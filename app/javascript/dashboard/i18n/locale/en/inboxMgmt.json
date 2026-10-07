@@ -861,6 +861,58 @@
         "CHECKING": "Checking"
       }
     },
+    "WHATSAPP_HYBRID": {
+      "TITLE": "WhatsApp API on this number",
+      "DESCRIPTION": "A second way to send from this same inbox. When the official 24-hour window is closed, replies go through WhatsApp API.",
+      "CONNECT": "Connect WhatsApp API",
+      "SCAN_TITLE": "Scan the QR code with this inbox's WhatsApp Business",
+      "QR_ALT": "QR code to connect WhatsApp API",
+      "STEP_1": "Open WhatsApp Business on the phone of this number",
+      "STEP_2": "Go to Settings and then Linked devices",
+      "STEP_3": "Tap Link a device and point the phone at this code",
+      "USE_CODE": "Use a code instead",
+      "CODE_HELP": "On the phone, tap Link with phone number instead and type this code.",
+      "NEW_QR": "New QR code",
+      "EXPIRED_HELP": "WhatsApp ends pairing when no code is read for about two and a half minutes. Create a new one with the phone in hand. The official inbox keeps working normally.",
+      "DISCONNECTED_HELP": "The WhatsApp API connection of this number was closed. Until you reconnect, replies after 24 hours need an approved template, as before. The official inbox keeps working normally.",
+      "CONNECTED_HELP": "Connected to {phone}. Same number as the official inbox.",
+      "WRONG_NUMBER": "The connected phone ({phone}) is not this inbox's number. Disconnect and connect the right phone.",
+      "DISCONNECT": "Disconnect WhatsApp API",
+      "OFFICIAL": "Official",
+      "WEB": "WhatsApp API",
+      "RATE_LIMIT": "Messages per minute through WhatsApp API",
+      "STATUS": {
+        "NOT_CONNECTED": "Not connected",
+        "AWAITING": "Waiting for the phone",
+        "CONNECTED": "Connected",
+        "FAILED": "Connection failed",
+        "DISCONNECTED": "Disconnected"
+      },
+      "RISK": {
+        "TITLE": "Before turning it on",
+        "TEXT": "I understand that WhatsApp API is not an official Meta channel and that the official number may be restricted or banned by Meta."
+      },
+      "ROUTING": {
+        "TITLE": "Automatic sending",
+        "DESCRIPTION": "The inbox picks the way for each message. You don't need to do anything.",
+        "INSIDE": "Within 24 hours",
+        "OUTSIDE": "After 24 hours",
+        "TEMPLATES": "Approved templates"
+      },
+      "ORIGINS": {
+        "TITLE": "Who can send after 24 hours",
+        "HUMAN": "Agents",
+        "BOT": "Bots",
+        "AUTOMATION": "Automations",
+        "CAMPAIGN": "Campaigns"
+      },
+      "ERRORS": {
+        "CONNECT": "Could not connect WhatsApp API. Try again.",
+        "CODE": "Could not create the code. Try again.",
+        "SAVE": "Could not save. Try again.",
+        "DISCONNECT": "Could not disconnect. Try again."
+      }
+    },
     "TABS": {
       "SETTINGS": "Settings",
       "COLLABORATORS": "Collaborators",
@@ -874,7 +926,8 @@
       "ACCOUNT_HEALTH": "Account Health",
       "CSAT": "CSAT",
       "VOICE": "Voice",
-      "CALLS": "Calls"
+      "CALLS": "Calls",
+      "WHATSAPP_API": "WhatsApp API"
     },
     "VOICE_CONFIGURATION": {
       "ENABLE_VOICE": {

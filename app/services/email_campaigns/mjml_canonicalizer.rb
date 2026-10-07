@@ -17,8 +17,11 @@ class EmailCampaigns::MjmlCanonicalizer
   HEX_DIGITS = '0123456789abcdef'.freeze
   ROOT = 'mj-canonical-root'.freeze
 
-  def self.call(mjml)
-    new(mjml).call
+  # An optional block gets the parsed root (it may change attributes in place) and the
+  # MjmlEndingContent, and returns { slot index => new content } for the ending-tag contents it
+  # rewrites (EmailCampaigns::LockedFooter). It is not called for malformed MJML.
+  def self.call(mjml, &)
+    new(mjml).call(&)
   end
 
   def initialize(mjml)
@@ -32,8 +35,9 @@ class EmailCampaigns::MjmlCanonicalizer
     root = parse(normalize_entities(cut.skeleton))
     return malformed if root.nil?
 
+    slot_changes = block_given? ? yield(root, cut) : {}
     ctx = root_context(root)
-    cut.restore(root.children.map { |node| serialize(node, ctx) }.join)
+    cut.restore(root.children.map { |node| serialize(node, ctx) }.join) { |slot, index| slot_changes.fetch(index, slot.content) }
   end
 
   private

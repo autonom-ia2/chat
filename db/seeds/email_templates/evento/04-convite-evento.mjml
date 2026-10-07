@@ -1,0 +1,88 @@
+<mjml>
+  <mj-head>
+    <mj-title>Convite: encontro ao vivo e gratuito</mj-title>
+  </mj-head>
+  <mj-body width="600px" background-color="#fbefe0">
+    <mj-section background-color="#2b1608" padding="22px 24px">
+      <mj-column>
+        <mj-text font-family="Arial, Helvetica, sans-serif" font-size="20px" font-weight="700" color="#fff4e6" align="left" line-height="1.2" letter-spacing="1px" padding="0">Sua marca</mj-text>
+      </mj-column>
+    </mj-section>
+    <mj-section background-color="#fff4e6" padding="44px 24px 32px">
+      <mj-column>
+        <mj-text font-family="Arial, Helvetica, sans-serif" font-size="15px" font-weight="700" color="#c2410c" align="left" line-height="1.3" letter-spacing="2px" padding="0 0 12px">CONVITE · AO VIVO</mj-text>
+        <mj-text font-family="Arial, Helvetica, sans-serif" font-size="32px" font-weight="800" color="#2b1608" align="left" line-height="1.2" padding="0">Você está convidado para o nosso encontro online</mj-text>
+        <mj-text font-family="Arial, Helvetica, sans-serif" font-size="18px" color="#5c4433" align="left" line-height="1.6" padding="12px 0 0">{{ nome }}, separe uma hora. Vai ser rápido, prático e gratuito.</mj-text>
+      </mj-column>
+    </mj-section>
+    <mj-wrapper background-color="#fff4e6" padding="0 24px 40px">
+      <mj-section background-color="#ffffff" padding="0" border="1px solid #f0dcc6" border-radius="12px">
+        <mj-group>
+          <mj-column width="30%" background-color="#c2410c" padding="22px 8px" vertical-align="middle">
+            <mj-text font-family="Arial, Helvetica, sans-serif" font-size="48px" font-weight="800" color="#ffffff" align="center" line-height="1" padding="0">12</mj-text>
+            <mj-text font-family="Arial, Helvetica, sans-serif" font-size="16px" font-weight="700" color="#ffffff" align="center" line-height="1.2" letter-spacing="2px" padding="6px 0 0">NOV</mj-text>
+          </mj-column>
+          <mj-column width="70%" background-color="#ffffff" padding="18px 16px" vertical-align="middle">
+            <mj-text font-family="Arial, Helvetica, sans-serif" font-size="18px" font-weight="700" color="#2b1608" align="left" line-height="1.3" padding="0">Quarta-feira, às 19h</mj-text>
+            <mj-text font-family="Arial, Helvetica, sans-serif" font-size="15px" color="#5c4433" align="left" line-height="1.4" padding="2px 0 8px">Horário de Brasília</mj-text>
+            <mj-text font-family="Arial, Helvetica, sans-serif" font-size="16px" color="#2b1608" align="left" line-height="1.4" padding="0">Online e gratuito · 1 hora</mj-text>
+          </mj-column>
+        </mj-group>
+      </mj-section>
+    </mj-wrapper>
+    <mj-section background-color="#ffffff" padding="40px 24px 32px">
+      <mj-column width="40%" vertical-align="middle" padding="0 0 16px">
+        <mj-image src="/email-templates/biblioteca/04-evento.jpg" alt="Retrato de quem vai apresentar o encontro" width="200px" align="left" border-radius="12px" padding="0"></mj-image>
+      </mj-column>
+      <mj-column width="60%" vertical-align="middle">
+        <mj-text font-family="Arial, Helvetica, sans-serif" font-size="15px" font-weight="700" color="#c2410c" align="left" line-height="1.3" letter-spacing="2px" padding="0">QUEM APRESENTA</mj-text>
+        <mj-text font-family="Arial, Helvetica, sans-serif" font-size="20px" font-weight="700" color="#2b1608" align="left" line-height="1.3" padding="8px 0 0">Nome da pessoa</mj-text>
+        <mj-text font-family="Arial, Helvetica, sans-serif" font-size="16px" color="#5c4433" align="left" line-height="1.6" padding="6px 0 0">Cargo ou especialidade. Uma frase curta sobre a experiência dela.</mj-text>
+      </mj-column>
+    </mj-section>
+    <mj-section background-color="#ffffff" padding="8px 24px 12px">
+      <mj-column>
+        <mj-text font-family="Arial, Helvetica, sans-serif" font-size="22px" font-weight="700" color="#2b1608" align="left" line-height="1.3" padding="0">O que vamos ver</mj-text>
+      </mj-column>
+    </mj-section>
+    <mj-wrapper background-color="#ffffff" padding="0 24px">
+      <mj-section background-color="#ffffff" padding="14px 0" border-top="1px solid #f0dcc6">
+        <mj-group>
+          <mj-column width="22%">
+            <mj-text font-family="Arial, Helvetica, sans-serif" font-size="16px" font-weight="700" color="#c2410c" align="left" line-height="1.6" padding="0">19h00</mj-text>
+          </mj-column>
+          <mj-column width="78%">
+            <mj-text font-family="Arial, Helvetica, sans-serif" font-size="16px" color="#2b1608" align="left" line-height="1.6" padding="0">Boas-vindas e apresentação</mj-text>
+          </mj-column>
+        </mj-group>
+      </mj-section>
+      <mj-section background-color="#ffffff" padding="14px 0" border-top="1px solid #f0dcc6">
+        <mj-group>
+          <mj-column width="22%">
+            <mj-text font-family="Arial, Helvetica, sans-serif" font-size="16px" font-weight="700" color="#c2410c" align="left" line-height="1.6" padding="0">19h10</mj-text>
+          </mj-column>
+          <mj-column width="78%">
+            <mj-text font-family="Arial, Helvetica, sans-serif" font-size="16px" color="#2b1608" align="left" line-height="1.6" padding="0">Dicas práticas para o dia a dia</mj-text>
+          </mj-column>
+        </mj-group>
+      </mj-section>
+      <mj-section background-color="#ffffff" padding="14px 0" border-top="1px solid #f0dcc6" border-bottom="1px solid #f0dcc6">
+        <mj-group>
+          <mj-column width="22%">
+            <mj-text font-family="Arial, Helvetica, sans-serif" font-size="16px" font-weight="700" color="#c2410c" align="left" line-height="1.6" padding="0">19h40</mj-text>
+          </mj-column>
+          <mj-column width="78%">
+            <mj-text font-family="Arial, Helvetica, sans-serif" font-size="16px" color="#2b1608" align="left" line-height="1.6" padding="0">Perguntas e respostas ao vivo</mj-text>
+          </mj-column>
+        </mj-group>
+      </mj-section>
+    </mj-wrapper>
+    <mj-section background-color="#ffffff" padding="36px 24px 44px">
+      <mj-column>
+        <mj-button href="https://seusite.com.br" background-color="#c2410c" color="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="16px" font-weight="700" line-height="20px" border-radius="8px" inner-padding="15px 32px" align="center" padding="0">Garantir minha vaga</mj-button>
+        <mj-text font-family="Arial, Helvetica, sans-serif" font-size="16px" font-weight="700" color="#2b1608" align="center" line-height="1.6" padding="20px 0 0"><a href="https://seusite.com.br/agenda" style="color:#2b1608;text-decoration:underline;">Adicionar à agenda</a></mj-text>
+      </mj-column>
+    </mj-section>
+    <mj-section css-class="footer-locked" background-color="#f4f4f4" padding="20px 16px"><mj-column><mj-text font-family="Arial, Helvetica, sans-serif" font-size="12px" color="#4b5563" align="center" line-height="1.6">Nome da sua empresa · Endereço da empresa<br/>Você recebeu este e-mail porque está em nossa lista de contatos.<br/><a href="{{ unsubscribe_url }}" style="color:#4b5563;text-decoration:underline;">Cancelar inscrição</a></mj-text></mj-column></mj-section>
+  </mj-body>
+</mjml>

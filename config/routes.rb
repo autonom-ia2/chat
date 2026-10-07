@@ -755,6 +755,13 @@ Rails.application.routes.draw do
               post :reconnect
             end
           end
+          resources :whatsapp_hybrid_connections, only: [:show, :update, :destroy], param: :inbox_id do
+            member do
+              post :connect, action: :create
+              post :request_code
+              post :reconnect
+            end
+          end
           resources :labels, only: [:index, :show, :create, :update, :destroy]
 
           resources :notifications, only: [:index, :update, :destroy] do
