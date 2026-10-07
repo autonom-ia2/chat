@@ -151,8 +151,8 @@ jobs:
               # aceita 79 conexoes e o pior caso, no deploy com as duas instancias, fica em ~50.
               "SIDEKIQ_CONCURRENCY": "30",
               # WhatsApp Hibrido (#1067): aba "WhatsApp API" nas caixas WhatsApp Oficial.
-              # Piloto so na conta 1 (Chat2You). Ampliar = acrescentar ids separados por virgula.
-              "WHATSAPP_HYBRID_ACCOUNT_IDS": "1",
+              # Liberado para todas as contas (Rodrigo, 07/10/2026). Restringir = ids separados por virgula.
+              "WHATSAPP_HYBRID_ACCOUNT_IDS": "*",
           }
 
           lines = path.read_text().splitlines()

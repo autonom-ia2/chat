@@ -915,6 +915,8 @@ pt_BR:
         resumo: 'Ontem eu guardei %{n} avisos para não te encher de mensagem:'
         pausada: 'Pausei a vigia "%{nome}": quem criou não é mais administrador. Se ainda quiser, ligue de novo ou me peça.'
         whatsapp_api_caiu: 'O WhatsApp API da caixa "%{caixa}" desconectou. Até reconectar na aba WhatsApp API da caixa, respostas depois de 24 horas precisam de modelo aprovado. Quer que eu mostre como reconectar?'
+        whatsapp_api_perto_do_limite: 'O WhatsApp avisou que está perto de limitar conversas novas na caixa "%{caixa}" (o ciclo acaba em %{fim}). Já diminuí a velocidade de envio pelo WhatsApp API. Evite puxar conversa com contatos novos por lá por enquanto. Quer ver os números?'
+        whatsapp_api_bloqueado: 'O WhatsApp bloqueou conversas novas pelo WhatsApp API na caixa "%{caixa}" até %{fim}. Respostas para quem já conversa com você continuam; para contatos novos, use um modelo aprovado. Quer que eu explique?'
       needs_confirmation: 'Isto não tem volta, então precisa da sua confirmação na tela antes.'
       undo:
         already_undone: 'Isto já foi desfeito.'

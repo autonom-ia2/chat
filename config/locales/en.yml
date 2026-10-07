@@ -498,6 +498,8 @@ en:
         resumo: 'Yesterday I held back %{n} warnings so I would not flood you:'
         pausada: 'I paused the watch "%{nome}": the person who created it is no longer an admin. If you still want it, turn it back on or ask me.'
         whatsapp_api_caiu: 'WhatsApp API on the inbox "%{caixa}" disconnected. Until you reconnect it in the inbox WhatsApp API tab, replies after 24 hours need an approved template. Do you want me to show you how to reconnect?'
+        whatsapp_api_perto_do_limite: 'WhatsApp is close to limiting new conversations on the inbox "%{caixa}" (cycle ends on %{fim}). I already slowed down sending through WhatsApp API. Avoid starting conversations with new contacts there for now. Want to see the numbers?'
+        whatsapp_api_bloqueado: 'WhatsApp blocked new conversations through WhatsApp API on the inbox "%{caixa}" until %{fim}. Replies to people you already talk to keep going; for new contacts use an approved template. Want me to explain?'
       needs_confirmation: 'This cannot be undone, so it needs your confirmation on screen first.'
       undo:
         already_undone: 'This was already undone.'

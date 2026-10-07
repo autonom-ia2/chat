@@ -2,7 +2,8 @@
   "CONVERSATION": {
     "WHATSAPP_TRANSPORT": {
       "WEB": "WhatsApp API",
-      "WEB_FALLBACK": "WhatsApp API · fallback"
+      "WEB_FALLBACK": "WhatsApp API · fallback",
+      "REPLY_HINT": "Outside the 24-hour window: this reply goes through WhatsApp API."
     },
     "REFERRAL": {
       "AD_LABEL": "Ad",
