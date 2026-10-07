@@ -19,12 +19,14 @@ class EmailCampaigns::Import::TextStyle
     new(font_size: 16.0, color: '#000000', align: 'left')
   end
 
-  # px, % or a bare multiplier — what mj-text accepts; nil for anything else (normal, inherit, CSS smuggled in).
+  # px, % or a bare multiplier — what mj-text accepts; nil for anything else (normal, inherit, CSS smuggled in). In em
+  # or rem the number already is the multiplier of the letter (1.2em is 1.2, never 1.2 × 16).
   def self.line_height(value)
     text = EmailCampaigns::Import::StyleMap.plain(value).downcase
     return if text.empty?
 
-    number = EmailCampaigns::Import::StyleMap.px(text.delete_suffix('%'))
+    em = text.end_with?('em')
+    number = EmailCampaigns::Import::StyleMap.px(em ? text.delete_suffix('rem').delete_suffix('em') : text.delete_suffix('%'))
     return if number.nil? || number <= 0
     return "#{number.round}px" if text.end_with?('px')
 

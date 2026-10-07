@@ -8,6 +8,7 @@ const api = vi.hoisted(() => ({
   show: vi.fn(),
   fix: vi.fn(),
   save: vi.fn(),
+  rebuild: vi.fn(),
 }));
 const templatesIndex = vi.hoisted(() => vi.fn());
 const router = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn() }));
@@ -224,6 +225,99 @@ it('solves a field that does not exist here with the choice list, never a native
   expect(wrapper.find('[data-tone="ok"]').text()).toContain(
     'FIXED.FIELD_FIELD'
   );
+});
+
+it('rebuilds a part with the AI, follows it and shows the new preview', async () => {
+  route.params.importId = '7';
+  const blocked = {
+    blocking: [{ code: 'unresolved_parts', items: ['trecho-1'] }],
+    targets: {
+      images: [],
+      parts: [{ id: 'trecho-1', text: 'Safra' }],
+      fields: [],
+    },
+    ai_rebuild: { available: true, left: 5 },
+  };
+  api.show.mockResolvedValue({ data: ready(blocked) });
+  api.rebuild.mockResolvedValue({
+    data: ready({
+      ...blocked,
+      rebuilds: { 'trecho-1': { status: 'running' } },
+    }),
+  });
+  vi.useFakeTimers();
+  try {
+    await mountPage();
+    await buttonWith('EMAIL_IMPORT.SCREEN.ROWS.SOLVE_PART').trigger('click');
+    await flushPromises();
+    const dialog = document.body.querySelector('dialog[open]');
+    expect(dialog.textContent).toContain('PART_DIALOG.REBUILD_HINT');
+    Array.from(dialog.querySelectorAll('button'))
+      .find(button => button.textContent.includes('PART_DIALOG.REBUILD'))
+      .click();
+    await flushPromises();
+
+    expect(api.rebuild).toHaveBeenCalledWith(7, 'trecho-1');
+    expect(document.body.querySelector('dialog[open]')).toBeNull();
+    expect(wrapper.text()).toContain('ROWS.PART_REBUILDING');
+    expect(buttonWith('EMAIL_IMPORT.SCREEN.ROWS.SOLVE_PART')).toBeUndefined();
+
+    const { compileEmailMjml } = await import(
+      'dashboard/helper/compileEmailMjml'
+    );
+    compileEmailMjml.mockClear();
+    api.show.mockResolvedValue({
+      data: ready({
+        result_mjml: '<mjml><mj-body>refeito</mj-body></mjml>',
+        rebuilds: { 'trecho-1': { status: 'done' } },
+        fixes: [
+          { code: 'unresolved_parts', choice: 'rebuild', target: 'trecho-1' },
+        ],
+        ai_rebuild: { available: true, left: 4 },
+      }),
+    });
+    await vi.advanceTimersByTimeAsync(1600);
+    await flushPromises();
+
+    expect(compileEmailMjml).toHaveBeenCalledWith(
+      '<mjml><mj-body>refeito</mj-body></mjml>'
+    );
+    expect(wrapper.text()).toContain('EMAIL_IMPORT.SCREEN.RESULT.TITLE_READY');
+    expect(wrapper.find('[data-tone="ok"]').text()).toContain(
+      'FIXED.PART_REBUILD'
+    );
+    api.show.mockClear();
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(api.show).not.toHaveBeenCalled();
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+it('keeps "Refazer para editar" off with the current message when the AI is not configured', async () => {
+  route.params.importId = '7';
+  api.show.mockResolvedValue({
+    data: ready({
+      blocking: [{ code: 'unresolved_parts', items: ['trecho-1'] }],
+      targets: {
+        images: [],
+        parts: [{ id: 'trecho-1', text: 'Safra' }],
+        fields: [],
+      },
+      ai_rebuild: { available: false, left: 0 },
+    }),
+  });
+  await mountPage();
+  await buttonWith('EMAIL_IMPORT.SCREEN.ROWS.SOLVE_PART').trigger('click');
+  await flushPromises();
+
+  const dialog = document.body.querySelector('dialog[open]');
+  const rebuild = Array.from(dialog.querySelectorAll('button')).find(button =>
+    button.textContent.includes('PART_DIALOG.REBUILD')
+  );
+  expect(rebuild.disabled).toBe(true);
+  expect(dialog.textContent).toContain('PART_DIALOG.SOON');
+  expect(api.rebuild).not.toHaveBeenCalled();
 });
 
 it('says in one sentence that a file is not an e-mail, before sending it', async () => {

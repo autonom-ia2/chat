@@ -82,7 +82,12 @@
       "FIX_GONE": "This point is already solved.",
       "IMAGE_UNFIT": "This image does not work. Use JPG, PNG, GIF or WebP.",
       "IMAGE_TOO_LARGE": "This image is too big. Use up to 5 MB.",
-      "TEXT_INVALID": "Write a short text, without braces."
+      "TEXT_INVALID": "Write a short text, without braces.",
+      "AI_NOT_CONFIGURED": "Rebuilding with AI is not available in this account.",
+      "REBUILD_USED": "This part was already rebuilt once. Pick another way out.",
+      "REBUILD_RUNNING": "This part is already being rebuilt. Wait a little.",
+      "REBUILD_LIMIT": "You already rebuilt the most parts this model allows. Pick another way out.",
+      "REBUILD_MONTH_LIMIT": "You used every AI rebuild of this month. Pick another way out."
     },
     "SCREEN": {
       "CRUMB": "Bring my template",
@@ -180,6 +185,9 @@
         "BACKGROUND_MISSING_HINT": "The background kept only its color.",
         "PART": "This part became an image.",
         "PART_HINT": "Its text cannot be edited.",
+        "PART_REBUILDING": "I am rebuilding this part so you can edit it.",
+        "PART_REBUILDING_HINT": "It takes a few seconds. You can stay on this screen.",
+        "PART_REBUILD_FAILED": "It did not work. Pick another way out.",
         "FIELD": "This field does not exist here: {field}",
         "INVALID": "We could not check this template.",
         "INVALID_HINT": "Bring the template again.",
@@ -217,7 +225,8 @@
           "FIELD_TEXT": "In place of {field} goes \"{text}\".",
           "FIELD_REMOVE": "I erased {field}.",
           "PART_TEXT": "The part that was an image is now text you can edit.",
-          "PART_REMOVE": "I removed the part that was an image."
+          "PART_REMOVE": "I removed the part that was an image.",
+          "PART_REBUILD": "I rebuilt the part that was an image. Now you can edit it."
         }
       },
       "IMAGE_DIALOG": {
@@ -233,6 +242,10 @@
         "TEXT": "I could not make this part editable. You cannot change its text:",
         "REBUILD": "Rebuild to edit",
         "SOON": "Rebuilding with AI is coming soon.",
+        "REBUILD_HINT": "The AI rebuilds only this part. The text stays the same.",
+        "RUNNING": "This part is being rebuilt.",
+        "FAILED": "This part could not be rebuilt. Pick one of the options below.",
+        "USED_UP": "AI rebuilds are used up for now. Pick one of the options below.",
         "KEEP_TEXT": "Keep only the text",
         "REMOVE": "Remove this part"
       },

@@ -11,6 +11,7 @@
 #  locked_until               :datetime
 #  preview_html               :text
 #  progress                   :jsonb            not null
+#  rebuilds                   :jsonb            not null
 #  report                     :jsonb            not null
 #  result_mjml                :text
 #  source_kind                :string           not null
@@ -41,7 +42,8 @@
 # and is renewed by the job; a worker that dies leaves it to expire, and the next claim — or the screen asking for news —
 # takes it back, up to MAX_ATTEMPTS. Every write of the job is guarded by its attempt number, so a worker that lost the
 # import can never overwrite the one that took it. For the screen (delivery C) it also keeps the step the job is in
-# (`progress`), the cleaned preview of the original (`preview_html`, dropped once saved) and the fixes the person made.
+# (`progress`), the cleaned preview of the original (`preview_html`, dropped once saved) and the fixes the person made;
+# for "Refazer para editar" (delivery D), the state of each part sent to the AI (`rebuilds`, see PartRebuild).
 # The lock and the guarded writes are single conditional UPDATEs (update_all): that atomicity is the point, and the
 # columns they touch have nothing to validate.
 # rubocop:disable Rails/SkipsModelValidations

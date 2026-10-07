@@ -6,16 +6,19 @@
 # For the screens (delivery C): `index` answers the person's last import still running or waiting to be seen (to come
 # back to it), `show` adds the step of the job, the cleaned preview of the original and what can be fixed, and `fix`
 # solves one warning that blocks the saving (EmailCampaigns::Import::Fixer).
+# For "Refazer para editar" (delivery D): `rebuild` asks the AI to rebuild one part that became an image (202, the job
+# runs apart), and `show` tells the state of each part asked (`rebuilds`) and what is left (`ai_rebuild`).
 class Api::V1::Accounts::EmailCampaigns::TemplateImportsController < Api::V1::Accounts::EmailCampaigns::BaseController
   FEATURE = 'email_template_import'.freeze
   ERROR_PREFIX = 'email_template_import.'.freeze
-  ERROR_STATUS = { in_progress: :conflict, not_ready: :conflict }.freeze
+  ERROR_STATUS = { in_progress: :conflict, not_ready: :conflict, rebuild_running: :conflict, rebuild_limit: :too_many_requests,
+                   rebuild_month_limit: :too_many_requests }.freeze
   FIELDS = %i[id status source_kind source_url error_code email_campaign_template_id progress fixes created_at updated_at].freeze
   RESUMABLE = %w[queued processing ready].freeze
   RESUME_WINDOW = 1.day
 
   before_action :ensure_import_enabled
-  before_action :fetch_import, only: [:show, :save, :fix]
+  before_action :fetch_import, only: [:show, :save, :fix, :rebuild]
 
   rescue_from EmailCampaigns::Import::Error do |error|
     render_error(error.code)
@@ -57,6 +60,11 @@ class Api::V1::Accounts::EmailCampaigns::TemplateImportsController < Api::V1::Ac
     render json: payload(EmailCampaigns::Import::Fixer.call(@import, fix_params))
   end
 
+  def rebuild
+    authorize @import
+    render json: payload(EmailCampaigns::Import::PartRebuild::Starter.call(@import, rebuild_params[:target])), status: :accepted
+  end
+
   private
 
   def ensure_import_enabled
@@ -81,6 +89,10 @@ class Api::V1::Accounts::EmailCampaigns::TemplateImportsController < Api::V1::Ac
     params.permit(:kind, :choice, :target, :value, :file)
   end
 
+  def rebuild_params
+    params.permit(:target)
+  end
+
   def payload(import)
     ready = import.status == 'ready'
     import.as_json(only: FIELDS).merge(
@@ -88,8 +100,19 @@ class Api::V1::Accounts::EmailCampaigns::TemplateImportsController < Api::V1::Ac
       'result_mjml' => ready ? import.result_mjml : nil,
       'preview_html' => ready ? import.preview_html : nil,
       'blocking' => ready ? import.blocking : [],
-      'targets' => ready ? EmailCampaigns::Import::Fixer.targets(import) : nil
+      'targets' => ready ? EmailCampaigns::Import::Fixer.targets(import) : nil,
+      'rebuilds' => EmailCampaigns::Import::PartRebuild.view(import),
+      'ai_rebuild' => ready ? ai_rebuild(import) : nil
     )
+  end
+
+  # Whether the AI can rebuild parts here and how many are left (for this import and this month, whichever is less).
+  def ai_rebuild(import)
+    return { available: false, left: 0 } unless EmailCampaigns::Import::PartRebuild.available?(import.account)
+
+    left = [EmailCampaigns::Import::PartRebuild::MAX_PER_IMPORT - import.rebuilds.size,
+            EmailCampaigns::Import::PartRebuild::Quota.left(import.account)].min
+    { available: true, left: [left, 0].max }
   end
 
   def render_error(code, status: nil, **extra)

@@ -7,6 +7,7 @@ import ApiClient from './ApiClient';
 //   GET  template_imports/:id        status, passo, prévia do original, resultado e o que trava salvar
 //   POST template_imports/:id/fix    resolve um aviso (imagem, campo, trecho) no servidor
 //   POST template_imports/:id/save   guarda em "Meus modelos" (o navegador manda só o nome)
+//   POST template_imports/:id/rebuild  pede à IA para refazer um trecho que virou imagem (202)
 const MULTIPART = { headers: { 'Content-Type': 'multipart/form-data' } };
 
 const formOf = fields => {
@@ -54,6 +55,10 @@ class EmailCampaignTemplateImportsAPI extends ApiClient {
 
   save(id, name) {
     return axios.post(`${this.url}/${id}/save`, { name });
+  }
+
+  rebuild(id, target) {
+    return axios.post(`${this.url}/${id}/rebuild`, { target });
   }
 }
 

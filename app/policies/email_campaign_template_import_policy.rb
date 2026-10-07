@@ -1,6 +1,6 @@
 # Importar modelo (#1099, delivery B): whoever manages campaigns imports, follows and saves — the same key that
-# creates templates in "Meus modelos"; the screens (delivery C) also list the person's last import and fix one. Imports
-# of another account are never reachable (the controller scopes them).
+# creates templates in "Meus modelos"; the screens (delivery C) also list the person's last import and fix one, and ask
+# the AI to rebuild one part (delivery D). Imports of another account are never reachable (the controller scopes them).
 class EmailCampaignTemplateImportPolicy < ApplicationPolicy
   def index?
     manage?
@@ -19,6 +19,10 @@ class EmailCampaignTemplateImportPolicy < ApplicationPolicy
   end
 
   def save?
+    manage? && own?
+  end
+
+  def rebuild?
     manage? && own?
   end
 

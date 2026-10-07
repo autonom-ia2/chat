@@ -552,6 +552,7 @@ Rails.application.routes.draw do
               member do
                 post :save
                 post :fix
+                post :rebuild
               end
             end
             resources :reports, only: [:index, :show] do

@@ -1,6 +1,9 @@
 // What the result screen of "Trazer meu modelo" (#1099) says, built from the import the server
 // returns: first what still blocks the saving (each with its own button), then what was solved,
-// then what the import did. Sentences are i18n keys; fields go as chips, never as HTML.
+// then what the import did. Sentences are i18n keys; fields go as chips, never as HTML. A part the AI
+// is rebuilding ("Refazer para editar") says so, without a button, until it is done or did not work.
+import { FAILED, RUNNING, rebuildOf } from './partRebuild';
+
 const S = 'EMAIL_IMPORT.SCREEN';
 
 // Our fields the person can put in place of one that does not exist here (server: Fixer::FIELDS).
@@ -88,7 +91,30 @@ export const problemsOf = data => {
     : problems;
 };
 
-const problemRow = problem => {
+const partRow = (problem, data) => {
+  const state = rebuildOf(data, problem.target)?.status;
+  if (state === RUNNING) {
+    return {
+      id: problem.id,
+      tone: 'info',
+      icon: 'i-lucide-loader-circle animate-spin',
+      text: { key: `${S}.ROWS.PART_REBUILDING` },
+      hint: { key: `${S}.ROWS.PART_REBUILDING_HINT` },
+    };
+  }
+  return {
+    id: problem.id,
+    tone: 'warn',
+    icon: 'i-lucide-triangle-alert',
+    text: { key: `${S}.ROWS.PART` },
+    hint: {
+      key: `${S}.ROWS.${state === FAILED ? 'PART_REBUILD_FAILED' : 'PART_HINT'}`,
+    },
+    action: { label: `${S}.ROWS.SOLVE_PART`, problem },
+  };
+};
+
+const problemRow = (problem, data) => {
   if (problem.type === 'image') {
     const background = problem.kind === 'background';
     let hint = null;
@@ -110,16 +136,7 @@ const problemRow = problem => {
       action: { label: `${S}.ROWS.SWAP_IMAGE`, problem },
     };
   }
-  if (problem.type === 'part') {
-    return {
-      id: problem.id,
-      tone: 'warn',
-      icon: 'i-lucide-triangle-alert',
-      text: { key: `${S}.ROWS.PART` },
-      hint: { key: `${S}.ROWS.PART_HINT` },
-      action: { label: `${S}.ROWS.SOLVE_PART`, problem },
-    };
-  }
+  if (problem.type === 'part') return partRow(problem, data);
   if (problem.type === 'field') {
     return {
       id: problem.id,
@@ -171,6 +188,7 @@ const fixText = (fix, data) => {
     },
     'unresolved_parts.text': { key: `${S}.ROWS.FIXED.PART_TEXT` },
     'unresolved_parts.remove': { key: `${S}.ROWS.FIXED.PART_REMOVE` },
+    'unresolved_parts.rebuild': { key: `${S}.ROWS.FIXED.PART_REBUILD` },
   };
   return texts[`${fix.code}.${fix.choice}`];
 };
@@ -269,7 +287,7 @@ const doneRows = data => {
 };
 
 export const rowsOf = data => [
-  ...problemsOf(data).map(problemRow),
+  ...problemsOf(data).map(problem => problemRow(problem, data)),
   ...fixRows(data),
   ...doneRows(data),
 ];

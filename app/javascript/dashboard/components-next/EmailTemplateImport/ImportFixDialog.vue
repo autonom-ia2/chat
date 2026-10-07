@@ -1,7 +1,9 @@
 <script setup>
 // The small window that solves one warning of an imported model (#1099): the image that did not
 // come, the part that became an image, or the field that does not exist here. Every choice is done
-// on the server (EmailCampaigns::Import::Fixer); this only says which one.
+// on the server (EmailCampaigns::Import::Fixer); this only says which one. "Refazer para editar"
+// asks the AI to rebuild the part (delivery D); `rebuild` says whether it can, and the sentence
+// under the button.
 import { computed, nextTick, ref, useTemplateRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
@@ -14,9 +16,16 @@ const props = defineProps({
   problem: { type: Object, default: null },
   isBusy: { type: Boolean, default: false },
   errorText: { type: String, default: '' },
+  rebuild: {
+    type: Object,
+    default: () => ({
+      enabled: false,
+      hint: 'EMAIL_IMPORT.SCREEN.PART_DIALOG.SOON',
+    }),
+  },
 });
 
-const emit = defineEmits(['fix', 'close', 'restart']);
+const emit = defineEmits(['fix', 'rebuild', 'close', 'restart']);
 
 const { t } = useI18n();
 const S = 'EMAIL_IMPORT.SCREEN';
@@ -180,11 +189,13 @@ const chooseField = () => {
           icon="i-lucide-sparkles"
           size="lg"
           class="!min-h-12 w-full !rounded-xl"
-          disabled
-          :title="t(`${S}.PART_DIALOG.SOON`)"
+          :disabled="!rebuild.enabled || isBusy"
+          :is-loading="isBusy && rebuild.enabled"
+          :title="t(rebuild.hint)"
+          @click="emit('rebuild', problem.target)"
         />
         <p class="mb-1 text-center text-xs text-n-slate-11">
-          {{ t(`${S}.PART_DIALOG.SOON`) }}
+          {{ t(rebuild.hint) }}
         </p>
         <Button
           v-if="problem.text"

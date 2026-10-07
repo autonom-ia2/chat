@@ -84,4 +84,12 @@ describe('Email template imports API', () => {
       name: 'Outubro',
     });
   });
+
+  it('asks the AI to rebuild one part', () => {
+    EmailCampaignTemplateImportsAPI.rebuild(7, 'trecho-2');
+
+    expect(axiosMock.post).toHaveBeenCalledWith(`${base}/7/rebuild`, {
+      target: 'trecho-2',
+    });
+  });
 });

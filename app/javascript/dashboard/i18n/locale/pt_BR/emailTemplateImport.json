@@ -82,7 +82,12 @@
       "FIX_GONE": "Este ponto já foi resolvido.",
       "IMAGE_UNFIT": "Esta imagem não serve. Use JPG, PNG, GIF ou WebP.",
       "IMAGE_TOO_LARGE": "Esta imagem é grande demais. Use até 5 MB.",
-      "TEXT_INVALID": "Escreva um texto curto, sem chaves."
+      "TEXT_INVALID": "Escreva um texto curto, sem chaves.",
+      "AI_NOT_CONFIGURED": "Refazer com IA não está disponível nesta conta.",
+      "REBUILD_USED": "Este pedaço já foi refeito uma vez. Escolha outra saída.",
+      "REBUILD_RUNNING": "Este pedaço já está sendo refeito. Espere um pouco.",
+      "REBUILD_LIMIT": "Você já refez o máximo de pedaços deste modelo. Escolha outra saída.",
+      "REBUILD_MONTH_LIMIT": "Você já usou todos os refazer com IA deste mês. Escolha outra saída."
     },
     "SCREEN": {
       "CRUMB": "Trazer meu modelo",
@@ -180,6 +185,9 @@
         "BACKGROUND_MISSING_HINT": "O fundo ficou só com a cor.",
         "PART": "Este pedaço ficou como imagem.",
         "PART_HINT": "O texto dele não dá para editar.",
+        "PART_REBUILDING": "Estou refazendo este pedaço para você editar.",
+        "PART_REBUILDING_HINT": "Leva alguns segundos. Pode ficar nesta tela.",
+        "PART_REBUILD_FAILED": "Não deu para refazer. Escolha outra saída.",
         "FIELD": "Este campo não existe aqui: {field}",
         "INVALID": "Não deu para conferir este modelo.",
         "INVALID_HINT": "Traga o modelo de novo.",
@@ -217,7 +225,8 @@
           "FIELD_TEXT": "No lugar de {field} vai \"{text}\".",
           "FIELD_REMOVE": "Apaguei {field}.",
           "PART_TEXT": "O pedaço que era imagem agora é texto que dá para editar.",
-          "PART_REMOVE": "Tirei o pedaço que era imagem."
+          "PART_REMOVE": "Tirei o pedaço que era imagem.",
+          "PART_REBUILD": "Refiz o pedaço que era imagem. Agora dá para editar."
         }
       },
       "IMAGE_DIALOG": {
@@ -233,6 +242,10 @@
         "TEXT": "Não deu para deixar este pedaço editável. Você não consegue mudar o texto dele:",
         "REBUILD": "Refazer para editar",
         "SOON": "Refazer com IA chega em breve.",
+        "REBUILD_HINT": "A IA refaz só este pedaço. O texto não muda.",
+        "RUNNING": "Este pedaço está sendo refeito.",
+        "FAILED": "Não deu para refazer este pedaço. Escolha uma opção abaixo.",
+        "USED_UP": "Os refazer com IA acabaram por agora. Escolha uma opção abaixo.",
         "KEEP_TEXT": "Deixar só o texto",
         "REMOVE": "Tirar este pedaço"
       },

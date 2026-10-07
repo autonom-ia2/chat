@@ -377,4 +377,76 @@ RSpec.describe 'Email template imports', :aggregate_failures, type: :request do
       expect(EmailCampaignTemplateImport.find(id).status).to eq('ready')
     end
   end
+
+  describe 'rebuilding a part with the AI ("Refazer para editar")' do
+    let(:raw_model) do
+      '<mjml><mj-body><mj-section><mj-column><mj-text>Oi</mj-text><mj-raw><div>Faltam 3 dias</div></mj-raw>' \
+        '</mj-column></mj-section></mj-body></mjml>'
+    end
+    let(:client) { instance_double(Crm::Ai::ResponsesClient) }
+
+    def with_ai
+      resolver = instance_double(Crm::Ai::CredentialResolver, configured?: true, resolve: { api_key: 'k', api_base: 'https://ia.example.com' })
+      allow(Crm::Ai::CredentialResolver).to receive(:new).and_return(resolver)
+      allow(Crm::Ai::ResponsesClient).to receive(:new).and_return(client)
+      allow(client).to receive(:create)
+        .and_return({ text: { mjml: '<mj-section><mj-column><mj-text>Faltam 3 dias</mj-text></mj-column></mj-section>' }.to_json })
+    end
+
+    def rebuild(id, target, auth = headers)
+      perform_enqueued_jobs(only: EmailCampaigns::Import::RebuildJob) do
+        post "#{path}/#{id}/rebuild", params: { target: target }, headers: auth, as: :json
+      end
+    end
+
+    it 'rebuilds the part in the background, and the model can be saved' do
+      with_ai
+      id = paste(raw_model)
+      expect(show(id)['ai_rebuild']).to eq('available' => true, 'left' => 5)
+
+      rebuild(id, 'trecho-1')
+      expect(response).to have_http_status(:accepted)
+
+      body = show(id)
+      expect(body['rebuilds']).to eq('trecho-1' => { 'status' => 'done' })
+      expect(body['blocking']).to eq([])
+      expect(body['targets']['parts']).to eq([])
+      expect(body['result_mjml']).to include('Faltam 3 dias')
+      expect(body['ai_rebuild']).to eq('available' => true, 'left' => 4)
+      expect(body['fixes'].last).to include('code' => 'unresolved_parts', 'choice' => 'rebuild', 'target' => 'trecho-1')
+
+      rebuild(id, 'trecho-1')
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body).to eq('error' => 'email_template_import.fix_gone')
+
+      post "#{path}/#{id}/save", params: { name: 'Refeito' }, headers: headers
+      expect(response).to have_http_status(:created)
+    end
+
+    it 'says the AI is not configured, and counts nothing' do
+      id = paste(raw_model)
+      expect(show(id)['ai_rebuild']).to eq('available' => false, 'left' => 0)
+
+      rebuild(id, 'trecho-1')
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body).to eq('error' => 'email_template_import.ai_not_configured')
+      expect(EmailTemplateImportAiQuota.count).to eq(0)
+    end
+
+    it 'is behind the flag, campaign_manage and the account' do
+      with_ai
+      id = paste(raw_model)
+      agent = create(:user, account: account, role: :agent)
+
+      rebuild(id, 'trecho-1', agent.create_new_auth_token)
+      expect(response).to have_http_status(:unauthorized)
+      foreign = EmailCampaignTemplateImport.create!(account: create(:account), source_kind: 'paste', status: 'ready')
+      rebuild(foreign.id, 'trecho-1')
+      expect(response).to have_http_status(:not_found)
+      account.disable_features!('email_template_import')
+      rebuild(id, 'trecho-1')
+      expect(response).to have_http_status(:not_found)
+      expect(client).not_to have_received(:create)
+    end
+  end
 end

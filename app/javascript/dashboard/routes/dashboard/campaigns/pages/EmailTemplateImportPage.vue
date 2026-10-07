@@ -6,7 +6,10 @@
 // resumes it. Everything that changes the design happens on the server.
 // The page is kept alive: an answer that arrives after it left (or after it started over) belongs
 // to a visit that is over, so it is dropped (`isActive`, `visit` and the import id).
+// "Refazer para editar" (delivery D) asks the AI to rebuild one part: while a part is being rebuilt,
+// the result keeps asking the server for news, and the preview is compiled again when it changes.
 import {
+  computed,
   onActivated,
   onBeforeUnmount,
   onDeactivated,
@@ -38,6 +41,10 @@ import {
   sourceOf,
 } from 'dashboard/components-next/EmailTemplateImport/importErrors';
 import { uniqueName } from 'dashboard/components-next/EmailTemplateImport/uniqueName';
+import {
+  isRebuilding,
+  rebuildButton,
+} from 'dashboard/components-next/EmailTemplateImport/partRebuild';
 
 const POLL_MS = 1500;
 // A network hiccup is not a failed import: the job goes on in the server.
@@ -158,12 +165,19 @@ const schedulePoll = poll => {
   pollTimer = setTimeout(poll, POLL_MS);
 };
 
+// Ready: the result shows (or, while a part is being rebuilt, its preview follows the changes).
+const settleReady = (before, payload) => {
+  stopPolling();
+  if (!['result', 'name'].includes(screen.value)) showReady();
+  else if (before?.result_mjml !== payload.result_mjml) compileResult();
+  return isRebuilding(payload);
+};
+
 const settle = payload => {
+  const before = data.value;
   data.value = payload;
-  if (payload.status === 'ready') {
-    stopPolling();
-    showReady();
-  } else if (payload.status === 'failed') {
+  if (payload.status === 'ready') return settleReady(before, payload);
+  if (payload.status === 'failed') {
     failImport(payload.error_code || 'internal');
   } else if (payload.status === 'saved') {
     endVisit();
@@ -341,6 +355,31 @@ const fix = async payload => {
   }
 };
 
+const rebuildState = computed(() =>
+  activeProblem.value?.type === 'part'
+    ? rebuildButton(data.value, activeProblem.value.target)
+    : undefined
+);
+
+const rebuild = async target => {
+  const run = visit;
+  isFixing.value = true;
+  fixError.value = '';
+  try {
+    const { data: payloadAfter } =
+      await EmailCampaignTemplateImportsAPI.rebuild(importId.value, target);
+    if (!isCurrent(run)) return;
+    data.value = payloadAfter;
+    fixDialog.value?.close();
+    schedulePoll(poll);
+  } catch (error) {
+    if (isCurrent(run))
+      fixError.value = errorText(errorCode(error) || 'internal');
+  } finally {
+    isFixing.value = false;
+  }
+};
+
 const toName = async () => {
   const run = visit;
   nameError.value = '';
@@ -469,7 +508,9 @@ onBeforeUnmount(leave);
       :problem="activeProblem"
       :is-busy="isFixing"
       :error-text="fixError"
+      :rebuild="rebuildState"
       @fix="fix"
+      @rebuild="rebuild"
       @close="closeFix"
       @restart="reset"
     />

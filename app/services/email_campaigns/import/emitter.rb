@@ -1,8 +1,19 @@
 # Writes the importer's design as MJML (#1099): explicit close tags, attributes escaped, one block per line. The result
-# then goes through LockedFooter.ensure (canonical MJML with our footer) and the quality fixes.
+# then goes through LockedFooter.ensure (canonical MJML with our footer) and the quality fixes. `sections` and `blocks`
+# write a piece alone, for a part the AI rebuilt later (PartRebuild::Splice).
 class EmailCampaigns::Import::Emitter
   def self.call(document)
     new(document).call
+  end
+
+  def self.sections(sections)
+    emitter = new(nil)
+    sections.map { |section| emitter.section(section) }.join("\n")
+  end
+
+  def self.blocks(blocks)
+    emitter = new(nil)
+    blocks.map { |block| emitter.block(block) }.join("\n")
   end
 
   def initialize(document)
@@ -14,6 +25,18 @@ class EmailCampaigns::Import::Emitter
      *@document.sections.map { |section| section(section) }, '  </mj-body>', '</mjml>'].join("\n")
   end
 
+  def section(section)
+    url = section.background_url
+    attrs = { 'background-color' => section.background, 'background-url' => url, 'background-size' => url && 'cover',
+              'background-repeat' => url && 'no-repeat', 'padding' => section.padding,
+              'css-class' => section.background_missing ? EmailCampaigns::Import::Placeholders::MISSING_BACKGROUND_CLASS : nil }
+    ["    <mj-section#{attributes(attrs)}>", *section.columns.map { |column| column(column) }, '    </mj-section>'].join("\n")
+  end
+
+  def block(block)
+    "        <#{block.tag}#{attributes(block.attrs)}>#{block.content}</#{block.tag}>"
+  end
+
   private
 
   def head
@@ -23,21 +46,9 @@ class EmailCampaigns::Import::Emitter
     "  <mj-head>#{parts.join}</mj-head>"
   end
 
-  def section(section)
-    url = section.background_url
-    attrs = { 'background-color' => section.background, 'background-url' => url, 'background-size' => url && 'cover',
-              'background-repeat' => url && 'no-repeat', 'padding' => section.padding,
-              'css-class' => section.background_missing ? EmailCampaigns::Import::Placeholders::MISSING_BACKGROUND_CLASS : nil }
-    ["    <mj-section#{attributes(attrs)}>", *section.columns.map { |column| column(column) }, '    </mj-section>'].join("\n")
-  end
-
   def column(column)
     attrs = { 'width' => column.width, 'padding' => column.padding, 'background-color' => column.background }
     ["      <mj-column#{attributes(attrs)}>", *column.blocks.map { |block| block(block) }, '      </mj-column>'].join("\n")
-  end
-
-  def block(block)
-    "        <#{block.tag}#{attributes(block.attrs)}>#{block.content}</#{block.tag}>"
   end
 
   def attributes(hash)

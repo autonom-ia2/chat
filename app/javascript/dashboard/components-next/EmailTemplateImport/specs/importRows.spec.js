@@ -219,6 +219,38 @@ describe('rowsOf', () => {
     );
   });
 
+  it('says a part is being rebuilt without a button, did not work with one, or was rebuilt', () => {
+    const blocked = state => ({
+      ...ready,
+      blocking: [{ code: 'unresolved_parts' }],
+      targets: { images: [], parts: [{ id: 'trecho-1' }], fields: [] },
+      rebuilds: state ? { 'trecho-1': { status: state } } : {},
+    });
+
+    const [running] = rowsOf(blocked('running'));
+    expect(running).toMatchObject({
+      tone: 'info',
+      text: { key: 'EMAIL_IMPORT.SCREEN.ROWS.PART_REBUILDING' },
+    });
+    expect(running.action).toBeUndefined();
+
+    const [failed] = rowsOf(blocked('failed'));
+    expect(failed.hint.key).toBe(
+      'EMAIL_IMPORT.SCREEN.ROWS.PART_REBUILD_FAILED'
+    );
+    expect(failed.action.label).toBe('EMAIL_IMPORT.SCREEN.ROWS.SOLVE_PART');
+
+    const rebuilt = rowsOf({
+      ...ready,
+      fixes: [
+        { code: 'unresolved_parts', choice: 'rebuild', target: 'trecho-1' },
+      ],
+    }).find(row => row.id === 'fix-0');
+    expect(rebuilt.text.key).toBe(
+      'EMAIL_IMPORT.SCREEN.ROWS.FIXED.PART_REBUILD'
+    );
+  });
+
   it('offers to bring again when something blocks that the screen cannot fix', () => {
     const problems = problemsOf({ ...ready, blocking: [{ code: 'invalid' }] });
     expect(problems).toEqual([{ id: 'invalid', type: 'invalid' }]);
