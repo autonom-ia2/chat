@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # #990: runs ONE allow-listed rake task in the chatwoot-web container of the active (current) instance via SSM.
-# Used by .github/workflows/ops-campaign-audience-backfill.yml and ops-contacts-merge-ninth-digit.yml.
+# Used by .github/workflows/ops-campaign-audience-backfill.yml, ops-contacts-merge-ninth-digit.yml and ops-email-templates-seed.yml.
 #
 # Inputs (env), all validated here; nothing free-form reaches the remote command:
-#   OPS_TASK           campaign_journey:backfill_audience_links | contacts:merge_ninth_digit_duplicates
+#   OPS_TASK           campaign_journey:backfill_audience_links | contacts:merge_ninth_digit_duplicates | email_campaign_templates:seed
 #   OPS_MODE           dry_run | apply (apply adds APPLY=1)
 #   OPS_CONFIRM        true is required for apply
 #   OPS_EXPECTED_SHA   40-char lowercase commit; aborts when /app/.git_sha in the container differs
@@ -27,7 +27,7 @@ fail() {
 }
 
 case "${OPS_TASK:-}" in
-  campaign_journey:backfill_audience_links | contacts:merge_ninth_digit_duplicates) ;;
+  campaign_journey:backfill_audience_links | contacts:merge_ninth_digit_duplicates | email_campaign_templates:seed) ;;
   *) fail "task not allowed" ;;
 esac
 

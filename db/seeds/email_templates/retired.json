@@ -1,0 +1,19 @@
+{
+  "about": "Names of shared (account_id IS NULL) gallery templates from earlier libraries. email_campaign_templates:seed deletes ONLY global rows with these exact names; account templates are never touched. #1082 retired the 14 English Mailteorite designs.",
+  "names": [
+    "Abandoned Cart with Benefits Breakdown",
+    "Welcome & Account Activation for Donors",
+    "Welcome & Email Verification (Security-Focused)",
+    "Webinar Thank You & Review Request",
+    "Weekly Newsletter with Data Analysis",
+    "Productivity Newsletter - Quarterly Edition",
+    "New Product Launch - Simple Hero",
+    "Product Launch Teaser - Mystery Reveal",
+    "Post-Purchase Review Request",
+    "Re-engagement Breakup (Final Notice)",
+    "Company Anniversary Celebration",
+    "Win-Back with Anonymous Poll",
+    "Card Shipped Confirmation",
+    "Order Bump with Future Discount"
+  ]
+}

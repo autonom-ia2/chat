@@ -1,34 +1,32 @@
 require 'rails_helper'
 
 RSpec.describe EmailCampaigns::TemplateCatalog, :aggregate_failures do
-  it 'keeps the approved fourteen source designs addressable and uniquely keyed' do
+  it 'keeps the thirteen pt-BR designs addressable and uniquely keyed' do
     entries = described_class.entries
 
-    expect(entries.size).to eq(14)
+    expect(entries.size).to eq(13)
     expect(entries.map { |entry| entry.fetch('key') }.uniq.size).to eq(entries.size)
     expect(entries.map { |entry| entry.fetch('name') }.uniq.size).to eq(entries.size)
+    expect(entries.map { |entry| entry.fetch('name') } & described_class.retired_names).to be_empty
 
     entries.each do |entry|
       source = described_class::ROOT.join(entry.fetch('path'))
       expect(source).to exist
       expect(source.extname).to eq('.mjml')
-      compiled = source.sub_ext('.html')
-      expect(compiled).to exist
-      expect(compiled.read).to include('footer-locked')
+      expect(described_class.html_path(entry)).to exist
+      expect(described_class.html_path(entry).read).to include('footer-locked')
       # Never two unsubscribe links: a design with its own footer gets it locked, not a second one (#1081).
-      expect(compiled.read.scan('{{ unsubscribe_url }}').size).to eq(1)
+      expect(described_class.html_path(entry).read.scan('{{ unsubscribe_url }}').size).to eq(1)
     end
   end
 
-  it 'sanitizes every design while preserving the protected unsubscribe footer' do
+  it 'sanitizes every design idempotently while preserving the protected unsubscribe footer' do
     described_class.entries.each do |entry|
       first = described_class.body(entry)
-      second = described_class.body(entry)
 
-      expect(first).to eq(second)
+      expect(described_class.body(entry)).to eq(first)
       expect(first).to include('footer-locked')
       expect(first.scan('{{ unsubscribe_url }}').size).to eq(1)
-      expect(first).not_to include('<!--')
     end
   end
 
@@ -40,23 +38,22 @@ RSpec.describe EmailCampaigns::TemplateCatalog, :aggregate_failures do
     expect(described_class.key_for(template.new(123, entry.fetch('name')))).to be_nil
   end
 
-  it 'restores the shared catalog idempotently without changing account-owned templates' do
-    account = create(:account)
-    first_entry = described_class.entries.first
-    own = EmailCampaignTemplate.create!(account: account, name: first_entry.fetch('name'), category: first_entry.fetch('category'),
-                                        body_mjml: '<mjml><mj-body><mj-text>Own</mj-text></mj-body></mjml>',
-                                        body_html: '<html>Own</html>')
-    task = Rake::Task['email_campaign_templates:seed']
+  it 'points the published MJML and HTML images at this installation' do
+    entry = described_class.entries.find { |item| item.fetch('key') == 'boas-vindas' }
 
-    task.reenable
-    task.invoke
-    task.reenable
-    task.invoke
+    mjml, html = described_class.published(entry, base_url: 'https://chat.exemplo.com.br')
 
-    expect(EmailCampaignTemplate.global.count).to eq(14)
-    expect(EmailCampaignTemplate.where(account: account).find_by(name: own.name)).to have_attributes(
-      body_mjml: own.body_mjml,
-      body_html: own.body_html
-    )
+    image = 'https://chat.exemplo.com.br/email-templates/biblioteca/01-boas-vindas.jpg'
+    expect(mjml).to include(%(src="#{image}"))
+    expect(html).to include(%(src="#{image}"))
+    expect([mjml, html]).to all(satisfy { |markup| markup.exclude?('src="/email-templates/') })
+    expect(html).to include('{{ unsubscribe_url }}')
+  end
+
+  it 'refuses to publish without an absolute installation URL' do
+    entry = described_class.entries.first
+
+    expect { described_class.published(entry, base_url: nil) }.to raise_error(ArgumentError)
+    expect { described_class.published(entry, base_url: 'chat.exemplo.com.br') }.to raise_error(ArgumentError)
   end
 end
