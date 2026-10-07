@@ -63,6 +63,28 @@ RSpec.describe EmailCampaigns::Ai::PollJob, :aggregate_failures do
     expect(client).to have_received(:delete).with('resp_1')
   end
 
+  it 'cleans every block the model writes and stores it as canonical MJML' do
+    dirty = adjust_hero.sub('href="https://loja.com.br"', 'href="javascript:alert(1)" onclick="x()"')
+                       .sub('</mj-column>', '<mj-spacer height="8px" /><script>x()</script></mj-column>')
+    answers['resp_1'] = changed(write(dirty), keep('b2'))
+
+    poll
+
+    mjml = adjustment['mjml']
+    expect(mjml).not_to include('<script', 'javascript:', 'onclick', '<mj-spacer height="8px" />')
+    expect(mjml).to include('<mj-spacer height="8px"></mj-spacer>', 'href="#"')
+  end
+
+  it 'keeps the summary of what changed short for the editor' do
+    answers['resp_1'] = changed(write(adjust_hero(title: 'Outubro')), keep('b2'),
+                                summary: "Troquei o título. #{'Detalhe longo demais. ' * 30}")
+
+    poll
+
+    expect(adjustment['summary'].length).to be <= EmailCampaigns::Ai::AdjustFinisher::SUMMARY_MAX
+    expect(adjustment['summary']).to start_with('Troquei o título.').and end_with('.')
+  end
+
   it 'keeps untouched blocks byte for byte and the locked footer exactly once' do
     answers['resp_1'] = changed(write(adjust_hero(title: 'Promoção de novembro')), keep('b2'))
 

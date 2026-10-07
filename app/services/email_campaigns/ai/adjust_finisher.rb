@@ -8,6 +8,7 @@
 class EmailCampaigns::Ai::AdjustFinisher
   MAX_FIX_ROUNDS = 1
   REASON_MAX = 300
+  SUMMARY_MAX = 200
   Violation = EmailCampaigns::QualityGate::Violation
 
   def initialize(campaign:, token:, client:, response_id:, adjustment:)
@@ -93,12 +94,14 @@ class EmailCampaigns::Ai::AdjustFinisher
   end
 
   def propose!(mjml, summary)
-    EmailCampaigns::Ai::Adjustment.update(@campaign, @token, status: 'proposed', mjml: mjml, summary: summary.to_s.strip)
+    summary = EmailCampaigns::Ai::ShortSentence.call(summary, SUMMARY_MAX)
+    EmailCampaigns::Ai::Adjustment.update(@campaign, @token, status: 'proposed', mjml: mjml, summary: summary)
     EmailCampaigns::Ai::Broadcaster.ready(@campaign) if @campaign.ai_propose!(@token)
   end
 
   def refuse!(reason)
-    EmailCampaigns::Ai::Adjustment.update(@campaign, @token, status: 'refused', reason: reason.to_s.strip.first(REASON_MAX))
+    reason = EmailCampaigns::Ai::ShortSentence.call(reason, REASON_MAX)
+    EmailCampaigns::Ai::Adjustment.update(@campaign, @token, status: 'refused', reason: reason)
     fail!('adjust_refused', status: 'refused')
   end
 
