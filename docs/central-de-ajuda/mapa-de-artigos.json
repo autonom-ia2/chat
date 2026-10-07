@@ -1526,6 +1526,30 @@
      ],
      "revisar": false,
      "nota": "O capítulo 14 ensina a LER o relatório de CSAT, mas nenhum assunto do estudo ensinava a HABILITAR a pesquisa."
+    },
+    {
+     "id": "07.12",
+     "titulo": "Responder depois de 24 horas na caixa oficial: a aba WhatsApp API",
+     "para_que_serve": "Ligar o mesmo número da caixa oficial também pelo QR Code, para a resposta depois de 24 horas sair sem modelo aprovado, e saber o risco disso.",
+     "publico": "ambos",
+     "prioridade": "P1",
+     "assuntos": [
+      "05.11-janela-24-horas"
+     ],
+     "rotas": [
+      "settings_inbox_show"
+     ],
+     "me_leve_ate_la": {
+      "rota": "settings_inbox_list",
+      "destaque": null
+     },
+     "requer": "inbox_management",
+     "prints": [],
+     "fontes": [
+      "porques: Conectar o WhatsApp API na caixa oficial"
+     ],
+     "revisar": false,
+     "nota": "WhatsApp Híbrido (#1067): aba WhatsApp API da caixa de WhatsApp Oficial. A aba só aparece nas contas liberadas pela instalação."
     }
    ]
   },

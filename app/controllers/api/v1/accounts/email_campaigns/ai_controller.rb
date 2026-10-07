@@ -5,8 +5,8 @@ class Api::V1::Accounts::EmailCampaigns::AiController < Api::V1::Accounts::Email
   before_action :ensure_ai_credential
 
   ASSET_PARAMS = %i[kind url signed_id description role video_url poster_url poster_signed_id].freeze
-  # Limite do MJML base alimentado no prompt de adaptação (mesmo do Generator) — validado já no
-  # controller p/ rejeitar cedo, sem enfileirar.
+  # Limite do e-mail da tela enviado para o ajuste (mesmo do Generator) — validado já no controller p/
+  # rejeitar cedo, sem enfileirar.
   MAX_BASE_MJML_BYTES = 120_000
 
   # Builder copilot ASSÍNCRONO: enfileira a geração (OpenAI background) e retorna 202 na hora — o
@@ -22,15 +22,26 @@ class Api::V1::Accounts::EmailCampaigns::AiController < Api::V1::Accounts::Email
     brand = brand_params
     return if performed?
 
+    EmailCampaigns::Ai::Adjustment.clear(campaign)
     token = campaign.ai_begin!
     EmailCampaigns::Ai::SubmitJob.perform_later(campaign.id, token, generation_params.merge('brand' => brand))
     render json: { ai_status: campaign.ai_status }, status: :accepted
   end
 
-  # Polling de fallback (o caminho feliz é o ActionCable). Estado leve da geração da campanha.
+  # Polling de fallback (o caminho feliz é o ActionCable). Estado leve da geração da campanha; num
+  # ajuste (#1095) também o antes/depois que o editor mostra para a pessoa aplicar ou descartar.
   def status
     campaign = EmailCampaign.where(account: Current.account).find(params[:id])
-    render json: { ai_status: campaign.ai_status, ai_error: campaign.ai_error, ai_completed_at: campaign.ai_completed_at }
+    render json: { ai_status: campaign.ai_status, ai_error: campaign.ai_error, ai_completed_at: campaign.ai_completed_at,
+                   ai_adjustment: EmailCampaigns::Ai::Adjustment.presented(campaign, campaign.ai_generation_token) }
+  end
+
+  # A pessoa aplicou ou descartou o ajuste no editor: a proposta deixa de existir.
+  def discard_adjustment
+    authorize EmailCampaign, :create?
+    campaign = EmailCampaign.where(account: Current.account).find(params[:id])
+    EmailCampaigns::Ai::Adjustment.clear(campaign)
+    head :no_content
   end
 
   # Reescrita também roda fora do limite de tempo da requisição web.

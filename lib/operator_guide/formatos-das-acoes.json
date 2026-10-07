@@ -695,6 +695,16 @@
     ],
     "sem_corpo": true
   },
+  "DELETE email_campaigns/ai/campaigns/:id/adjustment": {
+    "completo": true,
+    "controller": "api/v1/accounts/email_campaigns/ai#discard_adjustment",
+    "modelo": "EmailCampaign",
+    "origem": [
+      "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:40",
+      "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:42"
+    ],
+    "sem_corpo": true
+  },
   "DELETE email_campaigns/campaigns/:id": {
     "completo": true,
     "controller": "api/v1/accounts/email_campaigns/campaigns#destroy",
@@ -15002,16 +15012,16 @@
     ],
     "origem": [
       "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:15",
-      "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:49",
-      "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:91",
-      "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:47",
-      "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:46",
-      "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:65",
-      "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:69",
       "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:60",
+      "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:102",
       "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:58",
-      "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:79",
       "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:57",
+      "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:76",
+      "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:80",
+      "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:71",
+      "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:69",
+      "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:90",
+      "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:68",
       "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:18",
       "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:17"
     ],
@@ -15032,8 +15042,8 @@
     "controller": "api/v1/accounts/email_campaigns/ai#rewrite",
     "modelo": "EmailCampaign",
     "origem": [
-      "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:37",
-      "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:39"
+      "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:48",
+      "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:50"
     ],
     "sem_corpo": false
   },

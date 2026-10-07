@@ -24,6 +24,8 @@ const sectors = shallowRef([]);
 const styleVersion = ref(0);
 const device = ref('desktop');
 const footerLocked = ref(false);
+// Bumped on every canvas change, so the page can tell an empty e-mail from one with content (#1095).
+const contentVersion = ref(0);
 // <mj-title>/<mj-preview> of the loaded MJML: kept out of the canvas, given back on export.
 let heldHead = '';
 
@@ -119,6 +121,9 @@ async function init(el, opts = {}) {
     refreshSectors();
   });
   ed.on('component:add', lockFooter);
+  ed.on('update', () => {
+    contentVersion.value += 1;
+  });
 
   ed.BlockManager.getAll?.()?.reset?.();
   registerAutonomiaBlocks(ed);
@@ -168,6 +173,7 @@ function destroy() {
   styleVersion.value = 0;
   device.value = 'desktop';
   footerLocked.value = false;
+  contentVersion.value = 0;
   savedCanvasView = null;
   heldHead = '';
 }
@@ -418,12 +424,17 @@ const getHtml = () => {
   return out.html || '';
 };
 
+// Compiles any MJML with the editor's compiler (before/after preview of an AI adjustment, #1095).
+const compileMjml = mjml =>
+  (mjml && editor.value?.runCommand('mjml-code-to-html', { mjml })?.html) || '';
+
 const setMjml = mjml => {
   if (!editor.value) return;
   const prepared = prepareMjmlForEditor(mjml);
   heldHead = prepared.held;
   editor.value.setComponents(prepared.mjml);
   lockFooter();
+  contentVersion.value += 1;
 };
 
 // ---- selecao/texto ----
@@ -455,6 +466,7 @@ export function useEmailEditor() {
     styleVersion,
     device,
     footerLocked,
+    contentVersion,
 
     // ciclo de vida (SO o GrapesEditor.vue chama)
     init,
@@ -490,6 +502,7 @@ export function useEmailEditor() {
     getMjml,
     getHtml,
     setMjml,
+    compileMjml,
 
     // LOCK
     lockFooter,

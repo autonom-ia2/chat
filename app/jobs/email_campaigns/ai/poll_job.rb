@@ -70,6 +70,9 @@ module EmailCampaigns
       end
 
       def finish_completed(result)
+        adjustment = Adjustment.find(@run.campaign, @run.token)
+        return finish_adjustment(adjustment, result) if adjustment
+
         parsed = parse_output(result[:text])
         # Resposta completa mas sem mjml utilizável: NÃO marca pronto (o Sanitizer transformaria
         # nil num e-mail só com rodapé). Trata como falha p/ o usuário poder tentar de novo.
@@ -86,6 +89,12 @@ module EmailCampaigns
         return finish_failed('quality_gate_failed') if check.blocking.any?
 
         succeed(draft, check, result)
+      end
+
+      # "Ajustar com IA" (#1095): the answer is a proposal the editor shows; AdjustFinisher checks and keeps it.
+      def finish_adjustment(adjustment, result)
+        AdjustFinisher.new(campaign: @run.campaign, token: @run.token, client: @run.client, response_id: @run.response_id,
+                           adjustment: adjustment).call(text: result[:text], usage: result[:usage], model: result.fetch(:model))
       end
 
       def succeed(draft, check, result)

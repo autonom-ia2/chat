@@ -1,5 +1,5 @@
 <script setup>
-import { onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import EmailCampaignAiAPI from 'dashboard/api/emailCampaignAi';
@@ -8,22 +8,49 @@ import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 
 const props = defineProps({
   campaignId: { type: Number, required: true },
+  // create: a new e-mail; adjust: changes to the e-mail on the screen (#1095), which go straight to the
+  // before/after preview when ready.
+  mode: { type: String, default: 'create' },
 });
 
-// ready -> usuário pediu abrir no editor; close -> sair (geração continua em background)
+// ready -> usuário pediu abrir no editor (no ajuste, emitido sozinho com o estado da geração);
+// close -> sair (geração continua em background)
 const emit = defineEmits(['ready', 'close']);
 
 const { t } = useI18n();
 // eslint-disable-next-line @intlify/vue-i18n/no-dynamic-keys
 const tk = key => t(`CAMPAIGN.EMAIL_CAMPAIGN.AI.GENERATING.${key}`);
+// A generation resumed after leaving the page has no mode: the adjustment in the status tells it.
+const seenAdjustment = ref(false);
+const isAdjust = computed(
+  () => props.mode === 'adjust' || seenAdjustment.value
+);
+// Same text key in both modes, ADJUST_ prefixed when adjusting.
+const modeKey = key => (isAdjust.value ? `ADJUST_${key}` : key);
+
+// Why an adjustment did not happen, in one plain sentence: the model's own reason when the request cannot
+// be done in an e-mail, else what the quality check would not let through, else a known failure.
+const KNOWN_FAILURES = ['adjust_unreadable', 'base_mjml_too_large'];
+const failure = ref(null);
+const failureText = computed(() => {
+  const adjustment = failure.value?.ai_adjustment;
+  if (adjustment?.reason) return adjustment.reason;
+  if (adjustment?.problem)
+    return tk(`PROBLEM.${adjustment.problem.toUpperCase()}`);
+  const code = failure.value?.ai_error;
+  // 'quality_gate_failed' (#1076): the new e-mail kept failing the quality check after one repair.
+  if (code === 'quality_gate_failed') return t('BRAND_KITS.QUALITY.FAILED');
+  if (isAdjust.value && KNOWN_FAILURES.includes(code)) {
+    return tk(`PROBLEM.${code.toUpperCase()}`);
+  }
+  return tk(modeKey('FAILED_BODY'));
+});
 
 const POLL_MS = 4000;
 const MAX_MS = 16 * 60 * 1000; // teto de segurança ACIMA do backend (~15 min)
 
 // processing | ready | failed
 const phase = ref('processing');
-// 'quality_gate_failed' (#1076): the e-mail kept failing the quality check after one repair.
-const failureCode = ref('');
 let timer = null;
 let startedAt = 0;
 
@@ -37,14 +64,19 @@ const stop = () => {
 const poll = async () => {
   try {
     const { data } = await EmailCampaignAiAPI.status(props.campaignId);
+    if (data.ai_adjustment) seenAdjustment.value = true;
     if (data.ai_status === 'ready') {
-      phase.value = 'ready';
       stop();
+      if (isAdjust.value) {
+        emit('ready', data);
+        return;
+      }
+      phase.value = 'ready';
       return;
     }
     if (data.ai_status === 'failed') {
+      failure.value = data;
       phase.value = 'failed';
-      failureCode.value = data.ai_error || '';
       stop();
       return;
     }
@@ -66,7 +98,7 @@ onMounted(() => {
 
 onBeforeUnmount(stop);
 
-const openInEditor = () => emit('ready');
+const openInEditor = () => emit('ready', null);
 const leave = () => emit('close');
 </script>
 
@@ -94,15 +126,15 @@ const leave = () => emit('close');
         </div>
         <div>
           <h3 class="mb-2 text-lg font-semibold text-n-slate-12">
-            {{ tk('TITLE') }}
+            {{ tk(modeKey('TITLE')) }}
           </h3>
           <p class="max-w-md mb-0 text-sm leading-6 text-n-slate-11">
-            {{ tk('BODY') }}
+            {{ tk(modeKey('BODY')) }}
           </p>
         </div>
         <div class="flex items-center gap-2 text-sm text-n-slate-11">
           <Spinner class="size-4" />
-          <span>{{ tk('WORKING') }}</span>
+          <span>{{ tk(modeKey('WORKING')) }}</span>
         </div>
         <Button
           :label="tk('LEAVE')"
@@ -112,7 +144,7 @@ const leave = () => emit('close');
           @click="leave"
         />
         <p class="mb-0 text-xs text-n-slate-10">
-          {{ tk('LEAVE_HINT') }}
+          {{ tk(modeKey('LEAVE_HINT')) }}
         </p>
       </div>
 
@@ -146,14 +178,10 @@ const leave = () => emit('close');
         </span>
         <div>
           <h3 class="mb-2 text-lg font-semibold text-n-slate-12">
-            {{ tk('FAILED_TITLE') }}
+            {{ tk(modeKey('FAILED_TITLE')) }}
           </h3>
           <p class="max-w-md mb-0 text-sm leading-6 text-n-slate-11">
-            {{
-              failureCode === 'quality_gate_failed'
-                ? t('BRAND_KITS.QUALITY.FAILED')
-                : tk('FAILED_BODY')
-            }}
+            {{ failureText }}
           </p>
         </div>
         <Button

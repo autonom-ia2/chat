@@ -22,11 +22,16 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
-  // Current canvas MJML when a design/template is already loaded. Enables the
-  // "adapt this template" mode: the AI keeps the structure and rewrites the copy.
-  baseMjml: {
-    type: String,
-    default: '',
+  // The canvas already has content (#1095): the dialog ADJUSTS it — the AI changes only what the person
+  // asks — unless the person unticks "Mudar só o que eu pedir" to create a new e-mail from scratch.
+  canAdjust: {
+    type: Boolean,
+    default: false,
+  },
+  // Reads the canvas MJML at submit time, unsaved edits included.
+  readCurrentMjml: {
+    type: Function,
+    default: () => '',
   },
   // Identity this e-mail starts with (#1076): { kitId, mode } from the campaign or Nova campanha.
   initialBrand: {
@@ -44,8 +49,6 @@ const tk = key => {
   return t(`CAMPAIGN.EMAIL_CAMPAIGN.AI.COMPOSER.${key}`);
 };
 
-const chipLabel = key => `{{ ${key} }}`;
-
 const ROLE_OPTIONS = ['logo', 'product', 'banner', 'testimonial', 'other'];
 const roleChoices = computed(() =>
   ROLE_OPTIONS.map(role => ({
@@ -58,10 +61,10 @@ const brief = ref('');
 const assets = ref([]); // { id, kind, url, signedId, videoUrl, posterUrl, provider, description, role }
 const videoLink = ref('');
 
-// When a design is already loaded, default to ADAPTING it (preserve structure,
-// rewrite copy to the brief). The user can switch to a from-scratch generation.
-const hasBase = computed(() => props.baseMjml.trim().length > 0);
-const adaptDesign = ref(true);
+const adjustOnly = ref(true);
+const isAdjust = computed(() => props.canAdjust && adjustOnly.value);
+// Same text key in both modes, ADJUST_ prefixed when adjusting.
+const modeKey = key => (isAdjust.value ? `ADJUST_${key}` : key);
 
 const isGenerating = ref(false);
 const isReadingSite = ref(false);
@@ -108,7 +111,7 @@ const humanizeError = error => {
     return tk('NOT_CONFIGURED');
   }
   if (code === 'email_campaign.base_mjml_too_large') {
-    return tk('BASE_TOO_LARGE');
+    return tk('ADJUST_TOO_LARGE');
   }
   if (code?.startsWith('brand_kit')) {
     return t('BRAND_KITS.PICKER.UNAVAILABLE');
@@ -295,10 +298,10 @@ const generate = async () => {
       brief: brief.value.trim(),
       placeholders: props.placeholders,
       assets: buildPayloadAssets(),
-      baseMjml: hasBase.value && adaptDesign.value ? props.baseMjml : undefined,
+      baseMjml: isAdjust.value ? props.readCurrentMjml() : undefined,
       brand,
     });
-    emit('generationStarted');
+    emit('generationStarted', { mode: isAdjust.value ? 'adjust' : 'create' });
     close();
   } catch (error) {
     errorMessage.value = humanizeError(error);
@@ -314,17 +317,25 @@ const generate = async () => {
     @click.self="close"
   >
     <div
-      class="flex max-h-[88vh] w-[min(42rem,calc(100vw-3rem))] min-w-0 flex-col overflow-hidden rounded-xl border border-n-weak bg-n-solid-2 shadow-xl"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="ai-composer-title"
+      class="flex max-h-[88vh] w-[min(42rem,calc(100vw-2rem))] min-w-0 flex-col overflow-hidden rounded-xl border border-n-weak bg-n-solid-2 shadow-xl"
+      data-test="ai-composer"
     >
       <div
         class="flex items-start justify-between gap-3 p-6 pb-4 border-b border-n-weak"
       >
         <div class="min-w-0">
-          <h3 class="mb-1 text-base font-medium leading-6 text-n-slate-12">
-            {{ tk('TITLE') }}
+          <h3
+            id="ai-composer-title"
+            class="mb-1 text-base font-medium leading-6 text-n-slate-12"
+            data-test="ai-composer-title"
+          >
+            {{ tk(modeKey('TITLE')) }}
           </h3>
           <p class="max-w-xl mb-0 text-sm leading-5 text-n-slate-11">
-            {{ tk('SUBTITLE') }}
+            {{ tk(modeKey('SUBTITLE')) }}
           </p>
         </div>
         <Button
@@ -332,19 +343,43 @@ const generate = async () => {
           color="slate"
           variant="ghost"
           size="sm"
+          :aria-label="tk('CANCEL')"
+          class="!size-11 shrink-0"
           @click="close"
         />
       </div>
 
-      <div class="flex flex-col gap-6 p-6 overflow-y-auto">
+      <div class="flex flex-col gap-6 p-6 overflow-y-auto *:shrink-0">
+        <!-- Com conteúdo na tela: ajustar (padrão) ou desmarcar para criar do zero (#1095) -->
+        <label
+          v-if="canAdjust"
+          class="flex items-start gap-3 p-3 rounded-xl cursor-pointer min-h-11 border border-n-weak bg-n-alpha-1"
+          data-test="ai-composer-adjust-only"
+        >
+          <input
+            v-model="adjustOnly"
+            type="checkbox"
+            class="mt-0.5 accent-n-brand size-5 shrink-0"
+          />
+          <span class="flex flex-col gap-0.5">
+            <span class="text-sm font-medium text-n-slate-12">
+              {{ tk('ADJUST_ONLY_LABEL') }}
+            </span>
+            <span class="text-xs leading-5 text-n-slate-11">
+              {{ tk(adjustOnly ? 'ADJUST_ONLY_HINT' : 'ADJUST_ONLY_OFF_HINT') }}
+            </span>
+          </span>
+        </label>
+
         <TextArea
           v-model="brief"
-          :label="tk('BRIEF_LABEL')"
-          :placeholder="tk('BRIEF_PLACEHOLDER')"
+          :label="tk(modeKey('BRIEF_LABEL'))"
+          :placeholder="tk(modeKey('BRIEF_PLACEHOLDER'))"
           auto-height
           resize
           min-height="7rem"
           max-height="16rem"
+          data-test="ai-composer-brief"
         />
 
         <BrandIdentityPicker
@@ -353,53 +388,24 @@ const generate = async () => {
           @reading="value => (isReadingSite = value)"
         />
 
-        <!-- Modo adaptar: visivel quando ja existe um design/modelo carregado -->
-        <label
-          v-if="hasBase"
-          class="flex items-start gap-2.5 p-3 rounded-lg cursor-pointer border border-n-weak bg-n-alpha-1"
+        <!-- Personalização em palavras simples, sem campos técnicos -->
+        <p
+          v-if="placeholders.length"
+          class="flex items-start gap-2 mb-0 text-sm leading-5 text-n-slate-11"
+          data-test="ai-composer-personalize"
         >
-          <input
-            v-model="adaptDesign"
-            type="checkbox"
-            class="mt-0.5 accent-n-brand size-4"
-          />
-          <span class="flex flex-col gap-0.5">
-            <span class="text-sm font-medium text-n-slate-12">
-              {{ tk('ADAPT_LABEL') }}
-            </span>
-            <span class="text-xs leading-4 text-n-slate-11">
-              {{ tk('ADAPT_HINT') }}
-            </span>
-          </span>
-        </label>
-
-        <!-- Placeholders da base disponiveis -->
-        <div v-if="placeholders.length" class="flex flex-col gap-2">
-          <p class="mb-0 text-sm font-medium text-n-slate-12">
-            {{ tk('PLACEHOLDERS_LABEL') }}
-          </p>
-          <p class="mb-0 text-xs leading-4 text-n-slate-11">
-            {{ tk('PLACEHOLDERS_HINT') }}
-          </p>
-          <div class="flex flex-wrap gap-1.5">
-            <span
-              v-for="key in placeholders"
-              :key="key"
-              class="inline-flex items-center px-2 py-1 font-mono text-xs rounded-md text-n-slate-12 bg-n-alpha-2"
-            >
-              {{ chipLabel(key) }}
-            </span>
-          </div>
-        </div>
+          <span class="i-lucide-user-round mt-0.5 size-4 shrink-0" />
+          {{ tk('PERSONALIZE_HINT') }}
+        </p>
 
         <!-- Secao ASSETS -->
         <div class="flex flex-col gap-3">
           <div>
             <p class="mb-1 text-sm font-medium text-n-slate-12">
-              {{ tk('ASSETS_LABEL') }}
+              {{ tk(modeKey('ASSETS_LABEL')) }}
             </p>
             <p class="mb-0 text-xs leading-4 text-n-slate-11">
-              {{ tk('ASSETS_HINT') }}
+              {{ tk(modeKey('ASSETS_HINT')) }}
             </p>
           </div>
 
@@ -582,7 +588,8 @@ const generate = async () => {
           type="button"
           color="blue"
           icon="i-lucide-sparkles"
-          :label="tk('GENERATE')"
+          :label="tk(modeKey('GENERATE'))"
+          data-test="ai-composer-submit"
           class="w-full"
           :is-loading="isGenerating"
           :disabled="!canGenerate"

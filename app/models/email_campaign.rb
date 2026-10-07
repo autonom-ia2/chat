@@ -291,6 +291,12 @@ class EmailCampaign < ApplicationRecord
     rows.positive?
   end
 
+  # "Ajustar com IA" (#1095): the adjusted e-mail is a proposal the person applies in the editor
+  # (EmailCampaigns::Ai::Adjustment); only the generation is marked ready, the body stays as it was.
+  def ai_propose!(token)
+    ai_guarded_update(token, ai_status: self.class.ai_statuses[:ready], ai_error: nil, ai_completed_at: Time.current)
+  end
+
   def ai_fail!(token, message)
     ai_guarded_update(token, ai_status: self.class.ai_statuses[:failed],
                              ai_error: message.to_s.truncate(500), ai_completed_at: Time.current)
