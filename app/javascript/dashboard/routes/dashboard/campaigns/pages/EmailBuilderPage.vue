@@ -355,6 +355,20 @@ const forgetAdjustment = async () => {
   }
 };
 
+// Applied: the server uses the proposal up and records a site identity the adjustment used (#1111). It runs before
+// the save, whose answer brings the campaign back with that identity for the identity panel.
+const recordAppliedAdjustment = async () => {
+  try {
+    await EmailCampaignAiAPI.applyAdjustment(campaignId.value);
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      '[EmailBuilderPage] could not record the applied AI adjustment',
+      error
+    );
+  }
+};
+
 const persistBody = async () => {
   try {
     await persist();
@@ -369,7 +383,8 @@ const applyAdjustment = async () => {
   undoMjml.value = getMjml();
   setMjml(proposal.after);
   showUndo.value = true;
-  await Promise.all([persistBody(), forgetAdjustment()]);
+  await recordAppliedAdjustment();
+  await persistBody();
 };
 
 const discardAdjustment = () => {

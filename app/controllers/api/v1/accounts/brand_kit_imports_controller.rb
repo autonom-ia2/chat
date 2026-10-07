@@ -28,7 +28,7 @@ class Api::V1::Accounts::BrandKitImportsController < Api::V1::Accounts::BaseCont
   private
 
   def rate_limited?
-    BrandImportJob.where(account: Current.account).where('created_at > ?', 1.hour.ago).count >= BrandImportJob::HOURLY_LIMIT
+    BrandImportJob.where(account: Current.account).from_import_screen.last_hour.count >= BrandImportJob::HOURLY_LIMIT
   end
 
   def active_import_conflict?

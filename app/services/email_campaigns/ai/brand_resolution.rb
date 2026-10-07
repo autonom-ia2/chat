@@ -4,13 +4,16 @@
 #   nil / {}                                     no identity: the model picks colors as before
 # A site the person asked for in the request itself (#1111, `requested_url`, found by SiteRequest) wins over all
 # of these for this e-mail: it is read now (BrandKits::SiteImporter, same limits) and the reading is kept as a
-# BrandImportJob so the editor can save it as an identity. When it cannot be read, the identity above is used
-# and the snapshot says so ('site_request' => { host, status: 'unreadable' }).
+# BrandImportJob so the editor can save it as an identity (marked result['origin'] = 'briefing': out of the import
+# screen's limit, capped at BrandImportJob::BRIEFING_HOURLY_LIMIT per hour, failed reads included). When it cannot be
+# read, the identity above is used and the snapshot says so ('site_request' => { host, status: 'unreadable' }).
 # Returns [identity, snapshot]: the BrandKits::PromptPayload hash for the prompt (or nil) and what the
 # campaign records in brand_identity (Resultado shows it). The logo of a site read for one e-mail is
 # stored with the campaign (builder_assets) so the e-mail never points at another host for it; when it
 # cannot be stored the e-mail goes without logo.
 class EmailCampaigns::Ai::BrandResolution
+  BRIEFING_ORIGIN = { 'origin' => BrandImportJob::ORIGIN_BRIEFING }.freeze
+
   def initialize(campaign, brand, requested_url: nil)
     @campaign = campaign
     @brand = brand.is_a?(Hash) ? brand.stringify_keys : {}
@@ -59,9 +62,10 @@ class EmailCampaigns::Ai::BrandResolution
 
   def from_requested_site
     url = BrandKits::SiteImporter.normalize_url(@requested_url)
-    proposal = BrandKits::SiteImporter.new(url).perform
-    import = BrandImportJob.create!(account_id: @campaign.account_id, url: url, status: :succeeded, result: proposal,
-                                    started_at: Time.current, finished_at: Time.current)
+    raise BrandKits::SiteImporter::Error, 'rate_limited' if briefing_reads_exhausted?
+
+    proposal = read_site(url)
+    import = record_read(url, status: :succeeded, result: proposal.merge(BRIEFING_ORIGIN))
     identity, snapshot = from_proposal(proposal, url)
     [identity.merge(requested_site: host),
      snapshot.merge('site_request' => { 'host' => host, 'status' => 'used', 'import_id' => import.id })]
@@ -71,6 +75,22 @@ class EmailCampaigns::Ai::BrandResolution
     Rails.logger.info("[EmailCampaigns::Ai::BrandResolution] campaign=#{@campaign.id} requested site unreadable: #{code}")
     identity, snapshot = chosen
     [identity, snapshot.merge('site_request' => { 'host' => host, 'status' => 'unreadable' })]
+  end
+
+  # Every read the request triggers is recorded (failed ones too), so the cap also counts attempts that failed.
+  def read_site(url)
+    BrandKits::SiteImporter.new(url).perform
+  rescue BrandKits::SiteImporter::Error => e
+    record_read(url, status: :failed, error_code: e.code, result: BRIEFING_ORIGIN)
+    raise
+  end
+
+  def record_read(url, **attributes)
+    BrandImportJob.create!(account_id: @campaign.account_id, url: url, started_at: Time.current, finished_at: Time.current, **attributes)
+  end
+
+  def briefing_reads_exhausted?
+    BrandImportJob.where(account_id: @campaign.account_id).from_briefing.last_hour.count >= BrandImportJob::BRIEFING_HOURLY_LIMIT
   end
 
   def host

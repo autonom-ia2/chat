@@ -25,7 +25,7 @@ module EmailCampaigns
         return fail_generation(campaign, token, 'adjust_unreadable') if generator.adjust? && generator.sections.nil?
 
         req = generator.build
-        start_adjustment(campaign, token, generator, req, params.merge('site_request' => brand_identity['site_request'])) if generator.adjust?
+        start_adjustment(campaign, token, generator, req, params.merge('brand_identity' => brand_identity)) if generator.adjust?
         client = Crm::Ai::ResponsesClient.new(credential: credential)
         result = client.create_background(
           model: Crm::Ai::Config::MODEL_EMAIL, instructions: req[:instructions], input: req[:input],
@@ -54,12 +54,12 @@ module EmailCampaigns
         campaign.ai_processing? && campaign.ai_generation_token == token
       end
 
-      # Ajuste (#1095): guarda o e-mail de antes e o pedido; o PollJob monta, confere e propõe o resultado. Com o
-      # aviso do site pedido no próprio pedido (#1111), que o editor mostra junto da proposta.
+      # Ajuste (#1095): guarda o e-mail de antes e o pedido; o PollJob monta, confere e propõe o resultado. Com a
+      # identidade usada (#1111: o aviso do site pedido no próprio pedido e o que "Aplicar" grava na campanha).
       def start_adjustment(campaign, token, generator, req, params)
         Adjustment.start(campaign, token: token, request: { base: generator.sections.canonical, placeholders: params['placeholders'],
                                                             instructions: req[:instructions], input: req[:input_text],
-                                                            site_request: params['site_request'] })
+                                                            brand_identity: params['brand_identity'] })
       end
 
       # A site asked for in the request itself (#1111) wins over the identity chosen in the composer for this e-mail.

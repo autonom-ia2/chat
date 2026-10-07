@@ -101,7 +101,7 @@ RSpec.describe EmailCampaigns::Ai::SubmitJob, :aggregate_failures do
       expect(request[:instructions]).to include('"name":"Aurora"', 'PRIMARY=#0055aa', 'aurora.example')
     end
     adjustment = EmailCampaigns::Ai::Adjustment.find(campaign, token)
-    expect(adjustment['site_request']).to include('host' => 'aurora.example', 'status' => 'used')
+    expect(adjustment.dig('brand_identity', 'site_request')).to include('host' => 'aurora.example', 'status' => 'used')
     EmailCampaigns::Ai::Adjustment.update(campaign, token, status: 'proposed', mjml: base, summary: 'Troquei as cores.')
     expect(EmailCampaigns::Ai::Adjustment.presented(campaign, token)['site_request']).to include('host' => 'aurora.example')
   end

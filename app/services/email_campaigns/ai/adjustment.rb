@@ -8,10 +8,11 @@ class EmailCampaigns::Ai::Adjustment
   TTL = 1.day
   PREFIX = 'email_campaigns:ai:adjustment:'.freeze
 
-  # request: { base:, placeholders:, instructions:, input:, site_request: } — the e-mail before (canonical MJML), what
-  # a second round needs to ask again and the notice about a site asked for in the request (#1111).
+  # request: { base:, placeholders:, instructions:, input:, brand_identity: } — the e-mail before (canonical MJML), what
+  # a second round needs to ask again and the identity the adjustment used (#1111: with the notice about a site
+  # asked for in the request).
   def self.start(campaign, token:, request:)
-    data = request.to_h.stringify_keys.slice('base', 'placeholders', 'instructions', 'input', 'site_request')
+    data = request.to_h.stringify_keys.slice('base', 'placeholders', 'instructions', 'input', 'brand_identity')
                   .merge('token' => token, 'round' => 0, 'status' => 'working')
     data['placeholders'] = Array(data['placeholders'])
     Redis::Alfred.set(key(campaign), data.to_json, ex: TTL.to_i)
@@ -38,6 +39,17 @@ class EmailCampaigns::Ai::Adjustment
     Redis::Alfred.delete(key(campaign))
   end
 
+  # The person applied the proposal in the editor. Only a proposal of the current generation counts, and only an
+  # adjustment that used a site asked for in the request (#1111) changes the identity the campaign records; a
+  # discarded proposal (clear) never writes. The proposal is used up either way. -> the campaign's brand_identity.
+  def self.apply(campaign)
+    data = find(campaign, campaign.ai_generation_token)
+    identity = data && data['status'] == 'proposed' ? data['brand_identity'].to_h : {}
+    campaign.record_brand_identity!(identity) if identity.dig('site_request', 'status') == 'used'
+    clear(campaign)
+    campaign.brand_identity
+  end
+
   # Each provider response is handled once, even if Sidekiq delivers the poll twice.
   def self.claim_response(campaign, response_id)
     Redis::Alfred.set("#{key(campaign)}:#{response_id}", '1', nx: true, ex: TTL.to_i)
@@ -49,8 +61,9 @@ class EmailCampaigns::Ai::Adjustment
     data = find(campaign, token)
     return nil if data.nil?
 
-    fields = data['status'] == 'proposed' ? %w[status base mjml summary site_request] : %w[status reason problem]
-    data.slice(*fields).compact
+    return data.slice('status', 'reason', 'problem').compact unless data['status'] == 'proposed'
+
+    data.slice('status', 'base', 'mjml', 'summary').merge('site_request' => data.dig('brand_identity', 'site_request')).compact
   end
 
   def self.key(campaign)

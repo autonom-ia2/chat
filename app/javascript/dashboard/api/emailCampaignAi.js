@@ -41,6 +41,12 @@ class EmailCampaignAiAPI extends ApiClient {
   discardAdjustment(campaignId) {
     return axios.delete(`${this.url}/campaigns/${campaignId}/adjustment`);
   }
+
+  // Applied: the proposal is used up and, when it used a site asked for in the request (#1111), the campaign
+  // records that identity. -> { brand_identity }
+  applyAdjustment(campaignId) {
+    return axios.post(`${this.url}/campaigns/${campaignId}/adjustment/apply`);
+  }
 }
 
 export default new EmailCampaignAiAPI();

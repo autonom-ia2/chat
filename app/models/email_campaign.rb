@@ -297,6 +297,12 @@ class EmailCampaign < ApplicationRecord
     ai_guarded_update(token, ai_status: self.class.ai_statuses[:ready], ai_error: nil, ai_completed_at: Time.current)
   end
 
+  # "Ajustar com IA" applied with a site asked for in the request (#1111): the identity the adjustment used, written
+  # alone so it never saves the rest of the campaign.
+  def record_brand_identity!(identity)
+    update_columns(brand_identity: identity.to_h, updated_at: Time.current)
+  end
+
   def ai_fail!(token, message)
     ai_guarded_update(token, ai_status: self.class.ai_statuses[:failed],
                              ai_error: message.to_s.truncate(500), ai_completed_at: Time.current)

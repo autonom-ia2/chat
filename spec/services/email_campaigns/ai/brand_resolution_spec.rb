@@ -75,7 +75,33 @@ RSpec.describe EmailCampaigns::Ai::BrandResolution, :aggregate_failures do
       expect(identity).not_to have_key(:requested_site)
       expect(snapshot).to eq('kit_id' => kit.id, 'name' => 'Hub2You', 'mode' => 'light', 'source' => 'kit',
                              'site_request' => { 'host' => '127.0.0.1', 'status' => 'unreadable' })
-      expect(BrandImportJob.where(account: account)).to be_empty
+      expect(BrandImportJob.where(account: account).pluck(:status, :error_code)).to eq([%w[failed unsafe_url]])
+    end
+
+    it 'marks every read as coming from the request, failed ones too' do
+      allow(BrandKits::SiteImporter).to receive(:new).and_return(instance_double(BrandKits::SiteImporter, perform: proposal))
+      described_class.new(campaign, nil, requested_url: 'https://aurora.example/').call
+      allow(BrandKits::SiteImporter).to receive(:new).and_raise(BrandKits::SiteImporter::Error.new('timeout'))
+      described_class.new(campaign, nil, requested_url: 'https://aurora.example/').call
+
+      reads = BrandImportJob.where(account: account).order(:id)
+      expect(reads.map(&:status)).to eq(%w[succeeded failed])
+      expect(reads.map { |read| read.result['origin'] }).to eq([BrandImportJob::ORIGIN_BRIEFING] * 2)
+      expect(reads.last.error_code).to eq('timeout')
+      expect(BrandImportJob.where(account: account).from_briefing.count).to eq(2)
+      expect(BrandImportJob.where(account: account).from_import_screen.count).to eq(0)
+    end
+
+    it 'stops reading sites from requests after the hourly cap of the account' do
+      create_list(:brand_import_job, BrandImportJob::BRIEFING_HOURLY_LIMIT, account: account, status: :failed,
+                                                                            result: { 'origin' => BrandImportJob::ORIGIN_BRIEFING })
+      allow(BrandKits::SiteImporter).to receive(:new)
+
+      identity, snapshot = described_class.new(campaign, { 'kit_id' => kit.id }, requested_url: 'https://aurora.example/').call
+
+      expect(BrandKits::SiteImporter).not_to have_received(:new)
+      expect(identity).to include(name: 'Hub2You')
+      expect(snapshot['site_request']).to eq('host' => 'aurora.example', 'status' => 'unreadable')
     end
 
     it 'says so when the site cannot be read and there is no identity to fall back on' do
