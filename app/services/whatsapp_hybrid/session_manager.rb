@@ -1,6 +1,7 @@
 # Ciclo de vida da sessão WAHA auxiliar de uma caixa Cloud (chat#1067).
-# A sessão nasce SEM App Chatwoot e SEM webhook: se tivesse, criaria uma segunda caixa com todo o
-# inbound do número. A Cloud continua recebendo tudo; a sessão só envia.
+# A sessão nasce SEM App Chatwoot: se tivesse, criaria uma segunda caixa com todo o inbound do número.
+# O único webhook é o nosso, assinado (HMAC), e só com estado da sessão e confirmação de entrega:
+# nenhuma mensagem recebida passa por ele. A Cloud continua recebendo tudo; a sessão só envia.
 class WhatsappHybrid::SessionManager
   STATUS_MAP = {
     'WORKING' => 'connected',
@@ -11,6 +12,7 @@ class WhatsappHybrid::SessionManager
   }.freeze
 
   SESSION_IGNORE = { status: true, broadcast: true, channels: true, groups: true }.freeze
+  WEBHOOK_EVENTS = %w[session.status message.ack].freeze
 
   def initialize(connection, client: Waha::Client.new)
     @connection = connection
@@ -30,7 +32,7 @@ class WhatsappHybrid::SessionManager
   def ensure_session!
     remote = fetch_remote
     if remote.blank?
-      @client.create_session(connection.session_name, start: true, config: { ignore: SESSION_IGNORE })
+      @client.create_session(connection.session_name, start: true, config: session_config)
     elsif remote['status'] == 'STOPPED'
       @client.start_session(connection.session_name)
     end
@@ -40,10 +42,23 @@ class WhatsappHybrid::SessionManager
   # Consulta o motor e grava estado + número conectado. Retorna o estado público.
   def refresh!
     remote = fetch_remote
+    ensure_webhook!(remote)
     status = STATUS_MAP.fetch(remote['status'].to_s, remote.blank? ? 'disconnected' : 'connecting')
     phone = remote.dig('me', 'id').to_s.split('@').first.to_s.delete('^0-9').presence
-    connection.update!(status: status, connected_phone: phone || connection.connected_phone, status_checked_at: Time.current)
+    apply_status!(status, phone: phone)
     status
+  end
+
+  # Grava o estado vindo do motor (consulta ou webhook) e avisa os administradores uma vez por queda.
+  def apply_status!(status, phone: nil)
+    was_connected = connection.status == 'connected'
+    connection.update!(status: status, connected_phone: phone || connection.connected_phone, status_checked_at: Time.current)
+    if status == 'connected'
+      connection.update!(down_alerted_at: nil) if connection.down_alerted_at
+    elsif was_connected && connection.routable_when_connected? && connection.down_alerted_at.nil?
+      connection.update!(down_alerted_at: Time.current)
+      WhatsappHybrid::DownAlert.new(connection).deliver!
+    end
   end
 
   def qr
@@ -71,20 +86,31 @@ class WhatsappHybrid::SessionManager
     connection.update!(status: 'connecting', connected_phone: nil)
   end
 
+  # Apagar a conexão dispara o logout e a exclusão da sessão no motor (TeardownSessionJob).
   def disconnect!
-    begin
-      @client.logout_session(connection.session_name)
-    rescue Waha::Client::Error => e
-      Rails.logger.warn("[whatsapp_hybrid] logout failed inbox=#{connection.inbox_id}: #{e.class}")
-    end
-    @client.delete_session(connection.session_name)
-  rescue Waha::Client::Error => e
-    Rails.logger.warn("[whatsapp_hybrid] delete failed inbox=#{connection.inbox_id}: #{e.class}")
-  ensure
     connection.destroy!
   end
 
   private
+
+  def session_config
+    {
+      ignore: SESSION_IGNORE,
+      webhooks: [{ url: connection.webhook_url, events: WEBHOOK_EVENTS, hmac: { key: connection.ensure_webhook_secret! } }]
+    }
+  end
+
+  # Sessão criada antes do webhook (piloto) ou com outro endereço: grava a configuração uma vez.
+  def ensure_webhook!(remote)
+    return if remote.blank?
+
+    urls = Array(remote.dig('config', 'webhooks')).pluck('url')
+    return if urls.include?(connection.webhook_url)
+
+    @client.update_session(connection.session_name, config: session_config, apps: nil)
+  rescue Waha::Client::Error => e
+    Rails.logger.warn("[whatsapp_hybrid] webhook setup failed inbox=#{connection.inbox_id}: #{e.class}")
+  end
 
   def fetch_remote
     @client.get_session(connection.session_name) || {}
