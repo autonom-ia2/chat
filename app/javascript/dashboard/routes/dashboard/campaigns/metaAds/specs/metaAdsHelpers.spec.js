@@ -3,6 +3,7 @@ import {
   currentStep,
   errorMessageKey,
   money,
+  thumbClass,
 } from '../metaAdsHelpers';
 
 describe('Anúncios da Meta · helpers (#1047)', () => {
@@ -52,5 +53,13 @@ describe('Anúncios da Meta · helpers (#1047)', () => {
   it('formats the click time with the app locale (pt_BR is not an Intl tag)', () => {
     expect(clockTime('2026-10-06T16:52:00Z', 'pt_BR')).toBeTruthy();
     expect(clockTime(null, 'pt_BR')).toBeNull();
+  });
+
+  it('gives each ad the same color in the card and inside, from its id (#1088)', () => {
+    expect(thumbClass('120254710067060999')).toBe(
+      thumbClass('120254710067060999')
+    );
+    expect(new Set(['1', '2', '3', '4'].map(thumbClass)).size).toBe(4);
+    expect(thumbClass(null)).toContain('from-[');
   });
 });

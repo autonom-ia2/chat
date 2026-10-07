@@ -8,19 +8,25 @@ class WhatsappHybrid::Router
 
   # Conversa pode receber texto livre pelo Web (usado para destravar o editor e pelo envio).
   def web_reply_available?
-    connection.present? && WhatsappHybrid::Config.routing_enabled? && connection.routable? &&
-      !cloud_window_open? && contact_phone.present?
+    web_ready? && !cloud_window_open?
   end
 
   def route_for(message)
     return :cloud if cloud_window_open?
-    # Botões, listas, carrossel, formulário e pesquisa são recursos Meta: pelo WhatsApp Web viram
-    # texto solto (e chamam atenção de bloqueio). Só texto e anexos passam pelo Web.
-    return :cloud unless message.content_type == 'text'
-    return :cloud unless web_reply_available?
-    return :cloud unless connection.origin_enabled?(origin_of(message))
+    return :cloud unless web_ready? && web_allowed_for?(message)
 
     :web
+  end
+
+  # Conexão pronta e contato com telefone, independente da janela (o plano B usa isto).
+  def web_ready?
+    connection.present? && WhatsappHybrid::Config.routing_enabled? && connection.routable? && contact_phone.present?
+  end
+
+  # Botões, listas, carrossel, formulário e pesquisa são recursos Meta: pelo WhatsApp Web viram
+  # texto solto (e chamam atenção de bloqueio). Só texto e anexos passam pelo Web.
+  def web_allowed_for?(message)
+    message.content_type == 'text' && connection.origin_enabled?(origin_of(message))
   end
 
   def cloud_window_open?

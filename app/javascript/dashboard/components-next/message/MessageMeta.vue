@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { messageTimestamp } from 'shared/helpers/timeHelper';
 import { useExactTimestamp } from 'shared/composables/useExactTimestamp';
 
@@ -11,6 +12,7 @@ import { useMessageContext } from './provider.js';
 import { MESSAGE_STATUS, MESSAGE_TYPES } from './constants';
 
 const exactTimestamp = useExactTimestamp();
+const { t } = useI18n();
 
 const {
   isAFacebookInbox,
@@ -40,6 +42,14 @@ const readableTime = computed(() =>
 );
 
 const exactTime = computed(() => exactTimestamp(createdAt.value));
+
+// WhatsApp Híbrido (chat#1067): mensagem que saiu pelo WhatsApp API em vez da conexão oficial.
+const transportLabel = computed(() => {
+  if (contentAttributes.value?.whatsappTransport !== 'web') return '';
+  return contentAttributes.value?.whatsappTransportFallback
+    ? t('CONVERSATION.WHATSAPP_TRANSPORT.WEB_FALLBACK')
+    : t('CONVERSATION.WHATSAPP_TRANSPORT.WEB');
+});
 
 const showStatusIndicator = computed(() => {
   if (isPrivate.value) return false;
@@ -150,6 +160,9 @@ const statusToShow = computed(() => {
       </time>
     </div>
     <Icon v-if="isPrivate" icon="i-lucide-lock-keyhole" class="size-3" />
+    <span v-if="transportLabel" class="whitespace-nowrap">
+      {{ transportLabel }}
+    </span>
     <MessageStatus v-if="showStatusIndicator" :status="statusToShow" />
   </div>
 </template>

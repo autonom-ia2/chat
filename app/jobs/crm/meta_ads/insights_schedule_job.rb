@@ -17,7 +17,7 @@ class Crm::MetaAds::InsightsScheduleJob < ApplicationJob
     connections.find_each do |connection|
       next unless connection.account.feature_enabled?(FEATURE)
 
-      Crm::MetaAds::LinksBackfillJob.start(connection) if scope == 'recent' && connection.links_backfilled_at.nil?
+      start_daily_loads(connection) if scope == 'recent'
 
       if scope == 'recent' && connection.insights_backfilled_at.nil?
         Crm::MetaAds::InsightsBackfillJob.start(connection)
@@ -31,6 +31,12 @@ class Crm::MetaAds::InsightsScheduleJob < ApplicationJob
 
   # Não chamar de `enqueue`: o nome sobrescreve ActiveJob::Base#enqueue, que o perform_later do sidekiq-cron
   # usa, e todo agendamento falha (#1073).
+  # Uma vez por dia: as ligações dos 90 dias que faltam (só banco) e a imagem dos anúncios.
+  def start_daily_loads(connection)
+    Crm::MetaAds::LinksBackfillJob.start(connection) if connection.links_backfilled_at.nil?
+    Crm::MetaAds::AdImagesJob.start(connection)
+  end
+
   def enqueue_sync(connection, scope)
     return unless Crm::MetaAds::Insights::Refresh.claim(connection.id, scope)
 

@@ -1,13 +1,19 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import CrmMetaAdsConnectionAPI from 'dashboard/api/crmMetaAdsConnection';
 import { conversationUrl, frontendURL } from 'dashboard/helper/URLHelper';
-import { intlLocale, relativeTime } from '../metaAdsHelpers';
+import {
+  VERDICT_CLASSES,
+  amount,
+  relativeTime,
+  thumbClass,
+} from '../metaAdsHelpers';
 import { useMetaAdsLive } from '../useMetaAdsLive';
 import MetaAdsConfidence from './MetaAdsConfidence.vue';
+import MetaAdsAdDetail from './MetaAdsAdDetail.vue';
 
 // Anúncios da Meta (#1088, F3a): o painel do dia a dia do mockup aprovado. Uma frase com o dinheiro, a ação do
 // dia com o porquê, o caminho investido → conversas → propostas → vendas, cada anúncio por venda com o veredito
@@ -17,11 +23,38 @@ const emit = defineEmits(['open']);
 
 const { t, locale } = useI18n();
 const route = useRoute();
+const router = useRouter();
 const PERIODS = [7, 30];
 const days = ref(30);
 const panel = ref(null);
 const loading = ref(true);
 const showStalled = ref(false);
+// Anúncio aberto por dentro (F3b), lembrado no endereço (?anuncio=) como a aba da página: recarregar ou
+// mandar o link abre o mesmo anúncio. Com ele aberto, o detalhe ocupa o lugar do painel; o período continua
+// valendo para os dois. O endereço é a única fonte: o menu lateral que volta para a mesma página sem a query
+// também fecha o anúncio.
+const anuncioFromRoute = () =>
+  route.query.anuncio ? String(route.query.anuncio) : null;
+const openAd = ref(anuncioFromRoute());
+const rememberAd = value => {
+  const query = { ...route.query };
+  if (value) query.anuncio = value;
+  else delete query.anuncio;
+  router.replace({ query });
+};
+
+// Ao voltar do anúncio, o foco e a rolagem voltam ao cartão dele: quem compara anúncios um a um pelo teclado
+// não recomeça do topo da página.
+const focusCard = adId =>
+  nextTick(() =>
+    document.querySelector(`[data-panel-ad-open="${adId}"]`)?.focus()
+  );
+
+watch(anuncioFromRoute, value => {
+  const closed = openAd.value;
+  openAd.value = value;
+  if (!value && closed) focusCard(closed);
+});
 
 const live = useMetaAdsLive({
   // Troca de período no meio de uma leitura: a resposta do período antigo é descartada.
@@ -42,13 +75,7 @@ const choosePeriod = value => {
   live.reload();
 };
 
-const fmt = value =>
-  new Intl.NumberFormat(intlLocale(locale.value), {
-    style: 'currency',
-    currency: panel.value?.currency || 'BRL',
-    minimumFractionDigits: Number.isInteger(Number(value)) ? 0 : 2,
-    maximumFractionDigits: 2,
-  }).format(Number(value || 0));
+const fmt = value => amount(value, panel.value?.currency, locale.value);
 
 const totals = computed(() => panel.value?.totals || {});
 const updated = computed(() =>
@@ -132,24 +159,13 @@ const path = computed(() => [
   },
 ]);
 
-// Sem a imagem do anúncio, cada um ganha uma cor, para não virarem cartões iguais. Cores fixas e escuras
-// (o nome vai em branco por cima): as do tema clareiam no modo escuro.
-const THUMBS = [
-  'from-[#2563EB] to-[#0D2344]',
-  'from-[#B45309] to-[#78350F]',
-  'from-[#0F766E] to-[#134E4A]',
-  'from-[#4F46E5] to-[#312E81]',
-];
-
-const VERDICTS = {
-  up: 'bg-n-teal-3 text-n-teal-11',
-  keep: 'bg-n-blue-3 text-n-blue-11',
-  signal: 'bg-n-amber-3 text-n-amber-11',
-  review: 'bg-n-ruby-3 text-n-ruby-11',
-  early: 'bg-n-alpha-2 text-n-slate-11',
-};
-
 const ads = computed(() => panel.value?.ads || []);
+// Os três números de cada anúncio, lado a lado.
+const adStats = ad => [
+  { key: 'SPEND', value: fmt(ad.spend) },
+  { key: 'CONVERSATIONS', value: ad.conversations },
+  { key: 'SALES', value: ad.sales },
+];
 const stalled = computed(() =>
   action.value.kind === 'stalled_quotes' ? action.value.cards || [] : []
 );
@@ -203,7 +219,15 @@ onMounted(() => live.start());
       </div>
     </div>
 
-    <div v-if="loading && !panel" class="flex justify-center p-12">
+    <MetaAdsAdDetail
+      v-if="openAd"
+      :key="openAd"
+      :ad-id="openAd"
+      :days="days"
+      @back="rememberAd(null)"
+    />
+
+    <div v-else-if="loading && !panel" class="flex justify-center p-12">
       <Spinner />
     </div>
 
@@ -429,53 +453,79 @@ onMounted(() => live.start());
         </p>
         <ul
           v-else
-          class="grid gap-4 p-0 m-0 list-none sm:grid-cols-2 xl:grid-cols-3"
+          class="grid items-start gap-5 p-0 m-0 list-none sm:grid-cols-2 xl:grid-cols-3"
         >
           <li
-            v-for="(ad, index) in ads"
+            v-for="ad in ads"
             :key="ad.ad_id"
             :data-panel-ad="ad.ad_id"
-            class="flex flex-col overflow-hidden border border-solid rounded-lg border-n-weak"
+            class="relative flex flex-col overflow-hidden border border-solid rounded-lg border-n-weak bg-n-solid-1 hover:border-n-strong has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-n-brand"
           >
-            <div
-              class="relative flex items-end h-20 px-4 py-3 bg-gradient-to-br"
-              :class="THUMBS[index % THUMBS.length]"
-            >
+            <div class="flex justify-center bg-n-alpha-1">
               <img
                 v-if="ad.thumbnail_url"
                 :src="ad.thumbnail_url"
-                alt=""
+                :alt="ad.name || ''"
                 loading="lazy"
-                class="absolute inset-0 object-cover size-full"
+                data-panel-ad-image
+                class="block object-contain w-full h-auto max-h-[32rem]"
               />
-              <span
-                class="relative text-[13px] font-520 text-white truncate drop-shadow"
+              <div
+                v-else
+                data-panel-ad-placeholder
+                class="grid w-full aspect-square place-items-center bg-gradient-to-br"
+                :class="thumbClass(ad.ad_id)"
               >
-                {{ ad.name || $t('CRM_KANBAN.META_ADS_HUB.PANEL.AD_NO_NAME') }}
-              </span>
+                <span
+                  class="i-lucide-image size-8 text-white/50"
+                  aria-hidden="true"
+                />
+              </div>
             </div>
-            <div class="flex flex-col gap-2 p-4">
-              <span
-                :data-verdict="ad.verdict"
-                class="px-2 py-0.5 text-[11px] font-520 uppercase tracking-[0.06em] rounded w-fit"
-                :class="VERDICTS[ad.verdict]"
+            <div class="flex flex-col gap-4 p-4">
+              <div class="flex items-start justify-between gap-3">
+                <span
+                  class="text-sm font-520 leading-snug text-n-slate-12 line-clamp-2"
+                >
+                  {{
+                    ad.name || $t('CRM_KANBAN.META_ADS_HUB.PANEL.AD_NO_NAME')
+                  }}
+                </span>
+                <span
+                  :data-verdict="ad.verdict"
+                  class="flex-none px-2 py-0.5 text-[11px] font-520 uppercase tracking-[0.06em] rounded whitespace-nowrap"
+                  :class="VERDICT_CLASSES[ad.verdict]"
+                >
+                  {{
+                    $t(
+                      `CRM_KANBAN.META_ADS_HUB.PANEL.VERDICT.${ad.verdict.toUpperCase()}`
+                    )
+                  }}
+                </span>
+              </div>
+              <dl
+                class="grid m-0 gap-x-3 gap-y-1 grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)_minmax(0,1fr)]"
               >
-                {{
-                  $t(
-                    `CRM_KANBAN.META_ADS_HUB.PANEL.VERDICT.${ad.verdict.toUpperCase()}`
-                  )
-                }}
-              </span>
-              <span class="text-sm font-440 tabular-nums text-n-slate-12">
-                {{
-                  $t('CRM_KANBAN.META_ADS_HUB.PANEL.AD_LINE', {
-                    spend: fmt(ad.spend),
-                    conversations: counted('CONVERSATIONS', ad.conversations),
-                    sales: counted('SALES', ad.sales),
-                  })
-                }}
-              </span>
-              <span class="text-xs font-420 tabular-nums text-n-slate-10">
+                <div
+                  v-for="stat in adStats(ad)"
+                  :key="stat.key"
+                  class="flex flex-col gap-1 min-w-0"
+                >
+                  <dt
+                    class="text-[11px] font-520 uppercase tracking-[0.06em] text-n-slate-10"
+                  >
+                    {{
+                      $t(`CRM_KANBAN.META_ADS_HUB.PANEL.AD_STATS.${stat.key}`)
+                    }}
+                  </dt>
+                  <dd
+                    class="m-0 text-base whitespace-nowrap font-interDisplay font-520 tabular-nums text-n-slate-12"
+                  >
+                    {{ stat.value }}
+                  </dd>
+                </div>
+              </dl>
+              <p class="m-0 text-xs font-420 tabular-nums text-n-slate-10">
                 {{
                   ad.cost_per_sale != null
                     ? $t('CRM_KANBAN.META_ADS_HUB.PANEL.PER_SALE', {
@@ -487,7 +537,27 @@ onMounted(() => live.start());
                         ad.quotes
                       )
                 }}
-              </span>
+              </p>
+              <!-- O botão cobre o cartão inteiro (after:inset-0): tocar em qualquer parte abre o anúncio, e o
+                   leitor de tela ouve um só botão com o nome dele. -->
+              <button
+                type="button"
+                :data-panel-ad-open="ad.ad_id"
+                :aria-label="
+                  $t('CRM_KANBAN.META_ADS_HUB.PANEL.OPEN_AD_LABEL', {
+                    name:
+                      ad.name || $t('CRM_KANBAN.META_ADS_HUB.PANEL.AD_NO_NAME'),
+                  })
+                "
+                class="inline-flex items-center self-start gap-1 p-0 text-[13px] font-440 bg-transparent border-0 min-h-11 text-n-blue-11 focus-visible:outline-none after:absolute after:inset-0 after:content-['']"
+                @click="rememberAd(String(ad.ad_id))"
+              >
+                {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.OPEN_AD') }}
+                <span
+                  class="i-lucide-arrow-right size-3.5"
+                  aria-hidden="true"
+                />
+              </button>
             </div>
           </li>
         </ul>

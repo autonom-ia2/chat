@@ -17,7 +17,10 @@ RSpec.describe 'WhatsApp Híbrido connections API', type: :request do
     with_modified_env(WHATSAPP_HYBRID_ACCOUNT_IDS: account.id.to_s, WAHA_API_URL: 'http://waha.test', WAHA_API_KEY: 'k') { example.run }
   end
 
-  before { allow(Waha::Client).to receive(:new).and_return(client) }
+  before do
+    allow(Waha::Client).to receive(:new).and_return(client)
+    allow(client).to receive(:update_session)
+  end
 
   it 'hides the tab for accounts outside the allowlist' do
     with_modified_env(WHATSAPP_HYBRID_ACCOUNT_IDS: '') do
@@ -45,7 +48,9 @@ RSpec.describe 'WhatsApp Híbrido connections API', type: :request do
 
     post "#{base}/connect", headers: admin.create_new_auth_token, as: :json
 
-    expect(client).to have_received(:create_session).with('hybrid-5511999993846', start: true, config: { ignore: hash_including(groups: true) })
+    webhook = hash_including(events: %w[session.status message.ack], hmac: hash_including(:key))
+    expected_config = hash_including(ignore: hash_including(groups: true), webhooks: [webhook])
+    expect(client).to have_received(:create_session).with('hybrid-5511999993846', start: true, config: expected_config)
     expect(response.parsed_body).to include('connected' => true, 'same_number' => true, 'risk_accepted' => false, 'routing_active' => false)
   end
 
@@ -81,14 +86,21 @@ RSpec.describe 'WhatsApp Híbrido connections API', type: :request do
     expect(WhatsappHybrid::Connection.last.status).to eq('awaiting_scan')
   end
 
-  it 'disconnects and removes the connection' do
+  it 'disconnects, removes the connection and tears the session down in background' do
     WhatsappHybrid::Connection.create!(account: account, inbox: inbox, session_name: 'hybrid-5511999993846')
-    allow(client).to receive(:logout_session)
-    allow(client).to receive(:delete_session)
 
-    delete base, headers: admin.create_new_auth_token, as: :json
+    expect { delete base, headers: admin.create_new_auth_token, as: :json }
+      .to have_enqueued_job(WhatsappHybrid::TeardownSessionJob).with('hybrid-5511999993846')
 
     expect(response).to have_http_status(:no_content)
+    expect(WhatsappHybrid::Connection.count).to eq(0)
+  end
+
+  it 'tears the session down when the official inbox is deleted' do
+    WhatsappHybrid::Connection.create!(account: account, inbox: inbox, session_name: 'hybrid-5511999993846')
+    allow(channel).to receive(:teardown_webhooks)
+
+    expect { inbox.destroy! }.to have_enqueued_job(WhatsappHybrid::TeardownSessionJob).with('hybrid-5511999993846')
     expect(WhatsappHybrid::Connection.count).to eq(0)
   end
 end
