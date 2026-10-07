@@ -14,6 +14,8 @@ import {
 import { useMetaAdsLive } from '../useMetaAdsLive';
 import MetaAdsConfidence from './MetaAdsConfidence.vue';
 import MetaAdsAdDetail from './MetaAdsAdDetail.vue';
+import MetaAdsDailyAction from './MetaAdsDailyAction.vue';
+import MetaAdsQuoteMessage from './MetaAdsQuoteMessage.vue';
 
 // Anúncios da Meta (#1088, F3a): o painel do dia a dia do mockup aprovado. Uma frase com o dinheiro, a ação do
 // dia com o porquê, o caminho investido → conversas → propostas → vendas, cada anúncio por venda com o veredito
@@ -160,7 +162,11 @@ const path = computed(() => [
 ]);
 
 const ads = computed(() => panel.value?.ads || []);
-// Os três números de cada anúncio, lado a lado.
+// O link de imagem da Meta vence (o "oe=" da URL); imagem que não abre vira o quadro de reserva. Guarda o link
+// que falhou por anúncio: quando a renovação diária traz um link novo, a imagem volta sem recarregar a página.
+const brokenImages = ref({});
+// Os três números de cada anúncio: o investido numa linha, conversas e vendas lado a lado embaixo (em três
+// colunas o rótulo "Conversas" não cabe no cartão estreito).
 const adStats = ad => [
   { key: 'SPEND', value: fmt(ad.spend) },
   { key: 'CONVERSATIONS', value: ad.conversations },
@@ -178,11 +184,14 @@ const conversationLink = id =>
 
 const waitingFor = value => relativeTime(value, locale.value);
 
-const onAction = () => {
-  if (action.value.kind === 'stalled_quotes') {
+// O botão da ação do dia (pela regra ou pela IA, F4a): a IA pode apontar um anúncio para revisar.
+const onAction = ({ kind, adId }) => {
+  if (kind === 'stalled_quotes') {
     showStalled.value = !showStalled.value;
-  } else if (action.value.kind === 'fix_tracking') {
+  } else if (kind === 'fix_tracking') {
     emit('open', 3);
+  } else if (kind === 'review_ad' && adId) {
+    rememberAd(String(adId));
   }
 };
 
@@ -272,46 +281,18 @@ onMounted(() => live.start());
         >
           {{ headline }}
         </h3>
-        <div
-          data-panel-action
-          :data-action-kind="action.kind"
-          class="relative flex flex-col gap-4 p-4 rounded-lg sm:p-5 bg-white/[0.07] ring-1 ring-inset ring-white/10 sm:flex-row sm:items-center"
-        >
-          <p class="flex-1 m-0">
-            <span
-              class="block mb-1 text-[11px] font-520 uppercase tracking-[0.1em] text-white/60"
-            >
-              {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.TODAY') }}
-            </span>
-            <span class="block text-[15px] font-440 leading-relaxed text-white">
-              {{ actionText.text }}
-            </span>
-          </p>
-          <button
-            v-if="action.kind !== 'wait'"
-            type="button"
-            data-panel-action-button
-            class="px-4 text-sm font-520 bg-white border-0 rounded-lg min-h-11 text-[#0D2344] whitespace-nowrap hover:bg-n-blue-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
-            @click="onAction"
-          >
-            {{
-              $t(
-                `CRM_KANBAN.META_ADS_HUB.PANEL.ACTION.${action.kind.toUpperCase()}.BUTTON`,
-                { count: action.count },
-                action.count ?? 2
-              )
-            }}
-          </button>
-        </div>
-        <p
-          class="relative max-w-3xl m-0 text-[13px] font-420 leading-relaxed text-pretty text-white/65"
-        >
-          {{ actionText.why }}
-        </p>
+        <MetaAdsDailyAction
+          :action="action"
+          :rule-text="actionText"
+          :days="days"
+          @act="onAction"
+        />
       </div>
 
+      <!-- v-show: fechar a lista não apaga o que cada mensagem sugerida já fez (rascunho, "Enviada"). -->
       <div
-        v-if="showStalled && stalled.length"
+        v-if="stalled.length"
+        v-show="showStalled"
         data-panel-stalled
         class="flex flex-col gap-4 p-5 border border-solid rounded-xl border-n-weak bg-n-solid-1 sm:p-6"
       >
@@ -357,6 +338,7 @@ onMounted(() => live.start());
             >
               {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.OPEN_CONVERSATION') }}
             </router-link>
+            <MetaAdsQuoteMessage v-if="card.conversation_id" :card="card" />
           </li>
         </ul>
         <p
@@ -381,13 +363,13 @@ onMounted(() => live.start());
           {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.PATH_TITLE') }}
         </h4>
         <ol
-          class="grid grid-cols-2 p-0 m-0 list-none gap-y-6 gap-x-4 lg:grid-cols-4 lg:gap-x-0"
+          class="grid grid-cols-2 p-0 m-0 list-none gap-y-6 gap-x-4 xl:grid-cols-4 xl:gap-x-0"
         >
           <li
             v-for="step in path"
             :key="step.key"
             :data-panel-path="step.key"
-            class="flex flex-col gap-1.5 lg:px-6 lg:first:ps-0 lg:[&:not(:first-child)]:border-0 lg:[&:not(:first-child)]:border-s lg:[&:not(:first-child)]:border-solid lg:[&:not(:first-child)]:border-n-weak"
+            class="flex flex-col gap-1.5 xl:px-6 xl:first:ps-0 xl:[&:not(:first-child)]:border-0 xl:[&:not(:first-child)]:border-s xl:[&:not(:first-child)]:border-solid xl:[&:not(:first-child)]:border-n-weak"
           >
             <span
               class="font-interDisplay text-[30px] font-520 leading-none tracking-[-0.02em] tabular-nums"
@@ -463,12 +445,16 @@ onMounted(() => live.start());
           >
             <div class="flex justify-center bg-n-alpha-1">
               <img
-                v-if="ad.thumbnail_url"
+                v-if="
+                  ad.thumbnail_url &&
+                  brokenImages[ad.ad_id] !== ad.thumbnail_url
+                "
                 :src="ad.thumbnail_url"
                 :alt="ad.name || ''"
                 loading="lazy"
                 data-panel-ad-image
                 class="block object-contain w-full h-auto max-h-[32rem]"
+                @error="brokenImages[ad.ad_id] = ad.thumbnail_url"
               />
               <div
                 v-else
@@ -503,17 +489,14 @@ onMounted(() => live.start());
                   }}
                 </span>
               </div>
-              <dl
-                class="grid m-0 gap-x-3 gap-y-1 grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)_minmax(0,1fr)]"
-              >
+              <dl class="grid grid-cols-2 m-0 gap-x-3 gap-y-3">
                 <div
                   v-for="stat in adStats(ad)"
                   :key="stat.key"
                   class="flex flex-col gap-1 min-w-0"
+                  :class="{ 'col-span-2': stat.key === 'SPEND' }"
                 >
-                  <dt
-                    class="text-[11px] font-520 uppercase tracking-[0.06em] text-n-slate-10"
-                  >
+                  <dt class="text-xs font-440 text-n-slate-10">
                     {{
                       $t(`CRM_KANBAN.META_ADS_HUB.PANEL.AD_STATS.${stat.key}`)
                     }}

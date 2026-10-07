@@ -36,6 +36,7 @@ const mountSummary = async (connection = CONNECTION) => {
       stubs: {
         Button: { template: '<button><slot /></button>' },
         Dialog: true,
+        MetaAdsWhatsappReport: true,
         RouterLink: { template: '<a><slot /></a>' },
       },
     },

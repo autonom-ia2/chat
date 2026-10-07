@@ -110,6 +110,15 @@ describe('Anúncios da Meta · o anúncio por dentro (#1088, F3b)', () => {
     );
   });
 
+  it('swaps an image that does not load (expired Meta link) for the placeholder', async () => {
+    const wrapper = await mountDetail();
+
+    await wrapper.find('[data-ad-detail-image]').trigger('error');
+
+    expect(wrapper.find('[data-ad-detail-image]').exists()).toBe(false);
+    expect(wrapper.find('[data-ad-detail-placeholder]').exists()).toBe(true);
+  });
+
   it('shows the verdict, the tiles and the early reason with the meanwhile block', async () => {
     const wrapper = await mountDetail();
 

@@ -2279,6 +2279,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_08_100000) do
     t.datetime "insights_backfilled_at"
     t.string "ad_account_timezone"
     t.datetime "links_backfilled_at"
+    t.jsonb "whatsapp_report", default: {}, null: false
+    t.string "whatsapp_report_phone"
     t.index ["account_id"], name: "index_crm_meta_ads_connections_on_account_id", unique: true
     t.index ["ad_account_id"], name: "idx_crm_meta_ads_connections_partner_ad_account", unique: true, where: "((mode)::text = 'partner'::text)"
   end

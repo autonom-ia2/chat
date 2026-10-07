@@ -321,6 +321,14 @@ Rails.application.routes.draw do
               get :panel
               get :panel_ad
             end
+            # Anúncios da Meta F4 (#1100): ação do dia e mensagem sugerida pela IA; resumo e alerta no WhatsApp.
+            scope 'meta_ads_connection' do
+              post :daily_action, to: 'meta_ads_ai#daily_action'
+              post :quote_message, to: 'meta_ads_ai#quote_message'
+              get :whatsapp_report, to: 'meta_ads_whatsapp_reports#show'
+              patch :whatsapp_report, to: 'meta_ads_whatsapp_reports#update'
+              post 'whatsapp_report/test', to: 'meta_ads_whatsapp_reports#test_send'
+            end
             get 'conversations/card_stages', to: 'cards#card_stages'
             get 'conversations/:conversation_id/card', to: 'cards#by_conversation'
             get :kanban, to: 'kanban#index'

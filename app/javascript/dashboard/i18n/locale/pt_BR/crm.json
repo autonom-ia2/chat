@@ -2412,6 +2412,117 @@
         "QUOTES_TITLE": "Propostas deste anúncio",
         "QUOTES_EMPTY": "Nenhuma proposta deste anúncio neste período ainda.",
         "WON": "Vendida"
+      },
+      "AI": {
+        "DAILY": {
+          "BADGE": "Escrito pela IA",
+          "WRITING": "A IA está escrevendo…",
+          "AI_ERROR": "A IA não respondeu agora; esta é a ação pela regra.",
+          "FAILED": "Não foi possível falar com a IA agora; esta é a ação pela regra.",
+          "REVIEW_AD_BUTTON": "Ver o anúncio",
+          "WHY_LABEL": "Por quê:"
+        },
+        "QUOTE": {
+          "SUGGEST": "Sugerir mensagem",
+          "WRITING": "Escrevendo…",
+          "LABEL": "Mensagem sugerida — revise antes de enviar",
+          "SOURCE": "Porque o cliente disse: “{quote}”",
+          "SEND": "Enviar na conversa",
+          "SENT": "Mensagem enviada na conversa.",
+          "SENT_STATE": "Enviada",
+          "SEND_FAILED": "A mensagem não foi enviada. Tente de novo ou abra a conversa.",
+          "COPY": "Copiar",
+          "COPIED": "Mensagem copiada.",
+          "COPY_FAILED": "Não deu para copiar. Selecione o texto e copie à mão.",
+          "FAILED": "Não foi possível sugerir uma mensagem agora. Tente de novo daqui a pouco.",
+          "REASONS": {
+            "CLOSED": "O cliente já fechou o negócio. Não há o que retomar aqui.",
+            "DECLINED": "O cliente já disse que não. Melhor não insistir.",
+            "NOTHING_OPEN": "Não há nada em aberto para retomar nesta conversa.",
+            "WINDOW_CLOSED": "Já se passaram mais de 24 horas da última mensagem do cliente: o WhatsApp só aceita um modelo aprovado. Abra a conversa para enviar um.",
+            "AI_UNAVAILABLE": "A IA está desligada nesta conta.",
+            "CREDENTIALS_MISSING": "A IA ainda não foi configurada nesta conta.",
+            "AI_INVALID": "A IA não conseguiu escrever uma mensagem que combine com esta conversa. Abra a conversa para escrever a sua.",
+            "UNSAFE_CONTENT": "A conversa tem link, chave de pagamento ou contato que não veio da sua equipe. Por segurança, escreva esta mensagem você mesmo.",
+            "AI_ERROR": "A IA não respondeu agora. Tente de novo daqui a pouco."
+          }
+        }
+      },
+      "WHATSAPP_REPORT": {
+        "EYEBROW": "Resumo no WhatsApp",
+        "TITLE": "Receba os números dos anúncios no seu WhatsApp",
+        "HINT": "Uma mensagem por dia com o resultado de ontem, e um aviso quando um anúncio gastar sem trazer conversa. Vem desligado; você decide.",
+        "LOADING": "Carregando…",
+        "LOAD_ERROR": "Não foi possível carregar o resumo no WhatsApp.",
+        "RETRY": "Tentar de novo",
+        "SUMMARY_TOGGLE": "Resumo diário",
+        "SUMMARY_TOGGLE_HINT": "Todo dia às {time} ({zone}), com os números de ontem.",
+        "ALERT_TOGGLE": "Alerta de gasto sem conversa",
+        "ALERT_TOGGLE_HINT": "Às {time} ({zone}), quando um anúncio gastou hoje e não trouxe nenhuma conversa. No máximo 1 por dia.",
+        "ORIGIN_LABEL": "De qual número sai",
+        "ORIGIN_PLACEHOLDER": "Escolha um número conectado",
+        "ORIGIN_EMPTY": "Nenhum número de WhatsApp está conectado agora. Conecte um em Caixas de entrada para usar o resumo.",
+        "ORIGIN_GONE": "O número escolhido antes não está conectado agora. Escolha outro.",
+        "KIND": {
+          "WAHA": "WhatsApp API",
+          "WHATSAPP_CLOUD": "WhatsApp Oficial"
+        },
+        "KIND_HINT": {
+          "WAHA": "Envia texto simples. Para proteger o número, saem no máximo 2 mensagens por dia.",
+          "WHATSAPP_CLOUD": "O WhatsApp Oficial só envia com modelo aprovado pela Meta. Veja abaixo."
+        },
+        "PHONE_LABEL": "Número que recebe",
+        "PHONE_PLACEHOLDER": "(11) 99999-0000",
+        "PHONE_HINT": "Com DDD. Use o seu número, não o de um cliente.",
+        "REPLY_NOTE": "Se você responder a mensagem, ela aparece como conversa nessa caixa.",
+        "TEMPLATES": {
+          "TITLE": "Modelos da Meta",
+          "HINT": "Crie estes dois modelos no Gerenciador do WhatsApp, na categoria Utilidade e no idioma Português (BR). Enquanto um modelo não estiver aprovado, a mensagem dele não sai.",
+          "SUMMARY": "Resumo diário",
+          "ALERT": "Alerta",
+          "NAME": "Nome do modelo:",
+          "COPY_NAME": "Copiar nome",
+          "COPY_TEXT": "Copiar texto",
+          "COPIED": "Copiado.",
+          "COPY_FAILED": "Não deu para copiar. Selecione o texto e copie à mão.",
+          "BLOCKED": "Sem este modelo aprovado, nada é enviado.",
+          "STATUS": {
+            "APPROVED": "Aprovado",
+            "PENDING": "Em análise",
+            "REJECTED": "Recusado",
+            "MISSING": "Não criado"
+          }
+        },
+        "SAVE": "Salvar",
+        "SAVED": "Resumo no WhatsApp salvo.",
+        "DISCARD": "Descartar mudanças",
+        "TEST": "Enviar teste",
+        "TEST_HINT": "Envia agora o resumo de ontem, marcado como teste.",
+        "TEST_NEEDS_SAVE": "Salve o número que envia e o número que recebe antes de testar.",
+        "TEST_NEEDS_SAVE_CHANGES": "Salve ou descarte as mudanças antes de testar.",
+        "TEST_NEEDS_ORIGIN": "O número que envia não está conectado agora. Escolha outro e salve antes de testar.",
+        "TEST_SENT": "Teste enviado às {time}. Confira o seu WhatsApp.",
+        "HISTORY": {
+          "TITLE": "Últimos envios",
+          "SUMMARY": "Último resumo: {time}",
+          "ALERT": "Último alerta: {time}",
+          "NONE": "Nenhuma mensagem enviada ainda.",
+          "ERROR": "Último problema, {time}: {message}",
+          "NOTHING_TO_REPORT": "Ontem não teve gasto nem conversa, então nenhum resumo foi enviado ({time})."
+        },
+        "ERRORS": {
+          "INVALID_PHONE": "Este número não parece válido. Coloque o DDD e o número, por exemplo (11) 99999-0000.",
+          "PHONE_REQUIRED": "Informe o número que vai receber as mensagens.",
+          "ORIGIN_REQUIRED": "Escolha de qual número as mensagens saem.",
+          "INBOX_NOT_CONNECTED": "Este número não está conectado agora. Escolha outro.",
+          "TEMPLATE_NOT_APPROVED": "O WhatsApp Oficial só envia com o modelo aprovado pela Meta. Aprove o modelo ou escolha um número do WhatsApp API.",
+          "NOT_CONNECTED": "Conecte a Meta antes de ligar o resumo.",
+          "RATE_LIMITED": "Você já enviou 3 testes nesta hora. Tente mais tarde.",
+          "SEND_FAILED": "O WhatsApp não aceitou o envio. Confira a conexão do número que envia.",
+          "SEND_UNCERTAIN": "Não deu para confirmar se chegou. Confira o seu WhatsApp antes de tentar de novo.",
+          "WHATSAPP_NUMBER_NOT_FOUND": "Este número não tem WhatsApp.",
+          "GENERIC": "Não deu certo agora. Tente de novo."
+        }
       }
     }
   },
