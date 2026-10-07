@@ -2346,7 +2346,6 @@
         "ADS_TITLE": "Your ads, by sale",
         "ADS_EMPTY": "As soon as an ad spends or brings a conversation, it shows up here.",
         "AD_NO_NAME": "Unnamed ad",
-        "AD_LINE": "{spend} → {conversations} → {sales}",
         "AD_QUOTES": "1 open quote | {count} open quotes",
         "VERDICT": {
           "UP": "Increase · enough data",
@@ -2364,7 +2363,12 @@
         },
         "STALLED_MORE": "and {count} more in the CRM",
         "REACHED": "{share}% got there",
-        "SALES_VALUE": "· {value}"
+        "SALES_VALUE": "· {value}",
+        "AD_STATS": {
+          "SPEND": "Invested",
+          "CONVERSATIONS": "Conversations",
+          "SALES": "Sales"
+        }
       }
     }
   },

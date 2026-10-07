@@ -55,6 +55,14 @@ RSpec.describe Crm::MetaAds::NameResolver do
       expect(Crm::MetaAdObject.find_by(meta_object_id: ad_id).preview_url).to eq('https://fb.me/adspreview/abc')
     end
 
+    it 'prefere a imagem original do criativo à miniatura pequena (#1088)' do
+      body = ad_body(ad_id).merge(creative: { id: '9', image_url: 'https://scontent/capa-1080x1350.jpg',
+                                              thumbnail_url: 'https://scontent/64px.jpg' })
+      stub_meta_object(id: ad_id, fields: ad_fields, body: body)
+
+      expect(resolver.resolve([ad_id], type: 'ad')[ad_id]).to include(thumbnail_url: 'https://scontent/capa-1080x1350.jpg')
+    end
+
     it 'no modo parceiro só grava objeto da conta de anúncios conectada (#1047)' do
       AiProviderCredential.create!(provider: 'meta_ads', api_key: MetaAdsHelpers::TEST_TOKEN)
       channel = create(:channel_whatsapp, account: account, sync_templates: false, validate_provider_config: false)

@@ -166,6 +166,28 @@ describe('Anúncios da Meta · painel do dia a dia (#1088)', () => {
     expect(ad.find('[data-verdict]').text()).toContain('VERDICT.EARLY');
   });
 
+  it('shows the ad image in its own format, or a placeholder without one', async () => {
+    CrmMetaAdsConnectionAPI.panel.mockResolvedValue({
+      data: {
+        panel: {
+          ...PANEL,
+          ads: [
+            { ...PANEL.ads[0], thumbnail_url: 'https://scontent/capa.jpg' },
+            { ...PANEL.ads[0], ad_id: '2', thumbnail_url: null },
+          ],
+        },
+      },
+    });
+    const wrapper = await mountPanel();
+
+    const image = wrapper.find('[data-panel-ad="1"] [data-panel-ad-image]');
+    expect(image.attributes('src')).toBe('https://scontent/capa.jpg');
+    expect(image.classes()).toContain('h-auto');
+    expect(
+      wrapper.find('[data-panel-ad="2"] [data-panel-ad-placeholder]').exists()
+    ).toBe(true);
+  });
+
   it('changes the period and asks again', async () => {
     const wrapper = await mountPanel();
 

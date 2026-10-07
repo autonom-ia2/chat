@@ -32,6 +32,22 @@ conversa") → menos de 70% das conversas com anúncio identificado (leva ao pas
 faltam para o veredito) / tudo com veredito / sem dado. Cada uma traz o porquê com os números. A versão escrita
 pela IA é da F4.
 
+## Imagem do anúncio
+
+O cartão mostra o anúncio inteiro, no formato dele (quadrado, vertical ou horizontal), sem corte; sem imagem,
+um quadrado neutro. A imagem fica em `crm_meta_ad_objects.thumbnail_url`.
+
+- **De onde vem:** `Crm::MetaAds::AdImages` lê `act_X/ads` com `creative{id,image_url,thumbnail_url}` (até 10
+  páginas de 100). `image_url` é a imagem original. Anúncio em vídeo não tem: pede a miniatura do criativo em
+  1080 px, no máximo 30 vídeos por rodada. Só https. O `NameResolver` também prefere `image_url` à miniatura de
+  64 px quando busca o nome de um anúncio.
+- **O que não apaga:** nome ou imagem que a Meta não mandou mantêm o que a linha já tinha (`COALESCE`). A carga
+  não mexe em `fetched_at` nem na prévia: anúncio novo continua indo ao `NameResolver`, que traz a prévia.
+- **Quando renova:** `Crm::MetaAds::AdImagesJob`, uma vez por dia por conexão (chave no Redis de 24 h): na rodada
+  das 4h (`recent`) e na primeira abertura da tela no dia. Se a Meta recusa ou o job quebra, tenta de novo depois de
+  30 min. Conta pausada por limite de uso não enfileira; token recusado ou acesso perdido seguem a regra da coleta
+  (`Insights::Failure`).
+
 ## Fora (F3b e F4)
 
 Anúncio por dentro (F3b). IA na ação do dia, mensagem sugerida, resumo das 8h e alertas no WhatsApp (F4).

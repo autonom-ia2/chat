@@ -2347,7 +2347,6 @@
         "ADS_TITLE": "Seus anúncios, por venda",
         "ADS_EMPTY": "Assim que um anúncio gastar ou trouxer conversa, ele aparece aqui.",
         "AD_NO_NAME": "Anúncio sem nome",
-        "AD_LINE": "{spend} → {conversations} → {sales}",
         "AD_QUOTES": "1 proposta aberta | {count} propostas abertas",
         "VERDICT": {
           "UP": "Aumentar · base suficiente",
@@ -2365,7 +2364,12 @@
         },
         "STALLED_MORE": "e mais {count} no CRM",
         "REACHED": "{share}% chegaram",
-        "SALES_VALUE": "· {value}"
+        "SALES_VALUE": "· {value}",
+        "AD_STATS": {
+          "SPEND": "Investido",
+          "CONVERSATIONS": "Conversas",
+          "SALES": "Vendas"
+        }
       }
     }
   },

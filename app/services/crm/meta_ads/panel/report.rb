@@ -58,7 +58,9 @@ class Crm::MetaAds::Panel::Report
   def sales_totals
     sales = cohort.cards.select(&:sale?)
     value = sales.sum(&:value)
-    { sales: sales.size, sales_value: value.round(2), cost_per_sale: ratio(total_spend, sales.size), return_per_real: ratio(value, total_spend) }
+    # Sem venda não há retorno a mostrar: "voltou R$ 0" lê como prejuízo antes da hora.
+    { sales: sales.size, sales_value: value.round(2), cost_per_sale: ratio(total_spend, sales.size),
+      return_per_real: sales.any? ? ratio(value, total_spend) : nil }
   end
 
   def total_spend

@@ -150,6 +150,12 @@ const VERDICTS = {
 };
 
 const ads = computed(() => panel.value?.ads || []);
+// Os três números de cada anúncio, lado a lado.
+const adStats = ad => [
+  { key: 'SPEND', value: fmt(ad.spend) },
+  { key: 'CONVERSATIONS', value: ad.conversations },
+  { key: 'SALES', value: ad.sales },
+];
 const stalled = computed(() =>
   action.value.kind === 'stalled_quotes' ? action.value.cards || [] : []
 );
@@ -429,53 +435,79 @@ onMounted(() => live.start());
         </p>
         <ul
           v-else
-          class="grid gap-4 p-0 m-0 list-none sm:grid-cols-2 xl:grid-cols-3"
+          class="grid items-start gap-5 p-0 m-0 list-none sm:grid-cols-2 xl:grid-cols-3"
         >
           <li
             v-for="(ad, index) in ads"
             :key="ad.ad_id"
             :data-panel-ad="ad.ad_id"
-            class="flex flex-col overflow-hidden border border-solid rounded-lg border-n-weak"
+            class="flex flex-col overflow-hidden border border-solid rounded-lg border-n-weak bg-n-solid-1"
           >
-            <div
-              class="relative flex items-end h-20 px-4 py-3 bg-gradient-to-br"
-              :class="THUMBS[index % THUMBS.length]"
-            >
+            <div class="flex justify-center bg-n-alpha-1">
               <img
                 v-if="ad.thumbnail_url"
                 :src="ad.thumbnail_url"
-                alt=""
+                :alt="ad.name || ''"
                 loading="lazy"
-                class="absolute inset-0 object-cover size-full"
+                data-panel-ad-image
+                class="block object-contain w-full h-auto max-h-[32rem]"
               />
-              <span
-                class="relative text-[13px] font-520 text-white truncate drop-shadow"
+              <div
+                v-else
+                data-panel-ad-placeholder
+                class="grid w-full aspect-square place-items-center bg-gradient-to-br"
+                :class="THUMBS[index % THUMBS.length]"
               >
-                {{ ad.name || $t('CRM_KANBAN.META_ADS_HUB.PANEL.AD_NO_NAME') }}
-              </span>
+                <span
+                  class="i-lucide-image size-8 text-white/50"
+                  aria-hidden="true"
+                />
+              </div>
             </div>
-            <div class="flex flex-col gap-2 p-4">
-              <span
-                :data-verdict="ad.verdict"
-                class="px-2 py-0.5 text-[11px] font-520 uppercase tracking-[0.06em] rounded w-fit"
-                :class="VERDICTS[ad.verdict]"
+            <div class="flex flex-col gap-4 p-4">
+              <div class="flex items-start justify-between gap-3">
+                <span
+                  class="text-sm font-520 leading-snug text-n-slate-12 line-clamp-2"
+                >
+                  {{
+                    ad.name || $t('CRM_KANBAN.META_ADS_HUB.PANEL.AD_NO_NAME')
+                  }}
+                </span>
+                <span
+                  :data-verdict="ad.verdict"
+                  class="flex-none px-2 py-0.5 text-[11px] font-520 uppercase tracking-[0.06em] rounded whitespace-nowrap"
+                  :class="VERDICTS[ad.verdict]"
+                >
+                  {{
+                    $t(
+                      `CRM_KANBAN.META_ADS_HUB.PANEL.VERDICT.${ad.verdict.toUpperCase()}`
+                    )
+                  }}
+                </span>
+              </div>
+              <dl
+                class="grid m-0 gap-x-3 gap-y-1 grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)_minmax(0,1fr)]"
               >
-                {{
-                  $t(
-                    `CRM_KANBAN.META_ADS_HUB.PANEL.VERDICT.${ad.verdict.toUpperCase()}`
-                  )
-                }}
-              </span>
-              <span class="text-sm font-440 tabular-nums text-n-slate-12">
-                {{
-                  $t('CRM_KANBAN.META_ADS_HUB.PANEL.AD_LINE', {
-                    spend: fmt(ad.spend),
-                    conversations: counted('CONVERSATIONS', ad.conversations),
-                    sales: counted('SALES', ad.sales),
-                  })
-                }}
-              </span>
-              <span class="text-xs font-420 tabular-nums text-n-slate-10">
+                <div
+                  v-for="stat in adStats(ad)"
+                  :key="stat.key"
+                  class="flex flex-col gap-1 min-w-0"
+                >
+                  <dt
+                    class="text-[11px] font-520 uppercase tracking-[0.06em] text-n-slate-10"
+                  >
+                    {{
+                      $t(`CRM_KANBAN.META_ADS_HUB.PANEL.AD_STATS.${stat.key}`)
+                    }}
+                  </dt>
+                  <dd
+                    class="m-0 text-base whitespace-nowrap font-interDisplay font-520 tabular-nums text-n-slate-12"
+                  >
+                    {{ stat.value }}
+                  </dd>
+                </div>
+              </dl>
+              <p class="m-0 text-xs font-420 tabular-nums text-n-slate-10">
                 {{
                   ad.cost_per_sale != null
                     ? $t('CRM_KANBAN.META_ADS_HUB.PANEL.PER_SALE', {
@@ -487,7 +519,7 @@ onMounted(() => live.start());
                         ad.quotes
                       )
                 }}
-              </span>
+              </p>
             </div>
           </li>
         </ul>
