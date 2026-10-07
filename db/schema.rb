@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_10_07_235900) do
+ActiveRecord::Schema[7.2].define(version: 2026_10_08_100000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1678,6 +1678,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_07_235900) do
     t.datetime "opted_out_at"
     t.string "opt_out_source"
     t.bigint "opted_out_by_id"
+    t.index "account_id, lower((custom_attributes ->> 'waha_whatsapp_chat_id'::text))", name: "idx_contacts_account_lower_waha_whatsapp_chat_id"
+    t.index "account_id, lower((custom_attributes ->> 'waha_whatsapp_jid'::text))", name: "idx_contacts_account_lower_waha_whatsapp_jid"
+    t.index "account_id, lower((custom_attributes ->> 'waha_whatsapp_lid'::text))", name: "idx_contacts_account_lower_waha_whatsapp_lid"
+    t.index "account_id, lower((identifier)::text)", name: "idx_contacts_account_lower_identifier"
     t.index "lower((email)::text), account_id", name: "index_contacts_on_lower_email_account_id"
     t.index ["account_id", "contact_type"], name: "index_contacts_on_account_id_and_contact_type"
     t.index ["account_id", "email", "phone_number", "identifier"], name: "index_contacts_on_nonempty_fields", where: "(((email)::text <> ''::text) OR ((phone_number)::text <> ''::text) OR ((identifier)::text <> ''::text))"
