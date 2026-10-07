@@ -34,3 +34,7 @@ Validação final desta correção:290 testes Node aprovados, zero falhas/skips/
 Nexo-revisao PID65637 aprovou o diff de classificação antecipada, sem bloqueador estático; os dois casos negativos POST foram acrescentados após o parecer, sem nova alteração do código funcional. Iris-carga40282, Atlas-latencia40283 e Argos-guard40284 também concluíram revisões focais locais, todos exit0. Esses pareceres não representam homologação de produção.
 Uma consulta real somente de bootstrap, após a retomada, retornou configuração completa em19.002ms às09:38:49UTC, sem ponteiro de sessão; um resultado isolado não comprova estabilidade do transporte.
 As novas tentativas de diagnóstico com navegador e de disponibilização de uma variante limitada aos metadados públicos foram recusadas pela ferramenta. Nenhuma delas forneceu um novo resultado operacional. Não houve publicação, novo pedido de reconexão nem reinício da VPS nesta etapa. A captura completa e a ativação continuam pendentes.
+
+## Handoff consolidado de 07/10
+
+A evidência posterior de09:52UTC identificou o documento compilado inicial como query; falta sua resposta e a sequência até papéis/publicação. Comentários anteriores de que esse documento ainda era desconhecido estão superados. O estado, a cópia sanitizada do recibo, o mapa dos arquivos e as pendências estão em `../runbooks/instagram-assisted-codex-handoff.md` e `995-handoff-evidence-20261007.json`. A revisão GitHub/worktree desta entrega não foi nova homologação da VPS. Nenhuma alteração funcional foi feita nesta consolidação.

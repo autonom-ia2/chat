@@ -167,3 +167,7 @@ no editor legado. `pnpm relationships:check` verifica ASTs contra a base aprovad
 os testes. Executar com Ruby/Bundler do projeto via rbenv. Datas e confirmações por chave
 são compartilhadas entre superfícies. Mídias de empresas cobrem arquivos armazenados de
 conversas autorizadas, incluindo notas; anexos externos permanecem na origem.
+
+## Instagram assistido — continuidade operacional
+
+Estado consolidado e ponto de retomada: [handoff para o Codex](docs/runbooks/instagram-assisted-codex-handoff.md). A [mensagem inicial](docs/runbooks/instagram-assisted-codex-start.md) indica o workspace e o próximo teste; o [manifesto de evidências](docs/audit/995-handoff-evidence-20261007.json) separa observações históricas de verificações atuais. A #995 continua aberta e a #1112 é uma correção parcial, não liberação do assistido.

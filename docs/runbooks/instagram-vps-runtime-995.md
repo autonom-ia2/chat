@@ -1,5 +1,8 @@
 # Runtime Instagram na VPS — #995
 
+> **Retomada em 07/10/2026:** leia [o handoff consolidado](instagram-assisted-codex-handoff.md) antes dos comandos históricos abaixo. A #1089 já foi instalada e os sete serviços retomados; a resposta da consulta inicial e o aceite do assistido ainda estão pendentes.
+
+
 A instalação do runtime e a publicação HTTPS privada foram aprovadas por Rodrigo
 no escopo da [issue #995](https://github.com/autonom-ia2/chat/issues/995).
 A aprovação não comprova execução ou homologação: registrar cada etapa concluída
