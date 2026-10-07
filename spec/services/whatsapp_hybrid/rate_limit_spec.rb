@@ -66,6 +66,15 @@ describe WhatsappHybrid::RateLimit do
     end
   end
 
+  describe 'hybrid inbox flag when Redis is unavailable' do
+    it 'answers from the database instead of breaking the conversation list' do
+      connection
+      allow(Redis::Alfred).to receive(:get).and_raise(Redis::CannotConnectError)
+
+      expect(WhatsappHybrid::Config.hybrid_inbox?(inbox.id)).to be(true)
+    end
+  end
+
   describe 'hybrid inbox flag' do
     it 'answers from cache and forgets it when the connection is created' do
       expect(WhatsappHybrid::Config.hybrid_inbox?(inbox.id)).to be(false)

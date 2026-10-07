@@ -31,6 +31,10 @@ module WhatsappHybrid::Config
     present = WhatsappHybrid::Connection.exists?(inbox_id: inbox_id)
     ::Redis::Alfred.setex(inbox_flag_key(inbox_id), present ? '1' : '0', INBOX_FLAG_TTL)
     present
+  rescue Redis::BaseError => e
+    # A lista de conversas de todas as contas passa por aqui: sem o cache, responde do banco em vez de quebrar.
+    Rails.logger.warn("[whatsapp_hybrid] inbox flag cache unavailable: #{e.class}")
+    WhatsappHybrid::Connection.exists?(inbox_id: inbox_id)
   end
 
   def forget_inbox(inbox_id)
