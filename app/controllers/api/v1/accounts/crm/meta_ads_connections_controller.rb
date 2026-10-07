@@ -18,13 +18,16 @@
 # POST  insights → último dia lido da conta de anúncios; pede a leitura de hoje se tiver mais de 5 minutos.
 #                  O fim da leitura chega pelo canal de tempo real (crm.meta_ads.insights_updated).
 #
+# Painel (#1088):
+# GET   panel?days=7|30 → o painel do dia a dia (Crm::MetaAds::Panel::Report); também pede a leitura de hoje.
+#
 # Quem não é administrador recebe 403 (não 401: a sessão é válida, só falta a permissão).
 class Api::V1::Accounts::Crm::MetaAdsConnectionsController < Api::V1::Accounts::Crm::BaseController
   include DeferInteractiveAi
 
   # Tokens da Meta têm algumas centenas de caracteres; o teto barra corpos absurdos antes da Graph.
   MAX_TOKEN_LENGTH = 2048
-  READ_ACTIONS = %w[show ad_accounts pixels funnels insights].freeze
+  READ_ACTIONS = %w[show ad_accounts pixels funnels insights panel].freeze
 
   before_action :ensure_administrator
   before_action :ensure_mode, only: [:ad_accounts, :pixels, :selection]
@@ -58,6 +61,15 @@ class Api::V1::Accounts::Crm::MetaAdsConnectionsController < Api::V1::Accounts::
 
     refreshing = ::Crm::MetaAds::Insights::Refresh.request!(connection)
     render json: { insights: ::Crm::MetaAds::Insights::Summary.payload(connection, refreshing: refreshing) }
+  end
+
+  def panel
+    connection = current_connection
+    return render json: { panel: nil } if connection.blank? || connection.ad_account_id.blank?
+
+    refreshing = ::Crm::MetaAds::Insights::Refresh.request!(connection)
+    report = ::Crm::MetaAds::Panel::Report.new(connection, days: params[:days]).payload
+    render json: { panel: report.merge(synced_at: connection.reload.insights_synced_at, refreshing: refreshing) }
   end
 
   def ad_accounts

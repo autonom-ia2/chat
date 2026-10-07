@@ -2209,7 +2209,7 @@
         "NEXT_PANEL": "Next step: a dashboard with what each sale cost, ad by ad.",
         "SPEND_TODAY": "Spent today",
         "SPEND_ON": "Spent on {date}",
-        "SPEND_CONVERSATIONS": "{count} conversations from ads today",
+        "SPEND_CONVERSATIONS": "1 conversation from ads today | {count} conversations from ads today",
         "SPEND_UPDATED": "updated {time}",
         "SPEND_REFRESHING": "updating…",
         "SPEND_EMPTY": "Ad spend shows up here after the first read from Meta.",
@@ -2217,7 +2217,7 @@
         "SPEND_BACKFILLING": "Fetching the last 90 days from Meta…",
         "CONFIDENCE": {
           "TITLE": "How much to trust the numbers",
-          "TOTAL": "In the last {days} days, {count} conversations came from Meta ads. This is how well we know which ad brought each one:",
+          "TOTAL": "In the last {days} days, 1 conversation came from Meta ads. This is how well we know which ad brought it: | In the last {days} days, {count} conversations came from Meta ads. This is how well we know which ad brought each one:",
           "EMPTY": "As soon as conversations arrive from ads, we show here which ad brought each one.",
           "AD": "Exact ad",
           "AD_NAME": "Ad found by its name",
@@ -2294,6 +2294,77 @@
         "FINISH": "Finish",
         "LATER": "Not now",
         "BEFORE": "Before: {value}"
+      },
+      "PANEL": {
+        "TABS": {
+          "RESULT": "Results",
+          "CONNECTION": "Connection",
+          "LABEL": "What to see"
+        },
+        "HEADLINE": "You invested {spend}. {conversations} and {sales} came in.",
+        "PERIOD": "{days} days",
+        "PERIOD_LABEL": "Period",
+        "PERIOD_CTX": "Last {days} days",
+        "PERIOD_HINT": "What happened to the people who came from ads in the last {days} days.",
+        "TODAY": "What to do today",
+        "SEVERAL_ADS": "several ads",
+        "ACTION": {
+          "STALLED_QUOTES": {
+            "TEXT": "1 quote from ads has been stalled for more than {days} days. It came from \"{ad}\". | {count} quotes from ads have been stalled for more than {days} days. Most came from \"{ad}\".",
+            "WHY": "Why: they add up to {value} in negotiation. Following up with someone who asked for a quote costs less than advertising again.",
+            "BUTTON": "See the quote | See the {count} quotes"
+          },
+          "FIX_TRACKING": {
+            "TEXT": "We do not know which ad brought 1 conversation. | We do not know which ad brought {unknown} conversations.",
+            "WHY": "Why: without the ad, the cost per sale of each one is wrong. Of the {conversations} conversations from ads in the last 30 days, {unknown} have no ad.",
+            "BUTTON": "Fix it in step 3"
+          },
+          "WAIT": {
+            "TEXT": "Nothing to fix now. Keep your ads as they are.",
+            "WHY": "Why: an ad only gets a verdict after 20 conversations. The one that brought the most so far, \"{ad}\", needs {missing} more."
+          },
+          "ON_TRACK": {
+            "TEXT": "Nothing stalled. See the verdict of each ad below.",
+            "WHY": "Why: your ads already have enough conversations to compare the cost of each sale."
+          },
+          "NO_DATA": {
+            "TEXT": "There is no ad spend or conversation in this period yet.",
+            "WHY": "Why: the numbers show up as soon as an ad spends or brings the first conversation."
+          }
+        },
+        "PATH_TITLE": "Where your money went",
+        "PATH": {
+          "SPEND": "invested",
+          "CONVERSATIONS": "conversation | conversations",
+          "QUOTES": "quote | quotes",
+          "SALES": "sale | sales"
+        },
+        "EACH": "{value} each",
+        "PER_SALE": "{value} per sale",
+        "RETURN": "Each R$ 1 invested returned {value}",
+        "OPEN_QUOTES": "Sales on the way: 1 open quote | Sales on the way: {count} open quotes",
+        "ADS_TITLE": "Your ads, by sale",
+        "ADS_EMPTY": "As soon as an ad spends or brings a conversation, it shows up here.",
+        "AD_NO_NAME": "Unnamed ad",
+        "AD_LINE": "{spend} → {conversations} → {sales}",
+        "AD_QUOTES": "1 open quote | {count} open quotes",
+        "VERDICT": {
+          "UP": "Increase · enough data",
+          "KEEP": "Keep",
+          "SIGNAL": "Early signal",
+          "REVIEW": "Review the ad",
+          "EARLY": "Too early"
+        },
+        "STALLED_TITLE": "1 stalled quote | {count} stalled quotes",
+        "STALLED_SINCE": "No reply {time}",
+        "OPEN_CONVERSATION": "Open conversation",
+        "COUNT": {
+          "CONVERSATIONS": "{n} conversation | {n} conversations",
+          "SALES": "{n} sale | {n} sales"
+        },
+        "STALLED_MORE": "and {count} more in the CRM",
+        "REACHED": "{share}% got there",
+        "SALES_VALUE": "· {value}"
       }
     }
   },
