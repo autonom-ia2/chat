@@ -229,6 +229,11 @@ gem 'rubyzip', '~> 2.3', require: 'zip' # docx (Zip::File) + dep do roo
 gem 'mini_magick', '~> 4.12'
 gem 'rtesseract', '~> 3.1'
 
+##-- autonomia: importar modelo de e-mail (#1099) --##
+# Leva as regras de <style> para dentro das tags antes de converter o HTML importado em MJML. Ruby-puro;
+# usado sempre com import: false (nunca segue @import pela rede).
+gem 'css_parser', '~> 3.2'
+
 ### Gems required only in specific deployment environments ###
 ##############################################################
 

@@ -188,6 +188,10 @@ GEM
     cronex (0.15.0)
       tzinfo
       unicode (>= 0.4.4.5)
+    css_parser (3.2.0)
+      addressable
+      base64
+      ssrf_filter (~> 1.5)
     csv (3.3.0)
     csv-safe (3.3.1)
       csv (~> 3.0)
@@ -1098,6 +1102,7 @@ DEPENDENCIES
   cld3 (~> 3.7)
   climate_control
   commonmarker
+  css_parser (~> 3.2)
   csv-safe
   database_cleaner
   datadog (~> 2.0)

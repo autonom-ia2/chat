@@ -4,6 +4,10 @@
 # described images served by the installation (<= 200 KB), HTML under Gmail's 102 KB clip, and placeholders
 # every campaign can fill. Wired to the seed library (spec/services/email_campaigns/quality_gate_library_spec.rb);
 # built to run after AI generation too. Parses with Nokogiri and plain string methods — no regex.
+#
+# On the server, without Node (template import, #1099), it runs on the MJML alone: html: nil skips the checks that need
+# the compiled HTML and estimates its size (EstimatedSize); remote_images: true accepts absolute web images that the
+# import copies afterwards (RemoteImage), still demanding a description.
 class EmailCampaigns::QualityGate
   include Css
 
@@ -14,7 +18,6 @@ class EmailCampaigns::QualityGate
     mj-text mj-image mj-button mj-divider mj-spacer mj-social mj-social-element
   ].freeze
   INLINE_TAGS = %w[a br strong b em span].freeze
-  CONTAINERS = %w[mj-group mj-section mj-wrapper mj-body].freeze
   FONT = 'arial'.freeze
   UNSUBSCRIBE = 'unsubscribe_url'.freeze
   UNSUBSCRIBE_HREF = '{{ unsubscribe_url }}'.freeze
@@ -33,7 +36,6 @@ class EmailCampaigns::QualityGate
   DEFAULT_BUTTON_BACKGROUND = '#414141'.freeze
   DEFAULT_INNER_PADDING = '10px 25px'.freeze
   DEFAULT_BUTTON_LINE_HEIGHT = '120%'.freeze
-  DEFAULT_BACKGROUND = '#ffffff'.freeze
 
   def self.locked_footers(mjml)
     footer_sections(Nokogiri::HTML5.fragment(mjml.to_s)).map(&:to_html)
@@ -43,13 +45,14 @@ class EmailCampaigns::QualityGate
     doc.css('mj-section, mj-wrapper').select { |node| node['css-class'].to_s.split.include?('footer-locked') }
   end
 
-  def initialize(mjml:, html:, compile_errors: [], public_root: Rails.public_path,
-                 placeholders: EmailCampaigns::TemplateValidator::DEFAULT_KEYS)
+  def initialize(mjml:, html: nil, compile_errors: [], public_root: Rails.public_path, # rubocop:disable Metrics/ParameterLists
+                 placeholders: EmailCampaigns::TemplateValidator::DEFAULT_KEYS, remote_images: false)
     @mjml = mjml.to_s
-    @html = html.to_s
+    @html = html&.to_s
     @compile_errors = compile_errors
     @public_root = Pathname.new(public_root).expand_path
     @placeholders = placeholders
+    @remote_images = remote_images
     @doc = Nokogiri::HTML5.fragment(@mjml)
   end
 
@@ -62,8 +65,12 @@ class EmailCampaigns::QualityGate
     check_buttons
     check_images
     check_placeholders
-    add(:html_size, "#{@html.bytesize} bytes") if @html.bytesize > MAX_HTML_BYTES
+    add(:html_size, "#{html_bytes} bytes#{' (estimated)' if @html.nil?}") if html_bytes > MAX_HTML_BYTES
     @violations
+  end
+
+  def html_bytes
+    @html_bytes ||= @html.nil? ? EstimatedSize.bytes(@mjml) : @html.bytesize
   end
 
   private
@@ -105,6 +112,10 @@ class EmailCampaigns::QualityGate
     unless footers.size == 1 && links.size == 1 && in_footer == 1 && placeholder_uses == 1
       add(:unsubscribe, "#{footers.size} footer-locked, #{links.size} unsubscribe link(s), #{in_footer} in the footer")
     end
+    check_compiled_unsubscribe unless @html.nil?
+  end
+
+  def check_compiled_unsubscribe
     html_links = unsubscribe_links(Nokogiri::HTML5(@html)).size
     add(:unsubscribe, "#{html_links} unsubscribe link(s) in the compiled HTML") unless html_links == 1
   end
@@ -168,7 +179,7 @@ class EmailCampaigns::QualityGate
     @doc.css('mj-image').each do |image|
       src = image['src'].to_s
       add(:image_alt, src) if image['alt'].to_s.strip.empty?
-      problem = LocalImage.problem(src, @public_root)
+      problem = (@remote_images ? RemoteImage : LocalImage).problem(src, @public_root)
       add(:local_images, "#{src}: #{problem}") if problem
     end
   end
@@ -182,12 +193,7 @@ class EmailCampaigns::QualityGate
   end
 
   def background_of(node)
-    node.ancestors.each do |parent|
-      color = parent['inner-background-color'] || parent['background-color'] if parent.name == 'mj-column'
-      color = parent['background-color'] if CONTAINERS.include?(parent.name)
-      return color if color.present?
-    end
-    DEFAULT_BACKGROUND
+    Background.of(node)
   end
 
   def in_footer?(node)

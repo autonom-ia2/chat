@@ -1,0 +1,104 @@
+<!-- Fixture "estilo Mailjet": o Passport exporta MJML (não HTML). Vem com componentes que o nosso
+     editor não edita (mj-hero, mj-navbar, mj-raw, mj-table, mj-accordion), mj-attributes/mj-class,
+     mj-include e variáveis da Mailjet: [[data:firstname:""]] (marketing) e {{var:empresa:""}} (transacional),
+     [[UNSUB_LINK_PT]] e [[PERMALINK]]. A extensão .html é proposital: o usuário cola "o HTML" sem saber que é MJML. -->
+<mjml lang="pt-BR">
+  <mj-head>
+    <mj-title>Agenda de outubro</mj-title>
+    <mj-preview>Os horários do mês já estão abertos</mj-preview>
+    <mj-font name="Roboto" href="https://fonts.example-fonts.com/css?family=Roboto:400,700" />
+    <mj-attributes>
+      <mj-all font-family="Roboto, Helvetica, Arial, sans-serif" />
+      <mj-text font-size="15px" color="#3C3C3C" line-height="22px" />
+      <mj-class name="destaque" color="#E2483D" font-weight="700" />
+      <mj-button background-color="#E2483D" border-radius="3px" font-size="13px" inner-padding="8px 16px" />
+    </mj-attributes>
+    <mj-style inline="inline">
+      .borda-suave { border:1px solid #EEEEEE; }
+    </mj-style>
+    <mj-style>
+      @media only screen and (max-width:480px) { .so-mobile { display:block !important; } }
+    </mj-style>
+    <mj-include path="./cabecalho-compartilhado.mjml" />
+  </mj-head>
+  <mj-body background-color="#F2F2F2" width="600px">
+    <mj-section padding="8px 0">
+      <mj-column>
+        <mj-text align="right" font-size="11px" color="#9B9B9B">
+          <a href="[[PERMALINK]]" style="color:#9B9B9B;">Ver versão online</a>
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-navbar base-url="https://exemplo-clinica.example.com" hamburger="hamburger" ico-color="#3C3C3C">
+      <mj-navbar-link href="/servicos" color="#3C3C3C">Serviços</mj-navbar-link>
+      <mj-navbar-link href="/agenda" color="#3C3C3C">Agenda</mj-navbar-link>
+      <mj-navbar-link href="/contato" color="#3C3C3C">Contato</mj-navbar-link>
+    </mj-navbar>
+
+    <mj-hero mode="fixed-height" height="300px" background-width="600px" background-height="300px"
+             background-url="https://xxxxx.mjt.lu.example.com/img/abc123/hero.jpg" background-color="#2A3448" padding="80px 24px">
+      <mj-text align="center" color="#FFFFFF" font-size="30px" line-height="38px">
+        Olá, [[data:firstname:"cliente"]]
+      </mj-text>
+      <mj-button href="https://exemplo-clinica.example.com/agenda?utm_source=mailjet">Agendar agora</mj-button>
+    </mj-hero>
+
+    <mj-wrapper background-color="#FFFFFF" padding="24px 0" css-class="borda-suave">
+      <mj-section>
+        <mj-column>
+          <mj-text>
+            <p>Reservamos horários especiais para {{var:empresa:"a sua empresa"}}.</p>
+            <p mj-class="destaque">Vagas limitadas.</p>
+          </mj-text>
+          <mj-table font-size="14px" cellpadding="6px">
+            <tr style="border-bottom:1px solid #EEEEEE;text-align:left;">
+              <th>Dia</th><th>Horário</th><th>Vagas</th>
+            </tr>
+            <tr><td>Segunda</td><td>9h</td><td>3</td></tr>
+            <tr><td>Quarta</td><td>14h</td><td>5</td></tr>
+          </mj-table>
+        </mj-column>
+      </mj-section>
+      <mj-section>
+        <mj-group>
+          <mj-column>
+            <mj-image src="https://xxxxx.mjt.lu.example.com/img/abc123/sala-1.jpg" alt="Sala de atendimento" />
+          </mj-column>
+          <mj-column>
+            <mj-image src="https://xxxxx.mjt.lu.example.com/img/abc123/sala-2.jpg" alt="" />
+          </mj-column>
+        </mj-group>
+      </mj-section>
+      <mj-section>
+        <mj-column>
+          <mj-accordion>
+            <mj-accordion-element>
+              <mj-accordion-title>Preciso levar algo?</mj-accordion-title>
+              <mj-accordion-text>Apenas um documento com foto.</mj-accordion-text>
+            </mj-accordion-element>
+          </mj-accordion>
+          <mj-raw>
+            <!-- htmlmin:ignore --><div style="font-size:12px;color:#BBBBBB;" onclick="alert(1)">Bloco cru vindo de outro sistema</div><!-- htmlmin:ignore -->
+          </mj-raw>
+          <mj-spacer height="16px" />
+          <mj-button href="https://exemplo-clinica.example.com/agenda" font-size="12px">Ver agenda completa</mj-button>
+        </mj-column>
+      </mj-section>
+    </mj-wrapper>
+
+    <mj-section>
+      <mj-column>
+        <mj-social font-size="12px" icon-size="20px" mode="horizontal">
+          <mj-social-element name="facebook" href="https://social.example.com/clinica">Página</mj-social-element>
+          <mj-social-element name="instagram" href="https://social2.example.com/clinica">Fotos</mj-social-element>
+        </mj-social>
+        <mj-text align="center" font-size="11px" color="#9B9B9B">
+          Exemplo Clínica · Av. Exemplo, 50 · Cidade/UF<br />
+          Este e-mail foi enviado para [[EMAIL_TO]].
+          <a href="[[UNSUB_LINK_PT]]" style="color:#9B9B9B;">Cancelar inscrição</a>
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>

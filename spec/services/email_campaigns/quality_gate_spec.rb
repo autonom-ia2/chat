@@ -117,6 +117,35 @@ RSpec.describe EmailCampaigns::QualityGate, :aggregate_failures do
     expect(checks(template(text(%(#{font} font-size="16px" color="#1f2937"), '{{ contact.email }}')))).not_to include(:placeholders)
   end
 
+  describe 'on the MJML alone, as the server checks an import (#1099)' do
+    def mjml_checks(mjml, **)
+      described_class.new(mjml: mjml, public_root: public_root, **).violations.map(&:check)
+    end
+
+    it 'runs every rule it can read from the MJML without compiled HTML' do
+      expect(mjml_checks(template(text))).to be_empty
+      expect(mjml_checks(template(text, ''))).to include(:unsubscribe)
+      expect(mjml_checks(template(text(%(#{font} font-size="12px" color="#9ca3af"))))).to include(:font_size, :contrast)
+    end
+
+    it 'estimates the compiled size from the MJML to warn before Gmail clips the message' do
+      long = text(%(#{font} font-size="16px" color="#1f2937"), 'x' * 110 * 1024)
+
+      expect(mjml_checks(template(long))).to include(:html_size)
+      expect(EmailCampaigns::QualityGate::EstimatedSize.bytes(template(text))).to be_between(2_000, 20_000)
+    end
+
+    it 'accepts absolute web images the import will copy, still demanding a description' do
+      web = %(#{text}<mj-image src="https://cdn.exemplo.com/a.jpg" alt="Foto"></mj-image>)
+
+      expect(mjml_checks(template(web), remote_images: true)).to be_empty
+      expect(mjml_checks(template(web))).to include(:local_images)
+      expect(mjml_checks(template(%(#{text}<mj-image src="javascript:x" alt="Foto"></mj-image>)), remote_images: true)).to include(:local_images)
+      expect(mjml_checks(template(%(#{text}<mj-image src="https://cdn.exemplo.com/a.jpg"></mj-image>)), remote_images: true))
+        .to include(:image_alt)
+    end
+  end
+
   it 'exposes the locked footer so a library can require it to be identical everywhere' do
     footers = described_class.locked_footers(template(text))
 
