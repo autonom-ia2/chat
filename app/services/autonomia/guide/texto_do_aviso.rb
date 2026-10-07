@@ -29,6 +29,10 @@ class Autonomia::Guide::TextoDoAviso
     I18n.with_locale(@locale) { t('pausada', nome: vigia.nome) }
   end
 
+  def whatsapp_api_caiu(inbox)
+    I18n.with_locale(@locale) { t('whatsapp_api_caiu', caixa: inbox.name) }
+  end
+
   private
 
   def linha(sinal)

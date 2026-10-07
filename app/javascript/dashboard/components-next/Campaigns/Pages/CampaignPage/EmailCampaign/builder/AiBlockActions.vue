@@ -14,12 +14,14 @@ import { useEmailEditor } from './composables/useEmailEditor';
 // Contrato congelado em /tmp/uxshot/contracts/FE-AI.md §2.
 const { t } = useI18n();
 
-const { selectedComponent, getSelectedText, setSelectedText } =
-  useEmailEditor();
-
 const isMenuOpen = ref(false);
 const isRewriting = ref(false);
 let rewriteRequestId = 0;
+
+const { selectedComponent, isTextSelected, getSelectedText, setSelectedText } =
+  useEmailEditor();
+// #1093: only a text or a button can be improved; otherwise the button is off with a hint.
+const canImprove = computed(() => isTextSelected.value && !isRewriting.value);
 
 const INSTRUCTIONS = {
   rewrite: 'Reescreva o texto mantendo o sentido e o tom.',
@@ -97,6 +99,7 @@ const handleAction = async ({ action }) => {
 watch(selectedComponent, () => {
   rewriteRequestId += 1;
   isRewriting.value = false;
+  isMenuOpen.value = false;
 });
 
 onBeforeUnmount(() => {
@@ -109,13 +112,16 @@ onBeforeUnmount(() => {
     <OnClickOutside @trigger="isMenuOpen = false">
       <Button
         icon="i-lucide-sparkles"
-        color="slate"
-        variant="faded"
+        color="blue"
+        variant="solid"
         size="sm"
         type="button"
+        class="!min-h-11 w-full justify-center"
         :label="t('CAMPAIGN.EMAIL_CAMPAIGN.AI.BLOCK_ACTIONS.TRIGGER')"
         :is-loading="isRewriting"
-        :disabled="isRewriting || !selectedComponent"
+        :disabled="!canImprove"
+        :aria-describedby="isTextSelected ? undefined : 'ai-block-hint'"
+        data-test="ai-block-trigger"
         @click="isMenuOpen = !isMenuOpen"
       />
       <DropdownMenu
@@ -125,5 +131,13 @@ onBeforeUnmount(() => {
         @action="handleAction"
       />
     </OnClickOutside>
+    <p
+      v-if="!isTextSelected"
+      id="ai-block-hint"
+      class="m-0 mt-2 text-sm leading-5 text-n-slate-11"
+      data-test="ai-block-hint"
+    >
+      {{ t('CAMPAIGN.EMAIL_CAMPAIGN.AI.BLOCK_ACTIONS.HINT') }}
+    </p>
   </div>
 </template>

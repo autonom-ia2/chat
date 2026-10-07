@@ -35,6 +35,15 @@ class Autonomia::Guide::Entrega
     end
   end
 
+  # O WhatsApp API (sessão auxiliar do WhatsApp Híbrido, chat#1067) caiu: urgente, para todos os administradores.
+  # `chave` leva o instante da queda: uma queda é um aviso só, mesmo com vários eventos do motor.
+  def whatsapp_api_caiu!(inbox, caiu_em)
+    administradores.find_each do |user|
+      entregar(user, chave: "whatsapp_api:#{user.id}:#{inbox.id}:#{caiu_em.to_i}", gravidade: AVISO::URGENTE,
+                     sinal: { 'inbox_id' => inbox.id }, texto: @texto.whatsapp_api_caiu(inbox))
+    end
+  end
+
   # O resumo dos adiados de dias anteriores: um por pessoa, no primeiro pulso do dia.
   def resumir_adiados!
     adiados = AVISO.where(account: @account, estado: AVISO::ADIADO).where(created_at: ...@agora.beginning_of_day).includes(:user)

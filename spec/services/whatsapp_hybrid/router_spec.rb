@@ -22,6 +22,7 @@ describe WhatsappHybrid::Router do
     allow(Waha::Client).to receive(:new).and_return(client)
     allow(client).to receive(:check_contact_exists).and_return({ 'numberExists' => true, 'chatId' => '5511937016094@c.us' })
     allow(client).to receive(:new_message_id).and_return('3EB0AAAA')
+    allow(client).to receive(:update_session)
     Redis::Alfred.delete('whatsapp_hybrid:chat_id:hybrid-test:5511937016094')
   end
 

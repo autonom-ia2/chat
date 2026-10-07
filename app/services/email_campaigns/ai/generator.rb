@@ -1,9 +1,11 @@
 module EmailCampaigns
   module Ai
     # Monta o pedido (instructions + input multimodal) da geração de e-mail por IA a partir do
-    # brief + placeholders + assets (imagens/PDF/vídeo) + base_mjml. Extraído do AiController p/ que
-    # o job assíncrono (SubmitJob) e o controller usem a MESMA lógica. Resolve apenas blobs que a
-    # CONTA possui (builder_assets das próprias campanhas) — não confia em url do cliente.
+    # brief + placeholders + assets (imagens/PDF/vídeo). Com base_mjml (o e-mail que está na tela) o
+    # pedido é um AJUSTE (#1095): o brief é o que a pessoa quer mudar e o modelo devolve os blocos do
+    # e-mail ajustado (EditPromptBuilder). Extraído do AiController p/ que o job assíncrono (SubmitJob)
+    # e o controller usem a MESMA lógica. Resolve apenas blobs que a CONTA possui (builder_assets das
+    # próprias campanhas) — não confia em url do cliente.
     class Generator
       IMAGE_TYPES = %w[image/png image/jpeg image/gif image/webp].freeze
       VIDEO_TYPES = %w[video/mp4 video/webm video/quicktime].freeze
@@ -40,19 +42,46 @@ module EmailCampaigns
         @base_mjml.present? && @base_mjml.bytesize > MAX_BASE_MJML_BYTES
       end
 
-      # { instructions:, input: } pronto p/ ResponsesClient. enrich_image_src! roda antes de
-      # instructions (o prompt usa asset[:src_url]); o input carrega imagens/PDF como base64.
+      def adjust?
+        @base_mjml.present?
+      end
+
+      # Blocos do e-mail que está sendo ajustado; nil quando não há base ou ela não se divide.
+      def sections
+        return nil unless adjust?
+
+        @sections ||= MjmlSections.parse(@base_mjml)
+      end
+
+      # { instructions:, input:, input_text:, schema:, tools: } pronto p/ ResponsesClient. enrich_image_src!
+      # roda antes de instructions (o prompt usa asset[:src_url]); o input carrega imagens/PDF como base64.
       def build
         videos = resolve_video_assets
         enrich_image_src!
-        {
-          instructions: PromptBuilder.generate(placeholders: @placeholders, assets: @assets, videos: videos,
-                                               base_mjml: @base_mjml, brand: @account.name),
-          input: build_input(videos)
-        }
+        adjust? ? build_adjust(videos) : build_generate(videos)
       end
 
       private
+
+      def build_generate(videos)
+        text = PromptBuilder.input_text(brief: @brief, placeholders: @placeholders, assets: @assets, videos: videos)
+        { instructions: PromptBuilder.generate(placeholders: @placeholders, assets: @assets, videos: videos, brand: @account.name),
+          input: build_input(text), input_text: text, schema: GENERATE_SCHEMA, tools: Crm::Ai::WebSearch.tools }
+      end
+
+      # Ajuste: sem busca na web — o modelo só mexe no e-mail que recebeu.
+      def build_adjust(videos)
+        text = EditPromptBuilder.input_text(request: @brief, sections: sections.editable, placeholders: @placeholders,
+                                            assets_rule: PromptBuilder.assets_rule(@assets),
+                                            video_rule: PromptBuilder.video_embed_rule(videos))
+        { instructions: EditPromptBuilder.instructions(identity: identity), input: build_input(text), input_text: text,
+          schema: EditPromptBuilder::SCHEMA, tools: nil }
+      end
+
+      # Identidade visual em uso. Hoje o nome da conta; o kit de marca (#1076) entra aqui.
+      def identity
+        { name: @account.name }
+      end
 
       def normalize_assets(assets)
         Array(assets).map do |asset|
@@ -61,9 +90,7 @@ module EmailCampaigns
         end
       end
 
-      def build_input(videos)
-        text = PromptBuilder.input_text(brief: @brief, placeholders: @placeholders, assets: @assets,
-                                        videos: videos, base_mjml: @base_mjml)
+      def build_input(text)
         content = [{ type: 'input_text', text: text }]
         @assets.each do |asset|
           part = asset_content_part(asset)

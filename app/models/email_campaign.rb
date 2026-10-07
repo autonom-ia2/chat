@@ -131,6 +131,14 @@ class EmailCampaign < ApplicationRecord
     end
   end
 
+  # The account does not e-mail this address: it is suppressed (bounce, complaint, unsubscribe) or
+  # belongs to a contact who refused messages. Same protection as the real send
+  # (EmailCampaigns::DeliveryClaim); the test send refuses it too (#1093).
+  def refuses_address?(email)
+    EmailSuppression.suppressed?(account, email) ||
+      account.contacts.opted_out.exists?(['lower(email) = ?', email.to_s.strip.downcase])
+  end
+
   # Don't let an empty campaign go out: require rendered HTML or MJML source before sending.
   def body_present?
     body_html.present? || body_mjml.present?
@@ -267,6 +275,12 @@ class EmailCampaign < ApplicationRecord
       ai_subject_variants: Array(subject_variants),
       ai_status: self.class.ai_statuses[:ready], ai_error: nil, ai_completed_at: Time.current
     )
+  end
+
+  # "Ajustar com IA" (#1095): the adjusted e-mail is a proposal the person applies in the editor
+  # (EmailCampaigns::Ai::Adjustment); only the generation is marked ready, the body stays as it was.
+  def ai_propose!(token)
+    ai_guarded_update(token, ai_status: self.class.ai_statuses[:ready], ai_error: nil, ai_completed_at: Time.current)
   end
 
   def ai_fail!(token, message)

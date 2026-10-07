@@ -60,6 +60,12 @@ module EmailCampaigns
       end
 
       def finish_completed(campaign, client, token, response_id, text, usage, model)
+        adjustment = Adjustment.find(campaign, token)
+        if adjustment
+          return AdjustFinisher.new(campaign: campaign, token: token, client: client, response_id: response_id,
+                                    adjustment: adjustment).call(text: text, usage: usage, model: model)
+        end
+
         parsed = parse_output(text)
         # Resposta completa mas sem mjml utilizável: NÃO marca pronto (o Sanitizer transformaria
         # nil num e-mail só com rodapé). Trata como falha p/ o usuário poder tentar de novo.

@@ -12,6 +12,7 @@ import registerAutonomiaBlocks from '../blocks';
 import { prepareMjmlForEditor, restoreHeldHead } from '../editorMjml';
 // grapesjs-mjml options and the plugin that keep canvas paddings = sent e-mail (#1081).
 import { mjmlEditorPlugins, mjmlEditorPluginsOpts } from '../grapesMjmlSetup';
+import { isTextComponentType } from '../editorTextTypes';
 
 // ---- estado interno (modulo) ----
 const editor = shallowRef(null);
@@ -23,6 +24,8 @@ const sectors = shallowRef([]);
 const styleVersion = ref(0);
 const device = ref('desktop');
 const footerLocked = ref(false);
+// Bumped on every canvas change, so the page can tell an empty e-mail from one with content (#1095).
+const contentVersion = ref(0);
 // <mj-title>/<mj-preview> of the loaded MJML: kept out of the canvas, given back on export.
 let heldHead = '';
 
@@ -118,6 +121,9 @@ async function init(el, opts = {}) {
     refreshSectors();
   });
   ed.on('component:add', lockFooter);
+  ed.on('update', () => {
+    contentVersion.value += 1;
+  });
 
   ed.BlockManager.getAll?.()?.reset?.();
   registerAutonomiaBlocks(ed);
@@ -167,6 +173,7 @@ function destroy() {
   styleVersion.value = 0;
   device.value = 'desktop';
   footerLocked.value = false;
+  contentVersion.value = 0;
   savedCanvasView = null;
   heldHead = '';
 }
@@ -290,6 +297,8 @@ const setSectionStyle = (propName, value) => {
 
 // Tipo do componente selecionado. grapesjs-mjml usa 'mj-image' p/ imagens.
 const selectedType = computed(() => selectedComponent.value?.get?.('type'));
+// Only a text or a button holds text to rewrite or personalize (#1093).
+const isTextSelected = computed(() => isTextComponentType(selectedType.value));
 
 // ---- TOP BAR / COMANDOS ----
 const runCommand = (name, opts) => editor.value?.runCommand(name, opts);
@@ -415,12 +424,17 @@ const getHtml = () => {
   return out.html || '';
 };
 
+// Compiles any MJML with the editor's compiler (before/after preview of an AI adjustment, #1095).
+const compileMjml = mjml =>
+  (mjml && editor.value?.runCommand('mjml-code-to-html', { mjml })?.html) || '';
+
 const setMjml = mjml => {
   if (!editor.value) return;
   const prepared = prepareMjmlForEditor(mjml);
   heldHead = prepared.held;
   editor.value.setComponents(prepared.mjml);
   lockFooter();
+  contentVersion.value += 1;
 };
 
 // ---- selecao/texto ----
@@ -430,10 +444,13 @@ const getSelectedText = () => {
   return cmp.getEl?.()?.innerText ?? cmp.getInnerHTML?.() ?? '';
 };
 
+// Defense in depth (#1093): a section/column selected would have its whole structure swapped for
+// loose text. Only a text or a button is ever replaced; returns whether it was.
 const setSelectedText = html => {
   const cmp = selectedComponent.value || editor.value?.getSelected();
-  if (!cmp) return;
+  if (!cmp || !isTextComponentType(cmp.get?.('type'))) return false;
   cmp.components(html);
+  return true;
 };
 
 export function useEmailEditor() {
@@ -444,10 +461,12 @@ export function useEmailEditor() {
     blocks,
     selectedComponent,
     selectedType,
+    isTextSelected,
     sectors,
     styleVersion,
     device,
     footerLocked,
+    contentVersion,
 
     // ciclo de vida (SO o GrapesEditor.vue chama)
     init,
@@ -483,6 +502,7 @@ export function useEmailEditor() {
     getMjml,
     getHtml,
     setMjml,
+    compileMjml,
 
     // LOCK
     lockFooter,

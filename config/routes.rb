@@ -555,6 +555,7 @@ Rails.application.routes.draw do
             post 'ai/generate',                to: 'ai#generate'
             post 'ai/rewrite',                 to: 'ai#rewrite'
             get  'ai/campaigns/:id/status',    to: 'ai#status'
+            delete 'ai/campaigns/:id/adjustment', to: 'ai#discard_adjustment'
             resources :templates, only: [:index, :show, :create, :destroy]
             resources :reports, only: [:index, :show] do
               member do
@@ -1140,6 +1141,7 @@ Rails.application.routes.draw do
   post 'webhooks/sms/:phone_number', to: 'webhooks/sms#process_payload'
   get 'webhooks/whatsapp/:phone_number', to: 'webhooks/whatsapp#verify'
   post 'webhooks/whatsapp/:phone_number', to: 'webhooks/whatsapp#process_payload'
+  post 'webhooks/whatsapp_hybrid/:public_id', to: 'webhooks/whatsapp_hybrid#create'
   get 'webhooks/instagram', to: 'webhooks/instagram#verify'
   post 'webhooks/instagram', to: 'webhooks/instagram#events'
   post 'webhooks/tiktok', to: 'webhooks/tiktok#events'

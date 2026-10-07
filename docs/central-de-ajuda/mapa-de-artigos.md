@@ -76,7 +76,7 @@ Nenhum artigo foi redigido — apenas o mapa. Fonte de dados: `docs/central-de-a
 - **06.06** — n8n e integrações de terceiros. Automatizar o funil por fora com n8n e reconhecer Dialogflow, Tradutor do Google e Dyte.
 - **06.07** — Conectar Slack, Linear, Notion e a loja Shopify. Levar as conversas para o Slack e ligar Linear, Notion e Shopify à conta.
 
-## 07 — Caixas de entrada (todos os canais) e pesquisa de satisfação (11 artigos)
+## 07 — Caixas de entrada (todos os canais) e pesquisa de satisfação (12 artigos)
 
 - **07.01** — WhatsApp Oficial ou WhatsApp API: qual caixa criar. Escolher entre os dois cartões de WhatsApp e reunir o que precisa ter em mãos antes de começar.
 - **07.02** — Criar a caixa de WhatsApp Oficial: cadastro incorporado ou manual. Conectar o número pela Meta em poucos cliques, ou preencher os cinco campos manuais e concluir o webhook.
@@ -89,6 +89,7 @@ Nenhum artigo foi redigido — apenas o mapa. Fonte de dados: `docs/central-de-a
 - **07.09** — Criar uma caixa de e-mail ou de site (chat ao vivo). Configurar IMAP/SMTP para a caixa de e-mail e instalar o widget do site.
 - **07.10** — Criar uma caixa dos outros canais. Conectar Instagram, Facebook, SMS, Telegram, API própria, Line ou TikTok.
 - **07.11** — Ligar a pesquisa de satisfação (CSAT) na caixa. Habilitar a pesquisa de CSAT — sem isso, o relatório do capítulo 14 fica vazio para sempre.
+- **07.12** — Responder depois de 24 horas na caixa oficial: a aba WhatsApp API. Ligar o mesmo número da caixa oficial também pelo QR Code, para a resposta depois de 24 horas sair sem modelo aprovado, e saber o risco disso.
 
 ## 08 — Conversas (inclui Chamadas) (15 artigos)
 
