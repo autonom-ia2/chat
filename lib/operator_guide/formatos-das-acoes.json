@@ -4837,6 +4837,27 @@
     ],
     "sem_corpo": false
   },
+  "PATCH crm/meta_ads_connection/whatsapp_report": {
+    "campos": {
+      "whatsapp_report": {
+        "campos": {
+          "alert_enabled": {},
+          "enabled": {},
+          "inbox_id": {},
+          "phone": {}
+        },
+        "tipo": "objeto"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/crm/meta_ads_whatsapp_reports#update",
+    "modelo": "Crm::MetaAdsConnection",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_whatsapp_reports_controller.rb:24",
+      "app/controllers/api/v1/accounts/crm/meta_ads_whatsapp_reports_controller.rb:64"
+    ],
+    "sem_corpo": false
+  },
   "PATCH crm/pipelines/:id": {
     "campos": {
       "description": {
@@ -13616,6 +13637,22 @@
     ],
     "sem_corpo": false
   },
+  "POST crm/meta_ads_connection/daily_action": {
+    "campos": {
+      "days": {}
+    },
+    "completo": false,
+    "controller": "api/v1/accounts/crm/meta_ads_ai#daily_action",
+    "modelo": "Crm::MetaAdsConnection",
+    "motivos": [
+      "leitura crua sem tipo: days (repassada a ::Crm::MetaAds::Panel::Report.new)"
+    ],
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_ai_controller.rb:14",
+      "app/controllers/api/v1/accounts/crm/meta_ads_ai_controller.rb:18"
+    ],
+    "sem_corpo": false
+  },
   "POST crm/meta_ads_connection/insights": {
     "completo": true,
     "controller": "api/v1/accounts/crm/meta_ads_connections#insights",
@@ -13624,6 +13661,22 @@
       "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:60"
     ],
     "sem_corpo": true
+  },
+  "POST crm/meta_ads_connection/quote_message": {
+    "campos": {
+      "card_id": {
+        "tipo": "id",
+        "tipo_pela_leitura": "nome"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/crm/meta_ads_ai#quote_message",
+    "modelo": "Conversation",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_ai_controller.rb:26",
+      "app/controllers/api/v1/accounts/crm/meta_ads_ai_controller.rb:27"
+    ],
+    "sem_corpo": false
   },
   "POST crm/meta_ads_connection/selection": {
     "campos": {
@@ -13669,6 +13722,15 @@
       "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:136"
     ],
     "sem_corpo": false
+  },
+  "POST crm/meta_ads_connection/whatsapp_report/test": {
+    "completo": true,
+    "controller": "api/v1/accounts/crm/meta_ads_whatsapp_reports#test_send",
+    "modelo": "Crm::MetaAdsConnection",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_whatsapp_reports_controller.rb:31"
+    ],
+    "sem_corpo": true
   },
   "POST crm/pipelines": {
     "campos": {

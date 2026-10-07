@@ -5,18 +5,18 @@ Gerado por `bundle exec rails autonomia:guia:formatos` a partir do código (#900
 
 | | Ações |
 |---|---|
-| No catálogo | 533 |
-| Sem corpo | 148 |
-| Com corpo | 385 |
-| Com corpo e formato completo | 312 (81,0%) |
-| Com corpo e formato incompleto | 73 |
+| No catálogo | 537 |
+| Sem corpo | 149 |
+| Com corpo | 388 |
+| Com corpo e formato completo | 314 (80,9%) |
+| Com corpo e formato incompleto | 74 |
 
 ## Por dentro dos campos
 
 | | Total |
 |---|---|
-| Campos aninhados com vocabulário | 17 de 151 |
-| Leituras cruas tipadas | 108 de 180 |
+| Campos aninhados com vocabulário | 17 de 152 |
+| Leituras cruas tipadas | 109 de 182 |
 
 ## Incompletas por motivo
 
@@ -24,7 +24,7 @@ Uma ação pode ter mais de um motivo.
 
 | Motivo | Ações |
 |---|---|
-| leitura crua sem tipo | 58 |
+| leitura crua sem tipo | 59 |
 | aceita qualquer campo | 5 |
 | params inteiro repassado | 9 |
 | lê o corpo cru | 2 |
@@ -75,6 +75,7 @@ Uma ação pode ter mais de um motivo.
 - `POST crm/cards/bulk` — leitura crua sem tipo: action_name, bulk_action
 - `POST crm/meetings/:id/sync` — leitura crua sem tipo: force
 - `POST crm/meetings/suggest_times` — leitura crua sem tipo: date, duration_minutes
+- `POST crm/meta_ads_connection/daily_action` — leitura crua sem tipo: days (repassada a ::Crm::MetaAds::Panel::Report.new)
 - `POST crm/pipelines` — leitura crua sem tipo: goal
 - `POST crm/pipelines/:pipeline_id/stages` — leitura crua sem tipo: funnel_stage_type
 - `POST ctwa_tracked_links` — leitura crua sem tipo: ctwa_tracked_link
@@ -154,6 +155,7 @@ Uma ação pode ter mais de um motivo.
 - `api/v1/accounts/crm/meetings#suggest_times` date — o código não converte nem compara o valor
 - `api/v1/accounts/crm/meetings#suggest_times` duration_minutes — o código não converte nem compara o valor
 - `api/v1/accounts/crm/meetings#sync` force — o código não converte nem compara o valor
+- `api/v1/accounts/crm/meta_ads_ai#daily_action` days — repassada a ::Crm::MetaAds::Panel::Report.new
 - `api/v1/accounts/crm/pipelines#create` goal — o código não converte nem compara o valor
 - `api/v1/accounts/crm/pipelines#update` goal — o código não converte nem compara o valor
 - `api/v1/accounts/crm/pipelines#update` google_sync — o código não converte nem compara o valor
@@ -188,8 +190,8 @@ O Guia recusa parâmetro que a leitura não lê. Leitura sem lista conhecida nã
 
 | | Leituras |
 |---|---|
-| No catálogo | 321 |
-| Com parâmetros conhecidos | 270 |
+| No catálogo | 322 |
+| Com parâmetros conhecidos | 271 |
 | Sem parâmetros conhecidos | 51 |
 
 ### Leituras sem parâmetros conhecidos

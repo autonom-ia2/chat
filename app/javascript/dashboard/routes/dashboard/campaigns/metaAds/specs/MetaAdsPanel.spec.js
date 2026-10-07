@@ -11,7 +11,12 @@ const routing = vi.hoisted(() => ({
 }));
 
 vi.mock('dashboard/api/crmMetaAdsConnection', () => ({
-  default: { panel: vi.fn(), panelAd: vi.fn() },
+  default: {
+    panel: vi.fn(),
+    panelAd: vi.fn(),
+    dailyAction: vi.fn(),
+    quoteMessage: vi.fn(),
+  },
 }));
 vi.mock('vue-router', () => ({
   useRoute: () => routing.route,
@@ -101,6 +106,9 @@ describe('Anúncios da Meta · painel do dia a dia (#1088)', () => {
       routing.route.query = query;
     });
     CrmMetaAdsConnectionAPI.panelAd.mockResolvedValue({ data: { ad: null } });
+    CrmMetaAdsConnectionAPI.dailyAction.mockResolvedValue({
+      data: { daily_action: null },
+    });
     CrmMetaAdsConnectionAPI.panel.mockResolvedValue({
       data: { panel: PANEL },
     });
@@ -131,15 +139,73 @@ describe('Anúncios da Meta · painel do dia a dia (#1088)', () => {
     expect(
       wrapper.find('[data-panel-action]').attributes('data-action-kind')
     ).toBe('stalled_quotes');
-    expect(wrapper.find('[data-panel-stalled]').exists()).toBe(false);
+    const stalledStyle = () =>
+      wrapper.find('[data-panel-stalled]').attributes('style') || '';
+    expect(stalledStyle()).toContain('display: none');
 
     await wrapper.find('[data-panel-action-button]').trigger('click');
+    expect(stalledStyle()).not.toContain('display: none');
 
     const card = wrapper.find('[data-panel-stalled-card]');
     expect(card.text()).toContain('Virgínia');
     expect(card.find('a').attributes('href')).toContain(
       '/app/accounts/18/conversations/99'
     );
+  });
+
+  it('the AI can point to an ad to review, and its button opens that ad', async () => {
+    CrmMetaAdsConnectionAPI.dailyAction.mockResolvedValue({
+      data: {
+        daily_action: {
+          source: 'ai',
+          reason: null,
+          kind: 'review_ad',
+          ad_id: '1',
+          headline: 'Revise o anúncio Capa.',
+          body: null,
+          why: 'Ele trouxe 12 conversas e nenhuma venda.',
+          days: 30,
+        },
+      },
+    });
+    const wrapper = await mountPanel();
+
+    expect(CrmMetaAdsConnectionAPI.dailyAction).toHaveBeenCalledWith(30);
+    expect(
+      wrapper.find('[data-panel-action]').attributes('data-action-kind')
+    ).toBe('review_ad');
+    await wrapper.find('[data-panel-action-button]').trigger('click');
+    await flushPromises();
+
+    expect(routing.replace).toHaveBeenCalledWith({ query: { anuncio: '1' } });
+  });
+
+  it('each stalled quote can get a suggested message', async () => {
+    const wrapper = await mountPanel();
+
+    await wrapper.find('[data-panel-action-button]').trigger('click');
+
+    expect(
+      wrapper.find('[data-panel-stalled-card] [data-quote-suggest]').exists()
+    ).toBe(true);
+  });
+
+  it('closing and reopening the stalled list keeps what each suggested message did', async () => {
+    const wrapper = await mountPanel();
+    const toggle = () =>
+      wrapper.find('[data-panel-action-button]').trigger('click');
+
+    await toggle();
+    const uid = () =>
+      wrapper.findComponent({ name: 'MetaAdsQuoteMessage' }).vm.$.uid;
+    const before = uid();
+    await toggle();
+    expect(wrapper.find('[data-panel-stalled]').attributes('style')).toContain(
+      'display: none'
+    );
+    await toggle();
+
+    expect(uid()).toBe(before);
   });
 
   it('fix tracking sends the person to step 3', async () => {

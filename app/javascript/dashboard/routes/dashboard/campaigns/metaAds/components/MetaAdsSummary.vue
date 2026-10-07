@@ -9,6 +9,7 @@ import CtwaTrackedLinksAPI from 'dashboard/api/ctwaTrackedLinks';
 import { errorMessageKey, intlLocale, relativeTime } from '../metaAdsHelpers';
 import { useMetaAdsLive } from '../useMetaAdsLive';
 import MetaAdsConfidence from './MetaAdsConfidence.vue';
+import MetaAdsWhatsappReport from './MetaAdsWhatsappReport.vue';
 
 // Anúncios da Meta (#1068): a conexão pronta. Herói com a frase da conta, quatro quadros com o que está
 // ligado de verdade (WhatsApp, site, campanhas com nome, funis avisando a Meta), o que acontece agora e um
@@ -389,6 +390,8 @@ onMounted(() => {
         </li>
       </ol>
     </div>
+
+    <MetaAdsWhatsappReport />
 
     <div>
       <Button

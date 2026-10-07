@@ -1,0 +1,58 @@
+pt_BR:
+  meta_ads_whatsapp_report:
+    date_format: "%d/%m"
+    number:
+      separator: ","
+      delimiter: "."
+    currency_units:
+      BRL: "R$"
+      USD: "US$"
+      EUR: "€"
+    summary:
+      title: "Anúncios da Meta — ontem, %{date}"
+      test_prefix: "[Teste]"
+      spend: "Investido: %{value}"
+      conversations:
+        one: "Conversas: %{count}"
+        other: "Conversas: %{count}"
+      conversations_with_cost:
+        one: "Conversas: %{count} (%{cost} por conversa)"
+        other: "Conversas: %{count} (%{cost} por conversa)"
+      quotes_sales: "Propostas: %{quotes} · Vendas: %{sales}"
+      quotes_sales_value: "Propostas: %{quotes} · Vendas: %{sales} (%{value})"
+      best_ad:
+        one: "Melhor anúncio: %{name}, com %{count} conversa"
+        other: "Melhor anúncio: %{name}, com %{count} conversas"
+      action: "O que fazer hoje: %{text}"
+      link: "Ver o painel: %{url}"
+    alert:
+      text: "Atenção: o anúncio %{name} gastou %{value} hoje e ainda não trouxe nenhuma conversa."
+      hint: "Vale conferir se ele leva para o WhatsApp certo. Ver o painel: %{url}"
+    actions:
+      stalled_quotes:
+        one: "Retome a proposta parada há mais de %{days} dias (%{value})."
+        other: "Retome as %{count} propostas paradas há mais de %{days} dias (%{value})."
+      fix_tracking:
+        one: "Confira de qual anúncio veio %{count} conversa sem anúncio identificado."
+        other: "Confira de qual anúncio vieram %{count} conversas sem anúncio identificado."
+      wait: "Nada a corrigir. Siga com os anúncios como estão."
+      on_track: "Nada parado. Veja no painel o veredito de cada anúncio."
+      no_data: "Ainda não há gasto nem conversa de anúncio nos últimos 7 dias."
+    # As variáveis do modelo do Oficial (sempre pt_BR): {{3}} junta conversas, propostas e vendas.
+    template:
+      results: "%{conversations}, %{quotes} e %{sales}"
+      conversations:
+        one: "%{count} conversa"
+        other: "%{count} conversas"
+      quotes:
+        one: "%{count} proposta"
+        other: "%{count} propostas"
+      sales:
+        one: "%{count} venda"
+        other: "%{count} vendas"
+    # Texto exato para criar no Gerenciador do WhatsApp (categoria UTILITY, idioma pt_BR). A Meta recusa modelo que
+    # começa ou termina com variável, ou com variável demais para o tamanho do texto: texto fixo antes e depois, e só
+    # 4 variáveis no resumo.
+    templates:
+      summary: "Olá! Este é o resumo diário dos seus anúncios na Meta, referente a {{1}}. Investimento: {{2}}. Resultado: {{3}}. O que fazer hoje: {{4}} Os detalhes de cada anúncio estão no painel de Anúncios da Meta."
+      alert: "Atenção: o anúncio {{1}} gastou {{2}} hoje e ainda não trouxe nenhuma conversa. Vale conferir no painel de Anúncios da Meta."
