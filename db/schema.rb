@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_10_07_230000) do
+ActiveRecord::Schema[7.2].define(version: 2026_10_07_235900) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -3498,8 +3498,12 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_07_230000) do
     t.datetime "status_checked_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "public_id", null: false
+    t.text "webhook_secret"
+    t.datetime "down_alerted_at"
     t.index ["account_id"], name: "index_whatsapp_hybrid_connections_on_account_id"
     t.index ["inbox_id"], name: "index_whatsapp_hybrid_connections_on_inbox_id", unique: true
+    t.index ["public_id"], name: "index_whatsapp_hybrid_connections_on_public_id", unique: true
     t.index ["session_name"], name: "index_whatsapp_hybrid_connections_on_session_name", unique: true
   end
 

@@ -11,6 +11,18 @@ class WhatsappHybrid::WebTransport
                        'ou use um modelo aprovado.'.freeze
   MEDIA_ENDPOINTS = { 'image' => 'sendImage', 'audio' => 'sendVoice', 'video' => 'sendVideo' }.freeze
 
+  MESSAGE_KEY_TTL = 7.days.to_i
+
+  # Mensagem enviada pelo WhatsApp API a partir do id físico (para as confirmações de entrega do motor).
+  def self.message_for(connection, physical_id)
+    message_id = ::Redis::Alfred.get(message_key(connection, physical_id))
+    Message.find_by(id: message_id, inbox_id: connection.inbox_id) if message_id.present?
+  end
+
+  def self.message_key(connection, physical_id)
+    "whatsapp_hybrid:msg:#{connection.id}:#{physical_id}"
+  end
+
   def initialize(message:, connection:, origin:, client: Waha::Client.new)
     @message = message
     @connection = connection
@@ -68,6 +80,7 @@ class WhatsappHybrid::WebTransport
   def mark_pending!(physical_id)
     attrs = @message.content_attributes.to_h.merge('whatsapp_transport' => 'web', 'whatsapp_transport_origin' => @origin)
     @message.update!(source_id: physical_id, content_attributes: attrs)
+    ::Redis::Alfred.setex(self.class.message_key(@connection, physical_id), @message.id, MESSAGE_KEY_TTL)
   end
 
   def resolve_chat_id
