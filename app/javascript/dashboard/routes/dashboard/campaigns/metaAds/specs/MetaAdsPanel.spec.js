@@ -268,6 +268,31 @@ describe('Anúncios da Meta · painel do dia a dia (#1088)', () => {
     ).toBe(true);
   });
 
+  it('swaps an image that does not load (expired Meta link) for the placeholder', async () => {
+    CrmMetaAdsConnectionAPI.panel.mockResolvedValue({
+      data: {
+        panel: {
+          ...PANEL,
+          ads: [
+            { ...PANEL.ads[0], thumbnail_url: 'https://scontent/capa.jpg' },
+          ],
+        },
+      },
+    });
+    const wrapper = await mountPanel();
+
+    await wrapper
+      .find('[data-panel-ad="1"] [data-panel-ad-image]')
+      .trigger('error');
+
+    expect(
+      wrapper.find('[data-panel-ad="1"] [data-panel-ad-image]').exists()
+    ).toBe(false);
+    expect(
+      wrapper.find('[data-panel-ad="1"] [data-panel-ad-placeholder]').exists()
+    ).toBe(true);
+  });
+
   it('changes the period and asks again', async () => {
     const wrapper = await mountPanel();
 

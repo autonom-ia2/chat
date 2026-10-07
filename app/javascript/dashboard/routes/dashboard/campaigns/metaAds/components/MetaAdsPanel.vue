@@ -162,7 +162,11 @@ const path = computed(() => [
 ]);
 
 const ads = computed(() => panel.value?.ads || []);
-// Os três números de cada anúncio, lado a lado.
+// O link de imagem da Meta vence (o "oe=" da URL); imagem que não abre vira o quadro de reserva até a
+// renovação diária trazer o link novo.
+const brokenImages = ref({});
+// Os três números de cada anúncio: o investido numa linha, conversas e vendas lado a lado embaixo (em três
+// colunas o rótulo "Conversas" não cabe no cartão estreito).
 const adStats = ad => [
   { key: 'SPEND', value: fmt(ad.spend) },
   { key: 'CONVERSATIONS', value: ad.conversations },
@@ -359,13 +363,13 @@ onMounted(() => live.start());
           {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.PATH_TITLE') }}
         </h4>
         <ol
-          class="grid grid-cols-2 p-0 m-0 list-none gap-y-6 gap-x-4 lg:grid-cols-4 lg:gap-x-0"
+          class="grid grid-cols-2 p-0 m-0 list-none gap-y-6 gap-x-4 xl:grid-cols-4 xl:gap-x-0"
         >
           <li
             v-for="step in path"
             :key="step.key"
             :data-panel-path="step.key"
-            class="flex flex-col gap-1.5 lg:px-6 lg:first:ps-0 lg:[&:not(:first-child)]:border-0 lg:[&:not(:first-child)]:border-s lg:[&:not(:first-child)]:border-solid lg:[&:not(:first-child)]:border-n-weak"
+            class="flex flex-col gap-1.5 xl:px-6 xl:first:ps-0 xl:[&:not(:first-child)]:border-0 xl:[&:not(:first-child)]:border-s xl:[&:not(:first-child)]:border-solid xl:[&:not(:first-child)]:border-n-weak"
           >
             <span
               class="font-interDisplay text-[30px] font-520 leading-none tracking-[-0.02em] tabular-nums"
@@ -441,12 +445,13 @@ onMounted(() => live.start());
           >
             <div class="flex justify-center bg-n-alpha-1">
               <img
-                v-if="ad.thumbnail_url"
+                v-if="ad.thumbnail_url && !brokenImages[ad.ad_id]"
                 :src="ad.thumbnail_url"
                 :alt="ad.name || ''"
                 loading="lazy"
                 data-panel-ad-image
                 class="block object-contain w-full h-auto max-h-[32rem]"
+                @error="brokenImages[ad.ad_id] = true"
               />
               <div
                 v-else
@@ -481,17 +486,14 @@ onMounted(() => live.start());
                   }}
                 </span>
               </div>
-              <dl
-                class="grid m-0 gap-x-3 gap-y-1 grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)_minmax(0,1fr)]"
-              >
+              <dl class="grid grid-cols-2 m-0 gap-x-3 gap-y-3">
                 <div
                   v-for="stat in adStats(ad)"
                   :key="stat.key"
                   class="flex flex-col gap-1 min-w-0"
+                  :class="{ 'col-span-2': stat.key === 'SPEND' }"
                 >
-                  <dt
-                    class="text-[11px] font-520 uppercase tracking-[0.06em] text-n-slate-10"
-                  >
+                  <dt class="text-xs font-440 text-n-slate-10">
                     {{
                       $t(`CRM_KANBAN.META_ADS_HUB.PANEL.AD_STATS.${stat.key}`)
                     }}
