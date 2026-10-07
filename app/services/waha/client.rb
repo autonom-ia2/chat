@@ -5,6 +5,8 @@ module Waha
   # Waha::Client::Error em qualquer falha, com status + corpo para diagnóstico.
   class Client
     class Error < StandardError; end
+    # A resposta não chegou: não dá para saber se o motor executou o pedido.
+    class Timeout < Error; end
 
     DEFAULT_TIMEOUT = 20
 
@@ -56,6 +58,29 @@ module Waha
     # QR como bytes PNG (para o controller repassar como imagem).
     def qr_image(name)
       raw_get("/api/#{name}/auth/qr")
+    end
+
+    # Código de pareamento (alternativa ao QR): o celular digita o código em "Conectar com número de telefone".
+    def request_pairing_code(name, phone:)
+      post("/api/#{name}/auth/request-code", { phoneNumber: phone })
+    end
+
+    # ---- ENVIO DIRETO (WhatsApp Híbrido, chat#1067) ----
+    # O id é gerado antes do envio para a mensagem já ter identidade quando o eco da Meta chegar.
+    def new_message_id(session)
+      get("/api/#{session}/new-message-id")['id']
+    end
+
+    def send_text(session:, chat_id:, text:, id:)
+      post('/api/sendText', { session: session, chatId: chat_id, text: text, id: id })
+    end
+
+    # kind: sendImage | sendFile | sendVoice | sendVideo. media: { file: { url:, mimetype:, filename: }, caption: }
+    def send_media(kind, session:, chat_id:, id:, media:)
+      body = { session: session, chatId: chat_id, file: media[:file], id: id }
+      body[:caption] = media[:caption] if media[:caption].present?
+      body[:convert] = true if %w[sendVoice sendVideo].include?(kind)
+      post("/api/#{kind}", body)
     end
 
     # ---- APPS (conector de mensagens) ----
@@ -134,7 +159,9 @@ module Waha
       raise Error, "WAHA #{method.upcase} #{path} -> #{response.code}: #{response.body.to_s[0, 300]}" unless response.success?
 
       response.parsed_response
-    rescue HTTParty::Error, SocketError, Net::OpenTimeout, Net::ReadTimeout, Errno::ECONNREFUSED => e
+    rescue Net::ReadTimeout => e
+      raise Timeout, "WAHA #{method.upcase} #{path} sem resposta: #{e.message}"
+    rescue HTTParty::Error, SocketError, Net::OpenTimeout, Errno::ECONNREFUSED => e
       raise Error, "WAHA #{method.upcase} #{path} falhou: #{e.message}"
     end
 
