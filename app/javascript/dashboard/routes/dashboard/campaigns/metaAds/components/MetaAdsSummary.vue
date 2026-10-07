@@ -200,7 +200,7 @@ onMounted(() => {
 <template>
   <section data-meta-ads-summary class="flex flex-col gap-5">
     <div
-      class="relative flex flex-col gap-4 p-5 overflow-hidden text-white rounded-2xl sm:p-7"
+      class="relative flex flex-col gap-5 p-6 overflow-hidden text-white rounded-xl sm:p-8"
       :class="attention ? 'bg-n-amber-11' : 'bg-[#0D2344]'"
     >
       <span
@@ -209,7 +209,7 @@ onMounted(() => {
       />
       <div class="relative flex flex-col gap-2">
         <span
-          class="inline-flex items-center gap-2 text-xs font-semibold tracking-wider uppercase"
+          class="inline-flex items-center gap-2 text-[11px] font-520 tracking-[0.1em] uppercase"
           :class="attention ? 'text-n-amber-3' : 'text-n-teal-6'"
         >
           <span
@@ -226,7 +226,7 @@ onMounted(() => {
           }}
         </span>
         <h3
-          class="m-0 text-2xl font-semibold leading-tight tracking-tight text-white sm:text-3xl text-balance"
+          class="m-0 font-interDisplay text-[28px] sm:text-[34px] font-520 leading-[1.12] tracking-[-0.02em] text-white text-balance"
         >
           {{
             attention
@@ -247,7 +247,7 @@ onMounted(() => {
               {{ spendLabel }}
               <strong
                 data-summary-spend-value
-                class="text-lg font-semibold text-white"
+                class="font-interDisplay text-lg font-520 text-white"
               >
                 {{ spendMoney }}
               </strong>
@@ -316,7 +316,7 @@ onMounted(() => {
           v-else
           data-summary-crm
           :to="{ name: 'crm_kanban_index' }"
-          class="inline-flex items-center gap-2 px-4 text-sm font-semibold no-underline bg-white rounded-xl min-h-11 text-[#0D2344] hover:bg-n-blue-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+          class="inline-flex items-center gap-2 px-4 text-sm font-520 no-underline bg-white rounded-lg min-h-11 text-[#0D2344] hover:bg-n-blue-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
         >
           <span class="i-lucide-kanban size-4" aria-hidden="true" />
           {{ $t('CRM_KANBAN.META_ADS_HUB.SUMMARY.OPEN_CRM') }}
@@ -328,7 +328,7 @@ onMounted(() => {
       <li v-for="tile in tiles" :key="tile.key" :data-summary-tile="tile.key">
         <button
           type="button"
-          class="flex items-center w-full gap-3 px-4 py-3 text-left border border-solid shadow-sm min-h-[4.5rem] rounded-2xl border-n-weak bg-n-solid-1 hover:bg-n-alpha-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
+          class="flex items-center w-full gap-3 px-4 py-3 text-left border border-solid min-h-[4.5rem] rounded-xl border-n-weak bg-n-solid-1 hover:bg-n-alpha-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
           @click="emit('open', tile.step)"
         >
           <span
@@ -346,7 +346,7 @@ onMounted(() => {
             <span class="text-xs text-n-slate-11">
               {{ $t(`CRM_KANBAN.META_ADS_HUB.SUMMARY.TILE_${tile.key}`) }}
             </span>
-            <span class="text-base font-semibold truncate text-n-slate-12">
+            <span class="text-[15px] font-520 truncate text-n-slate-12">
               {{ tile.value }}
             </span>
           </span>
@@ -366,9 +366,11 @@ onMounted(() => {
 
     <div
       v-if="!attention"
-      class="flex flex-col gap-3 p-4 border shadow-sm rounded-2xl border-n-weak bg-n-solid-1 sm:p-5"
+      class="flex flex-col gap-4 p-5 border border-solid rounded-xl border-n-weak bg-n-solid-1 sm:p-6"
     >
-      <h4 class="m-0 text-base font-semibold text-n-slate-12">
+      <h4
+        class="m-0 text-xs font-520 uppercase tracking-[0.08em] text-n-slate-11"
+      >
         {{ $t('CRM_KANBAN.META_ADS_HUB.SUMMARY.NEXT_TITLE') }}
       </h4>
       <ol class="flex flex-col gap-2 p-0 m-0 list-none">
@@ -378,7 +380,7 @@ onMounted(() => {
           class="flex items-start gap-3 text-sm text-n-slate-12"
         >
           <span
-            class="grid flex-none text-xs font-semibold rounded-full size-6 place-items-center bg-n-blue-3 text-n-blue-11"
+            class="grid flex-none text-xs font-520 rounded-full size-6 place-items-center bg-n-blue-3 text-n-blue-11"
             aria-hidden="true"
           >
             {{ index + 1 }}

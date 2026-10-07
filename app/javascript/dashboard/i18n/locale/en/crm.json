@@ -2306,7 +2306,7 @@
         "PERIOD_LABEL": "Period",
         "PERIOD_CTX": "Last {days} days",
         "PERIOD_HINT": "What happened to the people who came from ads in the last {days} days.",
-        "TODAY": "What to do today:",
+        "TODAY": "What to do today",
         "SEVERAL_ADS": "several ads",
         "ACTION": {
           "STALLED_QUOTES": {

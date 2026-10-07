@@ -2307,7 +2307,7 @@
         "PERIOD_LABEL": "Período",
         "PERIOD_CTX": "Últimos {days} dias",
         "PERIOD_HINT": "O que aconteceu com as pessoas que chegaram por anúncio nos últimos {days} dias.",
-        "TODAY": "O que fazer hoje:",
+        "TODAY": "O que fazer hoje",
         "SEVERAL_ADS": "vários anúncios",
         "ACTION": {
           "STALLED_QUOTES": {
