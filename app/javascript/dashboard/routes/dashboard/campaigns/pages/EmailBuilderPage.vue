@@ -19,12 +19,13 @@ import EmailRecipientStep from 'dashboard/components-next/Campaigns/Pages/Campai
 import Button from 'dashboard/components-next/button/Button.vue';
 import { useCanManage } from 'dashboard/composables/useCanManage';
 import Input from 'dashboard/components-next/input/Input.vue';
-import { testSendAddress, testSendErrorKey } from './emailTestSend';
+import { testSendAddress, testSendErrorMessage } from './emailTestSend';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import GrapesEditor from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/builder/GrapesEditor.vue';
 import AiComposerDialog from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/builder/AiComposerDialog.vue';
 import AiGeneratingDialog from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/builder/AiGeneratingDialog.vue';
 import AiBlockActions from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/builder/AiBlockActions.vue';
+import TestSendForm from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/builder/TestSendForm.vue';
 import PlaceholderChips from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/builder/PlaceholderChips.vue';
 import BlocksPanel from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/builder/BlocksPanel.vue';
 import PropertiesPanel from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/builder/PropertiesPanel.vue';
@@ -64,7 +65,7 @@ const {
   setMjml,
   setDevice,
   selectedComponent,
-  selectedType,
+  isTextSelected,
   setSelectedText,
   adjustCanvasScroll,
   setCanvasPreview,
@@ -82,9 +83,10 @@ const showGeneratingDialog = ref(false);
 // from scratch. Empty when there's no design yet.
 const aiBaseMjml = ref('');
 const showTestPopover = ref(false);
-// D8 (#999): the test goes only to the logged-in user — the field shows that address, locked.
+// #1093: the test goes to any typed address (up to 5); the field starts with the user's own.
 const testEmail = computed(() => testSendAddress(currentUser.value));
 const isSendingTest = ref(false);
+const testSendError = ref('');
 const showSaveTemplatePopover = ref(false);
 const templateName = ref('');
 const isSavingTemplate = ref(false);
@@ -94,6 +96,7 @@ const isPersistingSubject = ref(false);
 // never overlap: opening one closes the other.
 const toggleTestPopover = () => {
   showSaveTemplatePopover.value = false;
+  testSendError.value = '';
   showTestPopover.value = !showTestPopover.value;
 };
 const toggleSaveTemplatePopover = () => {
@@ -213,9 +216,9 @@ const save = async () => {
   }
 };
 
-const sendTest = async () => {
-  if (!testEmail.value) return;
+const sendTest = async toEmails => {
   isSendingTest.value = true;
+  testSendError.value = '';
   try {
     await persist({
       subject: subjectInput.value.trim(),
@@ -223,12 +226,13 @@ const sendTest = async () => {
     });
     await store.dispatch('emailCampaigns/sendTest', {
       id: campaignId.value,
-      toEmail: testEmail.value,
+      toEmails,
     });
     useAlert(t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SEND_TEST_SUCCESS'));
     showTestPopover.value = false;
   } catch (error) {
-    useAlert(t(testSendErrorKey(error)));
+    const { key, params } = testSendErrorMessage(error);
+    testSendError.value = t(key, params);
   } finally {
     isSendingTest.value = false;
   }
@@ -503,7 +507,7 @@ const onSenderSaved = () => {
   store.dispatch('emailCampaigns/getOne', campaignId.value);
 };
 const insertPlaceholder = key => {
-  if (['mj-text', 'mj-button'].includes(selectedType.value)) {
+  if (isTextSelected.value) {
     setSelectedText(`${selectedComponent.value.getInnerHTML()} {{ ${key} }}`);
   }
   showPersonalize.value = false;
@@ -810,39 +814,15 @@ const insertPlaceholder = key => {
               <div
                 v-if="showTestPopover"
                 class="absolute end-0 z-50 flex flex-col w-[min(20rem,calc(100vw-3rem))] gap-3 p-4 border rounded-lg shadow-lg top-12 border-n-weak bg-n-solid-1"
+                data-test="test-send-popover"
               >
-                <Input
-                  :model-value="testEmail"
-                  type="email"
-                  disabled
-                  :label="
-                    t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SEND_TEST_EMAIL_LABEL')
-                  "
-                  :placeholder="
-                    t(
-                      'CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SEND_TEST_EMAIL_PLACEHOLDER'
-                    )
-                  "
-                  @enter="sendTest()"
+                <TestSendForm
+                  :default-email="testEmail"
+                  :is-sending="isSendingTest"
+                  :error-message="testSendError"
+                  @send="sendTest"
+                  @cancel="showTestPopover = false"
                 />
-                <div class="flex justify-end gap-2">
-                  <Button
-                    :label="t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.CANCEL')"
-                    color="slate"
-                    variant="ghost"
-                    size="sm"
-                    @click="showTestPopover = false"
-                  />
-                  <Button
-                    :label="
-                      t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SEND_TEST_SUBMIT')
-                    "
-                    color="blue"
-                    size="sm"
-                    :is-loading="isSendingTest"
-                    @click="sendTest()"
-                  />
-                </div>
               </div>
               <div
                 v-if="showSaveTemplatePopover"

@@ -676,12 +676,16 @@
         "SAVE_SUCCESS": "Campanha salva com sucesso",
         "SAVE_ERROR": "Não foi possível salvar a campanha, tente novamente",
         "SEND_TEST": "Enviar teste",
-        "SEND_TEST_EMAIL_LABEL": "E-mail do destinatário",
+        "SEND_TEST_EMAIL_LABEL": "Enviar o teste para",
         "SEND_TEST_EMAIL_PLACEHOLDER": "nome{'@'}dominio.com",
-        "SEND_TEST_SUBMIT": "Enviar",
+        "SEND_TEST_EMAIL_HINT": "Até 5 e-mails, um por linha.",
+        "SEND_TEST_SUBMIT": "Enviar teste",
         "SEND_TEST_SUCCESS": "E-mail de teste enviado",
         "SEND_TEST_ERROR": "Não foi possível enviar o e-mail de teste",
-        "SEND_TEST_ONLY_SELF": "O e-mail de teste vai só para o seu endereço",
+        "SEND_TEST_EMPTY": "Escreva pelo menos um e-mail.",
+        "SEND_TEST_INVALID": "Este e-mail não parece certo: {email}",
+        "SEND_TEST_TOO_MANY": "No máximo 5 e-mails por teste.",
+        "SEND_TEST_SUPPRESSED": "{email} não recebe e-mails desta conta. Use outro endereço.",
         "SEND_TEST_RATE_LIMITED": "Muitos testes para esta campanha. Tente de novo daqui a uma hora",
         "SAVE_TEMPLATE": "Salvar como modelo",
         "SAVE_TEMPLATE_NAME_LABEL": "Nome do modelo",
@@ -815,7 +819,8 @@
           "PERSUASIVE": "Mais persuasivo",
           "NO_TEXT": "Selecione um bloco com texto para melhorar.",
           "ERROR": "Não foi possível reescrever o texto. Tente novamente.",
-          "NOT_CONFIGURED": "Configure a chave de IA do CRM em Conexões para usar este recurso."
+          "NOT_CONFIGURED": "Configure a chave de IA do CRM em Conexões para usar este recurso.",
+          "HINT": "Clique num texto ou botão do e-mail para melhorar com IA."
         }
       },
       "WELCOME": {
