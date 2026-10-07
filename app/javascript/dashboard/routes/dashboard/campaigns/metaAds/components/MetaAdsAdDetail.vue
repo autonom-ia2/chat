@@ -224,6 +224,10 @@ const axis = computed(() => {
 });
 
 onMounted(() => live.start());
+
+// Link de imagem da Meta vencido: mostra o quadro de reserva (guarda a URL que falhou, então um link novo volta
+// a tentar).
+const brokenImage = ref(null);
 </script>
 
 <template>
@@ -310,11 +314,12 @@ onMounted(() => live.start());
         >
           <div class="flex justify-center bg-n-alpha-1">
             <img
-              v-if="ad.thumbnail_url"
+              v-if="ad.thumbnail_url && brokenImage !== ad.thumbnail_url"
               :src="ad.thumbnail_url"
               :alt="ad.name || ''"
               data-ad-detail-image
               class="block object-contain w-full h-auto max-h-[40rem]"
+              @error="brokenImage = ad.thumbnail_url"
             />
             <div
               v-else

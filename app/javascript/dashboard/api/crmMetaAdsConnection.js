@@ -103,6 +103,22 @@ class CrmMetaAdsConnectionAPI extends ApiClient {
       axios.post(`${this.url}/suggest_stages`, { pipeline_id: pipelineId })
     );
   }
+
+  // F4a (#1100): "what to do today" written by the AI from the panel numbers →
+  // { daily_action: null | { source: 'ai'|'rule', reason, kind, ad_id,
+  //   headline, body, why, days, generated_at } }.
+  dailyAction(days) {
+    return pollAiRequest(axios.post(`${this.url}/daily_action`, { days }));
+  }
+
+  // Suggested message to resume a stalled quote. Never sent by the server →
+  // { quote_message: { card_id, conversation_id, applies, reason, message,
+  //   source_quote } }.
+  quoteMessage(cardId) {
+    return pollAiRequest(
+      axios.post(`${this.url}/quote_message`, { card_id: cardId })
+    );
+  }
 }
 
 export default new CrmMetaAdsConnectionAPI();

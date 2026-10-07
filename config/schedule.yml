@@ -290,3 +290,19 @@ crm_meta_ads_insights_recent_job:
   class: 'Crm::MetaAds::InsightsScheduleJob'
   queue: scheduled_jobs
   args: ['recent']
+
+# Anúncios da Meta F4b (#1100): resumo de ontem no WhatsApp do dono às 8h de Brasília (11:00 UTC). Vem desligado;
+# só conexões que ligaram o resumo. No máximo um por dia (trava no DeliverJob).
+crm_meta_ads_whatsapp_summary_job:
+  cron: '0 11 * * *'
+  class: 'Crm::MetaAds::WhatsappReport::ScheduleJob'
+  queue: scheduled_jobs
+  args: ['summary']
+
+# Anúncios da Meta F4b (#1100): alerta de anúncio que gastou hoje sem trazer conversa, às 16h30 de Brasília
+# (19:30 UTC). Só conexões que ligaram o alerta; no máximo um por dia.
+crm_meta_ads_whatsapp_alert_job:
+  cron: '30 19 * * *'
+  class: 'Crm::MetaAds::WhatsappReport::ScheduleJob'
+  queue: scheduled_jobs
+  args: ['alert']
