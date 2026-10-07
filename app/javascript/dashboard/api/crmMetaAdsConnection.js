@@ -88,10 +88,35 @@ class CrmMetaAdsConnectionAPI extends ApiClient {
     return axios.get(`${this.url}/panel`, { params: { days } });
   }
 
+  // One ad from the inside (#1088, F3b): { ad: null } without data, or
+  // { ad: { ...numbers, verdict, account_average_cost_per_sale, reason, daily,
+  // quotes_list } }. Only reads the database; never calls Meta.
+  panelAd(adId, days) {
+    return axios.get(`${this.url}/panel_ad`, {
+      params: { ad_id: adId, days },
+    });
+  }
+
   // AI reads the stages and answers { suggestions: [{ stage_id, type, reason }] }.
   suggestStages(pipelineId) {
     return pollAiRequest(
       axios.post(`${this.url}/suggest_stages`, { pipeline_id: pipelineId })
+    );
+  }
+
+  // F4a (#1100): "what to do today" written by the AI from the panel numbers →
+  // { daily_action: null | { source: 'ai'|'rule', reason, kind, ad_id,
+  //   headline, body, why, days, generated_at } }.
+  dailyAction(days) {
+    return pollAiRequest(axios.post(`${this.url}/daily_action`, { days }));
+  }
+
+  // Suggested message to resume a stalled quote. Never sent by the server →
+  // { quote_message: { card_id, conversation_id, applies, reason, message,
+  //   source_quote } }.
+  quoteMessage(cardId) {
+    return pollAiRequest(
+      axios.post(`${this.url}/quote_message`, { card_id: cardId })
     );
   }
 }

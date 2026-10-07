@@ -45,7 +45,7 @@ const route = vi.hoisted(() => ({ value: null }));
 const push = vi.fn();
 vi.mock('vue-router', () => ({
   useRoute: () => route.value,
-  useRouter: () => ({ push }),
+  useRouter: () => ({ push, replace: vi.fn() }),
 }));
 const alert = vi.fn();
 vi.mock('dashboard/composables', () => ({
@@ -110,8 +110,8 @@ const module = (getters, actions = {}) => ({
   actions,
 });
 
-const mountPage = () => {
-  route.value = { query: {}, params: { accountId: 1 } };
+const mountPage = ({ query = {} } = {}) => {
+  route.value = { query, params: { accountId: 1 } };
   api.list.mockResolvedValue({
     data: { payload: [AUDIENCE], meta: { count: 1 } },
   });
@@ -361,6 +361,13 @@ describe('Nova campanha — e-mail (D8–D13)', () => {
       // D12: marks the visit so the editor's exit comes back to the journey.
       query: { journey: '1' },
     });
+    // #1093: the page already reads the e-mail on return; no "I came back" button.
+    expect(wrapper.find('[data-test="email-content"]').text()).not.toContain(
+      'I came back from the editor'
+    );
+    expect(
+      wrapper.find('[data-test="email-content"]').findAll('button')
+    ).toHaveLength(1);
     wrapper.unmount();
   });
 
@@ -390,7 +397,8 @@ describe('Nova campanha — e-mail (D8–D13)', () => {
     });
     emailApi.sendTest.mockResolvedValue({});
     emailApi.schedule.mockResolvedValue({});
-    const wrapper = mountPage();
+    // The editor's exit lands here with ?email=<id> (journeyRedirects, #1093).
+    const wrapper = mountPage({ query: { email: '31' } });
     await flushPromises();
     await vi.advanceTimersByTimeAsync(500);
     await flushPromises();

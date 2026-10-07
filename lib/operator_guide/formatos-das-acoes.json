@@ -227,6 +227,16 @@
     ],
     "sem_corpo": true
   },
+  "DELETE brand_kits/:id": {
+    "completo": true,
+    "controller": "api/v1/accounts/brand_kits#destroy",
+    "modelo": "BrandKit",
+    "origem": [
+      "app/controllers/api/v1/accounts/brand_kits_controller.rb:34",
+      "app/controllers/api/v1/accounts/brand_kits_controller.rb:58"
+    ],
+    "sem_corpo": true
+  },
   "DELETE campaign_imports/:id": {
     "completo": true,
     "controller": "api/v1/accounts/campaign_imports#destroy",
@@ -535,7 +545,7 @@
     "controller": "api/v1/accounts/crm/meta_ads_connections#destroy",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:53"
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:55"
     ],
     "sem_corpo": true
   },
@@ -682,6 +692,16 @@
     "origem": [
       "app/controllers/api/v1/accounts/dashboard_apps_controller.rb:20",
       "app/controllers/api/v1/accounts/dashboard_apps_controller.rb:43"
+    ],
+    "sem_corpo": true
+  },
+  "DELETE email_campaigns/ai/campaigns/:id/adjustment": {
+    "completo": true,
+    "controller": "api/v1/accounts/email_campaigns/ai#discard_adjustment",
+    "modelo": "EmailCampaign",
+    "origem": [
+      "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:40",
+      "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:42"
     ],
     "sem_corpo": true
   },
@@ -3808,6 +3828,117 @@
     ],
     "sem_corpo": false
   },
+  "PATCH brand_kits/:id": {
+    "campos": {
+      "appearance": {
+        "campos": {
+          "footer": {
+            "campos": {
+              "address": {},
+              "company_name": {},
+              "phone": {},
+              "website": {}
+            },
+            "tipo": "objeto"
+          },
+          "logo_url": {},
+          "palettes": {
+            "campos": {
+              "dark": {
+                "campos": {
+                  "accent": {},
+                  "background": {},
+                  "band": {},
+                  "ink": {},
+                  "muted": {},
+                  "primary": {},
+                  "surface": {},
+                  "tint": {}
+                },
+                "tipo": "objeto"
+              },
+              "light": {
+                "campos": {
+                  "accent": {},
+                  "background": {},
+                  "band": {},
+                  "ink": {},
+                  "muted": {},
+                  "primary": {},
+                  "surface": {},
+                  "tint": {}
+                },
+                "tipo": "objeto"
+              }
+            },
+            "tipo": "objeto"
+          },
+          "site_palette": {
+            "campos": {
+              "accent": {},
+              "background": {},
+              "ink": {},
+              "muted": {},
+              "primary": {},
+              "surface": {},
+              "tint": {}
+            },
+            "tipo": "objeto"
+          },
+          "social_links": {
+            "campos": {
+              "network": {},
+              "url": {}
+            },
+            "tipo": "objeto"
+          },
+          "typography": {
+            "campos": {
+              "body_font": {},
+              "google_font_url": {},
+              "heading_font": {}
+            },
+            "tipo": "objeto"
+          }
+        },
+        "tipo": "objeto"
+      },
+      "is_default": {
+        "padrao": false,
+        "tipo": "booleano"
+      },
+      "logo": {},
+      "logo_source_url": {},
+      "name": {
+        "max_caracteres": 80,
+        "nao_pode_ficar_vazio": true,
+        "tipo": "string",
+        "unico": true
+      },
+      "remove_logo": {},
+      "source_url": {
+        "max_caracteres": 2048,
+        "tipo": "string"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/brand_kits#update",
+    "corpo_plano": false,
+    "envelope": "brand_kit",
+    "modelo": "BrandKit",
+    "origem": [
+      "app/controllers/api/v1/accounts/brand_kits_controller.rb:28",
+      "app/controllers/api/v1/accounts/brand_kits_controller.rb:101",
+      "app/controllers/api/v1/accounts/brand_kits_controller.rb:105",
+      "app/controllers/api/v1/accounts/brand_kits_controller.rb:58"
+    ],
+    "sem_corpo": false,
+    "so_no_envelope": [
+      "logo",
+      "logo_source_url",
+      "remove_logo"
+    ]
+  },
   "PATCH branded_email_layout": {
     "campos": {
       "branded_email_layout": {
@@ -4794,8 +4925,8 @@
     "envelope": "meta_ads_connection",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:39",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:208"
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:41",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:217"
     ],
     "sem_corpo": false
   },
@@ -4804,7 +4935,7 @@
     "controller": "api/v1/accounts/crm/meta_ads_connections#destinations",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:96"
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:105"
     ],
     "sem_corpo": true
   },
@@ -4830,10 +4961,31 @@
     "controller": "api/v1/accounts/crm/meta_ads_connections#funnel",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:110",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:204",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:114",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:113"
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:119",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:213",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:123",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:122"
+    ],
+    "sem_corpo": false
+  },
+  "PATCH crm/meta_ads_connection/whatsapp_report": {
+    "campos": {
+      "whatsapp_report": {
+        "campos": {
+          "alert_enabled": {},
+          "enabled": {},
+          "inbox_id": {},
+          "phone": {}
+        },
+        "tipo": "objeto"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/crm/meta_ads_whatsapp_reports#update",
+    "modelo": "Crm::MetaAdsConnection",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_whatsapp_reports_controller.rb:26",
+      "app/controllers/api/v1/accounts/crm/meta_ads_whatsapp_reports_controller.rb:72"
     ],
     "sem_corpo": false
   },
@@ -11103,6 +11255,153 @@
     ],
     "sem_corpo": false
   },
+  "POST brand_kit_imports": {
+    "campos": {
+      "url": {
+        "max_caracteres": 2048,
+        "obrigatorio": "pelo_modelo",
+        "tipo": "string"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/brand_kit_imports#create",
+    "modelo": "BrandImportJob",
+    "origem": [
+      "app/controllers/api/v1/accounts/brand_kit_imports_controller.rb:12",
+      "app/controllers/api/v1/accounts/brand_kit_imports_controller.rb:14"
+    ],
+    "sem_corpo": false
+  },
+  "POST brand_kits": {
+    "campos": {
+      "appearance": {
+        "campos": {
+          "footer": {
+            "campos": {
+              "address": {},
+              "company_name": {},
+              "phone": {},
+              "website": {}
+            },
+            "tipo": "objeto"
+          },
+          "logo_url": {},
+          "palettes": {
+            "campos": {
+              "dark": {
+                "campos": {
+                  "accent": {},
+                  "background": {},
+                  "band": {},
+                  "ink": {},
+                  "muted": {},
+                  "primary": {},
+                  "surface": {},
+                  "tint": {}
+                },
+                "tipo": "objeto"
+              },
+              "light": {
+                "campos": {
+                  "accent": {},
+                  "background": {},
+                  "band": {},
+                  "ink": {},
+                  "muted": {},
+                  "primary": {},
+                  "surface": {},
+                  "tint": {}
+                },
+                "tipo": "objeto"
+              }
+            },
+            "tipo": "objeto"
+          },
+          "site_palette": {
+            "campos": {
+              "accent": {},
+              "background": {},
+              "ink": {},
+              "muted": {},
+              "primary": {},
+              "surface": {},
+              "tint": {}
+            },
+            "tipo": "objeto"
+          },
+          "social_links": {
+            "campos": {
+              "network": {},
+              "url": {}
+            },
+            "tipo": "objeto"
+          },
+          "typography": {
+            "campos": {
+              "body_font": {},
+              "google_font_url": {},
+              "heading_font": {}
+            },
+            "tipo": "objeto"
+          }
+        },
+        "tipo": "objeto"
+      },
+      "is_default": {
+        "padrao": false,
+        "tipo": "booleano"
+      },
+      "logo": {},
+      "logo_source_url": {},
+      "name": {
+        "max_caracteres": 80,
+        "obrigatorio": "pelo_modelo",
+        "tipo": "string",
+        "unico": true
+      },
+      "remove_logo": {},
+      "source_url": {
+        "max_caracteres": 2048,
+        "tipo": "string"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/brand_kits#create",
+    "corpo_plano": false,
+    "envelope": "brand_kit",
+    "modelo": "BrandKit",
+    "origem": [
+      "app/controllers/api/v1/accounts/brand_kits_controller.rb:20",
+      "app/controllers/api/v1/accounts/brand_kits_controller.rb:101",
+      "app/controllers/api/v1/accounts/brand_kits_controller.rb:105"
+    ],
+    "sem_corpo": false,
+    "so_no_envelope": [
+      "logo",
+      "logo_source_url",
+      "remove_logo"
+    ]
+  },
+  "POST brand_kits/:id/restore": {
+    "completo": true,
+    "controller": "api/v1/accounts/brand_kits#restore",
+    "modelo": "BrandKit",
+    "origem": [
+      "app/controllers/api/v1/accounts/brand_kits_controller.rb:46",
+      "app/controllers/api/v1/accounts/brand_kits_controller.rb:58"
+    ],
+    "sem_corpo": true
+  },
+  "POST brand_kits/:id/set_default": {
+    "completo": true,
+    "controller": "api/v1/accounts/brand_kits#set_default",
+    "modelo": "BrandKit",
+    "origem": [
+      "app/controllers/api/v1/accounts/brand_kits_controller.rb:41",
+      "app/controllers/api/v1/accounts/brand_kits_controller.rb:58"
+    ],
+    "sem_corpo": true
+  },
   "POST bulk_actions": {
     "campos": {
       "action_name": {},
@@ -13616,14 +13915,46 @@
     ],
     "sem_corpo": false
   },
+  "POST crm/meta_ads_connection/daily_action": {
+    "campos": {
+      "days": {}
+    },
+    "completo": false,
+    "controller": "api/v1/accounts/crm/meta_ads_ai#daily_action",
+    "modelo": "Crm::MetaAdsConnection",
+    "motivos": [
+      "leitura crua sem tipo: days (repassada a ::Crm::MetaAds::Panel::Report.new)"
+    ],
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_ai_controller.rb:14",
+      "app/controllers/api/v1/accounts/crm/meta_ads_ai_controller.rb:18"
+    ],
+    "sem_corpo": false
+  },
   "POST crm/meta_ads_connection/insights": {
     "completo": true,
     "controller": "api/v1/accounts/crm/meta_ads_connections#insights",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:58"
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:60"
     ],
     "sem_corpo": true
+  },
+  "POST crm/meta_ads_connection/quote_message": {
+    "campos": {
+      "card_id": {
+        "tipo": "id",
+        "tipo_pela_leitura": "nome"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/crm/meta_ads_ai#quote_message",
+    "modelo": "Conversation",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_ai_controller.rb:26",
+      "app/controllers/api/v1/accounts/crm/meta_ads_ai_controller.rb:27"
+    ],
+    "sem_corpo": false
   },
   "POST crm/meta_ads_connection/selection": {
     "campos": {
@@ -13647,9 +13978,9 @@
     "controller": "api/v1/accounts/crm/meta_ads_connections#selection",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:87",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:88",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:149"
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:96",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:97",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:158"
     ],
     "sem_corpo": false
   },
@@ -13664,11 +13995,20 @@
     "controller": "api/v1/accounts/crm/meta_ads_connections#suggest_stages",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:124",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:128",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:127"
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:133",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:137",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:136"
     ],
     "sem_corpo": false
+  },
+  "POST crm/meta_ads_connection/whatsapp_report/test": {
+    "completo": true,
+    "controller": "api/v1/accounts/crm/meta_ads_whatsapp_reports#test_send",
+    "modelo": "Crm::MetaAdsConnection",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_whatsapp_reports_controller.rb:33"
+    ],
+    "sem_corpo": true
   },
   "POST crm/pipelines": {
     "campos": {
@@ -14694,6 +15034,26 @@
     ],
     "sem_corpo": false
   },
+  "POST email_campaigns/ai/campaigns/:id/adjustment/apply": {
+    "completo": true,
+    "controller": "api/v1/accounts/email_campaigns/ai#apply_adjustment",
+    "modelo": "EmailCampaign",
+    "origem": [
+      "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:49",
+      "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:51"
+    ],
+    "sem_corpo": true
+  },
+  "POST email_campaigns/ai/campaigns/:id/adjustment/undo": {
+    "completo": true,
+    "controller": "api/v1/accounts/email_campaigns/ai#undo_adjustment",
+    "modelo": "EmailCampaign",
+    "origem": [
+      "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:56",
+      "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:58"
+    ],
+    "sem_corpo": true
+  },
   "POST email_campaigns/ai/generate": {
     "campos": {
       "assets": {
@@ -14704,6 +15064,15 @@
         "tipo": "string",
         "tipo_pela_leitura": "uso"
       },
+      "brand_import_id": {
+        "tipo": "id",
+        "tipo_pela_leitura": "nome"
+      },
+      "brand_kit_id": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
+      "brand_mode": {},
       "brief": {
         "tipo": "string",
         "tipo_pela_leitura": "uso"
@@ -14717,15 +15086,24 @@
         "tipo_pela_leitura": "uso"
       }
     },
-    "completo": true,
+    "completo": false,
     "controller": "api/v1/accounts/email_campaigns/ai#generate",
-    "modelo": "EmailCampaign",
+    "modelo": "BrandKit",
+    "motivos": [
+      "leitura crua sem tipo: brand_mode (repassada a modes.include?)"
+    ],
     "origem": [
       "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:15",
-      "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:46",
-      "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:51",
-      "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:44",
-      "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:43",
+      "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:75",
+      "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:117",
+      "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:73",
+      "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:72",
+      "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:91",
+      "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:95",
+      "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:86",
+      "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:84",
+      "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:105",
+      "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:83",
       "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:18",
       "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:17"
     ],
@@ -14746,8 +15124,8 @@
     "controller": "api/v1/accounts/email_campaigns/ai#rewrite",
     "modelo": "EmailCampaign",
     "origem": [
-      "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:34",
-      "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:36"
+      "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:63",
+      "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:65"
     ],
     "sem_corpo": false
   },
@@ -14931,18 +15309,18 @@
   },
   "POST email_campaigns/campaigns/:id/test_send": {
     "campos": {
-      "to_email": {
-        "tipo": "string",
-        "tipo_pela_leitura": "uso"
+      "to_email": {},
+      "to_emails": {
+        "tipo": "lista"
       }
     },
     "completo": true,
     "controller": "api/v1/accounts/email_campaigns/test_sends#create",
     "modelo": "EmailCampaign",
     "origem": [
-      "app/controllers/api/v1/accounts/email_campaigns/test_sends_controller.rb:10",
-      "app/controllers/api/v1/accounts/email_campaigns/test_sends_controller.rb:66",
-      "app/controllers/api/v1/accounts/email_campaigns/test_sends_controller.rb:11"
+      "app/controllers/api/v1/accounts/email_campaigns/test_sends_controller.rb:12",
+      "app/controllers/api/v1/accounts/email_campaigns/test_sends_controller.rb:71",
+      "app/controllers/api/v1/accounts/email_campaigns/test_sends_controller.rb:13"
     ],
     "sem_corpo": false
   },
@@ -20250,6 +20628,117 @@
     ],
     "sem_corpo": false
   },
+  "PUT brand_kits/:id": {
+    "campos": {
+      "appearance": {
+        "campos": {
+          "footer": {
+            "campos": {
+              "address": {},
+              "company_name": {},
+              "phone": {},
+              "website": {}
+            },
+            "tipo": "objeto"
+          },
+          "logo_url": {},
+          "palettes": {
+            "campos": {
+              "dark": {
+                "campos": {
+                  "accent": {},
+                  "background": {},
+                  "band": {},
+                  "ink": {},
+                  "muted": {},
+                  "primary": {},
+                  "surface": {},
+                  "tint": {}
+                },
+                "tipo": "objeto"
+              },
+              "light": {
+                "campos": {
+                  "accent": {},
+                  "background": {},
+                  "band": {},
+                  "ink": {},
+                  "muted": {},
+                  "primary": {},
+                  "surface": {},
+                  "tint": {}
+                },
+                "tipo": "objeto"
+              }
+            },
+            "tipo": "objeto"
+          },
+          "site_palette": {
+            "campos": {
+              "accent": {},
+              "background": {},
+              "ink": {},
+              "muted": {},
+              "primary": {},
+              "surface": {},
+              "tint": {}
+            },
+            "tipo": "objeto"
+          },
+          "social_links": {
+            "campos": {
+              "network": {},
+              "url": {}
+            },
+            "tipo": "objeto"
+          },
+          "typography": {
+            "campos": {
+              "body_font": {},
+              "google_font_url": {},
+              "heading_font": {}
+            },
+            "tipo": "objeto"
+          }
+        },
+        "tipo": "objeto"
+      },
+      "is_default": {
+        "padrao": false,
+        "tipo": "booleano"
+      },
+      "logo": {},
+      "logo_source_url": {},
+      "name": {
+        "max_caracteres": 80,
+        "nao_pode_ficar_vazio": true,
+        "tipo": "string",
+        "unico": true
+      },
+      "remove_logo": {},
+      "source_url": {
+        "max_caracteres": 2048,
+        "tipo": "string"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/brand_kits#update",
+    "corpo_plano": false,
+    "envelope": "brand_kit",
+    "modelo": "BrandKit",
+    "origem": [
+      "app/controllers/api/v1/accounts/brand_kits_controller.rb:28",
+      "app/controllers/api/v1/accounts/brand_kits_controller.rb:101",
+      "app/controllers/api/v1/accounts/brand_kits_controller.rb:105",
+      "app/controllers/api/v1/accounts/brand_kits_controller.rb:58"
+    ],
+    "sem_corpo": false,
+    "so_no_envelope": [
+      "logo",
+      "logo_source_url",
+      "remove_logo"
+    ]
+  },
   "PUT branded_email_layout": {
     "campos": {
       "branded_email_layout": {
@@ -21126,8 +21615,8 @@
     "envelope": "meta_ads_connection",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:39",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:208"
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:41",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:217"
     ],
     "sem_corpo": false
   },

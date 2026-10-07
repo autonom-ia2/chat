@@ -21,6 +21,8 @@ class Crm::Ai::InteractiveOperation
     when 'email_rewrite' then authorize_email!
     when 'stage_criteria' then authorize_pipeline!
     when 'meta_funnel_stages' then authorize_meta_funnel!
+    when 'meta_ads_daily_action' then authorize_meta_ads_panel!
+    when 'meta_ads_quote_message' then authorize_meta_ads_quote!
     else raise ArgumentError, 'unknown_interactive_operation'
     end
   end
@@ -37,6 +39,8 @@ class Crm::Ai::InteractiveOperation
     when 'email_rewrite' then EmailCampaigns::Ai::Rewriter.new(account: @account, **@inputs).perform
     when 'stage_criteria' then Crm::Ai::StageCriteriaImprover.new(pipeline: pipeline, **@inputs.except(:pipeline_id)).perform
     when 'meta_funnel_stages' then Crm::MetaAds::StageTypeSuggester.new(pipeline: meta_funnel, language: @inputs.fetch(:language)).perform
+    when 'meta_ads_daily_action' then meta_ads_daily_action
+    when 'meta_ads_quote_message' then meta_ads_quote_message
     end
   end
 
@@ -94,6 +98,43 @@ class Crm::Ai::InteractiveOperation
     @meta_funnel ||= Crm::MetaAds::Funnels.new(@account, connection).find!(@inputs.fetch(:pipeline_id))
   rescue Crm::MetaAds::Funnels::Error
     raise ActiveRecord::RecordNotFound
+  end
+
+  # Anúncios da Meta, F4a (#1100): o mesmo administrador do painel, com a conta de anúncios escolhida.
+  def authorize_meta_ads_panel!
+    raise Pundit::NotAuthorizedError unless Crm::Config.enabled? && Crm::Ai::Config.enabled?
+
+    Pundit.authorize(@context, ::Crm::MetaAdsConnection, :show?)
+    meta_ads_connection
+  end
+
+  # A proposta precisa estar entre as paradas, recalculadas agora; nunca se confia no card_id da tela.
+  def authorize_meta_ads_quote!
+    authorize_meta_ads_panel!
+    raise ActiveRecord::RecordNotFound if meta_ads_stalled_card.blank?
+
+    authorize_conversation!(meta_ads_conversation)
+  end
+
+  def meta_ads_connection
+    @meta_ads_connection ||= ::Crm::MetaAdsConnection.where.not(ad_account_id: nil).find_by!(account_id: @account.id)
+  end
+
+  def meta_ads_stalled_card
+    @meta_ads_stalled_card ||= Crm::MetaAds::QuoteMessageSuggester.stalled_card(meta_ads_connection, card.id)
+  end
+
+  def meta_ads_conversation
+    @meta_ads_conversation ||= @account.conversations.find(meta_ads_stalled_card.conversation_id)
+  end
+
+  def meta_ads_daily_action
+    { daily_action: Crm::MetaAds::Panel::AiAction.daily(connection: meta_ads_connection, **@inputs.slice(:days, :language)) }
+  end
+
+  def meta_ads_quote_message
+    suggester = Crm::MetaAds::QuoteMessageSuggester.new(card: card, conversation: meta_ads_conversation, language: @inputs.fetch(:language))
+    { quote_message: suggester.perform }
   end
 
   def authorize_email!

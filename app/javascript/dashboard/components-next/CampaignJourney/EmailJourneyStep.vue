@@ -3,13 +3,15 @@
 // sender (verified domain or webmail inbox for direct send) and the inbox for replies; then
 // POST campaign_journey/campaigns creates the draft linked to the audience and the existing
 // editor (EmailBuilderPage: "Como você quer começar?", AI, library, blocks, details) opens
-// unchanged. Back here, the content summary shows and the journey goes on to Revisar.
+// unchanged. Back here (?email=<id>, #1093) the page reads the e-mail again, so the content
+// summary shows and the journey goes on to Revisar.
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
 import { isDirectSendInbox, isVerifiedIdentity } from './emailSenders';
+import BrandIdentityLine from 'dashboard/components-next/BrandKits/BrandIdentityLine.vue';
 
 const props = defineProps({
   draft: { type: Object, required: true },
@@ -20,7 +22,7 @@ const props = defineProps({
   isCreating: { type: Boolean, default: false },
 });
 
-const emit = defineEmits(['update', 'create', 'openEditor', 'reload']);
+const emit = defineEmits(['update', 'create', 'openEditor', 'manageIdentity']);
 
 const NS = 'CAMPAIGN_JOURNEY.NEW_CAMPAIGN.EMAIL';
 const { t } = useI18n();
@@ -119,6 +121,11 @@ const chooseSender = value => {
           @update:model-value="replyInboxId => emit('update', { replyInboxId })"
         />
       </div>
+      <BrandIdentityLine
+        :kit-id="draft.brandKitId"
+        @change="brandKitId => emit('update', { brandKitId })"
+        @manage="create => emit('manageIdentity', create)"
+      />
       <div class="flex justify-end">
         <Button
           :label="t(`${NS}.CREATE`)"
@@ -170,6 +177,11 @@ const chooseSender = value => {
             : t(`${NS}.CONTENT_EMPTY`)
         }}
       </p>
+      <BrandIdentityLine
+        :kit-id="draft.brandKitId"
+        @change="brandKitId => emit('update', { brandKitId })"
+        @manage="create => emit('manageIdentity', create)"
+      />
       <div class="flex flex-wrap gap-2">
         <Button
           :label="t(`${NS}.OPEN_EDITOR`)"
@@ -177,13 +189,6 @@ const chooseSender = value => {
           class="!min-h-11 !rounded-xl"
           data-test="email-open-editor"
           @click="emit('openEditor')"
-        />
-        <Button
-          :label="t(`${NS}.RELOAD`)"
-          variant="outline"
-          color="slate"
-          class="!min-h-11 !rounded-xl"
-          @click="emit('reload')"
         />
       </div>
     </div>

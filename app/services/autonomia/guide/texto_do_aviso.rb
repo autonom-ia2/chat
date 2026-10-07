@@ -33,6 +33,14 @@ class Autonomia::Guide::TextoDoAviso
     I18n.with_locale(@locale) { t('whatsapp_api_caiu', caixa: inbox.name) }
   end
 
+  def whatsapp_api_limite(inbox, estado, fim_ciclo)
+    I18n.with_locale(@locale) do
+      fim = fim_ciclo.to_i.positive? ? I18n.l(Time.zone.at(fim_ciclo.to_i).to_date) : '—'
+      chave = estado == 'CAPPED' ? 'whatsapp_api_bloqueado' : 'whatsapp_api_perto_do_limite'
+      t(chave, caixa: inbox.name, fim: fim)
+    end
+  end
+
   private
 
   def linha(sinal)

@@ -22,6 +22,7 @@ module WhatsappHybrid::CloudFailureFallback
 
     failed_attrs = message.content_attributes.to_h
     message.update!(status: :sent, content_attributes: failed_attrs.except('external_error').merge('whatsapp_transport_fallback' => true))
+    WhatsappHybrid::Stats.record(router.connection, origin: router.origin_of(message), outcome: 'fallback')
     WhatsappHybrid::WebTransport.new(message: message, connection: router.connection, origin: router.origin_of(message)).perform
   rescue StandardError
     # Erro fora do motor (Redis, banco): a mensagem volta para a falha original, nunca fica "enviada" sem ter saído.

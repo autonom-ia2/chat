@@ -6,7 +6,11 @@ RSpec.describe 'WhatsApp Híbrido engine webhook', type: :request do
     WhatsappHybrid::Connection.create!(account: channel.account, inbox: channel.inbox, session_name: 'hybrid-test',
                                        webhook_secret: 'segredo-de-teste')
   end
-  let(:body) { { event: 'session.status', session: 'hybrid-test', payload: { status: 'FAILED' } }.to_json }
+  let(:now_ms) { (Time.current.to_f * 1000).to_i }
+  let(:body) do
+    { id: "evt_#{SecureRandom.hex(8)}", timestamp: now_ms, event: 'session.status', session: 'hybrid-test',
+      me: { id: '5511999993846@c.us', pushName: 'Loja' }, payload: { status: 'FAILED' } }.to_json
+  end
   let(:path) { "/webhooks/whatsapp_hybrid/#{connection.public_id}" }
 
   def post_signed(payload, signature)
@@ -17,8 +21,45 @@ RSpec.describe 'WhatsApp Híbrido engine webhook', type: :request do
     signature = OpenSSL::HMAC.hexdigest('SHA512', 'segredo-de-teste', body)
 
     expect { post_signed(body, signature) }
-      .to have_enqueued_job(WhatsappHybrid::WebhookEventJob).with(connection.id, 'session.status', hash_including('status' => 'FAILED'))
+      .to have_enqueued_job(WhatsappHybrid::WebhookEventJob)
+      .with(connection.id, 'session.status', { 'status' => 'FAILED', 'me' => { 'id' => '5511999993846@c.us' } })
     expect(response).to have_http_status(:ok)
+  end
+
+  it 'passes only the WhatsApp limit fields of the status event' do
+    capped = JSON.parse(body).merge('payload' => { 'status' => 'WORKING', 'data' => { 'messageCapping' => {
+                                      'cappingStatus' => 'CAPPED', 'totalQuota' => 1000, 'usedQuota' => 1000, 'mvStatus' => 'X'
+                                    } } }).to_json
+
+    expect { post_signed(capped, OpenSSL::HMAC.hexdigest('SHA512', 'segredo-de-teste', capped)) }
+      .to have_enqueued_job(WhatsappHybrid::WebhookEventJob).with(
+        connection.id, 'session.status',
+        hash_including('capping' => { 'cappingStatus' => 'CAPPED', 'totalQuota' => 1000, 'usedQuota' => 1000 })
+      )
+  end
+
+  it 'applies a replayed event only once' do
+    signature = OpenSSL::HMAC.hexdigest('SHA512', 'segredo-de-teste', body)
+    post_signed(body, signature)
+
+    expect { post_signed(body, signature) }.not_to have_enqueued_job(WhatsappHybrid::WebhookEventJob)
+    expect(response).to have_http_status(:ok)
+  end
+
+  it 'refuses a signed event older than five minutes' do
+    old = JSON.parse(body).merge('timestamp' => now_ms - 6.minutes.in_milliseconds).to_json
+
+    expect { post_signed(old, OpenSSL::HMAC.hexdigest('SHA512', 'segredo-de-teste', old)) }
+      .not_to have_enqueued_job(WhatsappHybrid::WebhookEventJob)
+    expect(response).to have_http_status(:bad_request)
+  end
+
+  it 'refuses a signed event without timestamp' do
+    undated = JSON.parse(body).except('timestamp').to_json
+
+    post_signed(undated, OpenSSL::HMAC.hexdigest('SHA512', 'segredo-de-teste', undated))
+
+    expect(response).to have_http_status(:bad_request)
   end
 
   it 'accepts the signature in upper case hex' do
@@ -54,7 +95,7 @@ RSpec.describe 'WhatsApp Híbrido engine webhook', type: :request do
   end
 
   it 'refuses oversized bodies before anything else' do
-    big = { event: 'session.status', payload: { status: 'WORKING', pad: 'x' * 70_000 } }.to_json
+    big = { id: 'evt_big', timestamp: now_ms, event: 'session.status', payload: { status: 'WORKING', pad: 'x' * 70_000 } }.to_json
 
     expect { post_signed(big, OpenSSL::HMAC.hexdigest('SHA512', 'segredo-de-teste', big)) }
       .not_to have_enqueued_job(WhatsappHybrid::WebhookEventJob)
@@ -62,7 +103,7 @@ RSpec.describe 'WhatsApp Híbrido engine webhook', type: :request do
   end
 
   it 'ignores events other than session status and acks' do
-    message_body = { event: 'message', payload: { body: 'oi' } }.to_json
+    message_body = { id: 'evt_msg', timestamp: now_ms, event: 'message', payload: { body: 'oi' } }.to_json
 
     expect { post_signed(message_body, OpenSSL::HMAC.hexdigest('SHA512', 'segredo-de-teste', message_body)) }
       .not_to have_enqueued_job(WhatsappHybrid::WebhookEventJob)

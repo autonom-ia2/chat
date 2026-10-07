@@ -45,6 +45,10 @@ export const withCampaignJourney = (
         'campaigns_journey_live_chat_new',
         'campaigns_journey_live_chat_edit',
         'campaigns_journey_result',
+        // Identidade visual (#1076) is a tab of Campanha.
+        'campaigns_journey_brand_kits',
+        'campaigns_journey_brand_kit_new',
+        'campaigns_journey_brand_kit_edit',
       ],
     },
     ...kept,

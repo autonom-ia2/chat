@@ -1,4 +1,4 @@
-# Guia da Plataforma Autonom.ia — base de conhecimento (193 fluxos)
+# Guia da Plataforma Autonom.ia — base de conhecimento (198 fluxos)
 
 > ARQUIVO GERADO por `pnpm guia:build`. Não edite à mão: a rota, o endereço e a
 > permissão saem do roteador do painel, e o texto humano fica em
@@ -587,6 +587,46 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - gotchas: nada entra nos contatos antes de Salvar público; sair antes não cria contato, empresa nem lista; é preciso ter coluna de celular ou de e-mail; canal sem dado aparece desligado com sem dados e não liga; as outras colunas ficam guardadas para usar na mensagem; o bloco Empresas só aparece com Empresas ligada na conta e coluna de empresa; contato que já tem outra empresa continua com a dele (mantida); se veio de uma campanha, o aviso no topo diz qual e, depois de salvar, Voltar para a campanha abre o passo 1 com o público escolhido; não dá para desligar um canal que uma campanha agendada ainda usa.
 - nav_target: `campaigns_journey_audience_new`
 
+### Guardar a identidade visual dos e-mails
+- intent: Onde coloco a logo e as cores da minha marca nos e-mails?; Como faço os e-mails terem a cara da minha empresa?; Onde fica a Identidade visual?; Como troco a identidade padrão?; Como arquivo ou trago de volta uma identidade?
+- onde_fica: Menu lateral > Campanhas > Campanha > aba Identidade visual
+- rota: `campaigns_journey_brand_kits` - `/app/accounts/:accountId/campaigns/identity`
+- gate: feature flag `campaigns`; papel `administrator` ou `campaign_view` ou `campaign_manage`
+- pre_requisitos: jornada de campanhas e campanhas de e-mail ligadas (CAMPAIGN_JOURNEY_ENABLED, EMAIL_CAMPAIGN_ENABLED) e identidade visual ligada (BRAND_KITS_ENABLED, ligada por padrão); e-mail conectado (domínio verificado ou caixa de webmail aceita no envio direto); para ver, campaign_view; para criar, alterar, tornar padrão e arquivar, administrador ou função com campaign_manage.
+- passos: 1. Abra Campanhas > Campanha e clique na aba Identidade visual; 2. Sem nenhuma identidade, clique em Usar o meu site; 3. Cada cartão mostra a logo na faixa do topo, o nome, Padrão na que os e-mails novos usam, o site, as fontes e as cores; 4. Clique em Alterar para mudar logo, cores, fontes, redes e rodapé; 5. No botão de três pontos, Tornar padrão faz os e-mails novos saírem com ela; Arquivar tira da lista (pede confirmação no próprio cartão); 6. Arquivadas: Ver mostra as arquivadas, com Restaurar.
+- gotchas: a aba só aparece com e-mail conectado; a padrão não pode ser arquivada antes de outra virar padrão; arquivar não muda e-mails já feitos; a primeira identidade vira padrão sozinha; cada identidade guarda duas versões de cores, fundo claro (recomendada para e-mail) e fundo escuro (igual ao site), e cada e-mail escolhe uma; o rodapé do e-mail é sempre o do sistema, com o descadastro: a identidade só preenche a linha de empresa, endereço e site e as redes; com BRAND_KITS_ENABLED desligada a aba some e a IA volta a escolher as cores.
+- nav_target: `campaigns_journey_brand_kits`
+
+### Criar a identidade visual a partir do site
+- intent: Como crio uma identidade visual?; Como pego a logo e as cores do meu site?; Por que o e-mail sai com fundo claro se o meu site é escuro?; Por que aparece Arial em vez da minha fonte?; Por que a logo não aparece na faixa do topo?
+- onde_fica: Menu lateral > Campanhas > Campanha > Identidade visual > Nova identidade (ou Usar o meu site)
+- rota: `campaigns_journey_brand_kit_new` - `/app/accounts/:accountId/campaigns/identity/new`
+- gate: feature flag `campaigns`; papel `administrator` ou `campaign_manage`
+- pre_requisitos: identidade visual ligada (BRAND_KITS_ENABLED) e e-mail conectado; administrador ou função com campaign_manage; site público com página inicial em HTML.
+- passos: 1. Cole o endereço do site e clique em Ler o site; 2. Espere a leitura (logo, cores, fontes, redes e rodapé) e clique em Conferir; 3. Parte 1: escolha a logo (do topo do site, ícone ou Enviar outra); em Cores do e-mail, veja Fundo claro e Fundo escuro e use Alterar em cada cor (Botões e destaques, Detalhes, Texto, Texto suave, Fundo, Faixa do topo); Voltar às cores sugeridas desfaz; troque as fontes de títulos e de texto se quiser; a prévia ao lado muda na hora e Ver com Arial mostra como fica sem a fonte; 4. Continuar; 5. Parte 2: dê o nome, confira as redes (Alterar, Tirar, Adicionar rede) e o rodapé (empresa, site, endereço); 6. Salvar.
+- gotchas: nada é salvo antes de Salvar; a logo escolhida só é baixada ao salvar e precisa ser PNG, JPEG, WebP ou GIF (SVG fica de fora); logo branca precisa de faixa do topo escura, e a tela avisa quando a faixa está clara; fonte fora do Google Fonts não carrega no e-mail; mesmo com a fonte do site, alguns programas de e-mail mostram Arial; site sem endereço deixa o campo vazio com um convite para escrever; até algumas leituras por hora e uma por vez na conta.
+- nav_target: `campaigns_journey_brand_kit_new`
+
+### Alterar uma identidade visual
+- intent: Como mudo a cor do botão dos e-mails?; Como troco a logo da identidade?; Como mudo as redes que aparecem no rodapé?; Como deixo os e-mails com fundo escuro?
+- onde_fica: Menu lateral > Campanhas > Campanha > Identidade visual > Alterar (no cartão)
+- rota: `campaigns_journey_brand_kit_edit` - `/app/accounts/:accountId/campaigns/identity/:kitId`
+- gate: feature flag `campaigns`; papel `administrator` ou `campaign_manage`
+- pre_requisitos: identidade visual ligada; administrador ou função com campaign_manage.
+- passos: 1. No cartão da identidade, clique em Alterar; 2. Na aba Logo, cores e fontes, troque a logo, escolha Fundo claro ou Fundo escuro para ver e mudar cada versão, e troque as fontes; 3. Na aba Redes e rodapé, mude o nome, as redes e a linha do rodapé; 4. Salvar.
+- gotchas: as mudanças valem para os e-mails criados depois; e-mails já feitos guardam o que tinham; a versão de cores (clara ou escura) de cada e-mail é escolhida em Criar com IA.
+- nav_target: `campaigns_journey_brand_kit_edit`
+
+### Usar a identidade visual num e-mail criado com IA
+- intent: Como faço o e-mail da IA sair com a minha marca?; Como uso outra identidade num e-mail?; Como uso o site de outra marca só neste e-mail?; Posso pedir no próprio texto para usar a identidade de um site?; Por que o e-mail diz Confira antes de enviar?; Por que a geração falhou com um problema que impede o envio?
+- onde_fica: editor do e-mail > Criar com IA > Identidade (e, no editor, o painel Identidade deste e-mail)
+- rota: `campaigns_email_builder` - `/app/accounts/:accountId/campaigns/email_campaigns/:campaignId/builder`
+- gate: feature flag `campaigns`; papel `administrator` ou `campaign_view` ou `campaign_manage`
+- pre_requisitos: identidade visual ligada; IA de e-mail configurada; para gerar, administrador ou função com campaign_manage.
+- passos: 1. Em Criar com IA, a identidade padrão já vem escolhida; 2. Clique em Trocar para escolher outra, Usar outro site ou Ver todas as identidades (abre em outra aba, o e-mail fica aberto); 3. Em Usar outro site, cole o endereço, clique em Ler o site e espere a leitura; marque Salvar como identidade se quiser guardar o site na lista; 4. Escolha Fundo claro (recomendado) ou Fundo escuro; 5. Escreva o briefing e clique em Gerar; 6. No editor, o painel Identidade deste e-mail mostra qual foi usada; Trocar abre o Criar com IA de novo para refazer o e-mail com outra identidade. 7. Também dá para pedir no próprio texto do Criar com IA ou do Ajustar com IA (ex.: "use a identidade do site https://aurora.com.br"): a IA lê o pedido, lê o site e usa a logo, as cores e as fontes dele só neste e-mail; uma frase diz "Usei a identidade de aurora.com.br, como você pediu." com o botão Salvar como identidade.
+- gotchas: sem marcar Salvar como identidade, o site vale só para este e-mail e a logo dele fica guardada com a campanha; marcado, o site vira uma identidade ao clicar em Gerar, com o nome do site (se o nome já existe na lista, ganha um número, como Aurora 2), não vira padrão (a não ser que seja a primeira) e um aviso diz se deu certo, se salvou sem a logo ou se não deu para salvar (nesse caso o e-mail usa o site mesmo assim); a IA usa as cores, as fontes e a logo da identidade e não inventa outro rodapé; depois de gerar, o sistema confere contraste, tamanho dos botões, descrição das imagens, placeholders, tamanho e rodapé; se algo falha, pede uma correção à IA; segundo rodapé, placeholder que a campanha não preenche ou e-mail claramente maior que o limite do Gmail fazem a geração falhar; o resto aparece em Confira antes de enviar, inclusive e-mail perto do limite do Gmail e menos de 3 assuntos sugeridos; o tamanho é uma estimativa feita pelo MJML; em Nova campanha, a linha Identidade (Trocar, Gerenciar) escolhe a identidade antes de abrir o editor; o Resultado da campanha mostra qual identidade o e-mail usou. Site pedido no próprio texto: vale só para este e-mail e vence a identidade escolhida; "layout" ou "cara" do site quer dizer cores, fontes e logo — a estrutura continua nos blocos do editor; no Ajustar com IA, trocar a identidade conta como o pedido (textos, imagens e links ficam); no Ajustar com IA, a identidade da campanha só muda quando você clica em Aplicar (Descartar não muda nada, e Desfazer logo depois volta o e-mail e a identidade de antes); site que não abre, endereço interno ou endereço privado não é lido (e os sites lidos assim não contam no limite de 10 leituras por hora da tela Identidade visual; têm um limite próprio de 30 por hora), e a frase diz "Não consegui ler aurora.com.br. Usei a identidade padrão."; endereço citado só como link ou página do produto não troca a identidade.
+- nav_target: `campaigns_email_builder`
+
 ### Criar campanha de WhatsApp Oficial em três passos
 - intent: Como crio uma campanha de WhatsApp para uma planilha?; Como escolho o público da campanha?; De onde vem cada parte da mensagem do modelo?; Por que um canal aparece indisponível?; Como agendo o envio?; Por que algumas pessoas ficam de fora?
 - onde_fica: Menu lateral > Campanhas > Campanha > Nova campanha (ou Público > Usar em nova campanha)
@@ -640,13 +680,13 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - highlight: `campaigns-new-email`
 
 ### Montar e-mail com editor, IA e templates
-- intent: "Como edito o corpo do e-mail?"; "Onde uso IA para escrever?"; "Como aplicar template?"
+- intent: "Como edito o corpo do e-mail?"; "Onde uso IA para escrever?"; "Como aplicar template?"; "Como peço para a IA mudar só uma parte do e-mail?"
 - onde_fica: Sidebar > Campanhas > E-mails > Editor
 - rota: `campaigns_email_builder` - `/app/accounts/:accountId/campaigns/email_campaigns/:campaignId/builder`
 - gate: feature flag `campaigns`; papel `administrator` ou `campaign_view` ou `campaign_manage`
 - pre_requisitos: campanha em rascunho; para IA, `CRM_AI_ENABLED=true` e credencial de IA resolvível.
-- passos: Abra o editor; escolha IA, Biblioteca de modelos ou começar do zero; ajuste assunto e prévia do assunto no topo; edite blocos e propriedades; use Personalizar para inserir os campos disponíveis; envie teste, salve e abra Revisar envio.
-- gotchas: geração por IA é assíncrona e mostra status `processing/ready/failed`; templates ficam em rota própria `campaigns_email_templates`; enviar teste persiste o corpo antes de enviar.
+- passos: Abra o editor; escolha IA, Biblioteca de modelos ou começar do zero; ajuste assunto e prévia do assunto no topo; edite blocos e propriedades; use Personalizar para inserir os campos disponíveis; com o e-mail já montado, clique em Ajustar com IA, escreva o que quer mudar (ex.: "deixe o botão verde") e confira o antes e depois: Aplicar troca o e-mail, Descartar mantém como estava, e Desfazer volta logo depois de aplicar; envie teste, salve e abra Revisar envio.
+- gotchas: geração por IA é assíncrona e mostra status `processing/ready/failed`; o botão diz Criar com IA com o editor vazio e Ajustar com IA quando já há conteúdo — desmarcar "Mudar só o que eu pedir" cria um e-mail novo do zero; o ajuste muda só o pedido, nunca o rodapé de descadastro, e não aplica nada sem a pessoa ver a prévia; se a mudança deixaria o e-mail difícil de ler ou não dá para fazer num e-mail, a tela diz o motivo em uma frase; templates ficam em rota própria `campaigns_email_templates`; enviar teste persiste o corpo antes de enviar.
 - nav_target: `campaigns_email_builder`
 
 ### Gerenciar destinatários, agendar e enviar campanha de e-mail
@@ -1312,6 +1352,17 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - gotchas: WhatsApp API por QR Code é DIFERENTE do WhatsApp Oficial: usa o número direto via QR (sem aprovação da Meta); números brasileiros enviados com ou sem o 9º dígito são resolvidos automaticamente para o chat correto quando o App de números brasileiros está habilitado no WAHA; cada contato usa uma conversa contínua nesta caixa e, se o cliente voltar depois de uma resolução, a mesma conversa é reaberta; o QR aparece na tela de conexão DEPOIS de criar a caixa (não no clique do tile); o WhatsApp dá cerca de 2 minutos e meio para ler (a tela mostra o tempo restante); se expirar, a tela mostra "O QR Code expirou" e o botão Gerar novo QR Code, sem recriar a caixa; leia pelo próprio WhatsApp (Aparelhos conectados), não pela câmera do celular; pode desconectar se o aparelho/sessão cair; se o tile não aparecer, o canal pode não estar habilitado nesta instalação.
 - nav_target: `settings_inbox_new`
 - highlight: `channel-whatsapp-api`
+
+### Conectar o WhatsApp API na caixa oficial
+- intent: Como respondo o cliente depois de 24 horas sem modelo?; Quero ligar o WhatsApp API na minha caixa oficial; Onde fica a aba WhatsApp API da caixa?; O que quer dizer WhatsApp API na bolha da mensagem?; O que é WhatsApp API plano B?; O WhatsApp API da caixa desconectou, como reconecto?; Como desligo o envio pelo WhatsApp API?
+- onde_fica: Configurações > Caixas de entrada > selecionar a caixa de WhatsApp Oficial > aba WhatsApp API
+- rota: `settings_inbox_show` - `/app/accounts/:accountId/settings/inboxes/:inboxId/:tab?`
+- gate: feature flag `inbox_management`; papel `administrator` ou `inbox_view` ou `inbox_manage`
+- perfil: `administrator`, ou função personalizada com `inbox_manage`. Sem isso, diga que conectar, ajustar e desconectar o WhatsApp API da caixa fica com quem administra as caixas; quem atende só vê o resultado na conversa.
+- pre_requisitos: caixa de WhatsApp Oficial conectada pela Meta; o celular com o WhatsApp Business do mesmo número na mão; a aba só aparece nas contas em que o recurso foi liberado
+- passos: 1. Abra a caixa de WhatsApp Oficial em Configurações > Caixas de entrada; 2. Entre na aba WhatsApp API e clique em Conectar WhatsApp API; 3. No celular deste número, abra o WhatsApp Business, vá em Configurações > Dispositivos conectados > Conectar dispositivo e leia o QR Code (ou clique em Prefiro usar um código e, no celular, toque em Conectar com número de telefone e digite o código); 4. Espere a tela confirmar que é o mesmo número da caixa oficial; 5. Em Antes de ligar, marque o aceite do risco; 6. Confira o Envio automático (já vem ligado); 7. Em Quem pode enviar depois de 24 horas, deixe ligados só Atendentes, Robôs, Automações ou Campanhas que devem usar esse caminho; 8. Ajuste Mensagens por minuto pelo WhatsApp API (de 1 a 120; vem 20).
+- gotchas: o WhatsApp API não é canal oficial da Meta e o número oficial pode sofrer restrição ou banimento, por isso nada sai por ele antes do aceite do risco; é a mesma caixa e a mesma conversa, sem segunda caixa nem bolha repetida; dentro de 24 horas a mensagem sai pelo WhatsApp Oficial, depois de 24 horas sai pelo WhatsApp API; modelo aprovado sempre sai pelo oficial; botões, listas, carrossel e formulários nunca saem pelo WhatsApp API; com a aba conectada, o campo de resposta não trava mais depois de 24 horas; a bolha mostra WhatsApp API quando saiu por esse caminho e WhatsApp API · plano B quando a Meta recusou porque a janela tinha fechado e a mensagem foi reenviada com segurança; contato só com o código da Meta, sem telefone na ficha, nunca usa o WhatsApp API e continua precisando de modelo depois de 24 horas; se o celular conectado for outro número, a tela avisa e nada sai por ele: desconecte e conecte o celular certo; origem desligada em Quem pode enviar falha depois de 24 horas como antes; o que passa do limite por minuto espera a vez em vez de sair em rajada; se o celular desconectar, os administradores recebem aviso urgente do Guia e, até reconectar com Gerar novo QR Code, respostas depois de 24 horas voltam a precisar de modelo aprovado; falha com Confira no celular antes de reenviar quer dizer que não deu para saber se saiu, então olhe o celular antes de mandar de novo; desligar o Envio automático pausa sem desconectar; Desconectar WhatsApp API tira o aparelho do celular e a caixa volta a pedir modelo depois de 24 horas.
+- nav_target: `settings_inbox_show`
 
 ### Conectar caixa de e-mail
 - intent: Como conecto um e-mail?; Como integro Gmail/Outlook?; Quero atender por e-mail; Conectar caixa de e-mail (IMAP/SMTP)

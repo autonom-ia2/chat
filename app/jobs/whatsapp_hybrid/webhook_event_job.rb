@@ -20,6 +20,7 @@ class WhatsappHybrid::WebhookEventJob < ApplicationJob
     status = WhatsappHybrid::SessionManager::STATUS_MAP.fetch(payload['status'].to_s, 'connecting')
     phone = payload.dig('me', 'id').to_s.split('@').first.to_s.delete('^0-9').presence
     WhatsappHybrid::SessionManager.new(connection).apply_status!(status, phone: phone)
+    WhatsappHybrid::Capping.new(connection).apply!(payload['capping']) if payload['capping'].is_a?(Hash)
   end
 
   def apply_ack(connection, payload)

@@ -319,6 +319,15 @@ Rails.application.routes.draw do
               post :suggest_stages
               post :insights
               get :panel
+              get :panel_ad
+            end
+            # Anúncios da Meta F4 (#1100): ação do dia e mensagem sugerida pela IA; resumo e alerta no WhatsApp.
+            scope 'meta_ads_connection' do
+              post :daily_action, to: 'meta_ads_ai#daily_action'
+              post :quote_message, to: 'meta_ads_ai#quote_message'
+              get :whatsapp_report, to: 'meta_ads_whatsapp_reports#show'
+              patch :whatsapp_report, to: 'meta_ads_whatsapp_reports#update'
+              post 'whatsapp_report/test', to: 'meta_ads_whatsapp_reports#test_send'
             end
             get 'conversations/card_stages', to: 'cards#card_stages'
             get 'conversations/:conversation_id/card', to: 'cards#by_conversation'
@@ -507,6 +516,12 @@ Rails.application.routes.draw do
               resources :saved_presets, only: [:create, :update, :destroy]
             end
           end
+          # Identidade visual (#1076): kits de marca da conta e importação a partir do site.
+          resources :brand_kits, only: [:index, :show, :create, :update, :destroy] do
+            post :set_default, on: :member
+            post :restore, on: :member
+          end
+          resources :brand_kit_imports, only: [:create, :show]
           namespace :email_campaigns do
             post 'maintenance/backfills', to: 'maintenance#create'
             get 'maintenance/backfills/:id', to: 'maintenance#show'
@@ -546,6 +561,9 @@ Rails.application.routes.draw do
             post 'ai/generate',                to: 'ai#generate'
             post 'ai/rewrite',                 to: 'ai#rewrite'
             get  'ai/campaigns/:id/status',    to: 'ai#status'
+            delete 'ai/campaigns/:id/adjustment', to: 'ai#discard_adjustment'
+            post 'ai/campaigns/:id/adjustment/apply', to: 'ai#apply_adjustment'
+            post 'ai/campaigns/:id/adjustment/undo', to: 'ai#undo_adjustment'
             resources :templates, only: [:index, :show, :create, :destroy]
             # Importar modelo (#1099): colar/arquivo/endereço → job → acompanhar → corrigir → salvar em "Meus modelos".
             resources :template_imports, only: [:index, :create, :show] do

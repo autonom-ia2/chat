@@ -5,6 +5,7 @@ describe('Email campaign AI API', () => {
   const axiosMock = {
     get: vi.fn(() => Promise.resolve()),
     post: vi.fn(() => Promise.resolve()),
+    delete: vi.fn(() => Promise.resolve()),
   };
 
   beforeEach(() => {
@@ -44,6 +45,14 @@ describe('Email campaign AI API', () => {
     );
   });
 
+  it('discards the AI adjustment of a campaign (#1095)', () => {
+    EmailCampaignAiAPI.discardAdjustment(7);
+
+    expect(axiosMock.delete).toHaveBeenCalledWith(
+      '/api/v1/accounts/85/email_campaigns/ai/campaigns/7/adjustment'
+    );
+  });
+
   it('posts rewrite through the async request wrapper', async () => {
     axiosMock.post.mockResolvedValueOnce({
       status: 202,
@@ -72,6 +81,26 @@ describe('Email campaign AI API', () => {
     });
     expect(axiosMock.get).toHaveBeenCalledWith(
       '/api/v1/accounts/85/ai_requests/rewrite-1'
+    );
+  });
+
+  it('applies an adjustment on the server, which records a site identity it used (#1111)', async () => {
+    axiosMock.post.mockResolvedValueOnce({ data: { brand_identity: {} } });
+
+    await EmailCampaignAiAPI.applyAdjustment(7);
+
+    expect(axiosMock.post).toHaveBeenCalledWith(
+      '/api/v1/accounts/85/email_campaigns/ai/campaigns/7/adjustment/apply'
+    );
+  });
+
+  it('undoes an applied adjustment on the server, which restores the identity (#1111)', async () => {
+    axiosMock.post.mockResolvedValueOnce({ data: { brand_identity: {} } });
+
+    await EmailCampaignAiAPI.undoAdjustment(7);
+
+    expect(axiosMock.post).toHaveBeenCalledWith(
+      '/api/v1/accounts/85/email_campaigns/ai/campaigns/7/adjustment/undo'
     );
   });
 });

@@ -3,21 +3,23 @@
 # and goes out the same way the real send does: the verified domain (SES) or the campaign's inbox
 # (direct_inbox), with the same Reply-To.
 #
-# The test goes only to the logged-in user's own email ("Enviar teste para mim", D8): without
-# `to_email`, or with `to_email` equal to it (case-insensitive). Any other address → 422
-# email_campaign.test_send_only_self.
+# Who sends: only who manages campaigns (`update?` → campaign_manage). To whom (#1093, decision of
+# 07/10/2026): up to 5 typed addresses (`to_emails`, or the single `to_email`); none → the
+# logged-in user's own address. Every address is checked before anything leaves: a valid e-mail,
+# not suppressed, not a contact who refused messages. The limit of 10 per hour per user and
+# campaign counts test sends (one request), not addresses: at most 50 e-mails an hour.
 class Api::V1::Accounts::EmailCampaigns::TestSendsController < Api::V1::Accounts::EmailCampaigns::BaseController
   def create
     campaign = EmailCampaign.where(account: Current.account).find(params[:id])
     authorize campaign, :update?
 
-    to_email = Current.user.email.to_s.strip
-    return render_unprocessable('email_campaign.test_send_only_self') unless own_address?(to_email)
-    return render_unprocessable('email_campaign.invalid_email') unless Devise.email_regexp.match?(to_email)
-    return render_unprocessable(missing_sender_code(campaign)) unless campaign.sender_ready?
+    to_emails = requested_addresses
+    refusal = address_refusal(campaign, to_emails) || sender_refusal(campaign)
+    return render json: refusal, status: :unprocessable_entity if refusal
     return render json: { error: 'email_campaign.test_send_rate_limited' }, status: :too_many_requests if rate_limited?(campaign)
 
-    render json: { message_id: deliver(campaign, to_email), to_email: to_email }
+    message_ids = to_emails.map { |to_email| deliver(campaign, to_email) }
+    render json: { message_id: message_ids.first, to_email: to_emails.first, message_ids: message_ids, to_emails: to_emails }
   rescue EmailCampaigns::Ses::Error => e
     render json: { error: e.message }, status: :unprocessable_entity
   rescue DirectSendFailed
@@ -62,13 +64,31 @@ class Api::V1::Accounts::EmailCampaigns::TestSendsController < Api::V1::Accounts
     raise DirectSendFailed
   end
 
-  def own_address?(user_email)
-    requested = params[:to_email].to_s.strip
-    requested.blank? || requested.casecmp?(user_email)
+  MAX_RECIPIENTS = 5
+
+  # Typed addresses, trimmed and without repeats (case-insensitive); none → the user's own address.
+  def requested_addresses
+    permitted = params.permit(:to_email, to_emails: [])
+    typed = [*permitted[:to_emails], permitted[:to_email]].map { |email| email.to_s.strip }.compact_blank
+    typed = [Current.user.email.to_s.strip].compact_blank if typed.empty?
+    typed.uniq(&:downcase)
   end
 
-  def missing_sender_code(campaign)
-    campaign.direct_inbox? ? 'email_campaign.sender_inbox_missing' : 'email_campaign.sender_identity_missing'
+  def address_refusal(campaign, to_emails)
+    return { error: 'email_campaign.test_send_no_recipient' } if to_emails.empty?
+    return { error: 'email_campaign.test_send_too_many', limit: MAX_RECIPIENTS } if to_emails.size > MAX_RECIPIENTS
+
+    invalid = to_emails.find { |email| !Devise.email_regexp.match?(email) }
+    return { error: 'email_campaign.invalid_email', email: invalid } if invalid
+
+    refused = to_emails.find { |email| campaign.refuses_address?(email) }
+    { error: 'email_campaign.test_send_suppressed', email: refused.downcase } if refused
+  end
+
+  def sender_refusal(campaign)
+    return if campaign.sender_ready?
+
+    { error: campaign.direct_inbox? ? 'email_campaign.sender_inbox_missing' : 'email_campaign.sender_identity_missing' }
   end
 
   # Render with the first real recipient (real custom_data drops) or a fake in-memory one.

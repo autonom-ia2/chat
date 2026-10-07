@@ -3,12 +3,13 @@
 # footer with the only unsubscribe link, WCAG AA contrast, 44px buttons, readable sizes in explicit Arial,
 # described images served by the installation (<= 200 KB), HTML under Gmail's 102 KB clip, and placeholders
 # every campaign can fill. Wired to the seed library (spec/services/email_campaigns/quality_gate_library_spec.rb);
-# built to run after AI generation too. Parses with Nokogiri and plain string methods — no regex.
+# built to run after AI generation too (EmailCampaigns::Ai::QualityCheck). Parses with Nokogiri and plain string
+# methods — no regex.
 #
-# On the server, without Node (template import, #1099), it runs on the MJML alone: html: nil skips the checks that need
-# the compiled HTML and estimates its size (EstimatedSize); remote_images: true accepts absolute web images that the
-# import copies afterwards (RemoteImage), still demanding a description; fonts: lets an imported model keep a font every
-# e-mail program shows (Import::WebFonts) instead of Arial.
+# On the server, without Node (template import, #1099, and the AI jobs, #1095), it runs on the MJML alone: html: nil
+# skips the checks that need the compiled HTML and estimates its size (EstimatedSize); remote_images: true accepts
+# absolute web images that the import copies afterwards (RemoteImage), still demanding a description; fonts: lets an
+# imported model keep a font every e-mail program shows (Import::WebFonts) instead of Arial.
 class EmailCampaigns::QualityGate
   include Css
 
@@ -30,6 +31,8 @@ class EmailCampaigns::QualityGate
   LARGE_TEXT_PX = 24
   BOLD = %w[bold 700 800 900].freeze
   MAX_HTML_BYTES = 102 * 1024
+  # What an AI adjustment of an e-mail can break (#1095). The others are about how a template is built and served.
+  AI_CHECKS = %i[contrast button_height image_alt placeholders unsubscribe html_size].freeze
   # MJML defaults, used when the attribute is absent.
   DEFAULT_FONT_PX = 13
   DEFAULT_TEXT_COLOR = '#000000'.freeze
@@ -50,6 +53,7 @@ class EmailCampaigns::QualityGate
                  placeholders: EmailCampaigns::TemplateValidator::DEFAULT_KEYS, remote_images: false, fonts: [FONT])
     @mjml = mjml.to_s
     @fonts = fonts
+    # nil when the MJML is not compiled (import and AI jobs: no compiler in the production image).
     @html = html&.to_s
     @compile_errors = compile_errors
     @public_root = Pathname.new(public_root).expand_path

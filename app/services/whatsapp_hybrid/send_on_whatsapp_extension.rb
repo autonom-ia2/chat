@@ -19,7 +19,7 @@ module WhatsappHybrid::SendOnWhatsappExtension
   def hybrid_web_candidate?
     template_params.blank? && !contact_info_request? && !broadcast_destination? &&
       WhatsappHybrid::Config.account_allowed?(message.account_id) &&
-      WhatsappHybrid::Connection.exists?(inbox_id: message.inbox_id)
+      WhatsappHybrid::Config.hybrid_inbox?(message.inbox_id)
   end
 
   def fail_outside_window!

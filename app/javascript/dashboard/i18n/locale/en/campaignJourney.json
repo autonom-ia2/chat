@@ -473,7 +473,6 @@
         "OPEN_EDITOR": "Open the editor",
         "CONTENT_READY": "Subject: {subject}",
         "CONTENT_EMPTY": "No content yet.",
-        "RELOAD": "I came back from the editor",
         "ERROR": "Could not create the email now. Try again.",
         "PREHEADER_LABEL": "Preview text"
       },
@@ -489,6 +488,13 @@
         "PREVIEW_HINT": "Preview with the first contact of the audience.",
         "PREVIEW_EMPTY": "Write the message to see it.",
         "DETAIL": "Inbox {inbox} · {segments} SMS per person"
+      },
+      "RESUME": {
+        "TITLE": "You have an unfinished campaign: {name}.",
+        "NO_NAME": "no name",
+        "CONTINUE": "Continue this one",
+        "START_NEW": "Start a new one",
+        "EMAIL_KEPT": "It stays saved in the e-mail list."
       }
     },
     "LIVE_CHAT": {

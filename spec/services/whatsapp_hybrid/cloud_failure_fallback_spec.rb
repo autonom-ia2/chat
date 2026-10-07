@@ -19,7 +19,8 @@ describe WhatsappHybrid::CloudFailureFallback do
                                        status_checked_at: Time.current)
     allow(Waha::Client).to receive(:new).and_return(client)
     allow(client).to receive_messages(check_contact_exists: { 'numberExists' => true, 'chatId' => '5511937016094@c.us' },
-                                      new_message_id: '3EB0FALL', send_text: {})
+                                      new_message_id: '3EB0FALL', send_text: {}, start_typing: {}, stop_typing: {})
+    allow(Kernel).to receive(:sleep)
     Redis::Alfred.delete('whatsapp_hybrid:chat_id:hybrid-test:5511937016094')
   end
 

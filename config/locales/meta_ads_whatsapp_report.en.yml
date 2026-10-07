@@ -1,0 +1,57 @@
+en:
+  meta_ads_whatsapp_report:
+    date_format: "%m/%d"
+    number:
+      separator: "."
+      delimiter: ","
+    currency_units:
+      BRL: "R$"
+      USD: "US$"
+      EUR: "€"
+    summary:
+      title: "Meta ads — yesterday, %{date}"
+      test_prefix: "[Test]"
+      spend: "Spent: %{value}"
+      conversations:
+        one: "Conversations: %{count}"
+        other: "Conversations: %{count}"
+      conversations_with_cost:
+        one: "Conversations: %{count} (%{cost} per conversation)"
+        other: "Conversations: %{count} (%{cost} per conversation)"
+      quotes_sales: "Quotes: %{quotes} · Sales: %{sales}"
+      quotes_sales_value: "Quotes: %{quotes} · Sales: %{sales} (%{value})"
+      best_ad:
+        one: "Best ad: %{name}, with %{count} conversation"
+        other: "Best ad: %{name}, with %{count} conversations"
+      action: "What to do today: %{text}"
+      link: "Open the dashboard: %{url}"
+    alert:
+      text: "Heads up: the ad %{name} spent %{value} today and has not brought any conversation yet."
+      hint: "Check that it leads to the right WhatsApp. Open the dashboard: %{url}"
+    actions:
+      stalled_quotes:
+        one: "Follow up on the quote stalled for more than %{days} days (%{value})."
+        other: "Follow up on the %{count} quotes stalled for more than %{days} days (%{value})."
+      fix_tracking:
+        one: "Check which ad %{count} conversation without an identified ad came from."
+        other: "Check which ads %{count} conversations without an identified ad came from."
+      wait: "Nothing to fix. Keep the ads as they are."
+      on_track: "Nothing stalled. See each ad's verdict on the dashboard."
+      no_data: "No ad spend or conversation in the last 30 days yet."
+    # The official template variables are always filled in pt_BR; these keys only keep the catalogs in sync.
+    template:
+      results: "%{conversations}, %{quotes} and %{sales}"
+      conversations:
+        one: "%{count} conversation"
+        other: "%{count} conversations"
+      quotes:
+        one: "%{count} quote"
+        other: "%{count} quotes"
+      sales:
+        one: "%{count} sale"
+        other: "%{count} sales"
+    # The WhatsApp template must be created in pt_BR with this exact text (UTILITY category), so the body stays in
+    # Portuguese in every locale: it is the text to paste, not a translation.
+    templates:
+      summary: "Olá! Este é o resumo diário dos seus anúncios na Meta, referente a {{1}}. Investimento: {{2}}. Resultado: {{3}}. O que fazer hoje: {{4}} Os detalhes de cada anúncio estão no painel de Anúncios da Meta."
+      alert: "Atenção: o anúncio {{1}} gastou {{2}} hoje e ainda não trouxe nenhuma conversa. Vale conferir no painel de Anúncios da Meta."

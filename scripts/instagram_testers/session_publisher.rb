@@ -6,6 +6,8 @@ $stdout.reopen(File::NULL, 'w')
 $stderr.reopen(File::NULL, 'w')
 
 begin
+  require_relative '../../config/application'
+  Rails.application.config.before_initialize { |app| app.config.eager_load = false }
   require_relative '../../config/environment'
   Rails.application.load_runner
   require 'json'

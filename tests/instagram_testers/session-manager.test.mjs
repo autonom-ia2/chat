@@ -12,6 +12,7 @@ import {
   unlink,
   writeFile,
 } from 'node:fs/promises';
+import { readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { EventEmitter } from 'node:events';
@@ -50,6 +51,18 @@ const baseEnv = {
   INSTAGRAM_TESTER_PROXY_AUTH_MODE: 'ip',
   INSTAGRAM_TESTER_PROXY_IDENTITY: '93.184.216.34:8080',
 };
+const loadingDocuments = JSON.parse(
+  readFileSync(
+    new URL('./fixtures/loading-documents.json', import.meta.url),
+    'utf8'
+  )
+);
+const loadingDocumentIds = Object.fromEntries(
+  Object.entries(loadingDocuments).map(([name, document]) => [
+    name,
+    document.doc_id,
+  ])
+);
 
 const bootstrapMetadata = Object.fromEntries(
   Object.entries(baseEnv).filter(([key]) => !key.includes('PROXY'))
@@ -83,6 +96,7 @@ const rolesUrl = 'https://developers.facebook.com/apps/' +
   process.env.INSTAGRAM_META_DEVELOPER_APP_ID + '/roles/roles/?business_id=' +
   process.env.INSTAGRAM_META_BUSINESS_ID;
 const body = ${JSON.stringify(rolesResponse)};
+const loadingDocumentIds = ${JSON.stringify(loadingDocumentIds)};
 const fields = new URLSearchParams({
   __user: process.env.INSTAGRAM_TESTER_ADMIN_USER_ID,
   __bid: process.env.INSTAGRAM_META_BUSINESS_ID,
@@ -96,9 +110,10 @@ const fields = new URLSearchParams({
 }).toString();
 
 class Request {
+  constructor(requestFields = fields) { this.requestFields = requestFields; }
   url() { return 'https://developers.facebook.com/api/graphql/'; }
   method() { return 'POST'; }
-  postData() { return fields; }
+  postData() { return this.requestFields; }
   async allHeaders() {
     return {
       cookie: 'c_user=' + process.env.INSTAGRAM_TESTER_ADMIN_USER_ID + '; xs=synthetic',
@@ -109,13 +124,17 @@ class Request {
 }
 
 class Response {
-  constructor(status) { this.responseStatus = status; }
+  constructor(status, responseRequest = new Request(), responseBody = body) {
+    this.responseStatus = status;
+    this.responseRequest = responseRequest;
+    this.responseBody = responseBody;
+  }
   url() { return 'https://developers.facebook.com/api/graphql/'; }
-  request() { return new Request(); }
+  request() { return this.responseRequest; }
   status() { return this.responseStatus; }
   async text() {
     if (mode === 'html') process.emit('SIGTERM');
-    return mode === 'html' ? '<html>login</html>' : body;
+    return mode === 'html' ? '<html>login</html>' : this.responseBody;
   }
 }
 
@@ -143,6 +162,52 @@ class Page extends EventEmitter {
           : 200;
     const navigationStatus =
       mode === 'status-401' || mode === 'status-403' ? responseStatus : 200;
+    const dispatch = async request => {
+      let continued = false;
+      let aborted = false;
+      await routeHandler({
+        request: () => request,
+        continue: async () => { continued = true; },
+        abort: async () => { aborted = true; },
+      });
+      appendFileSync(
+        process.env.SYNTHETIC_ROUTE_FILE,
+        JSON.stringify({
+          name: new URLSearchParams(request.postData()).get('fb_api_req_friendly_name'),
+          continued,
+          aborted,
+        }) + '\\n'
+      );
+      if (!continued || aborted) throw new Error('synthetic_route_not_continued');
+    };
+    if (mode === 'loading-before-roles') {
+      for (const [name, variables] of [
+        ['GeoNextAppControllerContainerQuery', { appID: process.env.INSTAGRAM_META_DEVELOPER_APP_ID }],
+        ['DeveloperHeaderComponentContainerQuery', {
+          businessID: process.env.INSTAGRAM_META_BUSINESS_ID,
+          businessID_is_null: false,
+        }],
+        ['DeveloperAppVisibilityToggleLazyLoadedQuery', { appID: process.env.INSTAGRAM_META_DEVELOPER_APP_ID }],
+        ['DeveloperAppBannerQuery', { appID: process.env.INSTAGRAM_META_DEVELOPER_APP_ID }],
+        ['DeveloperAppDashboardSidebarNavigationV2Query', { appID: process.env.INSTAGRAM_META_DEVELOPER_APP_ID }],
+      ]) {
+        const loadingFields = new URLSearchParams({
+          __user: process.env.INSTAGRAM_TESTER_ADMIN_USER_ID,
+          __bid: process.env.INSTAGRAM_META_BUSINESS_ID,
+          av: process.env.INSTAGRAM_TESTER_ADMIN_USER_ID,
+          doc_id: loadingDocumentIds[name],
+          fb_api_req_friendly_name: name,
+          variables: JSON.stringify(variables),
+        }).toString();
+        const loadingRequest = new Request(loadingFields);
+        await dispatch(loadingRequest);
+        this.emit('response', new Response(200, loadingRequest, JSON.stringify({
+          data: { fetch__Application: { id: process.env.INSTAGRAM_META_DEVELOPER_APP_ID } },
+        })));
+      }
+    }
+    const rolesRequest = new Request(fields);
+    await dispatch(rolesRequest);
     if (
       ![
         'redirect',
@@ -151,17 +216,18 @@ class Page extends EventEmitter {
         'status-403',
       ].includes(mode)
     ) {
-      this.emit('response', new Response(responseStatus));
+      this.emit('response', new Response(responseStatus, rolesRequest));
     }
     return new Navigation(navigationStatus);
   }
 }
 
+let routeHandler;
 class Context extends EventEmitter {
   constructor() { super(); this.page = new Page(); }
   pages() { return [this.page]; }
   async newPage() { return this.page; }
-  async route() {}
+  async route(_pattern, handler) { routeHandler = handler; }
   async close() { this.emit('close'); }
 }
 
@@ -185,11 +251,13 @@ async function fixture(mode) {
   const runtime = join(root, 'fake-playwright.mjs');
   const operationLog = join(root, 'operations.jsonl');
   const launch = join(root, 'launch.jsonl');
+  const routeLog = join(root, 'routes.jsonl');
   await writeFile(runtime, fakeRuntime, { mode: 0o600 });
   return {
     root,
     operations: operationLog,
     launch,
+    routes: routeLog,
     env: {
       ...baseEnv,
       INSTAGRAM_TESTER_BROWSER_PROFILE: profile,
@@ -204,6 +272,7 @@ async function fixture(mode) {
       SYNTHETIC_MODE: mode,
       SYNTHETIC_OPS_FILE: operationLog,
       SYNTHETIC_LAUNCH_FILE: launch,
+      SYNTHETIC_ROUTE_FILE: routeLog,
       ...baseEnv,
     },
   };
@@ -283,6 +352,47 @@ test('publishes one observed session with the expected version and proxy binding
       baseEnv.INSTAGRAM_TESTER_ADMIN_USER_ID
     );
     assert.equal(publication.app_id, baseEnv.INSTAGRAM_META_DEVELOPER_APP_ID);
+  } finally {
+    process.emit('SIGTERM');
+    if (settled) await settled;
+    await cleanup(data);
+  }
+});
+
+test('allows pinned loading queries before RolesTable and publishes exactly once from RolesTable', async () => {
+  const data = await fixture('loading-before-roles');
+  let settled;
+  try {
+    settled = withProcessEnv(data.processEnv, () =>
+      run(data.env).then(
+        () => null,
+        error => error
+      )
+    );
+    const entries = await waitForOperation(data.operations, 'publish');
+    process.emit('SIGTERM');
+    const error = await settled;
+    assert.equal(error, null);
+    assert.deepEqual(
+      entries.map(entry => entry.operation),
+      ['bootstrap', 'publish']
+    );
+    const routes = await readOperations(data.routes);
+    assert.deepEqual(
+      routes.map(route => route.name),
+      [
+        'GeoNextAppControllerContainerQuery',
+        'DeveloperHeaderComponentContainerQuery',
+        'DeveloperAppVisibilityToggleLazyLoadedQuery',
+        'DeveloperAppBannerQuery',
+        'DeveloperAppDashboardSidebarNavigationV2Query',
+        'RolesTable_Query',
+      ]
+    );
+    assert.equal(
+      routes.every(route => route.continued && !route.aborted),
+      true
+    );
   } finally {
     process.emit('SIGTERM');
     if (settled) await settled;
@@ -546,6 +656,19 @@ async function syntheticManager(t, options = {}) {
     });
     assert.equal(continued, true);
     if (options.pendingNavigation) return new Promise(() => {});
+    if (options.backgroundMethod) {
+      page.emit('response', {
+        url: request.url,
+        request: () => ({
+          ...request,
+          method: () => options.backgroundMethod,
+          postData: () => options.backgroundBody ?? null,
+          allHeaders: options.backgroundHeaders,
+        }),
+        status: () => 200,
+        text: async () => '',
+      });
+    }
     const body = deferred();
     bodies.push(body);
     if (!options.pendingBody) body.resolve(rolesResponse);
@@ -1230,3 +1353,38 @@ test('VPS cadence leaves room for its full cycle before the backend heartbeat ex
   data.signals.emit('SIGTERM');
   assert.equal(await data.settled, null);
 });
+
+for (const [method, body, label] of [
+  ['GET', null, 'GET'],
+  ['HEAD', null, 'HEAD'],
+  ['POST', 'fb_api_req_friendly_name=OtherRead_Query', 'unrelated POST'],
+  [
+    'POST',
+    'fb_api_req_friendly_name=RolesTable_Query&doc_id=invalid',
+    'invalid roles POST',
+  ],
+]) {
+  test(`ignores background ${label} GraphQL before reserving a roles publication`, async t => {
+    let backgroundHeaderReads = 0;
+    const data = await syntheticManager(t, {
+      backgroundMethod: method,
+      backgroundBody: body,
+      backgroundHeaders: () => {
+        backgroundHeaderReads += 1;
+        return new Promise(() => {});
+      },
+    });
+    assert.equal(backgroundHeaderReads, 0);
+    const publications = data.entries.filter(
+      entry => entry.payload.operation === 'publish'
+    );
+    assert.equal(publications.length, 1);
+    assert.equal(publications[0].payload.expected_version, null);
+    assert.equal(
+      publications[0].payload.session.user_id,
+      baseEnv.INSTAGRAM_TESTER_ADMIN_USER_ID
+    );
+    assert.equal(data.headers.length, 1);
+    assert.deepEqual(data.stderr, []);
+  });
+}

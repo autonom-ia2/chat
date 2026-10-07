@@ -881,6 +881,20 @@
       "OFFICIAL": "Official",
       "WEB": "WhatsApp API",
       "RATE_LIMIT": "Messages per minute through WhatsApp API",
+      "CAMPAIGN_LIMIT": "Campaigns use at most {limit} per minute. When WhatsApp warns about the limit, the speed goes down by itself.",
+      "CAPPING": {
+        "NEAR": "WhatsApp warned that this number is close to the limit of new conversations ({used} of {total}). Sending through WhatsApp API slowed down by itself. The cycle ends on {end}.",
+        "BLOCKED": "WhatsApp blocked new conversations through WhatsApp API until {end}. Replies to people you already talk to keep going; for new contacts use an approved template."
+      },
+      "STATS": {
+        "TITLE": "Last {days} days through WhatsApp API",
+        "EMPTY": "No message went through WhatsApp API yet.",
+        "WHO": "Who sent",
+        "SENT": "Sent",
+        "FAILED": "Failed",
+        "WAITED": "Waited their turn",
+        "FALLBACK": "Plan B"
+      },
       "STATUS": {
         "NOT_CONNECTED": "Not connected",
         "AWAITING": "Waiting for the phone",

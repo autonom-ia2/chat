@@ -2346,7 +2346,8 @@
         "ADS_TITLE": "Your ads, by sale",
         "ADS_EMPTY": "As soon as an ad spends or brings a conversation, it shows up here.",
         "AD_NO_NAME": "Unnamed ad",
-        "AD_LINE": "{spend} → {conversations} → {sales}",
+        "OPEN_AD": "See inside",
+        "OPEN_AD_LABEL": "See inside the ad {name}",
         "AD_QUOTES": "1 open quote | {count} open quotes",
         "VERDICT": {
           "UP": "Increase · enough data",
@@ -2364,7 +2365,163 @@
         },
         "STALLED_MORE": "and {count} more in the CRM",
         "REACHED": "{share}% got there",
-        "SALES_VALUE": "· {value}"
+        "SALES_VALUE": "· {value}",
+        "AD_STATS": {
+          "SPEND": "Invested",
+          "CONVERSATIONS": "Conversations",
+          "SALES": "Sales"
+        }
+      },
+      "AD_DETAIL": {
+        "BACK": "Back to the panel",
+        "CAMPAIGN": "Campaign",
+        "ADSET": "Ad set",
+        "EMPTY": "We found no numbers for this ad in this period.",
+        "ERROR": "We could not load this ad now. We will try again on our own in a moment.",
+        "RETRY": "Try again",
+        "PREVIEW": "See how it shows on Meta",
+        "NO_VALUE": "—",
+        "TILES": {
+          "COST_PER_SALE": "Cost per sale",
+          "AVERAGE": "Account average",
+          "SPEND": "Invested",
+          "QUOTES": "Quotes",
+          "SALES": "Sales",
+          "CONVERSATIONS": "Conversations"
+        },
+        "WHY_TITLE": "Why",
+        "REASON": {
+          "EARLY": "It is too early to say whether this ad sells. It brought 1 conversation and needs {missing} more. We will look again when it reaches 20 conversations. | It is too early to say whether this ad sells. It brought {count} conversations and needs {missing} more. We will look again when it reaches 20 conversations.",
+          "NO_SALES": "It brought 1 conversation and no sale. With {spend} invested, it is worth reviewing the image, the text or the audience. | It brought {count} conversations and no sale. With {spend} invested, it is worth reviewing the image, the text or the audience.",
+          "SIGNAL": "It made 1 sale with {spend} invested. Still too few to compare with the account average: the verdict comes from 3 sales on. | It made {count} sales with {spend} invested. Still too few to compare with the account average: the verdict comes from 3 sales on.",
+          "BELOW_AVERAGE": "Each sale from this ad cost {cost}, {difference} less than the account average ({average}). With 1 sale, the base is already enough. | Each sale from this ad cost {cost}, {difference} less than the account average ({average}). With {count} sales, the base is already enough.",
+          "NEAR_AVERAGE": "Each sale from this ad cost {cost}, close to the account average ({average}). It is worth keeping it as it is.",
+          "ABOVE_AVERAGE": "Each sale from this ad cost {cost}, {difference} more than the account average ({average}). Review the ad before putting more money in."
+        },
+        "MEANWHILE_TITLE": "Meanwhile",
+        "MEANWHILE": "1 open quote from this ad is waiting for an answer. Picking it up is what you can do now. | {count} open quotes from this ad are waiting for an answer. Picking them up is what you can do now.",
+        "MEANWHILE_SEE": "See the quotes",
+        "CHART_TITLE": "Spend and conversations per day",
+        "LEGEND_SPEND": "Spend",
+        "LEGEND_CONVERSATIONS": "Conversations",
+        "CHART_DAY": "{date}: {spend} · 1 conversation | {date}: {spend} · {count} conversations",
+        "CHART_SCALE": "Highest spend in a day: {spend} · most conversations in a day: 1 | Highest spend in a day: {spend} · most conversations in a day: {count}",
+        "DAYS_TOGGLE": "See day by day",
+        "DAYS_DATE": "Day",
+        "QUOTES_TITLE": "Quotes from this ad",
+        "QUOTES_EMPTY": "No quote from this ad in this period yet.",
+        "WON": "Sold"
+      },
+      "AI": {
+        "DAILY": {
+          "BADGE": "Written by AI",
+          "WRITING": "AI is writing…",
+          "AI_ERROR": "The AI did not answer right now; this is the action by the rule.",
+          "FAILED": "We could not reach the AI right now; this is the action by the rule.",
+          "REVIEW_AD_BUTTON": "See the ad",
+          "WHY_LABEL": "Why:"
+        },
+        "QUOTE": {
+          "SUGGEST": "Suggest message",
+          "WRITING": "Writing…",
+          "LABEL": "Suggested message — review before sending",
+          "SOURCE": "Because the customer said: “{quote}”",
+          "SEND": "Send in the conversation",
+          "SENT": "Message sent in the conversation.",
+          "SENT_STATE": "Sent",
+          "SEND_FAILED": "The message was not sent. Try again or open the conversation.",
+          "COPY": "Copy",
+          "COPIED": "Message copied.",
+          "COPY_FAILED": "Couldn't copy. Select the text and copy it by hand.",
+          "FAILED": "We could not suggest a message right now. Try again in a moment.",
+          "REASONS": {
+            "CLOSED": "The customer already closed the deal. Nothing to resume here.",
+            "DECLINED": "The customer already said no. Better not to insist.",
+            "NOTHING_OPEN": "There is nothing open to resume in this conversation.",
+            "WINDOW_CLOSED": "More than 24 hours since the customer's last message: WhatsApp only accepts an approved template. Open the conversation to send one.",
+            "AI_UNAVAILABLE": "AI is turned off for this account.",
+            "CREDENTIALS_MISSING": "AI is not set up for this account yet.",
+            "AI_INVALID": "The AI could not write a message that fits this conversation. Open the conversation to write yours.",
+            "UNSAFE_CONTENT": "The conversation has a link, payment key or contact that did not come from your team. To be safe, write this message yourself.",
+            "AI_ERROR": "The AI did not answer right now. Try again in a moment."
+          }
+        }
+      },
+      "WHATSAPP_REPORT": {
+        "EYEBROW": "WhatsApp summary",
+        "TITLE": "Get your ad numbers on your WhatsApp",
+        "HINT": "One message a day with yesterday's results, and a warning when an ad spends without bringing conversations. It starts off; you decide.",
+        "LOADING": "Loading…",
+        "LOAD_ERROR": "Could not load the WhatsApp summary.",
+        "RETRY": "Try again",
+        "SUMMARY_TOGGLE": "Daily summary",
+        "SUMMARY_TOGGLE_HINT": "Every day at {time} ({zone}), with yesterday's numbers.",
+        "ALERT_TOGGLE": "Spend without conversations alert",
+        "ALERT_TOGGLE_HINT": "At {time} ({zone}), when an ad spent today and brought no conversation. At most 1 a day.",
+        "ORIGIN_LABEL": "Sent from",
+        "ORIGIN_PLACEHOLDER": "Choose a connected number",
+        "ORIGIN_EMPTY": "No WhatsApp number is connected right now. Connect one in Inboxes to use the summary.",
+        "ORIGIN_GONE": "The number chosen before is not connected now. Choose another one.",
+        "KIND": {
+          "WAHA": "WhatsApp API",
+          "WHATSAPP_CLOUD": "Official WhatsApp"
+        },
+        "KIND_HINT": {
+          "WAHA": "Sends plain text. To protect the number, at most 2 messages go out a day.",
+          "WHATSAPP_CLOUD": "Official WhatsApp only sends with a template approved by Meta. See below."
+        },
+        "PHONE_LABEL": "Number that receives",
+        "PHONE_PLACEHOLDER": "+1 555 123 4567",
+        "PHONE_HINT": "With area code. Use your own number, not a customer's.",
+        "REPLY_NOTE": "If you reply to the message, it shows up as a conversation in that inbox.",
+        "TEMPLATES": {
+          "TITLE": "Meta templates",
+          "HINT": "Create these two templates in WhatsApp Manager, category Utility, language Portuguese (BR). While a template is not approved, its message is not sent.",
+          "SUMMARY": "Daily summary",
+          "ALERT": "Alert",
+          "NAME": "Template name:",
+          "COPY_NAME": "Copy name",
+          "COPY_TEXT": "Copy text",
+          "COPIED": "Copied.",
+          "COPY_FAILED": "Could not copy. Select the text and copy it by hand.",
+          "BLOCKED": "Without this template approved, nothing is sent.",
+          "STATUS": {
+            "APPROVED": "Approved",
+            "PENDING": "Under review",
+            "REJECTED": "Rejected",
+            "MISSING": "Not created"
+          }
+        },
+        "SAVE": "Save",
+        "SAVED": "WhatsApp summary saved.",
+        "DISCARD": "Discard changes",
+        "TEST": "Send test",
+        "TEST_HINT": "Sends yesterday's summary now, marked as a test.",
+        "TEST_NEEDS_SAVE": "Save the sending number and the receiving number before testing.",
+        "TEST_NEEDS_SAVE_CHANGES": "Save or discard your changes before testing.",
+        "TEST_NEEDS_ORIGIN": "The sending number is not connected now. Choose another one and save before testing.",
+        "TEST_SENT": "Test sent at {time}. Check your WhatsApp.",
+        "HISTORY": {
+          "TITLE": "Last messages",
+          "SUMMARY": "Last summary: {time}",
+          "ALERT": "Last alert: {time}",
+          "NONE": "No message sent yet.",
+          "ERROR": "Last problem, {time}: {message}",
+          "NOTHING_TO_REPORT": "Yesterday had no spend and no conversations, so no summary went out ({time})."
+        },
+        "ERRORS": {
+          "INVALID_PHONE": "This number does not look valid. Include the country and area code.",
+          "PHONE_REQUIRED": "Enter the number that receives the messages.",
+          "ORIGIN_REQUIRED": "Choose the number the messages are sent from.",
+          "INBOX_NOT_CONNECTED": "This number is not connected right now. Choose another one.",
+          "TEMPLATE_NOT_APPROVED": "Official WhatsApp only sends with the template approved by Meta. Get it approved or choose a WhatsApp API number.",
+          "NOT_CONNECTED": "Connect Meta before turning on the summary.",
+          "RATE_LIMITED": "You already sent 3 tests in this hour. Try again later.",
+          "SEND_FAILED": "WhatsApp did not accept the message. Check the connection of the sending number.",
+          "SEND_UNCERTAIN": "We could not confirm it arrived. Check your WhatsApp before trying again.",
+          "WHATSAPP_NUMBER_NOT_FOUND": "This number has no WhatsApp.",
+          "GENERIC": "It did not work this time. Try again."
+        }
       }
     }
   },

@@ -736,6 +736,7 @@ RSpec.describe Conversation do
         contact_inbox: conversation.contact_inbox,
         timestamp: conversation.last_activity_at.to_i,
         can_reply: true,
+        whatsapp_api_reply: false,
         channel: 'Channel::WebWidget',
         snoozed_until: conversation.snoozed_until,
         custom_attributes: conversation.custom_attributes,
