@@ -934,6 +934,7 @@ async function installRoute(
           return;
         }
         if (state.inviteArmed && method === 'POST') {
+          if (typeaheadPath(url)) state.typeaheadRejected = true;
           await route.abort('blockedbyclient');
           return;
         }

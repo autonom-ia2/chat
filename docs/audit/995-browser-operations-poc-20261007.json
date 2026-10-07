@@ -2625,9 +2625,10 @@
         "job": "m2-d01bb2581fe04f3db0a7b73f5752ae38"
       },
       "actual_executor_offline": {
-        "cases": 34,
-        "passed": 34,
-        "network": false
+        "cases": 35,
+        "passed": 35,
+        "network": false,
+        "extra_typeahead_during_permit_blocks_write": true
       },
       "actual_ruby_services_fake_redis": {
         "checks": 23,
@@ -2657,10 +2658,18 @@
         "unexplained": 0,
         "job": "m2-f1c8d17671cc4c9194505b3b9e333580",
         "up_to_date": true
+      },
+      "late_fix_eslint": {
+        "errors": 0,
+        "warnings": 0,
+        "node": "m2",
+        "job": "m2-7bcf0fb85ddf42f0acf78ac660129f58",
+        "snapshot": "20261007-194636-ef2321db-6decd3f40b-0bf920c8",
+        "source_sha256": "c115b10c1a9f1934f7504e4c9823c0e3e048bd4a0988dbcc93031c5da024e354"
       }
     },
     "files_sha256": {
-      "scripts/instagram_testers/browser-operations.mjs": "ca8eddba1103565df16f5375b03eff666d155fb27a3ef8e70fc0e392cc3dcfe2",
+      "scripts/instagram_testers/browser-operations.mjs": "c115b10c1a9f1934f7504e4c9823c0e3e048bd4a0988dbcc93031c5da024e354",
       "scripts/instagram_testers/session-manager.mjs": "c011bdf898ec0e73ac6163301a8f44f28472909a2d3f166d2b48b435fc1b7e8a",
       "scripts/instagram_testers/runtime/operator-protocol.mjs": "0cfb99f7bf3327d0dd653fc5f18d8549777e741db70380b105d771dbf03e5d40",
       "app/services/instagram/testers/browser_operations.rb": "0d29e8d7cb7c72a3b7c59c592496246d9ef6253696a84b6716b6b96415140005",
@@ -2683,7 +2692,27 @@
       "production_approval": false,
       "previous_findings_closed": true,
       "documentary_corrections_applied": true,
-      "release_plan_sha256": "3c0d06221ec98653003f5fd522a06328b575ffc13e69318b4c17154dcdcd6104"
+      "release_plan_sha256": "3c0d06221ec98653003f5fd522a06328b575ffc13e69318b4c17154dcdcd6104",
+      "late_finding": {
+        "severity": "P1",
+        "description": "armed typeahead aborted without invalidating previous selection",
+        "fixed": true,
+        "delta_lines": 1,
+        "targeted_review": "green_for_commit_and_ci",
+        "production_approval": false
+      }
+    },
+    "ci_previous_head": {
+      "head": "ef2321dbb7c40752bbae907b07d641319afb8536",
+      "checks_passed": 26,
+      "required_contexts_passed": [
+        "RSpec",
+        "Vitest",
+        "trava",
+        "central",
+        "fork-i18n"
+      ],
+      "applies_to_late_fix": false
     }
   }
 }

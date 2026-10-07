@@ -275,3 +275,11 @@ Leitura22:28:26UTC, observerb51cc6009d465f9dc220761585a38846e5797d6ee1bd197f08ac
 
 
 Revisão final independenteNexo:verde condicional para commit/CI/revisão da PR, sem novo bloqueio funcional ou de segurança. Todos os achados anteriores fechados nos hashes registrados. Duas correções documentais aplicadas:Chrome faz busca/status/convite;backend prepara URL OAuth depois do accepted. Alvo do teste é autorizado, mas a ativação do piloto ainda depende da aprovação final. Parecer não autoriza merge/deploy/instalação nem declara aceite de provider. Maincaca revalidada; CI deve executar no head final antes da liberação.
+
+## Correção adicional antes da liberação — 22:46 UTC
+
+O CI do head ef2321dbb7c40752bbae907b07d641319afb8536 terminou com26checks aprovados, incluindo os cinco contextos obrigatórios (RSpec agregado, Vitest, trava, central, fork-i18n). Esse resultado não aprova o delta posterior. Revisão focada encontrou P1: depois de armar o convite, o guard abortava uma busca extra da Meta antes de marcar typeaheadRejected. A âncora da seleção anterior podia continuar válida. O alvo e os19campos permaneciam estritos, mas a exclusividade da busca não estava garantida nessa fronteira.
+
+Correção mínima:marcar typeaheadRejected antes do abort quando o POST extra é typeahead. SHA do executor c115b10c1a9f1934f7504e4c9823c0e3e048bd4a0988dbcc93031c5da024e354. Harness do módulo real passou35/35 sem rede; caso novo executa o handler real de busca extra durante o permit e comprova permits1,continue0,write_startedfalse,typeaheadRejectedtrue,invite_unknown e dois aborts. node --check/import/diff check passaram. Nexo confirmou fechamento da P1 e restabeleceu verde condicional para commit/CI. Backend/protocolo inalterados; checks anteriores desses módulos continuam identificados pelos hashes. Nova rodada de CI será exigida no novo head; nenhum merge, deploy, instalação permanente ou convite realizado.
+
+ESLint do executor corrigido passou sem erros/avisos no M2, job m2-7bcf0fb85ddf42f0acf78ac660129f58, snapshot194636 de checksum6decd3f40b35feedbfd8d1e0acdd27040043a71d613826d5a9bc70f5ec17786d. Hash do executor conferido antes do check; dependências existentes vinculadas apenas no snapshot. Planner excluiu M4 por espaço, sem forçar o nó.
