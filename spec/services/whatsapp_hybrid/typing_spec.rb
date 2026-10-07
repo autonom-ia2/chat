@@ -1,5 +1,6 @@
 require 'rails_helper'
 
+# Números do Humanize v3 (google-saas/lib/services/automation/humanize/config.ts).
 describe WhatsappHybrid::Typing do
   let(:client) { instance_double(Waha::Client) }
   let(:conversation) { create(:conversation) }
@@ -13,35 +14,40 @@ describe WhatsappHybrid::Typing do
 
   before { allow(Kernel).to receive(:sleep) { |seconds| sleeps << seconds } }
 
-  it 'reads first, then shows typing for a human time, then stops before sending' do
-    create(:message, conversation: conversation, account: conversation.account, inbox: conversation.inbox,
-                     message_type: :incoming, content: 'x' * 60)
+  it 'shows typing for the human time and stops before sending' do
     allow(client).to receive_messages(start_typing: {}, stop_typing: {})
-    message = outgoing('Já tenho o retorno para você, posso te ligar agora?')
 
-    typing.simulate(message)
+    typing.simulate(outgoing('Já tenho o retorno para você, posso te ligar agora?'))
 
-    expect(sleeps.first).to eq(2.0)
-    expect(sleeps.last).to be_between(52 / 6.5, 52 / 4.5)
     expect(client).to have_received(:start_typing).with(session: 'hybrid-test', chat_id: '5511999990000@c.us')
+    expect(sleeps.size).to eq(1)
     expect(client).to have_received(:stop_typing)
   end
 
-  it 'types at a human speed that changes from message to message' do
-    message = outgoing('x' * 30)
-    times = Array.new(5) { typing.typing_for(message) }
+  it 'adds the per-character time, punctuation pauses and the first-chunk extra' do
+    text = 'Já tenho o retorno para você, posso te ligar agora?' # 51 chars, uma vírgula, uma interrogação
+    min = (51 * 24) + 90 + 320 + 700
+    max = (51 * 38) + 90 + 320 + 1600
 
-    expect(times).to all(be_between(30 / 6.5, 30 / 4.5))
-    expect(times.uniq.size).to be > 1
+    expect(Array.new(10) { typing.delay_ms(outgoing(text)) }).to all(be_between(min, max))
   end
 
-  it 'keeps typing between one and nine seconds' do
-    expect(typing.typing_for(outgoing('oi'))).to eq(1.0)
-    expect(typing.typing_for(outgoing('x' * 2000))).to eq(9.0)
+  it 'pauses on line breaks and list items' do
+    plain = described_class.new(client, session: 's', chat_id: 'c', rng: Random.new(1)).delay_ms(outgoing('a b c'))
+    listed = described_class.new(client, session: 's', chat_id: 'c', rng: Random.new(1)).delay_ms(outgoing("a\n- b\n1. c"))
+
+    expect(listed - plain).to be >= (2 * 180) + (2 * 220)
   end
 
-  it 'reads for at least half a second even without a customer message' do
-    expect(typing.reading_for(outgoing('oi'))).to eq(0.5)
+  it 'never takes the same time twice in a row for the same text' do
+    message = outgoing('Posso te ligar agora?')
+
+    expect(Array.new(5) { typing.delay_ms(message) }.uniq.size).to be > 1
+  end
+
+  it 'keeps every wait between 0.9 and 15 seconds' do
+    expect(typing.delay_ms(outgoing('ok'))).to be >= 900
+    expect(typing.delay_ms(outgoing('x ' * 2000))).to eq(15_000)
   end
 
   it 'still lets the send go on when the engine refuses the typing indicator' do
