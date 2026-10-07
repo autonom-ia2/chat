@@ -28,7 +28,10 @@ module EmailCampaigns
         }
       }.freeze
 
-      def initialize(account:, brief:, placeholders: [], assets: [], base_mjml: nil)
+      # identity: BrandKits::PromptPayload hash of the chosen visual identity (#1076), or nil.
+      # rubocop:disable Metrics/ParameterLists -- keyword data of one generation request
+      def initialize(account:, brief:, placeholders: [], assets: [], base_mjml: nil, identity: nil)
+        @identity = identity
         @account = account
         @brief = brief.to_s
         @placeholders = Array(placeholders)
@@ -37,6 +40,7 @@ module EmailCampaigns
         @image_budget = MAX_IMAGES_PER_REQUEST
         @pdf_budget = Crm::Ai::Config::MAX_PDFS_PER_REQUEST
       end
+      # rubocop:enable Metrics/ParameterLists
 
       def base_mjml_too_large?
         @base_mjml.present? && @base_mjml.bytesize > MAX_BASE_MJML_BYTES
@@ -64,23 +68,25 @@ module EmailCampaigns
       private
 
       def build_generate(videos)
-        text = PromptBuilder.input_text(brief: @brief, placeholders: @placeholders, assets: @assets, videos: videos)
-        { instructions: PromptBuilder.generate(placeholders: @placeholders, assets: @assets, videos: videos, brand: @account.name),
+        text = PromptBuilder.input_text(brief: @brief, placeholders: @placeholders, assets: @assets, videos: videos,
+                                        identity: @identity)
+        { instructions: PromptBuilder.generate(placeholders: @placeholders, assets: @assets, videos: videos,
+                                               brand: @account.name, identity: @identity),
           input: build_input(text), input_text: text, schema: GENERATE_SCHEMA, tools: Crm::Ai::WebSearch.tools }
       end
 
       # Ajuste: sem busca na web — o modelo só mexe no e-mail que recebeu.
       def build_adjust(videos)
         text = EditPromptBuilder.input_text(request: @brief, sections: sections.editable, placeholders: @placeholders,
-                                            assets_rule: PromptBuilder.assets_rule(@assets),
+                                            assets_rule: PromptBuilder.assets_rule(@assets, identity: @identity),
                                             video_rule: PromptBuilder.video_embed_rule(videos))
-        { instructions: EditPromptBuilder.instructions(identity: identity), input: build_input(text), input_text: text,
+        { instructions: EditPromptBuilder.instructions(identity: adjust_identity), input: build_input(text), input_text: text,
           schema: EditPromptBuilder::SCHEMA, tools: nil }
       end
 
-      # Identidade visual em uso. Hoje o nome da conta; o kit de marca (#1076) entra aqui.
-      def identity
-        { name: @account.name }
+      # Identidade visual do ajuste: o kit escolhido (#1076, BrandKits::PromptPayload) ou, sem kit, só o nome da conta.
+      def adjust_identity
+        @identity || { name: @account.name }
       end
 
       def normalize_assets(assets)
@@ -211,11 +217,7 @@ module EmailCampaigns
       # um domínio fixo (evita gravar URLs apontando para a instalação errada). Falha clara se
       # ausente (a geração é marcada failed e o usuário pode tentar de novo).
       def blob_url(blob)
-        base = ENV['FRONTEND_URL'].presence
-        raise 'frontend_url_not_configured' if base.blank?
-
-        uri = URI.parse(base)
-        Rails.application.routes.url_helpers.rails_blob_url(blob, host: uri.host, protocol: uri.scheme, port: uri.port)
+        EmailCampaigns::PublicBlobUrl.call(blob)
       end
 
       def image_content_type?(content_type)

@@ -205,6 +205,18 @@ const sendDate = info => {
   return null;
 };
 
+// Which visual identity the AI e-mail used (#1076), as the campaign recorded it.
+const identityText = computed(() => {
+  const identity = campaign.value?.brand_identity;
+  if (!identity?.name) return '';
+  return t('BRAND_KITS.RESULT.IDENTITY', {
+    name: identity.name,
+    mode: t(
+      `BRAND_KITS.PICKER.MODES.${(identity.mode || 'light').toUpperCase()}`
+    ),
+  });
+});
+
 const subtitle = computed(() => {
   const info = result.value?.campaign || {};
   const when = sendDate(info);
@@ -213,6 +225,7 @@ const subtitle = computed(() => {
     info.from_email,
     when && t(`${NS}.SUBTITLE.${when.key}`, { date: date(when.value) }),
     info.audience && t(`${NS}.SUBTITLE.AUDIENCE`, { name: info.audience.name }),
+    identityText.value,
   ]
     .filter(Boolean)
     .join(' · ');

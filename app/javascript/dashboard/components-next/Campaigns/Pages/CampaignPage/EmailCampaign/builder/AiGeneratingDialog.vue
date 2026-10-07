@@ -38,6 +38,8 @@ const failureText = computed(() => {
   if (adjustment?.problem)
     return tk(`PROBLEM.${adjustment.problem.toUpperCase()}`);
   const code = failure.value?.ai_error;
+  // 'quality_gate_failed' (#1076): the new e-mail kept failing the quality check after one repair.
+  if (code === 'quality_gate_failed') return t('BRAND_KITS.QUALITY.FAILED');
   if (isAdjust.value && KNOWN_FAILURES.includes(code)) {
     return tk(`PROBLEM.${code.toUpperCase()}`);
   }

@@ -1055,6 +1055,39 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_08_100000) do
     t.index ["user_id"], name: "index_autonomia_user_links_on_user_id"
   end
 
+  create_table "brand_import_jobs", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "user_id"
+    t.string "url", null: false
+    t.integer "status", default: 0, null: false
+    t.jsonb "result"
+    t.string "error_code"
+    t.datetime "started_at"
+    t.datetime "finished_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "created_at"], name: "index_brand_import_jobs_on_account_id_and_created_at"
+    t.index ["account_id"], name: "idx_brand_import_jobs_one_active_per_account", unique: true, where: "(status = ANY (ARRAY[0, 1]))"
+    t.index ["account_id"], name: "index_brand_import_jobs_on_account_id"
+    t.index ["user_id"], name: "index_brand_import_jobs_on_user_id"
+  end
+
+  create_table "brand_kits", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "name", null: false
+    t.boolean "is_default", default: false, null: false
+    t.datetime "archived_at"
+    t.jsonb "appearance", default: {}, null: false
+    t.string "source_url"
+    t.bigint "created_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index "account_id, lower((name)::text)", name: "idx_brand_kits_live_name_per_account", unique: true, where: "(archived_at IS NULL)"
+    t.index ["account_id"], name: "idx_brand_kits_one_default_per_account", unique: true, where: "(is_default AND (archived_at IS NULL))"
+    t.index ["account_id"], name: "index_brand_kits_on_account_id"
+    t.index ["created_by_id"], name: "index_brand_kits_on_created_by_id"
+  end
+
   create_table "calls", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "inbox_id", null: false
@@ -2722,6 +2755,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_08_100000) do
     t.bigint "preflight_ceiling", default: 0, null: false
     t.jsonb "pause_reason", default: {}, null: false
     t.bigint "reply_to_inbox_id"
+    t.jsonb "brand_identity", default: {}, null: false
+    t.jsonb "ai_quality_warnings", default: [], null: false
     t.index ["account_id", "status", "scheduled_at"], name: "idx_email_campaigns_account_status_scheduled"
     t.index ["account_id"], name: "index_email_campaigns_on_account_id"
     t.index ["reply_to_inbox_id"], name: "index_email_campaigns_on_reply_to_inbox_id"
@@ -3610,6 +3645,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_08_100000) do
   add_foreign_key "autonomia_prospecting_settings", "crm_pipeline_stages", column: "default_crm_stage_id", on_delete: :nullify
   add_foreign_key "autonomia_prospecting_settings", "crm_pipelines", column: "default_crm_pipeline_id", on_delete: :nullify
   add_foreign_key "autonomia_user_links", "users", on_delete: :cascade
+  add_foreign_key "brand_import_jobs", "accounts", on_delete: :cascade
+  add_foreign_key "brand_import_jobs", "users", on_delete: :nullify
+  add_foreign_key "brand_kits", "accounts", on_delete: :cascade
+  add_foreign_key "brand_kits", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "campaign_audience_links", "accounts", on_delete: :cascade
   add_foreign_key "campaign_audience_links", "campaign_imports", on_delete: :nullify
   add_foreign_key "campaign_recipients", "accounts", on_delete: :cascade
