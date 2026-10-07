@@ -12,7 +12,7 @@ class EmailCampaigns::Import::MjmlSource
   URL_ATTRIBUTES = %w[href src background-url srcset sizes thumbnails-src icon-wrapped-url icon-unwrapped-url left-icon
                       right-icon base-url usemap].freeze
   # A double quote ends the attribute of the HTML the MJML compiles into; braces would reach the template renderer.
-  UNSAFE_ATTRIBUTE_VALUES = (EmailCampaigns::Import::Sanitizer::UNSAFE_VALUES + ['"', '{{', '{%']).freeze
+  UNSAFE_ATTRIBUTE_VALUES = (EmailCampaigns::MarkupPolicy::UNSAFE_CSS + ['"', '{{', '{%']).freeze
   NAVBAR_JOIN = ' · '.freeze
 
   def self.call(source, report, base_url: nil, budget: EmailCampaigns::Import::Budget.new)

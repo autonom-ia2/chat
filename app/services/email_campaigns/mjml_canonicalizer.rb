@@ -10,7 +10,9 @@
 # comments are cut out before parsing and put back verbatim (MjmlEndingContent). The <mj-attributes>
 # defaults are then written on each body element and <mj-attributes> is dropped (MjmlHeadDefaults);
 # corrupted heads saved by the old editor are read flat, so their defaults come back too. Malformed
-# MJML is returned unchanged (and logged) — never mangled.
+# MJML is returned unchanged (and logged) — never mangled. With recover: true (the markup cleaning of
+# EmailCampaigns::Ai::MarkupCleaner, #1104) it is read by the lenient parser instead, so the block still sees and
+# cleans it; MJML not even that parser reads comes back empty, never unchecked.
 class EmailCampaigns::MjmlCanonicalizer
   XML_ENTITIES = %w[amp lt gt quot apos].freeze
   MAX_ENTITY_LENGTH = 40
@@ -19,20 +21,23 @@ class EmailCampaigns::MjmlCanonicalizer
 
   # An optional block gets the parsed root (it may change attributes in place) and the
   # MjmlEndingContent, and returns { slot index => new content } for the ending-tag contents it
-  # rewrites (EmailCampaigns::LockedFooter). It is not called for malformed MJML.
-  def self.call(mjml, &)
-    new(mjml).call(&)
+  # rewrites (EmailCampaigns::LockedFooter). It is not called for malformed MJML, unless recover: true.
+  def self.call(mjml, recover: false, &)
+    new(mjml, recover: recover).call(&)
   end
 
-  def initialize(mjml)
+  def initialize(mjml, recover: false)
     @mjml = mjml.to_s
+    @recover = recover
   end
 
   def call
     return @mjml if @mjml.empty?
 
     cut = EmailCampaigns::MjmlEndingContent.new(@mjml)
-    root = parse(normalize_entities(cut.skeleton))
+    skeleton = normalize_entities(cut.skeleton)
+    root = parse(skeleton)
+    root ||= repair(skeleton) if @recover
     return malformed if root.nil?
 
     slot_changes = block_given? ? yield(root, cut) : {}
@@ -43,8 +48,8 @@ class EmailCampaigns::MjmlCanonicalizer
   private
 
   def malformed
-    Rails.logger.warn('[EmailCampaigns::MjmlCanonicalizer] MJML is not well-formed; kept unchanged')
-    @mjml
+    Rails.logger.warn("[EmailCampaigns::MjmlCanonicalizer] MJML is not well-formed; #{@recover ? 'dropped' : 'kept unchanged'}")
+    @recover ? '' : @mjml
   end
 
   # Wrapped in a synthetic root so fragments (several sibling sections) parse too.
@@ -52,6 +57,11 @@ class EmailCampaigns::MjmlCanonicalizer
     Nokogiri::XML("<#{ROOT}>#{skeleton}</#{ROOT}>") { |config| config.strict.nonet }.root
   rescue Nokogiri::XML::SyntaxError
     nil
+  end
+
+  def repair(skeleton)
+    Rails.logger.warn('[EmailCampaigns::MjmlCanonicalizer] MJML is not well-formed; repaired')
+    Nokogiri::XML("<#{ROOT}>#{skeleton}</#{ROOT}>") { |config| config.recover.nonet }.root
   end
 
   # ---- entities: XML knows only five; HTML names become numeric, a bare & becomes &amp; ----
