@@ -1,22 +1,75 @@
-// Compiles e-mail MJML to HTML in the browser with mjml-browser, the same compiler the e-mail
-// editor runs (grapesjs-mjml). Loaded on first use, so screens that never preview MJML do not pay
-// for it. Never throws: a design that does not compile gives '' and the screen shows no preview.
+// Compiles e-mail MJML to HTML with the e-mail editor's own compiler: GrapesJS + grapesjs-mjml with
+// the editor's plugins (grapesMjmlSetup) and its load/export path (editorMjml), in headless mode.
+// The preview then shows what the editor will send, and the dashboard ships ONE MJML compiler — the
+// copy inside grapesjs-mjml — instead of a second mjml-browser (#1118). GrapesJS loads on first use
+// and the headless editor is kept for the next preview; disposeEmailMjmlCompiler frees it when the
+// screen leaves. Never throws: a design that does not compile gives '' and the screen shows no preview.
+import {
+  prepareMjmlForEditor,
+  restoreHeldHead,
+} from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/builder/editorMjml';
+import {
+  mjmlEditorPlugins,
+  mjmlEditorPluginsOpts,
+} from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/builder/grapesMjmlSetup';
+
 let compilerPromise = null;
 
+const createCompiler = async () => {
+  const [{ default: grapesjs }, { default: mjmlPlugin }] = await Promise.all([
+    import('grapesjs'),
+    import('grapesjs-mjml'),
+  ]);
+  return grapesjs.init({
+    headless: true,
+    storageManager: false,
+    plugins: mjmlEditorPlugins(mjmlPlugin),
+    pluginsOpts: mjmlEditorPluginsOpts(mjmlPlugin),
+  });
+};
+
 const compiler = () => {
-  compilerPromise ||= import('mjml-browser').then(module => module.default);
+  compilerPromise ||= createCompiler().catch(error => {
+    compilerPromise = null;
+    throw error;
+  });
   return compilerPromise;
+};
+
+// The editor's path, synchronous end to end, so two previews never interleave on the shared editor:
+// load (prepareMjmlForEditor + setComponents), export (mjml-code + restoreHeldHead), compile.
+const compileInEditor = (editor, mjml) => {
+  const prepared = prepareMjmlForEditor(mjml);
+  editor.setComponents(prepared.mjml);
+  const exported = restoreHeldHead(
+    editor.runCommand('mjml-code') || '',
+    prepared.held
+  );
+  const out = editor.runCommand('mjml-code-to-html', { mjml: exported }) || {};
+  editor.setComponents('');
+  return out.html || '';
 };
 
 export const compileEmailMjml = async mjml => {
   if (typeof mjml !== 'string' || !mjml.trim()) return '';
   try {
-    const mjml2html = await compiler();
-    return mjml2html(mjml, { validationLevel: 'soft' }).html || '';
+    return compileInEditor(await compiler(), mjml);
   } catch (error) {
     // eslint-disable-next-line no-console
     console.warn('[compileEmailMjml] could not compile the design', error);
     return '';
+  }
+};
+
+export const disposeEmailMjmlCompiler = async () => {
+  const pending = compilerPromise;
+  compilerPromise = null;
+  if (!pending) return;
+  try {
+    (await pending).destroy();
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.warn('[compileEmailMjml] could not dispose the compiler', error);
   }
 };
 

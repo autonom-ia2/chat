@@ -180,9 +180,6 @@ importers:
       mitt:
         specifier: ^3.0.1
         version: 3.0.1
-      mjml-browser:
-        specifier: 4.18.0
-        version: 4.18.0
       opus-recorder:
         specifier: ^8.0.5
         version: 8.0.5
@@ -340,6 +337,9 @@ importers:
       lint-staged:
         specifier: ^16.2.7
         version: 16.2.7
+      mjml-browser:
+        specifier: 4.18.0
+        version: 4.18.0
       postcss:
         specifier: ^8.5.23
         version: 8.5.23

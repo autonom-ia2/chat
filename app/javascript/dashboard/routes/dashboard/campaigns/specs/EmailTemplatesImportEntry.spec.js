@@ -6,6 +6,7 @@ const apiIndex = vi.hoisted(() => vi.fn());
 const apiShow = vi.hoisted(() => vi.fn());
 const latest = vi.hoisted(() => vi.fn());
 const compile = vi.hoisted(() => vi.fn());
+const disposeCompiler = vi.hoisted(() => vi.fn());
 const routerPush = vi.hoisted(() => vi.fn());
 const routerReplace = vi.hoisted(() => vi.fn());
 const alert = vi.hoisted(() => vi.fn());
@@ -20,6 +21,7 @@ vi.mock('dashboard/api/emailCampaignTemplateImports', () => ({
 }));
 vi.mock('dashboard/helper/compileEmailMjml', () => ({
   compileEmailMjml: compile,
+  disposeEmailMjmlCompiler: disposeCompiler,
 }));
 vi.mock('dashboard/composables/store', () => ({
   useStore: () => ({ dispatch: vi.fn().mockResolvedValue({}) }),
@@ -115,6 +117,16 @@ const mountPage = async () => {
   });
   await flushPromises();
 };
+
+it('frees the e-mail compiler when the library closes', async () => {
+  await mountPage();
+  disposeCompiler.mockClear();
+
+  wrapper.unmount();
+  wrapper = null;
+
+  expect(disposeCompiler).toHaveBeenCalledTimes(1);
+});
 
 const importButtons = () =>
   wrapper

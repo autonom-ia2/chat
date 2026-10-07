@@ -24,6 +24,7 @@ import EmailCampaignTemplatesAPI from 'dashboard/api/emailCampaignTemplates';
 import EmailCampaignTemplateImportsAPI from 'dashboard/api/emailCampaignTemplateImports';
 import {
   compileEmailMjml,
+  disposeEmailMjmlCompiler,
   withImportMarks,
 } from 'dashboard/helper/compileEmailMjml';
 import ImportChoose from 'dashboard/components-next/EmailTemplateImport/ImportChoose.vue';
@@ -452,7 +453,10 @@ onActivated(() => {
   wasActivated = true;
 });
 onDeactivated(leave);
-onBeforeUnmount(leave);
+onBeforeUnmount(() => {
+  leave();
+  disposeEmailMjmlCompiler();
+});
 </script>
 
 <template>

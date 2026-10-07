@@ -16,7 +16,10 @@ import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 
 import EmailCampaignTemplatesAPI from 'dashboard/api/emailCampaignTemplates';
 import EmailCampaignTemplateImportsAPI from 'dashboard/api/emailCampaignTemplateImports';
-import { compileEmailMjml } from 'dashboard/helper/compileEmailMjml';
+import {
+  compileEmailMjml,
+  disposeEmailMjmlCompiler,
+} from 'dashboard/helper/compileEmailMjml';
 import Button from 'dashboard/components-next/button/Button.vue';
 import { useCanManage } from 'dashboard/composables/useCanManage';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
@@ -326,6 +329,7 @@ onBeforeUnmount(() => {
     thumbObserver = null;
   }
   cardEls.clear();
+  disposeEmailMjmlCompiler();
 });
 
 // Back from "Trazer meu modelo" with the saved model: "Meus modelos", the card marked "Novo" and the

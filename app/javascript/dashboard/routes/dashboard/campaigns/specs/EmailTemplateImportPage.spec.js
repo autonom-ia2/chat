@@ -26,6 +26,7 @@ vi.mock('dashboard/helper/compileEmailMjml', () => ({
   compileEmailMjml: vi.fn(async mjml =>
     mjml ? '<html><body>ok</body></html>' : ''
   ),
+  disposeEmailMjmlCompiler: vi.fn(),
   withImportMarks: html => html,
 }));
 vi.mock('dashboard/composables/store', () => ({
@@ -92,6 +93,19 @@ const mountPage = async () => {
   await flushPromises();
   return wrapper;
 };
+
+it('frees the e-mail compiler when the screen closes', async () => {
+  await mountPage();
+  const { disposeEmailMjmlCompiler } = await import(
+    'dashboard/helper/compileEmailMjml'
+  );
+  disposeEmailMjmlCompiler.mockClear();
+
+  wrapper.unmount();
+  wrapper = null;
+
+  expect(disposeEmailMjmlCompiler).toHaveBeenCalledTimes(1);
+});
 
 const buttonWith = label =>
   wrapper.findAll('button').find(button => button.text().includes(label));
