@@ -361,8 +361,8 @@ Gestos, em todas as ações com `id`:
 ## 3. Dados — duas migrations
 
 Só tabelas novas do fork.
-- `db/migrate/20261009100000_create_crm_meta_advisor_runs_and_actions.rb` (rollback = `drop_table` das duas);
-- `db/migrate/20261009100100_create_crm_meta_ad_frequency_windows.rb` (rollback = `drop_table`).
+- `db/migrate/20261009143700_create_crm_meta_advisor_runs_and_actions.rb` (rollback = `drop_table` das duas);
+- `db/migrate/20261009143800_create_crm_meta_ad_frequency_windows.rb` (rollback = `drop_table`).
 
 ### `crm_meta_advisor_runs` — cada análise
 
@@ -972,7 +972,7 @@ Conferências do gabarito (para quem revisar a conta):
 
 | | Arquivos |
 |---|---|
-| Cria (B1) | `db/migrate/20261009100000_create_crm_meta_advisor_runs_and_actions.rb`; `db/migrate/20261009100100_create_crm_meta_ad_frequency_windows.rb`; `app/models/crm/meta_advisor_run.rb`; `app/models/crm/meta_advisor_action.rb`; `app/models/crm/meta_ad_frequency_window.rb` |
+| Cria (B1) | `db/migrate/20261009143700_create_crm_meta_advisor_runs_and_actions.rb`; `db/migrate/20261009143800_create_crm_meta_ad_frequency_windows.rb`; `app/models/crm/meta_advisor_run.rb`; `app/models/crm/meta_advisor_action.rb`; `app/models/crm/meta_ad_frequency_window.rb` |
 | Cria | `app/controllers/api/v1/accounts/crm/meta_ads_advisor_actions_controller.rb`; `app/services/crm/meta_ads/panel/meta_comparison.rb`; `app/services/crm/meta_ads/panel/path_list.rb`; `app/jobs/crm/meta_ads/advisor/prune_job.rb`; `spec/models/crm/meta_advisor_action_spec.rb`; `spec/services/crm/meta_ads/panel/meta_comparison_spec.rb`; `spec/services/crm/meta_ads/panel/path_list_spec.rb`; `spec/requests/api/v1/accounts/crm/meta_ads_advisor_actions_spec.rb`; `spec/jobs/crm/meta_ads/advisor/prune_job_spec.rb` |
 | Altera (exclusivo) | `config/routes.rb` (B1); `db/schema.rb` (B1, só as 3 tabelas); `config/schedule.yml`; `app/services/crm/meta_ads/insights/query.rb`; `app/services/crm/meta_ads/insights/sync.rb`; `app/services/crm/meta_ads/insights/writer.rb`; `app/services/crm/meta_ads/links/stats.rb` (`since:` opcional, padrão 30 dias); `app/services/crm/meta_ads/panel/report.rb` (tira `action`; `confidence` no período); `app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb` (`panel` com `advice`/`meta_comparison`/`response_time`; `panel_list`; `READ_ACTIONS`); `app/services/crm/meta_ads/whatsapp_report/digest.rb`; `app/services/crm/meta_ads/whatsapp_report/message_builder.rb`; `config/locales/meta_ads_whatsapp_report.en.yml`; `config/locales/meta_ads_whatsapp_report.pt_BR.yml`; specs existentes: `report_spec`, `digest_spec`, `message_builder_spec`, `deliver_job_spec`, `insights/sync_spec`, `insights/writer_spec`, `links/stats_spec`, o request spec do painel (`meta_ads_connections_spec` ou equivalente), `spec/configs/schedule_spec.rb` (se listar jobs) |
 | Remove chamadas | `Panel::Action.for` em `Report#payload` e em `Digest#action` (o método em si fica para a integração) |
