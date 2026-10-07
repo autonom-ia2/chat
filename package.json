@@ -7,6 +7,8 @@
     "relationships:test": "pnpm relationships:check && pnpm test app/javascript/dashboard/components-next/Relationships/specs",
     "guia:build": "node scripts/guide-map/build.mjs",
     "guia:check": "node scripts/guide-map/check.mjs",
+    "mjml:attributes": "node scripts/mjml-attributes/build.mjs",
+    "mjml:attributes:check": "node scripts/mjml-attributes/build.mjs --check",
     "central:prints": "node scripts/central-de-ajuda/roteiro-prints.mjs",
     "central:check": "node scripts/central-de-ajuda/conferir.mjs",
     "eslint": "eslint app/**/*.{js,vue}",

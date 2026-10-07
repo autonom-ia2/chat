@@ -74,6 +74,20 @@ class CrmMetaAdsConnectionAPI extends ApiClient {
     });
   }
 
+  // Collection (#1073): last day read for the ad account →
+  // { insights: { synced_at, refreshing, date, spend, currency, conversations } }.
+  // Asks Meta for today's numbers when they are older than 5 minutes; the end
+  // of that read arrives as crm.meta_ads.insights_updated.
+  insights() {
+    return axios.post(`${this.url}/insights`);
+  }
+
+  // Daily panel (#1088): { panel: { days, from, to, currency, totals, ads, action,
+  // confidence, synced_at, refreshing } }. Also asks Meta for today's numbers.
+  panel(days) {
+    return axios.get(`${this.url}/panel`, { params: { days } });
+  }
+
   // AI reads the stages and answers { suggestions: [{ stage_id, type, reason }] }.
   suggestStages(pipelineId) {
     return pollAiRequest(

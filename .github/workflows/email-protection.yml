@@ -201,6 +201,8 @@ jobs:
           pnpm exec vitest run --maxWorkers=2 --minWorkers=1 --no-cache --no-coverage --reporter=default --reporter=junit --outputFile=tmp/email436/ci/vitest.xml
       - name: All 57 locale modules - compile and render without fallback
         run: node scripts/check-email-protection-i18n.mjs | tee tmp/email436/ci/locales.json
+      - name: MJML allowed attributes in sync with mjml-browser (JS/Ruby canonicalizer parity)
+        run: pnpm mjml:attributes:check
       - name: ESLint and Prettier - cumulative changed feature JS and Vue
         run: |
           python3 .github/scripts/email-protection-files.py frontend-lint > tmp/email436/ci/frontend-lint-files

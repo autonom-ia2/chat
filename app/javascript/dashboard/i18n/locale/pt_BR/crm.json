@@ -2207,7 +2207,26 @@
         "NEXT_TITLE": "O que acontece agora",
         "NEXT_NAMES": "Cada conversa que veio de anúncio mostra o nome da campanha e o Ver anúncio no card do CRM.",
         "NEXT_SALES": "Quando um card avança ou é ganho, a Meta fica sabendo e aprende quem compra.",
-        "NEXT_PANEL": "Próxima etapa: um painel com quanto custou cada venda, anúncio por anúncio."
+        "NEXT_PANEL": "Próxima etapa: um painel com quanto custou cada venda, anúncio por anúncio.",
+        "SPEND_TODAY": "Gasto hoje",
+        "SPEND_ON": "Gasto em {date}",
+        "SPEND_CONVERSATIONS": "1 conversa veio de anúncios hoje | {count} conversas vieram de anúncios hoje",
+        "SPEND_UPDATED": "atualizado {time}",
+        "SPEND_REFRESHING": "atualizando…",
+        "SPEND_EMPTY": "O gasto dos anúncios aparece aqui depois da primeira leitura da Meta.",
+        "ACCESS_LOST_HINT": "A Meta não deixa mais a gente ler esta conta de anúncios. Compartilhe de novo ou conecte outra conta.",
+        "SPEND_BACKFILLING": "Buscando os últimos 90 dias na Meta…",
+        "CONFIDENCE": {
+          "TITLE": "Quanto confiar nos números",
+          "TOTAL": "Nos últimos {days} dias, 1 conversa veio de anúncios da Meta. Veja o quanto sabemos de qual anúncio a trouxe: | Nos últimos {days} dias, {count} conversas vieram de anúncios da Meta. Veja o quanto sabemos de qual anúncio trouxe cada uma:",
+          "EMPTY": "Assim que chegarem conversas de anúncios, mostramos aqui de qual anúncio cada uma veio.",
+          "AD": "Anúncio certo",
+          "AD_NAME": "Anúncio achado pelo nome",
+          "CAMPAIGN": "Só a campanha",
+          "UNKNOWN": "Veio da Meta, sem saber o anúncio",
+          "FIX": "Cole o texto do passo 3 em todos os anúncios que levam ao site para saber o anúncio",
+          "SHARE": "{share}%"
+        }
       },
       "ERRORS": {
         "PLATFORM_UNAVAILABLE": "Compartilhar ainda não está disponível. Por enquanto, use uma chave de acesso.",
@@ -2276,6 +2295,77 @@
         "FINISH": "Terminar",
         "LATER": "Agora não",
         "BEFORE": "Antes: {value}"
+      },
+      "PANEL": {
+        "TABS": {
+          "RESULT": "Resultado",
+          "CONNECTION": "Conexão",
+          "LABEL": "O que ver"
+        },
+        "HEADLINE": "Você investiu {spend}. Vieram {conversations} e {sales}.",
+        "PERIOD": "{days} dias",
+        "PERIOD_LABEL": "Período",
+        "PERIOD_CTX": "Últimos {days} dias",
+        "PERIOD_HINT": "O que aconteceu com as pessoas que chegaram por anúncio nos últimos {days} dias.",
+        "TODAY": "O que fazer hoje",
+        "SEVERAL_ADS": "vários anúncios",
+        "ACTION": {
+          "STALLED_QUOTES": {
+            "TEXT": "1 proposta de anúncio está parada há mais de {days} dias. Ela veio de \"{ad}\". | {count} propostas de anúncio estão paradas há mais de {days} dias. A maior parte veio de \"{ad}\".",
+            "WHY": "Por quê: somam {value} em negociação. Retomar quem já pediu proposta custa menos que anunciar de novo.",
+            "BUTTON": "Ver a proposta | Ver as {count} propostas"
+          },
+          "FIX_TRACKING": {
+            "TEXT": "Não sabemos de qual anúncio veio 1 conversa. | Não sabemos de qual anúncio vieram {unknown} conversas.",
+            "WHY": "Por quê: sem o anúncio, o custo por venda de cada um fica errado. Das {conversations} conversas de anúncio dos últimos 30 dias, {unknown} estão sem anúncio.",
+            "BUTTON": "Corrigir no passo 3"
+          },
+          "WAIT": {
+            "TEXT": "Nada a corrigir agora. Siga com os anúncios como estão.",
+            "WHY": "Por quê: um anúncio só ganha veredito depois de 20 conversas. O que mais trouxe até agora, \"{ad}\", precisa de mais {missing}."
+          },
+          "ON_TRACK": {
+            "TEXT": "Nada parado. Veja abaixo o veredito de cada anúncio.",
+            "WHY": "Por quê: seus anúncios já têm conversas suficientes para comparar o custo de cada venda."
+          },
+          "NO_DATA": {
+            "TEXT": "Ainda não há gasto nem conversa de anúncio neste período.",
+            "WHY": "Por quê: os números aparecem assim que um anúncio gastar ou trouxer a primeira conversa."
+          }
+        },
+        "PATH_TITLE": "O caminho do seu dinheiro",
+        "PATH": {
+          "SPEND": "investidos",
+          "CONVERSATIONS": "conversa | conversas",
+          "QUOTES": "proposta | propostas",
+          "SALES": "venda | vendas"
+        },
+        "EACH": "{value} cada",
+        "PER_SALE": "{value} por venda",
+        "RETURN": "Cada R$ 1 investido voltou {value}",
+        "OPEN_QUOTES": "Vendas chegando: 1 proposta aberta | Vendas chegando: {count} propostas abertas",
+        "ADS_TITLE": "Seus anúncios, por venda",
+        "ADS_EMPTY": "Assim que um anúncio gastar ou trouxer conversa, ele aparece aqui.",
+        "AD_NO_NAME": "Anúncio sem nome",
+        "AD_LINE": "{spend} → {conversations} → {sales}",
+        "AD_QUOTES": "1 proposta aberta | {count} propostas abertas",
+        "VERDICT": {
+          "UP": "Aumentar · base suficiente",
+          "KEEP": "Manter",
+          "SIGNAL": "Sinal inicial",
+          "REVIEW": "Revisar o anúncio",
+          "EARLY": "Ainda é cedo"
+        },
+        "STALLED_TITLE": "1 proposta parada | {count} propostas paradas",
+        "STALLED_SINCE": "Sem resposta {time}",
+        "OPEN_CONVERSATION": "Abrir conversa",
+        "COUNT": {
+          "CONVERSATIONS": "{n} conversa | {n} conversas",
+          "SALES": "{n} venda | {n} vendas"
+        },
+        "STALLED_MORE": "e mais {count} no CRM",
+        "REACHED": "{share}% chegaram",
+        "SALES_VALUE": "· {value}"
       }
     }
   },

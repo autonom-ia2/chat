@@ -1,0 +1,44 @@
+<mjml>
+  <mj-head>
+    <mj-title>Comunicado: novo horário de atendimento</mj-title>
+  </mj-head>
+  <mj-body width="600px" background-color="#f3f5f8">
+    <mj-section background-color="#1e3a5f" padding="22px 24px">
+      <mj-column>
+        <mj-text font-family="Arial, Helvetica, sans-serif" font-size="20px" font-weight="700" color="#ffffff" align="left" line-height="1.2" letter-spacing="1px" padding="0">Sua marca</mj-text>
+      </mj-column>
+    </mj-section>
+    <mj-section background-color="#ffffff" padding="44px 24px 24px">
+      <mj-column>
+        <mj-text font-family="Arial, Helvetica, sans-serif" font-size="15px" font-weight="700" color="#1e3a5f" align="left" line-height="1.3" letter-spacing="2px" padding="0 0 12px">COMUNICADO IMPORTANTE</mj-text>
+        <mj-text font-family="Arial, Helvetica, sans-serif" font-size="28px" font-weight="800" color="#111827" align="left" line-height="1.2" padding="0">Uma mudança no nosso horário de atendimento</mj-text>
+        <mj-text font-family="Arial, Helvetica, sans-serif" font-size="15px" color="#4b5563" align="left" line-height="1.4" padding="12px 0 0">Publicado em DD/MM/AAAA</mj-text>
+        <mj-divider border-color="#e5e7eb" border-width="1px" padding="28px 0 0"></mj-divider>
+        <mj-text font-family="Arial, Helvetica, sans-serif" font-size="16px" color="#111827" align="left" line-height="1.6" padding="28px 0 0">Olá, {{ nome }}.</mj-text>
+        <mj-text font-family="Arial, Helvetica, sans-serif" font-size="16px" color="#111827" align="left" line-height="1.6" padding="12px 0 0">A partir de DD/MM, o nosso atendimento muda de horário.</mj-text>
+        <mj-text font-family="Arial, Helvetica, sans-serif" font-size="16px" color="#111827" align="left" line-height="1.6" padding="12px 0 0">Fizemos essa mudança para atender você com mais calma e atenção.</mj-text>
+      </mj-column>
+    </mj-section>
+    <mj-wrapper background-color="#ffffff" padding="8px 24px">
+      <mj-section background-color="#eef3f9" padding="20px 20px" border-left="4px solid #1e3a5f">
+        <mj-column>
+          <mj-text font-family="Arial, Helvetica, sans-serif" font-size="15px" font-weight="700" color="#1e3a5f" align="left" line-height="1.3" letter-spacing="2px" padding="0">O QUE MUDA</mj-text>
+          <mj-text font-family="Arial, Helvetica, sans-serif" font-size="18px" font-weight="700" color="#111827" align="left" line-height="1.4" padding="8px 0 0">Novo horário: segunda a sexta, das 8h às 18h.</mj-text>
+        </mj-column>
+      </mj-section>
+      <mj-section background-color="#ffffff" padding="20px 20px" border-left="4px solid #cbd5e1">
+        <mj-column>
+          <mj-text font-family="Arial, Helvetica, sans-serif" font-size="15px" font-weight="700" color="#1e3a5f" align="left" line-height="1.3" letter-spacing="2px" padding="0">O QUE NÃO MUDA</mj-text>
+          <mj-text font-family="Arial, Helvetica, sans-serif" font-size="16px" color="#111827" align="left" line-height="1.6" padding="8px 0 0">Seus dados, pedidos e contatos continuam iguais. Você não precisa fazer nada.</mj-text>
+        </mj-column>
+      </mj-section>
+    </mj-wrapper>
+    <mj-section background-color="#ffffff" padding="24px 24px 44px">
+      <mj-column>
+        <mj-button href="https://seusite.com.br" background-color="#1e3a5f" color="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="16px" font-weight="700" line-height="20px" border-radius="8px" inner-padding="15px 32px" align="left" padding="0">Ver todos os detalhes</mj-button>
+        <mj-text font-family="Arial, Helvetica, sans-serif" font-size="16px" color="#4b5563" align="left" line-height="1.6" padding="28px 0 0">Obrigado pela confiança.<br/>Equipe Sua marca</mj-text>
+      </mj-column>
+    </mj-section>
+    <mj-section css-class="footer-locked" background-color="#f4f4f4" padding="20px 16px"><mj-column><mj-text font-family="Arial, Helvetica, sans-serif" font-size="12px" color="#4b5563" align="center" line-height="1.6">Nome da sua empresa · Endereço da empresa<br/>Você recebeu este e-mail porque está em nossa lista de contatos.<br/><a href="{{ unsubscribe_url }}" style="color:#4b5563;text-decoration:underline;">Cancelar inscrição</a></mj-text></mj-column></mj-section>
+  </mj-body>
+</mjml>

@@ -374,3 +374,13 @@ O transporte mantém um único orçamento de 25 segundos. STS e CURRENT são lid
 Um diagnóstico aprovado com fontes candidatas não atualiza o runtime instalado. Publicar uma release imutável com o commit aprovado e conferir os hashes instalados antes da partida. Não editar a release atual em lugar, não substituir um B0 por diagnóstico e não usar versões de CURRENT anteriores a um deploy concorrente.
 
 A cobertura dessa ordem fica em `tests/instagram_testers/publisher-concurrency.test.mjs`, executada e verificada pelo ESLint no workflow Instagram. Para o aceite funcional, continuam obrigatórios login Meta, publicação recebida e renovações naturais pelo runtime VPS.
+
+## Recuperação de resposta perdida durante a intervenção humana
+
+O controle da janela depende do vencimento confirmado pelo backend, além do teto de uma hora do pedido. Uma falha de transporte não significa que a renovação deixou de ser aplicada: reconciliar o mesmo pedido antes de classificá-lo como falho. Não criar outro pedido enquanto o resultado do atual estiver indefinido.
+
+A supervisão é única desde o claim e atravessa o fechamento do navegador e a captura pelo manager. Somente o mesmo pedido `running` com prazo confirmado futuro permite manter a atividade. Pedido expirado, revogado, ausente ou com outro ID cancela o filho. `succeeded` deve vir do backend; sua confirmação encerra o acompanhamento sem repetir publicação. O término do filho é aguardado antes de liberar o wrapper.
+
+Validar com relógio controlado resposta aplicada/perdida, leitura tardia, troca de ID, revogação, expiração, fechamento durante renovação e sucesso com confirmação final incerta. O workflow executa explicitamente `operator-waiter.test.mjs` junto aos contratos de controle e ao ESLint.
+
+Para implantar: Issue → branch → PR → Project → revisão e CI → aprovação/fila → release imutável da VPS. Não sobrescrever a release em execução. Preservar o perfil autenticado e a chave de cada instalação. Não interromper janela humana ativa. Após implantação, conferir captura natural, publicação, renovação e estado do SuperAdmin antes de ativar o assistido. Rollback restaura somente a release anterior sob contenção do próprio gestor; não apaga sessão nem reativa os Macs.

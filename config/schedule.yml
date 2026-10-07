@@ -275,3 +275,18 @@ autonomia_guide_limpar_avisos_job:
   cron: '50 4 * * *'
   class: 'Autonomia::Guide::LimparAvisosJob'
   queue: scheduled_jobs
+
+# Anúncios da Meta (#1073): gasto de hoje de cada conexão, a cada 30 minutos.
+crm_meta_ads_insights_today_job:
+  cron: '*/30 * * * *'
+  class: 'Crm::MetaAds::InsightsScheduleJob'
+  queue: scheduled_jobs
+  args: ['today']
+
+# Anúncios da Meta (#1073): relê os 3 dias anteriores, com posicionamento, às 4h de Brasília (07:00 UTC).
+# A Meta corrige números recentes. Conexão sem a carga de 90 dias recebe a carga no lugar.
+crm_meta_ads_insights_recent_job:
+  cron: '0 7 * * *'
+  class: 'Crm::MetaAds::InsightsScheduleJob'
+  queue: scheduled_jobs
+  args: ['recent']

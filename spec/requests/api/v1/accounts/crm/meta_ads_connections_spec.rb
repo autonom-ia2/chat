@@ -221,4 +221,105 @@ RSpec.describe 'CRM meta_ads_connection API', type: :request do
       expect(Crm::MetaAdsConnection.where(account_id: account.id).count).to eq(1)
     end
   end
+
+  describe 'GET panel (#1088)' do
+    let(:connection) { create_meta_ads_insights_connection(account) }
+
+    after do
+      Crm::MetaAds::Insights::Refresh.release(connection.id, 'today')
+      Crm::MetaAds::Insights::Backfill.release(connection.id)
+      Redis::Alfred.delete("#{Crm::MetaAds::LinksBackfillJob::RUNNING_KEY}:#{connection.id}")
+    end
+
+    it 'devolve o painel do período e pede a leitura de hoje' do
+      connection.update!(insights_backfilled_at: 1.day.ago, links_backfilled_at: 1.day.ago)
+
+      expect do
+        get "#{path}/panel", params: { days: 7 }, headers: auth_headers(admin)
+      end.to have_enqueued_job(Crm::MetaAds::InsightsSyncJob).with(connection.id, 'today')
+
+      panel = response.parsed_body['panel']
+      expect(panel).to include('days' => 7, 'currency' => 'BRL', 'refreshing' => true)
+      expect(panel['totals']).to include('spend' => 0.0, 'conversations' => 0, 'sales' => 0)
+      expect(panel['action']).to eq('kind' => 'no_data')
+      expect(panel['confidence']).to include('conversations' => 0)
+    end
+
+    it 'sem conta de anúncios devolve vazio' do
+      get "#{path}/panel", headers: auth_headers(admin)
+
+      expect(response.parsed_body).to eq('panel' => nil)
+    end
+
+    it 'agente recebe 403' do
+      get "#{path}/panel", headers: auth_headers(agent)
+
+      expect(response).to have_http_status(:forbidden)
+    end
+  end
+
+  describe 'POST insights (#1073)' do
+    let(:connection) { create_meta_ads_insights_connection(account) }
+
+    after { Crm::MetaAds::Insights::Refresh.release(connection.id, 'today') }
+
+    it 'devolve o último dia lido e pede a leitura de hoje quando está velha' do
+      [['1', 30, 2], ['2', 12.5, 1]].each do |ad_id, spend, conversations|
+        Crm::MetaAdInsightDaily.create!(account: account, ad_account_id: connection.ad_account_id, ad_id: ad_id, date: Date.new(2026, 10, 5),
+                                        currency: 'BRL', spend: spend, conversations_started: conversations, attribution_window: '7d_click',
+                                        fetched_at: Time.current)
+      end
+
+      expect do
+        post "#{path}/insights", headers: auth_headers(admin), as: :json
+      end.to have_enqueued_job(Crm::MetaAds::InsightsSyncJob).with(connection.id, 'today')
+
+      expect(response.parsed_body['insights']).to include('date' => '2026-10-05', 'spend' => '42.5', 'currency' => 'BRL',
+                                                          'conversations' => 3, 'refreshing' => true)
+    end
+
+    it 'várias aberturas ao mesmo tempo geram uma leitura só' do
+      connection
+
+      expect do
+        2.times { post "#{path}/insights", headers: auth_headers(admin), as: :json }
+      end.to have_enqueued_job(Crm::MetaAds::InsightsSyncJob).exactly(:once)
+      expect(response.parsed_body['insights']).to include('refreshing' => true, 'date' => nil)
+    end
+
+    it 'lido há menos de 2 minutos não chama a Meta de novo' do
+      connection.update!(insights_synced_at: 1.minute.ago, insights_backfilled_at: 1.day.ago)
+
+      expect do
+        post "#{path}/insights", headers: auth_headers(admin), as: :json
+      end.not_to have_enqueued_job(Crm::MetaAds::InsightsSyncJob)
+      expect(response.parsed_body['insights']['refreshing']).to be(false)
+    end
+
+    it 'sem a carga de 90 dias, abrir a tela começa a carga na hora e avisa que está buscando' do
+      connection.update!(insights_synced_at: 1.minute.ago)
+
+      expect do
+        post "#{path}/insights", headers: auth_headers(admin), as: :json
+      end.to have_enqueued_job(Crm::MetaAds::InsightsBackfillJob).with(connection.id)
+                                                                 .and have_enqueued_job(Crm::MetaAds::LinksBackfillJob).with(connection.id)
+      expect(response.parsed_body['insights']).to include('backfilling' => true, 'ad_conversations_today' => 0)
+      expect(response.parsed_body['insights']['confidence']).to include('conversations' => 0, 'window_days' => 30)
+    ensure
+      Crm::MetaAds::Insights::Backfill.release(connection.id)
+      Redis::Alfred.delete("#{Crm::MetaAds::LinksBackfillJob::RUNNING_KEY}:#{connection.id}")
+    end
+
+    it 'sem conexão devolve vazio' do
+      post "#{path}/insights", headers: auth_headers(admin), as: :json
+
+      expect(response.parsed_body).to eq('insights' => nil)
+    end
+
+    it 'agente recebe 403' do
+      post "#{path}/insights", headers: auth_headers(agent), as: :json
+
+      expect(response).to have_http_status(:forbidden)
+    end
+  end
 end

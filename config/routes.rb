@@ -317,6 +317,8 @@ Rails.application.routes.draw do
               get :funnels
               patch :funnel
               post :suggest_stages
+              post :insights
+              get :panel
             end
             get 'conversations/card_stages', to: 'cards#card_stages'
             get 'conversations/:conversation_id/card', to: 'cards#by_conversation'
@@ -755,6 +757,13 @@ Rails.application.routes.draw do
           resources :waha_inboxes, only: [:create], param: :inbox_id do
             member do
               get :connection
+              post :reconnect
+            end
+          end
+          resources :whatsapp_hybrid_connections, only: [:show, :update, :destroy], param: :inbox_id do
+            member do
+              post :connect, action: :create
+              post :request_code
               post :reconnect
             end
           end

@@ -6,11 +6,15 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import CrmMetaAdsConnectionAPI from 'dashboard/api/crmMetaAdsConnection';
 import CtwaTrackedLinksAPI from 'dashboard/api/ctwaTrackedLinks';
-import { errorMessageKey, relativeTime } from '../metaAdsHelpers';
+import { errorMessageKey, intlLocale, relativeTime } from '../metaAdsHelpers';
+import { useMetaAdsLive } from '../useMetaAdsLive';
+import MetaAdsConfidence from './MetaAdsConfidence.vue';
 
 // Anúncios da Meta (#1068): a conexão pronta. Herói com a frase da conta, quatro quadros com o que está
 // ligado de verdade (WhatsApp, site, campanhas com nome, funis avisando a Meta), o que acontece agora e um
 // atalho para cada passo. "Precisa de atenção" quando a Meta recusou o acesso salvo.
+//
+// Gasto (#1073): mantido vivo por useMetaAdsLive enquanto a tela está aberta.
 const props = defineProps({
   connection: { type: Object, required: true },
 });
@@ -22,8 +26,14 @@ const removeDialog = ref(null);
 const removing = ref(false);
 const sitePages = ref([]);
 const funnels = ref(null);
+const insights = ref(null);
 
 const attention = computed(() => props.connection.status !== 'active');
+const attentionHint = computed(() =>
+  props.connection.last_error === 'ad_account_access_lost'
+    ? t('CRM_KANBAN.META_ADS_HUB.SUMMARY.ACCESS_LOST_HINT')
+    : t('CRM_KANBAN.META_ADS_HUB.SUMMARY.ATTENTION_HINT')
+);
 const partnerName = computed(
   () => props.connection.partner?.business_name || 'Hub2You'
 );
@@ -104,7 +114,55 @@ const tiles = computed(() => [
   },
 ]);
 
+// "2026-10-06" é o dia da conta de anúncios, sem hora. O servidor diz qual é hoje no fuso da conta (`today`);
+// sem fuso conhecido, vale a data de quem vê.
+const localDay = () => {
+  const now = new Date();
+  const pad = value => String(value).padStart(2, '0');
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+};
+
+const spendMoney = computed(() => {
+  const data = insights.value;
+  if (!data?.date) return null;
+  return new Intl.NumberFormat(intlLocale(locale.value), {
+    style: 'currency',
+    currency: data.currency || 'BRL',
+  }).format(Number(data.spend));
+});
+const spendLabel = computed(() => {
+  const data = insights.value;
+  if (!spendMoney.value) return null;
+  if (data.date === (data.today || localDay())) {
+    return t('CRM_KANBAN.META_ADS_HUB.SUMMARY.SPEND_TODAY');
+  }
+  const date = new Date(`${data.date}T12:00:00`).toLocaleDateString(
+    intlLocale(locale.value),
+    { day: '2-digit', month: '2-digit' }
+  );
+  return t('CRM_KANBAN.META_ADS_HUB.SUMMARY.SPEND_ON', { date });
+});
+const spendUpdated = computed(() => {
+  const time = relativeTime(insights.value?.synced_at, locale.value);
+  return time
+    ? t('CRM_KANBAN.META_ADS_HUB.SUMMARY.SPEND_UPDATED', { time })
+    : null;
+});
+
 const NEXT = ['NEXT_NAMES', 'NEXT_SALES', 'NEXT_PANEL'];
+
+const confidence = computed(() => insights.value?.confidence || null);
+
+const live = useMetaAdsLive({
+  load: async () => {
+    const { data } = await CrmMetaAdsConnectionAPI.insights();
+    insights.value = data.insights;
+  },
+  waiting: () => insights.value?.refreshing || insights.value?.backfilling,
+  onEvent: data => {
+    insights.value = { ...insights.value, ...data, refreshing: false };
+  },
+});
 
 const load = async () => {
   const [links, funnelData] = await Promise.allSettled([
@@ -133,13 +191,16 @@ const remove = async () => {
   }
 };
 
-onMounted(load);
+onMounted(() => {
+  load();
+  if (!attention.value) live.start();
+});
 </script>
 
 <template>
   <section data-meta-ads-summary class="flex flex-col gap-5">
     <div
-      class="relative flex flex-col gap-4 p-5 overflow-hidden text-white rounded-2xl sm:p-7"
+      class="relative flex flex-col gap-5 p-6 overflow-hidden text-white rounded-xl sm:p-8"
       :class="attention ? 'bg-n-amber-11' : 'bg-[#0D2344]'"
     >
       <span
@@ -148,7 +209,7 @@ onMounted(load);
       />
       <div class="relative flex flex-col gap-2">
         <span
-          class="inline-flex items-center gap-2 text-xs font-semibold tracking-wider uppercase"
+          class="inline-flex items-center gap-2 text-[11px] font-520 tracking-[0.1em] uppercase"
           :class="attention ? 'text-n-amber-3' : 'text-n-teal-6'"
         >
           <span
@@ -165,17 +226,70 @@ onMounted(load);
           }}
         </span>
         <h3
-          class="m-0 text-2xl font-semibold leading-tight tracking-tight text-white sm:text-3xl text-balance"
+          class="m-0 font-interDisplay text-[28px] sm:text-[34px] font-520 leading-[1.12] tracking-[-0.02em] text-white text-balance"
         >
           {{
             attention
-              ? $t('CRM_KANBAN.META_ADS_HUB.SUMMARY.ATTENTION_HINT')
+              ? attentionHint
               : $t('CRM_KANBAN.META_ADS_HUB.SUMMARY.HEADLINE', {
                   account: connection.ad_account?.name || '',
                 })
           }}
         </h3>
-        <p class="flex flex-wrap m-0 text-sm text-n-blue-4 gap-x-3 gap-y-1">
+        <p
+          v-if="!attention && insights"
+          data-summary-spend
+          class="flex flex-wrap items-baseline m-0 text-sm text-white/75 gap-x-3 gap-y-1"
+          aria-live="polite"
+        >
+          <template v-if="spendLabel">
+            <span>
+              {{ spendLabel }}
+              <strong
+                data-summary-spend-value
+                class="font-interDisplay text-lg font-520 text-white"
+              >
+                {{ spendMoney }}
+              </strong>
+            </span>
+            <span>
+              {{
+                $t(
+                  'CRM_KANBAN.META_ADS_HUB.SUMMARY.SPEND_CONVERSATIONS',
+                  { count: insights.ad_conversations_today ?? 0 },
+                  insights.ad_conversations_today ?? 0
+                )
+              }}
+            </span>
+          </template>
+          <span v-else-if="!insights.backfilling">
+            {{ $t('CRM_KANBAN.META_ADS_HUB.SUMMARY.SPEND_EMPTY') }}
+          </span>
+          <span
+            v-if="insights.backfilling"
+            data-summary-spend-backfilling
+            class="inline-flex items-center gap-1"
+          >
+            <span
+              class="i-lucide-loader-circle size-3.5 animate-spin"
+              aria-hidden="true"
+            />
+            {{ $t('CRM_KANBAN.META_ADS_HUB.SUMMARY.SPEND_BACKFILLING') }}
+          </span>
+          <span v-if="spendUpdated">{{ spendUpdated }}</span>
+          <span
+            v-if="insights.refreshing"
+            data-summary-spend-refreshing
+            class="inline-flex items-center gap-1"
+          >
+            <span
+              class="i-lucide-refresh-cw size-3.5 animate-spin"
+              aria-hidden="true"
+            />
+            {{ $t('CRM_KANBAN.META_ADS_HUB.SUMMARY.SPEND_REFRESHING') }}
+          </span>
+        </p>
+        <p class="flex flex-wrap m-0 text-sm text-white/75 gap-x-3 gap-y-1">
           <span>{{ via }}</span>
           <span>
             {{
@@ -202,7 +316,7 @@ onMounted(load);
           v-else
           data-summary-crm
           :to="{ name: 'crm_kanban_index' }"
-          class="inline-flex items-center gap-2 px-4 text-sm font-semibold no-underline bg-white rounded-xl min-h-11 text-[#0D2344] hover:bg-n-blue-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+          class="inline-flex items-center gap-2 px-4 text-sm font-520 no-underline bg-white rounded-lg min-h-11 text-[#0D2344] hover:bg-n-blue-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
         >
           <span class="i-lucide-kanban size-4" aria-hidden="true" />
           {{ $t('CRM_KANBAN.META_ADS_HUB.SUMMARY.OPEN_CRM') }}
@@ -214,7 +328,7 @@ onMounted(load);
       <li v-for="tile in tiles" :key="tile.key" :data-summary-tile="tile.key">
         <button
           type="button"
-          class="flex items-center w-full gap-3 px-4 py-3 text-left border border-solid shadow-sm min-h-[4.5rem] rounded-2xl border-n-weak bg-n-solid-1 hover:bg-n-alpha-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
+          class="flex items-center w-full gap-3 px-4 py-3 text-left border border-solid min-h-[4.5rem] rounded-xl border-n-weak bg-n-solid-1 hover:bg-n-alpha-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
           @click="emit('open', tile.step)"
         >
           <span
@@ -232,7 +346,7 @@ onMounted(load);
             <span class="text-xs text-n-slate-11">
               {{ $t(`CRM_KANBAN.META_ADS_HUB.SUMMARY.TILE_${tile.key}`) }}
             </span>
-            <span class="text-base font-semibold truncate text-n-slate-12">
+            <span class="text-[15px] font-520 truncate text-n-slate-12">
               {{ tile.value }}
             </span>
           </span>
@@ -244,11 +358,19 @@ onMounted(load);
       </li>
     </ul>
 
+    <MetaAdsConfidence
+      v-if="!attention && confidence"
+      :confidence="confidence"
+      @fix="emit('open', 3)"
+    />
+
     <div
       v-if="!attention"
-      class="flex flex-col gap-3 p-4 border shadow-sm rounded-2xl border-n-weak bg-n-solid-1 sm:p-5"
+      class="flex flex-col gap-4 p-5 border border-solid rounded-xl border-n-weak bg-n-solid-1 sm:p-6"
     >
-      <h4 class="m-0 text-base font-semibold text-n-slate-12">
+      <h4
+        class="m-0 text-xs font-520 uppercase tracking-[0.08em] text-n-slate-11"
+      >
         {{ $t('CRM_KANBAN.META_ADS_HUB.SUMMARY.NEXT_TITLE') }}
       </h4>
       <ol class="flex flex-col gap-2 p-0 m-0 list-none">
@@ -258,7 +380,7 @@ onMounted(load);
           class="flex items-start gap-3 text-sm text-n-slate-12"
         >
           <span
-            class="grid flex-none text-xs font-semibold rounded-full size-6 place-items-center bg-n-blue-3 text-n-blue-11"
+            class="grid flex-none text-xs font-520 rounded-full size-6 place-items-center bg-n-blue-3 text-n-blue-11"
             aria-hidden="true"
           >
             {{ index + 1 }}

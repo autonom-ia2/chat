@@ -7,6 +7,11 @@ import { ref, shallowRef, computed, markRaw } from 'vue';
 import 'grapesjs/dist/css/grapes.min.css';
 
 import registerAutonomiaBlocks from '../blocks';
+// Every MJML handed to setComponents goes through prepareMjmlForEditor and every export through
+// restoreHeldHead (#1074): see editorMjml.js and mjmlCanonical.js.
+import { prepareMjmlForEditor, restoreHeldHead } from '../editorMjml';
+// grapesjs-mjml options and the plugin that keep canvas paddings = sent e-mail (#1081).
+import { mjmlEditorPlugins, mjmlEditorPluginsOpts } from '../grapesMjmlSetup';
 
 // ---- estado interno (modulo) ----
 const editor = shallowRef(null);
@@ -18,6 +23,8 @@ const sectors = shallowRef([]);
 const styleVersion = ref(0);
 const device = ref('desktop');
 const footerLocked = ref(false);
+// <mj-title>/<mj-preview> of the loaded MJML: kept out of the canvas, given back on export.
+let heldHead = '';
 
 const DEVICE_MAP = { desktop: 'Desktop', mobile: 'Mobile portrait' };
 let editorGeneration = 0;
@@ -56,25 +63,6 @@ const lockFooter = () => {
   footerLocked.value = locked;
 };
 
-// MJML leaf/void tags that must NOT wrap siblings. grapesjs-mjml registers them with void:false,
-// so a self-closed <mj-spacer/> is parsed by the HTML parser as an OPEN tag that swallows every
-// following sibling; the MJML compiler then DROPS that nested content (the whole body arrives
-// hollow). Forcing an explicit empty close keeps them as leaves so the getMjml/getHtml round-trip
-// stays flat and the rendered/sent e-mail matches the canvas. Applied on every setComponents input.
-const VOID_MJML_TAGS = ['mj-spacer', 'mj-divider', 'mj-image'];
-const normalizeVoidMjml = (mjml = '') =>
-  VOID_MJML_TAGS.reduce(
-    (acc, tag) =>
-      acc.replace(
-        new RegExp(
-          `<${tag}(?=[\\s/>])((?:[^>"']|"[^"]*"|'[^']*')*?)\\s*/>`,
-          'gi'
-        ),
-        `<${tag}$1></${tag}>`
-      ),
-    mjml
-  );
-
 async function init(el, opts = {}) {
   // Idempotente: ja inicializado -> devolve a instancia existente (evita 2o
   // editor / leak quando o componente re-monta).
@@ -102,10 +90,8 @@ async function init(el, opts = {}) {
     // assetManager.custom => o modal feio/ingles do GrapesJS NUNCA renderiza.
     // Nosso PropImage.vue cuida do upload/troca de imagem.
     assetManager: { custom: true },
-    plugins: [mjmlPlugin],
-    pluginsOpts: {
-      [mjmlPlugin]: { useCustomTheme: false, blocks: [] },
-    },
+    plugins: mjmlEditorPlugins(mjmlPlugin),
+    pluginsOpts: mjmlEditorPluginsOpts(mjmlPlugin),
   });
 
   if (generation !== editorGeneration || !el.isConnected) {
@@ -155,7 +141,9 @@ async function init(el, opts = {}) {
 
   const initialMjml = opts.mjml || '';
   if (initialMjml) {
-    ed.setComponents(normalizeVoidMjml(initialMjml));
+    const prepared = prepareMjmlForEditor(initialMjml);
+    heldHead = prepared.held;
+    ed.setComponents(prepared.mjml);
   }
 
   // onReady dispara imediatamente se o editor ja estiver pronto, ou agenda.
@@ -180,6 +168,7 @@ function destroy() {
   device.value = 'desktop';
   footerLocked.value = false;
   savedCanvasView = null;
+  heldHead = '';
 }
 
 // ---- BLOCKS ----
@@ -411,10 +400,14 @@ const adjustCanvasScroll = delta =>
   editor.value?.Canvas.getWindow().scrollBy(0, delta);
 
 // ---- I/O MJML/HTML ----
-const getMjml = () => editor.value?.runCommand('mjml-code') || '';
+const getMjml = () =>
+  restoreHeldHead(editor.value?.runCommand('mjml-code') || '', heldHead);
 
+// Compiles the exported MJML (with the held head) so the sent HTML keeps title and preview.
 const getHtml = () => {
-  const out = editor.value?.runCommand('mjml-code-to-html') || {};
+  const mjml = getMjml();
+  const out =
+    (mjml && editor.value?.runCommand('mjml-code-to-html', { mjml })) || {};
   if (out.errors?.length) {
     // eslint-disable-next-line no-console
     console.warn('[useEmailEditor] mjml-code-to-html errors', out.errors);
@@ -423,7 +416,10 @@ const getHtml = () => {
 };
 
 const setMjml = mjml => {
-  editor.value?.setComponents(normalizeVoidMjml(mjml));
+  if (!editor.value) return;
+  const prepared = prepareMjmlForEditor(mjml);
+  heldHead = prepared.held;
+  editor.value.setComponents(prepared.mjml);
   lockFooter();
 };
 
