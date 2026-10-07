@@ -2235,7 +2235,7 @@
               "OURS_HIGHER": "Contamos toda conversa que chegou pelo anúncio, inclusive de quem clicou antes e voltou; a Meta só conta até 7 dias depois do clique."
             },
             "SITE": {
-              "LINE": "Até ontem, a Meta diz {meta} contato pelo site (visitas à página: {visits}); conversas que vieram do site, nós contamos {ours}. | Até ontem, a Meta diz {meta} contatos pelo site (visitas à página: {visits}); conversas que vieram do site, nós contamos {ours}.",
+              "LINE": "Até ontem, a Meta diz {meta} contato pelo site (visitas à página: {visits}); pelo botão do site, nós contamos {ours}. | Até ontem, a Meta diz {meta} contatos pelo site (visitas à página: {visits}); pelo botão do site, nós contamos {ours}.",
               "CLOSE": "Os dois números batem.",
               "META_HIGHER": "A Meta conta quem deixou contato no site; nem todo mundo clica depois para conversar no WhatsApp.",
               "OURS_HIGHER": "Contamos toda conversa que veio pelo botão do site, mesmo de quem não deixou contato lá."

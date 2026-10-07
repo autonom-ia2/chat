@@ -583,9 +583,11 @@ onMounted(() => live.start());
               </div>
             </div>
             <div class="flex flex-col gap-4 p-4">
-              <div class="flex items-start justify-between gap-3">
+              <div
+                class="flex flex-wrap items-start justify-between gap-x-3 gap-y-2"
+              >
                 <span
-                  class="text-sm font-520 leading-snug text-n-slate-12 line-clamp-2"
+                  class="text-sm font-520 leading-snug break-words text-n-slate-12 line-clamp-2"
                 >
                   {{
                     ad.name || $t('CRM_KANBAN.META_ADS_HUB.PANEL.AD_NO_NAME')

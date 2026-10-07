@@ -2234,7 +2234,7 @@
               "OURS_HIGHER": "We count every conversation that came from the ad, including people who clicked before and came back; Meta only counts up to 7 days after the click."
             },
             "SITE": {
-              "LINE": "Until yesterday, Meta says {meta} contact on the site (page visits: {visits}); conversations that came from the site, we counted {ours}. | Until yesterday, Meta says {meta} contacts on the site (page visits: {visits}); conversations that came from the site, we counted {ours}.",
+              "LINE": "Until yesterday, Meta says {meta} contact on the site (page visits: {visits}); through the site button, we counted {ours}. | Until yesterday, Meta says {meta} contacts on the site (page visits: {visits}); through the site button, we counted {ours}.",
               "CLOSE": "The two numbers match.",
               "META_HIGHER": "Meta counts people who left their contact on the site; not everyone clicks afterwards to talk on WhatsApp.",
               "OURS_HIGHER": "We count every conversation that came through the site button, even from people who did not leave their contact there."

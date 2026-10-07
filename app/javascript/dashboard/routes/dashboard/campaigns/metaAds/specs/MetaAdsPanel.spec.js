@@ -746,7 +746,7 @@ describe('Anúncios da Meta · Quanto confiar, Meta × nós (#1110, F5)', () => 
     expect(whatsapp.text()).toContain('Os dois números batem.');
     const site = wrapper.find('[data-confidence-meta-row="site"]');
     expect(site.text()).toContain(
-      '12 contatos pelo site (visitas à página: 31); conversas que vieram do site, nós contamos 3.'
+      '12 contatos pelo site (visitas à página: 31); pelo botão do site, nós contamos 3.'
     );
     expect(site.text()).toContain('nem todo mundo clica depois');
   });
@@ -784,7 +784,7 @@ describe('Anúncios da Meta · Quanto confiar, Meta × nós (#1110, F5)', () => 
 
     const site = wrapper.find('[data-confidence-meta-row="site"]');
     expect(site.text()).toBe(
-      'Até ontem, a Meta diz 0 contatos pelo site (visitas à página: 0); conversas que vieram do site, nós contamos 1.'
+      'Até ontem, a Meta diz 0 contatos pelo site (visitas à página: 0); pelo botão do site, nós contamos 1.'
     );
     expect(site.findAll('p')).toHaveLength(1);
     expect(wrapper.find('[data-confidence-meta-empty]').exists()).toBe(true);
