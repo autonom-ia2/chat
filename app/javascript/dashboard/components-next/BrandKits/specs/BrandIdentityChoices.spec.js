@@ -7,6 +7,7 @@ import { resetBrandKits } from '../useBrandKits';
 import BrandIdentityPicker from '../BrandIdentityPicker.vue';
 import BrandIdentityLine from '../BrandIdentityLine.vue';
 import BrandKitNudge from '../BrandKitNudge.vue';
+import BrandEmailIdentityPanel from '../BrandEmailIdentityPanel.vue';
 
 vi.mock('dashboard/api/brandKits', () => ({ default: { list: vi.fn() } }));
 const push = vi.fn();
@@ -191,6 +192,67 @@ describe('choosing the identity of an e-mail (#1076)', () => {
 
     expect(wrapper.find('[data-test="brand-nudge"]').exists()).toBe(false);
     expect(BrandKitsAPI.list).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+});
+
+// #1126: "Trocar" in the editor's "Identidade deste e-mail" lists the identities; the one picked goes to the AI.
+describe('Identidade deste e-mail in the editor (#1126)', () => {
+  beforeEach(() => {
+    resetBrandKits();
+    BrandKitsAPI.list.mockReturnValue(listResponse(kits));
+  });
+
+  const identity = { kit_id: 1, name: 'Hub2You', mode: 'light', source: 'kit' };
+
+  it('Trocar lists the identities and hands the one picked over, with its name', async () => {
+    const wrapper = mountWith(BrandEmailIdentityPanel, {
+      identity,
+      canManage: true,
+    });
+    await flushPromises();
+
+    expect(wrapper.find('[role="menu"]').exists()).toBe(false);
+    await wrapper.find('[data-test="email-identity-change"]').trigger('click');
+
+    const current = wrapper.find('[data-kit-option="1"]');
+    expect(current.attributes('aria-checked')).toBe('true');
+    expect(wrapper.find('[data-kit-option="2"]').text()).toContain('Autonomia');
+
+    await wrapper.find('[data-kit-option="2"]').trigger('click');
+
+    expect(wrapper.emitted('change')).toEqual([
+      [{ kitId: 2, name: 'Autonomia' }],
+    ]);
+    expect(wrapper.find('[role="menu"]').exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it('an e-mail without identity offers the same list under "Use"', async () => {
+    const wrapper = mountWith(BrandEmailIdentityPanel, {
+      identity: {},
+      canManage: true,
+    });
+    await flushPromises();
+
+    const button = wrapper.find('[data-test="email-identity-change"]');
+    expect(button.text()).toBe('Use');
+    await button.trigger('click');
+    await wrapper.find('[data-kit-option="1"]').trigger('click');
+
+    expect(wrapper.emitted('change')).toEqual([
+      [{ kitId: 1, name: 'Hub2You' }],
+    ]);
+    wrapper.unmount();
+  });
+
+  it('no Trocar for someone who cannot change the e-mail', async () => {
+    const wrapper = mountWith(BrandEmailIdentityPanel, { identity });
+    await flushPromises();
+
+    expect(wrapper.find('[data-test="email-identity-change"]').exists()).toBe(
+      false
+    );
     wrapper.unmount();
   });
 });

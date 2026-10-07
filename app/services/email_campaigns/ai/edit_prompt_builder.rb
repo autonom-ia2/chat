@@ -14,6 +14,7 @@ module EmailCampaigns::Ai::EditPromptBuilder
         outcome: { type: 'string', enum: %w[changed impossible] },
         reason: { type: 'string' },
         summary: { type: 'string' },
+        identity_applied: { type: 'boolean' },
         blocks: {
           type: 'array',
           items: {
@@ -24,7 +25,7 @@ module EmailCampaigns::Ai::EditPromptBuilder
           }
         }
       },
-      required: %w[outcome reason summary blocks],
+      required: %w[outcome reason summary identity_applied blocks],
       additionalProperties: false
     }
   }.freeze
@@ -59,6 +60,7 @@ module EmailCampaigns::Ai::EditPromptBuilder
         agendar) ou não estiver claro o que mudar, responda outcome "impossible", "blocks" vazio e em "reason" UMA
         frase simples, sem termo técnico, dizendo o que não dá para fazer e o que a pessoa pode pedir no lugar.
         Caso contrário outcome "changed" e "reason" vazio.
+      #{identity_applied_rule(identity)}
 
       REGRAS DO AJUSTE:
       - Mude SOMENTE o que foi pedido. Todo o resto fica idêntico: textos, cores, imagens, links, espaçamentos e ordem.
@@ -159,10 +161,23 @@ module EmailCampaigns::Ai::EditPromptBuilder
       'quando houver), fundos, títulos, textos e botões. Para isso,'
   end
 
+  # #1126: "Trocar" in the editor's identity panel asks to apply the chosen identity to the e-mail. The model reads
+  # the request (it may be reworded); this only says what applying it means.
   def identity_keep(identity)
-    return 'O que o pedido não toca continua exatamente como está no e-mail.' if identity[:requested_site].blank?
+    return 'Textos, imagens, links, a ordem e a estrutura dos blocos continuam exatamente como estão.' if identity[:requested_site].present?
 
-    'Textos, imagens, links, a ordem e a estrutura dos blocos continuam exatamente como estão.'
+    'Se o pedido for aplicar esta identidade ao e-mail, isso vale para o e-mail INTEIRO — faixa do topo (com a ' \
+      'logo_url, quando houver, no lugar da logo antiga), fundos, títulos, textos e botões; textos, imagens, links, ' \
+      "a ordem e a estrutura dos blocos continuam exatamente como estão.\n" \
+      'O que o pedido não toca continua exatamente como está no e-mail.'
+  end
+
+  # Whether the e-mail now wears the identity (#1126): the editor then swaps the footer line and records the identity.
+  def identity_applied_rule(identity)
+    return '- "identity_applied": false (não há identidade de marca para aplicar).' if identity.to_h[:palette].blank?
+
+    '- "identity_applied": true quando o pedido é aplicar a IDENTIDADE VISUAL DA MARCA abaixo ao e-mail e você a ' \
+      'aplicou no e-mail inteiro; false em qualquer outro caso.'
   end
 
   def allowed_attributes

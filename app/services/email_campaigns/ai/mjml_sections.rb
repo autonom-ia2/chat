@@ -37,15 +37,22 @@ class EmailCampaigns::Ai::MjmlSections
   end
 
   # items: [{ 'keep' => id, 'mjml' => '' }, { 'keep' => '', 'mjml' => '<mj-section>...' }]. Unknown ids
-  # are left out and listed in #unknown_ids. The locked footer goes back last, as it was.
-  def assemble(items)
+  # are left out and listed in #unknown_ids. The locked footer goes back last, as it was — or, when the adjustment
+  # applied another identity (#1126), as `footer` (that identity's BrandKits::FooterMjml) if it was our own footer.
+  def assemble(items, footer: nil)
     by_id = editable.index_by(&:id)
     @unknown_ids = []
     body = Array(items).filter_map { |item| block_for(item.to_h, by_id) }
-    @prefix + body.join + @sections.select(&:locked).map(&:mjml).join + @suffix
+    @prefix + body.join + locked_footer(footer) + @suffix
   end
 
   private
+
+  def locked_footer(footer)
+    @sections.select(&:locked).map do |section|
+      footer.present? && EmailCampaigns::LockedFooter.ours?(section.mjml) ? footer : section.mjml
+    end.join
+  end
 
   def block_for(item, by_id)
     keep = item['keep'].to_s.strip

@@ -7,12 +7,17 @@ vi.mock('dashboard/api/emailCampaignAi', () => ({ default: { generate } }));
 vi.mock('dashboard/api/emailCampaignAssets', () => ({ default: {} }));
 // Visual identity (#1076) off unless a case turns it on; BrandIdentityChoices.spec covers the picker.
 const brandKitsEnabled = vi.hoisted(() => ({ value: false }));
+const brandKitsList = vi.hoisted(() => [
+  { id: 1, name: 'Hub2You', is_default: true },
+  { id: 2, name: 'Autonomia', is_default: false },
+  { id: 3, name: 'Aurora', is_default: false },
+]);
 vi.mock('dashboard/components-next/BrandKits/useBrandKits', async () => {
   const { ref } = await import('vue');
   return {
     useBrandKits: () => ({
       isEnabled: ref(brandKitsEnabled.value),
-      kits: ref([]),
+      kits: ref(brandKitsList),
       fetchKits: vi.fn(),
     }),
   };
@@ -167,5 +172,94 @@ describe('AiComposerDialog', () => {
         brand: { brand_kit_id: 3, brand_mode: 'dark' },
       })
     );
+  });
+});
+
+// #1126: "Trocar" in the editor's identity panel opens the dialog with the identity picked and the request
+// already written; the person may edit it. Empty canvas: "Criar com IA" with the identity picked.
+describe('AiComposerDialog — identity picked in the editor panel (#1126)', () => {
+  const changeIdentity = { kitId: 2, name: 'Autonomia' };
+  const request = name =>
+    `Apply the ${name} identity to the whole email: colors, fonts and logo.`;
+  const brief = wrapper =>
+    wrapper.find('[data-test="ai-composer-brief"] textarea');
+  const picker = wrapper =>
+    wrapper.findComponent({ name: 'BrandIdentityPicker' });
+
+  beforeEach(() => {
+    brandKitsEnabled.value = true;
+  });
+
+  it('adjusts with the identity picked and the request written, and sends what the person edited', async () => {
+    generate.mockResolvedValue({});
+    const wrapper = mountDialog({
+      canAdjust: true,
+      readCurrentMjml: () => '<mjml>screen</mjml>',
+      initialBrand: { kitId: 1, mode: 'dark' },
+      changeIdentity,
+    });
+
+    expect(title(wrapper)).toBe('Adjust with AI');
+    expect(brief(wrapper).element.value).toBe(request('Autonomia'));
+    expect(picker(wrapper).props('modelValue')).toMatchObject({
+      kitId: 2,
+      mode: 'dark',
+    });
+
+    await typeRequest(wrapper, `${request('Autonomia')} Keep the photos.`);
+    await submit(wrapper).trigger('click');
+    await flushPromises();
+
+    expect(generate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        brief: `${request('Autonomia')} Keep the photos.`,
+        baseMjml: '<mjml>screen</mjml>',
+        brand: { brand_kit_id: 2, brand_mode: 'dark' },
+      })
+    );
+    expect(wrapper.emitted('generationStarted')).toEqual([
+      [{ mode: 'adjust' }],
+    ]);
+  });
+
+  it('follows another identity picked in the dialog while the request is untouched', async () => {
+    const wrapper = mountDialog({ canAdjust: true, changeIdentity });
+
+    picker(wrapper).vm.$emit('update:modelValue', {
+      ...picker(wrapper).props('modelValue'),
+      kitId: 3,
+    });
+    await flushPromises();
+    expect(brief(wrapper).element.value).toBe(request('Aurora'));
+
+    await typeRequest(wrapper, 'Only the button');
+    picker(wrapper).vm.$emit('update:modelValue', {
+      ...picker(wrapper).props('modelValue'),
+      kitId: 1,
+    });
+    await flushPromises();
+    expect(brief(wrapper).element.value).toBe('Only the button');
+  });
+
+  it('leaves the request empty when the person chooses to create a new e-mail instead', async () => {
+    const wrapper = mountDialog({ canAdjust: true, changeIdentity });
+
+    await wrapper
+      .find('[data-test="ai-composer-adjust-only"] input')
+      .setValue(false);
+    expect(brief(wrapper).element.value).toBe('');
+
+    await wrapper
+      .find('[data-test="ai-composer-adjust-only"] input')
+      .setValue(true);
+    expect(brief(wrapper).element.value).toBe(request('Autonomia'));
+  });
+
+  it('opens "Create with AI" with the identity picked when the canvas is empty', () => {
+    const wrapper = mountDialog({ changeIdentity });
+
+    expect(title(wrapper)).toBe('Create with AI');
+    expect(brief(wrapper).element.value).toBe('');
+    expect(picker(wrapper).props('modelValue')).toMatchObject({ kitId: 2 });
   });
 });

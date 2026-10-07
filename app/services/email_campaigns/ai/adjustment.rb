@@ -8,11 +8,11 @@ class EmailCampaigns::Ai::Adjustment
   TTL = 1.day
   PREFIX = 'email_campaigns:ai:adjustment:'.freeze
 
-  # request: { base:, placeholders:, instructions:, input:, brand_identity: } — the e-mail before (canonical MJML), what
+  # request: { base:, placeholders:, instructions:, input:, brand_identity:, footer: } — the e-mail before (canonical MJML), what
   # a second round needs to ask again and the identity the adjustment used (#1111: with the notice about a site
-  # asked for in the request).
+  # asked for in the request) with its footer, used only if the model applies that identity (#1126).
   def self.start(campaign, token:, request:)
-    data = request.to_h.stringify_keys.slice('base', 'placeholders', 'instructions', 'input', 'brand_identity')
+    data = request.to_h.stringify_keys.slice('base', 'placeholders', 'instructions', 'input', 'brand_identity', 'footer')
                   .merge('token' => token, 'round' => 0, 'status' => 'working')
     data['placeholders'] = Array(data['placeholders'])
     Redis::Alfred.set(key(campaign), data.to_json, ex: TTL.to_i)
@@ -40,15 +40,23 @@ class EmailCampaigns::Ai::Adjustment
   end
 
   # The person applied the proposal in the editor. Only a proposal of the current generation counts, and only an
-  # adjustment that used a site asked for in the request (#1111) changes the identity the campaign records; a
-  # discarded proposal (clear) never writes. The proposal is used up either way. -> the campaign's brand_identity.
+  # adjustment that used a site asked for in the request (#1111) or that the model says dressed the e-mail in the
+  # chosen identity (#1126) changes the identity the campaign records; a discarded proposal (clear) never writes.
+  # The proposal is used up either way. -> the campaign's brand_identity.
   def self.apply(campaign)
     data = find(campaign, campaign.ai_generation_token)
     identity = data && data['status'] == 'proposed' ? data['brand_identity'].to_h : {}
-    change_identity(campaign, identity) if identity.dig('site_request', 'status') == 'used'
+    change_identity(campaign, identity) if new_identity?(identity, data)
     clear(campaign)
     campaign.brand_identity
   end
+
+  def self.new_identity?(identity, data)
+    return false if identity['name'].blank?
+
+    identity.dig('site_request', 'status') == 'used' || data['identity_applied'] == true
+  end
+  private_class_method :new_identity?
 
   # "Desfazer" right after applying: the identity the campaign had before comes back, once, while the generation is
   # still the one that applied it. -> the campaign's brand_identity.

@@ -17,10 +17,17 @@ class EmailCampaigns::LockedFooter
   # Merge-tag wrappers used by e-mail platforms; longer openers first.
   MERGE_TAGS = [['{{', '}}'], ['*|', '|*'], ['[[', ']]'], ['<%', '%>'], ['%%', '%%'], ['[', ']'], ['%', '%']].freeze
 
+  TEXT_START = MJML.index('>', MJML.index('<mj-text')) + 1
+
   # The shared footer with one more line (e.g. the brand) at the top of its text.
   def self.with_first_line(line)
-    text_start = MJML.index('>', MJML.index('<mj-text')) + 1
-    "#{MJML[0...text_start]}#{line}<br/>#{MJML[text_start..]}"
+    "#{MJML[0...TEXT_START]}#{line}<br/>#{MJML[TEXT_START..]}"
+  end
+
+  # True for the shared footer, with or without the line .with_first_line adds (canonical MJML of a locked section).
+  # A footer the e-mail brought from elsewhere (imported template) is not ours.
+  def self.ours?(section_mjml)
+    section_mjml.start_with?(MJML[0...TEXT_START]) && section_mjml.end_with?(MJML[TEXT_START..])
   end
 
   def self.ensure(mjml)

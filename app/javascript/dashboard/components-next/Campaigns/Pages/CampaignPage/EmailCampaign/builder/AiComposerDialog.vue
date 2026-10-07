@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 
@@ -38,6 +38,12 @@ const props = defineProps({
     type: Object,
     default: () => ({}),
   },
+  // Identity picked under "Trocar" in the editor panel (#1126): { kitId, name }. It comes chosen and,
+  // when adjusting, the request to apply it to the whole e-mail comes written (the person may edit it).
+  changeIdentity: {
+    type: Object,
+    default: null,
+  },
 });
 
 const emit = defineEmits(['close', 'generationStarted']);
@@ -74,12 +80,35 @@ const {
   fetchKits: fetchBrandKits,
 } = useBrandKits();
 const identity = ref({
-  kitId: props.initialBrand.kitId || null,
+  kitId: props.changeIdentity?.kitId || props.initialBrand.kitId || null,
   importId: null,
   proposal: null,
   mode: props.initialBrand.mode || 'light',
   saveAsKit: false,
 });
+// #1126: the written request names the identity chosen now and follows it while the person has not
+// edited it; creating a new e-mail instead (unticked) starts with an empty briefing.
+const identityName = computed(() => {
+  const { kitId, proposal } = identity.value;
+  const kit = brandKits.value.find(item => item.id === kitId);
+  if (kit) return kit.name;
+  if (kitId && kitId === props.changeIdentity?.kitId) {
+    return props.changeIdentity.name;
+  }
+  return proposal?.name || '';
+});
+const identityRequest = computed(() =>
+  props.changeIdentity && isAdjust.value && identityName.value
+    ? t('CAMPAIGN.EMAIL_CAMPAIGN.AI.COMPOSER.APPLY_IDENTITY_REQUEST', {
+        name: identityName.value,
+      })
+    : ''
+);
+brief.value = identityRequest.value;
+watch(identityRequest, (next, previous) => {
+  if (brief.value === previous) brief.value = next;
+});
+
 const isUploadingImage = ref(false);
 const isUploadingPdf = ref(false);
 const isResolvingVideo = ref(false);

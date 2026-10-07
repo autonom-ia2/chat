@@ -179,6 +179,39 @@ RSpec.describe EmailCampaigns::Ai::PollJob, :aggregate_failures do
     end
   end
 
+  # #1126: the model said it dressed the e-mail in the chosen identity — the footer line follows it; blocks it kept
+  # come back byte for byte.
+  describe 'applying another identity' do
+    let(:kit_footer) { BrandKits::FooterMjml.new(footer: { company_name: 'Autonomia' }).to_s }
+
+    before do
+      request = { base: EmailCampaigns::Ai::MjmlSections.parse(adjust_base_mjml).canonical, placeholders: %w[nome],
+                  instructions: 'INSTRUCOES', input: 'PEDIDO', footer: kit_footer,
+                  brand_identity: { 'kit_id' => 2, 'name' => 'Autonomia', 'mode' => 'light', 'source' => 'kit' } }
+      EmailCampaigns::Ai::Adjustment.start(campaign, token: token, request: request)
+    end
+
+    it 'swaps the identity line of the footer and remembers that the identity was applied' do
+      answers['resp_1'] = changed(write(adjust_hero(button_color: '#c8102e')), keep('b2')).merge(identity_applied: true)
+
+      poll
+
+      expect(adjustment['mjml']).to include(kit_footer, EmailAdjustFixture::FAQ)
+      expect(adjustment['mjml'].scan('footer-locked').size).to eq(1)
+      expect(EmailCampaigns::Ai::Adjustment.find(campaign, token)['identity_applied']).to be(true)
+    end
+
+    it 'keeps the footer when the model did not apply the identity' do
+      answers['resp_1'] = changed(write(adjust_hero(title: 'Outubro')), keep('b2')).merge(identity_applied: false)
+
+      poll
+
+      expect(adjustment['mjml']).to include(EmailCampaigns::LockedFooter::MJML)
+      expect(adjustment['mjml']).not_to include('Autonomia')
+      expect(EmailCampaigns::Ai::Adjustment.find(campaign, token)['identity_applied']).to be(false)
+    end
+  end
+
   it 'shows the one sentence of the model when the request cannot be done' do
     answers['resp_1'] = { outcome: 'impossible', reason: 'Vídeo não toca dentro do e-mail; posso pôr uma imagem que abre o vídeo.',
                           summary: '', blocks: [] }

@@ -41,6 +41,32 @@ RSpec.describe EmailCampaigns::Ai::MjmlSections, :aggregate_failures do
     expect(result).to start_with('<mjml><mj-head><mj-title>Oi</mj-title></mj-head><mj-body background-color="#eeeeee">')
   end
 
+  # #1126: applying another identity swaps the identity line of our footer; the legal text and the link stay.
+  describe 'the footer of another identity' do
+    let(:kit_footer) { BrandKits::FooterMjml.new(footer: { company_name: 'Autonomia', address: 'Rua B, 2' }).to_s }
+
+    it 'replaces our footer, with or without an identity line, by the footer of the identity applied' do
+      old = BrandKits::FooterMjml.new(footer: { company_name: 'Hub2You' }).to_s
+      [EmailCampaigns::LockedFooter::MJML, old].each do |footer|
+        mjml = "<mjml><mj-body>#{EmailAdjustFixture::HERO}#{footer}</mj-body></mjml>"
+
+        result = described_class.parse(mjml).assemble([{ 'keep' => 'b1', 'mjml' => '' }], footer: kit_footer)
+
+        expect(result).to eq("<mjml><mj-body>#{EmailAdjustFixture::HERO}#{kit_footer}</mj-body></mjml>")
+      end
+    end
+
+    it 'keeps a footer the e-mail brought from elsewhere' do
+      own = '<mj-section css-class="footer-locked"><mj-column><mj-text>Loja X · <a href="{{ unsubscribe_url }}">Sair</a>' \
+            '</mj-text></mj-column></mj-section>'
+      result = described_class.parse("<mjml><mj-body>#{EmailAdjustFixture::HERO}#{own}</mj-body></mjml>")
+                              .assemble([{ 'keep' => 'b1', 'mjml' => '' }], footer: kit_footer)
+
+      expect(result).to include('Loja X')
+      expect(result).not_to include('Autonomia')
+    end
+  end
+
   it 'refuses MJML without a body' do
     expect(described_class.parse('<mj-section></mj-section>')).to be_nil
   end
