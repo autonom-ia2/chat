@@ -2347,6 +2347,8 @@
         "ADS_TITLE": "Seus anúncios, por venda",
         "ADS_EMPTY": "Assim que um anúncio gastar ou trouxer conversa, ele aparece aqui.",
         "AD_NO_NAME": "Anúncio sem nome",
+        "OPEN_AD": "Ver por dentro",
+        "OPEN_AD_LABEL": "Ver por dentro o anúncio {name}",
         "AD_QUOTES": "1 proposta aberta | {count} propostas abertas",
         "VERDICT": {
           "UP": "Aumentar · base suficiente",
@@ -2370,6 +2372,46 @@
           "CONVERSATIONS": "Conversas",
           "SALES": "Vendas"
         }
+      },
+      "AD_DETAIL": {
+        "BACK": "Voltar ao painel",
+        "CAMPAIGN": "Campanha",
+        "ADSET": "Conjunto",
+        "EMPTY": "Não encontramos números deste anúncio neste período.",
+        "ERROR": "Não conseguimos carregar este anúncio agora. Tentamos de novo sozinhos daqui a pouco.",
+        "RETRY": "Tentar de novo",
+        "PREVIEW": "Ver como aparece na Meta",
+        "NO_VALUE": "—",
+        "TILES": {
+          "COST_PER_SALE": "Custo por venda",
+          "AVERAGE": "Média da conta",
+          "SPEND": "Investido",
+          "QUOTES": "Propostas",
+          "SALES": "Vendas",
+          "CONVERSATIONS": "Conversas"
+        },
+        "WHY_TITLE": "Por quê",
+        "REASON": {
+          "EARLY": "Ainda não dá para dizer se este anúncio vende. Ele trouxe 1 conversa e precisa de mais {missing}. Voltamos a olhar quando chegar a 20 conversas. | Ainda não dá para dizer se este anúncio vende. Ele trouxe {count} conversas e precisa de mais {missing}. Voltamos a olhar quando chegar a 20 conversas.",
+          "NO_SALES": "Ele trouxe 1 conversa e nenhuma venda. Com {spend} investidos, vale revisar a imagem, o texto ou o público. | Ele trouxe {count} conversas e nenhuma venda. Com {spend} investidos, vale revisar a imagem, o texto ou o público.",
+          "SIGNAL": "Ele fez 1 venda com {spend} investidos. Ainda é pouco para comparar com a média da conta: o veredito vem a partir de 3 vendas. | Ele fez {count} vendas com {spend} investidos. Ainda é pouco para comparar com a média da conta: o veredito vem a partir de 3 vendas.",
+          "BELOW_AVERAGE": "Cada venda deste anúncio custou {cost}, {difference} a menos que a média da conta ({average}). Com 1 venda, a base já é suficiente. | Cada venda deste anúncio custou {cost}, {difference} a menos que a média da conta ({average}). Com {count} vendas, a base já é suficiente.",
+          "NEAR_AVERAGE": "Cada venda deste anúncio custou {cost}, perto da média da conta ({average}). Vale manter como está.",
+          "ABOVE_AVERAGE": "Cada venda deste anúncio custou {cost}, {difference} a mais que a média da conta ({average}). Revise o anúncio antes de pôr mais verba."
+        },
+        "MEANWHILE_TITLE": "Enquanto isso",
+        "MEANWHILE": "1 proposta aberta deste anúncio espera resposta. Retomar essa conversa é o que dá para fazer agora. | {count} propostas abertas deste anúncio esperam resposta. Retomar essas conversas é o que dá para fazer agora.",
+        "MEANWHILE_SEE": "Ver as propostas",
+        "CHART_TITLE": "Gasto e conversas por dia",
+        "LEGEND_SPEND": "Gasto",
+        "LEGEND_CONVERSATIONS": "Conversas",
+        "CHART_DAY": "{date}: {spend} · 1 conversa | {date}: {spend} · {count} conversas",
+        "CHART_SCALE": "Maior gasto num dia: {spend} · mais conversas num dia: 1 | Maior gasto num dia: {spend} · mais conversas num dia: {count}",
+        "DAYS_TOGGLE": "Ver dia a dia",
+        "DAYS_DATE": "Dia",
+        "QUOTES_TITLE": "Propostas deste anúncio",
+        "QUOTES_EMPTY": "Nenhuma proposta deste anúncio neste período ainda.",
+        "WON": "Vendida"
       }
     }
   },

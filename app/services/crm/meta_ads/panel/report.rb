@@ -4,8 +4,13 @@
 #
 # O período são os últimos `days` dias contando hoje, no fuso da conta de anúncios (o mesmo em que a Meta conta
 # o gasto). Tudo sai do banco: gasto da coleta diária (F2a), ligações conversa → anúncio (F2b) e cards do CRM.
+#
+# O anúncio por dentro (F3b, Panel::AdDetail) lê daqui o período, a coorte, a linha do anúncio e a média da conta,
+# para que o número da lista e o da tela do anúncio nunca divirjam.
 class Crm::MetaAds::Panel::Report
   PERIODS = [7, 30].freeze
+
+  attr_reader :days, :zone
 
   def initialize(connection, days:)
     @connection = connection
@@ -20,8 +25,6 @@ class Crm::MetaAds::Panel::Report
       confidence: confidence
     }
   end
-
-  private
 
   def today
     @today ||= Time.current.in_time_zone(@zone).to_date
@@ -39,12 +42,28 @@ class Crm::MetaAds::Panel::Report
     Crm::MetaAdInsightDaily.where(account_id: @connection.account_id, ad_account_id: @connection.ad_account_id, date: first_day..today)
   end
 
-  def spend_by_ad
-    @spend_by_ad ||= insights.group(:ad_id).sum(:spend).transform_values(&:to_f)
-  end
-
   def currency
     insights.where.not(currency: nil).pick(:currency) || 'BRL'
+  end
+
+  def ads
+    @ads ||= ad_ids.map { |ad_id| ad_row(ad_id) }
+                   .map { |row| row.merge(verdict: verdict(row)) }
+                   .sort_by { |row| [-row[:sales], -row[:conversations], -row[:spend]] }
+  end
+
+  # Custo por venda da conta, só com os anúncios que venderam; nil enquanto nenhum vendeu.
+  def average_cost_per_sale
+    return @average_cost_per_sale if defined?(@average_cost_per_sale)
+
+    selling = ad_ids.map { |ad_id| ad_row(ad_id) }.select { |row| row[:sales].positive? }
+    @average_cost_per_sale = ratio(selling.sum { |row| row[:spend] }, selling.sum { |row| row[:sales] })
+  end
+
+  private
+
+  def spend_by_ad
+    @spend_by_ad ||= insights.group(:ad_id).sum(:spend).transform_values(&:to_f)
   end
 
   def totals
@@ -67,20 +86,16 @@ class Crm::MetaAds::Panel::Report
     spend_by_ad.values.sum
   end
 
-  def ads
-    @ads ||= begin
-      rows = ad_ids.map { |ad_id| ad_row(ad_id) }
-      average = average_cost_per_sale(rows)
-      rows.map { |row| row.merge(verdict: verdict(row, average)) }
-          .sort_by { |row| [-row[:sales], -row[:conversations], -row[:spend]] }
-    end
-  end
-
   def ad_ids
     (spend_by_ad.keys + cohort.conversation_ads.values.compact).uniq
   end
 
   def ad_row(ad_id)
+    @ad_rows ||= {}
+    @ad_rows[ad_id] ||= build_ad_row(ad_id)
+  end
+
+  def build_ad_row(ad_id)
     cards = cohort.cards.select { |card| card.ad_id == ad_id }
     sales = cards.select(&:sale?)
     spend = spend_by_ad.fetch(ad_id, 0.0)
@@ -96,15 +111,9 @@ class Crm::MetaAds::Panel::Report
     @objects ||= Crm::MetaAdObject.where(account_id: @connection.account_id, meta_object_id: ad_ids).index_by(&:meta_object_id)
   end
 
-  # Custo por venda da conta, só com os anúncios que venderam.
-  def average_cost_per_sale(rows)
-    selling = rows.select { |row| row[:sales].positive? }
-    ratio(selling.sum { |row| row[:spend] }, selling.sum { |row| row[:sales] })
-  end
-
-  def verdict(row, average)
+  def verdict(row)
     Crm::MetaAds::Panel::Verdict.for(conversations: row[:conversations], sales: row[:sales], cost_per_sale: row[:cost_per_sale],
-                                     average_cost_per_sale: average)
+                                     average_cost_per_sale: average_cost_per_sale)
   end
 
   def confidence

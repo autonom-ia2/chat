@@ -319,6 +319,7 @@ Rails.application.routes.draw do
               post :suggest_stages
               post :insights
               get :panel
+              get :panel_ad
             end
             get 'conversations/card_stages', to: 'cards#card_stages'
             get 'conversations/:conversation_id/card', to: 'cards#by_conversation'

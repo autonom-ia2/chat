@@ -258,6 +258,48 @@ RSpec.describe 'CRM meta_ads_connection API', type: :request do
     end
   end
 
+  describe 'GET panel_ad (#1088, F3b)' do
+    let(:ad_id) { '120254710362980416' }
+
+    it 'devolve o anúncio por dentro, só do banco' do
+      travel_to(Time.zone.parse('2026-10-06T15:00:00-03:00')) do
+        connection = create_meta_ads_insights_connection(account)
+        Crm::MetaAdInsightDaily.create!(account: account, ad_account_id: connection.ad_account_id, ad_id: ad_id, date: Date.new(2026, 10, 6),
+                                        currency: 'BRL', spend: 42.5, attribution_window: '7d_click', fetched_at: Time.current)
+
+        expect do
+          get "#{path}/panel_ad", params: { ad_id: ad_id, days: 7 }, headers: auth_headers(admin)
+        end.not_to have_enqueued_job(Crm::MetaAds::InsightsSyncJob)
+
+        ad = response.parsed_body['ad']
+        expect(ad).to include('ad_id' => ad_id, 'days' => 7, 'spend' => 42.5, 'verdict' => 'early', 'quotes_list' => [])
+        expect(ad['reason']).to include('kind' => 'early', 'missing_conversations' => 20)
+        expect(ad['daily'].last).to eq('date' => '2026-10-06', 'spend' => 42.5, 'conversations' => 0)
+      end
+    end
+
+    it 'anúncio sem dado no período devolve vazio' do
+      create_meta_ads_insights_connection(account)
+
+      get "#{path}/panel_ad", params: { ad_id: ad_id }, headers: auth_headers(admin)
+
+      expect(response.parsed_body).to eq('ad' => nil)
+    end
+
+    it 'sem conexão devolve vazio' do
+      get "#{path}/panel_ad", params: { ad_id: ad_id }, headers: auth_headers(admin)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body).to eq('ad' => nil)
+    end
+
+    it 'agente recebe 403' do
+      get "#{path}/panel_ad", params: { ad_id: ad_id }, headers: auth_headers(agent)
+
+      expect(response).to have_http_status(:forbidden)
+    end
+  end
+
   describe 'POST insights (#1073)' do
     let(:connection) { create_meta_ads_insights_connection(account) }
 

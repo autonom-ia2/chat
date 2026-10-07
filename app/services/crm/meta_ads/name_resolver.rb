@@ -23,6 +23,13 @@ class Crm::MetaAds::NameResolver
     'campaign' => 'name,account_id'
   }.freeze
   UNKNOWN_TYPE_FIELDS = 'name,account_id'.freeze
+  # A miniatura do criativo (64 px, anúncio em vídeo) só preenche linha sem imagem: não passa por cima da imagem de
+  # 1080 px que o Crm::MetaAds::AdImages já gravou (#1088). As outras colunas são trocadas como sempre.
+  REPLACED_COLUMNS = %i[object_type name campaign_id adset_id preview_url fetched_at updated_at].freeze
+  KEEP_BIG_IMAGE = Arel.sql(
+    (REPLACED_COLUMNS.map { |column| "#{column} = EXCLUDED.#{column}" } +
+      ['thumbnail_url = COALESCE(crm_meta_ad_objects.thumbnail_url, EXCLUDED.thumbnail_url)']).join(', ')
+  )
 
   class PermissionDenied < StandardError; end
   class GraphUnavailable < StandardError; end
@@ -120,9 +127,26 @@ class Crm::MetaAds::NameResolver
   # true quando a Graph trouxe algum nome. O ID do lote que não veio na resposta entra no cache negativo.
   def store(data, batch, type)
     rows = cache_rows(data, type)
-    Crm::MetaAdObject.upsert_all(rows, unique_by: :idx_crm_meta_ad_objects_account_object) if rows.any? # rubocop:disable Rails/SkipsModelValidations
+    small_ids = small_image_ids(data)
+    small, full = rows.partition { |item| small_ids.include?(item[:meta_object_id]) }
+    write_rows(full)
+    write_rows(small, on_duplicate: KEEP_BIG_IMAGE)
     remember_missing(batch - rows.pluck(:meta_object_id), type)
     rows.any?
+  end
+
+  def write_rows(rows, **)
+    Crm::MetaAdObject.upsert_all(rows, unique_by: :idx_crm_meta_ad_objects_account_object, **) if rows.any? # rubocop:disable Rails/SkipsModelValidations
+  end
+
+  # Anúncios cuja imagem veio só da miniatura do criativo, sem image_url (anúncio em vídeo, em geral).
+  def small_image_ids(data)
+    data.to_h.values.filter_map do |object|
+      creative = object['creative'] if object.is_a?(Hash)
+      next unless creative.is_a?(Hash) && http_url(creative['image_url']).nil? && http_url(creative['thumbnail_url'])
+
+      object['id'].to_s
+    end
   end
 
   # Cache negativo: linha sem nome e com fetched_at de agora. fresh_ids a conta como resolvida e

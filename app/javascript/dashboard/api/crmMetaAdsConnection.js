@@ -88,6 +88,15 @@ class CrmMetaAdsConnectionAPI extends ApiClient {
     return axios.get(`${this.url}/panel`, { params: { days } });
   }
 
+  // One ad from the inside (#1088, F3b): { ad: null } without data, or
+  // { ad: { ...numbers, verdict, account_average_cost_per_sale, reason, daily,
+  // quotes_list } }. Only reads the database; never calls Meta.
+  panelAd(adId, days) {
+    return axios.get(`${this.url}/panel_ad`, {
+      params: { ad_id: adId, days },
+    });
+  }
+
   // AI reads the stages and answers { suggestions: [{ stage_id, type, reason }] }.
   suggestStages(pipelineId) {
     return pollAiRequest(
