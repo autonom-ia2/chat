@@ -65,6 +65,11 @@ module Waha
       post("/api/#{name}/auth/request-code", { phoneNumber: phone })
     end
 
+    # Limite de conversas novas do número no ciclo atual (WhatsApp Híbrido, chat#1067).
+    def capping(session)
+      get("/api/sessions/#{session}/capping")
+    end
+
     # ---- ENVIO DIRETO (WhatsApp Híbrido, chat#1067) ----
     # O id é gerado antes do envio para a mensagem já ter identidade quando o eco da Meta chegar.
     def new_message_id(session)

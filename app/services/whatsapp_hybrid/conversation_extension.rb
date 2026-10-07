@@ -7,6 +7,7 @@ module WhatsappHybrid::ConversationExtension
     return false unless inbox&.channel_type == 'Channel::Whatsapp'
     # Lista de conversas chama isto para cada item: fora das contas liberadas, nem consulta o banco.
     return false unless WhatsappHybrid::Config.account_allowed?(account_id)
+    return false unless WhatsappHybrid::Config.hybrid_inbox?(inbox_id)
 
     WhatsappHybrid::Router.new(self).web_reply_available?
   end

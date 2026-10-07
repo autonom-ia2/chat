@@ -46,7 +46,15 @@ class WhatsappHybrid::SessionManager
     status = STATUS_MAP.fetch(remote['status'].to_s, remote.blank? ? 'disconnected' : 'connecting')
     phone = remote.dig('me', 'id').to_s.split('@').first.to_s.delete('^0-9').presence
     apply_status!(status, phone: phone)
+    refresh_capping! if status == 'connected'
     status
+  end
+
+  # O limite muda devagar; a aba e a revalidação antes do envio mantêm o retrato em dia.
+  def refresh_capping!
+    WhatsappHybrid::Capping.new(connection).apply!(@client.capping(connection.session_name))
+  rescue Waha::Client::Error => e
+    Rails.logger.warn("[whatsapp_hybrid] capping refresh failed inbox=#{connection.inbox_id}: #{e.class}")
   end
 
   # Grava o estado vindo do motor (consulta ou webhook) e avisa os administradores uma vez por queda.

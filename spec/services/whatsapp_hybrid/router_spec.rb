@@ -75,6 +75,17 @@ describe WhatsappHybrid::Router do
       expect(conversation.reload.can_reply?).to be(false)
     end
 
+    it 'explains the WhatsApp limit when new conversations are blocked' do
+      allow(client).to receive(:send_text).and_raise(Waha::Client::Error, 'WAHA POST /api/sendText -> 500: server returned error 475')
+      allow(client).to receive(:get_session).and_return({ 'status' => 'WORKING', 'me' => { 'id' => "#{connection.connected_phone}@c.us" } })
+      allow(client).to receive(:capping).and_return({ 'cappingStatus' => 'CAPPED' })
+      message = outgoing
+
+      Whatsapp::SendOnWhatsappService.new(message: message).perform
+
+      expect(message.reload.external_error).to include('limitou conversas novas')
+    end
+
     it 'refreshes the session state when WhatsApp API rejects a send' do
       allow(client).to receive(:send_text).and_raise(Waha::Client::Error, '422')
       allow(client).to receive(:get_session).and_return({ 'status' => 'FAILED' })

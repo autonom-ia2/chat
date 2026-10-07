@@ -20,6 +20,7 @@ RSpec.describe 'WhatsApp Híbrido connections API', type: :request do
   before do
     allow(Waha::Client).to receive(:new).and_return(client)
     allow(client).to receive(:update_session)
+    allow(client).to receive(:capping).and_return({ 'cappingStatus' => 'NONE', 'totalQuota' => -1, 'usedQuota' => 0 })
   end
 
   it 'hides the tab for accounts outside the allowlist' do

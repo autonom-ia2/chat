@@ -30,6 +30,14 @@ RSpec.describe WhatsappHybrid::WebhookEventJob do
       expect(connection.down_alerted_at).to be_nil
     end
 
+    it 'keeps the WhatsApp limit sent with the status' do
+      capping = { 'cappingStatus' => 'FIRST_WARNING', 'totalQuota' => 1000, 'usedQuota' => 640, 'cycleEnd' => 1_790_000_000 }
+
+      described_class.perform_now(connection.id, 'session.status', { 'status' => 'WORKING', 'capping' => capping })
+
+      expect(WhatsappHybrid::Capping.new(connection).status).to eq('FIRST_WARNING')
+    end
+
     it 'does not warn when the connection was never in use' do
       connection.update!(risk_accepted_at: nil)
 

@@ -93,8 +93,18 @@ class Api::V1::Accounts::WhatsappHybridConnectionsController < Api::V1::Accounts
       routing_active: connection.routable? && WhatsappHybrid::Config.routing_enabled?,
       disabled_origins: connection.disabled_origins,
       rate_limit_per_minute: connection.rate_limit_per_minute,
+      campaign_rate_limit_per_minute: WhatsappHybrid::RateLimit::CAMPAIGN_PER_MINUTE,
+      capping: capping_payload(connection),
+      stats: { days: WhatsappHybrid::Stats::DAYS, by_origin: WhatsappHybrid::Stats.summary(connection) },
       qr: qr_code
     }
+  end
+
+  def capping_payload(connection)
+    current = WhatsappHybrid::Capping.new(connection).current
+    return { status: 'NONE' } if current.blank?
+
+    { status: current['status'], used: current['used'], total: current['total'], cycle_end: current['cycle_end'] }
   end
 
   def render_engine_error(code, error)
