@@ -22,7 +22,7 @@
 # - Os exemplos (EXAMPLES) entram no próprio texto e são conferidos pelo Check de verdade no prompt_spec: exemplo que
 #   ensina errado não passa.
 module Crm::MetaAds::Advisor::Prompt
-  VERSION = 'p3'.freeze
+  VERSION = 'p9'.freeze
 
   # O jargão que o dono não entende. Entra nas instruções e no juiz da avaliação paga (writer_eval_spec).
   JARGON = 'CTR, CPM, CPC, CPA, CTA, ROAS, ROI, retorno sobre investimento, lead, funil, criativo, copy, leilão, conversão, campanha, ' \
@@ -54,8 +54,8 @@ module Crm::MetaAds::Advisor::Prompt
           'headline' => 'Crie uma versão nova do anúncio "{{ad_name}}"',
           'body' => 'Nos últimos {{window_days}} dias, cada pessoa viu o anúncio "{{ad_name}}", em média, {{frequency_7d}} vezes. E as ' \
                     'pessoas clicam {{ctr_drop_pct}} menos que nas semanas anteriores. Faça uma versão nova, com outra foto ou outra ' \
-                    'primeira frase. Mantenha a mesma oferta. Deixe o atual no ar até o novo trazer conversas e compare os dois daqui ' \
-                    'a {{window_days}} dias.',
+                    'primeira frase. Mantenha a mesma oferta. Deixe o atual no ar até o novo trazer conversas. Compare a versão nova ' \
+                    'com a atual daqui a {{window_days}} dias.',
           'why' => 'Quem vê o mesmo anúncio muitas vezes deixa de reparar nele. Com {{frequency_7d}} vezes por pessoa, em média, você ' \
                    'continua pagando para aparecer e menos gente clica.'
         }
@@ -70,7 +70,7 @@ module Crm::MetaAds::Advisor::Prompt
                     'anúncios é {{target_cost_per_sale}}. No Gerenciador de Anúncios, aumente em até {{max_increase_pct}} o campo ' \
                     '"Orçamento", que fica acima do anúncio, não nele. Depois, não mexa nele por {{cooldown_days}} dias e veja se as ' \
                     'conversas continuam chegando.',
-          'why' => 'Aumento pequeno mantém o anúncio estável. Aumento grande faz o Facebook e o Instagram recomeçarem a procurar quem ' \
+          'why' => 'Aumento pequeno costuma manter o anúncio estável. Aumento grande faz o Facebook e o Instagram recomeçarem a procurar quem ' \
                    'compra, e cada venda costuma ficar mais cara por um tempo. Por isso, no máximo {{max_increase_pct}}.'
         }
       },
@@ -124,16 +124,20 @@ module Crm::MetaAds::Advisor::Prompt
       got no reply. When median_seconds is already at or below target_seconds, the problem is the conversations without a reply:
       talk about those. Say "em geral", never "metade", and never that a person was slow (some replies are automatic). Matters:
       whoever writes from an ad usually asks other businesses too, and the first to answer usually gets the sale; the ad was
-      already paid for. Step: answer today the ones still waiting, starting with the most recent (they can still become a sale);
-      then "responda em até {{target_seconds}}, todo dia, no horário de atendimento", with "notificação do celular ligada",
-      "alguém de olho no WhatsApp em cada turno" and "respostas prontas para as perguntas de sempre". Never ask for replies at
-      every hour of the day and night.
+      already paid for. Step: when unanswered is above 0, "responda hoje a quem ainda está esperando, começando pelas conversas mais recentes"
+      (they can still become a sale); when unanswered is 0, skip this part;
+      then "responda em até {{target_seconds}}, no horário de atendimento", with ONE habit that makes it possible, the one that
+      fits best: "deixe a notificação do WhatsApp ligada no celular", "deixe alguém responsável por olhar o WhatsApp em cada
+      turno" or "tenha respostas prontas para as perguntas de sempre". Never list all of them. Never ask for replies at every hour
+      of the day and night.
 
       fix_tracking. Facts: conversations, unknown (conversations without the ad they came from), identified_pct (share with a
       known ad). Button: opens the connection settings at the step that fixes where conversations come from.
       Happening: of {{conversations}} conversations, {{unknown}} arrived without showing which ad brought them. Matters: without
       the ad of each conversation, the panel cannot tell which ad sells and which spends without return, so the advice about each
-      ad waits. Step: tap the button below and follow the step shown on the screen.
+      ad waits. Step: tap the button below; it opens the step that shows the text each ad must carry ("o texto do passo 3"). Put
+      that text in every ad that sends people to WhatsApp or to the site. Then new conversations usually show which ad brought them
+      ("costumam chegar"); never promise it. Conversations that already arrived stay without the ad.
 
       review_ad. Facts: ad_name, conversations, sales, spend (what the ad spent), cost_per_sale (null without a sale),
       target_cost_per_sale (the average cost per sale of all your ads, "a média dos seus anúncios"; null when no ad sold yet),
@@ -156,8 +160,9 @@ module Crm::MetaAds::Advisor::Prompt
       dropped much yet, so this is to prepare a new version before they do. Do not use ctr_drop_pct and do not say clicks fell.
       Variant both: the two facts, and the mechanism "quem vê o mesmo anúncio muitas vezes deixa de reparar nele".
       Step, in every variant: make a new version with another photo or another first sentence, keeping the same offer and price;
-      leave the current one running until the new one brings conversations, and compare them in {{window_days}} days. The
-      headline says to make a new version ("Crie uma versão nova"), never "Troque", because the current ad stays running.
+      leave the current one running until the new one brings conversations, then "compare a versão nova com a atual daqui a
+      {{window_days}} dias" (never "as duas" or "os dois": that is a quantity in words). The headline says to make a new version
+      ("Crie uma versão nova"), never "Troque", because the current ad stays running.
 
       scale_ad. Facts: ad_name, cost_per_sale, target_cost_per_sale (the average cost per sale of all your ads), frequency_7d,
       max_increase_pct, weeks (weeks in a row below the average), cooldown_days (days without touching it after the raise).
@@ -167,9 +172,14 @@ module Crm::MetaAds::Advisor::Prompt
       amount per day is not on the ad: it is in a level above it, so say the field is above the ad. Then "não mexa nele por
       {{cooldown_days}} dias". After that, look at whether conversations keep arriving at a similar cost: sales from these days
       take longer to show up, so a cost per sale that still looks good is not a reason to raise again. Matters: "aumento pequeno
-      mantém o anúncio estável; aumento grande faz o Facebook e o Instagram recomeçarem a procurar quem compra, e cada venda
+      costuma manter o anúncio estável; aumento grande faz o Facebook e o Instagram recomeçarem a procurar quem compra, e cada venda
       costuma ficar mais cara por um tempo". Never suggest a raise above max_increase_pct, doubling, or a next raise (the panel
       says when another one makes sense), and do not promise that sales grow with the money.
+      Body shape (about 300 characters; keep it this short): "Nas últimas {{weeks}} semanas, cada venda do anúncio "{{ad_name}}"
+      saiu por {{cost_per_sale}}, abaixo da média dos seus anúncios, {{target_cost_per_sale}}. No Gerenciador de Anúncios, abra a aba
+      "Conjuntos de anúncios" e aumente em até {{max_increase_pct}} o "Orçamento" do grupo deste anúncio (se não estiver lá, fica na
+      aba "Campanhas"). Depois, não mexa nele por {{cooldown_days}} dias."
+      The "look at whether conversations keep arriving" part and the mechanism go to the why, not to the body.
 
       auction_pressure. Facts: cpm_change_pct (how much more expensive it got for the ads to be shown, compared with the previous
       weeks), cpm_recent and cpm_baseline (prices per thousand views: do not use them, they would need the word "mil"),
@@ -218,8 +228,9 @@ module Crm::MetaAds::Advisor::Prompt
     - Every number, amount, percentage, time span and ad name goes in only as {{fact}}, where fact is one of the facts of that same
       action. Copy the key exactly, with double braces: {{ctr_drop_pct}}, never {ctr_drop_pct}, {{ctr}} or {{facts.ctr_drop_pct}}.
     - No digit outside a placeholder, anywhere: not in "24 horas", "1º", "2x" or a copied ad name.
-    - No quantity in words, in any language: no "três", "dez", "metade", "o dobro", "um terço", "mil" (also not in "aparecer para mil
-      pessoas"), "uma semana", "quinze dias", "meia hora". These are fine because they are not quantities: articles ("um anúncio",
+    - No quantity in words, in any language: no "dois", "duas", "ambos", "ambas" ("as duas versões", "os dois anúncios"), "três",
+      "dez", "metade", "o dobro", "um terço", "mil" (also not in "aparecer para mil pessoas"), "uma semana", "quinze dias", "meia
+      hora". Say "a versão nova e a atual", "cada anúncio" instead. These are fine because they are not quantities: articles ("um anúncio",
       "uma mensagem"), "a primeira resposta", "cada", "algumas", "todas", "nenhuma", "de novo", "mais", "menos".
     - Do not invent time spans ("amanhã", "semana que vem", "em poucos dias", "no último mês"). Say when to look again only with a
       time fact of the action (window_days, cooldown_days); without one, say what to look at, not when.
@@ -232,14 +243,19 @@ module Crm::MetaAds::Advisor::Prompt
     Wrong: "Os cliques caíram {{ctr_drop_pct}}% e o anúncio gastou {{spend}}." ("%" added; spend is not a fact of that action)
     Wrong: "Responda em até {{target_seconds}} minutos." (the unit is already in the value)
     Wrong: "A maior parte veio de {{ad_name}}." (the name is bare; and ad_name is the ad that brought the most, not most of them)
+    Wrong: "Com {{ctr_drop_pct}} menos cliques, o anúncio cansou." (ctr_drop_pct is the drop in the share of people who click, not
+    in the number of clicks: say "as pessoas clicam {{ctr_drop_pct}} menos"; this holds in the headline, the body and the why,
+    and never write "menos cliques" or "os cliques caíram" anywhere)
 
     EACH ACTION HAS THREE TEXTS
-    - headline (at most 120 characters): what to do, as one short sentence that starts with a verb in the imperative ("Retome",
+    - headline (at most 120 characters; aim for under 80): what to do, as one short sentence that starts with a verb in the imperative ("Retome",
       "Responda", "Crie", "Aumente", "Abra", "Não troque"). Some actions are shown only with the headline and the why, so the headline
       alone must say what to do, and it must not say more than the body (no "Troque" when the body keeps the current ad running).
-    - body (at most 400 characters): what is happening, with the facts; then the concrete step, small and reversible, and how to do
-      it; then, when the action has a time fact, when to look again. Two to five short sentences, one idea each.
-    - why (at most 300 characters, shown after "Por quê:"): why it matters, the mechanism in everyday words, with at least one
+    - body (at most 400 characters; aim for 220 to 320): what is happening, with the facts; then the concrete step, small and
+      reversible, and how to do it; then, when the action has a time fact, when to look again. Two to four short sentences, one
+      idea each. Pick the single most useful step; do not list every possible measure. A body over 400 is thrown away whole.
+      review_ad and scale_ad carry many facts: there, write the body in at most three sentences and leave the mechanism to the why.
+    - why (at most 300 characters, aim for under 200; shown after "Por quê:"): why it matters, the mechanism in everyday words, with at least one
       placeholder. One or two sentences. Do not start with "Porque".
     Below the texts the screen shows one button that takes the person to the place of the work (described per kind below). You may
     say "abaixo", but never write the button's label. The limits count your text with the placeholders; a text over the limit is
@@ -251,7 +267,8 @@ module Crm::MetaAds::Advisor::Prompt
       instructions; the phrases in quotes are the way to say it.
     - No jargon or acronyms. Never: #{JARGON}.
     - Do not call the ad's money "orçamento" or "verba" ("orçamento" also means a price quote): say "o valor por dia do anúncio".
-      The only exception is scale_ad, to name the field in the Gerenciador de Anúncios, in quotes: o campo "Orçamento".
+      The only exception is scale_ad, to name what the owner must click in the Gerenciador de Anúncios, always in quotes as the screen
+      shows it: the tabs "Conjuntos de anúncios" and "Campanhas" and the field "Orçamento". A label in quotes is not jargon.
     - Say "o Facebook e o Instagram", not "a Meta", except in the name Gerenciador de Anúncios. Say "a média dos seus anúncios",
       never "a média da conta" (to the owner, conta is a bill or a bank account).
     - Prefer "a imagem ou o texto do anúncio", "o preço para o anúncio aparecer", "conversas", "vendas", "propostas", "as pessoas",
@@ -282,7 +299,9 @@ module Crm::MetaAds::Advisor::Prompt
       placeholder: the value already brings its unit;
     - why_without_fact: a why without any placeholder;
     - empty_headline: an empty headline;
-    - too_long: a text over its limit;
+    - too_long: a text over its limit. previous_lengths gives, for each such action, the length of each text as "used/limit"
+      (counted with the placeholders as written). Write it again at most 80% of the limit: fewer and shorter sentences, only the
+      main step;
     - missing_action: an action missing or repeated.
   TEXT
 

@@ -23,7 +23,7 @@ class Crm::MetaAds::Advisor::Analysis
   DAILY_LIMIT = 6
   COUNTER_PREFIX = 'crm:meta_ads:advisor:count'.freeze
   COUNTER_TTL = 36.hours
-  STALE_WRITING = 5.minutes
+  STALE_WRITING = 7.minutes
   FILLERS = Crm::MetaAds::Advisor::Decision::FILLERS
   # Os tipos de fato que pedem concordância de número no texto (substantivo depois do valor).
   SINGULAR_TYPES = %i[count days].freeze

@@ -255,7 +255,9 @@ exemplo) não é coberto. Em pt/en/es esse caso não aparece, e ele fica nos ris
 
 **Nova tentativa e queda para a regra:**
 1. A primeira resposta tem algum código → chama de novo **uma vez**, com a mesma entrada e
-   `previous_rejection: [códigos]`, sem ecoar o texto.
+   `previous_rejection: [códigos]` e, para cada ação recusada por `too_long`, `previous_lengths` ("usado/limite" de
+   cada texto), sem ecoar o texto. A nova tentativa usa o mesmo modelo com esforço `medium`
+   (`Writer::RETRY_REASONING_EFFORT`): com o esforço alto ela passava de 90 s na avaliação paga.
 2. Se a segunda passar, vale o texto da IA.
 3. Se não passar:
    - cada ação aprovada fica com o texto da IA (`source: 'ai'`);
@@ -319,11 +321,11 @@ O `GET panel` a cada 2 min por aba, com o run do dia já criado, faz: 1 leitura 
    UPDATE crm_meta_advisor_runs SET writer_status = 'writing', writing_started_at = now(), retry_after = NULL
     WHERE id = :id AND (
           (writer_status = 'pending' AND (retry_after IS NULL OR retry_after <= now()))
-       OR (writer_status = 'writing' AND writing_started_at < now() - interval '5 minutes'))
+       OR (writer_status = 'writing' AND writing_started_at < now() - interval '7 minutes'))
    ```
-   (por `update_all`). Só segue se 1 linha mudou. `writing` com mais de 5 min conta como abandonado (job morto no
+   (por `update_all`). Só segue se 1 linha mudou. `writing` com mais de 7 min conta como abandonado (job morto no
    deploy) e pode ser reivindicado de novo. Por isso o Writer chama a IA com `timeout: 60` e uma nova tentativa
-   (`Writer::REQUEST_TIMEOUT`/`MAX_RETRIES`): o pior caso, 2 × (2 × 60 s + 1 s), fica abaixo dos 5 min.
+   (`Writer::REQUEST_TIMEOUT`/`MAX_RETRIES`): o pior caso, 2 × (2 × 90 s + 1 s) ≈ 6 min, fica abaixo dos 7 min (a avaliação paga mostrou que 60 s às vezes estoura com o raciocínio em nível alto).
 2. **Reserva o teto do dia** aqui, e só aqui (`INCR`). Sem vaga → grava `rule`/`daily_limit` e para.
 3. Writer + Check, fora de transação.
 4. Grava o resultado com `update_all ... WHERE id = :id AND writer_status = 'writing' AND writing_started_at = :o_meu`,
@@ -539,7 +541,7 @@ Advice = {
 `writer.status` na API:
 - `pending` só quando o run é reivindicável agora;
 - `pending` com `retry_after` no futuro sai como `rule` / `ai_error` (a tela mostra a regra e não pede IA);
-- `writing` com mais de 5 min sai como `pending`.
+- `writing` com mais de 7 min sai como `pending`.
 
 ```
 AdviceAction = {
@@ -665,7 +667,7 @@ Body `{ "days": 7|30 }`. `days` é aceito e ignorado (D5.2). Policy `show?`. O c
 - Sem conexão ou sem conta de anúncios → 200 `{ "daily_action": null }`.
 - `run = Analysis.current(...)` e, conforme o `writer.status` serializado:
   - `written` ou `rule` → 200 `{ "daily_action": Advice }`;
-  - `writing` (outra aba escrevendo há menos de 5 min) → 200 com o `Advice` em `writing`. Não adia nada; a tela
+  - `writing` (outra aba escrevendo há menos de 7 min) → 200 com o `Advice` em `writing`. Não adia nada; a tela
     continua conferindo o painel em `CHECK_MS` (§5.1);
   - `pending` e IA indisponível → grava `rule` com o motivo → 200;
   - `pending` e só fillers → `rule` / `not_applicable` → 200 (não gasta IA);
@@ -1381,9 +1383,26 @@ com models, `Panel::ResponseTime`, `Panel::MetaComparison`, `Panel::PathList`, a
   "orçamento"/"budget". Central 13.20: mesmo termo e "espere 5 dias".
 - §11.2 alinhada ao que P decidiu.
 
+**Avaliação paga (07/10, orquestrador, teto US$ 2 do Rodrigo): gasto total US$ 1,23.**
+
+| Rodada | Instruções | Aprovados | O que a rodada mostrou e virou correção |
+|---|---|---|---|
+| 1 | p3 / q3 | 16 de 34 | corpo acima de 400 caracteres; o próprio exemplo ensinava "compare os dois" (número por extenso); passo vago na origem |
+| 2 | p4 / q4 | 26 de 34 | "33% menos cliques" (é proporção de quem clica); o juiz não conhecia o passo 3 nem a hora das mensagens |
+| 3 | p5 / q5 | 32 de 34 | o exemplo "bom" da proposta punha a pergunta no meio |
+| 4 | p6 / q6 | 30 de 34 | só o código "too_long" não diz quanto cortar → `previous_lengths` ("usado/limite") na nova tentativa |
+| 5 | p7 | 31 de 34 | `Net::ReadTimeout` a 60 s → `REQUEST_TIMEOUT` 90 s e `STALE_WRITING` 7 min |
+| 6 | p8 | 32 de 34 | 0 erro de chamada; o juiz não sabia que o custo-alvo é "a média dos seus anúncios" |
+| 7 | p9 | 31 de 34 | a nova tentativa com esforço alto passava de 90 s → `RETRY_REASONING_EFFORT = 'medium'` (mesmo modelo) |
+| 8–9 | p9 / q7 | 14 de 15 (dirigidas) | injeção tratada como pedido real → regra explícita na proposta (q7) |
+| final | **p9 / q7** | **32 de 34** | **consultor 26 de 26 cenários, 0 erro de chamada**; proposta 6 de 8 |
+
+Limite conhecido (proposta, Q1/Q5): às vezes a mensagem termina com a oferta de ajuda em vez da pergunta, e uma vez
+leu como futuro um prazo do cliente que já tinha passado. Sem risco (não inventa, não pressiona, a pessoa edita antes
+de enviar). Fechar de vez exige o modelo declarar o tipo da mensagem e o código conferir o "?" no fim: melhoria futura.
+Relatórios por rodada no scratchpad da sessão; o `tmp/meta_ads_advisor_eval*.json` não vai para o git.
+
 **Pendente:**
-- A avaliação paga (teto US$ 2), à mão, pelo orquestrador, com as instruções `p3`/`q3`. O relatório de P aponta
-  dois pontos fora do escopo dele que bloqueiam essa rodada; resolver antes.
 - Fora do escopo de P, encaminhado: botão que abre o conjunto de anúncios (`adset_id`) e orçamento na campanha
   (CBO) no `scale_ad`. (O descanso de 3 dias e o `window_days` do `review_ad` foram resolvidos nas correções abaixo.)
 - Conferir na tela real o painel com 3 ações (uma "Feita"), a lista aberta e "Quanto confiar"; e se o

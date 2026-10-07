@@ -15,13 +15,16 @@
 class Crm::MetaAds::Advisor::Writer
   MODEL = Crm::Ai::Config::MODEL_SUMMARY
   REASONING_EFFORT = Crm::Ai::Config::SUMMARY_REASONING_EFFORT
+  # A segunda tentativa só reescreve o que foi recusado (mais curto, sem dígito solto): com o esforço alto ela passou de
+  # 90 s na avaliação paga (Net::ReadTimeout) e a ação caía na regra. Mesmo modelo, esforço médio.
+  RETRY_REASONING_EFFORT = 'medium'.freeze
   FEATURE = 'anuncios_meta'.freeze
   RETRY_AFTER = 15.minutes
   # O pior caso da escrita (2 pedidos × (1 + MAX_RETRIES) chamadas de até REQUEST_TIMEOUT s, mais as esperas de
   # 1 s entre elas) fica abaixo de Analysis::STALE_WRITING: um run em `writing` só conta como abandonado quando o
   # job que o reivindicou já não pode estar vivo. Com os padrões do cliente (180 s, 2 novas tentativas), seriam
-  # ~18 min, e outra aba reivindicaria o run aos 5 min, gastando outra vaga do teto e jogando fora o texto pago.
-  REQUEST_TIMEOUT = 60
+  # ~18 min, e outra aba reivindicaria o run aos 7 min, gastando outra vaga do teto e jogando fora o texto pago.
+  REQUEST_TIMEOUT = 90
   MAX_RETRIES = 1
   TEXT_KEYS = %w[headline body why].freeze
   # `numbers_in_words` vem depois de `actions`: o modelo gera as chaves na ordem do schema e declara depois de ter
@@ -62,7 +65,7 @@ class Crm::MetaAds::Advisor::Writer
     checked = check(first)
     return written(first, checked) if clean?(checked)
 
-    second = ask(input.merge(previous_rejection: codes(checked)))
+    second = ask(input.merge(previous_rejection: codes(checked), previous_lengths: lengths(first, checked)), effort: RETRY_REASONING_EFFORT)
     return rule('not_applicable') if second['applies'] == false
 
     finish(second, check(second))
@@ -84,12 +87,12 @@ class Crm::MetaAds::Advisor::Writer
     end
   end
 
-  def ask(payload)
+  def ask(payload, effort: REASONING_EFFORT)
     @attempts += 1
     credential = Crm::Ai::CredentialResolver.new(account: @run.account).resolve
     client = Crm::Ai::ResponsesClient.new(credential: credential, feature: FEATURE, account: @run.account, max_retries: MAX_RETRIES)
     response = client.create(model: MODEL, instructions: Crm::MetaAds::Advisor::Prompt.instructions, input: payload.to_json, schema: SCHEMA,
-                             reasoning_effort: REASONING_EFFORT, timeout: REQUEST_TIMEOUT)
+                             reasoning_effort: effort, timeout: REQUEST_TIMEOUT)
     parsed = JSON.parse(response.fetch(:text))
     parsed.is_a?(Hash) ? parsed : {}
   rescue JSON::ParserError
@@ -106,6 +109,15 @@ class Crm::MetaAds::Advisor::Writer
 
   def codes(checked)
     (checked[:global] + checked[:rejected].values.flatten).uniq.sort
+  end
+
+  # Tamanho ("usado/limite") de cada texto das ações recusadas por too_long, sem o texto: só o código não diz quanto
+  # cortar, e a segunda resposta passava do limite de novo.
+  def lengths(answer, checked)
+    long = checked[:rejected].select { |_key, list| list.include?('too_long') }.keys
+    Array(answer['actions']).select { |entry| entry.is_a?(Hash) && long.include?(entry['key'].to_s) }.to_h do |entry|
+      [entry['key'].to_s, Crm::MetaAds::Advisor::Check::LIMITS.to_h { |field, limit| [field, "#{entry[field].to_s.length}/#{limit}"] }]
+    end
   end
 
   # Segunda resposta ainda recusada: vale a IA só nas ações aprovadas.

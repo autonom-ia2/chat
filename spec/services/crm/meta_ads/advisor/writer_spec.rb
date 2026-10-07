@@ -67,8 +67,22 @@ RSpec.describe Crm::MetaAds::Advisor::Writer do
 
     expect(result).to include(writer_status: 'written', writer_reason: nil, writer_attempts: 2)
     expect(client).to have_received(:create).twice
-    expect(client).to have_received(:create).with(hash_including(input: include('"previous_rejection":["digit_outside_fact"]')))
+    expect(client).to have_received(:create).with(hash_including(input: include('"previous_rejection":["digit_outside_fact"]'),
+                                                                 reasoning_effort: described_class::RETRY_REASONING_EFFORT))
     expect(client).not_to have_received(:create).with(hash_including(input: include('R$ 3000')))
+  end
+
+  it 'texto longo demais: a nova tentativa recebe o tamanho de cada texto da ação recusada, nunca o texto' do
+    long_body = "#{'Retome cada proposta com calma. ' * 14}São {{count}}."
+    bad = [good.first.merge('body' => long_body), good.last]
+    allow(client).to receive(:create).and_return(reply(bad), reply(good))
+
+    perform
+
+    expect(client).to have_received(:create).with(hash_including(input: include('"previous_rejection":["too_long"]')))
+    lengths = %("previous_lengths":{"a1":{"headline":"#{good.first['headline'].length}/120","body":"#{long_body.length}/400")
+    expect(client).to have_received(:create).with(hash_including(input: include(lengths)))
+    expect(client).not_to have_received(:create).with(hash_including(input: include('Retome cada proposta com calma. Retome')))
   end
 
   it 'recusa duas vezes: a aprovada fica com a IA, a recusada volta à regra, e o motivo é check_failed' do

@@ -77,7 +77,7 @@ RSpec.describe Crm::MetaAds::Advisor::Analysis do
     expect(counter).to be_nil
     expect(current[:writer]).to eq(status: 'writing', reason: nil)
 
-    run.update!(writing_started_at: 6.minutes.ago)
+    run.update!(writing_started_at: (Crm::MetaAds::Advisor::Analysis::STALE_WRITING + 1.minute).ago)
     expect(current[:writer]).to eq(status: 'pending', reason: nil)
     expect(described_class.write!(run)).to be(true)
     expect(run.reload.writer_status).to eq('written')

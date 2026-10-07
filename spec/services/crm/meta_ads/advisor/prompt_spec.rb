@@ -28,7 +28,7 @@ RSpec.describe Crm::MetaAds::Advisor::Prompt do
   end
 
   it 'tem versão, que entra na assinatura do run' do
-    expect(described_class::VERSION).to eq('p3')
+    expect(described_class::VERSION).to eq('p9')
   end
 
   it 'cita os marcadores, os dados como dados, o schema do Writer e a nova tentativa' do
