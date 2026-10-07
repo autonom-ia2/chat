@@ -15074,8 +15074,25 @@
     "controller": "api/v1/accounts/email_campaigns/template_imports#create",
     "modelo": "EmailCampaignTemplateImport",
     "origem": [
-      "app/controllers/api/v1/accounts/email_campaigns/template_imports_controller.rb:29",
-      "app/controllers/api/v1/accounts/email_campaigns/template_imports_controller.rb:56"
+      "app/controllers/api/v1/accounts/email_campaigns/template_imports_controller.rb:41",
+      "app/controllers/api/v1/accounts/email_campaigns/template_imports_controller.rb:73"
+    ],
+    "sem_corpo": false
+  },
+  "POST email_campaigns/template_imports/:id/fix": {
+    "campos": {
+      "choice": {},
+      "file": {},
+      "kind": {},
+      "target": {},
+      "value": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/email_campaigns/template_imports#fix",
+    "origem": [
+      "app/controllers/api/v1/accounts/email_campaigns/template_imports_controller.rb:55",
+      "app/controllers/api/v1/accounts/email_campaigns/template_imports_controller.rb:81",
+      "app/controllers/api/v1/accounts/email_campaigns/template_imports_controller.rb:69"
     ],
     "sem_corpo": false
   },
@@ -15086,9 +15103,9 @@
     "completo": true,
     "controller": "api/v1/accounts/email_campaigns/template_imports#save",
     "origem": [
-      "app/controllers/api/v1/accounts/email_campaigns/template_imports_controller.rb:37",
-      "app/controllers/api/v1/accounts/email_campaigns/template_imports_controller.rb:60",
-      "app/controllers/api/v1/accounts/email_campaigns/template_imports_controller.rb:52"
+      "app/controllers/api/v1/accounts/email_campaigns/template_imports_controller.rb:49",
+      "app/controllers/api/v1/accounts/email_campaigns/template_imports_controller.rb:77",
+      "app/controllers/api/v1/accounts/email_campaigns/template_imports_controller.rb:69"
     ],
     "sem_corpo": false
   },

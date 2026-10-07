@@ -7,7 +7,10 @@
 #  blocking                   :jsonb            not null
 #  error_code                 :string
 #  expires_at                 :datetime         not null
+#  fixes                      :jsonb            not null
 #  locked_until               :datetime
+#  preview_html               :text
+#  progress                   :jsonb            not null
 #  report                     :jsonb            not null
 #  result_mjml                :text
 #  source_kind                :string           not null
@@ -37,7 +40,8 @@
 # permanent public addresses). One import is active per account (a partial unique index): its lock lasts LOCK_SECONDS
 # and is renewed by the job; a worker that dies leaves it to expire, and the next claim — or the screen asking for news —
 # takes it back, up to MAX_ATTEMPTS. Every write of the job is guarded by its attempt number, so a worker that lost the
-# import can never overwrite the one that took it.
+# import can never overwrite the one that took it. For the screen (delivery C) it also keeps the step the job is in
+# (`progress`), the cleaned preview of the original (`preview_html`, dropped once saved) and the fixes the person made.
 # The lock and the guarded writes are single conditional UPDATEs (update_all): that atomicity is the point, and the
 # columns they touch have nothing to validate.
 # rubocop:disable Rails/SkipsModelValidations
@@ -92,8 +96,15 @@ class EmailCampaignTemplateImport < ApplicationRecord
     guarded(token, locked_until: LOCK_SECONDS.seconds.from_now)
   end
 
-  def finish!(token, mjml:, report:, blocking: [])
-    guarded(token, status: 'ready', result_mjml: mjml, report: report, blocking: blocking, error_code: nil, locked_until: nil)
+  # `screen` carries what only the screens read: preview_html and the final progress.
+  def finish!(token, mjml:, report:, blocking: [], screen: {})
+    guarded(token, status: 'ready', result_mjml: mjml, report: report, blocking: blocking, error_code: nil, locked_until: nil,
+                   **screen.slice(:preview_html, :progress))
+  end
+
+  # Tells the screen which step the job is in (`step`, plus image counts while copying).
+  def progress!(token, progress)
+    guarded(token, progress: progress)
   end
 
   def fail!(token, code, report: nil)

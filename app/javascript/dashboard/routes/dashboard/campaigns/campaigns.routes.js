@@ -152,6 +152,17 @@ const campaignsRoutes = {
           beforeEnter: requireEmailCampaigns,
           component: () => import('./pages/EmailTemplatesPage.vue'),
         },
+        {
+          // "Trazer meu modelo" (#1099): só com a flag da conta e quem gerencia campanhas.
+          path: 'email_campaigns/templates/import/:importId?',
+          name: 'campaigns_email_template_import',
+          meta: {
+            featureFlag: FEATURE_FLAGS.EMAIL_TEMPLATE_IMPORT,
+            permissions: ['administrator', 'campaign_manage'],
+          },
+          beforeEnter: requireEmailCampaigns,
+          component: () => import('./pages/EmailTemplateImportPage.vue'),
+        },
         ...campaignJourneyRoutes,
       ],
     },

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_10_08_000000) do
+ActiveRecord::Schema[7.2].define(version: 2026_10_08_000100) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -2674,6 +2674,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_08_000000) do
     t.bigint "email_campaign_template_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.text "preview_html"
+    t.jsonb "progress", default: {}, null: false
+    t.jsonb "fixes", default: [], null: false
     t.index ["account_id", "created_at"], name: "index_email_template_imports_on_account_and_created"
     t.index ["account_id"], name: "index_email_template_imports_one_active_per_account", unique: true, where: "((status)::text = ANY ((ARRAY['queued'::character varying, 'processing'::character varying])::text[]))"
     t.index ["email_campaign_template_id"], name: "index_email_template_imports_on_template"

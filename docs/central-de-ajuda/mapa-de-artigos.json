@@ -3571,6 +3571,28 @@
      ],
      "revisar": false,
      "nota": null
+    },
+    {
+     "id": "13.21",
+     "titulo": "Trazer um modelo de e-mail de outra plataforma",
+     "para_que_serve": "Copiar para Meus modelos um e-mail feito em outra plataforma, conferir o antes e o depois, resolver o que não veio e salvar.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [],
+     "rotas": [
+      "campaigns_email_template_import"
+     ],
+     "me_leve_ate_la": {
+      "rota": "campaigns_email_template_import",
+      "destaque": null
+     },
+     "requer": "email_template_import",
+     "prints": [],
+     "fontes": [
+      "porques: trazer_modelo_de_email_de_outra_plataforma"
+     ],
+     "revisar": false,
+     "nota": null
     }
    ]
   },

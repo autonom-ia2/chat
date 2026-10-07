@@ -8,7 +8,8 @@
 # that fails becomes the "image to swap" placeholder with a blocking warning (an image block), leaves the section
 # background marking the section (MISSING_BACKGROUND_CLASS, same warning, seen by SaveCheck), or leaves a social link
 # with its network's default icon (a warning). Report entries keep the outcome; data: addresses are shortened and archive
-# images named by their relative path.
+# images named by their relative path. `rehost` also answers where each source went (`copies`, for the preview of the
+# original) and calls `on_copy` after each image (done, total), for the screen to tell how far the copying is.
 class EmailCampaigns::Import::ImageRehoster
   MAX_IMAGES = 40
   BUDGET_SECONDS = 30
@@ -22,9 +23,17 @@ class EmailCampaigns::Import::ImageRehoster
   BACKGROUND_ATTRIBUTES = %w[background-url background-size background-repeat].freeze
 
   Failure = Class.new(StandardError)
+  Result = Data.define(:mjml, :copies)
 
   def self.call(mjml, report, import:, files: {}, deadline: EmailCampaigns::Import::Deadline.new(BUDGET_SECONDS))
-    new(report, import, files, deadline).call(mjml)
+    rehost(mjml, report, import: import, files: files, deadline: deadline).mjml
+  end
+
+  # Result with the MJML and { source => public address } of every image that was copied. Options: files:, deadline:,
+  # on_copy:.
+  def self.rehost(mjml, report, import:, **options)
+    deadline = options[:deadline] || EmailCampaigns::Import::Deadline.new(BUDGET_SECONDS)
+    new(report, import, options[:files] || {}, deadline, options[:on_copy]).rehost(mjml)
   end
 
   # Every image address of an MJML design (image blocks, social icons and section backgrounds), placeholders aside.
@@ -45,23 +54,32 @@ class EmailCampaigns::Import::ImageRehoster
     root.css('[background-url]').select { |node| node['background-url'].present? }
   end
 
-  def initialize(report, import, files, deadline)
+  def initialize(report, import, files, deadline, on_copy = nil)
     @report = report
     @import = import
     @files = files
     @deadline = deadline.slice(BUDGET_SECONDS)
+    @on_copy = on_copy
   end
 
-  def call(mjml)
+  def rehost(mjml)
     EmailCampaigns::Import::PublicUrl.frontend
     entries = Array(@report.images).map { |image| image.to_h.symbolize_keys }
-    copies = entries.each_with_index.to_h { |entry, index| [entry[:src], copy(entry[:src], index)] }
+    copies = entries.each_with_index.to_h { |entry, index| [entry[:src], copied(entry[:src], index, entries.size)] }
     @report.images = entries.map { |entry| describe(entry, copies[entry[:src]]) }
     settle_report(copies.values)
-    point(mjml, copies)
+    Result.new(mjml: point(mjml, copies), copies: addresses(copies))
   end
 
   private
+
+  def addresses(copies)
+    copies.filter_map { |src, copy| [src, copy[:url]] if copy[:url] }.to_h
+  end
+
+  def copied(src, index, total)
+    copy(src, index).tap { @on_copy&.call(index + 1, total) }
+  end
 
   def copy(src, index)
     raise Failure, 'too_many' if index >= MAX_IMAGES
@@ -129,10 +147,7 @@ class EmailCampaigns::Import::ImageRehoster
   end
 
   def upload(output, index)
-    blob = ActiveStorage::Blob.create_and_upload!(io: StringIO.new(output.bytes), filename: "imagem-#{index + 1}.#{output.extension}",
-                                                  content_type: output.content_type, identify: false)
-    @import.images.attach(blob)
-    EmailCampaigns::Import::PublicUrl.for(blob)
+    EmailCampaigns::Import::ImageUpload.call(@import, output, "imagem-#{index + 1}")
   end
 
   def describe(entry, copy)

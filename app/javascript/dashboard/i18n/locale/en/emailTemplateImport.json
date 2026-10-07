@@ -77,7 +77,201 @@
       "NAME_TAKEN": "You already have a model with this name.",
       "NAME_INVALID": "Use a shorter name.",
       "INVALID": "This model could not be saved. Import it again.",
-      "DISABLED": "Importing models is not available in this account."
+      "DISABLED": "Importing models is not available in this account.",
+      "FIX_INVALID": "We could not make this change. Try again.",
+      "FIX_GONE": "This point is already solved.",
+      "IMAGE_UNFIT": "This image does not work. Use JPG, PNG, GIF or WebP.",
+      "IMAGE_TOO_LARGE": "This image is too big. Use up to 5 MB.",
+      "TEXT_INVALID": "Write a short text, without braces."
+    },
+    "SCREEN": {
+      "CRUMB": "Bring my template",
+      "STEP": "Step {current} of {total}",
+      "CANCEL": "Cancel",
+      "BACK": "Back",
+      "LATER": "Not now",
+      "LIBRARY": {
+        "BUTTON": "Bring my template",
+        "EMPTY_TITLE": "Have an email ready somewhere else?",
+        "EMPTY_TEXT": "Bring it here. It becomes editable, with your footer.",
+        "EMPTY_HINT": "Or save one of your emails as a template, in the editor.",
+        "SAVED": "Template saved in My templates.",
+        "NEW_BADGE": "New",
+        "NEW_HINT": "Brought from another platform today.",
+        "WAITING_TITLE": "Your template is still being prepared.",
+        "READY_TITLE": "Your template is ready. See how it looks and keep it.",
+        "RESUME": "See how it looks"
+      },
+      "CHOOSE": {
+        "TITLE": "How do you want to bring your template?",
+        "LEAD": "Pick one way. Nothing is saved before you see how it looks.",
+        "FILE_TITLE": "Send a file",
+        "FILE_TEXT": "The email file, ending in .html or .zip. You can drag it here.",
+        "FILE_GO": "Choose file",
+        "PASTE_TITLE": "Paste the code",
+        "PASTE_TEXT": "Copy the email code on the other platform and paste it here.",
+        "PASTE_GO": "Paste code",
+        "URL_TITLE": "Use the address",
+        "URL_TEXT": "The address of the email page, the one to view it in the browser.",
+        "URL_GO": "Paste address",
+        "HELP_TITLE": "On the other platform:",
+        "HELP_TEXT": "open the email, choose to edit the code and copy all of it.",
+        "HELP_RIGHTS": "Only use emails that are yours or that you may use."
+      },
+      "PASTE": {
+        "TITLE": "Paste the code of your email",
+        "LEAD": "Click the box and paste. On a computer: Ctrl + V.",
+        "LABEL": "Email code",
+        "RECEIVED": "Code received · {size}",
+        "GO": "Bring this template"
+      },
+      "FILE": {
+        "TITLE": "Send the file of your email",
+        "LEAD": "Drag the file here or tap to choose it.",
+        "DROP": "Choose file",
+        "DROP_HINT": ".html, or .zip with the images",
+        "CHANGE": "Change file",
+        "GO": "Bring this template"
+      },
+      "URL": {
+        "TITLE": "Paste the address of your email",
+        "LEAD": "On the other platform, open the email in the browser and copy the address.",
+        "LABEL": "Email address",
+        "PLACEHOLDER": "https://",
+        "GO": "Bring this template"
+      },
+      "PREPARING": {
+        "TITLE": "We are bringing your template",
+        "LEAD": "You can leave this screen. When you come back to My templates, it will be there for you to see.",
+        "READING": "Reading the template",
+        "IMAGES": "Bringing the images",
+        "IMAGES_COUNT": "Bringing the images ({done} of {total})",
+        "EDITABLE": "Making everything editable",
+        "LEAVE": "Do something else",
+        "SEE": "See how it looks"
+      },
+      "RESULT": {
+        "TITLE_READY": "Done. See how it looks.",
+        "TITLE_PENDING": "Almost done. Check {count} point. | Almost done. Check {count} points.",
+        "BEFORE": "Before",
+        "AFTER": "After",
+        "DESKTOP": "Computer",
+        "MOBILE": "Phone",
+        "BEFORE_TITLE": "How it was",
+        "BEFORE_NOTE": "on the other platform",
+        "AFTER_TITLE": "How it looks",
+        "AFTER_NOTE": "here, editable",
+        "AFTER_NOTE_PENDING": "here",
+        "SIDE_READY_TITLE": "Like it?",
+        "SIDE_DONE_TITLE": "All set",
+        "SIDE_READY_TEXT": "Next step: give it a name and keep it.",
+        "SIDE_PENDING_TITLE": "{count} point left | {count} points left",
+        "SIDE_PENDING_TEXT": "Solve each one here to keep it.",
+        "CONTINUE": "Looks good, continue",
+        "SOLVE": "Solve now",
+        "ANOTHER": "Bring another"
+      },
+      "ROWS": {
+        "IMAGE_MISSING": "An image did not come.",
+        "IMAGE_MISSING_ALT": "\"{alt}\" has no picture.",
+        "BACKGROUND_MISSING": "A background image did not come.",
+        "BACKGROUND_MISSING_HINT": "The background kept only its color.",
+        "PART": "This part became an image.",
+        "PART_HINT": "Its text cannot be edited.",
+        "FIELD": "This field does not exist here: {field}",
+        "INVALID": "We could not check this template.",
+        "INVALID_HINT": "Bring the template again.",
+        "SWAP_IMAGE": "Change image",
+        "SEE_WHERE": "See where",
+        "CHOOSE": "Choose",
+        "IMAGES_COPIED": "{count} image copied to your space. | {count} images copied to your space.",
+        "TAG_SWAPPED": "I changed {from} to {to}.",
+        "TAG_MORE": "And {count} more field. | And {count} more fields.",
+        "FOOTER": "I added your footer, with the link to leave the list.",
+        "FOOTER_HINT": "The old footer is gone.",
+        "REMOVED": "I removed {count} thing that does not work in email. | I removed {count} things that do not work in email.",
+        "REMOVED_ITEMS": {
+          "TRACKING_REMOVED": "an open counter",
+          "UNSAFE_REMOVED": "code that is not safe",
+          "UNSAFE_CSS_REMOVED": "styles that are not safe",
+          "HIDDEN_TEXT_REMOVED": "a hidden text",
+          "EMBED_REMOVED": "embedded content",
+          "TEMPLATE_CODE_REMOVED": "code from the other platform",
+          "PLATFORM_TAGS_REMOVED": "fields that only worked there"
+        },
+        "QUALITY": {
+          "BUTTON_HEIGHT": "I made the button bigger, easy to tap on a phone.",
+          "FONT_SIZE": "I made small text bigger, easy to read.",
+          "CONTRAST": "I darkened colors that were too light, easy to read.",
+          "FONT_FAMILY": "I changed the font to one every email shows.",
+          "IMAGE_ALT": "I described the images for people who cannot see them."
+        },
+        "FIXED": {
+          "IMAGE_UPLOAD": "New image in place of \"{target}\".",
+          "IMAGE_UPLOAD_PLAIN": "New image in place of the one that did not come.",
+          "IMAGE_UPLOAD_BACKGROUND": "New background image in place.",
+          "IMAGE_REMOVE": "I removed the space of the image that did not come.",
+          "FIELD_FIELD": "In place of {field} goes {choice}.",
+          "FIELD_TEXT": "In place of {field} goes \"{text}\".",
+          "FIELD_REMOVE": "I erased {field}.",
+          "PART_TEXT": "The part that was an image is now text you can edit.",
+          "PART_REMOVE": "I removed the part that was an image."
+        }
+      },
+      "IMAGE_DIALOG": {
+        "TITLE": "This image did not come",
+        "BACKGROUND_TITLE": "This background image did not come",
+        "TEXT": "Its address did not answer. Choose what to do.",
+        "UPLOAD": "Send another image",
+        "UPLOAD_HINT": "JPG, PNG, GIF or WebP, up to 5 MB.",
+        "REMOVE": "Remove this space"
+      },
+      "PART_DIALOG": {
+        "TITLE": "This part is an image",
+        "TEXT": "We could not bring this part as blocks. You cannot change its text:",
+        "REBUILD": "Rebuild to edit",
+        "SOON": "Rebuilding with AI is coming soon.",
+        "KEEP_TEXT": "Keep only the text",
+        "REMOVE": "Remove this part"
+      },
+      "FIELD_DIALOG": {
+        "TITLE": "What goes in place of {field}?",
+        "TEXT": "This field was from the other platform. It does not exist here.",
+        "PLACEHOLDER": "Choose an option",
+        "TEXT_OPTION": "Write a text in its place",
+        "REMOVE_OPTION": "Erase",
+        "TEXT_LABEL": "Text that goes in the email",
+        "TEXT_HINT": "It is the same for everyone who receives it.",
+        "CHOOSE": "Choose",
+        "DONE": "Done",
+        "FIELDS": {
+          "NOME": "Contact name",
+          "PRIMEIRO_NOME": "First name",
+          "EMAIL": "Email",
+          "EMPRESA": "Company",
+          "CARGO": "Job title"
+        },
+        "GROUP_FIELDS": "Fields of this account",
+        "GROUP_OTHER": "Or else"
+      },
+      "NAME": {
+        "TITLE": "What do you want to call this template?",
+        "LEAD": "It is the name shown in My templates.",
+        "LABEL": "Template name",
+        "FALLBACK": "My template",
+        "AGAIN": "See again",
+        "SAVE": "Save in My templates"
+      },
+      "ERROR": {
+        "NOT_EMAIL_TITLE": "This file is not an email template.",
+        "NOT_EMAIL_TEXT": "Send the file ending in .html, or paste the code.",
+        "TOO_BIG_TITLE": "This template is too big.",
+        "TOO_BIG_TEXT": "Take some images out of the file and try again.",
+        "FAILED_TITLE": "It did not work this time.",
+        "FAILED_TEXT": "Your file was not saved. Try again in a few minutes.",
+        "TRY_OTHER": "Try another",
+        "TRY_AGAIN": "Try again"
+      }
     }
   }
 }

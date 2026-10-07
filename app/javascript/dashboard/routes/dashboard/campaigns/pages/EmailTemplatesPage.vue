@@ -1,6 +1,7 @@
 <script setup>
 import {
   computed,
+  watch,
   onActivated,
   onMounted,
   onBeforeUnmount,
@@ -9,10 +10,13 @@ import {
 } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
-import { useStore } from 'dashboard/composables/store';
+import { useMapGetter, useStore } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 
 import EmailCampaignTemplatesAPI from 'dashboard/api/emailCampaignTemplates';
+import EmailCampaignTemplateImportsAPI from 'dashboard/api/emailCampaignTemplateImports';
+import { compileEmailMjml } from 'dashboard/helper/compileEmailMjml';
 import Button from 'dashboard/components-next/button/Button.vue';
 import { useCanManage } from 'dashboard/composables/useCanManage';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
@@ -25,6 +29,21 @@ const store = useStore();
 const route = useRoute();
 const router = useRouter();
 const canManage = useCanManage('campaign_manage');
+const isFeatureEnabledonAccount = useMapGetter(
+  'accounts/isFeatureEnabledonAccount'
+);
+// "Trazer meu modelo" (#1099): só com a flag email_template_import e quem gerencia campanhas.
+const canImport = computed(
+  () =>
+    canManage.value &&
+    isFeatureEnabledonAccount.value(
+      Number(route.params.accountId),
+      FEATURE_FLAGS.EMAIL_TEMPLATE_IMPORT
+    )
+);
+const IMPORT = 'EMAIL_IMPORT.SCREEN.LIBRARY';
+const newTemplateId = computed(() => Number(route.query.novo) || null);
+const pendingImport = ref(null);
 
 const campaignId = computed(() => {
   const id = Number(route.params.campaignId);
@@ -90,7 +109,7 @@ const categories = computed(() => {
 
 const filteredTemplates = computed(() => {
   const query = search.value.trim().toLocaleLowerCase();
-  return libraryTemplates.value.filter(
+  const found = libraryTemplates.value.filter(
     item =>
       (activeCategory.value === 'all' ||
         item.category === activeCategory.value) &&
@@ -98,7 +117,23 @@ const filteredTemplates = computed(() => {
         value?.toLocaleLowerCase().includes(query)
       )
   );
+  // The model just brought in comes first, marked "Novo".
+  return [
+    ...found.filter(item => item.id === newTemplateId.value),
+    ...found.filter(item => item.id !== newTemplateId.value),
+  ];
 });
+const showImportEmpty = computed(
+  () =>
+    canImport.value &&
+    library.value === 'own' &&
+    !libraryTemplates.value.length &&
+    !search.value.trim()
+);
+// The body of a template as HTML: compiled when saved, or compiled here from its MJML (an imported
+// model keeps only the MJML the server checked).
+const bodyHtmlOf = async template =>
+  template.body_html || compileEmailMjml(template.body_mjml);
 const fetchTemplates = async () => {
   isLoading.value = true;
   try {
@@ -120,8 +155,9 @@ const fetchThumbnail = async id => {
   inFlightThumbs.add(id);
   try {
     const { data } = await EmailCampaignTemplatesAPI.show(id);
+    const html = await bodyHtmlOf(data);
     if (isUnmounted) return;
-    thumbHtml.value = { ...thumbHtml.value, [id]: data.body_html || '' };
+    thumbHtml.value = { ...thumbHtml.value, [id]: html };
   } catch (error) {
     if (isUnmounted) return;
     thumbHtml.value = { ...thumbHtml.value, [id]: '' };
@@ -153,6 +189,24 @@ const goToBuilder = () => {
   });
 };
 
+const goToImport = importId => {
+  router.push({
+    name: 'campaigns_email_template_import',
+    params: { accountId: route.params.accountId, importId },
+    query: campaignId.value ? { campaign: campaignId.value } : {},
+  });
+};
+
+const fetchPendingImport = async () => {
+  if (!canImport.value) return;
+  try {
+    const { data } = await EmailCampaignTemplateImportsAPI.latest();
+    pendingImport.value = data?.payload?.[0] || null;
+  } catch (error) {
+    pendingImport.value = null;
+  }
+};
+
 const goBack = () => {
   if (campaignId.value) {
     goToBuilder();
@@ -178,8 +232,9 @@ const openPreview = async template => {
   const requestSeq = previewSeq;
   try {
     const { data } = await EmailCampaignTemplatesAPI.show(template.id);
+    const html = await bodyHtmlOf(data);
     if (isUnmounted || requestSeq !== previewSeq) return;
-    previewHtml.value = data.body_html || '';
+    previewHtml.value = html;
   } catch (error) {
     if (isUnmounted || requestSeq !== previewSeq) return;
     previewHtml.value = '';
@@ -253,10 +308,13 @@ onMounted(async () => {
     useAlert(t('CAMPAIGN.EMAIL_CAMPAIGN.GALLERY.LOAD_ERROR'));
   }
   await fetchTemplates();
+  fetchPendingImport();
   mounted = true;
 });
 onActivated(() => {
-  if (mounted) fetchTemplates();
+  if (!mounted) return;
+  fetchTemplates();
+  fetchPendingImport();
 });
 
 onBeforeUnmount(() => {
@@ -267,6 +325,19 @@ onBeforeUnmount(() => {
   }
   cardEls.clear();
 });
+
+// Back from "Trazer meu modelo" with the saved model: "Meus modelos", the card marked "Novo" and the
+// confirmation (the page is kept alive, so this also runs when it is shown again).
+watch(
+  newTemplateId,
+  id => {
+    if (!id) return;
+    library.value = 'own';
+    activeCategory.value = 'all';
+    useAlert(t(`${IMPORT}.SAVED`));
+  },
+  { immediate: true }
+);
 
 const chooseLibrary = value => {
   library.value = value;
@@ -298,7 +369,16 @@ const chooseLibrary = value => {
             {{ t(`${UX}.LIBRARY_SUBTITLE`) }}
           </p>
         </div>
-        <div class="relative">
+        <div class="relative flex flex-wrap gap-2">
+          <Button
+            v-if="canImport"
+            :label="t(`${IMPORT}.BUTTON`)"
+            icon="i-lucide-upload"
+            slate
+            outline
+            class="!min-h-11 !rounded-xl"
+            @click="goToImport()"
+          />
           <Button
             :label="t(`${UX}.${campaignId ? 'BACK_EDITOR' : 'BACK_CAMPAIGNS'}`)"
             icon="i-lucide-arrow-left"
@@ -372,7 +452,58 @@ const chooseLibrary = value => {
           {{ categoryLabel(category) }}
         </button>
       </nav>
+      <div
+        v-if="pendingImport"
+        class="mb-5 flex flex-wrap items-center gap-3 rounded-2xl border border-n-blue-5 bg-n-blue-2 p-4"
+        role="status"
+      >
+        <span
+          class="flex size-10 shrink-0 items-center justify-center rounded-full bg-n-blue-3 text-n-blue-11"
+        >
+          <span class="i-lucide-upload size-5" />
+        </span>
+        <p class="mb-0 min-w-0 flex-1 text-sm font-medium text-n-slate-12">
+          {{
+            t(
+              `${IMPORT}.${pendingImport.status === 'ready' ? 'READY_TITLE' : 'WAITING_TITLE'}`
+            )
+          }}
+        </p>
+        <Button
+          :label="t(`${IMPORT}.RESUME`)"
+          icon="i-lucide-arrow-right"
+          trailing-icon
+          class="!min-h-11 !rounded-xl"
+          @click="goToImport(pendingImport.id)"
+        />
+      </div>
       <div v-if="isLoading" class="flex justify-center py-16"><Spinner /></div>
+      <div
+        v-else-if="showImportEmpty"
+        class="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-n-strong bg-n-solid-1 px-6 py-12 text-center"
+      >
+        <span
+          class="mb-2 flex size-16 items-center justify-center rounded-2xl bg-n-blue-3 text-n-blue-11"
+        >
+          <span class="i-lucide-upload size-7" />
+        </span>
+        <h2 class="mb-0 text-xl font-semibold text-n-slate-12">
+          {{ t(`${IMPORT}.EMPTY_TITLE`) }}
+        </h2>
+        <p class="mb-0 text-base text-n-slate-11">
+          {{ t(`${IMPORT}.EMPTY_TEXT`) }}
+        </p>
+        <Button
+          :label="t(`${IMPORT}.BUTTON`)"
+          icon="i-lucide-upload"
+          size="lg"
+          class="mt-2 !min-h-12 !rounded-xl"
+          @click="goToImport()"
+        />
+        <p class="mb-0 mt-1 text-xs text-n-slate-11">
+          {{ t(`${IMPORT}.EMPTY_HINT`) }}
+        </p>
+      </div>
       <p
         v-else-if="!filteredTemplates.length"
         class="rounded-2xl border border-n-weak bg-n-solid-1 p-12 text-center text-sm text-n-slate-11"
@@ -385,7 +516,12 @@ const chooseLibrary = value => {
           :key="template.id"
           :ref="el => registerCard(template.id, el)"
           :data-template-id="template.id"
-          class="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-n-weak bg-n-solid-1 shadow-sm"
+          class="flex min-w-0 flex-col overflow-hidden rounded-2xl border bg-n-solid-1 shadow-sm"
+          :class="
+            template.id === newTemplateId
+              ? 'border-n-brand ring-2 ring-n-brand'
+              : 'border-n-weak'
+          "
         >
           <button
             class="relative flex h-56 items-center justify-center overflow-hidden border-b border-n-weak bg-n-alpha-1 p-4"
@@ -394,6 +530,12 @@ const chooseLibrary = value => {
             "
             @click="openPreview(template)"
           >
+            <span
+              v-if="template.id === newTemplateId"
+              class="absolute start-3 top-3 z-10 rounded-full bg-n-brand px-2.5 py-1 text-xs font-semibold text-white"
+            >
+              {{ t(`${IMPORT}.NEW_BADGE`) }}
+            </span>
             <img
               v-if="template.thumbnail_url"
               :src="template.thumbnail_url"
@@ -431,7 +573,11 @@ const chooseLibrary = value => {
               {{ displayName(template) }}
             </h2>
             <p class="mb-0 text-xs leading-5 text-n-slate-11">
-              {{ t(`${UX}.MODEL_HINT`) }}
+              {{
+                template.id === newTemplateId
+                  ? t(`${IMPORT}.NEW_HINT`)
+                  : t(`${UX}.MODEL_HINT`)
+              }}
             </p>
             <div class="mt-auto flex flex-wrap gap-2 pt-3">
               <Button

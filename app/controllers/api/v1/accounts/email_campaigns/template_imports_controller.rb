@@ -3,14 +3,19 @@
 # job that died, answering what blocks the saving from what the job stored; `save` turns a ready import into a template
 # in "Meus modelos", checked again on the server. Behind the per-account flag email_template_import (404 while it is
 # off) and campaign_manage. Errors are codes the screen explains in one sentence, never the client's markup.
+# For the screens (delivery C): `index` answers the person's last import still running or waiting to be seen (to come
+# back to it), `show` adds the step of the job, the cleaned preview of the original and what can be fixed, and `fix`
+# solves one warning that blocks the saving (EmailCampaigns::Import::Fixer).
 class Api::V1::Accounts::EmailCampaigns::TemplateImportsController < Api::V1::Accounts::EmailCampaigns::BaseController
   FEATURE = 'email_template_import'.freeze
   ERROR_PREFIX = 'email_template_import.'.freeze
   ERROR_STATUS = { in_progress: :conflict, not_ready: :conflict }.freeze
-  FIELDS = %i[id status source_kind source_url error_code email_campaign_template_id created_at updated_at].freeze
+  FIELDS = %i[id status source_kind source_url error_code email_campaign_template_id progress fixes created_at updated_at].freeze
+  RESUMABLE = %w[queued processing ready].freeze
+  RESUME_WINDOW = 1.day
 
   before_action :ensure_import_enabled
-  before_action :fetch_import, only: [:show, :save]
+  before_action :fetch_import, only: [:show, :save, :fix]
 
   rescue_from EmailCampaigns::Import::Error do |error|
     render_error(error.code)
@@ -18,6 +23,13 @@ class Api::V1::Accounts::EmailCampaigns::TemplateImportsController < Api::V1::Ac
 
   rescue_from EmailCampaigns::Import::Saver::Blocked do |error|
     render_error(error.code, blocking: error.problems.presence)
+  end
+
+  def index
+    authorize EmailCampaignTemplateImport
+    last = EmailCampaignTemplateImport.where(account: Current.account, user: Current.user, created_at: RESUME_WINDOW.ago..)
+                                      .order(created_at: :desc).first
+    render json: { payload: last && RESUMABLE.include?(last.status) ? [last.as_json(only: FIELDS)] : [] }
   end
 
   def show
@@ -40,6 +52,11 @@ class Api::V1::Accounts::EmailCampaigns::TemplateImportsController < Api::V1::Ac
     render json: template.as_json(only: Api::V1::Accounts::EmailCampaigns::TemplatesController::SHOW_FIELDS), status: :created
   end
 
+  def fix
+    authorize @import
+    render json: payload(EmailCampaigns::Import::Fixer.call(@import, fix_params))
+  end
+
   private
 
   def ensure_import_enabled
@@ -60,12 +77,18 @@ class Api::V1::Accounts::EmailCampaigns::TemplateImportsController < Api::V1::Ac
     params.permit(:name)
   end
 
+  def fix_params
+    params.permit(:kind, :choice, :target, :value, :file)
+  end
+
   def payload(import)
     ready = import.status == 'ready'
     import.as_json(only: FIELDS).merge(
       'report' => import.report.presence,
       'result_mjml' => ready ? import.result_mjml : nil,
-      'blocking' => ready ? import.blocking : []
+      'preview_html' => ready ? import.preview_html : nil,
+      'blocking' => ready ? import.blocking : [],
+      'targets' => ready ? EmailCampaigns::Import::Fixer.targets(import) : nil
     )
   end
 

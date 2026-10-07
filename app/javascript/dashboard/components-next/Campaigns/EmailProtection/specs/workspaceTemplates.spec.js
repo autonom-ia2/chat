@@ -13,14 +13,14 @@ vi.mock('dashboard/api/emailCampaignTemplates', () => ({
 }));
 vi.mock('dashboard/composables/store', () => ({
   useStore: () => ({ dispatch }),
-  useMapGetter: () => ref(false),
+  useMapGetter: () => ref(() => false),
 }));
 vi.mock('dashboard/composables/useCanManage', () => ({
   useCanManage: () => true,
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: alert }));
 vi.mock('vue-router', () => ({
-  useRoute: () => ({ params: { accountId: '800' } }),
+  useRoute: () => ({ params: { accountId: '800' }, query: {} }),
   useRouter: () => ({ push: routerPush }),
 }));
 vi.mock('vue-i18n', () => ({

@@ -547,9 +547,12 @@ Rails.application.routes.draw do
             post 'ai/rewrite',                 to: 'ai#rewrite'
             get  'ai/campaigns/:id/status',    to: 'ai#status'
             resources :templates, only: [:index, :show, :create, :destroy]
-            # Importar modelo (#1099): colar/arquivo/endereço → job → acompanhar → salvar em "Meus modelos".
-            resources :template_imports, only: [:create, :show] do
-              post :save, on: :member
+            # Importar modelo (#1099): colar/arquivo/endereço → job → acompanhar → corrigir → salvar em "Meus modelos".
+            resources :template_imports, only: [:index, :create, :show] do
+              member do
+                post :save
+                post :fix
+              end
             end
             resources :reports, only: [:index, :show] do
               member do

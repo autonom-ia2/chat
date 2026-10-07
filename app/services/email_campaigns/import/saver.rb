@@ -33,7 +33,7 @@ class EmailCampaigns::Import::Saver
       raise Blocked.new(:blocked, problems) if problems.any?
 
       template = create_template
-      @import.update!(status: 'saved', email_campaign_template: template)
+      @import.update!(status: 'saved', email_campaign_template: template, preview_html: nil)
       template
     end
   end

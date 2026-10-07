@@ -6,6 +6,8 @@
 # between the steps. The received input is purged only when this worker's guarded write landed: one that lost the
 # import to a newer attempt leaves the input to that attempt. An unexpected error goes to the error tracker as its class
 # and backtrace only — never its message, which may carry the client's markup.
+# For the screen (delivery C) the run also tells its step as it goes (reading, images with how many are done, checking)
+# and keeps the preview of the original, cleaned and pointing at the copied images (OriginalPreview).
 class EmailCampaigns::Import::Run
   JOB_SECONDS = 90
   Input = Data.define(:markup, :base_url, :files, :charset) do
@@ -34,12 +36,17 @@ class EmailCampaigns::Import::Run
   private
 
   def settle
+    step('reading')
     input = read_input
     result = convert(input)
-    mjml = copy_images(result, input)
+    copied = copy_images(result, input)
+    mjml = copied.mjml
     raise EmailCampaigns::Import::Error, :too_large if mjml.length > EmailCampaignTemplate::BODY_MAX
 
-    @import.finish!(@token, mjml: mjml, report: result.report.to_h, blocking: EmailCampaigns::Import::SaveCheck.call(mjml, @import))
+    step('checking', **@images)
+    preview = preview_of(input, copied.copies)
+    @import.finish!(@token, mjml: mjml, report: result.report.to_h, blocking: EmailCampaigns::Import::SaveCheck.call(mjml, @import),
+                            screen: { preview_html: preview, progress: { step: 'done', **@images } })
   rescue EmailCampaigns::Import::Error => e
     @import.fail!(@token, e.code)
   rescue StandardError => e
@@ -80,10 +87,28 @@ class EmailCampaigns::Import::Run
   end
 
   def copy_images(result, input)
-    mjml = EmailCampaigns::Import::ImageRehoster.call(result.mjml, result.report, import: @import, files: input.files || {},
-                                                                                  deadline: @deadline)
+    @images = { images_done: 0, images_total: Array(result.report.images).size }
+    step('images', **@images)
+    copied = EmailCampaigns::Import::ImageRehoster.rehost(result.mjml, result.report, import: @import, files: input.files || {},
+                                                                                      deadline: @deadline, on_copy: method(:image_copied))
+    mjml = copied.mjml
     mjml = EmailCampaigns::Import::ArchiveLinks.call(mjml, result.report) if input.files
     @deadline.check!
-    mjml
+    copied.with(mjml: mjml)
+  end
+
+  def image_copied(done, total)
+    @images = { images_done: done, images_total: total }
+    step('images', **@images)
+  end
+
+  def step(name, **counts)
+    @import.progress!(@token, { step: name, **counts })
+  end
+
+  # The preview is a help for the eye, never a reason to fail the import: past the deadline it is simply not kept.
+  def preview_of(input, copies)
+    EmailCampaigns::Import::OriginalPreview.call(input.markup, copies: copies, base_url: input.base_url, charset: input.charset,
+                                                               seconds: [EmailCampaigns::Import::OriginalPreview::SECONDS, @deadline.remaining].min)
   end
 end
