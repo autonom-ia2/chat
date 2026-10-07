@@ -10,7 +10,7 @@ RSpec.describe Crm::MetaAds::WhatsappReport::Sender do
   let(:digest) do
     { date: Date.new(2026, 10, 6), currency: 'BRL', spend: 120.0, conversations: 8, cost_per_conversation: 15.0, quotes: 3, sales: 1,
       sales_value: 900.0, best_ad: { ad_id: '1', name: 'Promo outubro', conversations: 5 },
-      action: { kind: 'stalled_quotes', count: 4, days: 3, value: 6200.0 } }
+      action: { kind: 'stalled_quotes', source: 'rule', facts: { 'count' => 4, 'days' => 3, 'value' => 6200.0 } } }
   end
   let(:alert) { { ad_id: '1', name: 'Promo outubro', spend: 45.0, currency: 'BRL' } }
 
@@ -60,7 +60,7 @@ RSpec.describe Crm::MetaAds::WhatsappReport::Sender do
           Conversas: 8 (R$ 15,00 por conversa)
           Propostas: 3 · Vendas: 1 (R$ 900,00)
           Melhor anúncio: Promo outubro, com 5 conversas
-          O que fazer hoje: Retome as 4 propostas paradas há mais de 3 dias (R$ 6.200,00).
+          O que fazer hoje: Retome as 4 propostas paradas há mais de 3 dias (R$ 6.200).
           Ver o painel: /app/accounts/#{account.id}/campaigns/meta-ads?aba=resultado
         TEXT
       end
@@ -130,7 +130,7 @@ RSpec.describe Crm::MetaAds::WhatsappReport::Sender do
       expect(template['name']).to eq('chat2you_resumo_anuncios')
       expect(template['language']).to eq('policy' => 'deterministic', 'code' => 'pt_BR')
       expect(template['components'].sole['parameters'].pluck('text'))
-        .to eq(['06/10', 'R$ 120,00', '8 conversas, 3 propostas e 1 venda', 'Retome as 4 propostas paradas há mais de 3 dias (R$ 6.200,00).'])
+        .to eq(['06/10', 'R$ 120,00', '8 conversas, 3 propostas e 1 venda', 'Retome as 4 propostas paradas há mais de 3 dias (R$ 6.200).'])
     end
 
     it 'sem o modelo aprovado não envia; recusa do provedor é send_failed' do

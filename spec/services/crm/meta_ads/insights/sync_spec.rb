@@ -10,6 +10,20 @@ RSpec.describe Crm::MetaAds::Insights::Sync do
 
   after { Redis::Alfred.delete(Crm::MetaAds::Insights::Usage.key(ad_account_id)) }
 
+  # A leitura da frequência de 7 dias (F5, D5.4): a consulta exata, sem `time_increment` nem janela de atribuição.
+  def stub_frequency(rows:, status: 200)
+    query = { 'level' => 'ad', 'date_preset' => 'last_7d', 'fields' => Crm::MetaAds::Insights::Query::WINDOW_FIELDS, 'limit' => '500' }
+    body = status == 200 ? { data: rows } : rows
+    stub_request(:get, meta_graph_url("act_#{ad_account_id}/insights"))
+      .with(query: query, headers: { 'Authorization' => "Bearer #{MetaAdsHelpers::TEST_TOKEN}" })
+      .to_return(status: status, body: body.to_json, headers: { 'Content-Type' => 'application/json' })
+  end
+
+  def frequency_row(ad_id: '120254710067060999', frequency: '4.6', date_stop: '2026-10-06')
+    { ad_id: ad_id, adset_id: '120254710067060777', impressions: '4600', reach: '1000', frequency: frequency,
+      date_start: '2026-09-30', date_stop: date_stop }
+  end
+
   it 'hoje: uma chamada por conta de anúncios, nível anúncio, dia a dia, janela fixa e sem ids (CA-2.1)' do
     graph = stub_meta_insights(ad_account_id, date_preset: 'today', rows: [meta_insights_row])
 
@@ -53,13 +67,66 @@ RSpec.describe Crm::MetaAds::Insights::Sync do
     stub_meta_insights(ad_account_id, date_preset: 'last_3d', rows: [meta_insights_row(date: '2026-10-04')])
     placements = stub_meta_insights(ad_account_id, date_preset: 'last_3d', breakdowns: 'publisher_platform,platform_position',
                                                    rows: [meta_insights_row(publisher_platform: 'instagram', platform_position: 'story')])
+    frequency = stub_frequency(rows: [frequency_row])
 
     expect(sync.perform('recent')).to eq(:ok)
 
     expect(placements).to have_been_requested.once
+    expect(frequency).to have_been_requested.once
     expect(Crm::MetaAdInsightDaily.sole.date).to eq(Date.new(2026, 10, 4))
     expect(Crm::MetaAdPlacementDaily.sole.platform_position).to eq('story')
     expect(connection.reload.insights_synced_at).to be_nil
+  end
+
+  describe 'frequência de 7 dias (F5, D5.4)' do
+    before { stub_meta_insights(ad_account_id, date_preset: 'last_3d', rows: [meta_insights_row(date: '2026-10-04')]) }
+
+    it 'grava uma linha por anúncio com o fim da janela que a Meta devolveu; reler sobrescreve' do
+      stub_meta_insights(ad_account_id, date_preset: 'last_3d', breakdowns: 'publisher_platform,platform_position', rows: [])
+      stub_frequency(rows: [frequency_row, frequency_row(ad_id: '777', frequency: '1.5', date_stop: '2026-10-05')])
+
+      2.times { described_class.new(connection).perform('recent') }
+
+      expect(Crm::MetaAdFrequencyWindow.order(:ad_id).pluck(:ad_id, :window_days, :date_end, :frequency, :reach, :impressions)).to eq(
+        [['120254710067060999', 7, Date.new(2026, 10, 6), BigDecimal('4.6'), 1000, 4600],
+         ['777', 7, Date.new(2026, 10, 5), BigDecimal('1.5'), 1000, 4600]]
+      )
+    end
+
+    it 'a falha dela, mesmo com código 100, não muda a conexão nem o resultado' do
+      allow(Rails.logger).to receive(:warn)
+      stub_meta_insights(ad_account_id, date_preset: 'last_3d', breakdowns: 'publisher_platform,platform_position', rows: [])
+      stub_frequency(rows: meta_graph_error(100, 'Invalid parameter'), status: 400)
+
+      expect(sync.perform('recent')).to eq(:ok)
+
+      expect(connection.reload).to have_attributes(status: 'active', last_error: nil)
+      expect(Crm::MetaAdFrequencyWindow.count).to eq(0)
+      expect(Rails.logger).to have_received(:warn).with(include('frequency', 'code=100'))
+    end
+
+    it 'roda mesmo quando a leitura de posicionamento falha, e o resultado continua o do posicionamento' do
+      allow(Rails.logger).to receive(:warn)
+      stub_meta_insights(ad_account_id, date_preset: 'last_3d', breakdowns: 'publisher_platform,platform_position',
+                                        rows: meta_graph_error(2, 'Service temporarily unavailable'), status: 500)
+      frequency = stub_frequency(rows: [frequency_row])
+
+      expect(sync.perform('recent')).to eq(:transient)
+
+      expect(frequency).to have_been_requested.once
+      expect(Crm::MetaAdFrequencyWindow.count).to eq(1)
+    end
+
+    it 'pula com a conta de anúncios em pausa pelo limite de uso' do
+      allow(Rails.logger).to receive(:warn)
+      stub_meta_insights(ad_account_id, date_preset: 'last_3d', breakdowns: 'publisher_platform,platform_position',
+                                        rows: meta_graph_error(17, 'User request limit reached'), status: 400)
+      frequency = stub_frequency(rows: [frequency_row])
+
+      expect(sync.perform('recent')).to eq(:paused)
+
+      expect(frequency).not_to have_been_requested
+    end
   end
 
   it 'uso acima de 75% pausa a conta de anúncios e a próxima leitura nem chama a Meta (CA-2.2)' do

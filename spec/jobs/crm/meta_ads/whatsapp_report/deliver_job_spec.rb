@@ -8,6 +8,12 @@ RSpec.describe Crm::MetaAds::WhatsappReport::DeliverJob do
   let(:sender) { instance_double(Crm::MetaAds::WhatsappReport::Sender) }
   let(:now) { Time.zone.parse('2026-10-07T08:00:00-03:00') }
   let(:error) { Crm::MetaAds::WhatsappReport::Settings::Error }
+  # O consultor (Advisor::Analysis) é do construtor A: aqui ele é stub (a integração roda sem stub).
+  let(:first_action) { { id: 4521, position: 1, kind: 'stalled_quotes', status: 'open', source: 'ai', headline: 'Retome.', body: nil } }
+  let(:advice) { { run_id: 812, writer: { status: 'written', reason: nil }, actions: [first_action] } }
+  # rubocop:disable RSpec/VerifiedDoubleReference
+  let!(:analysis) { class_double('Crm::MetaAds::Advisor::Analysis', daily: advice, current: advice, mark_shown!: nil).as_stubbed_const }
+  # rubocop:enable RSpec/VerifiedDoubleReference
 
   def spend_yesterday(value = 40)
     Crm::MetaAdInsightDaily.create!(account: account, ad_account_id: connection.ad_account_id, ad_id: '1', date: Date.new(2026, 10, 6),
@@ -28,20 +34,21 @@ RSpec.describe Crm::MetaAds::WhatsappReport::DeliverJob do
     travel_to(now) { %w[summary alert].each { |kind| Redis::Alfred.delete(described_class.lock_key(connection, kind)) } }
   end
 
-  it 'o resumo leva o texto da IA; erro ao montar sobe sem prender a trava do dia' do
+  it 'o resumo leva a primeira ação do consultor e a marca como mostrada; erro ao montar sobe sem prender a trava do dia' do
     travel_to(now) do
       spend_yesterday
-      answer = { source: 'ai', kind: 'wait', headline: 'Deixe rodar.', body: nil }
-      allow(Crm::MetaAds::Panel::AiAction).to receive(:daily).and_raise(Redis::CannotConnectError)
+      allow(analysis).to receive(:daily).and_raise(Redis::CannotConnectError)
       allow(sender).to receive(:send_summary).and_return(true)
 
       expect { described_class.perform_now(connection.id, 'summary') }.to raise_error(Redis::CannotConnectError)
       expect(Redis::Alfred.get(described_class.lock_key(connection, 'summary'))).to be_nil
+      expect(analysis).not_to have_received(:mark_shown!)
 
-      allow(Crm::MetaAds::Panel::AiAction).to receive(:daily).and_return(answer)
+      allow(analysis).to receive(:daily).and_return(advice)
       described_class.perform_now(connection.id, 'summary')
 
-      expect(sender).to have_received(:send_summary).once.with(hash_including(ai_action: answer))
+      expect(sender).to have_received(:send_summary).once.with(hash_including(action: first_action))
+      expect(analysis).to have_received(:mark_shown!).once.with([4521])
     end
   end
 
@@ -79,12 +86,12 @@ RSpec.describe Crm::MetaAds::WhatsappReport::DeliverJob do
   it 'ontem sem gasto nem conversa não envia, não chama a IA e registra nothing_to_report' do
     travel_to(now) do
       allow(sender).to receive(:send_summary)
-      expect(Crm::MetaAds::Panel::AiAction).not_to receive(:daily)
 
       described_class.perform_now(connection.id, 'summary')
 
       expect(sender).not_to have_received(:send_summary)
       expect(settings['last_error']).to eq('nothing_to_report')
+      expect(analysis).not_to have_received(:daily)
     end
   end
 

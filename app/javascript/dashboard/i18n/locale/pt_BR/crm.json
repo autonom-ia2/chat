@@ -2218,6 +2218,7 @@
         "SPEND_BACKFILLING": "Buscando os últimos 90 dias na Meta…",
         "CONFIDENCE": {
           "TITLE": "Quanto confiar nos números",
+          "TITLE_PERIOD": "Quanto confiar nos números — últimos {days} dias",
           "TOTAL": "Nos últimos {days} dias, 1 conversa veio de anúncios da Meta. Veja o quanto sabemos de qual anúncio a trouxe: | Nos últimos {days} dias, {count} conversas vieram de anúncios da Meta. Veja o quanto sabemos de qual anúncio trouxe cada uma:",
           "EMPTY": "Assim que chegarem conversas de anúncios, mostramos aqui de qual anúncio cada uma veio.",
           "AD": "Anúncio certo",
@@ -2225,7 +2226,22 @@
           "CAMPAIGN": "Só a campanha",
           "UNKNOWN": "Veio da Meta, sem saber o anúncio",
           "FIX": "Cole o texto do passo 3 em todos os anúncios que levam ao site para saber o anúncio",
-          "SHARE": "{share}%"
+          "SHARE": "{share}%",
+          "META": {
+            "WHATSAPP": {
+              "LINE": "Até ontem, a Meta diz {meta} conversa iniciada pelo WhatsApp; nós contamos {ours}. | Até ontem, a Meta diz {meta} conversas iniciadas pelo WhatsApp; nós contamos {ours}.",
+              "CLOSE": "Os dois números batem.",
+              "META_HIGHER": "A Meta também conta quem já conversava com você; conversa encaminhada ou de contato salvo chega sem origem para nós.",
+              "OURS_HIGHER": "Contamos toda conversa que chegou pelo anúncio, inclusive de quem clicou antes e voltou; a Meta só conta até 7 dias depois do clique."
+            },
+            "SITE": {
+              "LINE": "Até ontem, a Meta diz {meta} contato pelo site (visitas à página: {visits}); pelo botão do site, nós contamos {ours}. | Até ontem, a Meta diz {meta} contatos pelo site (visitas à página: {visits}); pelo botão do site, nós contamos {ours}.",
+              "CLOSE": "Os dois números batem.",
+              "META_HIGHER": "A Meta conta quem deixou contato no site; nem todo mundo clica depois para conversar no WhatsApp.",
+              "OURS_HIGHER": "Contamos toda conversa que veio pelo botão do site, mesmo de quem não deixou contato lá."
+            },
+            "NO_META_DATA": "A Meta ainda não mandou o número deste período."
+          }
         }
       },
       "ERRORS": {
@@ -2331,7 +2347,46 @@
           "NO_DATA": {
             "TEXT": "Ainda não há gasto nem conversa de anúncio neste período.",
             "WHY": "Por quê: os números aparecem assim que um anúncio gastar ou trouxer a primeira conversa."
-          }
+          },
+          "SLOW_RESPONSE": {
+            "TEXT": "Metade das conversas de anúncio dos últimos {windowDays} dias esperou mais de {medianSeconds} pela resposta. | Metade das conversas de anúncio dos últimos {windowDays} dias esperou mais de {medianSeconds} pela resposta, e 1 ficou sem resposta. | Metade das conversas de anúncio dos últimos {windowDays} dias esperou mais de {medianSeconds} pela resposta, e {unanswered} ficaram sem resposta.",
+            "TEXT_UNANSWERED": "1 conversa de anúncio dos últimos {windowDays} dias ficou sem resposta. | {unanswered} conversas de anúncio dos últimos {windowDays} dias ficaram sem resposta.",
+            "WHY": "Por quê: responder em até {targetSeconds} muda a venda. Quem espera muito procura outra empresa.",
+            "BUTTON": "Ver as conversas mais demoradas"
+          },
+          "REVIEW_AD": {
+            "TEXT": "Revise \"{ad}\": ele trouxe {conversations} conversas e {sales} vendas com {spend}.",
+            "WHY": "Por quê: seus anúncios que vendem custam em média {targetCostPerSale} por venda.",
+            "TEXT_NO_SALES": "Revise \"{ad}\": ele trouxe {conversations} conversas e nenhuma venda com {spend}.",
+            "WHY_NO_SALES": "Por quê: seus anúncios que vendem custam em média {targetCostPerSale} por venda. Olhe a imagem, o texto e quem atende essas conversas antes de desligar.",
+            "TEXT_ABOVE_AVERAGE": "Revise \"{ad}\": cada venda dele custa {costPerSale}.",
+            "WHY_ABOVE_AVERAGE": "Por quê: seus anúncios que vendem custam em média {targetCostPerSale} por venda. Ele trouxe {conversations} conversas e {sales} vendas com {spend}.",
+            "BUTTON": "Abrir o anúncio"
+          },
+          "REFRESH_CREATIVE": {
+            "TEXT": "Troque a imagem ou o texto de \"{ad}\".",
+            "WHY": "Por quê: o anúncio está cansando quem o vê.",
+            "TEXT_CTR": "Troque a imagem ou o texto de \"{ad}\": as pessoas estão clicando menos.",
+            "WHY_CTR": "Por quê: as pessoas clicam {ctrDropPct} menos nele do que nas semanas anteriores. Uma imagem ou um texto novo costuma trazer o interesse de volta.",
+            "TEXT_FREQUENCY": "Troque a imagem ou o texto de \"{ad}\": as mesmas pessoas já o viram muitas vezes.",
+            "WHY_FREQUENCY": "Por quê: cada pessoa já viu esse anúncio {frequency7d} vezes nos últimos {windowDays} dias. Quem vê o mesmo anúncio muitas vezes para de prestar atenção.",
+            "TEXT_BOTH": "Troque a imagem ou o texto de \"{ad}\": as pessoas clicam menos e já o viram muitas vezes.",
+            "WHY_BOTH": "Por quê: as pessoas clicam {ctrDropPct} menos nele do que nas semanas anteriores, e cada uma já o viu {frequency7d} vezes nos últimos {windowDays} dias.",
+            "BUTTON": "Abrir o anúncio"
+          },
+          "SCALE_AD": {
+            "TEXT": "Aumente o valor por dia do anúncio \"{ad}\" em até {maxIncreasePct}.",
+            "WHY": "Por quê: ele vende por {costPerSale}, abaixo da média de {targetCostPerSale}, há {weeks} semanas. Depois de aumentar, espere {cooldownDays} dias antes de aumentar de novo.",
+            "BUTTON": "Abrir no Gerenciador da Meta"
+          },
+          "AUCTION_PRESSURE": {
+            "TEXT": "Não troque seus anúncios por causa do preço desta semana.",
+            "WHY": "Por quê: aparecer para mil pessoas ficou {cpmChangePct} mais caro nos últimos {windowDays} dias, de {cpmBaseline} para {cpmRecent}, e os cliques continuam iguais. É a concorrência, não o seu anúncio.",
+            "BUTTON": "Entendi"
+          },
+          "DONE": "Feito",
+          "DISMISS": "Dispensar",
+          "DONE_LABEL": "Feita"
         },
         "PATH_TITLE": "O caminho do seu dinheiro",
         "PATH": {
@@ -2371,6 +2426,42 @@
           "SPEND": "Investido",
           "CONVERSATIONS": "Conversas",
           "SALES": "Vendas"
+        },
+        "DURATION": {
+          "SECONDS": "menos de 1 min",
+          "MINUTES": "{n} min",
+          "HOURS": "{n} h",
+          "DAYS": "{n} dia | {n} dias"
+        },
+        "RESPONSE_TIME": {
+          "LABEL": "Tempo de resposta:",
+          "NOTE": "metade respondida em até esse tempo",
+          "UNANSWERED": "1 sem resposta | {count} sem resposta"
+        },
+        "PATH_LIST": {
+          "TITLE_CONVERSATIONS": "Conversas de anúncio",
+          "TITLE_QUOTES": "Propostas",
+          "TITLE_SALES": "Vendas",
+          "TITLE_SLOW_REPLIES": "Conversas mais demoradas para responder",
+          "TOTAL_CONVERSATIONS": "1 conversa | {count} conversas",
+          "TOTAL_QUOTES": "1 proposta | {count} propostas",
+          "TOTAL_SALES": "1 venda | {count} vendas",
+          "TOTAL_SLOW_REPLIES": "1 conversa | {count} conversas",
+          "LAST_30_DAYS": "últimos 30 dias",
+          "EMPTY": "Nada nesta etapa no período.",
+          "ERROR": "Não foi possível carregar a lista agora.",
+          "RETRY": "Tentar de novo",
+          "SHOWING": "Mostrando {shown} de {total}",
+          "OPEN_CONVERSATION": "Abrir conversa",
+          "OPEN_CARD": "Abrir no CRM",
+          "OPEN": "Ver a lista",
+          "CLOSE": "Fechar a lista",
+          "OPEN_LABEL": "Ver a lista de {step}",
+          "NO_TITLE": "Sem nome",
+          "ANSWERED_IN": "Respondida em {duration}",
+          "NO_ANSWER": "Sem resposta",
+          "WON": "Ganha",
+          "LOST": "Perdida"
         }
       },
       "AD_DETAIL": {
@@ -2419,8 +2510,10 @@
           "WRITING": "A IA está escrevendo…",
           "AI_ERROR": "A IA não respondeu agora; esta é a ação pela regra.",
           "FAILED": "Não foi possível falar com a IA agora; esta é a ação pela regra.",
-          "REVIEW_AD_BUTTON": "Ver o anúncio",
-          "WHY_LABEL": "Por quê:"
+          "WHY_LABEL": "Por quê:",
+          "DISMISS_FAILED": "Não foi possível dispensar agora. Tente de novo.",
+          "DONE_FAILED": "Não foi possível marcar como feita agora. Tente de novo.",
+          "ALREADY_RESOLVED": "Esta ação já foi resolvida em outra tela. A lista foi atualizada."
         },
         "QUOTE": {
           "SUGGEST": "Sugerir mensagem",

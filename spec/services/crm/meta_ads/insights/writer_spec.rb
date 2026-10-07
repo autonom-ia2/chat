@@ -50,6 +50,22 @@ RSpec.describe Crm::MetaAds::Insights::Writer do
     expect(Crm::MetaAdInsightDaily.sole.conversations_started).to eq(0)
   end
 
+  it 'grava a frequência da janela por anúncio, com o date_stop da Meta como fim; linha sem anúncio ou sem fim fica de fora' do
+    rows = [
+      { 'ad_id' => '1', 'adset_id' => '10', 'impressions' => '4600', 'reach' => '1000', 'frequency' => '4.6', 'date_stop' => '2026-10-05' },
+      { 'ad_id' => nil, 'date_stop' => '2026-10-05' },
+      { 'ad_id' => '2', 'date_stop' => nil }
+    ]
+
+    expect(writer.frequency_windows!(rows, window_days: 7)).to eq(1)
+    expect(described_class.new(connection).frequency_windows!([rows.first.merge('frequency' => '4.8')], window_days: 7)).to eq(1)
+
+    expect(Crm::MetaAdFrequencyWindow.sole).to have_attributes(
+      account_id: account.id, ad_account_id: connection.ad_account_id, ad_id: '1', adset_id: '10', window_days: 7,
+      date_end: Date.new(2026, 10, 5), impressions: 4600, reach: 1000, frequency: BigDecimal('4.8')
+    )
+  end
+
   it 'grava posicionamento por plataforma e posição' do
     rows = [
       row(publisher_platform: 'instagram', platform_position: 'instagram_reels', spend: '20.00'),

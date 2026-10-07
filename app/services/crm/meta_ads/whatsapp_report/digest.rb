@@ -2,16 +2,15 @@
 # conta o gasto.
 #
 # Gasto de `crm_meta_ad_insights_daily` (date = ontem); conversas, propostas e vendas da mesma coorte do painel
-# (`Panel::Cohort`) com o intervalo de ontem; o anúncio que mais trouxe conversa; e o que fazer hoje, no período em
-# que o painel abre (30 dias), para o resumo dizer o mesmo que a pessoa vê ao abrir.
+# (`Panel::Cohort`) com o intervalo de ontem; o anúncio que mais trouxe conversa; e o que fazer hoje.
 #
-# O que fazer hoje: com `with_ai: true` (o envio das 8h), o texto da IA (`Panel::AiAction`, decisão do Rodrigo em
-# 07/10/2026). Ele sai do mesmo guardado do dia que o painel usa: se alguém já abriu o painel no idioma da conta,
-# não há chamada nova; senão é uma chamada por conta por dia, só para quem ligou o resumo. IA desligada, sem
-# credencial ou com falha: fica a regra (`Panel::Action`), como no painel. O envio de teste não chama a IA.
+# O que fazer hoje (F5, #1110): a primeira ação do consultor (Crm::MetaAds::Advisor::Analysis), a mesma que o
+# painel mostra em primeiro, porque o consultor não depende do período da tela (D5.2). Com `with_ai: true` (o
+# envio das 8h), `Analysis.daily` escreve o texto pela IA se o run do dia ainda não tem texto e há vaga no teto;
+# a ação vem com `source: 'ai'` e o texto pronto, ou com `source: 'rule'` e os fatos, que o MessageBuilder
+# formata. O envio de teste não chama a IA (`Analysis.current`, sem escrita). O envio real marca a ação como
+# mostrada (`mark_shown!`), o de teste não.
 class Crm::MetaAds::WhatsappReport::Digest
-  ACTION_DAYS = Crm::MetaAds::Panel::Report::PERIODS.last
-
   def initialize(connection, with_ai: false)
     @connection = connection
     @with_ai = with_ai
@@ -26,14 +25,20 @@ class Crm::MetaAds::WhatsappReport::Digest
     @payload ||= {
       date: date, currency: currency, spend: spend, conversations: cohort.conversation_ads.size,
       cost_per_conversation: ratio(spend, cohort.conversation_ads.size), quotes: cohort.cards.count(&:quote?),
-      sales: sales.size, sales_value: sales.sum(&:value).round(2), best_ad: best_ad, action: action,
-      ai_action: ai_action
+      sales: sales.size, sales_value: sales.sum(&:value).round(2), best_ad: best_ad, action: action
     }
   end
 
   # Ontem sem gasto e sem conversa: não há o que contar. Não monta o `payload`, para não chamar a IA à toa.
   def nothing_to_report?
     spend.zero? && cohort.conversation_ads.empty?
+  end
+
+  # Depois do envio real: a ação que o WhatsApp mostrou conta como mostrada na métrica de aceite. Os fillers
+  # (`wait`, `on_track`, `no_data`) não têm linha nem id.
+  def mark_shown!
+    id = payload.dig(:action, :id)
+    Crm::MetaAds::Advisor::Analysis.mark_shown!([id]) if id
   end
 
   private
@@ -66,17 +71,15 @@ class Crm::MetaAds::WhatsappReport::Digest
     { ad_id: ad_id, name: name.presence || ad_id, conversations: count }
   end
 
+  # A primeira ação do consultor, no idioma em que o resumo sai.
   def action
-    Crm::MetaAds::Panel::Report.new(@connection, days: ACTION_DAYS).payload[:action]
+    analysis = Crm::MetaAds::Advisor::Analysis
+    advice = @with_ai ? analysis.daily(@connection, language: language) : analysis.current(@connection, locale: language, trigger: 'digest')
+    advice[:actions].first
   end
 
-  # Só o texto que a IA de fato escreveu; a regra já está em `action`.
-  def ai_action
-    return unless @with_ai
-
-    answer = Crm::MetaAds::Panel::AiAction.daily(connection: @connection, days: ACTION_DAYS,
-                                                 language: Crm::MetaAds::WhatsappReport::MessageBuilder.new(@connection.account).language)
-    answer if answer[:source] == 'ai'
+  def language
+    Crm::MetaAds::WhatsappReport::MessageBuilder.new(@connection.account).language
   end
 
   def ratio(numerator, denominator)

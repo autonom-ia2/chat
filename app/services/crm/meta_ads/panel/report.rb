@@ -1,6 +1,7 @@
 # O painel do dia a dia de Anúncios da Meta (#1088, F3a): quanto foi investido no período, quantas conversas
-# vieram de anúncio, quantas viraram proposta e venda, cada anúncio com o seu veredito, a ação do dia e o quanto
-# confiar nos números.
+# vieram de anúncio, quantas viraram proposta e venda, cada anúncio com o seu veredito e o quanto confiar nos
+# números. A ação do dia saiu daqui na F5 (#1110): é o consultor (Crm::MetaAds::Advisor), que não depende do
+# período da tela (D5.2). O "quanto confiar" segue o período (D5.8).
 #
 # O período são os últimos `days` dias contando hoje, no fuso da conta de anúncios (o mesmo em que a Meta conta
 # o gasto). Tudo sai do banco: gasto da coleta diária (F2a), ligações conversa → anúncio (F2b) e cards do CRM.
@@ -20,9 +21,7 @@ class Crm::MetaAds::Panel::Report
 
   def payload
     {
-      days: @days, from: first_day, to: today, currency: currency, totals: totals, ads: ads,
-      action: Crm::MetaAds::Panel::Action.for(cards: cohort.cards, confidence: confidence, ads: ads),
-      confidence: confidence
+      days: @days, from: first_day, to: today, currency: currency, totals: totals, ads: ads, confidence: confidence
     }
   end
 
@@ -34,8 +33,14 @@ class Crm::MetaAds::Panel::Report
     today - (@days - 1)
   end
 
+  # Do início do primeiro dia, no fuso da conta de anúncios, até agora. A coorte, o tempo de resposta e o "quanto
+  # confiar" do período usam este mesmo intervalo.
+  def range
+    @range ||= first_day.in_time_zone(@zone)..Time.current
+  end
+
   def cohort
-    @cohort ||= Crm::MetaAds::Panel::Cohort.new(@connection.account_id, first_day.in_time_zone(@zone)..Time.current)
+    @cohort ||= Crm::MetaAds::Panel::Cohort.new(@connection.account_id, range)
   end
 
   def insights
@@ -117,7 +122,7 @@ class Crm::MetaAds::Panel::Report
   end
 
   def confidence
-    @confidence ||= Crm::MetaAds::Links::Stats.new(@connection).payload[:confidence]
+    @confidence ||= Crm::MetaAds::Links::Stats.new(@connection, since: range.begin).payload[:confidence]
   end
 
   def ratio(numerator, denominator)

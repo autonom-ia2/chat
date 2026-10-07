@@ -24,12 +24,21 @@ RSpec.describe 'CRM meta_ads_connection AI (F4a)', type: :request do
   end
 
   after do
-    Redis::Alfred.scan_each(match: "#{Crm::MetaAds::Panel::AiActionCache::PREFIX}:*") { |key| Redis::Alfred.delete(key) }
+    Redis::Alfred.scan_each(match: 'crm:meta_ads:advisor:*') { |key| Redis::Alfred.delete(key) }
   end
 
   def spend_today(connection)
     Crm::MetaAdInsightDaily.create!(account: account, ad_account_id: connection.ad_account_id, ad_id: ad_id, date: Date.new(2026, 10, 6),
                                     currency: 'BRL', spend: 42.5, attribution_window: '7d_click', fetched_at: Time.current)
+  end
+
+  # 5 conversas de anúncio sem anúncio identificado: o rastreio falha e a ação do dia é `fix_tracking`.
+  def untracked_conversations
+    5.times do |index|
+      conversation = create(:conversation, account: account)
+      Crm::MetaAdLink.create!(account: account, conversation: conversation, touch_key: SecureRandom.hex(4), origin: 'whatsapp',
+                              certainty: 'unknown', touched_at: (index + 1).days.ago)
+    end
   end
 
   def run_job_and_poll(accepted)
@@ -38,75 +47,100 @@ RSpec.describe 'CRM meta_ads_connection AI (F4a)', type: :request do
     response.parsed_body
   end
 
+  def post_daily_action(user = admin)
+    post "#{path}/daily_action", params: { days: 7 }, headers: auth_headers(user), as: :json
+  end
+
   describe 'POST daily_action' do
     let(:connection) { create_meta_ads_insights_connection(account) }
     let(:answer) do
-      { applies: true, kind: 'wait', ad_id: ad_id, headline: 'Deixe o anúncio rodar mais uns dias.',
-        body: 'Ainda é cedo para mexer.', why: 'Ele gastou R$ 42,50 e ainda não tem conversas suficientes.' }
+      { applies: true, numbers_in_words: false,
+        actions: [{ key: 'a1', headline: 'Arrume a origem das conversas.', body: 'Faltam {{unknown}} de {{conversations}} conversas.',
+                    why: 'Só {{identified_pct}} delas têm o anúncio.' }] }
     end
 
-    it 'pede à IA em segundo plano, devolve o texto dela e guarda para a próxima leitura do dia' do
+    it 'pede à IA em segundo plano, devolve o Advice escrito e não chama de novo na próxima leitura' do
       spend_today(connection)
+      untracked_conversations
       allow(client).to receive(:create).once.and_return(text: answer.to_json)
 
-      expect do
-        post "#{path}/daily_action", params: { days: 7 }, headers: auth_headers(admin), as: :json
-      end.to have_enqueued_job(Crm::Ai::InteractiveJob)
+      expect { post_daily_action }.to have_enqueued_job(Crm::Ai::InteractiveJob)
       expect(response).to have_http_status(:accepted)
 
       result = run_job_and_poll(response.parsed_body)
-      expect(result['status']).to eq('done')
-      expect(result['result']['daily_action']).to include('source' => 'ai', 'kind' => 'wait', 'ad_id' => ad_id, 'days' => 7,
-                                                          'headline' => 'Deixe o anúncio rodar mais uns dias.')
+      written = { 'status' => 'written', 'reason' => nil }
+      expect(result).to include('status' => 'done', 'result' => include('daily_action' => include('writer' => written)))
+      expect(result['result']['daily_action']['actions'].sole).to include(
+        'kind' => 'fix_tracking', 'source' => 'ai', 'status' => 'open', 'body' => 'Faltam 5 de 5 conversas.', 'why' => 'Só 0% delas têm o anúncio.'
+      )
 
-      post "#{path}/daily_action", params: { days: 7 }, headers: auth_headers(admin), as: :json
+      post_daily_action
       expect(response).to have_http_status(:ok)
-      expect(response.parsed_body['daily_action']).to include('source' => 'ai', 'kind' => 'wait')
+      expect(response.parsed_body['daily_action']['actions'].sole).to include('source' => 'ai', 'kind' => 'fix_tracking')
       expect(client).to have_received(:create).once
     end
 
-    it 'IA desligada responde a regra na hora' do
-      spend_today(connection)
+    it 'o job só escreve o run da própria conta' do
+      connection
+      other_run = Crm::MetaAdvisorRun.create!(account: create(:account), ad_account_id: '1', local_date: Date.new(2026, 10, 6), locale: 'en',
+                                              signature: 'x', rules_version: 'f5.1', trigger: 'panel')
+      operation = Crm::Ai::InteractiveOperation.new(
+        'operation' => 'meta_ads_daily_action', 'inputs' => { 'run_id' => other_run.id, 'language' => 'en' }, 'account_id' => account.id,
+        'account_user_id' => account.account_users.find_by(user: admin).id
+      )
+
+      operation.authorize!
+      expect { operation.perform }.to raise_error(ActiveRecord::RecordNotFound)
+      expect(other_run.reload.writer_status).to eq('pending')
+    end
+
+    it 'IA desligada fecha o run pela regra e responde na hora' do
+      untracked_conversations
+      connection
 
       with_modified_env CRM_AI_ENABLED: 'false' do
-        post "#{path}/daily_action", params: { days: 7 }, headers: auth_headers(admin), as: :json
+        post_daily_action
       end
 
       expect(response).to have_http_status(:ok)
-      expect(response.parsed_body['daily_action']).to include('source' => 'rule', 'reason' => 'ai_unavailable', 'kind' => 'wait', 'days' => 7)
+      advice = response.parsed_body['daily_action']
+      expect(advice['writer']).to eq('status' => 'rule', 'reason' => 'ai_unavailable')
+      expect(advice['actions'].sole).to include('kind' => 'fix_tracking', 'source' => 'rule', 'headline' => nil)
     end
 
-    it 'sem nada no período não chama a IA' do
-      connection
+    it 'só com a ação de espera não chama a IA' do
+      spend_today(connection)
 
-      post "#{path}/daily_action", params: { days: 30 }, headers: auth_headers(admin), as: :json
+      post_daily_action
 
-      expect(response.parsed_body['daily_action']).to include('source' => 'rule', 'reason' => 'not_applicable', 'kind' => 'no_data')
+      advice = response.parsed_body['daily_action']
+      expect(advice['writer']).to eq('status' => 'rule', 'reason' => 'not_applicable')
+      expect(advice['actions'].sole).to include('id' => nil, 'kind' => 'wait', 'ad_id' => ad_id)
       expect(Crm::Ai::ResponsesClient).not_to have_received(:new)
     end
 
-    it 'passado o teto do dia, fica com a regra' do
-      spend_today(connection)
-      Crm::MetaAds::Panel::AiActionCache::DAILY_LIMIT.times do
-        post "#{path}/daily_action", params: { days: 7 }, headers: auth_headers(admin), as: :json
-        expect(response).to have_http_status(:accepted)
-      end
+    it 'passado o teto do dia, fica com a regra sem reservar de novo' do
+      untracked_conversations
+      connection
+      key = Crm::MetaAds::Advisor::Analysis.counter_key(account.id, Date.new(2026, 10, 6))
+      Redis::Alfred.set(key, Crm::MetaAds::Advisor::Analysis::DAILY_LIMIT)
 
-      post "#{path}/daily_action", params: { days: 7 }, headers: auth_headers(admin), as: :json
+      post_daily_action
 
       expect(response).to have_http_status(:ok)
-      expect(response.parsed_body['daily_action']).to include('source' => 'rule', 'reason' => 'daily_limit')
+      expect(response.parsed_body['daily_action']['writer']).to eq('status' => 'rule', 'reason' => 'daily_limit')
+      expect(Redis::Alfred.get(key).to_i).to eq(Crm::MetaAds::Advisor::Analysis::DAILY_LIMIT)
     end
 
     it 'sem conexão devolve vazio' do
-      post "#{path}/daily_action", params: { days: 7 }, headers: auth_headers(admin), as: :json
+      post_daily_action
 
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body).to eq('daily_action' => nil)
     end
 
     it 'agente recebe 403' do
-      post "#{path}/daily_action", params: { days: 7 }, headers: auth_headers(agent), as: :json
+      post_daily_action(agent)
 
       expect(response).to have_http_status(:forbidden)
       expect(response.parsed_body).to eq('error' => 'forbidden')

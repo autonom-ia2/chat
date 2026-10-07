@@ -39,6 +39,19 @@ RSpec.describe Crm::MetaAds::Links::Stats do
     end
   end
 
+  it 'com since, conta só desde ali e diz quantos dias são no fuso da conta, hoje incluído (F5, D5.8)' do
+    recent, older = create_list(:conversation, 2, account: account)
+    travel_to(now) do
+      # O painel de 7 dias começa em 29/09 00:00 de São Paulo; agora ainda é 05/10 lá.
+      since = ActiveSupport::TimeZone['America/Sao_Paulo'].local(2026, 9, 29)
+      link(recent, 'ad', since + 1.hour)
+      link(older, 'ad', since - 1.minute)
+
+      expect(described_class.new(connection, since: since).payload[:confidence])
+        .to eq(window_days: 7, conversations: 1, ad: 1, ad_name: 0, campaign: 0, unknown: 0)
+    end
+  end
+
   it 'sem ligações devolve zeros' do
     expect(described_class.new(connection).payload)
       .to eq(ad_conversations_today: 0, confidence: { window_days: 30, conversations: 0, ad: 0, ad_name: 0, campaign: 0, unknown: 0 })

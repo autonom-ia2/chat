@@ -128,8 +128,12 @@ class Crm::Ai::InteractiveOperation
     @meta_ads_conversation ||= @account.conversations.find(meta_ads_stalled_card.conversation_id)
   end
 
+  # O consultor (F5, #1110): o run precisa ser da conta (nunca se confia no run_id da tela). Escreve o run (a
+  # Analysis reivindica e reserva o teto; se outra operação reivindicou antes, não escreve) e devolve o estado dele.
   def meta_ads_daily_action
-    { daily_action: Crm::MetaAds::Panel::AiAction.daily(connection: meta_ads_connection, **@inputs.slice(:days, :language)) }
+    run = ::Crm::MetaAdvisorRun.find_by!(id: @inputs.fetch(:run_id), account_id: @account.id)
+    Crm::MetaAds::Advisor::Analysis.write!(run)
+    { daily_action: Crm::MetaAds::Advisor::Analysis.serialize(run.reload, @inputs.fetch(:language)) }
   end
 
   def meta_ads_quote_message

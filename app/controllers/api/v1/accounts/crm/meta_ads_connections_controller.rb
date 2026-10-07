@@ -20,8 +20,12 @@
 #
 # Painel (#1088):
 # GET   panel?days=7|30 → o painel do dia a dia (Crm::MetaAds::Panel::Report); também pede a leitura de hoje.
+#       F5 (#1110): mais o consultor (`advice`, até 3 ações, sempre de 30 dias), a Meta × nós do período
+#       (`meta_comparison`) e o tempo de resposta do período (`response_time`).
 # GET   panel_ad?ad_id=&days=7|30 → um anúncio por dentro (Crm::MetaAds::Panel::AdDetail). Só banco: abrir o
 #       anúncio não chama a Meta nem pede leitura (o painel por trás já pediu).
+# GET   panel_list?step=conversations|quotes|sales|slow_replies&days=7|30 → a lista por trás de cada etapa do
+#       caminho do dinheiro (Crm::MetaAds::Panel::PathList, F5). Só banco. Etapa fora da lista: 422 invalid_step.
 #
 # Quem não é administrador recebe 403 (não 401: a sessão é válida, só falta a permissão).
 class Api::V1::Accounts::Crm::MetaAdsConnectionsController < Api::V1::Accounts::Crm::BaseController
@@ -29,7 +33,7 @@ class Api::V1::Accounts::Crm::MetaAdsConnectionsController < Api::V1::Accounts::
 
   # Tokens da Meta têm algumas centenas de caracteres; o teto barra corpos absurdos antes da Graph.
   MAX_TOKEN_LENGTH = 2048
-  READ_ACTIONS = %w[show ad_accounts pixels funnels insights panel panel_ad].freeze
+  READ_ACTIONS = %w[show ad_accounts pixels funnels insights panel panel_ad panel_list].freeze
 
   before_action :ensure_administrator
   before_action :ensure_mode, only: [:ad_accounts, :pixels, :selection]
@@ -70,8 +74,8 @@ class Api::V1::Accounts::Crm::MetaAdsConnectionsController < Api::V1::Accounts::
     return render json: { panel: nil } if connection.blank? || connection.ad_account_id.blank?
 
     refreshing = ::Crm::MetaAds::Insights::Refresh.request!(connection)
-    report = ::Crm::MetaAds::Panel::Report.new(connection, days: params[:days]).payload
-    render json: { panel: report.merge(synced_at: connection.reload.insights_synced_at, refreshing: refreshing) }
+    report = ::Crm::MetaAds::Panel::Report.new(connection, days: params[:days])
+    render json: { panel: panel_payload(connection, report).merge(synced_at: connection.reload.insights_synced_at, refreshing: refreshing) }
   end
 
   def panel_ad
@@ -79,6 +83,15 @@ class Api::V1::Accounts::Crm::MetaAdsConnectionsController < Api::V1::Accounts::
     return render json: { ad: nil } if connection.blank? || connection.ad_account_id.blank?
 
     render json: { ad: ::Crm::MetaAds::Panel::AdDetail.new(connection, ad_id: params[:ad_id], days: params[:days]).payload }
+  end
+
+  def panel_list
+    return render_unprocessable('invalid_step') unless ::Crm::MetaAds::Panel::PathList::STEPS.include?(params[:step])
+
+    connection = current_connection
+    return render json: { list: nil } if connection.blank? || connection.ad_account_id.blank?
+
+    render json: { list: ::Crm::MetaAds::Panel::PathList.new(connection, step: params[:step], days: params[:days]).payload }
   end
 
   def ad_accounts
@@ -191,6 +204,30 @@ class Api::V1::Accounts::Crm::MetaAdsConnectionsController < Api::V1::Accounts::
 
   def current_connection
     ::Crm::MetaAdsConnection.find_by(account_id: Current.account.id)
+  end
+
+  # O consultor recebe o Report da própria requisição: com 30 dias, os fatos dele reaproveitam a mesma coorte.
+  # Pedido pelo token de API (o Guia) não marca as ações como mostradas: a métrica de aceite é do painel (D5.11).
+  def panel_payload(connection, report)
+    report.payload.merge(
+      meta_comparison: ::Crm::MetaAds::Panel::MetaComparison.new(connection, report).payload,
+      response_time: response_time(connection, report),
+      advice: ::Crm::MetaAds::Advisor::Analysis.current(connection, locale: I18n.locale.to_s, report: report,
+                                                                    shown: !authenticate_by_access_token?)
+    )
+  end
+
+  # Sem conversa de anúncio no período não há o que medir. Com 30 dias é a mesma janela dos fatos do consultor
+  # (§4.2): sai do cache deles, sem refazer a consulta sobre `messages` a cada GET.
+  def response_time(connection, report)
+    return if report.cohort.conversation_ads.empty?
+
+    payload = if report.days == ::Crm::MetaAds::Advisor::Facts::COHORT_DAYS
+                ::Crm::MetaAds::Advisor::Facts.new(connection, report: report).payload.dig(:account, :response)
+              else
+                ::Crm::MetaAds::Panel::ResponseTime.new(account_id: connection.account_id, range: report.range).payload
+              end
+    payload.merge(days: report.days)
   end
 
   def payload
