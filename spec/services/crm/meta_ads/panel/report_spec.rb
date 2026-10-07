@@ -71,7 +71,7 @@ RSpec.describe Crm::MetaAds::Panel::Report do
 
       totals = described_class.new(connection, days: 7).payload[:totals]
 
-      expect(totals).to include(spend: 10.0, conversations: 0, cost_per_conversation: nil)
+      expect(totals).to include(spend: 10.0, conversations: 0, cost_per_conversation: nil, return_per_real: nil)
     end
   end
 

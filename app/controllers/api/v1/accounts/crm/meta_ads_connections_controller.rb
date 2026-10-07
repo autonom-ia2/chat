@@ -20,6 +20,8 @@
 #
 # Painel (#1088):
 # GET   panel?days=7|30 → o painel do dia a dia (Crm::MetaAds::Panel::Report); também pede a leitura de hoje.
+# GET   panel_ad?ad_id=&days=7|30 → um anúncio por dentro (Crm::MetaAds::Panel::AdDetail). Só banco: abrir o
+#       anúncio não chama a Meta nem pede leitura (o painel por trás já pediu).
 #
 # Quem não é administrador recebe 403 (não 401: a sessão é válida, só falta a permissão).
 class Api::V1::Accounts::Crm::MetaAdsConnectionsController < Api::V1::Accounts::Crm::BaseController
@@ -27,7 +29,7 @@ class Api::V1::Accounts::Crm::MetaAdsConnectionsController < Api::V1::Accounts::
 
   # Tokens da Meta têm algumas centenas de caracteres; o teto barra corpos absurdos antes da Graph.
   MAX_TOKEN_LENGTH = 2048
-  READ_ACTIONS = %w[show ad_accounts pixels funnels insights panel].freeze
+  READ_ACTIONS = %w[show ad_accounts pixels funnels insights panel panel_ad].freeze
 
   before_action :ensure_administrator
   before_action :ensure_mode, only: [:ad_accounts, :pixels, :selection]
@@ -70,6 +72,13 @@ class Api::V1::Accounts::Crm::MetaAdsConnectionsController < Api::V1::Accounts::
     refreshing = ::Crm::MetaAds::Insights::Refresh.request!(connection)
     report = ::Crm::MetaAds::Panel::Report.new(connection, days: params[:days]).payload
     render json: { panel: report.merge(synced_at: connection.reload.insights_synced_at, refreshing: refreshing) }
+  end
+
+  def panel_ad
+    connection = current_connection
+    return render json: { ad: nil } if connection.blank? || connection.ad_account_id.blank?
+
+    render json: { ad: ::Crm::MetaAds::Panel::AdDetail.new(connection, ad_id: params[:ad_id], days: params[:days]).payload }
   end
 
   def ad_accounts
