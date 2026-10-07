@@ -546,6 +546,19 @@ async function syntheticManager(t, options = {}) {
     });
     assert.equal(continued, true);
     if (options.pendingNavigation) return new Promise(() => {});
+    if (options.backgroundMethod) {
+      page.emit('response', {
+        url: request.url,
+        request: () => ({
+          ...request,
+          method: () => options.backgroundMethod,
+          postData: () => options.backgroundBody ?? null,
+          allHeaders: options.backgroundHeaders,
+        }),
+        status: () => 200,
+        text: async () => '',
+      });
+    }
     const body = deferred();
     bodies.push(body);
     if (!options.pendingBody) body.resolve(rolesResponse);
@@ -1230,3 +1243,38 @@ test('VPS cadence leaves room for its full cycle before the backend heartbeat ex
   data.signals.emit('SIGTERM');
   assert.equal(await data.settled, null);
 });
+
+for (const [method, body, label] of [
+  ['GET', null, 'GET'],
+  ['HEAD', null, 'HEAD'],
+  ['POST', 'fb_api_req_friendly_name=OtherRead_Query', 'unrelated POST'],
+  [
+    'POST',
+    'fb_api_req_friendly_name=RolesTable_Query&doc_id=invalid',
+    'invalid roles POST',
+  ],
+]) {
+  test(`ignores background ${label} GraphQL before reserving a roles publication`, async t => {
+    let backgroundHeaderReads = 0;
+    const data = await syntheticManager(t, {
+      backgroundMethod: method,
+      backgroundBody: body,
+      backgroundHeaders: () => {
+        backgroundHeaderReads += 1;
+        return new Promise(() => {});
+      },
+    });
+    assert.equal(backgroundHeaderReads, 0);
+    const publications = data.entries.filter(
+      entry => entry.payload.operation === 'publish'
+    );
+    assert.equal(publications.length, 1);
+    assert.equal(publications[0].payload.expected_version, null);
+    assert.equal(
+      publications[0].payload.session.user_id,
+      baseEnv.INSTAGRAM_TESTER_ADMIN_USER_ID
+    );
+    assert.equal(data.headers.length, 1);
+    assert.deepEqual(data.stderr, []);
+  });
+}
