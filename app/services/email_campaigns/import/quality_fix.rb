@@ -1,5 +1,5 @@
 # Deterministic quality corrections of an imported design (#1099), checked on the server against the MJML itself
-# (QualityGate without compiled HTML): Arial, body text at 14px or more, text and buttons readable (WCAG AA contrast),
+# (QualityGate without compiled HTML): a font every e-mail shows (WebFonts), body text at 14px or more, text and buttons readable (WCAG AA contrast),
 # buttons 44px tall, images described. At most MAX_PASSES rounds of gate → fix; what still fails is reported as pending
 # (unknown fields have their own blocking warning). Returns the corrected MJML.
 class EmailCampaigns::Import::QualityFix
@@ -32,7 +32,8 @@ class EmailCampaigns::Import::QualityFix
   private
 
   def violations(mjml)
-    EmailCampaigns::QualityGate.new(mjml: mjml, remote_images: true, placeholders: @placeholders).violations
+    EmailCampaigns::QualityGate.new(mjml: mjml, remote_images: true, placeholders: @placeholders,
+                                    fonts: EmailCampaigns::Import::WebFonts::NAMES).violations
   end
 
   def report(attempted, remaining)

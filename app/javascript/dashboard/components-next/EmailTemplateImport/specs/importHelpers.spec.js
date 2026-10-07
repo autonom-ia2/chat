@@ -5,7 +5,9 @@ import {
   fileProblem,
   pasteProblem,
   sizeLabel,
+  sourceOf,
 } from '../importErrors';
+import { cssString, withImportMarks } from 'dashboard/helper/compileEmailMjml';
 import { progressLines, progressPercent } from '../importProgress';
 import { uniqueName } from '../uniqueName';
 
@@ -27,6 +29,19 @@ describe('importErrors', () => {
     expect(classifyError('stalled').kind).toBe('failed');
     expect(classifyError('').kind).toBe('failed');
     expect(classifyError('rate_limited').kind).toBe('other');
+  });
+
+  it('keeps an address that did not open under the field, not on an error screen', () => {
+    expect(classifyError('url_unreachable').kind).toBe('inline');
+  });
+
+  it('knows how the model came in, so errors speak of a file, a code or an address', () => {
+    expect(['file', 'paste', 'url'].map(sourceOf)).toEqual([
+      'file',
+      'paste',
+      'url',
+    ]);
+    expect(sourceOf(undefined)).toBe('file');
   });
 
   it('checks the file and the pasted code before sending', () => {
@@ -102,6 +117,33 @@ describe('chipSegments', () => {
       { text: '<b>{{ nome }}</b>', chip: true },
       { text: '.' },
     ]);
+  });
+});
+
+describe('withImportMarks', () => {
+  const html =
+    '<html><head></head><body><a href="https://x.example">x</a></body></html>';
+
+  it('tags what is still to solve and keeps links from opening, with CSS only', () => {
+    const out = withImportMarks(html, {
+      unresolved: 'Ficou como imagem',
+      missing: 'Imagem não veio',
+    });
+    const style = out.slice(out.indexOf('<style>'), out.indexOf('</head>'));
+
+    expect(style).toContain('a{pointer-events:none');
+    expect(style).toContain(
+      '.import-unresolved::before{content:"Ficou como imagem"'
+    );
+    expect(style).toContain(
+      '.import-missing::before{content:"Imagem não veio"'
+    );
+    expect(style).not.toContain('<script');
+    expect(withImportMarks('')).toBe('');
+  });
+
+  it('writes a tag as a CSS string that cannot close the rule or the style', () => {
+    expect(cssString('a"b\\c</style>')).toBe('"a\\"b\\\\c\\3c /style>"');
   });
 });
 

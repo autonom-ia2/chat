@@ -1,8 +1,8 @@
-# Builders of the editable blocks of an imported model (#1099): mj-text from grouped paragraphs, mj-image (with a
+# Builders of the editable blocks of an imported model (#1099): mj-text from grouped paragraphs (in the original font
+# when every e-mail shows it, WebFonts), mj-image (with a
 # placeholder where the image could not be used), mj-divider, mj-spacer, and the marked placeholder image of a part
 # left for later (registered in the report with its text and markup, for the AI to rebuild on request).
 module EmailCampaigns::Import::Blocks
-  FONT = 'Arial, Helvetica, sans-serif'.freeze
   PADDING = '0px 0px 12px 0px'.freeze
   IMAGE_ALIGNS = %w[left center right].freeze
   MAX_ALT = 250
@@ -12,8 +12,8 @@ module EmailCampaigns::Import::Blocks
   module_function
 
   def text(style, html)
-    attrs = { 'font-family' => FONT, 'font-size' => "#{style.font_size.round}px", 'color' => style.color,
-              'font-weight' => style.bold ? '700' : nil, 'font-style' => style.italic ? 'italic' : nil,
+    attrs = { 'font-family' => EmailCampaigns::Import::WebFonts.stack(style.font_family), 'font-size' => "#{style.font_size.round}px",
+              'color' => style.color, 'font-weight' => style.bold ? '700' : nil, 'font-style' => style.italic ? 'italic' : nil,
               'line-height' => style.line_height, 'align' => style.align, 'padding' => PADDING }
     EmailCampaigns::Import::Model::Block.new(tag: 'mj-text', attrs: attrs, content: html)
   end

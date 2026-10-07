@@ -52,7 +52,7 @@ module EmailCampaigns::Import::Buttons
     outer = holder ? style(holder) : {}
     text = inherited.inherit(link)
     attrs = { 'href' => link['href'], 'background-color' => background(link), 'color' => color(own, outer),
-              'font-family' => EmailCampaigns::Import::Blocks::FONT, 'font-size' => "#{text.font_size.round}px",
+              'font-family' => EmailCampaigns::Import::WebFonts.stack(text.font_family), 'font-size' => "#{text.font_size.round}px",
               'font-weight' => text.bold ? '700' : nil, 'border-radius' => radius(own, outer), 'inner-padding' => inner_padding(own, outer),
               'line-height' => line_height(own), 'width' => width(own), 'align' => align(link, holder, text), 'padding' => PADDING }
     EmailCampaigns::Import::Model::Block.new(tag: 'mj-button', attrs: attrs, content: escape(EmailCampaigns::Import::TableParts.visible(link)))

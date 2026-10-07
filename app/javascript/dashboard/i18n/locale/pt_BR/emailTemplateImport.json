@@ -2,41 +2,41 @@
   "EMAIL_IMPORT": {
     "REPORT": {
       "UNKNOWN_FIELDS": "Alguns campos do modelo não existem aqui. Escolha o que vai no lugar antes de salvar.",
-      "IMAGE_MISSING": "{count} imagem(ns) não vieram. Troque antes de salvar.",
+      "IMAGE_MISSING": "{count} imagem não veio. Troque antes de salvar. | {count} imagens não vieram. Troque antes de salvar.",
       "INVALID": "Não deu para conferir este modelo. Importe de novo.",
-      "UNRESOLVED_PARTS": "{count} trecho(s) ainda não deu para trazer. Por enquanto, este modelo não pode ser salvo.",
-      "UNSAFE_REMOVED": "Tiramos um código que não é seguro em e-mail.",
-      "UNSAFE_CSS_REMOVED": "Tiramos estilos que não são seguros em e-mail.",
-      "HIDDEN_TEXT_REMOVED": "Tiramos um texto que estava escondido de quem lê.",
+      "UNRESOLVED_PARTS": "Ainda não deu para trazer {count} trecho. Por enquanto, este modelo não pode ser salvo. | Ainda não deu para trazer {count} trechos. Por enquanto, este modelo não pode ser salvo.",
+      "UNSAFE_REMOVED": "Tirei um código que não é seguro em e-mail.",
+      "UNSAFE_CSS_REMOVED": "Tirei estilos que não são seguros em e-mail.",
+      "HIDDEN_TEXT_REMOVED": "Tirei um texto que estava escondido de quem lê.",
       "CONDITIONAL_SIMPLIFIED": "Um trecho que mudava para cada pessoa agora mostra o mesmo texto para todos.",
-      "TAG_SIMPLIFIED": "Um campo tinha regras a mais. Ficamos só com o campo.",
-      "LINK_REMOVED": "{count} link(s) não funcionavam fora da ferramenta antiga e saíram. O texto ficou.",
+      "TAG_SIMPLIFIED": "Um campo tinha regras a mais. Fiquei só com o campo.",
+      "LINK_REMOVED": "{count} link não funcionava fora da ferramenta antiga e saiu. O texto ficou. | {count} links não funcionavam fora da ferramenta antiga e saíram. O texto ficou.",
       "REDIRECT_KEPT": "Alguns links passam por um contador da ferramenta antiga. Confira.",
-      "EMBED_REMOVED": "Tiramos um formulário ou conteúdo embutido. E-mail não mostra isso.",
+      "EMBED_REMOVED": "Tirei um formulário ou conteúdo embutido. E-mail não mostra isso.",
       "VIDEO_AS_IMAGE": "Um vídeo virou uma imagem com link.",
       "DARK_MODE_IGNORED": "As cores do modo escuro não foram mantidas.",
       "WEB_FONT_IGNORED": "Uma fonte especial foi trocada por uma que todo e-mail mostra.",
       "STYLES_DROPPED": "Alguns estilos não puderam ser mantidos.",
       "INCLUDE_IGNORED": "Um trecho que vinha de outro arquivo ficou de fora.",
-      "CSS_LIMIT": "O modelo tinha estilos demais. Ficamos com os primeiros.",
+      "CSS_LIMIT": "O modelo tinha estilos demais. Fiquei com os primeiros.",
       "LAYOUT_STACKED": "Algumas colunas foram empilhadas para caber no e-mail.",
       "TABLE_AS_TEXT": "Uma tabela virou linhas de texto.",
       "OUTLOOK_ONLY": "Um trecho feito só para um programa de e-mail foi trocado pela versão comum.",
       "QUALITY_PENDING": "Algumas regras de leitura não se corrigiram sozinhas. Confira o texto e as cores.",
       "GMAIL_CLIP": "O e-mail ficou longo e alguns programas de e-mail podem cortar.",
-      "TEMPLATE_CODE_REMOVED": "Tiramos um código da ferramenta antiga.",
+      "TEMPLATE_CODE_REMOVED": "Tirei um código da ferramenta antiga.",
       "UNSUBSCRIBE_LINK_REMOVED": "O link de descadastro antigo saiu. O nosso está no rodapé.",
       "UNSUBSCRIBE_TEXT_KEPT": "Ficou um texto sobre sair da lista. Confira.",
       "CHARACTERS_REPLACED": "Algumas letras não deu para ler e saíram. Confira o texto.",
       "ANIMATION_LOST": "Uma imagem animada ficou parada para caber no e-mail.",
       "SOCIAL_ICON_DEFAULT": "Um ícone de rede social não veio e voltou ao padrão.",
-      "IMAGES_TO_COPY": "{count} imagem(ns) para copiar.",
-      "IMAGES_COPIED": "{count} imagem(ns) copiadas para sua conta.",
-      "IMAGE_COMPRESSED": "{count} imagem(ns) ficaram mais leves para abrir rápido.",
+      "IMAGES_TO_COPY": "{count} imagem para copiar. | {count} imagens para copiar.",
+      "IMAGES_COPIED": "{count} imagem copiada para sua conta. | {count} imagens copiadas para sua conta.",
+      "IMAGE_COMPRESSED": "{count} imagem ficou mais leve, para abrir rápido. | {count} imagens ficaram mais leves, para abrir rápido.",
       "TAGS_CONVERTED": "Campos como o nome da pessoa agora funcionam aqui.",
-      "PLATFORM_TAGS_REMOVED": "Tiramos campos que só funcionavam na ferramenta antiga.",
+      "PLATFORM_TAGS_REMOVED": "Tirei campos que só funcionavam na ferramenta antiga.",
       "FOOTER_REPLACED": "O rodapé agora é o nosso, com o link de descadastro.",
-      "TRACKING_REMOVED": "Tiramos os contadores de abertura da ferramenta antiga.",
+      "TRACKING_REMOVED": "Tirei os contadores de abertura da ferramenta antiga.",
       "PREHEADER_KEPT": "O texto de prévia foi mantido.",
       "LINK_UNWRAPPED": "Os links agora vão direto para a página certa.",
       "VML_BUTTON_RECOVERED": "Um botão feito para um programa de e-mail foi refeito.",
@@ -44,8 +44,8 @@
       "NAVBAR_CONVERTED": "O menu virou links editáveis.",
       "ACCORDION_CONVERTED": "Trechos que abriam no clique agora mostram todo o texto.",
       "CAROUSEL_CONVERTED": "O carrossel virou imagens uma embaixo da outra.",
-      "FONT_REPLACED": "A fonte foi trocada para Arial para ler bem em todo lugar.",
-      "QUALITY_FIXED": "Ajustamos tamanhos e cores para ficar fácil de ler."
+      "FONT_REPLACED": "Troquei uma fonte especial por uma que todo e-mail mostra.",
+      "QUALITY_FIXED": "Ajustei tamanhos e cores para ficar fácil de ler."
     },
     "ERRORS": {
       "TOO_LARGE": "Este modelo é grande demais. Use até 500 KB, ou um .zip de até 2 MB.",
@@ -120,7 +120,7 @@
       },
       "PASTE": {
         "TITLE": "Cole o código do seu e-mail",
-        "LEAD": "Clique na caixa e cole. No computador: Ctrl + V.",
+        "LEAD": "Clique na caixa e cole. No computador: Ctrl + V (no Mac, Cmd + V).",
         "LABEL": "Código do e-mail",
         "RECEIVED": "Código recebido · {size}",
         "GO": "Trazer este modelo"
@@ -147,8 +147,7 @@
         "IMAGES": "Trazendo as imagens",
         "IMAGES_COUNT": "Trazendo as imagens ({done} de {total})",
         "EDITABLE": "Deixando tudo editável",
-        "LEAVE": "Fazer outra coisa",
-        "SEE": "Ver como ficou"
+        "LEAVE": "Fazer outra coisa"
       },
       "RESULT": {
         "TITLE_READY": "Pronto. Veja como ficou.",
@@ -169,7 +168,10 @@
         "SIDE_PENDING_TEXT": "Resolva cada um aqui para poder guardar.",
         "CONTINUE": "Está bom, continuar",
         "SOLVE": "Resolver agora",
-        "ANOTHER": "Trazer outro"
+        "ANOTHER": "Trazer outro",
+        "NO_PREVIEW": "Não deu para mostrar a prévia.",
+        "MARK_PART": "Ficou como imagem",
+        "MARK_IMAGE": "Imagem não veio"
       },
       "ROWS": {
         "IMAGE_MISSING": "Uma imagem não veio.",
@@ -182,7 +184,7 @@
         "INVALID": "Não deu para conferir este modelo.",
         "INVALID_HINT": "Traga o modelo de novo.",
         "SWAP_IMAGE": "Trocar imagem",
-        "SEE_WHERE": "Ver onde",
+        "SOLVE_PART": "Resolver",
         "CHOOSE": "Escolher",
         "IMAGES_COPIED": "{count} imagem copiada para o seu espaço. | {count} imagens copiadas para o seu espaço.",
         "TAG_SWAPPED": "Troquei {from} por {to}.",
@@ -228,7 +230,7 @@
       },
       "PART_DIALOG": {
         "TITLE": "Este pedaço é uma imagem",
-        "TEXT": "Não deu para trazer este pedaço em blocos. Você não consegue mudar o texto dele:",
+        "TEXT": "Não deu para deixar este pedaço editável. Você não consegue mudar o texto dele:",
         "REBUILD": "Refazer para editar",
         "SOON": "Refazer com IA chega em breve.",
         "KEEP_TEXT": "Deixar só o texto",
@@ -263,12 +265,30 @@
         "SAVE": "Salvar em Meus modelos"
       },
       "ERROR": {
-        "NOT_EMAIL_TITLE": "Este arquivo não é um modelo de e-mail.",
-        "NOT_EMAIL_TEXT": "Envie o arquivo que termina em .html, ou cole o código.",
-        "TOO_BIG_TITLE": "Este modelo é grande demais.",
-        "TOO_BIG_TEXT": "Tire algumas imagens do arquivo e tente de novo.",
-        "FAILED_TITLE": "Não deu certo agora.",
-        "FAILED_TEXT": "Seu arquivo não foi salvo. Tente de novo em alguns minutos.",
+        "NOT_EMAIL": {
+          "FILE_TITLE": "Este arquivo não é um modelo de e-mail.",
+          "FILE_TEXT": "Envie o arquivo que termina em .html, ou cole o código.",
+          "PASTE_TITLE": "Este código não é de um modelo de e-mail.",
+          "PASTE_TEXT": "Copie de novo o código do e-mail e cole aqui.",
+          "URL_TITLE": "Esta página não é de um modelo de e-mail.",
+          "URL_TEXT": "Abra o e-mail no navegador e copie o endereço de lá."
+        },
+        "TOO_BIG": {
+          "FILE_TITLE": "Este arquivo é grande demais.",
+          "FILE_TEXT": "Tire algumas imagens do arquivo e tente de novo.",
+          "PASTE_TITLE": "Este código é grande demais.",
+          "PASTE_TEXT": "Envie o arquivo do e-mail no lugar de colar.",
+          "URL_TITLE": "Esta página é grande demais.",
+          "URL_TEXT": "Envie o arquivo do e-mail no lugar do endereço."
+        },
+        "FAILED": {
+          "FILE_TITLE": "Não deu certo agora.",
+          "FILE_TEXT": "Seu arquivo não foi salvo. Tente de novo em alguns minutos.",
+          "PASTE_TITLE": "Não deu certo agora.",
+          "PASTE_TEXT": "Nada foi salvo. Tente de novo em alguns minutos.",
+          "URL_TITLE": "Não deu certo agora.",
+          "URL_TEXT": "Nada foi salvo. Tente de novo em alguns minutos."
+        },
         "TRY_OTHER": "Tentar outro",
         "TRY_AGAIN": "Tentar de novo"
       }

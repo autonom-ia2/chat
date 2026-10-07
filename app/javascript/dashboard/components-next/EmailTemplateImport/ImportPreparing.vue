@@ -11,7 +11,8 @@ const props = defineProps({
   status: { type: String, default: 'queued' },
 });
 
-const emit = defineEmits(['leave', 'see']);
+// The screen changes by itself when the model is ready: the only way out here is to leave.
+const emit = defineEmits(['leave']);
 
 const { t } = useI18n();
 const S = 'EMAIL_IMPORT.SCREEN.PREPARING';
@@ -56,33 +57,19 @@ const percent = computed(() => progressPercent(props.progress, props.status));
           {{ t(`${S}.${line.key}`, line.params) }}
         </li>
       </ul>
-      <div
-        class="mt-5 h-2 overflow-hidden rounded-full bg-n-slate-4"
-        role="progressbar"
-        :aria-valuenow="percent"
-        aria-valuemin="0"
-        aria-valuemax="100"
-      >
-        <div
-          class="h-full rounded-full bg-n-brand transition-all duration-500"
-          :style="{ width: `${percent}%` }"
-        />
-      </div>
-      <div class="mt-6 flex flex-wrap items-center justify-between gap-3">
+      <progress
+        :value="percent"
+        max="100"
+        :aria-label="t(`${S}.TITLE`)"
+        class="mt-5 block h-2 w-full appearance-none overflow-hidden rounded-full border-0 bg-n-slate-4 [&::-moz-progress-bar]:rounded-full [&::-moz-progress-bar]:bg-n-brand [&::-webkit-progress-bar]:bg-n-slate-4 [&::-webkit-progress-value]:rounded-full [&::-webkit-progress-value]:bg-n-brand [&::-webkit-progress-value]:transition-all"
+      />
+      <div class="mt-6 flex flex-wrap items-center gap-3">
         <Button
           :label="t(`${S}.LEAVE`)"
           slate
           outline
           class="!min-h-11 !rounded-xl"
           @click="emit('leave')"
-        />
-        <Button
-          :label="t(`${S}.SEE`)"
-          icon="i-lucide-arrow-right"
-          trailing-icon
-          class="!min-h-11 !rounded-xl"
-          :disabled="status !== 'ready'"
-          @click="emit('see')"
         />
       </div>
     </section>

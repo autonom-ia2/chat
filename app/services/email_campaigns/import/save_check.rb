@@ -64,7 +64,8 @@ class EmailCampaigns::Import::SaveCheck
   end
 
   def check_gate
-    gate = EmailCampaigns::QualityGate.new(mjml: @mjml, remote_images: true, placeholders: EmailCampaigns::Import::Engine::PLACEHOLDERS)
+    gate = EmailCampaigns::QualityGate.new(mjml: @mjml, remote_images: true, placeholders: EmailCampaigns::Import::Engine::PLACEHOLDERS,
+                                           fonts: EmailCampaigns::Import::WebFonts::NAMES)
     gate.violations.each do |violation|
       code = BLOCKING_GATE_CHECKS[violation.check]
       @problems[code] << violation.detail.to_s if code

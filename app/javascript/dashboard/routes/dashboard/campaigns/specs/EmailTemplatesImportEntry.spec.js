@@ -7,6 +7,7 @@ const apiShow = vi.hoisted(() => vi.fn());
 const latest = vi.hoisted(() => vi.fn());
 const compile = vi.hoisted(() => vi.fn());
 const routerPush = vi.hoisted(() => vi.fn());
+const routerReplace = vi.hoisted(() => vi.fn());
 const alert = vi.hoisted(() => vi.fn());
 const flags = vi.hoisted(() => ({ on: false, asked: [] }));
 const route = vi.hoisted(() => ({ params: { accountId: '800' }, query: {} }));
@@ -34,7 +35,7 @@ vi.mock('dashboard/composables/useCanManage', () => ({
 vi.mock('dashboard/composables', () => ({ useAlert: alert }));
 vi.mock('vue-router', () => ({
   useRoute: () => route,
-  useRouter: () => ({ push: routerPush }),
+  useRouter: () => ({ push: routerPush, replace: routerReplace }),
 }));
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: key => key }) }));
 
@@ -73,6 +74,7 @@ beforeEach(() => {
   latest.mockResolvedValue({ data: { payload: [] } });
   compile.mockResolvedValue('<html>compilado</html>');
   routerPush.mockReset();
+  routerReplace.mockReset();
   alert.mockReset();
   vi.stubGlobal(
     'IntersectionObserver',
@@ -162,6 +164,25 @@ it('marks the model just saved as new, first in "Meus modelos", with its compile
     '<html>compilado</html>'
   );
   expect(card.find('iframe').attributes('sandbox')).toBe('');
+  // The badge sits in the card text, not over the picture.
+  expect(card.find('button iframe').exists()).toBe(true);
+  expect(card.find('button').text()).not.toContain('NEW_BADGE');
+});
+
+it('takes ?novo= out of the address once it said so, so a reload does not say it again', async () => {
+  flags.on = true;
+  route.name = 'campaigns_email_templates';
+  route.query = { novo: '55', campaign: '3' };
+  await mountPage();
+
+  expect(routerReplace).toHaveBeenCalledWith({
+    name: 'campaigns_email_templates',
+    params: route.params,
+    query: { campaign: '3' },
+  });
+  expect(wrapper.find('article').text()).toContain(
+    'EMAIL_IMPORT.SCREEN.LIBRARY.NEW_BADGE'
+  );
 });
 
 it('brings back an import that is waiting to be seen', async () => {

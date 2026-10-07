@@ -20,7 +20,11 @@ RSpec.describe EmailCampaigns::Import::Fixer, :aggregate_failures do
     MJML
   end
   let(:mjml) { EmailCampaigns::LockedFooter.ensure("<mjml><mj-body>#{body}</mj-body></mjml>") }
-  let(:report) { { 'unresolved' => [{ 'id' => 'trecho-1', 'text' => 'Chegou a safra de outubro <b>', 'html' => '<div>x</div>' }] } }
+  let(:part_html) do
+    '<table><tr><td style="text-align:center"><h1 style="font-size:30px;color:#3b2516">Chegou a safra de outubro &lt;b&gt;</h1>' \
+      '<p style="font-size:16px">Grãos frescos,<br>direto da torra</p></td></tr></table>'
+  end
+  let(:report) { { 'unresolved' => [{ 'id' => 'trecho-1', 'text' => 'Chegou a safra de outubro <b>', 'html' => part_html }] } }
   let(:import) do
     EmailCampaignTemplateImport.create!(account: account, source_kind: 'paste', status: 'ready', result_mjml: mjml, report: report,
                                         blocking: EmailCampaigns::Import::SaveCheck.call(mjml, EmailCampaignTemplateImport.new))
@@ -87,6 +91,17 @@ RSpec.describe EmailCampaigns::Import::Fixer, :aggregate_failures do
       expect(codes).not_to include('image_missing')
     end
 
+    it 'keeps nothing when the image is not there (already solved, or never was)' do
+      expect { fix(kind: 'image', target: '999', choice: 'upload', file: upload) }
+        .to raise_error(EmailCampaigns::Import::Error) { |error| expect(error.code).to eq(:fix_gone) }
+      fix(kind: 'image', target: '1', choice: 'remove')
+      expect { fix(kind: 'image', target: '1', choice: 'upload', file: upload) }
+        .to raise_error(EmailCampaigns::Import::Error) { |error| expect(error.code).to eq(:fix_gone) }
+
+      expect(import.reload.images.count).to eq(0)
+      expect(ActiveStorage::Blob.count).to eq(0)
+    end
+
     it 'refuses a file that is not an image, and one that is too big' do
       expect { fix(kind: 'image', target: '1', choice: 'upload', file: upload('<html>oi</html>')) }
         .to raise_error(EmailCampaigns::Import::Error) { |error| expect(error.code).to eq(:image_unfit) }
@@ -134,14 +149,24 @@ RSpec.describe EmailCampaigns::Import::Fixer, :aggregate_failures do
   end
 
   describe 'a part that became an image' do
-    it 'keeps only its text, as an editable text block' do
+    it 'keeps only its text, one editable block per paragraph, the title still a title' do
       fix(kind: 'part', target: 'trecho-1', choice: 'text')
 
-      text = Nokogiri::XML(import.result_mjml).css('mj-text')[1]
-      expect(text.text).to eq('Chegou a safra de outubro <b>')
+      title, first, second = Nokogiri::XML(import.result_mjml).css('mj-text')[1, 3]
+      expect([title.text, first.text, second.text]).to eq(['Chegou a safra de outubro <b>', 'Grãos frescos,', 'direto da torra'])
+      expect(title.to_h).to include('font-size' => '30px', 'font-weight' => '700', 'align' => 'center', 'color' => '#3b2516')
+      expect(first.to_h).to include('font-size' => '16px', 'align' => 'center')
+      expect(first.to_h).not_to have_key('font-weight')
       expect(import.result_mjml).to include('Chegou a safra de outubro &lt;b>')
       expect(import.result_mjml).not_to include(placeholders::UNRESOLVED_SRC)
       expect(codes).not_to include('unresolved_parts')
+    end
+
+    it 'falls back to the flat text when the report kept no markup' do
+      import.update!(report: { 'unresolved' => [{ 'id' => 'trecho-1', 'text' => 'Chegou a safra' }] })
+      fix(kind: 'part', target: 'trecho-1', choice: 'text')
+
+      expect(Nokogiri::XML(import.result_mjml).css('mj-text')[1].text).to eq('Chegou a safra')
     end
 
     it 'stays readable on the color of the section it lands on' do

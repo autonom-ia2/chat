@@ -2,8 +2,16 @@
 // EmailCampaigns::Import::Error (and the controller), always as "email_template_import.<code>".
 export const ERROR_PREFIX = 'email_template_import.';
 
-// Problems with what the person typed: shown under the field, on the same screen.
-const INLINE = ['url_invalid', 'url_not_https', 'url_unsafe', 'empty'];
+// Problems with what the person typed: shown under the field, on the same screen, with what
+// they typed still there (the address that did not open comes back from the job).
+const INLINE = [
+  'url_invalid',
+  'url_not_https',
+  'url_unsafe',
+  'url_unreachable',
+  'empty',
+];
+const SOURCES = ['file', 'paste', 'url'];
 const NOT_EMAIL = [
   'unsupported_file',
   'zip_no_html',
@@ -39,6 +47,9 @@ export const classifyError = code => {
   if (FAILED.includes(code) || !code) return { kind: 'failed', code };
   return { kind: 'other', code };
 };
+
+// How the model came in, so an error speaks of a file, a pasted code or an address.
+export const sourceOf = kind => (SOURCES.includes(kind) ? kind : 'file');
 
 const extensionOf = name => {
   const dot = name.lastIndexOf('.');

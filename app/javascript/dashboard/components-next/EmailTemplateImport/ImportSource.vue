@@ -12,6 +12,8 @@ const props = defineProps({
     validator: value => ['paste', 'file', 'url'].includes(value),
   },
   initialFile: { type: Object, default: null },
+  // What the person sent last time, back on the screen after a problem with it (the address that did not open).
+  initialInput: { type: Object, default: null },
   errorText: { type: String, default: '' },
   isSending: { type: Boolean, default: false },
 });
@@ -20,9 +22,12 @@ const emit = defineEmits(['submit', 'back']);
 
 const { t } = useI18n();
 const S = 'EMAIL_IMPORT.SCREEN';
-const content = ref('');
-const address = ref('');
-const file = ref(props.initialFile);
+const sameMode = props.initialInput?.kind === props.mode;
+const content = ref(sameMode ? props.initialInput.content || '' : '');
+const address = ref(sameMode ? props.initialInput.url || '' : '');
+const file = ref(
+  props.initialFile || (sameMode ? props.initialInput.file : null)
+);
 const isDragging = ref(false);
 const fileInput = useTemplateRef('fileInput');
 

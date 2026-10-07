@@ -4,8 +4,10 @@ class EmailCampaigns::Import::QualityFix::Fixes
   include EmailCampaigns::QualityGate::Css
 
   GATE = EmailCampaigns::QualityGate
-  FONT = 'Arial, Helvetica, sans-serif'.freeze
+  FONTS = EmailCampaigns::Import::WebFonts
   MAX_ALT = 120
+  # How far a button background may move toward black (or white) so its own letter color reads well.
+  BUTTON_SHIFT = 0.3
 
   def initialize(root, cut, checks)
     @root = root
@@ -30,8 +32,8 @@ class EmailCampaigns::Import::QualityFix::Fixes
   private
 
   def font_family(node)
-    family = node['font-family'].to_s.split(',').first.to_s.strip.delete('"\'').downcase
-    node['font-family'] = FONT unless family == GATE::FONT
+    family = FONTS.names(node['font-family']).first
+    node['font-family'] = FONTS.stack(node['font-family']) unless FONTS::NAMES.include?(family)
   end
 
   def font_size(node)
@@ -75,16 +77,25 @@ class EmailCampaigns::Import::QualityFix::Fixes
     GATE::Contrast.adjust(color, background, needed)
   end
 
+  # The button keeps the letter color the original showed (usually white) when its background only needs a small shift
+  # to read well; otherwise the letter becomes black or white, whichever reads better, and the background moves if needed.
   def button_contrast(node)
     background = node['background-color'] || GATE::DEFAULT_BUTTON_BACKGROUND
     color = node['color'] || GATE::DEFAULT_BUTTON_COLOR
     return if GATE::Contrast.ratio(color, background).to_f >= GATE::MIN_CONTRAST
+
+    near = near_background(background, color)
+    return node['background-color'] = near if near
 
     best = %w[#ffffff #000000].max_by { |candidate| GATE::Contrast.ratio(candidate, background).to_f }
     node['color'] = best
     return if GATE::Contrast.ratio(best, background).to_f >= GATE::MIN_CONTRAST
 
     node['background-color'] = GATE::Contrast.adjust(background, best, GATE::MIN_CONTRAST)
+  end
+
+  def near_background(background, color)
+    GATE::Contrast.adjust(background, color, GATE::MIN_CONTRAST, limit: BUTTON_SHIFT) if GATE::Contrast.rgb(color)
   end
 
   def button_height(node)

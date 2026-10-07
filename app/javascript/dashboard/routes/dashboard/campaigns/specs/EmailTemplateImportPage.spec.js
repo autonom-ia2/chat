@@ -1,4 +1,4 @@
-import { reactive, ref } from 'vue';
+import { KeepAlive, h, nextTick, reactive, ref } from 'vue';
 import { config, flushPromises, mount } from '@vue/test-utils';
 import EmailTemplateImportPage from '../pages/EmailTemplateImportPage.vue';
 
@@ -240,7 +240,9 @@ it('says in one sentence that a file is not an e-mail, before sending it', async
   await flushPromises();
 
   expect(api.start).not.toHaveBeenCalled();
-  expect(wrapper.text()).toContain('EMAIL_IMPORT.SCREEN.ERROR.NOT_EMAIL_TITLE');
+  expect(wrapper.text()).toContain(
+    'EMAIL_IMPORT.SCREEN.ERROR.NOT_EMAIL.FILE_TITLE'
+  );
   expect(wrapper.text()).toContain('campanha-outubro.pdf');
   await buttonWith('EMAIL_IMPORT.SCREEN.ERROR.TRY_OTHER').trigger('click');
   expect(wrapper.findAll('[data-mode]')).toHaveLength(3);
@@ -280,6 +282,127 @@ it('offers to try again when the preparation fails in the middle', async () => {
   });
   await mountPage();
 
-  expect(wrapper.text()).toContain('EMAIL_IMPORT.SCREEN.ERROR.FAILED_TITLE');
+  expect(wrapper.text()).toContain(
+    'EMAIL_IMPORT.SCREEN.ERROR.FAILED.FILE_TITLE'
+  );
   expect(buttonWith('EMAIL_IMPORT.SCREEN.ERROR.TRY_AGAIN').exists()).toBe(true);
+});
+
+it('speaks of the pasted code, not of a file, when pasting fails', async () => {
+  api.start.mockRejectedValue(failure('malformed_mjml'));
+  await mountPage();
+  await wrapper.find('[data-mode="paste"]').trigger('click');
+  await wrapper.find('textarea').setValue('<mjml><mj-body>');
+  await wrapper.find('form').trigger('submit');
+  await flushPromises();
+
+  expect(wrapper.text()).toContain(
+    'EMAIL_IMPORT.SCREEN.ERROR.NOT_EMAIL.PASTE_TITLE'
+  );
+  expect(wrapper.text()).toContain(
+    'EMAIL_IMPORT.SCREEN.ERROR.NOT_EMAIL.PASTE_TEXT'
+  );
+  expect(wrapper.text()).not.toContain('FILE_');
+});
+
+it('brings an address that did not open back under the field, still typed', async () => {
+  api.start.mockResolvedValue({ data: { id: 7, status: 'queued' } });
+  api.show.mockResolvedValue({
+    data: { id: 7, status: 'failed', error_code: 'url_unreachable' },
+  });
+  await mountPage();
+  await wrapper.find('[data-mode="url"]').trigger('click');
+  await wrapper
+    .find('input[type="url"]')
+    .setValue('https://news.example.com/ver');
+  await wrapper.find('form').trigger('submit');
+  await flushPromises();
+
+  expect(wrapper.find('[role="alert"]').text()).toBe(
+    'EMAIL_IMPORT.ERRORS.URL_UNREACHABLE'
+  );
+  expect(wrapper.find('input[type="url"]').element.value).toBe(
+    'https://news.example.com/ver'
+  );
+});
+
+it('keeps following when one check fails on the network', async () => {
+  route.params.importId = '7';
+  api.show
+    .mockResolvedValueOnce({ data: { id: 7, status: 'processing' } })
+    .mockRejectedValueOnce(new Error('Network Error'))
+    .mockResolvedValue({ data: ready() });
+  vi.useFakeTimers();
+  try {
+    await mountPage();
+    await vi.advanceTimersByTimeAsync(1600);
+    expect(wrapper.text()).not.toContain('ERROR.FAILED');
+    await vi.advanceTimersByTimeAsync(1600);
+    await flushPromises();
+    expect(wrapper.text()).toContain('EMAIL_IMPORT.SCREEN.RESULT.TITLE_READY');
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+it('drops an answer that arrives after the kept-alive page left, and stops asking', async () => {
+  route.params.importId = '7';
+  let answer;
+  api.show.mockReturnValue(
+    new Promise(resolve => {
+      answer = resolve;
+    })
+  );
+  const shown = ref(true);
+  const Host = {
+    render: () =>
+      h(KeepAlive, null, shown.value ? h(EmailTemplateImportPage) : null),
+  };
+  vi.useFakeTimers();
+  try {
+    wrapper = mount(Host, { attachTo: document.body });
+    await flushPromises();
+    shown.value = false;
+    await nextTick();
+    answer({
+      data: { id: 7, status: 'saved', email_campaign_template_id: 55 },
+    });
+    await vi.advanceTimersByTimeAsync(5000);
+
+    expect(api.show).toHaveBeenCalledTimes(1);
+    expect(router.replace).not.toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'campaigns_email_templates' })
+    );
+
+    // Coming back starts a new visit from the address.
+    api.show.mockResolvedValue({ data: ready() });
+    shown.value = true;
+    await nextTick();
+    await flushPromises();
+    expect(api.show).toHaveBeenCalledTimes(2);
+    expect(wrapper.text()).toContain('EMAIL_IMPORT.SCREEN.RESULT.TITLE_READY');
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+it('ignores an answer about another import', async () => {
+  route.params.importId = '7';
+  api.show.mockResolvedValue({ data: ready({ id: 3 }) });
+  await mountPage();
+
+  expect(wrapper.text()).not.toContain(
+    'EMAIL_IMPORT.SCREEN.RESULT.TITLE_READY'
+  );
+});
+
+it('says when the preview could not be shown, with a way out', async () => {
+  route.params.importId = '7';
+  api.show.mockResolvedValue({ data: ready({ result_mjml: '' }) });
+  await mountPage();
+
+  const empty = wrapper.find('[data-no-preview]');
+  expect(empty.text()).toContain('EMAIL_IMPORT.SCREEN.RESULT.NO_PREVIEW');
+  await empty.find('button').trigger('click');
+  expect(wrapper.findAll('[data-mode]')).toHaveLength(3);
 });

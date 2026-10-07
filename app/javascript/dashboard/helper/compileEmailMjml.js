@@ -21,14 +21,41 @@ export const compileEmailMjml = async mjml => {
 };
 
 // Marks, inside a compiled preview, what the person still has to solve (css-class of the import
-// placeholders). Only CSS goes in: the preview runs in an iframe with sandbox="".
-export const IMPORT_MARK_STYLE =
-  '<style>.import-unresolved,.import-missing,.import-missing-background{outline:3px dashed #F59E0B;outline-offset:-3px}</style>';
+// placeholders): a dashed outline and a fixed tag that says what it is ("Ficou como imagem").
+// Links do not open: a click would take the preview frame to another site. Only CSS goes in: the
+// preview runs in an iframe with sandbox="".
+const MARK = '#D97706';
 
-export const withImportMarks = html => {
+// A text as a CSS string, so a translated tag can never close the rule or the <style>.
+export const cssString = text =>
+  `"${String(text)
+    .split('\\')
+    .join('\\\\')
+    .split('"')
+    .join('\\"')
+    .split('<')
+    .join('\\3c ')
+    .split('\n')
+    .join(' ')}"`;
+
+const tagRule = (selector, label) =>
+  label
+    ? `${selector}{position:relative}${selector}::before{content:${cssString(label)};position:absolute;left:10px;top:10px;z-index:2;` +
+      `padding:3px 9px;border-radius:999px;background:${MARK};color:#ffffff;font:600 12px/1.4 Arial,Helvetica,sans-serif}`
+    : '';
+
+export const importMarkStyle = (labels = {}) =>
+  '<style>a{pointer-events:none;cursor:default}' +
+  `.import-unresolved,.import-missing,.import-missing-background{outline:3px dashed ${MARK};outline-offset:-3px}` +
+  tagRule('.import-unresolved', labels.unresolved) +
+  tagRule('.import-missing', labels.missing) +
+  '</style>';
+
+export const withImportMarks = (html, labels = {}) => {
   if (!html) return '';
+  const style = importMarkStyle(labels);
   const head = html.indexOf('</head>');
   return head === -1
-    ? `${IMPORT_MARK_STYLE}${html}`
-    : `${html.slice(0, head)}${IMPORT_MARK_STYLE}${html.slice(head)}`;
+    ? `${style}${html}`
+    : `${html.slice(0, head)}${style}${html.slice(head)}`;
 };

@@ -115,7 +115,8 @@ RSpec.describe EmailCampaigns::Import::Engine, :aggregate_failures do
   it 'corrects quality problems on its own and lists what it could not' do
     result = import('mailchimp.html')
     violations = EmailCampaigns::QualityGate.new(mjml: result.mjml, remote_images: true,
-                                                 placeholders: described_class::PLACEHOLDERS).violations
+                                                 placeholders: described_class::PLACEHOLDERS,
+                                                 fonts: EmailCampaigns::Import::WebFonts::NAMES).violations
 
     expect(violations.map(&:check).uniq - %i[local_images]).to eq([])
     expect(warning(result, :quality_fixed)[:items]).to include('contrast', 'font_size', 'image_alt')

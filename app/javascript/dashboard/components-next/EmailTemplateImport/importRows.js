@@ -42,6 +42,16 @@ const FIXABLE = {
 };
 
 export const tagOf = key => `{{ ${key} }}`;
+
+// A field as the person wrote it in the original ({{lead.cupom}}), from what the import recorded;
+// our own way of writing it when the import has no record of it.
+export const fieldText = (data, key) => {
+  const unknown = (data?.report?.warnings || []).find(
+    warning => warning.code === 'unknown_fields'
+  );
+  const item = (unknown?.items || []).find(entry => entry?.key === key);
+  return item?.from || tagOf(key);
+};
 export const fieldLabelKey = key =>
   `${S}.FIELD_DIALOG.FIELDS.${key.toUpperCase()}`;
 
@@ -66,6 +76,7 @@ export const problemsOf = data => {
       id: `field-${key}`,
       type: 'field',
       target: key,
+      label: fieldText(data, key),
     })),
   ];
   const unfixable = (data?.blocking || []).some(
@@ -106,7 +117,7 @@ const problemRow = problem => {
       icon: 'i-lucide-triangle-alert',
       text: { key: `${S}.ROWS.PART` },
       hint: { key: `${S}.ROWS.PART_HINT` },
-      action: { label: `${S}.ROWS.SEE_WHERE`, icon: 'i-lucide-eye', problem },
+      action: { label: `${S}.ROWS.SOLVE_PART`, problem },
     };
   }
   if (problem.type === 'field') {
@@ -114,7 +125,7 @@ const problemRow = problem => {
       id: problem.id,
       tone: 'warn',
       icon: 'i-lucide-triangle-alert',
-      text: { key: `${S}.ROWS.FIELD`, chips: { field: tagOf(problem.target) } },
+      text: { key: `${S}.ROWS.FIELD`, chips: { field: problem.label } },
       action: { label: `${S}.ROWS.CHOOSE`, problem },
     };
   }
@@ -139,8 +150,8 @@ const imageUploadText = fix => {
   };
 };
 
-const fixText = fix => {
-  const field = { field: tagOf(fix.target) };
+const fixText = (fix, data) => {
+  const field = { field: fieldText(data, fix.target) };
   const texts = {
     'image_missing.upload': imageUploadText(fix),
     'image_missing.remove': { key: `${S}.ROWS.FIXED.IMAGE_REMOVE` },
@@ -170,7 +181,7 @@ const fixRows = data =>
       id: `fix-${index}`,
       tone: 'ok',
       icon: 'i-lucide-check',
-      text: fixText(fix),
+      text: fixText(fix, data),
     }))
     .filter(row => row.text);
 
@@ -251,7 +262,7 @@ const doneRows = data => {
         tone: warning.severity === 'warning' ? 'info' : 'ok',
         icon:
           warning.severity === 'warning' ? 'i-lucide-info' : 'i-lucide-check',
-        text: { key: warning.key, params: { count: warning.count } },
+        text: { key: warning.key, count: warning.count || 1 },
       })
     );
   return rows;

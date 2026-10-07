@@ -17,15 +17,17 @@ RSpec.describe EmailCampaigns::Import::QualityFix, :aggregate_failures do
   end
 
   def checks(mjml)
-    EmailCampaigns::QualityGate.new(mjml: mjml, remote_images: true, placeholders: placeholders).violations.map(&:check)
+    EmailCampaigns::QualityGate.new(mjml: mjml, remote_images: true, placeholders: placeholders,
+                                    fonts: EmailCampaigns::Import::WebFonts::NAMES).violations.map(&:check)
   end
 
   def warning(code)
     report.to_h[:warnings].find { |entry| entry[:code] == code }
   end
 
-  it 'darkens low-contrast text, raises small fonts and sets Arial, inside the text too' do
-    mjml = email('<mj-text font-family="Georgia" font-size="11px" color="#c8c8c8">Letras <span style="color:#dddddd;font-size:10px">miúdas</span> ' \
+  it 'darkens low-contrast text, raises small fonts and sets a font every e-mail shows, inside the text too' do
+    mjml = email('<mj-text font-family="Playfair Display" font-size="11px" color="#c8c8c8">' \
+                 'Letras <span style="color:#dddddd;font-size:10px">miúdas</span> ' \
                  'e <a href="https://a.example.com" style="color:#eeeeee">link</a></mj-text>')
 
     expect(checks(mjml)).to include(:contrast, :font_size, :font_family)
@@ -33,6 +35,27 @@ RSpec.describe EmailCampaigns::Import::QualityFix, :aggregate_failures do
     expect(checks(out)).to be_empty
     expect(out).to include('font-family="Arial, Helvetica, sans-serif"', 'font-size="14px"', 'font-size:14px')
     expect(warning(:quality_fixed)[:items]).to include('contrast', 'font_size', 'font_family')
+  end
+
+  it 'keeps a font every e-mail shows, and the fallback of the same kind of a web font' do
+    out = fix(email('<mj-text font-family="Georgia" font-size="16px" color="#111111">Serifa</mj-text>' \
+                    '<mj-text font-family="Lora, Georgia, serif" font-size="16px" color="#111111">Web</mj-text>' \
+                    '<mj-text font-family="Lobster" font-size="16px" color="#111111">Sem par</mj-text>'))
+
+    expect(Nokogiri::HTML5.fragment(out).css('mj-text').first(3).pluck('font-family'))
+      .to eq(['Georgia', EmailCampaigns::Import::WebFonts::SERIF, EmailCampaigns::Import::WebFonts::DEFAULT])
+    expect(checks(out)).to be_empty
+  end
+
+  it 'keeps the white letter of a button whose color only needs a little darkening' do
+    mjml = email('<mj-button font-family="Arial" font-size="16px" inner-padding="14px 24px" background-color="#b5652d" color="#ffffff" ' \
+                 'href="https://a.example.com">Quero provar</mj-button>')
+    button = Nokogiri::HTML5.fragment(fix(mjml)).at('mj-button')
+
+    expect(button['color']).to eq('#ffffff')
+    expect(button['background-color']).not_to eq('#b5652d')
+    expect(EmailCampaigns::QualityGate::Contrast.ratio('#ffffff', button['background-color'])).to be >= 4.5
+    expect(EmailCampaigns::QualityGate::Contrast.ratio(button['background-color'], '#b5652d')).to be < 1.3
   end
 
   it 'lightens text on a dark background instead of darkening it' do

@@ -1,6 +1,8 @@
 <script setup>
 // One e-mail shown at its real width (600 px on a computer, 375 px on a phone) and scaled down to
 // the width of its box. The HTML runs in an iframe with sandbox="": no script, no form, no way out.
+// Exception to "Tailwind only": the scale and the height follow the measured width of the box, a
+// value no utility class can hold, so they go in :style (the only inline style of this screen).
 import { computed, useTemplateRef } from 'vue';
 import { useElementSize } from '@vueuse/core';
 

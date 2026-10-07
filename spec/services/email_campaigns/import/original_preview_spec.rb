@@ -35,6 +35,13 @@ RSpec.describe EmailCampaigns::Import::OriginalPreview, :aggregate_failures do
     expect(out).not_to include('<script', 'alert(1)', 'onclick', 'roubar')
   end
 
+  it 'shows the fields as the person wrote them, not converted to ours' do
+    text = Nokogiri::HTML5(preview).text
+
+    expect(text).to include('Olá, {{lead.nome}}!')
+    expect(text).not_to include('{{ nome }}')
+  end
+
   it 'shows only the copies of the import and turns the other images grey' do
     doc = Nokogiri::HTML5(preview)
 

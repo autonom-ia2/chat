@@ -7,7 +7,6 @@ class EmailCampaigns::Import::ContentWalker
   BLOCK = %w[p div h1 h2 h3 h4 h5 h6 ul ol li blockquote pre center table tbody thead tfoot tr td th caption section article header
              footer main aside nav figure figcaption address dl dt dd].freeze
   MIN_SPACER = 4
-  SAFE_FONTS = %w[arial helvetica sans-serif].freeze
 
   def initialize(nodes, report, style: nil, budget: EmailCampaigns::Import::Budget.new)
     @nodes = Array(nodes)
@@ -131,9 +130,10 @@ class EmailCampaigns::Import::ContentWalker
     end
   end
 
-  # Web and custom fonts give way to Arial, the font every client has.
+  # Web and custom fonts give way to a font every client has (WebFonts).
   def font_replaced(family)
-    first = family.to_s.split(',').first.to_s.strip.delete(%q('")).downcase
-    @report.add(:font_replaced, item: first) if first.present? && SAFE_FONTS.exclude?(first)
+    return if EmailCampaigns::Import::WebFonts.kept?(family)
+
+    @report.add(:font_replaced, item: EmailCampaigns::Import::WebFonts.names(family).first)
   end
 end

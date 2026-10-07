@@ -33,15 +33,20 @@ module EmailCampaigns::QualityGate::Contrast
   end
 
   # The color closest to `color` that reaches `needed` against `background` (#1099): mixed step by step toward black on a
-  # light background or toward white on a dark one. Unreadable colors start from black. Returns #rrggbb.
-  def adjust(color, background, needed)
+  # light background or toward white on a dark one. Unreadable colors start from black. Returns #rrggbb. With `limit`
+  # (a fraction of the way), it gives up past it and returns nil instead of going all the way.
+  def adjust(color, background, needed, limit: nil)
     start = rgb(color) || [0, 0, 0]
     target = luminance(background).to_f > DARK_LUMINANCE ? [0, 0, 0] : [255, 255, 255]
-    (0..STEPS).each do |step|
+    (0..last_step(limit)).each do |step|
       mixed = hex(start.zip(target).map { |from, to| (from + ((to - from) * step / STEPS.to_f)).round })
       return mixed if ratio(mixed, background).to_f >= needed
     end
-    hex(target)
+    hex(target) unless limit
+  end
+
+  def last_step(limit)
+    limit ? (STEPS * limit).floor : STEPS
   end
 
   def hex(channels)

@@ -134,7 +134,7 @@ describe('rowsOf', () => {
     ).toEqual([
       ['image-0', 'warn', 'EMAIL_IMPORT.SCREEN.ROWS.SWAP_IMAGE'],
       ['image-1', 'warn', 'EMAIL_IMPORT.SCREEN.ROWS.SWAP_IMAGE'],
-      ['part-trecho-1', 'warn', 'EMAIL_IMPORT.SCREEN.ROWS.SEE_WHERE'],
+      ['part-trecho-1', 'warn', 'EMAIL_IMPORT.SCREEN.ROWS.SOLVE_PART'],
       ['field-cupom', 'warn', 'EMAIL_IMPORT.SCREEN.ROWS.CHOOSE'],
     ]);
     expect(rows[0].hint).toEqual({
@@ -153,6 +153,52 @@ describe('rowsOf', () => {
         chips: { field: '{{ lead }}' },
         params: { text: 'OUTUBRO10' },
       },
+    });
+  });
+
+  it('names a field the way the person wrote it in the original', () => {
+    const data = {
+      ...ready,
+      blocking: [{ code: 'unknown_fields' }],
+      targets: { images: [], parts: [], fields: ['cupom'] },
+      report: {
+        warnings: [
+          {
+            code: 'unknown_fields',
+            severity: 'blocking',
+            count: 1,
+            items: [{ from: '{{lead.cupom}}', key: 'cupom' }],
+          },
+        ],
+      },
+      fixes: [{ code: 'unknown_fields', choice: 'remove', target: 'cupom' }],
+    };
+
+    const [problem] = problemsOf(data);
+    expect(problem.label).toBe('{{lead.cupom}}');
+    const rows = rowsOf(data);
+    expect(rows[0].text.chips).toEqual({ field: '{{lead.cupom}}' });
+    expect(rows[1].text.chips).toEqual({ field: '{{lead.cupom}}' });
+  });
+
+  it('counts the other warnings so their sentences say one or many', () => {
+    const rows = rowsOf({
+      ...ready,
+      report: {
+        warnings: [
+          {
+            code: 'link_removed',
+            key: 'EMAIL_IMPORT.REPORT.LINK_REMOVED',
+            severity: 'warning',
+            count: 3,
+            items: [],
+          },
+        ],
+      },
+    });
+    expect(rows.find(row => row.id === 'link_removed').text).toEqual({
+      key: 'EMAIL_IMPORT.REPORT.LINK_REMOVED',
+      count: 3,
     });
   });
 

@@ -55,7 +55,9 @@ const title = computed(() => {
   }
   if (type === 'part') return t(`${S}.PART_DIALOG.TITLE`);
   if (type === 'field') {
-    return t(`${S}.FIELD_DIALOG.TITLE`, { field: tagOf(props.problem.target) });
+    return t(`${S}.FIELD_DIALOG.TITLE`, {
+      field: props.problem.label || tagOf(props.problem.target),
+    });
   }
   return t(`${S}.ROWS.INVALID`);
 });

@@ -12,6 +12,12 @@ const props = defineProps({
       ['not_email', 'too_big', 'failed', 'other'].includes(value),
   },
   code: { type: String, default: '' },
+  // How the model came in: the sentences speak of a file, a pasted code or an address.
+  source: {
+    type: String,
+    default: 'file',
+    validator: value => ['file', 'paste', 'url'].includes(value),
+  },
   fileName: { type: String, default: '' },
   fileSize: { type: Number, default: 0 },
 });
@@ -35,10 +41,14 @@ const look = computed(() => LOOKS[props.kind]);
 const title = computed(() => {
   if (props.kind === 'other')
     return t(`EMAIL_IMPORT.ERRORS.${props.code.toUpperCase()}`);
-  return t(`${S}.${props.kind.toUpperCase()}_TITLE`);
+  return t(
+    `${S}.${props.kind.toUpperCase()}.${props.source.toUpperCase()}_TITLE`
+  );
 });
 const text = computed(() =>
-  props.kind === 'other' ? '' : t(`${S}.${props.kind.toUpperCase()}_TEXT`)
+  props.kind === 'other'
+    ? ''
+    : t(`${S}.${props.kind.toUpperCase()}.${props.source.toUpperCase()}_TEXT`)
 );
 const retry = computed(() => props.kind === 'failed');
 const chip = computed(() =>

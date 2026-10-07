@@ -144,6 +144,23 @@ const DEVICES = [
           >
             <Spinner />
           </div>
+          <div
+            v-else-if="pane.id === 'after' && !pane.html"
+            class="flex h-full flex-col items-center justify-center gap-3 text-center"
+            data-no-preview
+          >
+            <span class="i-lucide-eye-off size-8 text-n-slate-10" />
+            <p class="mb-0 text-base text-n-slate-12">
+              {{ t(`${S}.NO_PREVIEW`) }}
+            </p>
+            <Button
+              :label="t(`${S}.ANOTHER`)"
+              slate
+              outline
+              class="!min-h-11 !rounded-xl"
+              @click="emit('another')"
+            />
+          </div>
           <ImportEmailFrame
             v-else
             :html="pane.html"

@@ -2,41 +2,41 @@
   "EMAIL_IMPORT": {
     "REPORT": {
       "UNKNOWN_FIELDS": "Some fields of the model are not ours. Choose what goes in their place before saving.",
-      "IMAGE_MISSING": "{count} image(s) did not come. Swap them before saving.",
+      "IMAGE_MISSING": "{count} image did not come. Swap it before saving. | {count} images did not come. Swap them before saving.",
       "INVALID": "This model could not be checked. Import it again.",
-      "UNRESOLVED_PARTS": "{count} part(s) could not be brought in yet. For now, this design cannot be saved.",
-      "UNSAFE_REMOVED": "We removed code that is not safe in an e-mail.",
-      "UNSAFE_CSS_REMOVED": "We removed styles that are not safe in an e-mail.",
-      "HIDDEN_TEXT_REMOVED": "We removed text that was hidden from the reader.",
+      "UNRESOLVED_PARTS": "I could not bring {count} part yet. For now, this design cannot be saved. | I could not bring {count} parts yet. For now, this design cannot be saved.",
+      "UNSAFE_REMOVED": "I removed code that is not safe in an e-mail.",
+      "UNSAFE_CSS_REMOVED": "I removed styles that are not safe in an e-mail.",
+      "HIDDEN_TEXT_REMOVED": "I removed text that was hidden from the reader.",
       "CONDITIONAL_SIMPLIFIED": "A part that changed for each person now shows the same text to everyone.",
-      "TAG_SIMPLIFIED": "A field had extra rules. We kept only the field.",
-      "LINK_REMOVED": "{count} link(s) did not work outside the old tool and were removed. The text stayed.",
+      "TAG_SIMPLIFIED": "A field had extra rules. I kept only the field.",
+      "LINK_REMOVED": "{count} link did not work outside the old tool and was removed. The text stayed. | {count} links did not work outside the old tool and were removed. The text stayed.",
       "REDIRECT_KEPT": "Some links pass through a counter of the old tool. Check them.",
-      "EMBED_REMOVED": "We removed a form or embedded content. E-mails do not show them.",
+      "EMBED_REMOVED": "I removed a form or embedded content. E-mails do not show them.",
       "VIDEO_AS_IMAGE": "A video became an image with a link.",
       "DARK_MODE_IGNORED": "The dark mode colors were not kept.",
       "WEB_FONT_IGNORED": "A special font was replaced by a font every e-mail shows.",
       "STYLES_DROPPED": "Some styles could not be kept.",
       "INCLUDE_IGNORED": "A part that came from another file was left out.",
-      "CSS_LIMIT": "The model had too many styles. We kept the first ones.",
+      "CSS_LIMIT": "The model had too many styles. I kept the first ones.",
       "LAYOUT_STACKED": "Some columns were stacked to fit the e-mail.",
       "TABLE_AS_TEXT": "A table became lines of text.",
       "OUTLOOK_ONLY": "A part made for one e-mail program only was replaced by the common version.",
       "QUALITY_PENDING": "Some reading rules could not be fixed on their own. Check the text and the colors.",
       "GMAIL_CLIP": "The e-mail is long and some e-mail programs may cut it.",
-      "TEMPLATE_CODE_REMOVED": "We removed code of the old tool.",
+      "TEMPLATE_CODE_REMOVED": "I removed code of the old tool.",
       "UNSUBSCRIBE_LINK_REMOVED": "The old unsubscribe link left. Ours is in the footer.",
       "UNSUBSCRIBE_TEXT_KEPT": "A text about leaving the list stayed. Check it.",
       "CHARACTERS_REPLACED": "Some letters could not be read and were left out. Check the text.",
       "ANIMATION_LOST": "An animated image became still to fit the e-mail.",
       "SOCIAL_ICON_DEFAULT": "A social network icon did not come and went back to the standard one.",
-      "IMAGES_TO_COPY": "{count} image(s) to copy.",
-      "IMAGES_COPIED": "{count} image(s) copied to your account.",
-      "IMAGE_COMPRESSED": "{count} image(s) were made lighter to open fast.",
+      "IMAGES_TO_COPY": "{count} image to copy. | {count} images to copy.",
+      "IMAGES_COPIED": "{count} image copied to your account. | {count} images copied to your account.",
+      "IMAGE_COMPRESSED": "{count} image was made lighter, to open fast. | {count} images were made lighter, to open fast.",
       "TAGS_CONVERTED": "Fields like the person's name now work here.",
-      "PLATFORM_TAGS_REMOVED": "We removed fields that only worked in the old tool.",
+      "PLATFORM_TAGS_REMOVED": "I removed fields that only worked in the old tool.",
       "FOOTER_REPLACED": "The footer is now ours, with the unsubscribe link.",
-      "TRACKING_REMOVED": "We removed the open counters of the old tool.",
+      "TRACKING_REMOVED": "I removed the open counters of the old tool.",
       "PREHEADER_KEPT": "The preview text was kept.",
       "LINK_UNWRAPPED": "Links now go straight to the right page.",
       "VML_BUTTON_RECOVERED": "A button made for one e-mail program was rebuilt.",
@@ -44,8 +44,8 @@
       "NAVBAR_CONVERTED": "The menu became editable links.",
       "ACCORDION_CONVERTED": "Parts that opened on click now show all the text.",
       "CAROUSEL_CONVERTED": "The image carousel became images one below the other.",
-      "FONT_REPLACED": "The font was changed to Arial so it reads well everywhere.",
-      "QUALITY_FIXED": "We fixed sizes and colors to make it easy to read."
+      "FONT_REPLACED": "I changed a special font to one every e-mail shows.",
+      "QUALITY_FIXED": "I fixed sizes and colors to make it easy to read."
     },
     "ERRORS": {
       "TOO_LARGE": "This model is too big. Use up to 500 KB, or a .zip up to 2 MB.",
@@ -120,7 +120,7 @@
       },
       "PASTE": {
         "TITLE": "Paste the code of your email",
-        "LEAD": "Click the box and paste. On a computer: Ctrl + V.",
+        "LEAD": "Click the box and paste. On a computer: Ctrl + V (on a Mac, Cmd + V).",
         "LABEL": "Email code",
         "RECEIVED": "Code received · {size}",
         "GO": "Bring this template"
@@ -147,8 +147,7 @@
         "IMAGES": "Bringing the images",
         "IMAGES_COUNT": "Bringing the images ({done} of {total})",
         "EDITABLE": "Making everything editable",
-        "LEAVE": "Do something else",
-        "SEE": "See how it looks"
+        "LEAVE": "Do something else"
       },
       "RESULT": {
         "TITLE_READY": "Done. See how it looks.",
@@ -169,7 +168,10 @@
         "SIDE_PENDING_TEXT": "Solve each one here to keep it.",
         "CONTINUE": "Looks good, continue",
         "SOLVE": "Solve now",
-        "ANOTHER": "Bring another"
+        "ANOTHER": "Bring another",
+        "NO_PREVIEW": "I could not show the preview.",
+        "MARK_PART": "Became an image",
+        "MARK_IMAGE": "Image did not come"
       },
       "ROWS": {
         "IMAGE_MISSING": "An image did not come.",
@@ -182,7 +184,7 @@
         "INVALID": "We could not check this template.",
         "INVALID_HINT": "Bring the template again.",
         "SWAP_IMAGE": "Change image",
-        "SEE_WHERE": "See where",
+        "SOLVE_PART": "Solve",
         "CHOOSE": "Choose",
         "IMAGES_COPIED": "{count} image copied to your space. | {count} images copied to your space.",
         "TAG_SWAPPED": "I changed {from} to {to}.",
@@ -228,7 +230,7 @@
       },
       "PART_DIALOG": {
         "TITLE": "This part is an image",
-        "TEXT": "We could not bring this part as blocks. You cannot change its text:",
+        "TEXT": "I could not make this part editable. You cannot change its text:",
         "REBUILD": "Rebuild to edit",
         "SOON": "Rebuilding with AI is coming soon.",
         "KEEP_TEXT": "Keep only the text",
@@ -263,12 +265,30 @@
         "SAVE": "Save in My templates"
       },
       "ERROR": {
-        "NOT_EMAIL_TITLE": "This file is not an email template.",
-        "NOT_EMAIL_TEXT": "Send the file ending in .html, or paste the code.",
-        "TOO_BIG_TITLE": "This template is too big.",
-        "TOO_BIG_TEXT": "Take some images out of the file and try again.",
-        "FAILED_TITLE": "It did not work this time.",
-        "FAILED_TEXT": "Your file was not saved. Try again in a few minutes.",
+        "NOT_EMAIL": {
+          "FILE_TITLE": "This file is not an email template.",
+          "FILE_TEXT": "Send the file ending in .html, or paste the code.",
+          "PASTE_TITLE": "This code is not from an email template.",
+          "PASTE_TEXT": "Copy the code of the email again and paste it here.",
+          "URL_TITLE": "This page is not an email template.",
+          "URL_TEXT": "Open the email in the browser and copy the address from there."
+        },
+        "TOO_BIG": {
+          "FILE_TITLE": "This file is too big.",
+          "FILE_TEXT": "Take some images out of the file and try again.",
+          "PASTE_TITLE": "This code is too big.",
+          "PASTE_TEXT": "Send the email file instead of pasting.",
+          "URL_TITLE": "This page is too big.",
+          "URL_TEXT": "Send the email file instead of the address."
+        },
+        "FAILED": {
+          "FILE_TITLE": "It did not work this time.",
+          "FILE_TEXT": "Your file was not saved. Try again in a few minutes.",
+          "PASTE_TITLE": "It did not work this time.",
+          "PASTE_TEXT": "Nothing was saved. Try again in a few minutes.",
+          "URL_TITLE": "It did not work this time.",
+          "URL_TEXT": "Nothing was saved. Try again in a few minutes."
+        },
         "TRY_OTHER": "Try another",
         "TRY_AGAIN": "Try again"
       }

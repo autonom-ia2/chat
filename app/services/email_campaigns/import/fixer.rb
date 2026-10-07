@@ -1,12 +1,13 @@
 # The way out of each warning that stops an import from being saved (#1099, delivery C), done on the copy the server
 # keeps — the browser only says which fix it wants:
 #   - kind image (an image block that is the "image to swap" placeholder, or a section whose background did not come),
-#     by its position among them: `upload` a new image (checked by its bytes, compressed and kept like the copied ones)
-#     or `remove` it (the block leaves; the section keeps its color);
+#     by its position among them, found before anything is kept: `upload` a new image (checked by its bytes,
+#     compressed and kept like the copied ones) or `remove` it (the block leaves; the section keeps its color);
 #   - kind field (a field our campaigns cannot fill), by its key: `field` puts one of ours in its place, `text` a text
 #     that is the same for everyone (written as text, never as a new field), `remove` erases it;
-#   - kind part (a part the converter did not understand), by its id: `text` keeps only its text, in a text block,
-#     `remove` takes it out. Rebuilding it with the AI is delivery D.
+#   - kind part (a part the converter did not understand), by its id: `text` keeps only its text, one text block per
+#     paragraph as the original showed it (PartParagraphs), `remove` takes it out. Rebuilding it with the AI is
+#     delivery D.
 # What blocks the saving is computed again (SaveCheck) and the fix is recorded, so the screen shows the warning solved.
 # Raises EmailCampaigns::Import::Error with a code the screen explains. String methods and Nokogiri — no regex.
 class EmailCampaigns::Import::Fixer
@@ -16,8 +17,6 @@ class EmailCampaigns::Import::Fixer
   MAX_TEXT = 200
   MAX_IMAGE_BYTES = EmailCampaigns::Import::ImageRehoster::MAX_SOURCE_BYTES
   TAG_MARKS = ['{{', '}}', '{%', '%}'].freeze
-  TEXT_ATTRIBUTES = { 'font-family' => 'Arial, Helvetica, sans-serif', 'font-size' => '16px', 'line-height' => '1.5',
-                      'padding' => '10px 25px' }.freeze
 
   def self.call(import, params)
     new(import, params).call
@@ -101,20 +100,28 @@ class EmailCampaigns::Import::Fixer
     end
   end
 
+  # The target is found before anything is kept: an upload for an image already solved (or one that never existed)
+  # never becomes a blob of the import.
   def fix_image(mjml)
+    refuse(:fix_gone) unless image_target?(mjml)
+
     url = upload if @choice == 'upload'
-    found = false
-    out = EmailCampaigns::MjmlCanonicalizer.call(mjml) do |root, _cut|
+    EmailCampaigns::MjmlCanonicalizer.call(mjml) do |root, _cut|
       node = image_at(root)
-      if node
-        found = true
-        @image_kind = node.name == 'mj-image' ? 'image' : 'background'
-        @label = node['alt'].presence
-        url ? swap_image(node, url) : drop_image(node)
-      end
+      @image_kind = node.name == 'mj-image' ? 'image' : 'background'
+      @label = node['alt'].presence
+      url ? swap_image(node, url) : drop_image(node)
       {}
     end
-    found ? out : refuse(:fix_gone)
+  end
+
+  def image_target?(mjml)
+    found = false
+    EmailCampaigns::MjmlCanonicalizer.call(mjml) do |root, _cut|
+      found = image_at(root).present?
+      {}
+    end
+    found
   end
 
   def image_at(root)
@@ -189,31 +196,32 @@ class EmailCampaigns::Import::Fixer
   end
 
   def fix_part(mjml)
-    text = self.class.parts(@import, mjml).find { |part| part[:id] == @target }&.dig(:text)
-    refuse(:fix_gone) if text.nil?
+    refuse(:fix_gone) unless self.class.parts(@import, mjml).any? { |part| part[:id] == @target }
 
+    paragraphs = @choice == 'text' ? part_paragraphs : []
     out = EmailCampaigns::MjmlCanonicalizer.call(mjml) do |root, _cut|
       node = unresolved_node(root)
-      @choice == 'text' && text.present? ? node.replace(text_block(node.document, text)) : node.remove
+      paragraphs.each { |paragraph| node.add_previous_sibling(EmailCampaigns::Import::PartParagraphs.block(node.document, paragraph)) }
+      node.remove
       {}
     end
     readable(out)
+  end
+
+  # Each paragraph of the part in its own text block, as the original showed it (a title stays a title).
+  def part_paragraphs
+    entry = Array(@import.report['unresolved']).find { |part| part['id'] == @target } || {}
+    EmailCampaigns::Import::PartParagraphs.call(entry['html'], entry['text'])
   end
 
   def unresolved_node(root)
     root.css('mj-image').find { |image| image['title'] == @target && image['src'] == EmailCampaigns::Import::Placeholders::UNRESOLVED_SRC }
   end
 
-  # The new text takes the colors of where it lands: the same deterministic correction the import ran (contrast,
-  # size), so text left on a dark banner stays readable.
+  # The new text keeps the color it had, then goes through the same deterministic correction the import ran (contrast,
+  # size) against where it lands, so text left on a dark banner (or a white title left on white) stays readable.
   def readable(mjml)
     scratch = EmailCampaigns::Import::Report.new(source_kind: 'paste')
     EmailCampaigns::Import::QualityFix.call(mjml, scratch, placeholders: EmailCampaigns::Import::Engine::PLACEHOLDERS)
-  end
-
-  def text_block(document, text)
-    block = document.create_element('mj-text', TEXT_ATTRIBUTES)
-    block.add_child(document.create_text_node(text))
-    block
   end
 end

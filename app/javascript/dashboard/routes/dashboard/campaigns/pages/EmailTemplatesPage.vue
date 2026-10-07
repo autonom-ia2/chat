@@ -42,7 +42,9 @@ const canImport = computed(
     )
 );
 const IMPORT = 'EMAIL_IMPORT.SCREEN.LIBRARY';
-const newTemplateId = computed(() => Number(route.query.novo) || null);
+// The model just brought in (#1099): marked "Novo" for this visit only — the address loses ?novo=
+// right away, so reloading or coming back does not announce it again.
+const newTemplateId = ref(null);
 const pendingImport = ref(null);
 
 const campaignId = computed(() => {
@@ -329,12 +331,18 @@ onBeforeUnmount(() => {
 // Back from "Trazer meu modelo" with the saved model: "Meus modelos", the card marked "Novo" and the
 // confirmation (the page is kept alive, so this also runs when it is shown again).
 watch(
-  newTemplateId,
-  id => {
+  () => route.query.novo,
+  novo => {
+    const id = Number(novo) || null;
     if (!id) return;
+    newTemplateId.value = id;
     library.value = 'own';
     activeCategory.value = 'all';
     useAlert(t(`${IMPORT}.SAVED`));
+    const query = Object.fromEntries(
+      Object.entries(route.query).filter(([key]) => key !== 'novo')
+    );
+    router.replace({ name: route.name, params: route.params, query });
   },
   { immediate: true }
 );
@@ -530,12 +538,6 @@ const chooseLibrary = value => {
             "
             @click="openPreview(template)"
           >
-            <span
-              v-if="template.id === newTemplateId"
-              class="absolute start-3 top-3 z-10 rounded-full bg-n-brand px-2.5 py-1 text-xs font-semibold text-white"
-            >
-              {{ t(`${IMPORT}.NEW_BADGE`) }}
-            </span>
             <img
               v-if="template.thumbnail_url"
               :src="template.thumbnail_url"
@@ -562,11 +564,19 @@ const chooseLibrary = value => {
             <span v-else class="i-lucide-image size-8 text-n-slate-9" />
           </button>
           <div class="flex flex-1 flex-col gap-2 p-5">
-            <span
-              class="w-fit rounded-full bg-n-blue-3 px-2.5 py-1 text-xs font-medium text-n-blue-11"
-            >
-              {{ categoryLabel(template.category) }}
-            </span>
+            <div class="flex flex-wrap items-center gap-2">
+              <span
+                class="w-fit rounded-full bg-n-blue-3 px-2.5 py-1 text-xs font-medium text-n-blue-11"
+              >
+                {{ categoryLabel(template.category) }}
+              </span>
+              <span
+                v-if="template.id === newTemplateId"
+                class="w-fit rounded-full bg-n-brand px-2.5 py-1 text-xs font-semibold text-white"
+              >
+                {{ t(`${IMPORT}.NEW_BADGE`) }}
+              </span>
+            </div>
             <h2
               class="mb-0 mt-1 text-base font-semibold leading-6 text-n-slate-12"
             >

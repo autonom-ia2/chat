@@ -44,6 +44,7 @@ RSpec.describe EmailCampaigns::Import::Converter, :aggregate_failures do
     expect(texts.first.inner_html).to eq('Olá, {{ nome }}!')
     expect(texts.last.attributes.transform_values(&:value)).to include('font-size' => '15px', 'color' => '#555555', 'align' => 'center',
                                                                        'line-height' => '22px')
+    expect(texts.map { |text| text['font-family'] }.uniq).to eq([EmailCampaigns::Import::WebFonts::SERIF])
     expect(texts.last.inner_html).to eq('Primeiro <strong>parágrafo</strong>.<br><br>Segundo com ' \
                                         '<a href="https://loja.example.com/x" style="color:#007c89;text-decoration:underline">link</a> e ' \
                                         '<span style="color:#990000">cor</span>.<br><br>• Item 1<br>• Item 2')

@@ -7,7 +7,8 @@
 #
 # On the server, without Node (template import, #1099), it runs on the MJML alone: html: nil skips the checks that need
 # the compiled HTML and estimates its size (EstimatedSize); remote_images: true accepts absolute web images that the
-# import copies afterwards (RemoteImage), still demanding a description.
+# import copies afterwards (RemoteImage), still demanding a description; fonts: lets an imported model keep a font every
+# e-mail program shows (Import::WebFonts) instead of Arial.
 class EmailCampaigns::QualityGate
   include Css
 
@@ -46,8 +47,9 @@ class EmailCampaigns::QualityGate
   end
 
   def initialize(mjml:, html: nil, compile_errors: [], public_root: Rails.public_path, # rubocop:disable Metrics/ParameterLists
-                 placeholders: EmailCampaigns::TemplateValidator::DEFAULT_KEYS, remote_images: false)
+                 placeholders: EmailCampaigns::TemplateValidator::DEFAULT_KEYS, remote_images: false, fonts: [FONT])
     @mjml = mjml.to_s
+    @fonts = fonts
     @html = html&.to_s
     @compile_errors = compile_errors
     @public_root = Pathname.new(public_root).expand_path
@@ -134,7 +136,7 @@ class EmailCampaigns::QualityGate
 
   def check_font_family(node)
     family = node['font-family'].to_s.split(',').first.to_s.strip.delete('"\'').downcase
-    add(:font_family, "#{node.name} #{node['font-family'].inspect}") unless family == FONT
+    add(:font_family, "#{node.name} #{node['font-family'].inspect}") unless @fonts.include?(family)
   end
 
   def check_font_sizes(node)

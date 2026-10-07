@@ -1,5 +1,6 @@
 # The "how it was" side of the import screen (#1099, delivery C): the original page after the same cleaning the engine
-# does (stylesheet into the tags, allowlist, hidden text and pixels out), with every image pointing at the copy the
+# does (stylesheet into the tags, allowlist, hidden text and pixels out) — but with its fields as they were written
+# ({{lead.nome}}, not our {{ nome }}), so it shows what the person knows, with every image pointing at the copy the
 # import made of it — or a grey box of the same size when it did not come — and no link leading anywhere. The screen
 # shows it in an iframe with sandbox="", so nothing of the original page runs or reports who opens the preview.
 # A model that was already MJML has no separate original to show (nil), and neither has one the cleaning cannot read
@@ -51,7 +52,7 @@ class EmailCampaigns::Import::OriginalPreview
     doc = EmailCampaigns::Import::Limits.html!(source, budget)
     scratch = EmailCampaigns::Import::Report.new(source_kind: 'paste')
     EmailCampaigns::Import::StyleInliner.call(doc, scratch)
-    EmailCampaigns::Import::Cleaner.call(doc.root, scratch, base_url: @base_url)
+    EmailCampaigns::Import::Cleaner.call(doc.root, scratch, base_url: @base_url, tags: false)
     budget.time!
     doc.at_css('body') || doc.root
   end
