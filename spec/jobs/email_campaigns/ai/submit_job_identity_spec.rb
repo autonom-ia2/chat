@@ -26,4 +26,19 @@ RSpec.describe EmailCampaigns::Ai::SubmitJob, :aggregate_failures do
       expect(request[:schema][:schema][:properties][:subject_variants]).to eq(type: 'array', items: { type: 'string' })
     end
   end
+
+  it 'sends the chosen identity to "Ajustar com IA" too (#1095), with the e-mail as blocks' do
+    token = campaign.ai_begin!
+    base = "<mjml><mj-body>#{EmailAdjustFixture::HERO}#{EmailCampaigns::LockedFooter::MJML}</mj-body></mjml>"
+    params = { 'brief' => 'Deixe o botão com a cor da marca', 'placeholders' => [], 'assets' => [], 'base_mjml' => base,
+               'brand' => { 'kit_id' => kit.id, 'mode' => 'light' } }
+
+    described_class.perform_now(campaign.id, token, params)
+
+    expect(client).to have_received(:create_background) do |**request|
+      expect(request[:schema]).to eq(EmailCampaigns::Ai::EditPromptBuilder::SCHEMA)
+      expect(request[:instructions]).to include('<<<IDENTIDADE', '"name":"Hub2You"', 'PRIMARY=#c8102e')
+    end
+    expect(EmailCampaigns::Ai::Adjustment.find(campaign, token)['instructions']).to include('<<<IDENTIDADE')
+  end
 end

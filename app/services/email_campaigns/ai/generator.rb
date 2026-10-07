@@ -78,15 +78,15 @@ module EmailCampaigns
       # Ajuste: sem busca na web — o modelo só mexe no e-mail que recebeu.
       def build_adjust(videos)
         text = EditPromptBuilder.input_text(request: @brief, sections: sections.editable, placeholders: @placeholders,
-                                            assets_rule: PromptBuilder.assets_rule(@assets),
+                                            assets_rule: PromptBuilder.assets_rule(@assets, identity: @identity),
                                             video_rule: PromptBuilder.video_embed_rule(videos))
-        { instructions: EditPromptBuilder.instructions(identity: identity), input: build_input(text), input_text: text,
+        { instructions: EditPromptBuilder.instructions(identity: adjust_identity), input: build_input(text), input_text: text,
           schema: EditPromptBuilder::SCHEMA, tools: nil }
       end
 
-      # Identidade visual em uso. Hoje o nome da conta; o kit de marca (#1076) entra aqui.
-      def identity
-        { name: @account.name }
+      # Identidade visual do ajuste: o kit escolhido (#1076, BrandKits::PromptPayload) ou, sem kit, só o nome da conta.
+      def adjust_identity
+        @identity || { name: @account.name }
       end
 
       def normalize_assets(assets)

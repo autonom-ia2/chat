@@ -5,12 +5,13 @@ import en from 'dashboard/i18n/locale/en/campaign.json';
 const generate = vi.hoisted(() => vi.fn());
 vi.mock('dashboard/api/emailCampaignAi', () => ({ default: { generate } }));
 vi.mock('dashboard/api/emailCampaignAssets', () => ({ default: {} }));
-// Visual identity (#1076) off: these cases are about adjusting; BrandIdentityChoices.spec covers the picker.
+// Visual identity (#1076) off unless a case turns it on; BrandIdentityChoices.spec covers the picker.
+const brandKitsEnabled = vi.hoisted(() => ({ value: false }));
 vi.mock('dashboard/components-next/BrandKits/useBrandKits', async () => {
   const { ref } = await import('vue');
   return {
     useBrandKits: () => ({
-      isEnabled: ref(false),
+      isEnabled: ref(brandKitsEnabled.value),
       kits: ref([]),
       fetchKits: vi.fn(),
     }),
@@ -26,13 +27,17 @@ beforeAll(() => {
 afterAll(() => {
   config.global.plugins = defaults;
 });
-afterEach(() => vi.clearAllMocks());
+afterEach(() => {
+  vi.clearAllMocks();
+  brandKitsEnabled.value = false;
+});
 
 const mountDialog = props =>
   mount(AiComposerDialog, {
     props: { campaignId: 7, placeholders: ['nome', 'contact.email'], ...props },
     global: {
       plugins: [createI18n({ legacy: false, locale: 'en', messages: { en } })],
+      stubs: { BrandIdentityPicker: true },
     },
   });
 
@@ -140,5 +145,27 @@ describe('AiComposerDialog', () => {
     await flushPromises();
 
     expect(wrapper.text()).toContain('This email is too big to adjust at once');
+  });
+
+  // #1076 + #1095: the identity chosen for the e-mail goes with an adjustment too.
+  it('sends the chosen visual identity together with the e-mail to adjust', async () => {
+    brandKitsEnabled.value = true;
+    generate.mockResolvedValue({});
+    const wrapper = mountDialog({
+      canAdjust: true,
+      readCurrentMjml: () => '<mjml>screen</mjml>',
+      initialBrand: { kitId: 3, mode: 'dark' },
+    });
+    await typeRequest(wrapper, 'Use as cores da marca no botão');
+
+    await submit(wrapper).trigger('click');
+    await flushPromises();
+
+    expect(generate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        baseMjml: '<mjml>screen</mjml>',
+        brand: { brand_kit_id: 3, brand_mode: 'dark' },
+      })
+    );
   });
 });
