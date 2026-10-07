@@ -4,6 +4,7 @@
 # turned into ones it can (navbar, table, accordion, carousel) or, for raw HTML, a marked placeholder.
 class EmailCampaigns::Import::MjmlBlocks
   BOLD = %w[bold 600 700 800 900].freeze
+  ALIGNS = %w[left center right justify].freeze
   MJML_FONT_PX = 13.0
 
   def initialize(source, report)
@@ -17,6 +18,7 @@ class EmailCampaigns::Import::MjmlBlocks
           'mj-navbar' => :navbar, 'mj-raw' => :raw_block }.freeze
 
   def call(node)
+    @source.budget.time!
     return send(MANY[node.name], node) if MANY.key?(node.name)
 
     [ONE[node.name] && send(ONE[node.name], node)].compact
@@ -24,17 +26,22 @@ class EmailCampaigns::Import::MjmlBlocks
 
   private
 
+  # Only normalized values reach the text style: they end up in attributes and inline styles of the output.
   def style(node)
     EmailCampaigns::Import::TextStyle.default.with(
       font_size: EmailCampaigns::Import::StyleMap.px(node['font-size'].to_s) || MJML_FONT_PX, color: @source.color(node['color']) || '#000000',
       font_family: node['font-family'], bold: BOLD.include?(node['font-weight'].to_s), italic: node['font-style'] == 'italic',
-      line_height: node['line-height'].presence, align: node['align'].presence || 'left'
+      line_height: @source.line_height(node['line-height']), align: align(node['align'], 'left')
     )
+  end
+
+  def align(value, fallback)
+    ALIGNS.include?(value.to_s.downcase) ? value.to_s.downcase : fallback
   end
 
   def text(node)
     fragment = @source.fragment(@source.content(node))
-    blocks = EmailCampaigns::Import::ContentWalker.new(fragment.children.to_a, @report, style: style(node)).call
+    blocks = EmailCampaigns::Import::ContentWalker.new(fragment.children.to_a, @report, style: style(node), budget: @source.budget).call
     padding = EmailCampaigns::Import::StyleMap.padding(node['padding'].to_s)
     return blocks unless padding && blocks.one? && blocks.first.tag == 'mj-text'
 
@@ -80,7 +87,7 @@ class EmailCampaigns::Import::MjmlBlocks
     table = @source.fragment("<table>#{@source.content(node)}</table>").at_css('table')
     return [] if table.nil?
 
-    EmailCampaigns::Import::ContentWalker.new([table], @report, style: style(node)).call
+    EmailCampaigns::Import::ContentWalker.new([table], @report, style: style(node), budget: @source.budget).call
   end
 
   def accordion(node)
@@ -105,7 +112,7 @@ class EmailCampaigns::Import::MjmlBlocks
 
     @report.add(:navbar_converted)
     first = node.at_xpath('./mj-navbar-link')
-    EmailCampaigns::Import::Blocks.text(style(first).with(align: node['align'].presence || 'center'),
+    EmailCampaigns::Import::Blocks.text(style(first).with(align: align(node['align'], 'center')),
                                         items.join(EmailCampaigns::Import::MjmlSource::NAVBAR_JOIN))
   end
 
@@ -115,7 +122,9 @@ class EmailCampaigns::Import::MjmlBlocks
 
     href = links.href(@source.tags.attribute(link['href'].to_s, link: true).to_s)
     color = @source.color(link['color']) || '#000000'
-    href ? %(<a href="#{escape_attribute(href)}" style="color:#{color};text-decoration:none">#{escape(text)}</a>) : escape(text)
+    return escape(text) unless href
+
+    %(<a href="#{escape_attribute(href)}" style="#{escape_attribute("color:#{color};text-decoration:none")}">#{escape(text)}</a>)
   end
 
   def plain(node)

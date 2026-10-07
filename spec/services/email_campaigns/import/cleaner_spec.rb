@@ -38,7 +38,7 @@ RSpec.describe EmailCampaigns::Import::Cleaner, :aggregate_failures do
                 'behavior:url(x.htc);background:url(\'https://img.example.com/fundo.jpg\') center #1F3A5F;position:absolute">Oi</td></tr></table>' \
                 '<div style="background-image:url(javascript:alert(1))">x</div>')
 
-    expect(out).to include('<td style="color:#fff;background-color:#1f3a5f" data-import-bg="https://img.example.com/fundo.jpg">Oi</td>')
+    expect(out).to include('<td style="color:#fff;background-color:#1f3a5f;position:absolute" data-import-bg="https://img.example.com/fundo.jpg">Oi</td>')
     expect(out).to include('<div>x</div>')
     expect(warning(:unsafe_css_removed)[:count]).to be >= 2
   end
@@ -132,5 +132,49 @@ RSpec.describe EmailCampaigns::Import::Cleaner, :aggregate_failures do
 
     expect(out).to eq('<a href="https://v.example.com/a.mp4"><img src="https://v.example.com/p.jpg" alt=""></a>')
     expect(warning(:video_as_image)[:count]).to eq(1)
+  end
+
+  it 'removes text hidden by relative tiny fonts, transparent colors, off-screen positions, zero width and clipping' do
+    hidden = {
+      'font-size:1%' => 'Um', 'color:transparent' => 'Dois', 'color:rgba(0,0,0,0)' => 'Tres',
+      'position:absolute;left:-9999px' => 'Quatro', 'width:0;overflow:hidden' => 'Cinco',
+      'clip:rect(0,0,0,0);position:absolute' => 'Seis', 'text-indent:-9999px' => 'Sete', 'font-size:0.05em' => 'Oito'
+    }
+    out = clean("<p>Visível</p>#{hidden.map { |style, text| %(<div style="#{style}">#{text}</div>) }.join}")
+
+    expect(out).to include('Visível')
+    hidden.each_value { |text| expect(out).not_to include(text) }
+    expect(report.dropped_texts.pluck(:text)).to include(*hidden.values)
+  end
+
+  it 'keeps text the color of the fallback background when a background image is behind it' do
+    out = clean('<table><tr><td background="https://img.example.com/hero.jpg" bgcolor="#ffffff">' \
+                '<h1 style="color:#ffffff">Black Friday 70% OFF</h1></td></tr></table>')
+
+    expect(out).to include('Black Friday 70% OFF')
+  end
+
+  it 'records the background image of a hidden part' do
+    clean('<p>Oi</p><div style="display:none"><table><tr><td background="https://img.example.com/escondida.jpg">Texto</td></tr></table></div>')
+
+    expect(report.dropped_images).to include({ src: 'https://img.example.com/escondida.jpg', reason: :hidden })
+  end
+
+  it 'unwraps a destination parameter only on a click-redirect address, keeping share and login links as they are' do
+    out = clean('<a href="https://www.facebook.example.com/sharer/sharer.php?u=https://loja.example.com/post">Compartilhar</a>' \
+                '<a href="https://loja.example.com/login?redirect=https://parceiro.example.com/x">Entrar</a>' \
+                '<a href="https://click.mail.example.com/track/click?url=https%3A%2F%2Floja.example.com%2Fofertas">Ofertas</a>')
+
+    expect(out).to include('href="https://www.facebook.example.com/sharer/sharer.php?u=https://loja.example.com/post"',
+                           'href="https://loja.example.com/login?redirect=https://parceiro.example.com/x"',
+                           'href="https://loja.example.com/ofertas"')
+    expect(warning(:redirect_kept)).to be_nil
+  end
+
+  it 'checks every CSS value, background colors included' do
+    out = clean('<div style="background-color:url(https://evil.example.com/x.png);color:#000000">Oi</div>')
+
+    expect(out).not_to include('evil.example.com')
+    expect(warning(:unsafe_css_removed)[:count]).to eq(1)
   end
 end

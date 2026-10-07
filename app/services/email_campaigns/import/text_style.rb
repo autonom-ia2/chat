@@ -19,6 +19,18 @@ class EmailCampaigns::Import::TextStyle
     new(font_size: 16.0, color: '#000000', align: 'left')
   end
 
+  # px, % or a bare multiplier — what mj-text accepts; nil for anything else (normal, inherit, CSS smuggled in).
+  def self.line_height(value)
+    text = EmailCampaigns::Import::StyleMap.plain(value).downcase
+    return if text.empty?
+
+    number = EmailCampaigns::Import::StyleMap.px(text.delete_suffix('%'))
+    return if number.nil? || number <= 0
+    return "#{number.round}px" if text.end_with?('px')
+
+    text.end_with?('%') ? "#{number.round}%" : number.round(2).to_s
+  end
+
   # The style the content of `node` starts from: every element ancestor folded from the top.
   def self.inherited_for(node)
     node.ancestors.to_a.reverse.select(&:element?).reduce(default) { |style, ancestor| style.inherit(ancestor) }
@@ -95,16 +107,8 @@ class EmailCampaigns::Import::TextStyle
     ITALIC_TAGS.include?(name) || italic
   end
 
-  # px, % or a bare multiplier — what mj-text accepts; anything else (normal, inherit) is ignored.
   def line_height_of(style)
-    value = EmailCampaigns::Import::StyleMap.plain(style['line-height']).downcase
-    return if value.empty?
-
-    number = EmailCampaigns::Import::StyleMap.px(value.delete_suffix('%'))
-    return if number.nil? || number <= 0
-    return "#{number.round}px" if value.end_with?('px')
-
-    value.end_with?('%') ? "#{number.round}%" : number.round(2).to_s
+    self.class.line_height(style['line-height'])
   end
 
   # Email tables start their content on the left, whatever the cell around them centers.

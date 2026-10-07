@@ -1,11 +1,15 @@
 # Links and images of an imported model (#1099). Links keep only http, https, mailto and tel (a removed link keeps
-# its text); a click redirect is unwrapped only when its destination parameter is an absolute http(s) address on
-# another host — UTM parameters carried over — and is otherwise kept as it is, with a warning; it is never followed over
-# the network. Tracking parameters of the source platform leave. Images keep http(s) and raster data: addresses (both
-# listed for copying later); anything else becomes a placeholder to swap. Relative addresses resolve only against the
-# page address of an import by URL. URI, Rack::Utils and string methods — no regex.
+# its text); a click redirect — an address whose path is a click-tracking one (/track/click, /mk/cl/, /r/...) — is
+# unwrapped only when its destination parameter is an absolute http(s) address on another host — UTM parameters
+# carried over — and is otherwise kept as it is, with a warning; it is never followed over the network. Any other link
+# with a destination-like parameter (a share button's ?u=, a login's ?redirect=) is a page of its own and stays as is.
+# Tracking parameters of the source platform leave. Images keep http(s) and raster data: addresses (both listed for
+# copying later); anything else becomes a placeholder to swap. Relative addresses resolve only against the page address
+# of an import by URL. URI, Rack::Utils and string methods — no regex.
 class EmailCampaigns::Import::LinkPolicy
   REDIRECT_PARAMS = %w[u url redirect redirect_url redirect_uri target dest destination link].freeze
+  # Path segments of the click-tracking addresses e-mail platforms wrap links in. A URL's structure, not a person's text.
+  REDIRECT_SEGMENTS = %w[c cl click clicks ct l link links ls mk out r redir redirect t track tracking wf].freeze
   TRACKING_PARAMS = %w[_hsenc _hsmi mc_cid mc_eid].freeze
   KEPT_SCHEMES = %w[mailto tel].freeze
   IMAGE_TYPES = %w[image/png image/jpeg image/jpg image/gif image/webp].freeze
@@ -93,19 +97,26 @@ class EmailCampaigns::Import::LinkPolicy
 
   def unwrap_redirect(href)
     uri = URI.parse(href)
+    return href unless redirect_path?(uri.path)
+
     params = Rack::Utils.parse_query(uri.query.to_s)
     keys = params.keys.select { |key| REDIRECT_PARAMS.include?(key.downcase) }
     return href if keys.empty?
+    return kept_redirect(href) unless keys.one? && trusted?(params[keys.first], uri)
 
-    destination = params[keys.first]
-    return kept_redirect(href) unless keys.one? && destination.is_a?(String) && trusted?(destination, uri)
+    unwrapped(href, carry_utm(params[keys.first], params))
+  rescue URI::InvalidURIError
+    href
+  end
 
-    final = carry_utm(destination, params)
+  def unwrapped(href, final)
     @report.rewrite_link(href, final)
     @report.add(:link_unwrapped)
     final
-  rescue URI::InvalidURIError
-    href
+  end
+
+  def redirect_path?(path)
+    path.to_s.downcase.split('/').any? { |segment| REDIRECT_SEGMENTS.include?(segment) }
   end
 
   def kept_redirect(href)
@@ -114,6 +125,8 @@ class EmailCampaigns::Import::LinkPolicy
   end
 
   def trusted?(destination, uri)
+    return false unless destination.is_a?(String)
+
     target = URI.parse(destination)
     EmailCampaigns::Import::Url::HTTP.include?(target.scheme) && target.host.present? && target.host != uri.host
   rescue URI::InvalidURIError

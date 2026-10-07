@@ -11,6 +11,8 @@ Imitam o HTML exportado por construtores de e-mail. Usam domínios `example.com`
 - `feito-a-mao-hostil.html`: conteúdo hostil (script, formulário, iframe, `javascript:`, CSS perigoso)
 - `produtos-vml.html`: banner com fundo em VML, botão só em VML, grade de produtos em 3 colunas,
   tabela do pedido e rodapé com endereço
+- `rodape-na-mesma-celula.html`: corpo e rodapé (descadastro e endereço) na mesma célula, no mesmo estilo de texto
+- `banner-texto-branco.html`: manchete branca sobre imagem de fundo, com cor de reserva branca
 
 ## De terceiros, licença MIT
 

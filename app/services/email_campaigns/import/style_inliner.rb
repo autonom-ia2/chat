@@ -6,6 +6,9 @@
 class EmailCampaigns::Import::StyleInliner
   Entry = Struct.new(:specificity, :order, :important, :property, :value)
   Rule = Struct.new(:selector, :declarations)
+  # What css_parser raises on a stylesheet it cannot read (it never loads files or addresses here). Anything else is a bug
+  # and goes up. The log carries the error class only, never the client's CSS.
+  PARSER_ERRORS = [ArgumentError, RuntimeError, IOError, CssParser::CircularReferenceError].freeze
 
   def self.call(doc, report, deadline: EmailCampaigns::Import::Limits::CSS_SECONDS, clock: nil)
     new(doc, report, deadline: deadline, clock: clock).call
@@ -51,7 +54,8 @@ class EmailCampaigns::Import::StyleInliner
       rule_set.selectors.each { |selector| rules << Rule.new(selector.strip, declarations) }
     end
     rules
-  rescue StandardError
+  rescue *PARSER_ERRORS => e
+    Rails.logger.warn("[email-import] stylesheet dropped: #{e.class}")
     @report.add(:styles_dropped)
     []
   end

@@ -8,21 +8,23 @@
 #   result.mjml   # => "<mjml>…</mjml>"
 #   result.report # => EmailCampaigns::Import::Report
 #
-# Raises EmailCampaigns::Import::Error (with a code) when the input cannot be imported at all.
+# Raises EmailCampaigns::Import::Error (with a code) when the input cannot be imported at all, or when it goes past the
+# ceilings of a Budget (elements, depth, time) on the way.
 class EmailCampaigns::Import::Engine
   Result = Data.define(:mjml, :report)
   TALLIES = { texts: 'mj-text', images: 'mj-image', buttons: 'mj-button', dividers: 'mj-divider', spacers: 'mj-spacer' }.freeze
   SOURCE_KINDS = %w[paste file url].freeze
   PLACEHOLDERS = (EmailCampaigns::TemplateValidator::DEFAULT_KEYS + EmailCampaigns::Import::MergeTags::Catalog::LIST_FIELDS).freeze
 
-  def self.call(input, source_kind:, base_url: nil)
-    new(input, source_kind, base_url).call
+  def self.call(input, source_kind:, base_url: nil, budget: nil)
+    new(input, source_kind, base_url, budget || EmailCampaigns::Import::Budget.new).call
   end
 
-  def initialize(input, source_kind, base_url)
+  def initialize(input, source_kind, base_url, budget)
     @input = input
     @source_kind = source_kind.to_s
     @base_url = base_url
+    @budget = budget
     @report = EmailCampaigns::Import::Report.new(source_kind: @source_kind)
   end
 
@@ -31,8 +33,10 @@ class EmailCampaigns::Import::Engine
 
     source = EmailCampaigns::Import::Limits.source!(@input)
     reader = mjml?(source) ? EmailCampaigns::Import::MjmlSource : EmailCampaigns::Import::HtmlSource
-    document = EmailCampaigns::Import::FooterCleaner.call(reader.call(source, @report, base_url: @base_url), @report)
+    document = EmailCampaigns::Import::FooterCleaner.call(reader.call(source, @report, base_url: @base_url, budget: @budget), @report)
     raise EmailCampaigns::Import::Error, :empty if document.sections.empty?
+
+    @budget.time!
 
     Result.new(mjml: finish(document), report: @report)
   end
@@ -40,7 +44,7 @@ class EmailCampaigns::Import::Engine
   private
 
   def mjml?(source)
-    Nokogiri::HTML5.fragment(source).element_children.first&.name == 'mjml'
+    EmailCampaigns::Import::Limits.fragment(source).element_children.first&.name == 'mjml'
   end
 
   def finish(document)
@@ -50,7 +54,8 @@ class EmailCampaigns::Import::Engine
     tally(document)
     @report.images = EmailCampaigns::Import::ImageList.from(document)
     @report.add(:images_to_copy, count: @report.images.size) if @report.images.any?
-    mjml = EmailCampaigns::LockedFooter.ensure(EmailCampaigns::Import::Emitter.call(document))
+    emitted = EmailCampaigns::Import::TemplateCode.scrub(EmailCampaigns::Import::Emitter.call(document), @report)
+    mjml = EmailCampaigns::LockedFooter.ensure(emitted)
     EmailCampaigns::Import::QualityFix.call(mjml, @report, placeholders: PLACEHOLDERS)
   end
 

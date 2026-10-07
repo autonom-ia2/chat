@@ -2,12 +2,15 @@
 # read — never on the raw markup. Fields go through MergeTags::Catalog; unsubscribe tags point at {{ unsubscribe_url }}
 # in links and leave plain text (our locked footer brings the only link); platform-only links lose their anchor;
 # conditionals keep their first branch (the others are recorded as dropped text); unknown tags become {{ key }} and are
-# listed for the person to choose. A tag split across inline tags by an editor is joined back first. No regex.
+# listed for the person to choose — except a link made only of a field, which LinkPolicy then removes, so there is
+# nothing left to choose. Text an unsubscribe tag leaves behind ("Para sair:") is recorded for the person to check. A
+# tag split across inline tags by an editor is joined back first. No regex.
 class EmailCampaigns::Import::MergeTags
   LINK_ATTRIBUTES = %w[href].freeze
   TEXT_ATTRIBUTES = %w[src alt title].freeze
   UNSUBSCRIBE = '{{ unsubscribe_url }}'.freeze
   MAX_JOIN = 6
+  MAX_LEFT_TEXT = 120
   INLINE = %w[span a strong b em i u font small sup sub mark].freeze
 
   def initialize(report)
@@ -35,15 +38,28 @@ class EmailCampaigns::Import::MergeTags
     parts = tokens.map do |token|
       next token.raw unless token.tag?
 
-      resolution = Catalog.resolve(token)
-      return :platform_link if link && resolution.kind == :platform_link && tokens.one?
+      part = attribute_tag(token, tokens, link)
+      return part if part == :platform_link
 
-      replacement(token, resolution, in_link: link)
+      part
     end
     parts.join
   end
 
   private
+
+  def attribute_tag(token, tokens, link)
+    resolution = Catalog.resolve(token)
+    return :platform_link if link && resolution.kind == :platform_link && tokens.one?
+    return "{{ #{resolution.key} }}" if link && field_link?(tokens, resolution)
+
+    replacement(token, resolution, in_link: link)
+  end
+
+  # A link whose whole address is one field: it cannot be a link of ours, so LinkPolicy drops it (and records it).
+  def field_link?(tokens, resolution)
+    %i[field unknown].include?(resolution.kind) && tokens.reject { |token| !token.tag? && token.raw.strip.empty? }.one?
+  end
 
   def kept_field(token)
     resolution = Catalog.resolve(token)
@@ -77,9 +93,12 @@ class EmailCampaigns::Import::MergeTags
     tokens = pair_names(Tokenizer.scan(node.content))
     return if tokens.none?(&:tag?) && @stack.empty?
 
+    @unsubscribe_text = false
     kept = +''
     tokens.each { |token| kept << piece(token) }
     node.content = kept
+    left = EmailCampaigns::Import::Visibility.visible_text(kept)
+    @report.add(:unsubscribe_text_kept, item: left[0, MAX_LEFT_TEXT]) if @unsubscribe_text && left.present?
   end
 
   def piece(token)
@@ -114,7 +133,7 @@ class EmailCampaigns::Import::MergeTags
   def replacement(token, resolution, in_link:)
     case resolution.kind
     when :field then field(token, resolution)
-    when :unsubscribe then in_link ? UNSUBSCRIBE : platform_noise
+    when :unsubscribe then in_link ? UNSUBSCRIBE : unsubscribe_text
     when :unknown then unknown(token, resolution)
     else platform_noise
     end
@@ -135,6 +154,11 @@ class EmailCampaigns::Import::MergeTags
   def platform_noise
     @report.add(:platform_tags_removed)
     ''
+  end
+
+  def unsubscribe_text
+    @unsubscribe_text = true
+    platform_noise
   end
 
   # *|FNAME|* *|LNAME|* is the full name.

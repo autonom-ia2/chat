@@ -35,7 +35,7 @@ class EmailCampaigns::Import::Outlook
     markup = inner(comment.content)
     return unless markup.downcase.include?('v:')
 
-    vml = Nokogiri::HTML5.fragment(markup)
+    vml = EmailCampaigns::Import::Limits.fragment(markup)
     elements = vml.css('*')
     button = elements.find { |element| element.name == BUTTON }
     rebuild_button(comment, button) if button

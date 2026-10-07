@@ -29,7 +29,7 @@ module EmailCampaigns::Import::InlineMarkup
     return NONE if href.blank?
 
     decoration = decoration(element) || 'underline'
-    [%(<a href="#{escape(href)}" style="color:#{own.color};text-decoration:#{decoration}">), '</a>']
+    [%(<a href="#{escape(href)}" style="#{escape("color:#{own.color};text-decoration:#{decoration}")}">), '</a>']
   end
 
   def differences(element, own, parent)

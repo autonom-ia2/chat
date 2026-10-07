@@ -2,8 +2,10 @@
 # KEEP are dropped with their content when active or useless in e-mail (script, form, iframe, object, svg, base, meta,
 # link, Office XML...) and unwrapped otherwise, keeping their text. Attributes are kept only from an allowlist (no on*,
 # no class/id/data-*); inline CSS only for known properties whose value carries no url(), expression(), script scheme
-# or escape. A background image (attribute or CSS) becomes the internal data-import-bg marker the converter turns into
-# a section background, when it is an http(s) address. Nokogiri and string methods — no regex.
+# or escape — background colors included. Position, offsets, indent and clip stay so Visibility can tell off-screen
+# and clipped text; the converter never writes them out. A background image (attribute or CSS) becomes the internal
+# data-import-bg marker the converter turns into a section background, when it is an http(s) address. Nokogiri and
+# string methods — no regex.
 class EmailCampaigns::Import::Sanitizer
   UNSAFE = %w[script iframe frame frameset object embed applet svg math form base link canvas audio param noscript template].freeze
   FORM_PARTS = %w[input button select textarea option optgroup label fieldset legend datalist output].freeze
@@ -17,7 +19,8 @@ class EmailCampaigns::Import::Sanitizer
   STYLE_PROPERTIES = %w[color background-color font-size font-family font-weight font-style line-height text-align text-decoration
                         text-transform letter-spacing padding padding-top padding-right padding-bottom padding-left border border-top
                         border-right border-bottom border-left border-color border-width border-style border-radius width max-width
-                        min-width height max-height display visibility opacity overflow mso-hide vertical-align float].freeze
+                        min-width height max-height display visibility opacity overflow mso-hide vertical-align float position
+                        left top text-indent clip].freeze
   UNSAFE_VALUES = ['url(', 'expression', 'javascript:', 'vbscript:', 'behavior', '-moz-binding', '@import', '\\', '<'].freeze
   HEAD_UNSAFE = 'script, base, iframe, object, embed'.freeze
 
@@ -133,10 +136,12 @@ class EmailCampaigns::Import::Sanitizer
     kept.empty? ? element.remove_attribute('style') : element['style'] = EmailCampaigns::Import::StyleMap.dump(kept)
   end
 
-  # Background images were already taken by #background; their shorthand gives only its color.
+  # Background images were already taken by #background (background-image leaves here); the shorthand gives only its
+  # color. Every other value is checked.
   def keep(out, property, value)
     return shorthand(out, value) if property == 'background'
-    return @report.add(:unsafe_css_removed) if unsafe?(value) && !property.start_with?('background')
+    return if property == 'background-image'
+    return @report.add(:unsafe_css_removed) if unsafe?(value)
 
     out[property] = value if STYLE_PROPERTIES.include?(property)
   end

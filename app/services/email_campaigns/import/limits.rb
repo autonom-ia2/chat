@@ -1,13 +1,17 @@
-# Ceilings of a template import (#1099), checked before any heavy work: 500 KB of markup, 5,000 elements, 40 levels of
-# nesting, 2,000 stylesheet rules and a time budget of its own for the CSS inliner.
+# Ceilings of a template import (#1099), checked before and during the heavy work: 500 KB of markup, 5,000 elements and
+# 40 levels of nesting (counted by Budget across every parse of one import), 2,000 stylesheet rules with a time budget of
+# their own for the CSS inliner, and one deadline for the whole conversion.
 module EmailCampaigns::Import::Limits
   MAX_BYTES = 500 * 1024
   MAX_ELEMENTS = 5_000
   MAX_DEPTH = 40
   MAX_CSS_RULES = 2_000
   CSS_SECONDS = 3.0
-  # Hard stop of the HTML parser itself, far above MAX_DEPTH so the friendlier check below runs first.
+  TOTAL_SECONDS = 10.0
+  # Hard stop of the HTML parser itself, far above MAX_DEPTH so the friendlier check of Budget runs first.
   PARSER_DEPTH = 400
+  # What Nokogiri's ArgumentError says when PARSER_DEPTH is crossed ("Document tree depth limit exceeded").
+  PARSER_DEPTH_ERROR = 'depth limit exceeded'.freeze
   BOM = [0xFEFF].pack('U').freeze
 
   module_function
@@ -25,25 +29,24 @@ module EmailCampaigns::Import::Limits
     text
   end
 
-  def html!(source)
-    doc = Nokogiri::HTML5(source, max_tree_depth: PARSER_DEPTH)
-    check_tree!(doc.root)
+  # A whole page, parsed within the parser depth and counted against the import's budget.
+  def html!(source, budget = EmailCampaigns::Import::Budget.new)
+    doc = parse { Nokogiri::HTML5(source, max_tree_depth: PARSER_DEPTH) }
+    budget.count!(doc.root)
     doc
-  rescue ArgumentError
-    raise EmailCampaigns::Import::Error, :too_deep
   end
 
-  # Counts elements and measures the deepest one without recursion.
-  def check_tree!(root)
-    elements = 0
-    stack = [[root, 1]]
-    until stack.empty?
-      node, depth = stack.pop
-      elements += 1
-      raise EmailCampaigns::Import::Error, :too_many_nodes if elements > MAX_ELEMENTS
-      raise EmailCampaigns::Import::Error, :too_deep if depth > MAX_DEPTH
+  # An HTML fragment parsed within the parser depth (not counted: callers that read client markup count it).
+  def fragment(html)
+    parse { Nokogiri::HTML5.fragment(html.to_s, max_tree_depth: PARSER_DEPTH) }
+  end
 
-      node.element_children.each { |child| stack << [child, depth + 1] }
-    end
+  # Runs a parse, turning only the parser's own depth stop into :too_deep; any other error goes up as it is.
+  def parse
+    yield
+  rescue ArgumentError => e
+    raise unless e.message.include?(PARSER_DEPTH_ERROR)
+
+    raise EmailCampaigns::Import::Error, :too_deep
   end
 end

@@ -118,4 +118,20 @@ RSpec.describe EmailCampaigns::Import::Converter, :aggregate_failures do
     expect(out.at('mj-image').attributes.transform_values(&:value))
       .to include('src' => EmailCampaigns::Import::Placeholders::MISSING_SRC, 'alt' => 'Logo', 'css-class' => 'import-missing')
   end
+
+  it 'reads a two-row table of titles and text as columns, not as a table of data' do
+    out = mjml(email('<tr><td><table><tr><td><strong>Loja Centro</strong></td><td><strong>Loja Sul</strong></td></tr>' \
+                     '<tr><td>Rua A, 100</td><td>Av. B, 200</td></tr></table></td></tr>'))
+
+    expect(out.to_html).not_to include('Loja Centro — Loja Sul')
+    expect(report.count(:table_as_text)).to eq(0)
+  end
+
+  it 'links the image of a card whose link wraps the image and the text' do
+    out = mjml(email('<tr><td><a href="https://loja.example.com/p1"><img src="https://img.example.com/p1.jpg" alt="P1" width="200">' \
+                     '<p>Produto 1</p></a></td></tr>'))
+
+    expect(out.at('mj-image')['href']).to eq('https://loja.example.com/p1')
+    expect(out.at('mj-text').inner_html).to include('href="https://loja.example.com/p1"')
+  end
 end

@@ -1,18 +1,21 @@
 # Turns the content of one column of an imported model into editable blocks (#1099), in reading order. Running text
 # (paragraphs, headings, lists, inline formatting) goes to a TextBuffer and comes out grouped by style; images, buttons,
 # rules and spacers break the text; a data table becomes lines of text, or a marked placeholder when too complex;
-# any other nested table is read through, top to bottom (side-by-side content inside a column stacks).
+# any other nested table is read through, top to bottom (side-by-side content inside a column stacks). An image inside a
+# link that also wraps text (a product card) keeps the link. Every visit checks the import's deadline.
 class EmailCampaigns::Import::ContentWalker
   BLOCK = %w[p div h1 h2 h3 h4 h5 h6 ul ol li blockquote pre center table tbody thead tfoot tr td th caption section article header
              footer main aside nav figure figcaption address dl dt dd].freeze
   MIN_SPACER = 4
   SAFE_FONTS = %w[arial helvetica sans-serif].freeze
 
-  def initialize(nodes, report, style: nil)
+  def initialize(nodes, report, style: nil, budget: EmailCampaigns::Import::Budget.new)
     @nodes = Array(nodes)
     @report = report
+    @budget = budget
     @style = style || EmailCampaigns::Import::TextStyle.inherited_for(@nodes.first)
     @blocks = []
+    @links = []
     @buffer = EmailCampaigns::Import::TextBuffer.new
   end
 
@@ -25,6 +28,7 @@ class EmailCampaigns::Import::ContentWalker
   private
 
   def visit(node, style)
+    @budget.time!
     return @buffer.text(node.content, style) if node.text?
     return unless node.element?
     return if special?(node, style)
@@ -42,7 +46,7 @@ class EmailCampaigns::Import::ContentWalker
   end
 
   def media(node, style)
-    node.name == 'img' ? EmailCampaigns::Import::Blocks.image(node, style) : EmailCampaigns::Import::Blocks.divider(node)
+    node.name == 'img' ? EmailCampaigns::Import::Blocks.image(node, style, href: @links.last) : EmailCampaigns::Import::Blocks.divider(node)
   end
 
   def link?(node, style)
@@ -106,9 +110,12 @@ class EmailCampaigns::Import::ContentWalker
   def inline(node, style)
     own = style.inherit(node)
     opening, closing = EmailCampaigns::Import::InlineMarkup.wrap(node, own, style)
+    link = node.name == 'a' && node['href'].present?
+    @links.push(node['href']) if link
     @buffer.open_inline(opening, closing)
     node.children.each { |child| visit(child, own) }
     @buffer.close_inline
+    @links.pop if link
   end
 
   def add(block)

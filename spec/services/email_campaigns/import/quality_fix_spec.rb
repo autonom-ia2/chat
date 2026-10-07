@@ -71,4 +71,14 @@ RSpec.describe EmailCampaigns::Import::QualityFix, :aggregate_failures do
     expect(checks(out)).to eq([:placeholders])
     expect(warning(:quality_pending)).to be_nil
   end
+
+  it 'leaves the color of text over a background image alone and lists the contrast as pending' do
+    hero = 'background-url="https://img.example.com/hero.jpg"'
+    [hero, %(#{hero} background-color="#ffffff")].each do |attrs|
+      out = fix(email('<mj-text font-family="Arial" font-size="32px" font-weight="700" color="#ffffff">Black Friday</mj-text>', attrs))
+
+      expect(Nokogiri::HTML5.fragment(out).at('mj-text')['color']).to eq('#ffffff')
+    end
+    expect(warning(:quality_pending)[:items]).to include('contrast')
+  end
 end

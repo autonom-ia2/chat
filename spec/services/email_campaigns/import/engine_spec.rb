@@ -40,6 +40,15 @@ RSpec.describe EmailCampaigns::Import::Engine, :aggregate_failures do
       expect(refusal('<p>x</p>', source_kind: 'ftp')).to eq(:invalid_source_kind)
     end
 
+    it 'turns only the parser depth stop into the depth code, letting any other parser error through' do
+      allow(Nokogiri).to receive(:HTML5).and_raise(ArgumentError, 'Document tree depth limit exceeded')
+      expect { EmailCampaigns::Import::Limits.html!('<p>x</p>') }
+        .to raise_error(EmailCampaigns::Import::Error) { |error| expect(error.code).to eq(:too_deep) }
+
+      allow(Nokogiri).to receive(:HTML5).and_raise(ArgumentError, 'outra coisa')
+      expect { EmailCampaigns::Import::Limits.html!('<p>x</p>') }.to raise_error(ArgumentError, 'outra coisa')
+    end
+
     it 'refuses a model without any text or image' do
       expect(refusal('<form><input name="senha"></form>')).to eq(:empty)
     end
@@ -81,6 +90,26 @@ RSpec.describe EmailCampaigns::Import::Engine, :aggregate_failures do
     expect(out.css('mj-image[css-class="import-unresolved"]').size).to eq(1)
     expect(codes(result)).to include(:hero_converted, :navbar_converted, :accordion_converted, :table_as_text, :include_ignored,
                                      :unresolved_parts, :web_font_ignored, :styles_dropped)
+  end
+
+  it 'keeps the body that shares its cell with the footer, taking out only the footer lines' do
+    result = import('rodape-na-mesma-celula.html')
+    body = parsed(result).css('mj-section').reject { |section| section['css-class'].to_s.include?('footer-locked') }.map(&:text).join
+
+    expect(body).to include('coleção de outono', 'Frete grátis', 'OUTONO10', '{{ primeiro_nome }}')
+    expect(body).not_to include('Descadastre-se', 'Rua das Flores')
+    expect(result.mjml.scan('{{ unsubscribe_url }}').size).to eq(1)
+  end
+
+  it 'keeps a white headline over a banner image, with the image and its color untouched' do
+    result = import('banner-texto-branco.html')
+    out = parsed(result)
+    banner = out.css('mj-section').find { |section| section['background-url'] }
+
+    expect(banner['background-url']).to eq('https://img.loja-exemplo.example.com/black-friday.jpg')
+    expect(banner.css('mj-text').map(&:text).join).to include('Black Friday 70% OFF', 'Só nesta sexta')
+    expect(banner.css('mj-text').pluck('color').uniq).to eq(['#ffffff'])
+    expect(result.report.dropped_texts.pluck(:reason)).not_to include(:hidden)
   end
 
   it 'corrects quality problems on its own and lists what it could not' do

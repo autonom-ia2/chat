@@ -7,17 +7,23 @@
 class EmailCampaigns::Import::MjmlSource
   ALLOWED = JSON.parse(Rails.root.join('app/javascript/dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/builder/' \
                                        'mjmlAllowedAttributes.json').read).fetch('components').freeze
-  URL_ATTRIBUTES = %w[href src background-url].freeze
+  # Read on their own (href, src, background-url) or left out: alternative images, carousel thumbnails and arrows,
+  # accordion icons, the navbar base address and image maps are never kept, so no address escapes the image list.
+  URL_ATTRIBUTES = %w[href src background-url srcset sizes thumbnails-src icon-wrapped-url icon-unwrapped-url left-icon
+                      right-icon base-url usemap].freeze
+  # A double quote ends the attribute of the HTML the MJML compiles into; braces would reach the template renderer.
+  UNSAFE_ATTRIBUTE_VALUES = (EmailCampaigns::Import::Sanitizer::UNSAFE_VALUES + ['"', '{{', '{%']).freeze
   NAVBAR_JOIN = ' · '.freeze
 
-  def self.call(source, report, base_url: nil)
-    new(source, report, base_url).call
+  def self.call(source, report, base_url: nil, budget: EmailCampaigns::Import::Budget.new)
+    new(source, report, base_url, budget).call
   end
 
-  def initialize(source, report, base_url)
+  def initialize(source, report, base_url, budget)
     @source = source
     @report = report
     @base_url = base_url
+    @budget = budget
     @links = EmailCampaigns::Import::LinkPolicy.new(report, base_url: base_url)
     @tags = EmailCampaigns::Import::MergeTags.new(report)
   end
@@ -36,7 +42,7 @@ class EmailCampaigns::Import::MjmlSource
   def canonical
     parsed = false
     out = EmailCampaigns::MjmlCanonicalizer.call(@source) do |root, _cut|
-      EmailCampaigns::Import::Limits.check_tree!(root)
+      @budget.count!(root)
       parsed = true
       {}
     end
@@ -70,7 +76,7 @@ class EmailCampaigns::Import::MjmlSource
   end
 
   def plain(node)
-    @tags.plain_text(EmailCampaigns::Import::Visibility.visible_text(Nokogiri::HTML5.fragment(content(node)).text))
+    @tags.plain_text(EmailCampaigns::Import::Visibility.visible_text(@budget.fragment!(content(node)).text))
   end
 
   def body_child(node)
@@ -135,7 +141,7 @@ class EmailCampaigns::Import::MjmlSource
 
   public
 
-  attr_reader :links, :tags
+  attr_reader :links, :tags, :budget
 
   # The raw ending-tag content of an MJML element (HTML for MJML), as written.
   def content(node)
@@ -143,19 +149,20 @@ class EmailCampaigns::Import::MjmlSource
     index ? @cut.slots[index].content : ''
   end
 
-  # A cleaned HTML fragment of an ending tag's content.
+  # A cleaned HTML fragment of an ending tag's content, counted against the import's ceilings.
   def fragment(html)
-    root = Nokogiri::HTML5.fragment(html.to_s)
-    EmailCampaigns::Import::Cleaner.call(root, @report, base_url: @base_url)
+    EmailCampaigns::Import::Cleaner.call(@budget.fragment!(html), @report, base_url: @base_url)
   end
 
+  # The allowlisted attributes of an element: colors normalized, line heights numeric, and any value that could leave
+  # its attribute (quote, url(), script, template code) dropped and reported.
   def allowed(node)
     names = ALLOWED.fetch(node.name, []) - URL_ATTRIBUTES
     node.attribute_nodes.each_with_object({}) do |attribute, out|
       next unless names.include?(attribute.name)
-      next @report.add(:unsafe_css_removed) if unsafe?(attribute.value)
 
-      out[attribute.name] = attribute.value
+      value = attribute_value(attribute.name, attribute.value)
+      out[attribute.name] = value if value
     end
   end
 
@@ -168,8 +175,18 @@ class EmailCampaigns::Import::MjmlSource
     @links.href(rewritten)
   end
 
+  # '#rrggbb', or nil (reported when the value smuggles something in) for anything else.
   def color(value)
-    EmailCampaigns::Import::StyleMap.color(value.to_s) || value.presence
+    normalized = EmailCampaigns::Import::StyleMap.color(value.to_s)
+    @report.add(:unsafe_css_removed) if normalized.nil? && unsafe?(value.to_s)
+    normalized
+  end
+
+  # A line height mj-text accepts (px, % or a bare multiplier), or nil (reported when unsafe).
+  def line_height(value)
+    normalized = EmailCampaigns::Import::TextStyle.line_height(value)
+    @report.add(:unsafe_css_removed) if normalized.nil? && unsafe?(value.to_s)
+    normalized
   end
 
   private
@@ -181,8 +198,18 @@ class EmailCampaigns::Import::MjmlSource
     src unless kind == :missing
   end
 
+  def attribute_value(name, value)
+    return color(value) if name.end_with?('color')
+    return attribute_value('font', value.delete('"')) if name.end_with?('font-family') && value.include?('"')
+    return line_height(value) if name.end_with?('line-height')
+    return value unless unsafe?(value)
+
+    @report.add(:unsafe_css_removed)
+    nil
+  end
+
   def unsafe?(value)
     lower = EmailCampaigns::Import::Url.compact(value).downcase
-    EmailCampaigns::Import::Sanitizer::UNSAFE_VALUES.any? { |marker| lower.include?(marker) }
+    UNSAFE_ATTRIBUTE_VALUES.any? { |marker| lower.include?(marker) }
   end
 end

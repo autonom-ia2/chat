@@ -1,7 +1,7 @@
 # Why an import could not even start (#1099). The screen turns the code into one sentence with one way out; the
 # message never carries any of the client's markup.
 class EmailCampaigns::Import::Error < StandardError
-  CODES = %i[too_large empty too_many_nodes too_deep malformed_mjml invalid_source_kind].freeze
+  CODES = %i[too_large empty too_many_nodes too_deep too_slow malformed_mjml invalid_source_kind].freeze
 
   attr_reader :code
 

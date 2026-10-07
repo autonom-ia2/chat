@@ -54,4 +54,18 @@ RSpec.describe EmailCampaigns::Import::StyleInliner, :aggregate_failures do
     expect(doc.css('p').map { |node| node['style'] }).to eq(['color:#000000', nil])
     expect(warning(:css_limit)[:count]).to eq(1)
   end
+
+  it 'drops a stylesheet the CSS parser rejects, logging only the error class, and lets programming errors through' do
+    messages = []
+    allow(Rails.logger).to receive(:warn) { |message| messages << message }
+    allow_any_instance_of(CssParser::Parser).to receive(:add_block!).and_raise(ArgumentError, 'Cannot parse secret-css') # rubocop:disable RSpec/AnyInstance
+    inline('p { color:#111111 }', '<p>A</p>')
+
+    expect(warning(:styles_dropped)[:count]).to eq(1)
+    expect(messages.join).to include('ArgumentError')
+    expect(messages.join).not_to include('secret-css')
+
+    allow_any_instance_of(CssParser::Parser).to receive(:add_block!).and_raise(NoMethodError) # rubocop:disable RSpec/AnyInstance
+    expect { inline('p { color:#111111 }', '<p>A</p>') }.to raise_error(NoMethodError)
+  end
 end

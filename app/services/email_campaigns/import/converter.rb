@@ -12,13 +12,14 @@ class EmailCampaigns::Import::Converter
   ROW_TAGS = %w[tr table].freeze
   BOX_TAGS = %w[div center section article header footer main aside td th].freeze
 
-  def self.call(body, report)
-    new(body, report).call
+  def self.call(body, report, budget: EmailCampaigns::Import::Budget.new)
+    new(body, report, budget).call
   end
 
-  def initialize(body, report)
+  def initialize(body, report, budget)
     @body = body
     @report = report
+    @budget = budget
     @layout = EmailCampaigns::Import::Layout.new
   end
 
@@ -54,6 +55,7 @@ class EmailCampaigns::Import::Converter
   end
 
   def sections_for(node, box)
+    @budget.time!
     box = box_for(node, box)
     return [] unless @layout.content?(node)
 
@@ -134,7 +136,7 @@ class EmailCampaigns::Import::Converter
   def leaf_section(nodes, box)
     return if nodes.none? { |node| node.element? || @layout.content?(node) }
 
-    blocks = EmailCampaigns::Import::ContentWalker.new(nodes, @report).call
+    blocks = EmailCampaigns::Import::ContentWalker.new(nodes, @report, budget: @budget).call
     return if blocks.empty?
 
     EmailCampaigns::Import::Model::Section.new(columns: [EmailCampaigns::Import::Model::Column.new(blocks: blocks)],
@@ -153,7 +155,7 @@ class EmailCampaigns::Import::Converter
   end
 
   def column(cell, box)
-    blocks = EmailCampaigns::Import::ContentWalker.new([cell], @report).call
+    blocks = EmailCampaigns::Import::ContentWalker.new([cell], @report, budget: @budget).call
     return if blocks.empty?
 
     @report.add(:layout_stacked) if cell.css('*').any? { |node| @layout.columns(node) }

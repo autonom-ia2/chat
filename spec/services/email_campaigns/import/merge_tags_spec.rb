@@ -23,6 +23,12 @@ RSpec.describe EmailCampaigns::Import::MergeTags, :aggregate_failures do
       expect(tokens.map(&:raw).join).to eq(source)
     end
 
+    it 'reads %% %% as a tag only around a name, so percentages in running text stay text' do
+      expect(described_class.scan('Desconto de 10%% hoje e 20%% amanhã').none?(&:tag?)).to be(true)
+      expect(described_class.scan('Oi %%FIRSTNAME%%, %%contact.first_name%% %%list:x%%').select(&:tag?).map(&:inner))
+        .to eq(%w[FIRSTNAME contact.first_name list:x])
+    end
+
     it 'keeps an opener without its closer as plain text' do
       tokens = described_class.scan('Preço {{ sem fim e 50% *| solto')
 
@@ -100,5 +106,11 @@ RSpec.describe EmailCampaigns::Import::MergeTags, :aggregate_failures do
 
   it 'cleans a plain-text value such as the subject, keeping only fields' do
     expect(described_class.new(report).plain_text('{{ params.assunto | default : "Novidades" }} para *|FNAME|*')).to eq('para {{ primeiro_nome }}')
+  end
+
+  it 'does not list as unknown a field that was the whole address of a link, since that link leaves' do
+    convert('<a href="{{ link_produto }}">Ver</a><p>{{ cupom }}</p>')
+
+    expect(warning(:unknown_fields)[:items].pluck(:key)).to eq(%w[cupom])
   end
 end

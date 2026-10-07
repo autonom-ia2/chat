@@ -9,7 +9,8 @@ class EmailCampaigns::Import::Report
     blocking: %i[unknown_fields image_missing],
     warning: %i[unresolved_parts unsafe_removed unsafe_css_removed hidden_text_removed conditional_simplified tag_simplified
                 link_removed redirect_kept embed_removed video_as_image dark_mode_ignored web_font_ignored styles_dropped
-                include_ignored css_limit layout_stacked table_as_text outlook_only quality_pending gmail_clip],
+                include_ignored css_limit layout_stacked table_as_text outlook_only quality_pending gmail_clip template_code_removed
+                unsubscribe_link_removed unsubscribe_text_kept],
     info: %i[images_to_copy tags_converted platform_tags_removed footer_replaced tracking_removed preheader_kept link_unwrapped
              vml_button_recovered hero_converted navbar_converted accordion_converted carousel_converted font_replaced quality_fixed]
   }.freeze
@@ -75,7 +76,9 @@ class EmailCampaigns::Import::Report
     @recovered_texts << text.to_s.split.join(' ')
   end
 
-  # Registers a part the converter left for later and returns the id its placeholder image carries.
+  # Registers a part the converter left for later and returns the id its placeholder image carries. The markup is the
+  # client's (already cleaned): whoever sends it to a model (delivery D) passes it as delimited data under a fixed
+  # instruction, never as instructions, and runs the answer through the same Cleaner.
   def add_unresolved(text:, html:)
     id = "trecho-#{@unresolved.size + 1}"
     @unresolved << { id: id, text: text.to_s.split.join(' '), html: html.to_s.byteslice(0, MAX_FRAGMENT_BYTES).scrub('') }

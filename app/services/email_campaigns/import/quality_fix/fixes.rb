@@ -45,7 +45,11 @@ class EmailCampaigns::Import::QualityFix::Fixes
     end
   end
 
+  # Text over a background image keeps its color: the image is what the reader sees, so the fallback color says nothing
+  # about contrast. The check stays pending for the person to judge.
   def text_contrast(node)
+    return if GATE::Background.image?(node)
+
     background = GATE::Background.of(node)
     needed = needed(node)
     color = node['color'] || GATE::DEFAULT_TEXT_COLOR

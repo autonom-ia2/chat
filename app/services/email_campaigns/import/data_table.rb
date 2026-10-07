@@ -1,10 +1,15 @@
 # A table of data (prices, schedules, invoice lines) rather than of layout (#1099): two rows or more, every filled row
-# with the same number (two or more) of filled cells, short text only — no image, link or nested table. A simple one becomes lines of text
+# with the same number (two or more) of filled cells, short text only — no image, link or nested table. With only two
+# rows and no header cell it must also look like a grid of values: no paragraphs, headings or lists, and no cell that is
+# all bold (a title over a column of a layout, such as two shops side by side). A simple one becomes lines of text
 # ("Serviço 1 — R$ 19,99"); one with merged cells or more than four columns is left for later as a marked image.
 module EmailCampaigns::Import::DataTable
   MAX_CELL_CHARS = 120
   MAX_COLUMNS = 4
+  GRID_ROWS = 3
   SEPARATOR = ' — '.freeze
+  BLOCKS = 'p, div, h1, h2, h3, h4, h5, h6, ul, ol, li, blockquote'.freeze
+  BOLD = %w[strong b].freeze
 
   module_function
 
@@ -13,7 +18,26 @@ module EmailCampaigns::Import::DataTable
     return false if rows.size < 2 || table.css('img, table, a[href]').any?
 
     cells = rows.map { |row| filled(row) }.reject(&:empty?)
-    uniform?(cells) && cells.flatten.all? { |cell| EmailCampaigns::Import::TableParts.words(cell).length <= MAX_CELL_CHARS }
+    uniform?(cells) && short?(cells.flatten) && grid?(table, rows, cells.flatten)
+  end
+
+  # Three rows or more, a header cell, or plain cells: what tells a grid of values from two rows of layout.
+  def grid?(table, rows, cells)
+    rows.size >= GRID_ROWS || table.css('th').any? || plain_cells?(table, cells)
+  end
+
+  def short?(cells)
+    cells.all? { |cell| EmailCampaigns::Import::TableParts.words(cell).length <= MAX_CELL_CHARS }
+  end
+
+  # No block content and no title cell (one whose whole text is bold).
+  def plain_cells?(table, cells)
+    table.css(BLOCKS).empty? && cells.none? { |cell| title?(cell) }
+  end
+
+  def title?(cell)
+    bold = cell.css(BOLD.join(', ')).map { |node| EmailCampaigns::Import::TableParts.visible(node) }.join(' ')
+    bold.present? && EmailCampaigns::Import::Visibility.visible_text(bold) == EmailCampaigns::Import::TableParts.visible(cell)
   end
 
   # Every filled row has the same number of filled cells, two or more.

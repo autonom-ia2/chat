@@ -1,13 +1,20 @@
 # Removes what the reader never sees in an imported model (#1099) so it cannot travel into the editable copy as spam or
-# a hidden trap: elements hidden by display/visibility/opacity/mso-hide or collapsed to zero height, text in a font
-# under 2px, text the color of its background, and tracking pixels (a side of 1px or less). The first hidden text
-# before anything visible is the inbox preview: it is kept as the preheader. Every removed text and image is recorded.
+# a hidden trap: elements hidden by display/visibility/opacity/mso-hide, collapsed to zero height or width, clipped
+# away or pushed off screen (position or text-indent), text in a font under 2px (relative sizes included), text with a
+# transparent color or the color of its background — unless a background image is behind it, since the image is what
+# the reader sees — and tracking pixels (a side of 1px or less). The first hidden text before anything visible is the
+# inbox preview: it is kept as the preheader. Every removed text and image, background images included, is recorded.
 class EmailCampaigns::Import::Visibility
-  Context = Struct.new(:color, :background, :font_size)
+  Context = Struct.new(:color, :background, :font_size, :clear, :image)
   # Zero-width, joiners, byte-order mark, figure and no-break spaces, soft hyphen: what preheader padding is made of.
   INVISIBLE = [0x200B, 0x200C, 0x200D, 0xFEFF, 0x034F, 0x2007, 0x00A0, 0x00AD, 0x2060].map { |code| [code].pack('U') }.freeze
   MIN_FONT_PX = 2
+  BASE_FONT_PX = 16.0
   SAME_COLOR_RATIO = 1.1
+  # A position or indent this far to the left or top puts content off screen.
+  OFFSCREEN_PX = -500
+  POSITIONED = %w[absolute fixed].freeze
+  CLEAR_COLORS = %w[transparent].freeze
 
   def self.call(root, report)
     new(root, report).call
@@ -24,7 +31,7 @@ class EmailCampaigns::Import::Visibility
   end
 
   def call
-    walk(@root, Context.new(nil, nil, nil))
+    walk(@root, Context.new(nil, nil, nil, false, false))
     @root
   end
 
@@ -59,8 +66,30 @@ class EmailCampaigns::Import::Visibility
     value = ->(name) { EmailCampaigns::Import::StyleMap.plain(style[name]).downcase }
     return true if HIDING.any? { |name, hiding| value.call(name) == hiding } || transparent?(value.call('opacity'))
 
-    collapsed = %w[max-height height].any? { |name| EmailCampaigns::Import::StyleMap.px(style[name])&.zero? }
-    collapsed && value.call('overflow') == 'hidden'
+    clipped?(value.call('clip')) || offscreen?(style, value.call('position')) || collapsed?(style, value.call('overflow'))
+  end
+
+  def collapsed?(style, overflow)
+    overflow == 'hidden' && %w[max-height height max-width width].any? { |name| EmailCampaigns::Import::StyleMap.px(style[name])&.zero? }
+  end
+
+  # clip: rect(top, right, bottom, left) that leaves no area.
+  def clipped?(clip)
+    return false unless clip.start_with?('rect(')
+
+    sides = clip.delete_prefix('rect(').delete_suffix(')').tr(',', ' ').split.map { |side| EmailCampaigns::Import::StyleMap.px(side) }
+    return false unless sides.size == 4 && sides.all?
+
+    top, right, bottom, left = sides
+    bottom <= top || right <= left
+  end
+
+  def offscreen?(style, position)
+    indent = EmailCampaigns::Import::StyleMap.px(style['text-indent'])
+    return true if indent && indent <= OFFSCREEN_PX
+    return false unless POSITIONED.include?(position)
+
+    %w[left top].any? { |side| (EmailCampaigns::Import::StyleMap.px(style[side]) || 0) <= OFFSCREEN_PX }
   end
 
   def transparent?(opacity)
@@ -84,11 +113,15 @@ class EmailCampaigns::Import::Visibility
   end
 
   def invisible?(context)
-    return true if context.font_size && context.font_size < MIN_FONT_PX
-    return false unless context.color && context.background
+    return true if context.clear || tiny?(context.font_size)
+    return false if context.image || context.color.nil? || context.background.nil?
 
     ratio = EmailCampaigns::QualityGate::Contrast.ratio(context.color, context.background)
     ratio.present? && ratio < SAME_COLOR_RATIO
+  end
+
+  def tiny?(font_size)
+    font_size.present? && font_size < MIN_FONT_PX
   end
 
   def hide(element)
@@ -102,6 +135,7 @@ class EmailCampaigns::Import::Visibility
     end
     element.css('a[href]').each { |link| @report.drop_link(link['href'], :hidden) }
     element.css('img').each { |image| pixel(image) }
+    [element, *element.css('[data-import-bg]')].each { |node| @report.drop_image(node['data-import-bg'], :hidden) }
     element.remove
   end
 
@@ -116,11 +150,32 @@ class EmailCampaigns::Import::Visibility
   end
 
   def inherit(context, element, style)
-    Context.new(
-      EmailCampaigns::Import::StyleMap.color(style['color']) || EmailCampaigns::Import::StyleMap.color(element['color']) || context.color,
-      EmailCampaigns::Import::StyleMap.color(style['background-color']) || EmailCampaigns::Import::StyleMap.color(element['bgcolor']) ||
-        context.background,
-      EmailCampaigns::Import::StyleMap.px(style['font-size']) || context.font_size
-    )
+    color = EmailCampaigns::Import::StyleMap.color(style['color']) || EmailCampaigns::Import::StyleMap.color(element['color'])
+    Context.new(color || context.color, background(element, style) || context.background, font_size(style['font-size'], context.font_size),
+                color ? false : clear?(style['color']) || context.clear, context.image || element['data-import-bg'].present?)
+  end
+
+  def background(element, style)
+    EmailCampaigns::Import::StyleMap.color(style['background-color']) || EmailCampaigns::Import::StyleMap.color(element['bgcolor'])
+  end
+
+  # Relative sizes (%, em) scale the inherited size; px, pt and rem stand on their own.
+  def font_size(value, inherited)
+    text = EmailCampaigns::Import::StyleMap.plain(value).downcase
+    base = inherited || BASE_FONT_PX
+    return base * text.delete_suffix('%').to_f / 100 if text.end_with?('%')
+    return base * text.delete_suffix('em').to_f if text.end_with?('em') && !text.end_with?('rem')
+
+    EmailCampaigns::Import::StyleMap.px(text) || inherited
+  end
+
+  # transparent, or rgba()/hsla() with an alpha of zero.
+  def clear?(value)
+    text = EmailCampaigns::Import::StyleMap.plain(value).downcase.delete(' ')
+    return true if CLEAR_COLORS.include?(text)
+    return false unless text.start_with?('rgba(', 'hsla(')
+
+    parts = text.split('(', 2).last.to_s.delete_suffix(')').split(',')
+    parts.size == 4 && parts.last.to_f.zero? && parts.last.start_with?('0', '.')
   end
 end

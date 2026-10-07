@@ -80,12 +80,25 @@ RSpec.describe EmailCampaigns::Import::Engine, :aggregate_failures do
     text.first.to_s.between?('0', '9') && !text.end_with?('%') && text.to_f <= 1
   end
 
-  define_method(:original_images) do |source|
-    Nokogiri::HTML5(source).css('img[src]').filter_map do |node|
-      next if dimensions.any? { |dimension| pixel_dimension?(node[dimension]) }
+  # The address inside the first url(...) of a CSS value, read with string methods.
+  define_method(:css_url) do |style|
+    start = style.to_s.downcase.index('url(')
+    next if start.nil?
 
-      node['src'].strip if EmailCampaigns::Import::Url.http?(node['src'])
-    end.uniq
+    inside = style[(start + 4)..].to_s
+    inside[0...(inside.index(')') || inside.length)].strip.delete(%q("'))
+  end
+
+  # Images and background images (attribute, inline CSS or MJML background-url) a reader sees.
+  define_method(:original_images) do |source|
+    doc = Nokogiri::HTML5(source)
+    images = doc.css('img[src]').filter_map do |node|
+      node['src'].strip unless dimensions.any? { |dimension| pixel_dimension?(node[dimension]) }
+    end
+    backgrounds = doc.css('[background], [background-url], [style]').flat_map do |node|
+      [node['background'], node['background-url'], css_url(node['style'])]
+    end
+    (images + backgrounds).compact.map(&:strip).uniq.select { |src| EmailCampaigns::Import::Url.http?(src) }
   end
 
   Dir[fixtures.join('*.html')].each do |path|
@@ -123,6 +136,8 @@ RSpec.describe EmailCampaigns::Import::Engine, :aggregate_failures do
 
         expect(missing).to eq([])
         expect(report.dropped_texts.pluck(:reason).uniq - allowed_drops).to eq([])
+        footer = report.dropped_texts.select { |drop| drop[:reason] == :footer }.pluck(:text)
+        expect(footer.reject { |text| text.length <= EmailCampaigns::Import::FooterCleaner::TAIL_MAX_CHARS }).to eq([])
       end
 
       it 'keeps every link and image, or says why it left' do
