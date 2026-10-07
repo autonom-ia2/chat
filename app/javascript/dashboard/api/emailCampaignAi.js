@@ -7,13 +7,22 @@ class EmailCampaignAiAPI extends ApiClient {
     super('email_campaigns/ai', { accountScoped: true });
   }
 
-  generate({ campaignId, brief, placeholders, assets = [], baseMjml }) {
+  // brand (#1076): { brand_kit_id | brand_import_id, brand_mode } — omitted, the default identity.
+  generate({
+    campaignId,
+    brief,
+    placeholders,
+    assets = [],
+    baseMjml,
+    brand = {},
+  }) {
     return axios.post(`${this.url}/generate`, {
       campaign_id: campaignId,
       brief,
       placeholders,
       assets,
       base_mjml: baseMjml,
+      ...brand,
     });
   }
 

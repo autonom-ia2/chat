@@ -9,7 +9,8 @@ module EmailCampaigns
 
       INITIAL_POLL_WAIT = 5.seconds
 
-      # params: { 'brief' =>, 'placeholders' => [], 'assets' => [], 'base_mjml' => } — com base_mjml é um ajuste (#1095)
+      # params: { 'brief' =>, 'placeholders' => [], 'assets' => [], 'base_mjml' =>, 'brand' => { kit_id|import_id, mode } }
+      # — com base_mjml é um ajuste (#1095)
       def perform(campaign_id, token, params)
         campaign = EmailCampaign.find_by(id: campaign_id)
         return if campaign.blank? || !active?(campaign, token)
@@ -17,8 +18,9 @@ module EmailCampaigns
         credential = Crm::Ai::CredentialResolver.new(account: campaign.account).resolve
         return fail_generation(campaign, token, 'ai_not_configured') if credential.blank?
 
+        identity, brand_identity = BrandResolution.new(campaign, params['brand']).call
         generator = Generator.new(account: campaign.account, brief: params['brief'], placeholders: params['placeholders'],
-                                  assets: params['assets'], base_mjml: params['base_mjml'])
+                                  assets: params['assets'], base_mjml: params['base_mjml'], identity: identity)
         return fail_generation(campaign, token, 'base_mjml_too_large') if generator.base_mjml_too_large?
         return fail_generation(campaign, token, 'adjust_unreadable') if generator.adjust? && generator.sections.nil?
 
@@ -33,7 +35,8 @@ module EmailCampaigns
         return fail_generation(campaign, token, 'empty_response') if result[:id].blank?
 
         if campaign.ai_attach_response!(token, result[:id])
-          PollJob.set(wait: INITIAL_POLL_WAIT).perform_later(campaign.id, token, result[:id], 0)
+          options = { 'brand_identity' => brand_identity, 'placeholders' => Array(params['placeholders']) }
+          PollJob.set(wait: INITIAL_POLL_WAIT).perform_later(campaign.id, token, result[:id], 0, options)
         else
           # Substituída no meio do caminho (token mudou): apaga a resposta órfã p/ não reter à toa.
           client.delete(result[:id])

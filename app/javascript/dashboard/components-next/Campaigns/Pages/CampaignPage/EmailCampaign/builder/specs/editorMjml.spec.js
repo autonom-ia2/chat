@@ -43,6 +43,20 @@ describe('editorMjml', () => {
     expect(restoreHeldHead('<mjml></mjml>', '')).toBe('<mjml></mjml>');
   });
 
+  it('holds every brand font (mj-font) aside and gives them back on export (#1076)', () => {
+    const source =
+      '<mjml><mj-head><mj-font name="Roboto" href="https://fonts.googleapis.com/css2?family=Roboto"></mj-font>' +
+      '<mj-font name="Inter" href="https://fonts.googleapis.com/css2?family=Inter"></mj-font></mj-head>' +
+      '<mj-body></mj-body></mjml>';
+
+    const { mjml, held } = prepareMjmlForEditor(source);
+
+    expect(mjml).not.toContain('mj-font');
+    const restored = restoreHeldHead(mjml, held);
+    expect(restored).toContain('<mj-font name="Roboto"');
+    expect(restored).toContain('<mj-font name="Inter"');
+  });
+
   it('keeps the canvas free of head blocks and the sent HTML with title and preview', () => {
     const container = document.createElement('div');
     document.body.appendChild(container);

@@ -1,0 +1,239 @@
+{
+  "BRAND_KITS": {
+    "TABS": {
+      "LABEL": "Seções de Campanha",
+      "CAMPAIGNS": "Campanhas",
+      "IDENTITY": "Identidade visual"
+    },
+    "NUDGE": {
+      "TEXT": "Seus e-mails ainda não têm a cara da sua marca.",
+      "ACTION": "Usar o meu site"
+    },
+    "LINE": {
+      "LABEL": "Identidade:",
+      "DEFAULT": "(padrão)",
+      "CHANGE": "Trocar",
+      "MANAGE": "Gerenciar"
+    },
+    "RESULT": {
+      "IDENTITY": "Identidade: {name}, {mode}"
+    },
+    "QUALITY": {
+      "FAILED": "O e-mail ficou com um problema que impede o envio, mesmo depois de uma correção. Tente criar de novo.",
+      "WARNINGS_TITLE": "Confira antes de enviar",
+      "CHECKS": {
+        "CONTRAST": "Algum texto está difícil de ler sobre a cor do fundo.",
+        "BUTTON_HEIGHT": "Algum botão está pequeno para tocar no celular.",
+        "IMAGE_ALT": "Alguma imagem está sem descrição.",
+        "SUBJECT_VARIANTS": "A IA sugeriu menos de 3 assuntos.",
+        "HTML_SIZE_NEAR": "O e-mail está perto do tamanho em que o Gmail corta o fim. Encurte se puder.",
+        "OTHER": "Algum bloco precisa de ajuste."
+      }
+    },
+    "PICKER": {
+      "LABEL": "Identidade",
+      "NONE": "Sem identidade",
+      "NONE_HINT": "A IA escolhe as cores. Use um site para ter a cara da sua marca.",
+      "DEFAULT": "Padrão",
+      "KIT_HINT": "Logo, cores, fonte e rodapé desta identidade.",
+      "CHANGE": "Trocar",
+      "OTHER_SITE": "Usar outro site",
+      "SEE_ALL": "Ver todas as identidades",
+      "OTHER_SITE_TITLE": "Usar outro site neste e-mail",
+      "OTHER_SITE_HINT": "Vamos ler o site na hora e usar a logo, as cores e a fonte dele.",
+      "SAVE_AS_KIT": "Salvar como identidade ({name})",
+      "USE_KIT": "Usar a {name}",
+      "NO_SITE": "Voltar",
+      "MODE_LABEL": "Cores do e-mail",
+      "MODES": {
+        "LIGHT": "Fundo claro (recomendado)",
+        "DARK": "Fundo escuro"
+      },
+      "ARIAL_NOTE": "Em alguns e-mails aparece Arial.",
+      "SAVED": "Identidade {name} salva. Ela aparece em Identidade visual.",
+      "SAVED_WITHOUT_LOGO": "Identidade {name} salva, mas sem a logo. Envie a logo em Identidade visual.",
+      "SAVE_FAILED": "Não deu para salvar a identidade. O e-mail usa o site mesmo assim.",
+      "UNAVAILABLE": "Essa identidade não está mais disponível. Escolha outra."
+    },
+    "EMAIL_PANEL": {
+      "TITLE": "Identidade deste e-mail",
+      "NONE": "Sem identidade",
+      "FROM_SITE": "site lido para este e-mail",
+      "CHANGE": "Trocar",
+      "USE": "Usar",
+      "FROM_IDENTITY": "O rodapé, as redes e a logo vêm da identidade. Para mudar de vez, altere em"
+    },
+    "PREVIEW": {
+      "TITLE": "Prévia do e-mail",
+      "WITH_FONT": "Ver com a fonte",
+      "WITH_ARIAL": "Ver com Arial",
+      "FROM": "De: {name}",
+      "SUBJECT": "Assunto: {subject}",
+      "SAMPLE_SUBJECT": "Seu atendimento em um só lugar",
+      "SAMPLE_TITLE": "Seu atendimento em um só lugar",
+      "SAMPLE_TEXT": "Responda seus clientes pelo WhatsApp, pelo site e pelo e-mail sem trocar de tela.",
+      "ITEM_1": "Todas as conversas numa lista só",
+      "ITEM_2": "Respostas prontas para o dia a dia",
+      "ITEM_3": "Relatórios simples de entender",
+      "SAMPLE_BUTTON": "Quero conhecer",
+      "SAMPLE_NOTE": "Leva poucos minutos para começar."
+    },
+    "COLORS": {
+      "CHANGE": "Alterar",
+      "CHANGE_ARIA": "Alterar a cor {role}",
+      "PICK": "Escolher a cor",
+      "CODE": "Código da cor",
+      "DONE": "Pronto",
+      "INVALID": "Use um código como #1a2b3c.",
+      "ROLES": {
+        "PRIMARY": { "LABEL": "Botões e destaques", "HINT": "Botões e links importantes" },
+        "ACCENT": { "LABEL": "Detalhes", "HINT": "Linhas, ícones e marcadores" },
+        "INK": { "LABEL": "Texto", "HINT": "A maior parte do texto" },
+        "MUTED": { "LABEL": "Texto suave", "HINT": "Avisos pequenos e rodapé" },
+        "BACKGROUND": { "LABEL": "Fundo", "HINT": "O fundo do e-mail" },
+        "BAND": { "LABEL": "Faixa do topo", "HINT": "Onde a logo aparece" }
+      }
+    },
+    "LOOK": {
+      "LOGO_TITLE": "Logo",
+      "LOGO_HINT": "Escolha a logo do e-mail.",
+      "LOGO_CURRENT": "Logo atual",
+      "LOGO_FROM_SITE": {
+        "TOP": "Logo do topo do site",
+        "ICON": "Ícone do site"
+      },
+      "LOGO_UPLOADED": "Logo enviada",
+      "LOGO_RECOMMENDED": "Recomendada",
+      "LOGO_UPLOAD": "Enviar outra",
+      "BAND_TOO_LIGHT": "Esta logo é branca e a faixa do topo está clara. Ela não vai aparecer. Escolha uma faixa escura.",
+      "WHITE_LOGO_ON_BAND": "Esta logo é branca. No e-mail, ela fica sobre a faixa escura do topo.",
+      "COLORS_TITLE": "Cores do e-mail",
+      "COLORS_HINT": "O site tem fundo claro. Em e-mail, fundo claro é mais fácil de ler e aparece igual em mais programas.",
+      "COLORS_HINT_DARK_SITE": "O site é escuro. Em e-mail, fundo claro é mais fácil de ler e aparece igual em mais programas.",
+      "MODE_LABEL": "Versão das cores",
+      "MODES": {
+        "LIGHT": { "LABEL": "Fundo claro", "HINT": "Recomendado para e-mail" },
+        "DARK": { "LABEL": "Fundo escuro", "HINT": "Igual ao site" }
+      },
+      "FOUND_COLORS": "Cores achadas no site:",
+      "RESET_COLORS": "Voltar às cores sugeridas",
+      "FONTS_TITLE": "Fontes",
+      "FONT_ROLES": {
+        "HEADING_FONT": "Títulos",
+        "BODY_FONT": "Texto"
+      },
+      "FONT_ARIAL": "Arial",
+      "FONT_CHANGE": "Trocar a fonte dos {role}",
+      "ARIAL_TITLE": "Em alguns e-mails aparece Arial.",
+      "ARIAL_TEXT": "Alguns programas de e-mail não mostram fontes de site. Neles, o texto sai em Arial."
+    },
+    "FOOTER": {
+      "NAME_TITLE": "Nome desta identidade",
+      "NAME_LABEL": "Nome",
+      "FIRST_IS_DEFAULT": "É a sua primeira identidade. Ela será a padrão dos novos e-mails.",
+      "SOCIAL_TITLE": "Redes sociais",
+      "SOCIAL_HINT": "Aparecem no rodapé do e-mail.",
+      "SOCIAL_EMPTY": "Nenhuma rede ainda.",
+      "CHANGE": "Alterar",
+      "REMOVE": "Tirar",
+      "LINK_LABEL": "Link da rede",
+      "LINK_PLACEHOLDER": "instagram.com/suaempresa",
+      "NETWORK_LABEL": "Rede",
+      "DONE": "Pronto",
+      "ADD": "Adicionar rede",
+      "ADD_CONFIRM": "Adicionar",
+      "CANCEL": "Cancelar",
+      "FOOTER_TITLE": "Rodapé do e-mail",
+      "FOOTER_HINT": "A primeira linha do rodapé. O resto do rodapé é sempre o mesmo.",
+      "COMPANY": "Nome da empresa",
+      "SITE": "Site",
+      "ADDRESS": "Endereço",
+      "ADDRESS_PLACEHOLDER": "Rua, número, cidade",
+      "ADDRESS_MISSING": "O site não mostra endereço. Quer escrever?"
+    },
+    "READER": {
+      "ADDRESS_LABEL": "Endereço do site",
+      "ADDRESS_PLACEHOLDER": "suaempresa.com.br",
+      "READ": "Ler o site",
+      "ERROR": "Não conseguimos ler o site. Confira o endereço e tente de novo.",
+      "READING": "Lendo {site}",
+      "READ_DONE": "Pronto: lemos {site}",
+      "WAIT_HINT": "Leva menos de um minuto. Pode esperar aqui.",
+      "ITEMS": {
+        "LOGO": "A logo",
+        "COLORS": "As cores",
+        "FONTS": "As fontes",
+        "SOCIAL": "As redes e o rodapé"
+      },
+      "FOUND": "nada achado | achamos 1 | achamos {count}"
+    },
+    "CARD": {
+      "NO_SITE": "sem site",
+      "AND": " e ",
+      "DEFAULT": "Padrão",
+      "ARCHIVED": "Arquivada",
+      "EDIT": "Alterar",
+      "MORE": "Mais ações de {name}",
+      "MAKE_DEFAULT": "Tornar padrão",
+      "MAKE_DEFAULT_HINT": "Os novos e-mails saem com ela",
+      "ARCHIVE": "Arquivar",
+      "ARCHIVE_HINT": "Sai da lista. Dá para trazer de volta",
+      "ARCHIVE_DEFAULT_HINT": "Torne outra padrão antes",
+      "RESTORE": "Restaurar",
+      "ARCHIVE_CONFIRM_TITLE": "Arquivar a {name}?",
+      "ARCHIVE_CONFIRM_TEXT": "Ela sai da lista e dos novos e-mails. Os e-mails já feitos não mudam.",
+      "BACK": "Voltar"
+    },
+    "EDITOR": {
+      "BACK_TO_LIST": "Voltar para Identidade visual",
+      "NEW_TITLE": "Nova identidade",
+      "EDIT_TITLE": "Alterar identidade: {name}",
+      "STEPS": {
+        "SITE": "Site",
+        "CONFIRM": "Confira",
+        "SAVE": "Salve"
+      },
+      "SITE_TITLE": "Qual é o endereço do seu site?",
+      "SITE_HINT": "Vamos olhar a página inicial e trazer a logo, as cores, as fontes e as redes.",
+      "CHECK": "Conferir",
+      "PART": "Parte {part} de 2",
+      "TABS": {
+        "LABEL": "Partes da identidade",
+        "LOOK": "Logo, cores e fontes",
+        "FOOTER": "Redes e rodapé"
+      },
+      "BACK": "Voltar",
+      "CANCEL": "Cancelar",
+      "CONTINUE": "Continuar",
+      "SAVE": "Salvar",
+      "ERRORS": {
+        "NAME": "Dê um nome que ainda não está na lista.",
+        "APPEARANCE": "Confira os links das redes e o site. Algum está errado.",
+        "GENERIC": "Não deu para salvar. Tente de novo."
+      }
+    },
+    "PAGE": {
+      "BREADCRUMB": "Caminho",
+      "SUBTITLE": "Logo, cores e fonte que os seus e-mails usam.",
+      "EMPTY": "Guarde a logo, as cores e a fonte da sua marca. Todo e-mail novo já sai com elas.",
+      "USE_MY_SITE": "Usar o meu site",
+      "NEW": "Nova identidade",
+      "SAVED": "Identidade salva. Os novos e-mails já saem com ela.",
+      "CREATE_EMAIL": "Criar um e-mail",
+      "FROM_CAMPAIGN": "Você veio da sua campanha.",
+      "BACK_TO_CAMPAIGN": "Voltar para a campanha",
+      "LOAD_ERROR": "Não conseguimos carregar as identidades. Tente de novo.",
+      "ARCHIVED_COUNT": "Arquivadas: {count}",
+      "SEE_ARCHIVED": "Ver",
+      "ARCHIVED_TITLE": "Identidades arquivadas",
+      "ARCHIVED_SUBTITLE": "Elas não aparecem nos novos e-mails. Restaure para usar de novo.",
+      "ARCHIVED_EMPTY": "Nenhuma identidade arquivada.",
+      "BACK_TO_LIST": "Voltar para a lista",
+      "UPDATED": "{name} salva.",
+      "DEFAULT_CHANGED": "{name} agora é a padrão.",
+      "ARCHIVED_DONE": "{name} arquivada. Os e-mails já feitos não mudam.",
+      "RESTORED": "{name} voltou para a lista.",
+      "ACTION_ERROR": "Não deu certo. Tente de novo."
+    }
+  }
+}

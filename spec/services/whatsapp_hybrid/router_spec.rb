@@ -23,6 +23,8 @@ describe WhatsappHybrid::Router do
     allow(client).to receive(:check_contact_exists).and_return({ 'numberExists' => true, 'chatId' => '5511937016094@c.us' })
     allow(client).to receive(:new_message_id).and_return('3EB0AAAA')
     allow(client).to receive(:update_session)
+    allow(client).to receive_messages(start_typing: {}, stop_typing: {})
+    allow(Kernel).to receive(:sleep)
     Redis::Alfred.delete('whatsapp_hybrid:chat_id:hybrid-test:5511937016094')
   end
 
@@ -73,6 +75,17 @@ describe WhatsappHybrid::Router do
       expect(message.external_error).to include('desconectado')
       expect(connection.reload.status).to eq('disconnected')
       expect(conversation.reload.can_reply?).to be(false)
+    end
+
+    it 'explains the WhatsApp limit when new conversations are blocked' do
+      allow(client).to receive(:send_text).and_raise(Waha::Client::Error, 'WAHA POST /api/sendText -> 500: server returned error 475')
+      allow(client).to receive(:get_session).and_return({ 'status' => 'WORKING', 'me' => { 'id' => "#{connection.connected_phone}@c.us" } })
+      allow(client).to receive(:capping).and_return({ 'cappingStatus' => 'CAPPED' })
+      message = outgoing
+
+      Whatsapp::SendOnWhatsappService.new(message: message).perform
+
+      expect(message.reload.external_error).to include('limitou conversas novas')
     end
 
     it 'refreshes the session state when WhatsApp API rejects a send' do

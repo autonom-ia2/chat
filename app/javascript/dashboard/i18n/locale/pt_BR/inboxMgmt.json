@@ -882,6 +882,20 @@
       "OFFICIAL": "Oficial",
       "WEB": "WhatsApp API",
       "RATE_LIMIT": "Mensagens por minuto pelo WhatsApp API",
+      "CAMPAIGN_LIMIT": "Campanhas usam no máximo {limit} por minuto. Quando o WhatsApp avisa do limite, a velocidade diminui sozinha.",
+      "CAPPING": {
+        "NEAR": "O WhatsApp avisou que este número está perto do limite de conversas novas ({used} de {total}). O envio pelo WhatsApp API já ficou mais lento sozinho. O ciclo acaba em {end}.",
+        "BLOCKED": "O WhatsApp bloqueou conversas novas pelo WhatsApp API até {end}. Respostas para quem já conversa com você continuam; para contatos novos, use um modelo aprovado."
+      },
+      "STATS": {
+        "TITLE": "Últimos {days} dias pelo WhatsApp API",
+        "EMPTY": "Nenhuma mensagem saiu pelo WhatsApp API ainda.",
+        "WHO": "Quem enviou",
+        "SENT": "Enviadas",
+        "FAILED": "Falharam",
+        "WAITED": "Esperaram a vez",
+        "FALLBACK": "Plano B"
+      },
       "STATUS": {
         "NOT_CONNECTED": "Não conectado",
         "AWAITING": "Aguardando o celular",
