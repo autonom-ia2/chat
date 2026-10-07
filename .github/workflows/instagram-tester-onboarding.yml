@@ -347,8 +347,7 @@ jobs:
         run: npm ci --prefix scripts/instagram_testers/runtime/vps --ignore-scripts --no-fund --no-audit
       - name: Prepare disposable Linux browser and private display
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends tigervnc-standalone-server xauth
+          "$GITHUB_WORKSPACE/.github/scripts/apt-install.sh" --no-install-recommends tigervnc-standalone-server xauth
           cd scripts/instagram_testers/runtime/vps
           npx --no-install playwright install --with-deps chrome
       - name: Exercise Linux Chrome, authenticated gateway and AF_UNIX VNC without Meta
