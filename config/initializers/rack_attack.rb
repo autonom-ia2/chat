@@ -461,6 +461,12 @@ class Rack::Attack
     req.ip if req.post? && CRM_CALENDAR_WEBHOOK_PATH.match?(req.path_without_extensions)
   end
 
+  # WhatsApp Híbrido (#1094): o motor manda poucos eventos por minuto; acima disto não é ele.
+  WHATSAPP_HYBRID_WEBHOOK_PREFIX = '/webhooks/whatsapp_hybrid/'.freeze
+  throttle('whatsapp_hybrid_webhook/ip', limit: ENV.fetch('RATE_LIMIT_WHATSAPP_HYBRID_WEBHOOK', '300').to_i, period: 1.minute) do |req|
+    req.ip if req.post? && req.path_without_extensions.start_with?(WHATSAPP_HYBRID_WEBHOOK_PREFIX)
+  end
+
   ## ----------------------------------------------- ##
 end
 
