@@ -2,16 +2,19 @@
 # conta o gasto.
 #
 # Gasto de `crm_meta_ad_insights_daily` (date = ontem); conversas, propostas e vendas da mesma coorte do painel
-# (`Panel::Cohort`) com o intervalo de ontem; o anúncio que mais trouxe conversa; e o que fazer hoje — a ação da
-# regra (`Panel::Action`) dos últimos 7 dias.
+# (`Panel::Cohort`) com o intervalo de ontem; o anúncio que mais trouxe conversa; e o que fazer hoje, no período em
+# que o painel abre (30 dias), para o resumo dizer o mesmo que a pessoa vê ao abrir.
 #
-# O resumo usa sempre a regra, nunca o texto da IA (F4a): o texto da IA só existe depois que alguém abre o painel no
-# dia, no período e no idioma de quem abriu; às 8h quase nunca haveria um, e o resumo não chama a IA sozinho.
+# O que fazer hoje: com `with_ai: true` (o envio das 8h), o texto da IA (`Panel::AiAction`, decisão do Rodrigo em
+# 07/10/2026). Ele sai do mesmo guardado do dia que o painel usa: se alguém já abriu o painel no idioma da conta,
+# não há chamada nova; senão é uma chamada por conta por dia, só para quem ligou o resumo. IA desligada, sem
+# credencial ou com falha: fica a regra (`Panel::Action`), como no painel. O envio de teste não chama a IA.
 class Crm::MetaAds::WhatsappReport::Digest
-  ACTION_DAYS = 7
+  ACTION_DAYS = Crm::MetaAds::Panel::Report::PERIODS.last
 
-  def initialize(connection)
+  def initialize(connection, with_ai: false)
     @connection = connection
+    @with_ai = with_ai
     @zone = (connection.ad_account_timezone.present? && ActiveSupport::TimeZone[connection.ad_account_timezone]) || Time.zone
   end
 
@@ -23,7 +26,8 @@ class Crm::MetaAds::WhatsappReport::Digest
     @payload ||= {
       date: date, currency: currency, spend: spend, conversations: cohort.conversation_ads.size,
       cost_per_conversation: ratio(spend, cohort.conversation_ads.size), quotes: cohort.cards.count(&:quote?),
-      sales: sales.size, sales_value: sales.sum(&:value).round(2), best_ad: best_ad, action: action
+      sales: sales.size, sales_value: sales.sum(&:value).round(2), best_ad: best_ad, action: action,
+      ai_action: ai_action
     }
   end
 
@@ -64,6 +68,15 @@ class Crm::MetaAds::WhatsappReport::Digest
 
   def action
     Crm::MetaAds::Panel::Report.new(@connection, days: ACTION_DAYS).payload[:action]
+  end
+
+  # Só o texto que a IA de fato escreveu; a regra já está em `action`.
+  def ai_action
+    return unless @with_ai
+
+    answer = Crm::MetaAds::Panel::AiAction.daily(connection: @connection, days: ACTION_DAYS,
+                                                 language: Crm::MetaAds::WhatsappReport::MessageBuilder.new(@connection.account).language)
+    answer if answer[:source] == 'ai'
   end
 
   def ratio(numerator, denominator)

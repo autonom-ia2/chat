@@ -9,7 +9,7 @@
 # log (classe só, nunca o prompt). Qualquer outro erro sobe.
 class Crm::MetaAds::Panel::AiAction
   MODEL = Crm::Ai::Config::MODEL_SUMMARY
-  REASONING_EFFORT = 'medium'.freeze
+  REASONING_EFFORT = Crm::Ai::Config::SUMMARY_REASONING_EFFORT
   FEATURE = 'anuncios_meta'.freeze
   KINDS = %w[stalled_quotes fix_tracking review_ad wait on_track].freeze
   LIMITS = { headline: 120, body: 400, why: 300 }.freeze

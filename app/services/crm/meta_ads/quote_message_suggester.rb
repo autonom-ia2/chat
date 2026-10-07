@@ -14,7 +14,7 @@
 # chamada (texto livre falharia); a tela oferece só "Abrir conversa".
 class Crm::MetaAds::QuoteMessageSuggester
   MODEL = Crm::Ai::Config::MODEL_SUMMARY
-  REASONING_EFFORT = 'medium'.freeze
+  REASONING_EFFORT = Crm::Ai::Config::SUMMARY_REASONING_EFFORT
   FEATURE = Crm::MetaAds::Panel::AiAction::FEATURE
   MESSAGE_LIMIT = 700
   REASONS = %w[closed declined nothing_open none].freeze

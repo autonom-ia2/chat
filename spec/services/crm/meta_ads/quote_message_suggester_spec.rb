@@ -41,7 +41,7 @@ RSpec.describe Crm::MetaAds::QuoteMessageSuggester do
 
   it 'manda a conversa sem atributos, título, telefone ou e-mail, e devolve a mensagem com a frase de origem' do
     expect(client).to receive(:create) do |request|
-      expect(request).to include(model: Crm::Ai::Config::MODEL_SUMMARY, schema: described_class::SCHEMA, reasoning_effort: 'medium')
+      expect(request).to include(model: Crm::Ai::Config::MODEL_SUMMARY, schema: described_class::SCHEMA, reasoning_effort: 'high')
       input = JSON.parse(request[:input])
       expect(input.keys).to contain_exactly('language', 'stage_name', 'value', 'currency', 'waiting_days', 'recent_messages',
                                             'conversation_state', 'temporal')

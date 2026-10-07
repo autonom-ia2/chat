@@ -31,6 +31,23 @@ RSpec.describe Crm::MetaAds::WhatsappReport::MessageBuilder do
               'Confira de qual anúncio vieram 4 conversas sem anúncio identificado.'])
   end
 
+  it 'com o texto da IA, o que fazer hoje é o título e o como fazer, numa linha no modelo' do
+    builder = described_class.new(create(:account, locale: 'pt_BR'))
+    ai = digest.merge(ai_action: { source: 'ai', headline: 'Retome a proposta de R$ 450,00.', body: "Comece hoje.\nUma mensagem curta basta." })
+
+    expect(builder.summary_text(ai)).to include('O que fazer hoje: Retome a proposta de R$ 450,00. Comece hoje.')
+    expect(builder.summary_parameters(ai).sole[:parameters].last[:text])
+      .to eq('Retome a proposta de R$ 450,00. Comece hoje. Uma mensagem curta basta.')
+  end
+
+  it 'conta em inglês: o modelo pt_BR fica com a regra, não com o texto da IA em inglês' do
+    builder = described_class.new(create(:account, locale: 'en'))
+    ai = digest.merge(ai_action: { source: 'ai', headline: 'Follow up the quote.', body: nil })
+
+    expect(builder.summary_text(ai)).to include('Follow up the quote.')
+    expect(builder.summary_parameters(ai).sole[:parameters].last[:text]).to eq('Retome a proposta parada há mais de 3 dias (R$ 450,00).')
+  end
+
   it 'variável do modelo sai numa linha só: nome de anúncio com quebra de linha, tab ou espaços seguidos' do
     builder = described_class.new(create(:account, locale: 'pt_BR'))
     alert = { name: "Promo\noutubro\t\t  2026     final", spend: 35.0, currency: 'BRL' }

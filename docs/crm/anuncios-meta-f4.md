@@ -105,7 +105,7 @@ Fica **fora**: título do card, nome e telefone de contato, atributos, texto de 
 
 ### Modelo, custo e falha
 
-- `MODEL = Crm::Ai::Config::MODEL_SUMMARY`, `reasoning_effort: 'medium'`, `ResponsesClient` com
+- `MODEL = Crm::Ai::Config::MODEL_SUMMARY`, `reasoning_effort: Crm::Ai::Config::SUMMARY_REASONING_EFFORT` (`'high'`, o padrão das IAs de resumo do CRM), `ResponsesClient` com
   `feature: 'anuncios_meta'`. O custo vai para `Crm::AiUsageEvent` pelo caminho que já existe.
 - Em `Crm::Reports::AiUsage::RESOURCE_FEATURES` entra a linha `'Anúncios da Meta' => %w[anuncios_meta]`.
 - **Não existe troca de modelo.** Se o modelo não existir ou o provedor recusar, o `ResponsesClient::Error` é
@@ -268,10 +268,14 @@ Os números do resumo saem de `Crm::MetaAds::WhatsappReport::Digest`:
 - de **ontem**, no fuso da conta de anúncios: gasto de `crm_meta_ad_insights_daily` (`date = ontem`) e conversas,
   propostas e vendas da `Panel::Cohort` com o intervalo de ontem;
 - o melhor anúncio de ontem, por conversas;
-- "o que fazer hoje": **sempre** a frase da regra (`Report.new(days: 7).payload[:action]`) em i18n de servidor.
-  O resumo não usa o texto da IA (F4a): ele só existe depois que alguém abre o painel no dia, no período e no
-  idioma de quem abriu, e às 8h quase nunca haveria um; o resumo também não chama a IA sozinho (custo diário por
-  conta). Se o dono quiser o texto da IA no WhatsApp, é decisão nova: gerar no job às 8h, com custo.
+- "o que fazer hoje" no envio das 8h (`Digest.new(connection, with_ai: true)`): o texto da IA da F4a
+  (`Panel::AiAction.daily`, `gpt-6-luna`), no período que o painel abre (30 dias) e no idioma da conta — decisão do
+  Rodrigo em 07/10/2026, qualidade da análise acima do custo. Sai do mesmo guardado do dia que o painel usa: se
+  alguém já abriu o painel no idioma da conta, não há chamada nova; senão é **uma chamada por conta por dia**, só
+  para quem ligou o resumo e só quando ontem teve gasto ou conversa. Vai o título e o como fazer, numa linha.
+  IA desligada, sem credencial, com falha ou "não se aplica": a frase da regra
+  (`Report.new(days: 30).payload[:action]`) em i18n de servidor. No Oficial o modelo é pt_BR: conta em outro
+  idioma fica com a regra no modelo. O envio de teste não chama a IA (usa a regra).
 
 Valores com `number_to_currency` na moeda da conta.
 

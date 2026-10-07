@@ -39,7 +39,7 @@ class Crm::MetaAds::WhatsappReport::DeliverJob < ApplicationJob
   end
 
   def deliver_summary(connection)
-    digest = Crm::MetaAds::WhatsappReport::Digest.new(connection)
+    digest = Crm::MetaAds::WhatsappReport::Digest.new(connection, with_ai: true)
     return settings(connection).record_error!(NOTHING_TO_REPORT) if digest.nothing_to_report?
 
     deliver(connection, 'summary') { |sender| sender.send_summary(digest.payload) }

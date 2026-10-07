@@ -44,7 +44,7 @@ RSpec.describe Crm::MetaAds::Panel::AiAction do
 
   it 'manda só números, com as ações permitidas, e devolve o texto da IA' do
     expect(client).to receive(:create) do |request|
-      expect(request).to include(model: Crm::Ai::Config::MODEL_SUMMARY, schema: described_class::SCHEMA, reasoning_effort: 'medium')
+      expect(request).to include(model: Crm::Ai::Config::MODEL_SUMMARY, schema: described_class::SCHEMA, reasoning_effort: 'high')
       input = JSON.parse(request[:input])
       expect(input.slice('allowed_kinds', 'confidence')).to eq('allowed_kinds' => %w[stalled_quotes review_ad],
                                                                'confidence' => { 'conversations' => 40, 'ad' => 30, 'ad_name' => 8 })

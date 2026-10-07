@@ -37,7 +37,7 @@ pt_BR:
         other: "Confira de qual anúncio vieram %{count} conversas sem anúncio identificado."
       wait: "Nada a corrigir. Siga com os anúncios como estão."
       on_track: "Nada parado. Veja no painel o veredito de cada anúncio."
-      no_data: "Ainda não há gasto nem conversa de anúncio nos últimos 7 dias."
+      no_data: "Ainda não há gasto nem conversa de anúncio nos últimos 30 dias."
     # As variáveis do modelo do Oficial (sempre pt_BR): {{3}} junta conversas, propostas e vendas.
     template:
       results: "%{conversations}, %{quotes} e %{sales}"

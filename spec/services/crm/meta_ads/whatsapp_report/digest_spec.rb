@@ -46,19 +46,63 @@ RSpec.describe Crm::MetaAds::WhatsappReport::Digest do
       end
     end
 
-    it 'o que fazer hoje é sempre a ação da regra, mesmo com o texto da IA do painel guardado no dia (sem chamar a IA)' do
-      travel_to(now) do
-        account.update!(locale: 'pt_BR')
-        spend(promo, Date.new(2026, 10, 6), 10)
-        # Como o painel grava: período padrão de 30 dias, idioma de quem abriu.
-        report = Crm::MetaAds::Panel::Report.new(connection, days: 30).payload
-        Crm::MetaAds::Panel::AiActionCache.new(connection: connection, report: report, zone: ActiveSupport::TimeZone['America/Sao_Paulo'],
-                                               locale: 'pt_BR').write(source: 'ai', kind: 'on_track', headline: 'Siga com o Promo outubro.')
-        expect(Crm::Ai::ResponsesClient).not_to receive(:new)
+    describe 'o que fazer hoje' do
+      let(:zone) { ActiveSupport::TimeZone['America/Sao_Paulo'] }
 
-        expect(described_class.new(connection).payload[:action]).to eq(Crm::MetaAds::Panel::Report.new(connection, days: 7).payload[:action])
-      ensure
+      def panel_cache
+        report = Crm::MetaAds::Panel::Report.new(connection, days: 30).payload
+        Crm::MetaAds::Panel::AiActionCache.new(connection: connection, report: report, zone: zone, locale: 'pt_BR')
+      end
+
+      after do
         Redis::Alfred.scan_each(match: "#{Crm::MetaAds::Panel::AiActionCache::PREFIX}:#{account.id}:*").each { |key| Redis::Alfred.delete(key) }
+      end
+
+      it 'o envio das 8h usa o texto da IA guardado pelo painel no dia, sem chamada nova' do
+        travel_to(now) do
+          account.update!(locale: 'pt_BR')
+          spend(promo, Date.new(2026, 10, 6), 10)
+          panel_cache.write(source: 'ai', kind: 'on_track', headline: 'Siga com o Promo outubro.')
+          expect(Crm::Ai::ResponsesClient).not_to receive(:new)
+
+          payload = described_class.new(connection, with_ai: true).payload
+
+          expect(payload[:ai_action]).to include(source: 'ai', headline: 'Siga com o Promo outubro.')
+          expect(payload[:action]).to eq(Crm::MetaAds::Panel::Report.new(connection, days: 30).payload[:action])
+        end
+      end
+
+      it 'sem texto guardado, o envio das 8h pede à IA no idioma da conta, no período de 30 dias do painel' do
+        travel_to(now) do
+          account.update!(locale: 'pt_BR')
+          spend(promo, Date.new(2026, 10, 6), 10)
+          answer = { source: 'ai', kind: 'wait', headline: 'Deixe rodar.', body: nil }
+          allow(Crm::MetaAds::Panel::AiAction).to receive(:daily).and_return(answer)
+
+          expect(described_class.new(connection, with_ai: true).payload[:ai_action]).to eq(answer)
+          expect(Crm::MetaAds::Panel::AiAction).to have_received(:daily).with(connection: connection, days: 30, language: 'pt_BR')
+        end
+      end
+
+      it 'IA indisponível ou com falha: fica só a regra' do
+        travel_to(now) do
+          spend(promo, Date.new(2026, 10, 6), 10)
+          allow(Crm::MetaAds::Panel::AiAction).to receive(:daily).and_return(source: 'rule', reason: 'ai_error', kind: 'wait')
+
+          payload = described_class.new(connection, with_ai: true).payload
+
+          expect(payload[:ai_action]).to be_nil
+          expect(payload[:action][:kind]).to eq('wait')
+        end
+      end
+
+      it 'o envio de teste não chama a IA' do
+        travel_to(now) do
+          spend(promo, Date.new(2026, 10, 6), 10)
+          expect(Crm::MetaAds::Panel::AiAction).not_to receive(:daily)
+
+          expect(described_class.new(connection).payload[:ai_action]).to be_nil
+        end
       end
     end
 

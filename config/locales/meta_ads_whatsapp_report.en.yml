@@ -37,7 +37,7 @@ en:
         other: "Check which ads %{count} conversations without an identified ad came from."
       wait: "Nothing to fix. Keep the ads as they are."
       on_track: "Nothing stalled. See each ad's verdict on the dashboard."
-      no_data: "No ad spend or conversation in the last 7 days yet."
+      no_data: "No ad spend or conversation in the last 30 days yet."
     # The official template variables are always filled in pt_BR; these keys only keep the catalogs in sync.
     template:
       results: "%{conversations}, %{quotes} and %{sales}"

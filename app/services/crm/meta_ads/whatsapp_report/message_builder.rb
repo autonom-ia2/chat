@@ -16,7 +16,7 @@ class Crm::MetaAds::WhatsappReport::MessageBuilder
   end
 
   def summary_text(digest, test: false)
-    I18n.with_locale(locale) do
+    I18n.with_locale(language) do
       lines = [summary_title(digest[:date], test), t('summary.spend', value: money(digest[:spend], digest[:currency])),
                conversations_line(digest), sales_line(digest), best_ad_line(digest[:best_ad]),
                t('summary.action', text: action_text(digest)), t('summary.link', url: panel_url)]
@@ -25,7 +25,7 @@ class Crm::MetaAds::WhatsappReport::MessageBuilder
   end
 
   def alert_text(alert)
-    I18n.with_locale(locale) do
+    I18n.with_locale(language) do
       [t('alert.text', name: alert[:name], value: money(alert[:spend], alert[:currency])), t('alert.hint', url: panel_url)].join("\n")
     end
   end
@@ -34,8 +34,16 @@ class Crm::MetaAds::WhatsappReport::MessageBuilder
     I18n.with_locale(TEMPLATE_LOCALE) do
       date = I18n.l(digest[:date], format: t('date_format'))
       date = "#{date} #{t('summary.test_prefix')}" if test
-      body([date, money(digest[:spend], digest[:currency]), results(digest), action_text(digest)])
+      # O modelo é pt_BR: o texto da IA só entra se foi escrito em pt_BR.
+      action = language == TEMPLATE_LOCALE.to_s ? action_text(digest) : rule_text(digest)
+      body([date, money(digest[:spend], digest[:currency]), results(digest), action])
     end
+  end
+
+  # O idioma da conta quando há texto do resumo nele; senão pt_BR. É também o idioma em que a IA escreve.
+  def language
+    account_locale = @account.locale.to_s
+    I18n.exists?("#{SCOPE}.summary.title", account_locale) ? account_locale : DEFAULT_LOCALE.to_s
   end
 
   def alert_parameters(alert)
@@ -43,11 +51,6 @@ class Crm::MetaAds::WhatsappReport::MessageBuilder
   end
 
   private
-
-  def locale
-    account_locale = @account.locale.to_s
-    I18n.exists?("#{SCOPE}.summary.title", account_locale) ? account_locale : DEFAULT_LOCALE
-  end
 
   def t(key, **)
     I18n.t("#{SCOPE}.#{key}", **)
@@ -80,8 +83,16 @@ class Crm::MetaAds::WhatsappReport::MessageBuilder
                           quotes: t('template.quotes', count: digest[:quotes]), sales: t('template.sales', count: digest[:sales]))
   end
 
-  # A ação da regra (Panel::Action) dos últimos dias; o resumo nunca chama a IA.
+  # O texto da IA quando há (título e como fazer, numa linha); senão a regra.
   def action_text(digest)
+    ai = digest[:ai_action]
+    return [ai[:headline], ai[:body]].compact.join(' ') if ai
+
+    rule_text(digest)
+  end
+
+  # A ação da regra (Panel::Action).
+  def rule_text(digest)
     rule = digest[:action]
     kind = rule[:kind]
     case kind
