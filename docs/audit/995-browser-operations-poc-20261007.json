@@ -2201,6 +2201,189 @@
         }
       },
       "interpretation": "Opcao alvo exata/unica visivel/habilitada e vinculada aJSON foi selecionada. Leitura posterior completa6controles achou tokenusername emdivrolebutton eAddunicoenabled; nao provou leaftext/username exatos por sourcesForsemTreeWalker nem aria-selectedchip. Falhou antesAdd; nenhum requestinvite/confirm/pub. Proximo candidato compara freshbaselineantesselect comregistroexatounicovisivelenableddepois, namesecundario/ARIAnaosupostos; writescontinuamabortados."
+    },
+    {
+      "unit": "instagram-hub2you-browser-invite-state-contract-dry-20261007-214525",
+      "script_sha256": "89aab5b3898cd35efcd425c2927a104990c72c473960bb26212472b24738290e",
+      "status": "observation_failed",
+      "failed_phase": "diagnostic",
+      "failure_class": "JSONDecodeError",
+      "manager_restored": false,
+      "other_seven_units_unchanged": true,
+      "manager_resources_preserved": true,
+      "runner_sha256": "4c06ecab230ce5693785a2a17b2e13ace7b7bd9637577a6cddce2f0b1d82f7a5",
+      "result": {},
+      "receipt_available": false,
+      "recovery": {
+        "unit": "instagram-hub2you-browser-invite-state-contract-dry-20261007-214525",
+        "recovery_utc": "2026-10-07T21:47:18Z",
+        "diagnostic_unit_failed": true,
+        "diagnostic_main_pid_zero": true,
+        "diagnostic_kill_mode": "control-group",
+        "chrome_absent": true,
+        "profile_lock_absent": true,
+        "human_browser_marker_absent": true,
+        "singleton_pid_not_alive": true,
+        "exclusive_verified": true,
+        "manager_before": "inactive",
+        "manager_after": "active",
+        "manager_restored": true,
+        "manager_original_caps_verified": true,
+        "new_invite_permitted": false,
+        "basis": "independent systemd/process/profile check; no JSON receipt available"
+      },
+      "interpretation": "Stdout vazio nao comprova estado Meta nem ausencia de atividade. ReferenceError local reproduzido no emissor final por nome de variavel inconsistente. Runner recusou restauracao sem JSON; gestor retomado separadamente apos comprovacao independente de termino/processos/perfil livre. Fonte antiga preservada; fix minimo e emissor completo/no-undef validados offline antes de novo diagnostico. Nenhuma escrita permitida pelo candidato revisado."
+    },
+    {
+      "unit": "instagram-hub2you-browser-invite-state-contract-dry-20261007-215216",
+      "script_sha256": "c794b046a44a2b14835183e65d243e78e9c91ac445108e5873306e93e6a25208",
+      "status": "observation_failed",
+      "failed_phase": "validate_capture",
+      "failure_class": "AssertionError",
+      "manager_restored": true,
+      "restore_basis": "terminal_cgroup_and_profile_exclusive",
+      "restore_failure_class": null,
+      "other_seven_units_unchanged": true,
+      "manager_resources_preserved": true,
+      "runner_sha256": "b436dc0429b49032379857f399dd386eb295a49dad9250246e1c79df0c387c04",
+      "result": {
+        "diagnostic": "browser_username_invite_state_contract_read_only",
+        "stack": "hub2you",
+        "stage": "completed",
+        "failure_code": "invite_state_contract_failed",
+        "diagnostic_ok": false,
+        "browser_closed": true,
+        "launch_settled": true,
+        "lock_released": true,
+        "search_response_validated": true,
+        "search_target_found": true,
+        "result_popup_capture_complete": true,
+        "result_popup_stable": true,
+        "result_popup_target_entry_bound_to_response_entry": true,
+        "invite_contract_selection_performed": true,
+        "invite_contract_selection_failure": null,
+        "confirmation_performed": false,
+        "invite_performed": false,
+        "publication_performed": false,
+        "selected_result_snapshot": {
+          "result_capture_complete": true,
+          "candidate_count": 6,
+          "inspected_count": 6,
+          "inspection_truncated": false,
+          "snapshot_truncated": false,
+          "target_exact_count": 0,
+          "target_exact_unique": false,
+          "target_exact_roles": [],
+          "target_exact_types": [],
+          "target_exact_editable": false,
+          "target_exact_selected": false,
+          "target_token_match_count": 1,
+          "target_entry_text_match_count": 0,
+          "target_entry_username_match_count": 0,
+          "target_entry_name_match_count": 0,
+          "target_entry_identity_match_count": 0,
+          "target_entry_identity_unique": false,
+          "target_entry_identity_selected": false,
+          "target_entry_exact_match_count": 0,
+          "target_entry_exact_unique": false,
+          "target_entry_matches": [
+            {
+              "tag": "div",
+              "role": "button",
+              "target_token_match": true,
+              "visible": true,
+              "enabled": true
+            }
+          ],
+          "target_entry_matches_truncated": false,
+          "action_button_count": 4,
+          "action_buttons_known_count": 1,
+          "action_buttons_unknown_count": 3,
+          "action_buttons": [
+            {
+              "role": "button",
+              "name_enum": "add",
+              "name": "Add",
+              "visible": true,
+              "enabled": true
+            }
+          ],
+          "known_confirmation_button_count": 1,
+          "known_confirmation_buttons": [
+            "add"
+          ],
+          "selected_chip_count": 0,
+          "selected_chip_present": false,
+          "controls": [
+            {
+              "tag": "a",
+              "name_unknown": true
+            },
+            {
+              "tag": "div",
+              "role": "button",
+              "name_unknown": true
+            },
+            {
+              "tag": "div",
+              "role": "button",
+              "target_token_match": true,
+              "name_unknown": true
+            },
+            {
+              "tag": "div",
+              "role": "button",
+              "name_unknown": true
+            },
+            {
+              "tag": "div",
+              "role": "button",
+              "name_enum": "add",
+              "name": "Add"
+            },
+            {
+              "tag": "div",
+              "selected": true,
+              "name_unknown": true
+            }
+          ]
+        },
+        "invite_state_contract_baseline_capture_complete": true,
+        "invite_state_contract_baseline_identity_count": 0,
+        "invite_state_contract_baseline_identity_button_count": 0,
+        "invite_state_contract_transition_capture_complete": true,
+        "invite_state_contract_transition_identity_count": 0,
+        "invite_state_contract_transition_identity_button_count": 0,
+        "invite_state_contract_transition_identity_button_unique": false,
+        "invite_state_contract_transition_identity_button_visible": false,
+        "invite_state_contract_transition_identity_button_enabled": false,
+        "invite_state_contract_transition_identity_button_new": false,
+        "invite_state_contract_transition_identity_button_role": null,
+        "invite_state_contract_transition_target_found": false,
+        "invite_state_contract_transition_target_unique": false,
+        "invite_state_contract_selection_performed": true,
+        "invite_state_contract_selection_failure": null,
+        "invite_state_contract_instagram_tester_checked": false,
+        "invite_state_contract_add_button_found": false,
+        "invite_state_contract_add_button_unique": false,
+        "invite_state_contract_add_button_visible": false,
+        "invite_state_contract_add_button_enabled": false,
+        "invite_state_contract_armed": false,
+        "invite_state_contract_confirmation_attempted": false,
+        "invite_state_contract_write_request_observed": false,
+        "invite_state_contract_write_request_count": 0,
+        "invite_state_contract_write_abort_failures": 0,
+        "invite_state_contract_requests_truncated": false,
+        "invite_state_contract_writes_blocked": false,
+        "invite_state_contract_last_request_target_matched": false,
+        "invite_state_contract_invite_request_target_matched": false,
+        "invite_state_contract_invite_request_count": 0,
+        "invite_state_contract_all_metadata_complete": false,
+        "invite_state_contract_failure": "selected_target_transition_not_proved",
+        "invite_state_contract_diagnostic_ok": false,
+        "invite_state_contract_requests": []
+      },
+      "interpretation": "Emissor corrigido gerou recibo completo. Baseline/transition completos, mas identidade por leaftext exato continua0. Token lexical inteiro do username esta em1divrolebutton visible/enabled posselecao. Selecao exata provada; predicado selectedtransition recusouantesAdd. NenhumPOSTconvite/confirmacao. Recuperacaoautomaticaindependentecgroup/perfilok. NaoafirmarcausaestilotextoMetasemobservacao."
     }
   ]
 }
