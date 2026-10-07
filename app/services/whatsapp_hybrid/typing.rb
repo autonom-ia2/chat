@@ -1,31 +1,42 @@
-# Envio "humanizado" pelo WhatsApp API (chat#1067): mostra "digitando…" e espera um tempo
-# proporcional ao texto antes de enviar. Disparo instantâneo, sempre igual, é padrão de robô para o
-# WhatsApp. O "digitando…" é cosmético: se o motor recusar, o envio segue normalmente.
-# Desligável por ENV WHATSAPP_HYBRID_TYPING=false.
+# Envio "humanizado" pelo WhatsApp API (chat#1067). Imita uma pessoa respondendo:
+# 1. lê a última mensagem do cliente (pausa proporcional ao tamanho dela, sem "digitando…");
+# 2. digita a resposta a uma velocidade de pessoa, sorteada a cada mensagem (nunca o mesmo tempo);
+# 3. envia. Disparo instantâneo e sempre igual é padrão de robô para o WhatsApp.
+# O "digitando…" é cosmético: se o motor recusar, o envio segue. WHATSAPP_HYBRID_TYPING=false desliga.
 class WhatsappHybrid::Typing
-  SECONDS_PER_CHAR = 0.04
-  MIN_SECONDS = 1.0
-  MAX_SECONDS = 4.0
-  MEDIA_SECONDS = 1.5
+  READING_CHARS_PER_SECOND = 30.0
+  READING_RANGE = (0.5..2.5)
+  TYPING_CHARS_PER_SECOND = (4.5..6.5)
+  TYPING_RANGE = (1.0..9.0)
+  MEDIA_RANGE = (1.5..2.5)
 
-  def initialize(client, session:, chat_id:)
+  def initialize(client, session:, chat_id:, rng: Random.new)
     @client = client
     @session = session
     @chat_id = chat_id
+    @rng = rng
   end
 
   def simulate(message)
     return if ENV.fetch('WHATSAPP_HYBRID_TYPING', 'true').to_s.downcase == 'false'
 
+    Kernel.sleep(reading_for(message))
     started = start
-    Kernel.sleep(duration_for(message))
+    Kernel.sleep(typing_for(message))
     stop if started
   end
 
-  def duration_for(message)
-    return MEDIA_SECONDS if message.attachments.any?
+  def reading_for(message)
+    last_incoming = message.conversation.messages.incoming.where(created_at: ...message.created_at).last
+    (last_incoming&.content.to_s.length / READING_CHARS_PER_SECOND).clamp(READING_RANGE.begin, READING_RANGE.end)
+  end
 
-    (message.outgoing_content.to_s.length * SECONDS_PER_CHAR).clamp(MIN_SECONDS, MAX_SECONDS)
+  def typing_for(message)
+    return @rng.rand(MEDIA_RANGE) if message.attachments.any?
+
+    # O que a pessoa digitou (content), não a assinatura que o envio acrescenta.
+    speed = @rng.rand(TYPING_CHARS_PER_SECOND)
+    (message.content.to_s.length / speed).clamp(TYPING_RANGE.begin, TYPING_RANGE.end)
   end
 
   private
