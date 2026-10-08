@@ -26,19 +26,23 @@ const dialogRef = ref(null);
 
 const hasSubjects = computed(() => subjects.value.length > 0);
 
+// Troca rápida de conversa: só a resposta da conversa aberta agora vale.
+let lastRequest = 0;
 const fetchSubjects = async () => {
   if (!props.conversationId) return;
+  lastRequest += 1;
+  const requestId = lastRequest;
+  const requestedFor = props.conversationId;
   isLoading.value = true;
   hasError.value = false;
   try {
-    const { data } = await CrmKanbanAPI.getConversationSubjects(
-      props.conversationId
-    );
+    const { data } = await CrmKanbanAPI.getConversationSubjects(requestedFor);
+    if (requestId !== lastRequest) return;
     subjects.value = data?.payload || [];
   } catch {
-    hasError.value = true;
+    if (requestId === lastRequest) hasError.value = true;
   } finally {
-    isLoading.value = false;
+    if (requestId === lastRequest) isLoading.value = false;
   }
 };
 
@@ -137,25 +141,19 @@ watch(
 
     <ul v-else class="mb-0 grid list-none gap-1.5 p-0">
       <li v-for="subject in subjects" :key="subject.id">
-        <button
-          type="button"
+        <component
+          :is="canSwitch(subject) ? 'button' : 'div'"
+          :type="canSwitch(subject) ? 'button' : undefined"
           class="flex min-h-11 w-full items-start gap-2 rounded-lg border px-2.5 py-2 text-start transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
           :class="[
             subject.current
               ? 'border-n-blue-7 bg-n-blue-2'
               : 'border-n-weak bg-n-alpha-black2',
-            canSwitch(subject) ? 'hover:border-n-strong' : 'cursor-default',
+            canSwitch(subject) ? 'hover:border-n-strong' : '',
             subject.status === 'open' ? '' : 'opacity-70',
           ]"
           :aria-current="subject.current ? 'true' : undefined"
-          :aria-label="
-            canSwitch(subject)
-              ? t('CRM_KANBAN.CONVERSATION.SUBJECTS.MAKE_CURRENT', {
-                  title: subject.title,
-                })
-              : subject.title
-          "
-          :disabled="!canSwitch(subject)"
+          data-crm-subject
           @click="makeCurrent(subject)"
         >
           <span
@@ -179,6 +177,9 @@ watch(
             >
               {{ subject.owner.name }}
             </span>
+            <span v-if="canSwitch(subject)" class="sr-only">
+              {{ t('CRM_KANBAN.CONVERSATION.SUBJECTS.MAKE_CURRENT_HINT') }}
+            </span>
           </span>
           <span
             v-if="subject.current"
@@ -192,14 +193,13 @@ watch(
           >
             {{ statusLabel(subject) }}
           </span>
-        </button>
+        </component>
       </li>
     </ul>
 
     <CrmNewSubjectDialog
       ref="dialogRef"
       :conversation-id="conversationId"
-      :has-subjects="hasSubjects"
       @created="afterChange"
     />
   </div>

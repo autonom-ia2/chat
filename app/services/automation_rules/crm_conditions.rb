@@ -1,6 +1,6 @@
 # Condições de Automação sobre o card do CRM da conversa (funil, etapa e status). O card é o mesmo
-# que Crm::Cards::ConversationCardFinder escolhe: não arquivado, o assunto atual (focused_at mais recente)
-# primeiro, depois o principal da conversa, depois o de menor id. Sem card, "diferente de" é verdadeiro e
+# que Crm::Cards::ConversationCardFinder escolhe: não arquivado, abertos antes de encerrados, o assunto atual
+# (focused_at mais recente) primeiro, depois o principal da conversa, depois o de menor id. Sem card, "diferente de" é verdadeiro e
 # "igual a" é falso.
 module AutomationRules::CrmConditions
   OPERATORS = {
@@ -21,7 +21,8 @@ module AutomationRules::CrmConditions
              OR EXISTS (SELECT 1 FROM crm_card_conversations
                         WHERE crm_card_conversations.card_id = crm_cards.id
                           AND crm_card_conversations.conversation_id = conversations.id))
-      ORDER BY (SELECT MAX(crm_focus.focused_at) FROM crm_card_conversations crm_focus
+      ORDER BY (crm_cards.status = #{Crm::Card.statuses[:open]}) DESC,
+               (SELECT MAX(crm_focus.focused_at) FROM crm_card_conversations crm_focus
                 WHERE crm_focus.card_id = crm_cards.id AND crm_focus.conversation_id = conversations.id) DESC NULLS LAST,
                (crm_cards.conversation_id = conversations.id) IS TRUE DESC, crm_cards.id
       LIMIT 1

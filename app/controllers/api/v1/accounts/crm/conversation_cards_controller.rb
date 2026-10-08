@@ -5,7 +5,7 @@ class Api::V1::Accounts::Crm::ConversationCardsController < Api::V1::Accounts::C
 
   def index
     cards = conversation_cards.includes(:stage, :pipeline, :owner).to_a
-    current_id = cards.find(&:open?)&.id
+    current_id = cards.first&.id if cards.first&.open?
     render json: { payload: cards.map { |card| card_payload(card, current_id) } }
   end
 

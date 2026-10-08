@@ -46,7 +46,9 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     # Chatwoot's frontend identifies conversations by display_id (per-account).
     conversation = Current.account.conversations.find_by!(display_id: params[:conversation_id])
     authorize_crm_conversation!(conversation)
-    card = ::Crm::Cards::ConversationCardFinder.new(account: Current.account).find(conversation)
+    # Só cards que a pessoa pode ver: o selo traz título, funil e etapa.
+    cards = ::Crm::Cards::ConversationCardFinder.new(account: Current.account).all(conversation)
+    card = cards.where(id: policy_scope(::Crm::Card).select(:id)).includes(:stage, :pipeline).first
     render json: { payload: stage_badge_payload(card) }
   end
 
@@ -296,6 +298,7 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     subjects_count = Hash.new(0)
     badges = ::Crm::Card.open
                         .where(account_id: Current.account.id, conversation_id: conversations.map(&:id))
+                        .where(id: policy_scope(::Crm::Card).select(:id))
                         .joins(CARD_STAGES_FOCUS_JOIN)
                         .order(Arel.sql('crm_focus.focused_at DESC NULLS LAST'), :id)
                         .includes(:stage, :pipeline)

@@ -50,6 +50,30 @@ RSpec.describe 'CRM conversation subjects API', type: :request do
     expect(badge).to include('card_id' => first_id, 'subjects_count' => 2)
   end
 
+  it 'moves the current subject to an open one when the focused card is closed, as automations see it' do
+    first_id = create_subject('Agentes de IA', new_subject: false)
+    second_id = create_subject('Chat2You')
+    account.crm_cards.find(second_id).update!(status: :won)
+
+    get "#{base_url}/cards", headers: auth_headers(agent)
+
+    expect(response.parsed_body['payload'].first).to include('id' => first_id, 'current' => true)
+    expect(Crm::Cards::ConversationCardFinder.new(account: account).find(conversation).id).to eq(first_id)
+  end
+
+  it 'does not leak the title of a card the agent cannot see in the list badge' do
+    other_inbox = create_crm_inbox(account: account, name: 'Caixa restrita')
+    account.crm_cards.create!(pipeline: pipeline, stage: pipeline_and_stage.last, contact: contact, inbox: other_inbox,
+                              primary_conversation: conversation, title: 'Assunto restrito')
+
+    get "/api/v1/accounts/#{account.id}/crm/conversations/card_stages",
+        params: { conversation_ids: [conversation.display_id] }, headers: auth_headers(agent)
+
+    expect(response.body).not_to include('Assunto restrito')
+    get "#{base_url}/card", headers: auth_headers(agent)
+    expect(response.body).not_to include('Assunto restrito')
+  end
+
   it 'does not make a closed card the current subject' do
     first_id = create_subject('Agentes de IA', new_subject: false)
     account.crm_cards.find(first_id).update!(status: :won)

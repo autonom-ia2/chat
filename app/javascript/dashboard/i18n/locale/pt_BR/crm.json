@@ -1374,7 +1374,6 @@
         "CURRENT_HINT": "Assunto atual desta conversa",
         "WON": "Ganho",
         "LOST": "Perdido",
-        "MAKE_CURRENT": "Tratar este assunto: {title}",
         "SWITCHED": "Agora tratando: {title}",
         "SWITCH_ERROR": "Não foi possível trocar o assunto atual.",
         "NEW_TITLE": "Novo assunto",
@@ -1385,7 +1384,8 @@
         "CREATE": "Criar assunto",
         "CREATED": "Assunto criado.",
         "MORE": "+{count}",
-        "MORE_HINT": "Mais {count} assunto(s) aberto(s) nesta conversa"
+        "MORE_HINT": "Mais {count} assunto(s) aberto(s) nesta conversa",
+        "MAKE_CURRENT_HINT": "Clique para tratar este assunto"
       }
     },
     "PIPELINE_DRAWER": {

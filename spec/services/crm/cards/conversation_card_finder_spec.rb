@@ -39,6 +39,16 @@ RSpec.describe Crm::Cards::ConversationCardFinder do
     expect(finder.all(conversation).to_a).to eq([residencial, primary])
   end
 
+  it 'põe o card aberto antes do encerrado, mesmo que o encerrado tenha foco mais recente' do
+    open_card = create_card(primary: other_conversation, title: 'Em andamento')
+    link(open_card, focused_at: 2.hours.ago)
+    won = create_card(primary: conversation, status: :won, title: 'Ganho')
+    link(won, focused_at: 1.minute.ago)
+
+    expect(finder.find(conversation)).to eq(open_card)
+    expect(finder.all(conversation).to_a).to eq([open_card, won])
+  end
+
   it 'ignora card arquivado e mantém card ganho' do
     won = create_card(primary: conversation, status: :won)
     archived = create_card(primary: other_conversation, status: :archived)

@@ -53,8 +53,7 @@ const mountPanel = (props = {}) =>
     },
   });
 
-const rows = wrapper =>
-  wrapper.findAll('[data-crm-conversation-subjects] li button');
+const rows = wrapper => wrapper.findAll('[data-crm-subject]');
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -90,7 +89,9 @@ it('makes another open subject current and refreshes the list badge', async () =
 it('never switches to a closed subject or without permission', async () => {
   const wrapper = mountPanel();
   await flushPromises();
-  expect(rows(wrapper)[2].attributes('disabled')).toBeDefined();
+  expect(rows(wrapper)[2].element.tagName).toBe('DIV');
+  expect(rows(wrapper)[0].element.tagName).toBe('DIV');
+  expect(rows(wrapper)[1].element.tagName).toBe('BUTTON');
 
   const readOnly = mountPanel({ canManage: false });
   await flushPromises();
@@ -99,7 +100,7 @@ it('never switches to a closed subject or without permission', async () => {
   expect(CrmKanbanAPI.focusConversationSubject).not.toHaveBeenCalled();
 });
 
-it('shows a retry when the subjects cannot be loaded', async () => {
+it('shows a retry when the subjects cannot be loaded and loads again on retry', async () => {
   CrmKanbanAPI.getConversationSubjects.mockRejectedValueOnce(new Error('x'));
   const wrapper = mountPanel();
   await flushPromises();
@@ -107,4 +108,30 @@ it('shows a retry when the subjects cannot be loaded', async () => {
   expect(wrapper.text()).toContain(
     'CRM_KANBAN.CONVERSATION.SUBJECTS.LOAD_ERROR'
   );
+  const retry = wrapper
+    .findAllComponents({ name: 'NextButton' })
+    .find(button => button.props('label')?.endsWith('SUBJECTS.RETRY'));
+  await retry.vm.$emit('click');
+  await flushPromises();
+  expect(rows(wrapper)).toHaveLength(3);
+});
+
+it('ignores a late answer from the previous conversation', async () => {
+  let resolveOld;
+  CrmKanbanAPI.getConversationSubjects
+    .mockImplementationOnce(
+      () =>
+        new Promise(resolve => {
+          resolveOld = resolve;
+        })
+    )
+    .mockResolvedValueOnce({ data: { payload: [SUBJECTS[1]] } });
+  const wrapper = mountPanel();
+  await wrapper.setProps({ conversationId: 10 });
+  await flushPromises();
+  resolveOld({ data: { payload: SUBJECTS } });
+  await flushPromises();
+
+  expect(rows(wrapper)).toHaveLength(1);
+  expect(rows(wrapper)[0].text()).toContain('Agentes de IA');
 });

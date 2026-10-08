@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, toRef } from 'vue';
+import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useStore } from 'vuex';
 import { useI18n } from 'vue-i18n';
@@ -24,7 +24,7 @@ const { canViewCrm, canManageCards } = useCrmPermissions();
 
 const isOpen = ref(false);
 const conversationId = computed(() => props.chat?.id);
-const stage = useCrmConversationStage(toRef(conversationId));
+const stage = useCrmConversationStage(conversationId);
 
 const accountId = computed(() => store.getters.getCurrentAccountId);
 const globalConfig = computed(() => store.getters['globalConfig/get'] || {});

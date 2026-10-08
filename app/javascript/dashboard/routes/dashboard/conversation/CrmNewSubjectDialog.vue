@@ -7,10 +7,9 @@ import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
 
 // Novo assunto na conversa (#1143): escolher o funil e dar um nome ao assunto. O card nasce na primeira etapa do
-// funil e vira o assunto atual. Com a conversa já tendo card, pede um card novo (new_subject) em vez de reaproveitar.
+// funil e vira o assunto atual. Sempre pede um card novo (new_subject): este diálogo nunca reaproveita um existente.
 const props = defineProps({
   conversationId: { type: [Number, String], required: true },
-  hasSubjects: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['created']);
@@ -26,7 +25,10 @@ const isCreating = ref(false);
 
 const pipelines = computed(() => store.getters['crmKanban/getPipelines'] || []);
 const canCreate = computed(
-  () => Boolean(pipelineId.value && title.value.trim()) && !isCreating.value
+  () =>
+    pipelines.value.some(pipeline => pipeline.id === pipelineId.value) &&
+    Boolean(title.value.trim()) &&
+    !isCreating.value
 );
 
 const loadPipelines = async () => {
@@ -45,6 +47,7 @@ const loadPipelines = async () => {
 
 const open = async () => {
   title.value = '';
+  pipelineId.value = null;
   dialogRef.value?.open();
   await loadPipelines();
 };
@@ -57,7 +60,7 @@ const create = async () => {
       conversation_display_id: props.conversationId,
       pipeline_id: pipelineId.value,
       title: title.value.trim(),
-      new_subject: props.hasSubjects,
+      new_subject: true,
     });
     useAlert(t('CRM_KANBAN.CONVERSATION.SUBJECTS.CREATED'));
     dialogRef.value?.close();
