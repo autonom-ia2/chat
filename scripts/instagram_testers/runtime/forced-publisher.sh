@@ -69,14 +69,17 @@ if [ "${SSH_ORIGINAL_COMMAND-}" = "instagram_publisher_channel_v1" ]; then
   /usr/bin/mkfifo "$channel_fifo" || fail
   exec 3<>"$channel_fifo" || fail
   exec 4<&0 || fail
-  /usr/bin/docker exec -i chatwoot-web bundle exec ruby scripts/instagram_testers/session_publisher.rb --channel <&4 >&3 2>/dev/null &
+  # Open the reader before a fast publisher can finish and close the FIFO.
+  exec 5<"$channel_fifo" || fail
+  /usr/bin/docker exec -i chatwoot-web bundle exec ruby scripts/instagram_testers/session_publisher.rb --channel <&4 >&3 3>&- 5<&- 2>/dev/null &
   channel_child=$!
   exec 4<&-
   exec 3>&-
   while IFS= read -r frame; do
     validate_frame "$frame" 2048
     printf '%s\n' "$frame"
-  done <"$channel_fifo"
+  done <&5
+  exec 5<&-
   wait "$channel_child" || fail
   exit 0
 fi
