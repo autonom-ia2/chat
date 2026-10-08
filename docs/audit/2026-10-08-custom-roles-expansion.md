@@ -38,7 +38,7 @@ Implementação, merge/deploy e mutações posteriores dependem de aprovação e
 
 ## Validação desta documentação
 - Leitura de `AGENTS.md`, código OSS/Enterprise, auditorias históricas e Issues #452/#888/#879/#894/#726.
-- Script local temporário de conferência: 28 referências de caminho/intervalo válidas; 34 chaves; 16 áreas.
+- Script local temporário de conferência: 38 referências de caminho/intervalo válidas; 34 chaves; 16 áreas.
 - Script não executa aplicação ou testes.
 - `git diff --check` executado; checagem final no índice antes do commit.
 - Nenhum teste foi executado. Specs existentes foram somente lidos.
@@ -57,3 +57,10 @@ PR somente de documentação; revisão e estado final registrados no fechamento.
 - Revisor de interface: contagens e tabela aprovadas; incorporados nomes pt-BR exatos, rótulo de conversas, gate da tela, redução dos cartões, slots fixos, alcance da prévia estática e resumo legado de crm_admin.
 - Revisor de servidor: incorporados PATCH que limpa função ausente, atribuição sem validação explícita de conta/elegibilidade, entradas SAML/SSO e ausência de gate de leitura contact_view. Policies da Central conferidas pelo principal: escrita negada por decisão de produto, não expandida na proposta.
 - Também faltava loader Husky no pre-push. Para push desta branch só de documentação, usar override transitório `git -c core.hooksPath=/dev/null push`; configuração permanente do repo não alterada.
+
+## Fechamento
+- PR draft de documentação: https://github.com/autonom-ia2/chat/pull/1136, anexada à conversa.
+- Issue e PR no Project Autonom.ia Dev: Em review, Hub2You, Docs, P2, Baixo, Local; próxima ação para Rodrigo avaliar a proposta.
+- Conferência de PR: OPEN/draft; somente dois arquivos Markdown. Worktree limpa antes do registro final.
+- Revisão factual dos três agentes incorporada; não é aprovação do Rodrigo para implementar/merge/deploy.
+- Nenhum merge, deploy ou alteração funcional realizada. Rollback desta documentação: reversão do commit de docs se ela vier a ser mergeada; plano para comportamento futuro consta no relatório.
