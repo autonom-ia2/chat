@@ -48,10 +48,32 @@ class Mcp::IntegrationToken < ApplicationRecord
       AccessToken.where(owner: self).delete_all
       managed_account_user = account_user
       managed_custom_role = custom_role
+      managed_user = managed_account_user&.user
       managed_account_user&.destroy!
       managed_custom_role&.destroy!
+      AccessToken.where(owner: managed_user).delete_all if managed_user.present?
+      managed_user&.destroy!
       destroy!
     end
+  end
+
+  def sync_inbox_memberships!
+    return if account_user.blank?
+
+    managed_user_id = account_user.user_id
+    missing_inbox_ids = account.inboxes.where.not(
+      id: InboxMember.where(user_id: managed_user_id).select(:inbox_id)
+    ).pluck(:id)
+    return if missing_inbox_ids.empty?
+
+    now = Time.current
+    # Skip callbacks intentionally so this technical reader cannot enter round-robin assignment.
+    InboxMember.insert_all( # rubocop:disable Rails/SkipsModelValidations
+      missing_inbox_ids.map do |inbox_id|
+        { inbox_id: inbox_id, user_id: managed_user_id, created_at: now, updated_at: now }
+      end,
+      unique_by: :index_inbox_members_on_inbox_id_and_user_id
+    )
   end
 
   private
@@ -76,6 +98,7 @@ class Mcp::IntegrationToken < ApplicationRecord
       password: "Aa1!#{SecureRandom.alphanumeric(28)}",
       confirmed_at: Time.current
     )
+    AccessToken.where(owner: user).delete_all
     membership = account.account_users.create!(
       user: user,
       role: :agent,
@@ -85,6 +108,7 @@ class Mcp::IntegrationToken < ApplicationRecord
 
     self.custom_role = role
     self.account_user = membership
+    sync_inbox_memberships!
   end
 
   def chatwoot_permissions

@@ -56,6 +56,8 @@ module AccessTokenAuthHelper
       return true
     end
 
+    token.sync_inbox_memberships! if token.class.name == 'Mcp::IntegrationToken'
+
     # Resolve to the backing human User + managed AccountUser so Pundit / the EE
     # CrmPermissions policy see a real account_user with the granular custom_role.
     Current.user = token.account_user.user

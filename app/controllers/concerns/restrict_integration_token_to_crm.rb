@@ -100,7 +100,7 @@ module RestrictIntegrationTokenToCrm
     scope_map = mcp_integration_token_request? ? MCP_SCOPE_MAP : CRM_SCOPE_MAP
     required_scope = scope_map.dig(params[:controller], params[:action])
 
-    return render_unauthorized('This integration token is not authorized for this endpoint') if required_scope.blank?
+    return render_unauthorized(unauthorized_endpoint_message) if required_scope.blank?
 
     return if !mcp_integration_token_request? && integration_token_scopes.include?('crm_admin')
     return if integration_token_scopes.include?(required_scope)
@@ -110,5 +110,11 @@ module RestrictIntegrationTokenToCrm
 
   def integration_token_scopes
     current_integration_token&.granted_scopes || []
+  end
+
+  def unauthorized_endpoint_message
+    return 'This integration token is not authorized for this endpoint' if mcp_integration_token_request?
+
+    'This token is only authorized for CRM endpoints'
   end
 end

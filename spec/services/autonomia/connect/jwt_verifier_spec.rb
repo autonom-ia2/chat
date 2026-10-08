@@ -5,7 +5,7 @@ RSpec.describe Autonomia::Connect::JwtVerifier do
   let(:kid) { 'connect-test-v1' }
   let(:issuer) { 'https://connect.example' }
   let(:audience) { 'https://agents.example/api/v1/autonomia/connect' }
-  let(:jwk) { JWT::JWK.new(key, kid: kid).export }
+  let(:jwk) { JSON.parse(JWT::JWK.new(key, kid: kid).export.to_json) }
   let(:verifier) do
     described_class.new(
       issuer: issuer,

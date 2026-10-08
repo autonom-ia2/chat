@@ -8,7 +8,7 @@ RSpec.describe 'Autonom.ia Connect Agents provisioning', type: :request do
   let(:headers) { { 'Authorization' => 'Bearer signed-connect-token' } }
 
   before do
-    Autonomia::UserLink.create!(identity_user_id: identity_subject, user: user)
+    Autonomia::UserLink.create!(identity_user_id: identity_subject, user: user, email: user.email)
     allow(Autonomia::Connect::JwtVerifier).to receive(:new).and_return(verifier)
   end
 
@@ -68,6 +68,7 @@ RSpec.describe 'Autonom.ia Connect Agents provisioning', type: :request do
       scopes: Mcp::IntegrationToken::DEFAULT_SCOPES
     )
     raw_token = integration.access_token.token
+    managed_user = integration.account_user.user
 
     delete '/api/v1/autonomia/connect/agents/integration',
            params: { account_id: account.id }, headers: headers, as: :json
@@ -75,5 +76,6 @@ RSpec.describe 'Autonom.ia Connect Agents provisioning', type: :request do
     expect(response).to have_http_status(:no_content)
     expect(AccessToken.find_by(token: raw_token)).to be_nil
     expect(Mcp::IntegrationToken.find_by(id: integration.id)).to be_nil
+    expect(User.find_by(id: managed_user.id)).to be_nil
   end
 end
