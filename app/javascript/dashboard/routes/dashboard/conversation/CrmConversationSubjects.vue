@@ -178,7 +178,12 @@ watch(
               {{ subject.title }}
             </span>
             <span class="truncate text-xs leading-5 text-n-slate-11">
-              {{ subject.pipeline_name }} · {{ subject.stage_name }}
+              {{
+                t('CRM_KANBAN.CONVERSATION.SUBJECTS.PIPELINE_STAGE', {
+                  pipeline: subject.pipeline_name,
+                  stage: subject.stage_name,
+                })
+              }}
             </span>
             <span
               v-if="subject.owner"

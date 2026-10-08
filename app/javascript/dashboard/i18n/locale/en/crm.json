@@ -1386,7 +1386,8 @@
         "MORE": "+{count}",
         "MORE_HINT": "{count} more open subject(s) in this conversation",
         "MAKE_CURRENT_HINT": "Click to work on this subject",
-        "REPLY_IN": "This message goes to:"
+        "REPLY_IN": "This message goes to:",
+        "PIPELINE_STAGE": "{pipeline} · {stage}"
       }
     },
     "PIPELINE_DRAWER": {

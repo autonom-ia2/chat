@@ -1386,7 +1386,8 @@
         "MORE": "+{count}",
         "MORE_HINT": "Mais {count} assunto(s) aberto(s) nesta conversa",
         "MAKE_CURRENT_HINT": "Clique para tratar este assunto",
-        "REPLY_IN": "Este envio fica no assunto:"
+        "REPLY_IN": "Este envio fica no assunto:",
+        "PIPELINE_STAGE": "{pipeline} · {stage}"
       }
     },
     "PIPELINE_DRAWER": {

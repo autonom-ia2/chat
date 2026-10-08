@@ -127,57 +127,66 @@ watch(
 </script>
 
 <template>
-  <OnClickOutside
-    v-if="isVisible && chosen"
-    class="relative flex items-center gap-1.5 px-4 pt-2 text-xs text-n-slate-11"
-    data-crm-reply-subject
-    @trigger="closeMenu()"
-    @keydown.esc.stop="closeMenu({ returnFocus: true })"
-  >
-    <span class="i-lucide-corner-down-right size-3.5 shrink-0" />
-    <span>{{ t('CRM_KANBAN.CONVERSATION.SUBJECTS.REPLY_IN') }}</span>
-    <button
-      ref="toggleRef"
-      type="button"
-      class="relative flex min-h-7 min-w-0 items-center gap-1 rounded-md bg-n-blue-2 px-2 font-medium text-n-blue-11 transition after:absolute after:-inset-y-2 after:inset-x-0 after:content-[''] hover:bg-n-blue-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
-      :class="{ 'cursor-default': !canManageCards }"
-      :aria-haspopup="canManageCards ? 'menu' : undefined"
-      :aria-expanded="canManageCards ? (isOpen ? 'true' : 'false') : undefined"
-      :aria-controls="canManageCards ? menuId : undefined"
-      :aria-busy="isSwitching ? 'true' : undefined"
-      data-crm-reply-subject-toggle
-      @click="toggleMenu"
+  <div class="contents">
+    <OnClickOutside
+      v-if="isVisible && chosen"
+      class="relative flex items-center gap-1.5 px-4 pt-2 text-xs text-n-slate-11"
+      data-crm-reply-subject
+      @trigger="closeMenu()"
+      @keydown.esc.stop="closeMenu({ returnFocus: true })"
     >
-      <span class="truncate">{{ chosen.title }}</span>
-      <span
-        v-if="canManageCards"
-        class="i-lucide-chevron-down size-3.5 shrink-0"
-        aria-hidden="true"
-      />
-    </button>
-    <ul
-      v-if="isOpen"
-      :id="menuId"
-      ref="menuRef"
-      role="menu"
-      class="absolute bottom-full left-4 z-50 mb-1 grid w-72 list-none gap-0.5 rounded-lg border border-n-weak bg-n-solid-1 p-1 shadow-lg"
-    >
-      <li v-for="subject in openSubjects" :key="subject.id" role="none">
-        <button
-          type="button"
-          role="menuitemradio"
-          :aria-checked="subject.id === chosen.id ? 'true' : 'false'"
-          class="flex min-h-11 w-full flex-col items-start rounded-md px-2.5 py-1.5 text-start hover:bg-n-alpha-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
-          @click="choose(subject)"
-        >
-          <span class="w-full truncate text-sm text-n-slate-12">
-            {{ subject.title }}
-          </span>
-          <span class="w-full truncate text-xs text-n-slate-11">
-            {{ subject.pipeline_name }} · {{ subject.stage_name }}
-          </span>
-        </button>
-      </li>
-    </ul>
-  </OnClickOutside>
+      <span class="i-lucide-corner-down-right size-3.5 shrink-0" />
+      <span>{{ t('CRM_KANBAN.CONVERSATION.SUBJECTS.REPLY_IN') }}</span>
+      <button
+        ref="toggleRef"
+        type="button"
+        class="relative flex min-h-7 min-w-0 items-center gap-1 rounded-md bg-n-blue-2 px-2 font-medium text-n-blue-11 transition after:absolute after:-inset-y-2 after:inset-x-0 after:content-[''] hover:bg-n-blue-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+        :class="{ 'cursor-default': !canManageCards }"
+        :aria-haspopup="canManageCards ? 'menu' : undefined"
+        :aria-expanded="
+          canManageCards ? (isOpen ? 'true' : 'false') : undefined
+        "
+        :aria-controls="canManageCards ? menuId : undefined"
+        :aria-busy="isSwitching ? 'true' : undefined"
+        data-crm-reply-subject-toggle
+        @click="toggleMenu"
+      >
+        <span class="truncate">{{ chosen.title }}</span>
+        <span
+          v-if="canManageCards"
+          class="i-lucide-chevron-down size-3.5 shrink-0"
+          aria-hidden="true"
+        />
+      </button>
+      <ul
+        v-if="isOpen"
+        :id="menuId"
+        ref="menuRef"
+        role="menu"
+        class="absolute bottom-full left-4 z-50 mb-1 grid w-72 list-none gap-0.5 rounded-lg border border-n-weak bg-n-solid-1 p-1 shadow-lg"
+      >
+        <li v-for="subject in openSubjects" :key="subject.id" role="none">
+          <button
+            type="button"
+            role="menuitemradio"
+            :aria-checked="subject.id === chosen.id ? 'true' : 'false'"
+            class="flex min-h-11 w-full flex-col items-start rounded-md px-2.5 py-1.5 text-start hover:bg-n-alpha-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+            @click="choose(subject)"
+          >
+            <span class="w-full truncate text-sm text-n-slate-12">
+              {{ subject.title }}
+            </span>
+            <span class="w-full truncate text-xs text-n-slate-11">
+              {{
+                t('CRM_KANBAN.CONVERSATION.SUBJECTS.PIPELINE_STAGE', {
+                  pipeline: subject.pipeline_name,
+                  stage: subject.stage_name,
+                })
+              }}
+            </span>
+          </button>
+        </li>
+      </ul>
+    </OnClickOutside>
+  </div>
 </template>
