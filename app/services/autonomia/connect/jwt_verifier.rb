@@ -22,25 +22,8 @@ class Autonomia::Connect::JwtVerifier
 
   def verify!(authorization_header)
     token = bearer_token(authorization_header)
-    header = JWT.decode(token, nil, false).last
-    jwk = Array(@jwks_loader.call.fetch('keys')).find { |candidate| candidate['kid'] == header['kid'] }
-    raise Unauthorized if jwk.blank? || header['alg'] != 'ES256'
-
-    payload = JWT.decode(
-      token,
-      JWT::JWK.import(jwk).public_key,
-      true,
-      algorithm: 'ES256',
-      verify_iss: true,
-      iss: @issuer,
-      verify_aud: true,
-      aud: @audience,
-      verify_iat: true,
-      required_claims: %w[iss sub aud scope client_id iat exp jti]
-    ).first
-    raise Unauthorized unless payload['scope'] == EXPECTED_SCOPE
-    raise Unauthorized unless payload['client_id'] == @client_id
-    raise Unauthorized unless payload['exp'].to_i - payload['iat'].to_i <= MAX_TOKEN_LIFETIME
+    payload = decode_payload(token, signing_jwk(token))
+    validate_claims!(payload)
 
     payload
   rescue JWT::DecodeError, JSON::ParserError, KeyError, OpenSSL::PKey::PKeyError, ArgumentError
@@ -54,6 +37,36 @@ class Autonomia::Connect::JwtVerifier
     raise Unauthorized unless scheme == 'Bearer' && token.present? && token.bytesize <= MAX_TOKEN_BYTES
 
     token
+  end
+
+  def signing_jwk(token)
+    header = JWT.decode(token, nil, false).last
+    raise Unauthorized unless header['alg'] == 'ES256'
+
+    Array(@jwks_loader.call.fetch('keys')).find { |candidate| candidate['kid'] == header['kid'] }.tap do |jwk|
+      raise Unauthorized if jwk.blank?
+    end
+  end
+
+  def decode_payload(token, jwk)
+    JWT.decode(
+      token,
+      JWT::JWK.import(jwk).public_key,
+      true,
+      algorithm: 'ES256',
+      verify_iss: true,
+      iss: @issuer,
+      verify_aud: true,
+      aud: @audience,
+      verify_iat: true,
+      required_claims: %w[iss sub aud scope client_id iat exp jti]
+    ).first
+  end
+
+  def validate_claims!(payload)
+    raise Unauthorized unless payload['scope'] == EXPECTED_SCOPE
+    raise Unauthorized unless payload['client_id'] == @client_id
+    raise Unauthorized unless payload['exp'].to_i - payload['iat'].to_i <= MAX_TOKEN_LIFETIME
   end
 
   def load_remote_jwks

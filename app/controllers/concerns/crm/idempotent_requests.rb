@@ -32,6 +32,7 @@ module Crm::IdempotentRequests
   def with_idempotency(&action)
     key = request.headers[IDEMPOTENCY_HEADER].presence
     return action.call if key.blank?
+
     key = "#{idempotency_namespace}:#{key}" if idempotency_namespace.present?
 
     fingerprint = idempotency_fingerprint

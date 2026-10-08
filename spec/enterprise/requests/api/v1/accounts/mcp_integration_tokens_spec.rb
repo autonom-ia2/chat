@@ -69,7 +69,7 @@ RSpec.describe 'MCP integration-token access', type: :request do
 
     post path,
          params: { content: 'Não enviar' },
-         headers: { api_access_token: read_only.access_token.token, 'Idempotency-Key' => 'agents-message-87654321' },
+         headers: { 'api_access_token' => read_only.access_token.token, 'Idempotency-Key' => 'agents-message-87654321' },
          as: :json
     expect(response).to have_http_status(:unauthorized)
 

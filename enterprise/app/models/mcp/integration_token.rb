@@ -89,7 +89,7 @@ class Mcp::IntegrationToken < ApplicationRecord
 
   def chatwoot_permissions
     permissions = []
-    permissions << 'conversation_manage' if scopes.any? { |scope| scope.start_with?('agents:conversation') || scope.start_with?('agents:message') }
+    permissions << 'conversation_manage' if scopes.any? { |scope| scope.start_with?('agents:conversation', 'agents:message') }
     permissions << 'contact_view' if scopes.include?('agents:contacts:read')
     permissions << 'inbox_view' if scopes.include?('agents:inboxes:read')
     permissions << 'report_manage' if scopes.include?('agents:reports:read')
