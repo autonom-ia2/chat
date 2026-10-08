@@ -25,7 +25,9 @@ Uma visão salva organiza os dados que a pessoa já pode acessar. O limite de ac
 
 ### 3.1 Editor e modelo de dados
 O editor já tem criação em dois passos, perfil inicial, ajustes por área, explicação do que a pessoa poderá fazer, prévia de navegação, duplicação e atribuição a agentes.
-Os perfis são Atendente, Supervisor, SDR, Gerente comercial, Marketing, Financeiro, Operações e Somente leitura; também é possível começar do zero.
+Os nomes na tela em pt-BR são Atendente, Supervisor, Vendedor (SDR), Gestor comercial, Marketing, Financeiro, Operações e Somente leitura; também é possível começar do zero.
+As rotas exigem feature flag CUSTOM_ROLES, Cloud/Enterprise e permissão de administrador (`customRole.routes.js:9-44`). Os cartões mostram até quatro áreas e quatro avatares, reduzindo as demais áreas a +N (`component/CustomRoleCard.vue:20-34,85-131`).
+O editor mantém três posições fixas e mostra — onde o nível não existe (`permissionMatrix.js:190-215`). A prévia do menu é um resumo estático das chaves, não uma simulação do alcance por caixa/time/funil (`component/RoleSummary.vue:33-70,132-193`).
 
 A função pertence à conta e guarda `name`, `description` e `permissions[]`. A API aceita esses campos, sem contrato de condições ou escopos. A associação ao membro usa um `custom_role_id`, não uma composição de várias funções.
 Fontes: `enterprise/app/models/custom_role.rb:47-100`; `enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:25-34`; `app/javascript/dashboard/routes/dashboard/settings/customRoles/permissionMatrix.js:325-414`.
@@ -33,9 +35,9 @@ Fontes: `enterprise/app/models/custom_role.rb:47-100`; `enterprise/app/controlle
 ### 3.2 Capacidades disponíveis
 | Área | Controle atual | Limite relevante |
 |---|---|---|
-| Conversas | Nenhuma / Limitadas / Todas; não atribuídas e participação | Não há somente leitura; “Todas” não significa todas as caixas da conta |
-| Contatos | Sem acesso / Ver / Editar | Editar também libera importação/exportação; sem carteira por função |
-| Base de conhecimento | Sem acesso / Ver / Editar | Controle por módulo |
+| Conversas | Sem acesso / Só as próprias / Todas; não atribuídas e participação | Não há somente leitura; “Todas” não significa todas as caixas da conta |
+| Contatos | Sem acesso / Ver / Editar no editor | Leitura da API não exige contact_view; Editar também libera importação/exportação; sem carteira por função |
+| Base de conhecimento | Sem acesso / Ver / Editar no editor | Central é conteúdo do repositório: escritas são negadas a todos; índices têm leitura mais ampla |
 | Relatórios de atendimento | Sem acesso / Ver (`report_manage`) | Nome técnico antigo não significa editar relatórios |
 | Respostas prontas | Uso como base; gerenciamento separado | Não são três níveis completos |
 | CRM | Ver / Editar; mover cards, relatórios, funis, IA, exportar e acesso total | Criar, editar e excluir cards compartilham chave; editar já permite mover |
@@ -124,9 +126,28 @@ Logo, exclusão não equivale a revogar todo acesso. A futura tela deve mostrar 
 Fonte: `enterprise/app/models/custom_role.rb:48-49`; regras do membro/CRM citadas acima.
 
 ### 4.7 Tela oculta não é garantia de autorização
+Em Contatos, `contact_view` controla a experiência de navegação, mas `ContactPolicy#index?/search?/filter?/show?` continuam permitindo leitura; o overlay não acrescenta gate para esses métodos. Assim, ocultar a área não equivale a bloquear sua API para membro autenticado da conta.
+Na Central de Ajuda, índices de portal/artigo continuam legíveis para membros; `knowledge_base_view` acrescenta acesso ao detalhe do artigo, enquanto escrita permanece proibida por decisão de produto (conteúdo vindo do repositório). “Editar” no catálogo não concede edição efetiva ali.
+Fontes: `app/policies/contact_policy.rb:1-56`; `enterprise/app/policies/enterprise/contact_policy.rb:1-26`; `app/policies/portal_policy.rb:3-22`; `app/policies/article_policy.rb:3-15`; `enterprise/app/policies/enterprise/article_policy.rb:1-7`.
+Não abrir escrita da Central para fazer o rótulo funcionar: ajustar a representação à regra do produto.
 Menu e rota são uma camada. A concessão precisa coincidir com controller/policy, consultas e payloads associados.
 A pendência [#726](https://github.com/autonom-ia2/chat/issues/726) é um exemplo: acesso a Modelos pela área de Campanhas e ação de sincronizar têm permissões distintas.
 Ainda demanda conferência específica antes da implementação; a Issue não substitui evidência de execução.
+
+### 4.8 Integridade da atribuição da função
+O update Enterprise do agente sempre chama a associação. Se o PATCH não trouxer `custom_role_id`, o código grava nil; uma alteração independente pode retirar a função e devolver o baseline de agente.
+A atribuição recebe o ID sem buscar a função em `Current.account.custom_roles`; a associação do modelo é opcional e não há validação explícita de mesma conta. SAML e o provisionamento SSO também atribuem IDs diretamente.
+A tela impede atribuir a administradores, mas o servidor não possui a mesma restrição explícita; esse estado pode fazer os gates administrativos e de função se comportarem de modo diferente.
+
+São riscos derivados do código, **sem teste de exploração, escrita ou ocorrência confirmada em produção**. Vincular um ID de outra conta não prova acesso aos dados dessa outra conta, pois os controllers mantêm isolamento por conta.
+Fontes: `enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:9-29`; `enterprise/app/models/enterprise/concerns/account_user.rb:1-7`; `enterprise/app/builders/saml_user_builder.rb:86-94`; `app/services/autonomia/sso/provisioner.rb:62-74`.
+Antes de ampliar atribuição, distinguir campo ausente de remoção explícita, validar conta e elegibilidade em todos os pontos de entrada efetivos.
+O modelo valida nome presente e inclusão das chaves, mas não combinações/dependências da UI (`custom_role.rb:92-101`); os novos contratos precisam dessas regras no servidor.
+
+### 4.9 Resumo legado de CRM pode subestimar o acesso
+Uma função antiga com apenas `crm_admin` pode aparecer como “CRM · Ver” no cartão: `getLevel` reconhece extras como Ver quando não há a chave de edição, embora as policies concedam o acesso total.
+Fonte: `app/javascript/dashboard/routes/dashboard/settings/customRoles/permissionMatrix.js:217-231`.
+Resumo e alertas devem mostrar a permissão efetiva, não só o nível inferido para preencher o editor.
 
 ## 5. Proposta de produto
 
@@ -146,7 +167,7 @@ Priorizar **conversas e cards CRM**:
 | Decisão | Opções propostas |
 |---|---|
 | Conversas: ação | Sem acesso / Consultar / Operar |
-| Conversas: alcance | Todas dentro da base autorizada / minhas / não atribuídas / participadas / meus times |
+| Conversas: alcance | Todas dentro da base autorizada, ou combinação de minhas / não atribuídas / participadas / meus times |
 | Recorte de conversas | Caixas selecionadas, sempre dentro da base de acesso aprovada |
 | CRM: alcance | Cards visíveis na base atual / meus cards / recorte de caixas e funis |
 | Ações CRM | Criar/editar, mover, excluir e exportar como capacidades distinguíveis |
@@ -234,7 +255,7 @@ Sua execução de escrita tem gate próprio de administrador (`app/services/auto
 ## 7. Sequência recomendada
 | Etapa | Entrega | Dependência / critério |
 |---|---|---|
-| 0 — Coerência | Reproduzir e decidir divergências lista/detalhe/time; decidir métricas globais e exclusão da função | Contrato explícito, sem “corrigir” ampliando acesso silenciosamente |
+| 0 — Coerência | Preservar atribuição em PATCH, validar conta/elegibilidade, decidir gates de leitura, divergências lista/detalhe/time, métricas globais e exclusão da função | Contrato explícito, sem “corrigir” ampliando acesso silenciosamente |
 | 1 — Consulta e alcance | Somente leitura real em conversas; recortes por caixa, responsável e funil | Escritas negadas no servidor; manter funções antigas |
 | 2 — Ações separadas | Excluir/exportar/atribuir, conforme priorização; separar preparar de enviar campanha | Mapa completo dos caminhos da ação; não refatorar todos os módulos de uma vez |
 | 3 — Combinações | E dentro de grupos / OU entre grupos; critérios por etapa | Mesmo resultado em lista, detalhe, métricas e eventos |
@@ -267,5 +288,5 @@ São avaliações de complexidade, não estimativas de prazo. O plano posterior 
 
 ## 10. Recomendação para decisão
 Aprovar primeiro a direção **área + dados visíveis + ações**, concentrando a primeira implementação em conversas e CRM.
-Definir, antes de codificar, se relatórios são do recorte visível ou globais por concessão explícita, e qual base caixa/time deve valer igualmente para listagem e abertura.
+Definir, antes de codificar, se relatórios são do recorte visível ou globais por concessão explícita, e qual base caixa/time deve valer igualmente para listagem e abertura. Separar acesso ao módulo Contatos da leitura contextual de dados de contato na conversa/CRM, para não bloquear caminhos operacionais existentes ao fechar o gate.
 Depois dessa decisão, abrir tarefas de implementação com critérios e PRs pequenos. Não começar por um pacote de dezenas de novas chaves administrativas.
