@@ -1,3 +1,5 @@
+/* eslint-disable max-classes-per-file -- Reader fakes model SDK client variants. */
+
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createSsmCurrentReader } from '../../scripts/instagram_testers/runtime/vps/ssm-current-reader.mjs';
@@ -150,10 +152,7 @@ test('makes three fresh reads and surfaces a provider error without retry', asyn
   await reader.read();
   await reader.read();
   await reader.read();
-  await assert.rejects(
-    reader.read(),
-    /instagram_session_publication_failed/
-  );
+  await assert.rejects(reader.read(), /instagram_session_publication_failed/);
   assert.equal(client.calls.length, 4);
   assert.equal(client.config.maxAttempts, 1);
   reader.close();

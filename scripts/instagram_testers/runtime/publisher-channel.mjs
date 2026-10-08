@@ -24,8 +24,7 @@ export { PUBLISHER_CHANNEL_COMMAND };
 export const MAX_CHANNEL_INPUT_BYTES = 2 * 1024 * 1024;
 export const MAX_CHANNEL_OUTPUT_BYTES = 2048;
 
-const staticFailure = () =>
-  new Error('instagram_session_publication_failed');
+const staticFailure = () => new Error('instagram_session_publication_failed');
 
 async function defaultCurrentReaderFactory(config) {
   const { createSsmCurrentReader } = await import(
@@ -195,13 +194,15 @@ export async function createPublisherChannel({
         ?.then(reader => reader?.close?.())
         .catch(() => {});
       if (scratch)
-        await files.rm(scratch, { recursive: true, force: true }).catch(() => {});
+        await files
+          .rm(scratch, { recursive: true, force: true })
+          .catch(() => {});
       outputBuffer = Buffer.alloc(0);
     })();
     return closing;
   };
   const failChannel = () => {
-    void close();
+    close().catch(() => {});
   };
 
   try {
@@ -245,14 +246,17 @@ export async function createPublisherChannel({
       await Promise.allSettled(metadata);
       throw staticFailure();
     }
-    const targetConfig = Object.freeze({ ...config, instanceId: currentInstanceId });
+    const targetConfig = Object.freeze({
+      ...config,
+      instanceId: currentInstanceId,
+    });
     const port = await abortable(freePortFn(), lifecycle.signal);
     remaining();
-    activeTunnel = spawnImpl(
-      'aws',
-      startSessionArguments(targetConfig, port),
-      { shell: false, detached: true, stdio: ['pipe', 'pipe', 'pipe'] }
-    );
+    activeTunnel = spawnImpl('aws', startSessionArguments(targetConfig, port), {
+      shell: false,
+      detached: true,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
     activeTunnel.once('error', failChannel);
     activeTunnel.once('close', failChannel);
     activeTunnel.stdout?.resume();
@@ -340,7 +344,9 @@ export async function createPublisherChannel({
         }
         const waiter = frameWaiter;
         frameWaiter = null;
-        waiter.resolve(line[line.length - 1] === 0x0d ? line.subarray(0, -1) : line);
+        waiter.resolve(
+          line[line.length - 1] === 0x0d ? line.subarray(0, -1) : line
+        );
       }
     });
 
@@ -366,13 +372,16 @@ export async function createPublisherChannel({
             frameWaiter = null;
             reject(staticFailure());
           }
-          void close();
+          close().catch(() => {});
         };
         signal?.addEventListener('abort', onAbort, { once: true });
         if (signal?.aborted) onAbort();
       });
 
-    const send = async (payload, { signals: requestSignals } = {}) => {
+    const send = async (
+      payload,
+      { signals: requestSignals = signals } = {}
+    ) => {
       validateRequest(payload);
       if (closed || frameActive) throw staticFailure();
       frameActive = true;

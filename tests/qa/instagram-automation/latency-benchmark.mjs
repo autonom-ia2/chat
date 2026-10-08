@@ -5,9 +5,14 @@
  * invite requests, while the fixture transport never reaches Meta or AWS.
  * No production profile, credentials, cookies, or source files are used.
  */
+/* eslint-disable no-await-in-loop, no-restricted-syntax, no-use-before-define, consistent-return -- The benchmark preserves ordered browser phases and event-handler return shapes. */
+
 import assert from 'node:assert/strict';
 import { createServer as createHttpsServer } from 'node:https';
-import { connect as connectNet, createServer as createNetServer } from 'node:net';
+import {
+  connect as connectNet,
+  createServer as createNetServer,
+} from 'node:net';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
@@ -15,7 +20,10 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { executeBrowserOperation } from '../../../scripts/instagram_testers/browser-operations.mjs';
 
-const FIXTURE_PATH = new URL('./latency-browser-fixtures.json', import.meta.url);
+const FIXTURE_PATH = new URL(
+  './latency-browser-fixtures.json',
+  import.meta.url
+);
 const ORIGIN = 'https://developers.facebook.com';
 const GRAPHQL_PATH = '/api/graphql/';
 const SEARCH_PATH = '/roles/instagram/typeahead/user/';
@@ -70,7 +78,8 @@ function monotonicClock() {
   return {
     marks,
     mark(name) {
-      if (MARK_NAMES.has(name) && marks[name] === undefined) marks[name] = now();
+      if (MARK_NAMES.has(name) && marks[name] === undefined)
+        marks[name] = now();
     },
     now,
   };
@@ -87,12 +96,16 @@ function readArgs(argv) {
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index];
     if (argument === '--iterations') {
-      const value = Number(argv[++index]);
-      if (!Number.isInteger(value) || value < 1 || value > 20) fail('invalid_iterations');
+      index += 1;
+      const value = Number(argv[index]);
+      if (!Number.isInteger(value) || value < 1 || value > 20)
+        fail('invalid_iterations');
       options.iterations = value;
     } else if (argument === '--output') {
-      options.output = argv[++index];
-      if (!options.output || options.output.includes('\0')) fail('invalid_output');
+      index += 1;
+      options.output = argv[index];
+      if (!options.output || options.output.includes('\0'))
+        fail('invalid_output');
     } else if (argument === '--help') {
       options.help = true;
     } else {
@@ -109,7 +122,9 @@ function safeClass(error) {
 
 function safeCode(error) {
   const value = error?.code;
-  return typeof value === 'string' && /^[a-z][a-z0-9_]{0,95}$/.test(value) ? value : null;
+  return typeof value === 'string' && /^[a-z][a-z0-9_]{0,95}$/.test(value)
+    ? value
+    : null;
 }
 
 function setDiagnosticStage(stage) {
@@ -121,7 +136,11 @@ function namedScenarios(fixture) {
   if (!scenarios || typeof scenarios !== 'object' || Array.isArray(scenarios))
     fail('invalid_named_scenarios');
   const names = Object.keys(scenarios);
-  const requiredNames = new Set(['search', 'status_accepted', 'invite_unknown']);
+  const requiredNames = new Set([
+    'search',
+    'status_accepted',
+    'invite_unknown',
+  ]);
   if (
     names.length !== requiredNames.size ||
     names.some(name => !requiredNames.has(name))
@@ -153,7 +172,8 @@ function namedScenarios(fixture) {
 
 async function loadChromium() {
   const modulePath = process.env.PLAYWRIGHT_MODULE_PATH;
-  if (!modulePath || modulePath.includes('\0')) fail('playwright_module_missing');
+  if (!modulePath || modulePath.includes('\0'))
+    fail('playwright_module_missing');
   const imported = await import(pathToFileURL(modulePath).href);
   const chromium = imported.chromium || imported.default?.chromium;
   if (!chromium || typeof chromium.launch !== 'function')
@@ -224,7 +244,8 @@ function fixtureResponse(scenario, fixture, url, method) {
     url.searchParams.get('business_id') === '10002'
   )
     return htmlResponse(createFixtureHtml(fixture, scenario));
-  if (method !== 'POST') return jsonResponse({ error: 'fixture_method_rejected' }, 405);
+  if (method !== 'POST')
+    return jsonResponse({ error: 'fixture_method_rejected' }, 405);
   if (url.pathname === GRAPHQL_PATH)
     return jsonResponse(rolesDocument(scenario, fixture));
   if (url.pathname === SEARCH_PATH) {
@@ -232,8 +253,7 @@ function fixtureResponse(scenario, fixture, url, method) {
       return jsonResponse({ payload: { entries: [] } });
     return jsonResponse(typeaheadDocument(fixture));
   }
-  if (url.pathname === INVITE_PATH)
-    return jsonResponse({ payload: {} });
+  if (url.pathname === INVITE_PATH) return jsonResponse({ payload: {} });
   return jsonResponse({ error: 'fixture_path_rejected' }, 404);
 }
 
@@ -358,60 +378,87 @@ function createFixtureHtml(fixture, scenario) {
 }
 
 async function createFixtureTransport(fixture, scenarioNames) {
-  const certDirectory = await mkdtemp(join(tmpdir(), 'instagram-latency-cert-'));
+  const certDirectory = await mkdtemp(
+    join(tmpdir(), 'instagram-latency-cert-')
+  );
   const keyPath = join(certDirectory, 'key.pem');
   const certPath = join(certDirectory, 'cert.pem');
   const openssl = spawnSync(
     'openssl',
     [
-      'req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-days', '1',
-      '-subj', '/CN=developers.facebook.com',
-      '-addext', 'subjectAltName=DNS:developers.facebook.com',
-      '-keyout', keyPath, '-out', certPath,
+      'req',
+      '-x509',
+      '-newkey',
+      'rsa:2048',
+      '-nodes',
+      '-days',
+      '1',
+      '-subj',
+      '/CN=developers.facebook.com',
+      '-addext',
+      'subjectAltName=DNS:developers.facebook.com',
+      '-keyout',
+      keyPath,
+      '-out',
+      certPath,
     ],
     { stdio: 'ignore', timeout: 15000 }
   );
-  if (openssl.error || openssl.status !== 0) fail('openssl_fixture_unavailable');
+  if (openssl.error || openssl.status !== 0)
+    fail('openssl_fixture_unavailable');
   const key = await readFile(keyPath);
   const cert = await readFile(certPath);
   let activeScenario = null;
-  const httpsServer = createHttpsServer({ key, cert }, async (request, response) => {
-    try {
-      const url = new URL(request.url || '/', ORIGIN);
-      const body = await readBody(request);
-      const result = fixtureResponse(activeScenario, fixture, url, request.method);
-      response.writeHead(result.status, {
-        'access-control-allow-origin': '*',
-        'access-control-allow-headers': 'content-type',
-        'access-control-allow-methods': 'POST, OPTIONS',
-        'content-type': result.contentType || 'application/json',
-        'content-length': Buffer.byteLength(result.body),
-      });
-      response.end(result.body);
-      void body;
-    } catch {
-      response.writeHead(500, {
-        'access-control-allow-origin': '*',
-        'content-type': 'application/json',
-      });
-      response.end('{"error":"fixture_failed"}');
+  const httpsServer = createHttpsServer(
+    { key, cert },
+    async (request, response) => {
+      try {
+        const url = new URL(request.url || '/', ORIGIN);
+        await readBody(request);
+        const result = fixtureResponse(
+          activeScenario,
+          fixture,
+          url,
+          request.method
+        );
+        response.writeHead(result.status, {
+          'access-control-allow-origin': '*',
+          'access-control-allow-headers': 'content-type',
+          'access-control-allow-methods': 'POST, OPTIONS',
+          'content-type': result.contentType || 'application/json',
+          'content-length': Buffer.byteLength(result.body),
+        });
+        response.end(result.body);
+      } catch {
+        response.writeHead(500, {
+          'access-control-allow-origin': '*',
+          'content-type': 'application/json',
+        });
+        response.end('{"error":"fixture_failed"}');
+      }
     }
-  });
+  );
   httpsServer.keepAliveTimeout = 1000;
   const fixturePort = await listen(httpsServer);
   const proxyServer = createNetServer(socket => {
     let header = Buffer.alloc(0);
     let connected = false;
-    const reject = () => socket.destroy();
+    const reject = () => {
+      socket.destroy();
+    };
     const onData = chunk => {
       if (connected) return;
       header = Buffer.concat([header, Buffer.from(chunk)]);
       if (header.length > 16384) return reject();
       const end = header.indexOf('\r\n\r\n');
       if (end < 0) return;
-      const firstLine = header.subarray(0, end).toString('latin1').split('\r\n')[0];
+      const firstLine = header
+        .subarray(0, end)
+        .toString('latin1')
+        .split('\r\n')[0];
       const [method, target] = firstLine.split(' ');
-      if (method !== 'CONNECT' || target !== 'developers.facebook.com:443') return reject();
+      if (method !== 'CONNECT' || target !== 'developers.facebook.com:443')
+        return reject();
       connected = true;
       socket.off('data', onData);
       const upstream = connectNet({ host: '127.0.0.1', port: fixturePort });
@@ -486,15 +533,39 @@ function buildPhaseMetrics(clock, requestCounts) {
   const marks = clock.marks;
   return {
     total_ms: between(marks, 'operation_started', 'operation_finished'),
-    roles_navigation_ms: between(marks, 'roles_navigation_started', 'roles_navigation_completed'),
+    roles_navigation_ms: between(
+      marks,
+      'roles_navigation_started',
+      'roles_navigation_completed'
+    ),
     roles_http_ms: between(marks, 'roles_request', 'roles_response'),
-    add_people_to_dialog_ms: between(marks, 'add_people_clicked', 'dialog_opened'),
+    add_people_to_dialog_ms: between(
+      marks,
+      'add_people_clicked',
+      'dialog_opened'
+    ),
     dialog_to_role_checked_ms: between(marks, 'dialog_opened', 'role_checked'),
     role_to_input_ms: between(marks, 'role_checked', 'search_input_filled'),
-    typeahead_http_ms: between(marks, 'typeahead_request', 'typeahead_response'),
-    typeahead_to_option_ms: between(marks, 'typeahead_response', 'search_option_rendered'),
-    option_to_selected_ms: between(marks, 'search_option_rendered', 'search_target_selected'),
-    selected_to_invite_click_ms: between(marks, 'search_target_selected', 'invite_button_clicked'),
+    typeahead_http_ms: between(
+      marks,
+      'typeahead_request',
+      'typeahead_response'
+    ),
+    typeahead_to_option_ms: between(
+      marks,
+      'typeahead_response',
+      'search_option_rendered'
+    ),
+    option_to_selected_ms: between(
+      marks,
+      'search_option_rendered',
+      'search_target_selected'
+    ),
+    selected_to_invite_click_ms: between(
+      marks,
+      'search_target_selected',
+      'invite_button_clicked'
+    ),
     invite_http_ms: between(marks, 'invite_request', 'invite_response'),
     request_counts: requestCounts,
   };
@@ -504,12 +575,18 @@ function sanitizeOutcome(action, result) {
   if (action === 'search') {
     return {
       ok: Array.isArray(result?.results),
-      candidate_count: Array.isArray(result?.results) ? result.results.length : 0,
+      candidate_count: Array.isArray(result?.results)
+        ? result.results.length
+        : 0,
       error_code: result?.error_code || null,
     };
   }
   if (action === 'status') {
-    return { ok: result?.status === 'accepted', status: result?.status || null, error_code: result?.error_code || null };
+    return {
+      ok: result?.status === 'accepted',
+      status: result?.status || null,
+      error_code: result?.error_code || null,
+    };
   }
   return {
     ok: result?.error_code === 'invite_unknown',
@@ -525,7 +602,9 @@ function summarizeSamples(samples) {
     .sort((left, right) => left - right);
   const percentile = fraction => {
     if (!values.length) return null;
-    return values[Math.min(values.length - 1, Math.ceil(values.length * fraction) - 1)];
+    return values[
+      Math.min(values.length - 1, Math.ceil(values.length * fraction) - 1)
+    ];
   };
   return {
     sample_count: samples.length,
@@ -551,7 +630,6 @@ async function runBenchmark(options, fixture, scenarioNames) {
   let browser;
   let context;
   let activeClock = null;
-  let activeScenario = null;
   const samples = [];
   try {
     setDiagnosticStage('browser_launch');
@@ -573,7 +651,8 @@ async function runBenchmark(options, fixture, scenarioNames) {
     const rawPage = await context.newPage();
     setDiagnosticStage('page_observers');
     await rawPage.exposeFunction('__latencyMark', name => {
-      if (typeof name === 'string' && MARK_NAMES.has(name)) activeClock?.mark(name);
+      if (typeof name === 'string' && MARK_NAMES.has(name))
+        activeClock?.mark(name);
     });
     const page = rawPage;
     const requestCounts = { roles: 0, typeahead: 0, invite: 0 };
@@ -604,11 +683,15 @@ async function runBenchmark(options, fixture, scenarioNames) {
     for (let iteration = 1; iteration <= options.iterations; iteration += 1) {
       for (const scenario of scenarioNames) {
         setDiagnosticStage(`operation_${scenario}`);
-        activeScenario = scenario;
         transport.setScenario(scenario);
         activeClock = monotonicClock();
         activeClock.mark('operation_started');
-        const request = makeRequest(scenario, configuration, fixture, iteration);
+        const request = makeRequest(
+          scenario,
+          configuration,
+          fixture,
+          iteration
+        );
         const result = await executeBrowserOperation({
           page,
           configuration,
@@ -619,17 +702,18 @@ async function runBenchmark(options, fixture, scenarioNames) {
             (method === 'POST' &&
               requestPath(url) === GRAPHQL_PATH &&
               body.includes('RolesTable_Query')),
-          permitInvite: scenario === 'invite_unknown'
-            ? permitRequest => ({
-                type: 'browser_operation',
-                operation: 'invite_permit',
-                id: permitRequest.id,
-                request_id: permitRequest.request_id,
-                claim: permitRequest.claim,
-                decision: 'write',
-                status: 'absent',
-              })
-            : undefined,
+          permitInvite:
+            scenario === 'invite_unknown'
+              ? permitRequest => ({
+                  type: 'browser_operation',
+                  operation: 'invite_permit',
+                  id: permitRequest.id,
+                  request_id: permitRequest.request_id,
+                  claim: permitRequest.claim,
+                  decision: 'write',
+                  status: 'absent',
+                })
+              : undefined,
           now: Date.now,
         });
         activeClock.mark('operation_finished');
@@ -660,7 +744,9 @@ async function runBenchmark(options, fixture, scenarioNames) {
 }
 
 function printHelp() {
-  process.stdout.write('usage: node .codex/latency-browser-benchmark.mjs [--iterations N] [--output PATH]\n');
+  process.stdout.write(
+    'usage: node .codex/latency-browser-benchmark.mjs [--iterations N] [--output PATH]\n'
+  );
 }
 
 async function main(argv = process.argv.slice(2)) {
@@ -686,17 +772,25 @@ async function main(argv = process.argv.slice(2)) {
     iterations: options.iterations,
     scenarios: scenarioNames,
     scenario_contract: Object.fromEntries(
-      scenarioNames.map(name => [name, {
-        action: fixture.scenarios[name].action,
-        target: fixture.scenarios[name].target,
-      }])
+      scenarioNames.map(name => [
+        name,
+        {
+          action: fixture.scenarios[name].action,
+          target: fixture.scenarios[name].target,
+        },
+      ])
     ),
     samples,
-    summaries: Object.fromEntries(scenarioNames.map(scenario => [
-      scenario,
-      summarizeSamples(samples.filter(sample => sample.scenario === scenario)),
-    ])),
-    provided_reference_series_seconds: fixture.provided_reference_series_seconds,
+    summaries: Object.fromEntries(
+      scenarioNames.map(scenario => [
+        scenario,
+        summarizeSamples(
+          samples.filter(sample => sample.scenario === scenario)
+        ),
+      ])
+    ),
+    provided_reference_series_seconds:
+      fixture.provided_reference_series_seconds,
     provided_ten_x_targets_seconds: fixture.provided_ten_x_targets_seconds,
     reference_mapping: fixture.reference_mapping,
     limits: [
@@ -705,18 +799,23 @@ async function main(argv = process.argv.slice(2)) {
       'UI fixture renders the target option before the synthetic typeahead response to keep the local run deterministic; HTTP and executor phases remain real.',
     ],
   };
-  if (options.output) await writeFile(options.output, `${JSON.stringify(report, null, 2)}\n`, { mode: 0o600 });
+  if (options.output)
+    await writeFile(options.output, `${JSON.stringify(report, null, 2)}\n`, {
+      mode: 0o600,
+    });
   process.stdout.write(`${JSON.stringify(report)}\n`);
 }
 
 main().catch(error => {
-  process.stdout.write(`${JSON.stringify({
-    status: 'error',
-    error_class: safeClass(error),
-    error_code: safeCode(error),
-    diagnostic_stage: diagnosticStage,
-    production_mutated: false,
-    meta_called: false,
-  })}\n`);
+  process.stdout.write(
+    `${JSON.stringify({
+      status: 'error',
+      error_class: safeClass(error),
+      error_code: safeCode(error),
+      diagnostic_stage: diagnosticStage,
+      production_mutated: false,
+      meta_called: false,
+    })}\n`
+  );
   process.exitCode = 1;
 });

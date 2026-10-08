@@ -1,12 +1,14 @@
+/* eslint-disable max-classes-per-file -- Transport fakes model separate stream interfaces. */
+
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
 import test from 'node:test';
 import {
   createPublisherChannel,
   PUBLISHER_CHANNEL_COMMAND,
-} from './publisher-channel.mjs';
-import { publisherSshArguments } from './publisher-tunnel.mjs';
-import { createPublisherBroker } from './vps/publisher-broker.mjs';
+} from '../../scripts/instagram_testers/runtime/publisher-channel.mjs';
+import { publisherSshArguments } from '../../scripts/instagram_testers/runtime/publisher-tunnel.mjs';
+import { createPublisherBroker } from '../../scripts/instagram_testers/runtime/vps/publisher-broker.mjs';
 
 const INSTANCE = 'i-0123456789abcdef0';
 const ENV = {
@@ -58,10 +60,12 @@ class FakeChild extends EventEmitter {
 }
 
 class FakeServer extends EventEmitter {
+  // eslint-disable-next-line class-methods-use-this
   listen(_socketPath, callback) {
     callback();
   }
 
+  // eslint-disable-next-line class-methods-use-this
   close(callback) {
     callback();
   }
@@ -92,7 +96,7 @@ function channelFactory({
     if (args.includes('get-caller-identity')) return '140023375763\n';
     throw new Error('unexpected_aws_command');
   };
-  const spawnImpl = (command, _args, _options) => {
+  const spawnImpl = command => {
     if (command === 'aws') return new FakeChild();
     ssh = new FakeChild(frame => {
       if (writeError) throw new Error('synthetic_write_failure');
@@ -155,7 +159,10 @@ test('keeps one SSH channel and verifies CURRENT before every frame', async () =
   assert.equal(fake.currentReads.length, 3);
   assert.equal(fake.readerFactories, 1);
   assert.equal(fake.sshFrames.length, 2);
-  assert.deepEqual(fake.sshFrames[0], { type: 'session', operation: 'bootstrap' });
+  assert.deepEqual(fake.sshFrames[0], {
+    type: 'session',
+    operation: 'bootstrap',
+  });
   await channel.close();
   assert.equal(fake.readerClosed, true);
 });
@@ -306,7 +313,7 @@ test('prewarms a broker channel with a bootstrap before accepting sockets', asyn
   };
   const sent = [];
   let closed = false;
-  const channelFactory = async () => ({
+  const brokerChannelFactory = async () => ({
     send: async payload => {
       sent.push(payload);
       return { type: 'bootstrap' };
@@ -323,7 +330,7 @@ test('prewarms a broker channel with a bootstrap before accepting sockets', asyn
     lstatImpl,
     chmodImpl: async () => {},
     createServerImpl: () => new FakeServer(),
-    channelFactory,
+    channelFactory: brokerChannelFactory,
     warmChannel: true,
     env: {},
     signals: new EventEmitter(),

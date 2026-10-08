@@ -87,10 +87,13 @@ export async function createPublisherBroker({
       try {
         if (stopping) throw publicationFailure();
         if (prewarmChannel) {
-          const bootstrap = await candidate.send({
-            type: 'session',
-            operation: 'bootstrap',
-          }, { signals });
+          const bootstrap = await candidate.send(
+            {
+              type: 'session',
+              operation: 'bootstrap',
+            },
+            { signals }
+          );
           if (bootstrap?.type !== 'bootstrap') throw publicationFailure();
         }
         channel = candidate;

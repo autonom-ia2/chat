@@ -1,8 +1,7 @@
 const INSTANCE_ID = /^i-[0-9a-f]{8,17}$/;
 const PARAMETER_NAME = '/chatwoot/prod/blue-green/current-instance-id';
 
-const staticFailure = () =>
-  new Error('instagram_session_publication_failed');
+const staticFailure = () => new Error('instagram_session_publication_failed');
 
 function requireSafe(value) {
   if (!value) throw staticFailure();
@@ -45,7 +44,9 @@ export async function createSsmCurrentReader(
     clientFactory ||= sdk.SSMClient;
     commandFactory ||= sdk.GetParameterCommand;
   }
-  const client = new clientFactory({
+  const Client = clientFactory;
+  const Command = commandFactory;
+  const client = new Client({
     region: config.region,
     profile: config.awsProfile,
     maxAttempts: 1,
@@ -69,10 +70,9 @@ export async function createSsmCurrentReader(
       try {
         if (request.signal.aborted) throw staticFailure();
         const response = await Promise.race([
-          client.send(
-            new commandFactory({ Name: config.currentInstanceParameter }),
-            { abortSignal: request.signal }
-          ),
+          client.send(new Command({ Name: config.currentInstanceParameter }), {
+            abortSignal: request.signal,
+          }),
           closedSignal,
         ]);
         if (closed || request.signal.aborted || signal?.aborted)

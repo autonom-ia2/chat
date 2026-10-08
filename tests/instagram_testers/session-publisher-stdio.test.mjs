@@ -1,3 +1,5 @@
+/* eslint-disable no-await-in-loop, no-restricted-syntax -- Each fixture lifecycle is intentionally sequential. */
+
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import {
@@ -225,7 +227,10 @@ test('channel mode reuses one boot and runs each frame inside its executor', asy
   const input = `${JSON.stringify(request)}\n${JSON.stringify(request)}\n`;
   const result = cli.run(input, ['--channel']);
   assert.equal(result.status, 0);
-  assert.equal(result.stdout, `${JSON.stringify(response)}\n${JSON.stringify(response)}\n`);
+  assert.equal(
+    result.stdout,
+    `${JSON.stringify(response)}\n${JSON.stringify(response)}\n`
+  );
   assert.equal(result.stderr, '');
   await cli.lifecycle([
     'boot',
