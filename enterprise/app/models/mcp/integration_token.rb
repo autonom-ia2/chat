@@ -92,13 +92,7 @@ class Mcp::IntegrationToken < ApplicationRecord
       description: "Managed role for MCP integration token: #{name}",
       permissions: chatwoot_permissions
     )
-    user = User.create!(
-      name: "MCP Integration (#{name})",
-      email: "mcp-integration+#{SecureRandom.hex(10)}@integration.invalid",
-      password: "Aa1!#{SecureRandom.alphanumeric(28)}",
-      confirmed_at: Time.current
-    )
-    AccessToken.where(owner: user).delete_all
+    user = create_managed_user
     membership = account.account_users.create!(
       user: user,
       role: :agent,
@@ -109,6 +103,17 @@ class Mcp::IntegrationToken < ApplicationRecord
     self.custom_role = role
     self.account_user = membership
     sync_inbox_memberships!
+  end
+
+  def create_managed_user
+    user = User.create!(
+      name: "MCP Integration (#{name})",
+      email: "mcp-integration+#{SecureRandom.hex(10)}@integration.invalid",
+      password: "Aa1!#{SecureRandom.alphanumeric(28)}",
+      confirmed_at: Time.current
+    )
+    AccessToken.where(owner: user).delete_all
+    user
   end
 
   def chatwoot_permissions
