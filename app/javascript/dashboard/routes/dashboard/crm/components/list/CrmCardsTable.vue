@@ -117,11 +117,12 @@ const columns = computed(() =>
 );
 
 // Meta conversion badge: maps ledger status -> i18n label + pill classes.
+// Chaves fixas (não montadas por variável): o lint de i18n confere que cada uma existe.
 const META_STATUS_LABELS = {
-  accepted: 'CRM_KANBAN.META_SYNC_STATUS.LABEL_ACCEPTED',
-  pending: 'CRM_KANBAN.META_SYNC_STATUS.LABEL_PENDING',
-  skipped: 'CRM_KANBAN.META_SYNC_STATUS.LABEL_SKIPPED',
-  error: 'CRM_KANBAN.META_SYNC_STATUS.LABEL_ERROR',
+  accepted: () => t('CRM_KANBAN.META_SYNC_STATUS.LABEL_ACCEPTED'),
+  pending: () => t('CRM_KANBAN.META_SYNC_STATUS.LABEL_PENDING'),
+  skipped: () => t('CRM_KANBAN.META_SYNC_STATUS.LABEL_SKIPPED'),
+  error: () => t('CRM_KANBAN.META_SYNC_STATUS.LABEL_ERROR'),
 };
 const META_STATUS_CLASSES = {
   accepted: 'bg-n-teal-3 text-n-teal-11',
@@ -129,8 +130,7 @@ const META_STATUS_CLASSES = {
   skipped: 'bg-n-alpha-2 text-n-slate-11',
   error: 'bg-n-ruby-3 text-n-ruby-11',
 };
-const metaStatusLabel = status =>
-  META_STATUS_LABELS[status] ? t(META_STATUS_LABELS[status]) : null;
+const metaStatusLabel = status => META_STATUS_LABELS[status]?.() ?? null;
 const metaStatusClass = status =>
   META_STATUS_CLASSES[status] || 'bg-n-alpha-2 text-n-slate-11';
 
