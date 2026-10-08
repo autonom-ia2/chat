@@ -46,6 +46,8 @@ O primeiro diagnóstico de cadência usou Node18 do host, CPU50% e memória512Mi
 - Sandbox publisher: `.codex/publisher-latency-sandbox-attempt4.json`, passed, cleanup verificado. Três tentativas anteriores falharam na montagem do harness privado; não produziram medições válidas e também tiveram cleanup verificado. O alvo de um bind dentro do diretório read-only precisava existir antes da montagem.
 - CURRENT CLI: `.codex/vps-current-latency-20261008.json`, passed; publisher vivo sem alteração; transient removida. O publisher vivo ainda usa quota temporária de CPU 200%; a medição isolada usou os 50% canônicos. Não houve ajuste do serviço vivo.
 
+A primeira execução Linux/Chrome do CI `cf86baa171` falhou no clique/navegação da página sintética de origem nula, em 5 s; nenhum pedido POST da rota foi observado. Esse fixture/gateway não foi alterado por este candidato e havia passado no commit anterior. Não ampliar prazo nem dispensar a checagem: exigir nova execução no SHA final e registrar seu resultado no PR.
+
 **Ainda não há prova de ganho de dez vezes na experiência completa com a Meta real.** As comparações publisher cold/warm incluem boot/processo Rails e transporte local por pipes. Excluem CURRENT, SSM/SSH, fila do manager e Meta. A leitura CURRENT é real, mas não publica operações. Não somar medianas de experimentos diferentes e apresentá-las como uma medição ponta a ponta.
 
 ## Revisão independente e publicação
