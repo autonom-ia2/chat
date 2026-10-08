@@ -174,6 +174,9 @@ describe('CrmKanbanCard bubble shortcut', () => {
     expect(wrapper.find('[data-crm-card-business]').text()).toContain(
       'Implantação do atendimento'
     );
+    expect(wrapper.find('[data-crm-card-business]').text()).not.toContain(
+      'CRM_KANBAN.CARD.BUSINESS_LABEL'
+    );
     expect(wrapper.text()).not.toContain('Empresa antiga');
   });
 

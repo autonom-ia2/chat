@@ -19,6 +19,23 @@ class Api::V1::Accounts::Crm::BaseController < Api::V1::Accounts::BaseController
     render json: { error: 'crm.ai.disabled' }, status: :not_found unless ::Crm::Ai::Config.enabled?
   end
 
+  def crm_visibility
+    @crm_visibility ||= ::Crm::Conversations::Visibility.new(
+      account: Current.account,
+      user: Current.user,
+      account_user: Current.account_user
+    )
+  end
+
+  def authorize_crm_conversation!(conversation)
+    authorize conversation, :show?
+    ::Crm::Conversations::AccessAuthorizer.new(
+      account: Current.account,
+      user: Current.user,
+      account_user: Current.account_user
+    ).authorize!(conversation)
+  end
+
   def render_unprocessable(message)
     render json: { error: message }, status: :unprocessable_entity
   end

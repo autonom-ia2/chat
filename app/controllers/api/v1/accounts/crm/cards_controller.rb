@@ -46,14 +46,16 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     # Chatwoot's frontend identifies conversations by display_id (per-account).
     conversation = Current.account.conversations.find_by!(display_id: params[:conversation_id])
     authorize_crm_conversation!(conversation)
-    card = ::Crm::Cards::ConversationCardFinder.new(account: Current.account).find(conversation)
+    # Só cards que a pessoa pode ver: o selo traz título, funil e etapa.
+    cards = ::Crm::Cards::ConversationCardFinder.new(account: Current.account).all(conversation)
+    card = cards.where(id: policy_scope(::Crm::Card).select(:id)).includes(:stage, :pipeline).first
     render json: { payload: stage_badge_payload(card) }
   end
 
   # Bulk stage lookup for the conversation list (virtual stage chips). Returns
   # { conversation_id => stage_badge } only for conversations the requester can
   # see that have an OPEN card. Capped at 100 ids per call. One badge per
-  # conversation: the current subject when it has more than one open card.
+  # conversation: the current subject, plus how many open subjects it has.
   def card_stages
     # Frontend sends display_ids (Chatwoot's per-account conversation identifier);
     # respond keyed by the SAME display_id so the client can match.
@@ -64,22 +66,7 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
                            .select { |conversation| crm_visibility.visible?(conversation) }
     return render(json: { payload: {} }) if conversations.blank?
 
-    display_by_global = conversations.index_by(&:id).transform_values(&:display_id)
-    multiple = Current.account.crm_pipelines.count > 1
-    payload = ::Crm::Card.open
-                         .where(account_id: Current.account.id, conversation_id: conversations.map(&:id))
-                         .joins(CARD_STAGES_FOCUS_JOIN)
-                         .order(Arel.sql('crm_focus.focused_at DESC NULLS LAST'), :id)
-                         .includes(:stage, :pipeline)
-                         .each_with_object({}) do |card, acc|
-      next if card.stage.blank?
-
-      display_id = display_by_global[card.conversation_id]
-      next if display_id.blank?
-
-      acc[display_id] ||= stage_badge_payload(card).merge(multiple_pipelines: multiple)
-    end
-    render json: { payload: payload }
+    render json: { payload: conversation_badges(conversations) }
   end
 
   def create
@@ -304,11 +291,33 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     attributes[:metadata] = metadata
   end
 
+  # Um selo por conversa (o assunto atual) e quantos assuntos abertos ela tem, chaveados pelo display_id.
+  def conversation_badges(conversations)
+    display_by_global = conversations.index_by(&:id).transform_values(&:display_id)
+    multiple = Current.account.crm_pipelines.count > 1
+    subjects_count = Hash.new(0)
+    badges = ::Crm::Card.open
+                        .where(account_id: Current.account.id, conversation_id: conversations.map(&:id))
+                        .where(id: policy_scope(::Crm::Card).select(:id))
+                        .joins(CARD_STAGES_FOCUS_JOIN)
+                        .order(Arel.sql('crm_focus.focused_at DESC NULLS LAST'), :id)
+                        .includes(:stage, :pipeline)
+                        .each_with_object({}) do |card, acc|
+      display_id = display_by_global[card.conversation_id]
+      next if card.stage.blank? || display_id.blank?
+
+      subjects_count[display_id] += 1
+      acc[display_id] ||= stage_badge_payload(card).merge(multiple_pipelines: multiple)
+    end
+    badges.each { |display_id, badge| badge[:subjects_count] = subjects_count[display_id] }
+  end
+
   def stage_badge_payload(card)
     return if card.blank? || card.stage.blank?
 
     {
       card_id: card.id,
+      title: card.title,
       pipeline_name: card.pipeline&.name,
       stage_name: card.stage.name,
       stage_color: card.stage.color,
@@ -415,23 +424,6 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     conversation = Current.account.conversations.find(permitted_params[:conversation_id])
     authorize_crm_conversation!(conversation)
     conversation
-  end
-
-  def crm_visibility
-    @crm_visibility ||= ::Crm::Conversations::Visibility.new(
-      account: Current.account,
-      user: Current.user,
-      account_user: Current.account_user
-    )
-  end
-
-  def authorize_crm_conversation!(conversation)
-    authorize conversation, :show?
-    ::Crm::Conversations::AccessAuthorizer.new(
-      account: Current.account,
-      user: Current.user,
-      account_user: Current.account_user
-    ).authorize!(conversation)
   end
 
   def create_authorizer

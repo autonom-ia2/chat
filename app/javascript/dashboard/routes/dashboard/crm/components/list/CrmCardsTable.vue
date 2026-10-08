@@ -117,11 +117,12 @@ const columns = computed(() =>
 );
 
 // Meta conversion badge: maps ledger status -> i18n label + pill classes.
+// Chaves fixas (não montadas por variável): o lint de i18n confere que cada uma existe.
 const META_STATUS_LABELS = {
-  accepted: 'CRM_KANBAN.META_SYNC_STATUS.LABEL_ACCEPTED',
-  pending: 'CRM_KANBAN.META_SYNC_STATUS.LABEL_PENDING',
-  skipped: 'CRM_KANBAN.META_SYNC_STATUS.LABEL_SKIPPED',
-  error: 'CRM_KANBAN.META_SYNC_STATUS.LABEL_ERROR',
+  accepted: () => t('CRM_KANBAN.META_SYNC_STATUS.LABEL_ACCEPTED'),
+  pending: () => t('CRM_KANBAN.META_SYNC_STATUS.LABEL_PENDING'),
+  skipped: () => t('CRM_KANBAN.META_SYNC_STATUS.LABEL_SKIPPED'),
+  error: () => t('CRM_KANBAN.META_SYNC_STATUS.LABEL_ERROR'),
 };
 const META_STATUS_CLASSES = {
   accepted: 'bg-n-teal-3 text-n-teal-11',
@@ -129,8 +130,7 @@ const META_STATUS_CLASSES = {
   skipped: 'bg-n-alpha-2 text-n-slate-11',
   error: 'bg-n-ruby-3 text-n-ruby-11',
 };
-const metaStatusLabel = status =>
-  META_STATUS_LABELS[status] ? t(META_STATUS_LABELS[status]) : null;
+const metaStatusLabel = status => META_STATUS_LABELS[status]?.() ?? null;
 const metaStatusClass = status =>
   META_STATUS_CLASSES[status] || 'bg-n-alpha-2 text-n-slate-11';
 
@@ -798,13 +798,16 @@ const onRowKeydown = (event, card) => {
                       </span>
                       <span
                         v-if="identityForCard(row.original).business"
-                        class="truncate text-xs text-n-slate-11"
+                        class="flex w-fit max-w-full items-center gap-1 rounded-md bg-n-blue-2 px-1.5 py-0.5 text-xs font-medium text-n-blue-11"
                         data-crm-list-business
                       >
-                        <span class="font-medium text-n-slate-10">
-                          {{ t('CRM_KANBAN.CARD.BUSINESS_LABEL') }}
-                        </span>
-                        {{ identityForCard(row.original).business }}
+                        <span
+                          class="i-lucide-tag size-3 shrink-0"
+                          aria-hidden="true"
+                        />
+                        <span class="truncate">{{
+                          identityForCard(row.original).business
+                        }}</span>
                       </span>
                     </button>
 
@@ -979,12 +982,10 @@ const onRowKeydown = (event, card) => {
             </span>
             <span
               v-if="identityForCard(card).business"
-              class="truncate text-xs text-n-slate-11"
+              class="flex w-fit max-w-full items-center gap-1 rounded-md bg-n-blue-2 px-1.5 py-0.5 text-xs font-medium text-n-blue-11"
             >
-              <span class="font-medium text-n-slate-10">
-                {{ t('CRM_KANBAN.CARD.BUSINESS_LABEL') }}
-              </span>
-              {{ identityForCard(card).business }}
+              <span class="i-lucide-tag size-3 shrink-0" aria-hidden="true" />
+              <span class="truncate">{{ identityForCard(card).business }}</span>
             </span>
             <div class="mt-1 flex flex-wrap items-center gap-2 text-xs">
               <span

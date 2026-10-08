@@ -11,21 +11,18 @@ import { CONVERSATION_PRIORITY } from '../../../../shared/constants/messages';
 import { CONVERSATION_EVENTS } from '../../../helper/AnalyticsHelper/events';
 import { useTrack } from 'dashboard/composables';
 import NextButton from 'dashboard/components-next/button/Button.vue';
-import CrmKanbanAPI from 'dashboard/api/crmKanban';
-import CrmConversationStageBadge from './CrmConversationStageBadge.vue';
+import CrmConversationSubjects from './CrmConversationSubjects.vue';
 import CrmCopilotPanel from 'dashboard/routes/dashboard/crm/components/CrmCopilotPanel.vue';
 import { useCrmPermissions } from 'dashboard/routes/dashboard/crm/composables/useCrmPermissions';
-import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 
 export default {
   components: {
-    ChoiceSelect,
     ContactDetailsItem,
     MultiselectDropdown,
     ConversationLabels,
     LabelItem,
     NextButton,
-    CrmConversationStageBadge,
+    CrmConversationSubjects,
     CrmCopilotPanel,
   },
   props: {
@@ -74,12 +71,6 @@ export default {
           icon: 'i-woot-priority-low',
         },
       ],
-      crmPipelineId: '',
-      crmStageId: '',
-      crmStages: [],
-      crmIsLoadingPipelines: false,
-      crmIsLoadingStages: false,
-      crmIsCreatingCard: false,
     };
   },
   computed: {
@@ -88,7 +79,6 @@ export default {
       currentUser: 'getCurrentUser',
       teams: 'teams/getTeams',
       globalConfig: 'globalConfig/get',
-      crmPipelines: 'crmKanban/getPipelines',
       allLabels: 'labels/getLabels',
       contactLabelTitlesFor: 'contactLabels/getContactLabels',
     }),
@@ -111,29 +101,6 @@ export default {
     },
     crmCreationEnabled() {
       return this.crmKanbanEnabled && this.canViewCrm && this.canManageCards;
-    },
-    crmPipelineOptions() {
-      return this.crmPipelines.map(pipeline => ({
-        value: pipeline.id,
-        label: pipeline.name,
-      }));
-    },
-    crmStageOptions() {
-      return this.crmStages.map(stage => ({
-        value: stage.id,
-        label: stage.name,
-      }));
-    },
-    canCreateCrmCard() {
-      return (
-        this.crmCreationEnabled &&
-        this.currentChat?.id &&
-        this.crmPipelineId &&
-        this.crmStageId &&
-        !this.crmIsCreatingCard &&
-        !this.crmIsLoadingPipelines &&
-        !this.crmIsLoadingStages
-      );
     },
     hasAnAssignedTeam() {
       return !!this.currentChat?.meta?.team;
@@ -239,15 +206,6 @@ export default {
     },
   },
   watch: {
-    crmCreationEnabled: {
-      immediate: true,
-      handler(enabled) {
-        if (enabled) this.loadCrmPipelines();
-      },
-    },
-    crmPipelineId(newPipelineId) {
-      if (newPipelineId) this.loadCrmStages(newPipelineId);
-    },
     contactId: {
       immediate: true,
       handler(newContactId) {
@@ -258,58 +216,6 @@ export default {
     },
   },
   methods: {
-    async loadCrmPipelines() {
-      if (!this.crmCreationEnabled || this.crmIsLoadingPipelines) return;
-      this.crmIsLoadingPipelines = true;
-      try {
-        const pipelines = await this.$store.dispatch(
-          'crmKanban/fetchPipelines'
-        );
-        if (!this.crmPipelineId && pipelines.length) {
-          this.crmPipelineId = pipelines[0].id;
-        }
-      } catch {
-        useAlert(this.$t('CRM_KANBAN.CONVERSATION.LOAD_ERROR'));
-      } finally {
-        this.crmIsLoadingPipelines = false;
-      }
-    },
-    async loadCrmStages(pipelineId) {
-      if (!this.crmCreationEnabled) return;
-      this.crmIsLoadingStages = true;
-      try {
-        const response = await CrmKanbanAPI.getStages(pipelineId);
-        this.crmStages = response.data.payload || [];
-        const stillAvailable = this.crmStages.some(
-          stage => String(stage.id) === String(this.crmStageId)
-        );
-        if (!stillAvailable) {
-          this.crmStageId = this.crmStages[0]?.id || '';
-        }
-      } catch {
-        this.crmStages = [];
-        this.crmStageId = '';
-        useAlert(this.$t('CRM_KANBAN.CONVERSATION.LOAD_ERROR'));
-      } finally {
-        this.crmIsLoadingStages = false;
-      }
-    },
-    async createCrmCardFromConversation() {
-      if (!this.canCreateCrmCard) return;
-      this.crmIsCreatingCard = true;
-      try {
-        await this.$store.dispatch('crmKanban/createCardFromConversation', {
-          conversation_display_id: this.currentChat.id,
-          pipeline_id: this.crmPipelineId,
-          stage_id: this.crmStageId,
-        });
-        useAlert(this.$t('CRM_KANBAN.CONVERSATION.CARD_READY'));
-      } catch {
-        useAlert(this.$t('CRM_KANBAN.CONVERSATION.CREATE_ERROR'));
-      } finally {
-        this.crmIsCreatingCard = false;
-      }
-    },
     openCrmKanban() {
       if (!this.canViewCrm) return;
       this.$router.push({
@@ -471,60 +377,11 @@ export default {
         />
       </div>
 
-      <div v-if="canViewCrm && conversationId" class="mb-3">
-        <span class="mb-1 block text-xs font-medium text-n-slate-11">
-          {{ $t('CRM_KANBAN.CONVERSATION.STAGE_BADGE_LABEL') }}
-        </span>
-        <CrmConversationStageBadge :conversation-id="conversationId" />
-      </div>
-
-      <div
-        v-if="crmCreationEnabled && crmPipelineOptions.length"
-        class="grid gap-2"
-      >
-        <label class="grid gap-1">
-          <span class="text-xs font-medium text-n-slate-11">
-            {{ $t('CRM_KANBAN.CONVERSATION.PIPELINE') }}
-          </span>
-          <ChoiceSelect
-            v-model="crmPipelineId"
-            :options="crmPipelineOptions"
-            :aria-label="$t('CRM_KANBAN.CONVERSATION.PIPELINE')"
-            compact
-            class="w-full"
-          />
-        </label>
-
-        <label class="grid gap-1">
-          <span class="text-xs font-medium text-n-slate-11">
-            {{ $t('CRM_KANBAN.CONVERSATION.STAGE') }}
-          </span>
-          <ChoiceSelect
-            v-model="crmStageId"
-            :options="crmStageOptions"
-            :aria-label="$t('CRM_KANBAN.CONVERSATION.STAGE')"
-            :disabled="crmIsLoadingStages"
-            compact
-            class="w-full"
-          />
-        </label>
-
-        <NextButton
-          :label="$t('CRM_KANBAN.CONVERSATION.CREATE_CARD')"
-          icon="i-lucide-plus"
-          sm
-          class="w-full justify-center"
-          :disabled="!canCreateCrmCard"
-          :is-loading="crmIsCreatingCard"
-          @click="createCrmCardFromConversation"
-        />
-      </div>
-      <p
-        v-else-if="crmCreationEnabled"
-        class="mb-0 text-xs leading-5 text-n-slate-11"
-      >
-        {{ $t('CRM_KANBAN.CONVERSATION.NO_PIPELINES') }}
-      </p>
+      <CrmConversationSubjects
+        v-if="conversationId"
+        :conversation-id="conversationId"
+        :can-manage="crmCreationEnabled"
+      />
     </section>
     <ContactDetailsItem
       compact
