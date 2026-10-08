@@ -180,6 +180,7 @@ class CrmKanbanAPI extends ApiClient {
       card: payload,
       conversation_id: payload.conversation_id,
       conversation_display_id: payload.conversation_display_id,
+      new_subject: payload.new_subject,
     });
   }
 
@@ -270,6 +271,17 @@ class CrmKanbanAPI extends ApiClient {
 
   getConversationCard(conversationId) {
     return axios.get(`${this.url}/conversations/${conversationId}/card`);
+  }
+
+  // Assuntos da conversa (#1143): os cards dela, o assunto atual primeiro.
+  getConversationSubjects(conversationId) {
+    return axios.get(`${this.url}/conversations/${conversationId}/cards`);
+  }
+
+  focusConversationSubject(conversationId, cardId) {
+    return axios.post(`${this.url}/conversations/${conversationId}/focus`, {
+      card_id: cardId,
+    });
   }
 
   getConversationCardStages(conversationIds) {

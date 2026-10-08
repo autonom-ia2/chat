@@ -336,6 +336,8 @@ Rails.application.routes.draw do
             end
             get 'conversations/card_stages', to: 'cards#card_stages'
             get 'conversations/:conversation_id/card', to: 'cards#by_conversation'
+            get 'conversations/:conversation_id/cards', to: 'conversation_cards#index'
+            post 'conversations/:conversation_id/focus', to: 'conversation_cards#focus'
             get :kanban, to: 'kanban#index'
             scope :reports, controller: :reports do
               get :pipelines, action: :pipelines, as: :crm_report_pipelines

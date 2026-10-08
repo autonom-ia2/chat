@@ -377,16 +377,15 @@ const canOpenConversation = computed(
           >
             {{ identityPerson }}
           </span>
+          <!-- Assunto do card num selo próprio (#1143, R18): empresa e nome continuam em destaque. -->
           <span
             v-if="identityBusiness"
-            class="ms-6 mt-1 block truncate text-xs font-normal leading-5 text-n-slate-11"
+            class="ms-6 mt-1 flex w-fit max-w-[calc(100%-1.5rem)] items-center gap-1 rounded-md bg-n-blue-2 px-1.5 py-0.5 text-xs font-medium leading-5 text-n-blue-11"
             :title="identityBusiness"
             data-crm-card-business
           >
-            <span class="font-medium text-n-slate-10">
-              {{ t('CRM_KANBAN.CARD.BUSINESS_LABEL') }}
-            </span>
-            {{ identityBusiness }}
+            <span class="i-lucide-tag size-3 shrink-0" aria-hidden="true" />
+            <span class="truncate">{{ identityBusiness }}</span>
           </span>
           <span
             v-if="!hasContact"

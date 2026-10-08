@@ -5,7 +5,7 @@ import CrmKanbanAPI from 'dashboard/api/crmKanban';
 // list resolves its CRM stage chip through ONE bulk request per tick (no N+1).
 //   cache[conversationId] === undefined -> not fetched yet
 //   cache[conversationId] === null      -> fetched, conversation has no card
-//   cache[conversationId] === { stage_name, stage_color, pipeline_name, multiple_pipelines }
+//   cache[conversationId] === { stage_name, stage_color, pipeline_name, multiple_pipelines, subjects_count }
 const cache = reactive({});
 let queue = new Set();
 let timer = null;
@@ -35,6 +35,13 @@ const enqueue = id => {
   queue.add(id);
   if (!timer) timer = setTimeout(flush, 50);
 };
+
+// Depois de criar ou trocar o assunto de uma conversa, o selo dela na lista precisa ser buscado de novo.
+export function refreshCrmConversationStage(id) {
+  if (!id) return;
+  delete cache[id];
+  enqueue(id);
+}
 
 export function useCrmConversationStage(conversationId) {
   const idRef = toRef(conversationId);

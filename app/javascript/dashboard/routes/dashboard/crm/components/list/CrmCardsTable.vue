@@ -798,13 +798,16 @@ const onRowKeydown = (event, card) => {
                       </span>
                       <span
                         v-if="identityForCard(row.original).business"
-                        class="truncate text-xs text-n-slate-11"
+                        class="flex w-fit max-w-full items-center gap-1 rounded-md bg-n-blue-2 px-1.5 py-0.5 text-xs font-medium text-n-blue-11"
                         data-crm-list-business
                       >
-                        <span class="font-medium text-n-slate-10">
-                          {{ t('CRM_KANBAN.CARD.BUSINESS_LABEL') }}
-                        </span>
-                        {{ identityForCard(row.original).business }}
+                        <span
+                          class="i-lucide-tag size-3 shrink-0"
+                          aria-hidden="true"
+                        />
+                        <span class="truncate">{{
+                          identityForCard(row.original).business
+                        }}</span>
                       </span>
                     </button>
 
@@ -979,12 +982,10 @@ const onRowKeydown = (event, card) => {
             </span>
             <span
               v-if="identityForCard(card).business"
-              class="truncate text-xs text-n-slate-11"
+              class="flex w-fit max-w-full items-center gap-1 rounded-md bg-n-blue-2 px-1.5 py-0.5 text-xs font-medium text-n-blue-11"
             >
-              <span class="font-medium text-n-slate-10">
-                {{ t('CRM_KANBAN.CARD.BUSINESS_LABEL') }}
-              </span>
-              {{ identityForCard(card).business }}
+              <span class="i-lucide-tag size-3 shrink-0" aria-hidden="true" />
+              <span class="truncate">{{ identityForCard(card).business }}</span>
             </span>
             <div class="mt-1 flex flex-wrap items-center gap-2 text-xs">
               <span

@@ -1054,6 +1054,10 @@
     "controller": "api/v1/accounts/crm/cards#by_conversation",
     "parametros": []
   },
+  "crm/conversations/:conversation_id/cards": {
+    "controller": "api/v1/accounts/crm/conversation_cards#index",
+    "parametros": []
+  },
   "crm/conversations/card_stages": {
     "controller": "api/v1/accounts/crm/cards#card_stages",
     "parametros": [
