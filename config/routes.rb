@@ -66,6 +66,17 @@ Rails.application.routes.draw do
   get '/api/v1/autonomia/product-invitations/validate', to: 'public/api/v1/autonomia/product_invitations#validate'
   namespace :api, defaults: { format: 'json' } do
     namespace :v1 do
+      namespace :autonomia do
+        namespace :connect do
+          resource :agents, only: [] do
+            get :accounts
+            post :integration, action: :create
+            post 'integration/rotate', action: :rotate
+            delete :integration, action: :destroy
+          end
+        end
+      end
+
       # ----------------------------------
       # start of account scoped api routes
       resources :accounts, only: [:create, :show, :update] do

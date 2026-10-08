@@ -79,22 +79,36 @@ module RestrictIntegrationTokenToCrm
     }
   }.freeze
 
+  MCP_SCOPE_MAP = {
+    'api/v1/accounts/conversations' => {
+      'index' => 'agents:conversations:read', 'show' => 'agents:conversations:read'
+    },
+    'api/v1/accounts/conversations/messages' => {
+      'index' => 'agents:messages:read', 'create' => 'agents:messages:send'
+    },
+    'api/v1/accounts/contacts' => {
+      'index' => 'agents:contacts:read', 'show' => 'agents:contacts:read', 'search' => 'agents:contacts:read'
+    },
+    'api/v1/accounts/agents' => { 'index' => 'agents:agents:read' },
+    'api/v1/accounts/inboxes' => { 'index' => 'agents:inboxes:read', 'show' => 'agents:inboxes:read' },
+    'api/v2/accounts/reports' => { 'summary' => 'agents:reports:read' }
+  }.freeze
+
   private
 
   def restrict_integration_token_to_crm!
-    required_scope = CRM_SCOPE_MAP.dig(params[:controller], params[:action])
+    scope_map = mcp_integration_token_request? ? MCP_SCOPE_MAP : CRM_SCOPE_MAP
+    required_scope = scope_map.dig(params[:controller], params[:action])
 
-    # Default deny: unmapped controller (conversations/contacts/admin/etc.) or
-    # unmapped action.
-    return render_unauthorized('This token is only authorized for CRM endpoints') if required_scope.blank?
+    return render_unauthorized('This integration token is not authorized for this endpoint') if required_scope.blank?
 
-    return if integration_token_scopes.include?('crm_admin')
+    return if !mcp_integration_token_request? && integration_token_scopes.include?('crm_admin')
     return if integration_token_scopes.include?(required_scope)
 
     render_unauthorized("This token is missing the required '#{required_scope}' scope")
   end
 
   def integration_token_scopes
-    current_integration_token&.account_user&.custom_role&.permissions || []
+    current_integration_token&.granted_scopes || []
   end
 end

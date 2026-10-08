@@ -41,12 +41,10 @@ module AccessTokenAuthHelper
     BOT_ACCESSIBLE_ENDPOINTS.fetch(params[:controller], []).include?(params[:action])
   end
 
-  # CRM integration token auth (plan §3.2, B-T3). Guarded by defined? so CE builds
-  # — which never autoload the EE-only Crm::IntegrationToken — skip this entirely
-  # and never NameError on the api_access_token path. Returns true when the
-  # request was handled (authorized OR rejected) so the caller stops.
+  # Scoped integration-token auth. Class-name matching keeps CE builds from
+  # autoloading EE-only constants while allowing both CRM and MCP credentials.
   def handle_integration_token_auth!
-    return false unless defined?(Crm::IntegrationToken) && @resource.is_a?(Crm::IntegrationToken)
+    return false unless integration_token_resource?(@resource)
 
     token = @resource
 
@@ -73,5 +71,15 @@ module AccessTokenAuthHelper
 
   def integration_token_request?
     current_integration_token.present?
+  end
+
+  def mcp_integration_token_request?
+    current_integration_token&.class&.name == 'Mcp::IntegrationToken'
+  end
+
+  private
+
+  def integration_token_resource?(resource)
+    resource&.class&.name.in?(%w[Crm::IntegrationToken Mcp::IntegrationToken])
   end
 end
