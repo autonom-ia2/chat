@@ -858,6 +858,7 @@ async function syntheticManager(t, options = {}) {
     pendingInvalidation,
     cleanupWaiting,
     page,
+    route: (...args) => routeHandler(...args),
     navigated,
     navigations: () => navigations,
     closed: () => closed,
@@ -1490,5 +1491,67 @@ for (const [method, body, label] of [
     );
     assert.equal(data.headers.length, 1);
     assert.deepEqual(data.stderr, []);
+  });
+}
+
+for (const operation of ['continue', 'abort']) {
+  test(`persistent guard contains a rejected route.${operation} and still processes search then status`, async t => {
+    const executions = [];
+    const data = await syntheticManager(t, {
+      vps: true,
+      browserOperations: true,
+      executeOperation: async ({ request }) => {
+        executions.push(request.action);
+        return {
+          type: 'browser_operation',
+          operation: 'complete',
+          action: request.action,
+          id: request.id,
+          request_id: request.request_id,
+          claim: request.claim,
+          captured_at: '2026-10-08T12:00:00.000Z',
+          ...(request.action === 'search' ? { results: [] } : {
+            target_id: request.target_id,
+            status: 'accepted',
+          }),
+        };
+      },
+    });
+    const rejectedRoute = {
+      request: () => ({
+        url: () => operation === 'continue'
+          ? configuration(baseEnv).rolesUrl
+          : 'https://unapproved.invalid/',
+        method: () => 'GET',
+        postData: () => null,
+      }),
+      continue: async () => {
+        assert.equal(operation, 'continue');
+        throw new Error('route.continue: Route is already handled!');
+      },
+      abort: async () => {
+        throw new Error('route.abort: Route is already handled!');
+      },
+    };
+    await assert.doesNotReject(data.route(rejectedRoute));
+    await data.clock.advance(1000);
+    data.browserRequest.action = 'status';
+    data.browserRequest.target_id = '10004';
+    await data.clock.advance(1000);
+    assert.deepEqual(executions, ['search', 'status']);
+    assert.equal(data.closed(), 0);
+    assert.ok(data.stderr.includes('instagram_browser_route_failed\n'));
+    let blocked = false;
+    // Check an unapproved request separately from the handled route.
+    await data.route({
+      request: () => ({
+        url: () => 'https://unapproved.invalid/',
+        method: () => 'POST',
+        postData: () => '',
+      }),
+      continue: async () => { assert.fail('unapproved request continued'); },
+      abort: async () => { blocked = true; },
+    });
+    assert.equal(blocked, true);
   });
 }

@@ -373,17 +373,26 @@ export async function run(
     // its reviewed natural typeahead request on the primary page.
     await setup.wait(
       context.route('**/*', async route => {
-        const request = route.request();
-        if (
-          !isAllowedBrowserRequest({
-            url: request.url(),
-            method: request.method(),
-            body: request.postData() || '',
-            config,
-          })
-        )
-          return route.abort();
-        return route.continue();
+        try {
+          const request = route.request();
+          if (
+            !isAllowedBrowserRequest({
+              url: request.url(),
+              method: request.method(),
+              body: request.postData() || '',
+              config,
+            })
+          ) {
+            await route.abort();
+          } else {
+            await route.continue();
+          }
+        } catch {
+          // A completed or cancelled request must not kill the persistent manager.
+          // Never continue a request after a guard failure.
+          await route.abort().catch(() => {});
+          stderr.write('instagram_browser_route_failed\n');
+        }
       })
     );
     setup.close();
