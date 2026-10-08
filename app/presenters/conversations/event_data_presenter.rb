@@ -34,14 +34,14 @@ class Conversations::EventDataPresenter < SimpleDelegator
   private
 
   # Convite R3 pendente do card CRM vinculado (badge na lista de conversas).
-  # Só consulta quando o CRM AI está ligado (find_by indexado por
-  # conversation_id); nil quando não há convite ativo — o front não renderiza.
+  # Só consulta quando o CRM AI está ligado; o card é o assunto atual da conversa
+  # (#1141); nil quando não há convite ativo — o front não renderiza.
   def crm_handoff_invite
     # Referência direta (sem defined?): defined? não dispara o autoload do
     # Zeitwerk e retornava nil com Crm::Ai ainda não carregado no processo.
     return unless Crm::Ai::Config.enabled?
 
-    card = account.crm_cards.find_by(conversation_id: id)
+    card = Crm::Cards::ConversationCardFinder.new(account: account).all(self).first
     return if card.blank?
 
     Crm::Ai::HandoffInvitePayload.for_card(card)

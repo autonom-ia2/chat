@@ -24,9 +24,9 @@ class Crm::Conversations::AutoCreateDeduplicator
 
   private
 
+  # Conversa já com card aberto: reaproveita o assunto atual dela, na mesma ordem do ConversationCardFinder.
   def conversation_card(active_cards)
-    active_cards.where(conversation_id: @conversation.id).first ||
-      active_cards.joins(:card_conversations).find_by(crm_card_conversations: { conversation_id: @conversation.id })
+    Crm::Cards::ConversationCardFinder.new(account: @account).all(@conversation).merge(active_cards).first
   end
 
   def contact_pipeline_card(active_cards)

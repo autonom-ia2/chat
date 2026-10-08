@@ -51,6 +51,21 @@ RSpec.describe AutomationRules::CrmActions do
       expect(card.reload.stage_id).to eq(next_stage.id)
     end
 
+    it 'crm_move_card_stage move o card do funil da etapa quando a conversa tem cards em vários funis' do
+      card = create_card
+      other_pipeline, other_stage = create_crm_pipeline(account: account, user: user, name: 'Residencial')
+      target_stage = create_crm_stage(account: account, pipeline: other_pipeline, name: 'Proposta')
+      other_conversation = create(:conversation, account: account, contact: conversation.contact, inbox: conversation.inbox)
+      residencial = account.crm_cards.create!(pipeline: other_pipeline, stage: other_stage, contact: conversation.contact,
+                                              primary_conversation: other_conversation, title: 'Residencial')
+      Crm::CardConversation.create!(account: account, card: residencial, conversation: conversation)
+
+      run_action('crm_move_card_stage', [target_stage.id])
+
+      expect(residencial.reload.stage_id).to eq(target_stage.id)
+      expect(card.reload).to have_attributes(pipeline_id: pipeline.id, stage_id: stage.id)
+    end
+
     it 'crm_move_card_stage não mexe em card já fechado' do
       card = create_card(status: :won)
 
@@ -140,6 +155,17 @@ RSpec.describe AutomationRules::CrmActions do
 
       expect(matches?('crm_stage_id', 'equal_to', [stage.id])).to be(true)
       expect(matches?('crm_stage_id', 'equal_to', [next_stage.id])).to be(false)
+    end
+
+    it 'olha o assunto atual quando a conversa tem mais de um card' do
+      create_card
+      other_conversation = create(:conversation, account: account)
+      focused = account.crm_cards.create!(pipeline: pipeline, stage: next_stage, contact: conversation.contact,
+                                          primary_conversation: other_conversation, title: 'Outro assunto')
+      Crm::CardConversation.create!(account: account, card: focused, conversation: conversation, focused_at: Time.current)
+
+      expect(matches?('crm_stage_id', 'equal_to', [next_stage.id])).to be(true)
+      expect(matches?('crm_stage_id', 'equal_to', [stage.id])).to be(false)
     end
 
     # O esquema já não grava o operador fora da lista; a guarda do filtro vale para a regra antiga.
