@@ -26,3 +26,11 @@ Essas verificações comprovam o contrato local, não a conexão em produção. 
 Rodrigo autorizou a continuidade da recuperação, incluindo merge/deploy e piloto delimitado; a última instrução foi resolver o problema. Root permanece o único executor de produção. O piloto anterior foi desativado no manager; SSM Hub restaurado de 14 para 15 (flag ausente), e o deploy normal de desativação 37750841459 está em andamento. Autonom.ia permanece fora das operações de navegador.
 
 Seguir fila normal, CI obrigatório e merge real. Os deploys AWS automáticos devem terminar e ter saúde conferida antes de ativar novamente apenas a Hub2You. Os scripts VPS não mudam neste PR; manter a instalação verificada em 61f20cfd e registrar sua equivalência de conteúdo com o novo merge. Reversão: desativar manager, restaurar apenas a linha SSM e usar deploy blue-green normal. Não utilizar a ação legada de rollback nem reiniciar diretamente web/worker.
+
+## Simulação na imagem ativa de produção
+
+Em 08/10/2026, o runner isolado na VPS n8n terminou com exit 0. A imagem OCI ativa de produção foi fixada pelo digest do container, com somente a correção de uma linha montada em modo leitura. Rails production, Postgres/Redis descartáveis e Redis de coordenação com TLS verificado exercitaram os serviços e a API autenticada reais.
+
+A constante antiga reproduziu `failed/meta_unavailable`; a corrigida produziu `ready`, seleção assinada válida, busca/status/autorização/reautorização pela API e resultado recuperado após recriar o cliente Redis. Dados malformados, campos extras, claim incorreto, deadline vencido e outro ator foram rejeitados. A limpeza e os oito serviços permanentes foram conferidos.
+
+O provedor foi sintético, sem egress; reconexão real com Meta ainda não foi validada. Postgres sandbox 18.6 difere da minor RDS 18.3. O recibo sanitizado, hashes e limites estão em [995-pr1139-production-image-simulation-20261008.json](995-pr1139-production-image-simulation-20261008.json).

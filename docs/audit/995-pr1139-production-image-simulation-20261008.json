@@ -1,0 +1,118 @@
+{
+  "issue": 995,
+  "pull_request": 1139,
+  "utc": "2026-10-08T09:38:05.419285+00:00",
+  "purpose": "Validate the full Rails browser-operation boundary before another release, using the active production OCI image on the production VPS with isolated synthetic services.",
+  "status": "passed",
+  "execution": "root only; reviewed by nexo_revisao",
+  "candidate_functional_sha": "36260e86c50cdf3759424423ed20fa0541fc52fd",
+  "production_base_sha": "61f20cfd107361a431fda51f02cace751cc4978d",
+  "production_image_manifest": "sha256:1e4bc14667bef74c67a16081625a10e1b294aaffae99612f6db81f880d0fc438",
+  "production_image_config": "sha256:78d1a3cbcfe070909a9770cfe5210979f1809cbba316a29bdc266a4de6a57e5c",
+  "candidate_source_sha256": "4e901ee808a784c7f85c0aa303901b949b002fece21305097f595e9b64e870ff",
+  "runner_sha256": "29a35b5f61da437623e39af1de9f38a760932303f1db15581af39802a5b02181",
+  "harness_sha256": "8235582e7063c352f879d44e36559ddaaf07147a7d69679e8a3102f6991fcc12",
+  "runtime": {
+    "ruby": "3.4.4",
+    "rails": "7.2.3.1",
+    "bundler": "2.6.7",
+    "postgres_sandbox": "18.6",
+    "postgres_rds": "18.3",
+    "redis": "7.4.9"
+  },
+  "isolation": {
+    "cleanup_verified": true,
+    "cleanup_window_seconds": 90,
+    "coordination_tls": true,
+    "global_deadline_seconds": 600,
+    "network_internal": true,
+    "persistent_data_volumes": false,
+    "published_ports": false,
+    "readonly_code_mounts": true,
+    "synthetic_provider": true
+  },
+  "results": {
+    "api_boundary": {
+      "enqueue_accepted": true,
+      "foreign_poll_rejected": true,
+      "poll_ready": true,
+      "selection_verified": true
+    },
+    "authorization_boundary": {
+      "enqueue_accepted": true,
+      "poll_ready": true,
+      "provider_call": false,
+      "state_bound": true
+    },
+    "baseline": {
+      "complete_received": true,
+      "error_code": "meta_unavailable",
+      "executor_shape_valid": true,
+      "rails_state": "failed"
+    },
+    "browser_calls": 0,
+    "mode": "sandbox",
+    "oauth_calls": 0,
+    "patched": {
+      "complete_received": true,
+      "executor_shape_valid": true,
+      "rails_state": "ready",
+      "selection_token_present": true,
+      "selection_verified": true
+    },
+    "production_mutated": false,
+    "provider_calls": 0,
+    "provider_reconnection_exercised": false,
+    "reauthorization_boundary": {
+      "http_ok": true,
+      "provider_call": false,
+      "state_bound": true
+    },
+    "rejection_checks": {
+      "deadline": true,
+      "extra_fields": true,
+      "foreign_actor": true,
+      "malformed_candidate": true,
+      "wrong_claim": true
+    },
+    "source_constant_sorted": true,
+    "status": "passed",
+    "status_boundary": {
+      "enqueue_accepted": true,
+      "poll_ready": true,
+      "status_absent": true
+    },
+    "transport_reconnect": {
+      "client_recreated": true,
+      "result_ready": true,
+      "selection_verified": true
+    }
+  },
+  "exit_code": 0,
+  "after_cleanup": {
+    "containers_networks_volumes_identical": true,
+    "eight_instagram_services_pid_limits_restart_counters_identical": true,
+    "existing_running_container_ids_identical": true,
+    "remaining_test_containers": 0,
+    "remaining_registry_configs": 0,
+    "remaining_input_directories": 0
+  },
+  "limitations": [
+    "Meta/browser/OAuth provider interaction was synthetic, with external egress blocked. No invitation, callback, grant, DM or real account connection was executed.",
+    "Reauthorization URL and signed state were validated; actual provider reconnection remains unverified.",
+    "Postgres major and pgvector match the required schema; sandbox minor18.6 differs from RDS18.3.",
+    "The exact active OCI image plus the candidate one-line read-only overlay was tested; new release runtime and real panel acceptance remain separate gates."
+  ],
+  "setup_diagnostics": {
+    "failed_sandbox_runs": 5,
+    "cause": "Private test-adapter bootstrap/order, diagnostic visibility, and missing operation_id in reconnect probe. Product behavior was not changed to make the test pass.",
+    "cleanup_verified_after_every_run": true
+  },
+  "publication_state_at_test_completion": {
+    "pr": "OPEN",
+    "new_merge": false,
+    "new_aws_deploy": false,
+    "new_vps_runtime_install": false,
+    "live_browser_operations_flags": "OFF"
+  }
+}
