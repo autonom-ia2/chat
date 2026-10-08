@@ -18,6 +18,7 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
   XLSX_CONTENT_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'.freeze
   # Selo da lista (#1141): conversa com mais de um card aberto mostra o assunto atual (focused_at mais recente).
   CARD_STAGES_FOCUS_JOIN = 'LEFT JOIN crm_card_conversations crm_focus ON crm_focus.card_id = crm_cards.id ' \
+                           'AND crm_focus.account_id = crm_cards.account_id ' \
                            'AND crm_focus.conversation_id = crm_cards.conversation_id'.freeze
 
   def index
