@@ -64,3 +64,18 @@ PR somente de documentação; revisão e estado final registrados no fechamento.
 - Conferência de PR: OPEN/draft; somente dois arquivos Markdown. Worktree limpa antes do registro final.
 - Revisão factual dos três agentes incorporada; não é aprovação do Rodrigo para implementar/merge/deploy.
 - Nenhum merge, deploy ou alteração funcional realizada. Rollback desta documentação: reversão do commit de docs se ela vier a ser mergeada; plano para comportamento futuro consta no relatório.
+
+
+## Complemento — cobertura operacional antes da expansão
+- Pedido passou a priorizar Campanhas liberado sem acesso a Anúncios Meta; dois agentes retomados para interface e servidor.
+- Fetch somente de origin/main e worktree destacada de leitura em /Users/rodrigosilva/dev/worktrees/chat2you-1135-coverage-current; revisão 372ca4eb5da63a6d87d01d3c40f78344b4c2d7cf. Worktree documental original preservada.
+- Revisão instalada conferida via SSM no container chatwoot-web, arquivo /app/.git_sha; corresponde ao snapshot atual.
+- Consulta estritamente de leitura via rails runner, dentro de transação com SET TRANSACTION READ ONLY: configuração indicada tem campaign_view, membro base agent e feature meta_ads_hub habilitada. Nenhuma alteração, segredo ou dado pessoal consultado; identificadores/configuração específica do cliente omitidos da documentação.
+- Bloqueio confirmado em menu, rota e policy: administrador exigido; não existe permissão customizada Meta no catálogo.
+- Lacuna adicional confirmada: rota Modelos WhatsApp permanece exclusiva de administrador, com pendência explícita no comentário do código. Brand Kits e Links/QR já reutilizam as permissões de Campanhas.
+- Nova proposta: meta_ads_view explícita, separar leitura de credenciais/configuração/IA e recortar detalhamento por visibilidade. Não ampliar automaticamente campaign_view porque há dados financeiros e comerciais da conta.
+- Risco concreto identificado: panel_list/Cohort consultam dados da conta inteira, sem recorte da visibilidade do usuário.
+- Sem navegação na sessão pessoal do Chrome: browser isolado iab indisponível. Evidência de configuração obtida por consulta read-only; não confundir com aceitação funcional do agente.
+- Nenhum teste executado, spec escrito, código funcional alterado, permissão concedida, merge ou deploy. Somente complemento documental da PR #1136.
+
+- Revisão independente do complemento: incorporadas distinção de gates de rotas administrativas, leituras Graph de contas/Pixels reservadas ao administrador, refresh disparado por consulta do painel e ocultação dos controles de IA no papel de leitura. Seção renumerada para 11; fontes conferidas no snapshot atual.

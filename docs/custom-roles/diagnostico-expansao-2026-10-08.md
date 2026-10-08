@@ -1,6 +1,7 @@
 # Funções personalizadas — diagnóstico e proposta de expansão
 Data: 08/10/2026 · Issue [#1135](https://github.com/autonom-ia2/chat/issues/1135)
-Base inspecionada: `81fd4d88d4c1c1a5b6a121d2c2b84c7d874f18fc`.
+Base do diagnóstico inicial: `81fd4d88d4c1c1a5b6a121d2c2b84c7d874f18fc`.
+Complemento de cobertura abaixo: código e revisão de produção `372ca4eb5da63a6d87d01d3c40f78344b4c2d7cf`.
 Status: proposta para avaliação; nenhuma alteração de permissões ou de produção nesta tarefa.
 
 ## 1. Conclusão
@@ -18,7 +19,7 @@ Uma visão salva organiza os dados que a pessoa já pode acessar. O limite de ac
 - Agentes especializados em servidor, interface e escopos; consolidação e conferência pelo agente principal.
 - A captura enviada mostra a listagem e os resumos. Não demonstra todas as permissões efetivas nem a versão do servidor.
 - As conclusões sobre comportamento são estáticas: leitura de código e de testes existentes. **Nenhum teste foi executado**, nem usuário real impersonado.
-- Não houve leitura de banco, alteração de conta, mudança de auth, merge ou deploy.
+- Na fase inicial não houve leitura de banco. O complemento de cobertura inclui consulta restrita em produção com transação somente de leitura; nenhuma alteração de conta, auth, merge ou deploy.
 - Cobertura dos caminhos citados; não é garantia de auditoria integral de todos os endpoints/realtime/jobs do produto.
 
 ## 3. O que existe hoje
@@ -290,3 +291,39 @@ São avaliações de complexidade, não estimativas de prazo. O plano posterior 
 Aprovar primeiro a direção **área + dados visíveis + ações**, concentrando a primeira implementação em conversas e CRM.
 Definir, antes de codificar, se relatórios são do recorte visível ou globais por concessão explícita, e qual base caixa/time deve valer igualmente para listagem e abertura. Separar acesso ao módulo Contatos da leitura contextual de dados de contato na conversa/CRM, para não bloquear caminhos operacionais existentes ao fechar o gate.
 Depois dessa decisão, abrir tarefas de implementação com critérios e PRs pequenos. Não começar por um pacote de dezenas de novas chaves administrativas.
+
+
+## 11. Prioridade antes da expansão: telas existentes sem acesso por função
+Esta etapa responde ao caso de Campanhas liberado sem Anúncios Meta. A revisão instalada foi conferida em `/app/.git_sha` e corresponde ao snapshot atual `372ca4eb5da63a6d87d01d3c40f78344b4c2d7cf`. A configuração indicada pelo solicitante foi consultada com `SET TRANSACTION READ ONLY`: leitura de Campanhas concedida, membro com papel base de agente e feature Meta habilitada. Identificadores e dados da conta não são registrados nesta PR.
+
+**Causa confirmada:** Anúncios Meta exige administrador no menu, na rota e na policy do servidor. `campaign_view` não participa desse acesso. O catálogo de funções não oferece uma opção específica para consultar Anúncios Meta. Não é suficiente mudar o menu.
+
+| Frente | O que temos | O que falta ou precisa ser incluído |
+|---|---|---|
+| Anúncios Meta | Painel e detalhamento existentes, exclusivos de administrador | Opção explícita “Anúncios Meta — Ver”, acesso pelo menu/rota/API e separação entre consulta e conexão/configuração |
+| Modelos WhatsApp em Campanhas | Tela existente com rota exclusiva de administrador; comentário remete a cobertura pendente no #726 | Aplicar leitura/gestão por função após conferir os endpoints e controles de escrita da tela |
+| Links e QR code / gestão de campanhas | `campaign_view/manage` na rota e nas policies correspondentes | Sem lacuna equivalente identificada; habilitação do módulo continua necessária |
+| Identidade visual / Brand Kits | Leitura e gestão já usam `campaign_view/manage` | Sem lacuna equivalente; depende das flags e do canal de e-mail |
+| Integrações, agentes/times, funções, segurança e administração da conta | Rotas inspecionadas exclusivas de administrador | Delegação administrativa é decisão separada; não incluir no primeiro ajuste de leitura Meta |
+
+### Correção mínima proposta para Anúncios Meta
+1. Acrescentar `meta_ads_view` ao catálogo/editor, com textos en/pt_BR e resumo da função. A permissão é explícita porque o painel inclui investimento, vendas e valores; não ampliar automaticamente todas as funções que já têm `campaign_view`.
+2. Fazer menu, rota e API aceitarem essa permissão para consultar o painel e métricas. A função indicada poderá receber essa opção somente após aprovação e implementação.
+3. Separar os endpoints de leitura operacional dos de configuração. Preservar administrador para token/OAuth, consulta de contas/Pixels na Graph (`ad_accounts`/`pixels`), gravação da seleção, destinos, funis/sinais, remoção e ações de IA/WhatsApp. Ocultar os controles de IA para o papel de leitura, pois o painel já renderiza ações de `advice` que chamam endpoints exclusivos de administrador.
+   A consulta `GET panel` e o `POST insights` podem disparar refresh de coleta: seu uso também precisa estar coberto pela nova permissão; consultar métricas não é inteiramente sem efeitos no servidor.
+4. Aplicar a visibilidade efetiva de conversas/cards ao detalhamento. `panel_list` expõe contatos, conversas, status e valores e o `Cohort` atual consulta a conta inteira; não liberar esse detalhamento sem recorte.
+5. Conferir com um agente: menu aparece, painel abre, detalhes respeitam seu alcance e tentativa direta de configurar a conexão continua negada. Conferir também administrador e função sem a nova permissão.
+6. Regenerar o mapa do Guia ao tocar menu/rotas e conferir os formatos se controllers/contratos alcançados pelo Guia forem alterados. Revisão, aprovação, deploy e rollback permanecem etapas da implementação futura.
+
+Fontes do complemento, todas na revisão `372ca4eb5d`:
+- `app/javascript/dashboard/components-next/sidebar/Sidebar.vue`, bloco Campaign Meta Ads.
+- `app/javascript/dashboard/routes/dashboard/crm/crm.routes.js`, rota campaigns_meta_ads_index.
+- `app/policies/crm/meta_ads_connection_policy.rb`.
+- `app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb`, READ_ACTIONS e ensure_administrator.
+- `app/services/crm/meta_ads/panel/report.rb`, métricas financeiras.
+- `app/services/crm/meta_ads/panel/path_list.rb` e `cohort.rb`, conteúdo e alcance do detalhamento.
+- `app/javascript/dashboard/routes/dashboard/campaigns/campaigns.routes.js`, rota de modelos WhatsApp.
+- `app/javascript/dashboard/routes/dashboard/campaigns/journey/campaignJourney.routes.js` e `app/policies/brand_kit_policy.rb`.
+- `enterprise/app/models/custom_role.rb`, catálogo sem chave Meta; segue com 34 chaves.
+
+O diagnóstico de acesso está comprovado por configuração e código instalado. Não houve navegação autenticada como agente, teste funcional, mudança de permissão ou deploy nesta etapa.
