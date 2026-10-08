@@ -1499,16 +1499,21 @@ async function openTesterSearch({
   navigate,
 }) {
   if (navigate) {
+    state.diagnosticPhase = 'roles_navigation';
     await navigateRoles(page, config, signal);
+    state.diagnosticPhase = 'roles_capture';
     await captureRoles(state, page, config, signal);
   }
+  state.diagnosticPhase = 'add_people_button';
   const add = await waitForUnique(
     page.getByRole('button', { name: /^(?:Add people|Adicionar pessoas)$/i }),
     signal
   );
   await requireEnabled(add, signal);
   await withSignal(add.click({ noWaitAfter: true }), signal);
+  state.diagnosticPhase = 'tester_dialog';
   const dialog = await waitForUnique(page.getByRole('dialog'), signal);
+  state.diagnosticPhase = 'tester_role';
   const role = await waitForUnique(
     dialog.getByRole('radio', {
       name: /^(?:Instagram tester|Instagram testers|Testador do Instagram|Testadores do Instagram)$/i,
@@ -1518,6 +1523,7 @@ async function openTesterSearch({
   await requireEnabled(role, signal);
   await withSignal(role.check(), signal);
   if (!(await withSignal(role.isChecked(), signal))) fail('meta_unavailable');
+  state.diagnosticPhase = 'search_input';
   const input = await waitForUnique(dialog.getByRole('combobox'), signal);
   state.searchInput = await requireEnabled(input, signal, true);
   await withSignal(state.searchInput.fill(`@${request.username}`), signal);
@@ -1525,6 +1531,7 @@ async function openTesterSearch({
     !(await inputConfirmed(state.searchInput, `@${request.username}`, signal))
   )
     fail('meta_unavailable');
+  state.diagnosticPhase = 'typeahead_response';
   const result = await withSignal(state.searchReady, signal);
   if (!safeBrowserLocation(page.url(), config)) fail('meta_session_expired');
   if (
@@ -1686,10 +1693,13 @@ async function performInvite({ page, config, request, state, signal }) {
 
 async function performStatus({ page, config, request, state, signal }) {
   const documentPromise = (async () => {
+    state.diagnosticPhase = 'roles_navigation';
     await navigateRoles(page, config, signal);
+    state.diagnosticPhase = 'roles_capture';
     return captureRoles(state, page, config, signal);
   })();
   const document = await documentPromise;
+  state.diagnosticPhase = 'roles_status';
   if (state.rolesRequests.length !== 1 || state.rolesResponses.length !== 1)
     fail('unknown_status');
   return parseRolesStatus(JSON.stringify(document), request.target_id);
@@ -1702,6 +1712,7 @@ export async function executeBrowserOperation({
   signal,
   requestGuard,
   permitInvite,
+  onDiagnostic,
   now = Date.now,
 } = {}) {
   const started = baseEnvelope(request, now);
@@ -1709,7 +1720,9 @@ export async function executeBrowserOperation({
   let removeObservers;
   const state = operationState();
   try {
+    state.diagnosticPhase = 'configuration_validation';
     validateConfiguration(configuration);
+    state.diagnosticPhase = 'request_validation';
     validateRequest(request, configuration);
     state.capturedAt = timestamp(now);
     if (
@@ -1718,7 +1731,9 @@ export async function executeBrowserOperation({
       typeof page.goto !== 'function'
     )
       fail('meta_unavailable');
+    state.diagnosticPhase = 'observers';
     removeObservers = await attachObservers(page, state, configuration, signal);
+    state.diagnosticPhase = 'request_routes';
     removeRoute = await installRoute(
       page,
       configuration,
@@ -1757,6 +1772,7 @@ export async function executeBrowserOperation({
           },
           now
         );
+      state.diagnosticPhase = 'invite_execution';
       const result = await performInvite({
         page,
         config: configuration,
@@ -1773,6 +1789,22 @@ export async function executeBrowserOperation({
     );
   } catch (error) {
     const code = SAFE_ERRORS.has(error?.code) ? error.code : 'meta_unavailable';
+    try {
+      onDiagnostic?.({
+        event: 'instagram_browser_operation_executor_failed',
+        phase: state.diagnosticPhase,
+        action: ACTIONS.has(request?.action) ? request.action : 'invalid',
+        error_code: code,
+        roles_request_count: state.rolesRequests.length,
+        roles_response_count: state.rolesResponses.length,
+        typeahead_request_count: state.typeaheadRequests.length,
+        typeahead_response_count: state.typeaheadResponses.length,
+        typeahead_rejected: state.typeaheadRejected === true,
+        typeahead_continue_failed: state.typeaheadContinueFailed === true,
+      });
+    } catch {
+      // Diagnostics must not change the terminal observation.
+    }
     return {
       ...started,
       ...(request?.action === 'invite'
