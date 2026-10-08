@@ -21,8 +21,8 @@ module AutomationRules::CrmActions
   end
 
   def crm_move_card_stage(params)
-    card = crm_card
     stage = crm_stage(params)
+    card = crm_card_for_pipeline(stage&.pipeline_id)
     # Como no Kanban (só cards abertos): mover card ganho/perdido reabriria eventos de etapa.
     return if card.blank? || stage.blank? || !card.open?
 
@@ -60,6 +60,15 @@ module AutomationRules::CrmActions
     return unless Crm::Config.enabled?
 
     Crm::Cards::ConversationCardFinder.new(account: @account).find(@conversation)
+  end
+
+  # Mover para uma etapa (#1141): com vários cards na conversa, move o card aberto do funil daquela etapa (o assunto
+  # atual primeiro); sem card aberto nesse funil, o assunto atual — que é o que a ação sempre moveu, inclusive entre funis.
+  def crm_card_for_pipeline(pipeline_id)
+    return unless Crm::Config.enabled?
+
+    cards = Crm::Cards::ConversationCardFinder.new(account: @account).all(@conversation).to_a
+    cards.find { |card| card.open? && card.pipeline_id == pipeline_id } || cards.first
   end
 
   def crm_stage(params)

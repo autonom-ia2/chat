@@ -16,6 +16,10 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
   RESULTS_PER_PAGE = 25
   MAX_RESULTS_PER_PAGE = 100
   XLSX_CONTENT_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'.freeze
+  # Selo da lista (#1141): conversa com mais de um card aberto mostra o assunto atual (focused_at mais recente).
+  CARD_STAGES_FOCUS_JOIN = 'LEFT JOIN crm_card_conversations crm_focus ON crm_focus.card_id = crm_cards.id ' \
+                           'AND crm_focus.account_id = crm_cards.account_id ' \
+                           'AND crm_focus.conversation_id = crm_cards.conversation_id'.freeze
 
   def index
     authorize ::Crm::Card
@@ -48,7 +52,8 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
 
   # Bulk stage lookup for the conversation list (virtual stage chips). Returns
   # { conversation_id => stage_badge } only for conversations the requester can
-  # see that have an OPEN card. Capped at 100 ids per call.
+  # see that have an OPEN card. Capped at 100 ids per call. One badge per
+  # conversation: the current subject when it has more than one open card.
   def card_stages
     # Frontend sends display_ids (Chatwoot's per-account conversation identifier);
     # respond keyed by the SAME display_id so the client can match.
@@ -63,6 +68,8 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     multiple = Current.account.crm_pipelines.count > 1
     payload = ::Crm::Card.open
                          .where(account_id: Current.account.id, conversation_id: conversations.map(&:id))
+                         .joins(CARD_STAGES_FOCUS_JOIN)
+                         .order(Arel.sql('crm_focus.focused_at DESC NULLS LAST'), :id)
                          .includes(:stage, :pipeline)
                          .each_with_object({}) do |card, acc|
       next if card.stage.blank?
@@ -70,7 +77,7 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
       display_id = display_by_global[card.conversation_id]
       next if display_id.blank?
 
-      acc[display_id] = stage_badge_payload(card).merge(multiple_pipelines: multiple)
+      acc[display_id] ||= stage_badge_payload(card).merge(multiple_pipelines: multiple)
     end
     render json: { payload: payload }
   end

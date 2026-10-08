@@ -1,0 +1,684 @@
+<title>Multifunil Chat2You</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: roteiro do cenário à esquerda + réplica do painel Chat2You (menu azul-marinho, lista, conversa, painel de assuntos) à direita.
+   Tokens = n-* do painel real + azul-marinho do menu. */
+:root{
+  --bg:#F7F7F7; --surface:#FEFEFE; --solid:#FFFFFF; --weak:#EAEAEA; --strong:#E2E3E7;
+  --s9:#8B8D98; --s10:#80838D; --s11:#60646C; --s12:#1C2024; --s3:#F0F0F3; --s2:#F9F9FB;
+  --brand:#2781F6; --brandh:#1073E9; --b2:#F5F9FF; --b3:#E9F3FF; --b6:#B5D5FF; --b11:#086DE0;
+  --t3:#E0F8F3; --t9:#12A594; --t11:#008573;
+  --a3:#FFF7C2; --a9:#FFC53D; --a11:#AB6400;
+  --r3:#FEEAED; --r9:#E54666; --r11:#CA244D;
+  --v3:#F4F0FE; --v9:#6E56CF; --v11:#6555B7;
+  --g3:#E9F6E9; --g9:#30A46C; --g11:#218358;
+  --side:#0E1D38; --side2:#16294A; --sidefg:#E6ECF5; --sidemuted:#9FB0C8;
+  --proto:#111827; --protofg:#E5E7EB; --protomuted:#9CA3AF;
+  --bubin:#FFFFFF; --bubout:#E9F3FF; --note:#FFF7C2;
+  --shadow:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.08);
+  --shadowlg:0 12px 32px rgba(13,35,68,.18);
+  --font:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#1C1D20; --surface:#141517; --solid:#17171A; --weak:#26262B; --strong:#34343A;
+  --s9:#696E77; --s10:#777B84; --s11:#B0B4BA; --s12:#EDEEF0; --s3:#212225; --s2:#18191B;
+  --b2:#0F1826; --b3:#0F2748; --b6:#1D5486; --b11:#7EB6FF;
+  --t3:#0D2D2A; --t11:#0BD8B6; --a3:#302008; --a11:#FFCA16; --r3:#3A141E; --r11:#FF949D;
+  --v3:#291F43; --v11:#A999EC; --g3:#132D21; --g11:#3DD68C;
+  --bubin:#212225; --bubout:#0F2748; --note:#302008;
+  --shadow:0 1px 2px rgba(0,0,0,.4); --shadowlg:0 12px 32px rgba(0,0,0,.55); color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#1C1D20; --surface:#141517; --solid:#17171A; --weak:#26262B; --strong:#34343A;
+  --s9:#696E77; --s10:#777B84; --s11:#B0B4BA; --s12:#EDEEF0; --s3:#212225; --s2:#18191B;
+  --b2:#0F1826; --b3:#0F2748; --b6:#1D5486; --b11:#7EB6FF;
+  --t3:#0D2D2A; --t11:#0BD8B6; --a3:#302008; --a11:#FFCA16; --r3:#3A141E; --r11:#FF949D;
+  --v3:#291F43; --v11:#A999EC; --g3:#132D21; --g11:#3DD68C;
+  --bubin:#212225; --bubout:#0F2748; --note:#302008;
+  --shadow:0 1px 2px rgba(0,0,0,.4); --shadowlg:0 12px 32px rgba(0,0,0,.55); color-scheme:dark }
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--s12);font-family:var(--font);font-size:14px;line-height:1.45}
+h1,h2,h3,p{margin:0}
+h1,h2,h3{text-wrap:balance}
+button{font:inherit;color:inherit;cursor:pointer;background:none;border:0}
+:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+.ico{width:16px;height:16px;flex:none;stroke-width:2}
+
+/* faixa do protótipo */
+.proto{position:sticky;top:env(safe-area-inset-top,0px);z-index:50;background:var(--proto);color:var(--protofg);padding:10px 16px;display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
+.proto b{font-weight:600;font-size:13px;letter-spacing:.02em}
+.proto .tag{font-size:11px;color:var(--protomuted);text-transform:uppercase;letter-spacing:.08em}
+.tabs{display:flex;flex-wrap:wrap;gap:6px}
+.tab{padding:6px 10px;border-radius:8px;font-size:12.5px;color:var(--protofg);border:1px solid #374151;display:flex;gap:6px;align-items:center}
+.tab[aria-selected="true"]{background:#F9FAFB;color:#111827;border-color:#F9FAFB}
+.tab .lv{font-size:10px;padding:1px 6px;border-radius:99px;background:#374151;color:#E5E7EB}
+.tab[aria-selected="true"] .lv{background:#E5E7EB;color:#111827}
+
+.stage{display:grid;grid-template-columns:330px minmax(0,1fr);gap:16px;padding:16px;padding-block:16px;align-items:start}
+@media (max-width:980px){.stage{grid-template-columns:minmax(0,1fr)}}
+
+/* roteiro */
+.guide{background:var(--solid);border:1px solid var(--weak);border-radius:14px;box-shadow:var(--shadow);padding:16px;display:flex;flex-direction:column;gap:14px;position:sticky;top:70px}
+@media (max-width:980px){.guide{position:static}}
+.guide .eyebrow{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--s10);display:flex;justify-content:space-between}
+.guide h2{font-size:17px;line-height:1.3}
+.guide .say{color:var(--s11);font-size:13.5px;display:flex;flex-direction:column;gap:8px}
+.guide .say strong{color:var(--s12)}
+.rules{display:flex;flex-direction:column;gap:6px;padding:10px 12px;background:var(--s2);border:1px solid var(--weak);border-radius:10px}
+.rules h3{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--s10)}
+.rules li{font-size:12.5px;color:var(--s12)}
+.rules ul{margin:0;padding-left:16px;display:flex;flex-direction:column;gap:4px}
+.impact{display:flex;flex-wrap:wrap;gap:6px}
+.impact span{font-size:11.5px;padding:3px 8px;border-radius:99px;background:var(--b3);color:var(--b11);font-weight:500}
+.nav{display:flex;gap:8px;align-items:center}
+.nav .dots{display:flex;gap:4px;flex:1;flex-wrap:wrap}
+.nav .dot{width:22px;height:6px;border-radius:99px;background:var(--strong)}
+.nav .dot.on{background:var(--brand)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border-radius:9px;border:1px solid var(--strong);background:var(--solid);font-weight:500;font-size:13px;min-height:36px}
+.btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}
+.btn.sm{padding:5px 9px;min-height:30px;font-size:12.5px}
+.btn.ghost{border-color:transparent;background:transparent}
+.btn[disabled]{opacity:.45;cursor:default}
+
+/* moldura do app */
+.frame-wrap{overflow-x:auto;border-radius:14px;box-shadow:var(--shadowlg);border:1px solid var(--weak);min-width:0}
+.app{width:1280px;height:780px;display:flex;background:var(--bg);position:relative;overflow:hidden}
+.sidebar{width:212px;flex:none;background:var(--side);color:var(--sidefg);display:flex;flex-direction:column;padding:14px 10px;gap:10px}
+.logo{display:flex;flex-direction:column;align-items:center;gap:6px;padding-bottom:4px}
+.logo .orb{width:40px;height:40px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#9DB9E6,#2B4C80 60%,#14284A);box-shadow:inset 0 0 0 3px rgba(255,255,255,.08)}
+.logo span{font-size:13px;font-weight:600}
+.sbsearch{display:flex;align-items:center;gap:6px;background:var(--side2);border-radius:8px;padding:6px 8px;color:var(--sidemuted);font-size:12.5px}
+.menu{display:flex;flex-direction:column;gap:2px}
+.mi{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:8px;font-size:13px;color:var(--sidefg)}
+.mi.on{background:var(--side2)}
+.mi.sub{padding-left:28px;font-size:12.5px;color:var(--sidemuted)}
+.mi.sub.on{color:var(--sidefg)}
+.me{margin-top:auto;display:flex;gap:8px;align-items:center;padding:8px;border-top:1px solid rgba(255,255,255,.08)}
+.me .av{width:30px;height:30px}
+.me small{display:block;color:var(--sidemuted);font-size:11px}
+.av{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:600;color:#fff;flex:none}
+
+.main{flex:1;min-width:0;display:flex}
+/* lista de conversas */
+.clist{width:330px;flex:none;border-right:1px solid var(--weak);background:var(--solid);display:flex;flex-direction:column}
+.clist header{padding:14px 14px 8px;display:flex;flex-direction:column;gap:10px;border-bottom:1px solid var(--weak)}
+.clist h1{font-size:18px}
+.ctabs{display:flex;gap:14px;font-size:13px;color:var(--s11)}
+.ctabs .on{color:var(--brand);font-weight:600;border-bottom:2px solid var(--brand);padding-bottom:6px}
+.filters{display:flex;gap:6px;flex-wrap:wrap}
+.fchip{display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:4px 8px;border:1px solid var(--strong);border-radius:8px;color:var(--s11);background:var(--solid)}
+.fchip.on{border-color:var(--b6);background:var(--b2);color:var(--b11)}
+.citem{display:flex;gap:10px;padding:12px 14px;border-bottom:1px solid var(--weak)}
+.citem.on{background:var(--b2);box-shadow:inset 3px 0 0 var(--brand)}
+.citem .body{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.citem .top{display:flex;justify-content:space-between;gap:6px}
+.citem .top b{font-size:13.5px}
+.citem .top time{font-size:11.5px;color:var(--s10);flex:none}
+.citem .prev{font-size:12.5px;color:var(--s11);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.citem .meta{font-size:11.5px;color:var(--s10);display:flex;gap:6px;align-items:center}
+.chips{display:flex;gap:4px;flex-wrap:wrap}
+.fun{display:inline-flex;align-items:center;gap:5px;font-size:11px;padding:2px 7px;border-radius:6px;background:var(--s3);color:var(--s12);font-weight:500;white-space:nowrap}
+.fun i{width:7px;height:7px;border-radius:2px;flex:none}
+.fun.more{color:var(--s11)}
+
+/* conversa */
+.conv{flex:1;min-width:0;display:flex;flex-direction:column;background:var(--bg)}
+.chead{display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--solid);border-bottom:1px solid var(--weak);min-height:62px}
+.chead .who{display:flex;flex-direction:column;min-width:0}
+.chead .who b{font-size:14px}
+.chead .who small{font-size:11.5px;color:var(--s10)}
+.subject{margin:0 auto;display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid var(--strong);border-radius:10px;background:var(--solid);font-size:12.5px;max-width:380px}
+.subject .lbl{color:var(--s10);font-size:11px;text-transform:uppercase;letter-spacing:.06em}
+.subject b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.subject .stg{color:var(--s11)}
+.assignee{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--s11)}
+.msgs{flex:1;overflow:auto;padding:16px 22px;display:flex;flex-direction:column;gap:10px}
+.day{align-self:center;font-size:11px;color:var(--s10);background:var(--s3);padding:2px 10px;border-radius:99px}
+.m{max-width:72%;display:flex;flex-direction:column;gap:3px}
+.m .b{padding:9px 12px;border-radius:12px;font-size:13.5px;box-shadow:var(--shadow)}
+.m.in{align-self:flex-start}
+.m.in .b{background:var(--bubin);border-top-left-radius:4px}
+.m.out{align-self:flex-end;align-items:flex-end}
+.m.out .b{background:var(--bubout);border-top-right-radius:4px}
+.m.note{align-self:flex-end;align-items:flex-end}
+.m.note .b{background:var(--note);border:1px dashed var(--a9);border-top-right-radius:4px}
+.m .t{font-size:11px;color:var(--s10);display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.m .t .fun{font-size:10.5px;padding:1px 6px}
+.act{align-self:center;display:flex;align-items:center;gap:6px;font-size:12px;color:var(--s11);background:var(--solid);border:1px solid var(--weak);padding:4px 10px;border-radius:99px;max-width:90%}
+.act.ai{color:var(--v11);background:var(--v3);border-color:transparent}
+.banner{margin:0 16px 10px;border:1px solid var(--b6);background:var(--b2);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.banner.warn{border-color:var(--a9);background:var(--a3)}
+.banner .h{display:flex;gap:8px;align-items:center;font-weight:600;font-size:13px;color:var(--b11)}
+.banner.warn .h{color:var(--a11)}
+.banner p{font-size:12.5px;color:var(--s11)}
+.banner .opts{display:flex;flex-direction:column;gap:6px}
+.banner .opt{display:flex;gap:8px;align-items:center;background:var(--solid);border:1px solid var(--weak);border-radius:9px;padding:7px 10px;font-size:12.5px}
+.banner .opt small{color:var(--s10);margin-left:auto}
+.banner .acts{display:flex;gap:6px;flex-wrap:wrap}
+.reply{margin:0 16px 14px;background:var(--solid);border:1px solid var(--strong);border-radius:12px;display:flex;flex-direction:column}
+.reply .rt{display:flex;gap:14px;padding:8px 12px 0;font-size:12.5px;color:var(--s11)}
+.reply .rt .on{color:var(--s12);font-weight:600}
+.reply .ctx{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--s11);padding:6px 12px 0}
+.reply .ta{padding:8px 12px;min-height:46px;font-size:13.5px;color:var(--s12)}
+.reply .ta.empty{color:var(--s9)}
+.reply .bar{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;border-top:1px solid var(--weak);color:var(--s10)}
+
+/* painel de assuntos */
+.panel{width:340px;flex:none;background:var(--solid);border-left:1px solid var(--weak);display:flex;flex-direction:column;overflow:auto}
+.ptabs{display:flex;gap:16px;padding:14px 16px 0;border-bottom:1px solid var(--weak);font-size:13px;color:var(--s11)}
+.ptabs span{padding-bottom:9px}
+.ptabs .on{color:var(--s12);font-weight:600;border-bottom:2px solid var(--brand)}
+.psec{padding:12px 16px;display:flex;flex-direction:column;gap:8px;border-bottom:1px solid var(--weak)}
+.psec h3{font-size:12px;color:var(--s10);text-transform:uppercase;letter-spacing:.06em;display:flex;justify-content:space-between;align-items:center}
+.prow{display:flex;gap:9px;padding:9px 10px;border:1px solid var(--weak);border-radius:10px;align-items:flex-start}
+.prow.focus{border-color:var(--b6);background:var(--b2)}
+.prow.lock{background:var(--s2);color:var(--s11)}
+.prow.closed{opacity:.75}
+.prow .bar{width:4px;align-self:stretch;border-radius:4px;flex:none}
+.prow .c{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.prow .c b{font-size:13px}
+.prow .c small{font-size:11.5px;color:var(--s11);display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.pill{font-size:10.5px;font-weight:600;padding:1px 7px;border-radius:99px;background:var(--s3);color:var(--s11);white-space:nowrap}
+.pill.cur{background:var(--brand);color:#fff}
+.pill.won{background:var(--g3);color:var(--g11)}
+.pill.res{background:var(--t3);color:var(--t11)}
+.pill.pin{background:var(--v3);color:var(--v11)}
+.kv{display:grid;grid-template-columns:110px 1fr;gap:6px 8px;font-size:12.5px}
+.kv dt{color:var(--s10)}
+.kv dd{margin:0;color:var(--s12)}
+.why{display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--s11)}
+.why li{list-style:none;display:flex;gap:6px}
+.why ul{margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+
+/* destaques do passo */
+.hl{position:relative;outline:2px solid #F59E0B;outline-offset:2px;border-radius:10px;animation:pulse 1.8s ease-in-out infinite}
+@keyframes pulse{50%{outline-color:rgba(245,158,11,.35)}}
+
+/* modal */
+.overlay{position:absolute;inset:0;background:rgba(13,20,35,.45);display:grid;place-items:center;z-index:5}
+.modal{width:520px;background:var(--solid);border-radius:14px;box-shadow:var(--shadowlg);display:flex;flex-direction:column}
+.modal header{padding:16px 18px;border-bottom:1px solid var(--weak);display:flex;justify-content:space-between;align-items:center}
+.modal header h2{font-size:16px}
+.modal .mb{padding:16px 18px;display:flex;flex-direction:column;gap:12px}
+.modal footer{padding:12px 18px;border-top:1px solid var(--weak);display:flex;justify-content:flex-end;gap:8px}
+.field{display:flex;flex-direction:column;gap:5px}
+.field label,.field .lab{font-size:12.5px;font-weight:600}
+.input{border:1px solid var(--strong);border-radius:9px;padding:8px 10px;font-size:13px;background:var(--solid)}
+.input.area{min-height:58px;color:var(--s12)}
+.choice{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.choice div{border:1px solid var(--strong);border-radius:9px;padding:8px 10px;font-size:12.5px;display:flex;gap:6px;align-items:center}
+.choice div.on{border-color:var(--brand);background:var(--b2);box-shadow:inset 0 0 0 1px var(--brand)}
+.hint{font-size:12px;color:var(--s11);background:var(--s2);border:1px solid var(--weak);border-radius:9px;padding:8px 10px;display:flex;gap:6px}
+
+/* kanban */
+.page{flex:1;min-width:0;display:flex;flex-direction:column}
+.ph{display:flex;align-items:center;gap:14px;padding:14px 20px;background:var(--solid);border-bottom:1px solid var(--weak)}
+.ph h1{font-size:20px}
+.seg{display:flex;background:var(--s3);border-radius:10px;padding:3px}
+.seg span{padding:5px 10px;border-radius:8px;font-size:12.5px;color:var(--s11);display:flex;gap:5px;align-items:center}
+.seg .on{background:var(--solid);color:var(--s12);font-weight:600;box-shadow:var(--shadow)}
+.tools{display:flex;gap:8px;padding:12px 20px;align-items:center;border-bottom:1px solid var(--weak);background:var(--bg);flex-wrap:wrap}
+.board{flex:1;display:flex;gap:12px;padding:14px 20px;overflow:hidden}
+.col{width:250px;flex:none;background:var(--s3);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px}
+.col h3{font-size:13.5px;display:flex;align-items:center;gap:7px}
+.col h3 i{width:9px;height:9px;border-radius:2px}
+.col h3 em{margin-left:auto;font-style:normal;font-size:11px;background:var(--solid);border-radius:6px;padding:1px 6px;color:var(--s11)}
+.kc{background:var(--solid);border-radius:11px;padding:10px 12px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:5px;border-left:3px solid var(--strong)}
+.kc b{font-size:13.5px}
+.kc small{font-size:12px;color:var(--s11)}
+.kc .row{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--s11);gap:6px}
+.kc .val{font-weight:600;color:var(--s12);font-size:13.5px}
+.tagx{font-size:10.5px;padding:2px 6px;border-radius:6px;background:var(--v3);color:var(--v11);display:inline-flex;gap:4px;align-items:center;font-weight:500}
+.tagx.red{background:var(--r3);color:var(--r11)}
+.tagx.amber{background:var(--a3);color:var(--a11)}
+
+/* configurações */
+.cfg{flex:1;overflow:auto;padding:18px 26px;display:flex;flex-direction:column;gap:16px}
+.crumb{font-size:12.5px;color:var(--s10);display:flex;gap:6px;align-items:center}
+.cfg h1{font-size:20px}
+.stabs{display:flex;gap:18px;border-bottom:1px solid var(--weak);font-size:13px;color:var(--s11)}
+.stabs span{padding-bottom:9px;display:flex;gap:6px;align-items:center}
+.stabs .on{color:var(--s12);font-weight:600;border-bottom:2px solid var(--brand)}
+.new{font-size:10px;font-weight:700;background:var(--v3);color:var(--v11);padding:1px 6px;border-radius:99px;letter-spacing:.04em}
+.box{background:var(--solid);border:1px solid var(--weak);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.box h2{font-size:15px}
+.box > p{font-size:13px;color:var(--s11)}
+.frow{display:flex;gap:12px;align-items:center;padding:10px 12px;border:1px solid var(--weak);border-radius:10px}
+.frow.on{border-color:var(--b6);background:var(--b2)}
+.ck{width:18px;height:18px;border-radius:5px;border:1.5px solid var(--s9);display:grid;place-items:center;flex:none}
+.ck.on{background:var(--brand);border-color:var(--brand);color:#fff}
+.frow .c{flex:1;display:flex;flex-direction:column;gap:2px}
+.frow .c small{font-size:12px;color:var(--s11)}
+.modes{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.mode{border:1px solid var(--strong);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--s11)}
+.mode b{color:var(--s12);font-size:13px;display:flex;gap:6px;align-items:center}
+.mode.on{border-color:var(--brand);background:var(--b2);box-shadow:inset 0 0 0 1px var(--brand)}
+.radio{width:16px;height:16px;border-radius:50%;border:1.5px solid var(--s9);flex:none;display:grid;place-items:center}
+.radio.on{border-color:var(--brand)}
+.radio.on::after{content:"";width:8px;height:8px;border-radius:50%;background:var(--brand)}
+.drawer{position:absolute;right:0;top:0;bottom:0;width:560px;background:var(--solid);box-shadow:var(--shadowlg);display:flex;flex-direction:column;z-index:4}
+.drawer header{background:#0D2344;color:#fff;padding:18px 22px;display:flex;flex-direction:column;gap:4px}
+.drawer header h2{font-size:19px}
+.drawer header small{color:#B9C7DC}
+.drawer .db{flex:1;overflow:auto;padding:16px 22px;display:flex;flex-direction:column;gap:14px}
+.drawer footer{padding:12px 22px;border-top:1px solid var(--weak);display:flex;justify-content:flex-end;gap:8px}
+.teamchip{display:inline-flex;gap:6px;align-items:center;padding:5px 9px;border-radius:8px;background:var(--s3);font-size:12.5px;font-weight:500}
+table.mx{border-collapse:collapse;width:100%;font-size:12.5px}
+.mx th,.mx td{padding:8px 10px;border-bottom:1px solid var(--weak);text-align:left}
+.mx th{font-size:11px;color:var(--s10);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.mx td.c{text-align:center}
+.mx tr.hlrow td{background:var(--v3)}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.tile{background:var(--solid);border:1px solid var(--weak);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:4px}
+.tile small{font-size:12px;color:var(--s11)}
+.tile b{font-size:22px;font-variant-numeric:tabular-nums}
+.tile span{font-size:11.5px;color:var(--s10)}
+.foot{padding:4px 16px 24px;color:var(--s10);font-size:12px;max-width:1100px}
+</style>
+<style>
+.ctype{font-size:10.5px;font-weight:600;padding:1px 7px;border-radius:99px;background:var(--s3);color:var(--s11);margin-left:6px;vertical-align:1px}
+.ctype.cli{background:var(--g3);color:var(--g11)}
+.ctype.lead{background:var(--a3);color:var(--a11)}
+.nocard{font-size:11px;padding:2px 7px;border-radius:6px;border:1px dashed var(--s9);color:var(--s11)}
+.agtable td{vertical-align:middle}
+.agname{display:flex;gap:8px;align-items:center}
+.funsel{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.all{font-size:12px;font-weight:600;padding:3px 9px;border-radius:7px;background:var(--b3);color:var(--b11)}
+.muted{font-size:12px;color:var(--s11)}
+.sbadge{align-self:flex-start;display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;padding:3px 8px;border-radius:7px;background:var(--b3);color:var(--b11);max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.toggle{width:34px;height:20px;border-radius:99px;background:var(--brand);position:relative;flex:none}
+.toggle::after{content:"";position:absolute;right:2px;top:2px;width:16px;height:16px;border-radius:50%;background:#fff}
+</style>
+<script src="https://unpkg.com/lucide@0.453.0/dist/umd/lucide.min.js"></script>
+
+<div class="proto" role="banner">
+  <div style="display:flex;flex-direction:column;gap:1px">
+    <span class="tag">Protótipo v6 — nada aqui é tela pronta</span>
+    <b>Chat2You · ciclo do cliente com vários funis</b>
+  </div>
+  <div class="tabs" role="tablist" id="tabs" aria-label="Cenários"></div>
+</div>
+
+<main class="stage">
+  <aside class="guide" id="guide" aria-live="polite"></aside>
+  <div class="frame-wrap"><div class="app" id="app"></div></div>
+</main>
+<p class="foot">Dados fictícios. Corretora “Horizonte Seguros” (chat.hub2you.ai) e clínica “Sorriso Pleno” (chat.autonomia.site). Use ← → do teclado para navegar entre os passos.</p>
+
+<script>
+/* ---------- dados base ---------- */
+const PEOPLE={
+  ana:{n:'Ana Ribeiro',ini:'AR',c:'#2781F6'},
+  leo:{n:'Léo Martins',ini:'LM',c:'#6E56CF'},
+  paula:{n:'Paula Dias',ini:'PD',c:'#E54666'},
+  marta:{n:'Marta Lopes',ini:'ML',c:'#0E7C66'},
+  rod:{n:'Rodrigo (admin)',ini:'RA',c:'#0D2344'},
+  bia:{n:'Bia Costa',ini:'BC',c:'#12A594'},
+  dra:{n:'Dra. Helena',ini:'DH',c:'#3E63DD'},
+  carla:{n:'Carla Mendes',ini:'CM',c:'#D6A10B'},
+  bot:{n:'Agente IA',ini:'IA',c:'#6E56CF'},
+  none:{n:'Sem responsável',ini:'—',c:'#80838D'}
+};
+/* acesso por funil dentro da caixa (configurado em CRM → Configurar caixas) */
+const VIEWERS={
+  ana:{p:'ana',role:'Agente',funs:['nofun','auto']},
+  leo:{p:'leo',role:'Agente',funs:['res','emp']},
+  paula:{p:'paula',role:'Agente',funs:['pos']},
+  marta:{p:'marta',role:'Agente · gestora',all:true},
+  rod:{p:'rod',role:'Administrador',all:true},
+  bia:{p:'bia',role:'Agente',funs:['agd']}
+};
+const FUN={
+  nofun:{n:'Sem funil (triagem)',kind:'—',c:'#80838D',stages:[]},
+  auto:{n:'Seguro Auto',kind:'Comercial',c:'#2781F6',stages:['Novo','Em cotação','Proposta','Fechamento']},
+  res:{n:'Residencial',kind:'Comercial',c:'#12A594',stages:['Novo','Em cotação','Proposta','Fechamento']},
+  emp:{n:'Empresarial',kind:'Comercial',c:'#6E56CF',stages:['Novo','Vistoria prévia','Proposta','Fechamento']},
+  pos:{n:'Pós-venda',kind:'Atendimento',c:'#E54666',stages:['Aberto','Com a seguradora','Aguardando cliente']},
+  com:{n:'Comercial',kind:'Comercial',c:'#2781F6',stages:['Novo','Em cotação','Proposta','Fechamento']},
+  agd:{n:'Agendamentos',kind:'Atendimento',c:'#12A594',stages:['Pedido','Horário proposto','Confirmado']},
+  orc:{n:'Orçamentos',kind:'Comercial',c:'#3E63DD',stages:['Novo','Avaliação','Proposta','Fechamento']}
+};
+const ICON=(n,s='')=>`<i data-lucide="${n}" class="ico" style="${s}"></i>`;
+const AV=(id,size)=>{const p=PEOPLE[id];return `<span class="av" style="background:${p.c};${size?`width:${size}px;height:${size}px;font-size:${size/2.6}px`:''}" aria-hidden="true">${p.ini}</span>`};
+const CAV=(ini,c)=>`<span class="av" style="background:${c}" aria-hidden="true">${ini}</span>`;
+const FCHIP=(f,txt)=>`<span class="fun"><i style="background:${FUN[f].c}"></i>${txt||FUN[f].n}</span>`;
+const CTYPE=t=>t?`<span class="ctype ${t==='Cliente'?'cli':t==='Lead'?'lead':''}">${t}</span>`:'';
+function canSee(card,v){const V=VIEWERS[v];return V.all||card.owner===v||V.funs.includes(card.f)}
+
+/* ---------- telas ---------- */
+function sidebar(active,viewer,acct){
+  const V=VIEWERS[viewer],P=PEOPLE[V.p];
+  const items=[['inbox','Caixa de Entrada','inbox'],['message-circle','Conversas','conv'],['contact','Relacionamentos','rel'],['square-kanban','CRM','crm'],['wallet','Financeiro','fin'],['settings','Configurações','cfg']];
+  let h=`<nav class="sidebar" aria-label="Menu"><div class="logo"><span class="orb"></span><span>${acct||'Horizonte Seguros'}</span></div><div class="sbsearch">${ICON('search')}Pesquisar...</div><div class="menu">`;
+  items.forEach(([ic,l,k])=>{h+=`<div class="mi ${active===k?'on':''}">${ICON(ic)}${l}</div>`;
+    if(k==='crm'&&active==='crm')h+=`<div class="mi sub on">Kanban</div><div class="mi sub">Calendário</div><div class="mi sub">Dashboard</div>`;
+    if(k==='cfg'&&active==='cfg')h+=`<div class="mi sub on">Caixas de entrada</div><div class="mi sub">Agentes</div><div class="mi sub">Funções personalizadas</div>`;});
+  const scope=V.all?'todos os funis':V.funs.map(f=>FUN[f].n).join(', ');
+  h+=`</div><div class="me">${AV(V.p,30)}<div><div style="font-size:12.5px;font-weight:600">${P.n}</div><small>${V.role} · ${scope}</small></div></div></nav>`;
+  return h;
+}
+function msgHTML(m){
+  if(m.k==='day')return `<div class="day">${m.t}</div>`;
+  if(m.k==='act')return `<div class="act">${ICON(m.ic||'info')}<span>${m.t}</span></div>`;
+  if(m.k==='ai')return `<div class="act ai">${ICON('sparkles')}<span>${m.t}</span></div>`;
+  const tag=m.tag?FCHIP(m.tag[0],m.tag[1]):'';
+  const who=m.who?PEOPLE[m.who].n+' · ':'';
+  return `<div class="m ${m.k}"><div class="b">${m.t}</div><div class="t">${who}${m.time||''}${tag?' · '+tag:''}</div></div>`;
+}
+function listItem(c,i,H){
+  const chips=c.nocard?'<span class="nocard">Sem assunto ainda</span>':(c.chips||[]).map(x=>FCHIP(x[0],x[1])).join('')+(c.more?`<span class="fun more">+${c.more} ${ICON('lock','width:11px;height:11px')}</span>`:'');
+  return `<div class="citem ${i===0&&!c.notopen?'on':''} ${c.hl&&H('listitem')?'hl':''}">${CAV(c.ini,c.c)}<div class="body"><div class="top"><b>${c.name}${CTYPE(c.type)}</b><time>${c.time}</time></div><div class="prev">${c.prev}</div><div class="chips ${i===0&&H('listchips')?'hl':''}">${chips}</div><div class="meta">${ICON('message-circle','width:12px;height:12px')}${c.inbox||'WhatsApp Horizonte'}${c.as?' · '+PEOPLE[c.as].n.split(' ')[0]:''}</div></div></div>`;
+}
+function convScreen(st,H){
+  const V=st.viewer,cards=st.cards||[],focus=cards.find(c=>c.focus);
+  const list=st.list.map((c,i)=>listItem(c,i,H)).join('');
+  const fil=st.filter?`<span class="fchip on ${H('filter')?'hl':''}">${ICON('filter','width:13px;height:13px')}Funil: ${st.filter}</span>`:`<span class="fchip">${ICON('filter','width:13px;height:13px')}Funil: todos os meus</span>`;
+  const subj=focus&&canSee(focus,V)?`<span class="lbl">Assunto atual</span>${FCHIP(focus.f,'')}<b>${focus.title}</b><span class="stg">· ${focus.stage}</span>${ICON('chevron-down')}`:`<span class="lbl">Assunto atual</span><b style="color:var(--s10)">${focus?'outro funil':'nenhum ainda'}</b>`;
+  let ban='';
+  if(st.banner){const b=st.banner;ban=`<div class="banner ${b.warn?'warn':''} ${H('banner')?'hl':''}"><div class="h">${ICON(b.warn?'circle-help':'sparkles')}${b.h}</div>${b.p?`<p>${b.p}</p>`:''}${b.opts?`<div class="opts">${b.opts.map(o=>`<div class="opt">${FCHIP(o[0])}<b>${o[1]}</b><small>${o[2]||''}</small></div>`).join('')}</div>`:''}<div class="acts">${(b.acts||[]).map((a,i)=>`<button class="btn sm ${i===0?'primary':''}">${a}</button>`).join('')}</div></div>`}
+  const rc=st.replyCtx;
+  const reply=`<div class="reply ${H('reply')?'hl':''}"><div class="rt"><span class="on">Responder</span><span>Nota privada</span></div>${rc?`<div class="ctx">${ICON('corner-down-right','width:13px;height:13px')}Este envio fica no assunto: ${FCHIP(rc[0],rc[1])}${ICON('chevron-down','width:13px;height:13px')}</div>`:''}<div class="ta ${st.draft?'':'empty'}">${st.draft||'Digite uma mensagem…'}</div><div class="bar"><span style="display:flex;gap:10px">${ICON('smile')}${ICON('paperclip')}${ICON('mic')}</span><button class="btn sm primary">${ICON('send','width:14px;height:14px')}Enviar</button></div></div>`;
+  const sel=cards.find(c=>c.id===st.sel)||focus;
+  const rows=cards.map(c=>{
+    const res=c.status==='won'?'<span class="pill won">Ganho</span>':c.status==='resolved'?'<span class="pill res">Resolvido</span>':'';
+    if(!canSee(c,V))return `<div class="prow lock ${c.status!=='open'?'closed':''}"><span class="bar" style="background:${FUN[c.f].c}"></span><div class="c"><b style="display:flex;gap:6px;align-items:center">${ICON('lock','width:13px;height:13px')}${FUN[c.f].n}</b><small>com ${PEOPLE[c.owner].n} · ${c.status==='open'?'em andamento':'encerrado'}</small></div>${res}</div>`;
+    return `<div class="prow ${c.focus?'focus':''} ${c.status!=='open'?'closed':''} ${H('card:'+c.id)?'hl':''}"><span class="bar" style="background:${FUN[c.f].c}"></span><div class="c"><b>${c.title}</b><small>${FCHIP(c.f)} ${c.stage}</small><small>${AV(c.owner,16)} ${PEOPLE[c.owner].n}${c.ref?' · '+c.ref:''}</small></div><div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">${c.focus?'<span class="pill cur">Atual</span>':''}${res}</div></div>`}).join('');
+  let det='';
+  if(sel&&canSee(sel,V)){
+    const fields=Object.entries(sel.fields||{}).map(([k,v])=>`<dt>${k}</dt><dd>${v}</dd>`).join('');
+    det=`<div class="psec ${H('detail')?'hl':''}"><h3>${sel.title}</h3><dl class="kv"><dt>Funil</dt><dd>${FUN[sel.f].n} <span class="pill">${FUN[sel.f].kind}</span></dd><dt>Etapa</dt><dd>${sel.stage}</dd><dt>Responsável</dt><dd>${PEOPLE[sel.owner].n}</dd>${sel.ref?`<dt>Referente a</dt><dd>${sel.ref}</dd>`:''}${fields}</dl></div>`;
+    if(sel.why)det+=`<div class="psec ${H('why')?'hl':''}"><h3>Por que está assim? ${ICON('history','width:14px;height:14px')}</h3><div class="why"><ul>${sel.why.map(w=>`<li>${ICON(w[0],'width:13px;height:13px;margin-top:2px')}<span>${w[1]}</span></li>`).join('')}</ul></div></div>`;
+  }
+  const ct=st.contact;
+  const contactSec=`<div class="psec ${H('contact')?'hl':''}"><h3>Contato</h3><dl class="kv"><dt>Tipo</dt><dd>${CTYPE(ct.type)||'—'}${ct.since?` <span class="muted">desde ${ct.since}</span>`:''}</dd><dt>Telefone</dt><dd>${ct.phone}</dd></dl></div>`;
+  const panel=`<aside class="panel" aria-label="Assuntos da conversa"><div class="ptabs"><span>Contato</span><span class="on">Assuntos (${cards.length})</span><span>Histórico</span></div>${contactSec}<div class="psec ${H('panel')?'hl':''}"><h3>Assuntos deste contato <button class="btn sm">${ICON('plus','width:13px;height:13px')}Novo assunto</button></h3>${rows||'<p class="muted">Nenhum assunto ainda.</p>'}</div>${det}</aside>`;
+  const asg=st.assignee?`<span class="assignee ${H('assignee')?'hl':''}">${AV(st.assignee,22)}Atendendo: <b style="color:var(--s12)">${PEOPLE[st.assignee].n}</b></span>`:`<span class="assignee">Sem atendente</span>`;
+  let modal='';
+  if(st.modal){const m=st.modal;modal=`<div class="overlay"><div class="modal ${H('modal')?'hl':''}" role="dialog" aria-label="Novo assunto"><header><h2>Novo assunto</h2>${ICON('x')}</header><div class="mb">
+    <div class="field"><span class="lab">Em qual funil?</span><div class="choice">${m.funs.map(f=>`<div class="${f===m.f?'on':''}"><span class="radio ${f===m.f?'on':''}"></span>${FCHIP(f)}</div>`).join('')}</div></div>
+    <div class="field"><label>Título</label><div class="input">${m.title}</div></div>
+    <div class="field"><label>Referente a</label><div class="input">${m.ref}</div></div>
+    <div class="hint">${ICON('users')}<span>Quem acessa <b>${FUN[m.f].n}</b> nesta caixa: ${m.pool}. Próximo no rodízio: <b>${PEOPLE[m.owner].n}</b>.</span></div>
+    </div><footer><button class="btn">Cancelar</button><button class="btn primary">${ICON('check','width:14px;height:14px')}Criar assunto</button></footer></div></div>`}
+  return `${sidebar('conv',V,st.acct)}<div class="main"><section class="clist" aria-label="Conversas"><header><h1>Conversas</h1><div class="ctabs">${[['mine','Minhas'],['part','Participando'],['unas','Não atribuídas'],['bot','Com o agente IA'],['all','Todas']].map(t=>`<span class="${(st.tab||'mine')===t[0]?'on':''}">${t[1]}</span>`).join('')}</div><div class="filters">${fil}<span class="fchip">${ICON('inbox','width:13px;height:13px')}Caixa: todas</span></div></header>${list}${st.listNote?`<p class="muted ${H('listnote')?'hl':''}" style="padding:12px 14px">${st.listNote}</p>`:''}</section>
+  <section class="conv" aria-label="Conversa"><div class="chead">${CAV(ct.ini,ct.c)}<div class="who"><b>${ct.name}${CTYPE(ct.type)}</b><small>${st.inbox||'WhatsApp Horizonte'} · ${ct.phone}</small></div><div class="subject ${H('subject')?'hl':''}">${subj}</div>${st.parts?`<span class="assignee ${H('parts')?'hl':''}">Participantes: ${st.parts.map(p=>AV(p,22)).join('')}</span>`:''}${asg}<button class="btn sm">${ICON('check','width:14px;height:14px')}Resolver</button></div>
+  <div class="msgs">${st.msgs.map(msgHTML).join('')}</div>${ban}${reply}</section>${panel}</div>${modal}`;
+}
+function kanbanScreen(st,H){
+  const V=VIEWERS[st.viewer];
+  const vis=(st.funs||['auto','res','emp','pos']).filter(f=>V.all||V.funs.includes(f));
+  const cols=st.cols.map(col=>`<div class="col"><h3><i style="background:${FUN[st.f].c}"></i>${col.n}<em>${col.cards.length}</em></h3>${col.cards.map(k=>`<div class="kc ${k.hl&&H('kc')?'hl':''}" style="border-left-color:${FUN[st.f].c}"><b>${k.co||k.who}${k.co?'':CTYPE(k.type)}</b>${k.co?`<small>${k.who}${CTYPE(k.type)}</small>`:''}<span class="sbadge">${ICON('tag','width:12px;height:12px')}${k.t}</span>${k.val?`<span class="val">${k.val}</span>`:''}${k.tags?`<div class="chips">${k.tags.map(t=>`<span class="tagx">${ICON(t[1]||'layers','width:11px;height:11px')}${t[0]}</span>`).join('')}</div>`:''}<div class="row"><span style="display:flex;gap:5px;align-items:center">${AV(k.o,18)}${PEOPLE[k.o].n}</span><span>${ICON('message-circle','width:12px;height:12px')} ${k.when||'agora'}</span></div></div>`).join('')}</div>`).join('');
+  return `${sidebar('crm',st.viewer,st.acct)}<div class="page"><div class="ph"><h1>CRM Kanban</h1><div class="seg"><span class="on">${ICON('square-kanban','width:14px;height:14px')}Kanban</span><span>${ICON('list','width:14px;height:14px')}Lista</span><span>${ICON('calendar','width:14px;height:14px')}Calendário</span></div><span style="margin-left:auto"></span><button class="btn primary">${ICON('plus','width:14px;height:14px')}Nova oportunidade</button></div>
+  <div class="tools"><span class="btn" style="min-width:200px;justify-content:space-between">${FCHIP(st.f)}${ICON('chevron-down')}</span><span class="muted ${H('funsel')?'hl':''}" style="padding:4px 6px">Funis que você acessa: ${vis.map(f=>FCHIP(f)).join(' ')}</span><span class="input" style="flex:1;min-width:140px;color:var(--s9)">Buscar por nome</span><span class="btn">${ICON('sliders-horizontal','width:14px;height:14px')}Mais filtros</span></div>
+  <div class="board">${cols}</div></div>`;
+}
+function agentsScreen(st,H){
+  const rows=st.agents.map(a=>`<tr><td><span class="agname">${AV(a.p,26)}<span><b>${PEOPLE[a.p].n}</b><br><span class="muted">${a.role}</span></span></span></td><td><div class="funsel">${a.all?'<span class="all">Todos os funis</span>':a.funs.map(f=>FCHIP(f)).join('')}<button class="btn sm ghost" aria-label="Editar funis">${ICON('pencil','width:13px;height:13px')}</button></div></td><td class="${H('owncol')?'hl':''}"><div class="choice" style="grid-template-columns:auto auto;gap:4px"><div class="${a.own?'':'on'}" style="padding:4px 8px"><span class="radio ${a.own?'':'on'}"></span>Todas</div><div class="${a.own?'on':''}" style="padding:4px 8px"><span class="radio ${a.own?'on':''}"></span>Só as suas</div></div></td><td class="muted">${a.recv}</td></tr>`).join('');
+  const inboxes=[['message-circle','WhatsApp Horizonte','4 funis · 5 agentes · cria card sozinha',1],['instagram','Instagram Horizonte','1 funil (Seguro Auto) · cria card sozinha'],['globe','Chat do site','CRM desligado']];
+  const funs=['auto','res','emp','pos'];
+  const bg=kanbanScreen({viewer:st.viewer,f:'auto',cols:FUN.auto.stages.map(n=>({n,cards:[]}))},()=>false);
+  return bg+`<div class="overlay" style="background:rgba(13,20,35,.35)"></div><aside class="drawer" style="width:1010px" aria-label="Configurar caixas no CRM">
+  <div style="padding:16px 22px;border-bottom:1px solid var(--weak);display:flex;justify-content:space-between;align-items:center"><div><h2 style="font-size:18px">Caixas de entrada no CRM</h2><p class="muted">Quais funis cada caixa usa e quem vê o quê.</p></div>${ICON('x')}</div>
+  <div style="flex:1;display:flex;min-height:0">
+   <nav style="width:250px;flex:none;border-right:1px solid var(--weak);padding:12px;display:flex;flex-direction:column;gap:6px;overflow:auto" aria-label="Caixas">${inboxes.map(i=>`<div class="frow ${i[3]?'on':''}" style="padding:9px 10px">${ICON(i[0])}<div class="c"><b style="font-size:13px">${i[1]}</b><small>${i[2]}</small></div></div>`).join('')}</nav>
+   <div style="flex:1;min-width:0;overflow:auto;padding:16px 20px;display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;align-items:center;gap:8px">${ICON('message-circle')}<h2 style="font-size:17px">WhatsApp Horizonte</h2><span class="pill res" style="margin-left:6px">CRM ligado</span></div>
+    <div class="box ${H('funs')?'hl':''}" style="padding:14px"><h2>1. Funis desta caixa</h2><p>Os tipos de assunto que chegam por este WhatsApp.</p><div style="display:flex;gap:8px;flex-wrap:wrap">${funs.map(f=>`<span class="frow on" style="padding:6px 10px;gap:8px"><span class="ck on">${ICON('check','width:12px;height:12px')}</span>${FCHIP(f)}</span>`).join('')}<button class="btn sm">${ICON('plus','width:13px;height:13px')}Criar funil</button></div><span class="muted">Com um funil só, aparece também a etapa inicial, como hoje.</span></div>
+    <div class="box ${H('create')?'hl':''}" style="padding:14px"><h2>2. Criação de cards</h2><div class="frow on"><span class="toggle" aria-hidden="true"></span><div class="c"><b>Criar card sozinho quando o assunto for identificado</b><small>Enquanto o assunto não aparece (“Oi, bom dia”), a conversa fica na triagem. Cada card começa na primeira etapa do seu funil.</small></div></div></div>
+    <div class="box ${H('table')?'hl':''}" style="padding:14px"><h2>3. Quem vê o quê</h2><p>Para cada pessoa da caixa: de quais funis ela vê as conversas e se vê todas ou só as suas. Só aparece para ela a conversa que tiver card nesses funis.</p>
+    <table class="mx agtable"><thead><tr><th>Agente</th><th>Vê conversas com card em</th><th>Dessas, vê</th><th>Recebe cards novos de</th></tr></thead><tbody>${rows}</tbody></table>
+    <div class="hint ${H('note')?'hl':''}">${ICON('info')}<span><b>Sem funil</b> = conversas ainda sem card (triagem). Card encerrado continua dando visão. “Todos os funis” inclui Sem funil e é o padrão de quem já está na caixa. Quem entra na caixa continua sendo definido em Configurações → Caixas de entrada → Agentes.</span></div></div>
+   </div></div>
+  <footer><button class="btn">Cancelar</button><button class="btn primary">${ICON('check','width:14px;height:14px')}Salvar WhatsApp Horizonte</button></footer></aside>`;
+}
+function funnelScreen(st,H){
+  const f=FUN[st.f];
+  return kanbanScreen({viewer:st.viewer,f:st.f,cols:f.stages.slice(0,3).map(n=>({n,cards:[]}))},()=>false)+`<div class="overlay" style="background:rgba(13,20,35,.35)"></div><aside class="drawer" aria-label="Editar funil"><header><small>Editar funil</small><h2>${f.n}</h2></header><div class="db">
+  <div class="field ${H('kind')?'hl':''}"><span class="lab">Tipo</span><div class="choice"><div class="${f.kind==='Comercial'?'on':''}"><span class="radio ${f.kind==='Comercial'?'on':''}"></span><span><b>Comercial</b><br><small class="muted">Termina em ganho ou perdido. Conta como venda.</small></span></div><div class="${f.kind==='Atendimento'?'on':''}"><span class="radio ${f.kind==='Atendimento'?'on':''}"></span><span><b>Atendimento</b><br><small class="muted">Termina em resolvido ou cancelado. Nunca conta como venda.</small></span></div></div></div>
+  <div class="frow on ${H('client')?'hl':''}"><span class="toggle" aria-hidden="true"></span><div class="c"><b>Ao ganhar, o contato vira Cliente</b><small>Lead passa a Cliente quando um card deste funil é ganho.</small></div></div>
+  <div class="field ${H('when')?'hl':''}"><span class="lab">Quando usar este funil</span><div class="input area">${st.when}</div><span class="muted">A IA usa este texto para sugerir “parece um assunto de ${f.n}”.</span></div>
+  <div class="field ${H('who')?'hl':''}"><span class="lab">Quem acessa este funil</span><div class="frow"><div class="c"><b>WhatsApp Horizonte</b><small>${st.who}</small></div><button class="btn sm">Editar na caixa</button></div><div class="frow"><div class="c"><b>Instagram Horizonte</b><small>Todos os agentes da caixa (caixa com um funil só)</small></div></div></div>
+  <div class="field"><span class="lab">Etapas</span><div style="display:flex;gap:6px;flex-wrap:wrap">${f.stages.map(s=>`<span class="teamchip">${s}</span>`).join('')}</div></div>
+  </div><footer><button class="btn">Cancelar</button><button class="btn primary">${ICON('check','width:14px;height:14px')}Salvar</button></footer></aside>`;
+}
+function reportScreen(st,H){
+  return `${sidebar('rel',st.viewer)}<div class="page"><div class="cfg"><div class="crumb">Relacionamentos ${ICON('chevron-right','width:13px;height:13px')} ${st.name}</div><h1>${st.name}${CTYPE('Cliente')}</h1><p class="muted">Lead em ${st.leadAt} · Cliente desde ${st.since}</p>
+  <div class="tiles ${H('tiles')?'hl':''}">${st.tiles.map(t=>`<div class="tile"><small>${t[0]}</small><b>${t[1]}</b><span>${t[2]}</span></div>`).join('')}</div>
+  <div class="box ${H('table')?'hl':''}"><h2>Linha do tempo</h2><table class="mx"><thead><tr><th>Quando</th><th>Assunto</th><th>Funil</th><th>Resultado</th><th>Responsável</th></tr></thead><tbody>${st.rows.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td>${FCHIP(r[2])}</td><td>${r[3]}</td><td>${r[4]}</td></tr>`).join('')}</tbody></table></div>
+  <div class="hint">${ICON('info')}<span>Uma pessoa, uma conversa de WhatsApp, vários cards. A lista de conversas mostra ${st.name.split(' ')[0]} uma vez; o CRM mostra um card por cotação ou atendimento.</span></div></div></div>`;
+}
+
+/* ---------- cenário: Horizonte ---------- */
+const joao={name:'João Pereira',ini:'JP',c:'#3E63DD',phone:'+55 11 98712-4410'};
+const cAuto={id:'a1',f:'auto',title:'Cotação — Onix 2021',stage:'Novo',owner:'ana',status:'open',ref:'Onix 2021',fields:{'Placa':'—','CEP pernoite':'—'}};
+const cRes={id:'r1',f:'res',title:'Cotação — Apto Moema',stage:'Novo',owner:'leo',status:'open',ref:'Apto 82 m², Moema',fields:{'Valor do imóvel':'R$ 780.000'}};
+const cEmp={id:'e1',f:'emp',title:'Cotação — Loja Materiais Pereira',stage:'Novo',owner:'leo',status:'open',ref:'Loja, CNPJ 12.345.678/0001-90',fields:{'Atividade':'materiais de construção','Área':'240 m²'}};
+const othersLeo=[{name:'Sílvia Mota',ini:'SM',c:'#12A594',time:'09:40',prev:'Léo: mandei a proposta da Allianz',chips:[['res','Residencial · Proposta']],as:'leo',type:'Lead'},{name:'Padaria Trigo Bom',ini:'TB',c:'#D6A10B',time:'ontem',prev:'Precisa da vistoria quando?',chips:[['emp','Empresarial · Vistoria prévia']],as:'leo',type:'Lead'}];
+
+const jul={name:'Juliana Castro',ini:'JC',c:'#D6A10B',phone:'+55 11 99120-4455'};
+const julMsgs=[{k:'day',t:'Hoje'},{k:'in',t:'Oi! Bom dia, tudo bem? 😊',time:'09:01'},{k:'ai',t:'Assunto ainda não identificado: conversa na triagem (Sem funil) · rodízio: Ana Ribeiro'},{k:'out',who:'ana',t:'Bom dia, Juliana! Tudo ótimo. Como posso te ajudar?',time:'09:02'}];
+
+const C0={name:'Configurar',lv:'Base',steps:[
+ {s:'agents',viewer:'rod',hl:['funs','create','table','owncol'],
+  agents:[{p:'ana',role:'Agente',funs:['nofun','auto'],recv:'Sem funil (triagem), Seguro Auto'},{p:'leo',role:'Agente',funs:['res','emp'],recv:'Residencial, Empresarial'},{p:'carla',role:'Agente',funs:['res'],own:1,recv:'Residencial'},{p:'paula',role:'Agente',funs:['pos'],recv:'Pós-venda'},{p:'marta',role:'Agente · gestora',all:true,recv:'Todos, inclusive Sem funil'}],
+  title:'Um lugar só: funis da caixa, criação e quem vê o quê',
+  say:'<p>Tudo que liga a caixa ao CRM fica num lugar só: <strong>CRM → Configurar caixas</strong>. Hoje está espalhado entre este painel, o Editar funil e a caixa. Cada caixa tem três blocos e <strong>um único Salvar</strong>: os funis da caixa, a criação de cards e quem vê o quê.</p><p>Em <strong>Quem vê o quê</strong>, cada pessoa tem os funis que vê e se vê <strong>todas</strong> as conversas deles ou <strong>só as suas</strong>. Isso substitui o “Visibilidade” da caixa inteira.</p><p>Nela existe o item <strong>Sem funil</strong>: quem tem esse item vê e recebe as conversas cujo assunto ainda não foi identificado (“Oi, bom dia”). É a <strong>triagem</strong>. Aqui, só a Ana e a Marta.</p><p>A coluna <strong>Dessas, vê</strong> define se a pessoa enxerga todas as conversas do funil ou só as suas. Léo vê todo o Residencial; a Carla, do mesmo funil, só os clientes dela. A gestora vê tudo.</p><p>A mesma configuração define a <strong>distribuição</strong>: quem acessa um funil entra no rodízio dos cards novos dele.</p>',
+  rules:['Padrão de quem já está na caixa: “Todos os funis”, inclusive Sem funil (nada muda até o admin mexer).','Caixa que hoje está em “Agente vê apenas atribuídos” vira “Só as suas” para cada agente que não é admin: ninguém ganha nem perde visão na troca.','Sai o “Funil padrão” da caixa com vários funis; cada card começa na primeira etapa do seu funil.','Com mais de um funil, a caixa não salva sem ninguém em “Sem funil”: conversa sem assunto nunca fica invisível.','“Todas” ou “Só as suas” é escolha por pessoa: o Léo vê todo o Residencial, a Carla só os clientes dela.','Card encerrado continua dando visão: quem ganhou não perde o cliente.','Cliente com card aberto que abre conversa nova (outro canal): a conversa é ligada ao card e vai para o dono dele, sem passar pela triagem.','Admin vê tudo.'],
+  tags:['CRM','Caixas de entrada','Agentes','Acesso','Distribuição']},
+ {s:'funnel',viewer:'rod',f:'res',hl:['kind','client','when','who'],
+  when:'Cliente quer seguro de casa ou apartamento, próprio ou alugado, ou pergunta sobre cobertura de incêndio, roubo ou danos elétricos em imóvel.',
+  who:'Léo Martins, Marta Lopes (todos os funis)',
+  title:'O funil: tipo, “vira cliente” e quando usar',
+  say:'<p><strong>Tipo</strong> separa venda de atendimento: Pós-venda termina em “Resolvido” e nunca conta como venda.</p><p><strong>Ao ganhar, o contato vira Cliente</strong>: o lead sobe na cadeia sozinho. Quem não marca ganho pode promover o contato à mão.</p><p><strong>Quando usar</strong> é o texto que a IA lê para decidir em que funil a conversa nasce.</p>',
+  rules:['O tipo Lead/Cliente já existe no contato hoje; só passa a ser atualizado.','“Quando usar” é texto livre do cliente: serve para qualquer ramo.'],
+  tags:['CRM','Funis','Relacionamentos','IA']}
+]};
+
+const C1={name:'1 · Lead chega',lv:'Simples',steps:[
+ {s:'conv',viewer:'ana',contact:{...joao,type:'Lead'},assignee:'ana',hl:['panel','listchips','why'],
+  list:[{name:'João Pereira',ini:'JP',c:'#3E63DD',time:'agora',prev:'Oi! Quero cotar seguro do meu Onix 2021',chips:[['auto','Seguro Auto · Novo']],as:'ana',type:'Lead'},{name:'Luciana Prado',ini:'LP',c:'#12A594',time:'9:12',prev:'Obrigada, Ana!',chips:[['auto','Seguro Auto · Proposta']],type:'Lead'}],
+  msgs:[{k:'day',t:'Hoje'},{k:'in',t:'Oi! Quero cotar seguro do meu Onix 2021',time:'10:02',tag:['auto','Cotação — Onix 2021']},{k:'ai',t:'Assunto identificado na 1ª mensagem: card em Seguro Auto · rodízio: Ana Ribeiro'},{k:'out',who:'ana',t:'Oi, João! Me passa a placa e o CEP de onde o carro dorme?',time:'10:04',tag:['auto','Cotação — Onix 2021']}],
+  cards:[{...cAuto,focus:true,why:[['sparkles','“Quero cotar seguro do meu Onix”: bate com o “quando usar” do Seguro Auto.'],['users','Rodízio entre quem acessa Seguro Auto nesta caixa.']]}],
+  replyCtx:['auto','Cotação — Onix 2021'],
+  title:'Assunto claro na primeira mensagem',
+  say:'<p>João já chega dizendo o que quer. A IA identifica <strong>Seguro Auto</strong>, o card nasce lá e vai para a Ana pelo rodízio desse funil. Não passa pela triagem.</p>',
+  rules:['Com mais de um funil, o card nasce no funil que a IA identificou, não num funil padrão fixo.','Caixa com um funil só: igual a hoje (cria direto no funil).'],
+  tags:['IA','Distribuição','CRM']},
+ {s:'conv',viewer:'ana',contact:{...jul,type:'Lead'},assignee:'ana',hl:['listchips','subject','panel'],
+  list:[{name:'Juliana Castro',ini:'JC',c:'#D6A10B',time:'09:02',prev:'Ana: Bom dia, Juliana! Como posso te ajudar?',nocard:1,as:'ana',type:'Lead'},{name:'João Pereira',ini:'JP',c:'#3E63DD',time:'10:04',prev:'Ana: Me passa a placa…',chips:[['auto','Seguro Auto · Novo']],type:'Lead'}],
+  msgs:julMsgs,cards:[],
+  title:'“Oi, bom dia”: a conversa vai para a triagem',
+  say:'<p>Juliana só cumprimenta. Não dá para saber o assunto, então <strong>nenhum card é criado</strong>. A conversa fica <strong>Sem funil</strong> e vai para quem faz triagem: a Ana, pelo rodízio.</p><p>A Ana puxa a conversa (“Como posso te ajudar?”) para o assunto aparecer.</p>',
+  rules:['Sem assunto identificado: nenhum card, nenhum funil chutado.','Só quem tem “Sem funil” vê e recebe esta conversa.','A Ana pode criar o card à mão a qualquer momento.'],
+  tags:['IA','Triagem','Distribuição','Acesso']},
+ {s:'conv',viewer:'leo',contact:{name:'Sílvia Mota',ini:'SM',c:'#12A594',phone:'+55 11 99301-2277',type:'Lead'},assignee:'leo',hl:['listnote'],
+  list:[othersLeo[0],othersLeo[1]],
+  listNote:'Nem a Juliana (sem funil) nem o João (Seguro Auto) aparecem aqui: o Léo acessa só Residencial e Empresarial.',
+  msgs:[{k:'in',t:'Pode ser a da Allianz mesmo, qual o próximo passo?',time:'09:38',tag:['res','Cotação — Casa Pinheiros']},{k:'out',who:'leo',t:'Mandei a proposta da Allianz, Sílvia. É só me confirmar a forma de pagamento.',time:'09:40',tag:['res','Cotação — Casa Pinheiros']}],
+  cards:[{id:'s1',f:'res',title:'Cotação — Casa Pinheiros',stage:'Proposta',owner:'leo',status:'open',focus:true,ref:'Casa 140 m², Pinheiros'}],
+  replyCtx:['res','Cotação — Casa Pinheiros'],
+  title:'Visão do Léo: nada de triagem na lista dele',
+  say:'<p>Léo acessa a mesma caixa, mas não tem <strong>Sem funil</strong>. A lista dele mostra só conversas com card em Residencial ou Empresarial. O “Oi, bom dia” da Juliana não chega até ele.</p>',
+  rules:['O mesmo filtro vale para contadores, busca e notificações.','“Todas” na lista significa “todas que você acessa”.'],
+  tags:['Acesso','Lista de conversas','Agentes']},
+ {s:'conv',viewer:'leo',contact:{...jul,type:'Lead'},assignee:'leo',hl:['listitem','assignee','why'],
+  list:[{name:'Juliana Castro',ini:'JC',c:'#D6A10B',time:'09:06',prev:'Léo: Oi Juliana, sou o Léo, cuido do residencial…',chips:[['res','Residencial · Novo']],as:'leo',type:'Lead',hl:1},...othersLeo],
+  msgs:[...julMsgs.slice(1),{k:'in',t:'Quero fazer o seguro do meu apartamento, acabei de mudar',time:'09:04',tag:['res','Cotação — Apto Vila Mariana']},{k:'ai',t:'Assunto identificado: Residencial · card criado · rodízio: Léo Martins'},{k:'act',ic:'arrow-right-left',t:'Conversa saiu da triagem: transferida de Ana Ribeiro para Léo Martins'},{k:'out',who:'leo',t:'Oi Juliana, sou o Léo, cuido do residencial! Quantos m² tem o apartamento?',time:'09:06',tag:['res','Cotação — Apto Vila Mariana']}],
+  cards:[{id:'j1',f:'res',title:'Cotação — Apto Vila Mariana',stage:'Novo',owner:'leo',status:'open',focus:true,ref:'Apto, Vila Mariana',why:[['sparkles','09:04 “seguro do meu apartamento”: Residencial.'],['users','Rodízio de quem acessa Residencial: Léo Martins.'],['arrow-right-left','Saiu da triagem: a conversa foi para o dono do primeiro card.']]}],
+  replyCtx:['res','Cotação — Apto Vila Mariana'],
+  title:'Assunto apareceu: sai da triagem e vai para o dono',
+  say:'<p>Na segunda mensagem a Juliana fala do apartamento. A IA identifica <strong>Residencial</strong>, cria o card e o rodízio entrega para o <strong>Léo</strong>.</p><p>Como a conversa estava na triagem, ela é <strong>transferida para o Léo</strong>. A partir daqui ela some da lista da Ana, que não acessa Residencial.</p>',
+  rules:['Primeiro card de uma conversa em triagem: a conversa vai para o dono do card.','Depois disso vale a regra normal: card novo só avisa o dono, não transfere.'],
+  tags:['IA','Distribuição','Atribuições','Acesso']}
+]};
+
+const C2={name:'2 · Lead vira cliente',lv:'Simples',steps:[
+ {s:'conv',viewer:'ana',contact:{...joao,type:'Cliente',since:'hoje'},assignee:'ana',hl:['contact','card:a1'],
+  list:[{name:'João Pereira',ini:'JP',c:'#3E63DD',time:'16:20',prev:'Fechado! Pode emitir.',chips:[['auto','Seguro Auto · Ganho']],as:'ana',type:'Cliente'}],
+  msgs:[{k:'out',who:'ana',t:'Ficou R$ 3.950 em 10x na Porto. Posso emitir?',time:'16:10',tag:['auto','Cotação — Onix 2021']},{k:'in',t:'Fechado! Pode emitir.',time:'16:20',tag:['auto','Cotação — Onix 2021']},{k:'act',ic:'trophy',t:'Cotação — Onix 2021 marcada como Ganha por Ana Ribeiro'},{k:'act',ic:'badge-check',t:'João Pereira passou de Lead para Cliente'}],
+  cards:[{...cAuto,stage:'Fechamento',status:'won',fields:{'Placa':'ABC1D23','Seguradora':'Porto','Prêmio':'R$ 3.950,00'}}],sel:'a1',
+  replyCtx:null,
+  title:'Ganhou: o contato sobe para Cliente',
+  say:'<p>Ana marca o card como <strong>Ganho</strong>. O João passa de <strong>Lead</strong> para <strong>Cliente</strong> na hora, e a data fica registrada.</p><p>Corretora que não usa “ganho” promove à mão: botão “Marcar como cliente” no contato.</p>',
+  rules:['Vira cliente pelo primeiro ganho em funil Comercial (se o funil tiver a opção ligada).','Cliente não volta a Lead por perder outra cotação.'],
+  tags:['Relacionamentos','CRM','Contato']}
+]};
+
+const C3={name:'3 · Cliente cota mais',lv:'Médio',steps:[
+ {s:'conv',viewer:'ana',contact:{...joao,type:'Cliente',since:'mar/2026'},assignee:'ana',hl:['banner'],
+  list:[{name:'João Pereira',ini:'JP',c:'#3E63DD',time:'10:15',prev:'Quero cotar o seguro do meu apartamento e da minha loja',chips:[['auto','Seguro Auto · Ganho']],as:'ana',type:'Cliente'}],
+  msgs:[{k:'day',t:'Março'},{k:'act',ic:'trophy',t:'Cotação — Onix 2021 ganha'},{k:'day',t:'Hoje · 7 meses depois'},{k:'in',t:'Oi Ana! Tudo certo com o carro. Agora quero cotar o seguro do meu apartamento e da minha loja de materiais',time:'10:15'}],
+  cards:[{...cAuto,stage:'Fechamento',status:'won'}],
+  banner:{h:'Parece que são 2 novos assuntos',p:'Nenhum dos dois é do Seguro Auto. Ninguém foi avisado ainda.',opts:[['res','Cotação — Apto Moema','rodízio: Léo Martins'],['emp','Cotação — Loja Materiais Pereira','rodízio: Léo Martins']],acts:['Criar os dois','Escolher','Ignorar']},
+  title:'O cliente volta e quer cotar outros seguros',
+  say:'<p>Sete meses depois, o João (agora <strong>Cliente</strong>) pede apartamento e loja. A IA sugere <strong>dois cards novos</strong>, cada um no funil certo, e mostra quem vai receber pelo rodízio.</p><p>A Ana decide com um clique. A venda do carro continua Ganha, intacta.</p>',
+  rules:['Nova compra = card novo; card ganho nunca é reaberto.','A IA só sugere; quem cria é a pessoa (ou o modo automático, se a caixa quiser).'],
+  tags:['IA','CRM','Distribuição']},
+ {s:'conv',viewer:'ana',contact:{...joao,type:'Cliente',since:'mar/2026'},assignee:'ana',parts:['leo'],hl:['panel','parts'],
+  list:[{name:'João Pereira',ini:'JP',c:'#3E63DD',time:'10:16',prev:'Ana: Já passei para o Léo, ele cuida do residencial…',chips:[['auto','Seguro Auto · Ganho']],more:2,as:'ana',type:'Cliente'}],
+  msgs:[{k:'in',t:'Oi Ana! Tudo certo com o carro. Agora quero cotar o seguro do meu apartamento e da minha loja de materiais',time:'10:15'},{k:'ai',t:'2 assuntos criados por Ana Ribeiro: Residencial e Empresarial · Léo Martins entrou como participante'},{k:'out',who:'ana',t:'Que bom, João! Já passei para o Léo, que cuida de residencial e empresa. Ele te chama aqui mesmo.',time:'10:16'}],
+  cards:[{...cAuto,stage:'Fechamento',status:'won'},{...cRes},{...cEmp}],sel:'a1',
+  title:'Visão da Ana: os novos cards são do Léo',
+  say:'<p>Os dois cards novos foram para o <strong>Léo</strong>, que entrou como participante. A Ana continua atendendo a conversa, mas vê os cards dele <strong>só como resumo</strong>, com cadeado, porque não acessa Residencial nem Empresarial.</p><p>Na lista, o selo mostra “+2” com cadeado: ela sabe que existe mais coisa, sem ver o conteúdo.</p>',
+  rules:['Atendente da conversa e dono do card são coisas separadas.','Ninguém ganha acesso a funil por estar na conversa.'],
+  tags:['Atribuições','Acesso','Visão da conversa']},
+ {s:'conv',viewer:'leo',contact:{...joao,type:'Cliente',since:'mar/2026'},assignee:'ana',parts:['leo'],tab:'part',hl:['listitem','parts','reply'],sel:'r1',
+  list:[{name:'João Pereira',ini:'JP',c:'#3E63DD',time:'10:21',prev:'Léo: Oi João, sou o Léo…',chips:[['res','Residencial · Novo'],['emp','Empresarial · Novo']],more:1,as:'ana',type:'Cliente',hl:1},...othersLeo],
+  msgs:[{k:'ai',t:'2 assuntos criados por Ana Ribeiro: Residencial e Empresarial · Léo Martins entrou como participante'},{k:'out',who:'ana',t:'Que bom, João! Já passei para o Léo, que cuida de residencial e empresa.',time:'10:16'},{k:'out',who:'leo',t:'Oi João, sou o Léo! Para o apartamento: quantos m² e é próprio ou alugado? E a loja, qual o CNPJ?',time:'10:21',tag:['res','Cotação — Apto Moema']}],
+  cards:[{...cAuto,stage:'Fechamento',status:'won'},{...cRes,focus:true,why:[['user','Criado por Ana Ribeiro a partir da sugestão da IA.'],['users','Rodízio de quem acessa Residencial: Léo Martins.']]},{...cEmp}],
+  replyCtx:['res','Cotação — Apto Moema'],
+  title:'Visão do Léo: a conversa do João aparece para ele',
+  say:'<p>O Léo <strong>não pega a atribuição</strong>: a conversa continua com a Ana. Ele entra como <strong>participante</strong>, recurso que o Chat2You já tem. A conversa aparece na aba <strong>Participando</strong> dele e ele recebe aviso de mensagem nova.</p><p>Ele responde na mesma conversa e escolhe em qual assunto a mensagem fica.</p><p>O card do carro aparece com cadeado para ele: é do Seguro Auto.</p>',
+  rules:['Dono de card que não é o atendente entra como participante da conversa.','A Ana pode transferir a conversa para o Léo se quiser; não é automático.'],
+  tags:['Lista de conversas','Acesso','Agentes']},
+ {s:'kanban',viewer:'leo',f:'res',hl:['kc','funsel'],
+  cols:[{n:'Novo',cards:[{t:'Cotação — Apto Moema',who:'João Pereira',type:'Cliente',ref:'82 m²',o:'leo',hl:1,tags:[['+2 assuntos deste contato']]}]},{n:'Em cotação',cards:[{t:'Cotação — Sobrado Butantã',who:'Renato Alves',co:'Alves Engenharia',type:'Lead',o:'leo',when:'ontem'}]},{n:'Proposta',cards:[{t:'Cotação — Casa Pinheiros',who:'Sílvia Mota',type:'Lead',val:'R$ 1.120,00',o:'leo',when:'09:40'}]},{n:'Fechamento',cards:[]}],
+  title:'Kanban do Léo: só os funis dele',
+  say:'<p>No Kanban, o Léo escolhe entre <strong>Residencial</strong> e <strong>Empresarial</strong>; Seguro Auto nem aparece. O card do João mostra que ele já é <strong>Cliente</strong>, um dado importante para a abordagem.</p>',
+  rules:['Kanban, lista, calendário e relatórios do CRM respeitam o mesmo acesso.'],
+  tags:['Kanban','Acesso']}
+]};
+
+const carlos={name:'Carlos Lima',ini:'CL',c:'#D6A10B',phone:'+55 21 99201-7733',type:'Cliente',since:'jan/2026'};
+const C4={name:'4 · Um funil, 3 cards',lv:'Médio',steps:[
+ {s:'conv',viewer:'ana',acct:'Prime Corretora',inbox:'WhatsApp Prime',contact:carlos,assignee:'ana',hl:['panel'],sel:'k2',
+  list:[{name:'Carlos Lima',ini:'CL',c:'#D6A10B',time:'11:02',prev:'Beleza, aguardo a da loja então',chips:[['com','Comercial · Ganho'],['com','Comercial · Proposta'],['com','Comercial · Novo']],as:'ana',type:'Cliente',inbox:'WhatsApp Prime'}],
+  msgs:[{k:'out',who:'ana',t:'Carlos, a residencial ficou R$ 890 por ano. A da loja sai até sexta.',time:'10:58',tag:['com','Cotação — Residencial']},{k:'in',t:'Beleza, aguardo a da loja então',time:'11:02',tag:['com','Cotação — Empresarial']}],
+  cards:[{id:'k1',f:'com',title:'Cotação — Auto HR-V',stage:'Fechamento',owner:'ana',status:'won',ref:'HR-V 2022'},{id:'k2',f:'com',title:'Cotação — Residencial',stage:'Proposta',owner:'ana',status:'open',focus:true,ref:'Casa Tijuca',fields:{'Valor':'R$ 890,00/ano'}},{id:'k3',f:'com',title:'Cotação — Empresarial',stage:'Novo',owner:'ana',status:'open',ref:'Oficina Lima ME'}],
+  replyCtx:['com','Cotação — Residencial'],
+  title:'Outra corretora: um funil Comercial só',
+  say:'<p>A Prime Corretora usa <strong>um funil “Comercial”</strong> para tudo e a mesma pessoa cuida de tudo. Funciona igual: o Carlos tem <strong>3 cards no mesmo funil</strong>, em etapas diferentes.</p><p>Hoje isso não é possível: o sistema junta tudo num card só.</p>',
+  rules:['Mesmo funil + mesmo contato pode ter vários cards abertos.','Cada card tem etapa, valor e campos próprios.'],
+  tags:['CRM','Visão da conversa']},
+ {s:'kanban',viewer:'ana',acct:'Prime Corretora',f:'com',funs:['com'],hl:['kc'],
+  cols:[{n:'Novo',cards:[{t:'Cotação — Empresarial',who:'Carlos Lima',co:'Oficina Lima ME',type:'Cliente',ref:'Oficina Lima ME',o:'ana',hl:1}]},{n:'Em cotação',cards:[{t:'Cotação — Auto Kicks',who:'Bruna Neves',type:'Lead',o:'ana',when:'ontem'}]},{n:'Proposta',cards:[{t:'Cotação — Residencial',who:'Carlos Lima',co:'Oficina Lima ME',type:'Cliente',ref:'Casa Tijuca',val:'R$ 890,00',o:'ana',hl:1}]},{n:'Fechamento',cards:[{t:'Cotação — Auto HR-V',who:'Carlos Lima',co:'Oficina Lima ME',type:'Cliente',val:'R$ 3.480,00',o:'ana',when:'jan',hl:1,tags:[['Ganho','trophy']]}]}],
+  title:'No Kanban, três cards do mesmo cliente',
+  say:'<p>Os três cards do Carlos aparecem em colunas diferentes. Cada um é uma oportunidade real: se fechar todas, são três vendas.</p>',
+  rules:['Relatórios contam pessoas, conversas e cards separadamente.'],
+  tags:['Kanban','Relatórios']}
+]};
+
+const C5={name:'5 · Cliente no pós-venda',lv:'Complexo',steps:[
+ {s:'conv',viewer:'paula',contact:{...joao,type:'Cliente',since:'mar/2026'},assignee:'paula',hl:['panel','assignee','listchips'],sel:'p1',
+  list:[{name:'João Pereira',ini:'JP',c:'#3E63DD',time:'07:58',prev:'Paula: Você está bem? Me manda fotos…',chips:[['pos','Pós-venda · Aberto']],more:3,as:'paula',type:'Cliente'},{name:'Marcos Teles',ini:'MT',c:'#D6A10B',time:'ontem',prev:'Recebi a 2ª via, obrigado',chips:[['pos','Pós-venda · Resolvido']],type:'Cliente'}],
+  msgs:[{k:'day',t:'Hoje · 07:50'},{k:'in',t:'Bati o Onix agora cedo, ninguém se machucou. O que eu faço?',time:'07:50'},{k:'ai',t:'Novo assunto em Pós-venda: Sinistro — Onix ABC1D23 · rodízio: Paula Dias'},{k:'act',ic:'user-plus',t:'Conversa sem atendente: atribuída a Paula Dias (dona do novo card)'},{k:'out',who:'paula',t:'Oi João, sou a Paula, do pós-venda. Que bom que está bem! Me manda fotos do carro e o local.',time:'07:58',tag:['pos','Sinistro — Onix']}],
+  cards:[{id:'p1',f:'pos',title:'Sinistro — Onix ABC1D23',stage:'Aberto',owner:'paula',status:'open',focus:true,ref:'Apólice Auto Porto',fields:{'Ocorrência':'colisão','Data':'hoje 07:40'},why:[['sparkles','“Bati o Onix”: assunto de Pós-venda, referente à apólice do carro.'],['user-plus','Ninguém atendia a conversa: foi para a dona do card novo.']]},{...cAuto,stage:'Fechamento',status:'won'},{...cRes,stage:'Proposta'},{...cEmp,stage:'Vistoria prévia'}],
+  replyCtx:['pos','Sinistro — Onix ABC1D23'],
+  title:'O cliente volta com um sinistro',
+  say:'<p>O João bate o carro. A caixa está em modo automático: a IA cria um card em <strong>Pós-venda</strong>, referente à apólice do Onix, e o rodízio entrega para a <strong>Paula</strong>.</p><p>Como ninguém atendia a conversa, ela vai para a Paula. Se a Ana estivesse atendendo, a Paula seria só avisada.</p><p>A Paula vê o histórico da conversa, mas os outros três cards aparecem com cadeado.</p>',
+  rules:['Ninguém atendendo: a conversa vai para o dono do card novo.','Alguém atendendo: o dono do card novo é avisado e pode responder.','Pós-venda termina em Resolvido, nunca em Ganho.'],
+  tags:['Atribuições','Distribuição','Acesso','IA']},
+ {s:'report',viewer:'marta',name:'João Pereira',leadAt:'mar/2026',since:'mar/2026',hl:['tiles','table'],
+  tiles:[['Vendas ganhas','1','R$ 3.950,00 · Auto'],['Cotações abertas','2','Residencial e Empresarial'],['Atendimentos','1','Sinistro em andamento'],['Conversões enviadas','1','Só a venda ganha']],
+  rows:[['mar','Cotação — Onix 2021','auto','<span class="pill won">Ganho</span>','Ana Ribeiro'],['out','Cotação — Apto Moema','res','<span class="pill">Proposta</span>','Léo Martins'],['out','Cotação — Loja Materiais Pereira','emp','<span class="pill">Vistoria prévia</span>','Léo Martins'],['hoje','Sinistro — Onix ABC1D23','pos','<span class="pill">Aberto</span>','Paula Dias']],
+  title:'O ciclo inteiro do cliente num lugar só',
+  say:'<p>Em Relacionamentos, a gestora vê a vida do João: entrou como lead, virou cliente, abriu duas cotações novas e um sinistro. Quatro cards, três responsáveis, uma conversa.</p><p>Os números separam venda de atendimento: o sinistro não entra na taxa de ganho nem vira conversão de anúncio.</p>',
+  rules:['Carga de trabalho conta pelo dono do card, não por quem atende a conversa.'],
+  tags:['Relatórios','Relacionamentos','Conversões']}
+]};
+
+const C6={name:'6 · Visão da gestora',lv:'Complexo',steps:[
+ {s:'conv',viewer:'marta',contact:{...joao,type:'Cliente',since:'mar/2026'},assignee:'paula',hl:['filter','panel'],sel:'r1',filter:'Residencial',tab:'all',
+  list:[{name:'João Pereira',ini:'JP',c:'#3E63DD',time:'08:10',prev:'Paula: Me manda fotos…',chips:[['res','Residencial · Proposta'],['pos','Pós-venda · Aberto'],['emp','Empresarial · Vistoria']],as:'paula',type:'Cliente'},{name:'Sílvia Mota',ini:'SM',c:'#12A594',time:'09:40',prev:'Léo: mandei a proposta da Allianz',chips:[['res','Residencial · Proposta']],as:'leo',type:'Lead'},{name:'Renato Alves',ini:'RA',c:'#80838D',time:'ontem',prev:'Vou ver com minha esposa',chips:[['res','Residencial · Em cotação']],as:'leo',type:'Lead'}],
+  msgs:[{k:'out',who:'leo',t:'João, o apto ficou R$ 1.040/ano na Tokio. Te mando o PDF.',time:'ontem 17:30',tag:['res','Cotação — Apto Moema']},{k:'day',t:'Hoje'},{k:'in',t:'Bati o Onix agora cedo, ninguém se machucou.',time:'07:50',tag:['pos','Sinistro — Onix']},{k:'out',who:'paula',t:'Me manda fotos do carro e o local.',time:'07:58',tag:['pos','Sinistro — Onix']}],
+  cards:[{...cRes,stage:'Proposta',fields:{'Valor do imóvel':'R$ 780.000','Prêmio':'R$ 1.040,00/ano'}},{id:'p1',f:'pos',title:'Sinistro — Onix ABC1D23',stage:'Aberto',owner:'paula',status:'open',focus:true,ref:'Apólice Auto Porto'},{...cEmp,stage:'Vistoria prévia'},{...cAuto,stage:'Fechamento',status:'won'}],
+  title:'Gestora com “todos os funis”: vê tudo e filtra',
+  say:'<p>A Marta está configurada com <strong>Todos os funis</strong> na caixa: os quatro cards do João abrem para ela.</p><p>Filtrando a lista por <strong>Funil: Residencial</strong>, o João aparece <strong>uma vez</strong>, mesmo tendo cards em três funis. Daqui ela acompanha o trabalho do Léo sem depender de relatório.</p>',
+  rules:['O filtro “Funil” considera qualquer card aberto da conversa.','Gestora não é admin: só tem “todos os funis” nas caixas em que foi configurada assim.'],
+  tags:['Perfis de acesso','Filtros','Lista de conversas']}
+]};
+
+const pat={name:'Patrícia Gomes',ini:'PG',c:'#12A594',phone:'+55 31 99812-5560',type:'Cliente',since:'2024'};
+const C7={name:'7 · Outro ramo',lv:'Autonomia',steps:[
+ {s:'conv',viewer:'bia',acct:'Sorriso Pleno',inbox:'WhatsApp Clínica',contact:pat,assignee:'bia',hl:['panel','banner'],
+  list:[{name:'Patrícia Gomes',ini:'PG',c:'#12A594',time:'16:02',prev:'Queria marcar uma limpeza pra mim e ver orçamento de aparelho…',chips:[['agd','Agendamentos · Pedido']],more:1,as:'bia',type:'Cliente',inbox:'WhatsApp Clínica'}],
+  msgs:[{k:'day',t:'Hoje'},{k:'in',t:'Boa tarde! Queria marcar uma limpeza pra mim e ver orçamento de aparelho pro meu filho Pedro, de 12 anos',time:'16:02'},{k:'ai',t:'2 assuntos: Agendamento (Patrícia) e Orçamento de aparelho (Pedro) · Dra. Helena avisada'},{k:'out',who:'bia',t:'Boa tarde, Patrícia! Tenho quinta 9h ou sexta 14h para a limpeza. A Dra. Helena vai falar com você sobre o aparelho do Pedro.',time:'16:04',tag:['agd','Agendamento — limpeza']}],
+  cards:[{id:'g1',f:'agd',title:'Agendamento — limpeza',stage:'Horário proposto',owner:'bia',status:'open',focus:true,ref:'Patrícia (titular)'},{id:'g2',f:'orc',title:'Orçamento — aparelho',stage:'Novo',owner:'dra',status:'open',ref:'Pedro, 12 anos (dependente)'}],
+  replyCtx:['agd','Agendamento — limpeza'],
+  title:'Mesmo modelo, clínica odontológica',
+  say:'<p>Conta do <strong>chat.autonomia.site</strong>. A recepcionista Bia acessa <strong>Agendamentos</strong>; a Dra. Helena, <strong>Orçamentos</strong>. Configurado no mesmo CRM → Configurar caixas.</p><p>A Patrícia já é cliente (paciente). O pedido gera dois cards, um referente a ela e outro ao filho. Nenhuma linha de código fala de clínica.</p>',
+  rules:['O ramo muda só os nomes dos funis e o texto “quando usar”.','“Referente a” separa quem fala de quem é atendido.'],
+  tags:['Multi-ramo','Acesso','Distribuição']}
+]};
+
+const julRes={id:'j1',f:'res',title:'Cotação — Apto Vila Mariana',stage:'Novo',status:'open',focus:true,ref:'Apto, Vila Mariana'};
+const C8={name:'8 · Sem atribuição automática',lv:'Variação',steps:[
+ {s:'conv',viewer:'leo',contact:{...jul,type:'Lead'},assignee:null,tab:'unas',hl:['listitem','assignee','card:j1'],
+  list:[{name:'Juliana Castro',ini:'JC',c:'#D6A10B',time:'09:04',prev:'Quero fazer o seguro do meu apartamento',chips:[['res','Residencial · Novo']],type:'Lead',hl:1},{name:'Renato Alves',ini:'RA',c:'#80838D',time:'08:40',prev:'Tenho um sobrado no Butantã',chips:[['res','Residencial · Novo']],type:'Lead'}],
+  msgs:[{k:'day',t:'Hoje'},{k:'in',t:'Oi! Bom dia, tudo bem? 😊',time:'09:01'},{k:'in',t:'Quero fazer o seguro do meu apartamento, acabei de mudar',time:'09:04',tag:['res','Cotação — Apto Vila Mariana']},{k:'ai',t:'Assunto identificado: Residencial · card criado sem responsável (caixa sem atribuição automática)'}],
+  cards:[{...julRes,owner:'none',why:[['sparkles','“Seguro do meu apartamento”: Residencial.'],['hand','Caixa sem atribuição automática: o card espera alguém assumir.']]}],
+  title:'Caixa sem atribuição automática: o time assume',
+  say:'<p>Nesta caixa a atribuição automática está <strong>desligada</strong>. A IA identifica o assunto e cria o card em <strong>Residencial</strong>, mas sem responsável.</p><p>A conversa cai em <strong>Não atribuídas</strong>, só para quem acessa Residencial (e para a triagem, enquanto não tinha card). O Léo vê e clica em <strong>Atribuir a mim</strong>.</p>',
+  rules:['A configuração da caixa manda: desligada = ninguém recebe sozinho.','“Não atribuídas” mostra só conversas de funis que a pessoa acessa (ou Sem funil, se tiver triagem).'],
+  tags:['Atribuições','Lista de conversas','Acesso']},
+ {s:'conv',viewer:'leo',contact:{...jul,type:'Lead'},assignee:'leo',tab:'mine',hl:['assignee','card:j1'],
+  list:[{name:'Juliana Castro',ini:'JC',c:'#D6A10B',time:'09:12',prev:'Léo: Oi Juliana! Quantos m²?',chips:[['res','Residencial · Novo']],as:'leo',type:'Lead'}],
+  msgs:[{k:'in',t:'Quero fazer o seguro do meu apartamento, acabei de mudar',time:'09:04',tag:['res','Cotação — Apto Vila Mariana']},{k:'act',ic:'user-check',t:'Léo Martins assumiu a conversa e o card Cotação — Apto Vila Mariana'},{k:'out',who:'leo',t:'Oi Juliana! Sou o Léo. Quantos m² tem o apartamento?',time:'09:12',tag:['res','Cotação — Apto Vila Mariana']}],
+  cards:[{...julRes,owner:'leo'}],replyCtx:['res','Cotação — Apto Vila Mariana'],
+  title:'Quem assume a conversa vira dono do card',
+  say:'<p>Ao clicar em <strong>Atribuir a mim</strong>, o Léo passa a ser atendente da conversa <strong>e</strong> dono do card em foco. Um clique, as duas coisas.</p>',
+  rules:['Assumir conversa preenche o dono só do card em foco que está sem dono.','Card que já tem dono não muda de mãos por isso.'],
+  tags:['Atribuições','CRM']}
+]};
+const C9={name:'9 · Com agente IA',lv:'Variação',steps:[
+ {s:'conv',viewer:'leo',contact:{...jul,type:'Lead'},assignee:'bot',tab:'bot',hl:['assignee','why','listitem'],
+  list:[{name:'Juliana Castro',ini:'JC',c:'#D6A10B',time:'09:05',prev:'Agente IA: Me conta quantos m² tem o apartamento?',chips:[['res','Residencial · Novo']],as:'bot',type:'Lead',hl:1}],
+  msgs:[{k:'day',t:'Hoje'},{k:'in',t:'Oi! Bom dia, tudo bem? 😊',time:'09:01'},{k:'out',who:'bot',t:'Bom dia, Juliana! Sou a assistente da Horizonte. Posso ajudar com cotação, sinistro ou 2ª via. O que você precisa?',time:'09:01'},{k:'in',t:'Quero fazer o seguro do meu apartamento',time:'09:04',tag:['res','Cotação — Apto Vila Mariana']},{k:'ai',t:'Assunto identificado: Residencial · card criado, atendido pelo Agente IA'},{k:'out',who:'bot',t:'Ótimo! Me conta quantos m² tem o apartamento e se é próprio ou alugado?',time:'09:05',tag:['res','Cotação — Apto Vila Mariana']}],
+  cards:[{...julRes,owner:'bot',why:[['bot','O Agente IA faz a triagem: ninguém da triagem humana precisou ver o “Oi”.'],['sparkles','“Seguro do meu apartamento”: Residencial.']]}],
+  replyCtx:null,
+  title:'O agente IA faz a triagem sozinho',
+  say:'<p>Caixa com <strong>agente IA</strong>. É ele quem responde o “Oi” e pergunta o que a pessoa precisa. Ninguém da triagem humana é incomodado.</p><p>Assim que o assunto aparece, o card nasce em <strong>Residencial</strong> com o responsável “Agente IA”. O Léo já enxerga a conversa na aba <strong>Com o agente IA</strong>, sem notificação.</p>',
+  rules:['Com agente IA, a triagem é dele; “Sem funil” só recebe o que ele devolver.','O agente IA continua coletando dados do card certo.'],
+  tags:['Agente IA','Triagem','IA']},
+ {s:'conv',viewer:'leo',contact:{...jul,type:'Lead'},assignee:'leo',tab:'mine',hl:['assignee','why'],
+  list:[{name:'Juliana Castro',ini:'JC',c:'#D6A10B',time:'09:09',prev:'Léo: Oi Juliana, assumo daqui',chips:[['res','Residencial · Em cotação']],as:'leo',type:'Lead'}],
+  msgs:[{k:'in',t:'82 m², é próprio. Quanto fica mais ou menos?',time:'09:08',tag:['res','Cotação — Apto Vila Mariana']},{k:'act',ic:'arrow-right-left',t:'Agente IA passou para humano: regra do funil Residencial (atribuição direta) · rodízio: Léo Martins'},{k:'out',who:'leo',t:'Oi Juliana, sou o Léo! Com 82 m² fica em torno de R$ 900/ano. Te mando as opções em 10 min.',time:'09:09',tag:['res','Cotação — Apto Vila Mariana']}],
+  cards:[{...julRes,owner:'leo',stage:'Em cotação',fields:{'Área':'82 m²','Ocupação':'próprio'},why:[['arrow-right-left','Passagem para humano no momento definido pelo funil (pedido de preço).'],['users','Escolhido entre quem acessa Residencial nesta caixa.']]}],
+  replyCtx:['res','Cotação — Apto Vila Mariana'],
+  title:'Passagem para humano pelo funil do card',
+  say:'<p>Quando a cliente pede preço, a regra de passagem do funil <strong>Residencial</strong> entra (ela já existe hoje, por funil e por etapa). O rodízio escolhe entre <strong>quem acessa Residencial</strong>, não entre todos da caixa.</p><p>O Léo vira atendente e dono do card. Se o funil estiver no modo convite, ele entra como participante e aceita.</p>',
+  rules:['O que muda na passagem que já existe: o grupo do rodízio passa a ser quem acessa o funil.','Se o agente IA não identifica o assunto e precisa de humano, a conversa vai para a triagem (Sem funil).'],
+  tags:['Agente IA','Distribuição','Atribuições']}
+]};
+
+const SC=[C0,C1,C2,C3,C4,C5,C6,C7,C8,C9];
+let cur={s:0,i:0};
+function render(){
+  const sc=SC[cur.s],st=sc.steps[cur.i],H=k=>(st.hl||[]).includes(k);
+  document.getElementById('tabs').innerHTML=SC.map((c,i)=>`<button class="tab" role="tab" aria-selected="${i===cur.s}" data-s="${i}">${c.name}<span class="lv">${c.lv}</span></button>`).join('');
+  const dots=sc.steps.map((_,i)=>`<span class="dot ${i<=cur.i?'on':''}"></span>`).join('');
+  document.getElementById('guide').innerHTML=`<div class="eyebrow"><span>${sc.name} · ${sc.lv}</span><span>Passo ${cur.i+1} de ${sc.steps.length}</span></div><h2>${st.title}</h2><div class="say">${st.say}</div>
+   <div class="rules"><h3>Regras deste passo</h3><ul>${st.rules.map(r=>`<li>${r}</li>`).join('')}</ul></div>
+   <div><div class="eyebrow" style="margin-bottom:6px"><span>Mexe em</span></div><div class="impact">${st.tags.map(t=>`<span>${t}</span>`).join('')}</div></div>
+   <div class="nav"><button class="btn sm" id="prev" ${cur.s===0&&cur.i===0?'disabled':''}>${ICON('arrow-left','width:14px;height:14px')}Anterior</button><div class="dots">${dots}</div><button class="btn sm primary" id="next" ${cur.s===SC.length-1&&cur.i===sc.steps.length-1?'disabled':''}>Próximo${ICON('arrow-right','width:14px;height:14px')}</button></div>
+   <p style="font-size:11.5px;color:var(--s10)">O contorno laranja marca o que mudou neste passo.</p>`;
+  const R={conv:convScreen,kanban:kanbanScreen,agents:agentsScreen,funnel:funnelScreen,report:reportScreen}[st.s];
+  document.getElementById('app').innerHTML=R(st,H);
+  if(window.lucide)lucide.createIcons();
+}
+function go(d){const sc=SC[cur.s];let i=cur.i+d,s=cur.s;if(i>=sc.steps.length){if(s<SC.length-1){s++;i=0}else i=sc.steps.length-1}if(i<0){if(s>0){s--;i=SC[s].steps.length-1}else i=0}cur={s,i};render()}
+document.addEventListener('click',e=>{const t=e.target.closest('[data-s]');if(t){cur={s:+t.dataset.s,i:0};render();return}if(e.target.closest('#next'))go(1);if(e.target.closest('#prev'))go(-1)});
+document.addEventListener('keydown',e=>{if(e.key==='ArrowRight')go(1);if(e.key==='ArrowLeft')go(-1)});
+render();
+</script>
