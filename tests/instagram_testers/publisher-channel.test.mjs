@@ -172,7 +172,9 @@ test('rejects a concurrent frame without replaying or closing the active frame',
   const channel = await createPublisherChannel(fake.options);
   const first = channel.send({ type: 'session', operation: 'bootstrap' });
 
-  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => {
+    setImmediate(resolve);
+  });
   await assert.rejects(
     channel.send({ type: 'session', operation: 'bootstrap' }),
     /instagram_session_publication_failed/

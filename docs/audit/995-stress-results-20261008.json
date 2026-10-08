@@ -305,14 +305,14 @@
         }
       ],
       "source_hashes": {
-        "scripts/instagram_testers/session-manager.mjs": "e81bdf0cb4b1d65dee4575f585f39ceee76e95d8a76583b7867440587c4f1b6d",
+        "scripts/instagram_testers/session-manager.mjs": "a4090720c62495d0b98cee2902291f413438aba78486658d2262a97e3230af32",
         "scripts/instagram_testers/session-observer.mjs": "1652c684772e0903c610cda279c9f1e9211a9c8dfc02fcab6daa838ef1d75463",
         "scripts/instagram_testers/browser-operations.mjs": "8b093ea92a80dcde4a0a4857772d87d3837bb42a296963fb943f04107ec87d44",
         "scripts/instagram_testers/runtime/entrypoint.mjs": "4ed32db50bd887affe731a5ab5ce1b168461769d78cf3b161a82904947454aa5",
         "scripts/instagram_testers/runtime/operator-protocol.mjs": "0cfb99f7bf3327d0dd653fc5f18d8549777e741db70380b105d771dbf03e5d40",
         "tests/qa/instagram-automation/latency-benchmark.mjs": "53da77b39e978b257862498f69cfa8c514959fabc62c5d5032e2d90a284c2b7b",
         "tests/qa/instagram-automation/latency-browser-fixtures.json": "5a75cfda0154d3913eddaaba4ac3e5a5f7c6cba469941bfe235e67ad5f537321",
-        "tests/qa/instagram-automation/route-stress.mjs": "c0e6a606c5e406f278c944515631c54117f4728fd19111903e54154460269632"
+        "tests/qa/instagram-automation/route-stress.mjs": "fea29e0a9dc0a5b7f15ef759bec6a9e83b09f4453c2a2ce68c67649b107cfe19"
       },
       "dependency_hashes": {
         "package-lock.json": "a9ea3c6a5774052827c337b94a6973983282c7734c1665d06da4a971232b7592",

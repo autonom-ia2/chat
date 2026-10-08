@@ -168,32 +168,6 @@ export async function privateProfile(path) {
   return target;
 }
 
-export async function handleBrowserRoute(route, config, stderr) {
-  try {
-    const request = route.request();
-    if (
-      !isAllowedBrowserRequest({
-        url: request.url(),
-        method: request.method(),
-        body: request.postData() || '',
-        config,
-      })
-    ) {
-      await route.abort();
-    } else {
-      await route.continue();
-    }
-  } catch (error) {
-    // Playwright has already completed these routes; a second abort cannot help.
-    // For other failures, close the request instead of permitting it.
-    if (!error.message?.includes('Route is already handled'))
-      await route.abort().catch(() => {});
-    writeBrowserOperationDiagnostic(stderr, {
-      event: 'instagram_browser_route_failed',
-    });
-  }
-}
-
 export function publisher(
   command,
   payload,
@@ -309,6 +283,32 @@ export function isAllowedBrowserRequest({
     );
   } catch {
     return false;
+  }
+}
+
+export async function handleBrowserRoute(route, config, stderr) {
+  try {
+    const request = route.request();
+    if (
+      !isAllowedBrowserRequest({
+        url: request.url(),
+        method: request.method(),
+        body: request.postData() || '',
+        config,
+      })
+    ) {
+      await route.abort();
+    } else {
+      await route.continue();
+    }
+  } catch (error) {
+    // Playwright has already completed these routes; a second abort cannot help.
+    // For other failures, close the request instead of permitting it.
+    if (!error.message?.includes('Route is already handled'))
+      await route.abort().catch(() => {});
+    writeBrowserOperationDiagnostic(stderr, {
+      event: 'instagram_browser_route_failed',
+    });
   }
 }
 

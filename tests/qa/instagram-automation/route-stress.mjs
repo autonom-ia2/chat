@@ -14,6 +14,8 @@ import {
   makeRequest,
 } from './latency-benchmark.mjs';
 
+const printReport = serialized => process.stdout.write(serialized + '\n');
+
 const fixture = JSON.parse(
   await readFile(
     new URL('./latency-browser-fixtures.json', import.meta.url),
@@ -59,7 +61,7 @@ page.goto = async (...args) => {
     return await realGoto(...args);
   } catch (error) {
     const message = error.message || '';
-    console.log(
+    printReport(
       JSON.stringify({
         event: 'fixture_navigation_failed',
         closed: page.isClosed(),
@@ -104,15 +106,15 @@ const browserGuard = async route => {
 };
 await context.route('**/*', browserGuard);
 
-async function operation(scenario, timeout = 5000, signal) {
+async function operation(scenario, signal, timeout = 5000) {
   // Match the production manager's polling interval between independent requests.
   await delay(1000);
   transport.setScenario(scenario);
   const request = makeRequest(scenario, config, fixture, sequence);
   sequence += 1;
-  const failed = request => {
+  const failed = failedRequest => {
     const code =
-      request.failure()?.errorText?.match(/net::ERR_[A-Z_]+/)?.[0] ||
+      failedRequest.failure()?.errorText?.match(/net::ERR_[A-Z_]+/)?.[0] ||
       'unclassified';
     requestFailures.push(code);
   };
@@ -150,7 +152,7 @@ async function operation(scenario, timeout = 5000, signal) {
 async function accepted() {
   const result = await operation('status_accepted');
   if (result.status !== 'accepted')
-    console.log(
+    printReport(
       JSON.stringify({
         status: 'failed',
         operation: 'status',
@@ -172,7 +174,7 @@ try {
       const inviteCount = transport.counts().invite;
       const uncertain = await operation('invite_unknown');
       if (uncertain.error_code !== 'invite_unknown')
-        console.log(
+        printReport(
           JSON.stringify({
             status: 'case_failed',
             name: 'uncertain_invite',
@@ -247,8 +249,8 @@ try {
     });
     const cancelled = await operation(
       'status_accepted',
-      5000,
-      cancelledController.signal
+      cancelledController.signal,
+      5000
     );
     assert.equal(transport.pendingResponseFault(), false);
     assert.ok(cancelled.error_code);
@@ -432,7 +434,7 @@ try {
   await delay(100);
   assert.deepEqual(errors, []);
   assert.equal(cases.length, responseOnly ? 13 : 39);
-  console.log(
+  printReport(
     JSON.stringify({
       status: cases.every(value => value.passed) ? 'passed' : 'failed',
       cases,

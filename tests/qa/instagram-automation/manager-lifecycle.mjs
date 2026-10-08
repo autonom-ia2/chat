@@ -25,6 +25,8 @@ import { executeBrowserOperation } from '../../../scripts/instagram_testers/brow
 import { run } from '../../../scripts/instagram_testers/session-manager.mjs';
 import { isMainModule } from '../../../scripts/instagram_testers/runtime/entrypoint.mjs';
 
+const printReport = serialized => process.stdout.write(serialized + '\n');
+
 const FIXTURE_PATH = new URL(
   './latency-browser-fixtures.json',
   import.meta.url
@@ -194,7 +196,7 @@ function makePublisher({
         request_id: payload.request_id,
       };
     }
-    fail('synthetic_publisher_operation');
+    return fail('synthetic_publisher_operation');
   };
 
   return { publish, state, configuration };
@@ -329,7 +331,6 @@ async function runManagerCase({
   fixture,
   transport,
   chromium,
-  profile,
   closePageDuringOperation,
   stopAfterComplete,
   clock = globalThis,
@@ -417,7 +418,7 @@ async function runManagerCase({
     clearTimeout(watchdog);
   }
   state.events = publisher.state.events;
-  console.log(
+  printReport(
     JSON.stringify({
       event: 'fixture_manager_cycle',
       result_error: safeCode(result?.error),

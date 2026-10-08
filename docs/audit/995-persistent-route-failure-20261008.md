@@ -77,7 +77,7 @@ O último piloto real foi busca 12,456 s e status sem conclusão em 120 s. Não 
 | Perfil preservado ao reiniciar                     | PASSOU (sintético) | cookies restaurados 3 vezes sem adicioná-los novamente                  |
 | Isolamento de produção                             | PASSOU             | oito serviços/PIDs/quotas/current inalterados, nenhum perfil real usado |
 | Revisão independente                               | PASSOU             | Nexo sem bloqueio funcional; condição final 39/39 cumprida              |
-| CI do commit final                                 | PENDENTE           | snapshot anterior não aprova a nova versão                              |
+| CI da revisão final                                | PENDENTE           | snapshot anterior não aprova a nova versão                              |
 | Meta real: busca/status/aceite em 10×              | NÃO VALIDADO       | último piloto busca 12,456 s; status sem conclusão em 120 s             |
 | Conta 18 conectada/reconectada pelo OAuth original | NÃO VALIDADO       | contrato coberto, sem exercício real concluído                          |
 | Renovação natural/reboot com sessão Meta legítima  | NÃO VALIDADO       | perfil sintético não comprova isto                                      |
@@ -95,3 +95,11 @@ Playwright 1.59.1 e Chrome 154.0.8037.97, com hashes registrados. Fonte candidat
 ### Próxima liberação e rollback
 
 A mudança executável está no manager VPS. Aplicações AWS continuam com o código já publicado em 49a5; este diff não justifica outro deploy AWS. Concluir CI/revisão antes de ativação; preservar 61f20 para rollback, verificar exclusividade de perfil/lock e artefato imutável/dependências/Node privados. O piloto autorizado deve medir os tempos Meta reais, OAuth original e conexão/reconexão. Reverter se o processo cair, voltar a abrir/preparar Instagram na VPS após aceite ou falhar conexão. Não remover perfil/cookies/Singletons nem concluir a Issue 995 por fixtures.
+
+### CI da rodada 45dcfc4578 e correção de lint
+
+[Rodada completa](https://github.com/autonom-ia2/chat/actions/runs/37817899595): os **403 testes Node** e **148 testes Python** da etapa de contratos passaram; SSH/sudo, preparação de sessão, Vitest, QA de componentes e Chrome Linux com os quatro grupos de estresse passaram. Todas as oito partes RSpec, lint geral, RuboCop, segurança, traduções e Guia também passaram. Resultado geral: 23 verificações aprovadas e uma reprovada por 11 achados ESLint na etapa específica de helpers. Não apresentar essa rodada como CI verde.
+
+Os 11 achados foram corrigidos sem mudança de regra ou tolerância: ordenar a declaração do helper de rota, eliminar retorno de executor Promise, explicitar retorno terminal que sempre lança, remover variável não usada e substituir console por stdout JSON. O parâmetro opcional do fixture foi movido para o fim com sua única chamada de três argumentos atualizada. ESLint local com configuração do projeto e versões diretas do lock: 9 arquivos, zero erros/avisos. Node local: 150/150 novamente. Nexo revisou o delta sobre 45dcfc4578 e não encontrou regressão semântica.
+
+A próxima CI continua obrigatória antes de liberação. Não houve merge nem deploy para corrigir lint.
