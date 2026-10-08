@@ -400,50 +400,6 @@ test('allows pinned loading queries before RolesTable and publishes exactly once
   }
 });
 
-test('polls browser operations at one second and executes a queued request once', async t => {
-  const executions = [];
-  const data = await syntheticManager(t, {
-    vps: true,
-    browserOperations: true,
-    browserRequestReadyAt: 999,
-    executeOperation: async ({ request }) => {
-      executions.push(request);
-      return {
-        type: 'browser_operation',
-        operation: 'complete',
-        action: request.action,
-        id: request.id,
-        request_id: request.request_id,
-        claim: request.claim,
-        captured_at: '2026-10-08T12:00:00.000Z',
-        results: [],
-      };
-    },
-  });
-  const browserEntries = () =>
-    data.entries.filter(entry => entry.payload.type === 'browser_operation');
-  try {
-    await data.clock.advance(999);
-    assert.equal(executions.length, 0);
-    assert.equal(browserEntries().filter(entry => entry.payload.operation === 'claim').length, 0);
-
-    await data.clock.advance(1);
-    const reads = browserEntries().filter(entry => entry.payload.operation === 'read');
-    const claims = browserEntries().filter(entry => entry.payload.operation === 'claim');
-    const completions = browserEntries().filter(entry => entry.payload.operation === 'complete');
-    assert.deepEqual(reads.map(entry => entry.at), [0, 1000]);
-    assert.equal(claims.length, 1);
-    assert.equal(completions.length, 1);
-    assert.equal(executions.length, 1);
-    assert.equal(data.entries.filter(entry => entry.payload.operation === 'bootstrap').length, 1);
-    assert.equal(data.entries.filter(entry => entry.payload.operation === 'authorization').length, 0);
-    data.signals.emit('SIGTERM');
-    assert.equal(await data.settled, null);
-  } finally {
-    data.signals.emit('SIGTERM');
-  }
-});
-
 for (const status of [401, 403]) {
   test(`preserves the stored version and stops on HTTP ${status}`, async () => {
     const data = await fixture(`status-${status}`);
@@ -911,6 +867,71 @@ async function syntheticManager(t, options = {}) {
     ),
   };
 }
+
+test('polls browser operations at one second and executes a queued request once', async t => {
+  const executions = [];
+  const data = await syntheticManager(t, {
+    vps: true,
+    browserOperations: true,
+    browserRequestReadyAt: 999,
+    executeOperation: async ({ request }) => {
+      executions.push(request);
+      return {
+        type: 'browser_operation',
+        operation: 'complete',
+        action: request.action,
+        id: request.id,
+        request_id: request.request_id,
+        claim: request.claim,
+        captured_at: '2026-10-08T12:00:00.000Z',
+        results: [],
+      };
+    },
+  });
+  const browserEntries = () =>
+    data.entries.filter(entry => entry.payload.type === 'browser_operation');
+  try {
+    await data.clock.advance(999);
+    assert.equal(executions.length, 0);
+    assert.equal(
+      browserEntries().filter(entry => entry.payload.operation === 'claim')
+        .length,
+      0
+    );
+
+    await data.clock.advance(1);
+    const reads = browserEntries().filter(
+      entry => entry.payload.operation === 'read'
+    );
+    const claims = browserEntries().filter(
+      entry => entry.payload.operation === 'claim'
+    );
+    const completions = browserEntries().filter(
+      entry => entry.payload.operation === 'complete'
+    );
+    assert.deepEqual(
+      reads.map(entry => entry.at),
+      [0, 1000]
+    );
+    assert.equal(claims.length, 1);
+    assert.equal(completions.length, 1);
+    assert.equal(executions.length, 1);
+    assert.equal(
+      data.entries.filter(entry => entry.payload.operation === 'bootstrap')
+        .length,
+      1
+    );
+    assert.equal(
+      data.entries.filter(entry => entry.payload.operation === 'authorization')
+        .length,
+      0
+    );
+    data.signals.emit('SIGTERM');
+    assert.equal(await data.settled, null);
+  } finally {
+    data.signals.emit('SIGTERM');
+  }
+});
 
 test('three refresh cycles preserve opaque CAS versions and the 15-minute interval', async t => {
   const data = await syntheticManager(t);
