@@ -1,6 +1,11 @@
 <script setup>
 import { ref, computed, nextTick, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
+import {
+  cardStatusLabel,
+  outcomeLabels,
+  outcomeStatuses,
+} from '../../helpers/cardOutcome';
 import DatePicker from 'vue-datepicker-next';
 
 import Input from 'dashboard/components-next/input/Input.vue';
@@ -28,6 +33,11 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  // Funil atual: decide os desfechos e os nomes deles (#1144).
+  pipeline: {
+    type: Object,
+    default: null,
+  },
 });
 
 const emit = defineEmits(['save']);
@@ -46,11 +56,15 @@ const toDate = raw => {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
 
-const STATUS_OPTIONS = computed(() => [
-  { value: 'open', label: t('CRM_KANBAN.LIST.STATUS_OPEN') },
-  { value: 'won', label: t('CRM_KANBAN.LIST.STATUS_WON') },
-  { value: 'lost', label: t('CRM_KANBAN.LIST.STATUS_LOST') },
-]);
+const STATUS_OPTIONS = computed(() => {
+  const statuses = outcomeStatuses(props.pipeline);
+  const labels = outcomeLabels(t, props.pipeline);
+  return [
+    { value: 'open', label: t('CRM_KANBAN.LIST.STATUS_OPEN') },
+    { value: statuses.success, label: labels.success },
+    { value: statuses.failure, label: labels.failure },
+  ];
+});
 
 const stageOptions = computed(() =>
   props.stages.map(stage => ({
@@ -84,12 +98,9 @@ const ownerLabel = computed(
   () => props.card.owner?.name || t('CRM_KANBAN.CARD.NO_OWNER')
 );
 
-const statusLabel = computed(() => {
-  const match = STATUS_OPTIONS.value.find(
-    option => option.value === props.card.status
-  );
-  return match?.label || props.card.status || '';
-});
+const statusLabel = computed(() =>
+  cardStatusLabel(t, props.card.status, props.pipeline)
+);
 
 const followUpDate = computed(() => toDate(props.card.next_follow_up_at));
 

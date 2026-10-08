@@ -18,6 +18,7 @@ module Crm
           card = @account.crm_cards.new(card_attributes)
           hydrate_from_conversation(card) if @conversation.present?
           card.owner ||= default_owner(card)
+          card.status = Crm::Cards::Outcome.status_for(card.pipeline, card.status)
           card.save!
           link_primary_conversation(card) if card.conversation_id.present?
           Crm::ActivityLogger.new(card: card, actor: @user, event_type: 'create', payload: activity_payload(card)).perform

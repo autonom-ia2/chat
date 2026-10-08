@@ -40,6 +40,7 @@ class Api::V1::Accounts::Crm::ConversationCardsController < Api::V1::Accounts::C
       current: card.id == current_id,
       pipeline_id: card.pipeline_id,
       pipeline_name: card.pipeline&.name,
+      outcome_labels: card.pipeline&.metadata&.dig('outcome_labels'),
       stage_name: card.stage&.name,
       stage_color: card.stage&.color,
       owner: card.owner && { id: card.owner.id, name: card.owner.available_name, avatar_url: card.owner.avatar_url }

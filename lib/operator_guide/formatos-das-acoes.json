@@ -553,8 +553,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/pipelines#destroy",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:31",
-      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:39"
+      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:34",
+      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:42"
     ],
     "sem_corpo": true
   },
@@ -3029,12 +3029,14 @@
                       "anyOf": [
                         {
                           "items": {
-                            "description": "Um de: open, won, lost, archived.",
+                            "description": "Um de: open, won, lost, archived, resolved, cancelled.",
                             "enum": [
                               "open",
                               "won",
                               "lost",
                               "archived",
+                              "resolved",
+                              "cancelled",
                               "all"
                             ]
                           },
@@ -4991,6 +4993,10 @@
   },
   "PATCH crm/pipelines/:id": {
     "campos": {
+      "counts_as_sale": {
+        "padrao": true,
+        "tipo": "booleano"
+      },
       "description": {
         "tipo": "string"
       },
@@ -5008,6 +5014,7 @@
         "nao_pode_ficar_vazio": true,
         "tipo": "string"
       },
+      "outcome_labels": {},
       "position": {
         "padrao": 0,
         "tipo": "inteiro"
@@ -5027,15 +5034,16 @@
     "envelope": "pipeline",
     "modelo": "Crm::Pipeline",
     "motivos": [
-      "leitura crua sem tipo: goal, google_sync, meta_sync"
+      "leitura crua sem tipo: goal, google_sync, meta_sync, outcome_labels"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:23",
-      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:44",
-      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:99",
-      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:69",
-      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:50",
-      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:39"
+      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:25",
+      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:47",
+      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:118",
+      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:88",
+      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:72",
+      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:53",
+      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:42"
     ],
     "sem_corpo": false
   },
@@ -9641,12 +9649,14 @@
                       "anyOf": [
                         {
                           "items": {
-                            "description": "Um de: open, won, lost, archived.",
+                            "description": "Um de: open, won, lost, archived, resolved, cancelled.",
                             "enum": [
                               "open",
                               "won",
                               "lost",
                               "archived",
+                              "resolved",
+                              "cancelled",
                               "all"
                             ]
                           },
@@ -13320,7 +13330,9 @@
           "open",
           "won",
           "lost",
-          "archived"
+          "archived",
+          "resolved",
+          "cancelled"
         ]
       },
       "team_id": {
@@ -13611,7 +13623,9 @@
           "open",
           "won",
           "lost",
-          "archived"
+          "archived",
+          "resolved",
+          "cancelled"
         ]
       },
       "team_id": {
@@ -14068,6 +14082,10 @@
   },
   "POST crm/pipelines": {
     "campos": {
+      "counts_as_sale": {
+        "padrao": true,
+        "tipo": "booleano"
+      },
       "description": {
         "tipo": "string"
       },
@@ -14083,6 +14101,7 @@
         "obrigatorio": "pelo_modelo",
         "tipo": "string"
       },
+      "outcome_labels": {},
       "position": {
         "padrao": 0,
         "tipo": "inteiro"
@@ -14102,12 +14121,13 @@
     "envelope": "pipeline",
     "modelo": "Crm::Pipeline",
     "motivos": [
-      "leitura crua sem tipo: goal"
+      "leitura crua sem tipo: goal, outcome_labels"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:14",
-      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:44",
-      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:50"
+      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:15",
+      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:47",
+      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:72",
+      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:53"
     ],
     "sem_corpo": false
   },
@@ -19909,12 +19929,14 @@
                       "anyOf": [
                         {
                           "items": {
-                            "description": "Um de: open, won, lost, archived.",
+                            "description": "Um de: open, won, lost, archived, resolved, cancelled.",
                             "enum": [
                               "open",
                               "won",
                               "lost",
                               "archived",
+                              "resolved",
+                              "cancelled",
                               "all"
                             ]
                           },
@@ -21685,6 +21707,10 @@
   },
   "PUT crm/pipelines/:id": {
     "campos": {
+      "counts_as_sale": {
+        "padrao": true,
+        "tipo": "booleano"
+      },
       "description": {
         "tipo": "string"
       },
@@ -21702,6 +21728,7 @@
         "nao_pode_ficar_vazio": true,
         "tipo": "string"
       },
+      "outcome_labels": {},
       "position": {
         "padrao": 0,
         "tipo": "inteiro"
@@ -21721,15 +21748,16 @@
     "envelope": "pipeline",
     "modelo": "Crm::Pipeline",
     "motivos": [
-      "leitura crua sem tipo: goal, google_sync, meta_sync"
+      "leitura crua sem tipo: goal, google_sync, meta_sync, outcome_labels"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:23",
-      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:44",
-      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:99",
-      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:69",
-      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:50",
-      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:39"
+      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:25",
+      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:47",
+      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:118",
+      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:88",
+      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:72",
+      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:53",
+      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:42"
     ],
     "sem_corpo": false
   },

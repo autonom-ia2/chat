@@ -247,7 +247,9 @@
     "CRM_CARD_STATUS": {
       "OPEN": "Open",
       "WON": "Won",
-      "LOST": "Lost"
+      "LOST": "Lost",
+      "RESOLVED": "Resolved",
+      "CANCELLED": "Cancelled"
     },
     "CRM_OPTIONS_ERROR": "Could not load CRM pipelines."
   }

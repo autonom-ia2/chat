@@ -45,6 +45,12 @@ import CrmCalendarQuickAdd from '../components/calendar/CrmCalendarQuickAdd.vue'
 import CrmCalendarMeetingScheduler from '../components/calendar/CrmCalendarMeetingScheduler.vue';
 import CrmMeetingDetail from '../components/calendar/CrmMeetingDetail.vue';
 import {
+  FAILURE_STATUSES,
+  SUCCESS_STATUSES,
+  outcomeLabels,
+  outcomeStatuses,
+} from '../helpers/cardOutcome';
+import {
   buildCrmCardColumns,
   DEFAULT_COLUMN_ORDER,
   DEFAULT_COLUMN_VISIBILITY,
@@ -205,12 +211,16 @@ const followUpStatusOptions = computed(() => [
 ]);
 // List-view-only "Resultado" filter (won/lost/archived). The board stays
 // open-only, so this control is rendered only when viewMode === 'list'.
-const resultOptions = computed(() => [
-  { value: 'open', label: t('CRM_KANBAN.RESULT_FILTER.OPEN') },
-  { value: 'won', label: t('CRM_KANBAN.RESULT_FILTER.WON') },
-  { value: 'lost', label: t('CRM_KANBAN.RESULT_FILTER.LOST') },
-  { value: 'archived', label: t('CRM_KANBAN.RESULT_FILTER.ARCHIVED') },
-]);
+const resultOptions = computed(() => {
+  const statuses = outcomeStatuses(selectedPipeline.value);
+  const labels = outcomeLabels(t, selectedPipeline.value);
+  return [
+    { value: 'open', label: t('CRM_KANBAN.RESULT_FILTER.OPEN') },
+    { value: statuses.success, label: labels.success },
+    { value: statuses.failure, label: labels.failure },
+    { value: 'archived', label: t('CRM_KANBAN.RESULT_FILTER.ARCHIVED') },
+  ];
+});
 const teamOptions = computed(() =>
   teams.value.map(team => ({ value: team.id, label: team.name }))
 );
@@ -1335,10 +1345,13 @@ const archiveCard = async () => {
   }
 };
 
+// Keyed on the status the server actually wrote: a non-sale funnel turns "won" into resolved (#1144).
 const CLOSE_ALERT_KEYS = {
   won: 'CARD_WON',
   lost: 'CARD_LOST',
-  reopen: 'CARD_REOPENED',
+  resolved: 'CARD_RESOLVED',
+  cancelled: 'CARD_CANCELLED',
+  open: 'CARD_REOPENED',
 };
 
 const closeCardDeal = async payload => {
@@ -1351,7 +1364,11 @@ const closeCardDeal = async payload => {
     if (selectedCard.value?.id === cardId) {
       selectedCard.value = detailedCard;
     }
-    useAlert(t(`CRM_KANBAN.ALERTS.${CLOSE_ALERT_KEYS[payload.result]}`));
+    useAlert(
+      t(
+        `CRM_KANBAN.ALERTS.${CLOSE_ALERT_KEYS[detailedCard?.status] || 'CARD_REOPENED'}`
+      )
+    );
   } catch {
     useAlert(t('CRM_KANBAN.ALERTS.CARD_CLOSE_ERROR'));
   }
@@ -1907,6 +1924,18 @@ const onMeetingUpdated = async () => {
   await syncCalendarIfActive();
 };
 
+// A aba de resultado segue o tipo do funil: "Ganho" vira "Resolvido" num funil que não é de venda (#1144).
+const alignResultFilter = async () => {
+  const { result } = filters.value;
+  const statuses = outcomeStatuses(selectedPipeline.value);
+  let aligned = result;
+  if (SUCCESS_STATUSES.includes(result)) aligned = statuses.success;
+  if (FAILURE_STATUSES.includes(result)) aligned = statuses.failure;
+  if (aligned === result) return;
+  filters.value = { ...filters.value, result: aligned };
+  await store.dispatch('crmKanban/setFilters', filters.value);
+};
+
 watch(currentPipelineId, async (newPipelineId, oldPipelineId) => {
   if (newPipelineId && newPipelineId !== oldPipelineId) {
     // Rehydrate per-pipeline column layout from localStorage and clear stale
@@ -1914,6 +1943,7 @@ watch(currentPipelineId, async (newPipelineId, oldPipelineId) => {
     store.dispatch('crmKanban/loadListPrefs', newPipelineId);
     store.dispatch('crmKanban/setListSelection', []);
     fetchSavedViews();
+    await alignResultFilter();
     await loadActiveView(true);
   }
 });
@@ -2410,6 +2440,7 @@ onUnmounted(() => {
         <div class="flex items-center gap-3">
           <CrmResultTabs
             :model-value="filters.result"
+            :pipeline="selectedPipeline"
             @update:model-value="selectResult"
           />
           <p class="mb-0 text-xs text-n-slate-10">
@@ -2437,6 +2468,7 @@ onUnmounted(() => {
         :cards="cardsListWithMeta"
         :stages="stages"
         :owners="agents"
+        :pipeline="selectedPipeline"
         :show-meta-column="isMetaSyncActive"
         :loading="uiFlags.isFetchingCardsList"
         :error="!!loadError"
@@ -2462,6 +2494,7 @@ onUnmounted(() => {
         :count="listSelection.length"
         :stages="stages"
         :owners="agents"
+        :pipeline="selectedPipeline"
         :is-busy="uiFlags.isBulkActing"
         @move="onBulkMove"
         @assign="onBulkAssign"

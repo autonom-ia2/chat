@@ -93,7 +93,7 @@ class Crm::Card < ApplicationRecord
   has_many :follow_ups, class_name: 'Crm::FollowUp', dependent: :destroy, inverse_of: :card
   has_many :ai_stage_suggestions, class_name: 'Crm::AiStageSuggestion', dependent: :destroy, inverse_of: :card
 
-  enum status: { open: 0, won: 1, lost: 2, archived: 3 }
+  enum status: { open: 0, won: 1, lost: 2, archived: 3, resolved: 4, cancelled: 5 }
   enum priority: { low: 0, medium: 1, high: 2, urgent: 3 }
 
   before_validation :ensure_activity_defaults
@@ -107,6 +107,7 @@ class Crm::Card < ApplicationRecord
   validates :metadata, jsonb_attributes_length: true
   validate :linked_records_must_belong_to_account
   validate :stage_must_belong_to_pipeline
+  validate :outcome_must_match_pipeline
 
   scope :active, -> { where(status: statuses[:open]) }
   scope :standalone, -> { where(contact_id: nil, conversation_id: nil, inbox_id: nil) }
@@ -168,8 +169,19 @@ class Crm::Card < ApplicationRecord
   # It must reflect the explicit close decision, never updated_at.
   def sync_closed_at
     return unless will_save_change_to_status?
+    # Ganho -> resolvido ao mudar de funil é o mesmo fechamento, não um novo (#1144).
+    return if Crm::Cards::Outcome.equivalent?(status_in_database, status)
 
-    self.closed_at = (won? || lost?) ? Time.current : nil
+    self.closed_at = Crm::Cards::Outcome::CLOSED_STATUSES.include?(status) ? Time.current : nil
+  end
+
+  # Ganho/perdido só em funil que conta como venda; resolvido/cancelado só nos outros (#1144). Checado só quando o status
+  # muda: um card ganho antes de o funil deixar de contar como venda continua editável.
+  def outcome_must_match_pipeline
+    return if pipeline.blank? || !will_save_change_to_status?
+    return if Crm::Cards::Outcome.status_for(pipeline, status) == status
+
+    errors.add(:status, "#{status} is not a closing result of this pipeline")
   end
 
   def stage_must_belong_to_pipeline

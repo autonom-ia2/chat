@@ -38,7 +38,7 @@ class Webhook < ApplicationRecord
   # value, payload[:event], dispatcher constant); the listener method is the
   # name with dots->underscores (crm.card.won -> crm_card_won). Plan §3.1.
   CRM_WEBHOOK_EVENTS = %w[crm.card.created crm.card.moved crm.card.won crm.card.lost
-                          crm.card.reopened crm.card.archived].freeze
+                          crm.card.resolved crm.card.cancelled crm.card.reopened crm.card.archived].freeze
 
   # Gated behind Crm::Config.enabled? so CE installs (CRM disabled) never offer
   # dead crm.* subscriptions. Computed at call time so the ENV gate is honored

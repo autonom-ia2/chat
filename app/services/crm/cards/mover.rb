@@ -30,10 +30,12 @@ class Crm::Cards::Mover
     @card.stage_id == @target_stage.id
   end
 
+  # Card fechado que muda para funil de outro tipo leva o desfecho equivalente (ganho <-> resolvido, #1144).
   def move_card!
     @card.update!(
       pipeline: @target_stage.pipeline,
       stage: @target_stage,
+      status: Crm::Cards::Outcome.status_for(@target_stage.pipeline, @card.status),
       entered_stage_at: Time.current,
       last_activity_at: Time.current
     )

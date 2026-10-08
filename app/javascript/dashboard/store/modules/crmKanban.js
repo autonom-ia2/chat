@@ -2,6 +2,7 @@ import { emitter } from 'shared/helpers/mitt';
 import { BUS_EVENTS } from 'shared/constants/busEvents';
 import types from '../mutation-types';
 import CrmKanbanAPI from '../../api/crmKanban';
+import { CLOSED_STATUSES } from 'dashboard/routes/dashboard/crm/helpers/cardOutcome';
 
 const emptyBoard = () => ({ pipeline: null, stages: [] });
 
@@ -1166,8 +1167,8 @@ export const actions = {
       return dispatch('moveCard', { cardId: id, stageId: fields.stage_id });
     }
 
-    // Won/lost route to the close path (status is NOT a permitted PATCH field).
-    if (fields.status === 'won' || fields.status === 'lost') {
+    // Closing results route to the close path (status is NOT a permitted PATCH field).
+    if (CLOSED_STATUSES.includes(fields.status)) {
       return dispatch('closeCard', { id, result: fields.status, ...fields });
     }
 

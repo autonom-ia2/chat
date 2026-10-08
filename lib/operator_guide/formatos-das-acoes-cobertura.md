@@ -16,7 +16,7 @@ Gerado por `bundle exec rails autonomia:guia:formatos` a partir do código (#900
 | | Total |
 |---|---|
 | Campos aninhados com vocabulário | 17 de 168 |
-| Leituras cruas tipadas | 111 de 184 |
+| Leituras cruas tipadas | 111 de 186 |
 
 ## Incompletas por motivo
 
@@ -35,7 +35,7 @@ Uma ação pode ter mais de um motivo.
 
 - `DELETE assignment_policies/:assignment_policy_id/inboxes/:id` — a rota não tem a action no controller: a chamada dá erro
 - `DELETE inboxes/:inbox_id/conference` — leitura crua sem tipo: call_sid
-- `PATCH crm/pipelines/:id` — leitura crua sem tipo: goal, google_sync, meta_sync
+- `PATCH crm/pipelines/:id` — leitura crua sem tipo: goal, google_sync, meta_sync, outcome_labels
 - `PATCH crm/pipelines/:pipeline_id/ai_settings` — aceita qualquer campo (permit! em app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:58)
 - `PATCH crm/stages/:id` — leitura crua sem tipo: funnel_stage_type
 - `PATCH ctwa_tracked_links/:id` — leitura crua sem tipo: ctwa_tracked_link
@@ -75,7 +75,7 @@ Uma ação pode ter mais de um motivo.
 - `POST crm/cards/bulk` — leitura crua sem tipo: action_name, bulk_action
 - `POST crm/meetings/:id/sync` — leitura crua sem tipo: force
 - `POST crm/meetings/suggest_times` — leitura crua sem tipo: date, duration_minutes
-- `POST crm/pipelines` — leitura crua sem tipo: goal
+- `POST crm/pipelines` — leitura crua sem tipo: goal, outcome_labels
 - `POST crm/pipelines/:pipeline_id/stages` — leitura crua sem tipo: funnel_stage_type
 - `POST ctwa_tracked_links` — leitura crua sem tipo: ctwa_tracked_link
 - `POST data_imports` — params inteiro repassado a DataImportSkipLogFinder.new
@@ -101,7 +101,7 @@ Uma ação pode ter mais de um motivo.
 - `POST whatsapp_calls/:id/terminate` — leitura crua sem tipo: sdp_answer (repassada a Whatsapp::CallService.new)
 - `POST whatsapp_calls/:id/upload_recording` — leitura crua sem tipo: recording (repassada a @call.message.attachments.create!)
 - `POST whatsapp_calls/initiate` — leitura crua sem tipo: sdp_offer (repassada a provider_service.initiate_call)
-- `PUT crm/pipelines/:id` — leitura crua sem tipo: goal, google_sync, meta_sync
+- `PUT crm/pipelines/:id` — leitura crua sem tipo: goal, google_sync, meta_sync, outcome_labels
 - `PUT crm/pipelines/:pipeline_id/ai_settings` — aceita qualquer campo (permit! em app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:58)
 - `PUT crm/stages/:id` — leitura crua sem tipo: funnel_stage_type
 - `PUT ctwa_tracked_links/:id` — leitura crua sem tipo: ctwa_tracked_link
@@ -156,9 +156,11 @@ Uma ação pode ter mais de um motivo.
 - `api/v1/accounts/crm/meetings#suggest_times` duration_minutes — o código não converte nem compara o valor
 - `api/v1/accounts/crm/meetings#sync` force — o código não converte nem compara o valor
 - `api/v1/accounts/crm/pipelines#create` goal — o código não converte nem compara o valor
+- `api/v1/accounts/crm/pipelines#create` outcome_labels — o código não converte nem compara o valor
 - `api/v1/accounts/crm/pipelines#update` goal — o código não converte nem compara o valor
 - `api/v1/accounts/crm/pipelines#update` google_sync — o código não converte nem compara o valor
 - `api/v1/accounts/crm/pipelines#update` meta_sync — o código não converte nem compara o valor
+- `api/v1/accounts/crm/pipelines#update` outcome_labels — o código não converte nem compara o valor
 - `api/v1/accounts/crm/stages#create` funnel_stage_type — o código não converte nem compara o valor
 - `api/v1/accounts/crm/stages#update` funnel_stage_type — o código não converte nem compara o valor
 - `api/v1/accounts/ctwa_tracked_links#create` ctwa_tracked_link — o código não converte nem compara o valor

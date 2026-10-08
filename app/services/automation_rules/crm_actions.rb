@@ -56,7 +56,7 @@ module AutomationRules::CrmActions
 
   def close_crm_card(result)
     card = crm_card
-    return if card.blank? || card.status == result
+    return if card.blank? || card.status == Crm::Cards::Outcome.status_for(card.pipeline, result)
 
     Crm::Cards::Closer.new(card: card, actor: nil, result: result).perform
     Crm::Cards::Broadcaster.broadcast(card, CRM_CARD_UPDATED)

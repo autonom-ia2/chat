@@ -636,6 +636,8 @@ pt_BR:
         won: 'Ganho'
         lost: 'Perdido'
         archived: 'Arquivado'
+        resolved: 'Resolvido'
+        cancelled: 'Cancelado'
       priorities:
         low: 'Baixa'
         medium: 'Média'

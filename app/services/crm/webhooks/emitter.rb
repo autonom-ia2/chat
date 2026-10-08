@@ -8,7 +8,7 @@ module Crm
     # caller passes IDS ONLY; the downstream listener reloads records by id.
     #
     # EVENT_MAP keys are the REAL event_type strings written by the CRM services
-    # (verified: creator.rb 'create', mover.rb 'move', closer.rb 'won'/'lost'/'reopen',
+    # (verified: creator.rb 'create', mover.rb 'move', closer.rb 'won'/'lost'/'resolved'/'cancelled'/'reopen',
     # cards_controller.rb 'archive'). Values are the dotted dispatcher constants.
     # This is an explicit allowlist: any event_type not listed (ai_*, follow_up_*,
     # conversation_sync, conversation_dedup_reuse, ...) is silently ignored for the
@@ -19,6 +19,8 @@ module Crm
         'move' => Events::Types::CRM_CARD_MOVED,
         'won' => Events::Types::CRM_CARD_WON,
         'lost' => Events::Types::CRM_CARD_LOST,
+        'resolved' => Events::Types::CRM_CARD_RESOLVED,
+        'cancelled' => Events::Types::CRM_CARD_CANCELLED,
         'reopen' => Events::Types::CRM_CARD_REOPENED,
         'archive' => Events::Types::CRM_CARD_ARCHIVED
       }.freeze

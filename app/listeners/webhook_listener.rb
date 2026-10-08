@@ -111,6 +111,14 @@ class WebhookListener < BaseListener
     deliver_crm_webhooks(event)
   end
 
+  def crm_card_resolved(event)
+    deliver_crm_webhooks(event)
+  end
+
+  def crm_card_cancelled(event)
+    deliver_crm_webhooks(event)
+  end
+
   def crm_card_reopened(event)
     deliver_crm_webhooks(event)
   end

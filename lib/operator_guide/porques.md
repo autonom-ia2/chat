@@ -435,7 +435,7 @@
 - onde_fica: Sidebar > CRM > CRM Kanban > abrir card
 - pre_requisitos: card existente em funil ativo.
 - passos: Arraste o card entre colunas no Kanban ou abra o drawer; ajuste etapa e responsável; para fechar, use ações de ganhar ou perder; informe valor ganho ou motivo da perda quando solicitado; reabra pelo mesmo drawer quando aplicável.
-- gotchas: se o movimento falhar, o front restaura o estado anterior; cards fechados podem aparecer melhor na Lista com filtro de resultado; perder e arquivar não deletam contato nem conversa.
+- gotchas: se o movimento falhar, o front restaura o estado anterior; cards fechados podem aparecer melhor na Lista com filtro de resultado; perder e arquivar não deletam contato nem conversa; em funil com "Fechar com sucesso aqui conta como venda" desligado (Editar funil), os botões fecham como Resolvido/Cancelado (ou o nome que o funil der), não somam em vendas nem avisam anúncios.
 
 ### criar_follow_ups_e_lembretes_no_crm
 - titulo: Criar follow-ups e lembretes no CRM
@@ -1027,7 +1027,7 @@
 - onde_fica: Configuracoes > Integracoes > n8n (Conexoes do CRM)
 - perfil: `administrator`; se o perfil nao puder, diga que a tela de integracoes e webhooks e administrativa. Custom role `crm_admin` pode acessar tokens pela rota do CRM, mas nao substitui o acesso administrativo a Configuracoes > Integracoes.
 - pre_requisitos: endpoint HTTPS publico do n8n; token de CRM com escopos adequados; decidir quais eventos assinar.
-- passos: 1. Abra n8n (Conexoes do CRM); 2. Clique para criar token de API do CRM; 3. Copie o token no n8n usando o header `api_access_token`; 4. Volte e crie um webhook; 5. Marque eventos como `crm.card.created`, `crm.card.moved`, `crm.card.won`, `crm.card.lost`, `crm.card.reopened` ou `crm.card.archived`.
+- passos: 1. Abra n8n (Conexoes do CRM); 2. Clique para criar token de API do CRM; 3. Copie o token no n8n usando o header `api_access_token`; 4. Volte e crie um webhook; 5. Marque eventos como `crm.card.created`, `crm.card.moved`, `crm.card.won`, `crm.card.lost`, `crm.card.resolved`, `crm.card.cancelled`, `crm.card.reopened` ou `crm.card.archived`.
 - gotchas: n8n local ou URL privada pode ser bloqueado por protecao SSRF; eventos de CRM so aparecem no webhook quando `CRM_KANBAN_ENABLED=true`; token e webhook sao duas partes separadas da integracao.
 - highlight: `crm-n8n-token`
 
