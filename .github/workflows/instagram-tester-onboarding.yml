@@ -78,6 +78,17 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  publisher-ssh-sudo:
+    name: Publisher real SSH and sudo boundary
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build disposable SSH and sudo fixture
+        run: docker build --file tests/instagram_testers/fixtures/remote-publisher-sudo/Dockerfile --tag instagram-publisher-sudo-fixture .
+      - name: Exercise persistent channel, legacy path and denied commands
+        run: docker run --rm --network none instagram-publisher-sudo-fixture
+
   python-preparer:
     name: Python session preparer
     runs-on: ubuntu-24.04

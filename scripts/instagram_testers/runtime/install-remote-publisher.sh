@@ -67,7 +67,13 @@ sudoers_tmp=$(/usr/bin/mktemp /etc/sudoers.d/instagram-tester-publisher.XXXXXX) 
 trap '/bin/rm -f "$sudoers_tmp"' EXIT
 /bin/chown root:root "$sudoers_tmp"
 /bin/chmod 0440 "$sudoers_tmp"
-printf '%s\n' "$publisher_user ALL=(root) NOPASSWD: $publisher_command \"\"" > "$sudoers_tmp"
+# sshd supplies the command selector, but sudo's env_reset removes it by default.
+# Keep only this selector, only for the no-argument wrapper; the wrapper validates
+# the empty legacy command or the fixed channel literal before touching Docker.
+{
+  printf '%s\n' "Defaults!$publisher_command env_keep += \"SSH_ORIGINAL_COMMAND\""
+  printf '%s\n' "$publisher_user ALL=(root) NOPASSWD: $publisher_command \"\""
+} > "$sudoers_tmp"
 /usr/sbin/visudo -cf "$sudoers_tmp" >/dev/null 2>&1 || fail
 /bin/mv -f "$sudoers_tmp" "$sudoers_path"
 trap - EXIT
