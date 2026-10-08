@@ -6,8 +6,8 @@ contendo `scripts/instagram_testers`, um SHA aprovado de 40 hex
 minúsculos e dependências **já instaladas** em `runtime/vps/node_modules` a partir
 do `package-lock.json`. O instalador não consulta Git/rede nem prova que o SHA
 representa o conteúdo recebido: essa correspondência/checksum é responsabilidade
-do empacotamento e aprovação da release. Ele copia somente os sete módulos
-JS do runtime existente e o pacote `vps/`; não copia Rails, `.env`, perfis ou
+do empacotamento e aprovação da release. Ele copia somente os módulos
+JS listados no instalador e o pacote `vps/`; não copia Rails, `.env`, perfis ou
 credenciais. Os links `.bin` do npm são ignorados; outros symlinks são recusados.
 
 Requisitos Linux ainda não verificados no host nesta entrega:
@@ -21,6 +21,13 @@ Requisitos Linux ainda não verificados no host nesta entrega:
 - Python 3.9+ e Node 22.12+ em `/usr/bin`. `Xvnc`, `xauth`, `mcookie`, Chrome,
   AWS CLI, OpenSSH, `systemctl`, `useradd`, `groupadd` e `runuser` nos caminhos do instalador;
   Session Manager plugin em `/usr/bin` ou `/usr/local/bin` e no PATH do serviço.
+- `/usr/bin/node` é o caminho efetivo na namespace, não uma exigência de atualizar
+  o pacote Node do host. Na VPS existente, manager/gateway/publisher montam
+  `/opt/instagram-meta-tools/node-v24.21.0-linux-x64/bin/node` nesse caminho por
+  `BindReadOnlyPaths`. Preservar esses drop-ins root-owned. O instalador também
+  precisa executar em namespace com o mesmo bind: fora dela, o Node 18 do host
+  é recusado corretamente. Conferir versão, SHA e permissões do runtime privado
+  antes de instalar; não relaxar o requisito >=22.12 nem alterar Node/npm/n8n.
 - TigerVNC `Xvnc` com `rfbunixpath`, `rfbunixmode` e `rfbport=-1`. Não usar Xvfb,
   x11vnc, websockify, VNC TCP, desktop, display manager ou shell no desktop.
 - Chrome estável com sandbox via user namespaces disponível para usuário sem
@@ -29,7 +36,7 @@ Requisitos Linux ainda não verificados no host nesta entrega:
   remover AppArmor ou passar `--no-sandbox` neste instalador. Com
   `NoNewPrivileges=true`, não depender do helper setuid: provar sandbox real na
   aceitação Linux. `chromiumSandbox=true` é necessário, não é prova de sandbox.
-- Pacote VPS com noVNC 1.7.0, jose 6.2.12, ws 8.22.0 e Playwright 1.59.1;
+- Pacote VPS com AWS SDK SSM 3.967.0, noVNC 1.7.0, jose 6.2.12, ws 8.22.0 e Playwright 1.59.1;
   playwright-core precisa existir na árvore preparada. O coordenador é dono do
   manifest/lockfile e da preparação das dependências.
 - Tailscale existente com HTTPS/certificado e ACL privada aprovados; o contrato

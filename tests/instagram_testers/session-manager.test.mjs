@@ -596,6 +596,8 @@ async function syntheticManager(t, options = {}) {
     data.env.INSTAGRAM_TESTER_RUNTIME_MODE = 'vps';
     data.env.INSTAGRAM_TESTER_CHROMIUM_SANDBOX = 'true';
   }
+  if (options.browserOperations)
+    data.env.INSTAGRAM_TESTER_BROWSER_OPERATIONS_ENABLED = 'true';
   if (options.reconnectId)
     data.env.INSTAGRAM_TESTER_RECONNECT_REQUEST_ID = options.reconnectId;
   const clock = new FakeClock();
@@ -694,6 +696,17 @@ async function syntheticManager(t, options = {}) {
   let versionReads = 0;
   let currentVersion = options.initialVersion || null;
   let publications = 0;
+  const browserRequest = options.browserRequest || {
+    type: 'browser_operation',
+    operation: 'request',
+    id: '33333333-3333-4333-8333-333333333333',
+    request_id: '44444444-4444-4444-8444-444444444444',
+    claim: '55555555-5555-4555-8555-555555555555',
+    action: 'search',
+    app_id: baseEnv.INSTAGRAM_META_DEVELOPER_APP_ID,
+    username: 'synthetic.user',
+    deadline: '2999-01-01T00:00:00.000Z',
+  };
   const pendingPublish = deferred();
   const pendingInvalidation = deferred();
   const cleanupWaiting = deferred();
@@ -743,6 +756,7 @@ async function syntheticManager(t, options = {}) {
         launchPersistentContext: async () => context,
       },
     }),
+    executeOperation: options.executeOperation,
     publish: async (_command, payload, { signal }) => {
       entries.push({ payload, signal, at: clock.time });
       signal.throwIfAborted();
@@ -777,6 +791,30 @@ async function syntheticManager(t, options = {}) {
           request: null,
         };
       }
+      if (payload.type === 'browser_operation') {
+        if (payload.operation === 'read')
+          return {
+            type: 'browser_operation',
+            operation: 'read',
+            request:
+              clock.time >= (options.browserRequestReadyAt ?? 1000)
+                ? browserRequest
+                : null,
+          };
+        if (payload.operation === 'claim')
+          return {
+            type: 'browser_operation',
+            operation: 'claim',
+            request: browserRequest,
+          };
+        if (payload.operation === 'complete')
+          return {
+            type: 'browser_operation',
+            operation: 'complete',
+            id: payload.id,
+            request_id: payload.request_id,
+          };
+      }
       publications += 1;
       if (options.rejectPublication === publications) {
         currentVersion = '00000000-0000-4000-8000-999999999999';
@@ -810,6 +848,7 @@ async function syntheticManager(t, options = {}) {
     clock,
     signals,
     entries,
+    browserRequest,
     bodies,
     headers,
     stdout,
@@ -828,6 +867,71 @@ async function syntheticManager(t, options = {}) {
     ),
   };
 }
+
+test('polls browser operations at one second and executes a queued request once', async t => {
+  const executions = [];
+  const data = await syntheticManager(t, {
+    vps: true,
+    browserOperations: true,
+    browserRequestReadyAt: 999,
+    executeOperation: async ({ request }) => {
+      executions.push(request);
+      return {
+        type: 'browser_operation',
+        operation: 'complete',
+        action: request.action,
+        id: request.id,
+        request_id: request.request_id,
+        claim: request.claim,
+        captured_at: '2026-10-08T12:00:00.000Z',
+        results: [],
+      };
+    },
+  });
+  const browserEntries = () =>
+    data.entries.filter(entry => entry.payload.type === 'browser_operation');
+  try {
+    await data.clock.advance(999);
+    assert.equal(executions.length, 0);
+    assert.equal(
+      browserEntries().filter(entry => entry.payload.operation === 'claim')
+        .length,
+      0
+    );
+
+    await data.clock.advance(1);
+    const reads = browserEntries().filter(
+      entry => entry.payload.operation === 'read'
+    );
+    const claims = browserEntries().filter(
+      entry => entry.payload.operation === 'claim'
+    );
+    const completions = browserEntries().filter(
+      entry => entry.payload.operation === 'complete'
+    );
+    assert.deepEqual(
+      reads.map(entry => entry.at),
+      [0, 1000]
+    );
+    assert.equal(claims.length, 1);
+    assert.equal(completions.length, 1);
+    assert.equal(executions.length, 1);
+    assert.equal(
+      data.entries.filter(entry => entry.payload.operation === 'bootstrap')
+        .length,
+      1
+    );
+    assert.equal(
+      data.entries.filter(entry => entry.payload.operation === 'authorization')
+        .length,
+      0
+    );
+    data.signals.emit('SIGTERM');
+    assert.equal(await data.settled, null);
+  } finally {
+    data.signals.emit('SIGTERM');
+  }
+});
 
 test('three refresh cycles preserve opaque CAS versions and the 15-minute interval', async t => {
   const data = await syntheticManager(t);

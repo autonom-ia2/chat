@@ -4,6 +4,7 @@ import { createServer } from 'node:net';
 import { isMainModule } from '../entrypoint.mjs';
 import { parseEnvelope, validateRequest } from '../operator-protocol.mjs';
 import { runPublisher } from '../publisher-tunnel.mjs';
+import { createPublisherChannel } from '../publisher-channel.mjs';
 import {
   MAX_CONNECTIONS,
   MAX_OUTPUT_BYTES,
@@ -39,6 +40,9 @@ export async function createPublisherBroker({
   chmodImpl = chmod,
   createServerImpl = createServer,
   runPublisherImpl = runPublisher,
+  channelFactory = createPublisherChannel,
+  warmChannel = false,
+  prewarmChannel = true,
   signals = process,
   clock = globalThis,
 } = {}) {
@@ -56,6 +60,9 @@ export async function createPublisherBroker({
   }
 
   const active = new Map();
+  let channel;
+  let channelPromise;
+  let channelQueue = Promise.resolve();
   let stopping = false;
   let ready = false;
   let closing;
@@ -63,6 +70,74 @@ export async function createPublisherBroker({
   const binding = new Promise(resolve => {
     bindingDone = resolve;
   });
+
+  const closeChannel = async candidate => {
+    if (!candidate) return;
+    if (channel === candidate) {
+      channel = null;
+      channelPromise = null;
+    }
+    await candidate.close().catch(() => {});
+  };
+
+  const openChannel = () => {
+    if (channelPromise) return channelPromise;
+    const pending = (async () => {
+      const candidate = await channelFactory({ stack, env, signals, clock });
+      try {
+        if (stopping) throw publicationFailure();
+        if (prewarmChannel) {
+          const bootstrap = await candidate.send(
+            {
+              type: 'session',
+              operation: 'bootstrap',
+            },
+            { signals }
+          );
+          if (bootstrap?.type !== 'bootstrap') throw publicationFailure();
+        }
+        channel = candidate;
+        return candidate;
+      } catch {
+        await candidate.close().catch(() => {});
+        throw publicationFailure();
+      }
+    })();
+    channelPromise = pending;
+    pending.catch(() => {
+      if (channelPromise === pending) channelPromise = null;
+    });
+    return pending;
+  };
+
+  const runWarmChannel = async (payload, requestSignals) => {
+    let cancelled = false;
+    const cancel = () => {
+      cancelled = true;
+    };
+    requestSignals.once('SIGTERM', cancel);
+    requestSignals.once('SIGINT', cancel);
+    const previous = channelQueue;
+    let release;
+    channelQueue = new Promise(resolve => {
+      release = resolve;
+    });
+    try {
+      await previous;
+      if (cancelled) throw publicationFailure();
+      const candidate = await openChannel();
+      try {
+        return await candidate.send(payload, { signals: requestSignals });
+      } catch {
+        await closeChannel(candidate);
+        throw publicationFailure();
+      }
+    } finally {
+      requestSignals.removeListener('SIGTERM', cancel);
+      requestSignals.removeListener('SIGINT', cancel);
+      release();
+    }
+  };
   const server = createServerImpl({ allowHalfOpen: true }, socket => {
     // Count sockets while reading AND while flushing a response.
     if (!ready || stopping || active.size >= MAX_CONNECTIONS) {
@@ -94,11 +169,13 @@ export async function createPublisherBroker({
           if (closed) return;
           validateRequest(payload);
           publishing = true;
-          const result = await runPublisherImpl(payload, {
-            stack,
-            env,
-            signals: requestSignals,
-          });
+          const result = warmChannel
+            ? await runWarmChannel(payload, requestSignals)
+            : await runPublisherImpl(payload, {
+                stack,
+                env,
+                signals: requestSignals,
+              });
           publishing = false;
           if (closed) return;
           socket.end(publisherEnvelope(payload, result));
@@ -117,12 +194,13 @@ export async function createPublisherBroker({
     active.forEach(terminate => terminate());
     signals.removeListener('SIGTERM', onSignal);
     signals.removeListener('SIGINT', onSignal);
-    closing = binding.then(
-      () =>
-        new Promise(resolve => {
-          server.close(() => resolve());
-        })
-    );
+    closing = binding.then(async () => {
+      await closeChannel(channel);
+      await channelPromise?.catch(() => {});
+      await new Promise(resolve => {
+        server.close(() => resolve());
+      });
+    });
     return closing;
   };
   onSignal = () => {
@@ -145,6 +223,7 @@ export async function createPublisherBroker({
     const bound = await socketIdentity(config, identityOptions);
     if (stopping || !sameIdentity(initial.directory, bound.directory))
       throw publicationFailure();
+    if (warmChannel) await openChannel();
     ready = true;
     return { server, close };
   } catch {
@@ -159,6 +238,7 @@ export async function main(env = process.env) {
     stack: env.INSTAGRAM_TESTER_RUNTIME_STACK,
     socketPath: env.INSTAGRAM_TESTER_PUBLISHER_SOCKET,
     env,
+    warmChannel: true,
   });
 }
 

@@ -1,0 +1,47 @@
+{
+  "utc": "2026-10-08T13:14:03.787816+00:00",
+  "result": {
+    "status": "passed",
+    "aws_identity_matches": true,
+    "current_matches_cli": true,
+    "calls": 5,
+    "same_current": true,
+    "elapsed_ms": [
+      1602.544,
+      149.47,
+      145.386,
+      162.606,
+      202.483
+    ],
+    "max_attempts": 1,
+    "value_cache": false,
+    "node_version": "v18.19.1",
+    "meta_called": false,
+    "production_mutated": false,
+    "live_service_unchanged": true,
+    "cpu_quota_percent": 50,
+    "memory_max_bytes": 536870912,
+    "bundle_sha256": "83440776c029fe7a2b619a253f3f12014bb251a6718188483820073659d68851",
+    "live_cpu_quota_before": "2s",
+    "unit_exit_code": 0,
+    "source_sha256": "5832374644a9b4c72c526edd461fff2061ea8425c8675d78c08ec7843fc45e04",
+    "staging_removed": true,
+    "transient_removed": true
+  },
+  "summary_ms": {
+    "first_with_credential_initialization": 1602.544,
+    "steady_samples": 4,
+    "steady_min": 145.386,
+    "steady_median": 156.038,
+    "steady_max": 202.483,
+    "cli_median_reference": 4512.955,
+    "steady_component_speedup": 28.922
+  },
+  "limits": [
+    "5 chamadas SDK reais; primeira inicializa credenciais, quatro reaproveitam cliente/conex\u00e3o.",
+    "Mesmo Node18.19.1, usu\u00e1rio/perfil AWS e CPU50% da VPS; nenhuma muta\u00e7\u00e3o ou chamada Meta/OAuth.",
+    "Depend\u00eancia auxiliar browser util-locate-window3.965.10 declara Node>=20; sucesso deste experimento n\u00e3o confirma suporte oficial de toda closure em Node18.",
+    "Instalador existente exige Node>=22.12, trava preservada; desvio atual precisa ser resolvido antes de instala\u00e7\u00e3o aprovada.",
+    "N\u00e3o mede Rails, fila manager, t\u00fanelSSM/SSH ou Meta; n\u00e3o somar medianas como resultado ponta a ponta."
+  ]
+}

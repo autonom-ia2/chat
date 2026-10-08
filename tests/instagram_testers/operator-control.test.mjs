@@ -2,6 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
+import { readdirSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import {
@@ -378,10 +379,28 @@ test('forced publisher emits only canonical bounded typed replies including boot
   const synthetic = source
     .replace('/usr/bin/id -u 2>/dev/null', 'printf 0')
     .replace(
+      '/usr/bin/docker exec -i chatwoot-web bundle exec ruby scripts/instagram_testers/session_publisher.rb --channel',
+      '/bin/cat'
+    )
+    .replace(
       '/usr/bin/docker exec -i chatwoot-web bundle exec ruby scripts/instagram_testers/session_publisher.rb 2>/dev/null',
       '/bin/cat'
     );
   assert.equal(synthetic.includes('/usr/bin/docker'), false);
+  assert.match(synthetic, /exec 4<&0/);
+  assert.match(source, /--channel <&4 >&3/);
+  assert.match(synthetic, /\/bin\/cat <&4 >&3/);
+  assert.match(synthetic, /exec 4<&-/);
+  const runSynthetic = (input, command = '') =>
+    spawnSync('/bin/sh', ['-c', synthetic], {
+      input,
+      encoding: 'utf8',
+      timeout: 3000,
+      env: {
+        SUDO_USER: 'chatwoot_publisher',
+        ...(command ? { SSH_ORIGINAL_COMMAND: command } : {}),
+      },
+    });
   for (const [reply, code] of [
     [JSON.stringify(envelope(request)), 0],
     [JSON.stringify({ type: 'session', version: id }), 0],
@@ -422,17 +441,47 @@ test('forced publisher emits only canonical bounded typed replies including boot
     ['x'.repeat(1025), 2],
     [JSON.stringify(envelope()) + '\nlog', 2],
   ]) {
-    const result = spawnSync('/bin/sh', ['-c', synthetic], {
-      input: reply,
-      encoding: 'utf8',
-      env: { SUDO_USER: 'chatwoot_publisher' },
-    });
+    const result = runSynthetic(reply);
+    assert.equal(result.error, undefined, reply);
     assert.equal(result.status, code, reply);
     assert.equal(result.stdout, code === 0 ? `${reply}\n` : '');
     assert.equal(
       result.stderr,
       code === 0 ? '' : 'instagram_publisher_transport_failed\n'
     );
+  }
+  const channelFrames = [
+    JSON.stringify({ type: 'session', version: id }),
+    JSON.stringify(bootstrap),
+    JSON.stringify(envelope(request)),
+  ].join('\n');
+  const beforeChannel = readdirSync('/tmp').filter(name =>
+    name.startsWith('instagram-publisher-channel.')
+  );
+  const channel = runSynthetic(
+    `${channelFrames}\n`,
+    'instagram_publisher_channel_v1'
+  );
+  assert.equal(channel.error, undefined);
+  assert.equal(channel.status, 0);
+  assert.equal(channel.stdout, `${channelFrames}\n`);
+  assert.equal(channel.stderr, '');
+  assert.deepEqual(
+    readdirSync('/tmp').filter(name =>
+      name.startsWith('instagram-publisher-channel.')
+    ),
+    beforeChannel
+  );
+  for (const [input, command] of [
+    ['not-json\n', 'instagram_publisher_channel_v1'],
+    [`${'x'.repeat(2049)}\n`, 'instagram_publisher_channel_v1'],
+    ['ignored\n', 'instagram_publisher_unknown_v1'],
+  ]) {
+    const result = runSynthetic(input, command);
+    assert.equal(result.error, undefined, `${command}:${input.length}`);
+    assert.equal(result.status, 2, `${command}:${input.length}`);
+    assert.equal(result.stdout, '');
+    assert.equal(result.stderr, 'instagram_publisher_transport_failed\n');
   }
 });
 

@@ -1,0 +1,189 @@
+{
+  "results": [
+    {
+      "status": "read_complete",
+      "utc": "2026-10-08T14:22:17.941375+00:00",
+      "stack": "hub2you",
+      "account_matches": true,
+      "instance_guard": "current_running_prod_github_actions",
+      "pin": {
+        "repository": "354307071110.dkr.ecr.us-east-1.amazonaws.com/chatwoot-autonomia-prod",
+        "manifest": "sha256:8b926f0a4da25dab038717039cb8d5f46f671651198c8cb0501e23d667912f4d",
+        "image_id": "sha256:64813df100ccc17ba5a2caf0bf03f2436c59216efdb684dd9cabb6dd575d7e53",
+        "source_sha": "23f667bab1ed1f4ab0e350c93f02576f6455d3fe"
+      },
+      "runtime": {
+        "memory": {
+          "host": {
+            "MemTotal_bytes": 4022243328,
+            "MemAvailable_bytes": 1227321344,
+            "SwapTotal_bytes": 0,
+            "SwapFree_bytes": 0
+          },
+          "containers": [
+            {
+              "container": "chatwoot-web",
+              "memory_limit_bytes": 0,
+              "oom_killed": false,
+              "memory_usage": "637.3MiB / 3.746GiB",
+              "memory_percent": "16.61%",
+              "cpu_percent": "25.13%",
+              "pids": "33"
+            },
+            {
+              "container": "chatwoot-worker",
+              "memory_limit_bytes": 0,
+              "oom_killed": false,
+              "memory_usage": "882.4MiB / 3.746GiB",
+              "memory_percent": "23.00%",
+              "cpu_percent": "87.76%",
+              "pids": "43"
+            }
+          ]
+        },
+        "status": "read_complete",
+        "captured_at": "2026-10-08T14:22:17.082554+00:00",
+        "containers": [
+          {
+            "container": "chatwoot-web",
+            "running": true,
+            "repository": "354307071110.dkr.ecr.us-east-1.amazonaws.com/chatwoot-autonomia-prod",
+            "manifest": "sha256:8b926f0a4da25dab038717039cb8d5f46f671651198c8cb0501e23d667912f4d",
+            "image_id": "sha256:64813df100ccc17ba5a2caf0bf03f2436c59216efdb684dd9cabb6dd575d7e53",
+            "source_sha": "23f667bab1ed1f4ab0e350c93f02576f6455d3fe",
+            "source_matches_expected": true,
+            "pid": 29471,
+            "restart_count": 0,
+            "started_at": "2026-10-08T12:39:03.547703694Z"
+          },
+          {
+            "container": "chatwoot-worker",
+            "running": true,
+            "repository": "354307071110.dkr.ecr.us-east-1.amazonaws.com/chatwoot-autonomia-prod",
+            "manifest": "sha256:8b926f0a4da25dab038717039cb8d5f46f671651198c8cb0501e23d667912f4d",
+            "image_id": "sha256:64813df100ccc17ba5a2caf0bf03f2436c59216efdb684dd9cabb6dd575d7e53",
+            "source_sha": "23f667bab1ed1f4ab0e350c93f02576f6455d3fe",
+            "source_matches_expected": true,
+            "pid": 29959,
+            "restart_count": 0,
+            "started_at": "2026-10-08T12:40:32.563569408Z"
+          }
+        ],
+        "pin": {
+          "repository": "354307071110.dkr.ecr.us-east-1.amazonaws.com/chatwoot-autonomia-prod",
+          "manifest": "sha256:8b926f0a4da25dab038717039cb8d5f46f671651198c8cb0501e23d667912f4d",
+          "image_id": "sha256:64813df100ccc17ba5a2caf0bf03f2436c59216efdb684dd9cabb6dd575d7e53",
+          "source_sha": "23f667bab1ed1f4ab0e350c93f02576f6455d3fe"
+        },
+        "continuity": {
+          "all_running": true,
+          "restart_counts": {
+            "chatwoot-web": 0,
+            "chatwoot-worker": 0
+          },
+          "pids_present": true,
+          "started_at_present": true
+        },
+        "mutation_performed": false,
+        "env_read": false,
+        "application_data_read": false
+      },
+      "mutation_performed": false,
+      "ssm_probe_mode": "read_only_docker_inspect_and_git_sha"
+    },
+    {
+      "status": "read_complete",
+      "utc": "2026-10-08T14:22:26.849031+00:00",
+      "stack": "autonomia",
+      "account_matches": true,
+      "instance_guard": "current_running_prod_github_actions",
+      "pin": {
+        "repository": "140023375763.dkr.ecr.us-east-1.amazonaws.com/chatwoot-autonomia-prod",
+        "manifest": "sha256:e81b575c306ecde47f16326e1dd773559baefd2e1aff93c88392e14fcc03e1f1",
+        "image_id": "sha256:e507237c3e2c0ac7b307ddb8787576196a41d275d895c8d967a00f200551db89",
+        "source_sha": "23f667bab1ed1f4ab0e350c93f02576f6455d3fe"
+      },
+      "runtime": {
+        "memory": {
+          "host": {
+            "MemTotal_bytes": 4022239232,
+            "MemAvailable_bytes": 1841631232,
+            "SwapTotal_bytes": 0,
+            "SwapFree_bytes": 0
+          },
+          "containers": [
+            {
+              "container": "chatwoot-web",
+              "memory_limit_bytes": 0,
+              "oom_killed": false,
+              "memory_usage": "578.4MiB / 3.746GiB",
+              "memory_percent": "15.08%",
+              "cpu_percent": "0.02%",
+              "pids": "20"
+            },
+            {
+              "container": "chatwoot-worker",
+              "memory_limit_bytes": 0,
+              "oom_killed": false,
+              "memory_usage": "780.9MiB / 3.746GiB",
+              "memory_percent": "20.36%",
+              "cpu_percent": "0.25%",
+              "pids": "23"
+            }
+          ]
+        },
+        "status": "read_complete",
+        "captured_at": "2026-10-08T14:22:26.026284+00:00",
+        "containers": [
+          {
+            "container": "chatwoot-web",
+            "running": true,
+            "repository": "140023375763.dkr.ecr.us-east-1.amazonaws.com/chatwoot-autonomia-prod",
+            "manifest": "sha256:e81b575c306ecde47f16326e1dd773559baefd2e1aff93c88392e14fcc03e1f1",
+            "image_id": "sha256:e507237c3e2c0ac7b307ddb8787576196a41d275d895c8d967a00f200551db89",
+            "source_sha": "23f667bab1ed1f4ab0e350c93f02576f6455d3fe",
+            "source_matches_expected": true,
+            "pid": 29284,
+            "restart_count": 0,
+            "started_at": "2026-10-08T12:38:44.973748285Z"
+          },
+          {
+            "container": "chatwoot-worker",
+            "running": true,
+            "repository": "140023375763.dkr.ecr.us-east-1.amazonaws.com/chatwoot-autonomia-prod",
+            "manifest": "sha256:e81b575c306ecde47f16326e1dd773559baefd2e1aff93c88392e14fcc03e1f1",
+            "image_id": "sha256:e507237c3e2c0ac7b307ddb8787576196a41d275d895c8d967a00f200551db89",
+            "source_sha": "23f667bab1ed1f4ab0e350c93f02576f6455d3fe",
+            "source_matches_expected": true,
+            "pid": 29783,
+            "restart_count": 0,
+            "started_at": "2026-10-08T12:40:25.046130636Z"
+          }
+        ],
+        "pin": {
+          "repository": "140023375763.dkr.ecr.us-east-1.amazonaws.com/chatwoot-autonomia-prod",
+          "manifest": "sha256:e81b575c306ecde47f16326e1dd773559baefd2e1aff93c88392e14fcc03e1f1",
+          "image_id": "sha256:e507237c3e2c0ac7b307ddb8787576196a41d275d895c8d967a00f200551db89",
+          "source_sha": "23f667bab1ed1f4ab0e350c93f02576f6455d3fe"
+        },
+        "continuity": {
+          "all_running": true,
+          "restart_counts": {
+            "chatwoot-web": 0,
+            "chatwoot-worker": 0
+          },
+          "pids_present": true,
+          "started_at_present": true
+        },
+        "mutation_performed": false,
+        "env_read": false,
+        "application_data_read": false
+      },
+      "mutation_performed": false,
+      "ssm_probe_mode": "read_only_docker_inspect_and_git_sha"
+    }
+  ],
+  "expected_current_main_sha": "23f667bab1ed1f4ab0e350c93f02576f6455d3fe",
+  "scope": "Fresh read-only pre-release inventory, explicitly pinned to the current main source. No application data, environment values or credentials read.",
+  "reader_sha256": "d19b8f0051ee34368b755b1c7187bd381415ddc0d2c9e85d027c95a9c0b3edc6"
+}

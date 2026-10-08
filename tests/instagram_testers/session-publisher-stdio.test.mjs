@@ -1,3 +1,5 @@
+/* eslint-disable no-await-in-loop, no-restricted-syntax -- Each fixture lifecycle is intentionally sequential. */
+
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import {
@@ -170,8 +172,8 @@ end
 `
   );
   return {
-    run(input = JSON.stringify(request)) {
-      const result = spawnSync('/usr/bin/ruby', [script], {
+    run(input = JSON.stringify(request), args = []) {
+      const result = spawnSync('/usr/bin/ruby', [script, ...args], {
         cwd: root,
         env: {},
         input,
@@ -218,6 +220,45 @@ test('success emits one JSON line despite boot, call and at_exit logs', async t 
   assert.equal(result.stderr, '');
   assert.deepEqual(JSON.parse(await cli.called()), request);
   await cli.lifecycle(successEvents);
+});
+
+test('channel mode reuses one boot and runs each frame inside its executor', async t => {
+  const cli = await fixture(t);
+  const input = `${JSON.stringify(request)}\n${JSON.stringify(request)}\n`;
+  const result = cli.run(input, ['--channel']);
+  assert.equal(result.status, 0);
+  assert.equal(
+    result.stdout,
+    `${JSON.stringify(response)}\n${JSON.stringify(response)}\n`
+  );
+  assert.equal(result.stderr, '');
+  await cli.lifecycle([
+    'boot',
+    'load_runner',
+    'executor_start',
+    'call',
+    'serialize',
+    'executor_complete',
+    'executor_start',
+    'call',
+    'serialize',
+    'executor_complete',
+    'at_exit',
+  ]);
+});
+
+test('channel mode rejects incomplete and oversized frames before executor work', async t => {
+  for (const input of [
+    JSON.stringify(request),
+    JSON.stringify(request).padEnd(limit + 1, ' ') + '\n',
+  ]) {
+    const cli = await fixture(t);
+    const result = cli.run(input, ['--channel']);
+    assert.equal(result.status, 2);
+    assert.equal(result.stdout, '');
+    assert.equal(result.stderr, failure);
+    await cli.lifecycle(['boot', 'load_runner', 'at_exit']);
+  }
 });
 
 [

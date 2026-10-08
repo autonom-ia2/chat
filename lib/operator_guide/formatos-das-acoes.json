@@ -16186,20 +16186,22 @@
         "tipo_pela_leitura": "nome"
       },
       "return_to": {},
+      "tester_authorization_attestation": {},
       "tester_selection_token": {}
     },
     "completo": true,
     "controller": "api/v1/accounts/instagram/authorizations#create",
     "modelo": "Inbox",
     "origem": [
-      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:10",
-      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:52",
-      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:70",
+      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:9",
+      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:48",
+      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:66",
       "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:15",
       "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:14",
-      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:58",
-      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:57",
-      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:50",
+      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:13",
+      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:54",
+      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:53",
+      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:46",
       "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:37"
     ],
     "sem_corpo": false

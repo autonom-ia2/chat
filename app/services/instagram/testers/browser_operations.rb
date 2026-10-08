@@ -214,7 +214,9 @@ class Instagram::Testers::BrowserOperations
   def complete_status(request, operation)
     status, target_id = role_observation(request, operation)
     status = reconcile_status(operation, target_id, status)
-    complete(request, result: { 'status' => status })
+    result = { 'status' => status }
+    result['authorization_attestation'] = authorization_attestation(operation) if status == 'accepted'
+    complete(request, result: result)
   end
 
   def complete_authorization(request, operation)
@@ -240,7 +242,11 @@ class Instagram::Testers::BrowserOperations
       outcome.reconcile { 'accepted' }
     end
 
-    complete(request, result: { 'status' => request.fetch('status'), 'invited' => request.fetch('invited') })
+    result = { 'status' => request.fetch('status'), 'invited' => request.fetch('invited') }
+    if request.fetch('status') == 'accepted' && !request.fetch('write_started')
+      result['authorization_attestation'] = authorization_attestation(operation)
+    end
+    complete(request, result: result)
   end
 
   def complete_invite_error(request, operation)
@@ -342,6 +348,13 @@ class Instagram::Testers::BrowserOperations
 
   def reconcile_status(operation, target_id, status)
     Instagram::Testers::InvitationOutcome.new(app_id: operation.fetch('app_id'), target_id: target_id).reconcile { status }
+  end
+
+  def authorization_attestation(operation)
+    Instagram::Testers::AuthorizationAttestation.issue(
+      selection: operation.fetch('selection'), operation_id: operation.fetch('id'),
+      request_id: operation.fetch('request_id'), source_action: operation.fetch('action')
+    )
   end
 
   def complete(request, result:)

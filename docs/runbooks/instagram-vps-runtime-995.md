@@ -1,5 +1,7 @@
 # Runtime Instagram na VPS — #995
 
+> **Candidato de 08/10/2026:** para PR #1155, usar o [plano de publicação e reversão](../audit/995-instagram-latency-release-plan-20261008.md) e as [evidências de runtime](../audit/995-instagram-runtime-readiness-20261008.md). Merge/deploy continuam suspensos. O Node privado existente satisfaz o contrato dentro da namespace; não atualizar o Node do host.
+
 > **Retomada em 07/10/2026:** leia [o handoff consolidado](instagram-assisted-codex-handoff.md) antes dos comandos históricos abaixo. A #1089 já foi instalada e os sete serviços retomados; a resposta da consulta inicial e o aceite do assistido ainda estão pendentes.
 
 
@@ -82,9 +84,17 @@ este bloco como parte dos testes. O instalador só aceita Linux/root e serviços
 Instagram VPS inativos; não contém `enable`, `start`, `stop` ou `restart`.
 
 ```sh
-sudo /usr/bin/python3 "$APPROVED_ARTIFACT/scripts/instagram_testers/runtime/vps/install/install.py" \
+sudo systemd-run --wait --collect --unit="instagram-install-$APPROVED_RELEASE_SHA" \
+  --property=Type=exec \
+  --property=BindReadOnlyPaths=/opt/instagram-meta-tools/node-v24.21.0-linux-x64/bin/node:/usr/bin/node \
+  /usr/bin/python3 "$APPROVED_ARTIFACT/scripts/instagram_testers/runtime/vps/install/install.py" \
   "$APPROVED_ARTIFACT" "$APPROVED_RELEASE_SHA"
 ```
+
+Esse comando usa o runtime privado já verificado, sem substituir `/usr/bin/node`
+do host. Confirmar o SHA do binário e preservar os drop-ins equivalentes dos seis
+serviços Node nas duas stacks. Não executar com unidades ativas, sessão humana
+aberta, artefato não aprovado ou sem snapshot de `current`/unidades para reversão.
 
 Instala release imutável em `/opt/instagram-meta/releases/SHA`, unidades em
 `/etc/systemd/system` e usuários/directórios privados. Faz somente
