@@ -1,7 +1,12 @@
 import { mount, flushPromises } from '@vue/test-utils';
 import CrmKanbanAPI from 'dashboard/api/crmKanban';
-import { notifyCrmSubjectsChanged } from 'dashboard/routes/dashboard/crm/composables/useCrmConversationStages';
+import {
+  crmSubjectsChange,
+  notifyCrmSubjectsChanged,
+} from 'dashboard/routes/dashboard/crm/composables/useCrmConversationStages';
 import CrmReplySubject from './CrmReplySubject.vue';
+
+const permissions = vi.hoisted(() => ({ canManageCards: null }));
 
 vi.mock('dashboard/api/crmKanban', () => ({
   default: {
@@ -19,8 +24,6 @@ vi.mock(
     };
   }
 );
-vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
-const permissions = vi.hoisted(() => ({ canManageCards: null }));
 vi.mock(
   'dashboard/routes/dashboard/crm/composables/useCrmPermissions',
   async () => {
@@ -34,6 +37,7 @@ vi.mock(
     };
   }
 );
+vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
 
 const subject = (id, title, extra = {}) => ({
   id,
@@ -44,6 +48,10 @@ const subject = (id, title, extra = {}) => ({
   stage_name: 'Novo',
   ...extra,
 });
+const TWO_SUBJECTS = [
+  subject(2, 'Chat2You', { current: true }),
+  subject(1, 'Agentes de IA'),
+];
 
 const wrappers = [];
 afterEach(() => wrappers.splice(0).forEach(wrapper => wrapper.unmount()));
@@ -53,9 +61,19 @@ const mountReply = (subjects, { canManageCards = true } = {}) => {
   CrmKanbanAPI.getConversationSubjects.mockResolvedValue({
     data: { payload: subjects },
   });
-  const wrapper = mount(CrmReplySubject, { props: { conversationId: 9 } });
+  const wrapper = mount(CrmReplySubject, {
+    props: { conversationId: 9 },
+    attachTo: document.body,
+  });
   wrappers.push(wrapper);
   return wrapper;
+};
+
+const lastCardId = wrapper => wrapper.emitted('update:cardId')?.at(-1)?.[0];
+const toggle = wrapper => wrapper.find('[data-crm-reply-subject-toggle]');
+const openAndPick = async (wrapper, index) => {
+  await toggle(wrapper).trigger('click');
+  await wrapper.findAll('[role="menuitemradio"]')[index].trigger('click');
 };
 
 beforeEach(() => {
@@ -71,45 +89,77 @@ it('stays hidden and sends no subject when the conversation has a single open su
   await flushPromises();
 
   expect(wrapper.find('[data-crm-reply-subject]').exists()).toBe(false);
-  const sentCards = (wrapper.emitted('update:cardId') || []).flat();
-  expect(sentCards.filter(Boolean)).toEqual([]);
+  expect(lastCardId(wrapper) ?? null).toBeNull();
 });
 
 it('shows the current subject and sends it with the reply', async () => {
-  const wrapper = mountReply([
-    subject(2, 'Chat2You', { current: true }),
-    subject(1, 'Agentes de IA'),
-  ]);
+  const wrapper = mountReply(TWO_SUBJECTS);
   await flushPromises();
 
-  expect(wrapper.find('[data-crm-reply-subject]').text()).toContain('Chat2You');
-  expect(wrapper.emitted('update:cardId').at(-1)).toEqual([2]);
+  expect(toggle(wrapper).text()).toContain('Chat2You');
+  expect(lastCardId(wrapper)).toBe(2);
 });
 
-it('switching the subject here makes it the current one right away', async () => {
-  const wrapper = mountReply([
-    subject(2, 'Chat2You', { current: true }),
-    subject(1, 'Agentes de IA'),
-  ]);
+it('uses the newly chosen subject at once, before the switch answers', async () => {
+  let finishFocus;
+  CrmKanbanAPI.focusConversationSubject.mockImplementationOnce(
+    () =>
+      new Promise(resolve => {
+        finishFocus = resolve;
+      })
+  );
+  const wrapper = mountReply(TWO_SUBJECTS);
   await flushPromises();
 
-  await wrapper.find('[data-crm-reply-subject] > button').trigger('click');
-  const options = wrapper.findAll('[data-crm-reply-subject] li button');
-  await options[1].trigger('click');
-  await flushPromises();
+  await openAndPick(wrapper, 1);
 
+  expect(lastCardId(wrapper)).toBe(1);
   expect(CrmKanbanAPI.focusConversationSubject).toHaveBeenCalledWith(9, 1);
+  finishFocus({});
+  await flushPromises();
   expect(notifyCrmSubjectsChanged).toHaveBeenCalledWith(9);
 });
 
-it('does not switch for someone who cannot manage cards', async () => {
-  const wrapper = mountReply(
-    [subject(2, 'Chat2You', { current: true }), subject(1, 'Agentes de IA')],
-    { canManageCards: false }
-  );
+it('goes back to the previous subject when the switch fails', async () => {
+  CrmKanbanAPI.focusConversationSubject.mockRejectedValueOnce(new Error('x'));
+  const wrapper = mountReply(TWO_SUBJECTS);
   await flushPromises();
 
-  const toggle = wrapper.find('[data-crm-reply-subject] > button');
-  expect(toggle.attributes('disabled')).toBeDefined();
+  await openAndPick(wrapper, 1);
+  await flushPromises();
+
+  expect(lastCardId(wrapper)).toBe(2);
+});
+
+it('reloads when the subjects of this conversation change elsewhere', async () => {
+  mountReply(TWO_SUBJECTS);
+  await flushPromises();
+  expect(CrmKanbanAPI.getConversationSubjects).toHaveBeenCalledTimes(1);
+
+  crmSubjectsChange.value = { conversationId: 9, version: 1 };
+  await flushPromises();
+
+  expect(CrmKanbanAPI.getConversationSubjects).toHaveBeenCalledTimes(2);
+});
+
+it('closes the menu with Escape and gives focus back', async () => {
+  const wrapper = mountReply(TWO_SUBJECTS);
+  await flushPromises();
+
+  await toggle(wrapper).trigger('click');
+  expect(wrapper.find('[role="menu"]').exists()).toBe(true);
+  await wrapper.find('[role="menu"]').trigger('keydown', { key: 'Escape' });
+
+  expect(wrapper.find('[role="menu"]').exists()).toBe(false);
+  expect(document.activeElement).toBe(toggle(wrapper).element);
+});
+
+it('only shows the subject to someone who cannot manage cards', async () => {
+  const wrapper = mountReply(TWO_SUBJECTS, { canManageCards: false });
+  await flushPromises();
+
+  await toggle(wrapper).trigger('click');
+
+  expect(wrapper.find('[role="menu"]').exists()).toBe(false);
   expect(CrmKanbanAPI.focusConversationSubject).not.toHaveBeenCalled();
 });

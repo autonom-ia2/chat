@@ -997,7 +997,7 @@ export default {
       try {
         await this.$store.dispatch(
           'createPendingMessageAndSend',
-          messagePayload
+          this.setCrmSubjectInPayload(messagePayload)
         );
         emitter.emit(BUS_EVENTS.SCROLL_TO_MESSAGE);
         emitter.emit(BUS_EVENTS.MESSAGE_SENT);
@@ -1160,6 +1160,7 @@ export default {
       this.attachedFiles = attachments;
     },
     // Assunto do envio (#1143): com mais de um assunto aberto, a mensagem leva o card escolhido na caixa de resposta.
+    // Aplicado em sendMessage, o ponto por onde passam texto, anexos, notas e templates.
     setCrmSubjectInPayload(payload) {
       if (!this.crmSubjectCardId) return payload;
 
@@ -1203,9 +1204,7 @@ export default {
             isVoiceMessage: attachment.isVoiceMessage || false,
           };
 
-          attachmentPayload = this.setCrmSubjectInPayload(
-            this.setReplyToInPayload(attachmentPayload)
-          );
+          attachmentPayload = this.setReplyToInPayload(attachmentPayload);
           multipleMessagePayload.push(attachmentPayload);
           // For WhatsApp, only the first attachment gets a caption
           if (!this.isAnInstagramChannel) caption = '';
@@ -1229,9 +1228,7 @@ export default {
           sender: this.sender,
         };
 
-        messagePayload = this.setCrmSubjectInPayload(
-          this.setReplyToInPayload(messagePayload)
-        );
+        messagePayload = this.setReplyToInPayload(messagePayload);
 
         multipleMessagePayload.push(messagePayload);
       }
@@ -1247,9 +1244,7 @@ export default {
         private: this.isPrivate,
         sender: this.sender,
       };
-      messagePayload = this.setCrmSubjectInPayload(
-        this.setReplyToInPayload(messagePayload)
-      );
+      messagePayload = this.setReplyToInPayload(messagePayload);
 
       if (this.attachedFiles && this.attachedFiles.length) {
         messagePayload.files = [];

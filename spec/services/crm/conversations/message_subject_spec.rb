@@ -12,27 +12,30 @@ RSpec.describe Crm::Conversations::MessageSubject do
                                      primary_conversation: primary, title: 'Assunto')
   end
 
-  def message_with(card_id)
+  # A conferência roda no before_validation da mensagem: o que se lê aqui é o que foi gravado.
+  def create_message(card_id)
     create(:message, account: account, conversation: conversation, message_type: :outgoing,
                      content_attributes: { 'crm_card_id' => card_id, 'external_echo' => 'mantido' })
   end
 
   it 'keeps the subject when the card belongs to the conversation' do
     card = create_card(primary: conversation)
-    message = message_with(card.id)
 
-    described_class.new(message).sanitize!
+    expect(create_message(card.id).reload.content_attributes['crm_card_id']).to eq(card.id)
+  end
 
-    expect(message.reload.content_attributes['crm_card_id']).to eq(card.id)
+  it 'normalizes a numeric string id' do
+    card = create_card(primary: conversation)
+
+    expect(create_message(card.id.to_s).reload.content_attributes['crm_card_id']).to eq(card.id)
   end
 
   it 'drops a card from another conversation and keeps the other attributes' do
     other_card = create_card(primary: create(:conversation, account: account))
-    message = message_with(other_card.id)
 
-    described_class.new(message).sanitize!
+    message = create_message(other_card.id).reload
 
-    expect(message.reload.content_attributes).not_to have_key('crm_card_id')
+    expect(message.content_attributes).not_to have_key('crm_card_id')
     expect(message.content_attributes['external_echo']).to eq('mantido')
   end
 
@@ -41,16 +44,22 @@ RSpec.describe Crm::Conversations::MessageSubject do
     foreign_pair = create_crm_pipeline(account: other_account, user: create(:user, account: other_account))
     foreign_card = create_card(primary: create(:conversation, account: other_account), target_account: other_account,
                                pipeline_and_stage_pair: foreign_pair)
-    message = message_with(foreign_card.id)
 
-    described_class.new(message).sanitize!
+    expect(create_message(foreign_card.id).reload.content_attributes).not_to have_key('crm_card_id')
+  end
 
-    expect(message.reload.content_attributes).not_to have_key('crm_card_id')
+  it 'drops values that are not a whole id instead of failing' do
+    card = create_card(primary: conversation)
+
+    [[card.id], { 'id' => card.id }, true, "#{card.id}abc", 1.9, ''].each do |value|
+      expect(create_message(value).reload.content_attributes).not_to have_key('crm_card_id')
+    end
   end
 
   it 'leaves messages without a subject untouched' do
-    message = create(:message, account: account, conversation: conversation, message_type: :outgoing)
+    message = create(:message, account: account, conversation: conversation, message_type: :outgoing,
+                               content_attributes: { 'external_echo' => 'mantido' })
 
-    expect { described_class.new(message).sanitize! }.not_to(change { message.reload.updated_at })
+    expect(message.reload.content_attributes).to eq('external_echo' => 'mantido')
   end
 end

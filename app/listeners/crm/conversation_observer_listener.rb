@@ -3,7 +3,6 @@ class Crm::ConversationObserverListener < BaseListener
     return unless Crm::Config.enabled?
 
     message = event.data[:message]
-    Crm::Conversations::MessageSubject.new(message).sanitize! if message.present?
     return if ignored_message?(message)
 
     Crm::SyncConversationCardJob.perform_later(message.conversation_id, message.id)
