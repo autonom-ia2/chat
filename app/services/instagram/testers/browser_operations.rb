@@ -4,7 +4,7 @@
 class Instagram::Testers::BrowserOperations
   STATUS_VALUES = %w[absent pending accepted].freeze
   INVITE_COMPLETION_STATUSES = %w[pending accepted].freeze
-  SEARCH_RESULT_KEYS = %w[id username name avatar_url].freeze
+  SEARCH_RESULT_KEYS = %w[avatar_url id name username].freeze
 
   def initialize(store: Instagram::Testers::BrowserOperationStore.new)
     @store = store
