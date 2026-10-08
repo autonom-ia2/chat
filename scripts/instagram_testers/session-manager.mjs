@@ -25,6 +25,14 @@ const REFRESH_INTERVAL_MS = 900000;
 const BROWSER_OPERATION_POLL_MS = 15000;
 const BROWSER_OPERATION_BUDGET_MS = 120000;
 
+function writeBrowserOperationDiagnostic(stderr, diagnostic) {
+  try {
+    stderr.write(`${JSON.stringify(diagnostic)}\n`);
+  } catch {
+    // Diagnostics must not change the operation's terminal observation.
+  }
+}
+
 export function cancellable(promise, signal) {
   return new Promise((done, reject) => {
     const abort = () => {
@@ -552,6 +560,18 @@ export async function run(
         );
         const operationConfig = config;
         let executionPending = false;
+        const diagnostic = {
+          event: 'instagram_browser_operation_lifecycle',
+          phase: 'read_requested',
+          read_received: false,
+          request_present: false,
+          claim_received: false,
+          execution_started: false,
+          execution_returned: false,
+          complete_requested: false,
+          complete_received: false,
+          executor_error_returned: false,
+        };
         try {
           const sendOperation = payload =>
             operationScope.wait(
@@ -564,13 +584,19 @@ export async function run(
             type: 'browser_operation',
             operation: 'read',
           });
+          diagnostic.read_received = true;
+          diagnostic.phase = 'read_received';
           if (envelope.request) {
+            diagnostic.request_present = true;
+            diagnostic.phase = 'claim_requested';
             const claimed = await sendOperation({
               type: 'browser_operation',
               operation: 'claim',
               id: envelope.request.id,
               request_id: envelope.request.request_id,
             });
+            diagnostic.claim_received = true;
+            diagnostic.phase = 'claim_received';
             if (
               [
                 'id',
@@ -584,6 +610,8 @@ export async function run(
             )
               throw new Error('publication_failed');
             executionPending = true;
+            diagnostic.execution_started = true;
+            diagnostic.phase = 'execute_started';
             const result = await operationScope.wait(
               executeOperation({
                 context,
@@ -591,6 +619,8 @@ export async function run(
                 configuration: operationConfig,
                 request: claimed.request,
                 signal: operationScope.signal,
+                onDiagnostic: observation =>
+                  writeBrowserOperationDiagnostic(stderr, observation),
                 permitInvite: async observation => {
                   if (
                     observation?.target_id !== claimed.request.target_id ||
@@ -626,18 +656,26 @@ export async function run(
               })
             );
             executionPending = false;
+            diagnostic.execution_returned = true;
+            diagnostic.executor_error_returned = Boolean(result.error_code);
+            diagnostic.phase = 'execute_returned';
             if (
               ['id', 'request_id', 'action', 'claim'].some(
                 key => result[key] !== claimed.request[key]
               )
             )
               throw new Error('publication_failed');
+            diagnostic.complete_requested = true;
+            diagnostic.phase = 'complete_requested';
             const completed = await sendOperation(result);
+            diagnostic.complete_received = true;
+            diagnostic.phase = 'complete_received';
             if (
               completed.id !== claimed.request.id ||
               completed.request_id !== claimed.request.request_id
             )
               throw new Error('publication_failed');
+            writeBrowserOperationDiagnostic(stderr, diagnostic);
             if (
               ['operator_required', 'meta_session_expired'].includes(
                 result.error_code
@@ -654,6 +692,7 @@ export async function run(
             }
           }
         } catch {
+          writeBrowserOperationDiagnostic(stderr, diagnostic);
           // Cancellation does not cancel Playwright's underlying call. Stop
           // this lifecycle so cleanup finishes before another job can run.
           if (executionPending) throw new Error('browser_runtime_required');
