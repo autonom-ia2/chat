@@ -1,4 +1,4 @@
-import { reactive, computed, watch, toRef } from 'vue';
+import { reactive, computed, watch, toRef, ref } from 'vue';
 import CrmKanbanAPI from 'dashboard/api/crmKanban';
 
 // Module-level singleton cache + batch queue so every conversation row in the
@@ -48,6 +48,17 @@ export function refreshCrmConversationStage(id) {
   versions[id] = (versions[id] || 0) + 1;
   queue.add(id);
   if (!timer) timer = setTimeout(flush, 50);
+}
+
+// Os assuntos de uma conversa mudaram (criado ou trocado o atual): painel, caixa de resposta e selo leem de novo.
+export const crmSubjectsChange = ref({ conversationId: null, version: 0 });
+
+export function notifyCrmSubjectsChanged(conversationId) {
+  crmSubjectsChange.value = {
+    conversationId,
+    version: crmSubjectsChange.value.version + 1,
+  };
+  refreshCrmConversationStage(conversationId);
 }
 
 export function useCrmConversationStage(conversationId) {

@@ -4,7 +4,10 @@ import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 import CrmKanbanAPI from 'dashboard/api/crmKanban';
-import { refreshCrmConversationStage } from 'dashboard/routes/dashboard/crm/composables/useCrmConversationStages';
+import {
+  crmSubjectsChange,
+  notifyCrmSubjectsChanged,
+} from 'dashboard/routes/dashboard/crm/composables/useCrmConversationStages';
 import CrmNewSubjectDialog from './CrmNewSubjectDialog.vue';
 
 // Assuntos da conversa (#1143): cada card dela numa linha, o assunto atual marcado. Clicar num assunto aberto faz
@@ -46,10 +49,7 @@ const fetchSubjects = async () => {
   }
 };
 
-const afterChange = async () => {
-  refreshCrmConversationStage(props.conversationId);
-  await fetchSubjects();
-};
+const afterChange = () => notifyCrmSubjectsChanged(props.conversationId);
 
 const canSwitch = subject =>
   props.canManage &&
@@ -85,6 +85,15 @@ const statusLabel = subject => {
 };
 
 const openNewSubject = () => dialogRef.value?.open();
+
+watch(
+  () => crmSubjectsChange.value,
+  change => {
+    if (String(change.conversationId) === String(props.conversationId)) {
+      fetchSubjects();
+    }
+  }
+);
 
 watch(
   () => props.conversationId,
