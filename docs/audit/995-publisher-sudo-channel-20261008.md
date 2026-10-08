@@ -31,3 +31,7 @@ Revisão independente confirmou o escopo restrito e exigiu a fixture SSH/sudo re
 Antes de aplicar, conferir revisão publicada, wrapper esperado, proprietário/modo da regra dedicada e seu conteúdo anterior exato. Preservar backup e SHA-256. Validar novo arquivo por visudo; trocar apenas a regra dedicada atomicamente. Não reiniciar web/worker para a regra sudo. Validar bootstrap real antes de nova ativação da VPS. Se falhar, restaurar somente essa regra do backup validado e manter VPS anterior saudável.
 
 Depois de canal funcional: ativar artefato imutável da revisão publicada com rollback preservado, limites canônicos e Node privado; executar busca/status do piloto já autorizado e medir enfileiramento → publicação. Não reenviar convite nem conceder nova permissão. A meta de 10 vezes deve ser comparada às medições antigas reais; os benchmarks anteriores de componentes não satisfazem essa prova.
+
+## Resultado da primeira CI e corrida adicional
+
+Na CI 37803145872, a fixture SSH/sudo real passou, incluindo reprodução da regra antiga. O contrato sintético existente falhou no wrapper por ETIMEDOUT: o publisher rápido podia fechar o FIFO antes de o pai abrir a leitura. Essa corrida é independente da variável removida pelo sudo. Correção mínima: abrir o descritor de leitura antes de criar o publisher, fechar descritores auxiliares no filho e consumir pelo leitor já aberto. Mantém validação, frames e limites. A próxima CI deve validar ambos os casos; nenhum resultado Meta é inferido desses testes.
