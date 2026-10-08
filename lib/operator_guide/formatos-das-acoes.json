@@ -451,7 +451,7 @@
     "modelo": "Message",
     "origem": [
       "enterprise/app/controllers/enterprise/api/v1/accounts/conversations/messages_controller.rb:2",
-      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:90",
+      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:125",
       "app/controllers/api/v1/accounts/conversations/base_controller.rb:7"
     ],
     "sem_corpo": false
@@ -4585,8 +4585,8 @@
     "controller": "api/v1/accounts/conversations/messages#update",
     "modelo": "Message",
     "origem": [
-      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:16",
-      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:90",
+      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:26",
+      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:125",
       "app/controllers/api/v1/accounts/conversations/base_controller.rb:7"
     ],
     "sem_corpo": false
@@ -12865,6 +12865,16 @@
     "sem_corpo": false
   },
   "POST conversations/:conversation_id/messages": {
+    "campos": {
+      "content": {
+        "max_caracteres": 150000,
+        "tipo": "string"
+      },
+      "private": {
+        "padrao": false,
+        "tipo": "booleano"
+      }
+    },
     "completo": false,
     "controller": "api/v1/accounts/conversations/messages#create",
     "modelo": "Message",
@@ -12872,7 +12882,8 @@
       "params inteiro repassado a Messages::MessageBuilder.new"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:8",
+      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:10",
+      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:81",
       "app/controllers/api/v1/accounts/conversations/base_controller.rb:7"
     ],
     "sem_corpo": false
@@ -12896,8 +12907,8 @@
     "controller": "api/v1/accounts/conversations/messages#retry",
     "modelo": "Message",
     "origem": [
-      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:28",
-      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:90",
+      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:38",
+      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:125",
       "app/controllers/api/v1/accounts/conversations/base_controller.rb:7"
     ],
     "sem_corpo": false
@@ -12921,8 +12932,8 @@
     "controller": "api/v1/accounts/conversations/messages#translate",
     "modelo": "Message",
     "origem": [
-      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:36",
-      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:90",
+      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:46",
+      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:125",
       "app/controllers/api/v1/accounts/conversations/base_controller.rb:7"
     ],
     "sem_corpo": false
@@ -21364,8 +21375,8 @@
     "controller": "api/v1/accounts/conversations/messages#update",
     "modelo": "Message",
     "origem": [
-      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:16",
-      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:90",
+      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:26",
+      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:125",
       "app/controllers/api/v1/accounts/conversations/base_controller.rb:7"
     ],
     "sem_corpo": false

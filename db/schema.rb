@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_10_10_090100) do
+ActiveRecord::Schema[7.2].define(version: 2026_10_10_110000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -3187,6 +3187,25 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_10_090100) do
     t.index ["account_id"], name: "index_macros_on_account_id"
   end
 
+  create_table "mcp_integration_tokens", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "custom_role_id"
+    t.bigint "account_user_id"
+    t.bigint "created_by_id"
+    t.string "identity_subject", null: false
+    t.string "name", null: false
+    t.text "scopes", default: [], null: false, array: true
+    t.datetime "last_used_at"
+    t.integer "status", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "identity_subject"], name: "idx_mcp_tokens_account_subject", unique: true
+    t.index ["account_id"], name: "index_mcp_integration_tokens_on_account_id"
+    t.index ["account_user_id"], name: "index_mcp_integration_tokens_on_account_user_id"
+    t.index ["created_by_id"], name: "index_mcp_integration_tokens_on_created_by_id"
+    t.index ["custom_role_id"], name: "index_mcp_integration_tokens_on_custom_role_id"
+  end
+
   create_table "mentions", force: :cascade do |t|
     t.bigint "user_id", null: false
     t.bigint "conversation_id", null: false
@@ -3876,6 +3895,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_10_090100) do
   add_foreign_key "email_template_import_ai_quotas", "accounts", on_delete: :cascade
   add_foreign_key "idempotency_keys", "accounts"
   add_foreign_key "inboxes", "portals"
+  add_foreign_key "mcp_integration_tokens", "account_users", on_delete: :nullify
+  add_foreign_key "mcp_integration_tokens", "accounts"
+  add_foreign_key "mcp_integration_tokens", "custom_roles", on_delete: :nullify
+  add_foreign_key "mcp_integration_tokens", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "user_sessions", "users"
   add_foreign_key "whatsapp_api_campaign_recipients", "accounts"
   add_foreign_key "whatsapp_api_campaign_recipients", "contacts", on_delete: :cascade

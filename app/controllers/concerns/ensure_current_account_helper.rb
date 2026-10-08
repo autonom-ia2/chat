@@ -35,10 +35,8 @@ module EnsureCurrentAccountHelper
     render_unauthorized('Bot is not authorized to access this account')
   end
 
-  # CRM integration token (plan §3.2, B-T3). defined?-guarded so CE never sees
-  # the EE-only constant. Current.account_user was already set in the auth helper.
   def integration_token_account?
-    defined?(Crm::IntegrationToken) && current_integration_token.present?
+    current_integration_token.present?
   end
 
   def account_accessible_for_integration_token?(account)

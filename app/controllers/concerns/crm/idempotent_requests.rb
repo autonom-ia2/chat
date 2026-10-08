@@ -33,6 +33,8 @@ module Crm::IdempotentRequests
     key = request.headers[IDEMPOTENCY_HEADER].presence
     return action.call if key.blank?
 
+    key = "#{idempotency_namespace}:#{key}" if idempotency_namespace.present?
+
     fingerprint = idempotency_fingerprint
     record = claim_idempotency_key(key, fingerprint)
 
@@ -42,6 +44,12 @@ module Crm::IdempotentRequests
 
     # Claim lost: a row already exists for [account, key]. Replay or reject.
     replay_idempotent_key(key, fingerprint)
+  end
+
+  # Controllers may isolate keys that share an account-level idempotency table.
+  # Existing CRM endpoints keep their historical namespace-free contract.
+  def idempotency_namespace
+    nil
   end
 
   # Atomic claim: INSERT ... ON CONFLICT DO NOTHING via insert_all. Returns the

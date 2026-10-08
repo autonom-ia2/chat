@@ -267,6 +267,24 @@ jobs:
           bundle exec rake db:create
           bundle exec rake db:schema:load
 
+      # Exercise the actual MCP migration against the preceding schema, not
+      # just the manually committed dump. One shard suffices; RSpec aggregates it.
+      - name: Validar migração MCP e schema regenerado
+        if: matrix.ci_node_index == 0
+        run: |
+          set -euo pipefail
+          bundle exec rake db:migrate:down VERSION=20261010110000
+          bundle exec rake db:migrate:up VERSION=20261010110000
+          bundle exec rake db:schema:dump
+          git diff --exit-code -- db/schema.rb
+
+      - name: Publicar schema regenerado em falha
+        if: failure() && matrix.ci_node_index == 0
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcp-schema-verification
+          path: db/schema.rb
+
       - name: Baixar o plano do RSpec
         uses: actions/download-artifact@v4
         with:
@@ -288,6 +306,22 @@ jobs:
           done
           echo "No $IDX: ${#TESTS[@]} arquivos de spec"
           bundle exec rspec --profile=10 --format progress --format json --out tmp/rspec_results.json "${TESTS[@]}"
+
+      # Keep the failed spec as the gate; only produce diagnostic files after it.
+      # This lets developers without the Rails runtime recover the official dump.
+      - name: Regenerar formatos do Guia para diagnóstico de falha
+        if: failure()
+        run: bundle exec rails autonomia:guia:formatos
+
+      - name: Publicar formatos gerados em falha
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: guide-generated-${{ matrix.ci_node_index }}
+          path: |
+            lib/operator_guide/formatos-das-acoes.json
+            lib/operator_guide/formatos-das-acoes-cobertura.md
+            lib/operator_guide/parametros-das-leituras.json
 
       - name: Publicar resultado do RSpec
         uses: actions/upload-artifact@v4

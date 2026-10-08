@@ -1,4 +1,6 @@
 class Api::V1::Accounts::Conversations::MessagesController < Api::V1::Accounts::Conversations::BaseController
+  include Crm::IdempotentRequests
+
   before_action :ensure_api_inbox, only: :update
 
   def index
@@ -6,11 +8,19 @@ class Api::V1::Accounts::Conversations::MessagesController < Api::V1::Accounts::
   end
 
   def create
-    user = Current.user || @resource
-    mb = Messages::MessageBuilder.new(user, @conversation, params)
-    @message = mb.perform
+    return create_mcp_message if mcp_integration_token_request?
+
+    @message = Messages::MessageBuilder.new(Current.user || @resource, @conversation, params).perform
   rescue StandardError => e
-    render_could_not_create_error(e.message)
+    if mcp_integration_token_request?
+      # A response may already be rendered when capture/commit fails. Replace it
+      # through the response setters rather than attempting a second render.
+      self.status = :unprocessable_entity
+      self.content_type = 'application/json'
+      self.response_body = { error: sanitized_error_message(e.message) }.to_json
+    else
+      render_could_not_create_error(e.message)
+    end
   end
 
   def update
@@ -55,6 +65,31 @@ class Api::V1::Accounts::Conversations::MessagesController < Api::V1::Accounts::
   end
 
   private
+
+  def create_mcp_message
+    key = request.headers[Crm::IdempotentRequests::IDEMPOTENCY_HEADER].to_s
+    unless key.match?(/\A[a-zA-Z0-9_-]{8,100}\z/)
+      return render json: {
+        error: { code: 'agents.idempotency.required', message: 'A valid Idempotency-Key header is required.' }
+      }, status: :unprocessable_entity
+    end
+
+    # The claim, message and replayable response commit together. A failed render
+    # or response write rolls everything back, before after_create_commit sends.
+    IdempotencyKey.transaction(requires_new: true) do
+      with_idempotency do
+        message_params = params.permit(:content, :private).merge(message_type: 'outgoing')
+        @message = Messages::MessageBuilder.new(Current.user, @conversation, message_params).perform
+        render :create
+      end
+    end
+  end
+
+  def idempotency_namespace
+    return super unless mcp_integration_token_request?
+
+    "mcp:#{current_integration_token.id}"
+  end
 
   def message
     @message ||= @conversation.messages.find(permitted_params[:id])
