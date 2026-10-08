@@ -267,6 +267,24 @@ jobs:
           bundle exec rake db:create
           bundle exec rake db:schema:load
 
+      # Exercise the actual MCP migration against the preceding schema, not
+      # just the manually committed dump. One shard suffices; RSpec aggregates it.
+      - name: Validar migração MCP e schema regenerado
+        if: matrix.ci_node_index == 0
+        run: |
+          set -euo pipefail
+          bundle exec rake db:migrate:down VERSION=20261010110000
+          bundle exec rake db:migrate:up VERSION=20261010110000
+          bundle exec rake db:schema:dump
+          git diff --exit-code -- db/schema.rb
+
+      - name: Publicar schema regenerado em falha
+        if: failure() && matrix.ci_node_index == 0
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcp-schema-verification
+          path: db/schema.rb
+
       - name: Baixar o plano do RSpec
         uses: actions/download-artifact@v4
         with:

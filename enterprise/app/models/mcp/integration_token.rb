@@ -35,6 +35,13 @@ class Mcp::IntegrationToken < ApplicationRecord
     scopes
   end
 
+  def authorizer_eligible?
+    return false if created_by_id.blank?
+
+    Autonomia::UserLink.exists?(identity_user_id: identity_subject, user_id: created_by_id) &&
+      account.account_users.exists?(user_id: created_by_id, role: :administrator)
+  end
+
   def rotate_access_token!
     with_lock do
       AccessToken.where(owner: self).delete_all

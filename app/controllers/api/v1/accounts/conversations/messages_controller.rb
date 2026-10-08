@@ -12,6 +12,8 @@ class Api::V1::Accounts::Conversations::MessagesController < Api::V1::Accounts::
 
     @message = Messages::MessageBuilder.new(Current.user || @resource, @conversation, params).perform
   rescue StandardError => e
+    # MCP response capture/commit can fail after render :create prepared a body.
+    self.response_body = nil if mcp_integration_token_request?
     render_could_not_create_error(e.message)
   end
 
@@ -66,10 +68,14 @@ class Api::V1::Accounts::Conversations::MessagesController < Api::V1::Accounts::
       }, status: :unprocessable_entity
     end
 
-    with_idempotency do
-      message_params = params.permit(:content, :private).merge(message_type: 'outgoing')
-      @message = Messages::MessageBuilder.new(Current.user, @conversation, message_params).perform
-      render :create
+    # The claim, message and replayable response commit together. A failed render
+    # or response write rolls everything back, before after_create_commit sends.
+    IdempotencyKey.transaction(requires_new: true) do
+      with_idempotency do
+        message_params = params.permit(:content, :private).merge(message_type: 'outgoing')
+        @message = Messages::MessageBuilder.new(Current.user, @conversation, message_params).perform
+        render :create
+      end
     end
   end
 

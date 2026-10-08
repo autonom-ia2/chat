@@ -56,6 +56,11 @@ module AccessTokenAuthHelper
       return true
     end
 
+    if token.respond_to?(:authorizer_eligible?) && !token.authorizer_eligible?
+      render_unauthorized('Invalid Access Token')
+      return true
+    end
+
     token.sync_inbox_memberships! if token.respond_to?(:sync_inbox_memberships!)
 
     # Resolve to the backing human User + managed AccountUser so Pundit / the EE
