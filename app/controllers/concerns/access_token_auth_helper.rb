@@ -51,12 +51,7 @@ module AccessTokenAuthHelper
     # Fail-closed: revoked token, or a token whose managed account_user/custom_role
     # was nullified (revocation race) must NEVER fall through to the blank-role
     # CRM superuser path (B-T2).
-    if token.revoked? || token.account_user.blank? || token.account_user.custom_role.blank?
-      render_unauthorized('Invalid Access Token')
-      return true
-    end
-
-    if token.respond_to?(:authorizer_eligible?) && !token.authorizer_eligible?
+    unless integration_token_active?(token)
       render_unauthorized('Invalid Access Token')
       return true
     end
@@ -85,6 +80,11 @@ module AccessTokenAuthHelper
   end
 
   private
+
+  def integration_token_active?(token)
+    !token.revoked? && token.account_user.present? && token.account_user.custom_role.present? &&
+      (!token.respond_to?(:authorizer_eligible?) || token.authorizer_eligible?)
+  end
 
   def integration_token_resource?(resource)
     resource&.class&.name.in?(%w[Crm::IntegrationToken Mcp::IntegrationToken])

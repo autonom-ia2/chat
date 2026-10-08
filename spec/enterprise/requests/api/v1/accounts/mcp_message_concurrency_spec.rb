@@ -9,8 +9,10 @@ RSpec.describe 'MCP message commit and concurrency', :relationships_committed_fi
   let!(:link) { Autonomia::UserLink.create!(identity_user_id: 'mcp-concurrency-user', user: admin, email: admin.email) }
   let!(:conversation) { create(:conversation, account: account) }
   let!(:integration) do
-    Mcp::IntegrationToken.create!(account: account, created_by: admin, identity_subject: link.identity_user_id,
-                                 name: 'Concurrent MCP', scopes: Mcp::IntegrationToken::DEFAULT_SCOPES)
+    Mcp::IntegrationToken.create!(
+      account: account, created_by: admin, identity_subject: link.identity_user_id,
+      name: 'Concurrent MCP', scopes: Mcp::IntegrationToken::DEFAULT_SCOPES
+    )
   end
   let(:path) { "/api/v1/accounts/#{account.id}/conversations/#{conversation.display_id}/messages" }
   let(:headers) { { 'api_access_token' => integration.access_token.token, 'Idempotency-Key' => 'concurrent-message-123' } }
@@ -28,10 +30,20 @@ RSpec.describe 'MCP message commit and concurrency', :relationships_committed_fi
     end
   end
 
+  let(:fail_after_commit) do
+    proc { raise 'Injected after-commit failure' if content == 'Committed message' }
+  end
+
+  before do
+    Message.set_callback(:create, :after, pause_after_create)
+    Message.set_callback(:commit, :after, fail_after_commit)
+  end
+
   after do
     release << true
     workers.each { |worker| worker.join(1) || worker.kill.join }
-    Message.skip_callback(:create, :after, pause_after_create) if @pause_installed
+    Message.skip_callback(:create, :after, pause_after_create)
+    Message.skip_callback(:commit, :after, fail_after_commit)
     IdempotencyKey.where(account: account).delete_all
     integration.revoke!
     account.messages.destroy_all
@@ -45,8 +57,6 @@ RSpec.describe 'MCP message commit and concurrency', :relationships_committed_fi
   end
 
   it 'serializes two real requests with the same key and replays one committed message' do
-    Message.set_callback(:create, :after, pause_after_create)
-    @pause_installed = true
     target_path = path
     request_headers = headers
     pids = Queue.new
@@ -87,11 +97,10 @@ RSpec.describe 'MCP message commit and concurrency', :relationships_committed_fi
     expect(responses.last[2]).to eq('true')
     expect(conversation.messages.where(content: 'Concurrent message').count).to eq(1)
     expect(IdempotencyKey.where(account: account).pluck(:state)).to eq(['done'])
+    expect(enqueued_jobs.count { |job| job[:job] == SendReplyJob && job[:args].first == responses.first[1] }).to eq(1)
   end
 
   it 'recovers the committed response even if an after-commit callback fails' do
-    allow_any_instance_of(Message).to receive(:execute_after_create_commit_callbacks).and_raise(StandardError, 'Injected after-commit failure')
-
     post path, params: { content: 'Committed message' }, headers: headers, as: :json
 
     expect(response).to have_http_status(:unprocessable_entity)

@@ -123,7 +123,11 @@ RSpec.describe 'MCP integration-token access', type: :request do
   it 'rolls back the message and claim if persisting the idempotent response fails, then permits a safe retry' do
     path = "/api/v1/accounts/#{account.id}/conversations/#{conversation.display_id}/messages"
     message_headers = headers.merge('Idempotency-Key' => 'response-failure-123')
-    allow_any_instance_of(IdempotencyKey).to receive(:update!).and_raise(ActiveRecord::StatementInvalid, 'Injected persistence failure')
+    allow(IdempotencyKey).to receive(:find).and_wrap_original do |find, *args|
+      record = find.call(*args)
+      allow(record).to receive(:update!).and_raise(ActiveRecord::StatementInvalid, 'Injected persistence failure')
+      record
+    end
 
     post path, params: { content: 'Atomic send', private: false }, headers: message_headers, as: :json
 
@@ -131,24 +135,26 @@ RSpec.describe 'MCP integration-token access', type: :request do
     expect(conversation.messages.where(content: 'Atomic send')).to be_empty
     expect(IdempotencyKey.where(account: account)).to be_empty
 
-    allow_any_instance_of(IdempotencyKey).to receive(:update!).and_call_original
+    allow(IdempotencyKey).to receive(:find).and_call_original
     post path, params: { content: 'Atomic send', private: false }, headers: message_headers, as: :json
     expect(response).to have_http_status(:ok)
     message_id = response.parsed_body.fetch('id')
 
     post path, params: { content: 'Atomic send', private: false }, headers: message_headers, as: :json
     expect(response).to have_http_status(:ok)
-    expect(response.parsed_body.fetch('id')).to eq(message_id)
-    expect(response.headers['Idempotency-Replayed']).to eq('true')
+    expect([response.parsed_body.fetch('id'), response.headers['Idempotency-Replayed']]).to eq([message_id, 'true'])
     expect(conversation.messages.where(content: 'Atomic send').count).to eq(1)
   end
 
   it 'rolls back the message and claim if rendering fails after the message is saved' do
     path = "/api/v1/accounts/#{account.id}/conversations/#{conversation.display_id}/messages"
     message_headers = headers.merge('Idempotency-Key' => 'render-failure-123')
-    allow_any_instance_of(Api::V1::Accounts::Conversations::MessagesController).to receive(:render).and_call_original
-    allow_any_instance_of(Api::V1::Accounts::Conversations::MessagesController).to receive(:render)
-      .with(:create).and_raise(StandardError, 'Injected render failure')
+    allow(Api::V1::Accounts::Conversations::MessagesController).to receive(:new).and_wrap_original do |constructor, *args|
+      controller = constructor.call(*args)
+      allow(controller).to receive(:render).and_call_original
+      allow(controller).to receive(:render).with(:create).and_raise(StandardError, 'Injected render failure')
+      controller
+    end
 
     post path, params: { content: 'Render rollback' }, headers: message_headers, as: :json
 

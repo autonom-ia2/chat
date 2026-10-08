@@ -12,9 +12,15 @@ class Api::V1::Accounts::Conversations::MessagesController < Api::V1::Accounts::
 
     @message = Messages::MessageBuilder.new(Current.user || @resource, @conversation, params).perform
   rescue StandardError => e
-    # MCP response capture/commit can fail after render :create prepared a body.
-    self.response_body = nil if mcp_integration_token_request?
-    render_could_not_create_error(e.message)
+    if mcp_integration_token_request?
+      # A response may already be rendered when capture/commit fails. Replace it
+      # through the response setters rather than attempting a second render.
+      self.status = :unprocessable_entity
+      self.content_type = 'application/json'
+      self.response_body = { error: sanitized_error_message(e.message) }.to_json
+    else
+      render_could_not_create_error(e.message)
+    end
   end
 
   def update

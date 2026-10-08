@@ -307,6 +307,22 @@ jobs:
           echo "No $IDX: ${#TESTS[@]} arquivos de spec"
           bundle exec rspec --profile=10 --format progress --format json --out tmp/rspec_results.json "${TESTS[@]}"
 
+      # Keep the failed spec as the gate; only produce diagnostic files after it.
+      # This lets developers without the Rails runtime recover the official dump.
+      - name: Regenerar formatos do Guia para diagnóstico de falha
+        if: failure()
+        run: bundle exec rails autonomia:guia:formatos
+
+      - name: Publicar formatos gerados em falha
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: guide-generated-${{ matrix.ci_node_index }}
+          path: |
+            lib/operator_guide/formatos-das-acoes.json
+            lib/operator_guide/formatos-das-acoes-cobertura.md
+            lib/operator_guide/parametros-das-leituras.json
+
       - name: Publicar resultado do RSpec
         uses: actions/upload-artifact@v4
         if: always()
