@@ -53,7 +53,10 @@ describe('Instagram tester request guards and cancellation', () => {
       useInstagramTester({ disabled, returnTo: ref('onboarding') })
     );
     instagramClient.getTesterStatus.mockResolvedValue({
-      data: { status: 'accepted' },
+      data: {
+        status: 'accepted',
+        authorization_attestation: 'signed-demo-authorization',
+      },
     });
     instagramClient.generateAuthorization.mockResolvedValue({
       data: { url: window.location.href },
@@ -66,10 +69,70 @@ describe('Instagram tester request guards and cancellation', () => {
     expect(instagramClient.generateAuthorization).toHaveBeenCalledWith(
       {
         tester_selection_token: candidate.selection_token,
+        tester_authorization_attestation: 'signed-demo-authorization',
         return_to: 'onboarding',
       },
       { signal: expect.any(AbortSignal) }
     );
+  });
+
+  it('uses only the confirmation belonging to the newly selected profile', async () => {
+    const otherCandidate = {
+      ...candidate,
+      id: '10002',
+      username: 'other_company',
+      selection_token: 'signed-other-selection',
+    };
+    instagramClient.searchTesters.mockResolvedValue({
+      data: { results: [candidate, otherCandidate] },
+    });
+    instagramClient.getTesterStatus
+      .mockResolvedValueOnce({
+        data: {
+          status: 'accepted',
+          authorization_attestation: 'signed-first-confirmation',
+        },
+      })
+      .mockResolvedValueOnce({ data: { status: 'accepted' } });
+    instagramClient.generateAuthorization.mockResolvedValue({
+      data: { url: window.location.href },
+    });
+    await tester.loadConfiguration();
+    tester.username.value = candidate.username;
+    await tester.search();
+    await tester.selectProfile(candidate);
+    tester.changeProfile();
+    await tester.selectProfile(otherCandidate);
+    await tester.authorize();
+
+    expect(instagramClient.generateAuthorization).toHaveBeenCalledWith(
+      { tester_selection_token: otherCandidate.selection_token },
+      { signal: expect.any(AbortSignal) }
+    );
+  });
+
+  it('requires a new status check after the server rejects an expired confirmation', async () => {
+    instagramClient.getTesterStatus.mockResolvedValue({
+      data: {
+        status: 'accepted',
+        authorization_attestation: 'expired-confirmation',
+      },
+    });
+    instagramClient.generateAuthorization.mockRejectedValue({
+      response: { data: { error_code: 'unknown_status' } },
+    });
+    await tester.loadConfiguration();
+    tester.username.value = candidate.username;
+    await tester.search();
+    await tester.selectProfile(candidate);
+    await tester.authorize();
+
+    expect(tester.selected.value).toEqual(candidate);
+    expect(tester.status.value).toBeNull();
+    expect(tester.error.value).toBe('STATUS_ERROR');
+    instagramClient.generateAuthorization.mockClear();
+    await tester.authorize();
+    expect(instagramClient.generateAuthorization).not.toHaveBeenCalled();
   });
   it('blocks disabled tester configuration for an ON account without invoking legacy OAuth', async () => {
     instagramClient.getTesterConfiguration.mockResolvedValue({

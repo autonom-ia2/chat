@@ -25,6 +25,7 @@ export function useInstagramTester({ disabled, returnTo }) {
   const searched = ref(false);
   const selected = ref(null);
   const status = ref(null);
+  const authorizationAttestation = ref(null);
   const operation = ref('');
   const error = ref('');
   const notice = ref('');
@@ -49,6 +50,7 @@ export function useInstagramTester({ disabled, returnTo }) {
     request.abort();
     selected.value = null;
     status.value = null;
+    authorizationAttestation.value = null;
     error.value = '';
     notice.value = '';
     sent.value = false;
@@ -100,8 +102,10 @@ export function useInstagramTester({ disabled, returnTo }) {
     if (
       action === 'oauth' ||
       (action === 'status' && status.value !== 'pending')
-    )
+    ) {
       status.value = null;
+      authorizationAttestation.value = null;
+    }
   };
 
   const run = async (action, callback, apply) => {
@@ -176,6 +180,7 @@ export function useInstagramTester({ disabled, returnTo }) {
       return undefined;
     const token = selected.value.selection_token;
     const wasPending = status.value === 'pending';
+    authorizationAttestation.value = null;
     return run(
       'status',
       signal => instagramClient.getTesterStatus(token, { signal }),
@@ -186,6 +191,11 @@ export function useInstagramTester({ disabled, returnTo }) {
           return;
         }
         status.value = data.status;
+        authorizationAttestation.value =
+          data.status === 'accepted' &&
+          typeof data.authorization_attestation === 'string'
+            ? data.authorization_attestation
+            : null;
         needsReconciliation.value = false;
         if (data.status === 'pending' && wasPending)
           notice.value = 'STILL_PENDING';
@@ -229,6 +239,11 @@ export function useInstagramTester({ disabled, returnTo }) {
           return;
         }
         status.value = data.status;
+        authorizationAttestation.value =
+          data.status === 'accepted' &&
+          typeof data.authorization_attestation === 'string'
+            ? data.authorization_attestation
+            : null;
         sent.value = data.invited;
       }
     );
@@ -249,6 +264,12 @@ export function useInstagramTester({ disabled, returnTo }) {
         instagramClient.generateAuthorization(
           {
             tester_selection_token: selected.value.selection_token,
+            ...(authorizationAttestation.value
+              ? {
+                  tester_authorization_attestation:
+                    authorizationAttestation.value,
+                }
+              : {}),
             ...(returnTo?.value ? { return_to: returnTo.value } : {}),
           },
           { signal }

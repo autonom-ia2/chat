@@ -5,15 +5,15 @@ class Api::V1::Accounts::Instagram::AuthorizationsController < Api::V1::Accounts
   before_action :ensure_meta_available
 
   rescue_from Instagram::Testers::Error, with: :render_tester_error
-  rescue_from Instagram::Testers::BrowserOperationStore::Rejected, with: :render_browser_error
 
   def create
     if browser_assisted_authorization?
-      render json: Instagram::Testers::BrowserOperations.new.enqueue_authorization(
+      render json: Instagram::Testers::BrowserAuthorization.new.prepare(
         account_id: Current.account.id, actor_id: current_user.id,
         selection_token: params.permit(:tester_selection_token)[:tester_selection_token],
+        authorization_attestation: params.permit(:tester_authorization_attestation)[:tester_authorization_attestation],
         return_to: params.permit(:return_to)[:return_to]
-      ), status: :accepted
+      ), status: :ok
       return
     end
 
@@ -35,10 +35,6 @@ class Api::V1::Accounts::Instagram::AuthorizationsController < Api::V1::Accounts
     Instagram::Testers::BrowserOperationStore.runtime_enabled? &&
       Current.account.feature_enabled?('instagram_assisted_onboarding') &&
       !params.key?(:inbox_id) && params[:return_to] != 'inbox'
-  end
-
-  def render_browser_error(error)
-    render_tester_error(Instagram::Testers::Error.new(error.code))
   end
 
   def ensure_meta_available
