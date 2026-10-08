@@ -404,7 +404,8 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
       account: Current.account,
       user: Current.user,
       conversation: conversation,
-      requested_params: create_params.to_h.with_indifferent_access
+      requested_params: create_params.to_h.with_indifferent_access,
+      new_subject: ActiveModel::Type::Boolean.new.cast(params[:new_subject]) || false
     )
   end
 
