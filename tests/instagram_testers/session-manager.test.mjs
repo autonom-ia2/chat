@@ -5,6 +5,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   mkdtemp,
+  lstat,
   open,
   readFile,
   realpath,
@@ -23,6 +24,7 @@ import {
   privateProfile,
   managerExitCode,
   isAllowedBrowserRequest,
+  handleBrowserRoute,
 } from '../../scripts/instagram_testers/session-manager.mjs';
 
 const INITIAL_VERSION = '11111111-1111-4111-8111-111111111111';
@@ -642,6 +644,10 @@ async function syntheticManager(t, options = {}) {
   let navigations = 0;
   let routeHandler;
   page.url = () => options.redirect || config.rolesUrl;
+  page.isClosed = () => options.closedPrimary === true;
+  page.close = async () => {
+    options.closedPrimary = true;
+  };
   const navigated = [];
   page.goto = async url => {
     navigated.push(url);
@@ -1510,18 +1516,21 @@ for (const operation of ['continue', 'abort']) {
           request_id: request.request_id,
           claim: request.claim,
           captured_at: '2026-10-08T12:00:00.000Z',
-          ...(request.action === 'search' ? { results: [] } : {
-            target_id: request.target_id,
-            status: 'accepted',
-          }),
+          ...(request.action === 'search'
+            ? { results: [] }
+            : {
+                target_id: request.target_id,
+                status: 'accepted',
+              }),
         };
       },
     });
     const rejectedRoute = {
       request: () => ({
-        url: () => operation === 'continue'
-          ? configuration(baseEnv).rolesUrl
-          : 'https://unapproved.invalid/',
+        url: () =>
+          operation === 'continue'
+            ? configuration(baseEnv).rolesUrl
+            : 'https://unapproved.invalid/',
         method: () => 'GET',
         postData: () => null,
       }),
@@ -1540,7 +1549,9 @@ for (const operation of ['continue', 'abort']) {
     await data.clock.advance(1000);
     assert.deepEqual(executions, ['search', 'status']);
     assert.equal(data.closed(), 0);
-    assert.ok(data.stderr.includes('instagram_browser_route_failed\n'));
+    assert.ok(
+      data.stderr.includes('{"event":"instagram_browser_route_failed"}\n')
+    );
     let blocked = false;
     // Check an unapproved request separately from the handled route.
     await data.route({
@@ -1549,9 +1560,135 @@ for (const operation of ['continue', 'abort']) {
         method: () => 'POST',
         postData: () => '',
       }),
-      continue: async () => { assert.fail('unapproved request continued'); },
-      abort: async () => { blocked = true; },
+      continue: async () => {
+        assert.fail('unapproved request continued');
+      },
+      abort: async () => {
+        blocked = true;
+      },
     });
     assert.equal(blocked, true);
   });
 }
+
+for (const count of [1, 1000]) {
+  test(`contains ${count} concurrent rejected browser routes without losing the next operation`, async t => {
+    let executions = 0;
+    const data = await syntheticManager(t, {
+      vps: true,
+      browserOperations: true,
+      executeOperation: async ({ request }) => {
+        executions += 1;
+        return {
+          type: 'browser_operation',
+          operation: 'complete',
+          action: request.action,
+          id: request.id,
+          request_id: request.request_id,
+          claim: request.claim,
+          captured_at: '2026-10-08T12:00:00.000Z',
+          results: [],
+        };
+      },
+    });
+    await Promise.all(
+      Array.from({ length: count }, (_, index) =>
+        data.route({
+          request: () => ({
+            url: () =>
+              index % 2
+                ? 'https://unapproved.invalid/'
+                : configuration(baseEnv).rolesUrl,
+            method: () => 'GET',
+            postData: () => null,
+          }),
+          continue: async () => {
+            throw new Error('route.continue: Route is already handled!');
+          },
+          abort: async () => {
+            throw new Error(
+              'route.abort: Target page, context or browser has been closed'
+            );
+          },
+        })
+      )
+    );
+    await data.clock.advance(1000);
+    assert.equal(executions, 1);
+    assert.equal(data.closed(), 0);
+    assert.equal(
+      data.stderr.filter(
+        value => value === '{"event":"instagram_browser_route_failed"}\n'
+      ).length,
+      count
+    );
+  });
+}
+
+test('route failure diagnostics cannot reject the browser callback', async () => {
+  await assert.doesNotReject(
+    handleBrowserRoute(
+      {
+        request: () => {
+          throw new Error('synthetic_request_closed');
+        },
+        abort: async () => {
+          throw new Error('synthetic_route_closed');
+        },
+      },
+      configuration(baseEnv),
+      {
+        write: () => {
+          throw new Error('synthetic_pipe_closed');
+        },
+      }
+    )
+  );
+});
+
+test('publishes the closed-page failure once, then releases the browser and profile before another read', async t => {
+  let data;
+  data = await syntheticManager(t, {
+    vps: true,
+    browserOperations: true,
+    executeOperation: async ({ request }) => {
+      await data.page.close();
+      return {
+        type: 'browser_operation',
+        operation: 'complete',
+        action: request.action,
+        id: request.id,
+        request_id: request.request_id,
+        claim: request.claim,
+        captured_at: '2026-10-08T12:00:00.000Z',
+        error_code: 'meta_unavailable',
+      };
+    },
+  });
+  await data.clock.advance(1000);
+  const error = await data.settled;
+  assert.equal(error?.message, 'browser_runtime_required');
+  const completions = data.entries.filter(
+    entry =>
+      entry.payload.type === 'browser_operation' &&
+      entry.payload.operation === 'complete'
+  );
+  assert.equal(completions.length, 1);
+  assert.equal(completions[0].payload.error_code, 'meta_unavailable');
+  const reads = data.entries.filter(
+    entry =>
+      entry.payload.type === 'browser_operation' &&
+      entry.payload.operation === 'read'
+  ).length;
+  await data.clock.advance(2000);
+  assert.equal(
+    data.entries.filter(
+      entry =>
+        entry.payload.type === 'browser_operation' &&
+        entry.payload.operation === 'read'
+    ).length,
+    reads
+  );
+  assert.equal(data.closed(), 1);
+  await assert.rejects(lstat(data.lockPath), { code: 'ENOENT' });
+});

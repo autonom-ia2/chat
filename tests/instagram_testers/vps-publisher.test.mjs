@@ -55,6 +55,26 @@ const publish = {
   configuration_revision: 'b'.repeat(64),
   roles_doc_id: '4',
 };
+const invitePermit = {
+  type: 'browser_operation',
+  operation: 'invite_permit',
+  id: '22222222-2222-4222-8222-222222222222',
+  request_id: '33333333-3333-4333-8333-333333333333',
+  claim: '44444444-4444-4444-8444-444444444444',
+  captured_at: '2026-10-08T12:00:00.000Z',
+  target_id: '10004',
+  username: 'placementseg',
+  status: 'absent',
+};
+const invitePermitWrite = {
+  type: 'browser_operation',
+  operation: 'invite_permit',
+  id: invitePermit.id,
+  request_id: invitePermit.request_id,
+  claim: invitePermit.claim,
+  decision: 'write',
+  status: 'absent',
+};
 const invalidUtf8 = Buffer.from(JSON.stringify(publish));
 invalidUtf8[invalidUtf8.indexOf(Buffer.from('é'))] = 0xff;
 const failure = { message: 'instagram_session_publication_failed' };
@@ -228,6 +248,53 @@ async function brokerFixture(t, changes = {}) {
   t.after(() => broker.close());
   return { ...broker, state, clock, signals, calls, options };
 }
+
+test('warm-channel prewarm failure closes its candidate and server listeners', async () => {
+  const state = files();
+  const signals = new EventEmitter();
+  let server;
+  let serverCloses = 0;
+  let candidateCloses = 0;
+  const baseServerFactory = serverFactory(state);
+  const createServerImpl = (options, handler) => {
+    server = baseServerFactory(options, handler);
+    const close = server.close.bind(server);
+    server.close = callback => {
+      serverCloses += 1;
+      close(callback);
+    };
+    return server;
+  };
+
+  await assert.rejects(
+    createPublisherBroker({
+      stack: 'hub2you',
+      uid: 200,
+      gid: 300,
+      env: { SYNTHETIC: 'publisher-only' },
+      lstatImpl: state.lstatImpl,
+      chmodImpl: state.chmodImpl,
+      createServerImpl,
+      signals,
+      warmChannel: true,
+      channelFactory: async () => ({
+        send: async () => {
+          throw new Error('synthetic prewarm failure');
+        },
+        close: async () => {
+          candidateCloses += 1;
+        },
+      }),
+    }),
+    failure
+  );
+
+  assert.equal(candidateCloses, 1);
+  assert.equal(serverCloses, 1);
+  assert.equal(server.closes, 1);
+  assert.equal(signals.listenerCount('SIGTERM'), 0);
+  assert.equal(signals.listenerCount('SIGINT'), 0);
+});
 
 function clientFixture(changes = {}) {
   const state = changes.files || files(changes.stack || 'hub2you', true);
@@ -677,6 +744,43 @@ test('all existing request operations and envelope variants remain compatible', 
   }
 });
 
+test('warm channel transports one invite_permit frame and never replays a lost response', async t => {
+  let inviteCalls = 0;
+  const channelFrames = [];
+  const channel = {
+    send: async payload => {
+      if (payload.operation === 'bootstrap') return { type: 'bootstrap' };
+      assert.deepEqual(payload, invitePermit);
+      inviteCalls += 1;
+      channelFrames.push(payload);
+      if (inviteCalls === 1) return invitePermitWrite;
+      throw new Error('synthetic_lost_invite_response');
+    },
+    close: async () => {},
+  };
+  const f = await brokerFixture(t, {
+    warmChannel: true,
+    channelFactory: async () => channel,
+  });
+  const first = new Socket();
+  f.server.accept(first);
+  first.receive(JSON.stringify(invitePermit));
+  await flush();
+  assert.deepEqual(
+    parseEnvelope(first.writes[0], 'browser_operation'),
+    invitePermitWrite
+  );
+
+  const second = new Socket();
+  f.server.accept(second);
+  second.receive(JSON.stringify(invitePermit));
+  await flush();
+  assert.equal(inviteCalls, 2);
+  assert.equal(channelFrames.length, 2);
+  assert.equal(second.destroyed, true);
+  assert.deepEqual(second.writes, []);
+});
+
 for (const [label, value] of [
   ['malformed JSON', '{'],
   ['empty input', ''],
@@ -785,6 +889,225 @@ test('broker capacity includes incomplete input and response flushing; fifth is 
   fresh.receive(JSON.stringify(request));
   await flush();
   assert.equal(f.calls.length, 2);
+});
+
+test('warm channel serializes three requests, cancels the middle one and preserves FIFO', async t => {
+  let releaseFirst;
+  let channelClosed = 0;
+  const channelFrames = [];
+  const channel = {
+    send: async payload => {
+      channelFrames.push(payload);
+      if (payload.operation === 'bootstrap') return { type: 'bootstrap' };
+      if (payload.operation === 'version') {
+        await new Promise(resolve => {
+          releaseFirst = resolve;
+        });
+        return version;
+      }
+      assert.deepEqual(payload, {
+        type: 'operator',
+        operation: 'operator_read',
+      });
+      return operator;
+    },
+    close: async () => {
+      channelClosed += 1;
+    },
+  };
+  const f = await brokerFixture(t, {
+    warmChannel: true,
+    channelFactory: async () => channel,
+  });
+  const first = new Socket();
+  const second = new Socket();
+  const third = new Socket();
+  f.server.accept(first);
+  f.server.accept(second);
+  f.server.accept(third);
+  first.receive(JSON.stringify(request));
+  second.receive(JSON.stringify({ type: 'session', operation: 'bootstrap' }));
+  third.receive(
+    JSON.stringify({ type: 'operator', operation: 'operator_read' })
+  );
+  await flush();
+
+  assert.equal(typeof releaseFirst, 'function');
+  assert.deepEqual(
+    channelFrames.map(payload => payload.operation),
+    ['bootstrap', 'version']
+  );
+  second.destroy();
+  await flush();
+  releaseFirst();
+  await flush();
+
+  assert.deepEqual(
+    channelFrames.map(payload => payload.operation),
+    ['bootstrap', 'version', 'operator_read']
+  );
+  assert.deepEqual(parseEnvelope(first.writes[0], 'session'), {
+    type: 'session',
+    version,
+  });
+  assert.deepEqual(parseEnvelope(third.writes[0], 'operator'), operator);
+  assert.equal(second.destroyed, true);
+  assert.deepEqual(second.writes, []);
+  assert.equal(channelClosed, 0);
+});
+
+test('warm channel reports CURRENT rotation for a queued frame and opens a fresh channel', async t => {
+  let releaseFirst;
+  let generation = 0;
+  let channelNumber = 0;
+  const channelFrames = [];
+  const channels = [];
+  const channelFactory = async () => {
+    channelNumber += 1;
+    const number = channelNumber;
+    const ownGeneration = generation;
+    const channel = {
+      send: async payload => {
+        channelFrames.push({ channel: number, payload });
+        if (payload.operation === 'bootstrap') return { type: 'bootstrap' };
+        if (payload.operation === 'version') {
+          await new Promise(resolve => {
+            releaseFirst = resolve;
+          });
+          generation = 1;
+          return version;
+        }
+        if (ownGeneration !== generation) throw new Error('current_rotated');
+        return operator;
+      },
+      close: async () => {},
+    };
+    channels.push(channel);
+    return channel;
+  };
+  const f = await brokerFixture(t, { warmChannel: true, channelFactory });
+  const first = new Socket();
+  const second = new Socket();
+  const third = new Socket();
+  f.server.accept(first);
+  f.server.accept(second);
+  f.server.accept(third);
+  first.receive(JSON.stringify(request));
+  second.receive(
+    JSON.stringify({ type: 'operator', operation: 'operator_read' })
+  );
+  third.receive(
+    JSON.stringify({ type: 'operator', operation: 'operator_read' })
+  );
+  await flush();
+  assert.equal(typeof releaseFirst, 'function');
+  releaseFirst();
+  await flush();
+
+  assert.equal(channels.length, 2);
+  assert.deepEqual(
+    channelFrames.map(frame => [frame.channel, frame.payload.operation]),
+    [
+      [1, 'bootstrap'],
+      [1, 'version'],
+      [1, 'operator_read'],
+      [2, 'bootstrap'],
+      [2, 'operator_read'],
+    ]
+  );
+  assert.deepEqual(parseEnvelope(first.writes[0], 'session'), {
+    type: 'session',
+    version,
+  });
+  assert.equal(second.destroyed, true);
+  assert.deepEqual(second.writes, []);
+  assert.deepEqual(parseEnvelope(third.writes[0], 'operator'), operator);
+});
+
+test('warm channel EOF closes the old channel and the next queued request uses a new one without replay', async t => {
+  let channelNumber = 0;
+  const channelFrames = [];
+  const channelFactory = async () => {
+    channelNumber += 1;
+    const number = channelNumber;
+    return {
+      send: async payload => {
+        channelFrames.push({ channel: number, payload });
+        if (payload.operation === 'bootstrap') return { type: 'bootstrap' };
+        if (number === 1) throw new Error('synthetic_ssh_eof');
+        return operator;
+      },
+      close: async () => {},
+    };
+  };
+  const f = await brokerFixture(t, { warmChannel: true, channelFactory });
+  const first = new Socket();
+  const second = new Socket();
+  f.server.accept(first);
+  f.server.accept(second);
+  first.receive(JSON.stringify(request));
+  second.receive(
+    JSON.stringify({ type: 'operator', operation: 'operator_read' })
+  );
+  await flush();
+
+  assert.equal(first.destroyed, true);
+  assert.deepEqual(first.writes, []);
+  assert.equal(channelNumber, 2);
+  assert.deepEqual(
+    channelFrames.map(frame => [frame.channel, frame.payload.operation]),
+    [
+      [1, 'bootstrap'],
+      [1, 'version'],
+      [2, 'bootstrap'],
+      [2, 'operator_read'],
+    ]
+  );
+  assert.deepEqual(parseEnvelope(second.writes[0], 'operator'), operator);
+});
+
+test('closing a warm broker cancels the active frame and releases queued requests', async t => {
+  let releaseCount = 0;
+  const channelFrames = [];
+  const channel = {
+    send: async (payload, { signals }) => {
+      channelFrames.push(payload);
+      if (payload.operation === 'bootstrap') return { type: 'bootstrap' };
+      return new Promise((_resolve, reject) => {
+        signals.once('SIGTERM', () => {
+          releaseCount += 1;
+          reject(new Error('synthetic_shutdown'));
+        });
+      });
+    },
+    close: async () => {},
+  };
+  const f = await brokerFixture(t, {
+    warmChannel: true,
+    channelFactory: async () => channel,
+  });
+  const first = new Socket();
+  const second = new Socket();
+  f.server.accept(first);
+  f.server.accept(second);
+  first.receive(JSON.stringify(request));
+  second.receive(
+    JSON.stringify({ type: 'operator', operation: 'operator_read' })
+  );
+  await flush();
+  const closing = f.close();
+  await closing;
+
+  assert.equal(releaseCount, 1);
+  assert.deepEqual(
+    channelFrames.map(payload => payload.operation),
+    ['bootstrap', 'version']
+  );
+  assert.equal(first.destroyed, true);
+  assert.equal(second.destroyed, true);
+  assert.equal(f.server.closes, 1);
+  assert.equal(f.signals.listenerCount('SIGTERM'), 0);
+  assert.equal(f.signals.listenerCount('SIGINT'), 0);
 });
 
 test('30s budget starts at admission, does not reset for data and includes publisher work', async t => {

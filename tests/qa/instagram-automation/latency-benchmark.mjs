@@ -15,10 +15,16 @@ import {
 } from 'node:net';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
+import { setTimeout as delay } from 'node:timers/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { executeBrowserOperation } from '../../../scripts/instagram_testers/browser-operations.mjs';
+import {
+  handleBrowserRoute,
+  isAllowedBrowserRequest,
+} from '../../../scripts/instagram_testers/session-manager.mjs';
+import { isMainModule } from '../../../scripts/instagram_testers/runtime/entrypoint.mjs';
 
 const FIXTURE_PATH = new URL(
   './latency-browser-fixtures.json',
@@ -69,6 +75,13 @@ function fail(code) {
   const error = new Error(code);
   error.code = code;
   throw error;
+}
+
+function normalizeConnectFault(value) {
+  if (value === null) return null;
+  if (!value || value.status !== 407 || typeof value.persistent !== 'boolean')
+    fail('invalid_connect_fault');
+  return { status: 407, persistent: value.persistent };
 }
 
 function monotonicClock() {
@@ -170,7 +183,7 @@ function namedScenarios(fixture) {
   return Object.freeze(names);
 }
 
-async function loadChromium() {
+export async function loadChromium() {
   const modulePath = process.env.PLAYWRIGHT_MODULE_PATH;
   if (!modulePath || modulePath.includes('\0'))
     fail('playwright_module_missing');
@@ -280,7 +293,7 @@ function closeServer(server) {
   });
 }
 
-function createFixtureHtml(fixture, scenario) {
+export function createFixtureHtml(fixture, scenario) {
   const target = JSON.stringify(fixture.target);
   const searchUrl = JSON.stringify(`${ORIGIN}${SEARCH_PATH}`);
   const inviteUrl = JSON.stringify(`${ORIGIN}${INVITE_PATH}`);
@@ -377,7 +390,7 @@ function createFixtureHtml(fixture, scenario) {
 </script></body></html>`;
 }
 
-async function createFixtureTransport(fixture, scenarioNames) {
+export async function createFixtureTransport(fixture, scenarioNames) {
   const certDirectory = await mkdtemp(
     join(tmpdir(), 'instagram-latency-cert-')
   );
@@ -409,18 +422,38 @@ async function createFixtureTransport(fixture, scenarioNames) {
   const key = await readFile(keyPath);
   const cert = await readFile(certPath);
   let activeScenario = null;
+  let responseFault = null;
+  let responseFaultHits = 0;
+  let connectFault = null;
+  let connectFaultHits = 0;
+  const requestCounts = { roles: 0, typeahead: 0, invite: 0 };
   const httpsServer = createHttpsServer(
     { key, cert },
     async (request, response) => {
       try {
         const url = new URL(request.url || '/', ORIGIN);
         await readBody(request);
-        const result = fixtureResponse(
+        let result = fixtureResponse(
           activeScenario,
           fixture,
           url,
           request.method
         );
+        if (url.pathname === GRAPHQL_PATH) requestCounts.roles += 1;
+        if (url.pathname === SEARCH_PATH) requestCounts.typeahead += 1;
+        if (url.pathname === INVITE_PATH) requestCounts.invite += 1;
+        if (responseFault?.path === url.pathname) {
+          const selected = responseFault;
+          if (!selected.persistent) responseFault = null;
+          responseFaultHits += 1;
+          selected.onHit?.();
+          if (selected.disconnect) {
+            response.destroy();
+            return;
+          }
+          if (selected.delayMs) await delay(selected.delayMs);
+          result = { ...result, ...selected };
+        }
         response.writeHead(result.status, {
           'access-control-allow-origin': '*',
           'access-control-allow-headers': 'content-type',
@@ -459,6 +492,18 @@ async function createFixtureTransport(fixture, scenarioNames) {
       const [method, target] = firstLine.split(' ');
       if (method !== 'CONNECT' || target !== 'developers.facebook.com:443')
         return reject();
+      if (connectFault) {
+        const selected = connectFault;
+        connectFaultHits += 1;
+        if (!selected.persistent) connectFault = null;
+        socket.end(
+          `HTTP/1.1 ${selected.status} Proxy Authentication Required\r\n` +
+            'Proxy-Authenticate: Basic realm="synthetic"\r\n' +
+            'Connection: close\r\n' +
+            'Content-Length: 0\r\n\r\n'
+        );
+        return;
+      }
       connected = true;
       socket.off('data', onData);
       const upstream = connectNet({ host: '127.0.0.1', port: fixturePort });
@@ -477,11 +522,81 @@ async function createFixtureTransport(fixture, scenarioNames) {
     socket.setTimeout(30000, reject);
   });
   const proxyPort = await listen(proxyServer);
+  const proxy = `http://127.0.0.1:${proxyPort}`;
   return {
-    proxy: `http://127.0.0.1:${proxyPort}`,
+    proxy,
     setScenario(value) {
       if (!scenarioNames.includes(value)) fail('invalid_fixture_scenario');
       activeScenario = value;
+    },
+    setResponseFault(value) {
+      responseFault = value;
+    },
+    responseFaultHits() {
+      return responseFaultHits;
+    },
+    pendingResponseFault() {
+      return responseFault !== null;
+    },
+    setConnectFault(value) {
+      connectFault = normalizeConnectFault(value);
+    },
+    connectFaultHits() {
+      return connectFaultHits;
+    },
+    pendingConnectFault() {
+      return connectFault !== null;
+    },
+    async probeConnectChallenge() {
+      const endpoint = new URL(proxy);
+      return new Promise(resolvePromise => {
+        const socket = connectNet({
+          host: endpoint.hostname,
+          port: Number(endpoint.port),
+        });
+        let header = Buffer.alloc(0);
+        let settled = false;
+        const finish = result => {
+          if (settled) return;
+          settled = true;
+          socket.destroy();
+          resolvePromise(result);
+        };
+        socket.setTimeout(3000, () =>
+          finish({ status: null, event: 'timeout' })
+        );
+        socket.on('connect', () =>
+          socket.write(
+            'CONNECT developers.facebook.com:443 HTTP/1.1\r\n' +
+              'Host: developers.facebook.com:443\r\n\r\n'
+          )
+        );
+        socket.on('data', chunk => {
+          header = Buffer.concat([header, Buffer.from(chunk)]);
+          if (header.length > 16384) {
+            finish({ status: null, event: 'oversize' });
+            return;
+          }
+          const end = header.indexOf('\r\n\r\n');
+          if (end < 0) return;
+          const firstLine = header
+            .subarray(0, end)
+            .toString('latin1')
+            .split('\r\n')[0];
+          const statusMatch = /^HTTP\/1\.[01] ([0-9]{3})(?: |$)/.exec(
+            firstLine
+          );
+          finish({
+            status: statusMatch ? Number(statusMatch[1]) : null,
+            event: statusMatch ? 'headers' : 'invalid_headers',
+          });
+        });
+        socket.on('error', () => finish({ status: null, event: 'error' }));
+        socket.on('close', () => finish({ status: null, event: 'closed' }));
+      });
+    },
+    counts() {
+      return { ...requestCounts };
     },
     async close() {
       await Promise.all([closeServer(proxyServer), closeServer(httpsServer)]);
@@ -490,7 +605,7 @@ async function createFixtureTransport(fixture, scenarioNames) {
   };
 }
 
-function makeConfiguration(fixture) {
+export function makeConfiguration(fixture) {
   return {
     appId: fixture.configuration.app_id,
     businessId: fixture.configuration.business_id,
@@ -500,7 +615,7 @@ function makeConfiguration(fixture) {
   };
 }
 
-function makeRequest(scenario, configuration, fixture, iteration) {
+export function makeRequest(scenario, configuration, fixture, iteration) {
   const definition = fixture.scenarios[scenario];
   if (!definition) fail('invalid_fixture_scenario');
   const request = {
@@ -647,6 +762,9 @@ async function runBenchmark(options, fixture, scenarioNames) {
     });
     setDiagnosticStage('context_create');
     context = await browser.newContext({ ignoreHTTPSErrors: true });
+    await context.route('**/*', route =>
+      handleBrowserRoute(route, configuration, process.stderr)
+    );
     setDiagnosticStage('page_create');
     const rawPage = await context.newPage();
     setDiagnosticStage('page_observers');
@@ -697,11 +815,8 @@ async function runBenchmark(options, fixture, scenarioNames) {
           configuration,
           request,
           signal: AbortSignal.timeout(120000),
-          requestGuard: ({ url, method, body }) =>
-            (method === 'GET' && url === configuration.rolesUrl) ||
-            (method === 'POST' &&
-              requestPath(url) === GRAPHQL_PATH &&
-              body.includes('RolesTable_Query')),
+          requestGuard: parameters =>
+            isAllowedBrowserRequest({ ...parameters, config: configuration }),
           permitInvite:
             scenario === 'invite_unknown'
               ? permitRequest => ({
@@ -806,16 +921,17 @@ async function main(argv = process.argv.slice(2)) {
   process.stdout.write(`${JSON.stringify(report)}\n`);
 }
 
-main().catch(error => {
-  process.stdout.write(
-    `${JSON.stringify({
-      status: 'error',
-      error_class: safeClass(error),
-      error_code: safeCode(error),
-      diagnostic_stage: diagnosticStage,
-      production_mutated: false,
-      meta_called: false,
-    })}\n`
-  );
-  process.exitCode = 1;
-});
+if (isMainModule(import.meta.url))
+  main().catch(error => {
+    process.stdout.write(
+      `${JSON.stringify({
+        status: 'error',
+        error_class: safeClass(error),
+        error_code: safeCode(error),
+        diagnostic_stage: diagnosticStage,
+        production_mutated: false,
+        meta_called: false,
+      })}\n`
+    );
+    process.exitCode = 1;
+  });

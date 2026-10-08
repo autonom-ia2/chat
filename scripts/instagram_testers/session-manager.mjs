@@ -168,6 +168,32 @@ export async function privateProfile(path) {
   return target;
 }
 
+export async function handleBrowserRoute(route, config, stderr) {
+  try {
+    const request = route.request();
+    if (
+      !isAllowedBrowserRequest({
+        url: request.url(),
+        method: request.method(),
+        body: request.postData() || '',
+        config,
+      })
+    ) {
+      await route.abort();
+    } else {
+      await route.continue();
+    }
+  } catch (error) {
+    // Playwright has already completed these routes; a second abort cannot help.
+    // For other failures, close the request instead of permitting it.
+    if (!error.message?.includes('Route is already handled'))
+      await route.abort().catch(() => {});
+    writeBrowserOperationDiagnostic(stderr, {
+      event: 'instagram_browser_route_failed',
+    });
+  }
+}
+
 export function publisher(
   command,
   payload,
@@ -372,28 +398,7 @@ export async function run(
     // The default guard stays in place; the operation executor permits only
     // its reviewed natural typeahead request on the primary page.
     await setup.wait(
-      context.route('**/*', async route => {
-        try {
-          const request = route.request();
-          if (
-            !isAllowedBrowserRequest({
-              url: request.url(),
-              method: request.method(),
-              body: request.postData() || '',
-              config,
-            })
-          ) {
-            await route.abort();
-          } else {
-            await route.continue();
-          }
-        } catch {
-          // A completed or cancelled request must not kill the persistent manager.
-          // Never continue a request after a guard failure.
-          await route.abort().catch(() => {});
-          stderr.write('instagram_browser_route_failed\n');
-        }
-      })
+      context.route('**/*', route => handleBrowserRoute(route, config, stderr))
     );
     setup.close();
     while (!shutdown.signal.aborted) {
@@ -685,6 +690,7 @@ export async function run(
             )
               throw new Error('publication_failed');
             writeBrowserOperationDiagnostic(stderr, diagnostic);
+            if (page.isClosed()) throw new Error('browser_runtime_required');
             if (
               ['operator_required', 'meta_session_expired'].includes(
                 result.error_code
@@ -700,11 +706,12 @@ export async function run(
               break;
             }
           }
-        } catch {
+        } catch (error) {
           writeBrowserOperationDiagnostic(stderr, diagnostic);
           // Cancellation does not cancel Playwright's underlying call. Stop
           // this lifecycle so cleanup finishes before another job can run.
-          if (executionPending) throw new Error('browser_runtime_required');
+          if (executionPending || error.message === 'browser_runtime_required')
+            throw new Error('browser_runtime_required');
           if (!shutdown.signal.aborted)
             stderr.write('instagram_browser_operation_failed\n');
         } finally {
