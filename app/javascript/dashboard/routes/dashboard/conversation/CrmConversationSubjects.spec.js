@@ -71,7 +71,10 @@ it('lists every subject and marks the current one', async () => {
   expect(rows(wrapper)).toHaveLength(3);
   expect(rows(wrapper)[0].attributes('aria-current')).toBe('true');
   expect(rows(wrapper)[0].text()).toContain('Chat2You');
-  expect(rows(wrapper)[1].text()).toContain('Comercial · Novo');
+  expect(rows(wrapper)[1].text()).toContain('Agentes de IA');
+  expect(rows(wrapper)[1].text()).toContain(
+    'CRM_KANBAN.CONVERSATION.SUBJECTS.PIPELINE_STAGE'
+  );
 });
 
 it('makes another open subject current and refreshes the list badge', async () => {
