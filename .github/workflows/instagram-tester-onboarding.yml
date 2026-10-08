@@ -125,6 +125,8 @@ jobs:
             tests/instagram_testers/runtime-publisher.test.mjs tests/instagram_testers/publisher-concurrency.test.mjs \
             tests/instagram_testers/runtime-entrypoint.test.mjs \
             tests/instagram_testers/session-publisher-stdio.test.mjs \
+            scripts/instagram_testers/runtime/publisher-channel.test.mjs \
+            tests/instagram_testers/ssm-current-reader.test.mjs \
             tests/instagram_testers/operator-control.test.mjs tests/instagram_testers/operator-waiter.test.mjs \
             tests/instagram_testers/vps-browser-marker.test.mjs \
             tests/instagram_testers/vps-gateway.test.mjs \
@@ -155,6 +157,8 @@ jobs:
           node --check scripts/instagram_testers/session-manager.mjs
           node --check scripts/instagram_testers/session-browser.mjs
           node --check scripts/instagram_testers/runtime/publisher-tunnel.mjs
+          node --check scripts/instagram_testers/runtime/publisher-channel.mjs
+          node --check scripts/instagram_testers/runtime/vps/ssm-current-reader.mjs
           node --check scripts/instagram_testers/runtime/entrypoint.mjs
           for script in scripts/instagram_testers/runtime/*.sh; do sh -n "$script"; done
           bash -n scripts/deploy/blue-green-recovery.sh
@@ -166,6 +170,11 @@ jobs:
           scripts/instagram_testers/session-manager.mjs
           scripts/instagram_testers/session-browser.mjs
           scripts/instagram_testers/runtime/publisher-tunnel.mjs
+          scripts/instagram_testers/runtime/publisher-channel.mjs
+          scripts/instagram_testers/runtime/publisher-channel.test.mjs
+          scripts/instagram_testers/runtime/vps/ssm-current-reader.mjs
+          tests/instagram_testers/ssm-current-reader.test.mjs
+          tests/qa/instagram-automation/latency-benchmark.mjs
           tests/instagram_testers/session-observer.test.mjs
           tests/instagram_testers/session-manager.test.mjs
           tests/instagram_testers/runtime-publisher.test.mjs tests/instagram_testers/publisher-concurrency.test.mjs

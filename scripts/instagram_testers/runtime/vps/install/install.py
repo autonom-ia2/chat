@@ -15,13 +15,16 @@ UNITS = tuple(f'instagram-vps-{role}@.service' for role in ('display', 'manager'
 ACCOUNTS = {f'{prefix}-{stack}': f'/var/lib/{home}-{stack}'
             for stack in STACKS for prefix, home in (('ig', 'instagram'), ('igpub', 'instagram-publisher'),
                                                     ('iggw', 'instagram-gateway'))}
-PUBLISHER_MODULES = ('publisher-broker.mjs', 'publisher-client.mjs', 'publisher-socket.mjs')
+PUBLISHER_MODULES = ('publisher-broker.mjs', 'publisher-client.mjs', 'publisher-socket.mjs',
+                     'ssm-current-reader.mjs')
 BINS = ('/usr/bin/node', '/usr/bin/python3', '/usr/bin/Xtigervnc', '/usr/bin/xauth', '/usr/bin/mcookie',
         '/usr/bin/google-chrome', '/usr/bin/ssh', '/usr/bin/systemctl',
         '/usr/sbin/useradd', '/usr/sbin/groupadd', '/usr/sbin/runuser')
-DEPS = {'@novnc/novnc': '1.7.0', 'jose': '6.2.12', 'playwright': '1.59.1', 'ws': '8.22.0'}
+DEPS = {'@aws-sdk/client-ssm': '3.967.0', '@novnc/novnc': '1.7.0', 'jose': '6.2.12',
+        'playwright': '1.59.1', 'ws': '8.22.0'}
 SCRIPTS = ('session-manager.mjs', 'session-browser.mjs', 'session-observer.mjs', 'browser-operations.mjs',
-           'runtime/publisher-tunnel.mjs', 'runtime/operator-waiter.mjs', 'runtime/operator-protocol.mjs',
+           'runtime/publisher-tunnel.mjs', 'runtime/publisher-channel.mjs', 'runtime/operator-waiter.mjs',
+           'runtime/operator-protocol.mjs',
            'runtime/browser-request-marker.mjs', 'runtime/entrypoint.mjs')
 
 

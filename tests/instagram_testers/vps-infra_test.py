@@ -52,7 +52,7 @@ class InstallTests(unittest.TestCase):
         (self.vps / 'gateway.mjs').write_text('// synthetic gateway, never executed\n')
         (self.vps / 'gateway-auth.mjs').write_text('// synthetic auth, never executed\n')
         (self.vps / 'web').mkdir()
-        for name in ('publisher-broker.mjs', 'publisher-client.mjs', 'publisher-socket.mjs'):
+        for name in installer.PUBLISHER_MODULES:
             (self.vps / name).write_text('// synthetic publisher module; never executed\n')
         for name in ('console.html', 'console.js', 'enter.html', 'enter.js'):
             (self.vps / 'web' / name).write_text('synthetic inert asset\n')

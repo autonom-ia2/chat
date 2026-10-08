@@ -3,20 +3,17 @@
 set -eu
 
 fail() {
+  if [ "${channel_child-}" != "" ]; then
+    kill "$channel_child" 2>/dev/null || true
+  fi
   printf '%s\n' 'instagram_publisher_transport_failed' >&2
   exit 2
 }
 
-[ "${SSH_ORIGINAL_COMMAND-}" = "" ] || fail
 [ "$#" -eq 0 ] || fail
 [ "$(/usr/bin/id -u 2>/dev/null)" = "0" ] || fail
 [ "${SUDO_USER-}" = "chatwoot_publisher" ] || fail
 
-result=$(/usr/bin/docker exec -i chatwoot-web bundle exec ruby scripts/instagram_testers/session_publisher.rb 2>/dev/null) || fail
-
-line_count=$(printf '%s\n' "$result" | /usr/bin/wc -l | /usr/bin/tr -d ' ')
-[ "$line_count" = "1" ] || fail
-[ "$(printf '%s' "$result" | /usr/bin/wc -c | /usr/bin/tr -d ' ')" -le 1024 ] || fail
 uuid='[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
 session='\{"type":"session","version":(null|"'"$uuid"'")\}'
 timestamp='[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z'
@@ -47,5 +44,44 @@ browser_read='\{"type":"browser_operation","operation":"read","request":(null|'"
 browser_claim='\{"type":"browser_operation","operation":"claim","request":('"$browser_search_claim"'|'"$browser_role_claim"')\}'
 browser_complete='\{"type":"browser_operation","operation":"complete","id":"'"$uuid"'","request_id":"'"$uuid"'",("state":"ready"|"state":"(failed|expired)","error_code":"('"$browser_errors"')")\}'
 browser_permit='\{"type":"browser_operation","operation":"invite_permit","id":"'"$uuid"'","request_id":"'"$uuid"'","claim":"'"$uuid"'",("decision":"write","status":"absent"|"decision":"noop","status":"pending"|"error_code":"('"$browser_errors"')")\}'
-printf '%s' "$result" | /usr/bin/grep -Eq "^($session|$operator|$bootstrap|$browser_read|$browser_claim|$browser_complete|$browser_permit)$" || fail
+
+validate_frame() {
+  frame=$1
+  limit=$2
+  [ "$(printf '%s' "$frame" | /usr/bin/wc -c | /usr/bin/tr -d ' ')" -le "$limit" ] || fail
+  printf '%s' "$frame" | /usr/bin/grep -Eq "^($session|$operator|$bootstrap|$browser_read|$browser_claim|$browser_complete|$browser_permit)$" || fail
+}
+
+if [ "${SSH_ORIGINAL_COMMAND-}" = "instagram_publisher_channel_v1" ]; then
+  channel_dir=$(/usr/bin/mktemp -d /tmp/instagram-publisher-channel.XXXXXX) || fail
+  channel_fifo="$channel_dir/output"
+  cleanup_channel() {
+    /usr/bin/rm -f "$channel_fifo" 2>/dev/null || true
+    /usr/bin/rmdir "$channel_dir" 2>/dev/null || true
+  }
+  channel_signal() {
+    kill "${channel_child-}" 2>/dev/null || true
+    cleanup_channel
+    exit 143
+  }
+  trap cleanup_channel EXIT
+  trap channel_signal HUP INT TERM
+  /usr/bin/mkfifo "$channel_fifo" || fail
+  exec 3<>"$channel_fifo" || fail
+  /usr/bin/docker exec -i chatwoot-web bundle exec ruby scripts/instagram_testers/session_publisher.rb --channel >&3 2>/dev/null &
+  channel_child=$!
+  exec 3>&-
+  while IFS= read -r frame; do
+    validate_frame "$frame" 2048
+    printf '%s\n' "$frame"
+  done <"$channel_fifo"
+  wait "$channel_child" || fail
+  exit 0
+fi
+
+[ "${SSH_ORIGINAL_COMMAND-}" = "" ] || fail
+result=$(/usr/bin/docker exec -i chatwoot-web bundle exec ruby scripts/instagram_testers/session_publisher.rb 2>/dev/null) || fail
+line_count=$(printf '%s\n' "$result" | /usr/bin/wc -l | /usr/bin/tr -d ' ')
+[ "$line_count" = "1" ] || fail
+validate_frame "$result" 1024
 printf '%s\n' "$result"

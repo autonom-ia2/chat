@@ -6,20 +6,44 @@ $stdout.reopen(File::NULL, 'w')
 $stderr.reopen(File::NULL, 'w')
 
 begin
+  channel = case ARGV
+            when [] then false
+            when ['--channel'] then true
+            else raise ArgumentError
+            end
+
   require_relative '../../config/application'
   Rails.application.config.before_initialize { |app| app.config.eager_load = false }
   require_relative '../../config/environment'
   Rails.application.load_runner
   require 'json'
 
-  result = Rails.application.executor.wrap(source: 'application.runner.railties') do
-    input = $stdin.read(2.megabytes + 1)
+  publish = lambda do |input|
     raise Instagram::Testers::Error, 'session_update_rejected' if input.bytesize > 2.megabytes
 
-    Instagram::Automation::SessionPublisher.new.call(JSON.parse(input)).to_json
+    Rails.application.executor.wrap(source: 'application.runner.railties') do
+      Instagram::Automation::SessionPublisher.new.call(JSON.parse(input)).to_json
+    end
   end
-  protocol_stdout.write("#{result}\n")
-  protocol_stdout.flush
+
+  if channel
+    while (line = $stdin.gets(2.megabytes + 1))
+      raise Instagram::Testers::Error, 'session_update_rejected' unless line.end_with?("\n")
+
+      result = publish.call(line.chomp)
+      protocol_stdout.write("#{result}\n")
+      protocol_stdout.flush
+    end
+  else
+    result = Rails.application.executor.wrap(source: 'application.runner.railties') do
+      input = $stdin.read(2.megabytes + 1)
+      raise Instagram::Testers::Error, 'session_update_rejected' if input.bytesize > 2.megabytes
+
+      Instagram::Automation::SessionPublisher.new.call(JSON.parse(input)).to_json
+    end
+    protocol_stdout.write("#{result}\n")
+    protocol_stdout.flush
+  end
 rescue StandardError, ScriptError
   # Exceptions may contain input: never output details or secret payloads.
   protocol_stderr.write("Instagram session publication failed\n")

@@ -22,7 +22,7 @@ import {
 
 const CYCLE_BUDGET_MS = 30000;
 const REFRESH_INTERVAL_MS = 900000;
-const BROWSER_OPERATION_POLL_MS = 15000;
+const BROWSER_OPERATION_POLL_MS = 1000;
 const BROWSER_OPERATION_BUDGET_MS = 120000;
 
 function writeBrowserOperationDiagnostic(stderr, diagnostic) {
