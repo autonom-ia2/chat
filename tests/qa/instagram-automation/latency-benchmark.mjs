@@ -309,6 +309,8 @@ export function createFixtureHtml(fixture, scenario) {
       </fieldset>
       <input id="tester-search" type="text" role="combobox" aria-controls="latency-listbox" autocomplete="off">
       <div id="latency-listbox" role="listbox" hidden></div>
+      <button type="button" id="cancel">Cancel</button>
+      <button type="button" id="close">Close</button>
       <button type="button" id="invite">Add</button>
     </section>
   </main>
@@ -347,6 +349,8 @@ export function createFixtureHtml(fixture, scenario) {
   const role = document.getElementById('instagram-testers-role');
   const input = document.getElementById('tester-search');
   const listbox = document.getElementById('latency-listbox');
+  const cancel = document.getElementById('cancel');
+  const close = document.getElementById('close');
   const invite = document.getElementById('invite');
   addPeople.addEventListener('click', () => {
     mark('add_people_clicked');
@@ -354,6 +358,11 @@ export function createFixtureHtml(fixture, scenario) {
     mark('dialog_opened');
   });
   role.addEventListener('change', () => mark('role_checked'));
+  const closeDialog = () => {
+    dialog.hidden = true;
+  };
+  cancel.addEventListener('click', closeDialog);
+  close.addEventListener('click', closeDialog);
   input.addEventListener('input', async () => {
     mark('search_input_filled');
     if (!listbox.querySelector('[role="option"]')) {

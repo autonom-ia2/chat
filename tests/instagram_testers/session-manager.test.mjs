@@ -109,6 +109,7 @@ const fields = new URLSearchParams({
   lsd: 'synthetic-lsd',
   jazoest: '1234',
   __req: '1',
+  __aaid: '67890',
 }).toString();
 
 class Request {
@@ -151,6 +152,7 @@ class Page extends EventEmitter {
     this.currentUrl = rolesUrl;
   }
   url() { return this.currentUrl; }
+  async evaluate() { return 200; }
   async goto() {
     if (mode === 'redirect') this.currentUrl = 'https://www.facebook.com/login/';
     if (mode === 'checkpoint-redirect') {
@@ -623,6 +625,7 @@ async function syntheticManager(t, options = {}) {
     lsd: 'synthetic-lsd',
     jazoest: '1234',
     __req: '1',
+    __aaid: '67890',
   }).toString();
   const request = {
     url: () => 'https://developers.facebook.com/api/graphql/',
@@ -645,6 +648,7 @@ async function syntheticManager(t, options = {}) {
   let routeHandler;
   page.url = () => options.redirect || config.rolesUrl;
   page.isClosed = () => options.closedPrimary === true;
+  page.evaluate = async () => 200;
   page.close = async () => {
     options.closedPrimary = true;
   };
@@ -875,13 +879,19 @@ async function syntheticManager(t, options = {}) {
   };
 }
 
-test('polls browser operations at one second and executes a queued request once', async t => {
+test('polls browser operations at 250 ms and executes a queued request once', async t => {
   const executions = [];
+  let observedWarm;
   const data = await syntheticManager(t, {
     vps: true,
     browserOperations: true,
-    browserRequestReadyAt: 999,
-    executeOperation: async ({ request }) => {
+    browserRequestReadyAt: 249,
+    executeOperation: async ({ request, page, warmMetaPage }) => {
+      assert.equal(warmMetaPage.valid, true);
+      assert.equal(warmMetaPage.page, page);
+      assert.equal(warmMetaPage.source, 'manager_refresh');
+      assert.equal(warmMetaPage.rolesAaid, '67890');
+      observedWarm = warmMetaPage;
       executions.push(request);
       return {
         type: 'browser_operation',
@@ -898,7 +908,7 @@ test('polls browser operations at one second and executes a queued request once'
   const browserEntries = () =>
     data.entries.filter(entry => entry.payload.type === 'browser_operation');
   try {
-    await data.clock.advance(999);
+    await data.clock.advance(249);
     assert.equal(executions.length, 0);
     assert.equal(
       browserEntries().filter(entry => entry.payload.operation === 'claim')
@@ -918,11 +928,12 @@ test('polls browser operations at one second and executes a queued request once'
     );
     assert.deepEqual(
       reads.map(entry => entry.at),
-      [0, 1000]
+      [0, 250]
     );
     assert.equal(claims.length, 1);
     assert.equal(completions.length, 1);
     assert.equal(executions.length, 1);
+    assert.equal(observedWarm.disposed, false);
     assert.equal(
       data.entries.filter(entry => entry.payload.operation === 'bootstrap')
         .length,
@@ -935,6 +946,9 @@ test('polls browser operations at one second and executes a queued request once'
     );
     data.signals.emit('SIGTERM');
     assert.equal(await data.settled, null);
+    assert.equal(observedWarm.disposed, true);
+    assert.equal(observedWarm.valid, false);
+    assert.equal(observedWarm.formBody, null);
   } finally {
     data.signals.emit('SIGTERM');
   }
@@ -1546,7 +1560,7 @@ for (const operation of ['continue', 'abort']) {
     await data.clock.advance(1000);
     data.browserRequest.action = 'status';
     data.browserRequest.target_id = '10004';
-    await data.clock.advance(1000);
+    await data.clock.advance(250);
     assert.deepEqual(executions, ['search', 'status']);
     assert.equal(data.closed(), 0);
     assert.ok(
@@ -1691,4 +1705,43 @@ test('publishes the closed-page failure once, then releases the browser and prof
   );
   assert.equal(data.closed(), 1);
   await assert.rejects(lstat(data.lockPath), { code: 'ENOENT' });
+});
+
+test('does not expose a warm page or claim work before the publication CAS resolves', async t => {
+  const warmStates = [];
+  const data = await syntheticManager(t, {
+    vps: true,
+    browserOperations: true,
+    pendingPublish: true,
+    browserRequestReadyAt: 0,
+    executeOperation: async ({ request, warmMetaPage }) => {
+      warmStates.push(warmMetaPage);
+      return {
+        type: 'browser_operation',
+        operation: 'complete',
+        action: request.action,
+        id: request.id,
+        request_id: request.request_id,
+        claim: request.claim,
+        captured_at: '2026-10-08T12:00:00.000Z',
+        results: [],
+      };
+    },
+  });
+  assert.equal(
+    data.entries.some(entry => entry.payload.operation === 'publish'),
+    true
+  );
+  assert.equal(
+    data.entries.some(entry => entry.payload.type === 'browser_operation'),
+    false
+  );
+  assert.equal(warmStates.length, 0);
+  data.pendingPublish.resolve(PUBLISHED_VERSION);
+  await drain();
+  assert.equal(warmStates.length, 1);
+  assert.equal(warmStates[0].valid, true);
+  data.signals.emit('SIGTERM');
+  assert.equal(await data.settled, null);
+  assert.equal(warmStates[0].formBody, null);
 });

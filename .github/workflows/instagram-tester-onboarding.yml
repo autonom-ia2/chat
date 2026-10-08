@@ -168,6 +168,8 @@ jobs:
           node --check tests/qa/instagram-testers/entry.js
           node --check scripts/instagram_testers/session-observer.mjs
           node --check scripts/instagram_testers/session-manager.mjs
+          node --check scripts/instagram_testers/browser-operations.mjs
+          node --check tests/qa/instagram-automation/warm-meta-page.mjs
           node --check scripts/instagram_testers/session-browser.mjs
           node --check scripts/instagram_testers/runtime/publisher-tunnel.mjs
           node --check scripts/instagram_testers/runtime/publisher-channel.mjs
@@ -181,6 +183,8 @@ jobs:
           pnpm exec eslint
           scripts/instagram_testers/session-observer.mjs
           scripts/instagram_testers/session-manager.mjs
+          scripts/instagram_testers/browser-operations.mjs
+          tests/qa/instagram-automation/warm-meta-page.mjs
           scripts/instagram_testers/session-browser.mjs
           scripts/instagram_testers/runtime/publisher-tunnel.mjs
           scripts/instagram_testers/runtime/publisher-channel.mjs
@@ -395,6 +399,14 @@ jobs:
         run: |
           mkdir -p tmp/instagram-stress
           node tests/qa/instagram-automation/ui-failures.mjs | tee tmp/instagram-stress/ui.jsonl
+      - name: Verify fresh reads and warm-page failure paths without Meta
+        if: ${{ !cancelled() }}
+        env:
+          PLAYWRIGHT_MODULE_PATH: ${{ github.workspace }}/scripts/instagram_testers/runtime/vps/node_modules/playwright/index.mjs
+          PLAYWRIGHT_EXECUTABLE_PATH: /usr/bin/google-chrome
+        run: |
+          mkdir -p tmp/instagram-stress
+          node tests/qa/instagram-automation/warm-meta-page.mjs | tee tmp/instagram-stress/warm-page.jsonl
       - name: Stress manager lifecycle without Meta
         if: ${{ !cancelled() }}
         env:
