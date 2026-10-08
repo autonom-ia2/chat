@@ -1,6 +1,6 @@
 import { mount, flushPromises } from '@vue/test-utils';
 import CrmKanbanAPI from 'dashboard/api/crmKanban';
-import { refreshCrmConversationStage } from 'dashboard/routes/dashboard/crm/composables/useCrmConversationStages';
+import { notifyCrmSubjectsChanged } from 'dashboard/routes/dashboard/crm/composables/useCrmConversationStages';
 import CrmConversationSubjects from './CrmConversationSubjects.vue';
 
 vi.mock('dashboard/api/crmKanban', () => ({
@@ -11,7 +11,19 @@ vi.mock('dashboard/api/crmKanban', () => ({
 }));
 vi.mock(
   'dashboard/routes/dashboard/crm/composables/useCrmConversationStages',
-  () => ({ refreshCrmConversationStage: vi.fn() })
+  async () => {
+    const { ref } = await import('vue');
+    const crmSubjectsChange = ref({ conversationId: null, version: 0 });
+    return {
+      crmSubjectsChange,
+      notifyCrmSubjectsChanged: vi.fn(conversationId => {
+        crmSubjectsChange.value = {
+          conversationId,
+          version: crmSubjectsChange.value.version + 1,
+        };
+      }),
+    };
+  }
 );
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
 
@@ -45,13 +57,23 @@ const SUBJECTS = [
   },
 ];
 
+const wrappers = [];
+afterEach(() => wrappers.splice(0).forEach(wrapper => wrapper.unmount()));
+
+const track = wrapper => {
+  wrappers.push(wrapper);
+  return wrapper;
+};
+
 const mountPanel = (props = {}) =>
-  mount(CrmConversationSubjects, {
-    props: { conversationId: 9, canManage: true, ...props },
-    global: {
-      stubs: { CrmNewSubjectDialog: true, NextButton: true },
-    },
-  });
+  track(
+    mount(CrmConversationSubjects, {
+      props: { conversationId: 9, canManage: true, ...props },
+      global: {
+        stubs: { CrmNewSubjectDialog: true, NextButton: true },
+      },
+    })
+  );
 
 const rows = wrapper => wrapper.findAll('[data-crm-subject]');
 
@@ -82,7 +104,7 @@ it('makes another open subject current and refreshes the list badge', async () =
   await flushPromises();
 
   expect(CrmKanbanAPI.focusConversationSubject).toHaveBeenCalledWith(9, 1);
-  expect(refreshCrmConversationStage).toHaveBeenCalledWith(9);
+  expect(notifyCrmSubjectsChanged).toHaveBeenCalledWith(9);
   expect(CrmKanbanAPI.getConversationSubjects).toHaveBeenCalledTimes(2);
 });
 

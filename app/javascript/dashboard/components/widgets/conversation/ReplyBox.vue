@@ -7,6 +7,7 @@ import { useTrack } from 'dashboard/composables';
 import { useKeyboardEvents } from 'dashboard/composables/useKeyboardEvents';
 
 import ReplyToMessage from './ReplyToMessage.vue';
+import CrmReplySubject from './CrmReplySubject.vue';
 import AttachmentPreview from 'dashboard/components/widgets/AttachmentsPreview.vue';
 import ReplyTopPanel from 'dashboard/components/widgets/WootWriter/ReplyTopPanel.vue';
 import ReplyEmailHead from './ReplyEmailHead.vue';
@@ -79,6 +80,7 @@ export default {
     ReplyBottomPanel,
     ReplyEmailHead,
     ReplyToMessage,
+    CrmReplySubject,
     ReplyTopPanel,
     ContentTemplates,
     WhatsappTemplates,
@@ -156,6 +158,7 @@ export default {
     return {
       message: '',
       inReplyTo: {},
+      crmSubjectCardId: null,
       isFocused: false,
       showEmojiPicker: false,
       attachedFiles: [],
@@ -206,6 +209,13 @@ export default {
       const senderId = this.currentChat?.meta?.sender?.id;
       if (!senderId) return {};
       return this.$store.getters['contacts/getContact'](senderId);
+    },
+    crmReplySubjectEnabled() {
+      return (
+        Boolean(this.currentChat?.id) &&
+        (this.globalConfig?.crmKanbanEnabled === true ||
+          window.globalConfig?.CRM_KANBAN_ENABLED === 'true')
+      );
     },
     shouldShowReplyToMessage() {
       return (
@@ -1149,6 +1159,18 @@ export default {
     removeAttachment(attachments) {
       this.attachedFiles = attachments;
     },
+    // Assunto do envio (#1143): com mais de um assunto aberto, a mensagem leva o card escolhido na caixa de resposta.
+    setCrmSubjectInPayload(payload) {
+      if (!this.crmSubjectCardId) return payload;
+
+      return {
+        ...payload,
+        contentAttributes: {
+          ...payload.contentAttributes,
+          crm_card_id: this.crmSubjectCardId,
+        },
+      };
+    },
     setReplyToInPayload(payload) {
       if (this.inReplyTo?.id) {
         return {
@@ -1181,7 +1203,9 @@ export default {
             isVoiceMessage: attachment.isVoiceMessage || false,
           };
 
-          attachmentPayload = this.setReplyToInPayload(attachmentPayload);
+          attachmentPayload = this.setCrmSubjectInPayload(
+            this.setReplyToInPayload(attachmentPayload)
+          );
           multipleMessagePayload.push(attachmentPayload);
           // For WhatsApp, only the first attachment gets a caption
           if (!this.isAnInstagramChannel) caption = '';
@@ -1205,7 +1229,9 @@ export default {
           sender: this.sender,
         };
 
-        messagePayload = this.setReplyToInPayload(messagePayload);
+        messagePayload = this.setCrmSubjectInPayload(
+          this.setReplyToInPayload(messagePayload)
+        );
 
         multipleMessagePayload.push(messagePayload);
       }
@@ -1221,7 +1247,9 @@ export default {
         private: this.isPrivate,
         sender: this.sender,
       };
-      messagePayload = this.setReplyToInPayload(messagePayload);
+      messagePayload = this.setCrmSubjectInPayload(
+        this.setReplyToInPayload(messagePayload)
+      );
 
       if (this.attachedFiles && this.attachedFiles.length) {
         messagePayload.files = [];
@@ -1376,6 +1404,11 @@ export default {
       leave-to-class="opacity-0 translate-y-2 scale-[0.98]"
     >
       <div :key="copilot.editorTransitionKey.value" class="reply-box__top">
+        <CrmReplySubject
+          v-if="crmReplySubjectEnabled"
+          v-model:card-id="crmSubjectCardId"
+          :conversation-id="currentChat.id"
+        />
         <ReplyToMessage
           v-if="shouldShowReplyToMessage"
           :message="inReplyTo"
