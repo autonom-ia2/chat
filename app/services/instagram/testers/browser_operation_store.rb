@@ -73,11 +73,11 @@ class Instagram::Testers::BrowserOperationStore
 
   def next_request
     require_runtime!
-    ids = Redis::Alfred.zrange(QUEUE_KEY, 0, QUEUE_SCAN_LIMIT - 1)
+    ids = Redis::Alfred.with { |connection| connection.zrange(QUEUE_KEY, 0, QUEUE_SCAN_LIMIT - 1) }
     ids.each do |id|
       record = load_record(id)
       unless record
-        Redis::Alfred.zrem(QUEUE_KEY, id)
+        Redis::Alfred.with { |connection| connection.zrem(QUEUE_KEY, id) }
         next
       end
 
