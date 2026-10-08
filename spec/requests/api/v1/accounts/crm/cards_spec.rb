@@ -177,6 +177,38 @@ RSpec.describe 'CRM cards API', type: :request do
     expect(account.crm_card_conversations.where(conversation_id: conversation.id).count).to eq(1)
   end
 
+  it 'creates a second open card in the same conversation and pipeline when a new subject is requested' do
+    account, user = create_account_and_user
+    agent, = create_crm_agent(account: account)
+    inbox = create_crm_inbox(account: account, members: [agent])
+    contact = account.contacts.create!(name: 'Cliente Dois Assuntos', phone_number: '+5511987654321')
+    conversation = create_crm_conversation(account: account, inbox: inbox, contact: contact, assignee: agent)
+    pipeline, stage = create_crm_pipeline(account: account, user: user)
+    account.crm_pipeline_inboxes.create!(pipeline: pipeline, inbox: inbox, default_stage: stage, created_by: user)
+    url = "/api/v1/accounts/#{account.id}/crm/cards/from_conversation"
+
+    post url, params: { conversation_display_id: conversation.display_id, card: { pipeline_id: pipeline.id, title: 'Agentes de IA' } },
+              headers: auth_headers(user)
+    first_card_id = response.parsed_body['payload']['id']
+
+    post url, params: { conversation_display_id: conversation.display_id, new_subject: true,
+                        card: { pipeline_id: pipeline.id, title: 'Chat2You' } },
+              headers: auth_headers(user)
+
+    expect(response).to have_http_status(:created)
+    second_card_id = response.parsed_body['payload']['id']
+    expect(second_card_id).not_to eq(first_card_id)
+    expect(account.crm_cards.open.where(conversation_id: conversation.id, pipeline_id: pipeline.id).pluck(:title))
+      .to contain_exactly('Agentes de IA', 'Chat2You')
+
+    get "/api/v1/accounts/#{account.id}/crm/conversations/#{conversation.display_id}/card", headers: auth_headers(user)
+    expect(response.parsed_body.dig('payload', 'card_id')).to eq(second_card_id)
+
+    get "/api/v1/accounts/#{account.id}/crm/conversations/card_stages",
+        params: { conversation_ids: [conversation.display_id] }, headers: auth_headers(user)
+    expect(response.parsed_body.dig('payload', conversation.display_id.to_s, 'card_id')).to eq(second_card_id)
+  end
+
   it 'moves a card and records an activity' do
     account, user = create_account_and_user
     pipeline, first_stage = create_crm_pipeline(account: account, user: user)

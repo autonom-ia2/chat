@@ -51,7 +51,6 @@
 #  idx_crm_cards_owner                           (account_id,owner_id,status,id)
 #  idx_crm_cards_status_created                  (account_id,status,created_at)
 #  idx_crm_cards_title_trgm                      (lower((title)::text) gin_trgm_ops) USING gin
-#  idx_crm_cards_unique_open_conversation        (conversation_id) UNIQUE WHERE ((conversation_id IS NOT NULL) AND (status = 0))
 #  idx_crm_cards_visible_inbox                   (account_id,inbox_id,status,id)
 #  index_crm_cards_on_account_id                 (account_id)
 #  index_crm_cards_on_account_score_updated      (account_id,score,updated_at)

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_10_10_090000) do
+ActiveRecord::Schema[7.2].define(version: 2026_10_10_090100) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -529,7 +529,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_10_090000) do
     t.string "faixa", default: "", null: false
     t.index ["account_id", "slug", "created_at"], name: "idx_autonomia_tool_runs_account_slug"
     t.index ["conversation_id", "created_at"], name: "idx_autonomia_tool_runs_conversation"
-    t.index ["conversation_id", "slug", "faixa"], name: "idx_autonomia_tool_runs_active", unique: true, where: "((status)::text = ANY ((ARRAY['pending'::character varying, 'running'::character varying])::text[]))"
+    t.index ["conversation_id", "slug", "faixa"], name: "idx_autonomia_tool_runs_active", unique: true, where: "((status)::text = ANY (ARRAY[('pending'::character varying)::text, ('running'::character varying)::text]))"
     t.index ["execution_key"], name: "idx_autonomia_tool_runs_execution_key", unique: true
   end
 
@@ -925,7 +925,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_10_090000) do
     t.index ["account_id"], name: "idx_autonomia_prospecting_leads_consent_refused", where: "(consent_refused_at IS NOT NULL)"
     t.index ["account_id"], name: "index_autonomia_prospecting_leads_on_account_id"
     t.index ["company_profile_id"], name: "idx_autonomia_prospecting_leads_company_profile"
-    t.index ["company_research_status"], name: "idx_autonomia_prospecting_leads_research_status", where: "((company_research_status)::text = ANY ((ARRAY['queued'::character varying, 'researching'::character varying, 'waiting_capacity'::character varying])::text[]))"
+    t.index ["company_research_status"], name: "idx_autonomia_prospecting_leads_research_status", where: "((company_research_status)::text = ANY (ARRAY[('queued'::character varying)::text, ('researching'::character varying)::text, ('waiting_capacity'::character varying)::text]))"
     t.index ["contact_id"], name: "index_autonomia_prospecting_leads_on_contact_id"
     t.index ["crm_card_id"], name: "index_autonomia_prospecting_leads_on_crm_card_id"
     t.index ["prospect_search_id"], name: "index_autonomia_prospecting_leads_on_search_id"
@@ -2030,7 +2030,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_10_090000) do
     t.index ["account_id", "updated_at", "id"], name: "idx_crm_cards_account_updated"
     t.index ["account_id"], name: "index_crm_cards_on_account_id"
     t.index ["contact_id"], name: "index_crm_cards_on_contact_id"
-    t.index ["conversation_id"], name: "idx_crm_cards_unique_open_conversation", unique: true, where: "((conversation_id IS NOT NULL) AND (status = 0))"
     t.index ["conversation_id"], name: "index_crm_cards_on_conversation_id"
     t.index ["inbox_id"], name: "index_crm_cards_on_inbox_id"
     t.index ["owner_id"], name: "index_crm_cards_on_owner_id"
@@ -2789,7 +2788,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_10_090000) do
     t.jsonb "fixes", default: [], null: false
     t.jsonb "rebuilds", default: {}, null: false
     t.index ["account_id", "created_at"], name: "index_email_template_imports_on_account_and_created"
-    t.index ["account_id"], name: "index_email_template_imports_one_active_per_account", unique: true, where: "((status)::text = ANY ((ARRAY['queued'::character varying, 'processing'::character varying])::text[]))"
+    t.index ["account_id"], name: "index_email_template_imports_one_active_per_account", unique: true, where: "((status)::text = ANY (ARRAY[('queued'::character varying)::text, ('processing'::character varying)::text]))"
     t.index ["email_campaign_template_id"], name: "index_email_template_imports_on_template"
     t.index ["expires_at"], name: "index_email_campaign_template_imports_on_expires_at"
   end
