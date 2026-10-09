@@ -21,6 +21,8 @@ class Crm::Meetings::Creator
   end
 
   def perform
+    return internal_creator.perform if internal_location?
+
     sanitized_params = Crm::Meetings::Sanitizer.new(@params).sanitize!
     guests = build_guest_list(sanitized_params)
 
@@ -42,6 +44,17 @@ class Crm::Meetings::Creator
   end
 
   private
+
+  # Agendamento WhatsApp-first (#1188): local pedido que não é Meet/Teams vira reunião interna, sem provedor.
+  # Sem `location_type` nos params o fluxo Google/Microsoft segue idêntico.
+  def internal_location?
+    type = @params[:location_type].presence || @params['location_type'].presence
+    type.present? && %w[google_meet teams].exclude?(type.to_s)
+  end
+
+  def internal_creator
+    Crm::Meetings::InternalCreator.new(account: @account, card: @card, inbox: @inbox, scheduled_by: @scheduled_by, params: @params)
+  end
 
   def build_guest_list(params)
     guests = []
