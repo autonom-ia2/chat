@@ -129,6 +129,42 @@ test('typed commands reject extra fields, unsupported operations and client succ
     assert.throws(() => validateRequest(invalid), /publication_failed/);
 });
 
+test('search completion accepts the legacy candidate and an optional tester status', () => {
+  const candidate = {
+    id: '178414000000000001',
+    username: 'latency.synthetic',
+    name: 'Synthetic',
+    avatar_url: null,
+  };
+  const completion = results => ({
+    type: 'browser_operation',
+    operation: 'complete',
+    action: 'search',
+    id,
+    request_id: '22222222-2222-4222-8222-222222222222',
+    claim: '33333333-3333-4333-8333-333333333333',
+    captured_at: stamp,
+    results,
+  });
+  for (const testerStatus of ['absent', 'pending', 'accepted', null]) {
+    const payload = completion([{ ...candidate, tester_status: testerStatus }]);
+    assert.deepEqual(validateRequest(payload), payload);
+  }
+  assert.deepEqual(
+    validateRequest(completion([candidate])),
+    completion([candidate])
+  );
+  for (const invalid of [
+    { ...candidate, tester_status: 'CONFIRMED' },
+    { ...candidate, tester_status: '' },
+    { ...candidate, tester_status: null, extra: 'x' },
+  ])
+    assert.throws(
+      () => validateRequest(completion([invalid])),
+      /publication_failed/
+    );
+});
+
 test('bootstrap accepts all five canonical values and bounds strings without secrets', () => {
   assert.deepEqual(
     validateRequest({ type: 'session', operation: 'bootstrap' }),

@@ -1139,6 +1139,11 @@ define(
     await q.select();
     await q.click('INVITE');
     await q.visibleText('INVITE_UNKNOWN');
+    await q.settle();
+    // Selection reads status once; an unknown invite adds exactly one
+    // automatic check, which still sees absent and keeps the amber state.
+    assert.equal(q.count('/status'), 2, 'Unknown invite must verify once');
+    await q.visibleText('INVITE_UNKNOWN');
     assert.equal(q.count('/invite'), 1);
     assert.equal(await (await q.button('INVITE')).count(), 0);
     assert.equal(await (await q.continueButton()).count(), 0);
@@ -1146,7 +1151,7 @@ define(
     q.state.status = 'pending';
     await q.click('CHECK_INVITE');
     await q.guidance();
-    assert.equal(q.count('/status'), 2);
+    assert.equal(q.count('/status'), 3, 'Unknown invite verification looped');
     assert.equal(q.count('/invite'), 1, 'Timeout blindly retried invite');
   }
 );

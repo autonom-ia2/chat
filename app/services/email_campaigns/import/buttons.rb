@@ -31,10 +31,37 @@ module EmailCampaigns::Import::Buttons
     EmailCampaigns::Import::StyleMap.color(style(node)['background-color']) || EmailCampaigns::Import::StyleMap.color(node['bgcolor'])
   end
 
+  # The cheap check comes first: asking every link's cell for its whole text and all of its links made a cell with many
+  # links quadratic (#1182).
   def cell(link)
     link.ancestors.first(CELL_LEVELS).find do |ancestor|
-      EmailCampaigns::Import::TableParts::CELLS.include?(ancestor.name) && same_text?(ancestor, link) &&
-        ancestor.css('a').one? && ancestor.css('img').empty?
+      EmailCampaigns::Import::TableParts::CELLS.include?(ancestor.name) && single_link?(ancestor) &&
+        ancestor.css('img').empty? && same_text?(ancestor, link)
+    end
+  end
+
+  # Whether the node holds exactly one link below it (what `node.css('a').one?` answers), stopping at the second one:
+  # a cell with many links costs two steps instead of one per link.
+  def single_link?(node)
+    links = 0
+    current = node.first_element_child
+    while current
+      links += 1 if current.name == 'a'
+      return false if links > 1
+
+      current = next_element_in(node, current)
+    end
+    links == 1
+  end
+
+  # The element after `current` inside `root`, in document order.
+  def next_element_in(root, current)
+    return current.first_element_child if current.first_element_child
+
+    until current == root
+      return current.next_element if current.next_element
+
+      current = current.parent
     end
   end
 
