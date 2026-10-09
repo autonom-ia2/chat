@@ -515,8 +515,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/cards#destroy",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:118",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:347"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:114",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:342"
     ],
     "sem_corpo": true
   },
@@ -4791,9 +4791,9 @@
     "envelope": "card",
     "modelo": "Crm::Card",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:105",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:457",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:347"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:101",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:467",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:342"
     ],
     "sem_corpo": false
   },
@@ -13370,10 +13370,17 @@
     "controller": "api/v1/accounts/crm/cards#create",
     "corpo_plano": true,
     "envelope": "card",
+    "fora_do_envelope": {
+      "new_subject": {
+        "tipo": "booleano",
+        "tipo_pela_leitura": "uso"
+      }
+    },
     "modelo": "Crm::Card",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:72",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:443",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:68",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:453",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:388",
       "app/controllers/concerns/crm/opportunity_registration.rb:7"
     ],
     "sem_corpo": false
@@ -13421,12 +13428,12 @@
       "leitura crua sem tipo: result (repassada a ::Crm::Cards::Closer.new)"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:134",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:142",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:141",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:140",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:139",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:347"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:130",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:138",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:137",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:136",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:135",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:342"
     ],
     "sem_corpo": false
   },
@@ -13434,8 +13441,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/cards#evaluate_ai",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:190",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:347"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:186",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:342"
     ],
     "sem_corpo": true
   },
@@ -13449,9 +13456,9 @@
     "controller": "api/v1/accounts/crm/cards#link_contact",
     "modelo": "Contact",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:172",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:173",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:347"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:168",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:169",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:342"
     ],
     "sem_corpo": false
   },
@@ -13469,10 +13476,10 @@
     "controller": "api/v1/accounts/crm/cards#link_conversation",
     "modelo": "Conversation",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:151",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:158",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:152",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:347"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:147",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:154",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:148",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:342"
     ],
     "sem_corpo": false
   },
@@ -13487,9 +13494,9 @@
     "controller": "api/v1/accounts/crm/cards#move",
     "modelo": "Crm::Card",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:125",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:127",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:347"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:121",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:123",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:342"
     ],
     "sem_corpo": false
   },
@@ -13497,8 +13504,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/cards#reset_auto_followup",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:206",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:347"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:202",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:342"
     ],
     "sem_corpo": true
   },
@@ -13506,8 +13513,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/cards#summarize",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:194",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:347"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:190",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:342"
     ],
     "sem_corpo": true
   },
@@ -13515,8 +13522,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/cards#unlink_contact",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:179",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:347"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:175",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:342"
     ],
     "sem_corpo": true
   },
@@ -13530,9 +13537,9 @@
     "controller": "api/v1/accounts/crm/cards#unlink_conversation",
     "modelo": "Conversation",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:164",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:165",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:347"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:160",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:161",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:342"
     ],
     "sem_corpo": false
   },
@@ -13678,11 +13685,11 @@
     },
     "modelo": "Crm::Card",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:94",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:443",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:417",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:354",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:352"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:90",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:453",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:427",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:349",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:347"
     ],
     "sem_corpo": false
   },
@@ -21610,9 +21617,9 @@
     "envelope": "card",
     "modelo": "Crm::Card",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:105",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:457",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:347"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:101",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:467",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:342"
     ],
     "sem_corpo": false
   },

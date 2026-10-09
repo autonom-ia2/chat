@@ -186,6 +186,13 @@ RSpec.describe Contact do
       end
     end
 
+    it 'keeps a name-only customer in the classic list (#1197)' do
+      customer = create(:contact, account: account, name: 'Cliente só com nome', email: nil, phone_number: nil, identifier: nil)
+      customer.update!(contact_type: 'customer')
+
+      expect(account.contacts.resolved_contacts(use_crm_v2: false)).to include(customer)
+    end
+
     context 'with mixed contact types' do
       it 'correctly filters based on use_crm_v2 parameter regardless of feature flag' do
         # Create different types of contacts

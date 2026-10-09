@@ -6,8 +6,9 @@ module AutomationRules::CrmActions
 
   private
 
-  # Só cria quando a conversa ainda não tem card. Sem o índice único (#1142), duas automações disparadas juntas
-  # poderiam criar dois: a trava da conversa e a nova checagem dentro dela garantem um só.
+  # Só cria quando a conversa não tem card aberto: com só cards ganhos/perdidos, pedido novo vira card novo (#1197).
+  # Sem o índice único (#1142), duas automações disparadas juntas poderiam criar dois: a trava da conversa e a
+  # checagem dentro dela garantem um só.
   def crm_create_card(params)
     return unless Crm::Config.enabled?
 
@@ -16,7 +17,7 @@ module AutomationRules::CrmActions
 
     card = nil
     @conversation.with_lock do
-      next if crm_card.present?
+      next if crm_card&.open?
 
       card = Crm::Cards::Creator.new(
         account: @account, user: nil, conversation: @conversation,

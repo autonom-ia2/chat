@@ -193,7 +193,9 @@ class Contact < ApplicationRecord
 
     # Explicitly registered leads may have only a name. Keep them visible in the
     # classic list too, without promoting anonymous widget visitors to contacts.
-    where("contacts.email <> '' OR contacts.phone_number <> '' OR contacts.identifier <> ''").or(where(contact_type: :lead))
+    # A lead promoted to customer (won card, #1197) stays visible as well.
+    where("contacts.email <> '' OR contacts.phone_number <> '' OR contacts.identifier <> ''")
+      .or(where(contact_type: :lead)).or(where(contact_type: :customer))
   end
 
   def discard_invalid_attrs

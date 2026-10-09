@@ -464,6 +464,13 @@ const defaultPipelinePayload = pipeline => ({
   description: pipeline?.description || 'Funil inicial do CRM Kanban',
   is_default: pipeline?.is_default ?? true,
   position: pipeline?.position || 1,
+  // "Conta como venda" e os nomes dos desfechos (#1144): false também vai (#1197).
+  ...(pipeline?.counts_as_sale !== undefined
+    ? { counts_as_sale: pipeline.counts_as_sale }
+    : {}),
+  ...(pipeline?.outcome_labels
+    ? { outcome_labels: pipeline.outcome_labels }
+    : {}),
   ...(pipeline?.goal ? { goal: pipeline.goal } : {}),
   ...(pipeline?.meta_sync ? { meta_sync: pipeline.meta_sync } : {}),
   ...(pipeline?.google_sync ? { google_sync: pipeline.google_sync } : {}),

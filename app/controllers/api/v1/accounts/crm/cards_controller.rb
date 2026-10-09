@@ -16,10 +16,6 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
   RESULTS_PER_PAGE = 25
   MAX_RESULTS_PER_PAGE = 100
   XLSX_CONTENT_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'.freeze
-  # Selo da lista (#1141): conversa com mais de um card aberto mostra o assunto atual (focused_at mais recente).
-  CARD_STAGES_FOCUS_JOIN = 'LEFT JOIN crm_card_conversations crm_focus ON crm_focus.card_id = crm_cards.id ' \
-                           'AND crm_focus.account_id = crm_cards.account_id ' \
-                           'AND crm_focus.conversation_id = crm_cards.conversation_id'.freeze
 
   def index
     authorize ::Crm::Card
@@ -296,14 +292,13 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     display_by_global = conversations.index_by(&:id).transform_values(&:display_id)
     multiple = Current.account.crm_pipelines.count > 1
     subjects_count = Hash.new(0)
-    badges = ::Crm::Card.open
-                        .where(account_id: Current.account.id, conversation_id: conversations.map(&:id))
-                        .where(id: policy_scope(::Crm::Card).select(:id))
-                        .joins(CARD_STAGES_FOCUS_JOIN)
-                        .order(Arel.sql('crm_focus.focused_at DESC NULLS LAST'), :id)
-                        .includes(:stage, :pipeline)
-                        .each_with_object({}) do |card, acc|
-      display_id = display_by_global[card.conversation_id]
+    # Principal ou vinculada (#1197): mesma regra do ConversationCardFinder, numa consulta para a lista toda.
+    badges = ::Crm::Cards::ConversationCardFinder.new(account: Current.account).all_for(conversations.map(&:id))
+                                                 .where(status: :open)
+                                                 .where(id: policy_scope(::Crm::Card).select(:id))
+                                                 .includes(:stage, :pipeline)
+                                                 .each_with_object({}) do |card, acc|
+      display_id = display_by_global[card.listed_conversation_id]
       next if card.stage.blank? || display_id.blank?
 
       subjects_count[display_id] += 1
@@ -361,25 +356,40 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
         existing = external_id && Current.account.crm_cards.find_by(external_id: external_id)
         next upsert_existing_card!(existing, permitted_params) if existing
 
-        @card = create_authorized_card(permitted_params)
+        @card, created = create_authorized_card(permitted_params)
         authorize @card, :show?
-        broadcast_card(::Events::Types::CRM_CARD_CREATED)
-        render :show, status: :created
+        broadcast_card(::Events::Types::CRM_CARD_CREATED) if created
+        render :show, status: created ? :created : :ok
       end
     end
   end
 
+  # Devolve [card, criado?]. Com conversation_id, segue o contrato de from_conversation (#1197): a conversa com card
+  # aberto devolve o assunto atual; card novo nela só com new_subject.
   def create_authorized_card(permitted_params)
     conversation = conversation_from_params(permitted_params)
     resolved_params = resolved_create_params(permitted_params, conversation: conversation)
     create_authorizer.authorize!(resolved_params, conversation: conversation)
     if @registration
-      return @registration.perform do |contact|
+      card = @registration.perform do |contact|
         ::Crm::Cards::Creator.new(account: Current.account, user: Current.user, params: resolved_params.merge(contact_id: contact.id)).perform
       end
+      return [card, true]
     end
 
-    ::Crm::Cards::Creator.new(account: Current.account, user: Current.user, params: resolved_params, conversation: conversation).perform
+    current = current_open_card(conversation)
+    return [current, false] if current
+
+    [::Crm::Cards::Creator.new(account: Current.account, user: Current.user, params: resolved_params, conversation: conversation).perform, true]
+  end
+
+  # Trava a conversa (como from_conversation) para duas chamadas juntas não criarem dois cards.
+  def current_open_card(conversation)
+    return if conversation.blank? || ActiveModel::Type::Boolean.new.cast(params[:new_subject])
+
+    conversation.lock!
+    card = ::Crm::Cards::ConversationCardFinder.new(account: Current.account).find(conversation)
+    card if card&.open?
   end
 
   def broadcast_card(event_name)
