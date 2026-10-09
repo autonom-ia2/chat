@@ -123,7 +123,7 @@ class Instagram::Automation::SessionPublisher
       completed = operations.complete!(request)
       response = { type: 'browser_operation', operation: 'complete', id: completed.fetch('id'),
                    request_id: completed.fetch('request_id'), state: completed.fetch('state') }
-      response[:error_code] = completed.fetch('error_code') if completed.key?('error_code')
+      response[:error_code] = browser_reply_error_code(request, completed) if completed.key?('error_code')
       response
     end
   end
@@ -235,8 +235,17 @@ class Instagram::Automation::SessionPublisher
     raise Instagram::Automation::OperatorControl::Rejected unless uuid?(value)
   end
 
+  # invite_not_sent is a Rails conclusion for the UI: only Rails can prove the
+  # claim was released, and the browser validates replies against its own codes.
+  # The browser therefore never sends it and gets back the code it sent.
   def validate_browser_error_code!(value)
-    raise Instagram::Automation::OperatorControl::Rejected unless value.is_a?(String) && Instagram::Testers::Error::STATUSES.key?(value)
+    valid = value.is_a?(String) && value != 'invite_not_sent' && Instagram::Testers::Error::STATUSES.key?(value)
+    raise Instagram::Automation::OperatorControl::Rejected unless valid
+  end
+
+  def browser_reply_error_code(request, completed)
+    code = completed.fetch('error_code')
+    code == 'invite_not_sent' ? request.fetch('error_code') : code
   end
 
   def invite_permit_result(operations, request)

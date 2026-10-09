@@ -5,6 +5,9 @@ class Instagram::Testers::BrowserOperations
   STATUS_VALUES = %w[absent pending accepted].freeze
   INVITE_COMPLETION_STATUSES = %w[pending accepted].freeze
   SEARCH_RESULT_KEYS = %w[avatar_url id name username].freeze
+  # Browser codes that, with write_started false and our own claim released,
+  # prove the invitation never reached Meta.
+  NOT_SENT_CODES = %w[meta_unavailable meta_session_expired proxy_unavailable operator_required].freeze
 
   def initialize(store: Instagram::Testers::BrowserOperationStore.new)
     @store = store
@@ -68,6 +71,7 @@ class Instagram::Testers::BrowserOperations
     raise Instagram::Testers::Error, 'invite_unknown' unless outcome.state.nil?
 
     outcome.claim!(token: request.fetch('claim'))
+    ensure_still_claimed!(request, outcome)
     invite_permit_response(request, decision: 'write', status: 'absent')
   end
 
@@ -249,21 +253,42 @@ class Instagram::Testers::BrowserOperations
     complete(request, result: result)
   end
 
+  # A late permit can claim the marker while this completion runs. Releasing
+  # before and after the close covers every order: a claim before the first
+  # release is deleted by it, a claim before the close by the second release,
+  # and a claim after the close fails the permit re-check, which releases it.
   def complete_invite_error(request, operation)
     validate_invite_error!(request, operation)
+    release = release_invite_claim?(request)
+    release_error = release_invite_claim(request, operation) if release
     context_error = execution_context_error(operation)
-    return complete_invite_context_failure(request, operation, context_error) if context_error
-
-    complete_invite_result_error(request, operation)
+    code = context_error&.code || invite_error_code(request, release_error)
+    begin
+      complete_failure(request, code)
+    ensure
+      release_invite_claim(request, operation) if release
+    end
   end
 
-  def complete_invite_context_failure(request, _operation, error)
-    complete_failure(request, error.code)
+  def invite_error_code(request, release_error)
+    return release_error.code if release_error
+
+    code = request.fetch('error_code')
+    not_sent = request.fetch('write_started') == false && NOT_SENT_CODES.include?(code)
+    not_sent ? 'invite_not_sent' : code
   end
 
-  def complete_invite_result_error(request, operation)
-    release_error = release_invite_claim(request, operation) if release_invite_claim?(request)
-    complete_failure(request, release_error&.code || request.fetch('error_code'))
+  # claimed and claim! are not atomic: a completion can close the record in
+  # between. Re-check after the marker exists and remove it if we lost the claim.
+  def ensure_still_claimed!(request, outcome)
+    @store.claimed(id: request.fetch('id'), request_id: request.fetch('request_id'), claim: request.fetch('claim'))
+  rescue Instagram::Testers::BrowserOperationStore::Rejected => e
+    begin
+      outcome.release_claim!(token: request.fetch('claim'))
+    rescue Instagram::Testers::Error, Redis::BaseError, ConnectionPool::TimeoutError
+      nil
+    end
+    raise e
   end
 
   def complete_invite_exception(request, _operation, error)

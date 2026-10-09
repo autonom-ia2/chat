@@ -33,6 +33,30 @@ RSpec.describe Instagram::Automation::SessionPublisher do
     end
   end
 
+  describe 'browser invite completion' do
+    let(:operations) { instance_double(Instagram::Testers::BrowserOperations) }
+    let(:completion) do
+      { 'type' => 'browser_operation', 'operation' => 'complete', 'action' => 'invite', 'id' => id,
+        'request_id' => SecureRandom.uuid, 'claim' => SecureRandom.uuid, 'captured_at' => Time.current.utc.iso8601(3),
+        'target_id' => '17841400000000001', 'error_code' => 'meta_unavailable', 'write_started' => false }
+    end
+
+    before { allow(Instagram::Testers::BrowserOperations).to receive(:new).and_return(operations) }
+
+    it 'returns the browser its own code when Rails records the invite as not sent' do
+      allow(operations).to receive(:complete!).and_return(
+        'id' => id, 'request_id' => completion.fetch('request_id'), 'state' => 'failed', 'error_code' => 'invite_not_sent'
+      )
+      expect(publisher.call(completion)).to include(state: 'failed', error_code: 'meta_unavailable')
+    end
+
+    it 'rejects invite_not_sent from the browser because only Rails can prove it' do
+      expect(operations).not_to receive(:complete!)
+      expect { publisher.call(completion.merge('error_code' => 'invite_not_sent')) }
+        .to raise_error(Instagram::Automation::OperatorControl::Rejected)
+    end
+  end
+
   context 'with canonical saved metadata' do
     let(:metadata) do
       { 'INSTAGRAM_META_DEVELOPER_APP_ID' => '10001', 'INSTAGRAM_META_BUSINESS_ID' => '10002',
