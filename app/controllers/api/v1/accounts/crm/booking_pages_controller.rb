@@ -21,8 +21,12 @@ class Api::V1::Accounts::Crm::BookingPagesController < Api::V1::Accounts::Crm::B
 
   def index
     report = ::Crm::BookingV2::AttentionReport.new(account: Current.account)
-    pages = pages_scope.includes(:default_assignee).order(:id)
-    render json: { payload: pages.map { |page| ::Crm::BookingV2::PageSerializer.new(page, attention: report.attention?(page)).summary } }
+    pages = pages_scope.includes(:default_assignee, agent_booking_links: :agent).order(:id).to_a
+    counts = ::Crm::BookingV2::AttentionReport.upcoming_counts(pages)
+    payload = pages.map do |page|
+      ::Crm::BookingV2::PageSerializer.new(page, attention: report.attention?(page), upcoming_meetings_count: counts.fetch(page.id, 0)).summary
+    end
+    render json: { payload: payload }
   end
 
   def show
@@ -131,7 +135,13 @@ class Api::V1::Accounts::Crm::BookingPagesController < Api::V1::Accounts::Crm::B
     missing << 'host' unless page_host_eligible?
     missing << 'location' if Array(@page.locations).empty?
     missing << 'working_hours' if @page.weekdays.empty?
+    missing << 'pipeline' unless pipeline_resolvable?
     missing
+  end
+
+  # A reserva cria um card: sem funil e etapa resolvíveis o Booker recusa toda reserva, então não publica.
+  def pipeline_resolvable?
+    ::Crm::BookingV2::Booker.pipeline_target(@page).values.all?(&:present?)
   end
 
   def page_host_eligible?

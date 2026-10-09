@@ -9,16 +9,19 @@ class Crm::BookingV2::PageSerializer
     { id: user.id, name: user.name, avatar_url: user.avatar_url }
   end
 
-  def initialize(profile, attention: false)
+  # `upcoming_meetings_count`: a lista passa a contagem já feita em lote (AttentionReport.upcoming_counts); sem ela,
+  # conta só esta página.
+  def initialize(profile, attention: false, upcoming_meetings_count: nil)
     @profile = profile
     @attention = attention
+    @upcoming_meetings_count = upcoming_meetings_count
   end
 
   def summary
     {
       id: profile.id, slug: profile.slug, title: profile.title, enabled: profile.enabled, public_url: public_url,
       locations: profile.locations, assignment_mode: profile.assignment_mode,
-      upcoming_meetings_count: Crm::BookingV2::AttentionReport.upcoming_meetings(profile).count,
+      upcoming_meetings_count: upcoming_meetings_count,
       attention: attention
     }
   end
@@ -30,6 +33,10 @@ class Crm::BookingV2::PageSerializer
   private
 
   attr_reader :profile, :attention
+
+  def upcoming_meetings_count
+    @upcoming_meetings_count || Crm::BookingV2::AttentionReport.upcoming_meetings(profile).count
+  end
 
   def settings
     {

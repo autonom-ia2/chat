@@ -1205,6 +1205,8 @@
       "ACTIVITY_MEETING_RESCHEDULED": "Meeting rescheduled",
       "ACTIVITY_MEETING_CANCELED": "Meeting cancelled",
       "ACTIVITY_MEETING_OUTCOME": "Meeting outcome recorded",
+      "ACTIVITY_MEETING_HOST_REASSIGNED": "Meeting moved to someone else",
+      "ACTIVITY_MEETING_HOST_REASSIGNED_TO": "Meeting moved to {name}",
       "ACTIVITY_AUTOMATION_OWNER_ASSIGNED": "Owner assigned by automation",
       "ACTIVITY_AUTOMATION_STAGE_MOVED": "Stage changed by automation",
       "ACTIVITY_AUTOMATION_FOLLOW_UP_CREATED": "Follow-up created by automation",

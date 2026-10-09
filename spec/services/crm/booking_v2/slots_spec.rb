@@ -110,6 +110,29 @@ RSpec.describe Crm::BookingV2::Slots do
       expect(free_busy).to have_received(:busy_intervals).with(raise_on_error: true).once
     end
 
+    it 'não usa o freebusy de caixa compartilhada: só a ocupação do responsável' do
+      inbox.channel.update!(calendar_shared: true)
+      allow(free_busy).to receive(:busy_intervals).and_return([{ start: local(monday, 9), end: local(monday, 17) }])
+      create_internal_meeting(world: world, starts_at: local(monday, 10))
+
+      with_modified_env(CRM_CALENDAR_GOOGLE_SIMULATE: 'false') do
+        expect(slots(strict: true)).to include('2026-10-12T09:00:00-03:00', '2026-10-12T13:00:00-03:00')
+        expect(slots(strict: true)).not_to include('2026-10-12T10:00:00-03:00')
+      end
+      expect(Google::FreeBusyService).not_to have_received(:new)
+    end
+
+    it 'pula o provedor com include_provider: false e mantém a ocupação local' do
+      create_internal_meeting(world: world, starts_at: local(monday, 10))
+
+      with_modified_env(CRM_CALENDAR_GOOGLE_SIMULATE: 'false') do
+        result = slots(strict: true, include_provider: false)
+        expect(result).not_to include('2026-10-12T10:00:00-03:00')
+        expect(result.size).to eq(15)
+      end
+      expect(Google::FreeBusyService).not_to have_received(:new)
+    end
+
     it 'não chama o provedor em simulação' do
       with_modified_env(CRM_CALENDAR_GOOGLE_SIMULATE: 'true') { expect(slots.size).to eq(16) }
 

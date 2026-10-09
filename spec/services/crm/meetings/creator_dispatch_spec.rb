@@ -45,6 +45,17 @@ RSpec.describe Crm::Meetings::Creator do
     end
   end
 
+  it 'grava origem e metadados da página já no rascunho do Meet, e nada muda quando eles não vêm' do
+    with_page = schedule(inbox: google_inbox, source: 'public_link',
+                         booking_metadata: { 'booking_profile_id' => world.profile.id, 'booking_link_id' => 7 })
+    plain = schedule(inbox: google_inbox, starts_at: starts_at + 1.hour, ends_at: starts_at + 90.minutes)
+
+    expect(with_page).to have_attributes(source: 'public_link', status: 'scheduled')
+    expect(with_page.metadata).to include('booking_profile_id' => world.profile.id, 'booking_link_id' => 7, 'reminder_minutes_before' => 15)
+    expect(plain.source).to be_nil
+    expect(plain.metadata.keys).not_to include('booking_profile_id', 'booking_link_id', 'consent')
+  end
+
   it 'continua recusando caixa sem calendário quando não há local pedido' do
     expect { schedule(inbox: create_crm_inbox(account: account)) }.to raise_error(ArgumentError, 'unsupported_calendar_inbox')
   end

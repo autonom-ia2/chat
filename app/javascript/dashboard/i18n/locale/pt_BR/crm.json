@@ -1205,6 +1205,8 @@
       "ACTIVITY_MEETING_RESCHEDULED": "Reunião reagendada",
       "ACTIVITY_MEETING_CANCELED": "Reunião cancelada",
       "ACTIVITY_MEETING_OUTCOME": "Resultado da reunião registrado",
+      "ACTIVITY_MEETING_HOST_REASSIGNED": "Reunião passou para outra pessoa",
+      "ACTIVITY_MEETING_HOST_REASSIGNED_TO": "Reunião passou para {name}",
       "ACTIVITY_AUTOMATION_OWNER_ASSIGNED": "Responsável atribuído por automação",
       "ACTIVITY_AUTOMATION_STAGE_MOVED": "Etapa alterada por automação",
       "ACTIVITY_AUTOMATION_FOLLOW_UP_CREATED": "Retorno criado por automação",

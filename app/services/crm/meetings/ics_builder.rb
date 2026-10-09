@@ -47,7 +47,7 @@ class Crm::Meetings::IcsBuilder
 
   def detail_lines
     lines = []
-    lines <<"DESCRIPTION:#{self.class.escape(meeting.description)}" if meeting.description.present?
+    lines << "DESCRIPTION:#{self.class.escape(meeting.description)}" if meeting.description.present?
     lines << "LOCATION:#{self.class.escape(location_text)}" if location_text.present?
     lines << "URL:#{meeting.online_meeting_url}" if web_url?(meeting.online_meeting_url)
     lines << "STATUS:#{meeting.canceled? ? 'CANCELLED' : 'CONFIRMED'}"

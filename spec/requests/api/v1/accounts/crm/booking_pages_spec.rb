@@ -25,8 +25,15 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingPages', type: :request do
     user
   end
 
+  # Upload vai como multipart; o resto, JSON.
   def call(user, verb, path, params = {})
+    return public_send(verb, path, params: params, headers: user.create_new_auth_token) if params.key?(:file)
+
     public_send(verb, path, params: params, headers: user.create_new_auth_token, as: :json)
+  end
+
+  def png_upload
+    Rack::Test::UploadedFile.new(Rails.root.join('spec/assets/avatar.png'), 'image/png')
   end
 
   def body
@@ -40,7 +47,7 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingPages', type: :request do
         agent: create(:user, account: account, role: :agent), other_role: role_user('crm_view', 'crm_admin')
       }
     end
-    let(:route_names) { %i[index show people create update publish pause preview_token update_people destroy] }
+    let(:route_names) { %i[index show people create update publish pause preview_token logo photo update_people destroy] }
     let(:reads) { %i[index show people] }
     let(:expected) do
       { admin: route_names, manage: route_names, view: reads, agent: [], other_role: [] }
@@ -54,6 +61,7 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingPages', type: :request do
         create: [:post, base, { template_key: 'sales_30' }], update: [:patch, member, { title: 'Novo' }],
         publish: [:post, "#{member}/publish", {}], pause: [:post, "#{member}/pause", {}],
         preview_token: [:post, "#{member}/preview_token", {}],
+        logo: [:post, "#{member}/logo", { file: png_upload }], photo: [:post, "#{member}/photo", { file: png_upload }],
         update_people: [:put, "#{member}/people", { user_ids: [world.host.id] }], destroy: [:delete, member, {}]
       }.fetch(name)
     end
@@ -105,8 +113,17 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingPages', type: :request do
       expect(created.locations).to eq([{ 'type' => 'whatsapp_video' }])
     end
 
-    it 'makes a manager role the host (agendamento keys are eligible) and starts blank without location' do
+    it 'does not make a manager role without CRM access the host (agendamento keys alone are not eligible)' do
       manager = role_user('agendamento_manage')
+      call(manager, :post, base, { template_key: 'blank' })
+
+      expect(response).to have_http_status(:created)
+      expect(body.dig('payload', 'host')).to be_nil
+      expect(body.dig('payload', 'locations')).to eq([])
+    end
+
+    it 'makes a manager role that also sees cards the host and starts blank without location' do
+      manager = role_user('agendamento_manage', 'crm_view')
       call(manager, :post, base, { template_key: 'blank' })
 
       expect(response).to have_http_status(:created)
@@ -251,6 +268,41 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingPages', type: :request do
       expect(response).to have_http_status(:ok)
       expect(page.reload.enabled).to be(false)
     end
+
+    it 'refuses to publish without a funnel and stage the booking can land on' do
+      empty_funnel = account.crm_pipelines.create!(name: 'Sem etapas', created_by: admin, status: :active)
+      page.update!(enabled: false, default_pipeline_id: empty_funnel.id, default_stage_id: nil)
+
+      call(admin, :post, "#{base}/#{page.id}/publish")
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(body['missing']).to eq(['pipeline'])
+      expect(page.reload.enabled).to be(false)
+    end
+
+    it 'pauses a Meet page whose mailbox lost the calendar, but does not publish it again' do
+      channel = create(:channel_email, account: account, provider: 'google', calendar_enabled: true)
+      page.update!(inbox: channel.inbox, locations: [{ 'type' => 'google_meet' }])
+      channel.update!(calendar_enabled: false)
+
+      call(admin, :post, "#{base}/#{page.id}/pause")
+      expect(response).to have_http_status(:ok)
+      expect(page.reload.enabled).to be(false)
+
+      call(admin, :post, "#{base}/#{page.id}/publish")
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(page.reload.enabled).to be(false)
+    end
+
+    it 'refuses a location label over the limit, a long description and an unknown time zone' do
+      long_label = 'r' * (Crm::AgentBookingProfile::MAX_TEXT + 1)
+      [{ locations: [{ type: 'in_person', label: long_label, address: 'Rua A' }] }, { description: 'd' * 2001 },
+       { timezone: 'Marte/Olympus' }].each do |change|
+        call(admin, :patch, "#{base}/#{page.id}", change)
+        expect(response).to have_http_status(:unprocessable_entity), "#{change.keys.first}: got #{response.status}"
+      end
+      expect(page.reload.timezone).to eq('America/Sao_Paulo')
+    end
   end
 
   describe 'DELETE destroy' do
@@ -312,6 +364,19 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingPages', type: :request do
       expect(response).to have_http_status(:unprocessable_entity)
       expect(body['error']).to include('PNG, JPEG or WebP')
       expect(page.reload.photo).not_to be_attached
+    end
+
+    # O tipo vem dos bytes, não do nome nem do Content-Type que o navegador manda.
+    it 'refuses SVG bytes disguised as logo.png with image/png' do
+      svg = '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>'
+      file = Tempfile.new(['logo', '.png'])
+      file.write(svg)
+      file.rewind
+      upload(admin, :logo, Rack::Test::UploadedFile.new(file.path, 'image/png', original_filename: 'logo.png'))
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(body['error']).to include('PNG, JPEG or WebP')
+      expect(page.reload.logo).not_to be_attached
     end
 
     it 'refuses an image over 2 MB' do

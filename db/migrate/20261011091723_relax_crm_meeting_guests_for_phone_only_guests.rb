@@ -8,7 +8,7 @@ class RelaxCrmMeetingGuestsForPhoneOnlyGuests < ActiveRecord::Migration[7.2]
 
   def up
     change_column_null :crm_meeting_guests, :email, true
-    add_column :crm_meeting_guests, :phone_number, :string
+    add_column :crm_meeting_guests, :phone_number, :string, if_not_exists: true
     add_index :crm_meeting_guests, %i[account_id meeting_id phone_number],
               unique: true, where: 'phone_number IS NOT NULL',
               name: 'idx_crm_meeting_guests_unique_phone', algorithm: :concurrently, if_not_exists: true
