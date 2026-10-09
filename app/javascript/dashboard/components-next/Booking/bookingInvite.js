@@ -19,8 +19,14 @@ export const stateLabelKey = state =>
     ? `CRM_KANBAN.BOOKING_INVITE.STATE.${STATE_KEYS[state]}`
     : '';
 
+// `usable: false` = a página ou o link individual deixou de atender: vale como vencido (não se reenvia link morto).
+export const inviteState = invite =>
+  invite?.usable === false && ACTIVE_STATES.includes(invite.state)
+    ? 'expired'
+    : invite?.state;
+
 export const isActiveInvite = invite =>
-  Boolean(invite) && ACTIVE_STATES.includes(invite.state);
+  Boolean(invite) && ACTIVE_STATES.includes(inviteState(invite));
 
 const STATE_TONES = {
   sent: 'bg-n-blue-3 text-n-blue-11',

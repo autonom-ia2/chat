@@ -2,8 +2,9 @@
 # é o pronto (`InviteText`) ou o editado pelo agente: até 1000 caracteres, texto puro (sem HTML) e com o link do
 # convite dentro. O texto já vem preenchido, então sai literal (`LiteralMessageBuilder`, sem a passada de Liquid).
 #
-# Quem chama confere que a pessoa pode responder a conversa. ArgumentError 'invite_text_invalid' para texto
-# recusado; 'invite_invalid' para convite sem acesso ou conversa de outro contato.
+# Quem chama confere que a pessoa vê a conversa. ArgumentError 'invite_text_invalid' para texto recusado;
+# 'invite_invalid' para convite sem acesso ou conversa de outro contato; 'cannot_reply' quando o canal não deixa
+# responder agora (janela de mensagens fechada: o cliente precisa escrever primeiro).
 class Crm::BookingV2::InviteDeliverer
   MAX_TEXT = 1000
 
@@ -23,7 +24,7 @@ class Crm::BookingV2::InviteDeliverer
     ActiveRecord::Base.transaction do
       message = build_message.perform
       invite.update!(sent_at: Time.current, conversation: conversation, channel: 'conversation',
-                     metadata: invite.metadata.to_h.merge('delivered_text' => content))
+                     metadata: invite.metadata.to_h.merge('delivered_text' => content, 'delivered_by_id' => user.id))
       message
     end
   end
@@ -34,6 +35,7 @@ class Crm::BookingV2::InviteDeliverer
 
   def validate!
     raise Crm::BookingV2::InviteError, 'invite_invalid' unless invite.active? && same_contact_conversation?
+    raise Crm::BookingV2::InviteError, 'cannot_reply' unless conversation.can_reply?
 
     value = content
     valid = value.length <= MAX_TEXT && value.include?(invite.url) && self.class.plain_text?(value)

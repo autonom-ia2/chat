@@ -1816,6 +1816,12 @@
       "SENT": "Mensagem enviada na conversa.",
       "CANCEL_LINK": "Cancelar link",
       "CANCELED": "Link cancelado.",
+      "CANCEL_CONFIRM": {
+        "TITLE": "Cancelar o link?",
+        "DESCRIPTION": "O cliente não vai mais conseguir marcar por ele.",
+        "YES": "Sim, cancelar",
+        "BACK": "Voltar"
+      },
       "NEW_LINK": "Criar novo link",
       "CLOSE": "Fechar",
       "STATE": {
@@ -1835,7 +1841,9 @@
         "LOAD": "Não foi possível abrir o link agora. Tente de novo.",
         "SEND": "Não foi possível enviar. Confira se o texto tem o link e se o cliente pode receber mensagem.",
         "COPY": "Não foi possível copiar o link.",
-        "CANCEL": "Não foi possível cancelar o link."
+        "CANCEL": "Não foi possível cancelar o link.",
+        "CANNOT_REPLY": "O cliente precisa mandar mensagem primeiro. Copie o link e envie de outro jeito.",
+        "FORBIDDEN": "Você não tem acesso a isto."
       }
     },
     "RELATIONSHIP": {

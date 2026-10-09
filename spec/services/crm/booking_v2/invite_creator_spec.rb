@@ -128,6 +128,22 @@ RSpec.describe Crm::BookingV2::InviteCreator do
       expect(other_person.reload.canceled_at).to be_nil
     end
 
+    it 'cancels the active invite and creates another when its personal link stopped working' do
+      page = create_booking_profile(account: account, host: world.host, title: 'Equipe')
+      Crm::BookingV2::PagePeople.new(page).assign!([world.host.id, agent.id])
+      world.profile.update!(enabled: false)
+      previous = create_invite(user: agent, card: world.card)
+      previous.booking_link.update!(enabled: false)
+
+      creator = described_class.new(account: account, user: agent, client: { card: world.card })
+      fresh = creator.perform
+
+      expect(creator).not_to be_reused
+      expect(fresh).not_to eq(previous)
+      expect(fresh).to have_attributes(booking_profile_id: page.id, booking_link_id: nil)
+      expect(previous.reload.canceled_at).to be_present
+    end
+
     it 'creates a new one when the previous is expired, canceled or scheduled' do
       %i[expires_at canceled_at scheduled_at].each do |field|
         previous = create_invite(card: world.card)

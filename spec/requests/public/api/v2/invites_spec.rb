@@ -131,13 +131,20 @@ RSpec.describe 'Public::Api::V2::Invites', type: :request do
 
     it 'ignores link preview robots by user agent' do
       ['WhatsApp/2.24.1 A', 'facebookexternalhit/1.1', 'Mozilla/5.0 (compatible; Googlebot/2.1)', 'TelegramBot (like TwitterBot)',
-       'Slackbot-LinkExpanding 1.0', 'Some Link Preview Service', 'MyCrawler', 'Spider 1', 'random-BOT'].each do |agent|
+       'Slackbot-LinkExpanding 1.0', 'Some Link Preview Service', 'MyCrawler', 'Spider 1', 'Discordbot/2.0'].each do |agent|
         viewed(invite.code, agent: agent)
         expect(response).to have_http_status(:no_content)
       end
 
       expect(invite.reload.open_count).to eq(0)
       expect(invite.first_opened_at).to be_nil
+    end
+
+    it 'counts a phone whose brand ends in "bot" (CUBOT) as a person' do
+      viewed(invite.code, agent: 'Mozilla/5.0 (Linux; Android 13; CUBOT KINGKONG 9) AppleWebKit/537.36 Chrome/129.0 Mobile Safari/537.36')
+
+      expect(response).to have_http_status(:no_content)
+      expect(invite.reload.open_count).to eq(1)
     end
 
     it 'answers the uniform 404 and records nothing for canceled invites or flag off' do

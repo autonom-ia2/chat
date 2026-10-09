@@ -1,20 +1,27 @@
 # JSON do link por cliente para o painel (#1190): botão Agendar na conversa e no card. Estado (J1-A10), link,
 # texto pronto (J1-A12) e quem criou. Pessoa só por id, nome e foto; e-mail e telefone não saem daqui.
+# `usable`: a página e o link individual ainda atendem; falso, o painel trata o link como vencido e não o reenvia.
+# `pages` pode vir de quem serializa vários convites, para não refazer a consulta a cada um.
 class Crm::BookingV2::InviteSerializer
-  def initialize(invite)
+  def initialize(invite, pages: nil)
     @invite = invite
+    @pages = pages
   end
 
   def as_json(*)
     timestamps.merge(references).merge(
       id: invite.id, code: invite.code, url: invite.url, text: text,
-      state: invite.state, channel: invite.channel, open_count: invite.open_count
+      state: invite.state, channel: invite.channel, open_count: invite.open_count, usable: pages.invite_usable?(invite)
     )
   end
 
   private
 
   attr_reader :invite
+
+  def pages
+    @pages ||= Crm::BookingV2::InvitePages.new(invite.account)
+  end
 
   def references
     {

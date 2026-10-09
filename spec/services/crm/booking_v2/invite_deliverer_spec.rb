@@ -23,7 +23,16 @@ RSpec.describe Crm::BookingV2::InviteDeliverer do
     expect(message.content_attributes['crm_booking_invite_id']).to eq(invite.id)
     expect(invite.reload).to have_attributes(conversation_id: conversation.id, channel: 'conversation', state: 'sent')
     expect(invite.sent_at).to be_present
-    expect(invite.metadata['delivered_text']).to eq(message.content)
+    expect(invite.metadata).to include('delivered_text' => message.content, 'delivered_by_id' => world.host.id)
+  end
+
+  it 'refuses with cannot_reply when the channel window is closed, and sends nothing' do
+    channel = create(:channel_api, account: account, additional_attributes: { 'agent_reply_time_window' => '12' })
+    closed = create(:conversation, account: account, inbox: channel.inbox, contact: world.contact)
+
+    expect { deliver(to: closed) }.to raise_error(Crm::BookingV2::InviteError, 'cannot_reply')
+    expect(closed.messages.count).to eq(0)
+    expect(invite.reload.sent_at).to be_nil
   end
 
   it 'sends the edited text literally (Liquid is not evaluated) and stores it as the delivered text' do

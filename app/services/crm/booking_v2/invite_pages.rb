@@ -22,6 +22,11 @@ class Crm::BookingV2::InvitePages
     link.enabled? && eligible?(link.agent)
   end
 
+  # O convite ainda leva a uma página que atende: a página utilizável e, se houver, o link individual também.
+  def invite_usable?(invite)
+    usable?(invite.booking_profile) && (invite.booking_link.blank? || link_usable?(invite.booking_link))
+  end
+
   # A página em que a pessoa atende (responsável fixo ou link individual ativo); senão a primeira publicada.
   def default_for(user)
     usable.find { |page| attends?(page, user) } || usable.first

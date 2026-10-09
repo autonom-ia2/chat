@@ -3,9 +3,9 @@
 #
 # Quem gera ou lista convites tem de ver o cliente pelas regras do próprio sistema (J8-A7): via card,
 # `CardPolicy#show?`; via conversa, `ConversationPolicy#show?`; só com o contato, `ContactPolicy#show?`. Entregar
-# na conversa exige poder responder nela: a mesma regra do envio de mensagem do Chatwoot
-# (`Conversations::MessagesController` autoriza `ConversationPolicy#show?`). `conversation_id` é o número da
-# conversa no painel (`display_id`), como nas rotas de conversa.
+# na conversa exige vê-la: a mesma regra do envio de mensagem do Chatwoot (`Conversations::BaseController` autoriza
+# `ConversationPolicy#show?`); canal com a janela de mensagens fechada recusa com `cannot_reply`. `conversation_id` é
+# o número da conversa no painel (`display_id`), como nas rotas de conversa.
 class Api::V1::Accounts::Crm::BookingInvitesController < Api::V1::Accounts::Crm::BaseController
   LIST_LIMIT = 5
 
@@ -65,7 +65,7 @@ class Api::V1::Accounts::Crm::BookingInvitesController < Api::V1::Accounts::Crm:
   end
 
   def recent_invites(contact)
-    invites_scope.where(contact_id: contact.id).includes(:booking_profile, :contact, :created_by)
+    invites_scope.where(contact_id: contact.id).includes(:booking_profile, :contact, :created_by, booking_link: :agent)
                  .recent_first.limit(LIST_LIMIT)
   end
 
@@ -96,11 +96,15 @@ class Api::V1::Accounts::Crm::BookingInvitesController < Api::V1::Accounts::Crm:
     Current.account.conversations.find_by!(display_id: display_id)
   end
 
+  def invite_pages
+    @invite_pages ||= ::Crm::BookingV2::InvitePages.new(Current.account)
+  end
+
   def pages_payload
-    ::Crm::BookingV2::InvitePages.new(Current.account).usable.map { |page| { id: page.id, title: page.title } }
+    invite_pages.usable.map { |page| { id: page.id, title: page.title } }
   end
 
   def serialize(invite)
-    ::Crm::BookingV2::InviteSerializer.new(invite).as_json
+    ::Crm::BookingV2::InviteSerializer.new(invite, pages: invite_pages).as_json
   end
 end

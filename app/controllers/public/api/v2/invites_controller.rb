@@ -8,9 +8,9 @@
 # `viewed` registra a abertura depois do primeiro render (POST, para pré-visualização de link não contar) e ignora
 # robôs de pré-visualização pelo `User-Agent`, comparado por `include?` numa lista fechada.
 class Public::Api::V2::InvitesController < PublicController
-  # Comparados em minúsculas.
+  # Comparados em minúsculas. Só nomes de robôs: um `bot` solto casaria com celular de gente (ex.: CUBOT).
   ROBOT_AGENTS = %w[whatsapp facebookexternalhit facebot twitterbot slackbot telegrambot discordbot linkedinbot googlebot
-                    bingbot preview crawler spider bot].freeze
+                    bingbot preview crawler spider].freeze
 
   before_action :set_invite
 
@@ -39,10 +39,7 @@ class Public::Api::V2::InvitesController < PublicController
     return false if @invite.blank? || !@invite.active?
     return false unless ::Crm::Config.booking_v2_enabled?(@invite.account)
 
-    pages = ::Crm::BookingV2::InvitePages.new(@invite.account)
-    return false unless pages.usable?(@invite.booking_profile)
-
-    @invite.booking_link.blank? || pages.link_usable?(@invite.booking_link)
+    ::Crm::BookingV2::InvitePages.new(@invite.account).invite_usable?(@invite)
   end
 
   def page_slug

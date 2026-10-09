@@ -1,7 +1,9 @@
 <script setup>
 // Link de agenda por cliente (#1190, J1): "Agendar" na conversa e no card gera (ou reaproveita) o link
 // do cliente, com o texto pronto para enviar na conversa ou copiar para qualquer canal. Autocontido:
-// só aparece com a flag da conta `crm_booking_v2` e o calendário de reuniões da instalação ligados.
+// só aparece com a flag da conta `crm_booking_v2` e o calendário de reuniões da instalação ligados, e para quem vê
+// os cards do CRM (mesma régua do backend, `HostEligibility`: administrador, agente sem função ou função com
+// `crm_view`/`crm_admin`).
 import { computed, ref, useId, watch } from 'vue';
 import { useStore } from 'vuex';
 import { useRouter } from 'vue-router';
@@ -13,9 +15,11 @@ import BookingInvitesAPI from 'dashboard/api/crmBookingInvites';
 import { useAlert } from 'dashboard/composables';
 import { copyTextToClipboard } from 'shared/helpers/clipboard';
 import { getUserPermissions } from 'dashboard/helper/permissionsHelper';
+import { useCrmPermissions } from 'dashboard/routes/dashboard/crm/composables/useCrmPermissions';
 import {
   BADGE_STATES,
   formatValidUntil,
+  inviteState,
   isActiveInvite,
   stateLabelKey,
   stateToneClass,
@@ -34,13 +38,17 @@ const MANAGE_KEY = 'agendamento_manage';
 const SETTINGS_ROUTE = 'settings_booking';
 const ERROR_DISABLED = 'crm.booking_v2.disabled';
 const ERROR_NO_PAGE = 'crm.booking_v2.no_page';
+const ERROR_CANNOT_REPLY = 'crm.booking_v2.cannot_reply';
+const HTTP_UNAUTHORIZED = 401;
 
 const store = useStore();
 const router = useRouter();
 const { t, locale } = useI18n();
+const { canViewCrm } = useCrmPermissions();
 const textId = useId();
 
 const dialogRef = ref(null);
+const cancelConfirmRef = ref(null);
 const isLoading = ref(false);
 const isSending = ref(false);
 const isCanceling = ref(false);
@@ -60,6 +68,7 @@ const isEnabled = computed(
       accountId.value,
       FEATURE_FLAG
     ) &&
+    canViewCrm.value &&
     !isDisabledOnServer.value
 );
 
@@ -99,15 +108,15 @@ const validUntil = computed(() =>
   formatValidUntil(invite.value?.expires_at, locale.value)
 );
 const isInviteActive = computed(() => isActiveInvite(invite.value));
+const shownState = computed(() => inviteState(invite.value));
 const textHasLink = computed(
   () => Boolean(invite.value?.url) && text.value.includes(invite.value.url)
 );
 
-const badgeState = computed(() =>
-  BADGE_STATES.includes(latestInvite.value?.state)
-    ? latestInvite.value.state
-    : ''
-);
+const badgeState = computed(() => {
+  const state = inviteState(latestInvite.value);
+  return BADGE_STATES.includes(state) ? state : '';
+});
 
 // Admin ou função com `agendamento_manage` vê o atalho para Configurações › Agendamento (J8-A3).
 const canOpenSettings = computed(() => {
@@ -122,6 +131,14 @@ const showSettingsShortcut = computed(
 );
 
 const errorCode = error => error?.response?.data?.error;
+
+// 401 = a pessoa não tem acesso a isto; senão a frase de quem chamou.
+const alertError = (error, message) =>
+  useAlert(
+    error?.response?.status === HTTP_UNAUTHORIZED
+      ? t('CRM_KANBAN.BOOKING_INVITE.ERRORS.FORBIDDEN')
+      : message
+  );
 
 const useInvite = value => {
   invite.value = value;
@@ -157,7 +174,7 @@ const handleLoadError = error => {
     hasNoPage.value = true;
     return;
   }
-  useAlert(t('CRM_KANBAN.BOOKING_INVITE.ERRORS.LOAD'));
+  alertError(error, t('CRM_KANBAN.BOOKING_INVITE.ERRORS.LOAD'));
 };
 
 const prepareInvite = async () => {
@@ -217,12 +234,20 @@ const sendInConversation = async () => {
     useInvite({ ...data.payload, text: text.value });
     useAlert(t('CRM_KANBAN.BOOKING_INVITE.SENT'));
     closePanel();
-  } catch {
-    useAlert(t('CRM_KANBAN.BOOKING_INVITE.ERRORS.SEND'));
+  } catch (error) {
+    alertError(
+      error,
+      errorCode(error) === ERROR_CANNOT_REPLY
+        ? t('CRM_KANBAN.BOOKING_INVITE.ERRORS.CANNOT_REPLY')
+        : t('CRM_KANBAN.BOOKING_INVITE.ERRORS.SEND')
+    );
   } finally {
     isSending.value = false;
   }
 };
+
+// Cancelar é definitivo: pede confirmação num diálogo por cima (foco nele; Esc ou "Voltar" desistem).
+const askCancel = () => cancelConfirmRef.value?.open();
 
 const cancelLink = async () => {
   isCanceling.value = true;
@@ -230,10 +255,11 @@ const cancelLink = async () => {
     await BookingInvitesAPI.cancel(invite.value.id);
     useInvite({ ...invite.value, state: 'canceled' });
     useAlert(t('CRM_KANBAN.BOOKING_INVITE.CANCELED'));
-  } catch {
-    useAlert(t('CRM_KANBAN.BOOKING_INVITE.ERRORS.CANCEL'));
+  } catch (error) {
+    alertError(error, t('CRM_KANBAN.BOOKING_INVITE.ERRORS.CANCEL'));
   } finally {
     isCanceling.value = false;
+    cancelConfirmRef.value?.close();
   }
 };
 
@@ -343,10 +369,10 @@ watch(
           <span
             role="status"
             class="rounded-full px-2 py-0.5 text-xs font-medium"
-            :class="stateToneClass(invite.state)"
+            :class="stateToneClass(shownState)"
             data-booking-invite-state
           >
-            {{ t(stateLabelKey(invite.state)) }}
+            {{ t(stateLabelKey(shownState)) }}
           </span>
         </div>
 
@@ -430,7 +456,7 @@ watch(
           :label="t('CRM_KANBAN.BOOKING_INVITE.CANCEL_LINK')"
           :is-loading="isCanceling"
           data-booking-cancel
-          @click="cancelLink"
+          @click="askCancel"
         />
         <span v-else />
         <NextButton
@@ -444,5 +470,17 @@ watch(
         />
       </div>
     </Dialog>
+
+    <Dialog
+      ref="cancelConfirmRef"
+      type="alert"
+      :title="t('CRM_KANBAN.BOOKING_INVITE.CANCEL_CONFIRM.TITLE')"
+      :description="t('CRM_KANBAN.BOOKING_INVITE.CANCEL_CONFIRM.DESCRIPTION')"
+      :cancel-button-label="t('CRM_KANBAN.BOOKING_INVITE.CANCEL_CONFIRM.BACK')"
+      :confirm-button-label="t('CRM_KANBAN.BOOKING_INVITE.CANCEL_CONFIRM.YES')"
+      :is-loading="isCanceling"
+      width="sm"
+      @confirm="cancelLink"
+    />
   </div>
 </template>

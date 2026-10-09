@@ -1815,6 +1815,12 @@
       "SENT": "Message sent in the conversation.",
       "CANCEL_LINK": "Cancel link",
       "CANCELED": "Link canceled.",
+      "CANCEL_CONFIRM": {
+        "TITLE": "Cancel the link?",
+        "DESCRIPTION": "The client won't be able to book with it anymore.",
+        "YES": "Yes, cancel",
+        "BACK": "Back"
+      },
       "NEW_LINK": "Create a new link",
       "CLOSE": "Close",
       "STATE": {
@@ -1834,7 +1840,9 @@
         "LOAD": "Couldn't open the link right now. Try again.",
         "SEND": "Couldn't send. Check that the text has the link and that the client can receive messages.",
         "COPY": "Couldn't copy the link.",
-        "CANCEL": "Couldn't cancel the link."
+        "CANCEL": "Couldn't cancel the link.",
+        "CANNOT_REPLY": "The client needs to message you first. Copy the link and send it another way.",
+        "FORBIDDEN": "You don't have access to this."
       }
     },
     "RELATIONSHIP": {

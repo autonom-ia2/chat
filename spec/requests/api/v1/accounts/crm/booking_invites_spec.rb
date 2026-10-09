@@ -170,6 +170,25 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingInvites', type: :request do
       expect(previous.reload.canceled_at).to be_present
     end
 
+    it 'creates from the contact alone (ContactPolicy), as a copy link without card or conversation' do
+      call(world.host, :post, base, { contact_id: world.contact.id })
+
+      expect(response).to have_http_status(:created)
+      invite = Crm::BookingInvite.find(body.dig('payload', 'id'))
+      expect(invite).to have_attributes(contact_id: world.contact.id, card_id: nil, conversation_id: nil, channel: 'copy')
+    end
+
+    it 'keeps the invite of another person when someone switches page' do
+      someone = role_user('crm_view', 'conversation_manage')
+      theirs = create_booking_invite(world: world, created_by: someone)
+      other_page = create_booking_profile(account: account, host: world.host, title: 'Visita')
+
+      call(world.host, :post, base, { card_id: world.card.id, booking_page_id: other_page.id })
+
+      expect(response).to have_http_status(:created)
+      expect(theirs.reload.canceled_at).to be_nil
+    end
+
     it 'refuses a conversation of another contact' do
       stranger = create_booking_contact(account: account, name: 'Outra', phone: '+5511955554444')
       other = create(:conversation, account: account, inbox: inbox, contact: stranger)
@@ -213,7 +232,20 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingInvites', type: :request do
       expect(response).to have_http_status(:ok)
       expect(body['payload'].pluck('id')).to eq(invites.first(5).map(&:id))
       expect(body['payload'].first['state']).to eq('opened')
+      expect(body['payload'].pluck('usable').uniq).to eq([true])
       expect(body['pages']).to eq([{ 'id' => world.profile.id, 'title' => world.profile.title }])
+    end
+
+    it 'marks as not usable an invite whose personal link stopped working, even with the page still open' do
+      page = create_booking_profile(account: account, host: world.host, title: 'Equipe')
+      Crm::BookingV2::PagePeople.new(page).assign!([world.host.id, create(:user, account: account, role: :agent).id])
+      link = page.agent_booking_links.find_by(agent_id: world.host.id)
+      invite = create_booking_invite(world: world, booking_profile: page, booking_link: link)
+      link.update!(enabled: false)
+
+      call(world.host, :get, base, { card_id: world.card.id })
+
+      expect(body['payload'].find { |item| item['id'] == invite.id }['usable']).to be(false)
     end
   end
 
@@ -241,6 +273,18 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingInvites', type: :request do
         expect(body['error']).to eq('crm.booking_v2.invite_text_invalid')
       end
       expect(conversation.messages.count).to eq(0)
+    end
+
+    it 'answers 422 cannot_reply when the channel window is closed' do
+      channel = create(:channel_api, account: account, additional_attributes: { 'agent_reply_time_window' => '12' })
+      create(:inbox_member, user: world.host, inbox: channel.inbox)
+      closed = create(:conversation, account: account, inbox: channel.inbox, contact: world.contact)
+
+      call(world.host, :post, "#{base}/#{host_invite.id}/deliver", { conversation_id: closed.display_id })
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(body['error']).to eq('crm.booking_v2.cannot_reply')
+      expect(closed.messages.count).to eq(0)
     end
 
     it 'answers 422 when there is no conversation to deliver to' do
