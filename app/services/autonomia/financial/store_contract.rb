@@ -12,7 +12,7 @@ class Autonomia::Financial::StoreContract
     schema.fetch('definitions').fetch(definition)
     schema['$ref'] = "#/definitions/#{definition}"
     errors = JSONSchemer.schema(schema).validate(payload).to_a
-    raise Autonomia::Financial::StoreContractError.new(errors.map { |error| error.fetch('data_pointer') }.uniq) if errors.any?
+    raise Autonomia::Financial::StoreContractError, errors.map { |error| error.fetch('data_pointer') }.uniq if errors.any?
 
     payload
   end

@@ -56,3 +56,33 @@ nao aprovadas. Tests de mocks nao provam quota atomica ou concorrencia remota.
 
 Nenhum acesso a AWS, banco, EC2, Auth ou API financeira de producao. Nenhum Rails
 console/runner/task, migration, segredo, merge ou deploy realizado.
+
+## Correcao dos erros introduzidos na PR #1185
+
+- Usuario autorizou corrigir os erros desta E0. Escopo limitado aos arquivos
+  novos; WorkingHour e seus testes nao foram modificados.
+- CI do head `0ff8f99b71`: shards 1 e 5 falharam antes dos exemplos porque o
+  helper exigia a gem agregadora `rspec`, ausente no Gemfile/lockfile. O teste
+  inicial isolado tinha essa gem adicional instalada, portanto nao reproduzia
+  a selecao de dependencias do CI.
+- Reproduzido localmente com um Gemfile temporario que declara somente
+  rspec-core, rspec-expectations, rspec-mocks, WebMock e json_schemer: dois
+  LoadErrors e zero exemplos antes da correcao. Bundler impede acessar a gem
+  agregadora mesmo quando ela esta instalada no diretorio temporario.
+- Helper passou a exigir os tres componentes RSpec existentes no projeto,
+  sem modificar Gemfile/lockfile. Corrigidas as 13 ocorrencias de lint dos
+  arquivos novos identificadas no log do RuboCop.
+- Mesma execucao isolada com `ruby -rbundler/setup .../bin/rspec --options
+  /dev/null spec/contracts/autonomia/financial`: **40 exemplos, 0 falhas**,
+  seeds 42 e 2026. Verificacao adicional confirmou que `require 'rspec'`
+  continua indisponivel e o helper corrigido carrega normalmente.
+- `git diff --check` passou. Ruby local permanece 2.6.10; componentes RSpec
+  locais sao 3.13.x. Isto comprova o carregamento sem a gem agregadora, nao
+  substitui a validacao do lockfile completo com Ruby 3.4.4 e RuboCop no CI.
+- As sete falhas WorkingHour do shard 4 sao separadas: o metodo encontra inbox
+  nil. O codigo nao mudou nesta PR e o CI do commit-base estava verde; a origem
+  exata da contaminacao/ordem de fixtures ainda nao foi demonstrada.
+- Hooks continuam indisponiveis neste worktree; eventual commit/push usa a
+  mesma excecao local documentada acima, sem mudar a configuracao global.
+- Nenhuma chamada real ao Financeiro, Rails em producao, acesso AWS, merge ou
+  deploy manual realizado nesta correcao.

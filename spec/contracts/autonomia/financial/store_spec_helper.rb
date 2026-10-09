@@ -1,5 +1,7 @@
 # These protocol specs also run without booting Rails or a database.
-require 'rspec'
+require 'rspec/core'
+require 'rspec/expectations'
+require 'rspec/mocks'
 require 'webmock/rspec'
 
 module Autonomia; end

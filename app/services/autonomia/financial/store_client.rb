@@ -6,8 +6,8 @@ require 'uri'
 
 # Proposed E0 API. No controllers/jobs call this client until Financial ships the scoped contract.
 class Autonomia::Financial::StoreClient < Autonomia::Financial::Client
-  STORE_PATH = '/financial/internal/store'.freeze
-  RESERVATIONS_PATH = '/financial/internal/usage-reservations'.freeze
+  STORE_PATH = '/financial/internal/store'
+  RESERVATIONS_PATH = '/financial/internal/usage-reservations'
   ERROR_CODES = %w[IDEMPOTENCY_CONFLICT USAGE_RESERVATION_NOT_FOUND USAGE_LIMIT_EXCEEDED FORBIDDEN UNAUTHORIZED].freeze
 
   def initialize(authorization_token:, installation_api_key:, namespace:, buyer_subject:, base_url:)
@@ -28,7 +28,7 @@ class Autonomia::Financial::StoreClient < Autonomia::Financial::Client
     payload = request_json(:get, "#{STORE_PATH}/service-subscriptions/#{subscription_id}", 'serviceSubscription')
     validate_namespace!(payload.fetch('namespace'))
     matches_buyer = payload.fetch('buyer').fetch('cognitoSub') == @buyer_subject
-    raise Autonomia::Financial::StoreClientError.new('RESPONSE_TARGET_MISMATCH') unless payload.fetch('id') == subscription_id && matches_buyer
+    raise Autonomia::Financial::StoreClientError, 'RESPONSE_TARGET_MISMATCH' unless payload.fetch('id') == subscription_id && matches_buyer
 
     payload
   end
@@ -43,7 +43,7 @@ class Autonomia::Financial::StoreClient < Autonomia::Financial::Client
       next unless target.fetch('type') == 'agent'
       next if target.fetch('installationId') == @namespace.fetch('installationId')
 
-      raise Autonomia::Financial::StoreClientError.new('RESPONSE_SCOPE_MISMATCH')
+      raise Autonomia::Financial::StoreClientError, 'RESPONSE_SCOPE_MISMATCH'
     end
     payload
   end
@@ -125,7 +125,7 @@ class Autonomia::Financial::StoreClient < Autonomia::Financial::Client
       request.body = JSON.generate(payload)
     end
     response = Net::HTTP.start(uri.host, uri.port, use_ssl: true, open_timeout: 5, read_timeout: 15,
-                              write_timeout: 5, max_retries: 0) { |http| http.request(request) }
+                               write_timeout: 5, max_retries: 0) { |http| http.request(request) }
     parse_response(response, schema, method)
   rescue Timeout::Error, SocketError, SystemCallError, IOError, OpenSSL::SSL::SSLError
     raise Autonomia::Financial::StoreClientError.new('TRANSPORT_ERROR', outcome: method == :post ? 'unknown' : 'failure')
@@ -140,7 +140,7 @@ class Autonomia::Financial::StoreClient < Autonomia::Financial::Client
   end
 
   def raise_response_error(response, payload, method)
-    code = payload.is_a?(Hash) && payload.dig('error').is_a?(Hash) ? payload.dig('error', 'code') : nil
+    code = payload.is_a?(Hash) && payload['error'].is_a?(Hash) ? payload.dig('error', 'code') : nil
     code = 'UPSTREAM_REJECTED' unless ERROR_CODES.include?(code)
     status = response.code.to_i
     outcome = method == :post && status >= 500 ? 'unknown' : 'failure'

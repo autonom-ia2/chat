@@ -92,7 +92,8 @@ RSpec.describe Autonomia::Financial::StoreClient do
   end
 
   it 'repeats exactly the same reservation payload on a caller-initiated retry' do
-    stub = stub_request(:post, reservation_url).with(body: reserve_payload.to_json)
+    stub = stub_request(:post, reservation_url)
+           .with(body: reserve_payload.to_json)
            .to_return(status: 201, body: reservation_response.to_json)
            .then.to_return(status: 200, body: reservation_response.merge('replayed' => true).to_json)
     expect(client.reserve!(reserve_payload)['replayed']).to be(false)
@@ -148,13 +149,15 @@ RSpec.describe Autonomia::Financial::StoreClient do
   it 'commits and releases the original reservation without creating another one' do
     committed = JSON.parse(reservation_response.to_json)
     committed['reservation'].merge!('status' => 'committed', 'expiresAt' => nil)
-    stub_request(:post, "#{reservation_url}/#{reservation_id}/commit").with(body: { idempotencyKey: 'commit:test:1' }.to_json)
+    stub_request(:post, "#{reservation_url}/#{reservation_id}/commit")
+      .with(body: { idempotencyKey: 'commit:test:1' }.to_json)
       .to_return(status: 200, body: committed.to_json)
     expect(client.commit!(reservation_id, 'idempotencyKey' => 'commit:test:1')).to eq(committed)
     released = JSON.parse(committed.to_json)
     released['reservation']['status'] = 'released'
     payload = { 'idempotencyKey' => 'release:test:1', 'reason' => 'resource_disabled' }
-    stub_request(:post, "#{reservation_url}/#{reservation_id}/release").with(body: payload.to_json)
+    stub_request(:post, "#{reservation_url}/#{reservation_id}/release")
+      .with(body: payload.to_json)
       .to_return(status: 200, body: released.to_json)
     expect(client.release!(reservation_id, payload)).to eq(released)
     expect(WebMock).not_to have_requested(:post, reservation_url)
@@ -167,9 +170,9 @@ RSpec.describe Autonomia::Financial::StoreClient do
   end
 
   it 'rejects a non-HTTPS origin and missing credentials without leaking their values' do
-    expect { described_class.new(**client_options.merge(base_url: 'http://financial.example.test')) }
+    expect { described_class.new(**client_options, base_url: 'http://financial.example.test') }
       .to raise_error(ArgumentError, 'Financial store requires an HTTPS origin.')
-    expect { described_class.new(**client_options.merge(installation_api_key: '')) }
+    expect { described_class.new(**client_options, installation_api_key: '') }
       .to raise_error(ArgumentError, 'Financial credentials are required.')
   end
 
