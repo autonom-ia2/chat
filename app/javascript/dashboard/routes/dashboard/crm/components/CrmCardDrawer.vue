@@ -1112,6 +1112,14 @@ const ACTIVITY_META = {
     icon: 'i-lucide-circle-check',
     tone: 'info',
   },
+  // Agendamento (#1188): quem atendia saiu da conta e a reunião foi para outra pessoa. `nameLabel` põe o nome de
+  // quem recebeu no título (labels.to_user_id, resolvido no backend).
+  meeting_host_reassigned: {
+    key: 'ACTIVITY_MEETING_HOST_REASSIGNED',
+    nameLabel: 'to_user_id',
+    icon: 'i-lucide-user-check',
+    tone: 'info',
+  },
   automation_owner_assigned: {
     key: 'ACTIVITY_AUTOMATION_OWNER_ASSIGNED',
     icon: 'i-lucide-user-check',
@@ -1144,14 +1152,14 @@ const ACTIVITY_META = {
   },
   ai_handoff: {
     key: 'ACTIVITY_AI_HANDOFF',
-    icon: 'i-lucide-user-round-check',
+    icon: 'i-lucide-user-check',
     tone: 'info',
   },
   // Fase D: handoff do agente nativo Autonom.ia. Reusa o mesmo visual do handoff
   // do Kanban; o detalhe nunca expõe motivo bruto do LLM (payload só ids/strategy).
   autonomia_handoff: {
     key: 'ACTIVITY_AUTONOMIA_HANDOFF',
-    icon: 'i-lucide-user-round-check',
+    icon: 'i-lucide-user-check',
     tone: 'info',
   },
   ai_followup_planned: {
@@ -1196,7 +1204,7 @@ const ACTIVITY_META = {
   },
   ai_handoff_pickup: {
     key: 'ACTIVITY_AI_HANDOFF_PICKUP',
-    icon: 'i-lucide-user-round-check',
+    icon: 'i-lucide-user-check',
     tone: 'positive',
   },
   ai_handoff_escalation: {
@@ -1380,13 +1388,20 @@ const activityDetail = activity => {
   }
 };
 
+// Título com o nome de quem recebeu, quando o evento tem `nameLabel` e o nome veio; senão, o título fixo.
+const activityTitle = (activity, meta) => {
+  if (!meta.key) return t('CRM_KANBAN.DRAWER.ACTIVITY_GENERIC');
+  const name = meta.nameLabel ? activity.labels?.[meta.nameLabel] : null;
+  return name
+    ? t(`CRM_KANBAN.DRAWER.${meta.key}_TO`, { name })
+    : t(`CRM_KANBAN.DRAWER.${meta.key}`);
+};
+
 // Single source of truth for rendering a timeline entry. Hard non-JSON
 // fallback: unknown event types still produce a humanized label + icon.
 const describeActivity = activity => {
   const meta = ACTIVITY_META[activity.event_type] || FALLBACK_META;
-  const title = meta.key
-    ? t(`CRM_KANBAN.DRAWER.${meta.key}`)
-    : t('CRM_KANBAN.DRAWER.ACTIVITY_GENERIC');
+  const title = activityTitle(activity, meta);
   return {
     title,
     icon: meta.icon,

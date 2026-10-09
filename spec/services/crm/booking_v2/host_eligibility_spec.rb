@@ -26,13 +26,25 @@ RSpec.describe Crm::BookingV2::HostEligibility do
     expect(described_class.eligible?(account: account, user: nil)).to be(false)
   end
 
-  it 'aceita função personalizada com CRM ou agendamento e recusa a que não tem nenhum' do
-    with_crm = create(:user, account: account, role: :agent).tap { |user| grant(user, 'crm_view') }
-    with_booking = create(:user, account: account, role: :agent).tap { |user| grant(user, 'agendamento_view') }
-    unrelated = create(:user, account: account, role: :agent).tap { |user| grant(user, 'report_manage') }
+  it 'recusa membro de integração (token de API), mesmo sem função' do
+    bot = create(:user)
+    create(:account_user, account: account, user: bot, integration: true)
 
-    expect(described_class.eligible?(account: account, user: with_crm)).to be(true)
-    expect(described_class.eligible?(account: account, user: with_booking)).to be(true)
-    expect(described_class.eligible?(account: account, user: unrelated)).to be(false)
+    expect(described_class.eligible?(account: account, user: bot)).to be(false)
+  end
+
+  # Mesmo critério de quem vê card (Enterprise::Crm::CardPolicy#index?): crm_view ou crm_admin.
+  it 'com função personalizada, aceita só quem vê card (crm_view ou crm_admin)' do
+    with_view = create(:user, account: account, role: :agent).tap { |user| grant(user, 'crm_view') }
+    with_admin = create(:user, account: account, role: :agent).tap { |user| grant(user, 'crm_admin') }
+    expect(described_class.eligible?(account: account, user: with_view)).to be(true)
+    expect(described_class.eligible?(account: account, user: with_admin)).to be(true)
+
+    { 'agendamento_view' => %w[agendamento_view], 'agendamento_manage' => %w[agendamento_manage],
+      'crm_manage_cards' => %w[crm_manage_cards], 'crm_move_cards' => %w[crm_move_cards],
+      'report_manage' => %w[report_manage] }.each do |label, keys|
+      user = create(:user, account: account, role: :agent).tap { |member| grant(member, *keys) }
+      expect(described_class.eligible?(account: account, user: user)).to be(false), "#{label} não deveria bastar"
+    end
   end
 end

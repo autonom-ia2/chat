@@ -3,6 +3,10 @@
 # desligados. Sem isso a reunião ficaria com um `created_by` de fora da conta, que nem cancelar se consegue
 # (`Crm::Meeting#validate_created_by_account`). Cada card afetado ganha uma atividade para o admin ver.
 #
+# Só age com a flag `crm_booking_v2` ligada na conta, e só no que é do agendamento novo: reuniões `scheduled`
+# futuras internas (`provider: :internal`) ou criadas por uma página nova (`metadata['booking_profile_id']`), e
+# links de páginas `page_version: 2`. Reunião Google/Microsoft antiga e link de página antiga ficam como estão.
+#
 # Ligado ao `after_destroy_commit` de `AccountUser` em `config/initializers/crm_booking_account_user.rb`.
 class Crm::BookingV2::OrphanReassigner
   EVENT_TYPE = 'meeting_host_reassigned'.freeze
@@ -14,6 +18,7 @@ class Crm::BookingV2::OrphanReassigner
 
   def perform
     return if account.blank? || user_id.blank?
+    return unless Crm::Config.booking_v2_enabled?(account)
     return if account.account_users.exists?(user_id: user_id)
 
     disable_links
@@ -27,24 +32,27 @@ class Crm::BookingV2::OrphanReassigner
   # Sem validação de propósito: a do link exige que o agente seja da conta, e ele acabou de sair. Desligar é o
   # único efeito; o mesmo padrão do Agents::DestroyJob ao desatribuir conversas.
   def disable_links
+    links = account.crm_agent_booking_links.where(agent_id: user_id, enabled: true)
+                   .where(booking_profile_id: account.crm_agent_booking_profiles.new_pages.select(:id))
     # rubocop:disable Rails/SkipsModelValidations
-    account.crm_agent_booking_links.where(agent_id: user_id, enabled: true).update_all(enabled: false, updated_at: Time.current)
+    links.update_all(enabled: false, updated_at: Time.current)
     # rubocop:enable Rails/SkipsModelValidations
   end
 
   def orphan_meetings
-    account.crm_meetings.upcoming.by_agent(user_id).includes(:card)
+    upcoming = account.crm_meetings.upcoming.by_agent(user_id)
+    upcoming.internal.or(upcoming.where("crm_meetings.metadata ->> 'booking_profile_id' IS NOT NULL")).includes(:card)
   end
 
   def reassign(meeting)
     profile = page_of(meeting)
-    new_host = page_host(profile) || first_administrator
-    if new_host.blank?
-      Rails.logger.warn("[booking_v2] meeting #{meeting.id} has no host to take over after user #{user_id} left account #{account.id}")
-      return
-    end
+    new_host = page_host(profile)
+    fallback = new_host.blank?
+    new_host ||= first_administrator
+    return log_no_host(meeting) if new_host.blank?
 
     meeting.update!(created_by: new_host)
+    log_reassignment(meeting, new_host, profile, fallback)
     log(meeting, new_host, profile)
   rescue ActiveRecord::RecordInvalid => e
     # Uma reunião com dado antigo inválido não trava as outras; fica no log para o admin tratar.
@@ -67,6 +75,18 @@ class Crm::BookingV2::OrphanReassigner
 
   def first_administrator
     @first_administrator ||= account.account_users.human.administrator.where.not(user_id: user_id).order(:id).first&.user
+  end
+
+  def log_no_host(meeting)
+    Rails.logger.warn("[booking_v2] meeting #{meeting.id} has no host to take over after user #{user_id} left account #{account.id}")
+  end
+
+  def log_reassignment(meeting, new_host, profile, fallback)
+    target = fallback ? 'first_administrator' : 'page_default_host'
+    Rails.logger.info(
+      "[booking_v2] meeting #{meeting.id} reassigned from user #{user_id} to user #{new_host.id} (#{target}) " \
+      "account #{account.id} booking_profile #{profile&.id.inspect}"
+    )
   end
 
   def log(meeting, new_host, profile)

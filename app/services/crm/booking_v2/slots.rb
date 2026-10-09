@@ -9,6 +9,12 @@
 # reservar) o freebusy não vem do cache e qualquer erro do provedor vira ArgumentError 'availability_unavailable'
 # (falha fechada). Fora do modo estrito o erro do provedor é registrado e a tela mostra só a ocupação local.
 #
+# Caixa compartilhada (`calendar_shared?`, ex.: um comercial@ da equipe toda): o freebusy é da caixa inteira e
+# bloquearia horários de outras pessoas, então fica só a ocupação do responsável (mesma regra do v1).
+#
+# `include_provider: false` pula o provedor: o Booker consulta o provedor ANTES das travas (rede lenta não segura
+# trava) e, dentro delas, reconfere só a ocupação local.
+#
 # `next_slot` faz UMA consulta ao provedor para todo o intervalo varrido (no máximo 14 dias ou a janela, se menor),
 # com cache de 5 minutos, e varre os dias localmente.
 class Crm::BookingV2::Slots
@@ -20,11 +26,12 @@ class Crm::BookingV2::Slots
     new(profile: profile, host: host, date: nil, duration: duration).first_free(from)
   end
 
-  def initialize(profile:, host:, date:, duration: nil, strict: false)
+  def initialize(profile:, host:, date:, duration: nil, strict: false, include_provider: true) # rubocop:disable Metrics/ParameterLists
     @profile = profile
     @host = host
     @date = date
     @strict = strict
+    @include_provider = include_provider
     @duration = resolve_duration!(duration).minutes
   end
 
@@ -52,7 +59,7 @@ class Crm::BookingV2::Slots
 
   private
 
-  attr_reader :profile, :host, :strict, :duration
+  attr_reader :profile, :host, :strict, :duration, :include_provider
 
   def resolve_duration!(value)
     minutes = value.nil? ? profile.duration_minutes : Integer(value.to_s, exception: false)
@@ -137,7 +144,7 @@ class Crm::BookingV2::Slots
   end
 
   def provider_intervals(range_start, range_end)
-    return [] if calendar_channel.blank? || simulated?
+    return [] if !include_provider || calendar_channel.blank? || calendar_channel.calendar_shared? || simulated?
     return fetch_strict(range_start, range_end) if strict
 
     cached_provider_intervals(range_start, range_end)
