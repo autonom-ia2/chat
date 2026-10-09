@@ -2685,6 +2685,29 @@
      ],
      "revisar": false,
      "nota": null
+    },
+    {
+     "id": "10.17",
+     "titulo": "Página de agendamento: o cliente marca o horário sozinho",
+     "para_que_serve": "Criar, publicar e pausar a página onde o cliente marca a conversa sozinho, sem caixa de e-mail, e mandar o link ou o QR code.",
+     "publico": "admin",
+     "prioridade": "P2",
+     "assuntos": [],
+     "rotas": [
+      "settings_booking"
+     ],
+     "me_leve_ate_la": {
+      "rota": "settings_booking",
+      "destaque": null
+     },
+     "requer": "crm_booking_v2",
+     "prints": [],
+     "fontes": [
+      "porques: Criar e publicar a página de agendamento",
+      "porques: Quem pode o quê no Agendamento"
+     ],
+     "revisar": false,
+     "nota": null
     }
    ]
   },
