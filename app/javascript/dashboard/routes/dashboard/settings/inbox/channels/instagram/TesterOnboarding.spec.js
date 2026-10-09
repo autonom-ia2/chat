@@ -481,7 +481,7 @@ describe('Instagram assisted tester onboarding', () => {
     await button(wrapper, 'Enviar convite').trigger('click');
     await flushPromises();
     expect(wrapper.text()).toContain(
-      'O convite não foi enviado. Tente novamente.'
+      'O convite não foi enviado. Tente novamente em alguns minutos e procure o suporte se persistir.'
     );
     expect(button(wrapper, 'Enviar convite')).toBeDefined();
     expect(wrapper.findComponent(TesterAcceptanceInstructions).exists()).toBe(
