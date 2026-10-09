@@ -497,6 +497,20 @@ export async function runLinuxSmoke() {
       context.pages()[0] ?? (await bounded(context.newPage(), budget(5000)));
     // No external navigation: all future requests are intercepted, content is local and synthetic.
     await page.setContent(HTML, { timeout: budget(5000) });
+    // On a fresh runner Chrome's first composited frame took up to 14 s (Chrome 155, cold CI runners, #1183).
+    // Playwright's click waits for animation frames before acting, so a cold compositor ate the 5 s click
+    // timeout of the form steps below. Wait for that first frame here, under its own budget.
+    await observedAction('FIRST_FRAME', () =>
+      bounded(
+        page.evaluate(
+          () =>
+            new Promise(resolve => {
+              requestAnimationFrame(() => resolve());
+            })
+        ),
+        budget(30_000)
+      )
+    );
     assert.equal(await bounded(page.title(), budget(5000)), 'Linux smoke');
     assert.equal(
       await page.locator('h1').textContent({ timeout: budget(5000) }),
