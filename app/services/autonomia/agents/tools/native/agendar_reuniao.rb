@@ -7,12 +7,20 @@
 # Quem é o cliente vem da conversa, nunca do modelo: o contato dela, com o telefone dele. O modelo só manda
 # `telefone` quando o contato não tem um número válido e o cliente o informou. O card é o que a conversa já tem
 # aberto (`ConversationCardFinder`, o mesmo do "criar card da conversa"); sem ele, o Booker cria um na conversa.
-# Na mesma transação nasce um convite `channel: 'ai'` com a reunião: o link de gestão e a conversa ficam no mesmo
-# mecanismo da reserva pela página (F1-C).
+# Junto com a reunião, no bloco que o Booker roda na transação dele e sob as travas (`perform { ... }`), nascem o
+# convite `channel: 'ai'` (o link de gestão e a conversa ficam no mesmo mecanismo da reserva pela página, F1-C) e, se
+# o card nasceu agora sem a conversa (contato sem telefone: Instagram, webchat), o vínculo do card com ESTA conversa.
+# A consulta ao provedor roda fora de transação, como na página pública.
+#
+# Meet/Teams mandam o convite pelo provedor e exigem e-mail: vai o do contato, ou o que o cliente informou quando o
+# contato não tem. Sem e-mail, esses locais nem são oferecidos (`locais_oferecidos`) e, pedidos assim mesmo, a
+# ferramenta pede o e-mail.
 #
 # Horário tomado entre a oferta e a escolha (outro cliente, outra conversa): devolve NOVAS opções, nunca reserva
 # dupla (a trava do agente decide quem fica). A chave de idempotência é a do turno: o retry do mesmo turno devolve a
-# mesma reunião; outro turno pedindo o mesmo horário é outro pedido.
+# mesma reunião. Outro turno pedindo o mesmo horário é outro pedido, mas se quem ocupa o horário é a reunião deste
+# mesmo cliente nesta página, a ferramenta confirma essa reunião em vez de dizer que o horário foi ocupado.
+# Turno acionado por evento (aviso do sistema) não marca: não é pedido do cliente.
 class Autonomia::Agents::Tools::Native::AgendarReuniao < Autonomia::Agents::Tools::Native::Base
   include Autonomia::Agents::Tools::Native::Agenda
 
@@ -26,6 +34,11 @@ class Autonomia::Agents::Tools::Native::AgendarReuniao < Autonomia::Agents::Tool
   OCUPADO = 'Esse horário acabou de ser ocupado e NÃO foi marcado. Peça desculpas e ofereça estas novas opções:'.freeze
   LIMITE = 'O cliente já tem reuniões marcadas demais nesta agenda e esta NÃO foi marcada. Explique e passe a conversa ' \
            'para uma pessoa da equipe: should_handoff=true, handoff_reason "cliente com reuniões em aberto".'.freeze
+  SEM_EMAIL = 'Esse local manda o convite por e-mail e o cliente não tem e-mail no cadastro. Peça o e-mail ao ' \
+              'cliente e chame de novo com `email`, ou ofereça outro local. Nada foi marcado.'.freeze
+  EMAIL_INVALIDO = 'O e-mail informado não é válido. Peça de novo ao cliente. Nada foi marcado.'.freeze
+  TURNO_DE_EVENTO = 'Este turno é um aviso do sistema, não um pedido do cliente: não marque nada agora. Se o ' \
+                    'cliente quiser marcar, ele vai pedir na conversa.'.freeze
   INDISPONIVEL = "Não foi possível marcar agora e nada foi marcado. #{Autonomia::Agents::Tools::Native::Agenda::PASSAR_PARA_PESSOA}".freeze
   ERROS_DE_PARAMETRO = %w[invalid_starts_at invalid_duration invalid_location].freeze
 
@@ -52,11 +65,13 @@ class Autonomia::Agents::Tools::Native::AgendarReuniao < Autonomia::Agents::Tool
         { 'name' => 'local', 'type' => 'string', 'required' => false,
           'description' => 'Tipo do local escolhido, entre os locais possíveis da consulta. null usa o primeiro.' },
         { 'name' => 'telefone', 'type' => 'string', 'required' => false,
-          'description' => 'Só quando a ferramenta pediu: o número que o cliente informou, com DDD. Senão null.' }
+          'description' => 'Só quando a ferramenta pediu: o número que o cliente informou, com DDD. Senão null.' },
+        { 'name' => 'email', 'type' => 'string', 'required' => false,
+          'description' => 'Só quando a ferramenta pediu: o e-mail que o cliente informou. Senão null.' }
       ]
     end
 
-    # O horário e a duração ajudam o diagnóstico; o telefone, nunca.
+    # O horário e a duração ajudam o diagnóstico; o telefone e o e-mail, nunca.
     def args_registraveis
       %w[inicio duracao_minutos local]
     end
@@ -68,19 +83,25 @@ class Autonomia::Agents::Tools::Native::AgendarReuniao < Autonomia::Agents::Tool
 
   def call
     return recusar('agenda_sem_conversa', SEM_CONVERSA) if conversa.blank?
+    return recusar('agenda_turno_de_evento', TURNO_DE_EVENTO) if delivery.try(:turno_de_evento?)
 
-    recusa = recusa_da_pagina
+    recusa = recusa_da_pagina || recusa_do_pedido
     return recusa if recusa
 
-    duracao = duracao_pedida
-    return duracao_invalida if duracao.nil?
-    return parametro_invalido(INICIO_INVALIDO) if inicio.nil?
-    return recusar('agenda_sem_telefone', SEM_TELEFONE) if telefone.blank?
-
-    reservar(duracao)
+    reservar(duracao_pedida)
   end
 
   private
+
+  # nil quando o pedido serve para reservar; senão o texto da recusa.
+  def recusa_do_pedido
+    return duracao_invalida if duracao_pedida.nil?
+    return parametro_invalido(INICIO_INVALIDO) if inicio.nil?
+    return recusar('agenda_sem_telefone', SEM_TELEFONE) if telefone.blank?
+    return recusar('agenda_sem_email', SEM_EMAIL) if falta_email?
+
+    nil
+  end
 
   def inicio
     return @inicio if defined?(@inicio)
@@ -107,13 +128,14 @@ class Autonomia::Agents::Tools::Native::AgendarReuniao < Autonomia::Agents::Tool
     ::Crm::BookingV2::PhoneLookup.normalize(numero, region: ::Crm::BookingV2::PhoneLookup.region_for(pagina.resolved_timezone))
   end
 
+  # O bloco roda só com a reserva NOVA, dentro da transação do Booker e sob as travas: convite e vínculo entram ou
+  # saem junto com a reunião. O reenvio do mesmo turno devolve a reunião que já tem os dois.
   def reservar(duracao)
-    resultado = ActiveRecord::Base.transaction do
-      reserva = booker(duracao).perform
-      convite!(reserva)
-      reserva
+    reserva = booker(duracao).perform do |nova|
+      vincular_card_a_conversa!(nova.card)
+      convite!(nova)
     end
-    confirmar(resultado.meeting)
+    confirmar(reserva.meeting)
   rescue ArgumentError => e
     tratar_erro(e.message, duracao)
   end
@@ -121,9 +143,21 @@ class Autonomia::Agents::Tools::Native::AgendarReuniao < Autonomia::Agents::Tool
   def booker(duracao)
     ::Crm::BookingV2::Booker.new(
       profile: pagina, name: contato.name.presence || telefone, phone: telefone, starts_at: inicio.iso8601,
-      duration: duracao, location_type: params['local'].presence, source: SOURCE, conversation: conversa, link: link,
-      contact: contato, card: card_da_conversa, idempotency_key: chave_da_tentativa
+      duration: duracao, location_type: tipo_do_local, source: SOURCE, conversation: conversa, link: link,
+      contact: contato, card: card_da_conversa, idempotency_key: chave_da_tentativa,
+      email: local_pede_email?(tipo_do_local) ? email_do_cliente : nil
     )
+  end
+
+  # O local pedido; sem pedido, o primeiro dos oferecidos (sem e-mail, o primeiro que não precisa dele).
+  def tipo_do_local
+    params['local'].presence || locais_oferecidos.first&.dig('type')
+  end
+
+  # Local desta página que manda o convite por e-mail, sem e-mail do cliente. Local que a página não tem fica para o
+  # Booker recusar (`invalid_location`), com a lista dos locais.
+  def falta_email?
+    local_pede_email?(tipo_do_local) && email_do_cliente.blank? && locais.any? { |local| local['type'] == tipo_do_local }
   end
 
   # O retry do mesmo turno é a mesma tentativa; outro turno, ou outro horário, é outra.
@@ -134,6 +168,14 @@ class Autonomia::Agents::Tools::Native::AgendarReuniao < Autonomia::Agents::Tool
   def card_da_conversa
     card = ::Crm::Cards::ConversationCardFinder.new(account: account).find(conversa)
     card if card&.open? && card.contact_id == contato&.id
+  end
+
+  # Card que nasceu agora sem conversa (o Booker só liga a conversa cujo contato tem o telefone da reserva): a IA
+  # sabe de que conversa veio o pedido e liga o card a ela pelo mesmo vínculo do "vincular conversa" do card.
+  def vincular_card_a_conversa!(card)
+    return if card.conversation_id.present? || card.contact_id != conversa.contact_id
+
+    ::Crm::Cards::ConversationLinker.new(card: card, conversation: conversa, actor: nil).link
   end
 
   def convite!(reserva)
@@ -155,8 +197,9 @@ class Autonomia::Agents::Tools::Native::AgendarReuniao < Autonomia::Agents::Tool
   end
 
   def tratar_erro(codigo, duracao)
-    return novas_opcoes(duracao) if codigo == 'slot_unavailable'
+    return ocupado(duracao) if codigo == 'slot_unavailable'
     return parametro_invalido(texto_do_parametro(codigo)) if ERROS_DE_PARAMETRO.include?(codigo)
+    return parametro_invalido(EMAIL_INVALIDO) if codigo == 'invalid_email'
     return recusar('agenda_limite_de_reunioes', LIMITE) if codigo == 'too_many_open'
 
     Rails.logger.warn("[autonomia][agenda] reserva recusada account=#{account.id} codigo=#{codigo}")
@@ -167,6 +210,19 @@ class Autonomia::Agents::Tools::Native::AgendarReuniao < Autonomia::Agents::Tool
     return "Esse local não existe nesta agenda. Locais possíveis: #{descricao_dos_locais}. Nada foi marcado." if codigo == 'invalid_location'
 
     INICIO_INVALIDO
+  end
+
+  # Quem ocupa o horário pode ser a reunião deste mesmo cliente, marcada em outro turno: essa é confirmada.
+  def ocupado(duracao)
+    reuniao = reuniao_do_cliente_no_horario
+    reuniao ? confirmar(reuniao) : novas_opcoes(duracao)
+  end
+
+  # Só dados do servidor: o contato desta conversa, esta página e o início pedido.
+  def reuniao_do_cliente_no_horario
+    ::Crm::Meeting.where(account_id: account.id, status: :scheduled, starts_at: inicio)
+                  .where('crm_meetings.metadata @> ?', { booking_profile_id: pagina.id }.to_json)
+                  .joins(:card).find_by(crm_cards: { contact_id: contato.id })
   end
 
   # O dia pedido primeiro; sem vaga nele, os próximos.

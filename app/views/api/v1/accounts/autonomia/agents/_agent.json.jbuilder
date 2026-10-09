@@ -25,6 +25,9 @@ json.config agent.config.to_h.slice('handoff_strategy', 'handoff_target_id', 'co
                                     'with_knowledge', 'knowledge_confidence', 'knowledge_summary',
                                     'audience', 'response_window', 'audience_unknown_contact',
                                     'faq_suggestions', 'booking_page_id')
+# #1196: o agente recebe a agenda da IA (o Agente de Cotação, de ferramentas mantidas, não). O PanelTune esconde a
+# escolha da página quando é false.
+json.booking_available Autonomia::Agents::Tools::Native::Agenda.aceita?(agent)
 # Revisor v2: MAPA DE TEMAS + confiança geral + resumo da base (UI de Conhecimento). Seguros de
 # expor (vêm do jsonb `config`, NUNCA de instruction/scaffold). Já estão dentro de `config`; expô-los
 # no topo dá chaves estáveis ao FE.

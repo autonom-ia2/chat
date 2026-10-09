@@ -649,6 +649,22 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
         }
       },
       'agendar_reuniao.rb#call#2' => {
+        espera: { motivo: 'agenda_turno_de_evento', slug: 'agendar_reuniao' },
+        dispara: lambda {
+          agenda_pronta
+          evento = Autonomia::Agents::Tools::Delivery.new(conversation: conversation, agent_inbox: agent_inbox, evento: 'resultado_pronto')
+          na_agenda(agendar, { inicio: '2026-10-20T10:00:00-03:00' }, entrega: evento)
+        }
+      },
+      'agendar_reuniao.rb#recusa_do_pedido#2' => {
+        espera: { motivo: 'agenda_sem_email', slug: 'agendar_reuniao' },
+        dispara: lambda {
+          agenda_pronta.profile.update_columns(locations: [{ 'type' => 'google_meet' }]) # rubocop:disable Rails/SkipsModelValidations
+          conversation.contact.update!(phone_number: '+5521988887777', email: nil)
+          na_agenda(agendar, { inicio: '2026-10-20T10:00:00-03:00', local: 'google_meet' })
+        }
+      },
+      'agendar_reuniao.rb#recusa_do_pedido#1' => {
         espera: { motivo: 'agenda_sem_telefone', slug: 'agendar_reuniao' },
         dispara: lambda {
           agenda_pronta

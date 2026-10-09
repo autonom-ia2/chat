@@ -931,7 +931,7 @@ module Autonomia
 
       def booking_enabled?
         agent = @thread.agent
-        agent.present? && agent.account_id == @thread.account_id && ::Autonomia::Agents::Tools::Native::Agenda.disponivel?(agent)
+        agent.present? && agent.account_id == @thread.account_id && ::Autonomia::Agents::Tools::Native::Agenda.ligada?(agent)
       end
 
       # 'custom'/Outros: sem esqueleto pronto, exploração mais ampla, construindo do zero DENTRO do

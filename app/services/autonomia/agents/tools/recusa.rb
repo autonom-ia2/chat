@@ -85,6 +85,8 @@ module Autonomia::Agents::Tools::Recusa
     'agenda_parametro_invalido' => 'data, horário, duração ou local fora do formato ou do que a página oferece',
     'agenda_sem_conversa' => 'não há conversa para marcar a reunião (Testar, Copiloto, playground)',
     'agenda_sem_telefone' => 'o contato da conversa não tem telefone válido e o modelo não mandou um',
+    'agenda_sem_email' => 'o local escolhido (Meet/Teams) pede o e-mail do cliente e o contato não tem nem o modelo mandou um',
+    'agenda_turno_de_evento' => 'o turno foi acionado por um aviso do sistema, e a agenda não marca reunião que o cliente não pediu',
     'agenda_horario_ocupado' => 'o horário escolhido foi ocupado antes da reserva; o modelo recebeu novas opções',
     'agenda_limite_de_reunioes' => 'o telefone já tem o máximo de reuniões abertas nesta agenda',
     'agenda_indisponivel' => 'a reserva falhou por um motivo do sistema (responsável, funil ou calendário)'

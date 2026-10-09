@@ -15,9 +15,9 @@ withFullI18n();
 // checks the choices without depending on the popover.
 const stubs = {
   ChoiceSelect: {
-    props: ['modelValue', 'options', 'ariaLabel'],
+    props: ['modelValue', 'options', 'ariaLabel', 'triggerId'],
     emits: ['update:modelValue'],
-    template: `<div class="choice">
+    template: `<div class="choice" :id="triggerId">
       <button v-for="option in options" :key="String(option.value)"
         :data-value="String(option.value)" :data-selected="option.value === modelValue"
         @click="$emit('update:modelValue', option.value)">{{ option.label }}</button>
@@ -92,6 +92,37 @@ describe('AgentBookingForm', () => {
       true
     );
     expect(wrapper.find('button.save').exists()).toBe(false);
+  });
+
+  it('accepts the saved page id as text and compares it as a number', async () => {
+    CrmBookingPagesAPI.get.mockResolvedValue({ data: { payload: PAGES } });
+    const wrapper = await mountForm({ config: { booking_page_id: '9' } });
+
+    expect(wrapper.find('[data-value="9"]').attributes('data-selected')).toBe(
+      'true'
+    );
+    expect(wrapper.find('[data-test="agent-booking-paused"]').exists()).toBe(
+      true
+    );
+    await wrapper.find('button.save').trigger('click');
+    expect(wrapper.emitted('submit')).toEqual([[9]]);
+  });
+
+  it('ties the visible label to the field', async () => {
+    CrmBookingPagesAPI.get.mockResolvedValue({ data: { payload: PAGES } });
+    const wrapper = await mountForm({ config: {} });
+
+    const forId = wrapper.find('label').attributes('for');
+    expect(forId).toBeTruthy();
+    expect(wrapper.find('.choice').attributes('id')).toBe(forId);
+  });
+
+  it('stays hidden, without reading the pages, for an agent that does not take the calendar', async () => {
+    CrmBookingPagesAPI.get.mockResolvedValue({ data: { payload: PAGES } });
+    const wrapper = await mountForm({ booking_available: false, config: {} });
+
+    expect(wrapper.find('section').exists()).toBe(false);
+    expect(CrmBookingPagesAPI.get).not.toHaveBeenCalled();
   });
 
   it('stays hidden when the account has no booking pages API (flag off)', async () => {

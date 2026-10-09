@@ -18,8 +18,15 @@ RSpec.describe 'Autonomia agent booking page setting', type: :request do
     end
   end
 
-  def save(page_id)
-    patch url, params: { agent: { config: { booking_page_id: page_id } } }, headers: administrator.create_new_auth_token, as: :json
+  def save(page_id, user: administrator, extra: {})
+    patch url, params: { agent: { config: { booking_page_id: page_id }.merge(extra) } }, headers: user.create_new_auth_token, as: :json
+  end
+
+  def role_user(*permissions)
+    user = create(:user, account: account, role: :agent)
+    role = create(:custom_role, account: account, permissions: permissions)
+    user.account_users.find_by(account: account).update!(custom_role: role)
+    user
   end
 
   it 'saves, exposes and clears the booking page' do
@@ -27,12 +34,49 @@ RSpec.describe 'Autonomia agent booking page setting', type: :request do
 
     expect(response).to have_http_status(:success)
     expect(response.parsed_body.dig('config', 'booking_page_id')).to eq(world.profile.id)
+    expect(response.parsed_body['booking_available']).to be(true)
     expect(agent.reload.config).to include('booking_page_id' => world.profile.id, 'handoff_strategy' => 'none')
 
     save(nil)
 
     expect(response).to have_http_status(:success)
     expect(agent.reload.config['booking_page_id']).to be_nil
+  end
+
+  it 'only lets people who can see Scheduling choose the page' do
+    blind = role_user('autonomia_manage')
+
+    save(world.profile.id, user: blind)
+
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response.parsed_body['error']).to eq(I18n.t('autonomia.agents.booking_page_forbidden'))
+    expect(agent.reload.config).not_to have_key('booking_page_id')
+
+    save(world.profile.id, user: role_user('autonomia_manage', 'agendamento_view'))
+
+    expect(response).to have_http_status(:success)
+    expect(agent.reload.config['booking_page_id']).to eq(world.profile.id)
+  end
+
+  it 'lets someone without Scheduling save other settings that resend the page already saved' do
+    agent.update!(config: agent.config.merge('booking_page_id' => world.profile.id))
+
+    save(world.profile.id.to_s, user: role_user('autonomia_manage'), extra: { response_window: 'always' })
+
+    expect(response).to have_http_status(:success)
+    expect(agent.reload.config).to include('booking_page_id' => world.profile.id.to_s, 'response_window' => 'always')
+  end
+
+  it 'hides the choice and refuses a page for the Quote Agent, which does not take the calendar' do
+    agent.update_columns(agent_type: 'insurance_quote') # rubocop:disable Rails/SkipsModelValidations
+
+    get url, headers: administrator.create_new_auth_token, as: :json
+    expect(response.parsed_body['booking_available']).to be(false)
+
+    save(world.profile.id)
+
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(agent.reload.config).not_to have_key('booking_page_id')
   end
 
   it 'refuses a page from another account' do

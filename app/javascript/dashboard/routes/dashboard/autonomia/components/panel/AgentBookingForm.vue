@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref, useId, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
@@ -8,7 +8,9 @@ import CrmBookingPagesAPI from 'dashboard/api/crmBookingPages';
 // #1196 — "Marcar reuniões": a página de agendamento que a IA usa para
 // oferecer horários e marcar. Escolher a página liga a agenda do agente; "Não
 // marcar" desliga. Some quando a conta não tem a agenda nova (a API de páginas
-// responde 404) ou a pessoa não pode ver as páginas.
+// responde 404), quando a pessoa não pode ver as páginas ou quando o agente
+// não recebe a agenda (`booking_available: false`, o Agente de Cotação).
+// O id da página é comparado como número: a config pode trazê-lo em texto.
 const props = defineProps({
   agent: { type: Object, default: () => ({}) },
   isSaving: { type: Boolean, default: false },
@@ -19,6 +21,14 @@ const emit = defineEmits(['submit']);
 const { t } = useI18n();
 
 const OFF = '';
+const fieldId = useId();
+
+const toPageId = value => {
+  const id = Number(value);
+  return Number.isInteger(id) && id > 0 ? id : OFF;
+};
+
+const acceptsBooking = computed(() => props.agent?.booking_available !== false);
 
 const pages = ref([]);
 const isAvailable = ref(false);
@@ -27,7 +37,7 @@ const selected = ref(OFF);
 const options = computed(() => [
   { value: OFF, label: t('BOOKING.AI_AGENT.OFF') },
   ...pages.value.map(page => ({
-    value: page.id,
+    value: toPageId(page.id),
     label: page.enabled
       ? page.title || t('BOOKING.CARD.UNTITLED')
       : t('BOOKING.AI_AGENT.PAUSED_PAGE', {
@@ -37,10 +47,11 @@ const options = computed(() => [
 ]);
 
 const selectedPage = computed(() =>
-  pages.value.find(page => page.id === selected.value)
+  pages.value.find(page => toPageId(page.id) === selected.value)
 );
 
 const loadPages = async () => {
+  if (!acceptsBooking.value) return;
   try {
     const { data } = await CrmBookingPagesAPI.get();
     pages.value = data.payload || [];
@@ -53,7 +64,7 @@ const loadPages = async () => {
 watch(
   () => props.agent,
   agent => {
-    selected.value = agent?.config?.booking_page_id ?? OFF;
+    selected.value = toPageId(agent?.config?.booking_page_id);
   },
   { immediate: true }
 );
@@ -67,7 +78,7 @@ onMounted(loadPages);
 
 <template>
   <section
-    v-if="isAvailable"
+    v-if="acceptsBooking && isAvailable"
     class="flex flex-col gap-4 pt-2 border-t border-n-weak"
   >
     <div class="flex flex-col">
@@ -87,11 +98,12 @@ onMounted(loadPages);
     </p>
     <template v-else>
       <div class="flex flex-col gap-1">
-        <label class="text-sm font-medium text-n-slate-12">
+        <label :for="fieldId" class="text-sm font-medium text-n-slate-12">
           {{ t('BOOKING.AI_AGENT.PAGE_LABEL') }}
         </label>
         <ChoiceSelect
           v-model="selected"
+          :trigger-id="fieldId"
           :options="options"
           :aria-label="t('BOOKING.AI_AGENT.PAGE_LABEL')"
           class="w-full"

@@ -4,7 +4,8 @@
 # A PÁGINA VEM SÓ DA CONFIGURAÇÃO DO AGENTE (`config['booking_page_id']`), nunca de parâmetro do modelo, e só vale
 # página nova da MESMA conta: id de outra conta, página antiga ou apagada é "sem página". Escolher a página é o que
 # liga as duas ferramentas (`Agent#ferramentas_nativas`); a flag da conta (`crm_booking_v2`) e o CRM ligado decidem
-# se elas aparecem no turno (`disponivel?`).
+# se elas aparecem no turno (`disponivel?`). Agente cujas ferramentas são mantidas pelo deploy (o Agente de Cotação)
+# não recebe a agenda: não aceita página (`aceita?`) e não recebe a instrução (`ligada?`).
 #
 # A REGRA DE HORÁRIO É A DA PÁGINA PÚBLICA (J6-A1): o mesmo `Crm::BookingV2::Slots`, com o mesmo responsável que a
 # página atende. Página `per_agent`: o link de quem está atribuído à conversa (a Atribuição do CRM decide quem atende,
@@ -38,11 +39,18 @@ module Autonomia::Agents::Tools::Native::Agenda
     page_id(agent).blank? ? slugs : (Array(slugs) + SLUGS).uniq
   end
 
-  # Gravação da config (`Agent`): sem página, ou página nova da própria conta. Só confere quando a página MUDA: uma
-  # página apagada depois não pode travar o salvar das outras configurações (a ferramenta recusa ao rodar).
+  # O agente pode receber a agenda: as ferramentas dele não são as mantidas pelo deploy (Agente de Cotação).
+  def self.aceita?(agent)
+    ::Autonomia::Insurance::QuoteAgent::Builder.ferramentas_mantidas(agent).nil?
+  end
+
+  # Gravação da config (`Agent`): sem página, ou página nova da própria conta num agente que recebe a agenda. Só
+  # confere quando a página MUDA: uma página apagada depois não pode travar o salvar das outras configurações (a
+  # ferramenta recusa ao rodar).
   def self.pagina_valida?(agent)
     valor = page_id(agent)
     return true if valor.blank? || valor == agent.config_in_database.to_h[CONFIG_KEY]
+    return false unless aceita?(agent)
 
     id = Integer(valor.to_s, exception: false)
     id.present? && agent.account.present? && agent.account.crm_agent_booking_profiles.new_pages.exists?(id: id)
@@ -53,10 +61,15 @@ module Autonomia::Agents::Tools::Native::Agenda
     page_id(agent).present? && ::Crm::Config.enabled? && ::Crm::Config.booking_v2_enabled?(agent.account)
   end
 
+  # A agenda ligada E as duas ferramentas no catálogo do agente: só aí a instrução fala delas.
+  def self.ligada?(agent)
+    disponivel?(agent) && (SLUGS - Array(agent.ferramentas_nativas)).empty?
+  end
+
   # Instrução do turno quando o agente tem a agenda. Vale sobre a instrução escrita antes da ferramenta existir
   # (o esqueleto antigo do tipo `scheduler` proibia consultar a agenda).
   def self.instrucao(agent)
-    return unless disponivel?(agent)
+    return unless ligada?(agent)
 
     <<~TEXT.strip
       # Agenda
@@ -123,9 +136,11 @@ module Autonomia::Agents::Tools::Native::Agenda
 
   # Duração pedida em minutos, ou a da página. nil quando o modelo pediu uma que a página não oferece.
   def duracao_pedida
+    return @duracao_pedida if defined?(@duracao_pedida)
+
     valor = params['duracao_minutos']
     minutos = valor.nil? ? pagina.duration_minutes : Integer(valor.to_s, exception: false)
-    minutos if pagina.durations.include?(minutos)
+    @duracao_pedida = (minutos if pagina.durations.include?(minutos))
   end
 
   def duracao_invalida
@@ -162,12 +177,35 @@ module Autonomia::Agents::Tools::Native::Agenda
     Array(pagina.locations).select { |item| item.is_a?(Hash) }
   end
 
+  # Meet/Teams: o convite sai pelo provedor, que exige o e-mail do cliente (`Booker#validate_provider_location!`).
+  def local_pede_email?(tipo)
+    ::Crm::BookingPageSettings::CALENDAR_LOCATIONS.key?(tipo.to_s)
+  end
+
+  # O e-mail do contato da conversa; sem ele, o que o modelo mandou porque a ferramenta pediu. Dado, não texto de
+  # pessoa: quem confere a forma é o `BookingInput` do Booker.
+  def email_do_cliente
+    conversa&.contact&.email.presence || params['email'].to_s.strip.presence
+  end
+
+  # Os locais que a IA oferece: na conversa de um cliente sem e-mail, só os que não precisam dele (se todos
+  # precisam, todos, e a descrição avisa). Sem conversa (Testar), todos, como no atendimento de quem tem e-mail.
+  def locais_oferecidos
+    return locais if conversa.blank? || email_do_cliente.present?
+
+    locais.reject { |local| local_pede_email?(local['type']) }.presence || locais
+  end
+
   def rotulo_do_local(local)
     rotulo = ::Crm::BookingV2::LocationLabel.for(local, account: account) || local['type']
     local['address'].present? ? "#{rotulo}: #{local['address']}" : rotulo
   end
 
   def descricao_dos_locais
-    locais.map { |local| "#{local['type']} (#{rotulo_do_local(local)})" }.join('; ')
+    locais_oferecidos.map { |local| "#{local['type']} (#{rotulo_do_local(local)}#{aviso_de_email(local)})" }.join('; ')
+  end
+
+  def aviso_de_email(local)
+    conversa.present? && email_do_cliente.blank? && local_pede_email?(local['type']) ? ', pede o e-mail do cliente' : ''
   end
 end

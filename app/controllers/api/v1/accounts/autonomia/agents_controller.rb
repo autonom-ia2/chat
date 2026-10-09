@@ -22,7 +22,10 @@ class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autono
   def create
     raise ::Autonomia::Agents::Agent::InstrucaoMantida if instrucao_mantida_pelo_tipo?(params.dig(:agent, :agent_type))
 
-    @agent = agents_scope.new(agent_params)
+    attrs = agent_params
+    return if recusar_pagina_de_agendamento_sem_permissao(attrs[:config])
+
+    @agent = agents_scope.new(attrs)
     @agent.created_by = Current.user
     apply_manual_scaffold
     @agent.save!
@@ -45,6 +48,8 @@ class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autono
     discard_generated_instruction_on_manual_switch
     instruction_before = @agent.instruction
     attrs = agent_params
+    return if recusar_pagina_de_agendamento_sem_permissao(attrs[:config])
+
     @agent.assign_attributes(attrs.except(:config))
     merge_config!(attrs[:config]) if attrs.key?(:config)
     return if reject_internal_with_channels
@@ -197,6 +202,21 @@ class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autono
     return value.to_unsafe_h if value.respond_to?(:to_unsafe_h)
 
     value.to_h
+  end
+
+  # #1196 — escolher (ou trocar) a página de agendamento da IA pede poder ver Agendamento: administrador ou função com
+  # `agendamento_view` (`_manage` implica). Reenviar a página que já está salva (quem manda o config inteiro de volta)
+  # não é escolher.
+  def recusar_pagina_de_agendamento_sem_permissao(config)
+    chave = ::Autonomia::Agents::Tools::Native::Agenda::CONFIG_KEY
+    return false unless config.respond_to?(:key?) && config.key?(chave)
+
+    salva = @agent ? @agent.config.to_h[chave] : nil
+    return false if config[chave].to_s == salva.to_s
+    return false if Current.account_user&.permission_granted?('agendamento_view')
+
+    render_unprocessable(I18n.t('autonomia.agents.booking_page_forbidden'))
+    true
   end
 
   def manual_mode?
