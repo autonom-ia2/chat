@@ -48,7 +48,10 @@ module Autonomia::Agents::Tools::Registry
     Autonomia::Agents::Tools::Native::GuiaLembrar,
     Autonomia::Agents::Tools::Native::GuiaEsquecer,
     # #936 — o Guia planeja um trabalho grande: receita, amostra e o botão Começar para a pessoa.
-    Autonomia::Agents::Tools::Native::GuiaTarefa
+    Autonomia::Agents::Tools::Native::GuiaTarefa,
+    # #1196 — a agenda da IA: ligadas ao escolher a página de agendamento do agente (`config['booking_page_id']`).
+    Autonomia::Agents::Tools::Native::HorariosDisponiveis,
+    Autonomia::Agents::Tools::Native::AgendarReuniao
   ].freeze
 
   module_function

@@ -46,8 +46,10 @@ class Crm::BookingV2::Booker
   # Interface pedida pelo plano (#1188): um argumento nomeado por dado do formulário.
   # `contact`/`card` (convite, #1189): a reserva usa o contato do convite em vez de procurar pelo telefone e, se o
   # card do convite é desse contato e está aberto, a reunião entra nele em vez de criar outro (J1-A3).
+  # `idempotency_key` (#1196): a chave da tentativa. A F1-B (#1189) passa a usá-la para devolver a reunião existente;
+  # aqui ela só é aceita, e a junção das branches fica com a versão da F1-B.
   def initialize(profile:, name:, phone:, starts_at:, source:, email: nil, duration: nil, location_type: nil, # rubocop:disable Metrics/ParameterLists
-                 consent: {}, conversation: nil, link: nil, contact: nil, card: nil)
+                 consent: {}, conversation: nil, link: nil, contact: nil, card: nil, idempotency_key: nil) # rubocop:disable Lint/UnusedMethodArgument
     @profile = profile
     @account = profile.account
     @input = Crm::BookingV2::BookingInput.new(profile: profile, name: name, phone: phone, starts_at: starts_at, email: email,

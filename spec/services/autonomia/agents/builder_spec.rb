@@ -458,4 +458,40 @@ RSpec.describe Autonomia::Agents::Builder do
       expect(thread.reload.agent.agent_type).to eq('custom')
     end
   end
+
+  # #1196 — agente com a agenda (página de agendamento escolhida): o Construtor não pode redigir nem manter a regra
+  # antiga do `scheduler` ("nunca consulte a agenda"). Sem agenda, nada muda.
+  describe 'agenda da IA' do
+    let(:world) { build_booking_world(account: account) }
+    let(:agent) do
+      Autonomia::Agents::Agent.create!(account: account, name: 'Agenda', agent_type: 'scheduler', status: :draft,
+                                       config: { 'booking_page_id' => world.profile.id })
+    end
+    let(:thread) { Autonomia::Agents::BuildThread.create!(account: account, agent: agent) }
+
+    around do |example|
+      with_modified_env('CRM_KANBAN_ENABLED' => 'true', 'CRM_CALENDAR_MEETINGS_ENABLED' => 'true') { example.run }
+    end
+
+    before { account.enable_features!('crm_booking_v2') }
+
+    it 'usa o esqueleto do scheduler com agenda e avisa que a instrução não pode proibir a agenda' do
+      expect(builder.send(:skeleton_context)).to include(described_class::SCHEDULER_WITH_BOOKING_SKELETON)
+      expect(builder.send(:skeleton_context)).not_to include('NUNCA consulte a agenda')
+      expect(builder.send(:booking_context)).to include('AGENDA LIGADA', 'horarios_disponiveis')
+    end
+
+    it 'no ajuste de um agente que já tem instrução, mantém o aviso da agenda' do
+      agent.update!(instruction: 'Você NUNCA consulta a agenda.')
+
+      expect(builder.send(:context_blocks).join("\n")).to include('AGENDA LIGADA')
+    end
+
+    it 'sem a flag da conta, volta ao esqueleto de sempre e sem aviso' do
+      account.disable_features!('crm_booking_v2')
+
+      expect(builder.send(:skeleton_context)).to include(described_class::SKELETON_INSTRUCTIONS['scheduler'])
+      expect(builder.send(:booking_context)).to eq('')
+    end
+  end
 end

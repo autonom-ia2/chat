@@ -253,6 +253,19 @@
     },
     "VIEW": {
       "READ_ONLY": "You can see this page, but you can't change it."
+    },
+    "AI_AGENT": {
+      "TITLE": "Book meetings",
+      "DESCRIPTION": "The agent offers real times from a booking page and books the meeting in the conversation.",
+      "PAGE_LABEL": "Booking page",
+      "OFF": "Don't book",
+      "PAUSED_PAGE": "{title} (paused)",
+      "PAUSED_HINT": "This page is paused. While it stays paused, the agent tells the client and hands the conversation to a person.",
+      "HINT": "The meeting goes to the page owner, or to the person assigned to the conversation when the page has one link per person.",
+      "EMPTY": "Create a booking page in Settings > Scheduling to let the agent book meetings.",
+      "SAVE": "Save",
+      "BOOKED_BY_AI": "Booked by the AI",
+      "BOOKED_BY_AI_DETAIL": "Booked by the AI: {title}"
     }
   }
 }

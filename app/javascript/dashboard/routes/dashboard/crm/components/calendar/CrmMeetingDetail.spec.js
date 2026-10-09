@@ -161,4 +161,31 @@ describe('CrmMeetingDetail: local da reunião', () => {
     );
     wrapper.unmount();
   });
+
+  // #1196 (J6-A4): a reunião marcada pela IA é identificável.
+  it('marca a reunião criada pela IA, e só ela', async () => {
+    const byAi = await mountDetail(
+      meeting({
+        provider: 'internal',
+        online_meeting_type: 'whatsapp_video',
+        source: 'ai',
+      })
+    );
+    expect(byAi.find('[data-test="meeting-booked-by-ai"]').text()).toContain(
+      'BOOKING.AI_AGENT.BOOKED_BY_AI'
+    );
+    byAi.unmount();
+
+    const byLink = await mountDetail(
+      meeting({
+        provider: 'internal',
+        online_meeting_type: 'whatsapp_video',
+        source: 'public_link',
+      })
+    );
+    expect(byLink.find('[data-test="meeting-booked-by-ai"]').exists()).toBe(
+      false
+    );
+    byLink.unmount();
+  });
 });

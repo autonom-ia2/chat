@@ -125,7 +125,7 @@ class Crm::Meetings::InternalCreator
       payload: {
         meeting_id: meeting.id, title: meeting.title, starts_at: meeting.starts_at.iso8601,
         online_meeting_url: meeting.online_meeting_url, provider: meeting.provider,
-        location_type: meeting.online_meeting_type, guests_count: meeting.meeting_guests.size
+        location_type: meeting.online_meeting_type, guests_count: meeting.meeting_guests.size, source: meeting.source
       }
     ).perform
   end

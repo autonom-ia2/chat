@@ -511,6 +511,14 @@ onBeforeUnmount(() => {
             <span class="i-lucide-circle-dot size-3.5" />
             {{ statusLabel }}
           </p>
+          <p
+            v-if="meeting.source === 'ai'"
+            class="mb-0 flex items-center gap-2 text-xs text-n-slate-11"
+            data-test="meeting-booked-by-ai"
+          >
+            <span class="i-lucide-sparkles size-3.5" />
+            {{ t('BOOKING.AI_AGENT.BOOKED_BY_AI') }}
+          </p>
         </div>
 
         <button

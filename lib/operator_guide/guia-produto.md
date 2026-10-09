@@ -1,4 +1,4 @@
-# Guia da Plataforma Autonom.ia — base de conhecimento (202 fluxos)
+# Guia da Plataforma Autonom.ia — base de conhecimento (203 fluxos)
 
 > ARQUIVO GERADO por `pnpm guia:build`. Não edite à mão: a rota, o endereço e a
 > permissão saem do roteador do painel, e o texto humano fica em
@@ -897,6 +897,16 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - pre_requisitos: agente existente; para métricas, conversas/respostas já registradas.
 - passos: Use Testar para conversar e ver confiança, transferência para humano e fontes usadas; use Desempenho para período 7d/30d, respostas, transferências e taxa de conhecimento; use Ajustar para primeira mensagem, mensagem quando não souber responder, tom, quando transferir para um humano, limite de confiança e atuação; em modo guiado, use Ajustar com IA.
 - gotchas: testar agente não finalizado mostra aviso; histórico de teste fica em `sessionStorage` por agente; modo manual expõe instrução, mas não permite salvar instrução vazia; Performance pode ficar vazia até o agente operar de verdade.
+- nav_target: `autonomia_agent_panel`
+
+### Deixar o agente de IA marcar reuniões
+- intent: "Como faço a IA marcar reunião no WhatsApp?"; "A IA pode oferecer horários?"; "Como desligo o agendamento da IA?"; "Por que a IA passou para uma pessoa em vez de marcar?"
+- onde_fica: Sidebar > Agentes de IA > Meus agentes > abrir agente > Ajustar > Marcar reuniões
+- rota: `autonomia_agent_panel` - `/app/accounts/:accountId/agents/:agentId/:tab(test|knowledge|channels|performance|tune|publish)?`
+- gate: papel `administrator` ou `autonomia_view` ou `autonomia_manage`
+- pre_requisitos: agendamento novo ligado na conta; ao menos uma página em Configurações > Agendamento, publicada e com quem atenda; o agente conectado a uma caixa.
+- passos: Abra o agente; entre em Ajustar; em Marcar reuniões, escolha a página de agendamento; clique Salvar. Para desligar, escolha "Não marcar" e salve. Teste no WhatsApp: peça para marcar, a IA oferece 2 ou 3 horários reais e marca depois que o cliente confirma.
+- gotchas: a IA só oferece os horários que a página mostraria ao cliente naquele momento; a reunião entra no card da conversa com a marca "Agendada pela IA"; página pausada, sem horário livre ou sem ninguém para atender faz a IA avisar o cliente e passar a conversa para uma pessoa (pela Atribuição do CRM); se o contato não tem telefone, a IA pede o número; em página com um link por pessoa, a reunião fica com quem está atribuído à conversa; a IA não remarca nem cancela, ela passa para uma pessoa. No Testar ela mostra horários, mas não marca.
 - nav_target: `autonomia_agent_panel`
 
 ### Usar Copiloto Autonom.ia na conversa

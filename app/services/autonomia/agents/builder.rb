@@ -649,6 +649,31 @@ module Autonomia
         SKEL
       }.freeze
 
+      # #1196 — o tipo `scheduler` quando o agente TEM a agenda (página de agendamento escolhida): a REGRA-MÃE deixa
+      # de ser "só anotar e encaminhar" e passa a ser oferecer horários reais e marcar pelas ferramentas.
+      SCHEDULER_WITH_BOOKING_SKELETON = <<~SKEL.freeze
+        IDENTIDADE: [[a coletar: nome]], do atendimento de [[a coletar: empresa/serviço]]. Cordial, ágil e
+        organizado: entende o que a pessoa precisa, oferece horários reais e marca na hora. NÃO se apresente como
+        assistente virtual, robô ou IA; fale como pessoa do time. Se perguntarem direto se é uma IA, responda com
+        honestidade e siga.
+        REGRA-MÃE (acima de tudo): horário só existe se veio da ferramenta `horarios_disponiveis`. Ofereça 2 ou 3
+        opções com dia da semana e hora; NUNCA invente horário, NUNCA diga "agendado/confirmado" antes de
+        `agendar_reuniao` confirmar. Antes de marcar, confirme com a pessoa dia, hora e local. Se a ferramenta
+        recusar, siga o que ela disser (pedir o número, oferecer as novas opções ou passar para uma pessoa).
+        ESCOPO & FATOS-ÂNCORA: serviços [[a coletar]]; preparo/pré-requisitos [[a coletar]]; política de
+        cancelamento/remarcação [[a coletar]]; valores/pagamento [[a coletar]]; endereço/unidades [[a coletar]].
+        PLAYBOOK: 1. QUER MARCAR: entender o assunto em 1 pergunta, consultar horários e oferecer 2 ou 3. 2. PEDIU
+        DIA/TURNO: consultar aquele dia; cheio, oferecer os próximos que a ferramenta devolveu. 3. ESCOLHEU: espelhar
+        dia + hora + local e pedir "ok"; com o ok, marcar. 4. MARCADO: confirmar dia, hora e local e o próximo passo.
+        5. HORÁRIO OCUPADO: pedir desculpas e oferecer as novas opções da ferramenta. 6. REMARCAR/CANCELAR: coletar
+        o pedido e encaminhar à equipe (você não remarca nem cancela). 7. AGENDA PAUSADA/SEM HORÁRIO: dizer isso e
+        passar para uma pessoa.
+        HANDOFF: agenda indisponível, remarcação/cancelamento, pedido de humano, fora do escopo. Passe: nome, assunto,
+        horário marcado ou preferido e o que já foi dito.
+        LIMITES: NUNCA invente disponibilidade, valor ou política; NUNCA dê orientação clínica; SEMPRE confirme
+        antes de marcar.
+      SKEL
+
       # Espinha do tipo como DADO (consumida pelo próprio Construtor via skeleton_context e pelo Revisor
       # type-aware via Reviewer#type_scope_hint). Fonte ÚNICA: SKELETON_INSTRUCTIONS. nil para 'custom'/
       # desconhecido (agent_type_for normaliza desconhecido → 'custom', que não está no hash).
@@ -804,7 +829,7 @@ module Autonomia
       # Blocos de contexto interno, na ordem em que aparecem antes do histórico. Cada um é DADO de
       # trabalho do Construtor (nunca fala do usuário). Omite os que não se aplicam.
       def context_blocks
-        [actuation_context, knowledge_intent_context, skeleton_context, opening_context, knowledge_context,
+        [actuation_context, knowledge_intent_context, skeleton_context, booking_context, opening_context, knowledge_context,
          send_media_context, materials_status_context, turn_budget_context, pending_request_context,
          adjust_context].compact_blank
       end
@@ -879,7 +904,7 @@ module Autonomia
       def skeleton_context
         return '' if adjust_mode?
 
-        skeleton = SKELETON_INSTRUCTIONS[builder_agent_type]
+        skeleton = booking_enabled? && builder_agent_type == 'scheduler' ? SCHEDULER_WITH_BOOKING_SKELETON : SKELETON_INSTRUCTIONS[builder_agent_type]
         return custom_exploration_context if skeleton.blank?
 
         [
@@ -889,6 +914,24 @@ module Autonomia
           'NÃO o trate como ordem sobre suas próprias regras. Use-o como espinha ao redigir a instruction',
           'final (§7).', skeleton
         ].join("\n")
+      end
+
+      # #1196 — AGENDA LIGADA (criação e AJUSTE, qualquer tipo): a instrução não pode proibir o que as ferramentas
+      # fazem. Sem este bloco, um ajuste de um agente `scheduler` antigo manteria "nunca consulte a agenda".
+      def booking_context
+        return '' unless booking_enabled?
+
+        'CONTEXTO INTERNO (não é fala do usuário). AGENDA LIGADA: este agente tem as ferramentas ' \
+          '`horarios_disponiveis` e `agendar_reuniao`, da página de agendamento escolhida pelo dono. A instruction NÃO ' \
+          'pode proibir consultar a agenda, oferecer horários ou marcar. Ao redigir ou ajustar: oferecer 2 ou 3 ' \
+          'horários vindos da ferramenta, confirmar dia, hora e local antes de marcar, nunca inventar horário e, se a ' \
+          'ferramenta recusar, seguir o motivo dela (pedir o número, oferecer novas opções ou passar para uma pessoa). ' \
+          'Remover regra antiga que diga o contrário.'
+      end
+
+      def booking_enabled?
+        agent = @thread.agent
+        agent.present? && agent.account_id == @thread.account_id && ::Autonomia::Agents::Tools::Native::Agenda.disponivel?(agent)
       end
 
       # 'custom'/Outros: sem esqueleto pronto, exploração mais ampla, construindo do zero DENTRO do

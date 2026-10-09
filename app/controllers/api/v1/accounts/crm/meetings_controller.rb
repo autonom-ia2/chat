@@ -270,6 +270,8 @@ class Api::V1::Accounts::Crm::MeetingsController < Api::V1::Accounts::Crm::BaseC
       online_meeting_url: meeting.online_meeting_url,
       location_type: meeting.online_meeting_type,
       location: serialize_location(meeting),
+      # Quem marcou pela página (#1188): `public_link`, `invite`, `ai` (a IA, #1196, J6-A4) ou nulo (manual).
+      source: meeting.source,
       reminder_id: meeting.reminder_id,
       summary: meeting.metadata.to_h['ai_summary'].presence,
       summary_at: meeting.metadata.to_h['ai_summary_at'].presence,
