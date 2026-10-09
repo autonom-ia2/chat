@@ -13,6 +13,7 @@ import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import { useAlert } from 'dashboard/composables';
 import crmMeetingsAPI from 'dashboard/api/crmMeetings';
+import { resolveMeetingLocation } from '../../helpers/meetingLocation';
 
 const props = defineProps({
   show: { type: Boolean, default: false },
@@ -62,7 +63,18 @@ const accountId = computed(() => {
 
 const meeting = computed(() => detail.value || props.event || {});
 
+// Reunião interna (página de agendamento) não tem Meet nem Teams: mostra o
+// local pelo rótulo próprio. Google e Microsoft seguem como antes.
+const location = computed(() => resolveMeetingLocation(meeting.value));
+
 const providerMeta = computed(() => {
+  if (location.value.isInternal) {
+    return {
+      providerIcon: location.value.icon,
+      joinIcon: 'i-lucide-link',
+      joinClass: 'bg-n-brand text-white hover:bg-n-brand/90',
+    };
+  }
   const onlineType = meeting.value.online_meeting_type;
   const provider = meeting.value.provider;
   const isTeams = provider === 'microsoft' || onlineType === 'teams';
@@ -239,7 +251,7 @@ watch([() => props.show, meetingId], ([isOpen]) => {
 });
 
 const openJoinLink = () => {
-  const url = meeting.value.online_meeting_url;
+  const url = location.value.joinUrl;
   if (url) window.open(url, '_blank', 'noopener,noreferrer');
 };
 
@@ -480,6 +492,17 @@ onBeforeUnmount(() => {
               {{ durationLabel }}
             </span>
           </p>
+          <p
+            v-if="location.isInternal"
+            class="mb-0 flex items-center gap-2 text-sm text-n-slate-12"
+            data-test="meeting-location"
+          >
+            <span class="size-4 text-n-slate-10" :class="location.icon" />
+            <span class="text-xs text-n-slate-11">
+              {{ t('CRM_KANBAN.CALENDAR.MEETING_DETAIL.LOCATION_LABEL') }}
+            </span>
+            {{ t(location.labelKey) }}
+          </p>
           <p class="mb-0 flex items-center gap-2 text-xs text-n-slate-11">
             <span class="i-lucide-globe-2 size-3.5" />
             {{ t('CRM_KANBAN.CALENDAR.TIMEZONE', { tz: userTimezone }) }}
@@ -491,7 +514,7 @@ onBeforeUnmount(() => {
         </div>
 
         <button
-          v-if="meeting.online_meeting_url"
+          v-if="location.joinUrl"
           type="button"
           class="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg px-4 text-sm font-medium transition-colors"
           :class="providerMeta.joinClass"

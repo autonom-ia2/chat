@@ -919,6 +919,13 @@
         "AI_UNAVAILABLE": "A IA está indisponível no momento.",
         "CANCEL": "Cancelar"
       },
+      "MEETING_LOCATION": {
+        "WHATSAPP_VIDEO": "Vídeo no WhatsApp",
+        "WHATSAPP_VOICE": "Ligação no WhatsApp",
+        "CUSTOM_LINK": "Link do agente",
+        "IN_PERSON": "Presencial",
+        "NO_ONLINE": "Sem videochamada"
+      },
       "MEETING_DETAIL": {
         "TITLE": "Detalhes da reunião",
         "STATUS_LABEL": "Status",

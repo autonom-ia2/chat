@@ -11,6 +11,7 @@ import {
   eventStart,
   isOverdue,
 } from './calendarEvents.js';
+import { resolveMeetingLocation } from '../../helpers/meetingLocation';
 
 const props = defineProps({
   event: { type: Object, required: true },
@@ -61,7 +62,9 @@ const isDone = computed(
 
 const hasConversation = computed(() => Boolean(props.event.conversation_id));
 const hasCard = computed(() => Boolean(props.event.card_id));
-const hasJoinLink = computed(() => Boolean(props.event.online_meeting_url));
+// Reunião interna mostra o local pelo rótulo próprio e só abre link http/https.
+const location = computed(() => resolveMeetingLocation(props.event));
+const hasJoinLink = computed(() => Boolean(location.value.joinUrl));
 
 const snoozePresets = [
   { key: '1h', label: 'SNOOZE_1H' },
@@ -75,12 +78,8 @@ const onOpenDeal = () => {
 };
 
 const onJoinMeeting = () => {
-  if (props.event.online_meeting_url) {
-    window.open(
-      props.event.online_meeting_url,
-      '_blank',
-      'noopener,noreferrer'
-    );
+  if (location.value.joinUrl) {
+    window.open(location.value.joinUrl, '_blank', 'noopener,noreferrer');
   }
 };
 </script>
@@ -113,6 +112,14 @@ const onJoinMeeting = () => {
       >
         <span class="i-lucide-clock size-3.5" />
         {{ startsAtLabel }}
+      </p>
+      <p
+        v-if="group === 'meeting' && location.isInternal"
+        class="mb-0 flex items-center gap-1.5 text-n-slate-11"
+        data-test="meeting-location"
+      >
+        <span class="size-3.5" :class="location.icon" />
+        {{ t(location.labelKey) }}
       </p>
       <p
         v-if="group === 'whatsapp' && timezone"
