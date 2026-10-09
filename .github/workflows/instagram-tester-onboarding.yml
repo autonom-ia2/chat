@@ -375,6 +375,10 @@ jobs:
     name: VPS Linux Chrome and private VNC
     runs-on: ubuntu-24.04
     timeout-minutes: 12
+    # Stress steps pipe into tee; without pipefail tee's exit code hides a failed contract.
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -408,6 +412,7 @@ jobs:
           node tests/qa/instagram-automation/ui-failures.mjs | tee tmp/instagram-stress/ui.jsonl
       - name: Verify truthful invite outcomes and budgets without Meta
         if: ${{ !cancelled() }}
+        timeout-minutes: 5
         env:
           PLAYWRIGHT_MODULE_PATH: ${{ github.workspace }}/scripts/instagram_testers/runtime/vps/node_modules/playwright/index.mjs
           PLAYWRIGHT_EXECUTABLE_PATH: /usr/bin/google-chrome
