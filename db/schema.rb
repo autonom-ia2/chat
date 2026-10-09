@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_10_11_134207) do
+ActiveRecord::Schema[7.2].define(version: 2026_10_13_100100) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1864,6 +1864,17 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_11_134207) do
     t.index ["conversation_id"], name: "index_crm_activities_on_conversation_id"
   end
 
+  create_table "crm_agent_availabilities", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "user_id", null: false
+    t.jsonb "working_hours", default: {}, null: false
+    t.boolean "paused", default: false, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "user_id"], name: "index_crm_agent_availabilities_on_account_id_and_user_id", unique: true
+    t.index ["user_id"], name: "index_crm_agent_availabilities_on_user_id"
+  end
+
   create_table "crm_agent_booking_links", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "booking_profile_id", null: false
@@ -1910,6 +1921,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_11_134207) do
     t.jsonb "brand", default: {}, null: false
     t.text "invite_text"
     t.integer "invite_ttl_days", default: 7, null: false
+    t.boolean "close_holidays", default: true, null: false
     t.index ["account_id"], name: "index_crm_agent_booking_profiles_on_account_id"
     t.index ["inbox_id"], name: "index_crm_agent_booking_profiles_on_inbox_id"
     t.index ["slug"], name: "index_crm_agent_booking_profiles_on_slug", unique: true
@@ -3836,6 +3848,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_11_134207) do
   add_foreign_key "crm_activities", "accounts"
   add_foreign_key "crm_activities", "conversations", on_delete: :cascade
   add_foreign_key "crm_activities", "crm_cards", column: "card_id", on_delete: :cascade
+  add_foreign_key "crm_agent_availabilities", "accounts", on_delete: :cascade
+  add_foreign_key "crm_agent_availabilities", "users", on_delete: :cascade
   add_foreign_key "crm_agent_booking_links", "accounts"
   add_foreign_key "crm_agent_booking_links", "crm_agent_booking_profiles", column: "booking_profile_id"
   add_foreign_key "crm_agent_booking_links", "inboxes", on_delete: :nullify

@@ -39,10 +39,21 @@ describe('bookingPageForm', () => {
       working_hours: { start_hour: 8, end_hour: 12, weekdays: [1, 3] },
       min_notice_minutes: 60,
       buffer_minutes: 5,
+      close_holidays: true,
       brand: { color: '#B3263E', headline: 'Oi' },
       default_pipeline_id: 2,
       default_stage_id: 20,
     });
+  });
+
+  it('feriados fechados vêm ligados e só desligam quando a página diz false', () => {
+    expect(pageToForm(page).closeHolidays).toBe(true);
+    expect(pageToForm({ ...page, close_holidays: true }).closeHolidays).toBe(
+      true
+    );
+    const off = pageToForm({ ...page, close_holidays: false });
+    expect(off.closeHolidays).toBe(false);
+    expect(formToPayload(off).close_holidays).toBe(false);
   });
 
   it('caixa de agenda só vai junto com Meet ou Teams', () => {

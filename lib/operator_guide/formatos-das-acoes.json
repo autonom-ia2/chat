@@ -506,7 +506,7 @@
     "controller": "api/v1/accounts/crm/booking_pages#destroy",
     "origem": [
       "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:63",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:108"
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:127"
     ],
     "sem_corpo": true
   },
@@ -4674,6 +4674,7 @@
         "tipo": "objeto"
       },
       "buffer_minutes": {},
+      "close_holidays": {},
       "contact_phone": {},
       "default_pipeline_id": {},
       "default_stage_id": {},
@@ -4714,9 +4715,9 @@
     "modelo": "Channel::Email",
     "origem": [
       "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:43",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:202",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:185",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:108"
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:221",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:204",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:127"
     ],
     "sem_corpo": false
   },
@@ -13339,8 +13340,8 @@
     ],
     "origem": [
       "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:77",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:163",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:108"
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:182",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:127"
     ],
     "sem_corpo": false
   },
@@ -13350,7 +13351,7 @@
     "modelo": "Channel::Email",
     "origem": [
       "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:58",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:108"
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:127"
     ],
     "sem_corpo": true
   },
@@ -13366,8 +13367,8 @@
     ],
     "origem": [
       "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:81",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:163",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:108"
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:182",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:127"
     ],
     "sem_corpo": false
   },
@@ -13376,7 +13377,7 @@
     "controller": "api/v1/accounts/crm/booking_pages#preview_token",
     "origem": [
       "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:71",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:108"
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:127"
     ],
     "sem_corpo": true
   },
@@ -13386,9 +13387,34 @@
     "modelo": "Channel::Email",
     "origem": [
       "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:50",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:108"
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:127"
     ],
     "sem_corpo": true
+  },
+  "POST crm/booking_pages/reassign": {
+    "campos": {
+      "from_user_id": {
+        "tipo": "id",
+        "tipo_pela_leitura": "nome"
+      },
+      "page_id": {
+        "tipo": "id",
+        "tipo_pela_leitura": "nome"
+      },
+      "to_user_id": {
+        "tipo": "id",
+        "tipo_pela_leitura": "nome"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/crm/booking_pages#reassign",
+    "modelo": "Crm::AgentBookingProfile",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:104",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:114",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:113"
+    ],
+    "sem_corpo": false
   },
   "POST crm/booking_profiles": {
     "campos": {
@@ -21688,6 +21714,7 @@
         "tipo": "objeto"
       },
       "buffer_minutes": {},
+      "close_holidays": {},
       "contact_phone": {},
       "default_pipeline_id": {},
       "default_stage_id": {},
@@ -21728,9 +21755,9 @@
     "modelo": "Channel::Email",
     "origem": [
       "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:43",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:202",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:185",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:108"
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:221",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:204",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:127"
     ],
     "sem_corpo": false
   },
@@ -21747,7 +21774,7 @@
     "origem": [
       "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:90",
       "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:91",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:108"
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:127"
     ],
     "sem_corpo": false
   },
@@ -22007,6 +22034,29 @@
     "origem": [
       "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:45",
       "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:254"
+    ],
+    "sem_corpo": false
+  },
+  "PUT crm/my_booking_hours": {
+    "campos": {
+      "paused": {},
+      "use_page_hours": {},
+      "working_hours": {
+        "campos": {
+          "end_hour": {},
+          "start_hour": {},
+          "weekdays": {
+            "tipo": "lista"
+          }
+        },
+        "tipo": "objeto"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/crm/my_booking_hours#update",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/my_booking_hours_controller.rb:19",
+      "app/controllers/api/v1/accounts/crm/my_booking_hours_controller.rb:42"
     ],
     "sem_corpo": false
   },

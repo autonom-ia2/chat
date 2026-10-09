@@ -35,6 +35,8 @@ export const pageToForm = page => {
     endHour: Number(hours.end_hour ?? 17),
     minNoticeMinutes: page.min_notice_minutes ?? 0,
     bufferMinutes: page.buffer_minutes ?? 0,
+    // Feriados nacionais fechados vêm ligados (#1195, J3-A13).
+    closeHolidays: page.close_holidays !== false,
     color: page.brand?.color || BRAND_COLORS[0].hex,
     headline: page.brand?.headline || '',
     pipelineId: page.default_pipeline_id ?? null,
@@ -73,6 +75,7 @@ export const formToPayload = form => ({
   },
   min_notice_minutes: form.minNoticeMinutes,
   buffer_minutes: form.bufferMinutes,
+  close_holidays: form.closeHolidays,
   brand: { color: form.color, headline: form.headline.trim() },
   default_pipeline_id: form.pipelineId,
   default_stage_id: form.stageId,

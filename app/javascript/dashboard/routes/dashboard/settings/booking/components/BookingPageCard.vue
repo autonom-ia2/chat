@@ -2,10 +2,12 @@
 import { computed, nextTick, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import BookingLinkActions from './BookingLinkActions.vue';
+import BookingReassignPanel from './BookingReassignPanel.vue';
 
 // Um cartão por página: nome, situação (No ar, Pausada ou Rascunho), aviso de
 // atenção, o link (só no ar) e, para quem pode mudar, Editar, Pausar/Publicar e
-// Excluir (com confirmação).
+// Excluir (com confirmação). "Passar reuniões" (#1195) abre o painel de passar as
+// reuniões de uma pessoa para outra.
 const props = defineProps({
   page: { type: Object, required: true },
   canManage: { type: Boolean, default: false },
@@ -14,7 +16,14 @@ const props = defineProps({
   notice: { type: String, default: '' },
 });
 
-const emit = defineEmits(['edit', 'view', 'publish', 'pause', 'delete']);
+const emit = defineEmits([
+  'edit',
+  'view',
+  'publish',
+  'pause',
+  'delete',
+  'reassigned',
+]);
 
 const { t } = useI18n();
 const confirming = ref(false);
@@ -39,6 +48,14 @@ const title = computed(() => props.page.title || t('BOOKING.CARD.UNTITLED'));
 
 const SECONDARY =
   'inline-flex items-center gap-2 min-h-11 px-4 rounded-xl text-base font-medium ring-1 ring-inset focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand disabled:opacity-60 disabled:cursor-not-allowed';
+
+const reassignOpen = ref(false);
+const reassignChanged = ref(false);
+const closeReassign = () => {
+  reassignOpen.value = false;
+  if (reassignChanged.value) emit('reassigned', props.page);
+  reassignChanged.value = false;
+};
 
 const confirmBox = ref(null);
 const askDelete = async () => {
@@ -149,6 +166,18 @@ const confirmDelete = () => {
           {{ t('BOOKING.CARD.PUBLISH') }}
         </button>
         <button
+          v-if="!reassignOpen"
+          type="button"
+          data-reassign
+          :disabled="busy"
+          :class="SECONDARY"
+          class="text-n-slate-12 bg-n-solid-1 ring-n-weak hover:ring-n-blue-7"
+          @click="reassignOpen = true"
+        >
+          <span class="i-lucide-users size-4" aria-hidden="true" />
+          {{ t('BOOKING.REASSIGN.OPEN') }}
+        </button>
+        <button
           v-if="!confirming"
           type="button"
           data-delete
@@ -173,6 +202,13 @@ const confirmDelete = () => {
         {{ t('BOOKING.CARD.VIEW') }}
       </button>
     </footer>
+
+    <BookingReassignPanel
+      v-if="canManage && reassignOpen"
+      :page="page"
+      @done="reassignChanged = true"
+      @close="closeReassign"
+    />
 
     <div
       v-if="canManage && confirming"

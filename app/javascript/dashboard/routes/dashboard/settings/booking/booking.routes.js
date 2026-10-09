@@ -1,15 +1,32 @@
 import { frontendURL } from '../../../../helper/URLHelper';
-import { SCHEDULING_PERMISSIONS } from 'dashboard/constants/permissions.js';
+import {
+  CRM_ADMIN_PERMISSION,
+  CRM_VIEW_PERMISSION,
+  SCHEDULING_PERMISSIONS,
+} from 'dashboard/constants/permissions.js';
 import store from 'dashboard/store';
 import { isBookingV2Available } from './bookingAccess';
 
 const SettingsWrapper = () => import('../SettingsWrapper.vue');
 const BookingSettingsPage = () => import('./BookingSettingsPage.vue');
+const MyBookingHoursPage = () => import('./MyBookingHoursPage.vue');
 
 // Configurações › Agendamento (#1187, F1-D). Ver pede agendamento_view; mudar,
 // agendamento_manage (a tela esconde os botões de escrita). O backend aplica o
 // mesmo corte (Crm::BookingPagePolicy).
 const meta = { permissions: ['administrator', ...SCHEDULING_PERMISSIONS] };
+
+// Meus horários (#1195, J8-A11): quem pode atender reuniões, o mesmo corte do
+// CRM (Crm::BookingV2::HostEligibility): administrador, agente sem função e
+// função com crm_view ou crm_admin. As chaves de Agendamento não entram.
+export const myHoursMeta = {
+  permissions: [
+    'administrator',
+    'agent',
+    CRM_VIEW_PERMISSION,
+    CRM_ADMIN_PERMISSION,
+  ],
+};
 
 // Link direto / F5: o guarda roda antes de a store ter a conta. Carrega a conta
 // antes de decidir (mesmo cuidado de autonomia.routes.js); sem conta, ou com a
@@ -54,6 +71,13 @@ export default {
           meta,
         },
       ],
+    },
+    {
+      path: frontendURL('accounts/:accountId/crm/my-booking-hours'),
+      name: 'crm_my_booking_hours',
+      meta: myHoursMeta,
+      beforeEnter: ensureBookingEnabled,
+      component: MyBookingHoursPage,
     },
   ],
 };

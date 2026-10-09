@@ -56,6 +56,20 @@ RSpec.describe Crm::BookingV2::OrphanReassigner do
     )
   end
 
+  it 'apaga os Meus horários de quem saiu e passa junto o lembrete pendente (#1195)' do
+    Crm::AgentAvailability.create!(account: account, user: seller, paused: true)
+    meeting = page_meeting(seller, 2.days.from_now)
+    reminder = Crm::FollowUp.create!(account: account, card: world.card, contact: world.contact, assignee: seller, created_by: seller,
+                                     title: 'Lembrete', due_at: meeting.starts_at - 15.minutes, follow_up_type: :meeting, status: :pending)
+    meeting.update!(reminder: reminder)
+
+    remove_from_account(seller)
+
+    expect(Crm::AgentAvailability.where(account: account, user_id: seller.id)).to be_empty
+    expect(meeting.reload.created_by_id).to eq(world.host.id)
+    expect(reminder.reload.assignee_id).to eq(world.host.id)
+  end
+
   it 'falls back to the first administrator when the page host is the one leaving' do
     meeting = page_meeting(world.host, 1.day.from_now)
 

@@ -11,7 +11,7 @@ class Api::V1::Accounts::Crm::BookingPagesController < Api::V1::Accounts::Crm::B
 
   before_action :ensure_booking_v2_enabled
   before_action -> { check_module_permission!('agendamento') }
-  before_action :fetch_page, except: [:index, :create]
+  before_action :fetch_page, except: [:index, :create, :reassign, :reassign_preview]
   before_action :authorize_page
 
   rescue_from ActiveRecord::RecordInvalid do |error|
@@ -94,7 +94,26 @@ class Api::V1::Accounts::Crm::BookingPagesController < Api::V1::Accounts::Crm::B
     render_unprocessable('crm.booking_v2.people_invalid')
   end
 
+  # Passar reuniões (#1195, J8-A10). A prévia mostra o mesmo resultado sem gravar ("mostrar antes de fazer").
+  def reassign_preview
+    render json: { payload: reassigner.preview }
+  rescue ::Crm::BookingV2::Reassigner::InvalidPeople
+    render_unprocessable('crm.booking_v2.people_invalid')
+  end
+
+  def reassign
+    render json: { payload: reassigner.perform }
+  rescue ::Crm::BookingV2::Reassigner::InvalidPeople
+    render_unprocessable('crm.booking_v2.people_invalid')
+  end
+
   private
+
+  def reassigner
+    page = params[:page_id].present? ? pages_scope.find(params[:page_id]) : nil
+    ::Crm::BookingV2::Reassigner.new(account: Current.account, from_user_id: params[:from_user_id], to_user_id: params[:to_user_id],
+                                     page: page, actor: Current.user)
+  end
 
   def ensure_booking_v2_enabled
     render json: { error: 'crm.booking_v2.disabled' }, status: :not_found unless ::Crm::Config.booking_v2_enabled?(Current.account)
@@ -201,7 +220,7 @@ class Api::V1::Accounts::Crm::BookingPagesController < Api::V1::Accounts::Crm::B
   def page_params
     parameter_set(:booking_page).permit(
       :title, :description, :duration_minutes, :buffer_minutes, :booking_window_days, :min_notice_minutes,
-      :timezone, :contact_phone, :default_pipeline_id, :default_stage_id, :invite_text, :invite_ttl_days,
+      :timezone, :contact_phone, :default_pipeline_id, :default_stage_id, :invite_text, :invite_ttl_days, :close_holidays,
       slot_durations: [], working_hours: [:start_hour, :end_hour, { weekdays: [] }],
       locations: [:type, :url, :address, :label], brand: [:color, :headline]
     ).to_h

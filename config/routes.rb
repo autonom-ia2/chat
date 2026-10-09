@@ -385,6 +385,11 @@ Rails.application.routes.draw do
             end
             # Agendamento WhatsApp-first (#1187): páginas novas (page_version 2), flag crm_booking_v2 + módulo agendamento.
             resources :booking_pages, only: [:index, :show, :create, :update, :destroy] do
+              # Passar reuniões de uma pessoa para outra (#1195): prévia sem gravar e a passagem.
+              collection do
+                get :reassign_preview
+                post :reassign
+              end
               member do
                 post :publish
                 post :pause
@@ -395,6 +400,9 @@ Rails.application.routes.draw do
                 put :people, action: :update_people
               end
             end
+            # Meus horários (#1195): a própria pessoa ajusta dias e horas de agendamento e pausa a agenda.
+            get :my_booking_hours, to: 'my_booking_hours#show'
+            put :my_booking_hours, to: 'my_booking_hours#update'
             # Link por cliente (#1190): botão Agendar da conversa e do card.
             resources :booking_invites, only: [:index, :create, :destroy] do
               member do

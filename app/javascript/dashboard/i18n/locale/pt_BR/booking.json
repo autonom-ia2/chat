@@ -170,7 +170,11 @@
       "BUFFER_NONE": "Sem intervalo",
       "BUFFER_VALUE": "{value} entre conversas",
       "EXTRA_LABEL": "Outras durações (opcional)",
-      "EXTRA_HINT": "O cliente escolhe quanto tempo quer."
+      "EXTRA_HINT": "O cliente escolhe quanto tempo quer.",
+      "HOLIDAYS_LABEL": "Feriados",
+      "HOLIDAYS_TOGGLE": "Fechar nos feriados nacionais",
+      "HOLIDAYS_ON_HINT": "Nos feriados nacionais ninguém consegue marcar.",
+      "HOLIDAYS_OFF_HINT": "Os feriados nacionais ficam abertos como um dia comum."
     },
     "WEEKDAYS": {
       "SUN": "Dom",
@@ -253,6 +257,51 @@
     },
     "VIEW": {
       "READ_ONLY": "Você pode ver esta página, mas não pode mudar."
+    },
+    "REASSIGN": {
+      "OPEN": "Passar reuniões",
+      "TITLE": "Passar reuniões para outra pessoa",
+      "HINT": "Conferimos se a pessoa nova está livre em cada horário antes de passar.",
+      "FROM": "De quem",
+      "TO": "Para quem",
+      "CHOOSE": "Escolha uma pessoa",
+      "ONLY_THIS_PAGE": "Só as desta página",
+      "PREVIEW": "Ver antes de passar",
+      "WILL_MOVE": "Nenhuma reunião para passar | 1 reunião vai passar para {name} | {count} reuniões vão passar para {name}",
+      "CONFLICTS": "{name} já tem compromisso nestes horários. Estas reuniões ficam como estão:",
+      "CONFIRM": "Passar para {name}",
+      "CANCEL": "Cancelar",
+      "CLOSE": "Fechar",
+      "DONE": "Nenhuma reunião passou | Pronto: 1 reunião passou para {name} | Pronto: {count} reuniões passaram para {name}",
+      "DONE_CONFLICTS": "1 reunião ficou como estava porque {name} já tinha compromisso. | {count} reuniões ficaram como estavam porque {name} já tinha compromisso.",
+      "PEOPLE_INVALID": "Essa pessoa não pode receber reuniões. Escolha outra.",
+      "ERROR": "Não deu certo. Tente de novo."
+    },
+    "MY_HOURS": {
+      "MENU": "Meus horários",
+      "TITLE": "Meus horários",
+      "SUBTITLE": "Escolha quando você aceita reuniões. Fica sempre dentro do horário das páginas.",
+      "LIMIT": "Limite das páginas: {days}, {from} às {to}",
+      "PAUSE_TITLE": "Sua agenda está aberta",
+      "PAUSE_HINT": "Clientes podem marcar com você nos horários abaixo.",
+      "PAUSED_TITLE": "Sua agenda está pausada",
+      "PAUSED_HINT": "Ninguém marca com você até você voltar.",
+      "PAUSE": "Pausar a minha agenda",
+      "RESUME": "Voltar a receber reuniões",
+      "PAUSED_OK": "Agenda pausada.",
+      "RESUMED_OK": "Agenda aberta de novo.",
+      "NO_PAGES": "Você ainda não atende em nenhuma página de agendamento. Quando o admin incluir você, seus horários aparecem aqui.",
+      "DENIED": "Você não atende reuniões nesta conta.",
+      "SAVE": "Salvar meus horários",
+      "USE_PAGE": "Usar o horário da página",
+      "SAVED": "Horários salvos.",
+      "ERRORS": {
+        "DAYS": "Escolha pelo menos um dia. Para parar de receber reuniões, use \"Pausar a minha agenda\".",
+        "HOURS": "O fim precisa ser depois do início.",
+        "OUTSIDE": "Esse horário passa do limite das páginas. Escolha dentro dele.",
+        "NO_PAGES": "Você ainda não atende em nenhuma página de agendamento.",
+        "GENERIC": "Não deu certo. Tente de novo."
+      }
     }
   }
 }

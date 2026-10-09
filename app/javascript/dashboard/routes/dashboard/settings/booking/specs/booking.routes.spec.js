@@ -1,7 +1,10 @@
 // Configurações › Agendamento (#1187, F1-D): permissões da rota, guarda da flag
 // (instalação + conta, com F5) e o item do menu.
 import bookingRoutes, { ensureBookingEnabled } from '../booking.routes';
-import { bookingSidebarItems } from '../bookingAccess';
+import {
+  bookingSidebarItems,
+  myBookingHoursSidebarItems,
+} from '../bookingAccess';
 
 const store = vi.hoisted(() => ({ getters: {}, dispatch: vi.fn() }));
 vi.mock('dashboard/store', () => ({ default: store }));
@@ -134,5 +137,47 @@ describe('item do menu Agendamento', () => {
     );
     window.globalConfig = { CRM_CALENDAR_MEETINGS_ENABLED: 'false' };
     expect(build({ isAdministrator: true })).toEqual([]);
+  });
+});
+
+describe('Meus horários (#1195): rota e item do menu', () => {
+  const myHours = bookingRoutes.routes.find(
+    route => route.name === 'crm_my_booking_hours'
+  );
+
+  beforeEach(() => {
+    window.globalConfig = { CRM_CALENDAR_MEETINGS_ENABLED: 'true' };
+  });
+
+  it('fica no CRM, com o guarda da flag, aberta a quem pode atender e só', () => {
+    expect(myHours.path).toBe('/app/accounts/:accountId/crm/my-booking-hours');
+    expect(myHours.beforeEnter).toBe(ensureBookingEnabled);
+    expect(myHours.meta.permissions).toEqual([
+      'administrator',
+      'agent',
+      'crm_view',
+      'crm_admin',
+    ]);
+    expect(myHours.meta.permissions).not.toContain('agendamento_view');
+    expect(myHours.meta.permissions).not.toContain('agendamento_manage');
+  });
+
+  it('o item aparece no CRM com a flag ligada e some com ela desligada', () => {
+    const build = account =>
+      myBookingHoursSidebarItems({
+        account,
+        t: key => key,
+        accountScopedRoute: name => ({ name }),
+      });
+    const [item] = build(withFlag(true));
+    expect(item).toEqual({
+      name: 'CRM My Booking Hours',
+      label: 'BOOKING.MY_HOURS.MENU',
+      to: { name: 'crm_my_booking_hours' },
+      activeOn: ['crm_my_booking_hours'],
+    });
+    expect(build(withFlag(false))).toEqual([]);
+    window.globalConfig = { CRM_CALENDAR_MEETINGS_ENABLED: 'false' };
+    expect(build(withFlag(true))).toEqual([]);
   });
 });

@@ -9,7 +9,7 @@
 #
 # Ligado ao `after_destroy_commit` de `AccountUser` em `config/initializers/crm_booking_account_user.rb`.
 class Crm::BookingV2::OrphanReassigner
-  EVENT_TYPE = 'meeting_host_reassigned'.freeze
+  EVENT_TYPE = Crm::BookingV2::MeetingHandover::EVENT_TYPE
 
   def initialize(account_id:, user_id:)
     @account = Account.find_by(id: account_id)
@@ -26,6 +26,7 @@ class Crm::BookingV2::OrphanReassigner
     ActiveRecord::Base.transaction do
       ActiveRecord::Base.connection.execute("SELECT pg_advisory_xact_lock(#{Crm::BookingV2::Booker::LOCK_NS_AGENT}, #{user_id.to_i})")
       disable_links
+      Crm::AgentAvailability.where(account_id: account.id, user_id: user_id).delete_all
       orphan_meetings.find_each { |meeting| reassign(meeting) }
     end
   end
@@ -56,9 +57,8 @@ class Crm::BookingV2::OrphanReassigner
     new_host ||= first_administrator
     return log_no_host(meeting) if new_host.blank?
 
-    meeting.update!(created_by: new_host)
+    Crm::BookingV2::MeetingHandover.new(meeting: meeting, from_user_id: user_id, to_user: new_host).perform
     log_reassignment(meeting, new_host, profile, fallback)
-    log(meeting, new_host, profile)
   rescue ActiveRecord::RecordInvalid => e
     # Uma reunião com dado antigo inválido não trava as outras; fica no log para o admin tratar.
     Rails.logger.warn("[booking_v2] meeting #{meeting.id} not reassigned: #{e.record.errors.full_messages.to_sentence}")
@@ -92,12 +92,5 @@ class Crm::BookingV2::OrphanReassigner
       "[booking_v2] meeting #{meeting.id} reassigned from user #{user_id} to user #{new_host.id} (#{target}) " \
       "account #{account.id} booking_profile #{profile&.id.inspect}"
     )
-  end
-
-  def log(meeting, new_host, profile)
-    Crm::ActivityLogger.new(
-      card: meeting.card, actor: nil, event_type: EVENT_TYPE,
-      payload: { meeting_id: meeting.id, from_user_id: user_id, to_user_id: new_host.id, booking_profile_id: profile&.id }
-    ).perform
   end
 end

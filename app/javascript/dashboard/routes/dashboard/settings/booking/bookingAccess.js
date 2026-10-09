@@ -36,3 +36,22 @@ export const bookingSidebarItems = ({
     },
   ];
 };
+
+// Meus horários (#1195, J8-A11): fica no grupo CRM, ao lado do Calendário,
+// para quem já vê o CRM (o grupo só nasce para essas pessoas). Não pede as
+// chaves de Agendamento: o agente comum ajusta a própria agenda.
+export const myBookingHoursSidebarItems = ({
+  account,
+  t,
+  accountScopedRoute,
+}) =>
+  isBookingV2Available(account)
+    ? [
+        {
+          name: 'CRM My Booking Hours',
+          label: t('BOOKING.MY_HOURS.MENU'),
+          to: accountScopedRoute('crm_my_booking_hours'),
+          activeOn: ['crm_my_booking_hours'],
+        },
+      ]
+    : [];

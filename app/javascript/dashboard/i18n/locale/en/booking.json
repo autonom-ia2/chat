@@ -170,7 +170,11 @@
       "BUFFER_NONE": "No break",
       "BUFFER_VALUE": "{value} between conversations",
       "EXTRA_LABEL": "Other durations (optional)",
-      "EXTRA_HINT": "The client chooses how long they want."
+      "EXTRA_HINT": "The client chooses how long they want.",
+      "HOLIDAYS_LABEL": "Holidays",
+      "HOLIDAYS_TOGGLE": "Close on national holidays",
+      "HOLIDAYS_ON_HINT": "Nobody can book on national holidays.",
+      "HOLIDAYS_OFF_HINT": "National holidays stay open like any other day."
     },
     "WEEKDAYS": {
       "SUN": "Sun",
@@ -253,6 +257,51 @@
     },
     "VIEW": {
       "READ_ONLY": "You can see this page, but you can't change it."
+    },
+    "REASSIGN": {
+      "OPEN": "Move meetings",
+      "TITLE": "Move meetings to someone else",
+      "HINT": "We check that the new person is free at each time before moving.",
+      "FROM": "From",
+      "TO": "To",
+      "CHOOSE": "Choose a person",
+      "ONLY_THIS_PAGE": "Only this page",
+      "PREVIEW": "See before moving",
+      "WILL_MOVE": "No meetings to move | 1 meeting will move to {name} | {count} meetings will move to {name}",
+      "CONFLICTS": "{name} is already busy at these times. These meetings stay as they are:",
+      "CONFIRM": "Move to {name}",
+      "CANCEL": "Cancel",
+      "CLOSE": "Close",
+      "DONE": "No meetings moved | Done: 1 meeting moved to {name} | Done: {count} meetings moved to {name}",
+      "DONE_CONFLICTS": "1 meeting stayed as it was because {name} was busy. | {count} meetings stayed as they were because {name} was busy.",
+      "PEOPLE_INVALID": "This person cannot take meetings. Choose someone else.",
+      "ERROR": "That did not work. Try again."
+    },
+    "MY_HOURS": {
+      "MENU": "My hours",
+      "TITLE": "My hours",
+      "SUBTITLE": "Choose when you take meetings. It always stays within the pages' hours.",
+      "LIMIT": "Pages' limit: {days}, {from} to {to}",
+      "PAUSE_TITLE": "Your schedule is open",
+      "PAUSE_HINT": "Customers can book with you at the times below.",
+      "PAUSED_TITLE": "Your schedule is paused",
+      "PAUSED_HINT": "Nobody books with you until you come back.",
+      "PAUSE": "Pause my schedule",
+      "RESUME": "Take meetings again",
+      "PAUSED_OK": "Schedule paused.",
+      "RESUMED_OK": "Schedule open again.",
+      "NO_PAGES": "You are not on any booking page yet. When the admin adds you, your hours show up here.",
+      "DENIED": "You do not take meetings in this account.",
+      "SAVE": "Save my hours",
+      "USE_PAGE": "Use the page hours",
+      "SAVED": "Hours saved.",
+      "ERRORS": {
+        "DAYS": "Choose at least one day. To stop taking meetings, use \"Pause my schedule\".",
+        "HOURS": "The end must be after the start.",
+        "OUTSIDE": "That time goes past the pages' limit. Choose within it.",
+        "NO_PAGES": "You are not on any booking page yet.",
+        "GENERIC": "That did not work. Try again."
+      }
     }
   }
 }

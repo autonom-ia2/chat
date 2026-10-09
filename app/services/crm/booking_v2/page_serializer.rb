@@ -43,7 +43,8 @@ class Crm::BookingV2::PageSerializer
       description: profile.description, duration_minutes: profile.duration_minutes, slot_durations: profile.slot_durations,
       buffer_minutes: profile.buffer_minutes, booking_window_days: profile.booking_window_days,
       min_notice_minutes: profile.min_notice_minutes, working_hours: profile.working_hours, timezone: profile.resolved_timezone,
-      calendar_inbox_id: profile.inbox_id, invite_text: profile.invite_text, invite_ttl_days: profile.invite_ttl_days
+      calendar_inbox_id: profile.inbox_id, invite_text: profile.invite_text, invite_ttl_days: profile.invite_ttl_days,
+      close_holidays: profile.close_holidays
     }
   end
 

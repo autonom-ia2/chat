@@ -167,6 +167,19 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingPages', type: :request do
       expect(page.reload.invite_ttl_days).to eq(3)
     end
 
+    it 'liga e desliga os feriados nacionais fechados (#1195) e devolve a opção na página' do
+      page.update!(close_holidays: true)
+
+      call(admin, :patch, "#{base}/#{page.id}", { close_holidays: false })
+      expect(response).to have_http_status(:ok)
+      expect(body['payload']).to include('close_holidays' => false)
+      expect(page.reload.close_holidays).to be(false)
+
+      call(admin, :patch, "#{base}/#{page.id}", { close_holidays: true })
+      expect(body['payload']).to include('close_holidays' => true)
+      expect(page.reload.close_holidays).to be(true)
+    end
+
     it 'refuses a funnel or stage from another account' do
       other = build_booking_world(account: create(:account), host_name: 'Outra')
 
