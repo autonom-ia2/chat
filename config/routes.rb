@@ -393,6 +393,12 @@ Rails.application.routes.draw do
                 put :people, action: :update_people
               end
             end
+            # Link por cliente (#1190): botão Agendar da conversa e do card.
+            resources :booking_invites, only: [:index, :create, :destroy] do
+              member do
+                post :deliver
+              end
+            end
           end
           namespace :autonomia do
             # #284 — feedback do ATENDENTE ("resposta errada") numa mensagem do agente. Aberto a qualquer
@@ -1151,6 +1157,12 @@ Rails.application.routes.draw do
         post 'booking/:slug/confirm', to: 'booking#confirm'
         get 'booking/:slug', to: 'booking#show'
         post 'booking/:slug', to: 'booking#create'
+      end
+
+      # Agendamento WhatsApp-first (#1187): link por cliente `/b/<code>` (#1190). Só o código opaco autoriza.
+      namespace :v2 do
+        get 'invites/:code', to: 'invites#show'
+        post 'invites/:code/viewed', to: 'invites#viewed'
       end
     end
   end

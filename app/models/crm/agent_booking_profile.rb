@@ -14,6 +14,8 @@
 #  description         :text
 #  duration_minutes    :integer          default(30), not null
 #  enabled             :boolean          default(TRUE), not null
+#  invite_text         :text
+#  invite_ttl_days     :integer          default(7), not null
 #  metadata            :jsonb            not null
 #  slug                :string           not null
 #  timezone            :string
@@ -52,6 +54,8 @@ class Crm::AgentBookingProfile < ApplicationRecord
   MAX_WINDOW = 90
   LEGACY_PAGE = 1
   NEW_PAGE = 2
+  MAX_INVITE_TTL_DAYS = 30
+  MAX_INVITE_TEXT = 1000
 
   # fixed     -> one default_assignee owns every booking (original S6 behaviour).
   # per_agent -> each eligible agent shares their OWN link (agent_booking_links);
@@ -75,6 +79,9 @@ class Crm::AgentBookingProfile < ApplicationRecord
   validates :booking_window_days, numericality: { only_integer: true, greater_than_or_equal_to: MIN_WINDOW, less_than_or_equal_to: MAX_WINDOW }
   validates :title, length: { maximum: 255 }, allow_blank: true
   validates :metadata, jsonb_attributes_length: true
+  # Link por cliente (#1190): validade do convite em dias e texto pronto que o agente pode editar antes de enviar.
+  validates :invite_ttl_days, numericality: { only_integer: true, greater_than_or_equal_to: 1, less_than_or_equal_to: MAX_INVITE_TTL_DAYS }
+  validates :invite_text, length: { maximum: MAX_INVITE_TEXT }
   # Página antiga (1) continua amarrada a uma caixa de calendário; a nova (2) funciona sem caixa.
   validates :inbox, presence: true, if: :legacy_page?
   validate :inbox_must_belong_to_account

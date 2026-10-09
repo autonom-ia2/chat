@@ -138,6 +138,18 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingPages', type: :request do
       expect(page.weekdays).to eq([1, 3])
     end
 
+    it 'updates the invite text and validity (#1190) and refuses a validity out of 1..30' do
+      call(admin, :patch, "#{base}/#{page.id}", { invite_text: 'Oi {nome}: {link}', invite_ttl_days: 3 })
+
+      expect(response).to have_http_status(:ok)
+      expect(body['payload']).to include('invite_text' => 'Oi {nome}: {link}', 'invite_ttl_days' => 3)
+      expect(page.reload).to have_attributes(invite_text: 'Oi {nome}: {link}', invite_ttl_days: 3)
+
+      call(admin, :patch, "#{base}/#{page.id}", { invite_ttl_days: 31 })
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(page.reload.invite_ttl_days).to eq(3)
+    end
+
     it 'refuses a funnel or stage from another account' do
       other = build_booking_world(account: create(:account), host_name: 'Outra')
 

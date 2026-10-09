@@ -492,6 +492,15 @@
     ],
     "sem_corpo": true
   },
+  "DELETE crm/booking_invites/:id": {
+    "completo": true,
+    "controller": "api/v1/accounts/crm/booking_invites#destroy",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:44",
+      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:60"
+    ],
+    "sem_corpo": true
+  },
   "DELETE crm/booking_pages/:id": {
     "completo": true,
     "controller": "api/v1/accounts/crm/booking_pages#destroy",
@@ -4670,6 +4679,8 @@
       "default_stage_id": {},
       "description": {},
       "duration_minutes": {},
+      "invite_text": {},
+      "invite_ttl_days": {},
       "locations": {
         "campos": {
           "address": {},
@@ -13245,6 +13256,58 @@
     ],
     "sem_corpo": true
   },
+  "POST crm/booking_invites": {
+    "campos": {
+      "booking_page_id": {
+        "tipo": "id",
+        "tipo_pela_leitura": "nome"
+      },
+      "card_id": {
+        "tipo": "inteiro"
+      },
+      "contact_id": {
+        "tipo": "inteiro"
+      },
+      "conversation_id": {
+        "tipo": "inteiro"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/crm/booking_invites#create",
+    "modelo": "Contact",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:26",
+      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:92",
+      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:90",
+      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:86",
+      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:84",
+      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:80",
+      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:78",
+      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:28"
+    ],
+    "sem_corpo": false
+  },
+  "POST crm/booking_invites/:id/deliver": {
+    "campos": {
+      "conversation_id": {
+        "tipo": "inteiro"
+      },
+      "text": {}
+    },
+    "completo": false,
+    "controller": "api/v1/accounts/crm/booking_invites#deliver",
+    "modelo": "Conversation",
+    "motivos": [
+      "leitura crua sem tipo: text (repassada a ::Crm::BookingV2::InviteDeliverer.new)"
+    ],
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:35",
+      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:40",
+      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:36",
+      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:60"
+    ],
+    "sem_corpo": false
+  },
   "POST crm/booking_pages": {
     "campos": {
       "template_key": {
@@ -21630,6 +21693,8 @@
       "default_stage_id": {},
       "description": {},
       "duration_minutes": {},
+      "invite_text": {},
+      "invite_ttl_days": {},
       "locations": {
         "campos": {
           "address": {},

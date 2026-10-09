@@ -5,18 +5,18 @@ Gerado por `bundle exec rails autonomia:guia:formatos` a partir do código (#900
 
 | | Ações |
 |---|---|
-| No catálogo | 567 |
-| Sem corpo | 165 |
-| Com corpo | 402 |
-| Com corpo e formato completo | 326 (81,1%) |
-| Com corpo e formato incompleto | 76 |
+| No catálogo | 570 |
+| Sem corpo | 166 |
+| Com corpo | 404 |
+| Com corpo e formato completo | 327 (80,9%) |
+| Com corpo e formato incompleto | 77 |
 
 ## Por dentro dos campos
 
 | | Total |
 |---|---|
 | Campos aninhados com vocabulário | 17 de 171 |
-| Leituras cruas tipadas | 112 de 189 |
+| Leituras cruas tipadas | 113 de 191 |
 
 ## Incompletas por motivo
 
@@ -24,7 +24,7 @@ Uma ação pode ter mais de um motivo.
 
 | Motivo | Ações |
 |---|---|
-| leitura crua sem tipo | 61 |
+| leitura crua sem tipo | 62 |
 | aceita qualquer campo | 5 |
 | params inteiro repassado | 9 |
 | lê o corpo cru | 2 |
@@ -70,6 +70,7 @@ Uma ação pode ter mais de um motivo.
 - `POST conversations/:id/toggle_typing_status` — params inteiro repassado a ::Conversations::TypingStatusManager.new
 - `POST conversations/:id/transcript` — leitura crua sem tipo: email (repassada a ConversationReplyMailer.with(account: @conversation.accou...)
 - `POST conversations/filter` — aceita qualquer campo (permit! em app/controllers/api/v1/accounts/conversations_controller.rb:52); params inteiro repassado a ::Conversations::FilterService.new
+- `POST crm/booking_invites/:id/deliver` — leitura crua sem tipo: text (repassada a ::Crm::BookingV2::InviteDeliverer.new)
 - `POST crm/booking_pages/:id/logo` — leitura crua sem tipo: file
 - `POST crm/booking_pages/:id/photo` — leitura crua sem tipo: file
 - `POST crm/cards/:card_id/contact` — leitura crua sem tipo: contact
@@ -150,6 +151,7 @@ Uma ação pode ter mais de um motivo.
 - `api/v1/accounts/contacts#export` column_names — o código não converte nem compara o valor
 - `api/v1/accounts/conversations#create` message — repassada a Messages::MessageBuilder.new
 - `api/v1/accounts/conversations#transcript` email — repassada a ConversationReplyMailer.with(account: @conversation.accou...
+- `api/v1/accounts/crm/booking_invites#deliver` text — repassada a ::Crm::BookingV2::InviteDeliverer.new
 - `api/v1/accounts/crm/booking_pages#logo` file — o código não converte nem compara o valor
 - `api/v1/accounts/crm/booking_pages#photo` file — o código não converte nem compara o valor
 - `api/v1/accounts/crm/cards#close` result — repassada a ::Crm::Cards::Closer.new
@@ -196,8 +198,8 @@ O Guia recusa parâmetro que a leitura não lê. Leitura sem lista conhecida nã
 
 | | Leituras |
 |---|---|
-| No catálogo | 333 |
-| Com parâmetros conhecidos | 282 |
+| No catálogo | 334 |
+| Com parâmetros conhecidos | 283 |
 | Sem parâmetros conhecidos | 51 |
 
 ### Leituras sem parâmetros conhecidos

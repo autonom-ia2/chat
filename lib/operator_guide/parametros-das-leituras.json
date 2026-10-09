@@ -985,6 +985,14 @@
       "until"
     ]
   },
+  "crm/booking_invites": {
+    "controller": "api/v1/accounts/crm/booking_invites#index",
+    "parametros": [
+      "card_id",
+      "contact_id",
+      "conversation_id"
+    ]
+  },
   "crm/booking_pages": {
     "controller": "api/v1/accounts/crm/booking_pages#index",
     "parametros": []

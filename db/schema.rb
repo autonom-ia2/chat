@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_10_11_092114) do
+ActiveRecord::Schema[7.2].define(version: 2026_10_11_134207) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1908,6 +1908,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_11_092114) do
     t.string "contact_phone"
     t.string "template_key"
     t.jsonb "brand", default: {}, null: false
+    t.text "invite_text"
+    t.integer "invite_ttl_days", default: 7, null: false
     t.index ["account_id"], name: "index_crm_agent_booking_profiles_on_account_id"
     t.index ["inbox_id"], name: "index_crm_agent_booking_profiles_on_inbox_id"
     t.index ["slug"], name: "index_crm_agent_booking_profiles_on_slug", unique: true
@@ -1948,6 +1950,42 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_11_092114) do
     t.integer "cache_write_tokens", default: 0, null: false
     t.index ["account_id", "created_at"], name: "idx_crm_ai_usage_account_created"
     t.index ["account_id", "feature", "created_at"], name: "idx_crm_ai_usage_account_feature_created"
+  end
+
+  create_table "crm_booking_invites", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "booking_profile_id", null: false
+    t.bigint "booking_link_id"
+    t.bigint "contact_id", null: false
+    t.bigint "card_id"
+    t.bigint "conversation_id"
+    t.bigint "created_by_id"
+    t.bigint "meeting_id"
+    t.string "code", null: false
+    t.string "channel", default: "copy", null: false
+    t.datetime "expires_at", null: false
+    t.datetime "sent_at"
+    t.datetime "first_opened_at"
+    t.datetime "last_opened_at"
+    t.integer "open_count", default: 0, null: false
+    t.datetime "scheduled_at"
+    t.datetime "canceled_at"
+    t.jsonb "metadata", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "card_id"], name: "idx_crm_booking_invites_account_card"
+    t.index ["account_id", "contact_id"], name: "idx_crm_booking_invites_account_contact"
+    t.index ["account_id", "conversation_id"], name: "idx_crm_booking_invites_account_conversation"
+    t.index ["account_id", "created_at"], name: "idx_crm_booking_invites_account_created"
+    t.index ["account_id", "created_by_id"], name: "idx_crm_booking_invites_account_creator"
+    t.index ["booking_link_id"], name: "index_crm_booking_invites_on_booking_link_id"
+    t.index ["booking_profile_id"], name: "index_crm_booking_invites_on_booking_profile_id"
+    t.index ["card_id"], name: "index_crm_booking_invites_on_card_id"
+    t.index ["code"], name: "index_crm_booking_invites_on_code", unique: true
+    t.index ["contact_id"], name: "index_crm_booking_invites_on_contact_id"
+    t.index ["conversation_id"], name: "index_crm_booking_invites_on_conversation_id"
+    t.index ["created_by_id"], name: "index_crm_booking_invites_on_created_by_id"
+    t.index ["meeting_id"], name: "index_crm_booking_invites_on_meeting_id"
   end
 
   create_table "crm_calendar_sync_states", force: :cascade do |t|
@@ -3808,6 +3846,13 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_11_092114) do
   add_foreign_key "crm_ai_stage_suggestions", "crm_cards", column: "card_id", on_delete: :cascade
   add_foreign_key "crm_ai_stage_suggestions", "crm_pipeline_stages", column: "from_stage_id"
   add_foreign_key "crm_ai_stage_suggestions", "crm_pipeline_stages", column: "to_stage_id"
+  add_foreign_key "crm_booking_invites", "contacts", on_delete: :cascade
+  add_foreign_key "crm_booking_invites", "conversations", on_delete: :nullify
+  add_foreign_key "crm_booking_invites", "crm_agent_booking_links", column: "booking_link_id", on_delete: :nullify
+  add_foreign_key "crm_booking_invites", "crm_agent_booking_profiles", column: "booking_profile_id", on_delete: :cascade
+  add_foreign_key "crm_booking_invites", "crm_cards", column: "card_id", on_delete: :nullify
+  add_foreign_key "crm_booking_invites", "crm_meetings", column: "meeting_id", on_delete: :nullify
+  add_foreign_key "crm_booking_invites", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "crm_calendar_sync_states", "accounts"
   add_foreign_key "crm_calendar_sync_states", "inboxes", on_delete: :nullify
   add_foreign_key "crm_card_conversations", "accounts"

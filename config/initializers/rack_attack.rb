@@ -453,6 +453,29 @@ class Rack::Attack
     req.ip if req.get? && PUBLIC_BOOKING_SLOTS_PATH.match?(req.path_without_extensions)
   end
 
+  # Link por cliente do agendamento (#1190): /public/api/v2/invites/:code (GET) e .../:code/viewed (POST). O código
+  # é a única autorização, então o limite por IP freia quem tenta adivinhar códigos. O caminho é normalizado como o
+  # roteador faz (`//` vira `/`) e comparado em pedaços, sem expressão regular.
+  PUBLIC_BOOKING_INVITES_PREFIX = '/public/api/v2/invites/'.freeze
+
+  # Pedaços depois de /public/api/v2/invites/ (["<code>"] ou ["<code>", "viewed"]); vazio para outros caminhos.
+  def self.public_booking_invite_segments(req)
+    path = ActionDispatch::Journey::Router::Utils.normalize_path(req.path_without_extensions)
+    return [] unless path.start_with?(PUBLIC_BOOKING_INVITES_PREFIX)
+
+    path.delete_prefix(PUBLIC_BOOKING_INVITES_PREFIX).split('/')
+  end
+
+  throttle('public_booking_invites/show_ip', limit: ENV.fetch('RATE_LIMIT_PUBLIC_BOOKING_INVITES', '30').to_i, period: 1.minute) do |req|
+    req.ip if (req.get? || req.head?) && public_booking_invite_segments(req).size == 1
+  end
+
+  throttle('public_booking_invites/viewed_ip', limit: ENV.fetch('RATE_LIMIT_PUBLIC_BOOKING_INVITES_VIEWED', '60').to_i,
+                                               period: 1.hour) do |req|
+    segments = public_booking_invite_segments(req)
+    req.ip if req.post? && segments.size == 2 && segments.last == 'viewed'
+  end
+
   # CRM calendar push webhooks (S7-B): public + unauthenticated. Generous per-IP cap
   # (providers batch from their own ranges) just to bound abuse — the handler only
   # verifies a secret and enqueues, never trusts the payload.

@@ -186,7 +186,7 @@ class Api::V1::Accounts::Crm::BookingPagesController < Api::V1::Accounts::Crm::B
   def page_params
     parameter_set(:booking_page).permit(
       :title, :description, :duration_minutes, :buffer_minutes, :booking_window_days, :min_notice_minutes,
-      :timezone, :contact_phone, :default_pipeline_id, :default_stage_id,
+      :timezone, :contact_phone, :default_pipeline_id, :default_stage_id, :invite_text, :invite_ttl_days,
       slot_durations: [], working_hours: [:start_hour, :end_hour, { weekdays: [] }],
       locations: [:type, :url, :address, :label], brand: [:color, :headline]
     ).to_h

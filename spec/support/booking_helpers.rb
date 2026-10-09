@@ -39,6 +39,14 @@ module BookingHelpers
     BookingWorld.new(account: account, host: host, pipeline: pipeline, stage: stage, contact: contact, card: card, profile: profile)
   end
 
+  # Link por cliente (#1190) da página do mundo para o cliente do mundo, criado pelo responsável.
+  def create_booking_invite(world:, **attrs)
+    Crm::BookingInvite.create!(
+      { account: world.account, booking_profile: world.profile, contact: world.contact, card: world.card,
+        created_by: world.host, expires_at: 7.days.from_now }.merge(attrs)
+    )
+  end
+
   # Reunião interna já agendada (sem provedor), para specs de disponibilidade, cancelamento e permissões.
   def create_internal_meeting(world:, starts_at:, duration: 30, status: :scheduled, **attrs)
     meeting = world.account.crm_meetings.new(
