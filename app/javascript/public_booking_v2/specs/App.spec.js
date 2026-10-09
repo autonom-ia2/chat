@@ -74,6 +74,13 @@ const BOOKED = {
   contact_whatsapp_url: 'https://wa.me/5511999990000',
 };
 
+// `request_id`: 16 a 64 caracteres de UUID ou hex (o que o navegador sorteia).
+const isRequestId = value =>
+  typeof value === 'string' &&
+  value.length >= 16 &&
+  value.length <= 64 &&
+  [...value].every(char => '0123456789abcdef-'.includes(char));
+
 const setPath = path => window.history.replaceState({}, '', path);
 
 const mountApp = async ({ page = PAGE, path = '/book/conversa' } = {}) => {
@@ -161,8 +168,10 @@ describe('public link /book/:slug', () => {
       company: '',
       form_token: 'form-token',
       captcha_token: undefined,
+      request_id: expect.any(String),
     });
 
+    expect(isRequestId(payload.request_id)).toBe(true);
     expect(wrapper.text()).toContain('Tudo certo, Ana!');
     const save = findAction(wrapper, 'Salvar na minha agenda');
     expect(save.attributes('href')).toBe(
@@ -277,6 +286,54 @@ describe('server errors', () => {
     await submit(wrapper);
     return wrapper;
   };
+
+  const requestIds = () =>
+    api.createBooking.mock.calls.map(([, payload]) => payload.request_id);
+
+  it('retries a lost answer with the same request_id and starts a new one after a definitive answer', async () => {
+    api.createBooking
+      .mockRejectedValueOnce(new api.ApiError(0, 'network'))
+      .mockRejectedValueOnce(new api.ApiError(500, 'unavailable'))
+      .mockRejectedValueOnce(new api.ApiError(422, 'booking_failed'))
+      .mockResolvedValueOnce(BOOKED);
+    const wrapper = await mountApp();
+    await click(wrapper, 'Escolher este');
+    await fillPublicDetails(wrapper);
+
+    await submit(wrapper);
+    expect(wrapper.find('[role="alert"]').text()).toContain(
+      'Não deu para marcar agora'
+    );
+    await submit(wrapper);
+    await submit(wrapper);
+    await submit(wrapper);
+
+    const [first, second, third, fourth] = requestIds();
+    expect(isRequestId(first)).toBe(true);
+    expect(second).toBe(first);
+    expect(third).toBe(first);
+    expect(isRequestId(fourth)).toBe(true);
+    expect(fourth).not.toBe(first);
+    expect(wrapper.text()).toContain('Tudo certo, Ana!');
+  });
+
+  it('uses a new request_id after choosing another time', async () => {
+    failWith('slot_unavailable');
+    const wrapper = await mountApp();
+    await click(wrapper, 'Escolher este');
+    await fillPublicDetails(wrapper);
+    await submit(wrapper);
+
+    api.createBooking.mockResolvedValue(BOOKED);
+    await click(wrapper, '19:00');
+    await fillPublicDetails(wrapper);
+    await submit(wrapper);
+
+    const [first, second] = requestIds();
+    expect(api.createBooking.mock.calls[1][1].starts_at).toBe(OTHER_SLOT);
+    expect(isRequestId(second)).toBe(true);
+    expect(second).not.toBe(first);
+  });
 
   it('slot_unavailable goes back to the times with a plain message', async () => {
     const wrapper = await bookAndFail('slot_unavailable');

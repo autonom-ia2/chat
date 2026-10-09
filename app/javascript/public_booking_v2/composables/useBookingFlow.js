@@ -2,6 +2,7 @@ import { computed, inject, provide, ref } from 'vue';
 import { createBooking, getPage, requestContact } from '../api';
 import { applyBrandColor } from '../helpers/brand';
 import { bookingDays, dateInZone, isValidTimeZone } from '../helpers/datetime';
+import { newRequestId } from '../helpers/requestId';
 import { useBookingForm } from './useBookingForm';
 import { useInvite } from './useInvite';
 import { useSlots } from './useSlots';
@@ -49,6 +50,9 @@ export function useBookingFlow(location = window.location) {
   const isSubmitting = ref(false);
   const result = ref(null);
   const isContactRequested = ref(false);
+  // Chave da tentativa de reserva: a mesma no reenvio depois de falha de rede ou do servidor (a reserva pode ter
+  // sido feita); nova depois de uma resposta definitiva ou de outro horário.
+  let requestId = null;
 
   const invite = useInvite();
   const slotsApi = useSlots({ slug, duration });
@@ -145,6 +149,7 @@ export function useBookingFlow(location = window.location) {
   };
 
   const chooseSlot = iso => {
+    requestId = null;
     selectedSlot.value = iso;
     slotNotice.value = '';
     goTo(invite.isInvite.value ? STEPS.CONFIRM : STEPS.DETAILS);
@@ -190,7 +195,10 @@ export function useBookingFlow(location = window.location) {
     company: form.company,
     form_token: page.value.form_token,
     captcha_token: bookingForm.captchaToken.value || undefined,
+    request_id: requestId,
   });
+
+  const isRetriable = error => !error?.status || error.status >= 500;
 
   const handleBookingError = error => {
     if (error?.code === 'slot_unavailable') return backToTimes();
@@ -210,10 +218,13 @@ export function useBookingFlow(location = window.location) {
     if (!isValid) return;
 
     isSubmitting.value = true;
+    requestId = requestId || newRequestId();
     try {
       result.value = await createBooking(slug.value, bookingPayload());
+      requestId = null;
       goTo(STEPS.DONE);
     } catch (error) {
+      if (!isRetriable(error)) requestId = null;
       handleBookingError(error);
     } finally {
       isSubmitting.value = false;

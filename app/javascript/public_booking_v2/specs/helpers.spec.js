@@ -19,6 +19,7 @@ import {
   onlyDigits,
   toInternational,
 } from '../helpers/phone';
+import { newRequestId } from '../helpers/requestId';
 import { safeAbsoluteUrl, safeUrl } from '../helpers/url';
 import { parseRoute } from '../composables/useBookingFlow';
 
@@ -156,5 +157,32 @@ describe('routes and locations', () => {
     expect(locationKey('whatsapp_video')).toBe('WHATSAPP_VIDEO');
     expect(locationKey('zoom')).toBe('OTHER');
     expect(locationKey(undefined)).toBe('OTHER');
+  });
+});
+
+describe('request id', () => {
+  it('uses crypto.randomUUID when the browser has it', () => {
+    const cryptoApi = {
+      randomUUID: () => 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+    };
+    expect(newRequestId(cryptoApi)).toBe(
+      'f47ac10b-58cc-4372-a567-0e02b2c3d479'
+    );
+  });
+
+  it('falls back to 16 random bytes in hex without randomUUID', () => {
+    const cryptoApi = {
+      getRandomValues: bytes => bytes.map((_, index) => index * 17),
+    };
+    expect(newRequestId(cryptoApi)).toBe('00112233445566778899aabbccddeeff');
+  });
+
+  it('draws a different key each time from the real crypto', () => {
+    const first = newRequestId();
+    expect(first.length).toBe(36);
+    expect([...first].every(char => '0123456789abcdef-'.includes(char))).toBe(
+      true
+    );
+    expect(newRequestId()).not.toBe(first);
   });
 });

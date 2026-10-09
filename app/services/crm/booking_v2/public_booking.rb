@@ -1,34 +1,49 @@
 # Reserva feita pela página pública v2 (#1189): pelo link público ou pelo link por cliente (`invite_code`).
 #
-# Link público: `Booker` com `source: 'public_link'` e, na mesma transação, um convite `channel: 'public'` com
-# contato, card e reunião, que vira o link de gestão (`/b/<code>`): um único mecanismo de acesso à reunião.
+# Sem transação própria: a do `Booker` é a única. A consulta ao provedor (freebusy) roda antes dela e o aviso em tempo
+# real sai depois do commit. O que precisa nascer junto com a reunião é gravado no bloco do `Booker`, dentro da
+# transação e sob as travas dele.
 #
-# Convite: a linha do convite é travada (`SELECT ... FOR UPDATE`) antes do `Booker`. O convite precisa estar ativo,
-# ser desta página (e, se tem link individual, deste link) e ainda não ter virado reunião. Contato, card e conversa
-# vêm do convite. O telefone é o do contato; se o cliente trocou o número ("Mudar o número") ou o contato não tem,
-# vale o digitado, só para esta reunião (o contato não muda). `source: 'invite'`.
-# Depois da reserva o convite guarda `scheduled_at` e `meeting`.
+# Link público: `Booker` com `source: 'public_link'` e, no bloco, um convite `channel: 'public'` com contato, card e
+# reunião, que vira o link de gestão (`/b/<code>`): um único mecanismo de acesso à reunião.
 #
-# Reenvio (duplo toque, rede que repete): o `Booker` devolve a reunião existente; aqui devolvemos o mesmo convite,
-# e o convite já agendado com a mesma hora há menos de 5 minutos responde a mesma reserva.
+# Convite: conferido sem trava antes do `Booker` (recusa cedo, sem consultar o provedor) e de novo no bloco, com a
+# linha travada (`SELECT ... FOR UPDATE`): ativo, ainda sem reunião e com a reunião nova sendo do contato do convite.
+# Dois pedidos do mesmo convite ao mesmo tempo: o segundo encontra o convite já agendado e a transação dele desfaz a
+# reunião. Contato, card e conversa vêm do convite. O telefone é o do contato; se o cliente trocou o número ("Mudar o
+# número") ou o contato não tem, vale o digitado, só para esta reunião (o contato não muda). `source: 'invite'`.
 #
-# Erros: ArgumentError com o código do `Booker`, ou 'booking_failed' para convite que não serve. O controller
-# reduz ao conjunto público.
+# Reenvio (duplo toque, rede que repete): só com o mesmo `request_id` (16 a 64 letras, dígitos, `-` ou `_`, sorteado
+# pelo navegador por tentativa), gravado na reunião e no convite. Mesma chave devolve a mesma reserva; sem chave ou
+# com outra, a reunião que já existe ocupa o horário (`slot_unavailable`) e nenhum dado dela sai. Nunca se cria
+# convite público para reunião que não nasceu deste pedido.
+#
+# Erros: ArgumentError com o código do `Booker`, ou 'booking_failed' para convite que não serve ou `request_id` fora
+# do formato. O controller reduz ao conjunto público.
 class Crm::BookingV2::PublicBooking
   Outcome = Struct.new(:meeting, :invite, :existing, keyword_init: true)
+  REQUEST_ID_LENGTH = (16..64)
+  REQUEST_ID_CHARS = Set.new([*'a'..'z', *'A'..'Z', *'0'..'9', '-', '_']).freeze
+
+  def self.valid_request_id?(value)
+    REQUEST_ID_LENGTH.cover?(value.length) && value.each_char.all? { |char| REQUEST_ID_CHARS.include?(char) }
+  end
 
   def initialize(page:, params:)
     @page = page
     @params = params.to_h.with_indifferent_access
+    @request_id = @params[:request_id].to_s.presence
   end
 
   def perform
-    ActiveRecord::Base.transaction { invite_code.present? ? book_with_invite : book_public }
+    raise ArgumentError, 'booking_failed' if request_id && !self.class.valid_request_id?(request_id)
+
+    invite_code.present? ? book_with_invite : book_public
   end
 
   private
 
-  attr_reader :page, :params
+  attr_reader :page, :params, :request_id
 
   def profile
     page.profile
@@ -39,28 +54,46 @@ class Crm::BookingV2::PublicBooking
   end
 
   def book_public
-    result = booker(phone: params[:phone], source: 'public_link', link: page.link).perform
-    invite = Crm::BookingInvite.find_by(meeting_id: result.meeting.id) if result.existing
-    Outcome.new(meeting: result.meeting, invite: invite || create_public_invite!(result), existing: result.existing)
+    created = nil
+    result = booker(phone: params[:phone], source: 'public_link', link: page.link).perform do |booked|
+      created = create_public_invite!(booked)
+    end
+    Outcome.new(meeting: result.meeting, invite: created || repeated_public_invite(result.meeting), existing: result.existing)
   end
 
   def create_public_invite!(result)
     Crm::BookingInvite.create!(
       account: page.account, booking_profile: profile, booking_link: page.link, contact: result.contact, card: result.card,
       meeting: result.meeting, channel: 'public', scheduled_at: Time.current,
-      expires_at: result.meeting.ends_at + Crm::BookingInvite::MANAGE_GRACE
+      expires_at: result.meeting.ends_at + Crm::BookingInvite::MANAGE_GRACE, metadata: { 'request_id' => request_id }.compact
     )
   end
 
+  # Reenvio com a mesma chave: o convite público que nasceu com ela. Outro convite não é devolvido.
+  def repeated_public_invite(meeting)
+    Crm::BookingInvite.where(meeting_id: meeting.id, channel: 'public').where("metadata->>'request_id' = ?", request_id).first ||
+      raise(ArgumentError, 'slot_unavailable')
+  end
+
   def book_with_invite
-    invite = Crm::BookingInvite.lock.find_by(code: invite_code)
+    invite = Crm::BookingInvite.find_by(code: invite_code)
     raise ArgumentError, 'booking_failed' unless invite_for_this_page?(invite)
     return repeated_invite_booking(invite) if invite.scheduled_at.present?
     raise ArgumentError, 'booking_failed' unless invite.active?
 
-    result = invite_booker(invite).perform
-    invite.update!(scheduled_at: Time.current, meeting: result.meeting)
-    Outcome.new(meeting: result.meeting, invite: invite, existing: result.existing)
+    result = invite_booker(invite).perform { |booked| attach_meeting!(invite, booked.meeting) }
+    return repeated_invite_booking(invite.reload) if result.existing
+
+    Outcome.new(meeting: result.meeting, invite: invite, existing: false)
+  end
+
+  # Dentro da transação do `Booker`: trava o convite e confere de novo. Qualquer recusa desfaz a reunião.
+  def attach_meeting!(invite, meeting)
+    invite.lock!
+    usable = invite.scheduled_at.nil? && invite.active? && meeting.card.contact_id == invite.contact_id
+    raise ArgumentError, 'booking_failed' unless usable
+
+    invite.update!(scheduled_at: Time.current, meeting: meeting, metadata: invite.metadata.to_h.merge('request_id' => request_id).compact)
   end
 
   def invite_booker(invite)
@@ -75,11 +108,11 @@ class Crm::BookingV2::PublicBooking
     invite.booking_link_id.nil? || invite.booking_link_id == page.link&.id
   end
 
-  # Convite já agendado: só o reenvio da mesma reserva (mesma hora, há pouco) responde de novo; o resto é recusado.
+  # Convite já agendado: só o reenvio da mesma reserva (mesma chave, mesma hora, há pouco) responde de novo.
   def repeated_invite_booking(invite)
     meeting = invite.meeting
-    repeated = meeting.present? && meeting.scheduled? && meeting.starts_at == requested_start &&
-               invite.scheduled_at > Crm::BookingV2::Booker::IDEMPOTENCY_WINDOW.ago
+    repeated = request_id.present? && invite.metadata.to_h['request_id'] == request_id && meeting.present? && meeting.scheduled? &&
+               meeting.starts_at == requested_start && invite.scheduled_at > Crm::BookingV2::Booker::IDEMPOTENCY_WINDOW.ago
     raise ArgumentError, 'booking_failed' unless repeated
 
     Outcome.new(meeting: meeting, invite: invite, existing: true)
@@ -95,7 +128,7 @@ class Crm::BookingV2::PublicBooking
     Crm::BookingV2::Booker.new(
       profile: profile, name: params[:name], phone: phone, email: params[:email], starts_at: params[:starts_at],
       duration: params[:duration].presence, location_type: params[:location_type].presence, consent: consent,
-      source: source, link: link, **extra
+      source: source, link: link, idempotency_key: request_id, **extra
     )
   end
 
