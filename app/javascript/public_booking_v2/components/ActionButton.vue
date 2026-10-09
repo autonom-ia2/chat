@@ -17,7 +17,7 @@ const props = defineProps({
 });
 
 const VARIANTS = {
-  primary: 'bg-[var(--brand)] text-white shadow-sm hover:brightness-110',
+  primary: 'bg-[var(--brand)] text-white shadow-sm hover:shadow-md',
   secondary:
     'border-2 border-[var(--brand)] bg-white text-[var(--brand)] hover:bg-slate-50',
   ghost:

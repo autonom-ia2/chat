@@ -62,7 +62,8 @@ class Public::Api::V2::BookingController < PublicController
   end
 
   def contact_request
-    ::Crm::BookingV2::ContactRequest.new(page: @page, name: params[:name], phone: params[:phone], consent: consent_params).perform
+    ::Crm::BookingV2::ContactRequest.new(page: @page, name: params[:name], phone: params[:phone], consent: consent_params,
+                                         invite_code: params[:invite_code]).perform
     render json: { requested: true }, status: :created
   rescue ArgumentError => e
     render_service_error(e)

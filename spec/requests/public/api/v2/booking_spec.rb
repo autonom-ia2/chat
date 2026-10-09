@@ -109,7 +109,7 @@ RSpec.describe 'Public::Api::V2::Booking', type: :request do
       expect(body.except('form_token')).to eq(
         'slug' => profile.slug, 'paused' => false, 'preview' => false, 'title' => 'Conversa de 30 min', 'description' => nil,
         'agent_name' => 'Camila', 'agent_photo_url' => nil, 'duration_minutes' => 30, 'durations' => [30],
-        'timezone' => 'America/Sao_Paulo', 'booking_window_days' => 14,
+        'timezone' => 'America/Sao_Paulo', 'booking_window_days' => 14, 'weekdays' => [1, 2, 3, 4, 5],
         'brand' => { 'color' => '#1F6FEB', 'headline' => 'Fale com a gente', 'logo_url' => nil, 'photo_url' => nil },
         'locations' => [{ 'type' => 'whatsapp_video', 'label' => 'Vídeo no WhatsApp', 'requires_email' => false }],
         'contact_whatsapp_url' => 'https://wa.me/5511933334444', 'captcha_site_key' => nil, 'notices_enabled' => false
@@ -126,6 +126,20 @@ RSpec.describe 'Public::Api::V2::Booking', type: :request do
 
       expect(body['locations']).to eq([{ 'type' => 'in_person', 'label' => 'Escritório Paulista', 'requires_email' => false },
                                        { 'type' => 'google_meet', 'label' => 'Google Meet', 'requires_email' => true }])
+    end
+
+    it 'manda o endereço só do local presencial, os dias que atende e o fuso com nome IANA' do
+      profile.update!(locations: [{ 'type' => 'in_person', 'address' => 'Av. Paulista, 1000' },
+                                  { 'type' => 'whatsapp_video', 'address' => 'não sai' }],
+                      working_hours: { 'start_hour' => 9, 'end_hour' => 17, 'weekdays' => [6, 1, 3] }, timezone: 'Brasilia')
+
+      get base
+
+      expect(body['locations']).to eq([{ 'type' => 'in_person', 'label' => 'Presencial', 'requires_email' => false,
+                                         'address' => 'Av. Paulista, 1000' },
+                                       { 'type' => 'whatsapp_video', 'label' => 'Vídeo no WhatsApp', 'requires_email' => false }])
+      expect(body['weekdays']).to eq([1, 3, 6])
+      expect(body['timezone']).to eq('America/Sao_Paulo')
     end
 
     it 'mostra a chave do captcha só quando a instalação tem a chave do servidor' do
@@ -644,6 +658,41 @@ RSpec.describe 'Public::Api::V2::Booking', type: :request do
       travel 25.hours
       ask_contact
       expect(response).to have_http_status(:created)
+    end
+
+    describe 'pelo link do cliente (invite_code)' do
+      let(:invite) { create_booking_invite(world: world) }
+
+      it 'usa o contato e o card aberto do convite, sem pedir nome nem telefone de novo' do
+        expect { ask_contact(invite_code: invite.code, name: nil, phone: nil) }
+          .not_to(change { [Contact.count, Crm::Card.count] })
+
+        expect(response).to have_http_status(:created)
+        follow_up = Crm::FollowUp.sole
+        expect(follow_up).to have_attributes(card_id: world.card.id, contact_id: world.contact.id)
+        expect(world.card.activities.pluck(:event_type)).to include('booking_contact_requested')
+        expect(Crm::Cards::Broadcaster).not_to have_received(:broadcast)
+      end
+
+      it 'abre card novo no contato do convite quando o card do convite já fechou' do
+        world.card.update!(status: :won)
+
+        expect { ask_contact(invite_code: invite.code, name: nil, phone: nil) }.not_to change(Contact, :count)
+
+        expect(response).to have_http_status(:created)
+        expect(Crm::Card.find_by!(source: 'contact_request').contact_id).to eq(world.contact.id)
+      end
+
+      it 'recusa convite cancelado, de outra página ou inexistente sem criar nada' do
+        other_page = create_booking_profile(account: account, host: world.host)
+        codes = [create_booking_invite(world: world, canceled_at: 1.minute.ago).code,
+                 create_booking_invite(world: world, booking_profile: other_page).code, 'NAOEXISTE']
+
+        codes.each do |code|
+          expect { ask_contact(invite_code: code, name: nil, phone: nil) }.not_to change(Crm::FollowUp, :count)
+          expect_error('booking_failed')
+        end
+      end
     end
 
     it 'recusa robô e telefone inválido sem criar nada' do

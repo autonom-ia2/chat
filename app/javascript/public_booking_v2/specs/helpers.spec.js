@@ -5,17 +5,27 @@ import {
   isHexColor,
   readableBrandColor,
 } from '../helpers/brand';
+import { googleCalendarUrl } from '../helpers/calendar';
 import {
   bookingDays,
   dateInZone,
   isValidTimeZone,
+  sameClock,
+  slotLabel,
   timeLabel,
 } from '../helpers/datetime';
-import { locationKey } from '../helpers/locations';
 import {
+  locationHint,
+  locationKey,
+  locationName,
+  locationOptions,
+} from '../helpers/locations';
+import {
+  caretAfterDigits,
   formatNational,
   isPlausiblePhone,
   looksLikeEmail,
+  normalizeNational,
   onlyDigits,
   toInternational,
 } from '../helpers/phone';
@@ -102,6 +112,28 @@ describe('phone', () => {
     expect(toInternational('55', '(11) 98888-0000')).toBe('+5511988880000');
   });
 
+  it('drops the country code and the trunk zero from what was pasted', () => {
+    expect(normalizeNational('+55 11 98765-4321', '55')).toBe('11987654321');
+    expect(normalizeNational('0055 11 98765-4321', '55')).toBe('11987654321');
+    expect(normalizeNational('5511987654321', '55')).toBe('11987654321');
+    expect(normalizeNational('011 98765-4321', '55')).toBe('11987654321');
+    expect(normalizeNational('55 98765-4321', '55', { pasted: true })).toBe(
+      '987654321'
+    );
+    // DDD 55 digitado à mão continua sendo DDD.
+    expect(normalizeNational('55987654321', '55')).toBe('55987654321');
+    expect(normalizeNational('119888800001', '55')).toBe('11988880000');
+    expect(normalizeNational('+1 202 555 0100', '1')).toBe('2025550100');
+  });
+
+  it('keeps the caret after the same digit when the mask changes', () => {
+    expect(caretAfterDigits('(11) 98765-4321', 0)).toBe(0);
+    expect(caretAfterDigits('(11) 98765-4321', 2)).toBe(3);
+    expect(caretAfterDigits('(11) 98765-4321', 3)).toBe(6);
+    expect(caretAfterDigits('(11) 98765-4321', 8)).toBe(12);
+    expect(caretAfterDigits('(11) 9876', 20)).toBe(9);
+  });
+
   it('does a light email check', () => {
     expect(looksLikeEmail('ana@exemplo.com')).toBe(true);
     ['ana', 'ana@', '@x.com', 'a@b', 'a b@x.com', 'a@@x.com', 'a@x.'].forEach(
@@ -115,12 +147,14 @@ describe('dates and time zones', () => {
     // 01:30 UTC on the 13th is still the 12th in São Paulo.
     const now = new Date('2026-10-13T01:30:00Z');
     expect(dateInZone(now, 'America/Sao_Paulo')).toBe('2026-10-12');
-    expect(bookingDays('America/Sao_Paulo', 2, now)).toEqual([
+    expect(bookingDays('America/Sao_Paulo', 2, undefined, now)).toEqual([
       '2026-10-12',
       '2026-10-13',
       '2026-10-14',
     ]);
-    expect(bookingDays('Asia/Tokyo', 0, now)).toEqual(['2026-10-13']);
+    expect(bookingDays('Asia/Tokyo', 0, undefined, now)).toEqual([
+      '2026-10-13',
+    ]);
   });
 
   it('shows times in the client time zone', () => {
@@ -130,6 +164,35 @@ describe('dates and time zones', () => {
     expect(
       timeLabel('2026-10-13T15:00:00-03:00', 'pt_BR', 'America/Sao_Paulo')
     ).toBe('15:00');
+  });
+
+  it('offers only the weekdays the page works and caps the window at 90 days', () => {
+    // 12/10/2026 é segunda-feira.
+    const now = new Date('2026-10-12T12:00:00Z');
+    expect(bookingDays('America/Sao_Paulo', 6, [1, 3, 5], now)).toEqual([
+      '2026-10-12',
+      '2026-10-14',
+      '2026-10-16',
+    ]);
+    expect(bookingDays('America/Sao_Paulo', 365, undefined, now)).toHaveLength(
+      91
+    );
+  });
+
+  it('adds the day to a time that falls on another day for the client', () => {
+    const iso = '2026-10-13T22:00:00-03:00';
+    expect(slotLabel(iso, 'pt_BR', 'America/Sao_Paulo', '2026-10-13')).toBe(
+      '22:00'
+    );
+    const tokyo = slotLabel(iso, 'pt_BR', 'Asia/Tokyo', '2026-10-13');
+    expect(tokyo).toContain('10:00');
+    expect(tokyo).toContain('14');
+  });
+
+  it('compares clocks, not zone names', () => {
+    const at = new Date('2026-10-12T12:00:00Z');
+    expect(sameClock('America/Sao_Paulo', 'America/Bahia', at)).toBe(true);
+    expect(sameClock('America/Sao_Paulo', 'America/Manaus', at)).toBe(false);
   });
 
   it('rejects an invalid time zone explicitly', () => {
@@ -157,6 +220,51 @@ describe('routes and locations', () => {
     expect(locationKey('whatsapp_video')).toBe('WHATSAPP_VIDEO');
     expect(locationKey('zoom')).toBe('OTHER');
     expect(locationKey(undefined)).toBe('OTHER');
+  });
+
+  it('prefers the server label and shows the in-person address', () => {
+    const t = (key, values) => (values ? `${key}:${values.address}` : key);
+    expect(locationName({ type: 'in_person', label: 'Loja' }, t)).toBe('Loja');
+    expect(locationName({ type: 'in_person' }, t)).toBe(
+      'BOOKING_V2.LOCATION.IN_PERSON'
+    );
+    expect(locationHint({ type: 'in_person', address: 'Rua A' }, t)).toBe(
+      'BOOKING_V2.ADDRESS:Rua A'
+    );
+    expect(locationHint({ type: 'whatsapp_video', address: 'x' }, t)).toBe(
+      'BOOKING_V2.LOCATION_HINT.WHATSAPP_VIDEO'
+    );
+    expect(locationOptions([{ type: 'teams', label: 'Teams' }], t)).toEqual([
+      {
+        value: 'teams',
+        label: 'Teams',
+        hint: 'BOOKING_V2.LOCATION_HINT.TEAMS',
+      },
+    ]);
+  });
+});
+
+describe('google calendar link', () => {
+  it('builds the event template with title, UTC times and place only', () => {
+    const url = new URL(
+      googleCalendarUrl({
+        title: 'Horário com Camila',
+        startsAt: '2026-10-13T15:00:00-03:00',
+        endsAt: '2026-10-13T15:30:00-03:00',
+        location: 'Av. Paulista, 1000',
+      })
+    );
+    expect(url.hostname).toBe('calendar.google.com');
+    expect(url.searchParams.get('dates')).toBe(
+      '20261013T180000Z/20261013T183000Z'
+    );
+    expect(url.searchParams.get('location')).toBe('Av. Paulista, 1000');
+  });
+
+  it('gives no link without valid times', () => {
+    expect(googleCalendarUrl({ title: 'x', startsAt: '', endsAt: '' })).toBe(
+      null
+    );
   });
 });
 

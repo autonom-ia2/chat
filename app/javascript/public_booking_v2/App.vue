@@ -15,7 +15,7 @@ import StepTime from './components/StepTime.vue';
 
 // Página pública de agendamento v2 (#1189). Só orquestra: o estado mora em composables/useBookingFlow e cada
 // tela é um componente.
-const { step, page, invite, load } = useBookingFlow();
+const { step, invite, isPreview, load } = useBookingFlow();
 const { t } = useI18n();
 
 const SCREENS = {
@@ -32,7 +32,6 @@ const SCREENS = {
 };
 
 const screen = computed(() => SCREENS[step.value] || null);
-const isPreview = computed(() => !!page.value?.preview);
 
 // A cada tela nova o foco vai para o título dela: o leitor de tela anuncia onde a pessoa está.
 watch(step, (current, previous) => {
@@ -54,7 +53,7 @@ onMounted(load);
     <main class="flex w-full max-w-md flex-col gap-4">
       <p
         v-if="isPreview"
-        class="rounded-xl bg-amber-100 p-3 text-center text-base font-medium text-amber-900"
+        class="rounded-xl bg-yellow-100 p-3 text-center text-base font-medium text-yellow-900"
       >
         {{ t('BOOKING_V2.PREVIEW') }}
       </p>

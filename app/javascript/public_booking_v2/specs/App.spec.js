@@ -1,4 +1,9 @@
-import { config, flushPromises, mount } from '@vue/test-utils';
+import {
+  config,
+  enableAutoUnmount,
+  flushPromises,
+  mount,
+} from '@vue/test-utils';
 import { defineComponent, h } from 'vue';
 import { createI18n } from 'vue-i18n';
 import App from '../App.vue';
@@ -24,6 +29,8 @@ config.global.plugins = [
   createI18n({ legacy: false, locale: 'pt_BR', messages }),
 ];
 
+enableAutoUnmount(afterEach);
+
 const CaptchaStub = defineComponent({
   name: 'CaptchaField',
   render: () => h('div', { 'data-testid': 'captcha' }),
@@ -47,6 +54,7 @@ const PAGE = {
   durations: [30],
   timezone: 'America/Sao_Paulo',
   booking_window_days: 7,
+  weekdays: [1, 2, 3, 4, 5],
   brand: { color: '#0B7A5A', headline: '', logo_url: null, photo_url: null },
   locations: [{ type: 'whatsapp_video', requires_email: false }],
   contact_whatsapp_url: 'https://wa.me/5511999990000',
@@ -83,10 +91,27 @@ const isRequestId = value =>
 
 const setPath = path => window.history.replaceState({}, '', path);
 
-const mountApp = async ({ page = PAGE, path = '/book/conversa' } = {}) => {
+// Fuso de quem abre a página, sem depender do fuso da máquina que roda o teste: todo formato da página passa o fuso
+// explícito, e o "fuso do navegador" vem do `resolvedOptions`.
+const realResolvedOptions = Intl.DateTimeFormat.prototype.resolvedOptions;
+let clientZoneSpy;
+const useClientZone = timeZone => {
+  clientZoneSpy = vi
+    .spyOn(Intl.DateTimeFormat.prototype, 'resolvedOptions')
+    .mockImplementation(function resolvedOptions() {
+      return { ...realResolvedOptions.call(this), timeZone };
+    });
+};
+
+const mountApp = async ({
+  page = PAGE,
+  path = '/book/conversa',
+  attach = false,
+} = {}) => {
   setPath(path);
   api.getPage.mockResolvedValue(page);
   const wrapper = mount(App, {
+    attachTo: attach ? document.body : undefined,
     global: { stubs: { CaptchaField: CaptchaStub } },
   });
   await flushPromises();
@@ -96,11 +121,23 @@ const mountApp = async ({ page = PAGE, path = '/book/conversa' } = {}) => {
 const findAction = (wrapper, text) =>
   wrapper.findAll('button, a').find(node => node.text().includes(text));
 
+// O jsdom entrega o `popstate` do `history.back()` alguns ciclos de tarefa depois.
+const HISTORY_TICKS = 4;
+const settle = async () => {
+  for (let tick = 0; tick < HISTORY_TICKS; tick += 1) {
+    // eslint-disable-next-line no-await-in-loop
+    await new Promise(resolve => {
+      setTimeout(resolve, 0);
+    });
+  }
+  await flushPromises();
+};
+
 const click = async (wrapper, text) => {
   const node = findAction(wrapper, text);
   if (!node) throw new Error(`No button "${text}" in:\n${wrapper.text()}`);
   await node.trigger('click');
-  await flushPromises();
+  await settle();
 };
 
 const submit = async wrapper => {
@@ -114,6 +151,7 @@ const fillPublicDetails = async (wrapper, digits = '11988880000') => {
 };
 
 beforeEach(() => {
+  useClientZone('America/Sao_Paulo');
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(new Date('2026-10-12T12:00:00Z'));
   api.getNextSlot.mockResolvedValue({ starts_at: NEXT_SLOT });
@@ -129,6 +167,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers();
+  clientZoneSpy?.mockRestore();
 });
 
 describe('public link /book/:slug', () => {
@@ -140,7 +179,7 @@ describe('public link /book/:slug', () => {
     expect(wrapper.text()).toContain('Qual dia fica bom?');
     expect(wrapper.text()).toContain('Mais cedo:');
 
-    await click(wrapper, 'Escolher este');
+    await click(wrapper, 'Quero este');
     expect(wrapper.text()).toContain('Seus dados');
     expect(wrapper.find('#booking-email').exists()).toBe(true);
 
@@ -181,7 +220,7 @@ describe('public link /book/:slug', () => {
     expect(findAction(wrapper, 'Falar no WhatsApp').attributes('href')).toBe(
       'https://wa.me/5511999990000'
     );
-    expect(findAction(wrapper, 'Entrar na reunião')).toBeUndefined();
+    expect(findAction(wrapper, 'Entrar pelo link')).toBeUndefined();
   });
 
   it('books through day and time; only free times become buttons', async () => {
@@ -196,19 +235,34 @@ describe('public link /book/:slug', () => {
       .findAll('ul button')
       .map(node => node.text())
       .sort();
-    // TZ=UTC no teste: 15:00 e 16:00 de Brasília aparecem como 18:00 e 19:00.
-    expect(times).toEqual(['18:00', '19:00']);
+    expect(times).toEqual(['15:00', '16:00']);
 
-    await click(wrapper, '19:00');
+    await click(wrapper, '16:00');
     await fillPublicDetails(wrapper);
     await submit(wrapper);
     expect(api.createBooking.mock.calls[0][1].starts_at).toBe(OTHER_SLOT);
   });
 
-  it('shows the page time zone when it differs from the client', async () => {
+  it('hides the time zone line when the client clock is the same as the page', async () => {
     const wrapper = await mountApp();
-    expect(wrapper.text()).toContain('Horários no seu fuso');
-    expect(wrapper.text()).toContain('A agenda é no fuso');
+    expect(wrapper.find('[data-testid="zone-note"]').exists()).toBe(false);
+  });
+
+  it('a client in Tokyo sees Tokyo times, with the day when it changes', async () => {
+    useClientZone('Asia/Tokyo');
+    const wrapper = await mountApp();
+    const note = wrapper.find('[data-testid="zone-note"]').text();
+    expect(note.startsWith('Horários mostrados em: ')).toBe(true);
+    expect(note).toContain('Japão');
+
+    await wrapper.find('button[aria-label*="13"]').trigger('click');
+    await flushPromises();
+    const labels = wrapper.findAll('ul button').map(node => node.text());
+    // 15:00 de Brasília do dia 13 = 03:00 de Tóquio do dia 14: o botão diz o dia.
+    expect(labels[0]).toContain('03:00');
+    expect(labels[0]).toContain('14');
+    expect(labels[0]).not.toBe('03:00');
+    expect(wrapper.find('[data-testid="zone-note"]').exists()).toBe(true);
   });
 
   it('asks for the email when the location requires it (Google Meet)', async () => {
@@ -218,7 +272,7 @@ describe('public link /book/:slug', () => {
         locations: [{ type: 'google_meet', requires_email: true }],
       },
     });
-    await click(wrapper, 'Escolher este');
+    await click(wrapper, 'Quero este');
     expect(wrapper.find('label[for="booking-email"]').text()).toBe(
       'Seu e-mail'
     );
@@ -226,9 +280,7 @@ describe('public link /book/:slug', () => {
     await fillPublicDetails(wrapper);
     await submit(wrapper);
     expect(api.createBooking).not.toHaveBeenCalled();
-    expect(wrapper.text()).toContain(
-      'Escreva seu e-mail para receber o link da reunião.'
-    );
+    expect(wrapper.text()).toContain('Escreva seu e-mail para receber o link.');
 
     await wrapper.find('#booking-email').setValue('ana@exemplo.com');
     await submit(wrapper);
@@ -251,7 +303,7 @@ describe('public link /book/:slug', () => {
     await flushPromises();
     expect(api.getNextSlot).toHaveBeenLastCalledWith('conversa', 60);
 
-    await click(wrapper, 'Escolher este');
+    await click(wrapper, 'Quero este');
     await wrapper
       .find('input[name="booking-location"][value="in_person"]')
       .setValue();
@@ -264,7 +316,7 @@ describe('public link /book/:slug', () => {
 
   it('blocks a short number before calling the server', async () => {
     const wrapper = await mountApp();
-    await click(wrapper, 'Escolher este');
+    await click(wrapper, 'Quero este');
     await fillPublicDetails(wrapper, '1198');
     await submit(wrapper);
     expect(api.createBooking).not.toHaveBeenCalled();
@@ -281,7 +333,7 @@ describe('server errors', () => {
   const bookAndFail = async code => {
     failWith(code);
     const wrapper = await mountApp();
-    await click(wrapper, 'Escolher este');
+    await click(wrapper, 'Quero este');
     await fillPublicDetails(wrapper);
     await submit(wrapper);
     return wrapper;
@@ -297,7 +349,7 @@ describe('server errors', () => {
       .mockRejectedValueOnce(new api.ApiError(422, 'booking_failed'))
       .mockResolvedValueOnce(BOOKED);
     const wrapper = await mountApp();
-    await click(wrapper, 'Escolher este');
+    await click(wrapper, 'Quero este');
     await fillPublicDetails(wrapper);
 
     await submit(wrapper);
@@ -320,12 +372,12 @@ describe('server errors', () => {
   it('uses a new request_id after choosing another time', async () => {
     failWith('slot_unavailable');
     const wrapper = await mountApp();
-    await click(wrapper, 'Escolher este');
+    await click(wrapper, 'Quero este');
     await fillPublicDetails(wrapper);
     await submit(wrapper);
 
     api.createBooking.mockResolvedValue(BOOKED);
-    await click(wrapper, '19:00');
+    await click(wrapper, '16:00');
     await fillPublicDetails(wrapper);
     await submit(wrapper);
 
@@ -358,7 +410,7 @@ describe('server errors', () => {
   });
 
   it.each([
-    ['too_many_open', 'Você já tem conversas marcadas'],
+    ['too_many_open', 'Você já tem horários marcados'],
     ['booking_failed', 'Não deu para marcar agora'],
     ['network', 'Não deu para marcar agora'],
   ])('%s shows a plain message and a WhatsApp way out', async (code, text) => {
@@ -378,9 +430,9 @@ describe('client link /b/:code', () => {
     expect(api.getPage).toHaveBeenCalledWith('conversa', undefined);
     expect(wrapper.text()).toContain('Oi, Marcos! Qual dia fica bom?');
 
-    await click(wrapper, 'Escolher este');
+    await click(wrapper, 'Quero este');
     expect(wrapper.find('[data-testid="confirm-summary"]').text()).toBe(
-      'Camila vai te chamar por vídeo no WhatsApp (11) •••••-5678'
+      'Camila vai chamar você por vídeo no WhatsApp (11) •••••-5678'
     );
     expect(wrapper.find('#booking-name').exists()).toBe(false);
     expect(wrapper.find('#booking-phone').exists()).toBe(false);
@@ -399,15 +451,17 @@ describe('client link /b/:code', () => {
     expect(api.markInviteViewed).toHaveBeenCalledTimes(1);
     expect(api.markInviteViewed).toHaveBeenCalledWith('Xk4p9Q');
 
-    await click(wrapper, 'Escolher este');
+    await click(wrapper, 'Quero este');
     await click(wrapper, 'Voltar');
-    await click(wrapper, 'Escolher outro dia');
+    expect(wrapper.text()).toContain('Oi, Marcos! Qual dia fica bom?');
+    await wrapper.find('button[aria-label*="13"]').trigger('click');
+    await settle();
     expect(api.markInviteViewed).toHaveBeenCalledTimes(1);
   });
 
   it('"Mudar o número" reveals the field and sends the new number', async () => {
     const wrapper = await mountApp({ path: '/b/Xk4p9Q' });
-    await click(wrapper, 'Escolher este');
+    await click(wrapper, 'Quero este');
     await click(wrapper, 'Mudar o número');
 
     expect(findAction(wrapper, 'Mudar o número')).toBeUndefined();
@@ -425,7 +479,7 @@ describe('client link /b/:code', () => {
     async (code, selector) => {
       api.createBooking.mockRejectedValue(new api.ApiError(422, code));
       const wrapper = await mountApp({ path: '/b/Xk4p9Q' });
-      await click(wrapper, 'Escolher este');
+      await click(wrapper, 'Quero este');
       expect(wrapper.find(selector).exists()).toBe(false);
       await submit(wrapper);
       expect(wrapper.find(selector).attributes('aria-invalid')).toBe('true');
@@ -435,16 +489,27 @@ describe('client link /b/:code', () => {
   it('asks for the number when the contact has no WhatsApp (J1-A11)', async () => {
     api.getInvite.mockResolvedValue({ ...INVITE, phone_masked: null });
     const wrapper = await mountApp({ path: '/b/Xk4p9Q' });
-    await click(wrapper, 'Escolher este');
+    await click(wrapper, 'Quero este');
     expect(wrapper.find('#booking-phone').exists()).toBe(true);
     await submit(wrapper);
     expect(api.createBooking).not.toHaveBeenCalled();
   });
 
-  it('shows "Você já agendou" for a used link', async () => {
-    api.getInvite.mockResolvedValue({ ...INVITE, state: 'scheduled' });
+  it('shows "Você já agendou" with the booked day and time', async () => {
+    api.getInvite.mockResolvedValue({
+      ...INVITE,
+      state: 'scheduled',
+      starts_at: NEXT_SLOT,
+      timezone: 'America/Sao_Paulo',
+    });
     const wrapper = await mountApp({ path: '/b/Xk4p9Q' });
     expect(wrapper.text()).toContain('Você já agendou');
+    expect(wrapper.find('[data-testid="already-when"]').text()).toContain(
+      'terça-feira, 13 de outubro'
+    );
+    expect(wrapper.find('[data-testid="already-when"]').text()).toContain(
+      '15:00'
+    );
     expect(findAction(wrapper, 'Falar no WhatsApp').attributes('href')).toBe(
       'https://wa.me/5511999990000'
     );
@@ -510,6 +575,15 @@ describe('page states', () => {
     });
     expect(api.getPage).toHaveBeenCalledWith('conversa', 'tk');
     expect(wrapper.text()).toContain('Prévia');
+
+    await click(wrapper, 'Quero este');
+    expect(wrapper.find('[data-testid="preview-no-booking"]').text()).toBe(
+      'Isto é uma prévia. Ninguém consegue marcar por aqui.'
+    );
+    expect(findAction(wrapper, 'Confirmar')).toBeUndefined();
+    await fillPublicDetails(wrapper);
+    await submit(wrapper);
+    expect(api.createBooking).not.toHaveBeenCalled();
   });
 
   it('applies a valid brand color and ignores an invalid one', async () => {
@@ -530,13 +604,13 @@ describe('page states', () => {
 describe('captcha and consent', () => {
   it('renders hCaptcha only when the page sends a site key', async () => {
     const without = await mountApp();
-    await click(without, 'Escolher este');
+    await click(without, 'Quero este');
     expect(without.find('[data-testid="captcha"]').exists()).toBe(false);
 
     const wrapper = await mountApp({
       page: { ...PAGE, captcha_site_key: 'site-key' },
     });
-    await click(wrapper, 'Escolher este');
+    await click(wrapper, 'Quero este');
     expect(wrapper.find('[data-testid="captcha"]').exists()).toBe(true);
 
     await fillPublicDetails(wrapper);
@@ -551,13 +625,13 @@ describe('captcha and consent', () => {
 
   it('shows the WhatsApp notice only when notices_enabled', async () => {
     const off = await mountApp();
-    await click(off, 'Escolher este');
+    await click(off, 'Quero este');
     expect(off.find('[data-testid="notices-consent"]').exists()).toBe(false);
 
     const on = await mountApp({ page: { ...PAGE, notices_enabled: true } });
-    await click(on, 'Escolher este');
+    await click(on, 'Quero este');
     expect(on.find('[data-testid="notices-consent"]').text()).toContain(
-      'aceita receber os avisos'
+      'aceita receber avisos sobre este horário'
     );
     await fillPublicDetails(on);
     await submit(on);
@@ -566,8 +640,13 @@ describe('captcha and consent', () => {
 
   it('keeps the honeypot out of reach and sends it', async () => {
     const wrapper = await mountApp();
-    await click(wrapper, 'Escolher este');
-    const trap = wrapper.find('input[name="company"]');
+    await click(wrapper, 'Quero este');
+    expect(wrapper.find('input[name="company"]').exists()).toBe(false);
+    const trap = wrapper.find('input[name="hp_field_x"]');
+    expect(trap.attributes('autocomplete')).toBe('off');
+    expect(wrapper.find('label[for="booking-hp-field"]').text()).not.toContain(
+      'Company'
+    );
     expect(trap.attributes('tabindex')).toBe('-1');
     expect(trap.element.closest('[aria-hidden="true"]')).not.toBeNull();
     await trap.setValue('bot inc');
@@ -588,7 +667,7 @@ describe('links are always safe', () => {
     const wrapper = await mountApp({
       page: { ...PAGE, contact_whatsapp_url: `${SCRIPT}alert(4)` },
     });
-    await click(wrapper, 'Escolher este');
+    await click(wrapper, 'Quero este');
     await fillPublicDetails(wrapper);
     await submit(wrapper);
 
@@ -597,7 +676,7 @@ describe('links are always safe', () => {
       expect(link.attributes('href')).not.toContain('script:');
     });
     expect(findAction(wrapper, 'Salvar na minha agenda')).toBeUndefined();
-    expect(findAction(wrapper, 'Entrar na reunião')).toBeUndefined();
+    expect(findAction(wrapper, 'Entrar pelo link')).toBeUndefined();
     expect(findAction(wrapper, 'Falar no WhatsApp')).toBeUndefined();
   });
 
@@ -607,10 +686,10 @@ describe('links are always safe', () => {
       location: { type: 'custom_link', join_url: 'https://meet.example.com/x' },
     });
     const wrapper = await mountApp();
-    await click(wrapper, 'Escolher este');
+    await click(wrapper, 'Quero este');
     await fillPublicDetails(wrapper);
     await submit(wrapper);
-    const join = findAction(wrapper, 'Entrar na reunião');
+    const join = findAction(wrapper, 'Entrar pelo link');
     expect(join.attributes('href')).toBe('https://meet.example.com/x');
     expect(join.attributes('rel')).toBe('noopener noreferrer');
   });
@@ -657,6 +736,305 @@ describe('no time works', () => {
     await flushPromises();
     expect(wrapper.text()).toContain('Não deu para buscar os horários.');
     await click(wrapper, 'Tentar de novo');
-    expect(wrapper.text()).toContain('18:00');
+    expect(wrapper.text()).toContain('15:00');
+  });
+});
+
+describe('days, durations and places', () => {
+  it('never offers a closed weekday and follows the page window up to 90 days', async () => {
+    const wrapper = await mountApp({
+      page: { ...PAGE, booking_window_days: 120 },
+    });
+    const labels = wrapper
+      .findAll('button[aria-label]')
+      .map(node => node.attributes('aria-label'));
+    // De segunda 12/10 a 90 dias depois: 13 semanas, só os dias úteis.
+    expect(labels).toHaveLength(65);
+    expect(labels.some(label => label.startsWith('sábado'))).toBe(false);
+    expect(labels.some(label => label.startsWith('domingo'))).toBe(false);
+  });
+
+  it('shows the chosen duration in the header and drops the old earliest time', async () => {
+    const wrapper = await mountApp({ page: { ...PAGE, durations: [30, 60] } });
+    expect(wrapper.find('header').text()).toContain('30 minutos');
+    expect(wrapper.text()).toContain('Mais cedo:');
+
+    api.getNextSlot.mockReturnValue(new Promise(() => {}));
+    await wrapper.find('input[name="booking-duration"][value="60"]').setValue();
+    await flushPromises();
+    expect(wrapper.find('header').text()).toContain('60 minutos');
+    expect(wrapper.text()).not.toContain('Mais cedo:');
+  });
+
+  it('uses the server label and shows the address before confirming', async () => {
+    const wrapper = await mountApp({
+      page: {
+        ...PAGE,
+        locations: [
+          {
+            type: 'in_person',
+            label: 'Escritório Paulista',
+            address: 'Av. Paulista, 1000',
+            requires_email: false,
+          },
+        ],
+      },
+    });
+    await click(wrapper, 'Quero este');
+    const place = wrapper.find('[data-testid="only-location"]').text();
+    expect(place).toContain('Escritório Paulista');
+    expect(place).toContain('Endereço: Av. Paulista, 1000');
+  });
+
+  it('uses the server labels in the location cards', async () => {
+    const wrapper = await mountApp({
+      page: {
+        ...PAGE,
+        locations: [
+          { type: 'whatsapp_video', label: 'Vídeo', requires_email: false },
+          {
+            type: 'in_person',
+            label: 'Loja do centro',
+            address: 'Rua A, 1',
+            requires_email: false,
+          },
+        ],
+      },
+    });
+    await click(wrapper, 'Quero este');
+    const cards = wrapper
+      .find('input[name="booking-location"]')
+      .element.closest('fieldset').textContent;
+    expect(cards).toContain('Loja do centro');
+    expect(cards).toContain('Endereço: Rua A, 1');
+  });
+});
+
+describe('phone back button', () => {
+  it('goes back one screen instead of leaving the page', async () => {
+    const wrapper = await mountApp();
+    await wrapper.find('button[aria-label*="13"]').trigger('click');
+    await settle();
+    expect(wrapper.text()).toContain('Qual horário?');
+    await click(wrapper, '16:00');
+    expect(wrapper.text()).toContain('Seus dados');
+
+    window.history.back();
+    await settle();
+    expect(wrapper.text()).toContain('Qual horário?');
+    window.history.back();
+    await settle();
+    expect(wrapper.text()).toContain('Qual dia fica bom?');
+  });
+
+  it('does not stack entries when the page loads again', async () => {
+    const before = window.history.length;
+    const wrapper = await mountApp();
+    expect(window.history.length).toBe(before);
+
+    api.getPage.mockRejectedValueOnce(new api.ApiError(0, 'network'));
+    await wrapper.vm.$.setupState.load();
+    await settle();
+    expect(window.history.length).toBe(before);
+  });
+
+  it('keeps the confirmation on screen after booking', async () => {
+    const wrapper = await mountApp();
+    await click(wrapper, 'Quero este');
+    await fillPublicDetails(wrapper);
+    await submit(wrapper);
+    expect(wrapper.text()).toContain('Tudo certo, Ana!');
+
+    window.history.back();
+    await settle();
+    expect(wrapper.text()).toContain('Tudo certo, Ana!');
+  });
+});
+
+describe('form token older than the server accepts', () => {
+  const LOADED_AT = new Date('2026-10-12T12:00:00Z');
+  const minutesLater = minutes =>
+    new Date(LOADED_AT.getTime() + minutes * 60 * 1000);
+
+  beforeEach(() => {
+    vi.useRealTimers();
+    vi.useFakeTimers({ toFake: ['Date', 'setTimeout'], now: LOADED_AT });
+  });
+
+  const openDetails = async () => {
+    const wrapper = await mountApp();
+    await findAction(wrapper, 'Quero este').trigger('click');
+    await flushPromises();
+    await fillPublicDetails(wrapper);
+    return wrapper;
+  };
+
+  it('fetches a fresh token before sending after 1h45', async () => {
+    const wrapper = await openDetails();
+    api.getPage.mockResolvedValue({ ...PAGE, form_token: 'form-token-2' });
+    vi.setSystemTime(minutesLater(110));
+
+    await wrapper.find('form').trigger('submit');
+    await flushPromises();
+    expect(api.getPage).toHaveBeenCalledTimes(2);
+    expect(api.createBooking).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(2100);
+    await flushPromises();
+    expect(api.createBooking).toHaveBeenCalledTimes(1);
+    expect(api.createBooking.mock.calls[0][1].form_token).toBe('form-token-2');
+    expect(wrapper.text()).toContain('Tudo certo, Ana!');
+  });
+
+  it('renews an old token once after booking_failed, with the same request_id', async () => {
+    const wrapper = await openDetails();
+    api.createBooking
+      .mockRejectedValueOnce(new api.ApiError(422, 'booking_failed'))
+      .mockResolvedValueOnce(BOOKED);
+    api.getPage.mockResolvedValue({ ...PAGE, form_token: 'form-token-2' });
+    vi.setSystemTime(minutesLater(70));
+
+    await wrapper.find('form').trigger('submit');
+    await flushPromises();
+    await vi.advanceTimersByTimeAsync(2100);
+    await flushPromises();
+
+    const [first, second] = api.createBooking.mock.calls.map(
+      ([, payload]) => payload
+    );
+    expect(first.form_token).toBe('form-token');
+    expect(second.form_token).toBe('form-token-2');
+    expect(second.request_id).toBe(first.request_id);
+    expect(wrapper.text()).toContain('Tudo certo, Ana!');
+  });
+
+  it('does not loop: a fresh token that fails shows the message', async () => {
+    const wrapper = await openDetails();
+    api.createBooking.mockRejectedValue(
+      new api.ApiError(422, 'booking_failed')
+    );
+
+    await wrapper.find('form').trigger('submit');
+    await flushPromises();
+    expect(api.getPage).toHaveBeenCalledTimes(1);
+    expect(api.createBooking).toHaveBeenCalledTimes(1);
+    expect(wrapper.find('[role="alert"]').text()).toContain(
+      'Não deu para marcar agora'
+    );
+  });
+});
+
+describe('phone number typing', () => {
+  it.each([
+    ['+55 11 98765-4321', '(11) 98765-4321', '+5511987654321'],
+    ['5511987654321', '(11) 98765-4321', '+5511987654321'],
+    ['011 98765-4321', '(11) 98765-4321', '+5511987654321'],
+    ['119888800001', '(11) 98888-0000', '+5511988880000'],
+  ])('"%s" shows %s and sends exactly that', async (typed, shown, sent) => {
+    const wrapper = await mountApp();
+    await click(wrapper, 'Quero este');
+    await wrapper.find('#booking-name').setValue('Ana Souza');
+    await wrapper.find('#booking-phone').setValue(typed);
+    expect(wrapper.find('#booking-phone').element.value).toBe(shown);
+    await submit(wrapper);
+    expect(api.createBooking.mock.calls[0][1].phone).toBe(sent);
+  });
+});
+
+describe('focus and announcements', () => {
+  it('moves the focus to the first wrong field, with no pile of alerts', async () => {
+    const wrapper = await mountApp({ attach: true });
+    await click(wrapper, 'Quero este');
+    await submit(wrapper);
+    expect(document.activeElement?.id).toBe('booking-name');
+    expect(wrapper.findAll('[role="alert"]')).toHaveLength(0);
+    expect(
+      wrapper.find('#booking-name').attributes('aria-describedby')
+    ).toContain('booking-name-error');
+  });
+
+  it('a field error from the server also takes the focus', async () => {
+    api.createBooking.mockRejectedValue(new api.ApiError(422, 'invalid_phone'));
+    const wrapper = await mountApp({ attach: true });
+    await click(wrapper, 'Quero este');
+    await fillPublicDetails(wrapper);
+    await submit(wrapper);
+    expect(document.activeElement?.id).toBe('booking-phone');
+  });
+
+  it('announces the sent contact request by focusing its title', async () => {
+    const wrapper = await mountApp({ attach: true });
+    await click(wrapper, 'Nenhum horário serve?');
+    await wrapper.find('#contact-name').setValue('Ana Souza');
+    await wrapper.find('#contact-phone').setValue('11988880000');
+    await submit(wrapper);
+    expect(document.activeElement?.textContent.trim()).toBe('Pedido enviado!');
+  });
+});
+
+describe('no time works from the client link', () => {
+  it('does not ask name and WhatsApp again and sends the invite code', async () => {
+    const wrapper = await mountApp({ path: '/b/Xk4p9Q' });
+    await click(wrapper, 'Nenhum horário serve?');
+    expect(wrapper.text()).toContain('Camila chama você no WhatsApp');
+    expect(wrapper.find('#contact-name').exists()).toBe(false);
+    expect(wrapper.find('#contact-phone').exists()).toBe(false);
+
+    await submit(wrapper);
+    expect(api.requestContact).toHaveBeenCalledWith(
+      'conversa',
+      expect.objectContaining({
+        name: undefined,
+        phone: undefined,
+        invite_code: 'Xk4p9Q',
+      })
+    );
+    expect(wrapper.text()).toContain('Pedido enviado!');
+  });
+});
+
+describe('after booking', () => {
+  const book = async () => {
+    const wrapper = await mountApp();
+    await click(wrapper, 'Quero este');
+    await fillPublicDetails(wrapper);
+    await submit(wrapper);
+    return wrapper;
+  };
+
+  it('hands over the link to change or cancel, with copy and open', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    });
+    const wrapper = await book();
+
+    const box = wrapper.find('[data-testid="manage-link"]');
+    expect(box.text()).toContain('Guarde este link para mudar ou cancelar');
+    expect(box.find('input').element.value).toBe(BOOKED.manage_url);
+    expect(findAction(wrapper, 'Abrir link').attributes('href')).toBe(
+      BOOKED.manage_url
+    );
+
+    await click(wrapper, 'Copiar link');
+    expect(writeText).toHaveBeenCalledWith(BOOKED.manage_url);
+    expect(box.find('[role="status"]').text()).toBe('Link copiado.');
+  });
+
+  it('offers Google Calendar next to the .ics, with only title, time and place', async () => {
+    const wrapper = await book();
+    const google = findAction(wrapper, 'Pôr na Agenda do Google');
+    const url = new URL(google.attributes('href'));
+    expect(url.origin + url.pathname).toBe(
+      'https://calendar.google.com/calendar/render'
+    );
+    expect(url.searchParams.get('action')).toBe('TEMPLATE');
+    expect(url.searchParams.get('text')).toBe('Horário com Camila');
+    expect(url.searchParams.get('dates')).toBe(
+      '20261013T180000Z/20261013T183000Z'
+    );
+    expect(google.attributes('href')).not.toContain('Ana');
+    expect(google.attributes('href')).not.toContain('5511988880000');
   });
 });

@@ -1,5 +1,9 @@
 <script setup>
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
+
+// Campo de texto grande. `error` é a chave de tradução do erro: o erro fica ligado ao campo (aria-describedby) e quem
+// avisa é o foco no campo, não um alerta por campo (um só alerta por vez na tela).
 
 const props = defineProps({
   id: { type: String, required: true },
@@ -13,6 +17,8 @@ const props = defineProps({
 });
 
 const model = defineModel({ type: String, default: '' });
+const { t } = useI18n();
+const errorText = computed(() => (props.error ? t(props.error) : ''));
 
 const describedBy = computed(
   () =>
@@ -45,10 +51,9 @@ const describedBy = computed(
     <p
       v-if="error"
       :id="`${id}-error`"
-      role="alert"
       class="text-base font-medium text-red-700"
     >
-      {{ error }}
+      {{ errorText }}
     </p>
   </div>
 </template>

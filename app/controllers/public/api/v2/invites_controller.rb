@@ -4,6 +4,8 @@
 # 404 UNIFORME (`{ error: 'not_found' }`) para código inexistente, vencido, cancelado, página pausada ou apagada,
 # responsável que não pode mais atender e conta sem a flag: quem tenta adivinhar códigos não distingue um caso do
 # outro. O payload leva só o primeiro nome e o telefone mascarado; nunca o número inteiro, e-mail ou id interno.
+# Convite agendado leva também `starts_at` (no fuso da página) e `timezone` (IANA), para a tela "Você já agendou"
+# dizer o dia e a hora.
 #
 # `viewed` registra a abertura depois do primeiro render (POST, para pré-visualização de link não contar) e ignora
 # robôs de pré-visualização pelo `User-Agent`, comparado por `include?` numa lista fechada.
@@ -19,7 +21,7 @@ class Public::Api::V2::InvitesController < PublicController
       code: @invite.code, page_slug: page_slug, state: @invite.scheduled_at.present? ? 'scheduled' : 'open',
       contact_first_name: ::Crm::BookingV2::InviteText.first_name(@invite.contact).presence,
       phone_masked: ::Crm::BookingV2::PhoneMask.mask(@invite.contact.phone_number)
-    }
+    }.merge(scheduled_time)
   end
 
   def viewed
@@ -30,7 +32,7 @@ class Public::Api::V2::InvitesController < PublicController
   private
 
   def set_invite
-    @invite = ::Crm::BookingInvite.includes(:account, :contact, :booking_link, booking_profile: :default_assignee)
+    @invite = ::Crm::BookingInvite.includes(:account, :contact, :booking_link, :meeting, booking_profile: :default_assignee)
                                   .find_by(code: params[:code].to_s)
     render json: { error: 'not_found' }, status: :not_found unless usable?
   end
@@ -44,6 +46,14 @@ class Public::Api::V2::InvitesController < PublicController
 
   def page_slug
     @invite.booking_link&.slug || @invite.booking_profile.slug
+  end
+
+  def scheduled_time
+    starts_at = @invite.meeting&.starts_at
+    return {} if @invite.scheduled_at.blank? || starts_at.blank?
+
+    zone = ActiveSupport::TimeZone[@invite.booking_profile.resolved_timezone]
+    { starts_at: (zone ? starts_at.in_time_zone(zone) : starts_at.utc).iso8601, timezone: zone&.tzinfo&.name }
   end
 
   def robot?

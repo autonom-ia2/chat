@@ -7,8 +7,12 @@
 # mesma trava de telefone do `Booker` (`pg_advisory_xact_lock(4, ...)`), para dois envios simultâneos não passarem
 # do limite nem criarem dois contatos.
 #
+# Vindo do link do cliente (`invite_code`): o convite precisa ser desta página e estar ativo. Nome e telefone vêm do
+# contato do convite quando a pessoa não digitou (o cliente não preenche de novo); o contato é o do convite (nada de
+# contato duplicado) e o card aberto do convite é reaproveitado. Convite que não serve: 'booking_failed'.
+#
 # Erros: ArgumentError 'invalid_name', 'invalid_phone', 'too_many_open', 'host_unavailable',
-# 'no_pipeline_configured', 'no_stage_configured'.
+# 'no_pipeline_configured', 'no_stage_configured', 'booking_failed'.
 class Crm::BookingV2::ContactRequest
   SOURCE = 'contact_request'.freeze
   FOLLOW_UP_SOURCE = 'booking_contact_request'.freeze
@@ -18,9 +22,12 @@ class Crm::BookingV2::ContactRequest
   INT32_RANGE = 2**32
   INT32_MAX = (2**31) - 1
 
-  def initialize(page:, name:, phone:, consent: {})
+  def initialize(page:, name:, phone:, consent: {}, invite_code: nil)
     @page = page
-    @input = Crm::BookingV2::BookingInput.new(profile: page.profile, name: name, phone: phone, starts_at: nil)
+    @invite_code = invite_code.to_s
+    contact = invite&.contact
+    @input = Crm::BookingV2::BookingInput.new(profile: page.profile, name: name.presence || contact&.name,
+                                              phone: phone.presence || contact&.phone_number, starts_at: nil)
     @consent = consent.to_h.with_indifferent_access
   end
 
@@ -32,7 +39,7 @@ class Crm::BookingV2::ContactRequest
 
       create_request!
     end
-    broadcast_card_created(card)
+    broadcast_card_created(card) unless invite_card
     card
   end
 
@@ -43,10 +50,21 @@ class Crm::BookingV2::ContactRequest
   delegate :profile, :account, :host, to: :page
   delegate :name, :phone, :phone_candidates, to: :input
 
+  def invite
+    return if @invite_code.blank?
+
+    @invite ||= Crm::BookingInvite.includes(:contact, :card).find_by(code: @invite_code)
+  end
+
   def validate!
+    raise ArgumentError, 'booking_failed' if @invite_code.present? && !usable_invite?
     raise ArgumentError, 'invalid_name' if name.blank?
     raise ArgumentError, 'invalid_phone' if phone.blank?
     raise ArgumentError, 'host_unavailable' unless Crm::BookingV2::HostEligibility.eligible?(account: account, user: host)
+  end
+
+  def usable_invite?
+    Crm::BookingV2::PublicBooking.invite_for_page?(invite, page) && invite.active?
   end
 
   # Mesma chave do Booker: crc32("conta:telefone") levado para int4 com sinal.
@@ -63,14 +81,19 @@ class Crm::BookingV2::ContactRequest
   end
 
   def create_request!
-    contact = Crm::BookingV2::PhoneLookup.find_contact(account: account, e164: phone) ||
+    contact = invite&.contact || Crm::BookingV2::PhoneLookup.find_contact(account: account, e164: phone) ||
               account.contacts.create!(name: name, phone_number: phone)
-    card = create_card!(contact)
+    card = invite_card || create_card!(contact)
     follow_up = create_follow_up!(card, contact)
     Crm::FollowUps::CardNextDueUpdater.update(card)
     Crm::ActivityLogger.new(card: card, actor: nil, event_type: ACTIVITY,
                             payload: { booking_profile_id: profile.id, follow_up_id: follow_up.id }).perform
     card
+  end
+
+  def invite_card
+    card = invite&.card
+    card if card&.open?
   end
 
   def create_card!(contact)

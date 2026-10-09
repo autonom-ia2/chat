@@ -29,6 +29,15 @@ class Crm::BookingV2::PublicBooking
     REQUEST_ID_LENGTH.cover?(value.length) && value.each_char.all? { |char| REQUEST_ID_CHARS.include?(char) }
   end
 
+  # O convite é desta página (conta, página e, se tiver, o link individual) e não foi cancelado. Também usado pelo
+  # pedido de contato vindo do convite (`ContactRequest`).
+  def self.invite_for_page?(invite, page)
+    return false if invite.blank? || invite.canceled_at.present?
+    return false unless invite.account_id == page.account.id && invite.booking_profile_id == page.profile.id
+
+    invite.booking_link_id.nil? || invite.booking_link_id == page.link&.id
+  end
+
   def initialize(page:, params:)
     @page = page
     @params = params.to_h.with_indifferent_access
@@ -77,7 +86,7 @@ class Crm::BookingV2::PublicBooking
 
   def book_with_invite
     invite = Crm::BookingInvite.find_by(code: invite_code)
-    raise ArgumentError, 'booking_failed' unless invite_for_this_page?(invite)
+    raise ArgumentError, 'booking_failed' unless self.class.invite_for_page?(invite, page)
     return repeated_invite_booking(invite) if invite.scheduled_at.present?
     raise ArgumentError, 'booking_failed' unless invite.active?
 
@@ -99,13 +108,6 @@ class Crm::BookingV2::PublicBooking
   def invite_booker(invite)
     booker(phone: params[:phone].presence || invite.contact.phone_number, source: 'invite', link: invite.booking_link || page.link,
            contact: invite.contact, card: invite.card, conversation: invite.conversation)
-  end
-
-  def invite_for_this_page?(invite)
-    return false if invite.blank? || invite.canceled_at.present?
-    return false unless invite.account_id == page.account.id && invite.booking_profile_id == profile.id
-
-    invite.booking_link_id.nil? || invite.booking_link_id == page.link&.id
   end
 
   # Convite já agendado: só o reenvio da mesma reserva (mesma chave, mesma hora, há pouco) responde de novo.

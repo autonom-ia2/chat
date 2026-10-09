@@ -7,7 +7,6 @@ export function useSlots({ slug, duration }) {
   const isLoading = ref(false);
   const hasFailed = ref(false);
   const nextSlot = ref(null);
-  const isNextLoading = ref(false);
   let slotsRequest = 0;
   let nextRequest = 0;
 
@@ -28,18 +27,17 @@ export function useSlots({ slug, duration }) {
     }
   };
 
-  // Sem atalho quando a consulta falha: a lista de dias continua lá, então ninguém fica sem saída.
+  // Sem atalho enquanto busca ou quando a consulta falha: o atalho velho (de outra duração ou de antes de recarregar)
+  // some na hora, e a lista de dias continua lá, então ninguém fica sem saída.
   const loadNextSlot = async () => {
     nextRequest += 1;
     const current = nextRequest;
-    isNextLoading.value = true;
+    nextSlot.value = null;
     try {
       const data = await getNextSlot(slug.value, duration.value);
       if (current === nextRequest) nextSlot.value = data?.starts_at || null;
     } catch (error) {
       if (current === nextRequest) nextSlot.value = null;
-    } finally {
-      if (current === nextRequest) isNextLoading.value = false;
     }
   };
 
@@ -48,7 +46,6 @@ export function useSlots({ slug, duration }) {
     isLoading,
     hasFailed,
     nextSlot,
-    isNextLoading,
     loadSlots,
     loadNextSlot,
   };
