@@ -91,6 +91,40 @@ RSpec.describe Autonomia::Financial::StoreClient do
     expect(stub).to have_been_requested.once
   end
 
+  it 'rejects a checkout belonging to another buyer without exposing its URL' do
+    response = fixtures.fetch('checkoutResponse').merge('buyer' => { 'cognitoSub' => 'another-buyer' })
+    stub_request(:post, "#{base_url}/financial/internal/store/checkout-sessions").to_return(status: 201, body: response.to_json)
+    expect { client.checkout!(fixtures.fetch('checkoutRequest'), idempotency_key: 'checkout:test:1') }
+      .to raise_error(Autonomia::Financial::StoreClientError) { |e|
+        expect(e.code).to eq('RESPONSE_TARGET_MISMATCH')
+        expect(e.outcome).to eq('unknown')
+        expect(e.message).not_to include(response.fetch('checkoutUrl'))
+      }
+  end
+
+  %w[installationId productCatalogItemId].each do |field|
+    it "rejects a checkout from another #{field}" do
+      response = fixtures.fetch('checkoutResponse')
+      response['namespace'] = fixtures.fetch('namespace').merge(field => fixtures.fetch('namespace').fetch(field).sub(/.$/, '9'))
+      stub_request(:post, "#{base_url}/financial/internal/store/checkout-sessions").to_return(status: 201, body: response.to_json)
+      expect { client.checkout!(fixtures.fetch('checkoutRequest'), idempotency_key: 'checkout:test:1') }
+        .to raise_error(Autonomia::Financial::StoreClientError) { |e|
+          expect(e.code).to eq('RESPONSE_SCOPE_MISMATCH')
+          expect(e.outcome).to eq('unknown')
+        }
+    end
+  end
+
+  it 'rejects a checkout for another requested plan price' do
+    response = fixtures.fetch('checkoutResponse').merge('servicePlanPriceId' => '40000000-0000-4000-8000-000000000099')
+    stub_request(:post, "#{base_url}/financial/internal/store/checkout-sessions").to_return(status: 201, body: response.to_json)
+    expect { client.checkout!(fixtures.fetch('checkoutRequest'), idempotency_key: 'checkout:test:1') }
+      .to raise_error(Autonomia::Financial::StoreClientError) { |e|
+        expect(e.code).to eq('RESPONSE_TARGET_MISMATCH')
+        expect(e.outcome).to eq('unknown')
+      }
+  end
+
   it 'repeats exactly the same reservation payload on a caller-initiated retry' do
     stub = stub_request(:post, reservation_url)
            .with(body: reserve_payload.to_json)
@@ -108,6 +142,37 @@ RSpec.describe Autonomia::Financial::StoreClient do
     }
     expect(stub).to have_been_requested.once
     expect(WebMock).not_to have_requested(:post, /release/)
+  end
+
+  [Net::HTTPBadResponse, Net::HTTPHeaderSyntaxError].each do |error_class|
+    it "treats #{error_class.name} on a write as an unknown outcome without retrying" do
+      stub = stub_request(:post, reservation_url).to_raise(error_class.new('sensitive-protocol-error'))
+      expect { client.reserve!(reserve_payload) }.to raise_error(Autonomia::Financial::StoreClientError) { |e|
+        expect(e.code).to eq('TRANSPORT_ERROR')
+        expect(e.outcome).to eq('unknown')
+        expect(e.message).not_to include('sensitive-protocol-error')
+      }
+      expect(stub).to have_been_requested.once
+      expect(WebMock).not_to have_requested(:post, /release/)
+    end
+
+    it "treats #{error_class.name} on a read as a transport failure" do
+      stub = stub_request(:get, "#{reservation_url}/#{reservation_id}").to_raise(error_class.new('sensitive-protocol-error'))
+      expect { client.reservation!(reservation_id) }.to raise_error(Autonomia::Financial::StoreClientError) { |e|
+        expect(e.code).to eq('TRANSPORT_ERROR')
+        expect(e.outcome).to eq('failure')
+      }
+      expect(stub).to have_been_requested.once
+    end
+  end
+
+  it 'does not accept a provisional reservation with no expiry after a write' do
+    reservation_response['reservation']['expiresAt'] = nil
+    stub_request(:post, reservation_url).to_return(status: 201, body: reservation_response.to_json)
+    expect { client.reserve!(reserve_payload) }.to raise_error(Autonomia::Financial::StoreClientError) { |e|
+      expect(e.code).to eq('INVALID_RESPONSE')
+      expect(e.outcome).to eq('unknown')
+    }
   end
 
   it 'keeps server errors and malformed successful writes as unknown outcomes' do
@@ -161,6 +226,34 @@ RSpec.describe Autonomia::Financial::StoreClient do
       .to_return(status: 200, body: released.to_json)
     expect(client.release!(reservation_id, payload)).to eq(released)
     expect(WebMock).not_to have_requested(:post, reservation_url)
+  end
+
+  %w[reserved released expired].each do |status|
+    it "does not accept #{status} as a successful commit, including an idempotent replay" do
+      reservation_response['reservation']['status'] = status
+      reservation_response['replayed'] = true
+      stub = stub_request(:post, "#{reservation_url}/#{reservation_id}/commit").to_return(status: 200, body: reservation_response.to_json)
+      expect { client.commit!(reservation_id, 'idempotencyKey' => 'commit:test:1') }
+        .to raise_error(Autonomia::Financial::StoreClientError) { |e|
+          expect(e.code).to eq('RESPONSE_STATE_MISMATCH')
+          expect(e.outcome).to eq('unknown')
+        }
+      expect(stub).to have_been_requested.once
+      expect(WebMock).not_to have_requested(:post, /release/)
+    end
+  end
+
+  %w[reserved committed expired].each do |status|
+    it "does not accept #{status} as a successful release" do
+      reservation_response['reservation'].merge!('status' => status, 'expiresAt' => status == 'reserved' ? '2026-10-09T18:15:00Z' : nil)
+      stub = stub_request(:post, "#{reservation_url}/#{reservation_id}/release").to_return(status: 200, body: reservation_response.to_json)
+      expect { client.release!(reservation_id, 'idempotencyKey' => 'release:test:1', 'reason' => 'resource_disabled') }
+        .to raise_error(Autonomia::Financial::StoreClientError) { |e|
+          expect(e.code).to eq('RESPONSE_STATE_MISMATCH')
+          expect(e.outcome).to eq('unknown')
+        }
+      expect(stub).to have_been_requested.once
+    end
   end
 
   it 'rejects traversal IDs and invalid quantities before sending HTTP' do

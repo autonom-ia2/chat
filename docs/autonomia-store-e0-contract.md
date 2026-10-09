@@ -49,6 +49,16 @@ definido; nao inventamos metodos para essas respostas. O evento comercial
 `store.subscription.updated` tambem precisa fechar o formato de `data`.
 O schema `storeEvent` desta fase cobre somente `store.entitlements.snapshot`.
 
+## Correlacao do checkout
+
+A resposta proposta de checkout inclui `namespace`, `buyer.cognitoSub` e
+`servicePlanPriceId`. O Financeiro deve deriva-los do escopo autenticado e da
+sessao persistida, nao de uma identidade enviada pelo browser. O cliente exige
+instalacao/produto e comprador esperados, alem do preco solicitado, antes de
+devolver `checkoutUrl`. Divergencia produz `outcome=unknown`, sem retry ou
+ativacao local. Esses campos adicionais ainda dependem de confirmacao e
+implementacao no Financeiro; esta E0 nao e um consumidor ativo dessas rotas.
+
 ## Schemas e fixtures
 
 - `config/autonomia_store/contract.v1.json`: documento compartilhavel com
@@ -89,10 +99,16 @@ comercial. Identificadores de reserva sao validados antes de compor o caminho.
 - `allocation`: confirmar ocupa capacidade; nao reinicia mensalmente; confirmar
   uma ocupacao nao pode deixar `expiresAt` de reserva provisoria. Desabilitar o
   recurso local antes de liberar capacidade confirmada no Financeiro.
+- `reserved`: exige `expiresAt` como date-time, nunca null. Outros estados
+  continuam permitindo null, com null obrigatorio em allocation committed.
+- Commit exige resposta `committed`; release exige `released`, inclusive em
+  replay idempotente. ID correto com estado diferente produz `outcome=unknown`.
 - `consumption`: acumula no periodo configurado. Confirmacao usa a quantidade
   reservada; quantidade variavel na confirmacao nao e implementada na E0.
 - Timeout, erro de transporte, 5xx ou resposta invalida numa escrita produz
   `outcome=unknown`: pode ter ocorrido efeito remoto. Nao liberar ou recomprar.
+- Resposta HTTP malformada e sintaxe de header invalida sao erros de transporte
+  sanitizados: leitura falha; escrita permanece desconhecida, sem retry.
 - Consulta de recuperacao malsucedida nao prova inexistencia nem liberacao.
 - Repetir a mesma intencao deve devolver a mesma reserva; conflito ou ultima
   vaga excedida e falha explicita, nunca habilitacao local antecipada.

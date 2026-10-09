@@ -25,6 +25,8 @@
   "checkoutRequest": { "servicePlanPriceId": "40000000-0000-4000-8000-000000000001", "limits": [] },
   "checkoutResponse": {
     "contractVersion": 1, "checkoutSessionId": "50000000-0000-4000-8000-000000000001",
+    "namespace": { "installationId": "chat2you-test", "productCatalogItemId": "10000000-0000-4000-8000-000000000001" },
+    "buyer": { "cognitoSub": "buyer-test-1" }, "servicePlanPriceId": "40000000-0000-4000-8000-000000000001",
     "checkoutUrl": "https://checkout.example.test/session", "expiresAt": "2026-10-09T19:00:00Z", "orderId": null, "serviceSubscriptionId": null
   },
   "reserveRequest": {

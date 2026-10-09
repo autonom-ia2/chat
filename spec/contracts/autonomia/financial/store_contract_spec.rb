@@ -66,6 +66,30 @@ RSpec.describe Autonomia::Financial::StoreContract do
     expect(described_class.validate!('reservationResponse', payload)).to eq(payload)
   end
 
+  [nil, 'not-a-date'].each do |expiry|
+    it "rejects a provisional reservation with expiry #{expiry.inspect}" do
+      payload = fixtures.fetch('reservationResponse')
+      payload['reservation']['expiresAt'] = expiry
+      expect { described_class.validate!('reservationResponse', payload) }.to raise_error(Autonomia::Financial::StoreContractError)
+    end
+  end
+
+  %w[released expired].each do |status|
+    it "allows a null expiry after a reservation is #{status}" do
+      payload = fixtures.fetch('reservationResponse')
+      payload['reservation'].merge!('status' => status, 'expiresAt' => nil)
+      expect(described_class.validate!('reservationResponse', payload)).to eq(payload)
+    end
+  end
+
+  %w[namespace buyer servicePlanPriceId].each do |field|
+    it "requires checkout #{field} for correlation with the authenticated request" do
+      payload = fixtures.fetch('checkoutResponse')
+      payload.delete(field)
+      expect { described_class.validate!('checkoutResponse', payload) }.to raise_error(Autonomia::Financial::StoreContractError)
+    end
+  end
+
   it 'rejects floating point event versions and leading zeroes' do
     payload = fixtures.fetch('storeEvent')
     payload['accessVersion'] = 9_007_199_254_740_993

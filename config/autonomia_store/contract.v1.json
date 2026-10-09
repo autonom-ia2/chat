@@ -14,6 +14,10 @@
         "productCatalogItemId": { "$ref": "#/definitions/uuid" }
       }
     },
+    "buyer": {
+      "type": "object", "additionalProperties": false, "required": ["cognitoSub"],
+      "properties": { "cognitoSub": { "$ref": "#/definitions/identifier" } }
+    },
     "resourceRef": {
       "type": "object",
       "additionalProperties": false,
@@ -165,9 +169,11 @@
     },
     "checkoutResponse": {
       "type": "object", "additionalProperties": false,
-      "required": ["contractVersion", "checkoutSessionId", "checkoutUrl", "expiresAt", "orderId", "serviceSubscriptionId"],
+      "required": ["contractVersion", "checkoutSessionId", "namespace", "buyer", "servicePlanPriceId", "checkoutUrl", "expiresAt", "orderId", "serviceSubscriptionId"],
       "properties": {
         "contractVersion": { "const": 1 }, "checkoutSessionId": { "$ref": "#/definitions/uuid" },
+        "namespace": { "$ref": "#/definitions/namespace" }, "buyer": { "$ref": "#/definitions/buyer" },
+        "servicePlanPriceId": { "$ref": "#/definitions/uuid" },
         "checkoutUrl": { "type": "string", "pattern": "^https://", "format": "uri" },
         "expiresAt": { "type": "string", "format": "date-time" },
         "orderId": { "anyOf": [{ "$ref": "#/definitions/uuid" }, { "type": "null" }] },
@@ -200,6 +206,9 @@
             "expiresAt": { "type": ["string", "null"], "format": "date-time" }
           },
           "allOf": [{
+            "if": { "properties": { "status": { "const": "reserved" } } },
+            "then": { "properties": { "expiresAt": { "type": "string", "format": "date-time" } } }
+          }, {
             "if": { "properties": { "usageBehavior": { "const": "allocation" }, "status": { "const": "committed" } } },
             "then": { "properties": { "expiresAt": { "type": "null" } } }
           }]
@@ -211,10 +220,7 @@
       "required": ["id", "buyer", "namespace", "serviceCatalogItemId", "planId", "planPriceId", "status", "currentPeriodStart", "currentPeriodEnd", "cancelAtPeriodEnd", "access", "limits"],
       "properties": {
         "id": { "$ref": "#/definitions/uuid" },
-        "buyer": {
-          "type": "object", "additionalProperties": false, "required": ["cognitoSub"],
-          "properties": { "cognitoSub": { "$ref": "#/definitions/identifier" } }
-        },
+        "buyer": { "$ref": "#/definitions/buyer" },
         "namespace": { "$ref": "#/definitions/namespace" }, "serviceCatalogItemId": { "$ref": "#/definitions/uuid" },
         "planId": { "$ref": "#/definitions/uuid" }, "planPriceId": { "$ref": "#/definitions/uuid" },
         "status": { "enum": ["active", "trialing", "past_due", "unpaid", "canceled"] },

@@ -86,3 +86,32 @@ console/runner/task, migration, segredo, merge ou deploy realizado.
   mesma excecao local documentada acima, sem mudar a configuracao global.
 - Nenhuma chamada real ao Financeiro, Rails em producao, acesso AWS, merge ou
   deploy manual realizado nesta correcao.
+
+## Correcao dos quatro comentarios de revisao
+
+- Usuario autorizou corrigir os quatro comentarios da PR #1185, na mesma
+  branch, sem merge/deploy. Tambem corrigido o alinhamento restante dos
+  argumentos de Net::HTTP.start apontado pelo CI do head 48174205cf.
+- Testes de regressao primeiro: **62 exemplos, 19 falhas** antes da correcao.
+  Reproduzidos estado de settlement incorreto, reserva provisoria sem expiry,
+  excecoes de protocolo HTTP nao sanitizadas e ausencia de correlacao do checkout.
+- Commit agora exige committed; release exige released, inclusive em replay.
+  Divergencias sao RESPONSE_STATE_MISMATCH com outcome unknown. Nao ha retry,
+  liberacao automatica ou compensacao depois de uma escrita ambigua.
+- Schema exige expiry date-time nas reservas reserved. Committed allocation
+  continua exigindo null; released/expired continuam aceitando null.
+- Net::HTTPBadResponse e Net::HTTPHeaderSyntaxError viram TRANSPORT_ERROR com
+  mensagem fixa: failure para leitura, unknown para escrita.
+- Checkout valida namespace, buyer.cognitoSub e servicePlanPriceId da resposta.
+  Fixtures ficticias e schema incluem os tres campos obrigatorios; namespace
+  e buyer reutilizam shapes comuns. Identidade nao foi adicionada ao request.
+- Financeiro - Asaas recebeu pedido de revisao desse complemento do contrato,
+  sem autorizacao para implementar por essa mensagem. Codigo financeiro local
+  ainda nao publica a rota proposta de checkout. Confirmacao dos campos novos
+  continua pendente; nao declaramos integracao publicada ou teste remoto.
+- Depois das correcoes: **62 exemplos, 0 falhas**, seeds 42 e 2026, com o
+  Gemfile temporario restrito aos componentes RSpec/WebMock/json_schemer.
+  Nenhum Rails, DB ou HTTP real carregado. Gemfile/lockfile intactos.
+- Ruby local e 2.6.10; RuboCop e suite completa no Ruby 3.4.4 do projeto
+  dependem do CI do novo head. Validacao local nao equivale a checks verdes.
+- Nenhum acesso a producao, AWS, banco, Auth, merge ou deploy manual.

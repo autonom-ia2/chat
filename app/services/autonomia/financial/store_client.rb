@@ -51,7 +51,13 @@ class Autonomia::Financial::StoreClient < Autonomia::Financial::Client
   def checkout!(payload, idempotency_key:)
     Autonomia::Financial::StoreContract.validate!('identifier', idempotency_key)
     Autonomia::Financial::StoreContract.validate!('checkoutRequest', payload)
-    request_json(:post, "#{STORE_PATH}/checkout-sessions", 'checkoutResponse', payload: payload, idempotency_key: idempotency_key)
+    response = request_json(:post, "#{STORE_PATH}/checkout-sessions", 'checkoutResponse', payload: payload, idempotency_key: idempotency_key)
+    validate_namespace!(response.fetch('namespace'), outcome: 'unknown')
+    matches_buyer = response.fetch('buyer').fetch('cognitoSub') == @buyer_subject
+    matches_price = response.fetch('servicePlanPriceId') == payload.fetch('servicePlanPriceId')
+    raise Autonomia::Financial::StoreClientError.new('RESPONSE_TARGET_MISMATCH', outcome: 'unknown') unless matches_buyer && matches_price
+
+    response
   end
 
   def reserve!(payload)
@@ -92,6 +98,11 @@ class Autonomia::Financial::StoreClient < Autonomia::Financial::Client
     Autonomia::Financial::StoreContract.validate!(schema, payload)
     response = reservation_request(:post, "#{RESERVATIONS_PATH}/#{reservation_id}/#{action}", payload)
     validate_reservation_id!(response, reservation_id, outcome: 'unknown')
+    expected_status = action == 'commit' ? 'committed' : 'released'
+    unless response.fetch('reservation').fetch('status') == expected_status
+      raise Autonomia::Financial::StoreClientError.new('RESPONSE_STATE_MISMATCH', outcome: 'unknown')
+    end
+
     response
   end
 
@@ -124,10 +135,11 @@ class Autonomia::Financial::StoreClient < Autonomia::Financial::Client
       request['Content-Type'] = 'application/json'
       request.body = JSON.generate(payload)
     end
-    response = Net::HTTP.start(uri.host, uri.port, use_ssl: true, open_timeout: 5, read_timeout: 15,
+    response = Net::HTTP.start(uri.host, uri.port,
+                               use_ssl: true, open_timeout: 5, read_timeout: 15,
                                write_timeout: 5, max_retries: 0) { |http| http.request(request) }
     parse_response(response, schema, method)
-  rescue Timeout::Error, SocketError, SystemCallError, IOError, OpenSSL::SSL::SSLError
+  rescue Timeout::Error, SocketError, SystemCallError, IOError, OpenSSL::SSL::SSLError, Net::HTTPBadResponse, Net::HTTPHeaderSyntaxError
     raise Autonomia::Financial::StoreClientError.new('TRANSPORT_ERROR', outcome: method == :post ? 'unknown' : 'failure')
   end
 
