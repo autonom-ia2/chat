@@ -1,0 +1,99 @@
+{
+  "CAMPAIGN_MANAGEMENT": {
+    "HEADER": {
+      "TITLE": "Pengurusan kempen",
+      "DESCRIPTION": "Pantau penghantaran, penerimaan dan kualiti kempen e-mel anda."
+    },
+    "PAYWALL": {
+      "TITLE": "Kempen e-mel belum didayakan",
+      "DESCRIPTION": "Dayakan kempen e-mel untuk melihat laporan penghantaran dan interaksi."
+    },
+    "FILTER": {
+      "LABEL": "Kempen",
+      "ALL": "Semua kempen"
+    },
+    "APPROXIMATE": "anggaran",
+    "OPEN_APPROXIMATE_HINT": "Kadar pembukaan ialah anggaran. Perlindungan Privasi Apple Mail dan ciri serupa boleh meningkatkan bilangan pembukaan dengan memuatkan imej lebih awal.",
+    "KPIS": {
+      "SENT": "Dihantar",
+      "DELIVERED": "Diterima",
+      "OPENED": "Dibuka",
+      "CLICKED": "Diklik",
+      "UNSUBSCRIBED": "Nyahlanggan",
+      "BOUNCED": "Tidak diterima",
+      "COMPLAINED": "Aduan spam"
+    },
+    "RATES": {
+      "OPEN_RATE": "Kadar pembukaan",
+      "CLICK_RATE": "Kadar klik",
+      "BOUNCE_RATE": "Kadar tidak diterima",
+      "COMPLAINT_RATE": "Kadar aduan spam",
+      "UNSUBSCRIBE_RATE": "Kadar nyahlanggan",
+      "OVER_DELIVERED": "daripada yang diterima"
+    },
+    "TABLE": {
+      "EMAIL": "E-mel",
+      "NAME": "Nama",
+      "LAST_EVENT_AT": "Aktiviti terakhir",
+      "STATUS": "Status",
+      "ATTEMPTS": "Percubaan",
+      "OPENS": "Pembukaan",
+      "CLICKS": "Klik"
+    },
+    "EMPTY_STATE": {
+      "TITLE": "Belum ada data kempen",
+      "SUBTITLE": "Hantar kempen e-mel untuk melihat metrik penghantaran dan interaksi."
+    },
+    "ERROR": "Laporan kempen tidak dapat dimuatkan. Cuba lagi.",
+    "EXPORT_CSV": "Eksport CSV",
+    "TIMELINE": {
+      "TITLE": "Penerimaan, pembukaan dan klik mengikut masa",
+      "EMPTY": "Belum ada peristiwa direkodkan untuk kempen ini.",
+      "INTERVAL": {
+        "DAY": "Mengikut hari",
+        "HOUR": "Mengikut jam"
+      }
+    },
+    "CLICKS_BY_LINK": {
+      "TITLE": "Klik mengikut pautan",
+      "EMPTY": "Belum ada klik direkodkan.",
+      "URL": "Pautan",
+      "UNIQUE": "Klik unik",
+      "TOTAL": "Jumlah klik"
+    },
+    "RECIPIENTS": {
+      "TITLE": "Penerima",
+      "SEARCH_PLACEHOLDER": "Cari mengikut nama atau e-mel",
+      "EMPTY": "Tiada penerima ditemukan.",
+      "PAGE_OF": "Halaman {page} daripada {total}",
+      "PREV": "Sebelumnya",
+      "NEXT": "Seterusnya"
+    },
+    "COMPARISON": {
+      "TITLE": "Perbandingan kempen"
+    }
+  },
+  "CRM_KANBAN": {
+    "TRACKED_LINKS": {
+      "TITLE": "Pautan boleh dijejak dan kod QR",
+      "SUBTITLE": "Cipta pautan atau QR bagi setiap kempen, penjual atau kedai. Perbualan yang bermula melaluinya akan mempunyai sumber yang dikenal pasti dalam CRM.",
+      "ADD": "Pautan baharu",
+      "NAME": "Nama",
+      "NAME_PLACEHOLDER": "Cth. QR kedai — Pusat bandar",
+      "INBOX": "Peti masuk WhatsApp",
+      "PREFILLED": "Mesej praisi",
+      "PREFILLED_PLACEHOLDER": "Cth. Hai! Saya ingin mengetahui lebih lanjut",
+      "CODE": "Kod",
+      "CLICKS": "Klik",
+      "CONVERSATIONS": "Perbualan",
+      "COPY_LINK": "Salin pautan",
+      "COPIED": "Disalin!",
+      "DOWNLOAD_QR": "Muat turun QR",
+      "DELETE": "Padam",
+      "DELETE_CONFIRM": "Padam pautan ini? Perbualan yang telah dikenal pasti sumbernya akan mengekalkan sumber tersebut.",
+      "EMPTY": "Belum ada pautan boleh dijejak. Cipta pautan pertama untuk mengenal pasti perbualan daripada kedai, penjual atau bio.",
+      "CREATE_SUCCESS": "Pautan dicipta",
+      "CREATE_ERROR": "Pautan tidak dapat dicipta"
+    }
+  }
+}

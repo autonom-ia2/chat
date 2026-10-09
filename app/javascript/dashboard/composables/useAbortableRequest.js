@@ -39,7 +39,8 @@ export function useAbortableRequest() {
     isPending.value = true;
 
     try {
-      return await runner(currentController.signal);
+      const result = await runner(currentController.signal);
+      return currentController.signal.aborted ? onAbort : result;
     } catch (error) {
       if (currentController.signal.aborted || isAbortError(error))
         return onAbort;

@@ -211,6 +211,134 @@
         "SUCCESS_MESSAGE": "Campaign deleted successfully",
         "ERROR_MESSAGE": "There was an error. Please try again."
       }
+    },
+    "EMAIL_CAMPAIGN": {
+      "ACTIONS": {
+        "CANCEL": "Annuleren",
+        "CANCEL_SUCCESS": "Campagne geannuleerd.",
+        "DELETE": "Verwijderen",
+        "DELETE_SUCCESS": "Campagne verwijderd.",
+        "DUPLICATE": "Dupliceren",
+        "DUPLICATE_SUCCESS": "Campagne gedupliceerd. Werk de ontvangers en planning bij.",
+        "EDIT": "Bewerken",
+        "MANAGE_RECIPIENTS": "Ontvangers",
+        "OPEN_BUILDER": "Bewerker",
+        "PAUSE": "Pauzeren",
+        "PAUSE_SUCCESS": "Campagne gepauzeerd.",
+        "SCHEDULE": "Inplannen",
+        "SCHEDULE_SUCCESS": "Campagne ingepland.",
+        "SEND_NOW": "Nu verzenden",
+        "SEND_SUCCESS": "Campagne in de verzendwachtrij geplaatst."
+      },
+      "AI": {
+        "BADGE": {
+          "FAILED": "AI mislukt",
+          "PROCESSING": "AI genereert",
+          "READY": "AI gereed"
+        }
+      },
+      "COUNTS": {
+        "FAILED": "Mislukt",
+        "RECIPIENTS": "Ontvangers",
+        "SENT": "Verzonden"
+      },
+      "DESCRIPTION": "Schrijf een e-mail, kies een geverifieerd verzenddomein, upload de ontvangerslijst en verstuur nu of plan de verzending in.",
+      "DIALOG": {
+        "BASE_HINT": "Upload een CSV- of XLSX-bestand met de kolommen name en email. Herkende kolommen worden personalisatievariabelen.",
+        "BASE_IMPORTING": "Lijst importeren…",
+        "BASE_LABEL": "Contactenlijst (CSV of XLSX)",
+        "BASE_PICK": "Bestand kiezen",
+        "BASE_SELECTED": "Geselecteerd: {name}",
+        "CANCEL": "Annuleren",
+        "CREATE_AND_OPEN": "Aanmaken en openen in de bewerker",
+        "CREATE_TITLE": "Nieuwe e-mailcampagne",
+        "DIRECT_OPTION": "rechtstreeks verzenden via deze inbox",
+        "DIRECT_WARNING": "Let op: dit is je persoonlijke mailbox. Gebruik deze alleen voor kleine aantallen eigen, echte contacten die toestemming hebben gegeven. Massaal verzenden via gratis webmail kan je account blokkeren of schorsen. De limiet is 100 per dag, met tussenpozen zoals bij handmatig verzenden. Verifieer je eigen domein voor grotere lijsten.",
+        "EDIT_TITLE": "E-mailcampagne bewerken",
+        "ERROR": "De campagne kon niet worden opgeslagen. Probeer het opnieuw.",
+        "FROM_EMAIL_DIRECT_HINT": "Rechtstreeks verzonden vanuit deze mailbox.",
+        "FROM_EMAIL_ERROR": "Het e-mailadres van de afzender is verplicht",
+        "FROM_EMAIL_HINT": "Moet een adres zijn op {'@'}{domain} (je geverifieerde domein).",
+        "FROM_EMAIL_HINT_NO_DOMAIN": "Moet een adres op je geverifieerde verzenddomein zijn.",
+        "FROM_EMAIL_INVALID": "Voer een geldig adres op je geverifieerde domein in",
+        "FROM_EMAIL_LABEL": "E-mailadres afzender",
+        "FROM_EMAIL_PLACEHOLDER": "Bijv. actie{'@'}jouwbedrijf.com",
+        "FROM_NAME_ERROR": "De naam van de afzender is verplicht",
+        "FROM_NAME_LABEL": "Naam afzender",
+        "FROM_NAME_PLACEHOLDER": "Bijv. Acme-marketing",
+        "NAME_ERROR": "Voer een campagnenaam in",
+        "NAME_LABEL": "Campagnenaam",
+        "NAME_PLACEHOLDER": "Bijv. Nieuwsbrief juni",
+        "NO_VERIFIED_DOMAIN": "Nog geen geverifieerd verzenddomein. Voeg er eerst een toe en verifieer het onder E-mailverzenddomeinen.",
+        "REPLY_TO_ERROR": "Het antwoordadres is verplicht",
+        "REPLY_TO_HINT": "Antwoorden gaan naar dit adres. Koppel het als inbox om antwoorden om te zetten in gesprekken.",
+        "REPLY_TO_INVALID": "Voer een geldig e-mailadres in",
+        "REPLY_TO_LABEL": "Antwoordadres",
+        "REPLY_TO_PLACEHOLDER": "Bijv. hulp{'@'}jouwbedrijf.com",
+        "SAVE_DRAFT": "Concept opslaan",
+        "SENDER_ERROR": "Selecteer een geverifieerd verzenddomein",
+        "SENDER_LABEL": "Verzenddomein",
+        "SENDER_PLACEHOLDER": "Selecteer een geverifieerd domein",
+        "SUCCESS": "Campagne opgeslagen."
+      },
+      "EMPTY_STATE": {
+        "SUBTITLE": "Maak je eerste campagne om een e-mail te schrijven en naar een geïmporteerde lijst te versturen.",
+        "TITLE": "Nog geen e-mailcampagnes"
+      },
+      "HEADER_TITLE": "E-mailcampagnes",
+      "IMPORT": {
+        "ERRORS": {
+          "EMPTY_FILE": "De lijst is leeg. Voeg contacten toe en upload opnieuw.",
+          "EXPIRED": "Het geüploade bestand is verlopen. Upload de lijst opnieuw.",
+          "FAILED": "Importeren mislukt. Er zijn bij deze poging geen contacten toegevoegd. Probeer het opnieuw of upload het bestand opnieuw.",
+          "FILE_TOO_LARGE": "Het bestand overschrijdt de uploadlimiet. Splits de lijst en probeer het opnieuw.",
+          "HEADERS": "Gebruik één kolom Name en één kolom Email in de eerste rij van het eerste werkblad, zonder dubbele kolomkoppen.",
+          "INVALID_FILE": "Het bestand kon niet worden gelezen. Upload een geldig CSV- of XLSX-bestand.",
+          "IN_PROGRESS": "Er loopt al een import voor deze campagne. Wacht tot deze klaar is.",
+          "ROW_LIMIT": "De lijst bevat meer dan 50.000 rijen. Splits deze in kleinere bestanden.",
+          "UPLOAD_FAILED": "Het bestand kon niet worden opgeslagen. Upload de lijst opnieuw."
+        },
+        "QUEUED": "Lijst ontvangen. Import staat in de wachtrij; je kunt deze pagina verlaten.",
+        "RETRY": "Import opnieuw proberen",
+        "PROCESSING": "De lijst wordt geïmporteerd. Verzenden is pas beschikbaar wanneer dit voltooid is.",
+        "COMPLETED": "Import van de lijst voltooid.",
+        "SUMMARY": "Toegevoegd: {imported} · Duplicaten: {duplicates} · Ongeldig: {invalid} · Uitgesloten van verzending: {suppressed} · Totaal: {total}"
+      },
+      "NEW": "Nieuwe e-mailcampagne",
+      "PLACEHOLDERS": {
+        "COPY_SUCCESS": "Variabele naar het klembord gekopieerd.",
+        "EMPTY": "Importeer ontvangers om de variabelen uit de kolommen van je spreadsheet te bekijken.",
+        "SUBTITLE": "Klik op een variabele om deze te kopiëren en plak deze in het onderwerp, de voorbeeldtekst of de berichttekst.",
+        "TITLE": "Beschikbare variabelen"
+      },
+      "RECIPIENTS": {
+        "ADD_MORE": "Meer contacten toevoegen",
+        "ADD_MORE_HINT": "De lijst is geüpload bij het aanmaken van de campagne. Upload nog een CSV/XLSX om contacten toe te voegen.",
+        "SUBTITLE": "Upload een CSV of XLSX met de kolommen name en email. Ontvangers worden alleen voor deze campagne gebruikt en niet aan je contacten toegevoegd.",
+        "TITLE": "Ontvangers"
+      },
+      "SCHEDULE_DIALOG": {
+        "CANCEL": "Annuleren",
+        "DATETIME_ERROR": "Kies een datum en tijd",
+        "DATETIME_LABEL": "Verzenden op",
+        "SUBMIT": "Inplannen"
+      },
+      "STATUS": {
+        "CANCELED": "Geannuleerd",
+        "DRAFT": "Concept",
+        "FAILED": "Mislukt",
+        "PAUSED": "Gepauzeerd",
+        "SCHEDULED": "Gepland",
+        "SENDING": "Bezig met verzenden",
+        "SENT": "Verzonden"
+      },
+      "VALIDATION": {
+        "BLANK_ITEM": "{key}: {count} ontvanger(s) zonder waarde",
+        "BLANK_LABEL": "Ontvangers zonder waarde:",
+        "MISSING_LABEL": "Gebruikt in de sjabloon, maar niet gevonden bij de ontvangers:",
+        "OK": "Alle variabelen in deze campagne hebben waarden. Je kunt verdergaan.",
+        "TITLE": "Controle vóór verzending"
+      }
     }
   }
 }

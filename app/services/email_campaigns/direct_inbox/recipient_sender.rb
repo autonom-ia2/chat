@@ -10,17 +10,11 @@ module EmailCampaigns
         @sender = sender
       end
 
-      # Retorna :sent, :failed, :suppressed ou :skipped.
-      def deliver(recipient, suppressed)
-        if suppressed.include?(recipient.email.downcase)
-          recipient.mark_suppressed!
-          return :suppressed
-        end
-        # claim() faz a transição atômica pending->sent. A partir daqui o destinatário JÁ
-        # está marcado como enviado: garantia at-most-once. Falha de envio marca FAILED e
-        # NUNCA volta para pending — reenvio por uma caixa pessoal gera duplicado e risco de
-        # bloqueio. Auto-pause cuida de padrões de falha.
-        return :skipped unless claim(recipient)
+      # Retorna :sent, :failed, :suppressed, :paused ou :skipped.
+      def deliver(recipient, _suppressed = nil)
+        @gate = ::EmailCampaigns::DeliveryClaim.new(@campaign)
+        result = @gate.claim(recipient)
+        return result unless result == :claimed
 
         send_claimed(recipient)
       ensure
@@ -32,6 +26,8 @@ module EmailCampaigns
       def send_claimed(recipient)
         rendered = render(recipient)
         tracked_html = ::EmailCampaigns::Tracking::Injector.new(recipient, rendered[:body_html]).perform
+        return :skipped unless @gate.dispatch_allowed?(recipient)
+
         message_id = @sender.deliver(
           to: recipient.email,
           subject: rendered[:subject],
@@ -44,7 +40,7 @@ module EmailCampaigns
         :sent
       rescue StandardError => e
         Rails.logger.error("[DirectInbox::RecipientSender] campaign=#{@campaign.id} recipient=#{recipient.id} #{e.message}")
-        recipient.mark_failed!(e.message)
+        recipient.with_lock { recipient.mark_failed!(e.message) if recipient.sent? }
         :failed
       end
 
@@ -62,21 +58,13 @@ module EmailCampaigns
       # (idempotente, espelha Sns::EventProcessor#on_delivery) para alimentar delivered_count,
       # as taxas (abertura/clique são calculadas sobre entregues) e a série temporal.
       def register_delivered(recipient, message_id)
-        return if recipient.email_events.where(event_type: :delivered).exists?
+        recipient.with_lock do
+          return if recipient.email_events.where(event_type: :delivered).exists?
 
-        recipient.email_events.create!(event_type: :delivered, occurred_at: Time.current,
-                                       payload: { 'via' => 'direct_inbox', 'message_id' => message_id })
-        recipient.mark_delivered!
-      end
-
-      def claim(recipient)
-        claimed = EmailCampaignRecipient.where(id: recipient.id, status: EmailCampaignRecipient.statuses[:pending])
-                                        .update_all(status: EmailCampaignRecipient.statuses[:sent], updated_at: Time.current)
-                                        .positive?
-        # update_all não toca a instância em memória: sincroniza para que mark_delivered!
-        # (que exige sent?/delivered?) enxergue o novo status em vez do :pending obsoleto.
-        recipient.status = :sent if claimed
-        claimed
+          recipient.email_events.create!(event_type: :delivered, occurred_at: Time.current,
+                                         payload: { 'via' => 'direct_inbox', 'message_id' => message_id })
+          recipient.mark_delivered!
+        end
       end
 
       def render(recipient)

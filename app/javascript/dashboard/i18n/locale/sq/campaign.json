@@ -211,6 +211,134 @@
         "SUCCESS_MESSAGE": "Campaign deleted successfully",
         "ERROR_MESSAGE": "There was an error. Please try again."
       }
+    },
+    "EMAIL_CAMPAIGN": {
+      "ACTIONS": {
+        "CANCEL": "Anulo",
+        "CANCEL_SUCCESS": "Fushata u anulua.",
+        "DELETE_SUCCESS": "Fushata u fshi.",
+        "DUPLICATE": "Krijo kopje",
+        "DUPLICATE_SUCCESS": "Kopja e fushatës u krijua. Përditësoni marrësit dhe orarin.",
+        "EDIT": "Ndrysho",
+        "OPEN_BUILDER": "Redaktori",
+        "PAUSE": "Pezullo",
+        "PAUSE_SUCCESS": "Fushata u pezullua.",
+        "SCHEDULE": "Planifiko",
+        "SCHEDULE_SUCCESS": "Fushata u planifikua.",
+        "SEND_NOW": "Dërgo tani",
+        "SEND_SUCCESS": "Fushata u vendos në radhën e dërgimit.",
+        "MANAGE_RECIPIENTS": "Marrësit",
+        "DELETE": "Fshi"
+      },
+      "AI": {
+        "BADGE": {
+          "FAILED": "Gabim i inteligjencës artificiale",
+          "PROCESSING": "Inteligjenca artificiale po krijon",
+          "READY": "Inteligjenca artificiale është gati"
+        }
+      },
+      "COUNTS": {
+        "FAILED": "Dështoi",
+        "SENT": "Dërguar",
+        "RECIPIENTS": "Marrësit"
+      },
+      "DESCRIPTION": "Shkruani një email, zgjidhni një domen dërgimi të verifikuar, ngarkoni listën e marrësve dhe dërgojeni tani ose planifikojeni.",
+      "DIALOG": {
+        "BASE_HINT": "Ngarkoni një CSV ose XLSX me kolonat name dhe email. Kolonat e zbuluara bëhen fusha personalizimi.",
+        "BASE_IMPORTING": "Po importohet lista…",
+        "BASE_LABEL": "Lista e kontakteve (CSV ose XLSX)",
+        "BASE_PICK": "Zgjidh skedarin",
+        "BASE_SELECTED": "U zgjodh: {name}",
+        "CREATE_AND_OPEN": "Krijo dhe hap në redaktor",
+        "CREATE_TITLE": "Fushatë e re me email",
+        "DIRECT_OPTION": "dërgim i drejtpërdrejtë nga kjo kuti postare",
+        "DIRECT_WARNING": "Kjo është kutia juaj postare personale. Përdoreni vetëm për sasi të vogla dhe kontaktet tuaja reale që kanë pranuar të marrin mesazhe. Dërgimi masiv nga një shërbim falas mund të bllokojë llogarinë. Kufiri është 100 mesazhe në ditë, me intervale si dërgimi manual. Për lista më të mëdha, verifikoni domenin tuaj.",
+        "EDIT_TITLE": "Ndrysho fushatën me email",
+        "ERROR": "Fushata nuk u ruajt. Provoni përsëri.",
+        "FROM_EMAIL_DIRECT_HINT": "Dërgohet drejtpërdrejt nga kjo kuti postare.",
+        "FROM_EMAIL_ERROR": "Vendosni emailin e dërguesit",
+        "FROM_EMAIL_HINT": "Duhet një adresë {'@'}{domain}, në domenin tuaj të verifikuar.",
+        "FROM_EMAIL_HINT_NO_DOMAIN": "Adresa duhet të jetë në domenin tuaj të verifikuar të dërgimit.",
+        "FROM_EMAIL_INVALID": "Vendosni një adresë të vlefshme në domenin e verifikuar",
+        "FROM_EMAIL_LABEL": "Emaili i dërguesit",
+        "FROM_EMAIL_PLACEHOLDER": "P.sh. promo{'@'}yourcompany.com",
+        "FROM_NAME_ERROR": "Vendosni emrin e dërguesit",
+        "FROM_NAME_LABEL": "Emri i dërguesit",
+        "FROM_NAME_PLACEHOLDER": "P.sh. Marketingu Acme",
+        "NAME_ERROR": "Vendosni emrin e fushatës",
+        "NAME_LABEL": "Emri i fushatës",
+        "NAME_PLACEHOLDER": "P.sh. Buletini i qershorit",
+        "NO_VERIFIED_DOMAIN": "Ende nuk ka domen të verifikuar. Shtoni dhe verifikoni fillimisht një domen te domenet e dërgimit të emailit.",
+        "REPLY_TO_ERROR": "Vendosni adresën për përgjigje",
+        "REPLY_TO_HINT": "Përgjigjet shkojnë në këtë adresë. Lidheni si kuti hyrëse për t’i kthyer përgjigjet në biseda.",
+        "REPLY_TO_INVALID": "Vendosni një adresë emaili të vlefshme",
+        "REPLY_TO_LABEL": "Adresa për përgjigje",
+        "REPLY_TO_PLACEHOLDER": "P.sh. support{'@'}yourcompany.com",
+        "SAVE_DRAFT": "Ruaj draftin",
+        "SENDER_ERROR": "Zgjidhni një domen dërgimi të verifikuar",
+        "SENDER_LABEL": "Domeni i dërgimit",
+        "SENDER_PLACEHOLDER": "Zgjidhni një domen të verifikuar",
+        "SUCCESS": "Fushata u ruajt.",
+        "CANCEL": "Anulo"
+      },
+      "EMPTY_STATE": {
+        "SUBTITLE": "Krijoni fushatën tuaj të parë për të shkruar dhe dërguar email te një listë e importuar.",
+        "TITLE": "Ende nuk ka fushata me email"
+      },
+      "HEADER_TITLE": "Fushata me email",
+      "IMPORT": {
+        "ERRORS": {
+          "EMPTY_FILE": "Lista është bosh. Shtoni kontakte dhe ngarkojeni përsëri.",
+          "EXPIRED": "Skedari i ngarkuar ka skaduar. Ngarkoni përsëri listën.",
+          "FAILED": "Importi dështoi. Asnjë kontakt nga kjo përpjekje nuk u shtua. Provoni përsëri ose ringarkoni skedarin.",
+          "FILE_TOO_LARGE": "Skedari tejkalon kufirin e madhësisë. Ndani listën dhe provoni përsëri.",
+          "HEADERS": "Në rreshtin e parë të fletës së parë përdorni një kolonë Name dhe një Email, pa tituj të përsëritur.",
+          "INVALID_FILE": "Skedari nuk u lexua. Ngarkoni një skedar CSV ose XLSX të vlefshëm.",
+          "IN_PROGRESS": "Një import për këtë fushatë është në proces. Prisni të përfundojë.",
+          "ROW_LIMIT": "Lista tejkalon 50 000 rreshta. Ndajeni në skedarë më të vegjël.",
+          "UPLOAD_FAILED": "Skedari nuk u ruajt. Ngarkoni përsëri listën."
+        },
+        "RETRY": "Riprovo importin",
+        "QUEUED": "Lista u mor. Importimi është në radhë; mund të largoheni nga kjo faqe.",
+        "PROCESSING": "Lista po importohet. Dërgimi nuk është i disponueshëm derisa të përfundojë.",
+        "COMPLETED": "Importimi i listës përfundoi.",
+        "SUMMARY": "Shtuar: {imported} · Dublikata: {duplicates} · Të pavlefshme: {invalid} · Përjashtuar nga dërgimi: {suppressed} · Gjithsej: {total}"
+      },
+      "PLACEHOLDERS": {
+        "COPY_SUCCESS": "Fusha u kopjua në kujtesën e përkohshme.",
+        "EMPTY": "Importoni marrësit për të parë fushat nga kolonat e tabelës.",
+        "SUBTITLE": "Klikoni një fushë për ta kopjuar, pastaj ngjiteni në subjekt, tekstin e pamjes paraprake ose përmbajtjen e mesazhit.",
+        "TITLE": "Fushat e disponueshme"
+      },
+      "RECIPIENTS": {
+        "ADD_MORE": "Shto kontakte",
+        "ADD_MORE_HINT": "Lista u ngarkua kur u krijua fushata. Ngarkoni një tjetër CSV/XLSX për të shtuar kontakte.",
+        "SUBTITLE": "Ngarkoni një CSV ose XLSX me kolonat name dhe email. Marrësit përdoren vetëm për këtë fushatë dhe nuk shtohen te kontaktet tuaja.",
+        "TITLE": "Marrësit"
+      },
+      "SCHEDULE_DIALOG": {
+        "DATETIME_ERROR": "Zgjidhni datën dhe orën",
+        "DATETIME_LABEL": "Koha e dërgimit",
+        "CANCEL": "Anulo",
+        "SUBMIT": "Planifiko"
+      },
+      "VALIDATION": {
+        "BLANK_ITEM": "{key}: {count} marrës pa vlerë",
+        "BLANK_LABEL": "Marrës pa vlerë:",
+        "MISSING_LABEL": "Përdoret në model, por nuk gjendet te marrësit:",
+        "OK": "Të gjitha fushat e kësaj fushate kanë vlera. Gati për dërgim.",
+        "TITLE": "Kontrolli para dërgimit"
+      },
+      "STATUS": {
+        "CANCELED": "Anuluar",
+        "DRAFT": "Në përgatitje",
+        "SCHEDULED": "Planifikuar",
+        "SENDING": "Duke dërguar",
+        "SENT": "Dërguar",
+        "PAUSED": "Dërgimi u pezullua",
+        "FAILED": "Dështoi"
+      },
+      "NEW": "Fushatë e re me email"
     }
   }
 }

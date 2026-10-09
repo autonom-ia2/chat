@@ -585,7 +585,7 @@
         "PREHEADER_PLACEHOLDER": "Short preview text shown after the subject",
         "PREHEADER_HINT": "Shown next to the subject in most inboxes.",
         "BASE_LABEL": "Contact list (CSV or XLSX)",
-        "BASE_HINT": "Upload a CSV or XLSX with name + email columns. Detected columns become personalization placeholders.",
+        "BASE_HINT": "Upload a CSV or XLSX with name and email columns. Detected columns become personalization fields.",
         "BASE_PICK": "Choose file",
         "BASE_SELECTED": "Selected: {name}",
         "BASE_IMPORTING": "Importing list…",
@@ -635,14 +635,14 @@
         "ADD_MORE_HINT": "The list was uploaded when the campaign was created. Upload another CSV/XLSX to append more contacts."
       },
       "PLACEHOLDERS": {
-        "TITLE": "Available placeholders",
-        "SUBTITLE": "Click a placeholder to copy it, then paste it into the subject, preheader or body.",
-        "EMPTY": "Import recipients to see the placeholders from your spreadsheet columns.",
-        "COPY_SUCCESS": "Placeholder copied to clipboard."
+        "TITLE": "Available personalization fields",
+        "SUBTITLE": "Click a field to copy it, then paste it into the subject, preview text or email body.",
+        "EMPTY": "Import recipients to see the personalization fields from your spreadsheet columns.",
+        "COPY_SUCCESS": "Personalization field copied to clipboard."
       },
       "VALIDATION": {
         "TITLE": "Pre-send check",
-        "OK": "All placeholders used in this campaign have values. Good to go.",
+        "OK": "All personalization fields used in this campaign have values. Ready to send.",
         "MISSING_LABEL": "Used in the template but not found in the recipients:",
         "BLANK_LABEL": "Recipients without a value:",
         "BLANK_ITEM": "{key}: {count} recipient(s) without a value"

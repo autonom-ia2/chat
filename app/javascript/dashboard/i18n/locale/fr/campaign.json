@@ -211,6 +211,134 @@
         "SUCCESS_MESSAGE": "La campagne a bien été supprimée",
         "ERROR_MESSAGE": "Une erreur est survenue, veuillez réessayer."
       }
+    },
+    "EMAIL_CAMPAIGN": {
+      "ACTIONS": {
+        "CANCEL": "Annuler",
+        "CANCEL_SUCCESS": "Campagne annulée.",
+        "DELETE_SUCCESS": "Campagne supprimée.",
+        "DUPLICATE": "Dupliquer",
+        "DUPLICATE_SUCCESS": "Campagne dupliquée. Mettez à jour les destinataires et la programmation.",
+        "EDIT": "Modifier",
+        "OPEN_BUILDER": "Éditeur",
+        "PAUSE": "Mettre en pause",
+        "PAUSE_SUCCESS": "Campagne mise en pause.",
+        "SCHEDULE": "Programmer",
+        "SCHEDULE_SUCCESS": "Campagne programmée.",
+        "SEND_NOW": "Envoyer maintenant",
+        "SEND_SUCCESS": "Campagne placée dans la file d’envoi.",
+        "MANAGE_RECIPIENTS": "Destinataires",
+        "DELETE": "Supprimer"
+      },
+      "AI": {
+        "BADGE": {
+          "FAILED": "Échec de l’IA",
+          "PROCESSING": "Génération par l’IA",
+          "READY": "IA prête"
+        }
+      },
+      "DESCRIPTION": "Rédigez un e-mail, choisissez un domaine d’envoi vérifié, importez vos destinataires et envoyez ou programmez l’envoi.",
+      "DIALOG": {
+        "BASE_HINT": "Importez un CSV ou XLSX avec les colonnes name et email. Les colonnes détectées deviennent des variables de personnalisation.",
+        "BASE_IMPORTING": "Importation de la liste…",
+        "BASE_LABEL": "Liste de contacts (CSV ou XLSX)",
+        "BASE_PICK": "Choisir un fichier",
+        "BASE_SELECTED": "Sélectionné : {name}",
+        "CREATE_AND_OPEN": "Créer et ouvrir dans l’éditeur",
+        "CREATE_TITLE": "Nouvelle campagne e-mail",
+        "DIRECT_OPTION": "envoi direct via cette boîte",
+        "DIRECT_WARNING": "Attention : il s’agit de votre boîte personnelle. Réservez-la à vos vrais contacts consentants et aux petits volumes. L’envoi massif depuis une messagerie gratuite peut bloquer ou suspendre votre compte. Limite de 100 par jour, à un rythme humain ; pour davantage, vérifiez votre propre domaine.",
+        "EDIT_TITLE": "Modifier la campagne e-mail",
+        "ERROR": "Impossible d’enregistrer la campagne. Réessayez.",
+        "FROM_EMAIL_DIRECT_HINT": "Envoi direct au nom de cette boîte.",
+        "FROM_EMAIL_ERROR": "L’adresse de l’expéditeur est requise",
+        "FROM_EMAIL_HINT": "L’adresse doit appartenir à {'@'}{domain} (votre domaine vérifié).",
+        "FROM_EMAIL_HINT_NO_DOMAIN": "L’adresse doit appartenir à votre domaine d’envoi vérifié.",
+        "FROM_EMAIL_INVALID": "Saisissez une adresse valide de votre domaine vérifié",
+        "FROM_EMAIL_LABEL": "Adresse de l’expéditeur",
+        "FROM_EMAIL_PLACEHOLDER": "Ex. promo{'@'}votreentreprise.com",
+        "FROM_NAME_ERROR": "Le nom de l’expéditeur est requis",
+        "FROM_NAME_LABEL": "Nom de l’expéditeur",
+        "FROM_NAME_PLACEHOLDER": "Ex. Service marketing Acme",
+        "NAME_ERROR": "Saisissez un nom de campagne",
+        "NAME_LABEL": "Nom de la campagne",
+        "NAME_PLACEHOLDER": "Ex. Lettre d’information de juin",
+        "NO_VERIFIED_DOMAIN": "Aucun domaine d’envoi vérifié. Ajoutez-en un et vérifiez-le dans Domaines d’envoi e-mail.",
+        "REPLY_TO_ERROR": "L’adresse de réponse est requise",
+        "REPLY_TO_HINT": "Les réponses arrivent à cette adresse. Connectez-la comme boîte de réception pour les transformer en conversations.",
+        "REPLY_TO_INVALID": "Saisissez une adresse e-mail valide",
+        "REPLY_TO_LABEL": "Adresse de réponse",
+        "REPLY_TO_PLACEHOLDER": "Ex. assistance{'@'}votreentreprise.com",
+        "SAVE_DRAFT": "Enregistrer le brouillon",
+        "SENDER_ERROR": "Sélectionnez un domaine d’envoi vérifié",
+        "SENDER_LABEL": "Domaine d’envoi",
+        "SENDER_PLACEHOLDER": "Sélectionnez un domaine vérifié",
+        "SUCCESS": "Campagne enregistrée.",
+        "CANCEL": "Annuler"
+      },
+      "EMPTY_STATE": {
+        "SUBTITLE": "Créez votre première campagne pour rédiger et envoyer un e-mail à une liste importée.",
+        "TITLE": "Aucune campagne e-mail"
+      },
+      "HEADER_TITLE": "Campagnes e-mail",
+      "IMPORT": {
+        "ERRORS": {
+          "EMPTY_FILE": "La liste est vide. Ajoutez des contacts puis importez-la à nouveau.",
+          "EXPIRED": "Le fichier importé a expiré. Importez à nouveau la liste.",
+          "FAILED": "Échec de l’importation. Aucun contact ajouté lors de cette tentative. Réessayez ou importez à nouveau le fichier.",
+          "FILE_TOO_LARGE": "Le fichier dépasse la taille autorisée. Divisez la liste et réessayez.",
+          "HEADERS": "Dans la première ligne de la première feuille, utilisez une colonne Name et une colonne Email, sans en-têtes en double.",
+          "INVALID_FILE": "Fichier illisible. Importez un fichier CSV ou XLSX valide.",
+          "IN_PROGRESS": "Une importation est déjà en cours pour cette campagne. Attendez sa fin.",
+          "ROW_LIMIT": "La liste dépasse 50 000 lignes. Divisez-la en fichiers plus petits.",
+          "UPLOAD_FAILED": "Impossible de stocker le fichier. Importez à nouveau la liste."
+        },
+        "RETRY": "Réessayer l’importation",
+        "QUEUED": "Liste reçue. Importation en attente ; vous pouvez quitter cette page.",
+        "PROCESSING": "Importation de la liste en cours. L’envoi est indisponible jusqu’à la fin.",
+        "COMPLETED": "Importation de la liste terminée.",
+        "SUMMARY": "Ajoutés : {imported} · Doublons : {duplicates} · Non valides : {invalid} · Exclus de l’envoi : {suppressed} · Total : {total}"
+      },
+      "PLACEHOLDERS": {
+        "COPY_SUCCESS": "Variable copiée dans le presse-papiers.",
+        "EMPTY": "Importez des destinataires pour voir les variables issues des colonnes de votre feuille.",
+        "SUBTITLE": "Cliquez sur une variable pour la copier, puis collez-la dans l’objet, le texte d’aperçu ou le corps du message.",
+        "TITLE": "Variables disponibles"
+      },
+      "RECIPIENTS": {
+        "ADD_MORE": "Ajouter des contacts",
+        "ADD_MORE_HINT": "La liste a été importée à la création. Importez un autre CSV/XLSX pour ajouter des contacts.",
+        "SUBTITLE": "Importez un CSV ou XLSX avec les colonnes name et email. Les destinataires servent uniquement à cette campagne et ne rejoignent pas vos contacts.",
+        "TITLE": "Destinataires"
+      },
+      "SCHEDULE_DIALOG": {
+        "DATETIME_ERROR": "Choisissez une date et une heure",
+        "DATETIME_LABEL": "Envoyer le",
+        "CANCEL": "Annuler",
+        "SUBMIT": "Programmer"
+      },
+      "STATUS": {
+        "PAUSED": "En pause",
+        "CANCELED": "Annulé",
+        "DRAFT": "Brouillon",
+        "FAILED": "Échec de l’envoi",
+        "SCHEDULED": "Programmé",
+        "SENDING": "Envoi en cours",
+        "SENT": "Envoyé"
+      },
+      "VALIDATION": {
+        "BLANK_ITEM": "{key} : {count} destinataire(s) sans valeur",
+        "BLANK_LABEL": "Destinataires sans valeur :",
+        "MISSING_LABEL": "Utilisées dans le modèle mais absentes des destinataires :",
+        "OK": "Toutes les variables de cette campagne ont des valeurs. L’envoi est prêt.",
+        "TITLE": "Vérification avant envoi"
+      },
+      "COUNTS": {
+        "SENT": "Envoyé",
+        "RECIPIENTS": "Destinataires",
+        "FAILED": "Échec de l’envoi"
+      },
+      "NEW": "Nouvelle campagne e-mail"
     }
   }
 }

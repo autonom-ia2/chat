@@ -1,0 +1,99 @@
+{
+  "CAMPAIGN_MANAGEMENT": {
+    "HEADER": {
+      "TITLE": "行銷活動管理",
+      "DESCRIPTION": "追蹤郵件活動的傳送、送達情況與品質。"
+    },
+    "PAYWALL": {
+      "TITLE": "尚未啟用郵件活動",
+      "DESCRIPTION": "啟用郵件活動後，即可在此查看送達與互動報告。"
+    },
+    "FILTER": {
+      "LABEL": "活動",
+      "ALL": "所有活動"
+    },
+    "APPROXIMATE": "估計值",
+    "OPEN_APPROXIMATE_HINT": "開啟率為估計值。Apple Mail 隱私保護等功能會預先載入圖片，可能導致開啟次數偏高。",
+    "KPIS": {
+      "SENT": "已傳送",
+      "DELIVERED": "已送達",
+      "OPENED": "已開啟",
+      "CLICKED": "已點擊",
+      "UNSUBSCRIBED": "取消訂閱",
+      "COMPLAINED": "垃圾郵件投訴",
+      "BOUNCED": "未送達"
+    },
+    "RATES": {
+      "OPEN_RATE": "開啟率",
+      "CLICK_RATE": "點擊率",
+      "BOUNCE_RATE": "未送達率",
+      "COMPLAINT_RATE": "投訴率",
+      "UNSUBSCRIBE_RATE": "取消訂閱率",
+      "OVER_DELIVERED": "占已送達郵件"
+    },
+    "TABLE": {
+      "EMAIL": "電子郵件",
+      "NAME": "姓名",
+      "LAST_EVENT_AT": "最近活動",
+      "STATUS": "狀態",
+      "ATTEMPTS": "嘗試次數",
+      "OPENS": "開啟次數",
+      "CLICKS": "點擊次數"
+    },
+    "EMPTY_STATE": {
+      "TITLE": "尚無活動資料",
+      "SUBTITLE": "傳送郵件活動後，即可查看送達與互動指標。"
+    },
+    "ERROR": "無法載入活動報告，請重試。",
+    "EXPORT_CSV": "匯出 CSV",
+    "TIMELINE": {
+      "TITLE": "送達、開啟與點擊的時間趨勢",
+      "EMPTY": "此活動尚無事件紀錄。",
+      "INTERVAL": {
+        "DAY": "依日",
+        "HOUR": "依小時"
+      }
+    },
+    "CLICKS_BY_LINK": {
+      "TITLE": "各連結點擊次數",
+      "EMPTY": "尚無點擊紀錄。",
+      "URL": "連結",
+      "UNIQUE": "不重複點擊次數",
+      "TOTAL": "總點擊次數"
+    },
+    "RECIPIENTS": {
+      "TITLE": "收件者",
+      "EMPTY": "找不到收件者。",
+      "PAGE_OF": "第 {page} 頁，共 {total} 頁",
+      "PREV": "上一頁",
+      "NEXT": "下一頁",
+      "SEARCH_PLACEHOLDER": "搜尋姓名或電子郵件"
+    },
+    "COMPARISON": {
+      "TITLE": "活動比較"
+    }
+  },
+  "CRM_KANBAN": {
+    "TRACKED_LINKS": {
+      "TITLE": "可追蹤連結與 QR 碼",
+      "SUBTITLE": "為每個活動、銷售人員或門市建立連結或 QR 碼。透過它們發起的對話會在 CRM 中關聯對應來源。",
+      "ADD": "新增連結",
+      "NAME_PLACEHOLDER": "例如：市中心門市 QR 碼",
+      "INBOX": "WhatsApp 收件匣",
+      "PREFILLED": "預先填入的訊息",
+      "PREFILLED_PLACEHOLDER": "例如：您好！我想了解更多",
+      "CODE": "代碼",
+      "CONVERSATIONS": "對話",
+      "COPY_LINK": "複製連結",
+      "COPIED": "已複製！",
+      "DOWNLOAD_QR": "下載 QR 碼",
+      "DELETE": "刪除",
+      "DELETE_CONFIRM": "刪除此連結？已關聯的對話會保留其來源。",
+      "EMPTY": "尚無可追蹤連結。建立第一個連結，將對話關聯至門市、銷售人員或個人簡介中的連結。",
+      "CREATE_SUCCESS": "連結已建立",
+      "CREATE_ERROR": "無法建立連結",
+      "NAME": "姓名",
+      "CLICKS": "點擊次數"
+    }
+  }
+}

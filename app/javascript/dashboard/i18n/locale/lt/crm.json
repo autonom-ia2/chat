@@ -1,0 +1,99 @@
+{
+  "CAMPAIGN_MANAGEMENT": {
+    "HEADER": {
+      "TITLE": "Kampanijų valdymas",
+      "DESCRIPTION": "Stebėkite el. pašto kampanijų siuntimą, pristatymą ir kokybę."
+    },
+    "PAYWALL": {
+      "TITLE": "El. pašto kampanijos neįjungtos",
+      "DESCRIPTION": "Įjunkite el. pašto kampanijas, kad matytumėte pristatymo ir įsitraukimo ataskaitas."
+    },
+    "FILTER": {
+      "LABEL": "Kampanija",
+      "ALL": "Visos kampanijos"
+    },
+    "APPROXIMATE": "apytiksliai",
+    "OPEN_APPROXIMATE_HINT": "Atidarymo rodikliai apytiksliai. Apple Mail privatumo apsauga ir panašios funkcijos gali padidinti atidarymų skaičių iš anksto įkeldamos vaizdus.",
+    "KPIS": {
+      "SENT": "Išsiųsta",
+      "DELIVERED": "Pristatyta",
+      "OPENED": "Atidaryta",
+      "CLICKED": "Paspausta",
+      "UNSUBSCRIBED": "Atsisakymai prenumeruoti",
+      "BOUNCED": "Nepristatyta",
+      "COMPLAINED": "Skundai dėl šlamšto"
+    },
+    "RATES": {
+      "OPEN_RATE": "Atidarymo rodiklis",
+      "CLICK_RATE": "Paspaudimų rodiklis",
+      "BOUNCE_RATE": "Nepristatymo rodiklis",
+      "COMPLAINT_RATE": "Skundų dėl šlamšto rodiklis",
+      "UNSUBSCRIBE_RATE": "Prenumeratos atsisakymo rodiklis",
+      "OVER_DELIVERED": "iš pristatytų"
+    },
+    "TABLE": {
+      "EMAIL": "El. paštas",
+      "NAME": "Vardas",
+      "LAST_EVENT_AT": "Paskutinė veikla",
+      "STATUS": "Būsena",
+      "ATTEMPTS": "Bandymai",
+      "OPENS": "Atidarymai",
+      "CLICKS": "Paspaudimai"
+    },
+    "EMPTY_STATE": {
+      "TITLE": "Kampanijų duomenų dar nėra",
+      "SUBTITLE": "Išsiųskite el. pašto kampaniją, kad matytumėte pristatymo ir įsitraukimo rodiklius."
+    },
+    "ERROR": "Nepavyko įkelti kampanijos ataskaitos. Bandykite dar kartą.",
+    "EXPORT_CSV": "Eksportuoti CSV",
+    "TIMELINE": {
+      "TITLE": "Pristatymai, atidarymai ir paspaudimai laikui bėgant",
+      "EMPTY": "Šiai kampanijai dar neužregistruota įvykių.",
+      "INTERVAL": {
+        "DAY": "Pagal dieną",
+        "HOUR": "Pagal valandą"
+      }
+    },
+    "CLICKS_BY_LINK": {
+      "TITLE": "Paspaudimai pagal nuorodą",
+      "EMPTY": "Paspaudimų dar neužregistruota.",
+      "URL": "Nuoroda",
+      "UNIQUE": "Unikalūs paspaudimai",
+      "TOTAL": "Iš viso paspaudimų"
+    },
+    "RECIPIENTS": {
+      "TITLE": "Gavėjai",
+      "SEARCH_PLACEHOLDER": "Ieškoti pagal vardą arba el. paštą",
+      "EMPTY": "Gavėjų nerasta.",
+      "PAGE_OF": "Puslapis {page} iš {total}",
+      "PREV": "Ankstesnis",
+      "NEXT": "Kitas"
+    },
+    "COMPARISON": {
+      "TITLE": "Kampanijų palyginimas"
+    }
+  },
+  "CRM_KANBAN": {
+    "TRACKED_LINKS": {
+      "TITLE": "Stebimos nuorodos ir QR kodai",
+      "SUBTITLE": "Sukurkite nuorodą arba QR kodą kiekvienai kampanijai, pardavėjui ar parduotuvei. Per juos pradėti pokalbiai CRM sistemoje gauna priskirtą šaltinį.",
+      "ADD": "Nauja nuoroda",
+      "NAME": "Pavadinimas",
+      "NAME_PLACEHOLDER": "Pvz., parduotuvės QR — Centras",
+      "INBOX": "WhatsApp pašto dėžutė",
+      "PREFILLED": "Iš anksto užpildytas pranešimas",
+      "PREFILLED_PLACEHOLDER": "Pvz., Sveiki! Noriu sužinoti daugiau",
+      "CODE": "Kodas",
+      "CLICKS": "Paspaudimai",
+      "CONVERSATIONS": "Pokalbiai",
+      "COPY_LINK": "Kopijuoti nuorodą",
+      "COPIED": "Nukopijuota!",
+      "DOWNLOAD_QR": "Atsisiųsti QR",
+      "DELETE": "Ištrinti",
+      "DELETE_CONFIRM": "Ištrinti šią nuorodą? Pokalbiai, kuriems šaltinis jau priskirtas, jį išsaugos.",
+      "EMPTY": "Stebimų nuorodų dar nėra. Sukurkite pirmąją, kad priskirtumėte pokalbių šaltinį parduotuvei, pardavėjui ar profilio aprašymui.",
+      "CREATE_SUCCESS": "Nuoroda sukurta",
+      "CREATE_ERROR": "Nepavyko sukurti nuorodos"
+    }
+  }
+}

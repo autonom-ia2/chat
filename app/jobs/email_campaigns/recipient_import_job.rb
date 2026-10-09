@@ -32,7 +32,7 @@ class EmailCampaigns::RecipientImportJob < ApplicationJob
       return unless import.active?
 
       result = EmailCampaigns::RecipientImporter.new(
-        import.email_campaign, import.source_file, filename: import.source_file.filename.to_s
+        import.email_campaign, import.source_file, filename: import.source_file.filename.to_s, import: import
       ).perform
       # Recipients, counters and completion commit together, or all roll back.
       import.update!(status: :completed, result: result.to_h, error_code: nil, completed_at: Time.current)

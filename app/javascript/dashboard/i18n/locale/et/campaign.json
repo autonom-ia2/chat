@@ -211,6 +211,134 @@
         "SUCCESS_MESSAGE": "Campaign deleted successfully",
         "ERROR_MESSAGE": "There was an error. Please try again."
       }
+    },
+    "EMAIL_CAMPAIGN": {
+      "ACTIONS": {
+        "CANCEL": "Tühista",
+        "CANCEL_SUCCESS": "Kampaania tühistatud.",
+        "DELETE_SUCCESS": "Kampaania kustutatud.",
+        "DUPLICATE": "Tee koopia",
+        "DUPLICATE_SUCCESS": "Kampaania kopeeritud. Uuenda saajaid ja ajakava.",
+        "EDIT": "Muuda",
+        "OPEN_BUILDER": "Redaktor",
+        "PAUSE": "Peata",
+        "PAUSE_SUCCESS": "Kampaania peatatud.",
+        "SCHEDULE": "Ajasta",
+        "SCHEDULE_SUCCESS": "Kampaania ajastatud.",
+        "SEND_NOW": "Saada kohe",
+        "SEND_SUCCESS": "Kampaania lisatud saatmisjärjekorda.",
+        "MANAGE_RECIPIENTS": "Saajad",
+        "DELETE": "Kustuta"
+      },
+      "AI": {
+        "BADGE": {
+          "FAILED": "Tehisintellekti tõrge",
+          "PROCESSING": "Tehisintellekt loob sisu",
+          "READY": "Tehisintellekt valmis"
+        }
+      },
+      "DESCRIPTION": "Koosta e-kiri, vali kinnitatud saatmisdomeen, laadi saajate loend üles ja saada kohe või ajasta.",
+      "DIALOG": {
+        "BASE_HINT": "Laadi üles CSV või XLSX veergudega name ja email. Tuvastatud veergudest saavad isikupärastamise väljad.",
+        "BASE_IMPORTING": "Loendi importimine…",
+        "BASE_LABEL": "Kontaktide loend (CSV või XLSX)",
+        "BASE_PICK": "Vali fail",
+        "BASE_SELECTED": "Valitud: {name}",
+        "CREATE_AND_OPEN": "Loo ja ava redaktoris",
+        "CREATE_TITLE": "Uus e-posti kampaania",
+        "DIRECT_OPTION": "otse saatmine selle postkasti kaudu",
+        "DIRECT_WARNING": "Tähelepanu: see on sinu isiklik postkast. Kasuta seda ainult enda tegelikele nõusoleku andnud kontaktidele väikestes kogustes saatmiseks. Masspostitus tasuta veebipostist võib konto blokeerida või peatada. Piirame saatmist 100 kirjale päevas loomulikus tempos; suuremate loendite jaoks kinnita oma domeen.",
+        "EDIT_TITLE": "Muuda e-posti kampaaniat",
+        "ERROR": "Kampaaniat ei saanud salvestada. Proovi uuesti.",
+        "FROM_EMAIL_DIRECT_HINT": "Saadetakse otse selle postkasti nimel.",
+        "FROM_EMAIL_ERROR": "Saatja e-post on nõutav",
+        "FROM_EMAIL_HINT": "Aadress peab kuuluma domeenile {'@'}{domain} (sinu kinnitatud domeen).",
+        "FROM_EMAIL_HINT_NO_DOMAIN": "Aadress peab kuuluma sinu kinnitatud saatmisdomeenile.",
+        "FROM_EMAIL_INVALID": "Sisesta kehtiv aadress oma kinnitatud domeenil",
+        "FROM_EMAIL_LABEL": "Saatja e-post",
+        "FROM_EMAIL_PLACEHOLDER": "Nt pakkumine{'@'}sinufirma.com",
+        "FROM_NAME_ERROR": "Saatja nimi on nõutav",
+        "FROM_NAME_LABEL": "Saatja nimi",
+        "FROM_NAME_PLACEHOLDER": "Nt Acme turundus",
+        "NAME_ERROR": "Sisesta kampaania nimi",
+        "NAME_LABEL": "Kampaania nimi",
+        "NAME_PLACEHOLDER": "Nt juuni uudiskiri",
+        "NO_VERIFIED_DOMAIN": "Kinnitatud saatmisdomeeni veel pole. Lisa ja kinnita see e-posti saatmisdomeenide jaotises.",
+        "REPLY_TO_ERROR": "Vastuse aadress on nõutav",
+        "REPLY_TO_HINT": "Vastused saabuvad sellele aadressile. Ühenda see postkastina, et muuta vastused vestlusteks.",
+        "REPLY_TO_INVALID": "Sisesta kehtiv e-posti aadress",
+        "REPLY_TO_LABEL": "Vastuse aadress",
+        "REPLY_TO_PLACEHOLDER": "Nt abi{'@'}sinufirma.com",
+        "SAVE_DRAFT": "Salvesta mustand",
+        "SENDER_ERROR": "Vali kinnitatud saatmisdomeen",
+        "SENDER_LABEL": "Saatmisdomeen",
+        "SENDER_PLACEHOLDER": "Vali kinnitatud domeen",
+        "SUCCESS": "Kampaania salvestatud.",
+        "CANCEL": "Tühista"
+      },
+      "EMPTY_STATE": {
+        "SUBTITLE": "Loo esimene kampaania, et koostada ja saata e-kiri imporditud loendile.",
+        "TITLE": "E-posti kampaaniaid veel pole"
+      },
+      "HEADER_TITLE": "E-posti kampaaniad",
+      "IMPORT": {
+        "ERRORS": {
+          "EMPTY_FILE": "Loend on tühi. Lisa kontakte ja laadi uuesti üles.",
+          "EXPIRED": "Üleslaaditud fail aegus. Laadi loend uuesti üles.",
+          "FAILED": "Import ebaõnnestus. Selle katse kontakte ei lisatud. Proovi uuesti või laadi fail uuesti üles.",
+          "FILE_TOO_LARGE": "Fail ületab suurusepiirangu. Jaga loend osadeks ja proovi uuesti.",
+          "HEADERS": "Kasuta esimese lehe esimeses reas üht Name- ja üht Email-veergu, ilma korduvate päisteta.",
+          "INVALID_FILE": "Faili ei saanud lugeda. Laadi üles kehtiv CSV- või XLSX-fail.",
+          "IN_PROGRESS": "Selle kampaania import juba käib. Oota selle lõppu.",
+          "ROW_LIMIT": "Loend ületab 50 000 rida. Jaga väiksemateks failideks.",
+          "UPLOAD_FAILED": "Faili ei saanud talletada. Laadi loend uuesti üles."
+        },
+        "RETRY": "Proovi importi uuesti",
+        "QUEUED": "Loend vastu võetud. Import on järjekorras; võite sellelt lehelt lahkuda.",
+        "PROCESSING": "Loendit imporditakse. Saatmine pole enne lõpetamist saadaval.",
+        "COMPLETED": "Loendi import lõpetatud.",
+        "SUMMARY": "Lisatud: {imported} · Duplikaadid: {duplicates} · Vigased: {invalid} · Saatmisest välja jäetud: {suppressed} · Kokku: {total}"
+      },
+      "PLACEHOLDERS": {
+        "COPY_SUCCESS": "Väli kopeeritud lõikelauale.",
+        "EMPTY": "Impordi saajad, et näha tabeli veergudest loodud välju.",
+        "SUBTITLE": "Klõpsa väljal selle kopeerimiseks ning kleebi teemasse, eelvaateteksti või kirja sisusse.",
+        "TITLE": "Saadaolevad väljad"
+      },
+      "RECIPIENTS": {
+        "ADD_MORE": "Lisa veel kontakte",
+        "ADD_MORE_HINT": "Loend laaditi üles kampaania loomisel. Lisa kontakte uue CSV/XLSX-failiga.",
+        "SUBTITLE": "Laadi üles CSV või XLSX veergudega name ja email. Saajaid kasutatakse ainult selles kampaanias ega lisata kontaktidesse.",
+        "TITLE": "Saajad"
+      },
+      "SCHEDULE_DIALOG": {
+        "DATETIME_ERROR": "Vali kuupäev ja kellaaeg",
+        "DATETIME_LABEL": "Saatmise aeg",
+        "CANCEL": "Tühista",
+        "SUBMIT": "Ajasta"
+      },
+      "STATUS": {
+        "PAUSED": "Peatatud",
+        "CANCELED": "Tühistatud",
+        "DRAFT": "Mustand",
+        "FAILED": "Saatmine ebaõnnestus",
+        "SCHEDULED": "Ajastatud",
+        "SENDING": "Saatmisel",
+        "SENT": "Saadetud"
+      },
+      "VALIDATION": {
+        "BLANK_ITEM": "{key}: {count} saajal puudub väärtus",
+        "BLANK_LABEL": "Väärtuseta saajad:",
+        "MISSING_LABEL": "Mall kasutab neid, kuid saajate andmetes need puuduvad:",
+        "OK": "Kõigil kampaania väljadel on väärtused. Saatmiseks valmis.",
+        "TITLE": "Saatmiseelne kontroll"
+      },
+      "COUNTS": {
+        "SENT": "Saadetud",
+        "RECIPIENTS": "Saajad",
+        "FAILED": "Saatmine ebaõnnestus"
+      },
+      "NEW": "Uus e-posti kampaania"
     }
   }
 }

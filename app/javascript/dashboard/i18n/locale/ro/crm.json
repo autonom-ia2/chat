@@ -1,0 +1,99 @@
+{
+  "CAMPAIGN_MANAGEMENT": {
+    "HEADER": {
+      "TITLE": "Gestionarea campaniilor",
+      "DESCRIPTION": "Urmărește trimiterea, livrarea și calitatea campaniilor tale de e-mail."
+    },
+    "PAYWALL": {
+      "TITLE": "Campaniile de e-mail nu sunt activate",
+      "DESCRIPTION": "Activează campaniile de e-mail pentru a vedea rapoartele de livrare și interacțiune."
+    },
+    "FILTER": {
+      "LABEL": "Campanie",
+      "ALL": "Toate campaniile"
+    },
+    "APPROXIMATE": "aproximativ",
+    "OPEN_APPROXIMATE_HINT": "Ratele de deschidere sunt aproximative. Protecția confidențialității din Apple Mail și funcții similare pot crește numărul deschiderilor prin preîncărcarea imaginilor.",
+    "KPIS": {
+      "SENT": "Trimise",
+      "DELIVERED": "Livrate",
+      "OPENED": "Deschise",
+      "CLICKED": "Cu clicuri",
+      "UNSUBSCRIBED": "Dezabonări",
+      "BOUNCED": "Nelivrate",
+      "COMPLAINED": "Reclamații de spam"
+    },
+    "RATES": {
+      "OPEN_RATE": "Rata de deschidere",
+      "CLICK_RATE": "Rata de clic",
+      "BOUNCE_RATE": "Rata de nelivrare",
+      "COMPLAINT_RATE": "Rata reclamațiilor de spam",
+      "UNSUBSCRIBE_RATE": "Rata de dezabonare",
+      "OVER_DELIVERED": "din cele livrate"
+    },
+    "TABLE": {
+      "EMAIL": "E-mail",
+      "NAME": "Nume",
+      "LAST_EVENT_AT": "Ultima activitate",
+      "STATUS": "Stare",
+      "ATTEMPTS": "Încercări",
+      "OPENS": "Deschideri",
+      "CLICKS": "Clicuri"
+    },
+    "EMPTY_STATE": {
+      "TITLE": "Încă nu există date despre campanii",
+      "SUBTITLE": "Trimite o campanie de e-mail pentru a vedea indicatorii de livrare și interacțiune."
+    },
+    "ERROR": "Raportul campaniei nu a putut fi încărcat. Încearcă din nou.",
+    "EXPORT_CSV": "Exportă CSV",
+    "TIMELINE": {
+      "TITLE": "Livrări, deschideri și clicuri în timp",
+      "EMPTY": "Nu sunt înregistrate evenimente pentru această campanie.",
+      "INTERVAL": {
+        "DAY": "Pe zi",
+        "HOUR": "Pe oră"
+      }
+    },
+    "CLICKS_BY_LINK": {
+      "TITLE": "Clicuri pe link",
+      "EMPTY": "Nu sunt înregistrate clicuri.",
+      "URL": "Link",
+      "UNIQUE": "Clicuri unice",
+      "TOTAL": "Total clicuri"
+    },
+    "RECIPIENTS": {
+      "TITLE": "Destinatari",
+      "SEARCH_PLACEHOLDER": "Caută după nume sau e-mail",
+      "EMPTY": "Nu s-au găsit destinatari.",
+      "PAGE_OF": "Pagina {page} din {total}",
+      "PREV": "Anterioară",
+      "NEXT": "Următoare"
+    },
+    "COMPARISON": {
+      "TITLE": "Compararea campaniilor"
+    }
+  },
+  "CRM_KANBAN": {
+    "TRACKED_LINKS": {
+      "TITLE": "Linkuri urmăribile și coduri QR",
+      "SUBTITLE": "Creează un link sau QR pentru fiecare campanie, vânzător sau magazin. Conversațiile inițiate prin acestea au sursa atribuită în CRM.",
+      "ADD": "Link nou",
+      "NAME": "Nume",
+      "NAME_PLACEHOLDER": "Ex.: QR magazin — Centru",
+      "INBOX": "Mesaje primite WhatsApp",
+      "PREFILLED": "Mesaj precompletat",
+      "PREFILLED_PLACEHOLDER": "Ex.: Bună! Vreau să aflu mai multe",
+      "CODE": "Cod",
+      "CLICKS": "Clicuri",
+      "CONVERSATIONS": "Conversații",
+      "COPY_LINK": "Copiază linkul",
+      "COPIED": "Copiat!",
+      "DOWNLOAD_QR": "Descarcă QR",
+      "DELETE": "Șterge",
+      "DELETE_CONFIRM": "Ștergi acest link? Conversațiile deja atribuite își păstrează originea.",
+      "EMPTY": "Nu există linkuri urmăribile. Creează primul link pentru a atribui conversațiile provenite din magazin, de la vânzător sau din biografie.",
+      "CREATE_SUCCESS": "Link creat",
+      "CREATE_ERROR": "Linkul nu a putut fi creat"
+    }
+  }
+}

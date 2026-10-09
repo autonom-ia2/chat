@@ -211,6 +211,134 @@
         "SUCCESS_MESSAGE": "Campaign deleted successfully",
         "ERROR_MESSAGE": "There was an error. Please try again."
       }
+    },
+    "EMAIL_CAMPAIGN": {
+      "ACTIONS": {
+        "CANCEL": "Avbryt",
+        "CANCEL_SUCCESS": "Kampanjen er avbrutt.",
+        "DELETE": "Slett",
+        "DELETE_SUCCESS": "Kampanjen er slettet.",
+        "DUPLICATE": "Dupliser",
+        "DUPLICATE_SUCCESS": "Kampanjen er duplisert. Oppdater mottakerne og tidsplanen.",
+        "EDIT": "Rediger",
+        "MANAGE_RECIPIENTS": "Mottakere",
+        "OPEN_BUILDER": "Redigeringsverktøy",
+        "PAUSE": "Sett på pause",
+        "PAUSE_SUCCESS": "Kampanjen er satt på pause.",
+        "SCHEDULE": "Planlegg",
+        "SCHEDULE_SUCCESS": "Kampanjen er planlagt.",
+        "SEND_NOW": "Send nå",
+        "SEND_SUCCESS": "Kampanjen er lagt i kø for sending."
+      },
+      "AI": {
+        "BADGE": {
+          "FAILED": "KI mislyktes",
+          "PROCESSING": "KI genererer",
+          "READY": "KI klar"
+        }
+      },
+      "COUNTS": {
+        "FAILED": "Mislykket",
+        "RECIPIENTS": "Mottakere",
+        "SENT": "Sendt"
+      },
+      "DESCRIPTION": "Skriv en e-post, velg et bekreftet avsenderdomene, last opp mottakerlisten og send nå eller planlegg sendingen.",
+      "DIALOG": {
+        "BASE_HINT": "Last opp CSV eller XLSX med kolonnene name og email. Oppdagede kolonner blir variabler for tilpasning.",
+        "BASE_IMPORTING": "Importerer liste…",
+        "BASE_LABEL": "Kontaktliste (CSV eller XLSX)",
+        "BASE_PICK": "Velg fil",
+        "BASE_SELECTED": "Valgt: {name}",
+        "CANCEL": "Avbryt",
+        "CREATE_AND_OPEN": "Opprett og åpne i redigeringsverktøyet",
+        "CREATE_TITLE": "Ny e-postkampanje",
+        "DIRECT_OPTION": "direkte sending via denne innboksen",
+        "DIRECT_WARNING": "Merk: Dette er din personlige postkasse. Bruk den bare til små mengder av dine egne reelle kontakter som har samtykket. Masseutsendelser fra gratis nettpost kan føre til at kontoen blokkeres eller suspenderes. Grensen er 100 per dag, med pauser som ved manuell sending. Bekreft ditt eget domene for større lister.",
+        "EDIT_TITLE": "Rediger e-postkampanje",
+        "ERROR": "Kunne ikke lagre kampanjen. Prøv igjen.",
+        "FROM_EMAIL_DIRECT_HINT": "Sendes direkte fra denne postkassen.",
+        "FROM_EMAIL_ERROR": "Avsenderens e-postadresse er påkrevd",
+        "FROM_EMAIL_HINT": "Må være en adresse på {'@'}{domain} (ditt bekreftede domene).",
+        "FROM_EMAIL_HINT_NO_DOMAIN": "Må være en adresse på ditt bekreftede avsenderdomene.",
+        "FROM_EMAIL_INVALID": "Skriv inn en gyldig adresse på ditt bekreftede domene",
+        "FROM_EMAIL_LABEL": "Avsenderadresse",
+        "FROM_EMAIL_PLACEHOLDER": "F.eks. tilbud{'@'}dinfirma.com",
+        "FROM_NAME_ERROR": "Avsenderens navn er påkrevd",
+        "FROM_NAME_LABEL": "Avsendernavn",
+        "FROM_NAME_PLACEHOLDER": "F.eks. Acme markedsføring",
+        "NAME_ERROR": "Skriv inn et kampanjenavn",
+        "NAME_LABEL": "Kampanjenavn",
+        "NAME_PLACEHOLDER": "F.eks. Nyhetsbrev for juni",
+        "NO_VERIFIED_DOMAIN": "Ingen bekreftede avsenderdomener ennå. Legg til og bekreft et under Domener for e-postsending først.",
+        "REPLY_TO_ERROR": "Svaradresse er påkrevd",
+        "REPLY_TO_HINT": "Svar sendes til denne adressen. Koble den til som en innboks for å gjøre svarene til samtaler.",
+        "REPLY_TO_INVALID": "Skriv inn en gyldig e-postadresse",
+        "REPLY_TO_LABEL": "Svaradresse",
+        "REPLY_TO_PLACEHOLDER": "F.eks. hjelp{'@'}dinfirma.com",
+        "SAVE_DRAFT": "Lagre utkast",
+        "SENDER_ERROR": "Velg et bekreftet avsenderdomene",
+        "SENDER_LABEL": "Avsenderdomene",
+        "SENDER_PLACEHOLDER": "Velg et bekreftet domene",
+        "SUCCESS": "Kampanjen er lagret."
+      },
+      "EMPTY_STATE": {
+        "SUBTITLE": "Opprett din første kampanje for å skrive og sende en e-post til en importert liste.",
+        "TITLE": "Ingen e-postkampanjer ennå"
+      },
+      "HEADER_TITLE": "E-postkampanjer",
+      "IMPORT": {
+        "ERRORS": {
+          "EMPTY_FILE": "Listen er tom. Legg til kontakter og last den opp på nytt.",
+          "EXPIRED": "Den opplastede filen er utløpt. Last opp listen på nytt.",
+          "FAILED": "Importen mislyktes. Ingen kontakter fra dette forsøket ble lagt til. Prøv igjen eller last opp filen på nytt.",
+          "FILE_TOO_LARGE": "Filen overstiger størrelsesgrensen. Del opp listen og prøv igjen.",
+          "HEADERS": "Bruk én Name-kolonne og én Email-kolonne i første rad på første ark, uten dupliserte overskrifter.",
+          "INVALID_FILE": "Kunne ikke lese filen. Last opp en gyldig CSV- eller XLSX-fil.",
+          "IN_PROGRESS": "En import pågår allerede for denne kampanjen. Vent til den er ferdig.",
+          "ROW_LIMIT": "Listen overstiger 50 000 rader. Del den opp i mindre filer.",
+          "UPLOAD_FAILED": "Kunne ikke lagre filen. Last opp listen på nytt."
+        },
+        "QUEUED": "Liste mottatt. Importen står i kø; du kan forlate denne siden.",
+        "RETRY": "Prøv importen på nytt",
+        "PROCESSING": "Importerer listen. Sending er utilgjengelig til importen er fullført.",
+        "COMPLETED": "Import av listen er fullført.",
+        "SUMMARY": "Lagt til: {imported} · Duplikater: {duplicates} · Ugyldige: {invalid} · Utelatt fra sending: {suppressed} · Totalt: {total}"
+      },
+      "NEW": "Ny e-postkampanje",
+      "PLACEHOLDERS": {
+        "COPY_SUCCESS": "Variabelen er kopiert til utklippstavlen.",
+        "EMPTY": "Importer mottakere for å se variablene fra kolonnene i regnearket.",
+        "SUBTITLE": "Klikk på en variabel for å kopiere den, og lim den inn i emnet, forhåndsvisningsteksten eller meldingsteksten.",
+        "TITLE": "Tilgjengelige variabler"
+      },
+      "RECIPIENTS": {
+        "ADD_MORE": "Legg til flere kontakter",
+        "ADD_MORE_HINT": "Listen ble lastet opp da kampanjen ble opprettet. Last opp en ny CSV/XLSX for å legge til flere kontakter.",
+        "SUBTITLE": "Last opp CSV eller XLSX med kolonnene name og email. Mottakerne brukes bare i denne kampanjen og legges ikke til i kontaktene dine.",
+        "TITLE": "Mottakere"
+      },
+      "SCHEDULE_DIALOG": {
+        "CANCEL": "Avbryt",
+        "DATETIME_ERROR": "Velg dato og klokkeslett",
+        "DATETIME_LABEL": "Send kl.",
+        "SUBMIT": "Planlegg"
+      },
+      "STATUS": {
+        "CANCELED": "Avbrutt",
+        "DRAFT": "Utkast",
+        "FAILED": "Mislykket",
+        "PAUSED": "På pause",
+        "SCHEDULED": "Planlagt",
+        "SENDING": "Sender",
+        "SENT": "Sendt"
+      },
+      "VALIDATION": {
+        "BLANK_ITEM": "{key}: {count} mottaker(e) uten verdi",
+        "BLANK_LABEL": "Mottakere uten verdi:",
+        "MISSING_LABEL": "Brukt i malen, men ikke funnet hos mottakerne:",
+        "OK": "Alle variablene i denne kampanjen har verdier. Du kan fortsette.",
+        "TITLE": "Kontroll før sending"
+      }
     }
   }
 }

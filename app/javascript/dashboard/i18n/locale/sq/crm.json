@@ -1,0 +1,99 @@
+{
+  "CAMPAIGN_MANAGEMENT": {
+    "HEADER": {
+      "TITLE": "Menaxhimi i fushatave",
+      "DESCRIPTION": "Ndiqni dërgimin, dorëzimin dhe cilësinë e fushatave me email."
+    },
+    "PAYWALL": {
+      "TITLE": "Fushatat me email nuk janë aktivizuar",
+      "DESCRIPTION": "Aktivizoni fushatat me email për të parë raportet e dorëzimit dhe ndërveprimit."
+    },
+    "FILTER": {
+      "LABEL": "Fushata",
+      "ALL": "Të gjitha fushatat"
+    },
+    "APPROXIMATE": "e përafërt",
+    "OPEN_APPROXIMATE_HINT": "Normat e hapjes janë të përafërta. Mbrojtja e privatësisë në Apple Mail dhe funksione të ngjashme mund t’i rrisin hapjet duke ngarkuar paraprakisht imazhet.",
+    "KPIS": {
+      "SENT": "Dërguar",
+      "DELIVERED": "Dorëzuar",
+      "OPENED": "Hapur",
+      "CLICKED": "Klikuar",
+      "UNSUBSCRIBED": "Çregjistrime",
+      "COMPLAINED": "Ankesa për mesazhe të padëshiruara",
+      "BOUNCED": "Nuk u dorëzua"
+    },
+    "RATES": {
+      "OPEN_RATE": "Norma e hapjes",
+      "CLICK_RATE": "Norma e klikimeve",
+      "BOUNCE_RATE": "Norma e mosdorëzimit",
+      "COMPLAINT_RATE": "Norma e ankesave",
+      "UNSUBSCRIBE_RATE": "Norma e çregjistrimit",
+      "OVER_DELIVERED": "nga të dorëzuarat"
+    },
+    "TABLE": {
+      "EMAIL": "Email",
+      "NAME": "Emri",
+      "LAST_EVENT_AT": "Aktiviteti i fundit",
+      "STATUS": "Gjendja",
+      "ATTEMPTS": "Përpjekjet",
+      "OPENS": "Hapjet",
+      "CLICKS": "Klikimet"
+    },
+    "EMPTY_STATE": {
+      "TITLE": "Ende nuk ka të dhëna për fushatat",
+      "SUBTITLE": "Dërgoni një fushatë me email për të parë matjet e dorëzimit dhe ndërveprimit."
+    },
+    "ERROR": "Raporti nuk u ngarkua. Provoni përsëri.",
+    "EXPORT_CSV": "Eksporto CSV",
+    "TIMELINE": {
+      "TITLE": "Dorëzimet, hapjet dhe klikimet me kalimin e kohës",
+      "EMPTY": "Ende nuk ka ngjarje të regjistruara për këtë fushatë.",
+      "INTERVAL": {
+        "DAY": "Sipas ditës",
+        "HOUR": "Sipas orës"
+      }
+    },
+    "CLICKS_BY_LINK": {
+      "TITLE": "Klikimet sipas lidhjes",
+      "EMPTY": "Ende nuk ka klikime të regjistruara.",
+      "URL": "Lidhja",
+      "UNIQUE": "Klikime unike",
+      "TOTAL": "Klikime gjithsej"
+    },
+    "RECIPIENTS": {
+      "TITLE": "Marrësit",
+      "EMPTY": "Nuk u gjetën marrës.",
+      "PAGE_OF": "Faqja {page} nga {total}",
+      "PREV": "E mëparshmja",
+      "NEXT": "Tjetra",
+      "SEARCH_PLACEHOLDER": "Kërko emrin ose email-in"
+    },
+    "COMPARISON": {
+      "TITLE": "Krahasimi i fushatave"
+    }
+  },
+  "CRM_KANBAN": {
+    "TRACKED_LINKS": {
+      "TITLE": "Lidhje të gjurmueshme dhe kode QR",
+      "SUBTITLE": "Krijoni një lidhje ose kod QR për çdo fushatë, shitës ose dyqan. Bisedave të nisura përmes tyre u caktohet burimi në CRM.",
+      "ADD": "Lidhje e re",
+      "NAME_PLACEHOLDER": "P.sh. QR i dyqanit — Qendër",
+      "INBOX": "Kutia hyrëse WhatsApp",
+      "PREFILLED": "Mesazh i plotësuar paraprakisht",
+      "PREFILLED_PLACEHOLDER": "P.sh. Përshëndetje! Dua të di më shumë",
+      "CODE": "Kodi",
+      "CONVERSATIONS": "Bisedat",
+      "COPY_LINK": "Kopjo lidhjen",
+      "COPIED": "U kopjua!",
+      "DOWNLOAD_QR": "Shkarko kodin QR",
+      "DELETE": "Fshi",
+      "DELETE_CONFIRM": "Ta fshij këtë lidhje? Bisedat që janë lidhur tashmë e ruajnë burimin e tyre.",
+      "EMPTY": "Ende nuk ka lidhje të gjurmueshme. Krijoni të parën për bisedat nga dyqani, shitësi ose përshkrimi i profilit.",
+      "CREATE_SUCCESS": "Lidhja u krijua",
+      "CREATE_ERROR": "Lidhja nuk u krijua",
+      "NAME": "Emri",
+      "CLICKS": "Klikimet"
+    }
+  }
+}

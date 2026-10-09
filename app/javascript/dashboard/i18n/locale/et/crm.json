@@ -1,0 +1,99 @@
+{
+  "CAMPAIGN_MANAGEMENT": {
+    "HEADER": {
+      "TITLE": "Kampaaniate haldus",
+      "DESCRIPTION": "Jälgi e-posti kampaaniate saatmist, kohaletoimetamist ja kvaliteeti."
+    },
+    "PAYWALL": {
+      "TITLE": "E-posti kampaaniad pole lubatud",
+      "DESCRIPTION": "Luba e-posti kampaaniad, et näha kohaletoimetamise ja kaasatuse aruandeid."
+    },
+    "FILTER": {
+      "LABEL": "Kampaania",
+      "ALL": "Kõik kampaaniad"
+    },
+    "APPROXIMATE": "hinnanguline",
+    "OPEN_APPROXIMATE_HINT": "Avamismäärad on hinnangulised. Apple Mail Privacy Protection ja sarnased funktsioonid võivad neid piltide eellaadimisega suurendada.",
+    "KPIS": {
+      "DELIVERED": "Kohale toimetatud",
+      "OPENED": "Avatud",
+      "CLICKED": "Klõpsatud",
+      "UNSUBSCRIBED": "Tellimusest loobumised",
+      "COMPLAINED": "Rämpspostikaebused",
+      "SENT": "Saadetud",
+      "BOUNCED": "Kohale toimetamata"
+    },
+    "RATES": {
+      "OPEN_RATE": "Avamismäär",
+      "CLICK_RATE": "Klõpsumäär",
+      "BOUNCE_RATE": "Kohale toimetamata kirjade määr",
+      "COMPLAINT_RATE": "Kaebuste määr",
+      "UNSUBSCRIBE_RATE": "Loobumismäär",
+      "OVER_DELIVERED": "kohale toimetatutest"
+    },
+    "TABLE": {
+      "EMAIL": "E-post",
+      "NAME": "Nimi",
+      "LAST_EVENT_AT": "Viimane tegevus",
+      "STATUS": "Olek",
+      "ATTEMPTS": "Katsed",
+      "OPENS": "Avamised",
+      "CLICKS": "Klõpsud"
+    },
+    "EMPTY_STATE": {
+      "TITLE": "Kampaaniaandmed veel puuduvad",
+      "SUBTITLE": "Saada e-posti kampaania, et näha kohaletoimetamise ja kaasatuse mõõdikuid."
+    },
+    "ERROR": "Kampaania aruannet ei saanud laadida. Proovi uuesti.",
+    "EXPORT_CSV": "Ekspordi CSV",
+    "TIMELINE": {
+      "TITLE": "Kohaletoimetamised, avamised ja klõpsud ajas",
+      "EMPTY": "Selle kampaania sündmusi pole veel salvestatud.",
+      "INTERVAL": {
+        "DAY": "Päevade kaupa",
+        "HOUR": "Tundide kaupa"
+      }
+    },
+    "CLICKS_BY_LINK": {
+      "TITLE": "Klõpsud lingi kaupa",
+      "EMPTY": "Klõpse pole veel salvestatud.",
+      "URL": "Link",
+      "UNIQUE": "Ainulaadsed klõpsud",
+      "TOTAL": "Klõpsud kokku"
+    },
+    "RECIPIENTS": {
+      "TITLE": "Saajad",
+      "EMPTY": "Saajaid ei leitud.",
+      "PAGE_OF": "Leht {page}/{total}",
+      "PREV": "Eelmine",
+      "NEXT": "Järgmine",
+      "SEARCH_PLACEHOLDER": "Otsi nime või e-posti aadressi"
+    },
+    "COMPARISON": {
+      "TITLE": "Kampaaniate võrdlus"
+    }
+  },
+  "CRM_KANBAN": {
+    "TRACKED_LINKS": {
+      "TITLE": "Jälgitavad lingid ja QR-koodid",
+      "SUBTITLE": "Loo link või QR-kood iga kampaania, müüja või poe jaoks. Selle kaudu alustatud vestlused seotakse CRM-is allikaga.",
+      "ADD": "Uus link",
+      "NAME_PLACEHOLDER": "Nt poe QR — Kesklinn",
+      "INBOX": "WhatsAppi postkast",
+      "PREFILLED": "Eeltäidetud sõnum",
+      "PREFILLED_PLACEHOLDER": "Nt Tere! Soovin lisateavet",
+      "CODE": "Kood",
+      "CONVERSATIONS": "Vestlused",
+      "COPY_LINK": "Kopeeri link",
+      "COPIED": "Kopeeritud!",
+      "DOWNLOAD_QR": "Laadi QR alla",
+      "DELETE": "Kustuta",
+      "DELETE_CONFIRM": "Kustutada see link? Juba seotud vestlused säilitavad oma päritolu.",
+      "EMPTY": "Jälgitavaid linke veel pole. Loo esimene, et siduda vestlusi poe, müüja või profiililingiga.",
+      "CREATE_SUCCESS": "Link loodud",
+      "CREATE_ERROR": "Linki ei saanud luua",
+      "NAME": "Nimi",
+      "CLICKS": "Klõpsud"
+    }
+  }
+}

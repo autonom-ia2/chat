@@ -211,6 +211,134 @@
         "SUCCESS_MESSAGE": "Campaign deleted successfully",
         "ERROR_MESSAGE": "There was an error. Please try again."
       }
+    },
+    "EMAIL_CAMPAIGN": {
+      "ACTIONS": {
+        "CANCEL": "Peruuta",
+        "CANCEL_SUCCESS": "Kampanja peruutettu.",
+        "DELETE_SUCCESS": "Kampanja poistettu.",
+        "DUPLICATE": "Monista",
+        "DUPLICATE_SUCCESS": "Kampanja monistettu. Päivitä vastaanottajat ja ajastus.",
+        "EDIT": "Muokkaa",
+        "OPEN_BUILDER": "Muokkain",
+        "PAUSE": "Keskeytä",
+        "PAUSE_SUCCESS": "Kampanja keskeytetty.",
+        "SCHEDULE": "Ajasta",
+        "SCHEDULE_SUCCESS": "Kampanja ajastettu.",
+        "SEND_NOW": "Lähetä nyt",
+        "SEND_SUCCESS": "Kampanja lisätty lähetysjonoon.",
+        "MANAGE_RECIPIENTS": "Vastaanottajat",
+        "DELETE": "Poista"
+      },
+      "AI": {
+        "BADGE": {
+          "FAILED": "Tekoäly epäonnistui",
+          "PROCESSING": "Tekoäly luo sisältöä",
+          "READY": "Tekoäly valmis"
+        }
+      },
+      "DESCRIPTION": "Kirjoita sähköposti, valitse vahvistettu lähetysverkkotunnus, tuo vastaanottajat ja lähetä heti tai ajasta.",
+      "DIALOG": {
+        "BASE_HINT": "Lataa CSV tai XLSX, jossa on name- ja email-sarakkeet. Tunnistetuista sarakkeista tulee personointikenttiä.",
+        "BASE_IMPORTING": "Tuodaan luetteloa…",
+        "BASE_LABEL": "Yhteystietoluettelo (CSV tai XLSX)",
+        "BASE_PICK": "Valitse tiedosto",
+        "BASE_SELECTED": "Valittu: {name}",
+        "CREATE_AND_OPEN": "Luo ja avaa muokkaimessa",
+        "CREATE_TITLE": "Uusi sähköpostikampanja",
+        "DIRECT_OPTION": "suora lähetys tämän postilaatikon kautta",
+        "DIRECT_WARNING": "Huomio: tämä on henkilökohtainen postilaatikkosi. Käytä sitä vain omille oikeille, suostumuksensa antaneille yhteystiedoille ja pieniin määriin. Massapostitus ilmaisesta verkkopostista voi estää tilisi käytön. Raja on 100 päivässä luonnollisin väliajoin; vahvista oma verkkotunnuksesi suuremmille luetteloille.",
+        "EDIT_TITLE": "Muokkaa sähköpostikampanjaa",
+        "ERROR": "Kampanjan tallennus epäonnistui. Yritä uudelleen.",
+        "FROM_EMAIL_DIRECT_HINT": "Lähetetään suoraan tästä postilaatikosta.",
+        "FROM_EMAIL_ERROR": "Lähettäjän sähköposti vaaditaan",
+        "FROM_EMAIL_HINT": "Osoitteen on oltava {'@'}{domain} (vahvistettu verkkotunnuksesi).",
+        "FROM_EMAIL_HINT_NO_DOMAIN": "Osoitteen on kuuluttava vahvistettuun lähetysverkkotunnukseesi.",
+        "FROM_EMAIL_INVALID": "Anna kelvollinen osoite vahvistetusta verkkotunnuksestasi",
+        "FROM_EMAIL_LABEL": "Lähettäjän sähköposti",
+        "FROM_EMAIL_PLACEHOLDER": "Esim. tarjoukset{'@'}yrityksesi.com",
+        "FROM_NAME_ERROR": "Lähettäjän nimi vaaditaan",
+        "FROM_NAME_LABEL": "Lähettäjän nimi",
+        "FROM_NAME_PLACEHOLDER": "Esim. Acmen markkinointi",
+        "NAME_ERROR": "Anna kampanjan nimi",
+        "NAME_LABEL": "Kampanjan nimi",
+        "NAME_PLACEHOLDER": "Esim. Kesäkuun uutiskirje",
+        "NO_VERIFIED_DOMAIN": "Ei vielä vahvistettua lähetysverkkotunnusta. Lisää ja vahvista se sähköpostin lähetysverkkotunnusten asetuksissa.",
+        "REPLY_TO_ERROR": "Vastausosoite vaaditaan",
+        "REPLY_TO_HINT": "Vastaukset tulevat tähän osoitteeseen. Yhdistä se postilaatikoksi muuttaaksesi vastaukset keskusteluiksi.",
+        "REPLY_TO_INVALID": "Anna kelvollinen sähköpostiosoite",
+        "REPLY_TO_LABEL": "Vastausosoite",
+        "REPLY_TO_PLACEHOLDER": "Esim. tuki{'@'}yrityksesi.com",
+        "SAVE_DRAFT": "Tallenna luonnos",
+        "SENDER_ERROR": "Valitse vahvistettu lähetysverkkotunnus",
+        "SENDER_LABEL": "Lähetysverkkotunnus",
+        "SENDER_PLACEHOLDER": "Valitse vahvistettu verkkotunnus",
+        "SUCCESS": "Kampanja tallennettu.",
+        "CANCEL": "Peruuta"
+      },
+      "EMPTY_STATE": {
+        "SUBTITLE": "Luo ensimmäinen kampanja kirjoittaaksesi ja lähettääksesi sähköpostin tuodulle luettelolle.",
+        "TITLE": "Ei vielä sähköpostikampanjoita"
+      },
+      "HEADER_TITLE": "Sähköpostikampanjat",
+      "IMPORT": {
+        "ERRORS": {
+          "EMPTY_FILE": "Luettelo on tyhjä. Lisää yhteystietoja ja lataa uudelleen.",
+          "EXPIRED": "Ladattu tiedosto on vanhentunut. Lataa luettelo uudelleen.",
+          "FAILED": "Tuonti epäonnistui. Tästä yrityksestä ei lisätty yhteystietoja. Yritä tai lataa tiedosto uudelleen.",
+          "FILE_TOO_LARGE": "Tiedosto ylittää kokorajan. Jaa luettelo ja yritä uudelleen.",
+          "HEADERS": "Käytä ensimmäisen taulukon ensimmäisellä rivillä yhtä Name- ja yhtä Email-saraketta ilman päällekkäisiä otsikoita.",
+          "INVALID_FILE": "Tiedostoa ei voitu lukea. Lataa kelvollinen CSV- tai XLSX-tiedosto.",
+          "IN_PROGRESS": "Kampanjan tuonti on jo käynnissä. Odota sen valmistumista.",
+          "ROW_LIMIT": "Luettelossa on yli 50 000 riviä. Jaa se pienempiin tiedostoihin.",
+          "UPLOAD_FAILED": "Tiedostoa ei voitu tallentaa. Lataa luettelo uudelleen."
+        },
+        "RETRY": "Yritä tuontia uudelleen",
+        "QUEUED": "Luettelo vastaanotettu. Tuonti on jonossa; voit poistua tältä sivulta.",
+        "PROCESSING": "Luetteloa tuodaan. Lähettäminen ei ole käytettävissä ennen tuonnin valmistumista.",
+        "COMPLETED": "Luettelon tuonti valmis.",
+        "SUMMARY": "Lisätty: {imported} · Kaksoiskappaleet: {duplicates} · Virheelliset: {invalid} · Lähetyksestä pois jätetyt: {suppressed} · Yhteensä: {total}"
+      },
+      "PLACEHOLDERS": {
+        "COPY_SUCCESS": "Kenttä kopioitu leikepöydälle.",
+        "EMPTY": "Tuo vastaanottajat nähdäksesi taulukon sarakkeista muodostetut kentät.",
+        "SUBTITLE": "Kopioi kenttä napsauttamalla ja liitä se aiheeseen, esikatselutekstiin tai viestin sisältöön.",
+        "TITLE": "Käytettävissä olevat kentät"
+      },
+      "RECIPIENTS": {
+        "ADD_MORE": "Lisää yhteystietoja",
+        "ADD_MORE_HINT": "Luettelo ladattiin kampanjaa luotaessa. Lisää yhteystietoja lataamalla toinen CSV/XLSX.",
+        "SUBTITLE": "Lataa CSV tai XLSX, jossa on name ja email. Vastaanottajia käytetään vain tässä kampanjassa, eikä heitä lisätä yhteystietoihin.",
+        "TITLE": "Vastaanottajat"
+      },
+      "SCHEDULE_DIALOG": {
+        "DATETIME_ERROR": "Valitse päivämäärä ja aika",
+        "DATETIME_LABEL": "Lähetysaika",
+        "CANCEL": "Peruuta",
+        "SUBMIT": "Ajasta"
+      },
+      "STATUS": {
+        "PAUSED": "Keskeytetty",
+        "CANCELED": "Peruttu",
+        "DRAFT": "Luonnos",
+        "FAILED": "Lähetys epäonnistui",
+        "SCHEDULED": "Ajastettu",
+        "SENDING": "Lähetetään",
+        "SENT": "Lähetetty"
+      },
+      "VALIDATION": {
+        "BLANK_ITEM": "{key}: {count} vastaanottajalta puuttuu arvo",
+        "BLANK_LABEL": "Vastaanottajat, joilta puuttuu arvo:",
+        "MISSING_LABEL": "Käytössä mallissa, mutta ei löydy vastaanottajatiedoista:",
+        "OK": "Kaikilla kampanjan kentillä on arvot. Valmis lähetettäväksi.",
+        "TITLE": "Tarkistus ennen lähetystä"
+      },
+      "COUNTS": {
+        "SENT": "Lähetetty",
+        "RECIPIENTS": "Vastaanottajat",
+        "FAILED": "Lähetys epäonnistui"
+      },
+      "NEW": "Uusi sähköpostikampanja"
     }
   }
 }

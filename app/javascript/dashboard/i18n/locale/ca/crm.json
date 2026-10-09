@@ -1,0 +1,99 @@
+{
+  "CAMPAIGN_MANAGEMENT": {
+    "HEADER": {
+      "TITLE": "Gestió de campanyes",
+      "DESCRIPTION": "Segueix els enviaments, el lliurament i la qualitat de les campanyes de correu."
+    },
+    "PAYWALL": {
+      "TITLE": "Les campanyes de correu no estan habilitades",
+      "DESCRIPTION": "Habilita les campanyes de correu per veure informes de lliurament i interacció."
+    },
+    "FILTER": {
+      "LABEL": "Campanya",
+      "ALL": "Totes les campanyes"
+    },
+    "APPROXIMATE": "aproximat",
+    "OPEN_APPROXIMATE_HINT": "Les taxes d’obertura són aproximades. Apple Mail Privacy Protection i funcions semblants poden augmentar-les precarregant imatges.",
+    "KPIS": {
+      "DELIVERED": "Lliurats",
+      "OPENED": "Oberts",
+      "CLICKED": "Amb clics",
+      "UNSUBSCRIBED": "Baixes de subscripció",
+      "COMPLAINED": "Denúncies de correu brossa",
+      "SENT": "Enviat",
+      "BOUNCED": "No lliurat"
+    },
+    "RATES": {
+      "OPEN_RATE": "Taxa d’obertura",
+      "CLICK_RATE": "Taxa de clics",
+      "BOUNCE_RATE": "Taxa de no lliurament",
+      "COMPLAINT_RATE": "Taxa de denúncies",
+      "UNSUBSCRIBE_RATE": "Taxa de baixes",
+      "OVER_DELIVERED": "dels lliurats"
+    },
+    "TABLE": {
+      "EMAIL": "Correu electrònic",
+      "NAME": "Nom",
+      "LAST_EVENT_AT": "Última activitat",
+      "STATUS": "Estat",
+      "ATTEMPTS": "Intents",
+      "OPENS": "Obertures",
+      "CLICKS": "Clics"
+    },
+    "EMPTY_STATE": {
+      "TITLE": "Encara no hi ha dades de campanyes",
+      "SUBTITLE": "Envia una campanya per veure mètriques de lliurament i interacció."
+    },
+    "ERROR": "No s’ha pogut carregar l’informe. Torna-ho a provar.",
+    "EXPORT_CSV": "Exporta CSV",
+    "TIMELINE": {
+      "TITLE": "Lliuraments, obertures i clics al llarg del temps",
+      "EMPTY": "Encara no hi ha esdeveniments registrats per a aquesta campanya.",
+      "INTERVAL": {
+        "DAY": "Per dia",
+        "HOUR": "Per hora"
+      }
+    },
+    "CLICKS_BY_LINK": {
+      "TITLE": "Clics per enllaç",
+      "EMPTY": "Encara no hi ha clics registrats.",
+      "URL": "Enllaç",
+      "UNIQUE": "Clics únics",
+      "TOTAL": "Clics totals"
+    },
+    "RECIPIENTS": {
+      "TITLE": "Destinataris",
+      "EMPTY": "No s’han trobat destinataris.",
+      "PAGE_OF": "Pàgina {page} de {total}",
+      "PREV": "Anterior",
+      "NEXT": "Següent",
+      "SEARCH_PLACEHOLDER": "Cercar per nom o correu"
+    },
+    "COMPARISON": {
+      "TITLE": "Comparació de campanyes"
+    }
+  },
+  "CRM_KANBAN": {
+    "TRACKED_LINKS": {
+      "TITLE": "Enllaços traçables i codis QR",
+      "SUBTITLE": "Crea un enllaç o QR per campanya, venedor o botiga. Les converses iniciades així arriben al CRM amb l’origen atribuït.",
+      "ADD": "Enllaç nou",
+      "NAME_PLACEHOLDER": "Ex. QR de botiga — Centre",
+      "INBOX": "Safata de WhatsApp",
+      "PREFILLED": "Missatge predefinit",
+      "PREFILLED_PLACEHOLDER": "Ex. Hola! Vull saber-ne més",
+      "CODE": "Codi",
+      "CONVERSATIONS": "Converses",
+      "COPY_LINK": "Copia l’enllaç",
+      "COPIED": "Copiat!",
+      "DOWNLOAD_QR": "Descarrega el QR",
+      "DELETE": "Suprimeix",
+      "DELETE_CONFIRM": "Vols suprimir aquest enllaç? Les converses ja atribuïdes conserven l’origen.",
+      "EMPTY": "Encara no hi ha enllaços traçables. Crea’n un per atribuir converses a botigues, venedors o enllaços de perfil.",
+      "CREATE_SUCCESS": "Enllaç creat",
+      "CREATE_ERROR": "No s’ha pogut crear l’enllaç",
+      "NAME": "Nom",
+      "CLICKS": "Clics"
+    }
+  }
+}

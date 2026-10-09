@@ -36,6 +36,9 @@ class EmailCampaignRecipient < ApplicationRecord
                  delivered: 4, opened: 5, clicked: 6, bounced: 7, complained: 8,
                  unsubscribed: 9 }
 
+  PREFLIGHT_STATUSES = %w[unchecked valid invalid review unknown].freeze
+  validates :preflight_status, inclusion: { in: PREFLIGHT_STATUSES }
+
   MAX_ATTEMPTS = 3
 
   before_validation :normalize_email

@@ -211,6 +211,134 @@
         "SUCCESS_MESSAGE": "Akcija ištrinta sėkmingai",
         "ERROR_MESSAGE": "Įvyko klaida. Prašau, pabandykite dar kartą."
       }
+    },
+    "EMAIL_CAMPAIGN": {
+      "ACTIONS": {
+        "CANCEL": "Atšaukti",
+        "CANCEL_SUCCESS": "Kampanija atšaukta.",
+        "DELETE": "Ištrinti",
+        "DELETE_SUCCESS": "Kampanija ištrinta.",
+        "DUPLICATE": "Dubliuoti",
+        "DUPLICATE_SUCCESS": "Kampanija nukopijuota. Atnaujinkite gavėjus ir siuntimo laiką.",
+        "EDIT": "Redaguoti",
+        "MANAGE_RECIPIENTS": "Gavėjai",
+        "OPEN_BUILDER": "Redaktorius",
+        "PAUSE": "Pristabdyti",
+        "PAUSE_SUCCESS": "Kampanija pristabdyta.",
+        "SCHEDULE": "Suplanuoti",
+        "SCHEDULE_SUCCESS": "Kampanija suplanuota.",
+        "SEND_NOW": "Siųsti dabar",
+        "SEND_SUCCESS": "Kampanija įtraukta į siuntimo eilę."
+      },
+      "AI": {
+        "BADGE": {
+          "FAILED": "DI klaida",
+          "PROCESSING": "DI generuoja",
+          "READY": "DI paruoštas"
+        }
+      },
+      "COUNTS": {
+        "FAILED": "Nepavyko",
+        "RECIPIENTS": "Gavėjai",
+        "SENT": "Išsiųsta"
+      },
+      "DESCRIPTION": "Parašykite laišką, pasirinkite patvirtintą siuntimo domeną, įkelkite gavėjus ir siųskite dabar arba suplanuokite siuntimą.",
+      "DIALOG": {
+        "BASE_HINT": "Įkelkite CSV arba XLSX su name ir email stulpeliais. Aptikti stulpeliai taps suasmeninimo kintamaisiais.",
+        "BASE_IMPORTING": "Importuojamas sąrašas…",
+        "BASE_LABEL": "Kontaktų sąrašas (CSV arba XLSX)",
+        "BASE_PICK": "Pasirinkti failą",
+        "BASE_SELECTED": "Pasirinkta: {name}",
+        "CANCEL": "Atšaukti",
+        "CREATE_AND_OPEN": "Sukurti ir atidaryti redaktoriuje",
+        "CREATE_TITLE": "Nauja el. pašto kampanija",
+        "DIRECT_OPTION": "tiesioginis siuntimas per šią pašto dėžutę",
+        "DIRECT_WARNING": "Dėmesio: tai jūsų asmeninė pašto dėžutė. Naudokite ją tik nedideliam kiekiui savo tikrų kontaktų, davusių sutikimą. Masinis siuntimas iš nemokamo žiniatinklio pašto gali užblokuoti arba sustabdyti paskyrą. Riba — 100 per dieną, su pauzėmis kaip siunčiant rankiniu būdu. Didesniems sąrašams patvirtinkite savo domeną.",
+        "EDIT_TITLE": "Redaguoti el. pašto kampaniją",
+        "ERROR": "Nepavyko išsaugoti kampanijos. Bandykite dar kartą.",
+        "FROM_EMAIL_DIRECT_HINT": "Siunčiama tiesiogiai iš šios pašto dėžutės.",
+        "FROM_EMAIL_ERROR": "Siuntėjo el. paštas privalomas",
+        "FROM_EMAIL_HINT": "Adresas turi būti {'@'}{domain} (jūsų patvirtintame domene).",
+        "FROM_EMAIL_HINT_NO_DOMAIN": "Adresas turi priklausyti jūsų patvirtintam siuntimo domenui.",
+        "FROM_EMAIL_INVALID": "Įveskite galiojantį adresą savo patvirtintame domene",
+        "FROM_EMAIL_LABEL": "Siuntėjo el. paštas",
+        "FROM_EMAIL_PLACEHOLDER": "Pvz., akcija{'@'}jusuimone.com",
+        "FROM_NAME_ERROR": "Siuntėjo vardas privalomas",
+        "FROM_NAME_LABEL": "Siuntėjo vardas",
+        "FROM_NAME_PLACEHOLDER": "Pvz., Acme rinkodara",
+        "NAME_ERROR": "Įveskite kampanijos pavadinimą",
+        "NAME_LABEL": "Kampanijos pavadinimas",
+        "NAME_PLACEHOLDER": "Pvz., Birželio naujienlaiškis",
+        "NO_VERIFIED_DOMAIN": "Patvirtinto siuntimo domeno dar nėra. Pirmiausia pridėkite ir patvirtinkite jį skiltyje El. pašto siuntimo domenai.",
+        "REPLY_TO_ERROR": "Atsakymo adresas privalomas",
+        "REPLY_TO_HINT": "Atsakymai siunčiami šiuo adresu. Prijunkite jį kaip pašto dėžutę, kad atsakymai taptų pokalbiais.",
+        "REPLY_TO_INVALID": "Įveskite galiojantį el. pašto adresą",
+        "REPLY_TO_LABEL": "Atsakymo adresas",
+        "REPLY_TO_PLACEHOLDER": "Pvz., pagalba{'@'}jusuimone.com",
+        "SAVE_DRAFT": "Išsaugoti juodraštį",
+        "SENDER_ERROR": "Pasirinkite patvirtintą siuntimo domeną",
+        "SENDER_LABEL": "Siuntimo domenas",
+        "SENDER_PLACEHOLDER": "Pasirinkite patvirtintą domeną",
+        "SUCCESS": "Kampanija išsaugota."
+      },
+      "EMPTY_STATE": {
+        "SUBTITLE": "Sukurkite pirmąją kampaniją, kad parašytumėte ir išsiųstumėte laišką importuotam sąrašui.",
+        "TITLE": "El. pašto kampanijų dar nėra"
+      },
+      "HEADER_TITLE": "El. pašto kampanijos",
+      "IMPORT": {
+        "ERRORS": {
+          "EMPTY_FILE": "Sąrašas tuščias. Pridėkite kontaktų ir įkelkite iš naujo.",
+          "EXPIRED": "Įkelto failo galiojimas baigėsi. Įkelkite sąrašą iš naujo.",
+          "FAILED": "Importuoti nepavyko. Šiuo bandymu nepridėta jokių kontaktų. Bandykite dar kartą arba įkelkite failą iš naujo.",
+          "FILE_TOO_LARGE": "Failas viršija dydžio ribą. Padalykite sąrašą ir bandykite dar kartą.",
+          "HEADERS": "Pirmojo lapo pirmoje eilutėje naudokite vieną Name ir vieną Email stulpelį, be pasikartojančių antraščių.",
+          "INVALID_FILE": "Nepavyko perskaityti failo. Įkelkite tinkamą CSV arba XLSX failą.",
+          "IN_PROGRESS": "Šios kampanijos importavimas jau vyksta. Palaukite, kol jis baigsis.",
+          "ROW_LIMIT": "Sąrašas viršija 50 000 eilučių. Padalykite jį į mažesnius failus.",
+          "UPLOAD_FAILED": "Nepavyko išsaugoti failo. Įkelkite sąrašą iš naujo."
+        },
+        "QUEUED": "Sąrašas gautas. Importavimas įtrauktas į eilę; galite išeiti iš šio puslapio.",
+        "RETRY": "Kartoti importavimą",
+        "PROCESSING": "Importuojamas sąrašas. Siuntimas bus galimas tik baigus importavimą.",
+        "COMPLETED": "Sąrašo importavimas baigtas.",
+        "SUMMARY": "Pridėta: {imported} · Dublikatai: {duplicates} · Netinkami: {invalid} · Neįtraukti į siuntimą: {suppressed} · Iš viso: {total}"
+      },
+      "NEW": "Nauja el. pašto kampanija",
+      "PLACEHOLDERS": {
+        "COPY_SUCCESS": "Kintamasis nukopijuotas į iškarpinę.",
+        "EMPTY": "Importuokite gavėjus, kad matytumėte skaičiuoklės stulpelių kintamuosius.",
+        "SUBTITLE": "Spustelėkite kintamąjį, kad jį nukopijuotumėte, tada įklijuokite į temą, peržiūros tekstą arba laiško turinį.",
+        "TITLE": "Galimi kintamieji"
+      },
+      "RECIPIENTS": {
+        "ADD_MORE": "Pridėti daugiau kontaktų",
+        "ADD_MORE_HINT": "Sąrašas įkeltas kuriant kampaniją. Įkelkite kitą CSV/XLSX, kad pridėtumėte daugiau kontaktų.",
+        "SUBTITLE": "Įkelkite CSV arba XLSX su name ir email stulpeliais. Gavėjai naudojami tik šiai kampanijai ir nepridedami prie jūsų kontaktų.",
+        "TITLE": "Gavėjai"
+      },
+      "SCHEDULE_DIALOG": {
+        "CANCEL": "Atšaukti",
+        "DATETIME_ERROR": "Pasirinkite datą ir laiką",
+        "DATETIME_LABEL": "Siųsti",
+        "SUBMIT": "Suplanuoti"
+      },
+      "STATUS": {
+        "CANCELED": "Atšaukta",
+        "DRAFT": "Juodraštis",
+        "FAILED": "Nepavyko",
+        "PAUSED": "Pristabdyta",
+        "SCHEDULED": "Suplanuota",
+        "SENDING": "Siunčiama",
+        "SENT": "Išsiųsta"
+      },
+      "VALIDATION": {
+        "BLANK_ITEM": "{key}: gavėjų be reikšmės — {count}",
+        "BLANK_LABEL": "Gavėjai be reikšmės:",
+        "MISSING_LABEL": "Naudojami šablone, bet nerasti gavėjų duomenyse:",
+        "OK": "Visi šioje kampanijoje naudojami kintamieji turi reikšmes. Galite tęsti.",
+        "TITLE": "Patikra prieš siuntimą"
+      }
     }
   }
 }

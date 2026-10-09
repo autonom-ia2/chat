@@ -211,6 +211,134 @@
         "SUCCESS_MESSAGE": "Chiến dịch được xoá thành công",
         "ERROR_MESSAGE": "Đã có lỗi. Vui lòng thử lại."
       }
+    },
+    "EMAIL_CAMPAIGN": {
+      "ACTIONS": {
+        "CANCEL": "Hủy",
+        "CANCEL_SUCCESS": "Đã hủy chiến dịch.",
+        "DELETE_SUCCESS": "Đã xóa chiến dịch.",
+        "DUPLICATE": "Nhân bản",
+        "DUPLICATE_SUCCESS": "Đã nhân bản chiến dịch. Hãy cập nhật người nhận và lịch gửi.",
+        "EDIT": "Chỉnh sửa",
+        "OPEN_BUILDER": "Trình soạn thảo",
+        "PAUSE": "Tạm dừng",
+        "PAUSE_SUCCESS": "Đã tạm dừng chiến dịch.",
+        "SCHEDULE": "Lên lịch",
+        "SCHEDULE_SUCCESS": "Đã lên lịch chiến dịch.",
+        "SEND_NOW": "Gửi ngay",
+        "SEND_SUCCESS": "Chiến dịch đã được đưa vào hàng đợi gửi.",
+        "MANAGE_RECIPIENTS": "Người nhận",
+        "DELETE": "Xóa"
+      },
+      "AI": {
+        "BADGE": {
+          "FAILED": "AI gặp lỗi",
+          "PROCESSING": "AI đang tạo",
+          "READY": "AI đã sẵn sàng"
+        }
+      },
+      "COUNTS": {
+        "FAILED": "Thất bại",
+        "SENT": "Đã gửi",
+        "RECIPIENTS": "Người nhận"
+      },
+      "DESCRIPTION": "Soạn email, chọn tên miền gửi đã xác minh, tải danh sách người nhận lên rồi gửi ngay hoặc lên lịch.",
+      "DIALOG": {
+        "BASE_HINT": "Tải tệp CSV hoặc XLSX có cột name và email. Các cột được nhận diện sẽ trở thành trường cá nhân hóa.",
+        "BASE_IMPORTING": "Đang nhập danh sách…",
+        "BASE_LABEL": "Danh sách liên hệ (CSV hoặc XLSX)",
+        "BASE_PICK": "Chọn tệp",
+        "BASE_SELECTED": "Đã chọn: {name}",
+        "CREATE_AND_OPEN": "Tạo và mở trong trình soạn thảo",
+        "CREATE_TITLE": "Chiến dịch email mới",
+        "DIRECT_OPTION": "gửi trực tiếp qua hộp thư này",
+        "DIRECT_WARNING": "Đây là hộp thư cá nhân của bạn. Chỉ dùng để gửi số lượng ít cho những liên hệ thực của bạn đã đồng ý nhận thư. Gửi hàng loạt từ dịch vụ email miễn phí có thể khiến tài khoản bị khóa hoặc đình chỉ. Giới hạn là 100 thư/ngày, gửi cách quãng như thao tác thủ công. Với danh sách lớn hơn, hãy xác minh tên miền riêng.",
+        "EDIT_TITLE": "Chỉnh sửa chiến dịch email",
+        "ERROR": "Không thể lưu chiến dịch. Vui lòng thử lại.",
+        "FROM_EMAIL_DIRECT_HINT": "Gửi trực tiếp dưới danh nghĩa hộp thư này.",
+        "FROM_EMAIL_ERROR": "Cần có email người gửi",
+        "FROM_EMAIL_HINT": "Địa chỉ phải thuộc {'@'}{domain}, tên miền đã xác minh của bạn.",
+        "FROM_EMAIL_HINT_NO_DOMAIN": "Địa chỉ phải thuộc tên miền gửi đã xác minh của bạn.",
+        "FROM_EMAIL_INVALID": "Nhập địa chỉ hợp lệ thuộc tên miền đã xác minh",
+        "FROM_EMAIL_LABEL": "Email người gửi",
+        "FROM_EMAIL_PLACEHOLDER": "Ví dụ: promo{'@'}yourcompany.com",
+        "FROM_NAME_ERROR": "Cần có tên người gửi",
+        "FROM_NAME_LABEL": "Tên người gửi",
+        "FROM_NAME_PLACEHOLDER": "Ví dụ: Tiếp thị Acme",
+        "NAME_ERROR": "Nhập tên chiến dịch",
+        "NAME_LABEL": "Tên chiến dịch",
+        "NAME_PLACEHOLDER": "Ví dụ: Bản tin tháng sáu",
+        "NO_VERIFIED_DOMAIN": "Chưa có tên miền gửi đã xác minh. Trước tiên, hãy thêm và xác minh tên miền trong mục tên miền gửi email.",
+        "REPLY_TO_ERROR": "Cần có địa chỉ nhận trả lời",
+        "REPLY_TO_HINT": "Thư trả lời sẽ đến địa chỉ này. Kết nối địa chỉ dưới dạng hộp thư để biến thư trả lời thành cuộc trò chuyện.",
+        "REPLY_TO_INVALID": "Nhập địa chỉ email hợp lệ",
+        "REPLY_TO_LABEL": "Địa chỉ nhận trả lời",
+        "REPLY_TO_PLACEHOLDER": "Ví dụ: support{'@'}yourcompany.com",
+        "SAVE_DRAFT": "Lưu bản nháp",
+        "SENDER_ERROR": "Chọn tên miền gửi đã xác minh",
+        "SENDER_LABEL": "Tên miền gửi",
+        "SENDER_PLACEHOLDER": "Chọn tên miền đã xác minh",
+        "SUCCESS": "Đã lưu chiến dịch.",
+        "CANCEL": "Hủy"
+      },
+      "EMPTY_STATE": {
+        "SUBTITLE": "Tạo chiến dịch đầu tiên để soạn và gửi email đến danh sách đã nhập.",
+        "TITLE": "Chưa có chiến dịch email"
+      },
+      "HEADER_TITLE": "Chiến dịch email",
+      "IMPORT": {
+        "ERRORS": {
+          "EMPTY_FILE": "Danh sách trống. Hãy thêm liên hệ và tải lên lại.",
+          "EXPIRED": "Tệp đã tải lên đã hết hạn. Hãy tải danh sách lên lại.",
+          "FAILED": "Nhập thất bại. Không có liên hệ nào từ lần thử này được thêm. Hãy thử lại hoặc tải tệp lên lại.",
+          "FILE_TOO_LARGE": "Tệp vượt giới hạn kích thước tải lên. Hãy chia nhỏ danh sách và thử lại.",
+          "HEADERS": "Dùng một cột Name và một cột Email ở hàng đầu tiên của trang tính đầu tiên, không trùng tiêu đề.",
+          "INVALID_FILE": "Không thể đọc tệp. Hãy tải tệp CSV hoặc XLSX hợp lệ.",
+          "IN_PROGRESS": "Chiến dịch này đang có một lượt nhập. Hãy chờ hoàn tất.",
+          "ROW_LIMIT": "Danh sách vượt quá 50.000 hàng. Hãy chia thành các tệp nhỏ hơn.",
+          "UPLOAD_FAILED": "Không thể lưu trữ tệp. Hãy tải danh sách lên lại."
+        },
+        "RETRY": "Thử nhập lại",
+        "QUEUED": "Đã nhận danh sách. Đang chờ nhập; bạn có thể rời trang này.",
+        "PROCESSING": "Đang nhập danh sách. Chưa thể gửi cho đến khi hoàn tất.",
+        "COMPLETED": "Đã nhập xong danh sách.",
+        "SUMMARY": "Đã thêm: {imported} · Trùng lặp: {duplicates} · Không hợp lệ: {invalid} · Loại khỏi danh sách gửi: {suppressed} · Tổng: {total}"
+      },
+      "PLACEHOLDERS": {
+        "COPY_SUCCESS": "Đã sao chép trường vào bộ nhớ tạm.",
+        "EMPTY": "Nhập người nhận để xem các trường từ cột trong bảng tính.",
+        "SUBTITLE": "Nhấp vào trường để sao chép, rồi dán vào tiêu đề, văn bản xem trước hoặc nội dung thư.",
+        "TITLE": "Trường có sẵn"
+      },
+      "RECIPIENTS": {
+        "ADD_MORE": "Thêm liên hệ",
+        "ADD_MORE_HINT": "Danh sách đã được tải lên khi tạo chiến dịch. Tải thêm tệp CSV/XLSX để bổ sung liên hệ.",
+        "SUBTITLE": "Tải CSV hoặc XLSX có cột name và email. Người nhận chỉ được dùng cho chiến dịch này và không được thêm vào danh bạ của bạn.",
+        "TITLE": "Người nhận"
+      },
+      "SCHEDULE_DIALOG": {
+        "DATETIME_ERROR": "Chọn ngày và giờ",
+        "DATETIME_LABEL": "Thời gian gửi",
+        "CANCEL": "Hủy",
+        "SUBMIT": "Lên lịch"
+      },
+      "VALIDATION": {
+        "BLANK_ITEM": "{key}: {count} người nhận chưa có giá trị",
+        "BLANK_LABEL": "Người nhận chưa có giá trị:",
+        "MISSING_LABEL": "Được dùng trong mẫu nhưng không có trong dữ liệu người nhận:",
+        "OK": "Tất cả trường được dùng trong chiến dịch đều có giá trị. Sẵn sàng gửi.",
+        "TITLE": "Kiểm tra trước khi gửi"
+      },
+      "STATUS": {
+        "CANCELED": "Đã hủy",
+        "DRAFT": "Bản nháp",
+        "SCHEDULED": "Đã lên lịch",
+        "SENDING": "Đang gửi",
+        "SENT": "Đã gửi",
+        "PAUSED": "Đã tạm dừng gửi",
+        "FAILED": "Thất bại"
+      },
+      "NEW": "Chiến dịch email mới"
     }
   }
 }

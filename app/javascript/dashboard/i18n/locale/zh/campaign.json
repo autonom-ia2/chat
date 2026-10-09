@@ -1,0 +1,132 @@
+{
+  "CAMPAIGN": {
+    "EMAIL_CAMPAIGN": {
+      "ACTIONS": {
+        "CANCEL": "取消",
+        "CANCEL_SUCCESS": "活动已取消。",
+        "DELETE_SUCCESS": "活动已删除。",
+        "DUPLICATE": "创建副本",
+        "DUPLICATE_SUCCESS": "活动已复制。请更新收件人和发送计划。",
+        "EDIT": "编辑",
+        "OPEN_BUILDER": "编辑器",
+        "PAUSE": "暂停",
+        "PAUSE_SUCCESS": "活动已暂停。",
+        "SCHEDULE": "定时发送",
+        "SCHEDULE_SUCCESS": "活动已安排发送。",
+        "SEND_NOW": "立即发送",
+        "SEND_SUCCESS": "活动已加入发送队列。",
+        "MANAGE_RECIPIENTS": "收件人",
+        "DELETE": "删除"
+      },
+      "AI": {
+        "BADGE": {
+          "FAILED": "AI 生成失败",
+          "PROCESSING": "AI 正在生成",
+          "READY": "AI 已就绪"
+        }
+      },
+      "COUNTS": {
+        "FAILED": "失败",
+        "SENT": "已发送",
+        "RECIPIENTS": "收件人"
+      },
+      "DESCRIPTION": "撰写邮件，选择已验证的发信域名，上传收件人列表，然后立即发送或定时发送。",
+      "DIALOG": {
+        "BASE_HINT": "上传包含 name 和 email 列的 CSV 或 XLSX 文件。识别到的列将成为个性化字段。",
+        "BASE_IMPORTING": "正在导入列表…",
+        "BASE_LABEL": "联系人列表（CSV 或 XLSX）",
+        "BASE_PICK": "选择文件",
+        "BASE_SELECTED": "已选择：{name}",
+        "CREATE_AND_OPEN": "创建并在编辑器中打开",
+        "CREATE_TITLE": "新建邮件活动",
+        "DIRECT_OPTION": "通过此收件箱直接发送",
+        "DIRECT_WARNING": "这是您的个人邮箱。请仅向已同意接收邮件的真实联系人少量发送。使用免费邮箱群发可能导致账号被封禁或停用。每天最多发送 100 封，并按类似人工发送的节奏间隔发送。如需使用更大的列表，请验证自己的域名。",
+        "EDIT_TITLE": "编辑邮件活动",
+        "ERROR": "无法保存活动，请重试。",
+        "FROM_EMAIL_DIRECT_HINT": "直接以此邮箱的身份发送。",
+        "FROM_EMAIL_ERROR": "请填写发件人邮箱",
+        "FROM_EMAIL_HINT": "地址必须使用 {'@'}{domain}，即您已验证的域名。",
+        "FROM_EMAIL_HINT_NO_DOMAIN": "地址必须属于您已验证的发信域名。",
+        "FROM_EMAIL_INVALID": "请输入已验证域名下的有效地址",
+        "FROM_EMAIL_LABEL": "发件人邮箱",
+        "FROM_EMAIL_PLACEHOLDER": "例如：promo{'@'}yourcompany.com",
+        "FROM_NAME_ERROR": "请填写发件人姓名",
+        "FROM_NAME_LABEL": "发件人姓名",
+        "FROM_NAME_PLACEHOLDER": "例如：Acme 营销团队",
+        "NAME_ERROR": "请输入活动名称",
+        "NAME_LABEL": "活动名称",
+        "NAME_PLACEHOLDER": "例如：六月简报",
+        "NO_VERIFIED_DOMAIN": "暂无已验证的发信域名。请先在邮件发信域名设置中添加并验证域名。",
+        "REPLY_TO_ERROR": "请填写回复地址",
+        "REPLY_TO_HINT": "回复将发送到此地址。将其连接为收件箱，即可把回复转为对话。",
+        "REPLY_TO_INVALID": "请输入有效的电子邮箱地址",
+        "REPLY_TO_LABEL": "回复地址",
+        "REPLY_TO_PLACEHOLDER": "例如：support{'@'}yourcompany.com",
+        "SAVE_DRAFT": "保存草稿",
+        "SENDER_ERROR": "请选择已验证的发信域名",
+        "SENDER_LABEL": "发信域名",
+        "SENDER_PLACEHOLDER": "选择已验证的域名",
+        "SUCCESS": "活动已保存。",
+        "CANCEL": "取消"
+      },
+      "EMPTY_STATE": {
+        "SUBTITLE": "创建第一个活动，向导入的列表撰写并发送邮件。",
+        "TITLE": "暂无邮件活动"
+      },
+      "HEADER_TITLE": "邮件活动",
+      "IMPORT": {
+        "ERRORS": {
+          "EMPTY_FILE": "列表为空。请添加联系人后重新上传。",
+          "EXPIRED": "上传的文件已过期。请重新上传列表。",
+          "FAILED": "导入失败，本次未添加任何联系人。请重试或重新上传文件。",
+          "FILE_TOO_LARGE": "文件超过上传大小限制。请拆分列表后重试。",
+          "HEADERS": "请在第一张工作表的第一行使用一个 Name 列和一个 Email 列，不要重复列标题。",
+          "INVALID_FILE": "无法读取文件。请上传有效的 CSV 或 XLSX 文件。",
+          "IN_PROGRESS": "此活动已有导入任务正在进行，请等待完成。",
+          "ROW_LIMIT": "列表超过 50,000 行。请拆分为较小的文件。",
+          "UPLOAD_FAILED": "无法存储文件。请重新上传列表。"
+        },
+        "RETRY": "重新导入",
+        "QUEUED": "列表已收到。导入已排队，您可以离开此页面。",
+        "PROCESSING": "正在导入列表。完成前无法发送。",
+        "COMPLETED": "列表导入完成。",
+        "SUMMARY": "已添加：{imported} · 重复：{duplicates} · 无效：{invalid} · 已排除发送：{suppressed} · 总计：{total}"
+      },
+      "PLACEHOLDERS": {
+        "COPY_SUCCESS": "字段已复制到剪贴板。",
+        "EMPTY": "导入收件人后，即可查看来自表格各列的个性化字段。",
+        "SUBTITLE": "点击字段以复制，然后粘贴到主题、预览文字或正文中。",
+        "TITLE": "可用字段"
+      },
+      "RECIPIENTS": {
+        "ADD_MORE": "添加更多联系人",
+        "ADD_MORE_HINT": "列表已在创建活动时上传。上传另一个 CSV/XLSX 文件以追加联系人。",
+        "SUBTITLE": "上传包含 name 和 email 列的 CSV 或 XLSX 文件。收件人仅用于此活动，不会加入您的联系人。",
+        "TITLE": "收件人"
+      },
+      "SCHEDULE_DIALOG": {
+        "DATETIME_ERROR": "请选择日期和时间",
+        "DATETIME_LABEL": "发送时间",
+        "CANCEL": "取消",
+        "SUBMIT": "定时发送"
+      },
+      "VALIDATION": {
+        "BLANK_ITEM": "{key}：{count} 位收件人缺少值",
+        "BLANK_LABEL": "缺少值的收件人：",
+        "MISSING_LABEL": "模板中使用了以下字段，但收件人数据中不存在：",
+        "OK": "此活动使用的所有字段都有值，可以发送。",
+        "TITLE": "发送前检查"
+      },
+      "STATUS": {
+        "CANCELED": "已取消",
+        "DRAFT": "草稿",
+        "SCHEDULED": "已排期",
+        "SENDING": "正在发送",
+        "SENT": "已发送",
+        "PAUSED": "发送已暂停",
+        "FAILED": "失败"
+      },
+      "NEW": "新建邮件活动"
+    }
+  }
+}

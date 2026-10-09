@@ -211,6 +211,134 @@
         "SUCCESS_MESSAGE": "Kampaņa ir veiksmīgi izdzēsta",
         "ERROR_MESSAGE": "Radās kļūda. Lūdzu mēģiniet vēlreiz."
       }
+    },
+    "EMAIL_CAMPAIGN": {
+      "ACTIONS": {
+        "CANCEL": "Atcelt",
+        "CANCEL_SUCCESS": "Kampaņa atcelta.",
+        "DELETE": "Dzēst",
+        "DELETE_SUCCESS": "Kampaņa dzēsta.",
+        "DUPLICATE": "Dublēt",
+        "DUPLICATE_SUCCESS": "Kampaņa dublēta. Atjauniniet saņēmējus un nosūtīšanas laiku.",
+        "EDIT": "Rediģēt",
+        "MANAGE_RECIPIENTS": "Saņēmēji",
+        "OPEN_BUILDER": "Redaktors",
+        "PAUSE": "Pauzēt",
+        "PAUSE_SUCCESS": "Kampaņa pauzēta.",
+        "SCHEDULE": "Ieplānot",
+        "SCHEDULE_SUCCESS": "Kampaņa ieplānota.",
+        "SEND_NOW": "Sūtīt tagad",
+        "SEND_SUCCESS": "Kampaņa pievienota sūtīšanas rindai."
+      },
+      "AI": {
+        "BADGE": {
+          "FAILED": "MI kļūda",
+          "PROCESSING": "MI ģenerē",
+          "READY": "MI gatavs"
+        }
+      },
+      "COUNTS": {
+        "FAILED": "Neizdevās",
+        "RECIPIENTS": "Saņēmēji",
+        "SENT": "Nosūtīts"
+      },
+      "DESCRIPTION": "Uzrakstiet e-pastu, izvēlieties verificētu sūtīšanas domēnu, augšupielādējiet saņēmējus un sūtiet tagad vai ieplānojiet sūtīšanu.",
+      "DIALOG": {
+        "BASE_HINT": "Augšupielādējiet CSV vai XLSX ar kolonnām name un email. Noteiktās kolonnas kļūs par personalizācijas mainīgajiem.",
+        "BASE_IMPORTING": "Importē sarakstu…",
+        "BASE_LABEL": "Kontaktpersonu saraksts (CSV vai XLSX)",
+        "BASE_PICK": "Izvēlēties failu",
+        "BASE_SELECTED": "Izvēlēts: {name}",
+        "CANCEL": "Atcelt",
+        "CREATE_AND_OPEN": "Izveidot un atvērt redaktorā",
+        "CREATE_TITLE": "Jauna e-pasta kampaņa",
+        "DIRECT_OPTION": "tieša sūtīšana caur šo iesūtni",
+        "DIRECT_WARNING": "Uzmanību: šī ir jūsu personīgā pastkaste. Izmantojiet to tikai nelielam skaitam savu īsto kontaktpersonu, kas devušas piekrišanu. Masveida sūtīšana no bezmaksas tīmekļa pasta var bloķēt vai apturēt kontu. Limits ir 100 dienā ar intervāliem kā manuālā sūtīšanā. Lielākiem sarakstiem verificējiet savu domēnu.",
+        "EDIT_TITLE": "Rediģēt e-pasta kampaņu",
+        "ERROR": "Neizdevās saglabāt kampaņu. Mēģiniet vēlreiz.",
+        "FROM_EMAIL_DIRECT_HINT": "Sūtīts tieši no šīs pastkastes.",
+        "FROM_EMAIL_ERROR": "Sūtītāja e-pasts ir obligāts",
+        "FROM_EMAIL_HINT": "Jābūt adresei {'@'}{domain} (jūsu verificētajā domēnā).",
+        "FROM_EMAIL_HINT_NO_DOMAIN": "Jābūt adresei jūsu verificētajā sūtīšanas domēnā.",
+        "FROM_EMAIL_INVALID": "Ievadiet derīgu adresi savā verificētajā domēnā",
+        "FROM_EMAIL_LABEL": "Sūtītāja e-pasts",
+        "FROM_EMAIL_PLACEHOLDER": "Piem., akcija{'@'}jusuuznemums.com",
+        "FROM_NAME_ERROR": "Sūtītāja vārds ir obligāts",
+        "FROM_NAME_LABEL": "Sūtītāja vārds",
+        "FROM_NAME_PLACEHOLDER": "Piem., Acme mārketings",
+        "NAME_ERROR": "Ievadiet kampaņas nosaukumu",
+        "NAME_LABEL": "Kampaņas nosaukums",
+        "NAME_PLACEHOLDER": "Piem., Jūnija jaunumi",
+        "NO_VERIFIED_DOMAIN": "Vēl nav verificēta sūtīšanas domēna. Vispirms pievienojiet un verificējiet domēnu sadaļā E-pasta sūtīšanas domēni.",
+        "REPLY_TO_ERROR": "Atbildes adrese ir obligāta",
+        "REPLY_TO_HINT": "Atbildes tiek sūtītas uz šo adresi. Savienojiet to kā iesūtni, lai atbildes pārvērstu sarunās.",
+        "REPLY_TO_INVALID": "Ievadiet derīgu e-pasta adresi",
+        "REPLY_TO_LABEL": "Atbildes adrese",
+        "REPLY_TO_PLACEHOLDER": "Piem., palidziba{'@'}jusuuznemums.com",
+        "SAVE_DRAFT": "Saglabāt melnrakstu",
+        "SENDER_ERROR": "Izvēlieties verificētu sūtīšanas domēnu",
+        "SENDER_LABEL": "Sūtīšanas domēns",
+        "SENDER_PLACEHOLDER": "Izvēlieties verificētu domēnu",
+        "SUCCESS": "Kampaņa saglabāta."
+      },
+      "EMPTY_STATE": {
+        "SUBTITLE": "Izveidojiet pirmo kampaņu, lai uzrakstītu un nosūtītu e-pastu importētam sarakstam.",
+        "TITLE": "E-pasta kampaņu vēl nav"
+      },
+      "HEADER_TITLE": "E-pasta kampaņas",
+      "IMPORT": {
+        "ERRORS": {
+          "EMPTY_FILE": "Saraksts ir tukšs. Pievienojiet kontaktpersonas un augšupielādējiet vēlreiz.",
+          "EXPIRED": "Augšupielādētā faila derīgums beidzies. Augšupielādējiet sarakstu vēlreiz.",
+          "FAILED": "Importēšana neizdevās. Šajā mēģinājumā netika pievienota neviena kontaktpersona. Mēģiniet vēlreiz vai augšupielādējiet failu atkārtoti.",
+          "FILE_TOO_LARGE": "Fails pārsniedz augšupielādes izmēra ierobežojumu. Sadaliet sarakstu un mēģiniet vēlreiz.",
+          "HEADERS": "Pirmās lapas pirmajā rindā izmantojiet vienu Name un vienu Email kolonnu bez dublētiem virsrakstiem.",
+          "INVALID_FILE": "Neizdevās nolasīt failu. Augšupielādējiet derīgu CSV vai XLSX failu.",
+          "IN_PROGRESS": "Šai kampaņai jau notiek importēšana. Uzgaidiet, līdz tā beidzas.",
+          "ROW_LIMIT": "Saraksts pārsniedz 50 000 rindu. Sadaliet to mazākos failos.",
+          "UPLOAD_FAILED": "Neizdevās saglabāt failu. Augšupielādējiet sarakstu vēlreiz."
+        },
+        "QUEUED": "Saraksts saņemts. Importēšana ir rindā; varat atstāt šo lapu.",
+        "RETRY": "Atkārtot importēšanu",
+        "PROCESSING": "Notiek saraksta importēšana. Sūtīšana nav pieejama līdz tās pabeigšanai.",
+        "COMPLETED": "Saraksta importēšana pabeigta.",
+        "SUMMARY": "Pievienoti: {imported} · Dublikāti: {duplicates} · Nederīgi: {invalid} · Izslēgti no sūtīšanas: {suppressed} · Kopā: {total}"
+      },
+      "NEW": "Jauna e-pasta kampaņa",
+      "PLACEHOLDERS": {
+        "COPY_SUCCESS": "Mainīgais nokopēts starpliktuvē.",
+        "EMPTY": "Importējiet saņēmējus, lai skatītu izklājlapas kolonnu mainīgos.",
+        "SUBTITLE": "Noklikšķiniet uz mainīgā, lai to kopētu, un ielīmējiet to tematā, priekšskatījuma tekstā vai vēstules saturā.",
+        "TITLE": "Pieejamie mainīgie"
+      },
+      "RECIPIENTS": {
+        "ADD_MORE": "Pievienot vairāk kontaktpersonu",
+        "ADD_MORE_HINT": "Saraksts tika augšupielādēts, veidojot kampaņu. Augšupielādējiet vēl vienu CSV/XLSX, lai pievienotu kontaktpersonas.",
+        "SUBTITLE": "Augšupielādējiet CSV vai XLSX ar kolonnām name un email. Saņēmēji tiek izmantoti tikai šajā kampaņā un netiek pievienoti jūsu kontaktpersonām.",
+        "TITLE": "Saņēmēji"
+      },
+      "SCHEDULE_DIALOG": {
+        "CANCEL": "Atcelt",
+        "DATETIME_ERROR": "Izvēlieties datumu un laiku",
+        "DATETIME_LABEL": "Sūtīt",
+        "SUBMIT": "Ieplānot"
+      },
+      "STATUS": {
+        "CANCELED": "Atcelts",
+        "DRAFT": "Melnraksts",
+        "FAILED": "Neizdevās",
+        "PAUSED": "Pauzēta",
+        "SCHEDULED": "Ieplānots",
+        "SENDING": "Tiek sūtīts",
+        "SENT": "Nosūtīts"
+      },
+      "VALIDATION": {
+        "BLANK_ITEM": "{key}: saņēmēji bez vērtības: {count}",
+        "BLANK_LABEL": "Saņēmēji bez vērtības:",
+        "MISSING_LABEL": "Izmantoti veidnē, bet nav atrasti saņēmēju datos:",
+        "OK": "Visiem šajā kampaņā izmantotajiem mainīgajiem ir vērtības. Varat turpināt.",
+        "TITLE": "Pārbaude pirms sūtīšanas"
+      }
     }
   }
 }

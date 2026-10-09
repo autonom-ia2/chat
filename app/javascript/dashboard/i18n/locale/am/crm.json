@@ -1,0 +1,99 @@
+{
+  "CAMPAIGN_MANAGEMENT": {
+    "HEADER": {
+      "TITLE": "የዘመቻ አስተዳደር",
+      "DESCRIPTION": "የኢሜይል ዘመቻዎችን መላክ፣ መድረስ እና ጥራት ይከታተሉ።"
+    },
+    "PAYWALL": {
+      "TITLE": "የኢሜይል ዘመቻዎች አልነቁም",
+      "DESCRIPTION": "የመድረስና ተሳትፎ ሪፖርቶችን ለማየት የኢሜይል ዘመቻዎችን ያንቁ።"
+    },
+    "FILTER": {
+      "LABEL": "ዘመቻ",
+      "ALL": "ሁሉም ዘመቻዎች"
+    },
+    "APPROXIMATE": "ግምታዊ",
+    "OPEN_APPROXIMATE_HINT": "የመክፈት መጠኖች ግምታዊ ናቸው። Apple Mail Privacy Protection እና ተመሳሳይ ባህሪያት ምስሎችን ቀድመው በመጫን መጠኑን ሊያሳድጉ ይችላሉ።",
+    "KPIS": {
+      "DELIVERED": "የደረሱ",
+      "OPENED": "የተከፈቱ",
+      "CLICKED": "ጠቅ የተደረጉ",
+      "UNSUBSCRIBED": "ከምዝገባ የወጡ",
+      "COMPLAINED": "የአይፈለጌ መልእክት ቅሬታዎች",
+      "SENT": "ተልኳል",
+      "BOUNCED": "አልደረሰም"
+    },
+    "RATES": {
+      "OPEN_RATE": "የመክፈት መጠን",
+      "CLICK_RATE": "የጠቅታ መጠን",
+      "BOUNCE_RATE": "ያልደረሱ መልእክቶች መጠን",
+      "COMPLAINT_RATE": "የቅሬታ መጠን",
+      "UNSUBSCRIBE_RATE": "ከምዝገባ የመውጣት መጠን",
+      "OVER_DELIVERED": "ከደረሱት መካከል"
+    },
+    "TABLE": {
+      "EMAIL": "ኢሜይል",
+      "NAME": "ስም",
+      "LAST_EVENT_AT": "የመጨረሻ እንቅስቃሴ",
+      "STATUS": "ሁኔታ",
+      "ATTEMPTS": "ሙከራዎች",
+      "OPENS": "መከፈቶች",
+      "CLICKS": "ጠቅታዎች"
+    },
+    "EMPTY_STATE": {
+      "TITLE": "እስካሁን የዘመቻ መረጃ የለም",
+      "SUBTITLE": "የመድረስና ተሳትፎ መለኪያዎችን ለማየት የኢሜይል ዘመቻ ይላኩ።"
+    },
+    "ERROR": "የዘመቻ ሪፖርቱ ሊጫን አልቻለም። እንደገና ይሞክሩ።",
+    "EXPORT_CSV": "CSV ወደ ውጭ አውጣ",
+    "TIMELINE": {
+      "TITLE": "በጊዜ ሂደት መድረስ፣ መከፈትና ጠቅታዎች",
+      "EMPTY": "ለዚህ ዘመቻ እስካሁን ክስተቶች አልተመዘገቡም።",
+      "INTERVAL": {
+        "DAY": "በቀን",
+        "HOUR": "በሰዓት"
+      }
+    },
+    "CLICKS_BY_LINK": {
+      "TITLE": "ጠቅታዎች በአገናኝ",
+      "EMPTY": "እስካሁን ጠቅታዎች አልተመዘገቡም።",
+      "URL": "አገናኝ",
+      "UNIQUE": "ልዩ ጠቅታዎች",
+      "TOTAL": "ጠቅላላ ጠቅታዎች"
+    },
+    "RECIPIENTS": {
+      "TITLE": "ተቀባዮች",
+      "EMPTY": "ተቀባዮች አልተገኙም።",
+      "PAGE_OF": "ገጽ {page} ከ {total}",
+      "PREV": "ቀዳሚ",
+      "NEXT": "ቀጣይ",
+      "SEARCH_PLACEHOLDER": "ስም ወይም ኢሜይል ፈልግ"
+    },
+    "COMPARISON": {
+      "TITLE": "የዘመቻ ንጽጽር"
+    }
+  },
+  "CRM_KANBAN": {
+    "TRACKED_LINKS": {
+      "TITLE": "ሊከታተሉ የሚችሉ አገናኞችና QR ኮዶች",
+      "SUBTITLE": "ለእያንዳንዱ ዘመቻ፣ ሻጭ ወይም ሱቅ አገናኝ ወይም QR ይፍጠሩ። በእሱ የሚጀምሩ ውይይቶች በCRM ውስጥ ከምንጫቸው ጋር ይያያዛሉ።",
+      "ADD": "አዲስ አገናኝ",
+      "NAME_PLACEHOLDER": "ለምሳሌ፦ የሱቅ QR — ከተማ መሃል",
+      "INBOX": "የWhatsApp ገቢ መልእክት ሳጥን",
+      "PREFILLED": "ቀድሞ የተሞላ መልእክት",
+      "PREFILLED_PLACEHOLDER": "ለምሳሌ፦ ሰላም! ተጨማሪ ማወቅ እፈልጋለሁ",
+      "CODE": "ኮድ",
+      "CONVERSATIONS": "ውይይቶች",
+      "COPY_LINK": "አገናኝ ቅዳ",
+      "COPIED": "ተቀድቷል!",
+      "DOWNLOAD_QR": "QR አውርድ",
+      "DELETE": "ሰርዝ",
+      "DELETE_CONFIRM": "ይህ አገናኝ ይሰረዝ? ቀድሞ የተያያዙ ውይይቶች ምንጫቸውን ይጠብቃሉ።",
+      "EMPTY": "እስካሁን ሊከታተሉ የሚችሉ አገናኞች የሉም። ውይይቶችን ከሱቅ፣ ሻጭ ወይም የመገለጫ አገናኝ ጋር ለማያያዝ የመጀመሪያውን ይፍጠሩ።",
+      "CREATE_SUCCESS": "አገናኙ ተፈጥሯል",
+      "CREATE_ERROR": "አገናኙ ሊፈጠር አልቻለም",
+      "NAME": "ስም",
+      "CLICKS": "ጠቅታዎች"
+    }
+  }
+}

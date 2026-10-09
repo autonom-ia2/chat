@@ -211,6 +211,134 @@
         "SUCCESS_MESSAGE": "La campanya s'ha suprimit correctament",
         "ERROR_MESSAGE": "S'ha produït un error. Torna-ho a provar."
       }
+    },
+    "EMAIL_CAMPAIGN": {
+      "ACTIONS": {
+        "CANCEL": "Cancel·la",
+        "CANCEL_SUCCESS": "Campanya cancel·lada.",
+        "DELETE_SUCCESS": "Campanya suprimida.",
+        "DUPLICATE": "Duplica",
+        "DUPLICATE_SUCCESS": "Campanya duplicada. Actualitza els destinataris i la programació.",
+        "EDIT": "Edita",
+        "OPEN_BUILDER": "Editor",
+        "PAUSE": "Posa en pausa",
+        "PAUSE_SUCCESS": "Campanya en pausa.",
+        "SCHEDULE": "Programa",
+        "SCHEDULE_SUCCESS": "Campanya programada.",
+        "SEND_NOW": "Envia ara",
+        "SEND_SUCCESS": "Campanya a la cua d’enviament.",
+        "MANAGE_RECIPIENTS": "Destinataris",
+        "DELETE": "Suprimeix"
+      },
+      "AI": {
+        "BADGE": {
+          "FAILED": "Error de la IA",
+          "PROCESSING": "IA generant",
+          "READY": "IA preparada"
+        }
+      },
+      "DESCRIPTION": "Redacta un correu, tria un domini d’enviament verificat, carrega els destinataris i envia ara o programa l’enviament.",
+      "DIALOG": {
+        "BASE_HINT": "Carrega un CSV o XLSX amb columnes name i email. Les columnes detectades esdevenen variables de personalització.",
+        "BASE_IMPORTING": "S’està important la llista…",
+        "BASE_LABEL": "Llista de contactes (CSV o XLSX)",
+        "BASE_PICK": "Tria un fitxer",
+        "BASE_SELECTED": "Seleccionat: {name}",
+        "CREATE_AND_OPEN": "Crea i obre a l’editor",
+        "CREATE_TITLE": "Campanya de correu nova",
+        "DIRECT_OPTION": "enviament directe des d’aquesta safata",
+        "DIRECT_WARNING": "Atenció: és la teva bústia personal. Fes-la servir només per als teus contactes reals amb consentiment i pocs enviaments. L’enviament massiu des d’un correu gratuït pot bloquejar o suspendre el compte. Limitem a 100 al dia, amb un ritme humà; per a llistes més grans, verifica el teu domini.",
+        "EDIT_TITLE": "Edita la campanya de correu",
+        "ERROR": "No s’ha pogut desar la campanya. Torna-ho a provar.",
+        "FROM_EMAIL_DIRECT_HINT": "Enviament directe amb aquesta bústia com a remitent.",
+        "FROM_EMAIL_ERROR": "Cal el correu del remitent",
+        "FROM_EMAIL_HINT": "Ha de ser una adreça {'@'}{domain} (el teu domini verificat).",
+        "FROM_EMAIL_HINT_NO_DOMAIN": "Ha de pertànyer al teu domini d’enviament verificat.",
+        "FROM_EMAIL_INVALID": "Introdueix una adreça vàlida del teu domini verificat",
+        "FROM_EMAIL_LABEL": "Correu del remitent",
+        "FROM_EMAIL_PLACEHOLDER": "Ex. promo{'@'}tevaempresa.com",
+        "FROM_NAME_ERROR": "Cal el nom del remitent",
+        "FROM_NAME_LABEL": "Nom del remitent",
+        "FROM_NAME_PLACEHOLDER": "Ex. Màrqueting Acme",
+        "NAME_ERROR": "Introdueix un nom de campanya",
+        "NAME_LABEL": "Nom de la campanya",
+        "NAME_PLACEHOLDER": "Ex. Butlletí de juny",
+        "NO_VERIFIED_DOMAIN": "Encara no hi ha cap domini verificat. Afegeix-ne un i verifica’l a Dominis d’enviament de correu.",
+        "REPLY_TO_ERROR": "Cal l’adreça de resposta",
+        "REPLY_TO_HINT": "Les respostes arriben aquí. Connecta l’adreça com a safata per convertir-les en converses.",
+        "REPLY_TO_INVALID": "Introdueix un correu vàlid",
+        "REPLY_TO_LABEL": "Adreça de resposta",
+        "REPLY_TO_PLACEHOLDER": "Ex. suport{'@'}tevaempresa.com",
+        "SAVE_DRAFT": "Desa l’esborrany",
+        "SENDER_ERROR": "Selecciona un domini d’enviament verificat",
+        "SENDER_LABEL": "Domini d’enviament",
+        "SENDER_PLACEHOLDER": "Selecciona un domini verificat",
+        "SUCCESS": "Campanya desada.",
+        "CANCEL": "Cancel·la"
+      },
+      "EMPTY_STATE": {
+        "SUBTITLE": "Crea la primera campanya per redactar i enviar un correu a una llista importada.",
+        "TITLE": "Encara no hi ha campanyes de correu"
+      },
+      "HEADER_TITLE": "Campanyes de correu",
+      "IMPORT": {
+        "ERRORS": {
+          "EMPTY_FILE": "La llista és buida. Afegeix contactes i torna-la a carregar.",
+          "EXPIRED": "El fitxer carregat ha caducat. Torna a carregar la llista.",
+          "FAILED": "La importació ha fallat. No s’ha afegit cap contacte d’aquest intent. Reintenta o torna a carregar el fitxer.",
+          "FILE_TOO_LARGE": "El fitxer supera la mida permesa. Divideix la llista i reintenta.",
+          "HEADERS": "Utilitza una columna Name i una Email a la primera fila del primer full, sense capçaleres duplicades.",
+          "INVALID_FILE": "No s’ha pogut llegir el fitxer. Carrega un CSV o XLSX vàlid.",
+          "IN_PROGRESS": "Ja hi ha una importació en curs per a aquesta campanya. Espera que acabi.",
+          "ROW_LIMIT": "La llista supera les 50.000 files. Divideix-la en fitxers més petits.",
+          "UPLOAD_FAILED": "No s’ha pogut desar el fitxer. Torna a carregar la llista."
+        },
+        "RETRY": "Reintenta la importació",
+        "QUEUED": "Llista rebuda. Importació a la cua; pots sortir d’aquesta pàgina.",
+        "PROCESSING": "S’està important la llista. L’enviament no estarà disponible fins que acabi.",
+        "COMPLETED": "Importació de la llista completada.",
+        "SUMMARY": "Afegits: {imported} · Duplicats: {duplicates} · No vàlids: {invalid} · Exclosos de l’enviament: {suppressed} · Total: {total}"
+      },
+      "PLACEHOLDERS": {
+        "COPY_SUCCESS": "Variable copiada al porta-retalls.",
+        "EMPTY": "Importa destinataris per veure les variables de les columnes del full.",
+        "SUBTITLE": "Fes clic en una variable per copiar-la i enganxa-la a l’assumpte, text de previsualització o cos.",
+        "TITLE": "Variables disponibles"
+      },
+      "RECIPIENTS": {
+        "ADD_MORE": "Afegeix més contactes",
+        "ADD_MORE_HINT": "La llista es va carregar en crear la campanya. Carrega un altre CSV/XLSX per afegir contactes.",
+        "SUBTITLE": "Carrega un CSV o XLSX amb name i email. Els destinataris només s’utilitzen en aquesta campanya i no s’afegeixen als contactes.",
+        "TITLE": "Destinataris"
+      },
+      "SCHEDULE_DIALOG": {
+        "DATETIME_ERROR": "Tria data i hora",
+        "DATETIME_LABEL": "Envia el",
+        "CANCEL": "Cancel·la",
+        "SUBMIT": "Programa"
+      },
+      "STATUS": {
+        "PAUSED": "En pausa",
+        "CANCELED": "Cancel·lat",
+        "DRAFT": "Esborrany",
+        "FAILED": "Error d’enviament",
+        "SCHEDULED": "Programat",
+        "SENDING": "S’està enviant",
+        "SENT": "Enviat"
+      },
+      "VALIDATION": {
+        "BLANK_ITEM": "{key}: {count} destinatari(s) sense valor",
+        "BLANK_LABEL": "Destinataris sense valor:",
+        "MISSING_LABEL": "Utilitzades a la plantilla però no trobades als destinataris:",
+        "OK": "Totes les variables d’aquesta campanya tenen valors. Ja es pot enviar.",
+        "TITLE": "Comprovació abans de l’enviament"
+      },
+      "COUNTS": {
+        "SENT": "Enviat",
+        "RECIPIENTS": "Destinataris",
+        "FAILED": "Error d’enviament"
+      },
+      "NEW": "Campanya de correu nova"
     }
   }
 }

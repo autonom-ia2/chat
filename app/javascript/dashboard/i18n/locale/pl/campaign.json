@@ -211,6 +211,134 @@
         "SUCCESS_MESSAGE": "Kampania została pomyślnie usunięta",
         "ERROR_MESSAGE": "Wystąpił błąd. Spróbuj ponownie."
       }
+    },
+    "EMAIL_CAMPAIGN": {
+      "ACTIONS": {
+        "CANCEL": "Anuluj",
+        "CANCEL_SUCCESS": "Kampania anulowana.",
+        "DELETE": "Usuń",
+        "DELETE_SUCCESS": "Kampania usunięta.",
+        "DUPLICATE": "Duplikuj",
+        "DUPLICATE_SUCCESS": "Kampania zduplikowana. Zaktualizuj odbiorców i harmonogram.",
+        "EDIT": "Edytuj",
+        "MANAGE_RECIPIENTS": "Odbiorcy",
+        "OPEN_BUILDER": "Edytor",
+        "PAUSE": "Wstrzymaj",
+        "PAUSE_SUCCESS": "Kampania wstrzymana.",
+        "SCHEDULE": "Zaplanuj",
+        "SCHEDULE_SUCCESS": "Kampania zaplanowana.",
+        "SEND_NOW": "Wyślij teraz",
+        "SEND_SUCCESS": "Kampania dodana do kolejki wysyłki."
+      },
+      "AI": {
+        "BADGE": {
+          "FAILED": "Błąd AI",
+          "PROCESSING": "AI generuje",
+          "READY": "AI gotowe"
+        }
+      },
+      "COUNTS": {
+        "FAILED": "Nieudane",
+        "RECIPIENTS": "Odbiorcy",
+        "SENT": "Wysłane"
+      },
+      "DESCRIPTION": "Napisz e-mail, wybierz zweryfikowaną domenę wysyłkową, prześlij listę odbiorców i wyślij od razu lub zaplanuj wysyłkę.",
+      "DIALOG": {
+        "BASE_HINT": "Prześlij CSV lub XLSX z kolumnami name i email. Wykryte kolumny staną się zmiennymi personalizacji.",
+        "BASE_IMPORTING": "Importowanie listy…",
+        "BASE_LABEL": "Lista kontaktów (CSV lub XLSX)",
+        "BASE_PICK": "Wybierz plik",
+        "BASE_SELECTED": "Wybrano: {name}",
+        "CANCEL": "Anuluj",
+        "CREATE_AND_OPEN": "Utwórz i otwórz w edytorze",
+        "CREATE_TITLE": "Nowa kampania e-mail",
+        "DIRECT_OPTION": "bezpośrednia wysyłka przez tę skrzynkę",
+        "DIRECT_WARNING": "Uwaga: to Twoja osobista skrzynka. Używaj jej tylko do niewielkich wysyłek do własnych rzeczywistych kontaktów, które wyraziły zgodę. Masowa wysyłka z darmowej poczty może zablokować lub zawiesić konto. Limit to 100 dziennie, z odstępami jak przy ręcznej wysyłce. Dla większych list zweryfikuj własną domenę.",
+        "EDIT_TITLE": "Edytuj kampanię e-mail",
+        "ERROR": "Nie udało się zapisać kampanii. Spróbuj ponownie.",
+        "FROM_EMAIL_DIRECT_HINT": "Wysyłane bezpośrednio z tej skrzynki.",
+        "FROM_EMAIL_ERROR": "Adres e-mail nadawcy jest wymagany",
+        "FROM_EMAIL_HINT": "Wymagany adres {'@'}{domain} (Twoja zweryfikowana domena).",
+        "FROM_EMAIL_HINT_NO_DOMAIN": "Wymagany adres w Twojej zweryfikowanej domenie wysyłkowej.",
+        "FROM_EMAIL_INVALID": "Wpisz poprawny adres w swojej zweryfikowanej domenie",
+        "FROM_EMAIL_LABEL": "E-mail nadawcy",
+        "FROM_EMAIL_PLACEHOLDER": "Np. promocje{'@'}twojafirma.com",
+        "FROM_NAME_ERROR": "Nazwa nadawcy jest wymagana",
+        "FROM_NAME_LABEL": "Nazwa nadawcy",
+        "FROM_NAME_PLACEHOLDER": "Np. Marketing Acme",
+        "NAME_ERROR": "Wpisz nazwę kampanii",
+        "NAME_LABEL": "Nazwa kampanii",
+        "NAME_PLACEHOLDER": "Np. Biuletyn czerwcowy",
+        "NO_VERIFIED_DOMAIN": "Brak zweryfikowanej domeny wysyłkowej. Najpierw dodaj i zweryfikuj domenę w sekcji Domeny wysyłkowe e-mail.",
+        "REPLY_TO_ERROR": "Adres do odpowiedzi jest wymagany",
+        "REPLY_TO_HINT": "Odpowiedzi trafiają na ten adres. Podłącz go jako skrzynkę, aby zamieniać odpowiedzi w rozmowy.",
+        "REPLY_TO_INVALID": "Wpisz poprawny adres e-mail",
+        "REPLY_TO_LABEL": "Adres do odpowiedzi",
+        "REPLY_TO_PLACEHOLDER": "Np. pomoc{'@'}twojafirma.com",
+        "SAVE_DRAFT": "Zapisz szkic",
+        "SENDER_ERROR": "Wybierz zweryfikowaną domenę wysyłkową",
+        "SENDER_LABEL": "Domena wysyłkowa",
+        "SENDER_PLACEHOLDER": "Wybierz zweryfikowaną domenę",
+        "SUCCESS": "Kampania zapisana."
+      },
+      "EMPTY_STATE": {
+        "SUBTITLE": "Utwórz pierwszą kampanię, aby napisać i wysłać e-mail do zaimportowanej listy.",
+        "TITLE": "Brak kampanii e-mail"
+      },
+      "HEADER_TITLE": "Kampanie e-mail",
+      "IMPORT": {
+        "ERRORS": {
+          "EMPTY_FILE": "Lista jest pusta. Dodaj kontakty i prześlij ją ponownie.",
+          "EXPIRED": "Przesłany plik wygasł. Prześlij listę ponownie.",
+          "FAILED": "Import nie powiódł się. Nie dodano żadnych kontaktów z tej próby. Ponów próbę lub prześlij plik ponownie.",
+          "FILE_TOO_LARGE": "Plik przekracza limit rozmiaru. Podziel listę i spróbuj ponownie.",
+          "HEADERS": "Użyj jednej kolumny Name i jednej Email w pierwszym wierszu pierwszego arkusza, bez powtarzających się nagłówków.",
+          "INVALID_FILE": "Nie udało się odczytać pliku. Prześlij poprawny plik CSV lub XLSX.",
+          "IN_PROGRESS": "Import dla tej kampanii już trwa. Poczekaj na zakończenie.",
+          "ROW_LIMIT": "Lista przekracza 50 000 wierszy. Podziel ją na mniejsze pliki.",
+          "UPLOAD_FAILED": "Nie udało się zapisać pliku. Prześlij listę ponownie."
+        },
+        "QUEUED": "Otrzymano listę. Import oczekuje w kolejce; możesz opuścić tę stronę.",
+        "RETRY": "Ponów import",
+        "PROCESSING": "Importowanie listy. Wysyłanie będzie dostępne po zakończeniu importu.",
+        "COMPLETED": "Import listy zakończony.",
+        "SUMMARY": "Dodane: {imported} · Duplikaty: {duplicates} · Nieprawidłowe: {invalid} · Wykluczone z wysyłki: {suppressed} · Razem: {total}"
+      },
+      "NEW": "Nowa kampania e-mail",
+      "PLACEHOLDERS": {
+        "COPY_SUCCESS": "Zmienna skopiowana do schowka.",
+        "EMPTY": "Zaimportuj odbiorców, aby zobaczyć zmienne z kolumn arkusza.",
+        "SUBTITLE": "Kliknij zmienną, aby ją skopiować, a następnie wklej do tematu, tekstu podglądu lub treści wiadomości.",
+        "TITLE": "Dostępne zmienne"
+      },
+      "RECIPIENTS": {
+        "ADD_MORE": "Dodaj więcej kontaktów",
+        "ADD_MORE_HINT": "Lista została przesłana przy tworzeniu kampanii. Prześlij kolejny CSV/XLSX, aby dodać kontakty.",
+        "SUBTITLE": "Prześlij CSV lub XLSX z kolumnami name i email. Odbiorcy są używani tylko w tej kampanii i nie trafiają do Twoich kontaktów.",
+        "TITLE": "Odbiorcy"
+      },
+      "SCHEDULE_DIALOG": {
+        "CANCEL": "Anuluj",
+        "DATETIME_ERROR": "Wybierz datę i godzinę",
+        "DATETIME_LABEL": "Wyślij o",
+        "SUBMIT": "Zaplanuj"
+      },
+      "STATUS": {
+        "CANCELED": "Anulowano",
+        "DRAFT": "Wersja robocza",
+        "FAILED": "Nieudane",
+        "PAUSED": "Wstrzymana",
+        "SCHEDULED": "Zaplanowano",
+        "SENDING": "Wysyłanie",
+        "SENT": "Wysłano"
+      },
+      "VALIDATION": {
+        "BLANK_ITEM": "{key}: liczba odbiorców bez wartości: {count}",
+        "BLANK_LABEL": "Odbiorcy bez wartości:",
+        "MISSING_LABEL": "Użyte w szablonie, ale nieznalezione u odbiorców:",
+        "OK": "Wszystkie zmienne w tej kampanii mają wartości. Możesz kontynuować.",
+        "TITLE": "Kontrola przed wysyłką"
+      }
     }
   }
 }

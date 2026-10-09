@@ -31,10 +31,11 @@ export const getters = {
 };
 
 export const actions = {
-  get: async ({ commit }, { silent = false } = {}) => {
+  get: async ({ commit }, { silent = false, status, signal } = {}) => {
     if (!silent) commit(types.SET_EMAIL_CAMPAIGN_UI_FLAG, { isFetching: true });
     try {
-      const response = await EmailCampaignsAPI.get();
+      const response = await EmailCampaignsAPI.get({ status, signal });
+      if (signal?.aborted) return;
       commit(types.SET_EMAIL_CAMPAIGNS, response.data.payload.campaigns || []);
     } finally {
       if (!silent)

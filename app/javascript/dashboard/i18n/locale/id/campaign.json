@@ -211,6 +211,134 @@
         "SUCCESS_MESSAGE": "Kampanye berhasil dihapus",
         "ERROR_MESSAGE": "Terjadi sebuah kesalahan. Silakan coba lagi."
       }
+    },
+    "EMAIL_CAMPAIGN": {
+      "ACTIONS": {
+        "CANCEL": "Batal",
+        "CANCEL_SUCCESS": "Kampanye dibatalkan.",
+        "DELETE": "Hapus",
+        "DELETE_SUCCESS": "Kampanye dihapus.",
+        "DUPLICATE": "Duplikasikan",
+        "DUPLICATE_SUCCESS": "Kampanye diduplikasi. Perbarui penerima dan jadwal.",
+        "EDIT": "Edit",
+        "MANAGE_RECIPIENTS": "Penerima",
+        "OPEN_BUILDER": "Penyunting",
+        "PAUSE": "Jeda",
+        "PAUSE_SUCCESS": "Kampanye dijeda.",
+        "SCHEDULE": "Jadwalkan",
+        "SCHEDULE_SUCCESS": "Kampanye dijadwalkan.",
+        "SEND_NOW": "Kirim sekarang",
+        "SEND_SUCCESS": "Kampanye masuk antrean pengiriman."
+      },
+      "AI": {
+        "BADGE": {
+          "FAILED": "AI gagal",
+          "PROCESSING": "AI sedang membuat",
+          "READY": "AI siap"
+        }
+      },
+      "COUNTS": {
+        "FAILED": "Gagal",
+        "RECIPIENTS": "Penerima",
+        "SENT": "Terkirim"
+      },
+      "DESCRIPTION": "Tulis email, pilih domain pengiriman terverifikasi, unggah daftar penerima, lalu kirim sekarang atau jadwalkan.",
+      "DIALOG": {
+        "BASE_HINT": "Unggah CSV atau XLSX dengan kolom name dan email. Kolom yang terdeteksi menjadi variabel personalisasi.",
+        "BASE_IMPORTING": "Mengimpor daftar…",
+        "BASE_LABEL": "Daftar kontak (CSV atau XLSX)",
+        "BASE_PICK": "Pilih berkas",
+        "BASE_SELECTED": "Dipilih: {name}",
+        "CANCEL": "Batal",
+        "CREATE_AND_OPEN": "Buat dan buka di penyunting",
+        "CREATE_TITLE": "Kampanye email baru",
+        "DIRECT_OPTION": "kirim langsung melalui kotak masuk ini",
+        "DIRECT_WARNING": "Perhatian: ini kotak surat pribadi Anda. Gunakan hanya untuk sedikit kontak nyata milik Anda yang telah menyetujui pengiriman. Pengiriman massal dari webmail gratis dapat menyebabkan akun diblokir atau ditangguhkan. Batasnya 100 per hari, dengan jeda seperti pengiriman manual. Untuk daftar yang lebih besar, verifikasi domain Anda sendiri.",
+        "EDIT_TITLE": "Edit kampanye email",
+        "ERROR": "Kampanye tidak dapat disimpan. Coba lagi.",
+        "FROM_EMAIL_DIRECT_HINT": "Dikirim langsung dari kotak surat ini.",
+        "FROM_EMAIL_ERROR": "Email pengirim wajib diisi",
+        "FROM_EMAIL_HINT": "Harus berupa alamat {'@'}{domain} (domain Anda yang terverifikasi).",
+        "FROM_EMAIL_HINT_NO_DOMAIN": "Harus berupa alamat pada domain pengiriman Anda yang terverifikasi.",
+        "FROM_EMAIL_INVALID": "Masukkan alamat valid pada domain Anda yang terverifikasi",
+        "FROM_EMAIL_LABEL": "Email pengirim",
+        "FROM_EMAIL_PLACEHOLDER": "Mis. promo{'@'}perusahaananda.com",
+        "FROM_NAME_ERROR": "Nama pengirim wajib diisi",
+        "FROM_NAME_LABEL": "Nama pengirim",
+        "FROM_NAME_PLACEHOLDER": "Mis. Pemasaran Acme",
+        "NAME_ERROR": "Masukkan nama kampanye",
+        "NAME_LABEL": "Nama kampanye",
+        "NAME_PLACEHOLDER": "Mis. Buletin Juni",
+        "NO_VERIFIED_DOMAIN": "Belum ada domain pengiriman terverifikasi. Tambahkan dan verifikasi domain di Domain pengiriman email terlebih dahulu.",
+        "REPLY_TO_ERROR": "Alamat balasan wajib diisi",
+        "REPLY_TO_HINT": "Balasan masuk ke alamat ini. Hubungkan sebagai kotak masuk untuk mengubah balasan menjadi percakapan.",
+        "REPLY_TO_INVALID": "Masukkan alamat email yang valid",
+        "REPLY_TO_LABEL": "Alamat balasan",
+        "REPLY_TO_PLACEHOLDER": "Mis. bantuan{'@'}perusahaananda.com",
+        "SAVE_DRAFT": "Simpan draf",
+        "SENDER_ERROR": "Pilih domain pengiriman terverifikasi",
+        "SENDER_LABEL": "Domain pengiriman",
+        "SENDER_PLACEHOLDER": "Pilih domain terverifikasi",
+        "SUCCESS": "Kampanye disimpan."
+      },
+      "EMPTY_STATE": {
+        "SUBTITLE": "Buat kampanye pertama untuk menulis dan mengirim email ke daftar yang diimpor.",
+        "TITLE": "Belum ada kampanye email"
+      },
+      "HEADER_TITLE": "Kampanye email",
+      "IMPORT": {
+        "ERRORS": {
+          "EMPTY_FILE": "Daftar kosong. Tambahkan kontak dan unggah kembali.",
+          "EXPIRED": "Berkas yang diunggah kedaluwarsa. Unggah daftar kembali.",
+          "FAILED": "Impor gagal. Tidak ada kontak dari percobaan ini yang ditambahkan. Coba lagi atau unggah berkas kembali.",
+          "FILE_TOO_LARGE": "Berkas melebihi batas ukuran unggahan. Bagi daftar dan coba lagi.",
+          "HEADERS": "Gunakan satu kolom Name dan satu kolom Email pada baris pertama lembar pertama, tanpa judul kolom ganda.",
+          "INVALID_FILE": "Berkas tidak dapat dibaca. Unggah berkas CSV atau XLSX yang valid.",
+          "IN_PROGRESS": "Impor untuk kampanye ini sedang berlangsung. Tunggu hingga selesai.",
+          "ROW_LIMIT": "Daftar melebihi 50.000 baris. Bagi menjadi berkas yang lebih kecil.",
+          "UPLOAD_FAILED": "Berkas tidak dapat disimpan. Unggah daftar kembali."
+        },
+        "QUEUED": "Daftar diterima. Impor masuk antrean; Anda dapat meninggalkan halaman ini.",
+        "RETRY": "Coba impor lagi",
+        "PROCESSING": "Mengimpor daftar. Pengiriman tidak tersedia hingga impor selesai.",
+        "COMPLETED": "Impor daftar selesai.",
+        "SUMMARY": "Ditambahkan: {imported} · Duplikat: {duplicates} · Tidak valid: {invalid} · Dikecualikan dari pengiriman: {suppressed} · Total: {total}"
+      },
+      "NEW": "Kampanye email baru",
+      "PLACEHOLDERS": {
+        "COPY_SUCCESS": "Variabel disalin ke papan klip.",
+        "EMPTY": "Impor penerima untuk melihat variabel dari kolom lembar kerja Anda.",
+        "SUBTITLE": "Klik variabel untuk menyalinnya, lalu tempelkan ke subjek, teks pratinjau, atau isi email.",
+        "TITLE": "Variabel tersedia"
+      },
+      "RECIPIENTS": {
+        "ADD_MORE": "Tambahkan kontak lainnya",
+        "ADD_MORE_HINT": "Daftar diunggah saat kampanye dibuat. Unggah CSV/XLSX lain untuk menambahkan kontak.",
+        "SUBTITLE": "Unggah CSV atau XLSX dengan kolom name dan email. Penerima hanya digunakan untuk kampanye ini dan tidak ditambahkan ke kontak Anda.",
+        "TITLE": "Penerima"
+      },
+      "SCHEDULE_DIALOG": {
+        "CANCEL": "Batal",
+        "DATETIME_ERROR": "Pilih tanggal dan waktu",
+        "DATETIME_LABEL": "Kirim pada",
+        "SUBMIT": "Jadwalkan"
+      },
+      "STATUS": {
+        "CANCELED": "Dibatalkan",
+        "DRAFT": "Draf",
+        "FAILED": "Gagal",
+        "PAUSED": "Dijeda",
+        "SCHEDULED": "Terjadwal",
+        "SENDING": "Sedang mengirim",
+        "SENT": "Terkirim"
+      },
+      "VALIDATION": {
+        "BLANK_ITEM": "{key}: {count} penerima tanpa nilai",
+        "BLANK_LABEL": "Penerima tanpa nilai:",
+        "MISSING_LABEL": "Digunakan dalam templat tetapi tidak ditemukan pada penerima:",
+        "OK": "Semua variabel dalam kampanye ini memiliki nilai. Siap dilanjutkan.",
+        "TITLE": "Pemeriksaan sebelum pengiriman"
+      }
     }
   }
 }

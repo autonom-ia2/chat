@@ -1,0 +1,99 @@
+{
+  "CAMPAIGN_MANAGEMENT": {
+    "HEADER": {
+      "TITLE": "Kampanjhantering",
+      "DESCRIPTION": "Följ utskick, leverans och kvalitet för dina e-postkampanjer."
+    },
+    "PAYWALL": {
+      "TITLE": "E-postkampanjer är inte aktiverade",
+      "DESCRIPTION": "Aktivera e-postkampanjer för att se rapporter om leverans och engagemang här."
+    },
+    "FILTER": {
+      "LABEL": "Kampanj",
+      "ALL": "Alla kampanjer"
+    },
+    "APPROXIMATE": "ungefärlig",
+    "OPEN_APPROXIMATE_HINT": "Öppningsfrekvensen är ungefärlig. Integritetsskydd i Apple Mail och liknande funktioner kan öka antalet öppningar genom att läsa in bilder i förväg.",
+    "KPIS": {
+      "SENT": "Skickat",
+      "DELIVERED": "Levererat",
+      "OPENED": "Öppnat",
+      "CLICKED": "Klickat",
+      "UNSUBSCRIBED": "Avregistreringar",
+      "COMPLAINED": "Spamklagomål",
+      "BOUNCED": "Inte levererat"
+    },
+    "RATES": {
+      "OPEN_RATE": "Öppningsfrekvens",
+      "CLICK_RATE": "Klickfrekvens",
+      "BOUNCE_RATE": "Andel ej levererade",
+      "COMPLAINT_RATE": "Klagomålsfrekvens",
+      "UNSUBSCRIBE_RATE": "Avregistreringsfrekvens",
+      "OVER_DELIVERED": "av levererade"
+    },
+    "TABLE": {
+      "EMAIL": "E-post",
+      "NAME": "Namn",
+      "LAST_EVENT_AT": "Senaste aktivitet",
+      "STATUS": "Status",
+      "ATTEMPTS": "Försök",
+      "OPENS": "Öppningar",
+      "CLICKS": "Klick"
+    },
+    "EMPTY_STATE": {
+      "TITLE": "Inga kampanjdata ännu",
+      "SUBTITLE": "Skicka en e-postkampanj för att börja se mätvärden för leverans och engagemang."
+    },
+    "ERROR": "Kampanjrapporten kunde inte läsas in. Försök igen.",
+    "EXPORT_CSV": "Exportera CSV",
+    "TIMELINE": {
+      "TITLE": "Leveranser, öppningar och klick över tid",
+      "EMPTY": "Inga händelser har registrerats för kampanjen ännu.",
+      "INTERVAL": {
+        "DAY": "Per dag",
+        "HOUR": "Per timme"
+      }
+    },
+    "CLICKS_BY_LINK": {
+      "TITLE": "Klick per länk",
+      "EMPTY": "Inga klick har registrerats ännu.",
+      "URL": "Länk",
+      "UNIQUE": "Unika klick",
+      "TOTAL": "Totalt antal klick"
+    },
+    "RECIPIENTS": {
+      "TITLE": "Mottagare",
+      "EMPTY": "Inga mottagare hittades.",
+      "PAGE_OF": "Sida {page} av {total}",
+      "PREV": "Föregående",
+      "NEXT": "Nästa",
+      "SEARCH_PLACEHOLDER": "Sök namn eller e-postadress"
+    },
+    "COMPARISON": {
+      "TITLE": "Jämför kampanjer"
+    }
+  },
+  "CRM_KANBAN": {
+    "TRACKED_LINKS": {
+      "TITLE": "Spårbara länkar och QR-koder",
+      "SUBTITLE": "Skapa en länk eller QR-kod per kampanj, säljare eller butik. Samtal som startas via dem kopplas till sin källa i CRM.",
+      "ADD": "Ny länk",
+      "NAME_PLACEHOLDER": "T.ex. Butikens QR — Centrum",
+      "INBOX": "WhatsApp-inkorg",
+      "PREFILLED": "Förifyllt meddelande",
+      "PREFILLED_PLACEHOLDER": "T.ex. Hej! Jag vill veta mer",
+      "CODE": "Kod",
+      "CONVERSATIONS": "Samtal",
+      "COPY_LINK": "Kopiera länk",
+      "COPIED": "Kopierat!",
+      "DOWNLOAD_QR": "Ladda ner QR-kod",
+      "DELETE": "Ta bort",
+      "DELETE_CONFIRM": "Ta bort länken? Redan kopplade samtal behåller sin källa.",
+      "EMPTY": "Inga spårbara länkar ännu. Skapa den första för att koppla samtal till butik, säljare eller profillänk.",
+      "CREATE_SUCCESS": "Länken har skapats",
+      "CREATE_ERROR": "Länken kunde inte skapas",
+      "NAME": "Namn",
+      "CLICKS": "Klick"
+    }
+  }
+}

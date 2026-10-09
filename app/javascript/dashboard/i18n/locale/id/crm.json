@@ -1,0 +1,99 @@
+{
+  "CAMPAIGN_MANAGEMENT": {
+    "HEADER": {
+      "TITLE": "Pengelolaan kampanye",
+      "DESCRIPTION": "Pantau pengiriman, penerimaan, dan kualitas kampanye email Anda."
+    },
+    "PAYWALL": {
+      "TITLE": "Kampanye email belum diaktifkan",
+      "DESCRIPTION": "Aktifkan kampanye email untuk melihat laporan pengiriman dan interaksi."
+    },
+    "FILTER": {
+      "LABEL": "Kampanye",
+      "ALL": "Semua kampanye"
+    },
+    "APPROXIMATE": "perkiraan",
+    "OPEN_APPROXIMATE_HINT": "Tingkat pembukaan bersifat perkiraan. Perlindungan Privasi Apple Mail dan fitur serupa dapat meningkatkan jumlah pembukaan karena memuat gambar lebih awal.",
+    "KPIS": {
+      "SENT": "Terkirim",
+      "DELIVERED": "Diterima",
+      "OPENED": "Dibuka",
+      "CLICKED": "Diklik",
+      "UNSUBSCRIBED": "Berhenti berlangganan",
+      "BOUNCED": "Tidak diterima",
+      "COMPLAINED": "Laporan spam"
+    },
+    "RATES": {
+      "OPEN_RATE": "Tingkat pembukaan",
+      "CLICK_RATE": "Tingkat klik",
+      "BOUNCE_RATE": "Tingkat tidak diterima",
+      "COMPLAINT_RATE": "Tingkat laporan spam",
+      "UNSUBSCRIBE_RATE": "Tingkat berhenti berlangganan",
+      "OVER_DELIVERED": "dari yang diterima"
+    },
+    "TABLE": {
+      "EMAIL": "Email",
+      "NAME": "Nama",
+      "LAST_EVENT_AT": "Aktivitas terakhir",
+      "STATUS": "Status",
+      "ATTEMPTS": "Percobaan",
+      "OPENS": "Pembukaan",
+      "CLICKS": "Klik"
+    },
+    "EMPTY_STATE": {
+      "TITLE": "Belum ada data kampanye",
+      "SUBTITLE": "Kirim kampanye email untuk melihat metrik pengiriman dan interaksi."
+    },
+    "ERROR": "Laporan kampanye tidak dapat dimuat. Coba lagi.",
+    "EXPORT_CSV": "Ekspor CSV",
+    "TIMELINE": {
+      "TITLE": "Penerimaan, pembukaan, dan klik dari waktu ke waktu",
+      "EMPTY": "Belum ada peristiwa yang tercatat untuk kampanye ini.",
+      "INTERVAL": {
+        "DAY": "Per hari",
+        "HOUR": "Per jam"
+      }
+    },
+    "CLICKS_BY_LINK": {
+      "TITLE": "Klik per tautan",
+      "EMPTY": "Belum ada klik yang tercatat.",
+      "URL": "Tautan",
+      "UNIQUE": "Klik unik",
+      "TOTAL": "Total klik"
+    },
+    "RECIPIENTS": {
+      "TITLE": "Penerima",
+      "SEARCH_PLACEHOLDER": "Cari berdasarkan nama atau email",
+      "EMPTY": "Penerima tidak ditemukan.",
+      "PAGE_OF": "Halaman {page} dari {total}",
+      "PREV": "Sebelumnya",
+      "NEXT": "Berikutnya"
+    },
+    "COMPARISON": {
+      "TITLE": "Perbandingan kampanye"
+    }
+  },
+  "CRM_KANBAN": {
+    "TRACKED_LINKS": {
+      "TITLE": "Tautan terlacak dan kode QR",
+      "SUBTITLE": "Buat tautan atau QR untuk setiap kampanye, penjual, atau toko. Percakapan yang dimulai melalui tautan tersebut akan memiliki sumber yang tercatat di CRM.",
+      "ADD": "Tautan baru",
+      "NAME": "Nama",
+      "NAME_PLACEHOLDER": "Mis. QR toko — Pusat kota",
+      "INBOX": "Kotak masuk WhatsApp",
+      "PREFILLED": "Pesan yang sudah diisi",
+      "PREFILLED_PLACEHOLDER": "Mis. Halo! Saya ingin tahu lebih lanjut",
+      "CODE": "Kode",
+      "CLICKS": "Klik",
+      "CONVERSATIONS": "Percakapan",
+      "COPY_LINK": "Salin tautan",
+      "COPIED": "Disalin!",
+      "DOWNLOAD_QR": "Unduh QR",
+      "DELETE": "Hapus",
+      "DELETE_CONFIRM": "Hapus tautan ini? Percakapan yang sumbernya sudah tercatat akan tetap menyimpan sumbernya.",
+      "EMPTY": "Belum ada tautan terlacak. Buat tautan pertama untuk mencatat sumber percakapan dari toko, penjual, atau bio.",
+      "CREATE_SUCCESS": "Tautan dibuat",
+      "CREATE_ERROR": "Tautan tidak dapat dibuat"
+    }
+  }
+}

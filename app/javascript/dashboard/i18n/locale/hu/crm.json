@@ -1,0 +1,99 @@
+{
+  "CAMPAIGN_MANAGEMENT": {
+    "HEADER": {
+      "TITLE": "Kampánykezelés",
+      "DESCRIPTION": "Kövesse az e-mail-kampányok küldését, kézbesítését és minőségét."
+    },
+    "PAYWALL": {
+      "TITLE": "Az e-mail-kampányok nincsenek engedélyezve",
+      "DESCRIPTION": "Engedélyezze az e-mail-kampányokat a kézbesítési és aktivitási jelentések megtekintéséhez."
+    },
+    "FILTER": {
+      "LABEL": "Kampány",
+      "ALL": "Összes kampány"
+    },
+    "APPROXIMATE": "hozzávetőleges",
+    "OPEN_APPROXIMATE_HINT": "A megnyitási arányok hozzávetőlegesek. Az Apple Mail adatvédelme és a hasonló funkciók a képek előzetes betöltésével növelhetik a megnyitások számát.",
+    "KPIS": {
+      "SENT": "Elküldve",
+      "DELIVERED": "Kézbesítve",
+      "OPENED": "Megnyitva",
+      "CLICKED": "Kattintással",
+      "UNSUBSCRIBED": "Leiratkozások",
+      "BOUNCED": "Nem kézbesített",
+      "COMPLAINED": "Spambejelentések"
+    },
+    "RATES": {
+      "OPEN_RATE": "Megnyitási arány",
+      "CLICK_RATE": "Kattintási arány",
+      "BOUNCE_RATE": "Kézbesítetlen levelek aránya",
+      "COMPLAINT_RATE": "Spambejelentési arány",
+      "UNSUBSCRIBE_RATE": "Leiratkozási arány",
+      "OVER_DELIVERED": "a kézbesítettekből"
+    },
+    "TABLE": {
+      "EMAIL": "E-mail",
+      "NAME": "Név",
+      "LAST_EVENT_AT": "Utolsó aktivitás",
+      "STATUS": "Állapot",
+      "ATTEMPTS": "Próbálkozások",
+      "OPENS": "Megnyitások",
+      "CLICKS": "Kattintások"
+    },
+    "EMPTY_STATE": {
+      "TITLE": "Még nincsenek kampányadatok",
+      "SUBTITLE": "Küldjön e-mail-kampányt a kézbesítési és aktivitási mutatók megtekintéséhez."
+    },
+    "ERROR": "A kampányjelentés nem tölthető be. Próbálja újra.",
+    "EXPORT_CSV": "CSV exportálása",
+    "TIMELINE": {
+      "TITLE": "Kézbesítések, megnyitások és kattintások időbeli alakulása",
+      "EMPTY": "Ehhez a kampányhoz még nem rögzítettek eseményt.",
+      "INTERVAL": {
+        "DAY": "Naponta",
+        "HOUR": "Óránként"
+      }
+    },
+    "CLICKS_BY_LINK": {
+      "TITLE": "Kattintások hivatkozásonként",
+      "EMPTY": "Még nincs rögzített kattintás.",
+      "URL": "Hivatkozás",
+      "UNIQUE": "Egyedi kattintások",
+      "TOTAL": "Összes kattintás"
+    },
+    "RECIPIENTS": {
+      "TITLE": "Címzettek",
+      "SEARCH_PLACEHOLDER": "Keresés név vagy e-mail-cím alapján",
+      "EMPTY": "Nem találhatók címzettek.",
+      "PAGE_OF": "{page}. oldal, összesen {total}",
+      "PREV": "Előző",
+      "NEXT": "Következő"
+    },
+    "COMPARISON": {
+      "TITLE": "Kampányok összehasonlítása"
+    }
+  },
+  "CRM_KANBAN": {
+    "TRACKED_LINKS": {
+      "TITLE": "Követhető hivatkozások és QR-kódok",
+      "SUBTITLE": "Hozzon létre hivatkozást vagy QR-kódot kampányonként, értékesítőnként vagy üzletenként. Az ezeken indított beszélgetések forrása megjelenik a CRM-ben.",
+      "ADD": "Új hivatkozás",
+      "NAME": "Név",
+      "NAME_PLACEHOLDER": "Pl. Üzlet QR — Belváros",
+      "INBOX": "WhatsApp-postafiók",
+      "PREFILLED": "Előre kitöltött üzenet",
+      "PREFILLED_PLACEHOLDER": "Pl. Szia! Szeretnék többet megtudni",
+      "CODE": "Kód",
+      "CLICKS": "Kattintások",
+      "CONVERSATIONS": "Beszélgetések",
+      "COPY_LINK": "Hivatkozás másolása",
+      "COPIED": "Másolva!",
+      "DOWNLOAD_QR": "QR letöltése",
+      "DELETE": "Törlés",
+      "DELETE_CONFIRM": "Törli ezt a hivatkozást? A már hozzárendelt beszélgetések megőrzik a forrásukat.",
+      "EMPTY": "Még nincs követhető hivatkozás. Hozza létre az elsőt az üzletből, értékesítőtől vagy profilbemutatkozásból érkező beszélgetések forrásának azonosításához.",
+      "CREATE_SUCCESS": "Hivatkozás létrehozva",
+      "CREATE_ERROR": "A hivatkozás nem hozható létre"
+    }
+  }
+}

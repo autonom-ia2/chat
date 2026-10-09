@@ -211,6 +211,134 @@
         "SUCCESS_MESSAGE": "Campaign deleted successfully",
         "ERROR_MESSAGE": "There was an error. Please try again."
       }
+    },
+    "EMAIL_CAMPAIGN": {
+      "ACTIONS": {
+        "CANCEL": "Hætta við",
+        "CANCEL_SUCCESS": "Hætt við herferð.",
+        "DELETE": "Eyða",
+        "DELETE_SUCCESS": "Herferð eytt.",
+        "DUPLICATE": "Afrita",
+        "DUPLICATE_SUCCESS": "Herferð afrituð. Uppfærðu viðtakendur og tímasetningu.",
+        "EDIT": "Breyta",
+        "MANAGE_RECIPIENTS": "Viðtakendur",
+        "OPEN_BUILDER": "Ritill",
+        "PAUSE": "Gera hlé",
+        "PAUSE_SUCCESS": "Herferð sett í hlé.",
+        "SCHEDULE": "Tímasetja",
+        "SCHEDULE_SUCCESS": "Herferð tímasett.",
+        "SEND_NOW": "Senda núna",
+        "SEND_SUCCESS": "Herferð komin í sendingarröð."
+      },
+      "AI": {
+        "BADGE": {
+          "FAILED": "Gervigreind brást",
+          "PROCESSING": "Gervigreind er að búa til",
+          "READY": "Gervigreind tilbúin"
+        }
+      },
+      "COUNTS": {
+        "FAILED": "Mistókst",
+        "RECIPIENTS": "Viðtakendur",
+        "SENT": "Sent"
+      },
+      "DESCRIPTION": "Skrifaðu tölvupóst, veldu staðfest sendingarlén, hladdu upp viðtakendalista og sendu núna eða tímasettu sendingu.",
+      "DIALOG": {
+        "BASE_HINT": "Hladdu upp CSV eða XLSX með dálkunum name og email. Greindir dálkar verða að breytum fyrir persónusnið.",
+        "BASE_IMPORTING": "Flyt inn lista…",
+        "BASE_LABEL": "Tengiliðalisti (CSV eða XLSX)",
+        "BASE_PICK": "Velja skrá",
+        "BASE_SELECTED": "Valið: {name}",
+        "CANCEL": "Hætta við",
+        "CREATE_AND_OPEN": "Búa til og opna í ritli",
+        "CREATE_TITLE": "Ný tölvupóstherferð",
+        "DIRECT_OPTION": "bein sending úr þessu pósthólfi",
+        "DIRECT_WARNING": "Athugaðu: Þetta er persónulegt pósthólf þitt. Notaðu það aðeins fyrir lítið magn af eigin raunverulegum tengiliðum sem hafa samþykkt sendingar. Fjöldasendingar úr ókeypis vefpósti geta lokað eða stöðvað reikninginn. Hámarkið er 100 á dag, með hléum líkt og við handvirka sendingu. Staðfestu eigið lén fyrir stærri lista.",
+        "EDIT_TITLE": "Breyta tölvupóstherferð",
+        "ERROR": "Ekki tókst að vista herferðina. Reyndu aftur.",
+        "FROM_EMAIL_DIRECT_HINT": "Sent beint úr þessu pósthólfi.",
+        "FROM_EMAIL_ERROR": "Netfang sendanda er nauðsynlegt",
+        "FROM_EMAIL_HINT": "Verður að vera netfang á {'@'}{domain} (staðfesta léninu þínu).",
+        "FROM_EMAIL_HINT_NO_DOMAIN": "Verður að vera netfang á staðfesta sendingarléninu þínu.",
+        "FROM_EMAIL_INVALID": "Sláðu inn gilt netfang á staðfesta léninu þínu",
+        "FROM_EMAIL_LABEL": "Netfang sendanda",
+        "FROM_EMAIL_PLACEHOLDER": "T.d. tilbod{'@'}fyrirtaeki.com",
+        "FROM_NAME_ERROR": "Nafn sendanda er nauðsynlegt",
+        "FROM_NAME_LABEL": "Nafn sendanda",
+        "FROM_NAME_PLACEHOLDER": "T.d. Markaðsdeild Acme",
+        "NAME_ERROR": "Sláðu inn heiti herferðar",
+        "NAME_LABEL": "Heiti herferðar",
+        "NAME_PLACEHOLDER": "T.d. Fréttabréf júnímánaðar",
+        "NO_VERIFIED_DOMAIN": "Ekkert staðfest sendingarlén enn. Bættu fyrst við léni og staðfestu það undir Sendingarlén tölvupósts.",
+        "REPLY_TO_ERROR": "Svarnetfang er nauðsynlegt",
+        "REPLY_TO_HINT": "Svör berast á þetta netfang. Tengdu það sem pósthólf til að breyta svörum í samtöl.",
+        "REPLY_TO_INVALID": "Sláðu inn gilt netfang",
+        "REPLY_TO_LABEL": "Svarnetfang",
+        "REPLY_TO_PLACEHOLDER": "T.d. adstod{'@'}fyrirtaeki.com",
+        "SAVE_DRAFT": "Vista drög",
+        "SENDER_ERROR": "Veldu staðfest sendingarlén",
+        "SENDER_LABEL": "Sendingarlén",
+        "SENDER_PLACEHOLDER": "Veldu staðfest lén",
+        "SUCCESS": "Herferð vistuð."
+      },
+      "EMPTY_STATE": {
+        "SUBTITLE": "Búðu til fyrstu herferðina til að skrifa og senda tölvupóst á innfluttan lista.",
+        "TITLE": "Engar tölvupóstherferðir enn"
+      },
+      "HEADER_TITLE": "Tölvupóstherferðir",
+      "IMPORT": {
+        "ERRORS": {
+          "EMPTY_FILE": "Listinn er tómur. Bættu við tengiliðum og hladdu honum upp aftur.",
+          "EXPIRED": "Innsenda skráin er útrunnin. Hladdu listanum upp aftur.",
+          "FAILED": "Innflutningur mistókst. Engum tengiliðum úr þessari tilraun var bætt við. Reyndu aftur eða hladdu skránni upp aftur.",
+          "FILE_TOO_LARGE": "Skráin fer yfir stærðarmörkin. Skiptu listanum og reyndu aftur.",
+          "HEADERS": "Notaðu einn Name-dálk og einn Email-dálk í fyrstu röð fyrsta blaðsins, án tvítekinna fyrirsagna.",
+          "INVALID_FILE": "Ekki tókst að lesa skrána. Hladdu upp gildri CSV- eða XLSX-skrá.",
+          "IN_PROGRESS": "Innflutningur er þegar í gangi fyrir þessa herferð. Bíddu þar til honum lýkur.",
+          "ROW_LIMIT": "Listinn inniheldur yfir 50.000 raðir. Skiptu honum í minni skrár.",
+          "UPLOAD_FAILED": "Ekki tókst að vista skrána. Hladdu listanum upp aftur."
+        },
+        "QUEUED": "Listi móttekinn. Innflutningur er í biðröð; þú mátt yfirgefa þessa síðu.",
+        "RETRY": "Reyna innflutning aftur",
+        "PROCESSING": "Verið er að flytja inn listann. Ekki er hægt að senda fyrr en því er lokið.",
+        "COMPLETED": "Innflutningi listans lokið.",
+        "SUMMARY": "Bætt við: {imported} · Tvítekningar: {duplicates} · Ógilt: {invalid} · Útilokað frá sendingu: {suppressed} · Samtals: {total}"
+      },
+      "NEW": "Ný tölvupóstherferð",
+      "PLACEHOLDERS": {
+        "COPY_SUCCESS": "Breyta afrituð á klippiborð.",
+        "EMPTY": "Flyttu inn viðtakendur til að sjá breytur úr dálkum töflureiknisins.",
+        "SUBTITLE": "Smelltu á breytu til að afrita hana og límdu hana í efnislínu, forskoðunartexta eða meginmál.",
+        "TITLE": "Tiltækar breytur"
+      },
+      "RECIPIENTS": {
+        "ADD_MORE": "Bæta við fleiri tengiliðum",
+        "ADD_MORE_HINT": "Listanum var hlaðið upp þegar herferðin var búin til. Hladdu upp öðrum CSV/XLSX til að bæta við tengiliðum.",
+        "SUBTITLE": "Hladdu upp CSV eða XLSX með dálkunum name og email. Viðtakendur eru aðeins notaðir í þessari herferð og bætast ekki við tengiliðina þína.",
+        "TITLE": "Viðtakendur"
+      },
+      "SCHEDULE_DIALOG": {
+        "CANCEL": "Hætta við",
+        "DATETIME_ERROR": "Veldu dagsetningu og tíma",
+        "DATETIME_LABEL": "Senda klukkan",
+        "SUBMIT": "Tímasetja"
+      },
+      "STATUS": {
+        "CANCELED": "Afturkallað",
+        "DRAFT": "Drög",
+        "FAILED": "Mistókst",
+        "PAUSED": "Í hléi",
+        "SCHEDULED": "Áætlað",
+        "SENDING": "Verið að senda",
+        "SENT": "Sent"
+      },
+      "VALIDATION": {
+        "BLANK_ITEM": "{key}: {count} viðtakendur án gildis",
+        "BLANK_LABEL": "Viðtakendur án gildis:",
+        "MISSING_LABEL": "Notaðar í sniðmátinu en finnast ekki hjá viðtakendum:",
+        "OK": "Allar breytur í þessari herferð hafa gildi. Þú getur haldið áfram.",
+        "TITLE": "Athugun fyrir sendingu"
+      }
     }
   }
 }

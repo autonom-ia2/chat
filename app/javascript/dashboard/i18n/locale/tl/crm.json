@@ -1,0 +1,99 @@
+{
+  "CAMPAIGN_MANAGEMENT": {
+    "HEADER": {
+      "TITLE": "Pamamahala ng kampanya",
+      "DESCRIPTION": "Subaybayan ang pagpapadala, paghahatid at kalidad ng mga kampanya sa email."
+    },
+    "PAYWALL": {
+      "TITLE": "Hindi pa naka-enable ang mga kampanya sa email",
+      "DESCRIPTION": "I-enable ang mga kampanya sa email para makita ang mga ulat ng paghahatid at pakikipag-ugnayan."
+    },
+    "FILTER": {
+      "LABEL": "Kampanya",
+      "ALL": "Lahat ng kampanya"
+    },
+    "APPROXIMATE": "tinataya",
+    "OPEN_APPROXIMATE_HINT": "Tinataya lamang ang rate ng pagbubukas. Maaaring mapataas ng proteksiyon sa privacy ng Apple Mail at katulad na tampok ang bilang dahil pauna nilang nilo-load ang mga larawan.",
+    "KPIS": {
+      "SENT": "Naipadala",
+      "DELIVERED": "Naihatid",
+      "OPENED": "Nabuksan",
+      "CLICKED": "Na-click",
+      "UNSUBSCRIBED": "Mga umalis sa subscription",
+      "COMPLAINED": "Mga reklamo sa spam",
+      "BOUNCED": "Hindi naihatid"
+    },
+    "RATES": {
+      "OPEN_RATE": "Rate ng pagbubukas",
+      "CLICK_RATE": "Rate ng pag-click",
+      "BOUNCE_RATE": "Rate ng hindi naihatid",
+      "COMPLAINT_RATE": "Rate ng reklamo",
+      "UNSUBSCRIBE_RATE": "Rate ng pag-alis sa subscription",
+      "OVER_DELIVERED": "sa mga naihatid"
+    },
+    "TABLE": {
+      "EMAIL": "Email",
+      "NAME": "Pangalan",
+      "LAST_EVENT_AT": "Huling aktibidad",
+      "STATUS": "Katayuan",
+      "ATTEMPTS": "Mga pagtatangka",
+      "OPENS": "Mga pagbubukas",
+      "CLICKS": "Mga pag-click"
+    },
+    "EMPTY_STATE": {
+      "TITLE": "Wala pang datos ng kampanya",
+      "SUBTITLE": "Magpadala ng kampanya sa email para makita ang mga sukatan ng paghahatid at pakikipag-ugnayan."
+    },
+    "ERROR": "Hindi ma-load ang ulat ng kampanya. Subukan muli.",
+    "EXPORT_CSV": "I-export ang CSV",
+    "TIMELINE": {
+      "TITLE": "Mga paghahatid, pagbubukas at pag-click sa paglipas ng panahon",
+      "EMPTY": "Wala pang naitalang pangyayari para sa kampanyang ito.",
+      "INTERVAL": {
+        "DAY": "Bawat araw",
+        "HOUR": "Bawat oras"
+      }
+    },
+    "CLICKS_BY_LINK": {
+      "TITLE": "Mga pag-click ayon sa link",
+      "EMPTY": "Wala pang naitalang pag-click.",
+      "URL": "Link",
+      "UNIQUE": "Mga natatanging pag-click",
+      "TOTAL": "Kabuuang pag-click"
+    },
+    "RECIPIENTS": {
+      "TITLE": "Mga tatanggap",
+      "EMPTY": "Walang natagpuang tatanggap.",
+      "PAGE_OF": "Pahina {page} ng {total}",
+      "PREV": "Nakaraan",
+      "NEXT": "Susunod",
+      "SEARCH_PLACEHOLDER": "Maghanap ng pangalan o email"
+    },
+    "COMPARISON": {
+      "TITLE": "Paghahambing ng kampanya"
+    }
+  },
+  "CRM_KANBAN": {
+    "TRACKED_LINKS": {
+      "TITLE": "Mga nasusubaybayang link at QR code",
+      "SUBTITLE": "Gumawa ng link o QR code para sa bawat kampanya, nagbebenta o tindahan. Ang mga usapang sinimulan sa mga ito ay may nakatalang pinagmulan sa CRM.",
+      "ADD": "Bagong link",
+      "NAME_PLACEHOLDER": "Hal. QR ng tindahan — Sentro",
+      "INBOX": "Inbox sa WhatsApp",
+      "PREFILLED": "Paunang mensahe",
+      "PREFILLED_PLACEHOLDER": "Hal. Kumusta! Gusto kong malaman ang higit pa",
+      "CODE": "Code",
+      "CONVERSATIONS": "Mga usapan",
+      "COPY_LINK": "Kopyahin ang link",
+      "COPIED": "Nakopya!",
+      "DOWNLOAD_QR": "I-download ang QR code",
+      "DELETE": "Tanggalin",
+      "DELETE_CONFIRM": "Tanggalin ang link na ito? Mananatili ang pinagmulan ng mga usapang naiuugnay na rito.",
+      "EMPTY": "Wala pang nasusubaybayang link. Gumawa ng una para maiugnay ang mga usapan sa tindahan, nagbebenta o paglalarawan ng profile.",
+      "CREATE_SUCCESS": "Nagawa ang link",
+      "CREATE_ERROR": "Hindi magawa ang link",
+      "NAME": "Pangalan",
+      "CLICKS": "Mga pag-click"
+    }
+  }
+}

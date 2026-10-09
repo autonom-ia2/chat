@@ -59,6 +59,7 @@ class EmailCampaign < ApplicationRecord
   belongs_to :sender_identity, class_name: 'EmailSenderIdentity', optional: true
   belongs_to :sender_inbox, class_name: 'Inbox', optional: true
 
+  has_many :email_campaign_import_issues, dependent: :destroy
   has_many :email_campaign_imports, dependent: :destroy
   has_one :latest_recipient_import, -> { order(id: :desc) }, class_name: 'EmailCampaignImport',
                                                              inverse_of: :email_campaign, dependent: nil
@@ -108,8 +109,14 @@ class EmailCampaign < ApplicationRecord
   EMAIL_REGEX = URI::MailTo::EMAIL_REGEXP
 
   def sendable?
-    (draft? || scheduled?) && !recipient_import_active? && subject.present? && body_html.present? && sender_ready? &&
-      email_campaign_recipients.exists?
+    return false unless draft? || scheduled?
+    return false if recipient_import_active?
+
+    subject.present? && body_html.present? && sender_ready? && sendable_recipients?
+  end
+
+  def sendable_recipients?
+    email_campaign_recipients.exists? && EmailCampaigns::PreflightDecision.new.campaign_allowed?(self)
   end
 
   def sender_ready?
@@ -151,13 +158,15 @@ class EmailCampaign < ApplicationRecord
   def pause!
     return unless sending? || scheduled?
 
-    update!(status: :paused)
+    update!(status: :paused, hygiene_pause_reason: nil)
   end
 
   def resume!
     return unless paused?
 
-    update!(status: :sending)
+    return unless EmailCampaigns::PreflightDecision.new.campaign_allowed?(self)
+
+    update!(status: :sending, hygiene_pause_reason: nil)
     EmailCampaigns::DeliveryJob.perform_later(id) if EmailCampaigns::Config.enabled?
   end
 
@@ -174,8 +183,16 @@ class EmailCampaign < ApplicationRecord
   end
 
   def finalize!
-    refresh_counters!
-    update!(status: :sent, sent_at: Time.current)
+    with_lock do
+      return unless sending?
+      return if recipient_import_active? || email_campaign_recipients.pending.exists?
+      # Another worker may own an optimistic claim but not have reached the provider.
+      # An ambiguous claim without a persisted receipt requires operator review.
+      return if email_campaign_recipients.sent.exists?(sent_at: nil)
+
+      refresh_counters!
+      update!(status: :sent, sent_at: Time.current)
+    end
   end
 
   # ---- geração de e-mail por IA (assíncrona/durável) ----

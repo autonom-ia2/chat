@@ -1,0 +1,99 @@
+{
+  "CAMPAIGN_MANAGEMENT": {
+    "HEADER": {
+      "TITLE": "Zarządzanie kampaniami",
+      "DESCRIPTION": "Śledź wysyłkę, dostarczanie i jakość kampanii e-mail."
+    },
+    "PAYWALL": {
+      "TITLE": "Kampanie e-mail nie są włączone",
+      "DESCRIPTION": "Włącz kampanie e-mail, aby zobaczyć raporty dostarczania i zaangażowania."
+    },
+    "FILTER": {
+      "LABEL": "Kampania",
+      "ALL": "Wszystkie kampanie"
+    },
+    "APPROXIMATE": "przybliżone",
+    "OPEN_APPROXIMATE_HINT": "Wskaźniki otwarć są przybliżone. Ochrona prywatności w Apple Mail i podobne funkcje mogą zawyżać liczbę otwarć przez wstępne ładowanie obrazów.",
+    "KPIS": {
+      "SENT": "Wysłane",
+      "DELIVERED": "Dostarczone",
+      "OPENED": "Otwarte",
+      "CLICKED": "Kliknięte",
+      "UNSUBSCRIBED": "Rezygnacje z subskrypcji",
+      "BOUNCED": "Niedostarczone",
+      "COMPLAINED": "Zgłoszenia spamu"
+    },
+    "RATES": {
+      "OPEN_RATE": "Wskaźnik otwarć",
+      "CLICK_RATE": "Wskaźnik kliknięć",
+      "BOUNCE_RATE": "Wskaźnik niedostarczeń",
+      "COMPLAINT_RATE": "Wskaźnik zgłoszeń spamu",
+      "UNSUBSCRIBE_RATE": "Wskaźnik rezygnacji",
+      "OVER_DELIVERED": "spośród dostarczonych"
+    },
+    "TABLE": {
+      "EMAIL": "E-mail",
+      "NAME": "Imię i nazwisko",
+      "LAST_EVENT_AT": "Ostatnia aktywność",
+      "STATUS": "Stan",
+      "ATTEMPTS": "Próby",
+      "OPENS": "Otwarcia",
+      "CLICKS": "Kliknięcia"
+    },
+    "EMPTY_STATE": {
+      "TITLE": "Brak danych kampanii",
+      "SUBTITLE": "Wyślij kampanię e-mail, aby zobaczyć wskaźniki dostarczania i zaangażowania."
+    },
+    "ERROR": "Nie udało się wczytać raportu kampanii. Spróbuj ponownie.",
+    "EXPORT_CSV": "Eksportuj CSV",
+    "TIMELINE": {
+      "TITLE": "Dostarczenia, otwarcia i kliknięcia w czasie",
+      "EMPTY": "Nie zarejestrowano jeszcze zdarzeń w tej kampanii.",
+      "INTERVAL": {
+        "DAY": "Według dnia",
+        "HOUR": "Według godziny"
+      }
+    },
+    "CLICKS_BY_LINK": {
+      "TITLE": "Kliknięcia według linku",
+      "EMPTY": "Nie zarejestrowano jeszcze kliknięć.",
+      "URL": "Link",
+      "UNIQUE": "Unikalne kliknięcia",
+      "TOTAL": "Łączna liczba kliknięć"
+    },
+    "RECIPIENTS": {
+      "TITLE": "Odbiorcy",
+      "SEARCH_PLACEHOLDER": "Szukaj po nazwie lub adresie e-mail",
+      "EMPTY": "Nie znaleziono odbiorców.",
+      "PAGE_OF": "Strona {page} z {total}",
+      "PREV": "Poprzednia",
+      "NEXT": "Następna"
+    },
+    "COMPARISON": {
+      "TITLE": "Porównanie kampanii"
+    }
+  },
+  "CRM_KANBAN": {
+    "TRACKED_LINKS": {
+      "TITLE": "Śledzone linki i kody QR",
+      "SUBTITLE": "Utwórz link lub kod QR dla kampanii, sprzedawcy lub sklepu. Rozmowy rozpoczęte w ten sposób mają przypisane źródło w CRM.",
+      "ADD": "Nowy link",
+      "NAME": "Nazwa",
+      "NAME_PLACEHOLDER": "Np. QR sklepu — Centrum",
+      "INBOX": "Skrzynka WhatsApp",
+      "PREFILLED": "Wstępnie wypełniona wiadomość",
+      "PREFILLED_PLACEHOLDER": "Np. Cześć! Chcę dowiedzieć się więcej",
+      "CODE": "Kod",
+      "CLICKS": "Kliknięcia",
+      "CONVERSATIONS": "Rozmowy",
+      "COPY_LINK": "Kopiuj link",
+      "COPIED": "Skopiowano!",
+      "DOWNLOAD_QR": "Pobierz QR",
+      "DELETE": "Usuń",
+      "DELETE_CONFIRM": "Usunąć ten link? Rozmowy z przypisanym źródłem zachowają je.",
+      "EMPTY": "Brak śledzonych linków. Utwórz pierwszy, aby przypisywać rozmowy do sklepu, sprzedawcy lub opisu profilu.",
+      "CREATE_SUCCESS": "Link utworzony",
+      "CREATE_ERROR": "Nie udało się utworzyć linku"
+    }
+  }
+}

@@ -211,6 +211,134 @@
         "SUCCESS_MESSAGE": "活動刪除成功",
         "ERROR_MESSAGE": "發生錯誤，請重試。"
       }
+    },
+    "EMAIL_CAMPAIGN": {
+      "ACTIONS": {
+        "CANCEL": "取消",
+        "CANCEL_SUCCESS": "活動已取消。",
+        "DELETE_SUCCESS": "活動已刪除。",
+        "DUPLICATE": "建立副本",
+        "DUPLICATE_SUCCESS": "活動已複製。請更新收件者與傳送排程。",
+        "EDIT": "編輯",
+        "OPEN_BUILDER": "編輯器",
+        "PAUSE": "暫停",
+        "PAUSE_SUCCESS": "活動已暫停。",
+        "SCHEDULE": "排程",
+        "SCHEDULE_SUCCESS": "活動已排程。",
+        "SEND_NOW": "立即傳送",
+        "SEND_SUCCESS": "活動已加入傳送佇列。",
+        "MANAGE_RECIPIENTS": "收件者",
+        "DELETE": "刪除"
+      },
+      "AI": {
+        "BADGE": {
+          "FAILED": "AI 產生失敗",
+          "PROCESSING": "AI 正在產生",
+          "READY": "AI 已就緒"
+        }
+      },
+      "COUNTS": {
+        "FAILED": "失敗",
+        "SENT": "已傳送",
+        "RECIPIENTS": "收件者"
+      },
+      "DESCRIPTION": "撰寫郵件、選擇已驗證的寄件網域、上傳收件者清單，然後立即傳送或安排排程。",
+      "DIALOG": {
+        "BASE_HINT": "上傳包含 name 與 email 欄的 CSV 或 XLSX 檔案。辨識到的欄位將成為個人化欄位。",
+        "BASE_IMPORTING": "正在匯入清單…",
+        "BASE_LABEL": "聯絡人清單（CSV 或 XLSX）",
+        "BASE_PICK": "選擇檔案",
+        "BASE_SELECTED": "已選擇：{name}",
+        "CREATE_AND_OPEN": "建立並在編輯器中開啟",
+        "CREATE_TITLE": "新增郵件活動",
+        "DIRECT_OPTION": "透過此收件匣直接傳送",
+        "DIRECT_WARNING": "這是您的個人信箱。請僅向已同意接收郵件的真實聯絡人少量傳送。使用免費信箱大量寄信可能導致帳號被封鎖或停用。每天最多傳送 100 封，並採取類似人工傳送的間隔。若清單較大，請驗證自己的網域。",
+        "EDIT_TITLE": "編輯郵件活動",
+        "ERROR": "無法儲存活動，請重試。",
+        "FROM_EMAIL_DIRECT_HINT": "直接以此信箱的身分傳送。",
+        "FROM_EMAIL_ERROR": "請填寫寄件者電子郵件",
+        "FROM_EMAIL_HINT": "地址必須使用 {'@'}{domain}，也就是您已驗證的網域。",
+        "FROM_EMAIL_HINT_NO_DOMAIN": "地址必須屬於您已驗證的寄件網域。",
+        "FROM_EMAIL_INVALID": "請輸入已驗證網域下的有效地址",
+        "FROM_EMAIL_LABEL": "寄件者電子郵件",
+        "FROM_EMAIL_PLACEHOLDER": "例如：promo{'@'}yourcompany.com",
+        "FROM_NAME_ERROR": "請填寫寄件者姓名",
+        "FROM_NAME_LABEL": "寄件者姓名",
+        "FROM_NAME_PLACEHOLDER": "例如：Acme 行銷團隊",
+        "NAME_ERROR": "請輸入活動名稱",
+        "NAME_LABEL": "活動名稱",
+        "NAME_PLACEHOLDER": "例如：六月電子報",
+        "NO_VERIFIED_DOMAIN": "尚無已驗證的寄件網域。請先在電子郵件寄件網域設定中新增並驗證網域。",
+        "REPLY_TO_ERROR": "請填寫回覆地址",
+        "REPLY_TO_HINT": "回覆將傳送至此地址。將其連接為收件匣，即可把回覆轉成對話。",
+        "REPLY_TO_INVALID": "請輸入有效的電子郵件地址",
+        "REPLY_TO_LABEL": "回覆地址",
+        "REPLY_TO_PLACEHOLDER": "例如：support{'@'}yourcompany.com",
+        "SAVE_DRAFT": "儲存草稿",
+        "SENDER_ERROR": "請選擇已驗證的寄件網域",
+        "SENDER_LABEL": "寄件網域",
+        "SENDER_PLACEHOLDER": "選擇已驗證的網域",
+        "SUCCESS": "活動已儲存。",
+        "CANCEL": "取消"
+      },
+      "EMPTY_STATE": {
+        "SUBTITLE": "建立第一個活動，向匯入的清單撰寫並傳送郵件。",
+        "TITLE": "尚無郵件活動"
+      },
+      "HEADER_TITLE": "郵件活動",
+      "IMPORT": {
+        "ERRORS": {
+          "EMPTY_FILE": "清單為空。請新增聯絡人後重新上傳。",
+          "EXPIRED": "上傳的檔案已過期。請重新上傳清單。",
+          "FAILED": "匯入失敗，本次未新增任何聯絡人。請重試或重新上傳檔案。",
+          "FILE_TOO_LARGE": "檔案超過上傳大小限制。請分割清單後重試。",
+          "HEADERS": "請在第一張工作表的第一列使用一個 Name 欄和一個 Email 欄，不要重複欄位標題。",
+          "INVALID_FILE": "無法讀取檔案。請上傳有效的 CSV 或 XLSX 檔案。",
+          "IN_PROGRESS": "此活動已有匯入作業正在進行，請等待完成。",
+          "ROW_LIMIT": "清單超過 50,000 列。請分割為較小的檔案。",
+          "UPLOAD_FAILED": "無法儲存檔案。請重新上傳清單。"
+        },
+        "RETRY": "重新匯入",
+        "QUEUED": "已收到清單。匯入已排入佇列，您可以離開此頁面。",
+        "PROCESSING": "正在匯入清單。完成前無法傳送。",
+        "COMPLETED": "清單匯入完成。",
+        "SUMMARY": "已新增：{imported} · 重複：{duplicates} · 無效：{invalid} · 已排除傳送：{suppressed} · 總計：{total}"
+      },
+      "PLACEHOLDERS": {
+        "COPY_SUCCESS": "欄位已複製到剪貼簿。",
+        "EMPTY": "匯入收件者後，即可查看來自試算表各欄的個人化欄位。",
+        "SUBTITLE": "點擊欄位以複製，然後貼到主旨、預覽文字或內文中。",
+        "TITLE": "可用欄位"
+      },
+      "RECIPIENTS": {
+        "ADD_MORE": "新增更多聯絡人",
+        "ADD_MORE_HINT": "清單已在建立活動時上傳。上傳另一個 CSV/XLSX 檔案以追加聯絡人。",
+        "SUBTITLE": "上傳包含 name 與 email 欄的 CSV 或 XLSX 檔案。收件者僅用於此活動，不會加入您的聯絡人。",
+        "TITLE": "收件者"
+      },
+      "SCHEDULE_DIALOG": {
+        "DATETIME_ERROR": "請選擇日期與時間",
+        "DATETIME_LABEL": "傳送時間",
+        "CANCEL": "取消",
+        "SUBMIT": "排程"
+      },
+      "VALIDATION": {
+        "BLANK_ITEM": "{key}：{count} 位收件者缺少值",
+        "BLANK_LABEL": "缺少值的收件者：",
+        "MISSING_LABEL": "範本中使用了以下欄位，但收件者資料中不存在：",
+        "OK": "此活動使用的所有欄位都有值，可以傳送。",
+        "TITLE": "傳送前檢查"
+      },
+      "STATUS": {
+        "CANCELED": "已取消",
+        "DRAFT": "草稿",
+        "SCHEDULED": "已排程",
+        "SENDING": "正在傳送",
+        "SENT": "已傳送",
+        "PAUSED": "傳送已暫停",
+        "FAILED": "失敗"
+      },
+      "NEW": "新增郵件活動"
     }
   }
 }

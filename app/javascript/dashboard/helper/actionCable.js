@@ -372,19 +372,16 @@ class ActionCableConnector extends BaseActionCableConnector {
     emitter.emit(BUS_EVENTS.CRM_AI_USAGE_CREATED, data);
   };
 
-  // Geração de e-mail por IA concluída/falhou: atualiza os selos (refetch) e emite o bus para o
-  // toast global (EmailCampaignAiToast, que tem i18n). O connector não tem i18n próprio.
+  // The page refreshes with its local filter; the global toast shares these events.
   onEmailCampaignAiReady = data => {
     if (!this.isAValidEvent(data)) return;
 
-    this.app.$store.dispatch('emailCampaigns/get');
     emitter.emit(BUS_EVENTS.EMAIL_CAMPAIGN_AI_READY, data);
   };
 
   onEmailCampaignAiFailed = data => {
     if (!this.isAValidEvent(data)) return;
 
-    this.app.$store.dispatch('emailCampaigns/get');
     emitter.emit(BUS_EVENTS.EMAIL_CAMPAIGN_AI_FAILED, data);
   };
 

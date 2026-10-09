@@ -1,0 +1,99 @@
+{
+  "CAMPAIGN_MANAGEMENT": {
+    "HEADER": {
+      "TITLE": "Quản lý chiến dịch",
+      "DESCRIPTION": "Theo dõi việc gửi, chuyển phát và chất lượng chiến dịch email."
+    },
+    "PAYWALL": {
+      "TITLE": "Chưa bật chiến dịch email",
+      "DESCRIPTION": "Bật chiến dịch email để xem báo cáo chuyển phát và tương tác tại đây."
+    },
+    "FILTER": {
+      "LABEL": "Chiến dịch",
+      "ALL": "Tất cả chiến dịch"
+    },
+    "APPROXIMATE": "ước tính",
+    "OPEN_APPROXIMATE_HINT": "Tỷ lệ mở là số liệu ước tính. Tính năng bảo vệ quyền riêng tư của Apple Mail và các tính năng tương tự có thể làm tăng số lượt mở do tải trước hình ảnh.",
+    "KPIS": {
+      "SENT": "Đã gửi",
+      "DELIVERED": "Đã chuyển phát",
+      "OPENED": "Đã mở",
+      "CLICKED": "Đã nhấp",
+      "UNSUBSCRIBED": "Hủy đăng ký",
+      "COMPLAINED": "Khiếu nại thư rác",
+      "BOUNCED": "Không được phát"
+    },
+    "RATES": {
+      "OPEN_RATE": "Tỷ lệ mở",
+      "CLICK_RATE": "Tỷ lệ nhấp",
+      "BOUNCE_RATE": "Tỷ lệ không chuyển phát được",
+      "COMPLAINT_RATE": "Tỷ lệ khiếu nại",
+      "UNSUBSCRIBE_RATE": "Tỷ lệ hủy đăng ký",
+      "OVER_DELIVERED": "trong số thư đã chuyển phát"
+    },
+    "TABLE": {
+      "EMAIL": "Email",
+      "NAME": "Tên",
+      "LAST_EVENT_AT": "Hoạt động gần nhất",
+      "STATUS": "Trạng thái",
+      "ATTEMPTS": "Số lần thử",
+      "OPENS": "Lượt mở",
+      "CLICKS": "Lượt nhấp"
+    },
+    "EMPTY_STATE": {
+      "TITLE": "Chưa có dữ liệu chiến dịch",
+      "SUBTITLE": "Gửi một chiến dịch email để xem số liệu chuyển phát và tương tác."
+    },
+    "ERROR": "Không thể tải báo cáo chiến dịch. Vui lòng thử lại.",
+    "EXPORT_CSV": "Xuất CSV",
+    "TIMELINE": {
+      "TITLE": "Chuyển phát, mở và nhấp theo thời gian",
+      "EMPTY": "Chưa ghi nhận sự kiện cho chiến dịch này.",
+      "INTERVAL": {
+        "DAY": "Theo ngày",
+        "HOUR": "Theo giờ"
+      }
+    },
+    "CLICKS_BY_LINK": {
+      "TITLE": "Lượt nhấp theo liên kết",
+      "EMPTY": "Chưa ghi nhận lượt nhấp.",
+      "URL": "Liên kết",
+      "UNIQUE": "Lượt nhấp duy nhất",
+      "TOTAL": "Tổng lượt nhấp"
+    },
+    "RECIPIENTS": {
+      "TITLE": "Người nhận",
+      "EMPTY": "Không tìm thấy người nhận.",
+      "PAGE_OF": "Trang {page} trên {total}",
+      "PREV": "Trước",
+      "NEXT": "Tiếp",
+      "SEARCH_PLACEHOLDER": "Tìm tên hoặc email"
+    },
+    "COMPARISON": {
+      "TITLE": "So sánh chiến dịch"
+    }
+  },
+  "CRM_KANBAN": {
+    "TRACKED_LINKS": {
+      "TITLE": "Liên kết và mã QR có thể theo dõi",
+      "SUBTITLE": "Tạo liên kết hoặc mã QR cho từng chiến dịch, nhân viên bán hàng hay cửa hàng. Cuộc trò chuyện bắt đầu qua đó sẽ được ghi nhận nguồn trong CRM.",
+      "ADD": "Liên kết mới",
+      "NAME_PLACEHOLDER": "Ví dụ: QR cửa hàng — Trung tâm",
+      "INBOX": "Hộp thư WhatsApp",
+      "PREFILLED": "Tin nhắn điền sẵn",
+      "PREFILLED_PLACEHOLDER": "Ví dụ: Xin chào! Tôi muốn tìm hiểu thêm",
+      "CODE": "Mã",
+      "CONVERSATIONS": "Cuộc trò chuyện",
+      "COPY_LINK": "Sao chép liên kết",
+      "COPIED": "Đã sao chép!",
+      "DOWNLOAD_QR": "Tải mã QR",
+      "DELETE": "Xóa",
+      "DELETE_CONFIRM": "Xóa liên kết này? Các cuộc trò chuyện đã được gán nguồn vẫn giữ nguyên nguồn.",
+      "EMPTY": "Chưa có liên kết theo dõi. Tạo liên kết đầu tiên để ghi nhận cuộc trò chuyện từ cửa hàng, nhân viên bán hàng hoặc phần giới thiệu hồ sơ.",
+      "CREATE_SUCCESS": "Đã tạo liên kết",
+      "CREATE_ERROR": "Không thể tạo liên kết",
+      "NAME": "Tên",
+      "CLICKS": "Lượt nhấp"
+    }
+  }
+}

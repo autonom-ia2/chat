@@ -1,0 +1,99 @@
+{
+  "CAMPAIGN_MANAGEMENT": {
+    "HEADER": {
+      "TITLE": "Kampaņu pārvaldība",
+      "DESCRIPTION": "Sekojiet e-pasta kampaņu sūtīšanai, piegādei un kvalitātei."
+    },
+    "PAYWALL": {
+      "TITLE": "E-pasta kampaņas nav iespējotas",
+      "DESCRIPTION": "Iespējojiet e-pasta kampaņas, lai skatītu piegādes un iesaistes pārskatus."
+    },
+    "FILTER": {
+      "LABEL": "Kampaņa",
+      "ALL": "Visas kampaņas"
+    },
+    "APPROXIMATE": "aptuveni",
+    "OPEN_APPROXIMATE_HINT": "Atvēršanas rādītāji ir aptuveni. Apple Mail privātuma aizsardzība un līdzīgas funkcijas var palielināt atvēršanu skaitu, iepriekš ielādējot attēlus.",
+    "KPIS": {
+      "SENT": "Nosūtīts",
+      "DELIVERED": "Piegādāts",
+      "OPENED": "Atvērts",
+      "CLICKED": "Noklikšķināts",
+      "UNSUBSCRIBED": "Atteikšanās no abonēšanas",
+      "BOUNCED": "Nav piegādāts",
+      "COMPLAINED": "Sūdzības par surogātpastu"
+    },
+    "RATES": {
+      "OPEN_RATE": "Atvēršanas rādītājs",
+      "CLICK_RATE": "Klikšķu rādītājs",
+      "BOUNCE_RATE": "Nepiegādāšanas rādītājs",
+      "COMPLAINT_RATE": "Sūdzību par surogātpastu rādītājs",
+      "UNSUBSCRIBE_RATE": "Abonēšanas atteikumu rādītājs",
+      "OVER_DELIVERED": "no piegādātajiem"
+    },
+    "TABLE": {
+      "EMAIL": "E-pasts",
+      "NAME": "Vārds",
+      "LAST_EVENT_AT": "Pēdējā aktivitāte",
+      "STATUS": "Statuss",
+      "ATTEMPTS": "Mēģinājumi",
+      "OPENS": "Atvēršanas",
+      "CLICKS": "Klikšķi"
+    },
+    "EMPTY_STATE": {
+      "TITLE": "Kampaņu datu vēl nav",
+      "SUBTITLE": "Nosūtiet e-pasta kampaņu, lai skatītu piegādes un iesaistes rādītājus."
+    },
+    "ERROR": "Neizdevās ielādēt kampaņas pārskatu. Mēģiniet vēlreiz.",
+    "EXPORT_CSV": "Eksportēt CSV",
+    "TIMELINE": {
+      "TITLE": "Piegādes, atvēršanas un klikšķi laika gaitā",
+      "EMPTY": "Šai kampaņai vēl nav reģistrētu notikumu.",
+      "INTERVAL": {
+        "DAY": "Pa dienām",
+        "HOUR": "Pa stundām"
+      }
+    },
+    "CLICKS_BY_LINK": {
+      "TITLE": "Klikšķi pēc saites",
+      "EMPTY": "Klikšķi vēl nav reģistrēti.",
+      "URL": "Saite",
+      "UNIQUE": "Unikālie klikšķi",
+      "TOTAL": "Klikšķi kopā"
+    },
+    "RECIPIENTS": {
+      "TITLE": "Saņēmēji",
+      "SEARCH_PLACEHOLDER": "Meklēt pēc vārda vai e-pasta",
+      "EMPTY": "Saņēmēji nav atrasti.",
+      "PAGE_OF": "Lapa {page} no {total}",
+      "PREV": "Iepriekšējā",
+      "NEXT": "Nākamā"
+    },
+    "COMPARISON": {
+      "TITLE": "Kampaņu salīdzināšana"
+    }
+  },
+  "CRM_KANBAN": {
+    "TRACKED_LINKS": {
+      "TITLE": "Izsekojamas saites un QR kodi",
+      "SUBTITLE": "Izveidojiet saiti vai QR kodu katrai kampaņai, pārdevējam vai veikalam. Sarunām, kas sāktas ar tiem, CRM sistēmā tiek piešķirts avots.",
+      "ADD": "Jauna saite",
+      "NAME": "Nosaukums",
+      "NAME_PLACEHOLDER": "Piem., veikala QR — Centrs",
+      "INBOX": "WhatsApp iesūtne",
+      "PREFILLED": "Iepriekš aizpildīts ziņojums",
+      "PREFILLED_PLACEHOLDER": "Piem., Sveiki! Vēlos uzzināt vairāk",
+      "CODE": "Kods",
+      "CLICKS": "Klikšķi",
+      "CONVERSATIONS": "Sarunas",
+      "COPY_LINK": "Kopēt saiti",
+      "COPIED": "Nokopēts!",
+      "DOWNLOAD_QR": "Lejupielādēt QR",
+      "DELETE": "Dzēst",
+      "DELETE_CONFIRM": "Dzēst šo saiti? Sarunas, kurām jau piešķirts avots, to saglabās.",
+      "EMPTY": "Izsekojamu saišu vēl nav. Izveidojiet pirmo, lai norādītu sarunu izcelsmi no veikala, pārdevēja vai profila apraksta.",
+      "CREATE_SUCCESS": "Saite izveidota",
+      "CREATE_ERROR": "Neizdevās izveidot saiti"
+    }
+  }
+}

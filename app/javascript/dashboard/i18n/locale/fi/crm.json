@@ -1,0 +1,99 @@
+{
+  "CAMPAIGN_MANAGEMENT": {
+    "HEADER": {
+      "TITLE": "Kampanjoiden hallinta",
+      "DESCRIPTION": "Seuraa sähköpostikampanjoiden lähettämistä, toimitusta ja laatua."
+    },
+    "PAYWALL": {
+      "TITLE": "Sähköpostikampanjat eivät ole käytössä",
+      "DESCRIPTION": "Ota sähköpostikampanjat käyttöön nähdäksesi toimitus- ja vuorovaikutusraportit."
+    },
+    "FILTER": {
+      "LABEL": "Kampanja",
+      "ALL": "Kaikki kampanjat"
+    },
+    "APPROXIMATE": "arvio",
+    "OPEN_APPROXIMATE_HINT": "Avausasteet ovat arvioita. Apple Mail Privacy Protection ja vastaavat toiminnot voivat kasvattaa niitä lataamalla kuvat ennakkoon.",
+    "KPIS": {
+      "DELIVERED": "Toimitettu",
+      "OPENED": "Avattu",
+      "CLICKED": "Klikattu",
+      "UNSUBSCRIBED": "Tilausten peruutukset",
+      "COMPLAINED": "Roskaposti-ilmoitukset",
+      "SENT": "Lähetetty",
+      "BOUNCED": "Ei toimitettu"
+    },
+    "RATES": {
+      "OPEN_RATE": "Avausaste",
+      "CLICK_RATE": "Klikkausaste",
+      "BOUNCE_RATE": "Toimittamatta jääneiden osuus",
+      "COMPLAINT_RATE": "Ilmoitusaste",
+      "UNSUBSCRIBE_RATE": "Peruutusaste",
+      "OVER_DELIVERED": "toimitetuista"
+    },
+    "TABLE": {
+      "EMAIL": "Sähköposti",
+      "NAME": "Nimi",
+      "LAST_EVENT_AT": "Viimeisin toiminta",
+      "STATUS": "Tila",
+      "ATTEMPTS": "Yritykset",
+      "OPENS": "Avaukset",
+      "CLICKS": "Klikkaukset"
+    },
+    "EMPTY_STATE": {
+      "TITLE": "Ei vielä kampanjatietoja",
+      "SUBTITLE": "Lähetä sähköpostikampanja nähdäksesi toimitus- ja vuorovaikutusmittarit."
+    },
+    "ERROR": "Kampanjaraportin lataaminen epäonnistui. Yritä uudelleen.",
+    "EXPORT_CSV": "Vie CSV",
+    "TIMELINE": {
+      "TITLE": "Toimitukset, avaukset ja klikkaukset ajan kuluessa",
+      "EMPTY": "Kampanjalle ei ole vielä kirjattu tapahtumia.",
+      "INTERVAL": {
+        "DAY": "Päivittäin",
+        "HOUR": "Tunneittain"
+      }
+    },
+    "CLICKS_BY_LINK": {
+      "TITLE": "Klikkaukset linkeittäin",
+      "EMPTY": "Ei vielä kirjattuja klikkauksia.",
+      "URL": "Linkki",
+      "UNIQUE": "Yksilölliset klikkaukset",
+      "TOTAL": "Klikkaukset yhteensä"
+    },
+    "RECIPIENTS": {
+      "TITLE": "Vastaanottajat",
+      "EMPTY": "Vastaanottajia ei löytynyt.",
+      "PAGE_OF": "Sivu {page}/{total}",
+      "PREV": "Edellinen",
+      "NEXT": "Seuraava",
+      "SEARCH_PLACEHOLDER": "Hae nimellä tai sähköpostiosoitteella"
+    },
+    "COMPARISON": {
+      "TITLE": "Kampanjoiden vertailu"
+    }
+  },
+  "CRM_KANBAN": {
+    "TRACKED_LINKS": {
+      "TITLE": "Seurattavat linkit ja QR-koodit",
+      "SUBTITLE": "Luo linkki tai QR-koodi kampanjalle, myyjälle tai myymälälle. Sen kautta alkavien keskustelujen lähde tallentuu CRM:ään.",
+      "ADD": "Uusi linkki",
+      "NAME_PLACEHOLDER": "Esim. Myymälän QR — Keskusta",
+      "INBOX": "WhatsApp-postilaatikko",
+      "PREFILLED": "Esitäytetty viesti",
+      "PREFILLED_PLACEHOLDER": "Esim. Hei! Haluaisin lisätietoja",
+      "CODE": "Koodi",
+      "CONVERSATIONS": "Keskustelut",
+      "COPY_LINK": "Kopioi linkki",
+      "COPIED": "Kopioitu!",
+      "DOWNLOAD_QR": "Lataa QR-koodi",
+      "DELETE": "Poista",
+      "DELETE_CONFIRM": "Poistetaanko linkki? Jo kohdistetut keskustelut säilyttävät alkuperänsä.",
+      "EMPTY": "Ei vielä seurattavia linkkejä. Luo linkki kohdistaaksesi keskustelut myymälään, myyjään tai profiililinkkiin.",
+      "CREATE_SUCCESS": "Linkki luotu",
+      "CREATE_ERROR": "Linkin luominen epäonnistui",
+      "NAME": "Nimi",
+      "CLICKS": "Klikkaukset"
+    }
+  }
+}

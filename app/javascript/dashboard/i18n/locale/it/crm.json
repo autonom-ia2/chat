@@ -1,0 +1,99 @@
+{
+  "CAMPAIGN_MANAGEMENT": {
+    "HEADER": {
+      "TITLE": "Gestione campagne",
+      "DESCRIPTION": "Monitora invio, consegna e qualità delle tue campagne email."
+    },
+    "PAYWALL": {
+      "TITLE": "Le campagne email non sono abilitate",
+      "DESCRIPTION": "Abilita le campagne email per visualizzare i rapporti su consegna e interazioni."
+    },
+    "FILTER": {
+      "LABEL": "Campagna",
+      "ALL": "Tutte le campagne"
+    },
+    "APPROXIMATE": "approssimativo",
+    "OPEN_APPROXIMATE_HINT": "I tassi di apertura sono approssimativi. La protezione della privacy di Apple Mail e funzioni simili possono aumentare le aperture precaricando le immagini.",
+    "KPIS": {
+      "SENT": "Inviati",
+      "DELIVERED": "Consegnati",
+      "OPENED": "Aperti",
+      "CLICKED": "Con clic",
+      "UNSUBSCRIBED": "Disiscrizioni",
+      "BOUNCED": "Non consegnati",
+      "COMPLAINED": "Segnalazioni di spam"
+    },
+    "RATES": {
+      "OPEN_RATE": "Tasso di apertura",
+      "CLICK_RATE": "Tasso di clic",
+      "BOUNCE_RATE": "Tasso di mancata consegna",
+      "COMPLAINT_RATE": "Tasso di segnalazioni di spam",
+      "UNSUBSCRIBE_RATE": "Tasso di disiscrizione",
+      "OVER_DELIVERED": "dei consegnati"
+    },
+    "TABLE": {
+      "EMAIL": "Email",
+      "NAME": "Nome",
+      "LAST_EVENT_AT": "Ultima attività",
+      "STATUS": "Stato",
+      "ATTEMPTS": "Tentativi",
+      "OPENS": "Aperture",
+      "CLICKS": "Clic"
+    },
+    "EMPTY_STATE": {
+      "TITLE": "Nessun dato sulle campagne disponibile",
+      "SUBTITLE": "Invia una campagna email per visualizzare le metriche di consegna e interazione."
+    },
+    "ERROR": "Impossibile caricare il rapporto della campagna. Riprova.",
+    "EXPORT_CSV": "Esporta CSV",
+    "TIMELINE": {
+      "TITLE": "Consegne, aperture e clic nel tempo",
+      "EMPTY": "Nessun evento registrato per questa campagna.",
+      "INTERVAL": {
+        "DAY": "Per giorno",
+        "HOUR": "Per ora"
+      }
+    },
+    "CLICKS_BY_LINK": {
+      "TITLE": "Clic per link",
+      "EMPTY": "Nessun clic registrato.",
+      "URL": "Link",
+      "UNIQUE": "Clic unici",
+      "TOTAL": "Clic totali"
+    },
+    "RECIPIENTS": {
+      "TITLE": "Destinatari",
+      "SEARCH_PLACEHOLDER": "Cerca per nome o email",
+      "EMPTY": "Nessun destinatario trovato.",
+      "PAGE_OF": "Pagina {page} di {total}",
+      "PREV": "Precedente",
+      "NEXT": "Successiva"
+    },
+    "COMPARISON": {
+      "TITLE": "Confronto delle campagne"
+    }
+  },
+  "CRM_KANBAN": {
+    "TRACKED_LINKS": {
+      "TITLE": "Link tracciabili e codici QR",
+      "SUBTITLE": "Crea un link o un QR per campagna, venditore o negozio. Le conversazioni avviate tramite questi collegamenti vengono attribuite alla loro origine nel CRM.",
+      "ADD": "Nuovo link",
+      "NAME": "Nome",
+      "NAME_PLACEHOLDER": "Es.: QR negozio — Centro",
+      "INBOX": "Casella WhatsApp",
+      "PREFILLED": "Messaggio precompilato",
+      "PREFILLED_PLACEHOLDER": "Es.: Ciao! Vorrei saperne di più",
+      "CODE": "Codice",
+      "CLICKS": "Clic",
+      "CONVERSATIONS": "Conversazioni",
+      "COPY_LINK": "Copia link",
+      "COPIED": "Copiato!",
+      "DOWNLOAD_QR": "Scarica QR",
+      "DELETE": "Elimina",
+      "DELETE_CONFIRM": "Eliminare questo link? Le conversazioni già attribuite mantengono la loro origine.",
+      "EMPTY": "Nessun link tracciabile. Crea il primo per attribuire le conversazioni provenienti da negozi, venditori o biografie.",
+      "CREATE_SUCCESS": "Link creato",
+      "CREATE_ERROR": "Impossibile creare il link"
+    }
+  }
+}

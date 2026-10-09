@@ -211,6 +211,134 @@
         "SUCCESS_MESSAGE": "Campanie ștearsă cu succes",
         "ERROR_MESSAGE": "A apărut o eroare. Te rugăm să încerci din nou."
       }
+    },
+    "EMAIL_CAMPAIGN": {
+      "ACTIONS": {
+        "CANCEL": "Anulează",
+        "CANCEL_SUCCESS": "Campanie anulată.",
+        "DELETE": "Șterge",
+        "DELETE_SUCCESS": "Campanie ștearsă.",
+        "DUPLICATE": "Duplică",
+        "DUPLICATE_SUCCESS": "Campanie duplicată. Actualizează destinatarii și programarea.",
+        "EDIT": "Editează",
+        "MANAGE_RECIPIENTS": "Destinatari",
+        "OPEN_BUILDER": "Editor",
+        "PAUSE": "Pune pe pauză",
+        "PAUSE_SUCCESS": "Campanie pusă pe pauză.",
+        "SCHEDULE": "Programează",
+        "SCHEDULE_SUCCESS": "Campanie programată.",
+        "SEND_NOW": "Trimite acum",
+        "SEND_SUCCESS": "Campanie în coada de trimitere."
+      },
+      "AI": {
+        "BADGE": {
+          "FAILED": "Eroare IA",
+          "PROCESSING": "IA generează",
+          "READY": "IA pregătită"
+        }
+      },
+      "COUNTS": {
+        "FAILED": "Eșuate",
+        "RECIPIENTS": "Destinatari",
+        "SENT": "Trimise"
+      },
+      "DESCRIPTION": "Scrie un e-mail, alege un domeniu de trimitere verificat, încarcă destinatarii și trimite acum sau programează trimiterea.",
+      "DIALOG": {
+        "BASE_HINT": "Încarcă un CSV sau XLSX cu coloanele name și email. Coloanele detectate devin variabile de personalizare.",
+        "BASE_IMPORTING": "Se importă lista…",
+        "BASE_LABEL": "Lista de contacte (CSV sau XLSX)",
+        "BASE_PICK": "Alege fișierul",
+        "BASE_SELECTED": "Selectat: {name}",
+        "CANCEL": "Anulează",
+        "CREATE_AND_OPEN": "Creează și deschide în editor",
+        "CREATE_TITLE": "Campanie de e-mail nouă",
+        "DIRECT_OPTION": "trimitere directă prin această căsuță poștală",
+        "DIRECT_WARNING": "Atenție: aceasta este căsuța ta personală. Folosește-o numai pentru volume mici de contacte proprii reale care și-au dat acordul. Trimiterea în masă dintr-un cont webmail gratuit poate duce la blocarea sau suspendarea contului. Limita este de 100 pe zi, cu intervale similare trimiterii manuale. Pentru liste mai mari, verifică propriul domeniu.",
+        "EDIT_TITLE": "Editează campania de e-mail",
+        "ERROR": "Campania nu a putut fi salvată. Încearcă din nou.",
+        "FROM_EMAIL_DIRECT_HINT": "Trimis direct din această căsuță poștală.",
+        "FROM_EMAIL_ERROR": "Adresa expeditorului este obligatorie",
+        "FROM_EMAIL_HINT": "Trebuie să fie o adresă {'@'}{domain} (domeniul tău verificat).",
+        "FROM_EMAIL_HINT_NO_DOMAIN": "Trebuie să fie o adresă de pe domeniul tău de trimitere verificat.",
+        "FROM_EMAIL_INVALID": "Introdu o adresă validă de pe domeniul tău verificat",
+        "FROM_EMAIL_LABEL": "E-mailul expeditorului",
+        "FROM_EMAIL_PLACEHOLDER": "Ex.: promo{'@'}firmata.com",
+        "FROM_NAME_ERROR": "Numele expeditorului este obligatoriu",
+        "FROM_NAME_LABEL": "Numele expeditorului",
+        "FROM_NAME_PLACEHOLDER": "Ex.: Marketing Acme",
+        "NAME_ERROR": "Introdu un nume pentru campanie",
+        "NAME_LABEL": "Numele campaniei",
+        "NAME_PLACEHOLDER": "Ex.: Buletin informativ din iunie",
+        "NO_VERIFIED_DOMAIN": "Nu există un domeniu de trimitere verificat. Adaugă și verifică unul în Domenii de trimitere e-mail.",
+        "REPLY_TO_ERROR": "Adresa pentru răspunsuri este obligatorie",
+        "REPLY_TO_HINT": "Răspunsurile ajung la această adresă. Conecteaz-o ca o căsuță de mesaje pentru a transforma răspunsurile în conversații.",
+        "REPLY_TO_INVALID": "Introdu o adresă de e-mail validă",
+        "REPLY_TO_LABEL": "Adresă pentru răspunsuri",
+        "REPLY_TO_PLACEHOLDER": "Ex.: asistenta{'@'}firmata.com",
+        "SAVE_DRAFT": "Salvează ciorna",
+        "SENDER_ERROR": "Selectează un domeniu de trimitere verificat",
+        "SENDER_LABEL": "Domeniu de trimitere",
+        "SENDER_PLACEHOLDER": "Selectează un domeniu verificat",
+        "SUCCESS": "Campanie salvată."
+      },
+      "EMPTY_STATE": {
+        "SUBTITLE": "Creează prima campanie pentru a scrie și trimite un e-mail unei liste importate.",
+        "TITLE": "Încă nu există campanii de e-mail"
+      },
+      "HEADER_TITLE": "Campanii de e-mail",
+      "IMPORT": {
+        "ERRORS": {
+          "EMPTY_FILE": "Lista este goală. Adaugă contacte și încarc-o din nou.",
+          "EXPIRED": "Fișierul încărcat a expirat. Încarcă lista din nou.",
+          "FAILED": "Importul a eșuat. Nu a fost adăugat niciun contact din această încercare. Reîncearcă sau încarcă fișierul din nou.",
+          "FILE_TOO_LARGE": "Fișierul depășește dimensiunea permisă. Împarte lista și încearcă din nou.",
+          "HEADERS": "Folosește o coloană Name și una Email în primul rând al primei foi, fără antete duplicate.",
+          "INVALID_FILE": "Fișierul nu a putut fi citit. Încarcă un CSV sau XLSX valid.",
+          "IN_PROGRESS": "Există deja un import în desfășurare pentru această campanie. Așteaptă finalizarea.",
+          "ROW_LIMIT": "Lista depășește 50.000 de rânduri. Împarte-o în fișiere mai mici.",
+          "UPLOAD_FAILED": "Fișierul nu a putut fi stocat. Încarcă lista din nou."
+        },
+        "QUEUED": "Listă primită. Importul este în așteptare; poți părăsi această pagină.",
+        "RETRY": "Reîncearcă importul",
+        "PROCESSING": "Se importă lista. Trimiterea nu este disponibilă până la finalizare.",
+        "COMPLETED": "Importul listei a fost finalizat.",
+        "SUMMARY": "Adăugate: {imported} · Duplicate: {duplicates} · Nevalide: {invalid} · Excluse de la trimitere: {suppressed} · Total: {total}"
+      },
+      "NEW": "Campanie de e-mail nouă",
+      "PLACEHOLDERS": {
+        "COPY_SUCCESS": "Variabilă copiată în clipboard.",
+        "EMPTY": "Importă destinatarii pentru a vedea variabilele din coloanele foii de calcul.",
+        "SUBTITLE": "Apasă pe o variabilă pentru a o copia, apoi lipește-o în subiect, textul de previzualizare sau corpul mesajului.",
+        "TITLE": "Variabile disponibile"
+      },
+      "RECIPIENTS": {
+        "ADD_MORE": "Adaugă mai multe contacte",
+        "ADD_MORE_HINT": "Lista a fost încărcată la crearea campaniei. Încarcă alt CSV/XLSX pentru a adăuga contacte.",
+        "SUBTITLE": "Încarcă un CSV sau XLSX cu coloanele name și email. Destinatarii sunt folosiți doar pentru această campanie și nu sunt adăugați la contactele tale.",
+        "TITLE": "Destinatari"
+      },
+      "SCHEDULE_DIALOG": {
+        "CANCEL": "Anulează",
+        "DATETIME_ERROR": "Alege data și ora",
+        "DATETIME_LABEL": "Trimite la",
+        "SUBMIT": "Programează"
+      },
+      "STATUS": {
+        "CANCELED": "Anulat",
+        "DRAFT": "Ciornă",
+        "FAILED": "Eșuate",
+        "PAUSED": "În pauză",
+        "SCHEDULED": "Programat",
+        "SENDING": "Se trimite",
+        "SENT": "Trimis"
+      },
+      "VALIDATION": {
+        "BLANK_ITEM": "{key}: destinatari fără valoare: {count}",
+        "BLANK_LABEL": "Destinatari fără valoare:",
+        "MISSING_LABEL": "Folosite în șablon, dar negăsite la destinatari:",
+        "OK": "Toate variabilele folosite în această campanie au valori. Poți continua.",
+        "TITLE": "Verificare înainte de trimitere"
+      }
     }
   }
 }

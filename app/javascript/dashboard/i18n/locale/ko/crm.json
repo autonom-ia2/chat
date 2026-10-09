@@ -1,0 +1,99 @@
+{
+  "CAMPAIGN_MANAGEMENT": {
+    "HEADER": {
+      "TITLE": "캠페인 관리",
+      "DESCRIPTION": "이메일 캠페인의 발송, 전달 및 품질을 확인하세요."
+    },
+    "PAYWALL": {
+      "TITLE": "이메일 캠페인이 활성화되어 있지 않습니다",
+      "DESCRIPTION": "이메일 캠페인을 활성화하면 전달 및 참여 보고서를 볼 수 있습니다."
+    },
+    "FILTER": {
+      "LABEL": "캠페인",
+      "ALL": "모든 캠페인"
+    },
+    "APPROXIMATE": "추정치",
+    "OPEN_APPROXIMATE_HINT": "열람률은 추정치입니다. Apple Mail 개인정보 보호와 유사한 기능은 이미지를 미리 불러와 열람 수를 높일 수 있습니다.",
+    "KPIS": {
+      "SENT": "발송됨",
+      "DELIVERED": "전달됨",
+      "OPENED": "열람됨",
+      "CLICKED": "클릭됨",
+      "UNSUBSCRIBED": "구독 취소",
+      "BOUNCED": "미전달",
+      "COMPLAINED": "스팸 신고"
+    },
+    "RATES": {
+      "OPEN_RATE": "열람률",
+      "CLICK_RATE": "클릭률",
+      "BOUNCE_RATE": "미전달률",
+      "COMPLAINT_RATE": "스팸 신고율",
+      "UNSUBSCRIBE_RATE": "구독 취소율",
+      "OVER_DELIVERED": "전달된 이메일 기준"
+    },
+    "TABLE": {
+      "EMAIL": "이메일",
+      "NAME": "이름",
+      "LAST_EVENT_AT": "최근 활동",
+      "STATUS": "상태",
+      "ATTEMPTS": "시도 횟수",
+      "OPENS": "열람 수",
+      "CLICKS": "클릭 수"
+    },
+    "EMPTY_STATE": {
+      "TITLE": "아직 캠페인 데이터가 없습니다",
+      "SUBTITLE": "이메일 캠페인을 발송하면 전달 및 참여 지표를 볼 수 있습니다."
+    },
+    "ERROR": "캠페인 보고서를 불러오지 못했습니다. 다시 시도하세요.",
+    "EXPORT_CSV": "CSV 내보내기",
+    "TIMELINE": {
+      "TITLE": "시간에 따른 전달, 열람 및 클릭 수",
+      "EMPTY": "이 캠페인에 기록된 이벤트가 아직 없습니다.",
+      "INTERVAL": {
+        "DAY": "일별",
+        "HOUR": "시간별"
+      }
+    },
+    "CLICKS_BY_LINK": {
+      "TITLE": "링크별 클릭 수",
+      "EMPTY": "아직 기록된 클릭이 없습니다.",
+      "URL": "링크",
+      "UNIQUE": "고유 클릭 수",
+      "TOTAL": "총 클릭 수"
+    },
+    "RECIPIENTS": {
+      "TITLE": "수신자",
+      "SEARCH_PLACEHOLDER": "이름 또는 이메일로 검색",
+      "EMPTY": "수신자를 찾을 수 없습니다.",
+      "PAGE_OF": "전체 {total}페이지 중 {page}페이지",
+      "PREV": "이전",
+      "NEXT": "다음"
+    },
+    "COMPARISON": {
+      "TITLE": "캠페인 비교"
+    }
+  },
+  "CRM_KANBAN": {
+    "TRACKED_LINKS": {
+      "TITLE": "추적 가능한 링크 및 QR 코드",
+      "SUBTITLE": "캠페인, 판매자 또는 매장별로 링크나 QR 코드를 만드세요. 이를 통해 시작된 대화에는 CRM에서 유입 경로가 지정됩니다.",
+      "ADD": "새 링크",
+      "NAME": "이름",
+      "NAME_PLACEHOLDER": "예: 매장 QR — 도심점",
+      "INBOX": "WhatsApp 받은 편지함",
+      "PREFILLED": "미리 입력된 메시지",
+      "PREFILLED_PLACEHOLDER": "예: 안녕하세요! 자세히 알고 싶어요",
+      "CODE": "코드",
+      "CLICKS": "클릭 수",
+      "CONVERSATIONS": "대화",
+      "COPY_LINK": "링크 복사",
+      "COPIED": "복사됨!",
+      "DOWNLOAD_QR": "QR 다운로드",
+      "DELETE": "삭제",
+      "DELETE_CONFIRM": "이 링크를 삭제할까요? 이미 유입 경로가 지정된 대화는 해당 경로를 유지합니다.",
+      "EMPTY": "아직 추적 가능한 링크가 없습니다. 첫 링크를 만들어 매장, 판매자 또는 프로필 소개에서 시작된 대화의 경로를 기록하세요.",
+      "CREATE_SUCCESS": "링크가 생성되었습니다",
+      "CREATE_ERROR": "링크를 생성하지 못했습니다"
+    }
+  }
+}

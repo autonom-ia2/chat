@@ -1,0 +1,99 @@
+{
+  "CAMPAIGN_MANAGEMENT": {
+    "HEADER": {
+      "TITLE": "Kampaniyalarni boshqarish",
+      "DESCRIPTION": "Email kampaniyalarining yuborilishi, yetkazilishi va sifatini kuzating."
+    },
+    "PAYWALL": {
+      "TITLE": "Email kampaniyalari yoqilmagan",
+      "DESCRIPTION": "Yetkazish va faollik hisobotlarini ko‘rish uchun email kampaniyalarini yoqing."
+    },
+    "FILTER": {
+      "LABEL": "Kampaniya",
+      "ALL": "Barcha kampaniyalar"
+    },
+    "APPROXIMATE": "taxminiy",
+    "OPEN_APPROXIMATE_HINT": "Ochish ko‘rsatkichlari taxminiy. Apple Mail maxfiylik himoyasi va o‘xshash funksiyalar rasmlarni oldindan yuklab, ochilishlar sonini oshirishi mumkin.",
+    "KPIS": {
+      "SENT": "Yuborilgan",
+      "DELIVERED": "Yetkazilgan",
+      "OPENED": "Ochilgan",
+      "CLICKED": "Bosilgan",
+      "UNSUBSCRIBED": "Obunadan chiqishlar",
+      "COMPLAINED": "Spam shikoyatlari",
+      "BOUNCED": "Yetkazilmadi"
+    },
+    "RATES": {
+      "OPEN_RATE": "Ochish ulushi",
+      "CLICK_RATE": "Bosish ulushi",
+      "BOUNCE_RATE": "Yetkazilmaganlar ulushi",
+      "COMPLAINT_RATE": "Shikoyatlar ulushi",
+      "UNSUBSCRIBE_RATE": "Obunadan chiqish ulushi",
+      "OVER_DELIVERED": "yetkazilganlar ichida"
+    },
+    "TABLE": {
+      "EMAIL": "Email",
+      "NAME": "Ism",
+      "LAST_EVENT_AT": "Oxirgi faollik",
+      "STATUS": "Holat",
+      "ATTEMPTS": "Urinishlar",
+      "OPENS": "Ochilishlar",
+      "CLICKS": "Bosishlar"
+    },
+    "EMPTY_STATE": {
+      "TITLE": "Hali kampaniya ma’lumotlari yo‘q",
+      "SUBTITLE": "Yetkazish va faollik ko‘rsatkichlarini ko‘rish uchun email kampaniyasini yuboring."
+    },
+    "ERROR": "Kampaniya hisobotini yuklab bo‘lmadi. Qayta urinib ko‘ring.",
+    "EXPORT_CSV": "CSV eksport qilish",
+    "TIMELINE": {
+      "TITLE": "Vaqt bo‘yicha yetkazishlar, ochilishlar va bosishlar",
+      "EMPTY": "Bu kampaniya uchun hali hodisalar qayd etilmagan.",
+      "INTERVAL": {
+        "DAY": "Kun bo‘yicha",
+        "HOUR": "Soat bo‘yicha"
+      }
+    },
+    "CLICKS_BY_LINK": {
+      "TITLE": "Havola bo‘yicha bosishlar",
+      "EMPTY": "Hali bosishlar qayd etilmagan.",
+      "URL": "Havola",
+      "UNIQUE": "Noyob bosishlar",
+      "TOTAL": "Jami bosishlar"
+    },
+    "RECIPIENTS": {
+      "TITLE": "Qabul qiluvchilar",
+      "EMPTY": "Qabul qiluvchilar topilmadi.",
+      "PAGE_OF": "{total} sahifadan {page}-sahifa",
+      "PREV": "Oldingi",
+      "NEXT": "Keyingi",
+      "SEARCH_PLACEHOLDER": "Ism yoki elektron pochta bo‘yicha qidirish"
+    },
+    "COMPARISON": {
+      "TITLE": "Kampaniyalarni taqqoslash"
+    }
+  },
+  "CRM_KANBAN": {
+    "TRACKED_LINKS": {
+      "TITLE": "Kuzatiladigan havolalar va QR kodlar",
+      "SUBTITLE": "Har bir kampaniya, sotuvchi yoki do‘kon uchun havola yoki QR kod yarating. Ular orqali boshlangan suhbatlar CRM tizimida manbaga bog‘lanadi.",
+      "ADD": "Yangi havola",
+      "NAME_PLACEHOLDER": "Masalan, Do‘kon QR kodi — Markaz",
+      "INBOX": "WhatsApp kiruvchi xatlar qutisi",
+      "PREFILLED": "Oldindan to‘ldirilgan xabar",
+      "PREFILLED_PLACEHOLDER": "Masalan, Salom! Batafsil bilmoqchiman",
+      "CODE": "Kod",
+      "CONVERSATIONS": "Suhbatlar",
+      "COPY_LINK": "Havolani nusxalash",
+      "COPIED": "Nusxalandi!",
+      "DOWNLOAD_QR": "QR kodni yuklab olish",
+      "DELETE": "O‘chirish",
+      "DELETE_CONFIRM": "Bu havola o‘chirilsinmi? Avval bog‘langan suhbatlar o‘z manbasini saqlaydi.",
+      "EMPTY": "Hali kuzatiladigan havolalar yo‘q. Do‘kon, sotuvchi yoki profil tavsifidan kelgan suhbatlarni bog‘lash uchun birinchisini yarating.",
+      "CREATE_SUCCESS": "Havola yaratildi",
+      "CREATE_ERROR": "Havolani yaratib bo‘lmadi",
+      "NAME": "Ism",
+      "CLICKS": "Bosishlar"
+    }
+  }
+}

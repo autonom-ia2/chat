@@ -4,6 +4,8 @@ class EmailCampaigns::RecipientImportMaintenanceJob < ApplicationJob
   def perform
     return unless EmailCampaigns::Config.enabled?
 
+    enqueue_preflights
+
     # Also recovers a crash between committing the upload and enqueueing its job.
     EmailCampaignImport.active.where(updated_at: ...EmailCampaignImport::RECOVERY_AFTER.ago).find_each do |import|
       recover(import)
@@ -15,6 +17,15 @@ class EmailCampaigns::RecipientImportMaintenanceJob < ApplicationJob
   end
 
   private
+
+  def enqueue_preflights
+    # Recover lost preflight enqueues and recheck expired/inconclusive outcomes.
+    ids = EmailCampaigns::RecipientPreflightJob.due.select(:email_campaign_id)
+    expired = EmailCampaign.where.not(preflight_lease_token: nil).where('preflight_lease_expires_at <= ?', Time.current)
+    EmailCampaign.where(id: ids).or(expired).where(status: %i[draft scheduled sending paused]).find_each(batch_size: 50) do |campaign|
+      EmailCampaigns::RecipientPreflightJob.enqueue(campaign.id) unless campaign.recipient_import_active?
+    end
+  end
 
   def recover(import)
     enqueue = false

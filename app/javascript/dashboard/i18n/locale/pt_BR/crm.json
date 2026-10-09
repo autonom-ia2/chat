@@ -2,7 +2,7 @@
   "CAMPAIGN_MANAGEMENT": {
     "HEADER": {
       "TITLE": "Gestão de campanhas",
-      "DESCRIPTION": "Acompanhe entregas, aberturas, cliques, descadastros, bounces e reclamações de spam das suas campanhas de e-mail."
+      "DESCRIPTION": "Acompanhe envios, entregas e a qualidade das suas campanhas de e-mail."
     },
     "PAYWALL": {
       "TITLE": "As campanhas de e-mail não estão habilitadas",
@@ -20,13 +20,13 @@
       "OPENED": "Abertos",
       "CLICKED": "Clicados",
       "UNSUBSCRIBED": "Descadastros",
-      "BOUNCED": "Bounces",
+      "BOUNCED": "Não entregues",
       "COMPLAINED": "Reclamações de spam"
     },
     "RATES": {
       "OPEN_RATE": "Taxa de abertura",
       "CLICK_RATE": "Taxa de cliques",
-      "BOUNCE_RATE": "Taxa de bounce",
+      "BOUNCE_RATE": "Taxa de não entrega",
       "COMPLAINT_RATE": "Taxa de reclamações",
       "UNSUBSCRIBE_RATE": "Taxa de descadastro",
       "OVER_DELIVERED": "dos entregues"
@@ -178,12 +178,12 @@
       "CARD_EVENT": "Evento: {event}"
     },
     "TRACKED_LINKS": {
-      "TITLE": "Links rastreáveis & QR codes",
+      "TITLE": "Links rastreáveis e códigos QR",
       "SUBTITLE": "Crie um link ou QR por campanha, vendedor ou loja. Conversas iniciadas por ele chegam atribuídas no CRM.",
       "ADD": "Novo link",
       "NAME": "Nome",
       "NAME_PLACEHOLDER": "Ex.: QR da loja — Centro",
-      "INBOX": "Inbox do WhatsApp",
+      "INBOX": "Caixa de entrada do WhatsApp",
       "PREFILLED": "Mensagem pré-preenchida",
       "PREFILLED_PLACEHOLDER": "Ex.: Olá! Quero saber mais",
       "CODE": "Código",
