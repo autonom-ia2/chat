@@ -45,6 +45,30 @@ describe('MyBookingHoursPage', () => {
     vi.clearAllMocks();
   });
 
+  it('horário salvo que saiu do limite começa só com o que ainda cabe, e salva sem erro', async () => {
+    MyBookingHoursAPI.save.mockResolvedValue({ data: { payload: payload() } });
+    const wrapper = await mountPage(
+      payload({
+        custom_hours: true,
+        weekdays: [1, 6],
+        start_hour: 7,
+        end_hour: 20,
+        limits: { weekdays: [1, 2, 3, 4, 5], start_hour: 9, end_hour: 17 },
+      })
+    );
+
+    const [start, end] = wrapper.findAllComponents(ChoiceSelect);
+    expect(start.props('modelValue')).toBe(9);
+    expect(end.props('modelValue')).toBe(17);
+    await wrapper.find('[data-save]').trigger('click');
+    await flushPromises();
+    expect(MyBookingHoursAPI.save).toHaveBeenCalledWith({
+      weekdays: [1],
+      startHour: 9,
+      endHour: 17,
+    });
+  });
+
   it('só oferece dias e horas dentro do limite das páginas', async () => {
     const wrapper = await mountPage(
       payload({

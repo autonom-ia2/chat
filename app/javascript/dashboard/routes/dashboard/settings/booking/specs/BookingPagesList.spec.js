@@ -139,6 +139,40 @@ describe('BookingPagesList', () => {
     expect(cards[1].find('[data-attention]').exists()).toBe(false);
   });
 
+  it('o admin vê quem pausou a agenda e as reuniões que ficaram com quem saiu (#1195)', async () => {
+    BookingPagesAPI.get.mockResolvedValue({
+      data: {
+        payload: [
+          page(1, {
+            paused_people: [{ id: 5, name: 'Rita' }],
+            orphaned: [
+              { id: 9, name: 'Vendedor', upcoming_meetings_count: 2 },
+              { id: 10, name: null, upcoming_meetings_count: 1 },
+            ],
+          }),
+          page(2),
+        ],
+      },
+    });
+    const wrapper = mountList(false);
+    await flushPromises();
+    const cards = wrapper.findAll('[data-page]');
+
+    expect(cards[0].find('[data-paused-person="5"]').text()).toBe(
+      'BOOKING.CARD.PERSON_PAUSED {"name":"Rita"}'
+    );
+    expect(cards[0].find('[data-orphaned]').attributes('role')).toBe('status');
+    expect(cards[0].find('[data-orphaned-person="9"]').text()).toBe(
+      'BOOKING.CARD.ORPHANED {"name":"Vendedor","count":2}'
+    );
+    expect(cards[0].find('[data-orphaned-person="10"]').text()).toBe(
+      'BOOKING.CARD.ORPHANED {"name":"BOOKING.CARD.REMOVED_PERSON","count":1}'
+    );
+    expect(cards[0].find('[data-attention]').exists()).toBe(false);
+    expect(cards[1].find('[data-paused-people]').exists()).toBe(false);
+    expect(cards[1].find('[data-orphaned]').exists()).toBe(false);
+  });
+
   it('copiar link usa a área de transferência e avisa', async () => {
     BookingPagesAPI.get.mockResolvedValue({ data: { payload: [page(1)] } });
     const wrapper = mountList();

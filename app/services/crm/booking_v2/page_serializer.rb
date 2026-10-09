@@ -10,11 +10,14 @@ class Crm::BookingV2::PageSerializer
   end
 
   # `upcoming_meetings_count`: a lista passa a contagem já feita em lote (AttentionReport.upcoming_counts); sem ela,
-  # conta só esta página.
-  def initialize(profile, attention: false, upcoming_meetings_count: nil)
+  # conta só esta página. `paused_user_ids`: quem pausou a própria agenda (#1195), também em lote na lista.
+  # `orphaned`: `AttentionReport#orphaned` desta página.
+  def initialize(profile, attention: false, upcoming_meetings_count: nil, paused_user_ids: nil, orphaned: [])
     @profile = profile
     @attention = attention
     @upcoming_meetings_count = upcoming_meetings_count
+    @paused_user_ids = paused_user_ids
+    @orphaned = orphaned
   end
 
   def summary
@@ -22,7 +25,7 @@ class Crm::BookingV2::PageSerializer
       id: profile.id, slug: profile.slug, title: profile.title, enabled: profile.enabled, public_url: public_url,
       locations: profile.locations, assignment_mode: profile.assignment_mode,
       upcoming_meetings_count: upcoming_meetings_count,
-      attention: attention
+      attention: attention, orphaned: @orphaned, paused_people: paused_people
     }
   end
 
@@ -36,6 +39,23 @@ class Crm::BookingV2::PageSerializer
 
   def upcoming_meetings_count
     @upcoming_meetings_count || Crm::BookingV2::AttentionReport.upcoming_meetings(profile).count
+  end
+
+  # Quem atende esta página e pausou a própria agenda em Meus horários (#1195): o admin vê no cartão.
+  def paused_people
+    hosts = host_users
+    paused = @paused_user_ids || paused_ids(hosts)
+    hosts.select { |user| paused.include?(user.id) }.map { |user| { id: user.id, name: user.name } }
+  end
+
+  def paused_ids(hosts)
+    Crm::AgentAvailability.where(account_id: profile.account_id, paused: true, user_id: hosts.map(&:id)).pluck(:user_id)
+  end
+
+  def host_users
+    return [profile.default_assignee].compact if profile.assignment_mode_fixed?
+
+    profile.agent_booking_links.select(&:enabled?).filter_map(&:agent)
   end
 
   def settings

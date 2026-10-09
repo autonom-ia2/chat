@@ -487,6 +487,30 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingPages', type: :request do
                                                'missing' => [])
     end
 
+    it 'index mostra quem atende e pausou a agenda e quem saiu com reunião, só com id e nome (#1195)' do
+      seller = create(:user, account: account, role: :agent, name: 'Vendedor', email: 'vendedor@exemplo.com')
+      paused_agent = create(:user, account: account, role: :agent, name: 'Rita Pausada', email: 'rita@exemplo.com')
+      page.update!(assignment_mode: :per_agent)
+      page.agent_booking_links.create!(account: account, agent: world.host)
+      page.agent_booking_links.create!(account: account, agent: paused_agent)
+      Crm::AgentAvailability.create!(account: account, user: paused_agent, paused: true)
+      outsider = create(:user, account: account, role: :agent)
+      Crm::AgentAvailability.create!(account: account, user: outsider, paused: true)
+      create_internal_meeting(world: world, starts_at: 1.day.from_now, created_by: seller, metadata: { 'booking_profile_id' => page.id })
+      seller.account_users.find_by(account: account).destroy!
+
+      call(admin, :get, base)
+
+      item = body['payload'].find { |entry| entry['id'] == page.id }
+      expect(item['paused_people']).to eq([{ 'id' => paused_agent.id, 'name' => 'Rita Pausada' }])
+      expect(item['orphaned']).to eq([{ 'id' => seller.id, 'name' => 'Vendedor', 'upcoming_meetings_count' => 1 }])
+      expect(response.body).not_to include('rita@exemplo.com', 'vendedor@exemplo.com')
+
+      call(admin, :get, "#{base}/#{page.id}")
+      expect(body['payload']).to include('paused_people' => [{ 'id' => paused_agent.id, 'name' => 'Rita Pausada' }],
+                                         'orphaned' => [{ 'id' => seller.id, 'name' => 'Vendedor', 'upcoming_meetings_count' => 1 }])
+    end
+
     it 'index tells what a disabled page still needs, so the screen can show Draft or Paused' do
       blank = create_booking_profile(account: account, host: world.host, enabled: false, locations: [],
                                      default_assignee: nil, working_hours: { 'start_hour' => 9, 'end_hour' => 17, 'weekdays' => [] })

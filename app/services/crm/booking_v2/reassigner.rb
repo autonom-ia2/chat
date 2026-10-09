@@ -11,9 +11,8 @@
 # trocar o responsável não muda a caixa, e a própria reunião já ocupa aquele horário lá (o freebusy a acusaria como
 # conflito dela mesma).
 #
-# Corrida: tudo acontece numa transação, sob a trava de agente (`Booker::LOCK_NS_AGENT`) das DUAS pessoas, em ordem
-# crescente de id. O Booker toma caixa, agente e telefone, nessa ordem, e uma só trava de agente; aqui não se toma
-# trava de caixa nem de telefone, então não há espera cruzada: uma reserva para a pessoa nova termina antes da
+# Corrida: tudo acontece numa transação, sob as travas de agente das DUAS pessoas, em ordem crescente de id
+# (`HostSchedule.lock!`, a mesma regra da saída de alguém da conta). Uma reserva para a pessoa nova termina antes da
 # conferência (e é vista por ela) ou espera a passagem terminar (e vê as reuniões que chegaram). Duas passagens
 # simultâneas para a mesma pessoa se enfileiram na trava dela.
 class Crm::BookingV2::Reassigner
@@ -43,7 +42,7 @@ class Crm::BookingV2::Reassigner
   def perform
     validate!
     ActiveRecord::Base.transaction do
-      lock_people!
+      Crm::BookingV2::HostSchedule.lock!([from_user_id, to_user.id])
       validate!
       run(write: true)
     end
@@ -58,23 +57,18 @@ class Crm::BookingV2::Reassigner
     raise InvalidPeople unless Crm::BookingV2::HostEligibility.eligible?(account: account, user: to_user)
   end
 
-  def lock_people!
-    connection = ActiveRecord::Base.connection
-    [from_user_id, to_user.id].sort.each do |user_id|
-      connection.execute("SELECT pg_advisory_xact_lock(#{Crm::BookingV2::Booker::LOCK_NS_AGENT}, #{user_id.to_i})")
-    end
-  end
-
   def run(write:)
-    planned = []
+    schedule = Crm::BookingV2::HostSchedule.new(account: account)
+    moved = 0
     conflicts = []
     meetings.each do |meeting|
-      next conflicts << conflict_row(meeting) if busy?(meeting, planned)
+      next conflicts << conflict_row(meeting) unless schedule.free?(meeting, to_user.id)
 
-      planned << { start: meeting.starts_at, end: meeting.ends_at }
       handover(meeting) if write
+      schedule.reserve(meeting, to_user.id)
+      moved += 1
     end
-    Result.new(moved: planned.size, conflicts: conflicts)
+    Result.new(moved: moved, conflicts: conflicts)
   end
 
   def meetings
@@ -82,19 +76,6 @@ class Crm::BookingV2::Reassigner
     account.crm_meetings.upcoming.by_agent(from_user_id)
            .where("crm_meetings.metadata ->> 'booking_profile_id' IN (?)", page_ids.map(&:to_s))
            .includes(:card, :reminder).order(:starts_at, :id).to_a
-  end
-
-  def busy?(meeting, planned)
-    buffer = buffer_for(meeting)
-    window_start = meeting.starts_at - buffer
-    window_end = meeting.ends_at + buffer
-    taken = Crm::BookingV2::Slots.busy_intervals(account_id: account.id, host_id: to_user.id, from: window_start, to: window_end)
-    (taken + planned).any? { |interval| window_start < interval[:end] && interval[:start] < window_end }
-  end
-
-  def buffer_for(meeting)
-    @buffers ||= account.crm_agent_booking_profiles.new_pages.pluck(:id, :buffer_minutes).to_h
-    @buffers.fetch(meeting.metadata.to_h['booking_profile_id'].to_i, 0).minutes
   end
 
   def conflict_row(meeting)

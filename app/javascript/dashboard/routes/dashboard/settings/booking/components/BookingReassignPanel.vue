@@ -31,11 +31,26 @@ const heading = ref(null);
 const nameOf = id => people.value.find(person => person.id === id)?.name;
 const toName = computed(() => nameOf(toId.value) || '');
 
-const fromOptions = computed(() =>
+const peopleOptions = computed(() =>
   people.value.map(person => ({ value: person.id, label: person.name }))
 );
+// De quem: quem pode atender e, também, quem não atende mais e ainda tem
+// reunião desta página (saiu da conta ou perdeu o acesso). Para quem: só quem
+// pode atender.
+const fromOptions = computed(() => {
+  const known = new Set(people.value.map(person => person.id));
+  const former = (props.page.orphaned || [])
+    .filter(person => !known.has(person.id))
+    .map(person => ({
+      value: person.id,
+      label: t('BOOKING.REASSIGN.FORMER', {
+        name: person.name || t('BOOKING.CARD.REMOVED_PERSON'),
+      }),
+    }));
+  return [...peopleOptions.value, ...former];
+});
 const toOptions = computed(() =>
-  fromOptions.value.filter(option => option.value !== fromId.value)
+  peopleOptions.value.filter(option => option.value !== fromId.value)
 );
 const ready = computed(
   () => fromId.value !== null && toId.value !== null && !busy.value

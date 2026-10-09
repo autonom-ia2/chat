@@ -45,6 +45,10 @@ const STATUS_TONE = {
   DRAFT: { badge: 'bg-n-amber-3 text-n-amber-11', dot: 'bg-n-amber-9' },
 };
 const title = computed(() => props.page.title || t('BOOKING.CARD.UNTITLED'));
+// Reuniões que ficaram com quem não atende mais (#1195) e quem pausou a agenda.
+const personName = person => person.name || t('BOOKING.CARD.REMOVED_PERSON');
+const orphaned = computed(() => props.page.orphaned || []);
+const pausedPeople = computed(() => props.page.paused_people || []);
 
 const SECONDARY =
   'inline-flex items-center gap-2 min-h-11 px-4 rounded-xl text-base font-medium ring-1 ring-inset focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand disabled:opacity-60 disabled:cursor-not-allowed';
@@ -111,6 +115,51 @@ const confirmDelete = () => {
       />
       {{ t('BOOKING.CARD.ATTENTION') }}
     </p>
+
+    <ul
+      v-if="orphaned.length"
+      data-orphaned
+      role="status"
+      class="flex flex-col gap-2 m-0 px-4 py-3 list-none rounded-xl bg-n-amber-3 text-n-amber-12"
+    >
+      <li
+        v-for="person in orphaned"
+        :key="person.id"
+        :data-orphaned-person="person.id"
+        class="flex items-start gap-3 text-base"
+      >
+        <span
+          class="i-lucide-triangle-alert mt-0.5 size-5 shrink-0"
+          aria-hidden="true"
+        />
+        {{
+          t(
+            'BOOKING.CARD.ORPHANED',
+            {
+              name: personName(person),
+              count: person.upcoming_meetings_count,
+            },
+            person.upcoming_meetings_count
+          )
+        }}
+      </li>
+    </ul>
+
+    <ul
+      v-if="pausedPeople.length"
+      data-paused-people
+      class="flex flex-col gap-1 m-0 p-0 list-none"
+    >
+      <li
+        v-for="person in pausedPeople"
+        :key="person.id"
+        :data-paused-person="person.id"
+        class="flex items-center gap-2 text-base text-n-slate-11"
+      >
+        <span class="i-lucide-pause size-4 shrink-0" aria-hidden="true" />
+        {{ t('BOOKING.CARD.PERSON_PAUSED', { name: personName(person) }) }}
+      </li>
+    </ul>
 
     <BookingLinkActions
       v-if="published && page.public_url"

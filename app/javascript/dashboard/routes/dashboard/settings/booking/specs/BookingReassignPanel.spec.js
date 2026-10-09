@@ -25,11 +25,9 @@ const PEOPLE = [
   { id: 6, name: 'Paula' },
 ];
 
-const mountPanel = async () => {
+const mountPanel = async (page = { id: 7, title: 'Vendas' }) => {
   BookingPagesAPI.people.mockResolvedValue({ data: { payload: PEOPLE } });
-  const wrapper = mount(BookingReassignPanel, {
-    props: { page: { id: 7, title: 'Vendas' } },
-  });
+  const wrapper = mount(BookingReassignPanel, { props: { page } });
   await flushPromises();
   return wrapper;
 };
@@ -63,6 +61,30 @@ describe('BookingReassignPanel', () => {
     expect(
       wrapper.find('[data-preview-button]').attributes('disabled')
     ).toBeDefined();
+  });
+
+  it('De quem inclui quem não atende mais e ficou com reunião; Para quem, não (#1195)', async () => {
+    const wrapper = await mountPanel({
+      id: 7,
+      title: 'Vendas',
+      orphaned: [
+        { id: 9, name: 'Vendedor', upcoming_meetings_count: 1 },
+        { id: 5, name: 'Camila', upcoming_meetings_count: 1 },
+      ],
+    });
+    const [fromSelect, toSelect] = wrapper.findAllComponents(ChoiceSelect);
+
+    expect(fromSelect.props('options')).toEqual([
+      { value: 4, label: 'Rui' },
+      { value: 5, label: 'Camila' },
+      { value: 6, label: 'Paula' },
+      { value: 9, label: 'BOOKING.REASSIGN.FORMER {"name":"Vendedor"}' },
+    ]);
+    fromSelect.vm.$emit('update:modelValue', 9);
+    await flushPromises();
+    expect(toSelect.props('options').map(item => item.value)).toEqual([
+      4, 5, 6,
+    ]);
   });
 
   it('mostra antes o que vai acontecer, com os conflitos, sem passar nada', async () => {

@@ -26,13 +26,24 @@ const problem = ref('');
 
 const limits = computed(() => data.value?.limits || null);
 
+const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+
+// O horário salvo pode ter ficado fora do limite (o admin mudou a página
+// depois): o formulário começa só com o que ainda cabe, para salvar não voltar
+// com erro de algo que a pessoa nem vê na tela.
 const fill = payload => {
   data.value = payload;
-  form.value = {
-    weekdays: [...(payload.weekdays || [])],
-    startHour: payload.start_hour ?? 9,
-    endHour: payload.end_hour ?? 17,
-  };
+  const bounds = payload.limits;
+  const days = payload.weekdays || [];
+  const startHour = payload.start_hour ?? 9;
+  const endHour = payload.end_hour ?? 17;
+  form.value = bounds
+    ? {
+        weekdays: days.filter(day => bounds.weekdays.includes(day)),
+        startHour: clamp(startHour, bounds.start_hour, bounds.end_hour - 1),
+        endHour: clamp(endHour, bounds.start_hour + 1, bounds.end_hour),
+      }
+    : { weekdays: [...days], startHour, endHour };
 };
 
 const load = async () => {

@@ -34,7 +34,10 @@
       "DELETE_BLOCKED": "Esta página tem reuniões marcadas. Pause a página em vez de excluir.",
       "DELETED": "Página excluída.",
       "PAUSED_OK": "Página pausada.",
-      "ACTION_ERROR": "Não deu certo. Tente de novo."
+      "ACTION_ERROR": "Não deu certo. Tente de novo.",
+      "ORPHANED": "Nenhuma reunião ficou com {name} | 1 reunião ficou com {name}, que não atende mais. Use Passar reuniões. | {count} reuniões ficaram com {name}, que não atende mais. Use Passar reuniões.",
+      "PERSON_PAUSED": "{name} pausou a agenda.",
+      "REMOVED_PERSON": "Pessoa removida"
     },
     "LINK": {
       "COPY": "Copiar link",
@@ -275,7 +278,8 @@
       "DONE": "Nenhuma reunião passou | Pronto: 1 reunião passou para {name} | Pronto: {count} reuniões passaram para {name}",
       "DONE_CONFLICTS": "1 reunião ficou como estava porque {name} já tinha compromisso. | {count} reuniões ficaram como estavam porque {name} já tinha compromisso.",
       "PEOPLE_INVALID": "Essa pessoa não pode receber reuniões. Escolha outra.",
-      "ERROR": "Não deu certo. Tente de novo."
+      "ERROR": "Não deu certo. Tente de novo.",
+      "FORMER": "{name} (não atende mais)"
     },
     "MY_HOURS": {
       "MENU": "Meus horários",

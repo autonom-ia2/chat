@@ -34,7 +34,10 @@
       "DELETE_BLOCKED": "This page has booked meetings. Pause the page instead of deleting it.",
       "DELETED": "Page deleted.",
       "PAUSED_OK": "Page paused.",
-      "ACTION_ERROR": "That didn't work. Try again."
+      "ACTION_ERROR": "That didn't work. Try again.",
+      "ORPHANED": "No meetings left with {name} | 1 meeting stayed with {name}, who no longer attends. Use Move meetings. | {count} meetings stayed with {name}, who no longer attends. Use Move meetings.",
+      "PERSON_PAUSED": "{name} paused their schedule.",
+      "REMOVED_PERSON": "Removed person"
     },
     "LINK": {
       "COPY": "Copy link",
@@ -275,7 +278,8 @@
       "DONE": "No meetings moved | Done: 1 meeting moved to {name} | Done: {count} meetings moved to {name}",
       "DONE_CONFLICTS": "1 meeting stayed as it was because {name} was busy. | {count} meetings stayed as they were because {name} was busy.",
       "PEOPLE_INVALID": "This person cannot take meetings. Choose someone else.",
-      "ERROR": "That did not work. Try again."
+      "ERROR": "That did not work. Try again.",
+      "FORMER": "{name} (no longer attends)"
     },
     "MY_HOURS": {
       "MENU": "My hours",

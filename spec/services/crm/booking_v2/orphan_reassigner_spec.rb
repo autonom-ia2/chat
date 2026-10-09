@@ -70,6 +70,49 @@ RSpec.describe Crm::BookingV2::OrphanReassigner do
     expect(reminder.reload.assignee_id).to eq(world.host.id)
   end
 
+  describe 'sem dupla reserva (#1195)' do
+    it 'não passa para quem já tem reunião no horário: fica com quem saiu, a página avisa e o admin passa depois' do
+      starts_at = 2.days.from_now.change(hour: 14)
+      busy = page_meeting(world.host, starts_at)
+      kept = page_meeting(seller, starts_at)
+      free = page_meeting(seller, starts_at + 2.hours)
+
+      remove_from_account(seller)
+
+      expect([kept, free, busy].map { |meeting| meeting.reload.created_by_id }).to eq([seller.id, world.host.id, world.host.id])
+      expect(reassigned_activities.pluck(:payload).pluck('meeting_id')).to eq([free.id])
+      report = Crm::BookingV2::AttentionReport.new(account: account)
+      expect(report.orphaned(world.profile)).to eq([{ id: seller.id, name: 'Vendedor', upcoming_meetings_count: 1 }])
+      expect(report.attention?(world.profile)).to be(false)
+
+      result = Crm::BookingV2::Reassigner.new(account: account, from_user_id: seller.id, to_user_id: admin.id, page: world.profile).perform
+      expect(result.moved).to eq(1)
+      expect(kept.reload.created_by_id).to eq(admin.id)
+      expect(Crm::BookingV2::AttentionReport.new(account: account).orphaned(world.profile)).to be_empty
+    end
+
+    it 'respeita o intervalo da página ao conferir quem recebe' do
+      world.profile.update!(buffer_minutes: 15)
+      starts_at = 2.days.from_now.change(hour: 14)
+      page_meeting(world.host, starts_at)
+      near = page_meeting(seller, starts_at + 40.minutes)
+
+      remove_from_account(seller)
+
+      expect(near.reload.created_by_id).to eq(seller.id)
+    end
+
+    it 'duas reuniões de quem saiu no mesmo horário: só a primeira passa' do
+      starts_at = 2.days.from_now.change(hour: 14)
+      first = page_meeting(seller, starts_at)
+      second = page_meeting(seller, starts_at)
+
+      remove_from_account(seller)
+
+      expect([first.reload.created_by_id, second.reload.created_by_id]).to eq([world.host.id, seller.id])
+    end
+  end
+
   it 'falls back to the first administrator when the page host is the one leaving' do
     meeting = page_meeting(world.host, 1.day.from_now)
 

@@ -23,7 +23,8 @@ class Api::V1::Accounts::Crm::BookingPagesController < Api::V1::Accounts::Crm::B
     report = ::Crm::BookingV2::AttentionReport.new(account: Current.account)
     pages = pages_scope.includes(:default_assignee, agent_booking_links: :agent).order(:id).to_a
     counts = ::Crm::BookingV2::AttentionReport.upcoming_counts(pages)
-    payload = pages.map { |page| page_summary(page, report, counts) }
+    paused = ::Crm::AgentAvailability.where(account_id: Current.account.id, paused: true).pluck(:user_id).to_set
+    payload = pages.map { |page| page_summary(page, report, counts, paused) }
     render json: { payload: payload }
   end
 
@@ -132,8 +133,10 @@ class Api::V1::Accounts::Crm::BookingPagesController < Api::V1::Accounts::Crm::B
   end
 
   def render_page(status: :ok)
-    attention = ::Crm::BookingV2::AttentionReport.new(account: Current.account).attention?(@page)
-    payload = ::Crm::BookingV2::PageSerializer.new(@page.reload, attention: attention).full.merge(calendar_options: calendar_inbox_options)
+    report = ::Crm::BookingV2::AttentionReport.new(account: Current.account)
+    page = @page.reload
+    payload = ::Crm::BookingV2::PageSerializer.new(page, attention: report.attention?(page), orphaned: report.orphaned(page))
+                                              .full.merge(calendar_options: calendar_inbox_options)
     render json: { payload: payload }, status: status
   end
 
@@ -148,8 +151,9 @@ class Api::V1::Accounts::Crm::BookingPagesController < Api::V1::Accounts::Crm::B
   end
 
   # O cartão da lista. `missing` só para página desligada: com algo faltando, a tela mostra Rascunho.
-  def page_summary(page, report, counts)
-    serializer = ::Crm::BookingV2::PageSerializer.new(page, attention: report.attention?(page), upcoming_meetings_count: counts.fetch(page.id, 0))
+  def page_summary(page, report, counts, paused_user_ids)
+    serializer = ::Crm::BookingV2::PageSerializer.new(page, attention: report.attention?(page), upcoming_meetings_count: counts.fetch(page.id, 0),
+                                                            paused_user_ids: paused_user_ids, orphaned: report.orphaned(page))
     serializer.summary.merge(missing: page.enabled? ? [] : publish_blockers(page))
   end
 
