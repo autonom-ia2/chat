@@ -126,6 +126,15 @@ RSpec.describe Crm::BookingV2::OrphanReassigner do
     expect(reassigned_activities.count).to eq(1)
   end
 
+  it 'deixa intacta reunião interna que não veio de página nova' do
+    manual = create_internal_meeting(world: world, starts_at: 2.days.from_now, created_by: seller)
+
+    remove_from_account(seller)
+
+    expect(manual.reload.created_by_id).to eq(seller.id)
+    expect(reassigned_activities).to be_empty
+  end
+
   it 'leaves the link of a legacy page untouched' do
     inbox = create(:channel_email, account: account, provider: 'google', calendar_enabled: true).inbox
     create(:inbox_member, inbox: inbox, user: seller)
