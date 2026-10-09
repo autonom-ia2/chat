@@ -42,10 +42,12 @@ class Api::V1::Accounts::Crm::BookingInvitesController < Api::V1::Accounts::Crm:
   end
 
   # O agente copiou o link para mandar por outro canal (#1194, RA-19): conta como enviado. Só a primeira vez grava a
-  # data; convite que já não vale não muda.
+  # data (sob trava de linha: dois toques ao mesmo tempo não regravam); convite que já não vale não muda.
   def copied
-    if @invite.sent_at.blank? && @invite.active?
-      @invite.update!(sent_at: Time.current, metadata: @invite.metadata.to_h.merge('copied_by_id' => Current.user.id))
+    @invite.with_lock do
+      if @invite.sent_at.blank? && @invite.active?
+        @invite.update!(sent_at: Time.current, metadata: @invite.metadata.to_h.merge('copied_by_id' => Current.user.id))
+      end
     end
     render json: { payload: serialize(@invite) }
   end

@@ -496,8 +496,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/booking_invites#destroy",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:53",
-      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:69"
+      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:55",
+      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:71"
     ],
     "sem_corpo": true
   },
@@ -13369,12 +13369,12 @@
     "modelo": "Contact",
     "origem": [
       "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:26",
+      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:103",
       "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:101",
-      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:99",
+      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:97",
       "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:95",
-      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:93",
+      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:91",
       "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:89",
-      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:87",
       "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:28"
     ],
     "sem_corpo": false
@@ -13384,7 +13384,7 @@
     "controller": "api/v1/accounts/crm/booking_invites#copied",
     "origem": [
       "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:46",
-      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:69"
+      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:71"
     ],
     "sem_corpo": true
   },
@@ -13405,7 +13405,7 @@
       "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:35",
       "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:40",
       "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:36",
-      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:69"
+      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:71"
     ],
     "sem_corpo": false
   },
@@ -13610,8 +13610,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/booking_stats#resend",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/booking_stats_controller.rb:35",
-      "app/controllers/api/v1/accounts/crm/booking_stats_controller.rb:36"
+      "app/controllers/api/v1/accounts/crm/booking_stats_controller.rb:37",
+      "app/controllers/api/v1/accounts/crm/booking_stats_controller.rb:38"
     ],
     "sem_corpo": true
   },

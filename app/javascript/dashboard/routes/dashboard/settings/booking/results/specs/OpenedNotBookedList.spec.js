@@ -20,10 +20,10 @@ vi.mock('dashboard/api/crmBookingStats', () => ({
 
 const row = (overrides = {}) => ({
   id: 7,
-  contact: { id: 3, name: 'Paula Reis' },
+  contact: { name: 'Paula Reis' },
   opened_at: '2026-10-07T15:00:00Z',
-  page: { id: 1, title: 'Conversa de 30 min' },
-  sent_by: { id: 2, name: 'Camila' },
+  page: { title: 'Conversa de 30 min' },
+  sent_by: { name: 'Camila' },
   can_resend: true,
   resent_at: null,
   ...overrides,
@@ -32,9 +32,10 @@ const listOf = (payload, meta = { page: 1, total: payload.length }) => ({
   data: { payload, meta },
 });
 
-const mountList = (props = {}) =>
+const mountList = (props = {}, options = {}) =>
   mount(OpenedNotBookedList, {
     props: { period: 30, scope: 'mine', ...props },
+    ...options,
   });
 
 describe('OpenedNotBookedList', () => {
@@ -63,7 +64,7 @@ describe('OpenedNotBookedList', () => {
     BookingStatsAPI.resend.mockResolvedValue({
       data: { payload: { id: 7, resent_at: '2026-10-09T15:00:00Z' } },
     });
-    const wrapper = mountList();
+    const wrapper = mountList({}, { attachTo: document.body });
     await flushPromises();
     expect(BookingStatsAPI.resend).not.toHaveBeenCalled();
 
@@ -76,8 +77,10 @@ describe('OpenedNotBookedList', () => {
 
     expect(BookingStatsAPI.resend).toHaveBeenCalledWith(7);
     expect(wrapper.get('[data-resent]').attributes('role')).toBe('status');
+    expect(document.activeElement).toBe(wrapper.get('[data-resent]').element);
     expect(wrapper.find('[data-resend]').exists()).toBe(false);
     expect(useAlert).toHaveBeenCalledWith('BOOKING.RESULTS.LIST.SENT_OK');
+    wrapper.unmount();
   });
 
   it('explica a janela fechada sem marcar como enviado', async () => {
@@ -126,6 +129,23 @@ describe('OpenedNotBookedList', () => {
     expect(wrapper.get('[data-row="9"] [data-resent]').exists()).toBe(true);
   });
 
+  it('quem não pode mandar o link não vê "Enviar de novo" nem a dica do card', async () => {
+    BookingStatsAPI.openedNotBooked.mockResolvedValue(
+      listOf([row({ can_resend: false })], {
+        page: 1,
+        total: 1,
+        can_resend: false,
+      })
+    );
+    const wrapper = mountList({ scope: 'team' });
+    await flushPromises();
+
+    const item = wrapper.get('[data-row="7"]');
+    expect(item.text()).toContain('Paula Reis');
+    expect(item.find('[data-resend]').exists()).toBe(false);
+    expect(item.find('[data-no-conversation]').exists()).toBe(false);
+  });
+
   it('lista vazia: uma frase e um botão que pede os 30 dias', async () => {
     BookingStatsAPI.openedNotBooked.mockResolvedValue(listOf([]));
     const wrapper = mountList({ period: 7 });
@@ -141,7 +161,9 @@ describe('OpenedNotBookedList', () => {
   it('carrega a próxima página em "Ver mais" e some quando acabou', async () => {
     BookingStatsAPI.openedNotBooked
       .mockResolvedValueOnce(listOf([row()], { page: 1, total: 2 }))
-      .mockResolvedValueOnce(listOf([row({ id: 10 })], { page: 2, total: 2 }));
+      .mockResolvedValueOnce(
+        listOf([row(), row({ id: 10 })], { page: 2, total: 2 })
+      );
     const wrapper = mountList();
     await flushPromises();
 

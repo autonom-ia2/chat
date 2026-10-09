@@ -158,12 +158,15 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingStats', type: :request do
 
       call(admin, :get, "#{base}/opened_not_booked", { period: 30 })
       expect(body['payload'].map { |row| row['contact']['name'] }).to eq(['Cliente Oculto', 'Ana Souza', world.contact.name])
-      expect(body['meta']).to eq('page' => 1, 'per_page' => 20, 'total' => 3)
+      expect(body['meta']).to eq('page' => 1, 'per_page' => 20, 'total' => 3, 'can_resend' => true)
 
       viewer = role_user('agendamento_view', 'conversation_manage')
       call(viewer, :get, "#{base}/opened_not_booked", { period: 30 })
       expect(body['payload'].map { |row| row['contact']['name'] }).to eq(['Ana Souza', world.contact.name])
       expect(response.body).not_to include('Oculto', '5511')
+      # Só vê: a lista não oferece "Enviar de novo", que o POST recusaria (401).
+      expect(body['payload'].pluck('can_resend')).to all(be(false))
+      expect(body['meta']).to include('can_resend' => false)
     end
 
     it 'skips a client who booked later through another link' do
@@ -183,7 +186,10 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingStats', type: :request do
 
       expect(body['payload'].pluck('id')).to eq([mine.id])
       expect(body['payload'].first).to include('can_resend' => true, 'resent_at' => nil,
-                                               'page' => { 'id' => world.profile.id, 'title' => world.profile.title })
+                                               'page' => { 'title' => world.profile.title },
+                                               'contact' => { 'name' => world.contact.name },
+                                               'sent_by' => { 'name' => world.host.name })
+      expect(body['meta']).to include('can_resend' => true)
     end
 
     it 'pages 20 rows at a time' do
@@ -229,6 +235,28 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingStats', type: :request do
 
       expect(response).to have_http_status(:unprocessable_entity)
       expect(body['error']).to eq('crm.booking_v2.cannot_reply')
+    end
+
+    it 'resends a colleague link that still works as it is: no second active link and the same host' do
+      active = opened_invite(opened_at: 2.days.ago)
+
+      expect { resend(admin, active) }.not_to change(Crm::BookingInvite, :count)
+
+      expect(response).to have_http_status(:ok)
+      message = active.conversation.messages.outgoing.last
+      expect(message).to have_attributes(sender: admin, content: include(active.url))
+      expect(active.reload).to have_attributes(created_by_id: world.host.id, canceled_at: nil, sent_at: be_within(5.seconds).of(Time.current))
+      expect(active.metadata).to include('delivered_by_id' => admin.id)
+    end
+
+    it 'renews an expired colleague link in the name of its author, so the client keeps one link and the same host' do
+      expect { resend(admin) }.to change { invite.conversation.messages.outgoing.count }.by(1)
+
+      expect(response).to have_http_status(:ok)
+      fresh = Crm::BookingInvite.where(contact: world.contact).where.not(id: invite.id).sole
+      expect(fresh).to have_attributes(created_by_id: world.host.id, booking_profile_id: world.profile.id, canceled_at: nil)
+      expect(fresh.metadata).to include('delivered_by_id' => admin.id)
+      expect(invite.conversation.messages.outgoing.last).to have_attributes(sender: admin, content: include(fresh.url))
     end
 
     it 'never resends to a client the person cannot see, nor a link of someone else to a plain agent' do

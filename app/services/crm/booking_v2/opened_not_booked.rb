@@ -5,7 +5,8 @@
 # (`ClientVisibility`). `user` presente = "Meus números": só os links que a pessoa criou.
 #
 # Cada linha diz se dá para "Enviar de novo" ali (`can_resend`: a conversa do convite, ou a principal do card, é
-# uma que a pessoa vê) e quando o cliente recebeu um link depois de abrir (`resent_at`). Página de 20, até 50.
+# uma que a pessoa vê; o controller ainda exige que ela possa mandar o link) e quando o cliente recebeu um link depois de abrir
+# (`resent_at`). Sem ids de contato nem de colega: só o que a tela mostra (RA-19). Página de 20, até 50.
 class Crm::BookingV2::OpenedNotBooked
   PER_PAGE = 20
   MAX_PAGE = 50
@@ -84,10 +85,10 @@ class Crm::BookingV2::OpenedNotBooked
 
   def row(invite, conversation, visible_ids, last_sent_at)
     {
-      id: invite.id, contact: { id: invite.contact.id, name: invite.contact.name },
+      id: invite.id, contact: { name: invite.contact.name },
       opened_at: invite.first_opened_at.iso8601, open_count: invite.open_count, sent_at: invite.sent_at&.iso8601,
-      page: { id: invite.booking_profile.id, title: invite.booking_profile.title },
-      sent_by: invite.created_by && { id: invite.created_by.id, name: invite.created_by.name },
+      page: { title: invite.booking_profile.title },
+      sent_by: invite.created_by && { name: invite.created_by.name },
       can_resend: conversation.present? && visible_ids.include?(conversation.id),
       resent_at: last_sent_at.present? && last_sent_at > invite.first_opened_at ? last_sent_at.iso8601 : nil
     }

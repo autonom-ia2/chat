@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import BookingStatsAPI from 'dashboard/api/crmBookingStats';
@@ -32,7 +32,10 @@ const loadingMore = ref(false);
 const failed = ref(false);
 const sendingId = ref(null);
 const notices = ref({});
+const listRoot = ref(null);
 
+// Só quem pode mandar o link vê "Enviar de novo" e a dica de quando não dá.
+const canSend = computed(() => meta.value.can_resend !== false);
 const hasMore = computed(() => rows.value.length < meta.value.total);
 const hint = computed(() =>
   props.scope === 'mine'
@@ -66,7 +69,10 @@ const loadMore = async () => {
   loadingMore.value = true;
   try {
     const { data } = await fetchPage(meta.value.page + 1);
-    rows.value = [...rows.value, ...(data.payload || [])];
+    // Alguém pode ter aberto um link entre as páginas: a mesma linha não entra duas vezes.
+    const seen = new Set(rows.value.map(item => item.id));
+    const fresh = (data.payload || []).filter(item => !seen.has(item.id));
+    rows.value = [...rows.value, ...fresh];
     meta.value = data.meta || meta.value;
   } catch {
     useAlert(t('BOOKING.RESULTS.LIST.ERROR'));
@@ -94,6 +100,11 @@ const resend = async row => {
       item.id === row.id ? { ...item, resent_at: data.payload.resent_at } : item
     );
     useAlert(t('BOOKING.RESULTS.LIST.SENT_OK'));
+    // O botão some: o foco vai para o "Enviado de novo" da mesma linha, sem se perder.
+    await nextTick();
+    listRoot.value
+      ?.querySelector(`[data-row="${row.id}"] [data-resent]`)
+      ?.focus();
   } catch (error) {
     notices.value = { ...notices.value, [row.id]: t(errorKey(error)) };
   } finally {
@@ -127,6 +138,7 @@ watch(() => [props.period, props.scope], load, { immediate: true });
 
 <template>
   <section
+    ref="listRoot"
     class="flex flex-col gap-4 p-4 rounded-2xl ring-1 ring-inset ring-n-weak bg-n-solid-1"
     aria-labelledby="booking-results-list"
   >
@@ -222,6 +234,7 @@ watch(() => [props.period, props.scope], load, { immediate: true });
             v-if="row.resent_at"
             role="status"
             data-resent
+            tabindex="-1"
             class="self-start px-3 py-1 text-sm font-medium rounded-full sm:self-center bg-n-teal-3 text-n-teal-11"
           >
             {{ t('BOOKING.RESULTS.LIST.RESENT') }}
@@ -240,7 +253,11 @@ watch(() => [props.period, props.scope], load, { immediate: true });
             <span class="i-lucide-send size-4" aria-hidden="true" />
             {{ t('BOOKING.RESULTS.LIST.RESEND') }}
           </button>
-          <span v-else class="text-sm text-n-slate-11" data-no-conversation>
+          <span
+            v-else-if="canSend"
+            class="text-sm text-n-slate-11"
+            data-no-conversation
+          >
             {{ t('BOOKING.RESULTS.LIST.NO_CONVERSATION') }}
           </span>
         </li>

@@ -28,7 +28,9 @@ class Api::V1::Accounts::Crm::BookingStatsController < Api::V1::Accounts::Crm::B
 
   def opened_not_booked
     list = opened_list(period: period, page: params[:page])
-    render json: { scope: scope_name, payload: list.rows, meta: list.meta }
+    can_send = resend_allowed?
+    rows = list.rows.map { |row| row.merge(can_resend: can_send && row[:can_resend]) }
+    render json: { scope: scope_name, payload: rows, meta: list.meta.merge(can_resend: can_send) }
   end
 
   # Reenvio: quem vê a equipe reenvia qualquer link da lista; os demais, só os próprios.
@@ -56,7 +58,16 @@ class Api::V1::Accounts::Crm::BookingStatsController < Api::V1::Accounts::Crm::B
   end
 
   def team_allowed?
-    ::Crm::BookingStatsPolicy.new(pundit_user, :booking_stats).team?
+    stats_policy.team?
+  end
+
+  # A lista só oferece "Enviar de novo" a quem pode mandar o link (a mesma régua do POST resend).
+  def resend_allowed?
+    stats_policy.resend?
+  end
+
+  def stats_policy
+    @stats_policy ||= ::Crm::BookingStatsPolicy.new(pundit_user, :booking_stats)
   end
 
   def scope_name
