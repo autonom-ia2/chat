@@ -38,6 +38,7 @@ import MetaConversionsAPI from 'dashboard/api/metaConversions';
 import { useCrmOrigin } from '../composables/useCrmOrigin';
 import CrmCardPill from './CrmCardPill.vue';
 import CrmCardMetaConversion from './CrmCardMetaConversion.vue';
+import BookingInviteButton from 'dashboard/components-next/Booking/BookingInviteButton.vue';
 import CrmOriginList from './CrmOriginList.vue';
 import CrmCardLeadForm from './CrmCardLeadForm.vue';
 
@@ -2547,6 +2548,7 @@ useFixedPanelPresence(computed(() => props.show));
             color="slate"
             @click="guardRelationship(scheduleMeeting)"
           />
+          <BookingInviteButton v-if="canManageCards" :card="card" show-status />
         </div>
         <div
           v-else-if="!isEditing"

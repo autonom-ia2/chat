@@ -1796,6 +1796,45 @@
         "LOAD_ERROR": "Could not load booking pages."
       }
     },
+    "BOOKING_INVITE": {
+      "BUTTON": "Schedule",
+      "BUTTON_HINT": "Create this client's scheduling link",
+      "TITLE": "Scheduling link for {name}",
+      "TITLE_NO_NAME": "Scheduling link",
+      "LOADING": "Getting the link ready…",
+      "PAGE": "Page: {title}",
+      "PAGE_LABEL": "Scheduling page",
+      "VALID_UNTIL": "Valid until {date}",
+      "TEXT_LABEL": "Invitation text",
+      "TEXT_NEEDS_LINK": "The text needs to include the link.",
+      "SEND": "Send in the conversation",
+      "COPY": "Copy link",
+      "COPIED": "Link copied. Paste it anywhere.",
+      "SENT": "Message sent in the conversation.",
+      "CANCEL_LINK": "Cancel link",
+      "CANCELED": "Link canceled.",
+      "NEW_LINK": "Create a new link",
+      "CLOSE": "Close",
+      "STATE": {
+        "CREATED": "Not sent yet",
+        "SENT": "Sent",
+        "OPENED": "Opened",
+        "SCHEDULED": "Scheduled",
+        "EXPIRED": "Expired",
+        "CANCELED": "Canceled"
+      },
+      "EMPTY": {
+        "ADMIN": "Publish a scheduling page to create links for your clients.",
+        "AGENT": "Ask the administrator to publish a scheduling page.",
+        "OPEN_SETTINGS": "Go to Scheduling"
+      },
+      "ERRORS": {
+        "LOAD": "Couldn't open the link right now. Try again.",
+        "SEND": "Couldn't send. Check that the text has the link and that the client can receive messages.",
+        "COPY": "Couldn't copy the link.",
+        "CANCEL": "Couldn't cancel the link."
+      }
+    },
     "RELATIONSHIP": {
       "TAB": "Relationship",
       "SHARED": "Shared record from Relationships",
