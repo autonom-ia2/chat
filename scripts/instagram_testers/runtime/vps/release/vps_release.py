@@ -72,6 +72,7 @@ MANAGER_EXIT_SECONDS = 40
 PAIR_READY_SECONDS = 20
 PUBLISHER_READY_SECONDS = 60
 TRANSIENT_WAIT_SECONDS = 900
+MIN_SYSTEMD = 252  # `systemctl kill --kill-whom` (the VPS runs Ubuntu 24.04, systemd 255)
 FAIL_TOKENS = ('instagram_session_session_update_rejected', 'instagram_manager_failed', 'instagram_vps_manager_failed')
 OPERATOR_TOKENS = ('instagram_session_operator_required', 'instagram_manager_operator_required')
 HEX = '0123456789abcdef'
@@ -114,6 +115,12 @@ LOCK_PROCEDURE = (
     '  2. conferir inode, dono ig-<stack>, modo 0600 e tamanho 0 do lock;',
     '  3. renomear atomicamente para pasta de auditoria root 0700 no mesmo filesystem;',
     '  4. rodar de novo o comando indicado abaixo.')
+WAITER_FLAG = '--stop-operator-waiter'
+# Dry-run prefixes for steps that run only when the remote state calls for them.
+OPTIONAL_STAGE = '# so se existir o stage do SHA: '
+OPTIONAL_NOOP = '# so se current ja for PREV com as units rodando (rollback_noop encerra aqui): '
+WAITER_LINE = ('operator_waiter_running: a sessao Meta espera uma pessoa e o waiter esta ocioso; '
+               'o rollback so para o waiter de proposito:')
 
 
 class Stop(Exception):
@@ -378,12 +385,20 @@ def links_body(shas):
     return f'for p in {paths}; do printf \'%s %s\\n\' "$p" "$(readlink "$p")"; done'
 
 
+def waiter_counts(stack):
+    # While operator-waiter.mjs runs, the only session-*.mjs processes of ig-<stack> are its children
+    # (manager.sh runs session-manager.mjs and the waiter one after the other): a person's request.
+    return [f'printf \'waiter_{stack} %s\\n\' "$(ps -o args= -u ig-{stack} | grep -cF runtime/operator-waiter.mjs)"',
+            f'printf \'session_procs_{stack} %s\\n\' "$(ps -o args= -u ig-{stack} | grep -cF '
+            '-e instagram_testers/session-browser.mjs -e instagram_testers/session-manager.mjs)"']
+
+
 def counts_body():
     parts = []
     for stack in STACKS:
         users = ','.join(homes(stack))
         parts += [
-            f'printf \'waiter_{stack} %s\\n\' "$(ps -o args= -u ig-{stack} | grep -cF runtime/operator-waiter.mjs)"',
+            *waiter_counts(stack),
             f'printf \'flag_{stack} %s\\n\' "$(grep -cxF INSTAGRAM_TESTER_BROWSER_OPERATIONS_ENABLED=true '
             f'/etc/instagram-meta/{stack}/manager.env)"',
             f'printf \'url_{stack} %s\\n\' "$(grep -cxF INSTAGRAM_TESTER_OPERATOR_BROWSER_URL=https://{GATEWAY_HOST}/'
@@ -393,6 +408,7 @@ def counts_body():
               'for f in rfbunixpath rfbunixmode rfbport; do printf \'xvnc_%s %s\\n\' "$f" '
               '"$(printf \'%s\' "$h" | grep -ciF "$f")"; done',
               'printf \'max_userns %s\\n\' "$(cat /proc/sys/user/max_user_namespaces)"',
+              'printf \'systemd %s\\n\' "$(systemctl --version | head -n 1 | cut -d \' \' -f 2)"',
               'if [ -e /proc/sys/kernel/unprivileged_userns_clone ]; then printf \'userns_clone %s\\n\' '
               '"$(cat /proc/sys/kernel/unprivileged_userns_clone)"; else echo \'userns_clone absent\'; fi']
     return '; '.join(parts)
@@ -441,8 +457,8 @@ def units_command(names):
 
 def guard_command(stack):
     return (label('guard', stack) + f" echo '@@ now'; date +%s; echo '@@ stat'; stat {STAT_FORMAT} "
-            f"{marker(stack)} {lock(stack)}; echo '@@ counts'; printf 'waiter_{stack} %s\\n' "
-            f'"$(ps -o args= -u ig-{stack} | grep -cF runtime/operator-waiter.mjs)"; echo \'@@ end\'')
+            f"{marker(stack)} {lock(stack)}; echo '@@ counts'; " + '; '.join(waiter_counts(stack))
+            + "; echo '@@ end'")
 
 
 def term_command(stack):
@@ -458,8 +474,9 @@ def start_command(names):
 
 
 def journal_command(stack, since):
-    return (label('journal', stack, since) + f' journalctl -u {unit_name("manager", stack)} --since=@{since} '
-            '-o cat --no-pager')
+    # `@@ end` only after a flushed, successful read: an empty answer must never mean "nothing happened".
+    return (label('journal', stack, since) + f' journalctl --sync && journalctl -u {unit_name("manager", stack)} '
+            f"--since=@{since} -o cat --no-pager && echo '@@ end'")
 
 
 def installer_command(sha):
@@ -607,8 +624,9 @@ def git_object(repo, sha, path):
 
 
 def ssh_runner(command, stdin=None, timeout=60):
+    feed = {'stdin': subprocess.DEVNULL} if stdin is None else {'input': stdin}
     try:
-        result = subprocess.run(ssh_argv(command), input=stdin, capture_output=True, timeout=timeout, check=False)
+        result = subprocess.run(ssh_argv(command), capture_output=True, timeout=timeout, check=False, **feed)
     except subprocess.TimeoutExpired:
         return None, ''
     return result.returncode, result.stdout.decode('utf-8', 'replace')
@@ -662,9 +680,10 @@ class Tool:
         if 'end' not in found:
             raise Stop(3 if self.mutated else 2, 'guard_incomplete')
         stat = parse_stat(found.get('stat', []))
+        counts = parse_pairs(found.get('counts', []))
         return {'now': to_int((found.get('now') or [''])[0]), 'marker': marker(stack) in stat,
-                'lock': lock(stack) in stat, 'waiter': to_int(parse_pairs(found.get('counts', [])).get(
-                    f'waiter_{stack}'))}
+                'lock': lock(stack) in stat, 'waiter': to_int(counts.get(f'waiter_{stack}')),
+                'session': to_int(counts.get(f'session_procs_{stack}'))}
 
     def current_target(self, shas):
         _, output = self.remote(links_command(shas))
@@ -857,6 +876,10 @@ class Tool:
                                      for f in ('rfbunixpath', 'rfbunixmode', 'rfbport')))
         c.add('host_userns', (to_int(s.counts.get('max_userns')) or 0) > 0 and s.counts.get('userns_clone') in (
             'absent', '1'))
+        c.add('host_systemd_version', (to_int(s.counts.get('systemd')) or 0) >= MIN_SYSTEMD)
+        for name in UNITS:
+            if s.active(name):
+                c.add(f'start_timestamp:{name}', s.start_epoch(name) is not None)
         viewers = {}
         for stack in STACKS:
             c.add(f'host_trusted:/etc/instagram-meta/{stack}', s.trusted(f'/etc/instagram-meta/{stack}'))
@@ -1120,7 +1143,7 @@ class Tool:
         artifact = self.artifact(a.sha, local['literals'])
         backup = self.read_backup(a.backup)
         s = self.phase_a(a, local, artifact, backup)
-        self.stop_runtime(s, strict=True, verify_hint=tool_command('verify', '--sha', a.source, '--backup', a.backup))
+        self.stop_runtime(s, strict=True)
         self.run_installer(a.sha, a.source)
         self.after_install(a.sha, local['templates'], backup)
         self.start_runtime(backup['active'], reset=False)
@@ -1161,24 +1184,30 @@ class Tool:
         self.require(c)
         return s
 
-    def stop_runtime(self, s, strict, verify_hint=None):
+    def stop_runtime(self, s, strict):
         stopped_any = False
         for stack in STACKS:
             name = unit_name('manager', stack)
             if not s.active(name):
                 continue
             guard = self.guard(stack)
-            if guard['marker'] or guard['waiter'] != 0:
-                raise Stop(3 if self.mutated else 2, 'human_window_open')
+            self.check_guard(guard, strict)
             since = guard['now']
+            rc, _ = self.remote(term_command(stack), raw=True)
+            if rc is None or rc == 255:
+                self.mutated = True
+                raise Stop(3, 'ssh_state_unknown')
+            if rc != 0:
+                raise Stop(3 if self.mutated else 2, 'manager_term_failed', (
+                    'sigterm_nao_entregue: o manager segue rodando como estava',))
             self.mutated = True
-            self.remote(term_command(stack))
             if not self.wait_manager_exit(name):
+                lines = ()
                 if not stopped_any and strict:
-                    raise Stop(3, 'manager_stop_timeout', (
-                        'nada_trocado current=PREV; o manager sai sozinho e reinicia em PREV (Restart=on-failure)',
-                        'nao_rodar_rollback; observe e depois rode:', verify_hint))
-                raise Stop(3, 'manager_stop_timeout')
+                    lines = ('nada_trocado current=PREV; sigterm_entregue mas o manager nao saiu em 40 s',
+                             'aguarde ele sair (Restart=on-failure religa em PREV com NRestarts=1) e rode o rollback '
+                             'abaixo, que religa PREV limpo',)
+                raise Stop(3, 'manager_stop_timeout', lines)
             self.remote(stop_command([name]))
             stopped_any = True
             if self.interrupted(stack, since):
@@ -1199,6 +1228,19 @@ class Tool:
             c.add(f'no_processes:{stack}', after.counts.get(f'procs_{stack}') == '0')
         self.require(c, code=3, token='units_not_stopped')
 
+    def check_guard(self, guard, strict):
+        code = 3 if self.mutated else 2
+        if guard['marker']:
+            raise Stop(code, 'human_window_open')
+        if guard['waiter'] == 0:
+            return
+        if strict:
+            raise Stop(code, 'operator_waiter_running')
+        if not self.args.stop_operator_waiter:
+            raise Stop(code, 'operator_waiter_running', (WAITER_LINE, self.rollback_hint[1] + ' ' + WAITER_FLAG))
+        if guard['session'] != 0:
+            raise Stop(code, 'human_window_open')
+
     def wait_manager_exit(self, name):
         deadline = self.clock() + MANAGER_EXIT_SECONDS
         while self.clock() < deadline:
@@ -1207,9 +1249,19 @@ class Tool:
             self.sleep(1)
         return False
 
+    def journal_lines(self, stack, since):
+        rc, output = self.remote(journal_command(stack, since))
+        lines = output.splitlines()
+        if rc != 0 or not lines or lines[-1] != '@@ end':
+            return None
+        return lines[:-1]
+
     def interrupted(self, stack, since):
-        _, output = self.remote(journal_command(stack, since))
-        for line in output.splitlines():
+        lines = self.journal_lines(stack, since)
+        if lines is None:
+            self.say('WARN journal_read_incomplete', stack)
+            return True
+        for line in lines:
             text = line.strip()
             if text == 'instagram_manager_failed':
                 return True
@@ -1376,7 +1428,11 @@ class Tool:
         for stack in STACKS:
             if 'manager' in active[stack]:
                 started = s.start_epoch(unit_name('manager', stack))
-                tokens = self.journal_tokens(stack, started if started is not None else s.now)
+                c.add(f'manager_start_known:{stack}', started is not None and s.now is not None)
+                if started is None:
+                    continue
+                tokens = self.journal_tokens(stack, started)
+                c.add(f'journal_read_complete:{stack}', tokens['complete'])
                 c.add(f'bootstrap:{stack}', not tokens['fail'])
                 operator = operator or tokens['operator']
                 if tokens['route_failed']:
@@ -1440,9 +1496,9 @@ class Tool:
             'socket', user, group, 0o660)
 
     def journal_tokens(self, stack, since):
-        _, output = self.remote(journal_command(stack, since))
-        result = {'fail': False, 'operator': False, 'route_failed': 0}
-        for line in output.splitlines():
+        lines = self.journal_lines(stack, since)
+        result = {'fail': False, 'operator': False, 'route_failed': 0, 'complete': lines is not None}
+        for line in lines or []:
             text = line.strip()
             if text in FAIL_TOKENS:
                 result['fail'] = True
@@ -1473,7 +1529,9 @@ class Tool:
         a = self.args
         prev, new = a.to, a.source
         hint = ['--backup', a.backup] if a.backup else [w for spec in a.units_active for w in ('--units-active', spec)]
-        self.rollback_hint = ('rode de novo o rollback:', tool_command('rollback', '--to', prev, '--from', new, *hint))
+        waiter = [WAITER_FLAG] if a.stop_operator_waiter else []
+        self.rollback_hint = ('rode de novo o rollback:', tool_command('rollback', '--to', prev, '--from', new, *hint,
+                                                                       *waiter))
         templates = self.local_templates(prev)
         backup = self.read_backup(a.backup) if a.backup else None
         if backup and (backup['from_sha'] != prev or backup['target_sha'] != new):
@@ -1518,15 +1576,25 @@ class Tool:
         c.add('tmp_link_absent_or_prev', (not link and not s.exists(temporary)) or finish)
         for stack in STACKS:
             c.add(f'marker_absent:{stack}', not s.exists(marker(stack)))
+            if s.counts.get(f'waiter_{stack}') != '0':
+                c.add(f'operator_waiter_stop_allowed:{stack}', self.args.stop_operator_waiter)
+                c.add(f'operator_waiter_idle:{stack}', s.counts.get(f'session_procs_{stack}') == '0')
         self.check_locks(c, s, [st for st in STACKS if 'manager' in active[st]])
-        self.require(c)
+        self.report(c)
+        if c.failed():
+            lines = ()
+            if not self.args.stop_operator_waiter and any(n.startswith('operator_waiter_stop_allowed:')
+                                                          for n in c.failed()):
+                lines = (WAITER_LINE, self.rollback_hint[1] + ' ' + WAITER_FLAG)
+            raise Stop(2, 'precondition_failed', lines)
         return finish
 
     def rollback_is_noop(self, s, prev, active):
         if s.links.get(CURRENT) != f'{RELEASES}/{prev}':
             return False
         names = [unit_name(r, st) for st in STACKS for r in active[st]]
-        if not all(s.active(n) and s.unit(n).get('SubState') == 'running' for n in names):
+        if not all(s.active(n) and s.unit(n).get('SubState') == 'running' and s.unit(n).get('NRestarts') == '0'
+                   for n in names):
             return False
         pids = {n: to_int(s.unit(n).get('MainPID')) for n in names if split_unit(n)[0] in NODE_ROLES}
         if not all(pids.values()):
@@ -1588,7 +1656,7 @@ class Tool:
                      (guard_command(stack), None)]
         return plan + [(stop_command(list(UNITS)), None), (snapshot_command(new, prev), None)]
 
-    def plan_start(self, sha):
+    def plan_start(self, sha, other, stage=True):
         plan = []
         for stack in STACKS:
             pair = [unit_name('display', stack), unit_name('gateway', stack)]
@@ -1596,12 +1664,16 @@ class Tool:
                      (ready_pair_command(stack), None), (start_command([unit_name('publisher', stack)]), None),
                      (ready_publisher_command(stack), None), (guard_command(stack), None),
                      (start_command([unit_name('manager', stack)]), None)]
-        return plan + self.plan_verify_state(sha)
+        return plan + self.plan_verify_state(sha, other, stage)
 
-    def plan_verify_state(self, sha):
-        pids = {unit_name(r, st): f'<MainPID:{unit_name(r, st)}>' for st in STACKS for r in NODE_ROLES}
-        return [(snapshot_command(sha, sha), None), (release_check_command(sha), None),
-                (runtime_command(sha, pids), None), (verify_pair_command('current'), None)] + [
+    @staticmethod
+    def plan_pids():
+        return {unit_name(r, st): f'<MainPID:{unit_name(r, st)}>' for st in STACKS for r in NODE_ROLES}
+
+    def plan_verify_state(self, sha, other, stage=True):
+        check = release_check_command(sha)
+        return [(snapshot_command(sha, other), None), (check if stage else OPTIONAL_STAGE + check, None),
+                (runtime_command(sha, self.plan_pids()), None), (verify_pair_command('current'), None)] + [
             (journal_command(st, '<ExecMainStartTimestamp>'), None) for st in STACKS]
 
     def plan_install(self):
@@ -1613,21 +1685,23 @@ class Tool:
         plan += self.plan_stop(a.sha, a.source)
         plan += [(install_command(a.sha), None), (links_command([a.sha]), None), (release_check_command(a.sha), None),
                  (verify_pair_command('current'), None), (snapshot_command(a.sha, a.source), None)]
-        return plan + self.plan_start(a.sha)
+        return plan + self.plan_start(a.sha, a.source)
 
     def plan_verify(self):
         self.local_templates(self.args.sha)
-        return [(backup_read_command(self.args.backup), None)] + self.plan_verify_state(self.args.sha)
+        return [(backup_read_command(self.args.backup), None)] + self.plan_verify_state(
+            self.args.sha, self.args.sha, stage=False)
 
     def plan_rollback(self):
         a = self.args
         self.local_templates(a.to)
         plan = [(backup_read_command(a.backup), None)] if a.backup else []
-        plan += [(snapshot_command(a.source, a.to), None)] + self.plan_stop(a.source, a.to)
+        plan += [(snapshot_command(a.source, a.to), None),
+                 (OPTIONAL_NOOP + runtime_command(a.to, self.plan_pids()), None)] + self.plan_stop(a.source, a.to)
         plan += [(reset_failed_command(), None), (cas_command(a.to, a.source), None),
                  ('# ou, se current-<PREV> ja aponta para PREV: ' + cas_finish_command(a.to, a.source), None),
                  (links_command([a.to]), None), (verify_pair_command('current'), None)]
-        return plan + self.plan_start(a.to)
+        return plan + self.plan_start(a.to, a.source, stage=False)
 
     # dispatch --------------------------------------------------------------------------------
     def run(self):
@@ -1641,7 +1715,7 @@ class Tool:
         if stop.code == 4:
             self.say('vps_release_operator_required', f'token={stop.token}')
             if self.args.command == 'install':
-                self.say(*self.rollback_hint)
+                self.say(*self.rollback_hint, WAITER_FLAG)
             return 4
         if self.stage_mutated and not self.mutated:
             self.say('vps_release_stage_failed', f'token={stop.token}', 'runtime_intocado',
@@ -1654,7 +1728,7 @@ class Tool:
             self.say('vps_release_verify_failed', f'token={stop.token}')
             return 3
         self.say('vps_release_failed_after_change', f'token={stop.token}')
-        if self.rollback_hint and not (stop.token == 'manager_stop_timeout' and stop.lines):
+        if self.rollback_hint:
             self.say(*self.rollback_hint)
         return 3
 
@@ -1692,6 +1766,7 @@ def parse_args(argv):
     rollback.add_argument('--from', dest='source', required=True)
     rollback.add_argument('--backup')
     rollback.add_argument('--units-active', action='append', default=[])
+    rollback.add_argument(WAITER_FLAG, dest='stop_operator_waiter', action='store_true')
     args = parser.parse_args(argv)
     for name in ('sha', 'source', 'to'):
         if getattr(args, name, None) is not None and not is_sha(getattr(args, name)):

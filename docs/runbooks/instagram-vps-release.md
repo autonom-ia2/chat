@@ -32,6 +32,9 @@ Ela usa o `install.py` existente e não o substitui. Contexto e lacunas: runbook
    `INSTAGRAM_TESTER_BROWSER_OPERATIONS_ENABLED=true` (ou o `manager.env` é mais novo que o
    processo), o `install` exige `--queue-idle-confirmed hub2you,autonomia`.
 5. A VPS precisa alcançar o registry do npm durante o `stage`.
+6. O `preflight` exige systemd ≥ 252 (`systemctl kill --kill-whom`; a VPS roda Ubuntu 24.04, systemd 255)
+   e o horário de início legível (`ExecMainStartTimestamp`) de toda unit ativa. Sem ele o `verify` não
+   saberia desde quando ler o journal.
 
 ## Sequência
 
@@ -52,7 +55,8 @@ O `install` faz, nesta ordem: checagens caras (stage contra o manifesto refeito 
 `node_modules` contra o digest do `stage`, `verify-pair.py` da release nova), réplica somente-leitura
 das checagens do `install.py`, fila e janela humana. Depois, por stack: relê marcador e waiter,
 manda SIGTERM só ao processo principal do manager, espera até 40 s e dá `stop`. Confere no journal se
-alguma operação foi interrompida e se o lock sumiu. Então para as outras units, roda o instalador
+alguma operação foi interrompida e se o lock sumiu. A leitura do journal faz `journalctl --sync` e só vale
+com o marcador de fim; leitura incompleta conta como operação interrompida. Então para as outras units, roda o instalador
 validado (`systemd-run --wait --collect ... BindReadOnlyPaths=<node privado>:/usr/bin/node`), confere
 `current`, o manifesto da release, o `verify-pair` e os drop-ins e overrides. Sobe display e gateway
 (401 sem `Set-Cookie`), o publisher (sonda que conecta no socket sem escrever) e o manager. Por fim
@@ -64,11 +68,12 @@ observa 180 s de bootstrap. ETA ≈ 8 min.
 |---|---|---|
 | 0 | ok | — |
 | 2 | precondição falhou, **nada mudou** | ler as linhas `FAIL`, corrigir, repetir |
+| 2 `manager_term_failed` | o SIGTERM não foi entregue; o manager segue como estava | ler a causa; nada a desfazer |
 | 3 | falhou depois de mudar algo | rodar o comando `rollback:` impresso |
-| 3 + `nao_rodar_rollback` | o manager não saiu em 40 s, nada foi trocado | esperar o auto-restart em PREV e rodar o `verify` impresso |
-| 3 + `operation_outcome_uncertain` | a parada interrompeu uma operação | rollback; **não** repetir a operação; reconciliar no Rails |
+| 3 `manager_stop_timeout` + `nada_trocado` | SIGTERM entregue, o manager não saiu em 40 s; `current` segue PREV | esperar ele sair (o `Restart=on-failure` religa em PREV com `NRestarts=1`) e rodar o `rollback:` impresso, que para tudo, zera o contador e religa PREV limpo |
+| 3 + `operation_outcome_uncertain` | a parada interrompeu uma operação, ou o journal não pôde ser lido por inteiro | rollback; **não** repetir a operação; reconciliar no Rails |
 | 3 `vps_release_stage_failed` | só o stage ficou incompleto | ver "Limpeza" |
-| 4 | runtime ok, a sessão Meta pede uma pessoa | depois de um `install`, PREV estava saudável no backup e a decisão de rollback é sua. Em `verify` avulso ou depois de um rollback, o rollback não resolve |
+| 4 | runtime ok, a sessão Meta pede uma pessoa | depois de um `install`, PREV estava saudável no backup e a decisão de rollback é sua: o `rollback:` impresso já leva `--stop-operator-waiter` (ver "Waiter do operador"). Em `verify` avulso ou depois de um rollback, o rollback não resolve |
 
 ## Rollback
 
@@ -82,8 +87,25 @@ instalador ou o npm transitório ainda estiver rodando, se `current` não for NE
 roda `reset-failed` (zera o start-limit sem apagar estado), faz o compare-and-swap
 (`ln -s` + `mv -T`; se `current-PREV` já aponta para PREV, só termina o `mv -T`), sobe na ordem e
 verifica. Quando PREV já está rodando com todas as units, ele não muda nada (`rollback_noop`).
-Pode ser repetido. Se o backup sumiu de `/tmp` (por exemplo depois de um boot), informe as units
+Pode ser repetido. `rollback_noop` exige também `NRestarts=0` em todas as units: um manager que
+reiniciou sozinho é religado limpo. Se o backup sumiu de `/tmp` (por exemplo depois de um boot), informe as units
 explicitamente: `--units-active hub2you=display,gateway,publisher,manager --units-active autonomia=...`.
+
+## Waiter do operador
+
+Quando o `session-manager.mjs` sai com 2 (a sessão Meta pede uma pessoa), o `manager.sh` sobe o
+`runtime/operator-waiter.mjs`, que fica esperando um pedido humano pelo Rails por até 1 h, em laço.
+O `install` nunca para um waiter. O `rollback` só para com `--stop-operator-waiter`, dado de propósito,
+e mesmo assim recusa (código 2, nada parado) quando há uma pessoa no meio do pedido:
+
+- marcador `/run/instagram-<stack>/browser-request.json` presente (navegador aberto para a pessoa); ou
+- algum processo `session-browser.mjs` ou `session-manager.mjs` do `ig-<stack>`: com o waiter vivo, eles
+  só existem como filhos dele, isto é, um pedido já reivindicado.
+
+Parar um waiter ocioso descarta só a espera; a sessão continua pedindo uma pessoa em PREV, se for o
+caso, e o `verify` do rollback devolve 4. Janela residual: entre o claim no Rails e o filho subir, o
+pedido existe sem processo visível na VPS. Se isso acontecer, o waiter devolve o pedido como `failed`
+ao receber o SIGTERM, e a pessoa refaz o pedido.
 
 ## Lock do manager
 
