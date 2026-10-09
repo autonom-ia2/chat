@@ -38,6 +38,11 @@ export const NOTIFICATION_TYPES = [
     label: 'PROFILE_SETTINGS.FORM.NOTIFICATIONS.TYPES.CRM_FOLLOWUP_REMINDER',
     value: 'crm_followup_reminder',
   },
+  {
+    label:
+      'PROFILE_SETTINGS.FORM.NOTIFICATIONS.TYPES.CONVERSATION_HANDOFF_REQUEST',
+    value: 'conversation_handoff_request',
+  },
 ];
 
 export const EVENT_TYPES = {

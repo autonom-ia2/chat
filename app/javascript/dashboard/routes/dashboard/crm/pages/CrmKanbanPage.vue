@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import { useEmitter } from 'dashboard/composables/emitter';
@@ -62,8 +62,14 @@ const { canManageCards, canMoveCards, canManagePipelines, canManageAi } =
   useCrmPermissions();
 
 const CRM_CALENDAR_MEETINGS_FEATURE = 'CRM_CALENDAR_MEETINGS_ENABLED';
+const isCrmAiEnabled = computed(
+  () =>
+    store.getters['globalConfig/get']?.crmAiEnabled === true ||
+    window.globalConfig?.CRM_AI_ENABLED === 'true'
+);
 
 const route = useRoute();
+const router = useRouter();
 // Calendar-only sub-page (route meta.calendarOnly): opens straight on the calendar
 // with the kanban/list/calendar switch and "New pipeline" button hidden.
 const isCalendarOnly = computed(() => route.meta?.calendarOnly === true);
@@ -509,6 +515,14 @@ const openEditPipelineDrawer = async () => {
 
 const closePipelineDrawer = () => {
   showPipelineDrawer.value = false;
+};
+
+const openHandoffSettings = () => {
+  if (!selectedPipeline.value) return;
+  router.push({
+    name: 'crm_handoff_settings_edit',
+    params: { pipelineId: selectedPipeline.value.id },
+  });
 };
 
 const askConfirmation = async config => {
@@ -1492,6 +1506,20 @@ onMounted(async () => {
           @click="openEditPipelineDrawer"
         />
 
+        <Button
+          v-if="
+            viewMode !== 'calendar' &&
+            selectedPipeline &&
+            canManageAi &&
+            isCrmAiEnabled
+          "
+          :label="t('CRM_KANBAN.ACTIONS.HANDOFF_SETTINGS')"
+          icon="i-lucide-arrow-right-left"
+          teal
+          solid
+          @click="openHandoffSettings"
+        />
+
         <div v-if="viewMode !== 'calendar'" class="w-60">
           <Input
             v-model="filters.search"
@@ -1500,46 +1528,6 @@ onMounted(async () => {
             @enter="applyFilters"
           />
         </div>
-
-        <label v-if="viewMode !== 'calendar'" class="grid gap-1">
-          <span class="text-xs font-medium text-n-slate-11">
-            {{ t('CRM_KANBAN.FILTERS.PRIORITY') }}
-          </span>
-          <select
-            v-model="filters.priority"
-            class="reset-base !mb-0 h-10 w-36 rounded-lg border-0 bg-n-alpha-black2 px-3 text-sm text-n-slate-12 outline outline-1 outline-n-weak focus:outline-n-brand"
-            @change="applyFilters"
-          >
-            <option value="">{{ t('CRM_KANBAN.FILTERS.ALL_FEMININE') }}</option>
-            <option
-              v-for="priority in priorityOptions"
-              :key="priority.value"
-              :value="priority.value"
-            >
-              {{ priority.label }}
-            </option>
-          </select>
-        </label>
-
-        <label v-if="viewMode !== 'calendar'" class="grid gap-1">
-          <span class="text-xs font-medium text-n-slate-11">
-            {{ t('CRM_KANBAN.FILTERS.FOLLOW_UP') }}
-          </span>
-          <select
-            v-model="filters.followUpStatus"
-            class="reset-base !mb-0 h-10 w-36 rounded-lg border-0 bg-n-alpha-black2 px-3 text-sm text-n-slate-12 outline outline-1 outline-n-weak focus:outline-n-brand"
-            @change="applyFilters"
-          >
-            <option value="">{{ t('CRM_KANBAN.FILTERS.ALL') }}</option>
-            <option
-              v-for="status in followUpStatusOptions"
-              :key="status.value"
-              :value="status.value"
-            >
-              {{ status.label }}
-            </option>
-          </select>
-        </label>
 
         <Popover
           v-if="viewMode !== 'calendar'"
@@ -1604,6 +1592,48 @@ onMounted(async () => {
                     :value="agent.value"
                   >
                     {{ agent.label }}
+                  </option>
+                </select>
+              </label>
+
+              <label class="grid gap-1">
+                <span class="text-xs font-medium text-n-slate-11">
+                  {{ t('CRM_KANBAN.FILTERS.PRIORITY') }}
+                </span>
+                <select
+                  v-model="filters.priority"
+                  class="reset-base !mb-0 h-9 w-full rounded-lg border-0 bg-n-alpha-black2 px-3 text-sm text-n-slate-12 outline outline-1 outline-n-weak focus:outline-n-brand"
+                  @change="applyFilters"
+                >
+                  <option value="">
+                    {{ t('CRM_KANBAN.FILTERS.ALL_FEMININE') }}
+                  </option>
+                  <option
+                    v-for="priority in priorityOptions"
+                    :key="priority.value"
+                    :value="priority.value"
+                  >
+                    {{ priority.label }}
+                  </option>
+                </select>
+              </label>
+
+              <label class="grid gap-1">
+                <span class="text-xs font-medium text-n-slate-11">
+                  {{ t('CRM_KANBAN.FILTERS.FOLLOW_UP') }}
+                </span>
+                <select
+                  v-model="filters.followUpStatus"
+                  class="reset-base !mb-0 h-9 w-full rounded-lg border-0 bg-n-alpha-black2 px-3 text-sm text-n-slate-12 outline outline-1 outline-n-weak focus:outline-n-brand"
+                  @change="applyFilters"
+                >
+                  <option value="">{{ t('CRM_KANBAN.FILTERS.ALL') }}</option>
+                  <option
+                    v-for="status in followUpStatusOptions"
+                    :key="status.value"
+                    :value="status.value"
+                  >
+                    {{ status.label }}
                   </option>
                 </select>
               </label>
@@ -1933,6 +1963,9 @@ onMounted(async () => {
           </div>
         </header>
 
+        <!-- :sort=false — a ordem da coluna é sempre por conversa mais recente
+             (getter); reordenar manualmente dentro da coluna seria revertido no
+             próximo tick, então fica desabilitado. Drag entre etapas segue. -->
         <Draggable
           v-model="stage.cards"
           item-key="id"
@@ -1942,6 +1975,7 @@ onMounted(async () => {
           class="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3"
           :animation="150"
           :disabled="!canMoveCards"
+          :sort="false"
           @start="onDragStart"
           @change="event => onDragChange(stage, event)"
         >

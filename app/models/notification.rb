@@ -44,7 +44,8 @@ class Notification < ApplicationRecord
     sla_missed_first_response: 6,
     sla_missed_next_response: 7,
     sla_missed_resolution: 8,
-    crm_followup_reminder: 9
+    crm_followup_reminder: 9,
+    conversation_handoff_request: 10
   }.freeze
 
   enum notification_type: NOTIFICATION_TYPES
@@ -94,6 +95,7 @@ class Notification < ApplicationRecord
       'assigned_conversation_new_message' => 'notifications.notification_title.assigned_conversation_new_message',
       'participating_conversation_new_message' => 'notifications.notification_title.assigned_conversation_new_message',
       'conversation_mention' => 'notifications.notification_title.conversation_mention',
+      'conversation_handoff_request' => 'notifications.notification_title.conversation_handoff_request',
       'sla_missed_first_response' => 'notifications.notification_title.sla_missed_first_response',
       'sla_missed_next_response' => 'notifications.notification_title.sla_missed_next_response',
       'sla_missed_resolution' => 'notifications.notification_title.sla_missed_resolution'
@@ -105,7 +107,7 @@ class Notification < ApplicationRecord
     if notification_type == 'conversation_creation'
       I18n.t(i18n_key, display_id: conversation.display_id, inbox_name: primary_actor.inbox.name)
     elsif %w[conversation_assignment assigned_conversation_new_message participating_conversation_new_message
-             conversation_mention].include?(notification_type)
+             conversation_mention conversation_handoff_request].include?(notification_type)
       I18n.t(i18n_key, display_id: conversation.display_id)
     else
       I18n.t(i18n_key, display_id: primary_actor.display_id)
@@ -119,7 +121,7 @@ class Notification < ApplicationRecord
       message_body(conversation.messages.first)
     when 'assigned_conversation_new_message', 'participating_conversation_new_message', 'conversation_mention'
       message_body(secondary_actor)
-    when 'conversation_assignment', 'sla_missed_next_response', 'sla_missed_resolution'
+    when 'conversation_assignment', 'conversation_handoff_request', 'sla_missed_next_response', 'sla_missed_resolution'
       message_body((conversation.messages.incoming.last || conversation.messages.outgoing.last))
     else
       ''

@@ -163,6 +163,23 @@ const followUp = computed(() => {
     tone,
   };
 });
+
+// Convite de handoff em aberto (payload handoff_invite): âmbar dentro do
+// prazo de pega, ruby quando o prazo estourou. Some quando o ciclo fecha
+// (alguém pega, expira ou escala).
+const handoffInvite = computed(() => {
+  const due = Number(props.card?.handoff_invite?.pickup_due_at);
+  if (!due || Number.isNaN(due)) return null;
+
+  const isOverdue = Date.now() / 1000 > due;
+  return {
+    tone: isOverdue ? 'ruby' : 'amber',
+    label: shortTimestamp(dynamicTime(due), true),
+    title: isOverdue
+      ? t('CRM_KANBAN.CARD.HANDOFF_INVITE_OVERDUE')
+      : t('CRM_KANBAN.CARD.HANDOFF_INVITE_PENDING'),
+  };
+});
 </script>
 
 <template>
@@ -218,6 +235,15 @@ const followUp = computed(() => {
     <!-- Signal pills -->
     <div class="mt-2.5 flex flex-wrap items-center gap-1.5">
       <SLACardLabel v-if="slaChat" :chat="slaChat" />
+
+      <CrmCardPill
+        v-if="handoffInvite"
+        icon="i-lucide-alarm-clock"
+        :tone="handoffInvite.tone"
+        :title="handoffInvite.title"
+      >
+        {{ handoffInvite.label }}
+      </CrmCardPill>
 
       <CrmCardPill v-if="card.inbox?.channel_type" tone="default">
         <template #lead>

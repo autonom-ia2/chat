@@ -25,7 +25,6 @@ const form = reactive({
   callbackMode: 'reminder',
   staleHours: 48,
   stageCriteria: {},
-  stageHandoff: {},
   autoFollowup: {
     enabled: false,
     triggerIdleHours: 6,
@@ -35,8 +34,6 @@ const form = reactive({
     toneInstructions: '',
   },
 });
-
-const HANDOFF_MODES = ['round_robin', 'direct'];
 
 // Keep the editable interval list in sync with the requested number of touches,
 // padding new slots with sensible defaults and trimming extras.
@@ -75,19 +72,6 @@ const loadSettings = async () => {
     form.staleHours = Number(payload.stale_hours || 48);
     form.stageCriteria = Object.fromEntries(
       (payload.stages || []).map(stage => [stage.id, stage.ai_criteria || ''])
-    );
-    form.stageHandoff = Object.fromEntries(
-      (payload.stages || []).map(stage => [
-        stage.id,
-        {
-          enabled: stage.handoff?.enabled === true,
-          mode: HANDOFF_MODES.includes(stage.handoff?.mode)
-            ? stage.handoff.mode
-            : 'round_robin',
-          trigger: stage.handoff?.trigger || '',
-          prefer_online: stage.handoff?.prefer_online !== false,
-        },
-      ])
     );
     const followup = payload.auto_followup || {};
     const intervals = Array.isArray(followup.intervals_hours)
@@ -142,7 +126,6 @@ const saveSettings = async ({ silent = false } = {}) => {
         },
       },
       stage_criteria: form.stageCriteria,
-      stage_handoff: form.stageHandoff,
     });
     const payload = response.data.payload || {};
     form.enabled = payload.enabled !== false;
@@ -277,62 +260,6 @@ watch(
             class="reset-base w-full rounded-lg border-0 bg-n-surface-2 px-3 py-2 text-sm text-n-slate-12 outline outline-1 outline-n-weak"
             :placeholder="t('CRM_KANBAN.AI_SETTINGS.CRITERIA_PLACEHOLDER')"
           />
-
-          <div
-            v-if="form.stageHandoff[stage.id]"
-            class="grid gap-2 rounded-lg bg-n-alpha-2 p-3"
-          >
-            <label
-              class="flex items-center gap-2 text-xs font-medium text-n-slate-12"
-            >
-              <input
-                v-model="form.stageHandoff[stage.id].enabled"
-                type="checkbox"
-                class="rounded border-n-weak"
-              />
-              {{ t('CRM_KANBAN.AI_SETTINGS.HANDOFF.ENABLED') }}
-            </label>
-
-            <template v-if="form.stageHandoff[stage.id].enabled">
-              <textarea
-                v-model="form.stageHandoff[stage.id].trigger"
-                rows="2"
-                class="reset-base w-full rounded-lg border-0 bg-n-surface-2 px-3 py-2 text-sm text-n-slate-12 outline outline-1 outline-n-weak"
-                :placeholder="
-                  t('CRM_KANBAN.AI_SETTINGS.HANDOFF.TRIGGER_PLACEHOLDER')
-                "
-              />
-              <div class="flex flex-wrap items-center gap-4">
-                <label class="flex items-center gap-2 text-xs text-n-slate-11">
-                  {{ t('CRM_KANBAN.AI_SETTINGS.HANDOFF.MODE') }}
-                  <select
-                    v-model="form.stageHandoff[stage.id].mode"
-                    class="reset-base rounded-lg border-0 bg-n-surface-2 px-2 py-1 text-xs text-n-slate-12 outline outline-1 outline-n-weak"
-                  >
-                    <option
-                      v-for="mode in HANDOFF_MODES"
-                      :key="mode"
-                      :value="mode"
-                    >
-                      {{
-                        t(
-                          `CRM_KANBAN.AI_SETTINGS.HANDOFF.MODE_${mode.toUpperCase()}`
-                        )
-                      }}
-                    </option>
-                  </select>
-                </label>
-                <label class="flex items-center gap-2 text-xs text-n-slate-11">
-                  <input
-                    v-model="form.stageHandoff[stage.id].prefer_online"
-                    type="checkbox"
-                    class="rounded border-n-weak"
-                  />
-                  {{ t('CRM_KANBAN.AI_SETTINGS.HANDOFF.PREFER_ONLINE') }}
-                </label>
-              </div>
-            </template>
-          </div>
         </div>
       </div>
 

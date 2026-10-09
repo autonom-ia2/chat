@@ -47,6 +47,7 @@ class Autonomia::Sso::Provisioner
 
   def sync_account_name(account)
     return if pending_agent_invitation(account).present?
+    return if identity_organization_fallback?
     return if organization_name.blank?
     return if account.name == organization_name
 

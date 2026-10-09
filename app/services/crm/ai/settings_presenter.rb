@@ -13,12 +13,14 @@ module Crm
           callback_mode: Config.pipeline_callback_mode(@pipeline),
           stale_hours: pipeline_settings[:stale_hours].presence || Config::DEFAULT_STALE_HOURS,
           auto_followup: Config.auto_followup_settings(@pipeline),
+          handoff: Config.handoff_settings(nil, @pipeline),
           stages: @pipeline.stages.order(:position, :id).map do |stage|
             {
               id: stage.id,
               name: stage.name,
               ai_criteria: Config.stage_ai_criteria(stage),
-              handoff: Config.handoff_settings(stage, @pipeline)
+              handoff: Config.handoff_settings(stage, @pipeline),
+              handoff_custom: (stage.metadata || {}).key?('ai_handoff')
             }
           end
         }

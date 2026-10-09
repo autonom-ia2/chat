@@ -45,6 +45,7 @@ class Crm::Cards::PayloadBuilder
     payload[:is_standalone] = @card.standalone?
     payload[:ai_summary] = ai_summary_payload
     payload[:ai_value] = ai_value_payload
+    payload[:handoff_invite] = handoff_invite_payload
     payload[:auto_followup] = auto_followup_payload
     payload[:next_follow_up_source] = next_follow_up_source
     NESTED_PAYLOADS.each do |key, method_name|
@@ -72,6 +73,12 @@ class Crm::Cards::PayloadBuilder
   # Provenance of value_cents so the UI can badge "filled by AI" and the Win
   # dialog can hint it. value_cents itself is authoritative (auto-filled).
   # Gated on conversation visibility like the summary.
+  # Convite R3 em aberto para o badge do kanban (lógica compartilhada com a
+  # lista de conversas em Crm::Ai::HandoffInvitePayload).
+  def handoff_invite_payload
+    Crm::Ai::HandoffInvitePayload.for_card(@card)
+  end
+
   def ai_value_payload
     return unless primary_conversation_visible?
 

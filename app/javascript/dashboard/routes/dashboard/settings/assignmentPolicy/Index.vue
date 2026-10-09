@@ -50,6 +50,32 @@ const agentAssignments = computed(() => {
     'advanced_assignment'
   );
 
+  const hasCrm =
+    isFeatureEnabledonAccount.value(accountId.value, 'crm') &&
+    window.globalConfig?.CRM_KANBAN_ENABLED === 'true' &&
+    window.globalConfig?.CRM_AI_ENABLED === 'true';
+  if (hasCrm) {
+    assignments.push({
+      key: 'crm_handoff_settings_index',
+      title: t('ASSIGNMENT_POLICY.INDEX.CRM_HANDOFF.TITLE'),
+      description: t('ASSIGNMENT_POLICY.INDEX.CRM_HANDOFF.DESCRIPTION'),
+      features: [
+        {
+          icon: 'i-lucide-arrow-right-left',
+          label: t('ASSIGNMENT_POLICY.INDEX.CRM_HANDOFF.FEATURES.0'),
+        },
+        {
+          icon: 'i-lucide-user-check',
+          label: t('ASSIGNMENT_POLICY.INDEX.CRM_HANDOFF.FEATURES.1'),
+        },
+        {
+          icon: 'i-lucide-bell-ring',
+          label: t('ASSIGNMENT_POLICY.INDEX.CRM_HANDOFF.FEATURES.2'),
+        },
+      ],
+    });
+  }
+
   if (hasAssignmentV2 && hasAdvancedAssignment) {
     assignments.push({
       key: 'agent_capacity_policy_index',

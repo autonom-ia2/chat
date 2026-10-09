@@ -687,6 +687,15 @@
           "Criar exceções com base em rótulos e tempo",
           "Adicione agentes a uma política - uma política por agente"
         ]
+      },
+      "CRM_HANDOFF": {
+        "TITLE": "Handoff da IA (CRM)",
+        "DESCRIPTION": "Defina como a IA passa conversas do funil para humanos.",
+        "FEATURES": [
+          "Transferência direta ou por convite, por funil e por etapa",
+          "Destino: caixa inteira em rodízio ou pessoa específica",
+          "Se ninguém pegar: re-notificar ou escalar para um supervisor"
+        ]
       }
     },
     "AGENT_ASSIGNMENT_POLICY": {

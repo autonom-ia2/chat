@@ -31,6 +31,10 @@ class Api::V1::Accounts::Crm::AiSettingsController < Api::V1::Accounts::Crm::Bas
       auto_followup: [
         :enabled, :trigger_idle_hours, :max_touches, :tone_instructions,
         { intervals_hours: [], quiet_hours: [:start, :end, :tz] }
+      ],
+      handoff: [
+        :enabled, :mode, :selector_mode, :handoff_mode, :trigger, :prefer_online, :pickup_threshold_seconds,
+        :escalation_user_id, :pool_type, :pool_id, :renotify_after_seconds, :escalation_action
       ]
     )
   end
