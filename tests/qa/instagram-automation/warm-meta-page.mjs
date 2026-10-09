@@ -109,12 +109,14 @@ async function operation({
   warmMetaPage,
   request,
   signal,
+  searchStatus,
 }) {
   return executeBrowserOperation({
     page,
     configuration,
     request,
     warmMetaPage,
+    searchStatus,
     signal: signal || AbortSignal.timeout(10000),
     requestGuard: parameters =>
       isAllowedBrowserRequest({ ...parameters, config: configuration }),
@@ -482,6 +484,64 @@ async function runConcurrentCase(fixture) {
   }
 }
 
+const LEGACY_CANDIDATE_KEYS = ['avatar_url', 'id', 'name', 'username'];
+
+// Search reports the tester status of the exact username only, and only with
+// the flag on. The fixture definition is restored for the later cases.
+async function runSearchStatusCase(fixture) {
+  const definition = fixture.scenarios.search;
+  const original = { ...definition };
+  const state = await setup(fixture, 'search');
+  let iteration = 20;
+  const search = async searchStatus => {
+    iteration += 1;
+    const result = await operation({
+      ...state,
+      searchStatus,
+      request: makeRequest('search', state.configuration, fixture, iteration),
+    });
+    assert.equal(Array.isArray(result.results), true);
+    return result.results;
+  };
+  try {
+    const [legacy] = await search(false);
+    assert.deepEqual(Object.keys(legacy).sort(), LEGACY_CANDIDATE_KEYS);
+
+    const exactStatus = async (rolesStatus, expected) => {
+      definition.roles_target_status = rolesStatus;
+      const [exact] = await search(true);
+      assert.deepEqual(
+        Object.keys(exact).sort(),
+        [...LEGACY_CANDIDATE_KEYS, 'tester_status'].sort()
+      );
+      assert.equal(exact.username, fixture.target.username);
+      assert.equal(exact.tester_status, expected);
+      return exact.tester_status;
+    };
+    const statuses = [
+      await exactStatus('ABSENT', 'absent'),
+      await exactStatus('CONFIRMED', 'accepted'),
+      await exactStatus('PENDING', 'pending'),
+    ];
+
+    definition.roles_target_status = 'CONFIRMED';
+    definition.typeahead_entries = 'target_and_other';
+    const pair = await search(true);
+    assert.equal(pair.length, 2);
+    const exact = pair.find(item => item.username === fixture.target.username);
+    const other = pair.find(item => item.username !== fixture.target.username);
+    assert.equal(exact.tester_status, 'accepted');
+    assert.equal(other.tester_status, null);
+
+    assert.equal(state.getGotoCount(), 1);
+    assert.equal(state.transport.counts().invite, 0);
+    return statuses;
+  } finally {
+    Object.assign(definition, original);
+    await closeSetup(state);
+  }
+}
+
 async function run() {
   const fixture = JSON.parse(await readFile(FIXTURE_PATH, 'utf8'));
   assert.equal(fixture.production_mutated, false);
@@ -603,6 +663,7 @@ async function run() {
       duplicate_roles_rejected: await runDuplicateRolesCase(fixture),
       dialog_guards_fail_closed: await runDialogGuardCase(fixture),
       concurrent_refresh_serialized: await runConcurrentCase(fixture),
+      search_status_exact_only: await runSearchStatusCase(fixture),
     };
   } finally {
     await closeSetup(state);

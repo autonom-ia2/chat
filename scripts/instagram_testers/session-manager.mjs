@@ -342,6 +342,8 @@ export async function run(
   const browserOperationsEnabled =
     env.INSTAGRAM_TESTER_RUNTIME_MODE === 'vps' &&
     env.INSTAGRAM_TESTER_BROWSER_OPERATIONS_ENABLED === 'true';
+  // Off by default: Rails must accept the tester_status candidate key first.
+  const searchStatus = env.INSTAGRAM_TESTER_SEARCH_STATUS_ENABLED === 'true';
   // 13 minutes asleep + a bounded 2-minute cycle fits the backend's 16-minute heartbeat TTL.
   // Legacy runtimes retain the original 15-minute pause and 30-second cycle.
   const refreshInterval =
@@ -689,6 +691,7 @@ export async function run(
                   page,
                   configuration: operationConfig,
                   warmMetaPage,
+                  searchStatus,
                   request: claimed.request,
                   signal: executionScope.signal,
                   deadlineAt,

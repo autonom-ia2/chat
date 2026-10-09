@@ -354,10 +354,16 @@ function completeContainer(container) {
   );
 }
 
-export function parseRolesStatus(body, targetId) {
-  if (!numeric(targetId)) fail('invalid_selection');
-  const document = parseDocument(body);
-  const container = document.data?.get_app_roles;
+const ROLE_STATUSES = new Map([
+  ['PENDING', 'pending'],
+  ['CONFIRMED', 'accepted'],
+]);
+
+// Maps every tester in a complete roster to its status. A roster without the
+// testers group is empty (everyone is absent); anything incomplete, malformed
+// or contradictory is unknown_status.
+export function rolesStatusMap(document) {
+  const container = document?.data?.get_app_roles;
   if (!container || typeof container !== 'object' || Array.isArray(container))
     fail('unknown_status');
   const groups = container.app_roles;
@@ -381,22 +387,21 @@ export function parseRolesStatus(body, targetId) {
         typeof user !== 'object' ||
         Array.isArray(user) ||
         !numeric(user.id) ||
-        !['PENDING', 'CONFIRMED'].includes(user.status)
+        !ROLE_STATUSES.has(user.status)
       )
         fail('unknown_status');
-      const values = statuses.get(user.id) || new Set();
-      values.add(user.status);
-      statuses.set(user.id, values);
+      const status = ROLE_STATUSES.get(user.status);
+      if (statuses.has(user.id) && statuses.get(user.id) !== status)
+        fail('unknown_status');
+      statuses.set(user.id, status);
     }
   }
-  if ([...statuses.values()].some(values => values.size > 1))
-    fail('unknown_status');
-  const status = statuses.get(targetId);
-  if (!status) return 'absent';
-  const value = [...status][0];
-  if (value === 'PENDING') return 'pending';
-  if (value === 'CONFIRMED') return 'accepted';
-  return fail('unknown_status');
+  return statuses;
+}
+
+export function parseRolesStatus(body, targetId) {
+  if (!numeric(targetId)) fail('invalid_selection');
+  return rolesStatusMap(parseDocument(body)).get(targetId) ?? 'absent';
 }
 
 function roleRequestMetadata(request, config) {
@@ -1981,6 +1986,7 @@ async function openTesterSearch({
   navigate,
   warmMetaPage = null,
 }) {
+  let rolesDocument = null;
   if (navigate) {
     const refreshWarm = warmRefreshRequired(warmMetaPage, page, config);
     if (refreshWarm) {
@@ -1995,7 +2001,13 @@ async function openTesterSearch({
       await navigateRoles(page, config, signal);
     }
     state.diagnosticPhase = 'roles_capture';
-    await captureRoles(state, page, config, signal, warmMetaPage);
+    rolesDocument = await captureRoles(
+      state,
+      page,
+      config,
+      signal,
+      warmMetaPage
+    );
   }
   if (warmMetaPage) {
     state.diagnosticPhase = 'tester_dialog_reset';
@@ -2044,7 +2056,26 @@ async function openTesterSearch({
   )
     fail(result?.error || 'meta_unavailable');
   if (!result?.ok) fail(result?.error || 'meta_unavailable');
-  return { results: result.results, dialog };
+  return { results: result.results, dialog, rolesDocument };
+}
+
+// Only the exact username the actor typed gets a status, so a search exposes
+// no more than the single status read it replaces. An unreadable roster
+// leaves every status unknown (null) and the search still succeeds.
+function searchStatuses(results, rolesDocument, request) {
+  let statuses;
+  try {
+    statuses = rolesStatusMap(rolesDocument);
+  } catch {
+    statuses = null;
+  }
+  return results.map(candidate => ({
+    ...candidate,
+    tester_status:
+      statuses && candidate.username === request.username
+        ? (statuses.get(candidate.id) ?? 'absent')
+        : null,
+  }));
 }
 
 async function performSearch({
@@ -2054,6 +2085,7 @@ async function performSearch({
   state,
   signal,
   warmMetaPage,
+  searchStatus,
 }) {
   const result = await openTesterSearch({
     page,
@@ -2064,7 +2096,8 @@ async function performSearch({
     navigate: true,
     warmMetaPage,
   });
-  return result.results;
+  if (!searchStatus) return result.results;
+  return searchStatuses(result.results, result.rolesDocument, request);
 }
 
 function requireUniqueInviteCandidate(results, request, state) {
@@ -2356,6 +2389,7 @@ export async function executeBrowserOperation({
   permitInvite,
   onDiagnostic,
   warmMetaPage = null,
+  searchStatus = false,
   deadlineAt,
   now = Date.now,
 } = {}) {
@@ -2397,6 +2431,7 @@ export async function executeBrowserOperation({
         state,
         signal,
         warmMetaPage,
+        searchStatus: searchStatus === true,
       });
       return successEnvelope(request, { results }, now);
     }

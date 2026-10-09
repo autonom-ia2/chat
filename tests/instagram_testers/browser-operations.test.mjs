@@ -341,3 +341,88 @@ test('an invite body read stops when the response deadline signal aborts', async
   await Promise.allSettled([...state.inviteTasks]);
   assert.equal(state.inviteTasks.size, 0);
 });
+
+function rolesDocument(groups, container = {}) {
+  return { data: { get_app_roles: { app_roles: groups, ...container } } };
+}
+
+function testers(users, group = {}) {
+  return { role: 'instagram testers', users, ...group };
+}
+
+function rolesFailure(callback) {
+  assert.throws(callback, error => error.code === 'unknown_status');
+}
+
+test('rolesStatusMap maps pending and confirmed testers', () => {
+  const statuses = operations.rolesStatusMap(
+    rolesDocument([
+      testers([
+        { id: TARGET_ID, status: 'PENDING' },
+        { id: '178414000000000002', status: 'CONFIRMED' },
+      ]),
+      { role: 'developers', users: [{ id: '5', status: 'CONFIRMED' }] },
+    ])
+  );
+
+  assert.deepEqual(
+    [...statuses],
+    [
+      [TARGET_ID, 'pending'],
+      ['178414000000000002', 'accepted'],
+    ]
+  );
+});
+
+test('an empty or missing testers group is an empty map and absent', () => {
+  [
+    rolesDocument([]),
+    rolesDocument([{ role: 'developers', users: [] }]),
+    rolesDocument([testers([])]),
+  ].forEach(document => {
+    assert.equal(operations.rolesStatusMap(document).size, 0);
+    assert.equal(
+      operations.parseRolesStatus(JSON.stringify(document), TARGET_ID),
+      'absent'
+    );
+  });
+});
+
+test('rolesStatusMap refuses incomplete, malformed or conflicting rosters', () => {
+  [
+    rolesDocument([], { page_info: { has_next_page: true } }),
+    rolesDocument([testers([], { page_info: { has_next_page: true } })]),
+    rolesDocument([
+      testers([
+        { id: TARGET_ID, status: 'PENDING' },
+        { id: TARGET_ID, status: 'CONFIRMED' },
+      ]),
+    ]),
+    rolesDocument([testers([{ id: 'abc', status: 'PENDING' }])]),
+    rolesDocument([testers([{ id: TARGET_ID, status: 'INVITED' }])]),
+    rolesDocument([{ role: 'instagram testers' }]),
+    { data: { get_app_roles: [] } },
+    { data: {} },
+  ].forEach(document => {
+    rolesFailure(() => operations.rolesStatusMap(document));
+    rolesFailure(() =>
+      operations.parseRolesStatus(JSON.stringify(document), TARGET_ID)
+    );
+  });
+});
+
+test('parseRolesStatus keeps its lookup and its selection check', () => {
+  const document = JSON.stringify(
+    rolesDocument([testers([{ id: TARGET_ID, status: 'CONFIRMED' }])])
+  );
+
+  assert.equal(operations.parseRolesStatus(document, TARGET_ID), 'accepted');
+  assert.equal(
+    operations.parseRolesStatus(document, '178414000000000002'),
+    'absent'
+  );
+  assert.throws(
+    () => operations.parseRolesStatus(document, 'abc'),
+    error => error.code === 'invalid_selection'
+  );
+});

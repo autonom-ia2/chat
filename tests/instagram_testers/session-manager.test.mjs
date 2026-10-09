@@ -602,6 +602,8 @@ async function syntheticManager(t, options = {}) {
   }
   if (options.browserOperations)
     data.env.INSTAGRAM_TESTER_BROWSER_OPERATIONS_ENABLED = 'true';
+  if (options.searchStatus !== undefined)
+    data.env.INSTAGRAM_TESTER_SEARCH_STATUS_ENABLED = options.searchStatus;
   if (options.reconnectId)
     data.env.INSTAGRAM_TESTER_RECONNECT_REQUEST_ID = options.reconnectId;
   const clock = new FakeClock();
@@ -985,6 +987,45 @@ test('polls browser operations at 250 ms and executes a queued request once', as
   } finally {
     data.signals.emit('SIGTERM');
   }
+});
+
+async function executorSearchStatus(t, searchStatus) {
+  let observed = 'executor_not_called';
+  const data = await syntheticManager(t, {
+    vps: true,
+    browserOperations: true,
+    browserRequestReadyAt: 249,
+    searchStatus,
+    executeOperation: async options => {
+      observed = options.searchStatus;
+      const { request } = options;
+      return {
+        type: 'browser_operation',
+        operation: 'complete',
+        action: request.action,
+        id: request.id,
+        request_id: request.request_id,
+        claim: request.claim,
+        captured_at: '2026-10-08T12:00:00.000Z',
+        results: [],
+      };
+    },
+  });
+  try {
+    await data.clock.advance(250);
+    data.signals.emit('SIGTERM');
+    assert.equal(await data.settled, null);
+  } finally {
+    data.signals.emit('SIGTERM');
+  }
+  return observed;
+}
+
+test('search status reaches the executor only when its flag is exactly true', async t => {
+  assert.equal(await executorSearchStatus(t, undefined), false);
+  assert.equal(await executorSearchStatus(t, 'true'), true);
+  for (const value of ['TRUE', '1', 'false', ''])
+    assert.equal(await executorSearchStatus(t, value), false);
 });
 
 test('three refresh cycles preserve opaque CAS versions and the 15-minute interval', async t => {
