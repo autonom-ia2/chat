@@ -160,3 +160,31 @@ Practical checklist for any change impacting core logic or public APIs
 - O formato de cada ação de escrita do Guia (`lib/operator_guide/formatos-das-acoes.json` e o relatório de cobertura ao lado) também é **gerado**, do código (#900). Mexeu em controller, strong params ou validação de um recurso que o Guia alcança? Rode `bundle exec rails autonomia:guia:formatos` e envie o resultado; `autonomia:guia:formatos:check` (e o spec `formatos_spec.rb` no CI) falha quando ele está fora de dia.
 - **Tela nova sem explicação não passa no PR** (`.github/workflows/guia-trava.yml`, #535). A IA comenta no próprio PR o rascunho do bloco; a trava só libera quando uma pessoa põe a explicação em `porques.md` — o rascunho da IA não libera sozinho. Há três saídas: explicar; declarar a tela em `_fora_do_guia` com o motivo (definitivo); ou o rótulo `guia-nao-se-aplica` com uma linha `Guia não se aplica: <motivo>` no corpo do PR (vale só para aquele PR).
 - Tela que entrou sem explicação mesmo assim (dispensada pelo rótulo, ou push direto no `main`) é pega depois do merge pelo **modo aprendiz** (`.github/workflows/guia-aprendiz.yml`, #537), que abre um PR com o rascunho. Sem tela nova, os dois ficam calados.
+
+## Limpeza depois do deploy: branch, worktree e snapshot (regra do Rodrigo, 09/10/2026)
+
+A entrega só termina depois do deploy, da conferência em produção ("ok, SHA")
+**e da limpeza**. Na mesma etapa, pedir e fazer as três:
+
+1. **Branch** — apagar a branch remota, se o merge não apagou.
+2. **Worktree** — `git worktree remove` + `git worktree prune`, com as
+   verificações do `/Users/rodrigosilva/dev/CLAUDE.md` (seção 2).
+3. **Snapshot do MacCluster** — apagar os snapshots da entrega em
+   `/Users/Shared/maccluster-workspaces/<projeto>/<snapshot>`.
+
+Como apagar o snapshot (não existe comando `maccluster` de remoção):
+
+- Só os snapshots da própria entrega, pelo **caminho exato**, nunca com curinga.
+  O nome traz o SHA curto do HEAD de origem (`<data>-<hora>-<sha>-...`).
+- Antes, conferir que nada o usa: `lsof +D <caminho>` sem saída.
+- Apagar em cada nó onde houver réplica (`maccluster exec --node m2|m4 -- ...`).
+  `maccluster workspace list` pode continuar listando o apagado.
+- Snapshot é cópia descartável do working tree: tudo nele está no git. Não
+  exige quarentena nem aprovação individual.
+
+**Reaproveite o snapshot.** Um por entrega, não um por rodada de teste: depois
+de editar, copie os arquivos alterados para dentro do `src` do snapshot e rode
+de novo. Snapshot novo só quando muda a base (outro HEAD, migration nova).
+
+Por que a regra existe: em dois dias as rodadas de teste criaram cerca de 120
+snapshots de ~360 MB cada. O disco do M4 chegou a 98% e travou o trabalho.
