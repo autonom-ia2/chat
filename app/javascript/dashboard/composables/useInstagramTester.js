@@ -282,8 +282,11 @@ export function useInstagramTester({ disabled, returnTo }) {
       }
     );
     // One automatic check, never a loop: the status op reconciles the marker.
-    if (error.value === 'INVITE_UNKNOWN')
-      await readStatus({ afterUnknownInvite: true });
+    if (error.value !== 'INVITE_UNKNOWN') return;
+    await readStatus({ afterUnknownInvite: true });
+    // A failed check proves nothing: the invite may still have reached Meta.
+    if (needsReconciliation.value && status.value === null)
+      error.value = 'INVITE_UNKNOWN';
   };
 
   const authorize = () => {

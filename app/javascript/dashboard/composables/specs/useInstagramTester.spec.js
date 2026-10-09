@@ -268,6 +268,22 @@ describe('Instagram tester request guards and cancellation', () => {
       expect(instagramClient.inviteTester).toHaveBeenCalledTimes(1);
     });
 
+    it('keeps the unknown state when the single automatic check fails', async () => {
+      await selectAbsent();
+      instagramClient.inviteTester.mockRejectedValue(failure('invite_unknown'));
+      instagramClient.getTesterStatus.mockRejectedValueOnce(
+        failure('meta_unavailable')
+      );
+      await tester.invite();
+
+      expect(instagramClient.getTesterStatus).toHaveBeenCalledTimes(2);
+      expect(tester.status.value).toBeNull();
+      expect(tester.needsReconciliation.value).toBe(true);
+      expect(tester.error.value).toBe('INVITE_UNKNOWN');
+      await tester.invite();
+      expect(instagramClient.inviteTester).toHaveBeenCalledTimes(1);
+    });
+
     it('does not verify automatically after a rejected invite', async () => {
       await selectAbsent();
       instagramClient.inviteTester.mockRejectedValue(
