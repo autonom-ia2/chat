@@ -9,6 +9,7 @@ WORKFLOWS = ('deploy-autonomia-blue-green.yml', 'deploy-hub2you-blue-green.yml')
 VPS_ONLY = (
     'scripts/instagram_testers/session-manager.mjs',
     'scripts/instagram_testers/browser-operations.mjs',
+    'scripts/instagram_testers/runtime/vps/release/vps_release.py',
     'tests/instagram_testers/session-manager.test.mjs',
     'tests/instagram_testers/publisher-channel.test.mjs',
     'tests/instagram_testers/vps-publisher.test.mjs',
@@ -65,6 +66,9 @@ class DeployRoutingTest(unittest.TestCase):
         paths = ('scripts/instagram_testers/session-manager.mjs.bak',
                  'scripts/instagram_testers/browser-operations.mjs.bak',
                  'scripts/instagram_testers/runtime/vps/systemd/instagram-vps-publisher@hub2you.service',
+                 'scripts/instagram_testers/runtime/vps/release.mjs',
+                 'scripts/instagram_testers/runtime/vps/release-notes/x.mjs',
+                 'scripts/instagram_testers/runtime/release/x.mjs',
                  'tests/instagram_testers_extra/runner.mjs',
                  'tests/qa/instagram-automation-extra/runner.mjs')
         for workflow in WORKFLOWS:
