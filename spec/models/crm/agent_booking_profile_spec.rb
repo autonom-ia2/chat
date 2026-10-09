@@ -47,6 +47,14 @@ RSpec.describe Crm::AgentBookingProfile, type: :model do
       expect(build_profile(min_notice_minutes: described_class::MAX_MIN_NOTICE + 1)).not_to be_valid
     end
 
+    it 'valida também quando os ajustes chegam com chave símbolo' do
+      profile = build_profile(brand: { color: 'azul' }, locations: [{ type: 'custom_link', url: 'javascript:alert(1)' }])
+
+      expect(profile).not_to be_valid
+      expect(profile.errors[:brand]).to include('invalid color')
+      expect(profile.errors[:locations]).to include('link must be an http or https URL')
+    end
+
     it 'valida a cor da marca como #RRGGBB' do
       expect(build_profile(brand: { 'color' => '#0D2344' })).to be_valid
       expect(build_profile(brand: { 'color' => 'azul' })).not_to be_valid

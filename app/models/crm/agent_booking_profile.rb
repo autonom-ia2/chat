@@ -75,6 +75,7 @@ class Crm::AgentBookingProfile < ApplicationRecord
 
   before_validation :ensure_slug, on: :create
   before_validation :normalize_working_hours
+  before_validation :normalize_json_settings
 
   validates :slug, presence: true, uniqueness: true
   validates :duration_minutes, numericality: { only_integer: true, greater_than_or_equal_to: MIN_DURATION, less_than_or_equal_to: MAX_DURATION }
@@ -141,6 +142,13 @@ class Crm::AgentBookingProfile < ApplicationRecord
 
   def ensure_slug
     self.slug ||= SecureRandom.uuid
+  end
+
+  # jsonb vindo com chave símbolo só vira string depois de salvar: normaliza antes, para a validação ver o que vai
+  # ser gravado.
+  def normalize_json_settings
+    self.brand = brand.deep_stringify_keys if brand.is_a?(Hash)
+    self.locations = locations.map { |item| item.is_a?(Hash) ? item.deep_stringify_keys : item } if locations.is_a?(Array)
   end
 
   def normalize_working_hours
@@ -214,16 +222,7 @@ class Crm::AgentBookingProfile < ApplicationRecord
     return errors.add(:locations, 'unknown type') unless LOCATION_TYPES.include?(location['type'])
     return if location['type'] != 'custom_link'
 
-    errors.add(:locations, 'link must be an http or https URL') unless web_url?(location['url'].to_s)
-  end
-
-  def web_url?(value)
-    return false if value.blank? || value.length > MAX_TEXT
-
-    uri = URI.parse(value)
-    uri.is_a?(URI::HTTP) && uri.host.present?
-  rescue URI::InvalidURIError
-    false
+    errors.add(:locations, 'link must be an http or https URL') unless Crm::WebUrl.valid?(location['url'], max: MAX_TEXT)
   end
 
   def validate_slot_durations

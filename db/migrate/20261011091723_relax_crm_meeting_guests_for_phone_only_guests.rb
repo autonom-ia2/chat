@@ -14,13 +14,15 @@ class RelaxCrmMeetingGuestsForPhoneOnlyGuests < ActiveRecord::Migration[7.2]
               name: 'idx_crm_meeting_guests_unique_phone', algorithm: :concurrently, if_not_exists: true
   end
 
+  # Checa ANTES de mexer em qualquer coisa: a migration roda fora de transação, então recusar no meio
+  # deixaria o banco pela metade (e apagaria os telefones).
   def down
-    remove_index :crm_meeting_guests, name: 'idx_crm_meeting_guests_unique_phone', algorithm: :concurrently, if_exists: true
-    remove_column :crm_meeting_guests, :phone_number
     if select_value('SELECT 1 FROM crm_meeting_guests WHERE email IS NULL LIMIT 1')
       raise ActiveRecord::IrreversibleMigration, 'Existem convidados sem e-mail; desligue a flag crm_booking_v2 em vez de reverter.'
     end
 
     change_column_null :crm_meeting_guests, :email, false
+    remove_index :crm_meeting_guests, name: 'idx_crm_meeting_guests_unique_phone', algorithm: :concurrently, if_exists: true
+    remove_column :crm_meeting_guests, :phone_number
   end
 end

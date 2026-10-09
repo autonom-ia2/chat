@@ -80,8 +80,6 @@ class Crm::Meeting < ApplicationRecord
   validate :card_must_have_reachable_guest
   validate :custom_link_must_be_web_url
 
-  MAX_LINK_LENGTH = 500
-
   scope :upcoming, -> { where(status: :scheduled).where('starts_at > ?', Time.current) }
   scope :past, -> { where(status: %i[completed canceled no_show]) }
   scope :by_agent, ->(user_id) { where(created_by_id: user_id) }
@@ -157,17 +155,8 @@ class Crm::Meeting < ApplicationRecord
   # O link do agente vai para um href: só http/https, sem javascript: nem data:.
   def custom_link_must_be_web_url
     return unless custom_link? && online_meeting_url.present?
-    return if web_url?(online_meeting_url)
+    return if Crm::WebUrl.valid?(online_meeting_url)
 
     errors.add(:online_meeting_url, 'must be an http or https URL')
-  end
-
-  def web_url?(value)
-    return false if value.length > MAX_LINK_LENGTH
-
-    uri = URI.parse(value)
-    uri.is_a?(URI::HTTP) && uri.host.present?
-  rescue URI::InvalidURIError
-    false
   end
 end
