@@ -259,14 +259,15 @@ class Instagram::Testers::BrowserOperations
   # before and after the close covers every order: a claim before the first
   # release is deleted by it, a claim before the close by the second release,
   # and a claim after the close fails the permit re-check, which releases it.
+  # The context check sits inside the ensure, so an unexpected error there
+  # still runs the second release.
   def complete_invite_error(request, operation)
     validate_invite_error!(request, operation)
     release = release_invite_claim?(request)
     release_error = release_invite_claim(request, operation) if release
-    context_error = execution_context_error(operation)
-    code = context_error&.code || invite_error_code(request, release_error)
     begin
-      complete_failure(request, code)
+      context_error = execution_context_error(operation)
+      complete_failure(request, context_error&.code || invite_error_code(request, release_error))
     ensure
       release_invite_claim(request, operation) if release
     end

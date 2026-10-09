@@ -206,6 +206,17 @@ RSpec.describe Instagram::Testers::BrowserOperations do
       expect(Redis::Alfred.get(key)).to be_nil
     end
 
+    it 'still releases after closing when the context check fails with an unexpected error' do
+      allow(Account).to receive(:find_by).and_wrap_original do |_original, *|
+        # A late permit claims after the first release, then the lookup fails.
+        Instagram::Testers::InvitationOutcome.new(app_id: '10001', target_id: target_id).claim!(token: claimed.fetch('claim'))
+        raise ActiveRecord::ConnectionNotEstablished
+      end
+      complete_not_written('meta_unavailable')
+      expect(Redis::Alfred.get(key)).to be_nil
+      expect(record).to include('state' => 'failed', 'error_code' => 'meta_unavailable')
+    end
+
     it 'keeps the marker when the completion payload cannot be trusted' do
       operations.invite_permit(permit)
       operations.complete!(completion.merge('captured_at' => 10.minutes.from_now.utc.iso8601(3),
