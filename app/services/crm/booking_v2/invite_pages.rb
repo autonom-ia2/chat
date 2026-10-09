@@ -32,21 +32,26 @@ class Crm::BookingV2::InvitePages
     usable.find { |page| attends?(page, user) } || usable.first
   end
 
-  # Link individual da pessoa numa página `per_agent`; nil quando a pessoa não atende nela.
+  # Link que o convite leva numa página `per_agent`: o da própria pessoa; se ela não atende ali, o primeiro link
+  # ativo da página (o endereço-base de `per_agent` não abre sozinho). nil em página de responsável fixo.
   def link_for(page, user)
     return unless page.assignment_mode_per_agent?
 
-    page.agent_booking_links.find { |link| link.agent_id == user&.id && link_usable?(link) }
+    own_link(page, user) || page.agent_booking_links.find { |link| link_usable?(link) }
   end
 
   private
 
   attr_reader :account
 
+  def own_link(page, user)
+    page.agent_booking_links.find { |link| link.agent_id == user&.id && link_usable?(link) }
+  end
+
   def attends?(page, user)
     return page.default_assignee_id == user&.id if page.assignment_mode_fixed?
 
-    link_for(page, user).present?
+    own_link(page, user).present?
   end
 
   def eligible?(user)

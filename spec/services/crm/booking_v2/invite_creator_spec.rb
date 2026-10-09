@@ -41,6 +41,16 @@ RSpec.describe Crm::BookingV2::InviteCreator do
       expect(invite.booking_link).to eq(page.agent_booking_links.find_by(agent_id: agent.id))
     end
 
+    it 'in a per_agent page where the person has no link, carries an active link of the page (base address does not open)' do
+      page = create_booking_profile(account: account, host: world.host, title: 'Equipe')
+      Crm::BookingV2::PagePeople.new(page).assign!([world.host.id])
+      world.profile.update!(enabled: false)
+
+      invite = create_invite(user: agent, page_id: page.id.to_s, card: world.card)
+
+      expect(invite.booking_link).to eq(page.agent_booking_links.find_by(agent_id: world.host.id))
+    end
+
     it 'falls back to the first published page when the person attends none' do
       invite = create_invite(user: agent, card: world.card)
 
@@ -140,7 +150,8 @@ RSpec.describe Crm::BookingV2::InviteCreator do
 
       expect(creator).not_to be_reused
       expect(fresh).not_to eq(previous)
-      expect(fresh).to have_attributes(booking_profile_id: page.id, booking_link_id: nil)
+      host_link = page.agent_booking_links.find_by(agent_id: world.host.id)
+      expect(fresh).to have_attributes(booking_profile_id: page.id, booking_link_id: host_link.id)
       expect(previous.reload.canceled_at).to be_present
     end
 
