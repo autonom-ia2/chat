@@ -13,7 +13,7 @@ module EmailCampaigns
       # Retorna :sent, :failed, :suppressed ou :skipped.
       def deliver(recipient, suppressed)
         if suppressed.include?(recipient.email.downcase)
-          recipient.mark_suppressed!
+          EmailCampaignRecipient.where(id: recipient.id, status: :pending).update_all(status: EmailCampaignRecipient.statuses[:suppressed])
           return :suppressed
         end
         # claim() faz a transição atômica pending->sent. A partir daqui o destinatário JÁ
@@ -70,9 +70,7 @@ module EmailCampaigns
       end
 
       def claim(recipient)
-        claimed = EmailCampaignRecipient.where(id: recipient.id, status: EmailCampaignRecipient.statuses[:pending])
-                                        .update_all(status: EmailCampaignRecipient.statuses[:sent], updated_at: Time.current)
-                                        .positive?
+        claimed = ::EmailCampaigns::Reputation::Admission.new(@campaign).claim!(recipient)
         # update_all não toca a instância em memória: sincroniza para que mark_delivered!
         # (que exige sent?/delivered?) enxergue o novo status em vez do :pending obsoleto.
         recipient.status = :sent if claimed

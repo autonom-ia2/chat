@@ -14,24 +14,31 @@ module EmailCampaigns
 
     def perform
       return unless EmailCampaigns::Config.enabled?
-      return unless eligible?
-      return guardrail_pause! if EmailCampaigns::Guardrail.paused?(@account)
 
-      @campaign.mark_sending! unless @campaign.sending?
+      EmailCampaigns::Reputation::CampaignDeliveryLock.synchronize(@campaign.id) { deliver_batch }
+    end
+
+    private
+
+    def deliver_batch
+      return unless eligible?
+
+      @admission = EmailCampaigns::Reputation::Admission.new(@campaign)
+      return if @admission.park_if_blocked!
+
+      @campaign.with_lock { @campaign.mark_sending! if @campaign.scheduled? }
       sender = EmailCampaigns::Ses::Sender.new(@campaign.sender_identity)
-      suppressed = EmailSuppression.suppressed_set_for(@account)
 
       @campaign.email_campaign_recipients.pending.find_each(batch_size: BATCH_SIZE) do |recipient|
         break unless @campaign.reload.sending?
+        break if @admission.park_if_blocked!
 
-        deliver_one(recipient, sender, suppressed)
+        deliver_one(recipient, sender)
         sleep(SEND_INTERVAL) if SEND_INTERVAL.positive?
       end
 
       @campaign.finalize! if @campaign.reload.sending? && no_pending?
     end
-
-    private
 
     def eligible?
       @campaign.reload
@@ -41,28 +48,20 @@ module EmailCampaigns
       true
     end
 
-    # Tenant-level guardrail tripped (bounce/complaint over limit in the 7d window):
-    # refuse to send and park the campaign with a clear, actionable error.
-    def guardrail_pause!
-      reason = @account.internal_attributes.dig(EmailCampaigns::Guardrail::FLAG_KEY, 'reason')
-      @campaign.update!(status: :paused,
-                        last_error: 'Envios pausados pelo guardrail de reputação da conta ' \
-                                    "(#{reason}). Após resolver a causa, solicite a liberação do guardrail.")
-    end
-
-    def deliver_one(recipient, sender, suppressed)
-      return recipient.mark_suppressed! if suppressed.include?(recipient.email.downcase)
-      return unless claim(recipient)
-
+    def deliver_one(recipient, sender)
       rendered = render(recipient)
       tracked_html = EmailCampaigns::Tracking::Injector.new(recipient, rendered[:body_html]).perform
+      headers = unsubscribe_headers(recipient)
+      # Render first, then admit immediately before the external call. Never send a lost claim.
+      return unless @admission.claim!(recipient)
+
       message_id = sender.deliver(
         to: recipient.email,
         subject: rendered[:subject],
         html_body: tracked_html,
         reply_to: @campaign.reply_to.presence || default_reply_to,
         from_email: from_email,
-        headers: unsubscribe_headers(recipient)
+        headers: headers
       )
       # SES has ACCEPTED the message by here — never route a post-send failure through the
       # transient-retry path (that would re-queue + re-send a delivered message = duplicate email).
@@ -75,7 +74,7 @@ module EmailCampaigns
     end
 
     # Post-send bookkeeping. The claim already flipped the row to :sent; persist the message_id.
-    # If the local write blips, retry it a few times then give up WITHOUT re-queueing — the row
+    # If the local write fails, give up WITHOUT re-queueing — the row
     # stays :sent (at-most-once), we only lose the ses_message_id linkage for that recipient.
     def persist_sent!(recipient, message_id)
       recipient.update_columns(ses_message_id: message_id, sent_at: Time.current, last_error: nil, updated_at: Time.current)
@@ -84,32 +83,14 @@ module EmailCampaigns
                          "recipient=#{recipient.id} ses_message_id=#{message_id} #{e.message}")
     end
 
-    # SES transient signals: throttling / 5xx / timeouts → requeue (claim is undone to pending,
-    # attempts bumped) up to MAX_ATTEMPTS, then permanently failed. Permanent errors (bad
-    # address, validation) fail immediately. at-most-once is preserved: a recipient whose SES
-    # call SUCCEEDED never raises and is never reset.
-    TRANSIENT_PATTERNS = /throttl|throttling|timeout|timed out|temporar|503|500|502|504|rate exceeded|service unavailable/i
-
+    # Only an explicit throttling rejection is safe to retry. Timeouts/5xx may follow
+    # acceptance and are terminal failed (sent_at nil) for operator reconciliation.
     def handle_send_failure(recipient, error)
-      if transient?(error)
+      if error.is_a?(EmailCampaigns::Ses::Error) && error.message.match?(/\A429\b|ThrottlingException|TooManyRequestsException/)
         recipient.register_attempt!(error.message)
       else
         recipient.mark_failed!(error.message)
       end
-    end
-
-    def transient?(error)
-      return true if error.is_a?(Net::OpenTimeout) || error.is_a?(Net::ReadTimeout) || error.is_a?(Timeout::Error)
-
-      error.message.to_s.match?(TRANSIENT_PATTERNS)
-    end
-
-    # Atomically claim a pending recipient so concurrent runs cannot double-send.
-    # Only the run whose UPDATE flips the row (pending -> sent) owns the delivery.
-    def claim(recipient)
-      claimed = EmailCampaignRecipient.where(id: recipient.id, status: EmailCampaignRecipient.statuses[:pending])
-                                      .update_all(status: EmailCampaignRecipient.statuses[:sent], updated_at: Time.current)
-      claimed.positive?
     end
 
     def render(recipient)

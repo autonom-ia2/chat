@@ -144,6 +144,12 @@ class EmailCampaign < ApplicationRecord
     end
   end
 
+  # Includes ambiguous claims/failures whose provider feedback may still arrive later.
+  def delivery_history?
+    recipients = email_campaign_recipients
+    recipients.where.not(sent_at: nil).or(recipients.where.not(status: %i[pending suppressed])).exists? || email_events.exists?
+  end
+
   def recipient_import_active?
     email_campaign_imports.active.exists?
   end
@@ -151,14 +157,22 @@ class EmailCampaign < ApplicationRecord
   def pause!
     return unless sending? || scheduled?
 
-    update!(status: :paused)
+    update!(status: :paused, pause_reason: { kind: 'manual', code: 'manual_pause' })
   end
 
-  def resume!
-    return unless paused?
+  def resume!(actor: nil)
+    enqueue = false
+    result = EmailCampaigns::Guardrail.resume!(account, actor: actor, delivery_mode: delivery_mode) do
+      with_lock do
+        next unless paused?
 
-    update!(status: :sending)
-    EmailCampaigns::DeliveryJob.perform_later(id) if EmailCampaigns::Config.enabled?
+        update!(status: :sending, pause_reason: {}, last_error: nil)
+        enqueue = true
+      end
+    end
+    raise CustomExceptions::EmailReputationBlocked, result unless result[:resume_allowed]
+
+    EmailCampaigns::DeliveryJob.perform_later(id) if enqueue && EmailCampaigns::Config.enabled?
   end
 
   def cancel!

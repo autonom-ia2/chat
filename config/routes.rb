@@ -385,6 +385,12 @@ Rails.application.routes.draw do
             end
           end
           namespace :email_campaigns do
+            resource :reputation, only: [:show] do
+              get :history
+              post :provider_release
+              post :reevaluate
+              post :override
+            end
             resources :sender_identities, only: [:index, :create, :show, :destroy] do
               member do
                 post :verify
@@ -399,6 +405,7 @@ Rails.application.routes.draw do
                 post :resume
                 post :cancel
                 post :duplicate
+                post :reevaluate
                 post :resolve_video, to: 'videos#resolve'
               end
               resources :recipients, only: [:index, :create] do

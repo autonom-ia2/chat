@@ -34,4 +34,24 @@ class EmailEvent < ApplicationRecord
   scope :clicks, -> { where(event_type: :click) }
 
   before_validation { self.occurred_at ||= Time.current }
+  before_save :invalidate_reputation_observation, if: :reputation_feedback?
+  after_save_commit :schedule_reputation_evaluation, if: :reputation_feedback?
+
+  private
+
+  def reputation_feedback?
+    [event_type, event_type_in_database, *previous_changes.fetch('event_type', [])].intersect?(%w[bounce complaint])
+  end
+
+  def invalidate_reputation_observation
+    return unless recipient.email_campaign.ses?
+
+    EmailCampaigns::Reputation::EvaluationQueue.invalidate(recipient.email_campaign.account_id)
+  end
+
+  def schedule_reputation_evaluation
+    return unless recipient.email_campaign.ses?
+
+    EmailCampaigns::Reputation::EvaluationQueue.request(recipient.email_campaign.account_id)
+  end
 end

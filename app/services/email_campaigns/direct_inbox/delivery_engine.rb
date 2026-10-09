@@ -85,7 +85,7 @@ module EmailCampaigns
       # ---- guardrail + auto-pausa ----
       def pause_if_guardrail_or_autopause!
         if EmailCampaigns::Guardrail.paused?(@account)
-          pause!('guardrail de reputação da conta')
+          EmailCampaigns::Reputation::Admission.new(@campaign).park_if_blocked!
           return true
         end
         if autopause_tripped?
@@ -112,7 +112,8 @@ module EmailCampaigns
       end
 
       def pause!(reason)
-        @campaign.update!(status: :paused, last_error: "Envio pausado: #{reason}.")
+        @campaign.update!(status: :paused, pause_reason: { kind: 'technical', code: 'direct_inbox_autopause' },
+                          last_error: "Envio pausado: #{reason}.")
       end
     end
   end

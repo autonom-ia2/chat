@@ -35,6 +35,10 @@ class EmailCampaignPolicy < ApplicationPolicy
     show?
   end
 
+  def reevaluate?
+    show?
+  end
+
   def cancel?
     show?
   end
