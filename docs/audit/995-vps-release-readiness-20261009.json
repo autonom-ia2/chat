@@ -1,0 +1,71 @@
+{
+  "date": "2026-10-09",
+  "issue": 995,
+  "pr": 1163,
+  "authorization": {
+    "release_authorized": true,
+    "authorized_test_account": 16,
+    "authorized_test_profile": "hub2you.ai",
+    "installation": "hub2you",
+    "prior_account18_preserved": true,
+    "account16_super_admin_enabled_by_user_report": true
+  },
+  "previous_code_validation": {
+    "commit": "fb32568b5268d90d2960a305d7ff64fbc3103d95",
+    "successful_checks": 24,
+    "cancelled_superseded_checks": 2,
+    "out_of_scope_skipped_checks": 2,
+    "node_tests": 404,
+    "python_contract_tests": 148,
+    "component_browser_cases": 38,
+    "wizard_browser_cases": 72,
+    "linux_chrome_warm_gate": "passed",
+    "real_latency_report": "995-warm-page-latency-20261008.json"
+  },
+  "fresh_runtime": {
+    "aws_sha": "28e1e0ac8b3835577f7469368f03a86d1a8dab0d",
+    "vps_current": "61f20cfd107361a431fda51f02cace751cc4978d",
+    "eight_units_running": true,
+    "node_sha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+    "account18_single_channel_and_inbox": true,
+    "account18_reauthorization_required": false,
+    "account18_token_expiry_in_future": true,
+    "account16_instagram_enabled": true,
+    "account16_assisted_enabled": false,
+    "account16_allowlisted": false
+  },
+  "release_routing": {
+    "before_final_matcher_failures": 15,
+    "after_tests_executed": 12,
+    "after_tests_passed": 12,
+    "independent_review": "GREEN",
+    "vps_only_push_skips_aws": true,
+    "mixed_application_push_still_deploys": true,
+    "shared_ruby_publisher_and_modules_still_deploy": true,
+    "manual_deploy_and_rollback_preserved": true,
+    "github_reference": "https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#filter-pattern-cheat-sheet",
+    "note": "An AWS Hub2You deployment is required for the newly authorized account16 allowlist. This is separate from the VPS-only code correction. No Autonom.ia deployment is required by this account change."
+  },
+  "installer": {
+    "previous_candidate_template_rejected": true,
+    "reason": "Installer requires identical candidate, CURRENT and installed unit bytes.",
+    "publisher_template_restored_to_50": true,
+    "publisher_template_sha256": "c1b41267081c93687dcc76fee2ca545e34c656d7e4b31877e49def19f887074d",
+    "production_effective_publisher_cpu_percent": 200,
+    "preserve_override_sha256": "41c6db5c35846b239a0da96950bc1e599703b0b1aabbb274a6f99f95d168ea43",
+    "quota_50_runtime_tested": false
+  },
+  "pending": {
+    "final_revision_ci": true,
+    "merge_queue": true,
+    "hub2you_allowlist_publish": true,
+    "account16_feature_enable": true,
+    "vps_installation": true,
+    "user_account16_test": true
+  },
+  "release": {
+    "merged": false,
+    "vps_installed": false,
+    "hub2you_config_published": false
+  }
+}

@@ -149,6 +149,8 @@ jobs:
         run: python -B tests/instagram_testers/vps-infra_test.py -v
       - name: Validate the Instagram operator environment allowlist for both deploy stacks
         run: python -B tests/instagram_testers/operator-env-allowlist_test.py -v
+      - name: Verify VPS-only releases preserve AWS deploy routing
+        run: python -B tests/instagram_testers/deploy-paths_test.py -v
       - name: Run offline deploy recovery tests with fake infrastructure commands
         run: python -B tests/instagram_testers/deploy-recovery_test.py -v
       - name: Validate isolated coordinator provisioning and runtime with fake infrastructure
