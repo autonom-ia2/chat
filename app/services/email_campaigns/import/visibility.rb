@@ -8,6 +8,8 @@ class EmailCampaigns::Import::Visibility
   Context = Struct.new(:color, :background, :font_size, :clear, :image)
   # Zero-width, joiners, byte-order mark, figure and no-break spaces, soft hyphen: what preheader padding is made of.
   INVISIBLE = [0x200B, 0x200C, 0x200D, 0xFEFF, 0x034F, 0x2007, 0x00A0, 0x00AD, 0x2060].map { |code| [code].pack('U') }.freeze
+  # The same set as one String#tr list, so the swap runs in C instead of a Ruby block per character (#1182).
+  INVISIBLE_CHARS = INVISIBLE.join.freeze
   MIN_FONT_PX = 2
   BASE_FONT_PX = 16.0
   SAME_COLOR_RATIO = 1.1
@@ -21,7 +23,7 @@ class EmailCampaigns::Import::Visibility
   end
 
   def self.visible_text(text)
-    text.to_s.each_char.map { |char| INVISIBLE.include?(char) ? ' ' : char }.join.split.join(' ')
+    text.to_s.tr(INVISIBLE_CHARS, ' ').split.join(' ')
   end
 
   def initialize(root, report)

@@ -123,12 +123,27 @@ RSpec.describe EmailCampaigns::Import::Engine, :aggregate_failures do
       expect(refusal("<table width=\"600\"><tr><td>#{'<p>texto</p>' * 200}</td></tr></table>", budget: budget)).to eq(:too_slow)
     end
 
-    it 'stays fast with many button-like links in one cell' do
-      links = '<p><a href="https://a.example.com/x" style="background-color:#ff0000">b</a></p>' * 1_600
-      started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-      import("<table width=\"600\"><tr><td>#{links}</td></tr></table>")
+    # What this guards is growth, not a wall-clock number. Two quadratic paths made a cell with many links slow:
+    # reading accented text by character index (MjmlEndingContent, #1099) and asking every link's cell for its whole
+    # text and all of its links (Buttons.cell, #1182). A fixed limit in seconds failed on loaded CI runners with no
+    # regression (5.16 s). Each pair imports 1,600 and then 400 accented links back to back, so a burst of load tends to
+    # hit both, and the median of three pairs ignores one disturbed pair either way. Ratio for 4x the links, measured
+    # on 09/10: 5.3-6.4 with both fixes, 10.5-11 with only the first, 14.3-14.9 with neither.
+    it 'does not grow quadratically with many accented button-like links in one cell' do
+      ratios = Array.new(3) { import_seconds(button_links_cell(1_600)) / import_seconds(button_links_cell(400)) }
 
-      expect(Process.clock_gettime(Process::CLOCK_MONOTONIC) - started).to be < 5
+      expect(ratios.sort[1]).to be < 8
+    end
+
+    def button_links_cell(count)
+      links = '<p><a href="https://a.example.com/x" style="background-color:#ff0000">Ação já</a></p>' * count
+      "<table width=\"600\"><tr><td>#{links}</td></tr></table>"
+    end
+
+    def import_seconds(html)
+      started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      import(html)
+      Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
     end
   end
 end
