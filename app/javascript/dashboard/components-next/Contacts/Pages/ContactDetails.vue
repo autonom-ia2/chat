@@ -14,6 +14,7 @@ import ContactLabels from 'dashboard/components-next/Contacts/ContactLabels/Cont
 import ContactsForm from 'dashboard/components-next/Contacts/ContactsForm/ContactsForm.vue';
 import ConfirmContactDeleteDialog from 'dashboard/components-next/Contacts/ContactsForm/ConfirmContactDeleteDialog.vue';
 import ContactOptOutSection from 'dashboard/components-next/Contacts/ContactOptOut/ContactOptOutSection.vue';
+import ContactCustomerSection from 'dashboard/components-next/Contacts/ContactCustomer/ContactCustomerSection.vue';
 import Policy from 'dashboard/components/policy.vue';
 
 const props = defineProps({
@@ -253,6 +254,7 @@ const handleAvatarDelete = async () => {
       surface="contact_details"
       :read-only="readOnly"
     />
+    <ContactCustomerSection :contact="selectedContact" :read-only="readOnly" />
     <ContactOptOutSection :contact="selectedContact" :read-only="readOnly" />
     <Policy :permissions="['administrator']">
       <div

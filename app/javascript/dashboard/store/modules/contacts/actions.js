@@ -334,6 +334,25 @@ export const actions = {
     }
   },
 
+  async setCustomer({ commit }, { id, customer }) {
+    const request = recordRequest(
+      this,
+      ContactAPI.accountIdFromRoute,
+      'contact',
+      id
+    );
+    const response = customer
+      ? await ContactAPI.markCustomer(id)
+      : await ContactAPI.removeCustomer(id);
+    if (request.valid())
+      commit(types.SET_CONTACT_ITEM, {
+        id,
+        contact_type: response.data.payload.contact_type,
+        customer_since: response.data.payload.customer_since,
+      });
+    return response.data.payload;
+  },
+
   fetchContactableInbox: async ({ commit }, id) => {
     commit(types.SET_CONTACT_UI_FLAG, { isFetchingInboxes: true });
     try {

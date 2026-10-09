@@ -98,6 +98,9 @@ class Crm::Card < ApplicationRecord
 
   before_validation :ensure_activity_defaults
   before_save :sync_closed_at
+  # Ganho só existe em funil que conta como venda: quem comprou vira cliente (#1144). No modelo, para valer em todo
+  # caminho que grava o ganho (fechar, criar já ganho, lote, automação).
+  after_save :promote_contact_to_customer, if: -> { saved_change_to_status?(to: 'won') && contact.present? }
 
   validates :title, presence: true
   validates :currency, presence: true
@@ -177,6 +180,10 @@ class Crm::Card < ApplicationRecord
 
   # Ganho/perdido só em funil que conta como venda; resolvido/cancelado só nos outros (#1144). Checado só quando o status
   # muda: um card ganho antes de o funil deixar de contar como venda continua editável.
+  def promote_contact_to_customer
+    contact.become_customer!
+  end
+
   def outcome_must_match_pipeline
     return if pipeline.blank? || !will_save_change_to_status?
     return if Crm::Cards::Outcome.status_for(pipeline, status) == status

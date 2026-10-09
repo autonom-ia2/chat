@@ -428,6 +428,15 @@
 - passos: Abra **Oportunidades** no painel Acompanhamento. A lista reúne as negociações do mesmo contato em todos os funis. Use a busca pelo título e **Situação**; avance por **Próxima** quando houver mais resultados. Clique numa oportunidade para abrir seu card no CRM em outra aba. Use **Atualizar oportunidades** ou retorne à ficha para buscar o estado atual.
 - gotchas: por padrão, arquivadas ficam fora; escolha **Arquivado** ou **Todas as situações** para consultá-las. O total considera apenas registros que você pode acessar e os filtros da consulta. A lista não cria nem altera dados. A ficha e seu preenchimento permanecem abertos. Os filtros desta lista não mudam os filtros do Kanban; as moedas aparecem por oportunidade e não são somadas ou convertidas.
 
+### marcar_contato_como_cliente
+- titulo: Marcar contato como cliente
+- rota: contacts_edit
+- intent: "Como marco que este contato já é cliente?"; "Desde quando ele é cliente?"; "Por que este lead virou cliente?"
+- onde_fica: Relacionamentos > Contatos > abrir contato > seção **Cliente**, abaixo de **Atualizar contato**
+- pre_requisitos: acesso para editar o contato.
+- passos: O contato vira cliente sozinho quando um card dele é ganho num funil que conta como venda. Para quem comprou de outro jeito, clique em **Marcar como cliente** e confirme em **Sim, marcar**. Para desfazer um engano, **Não é cliente** e **Sim, tirar**.
+- gotchas: o selo **Cliente desde** guarda a primeira venda e aparece também no painel da conversa; ganhar de novo não muda a data. Resolver um card de funil que não é de venda não promove. Desfazer volta o contato para lead e não mexe em cards nem conversas.
+
 ### mover_card_ganhar_perder_ou_reabrir_oportunidade
 - titulo: Mover card, ganhar, perder ou reabrir oportunidade
 - rota: crm_kanban_index

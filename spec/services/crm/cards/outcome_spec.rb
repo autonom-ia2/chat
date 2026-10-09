@@ -101,6 +101,40 @@ RSpec.describe Crm::Cards::Outcome do
     end
   end
 
+  describe 'lead becomes customer' do
+    it 'promotes the contact on a sale win and keeps the first date' do
+      contact = account.contacts.create!(name: 'Ana', phone_number: '+5511987650001', contact_type: :lead)
+      card = close(card_in(sale_pipeline, contact: contact), 'won')
+      since = contact.reload.customer_since
+
+      expect(contact).to be_customer
+      expect(since).to be_present
+
+      close(card, 'open')
+      travel 1.day do
+        close(card, 'won')
+      end
+      expect(contact.reload.customer_since).to eq(since)
+    end
+
+    it 'promotes the contact of a card created already won' do
+      contact = account.contacts.create!(name: 'Caio', phone_number: '+5511987650005', contact_type: :lead)
+      pipeline, stage = sale_pipeline
+      Crm::Cards::Creator.new(account: account, user: user,
+                              params: { pipeline_id: pipeline.id, stage_id: stage.id, contact_id: contact.id, title: 'Fechado', status: 'won' })
+                         .perform
+
+      expect(contact.reload).to be_customer
+    end
+
+    it 'does not promote on a resolved card of a non-sale funnel' do
+      contact = account.contacts.create!(name: 'Bia', phone_number: '+5511987650002', contact_type: :lead)
+      close(card_in(service_pipeline, contact: contact), 'won')
+
+      expect(contact.reload).to be_lead
+    end
+  end
+
   describe 'model guard' do
     it 'refuses a sale result in a non-sale funnel and the other way round' do
       expect { card_in(service_pipeline).update!(status: :won) }.to raise_error(ActiveRecord::RecordInvalid)

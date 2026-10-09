@@ -1,4 +1,4 @@
-# Guia da Plataforma Autonom.ia — base de conhecimento (199 fluxos)
+# Guia da Plataforma Autonom.ia — base de conhecimento (200 fluxos)
 
 > ARQUIVO GERADO por `pnpm guia:build`. Não edite à mão: a rota, o endereço e a
 > permissão saem do roteador do painel, e o texto humano fica em
@@ -466,6 +466,16 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - pre_requisitos: Relacionamentos e CRM habilitados; permissão de visualizar CRM e acesso ao contato. Cada oportunidade respeita também sua visibilidade no CRM.
 - passos: Abra **Oportunidades** no painel Acompanhamento. A lista reúne as negociações do mesmo contato em todos os funis. Use a busca pelo título e **Situação**; avance por **Próxima** quando houver mais resultados. Clique numa oportunidade para abrir seu card no CRM em outra aba. Use **Atualizar oportunidades** ou retorne à ficha para buscar o estado atual.
 - gotchas: por padrão, arquivadas ficam fora; escolha **Arquivado** ou **Todas as situações** para consultá-las. O total considera apenas registros que você pode acessar e os filtros da consulta. A lista não cria nem altera dados. A ficha e seu preenchimento permanecem abertos. Os filtros desta lista não mudam os filtros do Kanban; as moedas aparecem por oportunidade e não são somadas ou convertidas.
+- nav_target: `contacts_edit`
+
+### Marcar contato como cliente
+- intent: "Como marco que este contato já é cliente?"; "Desde quando ele é cliente?"; "Por que este lead virou cliente?"
+- onde_fica: Relacionamentos > Contatos > abrir contato > seção **Cliente**, abaixo de **Atualizar contato**
+- rota: `contacts_edit` - `/app/accounts/:accountId/contacts/:contactId`
+- gate: feature flag `crm`; papel `administrator` ou `agent` ou `contact_manage` ou `contact_view`
+- pre_requisitos: acesso para editar o contato.
+- passos: O contato vira cliente sozinho quando um card dele é ganho num funil que conta como venda. Para quem comprou de outro jeito, clique em **Marcar como cliente** e confirme em **Sim, marcar**. Para desfazer um engano, **Não é cliente** e **Sim, tirar**.
+- gotchas: o selo **Cliente desde** guarda a primeira venda e aparece também no painel da conversa; ganhar de novo não muda a data. Resolver um card de funil que não é de venda não promove. Desfazer volta o contato para lead e não mexe em cards nem conversas.
 - nav_target: `contacts_edit`
 
 ### Mover card, ganhar, perder ou reabrir oportunidade

@@ -40,6 +40,7 @@ RSpec.describe 'Shared relationship record write permissions', type: :request do
     [:delete, :contact_avatar, {}],
     [:delete, :company_avatar, {}],
     [:post, :contact_opt_out, {}],
+    [:post, :contact_customer, {}],
     [:post, :merge, {}],
     [:post, :bulk, { type: 'Contact', action_name: 'assign', labels: { add: ['forbidden'] } }],
     [:post, :contacts, { name: 'Forbidden person' }],
@@ -53,7 +54,8 @@ RSpec.describe 'Shared relationship record write permissions', type: :request do
         contact_labels: "#{base}/contacts/#{contact.id}/labels", company_contacts: "#{base}/companies/#{company.id}/contacts",
         company_contact: "#{base}/companies/#{company.id}/contacts/#{contact.id}",
         contact_avatar: "#{base}/contacts/#{contact.id}/avatar", company_avatar: "#{base}/companies/#{company.id}/avatar",
-        contact_opt_out: "#{base}/contacts/#{contact.id}/opt_out", merge: "#{base}/actions/contact_merge", bulk: "#{base}/bulk_actions",
+        contact_opt_out: "#{base}/contacts/#{contact.id}/opt_out", contact_customer: "#{base}/contacts/#{contact.id}/customer",
+        merge: "#{base}/actions/contact_merge", bulk: "#{base}/bulk_actions",
         contacts: "#{base}/contacts", companies: "#{base}/companies", card_contact: "#{base}/crm/cards/#{card.id}/contact"
       }
       params = input.deep_dup

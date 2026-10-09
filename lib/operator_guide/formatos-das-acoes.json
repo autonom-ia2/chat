@@ -382,6 +382,15 @@
     ],
     "sem_corpo": true
   },
+  "DELETE contacts/:contact_id/customer": {
+    "completo": true,
+    "controller": "api/v1/accounts/contacts/customers#destroy",
+    "origem": [
+      "app/controllers/api/v1/accounts/contacts/customers_controller.rb:11",
+      "app/controllers/api/v1/accounts/contacts/base_controller.rb:7"
+    ],
+    "sem_corpo": true
+  },
   "DELETE contacts/:contact_id/notes/:id": {
     "completo": true,
     "controller": "api/v1/accounts/contacts/notes#destroy",
@@ -12625,6 +12634,15 @@
       "app/controllers/api/v1/accounts/contacts/contact_inboxes_controller.rb:17"
     ],
     "sem_corpo": false
+  },
+  "POST contacts/:contact_id/customer": {
+    "completo": true,
+    "controller": "api/v1/accounts/contacts/customers#create",
+    "origem": [
+      "app/controllers/api/v1/accounts/contacts/customers_controller.rb:6",
+      "app/controllers/api/v1/accounts/contacts/base_controller.rb:7"
+    ],
+    "sem_corpo": true
   },
   "POST contacts/:contact_id/labels": {
     "campos": {
