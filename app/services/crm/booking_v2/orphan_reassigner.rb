@@ -21,8 +21,13 @@ class Crm::BookingV2::OrphanReassigner
     return unless Crm::Config.booking_v2_enabled?(account)
     return if account.account_users.exists?(user_id: user_id)
 
-    disable_links
-    orphan_meetings.find_each { |meeting| reassign(meeting) }
+    # Mesma trava de agente da reserva (Booker): uma reserva em andamento termina antes de olharmos as reuniões, e
+    # a próxima já vê a pessoa fora da conta.
+    ActiveRecord::Base.transaction do
+      ActiveRecord::Base.connection.execute("SELECT pg_advisory_xact_lock(#{Crm::BookingV2::Booker::LOCK_NS_AGENT}, #{user_id.to_i})")
+      disable_links
+      orphan_meetings.find_each { |meeting| reassign(meeting) }
+    end
   end
 
   private
@@ -40,8 +45,8 @@ class Crm::BookingV2::OrphanReassigner
   end
 
   def orphan_meetings
-    upcoming = account.crm_meetings.upcoming.by_agent(user_id)
-    upcoming.internal.or(upcoming.where("crm_meetings.metadata ->> 'booking_profile_id' IS NOT NULL")).includes(:card)
+    # Só reuniões das páginas novas: as demais seguem o comportamento de sempre do sistema.
+    account.crm_meetings.upcoming.by_agent(user_id).where("crm_meetings.metadata ->> 'booking_profile_id' IS NOT NULL").includes(:card)
   end
 
   def reassign(meeting)

@@ -7,6 +7,11 @@ require 'timeout'
 RSpec.describe Crm::BookingV2::Booker, :relationships_committed_fixtures do
   self.use_transactional_tests = false
 
+  # Sem transação, o que for gravado fica no banco. As auditorias (gem audited) de conta, usuário e caixa também:
+  # anotamos o último id antes de criar qualquer coisa e apagamos o que veio depois, para não vazar para outros testes
+  # do mesmo processo (ex.: specs de auditoria do enterprise contam linhas).
+  prepend_before { @audit_floor = Audited::Audit.maximum(:id).to_i }
+
   let!(:account) { create(:account) }
   let!(:world) { build_booking_world(account: account) }
   let(:slot) { '2026-10-20T10:00:00-03:00' }
@@ -30,13 +35,24 @@ RSpec.describe Crm::BookingV2::Booker, :relationships_committed_fixtures do
      Crm::AgentBookingProfile, Crm::PipelineStage, Crm::Pipeline, Contact]
   end
 
+  # Apaga tudo o que o teste gravou, pelos ids anotados: dados do CRM da conta, caixas e seus horários, pessoas e o que
+  # o Chatwoot cria junto com elas (vínculo com a conta, token, notificações), a conta e as auditorias.
   def cleanup_account!
     account_tables.each { |model| model.where(account_id: account.id).delete_all }
-    users = User.where(id: account.account_users.select(:user_id)).to_a
-    Inbox.where(account_id: account.id).find_each(&:destroy!)
-    account.account_users.delete_all
-    users.each(&:destroy!)
+    user_ids = account.account_users.pluck(:user_id)
+    inbox_ids = Inbox.where(account_id: account.id).pluck(:id)
+    Inbox.where(id: inbox_ids).find_each(&:destroy!)
+    WorkingHour.where(inbox_id: inbox_ids).or(WorkingHour.where(account_id: account.id)).delete_all
+    cleanup_people!(user_ids)
     account.reload.destroy!
+    Audited::Audit.where('id > ?', @audit_floor).delete_all
+  end
+
+  def cleanup_people!(user_ids)
+    AccountUser.where(user_id: user_ids).delete_all
+    NotificationSetting.where(user_id: user_ids).delete_all
+    AccessToken.where(owner_type: 'User', owner_id: user_ids).delete_all
+    User.where(id: user_ids).find_each(&:destroy!)
   end
 
   # A thread marcada para "pausar" para logo depois da conferência do horário, ainda dentro do lock. O Booker confere

@@ -6,10 +6,14 @@
 # Ordem: (1) reenvio idempotente devolve a reunião já criada, sem trava; (2) conferência estrita do horário COM o
 # provedor (freebusy Google/Microsoft), fora das travas, porque a rede pode demorar; (3) travas, nesta ordem: caixa
 # (`pg_advisory_xact_lock(1, inbox_id)`, se a página tem caixa), agente (`2, host_id`) e telefone
-# (`3, crc32("conta:telefone")`) — mesma ordem do v1, que também toma a do agente, então v1 e v2 do mesmo responsável
+# (`4, crc32("conta:telefone")`) — mesma ordem do v1, que também toma a do agente, então v1 e v2 do mesmo responsável
 # não marcam o mesmo horário, e duas reservas do mesmo telefone novo não criam dois contatos. Dentro das travas:
 # idempotência de novo (mesmo telefone + mesmo início + mesma página nos últimos 5 minutos), limite de reuniões abertas
-# por telefone, reconferência SÓ local do horário, contato, card e reunião.
+# por telefone, elegibilidade do responsável de novo (quem sai da conta toma a mesma trava de agente no
+# OrphanReassigner), reconferência SÓ local do horário, contato, card e reunião.
+#
+# Riscos residuais aceitos (mesmo comportamento do v1): entre a consulta ao provedor e o commit, um evento criado
+# direto no Google/Microsoft não é visto; e Meet/Teams criam o evento no provedor dentro da transação, sob as travas.
 #
 # Erros: ArgumentError com código (invalid_name, invalid_phone, invalid_email, invalid_starts_at, invalid_duration,
 # invalid_location, host_unavailable, email_required, calendar_unavailable, slot_unavailable, availability_unavailable,
@@ -21,7 +25,8 @@ class Crm::BookingV2::Booker
   IDEMPOTENCY_WINDOW = 5.minutes
   LOCK_NS_INBOX = 1
   LOCK_NS_AGENT = 2
-  LOCK_NS_PHONE = 3
+  # 3 já é do Crm::Calendar::SubscriptionManager (chave = inbox): telefone usa 4 para não dividir o espaço de chaves.
+  LOCK_NS_PHONE = 4
   INT32_RANGE = 2**32
   INT32_MAX = (2**31) - 1
   DEFAULT_REMINDER_MINUTES = 15
@@ -59,7 +64,7 @@ class Crm::BookingV2::Booker
     ensure_slot_available!(include_provider: true)
     result = ActiveRecord::Base.transaction do
       acquire_locks!
-      existing_result || book!
+      existing_result || book_if_host_still_eligible!
     end
     broadcast_card_created(result.card) unless result.existing
     result
@@ -94,6 +99,12 @@ class Crm::BookingV2::Booker
 
   def provider_location?
     PROVIDER_LOCATIONS.key?(location['type'])
+  end
+
+  def book_if_host_still_eligible!
+    raise ArgumentError, 'host_unavailable' unless Crm::BookingV2::HostEligibility.eligible?(account: account, user: host)
+
+    book!
   end
 
   def acquire_locks!

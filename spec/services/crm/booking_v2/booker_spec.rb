@@ -180,6 +180,17 @@ RSpec.describe Crm::BookingV2::Booker do
     expect(meeting.metadata).to include('booking_profile_id' => profile.id)
   end
 
+  it 'recusa quando o responsável perde o acesso entre a conferência e a trava' do
+    calls = 0
+    allow(Crm::BookingV2::HostEligibility).to receive(:eligible?).and_wrap_original do |original, **args|
+      calls += 1
+      calls == 1 ? original.call(**args) : false
+    end
+
+    expect { book }.to raise_error(ArgumentError, 'host_unavailable')
+    expect(account.crm_meetings.count).to eq(0)
+  end
+
   describe 'responsável vem da página' do
     let(:seller) { create(:user, account: account, role: :agent, name: 'Vendedor') }
 
