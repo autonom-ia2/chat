@@ -70,6 +70,9 @@ module Events::Types
   CRM_CARD_MOVED = 'crm.card.moved'
   CRM_CARD_WON = 'crm.card.won'
   CRM_CARD_LOST = 'crm.card.lost'
+  # funil que não conta como venda (#1144) fecha como resolvido ou cancelado
+  CRM_CARD_RESOLVED = 'crm.card.resolved'
+  CRM_CARD_CANCELLED = 'crm.card.cancelled'
   CRM_CARD_REOPENED = 'crm.card.reopened'
   CRM_CARD_ARCHIVED = 'crm.card.archived'
   CRM_FOLLOW_UP_DUE = 'crm.follow_up.due'

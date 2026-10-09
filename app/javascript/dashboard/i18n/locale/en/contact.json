@@ -17,6 +17,8 @@
     "INITIATED_AT": "Initiated at",
     "IP_ADDRESS": "IP Address",
     "CREATED_AT_LABEL": "Created",
+    "CUSTOMER": "Customer",
+    "CUSTOMER_SINCE": "Customer since {date}",
     "NEW_MESSAGE": "New message",
     "CALL": "Call",
     "CALL_INITIATED": "Calling the contact…",
@@ -509,6 +511,29 @@
         "DELETE": {
           "SUCCESS_MESSAGE": "Avatar deleted successfully",
           "ERROR_MESSAGE": "Could not delete avatar. Please try again later."
+        }
+      },
+      "CUSTOMER": {
+        "TITLE": "Customer",
+        "BADGE": "Customer",
+        "SINCE": "Customer since {date}",
+        "DESCRIPTION": "Becomes a customer on its own when a card is won in a sales funnel. Mark it here if they bought some other way.",
+        "MARK": "Mark as customer",
+        "UNDO": "Not a customer",
+        "MARK_DIALOG": {
+          "TITLE": "Mark as customer",
+          "DESCRIPTION": "The contact shows as a customer from today. Cards and conversations do not change.",
+          "CONFIRM": "Yes, mark"
+        },
+        "UNDO_DIALOG": {
+          "TITLE": "Remove customer",
+          "DESCRIPTION": "The contact goes back to lead and loses the customer date. Cards and conversations do not change.",
+          "CONFIRM": "Yes, remove"
+        },
+        "API": {
+          "MARK_SUCCESS": "Contact marked as customer",
+          "UNDO_SUCCESS": "Contact is a lead again",
+          "ERROR": "Could not save. Try again."
         }
       },
       "OPT_OUT": {

@@ -80,6 +80,19 @@ describe ContactMergeAction do
       end
     end
 
+    context 'when um dos contatos já é cliente (#1144)' do
+      it 'o contato que fica vira cliente com a data mais antiga' do
+        base_contact.update!(contact_type: :lead)
+        mergee_contact.update!(contact_type: :customer, customer_since: 2.years.ago.beginning_of_day)
+
+        contact_merge
+
+        base_contact.reload
+        expect(base_contact).to be_customer
+        expect(base_contact.customer_since).to eq(2.years.ago.beginning_of_day)
+      end
+    end
+
     context 'when um dos contatos recusou mensagens ativas (chat#713)' do
       let(:admin) { create(:user, account: account) }
 

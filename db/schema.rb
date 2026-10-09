@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_10_10_110000) do
+ActiveRecord::Schema[7.2].define(version: 2026_10_10_130000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1711,6 +1711,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_10_110000) do
     t.datetime "opted_out_at"
     t.string "opt_out_source"
     t.bigint "opted_out_by_id"
+    t.datetime "customer_since"
     t.index "account_id, lower((custom_attributes ->> 'waha_whatsapp_chat_id'::text))", name: "idx_contacts_account_lower_waha_whatsapp_chat_id"
     t.index "account_id, lower((custom_attributes ->> 'waha_whatsapp_jid'::text))", name: "idx_contacts_account_lower_waha_whatsapp_jid"
     t.index "account_id, lower((custom_attributes ->> 'waha_whatsapp_lid'::text))", name: "idx_contacts_account_lower_waha_whatsapp_lid"
@@ -2430,6 +2431,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_10_110000) do
     t.jsonb "metadata", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.boolean "counts_as_sale", default: true, null: false
     t.index ["account_id", "is_default"], name: "index_crm_pipelines_on_account_id_and_is_default"
     t.index ["account_id", "position"], name: "index_crm_pipelines_on_account_id_and_position"
     t.index ["account_id", "status"], name: "index_crm_pipelines_on_account_id_and_status"

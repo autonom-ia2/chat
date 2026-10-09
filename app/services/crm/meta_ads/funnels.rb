@@ -1,6 +1,6 @@
 # "Avisar a Meta sobre o seu funil" (#1047, CA-1.8): o passo 4 da conexão guiada.
 #
-# Lê os funis ativos ligados a um WhatsApp oficial da conta (os números que recebem os cliques dos anúncios),
+# Lê os funis de venda ativos ligados a um WhatsApp oficial da conta (os números que recebem os cliques dos anúncios),
 # mostra o que falta em cada um e grava, por aqui, o mesmo que Editar funil grava:
 # - em cada etapa, `metadata['funnel_stage_type']` ("Como a Meta entende esta etapa");
 # - no funil, `metadata['meta_sync']`: envio ligado, venda e mudança de etapa ligadas.
@@ -61,7 +61,7 @@ class Crm::MetaAds::Funnels
   end
 
   def pipelines
-    @pipelines ||= Crm::Pipeline.active.where(account_id: @account.id)
+    @pipelines ||= Crm::Pipeline.active.where(account_id: @account.id, counts_as_sale: true)
                                 .joins(:pipeline_inboxes).where(crm_pipeline_inboxes: { inbox_id: meta_inboxes.map(&:id) })
                                 .distinct.order(:position).includes(:stages, :inboxes).to_a
   end

@@ -6,6 +6,9 @@ import {
   ExceptionWithMessage,
 } from 'shared/helpers/CustomErrors';
 import { useExactTimestamp } from 'shared/composables/useExactTimestamp';
+import { useI18n } from 'vue-i18n';
+import { format, fromUnixTime } from 'date-fns';
+import { dateFnsLocaleFor } from 'shared/helpers/dateFnsLocale';
 import { useAdmin } from 'dashboard/composables/useAdmin';
 import { useRelationshipPermissions } from 'dashboard/composables/useRelationshipPermissions';
 import RecordReadOnly from 'dashboard/components-next/Relationships/RecordReadOnly.vue';
@@ -49,8 +52,10 @@ export default {
   emits: ['panelClose'],
   setup() {
     const { isAdmin } = useAdmin();
+    const { locale } = useI18n();
     return {
       isAdmin,
+      locale,
       ...useRelationshipPermissions(),
       exactTimestamp: useExactTimestamp(),
     };
@@ -67,6 +72,16 @@ export default {
       uiFlags: 'contacts/getUIFlags',
       currentChat: 'getSelectedChat',
     }),
+    // Lead que virou cliente (#1144): selo com a data, marcado e desfeito na página do contato.
+    customerSinceLabel() {
+      if (this.contact.contact_type !== 'customer') return '';
+      if (!this.contact.customer_since)
+        return this.$t('CONTACT_PANEL.CUSTOMER');
+      const date = format(fromUnixTime(this.contact.customer_since), 'P', {
+        locale: dateFnsLocaleFor(this.locale),
+      });
+      return this.$t('CONTACT_PANEL.CUSTOMER_SINCE', { date });
+    },
     contactProfileLink() {
       return `/app/accounts/${this.$route.params.accountId}/contacts/${this.contact.id}`;
     },
@@ -282,6 +297,14 @@ export default {
           </div>
         </div>
 
+        <span
+          v-if="customerSinceLabel"
+          data-test="contact-customer-badge"
+          class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-md w-fit bg-n-teal-3 text-n-teal-11"
+        >
+          <span class="i-lucide-badge-check size-3.5" aria-hidden="true" />
+          {{ customerSinceLabel }}
+        </span>
         <p v-if="additionalAttributes.description" class="break-words mb-0.5">
           {{ additionalAttributes.description }}
         </p>

@@ -8,6 +8,7 @@
 #  additional_attributes :jsonb
 #  blocked               :boolean          default(FALSE), not null
 #  contact_type          :integer          default("visitor")
+#  customer_since        :datetime
 #  country_code          :string           default("")
 #  custom_attributes     :jsonb
 #  email                 :string
@@ -51,6 +52,7 @@ class Contact < ApplicationRecord
   include Labelable
   include LlmFormattable
   include ContactOptOut
+  include ContactCustomer
 
   validates :account_id, presence: true
   validates :email, allow_blank: true, uniqueness: { scope: [:account_id], case_sensitive: false },

@@ -5,6 +5,10 @@ import { useAlert } from 'dashboard/composables';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 import CrmKanbanAPI from 'dashboard/api/crmKanban';
 import {
+  CLOSED_STATUSES,
+  cardStatusLabel,
+} from 'dashboard/routes/dashboard/crm/helpers/cardOutcome';
+import {
   crmSubjectsChange,
   notifyCrmSubjectsChanged,
 } from 'dashboard/routes/dashboard/crm/composables/useCrmConversationStages';
@@ -77,11 +81,10 @@ const makeCurrent = async subject => {
 };
 
 const statusLabel = subject => {
-  if (subject.status === 'won')
-    return t('CRM_KANBAN.CONVERSATION.SUBJECTS.WON');
-  if (subject.status === 'lost')
-    return t('CRM_KANBAN.CONVERSATION.SUBJECTS.LOST');
-  return '';
+  if (!CLOSED_STATUSES.includes(subject.status)) return '';
+  return cardStatusLabel(t, subject.status, {
+    metadata: { outcome_labels: subject.outcome_labels },
+  });
 };
 
 const openNewSubject = () => dialogRef.value?.open();

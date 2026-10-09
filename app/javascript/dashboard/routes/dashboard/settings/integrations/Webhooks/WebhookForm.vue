@@ -32,6 +32,8 @@ const CRM_WEBHOOK_EVENTS = [
   { value: 'crm.card.moved', labelKey: 'CRM_CARD_MOVED' },
   { value: 'crm.card.won', labelKey: 'CRM_CARD_WON' },
   { value: 'crm.card.lost', labelKey: 'CRM_CARD_LOST' },
+  { value: 'crm.card.resolved', labelKey: 'CRM_CARD_RESOLVED' },
+  { value: 'crm.card.cancelled', labelKey: 'CRM_CARD_CANCELLED' },
   { value: 'crm.card.reopened', labelKey: 'CRM_CARD_REOPENED' },
   { value: 'crm.card.archived', labelKey: 'CRM_CARD_ARCHIVED' },
 ];

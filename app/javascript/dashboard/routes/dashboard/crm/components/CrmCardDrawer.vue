@@ -10,6 +10,11 @@ import {
 } from 'vue';
 import { useStore } from 'vuex';
 import { useI18n } from 'vue-i18n';
+import {
+  STATUS_PILL_CLASSES,
+  cardStatusLabel,
+  countsAsSale,
+} from '../helpers/cardOutcome';
 import { useRoute, useRouter } from 'vue-router';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import CrmCardRelationshipPanel from './CrmCardRelationshipPanel.vue';
@@ -396,16 +401,38 @@ const completedFollowUps = computed(() =>
 // --- Deal close (Win / Lose / Reopen) ---------------------------------------
 const cardStatus = computed(() => props.card?.status || 'open');
 const isDealOpen = computed(() => cardStatus.value === 'open');
+const cardPipeline = computed(() => {
+  const id = Number(props.card?.pipeline_id || props.pipelineId);
+  return props.pipelines.find(pipeline => pipeline.id === id);
+});
+const isSalePipeline = computed(() => countsAsSale(cardPipeline.value));
 const statusLabel = computed(() =>
-  t(`CRM_KANBAN.DRAWER.STATUS_${String(cardStatus.value).toUpperCase()}`)
+  cardStatusLabel(t, cardStatus.value, cardPipeline.value)
 );
 const statusPillClass = computed(
-  () =>
-    ({
-      won: 'bg-n-teal-3 text-n-teal-11',
-      lost: 'bg-n-ruby-3 text-n-ruby-11',
-      archived: 'bg-n-slate-4 text-n-slate-10',
-    })[cardStatus.value] || 'bg-n-blue-3 text-n-blue-11'
+  () => STATUS_PILL_CLASSES[cardStatus.value] || 'bg-n-blue-3 text-n-blue-11'
+);
+// Funil de venda sem nome próprio mantém "Ganhar"/"Perder"; os outros mostram o nome do desfecho (#1144).
+const customOutcomeLabels = computed(
+  () => cardPipeline.value?.metadata?.outcome_labels || {}
+);
+const winDealLabel = computed(() =>
+  isSalePipeline.value && !customOutcomeLabels.value.success
+    ? t('CRM_KANBAN.DRAWER.WIN_DEAL')
+    : cardStatusLabel(
+        t,
+        isSalePipeline.value ? 'won' : 'resolved',
+        cardPipeline.value
+      )
+);
+const loseDealLabel = computed(() =>
+  isSalePipeline.value && !customOutcomeLabels.value.failure
+    ? t('CRM_KANBAN.DRAWER.LOSE_DEAL')
+    : cardStatusLabel(
+        t,
+        isSalePipeline.value ? 'lost' : 'cancelled',
+        cardPipeline.value
+      )
 );
 
 const conversationStatusLabel = status => {
@@ -437,6 +464,11 @@ const loseReason = ref('');
 
 const openWinDialog = () => {
   if (!props.canManageCards) return;
+  // Fora de venda não há valor a confirmar: fecha direto (Reabrir desfaz).
+  if (!isSalePipeline.value) {
+    emit('closeDeal', { result: 'won' });
+    return;
+  }
   winAmount.value = props.card?.value_cents
     ? Number(props.card.value_cents) / 100
     : '';
@@ -974,6 +1006,16 @@ const ACTIVITY_META = {
   move: { key: 'ACTIVITY_MOVE', icon: 'i-lucide-arrow-right', tone: 'info' },
   won: { key: 'ACTIVITY_WON', icon: 'i-lucide-trophy', tone: 'positive' },
   lost: { key: 'ACTIVITY_LOST', icon: 'i-lucide-circle-x', tone: 'negative' },
+  resolved: {
+    key: 'ACTIVITY_RESOLVED',
+    icon: 'i-lucide-circle-check',
+    tone: 'positive',
+  },
+  cancelled: {
+    key: 'ACTIVITY_CANCELLED',
+    icon: 'i-lucide-circle-x',
+    tone: 'negative',
+  },
   reopen: {
     key: 'ACTIVITY_REOPEN',
     icon: 'i-lucide-rotate-ccw',
@@ -1600,7 +1642,7 @@ useFixedPanelPresence(computed(() => props.show));
                 outline
                 class="!outline-n-weak !rounded-lg"
                 icon="i-lucide-trophy"
-                :label="t('CRM_KANBAN.DRAWER.WIN_DEAL')"
+                :label="winDealLabel"
                 @click="guardRelationship(openWinDialog)"
               />
               <Button
@@ -1609,7 +1651,7 @@ useFixedPanelPresence(computed(() => props.show));
                 outline
                 class="!outline-n-weak !rounded-lg"
                 icon="i-lucide-circle-x"
-                :label="t('CRM_KANBAN.DRAWER.LOSE_DEAL')"
+                :label="loseDealLabel"
                 @click="guardRelationship(openLoseDialog)"
               />
             </template>
@@ -2641,7 +2683,13 @@ useFixedPanelPresence(computed(() => props.show));
       >
         <div class="w-full max-w-sm p-5 rounded-xl bg-n-solid-1 shadow-lg">
           <h3 class="mb-3 text-base font-medium text-n-slate-12">
-            {{ t('CRM_KANBAN.DRAWER.LOSE_DIALOG_TITLE') }}
+            {{
+              isSalePipeline
+                ? t('CRM_KANBAN.DRAWER.LOSE_DIALOG_TITLE')
+                : t('CRM_KANBAN.DRAWER.CLOSE_AS_TITLE', {
+                    label: loseDealLabel,
+                  })
+            }}
           </h3>
           <Input
             v-model="loseReason"
@@ -2658,7 +2706,11 @@ useFixedPanelPresence(computed(() => props.show));
               @click="showLoseDialog = false"
             />
             <Button
-              :label="t('CRM_KANBAN.DRAWER.LOSE_CONFIRM')"
+              :label="
+                isSalePipeline
+                  ? t('CRM_KANBAN.DRAWER.LOSE_CONFIRM')
+                  : t('CRM_KANBAN.DRAWER.MARK_AS', { label: loseDealLabel })
+              "
               ruby
               sm
               icon="i-lucide-circle-x"

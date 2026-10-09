@@ -71,12 +71,20 @@ class ContactMergeAction
     # attributes in base contact are given preference
     merged_attributes = mergee_contact_attributes.deep_merge(base_contact_attributes)
     @mergee_contact.reload
-    merged_attributes = merged_attributes.merge(inherited_opt_out)
+    merged_attributes = merged_attributes.merge(inherited_opt_out).merge(inherited_customer)
 
     @mergee_contact.destroy!
     Rails.configuration.dispatcher.dispatch(CONTACT_MERGED, Time.zone.now, contact: @base_contact,
                                                                            tokens: [@base_contact.contact_inboxes.filter_map(&:pubsub_token)])
     @base_contact.update!(merged_attributes)
+  end
+
+  # #1144: cliente é da pessoa. Se um dos dois já era cliente, o que fica é cliente, com a data mais antiga.
+  def inherited_customer
+    customers = [@base_contact, @mergee_contact].select(&:customer?)
+    return {} if customers.empty?
+
+    { 'contact_type' => 'customer', 'customer_since' => customers.filter_map(&:customer_since).min }
   end
 
   # chat#713: a recusa de mensagens ativas é da pessoa. Se só o contato absorvido tinha recusado, a recusa (data, origem

@@ -926,6 +926,8 @@ en:
         won: 'Won'
         lost: 'Lost'
         archived: 'Archived'
+        resolved: 'Resolved'
+        cancelled: 'Cancelled'
       priorities:
         low: 'Low'
         medium: 'Medium'

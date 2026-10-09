@@ -30,6 +30,11 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  // Funil atual: decide os desfechos e os nomes deles (#1144).
+  pipeline: {
+    type: Object,
+    default: null,
+  },
   loading: {
     type: Boolean,
     default: false,
@@ -818,6 +823,7 @@ const onRowKeydown = (event, card) => {
                       :field="cell.column.columnDef.meta.field"
                       :stages="stages"
                       :owners="owners"
+                      :pipeline="pipeline"
                       @save="
                         value =>
                           onEditSave(

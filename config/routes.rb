@@ -696,6 +696,7 @@ Rails.application.routes.draw do
               resources :labels, only: [:create, :index]
               resources :notes
               resource :opt_out, only: [:create, :destroy]
+              resource :customer, only: [:create, :destroy]
               if ChatwootApp.enterprise?
                 resources :media, only: [:index, :show] do
                   member { get :preview }

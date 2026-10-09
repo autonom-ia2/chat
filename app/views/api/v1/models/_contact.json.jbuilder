@@ -9,6 +9,9 @@ json.blocked resource.blocked
 json.opted_out_at resource.opted_out_at&.to_i
 json.opt_out_source resource.opt_out_source
 json.identifier resource.identifier
+# Lead ou cliente (#1144): só leitura aqui; grava-se pelo ganho do card ou por Contacts::CustomersController.
+json.contact_type resource.contact_type
+json.customer_since resource.customer_since&.to_i
 json.company_id resource.company_id if Current.account&.feature_enabled?('companies')
 json.thumbnail resource.avatar_url
 json.custom_attributes resource.custom_attributes

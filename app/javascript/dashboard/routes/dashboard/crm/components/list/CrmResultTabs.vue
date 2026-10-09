@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { outcomeLabels, outcomeStatuses } from '../../helpers/cardOutcome';
 
 // List-only status tabs. `value` maps to the server `result` filter (card
 // status open/won/lost), NOT the conversation status (open/pending/resolved).
@@ -11,17 +12,26 @@ const props = defineProps({
     type: String,
     default: 'open',
   },
+  // Funil atual: decide os desfechos e os nomes deles (#1144).
+  pipeline: {
+    type: Object,
+    default: null,
+  },
 });
 
 const emit = defineEmits(['update:modelValue']);
 
 const { t } = useI18n();
 
-const tabs = computed(() => [
-  { value: 'open', label: t('CRM_KANBAN.RESULT_FILTER.OPEN') },
-  { value: 'won', label: t('CRM_KANBAN.RESULT_FILTER.WON') },
-  { value: 'lost', label: t('CRM_KANBAN.RESULT_FILTER.LOST') },
-]);
+const tabs = computed(() => {
+  const statuses = outcomeStatuses(props.pipeline);
+  const labels = outcomeLabels(t, props.pipeline);
+  return [
+    { value: 'open', label: t('CRM_KANBAN.RESULT_FILTER.OPEN') },
+    { value: statuses.success, label: labels.success },
+    { value: statuses.failure, label: labels.failure },
+  ];
+});
 
 // No fallback to 'open' here: when result is '' (Filtros "Todos" / a legacy
 // saved view) or 'archived', no everyday-outcome tab should read as active.

@@ -7,7 +7,7 @@ class Crm::Cards::FilterQuery
   # ignores it). `open` is the in-funnel deal status (NOT the conversation
   # status open/pending/resolved); the List status tabs select it explicitly so
   # the default view shows only active deals instead of mixing every status.
-  RESULT_STATUSES = %w[open won lost archived].freeze
+  RESULT_STATUSES = %w[open won lost resolved cancelled archived].freeze
 
   # Whitelisted sort columns for the list view. Maps the public `sort` param to a
   # real `crm_cards` column. Anything outside this map falls back to the default

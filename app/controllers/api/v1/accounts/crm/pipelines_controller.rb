@@ -1,5 +1,6 @@
 class Api::V1::Accounts::Crm::PipelinesController < Api::V1::Accounts::Crm::BaseController
   PIXEL_ID_MAX_LENGTH = 20
+  OUTCOME_LABEL_MAX_LENGTH = 30
 
   before_action :fetch_pipeline, only: [:show, :update, :destroy]
 
@@ -17,12 +18,14 @@ class Api::V1::Accounts::Crm::PipelinesController < Api::V1::Accounts::Crm::Base
     authorize @pipeline
     @pipeline.save!
     update_goal!
+    update_outcome_labels!
     render :show, status: :created
   end
 
   def update
     @pipeline.update!(pipeline_params)
     update_goal!
+    update_outcome_labels!
     update_meta_sync!
     update_google_sync!
     render :show
@@ -41,7 +44,7 @@ class Api::V1::Accounts::Crm::PipelinesController < Api::V1::Accounts::Crm::Base
   end
 
   def pipeline_params
-    parameter_set(:pipeline).permit(:name, :description, :status, :is_default, :position, metadata: {})
+    parameter_set(:pipeline).permit(:name, :description, :status, :is_default, :position, :counts_as_sale, metadata: {})
   end
 
   # Monthly sales target lives in metadata['goals'] and is merged in separately
@@ -59,6 +62,22 @@ class Api::V1::Accounts::Crm::PipelinesController < Api::V1::Accounts::Crm::Base
       }
     else
       metadata.delete('goals')
+    end
+    @pipeline.update!(metadata: metadata)
+  end
+
+  # Nome dos dois desfechos do funil (#1144), ex.: "Contratado"/"Desistiu". Em branco volta ao padrão da tela
+  # (Ganho/Perdido ou Resolvido/Cancelado). Fica em metadata['outcome_labels'], gravado à parte como a meta.
+  def update_outcome_labels!
+    labels = params.dig(:pipeline, :outcome_labels)
+    return if labels.nil?
+
+    metadata = (@pipeline.metadata || {}).deep_dup
+    cleaned = %w[success failure].index_with { |key| labels[key].to_s.strip.first(OUTCOME_LABEL_MAX_LENGTH) }.compact_blank
+    if cleaned.empty?
+      metadata.delete('outcome_labels')
+    else
+      metadata['outcome_labels'] = cleaned
     end
     @pipeline.update!(metadata: metadata)
   end

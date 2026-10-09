@@ -3,6 +3,7 @@
 # Table name: crm_pipelines
 #
 #  id            :bigint           not null, primary key
+#  counts_as_sale :boolean          default(TRUE), not null
 #  description   :text
 #  is_default    :boolean          default(FALSE), not null
 #  metadata      :jsonb            not null
@@ -41,11 +42,22 @@ class Crm::Pipeline < ApplicationRecord
   enum status: { active: 0, archived: 1 }
 
   before_validation :initialize_followup_days, on: :create
+  before_save :turn_off_conversion_sync, unless: :counts_as_sale?
 
   validates :name, presence: true
   validates :metadata, jsonb_attributes_length: true
 
   private
+
+  # Funil que não conta como venda (#1144) não manda nada para Meta nem Google, nem mudança de etapa: a sincronização
+  # é desligada ao salvar, para não virar conversão de anúncio por engano.
+  def turn_off_conversion_sync
+    config = (metadata || {}).deep_dup
+    %w[meta_sync google_sync].each do |key|
+      config[key] = config[key].merge('enabled' => false) if config[key].is_a?(Hash)
+    end
+    self.metadata = config
+  end
 
   def initialize_followup_days
     config = (metadata || {}).deep_dup
