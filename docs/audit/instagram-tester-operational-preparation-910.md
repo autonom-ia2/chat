@@ -1,3 +1,5 @@
+> Registro histórico. Estado atual, ativação da tela, incidente 502 e pendências: [repasse atualizado](instagram-tester-handoff-910.md).
+
 # Preparação operacional Instagram Tester — #910 / PR #913
 
 Data: 03/10/2026. Esta evidência complementa a avaliação de código e os testes

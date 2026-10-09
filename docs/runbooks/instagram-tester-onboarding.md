@@ -1,3 +1,5 @@
+> Estado em 03/10/2026: PR #913 mergeada e deploys aprovados; tela ligada para 15 contas Hub2You e 7 Autonom.ia, mesmo com erro, por ordem expressa. Sessão/convites/coordenação conjunta ainda não homologados. [Repasse e incidente 502](../audit/instagram-tester-handoff-910.md). Os gates abaixo permanecem critérios de operação completa; não são evidência de serviço pronto.
+
 # Runbook: onboarding Instagram Tester (#910 / PR #913)
 
 Este runbook prepara a operação. Merge, deploy, configuração de produção, segredos,

@@ -315,7 +315,7 @@ export async function hostKeyViaSsm(
         commandId,
         '--details',
         '--query',
-        'Invocations[0].{Status:Status,Output:CommandPlugins[0].Output}',
+        'CommandInvocations[0].{Status:Status,Output:CommandPlugins[0].Output}',
         '--output',
         'json',
       ])
@@ -482,7 +482,8 @@ export async function runPublisher(
     activeTunnel = spawnImpl('aws', startSessionArguments(targetConfig, port), {
       shell: false,
       detached: true,
-      stdio: ['ignore', 'pipe', 'pipe'],
+      // Session Manager closes the forwarder on stdin EOF; keep this pipe open.
+      stdio: ['pipe', 'pipe', 'pipe'],
     });
     activeTunnel.once('error', () => {});
     activeTunnel.stdout?.resume();

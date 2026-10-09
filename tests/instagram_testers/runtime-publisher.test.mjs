@@ -168,19 +168,43 @@ test('account verification is exact and does not expose AWS output', async () =>
 test('host key retrieval uses only fixed SSM commands and no SSH-side probing', async () => {
   const config = runtimeConfig('hub2you', baseEnv);
   const calls = [];
+  let elapsed = 0;
   const output = await hostKeyViaSsm(config, {
     run: async (_command, args) => {
       calls.push(args);
       if (args.includes('send-command')) return 'command-12345678\n';
-      if (args.includes('list-command-invocations') && calls.length === 2)
-        return 'null';
-      return JSON.stringify({
-        Status: 'Success',
-        Output:
-          'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAISyntheticHostKeyData== host\n',
-      });
+      const response = {
+        CommandInvocations:
+          calls.length === 2
+            ? []
+            : [
+                {
+                  Status: 'Success',
+                  CommandPlugins: [
+                    {
+                      Output:
+                        'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAISyntheticHostKeyData== host\n',
+                    },
+                  ],
+                },
+              ],
+      };
+      const query = args[args.indexOf('--query') + 1];
+      const invocation = response[query.split('[0]')[0]]?.[0];
+      return JSON.stringify(
+        invocation
+          ? {
+              Status: invocation.Status,
+              Output: invocation.CommandPlugins[0].Output,
+            }
+          : null
+      );
     },
-    sleep: async () => {},
+    deadline: 100,
+    now: () => elapsed,
+    sleep: async () => {
+      elapsed += 25;
+    },
   });
   assert.match(output, /^ssh-ed25519 /);
   assert.equal(calls.length, 3);

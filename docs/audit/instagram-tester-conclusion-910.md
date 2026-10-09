@@ -1,3 +1,5 @@
+> Registro histórico. Estado atual, ativação da tela, incidente 502 e pendências: [repasse atualizado](instagram-tester-handoff-910.md).
+
 # Instagram Tester — conclusão #910 / PR #913
 
 ## Estado da conclusão

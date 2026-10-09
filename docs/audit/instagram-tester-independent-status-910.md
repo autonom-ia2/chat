@@ -1,3 +1,5 @@
+> Registro histórico. Estado atual, ativação da tela, incidente 502 e pendências: [repasse atualizado](instagram-tester-handoff-910.md).
+
 # Avaliação independente — estado após preparo operacional #910 / PR #913
 
 03/10/2026. Base do onboarding: `042e473685a3135953af983f35acf337a943fbcb`.

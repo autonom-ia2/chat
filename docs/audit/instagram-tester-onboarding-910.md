@@ -1,3 +1,5 @@
+> Registro histórico. Estado atual, ativação da tela, incidente 502 e pendências: [repasse atualizado](instagram-tester-handoff-910.md).
+
 # #910 — termos de aceite e evidências de implementação
 
 > Atualização posterior: este documento preserva a evidência histórica. O código, os testes de sessão/proxy e os gates operacionais da rodada de conclusão estão em [instagram-tester-conclusion-910.md](instagram-tester-conclusion-910.md). Os resultados anteriores não validam as alterações posteriores ao commit `e685cb0018`.
