@@ -135,6 +135,7 @@ jobs:
             tests/qa/instagram-testers/toast-helpers.test.mjs \
             tests/instagram_testers/session-observer.test.mjs \
             tests/instagram_testers/session-manager.test.mjs \
+            tests/instagram_testers/browser-operations.test.mjs \
             tests/instagram_testers/runtime-publisher.test.mjs tests/instagram_testers/publisher-concurrency.test.mjs \
             tests/instagram_testers/runtime-entrypoint.test.mjs \
             tests/instagram_testers/session-publisher-stdio.test.mjs \
@@ -172,6 +173,8 @@ jobs:
           node --check scripts/instagram_testers/session-manager.mjs
           node --check scripts/instagram_testers/browser-operations.mjs
           node --check tests/qa/instagram-automation/warm-meta-page.mjs
+          node --check tests/qa/instagram-automation/invite-outcome.mjs
+          node --check tests/instagram_testers/browser-operations.test.mjs
           node --check scripts/instagram_testers/session-browser.mjs
           node --check scripts/instagram_testers/runtime/publisher-tunnel.mjs
           node --check scripts/instagram_testers/runtime/publisher-channel.mjs
@@ -196,10 +199,12 @@ jobs:
           tests/qa/instagram-automation/latency-benchmark.mjs
           tests/qa/instagram-automation/route-stress.mjs
           tests/qa/instagram-automation/ui-failures.mjs
+          tests/qa/instagram-automation/invite-outcome.mjs
           tests/qa/instagram-automation/manager-lifecycle.mjs
           tests/qa/instagram-automation/proxy-failures.mjs
           tests/instagram_testers/session-observer.test.mjs
           tests/instagram_testers/session-manager.test.mjs
+          tests/instagram_testers/browser-operations.test.mjs
           tests/instagram_testers/runtime-publisher.test.mjs tests/instagram_testers/publisher-concurrency.test.mjs
           tests/instagram_testers/runtime-entrypoint.test.mjs
           tests/instagram_testers/session-publisher-stdio.test.mjs
@@ -401,6 +406,14 @@ jobs:
         run: |
           mkdir -p tmp/instagram-stress
           node tests/qa/instagram-automation/ui-failures.mjs | tee tmp/instagram-stress/ui.jsonl
+      - name: Verify truthful invite outcomes and budgets without Meta
+        if: ${{ !cancelled() }}
+        env:
+          PLAYWRIGHT_MODULE_PATH: ${{ github.workspace }}/scripts/instagram_testers/runtime/vps/node_modules/playwright/index.mjs
+          PLAYWRIGHT_EXECUTABLE_PATH: /usr/bin/google-chrome
+        run: |
+          mkdir -p tmp/instagram-stress
+          node tests/qa/instagram-automation/invite-outcome.mjs | tee tmp/instagram-stress/invite.jsonl
       - name: Verify fresh reads and warm-page failure paths without Meta
         if: ${{ !cancelled() }}
         env:
