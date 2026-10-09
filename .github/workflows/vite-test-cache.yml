@@ -1,0 +1,111 @@
+name: Cache do Vite de teste
+
+# Compila os assets de teste do Vite na main e salva o cache NA REF DA MAIN (#1176).
+#
+# Por que existe: o primeiro spec que renderiza pagina compila o Vite (autoBuild), ~90 s por no do RSpec.
+# O testes.yml nao roda no push da main, entao o cache dele so era salvo em refs/pull/N/merge e
+# gh-readonly-queue/..., que nenhuma outra rodada consegue ler (uma rodada le a propria ref e a main).
+# Resultado medido em 09/10/2026: cache nunca reaproveitado, 250 copias da mesma chave e nos do RSpec
+# desequilibrados (253 a 482 s para 361 s previstos).
+#
+# Com o cache na main, todo PR e toda rodada da fila que nao mexem no frontend leem o build pronto.
+# A chave tem de ser IGUAL a do passo "Cache do build do Vite (teste)" do testes.yml.
+#
+# No PR que altera este arquivo, o job compila para provar que o build funciona, mas nao salva.
+#
+# Disputa com o deploy: e 1 job (~3 min) so em push da main que mexe no frontend, contra os 9 da antiga rodada
+# completa do testes.yml na main, que foi tirada por disputar runner com o deploy. Se ja existe cache para a chave,
+# o job sai em segundos (lookup-only).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'app/javascript/**'
+      - 'config/vite.json'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'postcss.config.js'
+      - 'tailwind.config.js'
+      - 'theme/**'
+      - 'vite.config.*'
+      - 'vite.shared.*'
+      - '.browserslistrc'
+  pull_request:
+    paths:
+      - '.github/workflows/vite-test-cache.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vite-test-cache-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build do Vite (teste)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      RAILS_ENV: test
+      # Mesmo teto de memoria do job de RSpec (#1118).
+      NODE_OPTIONS: --max-old-space-size=4096
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Chave do cache
+        id: chave
+        run: echo "key=vite-test-${{ runner.os }}-${{ hashFiles('app/javascript/**', 'config/vite.json', 'package.json', 'pnpm-lock.yaml', 'postcss.config.js', 'tailwind.config.js', 'theme/**', 'vite.config.*', 'vite.shared.*', '.browserslistrc') }}" >> "$GITHUB_OUTPUT"
+
+      - name: Conferir se ja existe
+        id: existe
+        # No PR sempre compila: e o teste deste workflow.
+        if: github.event_name != 'pull_request'
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            public/vite-test
+            tmp/cache/vite
+          key: ${{ steps.chave.outputs.key }}
+          lookup-only: true
+
+      - uses: ruby/setup-ruby@v1
+        if: steps.existe.outputs.cache-hit != 'true'
+        with:
+          bundler-cache: true
+
+      # A versao do pnpm vem do campo packageManager do package.json.
+      - uses: pnpm/action-setup@v4
+        if: steps.existe.outputs.cache-hit != 'true'
+
+      - uses: actions/setup-node@v4
+        if: steps.existe.outputs.cache-hit != 'true'
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Instalar dependencias JS
+        if: steps.existe.outputs.cache-hit != 'true'
+        run: pnpm install --frozen-lockfile
+
+      - name: Compilar
+        if: steps.existe.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          bin/vite build
+          # O vite_ruby so reaproveita o build com este registro (digest dos arquivos observados).
+          test -s tmp/cache/vite/last-build-test.json
+          jq -e '.success == true' tmp/cache/vite/last-build-test.json
+          test -s public/vite-test/.vite/manifest.json || test -s public/vite-test/manifest.json
+
+      - name: Salvar o cache na main
+        if: steps.existe.outputs.cache-hit != 'true' && github.event_name != 'pull_request'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            public/vite-test
+            tmp/cache/vite
+          key: ${{ steps.chave.outputs.key }}
