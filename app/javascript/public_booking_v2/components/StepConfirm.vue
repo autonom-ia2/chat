@@ -3,13 +3,18 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useFlow } from '../composables/useBookingFlow';
 import { whenLabel } from '../helpers/datetime';
-import { locationKey } from '../helpers/locations';
+import {
+  locationAddress,
+  locationName,
+  locationOptions,
+} from '../helpers/locations';
 import ActionButton from './ActionButton.vue';
 import BrandHeader from './BrandHeader.vue';
 import ChoiceCards from './ChoiceCards.vue';
 import FormFooter from './FormFooter.vue';
 import PhoneField from './PhoneField.vue';
 import TextField from './TextField.vue';
+import ZoneNote from './ZoneNote.vue';
 
 // Confirmar pelo link do cliente (J1 "Confirma"): nada a digitar. O número mascarado aparece; "Mudar o número"
 // revela o campo. Sem número no contato, o campo já vem aberto (J1-A11). Sem e-mail, salvo se o local exigir.
@@ -23,6 +28,8 @@ const {
   selectedLocation,
   emailRequired,
   selectedSlot,
+  clientZone,
+  isOtherClock,
   askName,
   askPhone,
   isChangingPhone,
@@ -33,7 +40,9 @@ const {
 const { t, locale } = useI18n();
 
 const when = computed(() =>
-  selectedSlot.value ? whenLabel(selectedSlot.value, locale.value) : ''
+  selectedSlot.value
+    ? whenLabel(selectedSlot.value, locale.value, clientZone)
+    : ''
 );
 const phoneMasked = computed(() => invite.phoneMasked.value);
 const summary = computed(() => {
@@ -53,21 +62,15 @@ const summary = computed(() => {
     });
   }
   return t('BOOKING_V2.CONFIRM.WITH', {
-    location: t(`BOOKING_V2.LOCATION.${locationKey(type)}`),
+    location: locationName(selectedLocation.value, t),
     name,
   });
 });
-const locationOptions = computed(() =>
-  locations.value.map(item => ({
-    value: item.type,
-    label: t(`BOOKING_V2.LOCATION.${locationKey(item.type)}`),
-    hint: t(`BOOKING_V2.LOCATION_HINT.${locationKey(item.type)}`),
-  }))
-);
+const address = computed(() => locationAddress(selectedLocation.value));
+const options = computed(() => locationOptions(locations.value, t));
 const canChangePhone = computed(
   () => !!phoneMasked.value && !isChangingPhone.value
 );
-const errorText = key => (key ? t(key) : '');
 </script>
 
 <template>
@@ -90,6 +93,10 @@ const errorText = key => (key ? t(key) : '');
       <p data-testid="confirm-summary" class="text-base text-slate-800">
         {{ summary }}
       </p>
+      <p v-if="address" class="text-base text-slate-800">
+        {{ t('BOOKING_V2.ADDRESS', { address }) }}
+      </p>
+      <ZoneNote v-if="isOtherClock" />
     </div>
     <form
       class="flex flex-col gap-5"
@@ -97,18 +104,18 @@ const errorText = key => (key ? t(key) : '');
       @submit.prevent="submitBooking"
     >
       <ChoiceCards
-        v-if="locationOptions.length > 1"
+        v-if="options.length > 1"
         v-model="locationType"
         name="booking-location"
         :legend="t('BOOKING_V2.DETAILS.LOCATION_TITLE')"
-        :options="locationOptions"
+        :options="options"
       />
       <TextField
         v-if="askName"
         id="booking-name"
         v-model="form.name"
         :label="t('BOOKING_V2.DETAILS.NAME')"
-        :error="errorText(fieldErrors.name)"
+        :error="fieldErrors.name"
         autocomplete="name"
         required
       />
@@ -118,7 +125,7 @@ const errorText = key => (key ? t(key) : '');
         v-model:country="form.countryCode"
         v-model:national="form.phone"
         :label="t('BOOKING_V2.CONFIRM.NEW_NUMBER')"
-        :error="errorText(fieldErrors.phone)"
+        :error="fieldErrors.phone"
       />
       <TextField
         v-if="emailRequired || fieldErrors.email"
@@ -129,7 +136,7 @@ const errorText = key => (key ? t(key) : '');
         inputmode="email"
         :label="t('BOOKING_V2.DETAILS.EMAIL_REQUIRED')"
         :hint="t('BOOKING_V2.DETAILS.EMAIL_HINT')"
-        :error="errorText(fieldErrors.email)"
+        :error="fieldErrors.email"
         required
       />
       <FormFooter :submit-label="t('BOOKING_V2.DETAILS.CONFIRM')" />

@@ -45,7 +45,8 @@ RSpec.describe 'Public::Api::V2::Invites manage', type: :request do
     expect(response).to have_http_status(:ok)
     expect(body.except('meeting')).to eq(
       'code' => invite.code, 'page_slug' => world.profile.slug, 'state' => 'scheduled', 'contact_first_name' => 'Marcos',
-      'phone_masked' => '(11) •••••-5678', 'contact_whatsapp_url' => 'https://wa.me/5511933334444'
+      'phone_masked' => '(11) •••••-5678', 'contact_whatsapp_url' => 'https://wa.me/5511933334444',
+      'starts_at' => '2026-10-20T10:00:00-03:00', 'timezone' => 'America/Sao_Paulo'
     )
     expect(body['meeting'].except('ics_url')).to eq(
       'starts_at' => '2026-10-20T10:00:00-03:00', 'ends_at' => '2026-10-20T10:30:00-03:00', 'timezone' => 'America/Sao_Paulo',

@@ -11,6 +11,7 @@ Backend é dono do contrato; se precisar mudar algo, mude **aqui** e avise no re
 {
   "code": "AB3K9QXZ", "page_slug": "...", "state": "scheduled",
   "contact_first_name": "Ana", "phone_masked": "(11) •••••-5678",
+  "starts_at": "2026-10-20T10:00:00-03:00", "timezone": "America/Sao_Paulo",   // F1-B: "Você já agendou" (fuso da página, IANA)
   "meeting": {
     "starts_at": "2026-10-20T10:00:00-03:00", "ends_at": "2026-10-20T10:30:00-03:00",
     "timezone": "America/Sao_Paulo", "title": "Conversa de 30 min", "agent_name": "Camila",

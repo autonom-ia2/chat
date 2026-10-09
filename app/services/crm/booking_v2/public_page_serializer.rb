@@ -2,7 +2,11 @@
 # nome e foto; nunca e-mail, id interno, caixa ou URL privada de local (o link de reunião só sai na confirmação).
 #
 # `locations[].label`: o rótulo que o dono escreveu ou o nome leigo do catálogo do fork (`LocationLabel`), no idioma
-# da conta. `requires_email`: Meet e Teams mandam o convite por e-mail, então o formulário pede e-mail.
+# da conta. `requires_email`: Meet e Teams mandam o convite por e-mail, então o formulário pede e-mail. `address`: só
+# do local presencial, que o dono publicou para o cliente saber aonde ir antes de confirmar.
+#
+# `timezone`: nome IANA do fuso da página (o navegador não entende os nomes do Rails, como "Brasilia"). `weekdays`: dias
+# da semana em que a página atende (0 = domingo ... 6 = sábado), para a página não oferecer dia fechado.
 # `notices_enabled` (#1192): a página tem caixa de avisos utilizável; a tela mostra o aviso de consentimento.
 class Crm::BookingV2::PublicPageSerializer
   include Rails.application.routes.url_helpers
@@ -43,8 +47,8 @@ class Crm::BookingV2::PublicPageSerializer
 
   def schedule
     {
-      duration_minutes: profile.duration_minutes, durations: profile.durations, timezone: profile.resolved_timezone,
-      booking_window_days: profile.booking_window_days
+      duration_minutes: profile.duration_minutes, durations: profile.durations, timezone: page.time_zone&.tzinfo&.name,
+      booking_window_days: profile.booking_window_days, weekdays: profile.weekdays.sort
     }
   end
 
@@ -67,8 +71,12 @@ class Crm::BookingV2::PublicPageSerializer
   def locations
     Array(profile.locations).select { |item| item.is_a?(Hash) }.map do |item|
       { type: item['type'], label: Crm::BookingV2::LocationLabel.for(item, account: profile.account),
-        requires_email: EMAIL_LOCATIONS.include?(item['type']) }
+        requires_email: EMAIL_LOCATIONS.include?(item['type']), address: in_person_address(item) }.compact
     end
+  end
+
+  def in_person_address(item)
+    item['address'].presence if item['type'] == 'in_person'
   end
 
   # Sem chave de servidor o hCaptcha não é conferido (ChatwootCaptcha aceita tudo), então a página nem o mostra.

@@ -1,10 +1,19 @@
-import { computed, inject, provide, ref } from 'vue';
+import { computed, inject, nextTick, provide, ref } from 'vue';
 import { createBooking, getPage, requestContact } from '../api';
 import { applyBrandColor } from '../helpers/brand';
-import { bookingDays, dateInZone, isValidTimeZone } from '../helpers/datetime';
+import {
+  bookingDays,
+  clientTimeZone,
+  dateInZone,
+  isValidTimeZone,
+  sameClock,
+} from '../helpers/datetime';
+import { newRequestId } from '../helpers/requestId';
 import { useBookingForm } from './useBookingForm';
+import { useFormToken } from './useFormToken';
 import { useInvite } from './useInvite';
 import { useSlots } from './useSlots';
+import { useStepHistory } from './useStepHistory';
 
 export const STEPS = Object.freeze({
   LOADING: 'loading',
@@ -19,6 +28,15 @@ export const STEPS = Object.freeze({
   DONE: 'done',
   NO_SLOT: 'no_slot',
 });
+
+// Telas do agendamento em si: só nelas o "voltar" do celular troca de tela.
+const BOOKING_STEPS = [
+  STEPS.DATE,
+  STEPS.TIME,
+  STEPS.DETAILS,
+  STEPS.CONFIRM,
+  STEPS.NO_SLOT,
+];
 
 const FLOW_KEY = Symbol('bookingFlow');
 
@@ -35,6 +53,10 @@ export const parseRoute = (pathname, search) => {
   return { code: null, slug: null };
 };
 
+// Primeiro campo marcado como inválido recebe o foco: o leitor de tela lê o rótulo e o erro dele.
+const focusFirstInvalid = () =>
+  nextTick(() => document.querySelector('[aria-invalid="true"]')?.focus());
+
 export function useBookingFlow(location = window.location) {
   const route = parseRoute(location.pathname, location.search);
   const step = ref(STEPS.LOADING);
@@ -46,19 +68,34 @@ export function useBookingFlow(location = window.location) {
   const selectedSlot = ref('');
   const slotNotice = ref('');
   const isChangingPhone = ref(false);
+  const isNameRequested = ref(false);
   const isSubmitting = ref(false);
   const result = ref(null);
   const isContactRequested = ref(false);
+  const clientZone = clientTimeZone();
+  // Chave da tentativa de reserva: a mesma no reenvio depois de falha de rede ou do servidor (a reserva pode ter
+  // sido feita); nova depois de uma resposta definitiva ou de outro horário.
+  let requestId = null;
 
   const invite = useInvite();
   const slotsApi = useSlots({ slug, duration });
   const bookingForm = useBookingForm();
   const { form } = bookingForm;
+  const formToken = useFormToken({ page, slug, preview: route.preview });
 
   const timeZone = computed(() => page.value?.timezone || '');
+  const isPreview = computed(() => !!page.value?.preview);
+  // O relógio de quem abre marca outra hora que o da página: as telas dizem em que horário estão as horas.
+  const isOtherClock = computed(
+    () => !!timeZone.value && !sameClock(clientZone, timeZone.value)
+  );
   const days = computed(() =>
     page.value
-      ? bookingDays(timeZone.value, page.value.booking_window_days)
+      ? bookingDays(
+          timeZone.value,
+          page.value.booking_window_days,
+          page.value.weekdays
+        )
       : []
   );
   const durations = computed(() =>
@@ -76,12 +113,11 @@ export function useBookingFlow(location = window.location) {
   const emailRequired = computed(
     () => !!selectedLocation.value?.requires_email
   );
-  // No convite o nome vem do contato; o campo só aparece se faltar ou se o servidor recusar o nome.
+  // No convite o nome e o número vêm do contato; o campo só aparece se faltar, se a pessoa pedir para mudar o número
+  // ou se o servidor recusar (e fica aberto depois disso, sem piscar a cada envio).
   const askName = computed(
     () =>
-      !invite.isInvite.value ||
-      !invite.firstName.value ||
-      !!bookingForm.fieldErrors.name
+      !invite.isInvite.value || !invite.firstName.value || isNameRequested.value
   );
   const askPhone = computed(
     () =>
@@ -93,27 +129,63 @@ export function useBookingFlow(location = window.location) {
     () => invite.firstName.value || form.name.trim().split(' ')[0] || ''
   );
   const captchaRequired = computed(() => !!page.value?.captcha_site_key);
+  const detailsStep = () =>
+    invite.isInvite.value ? STEPS.CONFIRM : STEPS.DETAILS;
 
   const goTo = next => {
     bookingForm.clearErrors();
     step.value = next;
   };
 
+  const showTimes = date => {
+    selectedDate.value = date;
+    selectedSlot.value = '';
+    slotNotice.value = '';
+    goTo(STEPS.TIME);
+    slotsApi.loadSlots(date);
+  };
+
+  // Volta pelo histórico: refaz a tela pedida com o que já foi escolhido; sem o dado, cai no dia. Reserva feita não
+  // se desfaz com o voltar.
+  const restoreStep = target => {
+    if (!BOOKING_STEPS.includes(step.value)) return null;
+    if (target === STEPS.TIME && selectedDate.value) {
+      return showTimes(selectedDate.value);
+    }
+    if (target === detailsStep() && selectedSlot.value) return goTo(target);
+    if (target === STEPS.NO_SLOT) return goTo(STEPS.NO_SLOT);
+    return goTo(STEPS.DATE);
+  };
+
+  const history = useStepHistory(restoreStep);
+
+  // Tela nova por escolha da pessoa: entra no histórico (a mesma tela de novo só substitui).
+  const navigate = next => {
+    if (step.value === next) history.replace(next);
+    else history.push(next);
+  };
+
+  const finishOn = next => {
+    goTo(next);
+    history.start(next);
+  };
+
   const startBooking = () => {
-    goTo(STEPS.DATE);
+    finishOn(STEPS.DATE);
     slotsApi.loadNextSlot();
   };
 
   const showPage = data => {
     page.value = data;
+    formToken.markIssued();
     applyBrandColor(data?.brand?.color);
-    if (data?.paused) return goTo(STEPS.PAUSED);
-    if (!isValidTimeZone(data?.timezone)) return goTo(STEPS.ERROR);
+    if (data?.paused) return finishOn(STEPS.PAUSED);
+    if (!isValidTimeZone(data?.timezone)) return finishOn(STEPS.ERROR);
 
     duration.value = data.duration_minutes;
     locationType.value = locations.value[0]?.type || null;
     if (invite.firstName.value) form.name = invite.firstName.value;
-    if (invite.isScheduled.value) return goTo(STEPS.ALREADY);
+    if (invite.isScheduled.value) return finishOn(STEPS.ALREADY);
     return startBooking();
   };
 
@@ -124,10 +196,10 @@ export function useBookingFlow(location = window.location) {
         const data = await invite.load(route.code);
         slug.value = data?.page_slug || null;
       }
-      if (!slug.value) return goTo(STEPS.NOT_FOUND);
+      if (!slug.value) return finishOn(STEPS.NOT_FOUND);
       return showPage(await getPage(slug.value, route.preview));
     } catch (error) {
-      return goTo(error?.status === 404 ? STEPS.NOT_FOUND : STEPS.ERROR);
+      return finishOn(error?.status === 404 ? STEPS.NOT_FOUND : STEPS.ERROR);
     }
   };
 
@@ -137,17 +209,16 @@ export function useBookingFlow(location = window.location) {
   };
 
   const chooseDay = date => {
-    selectedDate.value = date;
-    selectedSlot.value = '';
-    slotNotice.value = '';
-    goTo(STEPS.TIME);
-    slotsApi.loadSlots(date);
+    navigate(STEPS.TIME);
+    showTimes(date);
   };
 
   const chooseSlot = iso => {
+    requestId = null;
     selectedSlot.value = iso;
     slotNotice.value = '';
-    goTo(invite.isInvite.value ? STEPS.CONFIRM : STEPS.DETAILS);
+    navigate(detailsStep());
+    goTo(detailsStep());
   };
 
   const chooseEarliest = () => {
@@ -157,24 +228,30 @@ export function useBookingFlow(location = window.location) {
     chooseSlot(iso);
   };
 
+  // "Voltar" da página: pelo histórico quando há (o mesmo caminho do voltar do celular); senão direto.
   const goBack = () => {
+    if (history.back()) return null;
     if (step.value === STEPS.DETAILS || step.value === STEPS.CONFIRM) {
-      return chooseDay(selectedDate.value);
+      history.replace(STEPS.TIME);
+      return showTimes(selectedDate.value);
     }
+    history.replace(STEPS.DATE);
     return goTo(STEPS.DATE);
   };
 
-  const openNoSlot = () => goTo(STEPS.NO_SLOT);
+  const openNoSlot = () => {
+    navigate(STEPS.NO_SLOT);
+    goTo(STEPS.NO_SLOT);
+  };
 
   const startPhoneChange = () => {
     isChangingPhone.value = true;
   };
 
   const backToTimes = () => {
+    history.replace(STEPS.TIME);
+    showTimes(selectedDate.value);
     slotNotice.value = 'BOOKING_V2.ERRORS.SLOT_UNAVAILABLE';
-    selectedSlot.value = '';
-    step.value = STEPS.TIME;
-    slotsApi.loadSlots(selectedDate.value);
     slotsApi.loadNextSlot();
   };
 
@@ -190,60 +267,84 @@ export function useBookingFlow(location = window.location) {
     company: form.company,
     form_token: page.value.form_token,
     captcha_token: bookingForm.captchaToken.value || undefined,
+    request_id: requestId,
   });
 
-  const handleBookingError = error => {
-    if (error?.code === 'slot_unavailable') return backToTimes();
-    const field = bookingForm.applyServerError(error?.code);
+  const isRetriable = error => !error?.status || error.status >= 500;
+
+  // Erro de campo abre o campo (no convite ele pode estar escondido) e leva o foco até ele.
+  const showServerError = code => {
+    const field = bookingForm.applyServerError(code);
     if (field === 'phone') isChangingPhone.value = true;
-    return null;
+    if (field === 'name') isNameRequested.value = true;
+    if (field) focusFirstInvalid();
+  };
+
+  const isFormValid = options => {
+    const isValid = bookingForm.validate({
+      captchaRequired: captchaRequired.value,
+      ...options,
+    });
+    if (!isValid) focusFirstInvalid();
+    return isValid;
   };
 
   const submitBooking = async () => {
-    if (isSubmitting.value) return;
-    const isValid = bookingForm.validate({
+    if (isSubmitting.value || isPreview.value) return;
+    const isValid = isFormValid({
       askName: askName.value,
       askPhone: askPhone.value,
       emailRequired: emailRequired.value,
-      captchaRequired: captchaRequired.value,
     });
     if (!isValid) return;
 
     isSubmitting.value = true;
+    requestId = requestId || newRequestId();
     try {
-      result.value = await createBooking(slug.value, bookingPayload());
+      result.value = await formToken.sendWithFreshToken(() =>
+        createBooking(slug.value, bookingPayload())
+      );
+      requestId = null;
       goTo(STEPS.DONE);
+      history.replace(STEPS.DONE);
     } catch (error) {
-      handleBookingError(error);
+      if (!isRetriable(error)) requestId = null;
+      if (error?.code === 'slot_unavailable') backToTimes();
+      else showServerError(error?.code);
     } finally {
       isSubmitting.value = false;
       bookingForm.resetCaptcha();
     }
   };
 
+  // No convite, nome e número já são do contato: só vão se a pessoa digitou (o servidor usa os do convite).
+  const contactPayload = () => ({
+    name: askName.value ? form.name.trim() : undefined,
+    phone: askPhone.value ? bookingForm.phoneValue() : undefined,
+    invite_code: invite.invite.value?.code,
+    consent: bookingForm.consent(!!page.value.notices_enabled),
+    company: form.company,
+    form_token: page.value.form_token,
+    captcha_token: bookingForm.captchaToken.value || undefined,
+  });
+
   const submitContactRequest = async () => {
-    if (isSubmitting.value) return;
-    const isValid = bookingForm.validate({
-      askName: true,
-      askPhone: true,
+    if (isSubmitting.value || isPreview.value) return;
+    const isValid = isFormValid({
+      askName: askName.value,
+      askPhone: askPhone.value,
       emailRequired: false,
-      captchaRequired: captchaRequired.value,
     });
     if (!isValid) return;
 
     isSubmitting.value = true;
     try {
-      await requestContact(slug.value, {
-        name: form.name.trim(),
-        phone: bookingForm.phoneValue(),
-        consent: bookingForm.consent(!!page.value.notices_enabled),
-        company: form.company,
-        form_token: page.value.form_token,
-        captcha_token: bookingForm.captchaToken.value || undefined,
-      });
+      await formToken.sendWithFreshToken(() =>
+        requestContact(slug.value, contactPayload())
+      );
       isContactRequested.value = true;
     } catch (error) {
-      bookingForm.applyServerError(error?.code);
+      showServerError(error?.code);
     } finally {
       isSubmitting.value = false;
       bookingForm.resetCaptcha();
@@ -267,6 +368,9 @@ export function useBookingFlow(location = window.location) {
     selectedSlot,
     slotNotice,
     timeZone,
+    clientZone,
+    isOtherClock,
+    isPreview,
     emailRequired,
     askName,
     askPhone,

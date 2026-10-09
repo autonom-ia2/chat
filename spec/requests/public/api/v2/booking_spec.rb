@@ -1,7 +1,8 @@
 require 'rails_helper'
 
 # Página pública v2 (#1189): 404 uniforme, pausa, prévia, payload sem dado interno, barreiras de robô (honeypot,
-# form_token, captcha), reserva pelo link público e pelo convite, idempotência e erros públicos fechados (J2, RA-05).
+# form_token, captcha), reserva pelo link público e pelo convite, idempotência só pela chave do pedido (`request_id`),
+# erros públicos fechados (J2, RA-05) e falha nossa como 500 registrado.
 RSpec.describe 'Public::Api::V2::Booking', type: :request do
   let(:account) { create(:account, locale: 'pt_BR') }
   let(:world) { build_booking_world(account: account) }
@@ -33,8 +34,10 @@ RSpec.describe 'Public::Api::V2::Booking', type: :request do
     Crm::BookingV2::Tokens.generate('form', { 's' => slug, 't' => (Time.current - age).to_i }, expires_in: 2.hours)
   end
 
+  # Cada chamada é uma tentativa nova (chave nova), como no navegador; o reenvio passa a mesma `request_id`.
   def book(slug = profile.slug, **overrides)
-    params = { name: 'Ana Souza', phone: '(21) 98888-7777', starts_at: slot, company: '', form_token: form_token(slug), consent: consent }
+    params = { name: 'Ana Souza', phone: '(21) 98888-7777', starts_at: slot, company: '', form_token: form_token(slug), consent: consent,
+               request_id: SecureRandom.uuid }
     post base(slug), params: params.merge(overrides), as: :json
   end
 
@@ -55,6 +58,20 @@ RSpec.describe 'Public::Api::V2::Booking', type: :request do
   def expect_error(code)
     expect(response).to have_http_status(:unprocessable_entity)
     expect(body).to eq({ 'error' => code })
+  end
+
+  # O token do ICS é cifrado com IV aleatório: muda a cada resposta, mas aponta o mesmo convite.
+  def expect_same_booking(first)
+    expect(body.except('ics_url')).to eq(first.except('ics_url'))
+    [first, body].each do |answer|
+      token = answer['ics_url'].delete_prefix("#{frontend}/public/api/v2/ics/")
+      expect(Crm::BookingV2::Tokens.verify('ics', token)).to eq('c' => answer['manage_url'].delete_prefix("#{frontend}/b/"))
+    end
+  end
+
+  def expect_unavailable
+    expect(response).to have_http_status(:internal_server_error)
+    expect(body).to eq({ 'error' => 'unavailable' })
   end
 
   def expect_every_route_not_found(slug)
@@ -92,7 +109,7 @@ RSpec.describe 'Public::Api::V2::Booking', type: :request do
       expect(body.except('form_token')).to eq(
         'slug' => profile.slug, 'paused' => false, 'preview' => false, 'title' => 'Conversa de 30 min', 'description' => nil,
         'agent_name' => 'Camila', 'agent_photo_url' => nil, 'duration_minutes' => 30, 'durations' => [30],
-        'timezone' => 'America/Sao_Paulo', 'booking_window_days' => 14,
+        'timezone' => 'America/Sao_Paulo', 'booking_window_days' => 14, 'weekdays' => [1, 2, 3, 4, 5],
         'brand' => { 'color' => '#1F6FEB', 'headline' => 'Fale com a gente', 'logo_url' => nil, 'photo_url' => nil },
         'locations' => [{ 'type' => 'whatsapp_video', 'label' => 'Vídeo no WhatsApp', 'requires_email' => false }],
         'contact_whatsapp_url' => 'https://wa.me/5511933334444', 'captcha_site_key' => nil, 'notices_enabled' => false
@@ -109,6 +126,20 @@ RSpec.describe 'Public::Api::V2::Booking', type: :request do
 
       expect(body['locations']).to eq([{ 'type' => 'in_person', 'label' => 'Escritório Paulista', 'requires_email' => false },
                                        { 'type' => 'google_meet', 'label' => 'Google Meet', 'requires_email' => true }])
+    end
+
+    it 'manda o endereço só do local presencial, os dias que atende e o fuso com nome IANA' do
+      profile.update!(locations: [{ 'type' => 'in_person', 'address' => 'Av. Paulista, 1000' },
+                                  { 'type' => 'whatsapp_video', 'address' => 'não sai' }],
+                      working_hours: { 'start_hour' => 9, 'end_hour' => 17, 'weekdays' => [6, 1, 3] }, timezone: 'Brasilia')
+
+      get base
+
+      expect(body['locations']).to eq([{ 'type' => 'in_person', 'label' => 'Presencial', 'requires_email' => false,
+                                         'address' => 'Av. Paulista, 1000' },
+                                       { 'type' => 'whatsapp_video', 'label' => 'Vídeo no WhatsApp', 'requires_email' => false }])
+      expect(body['weekdays']).to eq([1, 3, 6])
+      expect(body['timezone']).to eq('America/Sao_Paulo')
     end
 
     it 'mostra a chave do captcha só quando a instalação tem a chave do servidor' do
@@ -303,15 +334,64 @@ RSpec.describe 'Public::Api::V2::Booking', type: :request do
       expect(Crm::Meeting.last.metadata).not_to have_key('consent')
     end
 
-    it 'o reenvio idêntico devolve 200 com a mesma reserva, sem duplicar' do
-      book
+    it 'o reenvio com a mesma request_id devolve 200 com a mesma reserva, sem duplicar' do
+      book(request_id: 'tentativa-0001-abcdef')
       first = body
+      expect(response).to have_http_status(:created)
+      travel 1.minute
 
-      expect { book }.not_to change(Crm::Meeting, :count)
+      expect { book(request_id: 'tentativa-0001-abcdef', phone: '+55 21 98888-7777') }.not_to change(Crm::Meeting, :count)
 
       expect(response).to have_http_status(:ok)
-      expect(body).to eq(first)
-      expect(Crm::BookingInvite.count).to eq(1)
+      expect_same_booking(first)
+      expect(Crm::BookingInvite.sole.metadata).to eq('request_id' => 'tentativa-0001-abcdef')
+      expect(Crm::Meeting.sole.metadata['booking_request_id']).to eq('tentativa-0001-abcdef')
+    end
+
+    # B1: quem sabe o telefone e o horário de outra pessoa não recebe a reunião dela (link de gestão, ICS, endereço).
+    describe 'reunião de outra pessoa no mesmo horário' do
+      before do
+        profile.update!(locations: [{ 'type' => 'in_person', 'address' => 'Av. Paulista, 1000' }])
+        book(request_id: 'chave-da-vitima-0001', location_type: 'in_person')
+        travel 1.minute
+      end
+
+      let!(:victim_invite) { Crm::BookingInvite.sole }
+
+      def expect_nothing_leaked
+        expect_error('slot_unavailable')
+        expect(response.body).not_to include(victim_invite.code)
+        expect(response.body).not_to include('Paulista')
+        expect(Crm::BookingInvite.sole).to eq(victim_invite)
+        expect(Crm::Meeting.count).to eq(1)
+      end
+
+      it 'recusa o estranho com o telefone em outro formato, outro nome e sem chave' do
+        book(name: 'Atacante', phone: '21988887777', location_type: 'in_person', request_id: nil)
+        expect_nothing_leaked
+      end
+
+      it 'recusa o estranho com outra chave' do
+        book(name: 'Atacante', phone: '+55 (21) 98888-7777', location_type: 'in_person', request_id: 'chave-do-atacante-01')
+        expect_nothing_leaked
+      end
+
+      it 'recusa chave fora do formato sem criar nada' do
+        ['curta', 'a' * 65, 'chave com espaço 0001', 'chave-com-acento-é-01'].each do |bad|
+          expect { book(request_id: bad, starts_at: '2026-10-20T11:00:00-03:00', location_type: 'in_person') }
+            .not_to change(Crm::Meeting, :count)
+          expect_error('booking_failed')
+        end
+      end
+    end
+
+    it 'nunca cria convite público para reunião que nasceu por outro caminho (IA, painel)' do
+      meeting = create_internal_meeting(world: world, starts_at: Time.iso8601(slot), metadata: { 'booking_profile_id' => profile.id })
+
+      expect { book(phone: world.contact.phone_number, request_id: 'qualquer-chave-0001') }.not_to change(Crm::BookingInvite, :count)
+
+      expect_error('slot_unavailable')
+      expect(Crm::Meeting.sole).to eq(meeting)
     end
 
     it 'devolve o link da reunião e o endereço quando o local tem' do
@@ -385,13 +465,32 @@ RSpec.describe 'Public::Api::V2::Booking', type: :request do
         expect_error('too_many_open')
       end
 
-      it 'reduz o resto a booking_failed, sem detalhe interno' do
+      it 'reduz os outros códigos conhecidos a booking_failed, sem detalhe interno' do
         book(location_type: 'teams')
         expect_error('booking_failed')
+      end
 
-        allow(Crm::BookingV2::PublicBooking).to receive(:new).and_raise(RuntimeError, 'PG::Error at +5521988887777')
-        book
-        expect_error('booking_failed')
+      it 'falha nossa vira 500 genérico registrado no rastreador, sem a mensagem no log' do
+        tracker = instance_double(ChatwootExceptionTracker, capture_exception: true)
+        allow(ChatwootExceptionTracker).to receive(:new).and_return(tracker)
+        allow(Rails.logger).to receive(:error)
+        allow(Rails.logger).to receive(:info)
+        errors = [RuntimeError.new('PG::Error at +5521988887777'), ArgumentError.new('invalid value for Integer(): "Ana Souza"')]
+
+        errors.each do |error|
+          allow(Crm::BookingV2::PublicBooking).to receive(:new).and_raise(error)
+          book
+          expect_unavailable
+          expect(response.body).not_to include('5521988887777')
+          expect(ChatwootExceptionTracker).to have_received(:new).with(error)
+        end
+        expect(tracker).to have_received(:capture_exception).twice
+        expect(Rails.logger).to have_received(:error).with('Public booking v2 error: RuntimeError')
+        expect(Rails.logger).to have_received(:error).with('Public booking v2 error: ArgumentError')
+        %w[error info].each do |level|
+          expect(Rails.logger).not_to have_received(level).with(include('invalid value for Integer'))
+          expect(Rails.logger).not_to have_received(level).with(include('PG::Error'))
+        end
       end
     end
   end
@@ -450,14 +549,46 @@ RSpec.describe 'Public::Api::V2::Booking', type: :request do
       expect(Crm::Meeting.real.pluck(:id)).to eq([Crm::Meeting.sole.id])
     end
 
-    it 'o reenvio idêntico devolve 200 com a mesma reserva' do
-      book(invite_code: invite.code)
+    it 'o reenvio com a mesma request_id devolve 200 com a mesma reserva; sem ela, recusa' do
+      book(invite_code: invite.code, request_id: 'tentativa-convite-0001')
       first = body
 
-      expect { book(invite_code: invite.code) }.not_to change(Crm::Meeting, :count)
-
+      expect { book(invite_code: invite.code, request_id: 'tentativa-convite-0001') }.not_to change(Crm::Meeting, :count)
       expect(response).to have_http_status(:ok)
-      expect(body).to eq(first)
+      expect_same_booking(first)
+      expect(invite.reload.metadata).to include('request_id' => 'tentativa-convite-0001')
+
+      [nil, 'outra-tentativa-00001'].each do |other|
+        book(invite_code: invite.code, request_id: other)
+        expect_error('booking_failed')
+      end
+    end
+
+    # A reunião que o convite recebe é sempre do contato do convite, mesmo quando o número digitado é de outra pessoa
+    # que já tem reunião naquele horário com a mesma chave.
+    it 'recusa quando a reunião encontrada é de outro contato e não marca o convite' do
+      book(name: 'Bruna', phone: '(21) 97777-1111', request_id: 'chave-repetida-00001')
+      other_meeting = Crm::Meeting.sole
+
+      expect { book(invite_code: invite.code, phone: '(21) 97777-1111', request_id: 'chave-repetida-00001') }
+        .not_to change(Crm::Meeting, :count)
+
+      expect_error('booking_failed')
+      expect(response.body).not_to include(Crm::BookingInvite.find_by!(meeting_id: other_meeting.id).code)
+      expect(invite.reload).to have_attributes(scheduled_at: nil, meeting_id: nil)
+    end
+
+    it 'com o número de outro contato, a reunião fica no contato do convite e o outro não muda' do
+      other = account.contacts.create!(name: 'Bruna', phone_number: '+5521977771111')
+
+      book(invite_code: invite.code, phone: '(21) 97777-1111')
+
+      expect(response).to have_http_status(:created)
+      meeting = Crm::Meeting.sole
+      expect(meeting.card.contact_id).to eq(world.contact.id)
+      guest = meeting.meeting_guests.find_by(guest_type: :contact_guest)
+      expect(guest).to have_attributes(contact_id: world.contact.id, phone_number: '+5521977771111')
+      expect(Crm::Card.where(contact_id: other.id)).to be_empty
     end
 
     it 'recusa convite de outra página, já agendado em outra hora, cancelado, vencido ou de outra conta' do
@@ -475,6 +606,37 @@ RSpec.describe 'Public::Api::V2::Booking', type: :request do
         expect_error('booking_failed')
       end
     end
+  end
+
+  # RA-08: fuso inválido gravado antes da validação nunca vira outro fuso em silêncio.
+  describe 'fuso da página gravado inválido' do
+    # Dado gravado antes da validação de fuso: só dá para reproduzir pulando a validação.
+    before { profile.update_column(:timezone, 'Marte/Olympus') } # rubocop:disable Rails/SkipsModelValidations
+
+    it 'responde 500 registrado em página, horários e reserva, sem criar nada' do
+      allow(ChatwootExceptionTracker).to receive(:new).and_call_original
+
+      get base
+      expect_unavailable
+      get "#{base}/slots", params: { date: '2026-10-20' }
+      expect_unavailable
+      get "#{base}/next_slot"
+      expect_unavailable
+      expect { book }.not_to change(Crm::Meeting, :count)
+      expect_unavailable
+
+      expect(ChatwootExceptionTracker).to have_received(:new).with(instance_of(Crm::BookingV2::PublicPage::InvalidTimeZone)).exactly(4).times
+    end
+  end
+
+  it 'confirma no fuso da página, sem cair no fuso do servidor' do
+    profile.update!(timezone: 'America/Manaus')
+
+    book(starts_at: '2026-10-20T10:00:00-04:00')
+
+    expect(response).to have_http_status(:created)
+    expect(body).to include('starts_at' => '2026-10-20T10:00:00-04:00', 'ends_at' => '2026-10-20T10:30:00-04:00',
+                            'timezone' => 'America/Manaus')
   end
 
   describe 'POST contact_request' do
@@ -515,6 +677,41 @@ RSpec.describe 'Public::Api::V2::Booking', type: :request do
       travel 25.hours
       ask_contact
       expect(response).to have_http_status(:created)
+    end
+
+    describe 'pelo link do cliente (invite_code)' do
+      let(:invite) { create_booking_invite(world: world) }
+
+      it 'usa o contato e o card aberto do convite, sem pedir nome nem telefone de novo' do
+        expect { ask_contact(invite_code: invite.code, name: nil, phone: nil) }
+          .not_to(change { [Contact.count, Crm::Card.count] })
+
+        expect(response).to have_http_status(:created)
+        follow_up = Crm::FollowUp.sole
+        expect(follow_up).to have_attributes(card_id: world.card.id, contact_id: world.contact.id)
+        expect(world.card.activities.pluck(:event_type)).to include('booking_contact_requested')
+        expect(Crm::Cards::Broadcaster).not_to have_received(:broadcast)
+      end
+
+      it 'abre card novo no contato do convite quando o card do convite já fechou' do
+        world.card.update!(status: :won)
+
+        expect { ask_contact(invite_code: invite.code, name: nil, phone: nil) }.not_to change(Contact, :count)
+
+        expect(response).to have_http_status(:created)
+        expect(Crm::Card.find_by!(source: 'contact_request').contact_id).to eq(world.contact.id)
+      end
+
+      it 'recusa convite cancelado, de outra página ou inexistente sem criar nada' do
+        other_page = create_booking_profile(account: account, host: world.host)
+        codes = [create_booking_invite(world: world, canceled_at: 1.minute.ago).code,
+                 create_booking_invite(world: world, booking_profile: other_page).code, 'NAOEXISTE']
+
+        codes.each do |code|
+          expect { ask_contact(invite_code: code, name: nil, phone: nil) }.not_to change(Crm::FollowUp, :count)
+          expect_error('booking_failed')
+        end
+      end
     end
 
     it 'recusa robô e telefone inválido sem criar nada' do

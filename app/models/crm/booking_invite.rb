@@ -3,7 +3,7 @@
 # verificação (J1-A2). O código é curto, opaco e sem caracteres que se confundem ao ler em voz alta (J1-A9).
 #
 # Tudo que o convite aponta (perfil, link individual, contato, card, conversa, reunião, autor) tem de ser da mesma
-# conta; conversa e card têm de ser do mesmo contato. Sem isso um id de outra conta viraria acesso cruzado.
+# conta; conversa, card e reunião (pelo card dela) têm de ser do mesmo contato. Sem isso um id de outra conta viraria acesso cruzado.
 class Crm::BookingInvite < ApplicationRecord
   self.table_name = 'crm_booking_invites'
 
@@ -31,6 +31,7 @@ class Crm::BookingInvite < ApplicationRecord
   validates :metadata, jsonb_attributes_length: true
   validate :records_must_belong_to_account
   validate :records_must_belong_to_contact
+  validate :link_must_belong_to_page
 
   scope :recent_first, -> { order(created_at: :desc, id: :desc) }
   # "Testar no meu WhatsApp" (#1192, J3-A11) cria convite com `metadata.test`: fora de listas, reaproveitamento e
@@ -96,8 +97,12 @@ class Crm::BookingInvite < ApplicationRecord
   end
 
   def records_must_belong_to_contact
-    errors.add(:conversation, 'must belong to the same contact') if conversation.present? && conversation.contact_id != contact_id
-    errors.add(:card, 'must belong to the same contact') if card.present? && card.contact_id != contact_id
+    { conversation: conversation, card: card, meeting: meeting&.card }.each do |name, owner|
+      errors.add(name, 'must belong to the same contact') if public_send(name).present? && owner&.contact_id != contact_id
+    end
+  end
+
+  def link_must_belong_to_page
     return if booking_link.blank? || booking_link.booking_profile_id == booking_profile_id
 
     errors.add(:booking_link, 'must belong to the same booking page')
