@@ -168,9 +168,14 @@ describe('CrmMeetingDetail: resposta do cliente e avisos (#1192)', () => {
 
   beforeEach(() => vi.clearAllMocks());
 
-  it('reunião comum, sem avisos nem resposta, não ganha o selo', async () => {
+  it('reunião comum não ganha o selo, nem quando o contato parou os avisos', async () => {
     const wrapper = await mountDetail(
-      meeting({ confirmation_status: 'pending', notices: [] })
+      meeting({
+        booking: false,
+        confirmation_status: 'pending',
+        notices_stopped: true,
+        notices: [],
+      })
     );
     expect(wrapper.find('[data-test="meeting-client-reply"]').exists()).toBe(
       false
@@ -183,7 +188,7 @@ describe('CrmMeetingDetail: resposta do cliente e avisos (#1192)', () => {
     ['change_requested', 'CHANGE_REQUESTED'],
   ])('cliente %s aparece com selo discreto', async (status, key) => {
     const wrapper = await mountDetail(
-      meeting({ confirmation_status: status, notices: [] })
+      meeting({ booking: true, confirmation_status: status, notices: [] })
     );
     const badge = wrapper.find('[data-test="meeting-confirmation"]');
     expect(badge.attributes('data-status')).toBe(status);
@@ -194,6 +199,7 @@ describe('CrmMeetingDetail: resposta do cliente e avisos (#1192)', () => {
   it('lista os avisos com motivo leigo e diz quem parou de receber', async () => {
     const wrapper = await mountDetail(
       meeting({
+        booking: true,
         confirmation_status: 'pending',
         notices_stopped: true,
         notices: [
@@ -244,6 +250,7 @@ describe('CrmMeetingDetail: resposta do cliente e avisos (#1192)', () => {
   it('motivo desconhecido cai em "outro motivo"', async () => {
     const wrapper = await mountDetail(
       meeting({
+        booking: true,
         notices: [
           {
             kind: 'booked',

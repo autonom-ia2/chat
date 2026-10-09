@@ -118,6 +118,26 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingPages notices', type: :request do
       expect(page.reload.notice_templates).to eq('booked' => { 'name' => 'com_link', 'language' => 'pt_BR' })
     end
 
+    it 'recusa modelo da Meta que pede o que o aviso não preenche (variável além do {{3}}, topo com variável, botão com link variável)' do
+      body = { 'type' => 'BODY', 'text' => 'Oi {{1}}, até {{2}}. Veja: {{3}}' }
+      cloud.channel.update!(message_templates: [
+                              { 'name' => 'quatro', 'language' => 'pt_BR', 'status' => 'APPROVED',
+                                'components' => [{ 'type' => 'BODY', 'text' => 'Oi {{1}}, até {{2}}. Veja: {{3}}. Código {{4}}' }] },
+                              { 'name' => 'topo', 'language' => 'pt_BR', 'status' => 'APPROVED',
+                                'components' => [{ 'type' => 'HEADER', 'format' => 'TEXT', 'text' => 'Olá {{1}}' }, body] },
+                              { 'name' => 'botao', 'language' => 'pt_BR', 'status' => 'APPROVED',
+                                'components' => [body, { 'type' => 'BUTTONS', 'buttons' => [{ 'type' => 'URL', 'url' => 'https://x.example/{{1}}' }] }] }
+                            ])
+      templates = { booked: { name: 'quatro', language: 'pt_BR' }, day_before: { name: 'topo', language: 'pt_BR' },
+                    hour_before: { name: 'botao', language: 'pt_BR' } }
+
+      call(admin, :patch, member, booking_page: { notice_inbox_id: cloud.id, notice_templates: templates })
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['errors']['notice_templates']).to eq(['must only use {{1}}, {{2}} and {{3}}: booked, day_before, hour_before'])
+      expect(page.reload.notice_templates).to eq({})
+    end
+
     it 'quem não enxerga a caixa de avisos já gravada salva os outros passos reenviando a mesma caixa, mas não troca a caixa' do
       page.update!(notice_inbox: cloud)
       manager = role_user('agendamento_manage')

@@ -92,7 +92,8 @@
     "MANAGE_TITLE": "Guarde este link para mudar ou cancelar",
     "COPY": "Copiar link",
     "COPIED": "Link copiado.",
-    "OPEN": "Abrir link"
+    "OPEN": "Abrir link",
+    "MESSAGE": "Você vai receber uma mensagem no WhatsApp com este horário."
   },
   "PAUSED": {
     "TITLE": "A agenda está fechada agora",
@@ -109,12 +110,55 @@
     "BODY": "Tente de novo em alguns minutos.",
     "RETRY": "Tentar de novo"
   },
-  "ALREADY": {
-    "TITLE": "Você já agendou",
-    "BODY": "Seu horário com {name} já está marcado.",
-    "BODY_NO_NAME": "Seu horário já está marcado.",
-    "CHANGE": "Para mudar o horário, fale no WhatsApp.",
-    "WHATSAPP": "Falar no WhatsApp"
+  "MANAGE": {
+    "TITLE": "Seu horário",
+    "TITLE_CONFIRMED": "Presença confirmada",
+    "TITLE_RESCHEDULED": "Horário atualizado",
+    "TITLE_STOPPED": "Pronto, os avisos pararam",
+    "TITLE_CANCELED": "Horário cancelado",
+    "TITLE_PAST": "Este horário já passou",
+    "BADGE_CONFIRMED": "Você confirmou",
+    "BADGE_CHANGE_REQUESTED": "Você pediu para mudar",
+    "JOIN": "Entrar",
+    "CONFIRM": "Vou estar lá",
+    "RESCHEDULE": "Mudar horário",
+    "CANCEL": "Cancelar",
+    "STOP": "Parar avisos",
+    "STOPPED": "Você não recebe mais avisos.",
+    "LOCKED": "Por aqui, dava para mudar ou cancelar até {deadline}.",
+    "LOCKED_NO_DEADLINE": "Não dá mais para mudar ou cancelar por aqui.",
+    "LOCKED_WHATSAPP": "Agora, fale com a gente no WhatsApp.",
+    "PAST_BODY": "Se precisar de algo, fale com a gente no WhatsApp.",
+    "PAST_BODY_NO_CONTACT": "Se precisar de algo, fale com a empresa.",
+    "CANCELED_BODY": "Se quiser, marque outro horário.",
+    "CANCELED_BODY_CLOSED": "Para marcar de novo, fale com a gente no WhatsApp.",
+    "CANCELED_BODY_NO_CONTACT": "Para marcar de novo, fale com a empresa.",
+    "BOOK_AGAIN": "Marcar outro horário",
+    "CANCEL_SCREEN": {
+      "TITLE": "Cancelar este horário?",
+      "BODY": "O horário fica livre para outra pessoa.",
+      "YES": "Sim, cancelar",
+      "NO": "Não, manter meu horário"
+    },
+    "STOP_SCREEN": {
+      "TITLE": "Parar os avisos?",
+      "BODY": "Você não vai mais receber mensagens automáticas sobre seus horários.",
+      "KEEPS": "Seu horário continua marcado.",
+      "YES": "Parar avisos",
+      "NO": "Voltar"
+    },
+    "ERRORS": {
+      "TOO_LATE": "Passou o prazo para mudar ou cancelar por aqui.",
+      "NOT_CHANGEABLE": "Este horário não pode mais ser mudado por aqui.",
+      "FAILED": "Não deu certo agora. Tente de novo."
+    }
+  },
+  "RESCHEDULE": {
+    "DATE_TITLE": "Para qual dia quer mudar?",
+    "CONFIRM_TITLE": "Mudar para este horário?",
+    "BEFORE": "Antes era: {when}",
+    "SUBMIT": "Confirmar novo horário",
+    "KEEP": "Manter meu horário"
   },
   "ERRORS": {
     "SLOT_UNAVAILABLE": "Esse horário acabou de ser reservado. Escolha outro.",

@@ -90,7 +90,7 @@
         "PIPELINE": "Esse funil ou etapa não existe mais. Escolha outro.",
         "BRAND": "Confira a cor e a frase de boas-vindas.",
         "NOTICE_INBOX_GONE": "Esse WhatsApp não pode mais mandar avisos. Escolha outro ou deixe sem avisos.",
-        "NOTICE_TEMPLATES": "Uma das mensagens aprovadas não serve: ela precisa ter o link do horário. Escolha outra.",
+        "NOTICE_TEMPLATES": "Uma das mensagens escolhidas não serve para os avisos. Escolha outra da lista.",
         "NOTICES": "Confira os avisos e o prazo para mudar."
       }
     },
@@ -236,7 +236,7 @@
       "CHANNEL": {
         "OFFICIAL": "Este é o WhatsApp oficial. Se o cliente não falou com você nas últimas 24 horas, o aviso só sai com uma mensagem aprovada pela Meta. Escolha essas mensagens logo abaixo.",
         "WAHA": "Por este número, o aviso só sai se o cliente falou com você nas últimas 24 horas. Assim o número não corre risco de bloqueio.",
-        "API": "Por este número, o aviso sai quando o cliente falou com você nas últimas 24 horas."
+        "API": "Por este número, o aviso sai na hora quando o cliente falou com você nas últimas 24 horas. Fora disso, sai com a mensagem pronta escolhida abaixo."
       },
       "PRESET_LABEL": "Quando avisar o cliente?",
       "PRESETS": {
@@ -263,7 +263,16 @@
       "TEMPLATES_HINT": "Escolha uma mensagem aprovada para cada aviso. Para aparecer aqui, ela precisa ter o link do horário no lugar de {link}. Ela pode usar {name} para o nome do cliente e {when} para o dia e a hora.",
       "TEMPLATES_EMPTY": "Este WhatsApp ainda não tem mensagem aprovada com o link do horário. Sem ela, o aviso só sai para quem falou com você nas últimas 24 horas. Peça a quem cuida do WhatsApp para criar uma na Meta.",
       "TEMPLATE_NONE": "Sem mensagem aprovada",
-      "TEMPLATE_OPTION": "{name} ({language})",
+      "SAMPLE_NAME": "Ana",
+      "SAMPLE_WHEN": "14/10 às 15:00",
+      "SAMPLE_LINK": "(link do horário)",
+      "TEMPLATE_OPTION_LANGUAGE": "{preview} · {language}",
+      "TEMPLATE_SAVED": "A mensagem já escolhida",
+      "MISSING_TEMPLATES": "Sem mensagem pronta para: {kinds}. Esse aviso só sai para quem falou com você nas últimas 24 horas.",
+      "API_TEMPLATES_LABEL": "Mensagens prontas deste WhatsApp",
+      "API_TEMPLATES_HINT": "Escolha uma mensagem pronta para cada aviso. O dia, a hora e o link vão no fim dela.",
+      "API_TEMPLATES_EMPTY": "Este WhatsApp ainda não tem mensagem pronta. Sem ela, o aviso só sai para quem falou com você nas últimas 24 horas.",
+      "API_TEMPLATES_FAILED": "Não deu para ver as mensagens prontas deste WhatsApp. Peça a um administrador para escolher.",
       "TEMPLATE_FOR": "Mensagem aprovada para o aviso {notice}",
       "KINDS": {
         "BOOKED": "Ao marcar",
@@ -327,6 +336,7 @@
       "NOTICES_ON": "O cliente recebe aviso no WhatsApp {when}, pelo número {inbox}.",
       "NOTICES_ON_NO_NAME": "O cliente recebe aviso no WhatsApp {when}.",
       "NOTICES_OFF": "Sem avisos no WhatsApp. O cliente vê o horário na tela e na agenda dele.",
+      "NOTICES_WINDOW_ONLY": "Só para quem falou com você nas últimas 24 horas.",
       "NOTICES_ALTER": "Alterar os avisos no WhatsApp",
       "CANCEL_UNTIL": "Ele pode mudar ou cancelar até {value} antes.",
       "CANCEL_ANYTIME": "Ele pode mudar ou cancelar até a hora marcada."

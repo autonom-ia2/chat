@@ -1038,6 +1038,7 @@
             "UNSUPPORTED_INBOX": "this WhatsApp does not send notices",
             "TEMPLATE_REQUIRED": "no approved message and the customer has not talked to you in the last 24 hours",
             "TEMPLATE_WITHOUT_LINK": "the approved message has no booking link",
+            "TEMPLATE_UNSUPPORTED": "the approved message asks for data the notice does not fill in",
             "WAHA_OUTSIDE_WINDOW": "the customer has not talked to you in the last 24 hours",
             "NUMBER_CAP": "this number already got many messages today",
             "ACCOUNT_CAP": "the account reached the daily notice limit",
@@ -1431,12 +1432,14 @@
       "ACTIVITY_BOOKING_CLIENT_CONFIRMED": "Customer confirmed the time",
       "ACTIVITY_BOOKING_CLIENT_CANCELED": "Customer cancelled the time",
       "ACTIVITY_BOOKING_CLIENT_RESCHEDULED": "Customer changed the time",
+      "ACTIVITY_BOOKING_CLIENT_REBOOKED": "Customer booked another time",
       "ACTIVITY_BOOKING_NOTICE_FAILED": "WhatsApp notice did not go out",
       "ACTIVITY_BOOKING_NOTICES_STOPPED": "Customer asked not to get notices",
       "ACTIVITY_BOOKING_AGENT_REMINDED": "Client reminded about the meeting",
       "ACTIVITY_BOOKING_REBOOK_LINK_SENT": "Link sent to pick another time",
       "ACTIVITY_DETAIL_BOOKING_TIME": "Time: {time}",
-      "ACTIVITY_DETAIL_BOOKING_MOVED": "From {from} to {to}"
+      "ACTIVITY_DETAIL_BOOKING_MOVED": "From {from} to {to}",
+      "ACTIVITY_DETAIL_BOOKING_NOTICE_FAILED": "{kind}: {reason}"
     },
     "COPILOT": {
       "TITLE": "Copilot",

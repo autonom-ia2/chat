@@ -27,6 +27,7 @@ pt_BR:
         confirmed: "%{name} confirmou o horário de %{when}"
         canceled: "%{name} cancelou o horário de %{when}"
         rescheduled: "%{name} mudou o horário para %{when}"
+        rebooked: "%{name} marcou de novo, para %{when}"
         notice_failed: "O aviso no WhatsApp para %{name} não saiu. O horário de %{when} continua marcado: fale com o cliente."
       templates:
         sales_30:

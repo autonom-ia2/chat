@@ -14,8 +14,9 @@ import ZoneNote from './ZoneNote.vue';
 
 // Pronto (J2-A11): "Salvar na minha agenda" baixa o .ics e, ao lado, "Pôr na Agenda do Google" (no navegador de
 // dentro do WhatsApp/Instagram o download pode falhar, RA-15); "Entrar pelo link" só para link http/https; "Falar no
-// WhatsApp" quando a página tem número; e o link para guardar (mudar ou cancelar). Não promete mensagem que pode não
-// sair (J2-A6).
+// WhatsApp" quando a página tem número; e o link para guardar (mudar ou cancelar). Só promete a mensagem no WhatsApp
+// quando o servidor diz que o aviso "ao marcar" vai sair (`notice_will_send`, J2-A6); o link para guardar fica nos dois
+// casos (é o caminho para mudar ou cancelar se a mensagem se perder).
 const { page, result, locations, greetingName, clientZone, isOtherClock } =
   useFlow();
 const { t, locale } = useI18n();
@@ -52,6 +53,7 @@ const googleUrl = computed(() =>
   })
 );
 const manageUrl = computed(() => safeAbsoluteUrl(result.value?.manage_url));
+const willMessage = computed(() => result.value?.notice_will_send === true);
 const whatsappUrl = computed(
   () => result.value?.contact_whatsapp_url || page.value.contact_whatsapp_url
 );
@@ -92,6 +94,13 @@ const whatsappUrl = computed(
       </p>
       <ZoneNote v-if="isOtherClock" />
     </div>
+    <p
+      v-if="willMessage"
+      data-testid="done-message-promise"
+      class="text-base text-slate-800"
+    >
+      {{ t('BOOKING_V2.DONE.MESSAGE') }}
+    </p>
     <div class="flex flex-col gap-3">
       <ActionButton v-if="joinUrl" :href="joinUrl" external>
         {{ t('BOOKING_V2.DONE.JOIN') }}

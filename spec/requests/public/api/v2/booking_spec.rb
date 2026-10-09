@@ -591,6 +591,78 @@ RSpec.describe 'Public::Api::V2::Booking', type: :request do
       expect(Crm::Card.where(contact_id: other.id)).to be_empty
     end
 
+    # Marcar de novo pelo mesmo convite depois de a reunião ser cancelada (#1192): sem nome nem WhatsApp, mesmo contato.
+    describe 'marcar de novo depois de cancelada' do
+      let(:canceled_meeting) do
+        create_internal_meeting(world: world, starts_at: Time.utc(2026, 10, 19, 13, 0, 0), status: :canceled,
+                                metadata: { 'booking_profile_id' => profile.id })
+      end
+
+      before { invite.update!(meeting: canceled_meeting, scheduled_at: 1.hour.ago, metadata: { 'request_id' => 'reserva-antiga-000001' }) }
+
+      it 'cria a reunião nova no contato do convite e aponta o convite para ela' do
+        expect { book(invite_code: invite.code, phone: nil, request_id: 'marcar-de-novo-00001') }
+          .to change(Crm::Meeting, :count).by(1)
+
+        expect(response).to have_http_status(:created)
+        meeting = Crm::Meeting.order(:id).last
+        expect(meeting).to have_attributes(status: 'scheduled', source: 'invite', starts_at: Time.iso8601(slot))
+        expect(meeting.card.contact_id).to eq(world.contact.id)
+        expect(meeting.meeting_guests.pluck(:phone_number, :contact_id)).to eq([['+5511912345678', world.contact.id]])
+        expect(invite.reload).to have_attributes(meeting_id: meeting.id, scheduled_at: Time.current, state: 'scheduled',
+                                                 metadata: include('request_id' => 'marcar-de-novo-00001'))
+        expect([canceled_meeting.reload.status, body['manage_url']]).to eq(['canceled', "#{frontend}/b/#{invite.code}"])
+      end
+
+      it 'registra no card que o cliente marcou de novo e avisa o responsável uma vez' do
+        book(invite_code: invite.code, phone: nil)
+
+        meeting = Crm::Meeting.order(:id).last
+        activity = Crm::Activity.find_by!(event_type: 'booking_client_rebooked')
+        expect(activity.payload).to include('meeting_id' => meeting.id, 'by' => 'client', 'canceled_meeting_id' => canceled_meeting.id)
+        expect(Crm::FollowUp.where("metadata->>'event' = ?", 'rebooked').count).to eq(1)
+        expect(Crm::BookingInvite.count).to eq(1)
+      end
+
+      it 'o reenvio com a mesma request_id devolve a mesma reserva; outra tentativa é recusada' do
+        book(invite_code: invite.code, request_id: 'marcar-de-novo-00001')
+        first = body
+
+        expect { book(invite_code: invite.code, request_id: 'marcar-de-novo-00001') }.not_to change(Crm::Meeting, :count)
+        expect(response).to have_http_status(:ok)
+        expect_same_booking(first)
+
+        expect { book(invite_code: invite.code, starts_at: '2026-10-20T11:00:00-03:00') }.not_to change(Crm::Meeting, :count)
+        expect_error('booking_failed')
+        expect(Crm::FollowUp.where("metadata->>'event' = ?", 'rebooked').count).to eq(1)
+      end
+
+      it 'vale para reunião cancelada por qualquer motivo, também a marcada por convite de teste' do
+        invite.update!(metadata: { 'test' => true })
+
+        book(invite_code: invite.code)
+
+        expect(response).to have_http_status(:created)
+        expect(invite.reload.meeting.metadata).to include('test' => true)
+      end
+
+      it 'recusa depois da validade do link de gestão, com reunião marcada ou convite cancelado' do
+        travel_to(canceled_meeting.ends_at + 1.day + 1.minute) do
+          expect { book(invite_code: invite.code, starts_at: '2026-10-21T10:00:00-03:00') }.not_to change(Crm::Meeting, :count)
+          expect_error('booking_failed')
+        end
+
+        canceled_meeting.update!(status: :scheduled)
+        expect { book(invite_code: invite.code) }.not_to change(Crm::Meeting, :count)
+        expect_error('booking_failed')
+
+        canceled_meeting.update!(status: :canceled)
+        invite.update!(canceled_at: Time.current)
+        expect { book(invite_code: invite.code) }.not_to change(Crm::Meeting, :count)
+        expect_error('booking_failed')
+      end
+    end
+
     it 'recusa convite de outra página, já agendado em outra hora, cancelado, vencido ou de outra conta' do
       other_page = create_booking_profile(account: account, host: world.host)
       foreign_world = build_booking_world(account: create(:account))

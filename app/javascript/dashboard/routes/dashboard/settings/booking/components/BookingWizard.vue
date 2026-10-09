@@ -169,6 +169,8 @@ const blockedByMissing = computed(
             v-else-if="step === STEP.AVISOS"
             :form="form"
             :inbox-options="page.notice_inbox_options || []"
+            :saved-inbox-id="page.notice_inbox_id ?? null"
+            :saved-templates="page.notice_templates || {}"
             @change="change"
           />
           <StepPreview

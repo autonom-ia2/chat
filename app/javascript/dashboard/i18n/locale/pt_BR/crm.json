@@ -1038,6 +1038,7 @@
             "UNSUPPORTED_INBOX": "este WhatsApp não manda avisos",
             "TEMPLATE_REQUIRED": "falta mensagem aprovada e o cliente não falou com você nas últimas 24 horas",
             "TEMPLATE_WITHOUT_LINK": "a mensagem aprovada não tem o link do horário",
+            "TEMPLATE_UNSUPPORTED": "a mensagem aprovada pede dados que o aviso não preenche",
             "WAHA_OUTSIDE_WINDOW": "o cliente não falou com você nas últimas 24 horas",
             "NUMBER_CAP": "este número já recebeu muitas mensagens hoje",
             "ACCOUNT_CAP": "a conta chegou ao limite de avisos do dia",
@@ -1431,12 +1432,14 @@
       "ACTIVITY_BOOKING_CLIENT_CONFIRMED": "Cliente confirmou o horário",
       "ACTIVITY_BOOKING_CLIENT_CANCELED": "Cliente cancelou o horário",
       "ACTIVITY_BOOKING_CLIENT_RESCHEDULED": "Cliente mudou o horário",
+      "ACTIVITY_BOOKING_CLIENT_REBOOKED": "Cliente marcou outro horário",
       "ACTIVITY_BOOKING_NOTICE_FAILED": "Aviso no WhatsApp não saiu",
       "ACTIVITY_BOOKING_NOTICES_STOPPED": "Cliente pediu para não receber avisos",
       "ACTIVITY_BOOKING_AGENT_REMINDED": "Cliente lembrado da reunião",
       "ACTIVITY_BOOKING_REBOOK_LINK_SENT": "Link enviado para marcar outro horário",
       "ACTIVITY_DETAIL_BOOKING_TIME": "Horário: {time}",
-      "ACTIVITY_DETAIL_BOOKING_MOVED": "De {from} para {to}"
+      "ACTIVITY_DETAIL_BOOKING_MOVED": "De {from} para {to}",
+      "ACTIVITY_DETAIL_BOOKING_NOTICE_FAILED": "{kind}: {reason}"
     },
     "COPILOT": {
       "TITLE": "Copiloto",

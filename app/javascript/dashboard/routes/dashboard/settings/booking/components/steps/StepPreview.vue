@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import BookingPreviewCard from '../BookingPreviewCard.vue';
 import BookingDestination from '../BookingDestination.vue';
@@ -15,7 +15,7 @@ import { MISSING_STEP, STEP } from '../../constants';
 // mesmo. "Depois da reunião" (#1193) diz para onde vai o card depois de
 // "Aconteceu". Publicada: link, QR code, Copiar link e, com número de avisos,
 // "Testar no meu WhatsApp" (J3-A11).
-defineProps({
+const props = defineProps({
   form: { type: Object, required: true },
   page: { type: Object, required: true },
   peopleNames: { type: String, default: '' },
@@ -28,6 +28,17 @@ defineProps({
 const emit = defineEmits(['fix', 'saveDestination', 'pageUpdated']);
 const { t } = useI18n();
 const destination = ref(null);
+
+// O teste sai pelo número de avisos: só para quem pode mudar a página e enxerga esse número
+// (o servidor recusa os outros).
+const canTest = computed(
+  () =>
+    props.canManage &&
+    !!props.page.notice_inbox_id &&
+    (props.page.notice_inbox_options || []).some(
+      inbox => inbox.id === props.page.notice_inbox_id
+    )
+);
 
 const fix = item => {
   if (MISSING_STEP[item] === STEP.PREVIA) {
@@ -124,10 +135,7 @@ const fix = item => {
         </p>
       </div>
       <BookingLinkActions v-if="page.public_url" :url="page.public_url" />
-      <BookingTestInvite
-        v-if="canManage && page.notice_inbox_id"
-        :page-id="page.id"
-      />
+      <BookingTestInvite v-if="canTest" :page-id="page.id" />
     </div>
     <span v-else-if="publishing" class="sr-only" role="status">
       {{ t('BOOKING.PREVIEW.PUBLISHING') }}

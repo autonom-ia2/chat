@@ -3,7 +3,9 @@
 #
 # - WhatsApp oficial (Cloud/360dialog): janela de 24 h aberta pelo cliente (`MessagingWindow`) → texto; fora dela,
 #   modelo APROVADO na Meta configurado para o aviso; sem modelo → `template_required`; modelo cujo corpo não leva o
-#   `{{3}}` (link de gestão, onde fica o "Parar avisos", J2-A9/RA-18) → `template_without_link`.
+#   `{{3}}` (link de gestão, onde fica o "Parar avisos", J2-A9/RA-18) → `template_without_link`; modelo que pede o que o
+#   aviso não preenche (variável além de `{{1}}`..`{{3}}` no corpo, variável ou mídia no topo, botão com link variável:
+#   a Meta recusaria) → `template_unsupported`.
 # - WAHA (`MessagingWindow` o libera sempre, por isso regra própria): só com mensagem RECEBIDA do cliente nas últimas
 #   24 h nesta caixa → texto; senão `waha_outside_window` (risco de bloqueio do número, J5-A5).
 # - Canal API de campanhas (não WAHA): janela do canal → texto; fora dela, modelo do canal por id; senão
@@ -16,6 +18,10 @@ class Crm::BookingV2::Notices::Route
   WAHA_WINDOW = 24.hours
   # Variável do corpo do modelo da Meta que recebe o link de gestão (`Notices::Delivery`).
   LINK_PLACEHOLDER = '{{3}}'.freeze
+  # Variáveis do corpo que o aviso preenche: {{1}} primeiro nome, {{2}} dia e hora, {{3}} link de gestão.
+  FILLED_VARIABLES = %w[1 2 3].freeze
+  # Topo com mídia pede o arquivo no envio, que o aviso não manda.
+  MEDIA_HEADERS = %w[IMAGE VIDEO DOCUMENT LOCATION].freeze
 
   Decision = Struct.new(:mode, :reason, :conversation, :template, keyword_init: true) do
     def send?
@@ -28,6 +34,22 @@ class Crm::BookingV2::Notices::Route
     component = Array(template.to_h['components']).find { |item| item['type'].to_s.casecmp?('body') }
     component.to_h['text'].to_s
   end
+
+  # O aviso consegue preencher o modelo: no corpo só {{1}}, {{2}} e {{3}}; no topo, só texto fixo; botão sem link
+  # variável. Leitura por `split` (sem regex): o que vem entre `{{` e `}}` é o nome da variável.
+  def self.fillable_template?(template)
+    variables = native_body(template).split('{{').drop(1).map { |part| part.split('}}').first.to_s.strip }
+    variables.all? { |name| FILLED_VARIABLES.include?(name) } && Array(template.to_h['components']).none? { |item| asks_more?(item) }
+  end
+
+  def self.asks_more?(component)
+    case component.to_h['type'].to_s.upcase
+    when 'HEADER' then MEDIA_HEADERS.include?(component['format'].to_s.upcase) || component['text'].to_s.include?('{{')
+    when 'BUTTONS' then Array(component['buttons']).any? { |button| button.to_h['url'].to_s.include?('{{') }
+    else false
+    end
+  end
+  private_class_method :asks_more?
 
   # Modelo da lista sincronizada da caixa com o nome e o idioma configurados (qualquer status).
   def self.synced_template(inbox, configured)
@@ -70,11 +92,18 @@ class Crm::BookingV2::Notices::Route
     return session if conversation && Crm::FollowUps::MessagingWindow.new(conversation).can_send_session_message?
 
     approved = self.class.approved_template(inbox, template)
-    return skip('template_required') if approved.blank?
-    return skip('template_without_link') unless self.class.native_body(approved).include?(LINK_PLACEHOLDER)
+    problem = template_problem(approved)
+    return skip(problem) if problem
     return skip('no_phone') if conversation.nil? && contact.phone_number.blank?
 
     Decision.new(mode: :native_template, conversation: conversation, template: approved)
+  end
+
+  def template_problem(approved)
+    return 'template_required' if approved.blank?
+    return 'template_without_link' unless self.class.native_body(approved).include?(LINK_PLACEHOLDER)
+
+    'template_unsupported' unless self.class.fillable_template?(approved)
   end
 
   def waha

@@ -90,7 +90,7 @@
         "PIPELINE": "That pipeline or stage no longer exists. Choose another one.",
         "BRAND": "Check the color and the welcome message.",
         "NOTICE_INBOX_GONE": "This WhatsApp can no longer send notices. Choose another one or leave it without notices.",
-        "NOTICE_TEMPLATES": "One of the approved messages does not work: it needs the booking link. Choose another one.",
+        "NOTICE_TEMPLATES": "One of the chosen messages does not work for notices. Choose another one from the list.",
         "NOTICES": "Check the notices and the deadline to change."
       }
     },
@@ -236,7 +236,7 @@
       "CHANNEL": {
         "OFFICIAL": "This is the official WhatsApp. If the customer has not talked to you in the last 24 hours, the notice only goes out with a message approved by Meta. Choose those messages below.",
         "WAHA": "From this number, the notice only goes out if the customer talked to you in the last 24 hours. This keeps the number safe from being blocked.",
-        "API": "From this number, the notice goes out when the customer talked to you in the last 24 hours."
+        "API": "From this number, the notice goes out right away when the customer talked to you in the last 24 hours. Otherwise it goes out with the ready message chosen below."
       },
       "PRESET_LABEL": "When should the customer be notified?",
       "PRESETS": {
@@ -263,7 +263,16 @@
       "TEMPLATES_HINT": "Choose an approved message for each notice. To show up here, it needs the booking link in place of {link}. It can use {name} for the customer name and {when} for the day and time.",
       "TEMPLATES_EMPTY": "This WhatsApp has no approved message with the booking link yet. Without one, the notice only goes out to people who talked to you in the last 24 hours. Ask whoever manages WhatsApp to create one on Meta.",
       "TEMPLATE_NONE": "No approved message",
-      "TEMPLATE_OPTION": "{name} ({language})",
+      "SAMPLE_NAME": "Ana",
+      "SAMPLE_WHEN": "10/14 at 3:00 PM",
+      "SAMPLE_LINK": "(booking link)",
+      "TEMPLATE_OPTION_LANGUAGE": "{preview} · {language}",
+      "TEMPLATE_SAVED": "The message already chosen",
+      "MISSING_TEMPLATES": "No ready message for: {kinds}. That notice only goes out to people who talked to you in the last 24 hours.",
+      "API_TEMPLATES_LABEL": "Ready messages of this WhatsApp",
+      "API_TEMPLATES_HINT": "Choose a ready message for each notice. The day, the time and the link go at the end of it.",
+      "API_TEMPLATES_EMPTY": "This WhatsApp has no ready message yet. Without one, the notice only goes out to people who talked to you in the last 24 hours.",
+      "API_TEMPLATES_FAILED": "Could not see the ready messages of this WhatsApp. Ask an administrator to choose them.",
       "TEMPLATE_FOR": "Approved message for the notice {notice}",
       "KINDS": {
         "BOOKED": "When booked",
@@ -279,14 +288,14 @@
         "BUTTON": "Test on my WhatsApp",
         "PHONE_LABEL": "Your WhatsApp",
         "PHONE_HINT": "You get a link just like the customer does. If you book a time with it, the time is really booked.",
-        "PHONE_PLACEHOLDER": "(11) 98888-0000",
+        "PHONE_PLACEHOLDER": "+1 555 123 4567",
         "SEND": "Send test",
         "SENT": "Done. Check your WhatsApp.",
         "ERRORS": {
           "NO_INBOX": "This page has no notices. Choose a WhatsApp in the notices step.",
           "FORBIDDEN": "You do not have access to this WhatsApp. Ask an administrator to run the test.",
           "NOT_PUBLISHED": "Publish the page before testing.",
-          "INVALID_PHONE": "Check the number. Include the area code, for example (11) 98888-0000.",
+          "INVALID_PHONE": "Check the number. Include the country and area code, for example +1 555 123 4567.",
           "OUTSIDE_WINDOW": "First send a “hi” from your phone to the company WhatsApp. Then tap Send test again.",
           "NUMBER_CAP": "This number already got many messages today. Try tomorrow or use another number.",
           "STOPPED": "This number asked not to get messages. Use another number.",
@@ -327,6 +336,7 @@
       "NOTICES_ON": "The customer gets a WhatsApp notice {when}, from the number {inbox}.",
       "NOTICES_ON_NO_NAME": "The customer gets a WhatsApp notice {when}.",
       "NOTICES_OFF": "No WhatsApp notices. The customer sees the time on screen and in their calendar.",
+      "NOTICES_WINDOW_ONLY": "Only for people who talked to you in the last 24 hours.",
       "NOTICES_ALTER": "Change the WhatsApp notices",
       "CANCEL_UNTIL": "They can change or cancel up to {value} before.",
       "CANCEL_ANYTIME": "They can change or cancel up to the booked time."

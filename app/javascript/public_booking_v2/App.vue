@@ -2,11 +2,14 @@
 import { computed, nextTick, onMounted, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { STEPS, useBookingFlow } from './composables/useBookingFlow';
-import AlreadyScheduled from './components/AlreadyScheduled.vue';
 import ErrorPage from './components/ErrorPage.vue';
+import ManageCancel from './components/ManageCancel.vue';
+import ManageMeeting from './components/ManageMeeting.vue';
+import ManageStop from './components/ManageStop.vue';
 import NoSlot from './components/NoSlot.vue';
 import NotFound from './components/NotFound.vue';
 import Paused from './components/Paused.vue';
+import RescheduleConfirm from './components/RescheduleConfirm.vue';
 import StepConfirm from './components/StepConfirm.vue';
 import StepDate from './components/StepDate.vue';
 import StepDetails from './components/StepDetails.vue';
@@ -22,7 +25,10 @@ const SCREENS = {
   [STEPS.NOT_FOUND]: NotFound,
   [STEPS.ERROR]: ErrorPage,
   [STEPS.PAUSED]: Paused,
-  [STEPS.ALREADY]: AlreadyScheduled,
+  [STEPS.MANAGE]: ManageMeeting,
+  [STEPS.MANAGE_CANCEL]: ManageCancel,
+  [STEPS.MANAGE_STOP]: ManageStop,
+  [STEPS.RESCHEDULE]: RescheduleConfirm,
   [STEPS.DATE]: StepDate,
   [STEPS.TIME]: StepTime,
   [STEPS.DETAILS]: StepDetails,
