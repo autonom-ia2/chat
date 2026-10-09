@@ -459,6 +459,16 @@ describe('Instagram assisted tester onboarding', () => {
     }
   );
 
+  it('offers Invite for an exact absent search result without a status request', async () => {
+    instagramClient.searchTesters.mockResolvedValue({
+      data: { results: [{ ...candidate, tester_status: 'absent' }] },
+    });
+    const wrapper = mountTester();
+    await searchAndSelect(wrapper);
+    expect(button(wrapper, 'Enviar convite')).toBeDefined();
+    expect(instagramClient.getTesterStatus).not.toHaveBeenCalled();
+  });
+
   it('keeps Invite available without acceptance steps when the invite was not sent', async () => {
     instagramClient.getTesterStatus.mockResolvedValue({
       data: { status: 'absent' },

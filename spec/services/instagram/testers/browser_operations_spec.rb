@@ -214,4 +214,58 @@ RSpec.describe Instagram::Testers::BrowserOperations do
       expect(record).to include('state' => 'failed', 'error_code' => 'meta_unavailable')
     end
   end
+
+  describe '#complete! for search' do
+    let(:searched) do
+      queued = store.enqueue(action: 'search', account_id: account.id, actor_id: administrator.id, app_id: '10001',
+                             installation: installation, input: { 'username' => 'demo_company' })
+      store.claim(id: queued.fetch('id'), request_id: queued.fetch('request_id'))
+    end
+
+    after do
+      Redis::Alfred.delete("#{Instagram::Testers::BrowserOperationStore::PREFIX}:record:#{searched.fetch('id')}")
+      Redis::Alfred.with { |connection| connection.zrem(Instagram::Testers::BrowserOperationStore::QUEUE_KEY, searched.fetch('id')) }
+    end
+
+    def exact
+      { 'id' => target_id, 'username' => 'demo_company', 'name' => 'Demo', 'avatar_url' => nil }
+    end
+
+    def other
+      exact.merge('id' => '17841400000000002', 'username' => 'demo_company_two')
+    end
+
+    def complete_search(results)
+      operations.complete!(searched.slice('id', 'request_id', 'claim').merge(
+                             'type' => 'browser_operation', 'operation' => 'complete', 'action' => 'search',
+                             'captured_at' => captured_at, 'results' => results
+                           ))
+      store.result(id: searched.fetch('id'), account_id: account.id, actor_id: administrator.id)
+    end
+
+    it 'stores the tester status of the exact username and nil for the others, without coordination Redis' do
+      expect(Instagram::Testers::CoordinationRedis).not_to receive(:get)
+      expect(Instagram::Testers::CoordinationRedis).not_to receive(:with)
+      stored = complete_search([exact.merge('tester_status' => 'pending'), other.merge('tester_status' => nil)])
+      expect(stored).to include('state' => 'ready')
+      expect(stored.fetch('results').map { |candidate| candidate.values_at('username', 'tester_status') })
+        .to eq([%w[demo_company pending], ['demo_company_two', nil]])
+    end
+
+    it 'stores a nil tester status for legacy candidates' do
+      stored = complete_search([exact])
+      expect(stored).to include('state' => 'ready')
+      expect(stored.fetch('results').first).to include('username' => 'demo_company', 'tester_status' => nil)
+    end
+
+    it 'rejects an invalid tester status' do
+      expect(complete_search([exact.merge('tester_status' => 'CONFIRMED')]))
+        .to include('state' => 'failed', 'error_code' => 'meta_unavailable')
+    end
+
+    it 'rejects a tester status on a candidate that is not the searched username' do
+      expect(complete_search([exact.merge('tester_status' => nil), other.merge('tester_status' => 'accepted')]))
+        .to include('state' => 'failed', 'error_code' => 'meta_unavailable')
+    end
+  end
 end

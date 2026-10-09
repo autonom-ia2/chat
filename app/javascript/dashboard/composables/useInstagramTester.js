@@ -5,6 +5,8 @@ import { useAbortableRequest } from './useAbortableRequest';
 export const INSTAGRAM_ACCEPTANCE_URL =
   'https://www.instagram.com/accounts/manage_access/';
 const VALID_STATUSES = ['absent', 'pending', 'accepted'];
+// Accepted still needs the status op: it issues the authorization attestation.
+const SEARCH_STATUSES = ['absent', 'pending'];
 const USERNAME_CHARACTERS =
   'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._';
 
@@ -31,6 +33,9 @@ export function useInstagramTester({ disabled, returnTo }) {
   const notice = ref('');
   const sent = ref(false);
   const needsReconciliation = ref(false);
+  // Selection tokens whose search status was already shown once. Any later
+  // selection reads Meta again, so a stale search status is never reused.
+  let consumedSearchStatus = new Set();
   const available = computed(
     () => configuration.value?.enabled && configuration.value?.available
   );
@@ -153,6 +158,7 @@ export function useInstagramTester({ disabled, returnTo }) {
     }
     results.value = [];
     searched.value = false;
+    consumedSearchStatus = new Set();
     return run(
       'search',
       signal => instagramClient.searchTesters(normalized, { signal }),
@@ -172,7 +178,11 @@ export function useInstagramTester({ disabled, returnTo }) {
           error.value = 'SEARCH_ERROR';
           return;
         }
-        results.value = data.results;
+        results.value = data.results.map(result =>
+          [undefined, null, ...VALID_STATUSES].includes(result.tester_status)
+            ? result
+            : { ...result, tester_status: null }
+        );
         searched.value = true;
       }
     );
@@ -218,8 +228,21 @@ export function useInstagramTester({ disabled, returnTo }) {
     if (busy.value || disabled.value || !results.value.includes(candidate))
       return undefined;
     selected.value = candidate;
-    status.value = null;
     sent.value = false;
+    const token = candidate.selection_token;
+    if (
+      SEARCH_STATUSES.includes(candidate.tester_status) &&
+      !consumedSearchStatus.has(token)
+    ) {
+      consumedSearchStatus.add(token);
+      status.value = candidate.tester_status;
+      authorizationAttestation.value = null;
+      needsReconciliation.value = false;
+      error.value = '';
+      notice.value = '';
+      return undefined;
+    }
+    status.value = null;
     return checkStatus();
   };
 

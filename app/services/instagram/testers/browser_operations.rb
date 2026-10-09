@@ -5,6 +5,7 @@ class Instagram::Testers::BrowserOperations
   STATUS_VALUES = %w[absent pending accepted].freeze
   INVITE_COMPLETION_STATUSES = %w[pending accepted].freeze
   SEARCH_RESULT_KEYS = %w[avatar_url id name username].freeze
+  SEARCH_STATUS_RESULT_KEYS = %w[avatar_url id name tester_status username].freeze
   # Browser codes that, with write_started false and our own claim released,
   # prove the invitation never reached Meta.
   NOT_SENT_CODES = %w[meta_unavailable meta_session_expired proxy_unavailable operator_required].freeze
@@ -209,7 +210,8 @@ class Instagram::Testers::BrowserOperations
 
     selection = Instagram::Testers::Selection.new(account_id: operation.fetch('account_id'),
                                                   actor_id: operation.fetch('actor_id'), app_id: operation.fetch('app_id'))
-    candidates = results.map { |candidate| materialize_candidate(candidate, selection) }
+    username = operation.dig('input', 'username')
+    candidates = results.map { |candidate| materialize_candidate(candidate, selection, username) }
     raise Instagram::Testers::Error, 'meta_unavailable' unless candidates.pluck(:id).uniq.length == candidates.length
 
     complete(request, result: { 'results' => candidates })
@@ -343,8 +345,8 @@ class Instagram::Testers::BrowserOperations
     [true, false].include?(value)
   end
 
-  def materialize_candidate(candidate, selection) # rubocop:disable Metrics/CyclomaticComplexity -- candidate normalization is fail-closed
-    raise Instagram::Testers::Error, 'meta_unavailable' unless candidate.is_a?(Hash) && candidate.keys.sort == SEARCH_RESULT_KEYS
+  def materialize_candidate(candidate, selection, searched_username) # rubocop:disable Metrics/CyclomaticComplexity -- candidate normalization is fail-closed
+    raise Instagram::Testers::Error, 'meta_unavailable' unless candidate.is_a?(Hash) && search_result_keys?(candidate)
 
     username = Instagram::Testers::Validation.normalize_username(candidate.fetch('username'))
     name = candidate.fetch('name')
@@ -355,9 +357,26 @@ class Instagram::Testers::BrowserOperations
     normalized = { id: candidate.fetch('id'), username: username, name: name, avatar_url: avatar_url }
     raise Instagram::Testers::Error, 'meta_unavailable' unless Instagram::Testers::Validation.id?(normalized[:id])
 
-    normalized.merge(selection_token: selection.issue(normalized))
+    tester_status = search_tester_status(candidate, username, searched_username)
+    normalized.merge(selection_token: selection.issue(normalized), tester_status: tester_status)
   rescue KeyError, TypeError
     raise Instagram::Testers::Error, 'meta_unavailable'
+  end
+
+  def search_result_keys?(candidate)
+    [SEARCH_RESULT_KEYS, SEARCH_STATUS_RESULT_KEYS].include?(candidate.keys.sort)
+  end
+
+  # A status may only describe the exact username the actor searched, so a
+  # search never exposes more than the single status read it replaces.
+  def search_tester_status(candidate, username, searched_username)
+    status = candidate['tester_status']
+    return if status.nil?
+
+    valid = STATUS_VALUES.include?(status) && username == searched_username
+    raise Instagram::Testers::Error, 'meta_unavailable' unless valid
+
+    status
   end
 
   def role_observation(request, operation)
