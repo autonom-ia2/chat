@@ -9,6 +9,7 @@ import {
   executeBrowserOperation,
   createWarmMetaPage,
   acceptFreshRolesResponse,
+  timingObservation,
 } from './browser-operations.mjs';
 import {
   parseEnvelope,
@@ -353,6 +354,7 @@ export async function run(
   const command = JSON.parse(
     env.INSTAGRAM_TESTER_PUBLISHER_COMMAND_JSON || 'null'
   );
+  const elapsedMs = startedAt => Math.max(0, Math.round(now() - startedAt));
   let lockPath;
   let lock;
   let context;
@@ -429,6 +431,9 @@ export async function run(
       let warmObservation = null;
       let accepting = true;
       let observe;
+      const cycleStartedAt = now();
+      // A fixed enum from the cycle's own code, never an error message.
+      let refreshOutcome = null;
       try {
         // Version is part of the recoverable cycle and is opaque to this client.
         const bootstrap = await send({
@@ -560,6 +565,7 @@ export async function run(
           state: 'healthy',
           control_available: false,
         });
+        refreshOutcome = 'healthy';
         if (unhealthy) stdout.write('instagram_session_recovered\n');
         unhealthy = null;
         // Recovery is a bounded child: the wrapper starts continuous refresh only after its real CAS receipt.
@@ -572,6 +578,7 @@ export async function run(
           operatorState.required || error.message === 'operator_required'
             ? 'operator_required'
             : 'session_update_rejected';
+        refreshOutcome = code;
         if (unhealthy !== code) stderr.write(`instagram_session_${code}\n`);
         unhealthy = code;
         if (code === 'operator_required') {
@@ -592,6 +599,12 @@ export async function run(
         if (observe) page.off('response', observe);
         // Release pending headers/body/publication; never await them in cleanup.
         cycle.close();
+        if (refreshOutcome)
+          writeBrowserOperationDiagnostic(stderr, {
+            event: 'instagram_manager_refresh_timing',
+            total_ms: elapsedMs(cycleStartedAt),
+            outcome: refreshOutcome,
+          });
       }
       // Browser operations run serially between refreshes. They never share
       // a live publication observer or the human reconnect queue.
@@ -625,6 +638,9 @@ export async function run(
           complete_requested: false,
           complete_received: false,
           executor_error_returned: false,
+          // Milliseconds only, from this host's clock.
+          timings_ms: { read: 0, claim: 0, execute: 0, permit: 0, complete: 0 },
+          phases_ms: {},
         };
         try {
           const sendOperation = payload =>
@@ -634,7 +650,15 @@ export async function run(
                 clock,
               })
             );
-          const envelope = await sendOperation({
+          const timedOperation = async (timing, payload) => {
+            const startedAt = now();
+            try {
+              return await sendOperation(payload);
+            } finally {
+              diagnostic.timings_ms[timing] = elapsedMs(startedAt);
+            }
+          };
+          const envelope = await timedOperation('read', {
             type: 'browser_operation',
             operation: 'read',
           });
@@ -644,7 +668,7 @@ export async function run(
             diagnostic.request_present = true;
             diagnostic.phase = 'claim_requested';
             const claimStartedAt = now();
-            const claimed = await sendOperation({
+            const claimed = await timedOperation('claim', {
               type: 'browser_operation',
               operation: 'claim',
               id: envelope.request.id,
@@ -686,6 +710,7 @@ export async function run(
             );
             let executionTimedOut = false;
             let result;
+            const executeStartedAt = now();
             try {
               result = await operationScope.wait(
                 executeOperation({
@@ -701,6 +726,11 @@ export async function run(
                   now,
                   onDiagnostic: observation =>
                     writeBrowserOperationDiagnostic(stderr, observation),
+                  onTiming: observation => {
+                    const timing = timingObservation(observation);
+                    diagnostic.phases_ms = timing.phases;
+                    writeBrowserOperationDiagnostic(stderr, timing);
+                  },
                   permitInvite: async (observation, { timeoutMs } = {}) => {
                     if (
                       observation?.target_id !== claimed.request.target_id ||
@@ -719,6 +749,7 @@ export async function run(
                       timeoutMs,
                       now
                     );
+                    const permitStartedAt = now();
                     try {
                       const permit = await publish(
                         command,
@@ -745,6 +776,8 @@ export async function run(
                       return permit;
                     } finally {
                       permitScope.close();
+                      diagnostic.timings_ms.permit +=
+                        elapsedMs(permitStartedAt);
                     }
                   },
                   requestGuard: request =>
@@ -757,6 +790,7 @@ export async function run(
             } finally {
               executionTimedOut = executionScope.signal.aborted;
               executionScope.close();
+              diagnostic.timings_ms.execute = elapsedMs(executeStartedAt);
             }
             executionPending = false;
             diagnostic.execution_returned = true;
@@ -770,7 +804,7 @@ export async function run(
               throw new Error('publication_failed');
             diagnostic.complete_requested = true;
             diagnostic.phase = 'complete_requested';
-            const completed = await sendOperation(result);
+            const completed = await timedOperation('complete', result);
             diagnostic.complete_received = true;
             diagnostic.phase = 'complete_received';
             if (

@@ -594,6 +594,20 @@ function deferred() {
   return { promise, resolve: resolvePromise, reject: rejectPromise };
 }
 
+function refreshTimings(data) {
+  return data.stderr
+    .filter(line => line.startsWith('{'))
+    .map(line => JSON.parse(line))
+    .filter(line => line.event === 'instagram_manager_refresh_timing');
+}
+
+// Every line except the per-cycle refresh timing, which B5 adds to each cycle.
+function operationalStderr(data) {
+  return data.stderr.filter(
+    line => !line.startsWith('{"event":"instagram_manager_refresh_timing"')
+  );
+}
+
 async function syntheticManager(t, options = {}) {
   const data = await fixture('valid');
   if (options.vps) {
@@ -777,7 +791,7 @@ async function syntheticManager(t, options = {}) {
       if (payload.operation === 'bootstrap') {
         versionReads += 1;
         if (options.failVersion === versionReads)
-          throw new Error('publication_failed');
+          throw new Error(options.failVersionMessage || 'publication_failed');
         if (options.pendingVersion) return new Promise(() => {});
         const latest =
           options.changedMetadata && versionReads > 1
@@ -1077,7 +1091,7 @@ for (const failVersion of [1, 2]) {
     );
     await data.clock.advance(1);
     assert.equal(data.stdout.includes('instagram_session_recovered\n'), true);
-    assert.equal(data.stderr.length, 1);
+    assert.equal(operationalStderr(data).length, 1);
     data.signals.emit('SIGTERM');
     assert.equal(await data.settled, null);
   });
@@ -1095,7 +1109,7 @@ for (const pending of [
     await data.clock.advance(30000);
     assert.equal(data.entries[0].signal.aborted, true);
     assert.equal(data.page.listenerCount('response'), 0);
-    assert.deepEqual(data.stderr, [
+    assert.deepEqual(operationalStderr(data), [
       'instagram_session_session_update_rejected\n',
     ]);
     const count = data.entries.length;
@@ -1593,7 +1607,7 @@ for (const [method, body, label] of [
       baseEnv.INSTAGRAM_TESTER_ADMIN_USER_ID
     );
     assert.equal(data.headers.length, 1);
-    assert.deepEqual(data.stderr, []);
+    assert.deepEqual(operationalStderr(data), []);
   });
 }
 
@@ -1992,4 +2006,174 @@ test('permit publish honors timeoutMs and frees the channel', async t => {
   );
   data.signals.emit('SIGTERM');
   assert.equal(await data.settled, null);
+});
+
+function nonNegativeInteger(value) {
+  return Number.isInteger(value) && value >= 0;
+}
+
+function requestIdentifiers(request) {
+  return [
+    request.id,
+    request.request_id,
+    request.claim,
+    request.username,
+    request.target_id,
+  ].filter(Boolean);
+}
+
+test('the lifecycle line times each publish and the executor without identifiers', async t => {
+  let data;
+  data = await syntheticManager(t, {
+    vps: true,
+    browserOperations: true,
+    browserRequestReadyAt: 0,
+    browserRequest: inviteBrowserRequest,
+    browserPublishDelayMs: {
+      read: 100,
+      claim: 200,
+      invite_permit: 300,
+      complete: 400,
+    },
+    executeOperation: async ({ request, permitInvite, onTiming }) => {
+      await new Promise(resolveDelay => {
+        data.clock.setTimeout(resolveDelay, 500);
+      });
+      await permitInvite(
+        {
+          captured_at: '2026-10-08T12:00:00.000Z',
+          target_id: request.target_id,
+          username: request.username,
+          status: 'absent',
+        },
+        { timeoutMs: 5000 }
+      );
+      onTiming({
+        event: 'instagram_browser_operation_timing',
+        action: 'invite',
+        result: 'ok',
+        total_ms: 800,
+        phases: {
+          roles_capture: 120,
+          invite_permit: 300,
+          [request.username]: 9,
+          roles_status: -1,
+          invite_response: 1.5,
+        },
+        invite_response_class: 'success_true',
+        target_id: request.target_id,
+      });
+      return browserCompletion(request, {
+        target_id: request.target_id,
+        status: 'pending',
+        invited: true,
+        write_started: true,
+      });
+    },
+  });
+  await data.clock.advance(1500);
+  await drain();
+  const [line] = lifecycleDiagnostics(data);
+  assert.equal(line.complete_received, true);
+  assert.deepEqual(line.timings_ms, {
+    read: 100,
+    claim: 200,
+    execute: 800,
+    permit: 300,
+    complete: 400,
+  });
+  assert.deepEqual(line.phases_ms, { roles_capture: 120, invite_permit: 300 });
+  const timing = data.stderr
+    .filter(value => value.startsWith('{'))
+    .map(value => JSON.parse(value))
+    .filter(value => value.event === 'instagram_browser_operation_timing');
+  assert.equal(timing.length, 1);
+  assert.deepEqual(timing[0], {
+    event: 'instagram_browser_operation_timing',
+    action: 'invite',
+    result: 'ok',
+    total_ms: 800,
+    phases: { roles_capture: 120, invite_permit: 300 },
+    invite_response_class: 'success_true',
+  });
+  const serialized = data.stderr.join('');
+  requestIdentifiers(inviteBrowserRequest).forEach(value =>
+    assert.equal(serialized.includes(value), false)
+  );
+  data.signals.emit('SIGTERM');
+});
+
+test('timings_ms has exactly five non-negative integers and permit 0 when unused', async t => {
+  const data = await syntheticManager(t, {
+    vps: true,
+    browserOperations: true,
+    browserRequestReadyAt: 0,
+    executeOperation: async ({ request }) =>
+      browserCompletion(request, { results: [] }),
+  });
+  await data.clock.advance(1);
+  const [line] = lifecycleDiagnostics(data);
+  assert.deepEqual(Object.keys(line.timings_ms).sort(), [
+    'claim',
+    'complete',
+    'execute',
+    'permit',
+    'read',
+  ]);
+  Object.values(line.timings_ms).forEach(value =>
+    assert.equal(nonNegativeInteger(value), true)
+  );
+  assert.equal(line.timings_ms.permit, 0);
+  assert.deepEqual(line.phases_ms, {});
+  const serialized = JSON.stringify(line);
+  requestIdentifiers(data.browserRequest).forEach(value =>
+    assert.equal(serialized.includes(value), false)
+  );
+  data.signals.emit('SIGTERM');
+  assert.equal(await data.settled, null);
+});
+
+test('each refresh cycle writes one timing line with an enum outcome', async t => {
+  const data = await syntheticManager(t);
+  await data.clock.advance(900000);
+  await data.clock.advance(900000);
+  const lines = refreshTimings(data);
+  assert.equal(lines.length, 3);
+  lines.forEach(line => {
+    assert.deepEqual(Object.keys(line).sort(), [
+      'event',
+      'outcome',
+      'total_ms',
+    ]);
+    assert.equal(line.outcome, 'healthy');
+    assert.equal(nonNegativeInteger(line.total_ms), true);
+  });
+  data.signals.emit('SIGTERM');
+  assert.equal(await data.settled, null);
+});
+
+test('a failing refresh cycle logs its enum outcome, never the error message', async t => {
+  const data = await syntheticManager(t, {
+    failVersion: 2,
+    failVersionMessage: 'https://secret.example/x',
+  });
+  await data.clock.advance(900000);
+  assert.deepEqual(
+    refreshTimings(data).map(line => line.outcome),
+    ['healthy', 'session_update_rejected']
+  );
+  assert.equal(data.stderr.join('').includes('secret.example'), false);
+  data.signals.emit('SIGTERM');
+  assert.equal(await data.settled, null);
+});
+
+test('an operator-required refresh cycle logs operator_required', async t => {
+  const data = await syntheticManager(t, {
+    redirect: 'https://www.facebook.com/login/',
+  });
+  assert.equal((await data.settled)?.message, 'operator_required');
+  assert.deepEqual(
+    refreshTimings(data).map(line => line.outcome),
+    ['operator_required']
+  );
 });
