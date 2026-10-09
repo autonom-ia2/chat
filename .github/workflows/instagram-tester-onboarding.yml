@@ -14,6 +14,7 @@ on:
       - 'scripts/instagram_testers/**'
       - 'tests/instagram_testers/**'
       - 'tests/qa/instagram-testers/**'
+      - 'tests/qa/instagram-automation/**'
       - 'tests/playwright/**'
       - 'app/javascript/dashboard/routes/dashboard/settings/inbox/**'
       - 'app/javascript/dashboard/api/channel/**'
@@ -46,6 +47,7 @@ on:
       - 'scripts/instagram_testers/**'
       - 'tests/instagram_testers/**'
       - 'tests/qa/instagram-testers/**'
+      - 'tests/qa/instagram-automation/**'
       - 'tests/playwright/**'
       - 'app/javascript/dashboard/routes/dashboard/settings/inbox/**'
       - 'app/javascript/dashboard/api/channel/**'
@@ -147,6 +149,8 @@ jobs:
         run: python -B tests/instagram_testers/vps-infra_test.py -v
       - name: Validate the Instagram operator environment allowlist for both deploy stacks
         run: python -B tests/instagram_testers/operator-env-allowlist_test.py -v
+      - name: Verify VPS-only releases preserve AWS deploy routing
+        run: python -B tests/instagram_testers/deploy-paths_test.py -v
       - name: Run offline deploy recovery tests with fake infrastructure commands
         run: python -B tests/instagram_testers/deploy-recovery_test.py -v
       - name: Validate isolated coordinator provisioning and runtime with fake infrastructure
@@ -166,6 +170,8 @@ jobs:
           node --check tests/qa/instagram-testers/entry.js
           node --check scripts/instagram_testers/session-observer.mjs
           node --check scripts/instagram_testers/session-manager.mjs
+          node --check scripts/instagram_testers/browser-operations.mjs
+          node --check tests/qa/instagram-automation/warm-meta-page.mjs
           node --check scripts/instagram_testers/session-browser.mjs
           node --check scripts/instagram_testers/runtime/publisher-tunnel.mjs
           node --check scripts/instagram_testers/runtime/publisher-channel.mjs
@@ -179,6 +185,8 @@ jobs:
           pnpm exec eslint
           scripts/instagram_testers/session-observer.mjs
           scripts/instagram_testers/session-manager.mjs
+          scripts/instagram_testers/browser-operations.mjs
+          tests/qa/instagram-automation/warm-meta-page.mjs
           scripts/instagram_testers/session-browser.mjs
           scripts/instagram_testers/runtime/publisher-tunnel.mjs
           scripts/instagram_testers/runtime/publisher-channel.mjs
@@ -186,6 +194,10 @@ jobs:
           scripts/instagram_testers/runtime/vps/ssm-current-reader.mjs
           tests/instagram_testers/ssm-current-reader.test.mjs
           tests/qa/instagram-automation/latency-benchmark.mjs
+          tests/qa/instagram-automation/route-stress.mjs
+          tests/qa/instagram-automation/ui-failures.mjs
+          tests/qa/instagram-automation/manager-lifecycle.mjs
+          tests/qa/instagram-automation/proxy-failures.mjs
           tests/instagram_testers/session-observer.test.mjs
           tests/instagram_testers/session-manager.test.mjs
           tests/instagram_testers/runtime-publisher.test.mjs tests/instagram_testers/publisher-concurrency.test.mjs
@@ -374,3 +386,48 @@ jobs:
         env:
           IG_VPS_LINUX_SMOKE: '1'
         run: node tests/instagram_testers/vps-linux-smoke.mjs
+      - name: Stress persistent browser routes and failure recovery without Meta
+        env:
+          PLAYWRIGHT_MODULE_PATH: ${{ github.workspace }}/scripts/instagram_testers/runtime/vps/node_modules/playwright/index.mjs
+          PLAYWRIGHT_EXECUTABLE_PATH: /usr/bin/google-chrome
+        run: |
+          mkdir -p tmp/instagram-stress
+          node tests/qa/instagram-automation/route-stress.mjs | tee tmp/instagram-stress/routes.jsonl
+      - name: Stress ambiguous UI without Meta
+        if: ${{ !cancelled() }}
+        env:
+          PLAYWRIGHT_MODULE_PATH: ${{ github.workspace }}/scripts/instagram_testers/runtime/vps/node_modules/playwright/index.mjs
+          PLAYWRIGHT_EXECUTABLE_PATH: /usr/bin/google-chrome
+        run: |
+          mkdir -p tmp/instagram-stress
+          node tests/qa/instagram-automation/ui-failures.mjs | tee tmp/instagram-stress/ui.jsonl
+      - name: Verify fresh reads and warm-page failure paths without Meta
+        if: ${{ !cancelled() }}
+        env:
+          PLAYWRIGHT_MODULE_PATH: ${{ github.workspace }}/scripts/instagram_testers/runtime/vps/node_modules/playwright/index.mjs
+          PLAYWRIGHT_EXECUTABLE_PATH: /usr/bin/google-chrome
+        run: |
+          mkdir -p tmp/instagram-stress
+          node tests/qa/instagram-automation/warm-meta-page.mjs | tee tmp/instagram-stress/warm-page.jsonl
+      - name: Stress manager lifecycle without Meta
+        if: ${{ !cancelled() }}
+        env:
+          PLAYWRIGHT_MODULE_PATH: ${{ github.workspace }}/scripts/instagram_testers/runtime/vps/node_modules/playwright/index.mjs
+          PLAYWRIGHT_EXECUTABLE_PATH: /usr/bin/google-chrome
+        run: |
+          mkdir -p tmp/instagram-stress
+          node tests/qa/instagram-automation/manager-lifecycle.mjs | tee tmp/instagram-stress/lifecycle.jsonl
+      - name: Stress HTTP and CONNECT proxy challenges without Meta
+        if: ${{ !cancelled() }}
+        env:
+          PLAYWRIGHT_MODULE_PATH: ${{ github.workspace }}/scripts/instagram_testers/runtime/vps/node_modules/playwright/index.mjs
+          PLAYWRIGHT_EXECUTABLE_PATH: /usr/bin/google-chrome
+        run: |
+          mkdir -p tmp/instagram-stress
+          node tests/qa/instagram-automation/proxy-failures.mjs | tee tmp/instagram-stress/proxy.jsonl
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: instagram-persistent-browser-stress
+          path: tmp/instagram-stress/*.jsonl
+          if-no-files-found: error

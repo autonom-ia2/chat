@@ -167,6 +167,26 @@ test('keeps one SSH channel and verifies CURRENT before every frame', async () =
   assert.equal(fake.readerClosed, true);
 });
 
+test('rejects a concurrent frame without replaying or closing the active frame', async () => {
+  const fake = channelFactory({ current: [INSTANCE], respond: false });
+  const channel = await createPublisherChannel(fake.options);
+  const first = channel.send({ type: 'session', operation: 'bootstrap' });
+
+  await new Promise(resolve => {
+    setImmediate(resolve);
+  });
+  await assert.rejects(
+    channel.send({ type: 'session', operation: 'bootstrap' }),
+    /instagram_session_publication_failed/
+  );
+  assert.equal(fake.sshFrames.length, 1);
+
+  fake.ssh.stdout.emit('data', Buffer.from(`${BOOTSTRAP}\n`));
+  assert.deepEqual(await first, JSON.parse(BOOTSTRAP));
+  await channel.close();
+  assert.equal(fake.readerClosed, true);
+});
+
 test('closes the channel when CURRENT rotates before a frame', async () => {
   const fake = channelFactory({ current: [INSTANCE, 'i-0fedcba9876543210'] });
   const channel = await createPublisherChannel(fake.options);

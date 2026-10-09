@@ -5,7 +5,11 @@ import { resolve, dirname, isAbsolute, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { spawn } from 'node:child_process';
 import { isMainModule } from './runtime/entrypoint.mjs';
-import { executeBrowserOperation } from './browser-operations.mjs';
+import {
+  executeBrowserOperation,
+  createWarmMetaPage,
+  acceptFreshRolesResponse,
+} from './browser-operations.mjs';
 import {
   parseEnvelope,
   validateRequest,
@@ -22,7 +26,7 @@ import {
 
 const CYCLE_BUDGET_MS = 30000;
 const REFRESH_INTERVAL_MS = 900000;
-const BROWSER_OPERATION_POLL_MS = 1000;
+const BROWSER_OPERATION_POLL_MS = 250;
 const BROWSER_OPERATION_BUDGET_MS = 120000;
 
 function writeBrowserOperationDiagnostic(stderr, diagnostic) {
@@ -286,6 +290,32 @@ export function isAllowedBrowserRequest({
   }
 }
 
+export async function handleBrowserRoute(route, config, stderr) {
+  try {
+    const request = route.request();
+    if (
+      !isAllowedBrowserRequest({
+        url: request.url(),
+        method: request.method(),
+        body: request.postData() || '',
+        config,
+      })
+    ) {
+      await route.abort();
+    } else {
+      await route.continue();
+    }
+  } catch (error) {
+    // Playwright has already completed these routes; a second abort cannot help.
+    // For other failures, close the request instead of permitting it.
+    if (!error.message?.includes('Route is already handled'))
+      await route.abort().catch(() => {});
+    writeBrowserOperationDiagnostic(stderr, {
+      event: 'instagram_browser_route_failed',
+    });
+  }
+}
+
 export async function run(
   env = process.env,
   {
@@ -316,6 +346,7 @@ export async function run(
   let lockPath;
   let lock;
   let context;
+  let warmMetaPage = null;
   let unhealthy = null;
   const operatorState = { required: false };
   const reconnect = { id: env.INSTAGRAM_TESTER_RECONNECT_REQUEST_ID };
@@ -372,22 +403,12 @@ export async function run(
     // The default guard stays in place; the operation executor permits only
     // its reviewed natural typeahead request on the primary page.
     await setup.wait(
-      context.route('**/*', async route => {
-        const request = route.request();
-        if (
-          !isAllowedBrowserRequest({
-            url: request.url(),
-            method: request.method(),
-            body: request.postData() || '',
-            config,
-          })
-        )
-          return route.abort();
-        return route.continue();
-      })
+      context.route('**/*', route => handleBrowserRoute(route, config, stderr))
     );
     setup.close();
     while (!shutdown.signal.aborted) {
+      warmMetaPage?.dispose();
+      warmMetaPage = null;
       const cycle = deadlineScope(shutdown.signal, clock, cycleBudget);
       const wait = cycle.wait;
       const send = payload => {
@@ -395,6 +416,7 @@ export async function run(
         return wait(publish(command, payload, { signal: cycle.signal, clock }));
       };
       let publication = null;
+      let warmObservation = null;
       let accepting = true;
       let observe;
       try {
@@ -482,6 +504,14 @@ export async function run(
               proxy_fingerprint: cycleConfig.proxyFingerprint,
               roles_response: rolesResponse,
             });
+            warmObservation = {
+              page,
+              configuration: cycleConfig,
+              request,
+              response,
+              body: rolesResponse,
+              source: 'manager_refresh',
+            };
             reconnect.id = undefined;
             return true;
           })();
@@ -503,6 +533,17 @@ export async function run(
         accepting = false;
         if (!(await wait(publication)))
           throw new Error('session_update_rejected');
+        if (browserOperationsEnabled) {
+          // Prime only after the real publication CAS and completed navigation.
+          // Every operation still captures a new RolesTable response.
+          warmMetaPage = createWarmMetaPage({
+            page,
+            configuration: cycleConfig,
+            now,
+          });
+          acceptFreshRolesResponse(warmMetaPage, warmObservation);
+        }
+        warmObservation = null;
         await send({
           type: 'operator',
           operation: 'manager_heartbeat',
@@ -514,6 +555,8 @@ export async function run(
         // Recovery is a bounded child: the wrapper starts continuous refresh only after its real CAS receipt.
         if (env.INSTAGRAM_TESTER_RECONNECT_REQUEST_ID) return;
       } catch (error) {
+        warmMetaPage?.dispose();
+        warmMetaPage = null;
         if (shutdown.signal.aborted) break;
         const code =
           operatorState.required || error.message === 'operator_required'
@@ -535,6 +578,7 @@ export async function run(
         if (reconnect.id) throw new Error('session_update_rejected');
       } finally {
         accepting = false;
+        warmObservation = null;
         if (observe) page.off('response', observe);
         // Release pending headers/body/publication; never await them in cleanup.
         cycle.close();
@@ -617,6 +661,7 @@ export async function run(
                 context,
                 page,
                 configuration: operationConfig,
+                warmMetaPage,
                 request: claimed.request,
                 signal: operationScope.signal,
                 onDiagnostic: observation =>
@@ -676,6 +721,7 @@ export async function run(
             )
               throw new Error('publication_failed');
             writeBrowserOperationDiagnostic(stderr, diagnostic);
+            if (page.isClosed()) throw new Error('browser_runtime_required');
             if (
               ['operator_required', 'meta_session_expired'].includes(
                 result.error_code
@@ -691,11 +737,12 @@ export async function run(
               break;
             }
           }
-        } catch {
+        } catch (error) {
           writeBrowserOperationDiagnostic(stderr, diagnostic);
           // Cancellation does not cancel Playwright's underlying call. Stop
           // this lifecycle so cleanup finishes before another job can run.
-          if (executionPending) throw new Error('browser_runtime_required');
+          if (executionPending || error.message === 'browser_runtime_required')
+            throw new Error('browser_runtime_required');
           if (!shutdown.signal.aborted)
             stderr.write('instagram_browser_operation_failed\n');
         } finally {
@@ -711,6 +758,7 @@ export async function run(
     }
     if (operatorState.required) throw new Error('operator_required');
   } finally {
+    warmMetaPage?.dispose();
     setup.close();
     const cleanup = deadlineScope(undefined, clock, 25000);
     try {

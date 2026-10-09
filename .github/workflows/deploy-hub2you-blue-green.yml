@@ -20,6 +20,12 @@ on:
       - '!docs/**'
       - '!*.md'
       - '!**/*.md'
+      # #995: fontes exclusivas do manager VPS e seus testes têm publicação própria.
+      # Publisher Ruby, wrappers SSH e módulos compartilhados continuam disparando AWS.
+      - '!scripts/instagram_testers/session-manager.mjs'
+      - '!scripts/instagram_testers/browser-operations.mjs'
+      - '!tests/instagram_testers/**'
+      - '!tests/qa/instagram-automation/**'
       # .md que o app lê em produção (manuais dos agentes, por exemplo
       # app/services/autonomia/insurance/quote_agent/instrucoes/) disparam deploy (docs/processo-de-release.md).
       - 'app/**/*.md'

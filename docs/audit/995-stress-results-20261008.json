@@ -1,0 +1,710 @@
+{
+  "version": 1,
+  "meta_called": false,
+  "production_profile_used": false,
+  "groups": [
+    {
+      "group": "routes",
+      "exit_code": 0,
+      "reports": [
+        {
+          "status": "passed",
+          "cases": [
+            {
+              "name": "search_status_uncertain_invite",
+              "iteration": 0,
+              "passed": true
+            },
+            {
+              "name": "search_status_uncertain_invite",
+              "iteration": 1,
+              "passed": true
+            },
+            {
+              "name": "search_status_uncertain_invite",
+              "iteration": 2,
+              "passed": true
+            },
+            {
+              "name": "search_status_uncertain_invite",
+              "iteration": 3,
+              "passed": true
+            },
+            {
+              "name": "search_status_uncertain_invite",
+              "iteration": 4,
+              "passed": true
+            },
+            {
+              "name": "search_status_uncertain_invite",
+              "iteration": 5,
+              "passed": true
+            },
+            {
+              "name": "search_status_uncertain_invite",
+              "iteration": 6,
+              "passed": true
+            },
+            {
+              "name": "search_status_uncertain_invite",
+              "iteration": 7,
+              "passed": true
+            },
+            {
+              "name": "search_status_uncertain_invite",
+              "iteration": 8,
+              "passed": true
+            },
+            {
+              "name": "search_status_uncertain_invite",
+              "iteration": 9,
+              "passed": true
+            },
+            {
+              "name": "real_background_route_already_handled_then_status",
+              "iteration": 0,
+              "passed": true
+            },
+            {
+              "name": "real_background_route_already_handled_then_status",
+              "iteration": 1,
+              "passed": true
+            },
+            {
+              "name": "real_background_route_already_handled_then_status",
+              "iteration": 2,
+              "passed": true
+            },
+            {
+              "name": "real_background_route_already_handled_then_status",
+              "iteration": 3,
+              "passed": true
+            },
+            {
+              "name": "real_background_route_already_handled_then_status",
+              "iteration": 4,
+              "passed": true
+            },
+            {
+              "name": "real_background_route_already_handled_then_status",
+              "iteration": 5,
+              "passed": true
+            },
+            {
+              "name": "real_background_route_already_handled_then_status",
+              "iteration": 6,
+              "passed": true
+            },
+            {
+              "name": "real_background_route_already_handled_then_status",
+              "iteration": 7,
+              "passed": true
+            },
+            {
+              "name": "real_background_route_already_handled_then_status",
+              "iteration": 8,
+              "passed": true
+            },
+            {
+              "name": "real_background_route_already_handled_then_status",
+              "iteration": 9,
+              "passed": true
+            },
+            {
+              "name": "cancelled_navigation_returns_typed_result_then_manager_poll_recovery",
+              "immediate_error": null,
+              "passed": true
+            },
+            {
+              "name": "delayed_route",
+              "passed": true
+            },
+            {
+              "name": "timeout_then_new_lifecycle_fixture",
+              "passed": true
+            },
+            {
+              "name": "network_failure_then_status",
+              "passed": true
+            },
+            {
+              "name": "closed_page_replacement_in_fixture",
+              "passed": true
+            },
+            {
+              "name": "unapproved_origin_blocked_then_status",
+              "passed": true
+            },
+            {
+              "name": "navigation_401",
+              "passed": true,
+              "expected": "meta_session_expired",
+              "actual": "meta_session_expired",
+              "result_status": null,
+              "recovered_status": "accepted",
+              "recovery_error": null,
+              "fault_consumed": true,
+              "request_failure_codes": [],
+              "observed_response_statuses": [401, 200, 200]
+            },
+            {
+              "name": "navigation_403",
+              "passed": true,
+              "expected": "meta_session_expired",
+              "actual": "meta_session_expired",
+              "result_status": null,
+              "recovered_status": "accepted",
+              "recovery_error": null,
+              "fault_consumed": true,
+              "request_failure_codes": [],
+              "observed_response_statuses": [403, 200, 200]
+            },
+            {
+              "name": "graphql_401",
+              "passed": true,
+              "expected": "meta_session_expired",
+              "actual": "meta_session_expired",
+              "result_status": null,
+              "recovered_status": "accepted",
+              "recovery_error": null,
+              "fault_consumed": true,
+              "request_failure_codes": [],
+              "observed_response_statuses": [200, 401, 200, 200]
+            },
+            {
+              "name": "graphql_403",
+              "passed": true,
+              "expected": "meta_session_expired",
+              "actual": "meta_session_expired",
+              "result_status": null,
+              "recovered_status": "accepted",
+              "recovery_error": null,
+              "fault_consumed": true,
+              "request_failure_codes": [],
+              "observed_response_statuses": [200, 403, 200, 200]
+            },
+            {
+              "name": "upstream_http_407_consumed_by_chromium",
+              "passed": true,
+              "expected": "meta_unavailable",
+              "actual": "meta_unavailable",
+              "result_status": null,
+              "recovered_status": "accepted",
+              "recovery_error": null,
+              "fault_consumed": true,
+              "request_failure_codes": ["net::ERR_UNEXPECTED_PROXY_AUTH"],
+              "observed_response_statuses": [200, 200, 200]
+            },
+            {
+              "name": "graphql_429",
+              "passed": true,
+              "expected": "rate_limited",
+              "actual": "rate_limited",
+              "result_status": null,
+              "recovered_status": "accepted",
+              "recovery_error": null,
+              "fault_consumed": true,
+              "request_failure_codes": [],
+              "observed_response_statuses": [200, 429, 200, 200]
+            },
+            {
+              "name": "graphql_500",
+              "passed": true,
+              "expected": "meta_unavailable",
+              "actual": "meta_unavailable",
+              "result_status": null,
+              "recovered_status": "accepted",
+              "recovery_error": null,
+              "fault_consumed": true,
+              "request_failure_codes": [],
+              "observed_response_statuses": [200, 500, 200, 200]
+            },
+            {
+              "name": "graphql_invalid_json",
+              "passed": true,
+              "expected": "unknown_status",
+              "actual": "unknown_status",
+              "result_status": null,
+              "recovered_status": "accepted",
+              "recovery_error": null,
+              "fault_consumed": true,
+              "request_failure_codes": [],
+              "observed_response_statuses": [200, 200, 200, 200]
+            },
+            {
+              "name": "graphql_login_html",
+              "passed": true,
+              "expected": "unknown_status",
+              "actual": "unknown_status",
+              "result_status": null,
+              "recovered_status": "accepted",
+              "recovery_error": null,
+              "fault_consumed": true,
+              "request_failure_codes": [],
+              "observed_response_statuses": [200, 200, 200, 200]
+            },
+            {
+              "name": "graphql_error_with_data",
+              "passed": true,
+              "expected": "unknown_status",
+              "actual": "unknown_status",
+              "result_status": null,
+              "recovered_status": "accepted",
+              "recovery_error": null,
+              "fault_consumed": true,
+              "request_failure_codes": [],
+              "observed_response_statuses": [200, 200, 200, 200]
+            },
+            {
+              "name": "roles_container_partial",
+              "passed": true,
+              "expected": "unknown_status",
+              "actual": "unknown_status",
+              "result_status": null,
+              "recovered_status": "accepted",
+              "recovery_error": null,
+              "fault_consumed": true,
+              "request_failure_codes": [],
+              "observed_response_statuses": [200, 200, 200, 200]
+            },
+            {
+              "name": "roles_group_partial",
+              "passed": true,
+              "expected": "unknown_status",
+              "actual": "unknown_status",
+              "result_status": null,
+              "recovered_status": "accepted",
+              "recovery_error": null,
+              "fault_consumed": true,
+              "request_failure_codes": [],
+              "observed_response_statuses": [200, 200, 200, 200]
+            },
+            {
+              "name": "roles_conflicting_status",
+              "passed": true,
+              "expected": "unknown_status",
+              "actual": "unknown_status",
+              "result_status": null,
+              "recovered_status": "accepted",
+              "recovery_error": null,
+              "fault_consumed": true,
+              "request_failure_codes": [],
+              "observed_response_statuses": [200, 200, 200, 200]
+            }
+          ],
+          "operations": 76,
+          "route_failures_contained": 11,
+          "unhandled_rejections": 0,
+          "meta_called": false,
+          "production_profile_used": false,
+          "production_mutated": false,
+          "limits": [
+            "Synthetic TLS/proxy and Meta responses; no production latency measurement.",
+            "Page replacement is fixture recovery, not proof that the production manager replaces a closed page."
+          ]
+        }
+      ],
+      "source_hashes": {
+        "scripts/instagram_testers/session-manager.mjs": "a4090720c62495d0b98cee2902291f413438aba78486658d2262a97e3230af32",
+        "scripts/instagram_testers/session-observer.mjs": "1652c684772e0903c610cda279c9f1e9211a9c8dfc02fcab6daa838ef1d75463",
+        "scripts/instagram_testers/browser-operations.mjs": "8b093ea92a80dcde4a0a4857772d87d3837bb42a296963fb943f04107ec87d44",
+        "scripts/instagram_testers/runtime/entrypoint.mjs": "4ed32db50bd887affe731a5ab5ce1b168461769d78cf3b161a82904947454aa5",
+        "scripts/instagram_testers/runtime/operator-protocol.mjs": "0cfb99f7bf3327d0dd653fc5f18d8549777e741db70380b105d771dbf03e5d40",
+        "tests/qa/instagram-automation/latency-benchmark.mjs": "53da77b39e978b257862498f69cfa8c514959fabc62c5d5032e2d90a284c2b7b",
+        "tests/qa/instagram-automation/latency-browser-fixtures.json": "5a75cfda0154d3913eddaaba4ac3e5a5f7c6cba469941bfe235e67ad5f537321",
+        "tests/qa/instagram-automation/route-stress.mjs": "fea29e0a9dc0a5b7f15ef759bec6a9e83b09f4453c2a2ce68c67649b107cfe19"
+      },
+      "dependency_hashes": {
+        "package-lock.json": "a9ea3c6a5774052827c337b94a6973983282c7734c1665d06da4a971232b7592",
+        "node_modules/playwright/package.json": "f5c873af32da3a56849a77a73eb4e6acf9629d58564ba420077feea88800225c",
+        "node_modules/playwright/index.mjs": "a0f5715ea22354f922791a9c53dc012d5d5c067ff9cc4cd35ffb7cd272071a9f",
+        "node_modules/playwright-core/package.json": "d4b8727c495ff2632084e922ee1c7f19a608ed23d86e8f3b0ba0ff317eea58ec"
+      },
+      "chrome_version": "Google Chrome 154.0.8037.97",
+      "production_services_unchanged": true,
+      "fixture_stage_removed": true
+    },
+    {
+      "group": "ui",
+      "exit_code": 0,
+      "reports": [
+        {
+          "status": "passed",
+          "benchmark": "browser_ui_failure_contract",
+          "production_mutated": false,
+          "meta_called": false,
+          "case_timeout_ms": 2000,
+          "cases": [
+            {
+              "name": "two_add_buttons",
+              "passed": true,
+              "expected": {
+                "failure_error": "meta_unavailable",
+                "failure_phase": "add_people_button",
+                "failure_roles_posts": 1,
+                "failure_typeahead_posts": 0
+              },
+              "actual": {
+                "failure_error": "meta_unavailable",
+                "failure_phase": "add_people_button",
+                "diagnostic_error": "meta_unavailable",
+                "operation_threw": false,
+                "operation_error_class": null,
+                "failure_post_counts": {
+                  "roles": 1,
+                  "typeahead": 0,
+                  "invite": 0
+                }
+              },
+              "recovery": {
+                "attempted": true,
+                "passed": true,
+                "status": "accepted",
+                "error": null,
+                "error_class": null,
+                "post_counts": {
+                  "roles": 1,
+                  "typeahead": 0,
+                  "invite": 0
+                }
+              },
+              "expectation_failures": []
+            },
+            {
+              "name": "two_comboboxes",
+              "passed": true,
+              "expected": {
+                "failure_error": "meta_unavailable",
+                "failure_phase": "search_input",
+                "failure_roles_posts": 1,
+                "failure_typeahead_posts": 0
+              },
+              "actual": {
+                "failure_error": "meta_unavailable",
+                "failure_phase": "search_input",
+                "diagnostic_error": "meta_unavailable",
+                "operation_threw": false,
+                "operation_error_class": null,
+                "failure_post_counts": {
+                  "roles": 1,
+                  "typeahead": 0,
+                  "invite": 0
+                }
+              },
+              "recovery": {
+                "attempted": true,
+                "passed": true,
+                "status": "accepted",
+                "error": null,
+                "error_class": null,
+                "post_counts": {
+                  "roles": 1,
+                  "typeahead": 0,
+                  "invite": 0
+                }
+              },
+              "expectation_failures": []
+            },
+            {
+              "name": "two_exact_options",
+              "passed": true,
+              "expected": {
+                "failure_error": "invalid_selection",
+                "failure_phase": "typeahead_response",
+                "failure_roles_posts": 1,
+                "failure_typeahead_posts": 1
+              },
+              "actual": {
+                "failure_error": "invalid_selection",
+                "failure_phase": "typeahead_response",
+                "diagnostic_error": "invalid_selection",
+                "operation_threw": false,
+                "operation_error_class": null,
+                "failure_post_counts": {
+                  "roles": 1,
+                  "typeahead": 1,
+                  "invite": 0
+                }
+              },
+              "recovery": {
+                "attempted": true,
+                "passed": true,
+                "status": "accepted",
+                "error": null,
+                "error_class": null,
+                "post_counts": {
+                  "roles": 1,
+                  "typeahead": 0,
+                  "invite": 0
+                }
+              },
+              "expectation_failures": []
+            },
+            {
+              "name": "hidden_option",
+              "passed": true,
+              "expected": {
+                "failure_error": "invalid_selection",
+                "failure_phase": "typeahead_response",
+                "failure_roles_posts": 1,
+                "failure_typeahead_posts": 1
+              },
+              "actual": {
+                "failure_error": "invalid_selection",
+                "failure_phase": "typeahead_response",
+                "diagnostic_error": "invalid_selection",
+                "operation_threw": false,
+                "operation_error_class": null,
+                "failure_post_counts": {
+                  "roles": 1,
+                  "typeahead": 1,
+                  "invite": 0
+                }
+              },
+              "recovery": {
+                "attempted": true,
+                "passed": true,
+                "status": "accepted",
+                "error": null,
+                "error_class": null,
+                "post_counts": {
+                  "roles": 1,
+                  "typeahead": 0,
+                  "invite": 0
+                }
+              },
+              "expectation_failures": []
+            },
+            {
+              "name": "disabled_option",
+              "passed": true,
+              "expected": {
+                "failure_error": "invalid_selection",
+                "failure_phase": "typeahead_response",
+                "failure_roles_posts": 1,
+                "failure_typeahead_posts": 1
+              },
+              "actual": {
+                "failure_error": "invalid_selection",
+                "failure_phase": "typeahead_response",
+                "diagnostic_error": "invalid_selection",
+                "operation_threw": false,
+                "operation_error_class": null,
+                "failure_post_counts": {
+                  "roles": 1,
+                  "typeahead": 1,
+                  "invite": 0
+                }
+              },
+              "recovery": {
+                "attempted": true,
+                "passed": true,
+                "status": "accepted",
+                "error": null,
+                "error_class": null,
+                "post_counts": {
+                  "roles": 1,
+                  "typeahead": 0,
+                  "invite": 0
+                }
+              },
+              "expectation_failures": []
+            },
+            {
+              "name": "html_login_without_roles",
+              "passed": true,
+              "expected": {
+                "failure_error": "meta_unavailable",
+                "failure_phase": "roles_capture",
+                "failure_roles_posts": 0,
+                "failure_typeahead_posts": 0
+              },
+              "actual": {
+                "failure_error": "meta_unavailable",
+                "failure_phase": "roles_capture",
+                "diagnostic_error": "meta_unavailable",
+                "operation_threw": false,
+                "operation_error_class": null,
+                "failure_post_counts": {
+                  "roles": 0,
+                  "typeahead": 0,
+                  "invite": 0
+                }
+              },
+              "recovery": {
+                "attempted": true,
+                "passed": true,
+                "status": "accepted",
+                "error": null,
+                "error_class": null,
+                "post_counts": {
+                  "roles": 1,
+                  "typeahead": 0,
+                  "invite": 0
+                }
+              },
+              "expectation_failures": []
+            }
+          ],
+          "limits": [
+            "Synthetic local HTTPS/proxy transport; no Meta, AWS or production profile.",
+            "The short timeout bounds ambiguous UI and missing Roles responses; it does not prove a provider timeout budget."
+          ]
+        }
+      ],
+      "source_hashes": {
+        "scripts/instagram_testers/session-manager.mjs": "e81bdf0cb4b1d65dee4575f585f39ceee76e95d8a76583b7867440587c4f1b6d",
+        "scripts/instagram_testers/session-observer.mjs": "1652c684772e0903c610cda279c9f1e9211a9c8dfc02fcab6daa838ef1d75463",
+        "scripts/instagram_testers/browser-operations.mjs": "8b093ea92a80dcde4a0a4857772d87d3837bb42a296963fb943f04107ec87d44",
+        "scripts/instagram_testers/runtime/entrypoint.mjs": "4ed32db50bd887affe731a5ab5ce1b168461769d78cf3b161a82904947454aa5",
+        "scripts/instagram_testers/runtime/operator-protocol.mjs": "0cfb99f7bf3327d0dd653fc5f18d8549777e741db70380b105d771dbf03e5d40",
+        "tests/qa/instagram-automation/latency-benchmark.mjs": "0b31b4572d7150fc7520fd1296b235eb17a5a5a03ba20fa0e4914884fc4a0ca4",
+        "tests/qa/instagram-automation/latency-browser-fixtures.json": "5a75cfda0154d3913eddaaba4ac3e5a5f7c6cba469941bfe235e67ad5f537321",
+        "tests/qa/instagram-automation/route-stress.mjs": "343d14412d454df73b21b23152067216affaa9edeb4d291d4fae38bb0b2c18fd",
+        "tests/qa/instagram-automation/ui-failures.mjs": "ad84655d36d6ccf2bcf41699d550148a33e97971c01f43c28fd0e020fb981e68"
+      },
+      "dependency_hashes": {
+        "package-lock.json": "a9ea3c6a5774052827c337b94a6973983282c7734c1665d06da4a971232b7592",
+        "node_modules/playwright/package.json": "f5c873af32da3a56849a77a73eb4e6acf9629d58564ba420077feea88800225c",
+        "node_modules/playwright/index.mjs": "a0f5715ea22354f922791a9c53dc012d5d5c067ff9cc4cd35ffb7cd272071a9f",
+        "node_modules/playwright-core/package.json": "d4b8727c495ff2632084e922ee1c7f19a608ed23d86e8f3b0ba0ff317eea58ec"
+      },
+      "chrome_version": "Google Chrome 154.0.8037.97",
+      "production_services_unchanged": true,
+      "fixture_stage_removed": true
+    },
+    {
+      "group": "proxy",
+      "exit_code": 0,
+      "reports": [
+        {
+          "status": "passed",
+          "production_mutated": false,
+          "meta_called": false,
+          "browser_lifecycle_restarted": true,
+          "upstream_http_407": {
+            "fault_hits": 1,
+            "response_statuses": [],
+            "request_failure_codes": ["net::ERR_UNEXPECTED_PROXY_AUTH"],
+            "result": {
+              "status": null,
+              "error_code": "meta_unavailable",
+              "write_started": false
+            },
+            "recovery_status": "accepted"
+          },
+          "proxy_connect_407": {
+            "direct_status": 407,
+            "browser_fault_hits": 2,
+            "response_statuses": [],
+            "request_failure_codes": ["net::ERR_INVALID_AUTH_CREDENTIALS"],
+            "result": {
+              "status": null,
+              "error_code": "meta_unavailable",
+              "write_started": false
+            },
+            "recovery_status": "accepted"
+          }
+        }
+      ],
+      "source_hashes": {
+        "scripts/instagram_testers/session-manager.mjs": "e81bdf0cb4b1d65dee4575f585f39ceee76e95d8a76583b7867440587c4f1b6d",
+        "scripts/instagram_testers/session-observer.mjs": "1652c684772e0903c610cda279c9f1e9211a9c8dfc02fcab6daa838ef1d75463",
+        "scripts/instagram_testers/browser-operations.mjs": "8b093ea92a80dcde4a0a4857772d87d3837bb42a296963fb943f04107ec87d44",
+        "scripts/instagram_testers/runtime/entrypoint.mjs": "4ed32db50bd887affe731a5ab5ce1b168461769d78cf3b161a82904947454aa5",
+        "scripts/instagram_testers/runtime/operator-protocol.mjs": "0cfb99f7bf3327d0dd653fc5f18d8549777e741db70380b105d771dbf03e5d40",
+        "tests/qa/instagram-automation/latency-benchmark.mjs": "a94e45add824d7defd3ee0fc3906ade6ea66fcee31d90f4fc58cd9ec8803355d",
+        "tests/qa/instagram-automation/latency-browser-fixtures.json": "5a75cfda0154d3913eddaaba4ac3e5a5f7c6cba469941bfe235e67ad5f537321",
+        "tests/qa/instagram-automation/route-stress.mjs": "343d14412d454df73b21b23152067216affaa9edeb4d291d4fae38bb0b2c18fd",
+        "tests/qa/instagram-automation/proxy-failures.mjs": "17f6e7813f22ccab6ee9c2197fc782e66bc8cf02a8543a7dfb2d3c04abf60af5"
+      },
+      "dependency_hashes": {
+        "package-lock.json": "a9ea3c6a5774052827c337b94a6973983282c7734c1665d06da4a971232b7592",
+        "node_modules/playwright/package.json": "f5c873af32da3a56849a77a73eb4e6acf9629d58564ba420077feea88800225c",
+        "node_modules/playwright/index.mjs": "a0f5715ea22354f922791a9c53dc012d5d5c067ff9cc4cd35ffb7cd272071a9f",
+        "node_modules/playwright-core/package.json": "d4b8727c495ff2632084e922ee1c7f19a608ed23d86e8f3b0ba0ff317eea58ec"
+      },
+      "chrome_version": "Google Chrome 154.0.8037.97",
+      "production_services_unchanged": true,
+      "fixture_stage_removed": true
+    },
+    {
+      "group": "lifecycle",
+      "exit_code": 0,
+      "reports": [
+        {
+          "status": "passed",
+          "harness": "manager_browser_lifecycle_local",
+          "report_version": 1,
+          "production_mutated": false,
+          "meta_called": false,
+          "closed_page": {
+            "manager_error": "browser_runtime_required",
+            "published_error": "meta_unavailable",
+            "read_count": 1,
+            "claim_count": 1,
+            "complete_count": 1,
+            "context_closed": true,
+            "cookie_restore": false,
+            "lock_released": true
+          },
+          "resumed_status": {
+            "status": "accepted",
+            "read_count": 1,
+            "claim_count": 1,
+            "complete_count": 1,
+            "context_closed": true,
+            "cookie_restore": true,
+            "lock_released": true,
+            "same_profile_reused": true
+          },
+          "timed_out_operation": {
+            "manager_error": "browser_runtime_required",
+            "fault_hits": 1,
+            "fault_consumed": true,
+            "deadline_fired": true,
+            "complete_count": 0,
+            "context_closed": true,
+            "cookie_restore": true,
+            "lock_released": true,
+            "delayed_fixture_response_ms": 1000,
+            "deadline_timer_scaled_for_local_harness": true
+          },
+          "resumed_after_timeout": {
+            "status": "accepted",
+            "complete_count": 1,
+            "context_closed": true,
+            "cookie_restore": true,
+            "lock_released": true,
+            "same_profile_reused": true
+          },
+          "fixture_requests": {
+            "roles": 8,
+            "typeahead": 0,
+            "invite": 0
+          }
+        }
+      ],
+      "source_hashes": {
+        "scripts/instagram_testers/session-manager.mjs": "e81bdf0cb4b1d65dee4575f585f39ceee76e95d8a76583b7867440587c4f1b6d",
+        "scripts/instagram_testers/session-observer.mjs": "1652c684772e0903c610cda279c9f1e9211a9c8dfc02fcab6daa838ef1d75463",
+        "scripts/instagram_testers/browser-operations.mjs": "8b093ea92a80dcde4a0a4857772d87d3837bb42a296963fb943f04107ec87d44",
+        "scripts/instagram_testers/runtime/entrypoint.mjs": "4ed32db50bd887affe731a5ab5ce1b168461769d78cf3b161a82904947454aa5",
+        "scripts/instagram_testers/runtime/operator-protocol.mjs": "0cfb99f7bf3327d0dd653fc5f18d8549777e741db70380b105d771dbf03e5d40",
+        "tests/qa/instagram-automation/latency-benchmark.mjs": "53da77b39e978b257862498f69cfa8c514959fabc62c5d5032e2d90a284c2b7b",
+        "tests/qa/instagram-automation/latency-browser-fixtures.json": "5a75cfda0154d3913eddaaba4ac3e5a5f7c6cba469941bfe235e67ad5f537321",
+        "tests/qa/instagram-automation/route-stress.mjs": "c0e6a606c5e406f278c944515631c54117f4728fd19111903e54154460269632",
+        "tests/qa/instagram-automation/manager-lifecycle.mjs": "478623e5d4e3beaeb39f72981333c64fe7cf14fa2a7237f90999902e34032984"
+      },
+      "dependency_hashes": {
+        "package-lock.json": "a9ea3c6a5774052827c337b94a6973983282c7734c1665d06da4a971232b7592",
+        "node_modules/playwright/package.json": "f5c873af32da3a56849a77a73eb4e6acf9629d58564ba420077feea88800225c",
+        "node_modules/playwright/index.mjs": "a0f5715ea22354f922791a9c53dc012d5d5c067ff9cc4cd35ffb7cd272071a9f",
+        "node_modules/playwright-core/package.json": "d4b8727c495ff2632084e922ee1c7f19a608ed23d86e8f3b0ba0ff317eea58ec"
+      },
+      "chrome_version": "Google Chrome 154.0.8037.97",
+      "production_services_unchanged": true,
+      "fixture_stage_removed": true
+    }
+  ]
+}

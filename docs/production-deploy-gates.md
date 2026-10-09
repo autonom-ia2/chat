@@ -18,6 +18,16 @@ decide): `**`, `.*`, `.*/**`, `!.github/**`, `!docs/**`, `!*.md`, `!**/*.md`,
 `app/**/*.md`, `lib/operator_guide/**`, `lib/central_de_ajuda/**`, `config/onboarding/**`. `paths-ignore` não aceita
 reinclusão com `!`, por isso a troca.
 
+Desde #995, alterações somente em `scripts/instagram_testers/session-manager.mjs`,
+`browser-operations.mjs`,
+`tests/instagram_testers/**` e `tests/qa/instagram-automation/**` também não
+disparam AWS. Essas duas fontes são instaladas separadamente na VPS; os testes
+não mudam a aplicação publicada. A exclusão é específica: o publisher Ruby,
+wrappers SSH, módulos compartilhados e demais arquivos continuam disparando
+o deploy. Um push misto com mudança na aplicação também dispara normalmente.
+O teste `tests/instagram_testers/deploy-paths_test.py` verifica as duas stacks
+e a preservação do deploy manual, rollback, manuais e dependências.
+
 Para executar um dos workflows à mão, o operador precisa:
 
 1. selecionar a branch `main`;

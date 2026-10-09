@@ -19,6 +19,37 @@ const MAX_UI_SOURCE_VALUES = 64;
 const MAX_UI_OPTIONS = 500;
 const UI_WAIT_MS = 5000;
 const UI_POLL_MS = 100;
+const WARM_FETCH_TIMEOUT_MS = 30000;
+const WARM_META_PAGE = 'warm_meta_page';
+const WARM_SOURCES = new Set(['manager_refresh', 'same_page_refresh']);
+const WARM_INVALIDATION_REASONS = new Set([
+  'page_closed',
+  'page_changed',
+  'configuration_changed',
+  'roles_anchor_changed',
+  'roles_response_invalid',
+  'roles_http_error',
+  'csrf_expired',
+  'proxy_error',
+  'aborted',
+  'refresh_replaced',
+  'disposed',
+  'unknown',
+]);
+const WARM_TERMINAL_REASONS = new Set([
+  'page_closed',
+  'configuration_changed',
+  'roles_anchor_changed',
+  'roles_response_invalid',
+  'roles_http_error',
+  'csrf_expired',
+  'proxy_error',
+  'aborted',
+  'refresh_replaced',
+  'disposed',
+]);
+const DIALOG_CANCEL_NAMES = /^(?:Cancel|Cancelar)$/i;
+const DIALOG_CLOSE_NAMES = /^(?:Close|Fechar)$/i;
 const TYPEAHEAD_FIELDS = Object.freeze([
   '__aaid',
   '__bid',
@@ -526,6 +557,330 @@ function responseError(status, fallback) {
   return fallback;
 }
 
+function warmConfigurationFingerprint(config) {
+  return [
+    config?.appId,
+    config?.businessId,
+    config?.docId,
+    config?.adminId,
+    config?.rolesUrl,
+    config?.proxyFingerprint || null,
+  ]
+    .map(value => (value === undefined ? null : value))
+    .join('\u001f');
+}
+
+function pageFromRequest(value) {
+  try {
+    const frame =
+      typeof value?.frame === 'function' ? value.frame() : undefined;
+    return typeof frame?.page === 'function' ? frame.page() : null;
+  } catch {
+    return null;
+  }
+}
+
+function warmPageClosed(page) {
+  try {
+    return typeof page?.isClosed === 'function' && page.isClosed();
+  } catch {
+    return true;
+  }
+}
+
+function warmIdentityMatches(warm, page, config) {
+  return (
+    warm?.kind === WARM_META_PAGE &&
+    warm.disposed !== true &&
+    warm.page === page &&
+    warm.configurationFingerprint === warmConfigurationFingerprint(config)
+  );
+}
+
+export function invalidateWarmMetaPage(warm, reason = 'unknown') {
+  if (!warm || warm.kind !== WARM_META_PAGE) return false;
+  const nextReason = WARM_INVALIDATION_REASONS.has(reason) ? reason : 'unknown';
+  const preserveTerminalReason =
+    nextReason === 'page_changed' &&
+    WARM_TERMINAL_REASONS.has(warm.invalidReason);
+  warm.valid = false;
+  warm.invalidReason = preserveTerminalReason ? warm.invalidReason : nextReason;
+  warm.formBody = null;
+  warm.rolesAaid = null;
+  warm.source = null;
+  warm.acceptedAt = null;
+  warm.generation += 1;
+  warm.refreshing = false;
+  return true;
+}
+
+function warmFailure(warm, reason, code) {
+  invalidateWarmMetaPage(warm, reason);
+  return fail(code);
+}
+
+function warmInvalidationError(warm) {
+  switch (warm?.invalidReason) {
+    case 'configuration_changed':
+    case 'csrf_expired':
+      return 'meta_session_expired';
+    case 'roles_anchor_changed':
+    case 'roles_response_invalid':
+      return 'unknown_status';
+    case 'page_changed':
+      return 'meta_session_expired';
+    case 'page_closed':
+    case 'proxy_error':
+    case 'roles_http_error':
+    case 'aborted':
+    case 'refresh_replaced':
+    case 'disposed':
+    case 'unknown':
+    default:
+      return 'meta_unavailable';
+  }
+}
+
+function warmCanRecoverCold(warm, page, config) {
+  return (
+    warm?.kind === WARM_META_PAGE &&
+    warm.disposed !== true &&
+    warm.valid !== true &&
+    warm.invalidReason === 'page_changed' &&
+    safeBrowserLocation(page?.url?.(), config)
+  );
+}
+
+function warmRefreshRequired(warm, page, config) {
+  if (!warm) return false;
+  if (!warmIdentityMatches(warm, page, config)) fail('meta_session_expired');
+  if (warm.valid) return true;
+  if (warmCanRecoverCold(warm, page, config)) return false;
+  return fail(warmInvalidationError(warm));
+}
+
+export function createWarmMetaPage({
+  page,
+  configuration,
+  now = Date.now,
+} = {}) {
+  validateConfiguration(configuration);
+  if (
+    !page ||
+    typeof page.on !== 'function' ||
+    typeof page.off !== 'function' ||
+    typeof page.evaluate !== 'function'
+  )
+    fail('meta_unavailable');
+  const warm = {
+    kind: WARM_META_PAGE,
+    page,
+    configuration,
+    configurationFingerprint: warmConfigurationFingerprint(configuration),
+    valid: false,
+    invalidReason: 'unknown',
+    generation: 0,
+    formBody: null,
+    rolesAaid: null,
+    source: null,
+    acceptedAt: null,
+    refreshing: false,
+    disposed: false,
+    now,
+    onClose: null,
+    onFrameNavigated: null,
+    dispose() {
+      if (warm.disposed) return;
+      warm.disposed = true;
+      invalidateWarmMetaPage(warm, 'disposed');
+      try {
+        page.off('close', warm.onClose);
+        page.off('framenavigated', warm.onFrameNavigated);
+      } catch {
+        // Page shutdown owns listener cleanup when Playwright has already closed.
+      }
+    },
+  };
+  warm.onClose = () => invalidateWarmMetaPage(warm, 'page_closed');
+  warm.onFrameNavigated = frame => {
+    try {
+      if (typeof page.mainFrame !== 'function' || frame === page.mainFrame())
+        invalidateWarmMetaPage(warm, 'page_changed');
+    } catch {
+      invalidateWarmMetaPage(warm, 'page_changed');
+    }
+  };
+  page.on('close', warm.onClose);
+  page.on('framenavigated', warm.onFrameNavigated);
+  return warm;
+}
+
+export function acceptFreshRolesResponse(
+  warm,
+  {
+    page,
+    configuration,
+    request,
+    response,
+    body,
+    source = 'manager_refresh',
+  } = {}
+) {
+  if (!warm || warm.kind !== WARM_META_PAGE) fail('invalid_selection');
+  if (!WARM_SOURCES.has(source))
+    warmFailure(warm, 'unknown', 'invalid_selection');
+  if (!warmIdentityMatches(warm, page, configuration))
+    warmFailure(warm, 'configuration_changed', 'meta_session_expired');
+  if (warmPageClosed(page))
+    warmFailure(warm, 'page_closed', 'meta_unavailable');
+  if (!safeBrowserLocation(page.url(), configuration))
+    warmFailure(warm, 'page_changed', 'meta_session_expired');
+  const responseRequest = responseValue(response, 'request');
+  if (
+    !request ||
+    !response ||
+    responseRequest !== request ||
+    (pageFromRequest(request) && pageFromRequest(request) !== page) ||
+    (pageFromRequest(responseRequest) &&
+      pageFromRequest(responseRequest) !== page)
+  )
+    warmFailure(warm, 'roles_response_invalid', 'unknown_status');
+  const metadata = roleRequestMetadata(request, configuration);
+  if (!metadata?.valid || !metadata.aaid)
+    warmFailure(warm, 'roles_response_invalid', 'unknown_status');
+  if (warm.valid && warm.rolesAaid && warm.rolesAaid !== metadata.aaid)
+    warmFailure(warm, 'roles_anchor_changed', 'unknown_status');
+  const status = responseStatus(response);
+  if (status === 401 || status === 403)
+    warmFailure(warm, 'csrf_expired', 'meta_session_expired');
+  if (status !== 200)
+    warmFailure(
+      warm,
+      'roles_http_error',
+      responseError(status, 'meta_unavailable')
+    );
+  if (typeof body !== 'string' || Buffer.byteLength(body) > RESPONSE_MAX)
+    warmFailure(warm, 'roles_response_invalid', 'unknown_status');
+  try {
+    validateRolesResponse(body);
+    parseDocument(body);
+  } catch {
+    warmFailure(warm, 'roles_response_invalid', 'unknown_status');
+  }
+  const formBody = requestBody(request);
+  if (!formBody) warmFailure(warm, 'roles_response_invalid', 'unknown_status');
+  warm.valid = true;
+  warm.invalidReason = null;
+  warm.formBody = formBody;
+  warm.rolesAaid = metadata.aaid;
+  warm.source = source;
+  warm.acceptedAt = operationNow(warm.now);
+  warm.generation += 1;
+  return Object.freeze({
+    accepted: true,
+    generation: warm.generation,
+    source,
+  });
+}
+
+export async function refreshWarmMetaPage(
+  warm,
+  { page, configuration, signal } = {}
+) {
+  if (!warmIdentityMatches(warm, page, configuration))
+    warmFailure(warm, 'configuration_changed', 'meta_session_expired');
+  if (!warm.valid || !warm.formBody || !warm.rolesAaid)
+    warmFailure(warm, 'unknown', 'meta_unavailable');
+  if (warmPageClosed(page))
+    warmFailure(warm, 'page_closed', 'meta_unavailable');
+  if (!safeBrowserLocation(page.url(), configuration))
+    warmFailure(warm, 'page_changed', 'meta_session_expired');
+  if (warm.refreshing) fail('busy');
+  warm.refreshing = true;
+  let evaluation;
+  const abortToken = `${warm.generation}:${operationNow(warm.now)}`;
+  let abortPromise;
+  const abortInPage = async () => {
+    try {
+      await page.evaluate(token => {
+        const registry = window.__chat2youWarmRolesFetches;
+        registry?.get(token)?.abort();
+      }, abortToken);
+    } catch {
+      // Page shutdown is handled by the outer cleanup and invalidation below.
+    }
+  };
+  const abort = () => {
+    abortPromise ||= abortInPage();
+  };
+  signal?.addEventListener('abort', abort, { once: true });
+  try {
+    signal?.throwIfAborted();
+    evaluation = page.evaluate(
+      async ({ url, body, timeoutMs, token }) => {
+        const registryKey = '__chat2youWarmRolesFetches';
+        const registry =
+          window[registryKey] instanceof Map ? window[registryKey] : new Map();
+        window[registryKey] = registry;
+        const controller = new AbortController();
+        registry.set(token, controller);
+        const timer = window.setTimeout(() => controller.abort(), timeoutMs);
+        try {
+          const response = await fetch(url, {
+            method: 'POST',
+            credentials: 'include',
+            cache: 'no-store',
+            redirect: 'error',
+            headers: {
+              'content-type': 'application/x-www-form-urlencoded',
+            },
+            body,
+            signal: controller.signal,
+          });
+          return response.status;
+        } finally {
+          window.clearTimeout(timer);
+          registry.delete(token);
+        }
+      },
+      {
+        url: GRAPHQL_URL,
+        body: warm.formBody,
+        timeoutMs: WARM_FETCH_TIMEOUT_MS,
+        token: abortToken,
+      }
+    );
+    const status = await withSignal(evaluation, signal);
+    if (!Number.isSafeInteger(status))
+      warmFailure(warm, 'roles_response_invalid', 'unknown_status');
+    if (status === 401 || status === 403)
+      warmFailure(warm, 'csrf_expired', 'meta_session_expired');
+    if (status !== 200)
+      warmFailure(
+        warm,
+        'roles_http_error',
+        responseError(status, 'meta_unavailable')
+      );
+    return Object.freeze({ status: 200, generation: warm.generation });
+  } catch (error) {
+    // The in-page fetch has its own AbortController. Drain its promise before
+    // returning so a pending browser request cannot outlive this operation.
+    if (signal?.aborted) {
+      abort();
+      await abortPromise;
+    }
+    await evaluation?.catch(() => {});
+    if (error instanceof BrowserOperationError) throw error;
+    if (signal?.aborted) {
+      warmFailure(warm, 'aborted', 'meta_unavailable');
+    }
+    return warmFailure(warm, 'proxy_error', 'meta_unavailable');
+  } finally {
+    signal?.removeEventListener('abort', abort);
+    warm.refreshing = false;
+  }
+}
+
 async function readResponseBody(response, signal) {
   let body;
   try {
@@ -553,7 +908,7 @@ async function inspectRolesResponse(response, metadata, page, config, signal) {
     const body = await readResponseBody(response, signal);
     validateRolesResponse(body);
     const document = parseDocument(body);
-    return { ok: true, document, aaid: metadata.aaid };
+    return { ok: true, document, body, aaid: metadata.aaid };
   } catch (error) {
     return {
       ok: false,
@@ -1077,6 +1432,53 @@ async function requireEnabled(locator, signal, editable = false) {
   return locator;
 }
 
+async function closeVisibleTesterDialog(page, signal) {
+  const dialogs = page.getByRole('dialog');
+  const count = await withSignal(dialogs.count(), signal);
+  let visibleDialog = null;
+  for (let index = 0; index < count; index += 1) {
+    const candidate = dialogs.nth(index);
+    if (await withSignal(candidate.isVisible(), signal)) {
+      if (visibleDialog) fail('meta_unavailable');
+      visibleDialog = candidate;
+    }
+  }
+  if (!visibleDialog) return;
+  const cancelButtons = visibleDialog.getByRole('button', {
+    name: DIALOG_CANCEL_NAMES,
+  });
+  const cancelCount = await withSignal(cancelButtons.count(), signal);
+  let close;
+  if (cancelCount > 0) {
+    if (cancelCount !== 1) fail('meta_unavailable');
+    close = cancelButtons.first();
+    if (!(await withSignal(close.isVisible(), signal)))
+      fail('meta_unavailable');
+    await requireEnabled(close, signal);
+  } else {
+    const closeButtons = visibleDialog.getByRole('button', {
+      name: DIALOG_CLOSE_NAMES,
+    });
+    if ((await withSignal(closeButtons.count(), signal)) !== 1)
+      fail('meta_unavailable');
+    close = closeButtons.first();
+    if (!(await withSignal(close.isVisible(), signal)))
+      fail('meta_unavailable');
+    await requireEnabled(close, signal);
+  }
+  await withSignal(close.click({ noWaitAfter: true }), signal);
+  const end = Date.now() + UI_WAIT_MS;
+  while (Date.now() < end) {
+    try {
+      if (!(await withSignal(visibleDialog.isVisible(), signal))) return;
+    } catch {
+      return;
+    }
+    await delay(UI_POLL_MS, signal);
+  }
+  fail('meta_unavailable');
+}
+
 function sanitizeUiTokenSnapshot(raw) {
   if (!raw || typeof raw !== 'object')
     return {
@@ -1461,7 +1863,9 @@ async function navigateRoles(page, config, signal) {
   let navigation;
   try {
     navigation = await withSignal(
-      page.goto(config.rolesUrl, { waitUntil: 'domcontentloaded' }),
+      // Roles capture is response-driven. UI steps retain their own bounded
+      // visibility/enabled checks after the response anchor is validated.
+      page.goto(config.rolesUrl, { waitUntil: 'commit' }),
       signal
     );
   } catch (error) {
@@ -1473,20 +1877,55 @@ async function navigateRoles(page, config, signal) {
   if (status && status !== 200) fail(responseError(status, 'meta_unavailable'));
 }
 
-async function captureRoles(state, page, config, signal) {
-  const result = await withSignal(state.rolesReady, signal);
+async function captureRoles(state, page, config, signal, warmMetaPage = null) {
+  let result;
+  try {
+    result = await withSignal(state.rolesReady, signal);
+  } catch (error) {
+    if (warmMetaPage) invalidateWarmMetaPage(warmMetaPage, 'aborted');
+    throw error;
+  }
   if (
     state.rolesRequests.length !== 1 ||
     state.rolesResponses.length !== 1 ||
     state.rolesMultiple ||
     state.rolesInvalid
-  )
+  ) {
+    if (warmMetaPage)
+      invalidateWarmMetaPage(warmMetaPage, 'roles_response_invalid');
     fail(result?.error || 'unknown_status');
-  if (!result?.ok) fail(result?.error || 'unknown_status');
+  }
+  if (!result?.ok) {
+    if (warmMetaPage)
+      invalidateWarmMetaPage(
+        warmMetaPage,
+        result?.error === 'meta_session_expired'
+          ? 'csrf_expired'
+          : 'roles_response_invalid'
+      );
+    fail(result?.error || 'unknown_status');
+  }
   state.rolesAaid = result.aaid;
   state.rolesAnchorReady = numeric(state.rolesAaid);
-  if (!state.rolesAnchorReady) fail('unknown_status');
-  if (!safeBrowserLocation(page.url(), config)) fail('meta_session_expired');
+  if (!state.rolesAnchorReady) {
+    if (warmMetaPage)
+      invalidateWarmMetaPage(warmMetaPage, 'roles_response_invalid');
+    fail('unknown_status');
+  }
+  if (!safeBrowserLocation(page.url(), config)) {
+    if (warmMetaPage) invalidateWarmMetaPage(warmMetaPage, 'page_changed');
+    fail('meta_session_expired');
+  }
+  if (warmMetaPage) {
+    acceptFreshRolesResponse(warmMetaPage, {
+      page,
+      configuration: config,
+      request: state.rolesRequests[0].request,
+      response: state.rolesResponses[0],
+      body: result.body,
+      source: 'same_page_refresh',
+    });
+  }
   return result.document;
 }
 
@@ -1497,12 +1936,27 @@ async function openTesterSearch({
   state,
   signal,
   navigate,
+  warmMetaPage = null,
 }) {
   if (navigate) {
-    state.diagnosticPhase = 'roles_navigation';
-    await navigateRoles(page, config, signal);
+    const refreshWarm = warmRefreshRequired(warmMetaPage, page, config);
+    if (refreshWarm) {
+      state.diagnosticPhase = 'roles_refresh';
+      await refreshWarmMetaPage(warmMetaPage, {
+        page,
+        configuration: config,
+        signal,
+      });
+    } else {
+      state.diagnosticPhase = 'roles_navigation';
+      await navigateRoles(page, config, signal);
+    }
     state.diagnosticPhase = 'roles_capture';
-    await captureRoles(state, page, config, signal);
+    await captureRoles(state, page, config, signal, warmMetaPage);
+  }
+  if (warmMetaPage) {
+    state.diagnosticPhase = 'tester_dialog_reset';
+    await closeVisibleTesterDialog(page, signal);
   }
   state.diagnosticPhase = 'add_people_button';
   const add = await waitForUnique(
@@ -1550,7 +2004,14 @@ async function openTesterSearch({
   return { results: result.results, dialog };
 }
 
-async function performSearch({ page, config, request, state, signal }) {
+async function performSearch({
+  page,
+  config,
+  request,
+  state,
+  signal,
+  warmMetaPage,
+}) {
   const result = await openTesterSearch({
     page,
     config,
@@ -1558,6 +2019,7 @@ async function performSearch({ page, config, request, state, signal }) {
     state,
     signal,
     navigate: true,
+    warmMetaPage,
   });
   return result.results;
 }
@@ -1691,12 +2153,38 @@ async function performInvite({ page, config, request, state, signal }) {
   };
 }
 
-async function performStatus({ page, config, request, state, signal }) {
+async function performStatus({
+  page,
+  config,
+  request,
+  state,
+  signal,
+  warmMetaPage = null,
+}) {
   const documentPromise = (async () => {
-    state.diagnosticPhase = 'roles_navigation';
-    await navigateRoles(page, config, signal);
+    const refreshWarm =
+      request.action !== 'invite' &&
+      warmRefreshRequired(warmMetaPage, page, config);
+    if (refreshWarm) {
+      state.diagnosticPhase = 'roles_refresh';
+      await refreshWarmMetaPage(warmMetaPage, {
+        page,
+        configuration: config,
+        signal,
+      });
+    } else {
+      if (
+        request.action === 'invite' &&
+        warmMetaPage &&
+        !warmMetaPage.valid &&
+        !warmCanRecoverCold(warmMetaPage, page, config)
+      )
+        fail(warmInvalidationError(warmMetaPage));
+      state.diagnosticPhase = 'roles_navigation';
+      await navigateRoles(page, config, signal);
+    }
     state.diagnosticPhase = 'roles_capture';
-    return captureRoles(state, page, config, signal);
+    return captureRoles(state, page, config, signal, warmMetaPage);
   })();
   const document = await documentPromise;
   state.diagnosticPhase = 'roles_status';
@@ -1713,6 +2201,7 @@ export async function executeBrowserOperation({
   requestGuard,
   permitInvite,
   onDiagnostic,
+  warmMetaPage = null,
   now = Date.now,
 } = {}) {
   const started = baseEnvelope(request, now);
@@ -1750,6 +2239,7 @@ export async function executeBrowserOperation({
         request,
         state,
         signal,
+        warmMetaPage,
       });
       return successEnvelope(request, { results }, now);
     }
@@ -1759,6 +2249,7 @@ export async function executeBrowserOperation({
       request,
       state,
       signal,
+      warmMetaPage,
     });
     if (request.action === 'invite') {
       if (status !== 'absent')

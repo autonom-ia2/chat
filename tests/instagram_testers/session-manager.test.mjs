@@ -5,6 +5,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   mkdtemp,
+  lstat,
   open,
   readFile,
   realpath,
@@ -23,6 +24,7 @@ import {
   privateProfile,
   managerExitCode,
   isAllowedBrowserRequest,
+  handleBrowserRoute,
 } from '../../scripts/instagram_testers/session-manager.mjs';
 
 const INITIAL_VERSION = '11111111-1111-4111-8111-111111111111';
@@ -107,6 +109,7 @@ const fields = new URLSearchParams({
   lsd: 'synthetic-lsd',
   jazoest: '1234',
   __req: '1',
+  __aaid: '67890',
 }).toString();
 
 class Request {
@@ -149,6 +152,7 @@ class Page extends EventEmitter {
     this.currentUrl = rolesUrl;
   }
   url() { return this.currentUrl; }
+  async evaluate() { return 200; }
   async goto() {
     if (mode === 'redirect') this.currentUrl = 'https://www.facebook.com/login/';
     if (mode === 'checkpoint-redirect') {
@@ -621,6 +625,7 @@ async function syntheticManager(t, options = {}) {
     lsd: 'synthetic-lsd',
     jazoest: '1234',
     __req: '1',
+    __aaid: '67890',
   }).toString();
   const request = {
     url: () => 'https://developers.facebook.com/api/graphql/',
@@ -642,6 +647,11 @@ async function syntheticManager(t, options = {}) {
   let navigations = 0;
   let routeHandler;
   page.url = () => options.redirect || config.rolesUrl;
+  page.isClosed = () => options.closedPrimary === true;
+  page.evaluate = async () => 200;
+  page.close = async () => {
+    options.closedPrimary = true;
+  };
   const navigated = [];
   page.goto = async url => {
     navigated.push(url);
@@ -858,6 +868,7 @@ async function syntheticManager(t, options = {}) {
     pendingInvalidation,
     cleanupWaiting,
     page,
+    route: (...args) => routeHandler(...args),
     navigated,
     navigations: () => navigations,
     closed: () => closed,
@@ -868,13 +879,19 @@ async function syntheticManager(t, options = {}) {
   };
 }
 
-test('polls browser operations at one second and executes a queued request once', async t => {
+test('polls browser operations at 250 ms and executes a queued request once', async t => {
   const executions = [];
+  let observedWarm;
   const data = await syntheticManager(t, {
     vps: true,
     browserOperations: true,
-    browserRequestReadyAt: 999,
-    executeOperation: async ({ request }) => {
+    browserRequestReadyAt: 249,
+    executeOperation: async ({ request, page, warmMetaPage }) => {
+      assert.equal(warmMetaPage.valid, true);
+      assert.equal(warmMetaPage.page, page);
+      assert.equal(warmMetaPage.source, 'manager_refresh');
+      assert.equal(warmMetaPage.rolesAaid, '67890');
+      observedWarm = warmMetaPage;
       executions.push(request);
       return {
         type: 'browser_operation',
@@ -891,7 +908,7 @@ test('polls browser operations at one second and executes a queued request once'
   const browserEntries = () =>
     data.entries.filter(entry => entry.payload.type === 'browser_operation');
   try {
-    await data.clock.advance(999);
+    await data.clock.advance(249);
     assert.equal(executions.length, 0);
     assert.equal(
       browserEntries().filter(entry => entry.payload.operation === 'claim')
@@ -911,11 +928,12 @@ test('polls browser operations at one second and executes a queued request once'
     );
     assert.deepEqual(
       reads.map(entry => entry.at),
-      [0, 1000]
+      [0, 250]
     );
     assert.equal(claims.length, 1);
     assert.equal(completions.length, 1);
     assert.equal(executions.length, 1);
+    assert.equal(observedWarm.disposed, false);
     assert.equal(
       data.entries.filter(entry => entry.payload.operation === 'bootstrap')
         .length,
@@ -928,6 +946,9 @@ test('polls browser operations at one second and executes a queued request once'
     );
     data.signals.emit('SIGTERM');
     assert.equal(await data.settled, null);
+    assert.equal(observedWarm.disposed, true);
+    assert.equal(observedWarm.valid, false);
+    assert.equal(observedWarm.formBody, null);
   } finally {
     data.signals.emit('SIGTERM');
   }
@@ -1492,3 +1513,235 @@ for (const [method, body, label] of [
     assert.deepEqual(data.stderr, []);
   });
 }
+
+for (const operation of ['continue', 'abort']) {
+  test(`persistent guard contains a rejected route.${operation} and still processes search then status`, async t => {
+    const executions = [];
+    const data = await syntheticManager(t, {
+      vps: true,
+      browserOperations: true,
+      executeOperation: async ({ request }) => {
+        executions.push(request.action);
+        return {
+          type: 'browser_operation',
+          operation: 'complete',
+          action: request.action,
+          id: request.id,
+          request_id: request.request_id,
+          claim: request.claim,
+          captured_at: '2026-10-08T12:00:00.000Z',
+          ...(request.action === 'search'
+            ? { results: [] }
+            : {
+                target_id: request.target_id,
+                status: 'accepted',
+              }),
+        };
+      },
+    });
+    const rejectedRoute = {
+      request: () => ({
+        url: () =>
+          operation === 'continue'
+            ? configuration(baseEnv).rolesUrl
+            : 'https://unapproved.invalid/',
+        method: () => 'GET',
+        postData: () => null,
+      }),
+      continue: async () => {
+        assert.equal(operation, 'continue');
+        throw new Error('route.continue: Route is already handled!');
+      },
+      abort: async () => {
+        throw new Error('route.abort: Route is already handled!');
+      },
+    };
+    await assert.doesNotReject(data.route(rejectedRoute));
+    await data.clock.advance(1000);
+    data.browserRequest.action = 'status';
+    data.browserRequest.target_id = '10004';
+    await data.clock.advance(250);
+    assert.deepEqual(executions, ['search', 'status']);
+    assert.equal(data.closed(), 0);
+    assert.ok(
+      data.stderr.includes('{"event":"instagram_browser_route_failed"}\n')
+    );
+    let blocked = false;
+    // Check an unapproved request separately from the handled route.
+    await data.route({
+      request: () => ({
+        url: () => 'https://unapproved.invalid/',
+        method: () => 'POST',
+        postData: () => '',
+      }),
+      continue: async () => {
+        assert.fail('unapproved request continued');
+      },
+      abort: async () => {
+        blocked = true;
+      },
+    });
+    assert.equal(blocked, true);
+  });
+}
+
+for (const count of [1, 1000]) {
+  test(`contains ${count} concurrent rejected browser routes without losing the next operation`, async t => {
+    let executions = 0;
+    const data = await syntheticManager(t, {
+      vps: true,
+      browserOperations: true,
+      executeOperation: async ({ request }) => {
+        executions += 1;
+        return {
+          type: 'browser_operation',
+          operation: 'complete',
+          action: request.action,
+          id: request.id,
+          request_id: request.request_id,
+          claim: request.claim,
+          captured_at: '2026-10-08T12:00:00.000Z',
+          results: [],
+        };
+      },
+    });
+    await Promise.all(
+      Array.from({ length: count }, (_, index) =>
+        data.route({
+          request: () => ({
+            url: () =>
+              index % 2
+                ? 'https://unapproved.invalid/'
+                : configuration(baseEnv).rolesUrl,
+            method: () => 'GET',
+            postData: () => null,
+          }),
+          continue: async () => {
+            throw new Error('route.continue: Route is already handled!');
+          },
+          abort: async () => {
+            throw new Error(
+              'route.abort: Target page, context or browser has been closed'
+            );
+          },
+        })
+      )
+    );
+    await data.clock.advance(1000);
+    assert.equal(executions, 1);
+    assert.equal(data.closed(), 0);
+    assert.equal(
+      data.stderr.filter(
+        value => value === '{"event":"instagram_browser_route_failed"}\n'
+      ).length,
+      count
+    );
+  });
+}
+
+test('route failure diagnostics cannot reject the browser callback', async () => {
+  await assert.doesNotReject(
+    handleBrowserRoute(
+      {
+        request: () => {
+          throw new Error('synthetic_request_closed');
+        },
+        abort: async () => {
+          throw new Error('synthetic_route_closed');
+        },
+      },
+      configuration(baseEnv),
+      {
+        write: () => {
+          throw new Error('synthetic_pipe_closed');
+        },
+      }
+    )
+  );
+});
+
+test('publishes the closed-page failure once, then releases the browser and profile before another read', async t => {
+  let data;
+  data = await syntheticManager(t, {
+    vps: true,
+    browserOperations: true,
+    executeOperation: async ({ request }) => {
+      await data.page.close();
+      return {
+        type: 'browser_operation',
+        operation: 'complete',
+        action: request.action,
+        id: request.id,
+        request_id: request.request_id,
+        claim: request.claim,
+        captured_at: '2026-10-08T12:00:00.000Z',
+        error_code: 'meta_unavailable',
+      };
+    },
+  });
+  await data.clock.advance(1000);
+  const error = await data.settled;
+  assert.equal(error?.message, 'browser_runtime_required');
+  const completions = data.entries.filter(
+    entry =>
+      entry.payload.type === 'browser_operation' &&
+      entry.payload.operation === 'complete'
+  );
+  assert.equal(completions.length, 1);
+  assert.equal(completions[0].payload.error_code, 'meta_unavailable');
+  const reads = data.entries.filter(
+    entry =>
+      entry.payload.type === 'browser_operation' &&
+      entry.payload.operation === 'read'
+  ).length;
+  await data.clock.advance(2000);
+  assert.equal(
+    data.entries.filter(
+      entry =>
+        entry.payload.type === 'browser_operation' &&
+        entry.payload.operation === 'read'
+    ).length,
+    reads
+  );
+  assert.equal(data.closed(), 1);
+  await assert.rejects(lstat(data.lockPath), { code: 'ENOENT' });
+});
+
+test('does not expose a warm page or claim work before the publication CAS resolves', async t => {
+  const warmStates = [];
+  const data = await syntheticManager(t, {
+    vps: true,
+    browserOperations: true,
+    pendingPublish: true,
+    browserRequestReadyAt: 0,
+    executeOperation: async ({ request, warmMetaPage }) => {
+      warmStates.push(warmMetaPage);
+      return {
+        type: 'browser_operation',
+        operation: 'complete',
+        action: request.action,
+        id: request.id,
+        request_id: request.request_id,
+        claim: request.claim,
+        captured_at: '2026-10-08T12:00:00.000Z',
+        results: [],
+      };
+    },
+  });
+  assert.equal(
+    data.entries.some(entry => entry.payload.operation === 'publish'),
+    true
+  );
+  assert.equal(
+    data.entries.some(entry => entry.payload.type === 'browser_operation'),
+    false
+  );
+  assert.equal(warmStates.length, 0);
+  data.pendingPublish.resolve(PUBLISHED_VERSION);
+  await drain();
+  assert.equal(warmStates.length, 1);
+  assert.equal(warmStates[0].valid, true);
+  data.signals.emit('SIGTERM');
+  assert.equal(await data.settled, null);
+  assert.equal(warmStates[0].formBody, null);
+});
