@@ -28,6 +28,11 @@ SSH_OPTIONS = ('-T', '-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=yes', '
 STACKS = ('hub2you', 'autonomia')
 ROLES = ('display', 'gateway', 'publisher', 'manager')
 NODE_ROLES = ('gateway', 'publisher', 'manager')
+# Every role carries the private-node bind drop-in (display included, see the host on 2026-10-09);
+# only NODE_ROLES actually run node, so only they get the /proc/<pid>/root node hash check.
+NODE_DROPIN_ROLES = ('display', *NODE_ROLES)
+# The tool never enables or disables units; it only requires one boot state shared by all eight.
+UNIT_FILE_STATES = ('enabled', 'disabled')
 UNITS = tuple(f'instagram-vps-{role}@{stack}.service' for stack in STACKS for role in ROLES)
 TEMPLATES = tuple(f'instagram-vps-{role}@.service' for role in ROLES)
 PORTS = {'hub2you': 18441, 'autonomia': 18442}
@@ -169,8 +174,6 @@ def cpu_override(stack):
 
 
 def expected_dropins(role, stack):
-    if role == 'display':
-        return set()
     if role == 'publisher':
         return {node_dropin(role), cpu_override(stack)}
     return {node_dropin(role)}
@@ -373,7 +376,7 @@ def snapshot_paths(new, prev):
 
 
 def hash_paths(new, prev):
-    paths = [NODE, *[node_dropin(r) for r in NODE_ROLES], *[cpu_override(s) for s in STACKS]]
+    paths = [NODE, *[node_dropin(r) for r in NODE_DROPIN_ROLES], *[cpu_override(s) for s in STACKS]]
     for base in ('/etc/systemd/system', f'{CURRENT}/{VPS_DIR}/systemd', f'{RELEASES}/{prev}/{VPS_DIR}/systemd',
                  f'{RELEASES}/{new}/{VPS_DIR}/systemd'):
         paths += [f'{base}/{t}' for t in TEMPLATES]
@@ -437,7 +440,7 @@ def snapshot_command(new, prev):
 
 
 def files_command():
-    files = ' '.join([*[node_dropin(r) for r in NODE_ROLES], *[cpu_override(s) for s in STACKS]])
+    files = ' '.join([*[node_dropin(r) for r in NODE_DROPIN_ROLES], *[cpu_override(s) for s in STACKS]])
     return (label('files') + f' for f in {files}; do echo "@@ file $f"; base64 -w0 "$f"; echo; done; '
             "echo '@@ end'")
 
@@ -806,20 +809,21 @@ class Tool:
         c.add('identity', s.identity == [HOSTNAME, '0'] and s.now is not None)
 
     def check_units(self, c, s):
+        states = set()
         for name in UNITS:
             role, stack = split_unit(name)
             unit = s.unit(name)
-            state = unit.get('UnitFileState', '')
+            states.add(unit.get('UnitFileState', ''))
             c.add(f'unit_loaded:{name}', unit.get('LoadState') == 'loaded' and unit.get(
                 'FragmentPath') == f'/etc/systemd/system/instagram-vps-{role}@.service')
-            c.add(f'unit_not_enabled:{name}', bool(state) and not state.startswith('enabled'))
             c.add(f'dropins_exact:{name}', set(unit.get('DropInPaths', '').split()) == expected_dropins(role, stack))
             if role == 'publisher':
                 c.add(f'publisher_quota:{stack}', unit.get('CPUQuotaPerSecUSec') == PUBLISHER_QUOTA)
+        c.add('unit_file_state_shared', len(states) == 1 and states <= set(UNIT_FILE_STATES))
 
     def check_files(self, c, s, templates, current=True, release=None):
         c.add('node_sha256', s.sha.get(NODE) == NODE_SHA256)
-        for role in NODE_ROLES:
+        for role in NODE_DROPIN_ROLES:
             c.add(f'node_dropin:{role}', s.sha.get(node_dropin(role)) == NODE_DROPIN_SHA256)
         for stack in STACKS:
             c.add(f'cpu_override:{stack}', s.sha.get(cpu_override(stack)) == CPU_OVERRIDE_SHA256)
@@ -989,7 +993,7 @@ class Tool:
         found = sections(output)
         files = {}
         checks = Checks()
-        expected = {**{node_dropin(r): NODE_DROPIN_SHA256 for r in NODE_ROLES},
+        expected = {**{node_dropin(r): NODE_DROPIN_SHA256 for r in NODE_DROPIN_ROLES},
                     **{cpu_override(st): CPU_OVERRIDE_SHA256 for st in STACKS}}
         for path, digest in expected.items():
             encoded = ''.join(found.get(f'file {path}', [])).strip()

@@ -75,6 +75,28 @@ observa 180 s de bootstrap. ETA ≈ 8 min.
 | 3 `vps_release_stage_failed` | só o stage ficou incompleto | ver "Limpeza" |
 | 4 | runtime ok, a sessão Meta pede uma pessoa | depois de um `install`, PREV estava saudável no backup e a decisão de rollback é sua: o `rollback:` impresso já leva `--stop-operator-waiter` (ver "Waiter do operador"). Em `verify` avulso ou depois de um rollback, o rollback não resolve |
 
+## Units habilitadas no boot e reboot no meio da janela
+
+As 8 units estão `enabled` desde 2026-10-07: o runtime volta sozinho depois de um boot da VPS. A
+ferramenta não habilita nem desabilita units; o `preflight` só exige que as 8 tenham o mesmo estado
+(`enabled` ou `disabled`), e o `install` confere o estado de cada uma contra o backup.
+
+Se a VPS reiniciar entre a parada e a subida do `install`, as units sobem sozinhas na release para a
+qual `current` aponta. Ela é sempre PREV ou NEW inteira, porque o instalador troca o link por
+`mv -T` atômico. Esse boot pula as checagens de fila, de janela humana, o `wait_bootstrap` de 180 s e
+os `pair_ready`/`publisher_ready` do `start_runtime`. O boot encerra as transientes do `systemd-run`
+e apaga o marker em `/run`, que é tmpfs. Ele não encerra pedidos Meta que já tinham sido recebidos,
+nem impede o manager religado de aceitar pedidos novos sem verificação. Depois do boot:
+
+1. Até o `verify` dar 0, o manager pode já estar aceitando pedidos. Antes do `verify`, confira
+   `ps -o pid=,args= -u ig-<stack>` e a fila no Rails (0 queued e 0 running). Depois rode
+   `python3 $T verify --sha <release de current> --backup <path>`. Se o backup sumiu de `/tmp`, use
+   `--units-active` explícito.
+2. `current` = NEW só prova que o link foi trocado, não que o runtime foi validado depois do boot. Só
+   considere a instalação concluída com `current` = NEW **e** `verify` 0; depois valide como de costume.
+3. Em qualquer outro caso, rode o `rollback:` do runbook. Não repita a operação Meta que estava em
+   andamento; reconcilie no Rails.
+
 ## Rollback
 
 ```sh

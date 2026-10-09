@@ -136,7 +136,7 @@ class FakeVPS:
             stack = name.split('@')[1].split('.')[0]
             self.units[name] = {
                 'Id': name, 'LoadState': 'loaded', 'ActiveState': 'inactive', 'SubState': 'dead',
-                'Result': 'success', 'MainPID': '0', 'NRestarts': '0', 'UnitFileState': 'disabled',
+                'Result': 'success', 'MainPID': '0', 'NRestarts': '0', 'UnitFileState': 'enabled',
                 'FragmentPath': f'/etc/systemd/system/instagram-vps-{role}@.service',
                 'DropInPaths': self.expected_dropins(role, stack),
                 'CPUQuotaPerSecUSec': '2s' if role == 'publisher' else '500ms',
@@ -147,8 +147,6 @@ class FakeVPS:
 
     @staticmethod
     def expected_dropins(role, stack):
-        if role == 'display':
-            return ''
         node = f'/etc/systemd/system/instagram-vps-{role}@.service.d/20-private-node.conf'
         if role == 'publisher':
             return f'{node} /etc/systemd/system/instagram-vps-publisher@{stack}.service.d/30-cpu-quota.conf'
@@ -198,7 +196,7 @@ class FakeVPS:
             self.put(f'/var/lib/instagram-{stack}/.Xauthority', 'regular file', f'ig-{stack}', f'ig-{stack}', '600', '50')
             self.counts[f'flag_{stack}'] = '0'
             self.counts[f'url_{stack}'] = '1'
-        for role in ('gateway', 'publisher', 'manager'):
+        for role in tool.NODE_DROPIN_ROLES:
             self.put(f'/etc/systemd/system/instagram-vps-{role}@.service.d')
             self.put(tool.node_dropin(role), 'regular file', mode='644', size='100')
             self.hashes[tool.node_dropin(role)] = tool.NODE_DROPIN_SHA256
@@ -330,7 +328,7 @@ class FakeVPS:
 
     def op_files(self, args, stdin):
         out = []
-        for role in ('gateway', 'publisher', 'manager'):
+        for role in tool.NODE_DROPIN_ROLES:
             out += [f'@@ file {tool.node_dropin(role)}', base64.b64encode(DROPIN_BYTES).decode()]
         for stack in STACKS:
             out += [f'@@ file {tool.cpu_override(stack)}', base64.b64encode(CPU_BYTES).decode()]
@@ -566,7 +564,7 @@ class Harness(unittest.TestCase):
             patcher = mock.patch.object(tool, name, value)
             patcher.start()
             self.addCleanup(patcher.stop)
-        self.vps.hashes.update({tool.node_dropin(r): sha(DROPIN_BYTES) for r in ('gateway', 'publisher', 'manager')})
+        self.vps.hashes.update({tool.node_dropin(r): sha(DROPIN_BYTES) for r in tool.NODE_DROPIN_ROLES})
         self.vps.hashes.update({tool.cpu_override(s): sha(CPU_BYTES) for s in STACKS})
 
     def run_tool(self, *argv, runner=None):
@@ -773,7 +771,9 @@ class PreflightTests(Harness):
             'hostname': lambda v: setattr(v, 'hostname', 'other'),
             'uid': lambda v: setattr(v, 'uid', '1000'),
             'current': lambda v: setattr(v, 'current', '/opt/instagram-meta/releases/' + 'f' * 40),
-            'enabled': unit('instagram-vps-gateway@hub2you.service', UnitFileState='enabled'),
+            'mixed_enablement': unit('instagram-vps-gateway@hub2you.service', UnitFileState='disabled'),
+            'unknown_enablement': unit('instagram-vps-gateway@hub2you.service', UnitFileState='masked'),
+            'display_dropin_missing': unit('instagram-vps-display@hub2you.service', DropInPaths=''),
             'not_found': unit('instagram-vps-display@autonomia.service', LoadState='not-found'),
             'override_missing': unit('instagram-vps-publisher@hub2you.service',
                                      DropInPaths=tool.node_dropin('publisher')),
@@ -813,7 +813,7 @@ class PreflightTests(Harness):
             with self.subTest(name=name):
                 self.vps = FakeVPS(self.prev, self.new, self.templates)
                 self.vps.hashes.update({tool.node_dropin(r): sha(DROPIN_BYTES)
-                                        for r in ('gateway', 'publisher', 'manager')})
+                                        for r in tool.NODE_DROPIN_ROLES})
                 self.vps.hashes.update({tool.cpu_override(s): sha(CPU_BYTES) for s in STACKS})
                 change(self.vps)
                 code, out, _ = self.run_tool('preflight', '--sha', self.new, '--from', self.prev)
@@ -906,7 +906,7 @@ class StageTests(Harness):
             with self.subTest(name=name):
                 self.vps = FakeVPS(self.prev, self.new, self.templates)
                 self.vps.hashes.update({tool.node_dropin(r): sha(DROPIN_BYTES)
-                                        for r in ('gateway', 'publisher', 'manager')})
+                                        for r in tool.NODE_DROPIN_ROLES})
                 self.vps.hashes.update({tool.cpu_override(s): sha(CPU_BYTES) for s in STACKS})
                 change(self.vps)
                 code, out, _ = self.run_tool('stage', '--sha', self.new, '--from', self.prev)
@@ -1047,7 +1047,7 @@ class InstallTests(Harness):
             with self.subTest(name=name):
                 self.vps = FakeVPS(self.prev, self.new, self.templates)
                 self.vps.hashes.update({tool.node_dropin(r): sha(DROPIN_BYTES)
-                                        for r in ('gateway', 'publisher', 'manager')})
+                                        for r in tool.NODE_DROPIN_ROLES})
                 self.vps.hashes.update({tool.cpu_override(s): sha(CPU_BYTES) for s in STACKS})
                 backup = self.backup()
                 self.stage()
@@ -1124,7 +1124,7 @@ class VerifyTests(Harness):
             'quota': lambda v: v.units['instagram-vps-publisher@hub2you.service'].update(CPUQuotaPerSecUSec='500ms'),
             'override': lambda v: v.hashes.__setitem__(tool.cpu_override('autonomia'), '0' * 64),
             'node': lambda v: v.node_override.__setitem__('instagram-vps-publisher@autonomia.service', '0' * 64),
-            'enabled': lambda v: v.units['instagram-vps-manager@hub2you.service'].update(UnitFileState='enabled'),
+            'mixed_enablement': lambda v: v.units['instagram-vps-manager@hub2you.service'].update(UnitFileState='disabled'),
             'token': lambda v: v.journal['hub2you'].append((v.now, 'instagram_session_session_update_rejected')),
             'release': lambda v: v.running.__setitem__('instagram-vps-gateway@autonomia.service', 'f' * 40),
             'listener': lambda v: v.http.__setitem__('hub2you', ('200', '0')),
@@ -1384,7 +1384,7 @@ class LeakTests(Harness):
             with self.subTest(name=name):
                 self.vps = FakeVPS(self.prev, self.new, self.templates)
                 self.vps.hashes.update({tool.node_dropin(r): sha(DROPIN_BYTES)
-                                        for r in ('gateway', 'publisher', 'manager')})
+                                        for r in tool.NODE_DROPIN_ROLES})
                 self.vps.hashes.update({tool.cpu_override(s): sha(CPU_BYTES) for s in STACKS})
                 if name in ('backup', 'stage_verify', 'journal', 'units', 'links', 'runtime'):
                     backup = self.backup()
