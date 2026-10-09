@@ -52,6 +52,31 @@ o estado ficam em [`liberacoes-por-conta.md`](liberacoes-por-conta.md).
    apaga os snapshots do MacCluster da entrega pelo caminho exato, nos dois nós. Alteração solta que ninguém
    assume vai para `resgate/<data>-<nome>` (commit + push, sem PR) antes de remover.
 
+### Hotfix (via expressa, #1176)
+
+Para acerto pequeno e urgente. Pelo caminho normal leva ~32–40 min até o cliente: CI do PR ~11 min, CI da fila
+~11 min e deploy ~9 min até a troca de tráfego (medianas das execuções de 08 e 09/10/2026 em `gh run list` e nos
+passos do job "Deploy Green"). A via expressa pula a segunda bateria. É o caso de emergência em que o `--admin` da
+seção "Fila de merge" vale.
+
+1. **Regressão do último deploy? Primeiro o rollback**, com OK do Rodrigo: `workflow_dispatch` com
+   `action=rollback` nos dois deploys só troca o tráfego de volta para a instância anterior. O hotfix vem depois.
+2. **Critérios, todos obrigatórios** (a conta do GitHub é compartilhada e tem bypass: quem confere é a
+   Orquestração, não o GitHub):
+   - diff pequeno, até ~50 linhas;
+   - sem migration e sem dependência nova;
+   - rótulo `hotfix`;
+   - fila de merge vazia e lote anterior com todos os "ok, SHA";
+   - CI do PR verde e a `main` sem nenhum merge depois que essa CI rodou (se mudou, fechar e reabrir o PR);
+   - vez dada pela Orquestração e OK do Rodrigo.
+3. **Merge:** `gh pr merge <N> --admin --merge --match-head-commit <sha>`. O bypass de admin do ruleset entra
+   direto na `main`, sem a rodada da fila, e o deploy dispara pelo push como sempre. Não roda CI depois do merge: o
+   que valeu foi a CI do PR. Se o comando puser o PR na fila em vez de mergear, deixar seguir pela fila.
+4. **Depois:** "ok, SHA" como em qualquer deploy. Hotfix sobe sozinho, nunca junto com lote.
+
+Por que é seguro pular a fila: ela testa a combinação com os outros PRs do lote. Com a fila vazia e a `main` parada
+desde a CI do PR, a combinação é exatamente a que essa CI testou. Fora desses critérios, usa o caminho normal.
+
 ### Deploy manual
 
 `workflow_dispatch` dos deploys só com a vez da Orquestração. Exceção: rollback de emergência, avisando na hora.
