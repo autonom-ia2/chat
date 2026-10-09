@@ -14,6 +14,8 @@ import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import { useAlert } from 'dashboard/composables';
 import crmMeetingsAPI from 'dashboard/api/crmMeetings';
 import { resolveMeetingLocation } from '../../helpers/meetingLocation';
+import { hasClientReply } from '../../helpers/meetingNotices';
+import CrmMeetingClientReply from './CrmMeetingClientReply.vue';
 
 const props = defineProps({
   show: { type: Boolean, default: false },
@@ -512,6 +514,11 @@ onBeforeUnmount(() => {
             {{ statusLabel }}
           </p>
         </div>
+
+        <CrmMeetingClientReply
+          v-if="hasClientReply(meeting)"
+          :meeting="meeting"
+        />
 
         <button
           v-if="location.joinUrl"

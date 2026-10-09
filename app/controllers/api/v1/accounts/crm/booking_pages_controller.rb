@@ -51,7 +51,7 @@ class Api::V1::Accounts::Crm::BookingPagesController < Api::V1::Accounts::Crm::B
   # "Testar no meu WhatsApp" (#1192, J3-A11): manda ao número informado, pela caixa de avisos, um link igual ao do
   # cliente. O convite de teste fica marcado (`metadata.test`) e fora dos números.
   def test_invite
-    ::Crm::BookingV2::TestInvite.new(page: @page, user: Current.user, phone: params[:phone]).perform
+    ::Crm::BookingV2::TestInvite.new(page: @page, user_context: pundit_user, phone: params[:phone]).perform
     render json: { sent: true }
   rescue ::Crm::BookingV2::TestInvite::Refused => e
     render json: { error: e.message, reason: e.reason }.compact, status: :unprocessable_entity
@@ -198,10 +198,11 @@ class Api::V1::Accounts::Crm::BookingPagesController < Api::V1::Accounts::Crm::B
 
     raw = body[:calendar_inbox_id]
     return { inbox_id: nil } if raw.blank?
+    # A tela manda a caixa em todo PATCH: só confere o escopo quando muda (quem não enxerga a caixa salva os outros
+    # passos sem trocar a caixa que já estava lá).
+    return {} if raw.to_s == @page.inbox_id.to_s
 
-    inbox = calendar_inboxes.find { |item| item.id == raw.to_i }
-    raise InvalidInbox, 'crm.booking_v2.calendar_inbox_invalid' if inbox.blank?
-
+    inbox = calendar_inboxes.find { |item| item.id == raw.to_i } || (raise InvalidInbox, 'crm.booking_v2.calendar_inbox_invalid')
     { inbox_id: inbox.id }
   end
 
@@ -214,6 +215,7 @@ class Api::V1::Accounts::Crm::BookingPagesController < Api::V1::Accounts::Crm::B
     body = params[:booking_page]
     return {} unless body.respond_to?(:key?) && body.key?(:notice_inbox_id)
     return { notice_inbox_id: nil } if body[:notice_inbox_id].blank?
+    return {} if body[:notice_inbox_id].to_s == @page.notice_inbox_id.to_s
 
     inbox = notice_inboxes.find(body[:notice_inbox_id]) || (raise InvalidInbox, 'crm.booking_v2.notice_inbox_invalid')
     { notice_inbox_id: inbox.id }

@@ -999,6 +999,51 @@
           "UPDATE_FAILED": "Não foi possível atualizar a reunião",
           "CANCEL_FAILED": "Não foi possível cancelar a reunião",
           "OUTCOME_FAILED": "Não foi possível registrar o resultado da reunião"
+        },
+        "CLIENT": {
+          "TITLE": "Resposta do cliente",
+          "CONFIRMED": "Confirmou",
+          "CHANGE_REQUESTED": "Pediu para mudar",
+          "PENDING": "Ainda não respondeu",
+          "STOPPED": "Pediu para não receber avisos"
+        },
+        "NOTICES": {
+          "TITLE": "Avisos no WhatsApp",
+          "KINDS": {
+            "BOOKED": "Ao marcar",
+            "RESCHEDULED": "Horário mudou",
+            "DAY_BEFORE": "1 dia antes",
+            "HOUR_BEFORE": "1 hora antes"
+          },
+          "STATUS": {
+            "PENDING": "Vai sair",
+            "SENDING": "Saindo agora",
+            "SENT": "Enviado",
+            "SKIPPED": "Não saiu",
+            "FAILED": "Falhou"
+          },
+          "SKIP_REASONS": {
+            "DISABLED": "os avisos estão desligados nesta conta",
+            "CANCELED": "o horário foi cancelado",
+            "PAST_DUE": "a hora do aviso já tinha passado",
+            "STALE": "o horário mudou depois que o aviso foi marcado",
+            "TOO_CLOSE": "ficaria perto demais de outro aviso",
+            "REPLACED": "saiu o aviso do horário novo no lugar",
+            "OPTED_OUT": "o cliente não aceita mensagens",
+            "STOPPED": "o cliente pediu para parar",
+            "NO_INBOX": "a página está sem WhatsApp de avisos",
+            "NO_INVITE": "o horário não veio de um link",
+            "NO_CONTACT": "o horário está sem contato",
+            "NO_PHONE": "o cliente não tem WhatsApp cadastrado",
+            "UNSUPPORTED_INBOX": "este WhatsApp não manda avisos",
+            "TEMPLATE_REQUIRED": "falta mensagem aprovada e o cliente não falou com você nas últimas 24 horas",
+            "TEMPLATE_WITHOUT_LINK": "a mensagem aprovada não tem o link do horário",
+            "WAHA_OUTSIDE_WINDOW": "o cliente não falou com você nas últimas 24 horas",
+            "NUMBER_CAP": "este número já recebeu muitas mensagens hoje",
+            "ACCOUNT_CAP": "a conta chegou ao limite de avisos do dia",
+            "OTHER": "outro motivo"
+          },
+          "FAILED_HINT": "Fale com o cliente para confirmar o horário."
         }
       },
       "MEETING_STATES": {
@@ -1346,7 +1391,15 @@
         "TIMELINE_TOUCH_REMINDER": "Toque {n}: a IA gerou um lembrete para a equipe"
       },
       "LEAD_FORM_TITLE": "Dados do formulário",
-      "LEAD_FORM_CAPTURED": "Preenchido {time}"
+      "LEAD_FORM_CAPTURED": "Preenchido {time}",
+      "CLIENT_ACTOR": "Cliente",
+      "ACTIVITY_BOOKING_CLIENT_CONFIRMED": "Cliente confirmou o horário",
+      "ACTIVITY_BOOKING_CLIENT_CANCELED": "Cliente cancelou o horário",
+      "ACTIVITY_BOOKING_CLIENT_RESCHEDULED": "Cliente mudou o horário",
+      "ACTIVITY_BOOKING_NOTICE_FAILED": "Aviso no WhatsApp não saiu",
+      "ACTIVITY_BOOKING_NOTICES_STOPPED": "Cliente pediu para não receber avisos",
+      "ACTIVITY_DETAIL_BOOKING_TIME": "Horário: {time}",
+      "ACTIVITY_DETAIL_BOOKING_MOVED": "De {from} para {to}"
     },
     "COPILOT": {
       "TITLE": "Copiloto",

@@ -162,3 +162,101 @@ describe('CrmMeetingDetail: local da reunião', () => {
     wrapper.unmount();
   });
 });
+
+describe('CrmMeetingDetail: resposta do cliente e avisos (#1192)', () => {
+  const BASE = 'CRM_KANBAN.CALENDAR.MEETING_DETAIL';
+
+  beforeEach(() => vi.clearAllMocks());
+
+  it('reunião comum, sem avisos nem resposta, não ganha o selo', async () => {
+    const wrapper = await mountDetail(
+      meeting({ confirmation_status: 'pending', notices: [] })
+    );
+    expect(wrapper.find('[data-test="meeting-client-reply"]').exists()).toBe(
+      false
+    );
+    wrapper.unmount();
+  });
+
+  it.each([
+    ['confirmed', 'CONFIRMED'],
+    ['change_requested', 'CHANGE_REQUESTED'],
+  ])('cliente %s aparece com selo discreto', async (status, key) => {
+    const wrapper = await mountDetail(
+      meeting({ confirmation_status: status, notices: [] })
+    );
+    const badge = wrapper.find('[data-test="meeting-confirmation"]');
+    expect(badge.attributes('data-status')).toBe(status);
+    expect(badge.text()).toBe(`${BASE}.CLIENT.${key}`);
+    wrapper.unmount();
+  });
+
+  it('lista os avisos com motivo leigo e diz quem parou de receber', async () => {
+    const wrapper = await mountDetail(
+      meeting({
+        confirmation_status: 'pending',
+        notices_stopped: true,
+        notices: [
+          {
+            kind: 'booked',
+            due_at: '2026-10-14T10:00:00Z',
+            status: 'sent',
+            skip_reason: null,
+          },
+          {
+            kind: 'day_before',
+            due_at: '2026-10-14T14:00:00Z',
+            status: 'skipped',
+            skip_reason: 'waha_outside_window',
+          },
+          {
+            kind: 'hour_before',
+            due_at: '2026-10-15T13:00:00Z',
+            status: 'failed',
+            skip_reason: null,
+          },
+        ],
+      })
+    );
+    expect(wrapper.find('[data-test="meeting-confirmation"]').text()).toBe(
+      `${BASE}.CLIENT.PENDING`
+    );
+    expect(wrapper.find('[data-test="meeting-notices-stopped"]').text()).toBe(
+      `${BASE}.CLIENT.STOPPED`
+    );
+    const items = wrapper.findAll('[data-notice]');
+    expect(items.map(item => item.attributes('data-notice'))).toEqual([
+      'booked',
+      'day_before',
+      'hour_before',
+    ]);
+    expect(items[0].text()).toContain(`${BASE}.NOTICES.STATUS.SENT`);
+    expect(items[1].text()).toContain(
+      `${BASE}.NOTICES.SKIP_REASONS.WAHA_OUTSIDE_WINDOW`
+    );
+    expect(items[2].text()).toContain(`${BASE}.NOTICES.STATUS.FAILED`);
+    expect(wrapper.find('[data-test="meeting-notice-failed"]').exists()).toBe(
+      true
+    );
+    wrapper.unmount();
+  });
+
+  it('motivo desconhecido cai em "outro motivo"', async () => {
+    const wrapper = await mountDetail(
+      meeting({
+        notices: [
+          {
+            kind: 'booked',
+            due_at: '2026-10-14T10:00:00Z',
+            status: 'skipped',
+            skip_reason: 'novo_motivo',
+          },
+        ],
+      })
+    );
+    expect(wrapper.find('[data-notice="booked"]').text()).toContain(
+      `${BASE}.NOTICES.SKIP_REASONS.OTHER`
+    );
+    wrapper.unmount();
+  });
+});

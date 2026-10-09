@@ -3,7 +3,8 @@
 #
 # Caixa de avisos aceita: WhatsApp oficial (Cloud ou 360dialog) e canal API de WhatsApp (WAHA ou API de campanhas).
 # Modelos: `{ "<aviso>": { "name": "...", "language": "pt_BR" } }` para o WhatsApp oficial e `{ "<aviso>": { "id": 5 } }`
-# (modelo do canal API) para o canal API.
+# (modelo do canal API) para o canal API. Modelo da Meta que já está na lista sincronizada da caixa precisa levar o
+# `{{3}}` (link de gestão, onde fica o "Parar avisos", J2-A9/RA-18); o envio confere de novo (`template_without_link`).
 module Crm::BookingNoticeSettings
   extend ActiveSupport::Concern
 
@@ -25,6 +26,7 @@ module Crm::BookingNoticeSettings
                                                      less_than_or_equal_to: MAX_CANCEL_UNTIL_MINUTES }
     validate :notice_inbox_must_be_usable
     validate :notice_templates_must_be_sane
+    validate :notice_templates_must_carry_link
   end
 
   class_methods do
@@ -85,6 +87,25 @@ module Crm::BookingNoticeSettings
     return errors.add(:notice_templates, 'unknown notice') unless (templates.keys - Crm::MeetingNotice::KINDS).empty?
 
     errors.add(:notice_templates, 'invalid template') unless templates.values.all? { |value| valid_notice_template?(value) }
+  end
+
+  # Só confere o que mudou (o modelo pode mudar na Meta depois; o envio confere de novo) e só modelo já sincronizado.
+  def notice_templates_must_carry_link
+    return unless notice_templates.is_a?(Hash) && notice_inbox&.channel.is_a?(Channel::Whatsapp)
+    return unless notice_templates_or_inbox_changing?
+
+    missing = notice_templates.keys.select { |kind| synced_template_without_link?(notice_templates[kind]) }
+    errors.add(:notice_templates, "must include {{3}} (manage link): #{missing.join(', ')}") if missing.any?
+  end
+
+  def notice_templates_or_inbox_changing?
+    will_save_change_to_notice_templates? || will_save_change_to_notice_inbox_id?
+  end
+
+  def synced_template_without_link?(configured)
+    route = Crm::BookingV2::Notices::Route
+    synced = configured.is_a?(Hash) && route.synced_template(notice_inbox, configured)
+    synced.present? && route.native_body(synced).exclude?(route::LINK_PLACEHOLDER)
   end
 
   def valid_notice_template?(value)

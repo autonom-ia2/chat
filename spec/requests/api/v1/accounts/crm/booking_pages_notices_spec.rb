@@ -98,6 +98,42 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingPages notices', type: :request do
       expect(page.reload).to have_attributes(notice_preset: 'standard', cancel_until_minutes: 120, notice_templates: {})
     end
 
+    it 'recusa modelo da Meta já sincronizado sem {{3}} (sem link de gestão nem de parar) e aceita o que tem (RA-18)' do
+      cloud.channel.update!(message_templates: [
+                              { 'name' => 'sem_link', 'language' => 'pt_BR', 'status' => 'APPROVED',
+                                'components' => [{ 'type' => 'BODY', 'text' => 'Oi {{1}}, até {{2}}.' }] },
+                              { 'name' => 'com_link', 'language' => 'pt_BR', 'status' => 'APPROVED',
+                                'components' => [{ 'type' => 'BODY', 'text' => 'Oi {{1}}, até {{2}}. Veja: {{3}}' }] }
+                            ])
+
+      call(admin, :patch, member, booking_page: { notice_inbox_id: cloud.id, notice_templates: { booked: { name: 'sem_link', language: 'pt_BR' } } })
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['errors']['notice_templates']).to eq(['must include {{3}} (manage link): booked'])
+      expect(page.reload).to have_attributes(notice_inbox_id: nil, notice_templates: {})
+
+      call(admin, :patch, member, booking_page: { notice_inbox_id: cloud.id, notice_templates: { booked: { name: 'com_link', language: 'pt_BR' } } })
+
+      expect(response).to have_http_status(:ok)
+      expect(page.reload.notice_templates).to eq('booked' => { 'name' => 'com_link', 'language' => 'pt_BR' })
+    end
+
+    it 'quem não enxerga a caixa de avisos já gravada salva os outros passos reenviando a mesma caixa, mas não troca a caixa' do
+      page.update!(notice_inbox: cloud)
+      manager = role_user('agendamento_manage')
+
+      call(manager, :patch, member, booking_page: { notice_inbox_id: cloud.id, notice_preset: 'light' })
+
+      expect(response).to have_http_status(:ok)
+      expect(page.reload).to have_attributes(notice_inbox_id: cloud.id, notice_preset: 'light')
+
+      call(manager, :patch, member, booking_page: { notice_inbox_id: dialog.id })
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq('crm.booking_v2.notice_inbox_invalid')
+      expect(page.reload.notice_inbox_id).to eq(cloud.id)
+    end
+
     it 'tira a caixa de avisos com nulo' do
       page.update!(notice_inbox: cloud)
 
@@ -138,8 +174,8 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingPages notices', type: :request do
       expect(response).to have_http_status(:ok)
     end
 
-    it 'recusa com o motivo do canal quando não pode mandar, sem criar convite' do
-      call(admin, :post, path, phone: '+5511955554444')
+    it 'recusa com o motivo do canal quando não pode mandar, sem criar convite nem contato' do
+      expect { call(admin, :post, path, phone: '+5511955554444') }.not_to change(Contact, :count)
 
       expect(response).to have_http_status(:unprocessable_entity)
       expect(response.parsed_body).to eq('error' => 'cannot_send', 'reason' => 'waha_outside_window')
@@ -159,14 +195,65 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingPages notices', type: :request do
       expect(response.parsed_body).to eq('error' => 'notice_inbox_missing')
     end
 
-    it 'só quem gerencia a página pode testar' do
+    it 'número que recusou mensagens ou parou os avisos não recebe o teste (RA-18)' do
+      conversation = open_window_for('+5511955554444')
+      contact = conversation.contact
+
+      Crm::BookingNoticeStop.create!(account: account, contact: contact)
+      call(admin, :post, path, phone: '+5511955554444')
+      expect(response.parsed_body).to eq('error' => 'cannot_send', 'reason' => 'stopped')
+
+      Crm::BookingNoticeStop.delete_all
+      contact.update!(opted_out_at: Time.current, opt_out_source: 'manual')
+      call(admin, :post, path, phone: '+5511955554444')
+      expect(response.parsed_body).to eq('error' => 'cannot_send', 'reason' => 'stopped')
+
+      expect(Crm::BookingInvite.count).to eq(0)
+      expect(conversation.messages.outgoing).to be_empty
+    end
+
+    it 'quem gerencia precisa enxergar a caixa de avisos: sem ser membro, recusa sem gravar nada' do
       open_window_for('+5511955554444')
+      outsider = role_user('agendamento_manage', 'conversation_manage')
+
+      expect { call(outsider, :post, path, phone: '+5511955554444') }.not_to change(Contact, :count)
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body).to eq('error' => 'notice_inbox_forbidden')
+      expect(Crm::BookingInvite.count).to eq(0)
+      expect(Message.outgoing.count).to eq(0)
+    end
+
+    it 'conversa que já existe: só manda quem pode responder nela (mesmo critério do envio pelo painel)' do
+      conversation = open_window_for('+5511955554444')
+      participating = role_user('agendamento_manage', 'conversation_participating_manage')
+      create(:inbox_member, user: participating, inbox: waha)
+
+      call(participating, :post, path, phone: '+5511955554444')
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body).to eq('error' => 'notice_inbox_forbidden', 'reason' => 'conversation_forbidden')
+      expect(conversation.messages.outgoing).to be_empty
+      expect(Crm::BookingInvite.count).to eq(0)
+
+      conversation.update!(assignee: participating)
+      call(participating, :post, path, phone: '+5511955554444')
+
+      expect(response).to have_http_status(:ok)
+      expect(conversation.messages.outgoing.count).to eq(1)
+    end
+
+    it 'só quem gerencia a página, enxerga a caixa e pode responder na conversa pode testar' do
+      open_window_for('+5511955554444')
+      member_manager = role_user('agendamento_manage', 'conversation_manage')
+      create(:inbox_member, user: member_manager, inbox: waha)
       {
-        admin => true, role_user('agendamento_manage') => true, role_user('agendamento_view') => false,
-        create(:user, account: account, role: :agent) => false, role_user('crm_view', 'crm_admin') => false
-      }.each do |user, allowed|
+        admin => 200, member_manager => 200, role_user('agendamento_manage', 'conversation_manage') => 422,
+        role_user('agendamento_view') => 401, create(:user, account: account, role: :agent) => 401, role_user('crm_view', 'crm_admin') => 401
+      }.each do |user, status|
+        Crm::BookingInvite.delete_all
         call(user, :post, path, phone: '+5511955554444')
-        expect(response.status).to eq(allowed ? 200 : 401), "#{user.id}: #{response.status}"
+        expect(response.status).to eq(status), "#{user.id}: #{response.status} #{response.body}"
       end
     end
   end

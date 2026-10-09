@@ -3,7 +3,7 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { STEPS } from '../constants';
 
-// Onde a pessoa está nos seis passos. Passo feito ganha o visto (e "concluído"
+// Onde a pessoa está nos passos do assistente. Passo feito ganha o visto (e "concluído"
 // para o leitor de tela); o atual leva aria-current="step".
 const props = defineProps({
   current: { type: Number, required: true },

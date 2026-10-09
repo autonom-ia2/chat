@@ -40,6 +40,7 @@ import CrmCardPill from './CrmCardPill.vue';
 import CrmCardMetaConversion from './CrmCardMetaConversion.vue';
 import BookingInviteButton from 'dashboard/components-next/Booking/BookingInviteButton.vue';
 import CrmOriginList from './CrmOriginList.vue';
+import { formatBookingTime } from '../helpers/meetingNotices';
 import CrmCardLeadForm from './CrmCardLeadForm.vue';
 
 const props = defineProps({
@@ -1121,6 +1122,32 @@ const ACTIVITY_META = {
     icon: 'i-lucide-user-check',
     tone: 'info',
   },
+  // Agendamento (#1192): o que o cliente fez pelo link e aviso no WhatsApp que não saiu.
+  booking_client_confirmed: {
+    key: 'ACTIVITY_BOOKING_CLIENT_CONFIRMED',
+    icon: 'i-lucide-circle-check',
+    tone: 'positive',
+  },
+  booking_client_canceled: {
+    key: 'ACTIVITY_BOOKING_CLIENT_CANCELED',
+    icon: 'i-lucide-calendar-x',
+    tone: 'negative',
+  },
+  booking_client_rescheduled: {
+    key: 'ACTIVITY_BOOKING_CLIENT_RESCHEDULED',
+    icon: 'i-lucide-calendar-clock',
+    tone: 'info',
+  },
+  booking_notice_failed: {
+    key: 'ACTIVITY_BOOKING_NOTICE_FAILED',
+    icon: 'i-lucide-message-circle-warning',
+    tone: 'negative',
+  },
+  booking_notices_stopped: {
+    key: 'ACTIVITY_BOOKING_NOTICES_STOPPED',
+    icon: 'i-lucide-bell-off',
+    tone: 'muted',
+  },
   automation_owner_assigned: {
     key: 'ACTIVITY_AUTOMATION_OWNER_ASSIGNED',
     icon: 'i-lucide-user-check',
@@ -1230,9 +1257,21 @@ const ACTIVITY_TONE_CLASSES = {
   muted: 'bg-n-slate-4 text-n-slate-10',
 };
 
+// Agendamento (#1192): o que o cliente fez pelo link. "Aviso não saiu" também
+// leva by: 'client' no payload, mas quem registrou foi o sistema.
+const CLIENT_BOOKING_EVENTS = [
+  'booking_client_confirmed',
+  'booking_client_canceled',
+  'booking_client_rescheduled',
+  'booking_notices_stopped',
+];
+
 // AI work runs as a system actor (actor_type === 'system'). ai_dismissed is a
 // human action (actor_type === 'user'), so it is NOT keyed on the 'ai_' prefix.
 const activityActor = activity => {
+  if (CLIENT_BOOKING_EVENTS.includes(activity.event_type)) {
+    return t('CRM_KANBAN.DRAWER.CLIENT_ACTOR');
+  }
   if (activity.actor_type === 'system') {
     return activity.event_type?.startsWith('ai_')
       ? t('CRM_KANBAN.DRAWER.AI_ACTOR')
@@ -1375,6 +1414,27 @@ const activityDetail = activity => {
       return t('CRM_KANBAN.DRAWER.ACTIVITY_DETAIL_FOLLOW_UP_RESCHEDULED', {
         time: relativeTimeFromISO(dueAt, locale.value),
       });
+    }
+    case 'booking_client_rescheduled': {
+      const from = formatBookingTime(activity.payload?.from, locale.value);
+      const to = formatBookingTime(activity.payload?.starts_at, locale.value);
+      if (from && to)
+        return t('CRM_KANBAN.DRAWER.ACTIVITY_DETAIL_BOOKING_MOVED', {
+          from,
+          to,
+        });
+      return to
+        ? t('CRM_KANBAN.DRAWER.ACTIVITY_DETAIL_BOOKING_TIME', { time: to })
+        : '';
+    }
+    case 'booking_client_confirmed':
+    case 'booking_client_canceled':
+    case 'booking_notice_failed':
+    case 'booking_notices_stopped': {
+      const time = formatBookingTime(activity.payload?.starts_at, locale.value);
+      return time
+        ? t('CRM_KANBAN.DRAWER.ACTIVITY_DETAIL_BOOKING_TIME', { time })
+        : '';
     }
     case 'meeting_scheduled':
     case 'meeting_rescheduled':

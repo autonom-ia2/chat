@@ -47,8 +47,7 @@ class Crm::BookingV2::Notices::Delivery
   end
 
   def native_body
-    component = Array(decision.template['components']).find { |item| item['type'].to_s.casecmp?('body') }
-    component.to_h['text'].to_s
+    Crm::BookingV2::Notices::Route.native_body(decision.template)
   end
 
   def used_positions

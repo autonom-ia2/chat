@@ -7,11 +7,12 @@ import StepAbout from './steps/StepAbout.vue';
 import StepWhere from './steps/StepWhere.vue';
 import StepWhen from './steps/StepWhen.vue';
 import StepLook from './steps/StepLook.vue';
+import StepNotices from './steps/StepNotices.vue';
 import StepPreview from './steps/StepPreview.vue';
 import { STEP } from '../constants';
 import { useBookingWizard } from '../composables/useBookingWizard';
 
-// Os seis passos da J3 (estado e chamadas em useBookingWizard). Só abre para
+// Os passos da J3 (estado e chamadas em useBookingWizard). Só abre para
 // quem pode mudar (agendamento_manage); quem só vê usa BookingPageView.
 const props = defineProps({
   pageId: { type: Number, default: null },
@@ -80,7 +81,7 @@ const primary = computed(() => {
       : { key: 'PUBLISH', action: publish };
   }
   return {
-    key: step.value === STEP.CARA ? 'SEE_PREVIEW' : 'CONTINUE',
+    key: step.value === STEP.AVISOS ? 'SEE_PREVIEW' : 'CONTINUE',
     action: continueStep,
   };
 });
@@ -158,6 +159,12 @@ const blockedByMissing = computed(
             :upload-error="uploadError"
             @change="change"
             @upload="upload"
+          />
+          <StepNotices
+            v-else-if="step === STEP.AVISOS"
+            :form="form"
+            :inbox-options="page.notice_inbox_options || []"
+            @change="change"
           />
           <StepPreview
             v-else

@@ -4805,8 +4805,8 @@
     "modelo": "Inbox",
     "origem": [
       "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:44",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:227",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:214",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:229",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:215",
       "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:196",
       "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:118"
     ],
@@ -21927,8 +21927,8 @@
     "modelo": "Inbox",
     "origem": [
       "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:44",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:227",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:214",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:229",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:215",
       "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:196",
       "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:118"
     ],

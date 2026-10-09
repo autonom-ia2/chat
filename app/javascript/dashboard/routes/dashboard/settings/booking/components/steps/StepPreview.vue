@@ -4,12 +4,15 @@ import { useI18n } from 'vue-i18n';
 import BookingPreviewCard from '../BookingPreviewCard.vue';
 import BookingDestination from '../BookingDestination.vue';
 import BookingLinkActions from '../BookingLinkActions.vue';
+import BookingNoticesSummary from '../BookingNoticesSummary.vue';
+import BookingTestInvite from '../BookingTestInvite.vue';
 import { MISSING_STEP, STEP } from '../../constants';
 
-// Passo 6: a prévia, para onde vai quem marcar e Publicar. Se a publicação
-// voltar com pendências, cada uma vira uma linha com "Resolver", que leva ao
-// passo certo; a do funil abre o "Alterar" daqui mesmo. Publicada: link, QR
-// code e Copiar link.
+// Último passo: a prévia, para onde vai quem marcar, os avisos no WhatsApp e
+// Publicar. Se a publicação voltar com pendências, cada uma vira uma linha com
+// "Resolver", que leva ao passo certo; a do funil abre o "Alterar" daqui
+// mesmo. Publicada: link, QR code, Copiar link e, com número de avisos,
+// "Testar no meu WhatsApp" (J3-A11).
 defineProps({
   form: { type: Object, required: true },
   page: { type: Object, required: true },
@@ -59,6 +62,13 @@ const fix = item => {
       @save="emit('saveDestination', $event)"
     />
 
+    <BookingNoticesSummary
+      :form="form"
+      :inbox-options="page.notice_inbox_options || []"
+      :can-manage="canManage"
+      @alter="emit('fix', STEP.AVISOS)"
+    />
+
     <div
       v-if="missing.length"
       data-missing
@@ -105,6 +115,10 @@ const fix = item => {
         </p>
       </div>
       <BookingLinkActions v-if="page.public_url" :url="page.public_url" />
+      <BookingTestInvite
+        v-if="canManage && page.notice_inbox_id"
+        :page-id="page.id"
+      />
     </div>
     <span v-else-if="publishing" class="sr-only" role="status">
       {{ t('BOOKING.PREVIEW.PUBLISHING') }}

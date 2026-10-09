@@ -52,6 +52,17 @@ RSpec.describe Crm::BookingV2::Notices::Scheduler do
     expect(soon.notices.pluck(:kind)).to contain_exactly('booked', 'hour_before')
   end
 
+  it 'não cria lembrete a menos de 30 minutos de outro aviso da reunião (marcar 1h10 antes não manda "1 hora antes" 10 min depois)' do
+    soon = create_internal_meeting(world: world, starts_at: 70.minutes.from_now, metadata: { 'booking_profile_id' => world.profile.id })
+    tomorrow = create_internal_meeting(world: world, starts_at: 1.day.from_now + 20.minutes, metadata: { 'booking_profile_id' => world.profile.id })
+
+    [soon, tomorrow].each { |target| described_class.new(target).schedule! }
+
+    expect(soon.notices.pluck(:kind)).to eq(%w[booked])
+    expect(tomorrow.notices.order(:due_at).pluck(:kind)).to eq(%w[booked hour_before])
+    expect(described_class::MIN_GAP).to eq(30.minutes)
+  end
+
   it 'repetir não duplica, guarda a conversa do convite e não faz nada sem caixa de avisos' do
     conversation = create(:conversation, account: account, inbox: inbox, contact: world.contact)
     invite = create_booking_invite(world: world, conversation: conversation)
@@ -111,6 +122,43 @@ RSpec.describe Crm::BookingV2::Notices::Scheduler do
       expect(rows['hour_before']).to have_attributes(status: 'sending', due_at: starts_at - 1.hour)
       expect(rows['day_before']).to have_attributes(status: 'skipped', skip_reason: 'past_due')
     end
+  end
+
+  describe '.meeting_moved!' do
+    it 'reunião de página nova: confirmação volta a pendente e os avisos são reprogramados' do
+      described_class.new(meeting).schedule!
+      moved = starts_at + 1.day
+      meeting.update!(confirmation_status: :confirmed, confirmed_at: Time.current, starts_at: moved, ends_at: moved + 30.minutes)
+
+      described_class.meeting_moved!(meeting)
+
+      expect(meeting.reload).to have_attributes(confirmation_status: 'pending', confirmed_at: nil)
+      expect(meeting.notices.find_by(kind: 'rescheduled')).to have_attributes(status: 'pending', due_at: Time.current)
+      expect(meeting.notices.find_by(kind: 'hour_before').due_at).to eq(starts_at + 1.day - 1.hour)
+    end
+
+    it 'reunião sem página nova não muda nada' do
+      manual = create_internal_meeting(world: world, starts_at: starts_at + 1.day)
+      manual.update!(confirmation_status: :confirmed, confirmed_at: Time.current)
+
+      described_class.meeting_moved!(manual)
+
+      expect(manual.reload.confirmation_status).to eq('confirmed')
+      expect(manual.notices).to be_empty
+    end
+  end
+
+  it '#reschedule! pula com too_close o lembrete que ficaria a menos de 30 minutos do "remarcado"' do
+    described_class.new(meeting).schedule!
+    new_start = 80.minutes.from_now
+    meeting.update!(starts_at: new_start, ends_at: new_start + 30.minutes)
+
+    described_class.new(meeting).reschedule!
+
+    rows = meeting.notices.reload.index_by(&:kind)
+    expect(rows['hour_before']).to have_attributes(status: 'skipped', skip_reason: 'too_close')
+    expect(rows['day_before']).to have_attributes(status: 'skipped', skip_reason: 'past_due')
+    expect(rows['rescheduled']).to have_attributes(status: 'pending', due_at: Time.current)
   end
 
   it '#skip_pending! pula só os pendentes, com o motivo' do

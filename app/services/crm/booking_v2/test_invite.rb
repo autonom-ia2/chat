@@ -2,12 +2,17 @@
 # um link igual ao que o cliente recebe (um convite de verdade, que abre a página e marca de verdade).
 #
 # O convite de teste leva `metadata.test = true`: fica fora da lista do botão Agendar, do reaproveitamento de
-# convites e dos números (F2-C usa `Crm::BookingInvite.real`). Vale a mesma regra de canal dos avisos
-# (`Notices::Route`, só texto: fora da janela do WhatsApp oficial é preciso mandar uma mensagem ao número da empresa
-# antes) e o mesmo teto por número.
+# convites e dos números (F2-C usa `Crm::BookingInvite.real`); a reunião marcada por ele também leva `test: true`
+# (`Crm::Meeting.real` a exclui). Vale a mesma regra de canal dos avisos (`Notices::Route`, só texto: fora da janela
+# do WhatsApp oficial é preciso mandar uma mensagem ao número da empresa antes), a mesma parada (recusou mensagens
+# ou parou os avisos) e o mesmo teto por número.
 #
-# Recusas (`Refused`, com `reason` quando é do canal): notice_inbox_missing, page_not_published, invalid_phone,
-# cannot_send.
+# Quem testa precisa enxergar a caixa de avisos (`policy_scope(::Inbox)`, o mesmo escopo da escolha da caixa) e, se a
+# mensagem vai para uma conversa que já existe, poder responder nela (`ConversationPolicy#show?`, o mesmo critério do
+# envio de mensagem do painel). Tudo é decidido antes de gravar: recusa não cria contato nem convite.
+#
+# Recusas (`Refused`, com `reason` quando é do canal): notice_inbox_missing, notice_inbox_forbidden (reason
+# `conversation_forbidden` quando é a conversa), page_not_published, invalid_phone, cannot_send.
 class Crm::BookingV2::TestInvite
   class Refused < StandardError
     attr_reader :reason
@@ -18,30 +23,48 @@ class Crm::BookingV2::TestInvite
     end
   end
 
-  def initialize(page:, user:, phone:)
+  # user_context: o `pundit_user` do controller ({ user:, account:, account_user: }).
+  def initialize(page:, user_context:, phone:)
     @page = page
-    @user = user
+    @user_context = user_context
+    @user = user_context[:user]
     @raw_phone = phone
   end
 
   def perform
     validate!
-    contact = find_or_create_contact!
+    contact = Crm::BookingV2::PhoneLookup.find_contact(account: page.account, e164: phone) ||
+              page.account.contacts.new(name: user.name, phone_number: phone)
     decision = Crm::BookingV2::Notices::Route.new(inbox: page.notice_inbox, contact: contact).decide
-    raise Refused.new('cannot_send', decision.reason) unless decision.send?
-    raise Refused.new('cannot_send', 'number_cap') if number_capped?(contact)
-
+    ensure_can_send!(contact, decision)
+    contact.save! if contact.new_record?
     send_invite!(contact, decision)
   end
 
   private
 
-  attr_reader :page, :user
+  attr_reader :page, :user, :user_context
 
   def validate!
     raise Refused, 'notice_inbox_missing' unless page.notices_usable?
+    raise Refused, 'notice_inbox_forbidden' unless Pundit.policy_scope!(user_context, ::Inbox).exists?(id: page.notice_inbox_id)
     raise Refused, 'page_not_published' unless pages.usable?(page)
     raise Refused, 'invalid_phone' if phone.blank?
+  end
+
+  def ensure_can_send!(contact, decision)
+    raise Refused.new('cannot_send', 'stopped') if stopped?(contact)
+    raise Refused.new('cannot_send', decision.reason) unless decision.send?
+    raise Refused.new('notice_inbox_forbidden', 'conversation_forbidden') unless can_reply?(decision.conversation)
+    raise Refused.new('cannot_send', 'number_cap') if number_capped?(contact)
+  end
+
+  def stopped?(contact)
+    contact.opted_out? || Crm::BookingNoticeStop.stopped?(account_id: page.account_id, contact_id: contact.id)
+  end
+
+  def can_reply?(conversation)
+    conversation.nil? || Pundit.policy!(user_context, conversation).show?
   end
 
   def pages
@@ -54,11 +77,6 @@ class Crm::BookingV2::TestInvite
 
   def number_capped?(contact)
     Crm::BookingV2::Notices::Sender.recent_for_contact(contact) >= Crm::BookingV2::Notices::Sender::NUMBER_LIMIT
-  end
-
-  def find_or_create_contact!
-    Crm::BookingV2::PhoneLookup.find_contact(account: page.account, e164: phone) ||
-      page.account.contacts.create!(name: user.name, phone_number: phone)
   end
 
   def send_invite!(contact, decision)

@@ -3,6 +3,7 @@
 #
 # - Atividade no card SEMPRE (é o registro para medição, RA-19): `booking_client_confirmed`,
 #   `booking_client_canceled`, `booking_client_rescheduled`, `booking_notice_failed`, `booking_notices_stopped`.
+#   `by`: 'client' no que o cliente fez pela página de gestão; 'system' no aviso que não saiu.
 # - Aviso ao responsável pelo caminho que o CRM já usa para chamar a pessoa: uma tarefa vencendo agora
 #   (`Crm::FollowUp`, lembrete), que o cron de tarefas transforma em push/e-mail conforme as preferências dela e que
 #   aparece no aviso de tarefas do painel. Parar avisos só registra. Aviso que não saiu avisa UMA vez por reunião.
@@ -17,6 +18,8 @@ class Crm::BookingV2::Notices::AgentAlert
   }.freeze
   SILENT = %w[notices_stopped].freeze
   ONCE_PER_MEETING = %w[notice_failed].freeze
+  # Eventos que não são ação do cliente: a atividade registra `by: 'system'`.
+  SYSTEM_EVENTS = %w[notice_failed].freeze
 
   def initialize(meeting, event, payload = {})
     @meeting = meeting
@@ -45,8 +48,12 @@ class Crm::BookingV2::Notices::AgentAlert
   def log_activity
     Crm::ActivityLogger.new(
       card: card, actor: nil, event_type: ACTIVITIES[event],
-      payload: { meeting_id: meeting.id, starts_at: meeting.starts_at.iso8601, by: 'client' }.merge(payload)
+      payload: { meeting_id: meeting.id, starts_at: meeting.starts_at.iso8601, by: author }.merge(payload)
     ).perform
+  end
+
+  def author
+    SYSTEM_EVENTS.include?(event) ? 'system' : 'client'
   end
 
   def already_alerted?

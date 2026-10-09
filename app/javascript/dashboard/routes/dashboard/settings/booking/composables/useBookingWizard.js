@@ -19,7 +19,7 @@ const saveErrorFrom = failure => {
   return problem ? `BOOKING.WIZARD.SERVER_ERRORS.${problem}` : SAVE_ERROR;
 };
 
-// Estado e chamadas do assistente de seis passos (J3). Um formulário só para a
+// Estado e chamadas do assistente de sete passos (J3). Um formulário só para a
 // página inteira: voltar um passo não perde o que foi digitado. Cada
 // "Continuar" confere o passo e salva (PATCH); o último passo publica.
 // `initialStep` abre uma página existente direto num passo (ex.: a prévia).
@@ -110,7 +110,7 @@ export const useBookingWizard = ({ pageId, initialStep, onClose }) => {
   const saveStep = async () => {
     const { data } = await BookingPagesAPI.update(
       page.value.id,
-      formToPayload(form.value)
+      formToPayload(form.value, page.value)
     );
     page.value = data.payload;
     if (step.value !== STEP.CONTE || samePeople()) return;

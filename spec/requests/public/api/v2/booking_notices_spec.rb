@@ -76,12 +76,22 @@ RSpec.describe 'Public::Api::V2::Booking notices', type: :request do
 
   it 'com modelo aprovado para o aviso "ao marcar": promete a mensagem mesmo sem conversa' do
     inbox.channel.update!(message_templates: [{ 'name' => 'aviso', 'language' => 'pt_BR', 'status' => 'APPROVED',
-                                                'components' => [{ 'type' => 'BODY', 'text' => 'Oi {{1}}' }] }])
+                                                'components' => [{ 'type' => 'BODY', 'text' => 'Oi {{1}}, veja: {{3}}' }] }])
     profile.update!(notice_inbox: inbox, notice_templates: { 'booked' => { 'name' => 'aviso', 'language' => 'pt_BR' } })
 
     book(phone: '(21) 98888-7777')
 
     expect(response.parsed_body['notice_will_send']).to be(true)
+  end
+
+  it 'modelo aprovado sem {{3}} (sem link de gestão nem de parar) não promete mensagem (RA-18)' do
+    profile.update!(notice_inbox: inbox, notice_templates: { 'booked' => { 'name' => 'aviso', 'language' => 'pt_BR' } })
+    inbox.channel.update!(message_templates: [{ 'name' => 'aviso', 'language' => 'pt_BR', 'status' => 'APPROVED',
+                                                'components' => [{ 'type' => 'BODY', 'text' => 'Oi {{1}}' }] }])
+
+    book(phone: '(21) 98888-7777')
+
+    expect(response.parsed_body).to include('confirmed' => true, 'notice_will_send' => false)
   end
 
   it 'reserva pelo convite guarda a conversa do convite na reunião' do

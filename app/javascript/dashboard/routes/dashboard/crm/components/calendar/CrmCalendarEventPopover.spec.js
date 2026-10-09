@@ -102,3 +102,24 @@ describe('CrmCalendarEventPopover: local da reunião', () => {
     unsafe.unmount();
   });
 });
+
+describe('CrmCalendarEventPopover: resposta do cliente (#1192)', () => {
+  it('mostra o selo quando o evento traz a resposta', () => {
+    const wrapper = mountPopover(
+      meeting({ confirmation_status: 'confirmed', notices_stopped: true })
+    );
+    expect(wrapper.find('[data-test="meeting-confirmation"]').text()).toBe(
+      'CRM_KANBAN.CALENDAR.MEETING_DETAIL.CLIENT.CONFIRMED'
+    );
+    expect(wrapper.text()).toContain(
+      'CRM_KANBAN.CALENDAR.MEETING_DETAIL.CLIENT.STOPPED'
+    );
+  });
+
+  it('sem resposta do cliente no evento, nada muda', () => {
+    const wrapper = mountPopover(meeting());
+    expect(wrapper.find('[data-test="meeting-confirmation"]').exists()).toBe(
+      false
+    );
+  });
+});

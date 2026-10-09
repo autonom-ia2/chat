@@ -6,7 +6,8 @@
 # - Remarcar: a MESMA reunião em outro horário, com as regras de horário livre da página (`Slots`, a mesma regra do
 #   `Booker`, sem copiar) e sob as mesmas travas, na mesma ordem: caixa da página (1), responsável (2). Conferência
 #   com o provedor fora das travas e só a local dentro, como o `Booker`. O horário antigo fica livre no commit.
-#   Os avisos vão para o novo horário e a confirmação volta a pendente (é outro horário).
+#   Os avisos vão para o novo horário e a confirmação volta a pendente (é outro horário), pelo próprio
+#   `RescheduleService`. Recusa do `RescheduleService` vira `booking_failed`.
 # - Confirmar: idempotente sob trava de linha; confirmar de novo não avisa de novo (J5-A6).
 # - Parar avisos: grava a parada do contato (vale para as próximas reuniões), marca as reuniões abertas dele e pula
 #   os avisos pendentes; a reunião continua valendo (J5-A7).
@@ -52,7 +53,7 @@ class Crm::BookingV2::ManageMeeting
     minutes = resolve_duration(duration)
     previous = meeting.starts_at
     ensure_slot!(new_start, minutes, include_provider: true)
-    ActiveRecord::Base.transaction { reschedule_locked!(new_start, minutes) }
+    move!(new_start, minutes)
     alert('rescheduled', from: previous.iso8601)
   end
 
@@ -116,6 +117,14 @@ class Crm::BookingV2::ManageMeeting
     fail!('slot_unavailable')
   end
 
+  # O `RescheduleService` também volta a confirmação a pendente e reprograma os avisos (`Scheduler.meeting_moved!`).
+  # Recusa dele (ArgumentError: reunião que não pode remarcar, horário inválido) vira `booking_failed`, não 500.
+  def move!(start, minutes)
+    ActiveRecord::Base.transaction { reschedule_locked!(start, minutes) }
+  rescue ArgumentError
+    fail!('booking_failed')
+  end
+
   def reschedule_locked!(start, minutes)
     acquire_locks!
     meeting.lock!
@@ -123,8 +132,6 @@ class Crm::BookingV2::ManageMeeting
     ensure_slot!(start, minutes, include_provider: false)
     Crm::Meetings::RescheduleService.new(meeting: meeting, params: { starts_at: start, ends_at: start + minutes.minutes,
                                                                      timezone: meeting.timezone }).perform
-    meeting.update!(confirmation_status: :pending, confirmed_at: nil)
-    scheduler.reschedule!
   end
 
   # Mesmas travas e mesma ordem do Booker (caixa da página, depois responsável): remarcar e marcar do mesmo

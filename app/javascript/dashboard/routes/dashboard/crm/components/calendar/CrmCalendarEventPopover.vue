@@ -12,6 +12,7 @@ import {
   isOverdue,
 } from './calendarEvents.js';
 import { resolveMeetingLocation } from '../../helpers/meetingLocation';
+import { confirmationMeta, hasClientReply } from '../../helpers/meetingNotices';
 
 const props = defineProps({
   event: { type: Object, required: true },
@@ -65,6 +66,12 @@ const hasCard = computed(() => Boolean(props.event.card_id));
 // Reunião interna mostra o local pelo rótulo próprio e só abre link http/https.
 const location = computed(() => resolveMeetingLocation(props.event));
 const hasJoinLink = computed(() => Boolean(location.value.joinUrl));
+// Resposta do cliente pelo link do agendamento (#1192, J4-A5), quando vem no evento.
+const clientReply = computed(() =>
+  group.value === 'meeting' && hasClientReply(props.event)
+    ? confirmationMeta(props.event.confirmation_status)
+    : null
+);
 
 const snoozePresets = [
   { key: '1h', label: 'SNOOZE_1H' },
@@ -120,6 +127,25 @@ const onJoinMeeting = () => {
       >
         <span class="size-3.5" :class="location.icon" />
         {{ t(location.labelKey) }}
+      </p>
+      <p v-if="clientReply" class="mb-0 flex flex-wrap items-center gap-1.5">
+        <span
+          data-test="meeting-confirmation"
+          class="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-medium"
+          :class="clientReply.className"
+        >
+          <span class="size-3" :class="clientReply.icon" aria-hidden="true" />
+          {{
+            t(`CRM_KANBAN.CALENDAR.MEETING_DETAIL.CLIENT.${clientReply.key}`)
+          }}
+        </span>
+        <span
+          v-if="event.notices_stopped"
+          class="inline-flex items-center gap-1 rounded-md bg-n-alpha-2 px-2 py-0.5 text-[11px] font-medium text-n-slate-11"
+        >
+          <span class="i-lucide-bell-off size-3" aria-hidden="true" />
+          {{ t('CRM_KANBAN.CALENDAR.MEETING_DETAIL.CLIENT.STOPPED') }}
+        </span>
       </p>
       <p
         v-if="group === 'whatsapp' && timezone"

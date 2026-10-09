@@ -2,7 +2,8 @@
 # `Notices::Delivery`. Regra por tipo de caixa de avisos:
 #
 # - WhatsApp oficial (Cloud/360dialog): janela de 24 h aberta pelo cliente (`MessagingWindow`) → texto; fora dela,
-#   modelo APROVADO na Meta configurado para o aviso; sem modelo → `template_required`.
+#   modelo APROVADO na Meta configurado para o aviso; sem modelo → `template_required`; modelo cujo corpo não leva o
+#   `{{3}}` (link de gestão, onde fica o "Parar avisos", J2-A9/RA-18) → `template_without_link`.
 # - WAHA (`MessagingWindow` o libera sempre, por isso regra própria): só com mensagem RECEBIDA do cliente nas últimas
 #   24 h nesta caixa → texto; senão `waha_outside_window` (risco de bloqueio do número, J5-A5).
 # - Canal API de campanhas (não WAHA): janela do canal → texto; fora dela, modelo do canal por id; senão
@@ -13,11 +14,33 @@
 # no link público não recebe mensagem automática (reduz abuso com número de terceiros).
 class Crm::BookingV2::Notices::Route
   WAHA_WINDOW = 24.hours
+  # Variável do corpo do modelo da Meta que recebe o link de gestão (`Notices::Delivery`).
+  LINK_PLACEHOLDER = '{{3}}'.freeze
 
   Decision = Struct.new(:mode, :reason, :conversation, :template, keyword_init: true) do
     def send?
       reason.nil?
     end
+  end
+
+  # Texto do corpo de um modelo da Meta (item da lista sincronizada da caixa).
+  def self.native_body(template)
+    component = Array(template.to_h['components']).find { |item| item['type'].to_s.casecmp?('body') }
+    component.to_h['text'].to_s
+  end
+
+  # Modelo da lista sincronizada da caixa com o nome e o idioma configurados (qualquer status).
+  def self.synced_template(inbox, configured)
+    name, language = configured.to_h.values_at('name', 'language').map(&:to_s)
+    return if name.blank? || language.blank?
+
+    Array(inbox&.channel.try(:message_templates)).find { |item| item['name'] == name && item['language'].to_s.casecmp?(language) }
+  end
+
+  # O mesmo, só se está APROVADO na Meta.
+  def self.approved_template(inbox, configured)
+    found = synced_template(inbox, configured)
+    found if found.to_h['status'].to_s.casecmp?('approved')
   end
 
   def initialize(inbox:, contact:, conversation: nil, template: nil)
@@ -46,8 +69,9 @@ class Crm::BookingV2::Notices::Route
   def official
     return session if conversation && Crm::FollowUps::MessagingWindow.new(conversation).can_send_session_message?
 
-    approved = approved_native_template
+    approved = self.class.approved_template(inbox, template)
     return skip('template_required') if approved.blank?
+    return skip('template_without_link') unless self.class.native_body(approved).include?(LINK_PLACEHOLDER)
     return skip('no_phone') if conversation.nil? && contact.phone_number.blank?
 
     Decision.new(mode: :native_template, conversation: conversation, template: approved)
@@ -83,17 +107,6 @@ class Crm::BookingV2::Notices::Route
                     else
                       contact.conversations.where(inbox_id: inbox.id).order(last_activity_at: :desc, id: :desc).first
                     end
-  end
-
-  # Modelo da Meta só vale se está APROVADO na lista sincronizada da caixa, com o mesmo nome e idioma.
-  def approved_native_template
-    name = template['name'].to_s
-    language = template['language'].to_s
-    return if name.blank? || language.blank?
-
-    Array(inbox.channel.message_templates).find do |item|
-      item['name'] == name && item['language'].to_s.casecmp?(language) && item['status'].to_s.casecmp?('approved')
-    end
   end
 
   def api_template_record

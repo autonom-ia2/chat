@@ -7,7 +7,7 @@
 # ser desta página (e, se tem link individual, deste link) e ainda não ter virado reunião. Contato, card e conversa
 # vêm do convite. O telefone é o do contato; se o cliente trocou o número ("Mudar o número") ou o contato não tem,
 # vale o digitado, só para esta reunião (o contato não muda). `source: 'invite'`.
-# Depois da reserva o convite guarda `scheduled_at` e `meeting`.
+# Depois da reserva o convite guarda `scheduled_at` e `meeting`; convite de teste marca a reunião com `test: true`.
 #
 # Reenvio (duplo toque, rede que repete): o `Booker` devolve a reunião existente; aqui devolvemos o mesmo convite,
 # e o convite já agendado com a mesma hora há menos de 5 minutos responde a mesma reserva.
@@ -60,7 +60,13 @@ class Crm::BookingV2::PublicBooking
 
     result = invite_booker(invite).perform
     invite.update!(scheduled_at: Time.current, meeting: result.meeting)
+    mark_test_meeting!(result.meeting) if invite.metadata.to_h['test'] == true
     Outcome.new(meeting: result.meeting, invite: invite, existing: result.existing)
+  end
+
+  # Reunião marcada por convite de "Testar no meu WhatsApp" (#1192): fica fora dos números (`Crm::Meeting.real`).
+  def mark_test_meeting!(meeting)
+    meeting.update!(metadata: meeting.metadata.to_h.merge('test' => true))
   end
 
   def invite_booker(invite)

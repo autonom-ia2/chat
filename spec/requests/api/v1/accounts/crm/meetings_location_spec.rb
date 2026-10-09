@@ -47,11 +47,17 @@ RSpec.describe 'Api::V1::Accounts::Crm::Meetings location', type: :request do
     payload = fetch(meeting)
 
     expect(payload).to include(
-      'confirmation_status' => 'confirmed', 'notices_stopped' => true,
+      'booking' => false, 'confirmation_status' => 'confirmed', 'notices_stopped' => true,
       'notices' => [
         { 'kind' => 'booked', 'due_at' => booked.due_at.iso8601, 'status' => 'sent', 'skip_reason' => nil },
         { 'kind' => 'hour_before', 'due_at' => hour.due_at.iso8601, 'status' => 'skipped', 'skip_reason' => 'stopped' }
       ]
     )
+  end
+
+  it 'marca booking verdadeiro na reunião que veio de uma página de agendamento' do
+    meeting = create_internal_meeting(world: world, starts_at: 2.days.from_now, metadata: { 'booking_profile_id' => world.profile.id })
+
+    expect(fetch(meeting)).to include('booking' => true, 'confirmation_status' => 'pending', 'notices_stopped' => false)
   end
 end

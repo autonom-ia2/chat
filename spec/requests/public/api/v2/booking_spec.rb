@@ -431,6 +431,25 @@ RSpec.describe 'Public::Api::V2::Booking', type: :request do
       expect(world.contact.reload.phone_number).to eq('+5511912345678')
     end
 
+    it 'reunião marcada por convite de "Testar no meu WhatsApp" leva a marca de teste e fica fora de Crm::Meeting.real (#1192)' do
+      invite.update!(metadata: { 'test' => true })
+
+      book(invite_code: invite.code)
+
+      expect(response).to have_http_status(:created)
+      meeting = Crm::Meeting.sole
+      expect(meeting.metadata).to include('test' => true, 'booking_profile_id' => profile.id)
+      expect(Crm::Meeting.real).to be_empty
+    end
+
+    it 'reunião de convite comum fica em Crm::Meeting.real, sem marca de teste' do
+      book(invite_code: invite.code)
+
+      expect(response).to have_http_status(:created)
+      expect(Crm::Meeting.sole.metadata).not_to have_key('test')
+      expect(Crm::Meeting.real.pluck(:id)).to eq([Crm::Meeting.sole.id])
+    end
+
     it 'o reenvio idêntico devolve 200 com a mesma reserva' do
       book(invite_code: invite.code)
       first = body

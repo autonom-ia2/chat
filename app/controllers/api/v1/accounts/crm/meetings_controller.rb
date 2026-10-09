@@ -284,6 +284,7 @@ class Api::V1::Accounts::Crm::MeetingsController < Api::V1::Accounts::Crm::BaseC
   # `notices_stopped`: o cliente parou os avisos (a parada do contato marca todas as reuniões abertas dele).
   def serialize_booking_notices(meeting)
     {
+      booking: meeting.booking?,
       confirmation_status: meeting.confirmation_status,
       notices_stopped: meeting.reminders_stopped_at.present?,
       notices: meeting.notices.sort_by { |notice| [notice.due_at, notice.id] }.map(&:as_summary)
