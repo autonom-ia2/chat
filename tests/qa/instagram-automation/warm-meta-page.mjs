@@ -641,7 +641,10 @@ async function runWarmInviteReuseCase(fixture) {
     assert.equal(await settledInviteCount(state.transport), 0);
     assert.equal(state.getGotoCount(), 1);
     assert.equal(state.transport.counts().roles, rolesBeforeInvite + 1);
-    assert.equal(state.warmMetaPage.valid, true);
+    // The denied invite left its token selected in the reused dialog, so the
+    // page is marked changed and the next operation recovers cold.
+    assert.equal(state.warmMetaPage.valid, false);
+    assert.equal(state.warmMetaPage.invalidReason, 'page_changed');
 
     definition.roles_target_status = 'CONFIRMED';
     state.transport.setScenario('status_accepted');
@@ -651,7 +654,8 @@ async function runWarmInviteReuseCase(fixture) {
       request: makeRequest('status_accepted', state.configuration, fixture, 34),
     });
     assert.equal(statusAfterInvite.status, 'accepted');
-    assert.equal(state.getGotoCount(), 1);
+    assert.equal(state.getGotoCount(), 2);
+    assert.equal(state.warmMetaPage.valid, true);
     return true;
   } finally {
     Object.assign(definition, original);
@@ -671,12 +675,21 @@ async function runInviteAfterSearchCase(fixture) {
     });
     assert.equal(search.results?.length, 1);
     assert.equal(await state.page.locator('#tester-dialog').isVisible(), true);
+    // The fixture opens the dialog even over an open one, so count the
+    // Cancel clicks to prove the invite reset the dialog itself.
+    await state.page.evaluate(() => {
+      window.dialogCancelCount = 0;
+      document.getElementById('cancel').addEventListener('click', () => {
+        window.dialogCancelCount += 1;
+      });
+    });
     const { result, delta } = await successfulWarmInvite(state, fixture, 41);
     assert.equal(result.error_code, undefined);
     assert.equal(result.invited, true);
     assert.equal(result.status, 'pending');
     assert.equal(result.write_started, true);
     assert.equal(delta, 1);
+    assert.equal(await state.page.evaluate(() => window.dialogCancelCount), 1);
     assert.equal(state.getGotoCount(), 1);
     return true;
   } finally {
@@ -730,6 +743,128 @@ async function runResidueRecoveryCase(fixture) {
     assert.equal(delta, 1);
     assert.equal(state.getGotoCount(), 2);
     assert.equal(state.warmMetaPage.valid, true);
+    return true;
+  } finally {
+    await closeSetup(state);
+  }
+}
+
+// A warm invite that selected its option but did not write (a noop permit, a
+// denied permit) leaves the token in the reused dialog. It marks the page
+// changed, so the very next invite recovers cold and succeeds the first time.
+async function runFailedInviteRetryCase(fixture) {
+  const state = await setup(fixture, 'search');
+  const unsentInvite = async (iteration, reply) => {
+    state.transport.setScenario('invite_unknown');
+    const before = state.transport.counts().invite;
+    const result = await operation({
+      ...state,
+      warmInvite: true,
+      signal: AbortSignal.timeout(INVITE_SIGNAL_MS),
+      permitInvite: observation => permitReply(observation, reply),
+      request: makeRequest(
+        'invite_unknown',
+        state.configuration,
+        fixture,
+        iteration
+      ),
+    });
+    assert.equal(result.write_started, false);
+    assert.equal((await settledInviteCount(state.transport)) - before, 0);
+    assert.equal(state.warmMetaPage.valid, false);
+    assert.equal(state.warmMetaPage.invalidReason, 'page_changed');
+    return result;
+  };
+  try {
+    const search = await operation({
+      ...state,
+      warmInvite: true,
+      request: makeRequest('search', state.configuration, fixture, 60),
+    });
+    assert.equal(search.results?.length, 1);
+
+    const noop = await unsentInvite(61, {
+      decision: 'noop',
+      status: 'pending',
+    });
+    assert.equal(noop.error_code, undefined);
+    assert.equal(noop.status, 'pending');
+    assert.equal(noop.invited, false);
+    assert.equal(state.getGotoCount(), 1);
+
+    const denied = await unsentInvite(62, { error_code: 'invite_unknown' });
+    assert.equal(denied.error_code, 'invite_unknown');
+    assert.equal(state.getGotoCount(), 2);
+
+    const { result, delta } = await successfulWarmInvite(state, fixture, 63);
+    assert.equal(result.error_code, undefined);
+    assert.equal(result.invited, true);
+    assert.equal(result.write_started, true);
+    assert.equal(delta, 1);
+    assert.equal(state.getGotoCount(), 3);
+    assert.equal(state.warmMetaPage.valid, true);
+    return true;
+  } finally {
+    await closeSetup(state);
+  }
+}
+
+// With the flag on, an invite follows the read decision: a configuration
+// identity mismatch or a terminal invalid reason fails closed before any roles
+// read, navigation or permit, instead of navigating cold.
+async function runWarmInviteFailClosedCase(fixture) {
+  const state = await setup(fixture, 'invite_unknown');
+  let permitCalls = 0;
+  const failedInvite = async (configuration, iteration) => {
+    const rolesBefore = state.transport.counts().roles;
+    const result = await operation({
+      ...state,
+      configuration,
+      warmInvite: true,
+      permitInvite: observation => {
+        permitCalls += 1;
+        return permitReply(observation, {
+          decision: 'write',
+          status: 'absent',
+        });
+      },
+      request: makeRequest('invite_unknown', configuration, fixture, iteration),
+    });
+    assert.equal(result.error_code, 'meta_session_expired');
+    assert.equal(result.write_started, false);
+    assert.equal(state.transport.counts().roles, rolesBefore);
+    assert.equal(state.transport.counts().invite, 0);
+    assert.equal(state.getGotoCount(), 1);
+    assert.equal(permitCalls, 0);
+  };
+  try {
+    await failedInvite(
+      {
+        ...state.configuration,
+        appId: '10009',
+        rolesUrl:
+          'https://developers.facebook.com/apps/10009/roles/roles/?business_id=10002',
+      },
+      70
+    );
+    assert.equal(state.warmMetaPage.valid, true);
+
+    state.transport.setScenario('status_accepted');
+    state.transport.setResponseFault({
+      path: '/api/graphql/',
+      status: 403,
+      body: '{"error":"expired"}',
+    });
+    const expired = await operation({
+      ...state,
+      request: makeRequest('status_accepted', state.configuration, fixture, 71),
+    });
+    assert.equal(expired.error_code, 'meta_session_expired');
+    assert.equal(state.warmMetaPage.invalidReason, 'csrf_expired');
+    state.transport.setResponseFault(null);
+    state.transport.setScenario('invite_unknown');
+    await failedInvite(state.configuration, 72);
+    assert.equal(state.warmMetaPage.invalidReason, 'csrf_expired');
     return true;
   } finally {
     await closeSetup(state);
@@ -863,6 +998,10 @@ async function run() {
         await runInviteAfterSearchCase(fixture),
       residue_invalidates_then_recovers_cold:
         await runResidueRecoveryCase(fixture),
+      unsent_invite_retry_succeeds_first_time:
+        await runFailedInviteRetryCase(fixture),
+      warm_invite_fails_closed_like_reads:
+        await runWarmInviteFailClosedCase(fixture),
     };
   } finally {
     await closeSetup(state);

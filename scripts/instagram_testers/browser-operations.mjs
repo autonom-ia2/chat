@@ -2213,7 +2213,7 @@ async function waitForInviteResponse(state, signal, deadlineAt, now) {
   return state.inviteOutcome;
 }
 
-async function performInvite({
+async function selectAndSendInvite({
   page,
   config,
   request,
@@ -2239,12 +2239,8 @@ async function performInvite({
     !baseline.complete ||
     baseline.source_truncated ||
     baseline.token_button_count !== 0
-  ) {
-    // A reused page that is not clean (for example a token left selected by
-    // an earlier operation) recovers with a cold navigation on the next op.
-    if (warmMetaPage) invalidateWarmMetaPage(warmMetaPage, 'page_changed');
+  )
     fail('invalid_selection');
-  }
   const option = await selectExactSearchOption(
     state.searchInput,
     request.username,
@@ -2344,6 +2340,24 @@ async function performInvite({
     invited: true,
     write_started: true,
   };
+}
+
+async function performInvite(options) {
+  const { warmMetaPage } = options;
+  let written = false;
+  try {
+    const result = await selectAndSendInvite(options);
+    written = result.invited === true;
+    return result;
+  } finally {
+    // Any invite that did not confirm its write (a dirty baseline, a noop or
+    // denied permit, a blocked POST, a click or response failure) may leave a
+    // token selected in the reused dialog, possibly for another profile. The
+    // next operation then recovers with a cold navigation instead of failing
+    // until the next refresh. An already invalid page keeps its reason.
+    if (warmMetaPage?.valid && !written)
+      invalidateWarmMetaPage(warmMetaPage, 'page_changed');
+  }
 }
 
 async function performStatus({
