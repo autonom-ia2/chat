@@ -2,7 +2,7 @@
 /* eslint-disable no-await-in-loop -- Poll one operation serially until completion or cancellation. */
 import ApiClient from '../ApiClient';
 
-const OPERATION_POLL_INTERVAL = 1000;
+const OPERATION_POLL_INTERVAL = 250;
 const OPERATION_STATES = ['queued', 'running', 'ready', 'failed', 'expired'];
 const OPERATION_ERRORS = new Set([
   'invalid_username',
