@@ -23,7 +23,11 @@ Para executar um dos workflows à mão, o operador precisa:
 1. selecionar a branch `main`;
 2. escolher `deploy` ou `rollback`;
 3. marcar `confirm_production=true`;
-4. passar pelos gates configurados no Environment `production`.
+4. ter a vez dada pela sessão Orquestração (regra em [processo-de-release.md](processo-de-release.md#deploy-manual)).
+
+O Environment `production` **não tem regra de proteção** (sem revisor, sem restrição de branch: conferido em
+09/10/2026). A restrição à `main` vem da condição `if: github.ref == 'refs/heads/main'` dos jobs. Por decisão do
+Rodrigo (09/10/2026, #1173), o controle do disparo manual é de processo, não de revisor obrigatório.
 
 Workflows:
 

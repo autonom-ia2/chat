@@ -3,6 +3,86 @@
 Combinado em 25/09/2026 entre as sessões Prospecção (#676), Cotação e Central/Guia e CRM, a pedido do Rodrigo:
 subir junto o que estiver pronto, com um deploy só, em vez de um deploy de ~40 minutos por PR.
 
+## Como funciona hoje (desde 09/10/2026, #1173)
+
+A sessão **Orquestração de CI/CD e deploy** coordena fila, merge, deploy e limpeza do chat2you, no lugar da antiga
+sessão Automação (decisão do Rodrigo em 09/10/2026). Nenhuma sessão ou agente põe PR na fila sem a vez dada por ela.
+Merge e deploy continuam exigindo o OK explícito do Rodrigo: a Orquestração organiza, não aprova.
+
+### Pedido de vaga
+
+Mandado à Orquestração só com a CI verde no head atual e sem push depois. Um push depois do pedido derruba o lote
+inteiro.
+
+| Campo | O que dizer |
+|---|---|
+| PR | número |
+| OK do Rodrigo | sim / não |
+| CI | verde no head atual (SHA) |
+| Migration | não / aditiva (tabela, coluna, índice `CONCURRENTLY`) / outra |
+| Guia e Central | o PR toca `lib/operator_guide`, rotas, menu, `lib/central_de_ajuda` ou `public/central-de-ajuda`? |
+| **Liberação** | sem flag (todas as contas) / flag `X` só na conta `N` como piloto, com data para decidir / flag `X` para todas |
+| Urgente | sim só se a produção está quebrada ou a `main` vermelha |
+
+Flag nova em `config/features.yml`, `feature_enabled?` novo ou lista de contas por variável de ambiente sem a linha
+"Liberação" não entram no lote. Por quê: em 09/10 o levantamento em produção mostrou funcionalidades nossas ligadas
+de 0 a 6 das 7 contas do autonomia (Relacionamentos, Anúncios da Meta, importação de e-mail) e outras presas em 1 a 3 contas, sem ninguém com data para decidir. O catálogo e
+o estado ficam em [`liberacoes-por-conta.md`](liberacoes-por-conta.md).
+
+### Lote
+
+- Até **7 PRs** sem migration destrutiva por rodada da fila (ruleset `main - fila de merge`, `max_entries_to_merge: 7`).
+  Migration aditiva vai no lote, com snapshot RDS nas duas contas tirado pela Orquestração antes. Outra migration sobe
+  sozinha, com snapshot e rollback do banco escritos antes.
+- Antes de fechar, a Orquestração confere: versão de migration repetida entre os PRs; arquivos gerados do Guia e da
+  Central em dia (`pnpm guia:check`, `pnpm central:check`, `rails autonomia:guia:formatos:check`); PR empilhado só
+  depois que o de baixo virar `MERGED`; e a linha "Liberação" de cada PR.
+- "Lote fechado, pode enfileirar": cada sessão roda `gh pr merge <N> --match-head-commit <sha>`. Antes disso, não.
+- Refazer CI = fechar e reabrir o PR. Não usar `gh run rerun` (reaproveita o merge ref antigo) nem mesclar a `main`
+  "para atualizar" (só se o GitHub disser `CONFLICTING`).
+
+### Depois do deploy
+
+1. Cada sessão valida a sua parte e manda "ok, SHA" à Orquestração. Nenhum lote novo antes de todos os "ok".
+2. A Orquestração confere em produção, só leitura por `psql`, quantas contas têm cada flag declarada no lote
+   (SQL gerado por `.github/scripts/feature_flags_por_conta.rb`). Diferente do declarado: avisa o Rodrigo.
+3. Piloto com data vencida volta ao Rodrigo para decidir: liberar para todas, estender ou remover.
+4. Limpeza da entrega, na mesma etapa: a branch do PR é apagada pelo GitHub no merge (`delete_branch_on_merge`,
+   ligado em 09/10/2026); a sessão dona remove a worktree (`git worktree remove` + `prune`, regra do `/dev`) e
+   apaga os snapshots do MacCluster da entrega pelo caminho exato, nos dois nós. Alteração solta que ninguém
+   assume vai para `resgate/<data>-<nome>` (commit + push, sem PR) antes de remover.
+
+### Hotfix (via expressa, #1176)
+
+Para acerto pequeno e urgente. Pelo caminho normal leva ~32–40 min até o cliente: CI do PR ~11 min, CI da fila
+~11 min e deploy ~9 min até a troca de tráfego (medianas das execuções de 08 e 09/10/2026 em `gh run list` e nos
+passos do job "Deploy Green"). A via expressa pula a segunda bateria. É o caso de emergência em que o `--admin` da
+seção "Fila de merge" vale.
+
+1. **Regressão do último deploy? Primeiro o rollback**, com OK do Rodrigo: `workflow_dispatch` com
+   `action=rollback` nos dois deploys só troca o tráfego de volta para a instância anterior. O hotfix vem depois.
+2. **Critérios, todos obrigatórios** (a conta do GitHub é compartilhada e tem bypass: quem confere é a
+   Orquestração, não o GitHub):
+   - diff pequeno, até ~50 linhas;
+   - sem migration e sem dependência nova;
+   - rótulo `hotfix`;
+   - fila de merge vazia e lote anterior com todos os "ok, SHA";
+   - CI do PR verde e a `main` sem nenhum merge depois que essa CI rodou (se mudou, fechar e reabrir o PR);
+   - vez dada pela Orquestração e OK do Rodrigo.
+3. **Merge:** `gh pr merge <N> --admin --merge --match-head-commit <sha>`. O bypass de admin do ruleset entra
+   direto na `main`, sem a rodada da fila, e o deploy dispara pelo push como sempre. Não roda CI depois do merge: o
+   que valeu foi a CI do PR. Se o comando puser o PR na fila em vez de mergear, deixar seguir pela fila.
+4. **Depois:** "ok, SHA" como em qualquer deploy. Hotfix sobe sozinho, nunca junto com lote.
+
+Por que é seguro pular a fila: ela testa a combinação com os outros PRs do lote. Com a fila vazia e a `main` parada
+desde a CI do PR, a combinação é exatamente a que essa CI testou. Fora desses critérios, usa o caminho normal.
+
+### Deploy manual
+
+`workflow_dispatch` dos deploys só com a vez da Orquestração. Exceção: rollback de emergência, avisando na hora.
+Todas as sessões de agente usam a mesma conta do GitHub, então o registro do Actions não mostra quem disparou.
+A Orquestração acompanha os disparos manuais e cobra quem furou a fila.
+
 ## Por que existe
 
 Todo merge na `main` dispara o deploy blue-green completo nas duas stacks (hub2you e autonomia). Os workflows usam
@@ -17,7 +97,10 @@ Deploy cancelado ou com falha antes da troca de tráfego (#972): se a instância
 `DeployCleanup=pending`, e o próximo deploy a termina. Se ela ainda estiver de pé, o próximo deploy espera até 30 min e,
 passado isso, a termina mesmo assim e segue: só uma migration de mais de 30 min é cortada.
 
-## Regras
+## Regras do lote manual (25/09 a 04/10/2026)
+
+O lote manual em `release/*` foi substituído pela fila de merge (seção seguinte). Continuam valendo: a bateria do
+item 2, o que dispara deploy (item 5), migration (6), par com o adapter (7), issues (8), rollback (9) e limpeza (11).
 
 1. **Um lote aberto por vez.** `release/<data>-loteN` sai da `main`. Cada sessão faz squash nele **só** do que já tem
    OK do Rodrigo, com a própria suíte verde lida antes. PR com mais de 30 linhas ou que mexa em arquitetura também
@@ -79,7 +162,8 @@ Com o ruleset ativo:
    PR na fila (o repositório tem `allow_auto_merge` ligado: é por ele que o `gh` entra na fila). O comando sai
    com sucesso **antes** do merge. Só conta como mergeado quando `gh pr view <N> --json state` mostrar
    `MERGED`. A posição na fila: `gh api graphql -f query='query{repository(owner:"autonom-ia2",name:"chat"){pullRequest(number:N){state isInMergeQueue mergeQueueEntry{state position}}}}'`.
-4. **A fila substitui o lote manual.** Ela junta até 2 PRs por rodada, testa o código combinado uma vez e faz
+4. **A fila substitui o lote manual.** Ela junta até 7 PRs por rodada (eram 2 até 07/10/2026; desde então `grouping_strategy: HEADGREEN`: basta o
+   commit do topo do grupo, que contém todos os PRs, passar nos checks), testa o código combinado uma vez e faz
    um único push na `main`, que gera um único deploy. Não é mais preciso combinar janela por mensagem nem
    montar `release/*-loteN` para juntar PRs. A validação depois do deploy (regra 4, "ok, SHA") continua.
 5. **O "Testes do fork" e o "fork-i18n" não rodam no push da `main`:** a fila já testou exatamente aquele
