@@ -1,0 +1,16 @@
+en:
+  crm:
+    booking_v2:
+      templates:
+        sales_30:
+          title: '30-minute sales call'
+          description: 'Pick a time and we will talk on a WhatsApp video call.'
+        consult_45:
+          title: '45-minute consultation'
+          description: 'Pick a time for an in-person consultation.'
+        visit_60:
+          title: '60-minute visit'
+          description: 'Pick a time for a one-hour in-person visit.'
+        blank:
+          title: 'New booking page'
+          description: ''

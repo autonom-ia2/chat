@@ -381,6 +381,18 @@ Rails.application.routes.draw do
                 delete 'agent_links/:link_id', action: :destroy_agent_link
               end
             end
+            # Agendamento WhatsApp-first (#1187): páginas novas (page_version 2), flag crm_booking_v2 + módulo agendamento.
+            resources :booking_pages, only: [:index, :show, :create, :update, :destroy] do
+              member do
+                post :publish
+                post :pause
+                post :preview_token
+                post :logo
+                post :photo
+                get :people
+                put :people, action: :update_people
+              end
+            end
           end
           namespace :autonomia do
             # #284 — feedback do ATENDENTE ("resposta errada") numa mensagem do agente. Aberto a qualquer

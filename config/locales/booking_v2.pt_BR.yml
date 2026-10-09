@@ -1,0 +1,16 @@
+pt_BR:
+  crm:
+    booking_v2:
+      templates:
+        sales_30:
+          title: 'Conversa de vendas de 30 min'
+          description: 'Escolha um horário e a gente conversa por vídeo no WhatsApp.'
+        consult_45:
+          title: 'Consulta de 45 min'
+          description: 'Escolha um horário para a consulta presencial.'
+        visit_60:
+          title: 'Visita de 60 min'
+          description: 'Escolha um horário para a visita presencial de uma hora.'
+        blank:
+          title: 'Nova página de agendamento'
+          description: ''

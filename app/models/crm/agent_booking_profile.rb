@@ -40,6 +40,8 @@
 #  fk_rails_...  (inbox_id => inboxes.id) ON DELETE => nullify
 #
 class Crm::AgentBookingProfile < ApplicationRecord
+  include Crm::BookingPageSettings
+
   self.table_name = 'crm_agent_booking_profiles'
 
   DEFAULT_WORKING_HOURS = { 'start_hour' => 9, 'end_hour' => 17, 'weekdays' => [1, 2, 3, 4, 5] }.freeze
@@ -50,15 +52,6 @@ class Crm::AgentBookingProfile < ApplicationRecord
   MAX_WINDOW = 90
   LEGACY_PAGE = 1
   NEW_PAGE = 2
-  MAX_MIN_NOTICE = 14 * 24 * 60
-  MAX_EXTRA_DURATIONS = 5
-  LOCATION_TYPES = %w[whatsapp_video whatsapp_voice custom_link in_person google_meet teams].freeze
-  TEMPLATE_KEYS = %w[sales_30 consult_45 visit_60 blank].freeze
-  HEX_DIGITS = '0123456789abcdefABCDEF'.freeze
-  MAX_LOCATIONS = 6
-  MAX_TEXT = 500
-  MAX_IMAGE_BYTES = 2.megabytes
-  IMAGE_TYPES = %w[image/png image/jpeg image/webp].freeze
 
   # fixed     -> one default_assignee owns every booking (original S6 behaviour).
   # per_agent -> each eligible agent shares their OWN link (agent_booking_links);
@@ -75,7 +68,6 @@ class Crm::AgentBookingProfile < ApplicationRecord
 
   before_validation :ensure_slug, on: :create
   before_validation :normalize_working_hours
-  before_validation :normalize_json_settings
 
   validates :slug, presence: true, uniqueness: true
   validates :duration_minutes, numericality: { only_integer: true, greater_than_or_equal_to: MIN_DURATION, less_than_or_equal_to: MAX_DURATION }
@@ -86,7 +78,6 @@ class Crm::AgentBookingProfile < ApplicationRecord
   # Página antiga (1) continua amarrada a uma caixa de calendário; a nova (2) funciona sem caixa.
   validates :inbox, presence: true, if: :legacy_page?
   validate :inbox_must_belong_to_account
-  validate :new_page_settings_must_be_sane
   validate :default_refs_must_belong_to_account
   validate :working_hours_must_be_sane
   # An ENABLED profile in FIXED mode must resolve a real scheduling user — Crm::Meeting
@@ -144,13 +135,6 @@ class Crm::AgentBookingProfile < ApplicationRecord
     self.slug ||= SecureRandom.uuid
   end
 
-  # jsonb vindo com chave símbolo só vira string depois de salvar: normaliza antes, para a validação ver o que vai
-  # ser gravado.
-  def normalize_json_settings
-    self.brand = brand.deep_stringify_keys if brand.is_a?(Hash)
-    self.locations = locations.map { |item| item.is_a?(Hash) ? item.deep_stringify_keys : item } if locations.is_a?(Array)
-  end
-
   def normalize_working_hours
     self.working_hours = DEFAULT_WORKING_HOURS.dup if working_hours.blank?
   end
@@ -196,75 +180,6 @@ class Crm::AgentBookingProfile < ApplicationRecord
     return if account.users.exists?(id: default_assignee_id)
 
     errors.add(:default_assignee_id, 'must belong to the same account')
-  end
-
-  def new_page_settings_must_be_sane
-    return unless new_page?
-
-    validate_locations
-    validate_slot_durations
-    validate_min_notice
-    validate_brand
-    validate_contact_phone
-    validate_images
-  end
-
-  def validate_locations
-    list = locations
-    return errors.add(:locations, 'must be a list') unless list.is_a?(Array)
-    return errors.add(:locations, 'has too many items') if list.size > MAX_LOCATIONS
-
-    list.each { |location| validate_location(location) }
-  end
-
-  def validate_location(location)
-    return errors.add(:locations, 'item must be an object') unless location.is_a?(Hash)
-    return errors.add(:locations, 'unknown type') unless LOCATION_TYPES.include?(location['type'])
-    return if location['type'] != 'custom_link'
-
-    errors.add(:locations, 'link must be an http or https URL') unless Crm::WebUrl.valid?(location['url'], max: MAX_TEXT)
-  end
-
-  def validate_slot_durations
-    list = slot_durations
-    ok = list.is_a?(Array) && list.size <= MAX_EXTRA_DURATIONS && list.all? { |v| v.is_a?(Integer) && v.between?(MIN_DURATION, MAX_DURATION) }
-    errors.add(:slot_durations, 'invalid durations') unless ok
-  end
-
-  def validate_min_notice
-    return if min_notice_minutes.to_i.between?(0, MAX_MIN_NOTICE)
-
-    errors.add(:min_notice_minutes, 'out of range')
-  end
-
-  def validate_brand
-    return errors.add(:brand, 'must be an object') unless brand.is_a?(Hash)
-
-    color = brand['color']
-    errors.add(:brand, 'invalid color') if color.present? && !hex_color?(color)
-    errors.add(:brand, 'headline too long') if brand['headline'].to_s.length > MAX_TEXT
-  end
-
-  def hex_color?(value)
-    value.is_a?(String) && value.length == 7 && value.start_with?('#') && value.delete_prefix('#').chars.all? { |char| HEX_DIGITS.include?(char) }
-  end
-
-  # Logo e foto vão para a página pública: só PNG, JPEG ou WebP (SVG pode carregar script) e até 2 MB.
-  def validate_images
-    %i[logo photo].each do |name|
-      attachment = public_send(name)
-      next unless attachment.attached?
-
-      errors.add(name, 'must be a PNG, JPEG or WebP image') unless IMAGE_TYPES.include?(attachment.content_type)
-      errors.add(name, 'is too large') if attachment.byte_size > MAX_IMAGE_BYTES
-    end
-  end
-
-  def validate_contact_phone
-    return if contact_phone.blank?
-    return if contact_phone.start_with?('+') && TelephoneNumber.valid?(contact_phone)
-
-    errors.add(:contact_phone, 'must be a valid E.164 number')
   end
 
   def working_hours_must_be_sane

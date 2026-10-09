@@ -35,6 +35,25 @@ RSpec.describe Crm::AgentBookingProfile, type: :model do
       expect(bad.errors[:locations]).to include('link must be an http or https URL')
     end
 
+    it 'aceita durações extras que chegam como texto do formulário' do
+      profile = build_profile(slot_durations: %w[60 15])
+
+      expect(profile).to be_valid
+      expect(profile.slot_durations).to eq([60, 15])
+      expect(build_profile(slot_durations: ['abc'])).not_to be_valid
+    end
+
+    it 'só aceita Meet ou Teams com a caixa do provedor conectada e com agenda' do
+      without_mailbox = build_profile(locations: [{ 'type' => 'google_meet' }])
+      expect(without_mailbox).not_to be_valid
+      expect(without_mailbox.errors[:locations]).to include('calendar location requires a connected calendar mailbox')
+
+      channel = create(:channel_email, account: account, provider: 'google', calendar_enabled: true)
+      google = build_profile(inbox: channel.inbox, locations: [{ 'type' => 'google_meet' }])
+      expect(google).to be_valid
+      expect(build_profile(inbox: channel.inbox, locations: [{ 'type' => 'teams' }])).not_to be_valid
+    end
+
     it 'limita a quantidade de locais e de durações extras' do
       expect(build_profile(locations: Array.new(7) { { 'type' => 'whatsapp_video' } })).not_to be_valid
       expect(build_profile(slot_durations: [10, 15, 20, 25, 30, 35])).not_to be_valid
