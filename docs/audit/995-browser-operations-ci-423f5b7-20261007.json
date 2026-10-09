@@ -1,0 +1,183 @@
+{
+  "observed_at_utc": "2026-10-07 23:00:59 UTC",
+  "issue": 995,
+  "pull_request": "https://github.com/autonom-ia2/chat/pull/1129",
+  "head": "423f5b767fdb8467de86584b7b7538640982a924",
+  "main_sha": "caca5eae44705d6d9449d00b005fae67b2da454c",
+  "required_contexts": [
+    "RSpec",
+    "Vitest",
+    "trava",
+    "central",
+    "fork-i18n"
+  ],
+  "checks_passed": 26,
+  "checks": [
+    {
+      "bucket": "pass",
+      "link": "https://github.com/autonom-ia2/chat/actions/runs/37698403286/job/113058752551",
+      "name": "RSpec",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/autonom-ia2/chat/actions/runs/37698415894/job/113055929070",
+      "name": "central",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/autonom-ia2/chat/actions/runs/37698415894/job/113055928928",
+      "name": "trava",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/autonom-ia2/chat/actions/runs/37698403355/job/113055835094",
+      "name": "Email UI, locales, build and isolated browser",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/autonom-ia2/chat/actions/runs/37698403355/job/113055835054",
+      "name": "Email backend and bounded regression",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/autonom-ia2/chat/actions/runs/37698403286/job/113055784156",
+      "name": "RSpec (7/8)",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/autonom-ia2/chat/actions/runs/37698403286/job/113055783875",
+      "name": "RSpec (6/8)",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/autonom-ia2/chat/actions/runs/37698403286/job/113055783921",
+      "name": "RSpec (1/8)",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/autonom-ia2/chat/actions/runs/37698403286/job/113055783879",
+      "name": "RSpec (0/8)",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/autonom-ia2/chat/actions/runs/37698403286/job/113055783844",
+      "name": "RSpec (5/8)",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/autonom-ia2/chat/actions/runs/37698403286/job/113055783845",
+      "name": "RSpec (4/8)",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/autonom-ia2/chat/actions/runs/37698403286/job/113055783826",
+      "name": "RSpec (3/8)",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/autonom-ia2/chat/actions/runs/37698403286/job/113055783814",
+      "name": "RSpec (2/8)",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/autonom-ia2/chat/actions/runs/37698403259/job/113055690837",
+      "name": "Instagram real Redis and PostgreSQL isolation",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/autonom-ia2/chat/actions/runs/37698403350/job/113055691385",
+      "name": "Node synthetic contracts",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/autonom-ia2/chat/actions/runs/37698403350/job/113055691216",
+      "name": "Python session preparer",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/autonom-ia2/chat/actions/runs/37698403350/job/113055691409",
+      "name": "Component browser QA",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/autonom-ia2/chat/actions/runs/37698403350/job/113055691343",
+      "name": "VPS Linux Chrome and private VNC",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/autonom-ia2/chat/actions/runs/37698403286/job/113055691148",
+      "name": "RSpec - plano",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/autonom-ia2/chat/actions/runs/37698403286/job/113055691432",
+      "name": "Vitest",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/autonom-ia2/chat/actions/runs/37698403286/job/113055691496",
+      "name": "ESLint",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/autonom-ia2/chat/actions/runs/37698403350/job/113055691068",
+      "name": "Vitest Instagram onboarding",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/autonom-ia2/chat/actions/runs/37698403286/job/113055691632",
+      "name": "Brakeman e bundle-audit",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/autonom-ia2/chat/actions/runs/37698403286/job/113055691401",
+      "name": "Rubocop",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/autonom-ia2/chat/actions/runs/37698403296/job/113055690558",
+      "name": "fork-i18n",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/autonom-ia2/chat/actions/runs/37698403355/job/113055691664",
+      "name": "Detect feature scope",
+      "state": "SUCCESS"
+    }
+  ],
+  "pr_state": {
+    "auto_merge": null,
+    "head": "423f5b767fdb8467de86584b7b7538640982a924",
+    "mergeable": true,
+    "mergeable_state": "clean",
+    "merged": false
+  },
+  "production_release_approval_pending": true,
+  "real_provider_acceptance": false,
+  "record_type": "local CI receipt for the frozen source head; not part of the release package"
+}

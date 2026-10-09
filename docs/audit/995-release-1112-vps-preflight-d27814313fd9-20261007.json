@@ -1,0 +1,239 @@
+{
+  "archive": "/Users/rodrigosilva/dev/worktrees/chat2you/995-meta-page-bootstrap/.codex/vps-release-d27814313fd96e7bc52266efa6177d7421dc4875.tar",
+  "archive_sha256": "7fc09488f72370eeaa7ad97716c7701300b5b6d000edc64ef63d19904b98af12",
+  "blockers": [
+    "release_script_sha_is_stale_until_authorized_merge_is_final",
+    "release_script_old_sha_does_not_match_live_current_release",
+    "release_script_pathset_omits_browser_operations_required_by_installer",
+    "all_eight_units_are_active_so_drain_precondition_is_not_met",
+    "profile_locks_and_chrome_processes_are_present_so_exclusive_precondition_is_not_met",
+    "expected_50_cpuquota_dropins_are_absent_at_script_path",
+    "staging_directory_already_contains_prior_artifacts_and_rollback_records"
+  ],
+  "derived_checks": {
+    "all_eight_units_active": true,
+    "current_matches_candidate": false,
+    "current_matches_script_old": false,
+    "expected_50_cpuquota_dropins_present": false,
+    "profiles_exclusive": false,
+    "stop_precondition_manager_autonomia_inactive": false,
+    "stop_precondition_other_seven_active": true
+  },
+  "manifest": "/Users/rodrigosilva/dev/worktrees/chat2you/995-meta-page-bootstrap/.codex/vps-release-d27814313fd96e7bc52266efa6177d7421dc4875.manifest.json",
+  "manifest_sha256": "ffaf44aefac8daf3d8bf1b12689e49fa513a38f8491f27a3440155e48b79c7c9",
+  "merge_parents": [
+    "caca5eae44705d6d9449d00b005fae67b2da454c",
+    "423f5b767fdb8467de86584b7b7538640982a924"
+  ],
+  "merge_sha": "d27814313fd96e7bc52266efa6177d7421dc4875",
+  "release_script": {
+    "fixed_old": "9a48a2de08e93f2f7dc6916d7a4c79729f88dec4",
+    "fixed_sha": "2cc6b4fb6e275e26c04ae126c06ac1b4f0b63b26",
+    "path": "/Users/rodrigosilva/dev/worktrees/chat2you/995-meta-page-bootstrap/.codex/release-1112-vps.py",
+    "pathset_omits_browser_operations": true
+  },
+  "remote_baseline": {
+    "current_files": {
+      "scripts/instagram_testers/runtime/vps/package-lock.json": {
+        "bytes": 3093,
+        "mode": "0o644",
+        "present": true,
+        "sha256": "06f43bc0d2868236059cfa5975c2eae6689f86e494099174380b42cb7bdafd37",
+        "uid": 0
+      },
+      "scripts/instagram_testers/runtime/vps/package.json": {
+        "bytes": 278,
+        "mode": "0o644",
+        "present": true,
+        "sha256": "7a940fdb5f7a10a266ef61caa0d5ef47dd9f2d6635141686b4a7660bd8df0fca",
+        "uid": 0
+      },
+      "scripts/instagram_testers/runtime/vps/systemd/instagram-vps-display@.service": {
+        "bytes": 1346,
+        "mode": "0o644",
+        "present": true,
+        "sha256": "505b60ec0c02c0a490206cb376081600cb133204704983484b74edd4108e0cb8",
+        "uid": 0
+      },
+      "scripts/instagram_testers/runtime/vps/systemd/instagram-vps-gateway@.service": {
+        "bytes": 1353,
+        "mode": "0o644",
+        "present": true,
+        "sha256": "985cd46bc125eb0b675a631ac6f1e57f709b90c4d49a43ef75526ddb9d6aa56b",
+        "uid": 0
+      },
+      "scripts/instagram_testers/runtime/vps/systemd/instagram-vps-manager@.service": {
+        "bytes": 1571,
+        "mode": "0o644",
+        "present": true,
+        "sha256": "6b96cb684d937c2a3ec6c5248b7b67891820ac68232ecf8953e6f07188f57be9",
+        "uid": 0
+      },
+      "scripts/instagram_testers/runtime/vps/systemd/instagram-vps-publisher@.service": {
+        "bytes": 1510,
+        "mode": "0o644",
+        "present": true,
+        "sha256": "c1b41267081c93687dcc76fee2ca545e34c656d7e4b31877e49def19f887074d",
+        "uid": 0
+      }
+    },
+    "current_target": "2cc6b4fb6e275e26c04ae126c06ac1b4f0b63b26",
+    "node": {
+      "present": true,
+      "version": "v24.21.0"
+    },
+    "profiles": {
+      "autonomia": {
+        "chrome_process_count": 10,
+        "directory": true,
+        "human_marker": false,
+        "manager_lock": true,
+        "mode": "0o700",
+        "singleton_lock": false,
+        "uid": 993
+      },
+      "hub2you": {
+        "chrome_process_count": 11,
+        "directory": true,
+        "human_marker": false,
+        "manager_lock": true,
+        "mode": "0o700",
+        "singleton_lock": false,
+        "uid": 997
+      }
+    },
+    "publisher_quota_expected_control": {
+      "autonomia": {
+        "lines": [],
+        "present": false
+      },
+      "hub2you": {
+        "lines": [],
+        "present": false
+      }
+    },
+    "publisher_quota_live_dropin": {
+      "autonomia": {
+        "lines": [
+          "[Service]",
+          "CPUQuota=200%"
+        ],
+        "present": true
+      },
+      "hub2you": {
+        "lines": [
+          "[Service]",
+          "CPUQuota=200%"
+        ],
+        "present": true
+      }
+    },
+    "stage": {
+      "before": true,
+      "manifest": true,
+      "present": true,
+      "release_tar": true,
+      "source": true
+    },
+    "units": {
+      "instagram-vps-display@autonomia.service": {
+        "rc": 0,
+        "state": {
+          "ActiveState": "active",
+          "CPUQuotaPerSecUSec": "500ms",
+          "DropInPaths": "/etc/systemd/system/instagram-vps-display@.service.d/20-private-node.conf",
+          "NRestarts": "0",
+          "SubState": "running",
+          "UnitFileState": "enabled"
+        }
+      },
+      "instagram-vps-display@hub2you.service": {
+        "rc": 0,
+        "state": {
+          "ActiveState": "active",
+          "CPUQuotaPerSecUSec": "500ms",
+          "DropInPaths": "/etc/systemd/system/instagram-vps-display@.service.d/20-private-node.conf",
+          "NRestarts": "0",
+          "SubState": "running",
+          "UnitFileState": "enabled"
+        }
+      },
+      "instagram-vps-gateway@autonomia.service": {
+        "rc": 0,
+        "state": {
+          "ActiveState": "active",
+          "CPUQuotaPerSecUSec": "500ms",
+          "DropInPaths": "/etc/systemd/system/instagram-vps-gateway@.service.d/20-private-node.conf",
+          "NRestarts": "0",
+          "SubState": "running",
+          "UnitFileState": "enabled"
+        }
+      },
+      "instagram-vps-gateway@hub2you.service": {
+        "rc": 0,
+        "state": {
+          "ActiveState": "active",
+          "CPUQuotaPerSecUSec": "500ms",
+          "DropInPaths": "/etc/systemd/system/instagram-vps-gateway@.service.d/20-private-node.conf",
+          "NRestarts": "0",
+          "SubState": "running",
+          "UnitFileState": "enabled"
+        }
+      },
+      "instagram-vps-manager@autonomia.service": {
+        "rc": 0,
+        "state": {
+          "ActiveState": "active",
+          "CPUQuotaPerSecUSec": "1.500000s",
+          "DropInPaths": "/etc/systemd/system/instagram-vps-manager@.service.d/20-private-node.conf",
+          "NRestarts": "0",
+          "SubState": "running",
+          "UnitFileState": "enabled"
+        }
+      },
+      "instagram-vps-manager@hub2you.service": {
+        "rc": 0,
+        "state": {
+          "ActiveState": "active",
+          "CPUQuotaPerSecUSec": "1.500000s",
+          "DropInPaths": "/etc/systemd/system/instagram-vps-manager@.service.d/20-private-node.conf",
+          "NRestarts": "0",
+          "SubState": "running",
+          "UnitFileState": "enabled"
+        }
+      },
+      "instagram-vps-publisher@autonomia.service": {
+        "rc": 0,
+        "state": {
+          "ActiveState": "active",
+          "CPUQuotaPerSecUSec": "2s",
+          "DropInPaths": "/etc/systemd/system/instagram-vps-publisher@.service.d/20-private-node.conf /etc/systemd/system/instagram-vps-publisher@autonomia.service.d/30-cpu-quota.conf",
+          "NRestarts": "0",
+          "SubState": "running",
+          "UnitFileState": "enabled"
+        }
+      },
+      "instagram-vps-publisher@hub2you.service": {
+        "rc": 0,
+        "state": {
+          "ActiveState": "active",
+          "CPUQuotaPerSecUSec": "2s",
+          "DropInPaths": "/etc/systemd/system/instagram-vps-publisher@.service.d/20-private-node.conf /etc/systemd/system/instagram-vps-publisher@hub2you.service.d/30-cpu-quota.conf",
+          "NRestarts": "0",
+          "SubState": "running",
+          "UnitFileState": "enabled"
+        }
+      }
+    }
+  },
+  "safety": {
+    "auth_or_provider_test": false,
+    "installation_run": false,
+    "n8n_traefik_redis_dns_changed": false,
+    "remote_mutations": false,
+    "secrets_read_or_emitted": false,
+    "units_stopped": false
+  },
+  "status": "preflight_blocked_no_remote_mutation",
+  "tracked_files_verified": 42
+}

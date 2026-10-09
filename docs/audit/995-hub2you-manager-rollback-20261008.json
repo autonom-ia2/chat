@@ -1,0 +1,66 @@
+{
+  "status": "rollback_completed",
+  "scope": {
+    "target": "hub2you_manager_only",
+    "expected_flag_after_rollback": "absent",
+    "backend_flag_changed": false,
+    "autonomia_manager_flag_changed": false,
+    "other_units_changed": false,
+    "profiles_or_caps_changed": false,
+    "meta_operation": false,
+    "search_invite_oauth": false,
+    "publication_performed": false
+  },
+  "helper": {
+    "path": ".codex/activate-hub2you-manager-1129.py",
+    "sha256": "ec2cdfd2e076f6bb3afa6b4d6300f91528822930448b27972656e4692acf0615"
+  },
+  "release_guard": {
+    "target_sha": "d27814313fd96e7bc52266efa6177d7421dc4875",
+    "package_sha256": "7fc09488f72370eeaa7ad97716c7701300b5b6d000edc64ef63d19904b98af12",
+    "browser_operations_source_sha256": "c115b10c1a9f1934f7504e4c9823c0e3e048bd4a0988dbcc93031c5da024e354"
+  },
+  "fresh_preflight_before_rollback": {
+    "receipt": ".codex/hub2you-manager-1129-preflight-004722076597.json",
+    "sha256": "b0293e4f7e96879634a899c6eb4f40302d239772ba129cc8613aad0abc527bbc",
+    "hub_manager_flag": "true",
+    "autonomia_manager_flag": "absent",
+    "all_8_units_healthy": true,
+    "all_8_units_nrestarts_zero": true,
+    "writes_performed": false
+  },
+  "rollback": {
+    "receipt": ".codex/hub2you-manager-1129-rollback-004741187505.json",
+    "sha256": "98c3e49abce47ddb7957967728fcab444621fbfc7ec372a2f59c78f40115b5da",
+    "status": "hub_manager_flag_rolled_back",
+    "flag_restored": true,
+    "manager_restarted": true,
+    "other_units_unchanged": true,
+    "autonomia_manager_flag": "absent"
+  },
+  "fresh_preflight_after_rollback": {
+    "receipt": ".codex/hub2you-manager-1129-preflight-004744543767.json",
+    "sha256": "a078080eb9379068b403430404a3149c248f1eb241c7f38c5ec093594f6f14d1",
+    "hub_manager_flag": "absent",
+    "autonomia_manager_flag": "absent",
+    "all_8_units_healthy": true,
+    "all_8_units_nrestarts_zero": true,
+    "writes_performed": false
+  },
+  "fresh_runtime_read_after_rollback": {
+    "source": ".codex/browser-operations-flag-observations.jsonl",
+    "sha256": "6708e613769dcf860d56715e19e913127bd0779fd185894d9f3cbe8f4401c84b",
+    "receipt_utc": "2026-10-08T00:47:58.865822+00:00",
+    "both_stacks_status": "ok",
+    "both_runtime_sha": "d27814313fd96e7bc52266efa6177d7421dc4875",
+    "both_managers_healthy": true,
+    "sessions_present": true,
+    "control_available": false,
+    "request_state_absent": true,
+    "publication_performed": false,
+    "hub_backend_flag_at_read": "true",
+    "backend_flag_reversal_pending_at_read": true,
+    "capture_pointer_after_rollback": false
+  },
+  "note": "O rollback do manager foi concluído. A leitura AWS posterior ainda encontrou a flag backend Hub verdadeira; Atlas deve revertê-la separadamente. Nenhuma alteração AWS foi feita neste bloco."
+}

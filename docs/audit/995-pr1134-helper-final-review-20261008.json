@@ -1,0 +1,21 @@
+{
+  "utc": "2026-10-08T06:46:22.588995+00:00",
+  "reviewer": "nexo_revisao",
+  "status": "green_external_gates_required",
+  "helpers": {
+    "writer": {
+      "file": "apply-browser-operations-activation-1134-hub2you.py",
+      "sha256": "72a3a350fe6efde999337991d5d83226b35a2ffe26189a47348e4e2f81b92a54"
+    },
+    "dispatcher": {
+      "file": "dispatch-pr1134-hub2you-activation.py",
+      "sha256": "d32cbe4141a1ae356be4a0e18359edcee00f6706b3bc78b14a4e234989654cad"
+    },
+    "preparer": {
+      "file": "prepare-browser-operations-activation-1134-hub2you.py",
+      "sha256": "0befc6f0b52bfc237627ca9180d4a6d970f2392d2372348ca5f7d66c525c0b0a"
+    }
+  },
+  "bilateral_unused": true,
+  "production_mutated": false
+}

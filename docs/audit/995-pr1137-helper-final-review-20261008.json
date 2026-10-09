@@ -1,0 +1,29 @@
+{
+  "utc": "2026-10-08T07:48:35.350449+00:00",
+  "source_head": "fb60eb893f2e199bec8c1bd7da28b5fde9d5971d",
+  "reviewer": "nexo_revisao",
+  "verdict": "approved with external fresh-state guards",
+  "helpers": {
+    "prepare-browser-operations-activation-1137-hub2you.py": "e4ead67ee50d85e710f61a1dd2d5d6eff06e7d6dbc7cbb27fe03e7e162bde8b9",
+    "apply-browser-operations-activation-1137-hub2you.py": "cdf9678a15cb880ec42ce018a5e1c60cff783f6f005c5901d4e9657db27f3a81",
+    "dispatch-pr1137-hub2you-activation.py": "f2a3b14e69578ee0da25e9ab683736f7c8484217a9d49f5b99cbbb2ab738a78c",
+    "activate-hub2you-manager-1137.py": "2259093e8daf11c4541ec048ab2ad5ab797fe9ccadca4abd48f5011454dbc299",
+    "release-1137-vps.py": "4651909c0e611a5803087b8a5b72d38d8d5ab4f5539c3b9660662c10bce8b0aa"
+  },
+  "manager_rollback_harness": {
+    "failed_atomic_write_preserves_old_env": true,
+    "browser_health_required_before_verified": true,
+    "production_called": false
+  },
+  "production_mutated": false,
+  "diagnostic_reader": {
+    "sha256": "a3a40feba0d3235145f86937c430e8fd9f191e4bb4d6c3bf2c07c3fb61a4e6c1",
+    "reviewer": "root",
+    "bounded_records": 200,
+    "strict_host_key_checking": true,
+    "incomplete_exit_code": 1,
+    "utc_since_canonicalized": true,
+    "canary_and_generated_probe_compile": "passed",
+    "executed_on_vps": false
+  }
+}

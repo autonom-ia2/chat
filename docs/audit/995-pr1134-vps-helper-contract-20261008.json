@@ -1,0 +1,47 @@
+{
+  "backend_health_reader": {
+    "backend_sha_hardcoded": false,
+    "browser_flag_optional_argument": "--expected-browser-operations-flag",
+    "exact_sha_checks": [
+      "containers[*].sha == args.expected_sha",
+      "results[*].release_sha == args.expected_sha"
+    ],
+    "expected_sha_source": "required --expected-sha argument",
+    "mutation_performed_required_false": true,
+    "output_fields": [
+      "expected_sha",
+      "results",
+      "results[*].release_sha",
+      "results[*].containers[*].sha",
+      "results[*].browser_operations_flag",
+      "mutation_performed"
+    ],
+    "path": ".codex/verify-release-1129-health.py",
+    "sha256": "aa2a45beebfd087a3a808a136141b3cc7ca34f6f2c537ff2916d7d3455be8fea"
+  },
+  "cross_release_comparison": {
+    "backend_fix_head": "ca7e158040e56532f9500ca41df585d5504579d4",
+    "new_vps_helper_needed": false,
+    "reason": "existing VPS helper is isolated from backend SHA; backend verifier already accepts the post-merge SHA as an argument",
+    "scripts_ops_diff": "none",
+    "vps_release_sha": "d27814313fd96e7bc52266efa6177d7421dc4875"
+  },
+  "next_gate": {
+    "activation": "requires explicit root authorization after backend health",
+    "backend_post_merge_sha": "must_be_supplied_after_merge",
+    "meta_operation": false,
+    "pre_read": "run backend verifier with merge SHA and mutation_performed false",
+    "vps_read": "run existing manager helper preflight against d278"
+  },
+  "no_execution": true,
+  "status": "read_only_helper_contract_verified",
+  "vps_activation_helper": {
+    "aws_or_ssm_calls_present": false,
+    "backend_reader_present": false,
+    "path": ".codex/activate-hub2you-manager-1129.py",
+    "preflight_and_rollback_guards_present": true,
+    "scope": "VPS current release, Hub manager flag, units/resources/profile cleanup",
+    "sha256": "ec2cdfd2e076f6bb3afa6b4d6300f91528822930448b27972656e4692acf0615",
+    "target_sha_hardcoded": "d27814313fd96e7bc52266efa6177d7421dc4875"
+  }
+}

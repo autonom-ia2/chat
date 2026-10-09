@@ -1,0 +1,205 @@
+{
+  "activation_attempt": {
+    "autonomia_manager_flag_after": "absent",
+    "error_code": "hub_browser_not_running",
+    "hub_manager_flag_after": "absent",
+    "receipt": ".codex/hub2you-manager-1129-apply-002206628739.json",
+    "rollback_error_code": null,
+    "rollback_verified": true,
+    "status": "hub_manager_activation_failed"
+  },
+  "activation_candidate_pending_review": {
+    "backup_reused": true,
+    "executed": true,
+    "local_check_receipt": ".codex/activate-hub2you-manager-1129-candidate-check.json",
+    "local_check_receipt_sha256": "84404fca96768b98b8fc46f11ac8376be928994a0220cf112a41000e992ebadb",
+    "path": ".codex/activate-hub2you-manager-1129.py",
+    "result": "hub_manager_flag_enabled",
+    "sha256": "ec2cdfd2e076f6bb3afa6b4d6300f91528822930448b27972656e4692acf0615"
+  },
+  "activation_post_readback": {
+    "receipt": ".codex/hub2you-manager-1129-after-apply.json",
+    "sha256": "16ab01884fe0e9f2f1c19c287f4f6a20ee5f2eb2dcdd0b8e1bc7e3edc43cc0bc",
+    "summary": {
+      "all_8_units_healthy": true,
+      "autonomia_flag_off": true,
+      "backup_reused_integrity": true,
+      "bootstrap_hash_matches_package": true,
+      "current_target": "d27814313fd96e7bc52266efa6177d7421dc4875",
+      "hub_manager_flag_true": true,
+      "other_7_units_healthy": true,
+      "profiles_ready": true
+    }
+  },
+  "activation_preflight_receipt": ".codex/hub2you-manager-1129-preflight-002053657110.json",
+  "activation_result": {
+    "autonomia_manager_flag": "absent",
+    "backup_reused": true,
+    "health_stable_seconds": 10,
+    "hub2you_manager_flag": "true",
+    "other_units_unchanged": true,
+    "receipt": ".codex/hub2you-manager-1129-apply-002648818286.json",
+    "status": "hub_manager_flag_enabled"
+  },
+  "checks": {
+    "activation_flag_offline_cases": 4,
+    "activation_mutation_gate_default_false": true,
+    "activation_remote_body_ast": true,
+    "activation_source_ast": true,
+    "archive_manifest_match": true,
+    "profile_and_service_readback": true,
+    "release_mutation_gate_default_false": true,
+    "release_preflight_executed_read_only": true,
+    "release_receipt_parser_invalid_json_fail_closed": true,
+    "release_remote_body_ast": true,
+    "release_source_ast": true,
+    "postactivation_runtime_read_sanitized": true
+  },
+  "current_target_after_resume": "d27814313fd96e7bc52266efa6177d7421dc4875",
+  "fresh_inspection": {
+    "backend_browser_operations_flag": "unset",
+    "both_runtime_sha": "d27814313fd96e7bc52266efa6177d7421dc4875",
+    "both_stacks_ok": true,
+    "control_request_absent": true,
+    "latest_receipt": ".codex/browser-operations-flag-observations.jsonl",
+    "publication_performed": false,
+    "script": ".codex/inspect-browser-operations-flag.py",
+    "sessions_available_active_healthy": true
+  },
+  "fresh_read_vs_capture": {
+    "activation_applied_at": "2026-10-08T00:26:48.818048+00:00",
+    "fresh_read": {
+      "receipt_utc": "2026-10-08T00:27:08.263182+00:00",
+      "hub2you_capture_at": "2026-10-08T00:22:21.533000Z",
+      "hub2you_pointer_updated_at": "2026-10-08T00:22:41.360200Z",
+      "hub2you_manager_observed_at": "2026-10-08T00:22:53.812Z",
+      "post_activation_read": true,
+      "post_activation_capture_proven": false
+    },
+    "fresh_capture": {
+      "receipt_utc": "2026-10-08T00:28:15.540000+00:00",
+      "hub2you_capture_at": "2026-10-08T00:26:52.147000Z",
+      "hub2you_pointer_updated_at": "2026-10-08T00:27:13.803828Z",
+      "hub2you_manager_observed_at": "2026-10-08T00:27:26.754Z",
+      "capture_after_activation": true,
+      "pointer_update_after_activation": true,
+      "manager_heartbeat_after_activation": true,
+      "publication_performed": false,
+      "control_request_absent": true,
+      "ack_separately_exposed": false
+    },
+    "source": ".codex/browser-operations-flag-observations.jsonl"
+  },
+  "install_receipt": ".codex/release-1129-install-002013137906.json",
+  "installed_and_resumed": true,
+  "old_sha": "2cc6b4fb6e275e26c04ae126c06ac1b4f0b63b26",
+  "package": {
+    "archive_sha256": "7fc09488f72370eeaa7ad97716c7701300b5b6d000edc64ef63d19904b98af12",
+    "tracked_files_verified": 42
+  },
+  "preflight_all_eight_active": true,
+  "preflight_all_eight_enabled": true,
+  "preflight_current_target": "2cc6b4fb6e275e26c04ae126c06ac1b4f0b63b26",
+  "preflight_receipt": ".codex/release-1129-preflight-001305538500.json",
+  "preflight_stage_absent": true,
+  "prepare_receipt": ".codex/release-1129-prepare-001347848497.json",
+  "profiles_changed": false,
+  "provenance": {
+    "executed": {
+      ".codex/activate-hub2you-manager-1129.py": "ec2cdfd2e076f6bb3afa6b4d6300f91528822930448b27972656e4692acf0615",
+      ".codex/release-1129-vps.py": "5d09ecf5eec099a601bcaa2585b591de49dcebb155197dca15263a4b198b5039",
+      ".codex/vps-release-d27814313fd96e7bc52266efa6177d7421dc4875.manifest.json": "ffaf44aefac8daf3d8bf1b12689e49fa513a38f8491f27a3440155e48b79c7c9",
+      ".codex/vps-release-d27814313fd96e7bc52266efa6177d7421dc4875.tar": "7fc09488f72370eeaa7ad97716c7701300b5b6d000edc64ef63d19904b98af12"
+    },
+    "prior_attempts": [
+      {
+        "helper_sha256": "1e6071c4740178650fb3d4e145efefd767ee0277046eea59786415038e4d0333",
+        "receipt": ".codex/hub2you-manager-1129-apply-002206628739.json",
+        "result": "hub_browser_not_running",
+        "rollback_verified": true
+      }
+    ],
+    "related_audit_artifacts": [
+      {
+        "path": "docs/audit/995-release-1112-vps-preflight-d27814313fd9-20261007.json",
+        "sha256": "cbeb69de4612f0097fe05e0d66f7d1a3f24d9b03b76a1b981f004970642fe635",
+        "note": "Recibo de preflight somente leitura gerado durante a preparação do release-1129; o nome 1112 é histórico e foi preservado."
+      }
+    ]
+  },
+  "release_changed": true,
+  "release_helper_delta": {
+    "executed_sha256": "5d09ecf5eec099a601bcaa2585b591de49dcebb155197dca15263a4b198b5039",
+    "prior_reported_sha256": "5fa36316dd8357ba04829644ab847aa84675d44104ee22e1ad25583200fac30e",
+    "reason": "decode systemd ControlGroup hex escapes before cgroup proof; package unchanged"
+  },
+  "remote_staging_written": true,
+  "required_next_gates": [
+    "Keep backend flags, pilot, search, invite and OAuth disabled",
+    "Observe the manager and session heartbeat; no further activation is required in this block"
+  ],
+  "resume_receipt": ".codex/release-1129-resume-002032362471.json",
+  "scope": {
+    "auth_provider_or_invite_test": false,
+    "backend_flag_changed": false,
+    "installation_run": true,
+    "manager_flag_changed": false,
+    "n8n_traefik_redis_dns_changed": false,
+    "profiles_changed": false,
+    "release_changed": true,
+    "remote_mutations": true,
+    "remote_staging_only": false,
+    "secrets_emitted": false,
+    "units_left_down": false,
+    "units_restored": true,
+    "units_stopped": true
+  },
+  "selected_release_sha": "d27814313fd96e7bc52266efa6177d7421dc4875",
+  "service_state_changed": false,
+  "stage_prepared": true,
+  "stage_receipts": [
+    ".codex/release-1129-stage-guard-001338080266.json",
+    ".codex/release-1129-stage-upload-001338728316.json",
+    ".codex/release-1129-stage-001339382425.json"
+  ],
+  "status": "release_resumed_hub2you_manager_enabled_flags_backend_unchanged",
+  "stop_receipt": ".codex/release-1129-stop-001944169919.json",
+  "target_sha": "d27814313fd96e7bc52266efa6177d7421dc4875",
+  "units_restored": true,
+  "units_stopped": false,
+  "units_transiently_stopped": true,
+  "verifier": {
+    "after_resume_receipt": ".codex/release-1129-health-after-resume.json",
+    "before_install_receipt": ".codex/release-1129-health-before-install.json",
+    "before_stop_receipt": ".codex/release-1129-health-before-stop.json",
+    "expected_browser_operations_flag": "unset",
+    "expected_sha": "d27814313fd96e7bc52266efa6177d7421dc4875",
+    "mutation_performed": false,
+    "path": ".codex/verify-release-1129-health.py",
+    "sha256": "aa2a45beebfd087a3a808a136141b3cc7ca34f6f2c537ff2916d7d3455be8fea"
+  },
+  "vps_after_resume_receipt": {
+    "path": ".codex/release-1129-vps-after-resume.json",
+    "sha256": "c5b0687a2a18349994445554605faff3691d04c7ec595e282322843e4e03709d"
+  },
+  "postactivation_runtime_read": {
+    "receipt": ".codex/hub2you-postactivation-runtime-read-20261008-003142.json",
+    "receipt_utc": "2026-10-08T00:31:42.929491+00:00",
+    "activation_at": "2026-10-08T00:26:48.818048Z",
+    "current_release_sha": "d27814313fd96e7bc52266efa6177d7421dc4875",
+    "browser_operations_sha256": "c115b10c1a9f1934f7504e4c9823c0e3e048bd4a0988dbcc93031c5da024e354",
+    "source_hash_matches_c115": true,
+    "units_total": 8,
+    "units_healthy": 8,
+    "units_nrestarts_zero": 8,
+    "units_result_success": 8,
+    "units_exec_main_ok": 8,
+    "journal_error_events_since_activation": 0,
+    "journal_read_complete": true,
+    "human_markers": {
+      "autonomia": false,
+      "hub2you": false
+    },
+    "mutation_performed": false
+  }
+}

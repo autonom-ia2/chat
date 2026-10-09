@@ -1,0 +1,9 @@
+{
+  "helpers": {
+    "dispatch-pr1134-blue-green-both.py": "bcad6267d36c3c8d8b11e052be1c143f6d096d07f3d2519cc12631df0841c284",
+    "dispatch-pr1134-hub2you-activation.py": "9a4f3d4d40597f7bc6d7e3b591401dbb3d66da70c5f42cc84db487c27545d67b",
+    "prepare-browser-operations-activation-1134-hub2you.py": "0befc6f0b52bfc237627ca9180d4a6d970f2392d2372348ca5f7d66c525c0b0a",
+    "apply-browser-operations-activation-1134-hub2you.py": "206821e666e86ff4dbd7fe46ea5ad24390dfb39fbf5ba1bdf49dcd9034352ac9"
+  },
+  "state": "awaiting independent review; not executed"
+}

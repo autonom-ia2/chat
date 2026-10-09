@@ -1,0 +1,19 @@
+{
+  "utc": "2026-10-08T01:05:13.988188+00:00",
+  "run_id": 37710013024,
+  "status": "completed",
+  "conclusion": "success",
+  "head_sha": "d27814313fd96e7bc52266efa6177d7421dc4875",
+  "jobs": [
+    {
+      "name": "Deploy Green",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "Rollback To Previous Target Group",
+      "status": "completed",
+      "conclusion": "skipped"
+    }
+  ]
+}

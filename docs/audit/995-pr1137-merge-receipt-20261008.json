@@ -1,0 +1,13 @@
+{
+  "merged_sha": "61f20cfd107361a431fda51f02cace751cc4978d",
+  "reviewed_head": "fb60eb893f2e199bec8c1bd7da28b5fde9d5971d",
+  "parents": [
+    "372ca4eb5da63a6d87d01d3c40f78344b4c2d7cf",
+    "fb60eb893f2e199bec8c1bd7da28b5fde9d5971d"
+  ],
+  "reviewed_scripts_identical": true,
+  "script_hashes": {
+    "scripts/instagram_testers/browser-operations.mjs": "8b093ea92a80dcde4a0a4857772d87d3837bb42a296963fb943f04107ec87d44",
+    "scripts/instagram_testers/session-manager.mjs": "e10b27d286116b0effee5264c1ac5e8f28ba8d2b3176ade2ba106157eefd6afb"
+  }
+}

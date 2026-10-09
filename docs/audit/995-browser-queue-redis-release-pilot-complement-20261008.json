@@ -1,0 +1,58 @@
+{
+  "status": "local_release_pilot_complement_audit",
+  "root_cause": {
+    "released_sha": "d27814313fd96e7bc52266efa6177d7421dc4875",
+    "observed_failure": "Redis::Alfred.zrange_and_zrem_missing_from_facade",
+    "baseline_receipt": ".codex/queue-redis-facade-regression-result.json",
+    "baseline_receipt_sha256": "a0ee90791d89e8279c2a1fc860bdecc9f2821844b38ee0d6748b41ad1756c258",
+    "baseline_reproduction": "NoMethodError on Redis::Alfred.zrange",
+    "live_facade_confirmation": "Atlas reported facade responds false while the Redis connection responds true"
+  },
+  "fix": {
+    "commit": "ca7e158040e56532f9500ca41df585d5504579d4",
+    "review_context": "PR1134",
+    "changed_file": "app/services/instagram/testers/browser_operation_store.rb",
+    "change": "route zrange and zrem through Redis::Alfred.with connection",
+    "regression_checks": 10,
+    "regression_status": "passed",
+    "vps_reinstall_required": false
+  },
+  "vps_compatibility": {
+    "release_sha": "d27814313fd96e7bc52266efa6177d7421dc4875",
+    "comparison": "git diff d27814313fd96e7bc52266efa6177d7421dc4875 ca7e158 -- scripts ops",
+    "scripts_ops_diff": "none",
+    "browser_operations_source_sha256": "c115b10c1a9f1934f7504e4c9823c0e3e048bd4a0988dbcc93031c5da024e354",
+    "conclusion": "backend-only Redis facade fix; current VPS package/source does not need reinstall for this correction"
+  },
+  "rollback_evidence": {
+    "manager_receipt": ".codex/hub2you-manager-1129-rollback-004741187505.json",
+    "manager_flag_after": "absent",
+    "manager_rollback_verified": true,
+    "post_preflight": ".codex/hub2you-manager-1129-preflight-004744543767.json",
+    "post_preflight_all_8_units_healthy": true,
+    "post_preflight_caps_and_profiles_preserved": true,
+    "backend_ssm_receipt": ".codex/browser-operations-activation-rollback-hub2you.json",
+    "backend_ssm_previous_version": 10,
+    "backend_ssm_rollback_version": 11,
+    "backend_ssm_flag_after": "unset",
+    "blue_green_runtime_rollback": {
+      "dispatch_receipt": ".codex/hub2you-blue-green-rollback-1129-dispatch.json",
+      "dispatch_status": "accepted_and_observed",
+      "workflow_status_at_receipt": "queued",
+      "completion_claimed": false
+    }
+  },
+  "scope": {
+    "local_audit_only": true,
+    "new_vps_action": false,
+    "new_meta_action": false,
+    "new_backend_mutation": false,
+    "secrets_or_client_data_recorded": false
+  },
+  "next_plan": {
+    "gate": "PR1134 review, CI, approval, merge and new AWS publication",
+    "after_gate": "fresh AWS/VPS health and hash read, then use existing Hub manager activation helper only if a new approval authorizes it",
+    "autonomia_manager": "remain off",
+    "search_invite_oauth": "remain disabled"
+  }
+}

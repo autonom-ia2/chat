@@ -1,0 +1,21 @@
+{
+  "utc": "2026-10-08T08:45:29.032318+00:00",
+  "reviewer": "nexo_revisao",
+  "review": "approved_conditionally_on_fresh_runtime_guards",
+  "helper_sha256": {
+    "prepare-browser-operations-activation-1139-hub2you.py": "d189d539699a8b65bfcf04fc85c22858fd04f9d7d07b3ab5d4acabba32ff88ab",
+    "apply-browser-operations-activation-1139-hub2you.py": "518437d46c32521004f40e2735d8a0968b132b6b41565c6017a8a292ac9c2fb1",
+    "dispatch-pr1139-hub2you-activation.py": "6c33d4b6bfa7a882311939ab1c64dc8f9550fc7969f8157519fc610c07b26cb5"
+  },
+  "dispatcher_reported_hash_truncation_corrected": true,
+  "hub_ssm_versions": [
+    15,
+    16,
+    17
+  ],
+  "aut_ssm_version": 8,
+  "vps_source_stays": "61f20cfd107361a431fda51f02cace751cc4978d",
+  "vps_script_content_equivalence_to_new_merge_required": true,
+  "root_only_production_writer": true,
+  "production_executed_by_helpers": false
+}

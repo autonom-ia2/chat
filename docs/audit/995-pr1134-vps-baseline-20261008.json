@@ -1,0 +1,91 @@
+{
+  "activation_gate": {
+    "activation_executed": false,
+    "env_source_changed": false,
+    "installation_or_reinstallation_executed": false,
+    "meta_login_or_operation_executed": false,
+    "next_step": "after backend fix health and explicit root release, run existing Hub-only activation helper with fresh preflight; keep Autonom off and other units unchanged"
+  },
+  "fresh_admin_capture_read": {
+    "meta_or_browser_operation_performed": false,
+    "publication_performed": false,
+    "receipt_utc": "2026-10-08T06:23:16.218996+00:00",
+    "sha256": "8bdde8fc622abcc37e6900d06eec944d8d9bf1f534e5892a7de0f8176a747f27",
+    "source": ".codex/browser-operations-flag-observations.jsonl",
+    "stacks": [
+      {
+        "available": true,
+        "browser_operations_flag": "unset",
+        "capture_present": true,
+        "capture_updated": true,
+        "control_available": false,
+        "enabled": true,
+        "managed_session": true,
+        "manager_state": "healthy",
+        "pointer_state": "active",
+        "request_state_absent": true,
+        "runtime_git_sha": "d27814313fd96e7bc52266efa6177d7421dc4875",
+        "session_present": true,
+        "status": "ok"
+      },
+      {
+        "available": true,
+        "browser_operations_flag": "unset",
+        "capture_present": true,
+        "capture_updated": true,
+        "control_available": false,
+        "enabled": true,
+        "managed_session": true,
+        "manager_state": "healthy",
+        "pointer_state": "active",
+        "request_state_absent": true,
+        "runtime_git_sha": "d27814313fd96e7bc52266efa6177d7421dc4875",
+        "session_present": true,
+        "status": "ok"
+      }
+    ]
+  },
+  "fresh_profile_lease_read": {
+    "autonomia": {
+      "chrome_running": true,
+      "flag": "absent",
+      "human_marker_absent": true,
+      "manager_lock_present": true,
+      "profile_lease_ready": true,
+      "profile_ready": true,
+      "singleton_shape_ok": true
+    },
+    "current_target_matches": true,
+    "hub2you": {
+      "chrome_running": true,
+      "flag": "absent",
+      "human_marker_absent": true,
+      "manager_lock_present": true,
+      "profile_lease_ready": true,
+      "profile_ready": true,
+      "singleton_shape_ok": true
+    },
+    "pids_or_lock_contents_emitted": false,
+    "read_only": true
+  },
+  "fresh_vps_preflight": {
+    "all_active_running_enabled": true,
+    "all_nrestarts_zero": true,
+    "autonomia_manager_flag": "absent",
+    "expected_caps_match": true,
+    "hub_manager_flag": "absent",
+    "receipt": ".codex/hub2you-manager-1129-preflight-062303317675.json",
+    "sha256": "e96cef1f0eac4eca598e3d04a6ebb23893ed8fc49c0910dc2f7913fddb2dfc61",
+    "target_sha_matches": true,
+    "units_total": 8,
+    "writes_performed": false
+  },
+  "provenance": {
+    "backend_head": "ca7e158040e56532f9500ca41df585d5504579d4",
+    "manager_activation_helper": ".codex/activate-hub2you-manager-1129.py",
+    "manager_activation_helper_sha256": "ec2cdfd2e076f6bb3afa6b4d6300f91528822930448b27972656e4692acf0615",
+    "vps_release_sha": "d27814313fd96e7bc52266efa6177d7421dc4875",
+    "vps_scripts_ops_diff": "none"
+  },
+  "status": "baseline_ready_no_activation"
+}

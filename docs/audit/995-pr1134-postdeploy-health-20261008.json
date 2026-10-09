@@ -1,0 +1,73 @@
+{
+  "utc": "2026-10-08T06:52:44.106745+00:00",
+  "expected_sha": "372ca4eb5da63a6d87d01d3c40f78344b4c2d7cf",
+  "results": [
+    {
+      "stack": "autonomia",
+      "status": "read_complete",
+      "release_sha": "372ca4eb5da63a6d87d01d3c40f78344b4c2d7cf",
+      "current_running": true,
+      "current_target_healthy": true,
+      "listener_matches_current": true,
+      "previous_instance_running": false,
+      "previous_instance_state": "stopped",
+      "previous_target_registered": true,
+      "previous_target_healthy": false,
+      "rollback_target_distinct": true,
+      "browser_operations_flag": "unset",
+      "containers": [
+        {
+          "container": "chatwoot-web",
+          "state": "running",
+          "sha": "372ca4eb5da63a6d87d01d3c40f78344b4c2d7cf",
+          "instagram_automation_enabled": true,
+          "instagram_allowlist_matches_target": true,
+          "browser_operations_flag": "unset"
+        },
+        {
+          "container": "chatwoot-worker",
+          "state": "running",
+          "sha": "372ca4eb5da63a6d87d01d3c40f78344b4c2d7cf",
+          "instagram_automation_enabled": true,
+          "instagram_allowlist_matches_target": true,
+          "browser_operations_flag": "unset"
+        }
+      ],
+      "mutation_performed": false
+    },
+    {
+      "stack": "hub2you",
+      "status": "read_complete",
+      "release_sha": "372ca4eb5da63a6d87d01d3c40f78344b4c2d7cf",
+      "current_running": true,
+      "current_target_healthy": true,
+      "listener_matches_current": true,
+      "previous_instance_running": false,
+      "previous_instance_state": "stopped",
+      "previous_target_registered": true,
+      "previous_target_healthy": false,
+      "rollback_target_distinct": true,
+      "browser_operations_flag": "unset",
+      "containers": [
+        {
+          "container": "chatwoot-web",
+          "state": "running",
+          "sha": "372ca4eb5da63a6d87d01d3c40f78344b4c2d7cf",
+          "instagram_automation_enabled": true,
+          "instagram_allowlist_matches_target": true,
+          "browser_operations_flag": "unset"
+        },
+        {
+          "container": "chatwoot-worker",
+          "state": "running",
+          "sha": "372ca4eb5da63a6d87d01d3c40f78344b4c2d7cf",
+          "instagram_automation_enabled": true,
+          "instagram_allowlist_matches_target": true,
+          "browser_operations_flag": "unset"
+        }
+      ],
+      "mutation_performed": false
+    }
+  ],
+  "mutation_performed": false
+}

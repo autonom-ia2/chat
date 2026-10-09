@@ -1,0 +1,25 @@
+{
+  "utc": "2026-10-08T08:17:07.709717+00:00",
+  "merged_sha": "61f20cfd107361a431fda51f02cace751cc4978d",
+  "automatic_deploys": {
+    "autonomia": {
+      "run": 37747005710,
+      "conclusion": "success"
+    },
+    "hub2you": {
+      "run": 37747005807,
+      "conclusion": "success"
+    }
+  },
+  "vps_installed_sha": "61f20cfd107361a431fda51f02cace751cc4978d",
+  "vps_eight_services_resumed": true,
+  "hub_configuration": {
+    "version_before": 13,
+    "version_after": 14,
+    "browser_operations_enabled": true,
+    "readback_verified": true
+  },
+  "hub_activation_deploy_run": 37748774506,
+  "functional_connection_verified": false,
+  "new_search_sent": false
+}

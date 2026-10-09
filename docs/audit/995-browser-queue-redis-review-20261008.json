@@ -1,0 +1,11 @@
+{
+  "pr": "https://github.com/autonom-ia2/chat/pull/1134",
+  "head": "ca7e158040e56532f9500ca41df585d5504579d4",
+  "reviewer": "nexo_revisao",
+  "verdict": "approved",
+  "scope": "2 Redis calls through Alfred.with; audit only",
+  "validation": "10 real Redis/facade/store/publisher checks; d278 NoMethodError reproduced; Rubocop zero",
+  "limits": "No production re-pilot, no connection/reconnection or Meta acceptance proof",
+  "aws_rollback": "pending Atlas reviewed safe blue-green loading SSM11 unset",
+  "publication": "requires Rodrigo approval of this new head after CI"
+}

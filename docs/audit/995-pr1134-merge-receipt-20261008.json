@@ -1,0 +1,20 @@
+{
+  "utc": "2026-10-08T06:36:02.522705+00:00",
+  "pr": 1134,
+  "head": "ca7e158040e56532f9500ca41df585d5504579d4",
+  "merge_sha": "372ca4eb5da63a6d87d01d3c40f78344b4c2d7cf",
+  "merged_at": "2026-10-08T06:34:43Z",
+  "parents": [
+    "d27814313fd96e7bc52266efa6177d7421dc4875",
+    "ca7e158040e56532f9500ca41df585d5504579d4"
+  ],
+  "source_matches_reviewed_head": true,
+  "source_sha256": "0e568f0a1cd54002aa9533b200b45f8433e75a51ef793e5ca57792e76309c7ca",
+  "scripts_ops_identical_to_vps_d278": true,
+  "vps_reinstall_required": false,
+  "automatic_push_deploys": {
+    "autonomia": 37738381995,
+    "hub2you": 37738381932
+  },
+  "manual_dispatch_executed": false
+}

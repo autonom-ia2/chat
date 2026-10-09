@@ -1,0 +1,96 @@
+{
+  "backend_fresh_read": {
+    "both_flags": "unset",
+    "both_runtime_sha": "372ca4eb5da63a6d87d01d3c40f78344b4c2d7cf",
+    "control_requests_absent": true,
+    "publication_performed": false,
+    "receipt_utc": "2026-10-08T06:47:06.661141+00:00",
+    "sha256": "bdc809c010509ff3718539e60292540b4be0d7dc9ac935b57e13ab80d8763cf0",
+    "source": ".codex/browser-operations-flag-observations.jsonl",
+    "stacks": [
+      {
+        "available": true,
+        "browser_operations_flag": "unset",
+        "capture_present": true,
+        "capture_updated": true,
+        "control_available": false,
+        "enabled": true,
+        "managed_session": true,
+        "manager_state": "healthy",
+        "pointer_state": "active",
+        "request_state_absent": true,
+        "runtime_git_sha": "372ca4eb5da63a6d87d01d3c40f78344b4c2d7cf",
+        "session_present": true,
+        "status": "ok"
+      },
+      {
+        "available": true,
+        "browser_operations_flag": "unset",
+        "capture_present": true,
+        "capture_updated": true,
+        "control_available": false,
+        "enabled": true,
+        "managed_session": true,
+        "manager_state": "healthy",
+        "pointer_state": "active",
+        "request_state_absent": true,
+        "runtime_git_sha": "372ca4eb5da63a6d87d01d3c40f78344b4c2d7cf",
+        "session_present": true,
+        "status": "ok"
+      }
+    ]
+  },
+  "execution": {
+    "env_source_changed": false,
+    "install_or_reinstall_executed": false,
+    "manager_activation_executed": false,
+    "meta_operation_executed": false
+  },
+  "next_gate": {
+    "after_gate": "fresh preflight/hash read, then root may explicitly authorize Hub-only manager activation",
+    "autonomia_manager": "remain_off",
+    "blocked_until": "Hub SSM true and deploy activation health are confirmed by root",
+    "other_units": "remain_unchanged",
+    "search_invite_oauth": "remain_disabled"
+  },
+  "provenance": {
+    "backend_head": "ca7e158040e56532f9500ca41df585d5504579d4",
+    "cli": "python3 .codex/activate-hub2you-manager-1129.py {preflight|apply|rollback} [--execute]",
+    "manager_helper": ".codex/activate-hub2you-manager-1129.py",
+    "manager_helper_sha256": "ec2cdfd2e076f6bb3afa6b4d6300f91528822930448b27972656e4692acf0615",
+    "vps_scripts_ops_diff": "none"
+  },
+  "status": "pre_activation_readiness_only",
+  "vps": {
+    "all_active_running_enabled": true,
+    "all_nrestarts_zero": true,
+    "autonomia_manager_flag": "absent",
+    "expected_caps_match": true,
+    "hub_manager_flag": "absent",
+    "preflight_receipt": ".codex/hub2you-manager-1129-preflight-064644184311.json",
+    "preflight_sha256": "4ebc7c0fe9b2e3d81c932fe10d5e53592cf3c51f8362d24d2dcffc89f6c9a397",
+    "profile_lease_probe": {
+      "autonomia": {
+        "chrome_running": true,
+        "human_marker_absent": true,
+        "manager_lock_present": true,
+        "profile_lease_ready": true,
+        "profile_ready": true,
+        "singleton_shape_ok": true
+      },
+      "hub2you": {
+        "chrome_running": true,
+        "human_marker_absent": true,
+        "manager_lock_present": true,
+        "profile_lease_ready": true,
+        "profile_ready": true,
+        "singleton_shape_ok": true
+      },
+      "pids_or_lock_contents_emitted": false,
+      "read_only": true
+    },
+    "release_sha": "d27814313fd96e7bc52266efa6177d7421dc4875",
+    "units_total": 8,
+    "writes_performed": false
+  }
+}

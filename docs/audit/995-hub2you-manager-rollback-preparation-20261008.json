@@ -1,0 +1,75 @@
+{
+  "status": "rollback_prepared_not_executed",
+  "scope": {
+    "target": "hub2you_manager_only",
+    "expected_flag_after_rollback": "absent",
+    "autonomia_manager_flag": "must_remain_absent_or_false",
+    "other_units": "must_remain_active_running_enabled_and_unchanged",
+    "resources_and_caps": "must_remain_unchanged",
+    "profiles_and_locks": "must_remain_exclusive_and_unchanged",
+    "backend_flag_change": false,
+    "meta_operation": false,
+    "search_invite_oauth": false,
+    "execution_performed": false
+  },
+  "helper": {
+    "path": ".codex/activate-hub2you-manager-1129.py",
+    "sha256": "ec2cdfd2e076f6bb3afa6b4d6300f91528822930448b27972656e4692acf0615",
+    "rollback_phase_requires_execute": true,
+    "remote_rollback_not_called": true
+  },
+  "release_guard": {
+    "target_sha": "d27814313fd96e7bc52266efa6177d7421dc4875",
+    "package_sha256": "7fc09488f72370eeaa7ad97716c7701300b5b6d000edc64ef63d19904b98af12",
+    "browser_operations_source_sha256": "c115b10c1a9f1934f7504e4c9823c0e3e048bd4a0988dbcc93031c5da024e354"
+  },
+  "activation_state_to_rollback": {
+    "apply_receipt": ".codex/hub2you-manager-1129-apply-002648818286.json",
+    "apply_receipt_sha256": "3b64af4a5767c9491805553e713a6f31ecefcca569bac92d2c39f3eb55e75f07",
+    "readback": ".codex/hub2you-manager-1129-after-apply.json",
+    "readback_sha256": "16ab01884fe0e9f2f1c19c287f4f6a20ee5f2eb2dcdd0b8e1bc7e3edc43cc0bc",
+    "hub_manager_flag": "true",
+    "autonomia_manager_flag": "absent",
+    "all_8_units_healthy": true,
+    "all_8_units_nrestarts_zero": true,
+    "other_7_units_healthy": true,
+    "expected_resources_match": true,
+    "profiles_ready": true,
+    "human_markers_absent": true,
+    "backup_reused_integrity": true,
+    "bootstrap_hash_matches_package": true
+  },
+  "rollback_guards_expected_from_helper": [
+    "current_release_is_target_sha",
+    "backup_directory_and_files_are_root_owned_with_expected_modes",
+    "autonomia_manager_flag_is_absent_or_false",
+    "all_other_units_match_recorded_active_state_and_resources",
+    "hub_manager_environment_matches_activation_new_sha256",
+    "hub_manager_stops_and_releases_browser_profile_locks",
+    "old_environment_restores_to_recorded_old_sha256",
+    "hub_manager_restarts_with_recorded_state_and_resources",
+    "other_units_remain_unchanged_after_restart"
+  ],
+  "capture_evidence": {
+    "last_post_activation_capture_read": ".codex/browser-operations-flag-observations.jsonl",
+    "source_sha256": "5827e870f49976d4c29ec11c168dbcbca41f74a223e26a95496a4ac7fd12c15",
+    "receipt_utc": "2026-10-08T00:28:15.540000+00:00",
+    "capture_after_activation": true,
+    "pointer_update_after_activation": true,
+    "manager_heartbeat_after_activation": true,
+    "publication_performed": false,
+    "control_request_absent": true,
+    "ack_separately_exposed": false,
+    "current_pilot_status": "later_expired_without_fetch_claim",
+    "rollback_requires_fresh_read_and_capture_health_confirmation": true
+  },
+  "local_validation": {
+    "helper_ast_compile": true,
+    "helper_sha_checked": true,
+    "no_remote_command_executed": true,
+    "no_service_state_changed": true,
+    "no_flag_changed": true,
+    "no_backend_or_meta_operation": true
+  },
+  "next_gate": "root_must_explicitly_release_remote_rollback_after_fresh_preflight_and_capture_health_read"
+}

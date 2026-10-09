@@ -1,0 +1,119 @@
+{
+  "utc": "2026-10-08T08:34:23.856232+00:00",
+  "expected_sha": "61f20cfd107361a431fda51f02cace751cc4978d",
+  "one_ui_search_click": true,
+  "manager_diagnostic": {
+    "cap_reached": false,
+    "events": [
+      {
+        "claim_received": true,
+        "complete_received": true,
+        "complete_requested": true,
+        "event": "instagram_browser_operation_lifecycle",
+        "execution_returned": true,
+        "execution_started": true,
+        "executor_error_returned": false,
+        "phase": "complete_received",
+        "read_received": true,
+        "request_present": true,
+        "timestamp": "2026-10-08T08:31:42.400558Z"
+      },
+      {
+        "claim_received": true,
+        "complete_received": true,
+        "complete_requested": true,
+        "event": "instagram_browser_operation_lifecycle",
+        "execution_returned": true,
+        "execution_started": true,
+        "executor_error_returned": false,
+        "phase": "complete_received",
+        "read_received": true,
+        "request_present": true,
+        "timestamp": "2026-10-08T08:32:44.023399Z"
+      }
+    ],
+    "ignored_record_count": 0,
+    "journal_complete": true,
+    "recognized_event_count": 2,
+    "record_count": 2,
+    "source_matches_expected": true,
+    "status": "ok"
+  },
+  "backend_operations": {
+    "record_count": 2,
+    "queue_record_count": 0,
+    "scan_truncated": false,
+    "state_counts": {
+      "queued": 0,
+      "running": 0,
+      "ready": 0,
+      "failed": 2,
+      "expired": 0
+    },
+    "current": null,
+    "last": {
+      "action": "search",
+      "state": "failed",
+      "error_code": "meta_unavailable",
+      "write_started": "unavailable",
+      "permit_marker": "not_persisted",
+      "outcome_marker": "not_applicable",
+      "publisher_ack": "not_persisted",
+      "created_at": "2026-10-08T08:32:01Z",
+      "updated_at": "2026-10-08T08:32:43Z",
+      "deadline": "2026-10-08T08:37:01Z",
+      "result_claim_present": false,
+      "stored_result_present": false
+    },
+    "latest_terminal": {
+      "action": "search",
+      "state": "failed",
+      "error_code": "meta_unavailable",
+      "write_started": "unavailable",
+      "permit_marker": "not_persisted",
+      "outcome_marker": "not_applicable",
+      "publisher_ack": "not_persisted",
+      "created_at": "2026-10-08T08:32:01Z",
+      "updated_at": "2026-10-08T08:32:43Z",
+      "deadline": "2026-10-08T08:37:01Z",
+      "result_claim_present": false,
+      "stored_result_present": false
+    },
+    "publisher_ack_storage": "not_persisted_by_session_publisher",
+    "record_summaries": [
+      {
+        "action": "search",
+        "state": "failed",
+        "error_code": "meta_unavailable",
+        "write_started": "unavailable",
+        "permit_marker": "not_persisted",
+        "outcome_marker": "not_applicable",
+        "publisher_ack": "not_persisted",
+        "created_at": "2026-10-08T08:30:47Z",
+        "updated_at": "2026-10-08T08:31:42Z",
+        "deadline": "2026-10-08T08:35:47Z",
+        "result_claim_present": false,
+        "stored_result_present": false
+      },
+      {
+        "action": "search",
+        "state": "failed",
+        "error_code": "meta_unavailable",
+        "write_started": "unavailable",
+        "permit_marker": "not_persisted",
+        "outcome_marker": "not_applicable",
+        "publisher_ack": "not_persisted",
+        "created_at": "2026-10-08T08:32:01Z",
+        "updated_at": "2026-10-08T08:32:43Z",
+        "deadline": "2026-10-08T08:37:01Z",
+        "result_claim_present": false,
+        "stored_result_present": false
+      }
+    ]
+  },
+  "channel_match_count": 0,
+  "functional_connection_verified": false,
+  "root_replayed_search": false,
+  "invite_oauth_or_dm_requested_by_root": false,
+  "safe_deactivation_in_progress": true
+}

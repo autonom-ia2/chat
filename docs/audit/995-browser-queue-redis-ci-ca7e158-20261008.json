@@ -1,0 +1,117 @@
+{
+  "utc": "2026-10-08T01:00:24.590185+00:00",
+  "pr": "https://github.com/autonom-ia2/chat/pull/1134",
+  "head": "ca7e158040e56532f9500ca41df585d5504579d4",
+  "checks_count": 26,
+  "success": 24,
+  "skipped": [
+    "Email backend and bounded regression",
+    "Email UI, locales, build and isolated browser"
+  ],
+  "checks": [
+    {
+      "name": "Detect feature scope",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "name": "fork-i18n",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "name": "trava",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "name": "Instagram real Redis and PostgreSQL isolation",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "name": "Python session preparer",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "name": "Rubocop",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "name": "Email backend and bounded regression",
+      "conclusion": "SKIPPED"
+    },
+    {
+      "name": "central",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "name": "Node synthetic contracts",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "name": "Brakeman e bundle-audit",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "name": "Email UI, locales, build and isolated browser",
+      "conclusion": "SKIPPED"
+    },
+    {
+      "name": "Vitest Instagram onboarding",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "name": "ESLint",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "name": "Component browser QA",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "name": "Vitest",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "name": "VPS Linux Chrome and private VNC",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "name": "RSpec - plano",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "name": "RSpec (0/8)",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "name": "RSpec (1/8)",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "name": "RSpec (2/8)",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "name": "RSpec (3/8)",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "name": "RSpec (4/8)",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "name": "RSpec (5/8)",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "name": "RSpec (6/8)",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "name": "RSpec (7/8)",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "name": "RSpec",
+      "conclusion": "SUCCESS"
+    }
+  ]
+}

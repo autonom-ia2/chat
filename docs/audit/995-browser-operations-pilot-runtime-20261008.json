@@ -1,0 +1,35 @@
+{
+  "status": "read_only_pilot_runtime_observation",
+  "receipt": ".codex/hub2you-pilot-runtime-read-20261008-003743.json",
+  "receipt_sha256": "e47ea23e85f41179aa95ad9c104d42823838e2a880840c322c942798cec43f8e",
+  "observed_at": "2026-10-08T00:37:43.443445+00:00",
+  "observation_since": "2026-10-08T00:36:50Z",
+  "scope": {
+    "stack": "hub2you",
+    "release_sha": "d27814313fd96e7bc52266efa6177d7421dc4875",
+    "browser_operations_sha256": "c115b10c1a9f1934f7504e4c9823c0e3e048bd4a0988dbcc93031c5da024e354",
+    "source_hash_matches_c115": true,
+    "meta_or_oauth_called": false,
+    "mutation_performed": false,
+    "profile_opened": false,
+    "second_search_or_retry": false,
+    "invite_performed": false
+  },
+  "runtime": {
+    "units_total": 4,
+    "units_healthy": 4,
+    "units_nrestarts_zero": 4,
+    "units_result_success": 4,
+    "units_exec_main_ok": 4,
+    "journal_warning_or_higher_events": 0,
+    "journal_error_or_higher_events": 0,
+    "journal_read_complete": true,
+    "chrome_process_count": 10,
+    "node_process_count": 0,
+    "profile_directory": true,
+    "human_marker": false,
+    "manager_lease_lock": true,
+    "browser_singleton_lease_lock": true
+  },
+  "interpretation": "Runtime remains healthy during the single UI search observation; this receipt does not assert search success or provider response."
+}
