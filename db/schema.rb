@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_10_10_130000) do
+ActiveRecord::Schema[7.2].define(version: 2026_10_11_092114) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1901,6 +1901,13 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_10_130000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.integer "assignment_mode", default: 0, null: false
+    t.integer "page_version", default: 1, null: false
+    t.jsonb "locations", default: [], null: false
+    t.integer "min_notice_minutes", default: 0, null: false
+    t.jsonb "slot_durations", default: [], null: false
+    t.string "contact_phone"
+    t.string "template_key"
+    t.jsonb "brand", default: {}, null: false
     t.index ["account_id"], name: "index_crm_agent_booking_profiles_on_account_id"
     t.index ["inbox_id"], name: "index_crm_agent_booking_profiles_on_inbox_id"
     t.index ["slug"], name: "index_crm_agent_booking_profiles_on_slug", unique: true
@@ -2134,14 +2141,16 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_10_130000) do
     t.bigint "meeting_id", null: false
     t.bigint "contact_id"
     t.bigint "user_id"
-    t.string "email", null: false
+    t.string "email"
     t.string "name"
     t.integer "guest_type", default: 0, null: false
     t.integer "rsvp_status", default: 0, null: false
     t.jsonb "metadata", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "phone_number"
     t.index ["account_id", "meeting_id", "email"], name: "idx_crm_meeting_guests_unique_email", unique: true
+    t.index ["account_id", "meeting_id", "phone_number"], name: "idx_crm_meeting_guests_unique_phone", unique: true, where: "(phone_number IS NOT NULL)"
     t.index ["account_id", "meeting_id"], name: "idx_crm_meeting_guests_meeting"
     t.index ["account_id"], name: "index_crm_meeting_guests_on_account_id"
     t.index ["contact_id"], name: "idx_crm_meeting_guests_contact"
@@ -2172,6 +2181,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_10_130000) do
     t.integer "outcome"
     t.text "outcome_notes"
     t.datetime "outcome_recorded_at"
+    t.string "source"
     t.index ["account_id", "card_id"], name: "idx_crm_meetings_card"
     t.index ["account_id", "created_by_id"], name: "idx_crm_meetings_created_by"
     t.index ["account_id", "inbox_id"], name: "idx_crm_meetings_inbox"
