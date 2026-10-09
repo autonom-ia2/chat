@@ -3,6 +3,10 @@
 # Table name: channel_email
 #
 #  id                        :bigint           not null, primary key
+#  calendar_enabled          :boolean          default(FALSE), not null
+#  calendar_identity         :string
+#  calendar_scope_granted    :boolean          default(FALSE), not null
+#  calendar_shared           :boolean          default(FALSE), not null
 #  email                     :string           not null
 #  forward_to_email          :string           not null
 #  imap_address              :string           default("")
@@ -31,6 +35,7 @@
 #
 # Indexes
 #
+#  idx_channel_email_calendar_enabled       (account_id,calendar_enabled)
 #  index_channel_email_on_email             (email) UNIQUE
 #  index_channel_email_on_forward_to_email  (forward_to_email) UNIQUE
 #

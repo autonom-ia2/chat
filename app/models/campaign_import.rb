@@ -1,3 +1,60 @@
+# == Schema Information
+#
+# Table name: campaign_imports
+#
+#  id                              :bigint           not null, primary key
+#  base_label                      :string
+#  batch_count                     :integer          default(0), not null
+#  campaign_name                   :string
+#  campaign_slug                   :string
+#  completed_at                    :datetime
+#  confirmed_at                    :datetime
+#  duplicate_file_rows             :integer          default(0), not null
+#  existing_contacts_count         :integer          default(0), not null
+#  existing_contacts_updated_count :integer          default(0), not null
+#  failed_at                       :datetime
+#  failed_contacts_count           :integer          default(0), not null
+#  failed_records                  :integer          default(0), not null
+#  import_finished_at              :datetime
+#  import_started_at               :datetime
+#  imported_contacts_count         :integer          default(0), not null
+#  invalid_rows                    :integer          default(0), not null
+#  labels_payload                  :jsonb            not null
+#  mode                            :string
+#  new_contacts_count              :integer          default(0), not null
+#  new_contacts_estimate           :integer          default(0), not null
+#  options                         :jsonb            not null
+#  processed_records               :integer          default(0), not null
+#  queued_at                       :datetime
+#  source_byte_size                :bigint
+#  source_content_type             :string
+#  source_filename                 :string
+#  source_format                   :string
+#  started_at                      :datetime
+#  status                          :integer          default("uploaded"), not null
+#  total_rows                      :integer          default(0), not null
+#  undo_completed_at               :datetime
+#  undo_finished_at                :datetime
+#  undo_started_at                 :datetime
+#  undo_status                     :integer          default("pending"), not null
+#  valid_rows                      :integer          default(0), not null
+#  validated_at                    :datetime
+#  validation_summary              :jsonb            not null
+#  created_at                      :datetime         not null
+#  updated_at                      :datetime         not null
+#  account_id                      :bigint           not null
+#  data_import_id                  :bigint
+#  user_id                         :bigint           not null
+#
+# Indexes
+#
+#  index_campaign_imports_on_account_id                    (account_id)
+#  index_campaign_imports_on_account_id_and_campaign_slug  (account_id,campaign_slug)
+#  index_campaign_imports_on_account_id_and_created_at     (account_id,created_at)
+#  index_campaign_imports_on_account_id_and_status         (account_id,status)
+#  index_campaign_imports_on_data_import_id                (data_import_id)
+#  index_campaign_imports_on_user_id                       (user_id)
+#
 class CampaignImport < ApplicationRecord
   DELETABLE_BEFORE_IMPORT_STATUSES = %w[uploaded validation_failed ready_to_confirm failed cancelled expired].freeze
 

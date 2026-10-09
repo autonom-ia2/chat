@@ -1,3 +1,28 @@
+# == Schema Information
+#
+# Table name: crm_stage_automation_steps
+#
+#  id                  :bigint           not null, primary key
+#  action_config       :jsonb            not null
+#  action_type         :integer          default("create_follow_up"), not null
+#  delay_seconds       :integer          default(0), not null
+#  position            :integer          default(0), not null
+#  created_at          :datetime         not null
+#  updated_at          :datetime         not null
+#  account_id          :bigint           not null
+#  stage_automation_id :bigint           not null
+#
+# Indexes
+#
+#  idx_crm_stage_automation_steps_order                     (stage_automation_id,position)
+#  index_crm_stage_automation_steps_on_account_id           (account_id)
+#  index_crm_stage_automation_steps_on_stage_automation_id  (stage_automation_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (account_id => accounts.id)
+#  fk_rails_...  (stage_automation_id => crm_stage_automations.id)
+#
 class Crm::StageAutomationStep < ApplicationRecord
   self.table_name = 'crm_stage_automation_steps'
 

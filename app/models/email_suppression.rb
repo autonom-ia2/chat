@@ -1,3 +1,23 @@
+# == Schema Information
+#
+# Table name: email_suppressions
+#
+#  id         :bigint           not null, primary key
+#  email      :string           not null
+#  reason     :string
+#  source     :string
+#  created_at :datetime         not null
+#  account_id :bigint           not null
+#
+# Indexes
+#
+#  idx_email_suppressions_account_email    (account_id, lower((email)::text)) UNIQUE
+#  index_email_suppressions_on_account_id  (account_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (account_id => accounts.id)
+#
 class EmailSuppression < ApplicationRecord
   belongs_to :account
 

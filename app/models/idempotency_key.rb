@@ -13,9 +13,13 @@
 #
 # Indexes
 #
-#  idx_idempotency_keys_created_at          (created_at)
-#  index_idempotency_keys_on_account_id     (account_id)
-#  uniq_idempotency_keys_per_account        (account_id,key) UNIQUE
+#  idx_idempotency_keys_created_at       (created_at)
+#  index_idempotency_keys_on_account_id  (account_id)
+#  uniq_idempotency_keys_per_account     (account_id,key) UNIQUE
+#
+# Foreign Keys
+#
+#  fk_rails_...  (account_id => accounts.id)
 #
 
 # Stripe-style idempotency record for CRM write endpoints (plan §3.3, B-API2).

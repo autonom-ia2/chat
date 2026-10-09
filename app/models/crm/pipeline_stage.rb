@@ -1,3 +1,36 @@
+# == Schema Information
+#
+# Table name: crm_pipeline_stages
+#
+#  id                  :bigint           not null, primary key
+#  color               :string
+#  description         :text
+#  is_lost_stage       :boolean          default(FALSE), not null
+#  is_won_stage        :boolean          default(FALSE), not null
+#  metadata            :jsonb            not null
+#  name                :string           not null
+#  position            :integer          default(0), not null
+#  sla_seconds         :integer
+#  sla_warning_seconds :integer
+#  win_probability     :integer          default(0), not null
+#  wip_limit           :integer
+#  created_at          :datetime         not null
+#  updated_at          :datetime         not null
+#  account_id          :bigint           not null
+#  pipeline_id         :bigint           not null
+#
+# Indexes
+#
+#  idx_crm_stages_account_pipeline_position                 (account_id,pipeline_id,position)
+#  index_crm_pipeline_stages_on_account_id                  (account_id)
+#  index_crm_pipeline_stages_on_account_id_and_pipeline_id  (account_id,pipeline_id)
+#  index_crm_pipeline_stages_on_pipeline_id                 (pipeline_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (account_id => accounts.id)
+#  fk_rails_...  (pipeline_id => crm_pipelines.id)
+#
 class Crm::PipelineStage < ApplicationRecord
   self.table_name = 'crm_pipeline_stages'
 

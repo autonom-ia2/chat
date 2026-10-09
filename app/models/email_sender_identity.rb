@@ -1,3 +1,33 @@
+# == Schema Information
+#
+# Table name: email_sender_identities
+#
+#  id                    :bigint           not null, primary key
+#  dkim_records          :jsonb            not null
+#  dmarc_record          :string
+#  domain                :string           not null
+#  from_email            :string
+#  last_error            :string
+#  provider              :string           default("ses"), not null
+#  ses_configuration_set :string
+#  spf_record            :string
+#  status                :integer          default("pending"), not null
+#  verified_at           :datetime
+#  created_at            :datetime         not null
+#  updated_at            :datetime         not null
+#  account_id            :bigint           not null
+#  reply_to_inbox_id     :bigint
+#
+# Indexes
+#
+#  idx_email_sender_identities_account_domain   (account_id, lower((domain)::text)) UNIQUE
+#  idx_email_sender_identities_account_status   (account_id,status)
+#  index_email_sender_identities_on_account_id  (account_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (account_id => accounts.id)
+#
 class EmailSenderIdentity < ApplicationRecord
   belongs_to :account
 

@@ -1,3 +1,23 @@
+# == Schema Information
+#
+# Table name: crm_service_schedules
+#
+#  id         :bigint           not null, primary key
+#  blocks     :jsonb            not null
+#  enabled    :boolean          default(TRUE), not null
+#  owner_type :string           not null
+#  timezone   :string           not null
+#  created_at :datetime         not null
+#  updated_at :datetime         not null
+#  account_id :bigint           not null
+#  owner_id   :bigint           not null
+#
+# Indexes
+#
+#  idx_crm_service_schedules_owner_unique                  (account_id,owner_type,owner_id) UNIQUE
+#  index_crm_service_schedules_on_account_id               (account_id)
+#  index_crm_service_schedules_on_owner_type_and_owner_id  (owner_type,owner_id)
+#
 class Crm::ServiceSchedule < ApplicationRecord
   self.table_name = 'crm_service_schedules'
 

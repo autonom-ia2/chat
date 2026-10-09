@@ -1,3 +1,42 @@
+# == Schema Information
+#
+# Table name: autonomia_agent_sources
+#
+#  id                 :bigint           not null, primary key
+#  confidence         :string
+#  error              :text
+#  external_link      :string
+#  kind               :integer          default("knowledge"), not null
+#  metadata           :jsonb            not null
+#  quality_score      :integer
+#  reference          :string
+#  review_label       :string
+#  review_reason      :text
+#  review_status      :string
+#  review_summary     :text
+#  reviewed_at        :datetime
+#  source_type        :string           not null
+#  status             :integer          default("pending"), not null
+#  sync_status        :string
+#  sync_token         :string
+#  synced_at          :datetime
+#  created_at         :datetime         not null
+#  updated_at         :datetime         not null
+#  account_id         :bigint           not null
+#  autonomia_agent_id :bigint           not null
+#
+# Indexes
+#
+#  index_autonomia_agent_sources_on_account_id                     (account_id)
+#  index_autonomia_agent_sources_on_autonomia_agent_id             (autonomia_agent_id)
+#  index_autonomia_agent_sources_on_autonomia_agent_id_and_kind    (autonomia_agent_id,kind)
+#  index_autonomia_agent_sources_on_autonomia_agent_id_and_status  (autonomia_agent_id,status)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (account_id => accounts.id)
+#  fk_rails_...  (autonomia_agent_id => autonomia_agents.id)
+#
 module Autonomia
   module Agents
     class Source < ApplicationRecord

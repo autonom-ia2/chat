@@ -1,3 +1,32 @@
+# == Schema Information
+#
+# Table name: autonomia_agent_knowledge
+#
+#  id                 :bigint           not null, primary key
+#  chunk_index        :integer          default(0), not null
+#  content            :text             not null
+#  embedding          :vector(1536)
+#  metadata           :jsonb            not null
+#  status             :integer          default("ready"), not null
+#  created_at         :datetime         not null
+#  updated_at         :datetime         not null
+#  account_id         :bigint           not null
+#  autonomia_agent_id :bigint           not null
+#  source_id          :bigint
+#
+# Indexes
+#
+#  idx_autonomia_knowledge_agent_status                   (autonomia_agent_id,status)
+#  idx_autonomia_knowledge_embedding                      (embedding) USING ivfflat
+#  index_autonomia_agent_knowledge_on_account_id          (account_id)
+#  index_autonomia_agent_knowledge_on_autonomia_agent_id  (autonomia_agent_id)
+#  index_autonomia_agent_knowledge_on_source_id           (source_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (account_id => accounts.id)
+#  fk_rails_...  (autonomia_agent_id => autonomia_agents.id)
+#
 module Autonomia
   module Agents
     class KnowledgeEntry < ApplicationRecord
