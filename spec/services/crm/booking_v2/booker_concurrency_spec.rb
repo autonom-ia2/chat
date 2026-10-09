@@ -8,10 +8,9 @@ RSpec.describe Crm::BookingV2::Booker, :relationships_committed_fixtures do
   self.use_transactional_tests = false
 
   # Sem transação, o que for gravado fica no banco. As auditorias (gem audited) de conta, usuário e caixa também:
-  # anotamos o último id antes de criar qualquer coisa e apagamos o que veio depois, para não vazar para outros testes
+  # anotamos o último id antes de criar qualquer coisa (o let! vem antes do da conta) e apagamos o que veio depois, para não vazar para outros testes
   # do mesmo processo (ex.: specs de auditoria do enterprise contam linhas).
-  prepend_before { @audit_floor = Audited::Audit.maximum(:id).to_i }
-
+  let!(:audit_floor) { Audited::Audit.maximum(:id).to_i }
   let!(:account) { create(:account) }
   let!(:world) { build_booking_world(account: account) }
   let(:slot) { '2026-10-20T10:00:00-03:00' }
@@ -40,12 +39,16 @@ RSpec.describe Crm::BookingV2::Booker, :relationships_committed_fixtures do
   def cleanup_account!
     account_tables.each { |model| model.where(account_id: account.id).delete_all }
     user_ids = account.account_users.pluck(:user_id)
+    cleanup_inboxes!
+    cleanup_people!(user_ids)
+    account.reload.destroy!
+    Audited::Audit.where('id > ?', audit_floor).delete_all
+  end
+
+  def cleanup_inboxes!
     inbox_ids = Inbox.where(account_id: account.id).pluck(:id)
     Inbox.where(id: inbox_ids).find_each(&:destroy!)
     WorkingHour.where(inbox_id: inbox_ids).or(WorkingHour.where(account_id: account.id)).delete_all
-    cleanup_people!(user_ids)
-    account.reload.destroy!
-    Audited::Audit.where('id > ?', @audit_floor).delete_all
   end
 
   def cleanup_people!(user_ids)
