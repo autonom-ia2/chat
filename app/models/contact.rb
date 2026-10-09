@@ -189,7 +189,8 @@ class Contact < ApplicationRecord
   end
 
   def self.resolved_contacts(use_crm_v2: false)
-    return where(contact_type: 'lead') if use_crm_v2
+    # Lead que vira cliente no ganho (#1166) continua na lista (#1197).
+    return where(contact_type: %i[lead customer]) if use_crm_v2
 
     # Explicitly registered leads may have only a name. Keep them visible in the
     # classic list too, without promoting anonymous widget visitors to contacts.

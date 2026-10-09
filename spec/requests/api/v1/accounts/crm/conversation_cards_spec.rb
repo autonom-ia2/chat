@@ -82,10 +82,13 @@ RSpec.describe 'CRM conversation subjects API', type: :request do
   end
 
   describe 'POST /crm/cards with conversation_id (#1197)' do
-    def post_card(title, **extra)
+    def base_card(title)
+      { pipeline_id: pipeline.id, stage_id: pipeline_and_stage.last.id, conversation_id: conversation.id, title: title }
+    end
+
+    def post_card(title, card: {}, **extra)
       post "/api/v1/accounts/#{account.id}/crm/cards",
-           params: { card: { pipeline_id: pipeline.id, stage_id: pipeline_and_stage.last.id, conversation_id: conversation.id, title: title } }
-             .merge(extra),
+           params: { card: base_card(title).merge(card) }.merge(extra),
            headers: auth_headers(agent)
     end
 
@@ -106,6 +109,30 @@ RSpec.describe 'CRM conversation subjects API', type: :request do
 
       expect(response).to have_http_status(:created)
       expect(response.parsed_body.dig('payload', 'id')).not_to eq(first_id)
+    end
+
+    it 'creates the integration card when external_id is sent, and updates it on the next call' do
+      create_subject('Agentes de IA', new_subject: false)
+
+      expect { post_card('Do ERP', card: { external_id: 'erp-42' }) }.to change(Crm::Card, :count).by(1)
+      expect(response).to have_http_status(:created)
+      card_id = response.parsed_body.dig('payload', 'id')
+
+      expect { post_card('Do ERP atualizado', card: { external_id: 'erp-42' }) }.not_to change(Crm::Card, :count)
+      expect(response.parsed_body.dig('payload', 'id')).to eq(card_id)
+    end
+
+    it 'creates a new card when the request is for another pipeline' do
+      create_subject('Agentes de IA', new_subject: false)
+      sinistros, sinistros_stage = create_crm_pipeline(account: account, user: admin, name: 'Sinistros')
+      account.crm_pipeline_inboxes.create!(pipeline: sinistros, inbox: inbox, default_stage: sinistros_stage, created_by: admin)
+
+      expect do
+        post "/api/v1/accounts/#{account.id}/crm/cards",
+             params: { card: { pipeline_id: sinistros.id, stage_id: sinistros_stage.id, conversation_id: conversation.id, title: 'Sinistro' } },
+             headers: auth_headers(agent)
+      end.to change(Crm::Card, :count).by(1)
+      expect(response).to have_http_status(:created)
     end
 
     it 'creates a new card when the conversation only has closed cards' do

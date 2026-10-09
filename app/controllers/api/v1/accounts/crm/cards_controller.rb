@@ -377,19 +377,24 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
       return [card, true]
     end
 
-    current = current_open_card(conversation)
+    current = current_open_card(conversation, resolved_params)
     return [current, false] if current
 
     [::Crm::Cards::Creator.new(account: Current.account, user: Current.user, params: resolved_params, conversation: conversation).perform, true]
   end
 
-  # Trava a conversa (como from_conversation) para duas chamadas juntas não criarem dois cards.
-  def current_open_card(conversation)
-    return if conversation.blank? || ActiveModel::Type::Boolean.new.cast(params[:new_subject])
+  # O card aberto da conversa no funil pedido, que o agente enxerga. Trava a conversa (como from_conversation) para duas
+  # chamadas juntas não criarem dois cards. Com external_id a integração cuida do próprio card: cria e, nas próximas
+  # chamadas, atualiza pelo external_id. Funil diferente é outro assunto: card novo. Sem funil no pedido, o assunto atual.
+  def current_open_card(conversation, resolved_params)
+    return if conversation.blank? || resolved_params[:external_id].present?
+    return if ActiveModel::Type::Boolean.new.cast(params[:new_subject])
 
     conversation.lock!
-    card = ::Crm::Cards::ConversationCardFinder.new(account: Current.account).find(conversation)
-    card if card&.open?
+    cards = ::Crm::Cards::ConversationCardFinder.new(account: Current.account).all(conversation)
+                                                .where(id: policy_scope(::Crm::Card).select(:id), status: :open)
+    cards = cards.where(pipeline_id: resolved_params[:pipeline_id]) if resolved_params[:pipeline_id].present?
+    cards.first
   end
 
   def broadcast_card(event_name)

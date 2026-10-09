@@ -167,8 +167,8 @@ RSpec.describe Contact do
 
         resolved = account.contacts.resolved_contacts(use_crm_v2: true)
 
-        expect(resolved).to include(lead_contact)
-        expect(resolved).not_to include(customer_contact)
+        # Cliente (lead promovido no ganho, #1166) continua listado no crm_v2 (#1197).
+        expect(resolved).to include(lead_contact, customer_contact)
         expect(resolved).not_to include(visitor_contact)
       end
 
@@ -212,8 +212,9 @@ RSpec.describe Contact do
 
         # Test with use_crm_v2: true
         resolved_new = account.contacts.resolved_contacts(use_crm_v2: true)
-        expect(resolved_new).to include(lead_with_email, lead_without_email)
-        expect(resolved_new).not_to include(visitor_contact, customer_contact)
+        # O ganho de um card promove o lead a cliente (#1166); no crm_v2 nenhuma outra lista mostra clientes (#1197).
+        expect(resolved_new).to include(lead_with_email, lead_without_email, customer_contact)
+        expect(resolved_new).not_to include(visitor_contact)
       end
     end
   end
