@@ -95,22 +95,37 @@ export function configuration(env) {
 // Validates only the form fields that identify the browser's observed roles
 // query. Headers/cookies and the response remain the responsibility of the
 // observer; the browser route gate must not inspect or log either.
+const LEGACY_ROLES_QUERY = 'RolesTable_Query';
+const APP_CONTEXT_QUERY = 'GeoNextAppControllerContainerQuery';
+
 export function rolesQueryFields(body, config) {
   requireSafe(typeof body === 'string' && Buffer.byteLength(body) <= 262144);
   const entries = [...new URLSearchParams(body)];
   requireSafe(new Set(entries.map(([key]) => key)).size === entries.length);
   const fields = Object.fromEntries(entries);
-  if (fields.fb_api_req_friendly_name !== 'RolesTable_Query') return null;
+  const query = fields.fb_api_req_friendly_name;
+  if (![LEGACY_ROLES_QUERY, APP_CONTEXT_QUERY].includes(query)) return null;
   requireSafe(
     config &&
-      fields.doc_id === config.docId &&
       fields.__bid === config.businessId &&
       fields.__user === config.adminId
   );
   requireSafe(!('av' in fields) || fields.av === config.adminId);
-  const variables = fields.variables?.match(
-    /^\s*\{\s*"app_id"\s*:\s*"([0-9]{1,40})"\s*\}\s*$/
-  );
+  let variables;
+  if (query === LEGACY_ROLES_QUERY) {
+    requireSafe(fields.doc_id === config.docId);
+    variables = fields.variables?.match(
+      /^\s*\{\s*"app_id"\s*:\s*"([0-9]{1,40})"\s*\}\s*$/
+    );
+  } else {
+    // Meta no longer emits RolesTable_Query on the roles page. Keep this
+    // replacement fail-closed: exact persisted-operation name and the same
+    // canonical doc-id binding used by the legacy contract.
+    requireSafe(fields.doc_id === config.docId);
+    variables = fields.variables?.match(
+      /^\s*\{\s*"appID"\s*:\s*"([0-9]{1,40})"\s*\}\s*$/
+    );
+  }
   requireSafe(variables && variables[1] === config.appId);
   return fields;
 }
@@ -127,7 +142,7 @@ export function observedSession({ url, method, headers, body }, config) {
   if (!fields) return null;
   requireSafe(
     !headers['x-fb-friendly-name'] ||
-      headers['x-fb-friendly-name'] === 'RolesTable_Query'
+      headers['x-fb-friendly-name'] === fields.fb_api_req_friendly_name
   );
   requireSafe(!headers['x-fb-lsd'] || headers['x-fb-lsd'] === fields.lsd);
   const cookie = headers.cookie;
@@ -172,7 +187,8 @@ export function safeBrowserLocation(url, config) {
   }
 }
 
-export function validateRolesResponse(body) {
+export function validateRolesResponse(body, query, config) {
+  const selectedQuery = query || LEGACY_ROLES_QUERY;
   requireSafe(typeof body === 'string' && Buffer.byteLength(body) <= 2097152);
   const document = JSON.parse(body.trim().replace(/^for \(;;\);/, ''));
   const clean = value => {
@@ -185,14 +201,24 @@ export function validateRolesResponse(body) {
       Object.values(value).every(clean)
     );
   };
+  requireSafe(clean(document));
+  if (selectedQuery === APP_CONTEXT_QUERY) {
+    const application = document?.data?.fetch__Application;
+    requireSafe(
+      config &&
+        application &&
+        typeof application === 'object' &&
+        !Array.isArray(application) &&
+        String(application.id) === config.appId
+    );
+    return true;
+  }
+  requireSafe(selectedQuery === LEGACY_ROLES_QUERY);
   const complete = value =>
     !('page_info' in value) || value.page_info?.has_next_page === false;
   const container = document?.data?.get_app_roles;
   requireSafe(
-    clean(document) &&
-      container &&
-      Array.isArray(container.app_roles) &&
-      complete(container)
+    container && Array.isArray(container.app_roles) && complete(container)
   );
   container.app_roles.forEach(group => {
     requireSafe(

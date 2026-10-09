@@ -108,6 +108,24 @@ const request = overrides => ({
   body: new URLSearchParams(fields).toString(),
   ...overrides,
 });
+const appContextFields = {
+  ...fields,
+  doc_id: '10003',
+  fb_api_req_friendly_name: 'GeoNextAppControllerContainerQuery',
+  variables: '{"appID":"10001"}',
+};
+const appContextRequest = overrides =>
+  request({
+    body: new URLSearchParams(appContextFields).toString(),
+    headers: {
+      ...request().headers,
+      'x-fb-friendly-name': 'GeoNextAppControllerContainerQuery',
+    },
+    ...overrides,
+  });
+const appContextResponse = {
+  data: { fetch__Application: { id: '10001', name: 'Synthetic App' } },
+};
 const roles = {
   data: {
     get_app_roles: {
@@ -120,6 +138,44 @@ const roles = {
     },
   },
 };
+
+test('captures the current Meta app-context query with the same admin/app/business binding', () => {
+  const session = observedSession(appContextRequest(), config);
+  assert.equal(session.user_id, config.adminId);
+  assert.equal(session.cookie, 'c_user=12345; xs=synthetic');
+  const parsed = rolesQueryFields(appContextRequest().body, config);
+  assert.equal(
+    parsed.fb_api_req_friendly_name,
+    'GeoNextAppControllerContainerQuery'
+  );
+  assert.equal(parsed.doc_id, config.docId);
+  for (const body of [
+    new URLSearchParams({
+      ...appContextFields,
+      doc_id: '999',
+    }).toString(),
+    new URLSearchParams({
+      ...appContextFields,
+      doc_id: 'not-numeric',
+    }).toString(),
+    new URLSearchParams({
+      ...appContextFields,
+      variables: '{"appID":"999"}',
+    }).toString(),
+  ])
+    assert.throws(() => observedSession(appContextRequest({ body }), config));
+  assert.throws(() =>
+    observedSession(
+      appContextRequest({
+        headers: {
+          ...appContextRequest().headers,
+          'x-fb-friendly-name': 'RolesTable_Query',
+        },
+      }),
+      config
+    )
+  );
+});
 
 test('captures only the legitimate matching roles request and binds admin/app/business/doc/proxy', () => {
   const session = observedSession(request(), config);
@@ -258,6 +314,30 @@ test('canonical upstream preserves the original fingerprint and rejects endpoint
   );
 });
 
+test('validates the current Meta app-context response and binds it to the configured app', () => {
+  assert.equal(
+    validateRolesResponse(
+      JSON.stringify(appContextResponse),
+      'GeoNextAppControllerContainerQuery',
+      config
+    ),
+    true
+  );
+  for (const body of [
+    JSON.stringify({
+      data: { fetch__Application: { id: '999', name: 'Other App' } },
+    }),
+    JSON.stringify({
+      data: { fetch__Application: { id: '10001' } },
+      errors: [{ message: 'challenge' }],
+    }),
+    JSON.stringify({ data: { fetch__Application: null } }),
+  ])
+    assert.throws(() =>
+      validateRolesResponse(body, 'GeoNextAppControllerContainerQuery', config)
+    );
+});
+
 test('requires complete error-free roles; rejects login/challenge/html and partial pagination', () => {
   assert.equal(
     validateRolesResponse(`for (;;);${JSON.stringify(roles)}`),
@@ -341,6 +421,15 @@ test('allows only safe browser reads and the exact RolesTable query write', () =
     false
   );
   assert.equal(rolesQueryFields(graphql.body, config).doc_id, config.docId);
+  const currentGraphql = {
+    ...graphql,
+    body: new URLSearchParams(appContextFields).toString(),
+  };
+  assert.equal(isAllowedBrowserRequest(currentGraphql), true);
+  assert.equal(
+    rolesQueryFields(currentGraphql.body, config).fb_api_req_friendly_name,
+    'GeoNextAppControllerContainerQuery'
+  );
   for (const method of ['GET', 'HEAD']) {
     assert.equal(
       isAllowedBrowserRequest({

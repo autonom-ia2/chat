@@ -416,12 +416,15 @@ export async function run(
             const request = response.request();
             const headers = await wait(request.allHeaders());
             cycle.signal.throwIfAborted();
+            const requestBody = request.postData();
+            const requestFields = rolesQueryFields(requestBody, cycleConfig);
+            if (!requestFields) throw new Error('session_update_rejected');
             const session = observedSession(
               {
                 url: request.url(),
                 method: request.method(),
                 headers,
-                body: request.postData(),
+                body: requestBody,
               },
               cycleConfig
             );
@@ -434,7 +437,11 @@ export async function run(
               throw new Error('session_update_rejected');
             const rolesResponse = await wait(response.text());
             cycle.signal.throwIfAborted();
-            validateRolesResponse(rolesResponse);
+            validateRolesResponse(
+              rolesResponse,
+              requestFields.fb_api_req_friendly_name,
+              cycleConfig
+            );
             if (!safeBrowserLocation(page.url(), cycleConfig))
               await requireOperator();
             await send({

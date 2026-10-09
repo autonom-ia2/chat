@@ -94,6 +94,25 @@ RSpec.describe Instagram::Automation::SessionPublisher do
       expect(publisher.call(request)).to eq(type: 'session', version: version)
     end
 
+    it 'accepts the current Meta app-context response only for the configured app' do
+      version = SecureRandom.uuid
+      allow(Instagram::Testers::ResponseParser).to receive(:parse)
+        .and_return({ 'data' => { 'fetch__Application' => { 'id' => '10001' } } })
+      expect(Instagram::Testers::ResponseParser).not_to receive(:status)
+      expect(store).to receive(:publish).and_return(version)
+
+      expect(publisher.call(request)).to eq(type: 'session', version: version)
+    end
+
+    it 'rejects a current Meta app-context response for another app before storage' do
+      allow(Instagram::Testers::ResponseParser).to receive(:parse)
+        .and_return({ 'data' => { 'fetch__Application' => { 'id' => '99999' } } })
+      expect(Instagram::Testers::ResponseParser).not_to receive(:status)
+      expect(store).not_to receive(:publish)
+
+      expect { publisher.call(request) }.to raise_error(Instagram::Testers::Error, 'unknown_status')
+    end
+
     it 'rejects changes of App, business, admin, doc or name between bootstrap and publish before CAS' do
       old_revision = revision
       metadata.keys.each do |key|

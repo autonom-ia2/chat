@@ -68,7 +68,7 @@ class Instagram::Automation::SessionPublisher
 
   def publish(store, request)
     document = Instagram::Testers::ResponseParser.parse(request.fetch('roles_response'), error_code: 'unknown_status')
-    Instagram::Testers::ResponseParser.status(document, '0')
+    validate_session_response!(document, request.fetch('app_id'))
     publication = lambda do
       store.publish(session: request.fetch('session'), expected_version: request.fetch('expected_version'),
                     captured_at: request.fetch('captured_at'), app_id: request.fetch('app_id'),
@@ -80,6 +80,17 @@ class Instagram::Automation::SessionPublisher
                 publication.call
               end
     { type: 'session', version: version }
+  end
+
+  def validate_session_response!(document, app_id)
+    application = document.dig('data', 'fetch__Application')
+    if application.is_a?(Hash)
+      raise Instagram::Testers::Error, 'unknown_status' unless application['id'].to_s == app_id
+
+      return
+    end
+
+    Instagram::Testers::ResponseParser.status(document, '0')
   end
 
   def operator_result(request)

@@ -82,13 +82,23 @@ const mode = process.env.SYNTHETIC_MODE || 'valid';
 const rolesUrl = 'https://developers.facebook.com/apps/' +
   process.env.INSTAGRAM_META_DEVELOPER_APP_ID + '/roles/roles/?business_id=' +
   process.env.INSTAGRAM_META_BUSINESS_ID;
-const body = ${JSON.stringify(rolesResponse)};
+const currentQuery = mode === 'current-query';
+const body = currentQuery
+  ? JSON.stringify({
+      data: {
+        fetch__Application: {
+          id: process.env.INSTAGRAM_META_DEVELOPER_APP_ID,
+          name: 'Synthetic App',
+        },
+      },
+    })
+  : ${JSON.stringify(rolesResponse)};
 const fields = new URLSearchParams({
   __user: process.env.INSTAGRAM_TESTER_ADMIN_USER_ID,
   __bid: process.env.INSTAGRAM_META_BUSINESS_ID,
   doc_id: process.env.INSTAGRAM_TESTER_ROLES_DOC_ID,
-  fb_api_req_friendly_name: 'RolesTable_Query',
-  variables: JSON.stringify({ app_id: process.env.INSTAGRAM_META_DEVELOPER_APP_ID }),
+  fb_api_req_friendly_name: currentQuery ? 'GeoNextAppControllerContainerQuery' : 'RolesTable_Query',
+  variables: JSON.stringify(currentQuery ? { appID: process.env.INSTAGRAM_META_DEVELOPER_APP_ID } : { app_id: process.env.INSTAGRAM_META_DEVELOPER_APP_ID }),
   fb_dtsg: 'synthetic-dtsg',
   lsd: 'synthetic-lsd',
   jazoest: '1234',
@@ -283,6 +293,36 @@ test('publishes one observed session with the expected version and proxy binding
       baseEnv.INSTAGRAM_TESTER_ADMIN_USER_ID
     );
     assert.equal(publication.app_id, baseEnv.INSTAGRAM_META_DEVELOPER_APP_ID);
+  } finally {
+    process.emit('SIGTERM');
+    if (settled) await settled;
+    await cleanup(data);
+  }
+});
+
+test('publishes the current Meta app-context query through the manager route gate', async () => {
+  const data = await fixture('current-query');
+  let settled;
+  try {
+    settled = withProcessEnv(data.processEnv, () =>
+      run(data.env).then(
+        () => null,
+        error => error
+      )
+    );
+    const entries = await waitForOperation(data.operations, 'publish');
+    process.emit('SIGTERM');
+    const error = await settled;
+    assert.equal(error, null);
+    assert.deepEqual(
+      entries.map(entry => entry.operation),
+      ['bootstrap', 'publish']
+    );
+    assert.equal(
+      entries[1].session.user_id,
+      baseEnv.INSTAGRAM_TESTER_ADMIN_USER_ID
+    );
+    assert.equal(entries[1].app_id, baseEnv.INSTAGRAM_META_DEVELOPER_APP_ID);
   } finally {
     process.emit('SIGTERM');
     if (settled) await settled;
