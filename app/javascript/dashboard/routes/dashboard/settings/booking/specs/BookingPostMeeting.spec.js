@@ -77,6 +77,16 @@ describe('BookingPostMeeting', () => {
     expect(sentence(auto)).toBe(
       'BOOKING.POST_MEETING.SUMMARY_AUTO {"stage":"Proposta"}'
     );
+    // Card de outro funil não muda: a frase diz isso quando há etapa.
+    expect(auto.find('[data-post-meeting-scope]').text()).toBe(
+      'BOOKING.POST_MEETING.SCOPE_HINT'
+    );
+  });
+
+  it('has no scope line when the card stays put', async () => {
+    const wrapper = await mountSection({ mode: 'ask', stage_id: null });
+
+    expect(wrapper.find('[data-post-meeting-scope]').exists()).toBe(false);
   });
 
   it('lets the admin choose an active pipeline, the stage and the mode, then saves only post_meeting', async () => {

@@ -45,7 +45,7 @@ class Crm::BookingV2::MeetingReminder
   def refusal_code
     return 'not_remindable' unless upcoming_booking?
     return 'already_confirmed' if meeting.confirmation_confirmed?
-    return 'stopped' if stopped?
+    return 'stopped' if client.stopped?
 
     'no_invite' unless client.invite&.active?
   end
@@ -59,15 +59,6 @@ class Crm::BookingV2::MeetingReminder
     refuse!('no_conversation', url: client.invite.url) if conversation.blank?
     refuse!('cannot_reply', url: client.invite.url) unless conversation.can_reply?
     conversation
-  end
-
-  # Mesma precedência de parada dos avisos automáticos (`Notices::Sender`).
-  def stopped?
-    contact = client.contact
-    return true if contact&.opted_out?
-    return true if Crm::BookingNoticeStop.stopped?(account_id: meeting.account_id, contact_id: contact&.id)
-
-    meeting.reminders_stopped_at.present?
   end
 
   def recently_reminded?

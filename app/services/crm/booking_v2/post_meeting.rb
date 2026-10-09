@@ -3,8 +3,9 @@
 # as automações da etapa); em `ask` só devolve a pergunta para a tela ("Mover" / "Agora não"), e o "Mover" usa a
 # rota de mover card que já existe.
 #
-# Nada a oferecer (nil): reunião sem página nova, página sem etapa (ou com funil arquivado), card que não está aberto
-# ou que já está nessa etapa.
+# Nada a oferecer (nil): reunião sem página nova, página sem etapa (ou com funil arquivado), card que não está aberto,
+# que já está nessa etapa ou que está num funil fora do fluxo da página. Uma vez por reunião: quem chama
+# (`RecordOutcomeService`) garante, sob trava, que só o primeiro "Aconteceu" chega aqui.
 class Crm::BookingV2::PostMeeting
   def initialize(meeting:, actor:)
     @meeting = meeting
@@ -33,7 +34,13 @@ class Crm::BookingV2::PostMeeting
 
     stage = profile.post_meeting_target
     card = meeting.card
-    stage if stage.present? && card.open? && card.stage_id != stage.id
+    stage if stage.present? && card.open? && card.stage_id != stage.id && same_flow?(card, stage)
+  end
+
+  # Só o card que está no fluxo da página: no funil para onde a página manda quem marca ou no funil da etapa
+  # escolhida. Card de outro funil (o botão Agendar vale para qualquer card) não é levado para lá por engano.
+  def same_flow?(card, stage)
+    [profile.default_pipeline_id, stage.pipeline_id].compact.include?(card.pipeline_id)
   end
 
   def move!(stage)

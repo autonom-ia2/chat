@@ -75,6 +75,10 @@ describe('meetingDay', () => {
       key: 'STOPPED',
       url: '',
     });
+    // Link para remarcar tocado de novo em menos de 10 minutos.
+    expect(
+      refusalFrom(error({ error: 'crm.booking_v2.recently_sent' }))
+    ).toEqual({ key: 'RECENTLY_SENT', url: '' });
     expect(refusalFrom(error({ error: 'crm.booking_v2.unknown' }))).toEqual({
       key: 'OTHER',
       url: '',
