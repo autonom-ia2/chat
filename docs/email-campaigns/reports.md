@@ -323,13 +323,9 @@ caracteres de controle. CSV cuida de aspas, vírgulas e quebras de linha. Valida
 autorização e captura do horizonte ocorrem antes dos headers para erros conhecidos retornarem
 JSON 422/401/404. Erro de infraestrutura após começar o stream não pode trocar CSV por JSON.
 
-## DTO público de proteção e integração obrigatória do parent
+## DTO público de proteção e integração — comportamento atual (#765)
 
-`GET reports` já retorna `payload = {summary,campaigns,campaign_options,applied_filters,
-protection,preflight,meta}`. `meta = {count,applied_filters}` descreve a comparação sem
-paginação. `preflight=null` sem seleção autorizada; proteção continua sendo da conta.
-O Builder memoiza **uma** apresentação de proteção por index, fora do loop de campanhas.
-`GET reports/:id` inclui protection/preflight e preserva os arrays opened/clicked antigos.
+`GET reports` e os detalhes de campanha continuam publicando um DTO sanitizado de proteção:
 
 ```text
 {state, reason_code, mode, scope:'account', release_eligible,
@@ -339,102 +335,33 @@ O Builder memoiza **uma** apresentação de proteção por index, fora do loop d
  capabilities:{reevaluate, resume, override}, domains}
 ```
 
-Fontes reais, lidas do PR1 em `../436-email-reputation` sem escrita:
-`EmailReputationState`, `Reputation::Policy`, `LegacyDecision`, `ProviderConfig`, `ProviderGate`,
-`EmailProviderState`. Não se chama Metrics, Observation, Evaluator, ProviderMonitor,
-Guardrail.evaluate!/reevaluate!/resume!, DNS, AWS ou qualquer rede no GET. Não se chama
-`for_account`, que pode criar estado. Leitura do estado da conta e associação administrativa
-uma vez por instância; provider gate faz uma busca pontual e, quando necessário para exibir
-telemetria, mais uma busca pontual. Leitura SuperAdmin é memoizada. Nenhuma consulta de
-reputação cresce com o número de campanhas/destinatários. Hygiene da seleção tem suas
-agregações próprias; GET não realiza recheck nem writes.
+A partir da #765, métricas locais são **diagnóstico**, não autoridade de bloqueio. Um
+`EmailReputationState.blocked` ou a flag legada `email_campaigns_paused` não transforma o
+DTO em `paused` e não exige amostra local para retomar. A Policy ainda pode classificar
+risco local como warning/attention/high_risk; `paused` local é apresentado como high_risk.
 
-Mapeamento persistido → público:
+O único veto reputacional de envio em massa vem do gate global. O provider DTO continua
+minimalista: `healthy`, `unknown`, `blocked` ou `not_applicable`, mais `observed_at`.
+Identificadores de infraestrutura, telemetria bruta, motivos de operador e dados de outra
+conta não são serializados. Direct inbox usa `not_applicable` e não consulta o gate global.
 
-- level warning → state attention; healthy/attention/high_risk/unknown mantidos; latch
-  blocked ou flag legado → paused, mesmo quando a avaliação atual já permitir release.
-  Ausência/zero sent → unknown se não houver latch. Level persistido não reconhecido
-  levanta erro, sem fabricar saúde ou esconder divergência de schema.
-- `current_metrics.sent/permanent/transient/unknown/complaints` → contadores de current;
-  permanent_ratio/complaint_ratio são multiplicados por 100 **somente no DTO** (até quatro
-  casas). `0.025 → 2.5`; valores ausentes/base zero → null. `cohort_start/end` → window_start/end.
-  `evaluated_at` vem da coluna de avaliação, nunca da data do trigger. Métricas são a
-  coorte local SES de sete dias, inclusive quando a campanha selecionada é direct inbox.
-- trigger_snapshot.triggered_at/code/metrics → trigger.at/reason_code/metrics. É uma
-  allowlist; não reutiliza métricas atuais nem altera o snapshot. Trigger ausente → null;
-  métricas de trigger ausentes mantêm valores null. Histórico permanece após release.
-- `reputation_paused/reputation_threshold/legacy_pause → reputation`,
-  `permanent_failures → hard_bounce_rate`, `complaints → complaint_rate`.
-  Gate que bloqueia → provider_blocked. `manual/manual_pause/user → manual` apenas para
-  o motivo da campanha (`Protection.pause_reason(campaign)`), sem atribuir pausa manual à conta.
-  Motivos desconhecidos → unknown, sem mensagens livres. JSON de pausa `{kind,code}`
-  precisa passar por esse normalizador no Jbuilder de campanhas.
-- provider healthy exige monitor ligado e observação healthy recente. Gate nil não
-  prova saúde: monitor off/ausente com política allow → unknown. Unknown com política
-  block, latch ou bloqueio manual → blocked. Direct inbox → not_applicable e ignora
-  **somente** o gate SES; mantém proteção da conta. Se monitor off ou unknown_action=allow
-  permitir envio, isso não veta release por si só, mas nunca aparece como healthy.
-- domains=[]: o PR1 não persiste métricas de domínio; não inferimos domínios nem pontuação
-  a partir de destinatários/from_email. Nenhum ID de conta AWS, razão de operador, actor,
-  override/budget, política interna, fingerprint ou dados de outra conta são serializados.
+`capabilities.resume` depende de: campanha pausada, autorização do usuário, provider
+permitido, import inativo, higiene válida e pelo menos um destinatário realmente elegível.
+Não depende de `current_metrics.resume_allowed`, generation marker, override local ou
+`release_eligible`. Este último permanece `false` por compatibilidade do contrato e não é
+mais um sinal de liberação reputacional. `capabilities.override` permanece presente por
+compatibilidade, sempre `false`.
 
-### Release reputacional e retomada manual
+A UI não deve citar nomes da infraestrutura. Os textos de proteção usam “Saúde de envio”,
+“Envio temporariamente protegido” e “Problemas da campanha”. Métricas locais podem ser
+mostradas como atenção/risco, sem dizer que a conta foi bloqueada por elas.
 
-O parent informou que o produtor já publica `current_metrics.evaluation_generation`
-no CAS bem sucedido do Evaluator. O adapter continua exigindo esse marcador para release
-reputacional. Não preencher o marcador retroativamente copiando a geração atual; apenas
-uma observação realmente publicada pode fornecê-lo. C/Evaluator não foi alterado aqui.
+Retomada via POST não confia em campos enviados pelo browser. Backend revalida provider,
+higiene, import e elegibilidade. Uma proteção global retorna HTTP 422 com envelope
+allowlisted; risco local sozinho não retorna 422.
 
-`release_eligible` exige simultaneamente: avaliação não futura nem mais antiga que a janela
-de sete dias; level conhecido e diferente de unknown; marcador inteiro positivo igual a
-observation_generation; evaluated_feedback_version == feedback_version; contagens completas
-não negativas; current_metrics.resume_allowed estritamente true; snapshot da policy igual
-à configuração atual; métricas aprovadas pela **Policy real** (e LegacyDecision em shadow/warning);
-ProviderGate sem bloqueio. Ratios internos continuam frações. Override ativo não substitui
-nenhuma dessas evidências. Esse sinal não limpa blocked nem transforma paused em healthy.
-Um novo feedback/uma nova geração invalida o release até uma nova publicação consistente.
-
-`capabilities.resume` distingue dois caminhos, ambos com campanha paused, autorização
-EmailCampaignPolicy de update/resume, actor/membership administrativa da mesma conta,
-provedor permitido, nenhum import ativo e higiene válida:
-
-- Conta protegida (`state.blocked` ou flag legada da conta): exige `release_eligible=true`.
-- Conta sem bloqueio: a pausa da campanha pode ser retomada sem amostra mínima SES, sem
-  estado de risco e sem marcador de geração. `release_eligible` pode permanecer false;
-  isso não torna a conta/provedor desconhecidos em saudáveis.
-
-Higiene exige DTO Hash com modo igual à configuração real e contagens inteiras não negativas
-reconciliadas entre ready/protected/invalid/review/unknown/unchecked. Ausência, inconsistência,
-lista vazia ou somente protegidos nega resume. O adapter aplica `PreflightDecision#campaign_allowed?`:
-shadow/warning não acrescentam enforcement de DNS; enforce exige validação fresca de todos
-os pending, como o backend atual. Em enforce o DTO também precisa de ready positivo.
-
-Uma consulta EXISTS adicional prova que há pelo menos um pending não enviado, sem
-ses_message_id preenchido e sem supressão ativa/legada, usando `Reports::RecipientState`.
-Em enforce esse candidato também precisa pertencer a ready_ids (valid, checked_at presente,
-valid_until futuro). Contagens prontas não substituem essa prova: linhas já enviadas ou
-ambíguas não permitem retomada. Nenhum destinatário é carregado em memória ou alterado.
-No máximo dois EXISTS de destinatários por campanha (decisão comum em enforce + candidato),
-além da consulta de import ativo e das leituras de higiene/provedor/autorização existentes.
-
-Direct inbox ignora somente o gate do SES. Uma pausa manual sem bloqueio da conta pode ser
-retomada sem amostra SES. Conta protegida continua exigindo release. Monitor desligado ou
-unknown permitido pela configuração aparece como unknown; bloqueio explícito ou latch do
-provedor continua vetando campanhas SES. Administrador da conta não é SuperAdmin: override
-só é anunciado com ambas as autorizações e não substitui os requisitos de resume.
-Sem campanha selecionada, capabilities são false.
-
-### Erro público de retomada bloqueada
-
-A negativa comum de `Evaluator#resume!` pode retornar `Payload.for_state` com
-`blocked: true` e sem `code`. `Errors.protection` traduz esse caso estrito para
-`{kind: "reputation", code: "reputation_paused", overridable: false, resume_allowed: false}`.
-Um `protection.code` aninhado conhecido tem precedência, inclusive provider bloqueado e
-avaliação técnica substituída. Códigos públicos conhecidos continuam na allowlist;
-`blocked` ausente/false/string não prova bloqueio e, sem causa conhecida, retorna technical/unknown.
-Toda resposta de erro preserva `resume_allowed: false`. Nunca serializa current_metrics,
-policy, trigger_snapshot, actor, note ou razão livre do operador. A tradução é somente
-apresentação: não executa release, reevaluate ou alteração de estado.
+Histórico de trigger local pode continuar no DTO para auditoria sanitizada, mas não é
+tratado como bloqueio vigente. Reads permanecem sem coleta de rede e sem writes.
 
 ### Wiring de campanha e POSTs; contrato da UI
 

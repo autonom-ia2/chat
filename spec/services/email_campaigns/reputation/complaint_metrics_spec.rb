@@ -32,21 +32,19 @@ RSpec.describe EmailCampaigns::Reputation::Metrics do # rubocop:disable RSpec/Sp
       expect(policy.evaluate(collector.call)).to include(complaint_ratio: 0.001, pause: true, spam_alert: true)
     end
 
-    it "keeps the override fingerprint and incident intact after late Complaint/#{subtype}" do
+    it "keeps late Complaint/#{subtype} diagnostic-only while real complaints remain visible" do
       recipient.update!(sent_at: 8.days.ago)
-      account.update!(internal_attributes: { email_campaigns_paused: { reason: 'synthetic legacy protection' } })
-      evaluator.evaluate!
-      state = EmailReputationState.find_by!(account: account)
-      snapshot = state.trigger_snapshot
-      state.update!(override: { expires_at: 1.hour.from_now.iso8601, remaining: 2, feedback_fingerprint: collector.harmful_feedback_fingerprint })
       2.times { recipient.email_events.create!(event_type: :complaint, payload: { complaint: { complaintSubType: subtype } }) }
-      expect(evaluator.evaluate!).to include(blocked: true, override_active: true)
-      expect(state.reload.trigger_snapshot).to eq(snapshot)
-      expect(state.override).not_to have_key('revoked_at')
-      expect(EmailReputationAudit.where(account: account, action: %w[override_revoked risk_alert])).to be_empty
+      expect(evaluator.evaluate!).to include(blocked: false, override_active: false)
+      state = EmailReputationState.find_by!(account: account)
+      expect(state.current_metrics['complaints']).to eq(0)
+      expect(state.current_metrics['provider_prevented']).to eq(0)
+
+      recipient.update!(sent_at: 1.hour.ago)
       recipient.email_events.create!(event_type: :complaint, payload: { complaint: { complaintSubType: 'FutureUnknown' } })
-      expect(evaluator.evaluate!).to include(override_active: false)
-      expect(state.reload.override['revocation_reason']).to eq('new_harmful_feedback')
+      result = evaluator.evaluate!
+      expect(result).to include(blocked: false, override_active: false, level: 'high_risk')
+      expect(result.dig(:current_metrics, 'complaints')).to eq(1)
     end
   end
 

@@ -25,23 +25,26 @@ RSpec.describe EmailCampaigns::ReputationEvaluationJob do # rubocop:disable RSpe
     expect { recipient.email_events.create!(event_type: :delivered) }.not_to have_enqueued_job(described_class)
   end
 
-  it 'reconciles old paused accounts with no recent sends and retains the pause' do
+  it 'retires old tenant protection while keeping the zero-send cohort diagnostic' do
     account.update!(internal_attributes: { email_campaigns_paused: { reason: 'old' } })
     recipient
     EmailCampaigns::GuardrailSweepJob.perform_now
     state = EmailReputationState.find_by!(account_id: account.id)
-    expect(state.blocked).to be(true)
+    expect(state.blocked).to be(false)
     expect(state.current_metrics['sent']).to eq(0)
     expect(state.evaluated_at).to be_present
-    expect(state.current_metrics['resume_allowed']).to be(false)
+    expect(state.current_metrics['resume_allowed']).to be(true)
+    expect(account.reload.internal_attributes['email_campaigns_paused']).to be_nil
   end
 
-  it 'reconciles persisted feedback even if its enqueue was lost' do
+  it 'reconciles persisted feedback even if its enqueue was lost without turning local risk into a block' do
     allow(described_class).to receive(:perform_later)
     recipient.update!(sent_at: Time.current)
     recipient.email_events.create!(event_type: :complaint)
     with_modified_env('EMAIL_REPUTATION_MODE' => 'enforce') { EmailCampaigns::GuardrailSweepJob.perform_now }
-    expect(EmailReputationState.find_by!(account_id: account.id).blocked).to be(true)
+    state = EmailReputationState.find_by!(account_id: account.id)
+    expect(state).to have_attributes(blocked: false, level: 'high_risk')
+    expect(state.current_metrics['complaints']).to eq(1)
   end
 
   it 'coalesces a burst and schedules one follow-up when feedback arrives during collection' do
@@ -115,7 +118,7 @@ RSpec.describe EmailCampaigns::ReputationEvaluationJob do # rubocop:disable RSpe
     allow(EmailCampaigns::Reputation::Observation).to receive(:new).and_return(observation)
     allow(observation).to receive(:collect).and_return(observation)
     with_modified_env('EMAIL_REPUTATION_MODE' => 'enforce') do
-      expect(EmailCampaigns::Reputation::Evaluator.new(account).evaluate!).to include(blocked: true, resume_allowed: false)
+      expect(EmailCampaigns::Reputation::Evaluator.new(account).evaluate!).to include(blocked: false, resume_allowed: true)
     end
     expect(state.reload.current_metrics).to eq(published)
     expect(state.evaluated_feedback_version).to eq(state.feedback_version)

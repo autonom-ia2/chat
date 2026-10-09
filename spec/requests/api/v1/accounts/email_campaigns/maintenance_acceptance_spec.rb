@@ -87,7 +87,7 @@ RSpec.describe 'Account maintenance acceptance', type: :request do
     expect([account.reload.attributes, campaign.reload.attributes, recipient.reload.attributes,
             state.reload.attributes, provider.reload.attributes, audit.reload.attributes]).to eq(before)
     expect(EmailSuppression.sole.reason).to eq('unsubscribe')
-    expect(EmailCampaigns::Guardrail.paused?(account)).to be(true)
+    expect(EmailCampaigns::Guardrail.paused?(account)).to be(false)
     expect(EmailCampaigns::Reputation::ProviderGate.protection).to include(code: 'provider_manual_block')
     foreign = create(:account)
     expect(EmailSuppression.suppressed?(foreign, recipient.email)).to be(false)

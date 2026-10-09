@@ -23,29 +23,41 @@ RSpec.describe EmailCampaigns::DeliveryEngine do # rubocop:disable RSpec/SpecFil
     allow(engine).to receive(:sleep)
   end
 
-  it 'finishes the in-flight send and admits no new recipient after observing a persisted block' do
+  it 'finishes the in-flight send and admits no new recipient after the global gate closes' do
+    provider_blocked = false
+    allow(EmailCampaigns::Reputation::ProviderGate).to receive(:protection) do
+      provider_blocked ? { kind: 'provider', code: 'provider_blocked', overridable: false } : nil
+    end
     allow(sender).to receive(:deliver) do
-      Account.find(account.id).update!(internal_attributes: { email_campaigns_paused: { reason: 'late feedback' } })
+      provider_blocked = true
       'accepted-first'
     end
     expect(EmailCampaigns::Reputation::Metrics).not_to receive(:new)
+
     engine.perform
+
     expect(sender).to have_received(:deliver).once
     expect(first.reload.sent_at).to be_present
     expect(first.ses_message_id).to eq('accepted-first')
     expect(second.reload).to be_pending
-    expect(campaign.reload).to be_paused
+    expect(campaign.reload.pause_reason).to include('kind' => 'provider', 'code' => 'provider_blocked')
   end
 
-  it 'rechecks persisted protection after rendering and before the claim' do
+  it 'rechecks the global protection after rendering and before the claim' do
+    provider_blocked = false
+    allow(EmailCampaigns::Reputation::ProviderGate).to receive(:protection) do
+      provider_blocked ? { kind: 'provider', code: 'provider_blocked', overridable: false } : nil
+    end
     allow(EmailCampaigns::Tracking::Injector).to receive(:new) do
-      EmailReputationState.create!(account: account, blocked: true)
+      provider_blocked = true
       instance_double(EmailCampaigns::Tracking::Injector, perform: '<p>tracked</p>')
     end
+
     expect(sender).not_to receive(:deliver)
     engine.perform
+
     expect(first.reload).to be_pending
-    expect(campaign.reload).to be_paused
+    expect(campaign.reload.pause_reason).to include('kind' => 'provider', 'code' => 'provider_blocked')
   end
 
   it 'never retries an ambiguous timeout or a post-acceptance bookkeeping failure' do
@@ -70,22 +82,27 @@ RSpec.describe EmailCampaigns::DeliveryEngine do # rubocop:disable RSpec/SpecFil
     expect(first.attempts).to eq(0)
   end
 
-  it 'never lets an override bypass contact suppression or consume its message budget' do
+  it 'keeps contact suppression authoritative and ignores stale tenant override budgets' do
     state = EmailReputationState.create!(account: account, blocked: true,
                                          override: { actor_id: 123, remaining: 1, expires_at: 1.hour.from_now.iso8601 })
     EmailSuppression.create!(account: account, email: first.email, reason: 'complaint')
     allow(sender).to receive(:deliver).and_return('accepted-second')
+
     engine.perform
+
     expect(first.reload).to be_suppressed
     expect(sender).to have_received(:deliver).once.with(hash_including(to: second.email))
-    expect(state.reload.override['remaining']).to eq(0)
+    expect(state.reload.override['remaining']).to eq(1)
   end
 
-  it 'parks at job start without constructing a sender' do
-    EmailReputationState.create!(account: account, blocked: true)
+  it 'parks at job start on a global block without constructing a sender' do
+    allow(EmailCampaigns::Reputation::ProviderGate).to receive(:protection)
+      .and_return(kind: 'provider', code: 'provider_blocked', overridable: false)
     expect(EmailCampaigns::Ses::Sender).not_to receive(:new)
+
     EmailCampaigns::DeliveryJob.perform_now(campaign.id)
-    expect(campaign.reload).to be_paused
+
+    expect(campaign.reload.pause_reason).to include('kind' => 'provider', 'code' => 'provider_blocked')
   end
 
   it 'rechecks contact suppression at admission after rendering' do

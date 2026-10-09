@@ -84,8 +84,9 @@ RSpec.describe EmailCampaigns::Reputation::Evaluator do # rubocop:disable RSpec/
       release << true
       worker.join(15) || worker.kill.join
     end
-    expect(worker.value).to include(blocked: true)
-    expect(account.reload.internal_attributes).to include('concurrent_note' => 'preserved', 'email_campaigns_paused' => be_present)
+    expect(worker.value).to include(blocked: false, level: 'high_risk', resume_allowed: true)
+    expect(account.reload.internal_attributes).to include('concurrent_note' => 'preserved')
+    expect(account.internal_attributes['email_campaigns_paused']).to be_nil
     result_sizes = []
     allow(connection).to receive(:select_all).and_wrap_original do |original, *args, **options|
       original.call(*args, **options).tap { |result| result_sizes << result.rows.size }
@@ -110,19 +111,19 @@ RSpec.describe EmailCampaigns::Reputation::Evaluator do # rubocop:disable RSpec/
         recipient.email_events.create!(event_type: :bounce, payload: { bounce: { bounceType: 'Permanent' } })
       end
       newest = described_class.new(account, policy: policy).evaluate!
-      expect(newest).to include(blocked: true, resume_allowed: false)
+      expect(newest).to include(blocked: false, level: 'high_risk', resume_allowed: true)
     ensure
       release << true
       worker.join(15) || worker.kill.join
     end
-    expect(worker.value).to include(resume_allowed: false, protection: include(code: 'reputation_evaluation_superseded'))
+    expect(worker.value).to include(blocked: false, resume_allowed: true)
     expect(EmailReputationState.find_by!(account: account).current_metrics['permanent']).to eq(5)
-    expect(account.reload.internal_attributes['email_campaigns_paused']).to be_present
-    expect(EmailReputationAudit.where(account: account, action: 'released')).to be_empty
+    expect(account.reload.internal_attributes['email_campaigns_paused']).to be_nil
+    expect(EmailReputationAudit.where(account: account, action: 'paused')).to be_empty
   end
 
   %w[shadow warning].each do |mode|
-    it "keeps legacy protection monotonic through three superseded harmful evaluations in #{mode}", :aggregate_failures do
+    it "keeps superseded harmful local observations diagnostic in #{mode}", :aggregate_failures do
       accepted = Array.new(50) do |index|
         campaign.email_campaign_recipients.create!(email: "superseded-#{mode}-#{index}@example.com", sent_at: 1.hour.ago, status: :sent)
       end
@@ -130,7 +131,7 @@ RSpec.describe EmailCampaigns::Reputation::Evaluator do # rubocop:disable RSpec/
         row.email_events.create!(event_type: :bounce, payload: { bounce: { bounceType: 'Permanent' } })
       end
       mode_policy = EmailCampaigns::Reputation::Policy.new('EMAIL_REPUTATION_MODE' => mode)
-      snapshot = nil
+
       3.times do |cycle|
         worker = Thread.new do
           ActiveRecord::Base.connection_pool.with_connection do
@@ -146,24 +147,22 @@ RSpec.describe EmailCampaigns::Reputation::Evaluator do # rubocop:disable RSpec/
           release << true
           worker.join(5) || worker.kill.join
         end
-        expect(worker.value).to include(blocked: true, resume_allowed: false,
-                                        protection: include(code: 'reputation_evaluation_superseded'))
+
+        expect(worker.value).to include(blocked: false, resume_allowed: true)
         state = EmailReputationState.find_by!(account: account)
         expect(state.current_metrics).to eq({})
-        snapshot ||= state.trigger_snapshot.deep_dup
-        expect(state.trigger_snapshot).to eq(snapshot)
-        expect(snapshot).to include('superseded' => true, 'feedback_version' => 5)
-        pending = campaign.email_campaign_recipients.create!(email: "denied-superseded-#{mode}-#{cycle}@example.com")
+        expect(state.trigger_snapshot).to eq({})
+        pending = campaign.email_campaign_recipients.create!(email: "allowed-superseded-#{mode}-#{cycle}@example.com")
         campaign.update!(status: :sending)
-        expect(EmailCampaigns::DeliveryClaim.new(campaign).claim(pending)).to eq(:paused)
-        expect(pending.reload).to be_pending
+        expect(EmailCampaigns::DeliveryClaim.new(campaign).claim(pending)).to eq(:claimed)
+        expect(pending.reload).to be_sent
       end
-      expect(EmailReputationAudit.where(account: account, action: 'paused').count).to eq(1)
+      expect(EmailReputationAudit.where(account: account, action: 'paused')).to be_empty
     end
   end
 
-  # rubocop:disable RSpec/MultipleExpectations -- barrier, durable incident and lease invariants across three cycles
-  it 'blocks before the next claim through three feedback-superseded harmful evaluations and keeps following up' do
+  # rubocop:disable RSpec/MultipleExpectations -- barrier and lease invariants across three cycles
+  it 'keeps feedback-superseded local evaluations diagnostic while preserving follow-up leases' do
     accepted = Array.new(100) do |index|
       campaign.email_campaign_recipients.create!(email: "stream#{index}@example.com", sent_at: 1.hour.ago, status: :sent)
     end
@@ -173,7 +172,7 @@ RSpec.describe EmailCampaigns::Reputation::Evaluator do # rubocop:disable RSpec/
     accepted.first(10).each do |row|
       row.email_events.create!(event_type: :bounce, payload: { bounce: { bounceType: 'Permanent' } })
     end
-    snapshot = nil
+
     3.times do |cycle|
       token = state.reload.evaluation_lease_token
       worker = Thread.new do
@@ -190,27 +189,26 @@ RSpec.describe EmailCampaigns::Reputation::Evaluator do # rubocop:disable RSpec/
         release << true
         worker.join(5) || worker.kill.join
       end
-      expect(worker.value).to include(blocked: true, resume_allowed: false,
-                                      protection: include(code: 'reputation_evaluation_superseded'))
+
+      expect(worker.value).to include(blocked: false, resume_allowed: true)
       expect(state.reload.attributes.slice(*published.keys)).to eq(published)
       expect(state.feedback_version).to eq(11 + cycle)
-      snapshot ||= state.trigger_snapshot.deep_dup
-      expect(state.trigger_snapshot).to eq(snapshot)
-      expect(snapshot).to include('superseded' => true, 'feedback_version' => 10)
-      expect(snapshot.dig('metrics', 'permanent_ratio')).to eq(0.1)
-      expect(account.reload.internal_attributes['email_campaigns_paused']).to be_present
-      pending = campaign.email_campaign_recipients.create!(email: "denied#{cycle}@example.com")
-      campaign.update!(status: :sending) # Exercise reputation again, not just the previous campaign pause.
-      expect(EmailCampaigns::DeliveryClaim.new(campaign).claim(pending)).to eq(:paused)
-      expect(pending.reload).to be_pending
+      expect(state.trigger_snapshot).to eq({})
+      expect(account.reload.internal_attributes['email_campaigns_paused']).to be_nil
+
+      pending = campaign.email_campaign_recipients.create!(email: "allowed#{cycle}@example.com")
+      campaign.update!(status: :sending)
+      expect(EmailCampaigns::DeliveryClaim.new(campaign).claim(pending)).to eq(:claimed)
+      expect(pending.reload).to be_sent
       expect do
         EmailCampaigns::Reputation::EvaluationQueue.finish(account.id, token)
       end.to have_enqueued_job(EmailCampaigns::ReputationEvaluationJob).with(account.id, kind_of(String))
       expect(state.reload.evaluation_lease_token).not_to eq(token)
     end
-    expect(EmailReputationAudit.where(account: account, action: 'paused').pluck(:snapshot)).to eq([snapshot])
+
     token = state.reload.evaluation_lease_token
-    expect(described_class.new(account, policy: policy).evaluate!).to include(blocked: true)
+    final = described_class.new(account, policy: policy).evaluate!
+    expect(final).to include(blocked: false, level: 'high_risk', resume_allowed: true)
     expect(state.reload.evaluated_feedback_version).to eq(state.feedback_version)
     EmailCampaigns::Reputation::EvaluationQueue.finish(account.id, token)
     expect(state.reload.evaluation_lease_token).to be_nil
@@ -247,28 +245,17 @@ RSpec.describe EmailCampaigns::Reputation::Evaluator do # rubocop:disable RSpec/
     expect(worker.value).to be_persisted
   end
 
-  it 'keeps the actual campaign resume collection outside the account lock' do
-    100.times { |i| campaign.email_campaign_recipients.create!(email: "resume#{i}@example.com", sent_at: 1.hour.ago) }
+  it 'resumes without collecting local reputation and retires only the legacy account flag' do
+    campaign.email_campaign_recipients.create!(email: 'resume-ready@example.com')
     campaign.update!(status: :paused)
-    account.update!(internal_attributes: { email_campaigns_paused: { reason: 'previous incident' } })
-    worker = Thread.new do
-      ActiveRecord::Base.connection_pool.with_connection do
-        Thread.current[:slow_reputation_collection] = true
-        EmailCampaign.find(campaign.id).resume!
-      end
-    end
-    begin
-      pid = Timeout.timeout(10) { captured.pop }
-      expect(ActiveRecord::Base.connection.select_value('SELECT pg_backend_pid()')).not_to eq(pid)
-      Timeout.timeout(3) do
-        fresh = Account.find(account.id)
-        fresh.update!(internal_attributes: fresh.internal_attributes.merge('during_resume' => 'retained'))
-      end
-    ensure
-      release << true
-      worker.join(15) || worker.kill.join
-    end
-    worker.value
+    account.update!(internal_attributes: {
+                      email_campaigns_paused: { reason: 'previous incident' },
+                      during_resume: 'retained'
+                    })
+    expect(EmailCampaigns::Reputation::Metrics).not_to receive(:new)
+
+    expect(EmailCampaign.find(campaign.id).resume!).to be(true)
+
     expect(campaign.reload).to be_sending
     expect(account.reload.internal_attributes).to eq('during_resume' => 'retained')
   end

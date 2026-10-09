@@ -22,6 +22,9 @@ class EmailProviderConfigTest < Minitest::Test
     refute config.manual_block
     assert_equal 0.05, config.bounce_ratio
     assert_equal 0.001, config.complaint_ratio
+    assert_in_delta 0.04, config.bounce_recovery_ratio, 1e-12
+    assert_in_delta 0.0008, config.complaint_recovery_ratio, 1e-12
+    assert_equal 2, config.recovery_observations
   end
 
   def test_only_stricter_finite_positive_thresholds_are_accepted
@@ -37,5 +40,17 @@ class EmailProviderConfigTest < Minitest::Test
                                                             'EMAIL_REPUTATION_PROVIDER_COMPLAINT_RATIO' => '0.0005')
     assert_equal 0.04, config.bounce_ratio
     assert_equal 0.0005, config.complaint_ratio
+  end
+
+  def test_recovery_thresholds_must_be_lower_than_blocking_thresholds
+    assert_raises(CustomExceptions::EmailReputationConfiguration) do
+      EmailCampaigns::Reputation::ProviderConfig.new('EMAIL_REPUTATION_PROVIDER_BOUNCE_RECOVERY_RATIO' => '0.05')
+    end
+    assert_raises(CustomExceptions::EmailReputationConfiguration) do
+      EmailCampaigns::Reputation::ProviderConfig.new('EMAIL_REPUTATION_PROVIDER_COMPLAINT_RECOVERY_RATIO' => '0.001')
+    end
+    assert_raises(CustomExceptions::EmailReputationConfiguration) do
+      EmailCampaigns::Reputation::ProviderConfig.new('EMAIL_REPUTATION_PROVIDER_RECOVERY_OBSERVATIONS' => '0')
+    end
   end
 end

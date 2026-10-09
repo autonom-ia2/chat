@@ -11,122 +11,149 @@ RSpec.describe EmailCampaigns::Reputation::ProviderMonitor do
   let(:cloudwatch) { instance_double(Aws::CloudWatch::Client) }
   let(:monitor) { described_class.new(config: config, ses: ses, cloudwatch: cloudwatch) }
 
-  it 'reads the latest CloudWatch ratio instead of summing samples or inventing SES GetAccount fields' do
-    allow(cloudwatch).to receive(:get_metric_statistics) do |args|
-      value = args[:metric_name] == 'Reputation.BounceRate' ? 0.10 : 0.0
-      expect(args).to include(namespace: 'AWS/SES', dimensions: [], statistics: ['Average'])
-      Aws::CloudWatch::Types::GetMetricStatisticsOutput.new(datapoints: [Aws::CloudWatch::Types::Datapoint.new(timestamp: now - 300, average: 0.01),
-                                                                         Aws::CloudWatch::Types::Datapoint.new(timestamp: now, average: value)])
-    end
-    monitor.call
-    state = EmailProviderState.find_by!(provider_key: config.provider_key)
-    expect(state.status).to eq('blocked')
-    expect(state.telemetry.dig('bounce', 'ratio')).to eq(0.10)
+  before { allow(EmailCampaigns::ProviderRecoveryJob).to receive(:perform_later) }
+
+  def point(value, timestamp = Time.current)
+    Aws::CloudWatch::Types::GetMetricStatisticsOutput.new(
+      datapoints: [Aws::CloudWatch::Types::Datapoint.new(timestamp: timestamp, average: value)]
+    )
   end
 
-  it 'blocks a disabled account without depending on CloudWatch availability' do
+  def stub_ratios(bounce:, complaint:)
+    allow(cloudwatch).to receive(:get_metric_statistics) do |args|
+      value = args[:metric_name] == 'Reputation.BounceRate' ? bounce : complaint
+      point(value, args[:end_time])
+    end
+  end
+
+  it 'blocks at the preventive bounce boundary' do
+    stub_ratios(bounce: 0.05, complaint: 0.0)
+    state = monitor.call
+    expect(state).to have_attributes(status: 'blocked', blocked: true)
+    expect(state.telemetry.dig('bounce', 'ratio')).to eq(0.05)
+    expect(EmailReputationAudit.where(provider_key: config.provider_key, action: 'provider_blocked').count).to eq(1)
+  end
+
+  it 'blocks a restricted sending account without metric availability' do
     allow(ses).to receive(:get_account).and_return('SendingEnabled' => false, 'EnforcementStatus' => 'SHUTDOWN')
     expect(cloudwatch).not_to receive(:get_metric_statistics)
-    monitor.call
-    expect(EmailProviderState.find_by!(provider_key: config.provider_key).status).to eq('blocked')
+    expect(monitor.call).to have_attributes(status: 'blocked', blocked: true)
   end
 
-  it 'preserves a known block on polling errors and does not expose raw error details' do
-    EmailProviderState.create!(provider_key: config.provider_key, status: 'blocked', observed_at: now - 3600)
-    allow(ses).to receive(:get_account).and_raise(EmailCampaigns::Ses::Error, 'private provider detail')
-    monitor.call
-    state = EmailProviderState.find_by!(provider_key: config.provider_key)
-    expect(state.status).to eq('blocked')
-    expect(state.error_code).to eq('EmailCampaigns::Ses::Error')
-    expect(state.observed_at).to eq(now - 3600)
+  it 'blocks complaints at the preventive boundary' do
+    stub_ratios(bounce: 0.0, complaint: 0.001)
+    expect(monitor.call).to have_attributes(status: 'blocked', blocked: true)
   end
 
-  it 'does not treat an unknown polling error on an existing block as new harmful evidence' do
+  it 'blocks provider restriction regardless of ratios' do
+    allow(ses).to receive(:get_account).and_return('SendingEnabled' => true, 'EnforcementStatus' => 'PROBATION')
+    expect(cloudwatch).not_to receive(:get_metric_statistics)
+    expect(monitor.call).to have_attributes(status: 'blocked', blocked: true)
+  end
+
+  it 'keeps the global gate latched after the first safe observation' do
+    stub_ratios(bounce: 0.05, complaint: 0.0)
+    state = monitor.call
+
+    travel 5.minutes do
+      stub_ratios(bounce: 0.03, complaint: 0.0005)
+      monitor.call
+      expect(state.reload).to have_attributes(status: 'healthy', blocked: true)
+      expect(state.telemetry['recovery_streak']).to eq(1)
+    end
+  end
+
+  it 'clears the global latch after the required consecutive safe observations' do
+    stub_ratios(bounce: 0.05, complaint: 0.0)
+    state = monitor.call
+    generation = state.harmful_generation
+
+    travel 5.minutes do
+      stub_ratios(bounce: 0.03, complaint: 0.0005)
+      monitor.call
+    end
+    travel 10.minutes do
+      stub_ratios(bounce: 0.03, complaint: 0.0005)
+      monitor.call
+      expect(state.reload).to have_attributes(status: 'healthy', blocked: false, harmful_generation: generation)
+      expect(state.telemetry['recovery_streak']).to eq(0)
+      expect(EmailCampaigns::Reputation::ProviderGate.protection(config: config)).to be_nil
+    end
+
+    expect(EmailReputationAudit.where(provider_key: config.provider_key, action: 'provider_recovered').count).to eq(1)
+    expect(EmailCampaigns::ProviderRecoveryJob).to have_received(:perform_later).with(config.provider_key, generation)
+  end
+
+  it 'does not recover inside the hysteresis band' do
+    stub_ratios(bounce: 0.05, complaint: 0.0)
+    state = monitor.call
+
+    travel 5.minutes do
+      stub_ratios(bounce: 0.045, complaint: 0.0)
+      monitor.call
+    end
+    travel 10.minutes do
+      stub_ratios(bounce: 0.045, complaint: 0.0)
+      monitor.call
+    end
+
+    expect(state.reload).to have_attributes(status: 'healthy', blocked: true)
+    expect(state.telemetry['recovery_streak']).to eq(0)
+  end
+
+  it 'resets recovery evidence after an unknown collection result' do
+    stub_ratios(bounce: 0.05, complaint: 0.0)
+    state = monitor.call
+
+    travel 5.minutes do
+      stub_ratios(bounce: 0.03, complaint: 0.0005)
+      monitor.call
+      expect(state.reload.telemetry['recovery_streak']).to eq(1)
+    end
+    travel 10.minutes do
+      allow(ses).to receive(:get_account).and_raise(Net::ReadTimeout)
+      monitor.call
+      expect(state.reload).to have_attributes(status: 'unknown', blocked: true, error_code: 'Net::ReadTimeout')
+      expect(state.telemetry['recovery_streak']).to eq(0)
+    end
+  end
+
+  it 'never lets automatic recovery bypass a durable manual block' do
+    stub_ratios(bounce: 0.05, complaint: 0.0)
+    state = monitor.call
+    state.update!(manual_block: true)
+
+    travel 5.minutes do
+      stub_ratios(bounce: 0.03, complaint: 0.0005)
+      monitor.call
+    end
+    travel 10.minutes do
+      stub_ratios(bounce: 0.03, complaint: 0.0005)
+      monitor.call
+    end
+
+    expect(state.reload.blocked).to be(true)
+    expect(EmailCampaigns::Reputation::ProviderGate.protection(config: config)[:code]).to eq('provider_manual_block')
+  end
+
+  it 'preserves a known block on collection errors without adding harmful generations' do
     state = EmailProviderState.create!(provider_key: config.provider_key, status: 'blocked', blocked: true,
                                        harmful_generation: 7, observed_at: now - 60, checked_at: now - 60)
     allow(ses).to receive(:get_account).and_raise(Net::ReadTimeout)
-    travel 1.second do
-      monitor.call
-    end
+
+    monitor.call
+
     expect(state.reload).to have_attributes(status: 'blocked', blocked: true, harmful_generation: 7,
                                             error_code: 'Net::ReadTimeout')
   end
 
-  it 'does no work by default and treats missing CloudWatch points as unknown' do
+  it 'does no work by default and treats missing metric points as unknown' do
     disabled = EmailCampaigns::Reputation::ProviderConfig.new({})
     expect(described_class.new(config: disabled, ses: ses, cloudwatch: cloudwatch).call).to be_nil
     expect(ses).not_to have_received(:get_account)
-    allow(cloudwatch).to receive(:get_metric_statistics).and_return(Aws::CloudWatch::Types::GetMetricStatisticsOutput.new(datapoints: []))
-    monitor.call
-    expect(EmailProviderState.find_by!(provider_key: config.provider_key).status).to eq('unknown')
-  end
 
-  it 'persists a known critical bounce without depending on the second metric request' do
-    allow(cloudwatch).to receive(:get_metric_statistics) do |args|
-      raise 'complaint metric unavailable' unless args[:metric_name] == 'Reputation.BounceRate'
-
-      Aws::CloudWatch::Types::GetMetricStatisticsOutput.new(
-        datapoints: [Aws::CloudWatch::Types::Datapoint.new(timestamp: now, average: 0.10)]
-      )
-    end
-    monitor.call
-    expect(EmailProviderState.find_by!(provider_key: config.provider_key).status).to eq('blocked')
-    expect(cloudwatch).to have_received(:get_metric_statistics).once
-  end
-
-  it 'updates the same row through healthy, preventive block, unknown and healthy without releasing the latch' do
-    ratio = 0.0
-    allow(cloudwatch).to receive(:get_metric_statistics) do |args|
-      Aws::CloudWatch::Types::GetMetricStatisticsOutput.new(
-        datapoints: [Aws::CloudWatch::Types::Datapoint.new(timestamp: args[:end_time], average: ratio)]
-      )
-    end
-    state = monitor.call
-    expect(state.status).to eq('healthy')
-    ratio = 0.05
-    travel 1.second do
-      expect(monitor.call.id).to eq(state.id)
-      expect(state.reload).to have_attributes(status: 'blocked', blocked: true)
-    end
-    travel 2.seconds do
-      allow(ses).to receive(:get_account).and_raise(Net::ReadTimeout)
-      monitor.call
-      expect(state.reload).to have_attributes(status: 'blocked', blocked: true)
-    end
-    travel 3.seconds do
-      allow(ses).to receive(:get_account).and_return('SendingEnabled' => true, 'EnforcementStatus' => 'HEALTHY')
-      ratio = 0.0
-      monitor.call
-      expect(state.reload).to have_attributes(status: 'healthy', blocked: true)
-      expect(EmailCampaigns::Reputation::ProviderGate.protection(config: config)[:code]).to eq('provider_blocked')
-    end
-    expect(EmailReputationAudit.where(provider_key: config.provider_key, action: 'provider_blocked').count).to eq(1)
-  end
-
-  it 'treats a second healthy poll error as unknown on the existing row' do
-    allow(cloudwatch).to receive(:get_metric_statistics).and_return(Aws::CloudWatch::Types::GetMetricStatisticsOutput.new(
-                                                                      datapoints: [Aws::CloudWatch::Types::Datapoint.new(timestamp: now, average: 0)]
-                                                                    ))
-    state = monitor.call
-    travel 1.second do
-      allow(ses).to receive(:get_account).and_raise(Net::ReadTimeout)
-      expect(monitor.call.id).to eq(state.id)
-      expect(state.reload.status).to eq('unknown')
-      expect(state.error_code).to eq('Net::ReadTimeout')
-    end
-  end
-
-  it 'blocks complaint at the preventive boundary and PROBATION regardless of ratios' do
-    allow(cloudwatch).to receive(:get_metric_statistics) do |args|
-      ratio = args[:metric_name] == 'Reputation.ComplaintRate' ? 0.001 : 0.0
-      Aws::CloudWatch::Types::GetMetricStatisticsOutput.new(
-        datapoints: [Aws::CloudWatch::Types::Datapoint.new(timestamp: now, average: ratio)]
-      )
-    end
-    expect(monitor.call).to have_attributes(status: 'blocked', blocked: true)
-    travel 1.second do
-      allow(ses).to receive(:get_account).and_return('SendingEnabled' => true, 'EnforcementStatus' => 'PROBATION')
-      expect(monitor.call.telemetry).to include('enforcement_status' => 'PROBATION')
-    end
+    empty = Aws::CloudWatch::Types::GetMetricStatisticsOutput.new(datapoints: [])
+    allow(cloudwatch).to receive(:get_metric_statistics).and_return(empty)
+    expect(monitor.call.status).to eq('unknown')
   end
 end

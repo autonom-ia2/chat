@@ -27,24 +27,24 @@ RSpec.describe EmailCampaigns::Reputation::Admission do
     expect(recipient.sent_at).to be_nil
   end
 
-  it 'observes a new persisted block despite the loaded account and parks before the next claim' do
+  it 'ignores a historical tenant reputation flag during admission' do
     expect(admission.claim!(recipient)).to be(true)
     next_recipient = campaign.email_campaign_recipients.create!(email: 'next@example.com')
     Account.find(account.id).update!(internal_attributes: { email_campaigns_paused: { reason: 'legacy' } })
-    expect(admission.claim!(next_recipient)).to be(false)
-    expect(campaign.reload.pause_reason).to include('kind' => 'reputation', 'code' => 'legacy_pause')
-    expect(next_recipient.reload).to be_pending
+    expect(admission.claim!(next_recipient)).to be(true)
+    expect(campaign.reload).to be_sending
+    expect(next_recipient.reload).to be_sent
   end
 
-  it 'limits override admissions across campaigns and does not refund already admitted calls' do
+  it 'does not consume or enforce a stale tenant override during admission' do
     state = EmailReputationState.create!(account: account, blocked: true, override: {
                                            actor_id: 123, remaining: 1, expires_at: 1.hour.from_now.iso8601
                                          })
     expect(admission.claim!(recipient)).to be(true)
-    expect(state.reload.override['remaining']).to eq(0)
     next_recipient = campaign.email_campaign_recipients.create!(email: 'next@example.com')
-    expect(admission.claim!(next_recipient)).to be(false)
-    expect(EmailReputationAudit.where(account: account, action: 'override_budget_exhausted').count).to eq(1)
+    expect(admission.claim!(next_recipient)).to be(true)
+    expect(state.reload.override['remaining']).to eq(1)
+    expect(EmailReputationAudit.where(account: account, action: 'override_budget_exhausted')).to be_empty
   end
 
   it 'cannot bypass the provider breaker with a tenant override' do
@@ -69,10 +69,10 @@ RSpec.describe EmailCampaigns::Reputation::Admission do
     expect(campaign.reload.pause_reason['kind']).to eq('manual')
   end
 
-  it 'parks invalid policy configuration without sending' do
+  it 'does not make local diagnostic policy configuration part of the admission path' do
     with_modified_env('EMAIL_REPUTATION_MODE' => 'invalid') do
-      expect(admission.park_if_blocked!).to be(true)
-      expect(campaign.reload.pause_reason).to include('kind' => 'technical', 'code' => 'reputation_configuration_invalid')
+      expect(admission.park_if_blocked!).to be(false)
+      expect(campaign.reload).to be_sending
     end
   end
 

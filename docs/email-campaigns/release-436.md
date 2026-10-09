@@ -1,5 +1,7 @@
 # #436 — entrega integrada de proteção e gestão de campanhas
 
+> **Nota histórica:** a semântica de reputação/guardrail desta release foi parcialmente substituída pela #765 em 2026-09-29. Para o comportamento vigente de bloqueio, recuperação automática e retomada, usar `docs/email-campaigns/reputation.md`.
+
 Data de validação local:17/09/2026. Escopo: código e PRs, **sem autorização de merge, deploy, liberação de campanha ou backfill em produção**.
 
 ## PR final de integração e trilha técnica

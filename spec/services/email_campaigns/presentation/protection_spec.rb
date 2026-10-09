@@ -82,7 +82,7 @@ RSpec.describe EmailCampaigns::Presentation::Protection do
   it 'preserves manual campaign pause separately and expresses internal ratios only as public percentages' do
     state
     expect(described_class.pause_reason(campaign)).to eq('manual')
-    expect(dto).to include(state: 'healthy', reason_code: nil, release_eligible: true)
+    expect(dto).to include(state: 'healthy', reason_code: nil, release_eligible: false)
     expect(dto[:current]).to eq(sent: 200, permanent_bounces: 1, temporary_bounces: 2, unknown_bounces: 3, complaints: 0,
                                 hard_bounce_rate: 0.5, complaint_rate: 0.0, evaluated_at: now,
                                 window_start: (now - 7.days).iso8601, window_end: now.iso8601)
@@ -97,13 +97,13 @@ RSpec.describe EmailCampaigns::Presentation::Protection do
     expect(state.reload.current_metrics).to include('permanent_ratio' => 0.025, 'complaint_ratio' => 0.001)
   end
 
-  it 'keeps an eligible sticky pause latched and its trigger immutable, separately from live telemetry' do
+  it 'keeps a historical tenant trigger immutable but does not expose it as an active block' do
     trigger = { triggered_at: (now - 1.day).iso8601, code: 'reputation_threshold',
                 metrics: metrics.merge('sent' => 100, 'permanent' => 10, 'permanent_ratio' => 0.1),
                 actor_id: 123, reason: 'private operator reason' }
     state.update!(blocked: true, triggered_at: now - 1.day, trigger_snapshot: trigger)
     before_read = state.reload.attributes
-    expect(dto).to include(state: 'paused', reason_code: 'reputation', release_eligible: true)
+    expect(dto).to include(state: 'healthy', reason_code: nil, release_eligible: false)
     expect(dto[:capabilities][:resume]).to be(true)
     expect(dto[:trigger]).to include(at: (now - 1.day).iso8601, reason_code: 'reputation')
     expect(dto[:trigger][:metrics]).to include(sent: 100, permanent_bounces: 10, hard_bounce_rate: 10.0)
@@ -112,11 +112,11 @@ RSpec.describe EmailCampaigns::Presentation::Protection do
     expect(state.reload.attributes).to eq(before_read)
   end
 
-  it 'does not equate an aged-out cohort to remediation or clear a sticky pause' do
+  it 'shows an aged-out local cohort as unknown without using the historical latch for admission' do
     state.update!(blocked: true, current_metrics: metrics.merge('sent' => 0, 'permanent_ratio' => nil, 'complaint_ratio' => nil))
-    expect(dto).to include(state: 'paused', release_eligible: false)
+    expect(dto).to include(state: 'unknown', release_eligible: false)
     expect(dto[:current]).to include(sent: 0, hard_bounce_rate: nil, complaint_rate: nil)
-    expect(dto[:capabilities][:resume]).to be(false)
+    expect(dto[:capabilities][:resume]).to be(true)
   end
 
   it 'allows an unblocked manual pause without claiming an empty SES sample is healthy' do
@@ -131,36 +131,37 @@ RSpec.describe EmailCampaigns::Presentation::Protection do
     expect(dto[:capabilities][:resume]).to be(true)
   end
 
-  it 'rejects passing stored flags if actual metrics fail the real resume policy' do
+  it 'keeps harmful local metrics diagnostic even when a historical blocked flag exists' do
     state.update!(blocked: true, current_metrics: metrics.merge('complaints' => 1))
-    expect(dto).to include(state: 'paused', release_eligible: false)
-    expect(dto[:capabilities][:resume]).to be(false)
+    expect(dto).to include(state: 'healthy', release_eligible: false)
+    expect(dto[:current][:complaints]).to eq(1)
+    expect(dto[:capabilities][:resume]).to be(true)
   end
 
   [nil, 0, 3, '4'].each do |generation|
     it "fails closed with missing or stale published generation #{generation.inspect}" do
       state.update!(blocked: true, current_metrics: metrics.merge('evaluation_generation' => generation))
       expect(dto[:release_eligible]).to be(false)
-      expect(dto[:capabilities][:resume]).to be(false)
+      expect(dto[:capabilities][:resume]).to be(true)
     end
   end
 
   it 'rejects feedback received after the published evaluation' do
     state.update!(blocked: true, feedback_version: 3)
     expect(dto[:release_eligible]).to be(false)
-    expect(dto[:capabilities][:resume]).to be(false)
+    expect(dto[:capabilities][:resume]).to be(true)
   end
 
   it 'rejects an expired evaluation even if no new observation has started' do
     state.update!(blocked: true, evaluated_at: now - 8.days)
     expect(dto[:release_eligible]).to be(false)
-    expect(dto[:capabilities][:resume]).to be(false)
+    expect(dto[:capabilities][:resume]).to be(true)
   end
 
   it 'does not grant resume on an unknown evaluated level' do
     state.update!(blocked: true, level: 'unknown')
-    expect(dto).to include(state: 'paused', release_eligible: false)
-    expect(dto[:capabilities][:resume]).to be(false)
+    expect(dto).to include(state: 'unknown', release_eligible: false)
+    expect(dto[:capabilities][:resume]).to be(true)
   end
 
   it 'requires the evaluated policy to match the current policy' do
@@ -171,8 +172,8 @@ RSpec.describe EmailCampaigns::Presentation::Protection do
   it 'does not let an active override substitute for passing metrics or a current generation' do
     state.update!(blocked: true, current_metrics: metrics.except('evaluation_generation'),
                   override: { expires_at: (now + 1.hour).iso8601, remaining: 10, reason: 'private reason', actor_id: actor.id })
-    expect(dto).to include(state: 'paused', release_eligible: false)
-    expect(dto[:capabilities][:resume]).to be(false)
+    expect(dto).to include(state: 'healthy', release_eligible: false)
+    expect(dto[:capabilities][:resume]).to be(true)
     expect(dto.to_json).not_to include('remaining', 'expires_at', 'actor_id', 'private reason')
   end
 
@@ -188,7 +189,7 @@ RSpec.describe EmailCampaigns::Presentation::Protection do
     it "denies resume with missing or inconsistent hygiene #{counts.inspect}" do
       state
       result = presenter.call(campaign: campaign, preflight: counts && { mode: 'enforce', counts: counts })
-      expect(result[:release_eligible]).to be(true)
+      expect(result[:release_eligible]).to be(false)
       expect(result[:capabilities][:resume]).to be(false)
     end
   end
@@ -215,10 +216,10 @@ RSpec.describe EmailCampaigns::Presentation::Protection do
         expect(dto[:capabilities][:resume]).to be(false)
       end
 
-      it 'still denies a protected tenant without fresh release evidence' do
+      it 'treats a historical tenant block as diagnostic-only' do
         state.update!(blocked: true, current_metrics: metrics.except('evaluation_generation'))
-        expect(dto).to include(state: 'paused', release_eligible: false)
-        expect(dto[:capabilities][:resume]).to be(false)
+        expect(dto).to include(state: 'healthy', release_eligible: false)
+        expect(dto[:capabilities][:resume]).to be(true)
       end
     end
   end
@@ -337,7 +338,7 @@ RSpec.describe EmailCampaigns::Presentation::Protection do
     expect(dto[:capabilities][:override]).to be(false)
     actor.update!(type: 'SuperAdmin')
     elevated = described_class.new(account: account, actor: actor.reload, now: now).call(campaign: campaign, preflight: preflight)
-    expect(elevated[:capabilities][:override]).to be(true)
+    expect(elevated[:capabilities][:override]).to be(false)
   end
 
   it 'never uses another tenant state, domain or private policy fields' do
@@ -348,19 +349,19 @@ RSpec.describe EmailCampaigns::Presentation::Protection do
     expect(dto.to_json).not_to include('private.example.org', 'evaluation_generation', 'feedback_version', 'thresholds')
   end
 
-  it 'invalidates release after a harmful event advances feedback and observation generations' do
+  it 'keeps local feedback-generation changes diagnostic-only for resume' do
     state.update!(blocked: true)
     expect(dto[:capabilities][:resume]).to be(true)
     state.update!(feedback_version: 3, observation_generation: 5)
     fresh = described_class.new(account: account, actor: actor, now: now).call(campaign: campaign, preflight: preflight)
-    expect(fresh).to include(state: 'paused', release_eligible: false)
-    expect(fresh[:capabilities][:resume]).to be(false)
+    expect(fresh).to include(state: 'healthy', release_eligible: false)
+    expect(fresh[:capabilities][:resume]).to be(true)
   end
 
-  it 'retains legacy account protection without inventing release evidence' do
+  it 'does not expose a legacy tenant flag as an active block' do
     account.update!(internal_attributes: { 'email_campaigns_paused' => true })
-    expect(dto).to include(state: 'paused', release_eligible: false)
-    expect(dto[:capabilities][:resume]).to be(false)
+    expect(dto).to include(state: 'unknown', release_eligible: false)
+    expect(dto[:capabilities][:resume]).to be(true)
   end
 
   it 'requires the resume policy even when the update policy allows the actor' do
@@ -397,14 +398,14 @@ RSpec.describe EmailCampaigns::Presentation::Protection do
       state
       allow(provider_config).to receive(:unknown_action).and_return('allow')
       expect(dto[:provider]).to eq(state: 'unknown', observed_at: nil)
-      expect(dto[:release_eligible]).to be(true)
+      expect(dto[:release_eligible]).to be(false)
     end
 
     it 'shows healthy only with fresh persisted provider monitoring' do
       state
       EmailProviderState.create!(provider_key: provider_config.provider_key, status: 'healthy', observed_at: now)
       expect(dto[:provider]).to eq(state: 'healthy', observed_at: now)
-      expect(dto[:release_eligible]).to be(true)
+      expect(dto[:release_eligible]).to be(false)
     end
 
     it 'does not mistake stale provider telemetry for healthy' do
@@ -423,14 +424,14 @@ RSpec.describe EmailCampaigns::Presentation::Protection do
       expect(dto.to_json).not_to include('ses:synthetic', 'private operator reason', 'private.example.org', 'other_tenant')
     end
 
-    it 'excludes SES provider gates for direct inbox but retains tenant protection and its SES metric scope' do
+    it 'excludes provider gates for direct inbox while keeping local metrics diagnostic' do
       state.update!(blocked: true, current_metrics: metrics.merge('resume_allowed' => false))
       inbox = create(:inbox, :with_email, account: account)
       direct = create(:email_campaign, account: account, delivery_mode: :direct_inbox, sender_identity: nil,
                                        sender_inbox: inbox, status: :paused)
       expect(EmailCampaigns::Reputation::ProviderGate).not_to receive(:protection)
       result = presenter.call(campaign: direct, preflight: preflight)
-      expect(result).to include(state: 'paused', reason_code: 'reputation', release_eligible: false)
+      expect(result).to include(state: 'healthy', reason_code: nil, release_eligible: false)
       expect(result[:provider]).to eq(state: 'not_applicable', observed_at: nil)
       expect(result[:current][:sent]).to eq(200)
       expect(result[:capabilities][:resume]).to be(false)
@@ -461,7 +462,7 @@ RSpec.describe EmailCampaigns::Presentation::Protection do
     state
     EmailProviderState.create!(provider_key: provider_config.provider_key, status: 'healthy', observed_at: now)
     expect(dto[:provider]).to eq(state: 'unknown', observed_at: nil)
-    expect(dto[:release_eligible]).to be(true)
+    expect(dto[:release_eligible]).to be(false)
   end
 
   it 'respects an explicit provider block even when monitoring is disabled' do
