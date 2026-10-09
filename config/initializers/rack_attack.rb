@@ -476,6 +476,42 @@ class Rack::Attack
     req.ip if req.post? && segments.size == 2 && segments.last == 'viewed'
   end
 
+  # Página pública v2 (#1189): /public/api/v2/booking/:slug (GET página, POST reserva), .../slots e .../next_slot
+  # (GET), .../contact_request (POST) e /public/api/v2/ics/:token (GET). Mesmo método do convite: caminho normalizado
+  # e comparado em pedaços, sem expressão regular. Só por IP (ver a nota do v1 sobre limite por slug).
+  PUBLIC_BOOKING_V2_PREFIX = '/public/api/v2/booking/'.freeze
+  PUBLIC_BOOKING_V2_ICS_PREFIX = '/public/api/v2/ics/'.freeze
+  PUBLIC_BOOKING_V2_SLOT_ACTIONS = %w[slots next_slot].freeze
+
+  # Pedaços do caminho depois de `prefix` (["<slug>"], ["<slug>", "slots"]...); vazio para outros caminhos.
+  def self.public_path_segments(req, prefix)
+    path = ActionDispatch::Journey::Router::Utils.normalize_path(req.path_without_extensions)
+    return [] unless path.start_with?(prefix)
+
+    path.delete_prefix(prefix).split('/')
+  end
+
+  throttle('public_booking_v2/create_ip', limit: ENV.fetch('RATE_LIMIT_PUBLIC_BOOKING_V2', '10').to_i, period: 1.hour) do |req|
+    req.ip if req.post? && public_path_segments(req, PUBLIC_BOOKING_V2_PREFIX).size == 1
+  end
+
+  throttle('public_booking_v2/contact_request_ip', limit: ENV.fetch('RATE_LIMIT_PUBLIC_BOOKING_V2_CONTACT', '10').to_i,
+                                                   period: 1.hour) do |req|
+    segments = public_path_segments(req, PUBLIC_BOOKING_V2_PREFIX)
+    req.ip if req.post? && segments.size == 2 && segments.last == 'contact_request'
+  end
+
+  throttle('public_booking_v2/slots_ip', limit: ENV.fetch('RATE_LIMIT_PUBLIC_BOOKING_V2_SLOTS', '60').to_i, period: 1.minute) do |req|
+    segments = public_path_segments(req, PUBLIC_BOOKING_V2_PREFIX)
+    req.ip if (req.get? || req.head?) && segments.size == 2 && PUBLIC_BOOKING_V2_SLOT_ACTIONS.include?(segments.last)
+  end
+
+  throttle('public_booking_v2/show_ip', limit: ENV.fetch('RATE_LIMIT_PUBLIC_BOOKING_V2_SHOW', '60').to_i, period: 1.minute) do |req|
+    get = req.get? || req.head?
+    req.ip if get && (public_path_segments(req, PUBLIC_BOOKING_V2_PREFIX).size == 1 ||
+                      public_path_segments(req, PUBLIC_BOOKING_V2_ICS_PREFIX).size == 1)
+  end
+
   # CRM calendar push webhooks (S7-B): public + unauthenticated. Generous per-IP cap
   # (providers batch from their own ranges) just to bound abuse — the handler only
   # verifies a secret and enqueues, never trusts the payload.

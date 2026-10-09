@@ -1,0 +1,124 @@
+{
+  "LOADING": "Loading…",
+  "PREVIEW": "Preview: this is how your client sees the page.",
+  "BACK": "Back",
+  "DURATION": "{minutes} min call",
+  "HEADER": {
+    "LOGO_ALT": "{name} logo",
+    "PHOTO_ALT": "Photo of {name}"
+  },
+  "LOCATION": {
+    "WHATSAPP_VIDEO": "WhatsApp video call",
+    "WHATSAPP_VOICE": "WhatsApp voice call",
+    "CUSTOM_LINK": "Meeting link",
+    "IN_PERSON": "In person",
+    "GOOGLE_MEET": "Google Meet",
+    "TEAMS": "Microsoft Teams",
+    "OTHER": "Meeting"
+  },
+  "LOCATION_HINT": {
+    "WHATSAPP_VIDEO": "We video call you at the booked time.",
+    "WHATSAPP_VOICE": "We call you at the booked time.",
+    "CUSTOM_LINK": "You get the meeting link.",
+    "IN_PERSON": "You come to the address.",
+    "GOOGLE_MEET": "You get the link by email.",
+    "TEAMS": "You get the link by email.",
+    "OTHER": "You get the details when you confirm."
+  },
+  "DATE": {
+    "TITLE": "Which day works for you?",
+    "HELLO": "Hi, {name}! Which day works for you?",
+    "DURATION_TITLE": "How long?",
+    "DURATION_OPTION": "{minutes} minutes",
+    "EARLIEST": "Earliest: {when}",
+    "PICK_EARLIEST": "Pick this one",
+    "OTHER_DAY": "Or pick another day",
+    "TIMEZONE": "Times in your time zone: {zone}.",
+    "PAGE_TIMEZONE": "The calendar uses: {zone}."
+  },
+  "TIME": {
+    "TITLE": "Which time?",
+    "LOADING": "Looking for times…",
+    "EMPTY": "No free time on this day.",
+    "FAILED": "We could not load the times.",
+    "RETRY": "Try again",
+    "OTHER_DAY": "Pick another day"
+  },
+  "NO_SLOT": {
+    "LINK": "No time works?",
+    "TITLE": "No time works?",
+    "BODY": "No problem. Leave your WhatsApp and {name} will reach out to set a time.",
+    "BODY_NO_NAME": "No problem. Leave your WhatsApp and we will reach out to set a time.",
+    "SUBMIT": "Ask for a call",
+    "DONE_TITLE": "Request sent!",
+    "DONE_BODY": "We will reach out on WhatsApp to set a time."
+  },
+  "DETAILS": {
+    "TITLE": "Your details",
+    "NAME": "Your name",
+    "PHONE": "Your WhatsApp",
+    "COUNTRY": "Country code",
+    "PHONE_HINT": "With area code.",
+    "EMAIL_OPTIONAL": "Email (optional)",
+    "EMAIL_REQUIRED": "Your email",
+    "EMAIL_HINT": "So we can send you the meeting link.",
+    "LOCATION_TITLE": "How do you prefer?",
+    "NOTICE": "By confirming, you agree to get updates about this call on WhatsApp. You can stop them anytime.",
+    "CAPTCHA": "Confirm you are not a robot.",
+    "CONFIRM": "Confirm",
+    "SENDING": "Sending…"
+  },
+  "CONFIRM": {
+    "TITLE": "Check before confirming",
+    "WHATSAPP_VIDEO": "{name} will video call you on WhatsApp {phone}",
+    "WHATSAPP_VOICE": "{name} will call you on WhatsApp {phone}",
+    "WITH": "{location} with {name}",
+    "CHANGE_NUMBER": "Change the number",
+    "NEW_NUMBER": "Your WhatsApp"
+  },
+  "DONE": {
+    "TITLE": "All set, {name}!",
+    "TITLE_NO_NAME": "All set!",
+    "WITH": "{location} with {name}",
+    "ADDRESS": "Address: {address}",
+    "SAVE": "Save to my calendar",
+    "WHATSAPP": "Chat on WhatsApp",
+    "JOIN": "Join the meeting",
+    "NOTIFIED": "We let {name} know."
+  },
+  "PAUSED": {
+    "TITLE": "Booking is closed for now",
+    "BODY": "You cannot book here right now. Talk to us on WhatsApp.",
+    "BODY_NO_WHATSAPP": "You cannot book here right now. Please try again later.",
+    "WHATSAPP": "Chat on WhatsApp"
+  },
+  "NOT_FOUND": {
+    "TITLE": "This link is no longer valid",
+    "BODY": "Ask the person who sent it for a new link."
+  },
+  "ERROR_PAGE": {
+    "TITLE": "We could not open the page",
+    "BODY": "Please try again in a few minutes.",
+    "RETRY": "Try again"
+  },
+  "ALREADY": {
+    "TITLE": "You are already booked",
+    "BODY": "Your call with {name} is already booked.",
+    "BODY_NO_NAME": "Your call is already booked.",
+    "CHANGE": "To change the time, talk to us on WhatsApp.",
+    "WHATSAPP": "Chat on WhatsApp"
+  },
+  "ERRORS": {
+    "SLOT_UNAVAILABLE": "That time was just taken. Please pick another one.",
+    "INVALID_PHONE": "Check your WhatsApp number, with area code.",
+    "INVALID_NAME": "Write your name.",
+    "INVALID_EMAIL": "Check your email.",
+    "EMAIL_REQUIRED": "Write your email to get the meeting link.",
+    "TOO_MANY_OPEN": "You already have calls booked. To book another, talk to us on WhatsApp.",
+    "BOOKING_FAILED": "We could not book it now. Try again or talk to us on WhatsApp.",
+    "CAPTCHA": "Confirm you are not a robot."
+  },
+  "HELP": {
+    "WHATSAPP": "Chat on WhatsApp"
+  }
+}

@@ -278,4 +278,29 @@ RSpec.describe Crm::BookingV2::Booker do
 
     expect(locks_during_freebusy).to eq([0])
   end
+
+  describe 'contato e card do convite (#1189)' do
+    it 'usa o contato informado e põe a reunião no card aberto dele, sem criar outro card' do
+      card = world.card
+      result = nil
+      expect { result = book(phone: world.contact.phone_number, contact: world.contact, card: card) }.not_to change(Crm::Card, :count)
+
+      expect(result.contact).to eq(world.contact)
+      expect(result.meeting.card_id).to eq(world.card.id)
+      expect(Crm::Cards::Broadcaster).not_to have_received(:broadcast)
+    end
+
+    it 'cria card novo quando o card informado está fechado ou é de outro contato, e ignora contato de outra conta' do
+      world.card.update!(status: :won)
+      expect(book(phone: world.contact.phone_number, contact: world.contact, card: world.card).card).not_to eq(world.card)
+
+      stranger = create_booking_contact(account: account, name: 'Outra', phone: '+5531977776666')
+      foreign = create_booking_contact(account: create(:account), name: 'Fora', phone: '+5531977775555')
+      result = book(starts_at: '2026-10-20T11:00:00-03:00', contact: foreign, card: create_booking_card(
+        account: account, pipeline: world.pipeline, stage: world.stage, contact: stranger
+      ))
+      expect(result.contact).to have_attributes(account_id: account.id, phone_number: '+5521988887777')
+      expect(result.card.contact_id).to eq(result.contact.id)
+    end
+  end
 end

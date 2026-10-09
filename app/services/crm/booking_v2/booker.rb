@@ -44,8 +44,10 @@ class Crm::BookingV2::Booker
   end
 
   # Interface pedida pelo plano (#1188): um argumento nomeado por dado do formulário.
+  # `contact`/`card` (convite, #1189): a reserva usa o contato do convite em vez de procurar pelo telefone e, se o
+  # card do convite é desse contato e está aberto, a reunião entra nele em vez de criar outro (J1-A3).
   def initialize(profile:, name:, phone:, starts_at:, source:, email: nil, duration: nil, location_type: nil, # rubocop:disable Metrics/ParameterLists
-                 consent: {}, conversation: nil, link: nil)
+                 consent: {}, conversation: nil, link: nil, contact: nil, card: nil)
     @profile = profile
     @account = profile.account
     @input = Crm::BookingV2::BookingInput.new(profile: profile, name: name, phone: phone, starts_at: starts_at, email: email,
@@ -54,6 +56,7 @@ class Crm::BookingV2::Booker
     @consent = consent.to_h.with_indifferent_access
     @conversation = conversation
     @link = link if link.present? && link.booking_profile_id == profile.id && link.enabled?
+    assign_client(contact, card)
   end
 
   def perform
@@ -66,7 +69,7 @@ class Crm::BookingV2::Booker
       acquire_locks!
       existing_result || book_if_host_still_eligible!
     end
-    broadcast_card_created(result.card) unless result.existing
+    broadcast_card_created(result.card) unless result.existing || @card
     result
   end
 
@@ -78,6 +81,12 @@ class Crm::BookingV2::Booker
 
   def host
     @host ||= @link&.agent || profile.default_assignee
+  end
+
+  # Só contato desta conta; só card aberto desse contato (o card já é da conta do contato).
+  def assign_client(contact, card)
+    @contact = contact if contact&.account_id == account.id
+    @card = card if @contact && card&.contact_id == @contact.id && card.open?
   end
 
   def validate_inputs!
@@ -139,7 +148,7 @@ class Crm::BookingV2::Booker
 
     ensure_slot_available!(include_provider: false)
     contact = find_or_create_contact!
-    card = create_card!(contact)
+    card = @card || create_card!(contact)
     meeting = create_meeting!(card)
     Result.new(meeting: meeting, contact: contact, card: card, existing: false)
   end
@@ -152,7 +161,7 @@ class Crm::BookingV2::Booker
   end
 
   def find_or_create_contact!
-    Crm::BookingV2::PhoneLookup.find_contact(account: account, e164: phone) ||
+    @contact || Crm::BookingV2::PhoneLookup.find_contact(account: account, e164: phone) ||
       account.contacts.create!(name: name, phone_number: phone, email: free_email)
   end
 
