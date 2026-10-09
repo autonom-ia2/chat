@@ -40,8 +40,8 @@ pai Workspace, nao para o Git oficial do Chatwoot.
   schema usa pattern e comprimento explicitos; teste de traversal passou.
 - Ruby 3.4.4/Bundler da aplicacao indisponiveis localmente: suite completa Rails
   e RuboCop do projeto nao executados nesta maquina. CI do PR e gate posterior.
-- Hook local de commit nao iniciou: `.husky/_/husky.sh` nao existe no worktree
-  sem dependencias frontend. Commit usa hooksPath desabilitado apenas nesse
+- Hooks locais de commit/push nao iniciaram: `.husky/_/husky.sh` nao existe no
+  worktree sem dependencias frontend. Commit/push usam hooksPath desabilitado apenas no
   comando; configuracao do Git/hook nao foi modificada. Validacoes acima feitas
   explicitamente; checks da PR continuam habilitados.
 
