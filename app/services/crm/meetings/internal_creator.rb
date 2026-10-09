@@ -7,7 +7,7 @@
 #
 # params: title, description, starts_at, ends_at, timezone, reminder_minutes_before, extra_guests (e-mails),
 # location_type, location_url (custom_link), location_address (in_person), location_label, guest_phone, source,
-# booking_profile_id, booking_link_id, consent ({ accepted_at, text_key }).
+# booking_profile_id, booking_link_id, booking_request_id (chave do pedido da página nova), consent ({ accepted_at, text_key }).
 class Crm::Meetings::InternalCreator
   DEFAULT_REMINDER_MINUTES = 15
   LOCATION_TYPES = %w[whatsapp_video whatsapp_voice custom_link in_person].freeze
@@ -69,6 +69,7 @@ class Crm::Meetings::InternalCreator
     metadata = { 'reminder_minutes_before' => reminder_minutes_before(params), 'location' => location.compact }
     metadata['booking_profile_id'] = params[:booking_profile_id] if params[:booking_profile_id].present?
     metadata['booking_link_id'] = params[:booking_link_id] if params[:booking_link_id].present?
+    metadata['booking_request_id'] = params[:booking_request_id] if params[:booking_request_id].present?
     consent = params[:consent].presence
     metadata['consent'] = { 'accepted_at' => consent[:accepted_at], 'text_key' => consent[:text_key] } if consent
     metadata

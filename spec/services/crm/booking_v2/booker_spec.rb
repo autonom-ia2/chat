@@ -12,9 +12,9 @@ RSpec.describe Crm::BookingV2::Booker do
     allow(Crm::Cards::Broadcaster).to receive(:broadcast)
   end
 
-  def book(**overrides)
+  def book(**overrides, &)
     described_class.new(profile: profile, name: 'Ana Souza', phone: '(21) 98888-7777', starts_at: slot,
-                        source: 'public_link', **overrides).perform
+                        source: 'public_link', **overrides).perform(&)
   end
 
   it 'cria contato, card e reunião interna sem e-mail' do
@@ -114,18 +114,54 @@ RSpec.describe Crm::BookingV2::Booker do
     expect(book(starts_at: '2026-10-12T10:00:00-03:00').meeting.starts_at).to eq(Time.iso8601('2026-10-12T10:00:00-03:00'))
   end
 
-  it 'devolve a mesma reunião em reenvio dentro de 5 minutos' do
-    first = book
+  it 'devolve a mesma reunião em reenvio com a mesma chave dentro de 5 minutos' do
+    first = book(idempotency_key: 'chave-da-tentativa-1')
     travel 4.minutes
-    second = book(phone: '+55 21 98888-7777')
+    second = book(phone: '+55 21 98888-7777', idempotency_key: 'chave-da-tentativa-1')
 
+    expect(first.meeting.metadata['booking_request_id']).to eq('chave-da-tentativa-1')
     expect(second.existing).to be(true)
     expect(second.meeting).to eq(first.meeting)
     expect(account.crm_meetings.count).to eq(1)
     expect(Crm::Cards::Broadcaster).to have_received(:broadcast).once
 
     travel 2.minutes
-    expect { book }.to raise_error(ArgumentError, 'slot_unavailable')
+    expect { book(idempotency_key: 'chave-da-tentativa-1') }.to raise_error(ArgumentError, 'slot_unavailable')
+  end
+
+  # Telefone, página e horário iguais não bastam: sem a chave do pedido a reunião de outra pessoa nunca volta.
+  it 'recusa o mesmo telefone e horário sem chave ou com outra chave, sem devolver a reunião' do
+    first = book(idempotency_key: 'chave-da-tentativa-1')
+
+    expect { book(name: 'Outro', phone: '21988887777') }.to raise_error(ArgumentError, 'slot_unavailable')
+    expect { book(name: 'Outro', phone: '21988887777', idempotency_key: 'chave-de-outra-pessoa') }
+      .to raise_error(ArgumentError, 'slot_unavailable')
+    expect(account.crm_meetings.sole).to eq(first.meeting)
+  end
+
+  it 'não grava chave do pedido quando ela não vem' do
+    expect(book.meeting.metadata).not_to have_key('booking_request_id')
+  end
+
+  it 'grava no bloco, dentro da transação, e desfaz a reunião quando o bloco recusa' do
+    expect { book { |_booked| raise ArgumentError, 'booking_failed' } }.to raise_error(ArgumentError, 'booking_failed')
+    expect(account.crm_meetings.count).to eq(0)
+    expect(account.contacts.where(phone_number: '+5521988887777')).to be_empty
+    expect(Crm::Cards::Broadcaster).not_to have_received(:broadcast)
+
+    seen = nil
+    result = book { |booked| seen = [booked.meeting.persisted?, ActiveRecord::Base.connection.transaction_open?] }
+    expect(seen).to eq([true, true])
+    expect(result.existing).to be(false)
+  end
+
+  it 'avisa o card novo só depois do commit da transação de quem chamou' do
+    ActiveRecord::Base.transaction do
+      book
+      expect(Crm::Cards::Broadcaster).not_to have_received(:broadcast)
+    end
+
+    expect(Crm::Cards::Broadcaster).to have_received(:broadcast).once
   end
 
   it 'recusa a terceira reunião aberta do mesmo telefone' do

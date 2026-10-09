@@ -1,7 +1,8 @@
 import { computed, ref } from 'vue';
 import { getInvite, markInviteViewed } from '../api';
 
-// Link do cliente `/b/:code` (J1-A2): o convite diz de qual página é, o primeiro nome e o telefone mascarado.
+// Link do cliente `/b/:code` (J1-A2): o convite diz de qual página é, o primeiro nome e o telefone mascarado; já
+// agendado, diz também quando (`starts_at`).
 export function useInvite() {
   const invite = ref(null);
   let viewedSent = false;
@@ -29,6 +30,7 @@ export function useInvite() {
     firstName: computed(() => invite.value?.contact_first_name || ''),
     phoneMasked: computed(() => invite.value?.phone_masked || ''),
     isScheduled: computed(() => invite.value?.state === 'scheduled'),
+    startsAt: computed(() => invite.value?.starts_at || ''),
     load,
     markViewed,
   };

@@ -58,4 +58,31 @@ RSpec.describe 'Public::Api::V2::Ics', type: :request do
     get "/public/api/v2/ics/#{valid}"
     expect_not_found
   end
+
+  it 'responde 404 para convite cancelado, fora da validade ou com a reunião cancelada' do
+    valid = token
+    invite.update!(canceled_at: Time.current)
+    get "/public/api/v2/ics/#{valid}"
+    expect_not_found
+
+    invite.update!(canceled_at: nil)
+    get "/public/api/v2/ics/#{valid}"
+    expect(response).to have_http_status(:ok)
+
+    meeting.update!(status: :canceled)
+    get "/public/api/v2/ics/#{valid}"
+    expect_not_found
+
+    meeting.update!(status: :scheduled)
+    travel_to meeting.ends_at + Crm::BookingInvite::MANAGE_GRACE + 1.minute
+    get "/public/api/v2/ics/#{Crm::BookingV2::Tokens.generate('ics', { 'c' => invite.code }, expires_in: 2.days)}"
+    expect_not_found
+  end
+
+  it 'não deixa o código do convite (link de gestão) legível no token' do
+    raw = Base64.urlsafe_decode64(token)
+
+    expect(raw).not_to include(invite.code)
+    expect(raw.split('--').map { |part| Base64.decode64(part) }.join).not_to include(invite.code)
+  end
 end

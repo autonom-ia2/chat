@@ -478,10 +478,16 @@ class Rack::Attack
 
   # Página pública v2 (#1189): /public/api/v2/booking/:slug (GET página, POST reserva), .../slots e .../next_slot
   # (GET), .../contact_request (POST) e /public/api/v2/ics/:token (GET). Mesmo método do convite: caminho normalizado
-  # e comparado em pedaços, sem expressão regular. Só por IP (ver a nota do v1 sobre limite por slug).
+  # e comparado em pedaços, sem expressão regular.
+  #
+  # Por IP e, para reserva e pedido de contato, também por página (slug). O teto por página limita o estrago de um
+  # ataque distribuído (muitos IPs) no CRM do cliente: no máximo N cards por hora/dia numa página. Contrapartida
+  # aceita (a nota do v1 acima): quem conhece o slug pode esgotar o teto e travar a página até o período virar.
   PUBLIC_BOOKING_V2_PREFIX = '/public/api/v2/booking/'.freeze
   PUBLIC_BOOKING_V2_ICS_PREFIX = '/public/api/v2/ics/'.freeze
   PUBLIC_BOOKING_V2_SLOT_ACTIONS = %w[slots next_slot].freeze
+  PUBLIC_BOOKING_V2_PAGE_BOOKINGS_PER_HOUR = ENV.fetch('RATE_LIMIT_PUBLIC_BOOKING_V2_PAGE_BOOKINGS_PER_HOUR', '40').to_i
+  PUBLIC_BOOKING_V2_PAGE_CONTACT_REQUESTS_PER_DAY = ENV.fetch('RATE_LIMIT_PUBLIC_BOOKING_V2_PAGE_CONTACT_REQUESTS_PER_DAY', '20').to_i
 
   # Pedaços do caminho depois de `prefix` (["<slug>"], ["<slug>", "slots"]...); vazio para outros caminhos.
   def self.public_path_segments(req, prefix)
@@ -499,6 +505,16 @@ class Rack::Attack
                                                    period: 1.hour) do |req|
     segments = public_path_segments(req, PUBLIC_BOOKING_V2_PREFIX)
     req.ip if req.post? && segments.size == 2 && segments.last == 'contact_request'
+  end
+
+  throttle('public_booking_v2/create_page', limit: PUBLIC_BOOKING_V2_PAGE_BOOKINGS_PER_HOUR, period: 1.hour) do |req|
+    segments = public_path_segments(req, PUBLIC_BOOKING_V2_PREFIX)
+    segments.first if req.post? && segments.size == 1
+  end
+
+  throttle('public_booking_v2/contact_request_page', limit: PUBLIC_BOOKING_V2_PAGE_CONTACT_REQUESTS_PER_DAY, period: 1.day) do |req|
+    segments = public_path_segments(req, PUBLIC_BOOKING_V2_PREFIX)
+    segments.first if req.post? && segments.size == 2 && segments.last == 'contact_request'
   end
 
   throttle('public_booking_v2/slots_ip', limit: ENV.fetch('RATE_LIMIT_PUBLIC_BOOKING_V2_SLOTS', '60').to_i, period: 1.minute) do |req|

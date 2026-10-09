@@ -10,7 +10,12 @@
 # - `paused?`: página (ou link individual) despublicada e sem prévia válida. A página mostra só o aviso de pausa.
 # - `readable?`: pode mostrar dados e horários (publicada ou em prévia) e o responsável ainda pode atender.
 # - `bookable?`: pode reservar. A prévia NUNCA reserva: exige página e link publicados.
+#
+# `time_zone`: fuso em que a página mostra horários. A página nova valida o fuso ao salvar; um inválido gravado antes
+# disso levanta `InvalidTimeZone` em vez de cair em outro fuso em silêncio (RA-08). Sem fuso gravado vale o da conta.
 class Crm::BookingV2::PublicPage
+  class InvalidTimeZone < StandardError; end
+
   attr_reader :slug, :profile, :link
 
   def self.find(slug, preview_token: nil)
@@ -61,6 +66,13 @@ class Crm::BookingV2::PublicPage
 
   def host
     link ? link.agent : profile.default_assignee
+  end
+
+  def time_zone
+    stored = profile.timezone.to_s
+    raise InvalidTimeZone, "booking page #{profile.id} has an invalid time zone" if stored.present? && ActiveSupport::TimeZone[stored].nil?
+
+    ActiveSupport::TimeZone[profile.resolved_timezone]
   end
 
   def host_eligible?

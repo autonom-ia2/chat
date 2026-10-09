@@ -1,8 +1,11 @@
 {
   "LOADING": "Carregando…",
   "PREVIEW": "Prévia: é assim que o cliente vê a página.",
+  "PREVIEW_NO_BOOKING": "Isto é uma prévia. Ninguém consegue marcar por aqui.",
   "BACK": "Voltar",
-  "DURATION": "Conversa de {minutes} min",
+  "DURATION": "{minutes} minutos",
+  "ADDRESS": "Endereço: {address}",
+  "ZONE": "Horários mostrados em: {zone}.",
   "HEADER": {
     "LOGO_ALT": "Logo de {name}",
     "PHOTO_ALT": "Foto de {name}"
@@ -10,19 +13,19 @@
   "LOCATION": {
     "WHATSAPP_VIDEO": "Vídeo no WhatsApp",
     "WHATSAPP_VOICE": "Ligação no WhatsApp",
-    "CUSTOM_LINK": "Reunião por link",
+    "CUSTOM_LINK": "On-line, por link",
     "IN_PERSON": "No local",
     "GOOGLE_MEET": "Google Meet",
     "TEAMS": "Microsoft Teams",
-    "OTHER": "Reunião"
+    "OTHER": "Atendimento"
   },
   "LOCATION_HINT": {
     "WHATSAPP_VIDEO": "Chamamos você por vídeo no horário marcado.",
     "WHATSAPP_VOICE": "Ligamos para você no horário marcado.",
-    "CUSTOM_LINK": "Você recebe o link da reunião.",
+    "CUSTOM_LINK": "Você recebe o link para entrar.",
     "IN_PERSON": "Você vai até o endereço.",
-    "GOOGLE_MEET": "Você recebe o link no e-mail.",
-    "TEAMS": "Você recebe o link no e-mail.",
+    "GOOGLE_MEET": "O link chega no seu e-mail.",
+    "TEAMS": "O link chega no seu e-mail.",
     "OTHER": "Você recebe os detalhes ao confirmar."
   },
   "DATE": {
@@ -31,10 +34,8 @@
     "DURATION_TITLE": "Quanto tempo?",
     "DURATION_OPTION": "{minutes} minutos",
     "EARLIEST": "Mais cedo: {when}",
-    "PICK_EARLIEST": "Escolher este",
-    "OTHER_DAY": "Ou escolha outro dia",
-    "TIMEZONE": "Horários no seu fuso: {zone}.",
-    "PAGE_TIMEZONE": "A agenda é no fuso: {zone}."
+    "PICK_EARLIEST": "Quero este",
+    "OTHER_DAY": "Ou escolha outro dia"
   },
   "TIME": {
     "TITLE": "Qual horário?",
@@ -49,7 +50,9 @@
     "TITLE": "Nenhum horário serve?",
     "BODY": "Sem problema. Deixe seu WhatsApp e {name} chama você para combinar.",
     "BODY_NO_NAME": "Sem problema. Deixe seu WhatsApp e chamamos você para combinar.",
-    "SUBMIT": "Pedir contato",
+    "BODY_INVITE": "Sem problema. {name} chama você no WhatsApp para combinar.",
+    "BODY_NO_NAME_INVITE": "Sem problema. Chamamos você no WhatsApp para combinar.",
+    "SUBMIT": "Pedir para me chamarem",
     "DONE_TITLE": "Pedido enviado!",
     "DONE_BODY": "Vamos chamar você no WhatsApp para combinar."
   },
@@ -61,17 +64,17 @@
     "PHONE_HINT": "Com DDD.",
     "EMAIL_OPTIONAL": "E-mail (se quiser)",
     "EMAIL_REQUIRED": "Seu e-mail",
-    "EMAIL_HINT": "Para mandar o link da reunião.",
-    "LOCATION_TITLE": "Como prefere?",
-    "NOTICE": "Ao confirmar, você aceita receber os avisos desta conversa no WhatsApp. Você pode parar quando quiser.",
+    "EMAIL_HINT": "O link chega no seu e-mail.",
+    "LOCATION_TITLE": "Como prefere o atendimento?",
+    "NOTICE": "Ao confirmar, você aceita receber avisos sobre este horário no WhatsApp. Você pode parar quando quiser.",
     "CAPTCHA": "Confirme que você não é um robô.",
     "CONFIRM": "Confirmar",
     "SENDING": "Enviando…"
   },
   "CONFIRM": {
     "TITLE": "Confira antes de confirmar",
-    "WHATSAPP_VIDEO": "{name} vai te chamar por vídeo no WhatsApp {phone}",
-    "WHATSAPP_VOICE": "{name} vai te ligar no WhatsApp {phone}",
+    "WHATSAPP_VIDEO": "{name} vai chamar você por vídeo no WhatsApp {phone}",
+    "WHATSAPP_VOICE": "{name} vai ligar para você no WhatsApp {phone}",
     "WITH": "{location} com {name}",
     "CHANGE_NUMBER": "Mudar o número",
     "NEW_NUMBER": "Seu WhatsApp"
@@ -80,11 +83,16 @@
     "TITLE": "Tudo certo, {name}!",
     "TITLE_NO_NAME": "Tudo certo!",
     "WITH": "{location} com {name}",
-    "ADDRESS": "Endereço: {address}",
     "SAVE": "Salvar na minha agenda",
+    "GOOGLE": "Pôr na Agenda do Google",
+    "CALENDAR_TITLE": "Horário com {name}",
     "WHATSAPP": "Falar no WhatsApp",
-    "JOIN": "Entrar na reunião",
-    "NOTIFIED": "Avisamos {name}."
+    "JOIN": "Entrar pelo link",
+    "NOTIFIED": "Avisamos {name}.",
+    "MANAGE_TITLE": "Guarde este link para mudar ou cancelar",
+    "COPY": "Copiar link",
+    "COPIED": "Link copiado.",
+    "OPEN": "Abrir link"
   },
   "PAUSED": {
     "TITLE": "A agenda está fechada agora",
@@ -103,8 +111,8 @@
   },
   "ALREADY": {
     "TITLE": "Você já agendou",
-    "BODY": "Sua conversa com {name} já está marcada.",
-    "BODY_NO_NAME": "Sua conversa já está marcada.",
+    "BODY": "Seu horário com {name} já está marcado.",
+    "BODY_NO_NAME": "Seu horário já está marcado.",
     "CHANGE": "Para mudar o horário, fale no WhatsApp.",
     "WHATSAPP": "Falar no WhatsApp"
   },
@@ -113,8 +121,8 @@
     "INVALID_PHONE": "Confira o número do WhatsApp, com DDD.",
     "INVALID_NAME": "Escreva seu nome.",
     "INVALID_EMAIL": "Confira o e-mail.",
-    "EMAIL_REQUIRED": "Escreva seu e-mail para receber o link da reunião.",
-    "TOO_MANY_OPEN": "Você já tem conversas marcadas. Para marcar outra, fale no WhatsApp.",
+    "EMAIL_REQUIRED": "Escreva seu e-mail para receber o link.",
+    "TOO_MANY_OPEN": "Você já tem horários marcados. Para marcar outro, fale no WhatsApp.",
     "BOOKING_FAILED": "Não deu para marcar agora. Tente de novo ou fale no WhatsApp.",
     "CAPTCHA": "Confirme que você não é um robô."
   },
