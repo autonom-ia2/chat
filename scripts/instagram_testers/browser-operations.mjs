@@ -2445,7 +2445,10 @@ async function selectAndSendInvite({
     state.inviteRequestCount !== 1
   )
     fail('invite_unknown');
-  await delay(UI_POLL_MS, signal);
+  // Meta already confirmed the write. This bounded settle only looks for a
+  // duplicate response, so the execution deadline must not turn the
+  // confirmed success into an unknown outcome.
+  await delay(UI_POLL_MS);
   if (state.inviteResponseCount !== 1) fail('invite_unknown');
   return {
     target_id: request.target_id,
