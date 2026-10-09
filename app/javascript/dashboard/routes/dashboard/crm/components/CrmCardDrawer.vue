@@ -39,6 +39,7 @@ import { useCrmOrigin } from '../composables/useCrmOrigin';
 import CrmCardPill from './CrmCardPill.vue';
 import CrmCardMetaConversion from './CrmCardMetaConversion.vue';
 import BookingInviteButton from 'dashboard/components-next/Booking/BookingInviteButton.vue';
+import CrmCardNextMeeting from './calendar/CrmCardNextMeeting.vue';
 import CrmOriginList from './CrmOriginList.vue';
 import { formatBookingTime } from '../helpers/meetingNotices';
 import CrmCardLeadForm from './CrmCardLeadForm.vue';
@@ -1148,6 +1149,17 @@ const ACTIVITY_META = {
     icon: 'i-lucide-bell-off',
     tone: 'muted',
   },
+  // Dia da reunião (#1193): o agente lembrou o cliente e mandou o link para remarcar.
+  booking_agent_reminded: {
+    key: 'ACTIVITY_BOOKING_AGENT_REMINDED',
+    icon: 'i-lucide-bell-ring',
+    tone: 'info',
+  },
+  booking_rebook_link_sent: {
+    key: 'ACTIVITY_BOOKING_REBOOK_LINK_SENT',
+    icon: 'i-lucide-calendar-plus',
+    tone: 'info',
+  },
   automation_owner_assigned: {
     key: 'ACTIVITY_AUTOMATION_OWNER_ASSIGNED',
     icon: 'i-lucide-user-check',
@@ -1430,7 +1442,9 @@ const activityDetail = activity => {
     case 'booking_client_confirmed':
     case 'booking_client_canceled':
     case 'booking_notice_failed':
-    case 'booking_notices_stopped': {
+    case 'booking_notices_stopped':
+    case 'booking_agent_reminded':
+    case 'booking_rebook_link_sent': {
       const time = formatBookingTime(activity.payload?.starts_at, locale.value);
       return time
         ? t('CRM_KANBAN.DRAWER.ACTIVITY_DETAIL_BOOKING_TIME', { time })
@@ -1803,6 +1817,11 @@ useFixedPanelPresence(computed(() => props.show));
           tabindex="-1"
           class="grid gap-4 outline-none"
         >
+          <!-- Próxima reunião do card (#1193): status do cliente, Chamar e Lembrar. -->
+          <CrmCardNextMeeting
+            v-if="meetingsEnabled && card?.id"
+            :card-id="card.id"
+          />
           <label class="grid gap-2 text-sm text-n-slate-12">
             <span>{{ t('CRM_KANBAN.DRAWER.STAGE') }}</span>
             <ChoiceSelect

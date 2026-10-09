@@ -1046,6 +1046,41 @@
           "FAILED_HINT": "Talk to the customer to confirm the time."
         }
       },
+      "MEETING_DAY": {
+        "NEXT_MEETING": "Next meeting",
+        "PHONE_LABEL": "Number",
+        "CALL": "Call on WhatsApp",
+        "CALL_HINT": "WhatsApp opens the chat with the client. To start the video call, tap the camera icon in WhatsApp itself.",
+        "CALL_HINT_VOICE": "WhatsApp opens the chat with the client. To call, tap the phone icon in WhatsApp itself.",
+        "REMIND": "Remind",
+        "REMIND_HINT": "Sends the client a short message asking to confirm the time.",
+        "REMIND_SENT": "Reminder sent",
+        "REMIND_SENT_HINT": "The message went out in the conversation.",
+        "REBOOK_TITLE": "Send {name} a link to pick another time",
+        "REBOOK_TITLE_NO_NAME": "Send the client a link to pick another time",
+        "REBOOK_SEND": "Send link",
+        "REBOOK_SENT": "Link sent in the conversation.",
+        "NOT_NOW": "Not now",
+        "MOVE_QUESTION": "Move to the \"{stage}\" stage?",
+        "MOVE_HINT": "This way the card does not get forgotten in the current stage.",
+        "MOVE": "Move",
+        "MOVED": "The card went to the \"{stage}\" stage.",
+        "MOVE_FAILED": "Could not move the card. Try again.",
+        "COPY_LINK": "Copy link",
+        "COPIED": "Link copied",
+        "REFUSED": {
+          "NOT_REMINDABLE": "This meeting can no longer get a reminder.",
+          "ALREADY_CONFIRMED": "The client already confirmed.",
+          "STOPPED": "The client asked not to get messages about this meeting. Nothing was sent.",
+          "NO_INVITE": "This meeting has no client link. Nothing was sent.",
+          "RECENTLY_REMINDED": "You reminded the client a few minutes ago. Wait a little before trying again.",
+          "NO_CONVERSATION": "There is no conversation with this client that you can answer. Copy the link and send it another way.",
+          "CANNOT_REPLY": "The client needs to send a message first. Copy the link and send it another way.",
+          "NOT_REBOOKABLE": "This only works after you mark “No-show”.",
+          "NO_PAGE": "No booking page is live right now. Publish a page in Settings › Booking.",
+          "OTHER": "Could not send. Try again."
+        }
+      },
       "MEETING_STATES": {
         "SCHEDULED": "Scheduled",
         "ONGOING": "Ongoing",
@@ -1398,6 +1433,8 @@
       "ACTIVITY_BOOKING_CLIENT_RESCHEDULED": "Customer changed the time",
       "ACTIVITY_BOOKING_NOTICE_FAILED": "WhatsApp notice did not go out",
       "ACTIVITY_BOOKING_NOTICES_STOPPED": "Customer asked not to get notices",
+      "ACTIVITY_BOOKING_AGENT_REMINDED": "Client reminded about the meeting",
+      "ACTIVITY_BOOKING_REBOOK_LINK_SENT": "Link sent to pick another time",
       "ACTIVITY_DETAIL_BOOKING_TIME": "Time: {time}",
       "ACTIVITY_DETAIL_BOOKING_MOVED": "From {from} to {to}"
     },

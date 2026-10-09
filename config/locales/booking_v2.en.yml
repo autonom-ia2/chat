@@ -21,6 +21,8 @@ en:
         hour_before: "Hi%{name}! Your appointment starts in 1 hour (%{when}). To confirm, change or cancel: %{link}"
         stop_line: "To stop these messages: %{link}"
         test_prefix: "This is a test of your booking page. Your client receives a link like this one:"
+      remind:
+        text: "Hi%{name}! Just a reminder of your appointment on %{when}. Can you confirm here? %{link}"
       agent_alerts:
         confirmed: "%{name} confirmed the appointment of %{when}"
         canceled: "%{name} canceled the appointment of %{when}"

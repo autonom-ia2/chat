@@ -16,6 +16,7 @@ import crmMeetingsAPI from 'dashboard/api/crmMeetings';
 import { resolveMeetingLocation } from '../../helpers/meetingLocation';
 import { hasClientReply } from '../../helpers/meetingNotices';
 import CrmMeetingClientReply from './CrmMeetingClientReply.vue';
+import CrmMeetingDayActions from './CrmMeetingDayActions.vue';
 
 const props = defineProps({
   show: { type: Boolean, default: false },
@@ -247,7 +248,12 @@ const onRefreshRsvp = async () => {
   isSyncing.value = false;
 };
 
+// Oferta de mover o card depois de "Aconteceu" (#1193, J4-A7): vem só na
+// resposta do registro do resultado.
+const postMeeting = ref(null);
+
 watch([() => props.show, meetingId], ([isOpen]) => {
+  postMeeting.value = null;
   if (isOpen) onSyncOnOpen();
   else detail.value = null;
 });
@@ -340,6 +346,9 @@ const onRecordOutcome = async (outcome, notes) => {
       payload
     );
     detail.value = response.data?.payload || detail.value;
+    if (response.data?.post_meeting) {
+      postMeeting.value = response.data.post_meeting;
+    }
     emit('updated', detail.value);
   } catch {
     useAlert(t('CRM_KANBAN.CALENDAR.MEETING_DETAIL.ERRORS.OUTCOME_FAILED'));
@@ -518,6 +527,13 @@ onBeforeUnmount(() => {
         <CrmMeetingClientReply
           v-if="hasClientReply(meeting)"
           :meeting="meeting"
+        />
+
+        <CrmMeetingDayActions
+          :meeting="meeting"
+          :account-id="accountId"
+          :post-meeting="postMeeting"
+          @changed="emit('updated', meeting)"
         />
 
         <button

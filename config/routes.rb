@@ -311,6 +311,9 @@ Rails.application.routes.draw do
                 post :sync
                 post :record_outcome
                 post :summarize
+                # Dia da reunião (#1193): "Lembrar" e "Enviar link para marcar outro horário".
+                post :remind, to: 'meeting_actions#remind'
+                post :rebook_link, to: 'meeting_actions#rebook_link'
               end
               collection do
                 post :suggest_times

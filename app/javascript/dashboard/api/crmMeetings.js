@@ -46,6 +46,18 @@ class CrmMeetingsApi extends ApiClient {
     return axios.post(url, { meeting: { outcome, notes } });
   }
 
+  // Dia da reunião (#1193): "Lembrar" (J4-A5) e o link para o cliente marcar
+  // outro horário depois de faltar (J4-A6). Só com o toque do agente.
+  remind(accountId, meetingId) {
+    return axios.post(`${this.meetingsUrl(accountId)}/${meetingId}/remind`);
+  }
+
+  rebookLink(accountId, meetingId) {
+    return axios.post(
+      `${this.meetingsUrl(accountId)}/${meetingId}/rebook_link`
+    );
+  }
+
   // AI (S5): suggest best free times for a not-yet-created meeting (collection route).
   suggestTimes(
     accountId,

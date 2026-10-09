@@ -58,6 +58,11 @@ const {
 
 onMounted(load);
 
+// "Depois da reunião" (#1193) salva sozinho na prévia e devolve a página.
+const onPageUpdated = payload => {
+  page.value = payload;
+};
+
 // Foco para quem usa teclado ou leitor de tela: ao trocar de passo, o título
 // do passo; quando falta algo, o primeiro campo com problema.
 const stepArea = ref(null);
@@ -177,6 +182,7 @@ const blockedByMissing = computed(
             :missing="missing"
             @fix="goTo"
             @save-destination="saveDestination"
+            @page-updated="onPageUpdated"
           />
         </template>
       </div>

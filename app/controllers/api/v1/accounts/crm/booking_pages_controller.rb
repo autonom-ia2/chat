@@ -225,6 +225,7 @@ class Api::V1::Accounts::Crm::BookingPagesController < Api::V1::Accounts::Crm::B
     Current.account.locale.presence || I18n.default_locale
   end
 
+  # `post_meeting` (#1193): `Crm::BookingV2::PostMeetingParams`.
   def page_params
     parameter_set(:booking_page).permit(
       :title, :description, :duration_minutes, :buffer_minutes, :booking_window_days, :min_notice_minutes,
@@ -232,6 +233,6 @@ class Api::V1::Accounts::Crm::BookingPagesController < Api::V1::Accounts::Crm::B
       slot_durations: [], working_hours: [:start_hour, :end_hour, { weekdays: [] }],
       locations: [:type, :url, :address, :label], brand: [:color, :headline],
       notice_templates: ::Crm::MeetingNotice::KINDS.index_with { %i[name language id] }
-    ).to_h
+    ).to_h.merge(::Crm::BookingV2::PostMeetingParams.attributes(parameter_set(:booking_page)))
   end
 end

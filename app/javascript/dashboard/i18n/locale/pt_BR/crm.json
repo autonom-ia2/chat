@@ -1046,6 +1046,41 @@
           "FAILED_HINT": "Fale com o cliente para confirmar o horário."
         }
       },
+      "MEETING_DAY": {
+        "NEXT_MEETING": "Próxima reunião",
+        "PHONE_LABEL": "Número",
+        "CALL": "Chamar no WhatsApp",
+        "CALL_HINT": "O WhatsApp abre a conversa com o cliente. Para a chamada de vídeo, toque no ícone da câmera no próprio WhatsApp.",
+        "CALL_HINT_VOICE": "O WhatsApp abre a conversa com o cliente. Para ligar, toque no ícone do telefone no próprio WhatsApp.",
+        "REMIND": "Lembrar",
+        "REMIND_HINT": "Manda ao cliente uma mensagem curta pedindo para confirmar o horário.",
+        "REMIND_SENT": "Lembrete enviado",
+        "REMIND_SENT_HINT": "A mensagem saiu na conversa.",
+        "REBOOK_TITLE": "Enviar link para {name} marcar outro horário",
+        "REBOOK_TITLE_NO_NAME": "Enviar link para o cliente marcar outro horário",
+        "REBOOK_SEND": "Enviar link",
+        "REBOOK_SENT": "Link enviado na conversa.",
+        "NOT_NOW": "Agora não",
+        "MOVE_QUESTION": "Mover para a etapa \"{stage}\"?",
+        "MOVE_HINT": "Assim o card não fica esquecido na etapa de agora.",
+        "MOVE": "Mover",
+        "MOVED": "O card foi para a etapa \"{stage}\".",
+        "MOVE_FAILED": "Não deu para mover o card. Tente de novo.",
+        "COPY_LINK": "Copiar link",
+        "COPIED": "Link copiado",
+        "REFUSED": {
+          "NOT_REMINDABLE": "Esta reunião não pode mais receber lembrete.",
+          "ALREADY_CONFIRMED": "O cliente já confirmou.",
+          "STOPPED": "O cliente pediu para não receber mensagens sobre esta reunião. Nada foi enviado.",
+          "NO_INVITE": "Esta reunião não tem o link do cliente. Nada foi enviado.",
+          "RECENTLY_REMINDED": "Você lembrou o cliente há poucos minutos. Espere um pouco para tentar de novo.",
+          "NO_CONVERSATION": "Não há conversa com este cliente que você possa responder. Copie o link e envie de outro jeito.",
+          "CANNOT_REPLY": "O cliente precisa mandar mensagem primeiro. Copie o link e envie de outro jeito.",
+          "NOT_REBOOKABLE": "Isto só funciona depois de marcar “Não compareceu”.",
+          "NO_PAGE": "Nenhuma página de agendamento está no ar agora. Publique uma em Configurações › Agendamento.",
+          "OTHER": "Não deu para enviar. Tente de novo."
+        }
+      },
       "MEETING_STATES": {
         "SCHEDULED": "Agendada",
         "ONGOING": "Em andamento",
@@ -1398,6 +1433,8 @@
       "ACTIVITY_BOOKING_CLIENT_RESCHEDULED": "Cliente mudou o horário",
       "ACTIVITY_BOOKING_NOTICE_FAILED": "Aviso no WhatsApp não saiu",
       "ACTIVITY_BOOKING_NOTICES_STOPPED": "Cliente pediu para não receber avisos",
+      "ACTIVITY_BOOKING_AGENT_REMINDED": "Cliente lembrado da reunião",
+      "ACTIVITY_BOOKING_REBOOK_LINK_SENT": "Link enviado para marcar outro horário",
       "ACTIVITY_DETAIL_BOOKING_TIME": "Horário: {time}",
       "ACTIVITY_DETAIL_BOOKING_MOVED": "De {from} para {to}"
     },

@@ -2,10 +2,16 @@ class Crm::Meetings::RecordOutcomeService
   VALID_OUTCOMES = %w[held no_show].freeze
   MAX_NOTES_LENGTH = 5000
 
-  def initialize(meeting:, outcome:, notes: nil)
+  # `post_meeting`: o que fazer com o card depois de "Aconteceu" numa reunião de página de agendamento (#1193, J4-A7),
+  # vindo do `Crm::BookingV2::PostMeeting`; nil quando não há nada a oferecer. `actor`: quem registrou (move o card em
+  # `auto`); sem ele, o responsável da reunião.
+  attr_reader :post_meeting
+
+  def initialize(meeting:, outcome:, notes: nil, actor: nil)
     @meeting = meeting
     @outcome = outcome.to_s
     @notes = notes
+    @actor = actor
   end
 
   def perform
@@ -18,6 +24,7 @@ class Crm::Meetings::RecordOutcomeService
     # API must enforce it too (no marking a next-week meeting as no-show today).
     raise ArgumentError, 'meeting_not_finished' unless @meeting.ends_at.present? && @meeting.ends_at <= Time.current
 
+    newly_held = newly_held?
     @meeting.update!(
       outcome: @outcome,
       outcome_notes: sanitized_notes,
@@ -25,10 +32,20 @@ class Crm::Meetings::RecordOutcomeService
     )
 
     log_activity
+    offer_post_meeting if newly_held
     @meeting
   end
 
   private
+
+  # Só na primeira vez: salvar as anotações de uma reunião que já "Aconteceu" passa por aqui de novo.
+  def newly_held?
+    @outcome == 'held' && !@meeting.outcome_held?
+  end
+
+  def offer_post_meeting
+    @post_meeting = Crm::BookingV2::PostMeeting.new(meeting: @meeting, actor: @actor || @meeting.created_by).perform
+  end
 
   def sanitized_notes
     return if @notes.blank?

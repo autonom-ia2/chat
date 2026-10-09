@@ -563,7 +563,7 @@
     "modelo": "Crm::Card",
     "origem": [
       "app/controllers/api/v1/accounts/crm/meetings_controller.rb:80",
-      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:175"
+      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:178"
     ],
     "sem_corpo": true
   },
@@ -4779,6 +4779,13 @@
         },
         "tipo": "objeto"
       },
+      "post_meeting": {
+        "campos": {
+          "mode": {},
+          "stage_id": {}
+        },
+        "tipo": "objeto"
+      },
       "slot_durations": {
         "tipo": "lista"
       },
@@ -4805,7 +4812,7 @@
     "modelo": "Inbox",
     "origem": [
       "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:44",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:229",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:230",
       "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:215",
       "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:196",
       "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:118"
@@ -5085,8 +5092,8 @@
     "modelo": "Crm::Meeting",
     "origem": [
       "app/controllers/api/v1/accounts/crm/meetings_controller.rb:63",
-      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:144",
-      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:175"
+      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:147",
+      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:178"
     ],
     "sem_corpo": false
   },
@@ -14191,11 +14198,21 @@
     "modelo": "IdempotencyKey",
     "origem": [
       "app/controllers/api/v1/accounts/crm/meetings_controller.rb:37",
-      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:205",
-      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:197",
-      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:201"
+      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:208",
+      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:200",
+      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:204"
     ],
     "sem_corpo": false
+  },
+  "POST crm/meetings/:id/rebook_link": {
+    "completo": true,
+    "controller": "api/v1/accounts/crm/meeting_actions#rebook_link",
+    "modelo": "Crm::BookingInvite",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meeting_actions_controller.rb:30",
+      "app/controllers/api/v1/accounts/crm/meeting_actions_controller.rb:43"
+    ],
+    "sem_corpo": true
   },
   "POST crm/meetings/:id/record_outcome": {
     "campos": {
@@ -14215,17 +14232,26 @@
     "modelo": "Crm::Meeting",
     "origem": [
       "app/controllers/api/v1/accounts/crm/meetings_controller.rb:95",
-      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:140",
-      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:175"
+      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:143",
+      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:178"
     ],
     "sem_corpo": false
+  },
+  "POST crm/meetings/:id/remind": {
+    "completo": true,
+    "controller": "api/v1/accounts/crm/meeting_actions#remind",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meeting_actions_controller.rb:25",
+      "app/controllers/api/v1/accounts/crm/meeting_actions_controller.rb:43"
+    ],
+    "sem_corpo": true
   },
   "POST crm/meetings/:id/summarize": {
     "completo": true,
     "controller": "api/v1/accounts/crm/meetings#summarize",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:131",
-      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:175"
+      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:134",
+      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:178"
     ],
     "sem_corpo": true
   },
@@ -14242,7 +14268,7 @@
     "origem": [
       "app/controllers/api/v1/accounts/crm/meetings_controller.rb:27",
       "app/controllers/api/v1/accounts/crm/meetings_controller.rb:29",
-      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:175"
+      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:178"
     ],
     "sem_corpo": false
   },
@@ -14261,9 +14287,9 @@
     "controller": "api/v1/accounts/crm/meetings#draft_invite",
     "modelo": "Crm::Card",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:123",
       "app/controllers/api/v1/accounts/crm/meetings_controller.rb:126",
-      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:197"
+      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:129",
+      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:200"
     ],
     "sem_corpo": false
   },
@@ -14292,11 +14318,11 @@
       "leitura crua sem tipo: date, duration_minutes"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:112",
-      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:117",
-      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:116",
-      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:201",
-      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:197"
+      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:115",
+      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:120",
+      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:119",
+      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:204",
+      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:200"
     ],
     "sem_corpo": false
   },
@@ -21901,6 +21927,13 @@
         },
         "tipo": "objeto"
       },
+      "post_meeting": {
+        "campos": {
+          "mode": {},
+          "stage_id": {}
+        },
+        "tipo": "objeto"
+      },
       "slot_durations": {
         "tipo": "lista"
       },
@@ -21927,7 +21960,7 @@
     "modelo": "Inbox",
     "origem": [
       "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:44",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:229",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:230",
       "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:215",
       "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:196",
       "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:118"
@@ -22187,8 +22220,8 @@
     "modelo": "Crm::Meeting",
     "origem": [
       "app/controllers/api/v1/accounts/crm/meetings_controller.rb:63",
-      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:144",
-      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:175"
+      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:147",
+      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:178"
     ],
     "sem_corpo": false
   },

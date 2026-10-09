@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_10_12_100600) do
+ActiveRecord::Schema[7.2].define(version: 2026_10_14_100300) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1914,9 +1914,12 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_12_100600) do
     t.string "notice_preset", default: "standard", null: false
     t.jsonb "notice_templates", default: {}, null: false
     t.integer "cancel_until_minutes", default: 120, null: false
+    t.string "post_meeting_mode", default: "ask", null: false
+    t.bigint "post_meeting_stage_id"
     t.index ["account_id"], name: "index_crm_agent_booking_profiles_on_account_id"
     t.index ["inbox_id"], name: "index_crm_agent_booking_profiles_on_inbox_id"
     t.index ["notice_inbox_id"], name: "index_crm_agent_booking_profiles_on_notice_inbox_id"
+    t.index ["post_meeting_stage_id"], name: "index_crm_agent_booking_profiles_on_post_meeting_stage_id"
     t.index ["slug"], name: "index_crm_agent_booking_profiles_on_slug", unique: true
   end
 
@@ -3878,6 +3881,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_12_100600) do
   add_foreign_key "crm_agent_booking_links", "inboxes", on_delete: :nullify
   add_foreign_key "crm_agent_booking_links", "users", column: "agent_id"
   add_foreign_key "crm_agent_booking_profiles", "accounts"
+  add_foreign_key "crm_agent_booking_profiles", "crm_pipeline_stages", column: "post_meeting_stage_id", on_delete: :nullify
   add_foreign_key "crm_agent_booking_profiles", "inboxes", column: "notice_inbox_id", on_delete: :nullify
   add_foreign_key "crm_agent_booking_profiles", "inboxes", on_delete: :nullify
   add_foreign_key "crm_ai_stage_suggestions", "accounts"

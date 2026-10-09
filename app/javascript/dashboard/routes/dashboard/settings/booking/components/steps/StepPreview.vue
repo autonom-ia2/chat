@@ -5,13 +5,15 @@ import BookingPreviewCard from '../BookingPreviewCard.vue';
 import BookingDestination from '../BookingDestination.vue';
 import BookingLinkActions from '../BookingLinkActions.vue';
 import BookingNoticesSummary from '../BookingNoticesSummary.vue';
+import BookingPostMeeting from '../BookingPostMeeting.vue';
 import BookingTestInvite from '../BookingTestInvite.vue';
 import { MISSING_STEP, STEP } from '../../constants';
 
 // Último passo: a prévia, para onde vai quem marcar, os avisos no WhatsApp e
 // Publicar. Se a publicação voltar com pendências, cada uma vira uma linha com
 // "Resolver", que leva ao passo certo; a do funil abre o "Alterar" daqui
-// mesmo. Publicada: link, QR code, Copiar link e, com número de avisos,
+// mesmo. "Depois da reunião" (#1193) diz para onde vai o card depois de
+// "Aconteceu". Publicada: link, QR code, Copiar link e, com número de avisos,
 // "Testar no meu WhatsApp" (J3-A11).
 defineProps({
   form: { type: Object, required: true },
@@ -23,7 +25,7 @@ defineProps({
   missing: { type: Array, default: () => [] },
 });
 
-const emit = defineEmits(['fix', 'saveDestination']);
+const emit = defineEmits(['fix', 'saveDestination', 'pageUpdated']);
 const { t } = useI18n();
 const destination = ref(null);
 
@@ -67,6 +69,13 @@ const fix = item => {
       :inbox-options="page.notice_inbox_options || []"
       :can-manage="canManage"
       @alter="emit('fix', STEP.AVISOS)"
+    />
+
+    <BookingPostMeeting
+      :page-id="page.id"
+      :post-meeting="page.post_meeting || {}"
+      :can-manage="canManage"
+      @saved="emit('pageUpdated', $event)"
     />
 
     <div

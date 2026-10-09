@@ -1,4 +1,4 @@
-# Guia da Plataforma Autonom.ia — base de conhecimento (203 fluxos)
+# Guia da Plataforma Autonom.ia — base de conhecimento (205 fluxos)
 
 > ARQUIVO GERADO por `pnpm guia:build`. Não edite à mão: a rota, o endereço e a
 > permissão saem do roteador do painel, e o texto humano fica em
@@ -567,6 +567,28 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - pre_requisitos: um WhatsApp conectado na conta (oficial da Meta, WAHA ou API de WhatsApp); no WhatsApp oficial, mensagens aprovadas pela Meta com o link do horário no lugar de {{3}} para avisar quem não falou com a empresa nas últimas 24 horas.
 - passos: 1. Abra Configurações > Agendamento e clique em Editar na página; 2. Clique em Continuar até o passo Avisos; 3. Em Por qual WhatsApp sai o aviso, escolha o número; 4. Escolha quando avisar: Ao marcar, 1 dia antes e 1 hora antes; Ao marcar e 1 hora antes; ou Só ao marcar; 5. No WhatsApp oficial, escolha uma mensagem aprovada para cada aviso; 6. Escolha até quando o cliente pode mudar ou cancelar (1 hora, 2 horas ou 1 dia antes); 7. Clique em Ver como fica e confira a frase dos avisos; 8. Com a página no ar, clique em Testar no meu WhatsApp, digite o seu número e clique em Enviar teste.
 - gotchas: toda mensagem leva o link para confirmar, mudar, cancelar e parar os avisos; no WhatsApp oficial, quem não falou com a empresa nas últimas 24 horas só recebe com mensagem aprovada pela Meta, e só aparecem na lista as aprovadas que têm o link no lugar de {{3}} ({{1}} é o nome e {{2}} o dia e a hora); pelo WAHA o aviso só sai se o cliente falou com a empresa nas últimas 24 horas, para o número não ser bloqueado; o teste é só texto, então no WhatsApp oficial mande antes um oi do seu celular para o número da empresa; o teste é um link de verdade, e marcar por ele marca de verdade; cada número recebe no máximo 4 mensagens automáticas em 24 horas, somando testes; quem pede para parar não recebe mais nenhum aviso, mas o horário continua marcado; aviso que não sai nunca cancela nem muda o horário, e quem atende recebe uma tarefa para falar com o cliente; trocar o WhatsApp de avisos apaga as mensagens aprovadas escolhidas; no detalhe da reunião aparecem Confirmou, Pediu para mudar ou Ainda não respondeu, a lista dos avisos com Enviado, Não saiu e o motivo, ou Falhou, e Pediu para não receber avisos.
+- nav_target: `settings_booking`
+
+### Atender no dia da reunião marcada pela página de agendamento
+- intent: Onde vejo as reuniões de hoje?; Como sei se o cliente confirmou a reunião?; Como lembro o cliente da reunião?; Como chamo o cliente no WhatsApp na hora da reunião?; Como faço a chamada de vídeo no WhatsApp?; O cliente faltou, como mando o link para marcar outro horário?; Como registro que a reunião aconteceu?
+- onde_fica: CRM Calendar > visão Agenda > Hoje (escolha Meus para ver só as suas); o detalhe abre ao clicar na reunião; no card, a Próxima reunião aparece no topo do Resumo
+- rota: `crm_calendar_index` - `/app/accounts/:accountId/crm/calendar`
+- gate: papel `administrator` ou `agent` ou `crm_view`
+- perfil: quem vê o card vê a reunião; Lembrar e Enviar link mandam mensagem na conversa do cliente, então só funcionam para quem pode responder essa conversa (sem isso, aparece Copiar link); Enviar link para marcar outro horário também pede poder usar o link do cliente (o mesmo do botão Agendar).
+- pre_requisitos: a opção Agendamento WhatsApp-first ligada na conta pelo suporte; reunião marcada por uma página de agendamento; para mandar mensagem, uma conversa com o cliente aberta para resposta.
+- passos: 1. Abra CRM Calendar, escolha a visão Agenda e veja Hoje; 2. Cada reunião mostra a hora, onde acontece e Confirmou, Pediu para mudar ou Ainda não respondeu; 3. Se o cliente não respondeu, toque em Lembrar: ele recebe na conversa uma mensagem curta com o link para confirmar; 4. Na hora, clique na reunião e em Chamar no WhatsApp: abre a conversa do cliente (ou o WhatsApp no número dele) e a chamada de vídeo ou de voz começa no próprio WhatsApp; 5. Depois, em Como foi a reunião?, toque em Aconteceu ou Não compareceu; 6. Se o cliente não compareceu, toque em Enviar link para ele marcar outro horário, ou em Agora não; 7. Se a página tem etapa para depois da reunião, responda Mover ou Agora não (no modo automático o card já muda sozinho).
+- gotchas: nada é enviado sem o seu toque; Lembrar não aparece quando o cliente já confirmou ou pediu para não receber avisos, e não repete em menos de 10 minutos; com a janela de mensagens fechada (o cliente precisa escrever primeiro) ou sem conversa que você possa responder, a mensagem não sai e aparece Copiar link para mandar de outro jeito; o link para marcar outro horário é um link novo do cliente, da mesma página quando ela ainda está no ar; a chamada de vídeo não acontece no painel, só no WhatsApp; Meus mostra as reuniões dos cards de que você é responsável.
+- nav_target: `crm_calendar_index`
+
+### Escolher para qual etapa o card vai depois da reunião
+- intent: Como faço o card mudar de etapa depois da reunião?; Como mover o card automaticamente quando a reunião acontece?; Por que o sistema pergunta se quero mover o card depois da reunião?; Como desligo a pergunta de mover o card?
+- onde_fica: Configurações > Agendamento > Editar a página > prévia (Ver como fica) > Depois da reunião
+- rota: `settings_booking` - `/app/accounts/:accountId/settings/booking`
+- gate: papel `administrator` ou `agendamento_view` ou `agendamento_manage`
+- perfil: mudar exige administrador ou função com Agendamento em Editar; com Agendamento em Ver a pessoa só lê a frase.
+- pre_requisitos: a opção Agendamento WhatsApp-first ligada na conta pelo suporte; um funil ativo com a etapa desejada.
+- passos: 1. Abra Configurações > Agendamento e clique em Editar na página; 2. Vá até a prévia; 3. Em Depois da reunião, clique em Alterar; 4. Escolha o funil e a etapa; 5. Escolha Perguntar antes ou Mover sozinho; 6. Clique em Salvar. Para desligar, clique em Alterar e em Não mover o card.
+- gotchas: vale quando alguém marca Aconteceu numa reunião marcada por esta página; Perguntar antes mostra Mover e Agora não no detalhe da reunião; Mover sozinho muda a etapa na hora e isso fica no histórico do card, com quem marcou Aconteceu; card ganho, perdido ou que já está na etapa não muda; funil arquivado não aparece na escolha e, se for arquivado depois, a página para de mover; salvar as anotações da reunião não pergunta de novo.
 - nav_target: `settings_booking`
 
 ### Quem pode o quê no Agendamento

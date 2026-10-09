@@ -331,6 +331,27 @@
       "CANCEL_UNTIL": "Ele pode mudar ou cancelar até {value} antes.",
       "CANCEL_ANYTIME": "Ele pode mudar ou cancelar até a hora marcada."
     },
+    "POST_MEETING": {
+      "TITLE": "Depois da reunião",
+      "OFF": "Quando alguém marca “Aconteceu”, o card fica onde está.",
+      "SOME_STAGE": "a etapa escolhida",
+      "SUMMARY_ASK": "Quando alguém marca “Aconteceu”, o sistema pergunta se o card vai para a etapa “{stage}”.",
+      "SUMMARY_AUTO": "Quando alguém marca “Aconteceu”, o card vai sozinho para a etapa “{stage}”.",
+      "STAGE_LABEL": "Etapa depois da reunião",
+      "MODE_LABEL": "Como mover",
+      "MODES": {
+        "ASK": {
+          "LABEL": "Perguntar antes",
+          "HINT": "A pessoa escolhe “Mover” ou “Agora não”."
+        },
+        "AUTO": {
+          "LABEL": "Mover sozinho",
+          "HINT": "O card muda de etapa e isso fica no histórico do card."
+        }
+      },
+      "TURN_OFF": "Não mover o card",
+      "SAVE_ERROR": "Não deu para salvar. Confira a etapa e tente de novo."
+    },
     "VIEW": {
       "READ_ONLY": "Você pode ver esta página, mas não pode mudar."
     }
