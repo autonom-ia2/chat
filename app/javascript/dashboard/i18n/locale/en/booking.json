@@ -1,0 +1,258 @@
+{
+  "BOOKING": {
+    "PAGE": {
+      "TITLE": "Scheduling",
+      "SUBTITLE": "Create the page where clients book a time with you."
+    },
+    "LIST": {
+      "LOADING": "Loading the pages",
+      "ERROR": "We couldn't load the pages.",
+      "RETRY": "Try again",
+      "EMPTY": "You don't have a booking page yet.",
+      "EMPTY_VIEW_ONLY": "There are no booking pages yet.",
+      "CREATE": "Create page",
+      "NEW": "New page",
+      "LABEL": "Booking pages"
+    },
+    "CARD": {
+      "UNTITLED": "Untitled page",
+      "UPCOMING": "No meetings booked | 1 meeting booked | {count} meetings booked",
+      "STATUS": {
+        "LIVE": "Live",
+        "PAUSED": "Paused",
+        "DRAFT": "Draft"
+      },
+      "ATTENTION": "The person who attends can't take meetings right now. Tap Edit and choose someone else.",
+      "EDIT": "Edit",
+      "VIEW": "View",
+      "PAUSE": "Pause page",
+      "PUBLISH": "Publish",
+      "DELETE": "Delete",
+      "CONFIRM_DELETE": "Delete this page? The link will stop working.",
+      "CONFIRM_YES": "Yes, delete",
+      "CONFIRM_NO": "Cancel",
+      "DELETE_BLOCKED": "This page has booked meetings. Pause the page instead of deleting it.",
+      "DELETED": "Page deleted.",
+      "PAUSED_OK": "Page paused.",
+      "ACTION_ERROR": "That didn't work. Try again."
+    },
+    "LINK": {
+      "COPY": "Copy link",
+      "COPIED": "Link copied.",
+      "COPY_ERROR": "We couldn't copy it. Select the link and copy it.",
+      "QR": "QR code",
+      "QR_HIDE": "Hide QR code",
+      "QR_ALT": "QR code of the booking page",
+      "QR_ERROR": "We couldn't create the QR code.",
+      "OPEN": "Open",
+      "OPEN_LABEL": "Open the page in a new tab"
+    },
+    "STEPS": {
+      "LABEL": "Steps to create the page",
+      "COUNT": "Step {current} of {total}",
+      "MODELO": "Template",
+      "CONTE": "Name and team",
+      "ONDE": "Where",
+      "QUANDO": "Days and hours",
+      "CARA": "Your brand",
+      "PREVIA": "Preview and publish",
+      "DONE": "done"
+    },
+    "WIZARD": {
+      "BACK": "Back",
+      "BACK_TO_LIST": "Back to the list",
+      "CONTINUE": "Continue",
+      "SEE_PREVIEW": "See how it looks",
+      "PUBLISH": "Publish",
+      "DONE": "Back to the list",
+      "SAVE_ERROR": "We couldn't save. Check and try again.",
+      "LOAD_ERROR": "We couldn't open the page.",
+      "LIVE_NOTICE": "This page is live. What you change applies as soon as you tap Continue.",
+      "ERRORS": {
+        "TITLE": "Write the name the client sees.",
+        "PEOPLE": "Choose who attends.",
+        "LOCATION": "Choose where the conversation happens.",
+        "LINK": "Paste the full link, starting with https://",
+        "ADDRESS": "Write the address.",
+        "CALENDAR": "Choose the calendar email inbox.",
+        "WEEKDAYS": "Choose at least one day.",
+        "HOURS": "The end time must be after the start time.",
+        "IMAGE_TYPE": "Use a PNG, JPEG or WebP image.",
+        "IMAGE_SIZE": "The image can be up to 2 MB.",
+        "IMAGE_UPLOAD": "We couldn't upload the image. Try another one."
+      },
+      "SERVER_ERRORS": {
+        "CALENDAR_GONE": "That calendar email inbox is no longer available. Choose another one or remove Google Meet and Teams.",
+        "PEOPLE_GONE": "Someone you chose can no longer take meetings. Choose again.",
+        "LOCATIONS": "One of the places can no longer be used. Check where the conversation happens.",
+        "HOURS": "Check the days and times.",
+        "PIPELINE": "That pipeline or stage no longer exists. Choose another one.",
+        "BRAND": "Check the color and the welcome message."
+      }
+    },
+    "TEMPLATE": {
+      "TITLE": "What do you want to book?",
+      "USE": "Use this template",
+      "POPULAR": "Most used",
+      "CREATE_ERROR": "We couldn't create the page. Try again.",
+      "SALES": {
+        "NAME": "Sales call",
+        "HINT": "30 minutes · WhatsApp video"
+      },
+      "CONSULT": {
+        "NAME": "Appointment",
+        "HINT": "45 minutes · in person"
+      },
+      "VISIT": {
+        "NAME": "Visit",
+        "HINT": "60 minutes · in person"
+      },
+      "BLANK": {
+        "NAME": "Start from scratch",
+        "HINT": "You fill in everything"
+      }
+    },
+    "ABOUT": {
+      "TITLE": "What is the conversation called?",
+      "NAME_LABEL": "Name the client sees",
+      "DURATION_LABEL": "How long does it take?",
+      "PEOPLE_LABEL": "Who attends?",
+      "PEOPLE_HINT": "Tap to choose. It can be more than one person.",
+      "PEOPLE_LOADING": "Loading the team",
+      "PEOPLE_ERROR": "We couldn't load the team.",
+      "PEOPLE_EMPTY": "Nobody on the team can attend yet."
+    },
+    "WHERE": {
+      "TITLE": "Where will the conversation be?",
+      "HINT": "Choose one or more.",
+      "RECOMMENDED": "Recommended",
+      "WHATSAPP_VIDEO": {
+        "NAME": "WhatsApp video",
+        "HINT": "You call the client at the time"
+      },
+      "WHATSAPP_VOICE": {
+        "NAME": "WhatsApp call",
+        "HINT": "Voice only"
+      },
+      "CUSTOM_LINK": {
+        "NAME": "My link",
+        "HINT": "Zoom, Meet or another one you already use"
+      },
+      "IN_PERSON": {
+        "NAME": "In person",
+        "HINT": "The client comes to the address"
+      },
+      "GOOGLE_MEET": {
+        "NAME": "Google Meet",
+        "HINT": "The link comes from your Google calendar"
+      },
+      "TEAMS": {
+        "NAME": "Microsoft Teams",
+        "HINT": "The link comes from your Microsoft calendar"
+      },
+      "LINK_LABEL": "Your link",
+      "LINK_PLACEHOLDER": "https://",
+      "ADDRESS_LABEL": "Address",
+      "ADDRESS_PLACEHOLDER": "Street, number and city",
+      "CALENDAR_LABEL": "Calendar email inbox",
+      "CALENDAR_HINT": "Google Meet and Teams show up here when you connect an email inbox.",
+      "CALENDAR_DISCONNECTED": "The calendar email inbox was disconnected. Remove this place or connect it again."
+    },
+    "WHEN": {
+      "TITLE": "When do you attend?",
+      "DAYS_LABEL": "Days",
+      "FROM": "From",
+      "TO": "To",
+      "NOTICE_LABEL": "Minimum notice",
+      "NOTICE_NONE": "No notice",
+      "NOTICE_VALUE": "{value} in advance",
+      "BUFFER_LABEL": "Break",
+      "BUFFER_NONE": "No break",
+      "BUFFER_VALUE": "{value} between conversations",
+      "EXTRA_LABEL": "Other durations (optional)",
+      "EXTRA_HINT": "The client chooses how long they want."
+    },
+    "WEEKDAYS": {
+      "SUN": "Sun",
+      "MON": "Mon",
+      "TUE": "Tue",
+      "WED": "Wed",
+      "THU": "Thu",
+      "FRI": "Fri",
+      "SAT": "Sat"
+    },
+    "WEEKDAYS_LONG": {
+      "SUN": "Sunday",
+      "MON": "Monday",
+      "TUE": "Tuesday",
+      "WED": "Wednesday",
+      "THU": "Thursday",
+      "FRI": "Friday",
+      "SAT": "Saturday"
+    },
+    "FORMAT": {
+      "MINUTES": "{n} minutes",
+      "ONE_HOUR": "1 hour",
+      "HOURS": "{n} hours",
+      "MIXED": "{hours} h {minutes} min",
+      "ONE_DAY": "1 day",
+      "DAYS": "{n} days",
+      "HOUR": "{hour}:00",
+      "DAY_RANGE": "{first} to {last}"
+    },
+    "LOOK": {
+      "TITLE": "Make it yours",
+      "LOGO": "Logo",
+      "PHOTO": "Your photo",
+      "UPLOAD": "Upload image",
+      "CHANGE": "Change image",
+      "UPLOADING": "Uploading…",
+      "IMAGE_HINT": "PNG, JPEG or WebP, up to 2 MB.",
+      "COLOR_LABEL": "Color",
+      "COLORS": {
+        "BLUE": "Blue",
+        "GREEN": "Green",
+        "RED": "Red",
+        "AMBER": "Amber",
+        "PURPLE": "Purple",
+        "GRAPHITE": "Graphite"
+      },
+      "HEADLINE_LABEL": "Welcome sentence",
+      "HEADLINE_PLACEHOLDER": "Pick the best time to talk",
+      "LOGO_ALT": "Company logo",
+      "PHOTO_ALT": "Photo of who attends"
+    },
+    "PREVIEW": {
+      "TITLE": "This is what the client will see",
+      "SCHEDULE": "{days}, from {from} to {to}",
+      "DEFAULT_HEADLINE": "Pick the best time to talk",
+      "WITH": "With {name}",
+      "PICK_TIME": "Choose a time",
+      "DESTINATION": "Whoever books goes to the {pipeline} pipeline, {stage} stage, with {people}.",
+      "DESTINATION_NO_PIPELINE": "Whoever books stays with {people}. No pipeline is chosen yet.",
+      "DEFAULT_PIPELINE": "default",
+      "DEFAULT_STAGE": "first",
+      "NOBODY": "nobody yet",
+      "ALTER": "Change",
+      "PIPELINE_LABEL": "Pipeline",
+      "STAGE_LABEL": "Stage",
+      "SAVE": "Save",
+      "CANCEL": "Cancel",
+      "PIPELINES_ERROR": "We couldn't load the pipelines.",
+      "MISSING_TITLE": "Almost ready to publish:",
+      "MISSING": {
+        "HOST": "Choose who attends",
+        "LOCATION": "Choose where the conversation happens",
+        "WORKING_HOURS": "Choose the days you attend",
+        "PIPELINE": "Choose which pipeline new bookings go to"
+      },
+      "FIX": "Fix it",
+      "PUBLISHED_TITLE": "Your page is live.",
+      "PUBLISHED_TEXT": "Send the link to your clients or show the QR code.",
+      "PUBLISHING": "Publishing"
+    },
+    "VIEW": {
+      "READ_ONLY": "You can see this page, but you can't change it."
+    }
+  }
+}
