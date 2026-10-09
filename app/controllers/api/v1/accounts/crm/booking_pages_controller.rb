@@ -7,7 +7,8 @@
 class Api::V1::Accounts::Crm::BookingPagesController < Api::V1::Accounts::Crm::BaseController
   PREVIEW_TTL = 1.hour
 
-  class InvalidCalendarInbox < StandardError; end
+  # A mensagem é o código devolvido (caixa de agenda ou de avisos fora do que a pessoa pode escolher).
+  class InvalidInbox < StandardError; end
 
   before_action :ensure_booking_v2_enabled
   before_action -> { check_module_permission!('agendamento') }
@@ -41,10 +42,19 @@ class Api::V1::Accounts::Crm::BookingPagesController < Api::V1::Accounts::Crm::B
   end
 
   def update
-    @page.update!(page_params.merge(calendar_inbox_attributes))
+    @page.update!(page_params.merge(calendar_inbox_attributes).merge(notice_inbox_attributes))
     render_page
-  rescue InvalidCalendarInbox
-    render_unprocessable('crm.booking_v2.calendar_inbox_invalid')
+  rescue InvalidInbox => e
+    render_unprocessable(e.message)
+  end
+
+  # "Testar no meu WhatsApp" (#1192, J3-A11): manda ao número informado, pela caixa de avisos, um link igual ao do
+  # cliente. O convite de teste fica marcado (`metadata.test`) e fora dos números.
+  def test_invite
+    ::Crm::BookingV2::TestInvite.new(page: @page, user: Current.user, phone: params[:phone]).perform
+    render json: { sent: true }
+  rescue ::Crm::BookingV2::TestInvite::Refused => e
+    render json: { error: e.message, reason: e.reason }.compact, status: :unprocessable_entity
   end
 
   def publish
@@ -114,7 +124,8 @@ class Api::V1::Accounts::Crm::BookingPagesController < Api::V1::Accounts::Crm::B
 
   def render_page(status: :ok)
     attention = ::Crm::BookingV2::AttentionReport.new(account: Current.account).attention?(@page)
-    payload = ::Crm::BookingV2::PageSerializer.new(@page.reload, attention: attention).full.merge(calendar_options: calendar_inbox_options)
+    payload = ::Crm::BookingV2::PageSerializer.new(@page.reload, attention: attention).full
+    payload = payload.merge(calendar_options: calendar_inbox_options, notice_inbox_options: notice_inboxes.as_json)
     render json: { payload: payload }, status: status
   end
 
@@ -189,9 +200,23 @@ class Api::V1::Accounts::Crm::BookingPagesController < Api::V1::Accounts::Crm::B
     return { inbox_id: nil } if raw.blank?
 
     inbox = calendar_inboxes.find { |item| item.id == raw.to_i }
-    raise InvalidCalendarInbox if inbox.blank?
+    raise InvalidInbox, 'crm.booking_v2.calendar_inbox_invalid' if inbox.blank?
 
     { inbox_id: inbox.id }
+  end
+
+  # Caixas que podem mandar avisos (#1192), do escopo de caixas que a própria pessoa já enxerga.
+  def notice_inboxes
+    @notice_inboxes ||= ::Crm::BookingV2::NoticeInboxOptions.new(policy_scope(::Inbox))
+  end
+
+  def notice_inbox_attributes
+    body = params[:booking_page]
+    return {} unless body.respond_to?(:key?) && body.key?(:notice_inbox_id)
+    return { notice_inbox_id: nil } if body[:notice_inbox_id].blank?
+
+    inbox = notice_inboxes.find(body[:notice_inbox_id]) || (raise InvalidInbox, 'crm.booking_v2.notice_inbox_invalid')
+    { notice_inbox_id: inbox.id }
   end
 
   def account_locale
@@ -201,9 +226,10 @@ class Api::V1::Accounts::Crm::BookingPagesController < Api::V1::Accounts::Crm::B
   def page_params
     parameter_set(:booking_page).permit(
       :title, :description, :duration_minutes, :buffer_minutes, :booking_window_days, :min_notice_minutes,
-      :timezone, :contact_phone, :default_pipeline_id, :default_stage_id, :invite_text, :invite_ttl_days,
+      :timezone, :contact_phone, :default_pipeline_id, :default_stage_id, :invite_text, :invite_ttl_days, :notice_preset, :cancel_until_minutes,
       slot_durations: [], working_hours: [:start_hour, :end_hour, { weekdays: [] }],
-      locations: [:type, :url, :address, :label], brand: [:color, :headline]
+      locations: [:type, :url, :address, :label], brand: [:color, :headline],
+      notice_templates: ::Crm::MeetingNotice::KINDS.index_with { %i[name language id] }
     ).to_h
   end
 end

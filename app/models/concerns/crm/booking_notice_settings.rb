@@ -1,0 +1,100 @@
+# Avisos no WhatsApp da página de agendamento nova (#1192, F2-A): caixa que manda os avisos, jogo de avisos pronto
+# (J5-A8), modelos aprovados por aviso e prazo para o cliente cancelar ou remarcar (J5-A3).
+#
+# Caixa de avisos aceita: WhatsApp oficial (Cloud ou 360dialog) e canal API de WhatsApp (WAHA ou API de campanhas).
+# Modelos: `{ "<aviso>": { "name": "...", "language": "pt_BR" } }` para o WhatsApp oficial e `{ "<aviso>": { "id": 5 } }`
+# (modelo do canal API) para o canal API.
+module Crm::BookingNoticeSettings
+  extend ActiveSupport::Concern
+
+  # Jogos de avisos prontos: o admin escolhe um, sem digitar horário.
+  PRESETS = {
+    'standard' => %w[booked day_before hour_before],
+    'light' => %w[booked hour_before],
+    'minimal' => %w[booked]
+  }.freeze
+  MAX_CANCEL_UNTIL_MINUTES = 7 * 24 * 60
+  MAX_TEMPLATE_TEXT = 512
+
+  included do
+    belongs_to :notice_inbox, class_name: 'Inbox', optional: true
+
+    before_validation :normalize_notice_templates
+    validates :notice_preset, inclusion: { in: PRESETS.keys }
+    validates :cancel_until_minutes, numericality: { only_integer: true, greater_than_or_equal_to: 0,
+                                                     less_than_or_equal_to: MAX_CANCEL_UNTIL_MINUTES }
+    validate :notice_inbox_must_be_usable
+    validate :notice_templates_must_be_sane
+  end
+
+  class_methods do
+    # Caixa que pode mandar aviso: WhatsApp oficial, ou canal API de WhatsApp (WAHA ou API de campanhas).
+    def notice_inbox_supported?(inbox)
+      notice_channel_kind(inbox).present?
+    end
+
+    # 'whatsapp' (Cloud/360dialog: precisa de modelo aprovado fora da janela), 'waha' (só dentro da janela de 24 h
+    # aberta pelo cliente) ou 'api' (canal API de campanhas: modelo do canal por id fora da janela). nil: não serve.
+    def notice_channel_kind(inbox)
+      channel = inbox&.channel
+      return 'whatsapp' if channel.is_a?(Channel::Whatsapp)
+      return unless channel.is_a?(Channel::Api)
+      return 'waha' if channel.waha_provider? || channel.whatsapp_api_provider == 'waha'
+
+      'api' if channel.whatsapp_api_campaign_channel?
+    end
+  end
+
+  def notice_kinds
+    PRESETS.fetch(notice_preset, PRESETS['standard'])
+  end
+
+  # A caixa de avisos existe, é desta conta e é de um canal que manda aviso.
+  def notices_usable?
+    notice_inbox.present? && notice_inbox.account_id == account_id && self.class.notice_inbox_supported?(notice_inbox)
+  end
+
+  def notice_template(kind)
+    notice_templates.to_h[kind.to_s].presence
+  end
+
+  private
+
+  # Formulário manda o id do modelo como texto ("5"): só converte o que é inteiro de verdade; o resto a validação
+  # recusa.
+  def normalize_notice_templates
+    return unless notice_templates.is_a?(Hash)
+
+    self.notice_templates = notice_templates.deep_stringify_keys.transform_values do |value|
+      next value unless value.is_a?(Hash) && value['id'].is_a?(String)
+
+      value.merge('id' => Integer(value['id'], exception: false) || value['id'])
+    end
+  end
+
+  def notice_inbox_must_be_usable
+    return if notice_inbox_id.blank?
+    return errors.add(:notice_inbox, 'must belong to the same account') if notice_inbox.blank? || notice_inbox.account_id != account_id
+
+    errors.add(:notice_inbox, 'must be a WhatsApp inbox') unless self.class.notice_inbox_supported?(notice_inbox)
+  end
+
+  def notice_templates_must_be_sane
+    templates = notice_templates
+    return errors.add(:notice_templates, 'must be an object') unless templates.is_a?(Hash)
+    return errors.add(:notice_templates, 'unknown notice') unless (templates.keys - Crm::MeetingNotice::KINDS).empty?
+
+    errors.add(:notice_templates, 'invalid template') unless templates.values.all? { |value| valid_notice_template?(value) }
+  end
+
+  def valid_notice_template?(value)
+    return false unless value.is_a?(Hash) && (value.keys - %w[name language id]).empty?
+    return value['id'].is_a?(Integer) && value['id'].positive? if value.key?('id')
+
+    %w[name language].all? { |key| template_text?(value[key]) }
+  end
+
+  def template_text?(text)
+    text.is_a?(String) && text.strip.present? && text.length <= MAX_TEMPLATE_TEXT
+  end
+end

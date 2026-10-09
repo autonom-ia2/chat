@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_10_11_134207) do
+ActiveRecord::Schema[7.2].define(version: 2026_10_12_100600) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1910,8 +1910,13 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_11_134207) do
     t.jsonb "brand", default: {}, null: false
     t.text "invite_text"
     t.integer "invite_ttl_days", default: 7, null: false
+    t.bigint "notice_inbox_id"
+    t.string "notice_preset", default: "standard", null: false
+    t.jsonb "notice_templates", default: {}, null: false
+    t.integer "cancel_until_minutes", default: 120, null: false
     t.index ["account_id"], name: "index_crm_agent_booking_profiles_on_account_id"
     t.index ["inbox_id"], name: "index_crm_agent_booking_profiles_on_inbox_id"
+    t.index ["notice_inbox_id"], name: "index_crm_agent_booking_profiles_on_notice_inbox_id"
     t.index ["slug"], name: "index_crm_agent_booking_profiles_on_slug", unique: true
   end
 
@@ -1986,6 +1991,15 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_11_134207) do
     t.index ["conversation_id"], name: "index_crm_booking_invites_on_conversation_id"
     t.index ["created_by_id"], name: "index_crm_booking_invites_on_created_by_id"
     t.index ["meeting_id"], name: "index_crm_booking_invites_on_meeting_id"
+  end
+
+  create_table "crm_booking_notice_stops", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "contact_id", null: false
+    t.string "reason"
+    t.datetime "created_at", null: false
+    t.index ["account_id", "contact_id"], name: "index_crm_booking_notice_stops_on_account_id_and_contact_id", unique: true
+    t.index ["contact_id"], name: "index_crm_booking_notice_stops_on_contact_id"
   end
 
   create_table "crm_calendar_sync_states", force: :cascade do |t|
@@ -2197,6 +2211,24 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_11_134207) do
     t.index ["user_id"], name: "index_crm_meeting_guests_on_user_id"
   end
 
+  create_table "crm_meeting_notices", force: :cascade do |t|
+    t.bigint "meeting_id", null: false
+    t.bigint "account_id", null: false
+    t.string "kind", null: false
+    t.datetime "due_at", null: false
+    t.integer "status", default: 0, null: false
+    t.string "skip_reason"
+    t.datetime "sent_at"
+    t.bigint "message_id"
+    t.integer "attempts", default: 0, null: false
+    t.string "error_code"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "sent_at"], name: "index_crm_meeting_notices_on_account_id_and_sent_at"
+    t.index ["meeting_id", "kind"], name: "index_crm_meeting_notices_on_meeting_id_and_kind", unique: true
+    t.index ["status", "due_at"], name: "index_crm_meeting_notices_on_status_and_due_at"
+  end
+
   create_table "crm_meetings", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "card_id", null: false
@@ -2220,6 +2252,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_11_134207) do
     t.text "outcome_notes"
     t.datetime "outcome_recorded_at"
     t.string "source"
+    t.datetime "confirmed_at"
+    t.integer "confirmation_status", default: 0, null: false
+    t.datetime "reminders_stopped_at"
+    t.bigint "conversation_id"
     t.index ["account_id", "card_id"], name: "idx_crm_meetings_card"
     t.index ["account_id", "created_by_id"], name: "idx_crm_meetings_created_by"
     t.index ["account_id", "inbox_id"], name: "idx_crm_meetings_inbox"
@@ -2228,6 +2264,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_11_134207) do
     t.index ["account_id", "status"], name: "idx_crm_meetings_status"
     t.index ["account_id"], name: "index_crm_meetings_on_account_id"
     t.index ["card_id"], name: "index_crm_meetings_on_card_id"
+    t.index ["conversation_id"], name: "index_crm_meetings_on_conversation_id"
     t.index ["created_by_id"], name: "index_crm_meetings_on_created_by_id"
     t.index ["external_event_id", "provider"], name: "idx_crm_meetings_external_unique", unique: true, where: "(external_event_id IS NOT NULL)"
     t.index ["inbox_id"], name: "index_crm_meetings_on_inbox_id"
@@ -3841,6 +3878,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_11_134207) do
   add_foreign_key "crm_agent_booking_links", "inboxes", on_delete: :nullify
   add_foreign_key "crm_agent_booking_links", "users", column: "agent_id"
   add_foreign_key "crm_agent_booking_profiles", "accounts"
+  add_foreign_key "crm_agent_booking_profiles", "inboxes", column: "notice_inbox_id", on_delete: :nullify
   add_foreign_key "crm_agent_booking_profiles", "inboxes", on_delete: :nullify
   add_foreign_key "crm_ai_stage_suggestions", "accounts"
   add_foreign_key "crm_ai_stage_suggestions", "crm_cards", column: "card_id", on_delete: :cascade
@@ -3853,6 +3891,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_11_134207) do
   add_foreign_key "crm_booking_invites", "crm_cards", column: "card_id", on_delete: :nullify
   add_foreign_key "crm_booking_invites", "crm_meetings", column: "meeting_id", on_delete: :nullify
   add_foreign_key "crm_booking_invites", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "crm_booking_notice_stops", "contacts", on_delete: :cascade
   add_foreign_key "crm_calendar_sync_states", "accounts"
   add_foreign_key "crm_calendar_sync_states", "inboxes", on_delete: :nullify
   add_foreign_key "crm_card_conversations", "accounts"
@@ -3887,7 +3926,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_11_134207) do
   add_foreign_key "crm_meeting_guests", "contacts", on_delete: :cascade
   add_foreign_key "crm_meeting_guests", "crm_meetings", column: "meeting_id"
   add_foreign_key "crm_meeting_guests", "users"
+  add_foreign_key "crm_meeting_notices", "crm_meetings", column: "meeting_id", on_delete: :cascade
   add_foreign_key "crm_meetings", "accounts"
+  add_foreign_key "crm_meetings", "conversations", on_delete: :nullify
   add_foreign_key "crm_meetings", "crm_cards", column: "card_id", on_delete: :cascade
   add_foreign_key "crm_meetings", "crm_follow_ups", column: "reminder_id", on_delete: :nullify
   add_foreign_key "crm_meetings", "inboxes", on_delete: :nullify

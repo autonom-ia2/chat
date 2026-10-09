@@ -393,6 +393,7 @@ Rails.application.routes.draw do
                 post :photo
                 get :people
                 put :people, action: :update_people
+                post :test_invite
               end
             end
             # Link por cliente (#1190): botão Agendar da conversa e do card.
@@ -1165,6 +1166,11 @@ Rails.application.routes.draw do
       namespace :v2 do
         get 'invites/:code', to: 'invites#show'
         post 'invites/:code/viewed', to: 'invites#viewed'
+        # Gestão da reunião pelo mesmo link (#1192).
+        post 'invites/:code/confirm', to: 'invites#confirm'
+        post 'invites/:code/cancel', to: 'invites#cancel'
+        post 'invites/:code/reschedule', to: 'invites#reschedule'
+        post 'invites/:code/stop_notices', to: 'invites#stop_notices'
         # Página pública v2 (#1189): só o slug opaco (página ou link individual) autoriza; ICS com token no caminho.
         get 'booking/:slug/slots', to: 'booking#slots'
         get 'booking/:slug/next_slot', to: 'booking#next_slot'

@@ -45,7 +45,8 @@ class Public::Api::V2::BookingController < PublicController
 
   def create
     outcome = ::Crm::BookingV2::PublicBooking.new(page: @page, params: booking_params).perform
-    render json: confirmation(outcome), status: outcome.existing ? :ok : :created
+    notice_will_send = schedule_notices(outcome)
+    render json: confirmation(outcome).merge(notice_will_send: notice_will_send), status: outcome.existing ? :ok : :created
   rescue ArgumentError => e
     render_booking_error(e.message)
   end
@@ -103,6 +104,19 @@ class Public::Api::V2::BookingController < PublicController
     raw.is_a?(ActionController::Parameters) ? raw.permit(:accepted, :text_key).to_h : {}
   end
 
+  # Avisos no WhatsApp (#1192): agenda depois da reserva gravada (repetir não duplica). `notice_will_send` diz se o
+  # aviso "ao marcar" vai de fato sair; sem isso a tela de sucesso não promete mensagem (J2-A6). A reserva já está
+  # gravada: erro aqui é registrado e a resposta segue como reserva confirmada, sem prometer mensagem.
+  def schedule_notices(outcome)
+    ::Crm::BookingV2::Notices::Scheduler.new(outcome.meeting).schedule!(invite: outcome.invite)
+    notice = outcome.meeting.notices.find_by(kind: 'booked')
+    notice.present? && notice.pending? && ::Crm::BookingV2::Notices::Sender.new(notice).will_send?
+  rescue StandardError => e
+    ChatwootExceptionTracker.new(e, account: @page.account).capture_exception
+    Rails.logger.error("Public booking v2 notices not scheduled: #{e.class.name}")
+    false
+  end
+
   def confirmation(outcome)
     meeting = outcome.meeting
     {
@@ -124,8 +138,7 @@ class Public::Api::V2::BookingController < PublicController
   end
 
   def ics_url(invite)
-    token = ::Crm::BookingV2::Tokens.generate('ics', { 'c' => invite.code }, expires_in: Public::Api::V2::IcsController::TOKEN_TTL)
-    "#{::Crm::BookingInvite.base_url}/public/api/v2/ics/#{token}"
+    ::Crm::BookingV2::ManagePayload.ics_url(invite)
   end
 
   def render_booking_error(code)

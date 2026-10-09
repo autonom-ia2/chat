@@ -3,6 +3,7 @@
 #
 # `locations[].label`: o rótulo que o dono escreveu ou o nome leigo do catálogo do fork (`LocationLabel`), no idioma
 # da conta. `requires_email`: Meet e Teams mandam o convite por e-mail, então o formulário pede e-mail.
+# `notices_enabled` (#1192): a página tem caixa de avisos utilizável; a tela mostra o aviso de consentimento.
 class Crm::BookingV2::PublicPageSerializer
   include Rails.application.routes.url_helpers
 
@@ -48,7 +49,7 @@ class Crm::BookingV2::PublicPageSerializer
   end
 
   def form
-    { form_token: self.class.form_token(page.slug), captcha_site_key: captcha_site_key, notices_enabled: false }
+    { form_token: self.class.form_token(page.slug), captcha_site_key: captcha_site_key, notices_enabled: profile.notices_usable? }
   end
 
   def host_name

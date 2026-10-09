@@ -276,7 +276,7 @@ RSpec.describe 'Public::Api::V2::Booking', type: :request do
         expect(body.except('ics_url')).to eq(
           'confirmed' => true, 'starts_at' => '2026-10-20T10:00:00-03:00', 'ends_at' => '2026-10-20T10:30:00-03:00',
           'timezone' => 'America/Sao_Paulo', 'location' => { 'type' => 'whatsapp_video' },
-          'manage_url' => "#{frontend}/b/#{invite.code}", 'contact_whatsapp_url' => nil
+          'manage_url' => "#{frontend}/b/#{invite.code}", 'contact_whatsapp_url' => nil, 'notice_will_send' => false
         )
         expect(body['ics_url']).to start_with("#{frontend}/public/api/v2/ics/")
         %w[+5521988887777 5521988887777 camila.host@example.com].each { |secret| expect(response.body).not_to include(secret) }

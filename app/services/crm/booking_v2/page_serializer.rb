@@ -44,6 +44,14 @@ class Crm::BookingV2::PageSerializer
       buffer_minutes: profile.buffer_minutes, booking_window_days: profile.booking_window_days,
       min_notice_minutes: profile.min_notice_minutes, working_hours: profile.working_hours, timezone: profile.resolved_timezone,
       calendar_inbox_id: profile.inbox_id, invite_text: profile.invite_text, invite_ttl_days: profile.invite_ttl_days
+    }.merge(notices)
+  end
+
+  # Avisos no WhatsApp (#1192): caixa de avisos, jogo de avisos, modelos e prazo para o cliente mudar.
+  def notices
+    {
+      notice_inbox_id: profile.notice_inbox_id, notice_preset: profile.notice_preset, notice_templates: profile.notice_templates,
+      cancel_until_minutes: profile.cancel_until_minutes
     }
   end
 

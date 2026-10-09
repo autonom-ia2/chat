@@ -26,8 +26,10 @@ class Crm::BookingV2::Slots
     new(profile: profile, host: host, date: nil, duration: duration).first_free(from)
   end
 
-  def initialize(profile:, host:, date:, duration: nil, strict: false, include_provider: true) # rubocop:disable Metrics/ParameterLists
+  # `ignore_meeting_id` (#1192, remarcar): a reunião que está mudando de horário não ocupa o horário dela mesma.
+  def initialize(profile:, host:, date:, duration: nil, strict: false, include_provider: true, ignore_meeting_id: nil) # rubocop:disable Metrics/ParameterLists
     @profile = profile
+    @ignore_meeting_id = ignore_meeting_id
     @host = host
     @date = date
     @strict = strict
@@ -138,6 +140,7 @@ class Crm::BookingV2::Slots
     return [] if host.blank?
 
     Crm::Meeting.where(account_id: profile.account_id, created_by_id: host.id, status: :scheduled)
+                .where.not(id: @ignore_meeting_id)
                 .where('starts_at < ? AND ends_at > ?', range_end, range_start)
                 .pluck(:starts_at, :ends_at)
                 .map { |start_at, end_at| { start: start_at, end: end_at } }

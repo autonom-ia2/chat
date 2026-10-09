@@ -43,6 +43,7 @@
 #
 class Crm::AgentBookingProfile < ApplicationRecord
   include Crm::BookingPageSettings
+  include Crm::BookingNoticeSettings
 
   self.table_name = 'crm_agent_booking_profiles'
 

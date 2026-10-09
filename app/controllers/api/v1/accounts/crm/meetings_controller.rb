@@ -190,7 +190,7 @@ class Api::V1::Accounts::Crm::MeetingsController < Api::V1::Accounts::Crm::BaseC
   def visible_meetings
     Current.account.crm_meetings
            .where(card_id: policy_scope(::Crm::Card).select(:id))
-           .includes(:meeting_guests, :card, :inbox, :created_by, :reminder)
+           .includes(:meeting_guests, :card, :inbox, :created_by, :reminder, :notices)
   end
 
   def card
@@ -277,6 +277,16 @@ class Api::V1::Accounts::Crm::MeetingsController < Api::V1::Accounts::Crm::BaseC
       scheduled_by: serialize_user(meeting.created_by),
       created_at: meeting.created_at&.iso8601,
       updated_at: meeting.updated_at&.iso8601
+    }.merge(serialize_booking_notices(meeting))
+  end
+
+  # Agendamento WhatsApp-first (#1192): resposta do cliente e avisos no WhatsApp (a tela usa na F2-B).
+  # `notices_stopped`: o cliente parou os avisos (a parada do contato marca todas as reuniões abertas dele).
+  def serialize_booking_notices(meeting)
+    {
+      confirmation_status: meeting.confirmation_status,
+      notices_stopped: meeting.reminders_stopped_at.present?,
+      notices: meeting.notices.sort_by { |notice| [notice.due_at, notice.id] }.map(&:as_summary)
     }
   end
 

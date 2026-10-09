@@ -65,7 +65,7 @@ class Api::V1::Accounts::Crm::BookingInvitesController < Api::V1::Accounts::Crm:
   end
 
   def recent_invites(contact)
-    invites_scope.where(contact_id: contact.id).includes(:booking_profile, :contact, :created_by, booking_link: :agent)
+    invites_scope.real.where(contact_id: contact.id).includes(:booking_profile, :contact, :created_by, booking_link: :agent)
                  .recent_first.limit(LIST_LIMIT)
   end
 

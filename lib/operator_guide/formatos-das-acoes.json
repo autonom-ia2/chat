@@ -505,8 +505,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/booking_pages#destroy",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:63",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:108"
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:73",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:118"
     ],
     "sem_corpo": true
   },
@@ -4665,6 +4665,55 @@
   },
   "PATCH crm/booking_pages/:id": {
     "campos": {
+      "booking_page": {
+        "campos": {
+          "booking_window_days": {},
+          "brand": {
+            "campos": {
+              "color": {},
+              "headline": {}
+            },
+            "tipo": "objeto"
+          },
+          "buffer_minutes": {},
+          "cancel_until_minutes": {},
+          "contact_phone": {},
+          "default_pipeline_id": {},
+          "default_stage_id": {},
+          "description": {},
+          "duration_minutes": {},
+          "invite_text": {},
+          "invite_ttl_days": {},
+          "locations": {
+            "campos": {
+              "address": {},
+              "label": {},
+              "type": {},
+              "url": {}
+            },
+            "tipo": "objeto"
+          },
+          "min_notice_minutes": {},
+          "notice_preset": {},
+          "notice_templates": {},
+          "slot_durations": {
+            "tipo": "lista"
+          },
+          "timezone": {},
+          "title": {},
+          "working_hours": {
+            "campos": {
+              "end_hour": {},
+              "start_hour": {},
+              "weekdays": {
+                "tipo": "lista"
+              }
+            },
+            "tipo": "objeto"
+          }
+        },
+        "tipo": "objeto"
+      },
       "booking_window_days": {},
       "brand": {
         "campos": {
@@ -4674,6 +4723,7 @@
         "tipo": "objeto"
       },
       "buffer_minutes": {},
+      "cancel_until_minutes": {},
       "contact_phone": {},
       "default_pipeline_id": {},
       "default_stage_id": {},
@@ -4691,10 +4741,53 @@
         "tipo": "objeto"
       },
       "min_notice_minutes": {},
+      "notice_preset": {},
+      "notice_templates": {
+        "campos": {
+          "booked": {
+            "campos": {
+              "id": {},
+              "language": {},
+              "name": {}
+            },
+            "tipo": "objeto"
+          },
+          "day_before": {
+            "campos": {
+              "id": {},
+              "language": {},
+              "name": {}
+            },
+            "tipo": "objeto"
+          },
+          "hour_before": {
+            "campos": {
+              "id": {},
+              "language": {},
+              "name": {}
+            },
+            "tipo": "objeto"
+          },
+          "rescheduled": {
+            "campos": {
+              "id": {},
+              "language": {},
+              "name": {}
+            },
+            "tipo": "objeto"
+          }
+        },
+        "tipo": "objeto"
+      },
       "slot_durations": {
         "tipo": "lista"
       },
-      "timezone": {},
+      "timezone": {
+        "padrao": "UTC",
+        "tipo": "string",
+        "um_de_resumo": "597 valores aceitos, por exemplo: Africa/Abidjan, Africa/Accra, Africa/Addis_Ababa, Africa/Algiers, Africa/Asmara",
+        "valida_no_servidor": true
+      },
       "title": {},
       "working_hours": {
         "campos": {
@@ -4704,19 +4797,18 @@
             "tipo": "lista"
           }
         },
-        "tipo": "objeto"
+        "tipo": "lista_de_objetos"
       }
     },
     "completo": true,
     "controller": "api/v1/accounts/crm/booking_pages#update",
-    "corpo_plano": true,
-    "envelope": "booking_page",
-    "modelo": "Channel::Email",
+    "modelo": "Inbox",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:43",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:202",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:185",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:108"
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:44",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:227",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:214",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:196",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:118"
     ],
     "sem_corpo": false
   },
@@ -13319,11 +13411,11 @@
     },
     "completo": true,
     "controller": "api/v1/accounts/crm/booking_pages#create",
-    "modelo": "Channel::Email",
+    "modelo": "Inbox",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:34",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:36",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:35"
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:35",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:37",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:36"
     ],
     "sem_corpo": false
   },
@@ -13333,24 +13425,24 @@
     },
     "completo": false,
     "controller": "api/v1/accounts/crm/booking_pages#logo",
-    "modelo": "Channel::Email",
+    "modelo": "Inbox",
     "motivos": [
       "leitura crua sem tipo: file"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:77",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:163",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:108"
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:87",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:174",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:118"
     ],
     "sem_corpo": false
   },
   "POST crm/booking_pages/:id/pause": {
     "completo": true,
     "controller": "api/v1/accounts/crm/booking_pages#pause",
-    "modelo": "Channel::Email",
+    "modelo": "Inbox",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:58",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:108"
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:68",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:118"
     ],
     "sem_corpo": true
   },
@@ -13360,14 +13452,14 @@
     },
     "completo": false,
     "controller": "api/v1/accounts/crm/booking_pages#photo",
-    "modelo": "Channel::Email",
+    "modelo": "Inbox",
     "motivos": [
       "leitura crua sem tipo: file"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:81",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:163",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:108"
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:91",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:174",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:118"
     ],
     "sem_corpo": false
   },
@@ -13375,20 +13467,36 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/booking_pages#preview_token",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:71",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:108"
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:81",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:118"
     ],
     "sem_corpo": true
   },
   "POST crm/booking_pages/:id/publish": {
     "completo": true,
     "controller": "api/v1/accounts/crm/booking_pages#publish",
-    "modelo": "Channel::Email",
+    "modelo": "Inbox",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:50",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:108"
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:60",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:118"
     ],
     "sem_corpo": true
+  },
+  "POST crm/booking_pages/:id/test_invite": {
+    "campos": {
+      "phone": {}
+    },
+    "completo": false,
+    "controller": "api/v1/accounts/crm/booking_pages#test_invite",
+    "motivos": [
+      "leitura crua sem tipo: phone (repassada a ::Crm::BookingV2::TestInvite.new)"
+    ],
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:53",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:54",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:118"
+    ],
+    "sem_corpo": false
   },
   "POST crm/booking_profiles": {
     "campos": {
@@ -21679,6 +21787,55 @@
   },
   "PUT crm/booking_pages/:id": {
     "campos": {
+      "booking_page": {
+        "campos": {
+          "booking_window_days": {},
+          "brand": {
+            "campos": {
+              "color": {},
+              "headline": {}
+            },
+            "tipo": "objeto"
+          },
+          "buffer_minutes": {},
+          "cancel_until_minutes": {},
+          "contact_phone": {},
+          "default_pipeline_id": {},
+          "default_stage_id": {},
+          "description": {},
+          "duration_minutes": {},
+          "invite_text": {},
+          "invite_ttl_days": {},
+          "locations": {
+            "campos": {
+              "address": {},
+              "label": {},
+              "type": {},
+              "url": {}
+            },
+            "tipo": "objeto"
+          },
+          "min_notice_minutes": {},
+          "notice_preset": {},
+          "notice_templates": {},
+          "slot_durations": {
+            "tipo": "lista"
+          },
+          "timezone": {},
+          "title": {},
+          "working_hours": {
+            "campos": {
+              "end_hour": {},
+              "start_hour": {},
+              "weekdays": {
+                "tipo": "lista"
+              }
+            },
+            "tipo": "objeto"
+          }
+        },
+        "tipo": "objeto"
+      },
       "booking_window_days": {},
       "brand": {
         "campos": {
@@ -21688,6 +21845,7 @@
         "tipo": "objeto"
       },
       "buffer_minutes": {},
+      "cancel_until_minutes": {},
       "contact_phone": {},
       "default_pipeline_id": {},
       "default_stage_id": {},
@@ -21705,10 +21863,53 @@
         "tipo": "objeto"
       },
       "min_notice_minutes": {},
+      "notice_preset": {},
+      "notice_templates": {
+        "campos": {
+          "booked": {
+            "campos": {
+              "id": {},
+              "language": {},
+              "name": {}
+            },
+            "tipo": "objeto"
+          },
+          "day_before": {
+            "campos": {
+              "id": {},
+              "language": {},
+              "name": {}
+            },
+            "tipo": "objeto"
+          },
+          "hour_before": {
+            "campos": {
+              "id": {},
+              "language": {},
+              "name": {}
+            },
+            "tipo": "objeto"
+          },
+          "rescheduled": {
+            "campos": {
+              "id": {},
+              "language": {},
+              "name": {}
+            },
+            "tipo": "objeto"
+          }
+        },
+        "tipo": "objeto"
+      },
       "slot_durations": {
         "tipo": "lista"
       },
-      "timezone": {},
+      "timezone": {
+        "padrao": "UTC",
+        "tipo": "string",
+        "um_de_resumo": "597 valores aceitos, por exemplo: Africa/Abidjan, Africa/Accra, Africa/Addis_Ababa, Africa/Algiers, Africa/Asmara",
+        "valida_no_servidor": true
+      },
       "title": {},
       "working_hours": {
         "campos": {
@@ -21718,19 +21919,18 @@
             "tipo": "lista"
           }
         },
-        "tipo": "objeto"
+        "tipo": "lista_de_objetos"
       }
     },
     "completo": true,
     "controller": "api/v1/accounts/crm/booking_pages#update",
-    "corpo_plano": true,
-    "envelope": "booking_page",
-    "modelo": "Channel::Email",
+    "modelo": "Inbox",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:43",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:202",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:185",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:108"
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:44",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:227",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:214",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:196",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:118"
     ],
     "sem_corpo": false
   },
@@ -21743,11 +21943,11 @@
     },
     "completo": true,
     "controller": "api/v1/accounts/crm/booking_pages#update_people",
-    "modelo": "Channel::Email",
+    "modelo": "Inbox",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:90",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:91",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:108"
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:100",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:101",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:118"
     ],
     "sem_corpo": false
   },
