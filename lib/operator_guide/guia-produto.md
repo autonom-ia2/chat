@@ -1,4 +1,4 @@
-# Guia da Plataforma Autonom.ia — base de conhecimento (200 fluxos)
+# Guia da Plataforma Autonom.ia — base de conhecimento (202 fluxos)
 
 > ARQUIVO GERADO por `pnpm guia:build`. Não edite à mão: a rota, o endereço e a
 > permissão saem do roteador do painel, e o texto humano fica em
@@ -546,6 +546,28 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - passos: Abra CRM Calendar; clique em Agendamento; habilite o perfil da caixa; defina duração, janela, fuso, dias e horário; escolha modo fixo ou por agente; salve e copie a URL.
 - gotchas: no modo por agente, o slug base pode não funcionar e cada agente deve usar seu link individual; a página pública envia e-mail de confirmação antes de criar a reunião; links dependem de `FRONTEND_URL` correto para o e-mail de confirmação.
 - nav_target: `crm_calendar_index`
+
+### Criar e publicar a página de agendamento
+- intent: Como crio uma página para o cliente marcar horário?; Onde fica o link de agendamento sem Google ou Microsoft?; Como mando o link ou o QR code de agendamento?; Como pauso a página de agendamento?; Por que não consigo publicar a página?; Como escolho para qual funil vai quem marcar?
+- onde_fica: Configurações > Agendamento
+- rota: `settings_booking` - `/app/accounts/:accountId/settings/booking`
+- gate: papel `administrator` ou `agendamento_view` ou `agendamento_manage`
+- perfil: criar, editar, publicar, pausar e excluir exige administrador ou função com Agendamento em Editar; com Agendamento em Ver a pessoa vê as páginas, a prévia e o link (copiar, QR code, abrir), mas não vê Criar página, Editar, Pausar, Publicar, Excluir nem Alterar. Agente sem função e função sem o módulo Agendamento não veem o item no menu.
+- pre_requisitos: agendamento de reuniões ligado na instalação e a opção Agendamento WhatsApp-first ligada na conta pelo suporte; função com Agendamento (Ver ou Editar) para quem não é administrador; para Google Meet ou Teams, uma caixa de e-mail do Google ou Microsoft com agenda já conectada.
+- passos: 1. Abra Configurações > Agendamento e clique em Criar página; 2. Escolha um modelo (Conversa de vendas, Consulta ou atendimento, Visita ou Começar do zero); 3. Em Conte, confira o nome que o cliente vê, quanto tempo dura e toque em quem atende; 4. Em Onde acontece, escolha um ou mais locais (Vídeo no WhatsApp, Ligação no WhatsApp, Meu link com o endereço completo, No local com o endereço); 5. Em Dias e horas, toque nos dias e escolha Das, Até, Avisar com e Intervalo; 6. Em Cara, envie logo e foto, escolha a cor e escreva a frase de boas-vindas, e clique em Ver como fica; 7. Na prévia, confira a frase do funil e use Alterar se quiser outro funil ou etapa; 8. Clique em Publicar e use Copiar link, QR code ou Abrir.
+- gotchas: escolher o modelo já cria a página pausada, com nome, duração, local e horários preenchidos; cada Continuar salva o passo, e voltar não perde o que foi digitado; Google Meet e Teams só aparecem com caixa de e-mail com agenda conectada, e uma página usa uma caixa só, então Meet e Teams não vão juntos; Publicar pode voltar com o que falta (quem atende, onde acontece, dias de atendimento), e Resolver leva ao passo certo; duas ou mais pessoas em quem atende criam um link individual para cada uma; logo e foto só PNG, JPEG ou WebP até 2 MB; a cor sai de opções prontas; excluir não funciona com reunião marcada no futuro, e nesse caso a saída é pausar; aviso de atenção no cartão quer dizer que quem atende não pode receber reuniões, e a página se comporta como pausada até trocar a pessoa; os avisos por WhatsApp ao cliente ainda não estão nesta tela; desligar a opção da conta tira a tela e a gaveta antiga do Kanban continua como antes.
+- nav_target: `settings_booking`
+
+### Quem pode o quê no Agendamento
+- intent: Quem pode criar a página de agendamento?; Como deixo alguém só ver as páginas de agendamento?; Por que o atendente não vê Configurações > Agendamento?; Qual função dá acesso ao Agendamento?
+- onde_fica: Configurações > Funções personalizadas > módulo Agendamento (Sem acesso, Ver, Editar); a tela fica em Configurações > Agendamento
+- rota: `settings_booking` - `/app/accounts/:accountId/settings/booking`
+- gate: papel `administrator` ou `agendamento_view` ou `agendamento_manage`
+- perfil: administrador faz tudo; função com Agendamento em Editar cria, edita, publica, pausa e exclui páginas e escolhe modelo, marca, locais, horários, funil e quem atende; função com Agendamento em Ver vê as páginas, a prévia e o link, sem botão de mudar; agente sem função e função sem o módulo não veem a tela e a API responde 403.
+- pre_requisitos: opção Agendamento WhatsApp-first ligada na conta; só o administrador cria e muda funções.
+- passos: 1. Abra Configurações > Funções personalizadas; 2. Crie ou edite a função; 3. Na linha Agendamento, escolha Ver ou Editar; 4. Salve a função e atribua à pessoa em Configurações > Agentes.
+- gotchas: Editar já inclui Ver; Agendamento não dá acesso a conectar caixas de e-mail ou WhatsApp, usuários, funções, integrações nem faturamento, que continuam do administrador; escolher uma caixa já conectada para Meet ou Teams não é conectar caixa; quem atende precisa ser pessoa da conta e, se tiver função, com acesso ao CRM; a gaveta antiga de página de agendamento no Kanban continua só do administrador.
+- nav_target: `settings_booking`
 
 ### Sincronizar RSVP, reagendar e registrar no-show
 - intent: "Como vejo se o convidado da reunião aceitou ou recusou?"; "Onde vejo o RSVP / confirmação de presença dos convidados da reunião?"; "Como marco no-show (não compareceu)?"; "Como cancelo ou reagendo uma reunião?"; "Status de presença dos convidados da reunião no calendário."

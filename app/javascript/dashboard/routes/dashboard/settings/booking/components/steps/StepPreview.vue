@@ -1,0 +1,97 @@
+<script setup>
+import { useI18n } from 'vue-i18n';
+import BookingPreviewCard from '../BookingPreviewCard.vue';
+import BookingDestination from '../BookingDestination.vue';
+import BookingLinkActions from '../BookingLinkActions.vue';
+import { MISSING_STEP } from '../../constants';
+
+// Passo 6: a prévia, para onde vai quem marcar e Publicar. Se a publicação
+// voltar com pendências, cada uma vira uma linha com "Resolver", que leva ao
+// passo certo. Publicada: link, QR code e Copiar link.
+defineProps({
+  form: { type: Object, required: true },
+  page: { type: Object, required: true },
+  peopleNames: { type: String, default: '' },
+  canManage: { type: Boolean, default: false },
+  publishing: { type: Boolean, default: false },
+  savingDestination: { type: Boolean, default: false },
+  missing: { type: Array, default: () => [] },
+});
+
+const emit = defineEmits(['fix', 'saveDestination']);
+const { t } = useI18n();
+</script>
+
+<template>
+  <section class="flex flex-col gap-6">
+    <h2 class="m-0 text-2xl font-semibold text-n-slate-12">
+      {{ t('BOOKING.PREVIEW.TITLE') }}
+    </h2>
+
+    <BookingPreviewCard
+      :form="form"
+      :logo-url="page.logo_url || ''"
+      :photo-url="page.photo_url || ''"
+      :host-name="peopleNames"
+    />
+
+    <BookingDestination
+      :pipeline-id="form.pipelineId"
+      :stage-id="form.stageId"
+      :people-names="peopleNames"
+      :can-manage="canManage"
+      :saving="savingDestination"
+      @save="emit('saveDestination', $event)"
+    />
+
+    <div
+      v-if="missing.length"
+      data-missing
+      role="alert"
+      class="flex flex-col gap-3 p-5 rounded-2xl bg-n-amber-2 ring-1 ring-inset ring-n-amber-6"
+    >
+      <p class="m-0 text-base font-semibold text-n-amber-12">
+        {{ t('BOOKING.PREVIEW.MISSING_TITLE') }}
+      </p>
+      <ul class="flex flex-col gap-2 p-0 m-0 list-none">
+        <li
+          v-for="item in missing"
+          :key="item"
+          :data-missing-item="item"
+          class="flex flex-wrap items-center justify-between gap-3"
+        >
+          <span class="text-base text-n-amber-12">
+            {{ t(`BOOKING.PREVIEW.MISSING.${item.toUpperCase()}`) }}
+          </span>
+          <button
+            type="button"
+            :data-fix="item"
+            class="inline-flex items-center min-h-11 px-4 rounded-xl text-base font-semibold text-n-amber-12 bg-n-solid-1 ring-1 ring-inset ring-n-amber-7 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+            @click="emit('fix', MISSING_STEP[item])"
+          >
+            {{ t('BOOKING.PREVIEW.FIX') }}
+          </button>
+        </li>
+      </ul>
+    </div>
+
+    <div
+      v-if="page.enabled"
+      data-published
+      class="flex flex-col gap-4 p-5 rounded-2xl bg-n-teal-2 ring-1 ring-inset ring-n-teal-6"
+    >
+      <div class="flex flex-col gap-1">
+        <p class="m-0 text-lg font-semibold text-n-teal-12">
+          {{ t('BOOKING.PREVIEW.PUBLISHED_TITLE') }}
+        </p>
+        <p class="m-0 text-base text-n-teal-12">
+          {{ t('BOOKING.PREVIEW.PUBLISHED_TEXT') }}
+        </p>
+      </div>
+      <BookingLinkActions v-if="page.public_url" :url="page.public_url" />
+    </div>
+    <span v-else-if="publishing" class="sr-only" role="status">
+      {{ t('BOOKING.PREVIEW.PUBLISHING') }}
+    </span>
+  </section>
+</template>
