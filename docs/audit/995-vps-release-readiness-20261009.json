@@ -67,5 +67,6 @@
     "merged": false,
     "vps_installed": false,
     "hub2you_config_published": false
-  }
+  },
+  "superseded_scope_by": "995-all-accounts-admin-switch-20261009.json"
 }

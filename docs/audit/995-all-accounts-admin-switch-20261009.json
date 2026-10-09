@@ -1,0 +1,102 @@
+{
+  "date": "2026-10-09",
+  "issue": 995,
+  "pr": 1163,
+  "rule": {
+    "installations": [
+      "hub2you",
+      "autonomia"
+    ],
+    "eligible_accounts": "all",
+    "per_account_switch": "instagram_assisted_onboarding",
+    "on": "assisted tester search/invite/status then original OAuth",
+    "off": "original OAuth directly",
+    "preserve_current_account_switches": true,
+    "allowlist_target": "empty",
+    "global_automation_target": true
+  },
+  "evidence": [
+    {
+      "stack": "hub2you",
+      "utc": "2026-10-09T08:07:18.283571+00:00",
+      "ssm_status": "Success",
+      "source_sha": "28e1e0ac8b3835577f7469368f03a86d1a8dab0d",
+      "parameter_version": 16,
+      "global_enabled": true,
+      "web_worker_allowlist_unrestricted": false,
+      "counts": {
+        "accounts": 15,
+        "marked_on": 2,
+        "marked_off": 13,
+        "currently_enabled": 1,
+        "expected_with_empty_allowlist": 2,
+        "mismatches_with_empty_allowlist": 0
+      },
+      "all_accounts_toggle_contract_passed": true,
+      "writes": false,
+      "meta_requests": 0
+    },
+    {
+      "stack": "autonomia",
+      "utc": "2026-10-09T08:07:18.283590+00:00",
+      "ssm_status": "Success",
+      "source_sha": "28e1e0ac8b3835577f7469368f03a86d1a8dab0d",
+      "parameter_version": 8,
+      "global_enabled": true,
+      "web_worker_allowlist_unrestricted": false,
+      "counts": {
+        "accounts": 7,
+        "marked_on": 2,
+        "marked_off": 5,
+        "currently_enabled": 1,
+        "expected_with_empty_allowlist": 2,
+        "mismatches_with_empty_allowlist": 0
+      },
+      "all_accounts_toggle_contract_passed": true,
+      "writes": false,
+      "meta_requests": 0
+    }
+  ],
+  "tests": {
+    "operator_env_contracts": {
+      "passed": 4,
+      "executed": 4
+    },
+    "deploy_routing_contracts": {
+      "passed": 12,
+      "executed": 12
+    },
+    "local_vitest": {
+      "executed": 0,
+      "status": "blocked_missing_vitest_dependency"
+    },
+    "production_simulation": {
+      "accounts": 22,
+      "mismatches": 0,
+      "scope": "enabled routing only; not UI or new OAuth grant"
+    }
+  },
+  "limits": {
+    "previous_ci_commit": "fb32568b5268d90d2960a305d7ff64fbc3103d95",
+    "final_ci_approved": false,
+    "github_actions_dispatch_error": "HTTP422 Actions has been disabled for this repository",
+    "organization_policy_read": "HTTP403",
+    "cause_confirmed": false,
+    "probe_first_attempt": "failed Ruby syntax; corrected and ruby -c validated before successful rerun"
+  },
+  "publication": {
+    "parameter_changes": 0,
+    "account_changes": 0,
+    "merge": false,
+    "aws_deploys": 0,
+    "vps_installed": false,
+    "pending": [
+      "final CI and native merge queue",
+      "VPS install and health",
+      "empty account allowlist parameter in both installations",
+      "blue-green configuration deploy in both installations",
+      "web/worker runtime verification",
+      "authenticated UI and functional acceptance"
+    ]
+  }
+}

@@ -1,5 +1,7 @@
 # Issue 995 — publicação VPS e teste autorizado na conta 16
 
+> Escopo operacional substituído pelo [plano de controle por conta para as duas instalações](995-all-accounts-admin-switch-20261009.md), autorizado em 2026-10-09. As evidências anteriores continuam históricas; não publicar a lista16,18 deste plano.
+
 Rodrigo autorizou liberar para testar a conta 16 da Hub2You, com o perfil @hub2you.ai. Esta decisão substitui o HOLD de publicação desta rodada; gates de CI, revisão e fila permanecem obrigatórios. A conta 18 e sua conexão existente devem ser preservadas.
 
 ## Provas antes da publicação
