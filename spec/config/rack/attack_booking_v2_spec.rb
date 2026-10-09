@@ -1,7 +1,8 @@
 require 'rails_helper'
 
-# Tetos por IP da página pública v2 (#1189): reserva e pedido de contato por hora, horários por minuto, página e ICS
-# por minuto. Caminho normalizado e comparado em pedaços, sem regex.
+# Tetos da página pública v2 (#1189). Por IP: reserva e pedido de contato por hora, horários por minuto, página e ICS
+# por minuto. Por página (slug): reservas por hora e pedidos de contato por dia. Caminho normalizado e comparado em
+# pedaços, sem regex.
 RSpec.describe Rack::Attack do
   def chave(nome, caminho, metodo: 'GET')
     env = Rack::MockRequest.env_for('/', method: metodo).merge('PATH_INFO' => caminho, 'REMOTE_ADDR' => '203.0.113.9')
@@ -26,6 +27,25 @@ RSpec.describe Rack::Attack do
     nome = 'public_booking_v2/contact_request_ip'
     expect(described_class.throttles.fetch(nome)).to have_attributes(limit: 10, period: 3600)
     expect(chave(nome, "/public/api/v2/booking/#{slug}/contact_request", metodo: 'POST')).to eq(ip)
+    expect(chave(nome, "/public/api/v2/booking/#{slug}/contact_request")).to be_nil
+    expect(chave(nome, "/public/api/v2/booking/#{slug}", metodo: 'POST')).to be_nil
+  end
+
+  it 'limita reservas por página por hora, pela página e não pelo IP' do
+    nome = 'public_booking_v2/create_page'
+    expect(described_class.throttles.fetch(nome)).to have_attributes(limit: 40, period: 3600)
+    ["/public/api/v2/booking/#{slug}", "/public//api/v2/booking/#{slug}/", "/public/api/v2/booking/#{slug}.json"].each do |grafia|
+      expect(chave(nome, grafia, metodo: 'POST')).to eq(slug), grafia
+    end
+    expect(chave(nome, "/public/api/v2/booking/#{slug}")).to be_nil
+    expect(chave(nome, "/public/api/v2/booking/#{slug}/contact_request", metodo: 'POST')).to be_nil
+    expect(chave(nome, "/public/api/v1/booking/#{slug}", metodo: 'POST')).to be_nil
+  end
+
+  it 'limita pedidos de contato por página por dia' do
+    nome = 'public_booking_v2/contact_request_page'
+    expect(described_class.throttles.fetch(nome)).to have_attributes(limit: 20, period: 86_400)
+    expect(chave(nome, "/public/api/v2/booking/#{slug}/contact_request", metodo: 'POST')).to eq(slug)
     expect(chave(nome, "/public/api/v2/booking/#{slug}/contact_request")).to be_nil
     expect(chave(nome, "/public/api/v2/booking/#{slug}", metodo: 'POST')).to be_nil
   end
