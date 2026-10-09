@@ -525,6 +525,28 @@
 - passos: 1. Abra Configurações > Funções personalizadas; 2. Crie ou edite a função; 3. Na linha Agendamento, escolha Ver ou Editar; 4. Salve a função e atribua à pessoa em Configurações > Agentes.
 - gotchas: Editar já inclui Ver; para publicar, a página precisa de quem atende, de um lugar, de pelo menos um dia de atendimento e de um funil para onde vai quem marcar, e o que faltar aparece com Resolver (o do funil abre o Alterar na própria prévia); página desligada com algo faltando aparece como Rascunho no cartão; Agendamento não dá acesso a conectar caixas de e-mail ou WhatsApp, usuários, funções, integrações nem faturamento, que continuam do administrador; escolher uma caixa já conectada para Meet ou Teams não é conectar caixa; quem atende precisa ser pessoa da conta e, se tiver função, com acesso ao CRM; a gaveta antiga de página de agendamento no Kanban continua só do administrador.
 
+### ver_resultados_do_agendamento
+- titulo: Ver os resultados do agendamento da equipe
+- rota: settings_booking_results
+- feature: crm_booking_v2
+- intent: Quantos clientes marcaram horário pelo link?; Quantos abriram o link e não marcaram?; Quantos compareceram e quantos faltaram?; De onde vieram os agendamentos?; Como mando o link de novo para quem abriu e não marcou?
+- onde_fica: Configurações > Agendamento > aba Resultados
+- perfil: administrador e função com Agendamento em Ver ou Editar veem a equipe toda e podem trocar para Só os meus; Enviar de novo exige poder mandar o link de agenda (administrador, agente sem função ou função com acesso ao CRM); agente sem função usa CRM > Meus números; função sem CRM e sem Agendamento não vê e a API responde 401.
+- pre_requisitos: opção Agendamento WhatsApp-first ligada na conta; ao menos um link de agenda enviado ou uma página publicada.
+- passos: 1. Abra Configurações > Agendamento e toque em Resultados; 2. Escolha 7 dias ou 30 dias; 3. Leia os cinco números (Links enviados, Abriram, Marcaram, Compareceram, Faltaram) e a frase de cada um; 4. Veja em De onde vieram os horários marcados quanto veio da conversa, do link da página e do pedido de contato; 5. Em Abriram o link e não marcaram, toque em Enviar de novo ao lado da pessoa para mandar o link na conversa dela.
+- gotchas: cada número conta o que aconteceu dentro do período, por isso Abriram pode passar de Links enviados quando o link foi enviado antes; os dias seguem o fuso da conta e contam o dia de hoje; link copiado conta como enviado; Compareceram e Faltaram só sobem depois que alguém marca o resultado da reunião no calendário; os testes de Testar no meu WhatsApp não entram; a lista só mostra clientes que a pessoa pode ver, uma linha por cliente; Enviar de novo só sai quando alguém toca, e com a conversa fechada para mensagens o cliente precisa escrever primeiro; sem conversa, use o botão Agendar no card; o painel mostra só números, sem nome nem telefone, fora da lista.
+
+### ver_meus_numeros_de_agendamento
+- titulo: Ver meus números de agendamento
+- rota: crm_booking_results
+- feature: crm_booking_v2
+- intent: Quantos dos meus links viraram horário marcado?; Quem abriu o meu link e não marcou?; Onde vejo meus números de agendamento?
+- onde_fica: Menu lateral > CRM > Meus números
+- perfil: administrador, agente sem função e função com acesso ao CRM veem os próprios números (links que criaram e reuniões em que são responsáveis); quem pode ver a equipe troca para Equipe toda.
+- pre_requisitos: opção Agendamento WhatsApp-first ligada na conta; CRM ligado.
+- passos: 1. Abra CRM > Meus números; 2. Escolha 7 dias ou 30 dias; 3. Leia os cinco números; 4. Em Abriram o link e não marcaram, toque em Enviar de novo para mandar o link na conversa do cliente.
+- gotchas: a lista mostra só quem recebeu o seu link e que você pode ver; ninguém recebe mensagem sem você tocar; se a conversa estiver fechada para mensagens, o cliente precisa escrever primeiro.
+
 ### sincronizar_rsvp_reagendar_e_registrar_no_show
 - titulo: Sincronizar RSVP, reagendar e registrar no-show
 - rota: crm_calendar_index

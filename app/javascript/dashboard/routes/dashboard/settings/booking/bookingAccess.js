@@ -33,6 +33,26 @@ export const bookingSidebarItems = ({
       label: t('SIDEBAR.BOOKING'),
       icon: 'i-lucide-calendar-check',
       to: accountScopedRoute('settings_booking'),
+      activeOn: ['settings_booking', 'settings_booking_results'],
+    },
+  ];
+};
+
+// CRM › Meus números (#1194, J8-A12): entra nos filhos do CRM, que já só
+// aparece para quem vê o CRM; aqui só a flag do agendamento novo.
+export const bookingResultsSidebarItems = ({
+  account,
+  t,
+  accountScopedRoute,
+}) => {
+  if (!isBookingV2Available(account)) return [];
+
+  return [
+    {
+      name: 'CRM Booking Results',
+      label: t('BOOKING.RESULTS.MENU'),
+      to: accountScopedRoute('crm_booking_results'),
+      activeOn: ['crm_booking_results'],
     },
   ];
 };

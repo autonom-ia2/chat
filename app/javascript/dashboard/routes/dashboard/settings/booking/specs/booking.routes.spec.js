@@ -1,7 +1,10 @@
 // Configurações › Agendamento (#1187, F1-D): permissões da rota, guarda da flag
 // (instalação + conta, com F5) e o item do menu.
 import bookingRoutes, { ensureBookingEnabled } from '../booking.routes';
-import { bookingSidebarItems } from '../bookingAccess';
+import {
+  bookingResultsSidebarItems,
+  bookingSidebarItems,
+} from '../bookingAccess';
 
 const store = vi.hoisted(() => ({ getters: {}, dispatch: vi.fn() }));
 vi.mock('dashboard/store', () => ({ default: store }));
@@ -134,5 +137,97 @@ describe('item do menu Agendamento', () => {
     );
     window.globalConfig = { CRM_CALENDAR_MEETINGS_ENABLED: 'false' };
     expect(build({ isAdministrator: true })).toEqual([]);
+  });
+});
+
+// Painel de resultados (#1194, J7-A5, J8-A12): aba nas Configurações para quem
+// tem o módulo e "Meus números" no CRM para quem atende.
+describe('rotas do painel de resultados', () => {
+  const results = parent.children.find(
+    route => route.name === 'settings_booking_results'
+  );
+  const crm = bookingRoutes.routes.find(
+    route => route.name === 'crm_booking_results'
+  );
+
+  beforeEach(() => {
+    store.dispatch.mockReset();
+    window.globalConfig = {
+      CRM_CALENDAR_MEETINGS_ENABLED: 'true',
+      CRM_KANBAN_ENABLED: 'true',
+    };
+  });
+
+  it('a aba Resultados fica em settings/booking/results, com as mesmas permissões e a equipe', () => {
+    expect(results.path).toBe('results');
+    expect(results.meta.permissions).toEqual([
+      'administrator',
+      'agendamento_view',
+      'agendamento_manage',
+    ]);
+    expect(results.props).toEqual({ entry: 'settings' });
+  });
+
+  it('"Meus números" fica no CRM e abre para quem atende, não para função só de agendamento', () => {
+    expect(crm.path).toBe('/app/accounts/:accountId/crm/booking-results');
+    expect(crm.meta.permissions).toEqual([
+      'administrator',
+      'agent',
+      'crm_view',
+      'crm_admin',
+    ]);
+    expect(crm.props).toEqual({ entry: 'crm' });
+  });
+
+  it('"Meus números" exige o CRM e a flag do agendamento novo', async () => {
+    store.getters['accounts/getAccount'] = () => withFlag(true);
+    const next = vi.fn();
+    await crm.beforeEnter({ params: { accountId: '9' } }, {}, next);
+    expect(next).toHaveBeenCalledWith();
+
+    window.globalConfig.CRM_KANBAN_ENABLED = 'false';
+    const blocked = vi.fn();
+    await crm.beforeEnter({ params: { accountId: '9' } }, {}, blocked);
+    expect(blocked).toHaveBeenCalledWith({
+      name: 'home',
+      params: { accountId: '9' },
+    });
+
+    window.globalConfig.CRM_KANBAN_ENABLED = 'true';
+    store.getters['accounts/getAccount'] = () => withFlag(false);
+    const off = vi.fn();
+    await crm.beforeEnter({ params: { accountId: '9' } }, {}, off);
+    expect(off).toHaveBeenCalledWith({
+      name: 'home',
+      params: { accountId: '9' },
+    });
+  });
+
+  it('o item "Meus números" só aparece com a flag, e o menu Agendamento acende nas duas abas', () => {
+    const args = { t: key => key, accountScopedRoute: name => ({ name }) };
+    expect(
+      bookingResultsSidebarItems({ ...args, account: withFlag(true) })
+    ).toEqual([
+      {
+        name: 'CRM Booking Results',
+        label: 'BOOKING.RESULTS.MENU',
+        to: { name: 'crm_booking_results' },
+        activeOn: ['crm_booking_results'],
+      },
+    ]);
+    expect(
+      bookingResultsSidebarItems({ ...args, account: withFlag(false) })
+    ).toEqual([]);
+
+    const [settingsItem] = bookingSidebarItems({
+      ...args,
+      account: withFlag(true),
+      isAdministrator: true,
+      permissions: [],
+    });
+    expect(settingsItem.activeOn).toEqual([
+      'settings_booking',
+      'settings_booking_results',
+    ]);
   });
 });

@@ -400,7 +400,13 @@ Rails.application.routes.draw do
             resources :booking_invites, only: [:index, :create, :destroy] do
               member do
                 post :deliver
+                post :copied
               end
+            end
+            # Painel de resultados do agendamento (#1194): números do período e "abriram e não marcaram".
+            resource :booking_stats, only: [:show] do
+              get :opened_not_booked
+              post 'opened_not_booked/:invite_id/resend', action: :resend, as: :resend_opened_not_booked
             end
           end
           namespace :autonomia do

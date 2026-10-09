@@ -215,13 +215,26 @@ const changePage = async () => {
   }
 };
 
+// Copiado = enviado por outro canal (#1194): o painel de resultados conta. Se o registro falhar, o link já
+// está copiado; a pessoa não precisa fazer nada, então não há aviso de erro.
+const markCopied = async () => {
+  try {
+    const { data } = await BookingInvitesAPI.copied(invite.value.id);
+    useInvite({ ...data.payload, text: text.value });
+  } catch {
+    // Só a contagem fica sem este envio; o painel continua certo para o resto.
+  }
+};
+
 const copyLink = async () => {
   try {
     await copyTextToClipboard(invite.value.url);
     useAlert(t('CRM_KANBAN.BOOKING_INVITE.COPIED'));
   } catch {
     useAlert(t('CRM_KANBAN.BOOKING_INVITE.ERRORS.COPY'));
+    return;
   }
+  await markCopied();
 };
 
 const sendInConversation = async () => {

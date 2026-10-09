@@ -496,8 +496,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/booking_invites#destroy",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:44",
-      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:60"
+      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:53",
+      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:69"
     ],
     "sem_corpo": true
   },
@@ -13369,15 +13369,24 @@
     "modelo": "Contact",
     "origem": [
       "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:26",
-      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:92",
-      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:90",
-      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:86",
-      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:84",
-      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:80",
-      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:78",
+      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:101",
+      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:99",
+      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:95",
+      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:93",
+      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:89",
+      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:87",
       "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:28"
     ],
     "sem_corpo": false
+  },
+  "POST crm/booking_invites/:id/copied": {
+    "completo": true,
+    "controller": "api/v1/accounts/crm/booking_invites#copied",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:46",
+      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:69"
+    ],
+    "sem_corpo": true
   },
   "POST crm/booking_invites/:id/deliver": {
     "campos": {
@@ -13396,7 +13405,7 @@
       "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:35",
       "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:40",
       "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:36",
-      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:60"
+      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:69"
     ],
     "sem_corpo": false
   },
@@ -13596,6 +13605,15 @@
       "app/controllers/api/v1/accounts/crm/booking_profiles_controller.rb:107"
     ],
     "sem_corpo": false
+  },
+  "POST crm/booking_stats/opened_not_booked/:invite_id/resend": {
+    "completo": true,
+    "controller": "api/v1/accounts/crm/booking_stats#resend",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/booking_stats_controller.rb:35",
+      "app/controllers/api/v1/accounts/crm/booking_stats_controller.rb:36"
+    ],
+    "sem_corpo": true
   },
   "POST crm/cards": {
     "campos": {

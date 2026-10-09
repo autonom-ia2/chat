@@ -253,6 +253,82 @@
     },
     "VIEW": {
       "READ_ONLY": "Você pode ver esta página, mas não pode mudar."
+    },
+    "RESULTS": {
+      "MENU": "Meus números",
+      "TAB_PAGES": "Páginas",
+      "TAB_RESULTS": "Resultados",
+      "TABS_LABEL": "Partes do agendamento",
+      "TITLE_TEAM": "Resultados do agendamento",
+      "TITLE_MINE": "Meus números",
+      "SUBTITLE": "Veja se os links de agenda estão virando horários marcados.",
+      "PERIOD_LABEL": "Período",
+      "PERIOD_7": "7 dias",
+      "PERIOD_30": "30 dias",
+      "SCOPE_LABEL": "De quem",
+      "SCOPE_MINE": "Só os meus",
+      "SCOPE_TEAM": "Equipe toda",
+      "LOADING": "Carregando os números",
+      "ERROR": "Não deu para carregar os números.",
+      "RETRY": "Tentar de novo",
+      "EMPTY": "Nada aconteceu nos últimos {days} dias.",
+      "SEE_30": "Ver 30 dias",
+      "REFRESH": "Atualizar",
+      "NUMBERS_LABEL": "Números dos últimos {days} dias",
+      "CONFIRMED": "Confirmaram pelo link: {count}",
+      "NUMBERS": {
+        "SENT": {
+          "LABEL": "Links enviados",
+          "HINT": "Links de agenda mandados ou copiados para clientes."
+        },
+        "OPENED": {
+          "LABEL": "Abriram",
+          "HINT": "Clientes que abriram o link."
+        },
+        "BOOKED": {
+          "LABEL": "Marcaram",
+          "HINT": "Horários marcados pelos links e pela página."
+        },
+        "ATTENDED": {
+          "LABEL": "Compareceram",
+          "HINT": "Reuniões marcadas como \"o cliente veio\"."
+        },
+        "NO_SHOW": {
+          "LABEL": "Faltaram",
+          "HINT": "Reuniões marcadas como \"o cliente não veio\"."
+        }
+      },
+      "ORIGINS": {
+        "TITLE": "De onde vieram os horários marcados",
+        "CONVERSATION": "Link mandado na conversa",
+        "PUBLIC_LINK": "Link da página (bio, site, anúncio)",
+        "CONTACT_REQUEST": "Pedido de contato",
+        "AI": "Atendente de IA",
+        "EMPTY": "Nenhum horário marcado neste período."
+      },
+      "LIST": {
+        "TITLE": "Abriram o link e não marcaram",
+        "HINT_MINE": "Só quem recebeu o seu link. Ninguém recebe mensagem sem você tocar.",
+        "HINT_TEAM": "Só clientes que você pode ver. Ninguém recebe mensagem sem alguém tocar.",
+        "LOADING": "Carregando a lista",
+        "ERROR": "Não deu para carregar a lista.",
+        "EMPTY": "Ninguém abriu o link sem marcar nos últimos {days} dias.",
+        "OPENED": "Abriu {when}",
+        "VIA": "{page} · enviado por {name}",
+        "RESEND": "Enviar de novo",
+        "RESEND_LABEL": "Enviar de novo o link para {name}",
+        "RESENT": "Enviado de novo",
+        "SENT_OK": "Link enviado na conversa.",
+        "NO_CONVERSATION": "Sem conversa. Use o botão Agendar no card.",
+        "MORE": "Ver mais",
+        "ERRORS": {
+          "CANNOT_REPLY": "A conversa está fechada. O cliente precisa mandar uma mensagem antes.",
+          "NO_CONVERSATION": "Este cliente não tem conversa. Use o botão Agendar no card.",
+          "NO_PAGE": "A página deste link não está no ar.",
+          "FORBIDDEN": "Você não pode enviar para este cliente.",
+          "GENERIC": "Não deu para enviar. Tente de novo."
+        }
+      }
     }
   }
 }

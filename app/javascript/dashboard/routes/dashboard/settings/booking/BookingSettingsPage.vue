@@ -5,6 +5,7 @@ import { useCanManage } from 'dashboard/composables/useCanManage';
 import BookingPagesList from './components/BookingPagesList.vue';
 import BookingWizard from './components/BookingWizard.vue';
 import BookingPageView from './components/BookingPageView.vue';
+import BookingSettingsTabs from './components/BookingSettingsTabs.vue';
 import { STEP } from './constants';
 
 // Configurações › Agendamento (#1187, F1-D): a lista de páginas, o assistente
@@ -44,6 +45,8 @@ const view = page => {
         {{ t('BOOKING.PAGE.SUBTITLE') }}
       </p>
     </header>
+
+    <BookingSettingsTabs v-if="screen.mode === 'list'" />
 
     <BookingWizard
       v-if="screen.mode === 'wizard' && canManage"

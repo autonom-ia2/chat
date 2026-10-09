@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_10_12_100600) do
+ActiveRecord::Schema[7.2].define(version: 2026_10_15_100000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1983,6 +1983,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_12_100600) do
     t.index ["account_id", "conversation_id"], name: "idx_crm_booking_invites_account_conversation"
     t.index ["account_id", "created_at"], name: "idx_crm_booking_invites_account_created"
     t.index ["account_id", "created_by_id"], name: "idx_crm_booking_invites_account_creator"
+    t.index ["account_id", "first_opened_at"], name: "idx_crm_booking_invites_account_opened", where: "(first_opened_at IS NOT NULL)"
+    t.index ["account_id", "sent_at"], name: "idx_crm_booking_invites_account_sent", where: "(sent_at IS NOT NULL)"
     t.index ["booking_link_id"], name: "index_crm_booking_invites_on_booking_link_id"
     t.index ["booking_profile_id"], name: "index_crm_booking_invites_on_booking_profile_id"
     t.index ["card_id"], name: "index_crm_booking_invites_on_card_id"
@@ -2257,6 +2259,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_12_100600) do
     t.datetime "reminders_stopped_at"
     t.bigint "conversation_id"
     t.index ["account_id", "card_id"], name: "idx_crm_meetings_card"
+    t.index ["account_id", "created_at"], name: "idx_crm_meetings_account_booked", where: "(source IS NOT NULL)"
     t.index ["account_id", "created_by_id"], name: "idx_crm_meetings_created_by"
     t.index ["account_id", "inbox_id"], name: "idx_crm_meetings_inbox"
     t.index ["account_id", "outcome", "outcome_recorded_at"], name: "idx_on_account_id_outcome_outcome_recorded_at_085cfbd511"

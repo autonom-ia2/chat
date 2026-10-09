@@ -173,4 +173,21 @@ RSpec.describe 'Custom role module permissions', type: :policy do # rubocop:disa
       expect(ArticlePolicy.new(context, article).update?).to be(false)
     end
   end
+
+  # Painel de resultados do agendamento (#1194, J7-A5, J8-A12).
+  describe 'Crm::BookingStatsPolicy' do
+    def abilities(user)
+      policy = Crm::BookingStatsPolicy.new(context_for(user), :booking_stats)
+      { show: policy.show?, team: policy.team?, resend: policy.resend? }
+    end
+
+    it 'gives own numbers to whoever hosts, the team to agendamento_view and admins, and nothing to roles without either' do
+      expect(abilities(admin)).to eq(show: true, team: true, resend: true)
+      expect(abilities(agent)).to eq(show: true, team: false, resend: true)
+      expect(abilities(custom_role_user('crm_view'))).to eq(show: true, team: false, resend: true)
+      expect(abilities(custom_role_user('agendamento_view'))).to eq(show: true, team: true, resend: false)
+      expect(abilities(custom_role_user('agendamento_manage', 'crm_view'))).to eq(show: true, team: true, resend: true)
+      expect(abilities(custom_role_user('conversation_manage'))).to eq(show: false, team: false, resend: false)
+    end
+  end
 end

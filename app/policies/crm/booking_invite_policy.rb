@@ -2,7 +2,7 @@
 # policies do sistema (card, conversa ou contato). Aqui fica o que é do convite:
 #   - usar convites: membro da conta sem função (agente ou administrador) ou função com alguma chave de CRM ou de
 #     agendamento (a mesma régua de quem pode atender, `HostEligibility`). Função sem CRM não usa.
-#   - ver e entregar: o administrador e `agendamento_view` (ou `_manage`) veem todos; os demais, só os próprios.
+#   - ver, entregar e marcar como copiado: o administrador e `agendamento_view` (ou `_manage`) veem todos; os demais, só os próprios.
 #   - cancelar: o administrador e `agendamento_manage` cancelam qualquer um; os demais, só os próprios.
 class Crm::BookingInvitePolicy < ApplicationPolicy
   def index?
@@ -18,6 +18,11 @@ class Crm::BookingInvitePolicy < ApplicationPolicy
   end
 
   def deliver?
+    show?
+  end
+
+  # Link copiado para mandar por outro canal (#1194, RA-19): mesma régua de entregar.
+  def copied?
     show?
   end
 

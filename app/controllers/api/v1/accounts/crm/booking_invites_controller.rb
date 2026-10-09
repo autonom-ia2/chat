@@ -10,7 +10,7 @@ class Api::V1::Accounts::Crm::BookingInvitesController < Api::V1::Accounts::Crm:
   LIST_LIMIT = 5
 
   before_action :ensure_booking_v2_enabled
-  before_action :fetch_invite, only: [:deliver, :destroy]
+  before_action :fetch_invite, only: [:deliver, :copied, :destroy]
   before_action :authorize_invite
 
   rescue_from ::Crm::BookingV2::InviteError do |error|
@@ -39,6 +39,15 @@ class Api::V1::Accounts::Crm::BookingInvitesController < Api::V1::Accounts::Crm:
     authorize conversation, :show?
     ::Crm::BookingV2::InviteDeliverer.new(invite: @invite, user: Current.user, conversation: conversation, text: params[:text]).perform
     render json: { payload: serialize(@invite.reload) }
+  end
+
+  # O agente copiou o link para mandar por outro canal (#1194, RA-19): conta como enviado. Só a primeira vez grava a
+  # data; convite que já não vale não muda.
+  def copied
+    if @invite.sent_at.blank? && @invite.active?
+      @invite.update!(sent_at: Time.current, metadata: @invite.metadata.to_h.merge('copied_by_id' => Current.user.id))
+    end
+    render json: { payload: serialize(@invite) }
   end
 
   def destroy

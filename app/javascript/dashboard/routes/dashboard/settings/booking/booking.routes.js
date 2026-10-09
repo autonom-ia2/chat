@@ -1,15 +1,32 @@
 import { frontendURL } from '../../../../helper/URLHelper';
-import { SCHEDULING_PERMISSIONS } from 'dashboard/constants/permissions.js';
+import {
+  CRM_ADMIN_PERMISSION,
+  CRM_VIEW_PERMISSION,
+  SCHEDULING_PERMISSIONS,
+} from 'dashboard/constants/permissions.js';
 import store from 'dashboard/store';
 import { isBookingV2Available } from './bookingAccess';
 
 const SettingsWrapper = () => import('../SettingsWrapper.vue');
 const BookingSettingsPage = () => import('./BookingSettingsPage.vue');
+const BookingResultsPage = () => import('./results/BookingResultsPage.vue');
 
 // Configurações › Agendamento (#1187, F1-D). Ver pede agendamento_view; mudar,
 // agendamento_manage (a tela esconde os botões de escrita). O backend aplica o
 // mesmo corte (Crm::BookingPagePolicy).
 const meta = { permissions: ['administrator', ...SCHEDULING_PERMISSIONS] };
+
+// CRM › Meus números (#1194, J8-A12): quem atende pelo agendamento vê os
+// próprios números (administrador, agente sem função, função com crm_view ou
+// crm_admin), como `Crm::BookingStatsPolicy` e `HostEligibility` no backend.
+const crmResultsMeta = {
+  permissions: [
+    'administrator',
+    'agent',
+    CRM_VIEW_PERMISSION,
+    CRM_ADMIN_PERMISSION,
+  ],
+};
 
 // Link direto / F5: o guarda roda antes de a store ter a conta. Carrega a conta
 // antes de decidir (mesmo cuidado de autonomia.routes.js); sem conta, ou com a
@@ -38,6 +55,15 @@ export const ensureBookingEnabled = async (to, _from, next) => {
   next({ name: 'home', params: to.params });
 };
 
+// "Meus números" mora no CRM: precisa também do CRM ligado na instalação.
+export const ensureBookingResultsEnabled = async (to, from, next) => {
+  if (window.globalConfig?.CRM_KANBAN_ENABLED !== 'true') {
+    next({ name: 'home', params: to.params });
+    return;
+  }
+  await ensureBookingEnabled(to, from, next);
+};
+
 export default {
   routes: [
     {
@@ -53,7 +79,23 @@ export default {
           component: BookingSettingsPage,
           meta,
         },
+        {
+          // Painel de resultados (#1194, J7): a equipe para quem tem acesso.
+          path: 'results',
+          name: 'settings_booking_results',
+          component: BookingResultsPage,
+          props: { entry: 'settings' },
+          meta,
+        },
       ],
+    },
+    {
+      path: frontendURL('accounts/:accountId/crm/booking-results'),
+      name: 'crm_booking_results',
+      meta: crmResultsMeta,
+      beforeEnter: ensureBookingResultsEnabled,
+      component: BookingResultsPage,
+      props: { entry: 'crm' },
     },
   ],
 };

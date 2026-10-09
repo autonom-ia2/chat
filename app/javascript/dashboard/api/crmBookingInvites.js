@@ -28,6 +28,11 @@ class CrmBookingInvitesAPI extends ApiClient {
     });
   }
 
+  // O link foi copiado para mandar por outro canal: conta como enviado (#1194).
+  copied(id) {
+    return axios.post(`${this.url}/${id}/copied`);
+  }
+
   cancel(id) {
     return axios.delete(`${this.url}/${id}`);
   }
