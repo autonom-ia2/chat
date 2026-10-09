@@ -7,7 +7,8 @@ class Crm::Cards::ActivityPayloadBuilder
   end
 
   STAGE_ID_KEYS = %w[from_stage_id to_stage_id target_stage_id stage_id].freeze
-  OWNER_ID_KEYS = %w[owner_id assignee_id].freeze
+  # to_user_id: quem recebeu a reunião de quem saiu da conta (meeting_host_reassigned, #1188).
+  OWNER_ID_KEYS = %w[owner_id assignee_id to_user_id].freeze
   CONTACT_ID_KEYS = %w[contact_id].freeze
   SENSITIVE_PAYLOAD_KEYS = %w[error send_error].freeze
   # Fase D: resolve o destino de time do handoff do agente nativo (assign_team)

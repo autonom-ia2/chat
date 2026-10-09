@@ -3,6 +3,8 @@
 # ficam com essa pessoa.
 #
 # A reunião aponta a página por `metadata['booking_profile_id']` (gravado por quem reserva pela página v2).
+# `attention?` olha só a página pedida (a lista e a tela de uma página não varrem as outras); `entries` é o
+# relatório da conta inteira.
 class Crm::BookingV2::AttentionReport
   PAGE_KEY = 'booking_profile_id'.freeze
 
@@ -10,6 +12,17 @@ class Crm::BookingV2::AttentionReport
 
   def self.upcoming_meetings(profile)
     profile.account.crm_meetings.upcoming.where("crm_meetings.metadata ->> 'booking_profile_id' = ?", profile.id.to_s)
+  end
+
+  # Reuniões futuras por página, numa consulta só: { profile_id => quantidade }.
+  def self.upcoming_counts(profiles)
+    return {} if profiles.empty?
+
+    account_id = profiles.first.account_id
+    Crm::Meeting.upcoming.where(account_id: account_id)
+                .where("crm_meetings.metadata ->> 'booking_profile_id' IN (?)", profiles.map { |profile| profile.id.to_s })
+                .group(Arel.sql("crm_meetings.metadata ->> 'booking_profile_id'")).count
+                .transform_keys(&:to_i)
   end
 
   def initialize(account:)
@@ -21,7 +34,9 @@ class Crm::BookingV2::AttentionReport
   end
 
   def attention?(profile)
-    entries.any? { |entry| entry.profile.id == profile.id }
+    return false unless profile.new_page? && profile.account_id == account.id
+
+    flagged_hosts(profile).any?
   end
 
   private
@@ -32,19 +47,23 @@ class Crm::BookingV2::AttentionReport
     account.crm_agent_booking_profiles.new_pages.includes(:default_assignee, agent_booking_links: :agent).order(:id)
   end
 
-  def entries_for(profile)
-    return per_agent_entries(profile) if profile.assignment_mode_per_agent?
+  # [link, user_id, motivo] de cada responsável que impede a página de atender; vazio = página em ordem.
+  def flagged_hosts(profile)
+    return per_agent_flags(profile) if profile.assignment_mode_per_agent?
     return [] if eligible?(profile.default_assignee)
 
-    reason = profile.default_assignee_id.blank? ? 'host_missing' : 'host_ineligible'
-    [build_entry(profile, nil, profile.default_assignee_id, reason)]
+    [[nil, profile.default_assignee_id, profile.default_assignee_id.blank? ? 'host_missing' : 'host_ineligible']]
   end
 
-  def per_agent_entries(profile)
+  def per_agent_flags(profile)
     links = profile.agent_booking_links.select(&:enabled?)
-    return [build_entry(profile, nil, nil, 'host_missing')] if links.empty?
+    return [[nil, nil, 'host_missing']] if links.empty?
 
-    links.reject { |link| eligible?(link.agent) }.map { |link| build_entry(profile, link, link.agent_id, 'host_ineligible') }
+    links.reject { |link| eligible?(link.agent) }.map { |link| [link, link.agent_id, 'host_ineligible'] }
+  end
+
+  def entries_for(profile)
+    flagged_hosts(profile).map { |link, user_id, reason| build_entry(profile, link, user_id, reason) }
   end
 
   def build_entry(profile, link, user_id, reason)

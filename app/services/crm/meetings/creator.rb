@@ -125,6 +125,7 @@ class Crm::Meetings::Creator
         external_event_id: nil,
         online_meeting_url: nil,
         status: :draft,
+        source: params[:source].presence,
         metadata: draft_metadata(params)
       )
       meeting.save!(validate: false)
@@ -260,8 +261,10 @@ class Crm::Meetings::Creator
     meeting.update_columns(status: Crm::Meeting.statuses[:failed], metadata: metadata, updated_at: Time.current)
   end
 
+  # `booking_metadata` (página de agendamento nova, #1188): booking_profile_id, booking_link_id e consent entram já no
+  # rascunho. Sem ele, o metadado é o de sempre.
   def draft_metadata(params)
-    { 'reminder_minutes_before' => reminder_minutes_before(params) }
+    { 'reminder_minutes_before' => reminder_minutes_before(params) }.merge(params[:booking_metadata].to_h.stringify_keys)
   end
 
   def reminder_minutes_before(params)

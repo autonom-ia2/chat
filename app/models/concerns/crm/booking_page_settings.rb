@@ -12,6 +12,7 @@ module Crm::BookingPageSettings
   CALENDAR_LOCATIONS = { 'google_meet' => :google?, 'teams' => :microsoft? }.freeze
   MAX_LOCATIONS = 6
   MAX_TEXT = 500
+  MAX_DESCRIPTION = 2000
   MAX_IMAGE_BYTES = 2.megabytes
   IMAGE_TYPES = %w[image/png image/jpeg image/webp].freeze
 
@@ -46,6 +47,24 @@ module Crm::BookingPageSettings
     validate_brand
     validate_contact_phone
     validate_images
+    validate_description
+    validate_timezone
+  end
+
+  def validate_description
+    errors.add(:description, 'is too long') if description.to_s.length > MAX_DESCRIPTION
+  end
+
+  def validate_timezone
+    return if timezone.blank? || ActiveSupport::TimeZone[timezone].present?
+
+    errors.add(:timezone, 'is not a valid time zone')
+  end
+
+  # A caixa de agenda só é conferida quando o que depende dela muda (locais, caixa) ou quando a página vai ao ar.
+  # Pausar uma página cuja caixa perdeu a agenda tem de funcionar: é justamente o que o admin quer fazer.
+  def calendar_check_needed?
+    new_record? || locations_changed? || inbox_id_changed? || (enabled_changed? && enabled?)
   end
 
   def validate_locations
@@ -59,13 +78,20 @@ module Crm::BookingPageSettings
   def validate_location(location)
     return errors.add(:locations, 'item must be an object') unless location.is_a?(Hash)
     return errors.add(:locations, 'unknown type') unless LOCATION_TYPES.include?(location['type'])
+    return errors.add(:locations, 'label or address too long') if location_text_too_long?(location)
     return validate_calendar_location(location['type']) if CALENDAR_LOCATIONS.key?(location['type'])
     return if location['type'] != 'custom_link'
 
     errors.add(:locations, 'link must be an http or https URL') unless Crm::WebUrl.valid?(location['url'], max: MAX_TEXT)
   end
 
+  def location_text_too_long?(location)
+    %w[label address].any? { |key| location[key].to_s.length > MAX_TEXT }
+  end
+
   def validate_calendar_location(type)
+    return unless calendar_check_needed?
+
     channel = inbox&.channel
     connected = channel.is_a?(Channel::Email) && channel.calendar_enabled? && channel.public_send(CALENDAR_LOCATIONS[type])
     errors.add(:locations, 'calendar location requires a connected calendar mailbox') unless connected

@@ -13,12 +13,12 @@ RSpec.describe Crm::BookingV2::Booker do
   end
 
   def book(**overrides)
-    described_class.new(profile: profile, host: world.host, name: 'Ana Souza', phone: '(21) 98888-7777', starts_at: slot,
+    described_class.new(profile: profile, name: 'Ana Souza', phone: '(21) 98888-7777', starts_at: slot,
                         source: 'public_link', **overrides).perform
   end
 
   it 'cria contato, card e reunião interna sem e-mail' do
-    result = book(consent: { text_key: 'booking.consent.v1' })
+    result = book(consent: { text_key: 'booking_v2.consent.whatsapp_notices', accepted_at: '2020-01-01T00:00:00Z' })
 
     expect(result.existing).to be(false)
     expect(result.contact).to have_attributes(name: 'Ana Souza', phone_number: '+5521988887777', email: nil)
@@ -28,7 +28,8 @@ RSpec.describe Crm::BookingV2::Booker do
                                               created_by_id: world.host.id, card_id: result.card.id, source: 'public_link',
                                               starts_at: Time.iso8601(slot), ends_at: Time.iso8601(slot) + 30.minutes)
     expect(result.meeting.metadata).to include('booking_profile_id' => profile.id,
-                                               'consent' => { 'accepted_at' => '2026-10-12T11:00:00Z', 'text_key' => 'booking.consent.v1' })
+                                               'consent' => { 'accepted_at' => '2026-10-12T11:00:00Z',
+                                                              'text_key' => 'booking_v2.consent.whatsapp_notices' })
     expect(result.meeting.meeting_guests.pluck(:phone_number, :email)).to eq([['+5521988887777', nil]])
     expect(Crm::Cards::Broadcaster).to have_received(:broadcast).with(result.card, Events::Types::CRM_CARD_CREATED).once
   end
@@ -97,7 +98,7 @@ RSpec.describe Crm::BookingV2::Booker do
     expect(book(name: 'Ana & Bia <b>Souza</b>').contact.name).to eq('Ana & Bia Souza')
   end
 
-  it 'recusa responsável com função sem CRM nem agendamento' do
+  it 'recusa responsável com função que não vê card' do
     role = create(:custom_role, account: account, permissions: ['report_manage'])
     world.host.account_users.find_by(account: account).update!(custom_role: role)
 
@@ -177,5 +178,104 @@ RSpec.describe Crm::BookingV2::Booker do
 
     expect(meeting).to have_attributes(provider: 'google', online_meeting_type: 'google_meet', source: 'public_link', inbox_id: inbox.id)
     expect(meeting.metadata).to include('booking_profile_id' => profile.id)
+  end
+
+  it 'recusa quando o responsável perde o acesso entre a conferência e a trava' do
+    calls = 0
+    allow(Crm::BookingV2::HostEligibility).to receive(:eligible?).and_wrap_original do |original, **args|
+      calls += 1
+      calls == 1 ? original.call(**args) : false
+    end
+
+    expect { book }.to raise_error(ArgumentError, 'host_unavailable')
+    expect(account.crm_meetings.count).to eq(0)
+  end
+
+  describe 'responsável vem da página' do
+    let(:seller) { create(:user, account: account, role: :agent, name: 'Vendedor') }
+
+    it 'usa o agente do link ativo desta página' do
+      link = profile.agent_booking_links.create!(account: account, agent: seller)
+
+      result = book(link: link)
+
+      expect(result.meeting.created_by_id).to eq(seller.id)
+      expect(result.card.owner_id).to eq(seller.id)
+    end
+
+    it 'ignora link desligado ou de outra página e usa o responsável padrão' do
+      off = profile.agent_booking_links.create!(account: account, agent: seller, enabled: false)
+      foreign = create_booking_profile(account: account, host: world.host).agent_booking_links.create!(account: account, agent: seller)
+
+      expect(book(link: off).meeting).to have_attributes(created_by_id: world.host.id)
+      expect(book(link: foreign, starts_at: '2026-10-20T11:00:00-03:00').meeting.metadata).not_to have_key('booking_link_id')
+      expect(account.crm_meetings.pluck(:created_by_id).uniq).to eq([world.host.id])
+    end
+
+    it 'não aceita escolher o responsável por parâmetro' do
+      expect { book(host: seller) }.to raise_error(ArgumentError, /unknown keyword: :host/)
+    end
+  end
+
+  describe 'consentimento' do
+    it 'ignora texto fora da lista fechada' do
+      expect(book(consent: { text_key: 'qualquer.coisa', accepted_at: '2020-01-01T00:00:00Z' }).meeting.metadata).not_to have_key('consent')
+    end
+  end
+
+  describe 'Meet/Teams pela página' do
+    let(:inbox) { create(:channel_email, account: account, provider: 'google', calendar_enabled: true).inbox }
+
+    before { profile.update!(inbox: inbox, locations: [{ 'type' => 'google_meet' }]) }
+
+    it 'exige e-mail do cliente' do
+      expect { book }.to raise_error(ArgumentError, 'email_required')
+      expect(account.crm_meetings.count).to eq(0)
+    end
+
+    it 'exige a caixa da página com agenda conectada' do
+      inbox.channel.update!(calendar_enabled: false)
+
+      expect { book(email: 'ana@example.com') }.to raise_error(ArgumentError, 'calendar_unavailable')
+      expect(account.contacts.where(phone_number: '+5521988887777')).to be_empty
+    end
+
+    it 'entrega origem, página, link e consentimento ao Creator (gravados no rascunho, sem update depois)' do
+      link = profile.agent_booking_links.create!(account: account, agent: world.host)
+      creator_params = nil
+      allow(Crm::Meetings::Creator).to receive(:new).and_wrap_original do |original, **args|
+        creator_params = args[:params]
+        original.call(**args)
+      end
+      consent = { 'accepted_at' => '2026-10-12T11:00:00Z', 'text_key' => 'booking_v2.consent.whatsapp_notices' }
+
+      meeting = with_modified_env(CRM_CALENDAR_GOOGLE_SIMULATE: 'true') do
+        book(email: 'ana@example.com', link: link, consent: { text_key: 'booking_v2.consent.whatsapp_notices' }).meeting
+      end
+
+      expect(creator_params).to include(source: 'public_link',
+                                        booking_metadata: { 'booking_profile_id' => profile.id, 'booking_link_id' => link.id,
+                                                            'consent' => consent })
+      expect(meeting).to have_attributes(source: 'public_link', status: 'scheduled')
+      expect(meeting.metadata).to include('booking_profile_id' => profile.id, 'booking_link_id' => link.id, 'consent' => consent)
+    end
+  end
+
+  it 'consulta o provedor uma vez, antes de tomar qualquer trava' do
+    inbox = create(:channel_email, account: account, provider: 'google', calendar_enabled: true).inbox
+    profile.update!(inbox: inbox)
+    locks_during_freebusy = []
+    free_busy = instance_double(Google::FreeBusyService)
+    allow(Google::FreeBusyService).to receive(:new).and_return(free_busy)
+    allow(free_busy).to receive(:busy_intervals) do
+      locks_during_freebusy << ActiveRecord::Base.connection.select_value(
+        "SELECT count(*) FROM pg_locks WHERE locktype = 'advisory' AND pid = pg_backend_pid()"
+      ).to_i
+      []
+    end
+
+    with_modified_env(CRM_CALENDAR_GOOGLE_SIMULATE: 'false') { expect(book.meeting).to be_persisted }
+
+    expect(locks_during_freebusy).to eq([0])
   end
 end
