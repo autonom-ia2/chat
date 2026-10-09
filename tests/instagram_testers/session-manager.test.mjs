@@ -594,6 +594,20 @@ function deferred() {
   return { promise, resolve: resolvePromise, reject: rejectPromise };
 }
 
+function refreshTimings(data) {
+  return data.stderr
+    .filter(line => line.startsWith('{'))
+    .map(line => JSON.parse(line))
+    .filter(line => line.event === 'instagram_manager_refresh_timing');
+}
+
+// Every line except the per-cycle refresh timing, which B5 adds to each cycle.
+function operationalStderr(data) {
+  return data.stderr.filter(
+    line => !line.startsWith('{"event":"instagram_manager_refresh_timing"')
+  );
+}
+
 async function syntheticManager(t, options = {}) {
   const data = await fixture('valid');
   if (options.vps) {
@@ -602,6 +616,10 @@ async function syntheticManager(t, options = {}) {
   }
   if (options.browserOperations)
     data.env.INSTAGRAM_TESTER_BROWSER_OPERATIONS_ENABLED = 'true';
+  if (options.searchStatus !== undefined)
+    data.env.INSTAGRAM_TESTER_SEARCH_STATUS_ENABLED = options.searchStatus;
+  if (options.warmInvite !== undefined)
+    data.env.INSTAGRAM_TESTER_WARM_INVITE_ENABLED = options.warmInvite;
   if (options.reconnectId)
     data.env.INSTAGRAM_TESTER_RECONNECT_REQUEST_ID = options.reconnectId;
   const clock = new FakeClock();
@@ -773,7 +791,7 @@ async function syntheticManager(t, options = {}) {
       if (payload.operation === 'bootstrap') {
         versionReads += 1;
         if (options.failVersion === versionReads)
-          throw new Error('publication_failed');
+          throw new Error(options.failVersionMessage || 'publication_failed');
         if (options.pendingVersion) return new Promise(() => {});
         const latest =
           options.changedMetadata && versionReads > 1
@@ -802,6 +820,39 @@ async function syntheticManager(t, options = {}) {
         };
       }
       if (payload.type === 'browser_operation') {
+        const publishDelay = options.browserPublishDelayMs?.[payload.operation];
+        if (publishDelay)
+          await new Promise((resolveDelay, rejectDelay) => {
+            const timer = clock.setTimeout(resolveDelay, publishDelay);
+            signal.addEventListener(
+              'abort',
+              () => {
+                clock.clearTimeout(timer);
+                rejectDelay(signal.reason);
+              },
+              { once: true }
+            );
+          });
+        if (payload.operation === 'invite_permit') {
+          // Like the real publishers, a pending permit settles only on abort.
+          if (options.pendingPermit)
+            return new Promise((_resolvePermit, rejectPermit) => {
+              signal.addEventListener(
+                'abort',
+                () => rejectPermit(signal.reason),
+                { once: true }
+              );
+            });
+          return {
+            type: 'browser_operation',
+            operation: 'invite_permit',
+            id: payload.id,
+            request_id: payload.request_id,
+            claim: payload.claim,
+            decision: 'write',
+            status: 'absent',
+          };
+        }
         if (payload.operation === 'read')
           return {
             type: 'browser_operation',
@@ -954,6 +1005,52 @@ test('polls browser operations at 250 ms and executes a queued request once', as
   }
 });
 
+async function executorFlag(t, flag, value) {
+  let observed = 'executor_not_called';
+  const data = await syntheticManager(t, {
+    vps: true,
+    browserOperations: true,
+    browserRequestReadyAt: 249,
+    [flag]: value,
+    executeOperation: async options => {
+      observed = options[flag];
+      const { request } = options;
+      return {
+        type: 'browser_operation',
+        operation: 'complete',
+        action: request.action,
+        id: request.id,
+        request_id: request.request_id,
+        claim: request.claim,
+        captured_at: '2026-10-08T12:00:00.000Z',
+        results: [],
+      };
+    },
+  });
+  try {
+    await data.clock.advance(250);
+    data.signals.emit('SIGTERM');
+    assert.equal(await data.settled, null);
+  } finally {
+    data.signals.emit('SIGTERM');
+  }
+  return observed;
+}
+
+test('search status reaches the executor only when its flag is exactly true', async t => {
+  assert.equal(await executorFlag(t, 'searchStatus', undefined), false);
+  assert.equal(await executorFlag(t, 'searchStatus', 'true'), true);
+  for (const value of ['TRUE', '1', 'false', ''])
+    assert.equal(await executorFlag(t, 'searchStatus', value), false);
+});
+
+test('warm invite reaches the executor only when its flag is exactly true', async t => {
+  assert.equal(await executorFlag(t, 'warmInvite', undefined), false);
+  assert.equal(await executorFlag(t, 'warmInvite', 'true'), true);
+  for (const value of ['TRUE', '1', 'false', ''])
+    assert.equal(await executorFlag(t, 'warmInvite', value), false);
+});
+
 test('three refresh cycles preserve opaque CAS versions and the 15-minute interval', async t => {
   const data = await syntheticManager(t);
   assert.equal(data.navigations(), 1);
@@ -994,7 +1091,7 @@ for (const failVersion of [1, 2]) {
     );
     await data.clock.advance(1);
     assert.equal(data.stdout.includes('instagram_session_recovered\n'), true);
-    assert.equal(data.stderr.length, 1);
+    assert.equal(operationalStderr(data).length, 1);
     data.signals.emit('SIGTERM');
     assert.equal(await data.settled, null);
   });
@@ -1012,7 +1109,7 @@ for (const pending of [
     await data.clock.advance(30000);
     assert.equal(data.entries[0].signal.aborted, true);
     assert.equal(data.page.listenerCount('response'), 0);
-    assert.deepEqual(data.stderr, [
+    assert.deepEqual(operationalStderr(data), [
       'instagram_session_session_update_rejected\n',
     ]);
     const count = data.entries.length;
@@ -1510,7 +1607,7 @@ for (const [method, body, label] of [
       baseEnv.INSTAGRAM_TESTER_ADMIN_USER_ID
     );
     assert.equal(data.headers.length, 1);
-    assert.deepEqual(data.stderr, []);
+    assert.deepEqual(operationalStderr(data), []);
   });
 }
 
@@ -1744,4 +1841,339 @@ test('does not expose a warm page or claim work before the publication CAS resol
   data.signals.emit('SIGTERM');
   assert.equal(await data.settled, null);
   assert.equal(warmStates[0].formBody, null);
+});
+
+const INVITE_TARGET_ID = '178414000000000001';
+const inviteBrowserRequest = Object.freeze({
+  type: 'browser_operation',
+  operation: 'request',
+  id: '33333333-3333-4333-8333-333333333333',
+  request_id: '44444444-4444-4444-8444-444444444444',
+  claim: '55555555-5555-4555-8555-555555555555',
+  action: 'invite',
+  app_id: baseEnv.INSTAGRAM_META_DEVELOPER_APP_ID,
+  username: 'synthetic.user',
+  target_id: INVITE_TARGET_ID,
+  deadline: '2999-01-01T00:00:00.000Z',
+});
+
+function browserCompletion(request, fields) {
+  return {
+    type: 'browser_operation',
+    operation: 'complete',
+    action: request.action,
+    id: request.id,
+    request_id: request.request_id,
+    claim: request.claim,
+    captured_at: '2026-10-08T12:00:00.000Z',
+    ...fields,
+  };
+}
+
+function browserOperationEntries(data, operation) {
+  return data.entries.filter(
+    entry =>
+      entry.payload.type === 'browser_operation' &&
+      entry.payload.operation === operation
+  );
+}
+
+function lifecycleDiagnostics(data) {
+  return data.stderr
+    .filter(line => line.startsWith('{'))
+    .map(line => JSON.parse(line))
+    .filter(line => line.event === 'instagram_browser_operation_lifecycle');
+}
+
+test('passes a deadline that reserves the completion publish', async t => {
+  const deadlines = [];
+  const data = await syntheticManager(t, {
+    vps: true,
+    browserOperations: true,
+    browserRequestReadyAt: 0,
+    browserPublishDelayMs: { read: 20000, claim: 20000 },
+    executeOperation: async ({ request, deadlineAt }) => {
+      deadlines.push(deadlineAt);
+      return browserCompletion(request, { results: [] });
+    },
+  });
+  await data.clock.advance(40000);
+  await drain();
+  const [read] = browserOperationEntries(data, 'read');
+  const [claim] = browserOperationEntries(data, 'claim');
+  assert.equal(read.at, 0);
+  assert.equal(claim.at, 20000);
+  assert.equal(deadlines.length, 1);
+  assert.equal(Number.isFinite(deadlines[0]), true);
+  assert.ok(deadlines[0] <= claim.at + 120000 - 35000);
+  assert.ok(deadlines[0] <= read.at + 120000 - 35000);
+  // 80 s of scope remain after the slow read and claim; 35 s stay reserved.
+  assert.equal(deadlines[0], 40000 + 80000 - 35000);
+  data.signals.emit('SIGTERM');
+});
+
+test('publishes a truthful completion when execution exhausts its budget, then restarts', async t => {
+  const observed = {};
+  const data = await syntheticManager(t, {
+    vps: true,
+    browserOperations: true,
+    browserRequestReadyAt: 0,
+    browserRequest: inviteBrowserRequest,
+    executeOperation: async ({ request, signal, deadlineAt }) => {
+      observed.deadlineAt = deadlineAt;
+      await new Promise(resolveAbort => {
+        signal.addEventListener('abort', resolveAbort, { once: true });
+      });
+      observed.abortedAt = observed.clock.time;
+      return browserCompletion(request, {
+        target_id: request.target_id,
+        error_code: 'invite_unknown',
+        write_started: true,
+      });
+    },
+  });
+  observed.clock = data.clock;
+  const [read] = browserOperationEntries(data, 'read');
+  await data.clock.advance(120000);
+  const error = await data.settled;
+  const completions = browserOperationEntries(data, 'complete');
+  assert.equal(completions.length, 1);
+  assert.equal(completions[0].payload.error_code, 'invite_unknown');
+  assert.equal(completions[0].payload.write_started, true);
+  assert.ok(completions[0].at <= observed.deadlineAt + 1000);
+  assert.ok(completions[0].at < read.at + 120000);
+  assert.equal(
+    lifecycleDiagnostics(data).some(line => line.complete_received === true),
+    true
+  );
+  assert.equal(error?.message, 'browser_runtime_required');
+});
+
+test('permit publish honors timeoutMs and frees the channel', async t => {
+  let data;
+  const permit = {};
+  data = await syntheticManager(t, {
+    vps: true,
+    browserOperations: true,
+    // The first read is empty, so the executor runs after `data` is bound.
+    browserRequestReadyAt: 250,
+    browserRequest: inviteBrowserRequest,
+    pendingPermit: true,
+    executeOperation: async ({ request, permitInvite }) => {
+      if (permit.started !== undefined)
+        return browserCompletion(request, {
+          target_id: request.target_id,
+          error_code: 'meta_unavailable',
+          write_started: false,
+        });
+      permit.started = data.clock.time;
+      try {
+        await permitInvite(
+          {
+            captured_at: '2026-10-08T12:00:00.000Z',
+            target_id: request.target_id,
+            username: request.username,
+            status: 'absent',
+          },
+          { timeoutMs: 1000 }
+        );
+        permit.outcome = 'resolved';
+      } catch {
+        permit.outcome = 'rejected';
+        permit.rejectedAfter = data.clock.time - permit.started;
+      }
+      return browserCompletion(request, {
+        target_id: request.target_id,
+        error_code: 'meta_unavailable',
+        write_started: false,
+      });
+    },
+  });
+  await data.clock.advance(250);
+  assert.equal(permit.started, 250);
+  await data.clock.advance(1000);
+  await drain();
+  assert.equal(permit.outcome, 'rejected');
+  assert.equal(permit.rejectedAfter, 1000);
+  assert.equal(browserOperationEntries(data, 'invite_permit').length, 1);
+  const completions = browserOperationEntries(data, 'complete');
+  assert.equal(completions.length, 1);
+  assert.equal(completions[0].at, permit.started + 1000);
+  assert.equal(completions[0].payload.error_code, 'meta_unavailable');
+  assert.equal(
+    lifecycleDiagnostics(data).some(line => line.complete_received === true),
+    true
+  );
+  data.signals.emit('SIGTERM');
+  assert.equal(await data.settled, null);
+});
+
+function nonNegativeInteger(value) {
+  return Number.isInteger(value) && value >= 0;
+}
+
+function requestIdentifiers(request) {
+  return [
+    request.id,
+    request.request_id,
+    request.claim,
+    request.username,
+    request.target_id,
+  ].filter(Boolean);
+}
+
+test('the lifecycle line times each publish and the executor without identifiers', async t => {
+  let data;
+  data = await syntheticManager(t, {
+    vps: true,
+    browserOperations: true,
+    browserRequestReadyAt: 0,
+    browserRequest: inviteBrowserRequest,
+    browserPublishDelayMs: {
+      read: 100,
+      claim: 200,
+      invite_permit: 300,
+      complete: 400,
+    },
+    executeOperation: async ({ request, permitInvite, onTiming }) => {
+      await new Promise(resolveDelay => {
+        data.clock.setTimeout(resolveDelay, 500);
+      });
+      await permitInvite(
+        {
+          captured_at: '2026-10-08T12:00:00.000Z',
+          target_id: request.target_id,
+          username: request.username,
+          status: 'absent',
+        },
+        { timeoutMs: 5000 }
+      );
+      onTiming({
+        event: 'instagram_browser_operation_timing',
+        action: 'invite',
+        result: 'ok',
+        total_ms: 800,
+        phases: {
+          roles_capture: 120,
+          invite_permit: 300,
+          [request.username]: 9,
+          roles_status: -1,
+          invite_response: 1.5,
+        },
+        invite_response_class: 'success_true',
+        target_id: request.target_id,
+      });
+      return browserCompletion(request, {
+        target_id: request.target_id,
+        status: 'pending',
+        invited: true,
+        write_started: true,
+      });
+    },
+  });
+  await data.clock.advance(1500);
+  await drain();
+  const [line] = lifecycleDiagnostics(data);
+  assert.equal(line.complete_received, true);
+  assert.deepEqual(line.timings_ms, {
+    read: 100,
+    claim: 200,
+    execute: 800,
+    permit: 300,
+    complete: 400,
+  });
+  assert.deepEqual(line.phases_ms, { roles_capture: 120, invite_permit: 300 });
+  const timing = data.stderr
+    .filter(value => value.startsWith('{'))
+    .map(value => JSON.parse(value))
+    .filter(value => value.event === 'instagram_browser_operation_timing');
+  assert.equal(timing.length, 1);
+  assert.deepEqual(timing[0], {
+    event: 'instagram_browser_operation_timing',
+    action: 'invite',
+    result: 'ok',
+    total_ms: 800,
+    phases: { roles_capture: 120, invite_permit: 300 },
+    invite_response_class: 'success_true',
+  });
+  const serialized = data.stderr.join('');
+  requestIdentifiers(inviteBrowserRequest).forEach(value =>
+    assert.equal(serialized.includes(value), false)
+  );
+  data.signals.emit('SIGTERM');
+});
+
+test('timings_ms has exactly five non-negative integers and permit 0 when unused', async t => {
+  const data = await syntheticManager(t, {
+    vps: true,
+    browserOperations: true,
+    browserRequestReadyAt: 0,
+    executeOperation: async ({ request }) =>
+      browserCompletion(request, { results: [] }),
+  });
+  await data.clock.advance(1);
+  const [line] = lifecycleDiagnostics(data);
+  assert.deepEqual(Object.keys(line.timings_ms).sort(), [
+    'claim',
+    'complete',
+    'execute',
+    'permit',
+    'read',
+  ]);
+  Object.values(line.timings_ms).forEach(value =>
+    assert.equal(nonNegativeInteger(value), true)
+  );
+  assert.equal(line.timings_ms.permit, 0);
+  assert.deepEqual(line.phases_ms, {});
+  const serialized = JSON.stringify(line);
+  requestIdentifiers(data.browserRequest).forEach(value =>
+    assert.equal(serialized.includes(value), false)
+  );
+  data.signals.emit('SIGTERM');
+  assert.equal(await data.settled, null);
+});
+
+test('each refresh cycle writes one timing line with an enum outcome', async t => {
+  const data = await syntheticManager(t);
+  await data.clock.advance(900000);
+  await data.clock.advance(900000);
+  const lines = refreshTimings(data);
+  assert.equal(lines.length, 3);
+  lines.forEach(line => {
+    assert.deepEqual(Object.keys(line).sort(), [
+      'event',
+      'outcome',
+      'total_ms',
+    ]);
+    assert.equal(line.outcome, 'healthy');
+    assert.equal(nonNegativeInteger(line.total_ms), true);
+  });
+  data.signals.emit('SIGTERM');
+  assert.equal(await data.settled, null);
+});
+
+test('a failing refresh cycle logs its enum outcome, never the error message', async t => {
+  const data = await syntheticManager(t, {
+    failVersion: 2,
+    failVersionMessage: 'https://secret.example/x',
+  });
+  await data.clock.advance(900000);
+  assert.deepEqual(
+    refreshTimings(data).map(line => line.outcome),
+    ['healthy', 'session_update_rejected']
+  );
+  assert.equal(data.stderr.join('').includes('secret.example'), false);
+  data.signals.emit('SIGTERM');
+  assert.equal(await data.settled, null);
+});
+
+test('an operator-required refresh cycle logs operator_required', async t => {
+  const data = await syntheticManager(t, {
+    redirect: 'https://www.facebook.com/login/',
+  });
+  assert.equal((await data.settled)?.message, 'operator_required');
+  assert.deepEqual(
+    refreshTimings(data).map(line => line.outcome),
+    ['operator_required']
+  );
 });

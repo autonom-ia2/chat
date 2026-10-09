@@ -9,6 +9,7 @@ import {
   executeBrowserOperation,
   createWarmMetaPage,
   acceptFreshRolesResponse,
+  timingObservation,
 } from './browser-operations.mjs';
 import {
   parseEnvelope,
@@ -28,6 +29,12 @@ const CYCLE_BUDGET_MS = 30000;
 const REFRESH_INTERVAL_MS = 900000;
 const BROWSER_OPERATION_POLL_MS = 250;
 const BROWSER_OPERATION_BUDGET_MS = 120000;
+// Mirrors Rails BrowserOperationStore::CLAIM_TTL (120 s). Rails starts its
+// claim window after it receives the claim, so the VPS window is never longer.
+const CLAIM_WINDOW_MS = 120000;
+// One completion publish (CYCLE_BUDGET_MS) plus 5 s of margin, which also
+// absorbs small clock skew against the request's absolute deadline.
+const COMPLETION_RESERVE_MS = 35000;
 
 function writeBrowserOperationDiagnostic(stderr, diagnostic) {
   try {
@@ -336,6 +343,10 @@ export async function run(
   const browserOperationsEnabled =
     env.INSTAGRAM_TESTER_RUNTIME_MODE === 'vps' &&
     env.INSTAGRAM_TESTER_BROWSER_OPERATIONS_ENABLED === 'true';
+  // Off by default: Rails must accept the tester_status candidate key first.
+  const searchStatus = env.INSTAGRAM_TESTER_SEARCH_STATUS_ENABLED === 'true';
+  // Off until a real-Meta pilot proves invites on the reused warm page.
+  const warmInvite = env.INSTAGRAM_TESTER_WARM_INVITE_ENABLED === 'true';
   // 13 minutes asleep + a bounded 2-minute cycle fits the backend's 16-minute heartbeat TTL.
   // Legacy runtimes retain the original 15-minute pause and 30-second cycle.
   const refreshInterval =
@@ -343,6 +354,7 @@ export async function run(
   const command = JSON.parse(
     env.INSTAGRAM_TESTER_PUBLISHER_COMMAND_JSON || 'null'
   );
+  const elapsedMs = startedAt => Math.max(0, Math.round(now() - startedAt));
   let lockPath;
   let lock;
   let context;
@@ -419,6 +431,9 @@ export async function run(
       let warmObservation = null;
       let accepting = true;
       let observe;
+      const cycleStartedAt = now();
+      // A fixed enum from the cycle's own code, never an error message.
+      let refreshOutcome = null;
       try {
         // Version is part of the recoverable cycle and is opaque to this client.
         const bootstrap = await send({
@@ -550,6 +565,7 @@ export async function run(
           state: 'healthy',
           control_available: false,
         });
+        refreshOutcome = 'healthy';
         if (unhealthy) stdout.write('instagram_session_recovered\n');
         unhealthy = null;
         // Recovery is a bounded child: the wrapper starts continuous refresh only after its real CAS receipt.
@@ -562,6 +578,7 @@ export async function run(
           operatorState.required || error.message === 'operator_required'
             ? 'operator_required'
             : 'session_update_rejected';
+        refreshOutcome = code;
         if (unhealthy !== code) stderr.write(`instagram_session_${code}\n`);
         unhealthy = code;
         if (code === 'operator_required') {
@@ -582,6 +599,12 @@ export async function run(
         if (observe) page.off('response', observe);
         // Release pending headers/body/publication; never await them in cleanup.
         cycle.close();
+        if (refreshOutcome)
+          writeBrowserOperationDiagnostic(stderr, {
+            event: 'instagram_manager_refresh_timing',
+            total_ms: elapsedMs(cycleStartedAt),
+            outcome: refreshOutcome,
+          });
       }
       // Browser operations run serially between refreshes. They never share
       // a live publication observer or the human reconnect queue.
@@ -615,6 +638,9 @@ export async function run(
           complete_requested: false,
           complete_received: false,
           executor_error_returned: false,
+          // Milliseconds only, from this host's clock.
+          timings_ms: { read: 0, claim: 0, execute: 0, permit: 0, complete: 0 },
+          phases_ms: {},
         };
         try {
           const sendOperation = payload =>
@@ -624,7 +650,15 @@ export async function run(
                 clock,
               })
             );
-          const envelope = await sendOperation({
+          const timedOperation = async (timing, payload) => {
+            const startedAt = now();
+            try {
+              return await sendOperation(payload);
+            } finally {
+              diagnostic.timings_ms[timing] = elapsedMs(startedAt);
+            }
+          };
+          const envelope = await timedOperation('read', {
             type: 'browser_operation',
             operation: 'read',
           });
@@ -633,7 +667,8 @@ export async function run(
           if (envelope.request) {
             diagnostic.request_present = true;
             diagnostic.phase = 'claim_requested';
-            const claimed = await sendOperation({
+            const claimStartedAt = now();
+            const claimed = await timedOperation('claim', {
               type: 'browser_operation',
               operation: 'claim',
               id: envelope.request.id,
@@ -656,50 +691,107 @@ export async function run(
             executionPending = true;
             diagnostic.execution_started = true;
             diagnostic.phase = 'execute_started';
-            const result = await operationScope.wait(
-              executeOperation({
-                context,
-                page,
-                configuration: operationConfig,
-                warmMetaPage,
-                request: claimed.request,
-                signal: operationScope.signal,
-                onDiagnostic: observation =>
-                  writeBrowserOperationDiagnostic(stderr, observation),
-                permitInvite: async observation => {
-                  if (
-                    observation?.target_id !== claimed.request.target_id ||
-                    observation?.username !== claimed.request.username ||
-                    observation?.status !== 'absent'
-                  )
-                    throw new Error('publication_failed');
-                  const permit = await sendOperation({
-                    type: 'browser_operation',
-                    operation: 'invite_permit',
-                    id: claimed.request.id,
-                    request_id: claimed.request.request_id,
-                    claim: claimed.request.claim,
-                    captured_at: observation.captured_at,
-                    target_id: claimed.request.target_id,
-                    username: claimed.request.username,
-                    status: 'absent',
-                  });
-                  if (
-                    permit.operation !== 'invite_permit' ||
-                    ['id', 'request_id', 'claim'].some(
-                      key => permit[key] !== claimed.request[key]
-                    )
-                  )
-                    throw new Error('publication_failed');
-                  return permit;
-                },
-                requestGuard: request =>
-                  isAllowedBrowserRequest({
-                    ...request,
-                    config: operationConfig,
-                  }),
-              })
+            // The executor must finish early enough for its completion
+            // publish to land inside the operation scope, the claim window and
+            // the request deadline.
+            const requestDeadline = Date.parse(claimed.request.deadline);
+            const executionBudgetMs =
+              Math.min(
+                operationScope.remaining(),
+                claimStartedAt + CLAIM_WINDOW_MS - now(),
+                Number.isNaN(requestDeadline) ? 0 : requestDeadline - Date.now()
+              ) - COMPLETION_RESERVE_MS;
+            const deadlineAt = now() + executionBudgetMs;
+            const executionScope = deadlineScope(
+              operationScope.signal,
+              clock,
+              Math.max(1, executionBudgetMs),
+              now
             );
+            let executionTimedOut = false;
+            let result;
+            const executeStartedAt = now();
+            try {
+              result = await operationScope.wait(
+                executeOperation({
+                  context,
+                  page,
+                  configuration: operationConfig,
+                  warmMetaPage,
+                  searchStatus,
+                  warmInvite,
+                  request: claimed.request,
+                  signal: executionScope.signal,
+                  deadlineAt,
+                  now,
+                  onDiagnostic: observation =>
+                    writeBrowserOperationDiagnostic(stderr, observation),
+                  onTiming: observation => {
+                    const timing = timingObservation(observation);
+                    diagnostic.phases_ms = timing.phases;
+                    writeBrowserOperationDiagnostic(stderr, timing);
+                  },
+                  permitInvite: async (observation, { timeoutMs } = {}) => {
+                    if (
+                      observation?.target_id !== claimed.request.target_id ||
+                      observation?.username !== claimed.request.username ||
+                      observation?.status !== 'absent' ||
+                      !Number.isFinite(timeoutMs) ||
+                      timeoutMs <= 0
+                    )
+                      throw new Error('publication_failed');
+                    // The permit has its own deadline. Its abort tears down
+                    // this publish, and the publish promise is awaited to the
+                    // end so the completion can use the publisher afterwards.
+                    const permitScope = deadlineScope(
+                      operationScope.signal,
+                      clock,
+                      timeoutMs,
+                      now
+                    );
+                    const permitStartedAt = now();
+                    try {
+                      const permit = await publish(
+                        command,
+                        {
+                          type: 'browser_operation',
+                          operation: 'invite_permit',
+                          id: claimed.request.id,
+                          request_id: claimed.request.request_id,
+                          claim: claimed.request.claim,
+                          captured_at: observation.captured_at,
+                          target_id: claimed.request.target_id,
+                          username: claimed.request.username,
+                          status: 'absent',
+                        },
+                        { signal: permitScope.signal, clock }
+                      );
+                      if (
+                        permit.operation !== 'invite_permit' ||
+                        ['id', 'request_id', 'claim'].some(
+                          key => permit[key] !== claimed.request[key]
+                        )
+                      )
+                        throw new Error('publication_failed');
+                      return permit;
+                    } finally {
+                      permitScope.close();
+                      diagnostic.timings_ms.permit +=
+                        elapsedMs(permitStartedAt);
+                    }
+                  },
+                  requestGuard: request =>
+                    isAllowedBrowserRequest({
+                      ...request,
+                      config: operationConfig,
+                    }),
+                })
+              );
+            } finally {
+              executionTimedOut = executionScope.signal.aborted;
+              executionScope.close();
+              diagnostic.timings_ms.execute = elapsedMs(executeStartedAt);
+            }
             executionPending = false;
             diagnostic.execution_returned = true;
             diagnostic.executor_error_returned = Boolean(result.error_code);
@@ -712,7 +804,7 @@ export async function run(
               throw new Error('publication_failed');
             diagnostic.complete_requested = true;
             diagnostic.phase = 'complete_requested';
-            const completed = await sendOperation(result);
+            const completed = await timedOperation('complete', result);
             diagnostic.complete_received = true;
             diagnostic.phase = 'complete_received';
             if (
@@ -736,6 +828,9 @@ export async function run(
               }).catch(() => {});
               break;
             }
+            // The truthful completion has landed. A Playwright call abandoned
+            // by the execution deadline must not leak into the next operation.
+            if (executionTimedOut) throw new Error('browser_runtime_required');
           }
         } catch (error) {
           writeBrowserOperationDiagnostic(stderr, diagnostic);

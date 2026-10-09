@@ -4,6 +4,7 @@ import { withFullI18n } from 'test-i18n';
 import instagramClient from 'dashboard/api/channel/instagramClient';
 import { useAlert } from 'dashboard/composables';
 import TesterOnboarding from './TesterOnboarding.vue';
+import TesterAcceptanceInstructions from './TesterAcceptanceInstructions.vue';
 import Instagram from '../Instagram.vue';
 
 vi.mock('dashboard/api/channel/instagramClient', () => ({
@@ -458,6 +459,37 @@ describe('Instagram assisted tester onboarding', () => {
     }
   );
 
+  it('offers Invite for an exact absent search result without a status request', async () => {
+    instagramClient.searchTesters.mockResolvedValue({
+      data: { results: [{ ...candidate, tester_status: 'absent' }] },
+    });
+    const wrapper = mountTester();
+    await searchAndSelect(wrapper);
+    expect(button(wrapper, 'Enviar convite')).toBeDefined();
+    expect(instagramClient.getTesterStatus).not.toHaveBeenCalled();
+  });
+
+  it('keeps Invite available without acceptance steps when the invite was not sent', async () => {
+    instagramClient.getTesterStatus.mockResolvedValue({
+      data: { status: 'absent' },
+    });
+    instagramClient.inviteTester.mockRejectedValue({
+      response: { data: { error_code: 'invite_not_sent' } },
+    });
+    const wrapper = mountTester();
+    await searchAndSelect(wrapper);
+    await button(wrapper, 'Enviar convite').trigger('click');
+    await flushPromises();
+    expect(wrapper.text()).toContain(
+      'O convite não foi enviado. Tente novamente em alguns minutos e procure o suporte se persistir.'
+    );
+    expect(button(wrapper, 'Enviar convite')).toBeDefined();
+    expect(wrapper.findComponent(TesterAcceptanceInstructions).exists()).toBe(
+      false
+    );
+    expect(instagramClient.getTesterStatus).toHaveBeenCalledTimes(1);
+  });
+
   it('reconciles timeout before allowing any new invite', async () => {
     instagramClient.getTesterStatus.mockResolvedValue({
       data: { status: 'absent' },
@@ -467,10 +499,13 @@ describe('Instagram assisted tester onboarding', () => {
     await searchAndSelect(wrapper);
     await button(wrapper, 'Enviar convite').trigger('click');
     await flushPromises();
+    // The single automatic check still sees absent, so Invite stays hidden.
+    expect(instagramClient.getTesterStatus).toHaveBeenCalledTimes(2);
+    expect(wrapper.text()).toContain('Não foi possível confirmar o envio');
     expect(button(wrapper, 'Enviar convite')).toBeUndefined();
     await button(wrapper, 'Verificar convite').trigger('click');
     await flushPromises();
-    expect(instagramClient.getTesterStatus).toHaveBeenCalledTimes(2);
+    expect(instagramClient.getTesterStatus).toHaveBeenCalledTimes(3);
     expect(button(wrapper, 'Enviar convite')).toBeDefined();
     expect(instagramClient.inviteTester).toHaveBeenCalledTimes(1);
   });

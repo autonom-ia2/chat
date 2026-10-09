@@ -108,6 +108,7 @@
           "STATUS_ERROR": "Não foi possível verificar o convite. Tente novamente.",
           "INVITE_ERROR": "Não foi possível enviar o convite. Verifique o convite antes de tentar novamente.",
           "INVITE_UNKNOWN": "Não foi possível confirmar o envio. Verifique o convite antes de tentar enviar novamente.",
+          "INVITE_NOT_SENT": "O convite não foi enviado. Tente novamente em alguns minutos e procure o suporte se persistir.",
           "UNAVAILABLE": "A integração com o Instagram está indisponível no momento. Procure o suporte para restabelecê-la.",
           "MANUAL_HELP": "Depois que o suporte confirmar o restabelecimento, volte a esta tela e tente novamente.",
           "RATE_LIMITED": "Aguarde antes de tentar novamente.",
