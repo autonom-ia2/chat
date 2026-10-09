@@ -218,6 +218,95 @@ test('a second post after the write is a duplicate and unknown', async () => {
   assert.equal(state.inviteResponseClass, 'duplicate');
 });
 
+function tamperedInvitePost(field, value) {
+  const body = new URLSearchParams(inviteBody());
+  body.set(field, value);
+  const text = body.toString();
+  return { url: () => INVITE_URL, method: () => 'POST', postData: () => text };
+}
+
+// The guards after the gate keep a permitted write to this op's exact target,
+// pinned __aaid and exact fields; anything else is blocked and never written.
+[
+  ['user_id_or_vanitys[0]', '178414000000000999'],
+  ['__aaid', '9000002'],
+  ['role', 'administrators'],
+].forEach(([field, value]) => {
+  test(`a permitted post with a different ${field} is blocked as invalid_selection`, async () => {
+    const state = readyState();
+    state.invitePermit = 'write';
+    const page = await routedPage(state);
+    const route = fakeRoute(tamperedInvitePost(field, value));
+
+    await page.routeHandler(route);
+
+    assert.equal(route.calls.abort, 1);
+    assert.equal(route.calls.continue, 0);
+    assert.equal(state.inviteWriteStarted, false);
+    assert.equal(state.inviteRequestCount, 0);
+    assert.equal(state.inviteRequestInvalid, true);
+    assert.deepEqual(state.inviteOutcome, {
+      ok: false,
+      error: 'invalid_selection',
+      blocked: true,
+    });
+  });
+});
+
+test('a permitted post with an extra field is blocked as invalid_selection', async () => {
+  const state = readyState();
+  state.invitePermit = 'write';
+  const page = await routedPage(state);
+  const route = fakeRoute(tamperedInvitePost('user_id_or_vanitys[1]', '1'));
+
+  await page.routeHandler(route);
+
+  assert.equal(route.calls.continue, 0);
+  assert.equal(state.inviteWriteStarted, false);
+  assert.equal(state.inviteOutcome?.error, 'invalid_selection');
+});
+
+test('a permitted post when the page left the roles location is blocked as session expired', async () => {
+  const state = readyState();
+  state.invitePermit = 'write';
+  const page = await routedPage(state);
+  page.url = () => 'https://developers.facebook.com/login/';
+  const route = fakeRoute(invitePost());
+
+  await page.routeHandler(route);
+
+  assert.equal(route.calls.abort, 1);
+  assert.equal(route.calls.continue, 0);
+  assert.equal(state.inviteWriteStarted, false);
+  assert.equal(state.inviteRequestInvalid, false);
+  assert.deepEqual(state.inviteOutcome, {
+    ok: false,
+    error: 'meta_session_expired',
+    blocked: true,
+  });
+});
+
+test('a continue that throws after the write marker is unknown and stays written', async () => {
+  const state = readyState();
+  state.invitePermit = 'write';
+  const page = await routedPage(state);
+  const route = fakeRoute(invitePost());
+  route.continue = async () => {
+    throw new Error('route_continue_failed');
+  };
+
+  await page.routeHandler(route);
+
+  assert.equal(state.inviteWriteStarted, true);
+  assert.equal(state.inviteRequestCount, 1);
+  assert.deepEqual(state.inviteOutcome, {
+    ok: false,
+    error: 'invite_unknown',
+    write_started: true,
+  });
+  assert.equal(state.inviteResponseClass, 'request_failed');
+});
+
 test('requestfailed_after_success_keeps_success', async () => {
   const state = operations.operationState();
   const page = fakePage();

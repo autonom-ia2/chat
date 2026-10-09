@@ -1997,7 +1997,7 @@ test('permit publish honors timeoutMs and frees the channel', async t => {
   assert.equal(permit.rejectedAfter, 1000);
   assert.equal(browserOperationEntries(data, 'invite_permit').length, 1);
   const completions = browserOperationEntries(data, 'complete');
-  assert.equal(completions.length >= 1, true);
+  assert.equal(completions.length, 1);
   assert.equal(completions[0].at, permit.started + 1000);
   assert.equal(completions[0].payload.error_code, 'meta_unavailable');
   assert.equal(

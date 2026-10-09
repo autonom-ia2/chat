@@ -83,6 +83,40 @@ function doublePostHtml() {
   );
 }
 
+// Posts another profile after the click; the route guard must block it.
+function tamperedTargetHtml() {
+  const html = createFixtureHtml(fixture, 'invite_unknown');
+  const needle = "fields.set('user_id_or_vanitys[0]', target.id);";
+  if (html.split(needle).length !== 2) throw new Error('fixture_shape_changed');
+  return html.replace(
+    needle,
+    "fields.set('user_id_or_vanitys[0]', '178414000000000999');"
+  );
+}
+
+// Answers write only after the manager's permit budget, as a slow publish
+// would, so the executor's post-permit budget check has to stop the click.
+function permitAfterItsBudget(fields) {
+  return async (observation, { timeoutMs } = {}) => {
+    await delay(timeoutMs + 1000);
+    return permitReply(observation, fields);
+  };
+}
+
+// The page leaves the roles location while the permit is in flight.
+function permitAfterLeavingRoles(fields) {
+  return async (observation, _options, page) => {
+    await page.evaluate(() =>
+      window.history.replaceState(
+        null,
+        '',
+        `${window.location.pathname}?business_id=1`
+      )
+    );
+    return permitReply(observation, fields);
+  };
+}
+
 const CASES = [
   {
     name: 'slow_permit_never_reports_an_unsent_write',
@@ -107,6 +141,8 @@ const CASES = [
     fault: { path: INVITE_PATH, delayMs: 40000, body: SUCCESS_BODY },
     expect: { error_code: 'invite_unknown', write_started: true, delta: 1 },
     returnsBeforeDeadlinePlusMs: 2000,
+    // A silent Meta is waited for until the deadline, not a shorter timer.
+    waitsUntilDeadlineMinusMs: 1000,
     responseClasses: ['timeout'],
   },
   {
@@ -195,6 +231,40 @@ const CASES = [
     fault: { path: rolesPagePath, status: 200, body: doublePostHtml() },
     expect: { error_code: 'invite_unknown', write_started: true, delta: 1 },
     responseClasses: ['duplicate'],
+  },
+  {
+    name: 'permit_null_never_clicks',
+    permit: async () => null,
+    expect: { error_code: 'meta_unavailable', write_started: false, delta: 0 },
+    noClick: true,
+    responseClasses: ['none'],
+  },
+  {
+    name: 'late_write_permit_without_budget_never_clicks',
+    permit: permitAfterItsBudget(WRITE),
+    budgetMs: 30000,
+    expect: { error_code: 'meta_unavailable', write_started: false, delta: 0 },
+    noClick: true,
+    responseClasses: ['none'],
+  },
+  {
+    name: 'location_lost_during_permit_never_clicks',
+    permit: permitAfterLeavingRoles(WRITE),
+    expect: {
+      error_code: 'meta_session_expired',
+      write_started: false,
+      delta: 0,
+    },
+    noClick: true,
+    responseClasses: ['none'],
+  },
+  {
+    name: 'tampered_target_after_click_is_blocked',
+    permit: permitAfter(0, WRITE),
+    fault: { path: rolesPagePath, status: 200, body: tamperedTargetHtml() },
+    expect: { error_code: 'invalid_selection', write_started: false, delta: 0 },
+    clicked: true,
+    responseClasses: ['none'],
   },
 ];
 
@@ -308,12 +378,19 @@ function checkCase(definition, observed) {
       observed.permitDeltas.length === 1 && observed.permitDeltas[0] === 0
     );
   if (definition.noClick) check('no_click', !observed.clicked);
+  if (definition.clicked) check('clicked', observed.clicked);
   if (definition.noPermit) check('no_permit', observed.permitCalls === 0);
   if (definition.returnsBeforeDeadlinePlusMs)
     check(
       'returns_within_deadline',
       observed.returnedAt <=
         observed.deadlineAt + definition.returnsBeforeDeadlinePlusMs
+    );
+  if (definition.waitsUntilDeadlineMinusMs)
+    check(
+      'waits_until_deadline',
+      observed.returnedAt >=
+        observed.deadlineAt - definition.waitsUntilDeadlineMinusMs
     );
   if (definition.returnsWithinPermitBudgetPlusMs)
     check(
@@ -392,7 +469,7 @@ try {
           permitStartedAt = Date.now();
           permitTimeoutMs = options?.timeoutMs ?? null;
           permitDeltas.push(transport.counts().invite - before);
-          return definition.permit(observation, options);
+          return definition.permit(observation, options, page);
         },
       });
     } catch (error) {
