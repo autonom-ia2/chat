@@ -467,6 +467,9 @@ const defaultPipelinePayload = pipeline => ({
   ...(pipeline?.goal ? { goal: pipeline.goal } : {}),
   ...(pipeline?.meta_sync ? { meta_sync: pipeline.meta_sync } : {}),
   ...(pipeline?.google_sync ? { google_sync: pipeline.google_sync } : {}),
+  ...(pipeline?.when_to_use !== undefined
+    ? { when_to_use: pipeline.when_to_use }
+    : {}),
 });
 
 const normalizeStagePayload = (stage, index) => ({

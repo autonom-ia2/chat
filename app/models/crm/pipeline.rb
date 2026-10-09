@@ -10,6 +10,7 @@
 #  name          :string           not null
 #  position      :integer          default(0), not null
 #  status        :integer          default("active"), not null
+#  when_to_use   :text
 #  created_at    :datetime         not null
 #  updated_at    :datetime         not null
 #  account_id    :bigint           not null
@@ -44,7 +45,11 @@ class Crm::Pipeline < ApplicationRecord
   before_validation :initialize_followup_days, on: :create
   before_save :turn_off_conversion_sync, unless: :counts_as_sale?
 
+  MAX_WHEN_TO_USE = 1_000
+
   validates :name, presence: true
+  # Multifunil (#1145): o "Quando usar" que a IA lê para saber se um pedido é deste funil.
+  validates :when_to_use, length: { maximum: MAX_WHEN_TO_USE }
   validates :metadata, jsonb_attributes_length: true
 
   private

@@ -4874,6 +4874,15 @@
       "default_stage_id": {
         "tipo": "inteiro"
       },
+      "subject_ai_mode": {
+        "padrao": "off",
+        "tipo": "string",
+        "um_de": [
+          "off",
+          "suggest",
+          "auto"
+        ]
+      },
       "visibility_mode": {
         "padrao": "all_inbox_cards",
         "tipo": "string",
@@ -5035,6 +5044,10 @@
           "active",
           "archived"
         ]
+      },
+      "when_to_use": {
+        "max_caracteres": 1000,
+        "tipo": "string"
       }
     },
     "completo": false,
@@ -13689,18 +13702,18 @@
   "POST crm/conversations/:conversation_id/focus": {
     "campos": {
       "card_id": {
-        "nao_pode_ficar_vazio": true,
         "obrigatorio": true,
-        "tipo": "inteiro"
+        "tipo": "id",
+        "tipo_pela_leitura": "nome"
       }
     },
     "completo": true,
     "controller": "api/v1/accounts/crm/conversation_cards#focus",
-    "modelo": "Crm::CardConversation",
+    "modelo": "Crm::Card",
     "origem": [
       "app/controllers/api/v1/accounts/crm/conversation_cards_controller.rb:12",
       "app/controllers/api/v1/accounts/crm/conversation_cards_controller.rb:13",
-      "app/controllers/api/v1/accounts/crm/conversation_cards_controller.rb:26"
+      "app/controllers/api/v1/accounts/crm/conversation_cards_controller.rb:25"
     ],
     "sem_corpo": false
   },
@@ -14131,6 +14144,10 @@
           "active",
           "archived"
         ]
+      },
+      "when_to_use": {
+        "max_caracteres": 1000,
+        "tipo": "string"
       }
     },
     "completo": false,
@@ -21758,6 +21775,10 @@
           "active",
           "archived"
         ]
+      },
+      "when_to_use": {
+        "max_caracteres": 1000,
+        "tipo": "string"
       }
     },
     "completo": false,
