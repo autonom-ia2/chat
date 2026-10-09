@@ -458,7 +458,20 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingPages', type: :request do
       call(admin, :get, base)
 
       expect(body['payload'].pluck('id')).to eq([page.id])
-      expect(body['payload'].first).to include('upcoming_meetings_count' => 1, 'attention' => false, 'enabled' => true)
+      expect(body['payload'].first).to include('upcoming_meetings_count' => 1, 'attention' => false, 'enabled' => true,
+                                               'missing' => [])
+    end
+
+    it 'index tells what a disabled page still needs, so the screen can show Draft or Paused' do
+      blank = create_booking_profile(account: account, host: world.host, enabled: false, locations: [],
+                                     default_assignee: nil, working_hours: { 'start_hour' => 9, 'end_hour' => 17, 'weekdays' => [] })
+      page.update!(enabled: false)
+
+      call(admin, :get, base)
+
+      by_id = body['payload'].index_by { |item| item['id'] }
+      expect(by_id[blank.id]['missing']).to match_array(%w[host location working_hours])
+      expect(by_id[page.id]['missing']).to eq([])
     end
   end
 

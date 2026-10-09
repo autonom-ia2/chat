@@ -88,7 +88,10 @@ const toggleExtra = value => {
 
 <template>
   <section class="flex flex-col gap-6">
-    <h2 class="m-0 text-2xl font-semibold text-n-slate-12">
+    <h2
+      tabindex="-1"
+      class="m-0 text-2xl font-semibold text-n-slate-12 focus:outline-none"
+    >
       {{ t('BOOKING.WHEN.TITLE') }}
     </h2>
 
@@ -96,7 +99,11 @@ const toggleExtra = value => {
       <legend class="p-0 mb-1 text-base font-semibold text-n-slate-12">
         {{ t('BOOKING.WHEN.DAYS_LABEL') }}
       </legend>
-      <div data-weekdays class="flex flex-wrap gap-2">
+      <div
+        data-weekdays
+        :data-invalid="error === 'WEEKDAYS' || undefined"
+        class="flex flex-wrap gap-2"
+      >
         <BookingToggle
           v-for="day in WEEKDAYS"
           :key="day"
@@ -107,7 +114,11 @@ const toggleExtra = value => {
           @toggle="toggleDay(day)"
         />
       </div>
-      <p v-if="error === 'WEEKDAYS'" class="m-0 text-base text-n-ruby-11">
+      <p
+        v-if="error === 'WEEKDAYS'"
+        role="alert"
+        class="m-0 text-base text-n-ruby-11"
+      >
         {{ t('BOOKING.WIZARD.ERRORS.WEEKDAYS') }}
       </p>
     </fieldset>

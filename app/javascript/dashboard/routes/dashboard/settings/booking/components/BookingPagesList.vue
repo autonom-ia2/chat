@@ -6,12 +6,13 @@ import BookingPagesAPI from 'dashboard/api/crmBookingPages';
 import BookingPageCard from './BookingPageCard.vue';
 
 // A lista de páginas: carregando, erro, vazio (1 frase + 1 botão) e os cartões.
-// Pausar, publicar e excluir acontecem aqui; editar e ver abrem outra tela.
+// Pausar e excluir acontecem aqui; editar, publicar (pela prévia) e ver abrem
+// outra tela.
 const props = defineProps({
   canManage: { type: Boolean, default: false },
 });
 
-const emit = defineEmits(['create', 'edit', 'view']);
+const emit = defineEmits(['create', 'edit', 'publish', 'view']);
 
 const { t } = useI18n();
 const pages = ref([]);
@@ -43,13 +44,6 @@ const setNotice = (id, text) => {
   notices.value = { ...notices.value, [id]: text };
 };
 
-const missingText = missing =>
-  t('BOOKING.CARD.MISSING', {
-    items: missing
-      .map(item => t(`BOOKING.PREVIEW.MISSING.${item.toUpperCase()}`))
-      .join(', '),
-  });
-
 const run = async (page, action) => {
   busyId.value = page.id;
   setNotice(page.id, '');
@@ -59,21 +53,6 @@ const run = async (page, action) => {
     busyId.value = null;
   }
 };
-
-const publish = page =>
-  run(page, async () => {
-    try {
-      const { data } = await BookingPagesAPI.publish(page.id);
-      replace(data.payload);
-      useAlert(t('BOOKING.CARD.PUBLISHED_OK'));
-    } catch (error) {
-      const missing = error?.response?.data?.missing;
-      setNotice(
-        page.id,
-        missing?.length ? missingText(missing) : t('BOOKING.CARD.ACTION_ERROR')
-      );
-    }
-  });
 
 const pause = page =>
   run(page, async () => {
@@ -192,7 +171,7 @@ onMounted(load);
             :notice="notices[page.id] || ''"
             @edit="emit('edit', $event)"
             @view="emit('view', $event)"
-            @publish="publish"
+            @publish="emit('publish', $event)"
             @pause="pause"
             @delete="remove"
           />

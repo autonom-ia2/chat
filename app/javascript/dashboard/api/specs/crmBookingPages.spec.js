@@ -56,16 +56,11 @@ describe('#CrmBookingPagesAPI', () => {
     });
   });
 
-  it('publica, pausa e pede a prévia nas rotas de membro', () => {
+  it('publica e pausa nas rotas de membro', () => {
     crmBookingPages.publish(4);
     crmBookingPages.pause(4);
-    crmBookingPages.previewToken(4);
     expect(axiosMock.post).toHaveBeenNthCalledWith(1, `${BASE}/4/publish`);
     expect(axiosMock.post).toHaveBeenNthCalledWith(2, `${BASE}/4/pause`);
-    expect(axiosMock.post).toHaveBeenNthCalledWith(
-      3,
-      `${BASE}/4/preview_token`
-    );
   });
 
   it('envia logo e foto como arquivo no campo file', () => {

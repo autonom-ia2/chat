@@ -14,7 +14,10 @@ const { t } = useI18n();
 
 <template>
   <section class="flex flex-col gap-6">
-    <h2 class="m-0 text-2xl font-semibold text-n-slate-12">
+    <h2
+      tabindex="-1"
+      class="m-0 text-2xl font-semibold text-n-slate-12 focus:outline-none"
+    >
       {{ t('BOOKING.TEMPLATE.TITLE') }}
     </h2>
     <ul

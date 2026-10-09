@@ -84,23 +84,32 @@ describe('BookingPagesList', () => {
     BookingPagesAPI.get.mockResolvedValue({
       data: {
         payload: [
-          page(1, { upcoming_meetings_count: 3 }),
-          page(2, { enabled: false }),
+          page(1, { upcoming_meetings_count: 3, missing: [] }),
+          page(2, { enabled: false, missing: [] }),
+          page(3, { enabled: false, missing: ['host'] }),
         ],
       },
     });
     const wrapper = mountList();
     await flushPromises();
     const cards = wrapper.findAll('[data-page]');
-    expect(cards).toHaveLength(2);
+    expect(cards).toHaveLength(3);
     expect(cards[0].find('h3').text()).toBe('Página 1');
     expect(cards[0].find('[data-status]').text()).toBe(
-      'BOOKING.CARD.PUBLISHED'
+      'BOOKING.CARD.STATUS.LIVE'
     );
     expect(cards[0].text()).toContain('BOOKING.CARD.UPCOMING 3');
     expect(cards[0].find('[data-pause]').exists()).toBe(true);
-    expect(cards[1].find('[data-status]').text()).toBe('BOOKING.CARD.PAUSED');
+    expect(cards[1].find('[data-status]').text()).toBe(
+      'BOOKING.CARD.STATUS.PAUSED'
+    );
     expect(cards[1].find('[data-publish]').exists()).toBe(true);
+    // Desligada e com algo faltando: Rascunho. Link e QR só para página no ar.
+    expect(cards[2].find('[data-status]').text()).toBe(
+      'BOOKING.CARD.STATUS.DRAFT'
+    );
+    expect(cards[1].find('[data-link-url]').exists()).toBe(false);
+    expect(cards[2].find('[data-link-url]').exists()).toBe(false);
     expect(cards[0].find('[data-link-url]').text()).toBe(
       'https://chat.exemplo.com/book/slug-1'
     );
@@ -172,36 +181,36 @@ describe('BookingPagesList', () => {
     await wrapper.find('[data-pause]').trigger('click');
     await flushPromises();
     expect(BookingPagesAPI.pause).toHaveBeenCalledWith(1);
-    expect(wrapper.find('[data-status]').text()).toBe('BOOKING.CARD.PAUSED');
+    expect(wrapper.find('[data-status]').text()).toBe(
+      'BOOKING.CARD.STATUS.PAUSED'
+    );
     expect(useAlert).toHaveBeenCalledWith('BOOKING.CARD.PAUSED_OK');
   });
 
-  it('publicar com pendência mostra o que falta em linguagem simples', async () => {
+  it('Publicar abre a prévia para conferir, sem publicar direto', async () => {
     BookingPagesAPI.get.mockResolvedValue({
-      data: { payload: [page(1, { enabled: false })] },
-    });
-    BookingPagesAPI.publish.mockRejectedValue({
-      response: { status: 422, data: { missing: ['host', 'location'] } },
+      data: { payload: [page(1, { enabled: false, missing: ['host'] })] },
     });
     const wrapper = mountList();
     await flushPromises();
     await wrapper.find('[data-publish]').trigger('click');
-    await flushPromises();
-    const notice = wrapper.find('[data-notice]').text();
-    expect(notice).toContain('BOOKING.CARD.MISSING');
-    expect(notice).toContain('BOOKING.PREVIEW.MISSING.HOST');
-    expect(notice).toContain('BOOKING.PREVIEW.MISSING.LOCATION');
-    expect(wrapper.find('[data-status]').text()).toBe('BOOKING.CARD.PAUSED');
+    expect(BookingPagesAPI.publish).not.toHaveBeenCalled();
+    expect(wrapper.emitted('publish')[0][0].id).toBe(1);
   });
 
   it('excluir pede confirmação antes de chamar a API', async () => {
     BookingPagesAPI.get.mockResolvedValue({ data: { payload: [page(1)] } });
     BookingPagesAPI.delete.mockResolvedValue({});
-    const wrapper = mountList();
+    const wrapper = mount(BookingPagesList, {
+      props: { canManage: true },
+      attachTo: document.body,
+    });
     await flushPromises();
     await wrapper.find('[data-delete]').trigger('click');
+    await flushPromises();
     expect(BookingPagesAPI.delete).not.toHaveBeenCalled();
-    expect(wrapper.find('[data-confirm]').exists()).toBe(true);
+    // A confirmação recebe o foco: o leitor de tela lê a pergunta.
+    expect(document.activeElement).toBe(wrapper.find('[data-confirm]').element);
     await wrapper.find('[data-confirm-no]').trigger('click');
     expect(wrapper.find('[data-confirm]').exists()).toBe(false);
     await wrapper.find('[data-delete]').trigger('click');
@@ -209,6 +218,7 @@ describe('BookingPagesList', () => {
     await flushPromises();
     expect(BookingPagesAPI.delete).toHaveBeenCalledWith(1);
     expect(wrapper.find('[data-page]').exists()).toBe(false);
+    wrapper.unmount();
   });
 
   it('excluir página com reunião marcada (409) explica e mantém o cartão', async () => {

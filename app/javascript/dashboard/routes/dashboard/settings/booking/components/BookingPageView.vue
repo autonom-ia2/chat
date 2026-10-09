@@ -9,7 +9,7 @@ import { pageToForm } from '../bookingPageForm';
 import { joinNames } from '../bookingFormat';
 
 // Para quem só vê (agendamento_view): a página como o cliente vê, para onde vai
-// quem marcar e o link. Nenhum botão muda nada (J8-A4).
+// quem marcar e, com a página no ar, o link. Nenhum botão muda nada (J8-A4).
 const props = defineProps({
   pageId: { type: Number, required: true },
 });
@@ -58,7 +58,10 @@ const peopleNames = computed(() =>
         :stage-id="form.stageId"
         :people-names="peopleNames"
       />
-      <BookingLinkActions v-if="page.public_url" :url="page.public_url" />
+      <BookingLinkActions
+        v-if="page.enabled && page.public_url"
+        :url="page.public_url"
+      />
     </template>
     <button
       type="button"

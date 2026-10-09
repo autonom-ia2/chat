@@ -23,9 +23,7 @@ class Api::V1::Accounts::Crm::BookingPagesController < Api::V1::Accounts::Crm::B
     report = ::Crm::BookingV2::AttentionReport.new(account: Current.account)
     pages = pages_scope.includes(:default_assignee, agent_booking_links: :agent).order(:id).to_a
     counts = ::Crm::BookingV2::AttentionReport.upcoming_counts(pages)
-    payload = pages.map do |page|
-      ::Crm::BookingV2::PageSerializer.new(page, attention: report.attention?(page), upcoming_meetings_count: counts.fetch(page.id, 0)).summary
-    end
+    payload = pages.map { |page| page_summary(page, report, counts) }
     render json: { payload: payload }
   end
 
@@ -50,7 +48,7 @@ class Api::V1::Accounts::Crm::BookingPagesController < Api::V1::Accounts::Crm::B
   end
 
   def publish
-    missing = publish_blockers
+    missing = publish_blockers(@page)
     return render json: { error: 'crm.booking_v2.publish_incomplete', missing: missing }, status: :unprocessable_entity if missing.any?
 
     @page.update!(enabled: true)
@@ -130,24 +128,31 @@ class Api::V1::Accounts::Crm::BookingPagesController < Api::V1::Accounts::Crm::B
     }
   end
 
-  def publish_blockers
+  # O cartão da lista. `missing` só para página desligada: com algo faltando, a tela mostra Rascunho.
+  def page_summary(page, report, counts)
+    serializer = ::Crm::BookingV2::PageSerializer.new(page, attention: report.attention?(page), upcoming_meetings_count: counts.fetch(page.id, 0))
+    serializer.summary.merge(missing: page.enabled? ? [] : publish_blockers(page))
+  end
+
+  # O que impede publicar (publish e, para o Rascunho, a lista).
+  def publish_blockers(page)
     missing = []
-    missing << 'host' unless page_host_eligible?
-    missing << 'location' if Array(@page.locations).empty?
-    missing << 'working_hours' if @page.weekdays.empty?
-    missing << 'pipeline' unless pipeline_resolvable?
+    missing << 'host' unless page_host_eligible?(page)
+    missing << 'location' if Array(page.locations).empty?
+    missing << 'working_hours' if page.weekdays.empty?
+    missing << 'pipeline' unless pipeline_resolvable?(page)
     missing
   end
 
   # A reserva cria um card: sem funil e etapa resolvíveis o Booker recusa toda reserva, então não publica.
-  def pipeline_resolvable?
-    ::Crm::BookingV2::Booker.pipeline_target(@page).values.all?(&:present?)
+  def pipeline_resolvable?(page)
+    ::Crm::BookingV2::Booker.pipeline_target(page).values.all?(&:present?)
   end
 
-  def page_host_eligible?
-    return eligible?(@page.default_assignee) if @page.assignment_mode_fixed?
+  def page_host_eligible?(page)
+    return eligible?(page.default_assignee) if page.assignment_mode_fixed?
 
-    @page.agent_booking_links.enabled.includes(:agent).any? { |link| eligible?(link.agent) }
+    page.agent_booking_links.select(&:enabled?).any? { |link| eligible?(link.agent) }
   end
 
   def eligible?(user)

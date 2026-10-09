@@ -1,10 +1,11 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, nextTick, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import BookingLinkActions from './BookingLinkActions.vue';
 
-// Um cartão por página: nome, situação, aviso de atenção, o link e, para quem
-// pode mudar, Editar, Pausar/Publicar e Excluir (com confirmação).
+// Um cartão por página: nome, situação (No ar, Pausada ou Rascunho), aviso de
+// atenção, o link (só no ar) e, para quem pode mudar, Editar, Pausar/Publicar e
+// Excluir (com confirmação).
 const props = defineProps({
   page: { type: Object, required: true },
   canManage: { type: Boolean, default: false },
@@ -19,10 +20,32 @@ const { t } = useI18n();
 const confirming = ref(false);
 
 const published = computed(() => props.page.enabled === true);
+// Rascunho: desligada e ainda falta algo para publicar (o `missing` do index).
+const status = computed(() => {
+  if (published.value) return 'LIVE';
+  return props.page.missing?.length ? 'DRAFT' : 'PAUSED';
+});
+const statusLabel = computed(() => {
+  if (status.value === 'LIVE') return t('BOOKING.CARD.STATUS.LIVE');
+  if (status.value === 'DRAFT') return t('BOOKING.CARD.STATUS.DRAFT');
+  return t('BOOKING.CARD.STATUS.PAUSED');
+});
+const STATUS_TONE = {
+  LIVE: { badge: 'bg-n-teal-3 text-n-teal-11', dot: 'bg-n-teal-9' },
+  PAUSED: { badge: 'bg-n-slate-3 text-n-slate-11', dot: 'bg-n-slate-9' },
+  DRAFT: { badge: 'bg-n-amber-3 text-n-amber-11', dot: 'bg-n-amber-9' },
+};
 const title = computed(() => props.page.title || t('BOOKING.CARD.UNTITLED'));
 
 const SECONDARY =
   'inline-flex items-center gap-2 min-h-11 px-4 rounded-xl text-base font-medium ring-1 ring-inset focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand disabled:opacity-60 disabled:cursor-not-allowed';
+
+const confirmBox = ref(null);
+const askDelete = async () => {
+  confirming.value = true;
+  await nextTick();
+  confirmBox.value?.focus();
+};
 
 const confirmDelete = () => {
   confirming.value = false;
@@ -47,18 +70,15 @@ const confirmDelete = () => {
       <span
         data-status
         class="inline-flex items-center gap-2 px-3 py-1 text-sm font-semibold rounded-full"
-        :class="
-          published
-            ? 'bg-n-teal-3 text-n-teal-11'
-            : 'bg-n-slate-3 text-n-slate-11'
-        "
+        :data-status-key="status"
+        :class="STATUS_TONE[status].badge"
       >
         <span
           class="size-2 rounded-full"
-          :class="published ? 'bg-n-teal-9' : 'bg-n-slate-9'"
+          :class="STATUS_TONE[status].dot"
           aria-hidden="true"
         />
-        {{ published ? t('BOOKING.CARD.PUBLISHED') : t('BOOKING.CARD.PAUSED') }}
+        {{ statusLabel }}
       </span>
     </header>
 
@@ -75,7 +95,10 @@ const confirmDelete = () => {
       {{ t('BOOKING.CARD.ATTENTION') }}
     </p>
 
-    <BookingLinkActions v-if="page.public_url" :url="page.public_url" />
+    <BookingLinkActions
+      v-if="published && page.public_url"
+      :url="page.public_url"
+    />
 
     <p
       v-if="notice"
@@ -132,7 +155,7 @@ const confirmDelete = () => {
           :disabled="busy"
           :class="SECONDARY"
           class="ms-auto text-n-ruby-11 bg-n-solid-1 ring-n-weak hover:ring-n-ruby-7"
-          @click="confirming = true"
+          @click="askDelete"
         >
           <span class="i-lucide-trash-2 size-4" aria-hidden="true" />
           {{ t('BOOKING.CARD.DELETE') }}
@@ -153,10 +176,12 @@ const confirmDelete = () => {
 
     <div
       v-if="canManage && confirming"
+      ref="confirmBox"
       data-confirm
       role="alertdialog"
+      tabindex="-1"
       :aria-label="t('BOOKING.CARD.CONFIRM_DELETE')"
-      class="flex flex-col gap-3 p-4 rounded-xl bg-n-ruby-2 ring-1 ring-inset ring-n-ruby-6"
+      class="flex flex-col gap-3 p-4 rounded-xl bg-n-ruby-2 ring-1 ring-inset ring-n-ruby-6 focus:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
     >
       <p class="m-0 text-base font-medium text-n-ruby-12">
         {{ t('BOOKING.CARD.CONFIRM_DELETE') }}

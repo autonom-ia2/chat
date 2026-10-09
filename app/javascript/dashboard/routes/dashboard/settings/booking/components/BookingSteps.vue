@@ -3,8 +3,8 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { STEPS } from '../constants';
 
-// Onde a pessoa está nos seis passos. Passo feito ganha o visto; o atual leva
-// aria-current="step" para o leitor de tela.
+// Onde a pessoa está nos seis passos. Passo feito ganha o visto (e "concluído"
+// para o leitor de tela); o atual leva aria-current="step".
 const props = defineProps({
   current: { type: Number, required: true },
 });
@@ -59,6 +59,9 @@ const steps = computed(() =>
         </span>
         <span :class="step.now ? '' : 'sr-only md:not-sr-only'">
           {{ t(`BOOKING.STEPS.${step.key}`) }}
+        </span>
+        <span v-if="step.done" data-step-done class="sr-only">
+          {{ t('BOOKING.STEPS.DONE') }}
         </span>
         <span
           v-if="step.number < STEPS.length"

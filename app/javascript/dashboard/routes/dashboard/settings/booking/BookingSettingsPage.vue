@@ -5,6 +5,7 @@ import { useCanManage } from 'dashboard/composables/useCanManage';
 import BookingPagesList from './components/BookingPagesList.vue';
 import BookingWizard from './components/BookingWizard.vue';
 import BookingPageView from './components/BookingPageView.vue';
+import { STEP } from './constants';
 
 // Configurações › Agendamento (#1187, F1-D): a lista de páginas, o assistente
 // de seis passos e, para quem só vê, a página em modo leitura. Escrever pede
@@ -12,7 +13,7 @@ import BookingPageView from './components/BookingPageView.vue';
 const { t } = useI18n();
 const canManage = useCanManage('agendamento_manage');
 
-// { mode: 'list' } | { mode: 'wizard', pageId } | { mode: 'view', pageId }
+// { mode: 'list' } | { mode: 'wizard', pageId, step } | { mode: 'view', pageId }
 const screen = ref({ mode: 'list' });
 
 const showList = () => {
@@ -23,6 +24,10 @@ const create = () => {
 };
 const edit = page => {
   screen.value = { mode: 'wizard', pageId: page.id };
+};
+// "Publicar" do cartão abre a prévia: a pessoa confere antes de pôr no ar.
+const publish = page => {
+  screen.value = { mode: 'wizard', pageId: page.id, step: STEP.PREVIA };
 };
 const view = page => {
   screen.value = { mode: 'view', pageId: page.id };
@@ -43,6 +48,7 @@ const view = page => {
     <BookingWizard
       v-if="screen.mode === 'wizard' && canManage"
       :page-id="screen.pageId"
+      :initial-step="screen.step"
       @close="showList"
     />
     <BookingPageView
@@ -55,6 +61,7 @@ const view = page => {
       :can-manage="canManage"
       @create="create"
       @edit="edit"
+      @publish="publish"
       @view="view"
     />
   </div>

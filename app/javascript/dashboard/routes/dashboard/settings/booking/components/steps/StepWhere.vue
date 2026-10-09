@@ -21,15 +21,22 @@ const { t } = useI18n();
 const providers = computed(
   () => new Set(props.calendarOptions.map(option => option.provider))
 );
+const selected = type => props.form.locations.some(item => item.type === type);
+
+// Meet ou Teams cuja caixa saiu da conta: continua na lista, com aviso, para
+// a pessoa poder tirar o local.
+const isDisconnected = choice =>
+  Boolean(choice.provider) && !providers.value.has(choice.provider);
+
 const calendarLocations = computed(() =>
   CALENDAR_LOCATIONS.filter(item => providers.value.has(item.provider))
 );
 const choices = computed(() => [
   ...BASIC_LOCATIONS,
-  ...calendarLocations.value,
+  ...CALENDAR_LOCATIONS.filter(
+    item => !isDisconnected(item) || selected(item.type)
+  ),
 ]);
-
-const selected = type => props.form.locations.some(item => item.type === type);
 const chosenCalendar = computed(() =>
   CALENDAR_LOCATIONS.find(item => selected(item.type))
 );
@@ -47,7 +54,10 @@ const turnOn = choice => {
     ? props.form.locations.filter(item => !calendarTypes.includes(item.type))
     : props.form.locations;
   const patch = {
-    locations: [...others, { type: choice.type, url: '', address: '' }],
+    locations: [
+      ...others,
+      { type: choice.type, url: '', address: '', label: '' },
+    ],
   };
   if (choice.provider) {
     const match = props.calendarOptions.find(
@@ -85,14 +95,24 @@ const errorText = key =>
 <template>
   <section class="flex flex-col gap-6">
     <div class="flex flex-col gap-1">
-      <h2 class="m-0 text-2xl font-semibold text-n-slate-12">
+      <h2
+        tabindex="-1"
+        class="m-0 text-2xl font-semibold text-n-slate-12 focus:outline-none"
+      >
         {{ t('BOOKING.WHERE.TITLE') }}
       </h2>
       <p class="m-0 text-base text-n-slate-11">{{ t('BOOKING.WHERE.HINT') }}</p>
     </div>
 
-    <ul class="flex flex-col gap-3 p-0 m-0 list-none">
-      <li v-for="choice in choices" :key="choice.type">
+    <ul
+      :data-invalid="error === 'LOCATION' || undefined"
+      class="flex flex-col gap-3 p-0 m-0 list-none"
+    >
+      <li
+        v-for="choice in choices"
+        :key="choice.type"
+        class="flex flex-col gap-2"
+      >
         <button
           type="button"
           :data-location="choice.type"
@@ -138,6 +158,18 @@ const errorText = key =>
             <span v-if="selected(choice.type)" class="i-lucide-check size-4" />
           </span>
         </button>
+        <p
+          v-if="isDisconnected(choice)"
+          :data-disconnected="choice.type"
+          role="status"
+          class="flex items-start gap-3 m-0 px-4 py-3 text-base rounded-xl bg-n-amber-3 text-n-amber-12"
+        >
+          <span
+            class="i-lucide-triangle-alert mt-0.5 size-5 shrink-0"
+            aria-hidden="true"
+          />
+          {{ t('BOOKING.WHERE.CALENDAR_DISCONNECTED') }}
+        </p>
       </li>
     </ul>
 
@@ -163,7 +195,10 @@ const errorText = key =>
       @update:model-value="updateLocation('in_person', 'address', $event)"
     />
 
-    <div v-if="chosenCalendar" class="flex flex-col gap-2">
+    <div
+      v-if="chosenCalendar && !isDisconnected(chosenCalendar)"
+      class="flex flex-col gap-2"
+    >
       <p class="m-0 text-base font-semibold text-n-slate-12">
         {{ t('BOOKING.WHERE.CALENDAR_LABEL') }}
       </p>

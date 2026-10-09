@@ -1,11 +1,12 @@
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import CrmKanbanAPI from 'dashboard/api/crmKanban';
 
 // "Quem marcar vai para o funil X, etapa Y, com Z." O padrão já vem escolhido
-// (primeiro funil e primeira etapa); "Alterar" abre a escolha (J3-A10).
+// (primeiro funil e primeira etapa); "Alterar" abre a escolha (J3-A10). A prévia
+// também abre a escolha pelo "Resolver" quando falta o funil (startEditing).
 const props = defineProps({
   pipelineId: { type: Number, default: null },
   stageId: { type: Number, default: null },
@@ -20,6 +21,10 @@ const { t } = useI18n();
 const pipelines = ref([]);
 const stagesByPipeline = ref({});
 const failed = ref(false);
+// Os funis já chegaram: antes disso a frase espera, para não mostrar um nome
+// genérico no lugar do funil escolhido.
+const loaded = ref(false);
+const formRef = ref(null);
 const editing = ref(false);
 const draft = ref({ pipelineId: null, stageId: null });
 
@@ -44,6 +49,7 @@ onMounted(async () => {
     failed.value = true;
   }
   await loadStages(props.pipelineId);
+  loaded.value = true;
 });
 
 const nameOf = (list, id) => list.find(item => item.id === id)?.name || '';
@@ -54,6 +60,7 @@ const stageName = computed(() =>
 const people = computed(() => props.peopleNames || t('BOOKING.PREVIEW.NOBODY'));
 
 const sentence = computed(() => {
+  if (!loaded.value) return '';
   if (!props.pipelineId) {
     return t('BOOKING.PREVIEW.DESTINATION_NO_PIPELINE', {
       people: people.value,
@@ -79,10 +86,14 @@ const stageOptions = computed(() =>
 const firstStage = pipelineId =>
   stagesByPipeline.value[pipelineId]?.[0]?.id ?? null;
 
-const startEditing = () => {
+const startEditing = async () => {
   draft.value = { pipelineId: props.pipelineId, stageId: props.stageId };
   editing.value = true;
+  await nextTick();
+  formRef.value?.querySelector('button')?.focus();
 };
+
+defineExpose({ startEditing });
 
 const choosePipeline = async pipelineId => {
   draft.value = { pipelineId, stageId: null };
@@ -124,7 +135,12 @@ watch(
     <p v-if="failed" role="status" class="m-0 text-base text-n-slate-11">
       {{ t('BOOKING.PREVIEW.PIPELINES_ERROR') }}
     </p>
-    <div v-if="editing" data-destination-form class="flex flex-col gap-4">
+    <div
+      v-if="editing"
+      ref="formRef"
+      data-destination-form
+      class="flex flex-col gap-4"
+    >
       <div class="grid gap-4 sm:grid-cols-2">
         <div class="flex flex-col gap-2">
           <p class="m-0 text-base font-semibold text-n-slate-12">

@@ -5,24 +5,41 @@ import {
   formToPayload,
   imageProblem,
   pageToForm,
+  serverProblem,
   stepProblem,
 } from '../bookingPageForm';
 import { joinNames } from '../bookingFormat';
 
+const SAVE_ERROR = 'BOOKING.WIZARD.SAVE_ERROR';
+const VALID_STEPS = Object.values(STEP);
+
+// O aviso de uma chamada que falhou: o próprio da recusa ou o geral.
+const saveErrorFrom = failure => {
+  const problem = serverProblem(failure?.response?.data);
+  return problem ? `BOOKING.WIZARD.SERVER_ERRORS.${problem}` : SAVE_ERROR;
+};
+
 // Estado e chamadas do assistente de seis passos (J3). Um formulário só para a
 // página inteira: voltar um passo não perde o que foi digitado. Cada
 // "Continuar" confere o passo e salva (PATCH); o último passo publica.
-export const useBookingWizard = ({ pageId, onClose }) => {
-  const step = ref(pageId ? STEP.CONTE : STEP.MODELO);
+// `initialStep` abre uma página existente direto num passo (ex.: a prévia).
+export const useBookingWizard = ({ pageId, initialStep, onClose }) => {
+  const openingStep = VALID_STEPS.includes(initialStep)
+    ? initialStep
+    : STEP.CONTE;
+  const step = ref(pageId ? openingStep : STEP.MODELO);
   const page = ref(null);
   const form = ref(null);
   const loading = ref(Boolean(pageId));
   const loadFailed = ref(false);
+  // A página já estava no ar quando foi aberta: o que mudar vale na hora.
+  const liveOnOpen = ref(false);
   const people = ref([]);
   const peopleState = ref('loading');
   const busy = ref(false);
   const error = ref('');
-  const saveFailed = ref(false);
+  // Chave i18n do aviso de "não salvou" ('' = sem aviso).
+  const saveError = ref('');
   const uploading = ref(null);
   const uploadError = ref(null);
   const missing = ref([]);
@@ -49,6 +66,7 @@ export const useBookingWizard = ({ pageId, onClose }) => {
     if (!pageId) return;
     try {
       const { data } = await BookingPagesAPI.show(pageId);
+      liveOnOpen.value = data.payload?.enabled === true;
       open(data.payload);
     } catch {
       loadFailed.value = true;
@@ -62,14 +80,15 @@ export const useBookingWizard = ({ pageId, onClose }) => {
     error.value = '';
   };
 
-  // Roda uma chamada com o botão ocupado; falha vira o aviso de "não salvou".
+  // Roda uma chamada com o botão ocupado; falha vira o aviso de "não salvou",
+  // com o motivo quando o servidor diz qual é.
   const attempt = async (action, flag = busy) => {
     flag.value = true;
-    saveFailed.value = false;
+    saveError.value = '';
     try {
       await action();
-    } catch {
-      saveFailed.value = true;
+    } catch (failure) {
+      saveError.value = saveErrorFrom(failure);
     } finally {
       flag.value = false;
     }
@@ -116,7 +135,7 @@ export const useBookingWizard = ({ pageId, onClose }) => {
 
   const back = () => {
     error.value = '';
-    saveFailed.value = false;
+    saveError.value = '';
     if (step.value <= STEP.CONTE) {
       onClose();
       return;
@@ -124,14 +143,16 @@ export const useBookingWizard = ({ pageId, onClose }) => {
     step.value -= 1;
   };
 
+  // Só passos que existem: uma pendência desconhecida não tira a pessoa da tela.
   const goTo = target => {
+    if (!VALID_STEPS.includes(target)) return;
     missing.value = [];
     step.value = target;
   };
 
   const publish = async () => {
     busy.value = true;
-    saveFailed.value = false;
+    saveError.value = '';
     missing.value = [];
     try {
       const { data } = await BookingPagesAPI.publish(page.value.id);
@@ -139,7 +160,7 @@ export const useBookingWizard = ({ pageId, onClose }) => {
     } catch (failure) {
       const list = failure?.response?.data?.missing;
       if (list?.length) missing.value = list;
-      else saveFailed.value = true;
+      else saveError.value = saveErrorFrom(failure);
     } finally {
       busy.value = false;
     }
@@ -172,6 +193,7 @@ export const useBookingWizard = ({ pageId, onClose }) => {
       });
       page.value = data.payload;
       change({ pipelineId, stageId });
+      missing.value = missing.value.filter(item => item !== 'pipeline');
     }, savingDestination);
 
   const peopleNames = computed(() => {
@@ -190,11 +212,12 @@ export const useBookingWizard = ({ pageId, onClose }) => {
     form,
     loading,
     loadFailed,
+    liveOnOpen,
     people,
     peopleState,
     busy,
     error,
-    saveFailed,
+    saveError,
     uploading,
     uploadError,
     missing,

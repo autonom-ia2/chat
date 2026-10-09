@@ -27,10 +27,6 @@ class CrmBookingPagesAPI extends ApiClient {
     return axios.post(`${this.url}/${id}/pause`);
   }
 
-  previewToken(id) {
-    return axios.post(`${this.url}/${id}/preview_token`);
-  }
-
   uploadImage(id, kind, file) {
     const body = new FormData();
     body.append('file', file);

@@ -17,8 +17,11 @@
     "CARD": {
       "UNTITLED": "Página sem nome",
       "UPCOMING": "Nenhuma reunião marcada | 1 reunião marcada | {count} reuniões marcadas",
-      "PUBLISHED": "Publicada",
-      "PAUSED": "Pausada",
+      "STATUS": {
+        "LIVE": "No ar",
+        "PAUSED": "Pausada",
+        "DRAFT": "Rascunho"
+      },
       "ATTENTION": "Quem atende não pode receber reuniões agora. Toque em Editar e escolha outra pessoa.",
       "EDIT": "Editar",
       "VIEW": "Ver",
@@ -31,9 +34,7 @@
       "DELETE_BLOCKED": "Esta página tem reuniões marcadas. Pause a página em vez de excluir.",
       "DELETED": "Página excluída.",
       "PAUSED_OK": "Página pausada.",
-      "PUBLISHED_OK": "Página publicada.",
-      "ACTION_ERROR": "Não deu certo. Tente de novo.",
-      "MISSING": "Para publicar, falta: {items}."
+      "ACTION_ERROR": "Não deu certo. Tente de novo."
     },
     "LINK": {
       "COPY": "Copiar link",
@@ -50,11 +51,12 @@
       "LABEL": "Passos para criar a página",
       "COUNT": "Passo {current} de {total}",
       "MODELO": "Modelo",
-      "CONTE": "Conte",
+      "CONTE": "Nome e equipe",
       "ONDE": "Onde acontece",
       "QUANDO": "Dias e horas",
-      "CARA": "Cara",
-      "PREVIA": "Prévia e publicar"
+      "CARA": "Sua marca",
+      "PREVIA": "Prévia e publicar",
+      "DONE": "concluído"
     },
     "WIZARD": {
       "BACK": "Voltar",
@@ -65,6 +67,7 @@
       "DONE": "Voltar para a lista",
       "SAVE_ERROR": "Não deu para salvar. Confira e tente de novo.",
       "LOAD_ERROR": "Não deu para abrir a página.",
+      "LIVE_NOTICE": "Esta página está no ar. O que você mudar vale assim que tocar em Continuar.",
       "ERRORS": {
         "TITLE": "Escreva o nome que o cliente vê.",
         "PEOPLE": "Escolha quem atende.",
@@ -77,6 +80,14 @@
         "IMAGE_TYPE": "Use uma imagem PNG, JPEG ou WebP.",
         "IMAGE_SIZE": "A imagem pode ter até 2 MB.",
         "IMAGE_UPLOAD": "Não deu para enviar a imagem. Tente outra."
+      },
+      "SERVER_ERRORS": {
+        "CALENDAR_GONE": "Essa caixa de e-mail da agenda não está mais disponível. Escolha outra ou tire o Google Meet e o Teams.",
+        "PEOPLE_GONE": "Alguém que você escolheu não pode mais atender. Escolha de novo.",
+        "LOCATIONS": "Um dos lugares não pode mais ser usado. Confira onde vai ser a conversa.",
+        "HOURS": "Confira os dias e os horários.",
+        "PIPELINE": "Esse funil ou etapa não existe mais. Escolha outro.",
+        "BRAND": "Confira a cor e a frase de boas-vindas."
       }
     },
     "TEMPLATE": {
@@ -144,14 +155,15 @@
       "ADDRESS_LABEL": "Endereço",
       "ADDRESS_PLACEHOLDER": "Rua, número e cidade",
       "CALENDAR_LABEL": "Caixa de e-mail da agenda",
-      "CALENDAR_HINT": "Google Meet e Teams aparecem aqui quando você conecta uma caixa de e-mail."
+      "CALENDAR_HINT": "Google Meet e Teams aparecem aqui quando você conecta uma caixa de e-mail.",
+      "CALENDAR_DISCONNECTED": "A caixa de agenda foi desconectada. Tire este local ou conecte de novo."
     },
     "WHEN": {
       "TITLE": "Quando você atende?",
       "DAYS_LABEL": "Dias",
       "FROM": "Das",
       "TO": "Até",
-      "NOTICE_LABEL": "Avisar com",
+      "NOTICE_LABEL": "Marcar com pelo menos",
       "NOTICE_NONE": "Sem antecedência",
       "NOTICE_VALUE": "{value} de antecedência",
       "BUFFER_LABEL": "Intervalo",
@@ -231,7 +243,8 @@
       "MISSING": {
         "HOST": "Escolher quem atende",
         "LOCATION": "Escolher onde vai ser a conversa",
-        "WORKING_HOURS": "Escolher os dias de atendimento"
+        "WORKING_HOURS": "Escolher os dias de atendimento",
+        "PIPELINE": "Escolher para qual funil vai quem marcar"
       },
       "FIX": "Resolver",
       "PUBLISHED_TITLE": "Sua página está no ar.",

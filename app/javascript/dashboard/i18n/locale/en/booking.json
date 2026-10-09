@@ -17,8 +17,11 @@
     "CARD": {
       "UNTITLED": "Untitled page",
       "UPCOMING": "No meetings booked | 1 meeting booked | {count} meetings booked",
-      "PUBLISHED": "Published",
-      "PAUSED": "Paused",
+      "STATUS": {
+        "LIVE": "Live",
+        "PAUSED": "Paused",
+        "DRAFT": "Draft"
+      },
       "ATTENTION": "The person who attends can't take meetings right now. Tap Edit and choose someone else.",
       "EDIT": "Edit",
       "VIEW": "View",
@@ -31,9 +34,7 @@
       "DELETE_BLOCKED": "This page has booked meetings. Pause the page instead of deleting it.",
       "DELETED": "Page deleted.",
       "PAUSED_OK": "Page paused.",
-      "PUBLISHED_OK": "Page published.",
-      "ACTION_ERROR": "That didn't work. Try again.",
-      "MISSING": "To publish, you still need to: {items}."
+      "ACTION_ERROR": "That didn't work. Try again."
     },
     "LINK": {
       "COPY": "Copy link",
@@ -50,11 +51,12 @@
       "LABEL": "Steps to create the page",
       "COUNT": "Step {current} of {total}",
       "MODELO": "Template",
-      "CONTE": "Basics",
+      "CONTE": "Name and team",
       "ONDE": "Where",
       "QUANDO": "Days and hours",
-      "CARA": "Look",
-      "PREVIA": "Preview and publish"
+      "CARA": "Your brand",
+      "PREVIA": "Preview and publish",
+      "DONE": "done"
     },
     "WIZARD": {
       "BACK": "Back",
@@ -65,6 +67,7 @@
       "DONE": "Back to the list",
       "SAVE_ERROR": "We couldn't save. Check and try again.",
       "LOAD_ERROR": "We couldn't open the page.",
+      "LIVE_NOTICE": "This page is live. What you change applies as soon as you tap Continue.",
       "ERRORS": {
         "TITLE": "Write the name the client sees.",
         "PEOPLE": "Choose who attends.",
@@ -77,6 +80,14 @@
         "IMAGE_TYPE": "Use a PNG, JPEG or WebP image.",
         "IMAGE_SIZE": "The image can be up to 2 MB.",
         "IMAGE_UPLOAD": "We couldn't upload the image. Try another one."
+      },
+      "SERVER_ERRORS": {
+        "CALENDAR_GONE": "That calendar email inbox is no longer available. Choose another one or remove Google Meet and Teams.",
+        "PEOPLE_GONE": "Someone you chose can no longer take meetings. Choose again.",
+        "LOCATIONS": "One of the places can no longer be used. Check where the conversation happens.",
+        "HOURS": "Check the days and times.",
+        "PIPELINE": "That pipeline or stage no longer exists. Choose another one.",
+        "BRAND": "Check the color and the welcome message."
       }
     },
     "TEMPLATE": {
@@ -144,7 +155,8 @@
       "ADDRESS_LABEL": "Address",
       "ADDRESS_PLACEHOLDER": "Street, number and city",
       "CALENDAR_LABEL": "Calendar email inbox",
-      "CALENDAR_HINT": "Google Meet and Teams show up here when you connect an email inbox."
+      "CALENDAR_HINT": "Google Meet and Teams show up here when you connect an email inbox.",
+      "CALENDAR_DISCONNECTED": "The calendar email inbox was disconnected. Remove this place or connect it again."
     },
     "WHEN": {
       "TITLE": "When do you attend?",
@@ -231,7 +243,8 @@
       "MISSING": {
         "HOST": "Choose who attends",
         "LOCATION": "Choose where the conversation happens",
-        "WORKING_HOURS": "Choose the days you attend"
+        "WORKING_HOURS": "Choose the days you attend",
+        "PIPELINE": "Choose which pipeline new bookings go to"
       },
       "FIX": "Fix it",
       "PUBLISHED_TITLE": "Your page is live.",

@@ -27,7 +27,7 @@ export const TEMPLATES = [
   {
     key: 'consult_45',
     i18n: 'CONSULT',
-    icon: 'i-lucide-stethoscope',
+    icon: 'i-lucide-calendar-clock',
     tone: 'bg-n-teal-3 text-n-teal-11',
   },
   {
@@ -88,9 +88,11 @@ export const BRAND_COLORS = [
 export const IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
 export const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
 
-// O que a publicação pode pedir, e o passo que resolve cada falta.
+// O que a publicação pode pedir, e o passo que resolve cada falta. O funil se
+// resolve na própria prévia, no "Alterar" de para onde vai quem marcar.
 export const MISSING_STEP = {
   host: STEP.CONTE,
   location: STEP.ONDE,
   working_hours: STEP.QUANDO,
+  pipeline: STEP.PREVIA,
 };

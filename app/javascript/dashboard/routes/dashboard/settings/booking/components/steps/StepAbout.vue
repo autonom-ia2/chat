@@ -38,7 +38,10 @@ const togglePerson = id => {
 
 <template>
   <section class="flex flex-col gap-6">
-    <h2 class="m-0 text-2xl font-semibold text-n-slate-12">
+    <h2
+      tabindex="-1"
+      class="m-0 text-2xl font-semibold text-n-slate-12 focus:outline-none"
+    >
       {{ t('BOOKING.ABOUT.TITLE') }}
     </h2>
 
@@ -96,7 +99,12 @@ const togglePerson = id => {
       <p v-else-if="!people.length" class="m-0 text-base text-n-slate-11">
         {{ t('BOOKING.ABOUT.PEOPLE_EMPTY') }}
       </p>
-      <div v-else data-people class="flex flex-wrap gap-2">
+      <div
+        v-else
+        data-people
+        :data-invalid="error === 'PEOPLE' || undefined"
+        class="flex flex-wrap gap-2"
+      >
         <BookingToggle
           v-for="person in people"
           :key="person.id"
@@ -106,7 +114,11 @@ const togglePerson = id => {
           @toggle="togglePerson(person.id)"
         />
       </div>
-      <p v-if="error === 'PEOPLE'" class="m-0 text-base text-n-ruby-11">
+      <p
+        v-if="error === 'PEOPLE'"
+        role="alert"
+        class="m-0 text-base text-n-ruby-11"
+      >
         {{ t('BOOKING.WIZARD.ERRORS.PEOPLE') }}
       </p>
     </fieldset>

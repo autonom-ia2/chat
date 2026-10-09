@@ -1,13 +1,15 @@
 <script setup>
+import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import BookingPreviewCard from '../BookingPreviewCard.vue';
 import BookingDestination from '../BookingDestination.vue';
 import BookingLinkActions from '../BookingLinkActions.vue';
-import { MISSING_STEP } from '../../constants';
+import { MISSING_STEP, STEP } from '../../constants';
 
 // Passo 6: a prévia, para onde vai quem marcar e Publicar. Se a publicação
 // voltar com pendências, cada uma vira uma linha com "Resolver", que leva ao
-// passo certo. Publicada: link, QR code e Copiar link.
+// passo certo; a do funil abre o "Alterar" daqui mesmo. Publicada: link, QR
+// code e Copiar link.
 defineProps({
   form: { type: Object, required: true },
   page: { type: Object, required: true },
@@ -20,11 +22,23 @@ defineProps({
 
 const emit = defineEmits(['fix', 'saveDestination']);
 const { t } = useI18n();
+const destination = ref(null);
+
+const fix = item => {
+  if (MISSING_STEP[item] === STEP.PREVIA) {
+    destination.value?.startEditing();
+    return;
+  }
+  if (MISSING_STEP[item]) emit('fix', MISSING_STEP[item]);
+};
 </script>
 
 <template>
   <section class="flex flex-col gap-6">
-    <h2 class="m-0 text-2xl font-semibold text-n-slate-12">
+    <h2
+      tabindex="-1"
+      class="m-0 text-2xl font-semibold text-n-slate-12 focus:outline-none"
+    >
       {{ t('BOOKING.PREVIEW.TITLE') }}
     </h2>
 
@@ -36,6 +50,7 @@ const { t } = useI18n();
     />
 
     <BookingDestination
+      ref="destination"
       :pipeline-id="form.pipelineId"
       :stage-id="form.stageId"
       :people-names="peopleNames"
@@ -64,10 +79,11 @@ const { t } = useI18n();
             {{ t(`BOOKING.PREVIEW.MISSING.${item.toUpperCase()}`) }}
           </span>
           <button
+            v-if="MISSING_STEP[item]"
             type="button"
             :data-fix="item"
             class="inline-flex items-center min-h-11 px-4 rounded-xl text-base font-semibold text-n-amber-12 bg-n-solid-1 ring-1 ring-inset ring-n-amber-7 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
-            @click="emit('fix', MISSING_STEP[item])"
+            @click="fix(item)"
           >
             {{ t('BOOKING.PREVIEW.FIX') }}
           </button>

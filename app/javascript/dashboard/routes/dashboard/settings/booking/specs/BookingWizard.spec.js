@@ -487,5 +487,191 @@ describe('BookingWizard', () => {
       await primary(wrapper).trigger('click');
       expect(wrapper.emitted('close')).toHaveLength(1);
     });
+
+    it('falta de funil: Resolver abre o Alterar e salvar libera o Publicar', async () => {
+      BookingPagesAPI.publish.mockRejectedValue({
+        response: { status: 422, data: { missing: ['pipeline'] } },
+      });
+      const wrapper = await openAtStep(6);
+      await flushPromises();
+      await continueStep(wrapper);
+      expect(wrapper.find('[data-missing]').text()).toContain(
+        'BOOKING.PREVIEW.MISSING.PIPELINE'
+      );
+      expect(primary(wrapper).attributes('disabled')).toBeDefined();
+      await wrapper.find('[data-fix="pipeline"]').trigger('click');
+      await flushPromises();
+      expect(currentStep(wrapper)).toBe('PREVIA');
+      const form = wrapper.find('[data-destination-form]');
+      expect(form.exists()).toBe(true);
+      await form.find('[data-destination-save]').trigger('click');
+      await flushPromises();
+      expect(wrapper.find('[data-missing]').exists()).toBe(false);
+      expect(primary(wrapper).attributes('disabled')).toBeUndefined();
+    });
+
+    it('pendência desconhecida não ganha Resolver nem tira a pessoa da prévia', async () => {
+      BookingPagesAPI.publish.mockRejectedValue({
+        response: { status: 422, data: { missing: ['outra_coisa'] } },
+      });
+      const wrapper = await openAtStep(6);
+      await continueStep(wrapper);
+      expect(wrapper.find('[data-missing-item="outra_coisa"]').exists()).toBe(
+        true
+      );
+      expect(wrapper.find('[data-fix="outra_coisa"]').exists()).toBe(false);
+      expect(currentStep(wrapper)).toBe('PREVIA');
+    });
+
+    it('abre direto na prévia quando o cartão pede Publicar', async () => {
+      BookingPagesAPI.show.mockImplementation(() => reply(fullPage()));
+      const wrapper = mount(BookingWizard, {
+        props: { pageId: 7, initialStep: 6 },
+      });
+      await flushPromises();
+      expect(currentStep(wrapper)).toBe('PREVIA');
+      expect(primary(wrapper).attributes('data-action')).toBe('PUBLISH');
+      expect(wrapper.find('[data-live-notice]').exists()).toBe(false);
+    });
+  });
+
+  describe('página no ar, recusas do servidor e locais', () => {
+    it('página no ar avisa no topo que a mudança vale na hora', async () => {
+      const wrapper = await mountWizard(7, fullPage({ enabled: true }));
+      expect(wrapper.find('[data-live-notice]').text()).toBe(
+        'BOOKING.WIZARD.LIVE_NOTICE'
+      );
+    });
+
+    it('caixa de agenda recusada (422) tem aviso próprio', async () => {
+      BookingPagesAPI.update.mockRejectedValue({
+        response: {
+          status: 422,
+          data: { error: 'crm.booking_v2.calendar_inbox_invalid' },
+        },
+      });
+      const wrapper = await mountWizard();
+      await continueStep(wrapper);
+      expect(wrapper.find('[data-save-error]').text()).toBe(
+        'BOOKING.WIZARD.SERVER_ERRORS.CALENDAR_GONE'
+      );
+    });
+
+    it('pessoa recusada (422) tem aviso próprio', async () => {
+      BookingPagesAPI.updatePeople.mockRejectedValue({
+        response: {
+          status: 422,
+          data: { error: 'crm.booking_v2.people_invalid' },
+        },
+      });
+      const wrapper = await mountWizard();
+      await wrapper.find('[data-person="2"]').trigger('click');
+      await continueStep(wrapper);
+      expect(wrapper.find('[data-save-error]').text()).toBe(
+        'BOOKING.WIZARD.SERVER_ERRORS.PEOPLE_GONE'
+      );
+      expect(currentStep(wrapper)).toBe('CONTE');
+    });
+
+    it('validação do servidor num campo vira aviso daquele assunto', async () => {
+      BookingPagesAPI.update.mockRejectedValue({
+        response: {
+          status: 422,
+          data: {
+            error: 'Working hours invalid',
+            errors: { working_hours: ['invalid working hours'] },
+          },
+        },
+      });
+      const wrapper = await mountWizard();
+      await continueStep(wrapper);
+      expect(wrapper.find('[data-save-error]').text()).toBe(
+        'BOOKING.WIZARD.SERVER_ERRORS.HOURS'
+      );
+    });
+
+    it('Meet com a caixa desconectada continua visível, com aviso, e dá para tirar', async () => {
+      const page = fullPage({
+        locations: [{ type: 'whatsapp_video' }, { type: 'google_meet' }],
+        calendar_inbox_id: 11,
+        calendar_options: [],
+      });
+      const wrapper = await openAtStep(3, page);
+      const meet = wrapper.find('[data-location="google_meet"]');
+      expect(meet.attributes('aria-pressed')).toBe('true');
+      expect(wrapper.find('[data-disconnected="google_meet"]').text()).toBe(
+        'BOOKING.WHERE.CALENDAR_DISCONNECTED'
+      );
+      expect(wrapper.find('[data-calendar]').exists()).toBe(false);
+      await meet.trigger('click');
+      expect(wrapper.find('[data-location="google_meet"]').exists()).toBe(
+        false
+      );
+      await continueStep(wrapper);
+      expect(lastPayload().locations).toEqual([{ type: 'whatsapp_video' }]);
+    });
+
+    it('local com rótulo salvo volta igual no PATCH', async () => {
+      const page = fullPage({
+        locations: [{ type: 'whatsapp_video', label: 'Vídeo rápido' }],
+      });
+      const wrapper = await openAtStep(3, page);
+      await continueStep(wrapper);
+      expect(lastPayload().locations).toEqual([
+        { type: 'whatsapp_video', label: 'Vídeo rápido' },
+      ]);
+    });
+  });
+
+  describe('foco e leitor de tela', () => {
+    it('ao trocar de passo o foco vai para o título do passo', async () => {
+      BookingPagesAPI.show.mockImplementation(() => reply(fullPage()));
+      const wrapper = mount(BookingWizard, {
+        props: { pageId: 7 },
+        attachTo: document.body,
+      });
+      await flushPromises();
+      await continueStep(wrapper);
+      expect(currentStep(wrapper)).toBe('ONDE');
+      expect(document.activeElement.tagName).toBe('H2');
+      expect(document.activeElement.textContent).toContain(
+        'BOOKING.WHERE.TITLE'
+      );
+      wrapper.unmount();
+    });
+
+    it('com algo faltando o foco vai para o primeiro campo com problema', async () => {
+      BookingPagesAPI.show.mockImplementation(() => reply(fullPage()));
+      const wrapper = mount(BookingWizard, {
+        props: { pageId: 7 },
+        attachTo: document.body,
+      });
+      await flushPromises();
+      await wrapper.find('[data-title] input').setValue('');
+      await continueStep(wrapper);
+      expect(document.activeElement).toBe(
+        wrapper.find('[data-title] input').element
+      );
+      await wrapper.find('[data-title] input').setValue('Conversa');
+      await wrapper.find('[data-person="1"]').trigger('click');
+      await continueStep(wrapper);
+      expect(wrapper.find('[data-people] + p[role="alert"]').exists()).toBe(
+        true
+      );
+      expect(document.activeElement).toBe(
+        wrapper.find('[data-person="1"]').element
+      );
+      wrapper.unmount();
+    });
+
+    it('passo feito é anunciado como concluído', async () => {
+      const wrapper = await openAtStep(3);
+      const done = wrapper.find('[data-step="CONTE"] [data-step-done]');
+      expect(done.text()).toBe('BOOKING.STEPS.DONE');
+      expect(done.classes()).toContain('sr-only');
+      expect(wrapper.find('[data-step="ONDE"] [data-step-done]').exists()).toBe(
+        false
+      );
+    });
   });
 });

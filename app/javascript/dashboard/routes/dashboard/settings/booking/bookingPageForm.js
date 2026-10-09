@@ -13,10 +13,12 @@ import {
 
 const CALENDAR_TYPES = CALENDAR_LOCATIONS.map(item => item.type);
 
+// `label` não tem campo na tela, mas a API aceita: o que vier salvo volta igual.
 const locationFrom = item => ({
   type: item.type,
   url: item.url || '',
   address: item.address || '',
+  label: item.label || '',
 });
 
 export const pageToForm = page => {
@@ -40,11 +42,16 @@ export const pageToForm = page => {
   };
 };
 
-const locationPayload = ({ type, url, address }) => {
+const locationFields = ({ type, url, address }) => {
   if (type === 'custom_link') return { type, url: url.trim() };
   if (type === 'in_person') return { type, address: address.trim() };
   return { type };
 };
+
+const locationPayload = item =>
+  item.label
+    ? { ...locationFields(item), label: item.label }
+    : locationFields(item);
 
 const usesCalendar = form =>
   form.locations.some(item => CALENDAR_TYPES.includes(item.type));
@@ -111,6 +118,33 @@ export const imageProblem = file => {
   if (!IMAGE_TYPES.includes(file.type)) return 'IMAGE_TYPE';
   if (file.size > MAX_IMAGE_BYTES) return 'IMAGE_SIZE';
   return null;
+};
+
+// Recusas do servidor (422) que têm aviso próprio. O código vem do
+// BookingPagesController; o campo, do errors do ActiveRecord::RecordInvalid.
+const SERVER_ERROR_CODES = {
+  'crm.booking_v2.calendar_inbox_invalid': 'CALENDAR_GONE',
+  'crm.booking_v2.people_invalid': 'PEOPLE_GONE',
+};
+const SERVER_ERROR_FIELDS = {
+  locations: 'LOCATIONS',
+  working_hours: 'HOURS',
+  min_notice_minutes: 'HOURS',
+  slot_durations: 'HOURS',
+  default_pipeline_id: 'PIPELINE',
+  default_stage_id: 'PIPELINE',
+  brand: 'BRAND',
+};
+
+// Devolve a chave do aviso (BOOKING.WIZARD.SERVER_ERRORS.*) ou null, quando
+// só cabe o aviso geral de "não salvou".
+export const serverProblem = data => {
+  const code = SERVER_ERROR_CODES[data?.error];
+  if (code) return code;
+  const field = Object.keys(data?.errors || {}).find(
+    key => SERVER_ERROR_FIELDS[key]
+  );
+  return field ? SERVER_ERROR_FIELDS[field] : null;
 };
 
 // O primeiro passo que resolve o que a publicação pediu.
