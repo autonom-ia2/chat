@@ -11,6 +11,9 @@
     "FILTERS": {
       "SEARCH_PLACEHOLDER": "Pesquisar por nome ou e-mail",
       "ALL_EVENTS": "Todos os eventos",
+      "ALL_AGENTS": "Todos os agentes de IA",
+      "AGENT_BY_ID": "Agente de IA #{id}",
+      "ALL_OPERATIONS": "Todas as configurações do agente",
       "DATE_RANGE": "Intervalo de datas",
       "CLEAR_ALL": "Limpar filtros",
       "EVENT_TYPE_GROUPS": {
@@ -22,6 +25,7 @@
       "EVENT_TYPES": {
         "SIGN_IN_OUT": "Entrar / sair",
         "AGENTS": "Agentes",
+        "AUTONOMIA_AGENTS": "Agentes de IA",
         "TEAMS": "Times",
         "TEAM_MEMBERS": "Membros do time",
         "INBOX_MEMBERS": "Colaboradores da caixa de entrada",
@@ -80,6 +84,38 @@
         "OTHER": "{agentName} alterou {attributes} de {user} para {values}",
         "DELETED": "{agentName} alterou {attributes} de um usuário excluído para {values}"
       }
+    },
+    "AUTONOMIA_AGENT": {
+      "EDIT": "{actor} atualizou {operationKey} do agente de IA (#{id})",
+      "CHANGE": "{label}: {before} → {after}",
+      "VALUES": {
+        "EMPTY": "não definido",
+        "HIDDEN": "oculto",
+        "ON": "ligado",
+        "OFF": "desligado",
+        "SECONDS": "{value} s",
+        "LENGTH": "{value} caracteres",
+        "COUNT": "{value} itens",
+        "RANGE": "{count} intervalos ({min}–{max} s)",
+        "MASKED_LIST": "{preview}",
+        "MASKED_LIST_MORE": "{preview} e mais {remaining} itens"
+      }
+    },
+    "OPERATION_KEYS": {
+      "VOICE_REPLY": "respostas de voz",
+      "VOICE_INSTRUCTIONS": "instruções de voz",
+      "HUMANIZE_DELIVERY": "humanização da entrega",
+      "OPERATE_MEDIA": "uso de mídia",
+      "OPERATE_REACTIONS": "uso de reações",
+      "TEST_ALLOWLIST_PHONES": "lista de telefones de teste",
+      "SILENCE_TOKENS": "tokens de silêncio",
+      "NATIVE_TOOL_SLUGS": "ferramentas nativas",
+      "DEBOUNCE_SECONDS": "tempo de agrupamento de respostas",
+      "ASYNC_TOOLS": "ferramentas assíncronas",
+      "ASYNC_POLL_INTERVALS": "intervalos de consulta",
+      "ASYNC_DEADLINE_SECONDS": "prazo das ferramentas assíncronas",
+      "UNKNOWN": "configuração do agente",
+      "MULTIPLE": "várias configurações do agente"
     },
     "INBOX": {
       "ADD": "{agentName} criou uma caixa de entrada (#{id})",

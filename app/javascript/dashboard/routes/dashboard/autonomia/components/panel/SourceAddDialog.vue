@@ -152,7 +152,7 @@ defineExpose({ open, close });
         </button>
       </div>
 
-      <p class="text-xs text-n-slate-10">
+      <p class="text-xs text-n-slate-11">
         {{ t('AGENTS.KNOWLEDGE.FORMATS_HINT') }}
       </p>
     </div>

@@ -267,6 +267,17 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
         espera: { motivo: 'invalid_tool_arguments', slug: 'consultar_auto' },
         dispara: -> { rodar_principal('name' => criar_especialista.function_name, 'call_id' => 'c1', 'arguments' => 'nao-e-json') }
       },
+      # Testar real não abre conversa nem ToolRun: a ferramenta assíncrona é bloqueada na superfície sandbox.
+      'answerer.rb#skip_test_tool#1' => {
+        espera: { motivo: 'async_indisponivel_nesta_superficie', conversa: '-' },
+        dispara: lambda {
+          register_async_tool(tool)
+          modelo_que_chama({ 'name' => tool.slug, 'call_id' => 'c1', 'arguments' => '{}' },
+                            resposta: { reply: 'ok', confidence: 0.9, should_handoff: false, handoff_reason: nil,
+                                         used_snippet_ids: [], answered_from_knowledge: false })
+          Autonomia::Agents::Playground.new(agent: agent, message: 'quero cotar', pode_editar: false).run
+        }
+      },
       'runner.rb#sem_ferramenta#1' => {
         espera: { motivo: 'tool_not_available', slug: 'cotar_seguro' },
         dispara: -> { rodar_especialista_pedindo('cotar_seguro') }

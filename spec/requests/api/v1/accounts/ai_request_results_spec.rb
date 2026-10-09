@@ -108,7 +108,14 @@ RSpec.describe 'Interactive AI result contracts', type: :request do
       Crm::Ai::InteractiveJob.perform_now(request['id'])
       get request['poll_url'], headers: headers
       expect(response.parsed_body['status']).to eq('done')
-      expect(Autonomia::Agents::Answerer).to have_received(:new).with(hash_including(history: [{ role: 'user', content: 'Antes' }]))
+      expected_history = if action == 'suggest'
+                           Autonomia::Copilot::ConversationContext.sanitize_history(
+                             [{ role: 'user', content: 'Antes' }]
+                           )
+                         else
+                           [{ role: 'user', content: 'Antes' }]
+                         end
+      expect(Autonomia::Agents::Answerer).to have_received(:new).with(hash_including(history: expected_history))
       expect(response.parsed_body['result']).to include('reply' => 'Resposta', 'handoff' => { 'should' => false, 'reason' => nil })
       expect(response.parsed_body['result']).not_to have_key('instruction')
     end

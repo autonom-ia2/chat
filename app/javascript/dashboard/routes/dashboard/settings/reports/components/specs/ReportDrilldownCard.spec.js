@@ -24,6 +24,9 @@ vi.mock('vue-i18n', () => ({
       if (key === 'REPORT.DRILLDOWN.OUTGOING_MESSAGE') {
         return 'Outgoing message';
       }
+      if (key === 'AGENTS.PANEL.REDESIGN_DRAWER.STATUS_OPEN') return 'Open';
+      if (key === 'AGENTS.PANEL.REDESIGN_DRAWER.LAST_ACTIVITY')
+        return 'Last activity:';
       return key;
     },
     locale: { value: 'en' },
@@ -124,13 +127,32 @@ describe('ReportDrilldownCard.vue', () => {
   it('renders only message created timestamp for message rows', () => {
     const wrapper = mountCard();
     const messageCreatedLabel = wrapper
-      .findAll('[aria-label]')
-      .map(timestamp => timestamp.attributes('aria-label'))
+      .findAll('[title]')
+      .map(timestamp => timestamp.attributes('title'))
       .find(label => label.includes('Message created at'));
 
     expect(wrapper.text()).toContain('2m');
     expect(wrapper.text()).not.toContain('4d • 4d');
     expect(messageCreatedLabel).toContain('Message created at');
+  });
+
+  it('uses the F4 presentation without changing the reports card', () => {
+    const wrapper = mountCard({
+      agentPanel: true,
+      record: { ...record, record_type: 'conversation', message: null },
+    });
+
+    expect(wrapper.text()).toContain('Open');
+    expect(wrapper.text()).not.toContain('open');
+    expect(wrapper.text()).not.toContain('4d • 4d');
+    expect(wrapper.find('.grid-cols-1').exists()).toBe(true);
+    expect(wrapper.find('.grid-cols-1').text()).toContain('Jane');
+    expect(wrapper.find('.grid-cols-1').text()).toContain('Website');
+    expect(
+      wrapper
+        .findAll('[title]')
+        .some(node => node.attributes('title').includes('Last activity:'))
+    ).toBe(true);
   });
 
   it('renders separate contact, inbox, and agent links', async () => {
@@ -146,7 +168,7 @@ describe('ReportDrilldownCard.vue', () => {
       true
     );
     expect(
-      links.every(link => link.classes().includes('text-n-slate-10'))
+      links.every(link => link.classes().includes('text-n-slate-11'))
     ).toBe(true);
     expect(
       links.every(link => !link.classes().includes('text-n-blue-11'))
@@ -185,8 +207,8 @@ describe('ReportDrilldownCard.vue', () => {
       },
     });
     const eventOccurredLabel = wrapper
-      .findAll('[aria-label]')
-      .map(timestamp => timestamp.attributes('aria-label'))
+      .findAll('[title]')
+      .map(timestamp => timestamp.attributes('title'))
       .find(label => label.includes('Event occurred at'));
 
     expect(wrapper.text()).toContain('Latest reply');

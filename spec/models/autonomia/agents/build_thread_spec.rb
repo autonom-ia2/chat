@@ -39,6 +39,14 @@ RSpec.describe Autonomia::Agents::BuildThread do
   end
 
   describe '#build_in_progress? / #build_stale? (E3)' do
+    it 'derives the stale window from the ResponsesClient timeout and retry count' do
+      expected_window =
+        (Crm::Ai::ResponsesClient::REQUEST_TIMEOUT *
+         (Crm::Ai::ResponsesClient::MAX_RETRIES + 1)) + 1.minute
+
+      expect(described_class::STALE_PROCESSING_AFTER).to eq(expected_window)
+    end
+
     it 'reports an in-progress build right after begin_build!' do
       # Arrange
       thread.begin_build!
@@ -46,6 +54,15 @@ RSpec.describe Autonomia::Agents::BuildThread do
       # Act + Assert
       expect(thread.build_in_progress?).to be(true)
       expect(thread.build_stale?).to be(false)
+    end
+
+    it 'remains in progress until the derived stale window has elapsed' do
+      thread.begin_build!
+
+      travel_to((described_class::STALE_PROCESSING_AFTER - 1.second).from_now) do
+        expect(thread.build_stale?).to be(false)
+        expect(thread.build_in_progress?).to be(true)
+      end
     end
 
     it 'flips to stale once processing exceeds the job window' do
@@ -88,7 +105,7 @@ RSpec.describe Autonomia::Agents::BuildThread do
 
       # Act
       new_token = nil
-      travel_to(10.minutes.from_now) { new_token = thread.begin_build! }
+      travel_to((described_class::STALE_PROCESSING_AFTER + 1.second).from_now) { new_token = thread.begin_build! }
 
       # Assert
       expect(new_token).to be_present

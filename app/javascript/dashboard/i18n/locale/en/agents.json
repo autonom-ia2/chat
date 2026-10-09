@@ -202,6 +202,450 @@
         "PAUSED": "Agent paused",
         "ACTIVATED": "Agent activated",
         "ERROR": "We couldn't update the agent status. Please try again."
+      },
+      "REDESIGN_STATUS": {
+        "ACTIVE": "Active",
+        "PAUSED": "Paused",
+        "TOGGLE_LABEL": "{status}: {name}"
+      },
+      "REDESIGN_TABS": {
+        "LABEL": "Agent sections",
+        "PERFORMANCE": "How it is going",
+        "TEST": "Test",
+        "KNOWLEDGE": "What it knows",
+        "CHANNELS": "Where it works",
+        "TUNE": "Adjustments",
+        "TOOLS": "Tools"
+      },
+      "REDESIGN_ACTIONS": {
+        "BACK": "Your agents",
+        "CONTINUE": "Continue building",
+        "TEST": "Test agent",
+        "EDIT": "Continue editing",
+        "CONNECT": "Connect"
+      },
+      "REDESIGN_PERFORMANCE": {
+        "TITLE": "How it is going",
+        "DESCRIPTION": "See what your agent is doing and where conversations need attention.",
+        "CONVERSATIONS_HANDLED": "Conversations handled",
+        "REPLIES_SENT": "Replies sent",
+        "HANDOFF_RATE": "% handed off to the team ({count})",
+        "AVG_CONFIDENCE": "Average confidence in replies",
+        "KNOWLEDGE_RATE": "% that used your materials",
+        "OUTCOMES_TITLE": "Conversation results",
+        "OUTCOMES_HINT": "Tap a number to see the conversations.",
+        "TIMELINE_TITLE": "Day to day",
+        "TIMELINE_REPLIES": "Replies",
+        "TIMELINE_HANDOFFS": "Handed to the team",
+        "REASONS_TITLE": "Why conversations went to the team",
+        "INTERNAL_TITLE": "Your team copilot is ready",
+        "INTERNAL_DESCRIPTION": "{name} helps your team inside conversations. Usage numbers do not appear here.",
+        "OPEN_CONVERSATION": "Open a conversation",
+        "QUOTE_NOTICE": "Quote agents keep real service metrics here. Knowledge and training metrics do not apply.",
+        "TEACH": "Teach the agent",
+        "NO_DATA": "No data",
+        "INTERNAL_NO_ACCESS": "You do not have permission to open a conversation."
+      },
+      "REDESIGN_DRAWER": {
+        "HIDDEN": "Some conversations are from inboxes you can't see.",
+        "REASON": "Reason: {reason}",
+        "SUGGESTION": "Suggested correction: {text}",
+        "TEACH": "Teach from this report",
+        "OPEN": "Open conversation #{id}",
+        "STATUS_OPEN": "Open",
+        "STATUS_PENDING": "Pending",
+        "STATUS_RESOLVED": "Resolved",
+        "STATUS_SNOOZED": "Snoozed",
+        "STATUS_UNKNOWN": "Unknown",
+        "LAST_ACTIVITY": "Last activity:"
+      },
+      "REDESIGN_QUOTE_NOTICE": "The quoting method for {name} is maintained by {installationName}. You choose the name, hours, quoting style and who it answers. Insurance connections live in Quoting.",
+      "REDESIGN_QUOTE_LINK": "Open Quoting",
+      "REDESIGN_QUOTE_KNOWLEDGE": {
+        "TITLE": "What Lia quotes",
+        "DESCRIPTION": "These are the branches configured for this quoting agent.",
+        "EMPTY": "No branches are configured for this agent yet.",
+        "ERROR": "We couldn't load the branches. Please try again."
+      },
+      "REDESIGN_CHANNELS": {
+        "CURRENT_TITLE": "Where {name} answers",
+        "CURRENT_DESCRIPTION": "These inboxes are already linked to {name}.",
+        "CONNECTED": "Connected",
+        "EMPTY": "{name} is not linked to an inbox yet.",
+        "ADD_TITLE": "Add another inbox",
+        "ADD_DESCRIPTION": "Choose an existing inbox. You can link more than one.",
+        "ADD": "Add",
+        "ADD_NAMED": "Add {channel}",
+        "REMOVE": "Remove",
+        "REMOVE_NAMED": "Remove {channel}",
+        "REMOVE_TITLE": "Remove this inbox?",
+        "REMOVE_DESCRIPTION": "{name} will stop answering in {channel}. Conversations stay in the inbox and your team can continue them.",
+        "OCCUPIED_TITLE": "Already in use",
+        "OCCUPIED_AGENT": "In use by {name}",
+        "OCCUPIED_BOT": "In use by another bot",
+        "INACTIVE": "Activate {name} before adding another inbox.",
+        "NO_ELIGIBLE": "There are no available inboxes to add.",
+        "CENTRAL_HINT": "WhatsApp numbers and QR codes are connected in Channels. This screen links inboxes that already exist.",
+        "OPEN_CHANNELS": "Open Channels",
+        "LOADING": "Loading inboxes…",
+        "LOAD_ERROR": "We could not load the inboxes. Try again.",
+        "ACTION_ERROR": "We could not save this change. Try again."
+      },
+      "REDESIGN_KNOWLEDGE": {
+        "TITLE": "What it knows",
+        "DESCRIPTION": "Add what {name} should learn and see what it uses.",
+        "AGENT": "this agent",
+        "BASE_TITLE": "Knowledge base",
+        "BASE_HINT": "See which materials the agent can use in answers.",
+        "COUNT": "{count} of {limit} materials",
+        "LIMIT": "You reached the limit of 30 materials. Remove one to add another.",
+        "ADD": "Add material",
+        "ADD_TITLE": "Add material",
+        "ADD_LINK": "One link",
+        "ADD_FILE": "One file",
+        "LINK_LABEL": "Link",
+        "LINK_PLACEHOLDER": "https://example.com/page",
+        "FILE_LABEL": "Choose a file",
+        "FILE_PLACEHOLDER": "Choose a PDF, Word, Excel, TXT, MD or JSON file",
+        "FORMATS": "PDF, Word, Excel, TXT, MD or JSON · up to 25 MB",
+        "WORD_EXCEL_NOTICE": "Word and Excel files may take longer to process.",
+        "URL_ERROR": "Enter a valid http or https URL.",
+        "FILE_TYPE_ERROR": "Choose a PDF, Word, Excel, TXT, MD or JSON file.",
+        "FILE_SIZE_ERROR": "The file must be 25 MB or smaller.",
+        "ADD_ERROR": "We couldn't add this material. Try again.",
+        "ERROR": "We couldn't load the materials. Try again.",
+        "LOADING": "Loading materials…",
+        "RETRY": "Try again",
+        "EMPTY": "No material yet. Without material, {name} answers only with what you told it during setup.",
+        "MATERIAL": "Material",
+        "REMOVE": "Remove material",
+        "REMOVE_CONFIRM_TITLE": "Remove this material?",
+        "REMOVE_CONFIRM_DESC": "\"{name}\" and its indexed passages will be removed from the agent's knowledge base. This can't be undone.",
+        "REMOVE_CONFIRM_BUTTON": "Remove",
+        "REMOVE_ERROR": "We couldn't remove this material. Try again.",
+        "RESEND": "Upload again",
+        "RESYNC_ERROR": "We couldn't process this material again. Try again.",
+        "MATERIAL_STATES": {
+          "UPLOADING": "Uploading",
+          "READING": "Reading",
+          "UNREADABLE": "Couldn't read",
+          "NEEDS_ANOTHER_FILE": "Needs another file",
+          "NOT_REVIEWED": "Not reviewed yet",
+          "NOT_REVIEWED_DESC": "Read, but review isn't finished. The agent doesn't use this material yet.",
+          "OUT_OF_BUSINESS_NOT_USED": "This isn't about your business. The agent doesn't use this material.",
+          "OUT_OF_BUSINESS_NOT_USED_DESC": "The agent doesn't use this material.",
+          "OUT_OF_BUSINESS_USED": "This may be outside your business.",
+          "OUT_OF_BUSINESS_USED_DESC": "Until another material is added, the agent still uses this one.",
+          "READY": "Ready"
+        },
+        "QUALITY_SCORE": "Score {score} of 10",
+        "QUALITY_LABELS": {
+          "OTIMA": "Great",
+          "BOA": "Good",
+          "FRACA": "Weak"
+        },
+        "QUALITY_CONFIDENCE": {
+          "HIGH": "High confidence",
+          "MEDIUM": "Medium confidence",
+          "LOW": "Low confidence"
+        },
+        "FAQ_TITLE": "Questions the team answered",
+        "FAQ_DESCRIPTION": "Questions answered by your team appear here after a conversation is resolved. Approve one and the agent learns it.",
+        "FAQ_ON": "Team suggestions on",
+        "FAQ_OFF": "Team suggestions off",
+        "FAQ_EMPTY": "No pending suggestions.",
+        "FAQ_EMPTY_DISABLED": "Turn on suggestions to receive questions from resolved conversations.",
+        "FAQ_VIEW_ONLY": "Only people who manage this agent can review questions.",
+        "FAQ_ERROR": "We couldn't load the questions. Try again.",
+        "FAQ_TOGGLE_ERROR": "We couldn't save this setting. Try again.",
+        "FAQ_APPROVE_ERROR": "We couldn't approve this question. Try again.",
+        "FAQ_IGNORE_ERROR": "We couldn't ignore this question. Try again.",
+        "FAQ_QUESTION": "Question",
+        "FAQ_ANSWER": "Answer",
+        "FAQ_APPROVE": "Approve",
+        "FAQ_EDIT_AND_APPROVE": "Edit and approve",
+        "FAQ_SAVE_AND_APPROVE": "Save and approve",
+        "FAQ_CANCEL": "Cancel",
+        "FAQ_IGNORE": "Ignore",
+        "FAQ_FROM_CONVERSATION": "Conversation #{id}",
+        "FAQ_LOAD_MORE": "Load more",
+        "CONFIDENCE_LABEL": "Knowledge base confidence",
+        "CONFIDENCE_VALUE": "{confidence}% · {quality}",
+        "CONFIDENCE_QUALITY": {
+          "GOOD": "good",
+          "FAIR": "fair",
+          "WEAK": "low"
+        }
+      },
+      "REDESIGN_TEST": {
+        "EYEBROW": "Private test",
+        "TITLE": "Test {name} before anyone sees it",
+        "NOTHING_EXTERNAL": "Nothing here reaches customers.",
+        "PRIVATE_BADGE": "Test · only you can see it",
+        "NO_SCHEDULE": "In this test, hours and audience rules do not apply. The first answer already includes the greeting.",
+        "INTERNAL_EXAMPLE": "Example conversation: ask as someone from your team would ask.",
+        "ASSEMBLING": "This agent is still being assembled. The test may not show its final behavior.",
+        "NOT_RESPONDING": "The agent couldn't reply now. Try again.",
+        "RETRY": "Try again",
+        "DELAY": "This is taking longer than usual. Try again.",
+        "RATE_LIMIT": "You sent several tests quickly. Wait a minute and try again.",
+        "EMPTY_RESPONSE": "The agent returned no answer. Try again.",
+        "QUOTE_SKIPPED": "Quoting is not performed in the test: {name} can ask for the details, but it does not contact insurers.",
+        "VIEWER_TOOL_SKIPPED": "In this test, {name} did not use {tool}: only people who manage the agent can test this action.",
+        "WRITES_EXTERNAL": "Tools that write to another system run for real in this test.",
+        "ERROR": "We couldn't run this test. Try again.",
+        "LEGEND_TITLE": "How to read the test",
+        "LEGEND_CONFIDENCE": "Confidence",
+        "LEGEND_CONFIDENCE_DESC": "How much {name} trusts the answer. The handoff rule decides whether it goes to the team.",
+        "LEGEND_CONFIDENCE_DESC_INTERNAL": "How much {name} trusts the answer.",
+        "LEGEND_CONFIDENCE_DESC_QUOTE": "How much {name} trusts the answer.",
+        "LEGEND_MATERIAL": "Material used",
+        "LEGEND_MATERIAL_DESC": "Shows which material the answer came from.",
+        "LEGEND_HANDOFF": "Yellow",
+        "LEGEND_HANDOFF_DESC": "This conversation would go to the team, and why.",
+        "HANDOFF": "This conversation would go to the team.",
+        "HANDOFF_NO_REASON": "No reason provided.",
+        "USED_MATERIAL": "Material used",
+        "SKIPPED_TOOLS": "Some tools were skipped:",
+        "TOOL": "this tool",
+        "THINKING": "Thinking",
+        "CLEAR": "Clear conversation",
+        "INPUT_PLACEHOLDER": "Ask something as a customer would…",
+        "SEND": "Send test",
+        "ADD_IMAGE": "Attach image",
+        "REMOVE_IMAGE": "Remove image",
+        "IMAGE_HINT": "Images only · up to 4 files · 5 MB each",
+        "CONFIDENCE": "Confidence",
+        "TEACH": "Teach something it missed"
+      },
+      "REDESIGN_SETTINGS": {
+        "TITLE": "Adjustments",
+        "DESCRIPTION": "Change one part at a time. Each section is saved separately.",
+        "SAVE": "Save",
+        "SAVED": "Saved.",
+        "SAVE_ERROR": "We could not save this change.",
+        "CANCEL": "Cancel",
+        "CONFIRM": "Confirm",
+        "CUSTOMER_ONLY_NOTICE": "The sections below apply only when {name} answers customers. They do not apply in the team panel.",
+        "IDENTITY": {
+          "TITLE": "Photo and name",
+          "DESCRIPTION": "Choose how this agent is shown to your team and customers.",
+          "PHOTO": "Photo",
+          "REMOVE_PHOTO": "Remove photo",
+          "NAME": "Name",
+          "NAME_REQUIRED": "Enter a name.",
+          "VOICE_LABEL": "Treat as",
+          "VOICE": {
+            "SHE": "She",
+            "HE": "He"
+          },
+          "AVATAR_SAVED": "Photo saved.",
+          "AVATAR_SAVE_ERROR": "We could not save the photo.",
+          "AVATAR_REMOVED": "Photo removed.",
+          "AVATAR_REMOVE_ERROR": "We could not remove the photo."
+        },
+        "INSTRUCTIONS": {
+          "TITLE": "What it does",
+          "DESCRIPTION": "Describe the work in a conversation or write the instructions yourself.",
+          "GUIDED": "Guided",
+          "MANUAL": "Written by you",
+          "MODE_LABEL": "Instruction mode for {name}",
+          "NO_SUMMARY": "There is no summary yet.",
+          "NO_GUIDED_VERSION": "This agent was written by hand. To change it by conversation, save a guided version first.",
+          "RECONVERSE": "Change by conversation",
+          "RETURN_GUIDED": "Return to guided",
+          "RECONVERSE_TITLE": "Change by conversation",
+          "RESUME_ERROR": "We could not open the conversation.",
+          "SEND_ERROR": "We could not send the message.",
+          "ATTACHED": "Material added.",
+          "ATTACH_ERROR": "We could not add the material.",
+          "WRITE_MANUALLY": "Write the instructions myself",
+          "MANUAL_LABEL": "Instructions",
+          "MANUAL_PLACEHOLDER": "Write how this agent should work.",
+          "MANUAL_WARNING": "The guided text is replaced by what you write. Safety protections remain active.",
+          "EMPTY": "Write the instructions before saving.",
+          "CONFIRM_TITLE": "Change instruction mode",
+          "CONFIRM_MANUAL": "The guided text will be replaced by what you write. The field opens empty.",
+          "CONFIRM_GUIDED": "The text you wrote will stop being used and the last guided version will be restored."
+        },
+        "ACTUATION": {
+          "TITLE": "Where it works",
+          "DESCRIPTION": "Choose whether this agent answers customers, helps the team, or does both.",
+          "EXTERNAL": "Customers",
+          "EXTERNAL_DESC": "Answers people in connected channels.",
+          "INTERNAL": "The team",
+          "INTERNAL_DESC": "Helps inside conversations and does not answer customers.",
+          "BOTH": "Both",
+          "BOTH_DESC": "Answers customers and helps the team.",
+          "UNAVAILABLE_LABEL": "Unavailable",
+          "UNAVAILABLE": "The team helper is not available for this account yet.",
+          "CHANNEL_WARNING": "Remove this agent from its channels before choosing The team."
+        },
+        "SPEECH": {
+          "TITLE": "How it speaks",
+          "DESCRIPTION": "These messages are used in the customer conversation.",
+          "GREETING": "First message",
+          "GREETING_PLACEHOLDER": "What should it say first?",
+          "FALLBACK": "When it does not know",
+          "FALLBACK_INTERNAL": "When it does not know, the helper shows the team",
+          "FALLBACK_PLACEHOLDER": "What should it say when it does not know?",
+          "TONE": "Way of speaking",
+          "CUSTOM": "My own style",
+          "CUSTOM_LABEL": "Describe the style",
+          "TONES": {
+            "FRIENDLY": "Friendly",
+            "PROFESSIONAL": "Professional",
+            "NEUTRAL": "Neutral",
+            "PLAYFUL": "Relaxed"
+          }
+        },
+        "HANDOFF": {
+          "TITLE": "When it passes to the team",
+          "DESCRIPTION": "Choose when a person should take over and where the conversation goes.",
+          "QUOTE_TITLE": "Who receives the conversation",
+          "QUOTE_DESCRIPTION": "Choose the person or team that receives a request for help.",
+          "STRATEGY_LOW": "When it is unsure",
+          "STRATEGY_LOW_DESC": "Calls the team when it is not confident in the answer.",
+          "STRATEGY_ALWAYS": "Always offer a person",
+          "STRATEGY_ALWAYS_DESC": "Offers the customer the option to talk to someone.",
+          "STRATEGY_NEVER": "Never offer a person",
+          "STRATEGY_NEVER_DESC": "It still passes the conversation when the customer asks.",
+          "TARGET_LABEL": "Who receives it",
+          "TARGET": {
+            "ANY": "Anyone available",
+            "MEMBER": "One person",
+            "TEAM": "One team"
+          },
+          "MEMBER_LABEL": "Person",
+          "TEAM_LABEL": "Team",
+          "MEMBER_PLACEHOLDER": "Choose a person",
+          "TEAM_PLACEHOLDER": "Choose a team",
+          "TARGET_REQUIRED": "Choose who should receive the conversation.",
+          "LOADING_TARGETS": "Loading people and teams…",
+          "LOAD_ERROR": "We could not load people and teams. Try again.",
+          "TARGET_INVALID": "This target is no longer available. The conversation will go to anyone available."
+        },
+        "AUDIENCE": {
+          "TITLE": "Who it answers",
+          "DESCRIPTION": "Choose whether it answers everyone or only a group of customers."
+        },
+        "SCHEDULE": {
+          "TITLE": "When it answers",
+          "DESCRIPTION": "Choose when this agent answers in its connected channels.",
+          "LOADING_CHANNELS": "Checking connected channels…",
+          "CHANNELS_ERROR": "We could not check the channels.",
+          "MISSING_WARNING": "These channels have no schedule. The agent answers there at any time."
+        },
+        "VERSIONS": {
+          "TITLE": "Previous versions",
+          "DESCRIPTION": "Each change to the instructions is kept here.",
+          "LOADING": "Loading versions…",
+          "LOAD_ERROR": "We could not load the versions.",
+          "EMPTY": "No previous versions.",
+          "CURRENT": "Current",
+          "AUTOMATIC": "Automatic",
+          "META": "{date} · {author}",
+          "RESTORE": "Restore this version",
+          "RESTORED": "Version restored.",
+          "RESTORE_ERROR": "We could not restore this version.",
+          "CONFIRM_TITLE": "Restore version",
+          "CONFIRM_DESCRIPTION": "The current instruction will be replaced by this version.",
+          "REASONS": {
+            "BUILDER": "Changed by conversation",
+            "BEFORE_MANUAL": "Before writing manually",
+            "MANUAL_EDIT": "Manual edit",
+            "ROLLBACK": "Restored version",
+            "KB_REFRESH": "New material entered",
+            "OTHER": "Instruction change"
+          }
+        },
+        "QUOTE": {
+          "TITLE": "How it quotes",
+          "DESCRIPTION": "When {name} explains coverage, it always uses the configured quote flow.",
+          "CONSULTIVE": "Consultive",
+          "CONSULTIVE_DESC": "Explains what the customer will receive before quoting.",
+          "OBJECTIVE": "Objective",
+          "OBJECTIVE_DESC": "Quotes first and explains if asked.",
+          "SCHEDULE": "Hours it tells the customer",
+          "SCHEDULE_PLACEHOLDER": "For example: Monday to Friday, 9am to 6pm"
+        },
+        "LIFECYCLE": {
+          "TITLE": "Agent status",
+          "DESCRIPTION": "Pausing sends open conversations back to the team. Materials and history remain saved.",
+          "INTERNAL_DESCRIPTION": "Pausing removes the helper from the conversation panel. Materials and history remain saved.",
+          "QUOTE_DESCRIPTION": "Pausing sends conversations back to the team. Quote settings and history remain saved.",
+          "CONTINUE": "Continue setup",
+          "PAUSE": "Pause agent",
+          "ACTIVATE": "Turn on agent",
+          "DELETE": "Delete agent",
+          "PAUSE_TITLE": "Pause agent",
+          "PAUSE_DESCRIPTION": "{name} will stop answering. Open conversations return to the team.",
+          "ACTIVATE_TITLE": "Turn on agent",
+          "ACTIVATE_DESCRIPTION": "{name} will answer again using the saved instruction.",
+          "DELETE_TITLE": "Delete agent",
+          "DELETE_DESCRIPTION": "{name} leaves the list and stops answering. Materials, links and history stay saved.",
+          "PAUSED": "Agent paused.",
+          "ACTIVATED": "Agent turned on.",
+          "DELETED": "Agent deleted.",
+          "ACTION_ERROR": "We could not change the agent status."
+        }
+      },
+      "REDESIGN_TOOLS": {
+        "TITLE": "Tools",
+        "DESCRIPTION": "Connect a safe external action when the agent needs information from another system.",
+        "ACCESS": "Only a platform administrator can manage tools.",
+        "QUOTE_HIDDEN": "The quote agent uses its own tools.",
+        "NEW": "New tool",
+        "CREATE_TITLE": "New tool",
+        "EDIT_TITLE": "Edit tool",
+        "NAME": "Name",
+        "SLUG": "Identifier",
+        "SLUG_METHOD": "{slug} · {method}",
+        "WHEN": "When to use",
+        "METHOD": "Method",
+        "URL": "Address",
+        "BODY": "JSON body",
+        "BODY_PLACEHOLDER": "Optional request body",
+        "HEADERS": "Headers",
+        "HEADER_NAME": "Header name",
+        "HEADER_VALUE": "Header value",
+        "SECRET": "Secret",
+        "ADD_HEADER": "Add header",
+        "NO_HEADERS": "No headers added.",
+        "PARAMETERS": "Information requested from the customer",
+        "PARAMETER_NAME": "Name",
+        "PARAMETER_TYPE": "Type",
+        "PARAMETER_DESCRIPTION": "Description",
+        "REQUIRED": "Required",
+        "ADD_PARAMETER": "Add information",
+        "NO_PARAMETERS": "No customer information requested.",
+        "REMOVE": "Remove",
+        "ENABLED": "On",
+        "DISABLED": "Off",
+        "TOGGLE_LABEL": "Turn {name} on or off",
+        "TEST": "Test",
+        "TEST_TITLE": "Test tool",
+        "TEST_DESCRIPTION": "Fill in the information this tool needs before running it.",
+        "TEST_REQUIRED": "Fill in {name} before testing.",
+        "EDIT": "Edit",
+        "DELETE": "Delete",
+        "LOADING": "Loading tools…",
+        "LOAD_ERROR": "We could not load the tools.",
+        "RETRY": "Try again",
+        "EMPTY": "No tools yet.",
+        "LIMIT": "You can add up to 10 tools.",
+        "STOCK_HINT": "Start with the stock consultation model.",
+        "STOCK_TEMPLATE": "Start with stock model",
+        "STOCK_NAME": "Stock consultation",
+        "STOCK_DESCRIPTION": "Searches available stock by a term from the customer.",
+        "STOCK_PARAM_DESCRIPTION": "Main search term provided by the customer",
+        "SAVED": "Tool saved.",
+        "SAVE_ERROR": "We could not save the tool.",
+        "DELETED": "Tool deleted.",
+        "DELETE_TITLE": "Delete tool",
+        "DELETE_DESCRIPTION": "{name} will stop being available to the agent.",
+        "DELETE_ERROR": "We could not delete the tool.",
+        "TEST_ERROR": "The tool test failed."
       }
     },
     "TEST": {
@@ -452,12 +896,14 @@
     "PERFORMANCE": {
       "RANGE": {
         "7D": "Last 7 days",
-        "30D": "Last 30 days"
+        "30D": "Last 30 days",
+        "LABEL": "Period"
       },
       "STATS": {
         "CONVERSATIONS": "Conversations handled",
         "REPLIES": "Replies sent",
         "HANDOFF_RATE": "Handoff rate",
+        "HANDOFF_RATE_VALUE": "{rate} · {count}",
         "AVG_CONFIDENCE": "Avg. confidence",
         "KNOWLEDGE_RATE": "Knowledge answer rate"
       },
@@ -465,12 +911,13 @@
         "TITLE": "Activity",
         "REPLIES": "Replies",
         "HANDOFFS": "Handoffs",
-        "BAR_ARIA": "{date}: {replies} replies, {handoffs} handoffs"
+        "BAR_ARIA": "{date}: {replies} replies, {handoffs} handoffs",
+        "TOTALS_ARIA": "{replies} replies and {handoffs} handoffs in {period}"
       },
       "REASONS": {
         "TITLE": "Top handoff reasons",
         "OTHER": "Other / unspecified",
-        "EMPTY": "No handoffs in this period.",
+        "EMPTY": "No conversation went to the team in this period.",
         "CODES": {
           "low_confidence": "Low confidence",
           "ai_unavailable": "AI unavailable",
@@ -479,7 +926,8 @@
           "policy": "Policy",
           "audience": "Outside the target audience",
           "schedule": "Outside the schedule",
-          "other": "Other / unspecified"
+          "other": "Other / unspecified",
+          "escolhas_incompletas": "Incomplete choices"
         }
       },
       "INSIGHT": {
@@ -501,11 +949,15 @@
         "SUBTITLE": "{count} conversation | {count} conversations",
         "LIMIT_NOTE": "showing the {limit} most recent",
         "EMPTY": "No conversations for this result in the period.",
-        "ERROR": "We couldn't load the conversations. Please try again."
+        "ERROR": "We couldn't load the conversations. Please try again.",
+        "SUBTITLE_PERIOD": "{count} conversations · last {days} days"
       },
       "EMPTY": "Your agent is ready — metrics will appear here after its first conversations. Meanwhile, try it out in the Test tab.",
       "ERROR": "We couldn't load performance data.",
-      "RETRY": "Try again"
+      "RETRY": "Try again",
+      "REDESIGN_EMPTY_WEEK": "No data this week yet.",
+      "EMPTY_WEEK_ACTION": "See 30 days",
+      "EMPTY_TOTAL_ACTION": "Test it"
     },
     "AUDIENCE": {
       "TITLE": "Target audience",
@@ -584,6 +1036,338 @@
       "ACTUATION_INTERNAL": "Internal",
       "ACTUATION_BOTH": "Both",
       "INTERNAL_COPILOT": "Internal copilot"
+    },
+    "V2": {
+      "status": {
+        "active": "Active",
+        "paused": "Paused",
+        "todo": "Not finished",
+        "ready": "Ready to connect"
+      },
+      "steps": {
+        "label": "Steps",
+        "stepLabel": "Step {number}: {label}",
+        "choice": "Choose",
+        "tell": "Tell us",
+        "test": "Test",
+        "live": "Connect"
+      },
+      "list": {
+        "title": "Your agents",
+        "description": "They answer your customers and call someone from your team when needed.",
+        "loading": "Loading your agents",
+        "ariaLabel": "Agents",
+        "internalContext": "Appears beside your team's conversations",
+        "noChannel": "No channel: nobody can talk to {pronoun}",
+        "channel": "{name}",
+        "channelMore": "{name} and {more} more",
+        "weekStats": "This week: {replies} replies · passed {handoffs} to the team",
+        "monthStats": "No replies this week · {replies} replies in 30 days",
+        "monthStatsFull": "30 days: {replies} replies · passed {handoffs} to the team",
+        "noConversations": "No conversations yet",
+        "viewerHint": "You can view and test agents. Ask an account administrator to create or change one.",
+        "pauseNotice": "Paused agents stop answering new conversations. Current conversations go to your team right away, and new ones go straight to people."
+      },
+      "summary": {
+        "label": "Summary",
+        "active": "{count} attending",
+        "paused": "{count} paused",
+        "toFinish": "{count} to finish"
+      },
+      "actions": {
+        "create": "Create agent",
+        "open": "Open",
+        "continue": "Continue",
+        "chooseChannel": "Choose where it works",
+        "connect": "Connect",
+        "toggle": "{status}: {name}",
+        "more": "More options for {name}",
+        "deleteDraft": "Delete draft",
+        "pause": "Pause",
+        "cancel": "Cancel",
+        "retry": "Try again"
+      },
+      "empty": {
+        "eyebrow": "Agents",
+        "title": "An agent can answer your customers while you work",
+        "description": "Tell it about your business, test the answers and connect it to an existing channel. When it is unsure, it calls someone from your team.",
+        "create": "Create my first agent",
+        "viewer": "There are no agents in this account yet. An account administrator can create the first one.",
+        "modelsTitle": "Start with one of these",
+        "modelsDescription": "Each one starts with the right questions. You can change everything later."
+      },
+      "models": {
+        "support": {
+          "title": "Answer questions",
+          "description": "Answers common questions and solves simple requests.",
+          "example": "Example: hours, prices, how it works"
+        },
+        "sdr": {
+          "title": "Qualify contacts",
+          "description": "Talks to new contacts, understands their interest and passes good opportunities to your team.",
+          "example": "Example: someone who requested a quote"
+        },
+        "reception": {
+          "title": "Welcome and route",
+          "description": "Welcomes people, understands the subject and sends them to the right person.",
+          "example": "Example: sales, finance or support"
+        }
+      },
+      "badges": {
+        "insurance": "Quote agent",
+        "internal": "Team helper",
+        "both": "Customers and team"
+      },
+      "states": {
+        "E1": {
+          "context": "Saved for {days} days"
+        },
+        "E2": {
+          "context": "Stopped at Tell us. It stays saved until you finish or delete it."
+        },
+        "E2m": {
+          "context": "Needs the instructions written."
+        },
+        "E4": {
+          "internalContext": "Needs to be connected for the team to use",
+          "externalContext": "Needs a place to work"
+        }
+      },
+      "invalidation": {
+        "article": {
+          "male": "He",
+          "female": "She"
+        },
+        "pronoun": {
+          "male": "him",
+          "female": "her"
+        },
+        "material": "{article} {name} learned new material. Test again before connecting.",
+        "person": "Stopped at Test · Something changed after the test."
+      },
+      "dialog": {
+        "pauseTitle": "Pause this agent?",
+        "pauseDescription": "New conversations will go straight to your team and current conversations will be handed off.",
+        "pauseInternalDescription": "The {name} disappears from the conversations panel until you turn it on again.",
+        "deleteTitle": "Delete this draft?",
+        "deleteDescription": "The draft leaves the list."
+      },
+      "errors": {
+        "loadTitle": "We couldn't load your agents",
+        "loadDescription": "Check your connection and try again. Your agents keep working while this list is unavailable.",
+        "refresh": "The list could not be refreshed. The cards below may be out of date.",
+        "stale": "The change was saved, but this list could not be refreshed. The cards below may be out of date.",
+        "resume": "We couldn't reopen this step. Nothing new was created; try again from the list.",
+        "update": "We couldn't change this agent. Try again.",
+        "delete": "We couldn't delete this draft. Try again."
+      }
+    },
+    "CREATION": {
+      "choice": {
+        "eyebrow": "START HERE",
+        "title": "What should this agent do?",
+        "description": "Choose a starting point. You can change the details later.",
+        "modelsLabel": "Agent starting points",
+        "selected": "Good choice. Continue when you are ready.",
+        "chooseHint": "Choose one option to continue.",
+        "models": {
+          "support": {
+            "title": "Answer questions",
+            "description": "Answers common questions and solves simple requests.",
+            "example": "Example: hours, prices, how it works"
+          },
+          "sdr": {
+            "title": "Qualify contacts",
+            "description": "Talks to new contacts, understands their interest and passes good opportunities to your team.",
+            "example": "Example: someone who requested a quote"
+          },
+          "reception": {
+            "title": "Welcome and route",
+            "description": "Welcomes people, understands the subject and sends them to the right person.",
+            "example": "Example: sales, finance or support"
+          },
+          "onboarding": {
+            "title": "Help after the sale",
+            "description": "Helps new customers get started and answers questions about using your service.",
+            "example": "Example: welcome and first access"
+          },
+          "scheduler": {
+            "title": "Book appointments",
+            "description": "Finds a good day and time and gets the details ready to confirm.",
+            "example": "Example: a meeting, visit or demo"
+          },
+          "reactivation": {
+            "title": "Bring customers back",
+            "description": "Reaches out to people who went quiet and reopens the conversation with your team.",
+            "example": "Example: someone who has not replied in 30 days"
+          },
+          "internal": {
+            "title": "Help my team",
+            "description": "Stays inside team conversations and helps people who are answering. It never talks to customers."
+          },
+          "custom": {
+            "title": "Another job",
+            "description": "Describe in your own words what this agent should do."
+          }
+        }
+      },
+      "tell": {
+        "eyebrow": "TELL US",
+        "title": "Tell your agent how to help",
+        "description": "Answer its questions in plain language. You can add files or links when they help.",
+        "conversation": "Conversation",
+        "conversationHint": "You can change your answers later.",
+        "knowsTitle": "What it knows",
+        "knowsInternalTitle": "How it helps the team",
+        "knowsDescription": "These answers shape the agent's first version.",
+        "knowLabels": {
+          "negocio": "What the business does",
+          "publico": "Who it talks to",
+          "quando_chama": "When it calls the team",
+          "nome": "Name"
+        },
+        "answer": "Answer",
+        "notAnswered": "Not answered yet",
+        "waitingForAnswers": "The questions will appear here as you answer.",
+        "reusableTitle": "Material from another agent",
+        "reusableDescription": "Use a ready material from this account without copying private content.",
+        "reusableSingle": "One ready material is available: {material}.",
+        "reusableEmpty": "No reusable material is available yet.",
+        "reusableLoading": "Checking materials from other agents…",
+        "reusableError": "We couldn't check materials from other agents. You can add one here.",
+        "suggestedLinks": "Suggested links",
+        "suggestedLinksHint": "The Builder found these references in the conversation.",
+        "continueHint": "When the questions are answered, test the agent before connecting it."
+      },
+      "test": {
+        "eyebrow": "TEST",
+        "title": "Try the agent before anyone sees it",
+        "description": "Change how it presents itself, then send a real test message. A successful test is required before connecting it.",
+        "presentationTitle": "How the agent presents itself",
+        "presentationDescription": "These details are visible to people who talk to the agent.",
+        "nameLabel": "Name",
+        "greetingLabel": "First message",
+        "changeHint": "Changing these details requires a new test.",
+        "agentFallback": "Your new agent",
+        "privateHint": "Private test",
+        "conversation": "Test conversation",
+        "empty": "Send a message to see how the agent answers.",
+        "thinking": "The agent is thinking…",
+        "inputPlaceholder": "Write a test message",
+        "internalExample": "Example conversation: ask as someone from your team would ask.",
+        "noSchedule": "This is private. Hours and audience rules do not apply here.",
+        "stillBuilding": "This agent is still being assembled. Its answers may change when it is ready.",
+        "writesExternal": "This test can write in another system. Use a safe test question and review the result before connecting it.",
+        "confidence": "Confidence",
+        "handoff": "This answer would call your team.",
+        "usedMaterials": "Material used",
+        "skippedTools": "Some tools were not run in this answer.",
+        "toolSkipped": "This action was not performed in the test.",
+        "toolNotInTest": "This action is only available outside the simulation.",
+        "toolViewerNotAllowed": "This action changes data and is available to editors.",
+        "clearConversation": "Clear conversation",
+        "addImage": "Add an image",
+        "removeImage": "Remove image",
+        "imageHint": "Up to 4 images, 5 MB each.",
+        "imageInvalid": "Choose a PNG, JPG, GIF or WebP image.",
+        "imageTooLarge": "Each image must be 5 MB or smaller.",
+        "imageTooMany": "You can add up to 4 images per question.",
+        "saved": "Saved. Continue whenever you want.",
+        "rateLimited": "You sent several tests quickly. Wait a moment and try again.",
+        "questions": {
+          "supportOne": "What are your opening hours?",
+          "supportTwo": "How can I get help with a common request?",
+          "sdrOne": "What would you ask someone who wants a quote?",
+          "sdrTwo": "How do you decide whether to call the team?",
+          "receptionOne": "How should you route a new conversation?",
+          "receptionTwo": "What should you ask before sending someone to the team?",
+          "onboardingOne": "What should a new customer do first?",
+          "onboardingTwo": "How do you help someone who is stuck?",
+          "schedulerOne": "What days and times can I choose?",
+          "schedulerTwo": "What should you collect before asking the team to confirm?",
+          "reactivationOne": "How would you restart a conversation that went quiet?",
+          "reactivationTwo": "When should you call someone from the team?",
+          "internalOne": "Summarize this conversation for me.",
+          "internalTwo": "Suggest a reply I can send."
+        },
+        "presentationChanged": "You changed the introduction. Start a new conversation to test the updated agent."
+      },
+      "live": {
+        "eyebrow": "CONNECT",
+        "title": "Connect {name}",
+        "description": "Choose where this agent should work. Connecting uses a channel that already exists in your account.",
+        "testRequired": "Finish a successful test before connecting this agent.",
+        "internalTitle": "Ready for your team",
+        "internalDescription": "This helper stays inside your team's conversations and does not need a customer channel.",
+        "channelTitle": "Where should it answer?",
+        "channelDescription": "Choose one or more existing inboxes. To create a WhatsApp connection, open Channels first.",
+        "channelLabel": "Available inboxes",
+        "channelBusy": "Already connected to another agent",
+        "channelBusyByAgent": "Already connected to {name}",
+        "channelReady": "Available",
+        "selectedTitle": "Selected inboxes ({count})",
+        "noChannels": "There are no available channels yet.",
+        "occupiedTitle": "Channels in use ({count})",
+        "openChannels": "Open Channels",
+        "windowTitle": "When should it answer?",
+        "windowDescription": "Choose the time window for customer conversations.",
+        "windows": {
+          "always": "Any time",
+          "businessHours": "During business hours",
+          "outside": "Outside business hours"
+        },
+        "summaryTitle": "Before you connect",
+        "summary": "{name} will answer in one or more inboxes.",
+        "greeting": "“{greeting}”",
+        "noWhatsapp": "WhatsApp is connected in Channels. Here you choose inboxes that already exist."
+      },
+      "ready": {
+        "title": "{name} is answering in {channel}",
+        "multiTitle": "{name} is answering in {count} inboxes",
+        "channelsLabel": "Inboxes",
+        "description": "Your agent is live. You can pause it or change its settings at any time.",
+        "internalTitle": "{name} is ready for your team",
+        "internalDescription": "Your team can use this helper in the conversations area.",
+        "offTitle": "{name} is saved",
+        "offDescription": "Nothing is answering yet. You can connect this agent when you are ready.",
+        "openConversation": "Open conversations",
+        "openConversationHint": "See where the agent is helping your team.",
+        "backToAgents": "Back to your agents",
+        "backToAgentsHint": "See status and continue managing your agents.",
+        "openPerformance": "See performance"
+      },
+      "actions": {
+        "continue": "Continue",
+        "continueToTest": "Continue to Test",
+        "continueToLive": "Continue to Connect",
+        "backToTell": "Change something",
+        "backToTest": "Back to Test",
+        "back": "Back",
+        "leave": "Leave and continue later",
+        "savePresentation": "Save changes",
+        "test": "Test",
+        "publish": "Connect agent",
+        "keepOff": "Leave turned off for now",
+        "useMaterial": "Use this material",
+        "useLink": "Use",
+        "notNow": "Not now",
+        "chooseMaterial": "Choose material",
+        "cancel": "Cancel",
+        "retry": "Try again",
+        "dismiss": "Dismiss"
+      },
+      "errors": {
+        "generic": "We couldn't load this step. Try again.",
+        "start": "We couldn't start your agent. Try again.",
+        "resume": "Couldn't resume the setup. Your agent is still saved. Try again.",
+        "tell": "We couldn't continue the conversation.",
+        "tellHint": "Your draft is safe. Try sending the answer again.",
+        "test": "We couldn't complete this test. Try again.",
+        "presentation": "We couldn't save these details. Try again.",
+        "publish": "We couldn't connect this agent. Check the channel and try again.",
+        "update": "We couldn't save this draft. Try again.",
+        "material": "We couldn't use this material. Try again."
+      }
     }
   }
 }

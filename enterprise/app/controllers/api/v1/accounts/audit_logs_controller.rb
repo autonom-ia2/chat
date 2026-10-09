@@ -28,6 +28,7 @@ class Api::V1::Accounts::AuditLogsController < Api::V1::Accounts::EnterpriseAcco
   def filtered_audit_logs
     scope = Current.account.associated_audits
     scope = scope.with_auditable_types(auditable_types) if auditable_types.present?
+    scope = filter_agent_audits(scope)
     scope = scope.search_by_user(params[:q]) if params[:q].is_a?(String) && params[:q].present?
     apply_date_window(scope)
   end
@@ -42,6 +43,48 @@ class Api::V1::Accounts::AuditLogsController < Api::V1::Accounts::EnterpriseAcco
     scope = scope.created_after(window_start) if window_start
     scope = scope.created_before(window_end) if window_end
     scope
+  end
+
+  def filter_agent_audits(scope)
+    return scope unless agent_filter_requested? || operation_key_filter_requested?
+    return scope.none if invalid_agent_filters?
+
+    scope = scope.where(auditable_type: 'Autonomia::Agents::Agent')
+    scope = scope.where(auditable_id: parsed_agent_id) if agent_filter_requested?
+    return scope unless operation_key_filter_requested?
+
+    scope.where(
+      'audited_changes @> ?',
+      { 'operation_config' => { operation_key => {} } }.to_json
+    )
+  end
+
+  def invalid_agent_filters?
+    (agent_filter_requested? && parsed_agent_id.nil?) ||
+      (operation_key_filter_requested? && operation_key.blank?)
+  end
+
+  def agent_filter_requested?
+    params[:agent_id].present?
+  end
+
+  def parsed_agent_id
+    return @parsed_agent_id if defined?(@parsed_agent_id)
+
+    @parsed_agent_id = Integer(params[:agent_id], 10)
+  rescue ArgumentError, TypeError
+    @parsed_agent_id = nil
+  end
+
+  def operation_key_filter_requested?
+    params[:operation_key].present?
+  end
+
+  def operation_key
+    return @operation_key if defined?(@operation_key)
+
+    candidate = params[:operation_key].to_s
+    @operation_key = candidate if Autonomia::Agents::ConfigContract::OPERATIONAL_KEYS.include?(candidate)
   end
 
   def sort_direction

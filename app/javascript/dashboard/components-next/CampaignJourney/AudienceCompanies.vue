@@ -1,10 +1,10 @@
 <script setup>
-import { formatNumber } from 'dashboard/components-next/CampaignJourney/localeTag';
+import { formatNumber } from 'dashboard/helper/localeTag';
 // "Empresas" of Novo público (#993, PRD §6.6-4, D10, C4–C6). Shown only when the backend
 // says companies are available for this audience (api-992.md §9).
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import JourneySwitch from './JourneySwitch.vue';
+import LabeledSwitch from 'dashboard/components-next/switch/LabeledSwitch.vue';
 
 const props = defineProps({
   // companiesBlock() result
@@ -49,7 +49,7 @@ const numbers = computed(() => {
           {{ t(`${NS}.HINT`, { column: block.column }) }}
         </p>
       </div>
-      <JourneySwitch
+      <LabeledSwitch
         :checked="block.create"
         :disabled="disabled"
         :label="block.create ? t(`${NS}.SWITCH_ON`) : t(`${NS}.SWITCH_OFF`)"

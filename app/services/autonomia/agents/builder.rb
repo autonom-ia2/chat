@@ -15,6 +15,7 @@ module Autonomia
       # a ENFORCEMENT (truncamento) usa o teto real de gravação, resolvido em write_limit_for.
       TONE_BUDGET_CHARS = 1_000
       INSTRUCTION_BUDGET_CHARS = 50_000
+      KNOWS_KEYS = %w[negocio publico quando_chama nome].freeze
 
       # INTENÇÃO DE FECHAR é decisão do MODELO, não de lista de palavras (regra do Rodrigo, 20/09/2026).
       # O Construtor já lê o turno inteiro para responder; este campo só pede que ele DECLARE o que
@@ -57,13 +58,20 @@ module Autonomia
             voice:             { type: 'string', enum: %w[feminina masculina] },
             needs_more_info:   { type: 'boolean' },
             next_question:     { type: 'string' },
+            knows:             {
+              type: 'object',
+              properties: KNOWS_KEYS.map(&:to_sym).index_with { |_key| { type: 'string' } },
+              required: KNOWS_KEYS,
+              additionalProperties: false
+            },
+            suggested_links:   { type: 'array', items: { type: 'string' } },
             # Leitura do MODELO sobre a última fala do usuário (substitui a antiga lista de palavras
             # CLOSE_INTENT_PATTERNS). Consumido por close_intent?; false é a saída "não se aplica".
             user_asked_to_close: { type: 'boolean', description: USER_ASKED_TO_CLOSE_DESCRIPTION }
           },
           required: %w[name agent_type instruction scaffold human_card greeting fallback_message
-                       handoff_rule starter_questions tone guardrails voice needs_more_info next_question
-                       user_asked_to_close],
+                       handoff_rule starter_questions tone guardrails voice needs_more_info next_question knows
+                       suggested_links user_asked_to_close],
           additionalProperties: false
         }
       }.freeze
@@ -135,6 +143,12 @@ module Autonomia
             faz a ingestão). NÃO afirme que você navega na web nem que já leu a página; você apenas usa o link
             como fonte de conhecimento após a adição. Se o usuário confirmar, siga a entrevista normalmente; o
             material entra no STATUS DOS MATERIAIS quando adicionado.
+        5.8 ROTEIRO ESTRUTURADO: devolva `knows` com exatamente quatro chaves, `negocio`, `publico`,
+            `quando_chama` e `nome`. Cada valor é uma resposta curta que já ficou clara na conversa; use string vazia
+            quando ainda não foi respondido. Absorva respostas fora de ordem na chave correta e não tente descobrir a
+            resposta procurando palavras no texto. Quando as quatro chaves estiverem preenchidas, não faça outra pergunta.
+        5.9 LINKS SUGERIDOS: devolva `suggested_links` como uma lista de URLs que o dono forneceu ou pediu para usar.
+            A lista pode ser vazia. Não invente URL, não inclua texto ou citações markdown na lista.
 
         ## 6. CRIAÇÃO vs. AJUSTE
         6.1 CRIAÇÃO (sem instrução atual): conduza a entrevista e gere a config.
@@ -195,6 +209,8 @@ module Autonomia
         `name` (perguntado), `agent_type` (deduzido), `instruction` (oculta, §7), `scaffold` (andaime oculto), `human_card`
         (resumo simples 1–2 frases, único texto visível sobre o miolo), `greeting`, `fallback_message`, `handoff_rule`,
         `starter_questions` (ancoradas no conhecimento real), `tone`, `guardrails`, `voice`.
+        - `knows`: objeto com exatamente `negocio`, `publico`, `quando_chama` e `nome`; strings vazias significam que
+          a resposta ainda falta. `suggested_links`: lista de URLs fornecidas pelo dono, vazia quando não houver.
         - `greeting`/`fallback_message`: grave SÓ o conteúdo final, em primeira pessoa do agente, usável como está. NUNCA
           inclua dentro do valor o prefixo "Aqui vai uma sugestão, ajuste como quiser": isso é rótulo de UI, não texto do agente.
         - `guardrails`: lista curta, SEM repetir as regras já escritas em §7 (uma fonte da verdade por regra).
@@ -686,6 +702,8 @@ module Autonomia
           return nil
         end
 
+        @thread.agent&.recusar_se_builder_indisponivel!
+
         result = client.create(
           model: Autonomia::Agents::Config::BUILDER_MODEL,
           instructions: MOTHER_INSTRUCTION,
@@ -804,9 +822,30 @@ module Autonomia
       # Blocos de contexto interno, na ordem em que aparecem antes do histórico. Cada um é DADO de
       # trabalho do Construtor (nunca fala do usuário). Omite os que não se aplicam.
       def context_blocks
-        [actuation_context, knowledge_intent_context, skeleton_context, opening_context, knowledge_context,
+        [actuation_context, knowledge_intent_context, skeleton_context, opening_context, knows_context,
+         knowledge_context,
          send_media_context, materials_status_context, turn_budget_context, pending_request_context,
          adjust_context].compact_blank
+      end
+
+      # BE-26: a resposta estruturada da rodada anterior é contexto interno, não uma dedução livre do
+      # histórico. Isso preserva respostas fora de ordem sem obrigar o modelo a reencontrar fatos por
+      # palavras ou a repetir uma pergunta já respondida.
+      def knows_context
+        state = @thread.state.to_h
+        knows = state['knows'].is_a?(Hash) ? state['knows'] : {}
+        links = Array(state['suggested_links']).select { |link| link.is_a?(String) && link.present? }
+        return '' if knows.values.none? { |value| value.to_s.strip.present? } && links.empty?
+
+        lines = [
+          'CONTEXTO INTERNO (não é fala do usuário). FATOS ESTRUTURADOS JÁ CONHECIDOS:',
+          "negocio: #{knows['negocio']}",
+          "publico: #{knows['publico']}",
+          "quando_chama: #{knows['quando_chama']}",
+          "nome: #{knows['nome']}"
+        ]
+        lines << "suggested_links: #{links.join(', ')}" if links.any?
+        lines.join("\n")
       end
 
       # PEDIDOS ACUMULAM (§4). Duas pendências morriam em silêncio:
@@ -1083,6 +1122,8 @@ module Autonomia
         {
           'needs_more_info' => parsed['needs_more_info'] == true,
           'next_question' => parsed['next_question'].to_s,
+          'knows' => knows_for(parsed['knows']),
+          'suggested_links' => suggested_links_for(parsed['suggested_links']),
           # Uma geração bem-sucedida LIMPA o resíduo da falha anterior (mark_ready! faz merge, não
           # substitui). `applied` e `truncated_fields` nascem no piso conservador — só apply_to_agent,
           # que de fato grava no agente, os sobrescreve.
@@ -1108,6 +1149,16 @@ module Autonomia
         }
       end
 
+      def self.knows_for(value)
+        source = value.is_a?(Hash) ? value : {}
+
+        KNOWS_KEYS.index_with { |key| (source[key] || source[key.to_sym]).to_s }
+      end
+
+      def self.suggested_links_for(value)
+        Array(value).select { |link| link.is_a?(String) && link.present? }
+      end
+
       def self.agent_type_for(value)
         Autonomia::Agents::Agent::AGENT_TYPES.include?(value) ? value : 'custom'
       end
@@ -1129,6 +1180,12 @@ module Autonomia
         # conta como "não se aplica": nunca força fechamento por omissão (mesmo fail-safe do #19).
         @user_asked_to_close = parsed['user_asked_to_close'] == true
 
+        # BE-26: as quatro respostas estruturadas são a autoridade para o encerramento da entrevista.
+        # Saídas antigas sem `knows` continuam no caminho legado até o modelo passar a emitir o schema
+        # novo; quando o campo existe, nunca deixamos force_close ou um `false` do modelo pular uma
+        # resposta ausente.
+        enforce_knows_completion!(parsed)
+
         # GATE (P0) + CONSTRUTOR (P1) — fechamento determinístico (defesa em profundidade): o modelo
         # PODE devolver needs_more_info=true mesmo quando deveria fechar (loop teimoso T01/T06/T08, em
         # que o Construtor recusou "pode fechar" e ficou pedindo revisão de material). Quando há um
@@ -1144,13 +1201,14 @@ module Autonomia
         # `@forced_close` registra que ESTE turno foi fechado POR CIMA de um needs_more_info=true. É o
         # sinal mais preciso de "fechou com pergunta pendente" (o modelo, com a conversa inteira à
         # frente, ainda queria perguntar) e é consumido por declare_gaps! na hora de avisar o dono.
-        @forced_close = parsed['needs_more_info'] == true && force_close?
+        @forced_close = parsed['needs_more_info'] == true && force_close? &&
+                        (!structured_knows_present?(parsed) || knows_complete?(parsed))
         parsed['needs_more_info'] = false if @forced_close
 
         # Portão DURO de materiais (§12 da instrução-mãe + spec): se o modelo quis fechar mas há fontes
         # ainda não revisadas e o usuário não declarou estar sem material, força mais uma rodada de
         # revisão antes de criar/atualizar o agente. Defesa em profundidade (não confia só no LLM).
-        force_materials_gate!(parsed) if parsed['needs_more_info'] != true
+        force_materials_gate!(parsed) if parsed['needs_more_info'] != true && !knows_complete?(parsed)
 
         # #19 — NÃO persistir agente VAZIO: se for fechar (needs_more_info=false) mas a saída veio
         # degenerada (instruction/human_card em branco), reabre a entrevista em vez de gravar um agente
@@ -1185,6 +1243,38 @@ module Autonomia
           declare_gaps!(parsed)
           apply_to_agent(token, parsed)
         end
+      end
+
+      def enforce_knows_completion!(parsed)
+        return unless structured_knows_present?(parsed)
+
+        if knows_complete?(parsed)
+          parsed['needs_more_info'] = false
+          parsed['next_question'] = ''
+          parsed['name'] = self.class.knows_for(parsed['knows'])['nome'] if parsed['name'].to_s.strip.blank?
+        else
+          parsed['needs_more_info'] = true
+          parsed['next_question'] = parsed['next_question'].to_s.presence || missing_knows_question(parsed)
+        end
+      end
+
+      def structured_knows_present?(parsed)
+        parsed.key?('knows')
+      end
+
+      def knows_complete?(parsed)
+        self.class.knows_for(parsed['knows']).values.all? { |value| value.to_s.strip.present? }
+      end
+
+      def missing_knows_question(parsed)
+        labels = {
+          'negocio' => 'O que seu negócio faz?',
+          'publico' => 'Quem o agente atende?',
+          'quando_chama' => 'Quando ele deve chamar a equipe?',
+          'nome' => 'Como você quer chamar este agente?'
+        }
+        missing = self.class.knows_for(parsed['knows']).find { |_key, value| value.to_s.strip.blank? }
+        labels.fetch(missing&.first, 'O que mais este agente precisa saber?')
       end
 
       # Reescreve o `parsed` para não fechar enquanto houver material pendente de revisão (sem
@@ -1339,7 +1429,7 @@ module Autonomia
 
         attrs = build_attributes(parsed)
         log_truncation
-        agent.apply_builder_config!(token, attrs)
+        applied = agent.apply_builder_config!(token, attrs, version_reason: 'builder', version_author: @thread.created_by)
         # #18 — marca ready INCONDICIONALMENTE: se a escrita não venceu por SUPERSEDE (existe um ajuste
         # mais NOVO do agente), o token DESTA thread ainda é válido → mark_ready! tira a thread de
         # `processing` (senão o front pollaria até timeout — regressão do supersede). Se não venceu por
@@ -1347,7 +1437,8 @@ module Autonomia
         # reprova e isto vira no-op — a geração nova é quem marca ready. Idempotente nos dois casos.
         @thread.mark_ready!(
           token,
-          state: self.class.state_for(parsed).merge('applied' => true, 'truncated_fields' => @truncated_fields.to_a)
+          state: self.class.state_for(parsed).merge('applied' => applied == true,
+                                                    'truncated_fields' => @truncated_fields.to_a)
         )
       end
 

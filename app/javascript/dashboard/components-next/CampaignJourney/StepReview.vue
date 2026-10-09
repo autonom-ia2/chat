@@ -14,7 +14,7 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
 import { formatInZone, isFutureSchedule, scheduleToUtc } from './scheduleTime';
-import { toLocaleTag, formatNumber } from './localeTag';
+import { toLocaleTag, formatNumber } from 'dashboard/helper/localeTag';
 
 const props = defineProps({
   draft: { type: Object, required: true },
@@ -185,7 +185,7 @@ const submit = () => {
       class="flex flex-col gap-3 rounded-2xl border border-n-weak bg-n-solid-1 p-4 shadow-sm lg:sticky lg:top-4"
       data-test="review-aside"
     >
-      <div class="rounded-xl bg-[#0D2344] p-4 text-white">
+      <div class="rounded-xl bg-n-navy p-4 text-white">
         <p class="m-0 text-xs font-semibold uppercase opacity-80">
           {{ t(`${NS}.RECEIVE`) }}
         </p>

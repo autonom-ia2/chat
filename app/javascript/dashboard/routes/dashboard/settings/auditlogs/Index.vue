@@ -1,10 +1,20 @@
 <script setup>
+/*
+ * Audit log messages are owned by the fork catalog and several action keys
+ * are selected from the event mapping at runtime.
+ */
+/* eslint-disable @intlify/vue-i18n/no-missing-keys, @intlify/vue-i18n/no-dynamic-keys */
+
 import { computed, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { useDebounceFn } from '@vueuse/core';
 import { useAlert } from 'dashboard/composables';
-import { useStoreGetters, useStore } from 'dashboard/composables/store';
+import {
+  useStoreGetters,
+  useStore,
+  useMapGetter,
+} from 'dashboard/composables/store';
 import { messageTimestamp } from 'shared/helpers/timeHelper';
 import {
   BaseTable,
@@ -20,6 +30,7 @@ import {
   generateTranslationPayload,
   generateLogActionKey,
   translateLogPayload,
+  getAutonomiaOperationChanges,
   auditLogFiltersFromQuery,
   buildAuditLogRouteQuery,
 } from 'dashboard/helper/auditlogHelper';
@@ -37,7 +48,26 @@ const { t } = useI18n();
 const records = computed(() => getters['auditlogs/getAuditLogs'].value);
 const uiFlags = computed(() => getters['auditlogs/getUIFlags'].value);
 const meta = computed(() => getters['auditlogs/getMeta'].value);
-const agentList = computed(() => getters['agents/getAgents'].value);
+const humanAgentList = computed(() => getters['agents/getAgents']?.value || []);
+const autonomiaAgentGetter = getters['autonomiaAgents/getRecords'];
+
+const accountId = useMapGetter('getCurrentAccountId');
+const currentAccount = useMapGetter('accounts/getAccount');
+const globalConfig = useMapGetter('globalConfig/get');
+const autonomiaAgentsEnabled = computed(() => {
+  const account =
+    typeof currentAccount.value === 'function'
+      ? currentAccount.value(accountId.value)
+      : null;
+
+  return (
+    globalConfig.value?.autonomiaAgentsEnabled === true &&
+    account?.autonomia_agents_enabled === true
+  );
+});
+const autonomiaAgentList = computed(() =>
+  autonomiaAgentsEnabled.value ? autonomiaAgentGetter?.value || [] : []
+);
 
 const searchQuery = ref(route.query.q ?? '');
 // The search term this page last put in the URL. Echoes of our own navigation
@@ -47,13 +77,31 @@ const pushedSearch = ref(searchQuery.value);
 const filters = computed(() => auditLogFiltersFromQuery(route.query));
 
 const hasActiveFilters = computed(() => {
-  const { q, types, since, sort } = filters.value;
-  return Boolean(q || types || since || sort);
+  const {
+    q,
+    types,
+    since,
+    sort,
+    agent_id: agentId,
+    operation_key: operationKey,
+  } = filters.value;
+  return Boolean(q || types || since || sort || agentId || operationKey);
 });
 
 const fetchAuditLogs = async () => {
   try {
     await store.dispatch('auditlogs/fetch', filters.value);
+  } catch (error) {
+    const errorMessage = error?.message || t('AUDIT_LOGS.API.ERROR_MESSAGE');
+    useAlert(errorMessage);
+  }
+};
+
+const fetchAutonomiaAgents = async () => {
+  if (!autonomiaAgentsEnabled.value || !autonomiaAgentGetter) return;
+
+  try {
+    await store.dispatch('autonomiaAgents/get');
   } catch (error) {
     const errorMessage = error?.message || t('AUDIT_LOGS.API.ERROR_MESSAGE');
     useAlert(errorMessage);
@@ -84,11 +132,74 @@ const clearFilters = () => {
 };
 
 const generateLogText = auditLogItem => {
-  const payload = generateTranslationPayload(auditLogItem, agentList.value);
+  const payload = generateTranslationPayload(
+    auditLogItem,
+    humanAgentList.value
+  );
   const translationKey = generateLogActionKey(auditLogItem);
   const mergedPayload = translateLogPayload(payload, t);
   return t(translationKey, mergedPayload);
 };
+
+const operationChanges = auditLogItem =>
+  getAutonomiaOperationChanges(auditLogItem);
+
+const formatOperationValue = value => {
+  if (value.type === 'empty') {
+    return t('AUDIT_LOGS.AUTONOMIA_AGENT.VALUES.EMPTY');
+  }
+  if (value.type === 'hidden') {
+    return t('AUDIT_LOGS.AUTONOMIA_AGENT.VALUES.HIDDEN');
+  }
+  if (value.type === 'boolean') {
+    return t(
+      value.value
+        ? 'AUDIT_LOGS.AUTONOMIA_AGENT.VALUES.ON'
+        : 'AUDIT_LOGS.AUTONOMIA_AGENT.VALUES.OFF'
+    );
+  }
+  if (value.type === 'number') {
+    return t('AUDIT_LOGS.AUTONOMIA_AGENT.VALUES.SECONDS', {
+      value: value.value,
+    });
+  }
+  if (value.type === 'length') {
+    return t('AUDIT_LOGS.AUTONOMIA_AGENT.VALUES.LENGTH', {
+      value: value.value,
+    });
+  }
+  if (value.type === 'count') {
+    return t('AUDIT_LOGS.AUTONOMIA_AGENT.VALUES.COUNT', {
+      value: value.value,
+    });
+  }
+  if (value.type === 'range') {
+    return t('AUDIT_LOGS.AUTONOMIA_AGENT.VALUES.RANGE', {
+      count: value.count,
+      min: value.min,
+      max: value.max,
+    });
+  }
+  if (value.type === 'masked_list') {
+    const preview = value.preview.join(', ');
+    const remaining = value.count - value.preview.length;
+    return remaining > 0
+      ? t('AUDIT_LOGS.AUTONOMIA_AGENT.VALUES.MASKED_LIST_MORE', {
+          preview,
+          remaining,
+        })
+      : t('AUDIT_LOGS.AUTONOMIA_AGENT.VALUES.MASKED_LIST', { preview });
+  }
+
+  return t('AUDIT_LOGS.AUTONOMIA_AGENT.VALUES.HIDDEN');
+};
+
+const formatOperationChange = change =>
+  t('AUDIT_LOGS.AUTONOMIA_AGENT.CHANGE', {
+    label: t(change.label),
+    before: formatOperationValue(change.before),
+    after: formatOperationValue(change.after),
+  });
 
 const showsRawIpAddress = computed(() =>
   getters['accounts/isFeatureEnabledonAccount'].value(
@@ -136,7 +247,12 @@ watch(
 
 onMounted(() => {
   store.dispatch('agents/get');
+  fetchAutonomiaAgents();
   fetchAuditLogs();
+});
+
+watch(autonomiaAgentsEnabled, enabled => {
+  if (enabled) fetchAutonomiaAgents();
 });
 </script>
 
@@ -165,6 +281,9 @@ onMounted(() => {
             :since="filters.since"
             :until="filters.until"
             :sort="filters.sort"
+            :agent-id="filters.agent_id"
+            :operation-key="filters.operation_key"
+            :agents="autonomiaAgentList"
             @update="onFiltersUpdate"
           />
         </template>
@@ -201,6 +320,17 @@ onMounted(() => {
                   >
                     {{ generateLogText(auditLogItem) }}
                   </span>
+                  <ul
+                    v-if="operationChanges(auditLogItem).length"
+                    class="mt-1 flex flex-col gap-0.5 text-body-small text-n-slate-11"
+                  >
+                    <li
+                      v-for="change in operationChanges(auditLogItem)"
+                      :key="change.key"
+                    >
+                      {{ formatOperationChange(change) }}
+                    </li>
+                  </ul>
                 </BaseTableCell>
 
                 <BaseTableCell>

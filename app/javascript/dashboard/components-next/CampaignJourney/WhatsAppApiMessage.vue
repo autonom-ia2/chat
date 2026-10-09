@@ -1,5 +1,5 @@
 <script setup>
-import { formatNumber } from 'dashboard/components-next/CampaignJourney/localeTag';
+import { formatNumber } from 'dashboard/helper/localeTag';
 import { DOT, PLUS } from 'dashboard/components-next/CampaignJourney/textMarks';
 // Passo 2 — WhatsApp API (#993 front of #999, PRD §6.3, D7; api-999.md §2.2). Inbox marked for
 // campaigns, free text with contact and audience fields ({{contact.first_name}},

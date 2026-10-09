@@ -1,6 +1,6 @@
 // ---------- Criar agente: Escolha → Conte → Teste → Ligue ----------
 function newBuild(model) {
-  return { model, answers: {}, turn: 0, files: [], media: [], images: [], tested: [], chunks: {}, channel: null, linkHint: false, linkAdded: false, tab: 'knowledge', starters: null, window: 'always' };
+  return { model, answers: {}, turn: 0, files: [], media: [], images: [], tested: [], chunks: {}, channels: [], linkHint: false, linkAdded: false, tab: 'knowledge', starters: null, window: 'always' };
 }
 function ensureBuild() { if (!S.build) S.build = newBuild('sdr'); if (!S.build.model) S.build.model = 'sdr'; return S.build; }
 const script = () => SCRIPT[S.build.model === 'internal' ? 'internal' : 'sdr'];
@@ -173,12 +173,16 @@ function viewLigue() {
   const internal = isInternal();
   const free = CHANNELS.filter((c) => !c.busyBy);
   const busy = CHANNELS.filter((c) => c.busyBy);
-  const ch = channelById(b.channel);
+  b.channels ||= [];
+  if (!internal && free.length === 1 && !b.channels.length) b.channels = [free[0].id];
+  const selected = b.channels.map((id) => channelById(id)).filter(Boolean);
+  const ch = selected[0];
+  const selectedNames = selected.map((c) => c.name).join(', ');
   const accepted = b.files.filter((f) => f.state === 'accepted').length;
   const starters = b.starters || (internal ? ['Resuma esta conversa', 'Sugira uma resposta'] : ['Sua corretora atende hoje por WhatsApp?', 'Quer ver como funciona na prática?', 'Quantas pessoas atendem na sua corretora?']);
   b.starters = starters;
-  const opt = (c) => `<button class="opt" role="radio" aria-checked="${b.channel === c.id}" data-ch="${c.id}" ${c.busyBy ? 'disabled' : ''}>
-    <span class="radio" aria-hidden="true"></span><span class="tile t-blue" style="width:2.5rem;height:2.5rem;border-radius:.75rem;display:grid;place-items:center">${icon(c.icon)}</span>
+  const opt = (c) => `<button class="opt" role="checkbox" aria-checked="${b.channels.includes(c.id)}" data-ch="${c.id}" ${c.busyBy ? 'disabled' : ''}>
+    <span class="check" aria-hidden="true"></span><span class="tile t-blue" style="width:2.5rem;height:2.5rem;border-radius:.75rem;display:grid;place-items:center">${icon(c.icon)}</span>
     <span style="flex:1;min-width:0"><b>${esc(c.name)}</b>${c.busyBy ? `<div class="small">Já tem ${artigo(agentById(c.busyBy) || { name: 'a' })} ${esc((agentById(c.busyBy) || {}).name || c.busyBy)} atendendo aqui. Cada canal tem um agente.</div>` : ''}</span></button>`;
   const windows = [['always', 'Sempre', 'Responde a qualquer hora.'], ['business_hours', 'No horário comercial', 'Só quando a caixa está aberta.'], ['outside_business_hours', 'Fora do horário comercial', 'Só quando a equipe não está.']];
   const bar = stateBar('ligue', [['normal', 'Normal'], ['semcanal', 'Nenhum canal livre'], ['falhou', 'Falhou ao ligar'], ['semhorario', 'Canal sem horário'], ['semteste', 'Sem teste'], ['naoadmin', 'Quem edita sem ser admin']]);
@@ -188,14 +192,14 @@ function viewLigue() {
     <header><h1 class="h1">${internal ? `Confira e ligue o ${esc(nome)}` : `Confira e escolha onde ${artigo({ name: nome })} ${esc(nome)} atende`}</h1>
     <p class="sub">${internal ? 'Ele aparece ao lado de cada conversa para a equipe. Nunca fala com clientes.' : 'Aparecem só os canais conectados na sua conta.'}</p></header>
     ${st === 'semteste' ? `<div class="banner amber" role="alert">${icon('flask-conical')}<span class="grow">Teste ${internal ? 'o' : 'a'} ${esc(nome)} antes de ligar.</span><button class="btn soft" data-go="teste">Ir para o teste</button></div>` : ''}
-    ${st === 'falhou' ? `<div class="banner red" role="alert">${icon('plug-zap')}<span class="grow">Não deu para ligar ${artigo({ name: nome })} ${esc(nome)} no ${esc(ch ? ch.name : 'canal')}. Nada mudou: ${internal ? 'ele' : 'ela'} continua desligad${internal ? 'o' : 'a'}.</span><button class="btn soft" data-state="ligue:normal">Tentar de novo</button></div>` : ''}
+    ${st === 'falhou' ? `<div class="banner red" role="alert">${icon('plug-zap')}<span class="grow">Não deu para ligar ${artigo({ name: nome })} ${esc(nome)} nos canais escolhidos. Nada mudou: ${internal ? 'ele' : 'ela'} continua desligad${internal ? 'o' : 'a'}.</span><button class="btn soft" data-state="ligue:normal">Tentar de novo</button></div>` : ''}
     <div class="two">
       <section style="display:flex;flex-direction:column;gap:1.5rem">
         ${internal ? `<div class="sect"><h3>Onde a equipe encontra</h3><p class="desc">Abra qualquer conversa: ${esc(nome)} fica no painel da direita, com resumo e sugestão de resposta.</p></div>` : `
         <div class="sect"><h3>Onde atende</h3>
-          ${freeList.length ? `<div role="radiogroup" aria-label="Canal" style="display:flex;flex-direction:column;gap:.75rem">${freeList.map(opt).join('')}</div>`
-    : `<div class="callout">${icon('info')}<span>Todos os canais já têm um agente. Conecte um canal novo ou tire um agente de um canal.</span></div>`}
-          ${st === 'naoadmin' ? `<p class="small">Peça a quem administra a conta para conectar um WhatsApp.</p>` : `<button class="btn outline" data-go="conectar">${icon('plus')}Conectar um WhatsApp novo</button>`}
+          ${freeList.length ? `<div role="group" aria-label="Canais" style="display:flex;flex-direction:column;gap:.75rem">${freeList.map(opt).join('')}</div>`
+    : `<div class="callout">${icon('info')}<span>Todos os canais já têm um agente. Abra Canais para conectar outro ou tire um agente de um canal.</span></div>`}
+          ${st === 'naoadmin' ? `<p class="small">Peça a quem administra a conta para abrir Canais.</p>` : `<a class="btn outline" href="/app/accounts/16/settings/inboxes/new" data-route="settings_inbox_new">${icon('plus')}Abrir Canais</a>`}
           <details><summary class="small" style="cursor:pointer;min-height:2.75rem;display:flex;align-items:center">Canais ocupados (${busy.length})</summary>
             <div style="display:flex;flex-direction:column;gap:.75rem;margin-top:.5rem">${busy.map(opt).join('')}</div></details></div>`}
         <div class="sect"><header><div><h3>Como ${internal ? 'ele' : 'ela'} se apresenta</h3><p class="desc">Do jeito que você testou.</p></div><button class="btn link" data-go="teste">Mudar</button></header>
@@ -208,9 +212,9 @@ function viewLigue() {
         <h3>Resumo</h3>
         <div class="who">${avatar({ name: nome, color: 'violet' }, 'width:2.4rem;height:2.4rem;font-size:1rem;border-radius:.75rem')}<span style="font-size:15px;color:var(--s12)">${esc(nome)} · ${esc(modelName(b.model))}</span></div>
         <p class="sentence">${internal ? `O <b>${esc(nome)}</b> vai aparecer ao lado das conversas para a equipe.`
-    : ch ? `A <b>${esc(nome)}</b> vai responder quem escrever no <b>${esc(ch.name)}</b>${b.window === 'always' ? '' : b.window === 'business_hours' ? ', no horário comercial' : ', fora do horário comercial'}. Quando não souber, passa a conversa para a equipe.` : 'Escolha um canal para ver o resumo.'}</p>
+    : ch ? `A <b>${esc(nome)}</b> vai responder quem escrever ${selected.length > 1 ? 'nos canais' : 'no canal'} <b>${esc(selectedNames)}</b>${b.window === 'always' ? '' : b.window === 'business_hours' ? ', no horário comercial' : ', fora do horário comercial'}. Quando não souber, passa a conversa para a equipe.` : 'Escolha um ou mais canais para ver o resumo.'}</p>
         <p class="small">${b.files.length ? `${accepted} material pronto · base 71%` : 'Sem material: responde só com o que você contou.'}</p>
-        <button class="btn primary lg" data-act="ligar" ${internal || ch ? '' : 'disabled'}>${icon('power')}Ligar ${internal ? 'o' : 'a'} ${esc(nome)}</button>
+        <button class="btn primary lg" data-act="ligar" ${internal || selected.length ? '' : 'disabled'}>${icon('power')}Ligar ${internal ? 'o' : 'a'} ${esc(nome)}</button>
         <button class="btn link" data-act="ligar-depois">Deixar desligad${internal ? 'o' : 'a'} por enquanto</button>
       </aside>
     </div>
@@ -221,9 +225,10 @@ function viewPronto() {
   const a = agentById('novo');
   if (!a) return viewLista();
   const internal = a.actuation === 'internal';
+  const channelNames = a.channels.map((id) => channelById(id)).filter(Boolean).map((channel) => channel.name).join(', ');
   return `<div class="page">
     <div class="done" role="status"><span class="c">${icon('check')}</span>
-      <div><b style="font-size:1.125rem">${internal ? `O ${esc(a.name)} já aparece para a equipe.` : `A ${esc(a.name)} está atendendo no ${esc(CH_LABEL(a.channels[0]))}.`}</b>
+      <div><b style="font-size:1.125rem">${internal ? `O ${esc(a.name)} já aparece para a equipe.` : `A ${esc(a.name)} está atendendo em ${esc(channelNames)}.`}</b>
       <div class="muted">${internal ? 'Abra qualquer conversa e veja no painel da direita.' : 'Ela já responde quem chegar. Você pode pausar quando quiser.'}</div></div></div>
     <div class="grid">
       ${internal ? `<button class="model" data-go="conversa"><span class="tile t-violet">${icon('message-circle')}</span><b>Ver numa conversa</b><span class="d">Abre suas conversas. Em qualquer uma, ${esc(a.name)} aparece no painel ao lado.</span></button>` : ''}

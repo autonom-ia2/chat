@@ -3,6 +3,7 @@ import {
   generateTranslationPayload,
   generateLogActionKey,
   translateLogPayload,
+  getAutonomiaOperationChanges,
   auditLogFiltersFromQuery,
   buildAuditLogRouteQuery,
 } from '../auditlogHelper'; // import the functions
@@ -204,6 +205,128 @@ describe('Helper functions', () => {
         id: 456,
       });
     });
+
+    it('uses the normalized actor and operation key for an Autonomia agent audit', () => {
+      const auditLogItem = {
+        auditable_type: 'Autonomia::Agents::Agent',
+        action: 'update',
+        user_id: 88,
+        username: 'operator@example.com',
+        actor: { type: 'SuperAdmin', id: 88, name: 'Operador global' },
+        auditable_id: 321,
+        operation_key: 'voice_reply',
+      };
+
+      expect(generateTranslationPayload(auditLogItem, agentList)).toEqual({
+        agentName: 88,
+        id: 321,
+        actor: 'Operador global',
+        operationKey: 'AUDIT_LOGS.OPERATION_KEYS.VOICE_REPLY',
+      });
+      expect(generateLogActionKey(auditLogItem)).toBe(
+        'AUDIT_LOGS.AUTONOMIA_AGENT.EDIT'
+      );
+    });
+
+    it('uses the plural operation keys for a multi-setting Autonomia audit', () => {
+      const auditLogItem = {
+        auditable_type: 'Autonomia::Agents::Agent',
+        action: 'update',
+        user_id: 88,
+        actor: { type: 'SuperAdmin', id: 88, name: 'Operador global' },
+        auditable_id: 321,
+        operation_keys: ['voice_reply', 'operate_media'],
+      };
+
+      expect(
+        generateTranslationPayload(auditLogItem, agentList).operationKey
+      ).toBe('AUDIT_LOGS.OPERATION_KEYS.MULTIPLE');
+    });
+  });
+
+  describe('getAutonomiaOperationChanges', () => {
+    it('does not attach operation changes to other audit types', () => {
+      expect(
+        getAutonomiaOperationChanges({
+          auditable_type: 'Team',
+          audited_changes: {
+            operation_config: {
+              voice_reply: { old: true, new: false },
+            },
+          },
+        })
+      ).toEqual([]);
+    });
+
+    it('keeps only typed, masked operation changes and never exposes raw values', () => {
+      const rawSecret = 'do-not-render-this-secret';
+      const auditLogItem = {
+        auditable_type: 'Autonomia::Agents::Agent',
+        operation_keys: [
+          'voice_reply',
+          'test_allowlist_phones',
+          'voice_instructions',
+          'native_tool_slugs',
+          'secret_key',
+        ],
+        audited_changes: {
+          operation_config: {
+            voice_reply: { old: true, new: false },
+            test_allowlist_phones: {
+              old: ['+551••••00'],
+              new: ['+551••••11'],
+            },
+            voice_instructions: {
+              old: { length: 8 },
+              new: { length: 12 },
+            },
+            native_tool_slugs: {
+              old: { count: 1 },
+              new: { count: 2 },
+            },
+            secret_key: { old: rawSecret, new: rawSecret },
+          },
+        },
+      };
+
+      const changes = getAutonomiaOperationChanges(auditLogItem);
+
+      expect(changes).toEqual([
+        {
+          key: 'voice_reply',
+          label: 'AUDIT_LOGS.OPERATION_KEYS.VOICE_REPLY',
+          before: { type: 'boolean', value: true },
+          after: { type: 'boolean', value: false },
+        },
+        {
+          key: 'test_allowlist_phones',
+          label: 'AUDIT_LOGS.OPERATION_KEYS.TEST_ALLOWLIST_PHONES',
+          before: {
+            type: 'masked_list',
+            count: 1,
+            preview: ['+551••••00'],
+          },
+          after: {
+            type: 'masked_list',
+            count: 1,
+            preview: ['+551••••11'],
+          },
+        },
+        {
+          key: 'voice_instructions',
+          label: 'AUDIT_LOGS.OPERATION_KEYS.VOICE_INSTRUCTIONS',
+          before: { type: 'length', value: 8 },
+          after: { type: 'length', value: 12 },
+        },
+        {
+          key: 'native_tool_slugs',
+          label: 'AUDIT_LOGS.OPERATION_KEYS.NATIVE_TOOL_SLUGS',
+          before: { type: 'count', value: 1 },
+          after: { type: 'count', value: 2 },
+        },
+      ]);
+      expect(JSON.stringify(changes)).not.toContain(rawSecret);
+    });
   });
 
   describe('translateLogPayload', () => {
@@ -261,6 +384,25 @@ describe('Helper functions', () => {
         agentName: 'Lia Admin',
         id: 42,
         user: 'Marcos Andrade',
+        role: undefined,
+        attributes: undefined,
+        values: undefined,
+      });
+    });
+
+    it('translates the operation key without exposing its machine name', () => {
+      const payload = {
+        actor: 'Operador global',
+        operationKey: 'AUDIT_LOGS.OPERATION_KEYS.VOICE_REPLY',
+      };
+      const translate = key =>
+        key === 'AUDIT_LOGS.OPERATION_KEYS.VOICE_REPLY'
+          ? 'respostas de voz'
+          : key;
+
+      expect(translateLogPayload(payload, translate)).toEqual({
+        actor: 'Operador global',
+        operationKey: 'respostas de voz',
         role: undefined,
         attributes: undefined,
         values: undefined,
@@ -345,6 +487,8 @@ describe('Helper functions', () => {
           q: 'jane',
           type: 'Inbox',
           sort: 'asc',
+          agent_id: '42',
+          operation_key: 'voice_reply',
           since: '100',
           until: '200',
         })
@@ -353,6 +497,8 @@ describe('Helper functions', () => {
         q: 'jane',
         types: ['Inbox'],
         sort: 'asc',
+        agent_id: 42,
+        operation_key: 'voice_reply',
         since: 100,
         until: 200,
       });
@@ -366,6 +512,12 @@ describe('Helper functions', () => {
 
     it('ignores a half open date window', () => {
       expect(auditLogFiltersFromQuery({ since: '100' })).toEqual({ page: 1 });
+    });
+
+    it('drops unknown agent and operation filters', () => {
+      expect(
+        auditLogFiltersFromQuery({ agent_id: '0', operation_key: 'unknown' })
+      ).toEqual({ page: 1 });
     });
   });
 

@@ -74,4 +74,12 @@ module Autonomia::Agents::Tools::Registry
 
     enabled.filter_map { |slug| find(slug) }.uniq.select { |tool| tool.available_for?(agent) }
   end
+
+  # Mantém a política de `for_agent` por agente, mas compartilha somente a leitura de disponibilidade
+  # durante uma projeção. Os slugs habilitados nunca são combinados entre agentes.
+  def for_agents(agents, readiness:)
+    Autonomia::Insurance::Connection.with_preloaded_for_accounts(readiness) do
+      Array(agents).to_h { |agent| [agent.id, for_agent(agent)] }
+    end
+  end
 end

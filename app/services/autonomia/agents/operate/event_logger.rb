@@ -17,10 +17,10 @@ module Autonomia
 
         # Porta de engajamento (#284 · Entrega 2a): a conversa foi passada DIRETO para humanos sem
         # resposta. `reason` ∈ audience | schedule -> event_type skipped_audience | skipped_schedule.
-        def self.skipped(agent:, conversation:, reason:)
+        def self.skipped(agent:, conversation:, reason:, target: nil)
           create!(
             agent: agent, conversation: conversation, event_type: :"skipped_#{reason}",
-            handoff_reason: curate_code(reason)
+            handoff_reason: curate_code(reason), metadata: target_metadata(target)
           )
         end
 
@@ -40,10 +40,11 @@ module Autonomia
 
         # `reason:` (opcional) sobrepõe o motivo do result — usado quando o handoff vem de fora
         # do Answerer (CRM). Passa pela mesma allowlist.
-        def self.handed_off(agent:, conversation:, result:, reason: nil)
+        def self.handed_off(agent:, conversation:, result:, reason: nil, target: nil)
           create!(
             agent: agent, conversation: conversation, event_type: :handed_off,
-            handoff_reason: reason.present? ? curate_code(reason) : curated_reason(result)
+            handoff_reason: reason.present? ? curate_code(reason) : curated_reason(result),
+            metadata: target_metadata(target)
           )
         end
 
@@ -92,6 +93,12 @@ module Autonomia
         def self.curate_code(reason)
           code = reason.to_s.strip.downcase
           ALLOWED_REASONS.include?(code) ? code : 'other'
+        end
+
+        def self.target_metadata(target)
+          return {} if target.blank?
+
+          { 'handoff_target' => target.to_h.stringify_keys.slice('type', 'id', 'name') }
         end
       end
     end

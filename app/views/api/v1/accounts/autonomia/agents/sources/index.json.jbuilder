@@ -1,5 +1,8 @@
 json.payload do
-  json.array! @sources, partial: 'api/v1/accounts/autonomia/agents/sources/source', as: :source
+  json.array! @sources do |source|
+    json.partial! 'api/v1/accounts/autonomia/agents/sources/source',
+                  source: source, material_projection: @material_projection
+  end
 end
 
 # Defensive: mirror the agents index so any future factory `get` (which commits

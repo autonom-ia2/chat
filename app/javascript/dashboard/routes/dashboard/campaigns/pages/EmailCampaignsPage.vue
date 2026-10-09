@@ -311,7 +311,7 @@ const confirmDestructive = async () => {
         :aria-label="t(`${UX}.OVERVIEW`)"
       >
         <div
-          class="relative min-w-0 overflow-hidden bg-[#0D2344] px-6 py-6 text-white md:w-[32%]"
+          class="relative min-w-0 overflow-hidden bg-n-navy px-6 py-6 text-white md:w-[32%]"
         >
           <span
             class="absolute -end-8 -top-12 size-40 rounded-full border-[1.5rem] border-n-blue-9 opacity-10"

@@ -147,7 +147,7 @@ const score = computed(() =>
         </span>
         <span
           v-if="source.reference && source.reference !== title"
-          class="text-xs truncate text-n-slate-10"
+          class="text-xs truncate text-n-slate-11"
         >
           {{ source.reference }}
         </span>
@@ -165,6 +165,7 @@ const score = computed(() =>
         ghost
         slate
         xs
+        class="min-h-11 min-w-11"
         icon="i-lucide-trash-2"
         :aria-label="t('AGENTS.MATERIALS.REMOVE')"
         :is-loading="removing"
@@ -177,7 +178,7 @@ const score = computed(() =>
       <div class="flex flex-wrap items-center gap-2">
         <span
           v-if="score !== null"
-          class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-md bg-n-teal-3 text-n-teal-11"
+          class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-md bg-n-teal-3 text-n-teal-12"
         >
           <i class="i-lucide-gauge size-3" />
           {{ t('AGENTS.MATERIALS.SCORE', { score }) }}
@@ -188,7 +189,7 @@ const score = computed(() =>
         >
           {{ labelText }}
         </span>
-        <span v-if="confidenceText" class="text-xs text-n-slate-10">
+        <span v-if="confidenceText" class="text-xs text-n-slate-11">
           {{ confidenceText }}
         </span>
       </div>
@@ -232,6 +233,7 @@ const score = computed(() =>
           outline
           amber
           xs
+          class="min-h-11"
           icon="i-lucide-refresh-cw"
           :label="t('AGENTS.MATERIALS.RESEND')"
           :is-loading="resyncing"

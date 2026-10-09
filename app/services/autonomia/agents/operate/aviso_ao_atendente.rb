@@ -43,24 +43,43 @@ class Autonomia::Agents::Operate::AvisoAoAtendente
   # O handoff é conferido e feito sob o lock, como em `Responder#handoff_if_signaled`: duas passadas não o
   # duplicam, e o evento `handed_off` sai uma vez.
   def escalar(agent_inbox)
-    liberou = false
-    @conversation.with_lock do
-      if @conversation.assignee_agent_bot_id == agent_inbox.agent_bot_id || @conversation.pending?
-        @conversation.bot_handoff!
-        liberou = true
-      end
-    end
-    if liberou
-      ::Autonomia::Agents::Operate::EventLogger.handed_off(agent: agent_inbox.agent, conversation: @conversation, result: nil,
-                                                           reason: 'ai_unavailable')
-    end
-    notar('ia_falhou')
+    target = liberar_para_equipe(agent_inbox)
+    return notar('ia_falhou') unless target
+
+    registrar_escalada(agent_inbox, target)
   rescue StandardError => e
     Rails.logger.warn("[autonomia][evento] escalada falhou run=#{@run.id} #{e.class}")
     notar('ia_falhou')
   end
 
   private
+
+  def liberar_para_equipe(agent_inbox)
+    target = nil
+    @conversation.with_lock do
+      if @conversation.assignee_agent_bot_id == agent_inbox.agent_bot_id || @conversation.pending?
+        target = ::Autonomia::Agents::Operate::HandoffRouter.new(
+          agent: agent_inbox.agent, conversation: @conversation, agent_inbox: agent_inbox
+        ).route
+        @conversation.bot_handoff!
+      end
+    end
+    target
+  end
+
+  def registrar_escalada(agent_inbox, target)
+    ::Autonomia::Agents::Operate::EventLogger.handed_off(
+      agent: agent_inbox.agent, conversation: @conversation, result: nil,
+      reason: 'ai_unavailable', target: target
+    )
+    ::Autonomia::Agents::NotaDoEncaminhamento.postar(
+      @conversation,
+      passagem: { agent: agent_inbox.agent, reason: 'ai_unavailable', target: target },
+      complemento: texto('ia_falhou'),
+      marcas: { 'autonomia_agent_id' => @run.autonomia_agent_id,
+                ::Autonomia::Agents::Tools::Evento::CHAVE => @evento.marca }
+    )
+  end
 
   def postar_nota(motivo)
     Messages::MessageBuilder.new(

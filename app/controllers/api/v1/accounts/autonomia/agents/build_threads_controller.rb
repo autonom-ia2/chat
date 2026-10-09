@@ -1,7 +1,20 @@
 class Api::V1::Accounts::Autonomia::Agents::BuildThreadsController < Api::V1::Accounts::Autonomia::BaseController
+  before_action :require_manage_for_show, only: [:show, :resume]
   before_action :fetch_thread, only: [:show, :messages, :retry_build]
 
   def show; end
+
+  def resume
+    agent = agents_scope.find(params[:agent_id])
+    agent.with_lock do
+      agent.recusar_se_builder_indisponivel!
+      @thread = build_threads_scope.where(agent: agent).order(id: :desc).first!
+      @thread.with_lock do
+        @thread.update!(force_close: false) if @thread.force_close == true
+      end
+    end
+    render :show
+  end
 
   # Abre a conversa do Construtor e dispara a geração assíncrona em job (begin_build! gera o build_token;
   # o SubmitJob roda a chamada SÍNCRONA ao modelo em poucos segundos) e retorna 202. O front faz polling
@@ -10,17 +23,25 @@ class Api::V1::Accounts::Autonomia::Agents::BuildThreadsController < Api::V1::Ac
   # Builder gera o 1º turno (saudação + 1ª pergunta) guiado pelo esqueleto do tipo. Quando há mensagem,
   # ela é empilhada normalmente. O guard de mensagem em branco fica só no `messages` (continuação).
   def create
-    @thread = build_threads_scope.new(thread_params)
-    @thread.created_by = Current.user
-    @thread.persist_start_options!(type: params[:type], actuation: params[:actuation], with_knowledge: params[:with_knowledge])
-    @thread.save!
-    # A pendência não pode morrer com a sessão: abrindo uma thread de AJUSTE (agente já vinculado),
-    # herda a pergunta que ficou sem resposta na thread anterior daquele agente.
-    @thread.inherit_pending_question!
-    append_user_message! if params[:message].present?
-    persist_no_materials_flag
-    persist_force_close_flag
-    claim_build_and_enqueue
+    token = nil
+    ActiveRecord::Base.transaction do
+      @thread = build_threads_scope.new(thread_params)
+      @thread.created_by = Current.user
+      @thread.persist_start_options!(type: params[:type], actuation: params[:actuation], with_knowledge: params[:with_knowledge])
+      @thread.save!
+      # BE-07 — o rascunho precisa existir antes do 202. O Builder continua sendo o escritor da
+      # instrução, mas a lista/poll já recebe um agente E1 ligado à sessão desde a abertura.
+      @thread.ensure_draft_agent!
+      # A pendência não pode morrer com a sessão: abrindo uma thread de AJUSTE (agente já vinculado),
+      # herda a pergunta que ficou sem resposta na thread anterior daquele agente.
+      @thread.inherit_pending_question!
+      append_user_message! if params[:message].present?
+      persist_no_materials_flag
+      persist_force_close_flag
+      token = @thread.begin_build!
+    end
+    enqueue_submit_job(token)
+    render :show, status: :accepted
   end
 
   # Continua a conversa: empilha a mensagem do usuário e refaz a geração (novo build_token).
@@ -30,7 +51,7 @@ class Api::V1::Accounts::Autonomia::Agents::BuildThreadsController < Api::V1::Ac
   # (`build_in_progress`) e nada é persistido. Stale (job morto além de STALE_PROCESSING_AFTER)
   # destrava o reenvio normalmente.
   def messages
-    return render_unprocessable(I18n.t('autonomia.build_thread.message_blank')) if params[:message].blank?
+    return render_message_required if params[:message].blank?
     # T6 — replay do MESMO turno (double-click / retry de rede): o último turno user já foi gravado
     # com este client_message_id, então devolve o estado atual (200) sem novo append nem job. Turnos
     # NOVOS de conteúdo idêntico ganham cid novo no front e nunca são engolidos.
@@ -43,6 +64,7 @@ class Api::V1::Accounts::Autonomia::Agents::BuildThreadsController < Api::V1::Ac
     persist_no_materials_flag
     persist_force_close_flag
     enqueue_submit_job(token)
+    render :show, status: :accepted
   end
 
   # E2 — reexecuta a geração de uma thread `failed` (ou presa em `processing` além da janela stale):
@@ -51,12 +73,26 @@ class Api::V1::Accounts::Autonomia::Agents::BuildThreadsController < Api::V1::Ac
   # responde 409 quando um build vivo ainda detém o slot (mesma regra do submit). A action chama-se
   # retry_build porque `retry` é palavra reservada do Ruby; a rota expõe POST :retry.
   def retry_build
-    return render_unprocessable(I18n.t('autonomia.build_thread.retry_unavailable')) unless @thread.failed? || @thread.processing?
+    return render_retry_unavailable unless @thread.failed? || @thread.processing?
 
     claim_build_and_enqueue
   end
 
   private
+
+  def require_manage_for_show
+    check_permission_granted!('autonomia_manage')
+  end
+
+  def render_message_required
+    render_unprocessable(I18n.t('autonomia.agents.errors.message_required', locale: current_account.locale),
+                         code: 'message_required')
+  end
+
+  def render_retry_unavailable
+    render_unprocessable(I18n.t('autonomia.agents.errors.retry_unavailable', locale: current_account.locale),
+                         code: 'retry_unavailable')
+  end
 
   # Empilha a mensagem do usuário no turno atual (texto + imagens anexadas). Compartilhado por
   # `create` (abertura com mensagem) e `messages` (continuação).
@@ -99,7 +135,7 @@ class Api::V1::Accounts::Autonomia::Agents::BuildThreadsController < Api::V1::Ac
   # Mesma recusa, mesma mensagem, antes de gastar modelo.
   def fetch_thread
     @thread = build_threads_scope.find(params[:id])
-    raise ::Autonomia::Agents::Agent::InstrucaoMantida if @thread.agent&.instrucao_mantida?
+    @thread.agent&.recusar_se_builder_indisponivel!
   end
 
   # E3 — 409 Conflict com código estável (`build_in_progress`): o front distingue do erro genérico
@@ -116,14 +152,31 @@ class Api::V1::Accounts::Autonomia::Agents::BuildThreadsController < Api::V1::Ac
     return render_build_in_progress if token.nil?
 
     enqueue_submit_job(token)
+    render :show, status: :accepted
   end
 
   def enqueue_submit_job(token)
     # #18 — o supersede de ajustes concorrentes é decidido no fechamento (apply_builder_config!), pelo
     # id monotônico da thread: uma sessão de ajuste mais nova (id maior) vence a mais antiga. Sem
     # marcação aqui (deadlock-free).
-    Autonomia::Agents::Builder::SubmitJob.perform_later(@thread.id, token)
-    render :show, status: :accepted
+    job = Autonomia::Agents::Builder::SubmitJob.perform_later(@thread.id, token)
+    raise ActiveJob::EnqueueError, 'submit job was not enqueued' if job == false
+
+    job
+  rescue StandardError => e
+    cleanup_failed_enqueue(token)
+    raise e
+  end
+
+  def cleanup_failed_enqueue(token)
+    return unless @thread&.processing? && @thread.build_token == token
+
+    @thread.mark_failed!(token, 'enqueue_failed')
+  rescue StandardError => e
+    Rails.logger.error(
+      '[Autonomia::Agents::BuildThreadsController] enqueue_failed_cleanup=' \
+      "#{e.class.name} thread=#{@thread&.id}"
+    )
   end
 
   # T6 — replay idempotente: o último turno user da thread já carrega este client_message_id
@@ -138,7 +191,7 @@ class Api::V1::Accounts::Autonomia::Agents::BuildThreadsController < Api::V1::Ac
 
   # Resolve o agente SEMPRE dentro do escopo da conta corrente (agents_scope) — nunca aceita o FK
   # cru do params, que permitiria vincular a thread a um agente de OUTRA conta (IDOR: leitura do
-  # conhecimento + escrita de config cross-account). Sem agente = construtor cria um rascunho depois.
+  # conhecimento + escrita de config cross-account). Sem agente, `create` cria o rascunho antes do 202.
   def thread_params
     agent_id = params.dig(:build_thread, :autonomia_agent_id).presence || params[:autonomia_agent_id].presence
     return {} if agent_id.blank?
@@ -146,7 +199,7 @@ class Api::V1::Accounts::Autonomia::Agents::BuildThreadsController < Api::V1::Ac
     agent = agents_scope.find(agent_id)
     # #380 — o fechamento desta thread reescreveria instruction/scaffold/config (`apply_builder_config!`)
     # de um agente cuja instrução é mantida pela Autonom.ia. Recusa na porta, antes de gastar modelo.
-    raise ::Autonomia::Agents::Agent::InstrucaoMantida if agent.instrucao_mantida?
+    agent.recusar_se_builder_indisponivel!
 
     { agent: agent }
   end

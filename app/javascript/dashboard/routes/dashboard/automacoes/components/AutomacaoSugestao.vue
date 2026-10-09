@@ -88,7 +88,7 @@ const dispensar = () => {
       v-if="visivel"
       data-sugestao
       :aria-label="$t('AUTOMACOES.SUGESTAO.ROTULO')"
-      class="flex flex-wrap items-center gap-5 px-6 py-5 text-white rounded-2xl bg-gradient-to-br from-[#0D2344] to-[#163A6B]"
+      class="flex flex-wrap items-center gap-5 px-6 py-5 text-white rounded-2xl bg-gradient-to-br from-n-navy to-[#163A6B]"
     >
       <span
         class="grid place-items-center size-12 shrink-0 rounded-xl bg-n-blue-9/20 text-n-blue-6"
@@ -115,7 +115,7 @@ const dispensar = () => {
         <button
           type="button"
           data-aceitar
-          class="px-5 text-[0.9375rem] font-semibold transition bg-white rounded-xl min-h-11 text-[#0D2344] hover:bg-white/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+          class="px-5 text-[0.9375rem] font-semibold transition bg-white rounded-xl min-h-11 text-n-navy hover:bg-white/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
           @click="
             emit(
               'aceitar',

@@ -1,30 +1,3 @@
-// ---------- Conectar WhatsApp novo (QR) ----------
-function viewConectar() {
-  const st = viewState('conectar', 'numero');
-  const bar = stateBar('conectar', [['numero', 'Informar o número'], ['numeroerrado', 'Número inválido'], ['qr', 'Esperando leitura'], ['verificando', 'Verificando'], ['conectando', 'Conectando'], ['ok', 'Conectado'], ['falhou', 'Código venceu'], ['desligada', 'Sessão desligada']]);
-  const pill = { verificando: '<span class="pill off"><span class="spin"></span>Verificando</span>', desligada: '<span class="pill off">Sessão desligada</span>', qr: '<span class="pill todo"><span class="dot amber"></span>Esperando a leitura do código · 52 s</span>', conectando: '<span class="pill todo"><span class="spin"></span>Conectando</span>', ok: '<span class="pill on"><span class="dot"></span>Conectado</span>', falhou: '<span class="pill" style="background:var(--r3);color:var(--r11)">Não conectou</span>' }[st];
-  return `<div class="page">${bar}
-    <button class="back" data-back>${icon('arrow-left')}Voltar</button>
-    <header><h1 class="h1">Conectar um WhatsApp</h1><p class="sub">Leia o código com o celular do número que o agente vai usar. Leva menos de um minuto.</p></header>
-    <div class="two">${st === 'numero' || st === 'numeroerrado' ? `<section class="sect">
-      <div class="field"><label for="wnum">Número do WhatsApp</label><input id="wnum" inputmode="tel" value="${st === 'numeroerrado' ? '11 4454-787' : '55 11 94454-0000'}">
-        <span class="small">Com 55, DDD e o número do celular.</span></div>
-      ${st === 'numeroerrado' ? `<div class="banner red" role="alert">${icon('alert-octagon')}<span class="grow">Esse número não parece um celular do Brasil. Confira: 55, DDD e os 9 dígitos.</span></div>` : ''}
-      <div class="callout">${icon('info')}<span>Esta conexão usa o seu acesso. Se você sair da conta, ela para.</span></div>
-      <div><button class="btn primary lg" data-state="conectar:qr">Mostrar o código</button></div></section>` : `<section class="sect" style="align-items:center;text-align:center">
-      ${pill}
-      ${st === 'ok' ? `<span class="tile t-teal" style="width:5rem;height:5rem;border-radius:1.5rem;display:grid;place-items:center">${icon('check', 'ico" style="width:2.5rem;height:2.5rem')}</span><b style="font-size:1.25rem">WhatsApp conectado</b><p class="muted">Agora escolha o agente que vai atender nele.</p><button class="btn primary lg" data-back>Escolher o agente</button>`
-    : st === 'desligada' ? `<p class="muted">O WhatsApp deste número foi desconectado no celular. Conecte de novo para o agente voltar a receber mensagens.</p><button class="btn primary lg" data-state="conectar:qr">${icon('refresh-cw')}Reconectar</button>`
-    : st === 'verificando' ? `<p class="muted">Conferindo a conexão com o WhatsApp…</p>`
-    : st === 'falhou' ? `<p class="muted">O código venceu antes da leitura. Gere outro e leia em até 1 minuto.</p><button class="btn primary lg" data-state="conectar:qr">${icon('refresh-cw')}Gerar outro código</button>`
-      : `<div class="qr" role="img" aria-label="Código para ler no WhatsApp"></div><button class="btn outline" data-state="conectar:qr">${icon('refresh-cw')}Gerar outro código</button>`}
-    </section>`}
-    <aside class="panel"><h3>Como ler</h3><ol class="steps3">
-      <li>Abra o WhatsApp no celular desse número.</li><li>Toque em <b>⋮</b> (Android) ou <b>Configurações</b> (iPhone) e depois em <b>Aparelhos conectados</b>.</li>
-      <li>Toque em <b>Conectar um aparelho</b> e aponte o celular para o código.</li></ol>
-      <div class="tip">${icon('lightbulb')}<span>Use um número da empresa, não o seu número pessoal.</span></div></aside></div></div>`;
-}
-
 // ---------- Dentro de uma conversa: copiloto e "resposta errada" ----------
 function viewConversa() {
   const helper = S.agents.find((x) => x.actuation === 'internal' || x.actuation === 'both');
@@ -76,7 +49,7 @@ const MAP = [
   ['Criar agente', [['escolha', '1. Escolha o trabalho'], ['conte', '2. Conte (conversa + materiais)'], ['conte@pensando', '2. Pensando'], ['conte@erro', '2. Erro ao enviar'], ['conte@recusado', '2. Não salvou'], ['conte@limite', '2. Muitas mensagens'], ['teste', '3. Teste'], ['teste@incompleto', '3. Ainda montando'], ['ligue', '4. Confira e ligue'], ['ligue@semcanal', '4. Sem canal livre'], ['ligue@falhou', '4. Falhou ao ligar'], ['escolha@semajudante', '1. Conta sem o painel da equipe'], ['teste@demora', '3. Demorando'], ['teste@material', '3. Aprendeu material novo'], ['teste@grava', '3. Ferramenta que grava'], ['ligue@semteste', '4. Sem teste'], ['interno', 'Ajudante da equipe (interno)'], ['interno-teste', 'Ajudante: teste numa conversa de exemplo']]],
   ['Clara (agente comum)', [['agente-clara-resumo', 'Como está indo'], ['agente-clara-resumo@vazio', 'Como está indo: sem conversas'], ['agente-clara-testar', 'Testar'], ['agente-clara-sabe', 'O que sabe'], ['agente-clara-sabe@estados', 'Materiais em todos os estados'], ['agente-clara-sabe@limite', 'Limite de 30 materiais'], ['agente-clara-onde', 'Onde atende'], ['agente-clara-onde@semcanal', 'Sem canal'], ['agente-clara-ajustes', 'Ajustes'], ['agente-clara-ajustes@versoes', 'Ajustes com versões'], ['agente-clara-ajustes@semhorario', 'Ajustes: canais sem horário'], ['agente-clara-testar@semperm', 'Testar: ferramenta pulada (só ver)'], ['agente-clara-ferramentas#super', 'Ferramentas (admin da plataforma)']]],
   ['Lia (Agente de Cotação)', [['agente-lia-resumo', 'Como está indo'], ['agente-lia-sabe', 'O que cota'], ['agente-lia-ajustes', 'Ajustes da cotação']]],
-  ['Outras', [['conectar', 'Conectar WhatsApp (número + código)'], ['conversa', 'Dentro da conversa: ajudante e "resposta errada"'], ['lista#view', 'Quem só pode ver']]],
+  ['Outras', [['conversa', 'Dentro da conversa: ajudante e "resposta errada"'], ['lista#view', 'Quem só pode ver']]],
 ];
 function openMap() {
   const layer = $('#layer');

@@ -1,11 +1,11 @@
 <script setup>
-import { formatNumber } from 'dashboard/components-next/CampaignJourney/localeTag';
+import { formatNumber } from 'dashboard/helper/localeTag';
 // "Por onde dá para falar com essas pessoas" (#993, PRD §6.6-2, D13, J5, J6). Channels are
 // on by what the spreadsheet has; one can be switched off. A channel without data shows
 // off with "sem dados" and cannot be switched on.
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import JourneySwitch from './JourneySwitch.vue';
+import LabeledSwitch from 'dashboard/components-next/switch/LabeledSwitch.vue';
 import { channelSwitches } from './audienceReview';
 
 const props = defineProps({
@@ -63,7 +63,7 @@ const label = item => {
       <p class="m-0 mt-1 text-xs text-n-slate-11">{{ t(`${NS}.HINT`) }}</p>
     </div>
     <div class="flex flex-wrap gap-2">
-      <JourneySwitch
+      <LabeledSwitch
         v-for="item in switches"
         :key="item.channel"
         :data-channel="item.channel"

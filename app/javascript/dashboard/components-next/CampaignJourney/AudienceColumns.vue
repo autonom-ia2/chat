@@ -1,5 +1,5 @@
 <script setup>
-import { formatNumber } from 'dashboard/components-next/CampaignJourney/localeTag';
+import { formatNumber } from 'dashboard/helper/localeTag';
 // "Colunas encontradas" + "Outras colunas" of Novo público (#993, PRD §6.6-1, B2). When
 // the columns were not found for sure (needs_column_choice) every target is a choice;
 // otherwise each one shows its column with "Trocar". Applying calls PATCH columns.

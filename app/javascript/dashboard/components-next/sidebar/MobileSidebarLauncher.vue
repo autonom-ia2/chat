@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
 import Button from 'dashboard/components-next/button/Button.vue';
 import ButtonGroup from 'dashboard/components-next/buttonGroup/ButtonGroup.vue';
@@ -14,6 +15,7 @@ defineProps({
 const emit = defineEmits(['toggle']);
 
 const route = useRoute();
+const { t } = useI18n();
 
 const isConversationRoute = computed(() => {
   const CONVERSATION_ROUTES = [
@@ -53,6 +55,14 @@ const toggleSidebar = () => {
         icon="i-lucide-menu"
         no-animation
         class="!rounded-full !bg-n-solid-3 dark:!bg-n-alpha-2 !text-n-slate-12 text-xl transition-all duration-200 ease-out hover:brightness-110"
+        :aria-label="
+          t(
+            isMobileSidebarOpen
+              ? 'HELP_CENTER.EDIT_HEADER.CLOSE_SIDEBAR'
+              : 'HELP_CENTER.EDIT_HEADER.OPEN_SIDEBAR'
+          )
+        "
+        :aria-expanded="isMobileSidebarOpen"
         lg
         @click="toggleSidebar"
       />

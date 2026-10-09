@@ -42,6 +42,17 @@ module Autonomia
         human_requested action_required needs_human customer_requested_human
       ].freeze
 
+      def self.effective_confidence_threshold(agent)
+        config = agent.respond_to?(:config) && agent.config.is_a?(Hash) ? agent.config : {}
+        raw = config.key?('confidence_threshold') ? config['confidence_threshold'] : nil
+        raw = agent.confidence_threshold if raw.nil? && agent.respond_to?(:confidence_threshold)
+        raw = Config::DEFAULT_CONFIDENCE_THRESHOLD if raw.blank?
+        value = Float(raw)
+        value.clamp(0.0, 1.0)
+      rescue ArgumentError, TypeError
+        Config::DEFAULT_CONFIDENCE_THRESHOLD
+      end
+
       # Cinto determinístico do desbloqueio de conhecimento geral (fix Schengen C, 2026-07-04 — Codex
       # HIGH #118): o ramo !claims_knowledge do portão confia no auto-rótulo do modelo. Se ele rotular
       # ERRADO um fato do NEGÓCIO como "geral" (answered_from_knowledge=false, confiança alta, sem
@@ -72,7 +83,7 @@ module Autonomia
       def initialize(agent:, query:, history: [], images: [], documents: [], allow_web_search: true,
                      trust_instruction: false, audience: :customer, retrieval_query: nil, delivery: nil,
                      operador: nil, max_rodadas: 1, max_segundos: nil, feature: 'agente_resposta',
-                     fixos: [])
+                     fixos: [], test_mode: false, pode_editar: false, surface: :live)
         @agent = agent
         @query = query.to_s
         # Quando a query composta embute contexto ANTES da pergunta real (ex.: copiloto chat com
@@ -111,6 +122,12 @@ module Autonomia
         # são caras e assíncronas, é decisão que exige medição própria.
         @max_rodadas = max_rodadas
         @max_segundos = max_segundos
+        # Superfícies sem conversa real (Testar e Sugerir) não podem disparar ações externas nem
+        # aceitar trabalho assíncrono. A permissão é calculada no servidor pelo chamador.
+        @test_mode = test_mode == true
+        @pode_editar = pode_editar == true
+        @surface = surface.to_sym
+        @skipped_tools = []
         # A etiqueta do custo na Gestão IA (#861). O Guia passa 'guia': com a do atendimento, o gasto
         # dele sumia dentro de "Assistente de respostas".
         @feature = feature
@@ -140,14 +157,14 @@ module Autonomia
       def trust_instruction_result(parsed, snippets)
         return AnswerResult.new(reply: nil, confidence: 0.0, handoff: { should: false, reason: nil },
                                 used_knowledge: [], answered_from_knowledge: false, raw_reply: nil,
-                                error: 'ai_unavailable') if parsed.nil?
+                                error: 'ai_unavailable', **result_metadata) if parsed.nil?
 
         AnswerResult.new(
           reply: conferir_precos(parsed['reply']), confidence: clamp(parsed['confidence'].to_f),
           handoff: { should: parsed['should_handoff'] == true, reason: parsed['handoff_reason'].presence },
           used_knowledge: used_knowledge(parsed['used_snippet_ids'], snippets, parsed),
           answered_from_knowledge: parsed['answered_from_knowledge'] == true,
-          raw_reply: parsed['reply']
+          raw_reply: parsed['reply'], **result_metadata
         )
       end
 
@@ -292,9 +309,17 @@ module Autonomia
 
         # O prompt e o cliente ficam na instância: a reescrita pedida pela conferência de preços os reusa.
         @prompt = PromptBuilder.new(agent: @agent, query: @query, history: @history, snippets: snippets,
-                                    images: @images, documents: @documents, audience: @audience)
+                                    images: @images, documents: @documents, audience: @audience,
+                                    surface: @surface)
         @cliente = Crm::Ai::ResponsesClient.new(credential: credential, feature: @feature, account: @agent.account)
-        raw = @cliente.create_with_tool_executor(
+        parsed = JSON.parse(generate_response[:text])
+        parsed.is_a?(Hash) ? parsed : nil # JSON não-objeto (ex.: "[]") -> handoff seguro, nunca 500.
+      rescue Crm::Ai::ResponsesClient::Error, JSON::ParserError => e
+        ia_indisponivel(e)
+      end
+
+      def generate_response
+        @cliente.create_with_tool_executor(
           model: Config::ANSWERER_MODEL,
           instructions: @prompt.instructions,
           input: @prompt.input,
@@ -304,10 +329,6 @@ module Autonomia
           max_rodadas: @max_rodadas,
           **{ max_segundos: @max_segundos }.compact
         ) { |calls| execute_tool_calls(calls) }
-        parsed = JSON.parse(raw[:text])
-        parsed.is_a?(Hash) ? parsed : nil # JSON não-objeto (ex.: "[]") -> handoff seguro, nunca 500.
-      rescue Crm::Ai::ResponsesClient::Error, JSON::ParserError => e
-        ia_indisponivel(e)
       end
 
       # Só a classe: a mensagem pode ecoar o prompt (a da OpenAI repete trecho do pedido), e o
@@ -385,13 +406,31 @@ module Autonomia
       def dispatch_tool_call(call, tools_by_slug, specialists_by_function)
         name = call['name'].to_s
         specialist = specialists_by_function[name]
+        return skip_test_tool(name, 'not_in_test') if @test_mode && specialist.present?
         return run_specialist(specialist, call) if specialist.present?
 
         tool = tools_by_slug[name]
+        return skip_test_tool(tool, 'not_in_test') if @test_mode && tool&.async?
+        if @test_mode && !@pode_editar && tool.respond_to?(:writes_external?) && tool.writes_external?
+          return skip_test_tool(tool, 'viewer_not_allowed')
+        end
+
         return tool.execute(call, delivery: @delivery, operador: @operador) if tool.present?
 
         Tools::Recusa.para_modelo('tool_not_available', slug: Tools::Recusa.slug_conhecido(name, @agent),
                                                         delivery: @delivery, agente: @agent)
+      end
+
+      def skip_test_tool(tool_or_slug, code)
+        slug = tool_or_slug.respond_to?(:slug) ? tool_or_slug.slug.to_s : tool_or_slug.to_s
+        name = if tool_or_slug.respond_to?(:display_name)
+                 tool_or_slug.display_name.to_s
+               else
+                 slug
+               end
+        @skipped_tools << { slug: slug, name: name, code: code }
+        refusal = code == 'viewer_not_allowed' ? 'tool_not_available' : 'async_indisponivel_nesta_superficie'
+        Tools::Recusa.para_modelo(refusal, slug: slug, delivery: @delivery, agente: @agent)
       end
 
       # O especialista devolve TEXTO (nunca levanta — ver Specialists::Runner). Vai direto como saída
@@ -437,7 +476,7 @@ module Autonomia
             reply: reply, confidence: confidence,
             handoff: { should: false, reason: nil },
             used_knowledge: used, answered_from_knowledge: answered,
-            raw_reply: parsed['reply']
+            raw_reply: parsed['reply'], **result_metadata
           )
         end
       end
@@ -621,7 +660,7 @@ module Autonomia
           confidence: confidence,
           handoff: { should: true, reason: parsed['handoff_reason'].presence || 'low_confidence' },
           used_knowledge: used, answered_from_knowledge: false,
-          raw_reply: parsed['reply'] # melhor esforço preservado p/ o Copilot
+          raw_reply: parsed['reply'], **result_metadata # melhor esforço preservado p/ o Copilot
         )
       end
 
@@ -646,13 +685,7 @@ module Autonomia
       end
 
       def threshold
-        raw = @agent.confidence_threshold.presence || Config::DEFAULT_CONFIDENCE_THRESHOLD
-        value = begin
-          Float(raw) # parse estrito: "abc" não vira 0.0 e desliga o portão; cai no DEFAULT.
-        rescue ArgumentError, TypeError
-          Config::DEFAULT_CONFIDENCE_THRESHOLD
-        end
-        clamp(value)
+        self.class.effective_confidence_threshold(@agent)
       end
 
       def clamp(value)
@@ -668,8 +701,23 @@ module Autonomia
           confidence: 0.0,
           handoff: { should: true, reason: reason },
           used_knowledge: [], answered_from_knowledge: false,
-          raw_reply: nil, error: reason
+          raw_reply: nil, error: reason, **result_metadata
         )
+      end
+
+      def result_metadata
+        {
+          skipped_tools: @skipped_tools,
+          writes_external: writes_external?
+        }
+      end
+
+      def writes_external?
+        return false unless @test_mode && @pode_editar
+
+        enabled_agent_tools.any? do |tool|
+          tool.respond_to?(:writes_external?) && tool.writes_external?
+        end
       end
     end
   end

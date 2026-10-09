@@ -298,7 +298,7 @@ const mudarLigada = async ligar => {
                 class="flex items-center gap-3 px-5 py-4 border-b border-n-weak"
               >
                 <span
-                  class="grid rounded-xl place-items-center size-10 bg-[#0D2344] text-n-blue-6"
+                  class="grid rounded-xl place-items-center size-10 bg-n-navy text-n-blue-6"
                 >
                   <span class="i-lucide-sparkles size-5" aria-hidden="true" />
                 </span>

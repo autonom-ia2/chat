@@ -1,4 +1,10 @@
 <script setup>
+/*
+ * Audit log filter labels come from the fork catalog and from runtime event
+ * mappings, so their keys cannot be enumerated statically by the linter.
+ */
+/* eslint-disable @intlify/vue-i18n/no-missing-keys, @intlify/vue-i18n/no-dynamic-keys */
+
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { startOfDay, endOfDay } from 'date-fns';
@@ -8,7 +14,10 @@ import DropdownMenu from 'dashboard/components-next/dropdown-menu/DropdownMenu.v
 import Icon from 'dashboard/components-next/icon/Icon.vue';
 import WootDatePicker from 'dashboard/components/ui/DatePicker/DatePicker.vue';
 import { DATE_RANGE_TYPES } from 'dashboard/components/ui/DatePicker/helpers/DatePickerHelper';
-import { EVENT_TYPE_GROUPS } from 'dashboard/helper/auditlogHelper';
+import {
+  AUTONOMIA_OPERATION_KEYS,
+  EVENT_TYPE_GROUPS,
+} from 'dashboard/helper/auditlogHelper';
 
 const props = defineProps({
   type: {
@@ -30,6 +39,18 @@ const props = defineProps({
   sort: {
     type: String,
     default: '',
+  },
+  agentId: {
+    type: [Number, String],
+    default: null,
+  },
+  operationKey: {
+    type: String,
+    default: '',
+  },
+  agents: {
+    type: Array,
+    default: () => [],
   },
 });
 
@@ -71,6 +92,65 @@ const selectedEventType = computed(() =>
     ({ value }) => value === props.type
   )
 );
+
+const selectedAgent = computed(() =>
+  props.agents.find(agent => String(agent.id) === String(props.agentId))
+);
+
+const hasAgentFilter = computed(
+  () =>
+    props.agentId !== null &&
+    props.agentId !== undefined &&
+    props.agentId !== ''
+);
+
+const agentSections = computed(() => [
+  {
+    items: [
+      {
+        label: t('AUDIT_LOGS.FILTERS.ALL_AGENTS'),
+        action: 'agent_id',
+        isSelected: !hasAgentFilter.value,
+      },
+      ...(hasAgentFilter.value && !selectedAgent.value
+        ? [
+            {
+              label: t('AUDIT_LOGS.FILTERS.AGENT_BY_ID', {
+                id: props.agentId,
+              }),
+              value: props.agentId,
+              action: 'agent_id',
+              isSelected: true,
+            },
+          ]
+        : []),
+      ...props.agents.map(agent => ({
+        label: agent.name,
+        value: agent.id,
+        action: 'agent_id',
+        isSelected: String(agent.id) === String(props.agentId),
+      })),
+    ],
+  },
+]);
+
+const operationSections = computed(() => [
+  {
+    items: [
+      {
+        label: t('AUDIT_LOGS.FILTERS.ALL_OPERATIONS'),
+        action: 'operation_key',
+        isSelected: !props.operationKey,
+      },
+      ...Object.entries(AUTONOMIA_OPERATION_KEYS).map(([value, key]) => ({
+        label: t(key),
+        value,
+        action: 'operation_key',
+        isSelected: props.operationKey === value,
+      })),
+    ],
+  },
+]);
 
 const eventTypeSections = computed(() => [
   {
@@ -122,6 +202,16 @@ const filterMenus = computed(() =>
       key: 'sort',
       icon: 'i-lucide-arrow-down-up',
       sections: sortSections.value,
+    },
+    {
+      key: 'agent',
+      icon: 'i-lucide-bot',
+      sections: agentSections.value,
+    },
+    {
+      key: 'operation',
+      icon: 'i-lucide-sliders-horizontal',
+      sections: operationSections.value,
     },
   ].map(menu => ({
     ...menu,

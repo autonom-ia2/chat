@@ -39,6 +39,10 @@ module Autonomia
           end
         end
 
+        def self.normalize_silence_token(value)
+          value.to_s.strip.downcase.gsub(/\A["'`*\s]+|["'`*\s]+\z/, '')
+        end
+
         def initialize(conversation:, agent_inbox:, reply_to_message_id: nil)
           @conversation = conversation
           @agent_inbox  = agent_inbox
@@ -102,7 +106,7 @@ module Autonomia
         # Normaliza p/ comparação: minúsculas + tira espaços e aspas/crase/asterisco SÓ das pontas
         # (markdown que o modelo às vezes adiciona). NUNCA mexe nos underscores internos do token.
         def normalize_token(value)
-          value.to_s.strip.downcase.gsub(/\A["'`*\s]+|["'`*\s]+\z/, '')
+          self.class.normalize_silence_token(value)
         end
 
         private
@@ -138,17 +142,16 @@ module Autonomia
         def handoff_if_signaled(result)
           return unless result&.handoff&.dig(:should)
 
-          released = false
-          @conversation.with_lock do
-            if bot_still_in_command?
-              @conversation.bot_handoff!
-              released = true
-            end
-          end
-          return unless released
+          target = release_to_humans
+          return unless target
 
-          ::Autonomia::Agents::Operate::EventLogger.handed_off(agent: @agent, conversation: @conversation, result: result)
-          ::Autonomia::Agents::NotaDoEncaminhamento.postar(@conversation)
+          reason = ::Autonomia::Agents::Operate::EventLogger.curated_reason(result) || 'other'
+          ::Autonomia::Agents::Operate::EventLogger.handed_off(
+            agent: @agent, conversation: @conversation, result: result, target: target
+          )
+          ::Autonomia::Agents::NotaDoEncaminhamento.postar(
+            @conversation, passagem: { agent: @agent, reason: reason, target: target }
+          )
         rescue StandardError => e
           Rails.logger.warn("[autonomia][operate] handoff_signal_failed agent=#{@agent.id} conv=#{@conversation.id} #{e.class}")
           nil
@@ -159,18 +162,31 @@ module Autonomia
         # rechecada com estado fresco para que duas respostas concorrentes não dupliquem) + evento
         # skipped_<motivo>, uma vez por episódio. Depois de liberada, o sinal repetido é silêncio.
         def skip_for_humans(reason)
-          released = false
-          @conversation.with_lock do
-            if bot_still_in_command?
-              @conversation.bot_handoff!
-              released = true
-            end
-          end
-          ::Autonomia::Agents::Operate::EventLogger.skipped(agent: @agent, conversation: @conversation, reason: reason) if released
+          target = release_to_humans
+          record_skip(reason, target) if target
           Result.skipped(reason)
         rescue StandardError => e
           Rails.logger.warn("[autonomia][operate] engagement_skip_failed agent=#{@agent.id} conv=#{@conversation.id} #{e.class}")
           Result.skipped(reason)
+        end
+
+        def release_to_humans
+          target = nil
+          @conversation.with_lock do
+            if bot_still_in_command?
+              target = ::Autonomia::Agents::Operate::HandoffRouter.new(
+                agent: @agent, conversation: @conversation, agent_inbox: @agent_inbox
+              ).route
+              @conversation.bot_handoff!
+            end
+          end
+          target
+        end
+
+        def record_skip(reason, target)
+          ::Autonomia::Agents::Operate::EventLogger.skipped(
+            agent: @agent, conversation: @conversation, reason: reason, target: target
+          )
         end
 
         # Espelho DESTE vínculo ainda é o ai_assignee (ou a conversa ainda está pending). Chamar só com

@@ -77,7 +77,7 @@ class Autonomia::Agents::Tools::Native::InsuranceCapabilities < Autonomia::Agent
     def available_for?(agent)
       return false unless Autonomia::Insurance::Config.enabled?(agent.account)
 
-      Autonomia::Insurance::Connection.for_account(agent.account).any?(&:ready?)
+      Autonomia::Insurance::Connection.ready_for_account?(agent.account)
     rescue StandardError
       false
     end

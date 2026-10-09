@@ -204,8 +204,9 @@ button{font:inherit;color:inherit;cursor:pointer}
 .opt{display:flex;align-items:center;gap:1rem;width:100%;text-align:left;padding:1rem 1.15rem;border-radius:1rem;border:0;background:var(--solid);box-shadow:inset 0 0 0 1px var(--weak)}
 .opt[aria-checked="true"]{box-shadow:inset 0 0 0 2px var(--brand);background:var(--b2)}
 .opt[disabled]{opacity:.62;cursor:not-allowed}
-.opt .radio{width:1.35rem;height:1.35rem;border-radius:999px;box-shadow:inset 0 0 0 2px var(--strong);flex:none}
-.opt[aria-checked="true"] .radio{box-shadow:inset 0 0 0 6px var(--brand)}
+.opt .check{width:1.35rem;height:1.35rem;border-radius:.35rem;box-shadow:inset 0 0 0 2px var(--strong);flex:none;display:grid;place-items:center}
+.opt[aria-checked="true"] .check{box-shadow:inset 0 0 0 2px var(--brand);background:var(--brand)}
+.opt[aria-checked="true"] .check::after{content:'✓';color:white;font-size:.9rem;line-height:1;font-weight:700}
 .field{display:flex;flex-direction:column;gap:.45rem}
 .field label{font-weight:600;font-size:14.5px}
 .field input,.field textarea{font:inherit;font-size:15.5px;color:var(--s12);background:var(--solid);border:0;box-shadow:inset 0 0 0 1px var(--strong);border-radius:.75rem;padding:.7rem .9rem;min-height:2.9rem;resize:vertical}
@@ -405,9 +406,22 @@ const PDF_CLARA = {
   nota: 8, label: 'Boa', conf: 'alta', resumo: 'Base comercial da Hub2You: Chat2You, Protege, integrações e como cada solução ajuda a corretora.',
 };
 
+// Variantes da lista: referência visual para todos os estados do PRD. Os nomes são fixtures do mockup,
+// não IDs/payloads do produto; a tela real usa state.code e stats.week/month do backend.
+const LIST_FIXTURE = overrides => ({
+  id: 'fixture', name: 'Agente de exemplo', color: 'violet', type: 'custom', actuation: 'external',
+  status: 'todo', mode: 'guided', voice: 'feminina', channels: [], stepName: 'Conte', empty: false,
+  testInvalidatedBy: null, card: 'Fixture visual da lista.', greeting: '', fallback: '', tone: '',
+  handoff: 'low_confidence', threshold: 0.6, window: 'always', audience: null, starters: [], base: null,
+  faqOn: false, faq: [], versions: [], files: [], media: [], stats: {
+    7: { conv: 0, replies: 0, handed: 0, conf: null, know: null, reasons: [] },
+    30: { conv: 0, replies: 0, handed: 0, conf: null, know: null, reasons: [] },
+  }, serie: {}, created: '07/10/2026', ...overrides,
+});
+
 const AGENTS = [
   {
-    id: 'clara', name: 'Clara', color: 'blue', type: 'custom', actuation: 'external', status: 'on', mode: 'guided',
+    id: 'clara', name: 'Clara', color: 'blue', type: 'custom', actuation: 'external', status: 'on', mode: 'guided', voice: 'feminina',
     channels: [43],
     card: 'Atende corretores de seguros, tira dúvidas comerciais sobre a Hub2You e entende se a solução faz sentido para a corretora.',
     greeting: 'Oi, eu sou a Clara, da Hub2You. Posso te ajudar com uma dúvida sobre a plataforma ou entender se alguma solução faz sentido para a sua corretora.',
@@ -422,7 +436,7 @@ const AGENTS = [
     serie: SERIE_CLARA, created: '06/07/2026',
   },
   {
-    id: 'lia', name: 'Lia', color: 'teal', type: 'insurance_quote', actuation: 'external', status: 'on', mode: 'guided',
+    id: 'lia', name: 'Lia', color: 'teal', type: 'insurance_quote', actuation: 'external', status: 'on', mode: 'guided', voice: 'feminina',
     channels: [57],
     card: 'Agente de Cotação. Identifica o ramo, coleta só os dados necessários e cota nas seguradoras da conta AGGER.',
     greeting: '', fallback: '', tone: '', handoff: 'low_confidence', threshold: 0.6, window: 'always', audience: null,
@@ -434,6 +448,15 @@ const AGENTS = [
     },
     serie: SERIE_LIA, created: '08/09/2026',
   },
+  LIST_FIXTURE({ id: 'interno', name: 'Apoio', color: 'slate', actuation: 'internal', status: 'on', mode: 'guided', voice: 'masculina', card: 'Ajuda a equipe ao lado das conversas.' }),
+  LIST_FIXTURE({ id: 'rascunho-e1', name: 'Bia', status: 'todo', empty: true, stepName: 'Conte' }),
+  LIST_FIXTURE({ id: 'rascunho-e2', name: 'Davi', voice: 'masculina', status: 'todo', stepName: 'Conte' }),
+  LIST_FIXTURE({ id: 'rascunho-e2m', name: 'Nina', status: 'todo', mode: 'manual', stepName: 'Conte' }),
+  LIST_FIXTURE({ id: 'rascunho-e3-material', name: 'Clara nova', status: 'todo', stepName: 'Teste', testInvalidatedBy: 'material' }),
+  LIST_FIXTURE({ id: 'rascunho-e3-person', name: 'Davi teste', voice: 'masculina', status: 'todo', stepName: 'Teste', testInvalidatedBy: 'person' }),
+  LIST_FIXTURE({ id: 'pronto-para-ligar', name: 'Bia pronta', status: 'ready', stepName: 'Ligue' }),
+  LIST_FIXTURE({ id: 'sem-canal', name: 'Sem canal', status: 'on', channels: [] }),
+  LIST_FIXTURE({ id: 'pausado', name: 'Nina pausada', status: 'off', voice: 'feminina', channels: [109] }),
 ];
 
 const MODELS = [
@@ -601,7 +624,12 @@ const CH_LABEL = (id) => (channelById(id) || { name: '' }).name;
 
 // ---------- Seus agentes ----------
 function agentLine(a) {
-  if (a.status === 'todo') return a.empty ? `<span>${icon('pencil-line')}Parou em "Conte". Guardado por 2 dias.</span>` : `<span>${icon('pencil-line')}Parou em "${esc(a.stepName)}". Fica guardado até você terminar ou excluir.</span>`;
+  if (a.status === 'todo') {
+    if (a.mode === 'manual') return `<span>${icon('pencil-line')}Falta escrever as instruções.</span>`;
+    if (a.testInvalidatedBy === 'material') return `<span>${icon('book-open')}${artigo(a).toUpperCase()} ${esc(a.name)} aprendeu um material novo. Teste de novo antes de ligar.</span>`;
+    if (a.testInvalidatedBy === 'person') return `<span>${icon('refresh-cw')}Parou em Teste · Algo mudou depois do teste.</span>`;
+    return a.empty ? `<span>${icon('pencil-line')}Parou em "Conte". Guardado por 2 dias.</span>` : `<span>${icon('pencil-line')}Parou em "${esc(a.stepName)}". Fica guardado até você terminar ou excluir.</span>`;
+  }
   if (a.status === 'ready') return `<span>${icon('plug-zap')}${a.actuation === 'internal' ? 'Falta ligar para a equipe usar' : 'Falta escolher onde atende'}</span>`;
   const parts = [];
   if (a.actuation === 'internal') parts.push(`<span>${icon('users')}Aparece ao lado das conversas da equipe</span>`);
@@ -617,8 +645,8 @@ function agentLine(a) {
 
 function agentCard(a) {
   let main;
-  if (a.status === 'todo') main = can() ? `<button class="btn primary" data-continue="${a.id}">Continuar</button>` : '';
-  else if (a.status === 'ready') main = can() ? `<button class="btn primary" data-continue="${a.id}">${a.actuation === 'internal' ? 'Ligar' : 'Escolher onde atende'}</button>` : '';
+  if (a.status === 'todo') main = can() ? `<button class="btn primary" data-continue="${a.id}">Continuar</button>` : `<button class="btn outline" data-open="${a.id}">Abrir</button>`;
+  else if (a.status === 'ready') main = can() ? `<button class="btn primary" data-continue="${a.id}">${a.actuation === 'internal' ? 'Ligar' : 'Escolher onde atende'}</button>` : `<button class="btn outline" data-open="${a.id}">Abrir</button>`;
   else main = `<button class="btn outline" data-open="${a.id}">Abrir</button>`;
   const tags = [];
   if (a.type === 'insurance_quote') tags.push('<span class="kind">Agente de Cotação</span>');
@@ -696,7 +724,7 @@ function modelCard(m, pressed) {
 
 // ---------- Criar agente: Escolha → Conte → Teste → Ligue ----------
 function newBuild(model) {
-  return { model, answers: {}, turn: 0, files: [], media: [], images: [], tested: [], chunks: {}, channel: null, linkHint: false, linkAdded: false, tab: 'knowledge', starters: null, window: 'always' };
+  return { model, answers: {}, turn: 0, files: [], media: [], images: [], tested: [], chunks: {}, channels: [], linkHint: false, linkAdded: false, tab: 'knowledge', starters: null, window: 'always' };
 }
 function ensureBuild() { if (!S.build) S.build = newBuild('sdr'); if (!S.build.model) S.build.model = 'sdr'; return S.build; }
 const script = () => SCRIPT[S.build.model === 'internal' ? 'internal' : 'sdr'];
@@ -869,12 +897,16 @@ function viewLigue() {
   const internal = isInternal();
   const free = CHANNELS.filter((c) => !c.busyBy);
   const busy = CHANNELS.filter((c) => c.busyBy);
-  const ch = channelById(b.channel);
+  b.channels ||= [];
+  if (!internal && free.length === 1 && !b.channels.length) b.channels = [free[0].id];
+  const selected = b.channels.map((id) => channelById(id)).filter(Boolean);
+  const ch = selected[0];
+  const selectedNames = selected.map((c) => c.name).join(', ');
   const accepted = b.files.filter((f) => f.state === 'accepted').length;
   const starters = b.starters || (internal ? ['Resuma esta conversa', 'Sugira uma resposta'] : ['Sua corretora atende hoje por WhatsApp?', 'Quer ver como funciona na prática?', 'Quantas pessoas atendem na sua corretora?']);
   b.starters = starters;
-  const opt = (c) => `<button class="opt" role="radio" aria-checked="${b.channel === c.id}" data-ch="${c.id}" ${c.busyBy ? 'disabled' : ''}>
-    <span class="radio" aria-hidden="true"></span><span class="tile t-blue" style="width:2.5rem;height:2.5rem;border-radius:.75rem;display:grid;place-items:center">${icon(c.icon)}</span>
+  const opt = (c) => `<button class="opt" role="checkbox" aria-checked="${b.channels.includes(c.id)}" data-ch="${c.id}" ${c.busyBy ? 'disabled' : ''}>
+    <span class="check" aria-hidden="true"></span><span class="tile t-blue" style="width:2.5rem;height:2.5rem;border-radius:.75rem;display:grid;place-items:center">${icon(c.icon)}</span>
     <span style="flex:1;min-width:0"><b>${esc(c.name)}</b>${c.busyBy ? `<div class="small">Já tem ${artigo(agentById(c.busyBy) || { name: 'a' })} ${esc((agentById(c.busyBy) || {}).name || c.busyBy)} atendendo aqui. Cada canal tem um agente.</div>` : ''}</span></button>`;
   const windows = [['always', 'Sempre', 'Responde a qualquer hora.'], ['business_hours', 'No horário comercial', 'Só quando a caixa está aberta.'], ['outside_business_hours', 'Fora do horário comercial', 'Só quando a equipe não está.']];
   const bar = stateBar('ligue', [['normal', 'Normal'], ['semcanal', 'Nenhum canal livre'], ['falhou', 'Falhou ao ligar'], ['semhorario', 'Canal sem horário'], ['semteste', 'Sem teste'], ['naoadmin', 'Quem edita sem ser admin']]);
@@ -884,14 +916,14 @@ function viewLigue() {
     <header><h1 class="h1">${internal ? `Confira e ligue o ${esc(nome)}` : `Confira e escolha onde ${artigo({ name: nome })} ${esc(nome)} atende`}</h1>
     <p class="sub">${internal ? 'Ele aparece ao lado de cada conversa para a equipe. Nunca fala com clientes.' : 'Aparecem só os canais conectados na sua conta.'}</p></header>
     ${st === 'semteste' ? `<div class="banner amber" role="alert">${icon('flask-conical')}<span class="grow">Teste ${internal ? 'o' : 'a'} ${esc(nome)} antes de ligar.</span><button class="btn soft" data-go="teste">Ir para o teste</button></div>` : ''}
-    ${st === 'falhou' ? `<div class="banner red" role="alert">${icon('plug-zap')}<span class="grow">Não deu para ligar ${artigo({ name: nome })} ${esc(nome)} no ${esc(ch ? ch.name : 'canal')}. Nada mudou: ${internal ? 'ele' : 'ela'} continua desligad${internal ? 'o' : 'a'}.</span><button class="btn soft" data-state="ligue:normal">Tentar de novo</button></div>` : ''}
+    ${st === 'falhou' ? `<div class="banner red" role="alert">${icon('plug-zap')}<span class="grow">Não deu para ligar ${artigo({ name: nome })} ${esc(nome)} nos canais escolhidos. Nada mudou: ${internal ? 'ele' : 'ela'} continua desligad${internal ? 'o' : 'a'}.</span><button class="btn soft" data-state="ligue:normal">Tentar de novo</button></div>` : ''}
     <div class="two">
       <section style="display:flex;flex-direction:column;gap:1.5rem">
         ${internal ? `<div class="sect"><h3>Onde a equipe encontra</h3><p class="desc">Abra qualquer conversa: ${esc(nome)} fica no painel da direita, com resumo e sugestão de resposta.</p></div>` : `
         <div class="sect"><h3>Onde atende</h3>
-          ${freeList.length ? `<div role="radiogroup" aria-label="Canal" style="display:flex;flex-direction:column;gap:.75rem">${freeList.map(opt).join('')}</div>`
-    : `<div class="callout">${icon('info')}<span>Todos os canais já têm um agente. Conecte um canal novo ou tire um agente de um canal.</span></div>`}
-          ${st === 'naoadmin' ? `<p class="small">Peça a quem administra a conta para conectar um WhatsApp.</p>` : `<button class="btn outline" data-go="conectar">${icon('plus')}Conectar um WhatsApp novo</button>`}
+          ${freeList.length ? `<div role="group" aria-label="Canais" style="display:flex;flex-direction:column;gap:.75rem">${freeList.map(opt).join('')}</div>`
+    : `<div class="callout">${icon('info')}<span>Todos os canais já têm um agente. Abra Canais para conectar outro ou tire um agente de um canal.</span></div>`}
+          ${st === 'naoadmin' ? `<p class="small">Peça a quem administra a conta para abrir Canais.</p>` : `<a class="btn outline" href="/app/accounts/16/settings/inboxes/new" data-route="settings_inbox_new">${icon('plus')}Abrir Canais</a>`}
           <details><summary class="small" style="cursor:pointer;min-height:2.75rem;display:flex;align-items:center">Canais ocupados (${busy.length})</summary>
             <div style="display:flex;flex-direction:column;gap:.75rem;margin-top:.5rem">${busy.map(opt).join('')}</div></details></div>`}
         <div class="sect"><header><div><h3>Como ${internal ? 'ele' : 'ela'} se apresenta</h3><p class="desc">Do jeito que você testou.</p></div><button class="btn link" data-go="teste">Mudar</button></header>
@@ -904,9 +936,9 @@ function viewLigue() {
         <h3>Resumo</h3>
         <div class="who">${avatar({ name: nome, color: 'violet' }, 'width:2.4rem;height:2.4rem;font-size:1rem;border-radius:.75rem')}<span style="font-size:15px;color:var(--s12)">${esc(nome)} · ${esc(modelName(b.model))}</span></div>
         <p class="sentence">${internal ? `O <b>${esc(nome)}</b> vai aparecer ao lado das conversas para a equipe.`
-    : ch ? `A <b>${esc(nome)}</b> vai responder quem escrever no <b>${esc(ch.name)}</b>${b.window === 'always' ? '' : b.window === 'business_hours' ? ', no horário comercial' : ', fora do horário comercial'}. Quando não souber, passa a conversa para a equipe.` : 'Escolha um canal para ver o resumo.'}</p>
+    : ch ? `A <b>${esc(nome)}</b> vai responder quem escrever ${selected.length > 1 ? 'nos canais' : 'no canal'} <b>${esc(selectedNames)}</b>${b.window === 'always' ? '' : b.window === 'business_hours' ? ', no horário comercial' : ', fora do horário comercial'}. Quando não souber, passa a conversa para a equipe.` : 'Escolha um ou mais canais para ver o resumo.'}</p>
         <p class="small">${b.files.length ? `${accepted} material pronto · base 71%` : 'Sem material: responde só com o que você contou.'}</p>
-        <button class="btn primary lg" data-act="ligar" ${internal || ch ? '' : 'disabled'}>${icon('power')}Ligar ${internal ? 'o' : 'a'} ${esc(nome)}</button>
+        <button class="btn primary lg" data-act="ligar" ${internal || selected.length ? '' : 'disabled'}>${icon('power')}Ligar ${internal ? 'o' : 'a'} ${esc(nome)}</button>
         <button class="btn link" data-act="ligar-depois">Deixar desligad${internal ? 'o' : 'a'} por enquanto</button>
       </aside>
     </div>
@@ -917,9 +949,10 @@ function viewPronto() {
   const a = agentById('novo');
   if (!a) return viewLista();
   const internal = a.actuation === 'internal';
+  const channelNames = a.channels.map((id) => channelById(id)).filter(Boolean).map((channel) => channel.name).join(', ');
   return `<div class="page">
     <div class="done" role="status"><span class="c">${icon('check')}</span>
-      <div><b style="font-size:1.125rem">${internal ? `O ${esc(a.name)} já aparece para a equipe.` : `A ${esc(a.name)} está atendendo no ${esc(CH_LABEL(a.channels[0]))}.`}</b>
+      <div><b style="font-size:1.125rem">${internal ? `O ${esc(a.name)} já aparece para a equipe.` : `A ${esc(a.name)} está atendendo em ${esc(channelNames)}.`}</b>
       <div class="muted">${internal ? 'Abra qualquer conversa e veja no painel da direita.' : 'Ela já responde quem chegar. Você pode pausar quando quiser.'}</div></div></div>
     <div class="grid">
       ${internal ? `<button class="model" data-go="conversa"><span class="tile t-violet">${icon('message-circle')}</span><b>Ver numa conversa</b><span class="d">Abre suas conversas. Em qualquer uma, ${esc(a.name)} aparece no painel ao lado.</span></button>` : ''}
@@ -1077,12 +1110,12 @@ function tabSabe(a) {
 // ----- Onde atende -----
 function tabOnde(a) {
   const st = viewState('onde', 'normal');
-  const bar = stateBar('onde', [['normal', 'Como está'], ['semcanal', 'Sem canal'], ['falhou', 'Falhou ao conectar'], ['naoadmin', 'Quem edita sem ser admin']]);
+  const bar = stateBar('onde', [['normal', 'Como está'], ['semcanal', 'Sem canal'], ['falhou', 'Falhou ao colocar'], ['naoadmin', 'Quem edita sem ser admin']]);
   const chans = st === 'semcanal' ? [] : a.channels;
   const free = CHANNELS.filter((c) => !c.busyBy);
   const off = a.status !== 'on'; // rascunho ou pausado (backend recusa agent_not_active)
   return `${bar}
-    ${st === 'falhou' ? `<div class="banner red" role="alert">${icon('plug-zap')}<span class="grow">Não deu para conectar no Chat do site hub2you: esse canal já tem um robô de outro sistema. Tire o outro robô nas configurações da caixa e tente de novo.</span></div>` : ''}
+    ${st === 'falhou' ? `<div class="banner red" role="alert">${icon('plug-zap')}<span class="grow">Não deu para colocar no Chat do site hub2you: esse canal já tem um robô de outro sistema. Tire o outro robô nas configurações da caixa e tente de novo.</span></div>` : ''}
     <div class="sect"><header><div><h3>Onde ${ela(a)} atende</h3><p class="desc">Cada canal tem um agente só. ${esc(a.name)} responde todo mundo que escreve nestes canais${a.audience ? ', dentro do público escolhido' : ''}.</p></div></header>
       ${chans.length ? `<div class="rows">${chans.map((id) => { const c = channelById(id); return `<div class="rowi"><span class="tile t-blue" style="width:2.5rem;height:2.5rem;border-radius:.75rem;display:grid;place-items:center">${icon(c.icon)}</span>
         <div class="grow"><b>${esc(c.name)}</b><div class="small">Conectado</div></div><button class="btn outline" data-disc="${a.id}:${id}">Tirar deste canal</button></div>`; }).join('')}</div>`
@@ -1091,7 +1124,7 @@ function tabOnde(a) {
       ${off ? `<div class="callout">${icon('info')}<span>Ligue ${artigo(a)} ${esc(a.name)} para colocar em outro canal.</span></div>` : ''}
       ${free.length ? `<div class="rows">${free.map((c) => `<div class="rowi"><span class="tile t-slate" style="width:2.5rem;height:2.5rem;border-radius:.75rem;display:grid;place-items:center">${icon(c.icon)}</span>
         <div class="grow"><b>${esc(c.name)}</b></div><button class="btn primary" data-conn="${a.id}:${c.id}" ${off ? 'disabled' : ''}>Colocar aqui</button></div>`).join('')}</div>` : '<p class="muted">Todos os canais já têm agente.</p>'}
-      ${st === 'naoadmin' ? '<p class="small">Peça a quem administra a conta para conectar um WhatsApp.</p>' : `<div><button class="btn outline" data-go="conectar">${icon('qr-code')}Conectar um WhatsApp novo</button></div>`}</div>`;
+      ${st === 'naoadmin' ? '<p class="small">Peça a quem administra a conta para abrir Canais.</p>' : `<div><a class="btn outline" href="/app/accounts/16/settings/inboxes/new" data-route="settings_inbox_new">${icon('plus')}Abrir Canais</a></div>`}</div>`;
 }
 
 // ----- Ajustes -----
@@ -1176,33 +1209,6 @@ function tabFerramentas(a) {
       ${S.toolResult ? `<div class="mat"><b>Resultado do teste</b><pre class="mono" style="margin:0;white-space:pre-wrap;overflow-wrap:anywhere">${esc(S.toolResult)}</pre></div>` : ''}</div>`;
 }
 
-// ---------- Conectar WhatsApp novo (QR) ----------
-function viewConectar() {
-  const st = viewState('conectar', 'numero');
-  const bar = stateBar('conectar', [['numero', 'Informar o número'], ['numeroerrado', 'Número inválido'], ['qr', 'Esperando leitura'], ['verificando', 'Verificando'], ['conectando', 'Conectando'], ['ok', 'Conectado'], ['falhou', 'Código venceu'], ['desligada', 'Sessão desligada']]);
-  const pill = { verificando: '<span class="pill off"><span class="spin"></span>Verificando</span>', desligada: '<span class="pill off">Sessão desligada</span>', qr: '<span class="pill todo"><span class="dot amber"></span>Esperando a leitura do código · 52 s</span>', conectando: '<span class="pill todo"><span class="spin"></span>Conectando</span>', ok: '<span class="pill on"><span class="dot"></span>Conectado</span>', falhou: '<span class="pill" style="background:var(--r3);color:var(--r11)">Não conectou</span>' }[st];
-  return `<div class="page">${bar}
-    <button class="back" data-back>${icon('arrow-left')}Voltar</button>
-    <header><h1 class="h1">Conectar um WhatsApp</h1><p class="sub">Leia o código com o celular do número que o agente vai usar. Leva menos de um minuto.</p></header>
-    <div class="two">${st === 'numero' || st === 'numeroerrado' ? `<section class="sect">
-      <div class="field"><label for="wnum">Número do WhatsApp</label><input id="wnum" inputmode="tel" value="${st === 'numeroerrado' ? '11 4454-787' : '55 11 94454-0000'}">
-        <span class="small">Com 55, DDD e o número do celular.</span></div>
-      ${st === 'numeroerrado' ? `<div class="banner red" role="alert">${icon('alert-octagon')}<span class="grow">Esse número não parece um celular do Brasil. Confira: 55, DDD e os 9 dígitos.</span></div>` : ''}
-      <div class="callout">${icon('info')}<span>Esta conexão usa o seu acesso. Se você sair da conta, ela para.</span></div>
-      <div><button class="btn primary lg" data-state="conectar:qr">Mostrar o código</button></div></section>` : `<section class="sect" style="align-items:center;text-align:center">
-      ${pill}
-      ${st === 'ok' ? `<span class="tile t-teal" style="width:5rem;height:5rem;border-radius:1.5rem;display:grid;place-items:center">${icon('check', 'ico" style="width:2.5rem;height:2.5rem')}</span><b style="font-size:1.25rem">WhatsApp conectado</b><p class="muted">Agora escolha o agente que vai atender nele.</p><button class="btn primary lg" data-back>Escolher o agente</button>`
-    : st === 'desligada' ? `<p class="muted">O WhatsApp deste número foi desconectado no celular. Conecte de novo para o agente voltar a receber mensagens.</p><button class="btn primary lg" data-state="conectar:qr">${icon('refresh-cw')}Reconectar</button>`
-    : st === 'verificando' ? `<p class="muted">Conferindo a conexão com o WhatsApp…</p>`
-    : st === 'falhou' ? `<p class="muted">O código venceu antes da leitura. Gere outro e leia em até 1 minuto.</p><button class="btn primary lg" data-state="conectar:qr">${icon('refresh-cw')}Gerar outro código</button>`
-      : `<div class="qr" role="img" aria-label="Código para ler no WhatsApp"></div><button class="btn outline" data-state="conectar:qr">${icon('refresh-cw')}Gerar outro código</button>`}
-    </section>`}
-    <aside class="panel"><h3>Como ler</h3><ol class="steps3">
-      <li>Abra o WhatsApp no celular desse número.</li><li>Toque em <b>⋮</b> (Android) ou <b>Configurações</b> (iPhone) e depois em <b>Aparelhos conectados</b>.</li>
-      <li>Toque em <b>Conectar um aparelho</b> e aponte o celular para o código.</li></ol>
-      <div class="tip">${icon('lightbulb')}<span>Use um número da empresa, não o seu número pessoal.</span></div></aside></div></div>`;
-}
-
 // ---------- Dentro de uma conversa: copiloto e "resposta errada" ----------
 function viewConversa() {
   const helper = S.agents.find((x) => x.actuation === 'internal' || x.actuation === 'both');
@@ -1254,7 +1260,7 @@ const MAP = [
   ['Criar agente', [['escolha', '1. Escolha o trabalho'], ['conte', '2. Conte (conversa + materiais)'], ['conte@pensando', '2. Pensando'], ['conte@erro', '2. Erro ao enviar'], ['conte@recusado', '2. Não salvou'], ['conte@limite', '2. Muitas mensagens'], ['teste', '3. Teste'], ['teste@incompleto', '3. Ainda montando'], ['ligue', '4. Confira e ligue'], ['ligue@semcanal', '4. Sem canal livre'], ['ligue@falhou', '4. Falhou ao ligar'], ['escolha@semajudante', '1. Conta sem o painel da equipe'], ['teste@demora', '3. Demorando'], ['teste@material', '3. Aprendeu material novo'], ['teste@grava', '3. Ferramenta que grava'], ['ligue@semteste', '4. Sem teste'], ['interno', 'Ajudante da equipe (interno)'], ['interno-teste', 'Ajudante: teste numa conversa de exemplo']]],
   ['Clara (agente comum)', [['agente-clara-resumo', 'Como está indo'], ['agente-clara-resumo@vazio', 'Como está indo: sem conversas'], ['agente-clara-testar', 'Testar'], ['agente-clara-sabe', 'O que sabe'], ['agente-clara-sabe@estados', 'Materiais em todos os estados'], ['agente-clara-sabe@limite', 'Limite de 30 materiais'], ['agente-clara-onde', 'Onde atende'], ['agente-clara-onde@semcanal', 'Sem canal'], ['agente-clara-ajustes', 'Ajustes'], ['agente-clara-ajustes@versoes', 'Ajustes com versões'], ['agente-clara-ajustes@semhorario', 'Ajustes: canais sem horário'], ['agente-clara-testar@semperm', 'Testar: ferramenta pulada (só ver)'], ['agente-clara-ferramentas#super', 'Ferramentas (admin da plataforma)']]],
   ['Lia (Agente de Cotação)', [['agente-lia-resumo', 'Como está indo'], ['agente-lia-sabe', 'O que cota'], ['agente-lia-ajustes', 'Ajustes da cotação']]],
-  ['Outras', [['conectar', 'Conectar WhatsApp (número + código)'], ['conversa', 'Dentro da conversa: ajudante e "resposta errada"'], ['lista#view', 'Quem só pode ver']]],
+  ['Outras', [['conversa', 'Dentro da conversa: ajudante e "resposta errada"'], ['lista#view', 'Quem só pode ver']]],
 ];
 function openMap() {
   const layer = $('#layer');
@@ -1308,7 +1314,7 @@ function shell() {
 }
 
 // ---------- roteador ----------
-const ROUTES = { lista: viewLista, escolha: viewEscolha, conte: viewConte, teste: viewTeste, ligue: viewLigue, pronto: viewPronto, conectar: viewConectar, conversa: viewConversa };
+const ROUTES = { lista: viewLista, escolha: viewEscolha, conte: viewConte, teste: viewTeste, ligue: viewLigue, pronto: viewPronto, conversa: viewConversa };
 let lastRoute = 'lista';
 function current() { return location.hash.slice(1) || 'lista'; }
 function go(r) { if (current() === r) render(); else location.hash = r; }
@@ -1325,7 +1331,7 @@ function render() {
 window.addEventListener('hashchange', () => {
   const r = current();
   if (r !== lastRoute) { S.open = null; window.scrollTo(0, 0); $('#main').focus({ preventScroll: true }); }
-  if (!r.startsWith('conectar')) lastRoute = r;
+  lastRoute = r;
   render();
 });
 
@@ -1361,16 +1367,17 @@ function toggleAgent(id) {
 function saveNewAgent(on) {
   const b = S.build; const internal = isInternal();
   const nome = bName();
+  const selectedChannels = b.channels || [];
   S.agents = S.agents.filter((x) => x.id !== 'novo');
   CHANNELS.forEach((c) => { if (c.busyBy === 'novo') c.busyBy = null; });
   const zero = { conv: 0, replies: 0, handed: 0, conf: null, know: null, reasons: [] };
   const a = { id: 'novo', name: nome, color: 'violet', type: b.model, actuation: internal ? 'internal' : 'external', status: on ? 'on' : 'ready', mode: 'guided',
-    channels: on && !internal ? [b.channel] : [], card: internal ? 'Ajuda a equipe: resume a conversa e sugere a próxima resposta.' : `Conversa com donos e gestores de corretoras que chegam pelo site e chama a equipe quando pedem preço ou demonstração.`,
+    channels: on && !internal ? [...selectedChannels] : [], card: internal ? 'Ajuda a equipe: resume a conversa e sugere a próxima resposta.' : `Conversa com donos e gestores de corretoras que chegam pelo site e chama a equipe quando pedem preço ou demonstração.`,
     greeting: bGreeting(), fallback: 'Não sei responder isso com segurança. Vou chamar alguém da equipe.', tone: '', handoff: 'low_confidence', threshold: 0.6,
     window: b.window, audience: null, starters: b.starters || [], base: b.files.some((f) => f.state === 'accepted') ? 71 : null, faqOn: false, faq: [], versions: [],
     files: b.files, media: b.media, stats: { 7: zero, 30: zero }, serie: {}, stepName: 'Ligue' };
   S.agents.push(a);
-  if (on && !internal) channelById(b.channel).busyBy = 'novo';
+  if (on && !internal) selectedChannels.forEach((id) => { const channel = channelById(id); if (channel) channel.busyBy = 'novo'; });
   if (on) { S.build = null; go('pronto'); } else { b.answers.nome = nome; go('lista'); toast(`${nome} guardad${artigo(a)}. Ligue quando quiser.`); }
 }
 
@@ -1472,7 +1479,13 @@ document.addEventListener('click', (e) => {
   if (d.model) { S.build = S.build && current() === 'escolha' ? S.build : newBuild(null); S.build.model = d.model; if (current() !== 'escolha') go('escolha'); else render(); return; }
   if (d.ans) { answer(d.ans); return; }
   if (d.q) { playTest(current() === 'teste' ? S.build : S.ptest, d.q); return; }
-  if (d.ch) { S.build.channel = Number(d.ch); render(); return; }
+  if (d.ch) {
+    const id = Number(d.ch);
+    const channels = S.build.channels || (S.build.channels = []);
+    const index = channels.indexOf(id);
+    if (index === -1) channels.push(id); else channels.splice(index, 1);
+    render(); return;
+  }
   if (d.bwin) { S.build.window = d.bwin; render(); return; }
   if (d.btab) { S.build.tab = d.btab; render(); return; }
   if (d.rmimg) { S.build.images.splice(Number(d.rmimg), 1); render(); return; }

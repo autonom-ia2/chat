@@ -40,13 +40,15 @@ RSpec.describe 'Autonomia agent analytics', type: :request do
 
       expect(response).to have_http_status(:success)
       body = response.parsed_body
-      expect(body['meta']).to include('metric' => 'handled', 'range' => '7d', 'count' => 1, 'has_more' => false)
+      expect(body['meta']).to include(
+        'metric' => 'handled', 'range' => '7d', 'count' => 1, 'has_hidden' => false, 'has_more' => false
+      )
       expect(body['payload'].size).to eq(1)
       expect(body['payload'].first['record_type']).to eq('conversation')
       expect(body['payload'].first['conversation']['display_id']).to eq(conversation.display_id)
     end
 
-    it 'evaluates the heavy conversation scope only once (no separate count)' do
+    it 'counts the visible scope before the limited fetch' do
       conversation_queries = []
       subscriber = ActiveSupport::Notifications.subscribe('sql.active_record') do |_name, _start, _finish, _id, payload|
         conversation_queries << payload[:sql] if payload[:sql].include?('FROM "conversations"')
@@ -57,8 +59,42 @@ RSpec.describe 'Autonomia agent analytics', type: :request do
 
       ActiveSupport::Notifications.unsubscribe(subscriber)
       expect(response).to have_http_status(:success)
-      expect(conversation_queries.size).to eq(1)
-      expect(conversation_queries.first).to include('LIMIT')
+      expect(conversation_queries.size).to eq(3)
+      expect(conversation_queries.count { |sql| sql.include?('SELECT 1 AS one') }).to eq(1)
+      expect(conversation_queries.count { |sql| sql.match?(/LIMIT/i) }).to eq(2)
+      expect(conversation_queries.count { |sql| sql.match?(/COUNT\s*\(/i) }).to eq(1)
+    end
+
+    it 'reports the full visible total while returning at most 50 rows without leaking another inbox' do
+      viewer = create(:user, account: account, role: :agent)
+      custom_role = create(:custom_role, account: account, permissions: %w[autonomia_view conversation_manage])
+      viewer.account_users.find_by!(account: account).update!(custom_role: custom_role)
+      create(:inbox_member, user: viewer, inbox: inbox)
+
+      restricted_inbox = create(:inbox, account: account, name: 'Caixa restrita')
+      hidden_contact = create(:contact, account: account, name: 'Contato que não pode aparecer')
+      hidden_conversation = create(:conversation, account: account, inbox: restricted_inbox, contact: hidden_contact)
+      Autonomia::Agents::AgentEvent.create!(agent: agent, account: account,
+                                            conversation_id: hidden_conversation.id, event_type: :replied)
+
+      visible_conversations = Array.new(50) do
+        create(:conversation, account: account, inbox: inbox)
+      end
+      visible_conversations.each do |visible_conversation|
+        Autonomia::Agents::AgentEvent.create!(agent: agent, account: account,
+                                              conversation_id: visible_conversation.id, event_type: :replied)
+      end
+
+      get "/api/v1/accounts/#{account.id}/autonomia/agents/#{agent.id}/analytics/conversations",
+          params: { range: '7d', metric: 'handled' }, headers: viewer.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:success)
+      body = response.parsed_body
+      expect(body['meta']).to include('count' => 51, 'has_more' => true, 'limit' => 50, 'has_hidden' => true)
+      expect(body['payload'].size).to eq(50)
+      expect(body['payload'].map { |row| row.dig('conversation', 'id') })
+        .to all(be_in([conversation.id, *visible_conversations.map(&:id)]))
+      expect(response.body).not_to include(hidden_contact.name, restricted_inbox.name)
     end
 
     it 'flags has_more when the result exceeds the drilldown limit' do
@@ -69,7 +105,7 @@ RSpec.describe 'Autonomia agent analytics', type: :request do
       get "/api/v1/accounts/#{account.id}/autonomia/agents/#{agent.id}/analytics/conversations",
           params: { range: '7d', metric: 'handled' }, headers: administrator.create_new_auth_token, as: :json
 
-      expect(response.parsed_body['meta']).to include('count' => 1, 'has_more' => true, 'limit' => 1)
+      expect(response.parsed_body['meta']).to include('count' => 2, 'has_more' => true, 'limit' => 1)
       expect(response.parsed_body['payload'].size).to eq(1)
     end
 
@@ -78,6 +114,23 @@ RSpec.describe 'Autonomia agent analytics', type: :request do
           params: { range: '7d', metric: 'bogus' }, headers: administrator.create_new_auth_token, as: :json
 
       expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body).to include(
+        'code' => 'unknown_metric',
+        'error' => I18n.t('autonomia.agents.errors.unknown_metric', locale: account.locale, raise: true)
+      )
+    end
+
+    it 'localizes the unknown metric error for a Brazilian Portuguese account' do
+      account.update!(locale: 'pt_BR')
+
+      get "/api/v1/accounts/#{account.id}/autonomia/agents/#{agent.id}/analytics/conversations",
+          params: { range: '7d', metric: 'bogus' }, headers: administrator.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body).to include(
+        'code' => 'unknown_metric',
+        'error' => I18n.t('autonomia.agents.errors.unknown_metric', locale: 'pt_BR', raise: true)
+      )
     end
 
     it 'is admin-only like the rest of the agents area' do

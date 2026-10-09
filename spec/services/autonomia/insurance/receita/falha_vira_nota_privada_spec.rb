@@ -217,7 +217,9 @@ RSpec.describe 'R20: toda falha da cotação chega à equipe em nota privada' do
     end
 
     def nota_do_encaminhamento(codigo)
-      "#{Autonomia::Agents::NotaDoEncaminhamento::TITULO}\n- #{motivos.fetch(codigo)}"
+      passagem = "A #{agent.name} passou esta conversa para a equipe: " \
+                 "#{I18n.t('autonomia.agents.handoff_reasons.ai_unavailable', locale: account.locale, default: 'ai_unavailable')}."
+      "#{passagem}\n#{Autonomia::Agents::NotaDoEncaminhamento::TITULO}\n- #{motivos.fetch(codigo)}"
     end
 
     it 'passagem à equipe: o especialista caiu, e a nota diz o que a IA não conseguiu' do

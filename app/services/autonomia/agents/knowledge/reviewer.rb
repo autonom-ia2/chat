@@ -213,13 +213,15 @@ module Autonomia
         # review_status ('aceitar'→'accepted', 'reenviar'→'needs_resend'). Resiliente: erro de
         # IA/credencial NÃO levanta — grava o default conservador 'needs_review' (confiança 'baixa',
         # sem summary) para não travar a criação do agente sem IA.
-        def review_source!
+        def review_source!(before_material_snapshot_digest: nil, expected_session_id: nil)
+          before_digest = before_material_snapshot_digest || @source.material_projection.material_snapshot_digest
+          session_id = expected_session_id || MaterialProjection.test_session_id(agent: @agent)
           parsed = request_review
           attrs = parsed ? mapped_review(parsed) : fallback_review
-          @source.mark_reviewed!(@token, attrs)
+          mark_reviewed_and_invalidate(attrs, before_digest, session_id)
         rescue StandardError => e
           Rails.logger.warn("[autonomia][reviewer] degraded source=#{@source.id} #{e.class}")
-          @source.mark_reviewed!(@token, fallback_review)
+          mark_reviewed_and_invalidate(fallback_review, before_digest, session_id)
         end
 
         # Agrega as fontes APROVADAS do agente num MAPA DE TEMAS + confiança geral e grava em
@@ -433,6 +435,17 @@ module Autonomia
           parts = ready.where(chunk_index: indexes).order(:chunk_index)
                        .map { |k| k.content.to_s.strip.truncate(SAMPLE_CHUNK_CHARS) }
           parts.join("\n---\n").truncate(SAMPLE_TOTAL_CHARS, separator: "\n---\n")
+        end
+
+        def mark_reviewed_and_invalidate(attrs, before_digest, session_id)
+          reviewed = @source.mark_reviewed!(@token, attrs)
+          return reviewed unless reviewed && before_digest
+
+          MaterialProjection.invalidate_if_digest_changed!(
+            agent: @agent, before_digest: before_digest, after: @source.material_projection,
+            expected_session_id: session_id
+          )
+          reviewed
         end
 
         # Até SAMPLE_MAX_CHUNKS índices espaçados uniformemente, sempre com o primeiro e o último.

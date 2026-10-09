@@ -200,6 +200,20 @@ module Autonomia
         review_status == 'accepted'
       end
 
+      # A projeção é consultada explicitamente pelos escritores depois de liberar qualquer lock da
+      # fonte. Não é callback: fontes de conhecimento e o construtor nunca adquirem Agent de dentro
+      # de uma gravação de Source, evitando a inversão Agent→Source em ingestões concorrentes.
+      def material_projection
+        agent.sources.reset
+        Autonomia::Agents::MaterialProjection.new(agent: agent).call
+      end
+
+      def invalidate_material_if_changed!(before, expected_session_id:)
+        Autonomia::Agents::MaterialProjection.invalidate_if_effective_change!(
+          agent: agent, before: before, after: material_projection, expected_session_id: expected_session_id
+        )
+      end
+
       private
 
       # Snapshot do parecer anterior (metadata['prev_review'], gravado por begin_ingestion!) mapeado

@@ -427,7 +427,10 @@ const contextMenuEnabledOptions = computed(() => {
       isOnChatwootCloud.value &&
       isCaptainMessage.value &&
       !isMessageDeleted.value,
-    reportAgent: isAutonomiaAgentMessage.value && !isMessageDeleted.value,
+    reportAgent:
+      isAutonomiaAgentMessage.value &&
+      !props.private &&
+      !isMessageDeleted.value,
   };
 });
 

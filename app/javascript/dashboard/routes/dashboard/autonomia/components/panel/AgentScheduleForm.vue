@@ -30,8 +30,9 @@ const handleSubmit = () => {
 };
 
 watch(
-  () => props.agent,
-  agent => {
+  [() => props.agent?.id, () => props.agent?.config?.response_window],
+  () => {
+    const agent = props.agent;
     selected.value = agent?.config?.response_window || RESPONSE_WINDOW.ALWAYS;
   },
   { immediate: true }
@@ -51,7 +52,7 @@ watch(
         @select="selected = $event"
       />
     </div>
-    <p class="m-0 text-xs text-n-slate-10">
+    <p class="m-0 text-xs text-n-slate-11">
       {{ t('AGENTS.SCHEDULE.HINT') }}
     </p>
     <NextButton
@@ -60,7 +61,7 @@ watch(
       :label="t('AGENTS.SCHEDULE.SAVE')"
       :is-loading="isSaving"
       :disabled="isSaving"
-      class="w-fit"
+      class="w-fit !bg-n-blue-11 !text-white dark:!text-n-navy hover:enabled:!bg-n-blue-12 hover:enabled:!brightness-100 focus-visible:!brightness-100 focus-visible:!outline-n-blue-11"
       @click="handleSubmit"
     />
   </div>

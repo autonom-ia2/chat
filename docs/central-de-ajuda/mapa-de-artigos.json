@@ -2802,7 +2802,8 @@
       "09.12-revisar-o-agente"
      ],
      "rotas": [
-      "autonomia_agents_builder"
+      "autonomia_agents_builder",
+      "autonomia_agent_build"
      ],
      "me_leve_ate_la": {
       "rota": "autonomia_agents_builder",
@@ -2825,7 +2826,8 @@
       "09.14-publicar-agente-interno"
      ],
      "rotas": [
-      "autonomia_agent_panel"
+      "autonomia_agent_panel",
+      "autonomia_agent_ready"
      ],
      "me_leve_ate_la": {
       "rota": "autonomia_agents_index",
@@ -2850,7 +2852,8 @@
       "09.16-aba-testar"
      ],
      "rotas": [
-      "autonomia_agent_panel"
+      "autonomia_agent_panel",
+      "autonomia_agent_panel_legacy"
      ],
      "me_leve_ate_la": {
       "rota": "autonomia_agents_index",

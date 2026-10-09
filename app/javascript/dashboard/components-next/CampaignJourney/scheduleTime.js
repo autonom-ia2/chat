@@ -1,7 +1,7 @@
 // "Quando" of the review step (#993, PRD §6.4): date and time are read in the account
 // time zone, whatever the browser zone is, and sent in UTC.
 import { zonedTimeToUtc } from 'date-fns-tz';
-import { toLocaleTag } from './localeTag';
+import { toLocaleTag } from 'dashboard/helper/localeTag';
 
 const browserTimeZone = () => {
   try {

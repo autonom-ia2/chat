@@ -83,6 +83,22 @@ describe('Autonomia API clients', () => {
       );
     });
 
+    it('passes cancellation to test without changing the legacy call shape', () => {
+      const signal = new AbortController().signal;
+
+      agents.test(
+        7,
+        { message: 'imagem', history: [], images: ['data:image/png;base64,x'] },
+        { signal }
+      );
+
+      expect(axiosMock.post).toHaveBeenCalledWith(
+        '/api/v1/accounts/85/autonomia/agents/7/test',
+        { message: 'imagem', history: [], images: ['data:image/png;base64,x'] },
+        { signal }
+      );
+    });
+
     it('manages tools under the per-agent endpoint', () => {
       agents.getTools(7);
       expect(axiosMock.get).toHaveBeenCalledWith(
@@ -202,6 +218,15 @@ describe('Autonomia API clients', () => {
         '/api/v1/accounts/85/autonomia/build_threads/3/messages',
         { message: 'mais contexto', client_message_id: expect.any(String) }
       );
+    });
+
+    it('resumes through the nested agent route without posting', () => {
+      buildThreads.resume(42);
+
+      expect(axiosMock.get).toHaveBeenCalledWith(
+        '/api/v1/accounts/85/autonomia/agents/42/build_thread'
+      );
+      expect(axiosMock.post).not.toHaveBeenCalled();
     });
 
     it('reuses the turn client_message_id handed by the store instead of minting one per call', () => {

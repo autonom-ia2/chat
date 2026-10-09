@@ -15,7 +15,7 @@ import { useAccount } from 'dashboard/composables/useAccount';
 import { INBOX_TYPES } from 'dashboard/helper/inbox';
 
 import Button from 'dashboard/components-next/button/Button.vue';
-import JourneyStepper from 'dashboard/components-next/CampaignJourney/JourneyStepper.vue';
+import JourneyStepBar from 'dashboard/components-next/CampaignJourney/JourneyStepBar.vue';
 import StepAudience from 'dashboard/components-next/CampaignJourney/StepAudience.vue';
 import StepMessage from 'dashboard/components-next/CampaignJourney/StepMessage.vue';
 import StepReview from 'dashboard/components-next/CampaignJourney/StepReview.vue';
@@ -736,7 +736,7 @@ onBeforeUnmount(() => {
       />
 
       <template v-else>
-        <JourneyStepper
+        <JourneyStepBar
           :current="draft.step"
           :reachable="reachable"
           @go="goTo"

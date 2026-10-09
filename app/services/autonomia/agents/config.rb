@@ -3,6 +3,11 @@ module Autonomia
     class Config
       BOOLEAN = ActiveModel::Type::Boolean.new
 
+      AI_RATE_LIMIT_DEFAULTS = RateLimits::DEFAULTS
+      def self.draft_reap_hours = DraftRetention.hours
+
+      def self.ai_rate_limits = RateLimits.values
+
       BUILDER_MODEL = Crm::Ai::Config::MODEL_EMAIL # gpt-6.1-sol
       # Construtor é um CHAT: chamada SÍNCRONA (ResponsesClient#create). O reasoning é ESCOLHIDO POR
       # FASE (Builder#run! decide) para atacar a latência (~24s/turno na campanha real):
@@ -349,6 +354,11 @@ module Autonomia
       # por call-sites que ainda não resolveram a conta. Com `account`: exige ENV
       # master ligada E a conta marcada como habilitada.
       INTERNAL_ATTR_KEY = 'autonomia_agents_enabled'.freeze
+      REDESIGN_ATTR_KEY = RedesignGate::ATTR_KEY
+
+      class << self
+        delegate :redesign_enabled?, :redesign_enabled_for?, :enable_redesign_for!, :disable_redesign_for!, to: RedesignGate
+      end
 
       def self.enabled?(account = nil)
         master = BOOLEAN.cast(ENV.fetch('AUTONOMIA_AGENTS_ENABLED', false))

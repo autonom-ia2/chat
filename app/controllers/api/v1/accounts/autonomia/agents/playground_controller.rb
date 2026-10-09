@@ -9,21 +9,27 @@ class Api::V1::Accounts::Autonomia::Agents::PlaygroundController < Api::V1::Acco
   # MULTIMODAL: aceita `images` (array de data-urls) anexadas à mensagem atual. Temporário — as
   # imagens chegam inline em base64 (sem ActiveStorage); o modelo as lê como input_image neste turno.
   def test
-    return render_unprocessable('message_required') if message_param.blank?
+    return render_message_required if params[:message].blank?
 
-    defer_interactive_ai('agent_test', {
-                           agent_id: @agent.id, message: message_param, history: history_param, images: images_param
-                         })
+    defer_interactive_ai(
+      'agent_test',
+      { agent_id: @agent.id, message: message_param, history: history_param, images: images_param },
+      state_agent: @agent
+    )
   end
 
   # POST .../agents/:id/suggest -> Copilot (rascunho ao atendente; sempre devolve reply)
   def suggest
-    return render_unprocessable('message_required') if message_param.blank?
+    return render_message_required if params[:message].blank?
 
     defer_interactive_ai('agent_suggest', { agent_id: @agent.id, message: message_param, history: history_param })
   end
 
   private
+
+  def render_message_required
+    render_unprocessable(I18n.t('autonomia.agents.errors.message_required', locale: current_account.locale), code: 'message_required')
+  end
 
   # Testar é leitura: "Ver" inclui testar o agente no playground (#452).
   def check_autonomia_permission

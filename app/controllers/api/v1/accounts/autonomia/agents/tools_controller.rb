@@ -10,7 +10,7 @@ class Api::V1::Accounts::Autonomia::Agents::ToolsController < Api::V1::Accounts:
   def show; end
 
   def create
-    @tool = tools_scope.new(tool_params)
+    @tool = tools_scope.new(merged_tool_params)
     @tool.account = Current.account
     @tool.save!
     render :show, status: :created
@@ -67,16 +67,36 @@ class Api::V1::Accounts::Autonomia::Agents::ToolsController < Api::V1::Accounts:
 
   def merged_tool_params
     attrs = tool_params.to_h
-    return attrs unless attrs['headers_config'].present?
+    return attrs if attrs['headers_config'].blank?
 
-    attrs['headers_config'] = attrs['headers_config'].map do |header|
-      next header unless header['secret'] == true || header['secret'] == 'true'
-      next header unless header['value'] == Autonomia::Agents::Tool.masked_header_value
+    attrs.merge('headers_config' => normalized_headers(attrs['headers_config']))
+  end
 
-      existing = @tool.headers_config.find { |item| item['key'] == header['key'] }
-      existing ? header.merge('value' => existing['value']) : header
-    end
-    attrs
+  def normalized_headers(headers)
+    existing_headers = Array(@tool&.headers_config)
+    headers.map { |header| normalized_header(header, existing_headers) }
+  end
+
+  def normalized_header(header, existing_headers)
+    existing = existing_headers.find { |item| item['key'] == header['key'] }
+    return preserve_existing_header(header, existing) if existing && masked_or_missing_value?(header)
+    return header.merge('value' => '') if masked_header?(header)
+
+    header
+  end
+
+  def preserve_existing_header(header, existing)
+    existing_secret = ActiveModel::Type::Boolean.new.cast(existing['secret'])
+    incoming_secret = ActiveModel::Type::Boolean.new.cast(header['secret'])
+    header.merge('value' => existing['value'], 'secret' => existing_secret || incoming_secret)
+  end
+
+  def masked_or_missing_value?(header)
+    !header.key?('value') || masked_header?(header)
+  end
+
+  def masked_header?(header)
+    header['value'] == Autonomia::Agents::Tool.masked_header_value
   end
 
   def test_params

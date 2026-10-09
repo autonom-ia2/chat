@@ -28,6 +28,7 @@
 #
 class Autonomia::Agents::InstructionVersion < ApplicationRecord
   self.table_name = 'autonomia_agent_instruction_versions'
+  GUIDED_CURRENT_REASONS = %w[builder kb_refresh rollback].freeze
 
   belongs_to :agent, class_name: 'Autonomia::Agents::Agent',
                      foreign_key: :autonomia_agent_id, inverse_of: :instruction_versions
@@ -40,4 +41,41 @@ class Autonomia::Agents::InstructionVersion < ApplicationRecord
   validates :instruction, presence: true, length: { maximum: Autonomia::Agents::Agent::MAX_INSTRUCTION_LENGTH }
   validates :instruction_hash, presence: true
   validates :reason, presence: true
+
+  def origin
+    metadata.to_h['origin'].presence || inferred_origin
+  end
+
+  def scaffold_snapshot
+    metadata.to_h['scaffold'].presence
+  end
+
+  def guided_origin?
+    origin == 'guided' && scaffold_snapshot.present?
+  end
+
+  def manual_origin?
+    return false unless origin == 'manual'
+    return true if reason.to_s == 'manual_edit'
+
+    reason.to_s == 'rollback' && metadata.to_h['origin'].to_s == 'manual'
+  end
+
+  def current_for?(effective_origin)
+    return false if reason.to_s == 'before_manual'
+
+    case effective_origin.to_s
+    when 'guided' then guided_origin? && GUIDED_CURRENT_REASONS.include?(reason.to_s)
+    when 'manual' then manual_origin?
+    else false
+    end
+  end
+
+  private
+
+  def inferred_origin
+    return 'guided' if %w[builder before_manual kb_refresh].include?(reason.to_s)
+
+    'manual'
+  end
 end

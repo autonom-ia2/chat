@@ -97,38 +97,14 @@ class Autonomia::Agents::Retriever
          .limit(top_k * 4)
   end
 
-  # Revisor v2 (§2.6): exclui do retrieval o conhecimento de fontes REPROVADAS pela IA Revisora
-  # (needs_resend) ou não-avaliáveis sem IA (needs_review). Fontes 'accepted' E ainda-não-revisadas
-  # (review_status nil — legado/sources pré-revisor) SEGUEM incluídas → sem regressão para
-  # conhecimento já no ar. Lista vazia ⇒ where.not(source_id: []) é no-op (não filtra nada).
-  #
-  # P3.2 — GATE DE ESCOPO NO RETRIEVAL (interação com P1.1): com o cutoff relaxado de 0.45 → 0.75
-  # (RETRIEVAL_HARD_CEILING), um KB de OUTRO negócio aprovado por nota técnica (denso o suficiente p/
-  # casar < 0.75) voltaria a ser recuperável e — se casar forte (≤ STRONG_MATCH) — sustentaria
-  # confiança alta no Answerer, vazando contexto errado (Protege+ num agente Lar Ideal, S12). Excluímos
-  # também as fontes de OUTRO NEGÓCIO (flag "Fora do negócio:" do Revisor, §6.6) ANTES do retrieval,
-  # fechando o ponto que o cutoff barrava por acidente. NÃO confundir com "Cobertura:" (desencaixe de
-  # TIPO, mesmo negócio) que NÃO isola — ver scope_mismatched_source_ids. Salvaguarda anti-regressão
-  # idêntica à do topic_map: só exclui mismatched quando RESTA conhecimento em escopo — nunca esvazia tudo.
+  # A projeção semântica é a única fonte da decisão de uso: mantém mídia fora do conhecimento, respeita
+  # revisão/geração e preserva a salvaguarda quando todos os aceitos estão fora do negócio.
   def rejected_source_ids
-    @agent.sources.where(review_status: %w[needs_resend needs_review]).pluck(:id) +
-      scope_mismatched_source_ids
+    material_projection.rejected_source_ids
   end
 
-  # Fontes ACEITAS porém de OUTRO NEGÓCIO: o Revisor marca isolamento de negócio com a frase "Fora do
-  # negócio: …" no início de uma sentença do review_summary (Reviewer::OUT_OF_BUSINESS_MARKER, §6.6).
-  # ATENÇÃO — correção do falso-positivo S15: ANTES gateávamos por SCOPE_MISMATCH_MARKER ("Cobertura:"),
-  # que o Revisor emite por mero desencaixe de TIPO (catálogo de produtos num agente de atendimento = MESMO
-  # negócio). Isso excluía do retrieval KB legítimo adicionado depois de finalizar ("incluir mais KB"). O
-  # isolamento real (leak S12: seguradora num agente de imobiliária) usa o marcador de NEGÓCIO, estrito.
-  # Devolve [] quando TODAS as aceitas estão flagueadas (ou nenhuma) — não regredir um agente cujo KB
-  # inteiro veio marcado (preserva o recall; mesma salvaguarda do in_scope_sources do agregado).
-  def scope_mismatched_source_ids
-    accepted = @agent.accepted_sources.to_a
-    mismatched = accepted.select { |s| Autonomia::Agents::Knowledge::Reviewer.out_of_business?(s.review_summary) }
-    return [] if mismatched.empty? || mismatched.size == accepted.size
-
-    mismatched.map(&:id)
+  def material_projection
+    @material_projection ||= Autonomia::Agents::MaterialProjection.new(agent: @agent).call
   end
 
   # Reforço lexical útil só quando o vetorial trouxe ALGO mas veio incompleto (< top_k) OU sem

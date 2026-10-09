@@ -363,6 +363,8 @@ Rails.application.routes.draw do
             post 'agents/message_reports', to: 'agents/message_reports#create'
             resources :agents, only: [:index, :show, :create, :update, :destroy] do
               member do
+                post :publish
+                patch :quote_choices, to: 'agents/quote_choices#update'
                 post :test,    to: 'agents/playground#test'
                 post :suggest, to: 'agents/playground#suggest'
                 get  :analytics, to: 'agents/analytics#index'   # Fase F
@@ -370,8 +372,14 @@ Rails.application.routes.draw do
                 get 'analytics/conversations', to: 'agents/analytics#conversations'
                 patch :avatar
                 delete :avatar
+                get :handoff_targets, to: 'agents/handoff_targets#index'
               end
+              get 'build_thread', to: 'agents/build_threads#resume'
               resources :sources, only: [:index, :create, :destroy], controller: 'agents/sources' do
+                collection do
+                  get :reusable
+                  post :copy
+                end
                 member { post :resync }
               end
               resources :channels, only: [:index, :create, :destroy],
@@ -1221,6 +1229,8 @@ Rails.application.routes.draw do
         post :toggle_prospecting_score_engine, on: :member
         post :toggle_insurance, on: :member
         post :toggle_insurance_ramo, on: :member
+        post :toggle_agents_redesign, on: :member
+        patch 'agents/:agent_id/operation_config', to: 'accounts#update_agent_operation_config', on: :member
       end
       resources :prospecting_scoring_profiles, except: [:show]
       resources :users, only: [:index, :new, :create, :show, :edit, :update, :destroy] do

@@ -13,7 +13,7 @@ import { useAlert } from 'dashboard/composables';
 import Button from 'dashboard/components-next/button/Button.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
-import JourneySwitch from 'dashboard/components-next/CampaignJourney/JourneySwitch.vue';
+import LabeledSwitch from 'dashboard/components-next/switch/LabeledSwitch.vue';
 import { useOnEnter } from 'dashboard/components-next/CampaignJourney/useOnEnter';
 import {
   BOT_SENDER,
@@ -274,7 +274,7 @@ useOnEnter(async () => {
             "
           />
           <div>
-            <JourneySwitch
+            <LabeledSwitch
               :checked="form.businessHours"
               :label="t(`${NS}.BUSINESS_HOURS`)"
               data-test="live-chat-hours"

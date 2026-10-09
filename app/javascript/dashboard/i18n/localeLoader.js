@@ -1,3 +1,5 @@
+import { toLocaleTag } from '../helper/localeTag';
+
 const DEFAULT_LOCALE = 'en';
 // The legacy European Portuguese catalogue is mostly untranslated English, so
 // preferences saved as `pt` are served in Brazilian Portuguese (issue #881).
@@ -60,4 +62,5 @@ export const setDashboardLocale = async (composer, locale) => {
   }
 
   composer.locale.value = resolvedLocale;
+  document.documentElement.lang = toLocaleTag(resolvedLocale);
 };

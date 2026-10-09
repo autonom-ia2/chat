@@ -1,3 +1,5 @@
+require 'digest'
+
 class Rack::Attack
   ### Configure Cache ###
 
@@ -37,6 +39,47 @@ class Rack::Attack
       normalized_path = path[/^[^.]+/]
       normalized_path == '/' ? normalized_path : normalized_path.sub(%r{/+\z}, '')
     end
+
+    # Identidade derivada da credencial; UID e IP não podem abrir outro orçamento.
+    def autonomia_credential_digest
+      credential = get_header('HTTP_API_ACCESS_TOKEN').presence || get_header('api_access_token').presence ||
+                   get_header('HTTP_ACCESS_TOKEN').presence || 'anonymous'
+      Digest::SHA256.hexdigest(credential)
+    end
+
+    def autonomia_ai_route
+      return @autonomia_ai_route if defined?(@autonomia_ai_route)
+
+      parts = path_without_extensions.split('/')
+      @autonomia_ai_route = nil
+      return unless parts[0, 4] == ['', 'api', 'v1', 'accounts'] && parts[5] == 'autonomia'
+      return unless decimal_id?(parts[4])
+
+      action = autonomia_ai_action(parts.drop(6))
+      @autonomia_ai_route = [parts[4].to_i, action] if action
+    end
+
+    private
+
+    def autonomia_ai_action(suffix)
+      return :build_threads if suffix == ['build_threads']
+      return unless decimal_id?(suffix[1])
+
+      case suffix
+      in ['build_threads', _, 'messages' | 'retry']
+        :build_threads
+      in ['agents', _, 'test' | 'suggest' => action]
+        action.to_sym
+      in ['agents', _, 'sources', 'copy']
+        :copy_source
+      else
+        nil
+      end
+    end
+
+    def decimal_id?(value)
+      value.present? && value.each_byte.all? { |byte| byte.between?(48, 57) }
+    end
   end
 
   ### Safelist IPs from Environment Variable ###
@@ -69,6 +112,16 @@ class Rack::Attack
   # Key: "rack::attack:#{Time.now.to_i/:period}:req/ip:#{req.ip}"
 
   throttle('req/ip', limit: ENV.fetch('RACK_ATTACK_LIMIT', '3000').to_i, period: 1.minute, &:ip)
+
+  # Lidos uma vez no boot: ENV inválida interrompe o boot, sem fallback silencioso.
+  Rails.application.config.after_initialize do
+    ::Autonomia::Agents::Config.ai_rate_limits.each do |action, limit|
+      throttle("autonomia/#{action}", limit: limit, period: 1.minute) do |req|
+        route = req.autonomia_ai_route if req.post?
+        "#{route.first}:#{req.autonomia_credential_digest}" if route && route.last == action
+      end
+    end
+  end
 
   throttle('public_tracked_links/ip', limit: 60, period: 1.minute) do |req|
     req.ip if req.get? && req.path_without_extensions.start_with?('/l/')
@@ -489,6 +542,14 @@ end
 # Log blocked events
 ActiveSupport::Notifications.subscribe('throttle.rack_attack') do |_name, _start, _finish, _request_id, payload|
   req = payload[:request]
+
+  if (route = req.autonomia_ai_route)
+    Rails.logger.warn(
+      "[Rack::Attack][Blocked] autonomia_action: #{route.last}, account_id: #{route.first}, " \
+      "credential_digest: #{req.autonomia_credential_digest}, method: #{req.request_method}"
+    )
+    next
+  end
 
   user_uid = req.get_header('HTTP_UID')
   api_access_token = req.get_header('HTTP_API_ACCESS_TOKEN') || req.get_header('api_access_token')

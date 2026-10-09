@@ -6,6 +6,7 @@ class Api::V1::Accounts::Autonomia::Agents::InstructionVersionsController < Api:
   MAX_VERSIONS = 50
 
   def index
+    @current_version = @agent.current_instruction_version
     @versions = @agent.instruction_versions
                       .includes(:created_by)
                       .order(created_at: :desc, id: :desc)
@@ -17,7 +18,9 @@ class Api::V1::Accounts::Autonomia::Agents::InstructionVersionsController < Api:
   def restore
     version = @agent.instruction_versions.find(params[:version_id])
     @agent.restore_instruction!(version, created_by: Current.user)
-    render 'api/v1/accounts/autonomia/agents/show'
+    locals = agent_detail_locals(@agent)
+    @list_row = locals.fetch(:list_row)
+    render 'api/v1/accounts/autonomia/agents/show', locals: locals
   end
 
   private

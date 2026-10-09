@@ -8,7 +8,7 @@ import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import AudienceChannelBadges from './AudienceChannelBadges.vue';
-import { toLocaleTag, formatNumber } from './localeTag';
+import { toLocaleTag, formatNumber } from 'dashboard/helper/localeTag';
 
 const props = defineProps({
   rows: { type: Array, default: () => [] },

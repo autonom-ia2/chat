@@ -46,13 +46,8 @@ class Api::V1::Accounts::Autonomia::ConversationCopilotController < Api::V1::Acc
   private
 
   def ensure_copilot_enabled
-    # Secure-by-default: BE default matches the FE (dashboard_controller exposes
-    # crmCopilotEnabled defaulting false) so "env unset" = fully off on both sides,
-    # never UI-hidden-but-endpoint-callable. Prod sets CRM_COPILOT_ENABLED=true.
-    enabled = ::Crm::Config.enabled? &&
-              ::Autonomia::Agents::Config.enabled?(Current.account) && # respeita o kill-switch master da Autonomia
-              ActiveModel::Type::Boolean.new.cast(ENV.fetch('CRM_COPILOT_ENABLED', false))
-    head :not_found unless enabled
+    availability = ::Autonomia::Agents::CopilotAvailability.new(account: Current.account).call
+    head :not_found unless availability.available
   end
 
   # Chatwoot identifies conversations by per-account display_id; show? enforces that

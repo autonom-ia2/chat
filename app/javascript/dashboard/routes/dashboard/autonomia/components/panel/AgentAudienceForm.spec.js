@@ -40,12 +40,12 @@ const stubs = {
     props: ['label'],
     template: '<button class="save">{{ label }}</button>',
   },
-  // Native select so setValue() drives v-model like the real component does.
-  Select: {
-    props: ['modelValue', 'options'],
-    emits: ['update:modelValue'],
+  ChoiceSelect: {
+    name: 'ChoiceSelect',
+    props: ['modelValue', 'options', 'ariaLabel'],
+    emits: ['update:modelValue', 'change'],
     template:
-      '<select class="unknown-contact" :value="modelValue" @change="$emit(\'update:modelValue\', $event.target.value)"><option v-for="option in options" :key="option.value" :value="option.value">{{ option.label }}</option></select>',
+      '<div data-test="choice-select"><button type="button" role="combobox" :aria-label="ariaLabel" :data-value="String(modelValue)">{{ modelValue }}</button><div role="listbox"><button v-for="option in options" :key="option.value" type="button" role="option" :data-value="String(option.value)" @click="$emit(\'update:modelValue\', option.value); $emit(\'change\', option.value)">{{ option.label }}</button></div></div>',
   },
 };
 
@@ -107,7 +107,7 @@ describe('AgentAudienceForm', () => {
     it('shows the selector once there is at least one condition', () => {
       const wrapper = mountForm({ config: { audience } });
 
-      expect(wrapper.find('select.unknown-contact').exists()).toBe(true);
+      expect(wrapper.find('[role="combobox"]').exists()).toBe(true);
       expect(wrapper.text()).toContain(
         'Conversation without an identified contact'
       );
@@ -116,11 +116,11 @@ describe('AgentAudienceForm', () => {
     it('hides the selector for everyone and for a specific audience with no conditions', async () => {
       const wrapper = mountForm({ config: {} });
 
-      expect(wrapper.find('select.unknown-contact').exists()).toBe(false);
+      expect(wrapper.find('[role="combobox"]').exists()).toBe(false);
 
       await wrapper.find('[data-id="specific"] button.pick').trigger('click');
 
-      expect(wrapper.find('select.unknown-contact').exists()).toBe(false);
+      expect(wrapper.find('[role="combobox"]').exists()).toBe(false);
     });
 
     it('hydrates the saved policy and emits the chosen one with the audience', async () => {
@@ -128,16 +128,46 @@ describe('AgentAudienceForm', () => {
         config: { audience, audience_unknown_contact: 'handoff' },
       });
 
-      expect(wrapper.find('select.unknown-contact').element.value).toBe(
+      expect(wrapper.find('[role="combobox"]').attributes('data-value')).toBe(
         'handoff'
       );
 
-      await wrapper.find('select.unknown-contact').setValue('respond');
+      await wrapper
+        .find('[role="option"][data-value="respond"]')
+        .trigger('click');
       await wrapper.find('button.save').trigger('click');
 
       expect(wrapper.emitted('submit')).toEqual([
         [{ audience, audienceUnknownContact: 'respond' }],
       ]);
     });
+  });
+
+  it('preserves a specific-audience draft during an unrelated agent refresh', async () => {
+    const wrapper = mountForm({ config: {} });
+
+    await wrapper.find('[data-id="specific"] button.pick').trigger('click');
+    await wrapper.setProps({
+      agent: { config: { response_window: 'business_hours' } },
+    });
+
+    expect(wrapper.find('[data-id="specific"]').attributes('data-active')).toBe(
+      'true'
+    );
+  });
+
+  it('rehydrates the audience policy when its own config changes', async () => {
+    const audience = { operator: 'and', conditions: [emailLeaf] };
+    const wrapper = mountForm({
+      config: { audience, audience_unknown_contact: 'respond' },
+    });
+
+    await wrapper.setProps({
+      agent: { config: { audience, audience_unknown_contact: 'handoff' } },
+    });
+
+    expect(wrapper.find('[role="combobox"]').attributes('data-value')).toBe(
+      'handoff'
+    );
   });
 });

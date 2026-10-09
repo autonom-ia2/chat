@@ -1,4 +1,4 @@
-# Guia da Plataforma Autonom.ia — base de conhecimento (193 fluxos)
+# Guia da Plataforma Autonom.ia — base de conhecimento (196 fluxos)
 
 > ARQUIVO GERADO por `pnpm guia:build`. Não edite à mão: a rota, o endereço e a
 > permissão saem do roteador do painel, e o texto humano fica em
@@ -755,14 +755,14 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - nav_target: `contacts_campaign_imports`
 - highlight: `campaign-imports-back-to-contacts`
 
-### Abrir hub de Agentes de IA
+### Ver seus agentes de IA
 - intent: "Onde ficam meus agentes?"; "Como crio um agente de IA?"; "Por que não vejo o menu Agentes?"
-- onde_fica: Sidebar > Agentes de IA > Meus agentes
+- onde_fica: Menu lateral > Agentes de IA > Seus agentes
 - rota: `autonomia_agents_index` - `/app/accounts/:accountId/agents`
 - gate: papel `administrator` ou `autonomia_view` ou `autonomia_manage`
-- pre_requisitos: conta habilitada pelo gate isolado; credencial de IA quando a liberação for global por conta.
-- passos: Abra Agentes; revise os cards existentes; clique em Criar com IA; para abrir um agente existente, clique no card; use a aba Testar como entrada padrão do painel.
-- gotchas: o menu Agentes aparece assim que a chave da OpenAI é conectada em Integracoes, sem precisar recarregar a pagina; backend de agentes é admin-only e retorna 404 quando o gate está off; a sidebar também esconde o grupo para não admins; o card mostra apenas `human_card`, não a instrução interna.
+- pre_requisitos: conta habilitada para Agentes; permissão de ver ou gerenciar agentes.
+- passos: Abra Agentes de IA; veja quem está atendendo, pausado ou falta terminar; use Abrir para acompanhar um agente; quem pode editar usa Criar agente ou Continuar; para pausar, use o interruptor e confirme o efeito nas conversas.
+- gotchas: pausar devolve as conversas para a equipe e mantém o agente salvo; quem só pode ver tem Abrir, sem botões de alteração; rascunhos podem ser excluídos pelo menu; o WhatsApp é conectado em Configurações > Caixas de entrada, e Agentes escolhe somente canais já conectados; quando o novo visual não estiver habilitado para a conta, o hub existente continua disponível.
 - nav_target: `autonomia_agents_index`
 - highlight: `agents-create`
 
@@ -772,8 +772,8 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - rota: `autonomia_agents_builder` - `/app/accounts/:accountId/agents/new`
 - gate: papel `administrator` ou `autonomia_manage`
 - pre_requisitos: tipo de agente escolhido; materiais opcionais em PDF, TXT, MD, JSON, XLSX ou DOCX; caixa elegível se for conectar ao atendimento.
-- passos: Escolha atuação Externa e Com conhecimento; selecione o tipo de agente; responda à entrevista do construtor; anexe arquivos ou adicione links no painel de materiais; avance para revisão; teste e conecte uma caixa.
-- gotchas: antes da primeira mensagem pode não existir draft agent, então anexos pedem para iniciar a conversa; links colados no chat não viram fonte automaticamente, aparece sugestão para adicionar; a instrução final só existe depois de finalizar/revisar.
+- passos: Clique em Criar agente; escolha o trabalho que ele vai fazer; continue e responda às perguntas; adicione materiais se quiser; teste uma conversa; escolha um canal já conectado em Ligue e coloque o agente para atender.
+- gotchas: materiais são opcionais; salvar e sair conserva o agente e a conversa; copiar um material de outro agente exige nova conferência antes de usar; links do chat precisam ser adicionados como material; conectar WhatsApp acontece em Configurações > Caixas de entrada, sem QR Code dentro de Agentes.
 - nav_target: `autonomia_agents_builder`
 
 ### Criar agente interno ou sem base
@@ -781,40 +781,71 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - onde_fica: Sidebar > Agentes de IA > Construtor de agentes
 - rota: `autonomia_agents_builder` - `/app/accounts/:accountId/agents/new`
 - gate: papel `administrator` ou `autonomia_manage`
-- pre_requisitos: definir atuação Interna ou Sem conhecimento na tela inicial.
-- passos: Escolha atuação Interna quando o agente for copiloto da equipe; escolha Sem conhecimento se ele deve partir só da conversa guiada; selecione o tipo ou "Outros"; responda ao construtor; finalize para revisar; abra o painel para testar.
+- pre_requisitos: permissão para gerenciar agentes; ajudante disponível na conta para uso interno.
+- passos: Escolha Ajudar minha equipe para uso interno; continue e responda às perguntas; os materiais são opcionais; teste o ajudante e ligue para a equipe, sem escolher caixa de entrada. Para um agente externo sem materiais, escolha o trabalho dele e siga a conversa sem anexos.
 - gotchas: agente interno não se conecta a caixa de entrada e a aba Canais fica oculta/redireciona; atuação `both` não é escolhida no construtor, é ajuste posterior; sem base reduz respostas ancoradas e pode aumentar as transferências para humano por falta de conhecimento.
 - nav_target: `autonomia_agents_builder`
 
 ### Atualizar conhecimento e fontes do agente
 - intent: "Como adiciono conhecimento depois de criado?"; "Como reprocesso uma fonte?"; "Como vejo a qualidade da base?"
-- onde_fica: Sidebar > Agentes de IA > Meus agentes > abrir agente > Conhecimento
-- rota: `autonomia_agent_panel` - `/app/accounts/:accountId/agents/:agentId/:tab(test|knowledge|channels|performance|tune|publish)?`
+- onde_fica: Sidebar > Agentes de IA > Seus agentes > abrir agente > O que sabe
+- rota: `autonomia_agent_panel` - `/app/accounts/:accountId/agents/:agentId/:tab(test|knowledge|channels|performance|tune|tools|publish)?`
 - gate: papel `administrator` ou `autonomia_view` ou `autonomia_manage`
 - pre_requisitos: agente existente; arquivo suportado ou URL para fonte.
-- passos: Abra o agente; entre em Conhecimento; arraste arquivos ou clique Adicionar; escolha link ou arquivo; acompanhe status do revisor e barra de confiança; use Reenviar para reprocessar ou remover para excluir fonte.
-- gotchas: remover/adicionar fonte recalcula a confiança e pode atualizar a instrução de agentes finalizados; a aba "Mídias para enviar" só aparece quando existir fonte desse tipo; formatos aceitos no diálogo são `.pdf`, `.txt`, `.md`, `.json`, `.xlsx`, `.docx`.
+- passos: Abra o agente; entre em O que sabe; clique Adicionar material e escolha link ou arquivo; acompanhe o estado e a avaliação; use Enviar de novo quando indicado; remover exige confirmação. Em Perguntas que a equipe respondeu, aprove, edite e aprove ou ignore as sugestões; use Carregar mais para consultar as restantes.
+- gotchas: só materiais de conhecimento aparecem nesta aba, com limite de 30 e 25 MB por arquivo; formatos aceitos: .pdf, .txt, .md, .json, .xlsx e .docx; o estado informa se o agente usa o material; alterar material em rascunho pode exigir novo teste; cotação mostra os ramos, sem cadastro de materiais.
 - nav_target: `autonomia_agent_panel`
 
 ### Conectar ou desconectar agente de uma caixa
 - intent: "Como coloco o agente para atender uma caixa?"; "Por que uma caixa aparece ocupada?"; "Como desconecto um agente?"
-- onde_fica: Sidebar > Agentes de IA > Meus agentes > abrir agente > Canais
-- rota: `autonomia_agent_panel` - `/app/accounts/:accountId/agents/:agentId/:tab(test|knowledge|channels|performance|tune|publish)?`
+- onde_fica: Sidebar > Agentes de IA > Seus agentes > abrir agente > Onde atende
+- rota: `autonomia_agent_panel` - `/app/accounts/:accountId/agents/:agentId/:tab(test|knowledge|channels|performance|tune|tools|publish)?`
 - gate: papel `administrator` ou `autonomia_view` ou `autonomia_manage`
 - pre_requisitos: agente ativo/finalizado; caixa elegível; cada caixa pode hospedar apenas um agente.
-- passos: Abra o agente; entre em Canais; veja caixas conectadas e elegíveis; clique Conectar em uma caixa livre; para remover, use Desconectar na lista de conectadas.
-- gotchas: agentes internos não conectam em caixa; caixas ocupadas aparecem sem botão de conectar; mudar um agente com canais conectados para `internal` pode ser rejeitado pelo backend.
+- passos: Abra Onde atende; confira as caixas ligadas; em Colocar em outro canal, escolha uma caixa disponível. Pode ligar várias caixas ao mesmo agente. Para remover uma, clique Remover e confirme a caixa indicada. Para conectar um novo número de WhatsApp, abra Canais primeiro e volte para associar a caixa existente.
+- gotchas: agentes internos não têm esta aba; cada caixa só pode hospedar um agente; caixas em uso mostram quem atende e não podem ser escolhidas; agente pausado ou em montagem não adiciona caixas; remover não apaga conversas; Abrir Canais exige também permissão de gerenciar caixas.
 - nav_target: `autonomia_agent_panel`
 
-### Testar, acompanhar e ajustar agente
-- intent: "Como testo o agente?"; "Como vejo desempenho?"; "Como ajusto tom, handoff ou instrução?"
-- onde_fica: Sidebar > Agentes de IA > Meus agentes > abrir agente > Testar, Desempenho ou Ajustar
-- rota: `autonomia_agent_panel` - `/app/accounts/:accountId/agents/:agentId/:tab(test|knowledge|channels|performance|tune|publish)?`
+### Testar e acompanhar um agente
+- intent: "Como testo o agente?"; "Como vejo o resultado das conversas?"; "Como vejo o desempenho nos últimos dias?"
+- onde_fica: Sidebar > Agentes de IA > Seus agentes > abrir agente > Como está indo ou Testar
+- rota: `autonomia_agent_panel` - `/app/accounts/:accountId/agents/:agentId/:tab(test|knowledge|channels|performance|tune|tools|publish)?`
 - gate: papel `administrator` ou `autonomia_view` ou `autonomia_manage`
-- pre_requisitos: agente existente; para métricas, conversas/respostas já registradas.
-- passos: Use Testar para conversar e ver confiança, transferência para humano e fontes usadas; use Desempenho para período 7d/30d, respostas, transferências e taxa de conhecimento; use Ajustar para primeira mensagem, mensagem quando não souber responder, tom, quando transferir para um humano, limite de confiança e atuação; em modo guiado, use Ajustar com IA.
-- gotchas: testar agente não finalizado mostra aviso; histórico de teste fica em `sessionStorage` por agente; modo manual expõe instrução, mas não permite salvar instrução vazia; Performance pode ficar vazia até o agente operar de verdade.
+- cobre: autonomia_agent_panel_legacy
+- pre_requisitos: agente existente na mesma conta; permissão para ver agentes; abrir conversas exige também a permissão de conversa e acesso à caixa.
+- passos: Abra o agente; veja Como está indo; escolha 7 ou 30 dias; clique em um resultado para listar as conversas que você pode ver; use Abrir para consultar uma conversa; para experimentar uma resposta, entre em Testar. Se faltar terminar o agente, use a ação de continuar a montagem no cabeçalho.
+- gotchas: a lista mostra até 50 registros recentes e avisa quando houver mais; conversas de caixas sem acesso ficam ocultas; uma semana sem atividade oferece Ver 30 dias; ausência total de dados oferece Testar; ajudantes internos mostram orientação para usar numa conversa, sem estatísticas de uso; cotação não mostra uso de materiais nem Ensinar; quem só pode ver tem apenas Como está indo e Testar. Com o novo visual desabilitado, as abas existentes Testar, Desempenho e Ajustar continuam disponíveis.
 - nav_target: `autonomia_agent_panel`
+
+### Ajustar apresentação e atendimento do agente
+- intent: Como altero o nome e a voz do agente?; Como mudo a forma de falar?; Como escolho a pessoa ou o time que recebe a conversa?
+- onde_fica: Agentes de IA > Seus agentes > abrir agente > Ajustes
+- rota: `autonomia_agent_panel` - `/app/accounts/:accountId/agents/:agentId/:tab(test|knowledge|channels|performance|tune|tools|publish)?`
+- gate: papel `administrator` ou `autonomia_view` ou `autonomia_manage`
+- pre_requisitos: permissão para gerenciar o agente na mesma conta.
+- passos: Abra Ajustes; edite a seção desejada e clique no Salvar daquela seção. Em O que faz, use Reconverse para continuar a montagem guiada; para escrever suas próprias instruções, confirme a mudança e salve o texto. Em Versões anteriores, escolha a versão e confirme a restauração. Em Quando passa para a equipe, escolha qualquer pessoa disponível, uma pessoa ou um time.
+- gotchas: cada seção salva apenas seus campos; instruções geradas ficam ocultas; o modo manual começa vazio e precisa de texto; voltar ao guiado exige versão guiada guardada; ajustes de cliente ficam ocultos no ajudante interno; cotação tem escolhas próprias e não permite editar instruções; pause ou remova com a confirmação indicada; Ferramentas é exclusiva de administradores da plataforma.
+- nav_target: `autonomia_agent_panel`
+
+### Continuar a configuração de um agente
+- intent: Quero continuar o agente que deixei pela metade; Onde parei na configuração?; Como volto para testar ou escolher onde atende?
+- onde_fica: Agentes de IA > Seus agentes > Continuar ou Escolher onde atende
+- rota: `autonomia_agent_build` - `/app/accounts/:accountId/agents/:agentId/build/:step(tell|test|live)`
+- gate: papel `administrator` ou `autonomia_manage`
+- pre_requisitos: agente salvo na mesma conta; permissão de gerenciar agentes.
+- passos: Localize o agente que falta terminar; clique na ação do cartão; continue as instruções, o teste ou a escolha do canal no ponto salvo; confira o resultado antes de ligar.
+- gotchas: retomar conserva o mesmo agente e a conversa guiada, sem criar outro; instruções manuais abrem Ajustar; se a conversa salva não puder ser carregada, a lista mostra um aviso e não começa outra; conectar WhatsApp continua em Configurações > Caixas de entrada.
+- nav_target: `autonomia_agent_build`
+
+### Acompanhar o resultado de um agente
+- intent: Como acompanho o agente que configurei?; Onde vejo o resultado depois de escolher onde atende?
+- onde_fica: Agentes de IA > agente > Desempenho
+- rota: `autonomia_agent_ready` - `/app/accounts/:accountId/agents/:agentId/ready`
+- gate: papel `administrator` ou `autonomia_manage`
+- pre_requisitos: agente existente na mesma conta; permissão de gerenciar agentes.
+- passos: Abra o resultado do agente; confira se ele está ativo ou pausado; leia respostas e passagens para a equipe no período escolhido; abra Testar quando precisar conferir uma mudança.
+- gotchas: não há números antes de o agente atender conversas; abrir o resultado não liga o agente nem conecta um canal.
+- nav_target: `autonomia_agent_ready`
 
 ### Usar Copiloto Autonom.ia na conversa
 - intent: "Como peço ajuda ao copiloto interno?"; "Por que o botão do copiloto não aparece?"; "Como trocar o agente do copiloto?"

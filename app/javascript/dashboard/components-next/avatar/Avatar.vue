@@ -65,10 +65,10 @@ const AVATAR_COLORS = {
     ['#1D2E62', '#9EB1FF'],
   ],
   light: [
-    ['#FBDCEF', '#C2298A'],
+    ['#FBDCEF', '#4747C2'],
     ['#FFE0BB', '#99543A'],
     ['#E8E8E8', '#60646C'],
-    ['#CCF3EA', '#008573'],
+    ['#CCF3EA', '#60646C'],
     ['#EBEBFE', '#4747C2'],
     ['#E1E9FF', '#3A5BC7'],
   ],
@@ -229,6 +229,7 @@ watch(
     <!-- Avatar Container -->
     <span
       role="img"
+      :aria-label="name || t('THUMBNAIL.AUTHOR.NOT_AVAILABLE')"
       class="relative inline-flex items-center justify-center object-cover overflow-hidden font-medium outline outline-1 -outline-offset-1 outline-[rgb(0_0_0_/_0.03)] dark:outline-[rgb(255_255_255_/_0.04)]"
       :class="[
         borderRadiusClass,

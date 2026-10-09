@@ -15,6 +15,13 @@ const props = defineProps({
     type: Object,
     required: true,
   },
+  // The agent panel has a tighter mobile card than the reports drawer. Keep
+  // the reports rendering unchanged and opt into the responsive presentation
+  // only from the F4 consumer.
+  agentPanel: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const { t } = useI18n();
@@ -29,6 +36,7 @@ const isEventBackedConversationRecord = computed(
 const conversationDisplayId = computed(() => conversation.value.display_id);
 const conversationNumber = computed(() => `#${conversationDisplayId.value}`);
 const messageDirection = computed(() => message.value.message_type);
+const isAgentPanel = computed(() => props.agentPanel);
 
 const formatTimestamp = timestamp => {
   if (!timestamp) return '';
@@ -73,6 +81,32 @@ const eventOccurredTooltip = computed(() =>
     time: formatTimestamp(props.record.occurred_at),
   })
 );
+
+const conversationStatusLabel = computed(() => {
+  const status = String(conversation.value.status || '').toUpperCase();
+  if (!status) return '';
+
+  const knownStatuses = ['OPEN', 'PENDING', 'RESOLVED', 'SNOOZED'];
+  const key = knownStatuses.includes(status) ? status : 'UNKNOWN';
+  return t(`AGENTS.PANEL.REDESIGN_DRAWER.STATUS_${key}`);
+});
+
+const agentPanelTimestamp = computed(() => {
+  if (isMessageRecord.value) return message.value.created_at;
+  if (isEventBackedConversationRecord.value) return props.record.occurred_at;
+
+  return conversation.value.last_activity_at;
+});
+
+const agentPanelTimestampTooltip = computed(() => {
+  if (!agentPanelTimestamp.value) return '';
+  if (isMessageRecord.value) return messageCreatedTooltip.value;
+  if (isEventBackedConversationRecord.value) return eventOccurredTooltip.value;
+
+  return `${t('AGENTS.PANEL.REDESIGN_DRAWER.LAST_ACTIVITY')} ${formatTimestamp(
+    agentPanelTimestamp.value
+  )}`;
+});
 
 const directionDetails = computed(() => {
   const direction = messageDirection.value;
@@ -161,8 +195,9 @@ const metadataAttributes = item => {
 };
 
 const metadataItemClass = item => [
-  'flex min-w-0 items-center gap-1 text-n-slate-10',
+  'flex min-w-0 items-center gap-1 text-n-slate-11',
   item.path ? 'group hover:text-n-blue-11 hover:underline' : '',
+  isAgentPanel.value ? 'items-start whitespace-normal break-words' : '',
 ];
 
 const metadataIconClass = item => [
@@ -206,15 +241,20 @@ const openRecord = () => {
             v-if="conversation.status"
             class="rounded bg-n-alpha-2 px-1.5 py-0.5 text-xs capitalize text-n-slate-11"
           >
-            {{ conversation.status }}
+            {{ isAgentPanel ? conversationStatusLabel : conversation.status }}
           </span>
           <span
             v-if="directionDetails"
             v-tooltip.top="directionDetails.tooltip"
             :aria-label="directionDetails.tooltip"
+            role="img"
             class="flex size-5 items-center justify-center rounded bg-n-alpha-2 text-n-slate-11"
           >
-            <Icon :icon="directionDetails.icon" class="size-3" />
+            <Icon
+              :icon="directionDetails.icon"
+              class="size-3"
+              aria-hidden="true"
+            />
           </span>
           <span
             v-if="metricValue"
@@ -225,32 +265,45 @@ const openRecord = () => {
         </div>
       </div>
       <div
-        class="ms-2 flex shrink-0 items-center justify-end gap-1 text-end text-xs leading-4 text-n-slate-10"
+        class="ms-2 flex shrink-0 items-center justify-end gap-1 text-end text-xs leading-4 text-n-slate-11"
       >
         <span
-          v-if="isMessageRecord"
-          v-tooltip.left="messageCreatedTooltip"
-          :aria-label="messageCreatedTooltip"
+          v-if="isAgentPanel"
+          v-tooltip.left="agentPanelTimestampTooltip"
+          :title="agentPanelTimestampTooltip"
           class="whitespace-nowrap"
         >
-          {{ compactTimestamp(message.created_at) }}
+          {{ compactTimestamp(agentPanelTimestamp) }}
+          <span class="sr-only">{{ agentPanelTimestampTooltip }}</span>
         </span>
-        <TimeAgo
-          v-else
-          :is-auto-refresh-enabled="false"
-          :conversation-id="conversation.id"
-          :last-activity-timestamp="conversation.last_activity_at"
-          :created-at-timestamp="conversation.created_at"
-          class="font-440 !text-xs !text-n-slate-10"
-        />
-        <span
-          v-if="isEventBackedConversationRecord"
-          v-tooltip.left="eventOccurredTooltip"
-          :aria-label="eventOccurredTooltip"
-          class="whitespace-nowrap rounded bg-n-alpha-2 px-1 py-0.5 text-[11px] leading-4 text-n-slate-10"
-        >
-          {{ compactTimestamp(record.occurred_at) }}
-        </span>
+        <template v-else>
+          <span
+            v-if="isMessageRecord"
+            v-tooltip.left="messageCreatedTooltip"
+            :title="messageCreatedTooltip"
+            class="whitespace-nowrap"
+          >
+            {{ compactTimestamp(message.created_at) }}
+            <span class="sr-only">{{ messageCreatedTooltip }}</span>
+          </span>
+          <TimeAgo
+            v-else
+            :is-auto-refresh-enabled="false"
+            :conversation-id="conversation.id"
+            :last-activity-timestamp="conversation.last_activity_at"
+            :created-at-timestamp="conversation.created_at"
+            class="font-440 !text-xs !text-n-slate-11"
+          />
+          <span
+            v-if="isEventBackedConversationRecord"
+            v-tooltip.left="eventOccurredTooltip"
+            :title="eventOccurredTooltip"
+            class="whitespace-nowrap rounded bg-n-alpha-2 px-1 py-0.5 text-[11px] leading-4 text-n-slate-11"
+          >
+            {{ compactTimestamp(record.occurred_at) }}
+            <span class="sr-only">{{ eventOccurredTooltip }}</span>
+          </span>
+        </template>
       </div>
     </div>
 
@@ -261,7 +314,10 @@ const openRecord = () => {
       {{ previewText }}
     </p>
 
-    <div class="mt-2 grid grid-cols-3 gap-2">
+    <div
+      class="mt-2 grid gap-2"
+      :class="isAgentPanel ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-3'"
+    >
       <component
         :is="item.path ? 'a' : 'span'"
         v-for="item in metadataItems"
@@ -272,7 +328,9 @@ const openRecord = () => {
         @click="stopMetadataLinkClick($event, item)"
       >
         <Icon :icon="item.icon" :class="metadataIconClass(item)" />
-        <span class="truncate">{{ item.label }}</span>
+        <span :class="isAgentPanel ? 'break-words' : 'truncate'">
+          {{ item.label }}
+        </span>
       </component>
     </div>
   </article>

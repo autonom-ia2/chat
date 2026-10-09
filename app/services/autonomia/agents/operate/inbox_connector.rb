@@ -10,15 +10,16 @@ module Autonomia
       # disconnect: destrói o vínculo + AgentBotInbox + AgentBot espelho e libera as conversas
       #             pending ao humano via bot_handoff!.
       class InboxConnector
-        Result = Struct.new(:status, :error, :agent_inbox, keyword_init: true) do
+        Result = Struct.new(:status, :error, :agent_inbox, :agent_inboxes, keyword_init: true) do
           def success?
             status == :ok
           end
         end
 
-        def initialize(agent:, inbox:)
+        def initialize(agent:, inbox: nil, inboxes: nil)
           @agent = agent
           @inbox = inbox
+          @inboxes = inboxes.nil? ? [inbox].compact : inboxes
           @account = agent.account
         end
 
@@ -36,20 +37,40 @@ module Autonomia
           # V2.1 — agente INTERNO (copiloto da equipe) NUNCA atende cliente: bloqueia o vínculo de caixa
           # (não cria AgentBot/AgentBotInbox/AgentInbox). Autoridade no backend; a UI esconde como 2ª defesa.
           return Result.new(status: :error, error: :agent_internal_not_connectable) if @agent.actuation_internal?
-          return Result.new(status: :error, error: :agent_not_active) unless agent_operable?
-          return Result.new(status: :error, error: :inbox_has_webhook_bot) if webhook_bot_present?
-          return Result.new(status: :error, error: :inbox_already_connected) if already_connected?
 
-          agent_inbox = nil
-          ActiveRecord::Base.transaction do
-            agent_bot = AgentBot.create!(account: @account, name: @agent.name, bot_type: :webhook,
-                                         outgoing_url: nil)
-            AgentBotInbox.create!(inbox: @inbox, agent_bot: agent_bot, account: @account)
-            agent_inbox = ::Autonomia::Agents::AgentInbox.create!(
-              agent: @agent, inbox: @inbox, account: @account, agent_bot: agent_bot
-            )
+          return Result.new(status: :error, error: :agent_not_active) unless agent_operable?
+
+          ensure_inboxes_belong_to_account!
+          lock_inboxes!
+
+          if (error = inbox_connection_error)
+            return Result.new(status: :error, error: error)
           end
-          Result.new(status: :ok, agent_inbox: agent_inbox)
+
+          agent_inboxes = create_agent_inboxes
+          Result.new(status: :ok, agent_inbox: agent_inboxes.first, agent_inboxes: agent_inboxes)
+        end
+
+        def inbox_connection_error
+          @inboxes.sort_by(&:id).filter_map do |inbox|
+            next :inbox_has_webhook_bot if webhook_bot_present?(inbox)
+            next :inbox_already_connected if already_connected?(inbox)
+          end.first
+        end
+
+        def create_agent_inboxes
+          ActiveRecord::Base.transaction do
+            @inboxes.sort_by(&:id).map { |inbox| create_agent_inbox(inbox) }
+          end
+        end
+
+        def create_agent_inbox(inbox)
+          agent_bot = AgentBot.create!(account: @account, name: @agent.name, bot_type: :webhook,
+                                       outgoing_url: nil)
+          AgentBotInbox.create!(inbox: inbox, agent_bot: agent_bot, account: @account)
+          ::Autonomia::Agents::AgentInbox.create!(
+            agent: @agent, inbox: inbox, account: @account, agent_bot: agent_bot
+          )
         end
 
         def disconnect!
@@ -72,18 +93,28 @@ module Autonomia
           @agent.operating?
         end
 
+        def ensure_inboxes_belong_to_account!
+          return if @inboxes.all? { |inbox| inbox.account_id == @account.id }
+
+          raise ActiveRecord::RecordNotFound
+        end
+
+        def lock_inboxes!
+          @inboxes.sort_by(&:id).each(&:lock!)
+        end
+
         # Há um AgentBot webhook real (Gabriela) ocupando o inbox? Consulta direta por
         # join (não via has_one :through, que com >1 linha resolveria uma arbitrária e
         # poderia não enxergar o bot webhook).
-        def webhook_bot_present?
+        def webhook_bot_present?(inbox)
           AgentBotInbox.joins(:agent_bot)
-                       .where(inbox_id: @inbox.id)
+                       .where(inbox_id: inbox.id)
                        .where.not(agent_bots: { outgoing_url: [nil, ''] })
                        .exists?
         end
 
-        def already_connected?
-          ::Autonomia::Agents::AgentInbox.kept.exists?(inbox_id: @inbox.id)
+        def already_connected?(inbox)
+          ::Autonomia::Agents::AgentInbox.kept.exists?(inbox_id: inbox.id)
         end
       end
     end

@@ -66,6 +66,15 @@ RSpec.describe Autonomia::Agents::Operate::EventLogger do
                                          result: result(handoff: { should: true, reason: 'low_confidence' }))
       expect(event.handoff_reason).to eq('low_confidence')
     end
+
+    it 'stores only the resolved handoff target snapshot' do
+      event = described_class.handed_off(
+        agent: agent, conversation: conversation, result: nil, reason: 'human_requested',
+        target: { type: 'member', id: 7, name: 'Ana', secret: 'não guardar' }
+      )
+
+      expect(event.metadata).to eq('handoff_target' => { 'type' => 'member', 'id' => 7, 'name' => 'Ana' })
+    end
   end
 
   describe '.handed_off_by_inbox' do

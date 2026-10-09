@@ -38,6 +38,14 @@ class AutonomiaBuildThreadsAPI extends ApiClient {
     return axios.get(`${this.url}/${threadId}`);
   }
 
+  // Reads the last guided Builder thread for an existing agent. This is a
+  // separate nested reader from the top-level thread resource: resuming must
+  // never create a thread or reveal a thread id supplied by the client.
+  resume(agentId, { signal } = {}) {
+    const endpoint = `${this.baseUrl()}/autonomia/agents/${agentId}/build_thread`;
+    return signal ? axios.get(endpoint, { signal }) : axios.get(endpoint);
+  }
+
   // Continues the conversation. The backend reads `params[:message]`. `extra`
   // carries optional flags merged into the body (e.g. `no_materials: true` when
   // the user declares they have no materials so the gate can close the

@@ -15,6 +15,8 @@ class Autonomia::Agents::Faq::KnowledgeWriter
   # -> KnowledgeEntry. Levanta EmbeddingService::EmbeddingError quando a IA não está configurada/falha
   # (o chamador decide; a aprovação não deve gravar conhecimento sem vetor).
   def write!(suggestion)
+    before = material_projection
+    before_session_id = Autonomia::Agents::MaterialProjection.test_session_id(agent: @agent)
     model = Autonomia::Agents::Config.active_embedding_model
     text = content_for(suggestion)
     vector = Autonomia::Agents::EmbeddingService.new(account: @account, model: model).embed(text)
@@ -27,6 +29,7 @@ class Autonomia::Agents::Faq::KnowledgeWriter
       created
     end
     write_large_embedding!(entry, vector) if Autonomia::Agents::Config.embedding_large?(model)
+    source.invalidate_material_if_changed!(before, expected_session_id: before_session_id)
     entry
   end
 
@@ -35,6 +38,11 @@ class Autonomia::Agents::Faq::KnowledgeWriter
   end
 
   private
+
+  def material_projection
+    @agent.sources.reset
+    Autonomia::Agents::MaterialProjection.new(agent: @agent).call
+  end
 
   def content_for(suggestion)
     "Pergunta: #{suggestion.question}\nResposta: #{suggestion.answer}"

@@ -157,6 +157,27 @@ RSpec.describe Autonomia::Agents::Analytics do
       expect(analytics.outcome_scope('handled')).to be_empty
     end
 
+    it 'does not count a report on a private Autonomia agent note as a wrong reply' do
+      private_note_conversation = conversation
+      replied(private_note_conversation)
+      private_note = create(
+        :message,
+        account: account,
+        conversation: private_note_conversation,
+        message_type: :outgoing,
+        sender: mirror,
+        private: true,
+        content_attributes: { 'autonomia_agent_id' => agent.id }
+      )
+      Captain::MessageReport.create!(message: private_note, user: create(:user, account: account),
+                                     report_reason: 'other')
+
+      analytics = described_class.new(agent: agent, range: '7d')
+
+      expect(analytics.call[:outcomes][:wrong_replies]).to eq(0)
+      expect(analytics.outcome_scope('wrong_replies')).to be_empty
+    end
+
     it 'never mixes agents or accounts' do
       other_agent = Autonomia::Agents::Agent.create!(account: account, name: 'Bia', agent_type: 'custom', instruction: 'x')
       conv = conversation

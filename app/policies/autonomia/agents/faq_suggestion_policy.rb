@@ -1,8 +1,8 @@
-# Revisão de sugestões de FAQ do agente Autonom.ia (#284 · 2b): mesma regra da área de agentes (#452) —
-# ver exige autonomia_view; aprovar/ignorar muda o que o agente responde, então exige autonomia_manage.
+# Revisão de sugestões de FAQ do agente Autonom.ia (#284 · 2b): listar, aprovar e ignorar mudam o que o
+# agente responde, então todas as ações exigem autonomia_manage.
 class Autonomia::Agents::FaqSuggestionPolicy < ApplicationPolicy
   def index?
-    permission_granted?('autonomia_view')
+    permission_granted?('autonomia_manage')
   end
 
   def approve?

@@ -234,7 +234,7 @@ onMounted(() => live.start());
     <template v-else-if="panel">
       <div
         data-panel-hero
-        class="relative flex flex-col gap-5 p-6 overflow-hidden text-white rounded-xl sm:p-8 bg-[#0D2344]"
+        class="relative flex flex-col gap-5 p-6 overflow-hidden text-white rounded-xl sm:p-8 bg-n-navy"
       >
         <span
           aria-hidden="true"
@@ -291,7 +291,7 @@ onMounted(() => live.start());
             v-if="action.kind !== 'wait'"
             type="button"
             data-panel-action-button
-            class="px-4 text-sm font-520 bg-white border-0 rounded-lg min-h-11 text-[#0D2344] whitespace-nowrap hover:bg-n-blue-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+            class="px-4 text-sm font-520 bg-white border-0 rounded-lg min-h-11 text-n-navy whitespace-nowrap hover:bg-n-blue-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
             @click="onAction"
           >
             {{

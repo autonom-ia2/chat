@@ -6,11 +6,26 @@ module Autonomia
     # cai no `raw_reply` — o melhor esforço do modelo antes do portão (conteúdo gerado, não é IP).
     # NUNCA expõe instruction/scaffold/prompt; o jbuilder /suggest filtra a fronteira de segurança.
     class Copilot
-      def initialize(agent:, message:, history: [], retrieval_query: nil)
+      def initialize(agent:, message:, history: [], retrieval_query: nil, **options)
         @agent = agent
-        @message = message
-        @history = history
-        @retrieval_query = retrieval_query
+        @test_mode = options.fetch(:test_mode, false) == true
+        message_limit = if @test_mode
+                          Autonomia::Agents::Config::MAX_QUERY_CHARS
+                        else
+                          Autonomia::Agents::Config::MAX_COMPOSED_QUERY_CHARS
+                        end
+        @message = Autonomia::Agents::Config.truncate_text(message, message_limit)
+        @history = if @test_mode
+                     Autonomia::Copilot::ConversationContext.sanitize_history(history)
+                   else
+                     history
+                   end
+        @retrieval_query = if retrieval_query.present?
+                             Autonomia::Agents::Config.truncate_text(retrieval_query,
+                                                                     Autonomia::Agents::Config::MAX_QUERY_CHARS)
+                           end
+        @pode_editar = options.fetch(:pode_editar, false) == true
+        @surface = options.fetch(:surface, :copilot).to_sym
       end
 
       # -> Autonomia::Agents::AnswerResult (com reply garantido p/ o atendente revisar)
@@ -21,7 +36,8 @@ module Autonomia
         # A regra anti-"material" universal do v2 já vale p/ :customer, então o copiloto interno também
         # não cita "material" (decisão do PO). :attendant fica reservado p/ um copiloto analítico futuro.
         Answerer.new(agent: @agent, query: @message, history: @history, audience: :customer,
-                     retrieval_query: @retrieval_query).answer
+                     retrieval_query: @retrieval_query, test_mode: @test_mode, pode_editar: @pode_editar,
+                     surface: @surface).answer
       end
     end
   end

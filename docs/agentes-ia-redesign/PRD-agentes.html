@@ -148,6 +148,7 @@ td:first-child{min-width:70px;font-weight:600}
 <li><a href="#151b-registro-de-conferencia-da-rodada-8">15.1b Registro de conferência da rodada 8</a></li>
 <li><a href="#151c-registro-de-conferencia-pre-r9-07102026">15.1c Registro de conferência pré-R9 (07/10/2026)</a></li>
 <li><a href="#151d-resultado-das-leituras-b1-autorizadas-07102026">15.1d Resultado das leituras B1 autorizadas (07/10/2026)</a></li>
+<li><a href="#151e-revisao-explicita-de-d7-07102026">15.1e Revisão explícita de D7 (07/10/2026)</a></li>
 </ul>
 </li>
 </ul>
@@ -206,13 +207,14 @@ td:first-child{min-width:70px;font-weight:600}
 <li><a href="#151b-registro-de-conferencia-da-rodada-8">15.1b Registro de conferência da rodada 8</a></li>
 <li><a href="#151c-registro-de-conferencia-pre-r9-07102026">15.1c Registro de conferência pré-R9 (07/10/2026)</a></li>
 <li><a href="#151d-resultado-das-leituras-b1-autorizadas-07102026">15.1d Resultado das leituras B1 autorizadas (07/10/2026)</a></li>
+<li><a href="#151e-revisao-explicita-de-d7-07102026">15.1e Revisão explícita de D7 (07/10/2026)</a></li>
 </ul>
 </li>
 </ul>
 </details>
     <section class="decs" aria-labelledby="dtit"><h2 id="dtit">Decisões e estados registrados</h2>
       <p class="sub">Resumo da §4, com recomendação e decisão/estado. As opções completas e os gates estão na tabela da §4.</p>
-      <ol><li><span class="did">D1</span><div><div class="dq"><strong>O agente em produção ignora o "limite de certeza" e a regra "Quando passa para a equipe".</strong> Em produção o Operate chama o Answerer com <code>trust_instruction: true</code> (<code>operate/responder.rb:331</code>), que nunca aplica portão de sistema (<code>answerer.rb:124,134-150</code>); o limite só vale no Testar e no Guia (<code>answerer.rb:649</code>). <code>handoff_strategy</code> é salvo e <strong>nenhum código lê</strong> (<code>agent.rb:125-128</code>). Hoje esses controles são decorativos e o Testar mostra um comportamento diferente do real.</div><div class="dr">Recomendação: <strong>(a)</strong> — honesto, sem mudar o que está no ar. A régua sai do protótipo; "Quando passa para a equipe" continua, gravando a regra no texto que o modelo lê (<code>PromptBuilder</code>), com spec provando o efeito.</div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D2</span><div><div class="dq">"Para quem vai" (pessoa / time)</div><div class="dr">Recomendação: <strong>(a)</strong> com padrão "Quem estiver livre" = comportamento atual</div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D3</span><div><div class="dq">Flag para alternar tela nova/antiga</div><div class="dr">Recomendação: <strong>(2)</strong> — liga primeiro na Hub2you (conta 16)</div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D4</span><div><div class="dq">Azul-marinho <code>#0D2344</code> sem token (4 arquivos já usam <code>bg-[#0D2344]</code>)</div><div class="dr">Recomendação: <strong>(b)</strong> e migrar os 4 usos no mesmo PR F0</div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D5</span><div><div class="dq">Sugestão "Vi o link X. Usar como material?"</div><div class="dr">Recomendação: <strong>(a)</strong> — regra do Rodrigo proíbe detectar por texto/regex no front</div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D6</span><div><div class="dq">Texto "Fica guardado até você terminar ou excluir" × limpeza automática de 48 h (rascunho sem instrução e sem material que tem conversa)</div><div class="dr">Recomendação: <strong>(a)</strong></div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D7</span><div><div class="dq">Conectar WhatsApp novo pelo fluxo do agente</div><div class="dr">Recomendação: <strong>(a)</strong>: campo "Número do WhatsApp" (55 + DDD + número) antes do código, permissão = administrador da conta, aviso "Esta conexão usa o seu acesso. Se você sair da conta, ela para."; <code>invalid_phone</code> vira mensagem pt-BR</div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D8</span><div><div class="dq">Quem só pode ver pode usar a aba Testar? (hoje <code>POST test</code> aceita <code>autonomia_view</code>, <code>playground_controller.rb:29</code>)</div><div class="dr">Recomendação: <strong>sim</strong> (como hoje)</div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D9</span><div><div class="dq">Ordem de merge com o lote de Campanhas (#993, ainda fora da <code>main</code>), que tem <code>JourneyStepper</code>, <code>JourneySwitch</code>, <code>useModalFocus</code>, <code>localeTag</code></div><div class="dr">Recomendação: <strong>(a)</strong></div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D10</span><div><div class="dq">Converter os tons antigos gravados em inglês (<code>friendly</code>, <code>professional</code>, <code>neutral</code>, <code>playful</code>) para a frase em português. <strong>Muda o texto que o modelo lê ao vivo</strong> (<code>prompt_builder.rb:242-246</code>)</div><div class="dr">Recomendação: <strong>(a)</strong>, depois do deploy de F7, seguido do núcleo do §11.8 e do "teste responde" de cada agente ativo alterado, contra a foto Q14; volta = UPDATE pela foto</div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); UPDATE ao vivo exige OK específico, foto Q14 e validação.</div></div></li><li><span class="did">D11</span><div><div class="dq">Etapa "Parou em …"</div><div class="dr">Recomendação: <strong>(a)</strong> (BE-08)</div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D12</span><div><div class="dq"><strong>Problema em produção hoje:</strong> <code>GET analytics/conversations</code> e <code>GET faq_suggestions</code> exigem só <code>autonomia_view</code> e devolvem dados de conversas de qualquer caixa (contato, atendente, última mensagem; pergunta e resposta de conversas reais) — <code>analytics_controller.rb:15-33</code>, <code>faq_suggestions_controller.rb:9-16</code></div><div class="dr">Recomendação: <strong>(a)</strong>, no B1 (BE-25)</div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D13</span><div><div class="dq">Onde ficam as edições do Agente de Cotação. <code>insurance/*</code> exige <code>insurance_*</code> + flag de Cotação (<code>insurance/base_controller.rb:1-12</code>)</div><div class="dr">Recomendação: <strong>(a)</strong> (BE-17)</div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D14</span><div><div class="dq">Números do agente interno (ajudante): uso do ajudante não gera evento</div><div class="dr">Recomendação: <strong>(a)</strong></div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D15</span><div><div class="dq">Garantir O2 ("ninguém liga sem testar"): rascunho "Pronto para ligar" vai direto para Ligue</div><div class="dr">Recomendação: <strong>(a)</strong></div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D16</span><div><div class="dq">"Usar material de outro agente"</div><div class="dr">Recomendação: <strong>(a)</strong></div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D17</span><div><div class="dq">Testar executa ferramentas de verdade (HTTP, inclusive POST com segredo) e é liberado a quem só vê (D8)</div><div class="dr">Recomendação: <strong>(a)</strong> (BE-12)</div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D18</span><div><div class="dq"><strong>Campos sem efeito hoje</strong> (§6.5): Primeira mensagem (<code>greeting</code>), Perguntas para puxar conversa (<code>starter_questions</code>) e Quando não souber responder (<code>fallback_message</code>) — nenhum chega ao cliente no atendimento real</div><div class="dr">Recomendação: <strong>(a)</strong></div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D19</span><div><div class="dq">Renomear não muda como o agente se apresenta (o nome vive na instrução)</div><div class="dr">Recomendação: <strong>(a)</strong></div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D20</span><div><div class="dq">Mídias "Para enviar": o atendimento não envia os arquivos ao cliente</div><div class="dr">Recomendação: <strong>(a)</strong>; (b) vira Issue própria</div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D21</span><div><div class="dq">Ajustes de operação por agente que o BE-19 fecha no PATCH (<code>voice_reply</code>, <code>voice_instructions</code>, <code>humanize_delivery</code>, <code>operate_media</code>, <code>operate_reactions</code>, <code>test_allowlist_phones</code>, <code>silence_tokens</code>, <code>native_tool_slugs</code>, <code>debounce_seconds</code>, <code>async_tools</code>, <code>async_poll_intervals</code>, <code>async_deadline_seconds</code>) — hoje só por esse PATCH</div><div class="dr">Recomendação: <strong>(a)</strong></div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D22</span><div><div class="dq">"Mudar conversando" sobrescreve nome, saudação, tom, perguntas e até a instrução manual</div><div class="dr">Recomendação: <strong>(a)</strong> (BE-05)</div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D23</span><div><div class="dq">Até onde vale "ninguém liga sem testar" (O2). Hoje também ligam: tela antiga (PATCH), Guia, API e a criação da Lia pela Cotação</div><div class="dr">Recomendação: <strong>(a)</strong></div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D24</span><div><div class="dq">O que acontece depois de ir ao ar</div><div class="dr">Recomendação: <strong>(a)</strong></div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D25</span><div><div class="dq">Voltar do modo manual para o guiado</div><div class="dr">Recomendação: <strong>(a)</strong></div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D26</span><div><div class="dq">Testar do ajudante da equipe (interno)</div><div class="dr">Recomendação: <strong>(a)</strong></div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D27</span><div><div class="dq">No teste, ferramentas que gravam em outro sistema (método ≠ GET) rodam de verdade para quem edita</div><div class="dr">Recomendação: <strong>(a)</strong></div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D28</span><div><div class="dq">De onde vêm as perguntas sugeridas do Teste</div><div class="dr">Recomendação: <strong>(a)</strong></div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D29</span><div><div class="dq">Nome e Primeira mensagem eram editados no Ligue, <strong>depois</strong> do teste — o agente ia ao ar com cumprimento não testado</div><div class="dr">Recomendação: <strong>(a)</strong></div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D30</span><div><div class="dq">Criar já ativo sem instrução (create da API/Guia com <code>status</code>/<code>enabled</code>)</div><div class="dr">Recomendação: <strong>(a)</strong></div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D31</span><div><div class="dq">O funil do CRM (<code>Crm::Ai::HandoffExecutor</code>) passa conversas com o seletor dele, fora dos 3 pontos do BE-06</div><div class="dr">Recomendação: <strong>(a)</strong></div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); caminho do funil permanece separado.</div></div></li><li><span class="did">D32</span><div><div class="dq">De onde vem o gênero dos textos da tela ({a}, {ela})</div><div class="dr">Recomendação: <strong>(a)</strong></div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D33</span><div><div class="dq">"Nunca" prometia passar quando a IA cai, e o atendimento não faz isso (falha de IA = silêncio, salvo a cotação assíncrona da Lia)</div><div class="dr">Recomendação: <strong>(a)</strong>; (b) vira Issue</div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D34</span><div><div class="dq">Texto de excluir depois do #1063 (exclusão lógica: some da lista, para de atender, materiais e vínculos guardados)</div><div class="dr">Recomendação: <strong>(a)</strong>; (b) vira Issue</div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D35</span><div><div class="dq">Lote de um PR só (§14) × fila da Automação com até 7 PRs por lote (07/10)</div><div class="dr">Recomendação: <strong>(a)</strong></div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); caminho ao vivo isolado; demais em lote de até 7 pela Automação.</div></div></li></ol></section>
+      <ol><li><span class="did">D1</span><div><div class="dq"><strong>O agente em produção ignora o "limite de certeza" e a regra "Quando passa para a equipe".</strong> Em produção o Operate chama o Answerer com <code>trust_instruction: true</code> (<code>operate/responder.rb:331</code>), que nunca aplica portão de sistema (<code>answerer.rb:124,134-150</code>); o limite só vale no Testar e no Guia (<code>answerer.rb:649</code>). <code>handoff_strategy</code> é salvo e <strong>nenhum código lê</strong> (<code>agent.rb:125-128</code>). Hoje esses controles são decorativos e o Testar mostra um comportamento diferente do real.</div><div class="dr">Recomendação: <strong>(a)</strong> — honesto, sem mudar o que está no ar. A régua sai do protótipo; "Quando passa para a equipe" continua, gravando a regra no texto que o modelo lê (<code>PromptBuilder</code>), com spec provando o efeito.</div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D2</span><div><div class="dq">"Para quem vai" (pessoa / time)</div><div class="dr">Recomendação: <strong>(a)</strong> com padrão "Quem estiver livre" = comportamento atual</div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D3</span><div><div class="dq">Flag para alternar tela nova/antiga</div><div class="dr">Recomendação: <strong>(2)</strong> — liga primeiro na Hub2you (conta 16)</div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D4</span><div><div class="dq">Azul-marinho <code>#0D2344</code> sem token (4 arquivos já usam <code>bg-[#0D2344]</code>)</div><div class="dr">Recomendação: <strong>(b)</strong> e migrar os 4 usos no mesmo PR F0</div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D5</span><div><div class="dq">Sugestão "Vi o link X. Usar como material?"</div><div class="dr">Recomendação: <strong>(a)</strong> — regra do Rodrigo proíbe detectar por texto/regex no front</div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D6</span><div><div class="dq">Texto "Fica guardado até você terminar ou excluir" × limpeza automática de 48 h (rascunho sem instrução e sem material que tem conversa)</div><div class="dr">Recomendação: <strong>(a)</strong></div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D7</span><div><div class="dq">Conexão de WhatsApp fora da área Agentes<br>A conexão, inclusive WhatsApp, continua na área existente de Canais/Caixas de entrada: settings_inbox_list em accounts/:accountId/settings/inboxes, com o cadastro existente settings_inbox_new em accounts/:accountId/settings/inboxes/new. Agentes não pedem número, exibem QR, recebem token nem criam waha_inboxes. Ligue e Onde atende só leem canais já conectados e elegíveis; sem canal livre, preservam o agente salvo e oferecem orientação/atalho para settings_inbox_new conforme a permissão.</div><div class="dr">Recomendação: <strong>(a)</strong> — uma fonte única para cadastrar/conectar canais, sem rota, tela ou contrato from novo em Agentes</div><div class="dr">Decisão/estado: Revisão explícita de Rodrigo em 07/10/2026; substitui a decisão anterior e torna F0-FINAL-01 inaplicável, sem declarar aprovação da revisão antiga.</div></div></li><li><span class="did">D8</span><div><div class="dq">Quem só pode ver pode usar a aba Testar? (hoje <code>POST test</code> aceita <code>autonomia_view</code>, <code>playground_controller.rb:29</code>)</div><div class="dr">Recomendação: <strong>sim</strong> (como hoje)</div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D9</span><div><div class="dq">Ordem de merge com o lote de Campanhas (#993, ainda fora da <code>main</code>), que tem <code>JourneyStepper</code>, <code>JourneySwitch</code>, <code>useModalFocus</code>, <code>localeTag</code></div><div class="dr">Recomendação: <strong>(a)</strong></div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D10</span><div><div class="dq">Converter os tons antigos gravados em inglês (<code>friendly</code>, <code>professional</code>, <code>neutral</code>, <code>playful</code>) para a frase em português. <strong>Muda o texto que o modelo lê ao vivo</strong> (<code>prompt_builder.rb:242-246</code>)</div><div class="dr">Recomendação: <strong>(a)</strong>, depois do deploy de F7, seguido do núcleo do §11.8 e do "teste responde" de cada agente ativo alterado, contra a foto Q14; volta = UPDATE pela foto</div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); UPDATE ao vivo exige OK específico, foto Q14 e validação.</div></div></li><li><span class="did">D11</span><div><div class="dq">Etapa "Parou em …"</div><div class="dr">Recomendação: <strong>(a)</strong> (BE-08)</div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D12</span><div><div class="dq"><strong>Problema em produção hoje:</strong> <code>GET analytics/conversations</code> e <code>GET faq_suggestions</code> exigem só <code>autonomia_view</code> e devolvem dados de conversas de qualquer caixa (contato, atendente, última mensagem; pergunta e resposta de conversas reais) — <code>analytics_controller.rb:15-33</code>, <code>faq_suggestions_controller.rb:9-16</code></div><div class="dr">Recomendação: <strong>(a)</strong>, no B1 (BE-25)</div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D13</span><div><div class="dq">Onde ficam as edições do Agente de Cotação. <code>insurance/*</code> exige <code>insurance_*</code> + flag de Cotação (<code>insurance/base_controller.rb:1-12</code>)</div><div class="dr">Recomendação: <strong>(a)</strong> (BE-17)</div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D14</span><div><div class="dq">Números do agente interno (ajudante): uso do ajudante não gera evento</div><div class="dr">Recomendação: <strong>(a)</strong></div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D15</span><div><div class="dq">Garantir O2 ("ninguém liga sem testar"): rascunho "Pronto para ligar" vai direto para Ligue</div><div class="dr">Recomendação: <strong>(a)</strong></div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D16</span><div><div class="dq">"Usar material de outro agente"</div><div class="dr">Recomendação: <strong>(a)</strong></div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D17</span><div><div class="dq">Testar executa ferramentas de verdade (HTTP, inclusive POST com segredo) e é liberado a quem só vê (D8)</div><div class="dr">Recomendação: <strong>(a)</strong> (BE-12)</div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D18</span><div><div class="dq"><strong>Campos sem efeito hoje</strong> (§6.5): Primeira mensagem (<code>greeting</code>), Perguntas para puxar conversa (<code>starter_questions</code>) e Quando não souber responder (<code>fallback_message</code>) — nenhum chega ao cliente no atendimento real</div><div class="dr">Recomendação: <strong>(a)</strong></div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D19</span><div><div class="dq">Renomear não muda como o agente se apresenta (o nome vive na instrução)</div><div class="dr">Recomendação: <strong>(a)</strong></div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D20</span><div><div class="dq">Mídias "Para enviar": o atendimento não envia os arquivos ao cliente</div><div class="dr">Recomendação: <strong>(a)</strong>; (b) vira Issue própria</div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D21</span><div><div class="dq">Ajustes de operação por agente que o BE-19 fecha no PATCH (<code>voice_reply</code>, <code>voice_instructions</code>, <code>humanize_delivery</code>, <code>operate_media</code>, <code>operate_reactions</code>, <code>test_allowlist_phones</code>, <code>silence_tokens</code>, <code>native_tool_slugs</code>, <code>debounce_seconds</code>, <code>async_tools</code>, <code>async_poll_intervals</code>, <code>async_deadline_seconds</code>) — hoje só por esse PATCH</div><div class="dr">Recomendação: <strong>(a)</strong></div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D22</span><div><div class="dq">"Mudar conversando" sobrescreve nome, saudação, tom, perguntas e até a instrução manual</div><div class="dr">Recomendação: <strong>(a)</strong> (BE-05)</div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D23</span><div><div class="dq">Até onde vale "ninguém liga sem testar" (O2). Hoje também ligam: tela antiga (PATCH), Guia, API e a criação da Lia pela Cotação</div><div class="dr">Recomendação: <strong>(a)</strong></div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D24</span><div><div class="dq">O que acontece depois de ir ao ar</div><div class="dr">Recomendação: <strong>(a)</strong></div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D25</span><div><div class="dq">Voltar do modo manual para o guiado</div><div class="dr">Recomendação: <strong>(a)</strong></div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D26</span><div><div class="dq">Testar do ajudante da equipe (interno)</div><div class="dr">Recomendação: <strong>(a)</strong></div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D27</span><div><div class="dq">No teste, ferramentas que gravam em outro sistema (método ≠ GET) rodam de verdade para quem edita</div><div class="dr">Recomendação: <strong>(a)</strong></div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D28</span><div><div class="dq">De onde vêm as perguntas sugeridas do Teste</div><div class="dr">Recomendação: <strong>(a)</strong></div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D29</span><div><div class="dq">Nome e Primeira mensagem eram editados no Ligue, <strong>depois</strong> do teste — o agente ia ao ar com cumprimento não testado</div><div class="dr">Recomendação: <strong>(a)</strong></div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D30</span><div><div class="dq">Criar já ativo sem instrução (create da API/Guia com <code>status</code>/<code>enabled</code>)</div><div class="dr">Recomendação: <strong>(a)</strong></div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D31</span><div><div class="dq">O funil do CRM (<code>Crm::Ai::HandoffExecutor</code>) passa conversas com o seletor dele, fora dos 3 pontos do BE-06</div><div class="dr">Recomendação: <strong>(a)</strong></div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); caminho do funil permanece separado.</div></div></li><li><span class="did">D32</span><div><div class="dq">De onde vem o gênero dos textos da tela ({a}, {ela})</div><div class="dr">Recomendação: <strong>(a)</strong></div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D33</span><div><div class="dq">"Nunca" prometia passar quando a IA cai, e o atendimento não faz isso (falha de IA = silêncio, salvo a cotação assíncrona da Lia)</div><div class="dr">Recomendação: <strong>(a)</strong>; (b) vira Issue</div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D34</span><div><div class="dq">Texto de excluir depois do #1063 (exclusão lógica: some da lista, para de atender, materiais e vínculos guardados)</div><div class="dr">Recomendação: <strong>(a)</strong>; (b) vira Issue</div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D35</span><div><div class="dq">Lote de um PR só (§14) × fila da Automação com até 7 PRs por lote (07/10)</div><div class="dr">Recomendação: <strong>(a)</strong></div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); caminho ao vivo isolado; demais em lote de até 7 pela Automação.</div></div></li></ol></section>
     <article>
 <div class="tw"><table>
 <thead>
@@ -224,7 +226,7 @@ td:first-child{min-width:70px;font-weight:600}
 <tbody>
 <tr>
 <td><strong>Status</strong></td>
-<td>Rascunho v9.2 — rodadas 1–8 aplicadas; decisões D1–D35 registradas e aprovadas como plano em 07/10/2026; rodada 9 normal concluída com 11 achados confirmados (1 alto, 9 médios, 1 baixo; UX-04 rejeitado), correções e checagem concluídas sem achados residuais documentais; atualizado com o #1063 (§0); causas C1–C15 em <code>docs/audit/2026-10-05-agentes-prd-r2-causa-raiz.md</code>; protótipo publicado inspecionado em 07/10; implementação e gate das telas reais pendentes</td>
+<td>Rascunho v9.2 — rodadas 1–8 aplicadas; decisões D1–D35 registradas; D7 revisada por Rodrigo em 07/10/2026 para manter toda conexão de WhatsApp na área existente de Canais; rodada 9 normal e checagem documental concluídas; protótipo publicado inspecionado; implementação, telas reais e gate local pendentes</td>
 </tr>
 <tr>
 <td><strong>Data</strong></td>
@@ -281,8 +283,9 @@ remove o <code>AgentBotInbox</code> vivo; o vínculo e os materiais ficam guarda
 "Com base/Sem base"), etapas escondidas, teste depois de ligar, e um painel sem ações básicas (ligar rascunho, excluir,
 renomear).</p>
 <p>Este projeto reconstrói a área inteira — lista, criação em 4 etapas (Escolha → Conte → Teste → Ligue), painel do agente com
-5 abas (+ Ferramentas para admin da plataforma), conexão de WhatsApp por código, e as peças dentro da conversa (ajudante da
-equipe e "resposta errada") — exatamente como no protótipo, mais o backend que o protótipo exige.</p>
+5 abas (+ Ferramentas para admin da plataforma), escolha de canais já conectados e atalho para a área existente de Canais,
+e as peças dentro da conversa (ajudante da equipe e "resposta errada") — exatamente como no protótipo, mais o backend que
+a jornada exige.</p>
 <p><strong>Para quem:</strong> dono e equipe de corretoras e pequenas empresas que usam o Chat2You (Hub2You <strong>e</strong> Autonom.ia). Critério de
 linguagem: uma pessoa com pouca familiaridade com tecnologia ("QI 70") consegue criar, testar, ligar e ajustar um agente
 sozinha.</p>
@@ -335,6 +338,7 @@ sozinha.</p>
 <li>Apagar o código antigo — acontece num PR separado <strong>depois</strong> do aceite final e de 2 semanas com a flag ligada (§10, F10).</li>
 <li>Cobrança/medição de cotações (<code>ToolRun</code>) — não muda.</li>
 <li>Novos canais além dos que o Chatwoot já conecta.</li>
+<li>Cadastrar ou conectar WhatsApp dentro de Agentes: a conexão continua em Configurações &gt; Canais/Caixas de entrada.</li>
 </ul>
 <hr />
 <h2 id="4-decisoes-do-rodrigo-e-estado-bloqueiam-partes-especificas">4. Decisões do Rodrigo e estado (bloqueiam partes específicas)</h2>
@@ -405,11 +409,11 @@ do protótipo foi feita na cópia publicada em 07/10, mas a aprovação visual e
 </tr>
 <tr>
 <td><strong>D7</strong></td>
-<td>Conectar WhatsApp novo pelo fluxo do agente</td>
-<td>O backend de caixa WAHA exige <code>phone</code> (<code>waha_inboxes_controller.rb:18,99</code>), aceita só celular do Brasil (55 + DDD + 9 dígitos, <code>inbox_provisioner.rb:11,44</code>) e grava o token de quem conecta (<code>waha_inboxes_controller.rb:102-104</code>). (a) pedir o número na tela e liberar a quem é administrador; (b) só administrador</td>
-<td><strong>(a)</strong>: campo "Número do WhatsApp" (55 + DDD + número) antes do código, permissão = administrador da conta, aviso "Esta conexão usa o seu acesso. Se você sair da conta, ela para."; <code>invalid_phone</code> vira mensagem pt-BR</td>
-<td>BE-13, F6</td>
-<td>Plano aprovado no escopo (07/10); segue os gates do PR.</td>
+<td>Conexão de WhatsApp fora da área Agentes<br>A conexão, inclusive WhatsApp, continua na área existente de Canais/Caixas de entrada: settings_inbox_list em accounts/:accountId/settings/inboxes, com o cadastro existente settings_inbox_new em accounts/:accountId/settings/inboxes/new. Agentes não pedem número, exibem QR, recebem token nem criam waha_inboxes. Ligue e Onde atende só leem canais já conectados e elegíveis; sem canal livre, preservam o agente salvo e oferecem orientação/atalho para settings_inbox_new conforme a permissão.</td>
+<td>(a) manter a conexão na área Canais e apenas associar a caixa existente ao agente; (b) criar conexão dentro de Agentes</td>
+<td><strong>(a)</strong> — uma fonte única para cadastrar/conectar canais, sem rota, tela ou contrato from novo em Agentes</td>
+<td>F3, F6; BE-11 e associação de canais</td>
+<td>Revisão explícita de Rodrigo em 07/10/2026; substitui a decisão anterior e torna F0-FINAL-01 inaplicável, sem declarar aprovação da revisão antiga.</td>
 </tr>
 <tr>
 <td><strong>D8</strong></td>
@@ -726,9 +730,11 @@ não rodou por permissão: "Neste teste, {ela} não usou {ferramenta}: só quem 
 (i18n) como contexto; para quem só vê, vale D17; título "Teste como ele ajudaria numa conversa"; sem a faixa "passaria para a equipe"; esse teste
 conta para ligar.</p>
 <p><strong>6.2.4 Ligue (<code>viewLigue</code>).</strong> "Confira e escolha onde {a} {nome} atende":
-- <strong>Onde atende:</strong> canais livres (radio), 1 só já vem marcado; "Conectar um WhatsApp novo" (só administrador; quem edita sem
-  ser administrador lê "Peça a quem administra a conta para conectar um WhatsApp."); "Canais ocupados (n)"
-  desabilitados com "Já tem a Clara atendendo aqui. Cada canal tem um agente." (BE-11).
+- <strong>Onde atende:</strong> canais já conectados e elegíveis (radio), 1 só já vem marcado; "Canais ocupados (n)"
+  desabilitados com "Já tem a Clara atendendo aqui. Cada canal tem um agente." (BE-11). A tela não pede número, não mostra QR
+  nem cria caixa. Sem canal livre, o agente continua salvo e aparece a orientação com o atalho existente para
+  Configurações &gt; Canais/Caixas de entrada (settings_inbox_new em accounts/:accountId/settings/inboxes/new), respeitando a
+  permissão.
 - <strong>Como se apresenta:</strong> só no resumo (Nome e Primeira mensagem, com "Mudar" que volta ao Teste — D29). <strong>Sem</strong> "Perguntas
   para puxar conversa" (D18).
 - <strong>Quando atende:</strong> Sempre / No horário comercial / Fora do horário comercial; se o canal escolhido não tem horário
@@ -766,8 +772,10 @@ da base; "Perguntas que a equipe respondeu" com liga/desliga, Aprovar / Mudar e 
 Agente de Cotação: só "O que a Lia cota" (ramos).</p>
 <p><strong>Onde atende (<code>tabOnde</code>).</strong> Canais conectados com "Tirar deste canal" (confirma; conversas vão para a equipe); "Colocar em
 outro canal" (só livres; rascunho e pausado desabilitados com "Ligue {a} {nome} para colocar em outro canal." —
-o backend recusa <code>agent_not_active</code>); aviso "não está em nenhum canal"; erro de conexão com a
-mensagem específica do servidor (BE-10); "Conectar um WhatsApp novo" (só administrador, mesma regra do Ligue).</p>
+o backend recusa <code>agent_not_active</code>); aviso "não está em nenhum canal"; erro da associação com a
+mensagem específica do servidor (BE-10). Esta aba só associa caixas já conectadas. Quando faltar uma caixa elegível, mostra
+orientação e, quando a permissão permitir, atalho para Configurações &gt; Canais/Caixas de entrada
+(settings_inbox_new em accounts/:accountId/settings/inboxes/new).</p>
 <p><strong>Ajustes (<code>tabAjustes</code>).</strong> Seções, cada uma com seu "Salvar". Num rascunho já testado, salvar algo que muda o texto do
 modelo mostra "Salvo. Teste {a} {nome} de novo antes de ligar." (§6.6):
 1. Foto e nome (trocar/tirar foto; nome — sincroniza o bot da conversa, BE-16, e o modo de se apresentar, D19).
@@ -842,18 +850,12 @@ identificador, quando usar, método GET/POST, endereço, corpo JSON, cabeçalhos
 ao cliente, ligada), resultado do teste em bloco, limite 10, "Começar pelo modelo de consulta de estoque".</p>
 <h3 id="64-outras-telas-e-dialogos-screens-extrajs-mainjs">6.4 Outras telas e diálogos (<code>screens-extra.js</code>, <code>main.js</code>)</h3>
 <ul>
-<li><strong>Conectar um WhatsApp</strong> (<code>viewConectar</code>): número (D7) → código QR, passos "Como ler", dica "Use um número da empresa";
-  estados Esperando leitura / Conectando / Conectado ("Escolher o agente", volta à origem) / Não conectou ("Gerar outro
-  código"). Com a flag desligada, se não houver rota antiga equivalente, <code>from</code> só pode apontar para uma origem interna
-  validada da mesma conta (agente/canal) e volta a ela com aviso localizado; sem origem válida, volta à lista de agentes com
-  aviso localizado. Esse caminho nunca renderiza <code>InviteConnectionPage</code>, não cria conexão e não promete retomar conversa no
-  painel antigo; os dados salvos do agente, thread e canal são preservados.</li>
+<li><strong>Conexão de WhatsApp fora de Agentes:</strong> não existe tela, rota, número, QR ou retorno de conexão dentro desta área. Ligue e Onde atende apenas listam/associam caixas já conectadas; quando faltar uma caixa elegível, mostram orientação e atalho para Configurações &gt; Canais/Caixas de entrada (settings_inbox_new em accounts/:accountId/settings/inboxes/new), conforme a permissão. O agente e seu rascunho permanecem salvos.</li>
 <li><strong>Dentro da conversa</strong> (<code>viewConversa</code>): painel do ajudante da equipe (resumo, "Sugerir resposta", "Resumir de novo",
   pergunta livre; vazio com "Criar ajudante") e "Marcar resposta como errada" (5 motivos como opções, "Qual seria a resposta
   certa?", botão libera após escolher). O que for marcado aparece na gaveta "Respostas marcadas como erradas" com motivo,
   resposta sugerida e "Ensinar" (BE-28).</li>
-<li><strong>Conectar um WhatsApp:</strong> também os estados "Verificando", "Sessão desligada" (texto próprio + "Reconectar") e o tempo
-  restante do código (60 s no primeiro, 20 s nos seguintes), reaproveitando <code>ConnectionPage.vue</code>/<code>wahaQrWindow.js</code>.</li>
+<li><strong>Conexão em Canais:</strong> estados de QR, verificação, sessão e reconexão continuam exclusivamente no fluxo existente de Canais/Caixas de entrada. Eles não entram no mapa, nas rotas ou no aceite visual de Agentes.</li>
 <li><strong>Gaveta "Resultado das conversas"</strong> (<code>openDrill</code>): lista real, foco preso, Esc fecha.</li>
 <li><strong>Textos de excluir (D34, depois do #1063):</strong> externo "{A} {nome} sai da lista e para de atender. As conversas com {ela}
   vão para a equipe."; ajudante "O {nome} sai da lista e some do painel das conversas."; rascunho "O rascunho sai da
@@ -893,7 +895,7 @@ produto…", "Material de exemplo.", "Enviando de novo.") e o sufixo "(exemplo)"
 - Resumo do Ligue: uma frase por opção de "Quando passa" (o protótipo mostra só a do padrão).
 - Sem "Perguntas para puxar conversa" e sem a aba "Para enviar" (D18, D20).
 - "Quando passa para a equipe" não aparece no Agente de Cotação (sem efeito nele); "Jeito de cotar" usa {nome}.
-- Botão "Conectar um WhatsApp novo" só para administrador.
+- <strong>Conectar WhatsApp:</strong> cadastro e conexão acontecem exclusivamente em Canais/Caixas de entrada; Agentes só escolhe uma caixa já conectada e elegível. O atalho para Canais respeita as permissões existentes.
 - Nota de passagem dentro da conversa ("A {nome} passou esta conversa para a equipe: {motivo}.") é nova (BE-24).</p>
 <h3 id="65-matriz-controle-leitor-efeito-ca-geral-14">6.5 Matriz controle → leitor → efeito (CA-GERAL-14)</h3>
 <p>Uma linha por controle do protótipo. "Leitor" é quem usa o valor <strong>durante o atendimento</strong> (verificado no código em 05/10; cada PR reconfere as linhas das telas que entrega na <code>origin/main</code> do dia — o #1036 deslocou algumas referências).
@@ -1403,7 +1405,7 @@ params ou GET regenera <code>bundle exec rails autonomia:guia:formatos</code> e 
 <tr>
 <td><strong>BE-03</strong></td>
 <td>Ligar atômico</td>
-<td><code>POST agents/:id/publish {inbox_id?, agent:{config:{response_window}}}</code> (sem <code>name</code> e <code>greeting</code>: são editados no Teste por PATCH, D29; <code>name</code>/<code>greeting</code> no corpo → 422 <code>publish_field_not_allowed</code>) → <code>Autonomia::Agents::Publisher</code> numa transação: pré-condição BE-04 → atributos → <code>enabled+active</code> (dispara <code>sync_mirror_bots</code> do #1036) → <code>InboxConnector</code> se <code>inbox_id</code>; erro = rollback + 422 <code>{error, code}</code>; <code>RecordNotUnique</code> → <code>inbox_already_connected</code>; ordem das recusas: <code>missing_instruction</code> antes de <code>missing_test</code> (sem teste válido da instrução atual, §6.6, D15). Interno: <code>inbox_id</code> proibido. <code>missing_test</code> só no <code>publish</code> (escopo D23): PATCH <code>status</code>/<code>enabled</code>, create, Guia, tela antiga e Cotação continuam como hoje; religar pausado pelo PATCH só exige instrução (D24).</td>
+<td><code>POST agents/:id/publish {inbox_id? | inbox_ids?: [inteiros positivos únicos], agent:{config:{response_window}}}</code> (os dois campos são mutuamente exclusivos; o singular permanece para clientes existentes; sem <code>name</code> e <code>greeting</code>: são editados no Teste por PATCH, D29; <code>name</code>/<code>greeting</code> no corpo → 422 <code>publish_field_not_allowed</code>) → <code>Autonomia::Agents::Publisher</code> resolve todas as caixas na conta e valida tudo antes de escrever, mantendo agente + caixas em uma transação com locks determinísticos: pré-condição BE-04 → atributos → <code>enabled+active</code> (dispara <code>sync_mirror_bots</code> do #1036) → um espelho <code>InboxConnector</code> por caixa; falha em qualquer caixa = rollback de ativação, configuração e vínculos + 422 <code>{error, code}</code>; <code>RecordNotUnique</code> → <code>inbox_already_connected</code>; ordem das recusas: <code>missing_instruction</code> antes de <code>missing_test</code> (sem teste válido da instrução atual, §6.6, D15). Interno: nenhuma caixa é aceita. <code>missing_test</code> só no <code>publish</code> (escopo D23): PATCH <code>status</code>/<code>enabled</code>, create, Guia, tela antiga e Cotação continuam como hoje; religar pausado pelo PATCH só exige instrução (D24).</td>
 <td>Baixo (aditivo)</td>
 <td>M</td>
 </tr>
@@ -1451,8 +1453,8 @@ params ou GET regenera <code>bundle exec rails autonomia:guia:formatos</code> e 
 </tr>
 <tr>
 <td><strong>BE-10</strong></td>
-<td>Mensagens pt-BR com <code>code</code></td>
-<td><code>render_unprocessable(message, code:)</code> passa a aceitar <code>code</code>. Recebem <code>code</code> estável: <code>instrucao_mantida</code>, <code>missing_instruction</code>, <code>missing_test</code>, <code>publish_field_not_allowed</code>, <code>copilot_unavailable</code>, <code>no_guided_version</code>, <code>internal_with_channels</code> (chave nova en+pt_BR), <code>config_key_not_allowed</code>, cada <code>connect_errors.*</code> (<code>agent_internal_not_connectable</code>, <code>agent_not_active</code>, <code>inbox_has_webhook_bot</code>, <code>inbox_already_connected</code>, <code>not_connected</code>) e os erros de <code>waha_inboxes#create</code> (<code>invalid_phone</code>, <code>integration_not_configured</code>, <code>remote_setup_failed</code>, <code>account_token_missing</code>) — neste endpoint o <code>error</code> continua trazendo o código, como hoje, para a tela antiga, e o <code>code</code> é acrescentado (a tela nova traduz pelo <code>code</code>). Mensagem em <code>error</code>, código em <code>code</code>.</td>
+<td>Mensagens pt-BR com code</td>
+<td>render_unprocessable(message, code:) passa a aceitar code. Recebem code estável: instrucao_mantida, missing_instruction, missing_test, publish_field_not_allowed, inbox_selection_invalid, inbox_selection_conflict, copilot_unavailable, no_guided_version, internal_with_channels (chave nova en+pt_BR), config_key_not_allowed, e cada erro da associação de canais (agent_internal_not_connectable, agent_not_active, inbox_has_webhook_bot, inbox_already_connected, not_connected). Os erros de criação de waha_inboxes (invalid_phone, integration_not_configured, remote_setup_failed, account_token_missing) continuam no fluxo existente de Canais/Caixas de entrada e não viram contrato de Agentes. Mensagem em error, código em code.</td>
 <td>Zero</td>
 <td>P</td>
 </tr>
@@ -1472,10 +1474,10 @@ params ou GET regenera <code>bundle exec rails autonomia:guia:formatos</code> e 
 </tr>
 <tr>
 <td><strong>BE-13</strong></td>
-<td>Criar caixa WhatsApp pelo fluxo do agente (D7)</td>
-<td>Reusar <code>waha_inboxes</code> com <code>phone</code> (55 + DDD + número) vindo da tela; permissão = administrador; erros com <code>code</code> (BE-10); volta com <code>?from=</code>, que só aceita rotas de agentes da própria conta (Ligue, Onde atende). Com a flag desligada e sem equivalente antigo, valida a origem interna da mesma conta e dos canais do agente; origem válida volta a ela com aviso localizado, inválida volta para "Seus agentes" com aviso localizado. Nunca renderiza <code>InviteConnectionPage</code>, dispara criação ou promete retomar conversa no painel antigo; dados salvos são preservados.</td>
-<td>Baixo</td>
-<td>M</td>
+<td>Limite de escopo da conexão de WhatsApp (D7 revisada)</td>
+<td>Nenhum endpoint, migration, tela, rota ou estado de QR novo em Agentes. O cadastro/conexão segue settings_inbox_list (accounts/:accountId/settings/inboxes) e settings_inbox_new (accounts/:accountId/settings/inboxes/new); Agentes apenas lê canais conectados/elegíveis e associa a caixa escolhida. A ausência de canal preserva o agente salvo e oferece orientação/atalho conforme a permissão. O contrato e os erros de waha_inboxes#create continuam pertencendo à área existente de Canais.</td>
+<td>Zero em Agentes</td>
+<td>—</td>
 </tr>
 <tr>
 <td><strong>BE-14</strong></td>
@@ -1651,10 +1653,7 @@ params ou GET regenera <code>bundle exec rails autonomia:guia:formatos</code> e 
 <li><strong>BE-05:</strong> um limite novo pedido no "Mudar conversando" aparece em <code>guardrails</code> e no texto do modelo [R5-16].</li>
 <li><strong>BE-12 (ajudante):</strong> <code>internal</code> com qualquer <code>handoff_strategy</code> → texto byte a byte igual; <code>both</code> → bloco só no Operate [R5-02].</li>
 <li><strong>BE-06:</strong> alvo administrador fora da caixa é válido e o evento registra o alvo [R5-04/18/23/35].</li>
-<li><strong>BE-13:</strong> <code>from</code> fora da lista volta para "Seus agentes" (inclusive <code>javascript:</code> e endereço externo); com a flag desligada,
-  origem sem equivalente antigo só volta para origem interna validada da mesma conta e dos canais do agente, ou para a lista,
-  sempre com aviso localizado; não renderiza <code>InviteConnectionPage</code>, cria conexão ou promete retomar conversa no painel antigo.
-  Dados salvos do agente, thread e canal permanecem [R4-33].</li>
+<li><strong>BE-13:</strong> não há criação de caixa, QR, from ou retorno de conexão no fluxo de Agentes. A API de Agentes só lê canais conectados/elegíveis e associa a caixa escolhida; sem canal, a UI preserva o agente salvo e orienta/atalha Canais conforme a permissão. waha_inboxes#create e seus códigos continuam cobertos pela área existente de Canais.</li>
 <li><strong>BE-14:</strong> rascunho criado pela API/Guia sem instrução e sem conversa é E1, e a lista mostra o prazo configurado [R4-39/46].</li>
 <li><strong>E1 / BE-03 (abertura):</strong> abertura que falha antes de existir rascunho mostra erro com "Tentar de novo" e não deixa o front
   esperando [R3-18/42/49]; o rascunho existe antes de abrir o Conte, mesmo sem material [R2-48].</li>
@@ -1755,23 +1754,20 @@ backend (B1).</p>
 <td>ver</td>
 </tr>
 <tr>
-<td><code>autonomia_agents_connect_whatsapp</code> (nova)</td>
-<td><code>agents/connect-whatsapp?from=</code></td>
-<td>administrador (D7)</td>
+<td><em>(nenhuma rota de conexão em Agentes)</em></td>
+<td>—</td>
+<td>—</td>
 </tr>
 </tbody>
 </table></div>
 <p>Toda rota usa <code>ensureAutonomiaEnabled</code> com <code>await contaDaRota(to)</code>; as mantidas renderizam a página nova ou antiga pela
   flag (<code>AgentsIndexEntry.vue</code> etc.). Com a flag desligada, as rotas novas seguem este mapa, sempre mantendo os guards
   existentes de conta, permissão e agente: <code>build/tell</code> → painel antigo <code>tune</code> do mesmo agente e da thread já salva; <code>build/test</code>
-  → <code>test</code>; <code>build/live</code> → <code>publish</code>; <code>ready</code> → <code>performance</code>. Nenhuma delas cria uma nova thread nem amplia um guard. Para
-  <code>connect-whatsapp</code>, não há equivalente antigo: só uma origem interna validada da mesma conta e dos canais do agente é aceita;
-  uma origem válida recebe aviso localizado e volta para ela, e uma inválida vai para a lista de agentes com aviso localizado.
-  Esse fallback não renderiza <code>InviteConnectionPage</code>, não cria conexão e não promete retomar conversa no painel antigo; dados
-  salvos ficam preservados.
-- <strong>Menu lateral</strong> (<code>Sidebar.vue</code>, toque mínimo, F1): item único "Agentes de IA" com <code>activeOn</code> = <code>autonomia_agents_index</code>,
-  <code>autonomia_agents_builder</code>, <code>autonomia_agent_build</code>, <code>autonomia_agent_ready</code>, <code>autonomia_agent_panel</code>,
-  <code>autonomia_agents_connect_whatsapp</code>; com a flag desligada, os filhos atuais.
+  → <code>test</code>; <code>build/live</code> → <code>publish</code>; <code>ready</code> → <code>performance</code>. Nenhuma delas cria uma nova thread nem amplia um guard.
+  O destino para cadastrar/conectar WhatsApp é exclusivamente a área existente de Canais/Caixas de entrada; Agentes não
+  cria uma rota, uma origem <code>from</code>, um QR ou um fallback de conexão. O atalho, quando exibido, aponta para
+  <code>settings_inbox_new</code> na própria conta; as permissões da rota existente continuam valendo.
+- <strong>Menu lateral</strong> (Sidebar.vue, toque mínimo, F1): item único "Agentes de IA" com activeOn = autonomia_agents_index, autonomia_agents_builder, autonomia_agent_build, autonomia_agent_ready, autonomia_agent_panel; com a flag desligada, os filhos atuais. A área de Canais/Caixas de entrada mantém seu próprio item e suas rotas existentes.
 - <strong>Teste assíncrono:</strong> <code>POST agents/:id/test</code> responde 202 com <code>poll_url</code>; o front consulta <code>ai_requests/:id</code> e mostra
   "Pensando" enquanto <code>pending</code> (padrão já usado por <code>pollAiRequest</code>).
 - <strong>Permissões:</strong> <code>useCanManage('autonomia_manage')</code>; admin da plataforma = <code>currentUser.type === 'SuperAdmin'</code>.
@@ -1938,12 +1934,6 @@ atual e indicação de migration; Rodrigo repassa à Automação.</p>
 <td>—</td>
 </tr>
 <tr>
-<td><strong>B6a</strong></td>
-<td>BE-13 (WhatsApp novo)</td>
-<td>B1</td>
-<td>—</td>
-</tr>
-<tr>
 <td><strong>B6b</strong></td>
 <td>BE-17 (Agente de Cotação), <strong>lote de um PR só</strong> (cobertura B6b do §11.8 depois)</td>
 <td>B1</td>
@@ -1970,7 +1960,7 @@ atual e indicação de migration; Rodrigo repassa à Automação.</p>
 <tr>
 <td><strong>F3</strong></td>
 <td>Teste + Ligue + Pronto (+ rota <code>ready</code>, Guia)</td>
-<td>F2, B3, B4b, <strong>F6</strong> (rota de conexão usada no Ligue)</td>
+<td>F2, B3, B4b</td>
 <td>6.2.3–6.2.5</td>
 </tr>
 <tr>
@@ -1987,8 +1977,8 @@ atual e indicação de migration; Rodrigo repassa à Automação.</p>
 </tr>
 <tr>
 <td><strong>F6</strong></td>
-<td>Onde atende + Conectar WhatsApp (+ rota, Guia)</td>
-<td>F4, B2 (BE-11), B6a (BE-13)</td>
+<td>Onde atende + atalho para Canais (sem conexão em Agentes)</td>
+<td>F4, B2 (BE-11)</td>
 <td>6.3, 6.4</td>
 </tr>
 <tr>
@@ -2054,21 +2044,23 @@ visual explícita do Rodrigo. A inspeção visual está em andamento; portanto e
 </ol>
 <h3 id="103-protocolo-de-revisao-regra-do-rodrigo">10.3 Protocolo de revisão (regra do Rodrigo)</h3>
 <ul>
-<li><strong>Rodada 1:</strong> revisores independentes, em paralelo, cada um com uma lente:</li>
+<li><strong>Validação antes da revisão:</strong> falhas de testes, lint e build são validação, não achados de revisão nem consomem rodada.
+  O principal corrige-as autonomamente e repete a validação pertinente antes de chamar o revisor.</li>
+<li><strong>Revisão 1:</strong> revisores independentes, em paralelo, cada um com uma lente:</li>
 <li><strong>produto/UX</strong> — compara com o protótipo e os CA da tela (texto, estados, permissões, celular, tema escuro);</li>
 <li><strong>técnica</strong> — correção, padrões do repo, construção aditiva, Enterprise, i18n, Guia/Central;</li>
 <li><strong>segurança e produção</strong> — isolamento entre contas, permissões, agentes no ar, Agente de Cotação, dados pessoais;</li>
 <li><strong>testes</strong> — o teste prova o critério? falha sem a correção?
-  Cada achado é verificado (reproduzido ou provado no código) antes de virar correção. O principal corrige e roda a
-  validação local de novo.</li>
-<li><strong>Rodada 2:</strong> os mesmos revisores sobre o resultado corrigido.</li>
+  Cada achado é verificado (reproduzido ou provado no código) antes de virar correção.</li>
+<li><strong>Depois da revisão 1:</strong> o principal corrige os achados e o mesmo revisor faz a <strong>revisão 2</strong>.</li>
 <li><strong>Sem achados → segue</strong> para testes de aceite e merge.</li>
-<li><strong>Com achados → PARA.</strong> Antes de corrigir, o principal encontra a <strong>causa raiz</strong> de cada achado — por que a rodada 1 e a
-    validação não pegaram, ou por que a correção introduziu o problema (requisito ambíguo, padrão do repo ignorado, teste
-    fraco, falta de contexto do implementador) — e registra em <code>docs/audit/&lt;data&gt;-agentes-&lt;pr&gt;-causa-raiz.md</code> com: achado,
-    causa raiz, correção da causa (não só do sintoma), o que muda no processo para não repetir. Só depois corrige, roda a
-    validação local e manda para <strong>uma revisão final</strong>. Se essa revisão ainda encontrar erro, para e retorna ao Rodrigo; não inicia outro ciclo por conta própria.</li>
-<li>Achado de severidade <strong>crítica</strong> (segurança, perda de dado, agente no ar quebrado) em qualquer rodada bloqueia o PR até a
+<li><strong>Com achados →</strong> antes de corrigir, o principal encontra a <strong>causa raiz</strong> de cada um — por que a revisão 1
+    e a validação não pegaram, ou por que a correção introduziu o problema — e registra em
+    <code>docs/audit/&lt;data&gt;-agentes-&lt;pr&gt;-causa-raiz.md</code> com achado, causa, correção da causa e mudança de processo.
+    Só depois corrige e chama o mesmo revisor para a <strong>revisão 3</strong>.</li>
+<li><strong>Revisão 3:</strong> se não houver achados, segue para aceite. Se ainda houver qualquer erro, parar e retornar ao Rodrigo;
+  não iniciar um quarto ciclo.</li>
+<li>Achado de severidade <strong>crítica</strong> (segurança, perda de dado, agente no ar quebrado) em qualquer revisão bloqueia o PR até a
   causa raiz estar registrada.</li>
 <li><strong>Passos de método obrigatórios antes de cada rodada</strong> (vieram da causa raiz da rodada 2 deste PRD,
   <code>docs/audit/2026-10-05-agentes-prd-r2-causa-raiz.md</code>):
@@ -2091,10 +2083,11 @@ visual explícita do Rodrigo. A inspeção visual está em andamento; portanto e
 <p><strong>Limite desta retomada do PRD.</strong> A R9 normal foi concluída com quatro lentes independentes e registro consolidado em
 <a href="revisoes/rodada-9.md"><code>revisoes/rodada-9.md</code></a>: 11 achados confirmados (1 alto, 9 médios e 1 baixo; UX-04 foi rejeitado).
 As correções foram fechadas na única checagem independente, sem achado residual documental. Não repetir a rodada. Nos próximos
-PRs, se a checagem encontrar achados, parar, registrar causa raiz em <code>docs/audit/</code>, corrigir a causa e fazer uma revisão final.
-Persistindo erro nessa final, parar e retornar ao Rodrigo. Não repetir ciclos. O critério documental é zero altos e zero médios de
-segurança/produção; demais pendências não bloqueantes precisam ter responsável e PR de destino. Nada disso autoriza merge,
-deploy, acesso adicional a produção ou a escrita de D10.</p>
+PRs, falhas de teste, lint e build devem ser corrigidas antes da revisão e não contam como rodada. O fluxo é revisão 1 →
+correção dos achados → revisão 2 pelo mesmo revisor; se a revisão 2 reprovar, registrar causa raiz, corrigir a causa e fazer
+a revisão 3 pelo mesmo revisor. Se a revisão 3 ainda encontrar erro, parar e retornar ao Rodrigo; não repetir ciclos.
+O critério documental é zero altos e zero médios de segurança/produção; demais pendências não bloqueantes precisam ter
+responsável e PR de destino. Nada disso autoriza merge, deploy, acesso adicional a produção ou a escrita de D10.</p>
 <hr />
 <h2 id="11-criterios-de-aceite-termos-de-aceite-por-tela">11. Critérios de aceite (termos de aceite por tela)</h2>
 <p>Formato: cada critério é verificado por <strong>V</strong> (Vitest), <strong>R</strong> (RSpec), <strong>P</strong> (Playwright/captura) ou <strong>M</strong> (inspeção
@@ -2119,11 +2112,7 @@ manual). Um critério só conta como atendido com evidência anexada ao PR.</p>
   <code>POST agents/:id/suggest</code> (D8), <code>POST agents/message_reports</code> e o chat do ajudante dentro da conversa (regra própria: qualquer
   membro que vê a conversa); quem edita faz tudo menos Ferramentas; Ferramentas só SuperAdmin (401 para os demais).</li>
 <li><strong>CA-GERAL-11 (R)</strong> Com <code>Config.enabled?</code> desligado, a API de agentes devolve 404 e o menu não aparece.</li>
-<li><strong>CA-GERAL-12 (V/R/P)</strong> Flag do redesign (BE-00): desligada → <code>build/tell</code> cai em <code>tune</code>, <code>build/test</code> em <code>test</code>,
-  <code>build/live</code> em <code>publish</code> e <code>ready</code> em <code>performance</code>, com o mesmo agente/thread salvo e os guards atuais; as specs atuais das
-  telas antigas passam sem alteração e há capturas antes/depois do F0 sem diferença; <code>connect-whatsapp</code> sem equivalente só
-  aceita origem interna validada da mesma conta/canais ou a lista, com aviso localizado, sem <code>InviteConnectionPage</code> nem criação;
-  ligada → telas novas; ligar/desligar numa conta (botão do Super Admin) não muda <code>autonomia_agents_redesign_enabled</code> de outra (R).</li>
+<li><strong>CA-GERAL-12 (V/R/P)</strong> Flag do redesign (BE-00): desligada → build/tell cai em tune, build/test em test, build/live em publish e ready em performance, com o mesmo agente/thread salvo e os guards atuais; as specs atuais das telas antigas passam sem alteração e há capturas antes/depois do F0 sem diferença. Agentes não têm rota de conexão: quando falta canal, a área orienta e, conforme a permissão, aponta para settings_inbox_new na própria conta; sem InviteConnectionPage, QR, criação ou parâmetro from em Agentes. Ligada → telas novas; ligar/desligar numa conta (botão do Super Admin) não muda autonomia_agents_redesign_enabled de outra (R).</li>
 <li><strong>CA-GERAL-13 (M)</strong> Correções de acessibilidade sobre o protótipo (§6.4) aplicadas.</li>
 <li><strong>CA-GERAL-14 (V/R)</strong> Todo controle tem efeito real: cada linha da matriz §6.5 tem o leitor provado por spec (grava → o
   atendimento ou o Testar muda) ou a decisão aplicada (controle removido).</li>
@@ -2258,9 +2247,9 @@ manual). Um critério só conta como atendido com evidência anexada ao PR.</p>
     o teste conta para ligar; para quem só vê, sem o aviso de D27 e com as ferramentas ≠ GET puladas.</li>
 <li><strong>Ligue</strong></li>
 <li><strong>CA-LIG-01 (V)</strong> Título e subtítulo (externo/interno).</li>
-<li><strong>CA-LIG-02 (V/R)</strong> Canais livres em <code>role="radiogroup"</code>; "Canais ocupados (n)" desabilitados com quem ocupa (BE-11);
+<li><strong>CA-LIG-02 (V/R)</strong> Canais livres em grupo de seleção múltipla (<code>role="group"</code>, cada opção com <code>role="checkbox"</code>); pode escolher mais de um canal; "Canais ocupados (n)" desabilitados com quem ocupa (BE-11);
     bot de outro sistema aparece como "Já tem outro robô neste canal".</li>
-<li><strong>CA-LIG-03 (V)</strong> 1 canal livre → já marcado.</li>
+<li><strong>CA-LIG-03 (V)</strong> 1 canal livre → já marcado; com vários canais livres, nenhum é marcado à força e a pessoa pode escolher vários.</li>
 <li><strong>CA-LIG-04 (V)</strong> O Ligue mostra Nome e Primeira mensagem só no resumo, com "Mudar" que volta ao Teste (D29).</li>
 <li><strong>CA-TES-09 (V/R)</strong> "Como se apresenta" no topo do Teste: Nome e Primeira mensagem editáveis, salvos por PATCH; a
     Primeira mensagem muda a primeira resposta no Testar e no atendimento (BE-30, spec R); mudar recomeça a conversa de teste
@@ -2268,16 +2257,15 @@ manual). Um critério só conta como atendido com evidência anexada ao PR.</p>
     ajudante interno, sem Primeira mensagem.</li>
 <li><strong>CA-LIG-05 (V/R)</strong> "Quando atende" com 3 opções (só externo) → <code>config.response_window</code>; canal com <code>has_schedule=false</code>
     mostra "Este canal não tem horário definido: {ela} vai responder sempre." com link (BE-11; spec R do caso sem horário).</li>
-<li><strong>CA-LIG-06 (V)</strong> Resumo em frase, com a parte de passagem por opção gravada: dúvida → "Quando não souber, passa a
+<li><strong>CA-LIG-06 (V)</strong> Resumo em frase para um ou vários canais escolhidos, com a parte de passagem por opção gravada: dúvida → "Quando não souber, passa a
     conversa para a equipe."; sempre oferecer → "Oferece falar com uma pessoa."; nunca → "Não oferece uma pessoa; passa
     quando o cliente pede."; "N material pronto · base N%" ou "Sem material: responde só com o que você contou."; "Ligar"
     desabilitado sem canal (externo).</li>
-<li><strong>CA-LIG-07 (R)</strong> Ligar é atômico (BE-03): se a conexão falha, o agente continua rascunho e nada foi gravado; sem
+<li><strong>CA-LIG-07 (R)</strong> Ligar é atômico (BE-03): todas as caixas escolhidas são verificadas antes da escrita; se uma conexão falha, o agente continua rascunho e nada foi gravado; sem
     instrução → 422 <code>missing_instruction</code> (BE-04).</li>
 <li><strong>CA-LIG-08 (V)</strong> Falhou ao ligar: <code>role="alert"</code> com o motivo do servidor e "Nada mudou: {ela} continua desligad{a}." +
     "Tentar de novo".</li>
-<li><strong>CA-LIG-09 (V)</strong> Sem canal livre: texto + "Conectar um WhatsApp novo" para administrador; quem edita sem ser administrador
-    lê "Peça a quem administra a conta para conectar um WhatsApp." (sem botão).</li>
+<li><strong>CA-LIG-09 (V)</strong> Sem canal livre: a tela informa que é preciso abrir Canais para conectar ou liberar uma caixa, mantém o agente salvo e, quando a permissão permitir, oferece o atalho "Abrir Canais" para settings_inbox_new (accounts/:accountId/settings/inboxes/new); sem essa permissão, mostra orientação localizada sem controle de escrita. Não há número, QR ou criação de caixa em Agentes.</li>
 <li><strong>CA-LIG-10 (V)</strong> "Deixar desligad{a} por enquanto" grava e volta com "Pronto para ligar" + toast.</li>
 <li><strong>CA-LIG-11 (V/R)</strong> Interno: sem canal, "Onde a equipe encontra", liga sem escolher canal (o teste válido continua
     exigido, D26); backend recusa canal em interno.</li>
@@ -2342,8 +2330,7 @@ manual). Um critério só conta como atendido com evidência anexada ao PR.</p>
     colocar em outro canal." + desabilitado.</li>
 <li><strong>CA-OND-03 (V)</strong> Aviso de sem canal.</li>
 <li><strong>CA-OND-04 (V/R)</strong> Falha de conexão mostra a mensagem pt-BR do servidor (pelo <code>code</code>, BE-10) e nada muda.</li>
-<li><strong>CA-OND-05 (V)</strong> "Conectar um WhatsApp novo" (só administrador; demais leem o texto de CA-LIG-09) → tela de conexão com
-    volta à origem.</li>
+<li><strong>CA-OND-05 (V)</strong> Sem caixa conectada/elegível: Onde atende informa a situação e, quando a permissão permitir, oferece "Abrir Canais" para settings_inbox_new; a aba não cria conexão, não abre QR e não recebe a responsabilidade pelo fluxo de Canais.</li>
 <li><strong>Ajustes</strong></li>
 <li><strong>CA-AJU-01 (V/R)</strong> Foto (trocar/tirar) e nome; "Salvar" por seção; toast "Salvo."; o nome novo aparece nas conversas
     (BE-16) e é o nome com que o agente se apresenta (BE-29, spec R).</li>
@@ -2396,12 +2383,8 @@ manual). Um critério só conta como atendido com evidência anexada ao PR.</p>
 </ul>
 <h3 id="115-outras-telas">11.5 Outras telas</h3>
 <ul>
-<li><strong>CA-CONECTAR-01 (V/R)</strong> Número do WhatsApp (D7) → código QR (<code>role="img"</code> + <code>aria-label</code>), passos, dica; só
-  administrador; erros do passo do número por <code>code</code> (BE-10): <code>invalid_phone</code>, <code>integration_not_configured</code>,
-  <code>remote_setup_failed</code>, <code>account_token_missing</code>, cada um com frase pt-BR.</li>
-<li><strong>CA-CONECTAR-02 (V)</strong> Estados Esperando leitura (com tempo restante do código: 60 s no primeiro, 20 s nos seguintes) /
-  Verificando / Conectando / Conectado ("Escolher o agente" volta à origem) / Não conectou ("O código venceu… Gerar outro
-  código" → <code>reconnect</code>) / Sessão desligada (texto próprio + "Reconectar") — mesmo mapeamento de <code>ConnectionPage.vue</code>.</li>
+<li><strong>CA-CANAIS-01 (V)</strong> A conexão de WhatsApp fica fora de Agentes. O aceite desta área prova apenas que Ligue e Onde atende mostram canais já conectados/elegíveis, preservam o agente salvo quando não há canal e orientam/atalham para settings_inbox_new conforme a permissão; o QR e o cadastro são aceitos pelo contrato próprio de Canais.</li>
+<li><strong>CA-CANAIS-02 (V)</strong> Nenhum mapa, rota, captura ou componente de Agentes exige número, QR, verificação, reconexão ou retorno de conexão. Esses estados continuam no fluxo existente de Canais/Caixas de entrada.</li>
 <li><strong>CA-CONVERSA-01 (V/R)</strong> Ajudante da equipe no painel da conversa (agente <code>internal|both</code> ativo), resumo, "Sugerir
   resposta", "Resumir de novo", pergunta livre; vazio com "Criar ajudante" só para quem edita; isolamento entre contas.</li>
 <li><strong>CA-CONVERSA-02 (V/R)</strong> "Marcar resposta como errada" no menu da mensagem do agente; 5 motivos (<code>role="radio"</code>), "Qual
@@ -2446,9 +2429,8 @@ manual). Um critério só conta como atendido com evidência anexada ao PR.</p>
   (dados, carregando, erro, sem conversas), testar (normal, montagem não terminou, não respondeu, ferramenta pulada para quem só vê), o que sabe (como está, todos os
   estados, vazio, limite), onde atende (como está, sem canal, falhou, quem edita sem ser admin, pausado), ajustes (como está, com versões, sem ajudante, ajudante interno, os dois, sem versão guiada, rascunho testado,
   modo manual, voltar ao guiado, vários canais sem horário), ferramentas (admin da plataforma) · Lia: como está indo, testar, o que cota, ajustes · ajudante interno: cartão,
-  como está indo · conectar (número, número inválido, esperando leitura, verificando, conectando, conectado, falhou, sessão
-  desligada) · conversa (ajudante, vazio do ajudante, resposta errada, nota interna de passagem) · gaveta de resultados (com
-  itens, vazia, respostas erradas).
+  como está indo · conversa (ajudante, vazio do ajudante, resposta errada, nota interna de passagem) · gaveta de resultados
+  (com itens, vazia, respostas erradas).
   Estados sem referência no protótipo (marcados "novo") são aprovados pelo Rodrigo na página lado a lado.</li>
 <li><strong>CA-VISUAL-01</strong> Todas as capturas dos dois lados anexadas ao PR (página lado a lado).</li>
 <li><strong>CA-VISUAL-02</strong> Nenhuma captura em branco ou cortada, conferida antes de enviar.</li>
@@ -2626,10 +2608,6 @@ produção: o volume é baixo (05/10: Clara com 3 conversas em 7 dias; Lia com 2
 <td>Nota de passagem privada não chega ao cliente (BE-24); "Uma pessoa" e "Um time" atribuem conforme o BE-06 e nunca fora do time; o tester usa uma caixa de teste sem funil do CRM com IA, que pode atribuir depois (D31)</td>
 </tr>
 <tr>
-<td>B6a</td>
-<td>Número inválido recusado sem criar caixa (BE-13)</td>
-</tr>
-<tr>
 <td>B6b</td>
 <td>Lia exposta com as escolhas iguais à foto e sem instrução (BE-17)</td>
 </tr>
@@ -2652,13 +2630,14 @@ produção: o volume é baixo (05/10: Clara com 3 conversas em 7 dias; Lia com 2
       editar/só ver/admin; aprovação visual explícita do Rodrigo registrada.
 - [ ] Todas as telas, estados e diálogos de §6 implementados e com a flag ligada na conta 16.
 - [ ] Matriz §6.5 sem nenhuma linha "nenhum leitor" sem decisão aplicada; máquina de estados §6.6 coberta por spec.
-- [ ] CA-GERAL, CA-LISTA, CA-CRIAR (ESC/CON/TES/LIG/PRO), CA-PAINEL (RES/PTES/SAB/OND/AJU/FER), CA-CONECTAR, CA-CONVERSA, CA-BE:
+- [ ] CA-GERAL, CA-LISTA, CA-CRIAR (ESC/CON/TES/LIG/PRO), CA-PAINEL (RES/PTES/SAB/OND/AJU/FER), CA-CANAIS, CA-CONVERSA, CA-BE:
       100% atendidos, cada um com evidência (spec, captura ou passo manual) no PR que o entregou.
 - [ ] CA-VISUAL-01..05 aprovados; página lado a lado protótipo × produto aprovada pelo Rodrigo.
 - [ ] Decisões D1–D35 registradas com a opção escolhida e implementadas conforme decidido.
 - [ ] Nenhum controle decorativo (CA-GERAL-14).</p>
 <p><strong>Qualidade</strong>
-- [ ] Cada PR passou pelo protocolo de revisão (§10.3); todo achado da rodada 2 tem registro de causa raiz em <code>docs/audit/</code>.
+- [ ] Cada PR passou pelo protocolo de revisão (§10.3); falhas de testes, lint e build foram tratadas antes da revisão e
+      não contam como rodada; achados que exigiram a revisão 3 têm registro de causa raiz em <code>docs/audit/</code>.
 - [ ] Falhas de segurança fechadas e provadas: BE-19 (chaves de config pelo PATCH) e BE-25 (conversas de outras caixas), com
       Q12 tratada com 🟢.
 - [ ] CI verde em todos os PRs (RSpec, Vitest, trava, central, fork-i18n) e, localmente, ESLint sem aviso, Rubocop limpo,
@@ -2851,14 +2830,7 @@ produção: o volume é baixo (05/10: Clara com 3 conversas em 7 dias; Lia com 2
 <td>Onde atende</td>
 <td><code>PanelWhereServes</code></td>
 <td><code>PanelChannels</code></td>
-<td><code>channels</code></td>
-<td>F6</td>
-</tr>
-<tr>
-<td>Conectar WhatsApp</td>
-<td><code>ConnectWhatsappPage</code>, <code>QrPanel</code></td>
-<td><code>ConnectionPage.vue</code>, <code>wahaQrWindow</code> (somente o fluxo antigo equivalente; o fallback sem equivalente valida a origem interna/lista)</td>
-<td><code>waha_inboxes</code></td>
+<td><code>channels</code> + atalho para settings_inbox_new quando aplicável</td>
 <td>F6</td>
 </tr>
 <tr>
@@ -3124,7 +3096,7 @@ correção, escrita ou limpeza em produção.</p>
 <td>Gate de telas reais e cenários</td>
 <td>§10.1 gate, §10.2 passo 5, §12 Escopo e <a href="aceite-telas-reais.md"><code>aceite-telas-reais.md</code></a></td>
 <td>(a–d) de produção não se aplica; a prova é local, com capturas e execução da jornada</td>
-<td>14 grupos do aceite; 1440/400 px; claro/escuro; editar/só ver/admin; carregando/vazio/erro/sucesso</td>
+<td>13 grupos do aceite; 1440/400 px; claro/escuro; editar/só ver/admin; carregando/vazio/erro/sucesso</td>
 </tr>
 <tr>
 <td>Segurança B1 ainda aberta</td>
@@ -3158,6 +3130,14 @@ correção, escrita ou limpeza em produção.</p>
 <td>Só nomes de chave e contagens; sem telefones/valores; Q12b fora do escopo</td>
 </tr>
 </tbody>
-</table></div></article>
+</table></div>
+<h3 id="151e-revisao-explicita-de-d7-07102026">15.1e Revisão explícita de D7 (07/10/2026)</h3>
+<p>Rodrigo retirou a decisão de conectar WhatsApp dentro da área Agentes. A conexão continua na área existente de Canais/Caixas de
+entrada (settings_inbox_list, accounts/:accountId/settings/inboxes; cadastro em settings_inbox_new). Ligue e Onde atende somente
+escolhem e associam canais já conectados/elegíveis; sem canal, preservam o agente salvo e orientam/atalham para Canais conforme
+a permissão. O fluxo de número, QR, waha_inboxes#create, rota de conexão e parâmetro from foi removido das obrigações
+normativas de Agentes. O achado F0-FINAL-01 continua válido como registro histórico do contrato anterior, mas deixou de exigir
+correção porque a decisão que o originava foi removida; isso não é aprovação retroativa da revisão final.</p>
+<p>Fonte da decisão e da consistência: docs/audit/2026-10-07-agentes-whatsapp-area-canais.md.</p></article>
   </main>
 </div>

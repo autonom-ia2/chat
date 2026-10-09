@@ -41,7 +41,7 @@ Etapas visuais da jornada: `Escolha → Conte → Teste → Ligue → Pronto`. M
 
 “Ligue” é a etapa visual do estado E4: o agente foi testado e está pronto para ligar. E5 começa quando a operação de ligar conclui no backend; “Pronto” deve refletir essa confirmação. Falha na navegação não desfaz nem duplica a operação concluída. E6 é o estado pausado. O estado de começo que falhou (`E1x`) não cria rascunho. O rascunho manual sem instrução é `E2m`: a lista mostra “Falta terminar · Falta escrever as instruções”, sem prazo de limpeza; “Continuar” leva a Ajustes › O que faz, e a pessoa precisa escrever a instrução para seguir até o ar. Depois de estar no ar, o agente nunca volta a ser mostrado como “Falta terminar”. Toda mudança anterior ao ar que altera o que ele responde ou por onde responde invalida o teste atual; religar um pausado exige instrução, sem exigir um teste novo. A fonte normativa é `docs/agentes-ia-redesign/PRD.md:404-461`.
 
-O mapa navegável e a preparação de cada estado estão em `docs/agentes-ia-redesign/mockup/src/screens-extra.js:74-108`. A implementação real não deve levar para o produto a faixa de protótipo, o mapa, a barra de estados ou o seletor de perfil.
+O mapa navegável e a preparação de cada estado estão em `docs/agentes-ia-redesign/mockup/src/screens-extra.js:46-80`. A implementação real não deve levar para o produto a faixa de protótipo, o mapa, a barra de estados ou o seletor de perfil.
 
 ## Checklist de cenários
 
@@ -117,7 +117,7 @@ O mapa navegável e a preparação de cada estado estão em `docs/agentes-ia-red
 - [ ] **Alvo:** canal livre, canais ocupados, nenhum canal livre, falha ao ligar, canal sem horário, teste ausente e editor sem ser administrador.
 - [ ] **Motivo:** a tela precisa responder “onde ele atende” e “quando atende” antes do clique que coloca o agente no ar.
 - [ ] **Afirmação dura local:** canais ocupados ficam desabilitados com a explicação de exclusividade; canal livre pode ser escolhido; ausência de canal, falta de teste, falha e falta de permissão mostram a orientação correta; o resumo acompanha a opção de horário escolhida; o botão de ligar é único e coerente com o estado.
-- [ ] **Dispensa:** perguntas para puxar conversa não fazem parte do produto; conectar WhatsApp é ação de administrador; o ajudante interno não exibe canal nem horário.
+- [ ] **Dispensa:** perguntas para puxar conversa não fazem parte do produto; a conexão de WhatsApp continua em Canais/Caixas de entrada; sem canal, Agentes preserva o agente e orienta para Canais; o ajudante interno não exibe canal nem horário.
 - **Fonte:** `mockup/src/screens-build.js:169-218`, `mockup/src/data.js:21-26`, PRD §6.2.4, §6.4, BE-10, BE-11 e §11.6.
 
 ### 10. Resultado de ligar e deixar pronto
@@ -144,15 +144,7 @@ O mapa navegável e a preparação de cada estado estão em `docs/agentes-ia-red
 - [ ] **Dispensa:** “Ferramentas” não se aplica à Lia mesmo no perfil SuperAdmin; “Onde atende” não se aplica ao interno; a criação da Lia não é reencenada pelo construtor comum.
 - **Fonte:** `mockup/src/screens-panel.js:11-31`, `mockup/src/screens-panel.js:104-147`, `mockup/src/data.js:33-62`, PRD §6.3, §6.5, §6.7, D14 e BE-17.
 
-### 13. Conectar um WhatsApp
-
-- [ ] **Alvo:** informar número, número inválido, esperando leitura, verificando, conectando, conectado, código vencido e sessão desligada.
-- [ ] **Motivo:** conectar canal é uma etapa sensível para alguém sem conhecimento técnico e precisa indicar claramente o próximo toque.
-- [ ] **Afirmação dura local:** número inválido explica o formato; o QR mostra instruções em três passos; cada estado informa o que está acontecendo; código vencido oferece novo código; sessão desligada oferece reconexão; sucesso permite escolher o agente; pessoa sem permissão recebe orientação sem controle de escrita.
-- [ ] **Dispensa:** conexão real com WhatsApp e disponibilidade do número ficam fora do aceite local e entram no plano de validação do PR B6a; não simular uma conexão de produção.
-- **Fonte:** `mockup/src/screens-extra.js:1-26`, `mockup/src/screens-build.js:198-200`, PRD §6.4, D7, BE-13 e §11.6.
-
-### 14. Dentro da conversa, ajudante e resposta errada
+### 13. Dentro da conversa, ajudante e resposta errada
 
 - [ ] **Alvo:** conversa com ajudante, vazio sem ajudante, nota interna de passagem, menu de mensagem, cinco motivos de resposta errada e gaveta de resultados.
 - [ ] **Motivo:** são as peças que tornam a promessa do ajudante compreensível no lugar onde a equipe trabalha.
@@ -172,13 +164,13 @@ Estas diferenças são decisão do PRD e não devem ser tratadas como defeito vi
 - `needs_review` informa que o material ainda não é usado; a frase de versão vale apenas para instruções; “Sem dados” substitui zero de certeza média.
 - Conte mantém o campo depois das quatro respostas; o rascunho não nasce na Escolha; voltar ao modo guiado pede confirmação.
 - O teste do ajudante não mostra passagem para a equipe; o aviso de cotação aparece somente quando houver `skipped_tools`.
-- A Lia usa “jeito de cotar”; “Quando passa para a equipe” não aparece para ela; conectar WhatsApp exige administrador; a nota de passagem privada é nova.
+- A Lia usa “jeito de cotar”; “Quando passa para a equipe” não aparece para ela; a conexão de WhatsApp fica em Canais e Agentes só associa caixas já conectadas; a nota de passagem privada é nova.
 
 Fonte completa das divergências: `docs/agentes-ia-redesign/PRD.md:313-367`.
 
 ## Evidência mínima para fechar o aceite local
 
-- [ ] Demonstração ao vivo das 14 famílias acima nas telas reais em ambiente isolado.
+- [ ] Demonstração ao vivo das 13 famílias acima nas telas reais em ambiente isolado.
 - [ ] Capturas reais por tela/estado em `{1440, 400} × {claro, escuro}`, usando os perfis aplicáveis.
 - [ ] Registro dos caminhos percorridos e do resultado de cada afirmação dura; `PASS`, `FAIL` ou `BLOCKED`, sem omissão.
 - [ ] Comparação lado a lado com o protótipo, registrando divergências pela lista acima.

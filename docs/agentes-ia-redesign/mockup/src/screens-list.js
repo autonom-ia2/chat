@@ -1,6 +1,11 @@
 // ---------- Seus agentes ----------
 function agentLine(a) {
-  if (a.status === 'todo') return a.empty ? `<span>${icon('pencil-line')}Parou em "Conte". Guardado por 2 dias.</span>` : `<span>${icon('pencil-line')}Parou em "${esc(a.stepName)}". Fica guardado até você terminar ou excluir.</span>`;
+  if (a.status === 'todo') {
+    if (a.mode === 'manual') return `<span>${icon('pencil-line')}Falta escrever as instruções.</span>`;
+    if (a.testInvalidatedBy === 'material') return `<span>${icon('book-open')}${artigo(a).toUpperCase()} ${esc(a.name)} aprendeu um material novo. Teste de novo antes de ligar.</span>`;
+    if (a.testInvalidatedBy === 'person') return `<span>${icon('refresh-cw')}Parou em Teste · Algo mudou depois do teste.</span>`;
+    return a.empty ? `<span>${icon('pencil-line')}Parou em "Conte". Guardado por 2 dias.</span>` : `<span>${icon('pencil-line')}Parou em "${esc(a.stepName)}". Fica guardado até você terminar ou excluir.</span>`;
+  }
   if (a.status === 'ready') return `<span>${icon('plug-zap')}${a.actuation === 'internal' ? 'Falta ligar para a equipe usar' : 'Falta escolher onde atende'}</span>`;
   const parts = [];
   if (a.actuation === 'internal') parts.push(`<span>${icon('users')}Aparece ao lado das conversas da equipe</span>`);
@@ -16,8 +21,8 @@ function agentLine(a) {
 
 function agentCard(a) {
   let main;
-  if (a.status === 'todo') main = can() ? `<button class="btn primary" data-continue="${a.id}">Continuar</button>` : '';
-  else if (a.status === 'ready') main = can() ? `<button class="btn primary" data-continue="${a.id}">${a.actuation === 'internal' ? 'Ligar' : 'Escolher onde atende'}</button>` : '';
+  if (a.status === 'todo') main = can() ? `<button class="btn primary" data-continue="${a.id}">Continuar</button>` : `<button class="btn outline" data-open="${a.id}">Abrir</button>`;
+  else if (a.status === 'ready') main = can() ? `<button class="btn primary" data-continue="${a.id}">${a.actuation === 'internal' ? 'Ligar' : 'Escolher onde atende'}</button>` : `<button class="btn outline" data-open="${a.id}">Abrir</button>`;
   else main = `<button class="btn outline" data-open="${a.id}">Abrir</button>`;
   const tags = [];
   if (a.type === 'insurance_quote') tags.push('<span class="kind">Agente de Cotação</span>');

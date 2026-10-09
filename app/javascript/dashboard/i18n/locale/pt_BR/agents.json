@@ -202,6 +202,450 @@
         "PAUSED": "Agente pausado",
         "ACTIVATED": "Agente ativado",
         "ERROR": "Não foi possível mudar o estado do agente. Tente de novo."
+      },
+      "REDESIGN_STATUS": {
+        "ACTIVE": "Atendendo",
+        "PAUSED": "Pausado",
+        "TOGGLE_LABEL": "{status}: {name}"
+      },
+      "REDESIGN_TABS": {
+        "LABEL": "Seções do agente",
+        "PERFORMANCE": "Como está indo",
+        "TEST": "Testar",
+        "KNOWLEDGE": "O que sabe",
+        "CHANNELS": "Onde atende",
+        "TUNE": "Ajustes",
+        "TOOLS": "Ferramentas"
+      },
+      "REDESIGN_ACTIONS": {
+        "BACK": "Seus agentes",
+        "CONTINUE": "Continuar montagem",
+        "TEST": "Testar agente",
+        "EDIT": "Continuar ajustando",
+        "CONNECT": "Ligar"
+      },
+      "REDESIGN_PERFORMANCE": {
+        "TITLE": "Como está indo",
+        "DESCRIPTION": "Veja o que seu agente está fazendo e onde as conversas precisam de atenção.",
+        "CONVERSATIONS_HANDLED": "Conversas atendidas",
+        "REPLIES_SENT": "Respostas enviadas",
+        "HANDOFF_RATE": "% que passaram para a equipe ({count})",
+        "AVG_CONFIDENCE": "Certeza média nas respostas",
+        "KNOWLEDGE_RATE": "% que usaram seus materiais",
+        "OUTCOMES_TITLE": "Resultado das conversas",
+        "OUTCOMES_HINT": "Toque num número para ver as conversas.",
+        "TIMELINE_TITLE": "Dia a dia",
+        "TIMELINE_REPLIES": "Respostas",
+        "TIMELINE_HANDOFFS": "Passadas para a equipe",
+        "REASONS_TITLE": "Por que passou para a equipe",
+        "INTERNAL_TITLE": "Seu copiloto está pronto",
+        "INTERNAL_DESCRIPTION": "O {name} ajuda a equipe dentro das conversas. Os números de uso ainda não aparecem aqui.",
+        "OPEN_CONVERSATION": "Abrir uma conversa",
+        "QUOTE_NOTICE": "Os agentes de cotação mostram aqui as métricas reais de atendimento. Métricas de conhecimento e ensino não se aplicam.",
+        "TEACH": "Ensinar o agente",
+        "NO_DATA": "Sem dados",
+        "INTERNAL_NO_ACCESS": "Você não tem permissão para abrir uma conversa."
+      },
+      "REDESIGN_DRAWER": {
+        "HIDDEN": "Algumas conversas são de caixas que você não vê.",
+        "REASON": "Motivo: {reason}",
+        "SUGGESTION": "Correção sugerida: {text}",
+        "TEACH": "Ensinar a partir deste relato",
+        "OPEN": "Abrir conversa #{id}",
+        "STATUS_OPEN": "Aberta",
+        "STATUS_PENDING": "Pendente",
+        "STATUS_RESOLVED": "Resolvida",
+        "STATUS_SNOOZED": "Adiada",
+        "STATUS_UNKNOWN": "Desconhecida",
+        "LAST_ACTIVITY": "Última atividade:"
+      },
+      "REDESIGN_QUOTE_NOTICE": "A forma de cotar da {name} é mantida pela {installationName}. Você escolhe nome, horário, jeito de cotar e para quem ela responde. Conexão com as seguradoras fica em Cotação.",
+      "REDESIGN_QUOTE_LINK": "Abrir Cotação",
+      "REDESIGN_QUOTE_KNOWLEDGE": {
+        "TITLE": "O que a Lia cota",
+        "DESCRIPTION": "Estes são os ramos configurados para este agente de cotação.",
+        "EMPTY": "Nenhum ramo foi configurado para este agente ainda.",
+        "ERROR": "Não foi possível carregar os ramos. Tente novamente."
+      },
+      "REDESIGN_CHANNELS": {
+        "CURRENT_TITLE": "Onde {name} atende",
+        "CURRENT_DESCRIPTION": "Estas caixas de entrada já estão ligadas a {name}.",
+        "CONNECTED": "Conectado",
+        "EMPTY": "{name} ainda não está ligado a uma caixa de entrada.",
+        "ADD_TITLE": "Colocar em outro canal",
+        "ADD_DESCRIPTION": "Escolha uma caixa de entrada existente. Você pode ligar mais de uma.",
+        "ADD": "Colocar",
+        "ADD_NAMED": "Colocar em {channel}",
+        "REMOVE": "Remover",
+        "REMOVE_NAMED": "Remover {channel}",
+        "REMOVE_TITLE": "Remover esta caixa de entrada?",
+        "REMOVE_DESCRIPTION": "{name} deixa de responder em {channel}. As conversas ficam na caixa de entrada e a equipe pode continuar o atendimento.",
+        "OCCUPIED_TITLE": "Já estão em uso",
+        "OCCUPIED_AGENT": "Em uso por {name}",
+        "OCCUPIED_BOT": "Em uso por outro bot",
+        "INACTIVE": "Ative {name} antes de colocar em outra caixa de entrada.",
+        "NO_ELIGIBLE": "Não há caixas de entrada disponíveis para adicionar.",
+        "CENTRAL_HINT": "Números de WhatsApp e QR Codes são conectados em Canais. Aqui você liga caixas de entrada que já existem.",
+        "OPEN_CHANNELS": "Abrir Canais",
+        "LOADING": "Carregando caixas de entrada…",
+        "LOAD_ERROR": "Não foi possível carregar as caixas de entrada. Tente de novo.",
+        "ACTION_ERROR": "Não foi possível salvar a alteração. Tente de novo."
+      },
+      "REDESIGN_KNOWLEDGE": {
+        "TITLE": "O que sabe",
+        "DESCRIPTION": "Adicione o que {name} deve aprender e veja o que ele usa.",
+        "AGENT": "este agente",
+        "BASE_TITLE": "Base de conhecimento",
+        "BASE_HINT": "Veja quais materiais o agente já pode usar nas respostas.",
+        "COUNT": "{count} de {limit} materiais",
+        "LIMIT": "Chegou ao limite de 30 materiais. Tire um para colocar outro.",
+        "ADD": "Adicionar material",
+        "ADD_TITLE": "Adicionar material",
+        "ADD_LINK": "Um link",
+        "ADD_FILE": "Um arquivo",
+        "LINK_LABEL": "Link",
+        "LINK_PLACEHOLDER": "https://exemplo.com/pagina",
+        "FILE_LABEL": "Escolha um arquivo",
+        "FILE_PLACEHOLDER": "Escolha um arquivo PDF, Word, Excel, TXT, MD ou JSON",
+        "FORMATS": "PDF, Word, Excel, TXT, MD ou JSON · até 25 MB",
+        "WORD_EXCEL_NOTICE": "Arquivos Word e Excel podem demorar mais para processar.",
+        "URL_ERROR": "Digite uma URL http ou https válida.",
+        "FILE_TYPE_ERROR": "Escolha um arquivo PDF, Word, Excel, TXT, MD ou JSON.",
+        "FILE_SIZE_ERROR": "O arquivo precisa ter no máximo 25 MB.",
+        "ADD_ERROR": "Não foi possível adicionar este material. Tente de novo.",
+        "ERROR": "Não foi possível carregar os materiais. Tente de novo.",
+        "LOADING": "Carregando materiais…",
+        "RETRY": "Tentar de novo",
+        "EMPTY": "Nenhum material ainda. Sem material, {name} responde só com o que você contou na montagem.",
+        "MATERIAL": "Material",
+        "REMOVE": "Remover material",
+        "REMOVE_CONFIRM_TITLE": "Remover este material?",
+        "REMOVE_CONFIRM_DESC": "\"{name}\" e os trechos indexados sairão da base de conhecimento do agente. Não dá para desfazer.",
+        "REMOVE_CONFIRM_BUTTON": "Remover",
+        "REMOVE_ERROR": "Não foi possível remover este material. Tente de novo.",
+        "RESEND": "Enviar de novo",
+        "RESYNC_ERROR": "Não foi possível processar este material de novo. Tente novamente.",
+        "MATERIAL_STATES": {
+          "UPLOADING": "Enviando",
+          "READING": "Lendo",
+          "UNREADABLE": "Não deu para ler",
+          "NEEDS_ANOTHER_FILE": "Precisa de outro arquivo",
+          "NOT_REVIEWED": "Ainda não conferido",
+          "NOT_REVIEWED_DESC": "Lido, mas a conferência não terminou. O agente ainda não usa este material.",
+          "OUT_OF_BUSINESS_NOT_USED": "Não é sobre o seu negócio. O agente não usa este material.",
+          "OUT_OF_BUSINESS_NOT_USED_DESC": "O agente não usa este material.",
+          "OUT_OF_BUSINESS_USED": "Parece não ser sobre o seu negócio.",
+          "OUT_OF_BUSINESS_USED_DESC": "Enquanto não houver outro material, o agente ainda usa este.",
+          "READY": "Pronto"
+        },
+        "QUALITY_SCORE": "Nota {score} de 10",
+        "QUALITY_LABELS": {
+          "OTIMA": "Ótima",
+          "BOA": "Boa",
+          "FRACA": "Fraca"
+        },
+        "QUALITY_CONFIDENCE": {
+          "HIGH": "Certeza alta",
+          "MEDIUM": "Certeza média",
+          "LOW": "Certeza baixa"
+        },
+        "FAQ_TITLE": "Perguntas que a equipe respondeu",
+        "FAQ_DESCRIPTION": "Depois que uma conversa é resolvida, as perguntas respondidas pela equipe aparecem aqui. Aprove uma e o agente aprende.",
+        "FAQ_ON": "Sugestões da equipe ligadas",
+        "FAQ_OFF": "Sugestões da equipe desligadas",
+        "FAQ_EMPTY": "Nenhuma sugestão pendente.",
+        "FAQ_EMPTY_DISABLED": "Ligue as sugestões para receber perguntas de conversas resolvidas.",
+        "FAQ_VIEW_ONLY": "Só quem gerencia este agente pode revisar perguntas.",
+        "FAQ_ERROR": "Não foi possível carregar as perguntas. Tente de novo.",
+        "FAQ_TOGGLE_ERROR": "Não foi possível salvar essa configuração. Tente de novo.",
+        "FAQ_APPROVE_ERROR": "Não foi possível aprovar esta pergunta. Tente de novo.",
+        "FAQ_IGNORE_ERROR": "Não foi possível ignorar esta pergunta. Tente de novo.",
+        "FAQ_QUESTION": "Pergunta",
+        "FAQ_ANSWER": "Resposta",
+        "FAQ_APPROVE": "Aprovar",
+        "FAQ_EDIT_AND_APPROVE": "Editar e aprovar",
+        "FAQ_SAVE_AND_APPROVE": "Salvar e aprovar",
+        "FAQ_CANCEL": "Cancelar",
+        "FAQ_IGNORE": "Ignorar",
+        "FAQ_FROM_CONVERSATION": "Conversa #{id}",
+        "FAQ_LOAD_MORE": "Carregar mais",
+        "CONFIDENCE_LABEL": "Confiança da base de conhecimento",
+        "CONFIDENCE_VALUE": "{confidence}% · {quality}",
+        "CONFIDENCE_QUALITY": {
+          "GOOD": "boa",
+          "FAIR": "média",
+          "WEAK": "baixa"
+        }
+      },
+      "REDESIGN_TEST": {
+        "EYEBROW": "Teste privado",
+        "TITLE": "Teste {name} antes de alguém ver",
+        "NOTHING_EXTERNAL": "Nada disso vai para clientes de verdade.",
+        "PRIVATE_BADGE": "Teste · só você vê",
+        "NO_SCHEDULE": "No teste, horário e público não são aplicados. A primeira resposta já vem com o cumprimento.",
+        "INTERNAL_EXAMPLE": "Conversa de exemplo: pergunte como alguém da sua equipe perguntaria.",
+        "ASSEMBLING": "Este agente ainda está sendo montado. O teste pode não mostrar o jeito final.",
+        "NOT_RESPONDING": "O agente não conseguiu responder agora. Tente de novo.",
+        "RETRY": "Tentar de novo",
+        "DELAY": "Está demorando mais que o normal. Tente de novo.",
+        "RATE_LIMIT": "Você testou muitas vezes seguidas. Espere um minuto e tente de novo.",
+        "EMPTY_RESPONSE": "O agente não trouxe uma resposta. Tente de novo.",
+        "QUOTE_SKIPPED": "No teste a cotação não é feita de verdade: {name} conversa e pede os dados, mas não consulta as seguradoras.",
+        "VIEWER_TOOL_SKIPPED": "Neste teste, {name} não usou {tool}: só quem edita testa essa ação.",
+        "WRITES_EXTERNAL": "Ferramentas que gravam em outro sistema rodam de verdade no teste.",
+        "ERROR": "Não foi possível rodar este teste. Tente de novo.",
+        "LEGEND_TITLE": "Como ler o teste",
+        "LEGEND_CONFIDENCE": "Certeza",
+        "LEGEND_CONFIDENCE_DESC": "Quanto {name} confia na resposta. A regra de passar para a equipe decide se ela vai para a equipe.",
+        "LEGEND_CONFIDENCE_DESC_INTERNAL": "Quanto {name} confia na resposta.",
+        "LEGEND_CONFIDENCE_DESC_QUOTE": "Quanto {name} confia na resposta.",
+        "LEGEND_MATERIAL": "Material usado",
+        "LEGEND_MATERIAL_DESC": "Mostra de qual material veio a resposta.",
+        "LEGEND_HANDOFF": "Amarelo",
+        "LEGEND_HANDOFF_DESC": "Aqui a conversa iria para a equipe, e o motivo.",
+        "HANDOFF": "Aqui a conversa iria para a equipe.",
+        "HANDOFF_NO_REASON": "Sem motivo informado.",
+        "USED_MATERIAL": "Material usado",
+        "SKIPPED_TOOLS": "Algumas ferramentas foram puladas:",
+        "TOOL": "esta ferramenta",
+        "THINKING": "Pensando",
+        "CLEAR": "Limpar conversa",
+        "INPUT_PLACEHOLDER": "Pergunte como um cliente perguntaria…",
+        "SEND": "Enviar teste",
+        "ADD_IMAGE": "Anexar imagem",
+        "REMOVE_IMAGE": "Remover imagem",
+        "IMAGE_HINT": "Somente imagens · até 4 arquivos · 5 MB cada",
+        "CONFIDENCE": "Certeza",
+        "TEACH": "Ensinar algo que faltou"
+      },
+      "REDESIGN_SETTINGS": {
+        "TITLE": "Ajustes",
+        "DESCRIPTION": "Mude uma parte por vez. Cada seção é salva separadamente.",
+        "SAVE": "Salvar",
+        "SAVED": "Salvo.",
+        "SAVE_ERROR": "Não foi possível salvar esta mudança.",
+        "CANCEL": "Cancelar",
+        "CONFIRM": "Confirmar",
+        "CUSTOMER_ONLY_NOTICE": "As seções abaixo valem só quando {name} atende clientes. No painel da equipe, isto não se aplica.",
+        "IDENTITY": {
+          "TITLE": "Foto e nome",
+          "DESCRIPTION": "Escolha como este agente aparece para a equipe e para os clientes.",
+          "PHOTO": "Foto",
+          "REMOVE_PHOTO": "Tirar foto",
+          "NAME": "Nome",
+          "NAME_REQUIRED": "Digite um nome.",
+          "VOICE_LABEL": "Tratar por",
+          "VOICE": {
+            "SHE": "Ela",
+            "HE": "Ele"
+          },
+          "AVATAR_SAVED": "Foto salva.",
+          "AVATAR_SAVE_ERROR": "Não foi possível salvar a foto.",
+          "AVATAR_REMOVED": "Foto tirada.",
+          "AVATAR_REMOVE_ERROR": "Não foi possível tirar a foto."
+        },
+        "INSTRUCTIONS": {
+          "TITLE": "O que faz",
+          "DESCRIPTION": "Mude conversando ou escreva as instruções você mesmo.",
+          "GUIDED": "Guiado",
+          "MANUAL": "Escrito por você",
+          "MODE_LABEL": "Modo de instrução de {name}",
+          "NO_SUMMARY": "Ainda não há resumo.",
+          "NO_GUIDED_VERSION": "Este agente foi escrito à mão. Para mudar conversando, salve primeiro uma versão guiada.",
+          "RECONVERSE": "Mudar conversando",
+          "RETURN_GUIDED": "Voltar ao guiado",
+          "RECONVERSE_TITLE": "Mudar conversando",
+          "RESUME_ERROR": "Não foi possível abrir a conversa.",
+          "SEND_ERROR": "Não foi possível enviar a mensagem.",
+          "ATTACHED": "Material adicionado.",
+          "ATTACH_ERROR": "Não foi possível adicionar o material.",
+          "WRITE_MANUALLY": "Escrever as instruções eu mesmo",
+          "MANUAL_LABEL": "Instruções",
+          "MANUAL_PLACEHOLDER": "Escreva como este agente deve atender.",
+          "MANUAL_WARNING": "O texto guiado é trocado pelo que você escrever. As proteções de segurança continuam ativas.",
+          "EMPTY": "Escreva as instruções antes de salvar.",
+          "CONFIRM_TITLE": "Mudar o modo das instruções",
+          "CONFIRM_MANUAL": "O texto guiado será trocado pelo que você escrever. O campo abre vazio.",
+          "CONFIRM_GUIDED": "O texto que você escreveu deixa de valer e a última versão guiada será restaurada."
+        },
+        "ACTUATION": {
+          "TITLE": "Onde atua",
+          "DESCRIPTION": "Escolha se este agente atende clientes, ajuda a equipe ou faz os dois.",
+          "EXTERNAL": "Clientes",
+          "EXTERNAL_DESC": "Responde nos canais conectados.",
+          "INTERNAL": "A equipe",
+          "INTERNAL_DESC": "Ajuda dentro das conversas e não atende clientes.",
+          "BOTH": "Os dois",
+          "BOTH_DESC": "Atende clientes e ajuda a equipe.",
+          "UNAVAILABLE_LABEL": "Indisponível",
+          "UNAVAILABLE": "O ajudante da equipe ainda não está disponível para esta conta.",
+          "CHANNEL_WARNING": "Tire este agente dos canais antes de escolher A equipe."
+        },
+        "SPEECH": {
+          "TITLE": "Como fala",
+          "DESCRIPTION": "Estas mensagens são usadas na conversa com o cliente.",
+          "GREETING": "Primeira mensagem",
+          "GREETING_PLACEHOLDER": "O que deve dizer primeiro?",
+          "FALLBACK": "Quando não souber responder",
+          "FALLBACK_INTERNAL": "Quando não souber, o ajudante mostra à equipe",
+          "FALLBACK_PLACEHOLDER": "O que deve dizer quando não souber?",
+          "TONE": "Jeito de falar",
+          "CUSTOM": "Do meu jeito",
+          "CUSTOM_LABEL": "Descreva o jeito",
+          "TONES": {
+            "FRIENDLY": "Amigável",
+            "PROFESSIONAL": "Profissional",
+            "NEUTRAL": "Neutro",
+            "PLAYFUL": "Descontraído"
+          }
+        },
+        "HANDOFF": {
+          "TITLE": "Quando passa para a equipe",
+          "DESCRIPTION": "Escolha quando uma pessoa assume e para onde a conversa vai.",
+          "QUOTE_TITLE": "Para quem vai a conversa",
+          "QUOTE_DESCRIPTION": "Escolha a pessoa ou o time que recebe um pedido de ajuda.",
+          "STRATEGY_LOW": "Quando estiver em dúvida",
+          "STRATEGY_LOW_DESC": "Chama a equipe quando não tem segurança na resposta.",
+          "STRATEGY_ALWAYS": "Sempre oferecer uma pessoa",
+          "STRATEGY_ALWAYS_DESC": "Oferece ao cliente a opção de falar com alguém.",
+          "STRATEGY_NEVER": "Nunca oferecer uma pessoa",
+          "STRATEGY_NEVER_DESC": "Ainda passa quando o cliente pede.",
+          "TARGET_LABEL": "Para quem vai",
+          "TARGET": {
+            "ANY": "Quem estiver livre",
+            "MEMBER": "Uma pessoa",
+            "TEAM": "Um time"
+          },
+          "MEMBER_LABEL": "Pessoa",
+          "TEAM_LABEL": "Time",
+          "MEMBER_PLACEHOLDER": "Escolha a pessoa",
+          "TEAM_PLACEHOLDER": "Escolha o time",
+          "TARGET_REQUIRED": "Escolha para quem a conversa deve ir.",
+          "LOADING_TARGETS": "Carregando pessoas e times…",
+          "LOAD_ERROR": "Não foi possível carregar pessoas e times. Tente de novo.",
+          "TARGET_INVALID": "Este alvo não está mais disponível. A conversa vai para quem estiver livre."
+        },
+        "AUDIENCE": {
+          "TITLE": "Para quem responde",
+          "DESCRIPTION": "Escolha se responde todo mundo ou só alguns clientes."
+        },
+        "SCHEDULE": {
+          "TITLE": "Quando atende",
+          "DESCRIPTION": "Escolha quando este agente responde nos canais conectados.",
+          "LOADING_CHANNELS": "Verificando canais conectados…",
+          "CHANNELS_ERROR": "Não foi possível verificar os canais.",
+          "MISSING_WARNING": "Estes canais não têm horário definido. O agente responde sempre neles."
+        },
+        "VERSIONS": {
+          "TITLE": "Versões anteriores",
+          "DESCRIPTION": "Cada mudança nas instruções fica guardada aqui.",
+          "LOADING": "Carregando versões…",
+          "LOAD_ERROR": "Não foi possível carregar as versões.",
+          "EMPTY": "Ainda não há versões anteriores.",
+          "CURRENT": "Atual",
+          "AUTOMATIC": "Automático",
+          "META": "{date} · {author}",
+          "RESTORE": "Voltar para esta versão",
+          "RESTORED": "Versão restaurada.",
+          "RESTORE_ERROR": "Não foi possível restaurar esta versão.",
+          "CONFIRM_TITLE": "Voltar para esta versão",
+          "CONFIRM_DESCRIPTION": "A instrução atual será trocada por esta versão.",
+          "REASONS": {
+            "BUILDER": "Mudança conversando",
+            "BEFORE_MANUAL": "Antes de escrever eu mesmo",
+            "MANUAL_EDIT": "Edição manual",
+            "ROLLBACK": "Versão restaurada",
+            "KB_REFRESH": "Material novo entrou",
+            "OTHER": "Mudança nas instruções"
+          }
+        },
+        "QUOTE": {
+          "TITLE": "Jeito de cotar",
+          "DESCRIPTION": "Quando {name} explica a cobertura, sempre usa o fluxo de cotação configurado.",
+          "CONSULTIVE": "Consultivo",
+          "CONSULTIVE_DESC": "Explica o que o cliente vai receber antes de cotar.",
+          "OBJECTIVE": "Objetivo",
+          "OBJECTIVE_DESC": "Cota primeiro. Explica se perguntarem.",
+          "SCHEDULE": "Horário que informa ao cliente",
+          "SCHEDULE_PLACEHOLDER": "Ex.: de segunda a sexta, das 09h às 18h"
+        },
+        "LIFECYCLE": {
+          "TITLE": "Status do agente",
+          "DESCRIPTION": "Ao pausar, as conversas abertas voltam para a equipe. Materiais e histórico continuam guardados.",
+          "INTERNAL_DESCRIPTION": "Ao pausar, o ajudante sai do painel de conversas. Materiais e histórico continuam guardados.",
+          "QUOTE_DESCRIPTION": "Ao pausar, as conversas voltam para a equipe. Ajustes e histórico continuam guardados.",
+          "CONTINUE": "Continuar montagem",
+          "PAUSE": "Pausar agente",
+          "ACTIVATE": "Ligar agente",
+          "DELETE": "Excluir agente",
+          "PAUSE_TITLE": "Pausar agente",
+          "PAUSE_DESCRIPTION": "{name} vai parar de atender. As conversas abertas voltam para a equipe.",
+          "ACTIVATE_TITLE": "Ligar agente",
+          "ACTIVATE_DESCRIPTION": "{name} volta a atender usando as instruções guardadas.",
+          "DELETE_TITLE": "Excluir agente",
+          "DELETE_DESCRIPTION": "{name} sai da lista e para de atender. Materiais, vínculos e histórico continuam guardados.",
+          "PAUSED": "Agente pausado.",
+          "ACTIVATED": "Agente ligado.",
+          "DELETED": "Agente excluído.",
+          "ACTION_ERROR": "Não foi possível mudar o status do agente."
+        }
+      },
+      "REDESIGN_TOOLS": {
+        "TITLE": "Ferramentas",
+        "DESCRIPTION": "Conecte uma ação externa segura quando o agente precisar de informação de outro sistema.",
+        "ACCESS": "Só um administrador da plataforma pode gerenciar ferramentas.",
+        "QUOTE_HIDDEN": "O agente de cotação usa as próprias ferramentas.",
+        "NEW": "Nova ferramenta",
+        "CREATE_TITLE": "Nova ferramenta",
+        "EDIT_TITLE": "Editar ferramenta",
+        "NAME": "Nome",
+        "SLUG": "Identificador",
+        "SLUG_METHOD": "{slug} · {method}",
+        "WHEN": "Quando usar",
+        "METHOD": "Método",
+        "URL": "Endereço",
+        "BODY": "Corpo JSON",
+        "BODY_PLACEHOLDER": "Corpo opcional da requisição",
+        "HEADERS": "Cabeçalhos",
+        "HEADER_NAME": "Nome do cabeçalho",
+        "HEADER_VALUE": "Valor do cabeçalho",
+        "SECRET": "Segredo",
+        "ADD_HEADER": "Adicionar cabeçalho",
+        "NO_HEADERS": "Nenhum cabeçalho adicionado.",
+        "PARAMETERS": "Informações pedidas ao cliente",
+        "PARAMETER_NAME": "Nome",
+        "PARAMETER_TYPE": "Tipo",
+        "PARAMETER_DESCRIPTION": "Descrição",
+        "REQUIRED": "Obrigatório",
+        "ADD_PARAMETER": "Adicionar informação",
+        "NO_PARAMETERS": "Nenhuma informação pedida ao cliente.",
+        "REMOVE": "Tirar",
+        "ENABLED": "Ligada",
+        "DISABLED": "Desligada",
+        "TOGGLE_LABEL": "Ligar ou desligar {name}",
+        "TEST": "Testar",
+        "TEST_TITLE": "Testar ferramenta",
+        "TEST_DESCRIPTION": "Preencha as informações que esta ferramenta precisa antes de testar.",
+        "TEST_REQUIRED": "Preencha {name} antes de testar.",
+        "EDIT": "Mudar",
+        "DELETE": "Excluir",
+        "LOADING": "Carregando ferramentas…",
+        "LOAD_ERROR": "Não foi possível carregar as ferramentas.",
+        "RETRY": "Tentar de novo",
+        "EMPTY": "Ainda não há ferramentas.",
+        "LIMIT": "Você pode adicionar até 10 ferramentas.",
+        "STOCK_HINT": "Comece pelo modelo de consulta de estoque.",
+        "STOCK_TEMPLATE": "Começar pelo modelo de estoque",
+        "STOCK_NAME": "Consulta de estoque",
+        "STOCK_DESCRIPTION": "Consulta o estoque disponível pelo termo informado pelo cliente.",
+        "STOCK_PARAM_DESCRIPTION": "Termo principal da busca informado pelo cliente",
+        "SAVED": "Ferramenta salva.",
+        "SAVE_ERROR": "Não foi possível salvar a ferramenta.",
+        "DELETED": "Ferramenta excluída.",
+        "DELETE_TITLE": "Excluir ferramenta",
+        "DELETE_DESCRIPTION": "{name} deixa de ficar disponível para o agente.",
+        "DELETE_ERROR": "Não foi possível excluir a ferramenta.",
+        "TEST_ERROR": "O teste da ferramenta falhou."
       }
     },
     "TEST": {
@@ -452,12 +896,14 @@
     "PERFORMANCE": {
       "RANGE": {
         "7D": "Últimos 7 dias",
-        "30D": "Últimos 30 dias"
+        "30D": "Últimos 30 dias",
+        "LABEL": "Período"
       },
       "STATS": {
         "CONVERSATIONS": "Conversas atendidas",
         "REPLIES": "Respostas enviadas",
         "HANDOFF_RATE": "Taxa de transferência",
+        "HANDOFF_RATE_VALUE": "{rate} · {count}",
         "AVG_CONFIDENCE": "Confiança média",
         "KNOWLEDGE_RATE": "Taxa de respostas com conhecimento"
       },
@@ -465,12 +911,13 @@
         "TITLE": "Atividade",
         "REPLIES": "Respostas",
         "HANDOFFS": "Transferências",
-        "BAR_ARIA": "{date}: {replies} respostas, {handoffs} transferências"
+        "BAR_ARIA": "{date}: {replies} respostas, {handoffs} transferências",
+        "TOTALS_ARIA": "{replies} respostas e {handoffs} transferências em {period}"
       },
       "REASONS": {
         "TITLE": "Principais motivos de transferência",
         "OTHER": "Outro / não especificado",
-        "EMPTY": "Nenhuma transferência neste período.",
+        "EMPTY": "Nenhuma conversa foi para a equipe neste período.",
         "CODES": {
           "low_confidence": "Baixa confiança",
           "ai_unavailable": "IA indisponível",
@@ -479,7 +926,8 @@
           "policy": "Política",
           "audience": "Fora do público-alvo",
           "schedule": "Fora do horário de atuação",
-          "other": "Outro / não especificado"
+          "other": "Outro / não especificado",
+          "escolhas_incompletas": "Escolhas incompletas"
         }
       },
       "INSIGHT": {
@@ -501,11 +949,15 @@
         "SUBTITLE": "{count} conversa | {count} conversas",
         "LIMIT_NOTE": "mostrando as {limit} mais recentes",
         "EMPTY": "Nenhuma conversa com este resultado no período.",
-        "ERROR": "Não foi possível carregar as conversas. Tente novamente."
+        "ERROR": "Não foi possível carregar as conversas. Tente novamente.",
+        "SUBTITLE_PERIOD": "{count} conversas · últimos {days} dias"
       },
       "EMPTY": "Seu agente está pronto — as métricas aparecem aqui após as primeiras conversas. Enquanto isso, experimente na aba Testar.",
       "ERROR": "Não foi possível carregar os dados de desempenho.",
-      "RETRY": "Tentar novamente"
+      "RETRY": "Tentar novamente",
+      "REDESIGN_EMPTY_WEEK": "Sem dados nesta semana ainda.",
+      "EMPTY_WEEK_ACTION": "Ver 30 dias",
+      "EMPTY_TOTAL_ACTION": "Testar"
     },
     "AUDIENCE": {
       "TITLE": "Público-alvo",
@@ -584,6 +1036,338 @@
       "ACTUATION_INTERNAL": "Interno",
       "ACTUATION_BOTH": "Ambos",
       "INTERNAL_COPILOT": "Copiloto da equipe"
+    },
+    "V2": {
+      "status": {
+        "active": "Atendendo",
+        "paused": "Pausado",
+        "todo": "Falta terminar",
+        "ready": "Pronto para ligar"
+      },
+      "steps": {
+        "label": "Etapas",
+        "stepLabel": "Etapa {number}: {label}",
+        "choice": "Escolha",
+        "tell": "Conte",
+        "test": "Teste",
+        "live": "Ligue"
+      },
+      "list": {
+        "title": "Seus agentes",
+        "description": "Eles respondem seus clientes e chamam alguém da equipe quando precisam.",
+        "loading": "Carregando seus agentes",
+        "ariaLabel": "Agentes",
+        "internalContext": "Aparece ao lado das conversas da equipe",
+        "noChannel": "Sem canal: ninguém fala com {pronoun}",
+        "channel": "{name}",
+        "channelMore": "{name} e mais {more}",
+        "weekStats": "Esta semana: {replies} respostas · passou {handoffs} para a equipe",
+        "monthStats": "Nada esta semana · {replies} respostas em 30 dias",
+        "monthStatsFull": "30 dias: {replies} respostas · passou {handoffs} para a equipe",
+        "noConversations": "Ainda sem conversas",
+        "viewerHint": "Você pode ver e testar os agentes. Peça a quem administra a conta para criar ou mudar um.",
+        "pauseNotice": "Pausou um agente? As conversas que estavam com ele vão para a equipe na hora, e as novas chegam direto para as pessoas."
+      },
+      "summary": {
+        "label": "Resumo",
+        "active": "{count} atendendo",
+        "paused": "{count} pausado(s)",
+        "toFinish": "{count} para terminar"
+      },
+      "actions": {
+        "create": "Criar agente",
+        "open": "Abrir",
+        "continue": "Continuar",
+        "chooseChannel": "Escolher onde atende",
+        "connect": "Ligar",
+        "toggle": "{status}: {name}",
+        "more": "Mais opções de {name}",
+        "deleteDraft": "Excluir rascunho",
+        "pause": "Pausar",
+        "cancel": "Cancelar",
+        "retry": "Tentar de novo"
+      },
+      "empty": {
+        "eyebrow": "Agentes",
+        "title": "Um agente responde seus clientes enquanto você trabalha",
+        "description": "Você conta como é o seu negócio, testa as respostas e liga em um canal que já existe. Quando ele não souber, chama alguém da equipe.",
+        "create": "Criar meu primeiro agente",
+        "viewer": "Ainda não há agentes nesta conta. Quem administra a conta pode criar o primeiro.",
+        "modelsTitle": "Comece por um destes",
+        "modelsDescription": "Cada um já vem com as perguntas certas. Você ajusta tudo depois."
+      },
+      "models": {
+        "support": {
+          "title": "Tirar dúvidas",
+          "description": "Responde perguntas comuns e resolve pedidos simples.",
+          "example": "Ex.: horário, preços, como funciona"
+        },
+        "sdr": {
+          "title": "Qualificar contatos",
+          "description": "Conversa com quem chega, entende o interesse e passa as boas oportunidades para a equipe.",
+          "example": "Ex.: quem pediu orçamento"
+        },
+        "reception": {
+          "title": "Receber e encaminhar",
+          "description": "Dá boas-vindas, entende o assunto e manda para a pessoa certa.",
+          "example": "Ex.: vendas, financeiro ou suporte"
+        }
+      },
+      "badges": {
+        "insurance": "Agente de Cotação",
+        "internal": "Ajuda a equipe",
+        "both": "Clientes e equipe"
+      },
+      "states": {
+        "E1": {
+          "context": "Guardado por {days} dias"
+        },
+        "E2": {
+          "context": "Parou em Conte. Fica guardado até você terminar ou excluir."
+        },
+        "E2m": {
+          "context": "Falta escrever as instruções."
+        },
+        "E4": {
+          "internalContext": "Falta ligar para a equipe usar",
+          "externalContext": "Falta escolher onde atende"
+        }
+      },
+      "invalidation": {
+        "article": {
+          "male": "O",
+          "female": "A"
+        },
+        "pronoun": {
+          "male": "ele",
+          "female": "ela"
+        },
+        "material": "{article} {name} aprendeu um material novo. Teste de novo antes de ligar.",
+        "person": "Parou em Teste · Algo mudou depois do teste."
+      },
+      "dialog": {
+        "pauseTitle": "Pausar este agente?",
+        "pauseDescription": "As conversas novas vão direto para a equipe e as conversas atuais serão transferidas.",
+        "pauseInternalDescription": "O {name} some do painel das conversas até você ligar de novo.",
+        "deleteTitle": "Excluir este rascunho?",
+        "deleteDescription": "O rascunho sai da lista."
+      },
+      "errors": {
+        "loadTitle": "Não deu para carregar seus agentes",
+        "loadDescription": "Pode ser a internet. Seus agentes continuam atendendo normalmente.",
+        "refresh": "Não foi possível atualizar a lista. Os cartões abaixo podem estar desatualizados.",
+        "stale": "A mudança foi salva, mas não foi possível atualizar a lista. Os cartões abaixo podem estar desatualizados.",
+        "resume": "Não foi possível reabrir esta etapa. Nada novo foi criado; tente novamente pela lista.",
+        "update": "Não foi possível mudar este agente. Tente novamente.",
+        "delete": "Não foi possível excluir este rascunho. Tente novamente."
+      }
+    },
+    "CREATION": {
+      "choice": {
+        "eyebrow": "COMECE AQUI",
+        "title": "O que seu agente deve fazer?",
+        "description": "Escolha um ponto de partida. Você pode mudar os detalhes depois.",
+        "modelsLabel": "Pontos de partida do agente",
+        "selected": "Boa escolha. Continue quando estiver pronto.",
+        "chooseHint": "Escolha uma opção para continuar.",
+        "models": {
+          "support": {
+            "title": "Tirar dúvidas",
+            "description": "Responde perguntas comuns e resolve pedidos simples.",
+            "example": "Ex.: horário, preços, como funciona"
+          },
+          "sdr": {
+            "title": "Qualificar contatos",
+            "description": "Conversa com quem chega, entende o interesse e passa as boas oportunidades para a equipe.",
+            "example": "Ex.: quem pediu orçamento"
+          },
+          "reception": {
+            "title": "Receber e encaminhar",
+            "description": "Dá boas-vindas, entende o assunto e manda para a pessoa certa.",
+            "example": "Ex.: vendas, financeiro ou suporte"
+          },
+          "onboarding": {
+            "title": "Ajudar depois da venda",
+            "description": "Ajuda o cliente novo nos primeiros passos e tira dúvidas de uso.",
+            "example": "Ex.: boas-vindas e primeiro acesso"
+          },
+          "scheduler": {
+            "title": "Marcar horários",
+            "description": "Pergunta o melhor dia e horário e deixa tudo pronto para confirmar.",
+            "example": "Ex.: reunião, visita ou demonstração"
+          },
+          "reactivation": {
+            "title": "Trazer clientes de volta",
+            "description": "Fala com quem sumiu e reabre a conversa com a equipe.",
+            "example": "Ex.: quem não responde há 30 dias"
+          },
+          "internal": {
+            "title": "Ajudar minha equipe",
+            "description": "Fica dentro das conversas e ajuda quem atende. Nunca fala com clientes."
+          },
+          "custom": {
+            "title": "Outro trabalho",
+            "description": "Você descreve com suas palavras o que este agente deve fazer."
+          }
+        }
+      },
+      "tell": {
+        "eyebrow": "CONTE",
+        "title": "Conte ao agente como ajudar",
+        "description": "Responda às perguntas com suas palavras. Você pode adicionar arquivos ou links quando ajudarem.",
+        "conversation": "Conversa",
+        "conversationHint": "Você pode mudar suas respostas depois.",
+        "knowsTitle": "O que ele sabe",
+        "knowsInternalTitle": "Como ele ajuda a equipe",
+        "knowsDescription": "Essas respostas formam a primeira versão do agente.",
+        "knowLabels": {
+          "negocio": "O que a empresa faz",
+          "publico": "Com quem ele fala",
+          "quando_chama": "Quando chama a equipe",
+          "nome": "Nome"
+        },
+        "answer": "Resposta",
+        "notAnswered": "Ainda não respondido",
+        "waitingForAnswers": "As perguntas aparecem aqui conforme você responde.",
+        "reusableTitle": "Material de outro agente",
+        "reusableDescription": "Use um material pronto desta conta sem copiar conteúdo privado.",
+        "reusableSingle": "Há um material pronto disponível: {material}.",
+        "reusableEmpty": "Ainda não há material reutilizável disponível.",
+        "reusableLoading": "Consultando materiais de outros agentes…",
+        "reusableError": "Não foi possível consultar os materiais de outros agentes. Você pode adicionar um aqui.",
+        "suggestedLinks": "Links sugeridos",
+        "suggestedLinksHint": "O Construtor encontrou estas referências na conversa.",
+        "continueHint": "Quando as perguntas terminarem, teste o agente antes de ligar."
+      },
+      "test": {
+        "eyebrow": "TESTE",
+        "title": "Experimente o agente antes de alguém vê-lo",
+        "description": "Mude a forma como ele se apresenta e envie uma mensagem de teste. Um teste aprovado é necessário antes de ligar.",
+        "presentationTitle": "Como o agente se apresenta",
+        "presentationDescription": "Esses detalhes aparecem para quem conversa com o agente.",
+        "nameLabel": "Nome",
+        "greetingLabel": "Primeira mensagem",
+        "changeHint": "Mudar esses detalhes exige um novo teste.",
+        "agentFallback": "Seu novo agente",
+        "privateHint": "Teste privado",
+        "conversation": "Conversa de teste",
+        "empty": "Envie uma mensagem para ver como o agente responde.",
+        "thinking": "O agente está pensando…",
+        "inputPlaceholder": "Escreva uma mensagem de teste",
+        "internalExample": "Conversa de exemplo: pergunte como alguém da sua equipe perguntaria.",
+        "noSchedule": "Este teste é privado. Horário e público não se aplicam aqui.",
+        "stillBuilding": "Este agente ainda está sendo montado. As respostas podem mudar quando ficar pronto.",
+        "writesExternal": "Este teste pode escrever em outro sistema. Use uma pergunta segura e confira o resultado antes de ligar.",
+        "confidence": "Certeza",
+        "handoff": "Esta resposta chamaria alguém da equipe.",
+        "usedMaterials": "Material usado",
+        "skippedTools": "Algumas ferramentas não foram usadas nesta resposta.",
+        "toolSkipped": "Esta ação não foi executada no teste.",
+        "toolNotInTest": "Esta ação só fica disponível fora da simulação.",
+        "toolViewerNotAllowed": "Esta ação altera dados e fica disponível para quem pode editar.",
+        "clearConversation": "Limpar conversa",
+        "addImage": "Adicionar imagem",
+        "removeImage": "Remover imagem",
+        "imageHint": "Até 4 imagens, com 5 MB cada.",
+        "imageInvalid": "Escolha uma imagem PNG, JPG, GIF ou WebP.",
+        "imageTooLarge": "Cada imagem deve ter no máximo 5 MB.",
+        "imageTooMany": "Você pode adicionar até 4 imagens por pergunta.",
+        "saved": "Guardado. Continue quando quiser.",
+        "rateLimited": "Você enviou vários testes seguidos. Espere um pouco e tente de novo.",
+        "questions": {
+          "supportOne": "Qual é o horário de atendimento?",
+          "supportTwo": "Como você ajudaria em um pedido comum?",
+          "sdrOne": "O que você perguntaria a quem quer um orçamento?",
+          "sdrTwo": "Como você decide quando chamar a equipe?",
+          "receptionOne": "Como você encaminharia uma conversa nova?",
+          "receptionTwo": "O que você perguntaria antes de chamar a equipe?",
+          "onboardingOne": "O que um cliente novo deve fazer primeiro?",
+          "onboardingTwo": "Como você ajuda alguém que travou?",
+          "schedulerOne": "Quais dias e horários eu posso escolher?",
+          "schedulerTwo": "O que você precisa saber antes de pedir a confirmação da equipe?",
+          "reactivationOne": "Como você retomaria uma conversa que parou?",
+          "reactivationTwo": "Quando você chamaria alguém da equipe?",
+          "internalOne": "Resuma esta conversa para mim.",
+          "internalTwo": "Sugira uma resposta que eu possa enviar."
+        },
+        "presentationChanged": "Você mudou a apresentação. Comece uma nova conversa para testar o agente atualizado."
+      },
+      "live": {
+        "eyebrow": "LIGUE",
+        "title": "Ligue {name}",
+        "description": "Escolha onde este agente deve trabalhar. A ligação usa um canal que já existe na sua conta.",
+        "testRequired": "Faça um teste aprovado antes de ligar este agente.",
+        "internalTitle": "Pronto para a sua equipe",
+        "internalDescription": "Este ajudante fica nas conversas da equipe e não precisa de canal para clientes.",
+        "channelTitle": "Onde ele deve responder?",
+        "channelDescription": "Escolha uma ou mais caixas de entrada que já existem. Para criar uma conexão WhatsApp, abra Canais primeiro.",
+        "channelLabel": "Caixas de entrada disponíveis",
+        "channelBusy": "Já está ligado a outro agente",
+        "channelBusyByAgent": "Já está ligado a {name}",
+        "channelReady": "Disponível",
+        "selectedTitle": "Caixas selecionadas ({count})",
+        "noChannels": "Ainda não há canais disponíveis.",
+        "occupiedTitle": "Canais ocupados ({count})",
+        "openChannels": "Abrir Canais",
+        "windowTitle": "Quando ele deve responder?",
+        "windowDescription": "Escolha o horário das conversas com clientes.",
+        "windows": {
+          "always": "A qualquer hora",
+          "businessHours": "No horário de atendimento",
+          "outside": "Fora do horário de atendimento"
+        },
+        "summaryTitle": "Antes de ligar",
+        "summary": "{name} responderá em uma ou mais caixas de entrada.",
+        "greeting": "“{greeting}”",
+        "noWhatsapp": "O WhatsApp é conectado em Canais. Aqui você escolhe as caixas de entrada que já existem."
+      },
+      "ready": {
+        "title": "{name} está atendendo em {channel}",
+        "multiTitle": "{name} está atendendo em {count} caixas de entrada",
+        "channelsLabel": "Caixas de entrada",
+        "description": "Seu agente está ligado. Você pode pausá-lo ou mudar suas configurações quando quiser.",
+        "internalTitle": "{name} está pronto para a equipe",
+        "internalDescription": "Sua equipe pode usar este ajudante na área de conversas.",
+        "offTitle": "{name} foi salvo",
+        "offDescription": "Ninguém está sendo atendido ainda. Você pode ligar este agente quando estiver pronto.",
+        "openConversation": "Abrir conversas",
+        "openConversationHint": "Veja onde o agente está ajudando sua equipe.",
+        "backToAgents": "Voltar para seus agentes",
+        "backToAgentsHint": "Veja o status e continue gerenciando seus agentes.",
+        "openPerformance": "Ver desempenho"
+      },
+      "actions": {
+        "continue": "Continuar",
+        "continueToTest": "Continuar para Teste",
+        "continueToLive": "Continuar para Ligar",
+        "backToTell": "Mudar algo",
+        "backToTest": "Voltar para Teste",
+        "back": "Voltar",
+        "leave": "Sair e continuar depois",
+        "savePresentation": "Salvar mudanças",
+        "test": "Testar",
+        "publish": "Ligar agente",
+        "keepOff": "Deixar desligado por enquanto",
+        "useMaterial": "Usar este material",
+        "useLink": "Usar",
+        "notNow": "Agora não",
+        "chooseMaterial": "Escolher material",
+        "cancel": "Cancelar",
+        "retry": "Tentar de novo",
+        "dismiss": "Fechar aviso"
+      },
+      "errors": {
+        "generic": "Não foi possível carregar esta etapa. Tente novamente.",
+        "start": "Não foi possível começar seu agente. Tente novamente.",
+        "resume": "Não foi possível retomar a montagem. Seu agente continua salvo. Tente de novo.",
+        "tell": "Não foi possível continuar a conversa.",
+        "tellHint": "Seu rascunho está salvo. Tente enviar a resposta de novo.",
+        "test": "Não foi possível terminar este teste. Tente novamente.",
+        "presentation": "Não foi possível salvar estes dados. Tente novamente.",
+        "publish": "Não foi possível ligar este agente. Confira o canal e tente novamente.",
+        "update": "Não foi possível salvar este rascunho. Tente novamente.",
+        "material": "Não foi possível usar este material. Tente novamente."
+      }
     }
   }
 }

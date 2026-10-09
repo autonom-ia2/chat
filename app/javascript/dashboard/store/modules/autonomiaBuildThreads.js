@@ -27,6 +27,34 @@ const POLL_MAX_ATTEMPTS = 600; // ~30 minutes ceiling
 
 let pollTimer = null;
 
+const currentEpoch = $state => $state?.epoch ?? 0;
+const advanceEpoch = $state => {
+  $state.epoch = currentEpoch($state) + 1;
+  return $state.epoch;
+};
+const isCurrentEpoch = ($state, epoch) => currentEpoch($state) === epoch;
+
+// Keep the HTTP projection on errors that reach the creation page. The shared
+// helper returns a new Error and discards response metadata, which makes a
+// missing thread indistinguishable from a permission failure to the caller.
+const throwPreservingApiError = error => {
+  const response = error?.response;
+  const responseData = response?.data;
+  const message =
+    responseData?.message ||
+    responseData?.error ||
+    error?.message ||
+    'Request failed';
+  const raised = error instanceof Error ? error : new Error(message);
+  if (responseData?.message && raised.message !== responseData.message)
+    raised.message = responseData.message;
+  if (response) raised.response = response;
+  if (response?.status != null) raised.status = response.status;
+  const code = responseData?.code || responseData?.error_code || error?.code;
+  if (code) raised.code = code;
+  throw raised;
+};
+
 // T6 — idempotency id per TURN (not per request): minted when the user sends a
 // message and reused while that exact turn is unconfirmed (double-click,
 // network replay, resend after 409/failure), so the backend can dedupe the
@@ -48,6 +76,10 @@ const clientIdForTurn = (threadId, content) => {
 };
 
 export const state = {
+  // Every reset or newer operation advances the projection identity. Async
+  // responses carry the identity they started with and may not write after a
+  // later conversation has taken ownership of the store.
+  epoch: 0,
   thread: null,
   messages: [],
   // How many authoritative backend turns MERGE_MESSAGES already reconciled —
@@ -135,11 +167,15 @@ export const actions = {
   // on mount with only the chosen `type` (no user message) so the Construtor
   // emits the opening turn; the greeting/first question arrive via polling. When
   // a `message` is present (the legacy fallback path) it is echoed optimistically.
-  start: async ({ commit, dispatch }, { agentId, message, ...rest } = {}) => {
-    commit('SET_UI_FLAG', { creating: true });
+  start: async (
+    { commit, dispatch, state: $state },
+    { agentId, message, ...rest } = {}
+  ) => {
     clearPoll();
     pendingTurn = null;
     commit('RESET');
+    const epoch = currentEpoch($state);
+    commit('SET_UI_FLAG', { creating: true });
     // Optimistically echo the user's turn so the bubble shows instantly, even
     // before the 202 lands (the backend will return the same turn). Skipped on
     // the opening (no message) — the AI speaks first there.
@@ -150,29 +186,103 @@ export const actions = {
         message,
         ...rest,
       });
+      if (!isCurrentEpoch($state, epoch)) return null;
       const payload = applyThreadResponse(commit, data);
-      dispatch('poll', { threadId: payload.id });
+      dispatch('poll', { threadId: payload.id, epoch });
       return payload;
     } catch (error) {
+      if (!isCurrentEpoch($state, epoch)) return null;
       commit('SET_ERROR', 'send');
       commit('SET_STATUS', 'failed');
       return throwErrorMessage(error);
     } finally {
-      commit('SET_UI_FLAG', { creating: false });
+      if (isCurrentEpoch($state, epoch))
+        commit('SET_UI_FLAG', { creating: false });
     }
   },
 
-  fetch: async ({ commit, dispatch }, { threadId }) => {
+  // Hydrates the last guided thread for an existing agent. The caller opens
+  // the Builder only after this action resolves, so the conversation appears
+  // with the server ids already in place. A settled response is intentionally
+  // not sent through onSettled: that hook can move the UI to `reviewing` and
+  // close the re-conversation dialog, while resume is only a read. If the
+  // server reports an in-flight build, the normal fetch/onSettled path takes
+  // over through polling.
+  resume: async (
+    { commit, dispatch, state: $state },
+    { agentId, signal } = {}
+  ) => {
+    if (!agentId) return null;
+    commit('INVALIDATE');
+    const epoch = currentEpoch($state);
+    clearPoll();
+    pendingTurn = null;
+    commit('SET_UI_FLAG', {
+      creating: false,
+      sending: false,
+      fetching: true,
+    });
+    let projectionEpoch = epoch;
+    try {
+      const { data } = await (signal
+        ? AutonomiaBuildThreadsAPI.resume(agentId, { signal })
+        : AutonomiaBuildThreadsAPI.resume(agentId));
+      signal?.throwIfAborted();
+      if (!isCurrentEpoch($state, epoch)) return null;
+      // Keep the last known agent/thread visible when the reader returns
+      // 401/404/422. Replace the projection only after a successful read.
+      commit('RESET');
+      projectionEpoch = currentEpoch($state);
+      const payload = applyThreadResponse(commit, data);
+      if (payload.status === 'processing') {
+        dispatch('poll', { threadId: payload.id, epoch: projectionEpoch });
+      }
+      return payload;
+    } catch (error) {
+      if (signal?.aborted) throw error;
+      if (!isCurrentEpoch($state, epoch)) return null;
+      return throwPreservingApiError(error);
+    } finally {
+      if (!signal?.aborted && isCurrentEpoch($state, projectionEpoch))
+        commit('SET_UI_FLAG', { fetching: false });
+    }
+  },
+
+  fetch: async (
+    { commit, dispatch, state: $state },
+    { threadId, epoch } = {}
+  ) => {
+    const expectedEpoch = epoch ?? currentEpoch($state);
+    if (
+      !threadId ||
+      !isCurrentEpoch($state, expectedEpoch) ||
+      $state.thread?.id !== threadId
+    )
+      return null;
     commit('SET_UI_FLAG', { fetching: true });
     try {
       const { data } = await AutonomiaBuildThreadsAPI.show(threadId);
+      if (
+        !isCurrentEpoch($state, expectedEpoch) ||
+        $state.thread?.id !== threadId
+      )
+        return null;
       const payload = applyThreadResponse(commit, data);
-      dispatch('onSettled', payload);
+      dispatch('onSettled', { payload, epoch: expectedEpoch });
       return payload;
     } catch (error) {
+      if (
+        !isCurrentEpoch($state, expectedEpoch) ||
+        $state.thread?.id !== threadId
+      )
+        return null;
       return throwErrorMessage(error);
     } finally {
-      commit('SET_UI_FLAG', { fetching: false });
+      if (
+        isCurrentEpoch($state, expectedEpoch) &&
+        $state.thread?.id === threadId
+      )
+        commit('SET_UI_FLAG', { fetching: false });
     }
   },
 
@@ -181,15 +291,32 @@ export const actions = {
     { threadId, content, extra = {}, echo = true } = {}
   ) => {
     if (!threadId) return null;
-    commit('SET_UI_FLAG', { sending: true });
+    commit('INVALIDATE');
+    const epoch = currentEpoch($state);
+    commit('SET_UI_FLAG', {
+      creating: false,
+      sending: true,
+      fetching: false,
+    });
     commit('SET_ERROR', null);
     commit('SET_PHASE', 'interviewing');
     clearPoll();
+    const reusesPendingEcho =
+      echo &&
+      content &&
+      pendingTurn?.threadId === threadId &&
+      pendingTurn.content === content &&
+      $state.messages.some(
+        message =>
+          message.local &&
+          message.role === 'user' &&
+          message.content === content
+      );
     // Echo the user's answer instantly so the conversation never appears to
     // "swallow" the message while the next build is enqueued. Wizard "signal"
     // turns (materials done / skipped) pass `echo: false` so the bubble does
     // not show that internal message to the user.
-    if (echo && content) {
+    if (echo && content && !reusesPendingEcho) {
       commit('APPEND_MESSAGE', { role: 'user', content });
     }
     // Same turn -> same id: a double-click or a resend of this exact message
@@ -203,47 +330,67 @@ export const actions = {
         extra,
         clientMessageId
       );
+      if (!isCurrentEpoch($state, epoch)) return null;
       // Turn accepted and persisted server-side: the next identical content is
       // a NEW turn and must get a fresh id.
       pendingTurn = null;
       const payload = applyThreadResponse(commit, data);
-      dispatch('poll', { threadId: payload.id });
+      dispatch('poll', { threadId: payload.id, epoch });
       return payload;
     } catch (error) {
+      if (!isCurrentEpoch($state, epoch)) return null;
+      // A rejected transport attempt must not leave a ghost user bubble behind.
+      // The retry below will render a single fresh local bubble while retaining
+      // the same client id for backend deduplication.
+      const lastMessage = $state.messages[$state.messages.length - 1];
+      if (
+        echo &&
+        lastMessage?.local &&
+        lastMessage.role === 'user' &&
+        lastMessage.content === content
+      ) {
+        commit('SET_MESSAGES', $state.messages.slice(0, -1));
+      }
       // 409 build_in_progress: the previous build is still running server-side —
-      // this is NOT a failure. Drop the optimistic echo (the turn was rejected),
-      // resume polling the in-flight build and rethrow the raw axios error so
-      // the page can show the friendly "still working" alert.
+      // this is NOT a failure. Resume polling the in-flight build and rethrow
+      // the raw axios error so the page can show the friendly "still working"
+      // alert.
       if (error?.response?.status === 409) {
-        const last = $state.messages[$state.messages.length - 1];
-        if (echo && last?.role === 'user' && last.content === content) {
-          commit('SET_MESSAGES', $state.messages.slice(0, -1));
-        }
-        dispatch('poll', { threadId });
+        dispatch('poll', { threadId, epoch });
         throw error;
       }
       commit('SET_ERROR', 'send');
       commit('SET_STATUS', 'failed');
       return throwErrorMessage(error);
     } finally {
-      commit('SET_UI_FLAG', { sending: false });
+      if (isCurrentEpoch($state, epoch))
+        commit('SET_UI_FLAG', { sending: false });
     }
   },
 
   // Re-runs the generation of a `failed` (or stale) thread via the retry
   // endpoint — unlike the old behavior of just re-polling, this actually
   // re-enqueues the SubmitJob with a fresh build_token, then polls to settle.
-  retry: async ({ commit, dispatch }, { threadId } = {}) => {
+  retry: async ({ commit, dispatch, state: $state }, { threadId } = {}) => {
     if (!threadId) return null;
+    commit('INVALIDATE');
+    const epoch = currentEpoch($state);
     commit('SET_ERROR', null);
     commit('SET_PHASE', 'interviewing');
+    commit('SET_UI_FLAG', {
+      creating: false,
+      sending: false,
+      fetching: false,
+    });
     clearPoll();
     try {
       const { data } = await AutonomiaBuildThreadsAPI.retryBuild(threadId);
+      if (!isCurrentEpoch($state, epoch)) return null;
       const payload = applyThreadResponse(commit, data);
-      dispatch('poll', { threadId: payload.id });
+      dispatch('poll', { threadId: payload.id, epoch });
       return payload;
     } catch (error) {
+      if (!isCurrentEpoch($state, epoch)) return null;
       return throwErrorMessage(error);
     }
   },
@@ -275,9 +422,13 @@ export const actions = {
   // Polls `show` until the build settles (ready/failed), then stops. Self-
   // clearing; a new start/send resets the loop. On exhausting the (long) window
   // without settling we surface a visible timeout instead of going quiet.
-  poll: ({ commit, dispatch }, { threadId, attempt = 0 }) => {
+  poll: (
+    { commit, dispatch, state: $state },
+    { threadId, attempt = 0, epoch } = {}
+  ) => {
+    const expectedEpoch = epoch ?? currentEpoch($state);
     clearPoll();
-    if (!threadId) return;
+    if (!threadId || !isCurrentEpoch($state, expectedEpoch)) return;
     if (attempt >= POLL_MAX_ATTEMPTS) {
       commit('SET_ERROR', 'timeout');
       commit('SET_STATUS', 'failed');
@@ -285,9 +436,17 @@ export const actions = {
     }
     pollTimer = setTimeout(async () => {
       pollTimer = null;
+      if (
+        !isCurrentEpoch($state, expectedEpoch) ||
+        $state.thread?.id !== threadId
+      )
+        return;
       let payload = null;
       try {
-        payload = await dispatch('fetch', { threadId });
+        payload = await dispatch('fetch', {
+          threadId,
+          epoch: expectedEpoch,
+        });
       } catch (error) {
         // Transient poll failure (network blip): the build is still running on
         // the server, so keep polling rather than going silent — the timeout
@@ -300,7 +459,15 @@ export const actions = {
       ) {
         return;
       }
-      dispatch('poll', { threadId, attempt: attempt + 1 });
+      if (
+        isCurrentEpoch($state, expectedEpoch) &&
+        $state.thread?.id === threadId
+      )
+        dispatch('poll', {
+          threadId,
+          attempt: attempt + 1,
+          epoch: expectedEpoch,
+        });
     }, POLL_INTERVAL);
   },
 
@@ -313,7 +480,12 @@ export const actions = {
   //   - needs_more_info=false -> the agent was generated; fetch it and switch to
   //     the `reviewing` phase so the review card can appear.
   //   - failed                -> surface a visible error.
-  onSettled: async ({ commit, dispatch, state: $state }, payload) => {
+  onSettled: async ({ commit, dispatch, state: $state }, input) => {
+    const payload = input?.payload || input;
+    const expectedEpoch = input?.payload
+      ? (input.epoch ?? currentEpoch($state))
+      : currentEpoch($state);
+    if (!isCurrentEpoch($state, expectedEpoch)) return;
     if (!payload) return;
 
     if (payload.status === 'failed') {
@@ -354,7 +526,8 @@ export const actions = {
       const agent = await dispatch('autonomiaAgents/show', payload.agent_id, {
         root: true,
       });
-      if (agent) commit('SET_AGENT', agent);
+      if (agent && isCurrentEpoch($state, expectedEpoch))
+        commit('SET_AGENT', agent);
     } catch (error) {
       // The hub/panel can still fetch the agent on navigation; swallow here.
     }
@@ -366,6 +539,9 @@ export const actions = {
 };
 
 export const mutations = {
+  INVALIDATE($state) {
+    advanceEpoch($state);
+  },
   SET_UI_FLAG($state, flags) {
     $state.uiFlags = { ...$state.uiFlags, ...flags };
   },
@@ -422,6 +598,7 @@ export const mutations = {
     $state.error = error;
   },
   RESET($state) {
+    advanceEpoch($state);
     $state.thread = null;
     $state.messages = [];
     $state.mergedCount = 0;
@@ -430,6 +607,11 @@ export const mutations = {
     $state.agent = null;
     $state.phase = 'interviewing';
     $state.error = null;
+    $state.uiFlags = {
+      creating: false,
+      sending: false,
+      fetching: false,
+    };
   },
 };
 

@@ -12,6 +12,31 @@
 class Autonomia::Agents::Operate::EngagementGate
   RESPONSE_WINDOWS = %w[always business_hours outside_business_hours].freeze
   UNKNOWN_CONTACT_POLICIES = %w[respond handoff].freeze
+  SCHEDULE_NOT_LOADED = Object.new.freeze
+  ScheduleSource = Struct.new(:kind, :schedule, :inbox, keyword_init: true)
+
+  # A tela de canais e o runtime compartilham a mesma precedência: uma agenda de serviço utilizável,
+  # depois o horário da caixa, depois nenhuma fonte. O sentinela permite ao controller informar que a
+  # agenda já foi carregada e está ausente, sem uma consulta escondida por item.
+  def self.schedule_source(inbox, service_schedule: SCHEDULE_NOT_LOADED)
+    return nil if inbox.blank?
+
+    schedule = if service_schedule.equal?(SCHEDULE_NOT_LOADED)
+                 ::Crm::ServiceSchedule.find_by(
+                   account_id: inbox.account_id, owner_type: 'Inbox', owner_id: inbox.id
+                 )
+               else
+                 service_schedule
+               end
+    return ScheduleSource.new(kind: :service, schedule: schedule) if schedule&.usable?
+    return ScheduleSource.new(kind: :inbox, inbox: inbox) if inbox.working_hours_enabled?
+
+    nil
+  end
+
+  def self.schedule?(inbox, service_schedule: SCHEDULE_NOT_LOADED)
+    schedule_source(inbox, service_schedule: service_schedule).present?
+  end
 
   def initialize(agent:, conversation:)
     @agent = agent
@@ -55,17 +80,11 @@ class Autonomia::Agents::Operate::EngagementGate
 
   # true/false quando há fonte de horário; nil quando não há nenhuma.
   def business_open_now
-    schedule = service_schedule
-    return schedule_open_now?(schedule) if schedule&.usable?
+    source = self.class.schedule_source(@conversation.inbox)
+    return nil if source.nil?
+    return schedule_open_now?(source.schedule) if source.kind == :service
 
-    inbox = @conversation.inbox
-    return nil unless inbox&.working_hours_enabled?
-
-    !inbox.out_of_office?
-  end
-
-  def service_schedule
-    ::Crm::ServiceSchedule.find_by(account_id: @conversation.account_id, owner_type: 'Inbox', owner_id: @conversation.inbox_id)
+    !source.inbox.out_of_office?
   end
 
   def schedule_open_now?(schedule)

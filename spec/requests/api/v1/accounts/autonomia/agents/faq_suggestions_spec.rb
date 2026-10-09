@@ -53,6 +53,29 @@ RSpec.describe 'Autonomia agent FAQ suggestions', type: :request do
 
       expect(response).to have_http_status(:unauthorized)
     end
+
+    it 'is forbidden for a user who can see Autonomia but cannot manage it' do
+      viewer = create(:user, account: account, role: :agent)
+      role = create(:custom_role, account: account, permissions: ['autonomia_view'])
+      viewer.account_users.find_by!(account: account).update!(custom_role: role)
+
+      get base_url, headers: viewer.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:unauthorized)
+    end
+
+    it 'does not resolve a suggestion agent from another account' do
+      other_account = create(:account, internal_attributes: { 'autonomia_agents_enabled' => true })
+      foreign_agent = Autonomia::Agents::Agent.create!(
+        account: other_account, name: 'Outro', agent_type: 'custom', status: :active, enabled: true,
+        instruction: 'Atenda.'
+      )
+
+      get "/api/v1/accounts/#{account.id}/autonomia/agents/#{foreign_agent.id}/faq_suggestions",
+          headers: administrator.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:not_found)
+    end
   end
 
   describe 'POST approve' do
@@ -82,6 +105,51 @@ RSpec.describe 'Autonomia agent FAQ suggestions', type: :request do
       post "#{base_url}/#{suggestion.id}/approve", headers: administrator.create_new_auth_token, as: :json
 
       expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body).to include(
+        'code' => 'not_pending',
+        'error' => I18n.t('autonomia.agents.errors.not_pending', locale: account.locale, raise: true)
+      )
+    end
+
+    it 'localizes the already-reviewed refusal for a Brazilian Portuguese account' do
+      account.update!(locale: 'pt_BR')
+      suggestion.update!(status: :ignored)
+
+      post "#{base_url}/#{suggestion.id}/approve", headers: administrator.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body).to include(
+        'code' => 'not_pending',
+        'error' => I18n.t('autonomia.agents.errors.not_pending', locale: 'pt_BR', raise: true)
+      )
+    end
+
+    it 'returns a stable localized error when the embedding provider fails' do
+      allow(Autonomia::Agents::EmbeddingService).to receive(:new)
+        .and_raise(Autonomia::Agents::EmbeddingService::EmbeddingError, 'provider secret leaked')
+
+      post "#{base_url}/#{suggestion.id}/approve", headers: administrator.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body).to include(
+        'code' => 'embedding_failed',
+        'error' => I18n.t('autonomia.agents.errors.embedding_failed', locale: account.locale, raise: true)
+      )
+      expect(response.body).not_to include('provider secret leaked')
+    end
+
+    it 'returns a stable localized error when the edited FAQ is invalid' do
+      account.update!(locale: 'pt_BR')
+
+      post "#{base_url}/#{suggestion.id}/approve",
+           params: { faq_suggestion: { question: 'x' * 501 } },
+           headers: administrator.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body).to include(
+        'code' => 'faq_invalid',
+        'error' => I18n.t('autonomia.agents.errors.faq_invalid', locale: 'pt_BR', raise: true)
+      )
     end
 
     it 'is forbidden for a regular agent' do

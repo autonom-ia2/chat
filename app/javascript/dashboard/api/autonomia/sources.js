@@ -19,8 +19,19 @@ class AutonomiaSourcesAPI extends ApiClient {
     super('autonomia/agents', { accountScoped: true });
   }
 
-  get(agentId) {
-    return axios.get(`${this.url}/${agentId}/sources`);
+  get(agentId, { signal } = {}) {
+    const endpoint = `${this.url}/${agentId}/sources`;
+    return signal ? axios.get(endpoint, { signal }) : axios.get(endpoint);
+  }
+
+  reusable(agentId) {
+    return axios.get(`${this.url}/${agentId}/sources/reusable`);
+  }
+
+  copy(agentId, sourceId) {
+    return axios.post(`${this.url}/${agentId}/sources/copy`, {
+      source_id: sourceId,
+    });
   }
 
   // `descriptor` is either { url } for a link or { file } for an upload. Both

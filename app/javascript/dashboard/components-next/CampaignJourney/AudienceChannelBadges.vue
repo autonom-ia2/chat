@@ -1,5 +1,5 @@
 <script setup>
-import { formatNumber } from 'dashboard/components-next/CampaignJourney/localeTag';
+import { formatNumber } from 'dashboard/helper/localeTag';
 import { useI18n } from 'vue-i18n';
 
 defineProps({

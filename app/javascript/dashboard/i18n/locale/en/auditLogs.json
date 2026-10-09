@@ -11,6 +11,9 @@
     "FILTERS": {
       "SEARCH_PLACEHOLDER": "Search by name or email",
       "ALL_EVENTS": "All events",
+      "ALL_AGENTS": "All AI agents",
+      "AGENT_BY_ID": "AI agent #{id}",
+      "ALL_OPERATIONS": "All agent settings",
       "DATE_RANGE": "Date range",
       "CLEAR_ALL": "Clear filters",
       "EVENT_TYPE_GROUPS": {
@@ -22,6 +25,7 @@
       "EVENT_TYPES": {
         "SIGN_IN_OUT": "Sign in / sign out",
         "AGENTS": "Agents",
+        "AUTONOMIA_AGENTS": "AI agents",
         "TEAMS": "Teams",
         "TEAM_MEMBERS": "Team members",
         "INBOX_MEMBERS": "Inbox collaborators",
@@ -80,6 +84,38 @@
         "OTHER": "{agentName} changed {attributes} of {user} to {values}",
         "DELETED": "{agentName} changed {attributes} of a deleted user to {values}"
       }
+    },
+    "AUTONOMIA_AGENT": {
+      "EDIT": "{actor} updated {operationKey} for AI agent (#{id})",
+      "CHANGE": "{label}: {before} → {after}",
+      "VALUES": {
+        "EMPTY": "not set",
+        "HIDDEN": "hidden",
+        "ON": "on",
+        "OFF": "off",
+        "SECONDS": "{value} s",
+        "LENGTH": "{value} characters",
+        "COUNT": "{value} items",
+        "RANGE": "{count} intervals ({min}–{max} s)",
+        "MASKED_LIST": "{preview}",
+        "MASKED_LIST_MORE": "{preview} and {remaining} more"
+      }
+    },
+    "OPERATION_KEYS": {
+      "VOICE_REPLY": "voice replies",
+      "VOICE_INSTRUCTIONS": "voice instructions",
+      "HUMANIZE_DELIVERY": "delivery humanization",
+      "OPERATE_MEDIA": "media handling",
+      "OPERATE_REACTIONS": "reaction handling",
+      "TEST_ALLOWLIST_PHONES": "test phone allowlist",
+      "SILENCE_TOKENS": "silence tokens",
+      "NATIVE_TOOL_SLUGS": "native tools",
+      "DEBOUNCE_SECONDS": "response grouping delay",
+      "ASYNC_TOOLS": "async tools",
+      "ASYNC_POLL_INTERVALS": "poll intervals",
+      "ASYNC_DEADLINE_SECONDS": "async tool deadline",
+      "UNKNOWN": "agent setting",
+      "MULTIPLE": "multiple agent settings"
     },
     "INBOX": {
       "ADD": "{agentName} created a new inbox (#{id})",

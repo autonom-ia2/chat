@@ -39,6 +39,26 @@ RSpec.describe 'Autonomia agent message reports', type: :request do
     expect(response.parsed_body['report_reason']).to eq('incorrect_information')
   end
 
+  it 'rejects a private Autonomia agent note and keeps the existing error' do
+    private_message = create(
+      :message,
+      account: account,
+      conversation: conversation,
+      message_type: :outgoing,
+      sender: mirror,
+      private: true,
+      content_attributes: { autonomia_agent_id: autonomia_agent.id }
+    )
+
+    expect do
+      post url, params: valid_params.merge(message_id: private_message.id),
+                headers: agent_user.create_new_auth_token, as: :json
+    end.not_to change(Captain::MessageReport, :count)
+
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response.parsed_body['error']).to eq('Only Autonomia agent messages can be reported')
+  end
+
   it 'rejects messages that were not posted by an Autonomia agent' do
     human_message = create(:message, account: account, conversation: conversation, message_type: :outgoing)
 

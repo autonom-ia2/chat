@@ -50,6 +50,8 @@ class Autonomia::Insurance::Connection < ApplicationRecord
   # isso o healthcheck tem uma rede de segurança para eles. A tela conhece a mesma lista
   # (`insuranceContract.js`), e `insuranceStates.spec.js` falha se as duas divergirem.
   TRANSIENT_STATUSES = %w[provisioning authenticating discovering].freeze
+  READINESS_COLUMNS = %i[id account_id status].freeze
+  READINESS_STATE_KEY = :autonomia_insurance_connection_readiness
 
   belongs_to :account
 
@@ -69,6 +71,34 @@ class Autonomia::Insurance::Connection < ApplicationRecord
   before_save :derive_username_hint
 
   scope :for_account, ->(account) { where(account: account) }
+
+  class << self
+    # A projeção da lista precisa perguntar a disponibilidade de muitas ferramentas sem reler a mesma conta.
+    # Só estes campos bastam para os gates; credenciais e sessão cifradas nunca entram nesta consulta.
+    def preload_for_accounts(account_ids)
+      ids = account_ids.uniq
+      return {} if ids.empty?
+
+      where(account_id: ids).select(*READINESS_COLUMNS).to_a.group_by(&:account_id)
+    end
+
+    # O estado vive somente durante a projeção atual e é restaurado mesmo quando um gate falha.
+    # Não é cache de processo nem altera o comportamento das chamadas de runtime.
+    def with_preloaded_for_accounts(readiness)
+      previous = ActiveSupport::IsolatedExecutionState[READINESS_STATE_KEY]
+      ActiveSupport::IsolatedExecutionState[READINESS_STATE_KEY] = readiness
+      yield
+    ensure
+      ActiveSupport::IsolatedExecutionState[READINESS_STATE_KEY] = previous
+    end
+
+    def ready_for_account?(account)
+      readiness = ActiveSupport::IsolatedExecutionState[READINESS_STATE_KEY]
+      return readiness.fetch(account.id, []).any?(&:ready?) if readiness
+
+      for_account(account).any?(&:ready?)
+    end
+  end
 
   def self.encryption_available?
     Chatwoot.encryption_configured?

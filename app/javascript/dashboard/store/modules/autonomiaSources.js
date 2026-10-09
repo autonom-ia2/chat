@@ -1,4 +1,5 @@
 import AutonomiaSourcesAPI from '../../api/autonomia/sources';
+import { useAbortableRequest } from 'dashboard/composables/useAbortableRequest';
 import { throwErrorMessage } from 'dashboard/store/utils/api';
 
 // Knowledge sources are a per-agent sub-resource (no global records-by-id list),
@@ -11,7 +12,32 @@ import { throwErrorMessage } from 'dashboard/store/utils/api';
 const POLL_INTERVAL = 4000;
 const INGESTING_STATUSES = ['pending', 'processing'];
 
+const sourcesRequest = useAbortableRequest();
 let pollTimer = null;
+
+const currentEpoch = $state => $state?.epoch ?? 0;
+const isCurrentProjection = ($state, agentId, epoch) =>
+  $state?.activeAgentId === agentId && currentEpoch($state) === epoch;
+
+const clearPoll = () => {
+  if (pollTimer) {
+    clearTimeout(pollTimer);
+    pollTimer = null;
+  }
+};
+
+const beginProjection = (commit, $state, agentId) => {
+  sourcesRequest.abort();
+  clearPoll();
+  commit('BEGIN_PROJECTION', agentId);
+  return currentEpoch($state);
+};
+
+const ensureAgentProjection = (commit, $state, agentId) => {
+  if ($state.activeAgentId === agentId) return currentEpoch($state);
+  const epoch = beginProjection(commit, $state, agentId);
+  return epoch;
+};
 
 // A source is still "settling" while it ingests (pending/processing) OR while it
 // has finished ingesting (`ready`) but the quality review has not landed yet
@@ -22,6 +48,8 @@ const isIngesting = source =>
   (source?.status === 'ready' && source?.review?.status == null);
 
 export const state = {
+  epoch: 0,
+  activeAgentId: null,
   records: [],
   uiFlags: {
     fetchingList: false,
@@ -112,85 +140,138 @@ const upsertItem = (items, item) => {
 };
 
 export const actions = {
-  fetch: async ({ commit, dispatch }, { agentId }) => {
+  fetch: async (
+    { commit, dispatch, state: $state },
+    { agentId, expectedEpoch } = {}
+  ) => {
+    if (!agentId) return null;
+    if (
+      expectedEpoch != null &&
+      !isCurrentProjection($state, agentId, expectedEpoch)
+    )
+      return null;
+    const epoch = beginProjection(commit, $state, agentId);
     // Zera a lista antes de buscar: ao trocar de agente o painel remonta, mas o
     // store é module-wide — sem isto os itens do agente anterior ficam visíveis
     // (o guard de loading é `fetchingList && !sources.length`) até o fetch voltar.
     commit('SET', []);
-    commit('SET_UI_FLAG', { fetchingList: true });
+    commit('SET_UI_FLAG', {
+      fetchingList: true,
+      creatingItem: false,
+      deletingItem: false,
+      resyncingItem: false,
+    });
     try {
-      const { data } = await AutonomiaSourcesAPI.get(agentId);
+      const response = await sourcesRequest.run(signal =>
+        AutonomiaSourcesAPI.get(agentId, { signal })
+      );
+      if (!response || !isCurrentProjection($state, agentId, epoch))
+        return null;
+      const { data } = response;
       const records = data.payload || data || [];
       commit('SET', records);
-      dispatch('schedulePoll', { agentId, records });
+      dispatch('schedulePoll', { agentId, records, epoch });
       return records;
     } catch (error) {
+      if (!isCurrentProjection($state, agentId, epoch)) return null;
       return throwErrorMessage(error);
     } finally {
-      commit('SET_UI_FLAG', { fetchingList: false });
+      if (isCurrentProjection($state, agentId, epoch))
+        commit('SET_UI_FLAG', { fetchingList: false });
     }
   },
 
   // `descriptor` is { url } for a link or { file } for an upload; the API
   // client maps it to the backend `source[...]` contract.
-  create: async ({ commit, dispatch }, { agentId, descriptor }) => {
+  create: async (
+    { commit, dispatch, state: $state },
+    { agentId, descriptor }
+  ) => {
+    const epoch = ensureAgentProjection(commit, $state, agentId);
     commit('SET_UI_FLAG', { creatingItem: true });
     try {
       const { data } = await AutonomiaSourcesAPI.create(agentId, descriptor);
+      if (!isCurrentProjection($state, agentId, epoch)) return null;
       const source = data.payload || data;
       commit('UPSERT', source);
-      dispatch('schedulePoll', { agentId, records: [source] });
+      dispatch('schedulePoll', { agentId, records: [source], epoch });
       return source;
     } catch (error) {
+      if (!isCurrentProjection($state, agentId, epoch)) return null;
       return throwErrorMessage(error);
     } finally {
-      commit('SET_UI_FLAG', { creatingItem: false });
+      if (isCurrentProjection($state, agentId, epoch))
+        commit('SET_UI_FLAG', { creatingItem: false });
     }
   },
 
-  remove: async ({ commit }, { agentId, sourceId }) => {
+  remove: async ({ commit, state: $state }, { agentId, sourceId }) => {
+    const epoch = ensureAgentProjection(commit, $state, agentId);
     commit('SET_UI_FLAG', { deletingItem: true });
     try {
       await AutonomiaSourcesAPI.delete(agentId, sourceId);
+      if (!isCurrentProjection($state, agentId, epoch)) return null;
       commit('DELETE', sourceId);
       return sourceId;
     } catch (error) {
+      if (!isCurrentProjection($state, agentId, epoch)) return null;
       return throwErrorMessage(error);
     } finally {
-      commit('SET_UI_FLAG', { deletingItem: false });
+      if (isCurrentProjection($state, agentId, epoch))
+        commit('SET_UI_FLAG', { deletingItem: false });
     }
   },
 
-  resync: async ({ commit, dispatch }, { agentId, sourceId }) => {
+  resync: async (
+    { commit, dispatch, state: $state },
+    { agentId, sourceId }
+  ) => {
+    const epoch = ensureAgentProjection(commit, $state, agentId);
     commit('SET_UI_FLAG', { resyncingItem: true });
     try {
       const { data } = await AutonomiaSourcesAPI.resync(agentId, sourceId);
+      if (!isCurrentProjection($state, agentId, epoch)) return null;
       const source = data.payload || data;
       commit('UPSERT', source);
-      dispatch('schedulePoll', { agentId, records: [source] });
+      dispatch('schedulePoll', { agentId, records: [source], epoch });
       return source;
     } catch (error) {
+      if (!isCurrentProjection($state, agentId, epoch)) return null;
       return throwErrorMessage(error);
     } finally {
-      commit('SET_UI_FLAG', { resyncingItem: false });
+      if (isCurrentProjection($state, agentId, epoch))
+        commit('SET_UI_FLAG', { resyncingItem: false });
     }
   },
 
   // Starts a single polling loop while any source is still ingesting; clears
   // itself once everything settles. Idempotent: never stacks timers.
-  schedulePoll: ({ dispatch }, { agentId, records = [] }) => {
-    if (pollTimer || !records.some(isIngesting)) return;
+  schedulePoll: (
+    { dispatch, state: $state },
+    { agentId, records = [], epoch } = {}
+  ) => {
+    const expectedEpoch = epoch ?? currentEpoch($state);
+    if (
+      pollTimer ||
+      !records.some(isIngesting) ||
+      !isCurrentProjection($state, agentId, expectedEpoch)
+    )
+      return;
     pollTimer = setTimeout(async () => {
       pollTimer = null;
-      await dispatch('fetch', { agentId });
+      if (!isCurrentProjection($state, agentId, expectedEpoch)) return;
+      await dispatch('fetch', { agentId, expectedEpoch });
     }, POLL_INTERVAL);
   },
 
   stopPolling: () => {
-    if (pollTimer) {
-      clearTimeout(pollTimer);
-      pollTimer = null;
-    }
+    clearPoll();
+  },
+
+  reset: ({ commit }) => {
+    sourcesRequest.abort();
+    clearPoll();
+    commit('RESET');
   },
 };
 
@@ -208,6 +289,21 @@ export const mutations = {
     $state.records = ($state.records || []).filter(
       source => source.id !== sourceId
     );
+  },
+  BEGIN_PROJECTION($state, agentId) {
+    $state.epoch = currentEpoch($state) + 1;
+    $state.activeAgentId = agentId;
+  },
+  RESET($state) {
+    $state.epoch = currentEpoch($state) + 1;
+    $state.activeAgentId = null;
+    $state.records = [];
+    $state.uiFlags = {
+      fetchingList: false,
+      creatingItem: false,
+      deletingItem: false,
+      resyncingItem: false,
+    };
   },
 };
 

@@ -1,5 +1,7 @@
 # Somente as operações interativas migradas: autorização na execução e na leitura do resultado.
 class Crm::Ai::InteractiveOperation
+  include Crm::Ai::InteractiveOperationAgentTest
+
   attr_reader :context
 
   def initialize(data)
@@ -153,20 +155,6 @@ class Crm::Ai::InteractiveOperation
 
   def agent
     @agent ||= Autonomia::Agents::Agent.kept.where(account: @account).where("config->>'system_key' IS NULL").find(@inputs.fetch(:agent_id))
-  end
-
-  def playground_result
-    test = @data['operation'] == 'agent_test'
-    args = @inputs.except(:agent_id)
-    result = if test
-               Autonomia::Agents::Playground.new(agent: agent, **args).run
-             else
-               Autonomia::Agents::Copilot.new(agent: agent, **args).suggest
-             end
-    JSON.parse(ApplicationController.render(
-                 template: "api/v1/accounts/autonomia/agents/playground/#{test ? 'test' : 'suggest'}",
-                 assigns: { agent: agent, result: result }, formats: [:json]
-               ))
   end
 
   def suggestion_payload(suggestion)

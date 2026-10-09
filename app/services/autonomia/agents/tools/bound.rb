@@ -42,6 +42,28 @@ class Autonomia::Agents::Tools::Bound
     (@record&.slug || @native&.slug).to_s
   end
 
+  # Nome seguro para avisos da superfície de Testar. O valor vem do catálogo ligado, nunca do
+  # argumento escrito pelo modelo.
+  def display_name
+    return @record.name.to_s if @record&.name.present?
+    return @native.tool_name.to_s if @native&.respond_to?(:tool_name) && @native.tool_name.present?
+    return @native.display_name.to_s if @native&.respond_to?(:display_name) && @native.display_name.present?
+
+    slug
+  end
+
+  def http_tool?
+    @record.present?
+  end
+
+  def http_method
+    @record&.http_method.to_s.upcase
+  end
+
+  def writes_external?
+    http_tool? && http_method.present? && http_method != 'GET'
+  end
+
   # A nativa recebe o agente: o formulário de cotação é montado a partir do que a conta conectou. E
   # o especialista: cada um vê o formulário do seu ramo (chat#591).
   def openai_schema

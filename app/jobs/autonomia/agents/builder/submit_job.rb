@@ -10,12 +10,15 @@ module Autonomia
       # foi substituída por uma nova geração no meio do caminho, o run! vira no-op e nada é gravado.
       class SubmitJob < ApplicationJob
         queue_as :medium
+        self.enqueue_after_transaction_commit = true
 
         def perform(thread_id, token)
           thread = Autonomia::Agents::BuildThread.find_by(id: thread_id)
           return if thread.blank? || !active?(thread, token)
 
           Autonomia::Agents::Builder.new(account: thread.account, build_thread: thread).run!(token)
+        rescue ::Autonomia::Agents::Errors::ManualMode => e
+          fail_build(thread, token, e.code)
         rescue Crm::Ai::ResponsesClient::Error => e
           fail_build(thread, token, e.message)
         rescue ActiveRecord::ActiveRecordError => e

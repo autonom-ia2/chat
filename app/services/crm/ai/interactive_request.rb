@@ -22,13 +22,20 @@ class Crm::Ai::InteractiveRequest
     Redis::Alfred.set("#{PREFIX}#{id}:claimed", '1', nx: true, ex: TTL.to_i)
   end
 
+  def self.pending?(id)
+    data = read(id)
+    data && data['status'] == 'pending' && Redis::Alfred.get("#{PREFIX}#{id}:claimed").present?
+  end
+
   def self.finish(id, status:, result: nil)
     data = read(id)
-    return if data.nil?
+    return false if data.nil?
 
     data['status'] = status
     data['result'] = result
     # KEEPTTL: a conclusão não ressuscita um pedido já expirado.
-    Redis::Alfred.with { |conn| conn.set("#{PREFIX}#{id}", data.to_json, xx: true, keepttl: true) }
+    Redis::Alfred.with do |conn|
+      conn.set("#{PREFIX}#{id}", data.to_json, xx: true, keepttl: true).present?
+    end
   end
 end

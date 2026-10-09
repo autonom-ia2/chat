@@ -105,6 +105,7 @@ export const colors = {
 
   // next design system color
   n: {
+    navy: '#0D2344',
     slate: {
       1: 'rgb(var(--slate-1) / <alpha-value>)',
       2: 'rgb(var(--slate-2) / <alpha-value>)',

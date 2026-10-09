@@ -100,7 +100,7 @@ export const VERDICT_CLASSES = {
 // nome vai em branco por cima): as do tema clareiam no modo escuro. A cor sai do ID do anúncio, não da posição
 // na lista: o cartão e o anúncio por dentro mostram a mesma cor, e ela não muda quando a ordem muda.
 const THUMBS = [
-  'from-[#2563EB] to-[#0D2344]',
+  'from-[#2563EB] to-n-navy',
   'from-[#B45309] to-[#78350F]',
   'from-[#0F766E] to-[#134E4A]',
   'from-[#4F46E5] to-[#312E81]',

@@ -13,7 +13,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useCanManage } from 'dashboard/composables/useCanManage';
 import { useOnEnter } from 'dashboard/components-next/CampaignJourney/useOnEnter';
-import { toLocaleTag } from 'dashboard/components-next/CampaignJourney/localeTag';
+import { toLocaleTag } from 'dashboard/helper/localeTag';
 import { vOnClickOutside } from '@vueuse/components';
 
 import Button from 'dashboard/components-next/button/Button.vue';
@@ -290,7 +290,7 @@ useOnEnter(fetchAll);
         :aria-label="t(`${NS}.OVERVIEW`)"
       >
         <div
-          class="relative min-w-0 overflow-hidden bg-[#0D2344] px-6 py-6 text-white md:w-[32%]"
+          class="relative min-w-0 overflow-hidden bg-n-navy px-6 py-6 text-white md:w-[32%]"
         >
           <p class="mb-0 text-xs text-white opacity-80">
             {{ t(`${NS}.NEXT_SEND`) }}

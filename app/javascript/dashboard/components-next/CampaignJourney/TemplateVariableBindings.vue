@@ -1,5 +1,5 @@
 <script setup>
-import { formatNumber } from 'dashboard/components-next/CampaignJourney/localeTag';
+import { formatNumber } from 'dashboard/helper/localeTag';
 // "De onde vem cada parte da mensagem" (#993, PRD §6.3, B1, B1b). Each template variable
 // comes from a contact field, an audience column or a fixed text. Prefilled choices from
 // variable_suggestions carry the "Sugerido" badge. The coverage line says how many people

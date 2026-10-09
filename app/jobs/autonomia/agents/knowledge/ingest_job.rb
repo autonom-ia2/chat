@@ -12,8 +12,15 @@ module Autonomia
           source = Autonomia::Agents::Source.for_kept_agents.find_by(id: source_id)
           return if source.blank?
 
+          before_material_projection = source.material_projection
+          before_material_snapshot_digest = before_material_projection.material_snapshot_digest
+          before_material_snapshot_session_id = Autonomia::Agents::MaterialProjection.test_session_id(
+            agent: source.agent
+          )
           token = source.begin_ingestion!
-          ProcessJob.perform_later(source.id, token)
+          ProcessJob.perform_later(
+            source.id, token, before_material_snapshot_digest, before_material_snapshot_session_id
+          )
         end
       end
     end

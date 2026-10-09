@@ -1,3 +1,5 @@
+/* eslint-disable @intlify/vue-i18n/no-dynamic-keys */
+
 // Chaves de tradução, não texto — quem exibe a frase (generateLogText, em
 // Index.vue) resolve cada uma com t() antes de montar a frase. Guardar o
 // texto em inglês aqui era a causa raiz da frase sair "metade em inglês"
@@ -49,6 +51,159 @@ const translationKeys = {
   // Ação feita pelo Guia da Plataforma, depois da confirmação na tela (#536).
   'account:guide_action': `AUDIT_LOGS.GUIDE.ACTION`,
   'message:destroy': `AUDIT_LOGS.MESSAGE.DELETE`,
+  'autonomia::agents::agent:update': `AUDIT_LOGS.AUTONOMIA_AGENT.EDIT`,
+};
+
+export const AUTONOMIA_OPERATION_KEYS = {
+  voice_reply: 'AUDIT_LOGS.OPERATION_KEYS.VOICE_REPLY',
+  voice_instructions: 'AUDIT_LOGS.OPERATION_KEYS.VOICE_INSTRUCTIONS',
+  humanize_delivery: 'AUDIT_LOGS.OPERATION_KEYS.HUMANIZE_DELIVERY',
+  operate_media: 'AUDIT_LOGS.OPERATION_KEYS.OPERATE_MEDIA',
+  operate_reactions: 'AUDIT_LOGS.OPERATION_KEYS.OPERATE_REACTIONS',
+  test_allowlist_phones: 'AUDIT_LOGS.OPERATION_KEYS.TEST_ALLOWLIST_PHONES',
+  silence_tokens: 'AUDIT_LOGS.OPERATION_KEYS.SILENCE_TOKENS',
+  native_tool_slugs: 'AUDIT_LOGS.OPERATION_KEYS.NATIVE_TOOL_SLUGS',
+  debounce_seconds: 'AUDIT_LOGS.OPERATION_KEYS.DEBOUNCE_SECONDS',
+  async_tools: 'AUDIT_LOGS.OPERATION_KEYS.ASYNC_TOOLS',
+  async_poll_intervals: 'AUDIT_LOGS.OPERATION_KEYS.ASYNC_POLL_INTERVALS',
+  async_deadline_seconds: 'AUDIT_LOGS.OPERATION_KEYS.ASYNC_DEADLINE_SECONDS',
+};
+
+const AUTONOMIA_BOOLEAN_OPERATION_KEYS = new Set([
+  'voice_reply',
+  'humanize_delivery',
+  'operate_media',
+  'operate_reactions',
+  'async_tools',
+]);
+
+const AUTONOMIA_NUMBER_OPERATION_KEYS = new Set([
+  'debounce_seconds',
+  'async_deadline_seconds',
+]);
+
+const isRecord = value =>
+  value !== null && typeof value === 'object' && !Array.isArray(value);
+
+const hiddenOperationValue = () => ({ type: 'hidden' });
+
+const summarizeAutonomiaOperationValue = (operationKey, value) => {
+  if (value === null || value === undefined) return { type: 'empty' };
+  if (isRecord(value) && value.redacted === true) return hiddenOperationValue();
+
+  if (AUTONOMIA_BOOLEAN_OPERATION_KEYS.has(operationKey)) {
+    return typeof value === 'boolean'
+      ? { type: 'boolean', value }
+      : hiddenOperationValue();
+  }
+
+  if (AUTONOMIA_NUMBER_OPERATION_KEYS.has(operationKey)) {
+    return typeof value === 'number' && Number.isFinite(value)
+      ? { type: 'number', value }
+      : hiddenOperationValue();
+  }
+
+  if (operationKey === 'test_allowlist_phones') {
+    if (!Array.isArray(value) || value.some(item => typeof item !== 'string')) {
+      return hiddenOperationValue();
+    }
+    if (!value.length) return { type: 'empty' };
+    return {
+      type: 'masked_list',
+      count: value.length,
+      preview: value.slice(0, 3),
+    };
+  }
+
+  if (operationKey === 'voice_instructions') {
+    return isRecord(value) &&
+      Number.isInteger(value.length) &&
+      value.length >= 0
+      ? { type: 'length', value: value.length }
+      : hiddenOperationValue();
+  }
+
+  if (operationKey === 'silence_tokens') {
+    return isRecord(value) && Number.isInteger(value.count) && value.count >= 0
+      ? { type: 'count', value: value.count }
+      : hiddenOperationValue();
+  }
+
+  if (operationKey === 'native_tool_slugs') {
+    return isRecord(value) && Number.isInteger(value.count) && value.count >= 0
+      ? { type: 'count', value: value.count }
+      : hiddenOperationValue();
+  }
+
+  if (operationKey === 'async_poll_intervals') {
+    if (
+      !isRecord(value) ||
+      !Number.isInteger(value.count) ||
+      value.count < 0 ||
+      typeof value.min !== 'number' ||
+      typeof value.max !== 'number' ||
+      !Number.isFinite(value.min) ||
+      !Number.isFinite(value.max)
+    ) {
+      return hiddenOperationValue();
+    }
+    return {
+      type: 'range',
+      count: value.count,
+      min: value.min,
+      max: value.max,
+    };
+  }
+
+  return hiddenOperationValue();
+};
+
+const operationKeysFromAudit = auditLogItem => {
+  const serializedKeys = Array.isArray(auditLogItem?.operation_keys)
+    ? auditLogItem.operation_keys
+    : [];
+  if (serializedKeys.length) return serializedKeys;
+
+  if (auditLogItem?.operation_key) return [auditLogItem.operation_key];
+
+  const operationConfig = auditLogItem?.audited_changes?.operation_config;
+  return isRecord(operationConfig) ? Object.keys(operationConfig) : [];
+};
+
+// O backend já mascara ou resume os valores antes de serializar o audit log.
+// O front só aceita essa forma tipada e nunca transforma o objeto inteiro em texto.
+export const getAutonomiaOperationChanges = auditLogItem => {
+  if (
+    auditLogItem?.auditable_type?.toLowerCase() !== 'autonomia::agents::agent'
+  ) {
+    return [];
+  }
+
+  const operationConfig = auditLogItem?.audited_changes?.operation_config;
+  if (!isRecord(operationConfig)) return [];
+
+  return operationKeysFromAudit(auditLogItem)
+    .filter(operationKey =>
+      Object.hasOwn(AUTONOMIA_OPERATION_KEYS, operationKey)
+    )
+    .map(operationKey => {
+      const change = operationConfig[operationKey];
+      if (
+        !isRecord(change) ||
+        !Object.hasOwn(change, 'old') ||
+        !Object.hasOwn(change, 'new')
+      ) {
+        return null;
+      }
+
+      return {
+        key: operationKey,
+        label: AUTONOMIA_OPERATION_KEYS[operationKey],
+        before: summarizeAutonomiaOperationValue(operationKey, change.old),
+        after: summarizeAutonomiaOperationValue(operationKey, change.new),
+      };
+    })
+    .filter(Boolean);
 };
 
 function extractAttrChange(attrChange) {
@@ -79,12 +234,13 @@ export function extractChangedAccountUserValues(auditedChanges) {
   return { changes, values };
 }
 
-function getAgentName(userId, agentList) {
+function getAgentName(userId, agentList = []) {
   if (userId === null) {
     return 'System';
   }
 
-  const agentName = agentList.find(agent => agent.id === userId)?.name;
+  const agents = Array.isArray(agentList) ? agentList : [];
+  const agentName = agents.find(agent => agent.id === userId)?.name;
 
   // If agent does not exist(removed/deleted), return userId
   return agentName || userId;
@@ -215,6 +371,21 @@ export function generateTranslationPayload(auditLogItem, agentList) {
     );
   }
 
+  if (auditableType === 'autonomia::agents::agent') {
+    translationPayload.actor =
+      auditLogItem.actor?.name ||
+      auditLogItem.username ||
+      translationPayload.agentName;
+    const operationKeys = operationKeysFromAudit(auditLogItem);
+    if (operationKeys.length === 1) {
+      translationPayload.operationKey =
+        AUTONOMIA_OPERATION_KEYS[operationKeys[0]] ||
+        'AUDIT_LOGS.OPERATION_KEYS.UNKNOWN';
+    } else if (operationKeys.length > 1) {
+      translationPayload.operationKey = 'AUDIT_LOGS.OPERATION_KEYS.MULTIPLE';
+    }
+  }
+
   return translationPayload;
 }
 
@@ -242,12 +413,18 @@ export const translateLogPayload = (payload, t) => {
     return value.map(item => translateKey(item)).join(', ');
   };
 
-  return {
+  const translatedPayload = {
     ...payload,
     role: translateKey(payload.role),
     attributes: translateAndJoin(payload.attributes),
     values: translateAndJoin(payload.values),
   };
+
+  if (Object.prototype.hasOwnProperty.call(payload, 'operationKey')) {
+    translatedPayload.operationKey = translateKey(payload.operationKey);
+  }
+
+  return translatedPayload;
 };
 
 export const generateLogActionKey = auditLogItem => {
@@ -268,6 +445,7 @@ export const EVENT_TYPE_GROUPS = [
     key: 'AGENTS_TEAMS',
     types: [
       { value: 'AccountUser', key: 'AGENTS' },
+      { value: 'Autonomia::Agents::Agent', key: 'AUTONOMIA_AGENTS' },
       { value: 'Team', key: 'TEAMS' },
       { value: 'TeamMember', key: 'TEAM_MEMBERS' },
       { value: 'InboxMember', key: 'INBOX_MEMBERS' },
@@ -303,6 +481,17 @@ export const auditLogFiltersFromQuery = (query = {}) => {
   if (query.q) filters.q = query.q;
   if (SUPPORTED_TYPES.includes(query.type)) filters.types = [query.type];
   if (SORT_ORDERS.includes(query.sort)) filters.sort = query.sort;
+
+  const agentId = Number(query.agent_id);
+  if (Number.isInteger(agentId) && agentId > 0) filters.agent_id = agentId;
+  if (
+    Object.prototype.hasOwnProperty.call(
+      AUTONOMIA_OPERATION_KEYS,
+      query.operation_key
+    )
+  ) {
+    filters.operation_key = query.operation_key;
+  }
 
   const since = Number(query.since);
   const until = Number(query.until);

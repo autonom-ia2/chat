@@ -15,13 +15,23 @@ const buildPollingError = (code, response) => {
   return error;
 };
 
-const pollUntilSettled = async (pollUrl, startedAt, intervalMs, timeoutMs) => {
+const pollUntilSettled = async (
+  pollUrl,
+  startedAt,
+  intervalMs,
+  timeoutMs,
+  signal
+) => {
+  signal?.throwIfAborted();
   if (Date.now() - startedAt >= timeoutMs) {
     throw buildPollingError('ai_request_timeout');
   }
 
   await wait(intervalMs);
-  const pollResponse = await axios.get(pollUrl);
+  signal?.throwIfAborted();
+  const pollResponse = signal
+    ? await axios.get(pollUrl, { signal })
+    : await axios.get(pollUrl);
   const { status, result, error: errorCode } = pollResponse.data || {};
 
   if (status === 'done') return { status: 200, data: result };
@@ -29,7 +39,7 @@ const pollUntilSettled = async (pollUrl, startedAt, intervalMs, timeoutMs) => {
     throw buildPollingError(errorCode || 'ai_request_failed', pollResponse);
   }
 
-  return pollUntilSettled(pollUrl, startedAt, intervalMs, timeoutMs);
+  return pollUntilSettled(pollUrl, startedAt, intervalMs, timeoutMs, signal);
 };
 
 // AI endpoints may return their legacy response or a 202 with a poll URL.
@@ -39,15 +49,18 @@ export const pollAiRequest = async (
   {
     intervalMs = DEFAULT_POLL_INTERVAL_MS,
     timeoutMs = DEFAULT_POLL_TIMEOUT_MS,
+    signal,
   } = {}
 ) => {
   const response = await requestPromise;
+  signal?.throwIfAborted();
   if (!response || response.status !== 202) return response;
 
   return pollUntilSettled(
     response.data.poll_url,
     Date.now(),
     intervalMs,
-    timeoutMs
+    timeoutMs,
+    signal
   );
 };

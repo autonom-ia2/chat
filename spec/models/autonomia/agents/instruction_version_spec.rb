@@ -50,6 +50,33 @@ RSpec.describe Autonomia::Agents::InstructionVersion, type: :model do
       expect(version.created_by).to eq(user)
       expect(version.account).to eq(account)
       expect(version.instruction_hash).to eq(Digest::SHA256.hexdigest('v1'))
+      expect(version.metadata).to include('agent_name' => 'Agente')
+    end
+
+    it 'marks Builder snapshots as guided so a later rename can be explained' do
+      agent.update!(mode: :guided, scaffold: 'Andaime guiado')
+      version = agent.record_instruction_version!(reason: 'builder', created_by: user)
+
+      expect(version.metadata).to include('origin' => 'guided', 'agent_name' => 'Agente', 'scaffold' => agent.scaffold)
+    end
+
+    it 'can force the guided snapshot recorded immediately before switching to manual' do
+      first = agent.record_instruction_version!(reason: 'builder', created_by: user)
+      second = agent.record_instruction_version!(reason: 'before_manual', created_by: user, force: true)
+
+      expect(first.instruction_hash).to eq(second.instruction_hash)
+      expect(second.reason).to eq('before_manual')
+      expect(second.metadata).to include('origin' => 'guided')
+      expect(agent.instruction_versions.count).to eq(2)
+    end
+
+    it 'records the manual origin and scaffold for user-authored text' do
+      agent.update!(scaffold: 'Andaime manual')
+
+      version = agent.record_instruction_version!(reason: 'manual_edit', created_by: user)
+
+      expect(version).to be_manual_origin
+      expect(version.metadata).to include('scaffold' => 'Andaime manual')
     end
 
     it 'is idempotent: a second call with the same instruction hash is a no-op' do
@@ -104,6 +131,28 @@ RSpec.describe Autonomia::Agents::InstructionVersion, type: :model do
       expect(rollback.reason).to eq('rollback')
       expect(rollback.instruction).to eq('v1')
       expect(rollback.created_by).to eq(user)
+    end
+
+    it 'restores a guided version with its scaffold and guided mode' do
+      agent.update!(mode: :guided, instruction: 'guided v1', scaffold: 'Andaime guiado')
+      guided = agent.record_instruction_version!(reason: 'builder', created_by: user)
+      agent.update!(mode: :manual, instruction: 'manual v2', scaffold: 'Andaime manual')
+
+      expect(agent.restore_instruction!(guided, created_by: user)).to be(true)
+
+      expect(agent.reload).to have_attributes(mode: 'guided', instruction: 'guided v1', scaffold: 'Andaime guiado')
+      expect(agent.instruction_versions.order(:id).last.metadata).to include('origin' => 'guided', 'scaffold' => 'Andaime guiado')
+    end
+
+    it 'restores a manual version as manual and exposes its text only for manual origin' do
+      agent.update!(mode: :manual, instruction: 'manual v1', scaffold: 'Andaime manual')
+      manual = agent.record_instruction_version!(reason: 'manual_edit', created_by: user)
+      agent.update!(mode: :guided, instruction: 'guided v2', scaffold: 'Andaime guiado')
+
+      expect(agent.restore_instruction!(manual, created_by: user)).to be(true)
+
+      expect(agent.reload).to have_attributes(mode: 'manual', instruction: 'manual v1', scaffold: 'Andaime manual')
+      expect(agent.instruction_versions.order(:id).last).to be_manual_origin
     end
 
     it 'rejects a version that belongs to another agent' do

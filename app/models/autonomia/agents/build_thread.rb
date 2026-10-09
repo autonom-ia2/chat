@@ -92,6 +92,33 @@ module Autonomia
         self.state = merged
       end
 
+      # BE-07 — cria o esqueleto E1 antes de o endpoint devolver 202. O agente ainda não tem instrução
+      # (ela continua sendo produzida pelo Builder), mas já tem conta, tipo, atuação e intenção de base
+      # para a lista e para qualquer poll que aconteça antes do primeiro job terminar. A trava da thread
+      # torna a operação idempotente quando duas aberturas tentam completar a mesma linha; uma thread que
+      # já veio vinculada a um agente de ajuste não cria outro.
+      def ensure_draft_agent!
+        return agent if agent.present?
+
+        with_lock do
+          return agent if agent.present?
+
+          self.agent = Autonomia::Agents::Agent.create!(
+            account: account,
+            created_by: created_by,
+            name: 'Novo agente',
+            agent_type: draft_agent_type,
+            mode: :guided,
+            status: :draft,
+            enabled: false,
+            actuation: draft_actuation,
+            config: { 'with_knowledge' => draft_with_knowledge? }
+          )
+          save!
+          agent
+        end
+      end
+
       # PENDÊNCIA QUE SOBREVIVE À SESSÃO. Cada abertura do Construtor cria uma thread NOVA (o painel de
       # ajuste faz RESET do store e chama `start`), então a pergunta que ficou sem resposta na sessão
       # anterior morria com a thread e o pedido do dono se perdia — ele reabria o Construtor e ninguém
@@ -124,7 +151,9 @@ module Autonomia
       # `processing` por mais tempo que isto, o job morreu/perdeu-se sem mark_failed! (o token-guard
       # impede qualquer escrita posterior). Passada a janela, reenvio/retry pode reassumir com um
       # novo token; dentro dela, um novo turno é rejeitado (custo duplo + supersede do turno vivo).
-      STALE_PROCESSING_AFTER = 5.minutes
+      STALE_PROCESSING_AFTER =
+        (Crm::Ai::ResponsesClient::REQUEST_TIMEOUT *
+         (Crm::Ai::ResponsesClient::MAX_RETRIES + 1)) + 1.minute
 
       # E3 — há um build vivo agora? (processing e ainda dentro da janela esperada do job).
       def build_in_progress?
@@ -188,6 +217,30 @@ module Autonomia
       # anexadas a ESTE turno; default [] preserva o shape legado {role,content,at} (sem regressão). O
       # Builder resolve as imagens só do último turno user (Builder#image_parts_for).
       def append_message!(role, content, image_signed_ids: [], client_message_id: nil)
+        if role.to_s == 'user' && autonomia_agent_id.present?
+          append_user_message_with_agent_lock!(role, content, image_signed_ids: image_signed_ids, client_message_id: client_message_id)
+        else
+          append_message_without_agent_lock!(role, content, image_signed_ids: image_signed_ids, client_message_id: client_message_id)
+        end
+      end
+
+      private
+
+      # A resposta do dono e o reaper disputam o mesmo lock do agente. O reaper só pode arquivar
+      # depois que esta transação terminar; se o agente já foi arquivado, a porta se comporta como
+      # recurso ausente e não grava uma mensagem órfã.
+      def append_user_message_with_agent_lock!(role, content, image_signed_ids:, client_message_id:)
+        linked_agent = agent
+        raise ActiveRecord::RecordNotFound, 'agent not found' if linked_agent.nil?
+
+        linked_agent.with_lock do
+          raise ActiveRecord::RecordNotFound, 'agent not found' if linked_agent.deleted?
+
+          append_message_without_agent_lock!(role, content, image_signed_ids: image_signed_ids, client_message_id: client_message_id)
+        end
+      end
+
+      def append_message_without_agent_lock!(role, content, image_signed_ids:, client_message_id:)
         cid = client_message_id.to_s.presence
         # #17 — IDEMPOTÊNCIA (best-effort): se este turno já foi gravado com o mesmo client_message_id
         # (double-click / retry do front), é no-op — evita turno duplicado. Sem id (legado) não dedup.
@@ -207,12 +260,25 @@ module Autonomia
         reload
       end
 
-      private
-
       def agent_must_belong_to_account
         return if account_id.blank? || agent.blank? || agent.account_id == account_id
 
         errors.add(:agent, 'must belong to the same account')
+      end
+
+      def draft_agent_type
+        requested = state.to_h['agent_type'].to_s
+        requested = 'custom' if requested.blank? || requested == 'insurance_quote'
+        Autonomia::Agents::Agent::AGENT_TYPES.include?(requested) ? requested : 'custom'
+      end
+
+      def draft_actuation
+        requested = state.to_h['actuation'].to_s
+        ACTUATIONS.include?(requested) ? requested : 'external'
+      end
+
+      def draft_with_knowledge?
+        ActiveModel::Type::Boolean.new.cast(state.to_h.fetch('with_knowledge', true))
       end
 
       # Escreve só se a geração identificada por `token` ainda for a ativa e ainda processing.

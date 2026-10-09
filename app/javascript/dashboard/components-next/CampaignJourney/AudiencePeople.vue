@@ -1,5 +1,5 @@
 <script setup>
-import { formatNumber } from 'dashboard/components-next/CampaignJourney/localeTag';
+import { formatNumber } from 'dashboard/helper/localeTag';
 // People and rows with a problem (#993, PRD §6.6-3, B5): "98 prontos · 2 com problema",
 // masked reason per row (problem_rows) or, without that endpoint, reasons with counts,
 // and the download of the rows left out. Saving goes on with the ready ones.

@@ -146,12 +146,12 @@ function tabSabe(a) {
 // ----- Onde atende -----
 function tabOnde(a) {
   const st = viewState('onde', 'normal');
-  const bar = stateBar('onde', [['normal', 'Como está'], ['semcanal', 'Sem canal'], ['falhou', 'Falhou ao conectar'], ['naoadmin', 'Quem edita sem ser admin']]);
+  const bar = stateBar('onde', [['normal', 'Como está'], ['semcanal', 'Sem canal'], ['falhou', 'Falhou ao colocar'], ['naoadmin', 'Quem edita sem ser admin']]);
   const chans = st === 'semcanal' ? [] : a.channels;
   const free = CHANNELS.filter((c) => !c.busyBy);
   const off = a.status !== 'on'; // rascunho ou pausado (backend recusa agent_not_active)
   return `${bar}
-    ${st === 'falhou' ? `<div class="banner red" role="alert">${icon('plug-zap')}<span class="grow">Não deu para conectar no Chat do site hub2you: esse canal já tem um robô de outro sistema. Tire o outro robô nas configurações da caixa e tente de novo.</span></div>` : ''}
+    ${st === 'falhou' ? `<div class="banner red" role="alert">${icon('plug-zap')}<span class="grow">Não deu para colocar no Chat do site hub2you: esse canal já tem um robô de outro sistema. Tire o outro robô nas configurações da caixa e tente de novo.</span></div>` : ''}
     <div class="sect"><header><div><h3>Onde ${ela(a)} atende</h3><p class="desc">Cada canal tem um agente só. ${esc(a.name)} responde todo mundo que escreve nestes canais${a.audience ? ', dentro do público escolhido' : ''}.</p></div></header>
       ${chans.length ? `<div class="rows">${chans.map((id) => { const c = channelById(id); return `<div class="rowi"><span class="tile t-blue" style="width:2.5rem;height:2.5rem;border-radius:.75rem;display:grid;place-items:center">${icon(c.icon)}</span>
         <div class="grow"><b>${esc(c.name)}</b><div class="small">Conectado</div></div><button class="btn outline" data-disc="${a.id}:${id}">Tirar deste canal</button></div>`; }).join('')}</div>`
@@ -160,7 +160,7 @@ function tabOnde(a) {
       ${off ? `<div class="callout">${icon('info')}<span>Ligue ${artigo(a)} ${esc(a.name)} para colocar em outro canal.</span></div>` : ''}
       ${free.length ? `<div class="rows">${free.map((c) => `<div class="rowi"><span class="tile t-slate" style="width:2.5rem;height:2.5rem;border-radius:.75rem;display:grid;place-items:center">${icon(c.icon)}</span>
         <div class="grow"><b>${esc(c.name)}</b></div><button class="btn primary" data-conn="${a.id}:${c.id}" ${off ? 'disabled' : ''}>Colocar aqui</button></div>`).join('')}</div>` : '<p class="muted">Todos os canais já têm agente.</p>'}
-      ${st === 'naoadmin' ? '<p class="small">Peça a quem administra a conta para conectar um WhatsApp.</p>' : `<div><button class="btn outline" data-go="conectar">${icon('qr-code')}Conectar um WhatsApp novo</button></div>`}</div>`;
+      ${st === 'naoadmin' ? '<p class="small">Peça a quem administra a conta para abrir Canais.</p>' : `<div><a class="btn outline" href="/app/accounts/16/settings/inboxes/new" data-route="settings_inbox_new">${icon('plus')}Abrir Canais</a></div>`}</div>`;
 }
 
 // ----- Ajustes -----

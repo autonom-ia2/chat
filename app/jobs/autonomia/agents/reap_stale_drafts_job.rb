@@ -17,7 +17,7 @@
 class Autonomia::Agents::ReapStaleDraftsJob < ApplicationJob
   queue_as :scheduled_jobs
 
-  DEFAULT_STALE_HOURS = 48
+  DEFAULT_STALE_HOURS = Autonomia::Agents::DraftRetention::DEFAULT_HOURS
   BATCH_LIMIT = 500
 
   def perform
@@ -52,6 +52,7 @@ class Autonomia::Agents::ReapStaleDraftsJob < ApplicationJob
       .where.missing(:sources)
       .where('autonomia_agents.updated_at < ?', cutoff)
       .where.not(id: recent_activity_agent_ids(Autonomia::Agents::BuildThread, cutoff))
+      .where.not(id: user_response_agent_ids(Autonomia::Agents::BuildThread))
   end
 
   # IDs de agente com atividade recente na relação dada. where.not(autonomia_agent_id: nil) é
@@ -63,11 +64,17 @@ class Autonomia::Agents::ReapStaleDraftsJob < ApplicationJob
             .select(:autonomia_agent_id)
   end
 
+  # Uma resposta do dono torna o rascunho trabalho iniciado, mesmo que a thread esteja velha. O
+  # filtro de agente nulo mantém a subquery segura quando a thread ainda nasceu sem agente: um NULL
+  # em NOT IN faria o reaper não encontrar nenhum rascunho.
+  def user_response_agent_ids(relation)
+    relation.where.not(autonomia_agent_id: nil)
+            .where('messages @> ?::jsonb', [{ role: 'user' }].to_json)
+            .select(:autonomia_agent_id)
+  end
+
   # Janela positiva sempre: 0/negativo (cutoff no futuro varreria rascunhos demais) cai no default.
   def stale_hours
-    hours = Integer(ENV.fetch('AUTONOMIA_DRAFT_REAP_HOURS', DEFAULT_STALE_HOURS))
-    hours.positive? ? hours : DEFAULT_STALE_HOURS
-  rescue ArgumentError, TypeError
-    DEFAULT_STALE_HOURS
+    Autonomia::Agents::Config.draft_reap_hours
   end
 end

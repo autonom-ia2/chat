@@ -52,4 +52,40 @@ describe('AgentScheduleForm', () => {
 
     expect(wrapper.emitted('submit')).toEqual([['outside_business_hours']]);
   });
+
+  it('preserves a schedule draft during an unrelated agent refresh', async () => {
+    const wrapper = mountForm({ config: {} });
+
+    await wrapper
+      .find('button[data-id="outside_business_hours"]')
+      .trigger('click');
+    await wrapper.setProps({
+      agent: { config: { audience: { operator: 'and', conditions: [] } } },
+    });
+
+    expect(
+      wrapper
+        .find('button[data-id="outside_business_hours"]')
+        .attributes('data-active')
+    ).toBe('true');
+  });
+
+  it('rehydrates the schedule when its own config changes', async () => {
+    const wrapper = mountForm({
+      config: { response_window: 'business_hours' },
+    });
+
+    await wrapper.setProps({
+      agent: { config: { response_window: 'outside_business_hours' } },
+    });
+
+    expect(
+      wrapper
+        .find('button[data-id="outside_business_hours"]')
+        .attributes('data-active')
+    ).toBe('true');
+    expect(
+      wrapper.find('button[data-id="business_hours"]').attributes('data-active')
+    ).toBe('false');
+  });
 });

@@ -17,7 +17,8 @@ RSpec.describe 'Conversation copilot CRM visibility', type: :request do
   end
 
   around do |example|
-    with_modified_env AUTONOMIA_AGENTS_ENABLED: 'true', CRM_KANBAN_ENABLED: 'true', CRM_COPILOT_ENABLED: 'true' do
+    with_modified_env AUTONOMIA_AGENTS_ENABLED: 'true', CRM_KANBAN_ENABLED: 'true', CRM_COPILOT_ENABLED: 'true',
+                      CRM_AI_ENABLED: 'true' do
       example.run
     end
   end

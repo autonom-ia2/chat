@@ -30,7 +30,7 @@ RSpec.describe 'Autonomia journeys - external agent lifecycle', type: :request d
   end
 
   describe 'activation without instruction' do
-    it 'activates an external agent even when it has no instruction' do
+    it 'rejects activating an external agent when it has no instruction' do
       # Arrange — agente externo recém-criado, sem instrução nenhuma.
       agent = create_external_agent(instruction: nil)
 
@@ -40,12 +40,25 @@ RSpec.describe 'Autonomia journeys - external agent lifecycle', type: :request d
             headers: administrator.create_new_auth_token,
             as: :json
 
-      # Assert — comportamento ATUAL: nenhuma validação exige instrução na ativação;
-      # o agente fica ativo/ligado mesmo "vazio".
-      # TODO(onda-N): se o produto decidir exigir instrução para ativar agente externo,
-      # este spec deve passar a assertar 422 (hoje a API aceita ativar sem instrução).
-      expect(response).to have_http_status(:success)
-      expect(agent.reload).to have_attributes(status: 'active', enabled: true, instruction: nil)
+      # Assert — BE-04/D30: a porta de ativação exige a instrução antes de gravar status/enabled.
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body).to include(
+        'code' => 'missing_instruction',
+        'error' => I18n.t('autonomia.agents.errors.missing_instruction', locale: account.locale, raise: true)
+      )
+      expect(agent.reload).to have_attributes(status: 'draft', enabled: false, instruction: nil)
+    end
+
+    it 'rejects creating an active external agent without an instruction' do
+      expect do
+        post "/api/v1/accounts/#{account.id}/autonomia/agents",
+             params: { agent: { name: 'Sem instrução', agent_type: 'support', status: 'active', enabled: true } },
+             headers: administrator.create_new_auth_token,
+             as: :json
+      end.not_to change(Autonomia::Agents::Agent, :count)
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['code']).to eq('missing_instruction')
     end
   end
 
@@ -76,6 +89,20 @@ RSpec.describe 'Autonomia journeys - external agent lifecycle', type: :request d
   end
 
   describe 'mode transitions' do
+    it 'rejects an active guided agent switching to manual without a new instruction' do
+      agent = create_external_agent(status: :active, enabled: true, instruction: 'INSTRUCAO GERADA')
+
+      patch "/api/v1/accounts/#{account.id}/autonomia/agents/#{agent.id}",
+            params: { agent: { mode: 'manual' } },
+            headers: administrator.create_new_auth_token,
+            as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['code']).to eq('missing_instruction')
+      expect(agent.reload).to have_attributes(status: 'active', enabled: true, mode: 'guided',
+                                               instruction: 'INSTRUCAO GERADA')
+    end
+
     it 'discards the builder-generated instruction when switching guided -> manual without a new one' do
       # Arrange — instrução gerada pelo Construtor (IP oculto em modo guiado).
       agent = create_external_agent(mode: :guided, instruction: 'INSTRUCAO GERADA PELO CONSTRUTOR')
@@ -171,45 +198,61 @@ RSpec.describe 'Autonomia journeys - external agent lifecycle', type: :request d
   end
 
   describe 'config updates' do
-    it 'preserves with_knowledge and reviewer-computed keys when updating config via API' do
-      # Arrange — with_knowledge/topic_map são chaves COMPUTADAS (PROTECTED_CONFIG_KEYS):
-      # o usuário não as define pela API e um update de config não pode apagá-las.
+    it 'rejects computed config keys before updating the agent' do
+      # Arrange — with_knowledge/topic_map são chaves computadas; o contrato BE-19
+      # recusa a tentativa antes de strong params, sanitização ou merge.
+      agent = create_external_agent(
+        config: { 'with_knowledge' => false, 'topic_map' => [{ 'topic' => 'frete' }], 'temperature' => 0.2 }
+      )
+      before_config = agent.reload.config
+
+      # Act — tenta sobrescrever uma chave computada pela API pública.
+      patch "/api/v1/accounts/#{account.id}/autonomia/agents/#{agent.id}",
+            params: { agent: { config: { with_knowledge: true } } },
+            headers: administrator.create_new_auth_token, as: :json
+
+      # Assert — nada é descartado em silêncio nem gravado parcialmente.
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body).to include('code' => 'config_key_not_allowed', 'key' => 'with_knowledge')
+      expect(agent.reload.config).to eq(before_config)
+    end
+
+    it 'merges an allowed public key while preserving computed config keys' do
       agent = create_external_agent(
         config: { 'with_knowledge' => false, 'topic_map' => [{ 'topic' => 'frete' }], 'temperature' => 0.2 }
       )
 
-      # Act — update mandando config nova (inclusive tentando sobrescrever with_knowledge).
       patch "/api/v1/accounts/#{account.id}/autonomia/agents/#{agent.id}",
-            params: { agent: { config: { temperature: 0.7, with_knowledge: true } } },
+            params: { agent: { config: { response_window: 'business_hours' } } },
             headers: administrator.create_new_auth_token, as: :json
 
-      # Assert — merge preserva as protegidas; só a chave livre (temperature) muda.
       expect(response).to have_http_status(:success)
-      agent.reload
-      expect(agent.config['with_knowledge']).to be(false)
-      expect(agent.config['topic_map']).to eq([{ 'topic' => 'frete' }])
-      expect(agent.config['temperature']).to eq(0.7)
+      expect(agent.reload.config).to include(
+        'with_knowledge' => false,
+        'topic_map' => [{ 'topic' => 'frete' }],
+        'temperature' => 0.2,
+        'response_window' => 'business_hours'
+      )
     end
 
     # #380 — as escolhas da corretora (`agente_de_cotacao`) são lidas a cada turno pelo Agente de
-    # Cotação e só o Builder as escreve, sempre as quatro. Uma escrita parcial pela API pararia o
-    # agente com `EscolhasIncompletas`; uma completa trocaria o nome dele por fora do fluxo.
-    it 'preserves the quote agent choices when updating config via API' do
+    # Cotação e só o Builder as escreve. A API genérica deve recusar a escrita parcial.
+    it 'rejects quote agent choices through the generic config endpoint' do
       # Arrange
       chave = Autonomia::Insurance::QuoteAgent::Builder::ESCOLHAS_DA_CORRETORA
       escolhas = { 'nome_agente' => 'Lia', 'nome_corretora' => 'Sena', 'horario' => 'seg a sex', 'comportamento' => 'consultivo' }
       agent = create_external_agent(agent_type: 'insurance_quote', config: { chave => escolhas })
+      before_config = agent.reload.config
 
       # Act — tenta trocar só o nome, por fora do Builder.
       patch "/api/v1/accounts/#{account.id}/autonomia/agents/#{agent.id}",
-            params: { agent: { config: { chave => { 'nome_agente' => 'Outra' }, 'temperature' => 0.7 } } },
+            params: { agent: { config: { chave => { 'nome_agente' => 'Outra' } } } },
             headers: administrator.create_new_auth_token, as: :json
 
-      # Assert — as escolhas ficam como o Builder gravou; a chave livre muda.
-      expect(response).to have_http_status(:success)
-      agent.reload
-      expect(agent.config[chave]).to eq(escolhas)
-      expect(agent.config['temperature']).to eq(0.7)
+      # Assert — o caminho dedicado do Builder continua sendo a única escrita autorizada.
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body).to include('code' => 'config_key_not_allowed', 'key' => chave)
+      expect(agent.reload.config).to eq(before_config)
     end
   end
 
@@ -378,7 +421,26 @@ RSpec.describe 'Autonomia journeys - external agent lifecycle', type: :request d
 
       # Assert
       expect(response).to have_http_status(:unprocessable_entity)
-      expect(response.parsed_body['error']).to include('is not a valid')
+      expect(response.parsed_body).to include(
+        'code' => 'invalid_enum',
+        'error' => I18n.t('autonomia.agents.errors.invalid_enum', locale: account.locale, raise: true)
+      )
+      expect(agent.reload.actuation).to eq('external')
+    end
+
+    it 'localizes an unknown enum value for a Brazilian Portuguese account' do
+      account.update!(locale: 'pt_BR')
+      agent = create_external_agent
+
+      patch "/api/v1/accounts/#{account.id}/autonomia/agents/#{agent.id}",
+            params: { agent: { actuation: 'sideways' } },
+            headers: administrator.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body).to include(
+        'code' => 'invalid_enum',
+        'error' => I18n.t('autonomia.agents.errors.invalid_enum', locale: 'pt_BR', raise: true)
+      )
       expect(agent.reload.actuation).to eq('external')
     end
 

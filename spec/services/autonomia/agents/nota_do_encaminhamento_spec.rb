@@ -113,6 +113,30 @@ RSpec.describe Autonomia::Agents::NotaDoEncaminhamento do
       expect(described_class.postar(conversation).content).to include('- cotar vida: a pessoa pediu este seguro')
     end
 
+    it 'integra a passagem à nota existente e mantém uma nota por episódio' do
+      create(:message, account: account, conversation: conversation, message_type: :incoming, content: 'oi')
+      recusar('busca_de_atividade_indisponivel')
+      described_class.postar(conversation)
+
+      passagem = { agent: agent, reason: 'human_requested' }
+      described_class.postar(conversation, passagem: passagem)
+      described_class.postar(conversation, passagem: passagem)
+
+      expect(notas.count).to eq(1)
+      expect(notas.sole.content.scan('passou esta conversa').size).to eq(1)
+      expect(notas.sole.content).to include(described_class::TITULO)
+      expect(notas.sole.content_attributes[described_class::PASSAGEM]).to be(true)
+      expect(notas.sole.content_attributes[described_class::EPISODIO]).to be_present
+    end
+
+    it 'usa o artigo masculino conforme a voz pública do agente' do
+      agent.update!(config: agent.config.to_h.merge('voice' => 'masculina'))
+
+      nota = described_class.postar(conversation, passagem: { agent: agent, reason: 'human_requested' })
+
+      expect(nota.content).to start_with("O #{agent.name} passou esta conversa")
+    end
+
     it 'Redis fora do ar: sem nota e sem erro' do
       recusar('busca_de_atividade_indisponivel')
       allow(Redis::Alfred).to receive(:with).and_raise(Redis::CannotConnectError)
@@ -148,8 +172,11 @@ RSpec.describe Autonomia::Agents::NotaDoEncaminhamento do
 
       expect(conversation.messages.where(private: false, message_type: :outgoing).pluck(:content))
         .to eq(['Alguém da equipe assume a conversa por aqui.'])
-      expect(notas.pluck(:content))
-        .to eq(["#{described_class::TITULO}\n- #{Autonomia::Agents::Tools::Recusa::MOTIVOS['busca_de_atividade_indisponivel']}"])
+      passagem = "A #{agent.name} passou esta conversa para a equipe: " \
+                 "#{I18n.t('autonomia.agents.handoff_reasons.ai_unavailable', locale: account.locale, default: 'ai_unavailable')}."
+      expected = [passagem, described_class::TITULO,
+                  "- #{Autonomia::Agents::Tools::Recusa::MOTIVOS['busca_de_atividade_indisponivel']}"].join("\n")
+      expect(notas.pluck(:content)).to eq([expected])
     end
   end
 end

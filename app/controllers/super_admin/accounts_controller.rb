@@ -1,4 +1,6 @@
 class SuperAdmin::AccountsController < SuperAdmin::ApplicationController
+  include SuperAdmin::AccountsAgentOperationConfig
+
   before_action :validate_suspension_metadata, only: :update
 
   # Overwrite any of the RESTful controller actions to implement custom behavior
@@ -132,6 +134,20 @@ class SuperAdmin::AccountsController < SuperAdmin::ApplicationController
       fallback_location: [namespace, requested_resource],
       notice: "Autonomia Insurance #{enabled ? 'enabled' : 'disabled'}"
     )
+  end
+
+  def toggle_agents_redesign
+    return head :unprocessable_entity unless %w[true false].include?(params[:enabled])
+
+    enabled = params[:enabled] == 'true'
+    if enabled
+      Autonomia::Agents::Config.enable_redesign_for!(requested_resource)
+    else
+      Autonomia::Agents::Config.disable_redesign_for!(requested_resource)
+    end
+    key = enabled ? 'enabled' : 'disabled'
+    redirect_back(fallback_location: [namespace, requested_resource],
+                  notice: I18n.t("autonomia.agents.redesign.#{key}"))
   end
 
   # O RAMO ALÉM DE AUTO, LIGADO CONTA A CONTA (chat#323). Só os ramos dos especialistas mantidos: outro valor não

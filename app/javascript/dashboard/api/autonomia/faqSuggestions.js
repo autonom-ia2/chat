@@ -7,9 +7,10 @@ class AutonomiaFaqSuggestionsAPI extends ApiClient {
     super('autonomia/agents', { accountScoped: true });
   }
 
-  list(agentId, { status = 'pending', page = 1 } = {}) {
+  list(agentId, { status = 'pending', page = 1, signal } = {}) {
     return axios.get(`${this.url}/${agentId}/faq_suggestions`, {
       params: { status, page },
+      ...(signal ? { signal } : {}),
     });
   }
 

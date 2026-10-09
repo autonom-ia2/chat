@@ -69,6 +69,10 @@ module Autonomia
         end
       end
 
+      def wrong_reply_report_scope
+        wrong_reply_reports
+      end
+
       private
 
       def events
@@ -231,7 +235,8 @@ module Autonomia
       def wrong_reply_reports
         ::Captain::MessageReport.joins(:message)
                                 .where(account_id: @agent.account_id, created_at: @from..@to)
-                                .where(messages: { sender_type: 'AgentBot', conversation_id: all_time_handled_ids })
+                                .where(messages: { sender_type: 'AgentBot', private: false,
+                                                   conversation_id: all_time_handled_ids })
       end
 
       def reported_conversations

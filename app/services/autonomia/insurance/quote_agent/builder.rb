@@ -250,6 +250,12 @@ class Autonomia::Insurance::QuoteAgent::Builder
     substituir(texto_do_principal, conferir_escolhas!(config[ESCOLHAS_DA_CORRETORA]))
   end
 
+  # ÚNICO escritor das quatro escolhas da Lia. O painel só oferece nome, comportamento e horário;
+  # o nome da corretora continua guardado no registro e nunca é aceito pela API de Agentes.
+  def self.atualizar_escolhas!(agent, escolhas)
+    ::Autonomia::Insurance::QuoteAgent::ChoicesUpdater.call(agent, escolhas)
+  end
+
   # Lido a cada montagem, e não fotografado no boot: é o que faz o deploy seguinte valer.
   def self.texto_do_principal
     INSTRUCOES.join(ARQUIVO_DO_PRINCIPAL).read
@@ -316,7 +322,7 @@ class Autonomia::Insurance::QuoteAgent::Builder
   def call
     # SÓ O NOME DO CAMPO, como nas outras três recusas: a porta devolve a mensagem em `detail`, e até a
     # rodada 7 de #380 ela era o próprio valor — `behavior: '$nomeAgente'` voltava ao cliente da API.
-    raise ComportamentoInvalido, 'comportamento' unless COMPORTAMENTOS.include?(@comportamento)
+    validar_comportamento!
 
     validar_slugs!
     validar_escolhas!
@@ -334,6 +340,10 @@ class Autonomia::Insurance::QuoteAgent::Builder
 
   private
 
+  def validar_comportamento!
+    raise ComportamentoInvalido, 'comportamento' unless COMPORTAMENTOS.include?(@comportamento)
+  end
+
   # O agente de cotação desta conta, se já houver.
   def existente
     ::Autonomia::Agents::Agent.kept.find_by(account: @account, agent_type: 'insurance_quote')
@@ -350,38 +360,6 @@ class Autonomia::Insurance::QuoteAgent::Builder
     return if desconhecidos.empty?
 
     raise SlugDesconhecido, "#{desconhecidos.join(', ')} (catálogo: #{catalogo.join(', ')})"
-  end
-
-  # As três escolhas de texto livre (`comportamento` é um de dois valores fixos, conferido em `call`).
-  # Nome vazio ou longo demais, e — rodada 6 — qualquer uma delas contendo um marcador reservado:
-  # `nome_corretora: '$nomeAgente'` chegaria ao modelo como marcador literal (termo 6), e o
-  # `EscolhasIncompletas` que o runtime levantaria dentro da transação não é resgatado pela porta do
-  # agente de cotação (500 sem o campo). A mensagem nomeia o campo e o motivo, nunca o valor.
-  def validar_escolhas!
-    { 'nome do agente' => @nome_agente, 'nome da corretora' => @nome_corretora }.each do |campo, valor|
-      raise NomeInvalido, "#{campo} vazio" if valor.blank?
-      raise NomeInvalido, "#{campo} acima de #{MAX_NOME} caracteres" if valor.length > MAX_NOME
-      raise NomeInvalido, "#{campo} contém um marcador reservado" if MARCADOR.match?(valor)
-    end
-    raise HorarioInvalido, 'horário contém um marcador reservado' if MARCADOR.match?(@horario)
-  end
-
-  # A coluna recebe o texto de hoje (retrato do nascimento); o que roda lê o arquivo do deploy com as
-  # escolhas guardadas em `config` (ver `instrucao_do_principal`).
-  def criar_agente
-    ::Autonomia::Agents::Agent.create!(
-      account: @account, name: @nome_agente, agent_type: 'insurance_quote',
-      status: :active, enabled: true, instruction: texto(ARQUIVO_DO_PRINCIPAL),
-      config: { 'native_tool_slugs' => TODAS_AS_TOOLS, 'with_knowledge' => true, ESCOLHAS_DA_CORRETORA => escolhas }
-    )
-  end
-
-  def criar_especialista(agente, dados)
-    ::Autonomia::Agents::Specialist.create!(
-      agent: agente, account: @account, slug: dados[:slug], name: dados[:nome],
-      description: dados[:descricao], instruction: texto_do_especialista(dados[:arquivo]),
-      tool_slugs: self.class.ferramentas_do_especialista(dados), enabled: true
-    )
   end
 
   # A MESMA substituição do runtime (`substituir`): o que a coluna guarda no nascimento é, no dia da
@@ -405,3 +383,143 @@ class Autonomia::Insurance::QuoteAgent::Builder
       'horario' => @horario, 'comportamento' => @comportamento }
   end
 end
+
+# Atualização feita pela tela avançada do agente de cotação. Fica fora do Builder de criação para manter
+# as duas portas pequenas: o Builder continua responsável por nascer pronto, e este objeto por validar e
+# persistir uma edição parcial das quatro escolhas já guardadas.
+module Autonomia::Insurance::QuoteAgent::ChoicesUpdater
+  ALLOWED_KEYS = %w[name behavior horario].freeze
+
+  class << self
+    def call(agent, escolhas)
+      ensure_quote_agent!(agent)
+      incoming = normalize(escolhas)
+      validate_incoming!(incoming)
+      existing = existing_choices(agent)
+      merged = merge_choices(existing, incoming)
+      validate_merged!(merged)
+      validate_with_builder!(agent, existing, merged)
+      persist!(agent, merged)
+      agent
+    end
+
+    private
+
+    def ensure_quote_agent!(agent)
+      raise ArgumentError, 'insurance_quote' unless agent&.agent_type == 'insurance_quote'
+    end
+
+    def normalize(escolhas)
+      escolhas.respond_to?(:to_h) ? escolhas.to_h.stringify_keys : {}
+    end
+
+    def validate_incoming!(incoming)
+      invalid_key = incoming.keys.find { |key| ALLOWED_KEYS.exclude?(key) }
+      raise ArgumentError, invalid_key if invalid_key
+
+      validate_name!(incoming)
+      validate_behavior!(incoming)
+      validate_schedule!(incoming)
+    end
+
+    def validate_name!(incoming)
+      return unless incoming.key?('name') && !incoming['name'].is_a?(String)
+
+      raise ::Autonomia::Insurance::QuoteAgent::Builder::NomeInvalido, 'nome do agente inválido'
+    end
+
+    def validate_behavior!(incoming)
+      return unless incoming.key?('behavior')
+      return if ::Autonomia::Insurance::QuoteAgent::Builder::COMPORTAMENTOS.include?(incoming['behavior'])
+
+      raise ::Autonomia::Insurance::QuoteAgent::Builder::ComportamentoInvalido, 'comportamento inválido'
+    end
+
+    def validate_schedule!(incoming)
+      return unless incoming.key?('horario')
+      return if incoming['horario'].is_a?(String) && incoming['horario'].strip.present?
+
+      raise ::Autonomia::Insurance::QuoteAgent::Builder::HorarioInvalido, 'horário inválido'
+    end
+
+    def existing_choices(agent)
+      builder = ::Autonomia::Insurance::QuoteAgent::Builder
+      existing = agent.config.to_h[builder::ESCOLHAS_DA_CORRETORA].to_h.stringify_keys
+      builder.conferir_escolhas!(existing)
+    end
+
+    def merge_choices(existing, incoming)
+      existing.merge(
+        'nome_agente' => incoming.fetch('name', existing['nome_agente']),
+        'comportamento' => incoming.fetch('behavior', existing['comportamento']),
+        'horario' => incoming.fetch('horario', existing['horario'])
+      )
+    end
+
+    def validate_merged!(merged)
+      %w[nome_agente comportamento horario].each do |key|
+        raise ::Autonomia::Insurance::QuoteAgent::Builder::EscolhasIncompletas, key unless merged[key].is_a?(String)
+      end
+    end
+
+    def validate_with_builder!(agent, existing, merged)
+      builder = ::Autonomia::Insurance::QuoteAgent::Builder
+      validator = builder.new(
+        account: agent.account,
+        nome_agente: merged['nome_agente'],
+        nome_corretora: existing['nome_corretora'],
+        horario: merged['horario'],
+        comportamento: merged['comportamento']
+      )
+      validator.send(:validar_comportamento!)
+      validator.send(:validar_escolhas!)
+      builder.conferir_escolhas!(merged)
+    end
+
+    def persist!(agent, merged)
+      ::Autonomia::Agents::Agent.transaction do
+        agent.with_lock do
+          agent.config = agent.config.to_h.merge(
+            ::Autonomia::Insurance::QuoteAgent::Builder::ESCOLHAS_DA_CORRETORA => merged
+          )
+          agent.name = merged['nome_agente']
+          agent.save!
+        end
+      end
+    end
+  end
+end
+
+module Autonomia::Insurance::QuoteAgent::BuilderCreation
+  private
+
+  def validar_escolhas!
+    builder = ::Autonomia::Insurance::QuoteAgent::Builder
+    { 'nome do agente' => @nome_agente, 'nome da corretora' => @nome_corretora }.each do |campo, valor|
+      raise builder::NomeInvalido, "#{campo} vazio" if valor.blank?
+      raise builder::NomeInvalido, "#{campo} acima de #{builder::MAX_NOME} caracteres" if valor.length > builder::MAX_NOME
+      raise builder::NomeInvalido, "#{campo} contém um marcador reservado" if builder::MARCADOR.match?(valor)
+    end
+    raise builder::HorarioInvalido, 'horário contém um marcador reservado' if builder::MARCADOR.match?(@horario)
+  end
+
+  def criar_agente
+    builder = ::Autonomia::Insurance::QuoteAgent::Builder
+    ::Autonomia::Agents::Agent.create!(
+      account: @account, name: @nome_agente, agent_type: 'insurance_quote',
+      status: :active, enabled: true, instruction: texto(builder::ARQUIVO_DO_PRINCIPAL),
+      config: { 'native_tool_slugs' => builder::TODAS_AS_TOOLS, 'with_knowledge' => true, 'voice' => 'feminina',
+                builder::ESCOLHAS_DA_CORRETORA => escolhas }
+    )
+  end
+
+  def criar_especialista(agente, dados)
+    ::Autonomia::Agents::Specialist.create!(
+      agent: agente, account: @account, slug: dados[:slug], name: dados[:nome],
+      description: dados[:descricao], instruction: texto_do_especialista(dados[:arquivo]),
+      tool_slugs: self.class.ferramentas_do_especialista(dados), enabled: true
+    )
+  end
+end
+
+Autonomia::Insurance::QuoteAgent::Builder.include(Autonomia::Insurance::QuoteAgent::BuilderCreation)

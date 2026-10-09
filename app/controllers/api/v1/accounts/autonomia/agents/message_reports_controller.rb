@@ -36,7 +36,8 @@ class Api::V1::Accounts::Autonomia::Agents::MessageReportsController < Api::V1::
 
   # Só mensagens postadas pelo agente Autonom.ia (AgentBot-espelho carimbado com autonomia_agent_id).
   def ensure_autonomia_agent_message
-    return if @message.sender_type == 'AgentBot' && @message.content_attributes.to_h['autonomia_agent_id'].present?
+    return if @message.sender_type == 'AgentBot' && !@message.private? &&
+              @message.content_attributes.to_h['autonomia_agent_id'].present?
 
     render json: { error: 'Only Autonomia agent messages can be reported' }, status: :unprocessable_entity
   end

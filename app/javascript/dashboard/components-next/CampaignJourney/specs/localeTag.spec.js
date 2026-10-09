@@ -1,4 +1,4 @@
-import { formatNumber, toLocaleTag } from '../localeTag';
+import { formatNumber, toLocaleTag } from 'dashboard/helper/localeTag';
 import { formatInZone } from '../scheduleTime';
 
 describe('toLocaleTag (pt_BR → pt-BR)', () => {

@@ -5,7 +5,10 @@ import WootDatePicker from 'dashboard/components/ui/DatePicker/DatePicker.vue';
 import AuditLogFilters from '../AuditLogFilters.vue';
 
 vi.mock('vue-i18n', () => ({
-  useI18n: () => ({ t: key => key }),
+  useI18n: () => ({
+    t: (key, params) =>
+      key === 'AUDIT_LOGS.FILTERS.AGENT_BY_ID' ? `AI agent #${params.id}` : key,
+  }),
 }));
 
 const mountComponent = (props = {}, mountFn = shallowMount) =>
@@ -31,6 +34,8 @@ describe('AuditLogFilters', () => {
       'AUDIT_LOGS.FILTERS.DATE_RANGE',
       'AUDIT_LOGS.FILTERS.EVENT_TYPES.INBOXES',
       'AUDIT_LOGS.FILTERS.SORT.OLDEST',
+      'AUDIT_LOGS.FILTERS.ALL_AGENTS',
+      'AUDIT_LOGS.FILTERS.ALL_OPERATIONS',
     ]);
   });
 
@@ -43,6 +48,8 @@ describe('AuditLogFilters', () => {
       'AUDIT_LOGS.FILTERS.DATE_RANGE',
       'AUDIT_LOGS.FILTERS.ALL_EVENTS',
       'AUDIT_LOGS.FILTERS.SORT.NEWEST',
+      'AUDIT_LOGS.FILTERS.ALL_AGENTS',
+      'AUDIT_LOGS.FILTERS.ALL_OPERATIONS',
     ]);
   });
 
@@ -98,6 +105,76 @@ describe('AuditLogFilters', () => {
     await openMenu(wrapper, 2);
 
     expect(wrapper.findAllComponents(DropdownMenu)).toHaveLength(1);
+  });
+
+  it('offers exact agent and operation filters without a native select', async () => {
+    const wrapper = mountComponent(
+      {
+        agentId: 7,
+        operationKey: 'voice_reply',
+        agents: [{ id: 7, name: 'Agent 7' }],
+      },
+      mount
+    );
+    const buttons = wrapper.findAllComponents(Button);
+
+    expect(buttons.at(3).text()).toBe('Agent 7');
+    expect(buttons.at(4).text()).toBe('AUDIT_LOGS.OPERATION_KEYS.VOICE_REPLY');
+
+    await buttons.at(3).trigger('click');
+    expect(
+      wrapper.findComponent(DropdownMenu).props('menuSections')[0].items
+    ).toEqual([
+      {
+        label: 'AUDIT_LOGS.FILTERS.ALL_AGENTS',
+        action: 'agent_id',
+        isSelected: false,
+      },
+      {
+        label: 'Agent 7',
+        value: 7,
+        action: 'agent_id',
+        isSelected: true,
+      },
+    ]);
+  });
+
+  it('keeps an active agent filter visible when its catalog entry is unavailable', async () => {
+    const wrapper = mountComponent({ agentId: 42 }, mount);
+    const buttons = wrapper.findAllComponents(Button);
+
+    expect(buttons.at(3).text()).toBe('AI agent #42');
+
+    await buttons.at(3).trigger('click');
+    expect(
+      wrapper.findComponent(DropdownMenu).props('menuSections')[0].items
+    ).toEqual([
+      {
+        label: 'AUDIT_LOGS.FILTERS.ALL_AGENTS',
+        action: 'agent_id',
+        isSelected: false,
+      },
+      {
+        label: 'AI agent #42',
+        value: 42,
+        action: 'agent_id',
+        isSelected: true,
+      },
+    ]);
+
+    wrapper.findComponent(DropdownMenu).vm.$emit('action', {
+      action: 'agent_id',
+      value: undefined,
+    });
+    expect(wrapper.emitted('update')).toEqual([[{ agent_id: undefined }]]);
+  });
+
+  it('prefers the catalog name when the active agent becomes available', async () => {
+    const wrapper = mountComponent({ agentId: 42 }, mount);
+
+    await wrapper.setProps({ agents: [{ id: 42, name: 'Clara' }] });
+
+    expect(wrapper.findAllComponents(Button).at(3).text()).toBe('Clara');
   });
 
   it('opens the calendar without applying a window', async () => {

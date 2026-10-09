@@ -30,7 +30,7 @@ const toggle = key => {
   >
     <div
       v-if="items.length"
-      class="min-w-0 bg-[#0D2344] px-6 py-6 text-white lg:w-[22%]"
+      class="min-w-0 bg-n-navy px-6 py-6 text-white lg:w-[22%]"
       :data-kpi="items[0].key"
     >
       <p class="mb-0 text-xs text-white opacity-80">{{ items[0].label }}</p>

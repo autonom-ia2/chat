@@ -8,8 +8,9 @@ class AutonomiaChannelsAPI extends ApiClient {
     super('autonomia/agents', { accountScoped: true });
   }
 
-  get(agentId) {
-    return axios.get(`${this.url}/${agentId}/channels`);
+  get(agentId, { signal } = {}) {
+    const endpoint = `${this.url}/${agentId}/channels`;
+    return signal ? axios.get(endpoint, { signal }) : axios.get(endpoint);
   }
 
   connect(agentId, inboxId) {

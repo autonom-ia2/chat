@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, ref } from 'vue';
 import { onKeyStroke, useScrollLock } from '@vueuse/core';
 import Button from 'dashboard/components-next/button/Button.vue';
 import TeleportWithDirection from 'dashboard/components-next/TeleportWithDirection.vue';
+import { useModalFocus } from 'dashboard/composables/useModalFocus';
 
 const props = defineProps({
   title: {
@@ -16,11 +17,20 @@ const props = defineProps({
   width: {
     type: String,
     default: 'xl',
-    validator: value => ['md', 'lg', 'xl', '2xl', '3xl'].includes(value),
+    validator: value =>
+      ['md', 'lg', 'xl', '2xl', '3xl', 'audience'].includes(value),
   },
   closeOnClickOutside: {
     type: Boolean,
     default: true,
+  },
+  panelTestId: {
+    type: String,
+    default: '',
+  },
+  backdropTestId: {
+    type: String,
+    default: '',
   },
 });
 
@@ -34,13 +44,16 @@ const MAX_WIDTH_CLASSES = {
   xl: 'max-w-xl',
   '2xl': 'max-w-2xl',
   '3xl': 'max-w-3xl',
+  audience: 'sm:w-[37rem]',
 };
 
 const isOpen = ref(false);
 const panelRef = ref(null);
 const isScrollLocked = useScrollLock(document.body);
+const { activate, deactivate } = useModalFocus({ container: panelRef });
 
 let previousActiveElement = null;
+let restorePending = false;
 
 const maxWidthClass = computed(() => MAX_WIDTH_CLASSES[props.width]);
 
@@ -50,23 +63,43 @@ const open = () => {
     document.activeElement instanceof HTMLElement
       ? document.activeElement
       : null;
+  restorePending = true;
   isOpen.value = true;
 };
 
 // Locking the page and moving focus both force layout. Doing that in the frame the panel mounts
 // in delays the slide by a frame, so it waits until the panel has arrived.
 const onAfterEnter = () => {
+  if (!isOpen.value) return;
+
   isScrollLocked.value = true;
-  panelRef.value?.focus();
+  const initialFocus =
+    panelRef.value?.querySelector('[data-autofocus]') || panelRef.value;
+  initialFocus?.focus({ preventScroll: true });
+  activate();
 };
 
 const close = () => {
   if (!isOpen.value) return;
+
+  deactivate();
   isOpen.value = false;
   isScrollLocked.value = false;
-  if (previousActiveElement?.isConnected) previousActiveElement.focus();
-  previousActiveElement = null;
   emit('close');
+};
+
+const restoreFocus = () => {
+  if (!restorePending) return;
+
+  restorePending = false;
+  const trigger = previousActiveElement;
+  previousActiveElement = null;
+  if (trigger?.isConnected) trigger.focus();
+};
+
+const onAfterLeave = () => {
+  restoreFocus();
+  emit('afterLeave');
 };
 
 const onOverlayClick = () => {
@@ -83,7 +116,9 @@ onKeyStroke('Escape', event => {
 });
 
 onBeforeUnmount(() => {
+  deactivate();
   isScrollLocked.value = false;
+  restoreFocus();
 });
 
 defineExpose({ open, close });
@@ -101,6 +136,7 @@ defineExpose({ open, close });
         v-if="isOpen"
         class="fixed inset-0 z-50 bg-n-alpha-black1"
         role="presentation"
+        :data-test="backdropTestId || undefined"
         @click="onOverlayClick"
       />
     </Transition>
@@ -110,7 +146,7 @@ defineExpose({ open, close });
       leave-active-class="transition-transform duration-200 ease-in"
       leave-to-class="translate-x-[calc(100%+0.75rem)] rtl:translate-x-[calc(-100%-0.75rem)]"
       @after-enter="onAfterEnter"
-      @after-leave="emit('afterLeave')"
+      @after-leave="onAfterLeave"
     >
       <aside
         v-if="isOpen"
@@ -118,6 +154,8 @@ defineExpose({ open, close });
         role="dialog"
         aria-modal="true"
         :aria-label="title"
+        :data-test="panelTestId || undefined"
+        :data-testid="panelTestId || undefined"
         tabindex="-1"
         class="fixed z-50 flex flex-col w-[calc(100%-1.5rem)] overflow-hidden rounded-xl shadow-lg outline outline-1 outline-n-container inset-y-3 end-3 bg-n-solid-1 will-change-transform"
         :class="maxWidthClass"
@@ -138,14 +176,16 @@ defineExpose({ open, close });
           </slot>
           <div class="flex items-center gap-1 shrink-0 -me-2">
             <slot name="header-actions" />
-            <Button
-              ghost
-              slate
-              sm
-              icon="i-lucide-x"
-              :aria-label="$t('GENERAL.CLOSE')"
-              @click="close"
-            />
+            <slot name="close">
+              <Button
+                ghost
+                slate
+                sm
+                icon="i-lucide-x"
+                :aria-label="$t('GENERAL.CLOSE')"
+                @click="close"
+              />
+            </slot>
           </div>
         </header>
         <div class="flex-1 min-h-0 px-6 py-5 overflow-y-auto">

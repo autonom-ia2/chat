@@ -7,6 +7,7 @@ import { useAlert } from 'dashboard/composables';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 import TabBar from 'dashboard/components-next/tabbar/TabBar.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
+import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import MaterialDropzone from './MaterialDropzone.vue';
 import MaterialCard from './MaterialCard.vue';
 import SourceAddDialog from '../panel/SourceAddDialog.vue';
@@ -24,6 +25,14 @@ const props = defineProps({
   agentId: {
     type: [String, Number],
     default: null,
+  },
+  confirmRemoval: {
+    type: Boolean,
+    default: false,
+  },
+  knowledgeOnly: {
+    type: Boolean,
+    default: false,
   },
 });
 
@@ -67,6 +76,8 @@ const confidenceBarClass = computed(() => {
 const activeTabIndex = ref(0);
 const resyncingId = ref(null);
 const removingId = ref(null);
+const removeDialogRef = ref(null);
+const pendingRemove = ref(null);
 
 const tabs = computed(() => {
   const list = [
@@ -76,7 +87,7 @@ const tabs = computed(() => {
       count: knowledgeSources.value.length || undefined,
     },
   ];
-  if (hasMediaKind.value) {
+  if (!props.knowledgeOnly && hasMediaKind.value) {
     list.push({
       key: 'media',
       label: t('AGENTS.MATERIALS.TABS.MEDIA'),
@@ -160,19 +171,41 @@ const onResync = async sourceId => {
   }
 };
 
-const onRemove = async sourceId => {
+const removeSource = async sourceId => {
   removingId.value = sourceId;
   try {
     await store.dispatch('autonomiaSources/remove', {
       agentId: props.agentId,
       sourceId,
     });
+    if (props.confirmRemoval) {
+      removeDialogRef.value?.close();
+      pendingRemove.value = null;
+    }
   } catch (error) {
     useAlert(t('AGENTS.MATERIALS.REMOVE_ERROR'));
   } finally {
     removingId.value = null;
   }
 };
+
+const requestRemove = sourceId => {
+  if (!props.confirmRemoval) {
+    removeSource(sourceId);
+    return;
+  }
+  pendingRemove.value = visibleSources.value.find(
+    source => source.id === sourceId
+  );
+  if (pendingRemove.value) removeDialogRef.value?.open();
+};
+
+const removeName = computed(
+  () => pendingRemove.value?.title || pendingRemove.value?.reference || ''
+);
+
+const confirmRemove = () =>
+  pendingRemove.value?.id ? removeSource(pendingRemove.value.id) : null;
 
 const fetchSources = () => {
   if (!props.agentId) return;
@@ -269,6 +302,7 @@ onBeforeUnmount(() => {
         ghost
         slate
         xs
+        class="min-h-11"
         icon="i-lucide-link"
         :label="t('AGENTS.MATERIALS.ADD_LINK')"
         :disabled="!hasAgent || isUploading || knowledgeLimitReached"
@@ -346,11 +380,12 @@ onBeforeUnmount(() => {
         <MaterialCard
           v-for="source in visibleSources"
           :key="source.id"
+          role="listitem"
           :source="source"
           :resyncing="resyncingId === source.id"
           :removing="removingId === source.id"
           @resync="onResync"
-          @remove="onRemove"
+          @remove="requestRemove"
         />
       </div>
     </div>
@@ -373,7 +408,7 @@ onBeforeUnmount(() => {
         <Spinner :size="16" />
         <span>{{ t('AGENTS.MATERIALS.STATUS.SENDING') }}</span>
       </div>
-      <p class="max-w-xs text-xs leading-relaxed text-n-slate-10">
+      <p class="max-w-xs text-xs leading-relaxed text-n-slate-11">
         {{
           hasAgent
             ? t('AGENTS.MATERIALS.EMPTY')
@@ -405,6 +440,20 @@ onBeforeUnmount(() => {
       ref="addDialogRef"
       :agent-id="Number(agentId)"
       @added="onSourceAdded"
+    />
+
+    <Dialog
+      v-if="confirmRemoval"
+      ref="removeDialogRef"
+      type="alert"
+      :title="t('AGENTS.KNOWLEDGE.REMOVE_CONFIRM_TITLE')"
+      :description="
+        t('AGENTS.KNOWLEDGE.REMOVE_CONFIRM_DESC', { name: removeName })
+      "
+      :confirm-button-label="t('AGENTS.KNOWLEDGE.REMOVE_CONFIRM_BUTTON')"
+      :is-loading="removingId !== null"
+      @confirm="confirmRemove"
+      @close="pendingRemove = null"
     />
   </section>
 </template>

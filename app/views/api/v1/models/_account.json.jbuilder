@@ -35,6 +35,8 @@ json.name @account.name
 json.support_email @account.support_email
 json.status @account.status
 json.autonomia_agents_enabled Autonomia::Agents::Config.enabled?(@account)
+json.autonomia_agents_redesign_enabled Autonomia::Agents::Config.redesign_enabled?(@account)
+json.autonomia_copilot_available Autonomia::Agents::CopilotAvailability.new(account: @account).call.available
 json.autonomia_prospecting_enabled Autonomia::Prospecting::Config.enabled?(@account)
 json.autonomia_insurance_enabled Autonomia::Insurance::Config.enabled?(@account)
 # Guia da Plataforma: gate EXATO do backend (Config.enabled? + credencial de IA resolvível) — o widget

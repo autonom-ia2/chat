@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Rascunho v9.2 — rodadas 1–8 aplicadas; decisões D1–D35 registradas e aprovadas como plano em 07/10/2026; rodada 9 normal concluída com 11 achados confirmados (1 alto, 9 médios, 1 baixo; UX-04 rejeitado), correções e checagem concluídas sem achados residuais documentais; atualizado com o #1063 (§0); causas C1–C15 em `docs/audit/2026-10-05-agentes-prd-r2-causa-raiz.md`; protótipo publicado inspecionado em 07/10; implementação e gate das telas reais pendentes |
+| **Status** | Rascunho v9.2 — rodadas 1–8 aplicadas; decisões D1–D35 registradas; D7 revisada por Rodrigo em 07/10/2026 para manter toda conexão de WhatsApp na área existente de Canais; rodada 9 normal e checagem documental concluídas; protótipo publicado inspecionado; implementação, telas reais e gate local pendentes |
 | **Data** | 05/10/2026 |
 | **Dono do produto** | Rodrigo (Hub2You / Autonom.ia) |
 | **Repositório** | `autonom-ia2/chat` (fork do Chatwoot) |
@@ -45,8 +45,9 @@ A área **Agentes de IA** é a única do painel que não passou pelo redesign "p
 renomear).
 
 Este projeto reconstrói a área inteira — lista, criação em 4 etapas (Escolha → Conte → Teste → Ligue), painel do agente com
-5 abas (+ Ferramentas para admin da plataforma), conexão de WhatsApp por código, e as peças dentro da conversa (ajudante da
-equipe e "resposta errada") — exatamente como no protótipo, mais o backend que o protótipo exige.
+5 abas (+ Ferramentas para admin da plataforma), escolha de canais já conectados e atalho para a área existente de Canais,
+e as peças dentro da conversa (ajudante da equipe e "resposta errada") — exatamente como no protótipo, mais o backend que
+a jornada exige.
 
 **Para quem:** dono e equipe de corretoras e pequenas empresas que usam o Chat2You (Hub2You **e** Autonom.ia). Critério de
 linguagem: uma pessoa com pouca familiaridade com tecnologia ("QI 70") consegue criar, testar, ligar e ajustar um agente
@@ -70,6 +71,7 @@ sozinha.
 - Apagar o código antigo — acontece num PR separado **depois** do aceite final e de 2 semanas com a flag ligada (§10, F10).
 - Cobrança/medição de cotações (`ToolRun`) — não muda.
 - Novos canais além dos que o Chatwoot já conecta.
+- Cadastrar ou conectar WhatsApp dentro de Agentes: a conexão continua em Configurações > Canais/Caixas de entrada.
 
 ---
 
@@ -89,7 +91,7 @@ do protótipo foi feita na cópia publicada em 07/10, mas a aprovação visual e
 | **D4** | Azul-marinho `#0D2344` sem token (4 arquivos já usam `bg-[#0D2344]`) | (a) seguir o precedente arbitrário; (b) criar token `n-navy` em `theme/colors.js` | **(b)** e migrar os 4 usos no mesmo PR F0 | F0 | Plano aprovado no escopo (07/10); segue os gates do PR. |
 | **D5** | Sugestão "Vi o link X. Usar como material?" | (a) o Construtor (modelo) devolve `suggested_links[]` no estado da conversa; (b) sem a sugestão, só "Colar um link" | **(a)** — regra do Rodrigo proíbe detectar por texto/regex no front | BE-09, F2 | Plano aprovado no escopo (07/10); segue os gates do PR. |
 | **D6** | Texto "Fica guardado até você terminar ou excluir" × limpeza automática de 48 h (rascunho sem instrução e sem material que tem conversa) | (a) poupar rascunho com ao menos 1 resposta do usuário na conversa; (b) mudar o texto para "Guardado por 2 dias" | **(a)** | BE-14, F1 | Plano aprovado no escopo (07/10); segue os gates do PR. |
-| **D7** | Conectar WhatsApp novo pelo fluxo do agente | O backend de caixa WAHA exige `phone` (`waha_inboxes_controller.rb:18,99`), aceita só celular do Brasil (55 + DDD + 9 dígitos, `inbox_provisioner.rb:11,44`) e grava o token de quem conecta (`waha_inboxes_controller.rb:102-104`). (a) pedir o número na tela e liberar a quem é administrador; (b) só administrador | **(a)**: campo "Número do WhatsApp" (55 + DDD + número) antes do código, permissão = administrador da conta, aviso "Esta conexão usa o seu acesso. Se você sair da conta, ela para."; `invalid_phone` vira mensagem pt-BR | BE-13, F6 | Plano aprovado no escopo (07/10); segue os gates do PR. |
+| **D7** | Conexão de WhatsApp fora da área Agentes<br>A conexão, inclusive WhatsApp, continua na área existente de Canais/Caixas de entrada: settings_inbox_list em accounts/:accountId/settings/inboxes, com o cadastro existente settings_inbox_new em accounts/:accountId/settings/inboxes/new. Agentes não pedem número, exibem QR, recebem token nem criam waha_inboxes. Ligue e Onde atende só leem canais já conectados e elegíveis; sem canal livre, preservam o agente salvo e oferecem orientação/atalho para settings_inbox_new conforme a permissão. | (a) manter a conexão na área Canais e apenas associar a caixa existente ao agente; (b) criar conexão dentro de Agentes | **(a)** — uma fonte única para cadastrar/conectar canais, sem rota, tela ou contrato from novo em Agentes | F3, F6; BE-11 e associação de canais | Revisão explícita de Rodrigo em 07/10/2026; substitui a decisão anterior e torna F0-FINAL-01 inaplicável, sem declarar aprovação da revisão antiga. |
 | **D8** | Quem só pode ver pode usar a aba Testar? (hoje `POST test` aceita `autonomia_view`, `playground_controller.rb:29`) | sim / não | **sim** (como hoje) | — | Plano aprovado no escopo (07/10); segue os gates do PR. |
 | **D9** | Ordem de merge com o lote de Campanhas (#993, ainda fora da `main`), que tem `JourneyStepper`, `JourneySwitch`, `useModalFocus`, `localeTag` | (a) F0 extrai esses 4 para `components-next/`/`helper/` e #993 importa no rebase; (b) esperar #993 | **(a)** | F0 | Plano aprovado no escopo (07/10); segue os gates do PR. |
 | **D10** | Converter os tons antigos gravados em inglês (`friendly`, `professional`, `neutral`, `playful`) para a frase em português. **Muda o texto que o modelo lê ao vivo** (`prompt_builder.rb:242-246`) | (a) UPDATE por psql com foto antes (Q14) e 🟢, excluindo `insurance_quote` e agentes de sistema; (b) só a tela pré-seleciona | **(a)**, depois do deploy de F7, seguido do núcleo do §11.8 e do "teste responde" de cada agente ativo alterado, contra a foto Q14; volta = UPDATE pela foto | F9 | Plano aprovado no escopo (07/10); UPDATE ao vivo exige OK específico, foto Q14 e validação. |
@@ -215,9 +217,11 @@ não rodou por permissão: "Neste teste, {ela} não usou {ferramenta}: só quem 
 conta para ligar.
 
 **6.2.4 Ligue (`viewLigue`).** "Confira e escolha onde {a} {nome} atende":
-- **Onde atende:** canais livres (radio), 1 só já vem marcado; "Conectar um WhatsApp novo" (só administrador; quem edita sem
-  ser administrador lê "Peça a quem administra a conta para conectar um WhatsApp."); "Canais ocupados (n)"
-  desabilitados com "Já tem a Clara atendendo aqui. Cada canal tem um agente." (BE-11).
+- **Onde atende:** canais já conectados e elegíveis (radio), 1 só já vem marcado; "Canais ocupados (n)"
+  desabilitados com "Já tem a Clara atendendo aqui. Cada canal tem um agente." (BE-11). A tela não pede número, não mostra QR
+  nem cria caixa. Sem canal livre, o agente continua salvo e aparece a orientação com o atalho existente para
+  Configurações > Canais/Caixas de entrada (settings_inbox_new em accounts/:accountId/settings/inboxes/new), respeitando a
+  permissão.
 - **Como se apresenta:** só no resumo (Nome e Primeira mensagem, com "Mudar" que volta ao Teste — D29). **Sem** "Perguntas
   para puxar conversa" (D18).
 - **Quando atende:** Sempre / No horário comercial / Fora do horário comercial; se o canal escolhido não tem horário
@@ -260,8 +264,10 @@ Agente de Cotação: só "O que a Lia cota" (ramos).
 
 **Onde atende (`tabOnde`).** Canais conectados com "Tirar deste canal" (confirma; conversas vão para a equipe); "Colocar em
 outro canal" (só livres; rascunho e pausado desabilitados com "Ligue {a} {nome} para colocar em outro canal." —
-o backend recusa `agent_not_active`); aviso "não está em nenhum canal"; erro de conexão com a
-mensagem específica do servidor (BE-10); "Conectar um WhatsApp novo" (só administrador, mesma regra do Ligue).
+o backend recusa `agent_not_active`); aviso "não está em nenhum canal"; erro da associação com a
+mensagem específica do servidor (BE-10). Esta aba só associa caixas já conectadas. Quando faltar uma caixa elegível, mostra
+orientação e, quando a permissão permitir, atalho para Configurações > Canais/Caixas de entrada
+(settings_inbox_new em accounts/:accountId/settings/inboxes/new).
 
 **Ajustes (`tabAjustes`).** Seções, cada uma com seu "Salvar". Num rascunho já testado, salvar algo que muda o texto do
 modelo mostra "Salvo. Teste {a} {nome} de novo antes de ligar." (§6.6):
@@ -320,18 +326,12 @@ ao cliente, ligada), resultado do teste em bloco, limite 10, "Começar pelo mode
 
 ### 6.4 Outras telas e diálogos (`screens-extra.js`, `main.js`)
 
-- **Conectar um WhatsApp** (`viewConectar`): número (D7) → código QR, passos "Como ler", dica "Use um número da empresa";
-  estados Esperando leitura / Conectando / Conectado ("Escolher o agente", volta à origem) / Não conectou ("Gerar outro
-  código"). Com a flag desligada, se não houver rota antiga equivalente, `from` só pode apontar para uma origem interna
-  validada da mesma conta (agente/canal) e volta a ela com aviso localizado; sem origem válida, volta à lista de agentes com
-  aviso localizado. Esse caminho nunca renderiza `InviteConnectionPage`, não cria conexão e não promete retomar conversa no
-  painel antigo; os dados salvos do agente, thread e canal são preservados.
+- **Conexão de WhatsApp fora de Agentes:** não existe tela, rota, número, QR ou retorno de conexão dentro desta área. Ligue e Onde atende apenas listam/associam caixas já conectadas; quando faltar uma caixa elegível, mostram orientação e atalho para Configurações > Canais/Caixas de entrada (settings_inbox_new em accounts/:accountId/settings/inboxes/new), conforme a permissão. O agente e seu rascunho permanecem salvos.
 - **Dentro da conversa** (`viewConversa`): painel do ajudante da equipe (resumo, "Sugerir resposta", "Resumir de novo",
   pergunta livre; vazio com "Criar ajudante") e "Marcar resposta como errada" (5 motivos como opções, "Qual seria a resposta
   certa?", botão libera após escolher). O que for marcado aparece na gaveta "Respostas marcadas como erradas" com motivo,
   resposta sugerida e "Ensinar" (BE-28).
-- **Conectar um WhatsApp:** também os estados "Verificando", "Sessão desligada" (texto próprio + "Reconectar") e o tempo
-  restante do código (60 s no primeiro, 20 s nos seguintes), reaproveitando `ConnectionPage.vue`/`wahaQrWindow.js`.
+- **Conexão em Canais:** estados de QR, verificação, sessão e reconexão continuam exclusivamente no fluxo existente de Canais/Caixas de entrada. Eles não entram no mapa, nas rotas ou no aceite visual de Agentes.
 - **Gaveta "Resultado das conversas"** (`openDrill`): lista real, foco preso, Esc fecha.
 - **Textos de excluir (D34, depois do #1063):** externo "{A} {nome} sai da lista e para de atender. As conversas com {ela}
   vão para a equipe."; ajudante "O {nome} sai da lista e some do painel das conversas."; rascunho "O rascunho sai da
@@ -373,7 +373,7 @@ produto…", "Material de exemplo.", "Enviando de novo.") e o sufixo "(exemplo)"
 - Resumo do Ligue: uma frase por opção de "Quando passa" (o protótipo mostra só a do padrão).
 - Sem "Perguntas para puxar conversa" e sem a aba "Para enviar" (D18, D20).
 - "Quando passa para a equipe" não aparece no Agente de Cotação (sem efeito nele); "Jeito de cotar" usa {nome}.
-- Botão "Conectar um WhatsApp novo" só para administrador.
+- **Conectar WhatsApp:** cadastro e conexão acontecem exclusivamente em Canais/Caixas de entrada; Agentes só escolhe uma caixa já conectada e elegível. O atalho para Canais respeita as permissões existentes.
 - Nota de passagem dentro da conversa ("A {nome} passou esta conversa para a equipe: {motivo}.") é nova (BE-24).
 
 ### 6.5 Matriz controle → leitor → efeito (CA-GERAL-14)
@@ -513,17 +513,17 @@ params ou GET regenera `bundle exec rails autonomia:guia:formatos` e roda `spec/
 | **BE-00** | Flag do redesign por conta (D3) | `Autonomia::Agents::Config.redesign_enabled?(account)` = ENV `AUTONOMIA_AGENTS_REDESIGN` + `internal_attributes['autonomia_agents_redesign']`; exposto em `_account.json.jbuilder` como `autonomia_agents_redesign_enabled`; helpers `enable_redesign_for!`/`disable_redesign_for!` (só specs e ambiente local); botão no Super Admin `SuperAdmin::AccountsController#toggle_agents_redesign` (rota + botão na tela da conta, mesmo padrão de `toggle_insurance`) — é por ele que se liga/desliga em produção, sem console. Endpoints novos **não** dependem da flag. | Zero | P |
 | **BE-01** | Números e canais na lista sem N+1 | Service `Autonomia::Agents::ListStats` com **uma** consulta agregada em `autonomia_agent_events` (índice `idx_autonomia_events_agent_created`), janela **idêntica** ao Analytics (`(dias-1).days.ago.beginning_of_day`) e `HANDOFF_TYPES`; `index` entrega `stats: {week:{replies,handoffs}, month:{replies,handoffs}}` e `channels: [{inbox_id,name,channel_type}]` (`includes(agent_inboxes: :inbox)`). Agentes arquivados e vínculos arquivados ficam fora da lista, das projeções de canais e dos contadores; um agente vivo pode ocupar o mesmo inbox depois que o vínculo antigo foi arquivado. | Baixo | P |
 | **BE-02** | Usar material de outro agente | `GET agents/:agent_id/sources/reusable` (só `knowledge` aceitos de outros agentes da conta, com agente e vínculo `kept`; exclui arquivados, agentes de sistema e a fonte de FAQ) e `POST agents/:agent_id/sources/copy {source_id}` (origem resolvida pela conta → 404 cross-tenant; limite 30; anexa a mesma blob; enfileira `IngestJob`; `metadata.copied_from_source_id`). | Baixo | M |
-| **BE-03** | Ligar atômico | `POST agents/:id/publish {inbox_id?, agent:{config:{response_window}}}` (sem `name` e `greeting`: são editados no Teste por PATCH, D29; `name`/`greeting` no corpo → 422 `publish_field_not_allowed`) → `Autonomia::Agents::Publisher` numa transação: pré-condição BE-04 → atributos → `enabled+active` (dispara `sync_mirror_bots` do #1036) → `InboxConnector` se `inbox_id`; erro = rollback + 422 `{error, code}`; `RecordNotUnique` → `inbox_already_connected`; ordem das recusas: `missing_instruction` antes de `missing_test` (sem teste válido da instrução atual, §6.6, D15). Interno: `inbox_id` proibido. `missing_test` só no `publish` (escopo D23): PATCH `status`/`enabled`, create, Guia, tela antiga e Cotação continuam como hoje; religar pausado pelo PATCH só exige instrução (D24). | Baixo (aditivo) | M |
+| **BE-03** | Ligar atômico | `POST agents/:id/publish {inbox_id? | inbox_ids?: [inteiros positivos únicos], agent:{config:{response_window}}}` (os dois campos são mutuamente exclusivos; o singular permanece para clientes existentes; sem `name` e `greeting`: são editados no Teste por PATCH, D29; `name`/`greeting` no corpo → 422 `publish_field_not_allowed`) → `Autonomia::Agents::Publisher` resolve todas as caixas na conta e valida tudo antes de escrever, mantendo agente + caixas em uma transação com locks determinísticos: pré-condição BE-04 → atributos → `enabled+active` (dispara `sync_mirror_bots` do #1036) → um espelho `InboxConnector` por caixa; falha em qualquer caixa = rollback de ativação, configuração e vínculos + 422 `{error, code}`; `RecordNotUnique` → `inbox_already_connected`; ordem das recusas: `missing_instruction` antes de `missing_test` (sem teste válido da instrução atual, §6.6, D15). Interno: nenhuma caixa é aceita. `missing_test` só no `publish` (escopo D23): PATCH `status`/`enabled`, create, Guia, tela antiga e Cotação continuam como hoje; religar pausado pelo PATCH só exige instrução (D24). | Baixo (aditivo) | M |
 | **BE-04** | Não ligar sem instrução | Guarda em controller/service (não no model): na transição para "atendendo" (`publish`, PATCH **e create** com `status`/`enabled` ativos, D30) exige `instrucao_do_sistema.present?` → 422 `missing_instruction` (en + pt_BR). Atualiza `external_agent_lifecycle_spec.rb:32-40`. | Baixo (só a transição) | P |
 | **BE-05** | Retomar a conversa da criação ("Mudar conversando") | `GET agents/:id/build_thread` (última thread do agente, jbuilder de `build_threads/show`), **exige `autonomia_manage`** (before_action própria; a conversa tem mensagens e imagens do dono); só em `mode=guided` (manual → 422 `manual_mode`, D22); zerar `force_close` ao retomar; ao fechar uma retomada, o `apply_builder_config!` só pode mudar `instruction`, `human_card`, `scaffold`, `handoff_rule` e `config.guardrails` (os "Limites duros" que o modelo lê, `prompt_builder.rb:248-252`) — `config.voice` só é gravada na criação; `name`, `greeting`, `fallback_message`, `tone`, `starter_questions` e `agent_type` ficam como estão; manter recusa `InstrucaoMantida`. **Invariante:** a instrução gerada nunca aparece na API (NR-10). Spec: só-ver → 401; outra conta → 404; manual → 422; retomada não muda campos editados à mão. | Baixo | P |
 | **BE-06** | Para quem vai (D2) | Config `handoff_target_type ∈ any|member|team` + `handoff_target_id`; validação: `member` precisa ser membro da **caixa da conversa** (ou administrador) — senão cai em `any` com log `alvo_invalido`; `team` precisa ser time da conta,; o funil do CRM (`Crm::Ai::HandoffExecutor`) **não muda** (D31: spec de não-regressão — conversa passada pelo funil continua com o seletor do CRM, sem alvo no evento, mesmo com o agente em "Um time"); a devolução de conversas ao pausar, excluir ou tirar canal (`AgentInbox#release_bot_conversations!`, #1036) também não segue "Para quem vai" e não gera nota (não é passagem decidida pela IA), como hoje; `handoff_target_type` entra no slice do `_agent.json.jbuilder` e na lista do BE-19; corrigir o comentário de `agent.rb:125-127` (`Operate::HANDOFF_STRATEGIES` não existe); `Operate::HandoffRouter` chamado antes do `bot_handoff!` nos **três** pontos que liberam a conversa: `Responder#handoff_if_signaled`, `Responder#skip_for_humans` e `AvisoAoAtendente#escalar` (spec para os três): `member` → `Conversations::AssignmentService`; `team` → `update!(team:)` e a pessoa é escolhida pela distribuição automática da caixa, só entre membros do time (sem distribuição ligada ou sem ninguém disponível, a conversa fica com o time e sem responsável, como hoje sem time — o roteador nunca atribui gente de fora; o funil do CRM pode atribuir depois, D31); alvo inválido → `any` + log `[autonomia][handoff] alvo_invalido`. O evento `handed_off` registra o alvo atribuído pelo roteador (pessoa ou time), para a Q17 olhar a atribuição da passagem e não o responsável atual. Alvo válido = `inbox.assignable_agents` (membros + administradores, `inbox.rb:185-187`). Padrão `any` = comportamento atual. | **Médio** (caminho ao vivo) | M |
 | **BE-07** | Construtor pergunta o nome | Roteiro do Construtor inclui o nome como última pergunta; o rascunho deixa de nascer "Novo agente" para sempre (`builder.rb:1401` vira provisório até a resposta). | Baixo | P |
 | **BE-08** | Estados do rascunho (D11, §6.6) | A API expõe, para cada agente, o estado de §6.6 (E1–E6), a etapa de "Continuar" e, quando o teste foi invalidado, o **motivo** (`test_invalidated_by`: pessoa ou material novo), sem carregar as conversas do Construtor inteiras na lista. Teste válido = a regra única da §6.6 (resposta concluída, por quem edita, na conversa de teste atual, que recomeça a cada mudança que invalida); antes de ir ao ar, mudar a instrução por qualquer caminho invalida; depois de ir ao ar, não (D24). Vale também para rascunho sem conversa do Construtor. | Baixo | M |
 | **BE-09** | Sugestão de link pelo modelo (D5) | `BUILDER_SCHEMA` (estrito) ganha `suggested_links: {type:'array', items:{type:'string'}}` em `properties` **e** em `required`; a instrução-mãe diz quando preencher (lista vazia = não se aplica); `state_for` grava; `build_threads/show.json.jbuilder` expõe `suggested_links`. O front só mostra o que veio. | Baixo | P |
-| **BE-10** | Mensagens pt-BR com `code` | `render_unprocessable(message, code:)` passa a aceitar `code`. Recebem `code` estável: `instrucao_mantida`, `missing_instruction`, `missing_test`, `publish_field_not_allowed`, `copilot_unavailable`, `no_guided_version`, `internal_with_channels` (chave nova en+pt_BR), `config_key_not_allowed`, cada `connect_errors.*` (`agent_internal_not_connectable`, `agent_not_active`, `inbox_has_webhook_bot`, `inbox_already_connected`, `not_connected`) e os erros de `waha_inboxes#create` (`invalid_phone`, `integration_not_configured`, `remote_setup_failed`, `account_token_missing`) — neste endpoint o `error` continua trazendo o código, como hoje, para a tela antiga, e o `code` é acrescentado (a tela nova traduz pelo `code`). Mensagem em `error`, código em `code`. | Zero | P |
+| **BE-10** | Mensagens pt-BR com code | render_unprocessable(message, code:) passa a aceitar code. Recebem code estável: instrucao_mantida, missing_instruction, missing_test, publish_field_not_allowed, inbox_selection_invalid, inbox_selection_conflict, copilot_unavailable, no_guided_version, internal_with_channels (chave nova en+pt_BR), config_key_not_allowed, e cada erro da associação de canais (agent_internal_not_connectable, agent_not_active, inbox_has_webhook_bot, inbox_already_connected, not_connected). Os erros de criação de waha_inboxes (invalid_phone, integration_not_configured, remote_setup_failed, account_token_missing) continuam no fluxo existente de Canais/Caixas de entrada e não viram contrato de Agentes. Mensagem em error, código em code. | Zero | P |
 | **BE-11** | Quem ocupa o canal e se ele tem horário | `channels#index` ganha `occupied_inboxes: [{id,name,channel_type, occupied_by:{kind:'agent'|'other_bot', agent_id?, agent_name?}}]` (só agentes da conta; bot externo sem nome) e, em cada caixa (livre, ocupada ou conectada), `has_schedule` (true quando há agenda de atendimento do CRM ou horário comercial ligado — mesma regra de `engagement_gate.rb`). Remover leitura de `inbox.occupied` no front; ocupação e elegibilidade consideram apenas agentes e vínculos `kept`, e não exibem links arquivados. Um agente vivo pode substituir o vínculo arquivado no mesmo inbox. | Baixo | P |
 | **BE-12** | Testar igual à produção (D1-a) | `Playground` usa `trust_instruction: true` e `rodadas_do_turno(agent)` e **nunca** `delivery` (ferramenta assíncrona/cotação devolve recusa nomeada no teste; spec: zero `ToolRun` e zero job assíncrono); com quem só vê, ferramenta HTTP com método ≠ GET não executa (D17). "Passaria para a equipe" sai do `should_handoff` do modelo. `handoff_strategy` passa a ser lido pelo `PromptBuilder` como regra no texto do modelo — **vale também no Operate**: `nil` e `low_confidence` geram `instructions` **byte a byte iguais** aos de hoje (spec compara antes/depois para Clara, Lia e Guia); `insurance_quote`, agentes de sistema e o ajudante `internal` não recebem o bloco (byte a byte iguais, spec); no `both`, o bloco vale só no Operate, não no copiloto. **Todo** valor que não seja `always_ask`/`never` (nil, `low_confidence`, `none`, desconhecido) gera texto byte a byte igual, com spec por valor. Antes do merge: Q13 e lista ao Rodrigo dos ativos com qualquer valor diferente de nil/`low_confidence`, que decide por agente. O motivo de passagem do Testar passa por `EventLogger.curate_code` (mesma lista do Analytics, incluindo `escolhas_incompletas`). Ajudante interno (D26): o Testar roda `Agents::Copilot#suggest` com a mesma entrada que o `ConversationChat` montaria (aviso de segurança + transcrição da conversa de exemplo + pedido), aceitando rascunho; nunca devolve faixa de passagem; a resposta fixa de falta (`NO_ANSWER_TEXT`) não conta como teste válido; para quem só vê vale D17. Lia: o Testar tem um **teto de tempo próprio**, abaixo do TTL do pedido (30 min) e descontado o fechamento — a única diferença de propósito para a produção, porque com `rodadas_do_turno` o orçamento real dela passa de 2 h; a cotação é recusada como `not_in_test`. `InteractiveOperation#playground_result` passa `pode_editar: @account_user.permission_granted?('autonomia_manage')` ao Playground, que repassa ao Answerer (D17). O resultado do teste ganha `skipped_tools: [{slug, name, code}]` com `code` ∈ `not_in_test` (cotação/assíncrona) ou `viewer_not_allowed` (D17), e `writes_external: true` quando o agente tem ferramenta ligada com método ≠ GET **e quem testa edita** (aviso D27; para quem só vê vem `false`). Sobe no **B4b** (lote de um PR só), com a cobertura B4b do §11.8. Atualizar Central 11.10. | **Médio** (muda o prompt ao vivo de quem tem `always_ask`/`never`) | P |
-| **BE-13** | Criar caixa WhatsApp pelo fluxo do agente (D7) | Reusar `waha_inboxes` com `phone` (55 + DDD + número) vindo da tela; permissão = administrador; erros com `code` (BE-10); volta com `?from=`, que só aceita rotas de agentes da própria conta (Ligue, Onde atende). Com a flag desligada e sem equivalente antigo, valida a origem interna da mesma conta e dos canais do agente; origem válida volta a ela com aviso localizado, inválida volta para "Seus agentes" com aviso localizado. Nunca renderiza `InviteConnectionPage`, dispara criação ou promete retomar conversa no painel antigo; dados salvos são preservados. | Baixo | M |
+| **BE-13** | Limite de escopo da conexão de WhatsApp (D7 revisada) | Nenhum endpoint, migration, tela, rota ou estado de QR novo em Agentes. O cadastro/conexão segue settings_inbox_list (accounts/:accountId/settings/inboxes) e settings_inbox_new (accounts/:accountId/settings/inboxes/new); Agentes apenas lê canais conectados/elegíveis e associa a caixa escolhida. A ausência de canal preserva o agente salvo e oferece orientação/atalho conforme a permissão. O contrato e os erros de waha_inboxes#create continuam pertencendo à área existente de Canais. | Zero em Agentes | — |
 | **BE-14** | Limpeza só do rascunho vazio (D6) | Desde o #1063 a limpeza **arquiva** (exclusão lógica, `reason: 'stale_draft'`), não destrói. Hoje (#1036) ela já poupa rascunho com instrução ou material; o BE-14 acrescenta que **uma resposta do usuário** também protege. O job de limpeza só apaga rascunho guiado desligado parado há 48 h **sem** instrução, **sem** nenhum material (de qualquer idade) e **sem** nenhuma resposta do usuário em qualquer conversa do Construtor. A API expõe o prazo configurado (`AUTONOMIA_DRAFT_REAP_HOURS`) para a tela dizer "Guardado por N dias". Rascunho criado pela API/Guia sem instrução e sem material é E1 (a lista diz o prazo). | Baixo | P |
 | **BE-15** | Janela de geração presa (B6) | `STALE_PROCESSING_AFTER = REQUEST_TIMEOUT * (MAX_RETRIES + 1) + 1.minute` (~10 min). Front: "Demorando" vira "Ainda respondendo" dentro da janela (reenviar dá 409). | Baixo | P |
 | **BE-16** | Nome e foto no bot da conversa | `after_update` sincroniza `name`/avatar do `AgentBot` espelho dos `agent_inboxes`. | Baixo | P |
@@ -584,10 +584,7 @@ Cada caso vira spec no PR do BE. Entre colchetes, o achado de revisão de onde v
 - **BE-05:** um limite novo pedido no "Mudar conversando" aparece em `guardrails` e no texto do modelo [R5-16].
 - **BE-12 (ajudante):** `internal` com qualquer `handoff_strategy` → texto byte a byte igual; `both` → bloco só no Operate [R5-02].
 - **BE-06:** alvo administrador fora da caixa é válido e o evento registra o alvo [R5-04/18/23/35].
-- **BE-13:** `from` fora da lista volta para "Seus agentes" (inclusive `javascript:` e endereço externo); com a flag desligada,
-  origem sem equivalente antigo só volta para origem interna validada da mesma conta e dos canais do agente, ou para a lista,
-  sempre com aviso localizado; não renderiza `InviteConnectionPage`, cria conexão ou promete retomar conversa no painel antigo.
-  Dados salvos do agente, thread e canal permanecem [R4-33].
+- **BE-13:** não há criação de caixa, QR, from ou retorno de conexão no fluxo de Agentes. A API de Agentes só lê canais conectados/elegíveis e associa a caixa escolhida; sem canal, a UI preserva o agente salvo e orienta/atalha Canais conforme a permissão. waha_inboxes#create e seus códigos continuam cobertos pela área existente de Canais.
 - **BE-14:** rascunho criado pela API/Guia sem instrução e sem conversa é E1, e a lista mostra o prazo configurado [R4-39/46].
 - **E1 / BE-03 (abertura):** abertura que falha antes de existir rascunho mostra erro com "Tentar de novo" e não deixa o front
   esperando [R3-18/42/49]; o rascunho existe antes de abrir o Conte, mesmo sem material [R2-48].
@@ -662,19 +659,16 @@ backend (B1).
   | `autonomia_agent_build` (nova) | `agents/:agentId/build/:step(tell\|test\|live)` | editar |
   | `autonomia_agent_ready` (nova) | `agents/:agentId/ready` | editar |
   | `autonomia_agent_panel` | `agents/:agentId/:tab(performance\|test\|knowledge\|channels\|tune\|tools\|publish)?` — padrão `performance`; `publish` redireciona para `build/live`; inclui `tools` no regex (hoje falta) | ver |
-  | `autonomia_agents_connect_whatsapp` (nova) | `agents/connect-whatsapp?from=` | administrador (D7) |
+  | *(nenhuma rota de conexão em Agentes)* | — | — |
 
   Toda rota usa `ensureAutonomiaEnabled` com `await contaDaRota(to)`; as mantidas renderizam a página nova ou antiga pela
   flag (`AgentsIndexEntry.vue` etc.). Com a flag desligada, as rotas novas seguem este mapa, sempre mantendo os guards
   existentes de conta, permissão e agente: `build/tell` → painel antigo `tune` do mesmo agente e da thread já salva; `build/test`
-  → `test`; `build/live` → `publish`; `ready` → `performance`. Nenhuma delas cria uma nova thread nem amplia um guard. Para
-  `connect-whatsapp`, não há equivalente antigo: só uma origem interna validada da mesma conta e dos canais do agente é aceita;
-  uma origem válida recebe aviso localizado e volta para ela, e uma inválida vai para a lista de agentes com aviso localizado.
-  Esse fallback não renderiza `InviteConnectionPage`, não cria conexão e não promete retomar conversa no painel antigo; dados
-  salvos ficam preservados.
-- **Menu lateral** (`Sidebar.vue`, toque mínimo, F1): item único "Agentes de IA" com `activeOn` = `autonomia_agents_index`,
-  `autonomia_agents_builder`, `autonomia_agent_build`, `autonomia_agent_ready`, `autonomia_agent_panel`,
-  `autonomia_agents_connect_whatsapp`; com a flag desligada, os filhos atuais.
+  → `test`; `build/live` → `publish`; `ready` → `performance`. Nenhuma delas cria uma nova thread nem amplia um guard.
+  O destino para cadastrar/conectar WhatsApp é exclusivamente a área existente de Canais/Caixas de entrada; Agentes não
+  cria uma rota, uma origem `from`, um QR ou um fallback de conexão. O atalho, quando exibido, aponta para
+  `settings_inbox_new` na própria conta; as permissões da rota existente continuam valendo.
+- **Menu lateral** (Sidebar.vue, toque mínimo, F1): item único "Agentes de IA" com activeOn = autonomia_agents_index, autonomia_agents_builder, autonomia_agent_build, autonomia_agent_ready, autonomia_agent_panel; com a flag desligada, os filhos atuais. A área de Canais/Caixas de entrada mantém seu próprio item e suas rotas existentes.
 - **Teste assíncrono:** `POST agents/:id/test` responde 202 com `poll_url`; o front consulta `ai_requests/:id` e mostra
   "Pensando" enquanto `pending` (padrão já usado por `pollAiRequest`).
 - **Permissões:** `useCanManage('autonomia_manage')`; admin da plataforma = `currentUser.type === 'SuperAdmin'`.
@@ -740,15 +734,14 @@ atual e indicação de migration; Rodrigo repassa à Automação.
 | **B4** | BE-02 (material de outro agente), BE-23 (versões) | B1 | — |
 | **B4b** | BE-12 + BE-29 + BE-30 — tudo o que muda o texto do modelo ao vivo, num **lote de um PR só** (Q13 e Q15 antes; cobertura B4b do §11.8 depois) | B1 | — |
 | **B5** | BE-06 (para quem vai) + BE-24 (nota de passagem) — caminho ao vivo, **lote de um PR só** (cobertura B5 do §11.8 depois) | B1 | — |
-| **B6a** | BE-13 (WhatsApp novo) | B1 | — |
 | **B6b** | BE-17 (Agente de Cotação), **lote de um PR só** (cobertura B6b do §11.8 depois) | B1 | — |
 | **F0** | Flag no front, kit, extração do #993 (D9), token `n-navy` (D4), namespace i18n, entradas nova/antiga, `tools` no regex, specs de rota, `@axe-core/playwright` + helper `expectNoSeriousA11y(page)`, `tests/playwright/agents.config.ts` (loopback) e `agents-prod.config.ts` (só leitura, para T23) | B2 (BE-00) | — |
 | **F1** | Lista + vazio + menu de item único + destaque do Guia | F0, B2 | 6.1 |
 | **F2** | Escolha + Conte (+ rota `build`, bloco no Guia) | F0, B3, B4 (BE-02) | 6.2.1–6.2.2 |
-| **F3** | Teste + Ligue + Pronto (+ rota `ready`, Guia) | F2, B3, B4b, **F6** (rota de conexão usada no Ligue) | 6.2.3–6.2.5 |
+| **F3** | Teste + Ligue + Pronto (+ rota `ready`, Guia) | F2, B3, B4b | 6.2.3–6.2.5 |
 | **F4** | Casca do painel + Como está indo + gaveta | F0 | 6.3 |
 | **F5** | Testar + O que sabe (materiais, perguntas da equipe, ramos da cotação) | F4, B2 (BE-27), B4, B4b, B6b (`quote_branches`) | 6.3 |
-| **F6** | Onde atende + Conectar WhatsApp (+ rota, Guia) | F4, B2 (BE-11), B6a (BE-13) | 6.3, 6.4 |
+| **F6** | Onde atende + atalho para Canais (sem conexão em Agentes) | F4, B2 (BE-11) | 6.3, 6.4 |
 | **F7** | Ajustes completos + Ferramentas | F4, B3 (BE-05), B4 (BE-23), B4b (BE-12/29/30), B5 (BE-06), B6b (BE-17) | 6.3 |
 | **F8** | Dentro da conversa: visual do ajudante, "resposta errada" e nota de passagem (toque mínimo em upstream) | F0, **B5** (BE-24) | 6.4 |
 | **F9** | Reescrita do Guia (8 blocos) e da Central (cap. 11, 00.08, 01.01, 18.x); ligar a flag na conta 16 pelo **Super Admin** (BE-00); UPDATE de tons D10 por psql com 🟢, somente após OK específico | F1–F8 | — |
@@ -794,21 +787,23 @@ Cada PR roda como um workflow de agentes, com o agente principal no comando entr
 
 ### 10.3 Protocolo de revisão (regra do Rodrigo)
 
-- **Rodada 1:** revisores independentes, em paralelo, cada um com uma lente:
+- **Validação antes da revisão:** falhas de testes, lint e build são validação, não achados de revisão nem consomem rodada.
+  O principal corrige-as autonomamente e repete a validação pertinente antes de chamar o revisor.
+- **Revisão 1:** revisores independentes, em paralelo, cada um com uma lente:
   - **produto/UX** — compara com o protótipo e os CA da tela (texto, estados, permissões, celular, tema escuro);
   - **técnica** — correção, padrões do repo, construção aditiva, Enterprise, i18n, Guia/Central;
   - **segurança e produção** — isolamento entre contas, permissões, agentes no ar, Agente de Cotação, dados pessoais;
   - **testes** — o teste prova o critério? falha sem a correção?
-  Cada achado é verificado (reproduzido ou provado no código) antes de virar correção. O principal corrige e roda a
-  validação local de novo.
-- **Rodada 2:** os mesmos revisores sobre o resultado corrigido.
+  Cada achado é verificado (reproduzido ou provado no código) antes de virar correção.
+- **Depois da revisão 1:** o principal corrige os achados e o mesmo revisor faz a **revisão 2**.
   - **Sem achados → segue** para testes de aceite e merge.
-  - **Com achados → PARA.** Antes de corrigir, o principal encontra a **causa raiz** de cada achado — por que a rodada 1 e a
-    validação não pegaram, ou por que a correção introduziu o problema (requisito ambíguo, padrão do repo ignorado, teste
-    fraco, falta de contexto do implementador) — e registra em `docs/audit/<data>-agentes-<pr>-causa-raiz.md` com: achado,
-    causa raiz, correção da causa (não só do sintoma), o que muda no processo para não repetir. Só depois corrige, roda a
-    validação local e manda para **uma revisão final**. Se essa revisão ainda encontrar erro, para e retorna ao Rodrigo; não inicia outro ciclo por conta própria.
-- Achado de severidade **crítica** (segurança, perda de dado, agente no ar quebrado) em qualquer rodada bloqueia o PR até a
+  - **Com achados →** antes de corrigir, o principal encontra a **causa raiz** de cada um — por que a revisão 1
+    e a validação não pegaram, ou por que a correção introduziu o problema — e registra em
+    `docs/audit/<data>-agentes-<pr>-causa-raiz.md` com achado, causa, correção da causa e mudança de processo.
+    Só depois corrige e chama o mesmo revisor para a **revisão 3**.
+- **Revisão 3:** se não houver achados, segue para aceite. Se ainda houver qualquer erro, parar e retornar ao Rodrigo;
+  não iniciar um quarto ciclo.
+- Achado de severidade **crítica** (segurança, perda de dado, agente no ar quebrado) em qualquer revisão bloqueia o PR até a
   causa raiz estar registrada.
 - **Passos de método obrigatórios antes de cada rodada** (vieram da causa raiz da rodada 2 deste PRD,
   `docs/audit/2026-10-05-agentes-prd-r2-causa-raiz.md`):
@@ -831,10 +826,11 @@ Cada PR roda como um workflow de agentes, com o agente principal no comando entr
 **Limite desta retomada do PRD.** A R9 normal foi concluída com quatro lentes independentes e registro consolidado em
 [`revisoes/rodada-9.md`](revisoes/rodada-9.md): 11 achados confirmados (1 alto, 9 médios e 1 baixo; UX-04 foi rejeitado).
 As correções foram fechadas na única checagem independente, sem achado residual documental. Não repetir a rodada. Nos próximos
-PRs, se a checagem encontrar achados, parar, registrar causa raiz em `docs/audit/`, corrigir a causa e fazer uma revisão final.
-Persistindo erro nessa final, parar e retornar ao Rodrigo. Não repetir ciclos. O critério documental é zero altos e zero médios de
-segurança/produção; demais pendências não bloqueantes precisam ter responsável e PR de destino. Nada disso autoriza merge,
-deploy, acesso adicional a produção ou a escrita de D10.
+PRs, falhas de teste, lint e build devem ser corrigidas antes da revisão e não contam como rodada. O fluxo é revisão 1 →
+correção dos achados → revisão 2 pelo mesmo revisor; se a revisão 2 reprovar, registrar causa raiz, corrigir a causa e fazer
+a revisão 3 pelo mesmo revisor. Se a revisão 3 ainda encontrar erro, parar e retornar ao Rodrigo; não repetir ciclos.
+O critério documental é zero altos e zero médios de segurança/produção; demais pendências não bloqueantes precisam ter
+responsável e PR de destino. Nada disso autoriza merge, deploy, acesso adicional a produção ou a escrita de D10.
 
 ---
 
@@ -863,11 +859,7 @@ manual). Um critério só conta como atendido com evidência anexada ao PR.
   `POST agents/:id/suggest` (D8), `POST agents/message_reports` e o chat do ajudante dentro da conversa (regra própria: qualquer
   membro que vê a conversa); quem edita faz tudo menos Ferramentas; Ferramentas só SuperAdmin (401 para os demais).
 - **CA-GERAL-11 (R)** Com `Config.enabled?` desligado, a API de agentes devolve 404 e o menu não aparece.
-- **CA-GERAL-12 (V/R/P)** Flag do redesign (BE-00): desligada → `build/tell` cai em `tune`, `build/test` em `test`,
-  `build/live` em `publish` e `ready` em `performance`, com o mesmo agente/thread salvo e os guards atuais; as specs atuais das
-  telas antigas passam sem alteração e há capturas antes/depois do F0 sem diferença; `connect-whatsapp` sem equivalente só
-  aceita origem interna validada da mesma conta/canais ou a lista, com aviso localizado, sem `InviteConnectionPage` nem criação;
-  ligada → telas novas; ligar/desligar numa conta (botão do Super Admin) não muda `autonomia_agents_redesign_enabled` de outra (R).
+- **CA-GERAL-12 (V/R/P)** Flag do redesign (BE-00): desligada → build/tell cai em tune, build/test em test, build/live em publish e ready em performance, com o mesmo agente/thread salvo e os guards atuais; as specs atuais das telas antigas passam sem alteração e há capturas antes/depois do F0 sem diferença. Agentes não têm rota de conexão: quando falta canal, a área orienta e, conforme a permissão, aponta para settings_inbox_new na própria conta; sem InviteConnectionPage, QR, criação ou parâmetro from em Agentes. Ligada → telas novas; ligar/desligar numa conta (botão do Super Admin) não muda autonomia_agents_redesign_enabled de outra (R).
 - **CA-GERAL-13 (M)** Correções de acessibilidade sobre o protótipo (§6.4) aplicadas.
 - **CA-GERAL-14 (V/R)** Todo controle tem efeito real: cada linha da matriz §6.5 tem o leitor provado por spec (grava → o
   atendimento ou o Testar muda) ou a decisão aplicada (controle removido).
@@ -1002,9 +994,9 @@ manual). Um critério só conta como atendido com evidência anexada ao PR.
     o teste conta para ligar; para quem só vê, sem o aviso de D27 e com as ferramentas ≠ GET puladas.
 - **Ligue**
   - **CA-LIG-01 (V)** Título e subtítulo (externo/interno).
-  - **CA-LIG-02 (V/R)** Canais livres em `role="radiogroup"`; "Canais ocupados (n)" desabilitados com quem ocupa (BE-11);
+  - **CA-LIG-02 (V/R)** Canais livres em grupo de seleção múltipla (`role="group"`, cada opção com `role="checkbox"`); pode escolher mais de um canal; "Canais ocupados (n)" desabilitados com quem ocupa (BE-11);
     bot de outro sistema aparece como "Já tem outro robô neste canal".
-  - **CA-LIG-03 (V)** 1 canal livre → já marcado.
+  - **CA-LIG-03 (V)** 1 canal livre → já marcado; com vários canais livres, nenhum é marcado à força e a pessoa pode escolher vários.
   - **CA-LIG-04 (V)** O Ligue mostra Nome e Primeira mensagem só no resumo, com "Mudar" que volta ao Teste (D29).
   - **CA-TES-09 (V/R)** "Como se apresenta" no topo do Teste: Nome e Primeira mensagem editáveis, salvos por PATCH; a
     Primeira mensagem muda a primeira resposta no Testar e no atendimento (BE-30, spec R); mudar recomeça a conversa de teste
@@ -1012,16 +1004,15 @@ manual). Um critério só conta como atendido com evidência anexada ao PR.
     ajudante interno, sem Primeira mensagem.
   - **CA-LIG-05 (V/R)** "Quando atende" com 3 opções (só externo) → `config.response_window`; canal com `has_schedule=false`
     mostra "Este canal não tem horário definido: {ela} vai responder sempre." com link (BE-11; spec R do caso sem horário).
-  - **CA-LIG-06 (V)** Resumo em frase, com a parte de passagem por opção gravada: dúvida → "Quando não souber, passa a
+  - **CA-LIG-06 (V)** Resumo em frase para um ou vários canais escolhidos, com a parte de passagem por opção gravada: dúvida → "Quando não souber, passa a
     conversa para a equipe."; sempre oferecer → "Oferece falar com uma pessoa."; nunca → "Não oferece uma pessoa; passa
     quando o cliente pede."; "N material pronto · base N%" ou "Sem material: responde só com o que você contou."; "Ligar"
     desabilitado sem canal (externo).
-  - **CA-LIG-07 (R)** Ligar é atômico (BE-03): se a conexão falha, o agente continua rascunho e nada foi gravado; sem
+  - **CA-LIG-07 (R)** Ligar é atômico (BE-03): todas as caixas escolhidas são verificadas antes da escrita; se uma conexão falha, o agente continua rascunho e nada foi gravado; sem
     instrução → 422 `missing_instruction` (BE-04).
   - **CA-LIG-08 (V)** Falhou ao ligar: `role="alert"` com o motivo do servidor e "Nada mudou: {ela} continua desligad{a}." +
     "Tentar de novo".
-  - **CA-LIG-09 (V)** Sem canal livre: texto + "Conectar um WhatsApp novo" para administrador; quem edita sem ser administrador
-    lê "Peça a quem administra a conta para conectar um WhatsApp." (sem botão).
+  - **CA-LIG-09 (V)** Sem canal livre: a tela informa que é preciso abrir Canais para conectar ou liberar uma caixa, mantém o agente salvo e, quando a permissão permitir, oferece o atalho "Abrir Canais" para settings_inbox_new (accounts/:accountId/settings/inboxes/new); sem essa permissão, mostra orientação localizada sem controle de escrita. Não há número, QR ou criação de caixa em Agentes.
   - **CA-LIG-10 (V)** "Deixar desligad{a} por enquanto" grava e volta com "Pronto para ligar" + toast.
   - **CA-LIG-11 (V/R)** Interno: sem canal, "Onde a equipe encontra", liga sem escolher canal (o teste válido continua
     exigido, D26); backend recusa canal em interno.
@@ -1086,8 +1077,7 @@ manual). Um critério só conta como atendido com evidência anexada ao PR.
     colocar em outro canal." + desabilitado.
   - **CA-OND-03 (V)** Aviso de sem canal.
   - **CA-OND-04 (V/R)** Falha de conexão mostra a mensagem pt-BR do servidor (pelo `code`, BE-10) e nada muda.
-  - **CA-OND-05 (V)** "Conectar um WhatsApp novo" (só administrador; demais leem o texto de CA-LIG-09) → tela de conexão com
-    volta à origem.
+  - **CA-OND-05 (V)** Sem caixa conectada/elegível: Onde atende informa a situação e, quando a permissão permitir, oferece "Abrir Canais" para settings_inbox_new; a aba não cria conexão, não abre QR e não recebe a responsabilidade pelo fluxo de Canais.
 - **Ajustes**
   - **CA-AJU-01 (V/R)** Foto (trocar/tirar) e nome; "Salvar" por seção; toast "Salvo."; o nome novo aparece nas conversas
     (BE-16) e é o nome com que o agente se apresenta (BE-29, spec R).
@@ -1140,12 +1130,8 @@ manual). Um critério só conta como atendido com evidência anexada ao PR.
 
 ### 11.5 Outras telas
 
-- **CA-CONECTAR-01 (V/R)** Número do WhatsApp (D7) → código QR (`role="img"` + `aria-label`), passos, dica; só
-  administrador; erros do passo do número por `code` (BE-10): `invalid_phone`, `integration_not_configured`,
-  `remote_setup_failed`, `account_token_missing`, cada um com frase pt-BR.
-- **CA-CONECTAR-02 (V)** Estados Esperando leitura (com tempo restante do código: 60 s no primeiro, 20 s nos seguintes) /
-  Verificando / Conectando / Conectado ("Escolher o agente" volta à origem) / Não conectou ("O código venceu… Gerar outro
-  código" → `reconnect`) / Sessão desligada (texto próprio + "Reconectar") — mesmo mapeamento de `ConnectionPage.vue`.
+- **CA-CANAIS-01 (V)** A conexão de WhatsApp fica fora de Agentes. O aceite desta área prova apenas que Ligue e Onde atende mostram canais já conectados/elegíveis, preservam o agente salvo quando não há canal e orientam/atalham para settings_inbox_new conforme a permissão; o QR e o cadastro são aceitos pelo contrato próprio de Canais.
+- **CA-CANAIS-02 (V)** Nenhum mapa, rota, captura ou componente de Agentes exige número, QR, verificação, reconexão ou retorno de conexão. Esses estados continuam no fluxo existente de Canais/Caixas de entrada.
 - **CA-CONVERSA-01 (V/R)** Ajudante da equipe no painel da conversa (agente `internal|both` ativo), resumo, "Sugerir
   resposta", "Resumir de novo", pergunta livre; vazio com "Criar ajudante" só para quem edita; isolamento entre contas.
 - **CA-CONVERSA-02 (V/R)** "Marcar resposta como errada" no menu da mensagem do agente; 5 motivos (`role="radio"`), "Qual
@@ -1190,9 +1176,8 @@ manual). Um critério só conta como atendido com evidência anexada ao PR.
   (dados, carregando, erro, sem conversas), testar (normal, montagem não terminou, não respondeu, ferramenta pulada para quem só vê), o que sabe (como está, todos os
   estados, vazio, limite), onde atende (como está, sem canal, falhou, quem edita sem ser admin, pausado), ajustes (como está, com versões, sem ajudante, ajudante interno, os dois, sem versão guiada, rascunho testado,
   modo manual, voltar ao guiado, vários canais sem horário), ferramentas (admin da plataforma) · Lia: como está indo, testar, o que cota, ajustes · ajudante interno: cartão,
-  como está indo · conectar (número, número inválido, esperando leitura, verificando, conectando, conectado, falhou, sessão
-  desligada) · conversa (ajudante, vazio do ajudante, resposta errada, nota interna de passagem) · gaveta de resultados (com
-  itens, vazia, respostas erradas).
+  como está indo · conversa (ajudante, vazio do ajudante, resposta errada, nota interna de passagem) · gaveta de resultados
+  (com itens, vazia, respostas erradas).
   Estados sem referência no protótipo (marcados "novo") são aprovados pelo Rodrigo na página lado a lado.
 - **CA-VISUAL-01** Todas as capturas dos dois lados anexadas ao PR (página lado a lado).
 - **CA-VISUAL-02** Nenhuma captura em branco ou cortada, conferida antes de enviar.
@@ -1307,7 +1292,6 @@ produção: o volume é baixo (05/10: Clara com 3 conversas em 7 dias; Lia com 2
 | B4 | Copiar material de outra conta → 404 (BE-02); versão guiada nunca mostra texto (BE-23, NR-10) |
 | B4b | Primeira mensagem e "quando não souber" chegam ao cliente (BE-30); "Nunca" não passa por iniciativa própria e passa quando o cliente pede (BE-12); o agente de teste renomeado se apresenta com o nome novo numa conversa nova (BE-29); a Lia termina o teste dentro do teto, sem cotar |
 | B5 | Nota de passagem privada não chega ao cliente (BE-24); "Uma pessoa" e "Um time" atribuem conforme o BE-06 e nunca fora do time; o tester usa uma caixa de teste sem funil do CRM com IA, que pode atribuir depois (D31) |
-| B6a | Número inválido recusado sem criar caixa (BE-13) |
 | B6b | Lia exposta com as escolhas iguais à foto e sem instrução (BE-17) |
 | D10 (F9) | Depois do UPDATE de tons: núcleo, mais "teste responde" de cada agente ativo alterado, contra a foto Q14 — como usuário só-ver, com a conferência da D27 por agente (com ferramenta que grava: dispensado e registrado) |
 | F1+ | Telas de quem só vê, em 1440 e 400 px, claro e escuro, sem nenhum clique em botão de escrita |
@@ -1324,14 +1308,15 @@ A entrega final do projeto só é aceita quando **todos** os itens abaixo estive
       editar/só ver/admin; aprovação visual explícita do Rodrigo registrada.
 - [ ] Todas as telas, estados e diálogos de §6 implementados e com a flag ligada na conta 16.
 - [ ] Matriz §6.5 sem nenhuma linha "nenhum leitor" sem decisão aplicada; máquina de estados §6.6 coberta por spec.
-- [ ] CA-GERAL, CA-LISTA, CA-CRIAR (ESC/CON/TES/LIG/PRO), CA-PAINEL (RES/PTES/SAB/OND/AJU/FER), CA-CONECTAR, CA-CONVERSA, CA-BE:
+- [ ] CA-GERAL, CA-LISTA, CA-CRIAR (ESC/CON/TES/LIG/PRO), CA-PAINEL (RES/PTES/SAB/OND/AJU/FER), CA-CANAIS, CA-CONVERSA, CA-BE:
       100% atendidos, cada um com evidência (spec, captura ou passo manual) no PR que o entregou.
 - [ ] CA-VISUAL-01..05 aprovados; página lado a lado protótipo × produto aprovada pelo Rodrigo.
 - [ ] Decisões D1–D35 registradas com a opção escolhida e implementadas conforme decidido.
 - [ ] Nenhum controle decorativo (CA-GERAL-14).
 
 **Qualidade**
-- [ ] Cada PR passou pelo protocolo de revisão (§10.3); todo achado da rodada 2 tem registro de causa raiz em `docs/audit/`.
+- [ ] Cada PR passou pelo protocolo de revisão (§10.3); falhas de testes, lint e build foram tratadas antes da revisão e
+      não contam como rodada; achados que exigiram a revisão 3 têm registro de causa raiz em `docs/audit/`.
 - [ ] Falhas de segurança fechadas e provadas: BE-19 (chaves de config pelo PATCH) e BE-25 (conversas de outras caixas), com
       Q12 tratada com 🟢.
 - [ ] CI verde em todos os PRs (RSpec, Vitest, trava, central, fork-i18n) e, localmente, ESLint sem aviso, Rubocop limpo,
@@ -1407,8 +1392,7 @@ A entrega final do projeto só é aceita quando **todos** os itens abaixo estive
 | Como está indo | `PanelHowItsGoing`, `StatTiles`, `OutcomeButtons`, `DailyBars`, `HandoffReasons`, `OutcomeConversationsDrawer` | `PanelPerformance`, `PerformanceOutcomes`, `PerformanceConversationsPanel` | `analytics`, `analytics/conversations` | F4 |
 | Testar | `AgentTestPhone`, `TestLegend` | `PanelTest` | `POST test` | F5 |
 | O que sabe | `PanelKnows`, `AddMaterialDialog`, `FaqReviewList`, `QuoteBranchesList` | `PanelKnowledge`, `SourceAddDialog`, `FaqSuggestionsSection` | `sources`, `faq_suggestions`, `quote_branches` do agente (BE-17) | F5 |
-| Onde atende | `PanelWhereServes` | `PanelChannels` | `channels` | F6 |
-| Conectar WhatsApp | `ConnectWhatsappPage`, `QrPanel` | `ConnectionPage.vue`, `wahaQrWindow` (somente o fluxo antigo equivalente; o fallback sem equivalente valida a origem interna/lista) | `waha_inboxes` | F6 |
+| Onde atende | `PanelWhereServes` | `PanelChannels` | `channels` + atalho para settings_inbox_new quando aplicável | F6 |
 | Ajustes | `PanelSettings` + `SettingsPhotoName`, `SettingsWhatItDoes` (+`ReconverseDialog`), `SettingsActuation`, `SettingsVoice`, `SettingsHandoff`, `SettingsAudience`, `SettingsWindow`, `SettingsVersions`, `SettingsDangerZone`, `SettingsQuoteStyle` | `PanelTune`, `AgentAudienceForm`, `AgentScheduleForm` | `PATCH agents/:id`, avatar, `instruction_versions`, `agents/:id/build_thread`, `PATCH agents/:id/quote_choices` | F7 |
 | Ferramentas | `PanelToolsV2`, `ToolDialog`, `ToolRow` | lógica de `PanelTools` | `tools` | F7 |
 | Conversa: ajudante | visual de `AutonomiaCopilotContainer` | o próprio | `copilot` | F8 |
@@ -1468,7 +1452,7 @@ correção, escrita ou limpeza em produção.
 | Decisão de plano D1–D35 e saída R9 | §4, §10.3, §15 linha da R9; resposta do Rodrigo nesta sessão em 07/10 | Não há consulta nem aborto de produção nesta decisão; merge, deploy, produção e D10 continuam sem autorização | Todos os D; R9 normal, checagem das correções; erro na checagem → causa raiz e revisão final; erro na final → parada e retorno |
 | #1063 e D34 (exclusão lógica) | `git show 4d79f25612`; `docs/audit/2026-10-06-agent-logical-deletion.md:5-38,40-62`; `app/models/autonomia/agents/agent.rb:44-49`; `app/services/autonomia/agents/soft_delete.rb:9-50` | (a) volume de produção: pendente, requer OK específico; (b) caminho local: `kept`, `SoftDelete`, liberação do espelho e auditoria; (c) evidência de produção: pendente do responsável; (d) estado legítimo arquivado não dispara volta | externo, ajudante e rascunho; consultas novas usam `kept`; D34 só ajusta texto, sem tela de recuperação |
 | D35 e fila | §0, D35, §10.1 (linhas B1/B4b/B5/B6b), §11.7 consequência, §14, Apêndice A e handoff §6 | (a–d) são definidos no plano do PR; lote misto não dispara rollback automático; não contatar Automação diretamente | caminho ao vivo isolado; demais lotes de até 7 sem migration; migration isolada com snapshot pela Automação |
-| Gate de telas reais e cenários | §10.1 gate, §10.2 passo 5, §12 Escopo e [`aceite-telas-reais.md`](aceite-telas-reais.md) | (a–d) de produção não se aplica; a prova é local, com capturas e execução da jornada | 14 grupos do aceite; 1440/400 px; claro/escuro; editar/só ver/admin; carregando/vazio/erro/sucesso |
+| Gate de telas reais e cenários | §10.1 gate, §10.2 passo 5, §12 Escopo e [`aceite-telas-reais.md`](aceite-telas-reais.md) | (a–d) de produção não se aplica; a prova é local, com capturas e execução da jornada | 13 grupos do aceite; 1440/400 px; claro/escuro; editar/só ver/admin; carregando/vazio/erro/sucesso |
 | Segurança B1 ainda aberta | D12, BE-19, BE-25, BE-31, §7.2, §11.8 cobertura B1 e §13 risco | (a) leituras autorizadas em §11.7/§15.1d: Antes B1 zero nas duas stacks; Q12a zero no Hub2You e chave `recovery` em um agente da conta 20 da Autonom.ia, desconhecida/órfã e preservada; nenhuma escrita; (b) baseline `6242e31695fd1c6b8b088f2fcb819c027fc5083c`: `agents_controller.rb:151-193` permite config aberta; `analytics_controller.rb:15-32` não filtra caixas; BE-31 sem caminho próprio; desenho B1 ainda pendente; (c) Q12b não executada; (d) falha de isolamento é bloqueio, sem volta automática por regra | B1 primeiro; config fora da lista, PermissionFilter e auditoria; nenhum release antes do gate e da revisão |
 
 ### 15.1d Resultado das leituras B1 autorizadas (07/10/2026)
@@ -1477,3 +1461,15 @@ correção, escrita ou limpeza em produção.
 |---|---|---|---|
 | Antes B1 | §11.7, plano B1 e recibo read-only da sessão responsável | Zero nas duas stacks; nenhuma correção ou escrita | Não prova o contrato B1 nem autoriza release |
 | Q12a | §11.7 e Q12a do plano B1 | Hub2You: zero; Autonom.ia, conta 20: chave `recovery`, uma ocorrência em um agente; desconhecida/órfã sem leitor ou escritor semântico encontrado no baseline, preservada | Só nomes de chave e contagens; sem telefones/valores; Q12b fora do escopo |
+
+
+### 15.1e Revisão explícita de D7 (07/10/2026)
+
+Rodrigo retirou a decisão de conectar WhatsApp dentro da área Agentes. A conexão continua na área existente de Canais/Caixas de
+entrada (settings_inbox_list, accounts/:accountId/settings/inboxes; cadastro em settings_inbox_new). Ligue e Onde atende somente
+escolhem e associam canais já conectados/elegíveis; sem canal, preservam o agente salvo e orientam/atalham para Canais conforme
+a permissão. O fluxo de número, QR, waha_inboxes#create, rota de conexão e parâmetro from foi removido das obrigações
+normativas de Agentes. O achado F0-FINAL-01 continua válido como registro histórico do contrato anterior, mas deixou de exigir
+correção porque a decisão que o originava foi removida; isso não é aprovação retroativa da revisão final.
+
+Fonte da decisão e da consistência: docs/audit/2026-10-07-agentes-whatsapp-area-canais.md.

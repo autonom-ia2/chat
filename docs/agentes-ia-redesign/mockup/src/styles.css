@@ -202,8 +202,9 @@ button{font:inherit;color:inherit;cursor:pointer}
 .opt{display:flex;align-items:center;gap:1rem;width:100%;text-align:left;padding:1rem 1.15rem;border-radius:1rem;border:0;background:var(--solid);box-shadow:inset 0 0 0 1px var(--weak)}
 .opt[aria-checked="true"]{box-shadow:inset 0 0 0 2px var(--brand);background:var(--b2)}
 .opt[disabled]{opacity:.62;cursor:not-allowed}
-.opt .radio{width:1.35rem;height:1.35rem;border-radius:999px;box-shadow:inset 0 0 0 2px var(--strong);flex:none}
-.opt[aria-checked="true"] .radio{box-shadow:inset 0 0 0 6px var(--brand)}
+.opt .check{width:1.35rem;height:1.35rem;border-radius:.35rem;box-shadow:inset 0 0 0 2px var(--strong);flex:none;display:grid;place-items:center}
+.opt[aria-checked="true"] .check{box-shadow:inset 0 0 0 2px var(--brand);background:var(--brand)}
+.opt[aria-checked="true"] .check::after{content:'✓';color:white;font-size:.9rem;line-height:1;font-weight:700}
 .field{display:flex;flex-direction:column;gap:.45rem}
 .field label{font-weight:600;font-size:14.5px}
 .field input,.field textarea{font:inherit;font-size:15.5px;color:var(--s12);background:var(--solid);border:0;box-shadow:inset 0 0 0 1px var(--strong);border-radius:.75rem;padding:.7rem .9rem;min-height:2.9rem;resize:vertical}

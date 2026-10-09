@@ -3,13 +3,14 @@ import { ref, reactive, computed, watch, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
+import { useAccount } from 'dashboard/composables/useAccount';
 import AutonomiaBuilderImagesAPI from 'dashboard/api/autonomia/builderImages';
 
 import NextButton from 'dashboard/components-next/button/Button.vue';
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
 import TextArea from 'dashboard/components-next/textarea/TextArea.vue';
-import Select from 'dashboard/components-next/select/Select.vue';
+import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import Switch from 'dashboard/components-next/switch/Switch.vue';
 import Icon from 'dashboard/components-next/icon/Icon.vue';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
@@ -30,6 +31,7 @@ const props = defineProps({
 
 const { t } = useI18n();
 const store = useStore();
+const { currentAccount } = useAccount();
 
 // Build-thread store powers the guided re-conversation (IP OCULTO: only
 // human-facing turns; instruction/scaffold are never read here).
@@ -41,6 +43,10 @@ const builderUiFlags = useMapGetter('autonomiaBuildThreads/getUIFlags');
 const reconverseDialogRef = ref(null);
 const avatarPreviewUrl = ref('');
 const isUploadingAvatar = ref(false);
+const isOpening = ref(false);
+const isRedesignEnabled = computed(
+  () => currentAccount.value?.autonomia_agents_redesign === true
+);
 
 const advancedMode = ref(props.agent.mode === 'manual');
 
@@ -206,12 +212,36 @@ const saveManualInstruction = () => {
   saveSettings({ instruction: form.instruction });
 };
 
-// Guided re-tuning reuses the Builder conversation. The thread is created
-// lazily on the first refinement message (the backend rejects empty opens), so
-// opening the dialog only clears any prior thread.
-const openReconverse = () => {
-  store.commit('autonomiaBuildThreads/RESET');
-  reconverseDialogRef.value?.open();
+// Guided re-tuning reuses the Builder conversation. New accounts hydrate the
+// existing thread before opening; accounts outside the redesign keep the
+// legacy lazy-creation flow until they are migrated.
+const openReconverse = async () => {
+  if (isOpening.value) return;
+
+  // Manual agents do not have a guided thread to resume. Keep this guard at
+  // the panel boundary so a stale direct call cannot write a new thread.
+  if (advancedMode.value) {
+    useAlert(t('AGENTS.BUILDER.SEND_ERROR'));
+    return;
+  }
+
+  if (!isRedesignEnabled.value) {
+    store.commit('autonomiaBuildThreads/RESET');
+    reconverseDialogRef.value?.open();
+    return;
+  }
+
+  isOpening.value = true;
+  try {
+    await store.dispatch('autonomiaBuildThreads/resume', {
+      agentId: props.agentId,
+    });
+    reconverseDialogRef.value?.open();
+  } catch (error) {
+    useAlert(t('AGENTS.BUILDER.SEND_ERROR'));
+  } finally {
+    isOpening.value = false;
+  }
 };
 
 // MULTIMODAL (async): identical to the Construtor — upload each attached image
@@ -227,6 +257,15 @@ const uploadImages = async images => {
 
 const onReconverseSend = async ({ content, images = [] }) => {
   const threadId = store.getters['autonomiaBuildThreads/getThread']?.id;
+
+  // The redesigned panel can only send into the hydrated thread. Check before
+  // uploading attachments so a missing resume never causes an orphan upload
+  // or falls back to POST /build_threads.
+  if (isRedesignEnabled.value && !threadId) {
+    useAlert(t('AGENTS.BUILDER.SEND_ERROR'));
+    return;
+  }
+
   try {
     const imageSignedIds = await uploadImages(images);
     if (!threadId) {
@@ -417,6 +456,8 @@ onMounted(loadHistory);
         sm
         icon="i-lucide-sparkles"
         :label="t('AGENTS.TUNE.RECONVERSE')"
+        :is-loading="isOpening"
+        :disabled="isOpening"
         class="w-fit"
         @click="openReconverse"
       />
@@ -462,7 +503,7 @@ onMounted(loadHistory);
         <label class="text-sm font-medium text-n-slate-12">
           {{ t('AGENTS.TUNE.ACTUATION_LABEL') }}
         </label>
-        <Select
+        <ChoiceSelect
           v-model="form.actuation"
           :options="ACTUATION_OPTIONS"
           :aria-label="t('AGENTS.TUNE.ACTUATION_LABEL')"
@@ -488,7 +529,7 @@ onMounted(loadHistory);
         <label class="text-sm font-medium text-n-slate-12">
           {{ t('AGENTS.TUNE.TONE') }}
         </label>
-        <Select
+        <ChoiceSelect
           v-model="form.tone"
           :options="TONE_OPTIONS"
           :aria-label="t('AGENTS.TUNE.TONE')"
@@ -500,7 +541,7 @@ onMounted(loadHistory);
         <label class="text-sm font-medium text-n-slate-12">
           {{ t('AGENTS.TUNE.HANDOFF_STRATEGY') }}
         </label>
-        <Select
+        <ChoiceSelect
           v-model="form.handoff_strategy"
           :options="HANDOFF_OPTIONS"
           :aria-label="t('AGENTS.TUNE.HANDOFF_STRATEGY')"

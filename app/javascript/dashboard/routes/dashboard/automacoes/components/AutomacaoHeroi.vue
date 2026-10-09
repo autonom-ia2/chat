@@ -105,7 +105,7 @@ const aoTeclar = evento => {
 <template>
   <section
     data-heroi
-    class="relative overflow-hidden rounded-3xl bg-[#0D2344] px-6 py-10 text-white md:px-12 md:py-12"
+    class="relative overflow-hidden rounded-3xl bg-n-navy px-6 py-10 text-white md:px-12 md:py-12"
   >
     <span
       aria-hidden="true"
@@ -196,7 +196,7 @@ const aoTeclar = evento => {
             data-anexar
             :disabled="desabilitado || !cabeMais"
             :title="$t('AUTOMACOES.HEROI.ANEXAR')"
-            class="inline-flex items-center gap-2 px-3 text-sm font-medium transition min-h-11 rounded-xl text-n-slate-11 hover:bg-n-slate-2 hover:text-[#0D2344] focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand disabled:cursor-not-allowed disabled:opacity-40"
+            class="inline-flex items-center gap-2 px-3 text-sm font-medium transition min-h-11 rounded-xl text-n-slate-11 hover:bg-n-slate-2 hover:text-n-navy focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand disabled:cursor-not-allowed disabled:opacity-40"
             @click="seletor?.click()"
           >
             <span class="i-lucide-paperclip size-5" aria-hidden="true" />
@@ -220,7 +220,7 @@ const aoTeclar = evento => {
             :disabled="desabilitado"
             :aria-label="$t('AUTOMACOES.HEROI.FALAR')"
             :title="$t('AUTOMACOES.HEROI.FALAR')"
-            class="grid place-items-center shrink-0 size-12 rounded-xl ring-1 ring-inset ring-n-weak bg-n-slate-2 text-[#0D2344] transition hover:bg-n-slate-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand disabled:cursor-not-allowed disabled:opacity-50"
+            class="grid place-items-center shrink-0 size-12 rounded-xl ring-1 ring-inset ring-n-weak bg-n-slate-2 text-n-navy transition hover:bg-n-slate-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand disabled:cursor-not-allowed disabled:opacity-50"
             @click="emit('falar')"
           >
             <span class="i-lucide-mic size-6" aria-hidden="true" />

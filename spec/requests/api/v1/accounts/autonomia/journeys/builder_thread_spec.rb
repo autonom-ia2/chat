@@ -106,6 +106,19 @@ RSpec.describe 'Autonomia journeys - builder threads', type: :request do
     expect(foreign_thread.reload.messages).to be_blank
   end
 
+  it 'returns 404 for a thread linked to a system agent' do
+    system_agent = Autonomia::Agents::Agent.create!(
+      account: account, name: 'Guia', agent_type: 'custom', mode: :guided,
+      status: :draft, enabled: false, config: { 'system_key' => 'guide' }
+    )
+    system_thread = Autonomia::Agents::BuildThread.create!(account: account, agent: system_agent)
+
+    post_message(system_thread.id, message: 'Não deve editar o Guia')
+
+    expect(response).to have_http_status(:not_found)
+    expect(system_thread.reload.messages).to be_blank
+  end
+
   it 'keeps the thread alive (agent nulled) after the agent is deleted and still accepts messages' do
     # Arrange — thread ligada a um agente que é deletado em seguida.
     agent = create_agent

@@ -10,10 +10,7 @@ import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
 import { useCanManage } from 'dashboard/composables/useCanManage';
 import { useOnEnter } from 'dashboard/components-next/CampaignJourney/useOnEnter';
-import {
-  toLocaleTag,
-  formatNumber,
-} from 'dashboard/components-next/CampaignJourney/localeTag';
+import { toLocaleTag, formatNumber } from 'dashboard/helper/localeTag';
 
 import Button from 'dashboard/components-next/button/Button.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
@@ -141,7 +138,7 @@ useOnEnter(fetchAudiences);
         class="mb-7 flex flex-col overflow-hidden rounded-3xl border border-n-weak bg-n-solid-1 shadow-sm sm:flex-row"
         :aria-label="t(`${NS}.OVERVIEW`)"
       >
-        <div class="min-w-0 bg-[#0D2344] px-6 py-6 text-white sm:w-[32%]">
+        <div class="min-w-0 bg-n-navy px-6 py-6 text-white sm:w-[32%]">
           <p class="mb-0 text-xs text-white opacity-80">
             {{ t(`${NS}.SAVED`) }}
           </p>

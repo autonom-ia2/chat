@@ -21,7 +21,7 @@ function shell() {
 }
 
 // ---------- roteador ----------
-const ROUTES = { lista: viewLista, escolha: viewEscolha, conte: viewConte, teste: viewTeste, ligue: viewLigue, pronto: viewPronto, conectar: viewConectar, conversa: viewConversa };
+const ROUTES = { lista: viewLista, escolha: viewEscolha, conte: viewConte, teste: viewTeste, ligue: viewLigue, pronto: viewPronto, conversa: viewConversa };
 let lastRoute = 'lista';
 function current() { return location.hash.slice(1) || 'lista'; }
 function go(r) { if (current() === r) render(); else location.hash = r; }
@@ -38,7 +38,7 @@ function render() {
 window.addEventListener('hashchange', () => {
   const r = current();
   if (r !== lastRoute) { S.open = null; window.scrollTo(0, 0); $('#main').focus({ preventScroll: true }); }
-  if (!r.startsWith('conectar')) lastRoute = r;
+  lastRoute = r;
   render();
 });
 
@@ -74,16 +74,17 @@ function toggleAgent(id) {
 function saveNewAgent(on) {
   const b = S.build; const internal = isInternal();
   const nome = bName();
+  const selectedChannels = b.channels || [];
   S.agents = S.agents.filter((x) => x.id !== 'novo');
   CHANNELS.forEach((c) => { if (c.busyBy === 'novo') c.busyBy = null; });
   const zero = { conv: 0, replies: 0, handed: 0, conf: null, know: null, reasons: [] };
   const a = { id: 'novo', name: nome, color: 'violet', type: b.model, actuation: internal ? 'internal' : 'external', status: on ? 'on' : 'ready', mode: 'guided',
-    channels: on && !internal ? [b.channel] : [], card: internal ? 'Ajuda a equipe: resume a conversa e sugere a próxima resposta.' : `Conversa com donos e gestores de corretoras que chegam pelo site e chama a equipe quando pedem preço ou demonstração.`,
+    channels: on && !internal ? [...selectedChannels] : [], card: internal ? 'Ajuda a equipe: resume a conversa e sugere a próxima resposta.' : `Conversa com donos e gestores de corretoras que chegam pelo site e chama a equipe quando pedem preço ou demonstração.`,
     greeting: bGreeting(), fallback: 'Não sei responder isso com segurança. Vou chamar alguém da equipe.', tone: '', handoff: 'low_confidence', threshold: 0.6,
     window: b.window, audience: null, starters: b.starters || [], base: b.files.some((f) => f.state === 'accepted') ? 71 : null, faqOn: false, faq: [], versions: [],
     files: b.files, media: b.media, stats: { 7: zero, 30: zero }, serie: {}, stepName: 'Ligue' };
   S.agents.push(a);
-  if (on && !internal) channelById(b.channel).busyBy = 'novo';
+  if (on && !internal) selectedChannels.forEach((id) => { const channel = channelById(id); if (channel) channel.busyBy = 'novo'; });
   if (on) { S.build = null; go('pronto'); } else { b.answers.nome = nome; go('lista'); toast(`${nome} guardad${artigo(a)}. Ligue quando quiser.`); }
 }
 
@@ -185,7 +186,13 @@ document.addEventListener('click', (e) => {
   if (d.model) { S.build = S.build && current() === 'escolha' ? S.build : newBuild(null); S.build.model = d.model; if (current() !== 'escolha') go('escolha'); else render(); return; }
   if (d.ans) { answer(d.ans); return; }
   if (d.q) { playTest(current() === 'teste' ? S.build : S.ptest, d.q); return; }
-  if (d.ch) { S.build.channel = Number(d.ch); render(); return; }
+  if (d.ch) {
+    const id = Number(d.ch);
+    const channels = S.build.channels || (S.build.channels = []);
+    const index = channels.indexOf(id);
+    if (index === -1) channels.push(id); else channels.splice(index, 1);
+    render(); return;
+  }
   if (d.bwin) { S.build.window = d.bwin; render(); return; }
   if (d.btab) { S.build.tab = d.btab; render(); return; }
   if (d.rmimg) { S.build.images.splice(Number(d.rmimg), 1); render(); return; }

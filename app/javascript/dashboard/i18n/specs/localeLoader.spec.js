@@ -30,6 +30,7 @@ describe('dashboard language catalogue loading', () => {
       });
       await setDashboardLocale(i18n.global, 'pt');
       expect(i18n.global.locale.value).toBe('pt_BR');
+      expect(document.documentElement.lang).toBe('pt-BR');
       expect(i18n.global.availableLocales).not.toContain('pt');
       expect(i18n.global.t('CANNED_MGMT.SEARCH_PLACEHOLDER')).toBe(
         'Pesquisar respostas prontas...'
@@ -71,6 +72,7 @@ describe('dashboard language catalogue loading', () => {
         await setDashboardLocale(instance.composer, language);
         await nextTick();
         expect(i18n.global.locale.value).toBe(language);
+        expect(document.documentElement.lang).toBe(language.replace('_', '-'));
         expect(i18n.global.availableLocales).toContain(language);
         expect(root.textContent).toBe(
           i18n.global.getLocaleMessage(language).PROFILE_SETTINGS.TITLE
@@ -94,6 +96,7 @@ describe('dashboard language catalogue loading', () => {
     delayedFrench.release();
     await earlierChoice;
     expect(i18n.global.locale.value).toBe('en');
+    expect(document.documentElement.lang).toBe('en');
     expect(i18n.global.t('PROFILE_SETTINGS.TITLE')).toBe('Profile Settings');
   });
 });

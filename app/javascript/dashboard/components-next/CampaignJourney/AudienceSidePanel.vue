@@ -1,5 +1,5 @@
 <script setup>
-import { formatNumber } from 'dashboard/components-next/CampaignJourney/localeTag';
+import { formatNumber } from 'dashboard/helper/localeTag';
 import { DOT } from 'dashboard/components-next/CampaignJourney/textMarks';
 // Painel lateral do público (#993, PRD §6.6, §7 "37rem", F1–F3, B8): channel badges, people,
 // companies, other columns kept, who does not receive, campaigns that used it, "Usar em nova
@@ -9,12 +9,12 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
+import SidePanel from 'dashboard/components-next/side-panel/SidePanel.vue';
 import { audiencesAPI } from 'dashboard/api/campaignJourney';
 import AudienceChannelBadges from './AudienceChannelBadges.vue';
 import { audienceChannelBadges } from './audienceRows';
 import { notReceiving } from './audienceReview';
 import { CHANNEL_LABEL_KEYS } from './campaignChannels';
-import { useModalFocus } from './useModalFocus';
 
 const props = defineProps({
   audienceId: { type: Number, required: true },
@@ -34,8 +34,7 @@ const contacts = ref([]);
 const contactsMeta = ref({ count: 0, page: 0 });
 const contactsOpen = ref(false);
 const contactsError = ref(false);
-const closeButton = ref(null);
-const panelRef = ref(null);
+const sidePanelRef = ref(null);
 
 const name = computed(
   () => detail.value?.name || detail.value?.campaign_name || ''
@@ -90,43 +89,36 @@ const channelLabel = channel =>
     ? t(`CAMPAIGN_JOURNEY.CHANNELS.${CHANNEL_LABEL_KEYS[channel]}`)
     : '';
 
-useModalFocus({
-  container: panelRef,
-  initial: computed(() => closeButton.value?.$el || null),
-  onClose: () => emit('close'),
-});
+const requestClose = () => sidePanelRef.value?.close();
+
+const onPanelAfterLeave = () => emit('close');
 
 watch(() => props.audienceId, load);
-onMounted(load);
+onMounted(() => {
+  sidePanelRef.value?.open();
+  load();
+});
 </script>
 
 <template>
-  <div
-    class="fixed inset-0 z-40 bg-n-alpha-black1"
-    role="presentation"
-    data-test="panel-backdrop"
-    @click="emit('close')"
-  />
-  <aside
-    ref="panelRef"
-    role="dialog"
-    aria-modal="true"
-    tabindex="-1"
-    class="fixed inset-y-0 z-40 flex w-full max-w-full flex-col overflow-y-auto border-n-weak bg-n-solid-1 shadow-xl outline-none ltr:right-0 ltr:border-l rtl:left-0 rtl:border-r sm:w-[37rem]"
-    :aria-label="name || t(`${NS}.TITLE`)"
-    data-test="audience-panel"
+  <SidePanel
+    ref="sidePanelRef"
+    :title="name || t(`${NS}.TITLE`)"
+    width="audience"
+    panel-test-id="audience-panel"
+    backdrop-test-id="panel-backdrop"
+    @after-leave="onPanelAfterLeave"
   >
-    <header
-      class="flex items-start justify-between gap-3 border-b border-n-weak px-5 py-4"
-    >
+    <template #header>
       <div class="min-w-0">
         <h2 class="m-0 truncate text-lg font-semibold text-n-slate-12">
           {{ name }}
         </h2>
         <AudienceChannelBadges v-if="detail" :badges="badges" class="mt-2" />
       </div>
+    </template>
+    <template #close>
       <Button
-        ref="closeButton"
         icon="i-lucide-x"
         :aria-label="t(`${NS}.CLOSE`)"
         variant="ghost"
@@ -134,9 +126,10 @@ onMounted(load);
         size="sm"
         class="!min-h-11 !min-w-11"
         data-test="panel-close"
-        @click="emit('close')"
+        data-autofocus
+        @click="requestClose"
       />
-    </header>
+    </template>
 
     <div v-if="isLoading" class="flex justify-center p-10"><Spinner /></div>
     <p v-else-if="hasError" role="alert" class="m-5 text-sm text-n-ruby-11">
@@ -295,11 +288,9 @@ onMounted(load);
           />
         </template>
       </section>
-
-      <footer
-        v-if="canManage"
-        class="flex flex-wrap justify-between gap-2 border-t border-n-weak pt-4"
-      >
+    </div>
+    <template v-if="canManage && !isLoading && !hasError" #footer>
+      <div class="flex flex-wrap justify-between gap-2">
         <Button
           :label="t('CAMPAIGN_JOURNEY.AUDIENCES.DELETE')"
           icon="i-lucide-trash-2"
@@ -319,7 +310,7 @@ onMounted(load);
           data-test="panel-use"
           @click="emit('use', { id: audienceId })"
         />
-      </footer>
-    </div>
-  </aside>
+      </div>
+    </template>
+  </SidePanel>
 </template>

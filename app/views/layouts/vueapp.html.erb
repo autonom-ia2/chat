@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html>
+<html lang="<%= I18n.locale.to_s.tr('_', '-') %>">
   <head>
     <title>
       <%= @global_config['INSTALLATION_NAME'] %>
     </title>
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, user-scalable=0"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"/>
     <% unless ChatwootApp.chatwoot_cloud? %>
       <meta name="robots" content="noindex">
     <% end %>

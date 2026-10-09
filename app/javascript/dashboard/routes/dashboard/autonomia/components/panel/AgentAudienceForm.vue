@@ -3,7 +3,7 @@ import { ref, computed, watch, useTemplateRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 import RadioCard from 'dashboard/components-next/radioCard/RadioCard.vue';
-import Select from 'dashboard/components-next/select/Select.vue';
+import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import AgentAudienceGroup from './audience/AgentAudienceGroup.vue';
 import { useAgentAudienceFilterTypes } from './audience/useAgentAudienceFilterTypes.js';
 
@@ -139,8 +139,13 @@ const handleSubmit = () => {
 };
 
 watch(
-  () => props.agent,
-  agent => {
+  [
+    () => props.agent?.id,
+    () => JSON.stringify(props.agent?.config?.audience ?? null),
+    () => props.agent?.config?.audience_unknown_contact,
+  ],
+  () => {
+    const agent = props.agent;
     if (!agent) return;
     const audience = agent.config?.audience;
     root.value = hydrateRoot(audience);
@@ -193,13 +198,13 @@ watch(
       <label class="text-sm font-medium text-n-slate-12">
         {{ t('AGENTS.AUDIENCE.UNKNOWN_CONTACT.LABEL') }}
       </label>
-      <Select
+      <ChoiceSelect
         v-model="unknownContact"
         :options="UNKNOWN_CONTACT_OPTIONS"
         :aria-label="t('AGENTS.AUDIENCE.UNKNOWN_CONTACT.LABEL')"
         class="w-full"
       />
-      <p class="m-0 text-xs text-n-slate-10">
+      <p class="m-0 text-xs text-n-slate-11">
         {{ t('AGENTS.AUDIENCE.UNKNOWN_CONTACT.HINT') }}
       </p>
     </div>
@@ -209,7 +214,7 @@ watch(
       :label="t('AGENTS.AUDIENCE.SAVE')"
       :is-loading="isSaving"
       :disabled="isSaving"
-      class="w-fit"
+      class="w-fit !bg-n-blue-11 !text-white dark:!text-n-navy hover:enabled:!bg-n-blue-12 hover:enabled:!brightness-100 focus-visible:!brightness-100 focus-visible:!outline-n-blue-11"
       @click="handleSubmit"
     />
   </div>

@@ -12,7 +12,7 @@ const BENEFITS = [
 <template>
   <section
     data-meta-ads-hero
-    class="relative overflow-hidden rounded-3xl bg-[#0D2344] px-6 py-10 text-white md:px-12 md:py-12"
+    class="relative overflow-hidden rounded-3xl bg-n-navy px-6 py-10 text-white md:px-12 md:py-12"
   >
     <span
       aria-hidden="true"
@@ -62,7 +62,7 @@ const BENEFITS = [
         <button
           type="button"
           data-meta-ads-start
-          class="inline-flex items-center gap-2 px-5 text-sm font-semibold transition-colors bg-white rounded-xl min-h-11 text-[#0D2344] hover:bg-n-blue-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+          class="inline-flex items-center gap-2 px-5 text-sm font-semibold transition-colors bg-white rounded-xl min-h-11 text-n-navy hover:bg-n-blue-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
           @click="$emit('start')"
         >
           <span class="i-lucide-plug size-4" aria-hidden="true" />

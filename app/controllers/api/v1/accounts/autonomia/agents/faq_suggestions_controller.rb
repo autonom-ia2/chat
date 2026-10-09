@@ -22,11 +22,11 @@ class Api::V1::Accounts::Autonomia::Agents::FaqSuggestionsController < Api::V1::
                                       .approve!(question: edits[:question], answer: edits[:answer])
     render :show
   rescue ::Autonomia::Agents::Faq::Approver::NotPending
-    render_unprocessable(I18n.t('autonomia.faq.not_pending'))
+    render_faq_error('not_pending')
   rescue ::Autonomia::Agents::EmbeddingService::EmbeddingError
-    render_unprocessable(I18n.t('autonomia.faq.embedding_failed'))
-  rescue ActiveRecord::RecordInvalid => e
-    render_unprocessable(e.record.errors.full_messages.to_sentence)
+    render_faq_error('embedding_failed')
+  rescue ActiveRecord::RecordInvalid
+    render_faq_error('faq_invalid')
   end
 
   def ignore
@@ -34,7 +34,7 @@ class Api::V1::Accounts::Autonomia::Agents::FaqSuggestionsController < Api::V1::
     ::Autonomia::Agents::Faq::Approver.new(suggestion: @suggestion, user: Current.user).ignore!
     render :show
   rescue ::Autonomia::Agents::Faq::Approver::NotPending
-    render_unprocessable(I18n.t('autonomia.faq.not_pending'))
+    render_faq_error('not_pending')
   end
 
   private
@@ -49,6 +49,13 @@ class Api::V1::Accounts::Autonomia::Agents::FaqSuggestionsController < Api::V1::
 
   def suggestions_scope
     @agent.faq_suggestions.where(account_id: Current.account.id)
+  end
+
+  def render_faq_error(code)
+    render_unprocessable(
+      I18n.t("autonomia.agents.errors.#{code}", locale: current_account.locale),
+      code: code
+    )
   end
 
   def status_filter

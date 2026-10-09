@@ -68,6 +68,36 @@ RSpec.describe Autonomia::Agents::ReapStaleDraftsJob, type: :job do
     expect(Autonomia::Agents::Agent.exists?(agent.id)).to be(true)
   end
 
+  it 'spares a stale draft with any user response in a build thread' do
+    agent = create_agent
+    thread = Autonomia::Agents::BuildThread.create!(
+      account: account,
+      agent: agent,
+      messages: [{ 'role' => 'user', 'content' => 'Quero continuar depois.' }]
+    )
+    thread.update_column(:updated_at, 3.days.ago) # rubocop:disable Rails/SkipsModelValidations
+
+    described_class.new.perform
+
+    expect(agent.reload).not_to be_deleted
+    expect(Autonomia::Agents::BuildThread.exists?(thread.id)).to be(true)
+  end
+
+  it 'archives an old thread without a user response but keeps the thread history' do
+    agent = create_agent
+    thread = Autonomia::Agents::BuildThread.create!(
+      account: account,
+      agent: agent,
+      messages: [{ 'role' => 'assistant', 'content' => 'Qual é o nome?' }]
+    )
+    thread.update_column(:updated_at, 3.days.ago) # rubocop:disable Rails/SkipsModelValidations
+
+    described_class.new.perform
+
+    expect(agent.reload).to be_deleted
+    expect(Autonomia::Agents::BuildThread.exists?(thread.id)).to be(true)
+  end
+
   it 'spares a recently updated draft' do
     fresh = create_agent(updated_ago: 1.hour)
 

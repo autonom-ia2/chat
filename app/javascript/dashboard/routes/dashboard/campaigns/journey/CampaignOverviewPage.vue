@@ -11,6 +11,7 @@ import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { useStore } from 'dashboard/composables/store';
 import CampaignResultsAPI from 'dashboard/api/campaignResults';
+import { toLocaleTag } from 'dashboard/helper/localeTag';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
@@ -44,18 +45,17 @@ const isLoading = ref(false);
 const hasError = ref(false);
 let requestId = 0;
 
-const localeTag = computed(() => locale.value.replace('_', '-'));
 const number = value =>
   typeof value === 'number'
-    ? new Intl.NumberFormat(localeTag.value).format(value)
+    ? new Intl.NumberFormat(toLocaleTag(locale.value)).format(value)
     : '—';
 const rateText = value =>
   typeof value === 'number'
-    ? `${new Intl.NumberFormat(localeTag.value, { maximumFractionDigits: 1 }).format(value)}%`
+    ? `${new Intl.NumberFormat(toLocaleTag(locale.value), { maximumFractionDigits: 1 }).format(value)}%`
     : '—';
 const date = value =>
   value
-    ? new Date(value).toLocaleDateString(localeTag.value, {
+    ? new Date(value).toLocaleDateString(toLocaleTag(locale.value), {
         day: '2-digit',
         month: '2-digit',
       })

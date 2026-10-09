@@ -6,9 +6,17 @@ json.payload do
   # IP oculto: o `state.draft_config` pode conter instruction/scaffold gerados pelo Construtor —
   # NUNCA expor. Só liberamos os campos de progresso da conversa, explicitamente filtrados.
   json.state do
+    knows = @thread.state['knows'].is_a?(Hash) ? @thread.state['knows'] : {}
     json.needs_more_info @thread.state['needs_more_info']
     json.next_question @thread.state['next_question']
     json.turn @thread.state['turn']
+    json.knows do
+      json.negocio knows['negocio'].to_s
+      json.publico knows['publico'].to_s
+      json.quando_chama knows['quando_chama'].to_s
+      json.nome knows['nome'].to_s
+    end
+    json.suggested_links Array(@thread.state['suggested_links']).select { |link| link.is_a?(String) && link.present? }
     # GAP (A) — o FE usa para o gate "não tenho material" (decisão do usuário de avançar a etapa de
     # materiais sem subir nada). Lido do jsonb `state`; campo seguro (não é IP).
     json.no_materials_declared ActiveModel::Type::Boolean.new.cast(@thread.state['no_materials_declared']) || false

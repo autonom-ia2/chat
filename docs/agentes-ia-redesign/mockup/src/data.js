@@ -30,9 +30,22 @@ const PDF_CLARA = {
   nota: 8, label: 'Boa', conf: 'alta', resumo: 'Base comercial da Hub2You: Chat2You, Protege, integrações e como cada solução ajuda a corretora.',
 };
 
+// Variantes da lista: referência visual para todos os estados do PRD. Os nomes são fixtures do mockup,
+// não IDs/payloads do produto; a tela real usa state.code e stats.week/month do backend.
+const LIST_FIXTURE = overrides => ({
+  id: 'fixture', name: 'Agente de exemplo', color: 'violet', type: 'custom', actuation: 'external',
+  status: 'todo', mode: 'guided', voice: 'feminina', channels: [], stepName: 'Conte', empty: false,
+  testInvalidatedBy: null, card: 'Fixture visual da lista.', greeting: '', fallback: '', tone: '',
+  handoff: 'low_confidence', threshold: 0.6, window: 'always', audience: null, starters: [], base: null,
+  faqOn: false, faq: [], versions: [], files: [], media: [], stats: {
+    7: { conv: 0, replies: 0, handed: 0, conf: null, know: null, reasons: [] },
+    30: { conv: 0, replies: 0, handed: 0, conf: null, know: null, reasons: [] },
+  }, serie: {}, created: '07/10/2026', ...overrides,
+});
+
 const AGENTS = [
   {
-    id: 'clara', name: 'Clara', color: 'blue', type: 'custom', actuation: 'external', status: 'on', mode: 'guided',
+    id: 'clara', name: 'Clara', color: 'blue', type: 'custom', actuation: 'external', status: 'on', mode: 'guided', voice: 'feminina',
     channels: [43],
     card: 'Atende corretores de seguros, tira dúvidas comerciais sobre a Hub2You e entende se a solução faz sentido para a corretora.',
     greeting: 'Oi, eu sou a Clara, da Hub2You. Posso te ajudar com uma dúvida sobre a plataforma ou entender se alguma solução faz sentido para a sua corretora.',
@@ -47,7 +60,7 @@ const AGENTS = [
     serie: SERIE_CLARA, created: '06/07/2026',
   },
   {
-    id: 'lia', name: 'Lia', color: 'teal', type: 'insurance_quote', actuation: 'external', status: 'on', mode: 'guided',
+    id: 'lia', name: 'Lia', color: 'teal', type: 'insurance_quote', actuation: 'external', status: 'on', mode: 'guided', voice: 'feminina',
     channels: [57],
     card: 'Agente de Cotação. Identifica o ramo, coleta só os dados necessários e cota nas seguradoras da conta AGGER.',
     greeting: '', fallback: '', tone: '', handoff: 'low_confidence', threshold: 0.6, window: 'always', audience: null,
@@ -59,6 +72,15 @@ const AGENTS = [
     },
     serie: SERIE_LIA, created: '08/09/2026',
   },
+  LIST_FIXTURE({ id: 'interno', name: 'Apoio', color: 'slate', actuation: 'internal', status: 'on', mode: 'guided', voice: 'masculina', card: 'Ajuda a equipe ao lado das conversas.' }),
+  LIST_FIXTURE({ id: 'rascunho-e1', name: 'Bia', status: 'todo', empty: true, stepName: 'Conte' }),
+  LIST_FIXTURE({ id: 'rascunho-e2', name: 'Davi', voice: 'masculina', status: 'todo', stepName: 'Conte' }),
+  LIST_FIXTURE({ id: 'rascunho-e2m', name: 'Nina', status: 'todo', mode: 'manual', stepName: 'Conte' }),
+  LIST_FIXTURE({ id: 'rascunho-e3-material', name: 'Clara nova', status: 'todo', stepName: 'Teste', testInvalidatedBy: 'material' }),
+  LIST_FIXTURE({ id: 'rascunho-e3-person', name: 'Davi teste', voice: 'masculina', status: 'todo', stepName: 'Teste', testInvalidatedBy: 'person' }),
+  LIST_FIXTURE({ id: 'pronto-para-ligar', name: 'Bia pronta', status: 'ready', stepName: 'Ligue' }),
+  LIST_FIXTURE({ id: 'sem-canal', name: 'Sem canal', status: 'on', channels: [] }),
+  LIST_FIXTURE({ id: 'pausado', name: 'Nina pausada', status: 'off', voice: 'feminina', channels: [109] }),
 ];
 
 const MODELS = [

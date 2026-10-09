@@ -173,6 +173,12 @@ const autonomiaAgentsEnabled = computed(
     autonomiaAgentsFlag.value &&
     (isAdministrator.value || hasAnyPermission(AUTONOMIA_PERMISSIONS))
 );
+const autonomiaAgentsRedesignEnabled = computed(
+  () =>
+    autonomiaAgentsEnabled.value &&
+    currentAccount.value(accountId.value)?.autonomia_agents_redesign_enabled ===
+      true
+);
 // Campaign Management (in the Campaigns group since #725) reads campaign reports and CTWA links,
 // gated by campaign_view (#452).
 const canViewCampaigns = computed(
@@ -803,30 +809,54 @@ const menuItems = computed(() => {
     },
     ...(autonomiaAgentsEnabled.value
       ? [
-          {
-            name: 'Agents',
-            label: t('SIDEBAR.AGENTS_AUTONOMIA'),
-            icon: 'i-lucide-bot',
-            activeOn: [
-              'autonomia_agents_index',
-              'autonomia_agents_builder',
-              'autonomia_agent_panel',
-            ],
-            children: [
-              {
-                name: 'My Agents',
-                label: t('SIDEBAR.AGENTS_HUB'),
+          autonomiaAgentsRedesignEnabled.value
+            ? {
+                name: 'Agents',
+                label: t('SIDEBAR.AGENTS_AUTONOMIA'),
+                icon: 'i-lucide-bot',
                 to: accountScopedRoute('autonomia_agents_index'),
-                activeOn: ['autonomia_agents_index', 'autonomia_agent_panel'],
+                activeOn: [
+                  'autonomia_agents_index',
+                  'autonomia_agents_builder',
+                  'autonomia_agent_build',
+                  'autonomia_agent_ready',
+                  'autonomia_agent_panel',
+                  'autonomia_agent_panel_legacy',
+                ],
+              }
+            : {
+                name: 'Agents',
+                label: t('SIDEBAR.AGENTS_AUTONOMIA'),
+                icon: 'i-lucide-bot',
+                activeOn: [
+                  'autonomia_agents_index',
+                  'autonomia_agents_builder',
+                  'autonomia_agent_build',
+                  'autonomia_agent_ready',
+                  'autonomia_agent_panel',
+                  'autonomia_agent_panel_legacy',
+                ],
+                children: [
+                  {
+                    name: 'My Agents',
+                    label: t('SIDEBAR.AGENTS_HUB'),
+                    to: accountScopedRoute('autonomia_agents_index'),
+                    activeOn: [
+                      'autonomia_agents_index',
+                      'autonomia_agent_build',
+                      'autonomia_agent_ready',
+                      'autonomia_agent_panel',
+                      'autonomia_agent_panel_legacy',
+                    ],
+                  },
+                  {
+                    name: 'Agent Builder',
+                    label: t('SIDEBAR.AGENTS_BUILDER'),
+                    to: accountScopedRoute('autonomia_agents_builder'),
+                    activeOn: ['autonomia_agents_builder'],
+                  },
+                ],
               },
-              {
-                name: 'Agent Builder',
-                label: t('SIDEBAR.AGENTS_BUILDER'),
-                to: accountScopedRoute('autonomia_agents_builder'),
-                activeOn: ['autonomia_agents_builder'],
-              },
-            ],
-          },
         ]
       : []),
     ...prospectingSidebarItems({
@@ -1436,7 +1466,7 @@ const menuItems = computed(() => {
           class="flex gap-2 items-center px-2 py-1 w-full h-7 rounded-lg outline outline-1 outline-n-weak bg-n-button-color transition-all duration-100 ease-out"
         >
           <span class="flex-shrink-0 i-lucide-search size-4 text-n-slate-10" />
-          <span class="flex-grow text-start text-n-slate-10">
+          <span class="flex-grow text-start text-n-slate-11">
             {{ t('COMBOBOX.SEARCH_PLACEHOLDER') }}
           </span>
           <span
@@ -1459,6 +1489,7 @@ const menuItems = computed(() => {
               icon="i-lucide-pen-line"
               color="slate"
               size="sm"
+              :aria-label="t('AUTONOMIA_GUIDE.A11Y.NEW_CONVERSATION')"
               class="dark:hover:!bg-n-slate-9/30"
               :class="[
                 isEffectivelyCollapsed

@@ -1,10 +1,11 @@
 <script setup>
-import { computed, onMounted, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
 import { useCanManage } from 'dashboard/composables/useCanManage';
+import { useAccount } from 'dashboard/composables/useAccount';
 
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
@@ -26,11 +27,15 @@ const props = defineProps({
     type: String,
     default: 'test',
   },
+  resumeBuild: { type: Boolean, default: false },
 });
 
 const { t } = useI18n();
 const store = useStore();
 const router = useRouter();
+const { currentAccount } = useAccount();
+const isEntryReady = ref(false);
+let entryVersion = 0;
 
 const uiFlags = useMapGetter('autonomiaAgents/getUIFlags');
 const currentUser = useMapGetter('getCurrentUser');
@@ -41,7 +46,7 @@ const agent = computed(() =>
 );
 
 const isLoading = computed(
-  () => uiFlags.value.fetchingItem && !agent.value?.id
+  () => !isEntryReady.value || (uiFlags.value.fetchingItem && !agent.value?.id)
 );
 
 // Tab icon per key (segmented control). Static, full class names so Tailwind's
@@ -194,13 +199,40 @@ watch(
 // /agents/2): onMounted não redispara, então recarrega via watch — senão o
 // cabeçalho/painéis mostram o agente anterior com ações apontando pro novo.
 watch(
-  () => props.agentId,
-  () => store.dispatch('autonomiaAgents/show', Number(props.agentId))
+  [() => props.agentId, () => props.tab, () => props.resumeBuild],
+  async () => {
+    entryVersion += 1;
+    const version = entryVersion;
+    isEntryReady.value = false;
+    try {
+      await store.dispatch('autonomiaAgents/show', Number(props.agentId));
+      if (version !== entryVersion) return;
+      const needsResume =
+        canManage.value &&
+        agent.value?.mode === 'guided' &&
+        (props.resumeBuild ||
+          (currentAccount.value?.autonomia_agents_redesign_enabled === true &&
+            props.tab === 'tune'));
+      if (needsResume) {
+        await store.dispatch('autonomiaBuildThreads/resume', {
+          agentId: Number(props.agentId),
+        });
+      }
+      if (version === entryVersion) isEntryReady.value = true;
+    } catch {
+      if (version !== entryVersion) return;
+      useAlert(
+        t(
+          props.resumeBuild
+            ? 'AGENTS.V2.errors.resume'
+            : 'AGENTS.BUILDER.SEND_ERROR'
+        )
+      );
+      router.replace({ name: 'autonomia_agents_index' });
+    }
+  },
+  { immediate: true }
 );
-
-onMounted(() => {
-  store.dispatch('autonomiaAgents/show', Number(props.agentId));
-});
 </script>
 
 <template>

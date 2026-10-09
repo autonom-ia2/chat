@@ -92,6 +92,8 @@
   "audit_logs": {
     "controller": "api/v1/accounts/audit_logs#show",
     "parametros": [
+      "agent_id",
+      "operation_key",
       "page",
       "q",
       "since",
@@ -112,6 +114,10 @@
     "controller": "api/v1/accounts/autonomia/agents#index",
     "parametros": []
   },
+  "autonomia/agents/:agent_id/build_thread": {
+    "controller": "api/v1/accounts/autonomia/agents/build_threads#resume",
+    "parametros": []
+  },
   "autonomia/agents/:agent_id/channels": {
     "controller": "api/v1/accounts/autonomia/agents/channels#index",
     "parametros": []
@@ -129,6 +135,10 @@
   },
   "autonomia/agents/:agent_id/sources": {
     "controller": "api/v1/accounts/autonomia/agents/sources#index",
+    "parametros": []
+  },
+  "autonomia/agents/:agent_id/sources/reusable": {
+    "controller": "api/v1/accounts/autonomia/agents/sources#reusable",
     "parametros": []
   },
   "autonomia/agents/:agent_id/tools": {
@@ -155,6 +165,10 @@
       "metric",
       "range"
     ]
+  },
+  "autonomia/agents/:id/handoff_targets": {
+    "controller": "api/v1/accounts/autonomia/agents/handoff_targets#index",
+    "parametros": []
   },
   "autonomia/avisos": {
     "controller": "api/v1/accounts/autonomia/avisos#index",

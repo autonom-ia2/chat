@@ -5,18 +5,18 @@ Gerado por `bundle exec rails autonomia:guia:formatos` a partir do código (#900
 
 | | Ações |
 |---|---|
-| No catálogo | 534 |
+| No catálogo | 537 |
 | Sem corpo | 149 |
-| Com corpo | 385 |
-| Com corpo e formato completo | 312 (81,0%) |
-| Com corpo e formato incompleto | 73 |
+| Com corpo | 388 |
+| Com corpo e formato completo | 314 (80,9%) |
+| Com corpo e formato incompleto | 74 |
 
 ## Por dentro dos campos
 
 | | Total |
 |---|---|
 | Campos aninhados com vocabulário | 17 de 151 |
-| Leituras cruas tipadas | 107 de 179 |
+| Leituras cruas tipadas | 109 de 182 |
 
 ## Incompletas por motivo
 
@@ -24,7 +24,7 @@ Uma ação pode ter mais de um motivo.
 
 | Motivo | Ações |
 |---|---|
-| leitura crua sem tipo | 58 |
+| leitura crua sem tipo | 59 |
 | aceita qualquer campo | 5 |
 | params inteiro repassado | 9 |
 | lê o corpo cru | 2 |
@@ -46,6 +46,7 @@ Uma ação pode ter mais de um motivo.
 - `POST assignment_policies/:assignment_policy_id/inboxes` — a rota não tem a action no controller: a chamada dá erro
 - `POST autonomia/agents/:agent_id/sources` — leitura crua sem tipo: descriptor.kind
 - `POST autonomia/agents/:agent_id/tools/:id/test` — leitura crua sem tipo: params
+- `POST autonomia/agents/:id/publish` — leitura crua sem tipo: agent
 - `POST autonomia/build_threads` — leitura crua sem tipo: message (repassada a @thread.append_message!), type (repassada a @thread.persist_start_options!), with_knowledge (repassada a @thread.persist_start_options!)
 - `POST autonomia/build_threads/:id/messages` — leitura crua sem tipo: message (repassada a @thread.append_message!)
 - `POST autonomia/conversations/:conversation_id/copilot` — leitura crua sem tipo: draft, instruction, task, tone
@@ -111,6 +112,7 @@ Uma ação pode ter mais de um motivo.
 
 - `api/v1/accounts/agents#bulk_create` emails — o código não converte nem compara o valor
 - `api/v1/accounts/articles#reorder` positions_hash — repassada a Article.update_positions
+- `api/v1/accounts/autonomia/agents#publish` agent — o código não converte nem compara o valor
 - `api/v1/accounts/autonomia/agents/build_threads#create` message — repassada a @thread.append_message!
 - `api/v1/accounts/autonomia/agents/build_threads#create` type — repassada a @thread.persist_start_options!
 - `api/v1/accounts/autonomia/agents/build_threads#create` with_knowledge — repassada a @thread.persist_start_options!
@@ -188,8 +190,8 @@ O Guia recusa parâmetro que a leitura não lê. Leitura sem lista conhecida nã
 
 | | Leituras |
 |---|---|
-| No catálogo | 321 |
-| Com parâmetros conhecidos | 270 |
+| No catálogo | 324 |
+| Com parâmetros conhecidos | 273 |
 | Sem parâmetros conhecidos | 51 |
 
 ### Leituras sem parâmetros conhecidos

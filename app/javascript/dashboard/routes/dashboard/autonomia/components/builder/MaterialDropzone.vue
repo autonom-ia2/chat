@@ -101,7 +101,7 @@ const dropLabel = computed(() => {
       >
         {{ t('AGENTS.MATERIALS.DROP_HINT') }}
       </p>
-      <p class="text-xs truncate text-n-slate-10">{{ formatsHint }}</p>
+      <p class="text-xs truncate text-n-slate-11">{{ formatsHint }}</p>
     </div>
     <input
       ref="fileInput"

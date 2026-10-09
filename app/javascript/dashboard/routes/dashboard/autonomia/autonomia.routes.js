@@ -9,9 +9,11 @@ import store from 'dashboard/store';
 // Lazy-loaded pages (owned by HUB / CONSTRUTOR / PAINEL implementers).
 // Dynamic imports keep this NAV module self-contained and code-split the
 // Autonomia bundle out of the main dashboard chunk.
-const AgentsHubPage = () => import('./pages/AgentsHubPage.vue');
-const AgentBuilderPage = () => import('./pages/AgentBuilderPage.vue');
-const AgentPanelPage = () => import('./pages/AgentPanelPage.vue');
+const AgentsIndexPage = () => import('./pages/AgentsIndexPage.vue');
+const AgentCreationEntry = () =>
+  import('./agentes/pages/AgentCreationEntry.vue');
+const LegacyAgentPanelPage = () => import('./pages/AgentPanelPage.vue');
+const AgentPanelPage = () => import('./agentes/pages/AgentPanelEntry.vue');
 const ProspectingSearchPage = () =>
   import('./prospecting/pages/ProspectingSearchPage.vue');
 const ProspectingListsPage = () =>
@@ -116,18 +118,56 @@ export const routes = [
     name: 'autonomia_agents_index',
     meta: agentsMeta,
     beforeEnter: ensureAutonomiaEnabled,
-    component: AgentsHubPage,
+    component: AgentsIndexPage,
   },
   {
     path: frontendURL('accounts/:accountId/agents/new'),
     name: 'autonomia_agents_builder',
     meta: agentsManageMeta,
     beforeEnter: ensureAutonomiaEnabled,
-    component: AgentBuilderPage,
+    component: AgentCreationEntry,
+    props: { step: 'choice' },
   },
   {
     path: frontendURL(
-      'accounts/:accountId/agents/:agentId/:tab(test|knowledge|channels|performance|tune|publish)?'
+      'accounts/:accountId/agents/:agentId/build/:step(tell|test|live)'
+    ),
+    name: 'autonomia_agent_build',
+    meta: agentsManageMeta,
+    beforeEnter: ensureAutonomiaEnabled,
+    component: AgentCreationEntry,
+    props: route => ({
+      agentId: route.params.agentId,
+      step: route.params.step,
+    }),
+  },
+  {
+    path: frontendURL('accounts/:accountId/agents/:agentId/ready'),
+    name: 'autonomia_agent_ready',
+    meta: agentsManageMeta,
+    beforeEnter: ensureAutonomiaEnabled,
+    component: AgentCreationEntry,
+    props: route => ({
+      agentId: route.params.agentId,
+      step: 'ready',
+    }),
+  },
+  {
+    path: frontendURL(
+      'accounts/:accountId/agents/:agentId/legacy/:tab(test|tune|performance)?'
+    ),
+    name: 'autonomia_agent_panel_legacy',
+    meta: agentsMeta,
+    beforeEnter: ensureAutonomiaEnabled,
+    component: LegacyAgentPanelPage,
+    props: route => ({
+      agentId: route.params.agentId,
+      tab: route.params.tab || 'test',
+    }),
+  },
+  {
+    path: frontendURL(
+      'accounts/:accountId/agents/:agentId/:tab(test|knowledge|channels|performance|tune|tools|publish)?'
     ),
     name: 'autonomia_agent_panel',
     meta: agentsMeta,
@@ -135,7 +175,12 @@ export const routes = [
     component: AgentPanelPage,
     props: route => ({
       agentId: route.params.agentId,
-      tab: route.params.tab || 'test',
+      tab:
+        route.params.tab ||
+        (store.getters['accounts/getAccount'](Number(route.params.accountId))
+          ?.autonomia_agents_redesign_enabled === true
+          ? 'performance'
+          : 'test'),
     }),
   },
   {

@@ -87,6 +87,46 @@ describe('pollAiRequest', () => {
     expect(window.axios.get).not.toHaveBeenCalled();
   });
 
+  it('aborts an in-flight poll without issuing another GET', async () => {
+    const controller = new AbortController();
+    window.axios.get.mockImplementation(() => {
+      controller.abort();
+      return Promise.resolve({ data: { status: 'pending' } });
+    });
+
+    const request = pollAiRequest(
+      Promise.resolve({
+        status: 202,
+        data: { poll_url: '/api/v1/accounts/85/ai_requests/request-abort' },
+      }),
+      { intervalMs: 1000, signal: controller.signal }
+    );
+
+    const rejection = expect(request).rejects.toMatchObject({
+      name: 'AbortError',
+    });
+
+    await vi.advanceTimersByTimeAsync(1000);
+    await rejection;
+    expect(window.axios.get).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not start polling when the signal was already aborted', async () => {
+    const controller = new AbortController();
+    controller.abort();
+
+    const request = pollAiRequest(
+      Promise.resolve({
+        status: 202,
+        data: { poll_url: '/api/v1/accounts/85/ai_requests/request-before' },
+      }),
+      { signal: controller.signal }
+    );
+
+    await expect(request).rejects.toMatchObject({ name: 'AbortError' });
+    expect(window.axios.get).not.toHaveBeenCalled();
+  });
+
   it('keeps using the poll URL returned by the server after navigation', async () => {
     window.axios.get.mockResolvedValue({
       data: { status: 'done', result: { text: 'fixed account' } },

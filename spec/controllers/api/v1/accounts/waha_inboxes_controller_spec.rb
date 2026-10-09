@@ -12,6 +12,40 @@ RSpec.describe 'WAHA inboxes API', type: :request do
 
   before { allow(Waha::Client).to receive(:new).and_return(client) }
 
+  describe 'POST /api/v1/accounts/{account.id}/waha_inboxes' do
+    let(:path) { "/api/v1/accounts/#{account.id}/waha_inboxes" }
+    let(:provisioner) { instance_double(Waha::InboxProvisioner) }
+
+    before { allow(Waha::InboxProvisioner).to receive(:new).and_return(provisioner) }
+
+    locales = %w[en pt_BR]
+    %w[invalid_phone integration_not_configured account_token_missing remote_setup_failed].each do |code|
+      locales.each do |locale|
+        it "preserves the legacy #{code} while adding a stable code and #{locale} message" do
+          account.update!(locale: locale)
+          allow(provisioner).to receive(:perform).and_raise(Waha::InboxProvisioner::Error, code)
+
+          post path, params: { phone: '5511999999999' }, headers: admin.create_new_auth_token, as: :json
+
+          expect(response).to have_http_status(:unprocessable_entity)
+          expect(response.parsed_body).to include('error' => code, 'code' => code)
+          expect(response.parsed_body['message']).to eq(I18n.t("autonomia.agents.errors.#{code}", locale: locale))
+          expect(response.parsed_body['message'].downcase).not_to include('translation missing')
+        end
+      end
+    end
+
+    it 'does not expose an unrecognized provider error to the client' do
+      allow(provisioner).to receive(:perform).and_raise(Waha::InboxProvisioner::Error, 'raw provider detail')
+
+      post path, params: { phone: '5511999999999' }, headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body).to include('error' => 'remote_setup_failed', 'code' => 'remote_setup_failed')
+      expect(response.body).not_to include('raw provider detail')
+    end
+  end
+
   describe 'POST /api/v1/accounts/{account.id}/waha_inboxes/{inbox_id}/reconnect' do
     let(:path) { "/api/v1/accounts/#{account.id}/waha_inboxes/#{inbox.id}/reconnect" }
 
@@ -65,6 +99,28 @@ RSpec.describe 'WAHA inboxes API', type: :request do
       post path, headers: agent.create_new_auth_token, as: :json
 
       expect(response).to have_http_status(:unauthorized)
+    end
+
+    it 'returns the stable reconnect code without leaking provider details' do
+      allow(client).to receive(:logout_session).and_raise(Waha::Client::Error, 'raw provider detail')
+      allow(client).to receive(:restart_session).and_raise(Waha::Client::Error, 'raw provider detail')
+      allow(Rails.logger).to receive(:error)
+
+      post path, headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body).to include('error' => 'reconnect_failed', 'code' => 'reconnect_failed')
+      expect(response.body).not_to include('raw provider detail')
+      expect(Rails.logger).not_to have_received(:error).with(include('raw provider detail'))
+    end
+
+    it 'returns the stable code for an inbox from another provider' do
+      channel.update!(additional_attributes: {})
+
+      post path, headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body).to include('error' => 'not_a_waha_inbox', 'code' => 'not_a_waha_inbox')
     end
   end
 end

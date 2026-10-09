@@ -40,6 +40,7 @@ RSpec.describe 'Autonomia journeys - channel connection', type: :request do
     # Assert — UNIQUE de 1 bot por inbox: 422 e nenhum vínculo novo criado.
     expect(response).to have_http_status(:unprocessable_entity)
     expect(response.parsed_body['error']).to be_present
+    expect(response.parsed_body['code']).to eq('inbox_already_connected')
     expect(Autonomia::Agents::AgentInbox.where(inbox_id: inbox.id).count).to eq(1)
     expect(Autonomia::Agents::AgentInbox.find_by(inbox_id: inbox.id).autonomia_agent_id).to eq(first_agent.id)
   end
@@ -53,6 +54,7 @@ RSpec.describe 'Autonomia journeys - channel connection', type: :request do
 
     # Assert — bloqueio no backend (InboxConnector), sem AgentBot/AgentBotInbox criados.
     expect(response).to have_http_status(:unprocessable_entity)
+    expect(response.parsed_body['code']).to eq('agent_internal_not_connectable')
     expect(Autonomia::Agents::AgentInbox.where(autonomia_agent_id: internal_agent.id)).to be_empty
     expect(AgentBotInbox.where(inbox_id: inbox.id)).to be_empty
   end
@@ -66,6 +68,7 @@ RSpec.describe 'Autonomia journeys - channel connection', type: :request do
 
     # Assert — só agente ativo+habilitado conecta canal.
     expect(response).to have_http_status(:unprocessable_entity)
+    expect(response.parsed_body['code']).to eq('agent_not_active')
     expect(Autonomia::Agents::AgentInbox.where(autonomia_agent_id: draft_agent.id)).to be_empty
   end
 
@@ -80,7 +83,18 @@ RSpec.describe 'Autonomia journeys - channel connection', type: :request do
 
     # Assert — coexistência proibida: webhook OU agente nativo, nunca os dois.
     expect(response).to have_http_status(:unprocessable_entity)
+    expect(response.parsed_body['code']).to eq('inbox_has_webhook_bot')
     expect(Autonomia::Agents::AgentInbox.where(inbox_id: inbox.id)).to be_empty
+  end
+
+  it 'returns the stable code when disconnecting an inbox that was never connected' do
+    agent = create_agent
+
+    delete "/api/v1/accounts/#{account.id}/autonomia/agents/#{agent.id}/channels/#{inbox.id}",
+           headers: administrator.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response.parsed_body['code']).to eq('not_connected')
   end
 
   it 'allows a both-actuation agent to connect a channel' do

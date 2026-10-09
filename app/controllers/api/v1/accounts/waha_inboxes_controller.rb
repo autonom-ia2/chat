@@ -11,6 +11,8 @@ class Api::V1::Accounts::WahaInboxesController < Api::V1::Accounts::BaseControll
     'STOPPED' => 'disconnected'
   }.freeze
 
+  PROVISION_ERRORS = %w[invalid_phone integration_not_configured account_token_missing remote_setup_failed].freeze
+
   def create
     authorize ::Inbox
     result = Waha::InboxProvisioner.new(
@@ -23,7 +25,9 @@ class Api::V1::Accounts::WahaInboxesController < Api::V1::Accounts::BaseControll
 
     render json: { id: result.inbox.id, name: result.inbox.name }, status: :ok
   rescue Waha::InboxProvisioner::Error => e
-    render json: { error: e.message }, status: :unprocessable_entity
+    code = PROVISION_ERRORS.include?(e.message) ? e.message : 'remote_setup_failed'
+    Rails.logger.error("[Waha] provisioning failed: #{e.class.name}")
+    render_waha_error(code)
   end
 
   # Saúde + QR. Não retorna nenhum termo interno do motor.
@@ -56,12 +60,18 @@ class Api::V1::Accounts::WahaInboxesController < Api::V1::Accounts::BaseControll
     client.start_session(session) if safe_session(client, session)['status'] == 'STOPPED'
     render json: { status: 'connecting' }
   rescue Waha::Client::Error => e
-    # Detalhe só nos logs; ao cliente, código estável (pode conter resposta do motor).
-    Rails.logger.error("[Waha] reconnect failed for inbox #{@inbox.id}: #{e.message}")
-    render json: { error: 'reconnect_failed' }, status: :unprocessable_entity
+    Rails.logger.error("[Waha] reconnect failed for inbox #{@inbox.id}: #{e.class.name}")
+    render_waha_error('reconnect_failed')
   end
 
   private
+
+  # O cliente existente traduz `error` como código. A mensagem legível é aditiva.
+  def render_waha_error(code)
+    render json: { error: code, code: code,
+                   message: I18n.t("autonomia.agents.errors.#{code}", locale: current_account.locale) },
+           status: :unprocessable_entity
+  end
 
   # QR + reconectar são ações sensíveis (mutam/expoem pareamento): exigem admin.
   def fetch_inbox
@@ -72,7 +82,7 @@ class Api::V1::Accounts::WahaInboxesController < Api::V1::Accounts::BaseControll
   def ensure_waha_inbox
     return if @inbox.channel.is_a?(Channel::Api) && waha_attributes['provider'] == 'waha'
 
-    render json: { error: 'not_a_waha_inbox' }, status: :unprocessable_entity
+    render_waha_error('not_a_waha_inbox')
   end
 
   def waha_attributes

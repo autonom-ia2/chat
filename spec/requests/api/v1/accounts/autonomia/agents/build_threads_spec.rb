@@ -47,9 +47,57 @@ RSpec.describe 'Autonomia agent build threads', type: :request do
       expect(messages.pluck('role')).to eq(%w[user assistant])
       expect(messages.last['content']).to eq('Qual o nome do agente?')
     end
+
+    it 'does not expose the thread to a user who can only view agents' do
+      thread.append_message!('user', 'Mensagem que não pode vazar')
+      viewer = create(:user, account: account, role: :agent)
+      role = create(:custom_role, account: account, permissions: ['autonomia_view'])
+      viewer.account_users.find_by!(account: account).update!(custom_role: role)
+
+      get "/api/v1/accounts/#{account.id}/autonomia/build_threads/#{thread.id}",
+          headers: viewer.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:unauthorized)
+      expect(response.parsed_body.dig('payload', 'messages')).to be_nil
+      expect(response.body).not_to include('Mensagem que não pode vazar')
+    end
+
+    it 'does not resolve a thread from another account' do
+      other_account = create(:account, internal_attributes: { 'autonomia_agents_enabled' => true })
+      foreign_thread = Autonomia::Agents::BuildThread.create!(account: other_account)
+
+      get "/api/v1/accounts/#{account.id}/autonomia/build_threads/#{foreign_thread.id}",
+          headers: administrator.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:not_found)
+    end
+
+    it 'returns 404 when the linked agent was archived before a user message arrives' do
+      linked_agent = Autonomia::Agents::Agent.create!(
+        account: account, name: 'Arquivado', agent_type: 'custom', status: :draft, enabled: false
+      )
+      linked_thread = Autonomia::Agents::BuildThread.create!(account: account, agent: linked_agent)
+      Autonomia::Agents::SoftDelete.new(agent: linked_agent, actor: nil, reason: 'stale_draft').perform
+
+      post "/api/v1/accounts/#{account.id}/autonomia/build_threads/#{linked_thread.id}/messages",
+           params: { message: 'Não deve entrar no histórico.' },
+           headers: administrator.create_new_auth_token,
+           as: :json
+
+      expect(response).to have_http_status(:not_found)
+      expect(Array(linked_thread.reload.messages)).to be_empty
+    end
   end
 
   describe 'POST /autonomia/build_threads/:id/messages (E3)' do
+    it 'rejects an empty message with the stable message_required code' do
+      post_message(message: '')
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['code']).to eq('message_required')
+      expect(Autonomia::Agents::Builder::SubmitJob).not_to have_received(:perform_later)
+    end
+
     it 'rejects a new turn with 409 build_in_progress while a fresh build is processing' do
       # Arrange
       thread.begin_build!
@@ -69,7 +117,7 @@ RSpec.describe 'Autonomia agent build threads', type: :request do
       old_token = thread.begin_build!
 
       # Act
-      travel_to(10.minutes.from_now) do
+      travel_to((Autonomia::Agents::BuildThread::STALE_PROCESSING_AFTER + 1.second).from_now) do
         post_message(message: 'destrava, o job morreu')
       end
 
@@ -148,6 +196,7 @@ RSpec.describe 'Autonomia agent build threads', type: :request do
 
       # Assert
       expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['code']).to eq('retry_unavailable')
       expect(Autonomia::Agents::Builder::SubmitJob).not_to have_received(:perform_later)
     end
   end
