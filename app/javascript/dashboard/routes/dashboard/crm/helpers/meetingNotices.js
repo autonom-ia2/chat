@@ -49,6 +49,7 @@ const SKIP_REASONS = [
   'unsupported_inbox',
   'template_required',
   'template_without_link',
+  'template_unsupported',
   'waha_outside_window',
   'number_cap',
   'account_cap',
@@ -56,16 +57,10 @@ const SKIP_REASONS = [
 
 const NOTICE_KINDS = ['booked', 'rescheduled', 'day_before', 'hour_before'];
 
-// Reunião que passou pela página de agendamento com avisos ou resposta do
-// cliente. Reunião comum (Google, Teams) não ganha o selo "Ainda não respondeu".
-export const hasClientReply = meeting =>
-  Boolean(
-    meeting &&
-      ((meeting.notices || []).length ||
-        meeting.notices_stopped ||
-        (meeting.confirmation_status &&
-          meeting.confirmation_status !== 'pending'))
-  );
+// Reunião que veio de uma página de agendamento (`booking`, do serializer da
+// reunião e do evento do calendário). Reunião comum (Google, Teams) não ganha o
+// selo "Ainda não respondeu", nem quando o contato parou os avisos.
+export const hasClientReply = meeting => meeting?.booking === true;
 
 export const confirmationMeta = status => CONFIRMATION[status] || null;
 

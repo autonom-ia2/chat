@@ -228,6 +228,7 @@ describe('CrmCardDrawer timeline copy', () => {
   it.each([
     ['booking_client_confirmed', 'Customer confirmed the time'],
     ['booking_client_canceled', 'Customer cancelled the time'],
+    ['booking_client_rebooked', 'Customer booked another time'],
     ['booking_notices_stopped', 'Customer asked not to get notices'],
   ])('describes %s in plain words, with the booked time', (type, title) => {
     const wrapper = mountDrawer();
@@ -252,13 +253,28 @@ describe('CrmCardDrawer timeline copy', () => {
       activity(1, 'booking_notice_failed', {
         meeting_id: 9,
         starts_at: '2026-10-20T13:00:00Z',
-        by: 'client',
+        by: 'system',
+        kind: 'day_before',
+        reason: 'template_required',
       })
     );
 
     expect(described.title).toBe('WhatsApp notice did not go out');
-    expect(described.detail).toContain('10/20/2026');
+    // Qual aviso e por quê, em palavras leigas; erro de envio sem motivo conhecido vira "Falhou".
+    expect(described.detail.startsWith('1 day before: ')).toBe(true);
+    expect(described.detail).not.toContain('template_required');
     expect(described.actor).toBe('System');
+
+    const crashed = wrapper.vm.describeActivity(
+      activity(2, 'booking_notice_failed', {
+        meeting_id: 9,
+        starts_at: '2026-10-20T13:00:00Z',
+        by: 'system',
+        kind: 'booked',
+        reason: 'Net::ReadTimeout',
+      })
+    );
+    expect(crashed.detail).not.toContain('Net::');
     wrapper.unmount();
   });
 

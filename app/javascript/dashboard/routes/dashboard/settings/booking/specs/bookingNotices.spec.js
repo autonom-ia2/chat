@@ -1,12 +1,15 @@
 import { mount, flushPromises } from '@vue/test-utils';
 import BookingPagesAPI from 'dashboard/api/crmBookingPages';
+import WhatsappApiMessageTemplatesAPI from 'dashboard/api/whatsappApiMessageTemplates';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import StepNotices from '../components/steps/StepNotices.vue';
 import BookingNoticesSummary from '../components/BookingNoticesSummary.vue';
 import BookingTestInvite from '../components/BookingTestInvite.vue';
 import { pageToForm } from '../bookingPageForm';
 import {
+  kindsWithoutTemplate,
   templateKinds,
+  templatePreview,
   testInviteProblem,
   usableTemplates,
 } from '../bookingNotices';
@@ -21,6 +24,9 @@ vi.mock('vue-i18n', () => ({
 }));
 vi.mock('dashboard/api/crmBookingPages', () => ({
   default: { testInvite: vi.fn() },
+}));
+vi.mock('dashboard/api/whatsappApiMessageTemplates', () => ({
+  default: { get: vi.fn() },
 }));
 
 const body = text => ({ type: 'BODY', text });
@@ -43,6 +49,12 @@ const WAHA = {
   id: 13,
   name: 'Celular',
   provider: 'waha',
+  needs_templates: false,
+};
+const API = {
+  id: 14,
+  name: 'WhatsApp de campanhas',
+  provider: 'api',
   needs_templates: false,
 };
 
@@ -91,6 +103,63 @@ describe('bookingNotices', () => {
     ]);
     expect(list.map(item => item.name)).toEqual(['com_link']);
     expect(usableTemplates(undefined)).toEqual([]);
+  });
+
+  it('recusa o que o aviso não preenche: variável além do {{3}}, topo com variável, botão com link variável', () => {
+    const list = usableTemplates([
+      template('ok', {
+        components: [
+          { type: 'HEADER', format: 'TEXT', text: 'Seu horário' },
+          body('Oi {{1}}, {{2}}: {{3}}'),
+          { type: 'BUTTONS', buttons: [{ type: 'URL', url: 'https://x.co' }] },
+        ],
+      }),
+      template('quatro', { components: [body('Oi {{1}}, {{3}} e {{4}}')] }),
+      template('topo', {
+        components: [
+          { type: 'HEADER', format: 'TEXT', text: 'Oi {{1}}' },
+          body('Veja {{3}}'),
+        ],
+      }),
+      template('botao', {
+        components: [
+          body('Veja {{3}}'),
+          {
+            type: 'BUTTONS',
+            buttons: [{ type: 'URL', url: 'https://x.co/{{1}}' }],
+          },
+        ],
+      }),
+    ]);
+    expect(list.map(item => item.name)).toEqual(['ok']);
+  });
+
+  it('a opção mostra a mensagem como chega, sem o nome técnico', () => {
+    const samples = { name: 'Ana', when: '14/10 às 15:00', link: '(link)' };
+    expect(templatePreview(template('aviso_v2'), samples)).toBe(
+      'Oi Ana, seu horário é 14/10 às 15:00. Confirme: (link)'
+    );
+    const long = template('longo', {
+      components: [body(`${'palavra '.repeat(30)}{{3}}`)],
+    });
+    expect(templatePreview(long, samples).length).toBeLessThanOrEqual(90);
+    expect(templatePreview(long, samples).endsWith('…')).toBe(true);
+  });
+
+  it('aponta os avisos sem mensagem pronta, só onde ela faz falta', () => {
+    const chosen = form({
+      noticePreset: 'light',
+      noticeTemplates: { booked: { name: 'a', language: 'pt_BR' } },
+    });
+    expect(kindsWithoutTemplate(chosen, OFFICIAL)).toEqual([
+      'hour_before',
+      'rescheduled',
+    ]);
+    expect(kindsWithoutTemplate(chosen, API)).toEqual([
+      'hour_before',
+      'rescheduled',
+    ]);
+    expect(kindsWithoutTemplate(chosen, WAHA)).toEqual([]);
   });
 
   it('recusa do teste vira um aviso leigo', () => {
@@ -229,6 +298,81 @@ describe('StepNotices', () => {
     });
   });
 
+  it('lista as mensagens pelo texto, e diz quais avisos ficam sem mensagem', () => {
+    templatesGetter.mockReturnValue([template('aviso_marcado')]);
+    const wrapper = mountStep({
+      noticeInboxId: 12,
+      noticePreset: 'minimal',
+      noticeTemplates: { booked: { name: 'aviso_marcado', language: 'pt_BR' } },
+    });
+    const booked = wrapper
+      .find('[data-template-kind="booked"]')
+      .findComponent(ChoiceSelect);
+    const label = booked.props('options')[1].label;
+    expect(label).toContain('BOOKING.NOTICES.SAMPLE_NAME');
+    expect(label).not.toContain('aviso_marcado');
+    expect(wrapper.find('[data-missing-templates]').text()).toContain(
+      'BOOKING.NOTICES.MISSING_TEMPLATES'
+    );
+    expect(wrapper.find('[data-missing-templates]').text()).toContain(
+      'BOOKING.NOTICES.KINDS.RESCHEDULED'
+    );
+  });
+
+  it('canal API de campanhas: escolhe a mensagem pronta do canal e grava o id', async () => {
+    WhatsappApiMessageTemplatesAPI.get.mockResolvedValue({
+      data: { payload: [{ id: 5, name: 'Lembrete', body: 'Oi!' }] },
+    });
+    const wrapper = mountStep({ noticeInboxId: 14 }, [OFFICIAL, API]);
+    await flushPromises();
+    expect(WhatsappApiMessageTemplatesAPI.get).toHaveBeenCalledWith(14);
+    const booked = wrapper
+      .find('[data-template-kind="booked"]')
+      .findComponent(ChoiceSelect);
+    expect(booked.props('options')).toEqual([
+      { value: '', label: 'BOOKING.NOTICES.TEMPLATE_NONE' },
+      { value: 'id:5', label: 'Lembrete' },
+    ]);
+    await booked.vm.$emit('update:modelValue', 'id:5');
+    expect(lastChange(wrapper)).toEqual({
+      noticeTemplates: { booked: { id: 5 } },
+    });
+  });
+
+  it('canal API sem acesso às mensagens: diz que não deu para ver', async () => {
+    WhatsappApiMessageTemplatesAPI.get.mockRejectedValue(new Error('403'));
+    const wrapper = mountStep({ noticeInboxId: 14 }, [API]);
+    await flushPromises();
+    expect(wrapper.find('[data-no-templates]').text()).toBe(
+      'BOOKING.NOTICES.API_TEMPLATES_FAILED'
+    );
+  });
+
+  it('voltar ao número salvo devolve as mensagens que já estavam escolhidas', async () => {
+    const saved = { booked: { name: 'aviso_marcado', language: 'pt_BR' } };
+    const wrapper = mount(StepNotices, {
+      props: {
+        form: form({ noticeInboxId: null }),
+        inboxOptions: [OFFICIAL, WAHA],
+        savedInboxId: 12,
+        savedTemplates: saved,
+      },
+      global: mountGlobal,
+    });
+    await wrapper
+      .findAllComponents(ChoiceSelect)[0]
+      .vm.$emit('update:modelValue', 12);
+    expect(lastChange(wrapper)).toEqual({
+      noticeInboxId: 12,
+      noticeTemplates: saved,
+    });
+  });
+
+  it('número salvo que a pessoa não enxerga: sem a frase de "nenhum WhatsApp"', () => {
+    const wrapper = mountStep({ noticeInboxId: 99 }, []);
+    expect(wrapper.find('[data-no-inboxes]').exists()).toBe(false);
+  });
+
   it('sem modelo aprovado com link: explica o que fazer', () => {
     const wrapper = mountStep({ noticeInboxId: 12 });
     expect(wrapper.find('[data-no-templates]').text()).toBe(
@@ -274,6 +418,17 @@ describe('BookingNoticesSummary', () => {
     expect(wrapper.text()).toContain('BOOKING.NOTICES.PRESETS.MINIMAL.SUMMARY');
     await wrapper.find('[data-notices-alter]').trigger('click');
     expect(wrapper.emitted('alter')).toHaveLength(1);
+
+    expect(wrapper.find('[data-notices-window]').text()).toContain(
+      'BOOKING.NOTICES.MISSING_TEMPLATES'
+    );
+
+    const waha = mount(BookingNoticesSummary, {
+      props: { form: form({ noticeInboxId: 13 }), inboxOptions: [WAHA] },
+    });
+    expect(waha.find('[data-notices-window]').text()).toBe(
+      'BOOKING.PREVIEW.NOTICES_WINDOW_ONLY'
+    );
 
     const readOnly = mount(BookingNoticesSummary, {
       props: { form: form({ noticeInboxId: 12 }), inboxOptions: [OFFICIAL] },

@@ -1,12 +1,14 @@
 <script setup>
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { presetFor } from '../bookingNotices';
+import { kindsWithoutTemplate, presetFor } from '../bookingNotices';
 import { formatMinutes } from '../bookingFormat';
 
 // Os avisos no WhatsApp em uma frase, na prévia (#1192): quando o cliente é
-// avisado, por qual número e até quando pode mudar. "Alterar" volta ao passo
-// dos avisos; quem só vê não tem o botão.
+// avisado, por qual número e até quando pode mudar. Não promete o que não
+// sai: aviso sem mensagem pronta e número WAHA só alcançam quem falou com a
+// empresa nas últimas 24 horas (J2-A6). "Alterar" volta ao passo dos avisos;
+// quem só vê não tem o botão.
 const props = defineProps({
   form: { type: Object, required: true },
   inboxOptions: { type: Array, default: () => [] },
@@ -16,11 +18,10 @@ const props = defineProps({
 const emit = defineEmits(['alter']);
 const { t } = useI18n();
 
-const inboxName = computed(
-  () =>
-    props.inboxOptions.find(inbox => inbox.id === props.form.noticeInboxId)
-      ?.name || ''
+const inbox = computed(() =>
+  props.inboxOptions.find(item => item.id === props.form.noticeInboxId)
 );
+const inboxName = computed(() => inbox.value?.name || '');
 
 const sentence = computed(() => {
   if (!props.form.noticeInboxId) return t('BOOKING.PREVIEW.NOTICES_OFF');
@@ -30,6 +31,19 @@ const sentence = computed(() => {
   return inboxName.value
     ? t('BOOKING.PREVIEW.NOTICES_ON', { when, inbox: inboxName.value })
     : t('BOOKING.PREVIEW.NOTICES_ON_NO_NAME', { when });
+});
+
+// Ressalva da janela de 24 horas, quando ela vale para algum aviso.
+const windowNote = computed(() => {
+  if (!props.form.noticeInboxId || !inbox.value) return '';
+  if (inbox.value.provider === 'waha')
+    return t('BOOKING.PREVIEW.NOTICES_WINDOW_ONLY');
+  const missing = kindsWithoutTemplate(props.form, inbox.value)
+    .map(kind => t(`BOOKING.NOTICES.KINDS.${kind.toUpperCase()}`))
+    .join(', ');
+  return missing
+    ? t('BOOKING.NOTICES.MISSING_TEMPLATES', { kinds: missing })
+    : '';
 });
 
 const deadline = computed(() =>
@@ -53,6 +67,13 @@ const deadline = computed(() =>
           aria-hidden="true"
         />
         {{ sentence }}
+      </p>
+      <p
+        v-if="windowNote"
+        data-notices-window
+        class="m-0 text-base text-n-amber-12"
+      >
+        {{ windowNote }}
       </p>
       <p class="m-0 text-base text-n-slate-11">{{ deadline }}</p>
     </div>

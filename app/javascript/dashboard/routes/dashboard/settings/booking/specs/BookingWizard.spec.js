@@ -492,6 +492,17 @@ describe('BookingWizard', () => {
       );
     });
 
+    it('número de avisos que a pessoa não enxerga: sem o botão de teste (o servidor recusaria)', async () => {
+      const page = fullPage({
+        enabled: true,
+        notice_inbox_id: 99,
+        notice_inbox_options: [WAHA],
+      });
+      const wrapper = await openAtStep(7, page);
+      expect(wrapper.find('[data-published]').exists()).toBe(true);
+      expect(wrapper.find('[data-test-start]').exists()).toBe(false);
+    });
+
     it('publicada sem número de avisos não oferece o teste', async () => {
       const wrapper = await openAtStep(7, fullPage({ enabled: true }));
       expect(wrapper.find('[data-published]').exists()).toBe(true);

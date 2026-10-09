@@ -181,6 +181,14 @@ export function useBookingFlow(location = window.location) {
     slotsApi.loadNextSlot();
   };
 
+  // Duração, local e nome do convite para uma reserva nova (a primeira, ou outra depois de cancelada).
+  const prepareBooking = () => {
+    duration.value = page.value.duration_minutes;
+    locationType.value = locations.value[0]?.type || null;
+    if (invite.firstName.value) form.name = invite.firstName.value;
+    requestId = null;
+  };
+
   const manage = useManage({
     steps: STEPS,
     step,
@@ -195,6 +203,7 @@ export function useBookingFlow(location = window.location) {
     selectedSlot,
     slots: slotsApi,
     backToTimes,
+    prepareBooking,
     stopRequested: !!route.stopNotices,
   });
 
@@ -230,10 +239,19 @@ export function useBookingFlow(location = window.location) {
     if (data?.paused) return finishOn(STEPS.PAUSED);
     if (!isValidTimeZone(data?.timezone)) return finishOn(STEPS.ERROR);
 
-    duration.value = data.duration_minutes;
-    locationType.value = locations.value[0]?.type || null;
-    if (invite.firstName.value) form.name = invite.firstName.value;
+    prepareBooking();
     return startBooking();
+  };
+
+  // Convite agendado abre a reunião mesmo quando a página não abre mais (responsável que saiu, página apagada): o
+  // cliente ainda vê o horário e pode cancelar; sem os dados da página, como página pausada.
+  const loadPage = async () => {
+    try {
+      return await getPage(slug.value, route.preview);
+    } catch (error) {
+      if (error?.status !== 404 || !invite.isScheduled.value) throw error;
+      return { slug: slug.value, paused: true };
+    }
   };
 
   const load = async () => {
@@ -244,7 +262,7 @@ export function useBookingFlow(location = window.location) {
         slug.value = data?.page_slug || null;
       }
       if (!slug.value) return finishOn(STEPS.NOT_FOUND);
-      return showPage(await getPage(slug.value, route.preview));
+      return showPage(await loadPage());
     } catch (error) {
       return finishOn(error?.status === 404 ? STEPS.NOT_FOUND : STEPS.ERROR);
     }
@@ -347,6 +365,8 @@ export function useBookingFlow(location = window.location) {
       requestId = null;
       goTo(STEPS.DONE);
       history.replace(STEPS.DONE);
+      // Marcou de novo pelo convite: a tela da reunião (pelo "voltar") já mostra o horário novo.
+      if (manage.isRebooking.value) manage.refresh();
     } catch (error) {
       if (!isRetriable(error)) requestId = null;
       if (error?.code === 'slot_unavailable') backToTimes();

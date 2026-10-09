@@ -1,8 +1,9 @@
 <script setup>
-import { computed, useId } from 'vue';
+import { computed, ref, useId, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useStore } from 'vuex';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
+import WhatsappApiMessageTemplatesAPI from 'dashboard/api/whatsappApiMessageTemplates';
 import BookingChoiceCards from '../BookingChoiceCards.vue';
 import {
   CANCEL_UNTIL_OPTIONS,
@@ -10,19 +11,25 @@ import {
   NOTICE_PRESETS,
 } from '../../constants';
 import {
+  kindsWithoutTemplate,
   templateChoice,
   templateKinds,
+  templatePreview,
   usableTemplates,
 } from '../../bookingNotices';
 import { formatMinutes } from '../../bookingFormat';
 
 // Passo 6: avisos no WhatsApp (#1192, J5-A8). Por qual número sai, qual jogo
-// de avisos (cartões prontos, sem digitar horário), a mensagem aprovada de cada
-// aviso quando o WhatsApp oficial pede, e até quando o cliente pode mudar.
+// de avisos (cartões prontos, sem digitar horário), a mensagem pronta de cada
+// aviso quando o número pede (WhatsApp oficial: aprovada na Meta; canal API de
+// campanhas: as mensagens do canal), e até quando o cliente pode mudar.
 const props = defineProps({
   form: { type: Object, required: true },
   // notice_inbox_options do GET da página: [{ id, name, provider, needs_templates }]
   inboxOptions: { type: Array, default: () => [] },
+  // Modelos já gravados na página: voltam quando a pessoa volta ao número salvo.
+  savedInboxId: { type: Number, default: null },
+  savedTemplates: { type: Object, default: () => ({}) },
 });
 
 const emit = defineEmits(['change']);
@@ -37,6 +44,8 @@ const templatesTitleId = useId();
 const chosenInbox = computed(() =>
   props.inboxOptions.find(inbox => inbox.id === props.form.noticeInboxId)
 );
+const isOfficial = computed(() => !!chosenInbox.value?.needs_templates);
+const isApiChannel = computed(() => chosenInbox.value?.provider === 'api');
 
 // A caixa salva entra na lista mesmo quando a pessoa não a enxerga (escolhida
 // por outra pessoa): a escolha não some sem ninguém mexer.
@@ -58,11 +67,16 @@ const inboxChoices = computed(() => {
   return choices;
 });
 
-// Trocar de número apaga os modelos: cada número tem a sua lista aprovada.
+// Trocar de número apaga os modelos: cada número tem a sua lista. Voltar ao
+// número salvo devolve as mensagens que já estavam escolhidas para ele.
 const chooseInbox = value => {
   const noticeInboxId = value === NO_INBOX ? null : value;
   if (noticeInboxId === props.form.noticeInboxId) return;
-  emit('change', { noticeInboxId, noticeTemplates: {} });
+  const noticeTemplates =
+    noticeInboxId && noticeInboxId === props.savedInboxId
+      ? { ...props.savedTemplates }
+      : {};
+  emit('change', { noticeInboxId, noticeTemplates });
 };
 
 // Texto curto do que vale para o número escolhido.
@@ -99,38 +113,72 @@ const cancelChoices = computed(() => {
   }));
 });
 
-// Modelos aprovados do número escolhido (lista sincronizada da caixa).
+// Mensagens do canal API de campanhas: lidas do canal quando ele é escolhido.
+// Quem não pode ver as campanhas recebe recusa: a tela diz que não deu para ver.
+const apiTemplates = ref([]);
+const apiTemplatesFailed = ref(false);
+const loadApiTemplates = async inbox => {
+  apiTemplates.value = [];
+  apiTemplatesFailed.value = false;
+  if (inbox?.provider !== 'api') return;
+  try {
+    const { data } = await WhatsappApiMessageTemplatesAPI.get(inbox.id);
+    if (chosenInbox.value?.id !== inbox.id) return;
+    apiTemplates.value = Array.isArray(data?.payload) ? data.payload : [];
+  } catch (error) {
+    apiTemplatesFailed.value = true;
+  }
+};
+watch(chosenInbox, loadApiTemplates, { immediate: true });
+
+// Mensagens que a pessoa pode escolher para o número.
 const templates = computed(() => {
   const inbox = chosenInbox.value;
+  if (isApiChannel.value) return apiTemplates.value;
   if (!inbox?.needs_templates) return [];
   return usableTemplates(
     store.getters['inboxes/getFilteredWhatsAppTemplates'](inbox.id)
   );
 });
 
+const samples = computed(() => ({
+  name: t('BOOKING.NOTICES.SAMPLE_NAME'),
+  when: t('BOOKING.NOTICES.SAMPLE_WHEN'),
+  link: t('BOOKING.NOTICES.SAMPLE_LINK'),
+}));
+
+// A opção mostra como a mensagem chega (nunca o nome técnico); o idioma só
+// aparece quando a lista tem mais de um.
+const hasManyLanguages = computed(
+  () => new Set(templates.value.map(item => item.language)).size > 1
+);
+const optionLabel = template => {
+  if (isApiChannel.value) return template.name;
+  const preview = templatePreview(template, samples.value) || template.name;
+  return hasManyLanguages.value
+    ? t('BOOKING.NOTICES.TEMPLATE_OPTION_LANGUAGE', {
+        preview,
+        language: template.language,
+      })
+    : preview;
+};
+
 const templateOptionsFor = kind => {
   const options = templates.value.map(template => ({
     value: templateChoice(template),
-    label: t('BOOKING.NOTICES.TEMPLATE_OPTION', {
-      name: template.name,
-      language: template.language,
-    }),
+    label: optionLabel(template),
   }));
-  const saved = props.form.noticeTemplates[kind];
-  const savedChoice = saved?.name ? templateChoice(saved) : '';
+  const savedChoice = templateChoice(props.form.noticeTemplates[kind]);
   if (savedChoice && !options.some(option => option.value === savedChoice)) {
     options.push({
       value: savedChoice,
-      label: t('BOOKING.NOTICES.TEMPLATE_OPTION', saved),
+      label: t('BOOKING.NOTICES.TEMPLATE_SAVED'),
     });
   }
   return [{ value: '', label: t('BOOKING.NOTICES.TEMPLATE_NONE') }, ...options];
 };
 
-const templateValue = kind => {
-  const saved = props.form.noticeTemplates[kind];
-  return saved?.name ? templateChoice(saved) : '';
-};
+const templateValue = kind => templateChoice(props.form.noticeTemplates[kind]);
 
 const chooseTemplate = (kind, choice) => {
   const others = Object.fromEntries(
@@ -139,17 +187,33 @@ const chooseTemplate = (kind, choice) => {
   const template = templates.value.find(
     item => templateChoice(item) === choice
   );
-  emit('change', {
-    noticeTemplates: template
-      ? {
-          ...others,
-          [kind]: { name: template.name, language: template.language },
-        }
-      : others,
-  });
+  if (!template) {
+    emit('change', { noticeTemplates: others });
+    return;
+  }
+  const value = isApiChannel.value
+    ? { id: template.id }
+    : { name: template.name, language: template.language };
+  emit('change', { noticeTemplates: { ...others, [kind]: value } });
 };
 
 const kinds = computed(() => templateKinds(props.form.noticePreset));
+
+// Avisos sem mensagem pronta: a pessoa sabe antes de salvar que esses só saem
+// para quem falou com a empresa nas últimas 24 horas.
+const missingKinds = computed(() =>
+  kindsWithoutTemplate(props.form, chosenInbox.value)
+    .map(kind => t(`BOOKING.NOTICES.KINDS.${kind.toUpperCase()}`))
+    .join(', ')
+);
+const emptyText = computed(() => {
+  if (isApiChannel.value) {
+    return apiTemplatesFailed.value
+      ? t('BOOKING.NOTICES.API_TEMPLATES_FAILED')
+      : t('BOOKING.NOTICES.API_TEMPLATES_EMPTY');
+  }
+  return t('BOOKING.NOTICES.TEMPLATES_EMPTY');
+});
 </script>
 
 <template>
@@ -178,7 +242,7 @@ const kinds = computed(() => templateKinds(props.form.noticePreset));
         @update:model-value="chooseInbox"
       />
       <p
-        v-if="!inboxOptions.length"
+        v-if="!inboxOptions.length && !form.noticeInboxId"
         data-no-inboxes
         class="m-0 text-base text-n-slate-11"
       >
@@ -215,7 +279,7 @@ const kinds = computed(() => templateKinds(props.form.noticePreset));
       </figure>
 
       <div
-        v-if="chosenInbox?.needs_templates"
+        v-if="isOfficial || isApiChannel"
         data-notice-templates
         role="group"
         :aria-labelledby="templatesTitleId"
@@ -225,17 +289,25 @@ const kinds = computed(() => templateKinds(props.form.noticePreset));
           :id="templatesTitleId"
           class="m-0 text-base font-semibold text-n-slate-12"
         >
-          {{ t('BOOKING.NOTICES.TEMPLATES_LABEL') }}
+          {{
+            isApiChannel
+              ? t('BOOKING.NOTICES.API_TEMPLATES_LABEL')
+              : t('BOOKING.NOTICES.TEMPLATES_LABEL')
+          }}
         </p>
         <p class="m-0 text-base text-n-slate-11">
-          {{ t('BOOKING.NOTICES.TEMPLATES_HINT', TEMPLATE_VARIABLES) }}
+          {{
+            isApiChannel
+              ? t('BOOKING.NOTICES.API_TEMPLATES_HINT')
+              : t('BOOKING.NOTICES.TEMPLATES_HINT', TEMPLATE_VARIABLES)
+          }}
         </p>
         <p
           v-if="!templates.length"
           data-no-templates
           class="m-0 text-base text-n-amber-12"
         >
-          {{ t('BOOKING.NOTICES.TEMPLATES_EMPTY') }}
+          {{ emptyText }}
         </p>
         <div
           v-for="kind in kinds"
@@ -257,6 +329,13 @@ const kinds = computed(() => templateKinds(props.form.noticePreset));
             @update:model-value="chooseTemplate(kind, $event)"
           />
         </div>
+        <p
+          v-if="templates.length && missingKinds"
+          data-missing-templates
+          class="m-0 text-base text-n-amber-12"
+        >
+          {{ t('BOOKING.NOTICES.MISSING_TEMPLATES', { kinds: missingKinds }) }}
+        </p>
       </div>
     </template>
 

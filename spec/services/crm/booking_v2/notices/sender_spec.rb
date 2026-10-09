@@ -116,6 +116,27 @@ RSpec.describe Crm::BookingV2::Notices::Sender do
       expect(alerts.count).to eq(1)
     end
 
+    it 'modelo aprovado que pede mais do que o aviso preenche não sai: template_unsupported e avisa o agente' do
+      asks_more = [
+        [{ 'type' => 'BODY', 'text' => 'Oi {{1}}, {{2}}. Link: {{3}}. Código {{4}}' }],
+        [{ 'type' => 'HEADER', 'format' => 'TEXT', 'text' => 'Olá {{1}}' }, { 'type' => 'BODY', 'text' => 'Oi {{1}}, {{2}}: {{3}}' }],
+        [{ 'type' => 'HEADER', 'format' => 'IMAGE' }, { 'type' => 'BODY', 'text' => 'Oi {{1}}, {{2}}: {{3}}' }],
+        [{ 'type' => 'BODY', 'text' => 'Oi {{1}}, {{2}}: {{3}}' },
+         { 'type' => 'BUTTONS', 'buttons' => [{ 'type' => 'URL', 'url' => 'https://x.example/{{1}}' }] }]
+      ]
+      world.profile.update_columns(notice_templates: { 'booked' => { 'name' => 'aviso_marcado', 'language' => 'pt_BR' } }) # rubocop:disable Rails/SkipsModelValidations
+
+      asks_more.each do |components|
+        inbox.channel.update!(message_templates: [booked_template.merge('components' => components)])
+        notice = claimed
+
+        expect { described_class.new(notice).perform }.not_to change(Message, :count)
+        expect(notice.reload).to have_attributes(status: 'skipped', skip_reason: 'template_unsupported'), components.inspect
+        notice.destroy!
+      end
+      expect(alerts.count).to eq(1)
+    end
+
     it 'modelo configurado mas NÃO aprovado na Meta conta como sem modelo' do
       inbox.channel.update!(message_templates: [booked_template.merge('status' => 'PENDING')])
       world.profile.update!(notice_templates: { 'booked' => { 'name' => 'aviso_marcado', 'language' => 'pt_BR' } })

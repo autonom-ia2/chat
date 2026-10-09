@@ -25,6 +25,7 @@ en:
         confirmed: "%{name} confirmed the appointment of %{when}"
         canceled: "%{name} canceled the appointment of %{when}"
         rescheduled: "%{name} moved the appointment to %{when}"
+        rebooked: "%{name} booked again, for %{when}"
         notice_failed: "The WhatsApp reminder to %{name} could not be sent. The appointment of %{when} stays booked: talk to the client."
       templates:
         sales_30:

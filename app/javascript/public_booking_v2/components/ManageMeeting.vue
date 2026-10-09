@@ -14,9 +14,10 @@ import WhatsAppButton from './WhatsAppButton.vue';
 
 // Tela da reunião pelo link do cliente (J5 "Sua conversa", contrato F2-A). Uma ação principal ("Vou estar lá");
 // mudar e cancelar só dentro do prazo (`can_change`), senão a frase com o prazo e o WhatsApp da empresa. Reunião
-// cancelada: "Cancelada", sem agenda nem "Entrar", com "Marcar outro horário" pela página (pausada: WhatsApp).
-// "Parar avisos" some quando os avisos já pararam (RA-18, J5-A7).
-const { page, invite, clientZone, manage } = useFlow();
+// cancelada: "Cancelada", sem agenda nem "Entrar", com "Marcar outro horário" pelo próprio convite, sem pedir nome
+// nem WhatsApp (`can_rebook`; página fechada: WhatsApp). Reunião que já terminou: sem agenda nem "Entrar".
+// "Parar avisos" some quando os avisos já pararam (RA-18, J5-A7). Durante uma ação, os outros botões esperam.
+const { page, clientZone, manage } = useFlow();
 const { t, locale } = useI18n();
 
 const RESULT_TITLES = {
@@ -38,6 +39,8 @@ const NOTIFIED_RESULTS = ['confirmed', 'rescheduled', 'canceled'];
 
 const meeting = computed(() => manage.meeting.value);
 const isCanceled = computed(() => manage.isCanceled.value);
+const hasEnded = computed(() => manage.hasEnded.value);
+const isWorking = computed(() => manage.isWorking.value);
 const result = computed(() => manage.notice.value);
 const agentName = computed(
   () => meeting.value.agent_name || page.value.agent_name || ''
@@ -45,6 +48,7 @@ const agentName = computed(
 
 const title = computed(() => {
   if (isCanceled.value) return t('BOOKING_V2.MANAGE.TITLE_CANCELED');
+  if (hasEnded.value && !result.value) return t('BOOKING_V2.MANAGE.TITLE_PAST');
   const key = RESULT_TITLES[result.value] || 'BOOKING_V2.MANAGE.TITLE';
   return t(key);
 });
@@ -69,8 +73,11 @@ const deadline = computed(() =>
     : ''
 );
 
-const icsUrl = computed(() => safeUrl(meeting.value.ics_url));
+const icsUrl = computed(() =>
+  hasEnded.value ? null : safeUrl(meeting.value.ics_url)
+);
 const googleUrl = computed(() => {
+  if (hasEnded.value) return null;
   const location = meeting.value.location || {};
   return googleCalendarUrl({
     title: t('BOOKING_V2.DONE.CALENDAR_TITLE', {
@@ -82,11 +89,12 @@ const googleUrl = computed(() => {
       locationAddress(location) || safeAbsoluteUrl(location.join_url) || '',
   });
 });
-// Marcar de novo é uma reserva nova pela página (o convite já foi usado): só com a página aberta.
-const bookAgainUrl = computed(() => {
-  const slug = invite.invite.value?.page_slug;
-  if (!slug || page.value.paused) return null;
-  return safeUrl(`/book/${encodeURIComponent(slug)}`);
+// Cancelada sem como marcar de novo por aqui: o WhatsApp da empresa, se houver.
+const canceledBody = computed(() => {
+  if (manage.canRebook.value) return t('BOOKING_V2.MANAGE.CANCELED_BODY');
+  return hasWhatsApp.value
+    ? t('BOOKING_V2.MANAGE.CANCELED_BODY_CLOSED')
+    : t('BOOKING_V2.MANAGE.CANCELED_BODY_NO_CONTACT');
 });
 </script>
 
@@ -125,25 +133,23 @@ const bookAgainUrl = computed(() => {
 
     <ManageError />
 
-    <MeetingCard :meeting="meeting" :show-join="!isCanceled" />
+    <MeetingCard :meeting="meeting" :show-join="!isCanceled && !hasEnded" />
     <p v-if="notified" class="text-center text-base text-slate-700">
       {{ notified }}
     </p>
 
     <div v-if="isCanceled" class="flex flex-col gap-3">
-      <p class="text-base text-slate-800">
-        {{
-          bookAgainUrl
-            ? t('BOOKING_V2.MANAGE.CANCELED_BODY')
-            : t('BOOKING_V2.MANAGE.CANCELED_BODY_CLOSED')
-        }}
-      </p>
-      <ActionButton v-if="bookAgainUrl" :href="bookAgainUrl">
+      <p class="text-base text-slate-800">{{ canceledBody }}</p>
+      <ActionButton
+        v-if="manage.canRebook.value"
+        :disabled="isWorking"
+        @click="manage.startRebook"
+      >
         {{ t('BOOKING_V2.MANAGE.BOOK_AGAIN') }}
       </ActionButton>
       <WhatsAppButton
         :url="whatsappUrl"
-        :variant="bookAgainUrl ? 'secondary' : 'primary'"
+        :variant="manage.canRebook.value ? 'secondary' : 'primary'"
       />
     </div>
 
@@ -158,6 +164,7 @@ const bookAgainUrl = computed(() => {
       <ActionButton
         v-if="manage.canReschedule.value"
         variant="secondary"
+        :disabled="isWorking"
         @click="manage.startReschedule"
       >
         {{ t('BOOKING_V2.MANAGE.RESCHEDULE') }}
@@ -176,6 +183,7 @@ const bookAgainUrl = computed(() => {
       <ActionButton
         v-if="manage.canChange.value"
         variant="ghost"
+        :disabled="isWorking"
         @click="manage.openCancel"
       >
         {{ t('BOOKING_V2.MANAGE.CANCEL') }}
@@ -185,7 +193,14 @@ const bookAgainUrl = computed(() => {
         data-testid="manage-locked"
         class="flex flex-col gap-3 rounded-2xl border-2 border-slate-200 p-4"
       >
-        <p class="text-base text-slate-800">
+        <p v-if="hasEnded" class="text-base text-slate-800">
+          {{
+            hasWhatsApp
+              ? t('BOOKING_V2.MANAGE.PAST_BODY')
+              : t('BOOKING_V2.MANAGE.PAST_BODY_NO_CONTACT')
+          }}
+        </p>
+        <p v-else class="text-base text-slate-800">
           {{
             deadline
               ? t('BOOKING_V2.MANAGE.LOCKED', { deadline })
@@ -204,7 +219,12 @@ const bookAgainUrl = computed(() => {
     >
       {{ t('BOOKING_V2.MANAGE.STOPPED') }}
     </p>
-    <ActionButton v-else variant="ghost" @click="manage.openStop">
+    <ActionButton
+      v-else
+      variant="ghost"
+      :disabled="isWorking"
+      @click="manage.openStop"
+    >
       {{ t('BOOKING_V2.MANAGE.STOP') }}
     </ActionButton>
   </section>

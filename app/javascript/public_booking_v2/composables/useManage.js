@@ -11,6 +11,8 @@ import { isValidTimeZone } from '../helpers/datetime';
 // Gestão da reunião pelo link do cliente `/b/<code>` (#1192, contrato F2-A, J5): "Vou estar lá", mudar o horário,
 // cancelar e parar avisos. As telas são passos do mesmo fluxo (`steps`), e o "voltar" do celular volta para a tela
 // da reunião; ação concluída não se desfaz com o voltar. Toda ação responde o JSON do convite, que substitui o atual.
+// Reunião cancelada com a página aberta (`can_rebook`): "Marcar outro horário" segue o fluxo do próprio convite (dia,
+// hora e confirmar, sem pedir nome nem WhatsApp); a reserva nova vira a reunião do convite.
 const ERROR_KEYS = {
   too_late: 'BOOKING_V2.MANAGE.ERRORS.TOO_LATE',
   not_changeable: 'BOOKING_V2.MANAGE.ERRORS.NOT_CHANGEABLE',
@@ -35,9 +37,11 @@ export function useManage({
   selectedSlot,
   slots,
   backToTimes,
+  prepareBooking,
   stopRequested,
 }) {
   const isRescheduling = ref(false);
+  const isRebooking = ref(false);
   const isWorking = ref(false);
   // Resultado da última ação ('confirmed' | 'rescheduled' | 'canceled' | 'stopped'): muda o título da tela.
   const notice = ref('');
@@ -61,6 +65,21 @@ export function useManage({
   const hasStarted = computed(
     () => new Date(meeting.value.starts_at || '').getTime() <= Date.now()
   );
+  // Reunião que já terminou (o link ainda abre até 1 dia depois): sem agenda nem "Entrar".
+  const hasEnded = computed(
+    () =>
+      isScheduled.value &&
+      new Date(meeting.value.ends_at || '').getTime() <= Date.now()
+  );
+  // Marcar de novo pelo convite: o servidor diz se pode (reunião cancelada, página aberta); a tela ainda precisa do
+  // fuso da página para mostrar os dias.
+  const canRebook = computed(
+    () =>
+      isCanceled.value &&
+      invite.invite.value?.can_rebook === true &&
+      !page.value?.paused &&
+      isValidTimeZone(page.value?.timezone)
+  );
   const canChange = computed(
     () => isScheduled.value && !!meeting.value.can_change
   );
@@ -80,9 +99,18 @@ export function useManage({
       durations.value.includes(minutes.value)
   );
 
+  // A duração no cabeçalho é a da reunião, não a principal da página.
+  const useMeetingLength = () => {
+    if (Number.isFinite(minutes.value) && minutes.value > 0) {
+      duration.value = minutes.value;
+    }
+  };
+
   const show = () => {
     isRescheduling.value = false;
+    isRebooking.value = false;
     error.value = '';
+    useMeetingLength();
     goTo(steps.MANAGE);
   };
 
@@ -97,6 +125,7 @@ export function useManage({
   // por abrir faria os avisos pararem sem a pessoa pedir.
   const open = () => {
     const askStop = stopRequested && !meeting.value.notices_stopped;
+    useMeetingLength();
     finishOn(askStop ? steps.MANAGE_STOP : steps.MANAGE);
   };
 
@@ -116,6 +145,16 @@ export function useManage({
   const startReschedule = () => {
     isRescheduling.value = true;
     duration.value = minutes.value;
+    selectedDate.value = '';
+    selectedSlot.value = '';
+    openScreen(steps.DATE);
+    slots.loadNextSlot();
+  };
+
+  const startRebook = () => {
+    if (!canRebook.value) return;
+    isRebooking.value = true;
+    prepareBooking();
     selectedDate.value = '';
     selectedSlot.value = '';
     openScreen(steps.DATE);
@@ -159,6 +198,11 @@ export function useManage({
         backToTimes();
       } else {
         await fail(failure);
+        // Cancelar de novo depois de uma resposta perdida: a releitura mostra que já está cancelada.
+        if (result === 'canceled' && isCanceled.value) {
+          error.value = '';
+          notice.value = 'canceled';
+        }
       }
     } finally {
       isWorking.value = false;
@@ -182,18 +226,23 @@ export function useManage({
     meeting,
     whatsappUrl,
     isCanceled,
+    hasEnded,
     isRescheduling,
+    isRebooking,
     isWorking,
     notice,
     error,
     canChange,
     canConfirm,
     canReschedule,
+    canRebook,
     open,
     show,
     back,
     returnToManage,
     startReschedule,
+    startRebook,
+    refresh,
     openCancel: () => openScreen(steps.MANAGE_CANCEL),
     openStop: () => openScreen(steps.MANAGE_STOP),
     confirm,

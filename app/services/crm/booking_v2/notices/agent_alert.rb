@@ -2,7 +2,8 @@
 # (#1192, J5-A3/A4/A6, RA-19).
 #
 # - Atividade no card SEMPRE (é o registro para medição, RA-19): `booking_client_confirmed`,
-#   `booking_client_canceled`, `booking_client_rescheduled`, `booking_notice_failed`, `booking_notices_stopped`.
+#   `booking_client_canceled`, `booking_client_rescheduled`, `booking_client_rebooked` (marcou de novo pelo link depois de
+#   uma reunião cancelada), `booking_notice_failed`, `booking_notices_stopped`.
 #   `by`: 'client' no que o cliente fez pela página de gestão; 'system' no aviso que não saiu.
 # - Aviso ao responsável pelo caminho que o CRM já usa para chamar a pessoa: uma tarefa vencendo agora
 #   (`Crm::FollowUp`, lembrete), que o cron de tarefas transforma em push/e-mail conforme as preferências dela e que
@@ -13,7 +14,8 @@ class Crm::BookingV2::Notices::AgentAlert
   SOURCE = 'booking_agent_alert'.freeze
   ACTIVITIES = {
     'confirmed' => 'booking_client_confirmed', 'canceled' => 'booking_client_canceled',
-    'rescheduled' => 'booking_client_rescheduled', 'notice_failed' => 'booking_notice_failed',
+    'rescheduled' => 'booking_client_rescheduled', 'rebooked' => 'booking_client_rebooked',
+    'notice_failed' => 'booking_notice_failed',
     'notices_stopped' => 'booking_notices_stopped'
   }.freeze
   SILENT = %w[notices_stopped].freeze

@@ -1087,6 +1087,7 @@ describe('meeting management /b/:code (F2-A)', () => {
   });
 
   const CANCELED = { status: 'canceled', can_change: false };
+  const rebookable = () => ({ ...scheduled(CANCELED), can_rebook: true });
 
   const openManage = async ({
     meeting = {},
@@ -1225,11 +1226,12 @@ describe('meeting management /b/:code (F2-A)', () => {
   });
 
   it('a canceled meeting offers to book again, with no calendar', async () => {
-    const wrapper = await openManage({ meeting: CANCELED });
+    api.getInvite.mockResolvedValue(rebookable());
+    const wrapper = await mountApp({ path: '/b/Xk4p9Q' });
     expect(heading(wrapper)).toBe('Horário cancelado');
-    expect(findAction(wrapper, 'Marcar outro horário').attributes('href')).toBe(
-      `${window.location.origin}/book/conversa`
-    );
+    const again = findAction(wrapper, 'Marcar outro horário');
+    expect(again.element.tagName).toBe('BUTTON');
+    expect(again.classes()).toContain('bg-[var(--brand)]');
     [
       'Salvar na minha agenda',
       'Pôr na Agenda do Google',
@@ -1239,6 +1241,131 @@ describe('meeting management /b/:code (F2-A)', () => {
     ].forEach(text => expect(findAction(wrapper, text)).toBeUndefined());
     expect(findAction(wrapper, 'Cancelar')).toBeUndefined();
     expect(wrapper.find('[data-testid="manage-badge"]').exists()).toBe(false);
+  });
+
+  describe('booking again through the same link (can_rebook)', () => {
+    const REBOOKED = scheduled({
+      starts_at: OTHER_SLOT,
+      ends_at: '2026-10-13T16:30:00-03:00',
+    });
+
+    it('books a new time without asking name or WhatsApp again', async () => {
+      api.getInvite.mockResolvedValue(rebookable());
+      const wrapper = await mountApp({ path: '/b/Xk4p9Q' });
+      await click(wrapper, 'Marcar outro horário');
+
+      expect(heading(wrapper)).toBe('Oi, Marcos! Qual dia fica bom?');
+      expect(api.getNextSlot).toHaveBeenCalledWith('conversa', 30);
+      await click(wrapper, 'Quero este');
+      expect(wrapper.find('#booking-name').exists()).toBe(false);
+      expect(wrapper.find('#booking-phone').exists()).toBe(false);
+
+      api.getInvite.mockResolvedValue(REBOOKED);
+      await submit(wrapper);
+      await settle();
+      const payload = api.createBooking.mock.calls[0][1];
+      expect(api.createBooking.mock.calls[0][0]).toBe('conversa');
+      expect(payload.invite_code).toBe('Xk4p9Q');
+      expect(payload.name).toBe('Marcos');
+      expect(payload.phone).toBeUndefined();
+      expect(wrapper.text()).toContain('Tudo certo, Marcos!');
+      // A reunião do convite é relida: o "voltar" leva ao horário novo, não ao cancelado.
+      expect(api.getInvite).toHaveBeenCalledTimes(2);
+    });
+
+    it('"Voltar" and the phone back button return to the canceled meeting', async () => {
+      api.getInvite.mockResolvedValue(rebookable());
+      const wrapper = await mountApp({ path: '/b/Xk4p9Q' });
+      await click(wrapper, 'Marcar outro horário');
+      await click(wrapper, 'Voltar');
+      expect(heading(wrapper)).toBe('Horário cancelado');
+
+      await click(wrapper, 'Marcar outro horário');
+      window.history.back();
+      await settle();
+      expect(heading(wrapper)).toBe('Horário cancelado');
+      expect(api.createBooking).not.toHaveBeenCalled();
+    });
+
+    it('without can_rebook, a canceled meeting only offers WhatsApp', async () => {
+      const wrapper = await openManage({ meeting: CANCELED });
+      expect(findAction(wrapper, 'Marcar outro horário')).toBeUndefined();
+      expect(wrapper.text()).toContain(
+        'Para marcar de novo, fale com a gente no WhatsApp.'
+      );
+
+      api.getInvite.mockResolvedValue({
+        ...scheduled(CANCELED),
+        contact_whatsapp_url: null,
+      });
+      const noContact = await mountApp({
+        page: { ...PAGE, contact_whatsapp_url: null },
+        path: '/b/Xk4p9Q',
+      });
+      expect(noContact.text()).toContain(
+        'Para marcar de novo, fale com a empresa.'
+      );
+      expect(findAction(noContact, 'Falar no WhatsApp')).toBeUndefined();
+    });
+  });
+
+  it('a meeting that already ended shows no calendar and no join', async () => {
+    vi.setSystemTime(new Date('2026-10-13T19:00:00Z'));
+    const wrapper = await openManage({
+      meeting: {
+        can_change: false,
+        location: {
+          type: 'custom_link',
+          label: 'Sala on-line',
+          join_url: 'https://meet.example.com/x',
+        },
+      },
+    });
+    expect(heading(wrapper)).toBe('Este horário já passou');
+    [
+      'Salvar na minha agenda',
+      'Pôr na Agenda do Google',
+      'Entrar',
+      'Vou estar lá',
+    ].forEach(text => expect(findAction(wrapper, text)).toBeUndefined());
+    expect(wrapper.find('[data-testid="manage-locked"]').text()).toContain(
+      'Se precisar de algo, fale com a gente no WhatsApp.'
+    );
+  });
+
+  it('a page that no longer opens still shows the meeting and lets the client cancel', async () => {
+    api.getInvite.mockResolvedValue(scheduled());
+    setPath('/b/Xk4p9Q');
+    api.getPage.mockRejectedValue(new api.ApiError(404, 'not_found'));
+    const wrapper = mount(App);
+    await flushPromises();
+    expect(heading(wrapper)).toBe('Seu horário');
+    expect(findAction(wrapper, 'Cancelar')).toBeDefined();
+    expect(findAction(wrapper, 'Mudar horário')).toBeUndefined();
+  });
+
+  it('shows the meeting length in the header, not the page default', async () => {
+    const wrapper = await openManage({
+      meeting: { ends_at: '2026-10-13T16:00:00-03:00' },
+      page: { ...PAGE, durations: [30, 60] },
+    });
+    expect(wrapper.find('header').text()).toContain('60 minutos');
+  });
+
+  it('a cancel retried after a lost answer ends on the canceled meeting, with no alert', async () => {
+    api.cancelInvite
+      .mockRejectedValueOnce(new api.ApiError(0, 'network'))
+      .mockRejectedValueOnce(new api.ApiError(422, 'not_changeable'));
+    const wrapper = await openManage();
+    await click(wrapper, 'Cancelar');
+    await click(wrapper, 'Sim, cancelar');
+    expect(wrapper.findAll('[role="alert"]')).toHaveLength(1);
+
+    api.getInvite.mockResolvedValue(scheduled(CANCELED));
+    await click(wrapper, 'Sim, cancelar');
+    expect(heading(wrapper)).toBe('Horário cancelado');
+    expect(wrapper.findAll('[role="alert"]')).toHaveLength(0);
+    expect(wrapper.text()).toContain('Avisamos Camila.');
   });
 
   it('a paused page still opens the meeting and lets the client cancel', async () => {
@@ -1264,7 +1391,7 @@ describe('meeting management /b/:code (F2-A)', () => {
   });
 
   it('cancels after one confirmation and then offers another time', async () => {
-    api.cancelInvite.mockResolvedValue(scheduled(CANCELED));
+    api.cancelInvite.mockResolvedValue(rebookable());
     const wrapper = await openManage();
     await click(wrapper, 'Cancelar');
     expect(heading(wrapper)).toBe('Cancelar este horário?');

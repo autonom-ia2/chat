@@ -40,7 +40,11 @@ import CrmCardPill from './CrmCardPill.vue';
 import CrmCardMetaConversion from './CrmCardMetaConversion.vue';
 import BookingInviteButton from 'dashboard/components-next/Booking/BookingInviteButton.vue';
 import CrmOriginList from './CrmOriginList.vue';
-import { formatBookingTime } from '../helpers/meetingNotices';
+import {
+  formatBookingTime,
+  noticeKindKey,
+  skipReasonKey,
+} from '../helpers/meetingNotices';
 import CrmCardLeadForm from './CrmCardLeadForm.vue';
 
 const props = defineProps({
@@ -1138,6 +1142,11 @@ const ACTIVITY_META = {
     icon: 'i-lucide-calendar-clock',
     tone: 'info',
   },
+  booking_client_rebooked: {
+    key: 'ACTIVITY_BOOKING_CLIENT_REBOOKED',
+    icon: 'i-lucide-calendar-plus',
+    tone: 'positive',
+  },
   booking_notice_failed: {
     key: 'ACTIVITY_BOOKING_NOTICE_FAILED',
     icon: 'i-lucide-message-circle-warning',
@@ -1257,19 +1266,16 @@ const ACTIVITY_TONE_CLASSES = {
   muted: 'bg-n-slate-4 text-n-slate-10',
 };
 
-// Agendamento (#1192): o que o cliente fez pelo link. "Aviso não saiu" também
-// leva by: 'client' no payload, mas quem registrou foi o sistema.
-const CLIENT_BOOKING_EVENTS = [
-  'booking_client_confirmed',
-  'booking_client_canceled',
-  'booking_client_rescheduled',
-  'booking_notices_stopped',
-];
+// Agendamento (#1192): o que o cliente fez pelo link leva by: 'client' no
+// payload ("Aviso não saiu" leva by: 'system'). Só eventos do agendamento.
+const isClientBookingEvent = activity =>
+  String(activity.event_type || '').startsWith('booking_') &&
+  activity.payload?.by === 'client';
 
 // AI work runs as a system actor (actor_type === 'system'). ai_dismissed is a
 // human action (actor_type === 'user'), so it is NOT keyed on the 'ai_' prefix.
 const activityActor = activity => {
-  if (CLIENT_BOOKING_EVENTS.includes(activity.event_type)) {
+  if (isClientBookingEvent(activity)) {
     return t('CRM_KANBAN.DRAWER.CLIENT_ACTOR');
   }
   if (activity.actor_type === 'system') {
@@ -1427,9 +1433,27 @@ const activityDetail = activity => {
         ? t('CRM_KANBAN.DRAWER.ACTIVITY_DETAIL_BOOKING_TIME', { time: to })
         : '';
     }
+    case 'booking_notice_failed': {
+      const kind = noticeKindKey(activity.payload?.kind);
+      const reason = activity.payload?.reason;
+      const base = 'CRM_KANBAN.CALENDAR.MEETING_DETAIL.NOTICES';
+      if (!kind) return '';
+      // Motivo de pulo conhecido tem texto; erro do envio (classe, interrupted,
+      // delivery_failed) aparece como "Falhou".
+      const reasonKey = skipReasonKey(reason);
+      const reasonText = t(
+        reasonKey === 'OTHER'
+          ? `${base}.STATUS.FAILED`
+          : `${base}.SKIP_REASONS.${reasonKey}`
+      );
+      return t('CRM_KANBAN.DRAWER.ACTIVITY_DETAIL_BOOKING_NOTICE_FAILED', {
+        kind: t(`${base}.KINDS.${kind}`),
+        reason: reasonText,
+      });
+    }
     case 'booking_client_confirmed':
     case 'booking_client_canceled':
-    case 'booking_notice_failed':
+    case 'booking_client_rebooked':
     case 'booking_notices_stopped': {
       const time = formatBookingTime(activity.payload?.starts_at, locale.value);
       return time

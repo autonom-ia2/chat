@@ -11,7 +11,7 @@ import ZoneNote from './ZoneNote.vue';
 // Dia (J1 "Escolhe o dia", J2 "Abre a página"): atalho do horário mais cedo no topo (J1-A13, J2-A8) e os dias
 // da janela em que a página atende (dia fechado não vira botão). Os dias são do fuso da página; os horários aparecem
 // no relógio de quem abre (RA-08). Ao mudar o horário de uma reunião (J5) a duração é a dela, e a saída é manter o
-// horário de agora em vez de pedir contato.
+// horário de agora em vez de pedir contato. Ao marcar de novo depois de cancelada, "Voltar" leva à reunião.
 const {
   page,
   slots,
@@ -123,6 +123,13 @@ const selectedDuration = computed({
     </ActionButton>
     <ActionButton v-else variant="ghost" @click="openNoSlot">
       {{ t('BOOKING_V2.NO_SLOT.LINK') }}
+    </ActionButton>
+    <ActionButton
+      v-if="manage.isRebooking.value"
+      variant="ghost"
+      @click="manage.returnToManage"
+    >
+      {{ t('BOOKING_V2.BACK') }}
     </ActionButton>
   </section>
 </template>
