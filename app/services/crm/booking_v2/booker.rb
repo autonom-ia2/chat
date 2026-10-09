@@ -3,14 +3,23 @@
 # Responsável vem da página, nunca de quem chama: o agente do link individual (se for desta página e estiver ativo)
 # ou o responsável padrão da página.
 #
+# Reenvio idempotente: só com a MESMA chave (`idempotency_key`, o `request_id` que o navegador sorteia por tentativa
+# de reserva), gravada na reunião (`metadata.booking_request_id`). Telefone e horário iguais não bastam: quem soubesse
+# o número e o horário de outra pessoa receberia a reunião dela. Sem chave, ou com outra, a reunião existente ocupa o
+# horário e a reserva é recusada (`slot_unavailable`).
+#
 # Ordem: (1) reenvio idempotente devolve a reunião já criada, sem trava; (2) conferência estrita do horário COM o
 # provedor (freebusy Google/Microsoft), fora das travas, porque a rede pode demorar; (3) travas, nesta ordem: caixa
 # (`pg_advisory_xact_lock(1, inbox_id)`, se a página tem caixa), agente (`2, host_id`) e telefone
 # (`4, crc32("conta:telefone")`) — mesma ordem do v1, que também toma a do agente, então v1 e v2 do mesmo responsável
 # não marcam o mesmo horário, e duas reservas do mesmo telefone novo não criam dois contatos. Dentro das travas:
-# idempotência de novo (mesmo telefone + mesmo início + mesma página nos últimos 5 minutos), limite de reuniões abertas
+# idempotência de novo (mesma chave + mesmo telefone + mesmo início + mesma página nos últimos 5 minutos), limite de reuniões abertas
 # por telefone, elegibilidade do responsável de novo (quem sai da conta toma a mesma trava de agente no
 # OrphanReassigner), reconferência SÓ local do horário, contato, card e reunião.
+#
+# `perform` aceita um bloco, chamado com a reserva NOVA dentro da mesma transação, ainda sob as travas: o que o chamador
+# grava ali (convite público, convite marcado como agendado) entra ou sai junto com a reunião. O aviso em tempo real do
+# card novo sai só depois do commit de todas as transações abertas.
 #
 # Riscos residuais aceitos (mesmo comportamento do v1): entre a consulta ao provedor e o commit, um evento criado
 # direto no Google/Microsoft não é visto; e Meet/Teams criam o evento no provedor dentro da transação, sob as travas.
@@ -23,6 +32,8 @@ class Crm::BookingV2::Booker
 
   MAX_OPEN_MEETINGS = 2
   IDEMPOTENCY_WINDOW = 5.minutes
+  # Reunião recente desta página com a mesma chave do pedido (`metadata` contém página e chave).
+  IDEMPOTENT_MEETING = 'crm_meetings.created_at > ? AND crm_meetings.metadata @> ?'.freeze
   LOCK_NS_INBOX = 1
   LOCK_NS_AGENT = 2
   # 3 já é do Crm::Calendar::SubscriptionManager (chave = inbox): telefone usa 4 para não dividir o espaço de chaves.
@@ -46,8 +57,9 @@ class Crm::BookingV2::Booker
   # Interface pedida pelo plano (#1188): um argumento nomeado por dado do formulário.
   # `contact`/`card` (convite, #1189): a reserva usa o contato do convite em vez de procurar pelo telefone e, se o
   # card do convite é desse contato e está aberto, a reunião entra nele em vez de criar outro (J1-A3).
+  # `idempotency_key`: chave do pedido; sem ela não há reenvio idempotente.
   def initialize(profile:, name:, phone:, starts_at:, source:, email: nil, duration: nil, location_type: nil, # rubocop:disable Metrics/ParameterLists
-                 consent: {}, conversation: nil, link: nil, contact: nil, card: nil)
+                 consent: {}, conversation: nil, link: nil, contact: nil, card: nil, idempotency_key: nil)
     @profile = profile
     @account = profile.account
     @input = Crm::BookingV2::BookingInput.new(profile: profile, name: name, phone: phone, starts_at: starts_at, email: email,
@@ -56,10 +68,11 @@ class Crm::BookingV2::Booker
     @consent = consent.to_h.with_indifferent_access
     @conversation = conversation
     @link = link if link.present? && link.booking_profile_id == profile.id && link.enabled?
+    @idempotency_key = idempotency_key.to_s.presence
     assign_client(contact, card)
   end
 
-  def perform
+  def perform(&on_booked)
     validate_inputs!
     previous = existing_result
     return previous if previous
@@ -67,9 +80,9 @@ class Crm::BookingV2::Booker
     ensure_slot_available!(include_provider: true)
     result = ActiveRecord::Base.transaction do
       acquire_locks!
-      existing_result || book_if_host_still_eligible!
+      existing_result || book_if_host_still_eligible!.tap { |booked| on_booked&.call(booked) }
     end
-    broadcast_card_created(result.card) unless result.existing || @card
+    ActiveRecord.after_all_transactions_commit { broadcast_card_created(result.card) } unless result.existing || @card
     result
   end
 
@@ -130,12 +143,9 @@ class Crm::BookingV2::Booker
   end
 
   def existing_result
-    meeting = guest_meetings.where(starts_at: starts_at).where('crm_meetings.created_at > ?', IDEMPOTENCY_WINDOW.ago)
-                            .where("crm_meetings.metadata->>'booking_profile_id' = ?", profile.id.to_s)
-                            .order(:id).first
-    return if meeting.nil?
-
-    Result.new(meeting: meeting, contact: meeting.card.contact, card: meeting.card, existing: true)
+    tag = { booking_profile_id: profile.id, booking_request_id: @idempotency_key }.to_json
+    meeting = @idempotency_key && guest_meetings.where(starts_at: starts_at).where(IDEMPOTENT_MEETING, IDEMPOTENCY_WINDOW.ago, tag).first
+    meeting && Result.new(meeting: meeting, contact: meeting.card.contact, card: meeting.card, existing: true)
   end
 
   def guest_meetings
@@ -220,7 +230,7 @@ class Crm::BookingV2::Booker
   end
 
   def booking_metadata
-    data = { 'booking_profile_id' => profile.id, 'booking_link_id' => @link&.id }.compact
+    data = { 'booking_profile_id' => profile.id, 'booking_link_id' => @link&.id, 'booking_request_id' => @idempotency_key }.compact
     consent = consent_metadata
     consent ? data.merge('consent' => consent) : data
   end
@@ -245,8 +255,8 @@ class Crm::BookingV2::Booker
     pipeline_target[:stage_id] || (raise ArgumentError, 'no_stage_configured')
   end
 
-  # Depois do commit: o card novo aparece no Kanban e no calendário de quem está aberto (como no v1). A reserva já
-  # está feita; falha aqui só é registrada.
+  # Depois do commit (também de uma transação de quem chamou, `after_all_transactions_commit`): o card novo aparece
+  # no Kanban e no calendário de quem está aberto (como no v1). A reserva já está feita; falha aqui só é registrada.
   def broadcast_card_created(card)
     Crm::Cards::Broadcaster.broadcast(card, Events::Types::CRM_CARD_CREATED)
   rescue StandardError => e

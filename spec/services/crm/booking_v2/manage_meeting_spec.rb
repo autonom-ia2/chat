@@ -140,6 +140,14 @@ RSpec.describe Crm::BookingV2::ManageMeeting do
       expect(meeting.reload.starts_at).to eq(starts_at)
     end
 
+    it 'recusa do serviço de remarcar (ArgumentError) vira booking_failed, não erro 500, sem mexer na reunião' do
+      allow(Crm::Meetings::RescheduleService).to receive(:new).and_raise(ArgumentError, 'meeting_not_reschedulable')
+
+      expect_refusal('booking_failed') { manage.reschedule!(starts_at: '2026-10-21T11:00:00-03:00') }
+      expect(meeting.reload).to have_attributes(starts_at: starts_at, status: 'scheduled')
+      expect(alerts('rescheduled')).to be_empty
+    end
+
     it 'recusa depois do prazo e reunião cancelada' do
       starts_in(1.hour)
       expect_refusal('too_late') { manage.reschedule!(starts_at: '2026-10-21T11:00:00-03:00') }

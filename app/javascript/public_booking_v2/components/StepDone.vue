@@ -2,37 +2,58 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useFlow } from '../composables/useBookingFlow';
+import { googleCalendarUrl } from '../helpers/calendar';
 import { whenLabel } from '../helpers/datetime';
-import { locationKey } from '../helpers/locations';
+import { locationAddress, locationName } from '../helpers/locations';
 import { safeAbsoluteUrl, safeUrl } from '../helpers/url';
 import ActionButton from './ActionButton.vue';
 import BrandHeader from './BrandHeader.vue';
+import ManageLink from './ManageLink.vue';
 import WhatsAppButton from './WhatsAppButton.vue';
+import ZoneNote from './ZoneNote.vue';
 
-// Pronto (J2-A11): "Salvar na minha agenda" baixa o .ics; "Falar no WhatsApp" quando a página tem número;
-// "Entrar na reunião" só para link http/https. Não promete mensagem que pode não sair (J2-A6).
-const { page, result, greetingName } = useFlow();
+// Pronto (J2-A11): "Salvar na minha agenda" baixa o .ics e, ao lado, "Pôr na Agenda do Google" (no navegador de
+// dentro do WhatsApp/Instagram o download pode falhar, RA-15); "Entrar pelo link" só para link http/https; "Falar no
+// WhatsApp" quando a página tem número; e o link para guardar (mudar ou cancelar). Só promete a mensagem no WhatsApp
+// quando o servidor diz que o aviso "ao marcar" vai sair (`notice_will_send`, J2-A6); o link para guardar fica nos dois
+// casos (é o caminho para mudar ou cancelar se a mensagem se perder).
+const { page, result, locations, greetingName, clientZone, isOtherClock } =
+  useFlow();
 const { t, locale } = useI18n();
 
 const when = computed(() =>
-  result.value?.starts_at ? whenLabel(result.value.starts_at, locale.value) : ''
+  result.value?.starts_at
+    ? whenLabel(result.value.starts_at, locale.value, clientZone)
+    : ''
 );
 const agentName = computed(
   () => page.value.agent_name || page.value.title || ''
 );
+// O local confirmado, com o nome e o endereço que a página mostrou.
+const place = computed(() => {
+  const confirmed = result.value?.location || {};
+  const shown = locations.value.find(item => item.type === confirmed.type);
+  return { ...shown, ...confirmed };
+});
 const locationText = computed(() =>
   t('BOOKING_V2.DONE.WITH', {
-    location: t(
-      `BOOKING_V2.LOCATION.${locationKey(result.value?.location?.type)}`
-    ),
+    location: locationName(place.value, t),
     name: agentName.value,
   })
 );
-const address = computed(() => result.value?.location?.address || '');
+const address = computed(() => locationAddress(place.value));
 const icsUrl = computed(() => safeUrl(result.value?.ics_url));
-const joinUrl = computed(() =>
-  safeAbsoluteUrl(result.value?.location?.join_url)
+const joinUrl = computed(() => safeAbsoluteUrl(place.value.join_url));
+const googleUrl = computed(() =>
+  googleCalendarUrl({
+    title: t('BOOKING_V2.DONE.CALENDAR_TITLE', { name: agentName.value }),
+    startsAt: result.value?.starts_at,
+    endsAt: result.value?.ends_at,
+    location: address.value || joinUrl.value || '',
+  })
 );
+const manageUrl = computed(() => safeAbsoluteUrl(result.value?.manage_url));
+const willMessage = computed(() => result.value?.notice_will_send === true);
 const whatsappUrl = computed(
   () => result.value?.contact_whatsapp_url || page.value.contact_whatsapp_url
 );
@@ -69,15 +90,36 @@ const whatsappUrl = computed(
       </p>
       <p class="text-base text-slate-800">{{ locationText }}</p>
       <p v-if="address" class="text-base text-slate-800">
-        {{ t('BOOKING_V2.DONE.ADDRESS', { address }) }}
+        {{ t('BOOKING_V2.ADDRESS', { address }) }}
       </p>
+      <ZoneNote v-if="isOtherClock" />
     </div>
+    <p
+      v-if="willMessage"
+      data-testid="done-message-promise"
+      class="text-base text-slate-800"
+    >
+      {{ t('BOOKING_V2.DONE.MESSAGE') }}
+    </p>
     <div class="flex flex-col gap-3">
-      <ActionButton v-if="icsUrl" :href="icsUrl" download>
+      <ActionButton v-if="joinUrl" :href="joinUrl" external>
+        {{ t('BOOKING_V2.DONE.JOIN') }}
+      </ActionButton>
+      <ActionButton
+        v-if="icsUrl"
+        :href="icsUrl"
+        :variant="joinUrl ? 'secondary' : 'primary'"
+        download
+      >
         {{ t('BOOKING_V2.DONE.SAVE') }}
       </ActionButton>
-      <ActionButton v-if="joinUrl" :href="joinUrl" variant="secondary" external>
-        {{ t('BOOKING_V2.DONE.JOIN') }}
+      <ActionButton
+        v-if="googleUrl"
+        :href="googleUrl"
+        variant="secondary"
+        external
+      >
+        {{ t('BOOKING_V2.DONE.GOOGLE') }}
       </ActionButton>
       <WhatsAppButton
         :url="whatsappUrl"
@@ -85,6 +127,7 @@ const whatsappUrl = computed(
         :label="t('BOOKING_V2.DONE.WHATSAPP')"
       />
     </div>
+    <ManageLink v-if="manageUrl" :url="manageUrl" />
     <p v-if="agentName" class="text-center text-base text-slate-600">
       {{ t('BOOKING_V2.DONE.NOTIFIED', { name: agentName }) }}
     </p>

@@ -50,7 +50,8 @@ RSpec.describe 'Public::Api::V2::Invites', type: :request do
 
       show(invite.code)
 
-      expect(response.parsed_body['state']).to eq('scheduled')
+      expect(response.parsed_body).to include('state' => 'scheduled', 'timezone' => 'America/Sao_Paulo',
+                                              'starts_at' => meeting.starts_at.in_time_zone('America/Sao_Paulo').iso8601)
     end
 
     it 'responde o 404 uniforme 1 dia depois do fim da reunião agendada' do

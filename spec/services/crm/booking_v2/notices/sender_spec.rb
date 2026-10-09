@@ -32,8 +32,9 @@ RSpec.describe Crm::BookingV2::Notices::Sender do
     world.profile.update!(notice_inbox: inbox)
   end
 
-  def claimed(kind = 'booked')
-    Crm::MeetingNotice.create!(meeting: meeting, account: account, kind: kind, due_at: Time.current, status: :sending, attempts: 1)
+  # Aviso já tomado pelo cron, no vencimento que o Scheduler daria (lembrete: início menos a antecedência).
+  def claimed(kind = 'booked', due_at: Crm::BookingV2::Notices::Scheduler.expected_due_at(meeting, kind))
+    Crm::MeetingNotice.create!(meeting: meeting, account: account, kind: kind, due_at: due_at, status: :sending, attempts: 1)
   end
 
   def open_window!(at: 2.hours.ago, target_inbox: inbox)
@@ -97,8 +98,43 @@ RSpec.describe Crm::BookingV2::Notices::Sender do
       expect([first.reload, second.reload].map { |notice| [notice.status, notice.skip_reason] }).to eq([%w[skipped template_required]] * 2)
       expect(alerts.count).to eq(1)
       expect(alerts.sole).to have_attributes(assignee_id: world.host.id, follow_up_type: 'task', card_id: world.card.id)
-      expect(Crm::Activity.where(card_id: world.card.id, event_type: 'booking_notice_failed').count).to eq(2)
+      failures = Crm::Activity.where(card_id: world.card.id, event_type: 'booking_notice_failed')
+      expect(failures.count).to eq(2)
+      expect(failures.map { |activity| activity.payload['by'] }).to eq(%w[system system])
       expect(meeting_snapshot).to eq(before)
+    end
+
+    it 'modelo aprovado sem {{3}} (sem link de gestão nem de parar) não sai: template_without_link e avisa o agente (J2-A9, RA-18)' do
+      no_link = booked_template.merge('components' => [{ 'type' => 'BODY', 'text' => 'Oi {{1}}, seu horário é {{2}}.' }])
+      inbox.channel.update!(message_templates: [no_link])
+      world.profile.update_columns(notice_templates: { 'booked' => { 'name' => 'aviso_marcado', 'language' => 'pt_BR' } }) # rubocop:disable Rails/SkipsModelValidations
+      notice = claimed
+
+      expect { described_class.new(notice).perform }.not_to change(Message, :count)
+
+      expect(notice.reload).to have_attributes(status: 'skipped', skip_reason: 'template_without_link')
+      expect(alerts.count).to eq(1)
+    end
+
+    it 'modelo aprovado que pede mais do que o aviso preenche não sai: template_unsupported e avisa o agente' do
+      asks_more = [
+        [{ 'type' => 'BODY', 'text' => 'Oi {{1}}, {{2}}. Link: {{3}}. Código {{4}}' }],
+        [{ 'type' => 'HEADER', 'format' => 'TEXT', 'text' => 'Olá {{1}}' }, { 'type' => 'BODY', 'text' => 'Oi {{1}}, {{2}}: {{3}}' }],
+        [{ 'type' => 'HEADER', 'format' => 'IMAGE' }, { 'type' => 'BODY', 'text' => 'Oi {{1}}, {{2}}: {{3}}' }],
+        [{ 'type' => 'BODY', 'text' => 'Oi {{1}}, {{2}}: {{3}}' },
+         { 'type' => 'BUTTONS', 'buttons' => [{ 'type' => 'URL', 'url' => 'https://x.example/{{1}}' }] }]
+      ]
+      world.profile.update_columns(notice_templates: { 'booked' => { 'name' => 'aviso_marcado', 'language' => 'pt_BR' } }) # rubocop:disable Rails/SkipsModelValidations
+
+      asks_more.each do |components|
+        inbox.channel.update!(message_templates: [booked_template.merge('components' => components)])
+        notice = claimed
+
+        expect { described_class.new(notice).perform }.not_to change(Message, :count)
+        expect(notice.reload).to have_attributes(status: 'skipped', skip_reason: 'template_unsupported'), components.inspect
+        notice.destroy!
+      end
+      expect(alerts.count).to eq(1)
     end
 
     it 'modelo configurado mas NÃO aprovado na Meta conta como sem modelo' do
@@ -221,6 +257,25 @@ RSpec.describe Crm::BookingV2::Notices::Sender do
       expect(notice.reload).to have_attributes(status: 'skipped', skip_reason: 'past_due')
     end
 
+    it '"ao marcar" e "remarcado" atrasados não saem depois do início da reunião, sem chamar o agente' do
+      meeting.update_columns(starts_at: 1.minute.ago, ends_at: 29.minutes.from_now) # rubocop:disable Rails/SkipsModelValidations
+      notices = %w[booked rescheduled].map { |kind| claimed(kind, due_at: 20.minutes.ago) }
+
+      expect { notices.each { |notice| described_class.new(notice).perform } }.not_to change(Message, :count)
+
+      expect(notices.map { |notice| notice.reload.skip_reason }).to eq(%w[past_due past_due])
+      expect(alerts).to be_empty
+    end
+
+    it 'lembrete cujo vencimento não bate mais com o início da reunião não sai (stale), sem chamar o agente' do
+      notice = claimed('hour_before', due_at: meeting.starts_at - 3.hours)
+
+      expect { described_class.new(notice).perform }.not_to change(Message, :count)
+
+      expect(notice.reload).to have_attributes(status: 'skipped', skip_reason: 'stale')
+      expect(alerts).to be_empty
+    end
+
     it 'flag da conta desligada é o kill-switch: nada sai' do
       account.disable_features('crm_booking_v2')
       account.save!
@@ -272,6 +327,37 @@ RSpec.describe Crm::BookingV2::Notices::Sender do
       expect(notice.reload.status).to eq('sent')
     end
 
+    it 'o próprio aviso (já em sending) não conta no teto' do
+      sent_elsewhere(3, at: 2.hours.ago)
+      notice = claimed
+
+      described_class.new(notice).perform
+
+      expect(notice.reload.status).to eq('sent')
+    end
+
+    it 'aviso saindo agora em outro processo (sending) conta no teto' do
+      sent_elsewhere(3, at: 2.hours.ago)
+      other = create_internal_meeting(world: world, starts_at: Time.zone.parse('2026-10-30T13:00:00Z'))
+      Crm::MeetingNotice.create!(meeting: other, account: account, kind: 'booked', due_at: Time.current, status: :sending)
+      notice = claimed
+
+      described_class.new(notice).perform
+
+      expect(notice.reload).to have_attributes(status: 'skipped', skip_reason: 'number_cap')
+    end
+
+    it 'teto por conta soma avisos saindo agora e testes' do
+      other = create_internal_meeting(world: world, starts_at: Time.zone.parse('2026-10-21T13:00:00Z'))
+      Crm::MeetingNotice.create!(meeting: other, account: account, kind: 'booked', due_at: Time.current, status: :sending)
+      create_booking_invite(world: world, metadata: { 'test' => true }, sent_at: 1.hour.ago)
+      notice = claimed
+
+      with_modified_env('CRM_BOOKING_NOTICES_ACCOUNT_DAILY_LIMIT' => '2') { described_class.new(notice).perform }
+
+      expect(notice.reload).to have_attributes(status: 'skipped', skip_reason: 'account_cap')
+    end
+
     it 'respeita o teto por conta configurado no ambiente' do
       other = create_internal_meeting(world: world, starts_at: Time.zone.parse('2026-10-21T13:00:00Z'))
       Crm::MeetingNotice.create!(meeting: other, account: account, kind: 'booked', due_at: 1.hour.ago, status: :sent, sent_at: 1.hour.ago)
@@ -288,10 +374,14 @@ RSpec.describe Crm::BookingV2::Notices::Sender do
     before = meeting_snapshot
     notice = claimed
     allow(Autonomia::LiteralMessageBuilder).to receive(:new).and_raise(ActiveRecord::RecordInvalid)
+    tracker = instance_double(ChatwootExceptionTracker, capture_exception: true)
+    allow(ChatwootExceptionTracker).to receive(:new).and_return(tracker)
 
     described_class.new(notice).perform
 
     expect(notice.reload).to have_attributes(status: 'failed', error_code: 'ActiveRecord::RecordInvalid', message_id: nil)
+    expect(ChatwootExceptionTracker).to have_received(:new).with(an_instance_of(ActiveRecord::RecordInvalid), account: account)
+    expect(tracker).to have_received(:capture_exception).once
     expect(alerts.count).to eq(1)
     expect(meeting_snapshot).to eq(before)
   end

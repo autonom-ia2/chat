@@ -9,7 +9,7 @@ import BookingSettingsTabs from './components/BookingSettingsTabs.vue';
 import { STEP } from './constants';
 
 // Configurações › Agendamento (#1187, F1-D): a lista de páginas, o assistente
-// de seis passos e, para quem só vê, a página em modo leitura. Escrever pede
+// de sete passos e, para quem só vê, a página em modo leitura. Escrever pede
 // `agendamento_manage` (o administrador tem).
 const { t } = useI18n();
 const canManage = useCanManage('agendamento_manage');

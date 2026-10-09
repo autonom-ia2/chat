@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useFlow } from '../composables/useBookingFlow';
 import { safeAbsoluteUrl, safeUrl } from '../helpers/url';
 
 // Cabeçalho com a cara da empresa (RA-20): logo, foto, nome, título. Sem logo ou foto (ou imagem quebrada),
@@ -11,6 +12,7 @@ const props = defineProps({
 });
 
 const { t } = useI18n();
+const flow = useFlow();
 const logoFailed = ref(false);
 const photoFailed = ref(false);
 
@@ -28,10 +30,12 @@ const initial = computed(
   () => (agentName.value || props.page.title || '?').trim().charAt(0) || '?'
 );
 const headline = computed(() => props.page.brand?.headline || '');
+// A duração escolhida pela pessoa (pode ser outra que a principal da página).
+const minutes = computed(
+  () => flow?.duration?.value || props.page.duration_minutes
+);
 const durationText = computed(() =>
-  props.page.duration_minutes
-    ? t('BOOKING_V2.DURATION', { minutes: props.page.duration_minutes })
-    : ''
+  minutes.value ? t('BOOKING_V2.DURATION', { minutes: minutes.value }) : ''
 );
 </script>
 

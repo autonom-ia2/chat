@@ -47,11 +47,12 @@ class Crm::BookingV2::PageSerializer
     }.merge(notices)
   end
 
-  # Avisos no WhatsApp (#1192): caixa de avisos, jogo de avisos, modelos e prazo para o cliente mudar.
+  # Avisos no WhatsApp (#1192): caixa de avisos, jogo de avisos, modelos e prazo para o cliente mudar. Depois da
+  # reunião (#1193): `post_meeting` `{ mode: 'ask'|'auto', stage_id, pipeline_id }`.
   def notices
     {
       notice_inbox_id: profile.notice_inbox_id, notice_preset: profile.notice_preset, notice_templates: profile.notice_templates,
-      cancel_until_minutes: profile.cancel_until_minutes
+      cancel_until_minutes: profile.cancel_until_minutes, post_meeting: profile.post_meeting_settings
     }
   end
 

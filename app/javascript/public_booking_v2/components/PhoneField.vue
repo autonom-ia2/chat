@@ -1,10 +1,16 @@
 <script setup>
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { formatNational, onlyDigits } from '../helpers/phone';
+import {
+  caretAfterDigits,
+  formatNational,
+  normalizeNational,
+  onlyDigits,
+} from '../helpers/phone';
 
-// WhatsApp: código do país (padrão +55) e o número com DDD, formatado enquanto a pessoa digita.
-// Guardamos só os dígitos; a formatação é feita com métodos de string (sem regex).
+// WhatsApp: código do país (padrão +55) e o número com DDD, formatado enquanto a pessoa digita. Guardamos só os
+// dígitos que vão para o servidor: o que aparece é o que é enviado. Colado com "+55", o código sai do número.
+// Formatação com métodos de string (sem regex). `error` é a chave de tradução do erro.
 const props = defineProps({
   id: { type: String, required: true },
   label: { type: String, required: true },
@@ -17,6 +23,7 @@ const national = defineModel('national', { type: String, default: '' });
 const { t } = useI18n();
 
 const display = computed(() => formatNational(national.value, country.value));
+const errorText = computed(() => (props.error ? t(props.error) : ''));
 const describedBy = computed(() =>
   [`${props.id}-hint`, props.error && `${props.id}-error`]
     .filter(Boolean)
@@ -30,9 +37,24 @@ const onCountryInput = event => {
 };
 
 const onNationalInput = event => {
-  const digits = onlyDigits(event.target.value);
+  const input = event.target;
+  const raw = input.value;
+  const pasted = event.inputType === 'insertFromPaste';
+  const digits = normalizeNational(raw, country.value, { pasted });
+  const typedBefore = onlyDigits(
+    raw.slice(0, input.selectionStart ?? raw.length)
+  );
+  const caretDigits = pasted
+    ? digits.length
+    : Math.min(typedBefore.length, digits.length);
+
   national.value = digits;
-  event.target.value = formatNational(digits, country.value);
+  const formatted = formatNational(digits, country.value);
+  input.value = formatted;
+  if (document.activeElement === input) {
+    const position = caretAfterDigits(formatted, caretDigits);
+    input.setSelectionRange(position, position);
+  }
 };
 </script>
 
@@ -74,10 +96,9 @@ const onNationalInput = event => {
     <p
       v-if="error"
       :id="`${id}-error`"
-      role="alert"
       class="text-base font-medium text-red-700"
     >
-      {{ error }}
+      {{ errorText }}
     </p>
   </fieldset>
 </template>

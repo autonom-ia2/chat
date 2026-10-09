@@ -4,6 +4,8 @@
 # 404 UNIFORME (`{ error: 'not_found' }`) para código inexistente, vencido, cancelado, página pausada ou apagada,
 # responsável que não pode mais atender e conta sem a flag: quem tenta adivinhar códigos não distingue um caso do
 # outro. O payload leva só o primeiro nome e o telefone mascarado; nunca o número inteiro, e-mail ou id interno.
+# Convite agendado leva também `starts_at` (no fuso da página) e `timezone` (IANA), para a tela "Você já agendou"
+# dizer o dia e a hora.
 #
 # `viewed` registra a abertura depois do primeiro render (POST, para pré-visualização de link não contar) e ignora
 # robôs de pré-visualização pelo `User-Agent`, comparado por `include?` numa lista fechada.
@@ -11,7 +13,8 @@
 # Gestão da reunião (#1192, contrato F2-A): convite agendado mostra `meeting` e aceita `confirm`, `cancel`,
 # `reschedule` e `stop_notices` (respondem o mesmo JSON do GET; recusa = 422 `{ error: <código> }`). O link de
 # convite agendado continua abrindo até 1 dia depois do fim da reunião, inclusive cancelada (mostra "Cancelada") e
-# inclusive com a página pausada (o cliente ainda precisa poder cancelar).
+# inclusive com a página pausada (o cliente ainda precisa poder cancelar). Reunião cancelada com a página aberta leva
+# `can_rebook: true`: o mesmo convite marca de novo (`PublicBooking`).
 class Public::Api::V2::InvitesController < PublicController
   # Comparados em minúsculas. Só nomes de robôs: um `bot` solto casaria com celular de gente (ex.: CUBOT).
   ROBOT_AGENTS = %w[whatsapp facebookexternalhit facebot twitterbot slackbot telegrambot discordbot linkedinbot googlebot
@@ -58,7 +61,7 @@ class Public::Api::V2::InvitesController < PublicController
   private
 
   def set_invite
-    @invite = ::Crm::BookingInvite.includes(:account, :contact, :booking_link, booking_profile: :default_assignee)
+    @invite = ::Crm::BookingInvite.includes(:account, :contact, :booking_link, :meeting, booking_profile: :default_assignee)
                                   .find_by(code: params[:code].to_s)
     render json: { error: 'not_found' }, status: :not_found unless usable?
   end
@@ -88,12 +91,26 @@ class Public::Api::V2::InvitesController < PublicController
     }
     return render json: payload unless scheduled?
 
-    render json: payload.merge(meeting: ::Crm::BookingV2::ManagePayload.new(@invite).as_json,
-                               contact_whatsapp_url: ::Crm::BookingV2::PublicPageSerializer.whatsapp_url(@invite.booking_profile))
+    render json: payload.merge(scheduled_time, meeting: ::Crm::BookingV2::ManagePayload.new(@invite).as_json, can_rebook: rebookable?,
+                                               contact_whatsapp_url: ::Crm::BookingV2::PublicPageSerializer.whatsapp_url(@invite.booking_profile))
+  end
+
+  # Reunião cancelada e página (e link individual, se houver) ainda atendendo: a página oferece marcar de novo pelo
+  # próprio convite, sem pedir nome e WhatsApp (`PublicBooking`).
+  def rebookable?
+    ::Crm::BookingV2::PublicBooking.rebookable?(@invite) && ::Crm::BookingV2::InvitePages.new(@invite.account).invite_usable?(@invite)
   end
 
   def page_slug
     @invite.booking_link&.slug || @invite.booking_profile.slug
+  end
+
+  def scheduled_time
+    starts_at = @invite.meeting&.starts_at
+    return {} if @invite.scheduled_at.blank? || starts_at.blank?
+
+    zone = ActiveSupport::TimeZone[@invite.booking_profile.resolved_timezone]
+    { starts_at: (zone ? starts_at.in_time_zone(zone) : starts_at.utc).iso8601, timezone: zone&.tzinfo&.name }
   end
 
   def robot?

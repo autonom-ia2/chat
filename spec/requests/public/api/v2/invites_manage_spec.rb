@@ -45,7 +45,8 @@ RSpec.describe 'Public::Api::V2::Invites manage', type: :request do
     expect(response).to have_http_status(:ok)
     expect(body.except('meeting')).to eq(
       'code' => invite.code, 'page_slug' => world.profile.slug, 'state' => 'scheduled', 'contact_first_name' => 'Marcos',
-      'phone_masked' => '(11) •••••-5678', 'contact_whatsapp_url' => 'https://wa.me/5511933334444'
+      'phone_masked' => '(11) •••••-5678', 'contact_whatsapp_url' => 'https://wa.me/5511933334444',
+      'starts_at' => '2026-10-20T10:00:00-03:00', 'timezone' => 'America/Sao_Paulo', 'can_rebook' => false
     )
     expect(body['meeting'].except('ics_url')).to eq(
       'starts_at' => '2026-10-20T10:00:00-03:00', 'ends_at' => '2026-10-20T10:30:00-03:00', 'timezone' => 'America/Sao_Paulo',
@@ -83,6 +84,7 @@ RSpec.describe 'Public::Api::V2::Invites manage', type: :request do
 
     expect(response).to have_http_status(:ok)
     expect(body['meeting']).to include('status' => 'canceled', 'can_change' => false)
+    expect(body['can_rebook']).to be(true)
     expect(meeting.reload.status).to eq('canceled')
 
     act(:cancel)
@@ -94,6 +96,18 @@ RSpec.describe 'Public::Api::V2::Invites manage', type: :request do
     travel_to(meeting.ends_at + 1.day + 1.minute) { show }
     expect(response).to have_http_status(:not_found)
     expect(body).to eq('error' => 'not_found')
+  end
+
+  it 'reunião cancelada pelo agente também oferece marcar de novo; responsável que não atende mais, não' do
+    meeting.update!(status: :canceled)
+
+    show
+    expect(body).to include('can_rebook' => true)
+    expect(body['meeting']).to include('status' => 'canceled')
+
+    allow(Crm::BookingV2::HostEligibility).to receive(:eligible?).and_return(false)
+    show
+    expect(body).to include('can_rebook' => false)
   end
 
   it 'cancel e reschedule fora do prazo respondem too_late e a tela mostra can_change falso' do
@@ -134,6 +148,7 @@ RSpec.describe 'Public::Api::V2::Invites manage', type: :request do
 
     expect(response).to have_http_status(:ok)
     expect(meeting.reload.status).to eq('canceled')
+    expect(body['can_rebook']).to be(false)
   end
 
   it 'código inexistente, convite cancelado e flag desligada: 404 uniforme em toda ação' do

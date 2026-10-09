@@ -2,21 +2,27 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useFlow } from '../composables/useBookingFlow';
-import { dayLabel, timeLabel } from '../helpers/datetime';
+import { dayLabel, slotLabel } from '../helpers/datetime';
 import ActionButton from './ActionButton.vue';
 import BrandHeader from './BrandHeader.vue';
+import ZoneNote from './ZoneNote.vue';
 
 // Hora: só horários livres viram botão (ocupados não vêm da API). Tocar no horário já avança: o cliente
-// chega à confirmação em até 4 toques (J1-A4, J2-A8). Dia vazio ou erro sempre oferece saída (RA-17).
+// chega à confirmação em até 4 toques (J1-A4, J2-A8). Dia vazio ou erro sempre oferece saída (RA-17). As horas
+// estão no relógio de quem abre; se uma delas cai em outro dia ali, o botão mostra o dia junto. Ao mudar o horário
+// de uma reunião (J5), a saída é manter o horário de agora em vez de pedir contato.
 const {
   page,
   slots,
   selectedDate,
+  clientZone,
+  isOtherClock,
   slotNotice,
   chooseDay,
   chooseSlot,
   goBack,
   openNoSlot,
+  manage,
 } = useFlow();
 const { t, locale } = useI18n();
 
@@ -26,7 +32,10 @@ const subtitle = computed(() =>
 const isLoading = computed(() => slots.isLoading.value);
 const hasFailed = computed(() => slots.hasFailed.value);
 const items = computed(() =>
-  slots.slots.value.map(iso => ({ iso, label: timeLabel(iso, locale.value) }))
+  slots.slots.value.map(iso => ({
+    iso,
+    label: slotLabel(iso, locale.value, clientZone, selectedDate.value),
+  }))
 );
 const isEmpty = computed(
   () => !isLoading.value && !hasFailed.value && !items.value.length
@@ -48,7 +57,7 @@ const isEmpty = computed(
     <p
       v-if="slotNotice"
       role="alert"
-      class="rounded-xl bg-amber-50 p-4 text-base font-medium text-amber-900"
+      class="rounded-xl bg-yellow-100 p-4 text-base font-medium text-yellow-900"
     >
       {{ t(slotNotice) }}
     </p>
@@ -73,7 +82,10 @@ const isEmpty = computed(
       {{ t('BOOKING_V2.TIME.EMPTY') }}
     </p>
 
-    <ul v-else class="grid grid-cols-3 gap-2">
+    <ul
+      v-else
+      class="grid grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] gap-2"
+    >
       <li v-for="item in items" :key="item.iso">
         <button
           type="button"
@@ -85,6 +97,8 @@ const isEmpty = computed(
       </li>
     </ul>
 
+    <ZoneNote v-if="isOtherClock" />
+
     <div class="flex flex-col gap-2">
       <ActionButton
         :variant="isEmpty || hasFailed ? 'primary' : 'secondary'"
@@ -92,7 +106,14 @@ const isEmpty = computed(
       >
         {{ t('BOOKING_V2.TIME.OTHER_DAY') }}
       </ActionButton>
-      <ActionButton variant="ghost" @click="openNoSlot">
+      <ActionButton
+        v-if="manage.isRescheduling.value"
+        variant="ghost"
+        @click="manage.returnToManage"
+      >
+        {{ t('BOOKING_V2.RESCHEDULE.KEEP') }}
+      </ActionButton>
+      <ActionButton v-else variant="ghost" @click="openNoSlot">
         {{ t('BOOKING_V2.NO_SLOT.LINK') }}
       </ActionButton>
     </div>

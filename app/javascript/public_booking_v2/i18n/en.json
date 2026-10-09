@@ -1,8 +1,11 @@
 {
   "LOADING": "Loading…",
-  "PREVIEW": "Preview: this is how your client sees the page.",
+  "PREVIEW": "Preview: this is how your clients see the page.",
+  "PREVIEW_NO_BOOKING": "This is a preview. Nobody can book here.",
   "BACK": "Back",
-  "DURATION": "{minutes} min call",
+  "DURATION": "{minutes} minutes",
+  "ADDRESS": "Address: {address}",
+  "ZONE": "Times shown in {zone}.",
   "HEADER": {
     "LOGO_ALT": "{name} logo",
     "PHOTO_ALT": "Photo of {name}"
@@ -10,19 +13,19 @@
   "LOCATION": {
     "WHATSAPP_VIDEO": "WhatsApp video call",
     "WHATSAPP_VOICE": "WhatsApp voice call",
-    "CUSTOM_LINK": "Meeting link",
+    "CUSTOM_LINK": "Online, by link",
     "IN_PERSON": "In person",
     "GOOGLE_MEET": "Google Meet",
     "TEAMS": "Microsoft Teams",
-    "OTHER": "Meeting"
+    "OTHER": "Appointment"
   },
   "LOCATION_HINT": {
     "WHATSAPP_VIDEO": "We video call you at the booked time.",
     "WHATSAPP_VOICE": "We call you at the booked time.",
-    "CUSTOM_LINK": "You get the meeting link.",
+    "CUSTOM_LINK": "You get the link to join.",
     "IN_PERSON": "You come to the address.",
-    "GOOGLE_MEET": "You get the link by email.",
-    "TEAMS": "You get the link by email.",
+    "GOOGLE_MEET": "The link comes by email.",
+    "TEAMS": "The link comes by email.",
     "OTHER": "You get the details when you confirm."
   },
   "DATE": {
@@ -31,10 +34,8 @@
     "DURATION_TITLE": "How long?",
     "DURATION_OPTION": "{minutes} minutes",
     "EARLIEST": "Earliest: {when}",
-    "PICK_EARLIEST": "Pick this one",
-    "OTHER_DAY": "Or pick another day",
-    "TIMEZONE": "Times in your time zone: {zone}.",
-    "PAGE_TIMEZONE": "The calendar uses: {zone}."
+    "PICK_EARLIEST": "I want this one",
+    "OTHER_DAY": "Or pick another day"
   },
   "TIME": {
     "TITLE": "Which time?",
@@ -49,7 +50,9 @@
     "TITLE": "No time works?",
     "BODY": "No problem. Leave your WhatsApp and {name} will reach out to set a time.",
     "BODY_NO_NAME": "No problem. Leave your WhatsApp and we will reach out to set a time.",
-    "SUBMIT": "Ask for a call",
+    "BODY_INVITE": "No problem. {name} will reach out on WhatsApp to set a time.",
+    "BODY_NO_NAME_INVITE": "No problem. We will reach out on WhatsApp to set a time.",
+    "SUBMIT": "Ask them to reach out",
     "DONE_TITLE": "Request sent!",
     "DONE_BODY": "We will reach out on WhatsApp to set a time."
   },
@@ -61,9 +64,9 @@
     "PHONE_HINT": "With area code.",
     "EMAIL_OPTIONAL": "Email (optional)",
     "EMAIL_REQUIRED": "Your email",
-    "EMAIL_HINT": "So we can send you the meeting link.",
-    "LOCATION_TITLE": "How do you prefer?",
-    "NOTICE": "By confirming, you agree to get updates about this call on WhatsApp. You can stop them anytime.",
+    "EMAIL_HINT": "The link comes by email.",
+    "LOCATION_TITLE": "How would you like to meet?",
+    "NOTICE": "By confirming, you agree to get updates about this booking on WhatsApp. You can stop them anytime.",
     "CAPTCHA": "Confirm you are not a robot.",
     "CONFIRM": "Confirm",
     "SENDING": "Sending…"
@@ -80,11 +83,17 @@
     "TITLE": "All set, {name}!",
     "TITLE_NO_NAME": "All set!",
     "WITH": "{location} with {name}",
-    "ADDRESS": "Address: {address}",
     "SAVE": "Save to my calendar",
+    "GOOGLE": "Add to Google Calendar",
+    "CALENDAR_TITLE": "Appointment with {name}",
     "WHATSAPP": "Chat on WhatsApp",
-    "JOIN": "Join the meeting",
-    "NOTIFIED": "We let {name} know."
+    "JOIN": "Join by link",
+    "NOTIFIED": "We let {name} know.",
+    "MANAGE_TITLE": "Keep this link to change or cancel",
+    "COPY": "Copy link",
+    "COPIED": "Link copied.",
+    "OPEN": "Open link",
+    "MESSAGE": "You will get a WhatsApp message with this time."
   },
   "PAUSED": {
     "TITLE": "Booking is closed for now",
@@ -101,20 +110,63 @@
     "BODY": "Please try again in a few minutes.",
     "RETRY": "Try again"
   },
-  "ALREADY": {
-    "TITLE": "You are already booked",
-    "BODY": "Your call with {name} is already booked.",
-    "BODY_NO_NAME": "Your call is already booked.",
-    "CHANGE": "To change the time, talk to us on WhatsApp.",
-    "WHATSAPP": "Chat on WhatsApp"
+  "MANAGE": {
+    "TITLE": "Your appointment",
+    "TITLE_CONFIRMED": "You are confirmed",
+    "TITLE_RESCHEDULED": "Time updated",
+    "TITLE_STOPPED": "Done, updates stopped",
+    "TITLE_CANCELED": "Appointment canceled",
+    "TITLE_PAST": "This time has passed",
+    "BADGE_CONFIRMED": "You confirmed",
+    "BADGE_CHANGE_REQUESTED": "You asked to change",
+    "JOIN": "Join",
+    "CONFIRM": "I will be there",
+    "RESCHEDULE": "Change time",
+    "CANCEL": "Cancel",
+    "STOP": "Stop updates",
+    "STOPPED": "You no longer get updates.",
+    "LOCKED": "You could change or cancel here until {deadline}.",
+    "LOCKED_NO_DEADLINE": "You can no longer change or cancel here.",
+    "LOCKED_WHATSAPP": "Now, talk to us on WhatsApp.",
+    "PAST_BODY": "If you need anything, talk to us on WhatsApp.",
+    "PAST_BODY_NO_CONTACT": "If you need anything, contact the business.",
+    "CANCELED_BODY": "If you want, book another time.",
+    "CANCELED_BODY_CLOSED": "To book again, talk to us on WhatsApp.",
+    "CANCELED_BODY_NO_CONTACT": "To book again, contact the business.",
+    "BOOK_AGAIN": "Book another time",
+    "CANCEL_SCREEN": {
+      "TITLE": "Cancel this appointment?",
+      "BODY": "The time becomes free for someone else.",
+      "YES": "Yes, cancel",
+      "NO": "No, keep my time"
+    },
+    "STOP_SCREEN": {
+      "TITLE": "Stop updates?",
+      "BODY": "You will no longer get automatic messages about your appointments.",
+      "KEEPS": "Your appointment is still booked.",
+      "YES": "Stop updates",
+      "NO": "Back"
+    },
+    "ERRORS": {
+      "TOO_LATE": "It is too late to change or cancel here.",
+      "NOT_CHANGEABLE": "This appointment can no longer be changed here.",
+      "FAILED": "That did not work now. Please try again."
+    }
+  },
+  "RESCHEDULE": {
+    "DATE_TITLE": "Which day do you want instead?",
+    "CONFIRM_TITLE": "Change to this time?",
+    "BEFORE": "It was: {when}",
+    "SUBMIT": "Confirm new time",
+    "KEEP": "Keep my time"
   },
   "ERRORS": {
     "SLOT_UNAVAILABLE": "That time was just taken. Please pick another one.",
     "INVALID_PHONE": "Check your WhatsApp number, with area code.",
     "INVALID_NAME": "Write your name.",
     "INVALID_EMAIL": "Check your email.",
-    "EMAIL_REQUIRED": "Write your email to get the meeting link.",
-    "TOO_MANY_OPEN": "You already have calls booked. To book another, talk to us on WhatsApp.",
+    "EMAIL_REQUIRED": "Write your email to get the link.",
+    "TOO_MANY_OPEN": "You already have times booked. To book another, talk to us on WhatsApp.",
     "BOOKING_FAILED": "We could not book it now. Try again or talk to us on WhatsApp.",
     "CAPTCHA": "Confirm you are not a robot."
   },

@@ -63,6 +63,21 @@ RSpec.describe 'PublicBooking::Pages', type: :request do
     expect(page.at_css('title').text).not_to eq('Conversa de 30 min')
   end
 
+  # M1: o slug-base de página per_agent só existe na prévia; sem passar o token a casca caía na v1.
+  it 'serve a v2 na prévia do slug-base de página per_agent e a v1 sem prévia válida' do
+    profile.update!(assignment_mode: :per_agent, enabled: false)
+    profile.agent_booking_links.create!(account: account, agent: world.host)
+    preview = Crm::BookingV2::Tokens.generate('preview', { 'p' => profile.id }, expires_in: 1.hour)
+
+    get "/book/#{profile.slug}", params: { preview: preview }
+    expect(entry).to eq('/vite-test/assets/public_booking_v2-entry.js')
+
+    [nil, 'lixo', Crm::BookingV2::Tokens.generate('form', { 'p' => profile.id }, expires_in: 1.hour)].each do |token|
+      get "/book/#{profile.slug}", params: { preview: token }.compact
+      expect(entry).to eq('/vite-test/assets/public_booking-entry.js'), token.inspect
+    end
+  end
+
   it 'serve a v1 para página antiga, slug desconhecido, flag desligada e confirmação da v1' do
     inbox = create(:channel_email, account: account, provider: 'google', calendar_enabled: true).inbox
     legacy = create_booking_profile(account: account, host: world.host, page_version: Crm::AgentBookingProfile::LEGACY_PAGE, inbox: inbox)

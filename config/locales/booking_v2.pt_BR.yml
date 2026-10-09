@@ -21,10 +21,13 @@ pt_BR:
         hour_before: "Oi%{name}! Seu horário começa em 1 hora (%{when}). Para confirmar, mudar ou cancelar: %{link}"
         stop_line: "Para parar estes avisos: %{link}"
         test_prefix: "Este é um teste da sua página de agendamento. Seu cliente recebe um link igual a este:"
+      remind:
+        text: "Oi%{name}! Passando para lembrar do seu horário em %{when}. Pode confirmar por aqui? %{link}"
       agent_alerts:
         confirmed: "%{name} confirmou o horário de %{when}"
         canceled: "%{name} cancelou o horário de %{when}"
         rescheduled: "%{name} mudou o horário para %{when}"
+        rebooked: "%{name} marcou de novo, para %{when}"
         notice_failed: "O aviso no WhatsApp para %{name} não saiu. O horário de %{when} continua marcado: fale com o cliente."
       templates:
         sales_30:

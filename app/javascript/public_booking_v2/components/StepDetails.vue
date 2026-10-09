@@ -3,7 +3,11 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useFlow } from '../composables/useBookingFlow';
 import { whenLabel } from '../helpers/datetime';
-import { locationKey } from '../helpers/locations';
+import {
+  locationHint,
+  locationName,
+  locationOptions,
+} from '../helpers/locations';
 import ActionButton from './ActionButton.vue';
 import BrandHeader from './BrandHeader.vue';
 import ChoiceCards from './ChoiceCards.vue';
@@ -11,31 +15,32 @@ import FormFooter from './FormFooter.vue';
 import PhoneField from './PhoneField.vue';
 import TextField from './TextField.vue';
 
-// Seus dados (J2): só nome e WhatsApp; e-mail opcional, obrigatório quando o local exige (Meet/Teams).
+// Seus dados (J2): só nome e WhatsApp; e-mail opcional, obrigatório quando o local exige (Meet/Teams). Com um local
+// só, ele aparece escrito (e o endereço, se for presencial) antes de confirmar.
 const {
   page,
   form,
   fieldErrors,
   locations,
   locationType,
+  selectedLocation,
   emailRequired,
   selectedSlot,
+  clientZone,
   goBack,
   submitBooking,
 } = useFlow();
 const { t, locale } = useI18n();
 
 const subtitle = computed(() =>
-  selectedSlot.value ? whenLabel(selectedSlot.value, locale.value) : ''
+  selectedSlot.value
+    ? whenLabel(selectedSlot.value, locale.value, clientZone)
+    : ''
 );
-const locationOptions = computed(() =>
-  locations.value.map(item => ({
-    value: item.type,
-    label: t(`BOOKING_V2.LOCATION.${locationKey(item.type)}`),
-    hint: t(`BOOKING_V2.LOCATION_HINT.${locationKey(item.type)}`),
-  }))
+const options = computed(() => locationOptions(locations.value, t));
+const onlyLocation = computed(() =>
+  options.value.length === 1 ? selectedLocation.value : null
 );
-const errorText = key => (key ? t(key) : '');
 </script>
 
 <template>
@@ -49,6 +54,18 @@ const errorText = key => (key ? t(key) : '');
     >
       {{ t('BOOKING_V2.DETAILS.TITLE') }}
     </h1>
+    <div
+      v-if="onlyLocation"
+      data-testid="only-location"
+      class="flex flex-col gap-1 rounded-2xl border-2 border-slate-200 bg-slate-50 p-4"
+    >
+      <p class="text-base font-semibold text-slate-900">
+        {{ locationName(onlyLocation, t) }}
+      </p>
+      <p class="text-base text-slate-800">
+        {{ locationHint(onlyLocation, t) }}
+      </p>
+    </div>
     <form
       class="flex flex-col gap-5"
       novalidate
@@ -58,7 +75,7 @@ const errorText = key => (key ? t(key) : '');
         id="booking-name"
         v-model="form.name"
         :label="t('BOOKING_V2.DETAILS.NAME')"
-        :error="errorText(fieldErrors.name)"
+        :error="fieldErrors.name"
         autocomplete="name"
         required
       />
@@ -67,14 +84,14 @@ const errorText = key => (key ? t(key) : '');
         v-model:country="form.countryCode"
         v-model:national="form.phone"
         :label="t('BOOKING_V2.DETAILS.PHONE')"
-        :error="errorText(fieldErrors.phone)"
+        :error="fieldErrors.phone"
       />
       <ChoiceCards
-        v-if="locationOptions.length > 1"
+        v-if="options.length > 1"
         v-model="locationType"
         name="booking-location"
         :legend="t('BOOKING_V2.DETAILS.LOCATION_TITLE')"
-        :options="locationOptions"
+        :options="options"
       />
       <TextField
         id="booking-email"
@@ -88,7 +105,7 @@ const errorText = key => (key ? t(key) : '');
             : t('BOOKING_V2.DETAILS.EMAIL_OPTIONAL')
         "
         :hint="emailRequired ? t('BOOKING_V2.DETAILS.EMAIL_HINT') : ''"
-        :error="errorText(fieldErrors.email)"
+        :error="fieldErrors.email"
         :required="emailRequired"
       />
       <FormFooter :submit-label="t('BOOKING_V2.DETAILS.CONFIRM')" />

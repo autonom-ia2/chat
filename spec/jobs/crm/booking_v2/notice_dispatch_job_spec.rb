@@ -12,8 +12,12 @@ RSpec.describe Crm::BookingV2::NoticeDispatchJob do
     with_modified_env('CRM_KANBAN_ENABLED' => 'true', 'CRM_CALENDAR_MEETINGS_ENABLED' => 'true') { example.run }
   end
 
-  def notice(kind, due_at:, status: :pending)
-    Crm::MeetingNotice.create!(meeting: meeting, account: account, kind: kind, due_at: due_at, status: status)
+  def notice(kind, due_at:, status: :pending, **attrs)
+    Crm::MeetingNotice.create!(meeting: meeting, account: account, kind: kind, due_at: due_at, status: status, **attrs)
+  end
+
+  def failure_alerts
+    Crm::FollowUp.where(account_id: account.id).where("metadata->>'event' = ?", 'notice_failed')
   end
 
   it 'enfileira como o sidekiq-cron faz' do
@@ -55,10 +59,16 @@ RSpec.describe Crm::BookingV2::NoticeDispatchJob do
       instance_double(Crm::BookingV2::Notices::Sender, perform: record.update!(status: :sent))
     end
 
+    tracker = instance_double(ChatwootExceptionTracker, capture_exception: true)
+    allow(ChatwootExceptionTracker).to receive(:new).and_return(tracker)
+
     described_class.perform_now
 
     expect(broken.reload).to have_attributes(status: 'failed', error_code: 'ActiveRecord::StatementInvalid')
     expect(fine.reload.status).to eq('sent')
+    expect(ChatwootExceptionTracker).to have_received(:new).with(an_instance_of(ActiveRecord::StatementInvalid), account: account)
+    expect(tracker).to have_received(:capture_exception).once
+    expect(failure_alerts.sole).to have_attributes(assignee_id: world.host.id, card_id: world.card.id)
   end
 
   it 'aviso preso em sending há mais de 15 minutos vira failed interrupted, sem reenviar' do
@@ -70,5 +80,41 @@ RSpec.describe Crm::BookingV2::NoticeDispatchJob do
 
     expect(stuck.reload).to have_attributes(status: 'failed', error_code: 'interrupted')
     expect(Crm::BookingV2::Notices::Sender).not_to have_received(:new)
+    expect(failure_alerts.count).to eq(1)
+
+    described_class.perform_now
+    expect(failure_alerts.count).to eq(1)
+  end
+
+  describe 'falha de entrega informada depois pelo provedor (sent = mensagem criada)' do
+    let(:conversation) { create(:conversation, account: account, contact: world.contact) }
+
+    def sent_notice(kind, message_status:, sent_at: 10.minutes.ago)
+      message = create(:message, account: account, inbox: conversation.inbox, conversation: conversation, message_type: :outgoing,
+                                 status: message_status)
+      notice(kind, due_at: sent_at, status: :sent, sent_at: sent_at, message_id: message.id)
+    end
+
+    it 'aviso cuja mensagem falhou vira failed delivery_failed e avisa o responsável uma vez' do
+      failed = sent_notice('booked', message_status: :failed)
+      delivered = sent_notice('day_before', message_status: :delivered)
+      allow(Crm::BookingV2::Notices::Sender).to receive(:new)
+
+      2.times { described_class.perform_now }
+
+      expect(failed.reload).to have_attributes(status: 'failed', error_code: 'delivery_failed')
+      expect(delivered.reload).to have_attributes(status: 'sent', error_code: nil)
+      expect(failure_alerts.count).to eq(1)
+      expect(Crm::Activity.where(card_id: world.card.id, event_type: 'booking_notice_failed').count).to eq(1)
+    end
+
+    it 'não reabre aviso enviado há mais de 2 horas' do
+      old = sent_notice('booked', message_status: :failed, sent_at: 3.hours.ago)
+
+      described_class.perform_now
+
+      expect(old.reload.status).to eq('sent')
+      expect(failure_alerts).to be_empty
+    end
   end
 end

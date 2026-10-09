@@ -3,7 +3,10 @@
 #
 # Caixa de avisos aceita: WhatsApp oficial (Cloud ou 360dialog) e canal API de WhatsApp (WAHA ou API de campanhas).
 # Modelos: `{ "<aviso>": { "name": "...", "language": "pt_BR" } }` para o WhatsApp oficial e `{ "<aviso>": { "id": 5 } }`
-# (modelo do canal API) para o canal API.
+# (modelo do canal API) para o canal API. Modelo da Meta que já está na lista sincronizada da caixa precisa levar o
+# `{{3}}` (link de gestão, onde fica o "Parar avisos", J2-A9/RA-18) e pedir só o que o aviso preenche (`{{1}}`..`{{3}}` no
+# corpo, topo sem variável nem mídia, botão sem link variável); o envio confere de novo (`template_without_link`,
+# `template_unsupported`).
 module Crm::BookingNoticeSettings
   extend ActiveSupport::Concern
 
@@ -25,6 +28,8 @@ module Crm::BookingNoticeSettings
                                                      less_than_or_equal_to: MAX_CANCEL_UNTIL_MINUTES }
     validate :notice_inbox_must_be_usable
     validate :notice_templates_must_be_sane
+    validate :notice_templates_must_carry_link
+    validate :notice_templates_must_be_fillable
   end
 
   class_methods do
@@ -85,6 +90,40 @@ module Crm::BookingNoticeSettings
     return errors.add(:notice_templates, 'unknown notice') unless (templates.keys - Crm::MeetingNotice::KINDS).empty?
 
     errors.add(:notice_templates, 'invalid template') unless templates.values.all? { |value| valid_notice_template?(value) }
+  end
+
+  # Só confere o que mudou (o modelo pode mudar na Meta depois; o envio confere de novo) e só modelo já sincronizado.
+  def notice_templates_must_carry_link
+    missing = synced_notice_templates.reject { |_kind, template| carries_link?(template) }.keys
+    errors.add(:notice_templates, "must include {{3}} (manage link): #{missing.join(', ')}") if missing.any?
+  end
+
+  # O aviso só preenche {{1}}..{{3}} do corpo: o que pede mais a Meta recusaria no envio (`Route.fillable_template?`).
+  def notice_templates_must_be_fillable
+    route = Crm::BookingV2::Notices::Route
+    unfillable = synced_notice_templates.select { |_kind, template| carries_link?(template) && !route.fillable_template?(template) }.keys
+    errors.add(:notice_templates, "must only use {{1}}, {{2}} and {{3}}: #{unfillable.join(', ')}") if unfillable.any?
+  end
+
+  # Modelos da Meta configurados que já estão na lista sincronizada da caixa, só quando modelos ou caixa mudam.
+  def synced_notice_templates
+    return {} unless notice_templates.is_a?(Hash) && notice_inbox&.channel.is_a?(Channel::Whatsapp)
+    return {} unless notice_templates_or_inbox_changing?
+
+    notice_templates.transform_values { |configured| synced_notice_template(configured) }.compact
+  end
+
+  def carries_link?(template)
+    route = Crm::BookingV2::Notices::Route
+    route.native_body(template).include?(route::LINK_PLACEHOLDER)
+  end
+
+  def notice_templates_or_inbox_changing?
+    will_save_change_to_notice_templates? || will_save_change_to_notice_inbox_id?
+  end
+
+  def synced_notice_template(configured)
+    Crm::BookingV2::Notices::Route.synced_template(notice_inbox, configured) if configured.is_a?(Hash)
   end
 
   def valid_notice_template?(value)

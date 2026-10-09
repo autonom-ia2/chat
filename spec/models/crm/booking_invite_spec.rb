@@ -91,6 +91,16 @@ RSpec.describe Crm::BookingInvite, type: :model do
       expect(errors_for(build_invite(card: other_card), :card)).to include('must belong to the same contact')
     end
 
+    it 'refuses a meeting whose card is of another contact of the same account' do
+      stranger = create_booking_contact(account: account, name: 'Outra Pessoa', phone: '+5511988887777')
+      other_card = create_booking_card(account: account, pipeline: world.pipeline, stage: world.stage, contact: stranger)
+      own_meeting = create_internal_meeting(world: world, starts_at: 2.days.from_now)
+      other_meeting = create_internal_meeting(world: world, starts_at: 3.days.from_now, card: other_card)
+
+      expect(errors_for(build_invite(meeting: other_meeting), :meeting)).to eq(['must belong to the same contact'])
+      expect(build_invite(meeting: own_meeting)).to be_valid
+    end
+
     it 'refuses a personal link of another page' do
       other_page = create_booking_profile(account: account, host: world.host)
       link = other_page.agent_booking_links.create!(account: account, agent: world.host)

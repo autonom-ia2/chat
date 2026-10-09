@@ -90,6 +90,14 @@ class Crm::Meeting < ApplicationRecord
   scope :by_agent, ->(user_id) { where(created_by_id: user_id) }
   # `outcome_held` / `outcome_no_show` scopes are provided by the prefixed enum.
   scope :with_outcome, -> { where.not(outcome: nil) }
+  # Sem as reuniões marcadas por convite de "Testar no meu WhatsApp" (#1192, `metadata.test`). Métricas do agendamento
+  # (F2-C) partem daqui.
+  scope :real, -> { where("COALESCE(crm_meetings.metadata->>'test', 'false') <> 'true'") }
+
+  # Veio de uma página de agendamento (#1187/#1192): o Booker grava a página em `metadata.booking_profile_id`.
+  def booking?
+    metadata.to_h['booking_profile_id'].present?
+  end
 
   def email_channel
     inbox&.channel

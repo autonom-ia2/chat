@@ -8,16 +8,26 @@
 #
 # Envio de formulário (reserva e pedido de contato): honeypot `company` vazio, `form_token` emitido no GET para o
 # MESMO slug com idade entre 2 s e 2 h, captcha quando a instalação tem `HCAPTCHA_SERVER_KEY`. Toda recusa de robô
-# é o mesmo 422 `booking_failed`. Erros visíveis ao público formam um conjunto fechado (PUBLIC_ERRORS); o resto vira
-# `booking_failed`, sem detalhe interno.
+# é o mesmo 422 `booking_failed`. A reserva aceita `request_id` (chave do pedido, ver `PublicBooking`).
+#
+# Erros: os códigos conhecidos dos serviços (BOOKING_ERRORS) são 422; os visíveis ao público formam um conjunto
+# fechado (PUBLIC_ERRORS) e o resto deles vira `booking_failed`, sem detalhe interno. Qualquer outro erro (inclusive
+# ArgumentError sem código conhecido) é falha nossa: vai para o rastreador de erros e responde 500 `unavailable`,
+# sem a mensagem, que pode conter o que a pessoa digitou. Fuso da página gravado inválido (dado anterior à validação)
+# entra aqui também: nunca mostra horários em outro fuso em silêncio (RA-08).
 class Public::Api::V2::BookingController < PublicController
   PUBLIC_ERRORS = %w[slot_unavailable invalid_phone invalid_name invalid_email email_required too_many_open].freeze
+  BOOKING_ERRORS = (PUBLIC_ERRORS + %w[
+    booking_failed invalid_starts_at invalid_duration invalid_location host_unavailable calendar_unavailable
+    availability_unavailable no_pipeline_configured no_stage_configured
+  ]).freeze
   FORM_MIN_AGE = 2.seconds
   FORM_MAX_AGE = 2.hours
 
   before_action :set_page
   before_action :ensure_readable, only: [:slots, :next_slot]
   before_action :ensure_bookable, :ensure_human, only: [:create, :contact_request]
+  before_action :ensure_time_zone, only: [:slots, :next_slot, :create]
 
   rescue_from StandardError, with: :render_unexpected_error
 
@@ -25,6 +35,7 @@ class Public::Api::V2::BookingController < PublicController
     return render json: serializer.paused if @page.paused?
     return render_not_found unless @page.readable?
 
+    ensure_time_zone
     render json: serializer.full
   end
 
@@ -32,15 +43,15 @@ class Public::Api::V2::BookingController < PublicController
     date = parsed_date
     available = date ? ::Crm::BookingV2::Slots.new(profile: @page.profile, host: @page.host, date: date, duration: params[:duration]).perform : []
     render json: { date: date, slots: available }
-  rescue ArgumentError
-    render_booking_error('booking_failed')
+  rescue ArgumentError => e
+    render_service_error(e)
   end
 
   def next_slot
     starts_at = ::Crm::BookingV2::Slots.next_slot(profile: @page.profile, host: @page.host, duration: params[:duration])
     render json: { starts_at: starts_at }
-  rescue ArgumentError
-    render_booking_error('booking_failed')
+  rescue ArgumentError => e
+    render_service_error(e)
   end
 
   def create
@@ -48,14 +59,15 @@ class Public::Api::V2::BookingController < PublicController
     notice_will_send = schedule_notices(outcome)
     render json: confirmation(outcome).merge(notice_will_send: notice_will_send), status: outcome.existing ? :ok : :created
   rescue ArgumentError => e
-    render_booking_error(e.message)
+    render_service_error(e)
   end
 
   def contact_request
-    ::Crm::BookingV2::ContactRequest.new(page: @page, name: params[:name], phone: params[:phone], consent: consent_params).perform
+    ::Crm::BookingV2::ContactRequest.new(page: @page, name: params[:name], phone: params[:phone], consent: consent_params,
+                                         invite_code: params[:invite_code]).perform
     render json: { requested: true }, status: :created
   rescue ArgumentError => e
-    render_booking_error(e.message)
+    render_service_error(e)
   end
 
   private
@@ -71,6 +83,11 @@ class Public::Api::V2::BookingController < PublicController
 
   def ensure_bookable
     render_not_found unless @page.bookable?
+  end
+
+  # Levanta (500 + rastreador) quando o fuso gravado na página é inválido.
+  def ensure_time_zone
+    @page.time_zone
   end
 
   def ensure_human
@@ -96,7 +113,7 @@ class Public::Api::V2::BookingController < PublicController
   end
 
   def booking_params
-    params.permit(:name, :phone, :email, :starts_at, :duration, :location_type, :invite_code).to_h.merge(consent: consent_params)
+    params.permit(:name, :phone, :email, :starts_at, :duration, :location_type, :invite_code, :request_id).to_h.merge(consent: consent_params)
   end
 
   def consent_params
@@ -120,15 +137,15 @@ class Public::Api::V2::BookingController < PublicController
   def confirmation(outcome)
     meeting = outcome.meeting
     {
-      confirmed: true, starts_at: local_iso(meeting, meeting.starts_at), ends_at: local_iso(meeting, meeting.ends_at),
-      timezone: meeting.timezone, location: confirmation_location(meeting), ics_url: ics_url(outcome.invite),
+      confirmed: true, starts_at: local_iso(meeting.starts_at), ends_at: local_iso(meeting.ends_at),
+      timezone: @page.time_zone.tzinfo.name, location: confirmation_location(meeting), ics_url: ics_url(outcome.invite),
       manage_url: outcome.invite.url, contact_whatsapp_url: ::Crm::BookingV2::PublicPageSerializer.whatsapp_url(@page.profile)
     }
   end
 
-  # Horário no fuso da página, como os horários livres.
-  def local_iso(meeting, time)
-    time.in_time_zone(ActiveSupport::TimeZone[meeting.timezone.to_s] || Time.zone).iso8601
+  # Horário no fuso da página (já conferido), como os horários livres.
+  def local_iso(time)
+    time.in_time_zone(@page.time_zone).iso8601
   end
 
   def confirmation_location(meeting)
@@ -139,6 +156,13 @@ class Public::Api::V2::BookingController < PublicController
 
   def ics_url(invite)
     ::Crm::BookingV2::ManagePayload.ics_url(invite)
+  end
+
+  # ArgumentError dos serviços: código conhecido é recusa (422); outro é falha nossa (500).
+  def render_service_error(error)
+    return render_unexpected_error(error) unless BOOKING_ERRORS.include?(error.message)
+
+    render_booking_error(error.message)
   end
 
   def render_booking_error(code)
@@ -153,6 +177,7 @@ class Public::Api::V2::BookingController < PublicController
 
   def render_unexpected_error(error)
     Rails.logger.error("Public booking v2 error: #{error.class.name}")
-    render_booking_error('booking_failed')
+    ChatwootExceptionTracker.new(error).capture_exception
+    render json: { error: 'unavailable' }, status: :internal_server_error
   end
 end

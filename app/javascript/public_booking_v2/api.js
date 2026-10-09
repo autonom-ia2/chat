@@ -68,3 +68,19 @@ export const getInvite = code => request(`/invites/${segment(code)}`);
 
 export const markInviteViewed = code =>
   request(`/invites/${segment(code)}/viewed`, { method: 'POST' });
+
+// Gestão da reunião pelo link do cliente (#1192, contrato F2-A): toda ação responde o mesmo JSON do convite.
+export const confirmInvite = code =>
+  request(`/invites/${segment(code)}/confirm`, { method: 'POST' });
+
+export const cancelInvite = code =>
+  request(`/invites/${segment(code)}/cancel`, { method: 'POST' });
+
+export const rescheduleInvite = (code, payload) =>
+  request(`/invites/${segment(code)}/reschedule`, {
+    method: 'POST',
+    body: payload,
+  });
+
+export const stopInviteNotices = code =>
+  request(`/invites/${segment(code)}/stop_notices`, { method: 'POST' });
