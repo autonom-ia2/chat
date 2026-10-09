@@ -802,6 +802,39 @@ async function syntheticManager(t, options = {}) {
         };
       }
       if (payload.type === 'browser_operation') {
+        const publishDelay = options.browserPublishDelayMs?.[payload.operation];
+        if (publishDelay)
+          await new Promise((resolveDelay, rejectDelay) => {
+            const timer = clock.setTimeout(resolveDelay, publishDelay);
+            signal.addEventListener(
+              'abort',
+              () => {
+                clock.clearTimeout(timer);
+                rejectDelay(signal.reason);
+              },
+              { once: true }
+            );
+          });
+        if (payload.operation === 'invite_permit') {
+          // Like the real publishers, a pending permit settles only on abort.
+          if (options.pendingPermit)
+            return new Promise((_resolvePermit, rejectPermit) => {
+              signal.addEventListener(
+                'abort',
+                () => rejectPermit(signal.reason),
+                { once: true }
+              );
+            });
+          return {
+            type: 'browser_operation',
+            operation: 'invite_permit',
+            id: payload.id,
+            request_id: payload.request_id,
+            claim: payload.claim,
+            decision: 'write',
+            status: 'absent',
+          };
+        }
         if (payload.operation === 'read')
           return {
             type: 'browser_operation',
@@ -1744,4 +1777,169 @@ test('does not expose a warm page or claim work before the publication CAS resol
   data.signals.emit('SIGTERM');
   assert.equal(await data.settled, null);
   assert.equal(warmStates[0].formBody, null);
+});
+
+const INVITE_TARGET_ID = '178414000000000001';
+const inviteBrowserRequest = Object.freeze({
+  type: 'browser_operation',
+  operation: 'request',
+  id: '33333333-3333-4333-8333-333333333333',
+  request_id: '44444444-4444-4444-8444-444444444444',
+  claim: '55555555-5555-4555-8555-555555555555',
+  action: 'invite',
+  app_id: baseEnv.INSTAGRAM_META_DEVELOPER_APP_ID,
+  username: 'synthetic.user',
+  target_id: INVITE_TARGET_ID,
+  deadline: '2999-01-01T00:00:00.000Z',
+});
+
+function browserCompletion(request, fields) {
+  return {
+    type: 'browser_operation',
+    operation: 'complete',
+    action: request.action,
+    id: request.id,
+    request_id: request.request_id,
+    claim: request.claim,
+    captured_at: '2026-10-08T12:00:00.000Z',
+    ...fields,
+  };
+}
+
+function browserOperationEntries(data, operation) {
+  return data.entries.filter(
+    entry =>
+      entry.payload.type === 'browser_operation' &&
+      entry.payload.operation === operation
+  );
+}
+
+function lifecycleDiagnostics(data) {
+  return data.stderr
+    .filter(line => line.startsWith('{'))
+    .map(line => JSON.parse(line))
+    .filter(line => line.event === 'instagram_browser_operation_lifecycle');
+}
+
+test('passes a deadline that reserves the completion publish', async t => {
+  const deadlines = [];
+  const data = await syntheticManager(t, {
+    vps: true,
+    browserOperations: true,
+    browserRequestReadyAt: 0,
+    browserPublishDelayMs: { read: 20000, claim: 20000 },
+    executeOperation: async ({ request, deadlineAt }) => {
+      deadlines.push(deadlineAt);
+      return browserCompletion(request, { results: [] });
+    },
+  });
+  await data.clock.advance(40000);
+  await drain();
+  const [read] = browserOperationEntries(data, 'read');
+  const [claim] = browserOperationEntries(data, 'claim');
+  assert.equal(read.at, 0);
+  assert.equal(claim.at, 20000);
+  assert.equal(deadlines.length, 1);
+  assert.equal(Number.isFinite(deadlines[0]), true);
+  assert.ok(deadlines[0] <= claim.at + 120000 - 35000);
+  assert.ok(deadlines[0] <= read.at + 120000 - 35000);
+  // 80 s of scope remain after the slow read and claim; 35 s stay reserved.
+  assert.equal(deadlines[0], 40000 + 80000 - 35000);
+  data.signals.emit('SIGTERM');
+});
+
+test('publishes a truthful completion when execution exhausts its budget, then restarts', async t => {
+  const observed = {};
+  const data = await syntheticManager(t, {
+    vps: true,
+    browserOperations: true,
+    browserRequestReadyAt: 0,
+    browserRequest: inviteBrowserRequest,
+    executeOperation: async ({ request, signal, deadlineAt }) => {
+      observed.deadlineAt = deadlineAt;
+      await new Promise(resolveAbort => {
+        signal.addEventListener('abort', resolveAbort, { once: true });
+      });
+      observed.abortedAt = observed.clock.time;
+      return browserCompletion(request, {
+        target_id: request.target_id,
+        error_code: 'invite_unknown',
+        write_started: true,
+      });
+    },
+  });
+  observed.clock = data.clock;
+  const [read] = browserOperationEntries(data, 'read');
+  await data.clock.advance(120000);
+  const error = await data.settled;
+  const completions = browserOperationEntries(data, 'complete');
+  assert.equal(completions.length, 1);
+  assert.equal(completions[0].payload.error_code, 'invite_unknown');
+  assert.equal(completions[0].payload.write_started, true);
+  assert.ok(completions[0].at <= observed.deadlineAt + 1000);
+  assert.ok(completions[0].at < read.at + 120000);
+  assert.equal(
+    lifecycleDiagnostics(data).some(line => line.complete_received === true),
+    true
+  );
+  assert.equal(error?.message, 'browser_runtime_required');
+});
+
+test('permit publish honors timeoutMs and frees the channel', async t => {
+  let data;
+  const permit = {};
+  data = await syntheticManager(t, {
+    vps: true,
+    browserOperations: true,
+    // The first read is empty, so the executor runs after `data` is bound.
+    browserRequestReadyAt: 250,
+    browserRequest: inviteBrowserRequest,
+    pendingPermit: true,
+    executeOperation: async ({ request, permitInvite }) => {
+      if (permit.started !== undefined)
+        return browserCompletion(request, {
+          target_id: request.target_id,
+          error_code: 'meta_unavailable',
+          write_started: false,
+        });
+      permit.started = data.clock.time;
+      try {
+        await permitInvite(
+          {
+            captured_at: '2026-10-08T12:00:00.000Z',
+            target_id: request.target_id,
+            username: request.username,
+            status: 'absent',
+          },
+          { timeoutMs: 1000 }
+        );
+        permit.outcome = 'resolved';
+      } catch {
+        permit.outcome = 'rejected';
+        permit.rejectedAfter = data.clock.time - permit.started;
+      }
+      return browserCompletion(request, {
+        target_id: request.target_id,
+        error_code: 'meta_unavailable',
+        write_started: false,
+      });
+    },
+  });
+  await data.clock.advance(250);
+  assert.equal(permit.started, 250);
+  await data.clock.advance(1000);
+  await drain();
+  assert.equal(permit.outcome, 'rejected');
+  assert.equal(permit.rejectedAfter, 1000);
+  assert.equal(browserOperationEntries(data, 'invite_permit').length, 1);
+  const completions = browserOperationEntries(data, 'complete');
+  assert.equal(completions.length >= 1, true);
+  assert.equal(completions[0].at, permit.started + 1000);
+  assert.equal(completions[0].payload.error_code, 'meta_unavailable');
+  assert.equal(
+    lifecycleDiagnostics(data).some(line => line.complete_received === true),
+    true
+  );
+  data.signals.emit('SIGTERM');
+  assert.equal(await data.settled, null);
 });

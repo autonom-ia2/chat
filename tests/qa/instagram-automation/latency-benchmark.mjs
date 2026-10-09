@@ -285,6 +285,22 @@ async function listen(server) {
   return address.port;
 }
 
+// Long synthetic faults stop waiting when the browser drops the request, so a
+// cancelled fetch cannot keep the harness process alive after its last case.
+async function waitWhileConnected(response, milliseconds) {
+  const controller = new AbortController();
+  const abort = () => controller.abort();
+  response.once('close', abort);
+  try {
+    await delay(milliseconds, undefined, { signal: controller.signal });
+    return true;
+  } catch {
+    return false;
+  } finally {
+    response.off('close', abort);
+  }
+}
+
 function closeServer(server) {
   if (!server) return Promise.resolve();
   return new Promise(resolvePromise => {
@@ -460,7 +476,11 @@ export async function createFixtureTransport(fixture, scenarioNames) {
             response.destroy();
             return;
           }
-          if (selected.delayMs) await delay(selected.delayMs);
+          if (
+            selected.delayMs &&
+            !(await waitWhileConnected(response, selected.delayMs))
+          )
+            return;
           result = { ...result, ...selected };
         }
         response.writeHead(result.status, {
@@ -470,8 +490,26 @@ export async function createFixtureTransport(fixture, scenarioNames) {
           'content-type': result.contentType || 'application/json',
           'content-length': Buffer.byteLength(result.body),
         });
+        if (result.stallBodyAfterHeadersMs) {
+          // Headers and the first body byte arrive; the rest of the body stalls.
+          const body = Buffer.from(result.body, 'utf8');
+          response.write(body.subarray(0, 1));
+          if (
+            !(await waitWhileConnected(
+              response,
+              result.stallBodyAfterHeadersMs
+            ))
+          )
+            return;
+          response.end(body.subarray(1));
+          return;
+        }
         response.end(result.body);
       } catch {
+        if (response.headersSent) {
+          response.destroy();
+          return;
+        }
         response.writeHead(500, {
           'access-control-allow-origin': '*',
           'content-type': 'application/json',

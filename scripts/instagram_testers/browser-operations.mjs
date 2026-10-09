@@ -19,6 +19,22 @@ const MAX_UI_SOURCE_VALUES = 64;
 const MAX_UI_OPTIONS = 500;
 const UI_WAIT_MS = 5000;
 const UI_POLL_MS = 100;
+const INVITE_CLICK_TIMEOUT_MS = 5000;
+const INVITE_REQUEST_WAIT_MS = 5000;
+const MIN_INVITE_RESPONSE_WAIT_MS = 10000;
+const INVITE_RESPONSE_TIMEOUT_MS = 30000;
+const INVITE_PERMIT_MAX_MS = 30000;
+// What an invite still needs after its permit: click, request and the
+// shortest response wait worth starting a write for.
+const INVITE_AFTER_PERMIT_MS =
+  INVITE_CLICK_TIMEOUT_MS +
+  INVITE_REQUEST_WAIT_MS +
+  MIN_INVITE_RESPONSE_WAIT_MS;
+// Read-only observer tasks never write, so cleanup may stop waiting for them.
+const TASK_SETTLE_MS = 2000;
+// Callers without a manager deadline get the manager's 120 s operation scope
+// minus its 35 s completion reserve.
+const DEFAULT_EXECUTION_BUDGET_MS = 85000;
 const WARM_FETCH_TIMEOUT_MS = 30000;
 const WARM_META_PAGE = 'warm_meta_page';
 const WARM_SOURCES = new Set(['manager_refresh', 'same_page_refresh']);
@@ -940,10 +956,11 @@ function recordOnce(list, value) {
   if (!list.includes(value)) list.push(value);
 }
 
-function operationState() {
+export function operationState() {
   let resolveRoles;
   let resolveSearch;
   let resolveInviteResponse;
+  let resolveInviteRequestSeen;
   return {
     rolesRequests: [],
     rolesResponses: [],
@@ -979,10 +996,18 @@ function operationState() {
     inviteRequestCount: 0,
     inviteRequestInvalid: false,
     inviteRequestDuplicate: false,
-    invitePermitPending: false,
+    invitePermit: null,
+    inviteClosed: false,
+    inviteRequestSeen: new Promise(resolve => {
+      resolveInviteRequestSeen = resolve;
+    }),
+    resolveInviteRequestSeen,
     inviteOutcome: null,
+    // Shape class only (B5 telemetry); never the body or status text.
+    inviteResponseClass: 'none',
+    inviteResponseController: null,
+    inviteResponseSignal: null,
     inviteWriteStarted: false,
-    inviteResponse: null,
     inviteResponseCount: 0,
     inviteTasks: new Set(),
     inviteResponseReady: new Promise(resolve => {
@@ -1066,22 +1091,45 @@ function recordSearchResponse(state, response, signal) {
   task.finally(() => state.typeaheadTasks.delete(task)).catch(() => {});
 }
 
+// The first result wins. Only a duplicate request or response replaces it.
+function settleInviteOutcome(state, outcome, responseClass) {
+  if (state.inviteOutcome) return;
+  state.inviteOutcome = outcome;
+  if (responseClass) state.inviteResponseClass = responseClass;
+  state.resolveInviteResponse(outcome);
+}
+
+function replaceInviteOutcomeWithDuplicate(state) {
+  state.inviteOutcome = { ok: false, error: 'invite_unknown' };
+  state.inviteResponseClass = 'duplicate';
+  state.resolveInviteResponse(state.inviteOutcome);
+}
+
+function unknownInvite(responseClass) {
+  return { outcome: { ok: false, error: 'invite_unknown' }, responseClass };
+}
+
+// Only HTTP 200 with payload.success === true is a sent invite. Every other
+// shape is classified and reported as unknown; nothing is guessed.
 async function inspectInviteResponse(response, signal) {
-  if (responseStatus(response) !== 200)
-    return { ok: false, error: 'invite_unknown' };
+  if (responseStatus(response) !== 200) return unknownInvite('non_200');
+  let document;
   try {
-    const body = await readResponseBody(response, signal);
-    const document = parseDocument(body);
-    const payload = document.payload;
-    if (!payload || typeof payload !== 'object' || Array.isArray(payload))
-      return { ok: false, error: 'invite_unknown' };
-    if (payload.success === true) return { ok: true };
-    if (payload.success === false)
-      return { ok: false, error: 'invite_rejected' };
-    return { ok: false, error: 'invite_unknown' };
+    document = parseDocument(await readResponseBody(response, signal));
   } catch {
-    return { ok: false, error: 'invite_unknown' };
+    return unknownInvite(signal?.aborted ? 'timeout' : 'malformed');
   }
+  const payload = document.payload;
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload))
+    return unknownInvite('malformed');
+  if (payload.success === true)
+    return { outcome: { ok: true }, responseClass: 'success_true' };
+  if (payload.success === false)
+    return {
+      outcome: { ok: false, error: 'invite_rejected' },
+      responseClass: 'success_false',
+    };
+  return unknownInvite('success_missing');
 }
 
 function recordInviteResponse(state, response, signal) {
@@ -1089,21 +1137,35 @@ function recordInviteResponse(state, response, signal) {
   if (!state.inviteRequest || request !== state.inviteRequest) return;
   state.inviteResponseCount += 1;
   if (state.inviteResponseCount !== 1) {
-    state.inviteResponse = { ok: false, error: 'invite_unknown' };
-    state.inviteOutcome = state.inviteResponse;
-    state.resolveInviteResponse(state.inviteResponse);
+    replaceInviteOutcomeWithDuplicate(state);
     return;
   }
-  const task = inspectInviteResponse(response, signal).then(result => {
-    state.inviteResponse = result;
-    if (!state.inviteOutcome) {
-      state.inviteOutcome = result;
-      state.resolveInviteResponse(result);
-    }
+  // The response deadline also stops a body that stalls after its headers.
+  const responseSignal = state.inviteResponseSignal
+    ? AbortSignal.any([signal, state.inviteResponseSignal].filter(Boolean))
+    : signal;
+  const task = inspectInviteResponse(response, responseSignal).then(result => {
+    settleInviteOutcome(state, result.outcome, result.responseClass);
     return result;
   });
   state.inviteTasks.add(task);
   task.finally(() => state.inviteTasks.delete(task)).catch(() => {});
+}
+
+function recordInviteRequestFailure(state, request) {
+  if (!state.inviteRequest || request !== state.inviteRequest) return;
+  settleInviteOutcome(
+    state,
+    { ok: false, error: 'invite_unknown' },
+    'request_failed'
+  );
+}
+
+// After this resolves, every intercepted invite POST has either marked its
+// write or will hit the closed gate, so inviteWriteStarted is final.
+export async function closeInviteGate(state) {
+  state.inviteClosed = true;
+  await Promise.allSettled([...state.routeTasks]);
 }
 
 async function inputConfirmed(input, value, signal) {
@@ -1158,11 +1220,13 @@ async function requestInvitePermit({
   state,
   targetId,
   username: targetUsername,
-  signal,
+  timeoutMs,
 }) {
   if (typeof permitInvite !== 'function') return null;
-  const reply = await withSignal(
-    permitInvite({
+  // Awaited to the end, never abandoned: the manager bounds the publish with
+  // timeoutMs, and an abandoned publish would block the completion publish.
+  const reply = await permitInvite(
+    {
       id: request.id,
       request_id: request.request_id,
       claim: request.claim,
@@ -1170,20 +1234,19 @@ async function requestInvitePermit({
       target_id: targetId,
       username: targetUsername,
       status: 'absent',
-    }),
-    signal
+    },
+    { timeoutMs }
   );
   return validateInvitePermitReply(reply, request);
 }
 
-async function installRoute(
+export async function installRoute(
   page,
   config,
   request,
   requestGuard,
   state,
-  signal,
-  permitInvite
+  signal
 ) {
   if (typeof requestGuard !== 'function') fail('meta_unavailable');
   const setInviteOutcome = outcome => {
@@ -1208,8 +1271,19 @@ async function installRoute(
           ) {
             if (state.inviteArmed && state.inviteRequestCount >= 1) {
               state.inviteRequestDuplicate = true;
-              setInviteOutcome({ ok: false, error: 'invite_unknown' });
+              replaceInviteOutcomeWithDuplicate(state);
             }
+            await route.abort('blockedbyclient');
+            return;
+          }
+          // From here to the write marker there is no await: once the gate
+          // closes, a POST is either already marked as written or blocked.
+          if (state.inviteClosed || state.invitePermit !== 'write') {
+            settleInviteOutcome(state, {
+              ok: false,
+              error: 'meta_unavailable',
+              blocked: true,
+            });
             await route.abort('blockedbyclient');
             return;
           }
@@ -1222,69 +1296,35 @@ async function installRoute(
           );
           if (!metadata?.valid || !inviteAnchorReady(state)) {
             state.inviteRequestInvalid = true;
-            setInviteOutcome({ ok: false, error: 'invite_unknown' });
-            await route.abort('blockedbyclient');
-            return;
-          }
-          state.inviteRequestCount += 1;
-          state.inviteRequest = browserRequest;
-          state.invitePermitPending = true;
-          let permit;
-          try {
-            permit = await requestInvitePermit({
-              permitInvite,
-              request,
-              state,
-              targetId: request.target_id,
-              username: request.username,
-              signal,
-            });
-          } catch {
-            permit = null;
-          } finally {
-            state.invitePermitPending = false;
-          }
-          if (!permit) {
-            setInviteOutcome({ ok: false, error: 'invite_unknown' });
-            await route.abort('blockedbyclient');
-            return;
-          }
-          if (permit.error_code) {
-            setInviteOutcome({ ok: false, error: permit.error_code });
-            await route.abort('blockedbyclient');
-            return;
-          }
-          if (permit.decision === 'noop') {
             setInviteOutcome({
               ok: false,
-              noop: true,
-              status: 'pending',
-              invited: false,
-              write_started: false,
+              error: 'invalid_selection',
+              blocked: true,
             });
             await route.abort('blockedbyclient');
             return;
           }
-          if (
-            !inviteAnchorReady(state) ||
-            !safeBrowserLocation(page.url(), config) ||
-            state.inviteRequest !== browserRequest ||
-            state.inviteRequestCount !== 1
-          ) {
-            setInviteOutcome({ ok: false, error: 'invite_unknown' });
+          if (!safeBrowserLocation(page.url(), config)) {
+            setInviteOutcome({
+              ok: false,
+              error: 'meta_session_expired',
+              blocked: true,
+            });
             await route.abort('blockedbyclient');
             return;
           }
-          signal?.throwIfAborted();
+          state.inviteRequestCount = 1;
+          state.inviteRequest = browserRequest;
           state.inviteWriteStarted = true;
+          state.resolveInviteRequestSeen();
           try {
             await route.continue();
           } catch {
-            setInviteOutcome({
-              ok: false,
-              error: 'invite_unknown',
-              write_started: true,
-            });
+            settleInviteOutcome(
+              state,
+              { ok: false, error: 'invite_unknown', write_started: true },
+              'request_failed'
+            );
           }
           return;
         }
@@ -1390,7 +1430,7 @@ async function installRoute(
   };
 }
 
-async function attachObservers(page, state, config, signal) {
+export async function attachObservers(page, state, config, signal) {
   const onRequest = request => {
     const metadata = roleRequestMetadata(request, config);
     if (metadata) recordRoleRequest(state, request, metadata);
@@ -1400,11 +1440,14 @@ async function attachObservers(page, state, config, signal) {
     recordSearchResponse(state, response, signal);
     recordInviteResponse(state, response, signal);
   };
+  const onRequestFailed = request => recordInviteRequestFailure(state, request);
   page.on('request', onRequest);
   page.on('response', onResponse);
+  page.on('requestfailed', onRequestFailed);
   return () => {
     page.off('request', onRequest);
     page.off('response', onResponse);
+    page.off('requestfailed', onRequestFailed);
   };
 }
 
@@ -2036,21 +2079,117 @@ function requireUniqueInviteCandidate(results, request, state) {
   return matches[0];
 }
 
-async function waitForInviteOutcome(state, signal) {
-  if (state.inviteOutcome) return state.inviteOutcome;
-  return withSignal(
-    Promise.race([
-      state.inviteResponseReady,
-      delay(UI_WAIT_MS, signal).then(() => ({
-        ok: false,
-        error: 'invite_unknown',
-      })),
-    ]),
+function remainingMs(deadlineAt, now) {
+  return deadlineAt - operationNow(now);
+}
+
+// Resolves with the first settled promise, or after ms; the timer never
+// outlives the wait.
+async function waitAtMost(promises, ms, signal) {
+  let timer;
+  const timeout = new Promise(resolve => {
+    timer = setTimeout(resolve, Math.max(0, ms));
+  });
+  try {
+    await withSignal(Promise.race([...promises, timeout]), signal);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function requestPermitBeforeClick({
+  page,
+  config,
+  request,
+  state,
+  permitInvite,
+  deadlineAt,
+  now,
+}) {
+  const permitBudget = Math.min(
+    INVITE_PERMIT_MAX_MS,
+    remainingMs(deadlineAt, now) - INVITE_AFTER_PERMIT_MS
+  );
+  if (!(permitBudget > 0)) fail('meta_unavailable');
+  let permit;
+  try {
+    permit = await requestInvitePermit({
+      permitInvite,
+      request,
+      state,
+      targetId: request.target_id,
+      username: request.username,
+      timeoutMs: permitBudget,
+    });
+  } catch {
+    permit = null;
+  }
+  if (!permit) fail('meta_unavailable');
+  if (permit.error_code) fail(permit.error_code);
+  if (permit.decision === 'noop') return permit;
+  state.invitePermit = 'write';
+  // The permit marks Rails' claim; any failure before the click is reported
+  // with write_started:false, so Rails releases that marker.
+  if (!inviteAnchorReady(state)) fail('invalid_selection');
+  if (!safeBrowserLocation(page.url(), config)) fail('meta_session_expired');
+  if (remainingMs(deadlineAt, now) < INVITE_AFTER_PERMIT_MS)
+    fail('meta_unavailable');
+  return permit;
+}
+
+async function waitForInviteRequest(state, signal) {
+  await waitAtMost(
+    [state.inviteRequestSeen, state.inviteResponseReady],
+    INVITE_REQUEST_WAIT_MS,
     signal
+  );
+  if (state.inviteWriteStarted) return;
+  await closeInviteGate(state);
+  if (state.inviteWriteStarted) return;
+  fail(
+    state.inviteOutcome?.blocked
+      ? state.inviteOutcome.error
+      : 'meta_unavailable'
   );
 }
 
-async function performInvite({ page, config, request, state, signal }) {
+async function waitForInviteResponse(state, signal, deadlineAt, now) {
+  const responseWait = Math.min(
+    INVITE_RESPONSE_TIMEOUT_MS,
+    remainingMs(deadlineAt, now)
+  );
+  const timer = setTimeout(
+    () => state.inviteResponseController.abort(new Error('invite_timeout')),
+    Math.max(0, responseWait)
+  );
+  try {
+    await withSignal(
+      state.inviteResponseReady,
+      AbortSignal.any([signal, state.inviteResponseSignal].filter(Boolean))
+    );
+  } catch (error) {
+    if (signal?.aborted) throw error;
+    settleInviteOutcome(
+      state,
+      { ok: false, error: 'invite_unknown' },
+      'timeout'
+    );
+  } finally {
+    clearTimeout(timer);
+  }
+  return state.inviteOutcome;
+}
+
+async function performInvite({
+  page,
+  config,
+  request,
+  state,
+  signal,
+  permitInvite,
+  deadlineAt,
+  now,
+}) {
   const { results, dialog } = await openTesterSearch({
     page,
     config,
@@ -2122,20 +2261,35 @@ async function performInvite({ page, config, request, state, signal }) {
   );
   await requireEnabled(addButton, signal);
   if (!inviteAnchorReady(state)) fail('invalid_selection');
-  state.inviteArmed = true;
-  try {
-    await withSignal(addButton.click({ noWaitAfter: true }), signal);
-  } catch {
-    if (!state.inviteOutcome) fail('invite_unknown');
-  }
-  const outcome = await waitForInviteOutcome(state, signal);
-  if (outcome?.noop === true && outcome.status === 'pending')
+  const permit = await requestPermitBeforeClick({
+    page,
+    config,
+    request,
+    state,
+    permitInvite,
+    deadlineAt,
+    now,
+  });
+  if (permit.decision === 'noop')
     return {
       target_id: request.target_id,
       status: 'pending',
       invited: false,
       write_started: false,
     };
+  state.inviteResponseController = new AbortController();
+  state.inviteResponseSignal = state.inviteResponseController.signal;
+  state.inviteArmed = true;
+  try {
+    await addButton.click({
+      noWaitAfter: true,
+      timeout: INVITE_CLICK_TIMEOUT_MS,
+    });
+  } catch {
+    // A click error never decides the outcome; the request wait does.
+  }
+  await waitForInviteRequest(state, signal);
+  const outcome = await waitForInviteResponse(state, signal, deadlineAt, now);
   if (outcome?.error) fail(outcome.error);
   if (
     outcome?.ok !== true ||
@@ -2202,9 +2356,13 @@ export async function executeBrowserOperation({
   permitInvite,
   onDiagnostic,
   warmMetaPage = null,
+  deadlineAt,
   now = Date.now,
 } = {}) {
   const started = baseEnvelope(request, now);
+  const executionDeadline = Number.isFinite(deadlineAt)
+    ? deadlineAt
+    : operationNow(now) + DEFAULT_EXECUTION_BUDGET_MS;
   let removeRoute;
   let removeObservers;
   const state = operationState();
@@ -2229,8 +2387,7 @@ export async function executeBrowserOperation({
       request,
       requestGuard,
       state,
-      signal,
-      permitInvite
+      signal
     );
     if (request.action === 'search') {
       const results = await performSearch({
@@ -2270,6 +2427,9 @@ export async function executeBrowserOperation({
         request,
         state,
         signal,
+        permitInvite,
+        deadlineAt: executionDeadline,
+        now,
       });
       return successEnvelope(request, result, now);
     }
@@ -2279,7 +2439,13 @@ export async function executeBrowserOperation({
       now
     );
   } catch (error) {
-    const code = SAFE_ERRORS.has(error?.code) ? error.code : 'meta_unavailable';
+    // write_started is read only after the gate closes, so a POST still in
+    // its route callback can never be reported as unsent.
+    if (request?.action === 'invite') await closeInviteGate(state);
+    const writeStarted = state.inviteWriteStarted === true;
+    let code = SAFE_ERRORS.has(error?.code) ? error.code : 'meta_unavailable';
+    // After a write only Meta's explicit rejection is a known outcome.
+    if (writeStarted && code !== 'invite_rejected') code = 'invite_unknown';
     try {
       onDiagnostic?.({
         event: 'instagram_browser_operation_executor_failed',
@@ -2301,7 +2467,7 @@ export async function executeBrowserOperation({
       ...(request?.action === 'invite'
         ? {
             target_id: request?.target_id ?? null,
-            write_started: state.inviteWriteStarted === true,
+            write_started: writeStarted,
           }
         : {}),
       error_code: code,
@@ -2309,11 +2475,19 @@ export async function executeBrowserOperation({
   } finally {
     if (removeRoute) await removeRoute();
     if (removeObservers) removeObservers();
-    await Promise.allSettled([
-      ...state.rolesTasks,
-      ...state.typeaheadTasks,
-      ...state.inviteTasks,
-      ...state.routeTasks,
-    ]);
+    state.inviteResponseController?.abort(new Error('operation_finished'));
+    // Route callbacks may still be writing, so they are awaited in full. The
+    // observer tasks only read and are bounded.
+    await Promise.allSettled([...state.routeTasks]);
+    await waitAtMost(
+      [
+        Promise.allSettled([
+          ...state.rolesTasks,
+          ...state.typeaheadTasks,
+          ...state.inviteTasks,
+        ]),
+      ],
+      TASK_SETTLE_MS
+    );
   }
 }

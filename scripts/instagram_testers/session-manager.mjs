@@ -28,6 +28,12 @@ const CYCLE_BUDGET_MS = 30000;
 const REFRESH_INTERVAL_MS = 900000;
 const BROWSER_OPERATION_POLL_MS = 250;
 const BROWSER_OPERATION_BUDGET_MS = 120000;
+// Mirrors Rails BrowserOperationStore::CLAIM_TTL (120 s). Rails starts its
+// claim window after it receives the claim, so the VPS window is never longer.
+const CLAIM_WINDOW_MS = 120000;
+// One completion publish (CYCLE_BUDGET_MS) plus 5 s of margin, which also
+// absorbs small clock skew against the request's absolute deadline.
+const COMPLETION_RESERVE_MS = 35000;
 
 function writeBrowserOperationDiagnostic(stderr, diagnostic) {
   try {
@@ -633,6 +639,7 @@ export async function run(
           if (envelope.request) {
             diagnostic.request_present = true;
             diagnostic.phase = 'claim_requested';
+            const claimStartedAt = now();
             const claimed = await sendOperation({
               type: 'browser_operation',
               operation: 'claim',
@@ -656,50 +663,95 @@ export async function run(
             executionPending = true;
             diagnostic.execution_started = true;
             diagnostic.phase = 'execute_started';
-            const result = await operationScope.wait(
-              executeOperation({
-                context,
-                page,
-                configuration: operationConfig,
-                warmMetaPage,
-                request: claimed.request,
-                signal: operationScope.signal,
-                onDiagnostic: observation =>
-                  writeBrowserOperationDiagnostic(stderr, observation),
-                permitInvite: async observation => {
-                  if (
-                    observation?.target_id !== claimed.request.target_id ||
-                    observation?.username !== claimed.request.username ||
-                    observation?.status !== 'absent'
-                  )
-                    throw new Error('publication_failed');
-                  const permit = await sendOperation({
-                    type: 'browser_operation',
-                    operation: 'invite_permit',
-                    id: claimed.request.id,
-                    request_id: claimed.request.request_id,
-                    claim: claimed.request.claim,
-                    captured_at: observation.captured_at,
-                    target_id: claimed.request.target_id,
-                    username: claimed.request.username,
-                    status: 'absent',
-                  });
-                  if (
-                    permit.operation !== 'invite_permit' ||
-                    ['id', 'request_id', 'claim'].some(
-                      key => permit[key] !== claimed.request[key]
-                    )
-                  )
-                    throw new Error('publication_failed');
-                  return permit;
-                },
-                requestGuard: request =>
-                  isAllowedBrowserRequest({
-                    ...request,
-                    config: operationConfig,
-                  }),
-              })
+            // The executor must finish early enough for its completion
+            // publish to land inside the operation scope, the claim window and
+            // the request deadline.
+            const requestDeadline = Date.parse(claimed.request.deadline);
+            const executionBudgetMs =
+              Math.min(
+                operationScope.remaining(),
+                claimStartedAt + CLAIM_WINDOW_MS - now(),
+                Number.isNaN(requestDeadline) ? 0 : requestDeadline - Date.now()
+              ) - COMPLETION_RESERVE_MS;
+            const deadlineAt = now() + executionBudgetMs;
+            const executionScope = deadlineScope(
+              operationScope.signal,
+              clock,
+              Math.max(1, executionBudgetMs),
+              now
             );
+            let executionTimedOut = false;
+            let result;
+            try {
+              result = await operationScope.wait(
+                executeOperation({
+                  context,
+                  page,
+                  configuration: operationConfig,
+                  warmMetaPage,
+                  request: claimed.request,
+                  signal: executionScope.signal,
+                  deadlineAt,
+                  now,
+                  onDiagnostic: observation =>
+                    writeBrowserOperationDiagnostic(stderr, observation),
+                  permitInvite: async (observation, { timeoutMs } = {}) => {
+                    if (
+                      observation?.target_id !== claimed.request.target_id ||
+                      observation?.username !== claimed.request.username ||
+                      observation?.status !== 'absent' ||
+                      !Number.isFinite(timeoutMs) ||
+                      timeoutMs <= 0
+                    )
+                      throw new Error('publication_failed');
+                    // The permit has its own deadline. Its abort tears down
+                    // this publish, and the publish promise is awaited to the
+                    // end so the completion can use the publisher afterwards.
+                    const permitScope = deadlineScope(
+                      operationScope.signal,
+                      clock,
+                      timeoutMs,
+                      now
+                    );
+                    try {
+                      const permit = await publish(
+                        command,
+                        {
+                          type: 'browser_operation',
+                          operation: 'invite_permit',
+                          id: claimed.request.id,
+                          request_id: claimed.request.request_id,
+                          claim: claimed.request.claim,
+                          captured_at: observation.captured_at,
+                          target_id: claimed.request.target_id,
+                          username: claimed.request.username,
+                          status: 'absent',
+                        },
+                        { signal: permitScope.signal, clock }
+                      );
+                      if (
+                        permit.operation !== 'invite_permit' ||
+                        ['id', 'request_id', 'claim'].some(
+                          key => permit[key] !== claimed.request[key]
+                        )
+                      )
+                        throw new Error('publication_failed');
+                      return permit;
+                    } finally {
+                      permitScope.close();
+                    }
+                  },
+                  requestGuard: request =>
+                    isAllowedBrowserRequest({
+                      ...request,
+                      config: operationConfig,
+                    }),
+                })
+              );
+            } finally {
+              executionTimedOut = executionScope.signal.aborted;
+              executionScope.close();
+            }
             executionPending = false;
             diagnostic.execution_returned = true;
             diagnostic.executor_error_returned = Boolean(result.error_code);
@@ -736,6 +788,9 @@ export async function run(
               }).catch(() => {});
               break;
             }
+            // The truthful completion has landed. A Playwright call abandoned
+            // by the execution deadline must not leak into the next operation.
+            if (executionTimedOut) throw new Error('browser_runtime_required');
           }
         } catch (error) {
           writeBrowserOperationDiagnostic(stderr, diagnostic);
