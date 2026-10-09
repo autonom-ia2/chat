@@ -902,7 +902,12 @@ class ConfigTests(SyntheticAccounts, unittest.TestCase):
                 check.validate('hub2you', 'manager', baseline | {key: value}, 123)
 
     def test_manager_search_status_flag_is_optional_literal_and_off_in_examples(self):
-        flag = 'INSTAGRAM_TESTER_SEARCH_STATUS_ENABLED'
+        self.assert_manager_flag_optional_literal_off('INSTAGRAM_TESTER_SEARCH_STATUS_ENABLED')
+
+    def test_manager_warm_invite_flag_is_optional_literal_and_off_in_examples(self):
+        self.assert_manager_flag_optional_literal_off('INSTAGRAM_TESTER_WARM_INVITE_ENABLED')
+
+    def assert_manager_flag_optional_literal_off(self, flag):
         for stack in check.STACKS:
             baseline = self.envs[stack, 'manager']
             self.assertEqual(baseline[flag], 'false')

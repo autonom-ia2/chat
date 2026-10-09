@@ -2222,6 +2222,7 @@ async function performInvite({
   permitInvite,
   deadlineAt,
   now,
+  warmMetaPage = null,
 }) {
   const { results, dialog } = await openTesterSearch({
     page,
@@ -2230,6 +2231,7 @@ async function performInvite({
     state,
     signal,
     navigate: false,
+    warmMetaPage,
   });
   requireUniqueInviteCandidate(results, request, state);
   const baseline = await readUiTokenButtons(dialog, request.username, signal);
@@ -2237,8 +2239,12 @@ async function performInvite({
     !baseline.complete ||
     baseline.source_truncated ||
     baseline.token_button_count !== 0
-  )
+  ) {
+    // A reused page that is not clean (for example a token left selected by
+    // an earlier operation) recovers with a cold navigation on the next op.
+    if (warmMetaPage) invalidateWarmMetaPage(warmMetaPage, 'page_changed');
     fail('invalid_selection');
+  }
   const option = await selectExactSearchOption(
     state.searchInput,
     request.username,
@@ -2347,11 +2353,13 @@ async function performStatus({
   state,
   signal,
   warmMetaPage = null,
+  warmInvite = false,
 }) {
+  // Without the warm-invite flag an invite always reads roles cold.
+  const reuseWarm = request.action !== 'invite' || warmInvite;
   const documentPromise = (async () => {
     const refreshWarm =
-      request.action !== 'invite' &&
-      warmRefreshRequired(warmMetaPage, page, config);
+      reuseWarm && warmRefreshRequired(warmMetaPage, page, config);
     if (refreshWarm) {
       state.diagnosticPhase = 'roles_refresh';
       await refreshWarmMetaPage(warmMetaPage, {
@@ -2361,7 +2369,7 @@ async function performStatus({
       });
     } else {
       if (
-        request.action === 'invite' &&
+        !reuseWarm &&
         warmMetaPage &&
         !warmMetaPage.valid &&
         !warmCanRecoverCold(warmMetaPage, page, config)
@@ -2390,6 +2398,7 @@ export async function executeBrowserOperation({
   onDiagnostic,
   warmMetaPage = null,
   searchStatus = false,
+  warmInvite = false,
   deadlineAt,
   now = Date.now,
 } = {}) {
@@ -2442,6 +2451,7 @@ export async function executeBrowserOperation({
       state,
       signal,
       warmMetaPage,
+      warmInvite: warmInvite === true,
     });
     if (request.action === 'invite') {
       if (status !== 'absent')
@@ -2465,6 +2475,7 @@ export async function executeBrowserOperation({
         permitInvite,
         deadlineAt: executionDeadline,
         now,
+        warmMetaPage: warmInvite === true ? warmMetaPage : null,
       });
       return successEnvelope(request, result, now);
     }

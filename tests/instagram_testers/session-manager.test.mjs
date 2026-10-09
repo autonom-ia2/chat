@@ -604,6 +604,8 @@ async function syntheticManager(t, options = {}) {
     data.env.INSTAGRAM_TESTER_BROWSER_OPERATIONS_ENABLED = 'true';
   if (options.searchStatus !== undefined)
     data.env.INSTAGRAM_TESTER_SEARCH_STATUS_ENABLED = options.searchStatus;
+  if (options.warmInvite !== undefined)
+    data.env.INSTAGRAM_TESTER_WARM_INVITE_ENABLED = options.warmInvite;
   if (options.reconnectId)
     data.env.INSTAGRAM_TESTER_RECONNECT_REQUEST_ID = options.reconnectId;
   const clock = new FakeClock();
@@ -989,15 +991,15 @@ test('polls browser operations at 250 ms and executes a queued request once', as
   }
 });
 
-async function executorSearchStatus(t, searchStatus) {
+async function executorFlag(t, flag, value) {
   let observed = 'executor_not_called';
   const data = await syntheticManager(t, {
     vps: true,
     browserOperations: true,
     browserRequestReadyAt: 249,
-    searchStatus,
+    [flag]: value,
     executeOperation: async options => {
-      observed = options.searchStatus;
+      observed = options[flag];
       const { request } = options;
       return {
         type: 'browser_operation',
@@ -1022,10 +1024,17 @@ async function executorSearchStatus(t, searchStatus) {
 }
 
 test('search status reaches the executor only when its flag is exactly true', async t => {
-  assert.equal(await executorSearchStatus(t, undefined), false);
-  assert.equal(await executorSearchStatus(t, 'true'), true);
+  assert.equal(await executorFlag(t, 'searchStatus', undefined), false);
+  assert.equal(await executorFlag(t, 'searchStatus', 'true'), true);
   for (const value of ['TRUE', '1', 'false', ''])
-    assert.equal(await executorSearchStatus(t, value), false);
+    assert.equal(await executorFlag(t, 'searchStatus', value), false);
+});
+
+test('warm invite reaches the executor only when its flag is exactly true', async t => {
+  assert.equal(await executorFlag(t, 'warmInvite', undefined), false);
+  assert.equal(await executorFlag(t, 'warmInvite', 'true'), true);
+  for (const value of ['TRUE', '1', 'false', ''])
+    assert.equal(await executorFlag(t, 'warmInvite', value), false);
 });
 
 test('three refresh cycles preserve opaque CAS versions and the 15-minute interval', async t => {

@@ -5,6 +5,7 @@
  */
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { setTimeout as delay } from 'node:timers/promises';
 import {
   executeBrowserOperation,
   createWarmMetaPage,
@@ -27,6 +28,11 @@ const FIXTURE_PATH = new URL(
   import.meta.url
 );
 const SCENARIOS = ['search', 'status_accepted', 'invite_unknown'];
+const INVITE_PATH = '/apps/10001/async/instagram/roles/add/';
+const SUCCESS_BODY = '{"payload":{"success":true}}';
+const INVITE_SIGNAL_MS = 60000;
+const SETTLE_POLL_MS = 100;
+const SETTLE_STABLE_MS = 3000;
 
 async function setup(fixture, scenario) {
   const configuration = makeConfiguration(fixture);
@@ -103,6 +109,20 @@ async function closeSetup(setupState) {
   await setupState.transport.close();
 }
 
+function permitReply(observation, fields) {
+  return {
+    type: 'browser_operation',
+    operation: 'invite_permit',
+    id: observation.id,
+    request_id: observation.request_id,
+    claim: observation.claim,
+    ...fields,
+  };
+}
+
+const denyInvite = observation =>
+  permitReply(observation, { error_code: 'invalid_selection' });
+
 async function operation({
   page,
   configuration,
@@ -110,6 +130,8 @@ async function operation({
   request,
   signal,
   searchStatus,
+  warmInvite,
+  permitInvite = denyInvite,
 }) {
   return executeBrowserOperation({
     page,
@@ -117,21 +139,57 @@ async function operation({
     request,
     warmMetaPage,
     searchStatus,
+    warmInvite,
     signal: signal || AbortSignal.timeout(10000),
     requestGuard: parameters =>
       isAllowedBrowserRequest({ ...parameters, config: configuration }),
-    permitInvite:
-      request.action === 'invite'
-        ? observation => ({
-            type: 'browser_operation',
-            operation: 'invite_permit',
-            id: observation.id,
-            request_id: observation.request_id,
-            claim: observation.claim,
-            error_code: 'invalid_selection',
-          })
-        : undefined,
+    permitInvite: request.action === 'invite' ? permitInvite : undefined,
   });
+}
+
+// The fixture counts an invite after reading its body, so wait until the
+// count has been stable for 3 s before checking write invariants.
+async function settledInviteCount(transport) {
+  let last = transport.counts().invite;
+  let stableSince = Date.now();
+  while (Date.now() - stableSince < SETTLE_STABLE_MS) {
+    // eslint-disable-next-line no-await-in-loop -- polling is serial by design.
+    await delay(SETTLE_POLL_MS);
+    const current = transport.counts().invite;
+    if (current !== last) {
+      last = current;
+      stableSince = Date.now();
+    }
+  }
+  return last;
+}
+
+// A write permit plus Meta's success body: the invite is expected to post once.
+async function successfulWarmInvite(state, fixture, iteration) {
+  state.transport.setScenario('invite_unknown');
+  state.transport.setResponseFault({ path: INVITE_PATH, body: SUCCESS_BODY });
+  const before = state.transport.counts().invite;
+  try {
+    const result = await operation({
+      ...state,
+      warmInvite: true,
+      signal: AbortSignal.timeout(INVITE_SIGNAL_MS),
+      permitInvite: observation =>
+        permitReply(observation, { decision: 'write', status: 'absent' }),
+      request: makeRequest(
+        'invite_unknown',
+        state.configuration,
+        fixture,
+        iteration
+      ),
+    });
+    return {
+      result,
+      delta: (await settledInviteCount(state.transport)) - before,
+    };
+  } finally {
+    state.transport.setResponseFault(null);
+  }
 }
 
 async function runAbortCase(fixture) {
@@ -542,6 +600,142 @@ async function runSearchStatusCase(fixture) {
   }
 }
 
+// With the flag on, the same sequence as the cold-invite run reuses the warm
+// page: the invite refreshes roles in place instead of navigating.
+async function runWarmInviteReuseCase(fixture) {
+  const definition = fixture.scenarios.status_accepted;
+  const original = { ...definition };
+  const state = await setup(fixture, 'status_accepted');
+  try {
+    definition.roles_target_status = 'ABSENT';
+    const absent = await operation({
+      ...state,
+      warmInvite: true,
+      request: makeRequest('status_accepted', state.configuration, fixture, 30),
+    });
+    assert.equal(absent.status, 'absent');
+    state.transport.setScenario('search');
+    const firstSearch = await operation({
+      ...state,
+      warmInvite: true,
+      request: makeRequest('search', state.configuration, fixture, 31),
+    });
+    assert.equal(firstSearch.results?.length, 1);
+    const secondSearch = await operation({
+      ...state,
+      warmInvite: true,
+      request: makeRequest('search', state.configuration, fixture, 32),
+    });
+    assert.equal(secondSearch.results?.length, 1);
+    assert.equal(state.getGotoCount(), 1);
+
+    state.transport.setScenario('invite_unknown');
+    const rolesBeforeInvite = state.transport.counts().roles;
+    const invite = await operation({
+      ...state,
+      warmInvite: true,
+      request: makeRequest('invite_unknown', state.configuration, fixture, 33),
+    });
+    assert.equal(invite.error_code, 'invalid_selection');
+    assert.equal(invite.write_started, false);
+    assert.equal(await settledInviteCount(state.transport), 0);
+    assert.equal(state.getGotoCount(), 1);
+    assert.equal(state.transport.counts().roles, rolesBeforeInvite + 1);
+    assert.equal(state.warmMetaPage.valid, true);
+
+    definition.roles_target_status = 'CONFIRMED';
+    state.transport.setScenario('status_accepted');
+    const statusAfterInvite = await operation({
+      ...state,
+      warmInvite: true,
+      request: makeRequest('status_accepted', state.configuration, fixture, 34),
+    });
+    assert.equal(statusAfterInvite.status, 'accepted');
+    assert.equal(state.getGotoCount(), 1);
+    return true;
+  } finally {
+    Object.assign(definition, original);
+    await closeSetup(state);
+  }
+}
+
+// A warm search leaves the dialog open; the warm invite resets it and writes
+// exactly once without navigating.
+async function runInviteAfterSearchCase(fixture) {
+  const state = await setup(fixture, 'search');
+  try {
+    const search = await operation({
+      ...state,
+      warmInvite: true,
+      request: makeRequest('search', state.configuration, fixture, 40),
+    });
+    assert.equal(search.results?.length, 1);
+    assert.equal(await state.page.locator('#tester-dialog').isVisible(), true);
+    const { result, delta } = await successfulWarmInvite(state, fixture, 41);
+    assert.equal(result.error_code, undefined);
+    assert.equal(result.invited, true);
+    assert.equal(result.status, 'pending');
+    assert.equal(result.write_started, true);
+    assert.equal(delta, 1);
+    assert.equal(state.getGotoCount(), 1);
+    return true;
+  } finally {
+    await closeSetup(state);
+  }
+}
+
+// The fixture's Cancel keeps a selected token. A warm invite that finds one
+// fails closed before any permit and marks the page changed, so the next
+// operation recovers with a cold navigation instead of failing until refresh.
+async function runResidueRecoveryCase(fixture) {
+  const state = await setup(fixture, 'search');
+  try {
+    const search = await operation({
+      ...state,
+      warmInvite: true,
+      request: makeRequest('search', state.configuration, fixture, 50),
+    });
+    assert.equal(search.results?.length, 1);
+    await state.page
+      .locator('#latency-listbox [role="option"]')
+      .click({ timeout: 5000 });
+
+    state.transport.setScenario('invite_unknown');
+    const before = state.transport.counts().invite;
+    let permitCalls = 0;
+    const residue = await operation({
+      ...state,
+      warmInvite: true,
+      signal: AbortSignal.timeout(INVITE_SIGNAL_MS),
+      permitInvite: observation => {
+        permitCalls += 1;
+        return permitReply(observation, {
+          decision: 'write',
+          status: 'absent',
+        });
+      },
+      request: makeRequest('invite_unknown', state.configuration, fixture, 51),
+    });
+    assert.equal(residue.error_code, 'invalid_selection');
+    assert.equal(residue.write_started, false);
+    assert.equal(permitCalls, 0);
+    assert.equal((await settledInviteCount(state.transport)) - before, 0);
+    assert.equal(state.warmMetaPage.valid, false);
+    assert.equal(state.warmMetaPage.invalidReason, 'page_changed');
+    assert.equal(state.getGotoCount(), 1);
+
+    const { result, delta } = await successfulWarmInvite(state, fixture, 52);
+    assert.equal(result.invited, true);
+    assert.equal(result.write_started, true);
+    assert.equal(delta, 1);
+    assert.equal(state.getGotoCount(), 2);
+    assert.equal(state.warmMetaPage.valid, true);
+    return true;
+  } finally {
+    await closeSetup(state);
+  }
+}
+
 async function run() {
   const fixture = JSON.parse(await readFile(FIXTURE_PATH, 'utf8'));
   assert.equal(fixture.production_mutated, false);
@@ -664,6 +858,11 @@ async function run() {
       dialog_guards_fail_closed: await runDialogGuardCase(fixture),
       concurrent_refresh_serialized: await runConcurrentCase(fixture),
       search_status_exact_only: await runSearchStatusCase(fixture),
+      invite_reused_warm: await runWarmInviteReuseCase(fixture),
+      invite_after_search_resets_dialog_and_writes_once:
+        await runInviteAfterSearchCase(fixture),
+      residue_invalidates_then_recovers_cold:
+        await runResidueRecoveryCase(fixture),
     };
   } finally {
     await closeSetup(state);
