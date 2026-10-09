@@ -18,6 +18,7 @@ class ContactMergeAction
       merge_contact_notes
       merge_calls
       merge_prospecting_leads
+      merge_crm_records
       merge_and_remove_mergee_contact
     end
     @base_contact
@@ -60,6 +61,32 @@ class ContactMergeAction
   def merge_prospecting_leads
     Autonomia::Prospecting::Lead.where(account_id: @account.id, contact_id: @mergee_contact.id)
                                 .update_all(contact_id: @base_contact.id, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+  end
+
+  # O contato absorvido é apagado logo depois. Sem isto, os cards ficariam sem contato (o Rails anula o vínculo) e os
+  # follow-ups e convidados de reunião seriam apagados em cascata pelo banco.
+  def merge_crm_records
+    merge_crm_cards
+    merge_crm_follow_ups
+    merge_crm_meeting_guests
+  end
+
+  def merge_crm_cards
+    Crm::Card.where(account_id: @account.id, contact_id: @mergee_contact.id)
+             .update_all(contact_id: @base_contact.id, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+  end
+
+  def merge_crm_follow_ups
+    Crm::FollowUp.where(account_id: @account.id, contact_id: @mergee_contact.id)
+                 .update_all(contact_id: @base_contact.id, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+  end
+
+  # Quem já é convidado da reunião pelo contato que fica não precisa de um segundo convite: o do absorvido some com ele.
+  def merge_crm_meeting_guests
+    base_meeting_ids = Crm::MeetingGuest.where(account_id: @account.id, contact_id: @base_contact.id).select(:meeting_id)
+    Crm::MeetingGuest.where(account_id: @account.id, contact_id: @mergee_contact.id)
+                     .where.not(meeting_id: base_meeting_ids)
+                     .update_all(contact_id: @base_contact.id, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
   end
 
   def merge_and_remove_mergee_contact

@@ -189,6 +189,87 @@ describe ContactMergeAction do
       end
     end
 
+    context 'when o contato absorvido tem vínculos do CRM' do
+      let(:agent) { create_crm_agent(account: account).first }
+      let(:pipeline_and_stage) { create_crm_pipeline(account: account, user: agent) }
+      let(:pipeline) { pipeline_and_stage.first }
+      let(:stage) { pipeline_and_stage.last }
+
+      def create_card(contact, title)
+        account.crm_cards.create!(pipeline: pipeline, stage: stage, owner: agent, contact: contact, title: title)
+      end
+
+      def create_meeting(card)
+        meeting = Crm::Meeting.new(account: account, card: card, created_by: agent, title: 'Reunião', provider: 0,
+                                   starts_at: 1.day.from_now, ends_at: 1.day.from_now + 1.hour, timezone: 'UTC')
+        meeting.save!(validate: false)
+        meeting
+      end
+
+      def create_meeting_guest(card, contact, email, meeting: create_meeting(card))
+        Crm::MeetingGuest.create!(account: account, meeting: meeting, contact: contact, email: email, guest_type: :contact_guest)
+      end
+
+      it 'move os cards do absorvido para o contato que fica' do
+        card = create_card(mergee_contact, 'Card do absorvido')
+
+        contact_merge
+
+        expect(card.reload.contact_id).to eq(base_contact.id)
+      end
+
+      it 'mantém os cards que já eram do contato que fica' do
+        card = create_card(base_contact, 'Card do base')
+
+        contact_merge
+
+        expect(card.reload.contact_id).to eq(base_contact.id)
+      end
+
+      it 'não move card de outra conta que aponte para o id do absorvido' do
+        other_account = create(:account)
+        other_user = create_crm_agent(account: other_account).first
+        other_pipeline, other_stage = create_crm_pipeline(account: other_account, user: other_user)
+        foreign = other_account.crm_cards.create!(pipeline: other_pipeline, stage: other_stage, owner: other_user, title: 'Card de outra conta')
+        foreign.update_columns(contact_id: mergee_contact.id) # rubocop:disable Rails/SkipsModelValidations
+
+        contact_merge
+
+        expect(foreign.reload.contact_id).to be_nil
+      end
+
+      it 'move os follow-ups do absorvido em vez de apagá-los' do
+        card = create_card(mergee_contact, 'Card com follow-up')
+        follow_up = account.crm_follow_ups.create!(card: card, contact: mergee_contact, created_by: agent, title: 'Retornar',
+                                                   due_at: 1.day.from_now, timezone: 'UTC')
+
+        contact_merge
+
+        expect(follow_up.reload.contact_id).to eq(base_contact.id)
+      end
+
+      it 'move o convidado de reunião do absorvido para o contato que fica' do
+        card = create_card(mergee_contact, 'Card com reunião')
+        guest = create_meeting_guest(card, mergee_contact, 'novo@new.com')
+
+        contact_merge
+
+        expect(guest.reload.contact_id).to eq(base_contact.id)
+      end
+
+      it 'não quebra a mescla quando os dois já são convidados da mesma reunião' do
+        card = create_card(mergee_contact, 'Card com reunião')
+        meeting = create_meeting(card)
+        base_guest = create_meeting_guest(card, base_contact, 'old@old.com', meeting: meeting)
+        mergee_guest = create_meeting_guest(card, mergee_contact, 'new@new.com', meeting: meeting)
+
+        expect { contact_merge }.not_to raise_error
+
+        expect(base_guest.reload.contact_id).to eq(base_contact.id)
+        expect(Crm::MeetingGuest.exists?(mergee_guest.id)).to be(false)
+      end
+    end
+
     context 'when contacts belong to a different account' do
       it 'throws an exception' do
         new_account = create(:account)
