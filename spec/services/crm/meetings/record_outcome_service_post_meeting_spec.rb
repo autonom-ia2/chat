@@ -86,7 +86,8 @@ RSpec.describe Crm::Meetings::RecordOutcomeService do
       world.card.update!(stage: proposal)
       expect(record('held').post_meeting).to be_nil
 
-      meeting.update!(outcome: nil)
+      # Zera a marca do primeiro "Aconteceu" para testar só o card fechado.
+      meeting.update!(outcome: nil, metadata: { 'booking_profile_id' => world.profile.id })
       world.card.update!(stage: world.stage, status: :won)
       expect(record('held').post_meeting).to be_nil
       expect(world.card.reload.stage_id).to eq(world.stage.id)
@@ -97,6 +98,42 @@ RSpec.describe Crm::Meetings::RecordOutcomeService do
       world.pipeline.update!(status: :archived)
 
       expect(record('held').post_meeting).to be_nil
+    end
+
+    it 'does not take a card of a pipeline outside the page flow to the chosen stage' do
+      support_pipeline, support_stage = create_crm_pipeline(account: account, user: world.host, name: 'Suporte')
+      world.card.update!(pipeline: support_pipeline, stage: support_stage)
+      world.profile.update!(post_meeting_mode: 'auto', post_meeting_stage: proposal)
+
+      expect(record('held').post_meeting).to be_nil
+      expect(world.card.reload).to have_attributes(pipeline_id: support_pipeline.id, stage_id: support_stage.id)
+      expect(world.card.activities.where(event_type: 'move')).to be_empty
+    end
+
+    it 'moves only once per meeting, even after switching to no-show and back to held' do
+      world.profile.update!(post_meeting_mode: 'auto', post_meeting_stage: proposal)
+      expect(record('held').post_meeting).to include(moved: true)
+      expect(meeting.reload.metadata['post_meeting_at']).to be_present
+
+      Crm::Cards::Mover.new(card: world.card.reload, actor: closer, target_stage: world.stage).perform
+      record('no_show')
+
+      expect(record('held').post_meeting).to be_nil
+      expect(world.card.reload.stage_id).to eq(world.stage.id)
+      expect(world.card.activities.where(event_type: 'move').count).to eq(2)
+    end
+
+    it 'does not move twice on a double tap: the second request, loaded before the first saved, sees it under the lock' do
+      world.profile.update!(post_meeting_mode: 'auto', post_meeting_stage: proposal)
+      stale = Crm::Meeting.find(meeting.id)
+      expect(stale.card.stage_id).to eq(world.stage.id) # carregado antes do primeiro toque
+      record('held')
+
+      second = described_class.new(meeting: stale, outcome: 'held', actor: closer)
+      second.perform
+
+      expect(second.post_meeting).to be_nil
+      expect(world.card.activities.where(event_type: 'move').count).to eq(1)
     end
 
     it 'does not ask again when the notes of a held meeting are saved later' do

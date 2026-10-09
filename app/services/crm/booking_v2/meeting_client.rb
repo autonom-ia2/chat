@@ -47,9 +47,22 @@ class Crm::BookingV2::MeetingClient
     @invite = Crm::BookingInvite.where(account_id: meeting.account_id, meeting_id: meeting.id).order(:id).last
   end
 
-  # Primeira conversa que a pessoa vê, para mandar uma mensagem ao cliente (Lembrar, link para remarcar).
+  # Conversa para mandar uma mensagem ao cliente (Lembrar, link para remarcar): a primeira que a pessoa vê e em que o
+  # canal deixa responder agora; sem nenhuma assim, a primeira que ela vê (quem chama recusa com `cannot_reply`).
   def reply_conversation
-    @reply_conversation ||= candidates.find { |conversation| @visible.call(conversation) }
+    return @reply_conversation if defined?(@reply_conversation)
+
+    seen = candidates.select { |conversation| @visible.call(conversation) }
+    @reply_conversation = seen.find(&:can_reply?) || seen.first
+  end
+
+  # O cliente não quer mensagens ativas: recusou (opt-out), parou os avisos da página (contato) ou desta reunião.
+  # Mesma precedência dos avisos automáticos (`Notices::Sender`). Vale para Lembrar e para o link de remarcar.
+  def stopped?
+    return true if contact&.opted_out?
+    return true if Crm::BookingNoticeStop.stopped?(account_id: meeting.account_id, contact_id: contact&.id)
+
+    meeting.reminders_stopped_at.present?
   end
 
   # Primeira conversa de WhatsApp que a pessoa vê, para o botão "Chamar no WhatsApp".

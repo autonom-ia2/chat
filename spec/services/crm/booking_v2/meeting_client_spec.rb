@@ -60,6 +60,34 @@ RSpec.describe Crm::BookingV2::MeetingClient do
     expect(described_class.new(meeting.reload, visible: ->(_conversation) { false }).as_json[:conversation_id]).to be_nil
   end
 
+  it 'writes in the first conversation the channel lets the person answer now, and keeps the first seen when none can' do
+    closed_channel = create(:channel_api, account: account, additional_attributes: { 'agent_reply_time_window' => '12' })
+    closed = conversation_in(closed_channel.inbox)
+    open_chat = conversation_in(widget)
+    meeting.update!(conversation: closed)
+    world.card.update!(primary_conversation: open_chat)
+
+    expect(described_class.new(meeting.reload).reply_conversation).to eq(open_chat)
+
+    only_closed = described_class.new(meeting.reload, visible: ->(conversation) { conversation.id == closed.id })
+    expect(only_closed.reply_conversation).to eq(closed)
+  end
+
+  it 'knows when the client does not want active messages: opt-out, stop of the page notices or of this meeting' do
+    expect(described_class.new(meeting).stopped?).to be(false)
+
+    world.contact.update!(opted_out_at: Time.current)
+    expect(described_class.new(meeting.reload).stopped?).to be(true)
+
+    world.contact.update!(opted_out_at: nil)
+    Crm::BookingNoticeStop.create!(account: account, contact: world.contact)
+    expect(described_class.new(meeting.reload).stopped?).to be(true)
+
+    Crm::BookingNoticeStop.delete_all
+    meeting.update!(reminders_stopped_at: Time.current)
+    expect(described_class.new(meeting.reload).stopped?).to be(true)
+  end
+
   it 'treats official WhatsApp and the WAHA API channel as WhatsApp, not a website chat or a plain API channel' do
     waha = create(:channel_api, account: account, additional_attributes: { 'provider' => 'waha' })
     plain_api = create(:channel_api, account: account)

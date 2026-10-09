@@ -77,6 +77,57 @@ RSpec.describe Crm::BookingV2::RebookLink do
     expect(world.card.activities.where(event_type: 'booking_rebook_link_sent')).to be_empty
   end
 
+  it 'refuses, creating and sending nothing, when the client opted out or stopped the notices (contact or meeting)' do
+    mark_no_show
+    world.contact.update!(opted_out_at: Time.current)
+    expect { rebook }.to raise_error(Crm::BookingV2::MeetingActionError) { |error| expect([error.message, error.url]).to eq(['stopped', nil]) }
+
+    world.contact.update!(opted_out_at: nil)
+    Crm::BookingNoticeStop.create!(account: account, contact: world.contact)
+    expect { rebook }.to raise_error(Crm::BookingV2::MeetingActionError, 'stopped')
+
+    Crm::BookingNoticeStop.delete_all
+    meeting.update!(reminders_stopped_at: Time.current)
+    expect { rebook }.to raise_error(Crm::BookingV2::MeetingActionError, 'stopped')
+
+    expect(Crm::BookingInvite.count).to eq(0)
+    expect(conversation.messages.count).to eq(0)
+  end
+
+  it 'refuses a second tap within 10 minutes without a new link, and allows it after that' do
+    mark_no_show
+    first = rebook
+    expect(meeting.reload.metadata).to include('rebook_link_sent_at' => Time.current.iso8601, 'rebook_link_sent_by_id' => world.host.id)
+
+    expect { rebook }.to raise_error(Crm::BookingV2::MeetingActionError) { |error| expect([error.message, error.url]).to eq(['recently_sent', nil]) }
+    expect(Crm::BookingInvite.count).to eq(1)
+    expect(conversation.messages.count).to eq(1)
+
+    # Depois da espera sai de novo, com o mesmo link ainda válido (o InviteCreator reaproveita o convite aberto).
+    travel 11.minutes
+    expect(rebook.id).to eq(first.id)
+    expect(conversation.messages.count).to eq(2)
+  end
+
+  it 'sees, under the lock, a send made after the meeting was loaded (two taps at once)' do
+    mark_no_show
+    stale = Crm::Meeting.find(meeting.id)
+    rebook
+
+    client = Crm::BookingV2::MeetingClient.new(stale, visible: ->(_conversation) { true })
+    expect { described_class.new(meeting: stale, user: world.host, client: client).perform }
+      .to raise_error(Crm::BookingV2::MeetingActionError, 'recently_sent')
+    expect(conversation.messages.count).to eq(1)
+  end
+
+  it 'does not start the wait when the message could not go out' do
+    mark_no_show
+    expect { rebook(visible: ->(_conversation) { false }) }.to raise_error(Crm::BookingV2::MeetingActionError, 'no_conversation')
+
+    expect(meeting.reload.metadata).not_to have_key('rebook_link_sent_at')
+    expect { rebook }.to change(conversation.messages, :count).by(1)
+  end
+
   it 'falls back to the page the person attends when the meeting page was paused' do
     mark_no_show
     other = create_booking_profile(account: account, host: world.host, pipeline: world.pipeline, stage: world.stage, title: 'Outra')

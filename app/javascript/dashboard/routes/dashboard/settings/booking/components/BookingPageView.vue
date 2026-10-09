@@ -6,11 +6,13 @@ import BookingPreviewCard from './BookingPreviewCard.vue';
 import BookingDestination from './BookingDestination.vue';
 import BookingLinkActions from './BookingLinkActions.vue';
 import BookingNoticesSummary from './BookingNoticesSummary.vue';
+import BookingPostMeeting from './BookingPostMeeting.vue';
 import { pageToForm } from '../bookingPageForm';
 import { joinNames } from '../bookingFormat';
 
 // Para quem só vê (agendamento_view): a página como o cliente vê, para onde vai
-// quem marcar e, com a página no ar, o link. Nenhum botão muda nada (J8-A4).
+// quem marcar, os avisos, "Depois da reunião" (#1193) e, com a página no ar, o
+// link. Nenhum botão muda nada (J8-A4).
 const props = defineProps({
   pageId: { type: Number, required: true },
 });
@@ -62,6 +64,11 @@ const peopleNames = computed(() =>
       <BookingNoticesSummary
         :form="form"
         :inbox-options="page.notice_inbox_options || []"
+      />
+      <BookingPostMeeting
+        :page-id="page.id"
+        :post-meeting="page.post_meeting || {}"
+        :can-manage="false"
       />
       <BookingLinkActions
         v-if="page.enabled && page.public_url"

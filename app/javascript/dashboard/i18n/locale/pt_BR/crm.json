@@ -1075,6 +1075,7 @@
           "STOPPED": "O cliente pediu para não receber mensagens sobre esta reunião. Nada foi enviado.",
           "NO_INVITE": "Esta reunião não tem o link do cliente. Nada foi enviado.",
           "RECENTLY_REMINDED": "Você lembrou o cliente há poucos minutos. Espere um pouco para tentar de novo.",
+          "RECENTLY_SENT": "O link saiu há poucos minutos. Espere um pouco para mandar de novo.",
           "NO_CONVERSATION": "Não há conversa com este cliente que você possa responder. Copie o link e envie de outro jeito.",
           "CANNOT_REPLY": "O cliente precisa mandar mensagem primeiro. Copie o link e envie de outro jeito.",
           "NOT_REBOOKABLE": "Isto só funciona depois de marcar “Não compareceu”.",
