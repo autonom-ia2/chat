@@ -4,7 +4,11 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { setTimeout as delay } from 'node:timers/promises';
-import { executeBrowserOperation } from '../../../scripts/instagram_testers/browser-operations.mjs';
+import {
+  executeBrowserOperation,
+  INVITE_RESPONSE_CLASSES,
+  TIMING_PHASES,
+} from '../../../scripts/instagram_testers/browser-operations.mjs';
 import {
   handleBrowserRoute,
   isAllowedBrowserRequest,
@@ -86,12 +90,15 @@ const CASES = [
     fault: { path: INVITE_PATH, body: SUCCESS_BODY },
     expect: { invited: true, write_started: true, delta: 1 },
     permitSeesNoWrite: true,
+    responseClasses: ['success_true'],
+    invitePhases: true,
   },
   {
     name: 'slow_meta_response_is_success_not_false_failure',
     permit: permitAfter(0, WRITE),
     fault: { path: INVITE_PATH, delayMs: 8000, body: SUCCESS_BODY },
     expect: { invited: true, write_started: true, delta: 1 },
+    responseClasses: ['success_true'],
   },
   {
     name: 'meta_silent_until_deadline_is_truthful_unknown',
@@ -100,6 +107,7 @@ const CASES = [
     fault: { path: INVITE_PATH, delayMs: 40000, body: SUCCESS_BODY },
     expect: { error_code: 'invite_unknown', write_started: true, delta: 1 },
     returnsBeforeDeadlinePlusMs: 2000,
+    responseClasses: ['timeout'],
   },
   {
     name: 'stalled_body_after_headers_is_unknown_within_budget',
@@ -112,18 +120,22 @@ const CASES = [
     },
     expect: { error_code: 'invite_unknown', write_started: true, delta: 1 },
     returnsBeforeDeadlinePlusMs: TASK_SETTLE_MS + 1000,
+    responseClasses: ['timeout'],
   },
   {
     name: 'meta_rejects_invite',
     permit: permitAfter(0, WRITE),
     fault: { path: INVITE_PATH, body: REJECTED_BODY },
     expect: { error_code: 'invite_rejected', write_started: true, delta: 1 },
+    responseClasses: ['success_false'],
   },
   {
-    // B5 adds the invite_response_class assertion through onTiming.
-    name: 'success_missing_is_unknown',
+    // The fixture answers {"payload":{}}: no boolean success.
+    name: 'success_missing_is_unknown_and_classified',
     permit: permitAfter(0, WRITE),
     expect: { error_code: 'invite_unknown', write_started: true, delta: 1 },
+    responseClasses: ['success_missing'],
+    invitePhases: true,
   },
   {
     name: 'permit_noop_never_clicks',
@@ -135,6 +147,7 @@ const CASES = [
       delta: 0,
     },
     noClick: true,
+    responseClasses: ['none'],
   },
   {
     // Simulates a re-claim after a lost completion: another claim's marker.
@@ -142,6 +155,7 @@ const CASES = [
     permit: permitAfter(0, { error_code: 'invite_unknown' }),
     expect: { error_code: 'invite_unknown', write_started: false, delta: 0 },
     noClick: true,
+    responseClasses: ['none'],
   },
   {
     name: 'permit_transport_times_out_never_clicks',
@@ -150,6 +164,7 @@ const CASES = [
     expect: { error_code: 'meta_unavailable', write_started: false, delta: 0 },
     noClick: true,
     returnsWithinPermitBudgetPlusMs: 1000,
+    responseClasses: ['none'],
   },
   {
     name: 'budget_too_short_never_requests_permit',
@@ -158,24 +173,28 @@ const CASES = [
     expect: { error_code: 'meta_unavailable', write_started: false, delta: 0 },
     noClick: true,
     noPermit: true,
+    responseClasses: ['none'],
   },
   {
-    // B5 adds the invite_response_class assertion through onTiming.
     name: 'mid_flight_disconnect_is_unknown_fast',
     permit: permitAfter(0, WRITE),
-    fault: { path: INVITE_PATH, disconnect: true },
+    // Persistent: Chrome re-sends a request whose reused keep-alive socket
+    // resets before any response byte, below the route layer (also on the
+    // base code). A one-shot fault let that retry reach the default body, so
+    // the page never saw the failure. The page still issues one invite
+    // request; the extra transport hit is Chrome's retry.
+    fault: { path: INVITE_PATH, disconnect: true, persistent: true },
     expect: { error_code: 'invite_unknown', write_started: true, delta: 1 },
     elapsedBelowMs: 10000,
-    // Chrome re-sends a request whose reused keep-alive socket resets before
-    // any response byte, below the route layer (also on the base code). The
-    // page still issued one invite request; the extra hit is the transport.
     transportRetryAllowed: true,
+    responseClasses: ['request_failed', 'non_200'],
   },
   {
     name: 'double_post_from_page_is_single_write',
     permit: permitAfter(0, WRITE),
     fault: { path: rolesPagePath, status: 200, body: doublePostHtml() },
     expect: { error_code: 'invite_unknown', write_started: true, delta: 1 },
+    responseClasses: ['duplicate'],
   },
 ];
 
@@ -201,6 +220,59 @@ async function settledInviteCount(transport) {
     }
   }
   return last;
+}
+
+// One timing event per operation: enums and allowlisted phases only, never
+// the username, target or operation identifiers.
+function checkTiming(definition, observed, check) {
+  const { timings, request } = observed;
+  check('timing_once', timings.length === 1);
+  const [timing] = timings;
+  if (!timing) return;
+  const phases = Object.keys(timing.phases || {});
+  check('timing_action', timing.action === 'invite');
+  check(
+    'timing_result',
+    timing.result === (observed.result.error_code ?? 'ok')
+  );
+  check(
+    'timing_phases_allowlisted',
+    phases.every(name => TIMING_PHASES.includes(name))
+  );
+  check(
+    'timing_phase_ms',
+    Object.values(timing.phases || {}).every(
+      value => Number.isInteger(value) && value >= 0
+    )
+  );
+  check(
+    'timing_total_ms',
+    Number.isInteger(timing.total_ms) && timing.total_ms >= 0
+  );
+  check(
+    'timing_class_enum',
+    INVITE_RESPONSE_CLASSES.includes(timing.invite_response_class)
+  );
+  check(
+    'timing_class',
+    definition.responseClasses.includes(timing.invite_response_class)
+  );
+  if (definition.invitePhases)
+    check(
+      'timing_invite_phases',
+      ['invite_permit', 'invite_response'].every(name => phases.includes(name))
+    );
+  const serialized = JSON.stringify(timing);
+  check(
+    'timing_no_identifiers',
+    [
+      fixture.target.username,
+      fixture.target.id,
+      request.id,
+      request.request_id,
+      request.claim,
+    ].every(value => !serialized.includes(value))
+  );
 }
 
 function checkCase(definition, observed) {
@@ -255,6 +327,7 @@ function checkCase(definition, observed) {
       'elapsed',
       observed.returnedAt - observed.startedAt < definition.elapsedBelowMs
     );
+  checkTiming(definition, observed, check);
   return failures;
 }
 
@@ -301,14 +374,17 @@ try {
     let permitTimeoutMs = null;
     const startedAt = Date.now();
     const deadlineAt = startedAt + (definition.budgetMs || DEFAULT_BUDGET_MS);
+    const request = makeRequest('invite_unknown', config, fixture, index + 2);
+    const timings = [];
     let result;
     try {
       result = await executeBrowserOperation({
         page,
         configuration: config,
-        request: makeRequest('invite_unknown', config, fixture, index + 2),
+        request,
         signal: AbortSignal.timeout(OPERATION_TIMEOUT_MS),
         deadlineAt,
+        onTiming: value => timings.push(value),
         requestGuard: parameters =>
           isAllowedBrowserRequest({ ...parameters, config }),
         permitInvite: (observation, options) => {
@@ -337,6 +413,8 @@ try {
       permitTimeoutMs,
       pageInviteRequests,
       clicked: marks.includes('invite_button_clicked'),
+      timings,
+      request,
     };
     const failures = checkCase(definition, observed);
     results.push({
@@ -357,6 +435,9 @@ try {
         permit_deltas: permitDeltas,
         permit_timeout_ms: permitTimeoutMs,
         clicked: observed.clicked,
+        timing_count: timings.length,
+        invite_response_class: timings[0]?.invite_response_class ?? null,
+        timing_phases: Object.keys(timings[0]?.phases || {}),
       },
     });
   }

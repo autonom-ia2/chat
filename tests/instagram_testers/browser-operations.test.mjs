@@ -426,3 +426,157 @@ test('parseRolesStatus keeps its lookup and its selection check', () => {
     error => error.code === 'invalid_selection'
   );
 });
+
+const EXPECTED_TIMING_PHASES = [
+  'configuration_validation',
+  'request_validation',
+  'observers',
+  'request_routes',
+  'roles_refresh',
+  'roles_navigation',
+  'roles_capture',
+  'tester_dialog_reset',
+  'add_people_button',
+  'tester_dialog',
+  'tester_role',
+  'search_input',
+  'typeahead_response',
+  'roles_status',
+  'invite_execution',
+  'invite_permit',
+  'invite_click',
+  'invite_request',
+  'invite_response',
+];
+const EXPECTED_RESPONSE_CLASSES = [
+  'success_true',
+  'success_false',
+  'success_missing',
+  'malformed',
+  'non_200',
+  'timeout',
+  'request_failed',
+  'duplicate',
+  'none',
+];
+
+function steppingClock(stepMs) {
+  let time = 1000;
+  return () => {
+    time += stepMs;
+    return time;
+  };
+}
+
+function identifiers(value) {
+  return [
+    value.id,
+    value.request_id,
+    value.claim,
+    value.username,
+    value.target_id,
+  ].filter(Boolean);
+}
+
+async function timedFailure(operationRequest, options = {}) {
+  const timings = [];
+  const diagnostics = [];
+  const result = await operations.executeBrowserOperation({
+    page: null,
+    configuration: config,
+    request: operationRequest,
+    requestGuard: () => true,
+    now: steppingClock(7),
+    onDiagnostic: value => diagnostics.push(value),
+    onTiming: value => {
+      timings.push(value);
+      if (options.throwFromTiming) throw new Error(INVITE_URL);
+    },
+  });
+  return { result, timings, diagnostics };
+}
+
+test('timing allowlists are frozen and hold the invite phases and classes', () => {
+  assert.equal(Object.isFrozen(operations.TIMING_PHASES), true);
+  assert.deepEqual([...operations.TIMING_PHASES], EXPECTED_TIMING_PHASES);
+  assert.equal(Object.isFrozen(operations.INVITE_RESPONSE_CLASSES), true);
+  assert.deepEqual(
+    [...operations.INVITE_RESPONSE_CLASSES],
+    EXPECTED_RESPONSE_CLASSES
+  );
+});
+
+test('enterPhase closes the previous phase and drops unknown names', () => {
+  const state = operations.operationState();
+  const times = [100, 130, 175, 180, 200];
+  const now = () => times.shift();
+
+  operations.enterPhase(state, 'roles_navigation', now);
+  operations.enterPhase(state, 'synthetic.user', now);
+  operations.enterPhase(state, 'roles_navigation', now);
+  operations.enterPhase(state, 'invite_permit', now);
+  operations.enterPhase(state, null, now);
+
+  assert.deepEqual(state.phases, { roles_navigation: 35, invite_permit: 20 });
+  assert.equal(state.diagnosticPhase, null);
+});
+
+test('onTiming reports one allowlisted, identifier-free event per invite', async () => {
+  const { result, timings, diagnostics } = await timedFailure(request);
+
+  assert.equal(result.error_code, 'meta_unavailable');
+  assert.equal(result.write_started, false);
+  assert.equal(diagnostics.length, 1);
+  assert.equal(timings.length, 1);
+  const [timing] = timings;
+  assert.deepEqual(Object.keys(timing).sort(), [
+    'action',
+    'event',
+    'invite_response_class',
+    'phases',
+    'result',
+    'total_ms',
+  ]);
+  assert.equal(timing.event, 'instagram_browser_operation_timing');
+  assert.equal(timing.action, 'invite');
+  assert.equal(timing.result, 'meta_unavailable');
+  assert.equal(timing.invite_response_class, 'none');
+  assert.equal(Number.isInteger(timing.total_ms) && timing.total_ms >= 0, true);
+  assert.deepEqual(Object.keys(timing.phases), [
+    'configuration_validation',
+    'request_validation',
+  ]);
+  Object.values(timing.phases).forEach(value =>
+    assert.equal(Number.isInteger(value) && value >= 0, true)
+  );
+  const serialized = JSON.stringify(timing);
+  identifiers(request).forEach(value =>
+    assert.equal(serialized.includes(value), false)
+  );
+});
+
+test('onTiming omits the response class outside invites and masks bad actions', async () => {
+  const search = { ...request, action: 'search' };
+  delete search.target_id;
+  const searchTiming = (await timedFailure(search)).timings;
+  assert.equal(searchTiming.length, 1);
+  assert.equal(searchTiming[0].action, 'search');
+  assert.equal('invite_response_class' in searchTiming[0], false);
+
+  const invalid = await timedFailure({ ...request, action: 'delete' });
+  assert.equal(invalid.timings.length, 1);
+  assert.equal(invalid.timings[0].action, 'invalid');
+  assert.equal(invalid.timings[0].result, 'invalid_selection');
+  assert.equal('invite_response_class' in invalid.timings[0], false);
+});
+
+test('a throwing onTiming never changes the terminal observation', async () => {
+  const quiet = await timedFailure(request);
+  const noisy = await timedFailure(request, { throwFromTiming: true });
+
+  assert.equal(noisy.timings.length, 1);
+  assert.deepEqual(
+    { ...noisy.result, captured_at: null },
+    { ...quiet.result, captured_at: null }
+  );
+});

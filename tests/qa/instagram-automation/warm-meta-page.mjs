@@ -10,6 +10,8 @@ import {
   executeBrowserOperation,
   createWarmMetaPage,
   acceptFreshRolesResponse,
+  INVITE_RESPONSE_CLASSES,
+  TIMING_PHASES,
 } from '../../../scripts/instagram_testers/browser-operations.mjs';
 import {
   handleBrowserRoute,
@@ -123,6 +125,41 @@ function permitReply(observation, fields) {
 const denyInvite = observation =>
   permitReply(observation, { error_code: 'invalid_selection' });
 
+const timingReceipt = { operations: 0, last: null };
+
+// Every operation reports exactly one timing event: enums and allowlisted
+// phases only, never the username, target or operation identifiers.
+function assertTiming(timings, request, result) {
+  assert.equal(timings.length, 1);
+  const [timing] = timings;
+  assert.equal(timing.event, 'instagram_browser_operation_timing');
+  assert.equal(timing.action, request.action);
+  assert.equal(timing.result, result.error_code ?? 'ok');
+  assert.equal(Number.isInteger(timing.total_ms) && timing.total_ms >= 0, true);
+  Object.entries(timing.phases).forEach(([name, value]) => {
+    assert.equal(TIMING_PHASES.includes(name), true);
+    assert.equal(Number.isInteger(value) && value >= 0, true);
+  });
+  assert.equal('invite_response_class' in timing, request.action === 'invite');
+  if (request.action === 'invite')
+    assert.equal(
+      INVITE_RESPONSE_CLASSES.includes(timing.invite_response_class),
+      true
+    );
+  const serialized = JSON.stringify(timing);
+  [
+    request.username,
+    request.target_id,
+    request.id,
+    request.request_id,
+    request.claim,
+  ]
+    .filter(Boolean)
+    .forEach(value => assert.equal(serialized.includes(value), false));
+  timingReceipt.operations += 1;
+  timingReceipt.last = timing;
+}
+
 async function operation({
   page,
   configuration,
@@ -133,7 +170,8 @@ async function operation({
   warmInvite,
   permitInvite = denyInvite,
 }) {
-  return executeBrowserOperation({
+  const timings = [];
+  const result = await executeBrowserOperation({
     page,
     configuration,
     request,
@@ -144,7 +182,10 @@ async function operation({
     requestGuard: parameters =>
       isAllowedBrowserRequest({ ...parameters, config: configuration }),
     permitInvite: request.action === 'invite' ? permitInvite : undefined,
+    onTiming: value => timings.push(value),
   });
+  assertTiming(timings, request, result);
+  return result;
 }
 
 // The fixture counts an invite after reading its body, so wait until the
@@ -183,6 +224,14 @@ async function successfulWarmInvite(state, fixture, iteration) {
         iteration
       ),
     });
+    const timing = timingReceipt.last;
+    assert.equal(timing.invite_response_class, 'success_true');
+    [
+      'invite_permit',
+      'invite_click',
+      'invite_request',
+      'invite_response',
+    ].forEach(name => assert.equal(name in timing.phases, true));
     return {
       result,
       delta: (await settledInviteCount(state.transport)) - before,
@@ -1002,6 +1051,7 @@ async function run() {
         await runFailedInviteRetryCase(fixture),
       warm_invite_fails_closed_like_reads:
         await runWarmInviteFailClosedCase(fixture),
+      timing_once_per_operation: timingReceipt.operations,
     };
   } finally {
     await closeSetup(state);

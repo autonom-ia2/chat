@@ -118,6 +118,43 @@ const SAFE_ERRORS = new Set([
   'operator_required',
 ]);
 
+// Timing telemetry (B5) carries only these phase names and response classes;
+// anything else is dropped before it can reach a log line.
+export const TIMING_PHASES = Object.freeze([
+  'configuration_validation',
+  'request_validation',
+  'observers',
+  'request_routes',
+  'roles_refresh',
+  'roles_navigation',
+  'roles_capture',
+  'tester_dialog_reset',
+  'add_people_button',
+  'tester_dialog',
+  'tester_role',
+  'search_input',
+  'typeahead_response',
+  'roles_status',
+  'invite_execution',
+  'invite_permit',
+  'invite_click',
+  'invite_request',
+  'invite_response',
+]);
+const TIMING_PHASE_SET = new Set(TIMING_PHASES);
+export const INVITE_RESPONSE_CLASSES = Object.freeze([
+  'success_true',
+  'success_false',
+  'success_missing',
+  'malformed',
+  'non_200',
+  'timeout',
+  'request_failed',
+  'duplicate',
+  'none',
+]);
+const INVITE_RESPONSE_CLASS_SET = new Set(INVITE_RESPONSE_CLASSES);
+
 class BrowserOperationError extends Error {
   constructor(code) {
     super(code);
@@ -1019,7 +1056,79 @@ export function operationState() {
       resolveInviteResponse = resolve;
     }),
     resolveInviteResponse,
+    diagnosticPhase: null,
+    phaseStartedAt: null,
+    phases: {},
+    clock: undefined,
   };
+}
+
+// Closes the current phase (only allowlisted names are timed) and opens the
+// next one; the diagnostic keeps naming the phase a failure happened in.
+export function enterPhase(state, name, now = state.clock) {
+  const at = operationNow(now);
+  const previous = state.diagnosticPhase;
+  if (TIMING_PHASE_SET.has(previous) && Number.isFinite(state.phaseStartedAt))
+    state.phases = {
+      ...state.phases,
+      [previous]:
+        (state.phases[previous] ?? 0) + Math.max(0, at - state.phaseStartedAt),
+    };
+  state.diagnosticPhase = name;
+  state.phaseStartedAt = at;
+}
+
+function timingMs(value) {
+  return Number.isInteger(value) && value >= 0 ? value : null;
+}
+
+// Rebuilds a timing event from allowlists only: milliseconds and enums, never
+// usernames, ids, URLs, bodies or error messages.
+export function timingObservation(value) {
+  const action = ACTIONS.has(value?.action) ? value.action : 'invalid';
+  const phases = Object.fromEntries(
+    TIMING_PHASES.map(name => [name, timingMs(value?.phases?.[name])]).filter(
+      ([, milliseconds]) => milliseconds !== null
+    )
+  );
+  const responseClass = INVITE_RESPONSE_CLASS_SET.has(
+    value?.invite_response_class
+  )
+    ? value.invite_response_class
+    : 'none';
+  return {
+    event: 'instagram_browser_operation_timing',
+    action,
+    result:
+      value?.result === 'ok' || SAFE_ERRORS.has(value?.result)
+        ? value.result
+        : 'meta_unavailable',
+    total_ms: timingMs(value?.total_ms) ?? 0,
+    phases,
+    ...(action === 'invite' ? { invite_response_class: responseClass } : {}),
+  };
+}
+
+function reportTiming(onTiming, state, request, result, startedAt, now) {
+  if (typeof onTiming !== 'function') return;
+  try {
+    onTiming(
+      timingObservation({
+        action: request?.action,
+        result,
+        total_ms: Math.round(Math.max(0, operationNow(now) - startedAt)),
+        phases: Object.fromEntries(
+          Object.entries(state.phases).map(([name, milliseconds]) => [
+            name,
+            Math.round(milliseconds),
+          ])
+        ),
+        invite_response_class: state.inviteResponseClass,
+      })
+    );
+  } catch {
+    // Telemetry must not change the operation's terminal observation.
+  }
 }
 
 function inviteAnchorReady(state) {
@@ -1990,17 +2099,17 @@ async function openTesterSearch({
   if (navigate) {
     const refreshWarm = warmRefreshRequired(warmMetaPage, page, config);
     if (refreshWarm) {
-      state.diagnosticPhase = 'roles_refresh';
+      enterPhase(state, 'roles_refresh');
       await refreshWarmMetaPage(warmMetaPage, {
         page,
         configuration: config,
         signal,
       });
     } else {
-      state.diagnosticPhase = 'roles_navigation';
+      enterPhase(state, 'roles_navigation');
       await navigateRoles(page, config, signal);
     }
-    state.diagnosticPhase = 'roles_capture';
+    enterPhase(state, 'roles_capture');
     rolesDocument = await captureRoles(
       state,
       page,
@@ -2010,19 +2119,19 @@ async function openTesterSearch({
     );
   }
   if (warmMetaPage) {
-    state.diagnosticPhase = 'tester_dialog_reset';
+    enterPhase(state, 'tester_dialog_reset');
     await closeVisibleTesterDialog(page, signal);
   }
-  state.diagnosticPhase = 'add_people_button';
+  enterPhase(state, 'add_people_button');
   const add = await waitForUnique(
     page.getByRole('button', { name: /^(?:Add people|Adicionar pessoas)$/i }),
     signal
   );
   await requireEnabled(add, signal);
   await withSignal(add.click({ noWaitAfter: true }), signal);
-  state.diagnosticPhase = 'tester_dialog';
+  enterPhase(state, 'tester_dialog');
   const dialog = await waitForUnique(page.getByRole('dialog'), signal);
-  state.diagnosticPhase = 'tester_role';
+  enterPhase(state, 'tester_role');
   const role = await waitForUnique(
     dialog.getByRole('radio', {
       name: /^(?:Instagram tester|Instagram testers|Testador do Instagram|Testadores do Instagram)$/i,
@@ -2032,7 +2141,7 @@ async function openTesterSearch({
   await requireEnabled(role, signal);
   await withSignal(role.check(), signal);
   if (!(await withSignal(role.isChecked(), signal))) fail('meta_unavailable');
-  state.diagnosticPhase = 'search_input';
+  enterPhase(state, 'search_input');
   const input = await waitForUnique(dialog.getByRole('combobox'), signal);
   state.searchInput = await requireEnabled(input, signal, true);
   await withSignal(state.searchInput.fill(`@${request.username}`), signal);
@@ -2040,7 +2149,7 @@ async function openTesterSearch({
     !(await inputConfirmed(state.searchInput, `@${request.username}`, signal))
   )
     fail('meta_unavailable');
-  state.diagnosticPhase = 'typeahead_response';
+  enterPhase(state, 'typeahead_response');
   const result = await withSignal(state.searchReady, signal);
   if (!safeBrowserLocation(page.url(), config)) fail('meta_session_expired');
   if (
@@ -2296,6 +2405,7 @@ async function selectAndSendInvite({
   );
   await requireEnabled(addButton, signal);
   if (!inviteAnchorReady(state)) fail('invalid_selection');
+  enterPhase(state, 'invite_permit');
   const permit = await requestPermitBeforeClick({
     page,
     config,
@@ -2312,6 +2422,7 @@ async function selectAndSendInvite({
       invited: false,
       write_started: false,
     };
+  enterPhase(state, 'invite_click');
   state.inviteResponseController = new AbortController();
   state.inviteResponseSignal = state.inviteResponseController.signal;
   state.inviteArmed = true;
@@ -2323,7 +2434,9 @@ async function selectAndSendInvite({
   } catch {
     // A click error never decides the outcome; the request wait does.
   }
+  enterPhase(state, 'invite_request');
   await waitForInviteRequest(state, signal);
+  enterPhase(state, 'invite_response');
   const outcome = await waitForInviteResponse(state, signal, deadlineAt, now);
   if (outcome?.error) fail(outcome.error);
   if (
@@ -2375,7 +2488,7 @@ async function performStatus({
     const refreshWarm =
       reuseWarm && warmRefreshRequired(warmMetaPage, page, config);
     if (refreshWarm) {
-      state.diagnosticPhase = 'roles_refresh';
+      enterPhase(state, 'roles_refresh');
       await refreshWarmMetaPage(warmMetaPage, {
         page,
         configuration: config,
@@ -2389,14 +2502,14 @@ async function performStatus({
         !warmCanRecoverCold(warmMetaPage, page, config)
       )
         fail(warmInvalidationError(warmMetaPage));
-      state.diagnosticPhase = 'roles_navigation';
+      enterPhase(state, 'roles_navigation');
       await navigateRoles(page, config, signal);
     }
-    state.diagnosticPhase = 'roles_capture';
+    enterPhase(state, 'roles_capture');
     return captureRoles(state, page, config, signal, warmMetaPage);
   })();
   const document = await documentPromise;
-  state.diagnosticPhase = 'roles_status';
+  enterPhase(state, 'roles_status');
   if (state.rolesRequests.length !== 1 || state.rolesResponses.length !== 1)
     fail('unknown_status');
   return parseRolesStatus(JSON.stringify(document), request.target_id);
@@ -2410,12 +2523,14 @@ export async function executeBrowserOperation({
   requestGuard,
   permitInvite,
   onDiagnostic,
+  onTiming,
   warmMetaPage = null,
   searchStatus = false,
   warmInvite = false,
   deadlineAt,
   now = Date.now,
 } = {}) {
+  const startedAt = operationNow(now);
   const started = baseEnvelope(request, now);
   const executionDeadline = Number.isFinite(deadlineAt)
     ? deadlineAt
@@ -2423,10 +2538,12 @@ export async function executeBrowserOperation({
   let removeRoute;
   let removeObservers;
   const state = operationState();
+  state.clock = now;
+  let timingResult = 'ok';
   try {
-    state.diagnosticPhase = 'configuration_validation';
+    enterPhase(state, 'configuration_validation');
     validateConfiguration(configuration);
-    state.diagnosticPhase = 'request_validation';
+    enterPhase(state, 'request_validation');
     validateRequest(request, configuration);
     state.capturedAt = timestamp(now);
     if (
@@ -2435,9 +2552,9 @@ export async function executeBrowserOperation({
       typeof page.goto !== 'function'
     )
       fail('meta_unavailable');
-    state.diagnosticPhase = 'observers';
+    enterPhase(state, 'observers');
     removeObservers = await attachObservers(page, state, configuration, signal);
-    state.diagnosticPhase = 'request_routes';
+    enterPhase(state, 'request_routes');
     removeRoute = await installRoute(
       page,
       configuration,
@@ -2479,7 +2596,7 @@ export async function executeBrowserOperation({
           },
           now
         );
-      state.diagnosticPhase = 'invite_execution';
+      enterPhase(state, 'invite_execution');
       const result = await performInvite({
         page,
         config: configuration,
@@ -2506,6 +2623,7 @@ export async function executeBrowserOperation({
     let code = SAFE_ERRORS.has(error?.code) ? error.code : 'meta_unavailable';
     // After a write only Meta's explicit rejection is a known outcome.
     if (writeStarted && code !== 'invite_rejected') code = 'invite_unknown';
+    timingResult = code;
     try {
       onDiagnostic?.({
         event: 'instagram_browser_operation_executor_failed',
@@ -2533,6 +2651,8 @@ export async function executeBrowserOperation({
       error_code: code,
     };
   } finally {
+    // Cleanup time is total_ms minus the phases, so the last phase ends here.
+    enterPhase(state, null);
     if (removeRoute) await removeRoute();
     if (removeObservers) removeObservers();
     state.inviteResponseController?.abort(new Error('operation_finished'));
@@ -2549,5 +2669,6 @@ export async function executeBrowserOperation({
       ],
       TASK_SETTLE_MS
     );
+    reportTiming(onTiming, state, request, timingResult, startedAt, now);
   }
 }
