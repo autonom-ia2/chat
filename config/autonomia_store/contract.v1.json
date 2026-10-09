@@ -1,0 +1,276 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Chatwoot / Financial store E0 proposal",
+  "description": "Proposal fixtures, not a declaration of deployed Financial capabilities.",
+  "definitions": {
+    "identifier": { "type": "string", "minLength": 1, "maxLength": 200, "not": { "pattern": "[\u0000-\u001f\u007f]" } },
+    "uuid": { "type": "string", "minLength": 36, "maxLength": 36, "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$" },
+    "namespace": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["installationId", "productCatalogItemId"],
+      "properties": {
+        "installationId": { "$ref": "#/definitions/identifier" },
+        "productCatalogItemId": { "$ref": "#/definitions/uuid" }
+      }
+    },
+    "resourceRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "id"],
+      "properties": {
+        "type": { "type": "string", "pattern": "^[a-z][a-z0-9._-]*$" },
+        "id": { "$ref": "#/definitions/identifier" }
+      }
+    },
+    "metric": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["metricKey", "metricName", "unit", "includedQuantity", "usageBehavior", "resetPeriod"],
+      "properties": {
+        "metricKey": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]+$" },
+        "metricName": { "type": "string", "minLength": 1 },
+        "unit": { "type": "string", "minLength": 1 },
+        "includedQuantity": { "type": "number", "minimum": 0 },
+        "usageBehavior": { "enum": ["allocation", "consumption"] },
+        "resetPeriod": { "enum": ["billing_period", "monthly", "yearly", "none"] }
+      },
+      "allOf": [{
+        "if": { "properties": { "usageBehavior": { "const": "allocation" } } },
+        "then": { "properties": { "resetPeriod": { "const": "none" } } }
+      }]
+    },
+    "reserveRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["serviceSubscriptionId", "metricKey", "quantity", "resourceRef", "idempotencyKey", "occurredAt"],
+      "properties": {
+        "serviceSubscriptionId": { "$ref": "#/definitions/uuid" },
+        "metricKey": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]+$" },
+        "quantity": { "type": "number", "exclusiveMinimum": 0 },
+        "resourceRef": { "$ref": "#/definitions/resourceRef" },
+        "idempotencyKey": { "$ref": "#/definitions/identifier" },
+        "occurredAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "commitRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["idempotencyKey"],
+      "properties": { "idempotencyKey": { "$ref": "#/definitions/identifier" } }
+    },
+    "releaseRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["idempotencyKey", "reason"],
+      "properties": {
+        "idempotencyKey": { "$ref": "#/definitions/identifier" },
+        "reason": { "enum": ["resource_disabled", "provisioning_failed", "unused_reservation"] }
+      }
+    },
+    "pagination": {
+      "type": "object", "additionalProperties": false,
+      "required": ["page", "pageSize", "totalItems", "totalPages"],
+      "properties": {
+        "page": { "type": "integer", "minimum": 1 },
+        "pageSize": { "type": "integer", "minimum": 1, "maximum": 100 },
+        "totalItems": { "type": "integer", "minimum": 0 },
+        "totalPages": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "service": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "key", "name", "description", "logoUrl"],
+      "properties": {
+        "id": { "$ref": "#/definitions/uuid" },
+        "key": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+        "name": { "type": "string", "minLength": 1 },
+        "description": { "type": ["string", "null"] },
+        "logoUrl": { "type": ["string", "null"], "pattern": "^https://", "format": "uri" }
+      }
+    },
+    "target": {
+      "oneOf": [
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["type", "featureKey"],
+          "properties": { "type": { "const": "feature" }, "featureKey": { "$ref": "#/definitions/identifier" } }
+        },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["type", "installationId", "principalAgentId"],
+          "properties": {
+            "type": { "const": "agent" },
+            "installationId": { "$ref": "#/definitions/identifier" },
+            "principalAgentId": { "type": "integer", "minimum": 1 }
+          }
+        }
+      ]
+    },
+    "offer": {
+      "type": "object", "additionalProperties": false, "required": ["plan", "price", "limits"],
+      "properties": {
+        "plan": {
+          "type": "object", "required": ["id", "name"],
+          "properties": { "id": { "$ref": "#/definitions/uuid" }, "name": { "type": "string", "minLength": 1 } }
+        },
+        "price": {
+          "type": "object", "required": ["id", "price", "currency", "billingCycle"],
+          "properties": {
+            "id": { "$ref": "#/definitions/uuid" },
+            "price": { "type": "number", "minimum": 0 },
+            "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+            "billingCycle": { "enum": ["monthly", "yearly", "one_time"] }
+          }
+        },
+        "limits": { "type": "array", "items": { "$ref": "#/definitions/metric" } }
+      }
+    },
+    "catalogResponse": {
+      "type": "object", "additionalProperties": false,
+      "required": ["contractVersion", "namespace", "data", "pagination"],
+      "properties": {
+        "contractVersion": { "const": 1 },
+        "namespace": { "$ref": "#/definitions/namespace" },
+        "pagination": { "$ref": "#/definitions/pagination" },
+        "data": {
+          "type": "array", "items": {
+            "type": "object", "additionalProperties": false, "required": ["service", "group", "target", "offers"],
+            "properties": {
+              "service": { "$ref": "#/definitions/service" }, "target": { "$ref": "#/definitions/target" },
+              "group": { "enum": ["feature", "agent"] },
+              "offers": { "type": "array", "items": { "$ref": "#/definitions/offer" } }
+            },
+            "allOf": [{
+              "if": { "properties": { "group": { "const": "agent" } } },
+              "then": { "properties": { "target": { "properties": { "type": { "const": "agent" } } } } },
+              "else": { "properties": { "target": { "properties": { "type": { "const": "feature" } } } } }
+            }]
+          }
+        }
+      }
+    },
+    "checkoutRequest": {
+      "type": "object", "additionalProperties": false, "required": ["servicePlanPriceId", "limits"],
+      "properties": {
+        "servicePlanPriceId": { "$ref": "#/definitions/uuid" },
+        "limits": { "type": "array", "items": {
+          "type": "object", "additionalProperties": false, "required": ["metricKey", "quantity"],
+          "properties": {
+            "metricKey": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]+$" },
+            "quantity": { "type": "number", "exclusiveMinimum": 0 }
+          }
+        } }
+      }
+    },
+    "checkoutResponse": {
+      "type": "object", "additionalProperties": false,
+      "required": ["contractVersion", "checkoutSessionId", "checkoutUrl", "expiresAt", "orderId", "serviceSubscriptionId"],
+      "properties": {
+        "contractVersion": { "const": 1 }, "checkoutSessionId": { "$ref": "#/definitions/uuid" },
+        "checkoutUrl": { "type": "string", "pattern": "^https://", "format": "uri" },
+        "expiresAt": { "type": "string", "format": "date-time" },
+        "orderId": { "anyOf": [{ "$ref": "#/definitions/uuid" }, { "type": "null" }] },
+        "serviceSubscriptionId": { "anyOf": [{ "$ref": "#/definitions/uuid" }, { "type": "null" }] }
+      }
+    },
+    "balance": {
+      "type": "object", "additionalProperties": false,
+      "required": ["includedQuantity", "usedQuantity", "reservedQuantity", "remainingQuantity"],
+      "properties": {
+        "includedQuantity": { "type": "number", "minimum": 0 }, "usedQuantity": { "type": "number", "minimum": 0 },
+        "reservedQuantity": { "type": "number", "minimum": 0 }, "remainingQuantity": { "type": "number", "minimum": 0 }
+      }
+    },
+    "reservationResponse": {
+      "type": "object", "additionalProperties": false, "required": ["reservation", "balance", "replayed"],
+      "properties": {
+        "replayed": { "type": "boolean" }, "balance": { "$ref": "#/definitions/balance" },
+        "reservation": {
+          "type": "object", "additionalProperties": false,
+          "required": ["id", "serviceSubscriptionId", "namespace", "metricKey", "usageBehavior", "resourceRef", "quantity", "status", "periodStart", "periodEnd", "expiresAt"],
+          "properties": {
+            "id": { "$ref": "#/definitions/uuid" }, "serviceSubscriptionId": { "$ref": "#/definitions/uuid" },
+            "namespace": { "$ref": "#/definitions/namespace" }, "resourceRef": { "$ref": "#/definitions/resourceRef" },
+            "metricKey": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]+$" },
+            "usageBehavior": { "enum": ["allocation", "consumption"] }, "quantity": { "type": "number", "exclusiveMinimum": 0 },
+            "status": { "enum": ["reserved", "committed", "released", "expired"] },
+            "periodStart": { "type": ["string", "null"], "format": "date-time" },
+            "periodEnd": { "type": ["string", "null"], "format": "date-time" },
+            "expiresAt": { "type": ["string", "null"], "format": "date-time" }
+          },
+          "allOf": [{
+            "if": { "properties": { "usageBehavior": { "const": "allocation" }, "status": { "const": "committed" } } },
+            "then": { "properties": { "expiresAt": { "type": "null" } } }
+          }]
+        }
+      }
+    },
+    "serviceSubscription": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "buyer", "namespace", "serviceCatalogItemId", "planId", "planPriceId", "status", "currentPeriodStart", "currentPeriodEnd", "cancelAtPeriodEnd", "access", "limits"],
+      "properties": {
+        "id": { "$ref": "#/definitions/uuid" },
+        "buyer": {
+          "type": "object", "additionalProperties": false, "required": ["cognitoSub"],
+          "properties": { "cognitoSub": { "$ref": "#/definitions/identifier" } }
+        },
+        "namespace": { "$ref": "#/definitions/namespace" }, "serviceCatalogItemId": { "$ref": "#/definitions/uuid" },
+        "planId": { "$ref": "#/definitions/uuid" }, "planPriceId": { "$ref": "#/definitions/uuid" },
+        "status": { "enum": ["active", "trialing", "past_due", "unpaid", "canceled"] },
+        "currentPeriodStart": { "type": "string", "format": "date-time" },
+        "currentPeriodEnd": { "type": "string", "format": "date-time" }, "cancelAtPeriodEnd": { "type": "boolean" },
+        "access": {
+          "type": "object", "additionalProperties": false, "required": ["allowed", "effectiveUntil"],
+          "properties": { "allowed": { "type": "boolean" }, "effectiveUntil": { "type": ["string", "null"], "format": "date-time" } }
+        },
+        "limits": { "type": "array", "items": {
+          "type": "object", "additionalProperties": false,
+          "required": ["metricKey", "metricName", "unit", "usageBehavior", "resetPeriod", "contractedQuantity", "usedQuantity", "reservedQuantity", "remainingQuantity"],
+          "properties": {
+            "metricKey": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]+$" },
+            "metricName": { "type": "string", "minLength": 1 }, "unit": { "type": "string", "minLength": 1 },
+            "usageBehavior": { "enum": ["allocation", "consumption"] },
+            "resetPeriod": { "enum": ["billing_period", "monthly", "yearly", "none"] },
+            "contractedQuantity": { "type": "number", "minimum": 0 }, "usedQuantity": { "type": "number", "minimum": 0 },
+            "reservedQuantity": { "type": "number", "minimum": 0 }, "remainingQuantity": { "type": "number", "minimum": 0 }
+          },
+          "allOf": [{
+            "if": { "properties": { "usageBehavior": { "const": "allocation" } } },
+            "then": { "properties": { "resetPeriod": { "const": "none" } } }
+          }]
+        } }
+      }
+    },
+    "storeEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contractVersion", "eventId", "type", "namespace", "accessVersion", "occurredAt", "data"],
+      "properties": {
+        "contractVersion": { "const": 1 },
+        "eventId": { "$ref": "#/definitions/uuid" },
+        "type": { "const": "store.entitlements.snapshot" },
+        "namespace": { "$ref": "#/definitions/namespace" },
+        "accessVersion": { "type": "string", "pattern": "^(0|[1-9][0-9]*)$" },
+        "occurredAt": { "type": "string", "format": "date-time" },
+        "data": {
+          "type": "object", "additionalProperties": false,
+          "required": ["serviceCatalogItemId", "resourceRef", "grants", "effectiveAccess"],
+          "properties": {
+            "serviceCatalogItemId": { "$ref": "#/definitions/uuid" }, "resourceRef": { "$ref": "#/definitions/resourceRef" },
+            "effectiveAccess": { "enum": ["granted", "suspended", "ended"] },
+            "grants": { "type": "array", "items": {
+              "type": "object", "additionalProperties": false,
+              "required": ["serviceSubscriptionId", "reservationId", "status", "effectiveUntil"],
+              "properties": {
+                "serviceSubscriptionId": { "$ref": "#/definitions/uuid" }, "reservationId": { "$ref": "#/definitions/uuid" },
+                "status": { "enum": ["granted", "suspended", "ended"] },
+                "effectiveUntil": { "type": ["string", "null"], "format": "date-time" }
+              }
+            } }
+          }
+        }
+      }
+    }
+  }
+}

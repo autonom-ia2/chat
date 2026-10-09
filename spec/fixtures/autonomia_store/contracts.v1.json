@@ -1,0 +1,62 @@
+{
+  "namespace": { "installationId": "chat2you-test", "productCatalogItemId": "10000000-0000-4000-8000-000000000001" },
+  "catalog": {
+    "contractVersion": 1,
+    "namespace": { "installationId": "chat2you-test", "productCatalogItemId": "10000000-0000-4000-8000-000000000001" },
+    "data": [{
+      "service": { "id": "20000000-0000-4000-8000-000000000001", "key": "sample-agent", "name": "Sample agent", "description": "Demonstration service", "logoUrl": "https://images.example.test/service-icon.png" },
+      "group": "agent", "target": { "type": "agent", "installationId": "chat2you-test", "principalAgentId": 5 },
+      "offers": [{
+        "plan": { "id": "30000000-0000-4000-8000-000000000001", "name": "Sample plan" },
+        "price": { "id": "40000000-0000-4000-8000-000000000001", "price": 199, "currency": "BRL", "billingCycle": "monthly" },
+        "limits": [{ "metricKey": "accounts_allowed", "metricName": "Enabled accounts", "unit": "account", "includedQuantity": 2, "usageBehavior": "allocation", "resetPeriod": "none" }]
+      }]
+    }, {
+      "service": { "id": "20000000-0000-4000-8000-000000000002", "key": "sample-campaigns", "name": "Sample campaigns", "description": "Feature demonstration", "logoUrl": null },
+      "group": "feature", "target": { "type": "feature", "featureKey": "email_campaigns" },
+      "offers": [{
+        "plan": { "id": "30000000-0000-4000-8000-000000000002", "name": "Sample trial" },
+        "price": { "id": "40000000-0000-4000-8000-000000000002", "price": 0, "currency": "BRL", "billingCycle": "monthly" },
+        "limits": [{ "metricKey": "accounts_allowed", "metricName": "Enabled accounts", "unit": "account", "includedQuantity": 1, "usageBehavior": "allocation", "resetPeriod": "none" }]
+      }]
+    }],
+    "pagination": { "page": 1, "pageSize": 20, "totalItems": 2, "totalPages": 1 }
+  },
+  "checkoutRequest": { "servicePlanPriceId": "40000000-0000-4000-8000-000000000001", "limits": [] },
+  "checkoutResponse": {
+    "contractVersion": 1, "checkoutSessionId": "50000000-0000-4000-8000-000000000001",
+    "checkoutUrl": "https://checkout.example.test/session", "expiresAt": "2026-10-09T19:00:00Z", "orderId": null, "serviceSubscriptionId": null
+  },
+  "reserveRequest": {
+    "serviceSubscriptionId": "60000000-0000-4000-8000-000000000001", "metricKey": "accounts_allowed", "quantity": 1,
+    "resourceRef": { "type": "account", "id": "17" }, "idempotencyKey": "intent:test:activation:1", "occurredAt": "2026-10-09T18:00:00Z"
+  },
+  "reservationResponse": {
+    "reservation": {
+      "id": "70000000-0000-4000-8000-000000000001", "serviceSubscriptionId": "60000000-0000-4000-8000-000000000001",
+      "namespace": { "installationId": "chat2you-test", "productCatalogItemId": "10000000-0000-4000-8000-000000000001" },
+      "metricKey": "accounts_allowed", "usageBehavior": "allocation", "resourceRef": { "type": "account", "id": "17" }, "quantity": 1,
+      "status": "reserved", "periodStart": null, "periodEnd": null, "expiresAt": "2026-10-09T18:15:00Z"
+    },
+    "balance": { "includedQuantity": 2, "usedQuantity": 0, "reservedQuantity": 1, "remainingQuantity": 1 }, "replayed": false
+  },
+  "serviceSubscription": {
+    "id": "60000000-0000-4000-8000-000000000001", "buyer": { "cognitoSub": "buyer-test-1" },
+    "namespace": { "installationId": "chat2you-test", "productCatalogItemId": "10000000-0000-4000-8000-000000000001" },
+    "serviceCatalogItemId": "20000000-0000-4000-8000-000000000001", "planId": "30000000-0000-4000-8000-000000000001", "planPriceId": "40000000-0000-4000-8000-000000000001",
+    "status": "active", "currentPeriodStart": "2026-10-09T18:00:00Z", "currentPeriodEnd": "2026-11-09T18:00:00Z", "cancelAtPeriodEnd": false,
+    "access": { "allowed": true, "effectiveUntil": "2026-11-09T18:00:00Z" },
+    "limits": [{ "metricKey": "accounts_allowed", "metricName": "Enabled accounts", "unit": "account", "usageBehavior": "allocation", "resetPeriod": "none", "contractedQuantity": 2, "usedQuantity": 0, "reservedQuantity": 1, "remainingQuantity": 1 }]
+  },
+  "storeEvent": {
+    "contractVersion": 1, "eventId": "80000000-0000-4000-8000-000000000001", "type": "store.entitlements.snapshot", "occurredAt": "2026-10-09T18:00:00Z",
+    "namespace": { "installationId": "chat2you-test", "productCatalogItemId": "10000000-0000-4000-8000-000000000001" }, "accessVersion": "9007199254740993",
+    "data": {
+      "serviceCatalogItemId": "20000000-0000-4000-8000-000000000001", "resourceRef": { "type": "account", "id": "17" }, "effectiveAccess": "granted",
+      "grants": [
+        { "serviceSubscriptionId": "60000000-0000-4000-8000-000000000001", "reservationId": "70000000-0000-4000-8000-000000000001", "status": "granted", "effectiveUntil": "2026-11-09T18:00:00Z" },
+        { "serviceSubscriptionId": "60000000-0000-4000-8000-000000000002", "reservationId": "70000000-0000-4000-8000-000000000002", "status": "ended", "effectiveUntil": "2026-10-09T17:00:00Z" }
+      ]
+    }
+  }
+}
