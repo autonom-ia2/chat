@@ -121,9 +121,24 @@ RSpec.describe Crm::BookingInvite, type: :model do
       expect(invite.state).to eq('expired')
       expect(invite).not_to be_active
 
-      invite.update!(scheduled_at: 2.days.ago)
+      meeting = create_internal_meeting(world: world, starts_at: 2.days.from_now)
+      invite.update!(scheduled_at: 2.days.ago, meeting: meeting)
       expect(invite.state).to eq('scheduled')
       expect(invite).to be_active
+    end
+
+    it 'deixa de dar acesso 1 dia depois do fim da reunião agendada (J5-A2)' do
+      meeting = create_internal_meeting(world: world, starts_at: 3.days.from_now)
+      invite.update!(scheduled_at: Time.current, meeting: meeting)
+
+      travel_to(meeting.ends_at + 23.hours) { expect(invite).to be_active }
+      travel_to(meeting.ends_at + 1.day + 1.minute) { expect(invite).not_to be_active }
+    end
+
+    it 'não dá acesso a convite marcado como agendado sem reunião' do
+      invite.update!(scheduled_at: Time.current)
+
+      expect(invite).not_to be_active
     end
 
     it 'is canceled above everything else' do

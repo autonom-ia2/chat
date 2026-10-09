@@ -69,11 +69,13 @@ RSpec.describe Crm::BookingV2::InviteCreator do
     it 'takes the contact from the card, validity from the page and channel copy without conversation' do
       world.profile.update!(invite_ttl_days: 3)
 
-      invite = freeze_time { create_invite(card: world.card) }
+      # O esperado é calculado dentro do mesmo tempo congelado: com a máquina carregada, comparar com o relógio de depois
+      # passava de 1 segundo e o teste ficava instável.
+      invite, expected_expiry = freeze_time { [create_invite(card: world.card), 3.days.from_now] }
 
       expect(invite).to have_attributes(contact_id: world.contact.id, card_id: world.card.id, created_by_id: world.host.id,
                                         channel: 'copy', conversation_id: nil)
-      expect(invite.expires_at).to be_within(1.second).of(3.days.from_now)
+      expect(invite.expires_at).to be_within(1.second).of(expected_expiry)
     end
 
     it 'takes the contact from the conversation and uses the conversation channel' do

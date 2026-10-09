@@ -11,6 +11,8 @@ class Crm::BookingInvite < ApplicationRecord
   CODE_ALPHABET = '23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz'.chars.freeze
   CODE_LENGTH = 8
   CHANNELS = %w[conversation copy ai public].freeze
+  # Depois de virar reunião, o mesmo link serve para gerir a reunião até 1 dia depois do fim dela (J5-A2).
+  MANAGE_GRACE = 1.day
 
   belongs_to :account
   belongs_to :booking_profile, class_name: 'Crm::AgentBookingProfile'
@@ -56,9 +58,13 @@ class Crm::BookingInvite < ApplicationRecord
     expires_at.present? && expires_at <= Time.current
   end
 
-  # Ainda dá acesso: não foi cancelado e, se não virou reunião, está dentro da validade.
+  # Ainda dá acesso: não foi cancelado e, se não virou reunião, está dentro da validade; se virou, até 1 dia depois
+  # do fim da reunião.
   def active?
-    canceled_at.blank? && (scheduled_at.present? || !expired?)
+    return false if canceled_at.present?
+    return !expired? if scheduled_at.blank?
+
+    meeting.present? && meeting.ends_at + MANAGE_GRACE > Time.current
   end
 
   def url

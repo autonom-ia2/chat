@@ -45,11 +45,22 @@ RSpec.describe 'Public::Api::V2::Invites', type: :request do
     end
 
     it 'says scheduled once the invite became a meeting, even after the deadline' do
-      invite.update!(scheduled_at: Time.current, expires_at: 1.minute.ago)
+      meeting = create_internal_meeting(world: world, starts_at: 2.days.from_now)
+      invite.update!(scheduled_at: Time.current, expires_at: 1.minute.ago, meeting: meeting)
 
       show(invite.code)
 
       expect(response.parsed_body['state']).to eq('scheduled')
+    end
+
+    it 'responde o 404 uniforme 1 dia depois do fim da reunião agendada' do
+      meeting = create_internal_meeting(world: world, starts_at: 2.days.from_now)
+      invite.update!(scheduled_at: Time.current, meeting: meeting)
+
+      travel_to(meeting.ends_at + 1.day + 1.minute) { show(invite.code) }
+
+      expect(response).to have_http_status(:not_found)
+      expect(response.parsed_body).to eq('error' => 'not_found')
     end
 
     it 'uses the personal link slug when the invite has one' do
