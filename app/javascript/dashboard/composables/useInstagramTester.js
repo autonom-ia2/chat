@@ -78,6 +78,7 @@ export function useInstagramTester({ disabled, returnTo }) {
       unknown_status: 'STATUS_ERROR',
       invite_rejected: 'INVITE_ERROR',
       invite_unknown: 'INVITE_UNKNOWN',
+      invite_not_sent: 'INVITE_NOT_SENT',
       rate_limited: 'RATE_LIMITED',
       forbidden: 'UNAVAILABLE',
       not_enabled: 'UNAVAILABLE',
@@ -94,7 +95,9 @@ export function useInstagramTester({ disabled, returnTo }) {
       searched.value = false;
       error.value = 'INVALID_SELECTION';
     }
-    if (action === 'invite') {
+    // Rails reports invite_not_sent only after proving nothing reached Meta,
+    // so the profile stays absent and Invite stays available.
+    if (action === 'invite' && code !== 'invite_not_sent') {
       needsReconciliation.value = true;
       status.value = null;
       if (!code || code === 'invite_unknown') error.value = 'INVITE_UNKNOWN';
@@ -175,7 +178,7 @@ export function useInstagramTester({ disabled, returnTo }) {
     );
   };
 
-  const checkStatus = () => {
+  const readStatus = ({ afterUnknownInvite }) => {
     if (busy.value || disabled.value || !selected.value || !available.value)
       return undefined;
     const token = selected.value.selection_token;
@@ -190,6 +193,13 @@ export function useInstagramTester({ disabled, returnTo }) {
           error.value = 'STATUS_ERROR';
           return;
         }
+        if (afterUnknownInvite && data.status === 'absent') {
+          // Meta may list a sent invite late; never re-expose Invite here.
+          status.value = null;
+          needsReconciliation.value = true;
+          error.value = 'INVITE_UNKNOWN';
+          return;
+        }
         status.value = data.status;
         authorizationAttestation.value =
           data.status === 'accepted' &&
@@ -202,6 +212,7 @@ export function useInstagramTester({ disabled, returnTo }) {
       }
     );
   };
+  const checkStatus = () => readStatus({ afterUnknownInvite: false });
 
   const selectProfile = candidate => {
     if (busy.value || disabled.value || !results.value.includes(candidate))
@@ -212,7 +223,7 @@ export function useInstagramTester({ disabled, returnTo }) {
     return checkStatus();
   };
 
-  const invite = () => {
+  const invite = async () => {
     if (
       busy.value ||
       disabled.value ||
@@ -221,8 +232,8 @@ export function useInstagramTester({ disabled, returnTo }) {
       status.value !== 'absent' ||
       needsReconciliation.value
     )
-      return undefined;
-    return run(
+      return;
+    await run(
       'invite',
       signal =>
         instagramClient.inviteTester(selected.value.selection_token, {
@@ -247,6 +258,9 @@ export function useInstagramTester({ disabled, returnTo }) {
         sent.value = data.invited;
       }
     );
+    // One automatic check, never a loop: the status op reconciles the marker.
+    if (error.value === 'INVITE_UNKNOWN')
+      await readStatus({ afterUnknownInvite: true });
   };
 
   const authorize = () => {

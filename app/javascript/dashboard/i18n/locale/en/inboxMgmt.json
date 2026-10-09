@@ -108,6 +108,7 @@
           "STATUS_ERROR": "Couldn’t check the invitation. Try again.",
           "INVITE_ERROR": "Couldn’t send the invitation. Check its status before trying again.",
           "INVITE_UNKNOWN": "Couldn’t confirm whether the invitation was sent. Check its status before sending again.",
+          "INVITE_NOT_SENT": "The invitation was not sent. Try again.",
           "UNAVAILABLE": "The Instagram integration is currently unavailable. Contact support to restore it.",
           "MANUAL_HELP": "Once support confirms the integration has been restored, return to this screen and try again.",
           "RATE_LIMITED": "Wait before trying again.",

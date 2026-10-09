@@ -210,6 +210,76 @@ describe('Instagram tester request guards and cancellation', () => {
     }
   );
 
+  describe('invite outcomes', () => {
+    const selectAbsent = async () => {
+      instagramClient.getTesterStatus.mockResolvedValueOnce({
+        data: { status: 'absent' },
+      });
+      await tester.loadConfiguration();
+      tester.username.value = candidate.username;
+      await tester.search();
+      await tester.selectProfile(candidate);
+    };
+    const failure = code => ({ response: { data: { error_code: code } } });
+
+    it('keeps the profile absent and invitable when Rails proves the invite was not sent', async () => {
+      await selectAbsent();
+      instagramClient.inviteTester.mockRejectedValue(
+        failure('invite_not_sent')
+      );
+      await tester.invite();
+
+      expect(tester.status.value).toBe('absent');
+      expect(tester.needsReconciliation.value).toBe(false);
+      expect(tester.error.value).toBe('INVITE_NOT_SENT');
+      expect(instagramClient.getTesterStatus).toHaveBeenCalledTimes(1);
+      await tester.invite();
+      expect(instagramClient.inviteTester).toHaveBeenCalledTimes(2);
+    });
+
+    it('verifies once after an unknown invite and shows the pending invitation', async () => {
+      await selectAbsent();
+      instagramClient.inviteTester.mockRejectedValue(failure('invite_unknown'));
+      instagramClient.getTesterStatus.mockResolvedValueOnce({
+        data: { status: 'pending' },
+      });
+      await tester.invite();
+
+      expect(instagramClient.getTesterStatus).toHaveBeenCalledTimes(2);
+      expect(tester.status.value).toBe('pending');
+      expect(tester.titleKey.value).toBe('PENDING_TITLE');
+      expect(tester.error.value).toBe('');
+      expect(tester.needsReconciliation.value).toBe(false);
+    });
+
+    it('keeps the unknown state when the single automatic check still lists the profile as absent', async () => {
+      await selectAbsent();
+      instagramClient.inviteTester.mockRejectedValue(failure('invite_unknown'));
+      instagramClient.getTesterStatus.mockResolvedValue({
+        data: { status: 'absent' },
+      });
+      await tester.invite();
+
+      expect(instagramClient.getTesterStatus).toHaveBeenCalledTimes(2);
+      expect(tester.status.value).toBeNull();
+      expect(tester.needsReconciliation.value).toBe(true);
+      expect(tester.error.value).toBe('INVITE_UNKNOWN');
+      await tester.invite();
+      expect(instagramClient.inviteTester).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not verify automatically after a rejected invite', async () => {
+      await selectAbsent();
+      instagramClient.inviteTester.mockRejectedValue(
+        failure('invite_rejected')
+      );
+      await tester.invite();
+
+      expect(tester.error.value).toBe('INVITE_ERROR');
+      expect(instagramClient.getTesterStatus).toHaveBeenCalledTimes(1);
+    });
+  });
+
   it.each(['resolve', 'reject'])(
     'ignores a late OAuth %s after disposal without navigating or surfacing an error',
     async outcome => {

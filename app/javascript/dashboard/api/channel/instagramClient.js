@@ -12,6 +12,7 @@ const OPERATION_ERRORS = new Set([
   'unknown_status',
   'invite_rejected',
   'invite_unknown',
+  'invite_not_sent',
   'rate_limited',
   'forbidden',
   'not_enabled',

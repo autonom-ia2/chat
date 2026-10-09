@@ -45,6 +45,25 @@ describe('Instagram account-scoped API client', () => {
     );
   });
 
+  it('passes invite_not_sent through from a failed invite operation', async () => {
+    axios.post.mockResolvedValue({
+      status: 202,
+      data: {
+        id: '00000000-0000-4000-8000-000000000001',
+        request_id: '00000000-0000-4000-8000-000000000002',
+        action: 'invite',
+        state: 'failed',
+        error_code: 'invite_not_sent',
+        deadline: new Date(Date.now() + 60000).toISOString(),
+      },
+    });
+    await expect(
+      instagramClient.inviteTester('signed-selection')
+    ).rejects.toMatchObject({
+      response: { data: { error_code: 'invite_not_sent' } },
+    });
+  });
+
   it('sends selection tokens for status and invite, never raw target IDs', () => {
     const options = { signal: new AbortController().signal };
     instagramClient.getTesterStatus('signed-selection', options);
