@@ -14,6 +14,8 @@ module BookingHelpers
   end
 
   # Página nova (page_version 2), sem caixa de e-mail, responsável fixo.
+  # `close_holidays: false`: os specs de agendamento viajam para segunda, 12/10/2026, que é feriado nacional (Nossa
+  # Senhora Aparecida). O padrão real (ligado) é coberto nos specs de feriado e no de ponta a ponta.
   def create_booking_profile(account:, host:, pipeline: nil, stage: nil, **attrs)
     account.crm_agent_booking_profiles.create!(
       {
@@ -25,7 +27,8 @@ module BookingHelpers
         default_pipeline_id: pipeline&.id,
         default_stage_id: stage&.id,
         locations: [{ 'type' => 'whatsapp_video' }],
-        enabled: true
+        enabled: true,
+        close_holidays: false
       }.merge(attrs)
     )
   end

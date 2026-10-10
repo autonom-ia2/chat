@@ -110,6 +110,7 @@ RSpec.describe 'Public::Api::V2::Booking', type: :request do
         'slug' => profile.slug, 'paused' => false, 'preview' => false, 'title' => 'Conversa de 30 min', 'description' => nil,
         'agent_name' => 'Camila', 'agent_photo_url' => nil, 'duration_minutes' => 30, 'durations' => [30],
         'timezone' => 'America/Sao_Paulo', 'booking_window_days' => 14, 'weekdays' => [1, 2, 3, 4, 5],
+        'closed_dates' => [],
         'brand' => { 'color' => '#1F6FEB', 'headline' => 'Fale com a gente', 'logo_url' => nil, 'photo_url' => nil },
         'locations' => [{ 'type' => 'whatsapp_video', 'label' => 'Vídeo no WhatsApp', 'requires_email' => false }],
         'contact_whatsapp_url' => 'https://wa.me/5511933334444', 'captcha_site_key' => nil, 'notices_enabled' => false
@@ -140,6 +141,44 @@ RSpec.describe 'Public::Api::V2::Booking', type: :request do
                                        { 'type' => 'whatsapp_video', 'label' => 'Vídeo no WhatsApp', 'requires_email' => false }])
       expect(body['weekdays']).to eq([1, 3, 6])
       expect(body['timezone']).to eq('America/Sao_Paulo')
+    end
+
+    # 12/10/2026 (hoje, segunda) é feriado nacional; 02/11 é o próximo, fora da janela de 14 dias. O mundo de teste
+    # desliga `close_holidays`; aqui volta ao padrão real (ligado).
+    describe 'closed_dates (J2-A8)' do
+      before { profile.update!(close_holidays: true) }
+
+      it 'manda os feriados da janela, no fuso da página, quando a página fecha feriados' do
+        get base
+
+        expect(body['closed_dates']).to eq(['2026-10-12'])
+      end
+
+      it 'não manda feriado fora da janela, e manda quando a janela o alcança' do
+        get base
+        expect(body['closed_dates']).not_to include('2026-11-02')
+
+        profile.update!(booking_window_days: 30)
+        get base
+        expect(body['closed_dates']).to eq(%w[2026-10-12 2026-11-02])
+      end
+
+      it 'não manda nenhuma data quando a página atende em feriado' do
+        profile.update!(close_holidays: false)
+
+        get base
+
+        expect(body['closed_dates']).to eq([])
+      end
+
+      it 'conta a janela a partir de hoje no fuso da página, não em UTC' do
+        # 01:30 UTC de 13/10 ainda é 12/10 em São Paulo (feriado), mas já é 13/10 em UTC.
+        travel_to Time.utc(2026, 10, 13, 1, 30, 0)
+
+        get base
+
+        expect(body['closed_dates']).to eq(['2026-10-12'])
+      end
     end
 
     it 'mostra a chave do captcha só quando a instalação tem a chave do servidor' do
@@ -307,7 +346,7 @@ RSpec.describe 'Public::Api::V2::Booking', type: :request do
         expect(body.except('ics_url')).to eq(
           'confirmed' => true, 'starts_at' => '2026-10-20T10:00:00-03:00', 'ends_at' => '2026-10-20T10:30:00-03:00',
           'timezone' => 'America/Sao_Paulo', 'location' => { 'type' => 'whatsapp_video' },
-          'manage_url' => "#{frontend}/b/#{invite.code}", 'contact_whatsapp_url' => nil
+          'manage_url' => "#{frontend}/b/#{invite.code}", 'contact_whatsapp_url' => nil, 'notice_will_send' => false
         )
         expect(body['ics_url']).to start_with("#{frontend}/public/api/v2/ics/")
         %w[+5521988887777 5521988887777 camila.host@example.com].each { |secret| expect(response.body).not_to include(secret) }
@@ -530,6 +569,25 @@ RSpec.describe 'Public::Api::V2::Booking', type: :request do
       expect(world.contact.reload.phone_number).to eq('+5511912345678')
     end
 
+    it 'reunião marcada por convite de "Testar no meu WhatsApp" leva a marca de teste e fica fora de Crm::Meeting.real (#1192)' do
+      invite.update!(metadata: { 'test' => true })
+
+      book(invite_code: invite.code)
+
+      expect(response).to have_http_status(:created)
+      meeting = Crm::Meeting.sole
+      expect(meeting.metadata).to include('test' => true, 'booking_profile_id' => profile.id)
+      expect(Crm::Meeting.real).to be_empty
+    end
+
+    it 'reunião de convite comum fica em Crm::Meeting.real, sem marca de teste' do
+      book(invite_code: invite.code)
+
+      expect(response).to have_http_status(:created)
+      expect(Crm::Meeting.sole.metadata).not_to have_key('test')
+      expect(Crm::Meeting.real.pluck(:id)).to eq([Crm::Meeting.sole.id])
+    end
+
     it 'o reenvio com a mesma request_id devolve 200 com a mesma reserva; sem ela, recusa' do
       book(invite_code: invite.code, request_id: 'tentativa-convite-0001')
       first = body
@@ -570,6 +628,78 @@ RSpec.describe 'Public::Api::V2::Booking', type: :request do
       guest = meeting.meeting_guests.find_by(guest_type: :contact_guest)
       expect(guest).to have_attributes(contact_id: world.contact.id, phone_number: '+5521977771111')
       expect(Crm::Card.where(contact_id: other.id)).to be_empty
+    end
+
+    # Marcar de novo pelo mesmo convite depois de a reunião ser cancelada (#1192): sem nome nem WhatsApp, mesmo contato.
+    describe 'marcar de novo depois de cancelada' do
+      let(:canceled_meeting) do
+        create_internal_meeting(world: world, starts_at: Time.utc(2026, 10, 19, 13, 0, 0), status: :canceled,
+                                metadata: { 'booking_profile_id' => profile.id })
+      end
+
+      before { invite.update!(meeting: canceled_meeting, scheduled_at: 1.hour.ago, metadata: { 'request_id' => 'reserva-antiga-000001' }) }
+
+      it 'cria a reunião nova no contato do convite e aponta o convite para ela' do
+        expect { book(invite_code: invite.code, phone: nil, request_id: 'marcar-de-novo-00001') }
+          .to change(Crm::Meeting, :count).by(1)
+
+        expect(response).to have_http_status(:created)
+        meeting = Crm::Meeting.order(:id).last
+        expect(meeting).to have_attributes(status: 'scheduled', source: 'invite', starts_at: Time.iso8601(slot))
+        expect(meeting.card.contact_id).to eq(world.contact.id)
+        expect(meeting.meeting_guests.pluck(:phone_number, :contact_id)).to eq([['+5511912345678', world.contact.id]])
+        expect(invite.reload).to have_attributes(meeting_id: meeting.id, scheduled_at: Time.current, state: 'scheduled',
+                                                 metadata: include('request_id' => 'marcar-de-novo-00001'))
+        expect([canceled_meeting.reload.status, body['manage_url']]).to eq(['canceled', "#{frontend}/b/#{invite.code}"])
+      end
+
+      it 'registra no card que o cliente marcou de novo e avisa o responsável uma vez' do
+        book(invite_code: invite.code, phone: nil)
+
+        meeting = Crm::Meeting.order(:id).last
+        activity = Crm::Activity.find_by!(event_type: 'booking_client_rebooked')
+        expect(activity.payload).to include('meeting_id' => meeting.id, 'by' => 'client', 'canceled_meeting_id' => canceled_meeting.id)
+        expect(Crm::FollowUp.where("metadata->>'event' = ?", 'rebooked').count).to eq(1)
+        expect(Crm::BookingInvite.count).to eq(1)
+      end
+
+      it 'o reenvio com a mesma request_id devolve a mesma reserva; outra tentativa é recusada' do
+        book(invite_code: invite.code, request_id: 'marcar-de-novo-00001')
+        first = body
+
+        expect { book(invite_code: invite.code, request_id: 'marcar-de-novo-00001') }.not_to change(Crm::Meeting, :count)
+        expect(response).to have_http_status(:ok)
+        expect_same_booking(first)
+
+        expect { book(invite_code: invite.code, starts_at: '2026-10-20T11:00:00-03:00') }.not_to change(Crm::Meeting, :count)
+        expect_error('booking_failed')
+        expect(Crm::FollowUp.where("metadata->>'event' = ?", 'rebooked').count).to eq(1)
+      end
+
+      it 'vale para reunião cancelada por qualquer motivo, também a marcada por convite de teste' do
+        invite.update!(metadata: { 'test' => true })
+
+        book(invite_code: invite.code)
+
+        expect(response).to have_http_status(:created)
+        expect(invite.reload.meeting.metadata).to include('test' => true)
+      end
+
+      it 'recusa depois da validade do link de gestão, com reunião marcada ou convite cancelado' do
+        travel_to(canceled_meeting.ends_at + 1.day + 1.minute) do
+          expect { book(invite_code: invite.code, starts_at: '2026-10-21T10:00:00-03:00') }.not_to change(Crm::Meeting, :count)
+          expect_error('booking_failed')
+        end
+
+        canceled_meeting.update!(status: :scheduled)
+        expect { book(invite_code: invite.code) }.not_to change(Crm::Meeting, :count)
+        expect_error('booking_failed')
+
+        canceled_meeting.update!(status: :canceled)
+        invite.update!(canceled_at: Time.current)
+        expect { book(invite_code: invite.code) }.not_to change(Crm::Meeting, :count)
+        expect_error('booking_failed')
+      end
     end
 
     it 'recusa convite de outra página, já agendado em outra hora, cancelado, vencido ou de outra conta' do

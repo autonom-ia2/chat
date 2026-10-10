@@ -37,6 +37,7 @@ vi.mock('dashboard/api/crmBookingInvites', () => ({
     index: vi.fn(),
     create: vi.fn(),
     deliver: vi.fn(),
+    copied: vi.fn(),
     cancel: vi.fn(),
   },
 }));
@@ -187,6 +188,9 @@ describe('BookingInviteButton', () => {
   });
 
   it('copies only the link', async () => {
+    BookingInvitesAPI.copied.mockResolvedValue({
+      data: { payload: invite({ state: 'sent' }) },
+    });
     const wrapper = mountButton();
     await openPanel(wrapper);
     await wrapper.get('[data-booking-copy]').trigger('click');
@@ -194,6 +198,9 @@ describe('BookingInviteButton', () => {
 
     expect(copyTextToClipboard).toHaveBeenCalledWith(URL);
     expect(useAlert).toHaveBeenCalledWith('Link copiado. Cole onde quiser.');
+    // Copiado conta como enviado no painel de resultados (#1194).
+    expect(BookingInvitesAPI.copied).toHaveBeenCalledWith(5);
+    expect(wrapper.get('[data-booking-invite-state]').text()).toBe('Enviado');
   });
 
   it('sends the edited text in the conversation', async () => {
@@ -455,6 +462,7 @@ describe('BookingInviteButton', () => {
     await flushPromises();
 
     expect(useAlert).toHaveBeenCalledWith('Não foi possível copiar o link.');
+    expect(BookingInvitesAPI.copied).not.toHaveBeenCalled();
   });
 
   it('does not reuse an active invite whose link no longer works', async () => {

@@ -106,4 +106,26 @@ RSpec.describe Crm::BookingV2::PublicBooking, :relationships_committed_fixtures 
     expect(invite.reload).to have_attributes(meeting_id: meeting.id, metadata: { 'request_id' => 'tentativa-primeira-01' })
     expect(Crm::MeetingGuest.where(account_id: account.id).pluck(:meeting_id).uniq).to eq([meeting.id])
   end
+
+  # Marcar de novo depois de cancelada (#1192): a mesma corrida, com o convite apontando a reunião cancelada. Só uma
+  # reunião nova sobra, o convite aponta para ela e o card registra uma só vez.
+  it 'deixa só uma de duas novas reservas simultâneas pelo convite de reunião cancelada' do
+    canceled = create_internal_meeting(world: world, starts_at: Time.utc(2026, 10, 19, 13, 0, 0), status: :canceled)
+    invite.update!(meeting: canceled, scheduled_at: 1.hour.ago)
+    pause_inside_lock
+    first = run_in_thread('2026-10-20T10:00:00-03:00', 'de-novo-primeira-001', pause: true)
+    Timeout.timeout(10) { paused.pop }
+    second = run_in_thread('2026-10-20T11:00:00-03:00', 'de-novo-segunda-0001')
+    wait_for_advisory_waiter!
+    release << true
+
+    outcomes = [first, second].map { |queue| Timeout.timeout(15) { queue.pop } }
+
+    expect(outcomes.first.first).to eq(:ok)
+    expect(outcomes.last).to eq([:error, 'booking_failed'])
+    fresh = Crm::Meeting.where(account_id: account.id, status: :scheduled).sole
+    expect(fresh.id).to eq(outcomes.first.last)
+    expect(invite.reload).to have_attributes(meeting_id: fresh.id)
+    expect(Crm::Activity.where(account_id: account.id, event_type: 'booking_client_rebooked').count).to eq(1)
+  end
 end

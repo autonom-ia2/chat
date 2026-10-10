@@ -34,6 +34,9 @@ class Crm::BookingInvite < ApplicationRecord
   validate :link_must_belong_to_page
 
   scope :recent_first, -> { order(created_at: :desc, id: :desc) }
+  # "Testar no meu WhatsApp" (#1192, J3-A11) cria convite com `metadata.test`: fora de listas, reaproveitamento e
+  # números.
+  scope :real, -> { where("COALESCE(crm_booking_invites.metadata->>'test', 'false') <> 'true'") }
 
   def self.generate_code
     Array.new(CODE_LENGTH) { CODE_ALPHABET[SecureRandom.random_number(CODE_ALPHABET.size)] }.join
@@ -60,7 +63,7 @@ class Crm::BookingInvite < ApplicationRecord
   end
 
   # Ainda dá acesso: não foi cancelado e, se não virou reunião, está dentro da validade; se virou, até 1 dia depois
-  # do fim da reunião.
+  # do fim da reunião, mesmo com a reunião cancelada (#1192: a página mostra "Cancelada" e oferece marcar de novo).
   def active?
     return false if canceled_at.present?
     return !expired? if scheduled_at.blank?

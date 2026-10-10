@@ -17,7 +17,8 @@ import {
   weekdayShort,
 } from '../../bookingFormat';
 
-// Passo 4: dias, horário, antecedência mínima, intervalo e durações extras.
+// Passo 4: dias, horário, antecedência mínima, intervalo, feriados nacionais
+// (ligado por padrão, #1195) e durações extras.
 // Tudo com opções prontas; nenhum número digitado.
 const props = defineProps({
   form: { type: Object, required: true },
@@ -183,6 +184,27 @@ const toggleExtra = value => {
           @update:model-value="emit('change', { bufferMinutes: $event })"
         />
       </div>
+    </div>
+
+    <div class="flex flex-col gap-2">
+      <p class="m-0 text-base font-semibold text-n-slate-12">
+        {{ t('BOOKING.WHEN.HOLIDAYS_LABEL') }}
+      </p>
+      <div class="flex">
+        <BookingToggle
+          data-holidays
+          :label="t('BOOKING.WHEN.HOLIDAYS_TOGGLE')"
+          :pressed="form.closeHolidays"
+          @toggle="emit('change', { closeHolidays: !form.closeHolidays })"
+        />
+      </div>
+      <p class="m-0 text-base text-n-slate-11">
+        {{
+          form.closeHolidays
+            ? t('BOOKING.WHEN.HOLIDAYS_ON_HINT')
+            : t('BOOKING.WHEN.HOLIDAYS_OFF_HINT')
+        }}
+      </p>
     </div>
 
     <fieldset class="flex flex-col gap-3 p-0 m-0 border-0">

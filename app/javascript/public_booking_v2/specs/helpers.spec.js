@@ -147,12 +147,12 @@ describe('dates and time zones', () => {
     // 01:30 UTC on the 13th is still the 12th in São Paulo.
     const now = new Date('2026-10-13T01:30:00Z');
     expect(dateInZone(now, 'America/Sao_Paulo')).toBe('2026-10-12');
-    expect(bookingDays('America/Sao_Paulo', 2, undefined, now)).toEqual([
+    expect(bookingDays('America/Sao_Paulo', 2, undefined, [], now)).toEqual([
       '2026-10-12',
       '2026-10-13',
       '2026-10-14',
     ]);
-    expect(bookingDays('Asia/Tokyo', 0, undefined, now)).toEqual([
+    expect(bookingDays('Asia/Tokyo', 0, undefined, [], now)).toEqual([
       '2026-10-13',
     ]);
   });
@@ -169,14 +169,22 @@ describe('dates and time zones', () => {
   it('offers only the weekdays the page works and caps the window at 90 days', () => {
     // 12/10/2026 é segunda-feira.
     const now = new Date('2026-10-12T12:00:00Z');
-    expect(bookingDays('America/Sao_Paulo', 6, [1, 3, 5], now)).toEqual([
+    expect(bookingDays('America/Sao_Paulo', 6, [1, 3, 5], [], now)).toEqual([
       '2026-10-12',
       '2026-10-14',
       '2026-10-16',
     ]);
-    expect(bookingDays('America/Sao_Paulo', 365, undefined, now)).toHaveLength(
-      91
-    );
+    expect(
+      bookingDays('America/Sao_Paulo', 365, undefined, [], now)
+    ).toHaveLength(91);
+  });
+
+  it('drops the closed dates (holidays) from the window', () => {
+    // 12/10/2026 é feriado (Nossa Senhora Aparecida) e segunda-feira.
+    const now = new Date('2026-10-12T12:00:00Z');
+    expect(
+      bookingDays('America/Sao_Paulo', 3, [1, 2, 3, 4, 5], ['2026-10-12'], now)
+    ).toEqual(['2026-10-13', '2026-10-14', '2026-10-15']);
   });
 
   it('adds the day to a time that falls on another day for the client', () => {
@@ -203,7 +211,7 @@ describe('dates and time zones', () => {
 });
 
 describe('routes and locations', () => {
-  it('reads /book/:slug, /b/:code and preview', () => {
+  it('reads /book/:slug, /b/:code, preview and stop_notices', () => {
     expect(parseRoute('/book/conversa', '?preview=tk')).toEqual({
       code: null,
       slug: 'conversa',
@@ -212,7 +220,16 @@ describe('routes and locations', () => {
     expect(parseRoute('/b/Xk4p9Q', '?preview=tk')).toEqual({
       code: 'Xk4p9Q',
       slug: null,
+      stopNotices: false,
     });
+    expect(parseRoute('/b/Xk4p9Q', '?stop_notices=1')).toEqual({
+      code: 'Xk4p9Q',
+      slug: null,
+      stopNotices: true,
+    });
+    expect(parseRoute('/b/Xk4p9Q', '?stop_notices=yes').stopNotices).toBe(
+      false
+    );
     expect(parseRoute('/other', '')).toEqual({ code: null, slug: null });
   });
 

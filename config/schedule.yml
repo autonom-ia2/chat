@@ -93,6 +93,13 @@ crm_follow_up_due_job:
   class: 'Crm::FollowUpDueJob'
   queue: scheduled_jobs
 
+# Agendamento WhatsApp-first (#1192): avisos no WhatsApp vencidos (ao marcar, 1 dia antes, 1 hora antes). Sai sem
+# consultar com CRM_CALENDAR_MEETINGS_ENABLED desligado; a flag da conta é conferida no envio.
+crm_booking_v2_notice_dispatch_job:
+  cron: '*/1 * * * *'
+  class: 'Crm::BookingV2::NoticeDispatchJob'
+  queue: scheduled_jobs
+
 # executed every 6 hours; feature flags checked inside the job
 crm_ai_stale_cards_job:
   cron: '0 */6 * * *'

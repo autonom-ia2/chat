@@ -2,10 +2,13 @@ import {
   BRAND_COLORS,
   CALENDAR_LOCATIONS,
   IMAGE_TYPES,
+  DEFAULT_CANCEL_UNTIL,
+  DEFAULT_NOTICE_PRESET,
   MAX_IMAGE_BYTES,
   MISSING_STEP,
   STEP,
 } from './constants';
+import { noticeTemplatesPayload } from './bookingNotices';
 
 // Converte a página da API (PageSerializer#full) no formulário do assistente e
 // de volta. Funções puras: o assistente guarda um formulário só, e voltar um
@@ -35,10 +38,16 @@ export const pageToForm = page => {
     endHour: Number(hours.end_hour ?? 17),
     minNoticeMinutes: page.min_notice_minutes ?? 0,
     bufferMinutes: page.buffer_minutes ?? 0,
+    // Feriados nacionais fechados vêm ligados (#1195, J3-A13).
+    closeHolidays: page.close_holidays !== false,
     color: page.brand?.color || BRAND_COLORS[0].hex,
     headline: page.brand?.headline || '',
     pipelineId: page.default_pipeline_id ?? null,
     stageId: page.default_stage_id ?? null,
+    noticeInboxId: page.notice_inbox_id ?? null,
+    noticePreset: page.notice_preset || DEFAULT_NOTICE_PRESET,
+    noticeTemplates: { ...(page.notice_templates || {}) },
+    cancelUntilMinutes: page.cancel_until_minutes ?? DEFAULT_CANCEL_UNTIL,
   };
 };
 
@@ -58,7 +67,7 @@ const usesCalendar = form =>
 
 // O corpo do PATCH. A caixa de agenda só vai junto quando há Meet ou Teams:
 // sem eles, a página não fica presa a caixa nenhuma.
-export const formToPayload = form => ({
+const basePayload = form => ({
   title: form.title.trim(),
   duration_minutes: form.durationMinutes,
   slot_durations: form.slotDurations.filter(
@@ -73,10 +82,25 @@ export const formToPayload = form => ({
   },
   min_notice_minutes: form.minNoticeMinutes,
   buffer_minutes: form.bufferMinutes,
+  close_holidays: form.closeHolidays,
   brand: { color: form.color, headline: form.headline.trim() },
   default_pipeline_id: form.pipelineId,
   default_stage_id: form.stageId,
+  notice_preset: form.noticePreset,
+  notice_templates: noticeTemplatesPayload(form),
+  cancel_until_minutes: form.cancelUntilMinutes,
 });
+
+// A caixa de avisos só vai quando muda: o servidor confere a caixa contra as
+// que a própria pessoa enxerga, e quem não vê a caixa escolhida por outra
+// pessoa ainda precisa conseguir salvar o resto da página.
+export const formToPayload = (form, page = null) => {
+  const payload = basePayload(form);
+  if (page && form.noticeInboxId === (page.notice_inbox_id ?? null)) {
+    return payload;
+  }
+  return { ...payload, notice_inbox_id: form.noticeInboxId };
+};
 
 // `new URL` é o parser do navegador: aceita só endereço completo http(s).
 export const isWebUrl = value => {
@@ -125,6 +149,7 @@ export const imageProblem = file => {
 const SERVER_ERROR_CODES = {
   'crm.booking_v2.calendar_inbox_invalid': 'CALENDAR_GONE',
   'crm.booking_v2.people_invalid': 'PEOPLE_GONE',
+  'crm.booking_v2.notice_inbox_invalid': 'NOTICE_INBOX_GONE',
 };
 const SERVER_ERROR_FIELDS = {
   locations: 'LOCATIONS',
@@ -134,6 +159,10 @@ const SERVER_ERROR_FIELDS = {
   default_pipeline_id: 'PIPELINE',
   default_stage_id: 'PIPELINE',
   brand: 'BRAND',
+  notice_inbox: 'NOTICE_INBOX_GONE',
+  notice_templates: 'NOTICE_TEMPLATES',
+  notice_preset: 'NOTICES',
+  cancel_until_minutes: 'NOTICES',
 };
 
 // Devolve a chave do aviso (BOOKING.WIZARD.SERVER_ERRORS.*) ou null, quando
