@@ -1,6 +1,9 @@
 // Configurações › Agendamento (#1187, F1-D): permissões da rota, guarda da flag
 // (instalação + conta, com F5) e o item do menu.
-import bookingRoutes, { ensureBookingEnabled } from '../booking.routes';
+import bookingRoutes, {
+  ensureBookingEnabled,
+  ensureBookingResultsEnabled,
+} from '../booking.routes';
 import {
   bookingResultsSidebarItems,
   bookingSidebarItems,
@@ -152,7 +155,7 @@ describe('Meus horários (#1195): rota e item do menu', () => {
 
   it('fica no CRM, com o guarda da flag, aberta a quem pode atender e só', () => {
     expect(myHours.path).toBe('/app/accounts/:accountId/crm/my-booking-hours');
-    expect(myHours.beforeEnter).toBe(ensureBookingEnabled);
+    expect(myHours.beforeEnter).toBe(ensureBookingResultsEnabled);
     expect(myHours.meta.permissions).toEqual([
       'administrator',
       'agent',
