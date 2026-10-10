@@ -54,10 +54,6 @@ on:
         default: false
         type: boolean
 
-concurrency:
-  group: deploy-autonomia-blue-green
-  cancel-in-progress: false
-
 permissions:
   contents: read
   id-token: write
@@ -80,9 +76,79 @@ env:
   ROOT_VOLUME_SIZE_GB: '30'
 
 jobs:
+  # Um lote, um deploy. A fila de merge entra na main grupo a grupo, e cada merge disparava o seu deploy (10/10:
+  # três lotes saíram em dois deploys cada). Push na main espera a fila esvaziar (teto de 25 min) e, se já houver
+  # um deploy mais novo vivo, sai sem deployar: o mais novo sobe a main inteira, este commit incluso. Cancelar à
+  # mão o deploy mais novo cancela também os que ele cobria: dispare de novo pelo workflow_dispatch.
+  # O critério é "existe deploy mais novo", nunca "a main andou": merge só de docs move a main sem disparar deploy.
+  # Deploy manual e rollback (workflow_dispatch) não esperam.
+  esperar-fila:
+    name: Esperar a fila de merge
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
+    outputs:
+      pular: ${{ steps.fila.outputs.pular }}
+    steps:
+      - id: fila
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const TETO_MS = 25 * 60 * 1000;
+            const PASSO_MS = 30 * 1000;
+            const inicio = Date.now();
+            // Falha aberta: erro de API vira "fila vazia" e "ninguém esperando". O pior caso é um deploy a mais,
+            // nunca um deploy perdido.
+            const tamanhoDaFila = async () => {
+              try {
+                const q = await github.graphql(`query($o:String!,$r:String!){repository(owner:$o,name:$r){mergeQueue(branch:"main"){entries(first:1){totalCount}}}}`, { o: owner, r: repo });
+                return q.repository.mergeQueue ? q.repository.mergeQueue.entries.totalCount : 0;
+              } catch (e) {
+                core.warning(`Fila de merge ilegível (${e.message}): segue sem esperar.`);
+                return 0;
+              }
+            };
+            let fila = await tamanhoDaFila();
+            while (fila > 0 && Date.now() - inicio < TETO_MS) {
+              core.info(`Fila de merge com ${fila} PR(s); esperando para subir o lote num deploy só.`);
+              await new Promise((ok) => setTimeout(ok, PASSO_MS));
+              fila = await tamanhoDaFila();
+            }
+            if (fila > 0) core.warning(`Fila ainda com ${fila} PR(s) depois de 25 min: deploy segue sem esperar mais.`);
+
+            // Pula quando existe execução de push mais nova (run_number maior) ainda viva, ou que já subiu com
+            // sucesso: ela leva a main inteira, este commit incluso. A segunda condição também impede que o rerun de
+            // um deploy velho volte a produção para trás por cima de um mais novo.
+            let mais_novas = [];
+            try {
+              // context.workflow é o nome do workflow; a API quer o id.
+              const { workflow_id } = (await github.rest.actions.getWorkflowRun({ owner, repo, run_id: context.runId })).data;
+              const runs = (await github.rest.actions.listWorkflowRuns({ owner, repo, workflow_id, branch: 'main', event: 'push', per_page: 30 })).data.workflow_runs;
+              mais_novas = runs.filter((r) => r.run_number > context.runNumber &&
+                (r.status !== 'completed' || r.conclusion === 'success'));
+            } catch (e) {
+              core.warning(`Não deu para ver os deploys mais novos (${e.message}): este deploy segue.`);
+            }
+            const pular = mais_novas.length > 0;
+            if (pular) core.notice(`Deploy mais novo (${mais_novas.map((r) => `#${r.run_number} ${r.head_sha.slice(0, 10)}`).join(', ')}) leva a main inteira, inclusive ${context.sha.slice(0, 10)}: este não sobe.`);
+            core.setOutput('pular', pular ? 'true' : 'false');
+
   deploy:
     name: Deploy Green
-    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || (inputs.confirm_production == true && inputs.action == 'deploy'))
+    needs: esperar-fila
+    # Trava no job, não no workflow: a espera da fila não segura a vez, e o rollback não fica atrás dela.
+    concurrency:
+      group: deploy-autonomia-blue-green
+      cancel-in-progress: false
+    if: >-
+      !cancelled() && github.ref == 'refs/heads/main' &&
+      ((github.event_name == 'push' && needs.esperar-fila.outputs.pular != 'true') ||
+      (github.event_name == 'workflow_dispatch' && inputs.confirm_production == true && inputs.action == 'deploy'))
     runs-on: ubuntu-latest
     timeout-minutes: 120
     environment: production
@@ -1089,6 +1155,9 @@ jobs:
 
   rollback:
     name: Rollback To Previous Target Group
+    concurrency:
+      group: deploy-autonomia-blue-green
+      cancel-in-progress: false
     if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.confirm_production == true && inputs.action == 'rollback'
     runs-on: ubuntu-latest
     timeout-minutes: 20
