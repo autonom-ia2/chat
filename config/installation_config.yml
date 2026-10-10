@@ -198,6 +198,10 @@
   description: 'System user token with ads_read and business_management. Stored encrypted; never shown again'
   locked: false
   type: secret
+- name: META_ADS_LOGIN_CONFIGURATION_ID
+  display_title: 'Meta Ads login configuration ID'
+  description: 'Facebook Login for Business configuration ID (ads_read) for "Sign in with Facebook" in Meta Ads (#1069). Created in the same Meta app as WhatsApp embedded signup'
+  locked: false
 # ------- End of Meta Ads Config ------- #
 
 # MARK: Microsoft Email Channel Config

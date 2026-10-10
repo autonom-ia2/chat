@@ -1,7 +1,11 @@
 # Anúncios da Meta (#1047) no Super Admin: portfólio parceiro e usuário do sistema da plataforma. Os IDs vão
 # para InstallationConfig; o token é só de escrita e vai cifrado para AiProviderCredential('meta_ads').
+# META_ADS_LOGIN_CONFIGURATION_ID (#1069): configuração do "Entrar com Facebook", no mesmo app do WhatsApp.
 module SuperAdmin::MetaAdsAppConfig
-  META_ADS_CONFIGS = %w[META_ADS_PARTNER_BUSINESS_ID META_ADS_PARTNER_BUSINESS_NAME META_ADS_SYSTEM_USER_ID META_ADS_PLATFORM_TOKEN].freeze
+  META_ADS_CONFIGS = %w[
+    META_ADS_PARTNER_BUSINESS_ID META_ADS_PARTNER_BUSINESS_NAME META_ADS_SYSTEM_USER_ID META_ADS_PLATFORM_TOKEN
+    META_ADS_LOGIN_CONFIGURATION_ID
+  ].freeze
   META_ADS_TOKEN_KEY = 'META_ADS_PLATFORM_TOKEN'.freeze
 
   private
