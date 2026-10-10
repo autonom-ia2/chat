@@ -3,11 +3,13 @@ class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autono
 
   # #1211 — `config.native_tool_slugs` com ferramenta de outro fluxo (ou que não existe). Recusa com o
   # slug na resposta, nunca descarte silencioso: quem pediu fica sabendo que a ferramenta não ligou.
+  # `code` separa o valor que nem é uma lista (`slugs` vazio) da lista com slug recusado.
   class FerramentaNativaNaoPermitida < StandardError
-    attr_reader :slugs
+    attr_reader :slugs, :code
 
-    def initialize(slugs)
+    def initialize(slugs, code: 'native_tool_not_allowed')
       @slugs = slugs
+      @code = code
       super()
     end
   end
@@ -186,7 +188,7 @@ class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autono
 
   def recusar_ferramentas_de_outro_fluxo(pedidos)
     return if pedidos.nil?
-    raise FerramentaNativaNaoPermitida, [] unless pedidos.is_a?(Array)
+    raise FerramentaNativaNaoPermitida.new([], code: 'native_tool_slugs_not_a_list') unless pedidos.is_a?(Array)
 
     permitidos = ::Autonomia::Agents::Tools::Registry.permitidas_para(@agent || agents_scope.new).map(&:slug)
     recusados = pedidos.map(&:to_s) - permitidos
@@ -194,7 +196,7 @@ class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autono
   end
 
   def render_ferramenta_nativa_nao_permitida(error)
-    render json: { error: I18n.t('autonomia.agents.native_tool_not_allowed'), code: 'native_tool_not_allowed', slugs: error.slugs },
+    render json: { error: I18n.t('autonomia.agents.native_tool_not_allowed'), code: error.code, slugs: error.slugs },
            status: :unprocessable_entity
   end
 

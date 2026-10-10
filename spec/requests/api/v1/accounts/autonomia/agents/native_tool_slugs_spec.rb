@@ -56,6 +56,7 @@ RSpec.describe 'Autonomia agent native tool slugs', type: :request do
                                        headers: administrator.create_new_auth_token, as: :json
 
       expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body).to include('code' => 'native_tool_slugs_not_a_list', 'slugs' => [])
       expect(agent.reload.native_tool_slugs).to be_nil
     end
 
