@@ -10,6 +10,9 @@ vi.mock('dashboard/store', () => ({ default: store }));
 vi.mock('./agentes/entrada/AgentesListaEntrada.vue', () => ({
   default: { name: 'AgentesListaEntrada' },
 }));
+vi.mock('./agentes/entrada/AgentePaginaEntrada.vue', () => ({
+  default: { name: 'AgentePaginaEntrada' },
+}));
 
 const rota = name => routes.find(route => route.name === name);
 const entrar = async name => {
@@ -89,8 +92,8 @@ describe('guardas da Autonomia com link direto', () => {
   });
 });
 
-// #1181: só o componente da lista muda; nome, caminho, meta e guarda continuam
-// os mesmos, e o Construtor e a página do agente ficam intocados.
+// #1181: só o componente da lista e o da página do agente mudam (seletores); nome,
+// caminho, meta, guarda e props continuam os mesmos, e o Construtor fica intocado.
 describe('entrada da lista de agentes (#1181)', () => {
   it('a rota da lista abre o seletor, com o mesmo caminho, meta e guarda', async () => {
     const lista = rota('autonomia_agents_index');
@@ -119,5 +122,35 @@ describe('entrada da lista de agentes (#1181)', () => {
     expect(painel.props({ params: { agentId: '7', tab: 'channels' } })).toEqual(
       { agentId: '7', tab: 'channels' }
     );
+  });
+
+  it('a página do agente abre o seletor, com o mesmo caminho, meta, guarda e props', async () => {
+    const painel = rota('autonomia_agent_panel');
+    const { default: componente } = await painel.component();
+
+    expect(componente.name).toBe('AgentePaginaEntrada');
+    expect(painel.path).toBe(
+      '/app/accounts/:accountId/agents/:agentId/:tab(test|knowledge|channels|performance|tune|publish)?'
+    );
+    expect(painel.meta).toEqual({
+      permissions: ['administrator', 'autonomia_view', 'autonomia_manage'],
+    });
+    expect(painel.beforeEnter).toBe(rota('autonomia_agents_index').beforeEnter);
+  });
+
+  it.each(['test', 'knowledge', 'channels', 'performance', 'tune', 'publish'])(
+    'a aba antiga %s continua chegando ao seletor pelo props',
+    tab => {
+      expect(
+        rota('autonomia_agent_panel').props({ params: { agentId: '7', tab } })
+      ).toEqual({ agentId: '7', tab });
+    }
+  );
+
+  it('a página do agente entra pela mesma guarda de Agentes', async () => {
+    contaCarregaDepois({ id: 9, autonomia_agents_enabled: true });
+    window.globalConfig = { AUTONOMIA_AGENTS_ENABLED: 'true' };
+    const next = await entrar('autonomia_agent_panel');
+    expect(next).toHaveBeenCalledWith();
   });
 });

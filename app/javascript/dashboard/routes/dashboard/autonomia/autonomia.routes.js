@@ -9,12 +9,13 @@ import store from 'dashboard/store';
 // Lazy-loaded pages (owned by HUB / CONSTRUTOR / PAINEL implementers).
 // Dynamic imports keep this NAV module self-contained and code-split the
 // Autonomia bundle out of the main dashboard chunk.
-// #1181: a lista passa por um seletor que escolhe a página antiga ou a nova pela
-// flag autonomia_agents_journey (a antiga continua no mesmo pedaço).
+// #1181: a lista e a página do agente passam por seletores que escolhem a página
+// antiga ou a nova pela flag autonomia_agents_journey (a antiga continua no mesmo pedaço).
 const AgentesListaEntrada = () =>
   import('./agentes/entrada/AgentesListaEntrada.vue');
 const AgentBuilderPage = () => import('./pages/AgentBuilderPage.vue');
-const AgentPanelPage = () => import('./pages/AgentPanelPage.vue');
+const AgentePaginaEntrada = () =>
+  import('./agentes/entrada/AgentePaginaEntrada.vue');
 const ProspectingSearchPage = () =>
   import('./prospecting/pages/ProspectingSearchPage.vue');
 const ProspectingListsPage = () =>
@@ -135,7 +136,7 @@ export const routes = [
     name: 'autonomia_agent_panel',
     meta: agentsMeta,
     beforeEnter: ensureAutonomiaEnabled,
-    component: AgentPanelPage,
+    component: AgentePaginaEntrada,
     props: route => ({
       agentId: route.params.agentId,
       tab: route.params.tab || 'test',
