@@ -93,6 +93,18 @@ RSpec.describe 'Autonomia agent booking page setting', type: :request do
       expect(Autonomia::Agents::Agent.find(response.parsed_body['id']).config['booking_page_id']).to eq(world.profile.id)
     end
 
+    it 'drops the computed and reserved config keys a request must never set' do
+      post "/api/v1/accounts/#{account.id}/autonomia/agents",
+           params: { agent: { name: 'Bia', agent_type: 'scheduler',
+                              config: { handoff_strategy: 'none', topic_map: [{ topic: 'x' }], system_key: 'guide', with_knowledge: true } } },
+           headers: administrator.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:created)
+      config = Autonomia::Agents::Agent.find(response.parsed_body['id']).config
+      expect(config).to include('handoff_strategy' => 'none')
+      expect(config.keys).not_to include('topic_map', 'system_key', 'with_knowledge')
+    end
+
     it 'refuses the page from someone who cannot see Scheduling and creates nothing' do
       blind = role_user('autonomia_manage')
 
