@@ -10,13 +10,15 @@ const { t } = useI18n();
 </script>
 
 <template>
-  <div v-if="manage.error.value" class="flex flex-col gap-3">
-    <p
-      role="alert"
-      class="rounded-xl bg-red-50 p-4 text-base font-medium text-red-900"
-    >
-      {{ t(manage.error.value) }}
-    </p>
-    <WhatsAppButton :url="manage.whatsappUrl.value" />
+  <div class="contents">
+    <div v-if="manage.error.value" class="flex flex-col gap-3">
+      <p
+        role="alert"
+        class="rounded-xl bg-red-50 p-4 text-base font-medium text-red-900"
+      >
+        {{ t(manage.error.value) }}
+      </p>
+      <WhatsAppButton :url="manage.whatsappUrl.value" />
+    </div>
   </div>
 </template>

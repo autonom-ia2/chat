@@ -22,7 +22,12 @@ async function main(files) {
     overrideConfig: {
       settings: {
         'vue-i18n': {
-          localeDir: './app/javascript/dashboard/i18n/locale/en/*.json',
+          // English catalogs only: the dashboard's and each standalone app's own (e.g. public_booking_v2),
+          // which never live in the dashboard catalog.
+          localeDir: [
+            './app/javascript/dashboard/i18n/locale/en/*.json',
+            './app/javascript/*/i18n/en.json',
+          ],
         },
       },
       rules: { '@intlify/vue-i18n/no-missing-keys': 'error' },
