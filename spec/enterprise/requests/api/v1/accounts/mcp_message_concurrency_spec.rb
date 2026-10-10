@@ -49,6 +49,10 @@ RSpec.describe 'MCP message commit and concurrency', :relationships_committed_fi
     account.messages.destroy_all
     account.conversations.destroy_all
     account.contacts.destroy_all
+    # Sem transacao, os working_hours das caixas (apagados por destroy_async, que este
+    # spec nao executa) ficavam commitados e quebravam specs seguintes
+    # (ex.: WorkingHour.today com inbox nil). Apaga explicitamente antes das caixas.
+    WorkingHour.where(inbox_id: account.inboxes.select(:id)).delete_all
     account.inboxes.destroy_all
     account.account_users.destroy_all
     account.notification_settings.destroy_all
