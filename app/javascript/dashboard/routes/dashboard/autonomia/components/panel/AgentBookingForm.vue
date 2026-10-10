@@ -77,57 +77,59 @@ onMounted(loadPages);
 </script>
 
 <template>
-  <section
-    v-if="acceptsBooking && isAvailable"
-    class="flex flex-col gap-4 pt-2 border-t border-n-weak"
-  >
-    <div class="flex flex-col">
-      <h3 class="text-sm font-medium text-n-slate-12">
-        {{ t('BOOKING.AI_AGENT.TITLE') }}
-      </h3>
-      <p class="m-0 text-xs text-n-slate-10">
-        {{ t('BOOKING.AI_AGENT.DESCRIPTION') }}
-      </p>
-    </div>
-    <p
-      v-if="!pages.length"
-      class="m-0 text-sm text-n-slate-11"
-      data-test="agent-booking-empty"
+  <div class="contents">
+    <section
+      v-if="acceptsBooking && isAvailable"
+      class="flex flex-col gap-4 pt-2 border-t border-n-weak"
     >
-      {{ t('BOOKING.AI_AGENT.EMPTY') }}
-    </p>
-    <template v-else>
-      <div class="flex flex-col gap-1">
-        <label :for="fieldId" class="text-sm font-medium text-n-slate-12">
-          {{ t('BOOKING.AI_AGENT.PAGE_LABEL') }}
-        </label>
-        <ChoiceSelect
-          v-model="selected"
-          :trigger-id="fieldId"
-          :options="options"
-          :aria-label="t('BOOKING.AI_AGENT.PAGE_LABEL')"
-          class="w-full"
-        />
-        <p
-          v-if="selectedPage && !selectedPage.enabled"
-          class="m-0 text-xs text-n-amber-11"
-          data-test="agent-booking-paused"
-        >
-          {{ t('BOOKING.AI_AGENT.PAUSED_HINT') }}
-        </p>
+      <div class="flex flex-col">
+        <h3 class="text-sm font-medium text-n-slate-12">
+          {{ t('BOOKING.AI_AGENT.TITLE') }}
+        </h3>
         <p class="m-0 text-xs text-n-slate-10">
-          {{ t('BOOKING.AI_AGENT.HINT') }}
+          {{ t('BOOKING.AI_AGENT.DESCRIPTION') }}
         </p>
       </div>
-      <NextButton
-        solid
-        sm
-        :label="t('BOOKING.AI_AGENT.SAVE')"
-        :is-loading="isSaving"
-        :disabled="isSaving"
-        class="w-fit"
-        @click="handleSubmit"
-      />
-    </template>
-  </section>
+      <p
+        v-if="!pages.length"
+        class="m-0 text-sm text-n-slate-11"
+        data-test="agent-booking-empty"
+      >
+        {{ t('BOOKING.AI_AGENT.EMPTY') }}
+      </p>
+      <template v-else>
+        <div class="flex flex-col gap-1">
+          <label :for="fieldId" class="text-sm font-medium text-n-slate-12">
+            {{ t('BOOKING.AI_AGENT.PAGE_LABEL') }}
+          </label>
+          <ChoiceSelect
+            v-model="selected"
+            :trigger-id="fieldId"
+            :options="options"
+            :aria-label="t('BOOKING.AI_AGENT.PAGE_LABEL')"
+            class="w-full"
+          />
+          <p
+            v-if="selectedPage && !selectedPage.enabled"
+            class="m-0 text-xs text-n-amber-11"
+            data-test="agent-booking-paused"
+          >
+            {{ t('BOOKING.AI_AGENT.PAUSED_HINT') }}
+          </p>
+          <p class="m-0 text-xs text-n-slate-10">
+            {{ t('BOOKING.AI_AGENT.HINT') }}
+          </p>
+        </div>
+        <NextButton
+          solid
+          sm
+          :label="t('BOOKING.AI_AGENT.SAVE')"
+          :is-loading="isSaving"
+          :disabled="isSaving"
+          class="w-fit"
+          @click="handleSubmit"
+        />
+      </template>
+    </section>
+  </div>
 </template>
