@@ -143,3 +143,14 @@ A Entrega 3 precisa de uma conta com **mais de um funil** para o piloto do acess
 - **Nome do assunto:** o Jev só escolhe; quando o pedido é novo, o modelo maior escreve o nome ("Agentes de IA", "Seguro do Onix"). Sem nome, nada muda.
 - **Card criado sozinho pela caixa** nasce com o nome do contato: o primeiro assunto identificado dá nome a ele, em vez de criar outro card.
 - **Antes de ligar na conta 16:** medir o custo por conversa com o modo Sugerir (a correção da seção 7: a IA é o PR 5, não o PR 8).
+
+## 11. Decisões de 10/10/2026 (Rodrigo) — IA de assunto ligada (#1260)
+
+- **Ligada em Automática para todas, já no deploy**, com o mesmo interruptor da IA do card: só funis com a IA do funil ligada e com a IA do CRM ligada na instalação. A migration põe as caixas no padrão antigo (Desligada) em Automática; a caixa ainda pode escolher Sugerir ou Desligada.
+- **Respeita a pessoa, como a IA de etapa:**
+  - assunto escolhido por uma pessoa (foco ou aceite) → por 4 h a IA não troca nem cria sozinha: sugere;
+  - card daquele funil fechado ou arquivado na conversa nas últimas 24 h → a IA não recria sozinha: sugere;
+  - sugestão dispensada nas últimas 24 h → não volta;
+  - card nomeado por uma pessoa nunca é renomeado.
+- **Sugestão vale em Sugerir e em Automática** (#1221 passa a expirar só quando a IA de assunto ou o CRM são desligados).
+- **Custo:** medido na conta 16 depois do deploy. O OK para ligar em todas as contas é do Rodrigo, com a estimativa no PR.

@@ -182,9 +182,9 @@ RSpec.describe 'CRM subject suggestions API', type: :request do
     expect(decision.reload.state).to eq('expired')
   end
 
-  it 'aceitar sugestão de caixa que não está mais em Sugerir não cria card' do
+  it 'aceitar sugestão de caixa com a IA de assunto desligada não cria card' do
     decision = suggestion(action: 'create', title: 'Chat2You')
-    setting.update_columns(subject_ai_mode: Crm::InboxSetting.subject_ai_modes[:auto]) # rubocop:disable Rails/SkipsModelValidations
+    setting.update_columns(subject_ai_mode: Crm::InboxSetting.subject_ai_modes[:off]) # rubocop:disable Rails/SkipsModelValidations
 
     expect { accept(decision) }.not_to change(Crm::Card, :count)
     expect(response.parsed_body['error']).to eq('crm.conversation_cards.mode_changed')

@@ -81,6 +81,7 @@ module Crm
           link.linked_by = @user
           # Card novo vira o assunto atual da conversa (#1142): com outro card já aberto nela, é deste que se trata agora.
           link.focused_at = Time.current
+          link.focused_by_id = @user&.id
         end
       end
 

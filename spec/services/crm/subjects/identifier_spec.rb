@@ -23,6 +23,7 @@ RSpec.describe Crm::Subjects::Identifier do
     allow(Crm::Ai::CredentialResolver).to receive(:new).and_return(instance_double(Crm::Ai::CredentialResolver, resolve: { api_key: 'k' }))
     allow(Crm::Ai::ResponsesClient).to receive(:new).and_return(cliente)
     allow(cliente).to receive(:create)
+    allow(Crm::Ai::Config).to receive(:enabled?).and_return(true)
   end
 
   def incoming(content)
@@ -377,5 +378,72 @@ RSpec.describe Crm::Subjects::Identifier do
 
     expect(Crm::AiUsageEvent.where(account_id: account.id).pluck(:feature)).to include('assunto')
     expect(Crm::Ai::ResponsesClient).to have_received(:new).with(hash_including(feature: 'assunto_revisao', account: account))
+  end
+
+  describe 'ligada por padrão, respeitando a pessoa (#1260)' do
+    it 'caixa nova nasce em Automática' do
+      outra = create(:inbox, account: account)
+
+      expect(account.crm_inbox_settings.create!(inbox: outra, crm_enabled: true)).to be_subject_ai_auto
+    end
+
+    it 'funil com a IA do funil desligada fica de fora: não pergunta nada' do
+      comercial.update!(metadata: { 'ai' => { 'enabled' => false } })
+      requests = stub_jev("novo_#{comercial.id}")
+
+      expect(identify(incoming('Quero o Chat2You'))).to be_nil
+      expect(requests).to be_empty
+    end
+
+    it 'IA do CRM desligada na instalação: não pergunta nada' do
+      allow(Crm::Ai::Config).to receive(:enabled?).and_return(false)
+      requests = stub_jev("novo_#{comercial.id}")
+
+      expect(identify(incoming('Quero o Chat2You'))).to be_nil
+      expect(requests).to be_empty
+    end
+
+    it 'assunto escolhido por uma pessoa há pouco: voltar a outro vira sugestão' do
+      agentes = create_card(title: 'Agentes de IA', focused_at: 2.hours.ago)
+      chat2you = create_card(title: 'Chat2You', focused_at: 1.hour.ago)
+      Crm::Cards::Focus.new(account: account, card: chat2you, conversation: conversation, user: admin).perform
+      stub_jev("card_#{agentes.id}")
+
+      decision = identify(incoming('Voltando aos agentes'))
+
+      expect(decision).to have_attributes(action: 'focus', state: 'suggested', card_id: agentes.id)
+      expect(finder.find(conversation)).to eq(chat2you)
+    end
+
+    it 'escolha da pessoa de mais de 4 h atrás não segura mais a IA' do
+      agentes = create_card(title: 'Agentes de IA', focused_at: 6.hours.ago)
+      chat2you = create_card(title: 'Chat2You', focused_at: 5.hours.ago)
+      Crm::CardConversation.find_by(card: chat2you, conversation: conversation).update!(focused_by_id: admin.id)
+      stub_jev("card_#{agentes.id}")
+
+      expect(identify(incoming('Voltando aos agentes'))).to have_attributes(action: 'focus', state: 'applied')
+    end
+
+    it 'card daquele funil fechado há pouco: o pedido novo vira sugestão, não card' do
+      create_card(title: 'Agentes de IA', focused_at: 1.hour.ago).update!(status: :lost)
+      create_card(title: 'Chat2You', focused_at: 2.hours.ago)
+      stub_jev("novo_#{comercial.id}")
+      stub_review(resposta: "novo_#{comercial.id}", titulo: 'Agentes de IA')
+
+      expect { identify(incoming('Quero os agentes de novo')) }.not_to change(Crm::Card, :count)
+      expect(Crm::SubjectDecision.last).to have_attributes(action: 'create', state: 'suggested')
+    end
+
+    it 'sugestão dispensada não volta: nem sugere de novo nem chama o modelo maior' do
+      create_card(title: 'Agentes de IA', focused_at: 1.hour.ago)
+      Crm::SubjectDecision.create!(account: account, conversation: conversation, mode: 'auto', action: 'create',
+                                   state: 'dismissed', pipeline: comercial, title: 'Chat2You')
+      stub_jev("novo_#{comercial.id}")
+
+      decision = identify(incoming('E o Chat2You?'))
+
+      expect(decision).to have_attributes(state: 'kept', reason: 'sugestao_dispensada')
+      expect(cliente).not_to have_received(:create)
+    end
   end
 end

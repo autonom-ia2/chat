@@ -41,13 +41,38 @@ class Crm::Subjects::Applier
     Crm::Conversations::SyncLock.new(account: @account, conversation: @conversation).perform do
       resultado = if mensagem_mais_nova?
                     { state: 'superseded' }
-                  elsif @mode == 'suggest'
+                  elsif modo_efetivo(action, atributos) == 'suggest'
                     sugerir
                   else
                     executar(action, atributos)
                   end
     end
     atributos.merge(action: action).merge(resultado)
+  end
+
+  # Automática respeita a pessoa (#1260): trocar o assunto ou abrir card vira sugestão quando uma pessoa escolheu o
+  # assunto há pouco, ou fechou/arquivou há pouco um card daquele funil nesta conversa. Dar nome não muda nada que a
+  # pessoa fez (card nomeado por ela nunca é renomeado) e segue automático.
+  def modo_efetivo(action, atributos)
+    return @mode unless @mode == 'auto' && %w[focus create].include?(action)
+    return 'suggest' if pessoa_escolheu_assunto?
+    return 'suggest' if action == 'create' && pessoa_fechou_card?(atributos[:pipeline])
+
+    @mode
+  end
+
+  def pessoa_escolheu_assunto?
+    atual = Crm::CardConversation.where(account_id: @account.id, conversation_id: @conversation.id)
+                                 .where.not(focused_at: nil).order(focused_at: :desc).first
+    atual.present? && atual.focused_by_id.present? && atual.focused_at >= Crm::Subjects::RESPEITO_AO_FOCO.ago
+  end
+
+  def pessoa_fechou_card?(pipeline)
+    desde = Crm::Subjects::RESPEITO_AO_FECHAMENTO.ago
+    vinculados = Crm::CardConversation.where(account_id: @account.id, conversation_id: @conversation.id).select(:card_id)
+    do_funil = @account.crm_cards.where(pipeline_id: pipeline.id)
+    cards = do_funil.where(conversation_id: @conversation.id).or(do_funil.where(id: vinculados))
+    cards.where(closed_at: desde..).or(cards.where(status: :archived, updated_at: desde..)).exists?
   end
 
   def executar(action, atributos)

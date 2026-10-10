@@ -15,7 +15,7 @@ class Crm::Subjects::Identifier
 
   def perform
     setting = Crm::InboxSetting.find_by(account_id: @account.id, inbox_id: @conversation.inbox_id, crm_enabled: true)
-    return if setting.nil? || setting.subject_ai_off?
+    return if setting.nil? || setting.subject_ai_off? || !Crm::Ai::Config.enabled?
     return existente if existente || pipelines.empty?
 
     @mode = setting.subject_ai_mode
@@ -66,7 +66,8 @@ class Crm::Subjects::Identifier
   def perguntar
     @jev = TypesafeAi::Decisor.new(feature: Crm::Subjects::FEATURE).decidir(decisor: question, estado: estado)
     opcao = question.opcao(@jev.resposta)
-    return concluir(state: 'kept', action: 'create', pipeline: opcao.pipeline, reason: 'sugestao_pendente') if ja_sugerido?(opcao)
+    repetida = sugestao_repetida(opcao)
+    return concluir(state: 'kept', **alvo(opcao), reason: repetida) if repetida
 
     escolha = revisar?(opcao) ? revisar : Escolha.new(opcao: opcao, decided_by: 'jev')
     return if escolha.nil?
@@ -89,10 +90,30 @@ class Crm::Subjects::Identifier
     @jev.certeza < Crm::Subjects::CERTEZA_MINIMA || opcao.tipo == :novo
   end
 
-  # Modo Sugerir: o pedido novo naquele funil já espera uma pessoa. Não paga o modelo maior de novo a cada mensagem.
+  # O pedido novo naquele funil já espera uma pessoa (Sugerir, ou Automática respeitando a pessoa). Não paga o modelo
+  # maior de novo a cada mensagem.
   def ja_sugerido?(opcao)
-    @mode == 'suggest' && opcao.tipo == :novo &&
+    opcao.tipo == :novo &&
       Crm::SubjectDecision.suggested.exists?(conversation_id: @conversation.id, pipeline_id: opcao.pipeline.id)
+  end
+
+  # A pessoa dispensou esta mesma sugestão há pouco (#1260): não sugere nem faz de novo, e não paga o modelo maior.
+  def dispensado?(opcao)
+    return false unless %i[novo card].include?(opcao.tipo)
+
+    Crm::SubjectDecision.where(conversation_id: @conversation.id, state: 'dismissed', **alvo(opcao))
+                        .exists?(['updated_at >= ?', Crm::Subjects::RESPEITO_AO_FECHAMENTO.ago])
+  end
+
+  # A mesma sugestão já espera uma pessoa, ou ela acabou de dispensá-la: nada a fazer, sem pagar o modelo maior.
+  def sugestao_repetida(opcao)
+    return 'sugestao_pendente' if ja_sugerido?(opcao)
+
+    'sugestao_dispensada' if dispensado?(opcao)
+  end
+
+  def alvo(opcao)
+    opcao.tipo == :novo ? { action: 'create', pipeline_id: opcao.pipeline.id } : { action: 'focus', card_id: opcao.card.id }
   end
 
   def revisar
@@ -117,11 +138,12 @@ class Crm::Subjects::Identifier
     @estado ||= Autonomia::Decisores::Estado.new(conversation: @conversation, message: @message, leituras: LEITURAS)
   end
 
-  # Os funis ativos ligados à caixa da conversa, com etapa para o card nascer, na ordem do CRM.
+  # Os funis ativos ligados à caixa da conversa, com etapa para o card nascer e a IA do funil ligada, na ordem do CRM.
   def pipelines
     @pipelines ||= @account.crm_pipelines.active.joins(:pipeline_inboxes, :stages)
                            .where(crm_pipeline_inboxes: { inbox_id: @conversation.inbox_id })
                            .order(:position, :id).distinct.to_a
+                           .select { |pipeline| Crm::Subjects.ia_do_funil?(pipeline) }
   end
 
   def cota_esgotada?

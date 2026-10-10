@@ -52,7 +52,7 @@ const toForm = (setting = {}) => {
     auto_create_card: jaConfigurada ? Boolean(setting.auto_create_card) : true,
     default_pipeline_id: setting.default_pipeline_id || '',
     default_stage_id: setting.default_stage_id || '',
-    subject_ai_mode: setting.subject_ai_mode || 'off',
+    subject_ai_mode: setting.subject_ai_mode || 'auto',
   };
 };
 
@@ -216,7 +216,8 @@ const saveInbox = inbox => {
     auto_create_card: form.crm_enabled && form.auto_create_card,
     default_pipeline_id: form.default_pipeline_id || null,
     default_stage_id: form.default_stage_id || null,
-    subject_ai_mode: form.crm_enabled ? form.subject_ai_mode : 'off',
+    // CRM desligado já desliga a IA de assunto no servidor; guardar a escolha faz ela valer quando o CRM voltar.
+    subject_ai_mode: form.subject_ai_mode,
   });
 };
 

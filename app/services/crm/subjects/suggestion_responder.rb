@@ -111,7 +111,7 @@ class Crm::Subjects::SuggestionResponder
   end
 
   def focar(card)
-    Crm::Cards::Focus.new(account: @account, card: card, conversation: @conversation).perform
+    Crm::Cards::Focus.new(account: @account, card: card, conversation: @conversation, user: @user).perform
     card
   end
 end
