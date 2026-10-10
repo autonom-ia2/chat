@@ -7,6 +7,8 @@ import { BUS_EVENTS } from 'shared/constants/busEvents';
 vi.mock('../../../../api/crmKanban', () => ({
   default: {
     createCard: vi.fn(),
+    createPipeline: vi.fn(),
+    updatePipeline: vi.fn(),
     accountIdFromRoute: '1',
     getPipelineInboxes: vi.fn(),
     createPipelineInbox: vi.fn(),
@@ -30,6 +32,52 @@ vi.mock('../../../../api/crmKanban', () => ({
 vi.mock('shared/helpers/mitt', () => ({
   emitter: { emit: vi.fn() },
 }));
+
+describe('#crmKanban pipeline save (#1197)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const run = pipeline =>
+    actions.savePipelineWithStages(
+      { commit: vi.fn(), dispatch: vi.fn() },
+      { pipeline, stages: [] }
+    );
+
+  it('sends counts_as_sale (even false) and outcome_labels on update', async () => {
+    CrmKanbanAPI.updatePipeline.mockResolvedValue({
+      data: { payload: { id: 3 } },
+    });
+    await run({
+      id: 3,
+      name: 'Sinistros',
+      counts_as_sale: false,
+      outcome_labels: { success: 'Pago', failure: 'Negado' },
+    });
+    expect(CrmKanbanAPI.updatePipeline).toHaveBeenCalledWith(
+      3,
+      expect.objectContaining({
+        counts_as_sale: false,
+        outcome_labels: { success: 'Pago', failure: 'Negado' },
+      })
+    );
+  });
+
+  it('sends counts_as_sale on create and omits what the caller did not set', async () => {
+    CrmKanbanAPI.createPipeline.mockResolvedValue({
+      data: { payload: { id: 4 } },
+    });
+    await run({ name: 'Vendas', counts_as_sale: true });
+    const payload = CrmKanbanAPI.createPipeline.mock.calls[0][0];
+    expect(payload.counts_as_sale).toBe(true);
+    expect(payload).not.toHaveProperty('outcome_labels');
+
+    await run({ name: 'Sem tipo' });
+    expect(CrmKanbanAPI.createPipeline.mock.calls[1][0]).not.toHaveProperty(
+      'counts_as_sale'
+    );
+  });
+});
 
 describe('#crmKanban confirmed opportunity creation', () => {
   beforeEach(() => {
