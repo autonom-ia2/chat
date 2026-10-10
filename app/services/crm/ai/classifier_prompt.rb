@@ -133,6 +133,9 @@ module Crm::Ai::ClassifierPrompt
     Quando "card.subject_started_at" vier preenchido, a conversa já tratou de outro pedido antes: preencha "card"
     SOMENTE com o que foi dito a partir desse horário (compare com o "created_at" das mensagens). O que veio antes
     é de outro pedido e nunca vai para "card".
+    "agent_results" traz, em uma frase cada, o que as ferramentas do agente produziram nestas conversas (o resultado de
+    uma cotação, um agendamento...). É fonte válida para os campos, como a conversa: use quando a descrição do campo
+    pedir esse dado, com "evidence" sendo a frase do resultado.
     Use SOMENTE as chaves fornecidas ali, no grupo correto. Nunca invente chaves, nunca mova uma chave entre
     grupos e nunca use atributos ausentes do schema.
     Se "attribute_schema" estiver vazio ou não houver evidência clara, retorne arrays vazios em

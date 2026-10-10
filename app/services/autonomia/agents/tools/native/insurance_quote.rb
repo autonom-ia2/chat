@@ -103,6 +103,7 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   include Comparativo
   include Fecho
   include Resultado
+  extend ResumoParaOCrm
   include NotaDaEquipe
   include RamoSemEspecialista
 

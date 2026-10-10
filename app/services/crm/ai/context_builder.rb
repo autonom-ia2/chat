@@ -28,7 +28,8 @@ module Crm
           },
           known_attributes: known_attributes,
           conversation_state: conversation_state,
-          temporal: temporal_context
+          temporal: temporal_context,
+          agent_results: AgentResults.new(card: @card).perform
         }
       end
 

@@ -143,3 +143,14 @@ A Entrega 3 precisa de uma conta com **mais de um funil** para o piloto do acess
 - **Nome do assunto:** o Jev só escolhe; quando o pedido é novo, o modelo maior escreve o nome ("Agentes de IA", "Seguro do Onix"). Sem nome, nada muda.
 - **Card criado sozinho pela caixa** nasce com o nome do contato: o primeiro assunto identificado dá nome a ele, em vez de criar outro card.
 - **Antes de ligar na conta 16:** medir o custo por conversa com o modo Sugerir (a correção da seção 7: a IA é o PR 5, não o PR 8).
+
+## 11. Decisões de 10/10/2026 (Rodrigo)
+
+- **PR 6 em dois:** 6a (#1234, no ar) criou os campos próprios do card (`card_attribute`) e fez a IA da conversa
+  gravar neles; 6b liga o resultado das ferramentas do agente a esses campos.
+- **Nada de código de um ramo só.** O multifunil serve a qualquer negócio (agents.autonomia.site é o mesmo código):
+  sem chaves fixas como `cotacao_valor`, sem botão de "campos de cotação". Cada ferramenta do agente resume o próprio
+  resultado em uma frase (`Native::Base.resumo_para_o_crm`); a IA do card lê esses resumos com as mensagens
+  (`agent_results`) e preenche os campos que o admin criou, pela descrição de cada campo. A cotação de seguro é a
+  primeira ferramenta com resumo; outras entram do mesmo jeito.
+- Só entra resultado de execução que começou depois do card: o de um pedido anterior não vai para o card de agora.

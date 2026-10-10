@@ -37,6 +37,13 @@ class Autonomia::Agents::Tools::Native::Base
       slug.humanize
     end
 
+    # O QUE A EXECUÇÃO PRODUZIU, EM UMA FRASE PARA O CRM (multifunil, #1146). A IA do card lê junto com as mensagens e
+    # preenche os campos que o admin criou (ex.: "Valor cotado", "Data da consulta"). Vale para qualquer negócio: cada
+    # ferramenta resume o próprio resultado. -> String ou nil (nil = nada a dizer).
+    def resumo_para_o_crm(_run)
+      nil
+    end
+
     # O que o modelo lê para decidir usar. Específico, nunca genérico.
     def description
       raise NotImplementedError, "#{self} must implement .description"
