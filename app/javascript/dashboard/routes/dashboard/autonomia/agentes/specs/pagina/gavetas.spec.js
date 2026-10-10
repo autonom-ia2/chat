@@ -498,21 +498,27 @@ describe('GavetaAgenda (#1253)', () => {
     wrapper.unmount();
   });
 
-  it('shows the server refusal (422) and keeps the drawer open', async () => {
-    store.dispatch.mockRejectedValue(
-      new Error('Você não pode escolher a página de agendamento.')
-    );
-    const wrapper = await montar();
-    await clicar('[data-valor="5"]');
-    expect(no('[data-pausada]')).not.toBeNull();
-    await clicar('[data-salvar]');
-    expect(alerta).not.toHaveBeenCalled();
-    expect(no('[data-erro]').textContent).toContain(
-      'Você não pode escolher a página de agendamento.'
-    );
-    expect(wrapper.emitted('fechar')).toBeUndefined();
-    wrapper.unmount();
-  });
+  it.each([
+    ['the server refusal (422)', new Error('Você não pode escolher a página.')],
+    [
+      'a server or network failure (500)',
+      new Error('AxiosError: Request failed with status code 500'),
+    ],
+  ])(
+    'shows the fixed save error for %s and keeps the drawer open',
+    async (_caso, falha) => {
+      store.dispatch.mockRejectedValue(falha);
+      const wrapper = await montar();
+      await clicar('[data-valor="5"]');
+      await clicar('[data-salvar]');
+      expect(alerta).not.toHaveBeenCalled();
+      const texto = no('[data-erro]').textContent;
+      expect(texto).toContain('AGENTS.JORNADA.PAGINA.GAVETA_AGENDA.ERRO');
+      expect(texto).not.toContain('AxiosError');
+      expect(wrapper.emitted('fechar')).toBeUndefined();
+      wrapper.unmount();
+    }
+  );
 
   it('says how to create a page when the account has none, without Save', async () => {
     paginasApi.get.mockResolvedValue({ data: { payload: [] } });

@@ -69,8 +69,9 @@ const salvar = async () => {
     });
     useAlert(t(`${NS}.PRONTO`));
     emit('fechar');
-  } catch (erro) {
-    erroSalvar.value = erro?.message || t(`${NS}.ERRO`);
+  } catch {
+    // Texto fixo como nas outras gavetas: a mensagem crua ("AxiosError: ...") não diz nada a quem usa.
+    erroSalvar.value = t(`${NS}.ERRO`);
   } finally {
     salvando.value = false;
   }
