@@ -4,12 +4,14 @@ name: Fila - painel
 # sessão estar viva: qualquer sessão (ou o Rodrigo) lê o estado aqui e assume. Regras em docs/processo-de-release.md.
 #
 # Também deixa rastro, sem travar ninguém (decisão do Rodrigo: controle de processo, não de revisor):
-#   - push num PR com `fila:pedido` ou `fila:liberado` tira os rótulos (regra "sem push depois da vaga");
-#   - PR que entra na main sem `fila:liberado` nem `hotfix` gera alerta no painel;
+#   - push num PR com `fila:pedido` tira o rótulo (regra "sem push depois do pedido");
+#   - PR que entra na main sem `fila:pedido` nem `hotfix` gera alerta no painel;
 #   - deploy disparado à mão (workflow_dispatch) gera alerta no painel.
 #
 # Seguro com pull_request_target: não faz checkout nem roda código do PR; só lê metadados e escreve rótulos e
-# comentários. O repositório é público: título de PR entra no painel sem markdown ativo, menção nem link.
+# comentários. Liberar = enfileirar: nenhum rótulo muda nessa hora, porque cada rótulo novo refaz os checks
+# obrigatórios do Guia e da Central e segura o PR fora da fila (lote de 10/10). O repositório é público: título
+# de PR entra no painel sem markdown ativo, menção nem link.
 
 on:
   pull_request_target:
@@ -63,22 +65,19 @@ jobs:
             if (ev === 'pull_request_target') {
               const pr = p.pull_request;
               const labels = nomes(pr.labels);
-              const vaga = ['fila:liberado', 'fila:pedido'].filter((name) => labels.includes(name));
-              if (p.action === 'synchronize' && vaga.length) {
-                for (const name of vaga) await tirar(pr.number, name);
-                const quais = vaga.map((name) => '`' + name + '`').join(' e ');
+              if (p.action === 'synchronize' && labels.includes('fila:pedido')) {
+                await tirar(pr.number, 'fila:pedido');
+                const quais = '`fila:pedido`';
                 await github.rest.issues.createComment({ owner, repo, issue_number: pr.number,
                   body: `Push depois do pedido de vaga: ${quais} saiu automaticamente. Com a CI verde no head novo, peça a vaga de novo (docs/processo-de-release.md).` });
                 alertas.push(`↩️ #${pr.number} recebeu push depois do pedido de vaga; ${quais} retirado.`);
               }
               if (p.action === 'closed' && pr.merged && pr.base.ref === 'main') {
-                if (labels.includes('fila:liberado') || labels.includes('hotfix')) {
-                  for (const name of ['fila:liberado', 'fila:pedido']) {
-                    if (labels.includes(name)) await tirar(pr.number, name);
-                  }
+                if (labels.includes('fila:pedido') || labels.includes('hotfix')) {
+                  if (labels.includes('fila:pedido')) await tirar(pr.number, 'fila:pedido');
                   await github.rest.issues.addLabels({ owner, repo, issue_number: pr.number, labels: ['fila:validar'] });
                 } else {
-                  alertas.push(`⚠️ #${pr.number} entrou na main **sem** \`fila:liberado\` nem \`hotfix\` (por ${pr.merged_by ? pr.merged_by.login : '?'}).`);
+                  alertas.push(`⚠️ #${pr.number} entrou na main **sem** \`fila:pedido\` nem \`hotfix\` (por ${pr.merged_by ? pr.merged_by.login : '?'}).`);
                 }
               }
             }
@@ -163,7 +162,7 @@ jobs:
             const corpo = [
               'Painel da fila de deploy do chat2you. **Atualizado sozinho** pelo workflow `fila-painel.yml`. Não edite à mão.',
               '',
-              'Regras: `docs/processo-de-release.md`. Quem coordena: sessão **Orquestração Deploy**. **O pedido do Rodrigo prevalece sempre**; com a Orquestração fora, o OK direto dele libera (a sessão põe `fila:liberado` citando o OK no PR).',
+              'Regras: `docs/processo-de-release.md`. Quem coordena: sessão **Orquestração Deploy**. **O pedido do Rodrigo prevalece sempre**; com a Orquestração fora, o OK direto dele libera (a sessão enfileira citando o OK no PR).',
               '',
               `**Atualizado:** ${agora} UTC · **main:** \`${main.slice(0, 10)}\``,
               '',
@@ -173,8 +172,8 @@ jobs:
               '## Fila de merge (GitHub)',
               filaTexto(),
               '',
-              '## Liberados para enfileirar (`fila:liberado`)',
-              lista(comRotulo('fila:liberado')),
+              '## Enfileirados, esperando checks (auto-merge)',
+              lista(abertos.filter((pr) => pr.auto_merge)),
               '',
               '## Hotfix (`hotfix`)',
               lista(comRotulo('hotfix')),

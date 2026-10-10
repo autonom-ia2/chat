@@ -10,8 +10,8 @@ Automação (decisão do Rodrigo em 09/10/2026; em 10/10 ela passou a orquestrar
 Nenhuma sessão ou agente põe PR na fila sem a vez dada por ela.
 
 **O pedido do Rodrigo prevalece sempre.** Se a Orquestração estiver fora (sessão parada, sem contexto, máquina
-dormindo), o OK direto do Rodrigo libera: a sessão dona põe `fila:liberado` no PR citando o OK dele, enfileira, e o
-painel registra. A Orquestração confere quando voltar.
+dormindo), o OK direto do Rodrigo libera: a sessão dona comenta no PR citando o OK dele, enfileira, e o painel
+registra. A Orquestração confere quando voltar.
 
 ### Quem decide o quê
 
@@ -31,12 +31,17 @@ de deploy e a cada 30 min). Ela não depende de nenhuma sessão estar viva: quem
 
 | Rótulo | Quem põe | Significa |
 |---|---|---|
-| `fila:pedido` | sessão dona do PR | pediu vaga (preencha a seção "Pedido de vaga" no corpo do PR) |
-| `fila:liberado` | Orquestração, ou a sessão com OK direto do Rodrigo | pode enfileirar; um push depois disso tira o rótulo sozinho (e o `fila:pedido` também) |
+| `fila:pedido` | sessão dona do PR, com a CI verde | pediu vaga (preencha a seção "Pedido de vaga" no corpo do PR); um push depois disso tira o rótulo sozinho |
 | `hotfix` | Orquestração | via expressa (abaixo) |
-| `fila:validar` | o painel, ao mergear um PR liberado ou hotfix | em produção, aguardando o "ok, SHA"; a Orquestração tira depois do ok |
+| `fila:validar` | o painel, ao mergear um PR com `fila:pedido` ou `hotfix` | em produção, aguardando o "ok, SHA"; a Orquestração tira depois do ok |
 
-Rastro sem trava: PR que entra na `main` sem `fila:liberado` nem `hotfix`, e deploy disparado à mão, viram alerta
+**Liberar é enfileirar.** Não existe rótulo de "liberado": a Orquestração (ou a sessão, com OK direto do Rodrigo)
+enfileira, e o painel mostra a fila de merge e os PRs com auto-merge esperando checks. Nenhum rótulo muda na hora
+de enfileirar: o `guia-trava.yml` roda de novo em qualquer `labeled`/`unlabeled`, e um rótulo trocado nessa hora
+refaz os checks obrigatórios e segura o PR fora da fila (em 10/10 isso partiu um lote em dois deploys). Pular a trava
+por rótulo não é saída: job pulado conta como check aprovado.
+
+Rastro sem trava: PR que entra na `main` sem `fila:pedido` nem `hotfix`, e deploy disparado à mão, viram alerta
 comentado no painel. As mensagens entre sessões continuam como aviso, mas o registro é o rótulo e o painel.
 
 ### Como assumir a orquestração
