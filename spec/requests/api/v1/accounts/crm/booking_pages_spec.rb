@@ -239,6 +239,23 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingPages', type: :request do
       expect(page.reload.inbox_id).to be_nil
     end
 
+    it 'quem não enxerga a caixa de agenda já gravada salva os outros passos reenviando a mesma caixa, mas não troca a caixa' do
+      page.update!(inbox: google, locations: [{ 'type' => 'google_meet' }])
+      manager = role_user('agendamento_manage')
+      other = create(:channel_email, account: account, provider: 'google', calendar_enabled: true).inbox
+
+      call(manager, :patch, "#{base}/#{page.id}", { booking_page: { calendar_inbox_id: google.id, title: 'Novo título' } })
+
+      expect(response).to have_http_status(:ok)
+      expect(page.reload).to have_attributes(inbox_id: google.id, title: 'Novo título')
+
+      call(manager, :patch, "#{base}/#{page.id}", { booking_page: { calendar_inbox_id: other.id } })
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(body['error']).to eq('crm.booking_v2.calendar_inbox_invalid')
+      expect(page.reload.inbox_id).to eq(google.id)
+    end
+
     it 'aceita durações extras como texto' do
       call(admin, :patch, "#{base}/#{page.id}", { booking_page: { slot_durations: %w[60 15] } })
 

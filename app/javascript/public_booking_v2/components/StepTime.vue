@@ -9,7 +9,8 @@ import ZoneNote from './ZoneNote.vue';
 
 // Hora: só horários livres viram botão (ocupados não vêm da API). Tocar no horário já avança: o cliente
 // chega à confirmação em até 4 toques (J1-A4, J2-A8). Dia vazio ou erro sempre oferece saída (RA-17). As horas
-// estão no relógio de quem abre; se uma delas cai em outro dia ali, o botão mostra o dia junto.
+// estão no relógio de quem abre; se uma delas cai em outro dia ali, o botão mostra o dia junto. Ao mudar o horário
+// de uma reunião (J5), a saída é manter o horário de agora em vez de pedir contato.
 const {
   page,
   slots,
@@ -21,6 +22,7 @@ const {
   chooseSlot,
   goBack,
   openNoSlot,
+  manage,
 } = useFlow();
 const { t, locale } = useI18n();
 
@@ -104,7 +106,14 @@ const isEmpty = computed(
       >
         {{ t('BOOKING_V2.TIME.OTHER_DAY') }}
       </ActionButton>
-      <ActionButton variant="ghost" @click="openNoSlot">
+      <ActionButton
+        v-if="manage.isRescheduling.value"
+        variant="ghost"
+        @click="manage.returnToManage"
+      >
+        {{ t('BOOKING_V2.RESCHEDULE.KEEP') }}
+      </ActionButton>
+      <ActionButton v-else variant="ghost" @click="openNoSlot">
         {{ t('BOOKING_V2.NO_SLOT.LINK') }}
       </ActionButton>
     </div>

@@ -47,6 +47,11 @@ class CrmBookingPagesAPI extends ApiClient {
     return axios.put(`${this.url}/${id}/people`, { user_ids: userIds });
   }
 
+  // "Testar no meu WhatsApp" (#1192): manda ao número um link igual ao do cliente.
+  testInvite(id, phone) {
+    return axios.post(`${this.url}/${id}/test_invite`, { phone });
+  }
+
   // Passar reuniões (#1195): `pageId` vazio = todas as páginas. A prévia não grava.
   reassignPreview({ fromUserId, toUserId, pageId }) {
     return axios.get(`${this.url}/reassign_preview`, {

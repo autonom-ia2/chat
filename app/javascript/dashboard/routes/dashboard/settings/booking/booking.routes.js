@@ -10,15 +10,17 @@ import { isBookingV2Available } from './bookingAccess';
 const SettingsWrapper = () => import('../SettingsWrapper.vue');
 const BookingSettingsPage = () => import('./BookingSettingsPage.vue');
 const MyBookingHoursPage = () => import('./MyBookingHoursPage.vue');
+const BookingResultsPage = () => import('./results/BookingResultsPage.vue');
 
 // Configurações › Agendamento (#1187, F1-D). Ver pede agendamento_view; mudar,
 // agendamento_manage (a tela esconde os botões de escrita). O backend aplica o
 // mesmo corte (Crm::BookingPagePolicy).
 const meta = { permissions: ['administrator', ...SCHEDULING_PERMISSIONS] };
 
-// Meus horários (#1195, J8-A11): quem pode atender reuniões, o mesmo corte do
-// CRM (Crm::BookingV2::HostEligibility): administrador, agente sem função e
-// função com crm_view ou crm_admin. As chaves de Agendamento não entram.
+// CRM › Meus horários (#1195, J8-A11) e Meus números (#1194, J8-A12): quem
+// pode atender reuniões, o mesmo corte do CRM (Crm::BookingV2::HostEligibility
+// e Crm::BookingStatsPolicy): administrador, agente sem função e função com
+// crm_view ou crm_admin. As chaves de Agendamento não entram.
 export const myHoursMeta = {
   permissions: [
     'administrator',
@@ -55,6 +57,15 @@ export const ensureBookingEnabled = async (to, _from, next) => {
   next({ name: 'home', params: to.params });
 };
 
+// "Meus números" mora no CRM: precisa também do CRM ligado na instalação.
+export const ensureBookingResultsEnabled = async (to, from, next) => {
+  if (window.globalConfig?.CRM_KANBAN_ENABLED !== 'true') {
+    next({ name: 'home', params: to.params });
+    return;
+  }
+  await ensureBookingEnabled(to, from, next);
+};
+
 export default {
   routes: [
     {
@@ -70,6 +81,14 @@ export default {
           component: BookingSettingsPage,
           meta,
         },
+        {
+          // Painel de resultados (#1194, J7): a equipe para quem tem acesso.
+          path: 'results',
+          name: 'settings_booking_results',
+          component: BookingResultsPage,
+          props: { entry: 'settings' },
+          meta,
+        },
       ],
     },
     {
@@ -78,6 +97,14 @@ export default {
       meta: myHoursMeta,
       beforeEnter: ensureBookingEnabled,
       component: MyBookingHoursPage,
+    },
+    {
+      path: frontendURL('accounts/:accountId/crm/booking-results'),
+      name: 'crm_booking_results',
+      meta: myHoursMeta,
+      beforeEnter: ensureBookingResultsEnabled,
+      component: BookingResultsPage,
+      props: { entry: 'crm' },
     },
   ],
 };

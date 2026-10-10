@@ -311,6 +311,9 @@ Rails.application.routes.draw do
                 post :sync
                 post :record_outcome
                 post :summarize
+                # Dia da reunião (#1193): "Lembrar" e "Enviar link para marcar outro horário".
+                post :remind, to: 'meeting_actions#remind'
+                post :rebook_link, to: 'meeting_actions#rebook_link'
               end
               collection do
                 post :suggest_times
@@ -398,6 +401,7 @@ Rails.application.routes.draw do
                 post :photo
                 get :people
                 put :people, action: :update_people
+                post :test_invite
               end
             end
             # Meus horários (#1195): a própria pessoa ajusta dias e horas de agendamento e pausa a agenda.
@@ -407,7 +411,13 @@ Rails.application.routes.draw do
             resources :booking_invites, only: [:index, :create, :destroy] do
               member do
                 post :deliver
+                post :copied
               end
+            end
+            # Painel de resultados do agendamento (#1194): números do período e "abriram e não marcaram".
+            resource :booking_stats, only: [:show] do
+              get :opened_not_booked
+              post 'opened_not_booked/:invite_id/resend', action: :resend, as: :resend_opened_not_booked
             end
           end
           namespace :autonomia do
@@ -1173,6 +1183,11 @@ Rails.application.routes.draw do
       namespace :v2 do
         get 'invites/:code', to: 'invites#show'
         post 'invites/:code/viewed', to: 'invites#viewed'
+        # Gestão da reunião pelo mesmo link (#1192).
+        post 'invites/:code/confirm', to: 'invites#confirm'
+        post 'invites/:code/cancel', to: 'invites#cancel'
+        post 'invites/:code/reschedule', to: 'invites#reschedule'
+        post 'invites/:code/stop_notices', to: 'invites#stop_notices'
         # Página pública v2 (#1189): só o slug opaco (página ou link individual) autoriza; ICS com token no caminho.
         get 'booking/:slug/slots', to: 'booking#slots'
         get 'booking/:slug/next_slot', to: 'booking#next_slot'

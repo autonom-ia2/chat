@@ -5,9 +5,9 @@
 # Não toca canal de e-mail nem lista membros de caixa (J8-A5). A gaveta antiga (BookingProfilesController) segue
 # só do administrador e só com páginas v1.
 class Api::V1::Accounts::Crm::BookingPagesController < Api::V1::Accounts::Crm::BaseController
-  PREVIEW_TTL = 1.hour
+  include ::Crm::BookingPageInboxes
 
-  class InvalidCalendarInbox < StandardError; end
+  PREVIEW_TTL = 1.hour
 
   before_action :ensure_booking_v2_enabled
   before_action -> { check_module_permission!('agendamento') }
@@ -42,10 +42,19 @@ class Api::V1::Accounts::Crm::BookingPagesController < Api::V1::Accounts::Crm::B
   end
 
   def update
-    @page.update!(page_params.merge(calendar_inbox_attributes))
+    @page.update!(page_params.merge(calendar_inbox_attributes).merge(notice_inbox_attributes))
     render_page
-  rescue InvalidCalendarInbox
-    render_unprocessable('crm.booking_v2.calendar_inbox_invalid')
+  rescue InvalidInbox => e
+    render_unprocessable(e.message)
+  end
+
+  # "Testar no meu WhatsApp" (#1192, J3-A11): manda ao número informado, pela caixa de avisos, um link igual ao do
+  # cliente. O convite de teste fica marcado (`metadata.test`) e fora dos números.
+  def test_invite
+    ::Crm::BookingV2::TestInvite.new(page: @page, user_context: pundit_user, phone: params[:phone]).perform
+    render json: { sent: true }
+  rescue ::Crm::BookingV2::TestInvite::Refused => e
+    render json: { error: e.message, reason: e.reason }.compact, status: :unprocessable_entity
   end
 
   def publish
@@ -135,8 +144,8 @@ class Api::V1::Accounts::Crm::BookingPagesController < Api::V1::Accounts::Crm::B
   def render_page(status: :ok)
     report = ::Crm::BookingV2::AttentionReport.new(account: Current.account)
     page = @page.reload
-    payload = ::Crm::BookingV2::PageSerializer.new(page, attention: report.attention?(page), orphaned: report.orphaned(page))
-                                              .full.merge(calendar_options: calendar_inbox_options)
+    payload = ::Crm::BookingV2::PageSerializer.new(page, attention: report.attention?(page), orphaned: report.orphaned(page)).full
+    payload = payload.merge(calendar_options: calendar_inbox_options, notice_inbox_options: notice_inboxes.as_json)
     render json: { payload: payload }, status: status
   end
 
@@ -191,42 +200,19 @@ class Api::V1::Accounts::Crm::BookingPagesController < Api::V1::Accounts::Crm::B
     render_page
   end
 
-  # Meet/Teams pedem uma caixa Google/Microsoft com agenda JÁ conectada. Escolher uma delas não é conectar caixa
-  # (J8-A5): a lista vem do escopo de caixas que a própria pessoa já enxerga.
-  def calendar_inboxes
-    policy_scope(::Inbox).includes(:channel).select do |inbox|
-      channel = inbox.channel
-      channel.is_a?(::Channel::Email) && channel.calendar_enabled? && (channel.google? || channel.microsoft?)
-    end
-  end
-
-  def calendar_inbox_options
-    calendar_inboxes.map { |inbox| { id: inbox.id, name: inbox.name, provider: inbox.channel.google? ? 'google' : 'microsoft' } }
-  end
-
-  def calendar_inbox_attributes
-    body = params[:booking_page]
-    return {} unless body.respond_to?(:key?) && body.key?(:calendar_inbox_id)
-
-    raw = body[:calendar_inbox_id]
-    return { inbox_id: nil } if raw.blank?
-
-    inbox = calendar_inboxes.find { |item| item.id == raw.to_i }
-    raise InvalidCalendarInbox if inbox.blank?
-
-    { inbox_id: inbox.id }
-  end
-
   def account_locale
     Current.account.locale.presence || I18n.default_locale
   end
 
+  # `post_meeting` (#1193): `Crm::BookingV2::PostMeetingParams`.
   def page_params
     parameter_set(:booking_page).permit(
       :title, :description, :duration_minutes, :buffer_minutes, :booking_window_days, :min_notice_minutes,
       :timezone, :contact_phone, :default_pipeline_id, :default_stage_id, :invite_text, :invite_ttl_days, :close_holidays,
+      :notice_preset, :cancel_until_minutes,
       slot_durations: [], working_hours: [:start_hour, :end_hour, { weekdays: [] }],
-      locations: [:type, :url, :address, :label], brand: [:color, :headline]
-    ).to_h
+      locations: [:type, :url, :address, :label], brand: [:color, :headline],
+      notice_templates: ::Crm::MeetingNotice::KINDS.index_with { %i[name language id] }
+    ).to_h.merge(::Crm::BookingV2::PostMeetingParams.attributes(parameter_set(:booking_page)))
   end
 end

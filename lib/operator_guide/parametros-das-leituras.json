@@ -1021,6 +1021,21 @@
     "controller": "api/v1/accounts/crm/booking_profiles#agent_links",
     "parametros": []
   },
+  "crm/booking_stats": {
+    "controller": "api/v1/accounts/crm/booking_stats#show",
+    "parametros": [
+      "period",
+      "scope"
+    ]
+  },
+  "crm/booking_stats/opened_not_booked": {
+    "controller": "api/v1/accounts/crm/booking_stats#opened_not_booked",
+    "parametros": [
+      "page",
+      "period",
+      "scope"
+    ]
+  },
   "crm/calendar/available_slots": {
     "controller": "api/v1/accounts/crm/calendar#available_slots",
     "parametros": [

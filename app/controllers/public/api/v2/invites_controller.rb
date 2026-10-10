@@ -9,19 +9,48 @@
 #
 # `viewed` registra a abertura depois do primeiro render (POST, para pré-visualização de link não contar) e ignora
 # robôs de pré-visualização pelo `User-Agent`, comparado por `include?` numa lista fechada.
+#
+# Gestão da reunião (#1192, contrato F2-A): convite agendado mostra `meeting` e aceita `confirm`, `cancel`,
+# `reschedule` e `stop_notices` (respondem o mesmo JSON do GET; recusa = 422 `{ error: <código> }`). O link de
+# convite agendado continua abrindo até 1 dia depois do fim da reunião, inclusive cancelada (mostra "Cancelada") e
+# inclusive com a página pausada (o cliente ainda precisa poder cancelar). Reunião cancelada com a página aberta leva
+# `can_rebook: true`: o mesmo convite marca de novo (`PublicBooking`).
 class Public::Api::V2::InvitesController < PublicController
   # Comparados em minúsculas. Só nomes de robôs: um `bot` solto casaria com celular de gente (ex.: CUBOT).
   ROBOT_AGENTS = %w[whatsapp facebookexternalhit facebot twitterbot slackbot telegrambot discordbot linkedinbot googlebot
                     bingbot preview crawler spider].freeze
 
+  MANAGE_ERRORS = %w[not_changeable too_late slot_unavailable booking_failed].freeze
+
   before_action :set_invite
 
+  rescue_from ::Crm::BookingV2::ManageError do |error|
+    code = MANAGE_ERRORS.include?(error.message) ? error.message : 'booking_failed'
+    render json: { error: code }, status: :unprocessable_entity
+  end
+
   def show
-    render json: {
-      code: @invite.code, page_slug: page_slug, state: @invite.scheduled_at.present? ? 'scheduled' : 'open',
-      contact_first_name: ::Crm::BookingV2::InviteText.first_name(@invite.contact).presence,
-      phone_masked: ::Crm::BookingV2::PhoneMask.mask(@invite.contact.phone_number)
-    }.merge(scheduled_time)
+    render_invite
+  end
+
+  def confirm
+    manage.confirm!
+    render_invite
+  end
+
+  def cancel
+    manage.cancel!
+    render_invite
+  end
+
+  def reschedule
+    manage.reschedule!(starts_at: params[:starts_at], duration: params[:duration].presence)
+    render_invite
+  end
+
+  def stop_notices
+    manage.stop_notices!
+    render_invite
   end
 
   def viewed
@@ -40,8 +69,36 @@ class Public::Api::V2::InvitesController < PublicController
   def usable?
     return false if @invite.blank? || !@invite.active?
     return false unless ::Crm::Config.booking_v2_enabled?(@invite.account)
+    return @invite.meeting.present? if scheduled?
 
     ::Crm::BookingV2::InvitePages.new(@invite.account).invite_usable?(@invite)
+  end
+
+  def scheduled?
+    @invite.scheduled_at.present?
+  end
+
+  def manage
+    ::Crm::BookingV2::ManageMeeting.new(@invite)
+  end
+
+  def render_invite
+    @invite.reload
+    payload = {
+      code: @invite.code, page_slug: page_slug, state: scheduled? ? 'scheduled' : 'open',
+      contact_first_name: ::Crm::BookingV2::InviteText.first_name(@invite.contact).presence,
+      phone_masked: ::Crm::BookingV2::PhoneMask.mask(@invite.contact.phone_number)
+    }
+    return render json: payload unless scheduled?
+
+    render json: payload.merge(scheduled_time, meeting: ::Crm::BookingV2::ManagePayload.new(@invite).as_json, can_rebook: rebookable?,
+                                               contact_whatsapp_url: ::Crm::BookingV2::PublicPageSerializer.whatsapp_url(@invite.booking_profile))
+  end
+
+  # Reunião cancelada e página (e link individual, se houver) ainda atendendo: a página oferece marcar de novo pelo
+  # próprio convite, sem pedir nome e WhatsApp (`PublicBooking`).
+  def rebookable?
+    ::Crm::BookingV2::PublicBooking.rebookable?(@invite) && ::Crm::BookingV2::InvitePages.new(@invite.account).invite_usable?(@invite)
   end
 
   def page_slug

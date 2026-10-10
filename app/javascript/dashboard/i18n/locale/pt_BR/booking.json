@@ -58,6 +58,7 @@
       "ONDE": "Onde acontece",
       "QUANDO": "Dias e horas",
       "CARA": "Sua marca",
+      "AVISOS": "Avisos",
       "PREVIA": "Prévia e publicar",
       "DONE": "concluído"
     },
@@ -90,7 +91,10 @@
         "LOCATIONS": "Um dos lugares não pode mais ser usado. Confira onde vai ser a conversa.",
         "HOURS": "Confira os dias e os horários.",
         "PIPELINE": "Esse funil ou etapa não existe mais. Escolha outro.",
-        "BRAND": "Confira a cor e a frase de boas-vindas."
+        "BRAND": "Confira a cor e a frase de boas-vindas.",
+        "NOTICE_INBOX_GONE": "Esse WhatsApp não pode mais mandar avisos. Escolha outro ou deixe sem avisos.",
+        "NOTICE_TEMPLATES": "Uma das mensagens escolhidas não serve para os avisos. Escolha outra da lista.",
+        "NOTICES": "Confira os avisos e o prazo para mudar."
       }
     },
     "TEMPLATE": {
@@ -229,6 +233,85 @@
       "LOGO_ALT": "Logo da empresa",
       "PHOTO_ALT": "Foto de quem atende"
     },
+    "NOTICES": {
+      "TITLE": "Avisos no WhatsApp",
+      "INTRO": "O cliente recebe uma mensagem com o dia, a hora e um link para confirmar, mudar ou cancelar. Toda mensagem tem como parar de receber.",
+      "INBOX_LABEL": "Por qual WhatsApp sai o aviso?",
+      "INBOX_NONE": "Sem avisos",
+      "INBOX_CURRENT": "O WhatsApp já escolhido",
+      "NO_INBOXES": "Nenhum WhatsApp conectado pode mandar avisos ainda. Quando houver um, ele aparece aqui.",
+      "CHANNEL": {
+        "OFFICIAL": "Este é o WhatsApp oficial. Se o cliente não falou com você nas últimas 24 horas, o aviso só sai com uma mensagem aprovada pela Meta. Escolha essas mensagens logo abaixo.",
+        "WAHA": "Por este número, o aviso só sai se o cliente falou com você nas últimas 24 horas. Assim o número não corre risco de bloqueio.",
+        "API": "Por este número, o aviso sai na hora quando o cliente falou com você nas últimas 24 horas. Fora disso, sai com a mensagem pronta escolhida abaixo."
+      },
+      "PRESET_LABEL": "Quando avisar o cliente?",
+      "PRESETS": {
+        "STANDARD": {
+          "LABEL": "Ao marcar, 1 dia antes e 1 hora antes",
+          "HINT": "Três mensagens. Quase ninguém esquece.",
+          "SUMMARY": "ao marcar, 1 dia antes e 1 hora antes"
+        },
+        "LIGHT": {
+          "LABEL": "Ao marcar e 1 hora antes",
+          "HINT": "Duas mensagens.",
+          "SUMMARY": "ao marcar e 1 hora antes"
+        },
+        "MINIMAL": {
+          "LABEL": "Só ao marcar",
+          "HINT": "Uma mensagem, com o dia, a hora e o link.",
+          "SUMMARY": "só ao marcar"
+        }
+      },
+      "RECOMMENDED": "Recomendado",
+      "SAMPLE_LABEL": "Assim chega para o cliente",
+      "SAMPLE_TEXT": "Oi, Ana! Seu horário está marcado para 14/10 às 15:00. Para confirmar, mudar ou cancelar: chat.exemplo.com/b/AB3K9QXZ\nPara parar estes avisos: chat.exemplo.com/b/AB3K9QXZ",
+      "TEMPLATES_LABEL": "Mensagens aprovadas pela Meta",
+      "TEMPLATES_HINT": "Escolha uma mensagem aprovada para cada aviso. Para aparecer aqui, ela precisa ter o link do horário no lugar de {link}. Ela pode usar {name} para o nome do cliente e {when} para o dia e a hora.",
+      "TEMPLATES_EMPTY": "Este WhatsApp ainda não tem mensagem aprovada com o link do horário. Sem ela, o aviso só sai para quem falou com você nas últimas 24 horas. Peça a quem cuida do WhatsApp para criar uma na Meta.",
+      "TEMPLATE_NONE": "Sem mensagem aprovada",
+      "SAMPLE_NAME": "Ana",
+      "SAMPLE_WHEN": "14/10 às 15:00",
+      "SAMPLE_LINK": "(link do horário)",
+      "TEMPLATE_OPTION_LANGUAGE": "{preview} · {language}",
+      "TEMPLATE_SAVED": "A mensagem já escolhida",
+      "MISSING_TEMPLATES": "Sem mensagem pronta para: {kinds}. Esse aviso só sai para quem falou com você nas últimas 24 horas.",
+      "API_TEMPLATES_LABEL": "Mensagens prontas deste WhatsApp",
+      "API_TEMPLATES_HINT": "Escolha uma mensagem pronta para cada aviso. O dia, a hora e o link vão no fim dela.",
+      "API_TEMPLATES_EMPTY": "Este WhatsApp ainda não tem mensagem pronta. Sem ela, o aviso só sai para quem falou com você nas últimas 24 horas.",
+      "API_TEMPLATES_FAILED": "Não deu para ver as mensagens prontas deste WhatsApp. Peça a um administrador para escolher.",
+      "TEMPLATE_FOR": "Mensagem aprovada para o aviso {notice}",
+      "KINDS": {
+        "BOOKED": "Ao marcar",
+        "RESCHEDULED": "Quando o horário muda",
+        "DAY_BEFORE": "1 dia antes",
+        "HOUR_BEFORE": "1 hora antes"
+      },
+      "CANCEL_LABEL": "Até quando o cliente pode mudar ou cancelar?",
+      "CANCEL_HINT": "Depois disso, o link mostra o horário, mas não deixa mudar. Aí o cliente fala com você.",
+      "CANCEL_VALUE": "Até {value} antes",
+      "CANCEL_ANYTIME": "Até a hora marcada",
+      "TEST": {
+        "BUTTON": "Testar no meu WhatsApp",
+        "PHONE_LABEL": "Seu WhatsApp",
+        "PHONE_HINT": "Você recebe um link igual ao do cliente. Se marcar um horário por ele, o horário fica marcado de verdade.",
+        "PHONE_PLACEHOLDER": "(11) 98888-0000",
+        "SEND": "Enviar teste",
+        "SENT": "Pronto. Confira o seu WhatsApp.",
+        "ERRORS": {
+          "NO_INBOX": "Esta página está sem avisos. Escolha um WhatsApp no passo dos avisos.",
+          "FORBIDDEN": "Você não tem acesso a este WhatsApp. Peça a um administrador para fazer o teste.",
+          "NOT_PUBLISHED": "Publique a página antes de testar.",
+          "INVALID_PHONE": "Confira o número. Use o DDD, por exemplo (11) 98888-0000.",
+          "OUTSIDE_WINDOW": "Mande antes um “oi” do seu celular para o WhatsApp da empresa. Depois toque em Enviar teste de novo.",
+          "NUMBER_CAP": "Este número já recebeu muitas mensagens hoje. Tente amanhã ou use outro número.",
+          "STOPPED": "Este número pediu para não receber mensagens. Use outro número.",
+          "CONVERSATION_FORBIDDEN": "Este número já conversa com a empresa numa conversa que você não pode abrir. Use outro número.",
+          "CANNOT_SEND": "Não deu para mandar por este WhatsApp. Confira se ele está conectado.",
+          "FAILED": "Não deu para enviar agora. Tente de novo."
+        }
+      }
+    },
     "PREVIEW": {
       "TITLE": "Assim o cliente vai ver",
       "SCHEDULE": "{days}, das {from} às {to}",
@@ -256,10 +339,114 @@
       "FIX": "Resolver",
       "PUBLISHED_TITLE": "Sua página está no ar.",
       "PUBLISHED_TEXT": "Mande o link para seus clientes ou mostre o QR code.",
-      "PUBLISHING": "Publicando"
+      "PUBLISHING": "Publicando",
+      "NOTICES_ON": "O cliente recebe aviso no WhatsApp {when}, pelo número {inbox}.",
+      "NOTICES_ON_NO_NAME": "O cliente recebe aviso no WhatsApp {when}.",
+      "NOTICES_OFF": "Sem avisos no WhatsApp. O cliente vê o horário na tela e na agenda dele.",
+      "NOTICES_WINDOW_ONLY": "Só para quem falou com você nas últimas 24 horas.",
+      "NOTICES_ALTER": "Alterar os avisos no WhatsApp",
+      "CANCEL_UNTIL": "Ele pode mudar ou cancelar até {value} antes.",
+      "CANCEL_ANYTIME": "Ele pode mudar ou cancelar até a hora marcada."
+    },
+    "POST_MEETING": {
+      "TITLE": "Depois da reunião",
+      "OFF": "Quando alguém marca “Aconteceu”, o card fica onde está.",
+      "SOME_STAGE": "a etapa escolhida",
+      "SUMMARY_ASK": "Quando alguém marca “Aconteceu”, o sistema pergunta se o card vai para a etapa “{stage}”.",
+      "SUMMARY_AUTO": "Quando alguém marca “Aconteceu”, o card vai sozinho para a etapa “{stage}”.",
+      "STAGE_LABEL": "Etapa depois da reunião",
+      "MODE_LABEL": "Como mover",
+      "MODES": {
+        "ASK": {
+          "LABEL": "Perguntar antes",
+          "HINT": "A pessoa escolhe “Mover” ou “Agora não”."
+        },
+        "AUTO": {
+          "LABEL": "Mover sozinho",
+          "HINT": "O card muda de etapa e isso fica no histórico do card."
+        }
+      },
+      "TURN_OFF": "Não mover o card",
+      "SAVE_ERROR": "Não deu para salvar. Confira a etapa e tente de novo."
     },
     "VIEW": {
       "READ_ONLY": "Você pode ver esta página, mas não pode mudar."
+    },
+    "RESULTS": {
+      "MENU": "Meus números",
+      "TAB_PAGES": "Páginas",
+      "TAB_RESULTS": "Resultados",
+      "TABS_LABEL": "Partes do agendamento",
+      "TITLE_TEAM": "Resultados do agendamento",
+      "TITLE_MINE": "Meus números",
+      "SUBTITLE": "Veja se os links de agenda estão virando horários marcados.",
+      "PERIOD_LABEL": "Período",
+      "PERIOD_7": "7 dias",
+      "PERIOD_30": "30 dias",
+      "SCOPE_LABEL": "De quem",
+      "SCOPE_MINE": "Só os meus",
+      "SCOPE_TEAM": "Equipe toda",
+      "LOADING": "Carregando os números",
+      "ERROR": "Não deu para carregar os números.",
+      "RETRY": "Tentar de novo",
+      "EMPTY": "Nada aconteceu nos últimos {days} dias.",
+      "SEE_30": "Ver 30 dias",
+      "REFRESH": "Atualizar",
+      "NUMBERS_LABEL": "Números dos últimos {days} dias",
+      "CONFIRMED": "Confirmaram pelo link: {count}",
+      "NUMBERS": {
+        "SENT": {
+          "LABEL": "Links enviados",
+          "HINT": "Links de agenda mandados ou copiados para clientes."
+        },
+        "OPENED": {
+          "LABEL": "Abriram",
+          "HINT": "Clientes que abriram o link."
+        },
+        "BOOKED": {
+          "LABEL": "Marcaram",
+          "HINT": "Horários marcados pelos links e pela página."
+        },
+        "ATTENDED": {
+          "LABEL": "Compareceram",
+          "HINT": "Reuniões marcadas como \"o cliente veio\"."
+        },
+        "NO_SHOW": {
+          "LABEL": "Faltaram",
+          "HINT": "Reuniões marcadas como \"o cliente não veio\"."
+        }
+      },
+      "ORIGINS": {
+        "TITLE": "De onde vieram os horários marcados",
+        "CONVERSATION": "Link mandado na conversa",
+        "PUBLIC_LINK": "Link da página (bio, site, anúncio)",
+        "CONTACT_REQUEST": "Pedido de contato",
+        "AI": "Atendente de IA",
+        "EMPTY": "Nenhum horário marcado neste período."
+      },
+      "LIST": {
+        "TITLE": "Abriram o link e não marcaram",
+        "HINT_MINE": "Só quem recebeu o seu link. Ninguém recebe mensagem sem você tocar.",
+        "HINT_TEAM": "Só clientes que você pode ver. Ninguém recebe mensagem sem alguém tocar.",
+        "LOADING": "Carregando a lista",
+        "ERROR": "Não deu para carregar a lista.",
+        "EMPTY": "Ninguém abriu o link sem marcar nos últimos {days} dias.",
+        "OPENED": "Abriu {when}",
+        "VIA": "{page} · enviado por {name}",
+        "RESEND": "Enviar de novo",
+        "RESEND_LABEL": "Enviar de novo o link para {name}",
+        "RESENT": "Enviado de novo",
+        "SENT_OK": "Link enviado na conversa.",
+        "NO_CONVERSATION": "Sem conversa. Use o botão Agendar no card.",
+        "MORE": "Ver mais",
+        "ERRORS": {
+          "CANNOT_REPLY": "A conversa está fechada. O cliente precisa mandar uma mensagem antes.",
+          "NO_CONVERSATION": "Este cliente não tem conversa. Use o botão Agendar no card.",
+          "NO_PAGE": "A página deste link não está no ar.",
+          "FORBIDDEN": "Você não pode enviar para este cliente.",
+          "GENERIC": "Não deu para enviar. Tente de novo."
+        }
+      }
     },
     "REASSIGN": {
       "OPEN": "Passar reuniões",

@@ -31,16 +31,20 @@ class Crm::BookingV2::Slots
   end
 
   # Reuniões `scheduled` da pessoa que cruzam o intervalo, de qualquer caixa e as internas. Também usada por quem
-  # confere conflito fora da página (Reassigner), sob a mesma trava de agente.
-  def self.busy_intervals(account_id:, host_id:, from:, to:)
+  # confere conflito fora da página (Reassigner), sob a mesma trava de agente. `ignore_meeting_id`: ver initialize.
+  def self.busy_intervals(account_id:, host_id:, from:, to:, ignore_meeting_id: nil)
     Crm::Meeting.where(account_id: account_id, created_by_id: host_id, status: :scheduled)
+                .where.not(id: ignore_meeting_id)
                 .where('starts_at < ? AND ends_at > ?', to, from)
                 .pluck(:starts_at, :ends_at)
                 .map { |start_at, end_at| { start: start_at, end: end_at } }
   end
 
-  def initialize(profile:, host:, date:, duration: nil, strict: false, include_provider: true) # rubocop:disable Metrics/ParameterLists
+  # `ignore_meeting_id` (#1192, remarcar): a reunião que está mudando de horário não ocupa o horário dela mesma.
+  # Feriado, pausa e "Meus horários" continuam valendo para o horário novo.
+  def initialize(profile:, host:, date:, duration: nil, strict: false, include_provider: true, ignore_meeting_id: nil) # rubocop:disable Metrics/ParameterLists
     @profile = profile
+    @ignore_meeting_id = ignore_meeting_id
     @host = host
     @date = date
     @strict = strict
@@ -182,7 +186,8 @@ class Crm::BookingV2::Slots
   def host_intervals(range_start, range_end)
     return [] if host.blank?
 
-    self.class.busy_intervals(account_id: profile.account_id, host_id: host.id, from: range_start, to: range_end)
+    self.class.busy_intervals(account_id: profile.account_id, host_id: host.id, from: range_start, to: range_end,
+                              ignore_meeting_id: @ignore_meeting_id)
   end
 
   def provider_intervals(range_start, range_end)

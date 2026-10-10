@@ -5,6 +5,7 @@ import BookingPagesAPI from 'dashboard/api/crmBookingPages';
 import BookingPreviewCard from './BookingPreviewCard.vue';
 import BookingDestination from './BookingDestination.vue';
 import BookingLinkActions from './BookingLinkActions.vue';
+import BookingNoticesSummary from './BookingNoticesSummary.vue';
 import { pageToForm } from '../bookingPageForm';
 import { joinNames } from '../bookingFormat';
 
@@ -57,6 +58,10 @@ const peopleNames = computed(() =>
         :pipeline-id="form.pipelineId"
         :stage-id="form.stageId"
         :people-names="peopleNames"
+      />
+      <BookingNoticesSummary
+        :form="form"
+        :inbox-options="page.notice_inbox_options || []"
       />
       <BookingLinkActions
         v-if="page.enabled && page.public_url"

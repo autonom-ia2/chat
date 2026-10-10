@@ -35,6 +35,7 @@ import SidebarChangelogButton from './SidebarChangelogButton.vue';
 import GuideSidebarEntry from 'dashboard/components/autonomia/guide/GuideSidebarEntry.vue';
 import { prospectingSidebarItems } from 'dashboard/routes/dashboard/autonomia/prospecting/utils/prospectingSidebar';
 import {
+  bookingResultsSidebarItems,
   bookingSidebarItems,
   myBookingHoursSidebarItems,
 } from 'dashboard/routes/dashboard/settings/booking/bookingAccess';
@@ -952,6 +953,11 @@ const menuItems = computed(() => {
                 activeOn: ['crm_calendar_index'],
               },
               ...myBookingHoursSidebarItems({
+                account: currentAccount.value(accountId.value),
+                t,
+                accountScopedRoute,
+              }),
+              ...bookingResultsSidebarItems({
                 account: currentAccount.value(accountId.value),
                 t,
                 accountScopedRoute,

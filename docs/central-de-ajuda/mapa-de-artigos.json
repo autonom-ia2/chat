@@ -2695,7 +2695,9 @@
      "assuntos": [],
      "rotas": [
       "settings_booking",
-      "crm_my_booking_hours"
+      "crm_my_booking_hours",
+      "settings_booking_results",
+      "crm_booking_results"
      ],
      "me_leve_ate_la": {
       "rota": "settings_booking",
@@ -2705,7 +2707,9 @@
      "prints": [],
      "fontes": [
       "porques: Criar e publicar a página de agendamento",
-      "porques: Quem pode o quê no Agendamento"
+      "porques: Quem pode o quê no Agendamento",
+      "porques: Ver os resultados do agendamento da equipe",
+      "porques: Ver meus números de agendamento"
      ],
      "revisar": false,
      "nota": null

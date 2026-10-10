@@ -203,7 +203,7 @@ describe('dates and time zones', () => {
 });
 
 describe('routes and locations', () => {
-  it('reads /book/:slug, /b/:code and preview', () => {
+  it('reads /book/:slug, /b/:code, preview and stop_notices', () => {
     expect(parseRoute('/book/conversa', '?preview=tk')).toEqual({
       code: null,
       slug: 'conversa',
@@ -212,7 +212,16 @@ describe('routes and locations', () => {
     expect(parseRoute('/b/Xk4p9Q', '?preview=tk')).toEqual({
       code: 'Xk4p9Q',
       slug: null,
+      stopNotices: false,
     });
+    expect(parseRoute('/b/Xk4p9Q', '?stop_notices=1')).toEqual({
+      code: 'Xk4p9Q',
+      slug: null,
+      stopNotices: true,
+    });
+    expect(parseRoute('/b/Xk4p9Q', '?stop_notices=yes').stopNotices).toBe(
+      false
+    );
     expect(parseRoute('/other', '')).toEqual({ code: null, slug: null });
   });
 
