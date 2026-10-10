@@ -19,7 +19,7 @@ RSpec.describe Crm::BookingV2::InviteDeliverer do
 
     expect(message).to be_persisted
     expect(message).to have_attributes(conversation_id: conversation.id, sender: world.host, message_type: 'outgoing', private: false)
-    expect(message.content).to eq("Oi, Marcos! Escolha o melhor horário para a gente conversar: #{invite.url}")
+    expect(message.content).to eq("Oi, Marcos! Escolha o melhor horário para você: #{invite.url}")
     expect(message.content_attributes['crm_booking_invite_id']).to eq(invite.id)
     expect(invite.reload).to have_attributes(conversation_id: conversation.id, channel: 'conversation', state: 'sent')
     expect(invite.sent_at).to be_present

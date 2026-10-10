@@ -11,13 +11,13 @@ RSpec.describe Crm::BookingV2::InviteText do
 
   it 'uses the default text in the account language with the first name and the link' do
     expect(described_class.new(invite).to_s)
-      .to eq("Oi, Marcos! Escolha o melhor horário para a gente conversar: https://app.example.com/b/#{invite.code}")
+      .to eq("Oi, Marcos! Escolha o melhor horário para você: https://app.example.com/b/#{invite.code}")
   end
 
   it 'uses the English default for an English account' do
     account.update!(locale: 'en')
 
-    expect(described_class.new(invite.reload).to_s).to eq("Hi, Marcos! Pick the best time for us to talk: #{invite.url}")
+    expect(described_class.new(invite.reload).to_s).to eq("Hi, Marcos! Pick the best time for you: #{invite.url}")
   end
 
   it 'uses the page text, replacing every {nome} and {link}' do
@@ -37,7 +37,7 @@ RSpec.describe Crm::BookingV2::InviteText do
     ['', '+55 11 91234-5678'].each do |name|
       world.contact.update_columns(name: name) # rubocop:disable Rails/SkipsModelValidations
 
-      expect(described_class.new(invite.reload).to_s).to eq("Oi! Escolha o melhor horário para a gente conversar: #{invite.url}")
+      expect(described_class.new(invite.reload).to_s).to eq("Oi! Escolha o melhor horário para você: #{invite.url}")
     end
   end
 
