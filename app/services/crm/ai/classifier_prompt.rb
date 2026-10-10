@@ -135,13 +135,14 @@ module Crm::Ai::ClassifierPrompt
     é de outro pedido e nunca vai para "card".
     "agent_results" traz, em uma frase cada, o que as ferramentas do agente produziram nestas conversas (o resultado de
     uma cotação, um agendamento...). É fonte válida para os campos, como a conversa: use quando a descrição do campo
-    pedir esse dado, com "evidence" sendo a frase do resultado.
+    pedir esse dado. Um resultado pode ser de outro pedido da mesma conversa: só use em "card" o que for claramente
+    deste card (compare o que o resultado cita com "card.title").
     Use SOMENTE as chaves fornecidas ali, no grupo correto. Nunca invente chaves, nunca mova uma chave entre
     grupos e nunca use atributos ausentes do schema.
     Se "attribute_schema" estiver vazio ou não houver evidência clara, retorne arrays vazios em
     "extracted_attributes.contact", "extracted_attributes.conversation" e "extracted_attributes.card".
     Para cada item extraído, preencha "key", "value", "confidence" e "evidence". "evidence" deve ser um
-    trecho curto da conversa que sustente o valor.
+    trecho curto da conversa (ou a frase de "agent_results") que sustente o valor.
     Regras por tipo:
     - text/link: retorne texto curto e limpo, sem inventar detalhes.
     - number/currency/percent: retorne número limpo, sem moeda nem texto. Ex.: "uns 3 mil" -> 3000.

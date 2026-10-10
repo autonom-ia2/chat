@@ -18,8 +18,8 @@ module Crm
         @card = card
       end
 
-      def perform
-        {
+      def perform(with_agent_results: false)
+        contexto = {
           summary: ai_metadata['summary'].to_s,
           recent_messages: recent_messages,
           current_stage: {
@@ -28,9 +28,12 @@ module Crm
           },
           known_attributes: known_attributes,
           conversation_state: conversation_state,
-          temporal: temporal_context,
-          agent_results: AgentResults.new(card: @card).perform
+          temporal: temporal_context
         }
+        # Só a avaliação do card lê o resultado das ferramentas do agente (#1146); resumo e follow-up não pagam a busca.
+        return contexto unless with_agent_results
+
+        contexto.merge(agent_results: AgentResults.new(card: @card, conversation_ids: conversation_ids).perform)
       end
 
       private

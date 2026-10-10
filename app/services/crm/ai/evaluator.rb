@@ -60,7 +60,7 @@ module Crm
           feature: 'avaliacao_card', account: @account, pipeline: @card.pipeline,
           cache_key_scope: :feature
         )
-        context = ContextBuilder.new(card: @card).perform
+        context = ContextBuilder.new(card: @card).perform(with_agent_results: true)
         model = auto_move_allowed? ? Config::MODEL_AUTO_MOVE : Config::MODEL_CLASSIFY
         effort = Config::CLASSIFY_REASONING_EFFORT
 

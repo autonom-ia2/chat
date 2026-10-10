@@ -47,4 +47,11 @@ RSpec.describe Crm::Ai::ContextBuilder do
       expect(known[:card]).to eq('placa' => 'ABC1D23')
     end
   end
+
+  describe '#perform agent_results (#1146)' do
+    it 'só a avaliação do card pede o resultado das ferramentas do agente' do
+      expect(described_class.new(card: card).perform).not_to have_key(:agent_results)
+      expect(described_class.new(card: card).perform(with_agent_results: true)[:agent_results]).to eq([])
+    end
+  end
 end

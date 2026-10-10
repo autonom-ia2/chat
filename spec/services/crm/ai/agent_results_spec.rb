@@ -21,12 +21,12 @@ RSpec.describe Crm::Ai::AgentResults do
     { 'produto' => 'auto', 'resultado_por_seguradora' => precos }
   end
 
-  # opcoes: slug, handle, arguments, conversa.
+  # opcoes: slug, handle, arguments, conversa, encerrado_em.
   def run_de(status:, criado_em: Time.current, **opcoes)
     Autonomia::Agents::ToolRun.create!(
       account: account, agent: agent, conversation: opcoes.fetch(:conversa, conversation), slug: opcoes.fetch(:slug, cotacao.slug),
       status: status, faixa: 'auto:onix', execution_key: SecureRandom.uuid, arguments: opcoes.fetch(:arguments, {}),
-      handle: opcoes.fetch(:handle, {}), created_at: criado_em, updated_at: criado_em
+      handle: opcoes.fetch(:handle, {}), created_at: criado_em, updated_at: opcoes.fetch(:encerrado_em, criado_em)
     )
   end
 
@@ -38,7 +38,7 @@ RSpec.describe Crm::Ai::AgentResults do
     card
     run_de(status: 'done', handle: handle_com_preco, arguments: { 'item' => 'Onix ABC1D23' }, criado_em: 1.minute.from_now)
 
-    resultados = described_class.new(card: card).perform
+    resultados = described_class.new(card: card, conversation_ids: [conversation.id]).perform
 
     expect(resultados.size).to eq(1)
     expect(resultados.first[:tool]).to eq(cotacao.slug)
@@ -54,13 +54,34 @@ RSpec.describe Crm::Ai::AgentResults do
     run_de(status: 'done', handle: handle_com_preco, criado_em: 3.minutes.from_now,
            conversa: create(:conversation, account: account, inbox: inbox))
 
-    expect(described_class.new(card: card).perform).to eq([])
+    expect(described_class.new(card: card, conversation_ids: [conversation.id]).perform).to eq([])
+  end
+
+  it 'a cotação pedida segundos antes de o card nascer, e encerrada depois, é deste card' do
+    run_de(status: 'done', handle: handle_com_preco, criado_em: 1.minute.ago, encerrado_em: 5.minutes.from_now)
+    card
+
+    expect(described_class.new(card: card, conversation_ids: [conversation.id]).perform.size).to eq(1)
+  end
+
+  it 'cotação encerrada como falha, mas com preço de alguma seguradora, entra' do
+    card
+    run_de(status: 'failed', handle: handle_com_preco, criado_em: 1.minute.from_now)
+
+    expect(described_class.new(card: card, conversation_ids: [conversation.id]).perform.first[:summary]).to include('R$ 1.950,00')
+  end
+
+  it 'ferramenta do catálogo sem resumo próprio não entra' do
+    card
+    run_de(status: 'done', slug: Autonomia::Agents::Tools::Registry::TOOLS.find { |tool| tool != cotacao }.slug, criado_em: 1.minute.from_now)
+
+    expect(described_class.new(card: card, conversation_ids: [conversation.id]).perform).to eq([])
   end
 
   it 'ferramenta sem resumo não entra' do
     card
     run_de(status: 'done', slug: 'ferramenta_que_nao_existe', criado_em: 1.minute.from_now)
 
-    expect(described_class.new(card: card).perform).to eq([])
+    expect(described_class.new(card: card, conversation_ids: [conversation.id]).perform).to eq([])
   end
 end
