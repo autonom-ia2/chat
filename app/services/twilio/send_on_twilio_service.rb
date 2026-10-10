@@ -83,7 +83,7 @@ class Twilio::SendOnTwilioService < Base::SendOnChannelService
   end
 
   def attachments
-    message.attachments.map(&:download_url)
+    message.attachments.sort_by(&:id).map(&:download_url)
   end
 
   def inbox
