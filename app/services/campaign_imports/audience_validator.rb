@@ -47,7 +47,11 @@ class CampaignImports::AudienceValidator < CampaignImports::Validator
   end
 
   def row_contacts
-    @row_contacts ||= CampaignImports::AudienceRowContacts.new(contact_reading)
+    @row_contacts ||= CampaignImports::AudienceRowContacts.new(contact_reading.with_legacy_mobiles(phone_country.brazil?))
+  end
+
+  def phone_country
+    @phone_country ||= CampaignImports::PhoneCountry.from(@reading.resolution, previous_resolution, @reading.mapping['phone'])
   end
 
   def previous_resolution
@@ -122,15 +126,23 @@ class CampaignImports::AudienceValidator < CampaignImports::Validator
   def ready_attributes(row_results, valid_rows, invalid_rows, plan)
     attributes = super.merge(audience_attributes(valid_rows))
     companies = CampaignImports::CompanyPreview.new(campaign_import.account, valid_rows).perform
-    summary = attributes[:validation_summary].merge(companies: companies)
-    # customer_base (#1246): how many legacy mobiles got the ninth digit, so the pilot can audit them.
-    summary = summary.merge(ninth_digit_added: valid_rows.count { |row| row[:ninth_digit_added] }) if contact_reading.customer_base?
+    summary = with_phone_country(attributes[:validation_summary].merge(companies: companies), row_results)
     attributes.merge(validation_summary: summary)
   end
 
   def mark_validation_failed(global_errors, row_results, exception: nil)
     super
-    campaign_import.update!(audience_attributes([])) if @reading
+    return unless @reading
+
+    campaign_import.update!(audience_attributes([]).merge(validation_summary: with_phone_country(campaign_import.validation_summary, row_results)))
+  end
+
+  # customer_base (#1246): the country Jev gave the phone column, and how many legacy mobiles got the
+  # ninth digit or were left out, so the pilot can audit them (also when no row was valid).
+  def with_phone_country(summary, row_results)
+    return summary unless contact_reading.customer_base?
+
+    summary.to_h.merge(phone_country.summary(row_results).stringify_keys)
   end
 
   def audience_attributes(valid_rows)

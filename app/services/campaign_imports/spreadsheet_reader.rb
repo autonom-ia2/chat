@@ -30,6 +30,8 @@ class CampaignImports::SpreadsheetReader
   def initialize(parsed, explicit_mapping: nil, pinned_header: {}, ai_resolver: nil, jev_enabled: CampaignImports::JevConfig.available?,
                  reading: CampaignImports::ContactReading::CLASSIC)
     @reading = reading
+    # Finding the header and counting phones also recognize the legacy mobiles Jev will judge.
+    @structure_reading = reading.with_legacy_mobiles(true)
     @parsed = parsed
     @explicit_mapping = explicit_mapping&.to_h&.transform_keys(&:to_s)
     @pinned_header = pinned_header.to_h.symbolize_keys.slice(:header_row, :table_index)
@@ -39,7 +41,7 @@ class CampaignImports::SpreadsheetReader
   # rubocop:enable Metrics/ParameterLists
 
   def perform
-    candidate = CampaignImports::HeaderLocator.new(@parsed, reading: @reading).perform(**@pinned_header)
+    candidate = CampaignImports::HeaderLocator.new(@parsed, reading: @structure_reading).perform(**@pinned_header)
     raise Error, 'empty_file' if candidate.nil? || candidate.rows.empty?
 
     columns = column_profiles(candidate)
@@ -58,11 +60,15 @@ class CampaignImports::SpreadsheetReader
       values = column_values(candidate.rows, index)
       {
         index: index, header: header, non_blank_count: values.size,
-        valid_phone_count: values.count { |value| @reading.phone?(value) },
-        valid_email_count: values.count { |value| @reading.email?(value) },
+        valid_phone_count: values.count { |value| @structure_reading.phone?(value) },
+        valid_email_count: values.count { |value| @structure_reading.email?(value) },
         examples: masked.fetch(index).fetch(:examples)
-      }
+      }.merge(phone_evidence(values))
     end
+  end
+
+  def phone_evidence(values)
+    @reading.customer_base? ? CampaignImports::PhoneEvidence.new(values, @reading).to_h : {}
   end
 
   def column_values(rows, index)
@@ -132,11 +138,20 @@ class CampaignImports::SpreadsheetReader
 
     answer = ai_resolver.resolve(
       headers: candidate.headers, header_row_number: candidate.header_row_number,
-      profiles: columns.map { |column| column.slice(:non_blank_count, :valid_phone_count, :valid_email_count, :examples) }
+      profiles: columns.map do |column|
+        column.slice(:non_blank_count, :valid_phone_count, :valid_email_count, :examples, *CampaignImports::PhoneEvidence::KEYS)
+      end
     )
-    { 'status' => 'answered', 'model' => answer[:model], 'schema_probability' => answer[:schema_probability], 'targets' => answer[:targets] }
+    { 'status' => 'answered', 'model' => answer[:model], 'schema_probability' => answer[:schema_probability], 'targets' => answer[:targets],
+      'phone_country' => phone_country(answer) }.compact
   rescue TypesafeAi::AudienceSchemaResolver::Error => e
     { 'status' => 'failed', 'error' => e.message }
+  end
+
+  # The country answer is about the column Jev took as phone (CampaignImports::PhoneCountry).
+  def phone_country(answer)
+    country = answer[:phone_country]
+    country && { 'value' => country[:value], 'confidence' => country[:confidence], 'column' => answer.dig(:targets, :phone, :index) }
   end
 
   def ai_resolver

@@ -104,6 +104,22 @@ module BaseDeClientesEval::Dados
     Celula.new(valor: valor, alcanca: false)
   end
 
+  # Celular dos EUA escrito tudo junto e sem o +1, com o primeiro dígito do assinante entre 6 e 9: os
+  # dígitos sozinhos não o distinguem de um celular brasileiro antigo ("9176551234" = DDD 91 + 7655-1234).
+  def celular_eua_junto
+    Celula.new(valor: "#{sorteio(%w[917 718 212 646 305 786 214 312])}#{rng.rand(6..9)}#{digitos(6)}", alcanca: false)
+  end
+
+  # Celular brasileiro antigo (8 dígitos depois do DDD) escrito tudo junto: só o contexto diz que é do Brasil.
+  def celular_antigo_junto
+    Celula.new(valor: "#{sorteio(DDDS)}#{rng.rand(6..9)}#{digitos(7)}", alcanca: true)
+  end
+
+  # Celular do México tudo junto (10 dígitos): Cidade do México começa com 55, que também é DDD do RS.
+  def celular_mexico_junto
+    Celula.new(valor: "#{sorteio(%w[55 81 33])}#{rng.rand(6..9)}#{digitos(7)}", alcanca: false)
+  end
+
   def fixo
     Celula.new(valor: "(#{sorteio(DDDS)}) #{rng.rand(2..5)}#{digitos(3)}-#{digitos(4)}", alcanca: false)
   end

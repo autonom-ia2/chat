@@ -35,6 +35,13 @@ RSpec.describe CampaignImports::HeaderLocator, :aggregate_failures do
       expect(candidate.rows.size).to eq(1)
     end
 
+    it 'reads again without the pin a file saved without a header under customer_base' do
+      candidate = described_class.new(parsed(headless)).perform(header_row: 0, table_index: 0)
+
+      expect(candidate.untitled).to be(false)
+      expect(candidate.header_row_number).to eq(2)
+    end
+
     it 'finds no header in a file where every line has contact data' do
       expect(described_class.new(parsed("Ana,11987654321\nBia,21987654321\n")).perform).to be_nil
     end

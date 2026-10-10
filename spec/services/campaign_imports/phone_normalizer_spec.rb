@@ -20,12 +20,13 @@ RSpec.describe CampaignImports::PhoneNormalizer do
   end
 
   describe 'with the national formats (customer_base reading)' do
-    def normalize(value)
-      described_class.normalize!(value, national_formats: true)
+    # legacy_mobiles: Jev said the phone column is Brazilian (CampaignImports::PhoneCountry).
+    def normalize(value, legacy_mobiles: true)
+      described_class.normalize!(value, national_formats: true, legacy_mobiles: legacy_mobiles)
     end
 
-    def refused(value)
-      normalize(value)
+    def refused(value, legacy_mobiles: true)
+      normalize(value, legacy_mobiles: legacy_mobiles)
       false
     rescue described_class::Error
       true
@@ -59,6 +60,13 @@ RSpec.describe CampaignImports::PhoneNormalizer do
       %w[2 3 4 5].each do |first|
         expect(refused("(21) #{first}543-2109")).to be(true), first
       end
+    end
+
+    it 'never adds the ninth digit when the column was not judged Brazilian' do
+      expect(refused('(11) 8765-4321', legacy_mobiles: false)).to be(true)
+      expect(refused('9175551234', legacy_mobiles: false)).to be(true)
+      expect(normalize('(11) 98765-4321', legacy_mobiles: false).phone_number).to eq('+5511987654321')
+      expect(normalize('011 98765-4321', legacy_mobiles: false).phone_number).to eq('+5511987654321')
     end
 
     it 'keeps 55 as the DDD of Rio Grande do Sul when nothing else can be the DDD' do

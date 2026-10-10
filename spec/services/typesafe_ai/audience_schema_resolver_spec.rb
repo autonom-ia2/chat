@@ -40,26 +40,43 @@ RSpec.describe TypesafeAi::AudienceSchemaResolver, :aggregate_failures do
   end
 
   describe 'share_hint (customer_base reading, #1246)' do
+    let(:country) { { 'type' => 'choice', 'choice' => 'brazil', 'confidence' => 0.93 } }
+    let(:customer_base) { described_class.new(client: client, model: 'jev-1.13.0', share_hint: true) }
+
     before do
-      allow(client).to receive(:evaluate).and_return(
-        response(phone: answer('column_1'), email: answer('none'), name: answer('column_0'), company: answer('none'))
-      )
+      answers = response(phone: answer('column_1'), email: answer('none'), name: answer('column_0'), company: answer('none'))
+      allow(client).to receive(:evaluate).and_return(answers.merge('answers' => answers['answers'].merge('phone_country' => country)))
     end
 
-    it 'sends the share of valid values and the phone question that trusts it when on' do
-      described_class.new(client: client, model: 'jev-1.13.0', share_hint: true).resolve(candidate)
+    it 'sends the share of valid values, the phone evidence and asks the country of the phone column when on' do
+      phone_profile = candidate[:profiles][1].merge(legacy_mobile_count: 1, country_code_55_count: 0, other_country_code_count: 0)
+      with_evidence = candidate.merge(profiles: [candidate[:profiles][0], phone_profile, candidate[:profiles][2]])
 
+      result = customer_base.resolve(with_evidence)
+
+      expect(result[:phone_country]).to eq(value: 'brazil', confidence: 0.93)
       expect(client).to have_received(:evaluate) do |state:, questions:, **|
-        expect(state[:profiles][1]).to include(valid_phone_share: 1.0, valid_email_share: 0.0)
+        expect(state[:profiles][1]).to include(valid_phone_share: 1.0, valid_email_share: 0.0, legacy_mobile_count: 1)
         expect(state[:task]).to eq(described_class::STATE_TASK_WITH_SHARE)
         expect(questions[:phone_column][:instructions]).to eq(described_class::PHONE_WITH_SHARE)
+        expect(questions[:phone_country][:criteria].keys).to eq(%w[brazil other unknown])
       end
+    end
+
+    it 'treats a country outside brazil, other and unknown as no answer and keeps the columns' do
+      country['choice'] = 'portugal'
+
+      result = customer_base.resolve(candidate)
+
+      expect(result[:phone_country]).to be_nil
+      expect(result[:targets][:phone]).to eq(index: 1, confidence: 0.95)
     end
 
     it 'sends the request every account has when off' do
       resolver.resolve(candidate)
 
       expect(client).to have_received(:evaluate) do |state:, questions:, **|
+        expect(questions).not_to have_key(:phone_country)
         expect(state[:profiles][1].keys).to eq(%i[non_blank_count valid_phone_count valid_email_count examples])
         expect(state[:task]).to eq(described_class::STATE_TASK)
         expect(questions[:phone_column][:instructions]).to eq(described_class::TARGETS[:phone])

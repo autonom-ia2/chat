@@ -8,7 +8,7 @@ A F0 previa recolher 5 planilhas reais de clientes. Decisão do Rodrigo (10/10):
 elas e estressar o motor que já está em produção, o da importação de contatos (#1006:
 `CampaignImports::Parser` + `SpreadsheetReader` + Jev).
 
-Para isso foram montadas **63 planilhas fictícias**, cada uma com gabarito. O gabarito diz:
+Para isso foram montadas **66 planilhas fictícias**, cada uma com gabarito. O gabarito diz:
 - qual é a linha do cabeçalho e qual é a aba;
 - qual coluna é o celular, o e-mail, o nome e a empresa (ou "não tem");
 - se o certo é o motor resolver sozinho ou parar e perguntar;
@@ -18,8 +18,8 @@ Para isso foram montadas **63 planilhas fictícias**, cada uma com gabarito. O g
 |---|---|---|
 | Simples (`casos_simples.rb`) | 9 | CSV com `,` `;` tab e `\|`, Windows-1252, XLSX, inglês, só WhatsApp, só e-mail |
 | Dia a dia (`casos_dia_a_dia.rb`) | 20 | título acima do cabeçalho, fixo + celular, dois e-mails, export do Kommo, RD, Pipedrive e HubSpot, várias abas, rodapé com total, repetidos |
-| Armadilhas (`casos_armadilhas.rb`) | 18 | CPF que parece celular, DDD em coluna separada, sem cabeçalho, cabeçalho genérico, ERP com 30 colunas, injeção no cabeçalho, dois valores na célula, Excel com celular salvo como número, base antiga sem o 9, 3.000 linhas, título com telefone, **celulares dos EUA no meio** |
-| Controle (`casos_controle.rb`) | 16 | escritos **depois** do ajuste e nunca usados para ajustar: Facebook Lead Ads (`p:+55…`), banco em snake_case, emoji no cabeçalho, escola, clínica, cabeçalhos repetidos |
+| Armadilhas (`casos_armadilhas.rb`) | 21 | CPF que parece celular, DDD em coluna separada, sem cabeçalho, cabeçalho genérico, ERP com 30 colunas, injeção no cabeçalho, dois valores na célula, Excel com celular salvo como número, base antiga sem o 9, 3.000 linhas, título com telefone, **celulares dos EUA no meio** |
+| Controle (`casos_controle.rb`) | 18 | escritos **depois** do ajuste e nunca usados para ajustar: Facebook Lead Ads (`p:+55…`), banco em snake_case, emoji no cabeçalho, escola, clínica, cabeçalhos repetidos, México, export brasileiro em inglês |
 
 Nenhum dado é de cliente. Nomes e empresas saem do Faker com semente fixa; telefones, CPFs e
 e-mails são gerados. O Jev, como em produção, só vê os cabeçalhos e o formato mascarado dos
@@ -112,19 +112,19 @@ Variáveis:
 Ele grava em `tmp/evals/base_de_clientes/<data>/` o `RELATORIO.md`, o `resultados.json` (com a
 resposta crua do Jev) e as planilhas.
 
-### Resultado (63 planilhas, 3 leituras com o Jev em cada, nas duas leituras)
+### Resultado (66 planilhas, 3 leituras com o Jev em cada, nas duas leituras)
 
 | | Clássica (sem a flag = `main`) | Nova (`customer_base`) |
 |---|---|---|
 | Erro silencioso (`critico`) | 0 | 0 |
-| Leituras perfeitas | 166 de 189 (88%) | 180 de 189 (95%) |
+| Leituras perfeitas | 168 de 204 (82%) | 195 de 204 (96%) |
 | Parou com erro | 3 | 0 |
-| Perguntou sem precisar | 14 | 5 |
-| Sugestão errada (perguntando) | 6 | 4 |
-| **Linhas alcançadas** | **5.442 de 5.556** | **5.556 de 5.556** |
+| Perguntou sem precisar | 24 | 3 |
+| Sugestão errada (perguntando) | 9 | 6 |
+| **Linhas alcançadas** | **5.564 de 5.716** | **5.716 de 5.716** |
 | **Linhas inventadas** | 0 | **0** |
 
-Gasto com o Jev em todas as rodadas do dia: cerca de US$ 0,25, para um teto de US$ 2. Uma leitura
+Gasto com o Jev em todas as rodadas do dia: cerca de US$ 0,45, para um teto de US$ 2. Uma leitura
 custa por volta de US$ 0,0001.
 
 A escolha de colunas já era segura antes: nenhuma leitura importaria coluna errada sem perguntar. O
@@ -154,10 +154,51 @@ baseadas em fato:
 3. O DDD tem de estar na lista da Anatel (67 DDDs), e não "quaisquer dois dígitos de 1 a 9".
 
 O c47 mistura 30% de celulares dos EUA escritos nos jeitos de lá. Nenhum foi aceito (0 inventadas).
-Sobra um caso que dígito nenhum resolve: um número dos EUA escrito tudo junto e sem o +1
-(`9175551234`). Para auditar, a importação conta quantos celulares ganharam o 9
-(`validation_summary.ninth_digit_added`). Mostrar esse número na tela fica para a F1, que terá
-tela própria.
+
+### Número tudo junto e sem o código do país: quem decide é o Jev
+
+Sobrava um caso que dígito nenhum resolve. `9175551234` tanto pode ser um celular brasileiro antigo
+(DDD 91) quanto um número de Nova York sem o +1. A decisão do Rodrigo: não é regra fixa nem lista de
+palavras, é a IA olhando a planilha.
+
+Na leitura nova o Jev responde mais uma pergunta: **de que país são os números da coluna de
+telefone**, com três respostas possíveis, `brazil`, `other` ou `unknown`. Ele não vê nenhum número.
+Vê o que já via (cabeçalhos e formato mascarado) e mais quatro contagens da coluna
+(`CampaignImports::PhoneEvidence`):
+- quantos já são celulares brasileiros completos;
+- quantos dependem do 9;
+- quantos vêm com +55;
+- quantos vêm com outro código.
+
+O 9 só é acrescentado quando a resposta é `brazil` com confiança de 0,8 ou mais, para a mesma coluna
+que o Jev julgou e com o Jev tendo achado as colunas de contato (`CampaignImports::PhoneCountry`). Se
+a pessoa troca a coluna de telefone na mão, a resposta não vale para a coluna nova. Com `other`, `unknown`, sem resposta ou com confiança baixa, o
+número é recusado como hoje. O resumo da validação registra a resposta e quantos celulares
+ganharam o 9 ou ficaram de fora (`phone_country`, `ninth_digit_added`, `legacy_mobiles_refused`).
+
+| Planilha | O que o Jev disse (3 leituras) | Resultado |
+|---|---|---|
+| c42 base antiga brasileira | brazil 0,77–0,86 | 40 de 40 linhas; numa leitura em 0,77, as 17 sem o 9 ficaram de fora |
+| c49 base brasileira, celular tudo junto (Nome, CPF, UF, CEP) | brazil 0,94–0,97 | 40 de 40 |
+| c48 planilha dos EUA, tudo junto (State, ZIP) | other / unknown, 0,06–0,14 | nenhum número virou +55 |
+| c50 sem pistas (Contact, Number), números dos EUA | unknown 0,45–0,48 | nenhum número virou +55 |
+| h17 México (55 = Cidade do México e DDD do RS) | brazil 0,46–0,55, abaixo do corte | nenhum número virou +55 |
+| h18 export brasileiro em inglês (Full Name, Mobile, CPF) | brazil 0,80–0,82 | 40 de 40, **no limite** |
+
+O h17 e o h18 foram escritos depois do ajuste da pergunta, sem uso nele. Margens que valem
+acompanhar no piloto:
+- no México o Jev ainda inclina para Brasil, embora abaixo do corte;
+- no export brasileiro em inglês (0,80–0,85) e na base antiga sem outros sinais (c42, 0,77–0,86) ele
+  fica rente ao corte.
+
+O corte não foi baixado para acomodar esses casos. Quando o Jev não tem certeza, a resposta certa é
+a tela perguntar à pessoa se os números são do Brasil. Isso fica para a F1, que terá tela própria; o
+resumo já registra quantos celulares antigos ficaram de fora (`legacy_mobiles_refused`).
+
+Se ele errar, o lado do erro é perder o celular antigo, nunca inventar um número.
+
+Sobra o que contexto nenhum resolve: um número dos EUA tudo junto no meio de uma planilha que é
+toda brasileira. A decisão é por coluna.
 
 ### O que foi tentado e desfeito
 
