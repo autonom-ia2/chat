@@ -42,7 +42,7 @@ module Crm
         account = @card.account
         linked = Crm::CardConversation.where(account_id: account.id, conversation_id: conversation_ids).select(:card_id)
         account.crm_cards.open.where(conversation_id: conversation_ids).or(account.crm_cards.open.where(id: linked))
-               .where.not(id: @card.id).includes(:pipeline, :stage).order(:id).limit(MAX_OTHER_SUBJECTS)
+               .where.not(id: @card.id).includes(:pipeline, :stage).order(id: :desc).limit(MAX_OTHER_SUBJECTS)
                .map { |card| { title: card.title, pipeline: card.pipeline&.name, stage: card.stage&.name } }
       end
 

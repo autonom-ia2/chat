@@ -125,7 +125,6 @@ module Crm
           stages: @stages.map { |stage| stage_payload(stage) },
           conversation_summary: @context[:summary],
           recent_messages: @context[:recent_messages],
-          other_subjects: @context[:other_subjects],
           # Quem está com a conversa AGORA. Os papéis por mensagem dizem quem falou; isto diz se a
           # conversa está aberta, se há uma pessoa do time responsável e quando um humano falou por
           # último — sem isso o estágio sai só do texto, sem saber se alguém já assumiu.
@@ -139,7 +138,12 @@ module Crm
           default_hour: @context.dig(:temporal, :default_hour) || 9,
           attribute_schema: @attribute_schema,
           known_attributes: known_attributes_payload
-        }.to_json
+        }.merge(other_subjects_payload).to_json
+      end
+
+      # Só quando a conversa tem outros pedidos (#1147): com um pedido só, a entrada fica igual à de antes.
+      def other_subjects_payload
+        @context[:other_subjects].present? ? { other_subjects: @context[:other_subjects] } : {}
       end
 
       # Valores já salvos, restritos às chaves do attribute_schema (conjunto pequeno definido pelo

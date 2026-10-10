@@ -8,7 +8,8 @@ module Crm::Cards::CurrentSubject
     conversation_ids = ([card.conversation_id] + card.card_conversations.pluck(:conversation_id)).compact.uniq
     return true if conversation_ids.empty?
 
-    finder = Crm::Cards::ConversationCardFinder.new(account: card.account)
-    card.account.conversations.where(id: conversation_ids).any? { |conversation| finder.find(conversation)&.id == card.id }
+    # Uma consulta para todas as conversas, na ordem do assunto atual: o primeiro card de cada conversa é o atual.
+    rows = Crm::Cards::ConversationCardFinder.new(account: card.account).all_for(conversation_ids)
+    rows.group_by(&:listed_conversation_id).any? { |_conversation_id, cards| cards.first.id == card.id }
   end
 end

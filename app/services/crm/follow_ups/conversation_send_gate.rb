@@ -10,7 +10,7 @@ class Crm::FollowUps::ConversationSendGate
   ESPERA_TRAVADA = 1.minute
   # Mensagens recentes olhadas atrás de um toque automático. `content_attributes` é json com string dentro
   # (ver CadenceAnchor): o filtro por `crm_follow_up_id` é feito em Ruby, numa janela curta.
-  JANELA = 20
+  JANELA = 50
 
   def initialize(follow_up, now: Time.current)
     @follow_up = follow_up
@@ -22,12 +22,11 @@ class Crm::FollowUps::ConversationSendGate
     conversation = @follow_up.conversation
     return yield if conversation.blank?
 
-    recente = envio_recente(conversation)
-    return adiar(recente.created_at + INTERVALO, 'outro_envio_recente') if recente
-
     resultado = nil
     rodou = Redis::LockManager.new.with_lock(chave(conversation), TRAVA.to_i) do
-      resultado = yield
+      # Conferido já com a trava: dois follow-ups não passam juntos pela checagem.
+      recente = envio_recente(conversation)
+      resultado = recente ? adiar(recente.created_at + INTERVALO, 'outro_envio_recente') : yield
       true
     end
     rodou ? resultado : adiar(@now + ESPERA_TRAVADA, 'outro_envio_em_andamento')

@@ -13,6 +13,8 @@ class Crm::Ai::StaleCardsJob < ApplicationJob
 
       pipeline.cards.open.where('last_activity_at < ?', cutoff).find_each do |card|
         next if already_evaluated_since_last_activity?(card)
+        # Multifunil (#1147): o Evaluator pula o card que não é o assunto atual; enfileirar seria um job à toa a cada ciclo.
+        next unless Crm::Cards::CurrentSubject.card?(card)
 
         Crm::Ai::EvaluateCardJob.perform_later(card.id)
       end

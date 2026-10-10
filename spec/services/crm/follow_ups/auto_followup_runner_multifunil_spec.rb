@@ -50,7 +50,7 @@ RSpec.describe Crm::FollowUps::AutoFollowupRunner do
     expect(result.status).to eq(:rescheduled)
     expect(follow_up.reload.due_at).to be >= Time.current + described_class::OTHER_SUBJECT_WAIT
     state = card.reload.metadata.dig('ai', 'auto_followup_state')
-    expect(state['reply_seen_at']).to be_present
+    expect(state['reply_seen_message_id']).to be_present
     expect(state['stopped_reason']).to be_blank
     expect(card.activities.where(event_type: 'ai_followup_postponed')).to exist
   end
@@ -63,9 +63,10 @@ RSpec.describe Crm::FollowUps::AutoFollowupRunner do
     expect(result.status).to eq(:stopped)
   end
 
-  it 'depois de adiar, a mesma resposta não adia de novo' do
+  it 'depois de adiar, a mesma resposta não adia de novo (horário com fração de segundo)' do
     focar(other_card, Time.current)
-    create_incoming_message(conversation: conversation, content: 'E a do apartamento?')
+    reply = create_incoming_message(conversation: conversation, content: 'E a do apartamento?')
+    reply.update!(created_at: reply.created_at + 0.123456.seconds)
     described_class.new(follow_up: follow_up, now: Time.current).perform
 
     runner = described_class.new(follow_up: follow_up.reload, now: 7.hours.from_now)

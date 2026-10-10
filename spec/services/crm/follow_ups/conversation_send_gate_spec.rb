@@ -61,4 +61,15 @@ RSpec.describe Crm::FollowUps::ConversationSendGate do
   ensure
     lock&.unlock(key)
   end
+
+  it 'lembrete interno (a IA avisa a equipe) não espera a vez da conversa' do
+    card.pipeline.update!(metadata: { ai: { auto_followup: { enabled: true, mode: 'ai_reminder' } } })
+    current = follow_up
+    current.update!(metadata: current.metadata.merge('source' => 'ai_followup'))
+    processor = Crm::FollowUps::DueProcessor.new(now: now)
+
+    expect(processor.send(:lembrete_interno?, current)).to be(true)
+    card.pipeline.update!(metadata: { ai: { auto_followup: { enabled: true } } })
+    expect(processor.send(:lembrete_interno?, current.reload)).to be(false)
+  end
 end

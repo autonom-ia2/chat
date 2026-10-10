@@ -263,18 +263,21 @@ module Crm
 
         last_incoming = conversation.messages.incoming.reorder(id: :desc).first
         baseline = reply_baseline_at
-        last_incoming if last_incoming && baseline && last_incoming.created_at > baseline
+        return if last_incoming.blank? || baseline.blank? || last_incoming.created_at <= baseline
+
+        # The reply about another request, once postponed for, stops counting. Compared by id: a serialized time
+        # loses the microseconds and the same reply would look new forever.
+        last_incoming if last_incoming.id > state['reply_seen_message_id'].to_i
       end
 
-      # The reply about another request, once postponed for, stops counting (`reply_seen_at`).
       def reply_baseline_at
-        [state['last_sent_at'], state['reply_seen_at']].filter_map { |value| parse_time(value) if value.present? }
-                                                       .push(@follow_up.created_at).compact.max
+        last_sent = state['last_sent_at'].presence
+        (last_sent && parse_time(last_sent)) || @follow_up.created_at
       end
 
       def postpone_for_other_subject(reply)
         next_due = compute_due(@now + OTHER_SUBJECT_WAIT)
-        merge_state!('reply_seen_at' => reply.created_at.iso8601)
+        merge_state!('reply_seen_message_id' => reply.id)
         log_activity('ai_followup_postponed', reason: 'other_subject', next_due_at: next_due.iso8601, touch: touch)
         reschedule(next_due)
       end
