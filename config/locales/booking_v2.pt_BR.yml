@@ -11,8 +11,8 @@ pt_BR:
       contact_request:
         follow_up_title: 'Ligar para %{name}: pediu contato pela página de agendamento'
       invite:
-        default_text: 'Oi, {nome}! Escolha o melhor horário para a gente conversar: {link}'
-        default_text_without_name: 'Oi! Escolha o melhor horário para a gente conversar: {link}'
+        default_text: 'Oi, {nome}! Escolha o melhor horário para você: {link}'
+        default_text_without_name: 'Oi! Escolha o melhor horário para você: {link}'
       notices:
         when_format: "%d/%m às %H:%M"
         booked: "Oi%{name}! Seu horário está marcado para %{when}. Para confirmar, mudar ou cancelar: %{link}"

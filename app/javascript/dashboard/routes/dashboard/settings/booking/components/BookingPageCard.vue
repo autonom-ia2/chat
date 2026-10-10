@@ -1,13 +1,13 @@
 <script setup>
 import { computed, nextTick, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import BookingLinkActions from './BookingLinkActions.vue';
+import BookingPageLinks from './BookingPageLinks.vue';
 import BookingReassignPanel from './BookingReassignPanel.vue';
 
 // Um cartão por página: nome, situação (No ar, Pausada ou Rascunho), aviso de
-// atenção, o link (só no ar) e, para quem pode mudar, Editar, Pausar/Publicar e
-// Excluir (com confirmação). "Passar reuniões" (#1195) abre o painel de passar as
-// reuniões de uma pessoa para outra.
+// atenção, o link (só no ar; com um link por pessoa, um por pessoa) e, para quem
+// pode mudar, Editar, Pausar/Publicar e Excluir (com confirmação). "Passar
+// reuniões" (#1195) abre o painel de passar as reuniões de uma pessoa para outra.
 const props = defineProps({
   page: { type: Object, required: true },
   canManage: { type: Boolean, default: false },
@@ -161,10 +161,7 @@ const confirmDelete = () => {
       </li>
     </ul>
 
-    <BookingLinkActions
-      v-if="published && page.public_url"
-      :url="page.public_url"
-    />
+    <BookingPageLinks v-if="published" :page="page" />
 
     <p
       v-if="notice"

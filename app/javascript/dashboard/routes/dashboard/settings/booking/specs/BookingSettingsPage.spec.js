@@ -117,4 +117,34 @@ describe('BookingSettingsPage', () => {
     await view.find('[data-back]').trigger('click');
     expect(wrapper.find('[data-page]').exists()).toBe(true);
   });
+
+  it('em leitura, página com um link por pessoa mostra o link de cada pessoa', async () => {
+    canManage.value = false;
+    const perPerson = {
+      ...page,
+      assignment_mode: 'per_agent',
+      public_url: null,
+      links: [
+        {
+          agent_id: 11,
+          agent_name: 'Bia',
+          url: 'https://chat.exemplo.com/book/bia',
+          enabled: true,
+        },
+      ],
+    };
+    BookingPagesAPI.get.mockResolvedValue({ data: { payload: [perPerson] } });
+    BookingPagesAPI.show.mockResolvedValue({ data: { payload: perPerson } });
+    const wrapper = mount(BookingSettingsPage);
+    await flushPromises();
+    await wrapper.find('[data-view]').trigger('click');
+    await flushPromises();
+    const view = wrapper.find('[data-page-view]');
+    expect(view.text()).not.toContain('/book/x');
+    const rows = view.findAll('[data-person-link]');
+    expect(rows).toHaveLength(1);
+    expect(rows[0].find('[data-link-url]').text()).toBe(
+      'https://chat.exemplo.com/book/bia'
+    );
+  });
 });
