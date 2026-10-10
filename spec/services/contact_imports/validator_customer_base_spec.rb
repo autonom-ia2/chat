@@ -48,11 +48,12 @@ RSpec.describe ContactImports::Validator, :aggregate_failures do
       expect(masked).not_to include('3456')
     end
 
-    it 'sends Jev counts and masked formats only, never a number' do
+    it 'sends Jev counts and masked formats with only the DDD visible, never a number' do
       requests = stub_audience_jev(phone: 'column_1', email: 'none', name: 'column_0', company: 'none', phone_country: 'brazil')
       described_class.new(create_contact_import(account: account, user: user, content: content)).perform
 
       expect(requests.first.dig('state', 'profiles', 1)).to include('legacy_mobile_count' => 1)
+      expect(requests.first.dig('state', 'profiles', 1, 'examples')).to include('(11) 0000-0000')
       expect(requests.to_json).not_to include('8765', '3456', '98765', 'Souza')
     end
   end

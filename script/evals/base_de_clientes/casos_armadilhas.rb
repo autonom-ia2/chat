@@ -147,7 +147,7 @@ module BaseDeClientesEval::Casos::Armadilhas
                                                                 alvos: { phone: 'Phone', email: 'Email', name: 'First Name' },
                                                                 nota: 'O Jev tem de dizer que não é Brasil: nenhum número vira +55.' do
     aba(['First Name', 'Last Name', 'Phone', 'Email', 'City', 'State', 'ZIP'], 40) do
-      [D.primeiro_nome, D.sobrenome, D.celular_eua_junto, D.email, 'New York', 'NY', D.digitos(5)]
+      [D.primeiro_nome, D.sobrenome, D.celular_eua_junto, D.email(dominios: D::DOMINIOS_EUA), 'New York', 'NY', D.digitos(5)]
     end
   end
 

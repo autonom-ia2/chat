@@ -7,6 +7,9 @@
 module BaseDeClientesEval::Dados
   DDDS = %w[11 12 13 15 16 19 21 22 24 27 31 32 34 35 41 43 44 47 48 51 53 54 61 62 65 67 71 73 79 81 83 84 85 86 91 92 98].freeze
   DOMINIOS = %w[gmail.com hotmail.com outlook.com yahoo.com.br uol.com.br terra.com.br empresa.com.br].freeze
+  # O domínio do e-mail vai ao Jev (JevMask): planilha de outro país usa os domínios de lá.
+  DOMINIOS_EUA = %w[gmail.com yahoo.com outlook.com company.com aol.com].freeze
+  DOMINIOS_MEXICO = %w[gmail.com hotmail.com empresa.com.mx prodigy.net.mx yahoo.com.mx].freeze
   STATUS = ['Ativo', 'Inativo', 'Prospect', 'Cancelado', 'Em negociação'].freeze
   CIDADES = ['São Paulo', 'Campinas', 'Rio de Janeiro', 'Belo Horizonte', 'Curitiba', 'Porto Alegre', 'Recife', 'Salvador', 'Fortaleza',
              'Goiânia'].freeze
@@ -59,9 +62,9 @@ module BaseDeClientesEval::Dados
     sorteio(CIDADES)
   end
 
-  def email_de(nome_pessoa)
+  def email_de(nome_pessoa, dominios = DOMINIOS)
     base = I18n.transliterate(nome_pessoa.to_s).downcase.split.first(2).join('.').delete('^a-z.')
-    "#{base.presence || 'contato'}#{rng.rand(100)}@#{sorteio(DOMINIOS)}"
+    "#{base.presence || 'contato'}#{rng.rand(100)}@#{sorteio(dominios)}"
   end
 
   # Celular brasileiro: DDD + 9 + 8 dígitos.
@@ -124,8 +127,8 @@ module BaseDeClientesEval::Dados
     Celula.new(valor: "(#{sorteio(DDDS)}) #{rng.rand(2..5)}#{digitos(3)}-#{digitos(4)}", alcanca: false)
   end
 
-  def email(nome_pessoa = nome)
-    Celula.new(valor: email_de(nome_pessoa), alcanca: true)
+  def email(nome_pessoa = nome, dominios: DOMINIOS)
+    Celula.new(valor: email_de(nome_pessoa, dominios), alcanca: true)
   end
 
   def cpf(mascara: true)

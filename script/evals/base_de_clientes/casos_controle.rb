@@ -113,7 +113,7 @@ module BaseDeClientesEval::Casos::Controle
                                                                    alvos: { phone: 'Teléfono', email: 'Correo', name: 'Nombre' },
                                                                    nota: 'Número mexicano não pode virar +55.' do
     aba(%w[Nombre Teléfono Correo Ciudad Estado C.P.], 40) do
-      [D.nome, D.celular_mexico_junto, D.email, 'Monterrey', 'Nuevo León', D.digitos(5)]
+      [D.nome, D.celular_mexico_junto, D.email(dominios: D::DOMINIOS_MEXICO), 'Monterrey', 'Nuevo León', D.digitos(5)]
     end
   end
 

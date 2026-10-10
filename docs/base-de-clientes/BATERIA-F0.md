@@ -8,7 +8,7 @@ A F0 previa recolher 5 planilhas reais de clientes. Decisão do Rodrigo (10/10):
 elas e estressar o motor que já está em produção, o da importação de contatos (#1006:
 `CampaignImports::Parser` + `SpreadsheetReader` + Jev).
 
-Para isso foram montadas **66 planilhas fictícias**, cada uma com gabarito. O gabarito diz:
+Para isso foram montadas **68 planilhas fictícias**, cada uma com gabarito. O gabarito diz:
 - qual é a linha do cabeçalho e qual é a aba;
 - qual coluna é o celular, o e-mail, o nome e a empresa (ou "não tem");
 - se o certo é o motor resolver sozinho ou parar e perguntar;
@@ -23,7 +23,28 @@ Para isso foram montadas **66 planilhas fictícias**, cada uma com gabarito. O g
 
 Nenhum dado é de cliente. Nomes e empresas saem do Faker com semente fixa; telefones, CPFs e
 e-mails são gerados. O Jev, como em produção, só vê os cabeçalhos e o formato mascarado dos
-valores.
+valores. As planilhas de outro país usam e-mails com domínios de lá, porque o domínio vai ao Jev.
+
+### O que o Jev vê (`CampaignImports::JevMask`, formato decidido pelo Rodrigo)
+
+Na leitura nova, nas amostras de cada coluna, valem duas regras:
+- **Telefone:** ficam visíveis o código do país e o DDD, e o resto dos dígitos vira 0, mantendo a
+  pontuação. `(11) 98765-4321` vai como `(11) 00000-0000`, `+1 917-555-1234` como
+  `+1 917-000-0000` e `1187654321` como `1100000000`.
+- **E-mail:** fica visível o domínio, e a parte local é mascarada. `joao@empresa.com.br` vai como
+  `aaaa@empresa.com.br`.
+
+O resto (nome, endereço) segue a máscara de sempre. Na leitura clássica as amostras não mudam.
+
+No **cabeçalho**, para todas as contas, a célula que parece telefone ou e-mail vai na mesma máscara.
+Numa planilha sem cabeçalho, a linha lida como cabeçalho pode ser dado, e antes ia ao Jev sem
+máscara nenhuma.
+
+Efeito medido. O DDD visível ajuda o Jev a reconhecer o Brasil: o export brasileiro em inglês foi de
+0,80–0,85 para 0,86–0,89. E não empurra o estrangeiro: México 0,30–0,45, EUA 0,14–0,23, ambos
+longe do corte. Uma primeira medição mostrava o México em 0,70–0,77, mas era defeito do gerador:
+os e-mails das planilhas mexicana e americana tinham domínio `.com.br`, e o domínio visível dizia
+"Brasil" corretamente. Corrigido o gerador, a folga voltou.
 
 ## Liberação: flag `customer_base`, piloto na conta 16
 
@@ -54,6 +75,15 @@ valida de novo. Assim as linhas também entram na comparação.
 O Jev varia de uma chamada para outra, então as respostas dele são gravadas na rodada do `main` e
 **reproduzidas** nas outras. Qualquer diferença só pode vir do código. Uma pergunta ao Jev que não
 está na gravação para a rodada.
+
+As duas exceções, as duas aceitas na revisão:
+- uma planilha salva sem cabeçalho (`header_row` 0) pela leitura nova, e lida depois com a flag
+  desligada, é relida sem o pin, na mesma aba (no `main` dava `header_row_not_found`). Só acontece
+  com dado criado pelo piloto;
+- o cabeçalho que parece telefone ou e-mail vai mascarado ao Jev, para todas as contas.
+
+Fora essas, nas 68 planilhas da rodada seguinte (`main` em `36f10f96e0`), a saída com a flag
+desligada também foi idêntica byte a byte.
 
 | Rodada | Linhas válidas | Inválidas | Planilhas que falham | Resultado |
 |---|---|---|---|---|
@@ -112,19 +142,19 @@ Variáveis:
 Ele grava em `tmp/evals/base_de_clientes/<data>/` o `RELATORIO.md`, o `resultados.json` (com a
 resposta crua do Jev) e as planilhas.
 
-### Resultado (66 planilhas, 3 leituras com o Jev em cada, nas duas leituras)
+### Resultado (68 planilhas, 3 leituras com o Jev em cada, nas duas leituras)
 
 | | Clássica (sem a flag = `main`) | Nova (`customer_base`) |
 |---|---|---|
 | Erro silencioso (`critico`) | 0 | 0 |
-| Leituras perfeitas | 168 de 204 (82%) | 195 de 204 (96%) |
+| Leituras perfeitas | 169 de 204 (83%) | 195 de 204 (96%) |
 | Parou com erro | 3 | 0 |
-| Perguntou sem precisar | 24 | 3 |
+| Perguntou sem precisar | 23 | 3 |
 | Sugestão errada (perguntando) | 9 | 6 |
-| **Linhas alcançadas** | **5.564 de 5.716** | **5.716 de 5.716** |
+| **Linhas alcançadas** | **5.562 de 5.716** | **5.716 de 5.716** |
 | **Linhas inventadas** | 0 | **0** |
 
-Gasto com o Jev em todas as rodadas do dia: cerca de US$ 0,45, para um teto de US$ 2. Uma leitura
+Gasto com o Jev em todas as rodadas do dia: cerca de US$ 0,60, para um teto de US$ 2. Uma leitura
 custa por volta de US$ 0,0001.
 
 A escolha de colunas já era segura antes: nenhuma leitura importaria coluna errada sem perguntar. O
@@ -178,18 +208,16 @@ ganharam o 9 ou ficaram de fora (`phone_country`, `ninth_digit_added`, `legacy_m
 
 | Planilha | O que o Jev disse (3 leituras) | Resultado |
 |---|---|---|
-| c42 base antiga brasileira | brazil 0,77–0,86 | 40 de 40 linhas; numa leitura em 0,77, as 17 sem o 9 ficaram de fora |
-| c49 base brasileira, celular tudo junto (Nome, CPF, UF, CEP) | brazil 0,94–0,97 | 40 de 40 |
-| c48 planilha dos EUA, tudo junto (State, ZIP) | other / unknown, 0,06–0,14 | nenhum número virou +55 |
-| c50 sem pistas (Contact, Number), números dos EUA | unknown 0,45–0,48 | nenhum número virou +55 |
-| h17 México (55 = Cidade do México e DDD do RS) | brazil 0,46–0,55, abaixo do corte | nenhum número virou +55 |
-| h18 export brasileiro em inglês (Full Name, Mobile, CPF) | brazil 0,80–0,82 | 40 de 40, **no limite** |
+| c42 base antiga brasileira | brazil 0,72–0,82 | só a leitura em 0,82 aproveita as 17 sem o 9; nas outras, ficam de fora |
+| c49 base brasileira, celular tudo junto (Nome, CPF, UF, CEP) | brazil 0,97–0,98 | 40 de 40 |
+| c48 planilha dos EUA, tudo junto (State, ZIP) | brazil 0,14–0,23, bem abaixo do corte | nenhum número virou +55 |
+| c50 sem pistas (Contact, Number), números dos EUA | unknown / brazil 0,23–0,28 | nenhum número virou +55 |
+| h17 México (55 = Cidade do México e DDD do RS) | brazil 0,30–0,45, abaixo do corte | nenhum número virou +55 |
+| h18 export brasileiro em inglês (Full Name, Mobile, CPF) | brazil 0,86–0,89 | 40 de 40 |
 
-O h17 e o h18 foram escritos depois do ajuste da pergunta, sem uso nele. Margens que valem
-acompanhar no piloto:
-- no México o Jev ainda inclina para Brasil, embora abaixo do corte;
-- no export brasileiro em inglês (0,80–0,85) e na base antiga sem outros sinais (c42, 0,77–0,86) ele
-  fica rente ao corte.
+O h17 e o h18 foram escritos depois do ajuste da pergunta, sem uso nele. Margem que vale acompanhar no
+piloto: na base antiga sem outros sinais além do cabeçalho em português (c42, 0,72–0,82), o Jev fica
+rente ao corte, e na maioria das leituras os celulares sem o 9 ficam de fora.
 
 O corte não foi baixado para acomodar esses casos. Quando o Jev não tem certeza, a resposta certa é
 a tela perguntar à pessoa se os números são do Brasil. Isso fica para a F1, que terá tela própria; o
@@ -209,7 +237,7 @@ toda brasileira. A decisão é por coluna.
 
 ## O que continua de fora
 
-1. **Perguntas sobre empresa ausente:** de 4 a 7 em 189 leituras. É clique a mais, não erro.
+1. **Perguntas sobre empresa ausente:** de 3 a 7 em 204 leituras. É clique a mais, não erro.
 2. **DDD numa coluna e número em outra:** o motor não junta colunas. Hoje ele pergunta. Entra na F1.
 3. **A mesma pessoa em várias linhas** (duas compras): a segunda linha é recusada como repetida.
    Decisão de produto da F1.

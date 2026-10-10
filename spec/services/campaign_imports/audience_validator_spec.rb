@@ -118,6 +118,22 @@ RSpec.describe CampaignImports::AudienceValidator, :aggregate_failures do
         expect(campaign_import.validation_summary).to include('phone_country' => 'brazil', 'ninth_digit_added' => 1, 'legacy_mobiles_refused' => 0)
       end
 
+      it 'does not carry the Brazil answer to another phone column the person picks by hand' do
+        two_columns = "Nome,Celular,Recado\nAna,(11) 8765-4321,(21) 8765-4321\nBia,(11) 97777-1234,(21) 97777-1234\n"
+        campaign_import = import_for(two_columns, customer_base: true, phone: 'column_1', email: 'none', name: 'column_0', company: 'none',
+                                                  phone_country: 'brazil')
+        described_class.new(campaign_import).perform
+        expect(campaign_import.reload.valid_rows).to eq(2)
+
+        manual = { 'name' => 0, 'phone' => 2, 'email' => nil, 'company' => nil }
+        campaign_import.update!(schema_resolution: campaign_import.schema_resolution.merge('manual_mapping' => manual))
+        described_class.new(campaign_import).perform
+
+        campaign_import.reload
+        expect(campaign_import.valid_rows).to eq(1)
+        expect(campaign_import.validation_summary).to include('ninth_digit_added' => 0, 'legacy_mobiles_refused' => 1)
+      end
+
       it 'explains a file left without valid rows because Jev did not judge the phone column Brazilian' do
         only_legacy = "Nome,Celular\nAna,(11) 8765-4321\n"
         campaign_import = import_for(only_legacy, customer_base: true, phone: 'column_1', email: 'none', name: 'column_0', company: 'none',

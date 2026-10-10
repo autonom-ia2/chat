@@ -47,7 +47,8 @@ class CampaignImports::AudienceValidator < CampaignImports::Validator
   end
 
   def row_contacts
-    @row_contacts ||= CampaignImports::AudienceRowContacts.new(contact_reading.with_legacy_mobiles(phone_country.brazil?))
+    legacy_mobiles = contact_reading.customer_base? && phone_country.brazil?
+    @row_contacts ||= CampaignImports::AudienceRowContacts.new(contact_reading.with_legacy_mobiles(legacy_mobiles))
   end
 
   def phone_country

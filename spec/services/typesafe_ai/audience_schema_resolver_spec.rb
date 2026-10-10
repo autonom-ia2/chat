@@ -63,6 +63,16 @@ RSpec.describe TypesafeAi::AudienceSchemaResolver, :aggregate_failures do
       end
     end
 
+    it 'keeps the columns when phone_country is not even an object' do
+      answers = response(phone: answer('column_1'), email: answer('none'), name: answer('column_0'), company: answer('none'))
+      allow(client).to receive(:evaluate).and_return(answers.merge('answers' => answers['answers'].merge('phone_country' => 'brazil')))
+
+      result = customer_base.resolve(candidate)
+
+      expect(result[:phone_country]).to be_nil
+      expect(result[:targets][:phone]).to eq(index: 1, confidence: 0.95)
+    end
+
     it 'treats a country outside brazil, other and unknown as no answer and keeps the columns' do
       country['choice'] = 'portugal'
 
@@ -81,6 +91,21 @@ RSpec.describe TypesafeAi::AudienceSchemaResolver, :aggregate_failures do
         expect(state[:task]).to eq(described_class::STATE_TASK)
         expect(questions[:phone_column][:instructions]).to eq(described_class::TARGETS[:phone])
       end
+    end
+  end
+
+  it 'masks a header cell that holds a phone or an email before it goes to Jev' do
+    allow(client).to receive(:evaluate).and_return(
+      response(phone: answer('column_1'), email: answer('none'), name: answer('column_0'), company: answer('none'))
+    )
+    data_as_header = candidate.merge(headers: ['Ana Souza', '(11) 3456-7890', 'ana.souza@example.org'])
+
+    resolver.resolve(data_as_header)
+
+    expect(client).to have_received(:evaluate) do |state:, questions:, **|
+      sent = { state: state, questions: questions }.to_json
+      expect(sent).not_to include('3456-7890', '34567890', 'ana.souza')
+      expect(state[:headers]).to eq(['Ana Souza', '(11) 0000-0000', 'aaa.aaaaa@example.org'])
     end
   end
 

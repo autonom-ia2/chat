@@ -54,7 +54,7 @@ class CampaignImports::SpreadsheetReader
   private
 
   def column_profiles(candidate)
-    masked = CampaignImports::ColumnProfiler.new(candidate.table.rows)
+    masked = CampaignImports::ColumnProfiler.new(candidate.table.rows, reveal_area_codes: @reading.customer_base?)
                                             .profiles(candidate.headers.length, candidate.rows, candidate.header_index)
     candidate.headers.each_with_index.map do |header, index|
       values = column_values(candidate.rows, index)

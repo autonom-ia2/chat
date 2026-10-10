@@ -27,7 +27,7 @@ class CampaignImports::PhoneCountry
   # row_results: every row the validator read (CampaignImports::AudienceRowContacts fields included).
   def summary(row_results)
     {
-      phone_country: @answer['value'] || 'not_answered',
+      phone_country: @answer['value'] || 'unknown',
       ninth_digit_added: row_results.count { |row| row[:errors].blank? && row[:ninth_digit_added] },
       legacy_mobiles_refused: row_results.count { |row| row[:legacy_mobile_refused] }
     }

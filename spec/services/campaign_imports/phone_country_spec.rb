@@ -34,6 +34,6 @@ RSpec.describe CampaignImports::PhoneCountry, :aggregate_failures do
 
     expect(described_class.new(jev(value: 'other'), 1).summary(rows))
       .to eq(phone_country: 'other', ninth_digit_added: 1, legacy_mobiles_refused: 1)
-    expect(described_class.new({}, 1).summary([])).to include(phone_country: 'not_answered')
+    expect(described_class.new({}, 1).summary([])).to include(phone_country: 'unknown')
   end
 end

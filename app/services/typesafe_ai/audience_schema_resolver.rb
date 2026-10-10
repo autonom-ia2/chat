@@ -70,6 +70,7 @@ class TypesafeAi::AudienceSchemaResolver
   def resolve(candidate)
     raise Error, 'schema_too_wide' if candidate.fetch(:headers).size > MAX_COLUMNS
 
+    candidate = candidate.merge(headers: candidate.fetch(:headers).map { |header| masked_header(header) })
     profiles = candidate.fetch(:profiles).map { |profile| inference_profile(profile) }
     response = @client.evaluate(model: @model, state: state_for(candidate, profiles), questions: questions_for(candidate, profiles))
     build_resolution(candidate, response)
@@ -80,6 +81,13 @@ class TypesafeAi::AudienceSchemaResolver
   end
 
   private
+
+  # In a file without a header the line read as header can be data (a landline, a document, an email the
+  # reader did not take as contact): a header cell that looks like a phone or an email goes masked, for every
+  # account, in the CampaignImports::JevMask shape. Header words never look like that.
+  def masked_header(header)
+    CampaignImports::JevMask.mask(header) || header
+  end
 
   def inference_profile(profile)
     counts = {
@@ -144,7 +152,7 @@ class TypesafeAi::AudienceSchemaResolver
   end
 
   def country_answer(answer)
-    answer = answer.to_h
+    answer = {} unless answer.is_a?(Hash)
     valid = answer['type'] == 'choice' && PHONE_COUNTRIES.key?(answer['choice']) && probability?(answer['confidence'])
     { value: answer['choice'], confidence: answer['confidence'] } if valid
   end
