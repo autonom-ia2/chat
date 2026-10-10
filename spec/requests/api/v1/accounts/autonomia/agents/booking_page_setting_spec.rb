@@ -79,6 +79,29 @@ RSpec.describe 'Autonomia agent booking page setting', type: :request do
     expect(agent.reload.config).not_to have_key('booking_page_id')
   end
 
+  describe 'when creating the agent' do
+    def create_agent(page_id, user: administrator)
+      post "/api/v1/accounts/#{account.id}/autonomia/agents",
+           params: { agent: { name: 'Bia', agent_type: 'scheduler', config: { booking_page_id: page_id } } },
+           headers: user.create_new_auth_token, as: :json
+    end
+
+    it 'saves the page chosen by someone who can see Scheduling' do
+      create_agent(world.profile.id)
+
+      expect(response).to have_http_status(:created)
+      expect(Autonomia::Agents::Agent.find(response.parsed_body['id']).config['booking_page_id']).to eq(world.profile.id)
+    end
+
+    it 'refuses the page from someone who cannot see Scheduling and creates nothing' do
+      blind = role_user('autonomia_manage')
+
+      expect { create_agent(world.profile.id, user: blind) }.not_to change(Autonomia::Agents::Agent, :count)
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq(I18n.t('autonomia.agents.booking_page_forbidden'))
+    end
+  end
+
   it 'refuses a page from another account' do
     foreign = build_booking_world(account: create(:account)).profile
 
