@@ -18,7 +18,7 @@ const vueFiles = dir =>
 
 const files = vueFiles(ROOT);
 
-describe('Configurações › Agendamento sem <select> nativo', () => {
+describe('CRM › Agendamento sem <select> nativo', () => {
   it('encontra os componentes da tela', () => {
     expect(files.length).toBeGreaterThan(10);
   });

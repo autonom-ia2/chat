@@ -14,7 +14,7 @@ describe('#CrmBookingPagesAPI', () => {
   const BASE = '/api/v1/accounts/85/crm/booking_pages';
 
   beforeEach(() => {
-    window.history.pushState({}, '', '/app/accounts/85/settings/booking');
+    window.history.pushState({}, '', '/app/accounts/85/crm/booking');
     window.axios = axiosMock;
   });
 

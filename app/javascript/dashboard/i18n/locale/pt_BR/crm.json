@@ -1079,7 +1079,7 @@
           "NO_CONVERSATION": "Não há conversa com este cliente que você possa responder. Copie o link e envie de outro jeito.",
           "CANNOT_REPLY": "O cliente precisa mandar mensagem primeiro. Copie o link e envie de outro jeito.",
           "NOT_REBOOKABLE": "Isto só funciona depois de marcar “Não compareceu”.",
-          "NO_PAGE": "Nenhuma página de agendamento está no ar agora. Publique uma em Configurações › Agendamento.",
+          "NO_PAGE": "Nenhuma página de agendamento está no ar agora. Publique uma em CRM › Agendamento.",
           "OTHER": "Não deu para enviar. Tente de novo."
         }
       },

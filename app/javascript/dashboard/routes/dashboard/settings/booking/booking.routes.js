@@ -12,9 +12,9 @@ const BookingSettingsPage = () => import('./BookingSettingsPage.vue');
 const MyBookingHoursPage = () => import('./MyBookingHoursPage.vue');
 const BookingResultsPage = () => import('./results/BookingResultsPage.vue');
 
-// Configurações › Agendamento (#1187, F1-D). Ver pede agendamento_view; mudar,
-// agendamento_manage (a tela esconde os botões de escrita). O backend aplica o
-// mesmo corte (Crm::BookingPagePolicy).
+// CRM › Agendamento (#1187, F1-D; no CRM desde o #1212). Ver pede
+// agendamento_view; mudar, agendamento_manage (a tela esconde os botões de
+// escrita). O backend aplica o mesmo corte (Crm::BookingPagePolicy).
 const meta = { permissions: ['administrator', ...SCHEDULING_PERMISSIONS] };
 
 // CRM › Meus horários (#1195, J8-A11) e Meus números (#1194, J8-A12): quem
@@ -57,8 +57,9 @@ export const ensureBookingEnabled = async (to, _from, next) => {
   next({ name: 'home', params: to.params });
 };
 
-// "Meus horários" e "Meus números" moram no CRM: precisam também do CRM ligado na instalação.
-export const ensureBookingResultsEnabled = async (to, from, next) => {
+// Agendamento, "Meus horários" e "Meus números" moram no CRM: precisam também
+// do CRM ligado na instalação.
+export const ensureCrmBookingEnabled = async (to, from, next) => {
   if (window.globalConfig?.CRM_KANBAN_ENABLED !== 'true') {
     next({ name: 'home', params: to.params });
     return;
@@ -66,12 +67,22 @@ export const ensureBookingResultsEnabled = async (to, from, next) => {
   await ensureBookingEnabled(to, from, next);
 };
 
+// O endereço era settings/booking até o #1212. O antigo leva ao novo com a
+// mesma query, para nenhum link salvo quebrar.
+const movedToCrm = name => to => ({
+  name,
+  params: to.params,
+  query: to.query,
+});
+
 export default {
   routes: [
     {
-      path: frontendURL('accounts/:accountId/settings/booking'),
+      // Os nomes das rotas não mudaram com o endereço: o Guia, a Central e os
+      // links do painel apontam para eles.
+      path: frontendURL('accounts/:accountId/crm/booking'),
       meta,
-      beforeEnter: ensureBookingEnabled,
+      beforeEnter: ensureCrmBookingEnabled,
       component: SettingsWrapper,
       props: { keepAlive: false },
       children: [
@@ -92,17 +103,25 @@ export default {
       ],
     },
     {
+      path: frontendURL('accounts/:accountId/settings/booking'),
+      redirect: movedToCrm('settings_booking'),
+    },
+    {
+      path: frontendURL('accounts/:accountId/settings/booking/results'),
+      redirect: movedToCrm('settings_booking_results'),
+    },
+    {
       path: frontendURL('accounts/:accountId/crm/my-booking-hours'),
       name: 'crm_my_booking_hours',
       meta: myHoursMeta,
-      beforeEnter: ensureBookingResultsEnabled,
+      beforeEnter: ensureCrmBookingEnabled,
       component: MyBookingHoursPage,
     },
     {
       path: frontendURL('accounts/:accountId/crm/booking-results'),
       name: 'crm_booking_results',
       meta: myHoursMeta,
-      beforeEnter: ensureBookingResultsEnabled,
+      beforeEnter: ensureCrmBookingEnabled,
       component: BookingResultsPage,
       props: { entry: 'crm' },
     },

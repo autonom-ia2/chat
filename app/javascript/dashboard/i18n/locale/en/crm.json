@@ -1079,7 +1079,7 @@
           "NO_CONVERSATION": "There is no conversation with this client that you can answer. Copy the link and send it another way.",
           "CANNOT_REPLY": "The client needs to send a message first. Copy the link and send it another way.",
           "NOT_REBOOKABLE": "This only works after you mark “No-show”.",
-          "NO_PAGE": "No booking page is live right now. Publish a page in Settings › Booking.",
+          "NO_PAGE": "No booking page is live right now. Publish a page in CRM › Scheduling.",
           "OTHER": "Could not send. Try again."
         }
       },

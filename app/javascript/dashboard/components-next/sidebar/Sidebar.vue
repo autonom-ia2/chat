@@ -241,8 +241,22 @@ const canManageCrmSla = computed(() => {
   return permissions.includes(CRM_ADMIN_PERMISSION);
 });
 
+// Agendamento mora no CRM (#1212): função só com Agendamento vê o grupo com
+// esse item; os demais itens seguem cortados pela permissão de cada rota.
+const crmBookingItems = computed(() =>
+  bookingSidebarItems({
+    account: currentAccount.value(accountId.value),
+    isAdministrator: isAdministrator.value,
+    permissions: getUserPermissions(currentUser.value, accountId.value),
+    t,
+    accountScopedRoute,
+  })
+);
+
 const showCrmSidebarEntry = computed(
-  () => crmKanbanEnabled.value && canViewCrm.value
+  () =>
+    crmKanbanEnabled.value &&
+    (canViewCrm.value || crmBookingItems.value.length > 0)
 );
 
 const hasFilteredUnreadCounts = computed(() => {
@@ -952,6 +966,7 @@ const menuItems = computed(() => {
                 to: accountScopedRoute('crm_calendar_index'),
                 activeOn: ['crm_calendar_index'],
               },
+              ...crmBookingItems.value,
               ...myBookingHoursSidebarItems({
                 account: currentAccount.value(accountId.value),
                 t,
@@ -1195,13 +1210,6 @@ const menuItems = computed(() => {
               },
             ]
           : []),
-        ...bookingSidebarItems({
-          account: currentAccount.value(accountId.value),
-          isAdministrator: isAdministrator.value,
-          permissions: getUserPermissions(currentUser.value, accountId.value),
-          t,
-          accountScopedRoute,
-        }),
         // {
         //   name: 'Settings Captain',
         //   label: t('SIDEBAR.CAPTAIN_AI'),
