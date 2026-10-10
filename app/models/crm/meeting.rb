@@ -57,8 +57,11 @@ class Crm::Meeting < ApplicationRecord
   belongs_to :inbox, optional: true
   belongs_to :created_by, class_name: 'User'
   belongs_to :reminder, class_name: 'Crm::FollowUp', optional: true
+  # Agendamento WhatsApp-first (#1192): conversa em que os avisos ao cliente saem (a do convite, quando houver).
+  belongs_to :conversation, optional: true
 
   has_many :meeting_guests, class_name: 'Crm::MeetingGuest', dependent: :destroy, inverse_of: :meeting
+  has_many :notices, class_name: 'Crm::MeetingNotice', dependent: :delete_all, inverse_of: :meeting
 
   enum status: { draft: 0, scheduled: 1, completed: 2, canceled: 3, rescheduled: 4, no_show: 5, failed: 6 }
   # `internal` = reunião sem provedor de calendário (WhatsApp, link do agente, presencial). Enum é inteiro:
@@ -68,6 +71,8 @@ class Crm::Meeting < ApplicationRecord
   # The `_prefix` keeps these methods (outcome_held?/outcome_no_show?) distinct
   # from the status enum, which already owns `no_show`/`completed` (status_*).
   enum outcome: { held: 0, no_show: 1 }, _prefix: true
+  # Resposta do cliente pela página de gestão (#1192, J5-A6). Prefixo para não colidir com outros enums.
+  enum confirmation_status: { pending: 0, confirmed: 1, change_requested: 2 }, _prefix: :confirmation
 
   validates :title, :starts_at, :ends_at, :timezone, :provider, presence: true
   validates :account_id, :card_id, :created_by_id, presence: true
@@ -85,6 +90,14 @@ class Crm::Meeting < ApplicationRecord
   scope :by_agent, ->(user_id) { where(created_by_id: user_id) }
   # `outcome_held` / `outcome_no_show` scopes are provided by the prefixed enum.
   scope :with_outcome, -> { where.not(outcome: nil) }
+  # Sem as reuniões marcadas por convite de "Testar no meu WhatsApp" (#1192, `metadata.test`). Métricas do agendamento
+  # (F2-C) partem daqui.
+  scope :real, -> { where("COALESCE(crm_meetings.metadata->>'test', 'false') <> 'true'") }
+
+  # Veio de uma página de agendamento (#1187/#1192): o Booker grava a página em `metadata.booking_profile_id`.
+  def booking?
+    metadata.to_h['booking_profile_id'].present?
+  end
 
   def email_channel
     inbox&.channel
@@ -103,6 +116,7 @@ class Crm::Meeting < ApplicationRecord
     validate_same_account(:card)
     validate_same_account(:inbox)
     validate_same_account(:reminder)
+    validate_same_account(:conversation)
     validate_created_by_account
   end
 

@@ -250,12 +250,26 @@ jobs:
       # ler. Salvo aqui, o cache ficava na ref do PR/fila, ninguem mais lia, e acumulava copias (#1176).
       # A chave tem de ser igual a do vite-test-cache.yml.
       - name: Cache do build do Vite (teste)
+        id: vite-cache
         uses: actions/cache/restore@v4
         with:
           path: |
             public/vite-test
             tmp/cache/vite
           key: vite-test-${{ runner.os }}-${{ hashFiles('app/javascript/**', 'config/vite.json', 'package.json', 'pnpm-lock.yaml', 'postcss.config.js', 'tailwind.config.js', 'theme/**', 'vite.config.*', 'vite.shared.*', '.browserslistrc') }}
+
+      # Sem cache (PR que muda o frontend), o build acontecia dentro do primeiro request que renderiza pagina e
+      # estourava o heap (~3,3 GB, 7018 modulos): o spec recebia 500 conforme o no em que caia (#1226). Aqui o build
+      # roda antes do RSpec, fora de request, com teto de memoria explicito; o autoBuild encontra o build pronto pelo
+      # digest do last-build-test.json e nao compila de novo.
+      - name: Compilar o Vite de teste (fora do request)
+        if: steps.vite-cache.outputs.cache-hit != 'true'
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
+        run: |
+          set -euo pipefail
+          bin/vite build
+          jq -e '.success == true' tmp/cache/vite/last-build-test.json
 
       # Conversores nativos que a imagem de producao (docker/Dockerfile) ja traz.
       # As previas de empresa (Relationships::PreviewRenderer) chamam ffmpeg,

@@ -312,4 +312,39 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingInvites', type: :request do
       expect(foreign.reload.canceled_at).to be_nil
     end
   end
+
+  # Link copiado para mandar por outro canal (#1194, RA-19): é o "enviado" de quem não manda pela conversa.
+  describe 'POST copied' do
+    it 'marks the link as sent once, keeping the first date, and only for whoever can deliver it' do
+      invite = host_invite
+      travel_to(2.hours.ago) { call(world.host, :post, "#{base}/#{invite.id}/copied") }
+
+      expect(response).to have_http_status(:ok)
+      expect(body.dig('payload', 'state')).to eq('sent')
+      first = invite.reload.sent_at
+      expect(first).to be_within(1.minute).of(2.hours.ago)
+      expect(invite.metadata).to include('copied_by_id' => world.host.id)
+
+      call(world.host, :post, "#{base}/#{invite.id}/copied")
+      expect(invite.reload.sent_at).to eq(first)
+
+      outsider = create(:user, account: account, role: :agent)
+      other = create_booking_invite(world: world, created_by: admin)
+      statuses = [outsider, world.host].map do |user|
+        call(user, :post, "#{base}/#{other.id}/copied")
+        response.status
+      end
+      expect(statuses).to eq([401, 401])
+      expect(other.reload.sent_at).to be_nil
+    end
+
+    it 'does not touch a canceled link' do
+      invite = host_invite
+      invite.update!(canceled_at: Time.current)
+
+      call(world.host, :post, "#{base}/#{invite.id}/copied")
+
+      expect(invite.reload.sent_at).to be_nil
+    end
+  end
 end

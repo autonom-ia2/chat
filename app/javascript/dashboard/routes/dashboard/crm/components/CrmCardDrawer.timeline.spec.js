@@ -225,6 +225,85 @@ describe('CrmCardDrawer timeline copy', () => {
     ).toBe('Reunião passou para outra pessoa');
   });
 
+  it.each([
+    ['booking_client_confirmed', 'Customer confirmed the time'],
+    ['booking_client_canceled', 'Customer cancelled the time'],
+    ['booking_client_rebooked', 'Customer booked another time'],
+    ['booking_notices_stopped', 'Customer asked not to get notices'],
+  ])('describes %s in plain words, with the booked time', (type, title) => {
+    const wrapper = mountDrawer();
+    const described = wrapper.vm.describeActivity(
+      activity(1, type, {
+        meeting_id: 9,
+        starts_at: '2026-10-20T13:00:00Z',
+        by: 'client',
+      })
+    );
+
+    expect(described.title).toBe(title);
+    expect(described.detail.startsWith('Time: ')).toBe(true);
+    expect(described.detail).toContain('10/20/2026');
+    expect(described.actor).toBe('Customer');
+    wrapper.unmount();
+  });
+
+  it('says a failed notice was recorded by the system, not the customer', () => {
+    const wrapper = mountDrawer();
+    const described = wrapper.vm.describeActivity(
+      activity(1, 'booking_notice_failed', {
+        meeting_id: 9,
+        starts_at: '2026-10-20T13:00:00Z',
+        by: 'system',
+        kind: 'day_before',
+        reason: 'template_required',
+      })
+    );
+
+    expect(described.title).toBe('WhatsApp notice did not go out');
+    // Qual aviso e por quê, em palavras leigas; erro de envio sem motivo conhecido vira "Falhou".
+    expect(described.detail.startsWith('1 day before: ')).toBe(true);
+    expect(described.detail).not.toContain('template_required');
+    expect(described.actor).toBe('System');
+
+    const crashed = wrapper.vm.describeActivity(
+      activity(2, 'booking_notice_failed', {
+        meeting_id: 9,
+        starts_at: '2026-10-20T13:00:00Z',
+        by: 'system',
+        kind: 'booked',
+        reason: 'Net::ReadTimeout',
+      })
+    );
+    expect(crashed.detail).not.toContain('Net::');
+    wrapper.unmount();
+  });
+
+  it('shows from and to when the customer changes the time', () => {
+    const wrapper = mountDrawer();
+    const { title, detail } = wrapper.vm.describeActivity(
+      activity(1, 'booking_client_rescheduled', {
+        meeting_id: 9,
+        starts_at: '2026-10-21T13:00:00Z',
+        from: '2026-10-20T13:00:00Z',
+        by: 'client',
+      })
+    );
+
+    expect(title).toBe('Customer changed the time');
+    expect(detail.startsWith('From 10/20/2026')).toBe(true);
+    expect(detail).toContain(' to 10/21/2026');
+    wrapper.unmount();
+  });
+
+  it('has the pt_BR copy for the booking activities', () => {
+    const ptBR = { locale: 'pt_BR' };
+
+    expect(
+      t('CRM_KANBAN.DRAWER.ACTIVITY_BOOKING_CLIENT_CONFIRMED', {}, ptBR)
+    ).toBe('Cliente confirmou o horário');
+    expect(t('CRM_KANBAN.DRAWER.CLIENT_ACTOR', {}, ptBR)).toBe('Cliente');
+  });
+
   it('does not use the cadence touch as an attempt counter on a sent AI follow-up', () => {
     const wrapper = mountDrawer();
     const { detail } = wrapper.vm.describeActivity(

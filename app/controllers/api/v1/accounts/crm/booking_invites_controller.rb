@@ -10,7 +10,7 @@ class Api::V1::Accounts::Crm::BookingInvitesController < Api::V1::Accounts::Crm:
   LIST_LIMIT = 5
 
   before_action :ensure_booking_v2_enabled
-  before_action :fetch_invite, only: [:deliver, :destroy]
+  before_action :fetch_invite, only: [:deliver, :copied, :destroy]
   before_action :authorize_invite
 
   rescue_from ::Crm::BookingV2::InviteError do |error|
@@ -41,6 +41,17 @@ class Api::V1::Accounts::Crm::BookingInvitesController < Api::V1::Accounts::Crm:
     render json: { payload: serialize(@invite.reload) }
   end
 
+  # O agente copiou o link para mandar por outro canal (#1194, RA-19): conta como enviado. Só a primeira vez grava a
+  # data (sob trava de linha: dois toques ao mesmo tempo não regravam); convite que já não vale não muda.
+  def copied
+    @invite.with_lock do
+      if @invite.sent_at.blank? && @invite.active?
+        @invite.update!(sent_at: Time.current, metadata: @invite.metadata.to_h.merge('copied_by_id' => Current.user.id))
+      end
+    end
+    render json: { payload: serialize(@invite) }
+  end
+
   def destroy
     ::Crm::BookingV2::InviteCanceler.new(@invite).perform
     render json: { payload: serialize(@invite) }
@@ -65,7 +76,7 @@ class Api::V1::Accounts::Crm::BookingInvitesController < Api::V1::Accounts::Crm:
   end
 
   def recent_invites(contact)
-    invites_scope.where(contact_id: contact.id).includes(:booking_profile, :contact, :created_by, booking_link: :agent)
+    invites_scope.real.where(contact_id: contact.id).includes(:booking_profile, :contact, :created_by, booking_link: :agent)
                  .recent_first.limit(LIST_LIMIT)
   end
 

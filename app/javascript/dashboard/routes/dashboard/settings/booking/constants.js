@@ -4,15 +4,25 @@
 
 export const BOOKING_V2_FEATURE = 'crm_booking_v2';
 
-// Os seis passos do assistente, na ordem da jornada J3.
-export const STEPS = ['MODELO', 'CONTE', 'ONDE', 'QUANDO', 'CARA', 'PREVIA'];
+// Os passos do assistente, na ordem da jornada J3. Os avisos no WhatsApp
+// (#1192) têm passo próprio antes da prévia: um assunto e uma ação por tela.
+export const STEPS = [
+  'MODELO',
+  'CONTE',
+  'ONDE',
+  'QUANDO',
+  'CARA',
+  'AVISOS',
+  'PREVIA',
+];
 export const STEP = {
   MODELO: 1,
   CONTE: 2,
   ONDE: 3,
   QUANDO: 4,
   CARA: 5,
-  PREVIA: 6,
+  AVISOS: 6,
+  PREVIA: 7,
 };
 
 // Os modelos que o backend conhece (Crm::BookingV2::PageTemplates).
@@ -87,6 +97,25 @@ export const BRAND_COLORS = [
 // Logo e foto: o mesmo que o backend aceita (sem SVG, até 2 MB).
 export const IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
 export const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
+
+// Jogos de avisos prontos (Crm::BookingNoticeSettings::PRESETS, J5-A8): o
+// administrador escolhe um, sem digitar horário. `kinds` na ordem em que saem.
+export const NOTICE_PRESETS = [
+  {
+    key: 'standard',
+    kinds: ['booked', 'day_before', 'hour_before'],
+    recommended: true,
+  },
+  { key: 'light', kinds: ['booked', 'hour_before'] },
+  { key: 'minimal', kinds: ['booked'] },
+];
+export const DEFAULT_NOTICE_PRESET = 'standard';
+// O aviso de "horário mudou" sai quando o cliente remarca, em qualquer jogo.
+export const RESCHEDULED_NOTICE = 'rescheduled';
+
+// Até quando o cliente pode mudar ou cancelar, em minutos antes do horário.
+export const CANCEL_UNTIL_OPTIONS = [60, 120, 1440];
+export const DEFAULT_CANCEL_UNTIL = 120;
 
 // O que a publicação pode pedir, e o passo que resolve cada falta. O funil se
 // resolve na própria prévia, no "Alterar" de para onde vai quem marcar.

@@ -21,7 +21,7 @@ class Api::V1::Accounts::Crm::MeetingsController < Api::V1::Accounts::Crm::BaseC
   end
 
   def show
-    render json: { payload: serialize(@meeting) }
+    render json: { payload: serialize_detail(@meeting) }
   end
 
   def sync
@@ -31,7 +31,7 @@ class Api::V1::Accounts::Crm::MeetingsController < Api::V1::Accounts::Crm::BaseC
     # (avoids N+1) and reflects the freshly-synced status/time/RSVP. The meeting may
     # have just been canceled by the sync, so fall back to a plain reload.
     synced = visible_meetings.find_by(id: @meeting.id) || @meeting.reload
-    render json: { payload: serialize(synced) }, status: :ok
+    render json: { payload: serialize_detail(synced) }, status: :ok
   end
 
   def create
@@ -95,13 +95,16 @@ class Api::V1::Accounts::Crm::MeetingsController < Api::V1::Accounts::Crm::BaseC
   def record_outcome
     authorize @meeting.card, :update?
 
-    Crm::Meetings::RecordOutcomeService.new(
+    service = Crm::Meetings::RecordOutcomeService.new(
       meeting: @meeting,
       outcome: outcome_params[:outcome],
-      notes: outcome_params[:notes]
-    ).perform
+      notes: outcome_params[:notes],
+      actor: Current.user
+    )
+    service.perform
 
-    render json: { payload: serialize(visible_meetings.find(@meeting.id)) }, status: :ok
+    # `post_meeting` (#1193, J4-A7): mover o card depois de "Aconteceu" (pergunta ou já movido); nil sem oferta.
+    render json: { payload: serialize_detail(visible_meetings.find(@meeting.id)), post_meeting: service.post_meeting }, status: :ok
   rescue ArgumentError
     render json: { error: 'Invalid outcome request' }, status: :unprocessable_entity
   end
@@ -190,7 +193,7 @@ class Api::V1::Accounts::Crm::MeetingsController < Api::V1::Accounts::Crm::BaseC
   def visible_meetings
     Current.account.crm_meetings
            .where(card_id: policy_scope(::Crm::Card).select(:id))
-           .includes(:meeting_guests, :card, :inbox, :created_by, :reminder)
+           .includes(:meeting_guests, :card, :inbox, :created_by, :reminder, :notices)
   end
 
   def card
@@ -277,7 +280,26 @@ class Api::V1::Accounts::Crm::MeetingsController < Api::V1::Accounts::Crm::BaseC
       scheduled_by: serialize_user(meeting.created_by),
       created_at: meeting.created_at&.iso8601,
       updated_at: meeting.updated_at&.iso8601
+    }.merge(serialize_booking_notices(meeting))
+  end
+
+  # Agendamento WhatsApp-first (#1192): resposta do cliente e avisos no WhatsApp (a tela usa na F2-B).
+  # `notices_stopped`: o cliente parou os avisos (a parada do contato marca todas as reuniões abertas dele).
+  def serialize_booking_notices(meeting)
+    {
+      booking: meeting.booking?,
+      confirmation_status: meeting.confirmation_status,
+      notices_stopped: meeting.reminders_stopped_at.present?,
+      reminded_at: meeting.metadata.to_h['reminded_at'].presence,
+      notices: meeting.notices.sort_by { |notice| [notice.due_at, notice.id] }.map(&:as_summary)
     }
+  end
+
+  # Detalhe de uma reunião (#1193, J4-A1/A2): o cliente com número, link do WhatsApp e a conversa de WhatsApp que a
+  # pessoa pode abrir (só no detalhe: a lista não consulta conversas reunião a reunião).
+  def serialize_detail(meeting)
+    client = ::Crm::BookingV2::MeetingClient.new(meeting, visible: ->(conversation) { policy(conversation).show? })
+    serialize(meeting).merge(client: client.as_json)
   end
 
   # Local da reunião interna (#1188): rótulo e endereço gravados em metadata['location']; nil nos dois quando não há.
@@ -290,6 +312,7 @@ class Api::V1::Accounts::Crm::MeetingsController < Api::V1::Accounts::Crm::BaseC
     {
       id: guest.id,
       email: guest.email,
+      phone_number: guest.phone_number,
       name: guest.name,
       guest_type: guest.guest_type,
       rsvp_status: guest.rsvp_status

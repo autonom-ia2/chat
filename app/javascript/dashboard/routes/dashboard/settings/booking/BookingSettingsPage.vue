@@ -5,10 +5,11 @@ import { useCanManage } from 'dashboard/composables/useCanManage';
 import BookingPagesList from './components/BookingPagesList.vue';
 import BookingWizard from './components/BookingWizard.vue';
 import BookingPageView from './components/BookingPageView.vue';
+import BookingSettingsTabs from './components/BookingSettingsTabs.vue';
 import { STEP } from './constants';
 
 // Configurações › Agendamento (#1187, F1-D): a lista de páginas, o assistente
-// de seis passos e, para quem só vê, a página em modo leitura. Escrever pede
+// de sete passos e, para quem só vê, a página em modo leitura. Escrever pede
 // `agendamento_manage` (o administrador tem).
 const { t } = useI18n();
 const canManage = useCanManage('agendamento_manage');
@@ -44,6 +45,8 @@ const view = page => {
         {{ t('BOOKING.PAGE.SUBTITLE') }}
       </p>
     </header>
+
+    <BookingSettingsTabs v-if="screen.mode === 'list'" />
 
     <BookingWizard
       v-if="screen.mode === 'wizard' && canManage"

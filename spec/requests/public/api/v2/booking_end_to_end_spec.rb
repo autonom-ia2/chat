@@ -38,7 +38,8 @@ RSpec.describe 'Agendamento sem Google/MS de ponta a ponta', type: :request do
   end
 
   # Cliente abre a página, espera alguns segundos preenchendo (o form_token recusa menos de 2 s) e pega o próximo
-  # horário: com 2 h de antecedência mínima a partir de 08:00:05, as 10:00 já passaram do limite.
+  # horário. Hoje, segunda 12/10/2026, é feriado nacional (Nossa Senhora Aparecida) e a página nasce fechando
+  # feriados (#1195, J3-A13): o próximo horário é o primeiro de terça.
   def open_page_and_pick_next_slot(slug)
     get "/public/api/v2/booking/#{slug}"
     page = response.parsed_body
@@ -54,7 +55,7 @@ RSpec.describe 'Agendamento sem Google/MS de ponta a ponta', type: :request do
     pipeline, stage = create_crm_pipeline(account: account, user: admin)
     slug = publish_page(create_page)
     form_token, starts_at = open_page_and_pick_next_slot(slug)
-    expect(starts_at).to eq('2026-10-12T10:30:00-03:00')
+    expect(starts_at).to eq('2026-10-13T09:00:00-03:00')
 
     post "/public/api/v2/booking/#{slug}",
          params: { name: 'Ana Souza', phone: '+55 21 98888-7777', starts_at: starts_at, company: '', form_token: form_token,

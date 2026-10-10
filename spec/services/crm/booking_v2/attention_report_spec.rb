@@ -56,4 +56,43 @@ RSpec.describe Crm::BookingV2::AttentionReport do
     expect(described_class.new(account: account).entries.map { |e| e.profile.id }).to eq([world.profile.id])
     expect(described_class.new(account: other.account).entries).to be_empty
   end
+
+  describe 'reuniões que ficaram com quem não atende mais (#1195)' do
+    it 'mostra a pessoa e quantas reuniões futuras ficaram, por página, sem marcar a página como sem responsável' do
+      seller = create(:user, account: account, role: :agent, name: 'Vendedor')
+      other_page = create_booking_profile(account: account, host: world.host)
+      page_meeting(2.days.from_now, host: seller)
+      page_meeting(3.days.from_now, host: seller)
+      page_meeting(4.days.from_now, host: seller, profile: other_page)
+      page_meeting(5.days.from_now, host: seller).update!(status: :canceled)
+      page_meeting(2.days.ago, host: seller)
+      page_meeting(2.days.from_now)
+      seller.account_users.find_by(account: account).destroy!
+      report = described_class.new(account: account)
+
+      expect(report.orphaned(world.profile)).to eq([{ id: seller.id, name: 'Vendedor', upcoming_meetings_count: 2 }])
+      expect(report.orphaned(other_page)).to eq([{ id: seller.id, name: 'Vendedor', upcoming_meetings_count: 1 }])
+      expect(report.attention?(world.profile)).to be(false)
+      expect(report.entries.map { |e| [e.profile.id, e.reason, e.user_id, e.upcoming_meetings_count] }).to eq(
+        [[world.profile.id, 'meetings_orphaned', seller.id, 2], [other_page.id, 'meetings_orphaned', seller.id, 1]]
+      )
+    end
+
+    it 'também mostra quem perdeu o acesso ao CRM e continua com reunião' do
+      seller = create(:user, account: account, role: :agent, name: 'Vendedor')
+      page_meeting(2.days.from_now, host: seller)
+      strip_crm_access(seller)
+
+      expect(described_class.new(account: account).orphaned(world.profile).pluck(:id)).to eq([seller.id])
+    end
+
+    it 'não mostra nada de outra conta nem de página antiga' do
+      other = build_booking_world(account: create(:account), host_name: 'Outra')
+      create_internal_meeting(world: other, starts_at: 2.days.from_now, metadata: { 'booking_profile_id' => other.profile.id })
+      other.host.account_users.find_by(account: other.account).destroy!
+
+      expect(described_class.new(account: account).orphaned(other.profile)).to eq([])
+      expect(described_class.new(account: account).entries).to be_empty
+    end
+  end
 end

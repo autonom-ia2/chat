@@ -7,11 +7,12 @@ import StepAbout from './steps/StepAbout.vue';
 import StepWhere from './steps/StepWhere.vue';
 import StepWhen from './steps/StepWhen.vue';
 import StepLook from './steps/StepLook.vue';
+import StepNotices from './steps/StepNotices.vue';
 import StepPreview from './steps/StepPreview.vue';
 import { STEP } from '../constants';
 import { useBookingWizard } from '../composables/useBookingWizard';
 
-// Os seis passos da J3 (estado e chamadas em useBookingWizard). Só abre para
+// Os passos da J3 (estado e chamadas em useBookingWizard). Só abre para
 // quem pode mudar (agendamento_manage); quem só vê usa BookingPageView.
 const props = defineProps({
   pageId: { type: Number, default: null },
@@ -57,6 +58,11 @@ const {
 
 onMounted(load);
 
+// "Depois da reunião" (#1193) salva sozinho na prévia e devolve a página.
+const onPageUpdated = payload => {
+  page.value = payload;
+};
+
 // Foco para quem usa teclado ou leitor de tela: ao trocar de passo, o título
 // do passo; quando falta algo, o primeiro campo com problema.
 const stepArea = ref(null);
@@ -80,7 +86,7 @@ const primary = computed(() => {
       : { key: 'PUBLISH', action: publish };
   }
   return {
-    key: step.value === STEP.CARA ? 'SEE_PREVIEW' : 'CONTINUE',
+    key: step.value === STEP.AVISOS ? 'SEE_PREVIEW' : 'CONTINUE',
     action: continueStep,
   };
 });
@@ -159,6 +165,14 @@ const blockedByMissing = computed(
             @change="change"
             @upload="upload"
           />
+          <StepNotices
+            v-else-if="step === STEP.AVISOS"
+            :form="form"
+            :inbox-options="page.notice_inbox_options || []"
+            :saved-inbox-id="page.notice_inbox_id ?? null"
+            :saved-templates="page.notice_templates || {}"
+            @change="change"
+          />
           <StepPreview
             v-else
             :form="form"
@@ -170,6 +184,7 @@ const blockedByMissing = computed(
             :missing="missing"
             @fix="goTo"
             @save-destination="saveDestination"
+            @page-updated="onPageUpdated"
           />
         </template>
       </div>

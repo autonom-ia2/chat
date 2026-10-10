@@ -16,6 +16,8 @@ RSpec.describe 'CRM subject suggestions API', type: :request do
   let(:base_url) { "/api/v1/accounts/#{account.id}/crm/conversations/#{conversation.display_id}" }
   let(:finder) { Crm::Cards::ConversationCardFinder.new(account: account) }
 
+  let!(:setting) { account.crm_inbox_settings.create!(inbox: inbox, crm_enabled: true, subject_ai_mode: :suggest) }
+
   before { account.crm_pipeline_inboxes.create!(pipeline: pipeline, inbox: inbox, default_stage: stage, created_by: admin) }
 
   def card(title, focused_at: nil)
@@ -156,6 +158,44 @@ RSpec.describe 'CRM subject suggestions API', type: :request do
     accept(decision)
 
     expect(account.crm_cards.order(:id).last.owner).to eq(agent)
+  end
+
+  it 'caixa que saiu do modo Sugerir (#1221): o aviso some e as sugestões pendentes expiram' do
+    card('Agentes de IA')
+    decision = suggestion(action: 'create', title: 'Chat2You')
+    allow(Crm::Subjects::Notifier).to receive(:notify)
+
+    setting.update!(subject_ai_mode: :off)
+
+    expect(Crm::Subjects::Notifier).to have_received(:notify).with(conversation)
+
+    get "#{base_url}/cards", headers: auth_headers(agent)
+    expect(response.parsed_body['suggestion']).to be_nil
+    expect(decision.reload.state).to eq('expired')
+  end
+
+  it 'CRM desligado na caixa também expira as sugestões pendentes' do
+    decision = suggestion(action: 'create', title: 'Chat2You')
+
+    setting.update!(crm_enabled: false)
+
+    expect(decision.reload.state).to eq('expired')
+  end
+
+  it 'aceitar sugestão de caixa que não está mais em Sugerir não cria card' do
+    decision = suggestion(action: 'create', title: 'Chat2You')
+    setting.update_columns(subject_ai_mode: Crm::InboxSetting.subject_ai_modes[:auto]) # rubocop:disable Rails/SkipsModelValidations
+
+    expect { accept(decision) }.not_to change(Crm::Card, :count)
+    expect(response.parsed_body['error']).to eq('crm.conversation_cards.mode_changed')
+    expect(decision.reload.state).to eq('expired')
+  end
+
+  it 'salvar a caixa que segue em Sugerir não mexe nas sugestões' do
+    decision = suggestion(action: 'create', title: 'Chat2You')
+    setting.update!(subject_ai_mode: :suggest, auto_create_card: true)
+
+    expect(decision.reload.state).to eq('suggested')
   end
 
   it 'Ignorar marca a sugestão e não mexe nos cards' do
