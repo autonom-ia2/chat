@@ -506,9 +506,7 @@ describe('GavetaAgenda (#1253)', () => {
     await clicar('[data-valor="5"]');
     expect(no('[data-pausada]')).not.toBeNull();
     await clicar('[data-salvar]');
-    expect(alerta).toHaveBeenCalledWith(
-      'Você não pode escolher a página de agendamento.'
-    );
+    expect(alerta).not.toHaveBeenCalled();
     expect(no('[data-erro]').textContent).toContain(
       'Você não pode escolher a página de agendamento.'
     );

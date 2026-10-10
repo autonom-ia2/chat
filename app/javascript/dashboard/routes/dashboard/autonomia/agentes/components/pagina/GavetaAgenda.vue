@@ -71,7 +71,6 @@ const salvar = async () => {
     emit('fechar');
   } catch (erro) {
     erroSalvar.value = erro?.message || t(`${NS}.ERRO`);
-    useAlert(erroSalvar.value);
   } finally {
     salvando.value = false;
   }
