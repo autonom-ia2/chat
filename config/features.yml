@@ -323,3 +323,11 @@
   display_name: Agendamento WhatsApp-first (CRM)
   enabled: false
   column: feature_flags_ext_1
+
+# Base de clientes (#1240). Hoje liga a leitura nova da planilha na importação de contatos e em Públicos (#1246):
+# celular antigo sem o 9, célula com dois valores, planilha sem cabeçalho e a proporção de valores válidos para o Jev.
+# Desligada: a leitura de sempre (CampaignImports::ContactReading::CLASSIC). Piloto por conta no Super Admin.
+- name: customer_base
+  display_name: Base de clientes (leitura nova da planilha)
+  enabled: false
+  column: feature_flags_ext_1

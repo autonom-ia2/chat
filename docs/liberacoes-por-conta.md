@@ -42,6 +42,7 @@ De onde vem o estado de uma conta nova (`before_create`):
 | `instagram_assisted_onboarding` | Instagram assistido (#995) |
 | `meta_ads_hub` | Anúncios da Meta (#1100) |
 | `email_template_import` | Importar modelo de e-mail (#1099) |
+| `customer_base` | Base de clientes (#1240): leitura nova da planilha na importação de contatos e em Públicos (#1246). Desligada = leitura igual ao `main`, provado linha a linha em `docs/base-de-clientes/BATERIA-F0.md` |
 
 ### Do Chatwoot, oferecidas aos clientes
 
@@ -114,5 +115,6 @@ Cada linha precisa de uma decisão do Rodrigo: liberar para todas, manter em pil
 |---|---|---|---|---|
 | `instagram_assisted_onboarding` | as duas | hub2you 16, 18; autonomia 1, 23 | pendente | |
 | `email_template_import` | autonomia | nenhuma | pendente | |
+| `customer_base` (dona: sessão Base de Clientes, #1240) | hub2you | 16 | piloto | 24/10/2026 (proposta) |
 | flags que faltam na conta 23 do autonomia | autonomia | 23 | pendente (conta nova não recebe flag de `feature_flags_ext_1`) | |
 | flags que faltam na conta 5 do hub2you | hub2you | 5 | pendente | |
