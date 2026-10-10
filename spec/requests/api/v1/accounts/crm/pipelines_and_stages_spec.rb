@@ -24,11 +24,12 @@ RSpec.describe 'CRM pipelines and stages API', type: :request do
     pipeline_id = response.parsed_body.dig('payload', 'id')
 
     patch "/api/v1/accounts/#{account.id}/crm/pipelines/#{pipeline_id}",
-          params: { pipeline: { name: 'Renovações 2026' } },
+          params: { pipeline: { name: 'Renovações 2026', when_to_use: 'Cliente que quer renovar o seguro.' } },
           headers: auth_headers(user)
 
     expect(response).to have_http_status(:ok)
     expect(response.parsed_body.dig('payload', 'name')).to eq('Renovações 2026')
+    expect(response.parsed_body.dig('payload', 'when_to_use')).to eq('Cliente que quer renovar o seguro.')
 
     delete "/api/v1/accounts/#{account.id}/crm/pipelines/#{pipeline_id}", headers: auth_headers(user)
 

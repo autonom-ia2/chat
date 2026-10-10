@@ -194,7 +194,8 @@ RSpec.describe Account do
         feature_relationships_navigation: 1 << 9,
         feature_instagram_assisted_onboarding: 1 << 10,
         feature_meta_ads_hub: 1 << 11,
-        feature_email_template_import: 1 << 12
+        feature_email_template_import: 1 << 12,
+        feature_autonomia_agents_journey: 1 << 13
       )
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_whatsapp_manual_transfer]).to eq(1)
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_data_import]).to eq(2)

@@ -25,12 +25,14 @@ RSpec.describe 'CRM inbox settings API', type: :request do
               visibility_mode: 'assigned_only',
               auto_create_card: true,
               default_pipeline_id: pipeline.id,
-              default_stage_id: stage.id
+              default_stage_id: stage.id,
+              subject_ai_mode: 'suggest'
             }
           },
           headers: auth_headers(admin)
 
     expect(response).to have_http_status(:ok)
+    expect(response.parsed_body.dig('payload', 'subject_ai_mode')).to eq('suggest')
     expect(response.parsed_body.dig('payload', 'crm_enabled')).to be(true)
     expect(response.parsed_body.dig('payload', 'visibility_mode')).to eq('assigned_only')
     expect(response.parsed_body.dig('payload', 'auto_create_card')).to be(true)

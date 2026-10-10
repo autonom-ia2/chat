@@ -584,6 +584,148 @@
       "ACTUATION_INTERNAL": "Internal",
       "ACTUATION_BOTH": "Both",
       "INTERNAL_COPILOT": "Internal copilot"
+    },
+    "JORNADA": {
+      "COMUM": {
+        "TENTAR_DE_NOVO": "Try again",
+        "FECHAR": "Close",
+        "CANCELAR": "Cancel",
+        "COMECANDO": "Starting…",
+        "NOVA_ABA": "(opens in a new tab)",
+        "NOVO_AGENTE": "New agent",
+        "CLIENTE": "Customer",
+        "AGENTE": "Agent",
+        "ESCREVENDO": "Typing…",
+        "USOU": "used: {arquivo}",
+        "IDEIAS": "Ideas to start with",
+        "QUEM_DISSE": "{quem}:"
+      },
+      "MENU": {
+        "AGENTES": "Agents",
+        "CRIAR_AGENTE": "Create agent"
+      },
+      "STATUS": {
+        "ATENDENDO": "Answering",
+        "PARADO": "Stopped",
+        "FALTA_TERMINAR": "Not finished",
+        "COTACAO": "Quotes"
+      },
+      "MODELOS": {
+        "ROTULO": "Ready-made templates",
+        "USAR": "Use this one",
+        "USAR_ARIA": "Use this template: {titulo}",
+        "EXEMPLO": "Example",
+        "EXEMPLO_SR": "Example conversation, not a real agent",
+        "DO_MEU_JEITO": "My own way: tell it in my own words",
+        "ESCOLHA": "Pick a ready-made template. You chat for a bit, test the answers and decide when to start answering.",
+        "SUPPORT": {
+          "TITULO": "Answer customer questions",
+          "TEXTO": "Answers about prices, opening hours, delivery and whatever else people ask.",
+          "CLIENTE": "Are you open on Saturday?",
+          "AGENTE": "Yes, we are, from 9am to 1pm. Can I help with anything else?"
+        },
+        "SDR": {
+          "TITULO": "Serve people who want to buy",
+          "TEXTO": "Understands what the person is looking for and hands over to the team to close.",
+          "CLIENTE": "I want to place an order",
+          "AGENTE": "Great! Tell me what you are looking for and I will call someone from the team."
+        },
+        "RECEPTION": {
+          "TITULO": "Welcome whoever arrives",
+          "TEXTO": "Welcomes people, understands the subject and hands over to the team.",
+          "CLIENTE": "Hi, I need help",
+          "AGENTE": "Hi! Great to have you here. What would you like to talk about?"
+        }
+      },
+      "HEROI": {
+        "TITULO": "Who will answer your customers when you can't?",
+        "SO_VER": "This is where the agents that answer your customers live. Creating and changing them is up to whoever manages the account.",
+        "SEM_CANAL": "To answer, the agent needs a connected channel, such as WhatsApp. You can build and test it now and connect later.",
+        "SEM_CANAL_SEM_PERMISSAO": "Ask an administrator to connect your WhatsApp or another channel.",
+        "CONECTAR_CANAL": "Connect your WhatsApp or another channel"
+      },
+      "LISTA": {
+        "TITULO": "Agents",
+        "TEXTO": "They answer your customers on WhatsApp, Instagram and your website.",
+        "SO_VER": "Creating and changing agents is up to whoever manages the account.",
+        "CRIAR": "Create agent",
+        "VER_MODELOS": "See ready-made templates",
+        "CARREGANDO": "Loading your agents",
+        "SEUS_AGENTES": "Your agents",
+        "CONTAGEM_ATENDENDO": "None answering | 1 answering | {n} answering",
+        "CONTAGEM_PARADOS": "None stopped | 1 stopped | {n} stopped"
+      },
+      "CARTAO": {
+        "ONDE_NENHUM": "Not on any channel yet",
+        "ONDE_N_CANAIS": "Answers on 1 channel | Answers on {n} channels",
+        "ONDE_CANAL": "Answers on {canal}",
+        "SEMANA_VAZIA": "No conversations this week yet",
+        "SEMANA_RESPONDIDAS": "This week: {n} conversation answered | This week: {n} conversations answered",
+        "SEMANA_PASSADAS": "{n} handed to the team | {n} handed to the team",
+        "PARADO": "Not answering anyone right now.",
+        "PARADO_SEM_CANAL": "Not on any channel yet.",
+        "RASCUNHO": "You started and did not finish.",
+        "COTACAO": "Opens in the quotes module",
+        "CONTINUAR": "Continue",
+        "CONTINUAR_ARIA": "Continue {nome}",
+        "MAIS_OPCOES": "More options for {nome}",
+        "EXCLUIR_RASCUNHO": "Delete draft"
+      },
+      "EXCLUIR": {
+        "TITULO": "Delete this draft?",
+        "TEXTO": "What you told so far will be lost.",
+        "CONFIRMAR": "Delete",
+        "FEITO": "Draft deleted."
+      },
+      "ERRO": {
+        "LISTA": "Your agents could not be shown right now.",
+        "LISTA_GARANTIA": "No agent was changed.",
+        "COMECAR_MODELO": "Could not start right now.",
+        "COMECAR_MODELO_GARANTIA": "Nothing was created.",
+        "COMECAR_ATENDER": "Could not start answering.",
+        "COMECAR_ATENDER_GARANTIA": "Nothing changed: {nome} is still not answering.",
+        "CANAL": "This channel could not be used.",
+        "CANAL_GARANTIA": "Nothing changed.",
+        "CANAL_ACAO": "Choose another one",
+        "TROCA_SEM_AGENTE": "{nome} could not start answering.",
+        "TROCA_SEM_AGENTE_GARANTIA": "{canal} was left with no agent. The conversations go to the team.",
+        "EXCLUIR": "Could not delete right now.",
+        "EXCLUIR_GARANTIA": "Nothing changed.",
+        "OFFLINE": "You are offline.",
+        "OFFLINE_GARANTIA": "As soon as you are back, try again.",
+        "SEM_CANAL": "No channel connected.",
+        "SEM_CANAL_GARANTIA": "{nome} can already answer. You still need to choose where."
+      },
+      "ONDE_QUANDO": {
+        "TITULO": "Where and when {nome} answers",
+        "ONDE": "Where it answers",
+        "QUANDO": "When it answers",
+        "OCUPADO": "{canal} · {agente} already answers here",
+        "OCUPADO_TEXTO": "Put {nome} in their place",
+        "EXTERNO": "{canal} · Another automatic service already answers here",
+        "EXTERNO_TEXTO": "Another system already answers here. To use it, stop the other system first.",
+        "TROCA": "{outro} stops answering on {canal}, but stays on your list. The open conversations on {canal} go back to the team.",
+        "TODOS_OCUPADOS": "All your channels already have an agent. Put {nome} in the place of one of them or connect another channel.",
+        "SEM_LEITURA": "Channels that already have an agent are not shown here.",
+        "SEMPRE": "Always",
+        "SEMPRE_TEXTO": "Any time, every day",
+        "DENTRO": "Only during business hours",
+        "DENTRO_TEXTO": "Channel hours: {horario}",
+        "FORA": "Only outside business hours",
+        "FORA_TEXTO": "Outside of: {horario}",
+        "SEM_HORARIO": "This channel has no business hours yet.",
+        "QUEM_RECEBE": "When it does not know, {nome} hands the conversation to the team. Who receives it is set in Assignment.",
+        "ESCOLHER_QUEM_RECEBE": "Choose who receives",
+        "QUEM_RECEBE_SEM_PERMISSAO": "Ask an administrator to choose who receives."
+      },
+      "COMPOSITOR": {
+        "ESCREVA": "Write your answer",
+        "ENVIAR": "Send",
+        "ANEXAR": "Send a photo, file or website",
+        "ANEXAR_FOTO": "Send a photo",
+        "REMOVER": "Remove {nome}",
+        "ANEXOS": "Files going along"
+      }
     }
   }
 }
