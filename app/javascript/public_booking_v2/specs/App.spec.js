@@ -736,6 +736,19 @@ describe('days, durations and places', () => {
     expect(labels.some(label => label.startsWith('domingo'))).toBe(false);
   });
 
+  it('never offers a holiday the page closes (J2-A8)', async () => {
+    const wrapper = await mountApp({
+      page: { ...PAGE, closed_dates: ['2026-10-12'] },
+    });
+    const labels = wrapper
+      .findAll('button[aria-label]')
+      .map(node => node.attributes('aria-label'));
+    // 12/10 (segunda, feriado) some; de 13/10 a 19/10 ficam os dias úteis.
+    expect(labels).toHaveLength(5);
+    expect(labels.some(label => label.includes('12 de outubro'))).toBe(false);
+    expect(labels.some(label => label.includes('13 de outubro'))).toBe(true);
+  });
+
   it('shows the chosen duration in the header and drops the old earliest time', async () => {
     const wrapper = await mountApp({ page: { ...PAGE, durations: [30, 60] } });
     expect(wrapper.find('header').text()).toContain('30 minutos');
@@ -1517,6 +1530,22 @@ describe('meeting management /b/:code (F2-A)', () => {
     const MOVED = scheduled({
       starts_at: OTHER_SLOT,
       ends_at: '2026-10-13T16:30:00-03:00',
+    });
+
+    it('never offers a holiday the page closes as the new day', async () => {
+      const wrapper = await openManage({
+        page: { ...PAGE, closed_dates: ['2026-10-12', '2026-10-15'] },
+      });
+      await click(wrapper, 'Mudar horário');
+
+      expect(heading(wrapper)).toBe('Para qual dia quer mudar?');
+      const labels = wrapper
+        .findAll('button[aria-label]')
+        .map(node => node.attributes('aria-label'));
+      expect(labels).toHaveLength(4);
+      expect(labels.some(label => label.includes('12 de outubro'))).toBe(false);
+      expect(labels.some(label => label.includes('15 de outubro'))).toBe(false);
+      expect(labels.some(label => label.includes('13 de outubro'))).toBe(true);
     });
 
     it('picks a new day and time, confirms, and shows the new time', async () => {

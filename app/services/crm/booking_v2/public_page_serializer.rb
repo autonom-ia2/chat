@@ -7,6 +7,9 @@
 #
 # `timezone`: nome IANA do fuso da página (o navegador não entende os nomes do Rails, como "Brasilia"). `weekdays`: dias
 # da semana em que a página atende (0 = domingo ... 6 = sábado), para a página não oferecer dia fechado.
+# `closed_dates` (#1195, J2-A8): feriados nacionais (`Crm::Calendar::Holidays`) da janela, de hoje a
+# `booking_window_days` no fuso da página, como YYYY-MM-DD. Só com `close_holidays` ligado: são os dias em que `Slots`
+# não oferece horário, e a página os trata como dia fechado em vez de deixar o cliente tocar à toa.
 # `notices_enabled` (#1192): a página tem caixa de avisos utilizável; a tela mostra o aviso de consentimento.
 class Crm::BookingV2::PublicPageSerializer
   include Rails.application.routes.url_helpers
@@ -48,8 +51,15 @@ class Crm::BookingV2::PublicPageSerializer
   def schedule
     {
       duration_minutes: profile.duration_minutes, durations: profile.durations, timezone: page.time_zone&.tzinfo&.name,
-      booking_window_days: profile.booking_window_days, weekdays: profile.weekdays.sort
+      booking_window_days: profile.booking_window_days, weekdays: profile.weekdays.sort, closed_dates: closed_dates
     }
+  end
+
+  def closed_dates
+    return [] unless profile.close_holidays?
+
+    today = Time.current.in_time_zone(page.time_zone || 'UTC').to_date
+    (today..(today + profile.booking_window_days)).select { |day| Crm::Calendar::Holidays.holiday?(day) }.map(&:iso8601)
   end
 
   def form
