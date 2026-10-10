@@ -120,6 +120,21 @@ RSpec.describe Crm::Subjects::Identifier do
     expect(cliente).not_to have_received(:create)
   end
 
+  it 'avisa a tela da conversa quando aplica, e fica quieto quando nada muda' do
+    create_card(title: 'Agentes de IA', focused_at: 1.hour.ago, metadata: { 'subject' => { 'source' => 'ai' } })
+    allow(Crm::Subjects::Notifier).to receive(:notify)
+    stub_jev('mesmo_assunto')
+    identify(incoming('Pode mandar a proposta?'))
+
+    expect(Crm::Subjects::Notifier).not_to have_received(:notify)
+
+    stub_jev("novo_#{comercial.id}")
+    stub_review(resposta: "novo_#{comercial.id}", titulo: 'Chat2You')
+    identify(incoming('E o Chat2You?'))
+
+    expect(Crm::Subjects::Notifier).to have_received(:notify).with(conversation).once
+  end
+
   it 'continua no mesmo assunto: não mexe em nada' do
     card = create_card(title: 'Agentes de IA', focused_at: 1.hour.ago)
     stub_jev('mesmo_assunto')

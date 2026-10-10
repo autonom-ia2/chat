@@ -1389,7 +1389,15 @@
         "MORE_HINT": "Mais {count} assunto(s) aberto(s) nesta conversa",
         "MAKE_CURRENT_HINT": "Clique para tratar este assunto",
         "REPLY_IN": "Este envio fica no assunto:",
-        "PIPELINE_STAGE": "{pipeline} · {stage}"
+        "PIPELINE_STAGE": "{pipeline} · {stage}",
+        "SUGGESTION_CREATE": "Parece um novo assunto: {title} ({pipeline}).",
+        "SUGGESTION_CREATE_ACCEPT": "Criar assunto",
+        "SUGGESTION_RENAME": "Parece que este assunto é: {title}.",
+        "SUGGESTION_RENAME_ACCEPT": "Usar este nome",
+        "SUGGESTION_FOCUS": "Parece que o cliente voltou a falar de: {title}.",
+        "SUGGESTION_FOCUS_ACCEPT": "Tratar este assunto",
+        "SUGGESTION_DISMISS": "Ignorar",
+        "SUGGESTION_ERROR": "Não foi possível responder à sugestão. Ela pode ter mudado; veja os assuntos de novo."
       }
     },
     "PIPELINE_DRAWER": {

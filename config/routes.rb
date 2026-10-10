@@ -349,6 +349,9 @@ Rails.application.routes.draw do
             get 'conversations/:conversation_id/card', to: 'cards#by_conversation'
             get 'conversations/:conversation_id/cards', to: 'conversation_cards#index'
             post 'conversations/:conversation_id/focus', to: 'conversation_cards#focus'
+            # Multifunil 5b (#1145): responder à sugestão de assunto da IA.
+            post 'conversations/:conversation_id/subject_suggestions/:suggestion_id/accept', to: 'conversation_cards#accept_suggestion'
+            post 'conversations/:conversation_id/subject_suggestions/:suggestion_id/dismiss', to: 'conversation_cards#dismiss_suggestion'
             get :kanban, to: 'kanban#index'
             scope :reports, controller: :reports do
               get :pipelines, action: :pipelines, as: :crm_report_pipelines
