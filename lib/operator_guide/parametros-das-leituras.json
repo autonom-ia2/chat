@@ -166,6 +166,10 @@
     "controller": "api/v1/accounts/autonomia/agents/build_threads#show",
     "parametros": []
   },
+  "autonomia/canais_ocupados": {
+    "controller": "api/v1/accounts/autonomia/canais_ocupados#index",
+    "parametros": []
+  },
   "autonomia/conversations/:conversation_id/copilot/agents": {
     "controller": "api/v1/accounts/autonomia/conversation_copilot#agents",
     "parametros": []
@@ -224,6 +228,12 @@
   "autonomia/invite_connection/:inbox_id/connection": {
     "controller": "api/v1/accounts/autonomia/invite_connections#connection",
     "parametros": []
+  },
+  "autonomia/numeros_da_semana": {
+    "controller": "api/v1/accounts/autonomia/numeros_da_semana#index",
+    "parametros": [
+      "agent_id"
+    ]
   },
   "autonomia/pendencias_do_guia": {
     "controller": "api/v1/accounts/autonomia/pendencias_do_guia#index",

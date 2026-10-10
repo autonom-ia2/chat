@@ -5,6 +5,7 @@
 #  id                  :bigint           not null, primary key
 #  auto_create_card    :boolean          default(FALSE), not null
 #  crm_enabled         :boolean          default(FALSE), not null
+#  subject_ai_mode     :integer          default("off"), not null
 #  visibility_mode     :integer          default("all_inbox_cards"), not null
 #  created_at          :datetime         not null
 #  updated_at          :datetime         not null
@@ -38,6 +39,8 @@ class Crm::InboxSetting < ApplicationRecord
   belongs_to :default_stage, class_name: 'Crm::PipelineStage', optional: true
 
   enum visibility_mode: { all_inbox_cards: 0, assigned_only: 1 }
+  # Multifunil (#1145): o que a IA faz quando identifica o assunto da conversa. Desligada é o padrão.
+  enum subject_ai_mode: { off: 0, suggest: 1, auto: 2 }, _prefix: :subject_ai
 
   validates :inbox_id, uniqueness: { scope: :account_id }
   validate :linked_records_must_belong_to_account

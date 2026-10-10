@@ -2169,6 +2169,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_15_100000) do
     t.boolean "auto_create_card", default: false, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "subject_ai_mode", default: 0, null: false
     t.index ["account_id", "crm_enabled"], name: "index_crm_inbox_settings_on_account_id_and_crm_enabled"
     t.index ["account_id", "inbox_id"], name: "index_crm_inbox_settings_on_account_id_and_inbox_id", unique: true
     t.index ["account_id"], name: "index_crm_inbox_settings_on_account_id"
@@ -2523,6 +2524,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_15_100000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.boolean "counts_as_sale", default: true, null: false
+    t.text "when_to_use"
     t.index ["account_id", "is_default"], name: "index_crm_pipelines_on_account_id_and_is_default"
     t.index ["account_id", "position"], name: "index_crm_pipelines_on_account_id_and_position"
     t.index ["account_id", "status"], name: "index_crm_pipelines_on_account_id_and_status"
@@ -2611,6 +2613,29 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_15_100000) do
     t.index ["created_by_id"], name: "index_crm_stage_automations_on_created_by_id"
     t.index ["pipeline_id"], name: "index_crm_stage_automations_on_pipeline_id"
     t.index ["stage_id"], name: "index_crm_stage_automations_on_stage_id"
+  end
+
+  create_table "crm_subject_decisions", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "conversation_id", null: false
+    t.bigint "message_id"
+    t.bigint "card_id"
+    t.bigint "pipeline_id"
+    t.string "action", null: false
+    t.string "state", null: false
+    t.string "mode", null: false
+    t.string "title"
+    t.float "confidence"
+    t.string "decided_by"
+    t.string "reason"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "created_at"], name: "idx_crm_subject_decisions_account_month"
+    t.index ["card_id"], name: "index_crm_subject_decisions_on_card_id"
+    t.index ["conversation_id", "message_id"], name: "idx_crm_subject_decisions_message", unique: true
+    t.index ["conversation_id", "state"], name: "idx_crm_subject_decisions_conversation_state"
+    t.index ["message_id"], name: "index_crm_subject_decisions_on_message_id"
+    t.index ["pipeline_id"], name: "index_crm_subject_decisions_on_pipeline_id"
   end
 
   create_table "csat_survey_responses", force: :cascade do |t|
@@ -3974,6 +3999,11 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_15_100000) do
   add_foreign_key "crm_stage_automations", "crm_pipeline_stages", column: "stage_id"
   add_foreign_key "crm_stage_automations", "crm_pipelines", column: "pipeline_id"
   add_foreign_key "crm_stage_automations", "users", column: "created_by_id"
+  add_foreign_key "crm_subject_decisions", "accounts", on_delete: :cascade
+  add_foreign_key "crm_subject_decisions", "conversations", on_delete: :cascade
+  add_foreign_key "crm_subject_decisions", "crm_cards", column: "card_id", on_delete: :nullify
+  add_foreign_key "crm_subject_decisions", "crm_pipelines", column: "pipeline_id", on_delete: :nullify
+  add_foreign_key "crm_subject_decisions", "messages", on_delete: :nullify
   add_foreign_key "ctwa_tracked_link_clicks", "accounts", on_delete: :cascade
   add_foreign_key "ctwa_tracked_link_clicks", "conversations", on_delete: :nullify
   add_foreign_key "ctwa_tracked_link_clicks", "ctwa_tracked_links", column: "tracked_link_id", on_delete: :cascade

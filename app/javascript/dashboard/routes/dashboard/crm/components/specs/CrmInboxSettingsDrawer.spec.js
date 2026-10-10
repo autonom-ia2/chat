@@ -41,6 +41,12 @@ const mountDrawer = (props = {}) =>
           emits: ['update:modelValue'],
           template: '<div class="combobox" />',
         },
+        ChoiceSelect: {
+          props: ['modelValue', 'options', 'disabled', 'ariaLabel'],
+          emits: ['update:modelValue'],
+          template:
+            '<div class="choice-select" :data-disabled="disabled" @click="$emit(\'update:modelValue\', \'suggest\')" />',
+        },
         Button: {
           props: ['label', 'isLoading', 'disabled'],
           emits: ['click'],
@@ -63,6 +69,31 @@ describe('CrmInboxSettingsDrawer', () => {
     const wrapper = mountDrawer();
     expect(wrapper.find('select').exists()).toBe(false);
     expect(wrapper.findAll('.combobox')).toHaveLength(6);
+  });
+
+  it('saves the subject AI mode chosen for the inbox (#1145), off while the CRM is off', async () => {
+    const wrapper = mountDrawer();
+    const [first, second] = sections(wrapper);
+
+    expect(first.find('.choice-select').attributes('data-disabled')).toBe(
+      'true'
+    );
+    await crmToggle(first).setValue(true);
+    await first.find('.choice-select').trigger('click');
+    await saveButton(first).trigger('click');
+    await crmToggle(second).setValue(true);
+    await second.find('.choice-select').trigger('click');
+    await crmToggle(second).setValue(false);
+    await saveButton(second).trigger('click');
+
+    expect(wrapper.emitted('save')[0][0]).toMatchObject({
+      inboxId: 1,
+      subject_ai_mode: 'suggest',
+    });
+    expect(wrapper.emitted('save')[1][0]).toMatchObject({
+      inboxId: 2,
+      subject_ai_mode: 'off',
+    });
   });
 
   it('only enables Save for an inbox that changed', async () => {
