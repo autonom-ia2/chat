@@ -47,6 +47,7 @@ import {
   skipReasonKey,
 } from '../helpers/meetingNotices';
 import CrmCardLeadForm from './CrmCardLeadForm.vue';
+import CrmCardCustomFields from './CrmCardCustomFields.vue';
 
 const props = defineProps({
   show: { type: Boolean, default: false },
@@ -2034,6 +2035,12 @@ useFixedPanelPresence(computed(() => props.show));
               />
             </label>
           </div>
+
+          <CrmCardCustomFields
+            v-if="isEditing && card?.id"
+            :card="card"
+            :can-manage="canManageCards"
+          />
 
           <details
             class="group rounded-xl border border-n-weak bg-n-surface-1 p-1"

@@ -115,4 +115,20 @@ RSpec.describe CustomAttributeDefinition do
       end
     end
   end
+
+  describe 'card attribute (#1146)' do
+    it 'não mexe no formulário de pré-chat do widget, mesmo com a chave de um campo de contato' do
+      definition = create(:custom_attribute_definition, account: account, attribute_key: 'cidade', attribute_model: 'card_attribute')
+
+      expect { definition.update!(attribute_display_name: 'Cidade do pedido') }
+        .not_to have_enqueued_job(Inboxes::UpdateWidgetPreChatCustomFieldsJob)
+      expect { definition.destroy! }.not_to have_enqueued_job(Inboxes::SyncWidgetPreChatCustomFieldsJob)
+    end
+
+    it 'recusa chave que é campo padrão do card' do
+      definition = build(:custom_attribute_definition, account: account, attribute_key: 'title', attribute_model: 'card_attribute')
+
+      expect(definition).not_to be_valid
+    end
+  end
 end

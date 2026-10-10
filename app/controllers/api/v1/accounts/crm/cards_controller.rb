@@ -104,8 +104,7 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     if attributes.present?
       mark_value_source_human!(attributes) if attributes.key?(:value_cents)
       mark_score_source_manual!(attributes) if score_changed_by_hand?(attributes)
-      @card.update!(attributes)
-      ::Crm::ActivityLogger.new(card: @card, actor: Current.user, event_type: 'update', payload: attributes).perform
+      apply_update!(attributes)
       broadcast_card(::Events::Types::CRM_CARD_UPDATED)
     end
     render :show
@@ -235,6 +234,10 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     @card = card
     authorize @card, :update?
     attributes = permitted_params.slice(*UPSERT_ATTRIBUTES.map(&:to_s)).compact
+    # Campos do card (#1146): o upsert junta com o que já está salvo, como o PATCH.
+    if permitted_params[:custom_attributes].present?
+      attributes['custom_attributes'] = @card.custom_attributes.to_h.merge(permitted_params[:custom_attributes].to_h).compact
+    end
     if attributes.present?
       @card.update!(attributes)
       ::Crm::ActivityLogger.new(card: @card, actor: Current.user, event_type: 'update', payload: attributes).perform
@@ -458,7 +461,7 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     parameter_set(:card).permit(
       :pipeline_id, :stage_id, :contact_id, :conversation_id, :inbox_id, :owner_id, :team_id,
       :title, :description, :value_cents, :currency, :status, :lost_reason, :source,
-      :priority, :score, :expected_close_at, :external_id, metadata: {}
+      :priority, :score, :expected_close_at, :external_id, metadata: {}, custom_attributes: {}
     )
   end
 
@@ -471,7 +474,22 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
   def update_params
     parameter_set(:card).permit(
       :title, :description, :value_cents, :currency, :lost_reason, :source,
-      :priority, :score, :expected_close_at, :external_id, :owner_id, metadata: {}
+      :priority, :score, :expected_close_at, :external_id, :owner_id, metadata: {}, custom_attributes: {}
     )
+  end
+
+  # Campos do card (#1146): o PATCH manda só o que mudou. Junta com o que já está salvo (chave com null sai), com o card
+  # travado, para duas edições ao mesmo tempo não apagarem o campo uma da outra.
+  def apply_update!(attributes)
+    ActiveRecord::Base.transaction do
+      registro = attributes.dup
+      if attributes.key?(:custom_attributes)
+        @card.lock!
+        attributes[:custom_attributes] = @card.custom_attributes.to_h.merge(attributes[:custom_attributes].to_h).compact
+      end
+      @card.update!(attributes)
+      # O histórico (e o webhook) registram só os campos que o pedido mandou, não o hash inteiro já juntado.
+      ::Crm::ActivityLogger.new(card: @card, actor: Current.user, event_type: 'update', payload: registro).perform
+    end
   end
 end

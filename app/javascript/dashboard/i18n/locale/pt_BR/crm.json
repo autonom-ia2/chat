@@ -1229,6 +1229,16 @@
       "TAB_TIMELINE": "Histórico",
       "TAB_RETURNS": "Retornos",
       "TAB_HISTORY": "Histórico",
+      "CARD_FIELDS": {
+        "TITLE": "Campos do card",
+        "HELP": "Informações próprias deste negócio.",
+        "EMPTY_ADMIN": "Ainda não há campos do card. Crie em Configurações → Atributos personalizados → Card.",
+        "OPEN_SETTINGS": "Criar campos do card",
+        "UPDATE_SUCCESS": "Campo do card salvo",
+        "UPDATE_ERROR": "Não foi possível salvar o campo do card",
+        "DELETE_SUCCESS": "Campo do card limpo",
+        "DELETE_ERROR": "Não foi possível limpar o campo do card"
+      },
       "MORE_DETAILS": "Mais detalhes",
       "LOADING_DETAILS": "Carregando detalhes atualizados...",
       "CONTACT_NAME": "Nome",

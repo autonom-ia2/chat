@@ -533,8 +533,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/cards#destroy",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:114",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:342"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:113",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:345"
     ],
     "sem_corpo": true
   },
@@ -667,7 +667,8 @@
         "um_de": [
           "conversation_attribute",
           "contact_attribute",
-          "company_attribute"
+          "company_attribute",
+          "card_attribute"
         ]
       },
       "filter_type": {}
@@ -2002,7 +2003,7 @@
                 }
               },
               {
-                "description": "Pergunta ao Decisor; as ações seguintes só rodam se ele der a resposta combinada. O Decisor também lê a mensagem (o corpo do e-mail também) e preenche o que estiver vazio em contato.nome, contato.telefone, contato.email, contato.cargo, contato.biografia, empresa.nome, card.titulo, card.descricao e em contato.atributo:<chave> de atributo de contato. Isso se configura nos campos do próprio Decisor (POST autonomia/decisores); o campo de card grava quando a regra cria o card logo depois.",
+                "description": "Pergunta ao Decisor; as ações seguintes só rodam se ele der a resposta combinada. O Decisor também lê a mensagem (o corpo do e-mail também) e preenche o que estiver vazio em contato.nome, contato.telefone, contato.email, contato.cargo, contato.biografia, empresa.nome, card.titulo, card.descricao e em contato.atributo:<chave> de atributo de contato e em card.atributo:<chave> de atributo de card. Isso se configura nos campos do próprio Decisor (POST autonomia/decisores); o campo de card grava quando a regra cria o card logo depois.",
                 "if": {
                   "properties": {
                     "action_name": {
@@ -4912,6 +4913,9 @@
         "padrao": "BRL",
         "tipo": "string"
       },
+      "custom_attributes": {
+        "tipo": "objeto_livre"
+      },
       "description": {
         "tipo": "string"
       },
@@ -4968,8 +4972,8 @@
     "modelo": "Crm::Card",
     "origem": [
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:101",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:472",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:342"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:475",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:345"
     ],
     "sem_corpo": false
   },
@@ -5962,7 +5966,8 @@
         "um_de": [
           "conversation_attribute",
           "contact_attribute",
-          "company_attribute"
+          "company_attribute",
+          "card_attribute"
         ]
       },
       "custom_attribute_definition": {
@@ -8795,7 +8800,7 @@
                 }
               },
               {
-                "description": "Pergunta ao Decisor; as ações seguintes só rodam se ele der a resposta combinada. O Decisor também lê a mensagem (o corpo do e-mail também) e preenche o que estiver vazio em contato.nome, contato.telefone, contato.email, contato.cargo, contato.biografia, empresa.nome, card.titulo, card.descricao e em contato.atributo:<chave> de atributo de contato. Isso se configura nos campos do próprio Decisor (POST autonomia/decisores); o campo de card grava quando a regra cria o card logo depois.",
+                "description": "Pergunta ao Decisor; as ações seguintes só rodam se ele der a resposta combinada. O Decisor também lê a mensagem (o corpo do e-mail também) e preenche o que estiver vazio em contato.nome, contato.telefone, contato.email, contato.cargo, contato.biografia, empresa.nome, card.titulo, card.descricao e em contato.atributo:<chave> de atributo de contato e em card.atributo:<chave> de atributo de card. Isso se configura nos campos do próprio Decisor (POST autonomia/decisores); o campo de card grava quando a regra cria o card logo depois.",
                 "if": {
                   "properties": {
                     "action_name": {
@@ -13675,6 +13680,9 @@
         "padrao": "BRL",
         "tipo": "string"
       },
+      "custom_attributes": {
+        "tipo": "objeto_livre"
+      },
       "description": {
         "tipo": "string"
       },
@@ -13763,8 +13771,8 @@
     "modelo": "Crm::Card",
     "origem": [
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:68",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:458",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:391",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:461",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:394",
       "app/controllers/concerns/crm/opportunity_registration.rb:7"
     ],
     "sem_corpo": false
@@ -13812,12 +13820,12 @@
       "leitura crua sem tipo: result (repassada a ::Crm::Cards::Closer.new)"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:130",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:138",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:129",
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:137",
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:136",
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:135",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:342"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:134",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:345"
     ],
     "sem_corpo": false
   },
@@ -13825,8 +13833,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/cards#evaluate_ai",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:186",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:342"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:185",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:345"
     ],
     "sem_corpo": true
   },
@@ -13840,9 +13848,9 @@
     "controller": "api/v1/accounts/crm/cards#link_contact",
     "modelo": "Contact",
     "origem": [
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:167",
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:168",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:169",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:342"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:345"
     ],
     "sem_corpo": false
   },
@@ -13860,10 +13868,10 @@
     "controller": "api/v1/accounts/crm/cards#link_conversation",
     "modelo": "Conversation",
     "origem": [
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:146",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:153",
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:147",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:154",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:148",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:342"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:345"
     ],
     "sem_corpo": false
   },
@@ -13878,9 +13886,9 @@
     "controller": "api/v1/accounts/crm/cards#move",
     "modelo": "Crm::Card",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:121",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:123",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:342"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:120",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:122",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:345"
     ],
     "sem_corpo": false
   },
@@ -13888,8 +13896,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/cards#reset_auto_followup",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:202",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:342"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:201",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:345"
     ],
     "sem_corpo": true
   },
@@ -13897,8 +13905,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/cards#summarize",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:190",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:342"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:189",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:345"
     ],
     "sem_corpo": true
   },
@@ -13906,8 +13914,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/cards#unlink_contact",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:175",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:342"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:174",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:345"
     ],
     "sem_corpo": true
   },
@@ -13921,9 +13929,9 @@
     "controller": "api/v1/accounts/crm/cards#unlink_conversation",
     "modelo": "Conversation",
     "origem": [
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:159",
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:160",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:161",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:342"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:345"
     ],
     "sem_corpo": false
   },
@@ -13974,6 +13982,9 @@
         "nao_pode_ficar_vazio": true,
         "padrao": "BRL",
         "tipo": "string"
+      },
+      "custom_attributes": {
+        "tipo": "objeto_livre"
       },
       "description": {
         "tipo": "string"
@@ -14070,10 +14081,10 @@
     "modelo": "Crm::Card",
     "origem": [
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:90",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:458",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:432",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:349",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:347"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:461",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:435",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:352",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:350"
     ],
     "sem_corpo": false
   },
@@ -15319,7 +15330,8 @@
         "um_de": [
           "conversation_attribute",
           "contact_attribute",
-          "company_attribute"
+          "company_attribute",
+          "card_attribute"
         ]
       },
       "attribute_values": {
@@ -19347,7 +19359,7 @@
                 }
               },
               {
-                "description": "Pergunta ao Decisor; as ações seguintes só rodam se ele der a resposta combinada. O Decisor também lê a mensagem (o corpo do e-mail também) e preenche o que estiver vazio em contato.nome, contato.telefone, contato.email, contato.cargo, contato.biografia, empresa.nome, card.titulo, card.descricao e em contato.atributo:<chave> de atributo de contato. Isso se configura nos campos do próprio Decisor (POST autonomia/decisores); o campo de card grava quando a regra cria o card logo depois.",
+                "description": "Pergunta ao Decisor; as ações seguintes só rodam se ele der a resposta combinada. O Decisor também lê a mensagem (o corpo do e-mail também) e preenche o que estiver vazio em contato.nome, contato.telefone, contato.email, contato.cargo, contato.biografia, empresa.nome, card.titulo, card.descricao e em contato.atributo:<chave> de atributo de contato e em card.atributo:<chave> de atributo de card. Isso se configura nos campos do próprio Decisor (POST autonomia/decisores); o campo de card grava quando a regra cria o card logo depois.",
                 "if": {
                   "properties": {
                     "action_name": {
@@ -22184,6 +22196,9 @@
         "padrao": "BRL",
         "tipo": "string"
       },
+      "custom_attributes": {
+        "tipo": "objeto_livre"
+      },
       "description": {
         "tipo": "string"
       },
@@ -22240,8 +22255,8 @@
     "modelo": "Crm::Card",
     "origem": [
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:101",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:472",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:342"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:475",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:345"
     ],
     "sem_corpo": false
   },
@@ -23136,7 +23151,8 @@
         "um_de": [
           "conversation_attribute",
           "contact_attribute",
-          "company_attribute"
+          "company_attribute",
+          "card_attribute"
         ]
       },
       "custom_attribute_definition": {
