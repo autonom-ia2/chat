@@ -488,7 +488,8 @@
           "RESTRICTED_WARNING": "O cadastro integrado do WhatsApp está temporariamente indisponível devido a um problema na API da Meta, e não por uma falha no Chatwoot. Você pode utilizar a configuração manual para números compatíveis com a Cloud API. Estamos trabalhando em conjunto com a Meta para resolver a situação o mais rápido possível.",
           "STATUS_LINK": "Ver atualizações de status",
           "CALLING_ENABLE_FAILED": "Sua caixa de entrada do WhatsApp está pronta, mas as chamadas de voz não puderam ser ativadas — este número ainda não está cadastrado na API de Chamadas do WhatsApp Business. Entre em contato com a Meta ou com seu provedor de soluções WhatsApp Business para realizar o cadastro e, depois, ative as chamadas nas configurações de Chamadas da caixa de entrada.",
-          "SDK_LOAD_ERROR": "Não foi possível carregar o cadastro do WhatsApp. Tente novamente."
+          "SDK_LOAD_ERROR": "Não foi possível carregar o cadastro do WhatsApp. Tente novamente.",
+          "NOT_CONFIRMED": "Não conseguimos confirmar a conexão com o WhatsApp. Confira suas caixas de entrada antes de tentar de novo."
         },
         "API": {
           "ERROR_MESSAGE": "Não foi possível salvar o canal do WhatsApp",
@@ -1861,6 +1862,72 @@
       "INSTAGRAM": "Instagram",
       "TIKTOK": "TikTok",
       "VOICE": "Voz"
+    },
+    "WHATSAPP_SWITCH_ACCOUNT": {
+      "CARD": {
+        "TITLE": "Conta do WhatsApp",
+        "DISPLAY_NAME": "Nome que o cliente vê",
+        "OWNER": "Empresa dona da conta",
+        "HINT": "Este número precisa ficar com outra empresa? Troque aqui. As conversas continuam nesta caixa.",
+        "ACTION": "Trocar de conta"
+      },
+      "DIALOG": {
+        "KICKER": "Trocar de conta · {phone}"
+      },
+      "TITLES": {
+        "CHECKLIST": "Antes de começar, confira duas coisas",
+        "FACEBOOK": "Siga na janela do Facebook",
+        "CONNECTING": "Quase lá",
+        "DONE": "Conta trocada",
+        "NOT_READY": "Conta trocada, mas as mensagens ainda não chegam",
+        "MISMATCH": "Esse não é o número desta caixa",
+        "CANCELLED": "A janela do Facebook foi fechada",
+        "FAILED": "O Facebook não aceitou a troca",
+        "UNKNOWN": "Não deu para confirmar a troca"
+      },
+      "CHECKLIST": {
+        "KEEP": "As conversas, o robô e o funil continuam nesta caixa.",
+        "LEFT_OLD_ACCOUNT": "O número já saiu da conta antiga",
+        "LEFT_OLD_ACCOUNT_WHY": "Sem isso, o Facebook não deixa cadastrar o número na empresa nova.",
+        "HOW_TO_TITLE": "Como tirar o número da conta antiga?",
+        "HOW_TO_1": "Entre no Gerenciador do WhatsApp da empresa antiga.",
+        "HOW_TO_2": "Em Telefones, abra o número e desligue a verificação em duas etapas.",
+        "HOW_TO_3": "Volte em Telefones e toque na lixeira ao lado do número.",
+        "HOW_TO_WARNING": "A partir daí, esta caixa para de receber mensagens até você terminar a troca.",
+        "PHONE_AT_HAND": "Estou com o celular do {phone} por perto",
+        "PHONE_AT_HAND_WHY": "Vai chegar um código por SMS ou ligação. Se o número estiver no app WhatsApp Business, deixe o app aberto.",
+        "SDK_ERROR": "Não foi possível carregar o Facebook. Atualize a página e tente de novo."
+      },
+      "FACEBOOK": {
+        "COMPANY": "Escolha a empresa nova",
+        "COMPANY_HINT": "Escolha a empresa que vai ficar com o número daqui em diante.",
+        "WHERE": "Diga onde o número está hoje",
+        "APP": "Está no app WhatsApp Business do celular",
+        "APP_HINT": "Escolha conectar o app e confirme pelo celular.",
+        "DIRECT": "Não está em nenhum app",
+        "DIRECT_HINT": "Cadastre o número e digite o código que chegar.",
+        "COME_BACK": "Volte para esta tela",
+        "COME_BACK_HINT": "Quando o Facebook terminar, esta tela continua sozinha."
+      },
+      "CONNECTING": "Conferindo com o WhatsApp. Leva alguns segundos, não feche esta tela.",
+      "RESULTS": {
+        "DONE": "O número {phone} agora é da empresa nova. As conversas, o robô e o funil continuam nesta caixa.",
+        "NOT_READY": "O número foi para a empresa nova, mas esta caixa ainda não está recebendo mensagens. Toque no botão abaixo para ligar o recebimento de novo.",
+        "MISMATCH": "No Facebook foi escolhido o número {received}. Esta caixa é do {phone}. Nada mudou. Abra o Facebook de novo e escolha o {phone}.",
+        "CANCELLED": "Nada mudou nesta caixa. Quando quiser, é só tentar de novo.",
+        "FAILED": "Nada mudou nesta caixa. Confira se o número saiu da conta antiga, se você escolheu o {phone} no Facebook e se o código foi digitado no celular certo. Depois, tente de novo.",
+        "TEST_TIP": "Faça um teste: mande um \"oi\" de outro celular para o {phone} e veja a conversa aparecer.",
+        "UNKNOWN": "Não conseguimos confirmar com o WhatsApp se a troca terminou. Confira os dados da conta nesta tela. Se a empresa nova ainda não aparecer, toque em Tentar de novo.",
+        "RETRY_FAILED": "O recebimento ainda não ligou. Espere um minuto e toque no botão de novo."
+      },
+      "ACTIONS": {
+        "NOT_NOW": "Agora não",
+        "OPEN_FACEBOOK": "Abrir o Facebook",
+        "CLOSE": "Fechar",
+        "FINISH": "Concluir",
+        "TRY_AGAIN": "Tentar de novo",
+        "RETRY_RECEIVING": "Ligar o recebimento"
+      }
     }
   }
 }

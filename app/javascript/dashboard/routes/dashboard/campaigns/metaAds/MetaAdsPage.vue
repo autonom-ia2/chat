@@ -28,7 +28,7 @@ const started = ref(false);
 const openStep = ref(null);
 // Modo escolhido no passo 1 antes de a conexão existir (compartilhar ainda não grava nada). Fica no
 // endereço (?modo=) para recarregar ou voltar não trocar o caminho em silêncio pela chave antiga (#1068).
-const MODES = ['partner', 'token'];
+const MODES = ['partner', 'token', 'facebook_login'];
 const route = useRoute();
 const router = useRouter();
 const chosenMode = ref(
@@ -125,6 +125,13 @@ const startToken = async () => {
   rememberMode('token');
   await load();
   if (!loadFailed.value) openStep.value = 2;
+};
+
+// "Entrar com o Facebook" (#1069): o servidor já trocou o código, testou e gravou a conexão.
+const startFacebookLogin = data => {
+  rememberMode('facebook_login');
+  update(data);
+  openStep.value = 2;
 };
 
 const accountSaved = data => {
@@ -261,6 +268,7 @@ onMounted(load);
               :connection="connection"
               @partner="startPartner"
               @token="startToken"
+              @facebook-login="startFacebookLogin"
             />
             <MetaAdsAccountStep
               v-else-if="activeStep === 2"

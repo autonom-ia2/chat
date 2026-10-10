@@ -32,5 +32,9 @@ export function usePermissoesDaJornada() {
     () => crmComIaLigado() && hasPermissions(QUEM_RECEBE, permissoes.value)
   );
 
-  return { podeConectarCanal, podeEscolherQuemRecebe };
+  // Sem CRM e IA do CRM na instalação, a tela de Atribuição não existe: quem usa esconde o "Peça a
+  // um administrador", que só faz sentido quando falta permissão.
+  const crmLigado = computed(() => crmComIaLigado());
+
+  return { podeConectarCanal, podeEscolherQuemRecebe, crmLigado };
 }

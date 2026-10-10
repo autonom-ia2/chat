@@ -183,6 +183,127 @@ describe('CrmCardDrawer timeline copy', () => {
     }
   );
 
+  it('says who received a reassigned meeting, in plain words', () => {
+    const wrapper = mountDrawer();
+    const reassigned = activity(
+      1,
+      'meeting_host_reassigned',
+      { meeting_id: 9, from_user_id: 3, to_user_id: 4 },
+      { labels: { to_user_id: 'Camila Torres' } }
+    );
+
+    const described = wrapper.vm.describeActivity(reassigned);
+
+    expect(described.title).toBe('Meeting moved to Camila Torres');
+    expect(described.icon).toBe('i-lucide-user-check');
+    expect(described.title).not.toContain('#4');
+    wrapper.unmount();
+  });
+
+  it('falls back to a nameless title when the new host name is missing', () => {
+    const wrapper = mountDrawer();
+    const { title } = wrapper.vm.describeActivity(
+      activity(1, 'meeting_host_reassigned', { to_user_id: 4 })
+    );
+
+    expect(title).toBe('Meeting moved to someone else');
+    wrapper.unmount();
+  });
+
+  it('has the pt_BR copy for the reassigned meeting', () => {
+    const ptBR = { locale: 'pt_BR' };
+
+    expect(
+      t(
+        'CRM_KANBAN.DRAWER.ACTIVITY_MEETING_HOST_REASSIGNED_TO',
+        { name: 'Camila' },
+        ptBR
+      )
+    ).toBe('Reunião passou para Camila');
+    expect(
+      t('CRM_KANBAN.DRAWER.ACTIVITY_MEETING_HOST_REASSIGNED', {}, ptBR)
+    ).toBe('Reunião passou para outra pessoa');
+  });
+
+  it.each([
+    ['booking_client_confirmed', 'Customer confirmed the time'],
+    ['booking_client_canceled', 'Customer cancelled the time'],
+    ['booking_client_rebooked', 'Customer booked another time'],
+    ['booking_notices_stopped', 'Customer asked not to get notices'],
+  ])('describes %s in plain words, with the booked time', (type, title) => {
+    const wrapper = mountDrawer();
+    const described = wrapper.vm.describeActivity(
+      activity(1, type, {
+        meeting_id: 9,
+        starts_at: '2026-10-20T13:00:00Z',
+        by: 'client',
+      })
+    );
+
+    expect(described.title).toBe(title);
+    expect(described.detail.startsWith('Time: ')).toBe(true);
+    expect(described.detail).toContain('10/20/2026');
+    expect(described.actor).toBe('Customer');
+    wrapper.unmount();
+  });
+
+  it('says a failed notice was recorded by the system, not the customer', () => {
+    const wrapper = mountDrawer();
+    const described = wrapper.vm.describeActivity(
+      activity(1, 'booking_notice_failed', {
+        meeting_id: 9,
+        starts_at: '2026-10-20T13:00:00Z',
+        by: 'system',
+        kind: 'day_before',
+        reason: 'template_required',
+      })
+    );
+
+    expect(described.title).toBe('WhatsApp notice did not go out');
+    // Qual aviso e por quê, em palavras leigas; erro de envio sem motivo conhecido vira "Falhou".
+    expect(described.detail.startsWith('1 day before: ')).toBe(true);
+    expect(described.detail).not.toContain('template_required');
+    expect(described.actor).toBe('System');
+
+    const crashed = wrapper.vm.describeActivity(
+      activity(2, 'booking_notice_failed', {
+        meeting_id: 9,
+        starts_at: '2026-10-20T13:00:00Z',
+        by: 'system',
+        kind: 'booked',
+        reason: 'Net::ReadTimeout',
+      })
+    );
+    expect(crashed.detail).not.toContain('Net::');
+    wrapper.unmount();
+  });
+
+  it('shows from and to when the customer changes the time', () => {
+    const wrapper = mountDrawer();
+    const { title, detail } = wrapper.vm.describeActivity(
+      activity(1, 'booking_client_rescheduled', {
+        meeting_id: 9,
+        starts_at: '2026-10-21T13:00:00Z',
+        from: '2026-10-20T13:00:00Z',
+        by: 'client',
+      })
+    );
+
+    expect(title).toBe('Customer changed the time');
+    expect(detail.startsWith('From 10/20/2026')).toBe(true);
+    expect(detail).toContain(' to 10/21/2026');
+    wrapper.unmount();
+  });
+
+  it('has the pt_BR copy for the booking activities', () => {
+    const ptBR = { locale: 'pt_BR' };
+
+    expect(
+      t('CRM_KANBAN.DRAWER.ACTIVITY_BOOKING_CLIENT_CONFIRMED', {}, ptBR)
+    ).toBe('Cliente confirmou o horário');
+    expect(t('CRM_KANBAN.DRAWER.CLIENT_ACTOR', {}, ptBR)).toBe('Cliente');
+  });
+
   it('does not use the cadence touch as an attempt counter on a sent AI follow-up', () => {
     const wrapper = mountDrawer();
     const { detail } = wrapper.vm.describeActivity(
@@ -246,6 +367,25 @@ describe('CrmCardDrawer contact save failure', () => {
     expect(wrapper.vm.contactError).toBe(generic);
     expect(wrapper.text()).not.toContain(serverMessage);
     expect(wrapper.emitted('refreshCard')).toBeUndefined();
+    wrapper.unmount();
+  });
+
+  // #1196 (J6-A4): the meeting the AI booked is identifiable on the card.
+  it('says the AI booked the meeting, and only for AI bookings', () => {
+    const wrapper = mountDrawer();
+    const byAi = activity(1, 'meeting_scheduled', {
+      title: 'Conversa de 30 min',
+      source: 'ai',
+    });
+    const byLink = activity(2, 'meeting_scheduled', {
+      title: 'Conversa de 30 min',
+      source: 'public_link',
+    });
+
+    expect(wrapper.vm.describeActivity(byAi).detail).toBe(
+      'Booked by the AI: Conversa de 30 min'
+    );
+    expect(wrapper.vm.describeActivity(byLink).detail).not.toContain('AI');
     wrapper.unmount();
   });
 });

@@ -34,6 +34,11 @@ import SidebarChangelogCard from './SidebarChangelogCard.vue';
 import SidebarChangelogButton from './SidebarChangelogButton.vue';
 import GuideSidebarEntry from 'dashboard/components/autonomia/guide/GuideSidebarEntry.vue';
 import { prospectingSidebarItems } from 'dashboard/routes/dashboard/autonomia/prospecting/utils/prospectingSidebar';
+import {
+  bookingResultsSidebarItems,
+  bookingSidebarItems,
+  myBookingHoursSidebarItems,
+} from 'dashboard/routes/dashboard/settings/booking/bookingAccess';
 import { agentsSidebarItems } from 'dashboard/routes/dashboard/autonomia/agentes/utils/agentsSidebar';
 import { withCampaignJourney } from 'dashboard/components-next/CampaignJourney/journeySidebar';
 import ChannelLeaf from './ChannelLeaf.vue';
@@ -244,8 +249,23 @@ const canManageCrmSla = computed(() => {
   return permissions.includes(CRM_ADMIN_PERMISSION);
 });
 
+// Agendamento mora no CRM (#1212): função só com Agendamento vê o grupo com
+// esse item e mais nenhum; Kanban, Calendário, Meus horários e Meus números só
+// aparecem para quem vê o CRM.
+const crmBookingItems = computed(() =>
+  bookingSidebarItems({
+    account: currentAccount.value(accountId.value),
+    isAdministrator: isAdministrator.value,
+    permissions: getUserPermissions(currentUser.value, accountId.value),
+    t,
+    accountScopedRoute,
+  })
+);
+
 const showCrmSidebarEntry = computed(
-  () => crmKanbanEnabled.value && canViewCrm.value
+  () =>
+    crmKanbanEnabled.value &&
+    (canViewCrm.value || crmBookingItems.value.length > 0)
 );
 
 const hasFilteredUnreadCounts = computed(() => {
@@ -921,18 +941,37 @@ const menuItems = computed(() => {
             label: t('SIDEBAR.CRM'),
             icon: 'i-lucide-kanban-square',
             children: [
-              {
-                name: 'CRM Kanban',
-                label: t('SIDEBAR.CRM_KANBAN'),
-                to: accountScopedRoute('crm_kanban_index'),
-                activeOn: ['crm_kanban_index'],
-              },
-              {
-                name: 'CRM Calendar',
-                label: t('SIDEBAR.CRM_CALENDAR'),
-                to: accountScopedRoute('crm_calendar_index'),
-                activeOn: ['crm_calendar_index'],
-              },
+              ...(canViewCrm.value
+                ? [
+                    {
+                      name: 'CRM Kanban',
+                      label: t('SIDEBAR.CRM_KANBAN'),
+                      to: accountScopedRoute('crm_kanban_index'),
+                      activeOn: ['crm_kanban_index'],
+                    },
+                    {
+                      name: 'CRM Calendar',
+                      label: t('SIDEBAR.CRM_CALENDAR'),
+                      to: accountScopedRoute('crm_calendar_index'),
+                      activeOn: ['crm_calendar_index'],
+                    },
+                  ]
+                : []),
+              ...crmBookingItems.value,
+              ...(canViewCrm.value
+                ? [
+                    ...myBookingHoursSidebarItems({
+                      account: currentAccount.value(accountId.value),
+                      t,
+                      accountScopedRoute,
+                    }),
+                    ...bookingResultsSidebarItems({
+                      account: currentAccount.value(accountId.value),
+                      t,
+                      accountScopedRoute,
+                    }),
+                  ]
+                : []),
               ...(canViewCrmReports.value
                 ? [
                     {

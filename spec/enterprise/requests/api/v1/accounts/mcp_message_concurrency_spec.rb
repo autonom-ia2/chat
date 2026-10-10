@@ -46,13 +46,18 @@ RSpec.describe 'MCP message commit and concurrency', :relationships_committed_fi
     Message.skip_callback(:commit, :after, fail_after_commit)
     IdempotencyKey.where(account: account).delete_all
     integration.revoke!
-    account.messages.destroy_all
-    account.conversations.destroy_all
-    account.contacts.destroy_all
-    account.inboxes.destroy_all
-    account.account_users.destroy_all
-    account.notification_settings.destroy_all
-    account.destroy!
+    # Sem transação, os filhos com dependent: :destroy_async (working_hours da caixa e da conta, entre outros) só
+    # saem quando o job roda. Fora do perform_enqueued_jobs eles ficavam órfãos (28 working_hours) e quebravam os
+    # specs seguintes do mesmo nó: WorkingHour.today com inbox nil (#1224).
+    perform_enqueued_jobs do
+      account.messages.destroy_all
+      account.conversations.destroy_all
+      account.contacts.destroy_all
+      account.inboxes.destroy_all
+      account.account_users.destroy_all
+      account.notification_settings.destroy_all
+      account.destroy!
+    end
     admin.destroy!
   end
 

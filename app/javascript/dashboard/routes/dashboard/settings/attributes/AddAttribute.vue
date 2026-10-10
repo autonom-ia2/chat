@@ -22,7 +22,7 @@ export default {
       type: Function,
       default: () => {},
     },
-    // Passes 0, 1 or 2 based on the selected AttributeModel tab selected in the UI
+    // Passes 0, 1, 2 or 3 based on the selected AttributeModel tab selected in the UI
     // Needs a better data type, todo: refactor this component later
     selectedAttributeModelTab: {
       type: Number,

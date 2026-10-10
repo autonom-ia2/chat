@@ -69,6 +69,23 @@ class ContactMergeAction
     merge_crm_cards
     merge_crm_follow_ups
     merge_crm_meeting_guests
+    merge_crm_booking_invites
+    merge_crm_booking_notice_stops
+  end
+
+  # #1192: "parar avisos" é da pessoa. Se só o absorvido tinha parado, a parada passa para o que fica; se os dois
+  # tinham, fica a do que fica (único por conta e contato) e a do absorvido some com ele.
+  def merge_crm_booking_notice_stops
+    stops = Crm::BookingNoticeStop.where(account_id: @account.id, contact_id: @mergee_contact.id)
+    return stops.delete_all if Crm::BookingNoticeStop.stopped?(account_id: @account.id, contact_id: @base_contact.id)
+
+    stops.update_all(contact_id: @base_contact.id) # rubocop:disable Rails/SkipsModelValidations
+  end
+
+  # #1190: o link por cliente é do contato; sem isto a FK em cascata apagaria os convites do absorvido.
+  def merge_crm_booking_invites
+    Crm::BookingInvite.where(account_id: @account.id, contact_id: @mergee_contact.id)
+                      .update_all(contact_id: @base_contact.id, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
   end
 
   def merge_crm_cards

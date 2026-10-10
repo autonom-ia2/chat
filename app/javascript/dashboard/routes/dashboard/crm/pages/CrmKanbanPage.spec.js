@@ -15,6 +15,7 @@ const route = { meta: {}, query: {}, params: {} };
 const permissions = {};
 const storeGetters = {};
 const dispatch = vi.fn();
+const push = vi.fn();
 
 vi.mock('vue-i18n', () => ({
   useI18n: () => ({
@@ -25,7 +26,7 @@ vi.mock('vue-i18n', () => ({
 
 vi.mock('vue-router', () => ({
   useRoute: () => route,
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+  useRouter: () => ({ push, replace: vi.fn() }),
 }));
 
 vi.mock('dashboard/composables/store', () => ({
@@ -105,8 +106,18 @@ const setPermissions = overrides => {
   });
 };
 
-const setGetters = () => {
+// `bookingV2` liga a opção da conta `crm_booking_v2` (agendamento novo, #1212).
+const setGetters = ({
+  bookingV2 = false,
+  role = 'administrator',
+  keys,
+} = {}) => {
   Object.assign(storeGetters, {
+    getCurrentRole: ref(role),
+    'accounts/getAccount': ref(() => ({
+      id: 1,
+      features: { crm_booking_v2: bookingV2 },
+    })),
     'crmKanban/getPipelines': ref([PIPELINE]),
     'crmKanban/getStages': ref(
       STAGES.map(s => ({ ...s, cards: [...s.cards] }))
@@ -122,7 +133,10 @@ const setGetters = () => {
     'crmKanban/getListGroupBy': ref(''),
     'crmKanban/getListSelection': ref([]),
     'crmKanban/getSavedViews': ref([]),
-    getCurrentUser: ref({ id: 1 }),
+    getCurrentUser: ref({
+      id: 1,
+      accounts: [{ id: 1, permissions: keys || [] }],
+    }),
     getCurrentAccountId: ref(1),
     'inboxes/getInboxes': ref([]),
     'agents/getAgents': ref([]),
@@ -136,10 +150,11 @@ const mountPage = async ({
   calendarOnly = false,
   perms = {},
   stubs = {},
+  account = {},
 } = {}) => {
   route.meta = calendarOnly ? { calendarOnly: true } : {};
   setPermissions(perms);
-  setGetters();
+  setGetters(account);
   const wrapper = mount(CrmKanbanPage, {
     attachTo: document.body,
     global: {
@@ -228,6 +243,72 @@ describe('CrmKanbanPage', () => {
     expect(
       wrapper.findComponent({ name: 'CrmBookingProfilesDrawer' }).props('show')
     ).toBe(true);
+  });
+
+  // Botão Agendamento do Calendário (#1212).
+  const bookingButton = () =>
+    Array.from(document.body.querySelectorAll('button')).find(
+      button =>
+        button.textContent.trim() === 'CRM_KANBAN.BOOKING.ADMIN.ACTION_SHORT'
+    );
+  const drawerShown = () =>
+    wrapper.findComponent({ name: 'CrmBookingProfilesDrawer' }).props('show');
+
+  it('com o agendamento novo ligado, o botão leva à página nova e não abre a gaveta', async () => {
+    push.mockClear();
+    wrapper = await mountPage({
+      calendarOnly: true,
+      account: { bookingV2: true },
+    });
+
+    bookingButton().click();
+    await flushPromises();
+
+    expect(push).toHaveBeenCalledWith({
+      name: 'settings_booking',
+      params: { accountId: 1 },
+    });
+    expect(drawerShown()).toBe(false);
+  });
+
+  it.each(['agendamento_view', 'agendamento_manage'])(
+    'com o agendamento novo, função com %s vê o botão mesmo sem gerenciar funis',
+    async key => {
+      wrapper = await mountPage({
+        calendarOnly: true,
+        perms: { canManagePipelines: false },
+        account: { bookingV2: true, role: 'agent', keys: [key] },
+      });
+      expect(bookingButton()).toBeDefined();
+    }
+  );
+
+  it('com o agendamento novo, quem não pode ver a página não vê o botão', async () => {
+    wrapper = await mountPage({
+      calendarOnly: true,
+      account: { bookingV2: true, role: 'agent', keys: ['crm_view'] },
+    });
+    expect(bookingButton()).toBeUndefined();
+  });
+
+  it('com o agendamento novo desligado, segue a gaveta antiga para quem gerencia funis, e só', async () => {
+    push.mockClear();
+    wrapper = await mountPage({
+      calendarOnly: true,
+      account: { role: 'agent', keys: ['agendamento_manage'] },
+    });
+    bookingButton().click();
+    await flushPromises();
+    expect(drawerShown()).toBe(true);
+    expect(push).not.toHaveBeenCalled();
+    wrapper.unmount();
+
+    wrapper = await mountPage({
+      calendarOnly: true,
+      perms: { canManagePipelines: false },
+      account: { role: 'agent', keys: ['agendamento_manage'] },
+    });
+    expect(bookingButton()).toBeUndefined();
   });
 
   it('shows funnel actions on the Kanban configuration menu', async () => {

@@ -919,6 +919,13 @@
         "AI_UNAVAILABLE": "AI is unavailable right now.",
         "CANCEL": "Cancel"
       },
+      "MEETING_LOCATION": {
+        "WHATSAPP_VIDEO": "WhatsApp video",
+        "WHATSAPP_VOICE": "WhatsApp call",
+        "CUSTOM_LINK": "Agent's link",
+        "IN_PERSON": "In person",
+        "NO_ONLINE": "No video call"
+      },
       "MEETING_DETAIL": {
         "TITLE": "Meeting details",
         "STATUS_LABEL": "Status",
@@ -992,6 +999,88 @@
           "UPDATE_FAILED": "Could not update meeting",
           "CANCEL_FAILED": "Could not cancel meeting",
           "OUTCOME_FAILED": "Could not record meeting outcome"
+        },
+        "CLIENT": {
+          "TITLE": "Customer reply",
+          "CONFIRMED": "Confirmed",
+          "CHANGE_REQUESTED": "Asked to change",
+          "PENDING": "Has not replied yet",
+          "STOPPED": "Asked not to get notices"
+        },
+        "NOTICES": {
+          "TITLE": "WhatsApp notices",
+          "KINDS": {
+            "BOOKED": "When booked",
+            "RESCHEDULED": "Time changed",
+            "DAY_BEFORE": "1 day before",
+            "HOUR_BEFORE": "1 hour before"
+          },
+          "STATUS": {
+            "PENDING": "Will go out",
+            "SENDING": "Going out now",
+            "SENT": "Sent",
+            "SKIPPED": "Did not go out",
+            "FAILED": "Failed"
+          },
+          "SKIP_REASONS": {
+            "DISABLED": "notices are turned off in this account",
+            "CANCELED": "the time was cancelled",
+            "PAST_DUE": "the notice time had already passed",
+            "STALE": "the time changed after the notice was planned",
+            "TOO_CLOSE": "it would be too close to another notice",
+            "REPLACED": "the new time notice went out instead",
+            "OPTED_OUT": "the customer does not accept messages",
+            "STOPPED": "the customer asked to stop",
+            "NO_INBOX": "the page has no WhatsApp for notices",
+            "NO_INVITE": "the time did not come from a link",
+            "NO_CONTACT": "the time has no contact",
+            "NO_PHONE": "the customer has no WhatsApp number",
+            "UNSUPPORTED_INBOX": "this WhatsApp does not send notices",
+            "TEMPLATE_REQUIRED": "no approved message and the customer has not talked to you in the last 24 hours",
+            "TEMPLATE_WITHOUT_LINK": "the approved message has no booking link",
+            "TEMPLATE_UNSUPPORTED": "the approved message asks for data the notice does not fill in",
+            "WAHA_OUTSIDE_WINDOW": "the customer has not talked to you in the last 24 hours",
+            "NUMBER_CAP": "this number already got many messages today",
+            "ACCOUNT_CAP": "the account reached the daily notice limit",
+            "OTHER": "another reason"
+          },
+          "FAILED_HINT": "Talk to the customer to confirm the time."
+        }
+      },
+      "MEETING_DAY": {
+        "NEXT_MEETING": "Next meeting",
+        "PHONE_LABEL": "Number",
+        "CALL": "Call on WhatsApp",
+        "CALL_HINT": "WhatsApp opens the chat with the client. To start the video call, tap the camera icon in WhatsApp itself.",
+        "CALL_HINT_VOICE": "WhatsApp opens the chat with the client. To call, tap the phone icon in WhatsApp itself.",
+        "REMIND": "Remind",
+        "REMIND_HINT": "Sends the client a short message asking to confirm the time.",
+        "REMIND_SENT": "Reminder sent",
+        "REMIND_SENT_HINT": "The message went out in the conversation.",
+        "REBOOK_TITLE": "Send {name} a link to pick another time",
+        "REBOOK_TITLE_NO_NAME": "Send the client a link to pick another time",
+        "REBOOK_SEND": "Send link",
+        "REBOOK_SENT": "Link sent in the conversation.",
+        "NOT_NOW": "Not now",
+        "MOVE_QUESTION": "Move to the \"{stage}\" stage?",
+        "MOVE_HINT": "This way the card does not get forgotten in the current stage.",
+        "MOVE": "Move",
+        "MOVED": "The card went to the \"{stage}\" stage.",
+        "MOVE_FAILED": "Could not move the card. Try again.",
+        "COPY_LINK": "Copy link",
+        "COPIED": "Link copied",
+        "REFUSED": {
+          "NOT_REMINDABLE": "This meeting can no longer get a reminder.",
+          "ALREADY_CONFIRMED": "The client already confirmed.",
+          "STOPPED": "The client asked not to get messages about this meeting. Nothing was sent.",
+          "NO_INVITE": "This meeting has no client link. Nothing was sent.",
+          "RECENTLY_REMINDED": "You reminded the client a few minutes ago. Wait a little before trying again.",
+          "RECENTLY_SENT": "The link went out a few minutes ago. Wait a little before sending it again.",
+          "NO_CONVERSATION": "There is no conversation with this client that you can answer. Copy the link and send it another way.",
+          "CANNOT_REPLY": "The client needs to send a message first. Copy the link and send it another way.",
+          "NOT_REBOOKABLE": "This only works after you mark “No-show”.",
+          "NO_PAGE": "No booking page is live right now. Publish a page in CRM › Scheduling.",
+          "OTHER": "Could not send. Try again."
         }
       },
       "MEETING_STATES": {
@@ -1140,6 +1229,16 @@
       "TAB_TIMELINE": "Timeline",
       "TAB_RETURNS": "Returns",
       "TAB_HISTORY": "History",
+      "CARD_FIELDS": {
+        "TITLE": "Card fields",
+        "HELP": "Information specific to this deal.",
+        "EMPTY_ADMIN": "No card fields yet. Create them in Settings → Custom attributes → Card.",
+        "OPEN_SETTINGS": "Create card fields",
+        "UPDATE_SUCCESS": "Card field saved",
+        "UPDATE_ERROR": "Could not save the card field",
+        "DELETE_SUCCESS": "Card field cleared",
+        "DELETE_ERROR": "Could not clear the card field"
+      },
       "MORE_DETAILS": "More details",
       "LOADING_DETAILS": "Loading updated details...",
       "CONTACT_NAME": "Name",
@@ -1198,6 +1297,8 @@
       "ACTIVITY_MEETING_RESCHEDULED": "Meeting rescheduled",
       "ACTIVITY_MEETING_CANCELED": "Meeting cancelled",
       "ACTIVITY_MEETING_OUTCOME": "Meeting outcome recorded",
+      "ACTIVITY_MEETING_HOST_REASSIGNED": "Meeting moved to someone else",
+      "ACTIVITY_MEETING_HOST_REASSIGNED_TO": "Meeting moved to {name}",
       "ACTIVITY_AUTOMATION_OWNER_ASSIGNED": "Owner assigned by automation",
       "ACTIVITY_AUTOMATION_STAGE_MOVED": "Stage changed by automation",
       "ACTIVITY_AUTOMATION_FOLLOW_UP_CREATED": "Follow-up created by automation",
@@ -1337,7 +1438,19 @@
         "TIMELINE_TOUCH_REMINDER": "Touch {n}: AI generated a team reminder"
       },
       "LEAD_FORM_TITLE": "Form details",
-      "LEAD_FORM_CAPTURED": "Filled {time}"
+      "LEAD_FORM_CAPTURED": "Filled {time}",
+      "CLIENT_ACTOR": "Customer",
+      "ACTIVITY_BOOKING_CLIENT_CONFIRMED": "Customer confirmed the time",
+      "ACTIVITY_BOOKING_CLIENT_CANCELED": "Customer cancelled the time",
+      "ACTIVITY_BOOKING_CLIENT_RESCHEDULED": "Customer changed the time",
+      "ACTIVITY_BOOKING_CLIENT_REBOOKED": "Customer booked another time",
+      "ACTIVITY_BOOKING_NOTICE_FAILED": "WhatsApp notice did not go out",
+      "ACTIVITY_BOOKING_NOTICES_STOPPED": "Customer asked not to get notices",
+      "ACTIVITY_BOOKING_AGENT_REMINDED": "Client reminded about the meeting",
+      "ACTIVITY_BOOKING_REBOOK_LINK_SENT": "Link sent to pick another time",
+      "ACTIVITY_DETAIL_BOOKING_TIME": "Time: {time}",
+      "ACTIVITY_DETAIL_BOOKING_MOVED": "From {from} to {to}",
+      "ACTIVITY_DETAIL_BOOKING_NOTICE_FAILED": "{kind}: {reason}"
     },
     "COPILOT": {
       "TITLE": "Copilot",
@@ -1389,7 +1502,15 @@
         "MORE_HINT": "{count} more open subject(s) in this conversation",
         "MAKE_CURRENT_HINT": "Click to work on this subject",
         "REPLY_IN": "This message goes to:",
-        "PIPELINE_STAGE": "{pipeline} · {stage}"
+        "PIPELINE_STAGE": "{pipeline} · {stage}",
+        "SUGGESTION_CREATE": "Looks like a new subject: {title} ({pipeline}).",
+        "SUGGESTION_CREATE_ACCEPT": "Create subject",
+        "SUGGESTION_RENAME": "Looks like this subject is: {title}.",
+        "SUGGESTION_RENAME_ACCEPT": "Use this name",
+        "SUGGESTION_FOCUS": "Looks like the customer is back to: {title}.",
+        "SUGGESTION_FOCUS_ACCEPT": "Handle this subject",
+        "SUGGESTION_DISMISS": "Dismiss",
+        "SUGGESTION_ERROR": "Could not answer the suggestion. It may have changed; check the subjects again."
       }
     },
     "PIPELINE_DRAWER": {
@@ -1797,6 +1918,53 @@
         "LOAD_ERROR": "Could not load booking pages."
       }
     },
+    "BOOKING_INVITE": {
+      "BUTTON": "Schedule",
+      "BUTTON_HINT": "Create this client's scheduling link",
+      "TITLE": "Scheduling link for {name}",
+      "TITLE_NO_NAME": "Scheduling link",
+      "LOADING": "Getting the link ready…",
+      "PAGE": "Page: {title}",
+      "PAGE_LABEL": "Scheduling page",
+      "VALID_UNTIL": "Valid until {date}",
+      "TEXT_LABEL": "Invitation text",
+      "TEXT_NEEDS_LINK": "The text needs to include the link.",
+      "SEND": "Send in the conversation",
+      "COPY": "Copy link",
+      "COPIED": "Link copied. Paste it anywhere.",
+      "SENT": "Message sent in the conversation.",
+      "CANCEL_LINK": "Cancel link",
+      "CANCELED": "Link canceled.",
+      "CANCEL_CONFIRM": {
+        "TITLE": "Cancel the link?",
+        "DESCRIPTION": "The client won't be able to book with it anymore.",
+        "YES": "Yes, cancel",
+        "BACK": "Back"
+      },
+      "NEW_LINK": "Create a new link",
+      "CLOSE": "Close",
+      "STATE": {
+        "CREATED": "Not sent yet",
+        "SENT": "Sent",
+        "OPENED": "Opened",
+        "SCHEDULED": "Scheduled",
+        "EXPIRED": "Expired",
+        "CANCELED": "Canceled"
+      },
+      "EMPTY": {
+        "ADMIN": "Publish a scheduling page to create links for your clients.",
+        "AGENT": "Ask the administrator to publish a scheduling page.",
+        "OPEN_SETTINGS": "Go to Scheduling"
+      },
+      "ERRORS": {
+        "LOAD": "Couldn't open the link right now. Try again.",
+        "SEND": "Couldn't send. Check that the text has the link and that the client can receive messages.",
+        "COPY": "Couldn't copy the link.",
+        "CANCEL": "Couldn't cancel the link.",
+        "CANNOT_REPLY": "The client needs to message you first. Copy the link and send it another way.",
+        "FORBIDDEN": "You don't have access to this."
+      }
+    },
     "RELATIONSHIP": {
       "TAB": "Relationship",
       "SHARED": "Shared record from Relationships",
@@ -2153,7 +2321,39 @@
         "OPEN_META": "Open Meta",
         "DETAILS": "See the path on Meta",
         "DETAILS_TEXT": "Business settings › Users › Partners › Add › Give a partner access to your assets. Select the ad account with \"View performance\" and the website dataset (Pixel).",
-        "TOKEN_LINK": "Prefer an access key?"
+        "TOKEN_LINK": "Prefer an access key?",
+        "FACEBOOK": {
+          "TITLE": "Sign in with your Facebook",
+          "LEAD": "Use the same Facebook you create your ads with. It takes a minute.",
+          "HOW_LABEL": "What will happen",
+          "HOW_1_TITLE": "A Facebook window opens",
+          "HOW_1_TEXT": "If it asks, sign in with your Facebook email and password.",
+          "HOW_2_TITLE": "Leave everything checked",
+          "HOW_2_TEXT": "Facebook shows your accounts and what we will use. Don't uncheck anything and tap \"Continue\" until the end.",
+          "HOW_3_TITLE": "You come back here",
+          "HOW_3_TEXT": "The window closes by itself and we take it from here.",
+          "CTA": "Sign in with Facebook",
+          "WAITING": "The Facebook window is open. Leave everything checked and tap \"Continue\" until the end.",
+          "TRUST_PASSWORD": "We never see your password",
+          "TRUST_ADS": "Nothing changes in your ads unless you ask",
+          "TRUST_OFF": "You can turn it off whenever you want",
+          "OTHER_WAYS": "Prefer another way to connect?",
+          "PARTNER_TITLE": "Share with {partner}",
+          "PARTNER_TEXT": "You give {partner} access to your ad account in Meta Business Manager. It takes about 5 minutes.",
+          "PARTNER_CTA": "See the steps",
+          "TOKEN_TITLE": "Use an access key",
+          "TOKEN_TEXT": "For those who already have a key created on Meta.",
+          "TOKEN_CTA": "Paste the key",
+          "POPUP_TITLE": "The Facebook window didn't open",
+          "POPUP_TEXT": "Your browser may have blocked it. Allow it and try again:",
+          "POPUP_STEP_1": "Tap the blocked window icon at the end of the address bar.",
+          "POPUP_STEP_2": "Choose \"Always allow\" for this site.",
+          "POPUP_STEP_3": "Tap \"Sign in again\".",
+          "NO_AD_ACCOUNT_TITLE": "The ad account was not checked",
+          "NO_ACCESS_TITLE": "Facebook didn't let us see your ads",
+          "RETRY": "Sign in again",
+          "BACK": "Back to Sign in with Facebook"
+        }
       },
       "ACCOUNT": {
         "TITLE": "Which account pays for your ads?",
@@ -2182,7 +2382,8 @@
         "PIXEL_CHANGE": "Change",
         "VIA_PARTNER": "Reading through {partner}",
         "VIA_TOKEN": "Reading with your access key",
-        "SWITCH": "Change"
+        "SWITCH": "Change",
+        "VIA_FACEBOOK": "Reading with your Facebook sign-in"
       },
       "DESTINATIONS": {
         "TITLE": "Where do your ads take the customer?",
@@ -2278,7 +2479,8 @@
             },
             "NO_META_DATA": "Meta has not sent the number for this period yet."
           }
-        }
+        },
+        "MODE_FACEBOOK": "By Facebook sign-in"
       },
       "ERRORS": {
         "PLATFORM_UNAVAILABLE": "Sharing is not available yet. For now, use an access key.",
@@ -2294,6 +2496,10 @@
         "TOKEN_INVALID": "Meta refused the saved key. Paste a new key or share the account.",
         "INVALID_AD_ACCOUNT": "This ad account is not valid.",
         "NOT_CONNECTED": "Connect Meta first.",
+        "LOGIN_FAILED": "Facebook didn't confirm the sign-in. Try again.",
+        "LOGIN_UNAVAILABLE": "Signing in with Facebook isn't available right now. Use another way to connect.",
+        "MISSING_ADS_READ": "Facebook didn't allow us to see your ads. Sign in again and allow access to your ad accounts.",
+        "NO_AD_ACCOUNT": "No ad account was chosen. Sign in again and pick at least one.",
         "GENERIC": "That did not work. Try again."
       },
       "MOVED": "Meta ads now have their own page: connection, ad names and sales to Meta.",

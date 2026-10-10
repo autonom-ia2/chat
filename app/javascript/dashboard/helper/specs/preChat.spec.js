@@ -92,5 +92,21 @@ describe('#Pre chat Helpers', () => {
         },
       ]);
     });
+
+    it('never offers company or CRM card attributes to the visitor', () => {
+      const fields = getCustomFields({
+        standardFields: { pre_chat_fields: [] },
+        customAttributes: [
+          { attribute_key: 'plan', attribute_model: 'card_attribute' },
+          { attribute_key: 'industry', attribute_model: 'company_attribute' },
+          {
+            attribute_key: 'order_id',
+            attribute_model: 'conversation_attribute',
+          },
+        ],
+      });
+
+      expect(fields.map(field => field.name)).toEqual(['order_id']);
+    });
   });
 });

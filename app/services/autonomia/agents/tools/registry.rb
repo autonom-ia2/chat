@@ -24,7 +24,10 @@ module Autonomia::Agents::Tools::Registry
     # ramo com imóvel a recebe (`QuoteAgent::Builder::CONSULTAS_DO_RAMO`).
     Autonomia::Agents::Tools::Native::CepLookup,
     Autonomia::Agents::Tools::Native::AtividadeLookup,
-    Autonomia::Agents::Tools::Native::InsuranceGeneralConditions
+    Autonomia::Agents::Tools::Native::InsuranceGeneralConditions,
+    # #1196 — a agenda da IA: ligadas ao escolher a página de agendamento do agente (`config['booking_page_id']`).
+    Autonomia::Agents::Tools::Native::HorariosDisponiveis,
+    Autonomia::Agents::Tools::Native::AgendarReuniao
   ].freeze
 
   DO_GUIA = [

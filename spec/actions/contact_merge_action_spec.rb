@@ -238,6 +238,37 @@ describe ContactMergeAction do
         expect(foreign.reload.contact_id).to be_nil
       end
 
+      it 'move os links por cliente do absorvido em vez de apagá-los (#1190)' do
+        page = create_booking_profile(account: account, host: agent)
+        invite = Crm::BookingInvite.create!(account: account, booking_profile: page, contact: mergee_contact,
+                                            created_by: agent, expires_at: 7.days.from_now)
+        kept = Crm::BookingInvite.create!(account: account, booking_profile: page, contact: base_contact,
+                                          created_by: agent, expires_at: 7.days.from_now)
+
+        contact_merge
+
+        expect(invite.reload.contact_id).to eq(base_contact.id)
+        expect(kept.reload.contact_id).to eq(base_contact.id)
+      end
+
+      it 'passa o "parar avisos" do absorvido para o contato que fica (#1192)' do
+        stop = Crm::BookingNoticeStop.create!(account: account, contact: mergee_contact, reason: 'client_link')
+
+        contact_merge
+
+        expect(stop.reload.contact_id).to eq(base_contact.id)
+        expect(Crm::BookingNoticeStop.where(account_id: account.id).pluck(:contact_id)).to eq([base_contact.id])
+      end
+
+      it 'mantém uma única parada quando os dois tinham parado os avisos (#1192)' do
+        kept = Crm::BookingNoticeStop.create!(account: account, contact: base_contact, reason: 'client_link')
+        Crm::BookingNoticeStop.create!(account: account, contact: mergee_contact, reason: 'client_link')
+
+        expect { contact_merge }.not_to raise_error
+
+        expect(Crm::BookingNoticeStop.where(account_id: account.id).pluck(:id, :contact_id)).to eq([[kept.id, base_contact.id]])
+      end
+
       it 'move os follow-ups do absorvido em vez de apagá-los' do
         card = create_card(mergee_contact, 'Card com follow-up')
         follow_up = account.crm_follow_ups.create!(card: card, contact: mergee_contact, created_by: agent, title: 'Retornar',

@@ -487,7 +487,8 @@
           "RESTRICTED_WARNING": "WhatsApp Embedded Signup is temporarily unavailable due to an API-level issue on Meta’s side, not a problem with Chatwoot. You can use manual setup for eligible Cloud API numbers. We’re working closely with Meta to resolve it as quickly as possible.",
           "STATUS_LINK": "View status updates",
           "CALLING_ENABLE_FAILED": "Your WhatsApp inbox is ready, but voice calling couldn't be turned on — this number isn't enrolled in the WhatsApp Business Calling API yet. Reach out to Meta or your WhatsApp Business Solution Provider to onboard it, then turn calling on from the inbox's Calls settings.",
-          "SDK_LOAD_ERROR": "Could not load WhatsApp signup. Please try again."
+          "SDK_LOAD_ERROR": "Could not load WhatsApp signup. Please try again.",
+          "NOT_CONFIRMED": "We could not confirm the connection with WhatsApp. Check your inboxes before trying again."
         },
         "API": {
           "ERROR_MESSAGE": "We were not able to save the WhatsApp channel",
@@ -1860,6 +1861,72 @@
       "INSTAGRAM": "Instagram",
       "TIKTOK": "TikTok",
       "VOICE": "Voice"
+    },
+    "WHATSAPP_SWITCH_ACCOUNT": {
+      "CARD": {
+        "TITLE": "WhatsApp account",
+        "DISPLAY_NAME": "Name your customers see",
+        "OWNER": "Company that owns the account",
+        "HINT": "Does this number need to belong to another company? Switch it here and the conversations stay in this inbox.",
+        "ACTION": "Switch account"
+      },
+      "DIALOG": {
+        "KICKER": "Switch account · {phone}"
+      },
+      "TITLES": {
+        "CHECKLIST": "Before you start, check two things",
+        "FACEBOOK": "Follow the steps in the Facebook window",
+        "CONNECTING": "Almost there",
+        "DONE": "Account switched",
+        "NOT_READY": "Account switched, messages not arriving yet",
+        "MISMATCH": "That is not this inbox's number",
+        "CANCELLED": "The Facebook window was closed",
+        "FAILED": "Facebook did not accept the switch",
+        "UNKNOWN": "We could not confirm the switch"
+      },
+      "CHECKLIST": {
+        "KEEP": "Conversations, the bot and the pipeline stay in this inbox.",
+        "LEFT_OLD_ACCOUNT": "The number has already left the old account",
+        "LEFT_OLD_ACCOUNT_WHY": "Without this, Facebook will not let you add the number to the new company.",
+        "HOW_TO_TITLE": "How do I remove the number from the old account?",
+        "HOW_TO_1": "Open the WhatsApp Manager of the old company.",
+        "HOW_TO_2": "In Phone numbers, open the number and turn off two-step verification.",
+        "HOW_TO_3": "Go back to Phone numbers and tap the trash icon next to the number.",
+        "HOW_TO_WARNING": "From then on, this inbox stops receiving messages until you finish the switch.",
+        "PHONE_AT_HAND": "I have the phone for {phone} nearby",
+        "PHONE_AT_HAND_WHY": "A code will arrive by text message or call. If the number is on the WhatsApp Business app, keep the app open.",
+        "SDK_ERROR": "Facebook could not be loaded. Refresh the page and try again."
+      },
+      "FACEBOOK": {
+        "COMPANY": "Choose the new company",
+        "COMPANY_HINT": "Pick the company that will own the number from now on.",
+        "WHERE": "Say where the number is today",
+        "APP": "It is on the WhatsApp Business app on the phone",
+        "APP_HINT": "Choose to connect the app and confirm on the phone.",
+        "DIRECT": "It is not on any app",
+        "DIRECT_HINT": "Add the number and type the code you receive.",
+        "COME_BACK": "Come back to this screen",
+        "COME_BACK_HINT": "When Facebook finishes, this screen continues on its own."
+      },
+      "CONNECTING": "Checking with WhatsApp. This takes a few seconds, do not close this screen.",
+      "RESULTS": {
+        "DONE": "The number {phone} now belongs to the new company. Conversations, the bot and the pipeline stay in this inbox.",
+        "NOT_READY": "The number moved to the new company, but this inbox is not receiving messages yet. Tap the button below to connect receiving again.",
+        "MISMATCH": "On Facebook the number {received} was chosen. This inbox belongs to {phone}. Nothing changed. Open Facebook again and choose {phone}.",
+        "CANCELLED": "Nothing changed in this inbox. You can try again whenever you want.",
+        "FAILED": "Nothing changed in this inbox. Check that the number left the old account, that you chose {phone} on Facebook and that the code was typed on the right phone. Then try again.",
+        "TEST_TIP": "Test it: send a \"hi\" from another phone to {phone} and watch the conversation show up.",
+        "UNKNOWN": "We could not confirm with WhatsApp whether the switch finished. Check the account details on this screen. If the new company is not there yet, tap Try again.",
+        "RETRY_FAILED": "Receiving is still off. Wait a minute and tap the button again."
+      },
+      "ACTIONS": {
+        "NOT_NOW": "Not now",
+        "OPEN_FACEBOOK": "Open Facebook",
+        "CLOSE": "Close",
+        "FINISH": "Done",
+        "TRY_AGAIN": "Try again",
+        "RETRY_RECEIVING": "Connect receiving"
+      }
     }
   }
 }

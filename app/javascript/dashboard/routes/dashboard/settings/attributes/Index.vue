@@ -46,7 +46,14 @@ const attributeModels = [
   'conversation_attribute',
   'contact_attribute',
   'company_attribute',
+  'card_attribute',
 ];
+
+// Campos de card (#1146) só fazem sentido com o CRM ligado na instalação.
+const globalConfig = useMapGetter('globalConfig/get');
+const crmKanbanEnabled = computed(
+  () => globalConfig.value?.crmKanbanEnabled === true
+);
 
 const hasCompaniesFeature = computed(
   () =>
@@ -88,6 +95,13 @@ const tabs = computed(() => {
     items.push({
       key: 2,
       name: t('ATTRIBUTES_MGMT.TABS.COMPANY'),
+    });
+  }
+
+  if (crmKanbanEnabled.value) {
+    items.push({
+      key: 3,
+      name: t('ATTRIBUTES_MGMT.TABS.CARD'),
     });
   }
 
@@ -235,7 +249,9 @@ const filteredAttributes = computed(() => {
             v-if="
               attributesEnabled &&
               relationshipState.can_manage &&
-              attributeModel !== 'conversation_attribute'
+              !['conversation_attribute', 'card_attribute'].includes(
+                attributeModel
+              )
             "
             outline
             sm

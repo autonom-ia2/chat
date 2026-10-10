@@ -34,13 +34,14 @@ module Crm
 
       private
 
-      # Valores JÁ salvos dos atributos customizados (contato + conversa). O classificador recebe o
+      # Valores JÁ salvos dos atributos customizados (contato, conversa e o próprio card, #1146). O classificador recebe o
       # SCHEMA (chaves permitidas) em attribute_schema; aqui vão os VALORES atuais, para ele decidir o
       # estágio ciente do que já se sabe e não re-extrair o que não mudou.
       def known_attributes
         {
           contact: attribute_values(@card.try(:contact)),
-          conversation: attribute_values(@card.primary_conversation)
+          conversation: attribute_values(@card.primary_conversation),
+          card: attribute_values(@card)
         }
       end
 

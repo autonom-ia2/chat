@@ -51,6 +51,7 @@ import security from './security/security.routes';
 import conversationWorkflow from './conversationWorkflow/conversationWorkflow.routes';
 import captain from './captain/captain.routes';
 import prospecting from './prospecting/prospecting.routes';
+import booking from './booking/booking.routes';
 import data from './data/data.routes';
 
 export default {
@@ -102,5 +103,6 @@ export default {
     ...conversationWorkflow.routes,
     ...captain.routes,
     ...prospecting.routes,
+    ...booking.routes,
   ],
 };

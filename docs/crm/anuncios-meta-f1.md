@@ -9,11 +9,16 @@ PRD: https://claude.ai/artifact/L1bQBEwmUCNKdubNkEeMKx. Este arquivo registra as
 | F1a | Backend: credencial da plataforma, conexão por parceiro ou token, lista de contas e Pixels, verificação real, destinos, "avisar a Meta quando vender". | Sim, vai sozinho na fila |
 | F1b | Tela Campanhas › Anúncios da Meta (4 passos), flag `meta_ads_hub`, passo 4 por funil com sugestão da IA (troca o `sales_signal` da F1a), teste do site e confirmação por campanha, Guia, i18n e correções do diagnóstico de 06/10 (CA-1.10). | Não |
 
-## Dois modos de conexão
+## Modos de conexão
 
 - **`partner`.** O cliente compartilha a conta de anúncios e o Pixel com o portfólio da Hub2You, como parceira. O Chat2You lê com o usuário do sistema da plataforma, cujo token fica em `AiProviderCredential('meta_ads')`, cifrado. É o mesmo caminho para as BMs que nós administramos (Hub2You, Placement e Autonomia). Não exige App Review.
 - **`token`.** O cliente cola um token próprio com `ads_read`. É o caminho de #1037, mantido como alternativa.
-- O "Entrar com Facebook" (Facebook Login for Business) entra depois do App Review e vira um terceiro modo.
+- **`facebook_login`** (#1069). O cliente clica em "Entrar com o Facebook" e passa pelo Login do Facebook para Empresas, com a configuração `META_ADS_LOGIN_CONFIGURATION_ID`. Essa configuração fica no mesmo app da Meta do cadastro do WhatsApp; o app e o segredo vêm de `WHATSAPP_APP_ID`/`WHATSAPP_APP_SECRET`.
+  - O código volta para `POST crm/meta_ads_connection/facebook_login`. `Crm::MetaAds::FacebookLogin` troca o código por token, e `Crm::MetaAds::TokenCheck` testa o token como no modo `token` (ads_read e ao menos uma conta). Só então a conexão é gravada, com o token cifrado.
+  - Daí em diante o modo se comporta como o `token`: lê com o token do próprio cliente (`own_token?`) e pode mandar eventos a qualquer Pixel que ele enxergue.
+  - O token só vale para o modo com que foi salvo: uma chave colada não serve de "login" no passo 2.
+  - Sem a configuração, o botão não aparece (`facebook_login.available` no GET).
+  - Depende do App Review de `ads_read` no app da Meta. Enquanto ele não sai, só usuários com função no app conseguem entrar.
 
 ## Trava entre clientes (modo `partner`)
 

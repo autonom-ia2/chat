@@ -75,6 +75,12 @@ RSpec.describe Autonomia::Agents::Tools::Registry do
       expect(described_class.for_agent(guia).map(&:slug)).to eq(Autonomia::Guide::Seed::FERRAMENTAS)
     end
 
+    it 'keeps the AI booking tools in the customer-service flow, out of the Platform Guide' do
+      slugs = Autonomia::Agents::Tools::Native::Agenda::SLUGS
+      expect(described_class::DE_ATENDIMENTO.map(&:slug)).to include(*slugs)
+      expect(described_class::DO_GUIA.map(&:slug)).not_to include(*slugs)
+    end
+
     it 'keeps every tool of the quote agent deploy list inside the customer-service flow' do
       expect(Autonomia::Insurance::QuoteAgent::Builder::TODAS_AS_TOOLS - described_class::DE_ATENDIMENTO.map(&:slug)).to be_empty
     end

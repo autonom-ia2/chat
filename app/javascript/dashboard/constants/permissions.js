@@ -20,6 +20,10 @@ export const PROSPECTING_PERMISSIONS = [
 ];
 export const INSURANCE_PERMISSIONS = ['insurance_view', 'insurance_manage'];
 export const AUTOMATION_PERMISSIONS = ['automation_view', 'automation_manage'];
+export const SCHEDULING_PERMISSIONS = [
+  'agendamento_view',
+  'agendamento_manage',
+];
 
 export const ROLES = ['agent', 'administrator'];
 

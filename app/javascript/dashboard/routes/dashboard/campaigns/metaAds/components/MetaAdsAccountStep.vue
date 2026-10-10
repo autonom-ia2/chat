@@ -48,6 +48,20 @@ const pixelOptions = computed(() => [
 const errorText = error =>
   t(errorMessageKey(error), { partner: props.partnerName });
 
+// Por onde a conta é lida: pela parceira, pela entrada com o Facebook (#1069) ou pela chave colada.
+const VIA = {
+  partner: ['i-lucide-handshake', 'VIA_PARTNER'],
+  facebook_login: ['i-lucide-facebook', 'VIA_FACEBOOK'],
+  token: ['i-lucide-key-round', 'VIA_TOKEN'],
+};
+const via = computed(() => VIA[props.mode] || VIA.token);
+const viaIcon = computed(() => via.value[0]);
+const viaLabel = computed(() =>
+  t(`CRM_KANBAN.META_ADS_HUB.ACCOUNT.${via.value[1]}`, {
+    partner: props.partnerName,
+  })
+);
+
 const latestPixel = list =>
   [...list].sort((a, b) =>
     String(b.last_fired_time || '').localeCompare(
@@ -176,18 +190,10 @@ onMounted(load);
       <span class="flex items-center gap-2 text-sm text-n-slate-12">
         <span
           class="size-4 text-n-blue-11"
-          :class="
-            mode === 'partner' ? 'i-lucide-handshake' : 'i-lucide-key-round'
-          "
+          :class="viaIcon"
           aria-hidden="true"
         />
-        {{
-          mode === 'partner'
-            ? $t('CRM_KANBAN.META_ADS_HUB.ACCOUNT.VIA_PARTNER', {
-                partner: partnerName,
-              })
-            : $t('CRM_KANBAN.META_ADS_HUB.ACCOUNT.VIA_TOKEN')
-        }}
+        {{ viaLabel }}
       </span>
       <button
         type="button"

@@ -13,15 +13,28 @@ class Crm::Ai::AttributeExtractorApplier
     @rejected = []
   end
 
+  # Dado da pessoa vai para o contato; dado do pedido (#1146), para o próprio card avaliado, que é o assunto atual da
+  # conversa: duas cotações do mesmo cliente guardam valores separados.
   def perform
     apply_group(:contact, @card.contact, :contact_attribute)
     apply_group(:conversation, @card.primary_conversation, :conversation_attribute)
+    apply_group(:card, @card, :card_attribute) if card_group_allowed?
     persist_audit!
 
     Result.new(applied: @applied, rejected: @rejected)
   end
 
   private
+
+  # Campo do card só no assunto atual da conversa: avaliar um card antigo ("Avaliar agora", card parado) leria as
+  # mensagens do pedido de agora e gravaria nele o dado de outro pedido.
+  def card_group_allowed?
+    return true if @card.primary_conversation.blank?
+    return true if Crm::Cards::ConversationCardFinder.new(account: @account).find(@card.primary_conversation)&.id == @card.id
+
+    reject_group(:card, 'not_current_subject')
+    false
+  end
 
   def apply_group(target, record, attribute_model)
     return reject_group(target, 'missing_record') if record.blank?
@@ -152,6 +165,11 @@ class Crm::Ai::AttributeExtractorApplier
     }
   end
 
+  # Chave do registro: o campo do card pode ter a mesma chave de um campo do contato.
+  def audit_key(item)
+    item[:target] == 'card' ? "card:#{item[:key]}" : item[:key]
+  end
+
   def persist_audit!
     return if @applied.empty?
 
@@ -160,7 +178,7 @@ class Crm::Ai::AttributeExtractorApplier
       metadata['ai'] ||= {}
       metadata['ai']['extracted_attributes'] ||= {}
       @applied.each do |item|
-        metadata['ai']['extracted_attributes'][item[:key]] = {
+        metadata['ai']['extracted_attributes'][audit_key(item)] = {
           'target' => item[:target],
           'value' => item[:value],
           'confidence' => item[:confidence],

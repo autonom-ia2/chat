@@ -68,6 +68,23 @@ RSpec.describe 'Autonomia agent native tool slugs', type: :request do
       expect(agent.reload.config).to eq('handoff_strategy' => 'none', 'native_tool_slugs' => [slug_de_atendimento])
     end
 
+    # A agenda da IA (#1196) é do fluxo de atendimento: a API aceita as duas, e a página da internet do Guia não.
+    it 'accepts the AI booking tools on a customer-service agent and still refuses the Guide web page tool' do
+      patch "#{base_url}/#{agent.id}", params: { agent: { config: { native_tool_slugs: Autonomia::Agents::Tools::Native::Agenda::SLUGS } } },
+                                       headers: administrator.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:success)
+      expect(agent.reload.native_tool_slugs).to eq(%w[horarios_disponiveis agendar_reuniao])
+
+      patch "#{base_url}/#{agent.id}",
+            params: { agent: { config: { native_tool_slugs: Autonomia::Agents::Tools::Native::Agenda::SLUGS + ['ler_pagina'] } } },
+            headers: administrator.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body).to include('code' => 'native_tool_not_allowed', 'slugs' => ['ler_pagina'])
+      expect(agent.reload.native_tool_slugs).to eq(%w[horarios_disponiveis agendar_reuniao])
+    end
+
     it 'keeps accepting an empty list, which turns every native tool off' do
       agent.update!(config: agent.config.merge('native_tool_slugs' => [slug_de_atendimento]))
 
