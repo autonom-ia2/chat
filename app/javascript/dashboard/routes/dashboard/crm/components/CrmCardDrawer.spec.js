@@ -86,6 +86,7 @@ const mountDrawer = (props = {}) =>
         CrmCardAutoFollowupStatus: true,
         PhoneNumberInput: true,
         CrmOpportunityContactPicker: true,
+        BookingInviteButton: true,
       },
     },
   });

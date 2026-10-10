@@ -141,6 +141,22 @@ module Crm
       end
 
       def local_meeting_intervals
+        internal_meeting_intervals + inbox_meeting_intervals
+      end
+
+      # Reuniões internas (#1188, sem provedor) do mesmo responsável, de qualquer caixa ou sem caixa.
+      def internal_meeting_intervals
+        agent = @agent || profile.default_assignee
+        return [] if agent.blank?
+
+        Crm::Meeting
+          .where(account_id: profile.account_id, created_by_id: agent.id, provider: :internal, status: :scheduled)
+          .where('starts_at < ? AND ends_at > ?', day_end + buffer, day_start - buffer)
+          .pluck(:starts_at, :ends_at)
+          .map { |s, e| { start: s, end: e } }
+      end
+
+      def inbox_meeting_intervals
         # SHARED mailbox: AvailabilityService already returns THIS agent's meetings
         # (fresh). Adding the inbox-wide set here would re-introduce the cross-agent
         # over-block, so skip it.

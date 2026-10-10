@@ -69,6 +69,13 @@ class ContactMergeAction
     merge_crm_cards
     merge_crm_follow_ups
     merge_crm_meeting_guests
+    merge_crm_booking_invites
+  end
+
+  # #1190: o link por cliente é do contato; sem isto a FK em cascata apagaria os convites do absorvido.
+  def merge_crm_booking_invites
+    Crm::BookingInvite.where(account_id: @account.id, contact_id: @mergee_contact.id)
+                      .update_all(contact_id: @base_contact.id, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
   end
 
   def merge_crm_cards

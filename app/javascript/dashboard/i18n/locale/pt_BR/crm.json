@@ -919,6 +919,13 @@
         "AI_UNAVAILABLE": "A IA está indisponível no momento.",
         "CANCEL": "Cancelar"
       },
+      "MEETING_LOCATION": {
+        "WHATSAPP_VIDEO": "Vídeo no WhatsApp",
+        "WHATSAPP_VOICE": "Ligação no WhatsApp",
+        "CUSTOM_LINK": "Link do agente",
+        "IN_PERSON": "Presencial",
+        "NO_ONLINE": "Sem videochamada"
+      },
       "MEETING_DETAIL": {
         "TITLE": "Detalhes da reunião",
         "STATUS_LABEL": "Status",
@@ -1198,6 +1205,8 @@
       "ACTIVITY_MEETING_RESCHEDULED": "Reunião reagendada",
       "ACTIVITY_MEETING_CANCELED": "Reunião cancelada",
       "ACTIVITY_MEETING_OUTCOME": "Resultado da reunião registrado",
+      "ACTIVITY_MEETING_HOST_REASSIGNED": "Reunião passou para outra pessoa",
+      "ACTIVITY_MEETING_HOST_REASSIGNED_TO": "Reunião passou para {name}",
       "ACTIVITY_AUTOMATION_OWNER_ASSIGNED": "Responsável atribuído por automação",
       "ACTIVITY_AUTOMATION_STAGE_MOVED": "Etapa alterada por automação",
       "ACTIVITY_AUTOMATION_FOLLOW_UP_CREATED": "Retorno criado por automação",
@@ -1796,6 +1805,53 @@
         "SAVED": "Página de agendamento salva",
         "SAVE_ERROR": "Não foi possível salvar a página de agendamento.",
         "LOAD_ERROR": "Não foi possível carregar as páginas de agendamento."
+      }
+    },
+    "BOOKING_INVITE": {
+      "BUTTON": "Agendar",
+      "BUTTON_HINT": "Gerar o link de agenda deste cliente",
+      "TITLE": "Link de agenda para {name}",
+      "TITLE_NO_NAME": "Link de agenda",
+      "LOADING": "Preparando o link…",
+      "PAGE": "Página: {title}",
+      "PAGE_LABEL": "Página de agendamento",
+      "VALID_UNTIL": "Vale até {date}",
+      "TEXT_LABEL": "Texto do convite",
+      "TEXT_NEEDS_LINK": "O texto precisa ter o link.",
+      "SEND": "Enviar na conversa",
+      "COPY": "Copiar link",
+      "COPIED": "Link copiado. Cole onde quiser.",
+      "SENT": "Mensagem enviada na conversa.",
+      "CANCEL_LINK": "Cancelar link",
+      "CANCELED": "Link cancelado.",
+      "CANCEL_CONFIRM": {
+        "TITLE": "Cancelar o link?",
+        "DESCRIPTION": "O cliente não vai mais conseguir marcar por ele.",
+        "YES": "Sim, cancelar",
+        "BACK": "Voltar"
+      },
+      "NEW_LINK": "Criar novo link",
+      "CLOSE": "Fechar",
+      "STATE": {
+        "CREATED": "Ainda não enviado",
+        "SENT": "Enviado",
+        "OPENED": "Aberto",
+        "SCHEDULED": "Agendado",
+        "EXPIRED": "Venceu",
+        "CANCELED": "Cancelado"
+      },
+      "EMPTY": {
+        "ADMIN": "Publique uma página de agendamento para gerar links para seus clientes.",
+        "AGENT": "Peça ao administrador para publicar uma página de agendamento.",
+        "OPEN_SETTINGS": "Ir para Agendamento"
+      },
+      "ERRORS": {
+        "LOAD": "Não foi possível abrir o link agora. Tente de novo.",
+        "SEND": "Não foi possível enviar. Confira se o texto tem o link e se o cliente pode receber mensagem.",
+        "COPY": "Não foi possível copiar o link.",
+        "CANCEL": "Não foi possível cancelar o link.",
+        "CANNOT_REPLY": "O cliente precisa mandar mensagem primeiro. Copie o link e envie de outro jeito.",
+        "FORBIDDEN": "Você não tem acesso a isto."
       }
     },
     "RELATIONSHIP": {

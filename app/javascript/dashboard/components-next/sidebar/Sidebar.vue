@@ -34,6 +34,7 @@ import SidebarChangelogCard from './SidebarChangelogCard.vue';
 import SidebarChangelogButton from './SidebarChangelogButton.vue';
 import GuideSidebarEntry from 'dashboard/components/autonomia/guide/GuideSidebarEntry.vue';
 import { prospectingSidebarItems } from 'dashboard/routes/dashboard/autonomia/prospecting/utils/prospectingSidebar';
+import { bookingSidebarItems } from 'dashboard/routes/dashboard/settings/booking/bookingAccess';
 import { agentsSidebarItems } from 'dashboard/routes/dashboard/autonomia/agentes/utils/agentsSidebar';
 import { withCampaignJourney } from 'dashboard/components-next/CampaignJourney/journeySidebar';
 import ChannelLeaf from './ChannelLeaf.vue';
@@ -1166,6 +1167,13 @@ const menuItems = computed(() => {
               },
             ]
           : []),
+        ...bookingSidebarItems({
+          account: currentAccount.value(accountId.value),
+          isAdministrator: isAdministrator.value,
+          permissions: getUserPermissions(currentUser.value, accountId.value),
+          t,
+          accountScopedRoute,
+        }),
         // {
         //   name: 'Settings Captain',
         //   label: t('SIDEBAR.CAPTAIN_AI'),

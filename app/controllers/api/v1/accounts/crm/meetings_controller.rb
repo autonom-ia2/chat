@@ -268,6 +268,8 @@ class Api::V1::Accounts::Crm::MeetingsController < Api::V1::Accounts::Crm::BaseC
       provider: meeting.provider,
       online_meeting_type: meeting.online_meeting_type,
       online_meeting_url: meeting.online_meeting_url,
+      location_type: meeting.online_meeting_type,
+      location: serialize_location(meeting),
       reminder_id: meeting.reminder_id,
       summary: meeting.metadata.to_h['ai_summary'].presence,
       summary_at: meeting.metadata.to_h['ai_summary_at'].presence,
@@ -276,6 +278,12 @@ class Api::V1::Accounts::Crm::MeetingsController < Api::V1::Accounts::Crm::BaseC
       created_at: meeting.created_at&.iso8601,
       updated_at: meeting.updated_at&.iso8601
     }
+  end
+
+  # Local da reunião interna (#1188): rótulo e endereço gravados em metadata['location']; nil nos dois quando não há.
+  def serialize_location(meeting)
+    location = meeting.metadata.to_h['location'].to_h
+    { label: location['label'], address: location['address'] }
   end
 
   def serialize_guest(guest)

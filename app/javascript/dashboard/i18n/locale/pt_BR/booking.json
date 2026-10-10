@@ -1,0 +1,261 @@
+{
+  "BOOKING": {
+    "PAGE": {
+      "TITLE": "Agendamento",
+      "SUBTITLE": "Crie a página onde o cliente marca um horário com você."
+    },
+    "LIST": {
+      "LOADING": "Carregando as páginas",
+      "ERROR": "Não deu para carregar as páginas.",
+      "RETRY": "Tentar de novo",
+      "EMPTY": "Você ainda não tem uma página de agendamento.",
+      "EMPTY_VIEW_ONLY": "Ainda não há páginas de agendamento.",
+      "CREATE": "Criar página",
+      "NEW": "Nova página",
+      "LABEL": "Páginas de agendamento"
+    },
+    "CARD": {
+      "UNTITLED": "Página sem nome",
+      "UPCOMING": "Nenhuma reunião marcada | 1 reunião marcada | {count} reuniões marcadas",
+      "STATUS": {
+        "LIVE": "No ar",
+        "PAUSED": "Pausada",
+        "DRAFT": "Rascunho"
+      },
+      "ATTENTION": "Quem atende não pode receber reuniões agora. Toque em Editar e escolha outra pessoa.",
+      "EDIT": "Editar",
+      "VIEW": "Ver",
+      "PAUSE": "Pausar página",
+      "PUBLISH": "Publicar",
+      "DELETE": "Excluir",
+      "CONFIRM_DELETE": "Excluir esta página? O link para de funcionar.",
+      "CONFIRM_YES": "Sim, excluir",
+      "CONFIRM_NO": "Cancelar",
+      "DELETE_BLOCKED": "Esta página tem reuniões marcadas. Pause a página em vez de excluir.",
+      "DELETED": "Página excluída.",
+      "PAUSED_OK": "Página pausada.",
+      "ACTION_ERROR": "Não deu certo. Tente de novo."
+    },
+    "LINK": {
+      "COPY": "Copiar link",
+      "COPIED": "Link copiado.",
+      "COPY_ERROR": "Não deu para copiar. Selecione o link e copie.",
+      "QR": "QR code",
+      "QR_HIDE": "Esconder QR code",
+      "QR_ALT": "QR code da página de agendamento",
+      "QR_ERROR": "Não deu para gerar o QR code.",
+      "OPEN": "Abrir",
+      "OPEN_LABEL": "Abrir a página em outra aba",
+      "PER_PERSON_TITLE": "Um link para cada pessoa",
+      "PER_PERSON_HINT": "O cliente marca pelo link da pessoa que vai atender. Divulgue o link de cada pessoa.",
+      "PERSON_LABEL": "Link de {name}"
+    },
+    "STEPS": {
+      "LABEL": "Passos para criar a página",
+      "COUNT": "Passo {current} de {total}",
+      "MODELO": "Modelo",
+      "CONTE": "Nome e equipe",
+      "ONDE": "Onde acontece",
+      "QUANDO": "Dias e horas",
+      "CARA": "Sua marca",
+      "PREVIA": "Prévia e publicar",
+      "DONE": "concluído"
+    },
+    "WIZARD": {
+      "BACK": "Voltar",
+      "BACK_TO_LIST": "Voltar para a lista",
+      "CONTINUE": "Continuar",
+      "SEE_PREVIEW": "Ver como fica",
+      "PUBLISH": "Publicar",
+      "DONE": "Voltar para a lista",
+      "SAVE_ERROR": "Não deu para salvar. Confira e tente de novo.",
+      "LOAD_ERROR": "Não deu para abrir a página.",
+      "LIVE_NOTICE": "Esta página está no ar. O que você mudar vale assim que tocar em Continuar.",
+      "ERRORS": {
+        "TITLE": "Escreva o nome que o cliente vê.",
+        "PEOPLE": "Escolha quem atende.",
+        "LOCATION": "Escolha onde vai ser o atendimento.",
+        "LINK": "Cole o link completo, começando com https://",
+        "ADDRESS": "Escreva o endereço.",
+        "CALENDAR": "Escolha a caixa de e-mail da agenda.",
+        "WEEKDAYS": "Escolha pelo menos um dia.",
+        "HOURS": "O horário final precisa ser depois do inicial.",
+        "IMAGE_TYPE": "Use uma imagem PNG, JPEG ou WebP.",
+        "IMAGE_SIZE": "A imagem pode ter até 2 MB.",
+        "IMAGE_UPLOAD": "Não deu para enviar a imagem. Tente outra."
+      },
+      "SERVER_ERRORS": {
+        "CALENDAR_GONE": "Essa caixa de e-mail da agenda não está mais disponível. Escolha outra ou tire o Google Meet e o Teams.",
+        "PEOPLE_GONE": "Alguém que você escolheu não pode mais atender. Escolha de novo.",
+        "LOCATIONS": "Um dos lugares não pode mais ser usado. Confira onde vai ser o atendimento.",
+        "HOURS": "Confira os dias e os horários.",
+        "PIPELINE": "Esse funil ou etapa não existe mais. Escolha outro.",
+        "BRAND": "Confira a cor e a frase de boas-vindas."
+      }
+    },
+    "TEMPLATE": {
+      "TITLE": "O que você quer marcar?",
+      "USE": "Usar este modelo",
+      "POPULAR": "Mais usado",
+      "CREATE_ERROR": "Não deu para criar a página. Tente de novo.",
+      "SALES": {
+        "NAME": "Conversa de vendas",
+        "HINT": "30 minutos · vídeo no WhatsApp"
+      },
+      "CONSULT": {
+        "NAME": "Consulta ou atendimento",
+        "HINT": "45 minutos · no local"
+      },
+      "VISIT": {
+        "NAME": "Visita",
+        "HINT": "60 minutos · no local"
+      },
+      "BLANK": {
+        "NAME": "Começar do zero",
+        "HINT": "Você preenche tudo"
+      }
+    },
+    "ABOUT": {
+      "TITLE": "Como se chama o atendimento?",
+      "NAME_LABEL": "Nome que o cliente vê",
+      "DURATION_LABEL": "Quanto tempo dura?",
+      "PEOPLE_LABEL": "Quem atende?",
+      "PEOPLE_HINT": "Toque para escolher. Pode ser mais de uma pessoa.",
+      "PEOPLE_LOADING": "Carregando a equipe",
+      "PEOPLE_ERROR": "Não deu para carregar a equipe.",
+      "PEOPLE_EMPTY": "Ninguém da equipe pode atender ainda."
+    },
+    "WHERE": {
+      "TITLE": "Onde vai ser o atendimento?",
+      "HINT": "Escolha um ou mais.",
+      "RECOMMENDED": "Recomendado",
+      "WHATSAPP_VIDEO": {
+        "NAME": "Vídeo no WhatsApp",
+        "HINT": "Você chama o cliente no horário"
+      },
+      "WHATSAPP_VOICE": {
+        "NAME": "Ligação no WhatsApp",
+        "HINT": "Só voz"
+      },
+      "CUSTOM_LINK": {
+        "NAME": "Meu link",
+        "HINT": "Zoom, Meet ou outro que você já usa"
+      },
+      "IN_PERSON": {
+        "NAME": "No local",
+        "HINT": "O cliente vai até o endereço"
+      },
+      "GOOGLE_MEET": {
+        "NAME": "Google Meet",
+        "HINT": "O link sai da sua agenda Google"
+      },
+      "TEAMS": {
+        "NAME": "Microsoft Teams",
+        "HINT": "O link sai da sua agenda Microsoft"
+      },
+      "LINK_LABEL": "Seu link",
+      "LINK_PLACEHOLDER": "https://",
+      "ADDRESS_LABEL": "Endereço",
+      "ADDRESS_PLACEHOLDER": "Rua, número e cidade",
+      "CALENDAR_LABEL": "Caixa de e-mail da agenda",
+      "CALENDAR_HINT": "Google Meet e Teams aparecem aqui quando você conecta uma caixa de e-mail.",
+      "CALENDAR_DISCONNECTED": "A caixa de agenda foi desconectada. Tire este local ou conecte de novo."
+    },
+    "WHEN": {
+      "TITLE": "Quando você atende?",
+      "DAYS_LABEL": "Dias",
+      "FROM": "Das",
+      "TO": "Até",
+      "NOTICE_LABEL": "Marcar com pelo menos",
+      "NOTICE_NONE": "Sem antecedência",
+      "NOTICE_VALUE": "{value} de antecedência",
+      "BUFFER_LABEL": "Intervalo",
+      "BUFFER_NONE": "Sem intervalo",
+      "BUFFER_VALUE": "{value} entre um horário e outro",
+      "EXTRA_LABEL": "Outras durações (opcional)",
+      "EXTRA_HINT": "O cliente escolhe quanto tempo quer."
+    },
+    "WEEKDAYS": {
+      "SUN": "Dom",
+      "MON": "Seg",
+      "TUE": "Ter",
+      "WED": "Qua",
+      "THU": "Qui",
+      "FRI": "Sex",
+      "SAT": "Sáb"
+    },
+    "WEEKDAYS_LONG": {
+      "SUN": "Domingo",
+      "MON": "Segunda-feira",
+      "TUE": "Terça-feira",
+      "WED": "Quarta-feira",
+      "THU": "Quinta-feira",
+      "FRI": "Sexta-feira",
+      "SAT": "Sábado"
+    },
+    "FORMAT": {
+      "MINUTES": "{n} minutos",
+      "ONE_HOUR": "1 hora",
+      "HOURS": "{n} horas",
+      "MIXED": "{hours} h e {minutes} min",
+      "ONE_DAY": "1 dia",
+      "DAYS": "{n} dias",
+      "HOUR": "{hour}:00",
+      "DAY_RANGE": "{first} a {last}"
+    },
+    "LOOK": {
+      "TITLE": "Deixe com a sua cara",
+      "LOGO": "Logo",
+      "PHOTO": "Sua foto",
+      "UPLOAD": "Enviar imagem",
+      "CHANGE": "Trocar imagem",
+      "UPLOADING": "Enviando…",
+      "IMAGE_HINT": "PNG, JPEG ou WebP, até 2 MB.",
+      "COLOR_LABEL": "Cor",
+      "COLORS": {
+        "BLUE": "Azul",
+        "GREEN": "Verde",
+        "RED": "Vermelho",
+        "AMBER": "Âmbar",
+        "PURPLE": "Roxo",
+        "GRAPHITE": "Grafite"
+      },
+      "HEADLINE_LABEL": "Frase de boas-vindas",
+      "HEADLINE_PLACEHOLDER": "Escolha o melhor horário para você",
+      "LOGO_ALT": "Logo da empresa",
+      "PHOTO_ALT": "Foto de quem atende"
+    },
+    "PREVIEW": {
+      "TITLE": "Assim o cliente vai ver",
+      "SCHEDULE": "{days}, das {from} às {to}",
+      "DEFAULT_HEADLINE": "Escolha o melhor horário para você",
+      "WITH": "Com {name}",
+      "PICK_TIME": "Escolher horário",
+      "DESTINATION": "Quem marcar vai para o funil {pipeline}, etapa {stage}, com {people}.",
+      "DESTINATION_NO_PIPELINE": "Quem marcar fica com {people}. Ainda não há funil escolhido.",
+      "DEFAULT_PIPELINE": "padrão",
+      "DEFAULT_STAGE": "inicial",
+      "NOBODY": "ninguém ainda",
+      "ALTER": "Alterar",
+      "PIPELINE_LABEL": "Funil",
+      "STAGE_LABEL": "Etapa",
+      "SAVE": "Salvar",
+      "CANCEL": "Cancelar",
+      "PIPELINES_ERROR": "Não deu para carregar os funis.",
+      "MISSING_TITLE": "Falta pouco para publicar:",
+      "MISSING": {
+        "HOST": "Escolher quem atende",
+        "LOCATION": "Escolher onde vai ser o atendimento",
+        "WORKING_HOURS": "Escolher os dias de atendimento",
+        "PIPELINE": "Escolher para qual funil vai quem marcar"
+      },
+      "FIX": "Resolver",
+      "PUBLISHED_TITLE": "Sua página está no ar.",
+      "PUBLISHED_TEXT": "Mande o link para seus clientes ou mostre o QR code.",
+      "PUBLISHING": "Publicando"
+    },
+    "VIEW": {
+      "READ_ONLY": "Você pode ver esta página, mas não pode mudar."
+    }
+  }
+}
