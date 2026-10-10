@@ -57,10 +57,15 @@ class Crm::InboxSetting < ApplicationRecord
     !(subject_ai_suggest? && crm_enabled?)
   end
 
+  # O painel aberto dessas conversas lê de novo (aviso em tempo real), em vez de mostrar a sugestão até recarregar.
   def expirar_sugestoes_de_assunto
-    conversas = account.conversations.where(inbox_id: inbox_id).select(:id)
-    Crm::SubjectDecision.suggested.where(account_id: account_id, conversation_id: conversas)
-                        .update_all(state: 'expired', updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+    pendentes = Crm::SubjectDecision.suggested.where(account_id: account_id,
+                                                     conversation_id: account.conversations.where(inbox_id: inbox_id).select(:id))
+    conversation_ids = pendentes.distinct.pluck(:conversation_id)
+    return if conversation_ids.empty?
+
+    pendentes.update_all(state: 'expired', updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+    account.conversations.where(id: conversation_ids).find_each { |conversation| Crm::Subjects::Notifier.notify(conversation) }
   end
 
   def linked_records_must_belong_to_account

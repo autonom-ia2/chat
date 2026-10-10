@@ -163,8 +163,11 @@ RSpec.describe 'CRM subject suggestions API', type: :request do
   it 'caixa que saiu do modo Sugerir (#1221): o aviso some e as sugestões pendentes expiram' do
     card('Agentes de IA')
     decision = suggestion(action: 'create', title: 'Chat2You')
+    allow(Crm::Subjects::Notifier).to receive(:notify)
 
     setting.update!(subject_ai_mode: :off)
+
+    expect(Crm::Subjects::Notifier).to have_received(:notify).with(conversation)
 
     get "#{base_url}/cards", headers: auth_headers(agent)
     expect(response.parsed_body['suggestion']).to be_nil
