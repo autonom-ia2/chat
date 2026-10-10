@@ -17,6 +17,7 @@ RSpec.describe Waha::InboxProvisioner do
     end
 
     before do
+      account.enable_features!('waha_history_import')
       allow(client).to receive(:history_source_ids_available?).and_return(true)
       allow(client).to receive(:get_session).and_raise(Waha::Client::Error.new('not_found', status: 404))
       allow(client).to receive(:create_session)
@@ -45,6 +46,25 @@ RSpec.describe Waha::InboxProvisioner do
       expect(marker).to include('status' => 'waiting_connection', 'pass' => 0, 'chat_id' => nil)
       expect(marker['before']).to eq(0)
       expect(Waha::HistoryImportJob).to have_been_enqueued.with(result.inbox.id)
+    end
+
+    context 'when the account does not have waha_history_import' do
+      before { account.disable_features!('waha_history_import') }
+
+      it 'creates the connection as before, without depending on the history connector' do
+        allow(client).to receive(:history_source_ids_available?).and_return(false)
+        apps = nil
+        allow(client).to receive(:create_session) { |_name, **options| apps = options[:apps] }
+
+        result = described_class.new(account: account, phone: '5511999999999', api_access_token: api_access_token,
+                                     client: client, config: config).perform
+
+        expect(client).not_to have_received(:history_source_ids_available?)
+        expect(result.inbox.channel.additional_attributes).not_to have_key('waha_history_import')
+        expect(Waha::HistoryImportJob).not_to have_been_enqueued
+        chatwoot_app = apps.find { |app| app[:app] == 'chatwoot' }
+        expect(chatwoot_app[:config]).not_to have_key(:chat2youHistoryOnboarding)
+      end
     end
 
     it 'refuses a new connection before any write when the connector cannot deduplicate history' do

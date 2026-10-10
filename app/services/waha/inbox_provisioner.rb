@@ -29,7 +29,7 @@ module Waha
       inbox = create_local_inbox(app_id, phone_numbers_app_id)
 
       provision_remote(inbox, app_id, phone_numbers_app_id)
-      Waha::HistoryImportJob.perform_later(inbox.id)
+      Waha::HistoryImportJob.perform_later(inbox.id) if history_import?
 
       Result.new(
         inbox: inbox,
@@ -45,7 +45,14 @@ module Waha
       raise Error, 'integration_not_configured' unless @config.enabled?
       raise Error, 'invalid_phone' unless @phone.match?(PHONE_RE)
       raise Error, 'account_token_missing' if @api_access_token.blank?
-      raise Error, 'history_connector_unavailable' unless @client.history_source_ids_available?
+      raise Error, 'history_connector_unavailable' if history_import? && !@client.history_source_ids_available?
+    end
+
+    # Histórico só nas contas liberadas: sem a flag, a conexão nasce como antes, sem depender da camada do conector.
+    def history_import?
+      return @history_import if defined?(@history_import)
+
+      @history_import = @account.feature_enabled?('waha_history_import')
     end
 
     def create_local_inbox(app_id, phone_numbers_app_id)
@@ -78,13 +85,12 @@ module Waha
           'phone_numbers_app_id' => phone_numbers_app_id,
           'account_token_owner_user_id' => AccessToken.find_by!(token: @api_access_token).owner_id,
           'kind' => @ai_agent ? 'ai' : 'human',
-          'waha_history_import' => new_history_state,
           # Já nasce marcada como caixa de campanha WhatsApp API — uma caixa WAHA É, por definição,
           # uma caixa de WhatsApp API; sem isto o seletor de campanha (filtra por campaign_channel_type)
           # nunca a enxerga e o disparo "one-click" fica inacessível.
           'campaign_channel_type' => Channel::Api::WHATSAPP_API_CAMPAIGN_CHANNEL_TYPE,
           'whatsapp_api_provider' => Channel::Api::WHATSAPP_API_CAMPAIGN_PROVIDER
-        }
+        }.merge(history_import? ? { 'waha_history_import' => new_history_state } : {})
       )
       @account.inboxes.create!(
         name: inbox_display_name,
@@ -128,7 +134,7 @@ module Waha
         accountToken: @api_access_token,
         inboxId: inbox.id,
         inboxIdentifier: inbox.channel.identifier,
-        locale: 'pt-BR', chat2youHistoryOnboarding: true,
+        locale: 'pt-BR',
         linkPreview: 'OFF',
         groups: 'OFF',
         templates: {},
@@ -140,7 +146,7 @@ module Waha
           status: nil,
           outgoing: 'message'
         }
-      }
+      }.merge(history_import? ? { chat2youHistoryOnboarding: true } : {})
     end
 
     def normalize_phone(phone)

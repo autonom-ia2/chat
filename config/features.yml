@@ -323,3 +323,10 @@
   display_name: Agendamento WhatsApp-first (CRM)
   enabled: false
   column: feature_flags_ext_1
+
+# Histórico das novas conexões WAHA (#1071): exige a camada do conector (deployment/waha-history). Piloto por conta;
+# desligada, a conexão nova nasce como antes e não consulta a capacidade do conector.
+- name: waha_history_import
+  display_name: WAHA history import on new connections
+  enabled: false
+  column: feature_flags_ext_1

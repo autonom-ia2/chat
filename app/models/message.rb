@@ -122,16 +122,24 @@ class Message < ApplicationRecord
   scope :non_activity_messages, -> { where.not(message_type: :activity).reorder('created_at desc') }
   scope :today, -> { where("date_trunc('day', created_at) = ?", Date.current) }
   scope :voice_calls, -> { where(content_type: :voice_call) }
-  scope :non_historical, -> { where("(messages.content_attributes #>> '{}')::jsonb->>'history_import' IS DISTINCT FROM 'true'") }
-  WAHA_HISTORY_EXCLUSION_SQL = "(messages.content_attributes #>> '{}')::jsonb->>'waha_history_import' IS DISTINCT FROM 'true'".freeze
+  # `store ... coder: JSON` over a `json` column persists a JSON *string* holding the object, so markers are read
+  # through `#>> '{}'`. The cast is guarded (`IS JSON OBJECT`): one row with `""` or non-object text must not break
+  # unread counts or reports for the whole account. `strpos` first skips the parse for the rows without the key.
+  def self.content_attribute_not_true_sql(key)
+    stored = '(messages.content_attributes #>> \'{}\')'
+    "CASE WHEN strpos(messages.content_attributes::text, '#{key}') = 0 THEN TRUE " \
+      "WHEN #{stored} IS JSON OBJECT THEN #{stored}::jsonb->>'#{key}' IS DISTINCT FROM 'true' ELSE TRUE END"
+  end
+
+  WAHA_HISTORY_EXCLUSION_SQL = content_attribute_not_true_sql('waha_history_import').freeze
+  scope :non_historical, -> { where(content_attribute_not_true_sql('history_import')) }
   scope :without_waha_history, -> { where(WAHA_HISTORY_EXCLUSION_SQL) }
   scope :for_reporting, -> { without_waha_history }
   scope :with_waha_source_id, lambda { |id|
     where("messages.source_id = :id OR messages.additional_attributes->'waha_source_ids' @> :ids::jsonb", id: id, ids: [id].to_json)
   }
   scope :pending_waha_outbound, lambda {
-    outgoing.where(private: false, source_id: nil)
-            .where("(messages.content_attributes #>> '{}')::jsonb->>'external_echo' IS DISTINCT FROM 'true'")
+    outgoing.where(private: false, source_id: nil).where(content_attribute_not_true_sql('external_echo'))
   }
 
   # TODO: Get rid of default scope
