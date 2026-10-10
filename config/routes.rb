@@ -323,6 +323,7 @@ Rails.application.routes.draw do
             end
             resource :google_conversion_feed, only: [:create]
             resource :meta_ads_connection, only: [:show, :update, :destroy] do
+              post :facebook_login
               get :ad_accounts
               get :pixels
               post :selection

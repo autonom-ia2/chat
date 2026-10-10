@@ -2217,7 +2217,13 @@
         "OPEN_META": "Open Meta",
         "DETAILS": "See the path on Meta",
         "DETAILS_TEXT": "Business settings › Users › Partners › Add › Give a partner access to your assets. Select the ad account with \"View performance\" and the website dataset (Pixel).",
-        "TOKEN_LINK": "Prefer an access key?"
+        "TOKEN_LINK": "Prefer an access key?",
+        "FACEBOOK_TITLE": "Sign in with Facebook",
+        "FACEBOOK_BADGE": "Fastest",
+        "FACEBOOK_HINT": "Sign in to Facebook and choose which ad accounts we can see. It takes a minute.",
+        "FACEBOOK_CTA": "Sign in with Facebook",
+        "PARTNER_LINK": "Prefer to share with {partner}?",
+        "FACEBOOK_POPUP_HINT": "Nothing opened? Allow pop-up windows for this site in your browser and try again."
       },
       "ACCOUNT": {
         "TITLE": "Which account pays for your ads?",
@@ -2246,7 +2252,8 @@
         "PIXEL_CHANGE": "Change",
         "VIA_PARTNER": "Reading through {partner}",
         "VIA_TOKEN": "Reading with your access key",
-        "SWITCH": "Change"
+        "SWITCH": "Change",
+        "VIA_FACEBOOK": "Reading with your Facebook sign-in"
       },
       "DESTINATIONS": {
         "TITLE": "Where do your ads take the customer?",
@@ -2342,7 +2349,8 @@
             },
             "NO_META_DATA": "Meta has not sent the number for this period yet."
           }
-        }
+        },
+        "MODE_FACEBOOK": "By Facebook sign-in"
       },
       "ERRORS": {
         "PLATFORM_UNAVAILABLE": "Sharing is not available yet. For now, use an access key.",
@@ -2358,6 +2366,10 @@
         "TOKEN_INVALID": "Meta refused the saved key. Paste a new key or share the account.",
         "INVALID_AD_ACCOUNT": "This ad account is not valid.",
         "NOT_CONNECTED": "Connect Meta first.",
+        "LOGIN_FAILED": "Facebook didn't confirm the sign-in. Try again.",
+        "LOGIN_UNAVAILABLE": "Signing in with Facebook isn't available right now. Use another way to connect.",
+        "MISSING_ADS_READ": "Facebook didn't allow us to see your ads. Sign in again and allow access to your ad accounts.",
+        "NO_AD_ACCOUNT": "No ad account was chosen. Sign in again and pick at least one.",
         "GENERIC": "That did not work. Try again."
       },
       "MOVED": "Meta ads now have their own page: connection, ad names and sales to Meta.",

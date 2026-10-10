@@ -2218,7 +2218,13 @@
         "OPEN_META": "Abrir a Meta",
         "DETAILS": "Ver o caminho na Meta",
         "DETAILS_TEXT": "Configurações do negócio › Usuários › Parceiros › Adicionar › Conceder a um parceiro acesso aos seus ativos. Marque a conta de anúncios com \"Ver desempenho\" e o conjunto de dados (Pixel) do site.",
-        "TOKEN_LINK": "Prefere usar uma chave de acesso?"
+        "TOKEN_LINK": "Prefere usar uma chave de acesso?",
+        "FACEBOOK_TITLE": "Entrar com o Facebook",
+        "FACEBOOK_BADGE": "Mais rápido",
+        "FACEBOOK_HINT": "Entre no Facebook e escolha quais contas de anúncios podemos ver. Leva um minuto.",
+        "FACEBOOK_CTA": "Entrar com o Facebook",
+        "PARTNER_LINK": "Prefere compartilhar com a {partner}?",
+        "FACEBOOK_POPUP_HINT": "Não abriu nada? Libere as janelas pop-up deste site no navegador e tente de novo."
       },
       "ACCOUNT": {
         "TITLE": "Qual conta paga os seus anúncios?",
@@ -2247,7 +2253,8 @@
         "PIXEL_CHANGE": "Alterar",
         "VIA_PARTNER": "Lendo pela {partner}",
         "VIA_TOKEN": "Lendo pela sua chave de acesso",
-        "SWITCH": "Trocar"
+        "SWITCH": "Trocar",
+        "VIA_FACEBOOK": "Lendo pela sua entrada com o Facebook"
       },
       "DESTINATIONS": {
         "TITLE": "Para onde seus anúncios levam o cliente?",
@@ -2343,7 +2350,8 @@
             },
             "NO_META_DATA": "A Meta ainda não mandou o número deste período."
           }
-        }
+        },
+        "MODE_FACEBOOK": "Pela entrada com o Facebook"
       },
       "ERRORS": {
         "PLATFORM_UNAVAILABLE": "Compartilhar ainda não está disponível. Por enquanto, use uma chave de acesso.",
@@ -2359,6 +2367,10 @@
         "TOKEN_INVALID": "A Meta recusou a chave salva. Cole uma chave nova ou compartilhe a conta.",
         "INVALID_AD_ACCOUNT": "Essa conta de anúncios não é válida.",
         "NOT_CONNECTED": "Conecte a Meta antes.",
+        "LOGIN_FAILED": "O Facebook não confirmou a entrada. Tente de novo.",
+        "LOGIN_UNAVAILABLE": "Entrar com o Facebook não está disponível agora. Use outro jeito de conectar.",
+        "MISSING_ADS_READ": "O Facebook não deixou ver seus anúncios. Entre de novo e libere o acesso às suas contas de anúncios.",
+        "NO_AD_ACCOUNT": "Nenhuma conta de anúncios foi escolhida. Entre de novo e marque pelo menos uma.",
         "GENERIC": "Não deu certo agora. Tente de novo."
       },
       "MOVED": "Os anúncios da Meta agora têm página própria: conexão, nomes dos anúncios e vendas para a Meta.",

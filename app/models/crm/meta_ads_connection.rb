@@ -36,9 +36,11 @@
 #
 # Conexão da conta com os anúncios da Meta (#1034, #1047). Uma por conta.
 #
-# Dois modos:
+# Três modos:
 # - `token`: o cliente colou um token próprio com ads_read (#1034). O token só existe cifrado; sem
 #   ACTIVE_RECORD_ENCRYPTION_* o model recusa gravar.
+# - `facebook_login`: o cliente entrou com o Facebook (Login do Facebook para Empresas, #1069) e concedeu
+#   ads_read; o token que a Meta devolve fica guardado como no modo `token` e lê só o que ele concedeu.
 # - `partner`: o cliente compartilhou a conta de anúncios com o portfólio da plataforma; a leitura usa o
 #   token da plataforma (`Crm::MetaAds::Platform`). Não há token por conta.
 #
@@ -48,7 +50,9 @@ class Crm::MetaAdsConnection < ApplicationRecord
   self.table_name = 'crm_meta_ads_connections'
 
   STATUSES = %w[active invalid].freeze
-  MODES = %w[token partner].freeze
+  MODES = %w[token partner facebook_login].freeze
+  # Modos em que a leitura usa o token do próprio cliente, guardado cifrado nesta conexão.
+  OWN_TOKEN_MODES = %w[token facebook_login].freeze
   DESTINATIONS = %w[whatsapp site].freeze
   LAST_ERROR_LIMIT = 255
   NAME_LIMIT = 255
@@ -66,7 +70,7 @@ class Crm::MetaAdsConnection < ApplicationRecord
 
   belongs_to :account
 
-  validates :access_token, presence: true, if: :token_mode?
+  validates :access_token, presence: true, if: :own_token?
   validates :status, inclusion: { in: STATUSES }
   validates :mode, inclusion: { in: MODES }
   validates :account_id, uniqueness: true
@@ -103,11 +107,16 @@ class Crm::MetaAdsConnection < ApplicationRecord
     mode == 'partner'
   end
 
+  # Lê a Meta com o token do próprio cliente (colado ou vindo do "Entrar com Facebook").
+  def own_token?
+    OWN_TOKEN_MODES.include?(mode)
+  end
+
   def active?
     status == 'active'
   end
 
-  # Token usado para ler a Meta: o do cliente no modo `token`, o da plataforma no modo `partner`.
+  # Token usado para ler a Meta: o do cliente nos modos com token próprio, o da plataforma no modo `partner`.
   def read_token
     partner_mode? ? Crm::MetaAds::Platform.token : access_token
   end
@@ -115,7 +124,7 @@ class Crm::MetaAdsConnection < ApplicationRecord
   # Pode ler a Meta agora? No modo `partner` o dono da conta de anúncios precisa continuar sendo um portfólio
   # do WhatsApp desta conta: se o número sai ou muda de portfólio, a leitura para (#1047).
   def readable?
-    return access_token.present? if token_mode?
+    return access_token.present? if own_token?
 
     Crm::MetaAds::Platform.token.present? && ad_account_id.present? &&
       Crm::MetaAds::Portfolios.for(account).include?(ad_account_business_id.to_s)

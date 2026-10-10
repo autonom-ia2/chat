@@ -38,12 +38,16 @@ const attentionHint = computed(() =>
 const partnerName = computed(
   () => props.connection.partner?.business_name || 'Hub2You'
 );
+const VIA_KEYS = {
+  partner: 'MODE_PARTNER',
+  facebook_login: 'MODE_FACEBOOK',
+  token: 'MODE_TOKEN',
+};
 const via = computed(() =>
-  props.connection.mode === 'partner'
-    ? t('CRM_KANBAN.META_ADS_HUB.SUMMARY.MODE_PARTNER', {
-        partner: partnerName.value,
-      })
-    : t('CRM_KANBAN.META_ADS_HUB.SUMMARY.MODE_TOKEN')
+  t(
+    `CRM_KANBAN.META_ADS_HUB.SUMMARY.${VIA_KEYS[props.connection.mode] || VIA_KEYS.token}`,
+    { partner: partnerName.value }
+  )
 );
 const verified = computed(() => {
   const time = relativeTime(
