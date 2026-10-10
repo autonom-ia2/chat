@@ -4,9 +4,9 @@ import { useI18n } from 'vue-i18n';
 import BookingPagesAPI from 'dashboard/api/crmBookingPages';
 import BookingPreviewCard from './BookingPreviewCard.vue';
 import BookingDestination from './BookingDestination.vue';
-import BookingLinkActions from './BookingLinkActions.vue';
 import BookingNoticesSummary from './BookingNoticesSummary.vue';
 import BookingPostMeeting from './BookingPostMeeting.vue';
+import BookingPageLinks from './BookingPageLinks.vue';
 import { pageToForm } from '../bookingPageForm';
 import { joinNames } from '../bookingFormat';
 
@@ -70,10 +70,7 @@ const peopleNames = computed(() =>
         :post-meeting="page.post_meeting || {}"
         :can-manage="false"
       />
-      <BookingLinkActions
-        v-if="page.enabled && page.public_url"
-        :url="page.public_url"
-      />
+      <BookingPageLinks v-if="page.enabled" :page="page" />
     </template>
     <button
       type="button"

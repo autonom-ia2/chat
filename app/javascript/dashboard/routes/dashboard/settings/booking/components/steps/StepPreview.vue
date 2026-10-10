@@ -3,9 +3,9 @@ import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import BookingPreviewCard from '../BookingPreviewCard.vue';
 import BookingDestination from '../BookingDestination.vue';
-import BookingLinkActions from '../BookingLinkActions.vue';
 import BookingNoticesSummary from '../BookingNoticesSummary.vue';
 import BookingPostMeeting from '../BookingPostMeeting.vue';
+import BookingPageLinks from '../BookingPageLinks.vue';
 import BookingTestInvite from '../BookingTestInvite.vue';
 import { MISSING_STEP, STEP } from '../../constants';
 
@@ -13,7 +13,7 @@ import { MISSING_STEP, STEP } from '../../constants';
 // Publicar. Se a publicação voltar com pendências, cada uma vira uma linha com
 // "Resolver", que leva ao passo certo; a do funil abre o "Alterar" daqui
 // mesmo. "Depois da reunião" (#1193) diz para onde vai o card depois de
-// "Aconteceu". Publicada: link, QR code, Copiar link e, com número de avisos,
+// "Aconteceu". Publicada: o link (ou um por pessoa), QR code, Copiar link e, com número de avisos,
 // "Testar no meu WhatsApp" (J3-A11).
 const props = defineProps({
   form: { type: Object, required: true },
@@ -134,7 +134,7 @@ const fix = item => {
           {{ t('BOOKING.PREVIEW.PUBLISHED_TEXT') }}
         </p>
       </div>
-      <BookingLinkActions v-if="page.public_url" :url="page.public_url" />
+      <BookingPageLinks :page="page" />
       <BookingTestInvite v-if="canTest" :page-id="page.id" />
     </div>
     <span v-else-if="publishing" class="sr-only" role="status">

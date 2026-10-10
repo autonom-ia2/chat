@@ -583,6 +583,34 @@ describe('BookingWizard', () => {
       expect(wrapper.emitted('close')).toHaveLength(1);
     });
 
+    it('publicada com um link por pessoa: um link para cada pessoa, sem o da página', async () => {
+      BookingPagesAPI.publish.mockImplementation(() =>
+        reply(
+          fullPage({
+            enabled: true,
+            assignment_mode: 'per_agent',
+            public_url: null,
+            links: [
+              {
+                agent_id: 11,
+                agent_name: 'Bia',
+                url: 'https://chat.exemplo.com/book/bia',
+                enabled: true,
+              },
+            ],
+          })
+        )
+      );
+      const wrapper = await openAtStep(7);
+      await continueStep(wrapper);
+      const published = wrapper.find('[data-published]');
+      expect(published.text()).not.toContain('/book/abc');
+      expect(published.findAll('[data-person-link]')).toHaveLength(1);
+      expect(published.find('[data-link-url]').text()).toBe(
+        'https://chat.exemplo.com/book/bia'
+      );
+    });
+
     it('falta de funil: Resolver abre o Alterar e salvar libera o Publicar', async () => {
       BookingPagesAPI.publish.mockRejectedValue({
         response: { status: 422, data: { missing: ['pipeline'] } },
