@@ -2,6 +2,7 @@ import {
   cardStatusLabel,
   countsAsSale,
   outcomeLabels,
+  outcomeGroup,
   outcomeStatuses,
 } from './cardOutcome';
 
@@ -49,5 +50,16 @@ describe('cardOutcome', () => {
       'CRM_KANBAN.DRAWER.STATUS_ARCHIVED'
     );
     expect(cardStatusLabel(t, 'won', pipeline)).toBe('Contratado');
+  });
+});
+
+describe('outcomeGroup', () => {
+  it('maps both funnel kinds to the same outcome tab (#1197)', () => {
+    expect(outcomeGroup('won')).toBe('success');
+    expect(outcomeGroup('resolved')).toBe('success');
+    expect(outcomeGroup('lost')).toBe('failure');
+    expect(outcomeGroup('cancelled')).toBe('failure');
+    expect(outcomeGroup('open')).toBeNull();
+    expect(outcomeGroup('archived')).toBeNull();
   });
 });

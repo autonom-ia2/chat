@@ -96,7 +96,9 @@ class Crm::Cards::FilterQuery
   def apply_result_filter(cards)
     return cards unless RESULT_STATUSES.include?(@params[:result].to_s)
 
-    cards.where(status: @params[:result])
+    # Aba de desfecho (#1197): card fechado antes de o funil trocar "conta como venda" continua na aba equivalente.
+    result = @params[:result].to_s
+    cards.where(status: [result, Crm::Cards::Outcome::NOT_SALE[result], Crm::Cards::Outcome::SALE[result]].compact)
   end
 
   def apply_search(cards)
