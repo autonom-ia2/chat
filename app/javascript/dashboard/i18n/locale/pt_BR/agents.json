@@ -584,6 +584,148 @@
       "ACTUATION_INTERNAL": "Interno",
       "ACTUATION_BOTH": "Ambos",
       "INTERNAL_COPILOT": "Copiloto da equipe"
+    },
+    "JORNADA": {
+      "COMUM": {
+        "TENTAR_DE_NOVO": "Tentar de novo",
+        "FECHAR": "Fechar",
+        "CANCELAR": "Cancelar",
+        "COMECANDO": "Começando…",
+        "NOVA_ABA": "(abre em nova aba)",
+        "NOVO_AGENTE": "Novo agente",
+        "CLIENTE": "Cliente",
+        "AGENTE": "Agente",
+        "ESCREVENDO": "Escrevendo…",
+        "USOU": "usou: {arquivo}",
+        "IDEIAS": "Ideias para começar",
+        "QUEM_DISSE": "{quem}:"
+      },
+      "MENU": {
+        "AGENTES": "Agentes",
+        "CRIAR_AGENTE": "Criar agente"
+      },
+      "STATUS": {
+        "ATENDENDO": "Atendendo",
+        "PARADO": "Parado",
+        "FALTA_TERMINAR": "Falta terminar",
+        "COTACAO": "Cotação"
+      },
+      "MODELOS": {
+        "ROTULO": "Modelos prontos",
+        "USAR": "Usar este",
+        "USAR_ARIA": "Usar este modelo: {titulo}",
+        "EXEMPLO": "Exemplo",
+        "EXEMPLO_SR": "Exemplo de conversa, não é um agente de verdade",
+        "DO_MEU_JEITO": "Do meu jeito: contar com minhas palavras",
+        "ESCOLHA": "Escolha um modelo pronto. Você conversa um pouco, testa as respostas e decide quando começar a atender.",
+        "SUPPORT": {
+          "TITULO": "Tirar dúvidas dos clientes",
+          "TEXTO": "Responde sobre preços, horários, entrega e o que mais perguntarem.",
+          "CLIENTE": "Vocês abrem no sábado?",
+          "AGENTE": "Abrimos sim, das 9h às 13h. Posso ajudar em mais alguma coisa?"
+        },
+        "SDR": {
+          "TITULO": "Atender quem quer comprar",
+          "TEXTO": "Entende o que a pessoa procura e passa para a equipe fechar.",
+          "CLIENTE": "Quero fazer um pedido",
+          "AGENTE": "Que bom! Me conta o que você procura que já chamo alguém da equipe."
+        },
+        "RECEPTION": {
+          "TITULO": "Receber quem chega",
+          "TEXTO": "Dá as boas-vindas, entende o assunto e passa para a equipe.",
+          "CLIENTE": "Oi, preciso de ajuda",
+          "AGENTE": "Oi! Que bom ter você aqui. Sobre qual assunto você quer falar?"
+        }
+      },
+      "HEROI": {
+        "TITULO": "Quem vai responder seus clientes quando você não puder?",
+        "SO_VER": "Aqui ficam os agentes que respondem seus clientes. Criar e mudar fica com quem administra a conta.",
+        "SEM_CANAL": "Para atender, o agente precisa de um canal conectado, como o WhatsApp. Dá para montar e testar agora e conectar depois.",
+        "SEM_CANAL_SEM_PERMISSAO": "Peça a um administrador para conectar seu WhatsApp ou outro canal.",
+        "CONECTAR_CANAL": "Conectar seu WhatsApp ou outro canal"
+      },
+      "LISTA": {
+        "TITULO": "Agentes",
+        "TEXTO": "Respondem seus clientes no WhatsApp, no Instagram e no site.",
+        "SO_VER": "Criar e mudar agentes fica com quem administra a conta.",
+        "CRIAR": "Criar agente",
+        "VER_MODELOS": "Ver modelos prontos",
+        "CARREGANDO": "Carregando seus agentes",
+        "SEUS_AGENTES": "Seus agentes",
+        "CONTAGEM_ATENDENDO": "Nenhum atendendo | 1 atendendo | {n} atendendo",
+        "CONTAGEM_PARADOS": "Nenhum parado | 1 parado | {n} parados"
+      },
+      "CARTAO": {
+        "ONDE_NENHUM": "Ainda não está em nenhum canal",
+        "ONDE_N_CANAIS": "Responde em 1 canal | Responde em {n} canais",
+        "ONDE_CANAL": "Responde no {canal}",
+        "SEMANA_VAZIA": "Ainda sem conversas esta semana",
+        "SEMANA_RESPONDIDAS": "Esta semana: {n} conversa respondida | Esta semana: {n} conversas respondidas",
+        "SEMANA_PASSADAS": "{n} passada para a equipe | {n} passadas para a equipe",
+        "PARADO": "Não está respondendo ninguém agora.",
+        "PARADO_SEM_CANAL": "Ainda não está em nenhum canal.",
+        "RASCUNHO": "Você começou e não terminou.",
+        "COTACAO": "Abre no módulo de cotação",
+        "CONTINUAR": "Continuar",
+        "CONTINUAR_ARIA": "Continuar {nome}",
+        "MAIS_OPCOES": "Mais opções de {nome}",
+        "EXCLUIR_RASCUNHO": "Excluir rascunho"
+      },
+      "EXCLUIR": {
+        "TITULO": "Excluir este rascunho?",
+        "TEXTO": "O que você contou até aqui se perde.",
+        "CONFIRMAR": "Excluir",
+        "FEITO": "Rascunho excluído."
+      },
+      "ERRO": {
+        "LISTA": "Não deu para mostrar seus agentes agora.",
+        "LISTA_GARANTIA": "Nenhum agente foi mudado.",
+        "COMECAR_MODELO": "Não deu para começar agora.",
+        "COMECAR_MODELO_GARANTIA": "Nada foi criado.",
+        "COMECAR_ATENDER": "Não deu para começar a atender.",
+        "COMECAR_ATENDER_GARANTIA": "Nada mudou: {nome} ainda não está atendendo.",
+        "CANAL": "Este canal não pôde ser usado.",
+        "CANAL_GARANTIA": "Nada mudou.",
+        "CANAL_ACAO": "Escolher outro",
+        "TROCA_SEM_AGENTE": "{nome} não conseguiu começar a atender.",
+        "TROCA_SEM_AGENTE_GARANTIA": "O {canal} ficou sem agente. As conversas vão para a equipe.",
+        "EXCLUIR": "Não deu para excluir agora.",
+        "EXCLUIR_GARANTIA": "Nada mudou.",
+        "OFFLINE": "Você está sem internet.",
+        "OFFLINE_GARANTIA": "Assim que voltar, tente de novo.",
+        "SEM_CANAL": "Nenhum canal conectado.",
+        "SEM_CANAL_GARANTIA": "{nome} já pode atender. Falta escolher onde."
+      },
+      "ONDE_QUANDO": {
+        "TITULO": "Onde e quando {nome} atende",
+        "ONDE": "Onde atende",
+        "QUANDO": "Quando atende",
+        "OCUPADO": "{canal} · Já tem {agente} respondendo aqui",
+        "OCUPADO_TEXTO": "Colocar {nome} no lugar",
+        "EXTERNO": "{canal} · Já tem outro atendimento automático",
+        "EXTERNO_TEXTO": "Outro sistema já responde aqui. Para usar, pare o outro sistema antes.",
+        "TROCA": "{outro} para de responder no {canal}, mas continua na sua lista. As conversas abertas no {canal} voltam para a equipe.",
+        "TODOS_OCUPADOS": "Todos os seus canais já têm um agente. Coloque {nome} no lugar de um deles ou conecte outro canal.",
+        "SEM_LEITURA": "Canais que já têm um agente não aparecem aqui.",
+        "SEMPRE": "Sempre",
+        "SEMPRE_TEXTO": "A qualquer hora, todos os dias",
+        "DENTRO": "Só no horário de atendimento",
+        "DENTRO_TEXTO": "Horário do canal: {horario}",
+        "FORA": "Só fora do horário de atendimento",
+        "FORA_TEXTO": "Fora de: {horario}",
+        "SEM_HORARIO": "Este canal ainda não tem horário de atendimento.",
+        "QUEM_RECEBE": "Quando não souber, {nome} passa a conversa para a equipe. Quem recebe é definido em Atribuição.",
+        "ESCOLHER_QUEM_RECEBE": "Escolher quem recebe",
+        "QUEM_RECEBE_SEM_PERMISSAO": "Peça a um administrador para escolher quem recebe."
+      },
+      "COMPOSITOR": {
+        "ESCREVA": "Escreva sua resposta",
+        "ENVIAR": "Enviar",
+        "ANEXAR": "Mandar foto, arquivo ou site",
+        "ANEXAR_FOTO": "Mandar foto",
+        "REMOVER": "Tirar {nome}",
+        "ANEXOS": "Arquivos que vão junto"
+      }
     }
   }
 }

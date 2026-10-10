@@ -44,7 +44,7 @@ class Api::V1::Accounts::Crm::PipelinesController < Api::V1::Accounts::Crm::Base
   end
 
   def pipeline_params
-    parameter_set(:pipeline).permit(:name, :description, :status, :is_default, :position, :counts_as_sale, metadata: {})
+    parameter_set(:pipeline).permit(:name, :description, :status, :is_default, :position, :counts_as_sale, :when_to_use, metadata: {})
   end
 
   # Monthly sales target lives in metadata['goals'] and is merged in separately

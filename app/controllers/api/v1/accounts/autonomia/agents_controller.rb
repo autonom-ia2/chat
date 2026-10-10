@@ -25,7 +25,8 @@ class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autono
     attrs = agent_params
     return if recusar_pagina_de_agendamento_sem_permissao(attrs[:config])
 
-    @agent = agents_scope.new(attrs)
+    @agent = agents_scope.new(attrs.except(:config))
+    merge_config!(attrs[:config]) if attrs.key?(:config)
     @agent.created_by = Current.user
     apply_manual_scaffold
     @agent.save!
@@ -163,7 +164,8 @@ class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autono
     permitted = %i[name agent_type mode tone greeting fallback_message handoff_rule human_card
                    enabled status actuation]
     permitted << :instruction if manual_mode?
-    attrs = params.require(:agent).permit(*permitted, starter_questions: [], config: {})
+    # Hash simples, não Parameters: um Hash gravado dentro de Parameters volta como "não permitido" no `new` (500).
+    attrs = params.require(:agent).permit(*permitted, starter_questions: [], config: {}).to_h
     attrs[:config] = sanitized_config(attrs[:config]) if attrs[:config].present?
     permit_audience_config(attrs)
     attrs
