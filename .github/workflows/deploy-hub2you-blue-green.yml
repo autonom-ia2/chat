@@ -24,6 +24,8 @@ on:
       # Publisher Ruby, wrappers SSH e módulos compartilhados continuam disparando AWS.
       - '!scripts/instagram_testers/session-manager.mjs'
       - '!scripts/instagram_testers/browser-operations.mjs'
+      # #1180: ferramenta de release da VPS; roda só no Mac do operador, nunca na imagem AWS.
+      - '!scripts/instagram_testers/runtime/vps/release/**'
       - '!tests/instagram_testers/**'
       - '!tests/qa/instagram-automation/**'
       # .md que o app lê em produção (manuais dos agentes, por exemplo

@@ -25,6 +25,9 @@ disparam AWS. Essas duas fontes são instaladas separadamente na VPS; os testes
 não mudam a aplicação publicada. A exclusão é específica: o publisher Ruby,
 wrappers SSH, módulos compartilhados e demais arquivos continuam disparando
 o deploy. Um push misto com mudança na aplicação também dispara normalmente.
+Desde #1180, `scripts/instagram_testers/runtime/vps/release/**` (a ferramenta de
+release da VPS, executada só no Mac do operador) também fica fora; o restante de
+`runtime/vps/` continua disparando AWS de forma conservadora.
 O teste `tests/instagram_testers/deploy-paths_test.py` verifica as duas stacks
 e a preservação do deploy manual, rollback, manuais e dependências.
 
