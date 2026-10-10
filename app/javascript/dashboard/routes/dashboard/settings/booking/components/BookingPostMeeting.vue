@@ -145,6 +145,13 @@ const turnOff = () => save({ stage_id: null });
         <p data-post-meeting-sentence class="m-0 text-base text-n-slate-12">
           {{ sentence }}
         </p>
+        <p
+          v-if="loaded && postMeeting.stage_id"
+          data-post-meeting-scope
+          class="m-0 text-base text-n-slate-11"
+        >
+          {{ t('BOOKING.POST_MEETING.SCOPE_HINT') }}
+        </p>
       </div>
       <button
         v-if="canManage && !editing"

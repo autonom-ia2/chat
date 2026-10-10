@@ -354,6 +354,7 @@
       "SOME_STAGE": "the chosen stage",
       "SUMMARY_ASK": "When someone marks “It happened”, we ask whether the card goes to the “{stage}” stage.",
       "SUMMARY_AUTO": "When someone marks “It happened”, the card goes to the “{stage}” stage by itself.",
+      "SCOPE_HINT": "Only cards in the page pipeline or in the pipeline of this stage change. A card from another pipeline stays where it is.",
       "STAGE_LABEL": "Stage after the meeting",
       "MODE_LABEL": "How to move",
       "MODES": {

@@ -354,6 +354,7 @@
       "SOME_STAGE": "a etapa escolhida",
       "SUMMARY_ASK": "Quando alguém marca “Aconteceu”, o sistema pergunta se o card vai para a etapa “{stage}”.",
       "SUMMARY_AUTO": "Quando alguém marca “Aconteceu”, o card vai sozinho para a etapa “{stage}”.",
+      "SCOPE_HINT": "Só muda o card que está no funil da página ou no funil dessa etapa. Card de outro funil fica onde está.",
       "STAGE_LABEL": "Etapa depois da reunião",
       "MODE_LABEL": "Como mover",
       "MODES": {

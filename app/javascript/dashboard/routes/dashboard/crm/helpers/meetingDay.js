@@ -12,6 +12,7 @@ const REFUSALS = {
   'crm.booking_v2.stopped': 'STOPPED',
   'crm.booking_v2.no_invite': 'NO_INVITE',
   'crm.booking_v2.recently_reminded': 'RECENTLY_REMINDED',
+  'crm.booking_v2.recently_sent': 'RECENTLY_SENT',
   'crm.booking_v2.no_conversation': 'NO_CONVERSATION',
   'crm.booking_v2.cannot_reply': 'CANNOT_REPLY',
   'crm.booking_v2.not_rebookable': 'NOT_REBOOKABLE',

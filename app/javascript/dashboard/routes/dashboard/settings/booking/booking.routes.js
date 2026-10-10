@@ -57,7 +57,7 @@ export const ensureBookingEnabled = async (to, _from, next) => {
   next({ name: 'home', params: to.params });
 };
 
-// "Meus números" mora no CRM: precisa também do CRM ligado na instalação.
+// "Meus horários" e "Meus números" moram no CRM: precisam também do CRM ligado na instalação.
 export const ensureBookingResultsEnabled = async (to, from, next) => {
   if (window.globalConfig?.CRM_KANBAN_ENABLED !== 'true') {
     next({ name: 'home', params: to.params });
@@ -95,7 +95,7 @@ export default {
       path: frontendURL('accounts/:accountId/crm/my-booking-hours'),
       name: 'crm_my_booking_hours',
       meta: myHoursMeta,
-      beforeEnter: ensureBookingEnabled,
+      beforeEnter: ensureBookingResultsEnabled,
       component: MyBookingHoursPage,
     },
     {
