@@ -138,37 +138,12 @@ RSpec.describe Crm::Ai::Evaluator do
     contact = create(:contact, account: account)
     conversation = create_crm_conversation(account: account, inbox: inbox, contact: contact)
     pipeline, source_stage = create_crm_pipeline(account: account, user: admin)
-    pipeline.update!(
-      metadata: {
-        'ai' => {
-          'enabled' => true,
-          'auto_move_enabled' => true,
-          'handoff' => { 'enabled' => false }
-        }
-      }
-    )
+    pipeline.update!(metadata: { 'ai' => { 'enabled' => true, 'auto_move_enabled' => true, 'handoff' => { 'enabled' => false } } })
     target_stage = create_crm_stage(account: account, pipeline: pipeline, name: 'Em atendimento', position: 1)
-    target_stage.update!(
-      metadata: {
-        'ai_criteria' => 'Cliente precisa de atendimento humano',
-        'ai_handoff' => {
-          'enabled' => true,
-          'handoff_mode' => 'r2_direct',
-          'pool_type' => 'user',
-          'pool_id' => agent.id,
-          'prefer_online' => false
-        }
-      }
-    )
-    card = account.crm_cards.create!(
-      pipeline: pipeline,
-      stage: source_stage,
-      title: 'Lead',
-      contact: contact,
-      inbox: inbox,
-      primary_conversation: conversation,
-      currency: 'BRL'
-    )
+    handoff = { 'enabled' => true, 'handoff_mode' => 'r2_direct', 'pool_type' => 'user', 'pool_id' => agent.id, 'prefer_online' => false }
+    target_stage.update!(metadata: { 'ai_criteria' => 'Cliente precisa de atendimento humano', 'ai_handoff' => handoff })
+    card = account.crm_cards.create!(pipeline: pipeline, stage: source_stage, title: 'Lead', contact: contact, inbox: inbox,
+                                     primary_conversation: conversation, currency: 'BRL')
 
     stub_crm_ai_credential
     allow(Rails.configuration.dispatcher).to receive(:dispatch)
@@ -186,9 +161,9 @@ RSpec.describe Crm::Ai::Evaluator do
     )
 
     expect(Crm::Ai::StageClassifier).to receive(:new).with(hash_including(handoff_enabled: false)).ordered
-                                                      .and_return(first_classifier)
+                                                     .and_return(first_classifier)
     expect(Crm::Ai::StageClassifier).to receive(:new).with(hash_including(handoff_enabled: true)).ordered
-                                                      .and_return(handoff_classifier)
+                                                     .and_return(handoff_classifier)
 
     result = described_class.new(card: card).perform
 
@@ -313,7 +288,7 @@ RSpec.describe Crm::Ai::Evaluator do
     )
 
     expect(Crm::Ai::StageClassifier).to receive(:new).with(hash_including(attribute_schema: { contact: [], conversation: [], card: [] }))
-                                                      .and_return(classifier)
+                                                     .and_return(classifier)
     expect(Crm::Ai::AttributeExtractorApplier).not_to receive(:new)
 
     described_class.new(card: card).perform
