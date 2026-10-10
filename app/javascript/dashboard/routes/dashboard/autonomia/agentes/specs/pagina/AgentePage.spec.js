@@ -69,6 +69,8 @@ const canaisApi = vi.hoisted(() => ({
 vi.mock('dashboard/api/autonomia/channels', () => ({ default: canaisApi }));
 const faqApi = vi.hoisted(() => ({ list: vi.fn() }));
 vi.mock('dashboard/api/autonomia/faqSuggestions', () => ({ default: faqApi }));
+const paginasApi = vi.hoisted(() => ({ get: vi.fn() }));
+vi.mock('dashboard/api/crmBookingPages', () => ({ default: paginasApi }));
 
 const no = seletor => document.querySelector(seletor);
 const todos = seletor => [...document.querySelectorAll(seletor)];
@@ -657,5 +659,72 @@ describe('AgentePage', () => {
     wrapper.unmount();
     expect(store.dispatch).toHaveBeenCalledWith('autonomiaSources/stopPolling');
     await nextTick();
+  });
+
+  // #1253 — Marca reuniões só com a agenda nova na conta (crm_booking_v2 + calendário da instalação).
+  describe('marca reuniões', () => {
+    const ligarAgendaNova = ligada => {
+      window.globalConfig = { CRM_CALENDAR_MEETINGS_ENABLED: 'true' };
+      store.state.getCurrentAccountId = 1;
+      store.state['accounts/getAccount'] = () => ({
+        features: { crm_booking_v2: ligada },
+      });
+    };
+
+    beforeEach(() => {
+      paginasApi.get.mockReset();
+      paginasApi.get.mockResolvedValue({
+        data: { payload: [{ id: 3, title: 'Visita', enabled: true }] },
+      });
+    });
+    afterEach(() => {
+      delete window.globalConfig;
+    });
+
+    it('shows the line and opens the booking drawer for who manages', async () => {
+      ligarAgendaNova(true);
+      const wrapper = await montar();
+      expect(no('[data-linha="agenda"]')).not.toBeNull();
+      await clicar('[data-alterar="agenda"]');
+      expect(no('[role="dialog"]').textContent).toContain(
+        'GAVETA_AGENDA.TITULO'
+      );
+      expect(no('[data-salvar]')).not.toBeNull();
+      wrapper.unmount();
+    });
+
+    it('shows nothing new, and reads no pages, with the account flag off', async () => {
+      ligarAgendaNova(false);
+      const wrapper = await montar();
+      expect(no('[data-linha="agenda"]')).toBeNull();
+      expect(paginasApi.get).not.toHaveBeenCalled();
+      wrapper.unmount();
+    });
+
+    it('hides the line when the pages API answers an error', async () => {
+      ligarAgendaNova(true);
+      paginasApi.get.mockRejectedValue(new Error('404'));
+      const wrapper = await montar();
+      expect(no('[data-linha="agenda"]')).toBeNull();
+      wrapper.unmount();
+    });
+
+    it('gives view-only seats the line without the change button', async () => {
+      estado.podeGerenciar = false;
+      ligarAgendaNova(true);
+      const wrapper = await montar();
+      expect(no('[data-linha="agenda"]')).not.toBeNull();
+      expect(no('[data-alterar="agenda"]')).toBeNull();
+      wrapper.unmount();
+    });
+
+    it('has no booking line for the quoting agent', async () => {
+      preparar({ agente: bia({ agent_type: 'insurance_quote' }) });
+      ligarAgendaNova(true);
+      const wrapper = await montar();
+      expect(no('[data-linha="agenda"]')).toBeNull();
+      expect(paginasApi.get).not.toHaveBeenCalled();
+      wrapper.unmount();
+    });
   });
 });

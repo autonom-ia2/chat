@@ -18,6 +18,7 @@ import GavetaConversas from '../components/pagina/GavetaConversas.vue';
 import GavetaFotoNome from '../components/pagina/GavetaFotoNome.vue';
 import GavetaVersoes from '../components/pagina/GavetaVersoes.vue';
 import GavetaInstrucoes from '../components/pagina/GavetaInstrucoes.vue';
+import GavetaAgenda from '../components/pagina/GavetaAgenda.vue';
 import MudarConversando from '../components/pagina/MudarConversando.vue';
 import {
   ESTADO_PAGINA,
@@ -25,6 +26,7 @@ import {
 } from '../composables/useAgenteDaPagina';
 import { useCanaisDoAgente } from '../composables/useCanaisDoAgente';
 import { useNumerosDaSemana } from '../composables/useNumerosDaSemana';
+import { useAgendaNovaNaConta } from '../composables/useAgendaNovaNaConta';
 import { ESTADO } from '../utils/estadoDoAgente';
 import { horariosDasCaixas } from '../utils/horarios';
 import {
@@ -64,6 +66,7 @@ const semana = useNumerosDaSemana({ agentId: Number(props.agentId) });
 const caixas = useMapGetter('inboxes/getInboxes');
 const fontes = useMapGetter('autonomiaSources/getKnowledgeSources');
 const flagsFontes = useMapGetter('autonomiaSources/getUIFlags');
+const agendaNova = useAgendaNovaNaConta();
 
 const aberta = ref(null);
 const vista = ref('pagina');
@@ -96,7 +99,9 @@ const podeMudar = computed(
   () => podeGerenciar.value && podeMudarConversando(agente.value)
 );
 const permitidas = computed(() =>
-  gavetasPermitidas(agente.value, podeGerenciar.value)
+  gavetasPermitidas(agente.value, podeGerenciar.value, {
+    agendaNova: agendaNova.value,
+  })
 );
 
 // Onde responde: nome da caixa pela L2 (ou pelos canais do agente); sem a leitura, só a contagem.
@@ -616,6 +621,12 @@ const tirarPergunta = id => {
       />
       <GavetaInstrucoes
         v-else-if="aberta === GAVETA.INSTRUCOES"
+        :agente="agente"
+        :nome="nome"
+        @fechar="fechar"
+      />
+      <GavetaAgenda
+        v-else-if="aberta === GAVETA.AGENDA"
         :agente="agente"
         :nome="nome"
         @fechar="fechar"

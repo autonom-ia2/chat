@@ -4,6 +4,7 @@ import GavetaTestar from '../../components/pagina/GavetaTestar.vue';
 import GavetaFotoNome from '../../components/pagina/GavetaFotoNome.vue';
 import GavetaVersoes from '../../components/pagina/GavetaVersoes.vue';
 import GavetaInstrucoes from '../../components/pagina/GavetaInstrucoes.vue';
+import GavetaAgenda from '../../components/pagina/GavetaAgenda.vue';
 
 const store = vi.hoisted(() => ({ dispatch: vi.fn(), getters: {} }));
 vi.mock('dashboard/composables/store', async () => {
@@ -15,6 +16,8 @@ vi.mock('dashboard/composables/store', async () => {
 });
 const alerta = vi.hoisted(() => vi.fn());
 vi.mock('dashboard/composables', () => ({ useAlert: alerta }));
+const paginasApi = vi.hoisted(() => ({ get: vi.fn() }));
+vi.mock('dashboard/api/crmBookingPages', () => ({ default: paginasApi }));
 
 const no = seletor => document.querySelector(seletor);
 const todos = seletor => [...document.querySelectorAll(seletor)];
@@ -420,6 +423,121 @@ describe('GavetaInstrucoes (T14)', () => {
     await clicar('[data-salvar]');
     expect(no('[data-erro]').textContent).toContain('INSTRUCOES.ERRO_GARANTIA');
     expect(no('[data-salvar]')).toBeNull();
+    wrapper.unmount();
+  });
+});
+
+// #1253 — Marcar reuniões. O ChoiceSelect é trocado por botões que mostram as opções e mudam o
+// v-model, para o spec conferir as escolhas sem depender do popover.
+describe('GavetaAgenda (#1253)', () => {
+  const ChoiceSelect = {
+    props: ['modelValue', 'options', 'ariaLabel', 'triggerId', 'disabled'],
+    emits: ['update:modelValue'],
+    template: `<div data-escolha :id="triggerId">
+      <button v-for="opcao in options" :key="String(opcao.value)" type="button"
+        :data-valor="String(opcao.value)" :data-marcada="opcao.value === modelValue"
+        @click="$emit('update:modelValue', opcao.value)">{{ opcao.label }}</button>
+    </div>`,
+  };
+  const PAGINAS = [
+    { id: 3, title: 'Visita', enabled: true },
+    { id: 5, title: 'Conversa', enabled: false },
+  ];
+  const montar = async (agente = {}) => {
+    const wrapper = mount(GavetaAgenda, {
+      attachTo: document.body,
+      props: {
+        agente: { ...AGENTE, config: { booking_page_id: 3 }, ...agente },
+        nome: 'Bia',
+      },
+      global: { stubs: { ChoiceSelect } },
+    });
+    await flushPromises();
+    return wrapper;
+  };
+
+  beforeEach(() => {
+    paginasApi.get.mockReset();
+    paginasApi.get.mockResolvedValue({ data: { payload: PAGINAS } });
+  });
+
+  it('offers "do not book" and each page, with the saved one chosen', async () => {
+    const wrapper = await montar();
+    expect(todos('[data-escolha] button').map(b => b.dataset.valor)).toEqual([
+      '',
+      '3',
+      '5',
+    ]);
+    expect(no('[data-valor="3"]').dataset.marcada).toBe('true');
+    expect(no('label').getAttribute('for')).toBe(no('[data-escolha]').id);
+    expect(no('select')).toBeNull();
+    wrapper.unmount();
+  });
+
+  it('saves only the booking page, and null for "do not book"', async () => {
+    store.dispatch.mockResolvedValue({});
+    const wrapper = await montar();
+    await clicar('[data-valor=""]');
+    await clicar('[data-salvar]');
+    expect(store.dispatch).toHaveBeenCalledWith('autonomiaAgents/update', {
+      id: 7,
+      config: { booking_page_id: null },
+    });
+    expect(alerta).toHaveBeenCalledWith(
+      'AGENTS.JORNADA.PAGINA.GAVETA_AGENDA.PRONTO'
+    );
+    expect(wrapper.emitted('fechar')).toHaveLength(1);
+    wrapper.unmount();
+  });
+
+  it('closes without writing when nothing changed', async () => {
+    const wrapper = await montar({ config: { booking_page_id: '3' } });
+    await clicar('[data-salvar]');
+    expect(store.dispatch).not.toHaveBeenCalled();
+    expect(wrapper.emitted('fechar')).toHaveLength(1);
+    wrapper.unmount();
+  });
+
+  it.each([
+    ['the server refusal (422)', new Error('Você não pode escolher a página.')],
+    [
+      'a server or network failure (500)',
+      new Error('AxiosError: Request failed with status code 500'),
+    ],
+  ])(
+    'shows the fixed save error for %s and keeps the drawer open',
+    async (_caso, falha) => {
+      store.dispatch.mockRejectedValue(falha);
+      const wrapper = await montar();
+      await clicar('[data-valor="5"]');
+      await clicar('[data-salvar]');
+      expect(alerta).not.toHaveBeenCalled();
+      const texto = no('[data-erro]').textContent;
+      expect(texto).toContain('AGENTS.JORNADA.PAGINA.GAVETA_AGENDA.ERRO');
+      expect(texto).not.toContain('AxiosError');
+      expect(wrapper.emitted('fechar')).toBeUndefined();
+      wrapper.unmount();
+    }
+  );
+
+  it('says how to create a page when the account has none, without Save', async () => {
+    paginasApi.get.mockResolvedValue({ data: { payload: [] } });
+    const wrapper = await montar();
+    expect(no('[data-sem-paginas]')).not.toBeNull();
+    expect(no('[data-salvar]')).toBeNull();
+    wrapper.unmount();
+  });
+
+  it('shows the standard error with a retry when the pages cannot be read', async () => {
+    paginasApi.get
+      .mockRejectedValueOnce(new Error('500'))
+      .mockResolvedValueOnce({ data: { payload: PAGINAS } });
+    const wrapper = await montar();
+    expect(no('[data-erro-ler]').textContent).toContain(
+      'AGENTS.JORNADA.PAGINA.GAVETA_AGENDA.ERRO_LER'
+    );
+    await clicar('[data-erro-ler] button');
+    expect(no('[data-escolha]')).not.toBeNull();
     wrapper.unmount();
   });
 });
