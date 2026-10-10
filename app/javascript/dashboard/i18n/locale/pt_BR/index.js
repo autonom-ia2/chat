@@ -14,6 +14,7 @@ import campaign from './campaign.json';
 import campaignImport from './campaignImport.json';
 import campaignJourney from './campaignJourney.json';
 import brandKits from './brandKits.json';
+import booking from './booking.json';
 import resultJourney from './resultJourney.json';
 import emailCampaignProtection from './emailCampaignProtection.json';
 import emailTemplateImport from './emailTemplateImport.json';
@@ -78,6 +79,7 @@ export default {
   ...campaignImport,
   ...campaignJourney,
   ...brandKits,
+  ...booking,
   ...resultJourney,
   ...emailCampaignProtection,
   ...emailTemplateImport,

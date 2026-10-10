@@ -492,12 +492,30 @@
     ],
     "sem_corpo": true
   },
+  "DELETE crm/booking_invites/:id": {
+    "completo": true,
+    "controller": "api/v1/accounts/crm/booking_invites#destroy",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:44",
+      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:60"
+    ],
+    "sem_corpo": true
+  },
+  "DELETE crm/booking_pages/:id": {
+    "completo": true,
+    "controller": "api/v1/accounts/crm/booking_pages#destroy",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:63",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:108"
+    ],
+    "sem_corpo": true
+  },
   "DELETE crm/booking_profiles/:id": {
     "completo": true,
     "controller": "api/v1/accounts/crm/booking_profiles#destroy",
     "origem": [
       "app/controllers/api/v1/accounts/crm/booking_profiles_controller.rb:36",
-      "app/controllers/api/v1/accounts/crm/booking_profiles_controller.rb:106"
+      "app/controllers/api/v1/accounts/crm/booking_profiles_controller.rb:107"
     ],
     "sem_corpo": true
   },
@@ -507,7 +525,7 @@
     "origem": [
       "app/controllers/api/v1/accounts/crm/booking_profiles_controller.rb:64",
       "app/controllers/api/v1/accounts/crm/booking_profiles_controller.rb:66",
-      "app/controllers/api/v1/accounts/crm/booking_profiles_controller.rb:106"
+      "app/controllers/api/v1/accounts/crm/booking_profiles_controller.rb:107"
     ],
     "sem_corpo": true
   },
@@ -4645,6 +4663,63 @@
     ],
     "sem_corpo": false
   },
+  "PATCH crm/booking_pages/:id": {
+    "campos": {
+      "booking_window_days": {},
+      "brand": {
+        "campos": {
+          "color": {},
+          "headline": {}
+        },
+        "tipo": "objeto"
+      },
+      "buffer_minutes": {},
+      "contact_phone": {},
+      "default_pipeline_id": {},
+      "default_stage_id": {},
+      "description": {},
+      "duration_minutes": {},
+      "invite_text": {},
+      "invite_ttl_days": {},
+      "locations": {
+        "campos": {
+          "address": {},
+          "label": {},
+          "type": {},
+          "url": {}
+        },
+        "tipo": "objeto"
+      },
+      "min_notice_minutes": {},
+      "slot_durations": {
+        "tipo": "lista"
+      },
+      "timezone": {},
+      "title": {},
+      "working_hours": {
+        "campos": {
+          "end_hour": {},
+          "start_hour": {},
+          "weekdays": {
+            "tipo": "lista"
+          }
+        },
+        "tipo": "objeto"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/crm/booking_pages#update",
+    "corpo_plano": true,
+    "envelope": "booking_page",
+    "modelo": "Channel::Email",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:43",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:202",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:185",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:108"
+    ],
+    "sem_corpo": false
+  },
   "PATCH crm/booking_profiles/:id": {
     "campos": {
       "assignment_mode": {
@@ -4694,7 +4769,7 @@
         "tipo": "booleano"
       },
       "inbox_id": {
-        "nao_pode_ficar_vazio": true,
+        "obrigatorio": "condicional",
         "tipo": "inteiro"
       },
       "timezone": {
@@ -4722,10 +4797,10 @@
     "modelo": "Crm::AgentBookingProfile",
     "origem": [
       "app/controllers/api/v1/accounts/crm/booking_profiles_controller.rb:27",
-      "app/controllers/api/v1/accounts/crm/booking_profiles_controller.rb:120",
+      "app/controllers/api/v1/accounts/crm/booking_profiles_controller.rb:121",
       "app/controllers/api/v1/accounts/crm/booking_profiles_controller.rb:78",
       "app/controllers/api/v1/accounts/crm/booking_profiles_controller.rb:75",
-      "app/controllers/api/v1/accounts/crm/booking_profiles_controller.rb:106"
+      "app/controllers/api/v1/accounts/crm/booking_profiles_controller.rb:107"
     ],
     "sem_corpo": false
   },
@@ -5892,6 +5967,8 @@
           "insurance_manage",
           "automation_view",
           "automation_manage",
+          "agendamento_view",
+          "agendamento_manage",
           "label_manage",
           "attribute_manage",
           "macro_manage",
@@ -13192,6 +13269,140 @@
     ],
     "sem_corpo": true
   },
+  "POST crm/booking_invites": {
+    "campos": {
+      "booking_page_id": {
+        "tipo": "id",
+        "tipo_pela_leitura": "nome"
+      },
+      "card_id": {
+        "tipo": "inteiro"
+      },
+      "contact_id": {
+        "tipo": "inteiro"
+      },
+      "conversation_id": {
+        "tipo": "inteiro"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/crm/booking_invites#create",
+    "modelo": "Contact",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:26",
+      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:92",
+      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:90",
+      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:86",
+      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:84",
+      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:80",
+      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:78",
+      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:28"
+    ],
+    "sem_corpo": false
+  },
+  "POST crm/booking_invites/:id/deliver": {
+    "campos": {
+      "conversation_id": {
+        "tipo": "inteiro"
+      },
+      "text": {}
+    },
+    "completo": false,
+    "controller": "api/v1/accounts/crm/booking_invites#deliver",
+    "modelo": "Conversation",
+    "motivos": [
+      "leitura crua sem tipo: text (repassada a ::Crm::BookingV2::InviteDeliverer.new)"
+    ],
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:35",
+      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:40",
+      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:36",
+      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:60"
+    ],
+    "sem_corpo": false
+  },
+  "POST crm/booking_pages": {
+    "campos": {
+      "template_key": {
+        "tipo": "string"
+      },
+      "title": {
+        "tipo": "string"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/crm/booking_pages#create",
+    "modelo": "Channel::Email",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:34",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:36",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:35"
+    ],
+    "sem_corpo": false
+  },
+  "POST crm/booking_pages/:id/logo": {
+    "campos": {
+      "file": {}
+    },
+    "completo": false,
+    "controller": "api/v1/accounts/crm/booking_pages#logo",
+    "modelo": "Channel::Email",
+    "motivos": [
+      "leitura crua sem tipo: file"
+    ],
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:77",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:163",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:108"
+    ],
+    "sem_corpo": false
+  },
+  "POST crm/booking_pages/:id/pause": {
+    "completo": true,
+    "controller": "api/v1/accounts/crm/booking_pages#pause",
+    "modelo": "Channel::Email",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:58",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:108"
+    ],
+    "sem_corpo": true
+  },
+  "POST crm/booking_pages/:id/photo": {
+    "campos": {
+      "file": {}
+    },
+    "completo": false,
+    "controller": "api/v1/accounts/crm/booking_pages#photo",
+    "modelo": "Channel::Email",
+    "motivos": [
+      "leitura crua sem tipo: file"
+    ],
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:81",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:163",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:108"
+    ],
+    "sem_corpo": false
+  },
+  "POST crm/booking_pages/:id/preview_token": {
+    "completo": true,
+    "controller": "api/v1/accounts/crm/booking_pages#preview_token",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:71",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:108"
+    ],
+    "sem_corpo": true
+  },
+  "POST crm/booking_pages/:id/publish": {
+    "completo": true,
+    "controller": "api/v1/accounts/crm/booking_pages#publish",
+    "modelo": "Channel::Email",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:50",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:108"
+    ],
+    "sem_corpo": true
+  },
   "POST crm/booking_profiles": {
     "campos": {
       "assignment_mode": {
@@ -13241,7 +13452,7 @@
         "tipo": "booleano"
       },
       "inbox_id": {
-        "obrigatorio": "pelo_modelo",
+        "obrigatorio": "condicional",
         "tipo": "inteiro"
       },
       "timezone": {
@@ -13269,7 +13480,7 @@
     "modelo": "Crm::AgentBookingProfile",
     "origem": [
       "app/controllers/api/v1/accounts/crm/booking_profiles_controller.rb:17",
-      "app/controllers/api/v1/accounts/crm/booking_profiles_controller.rb:120",
+      "app/controllers/api/v1/accounts/crm/booking_profiles_controller.rb:121",
       "app/controllers/api/v1/accounts/crm/booking_profiles_controller.rb:78",
       "app/controllers/api/v1/accounts/crm/booking_profiles_controller.rb:75"
     ],
@@ -13286,8 +13497,8 @@
     "envelope": "agent_link",
     "origem": [
       "app/controllers/api/v1/accounts/crm/booking_profiles_controller.rb:51",
-      "app/controllers/api/v1/accounts/crm/booking_profiles_controller.rb:129",
-      "app/controllers/api/v1/accounts/crm/booking_profiles_controller.rb:106"
+      "app/controllers/api/v1/accounts/crm/booking_profiles_controller.rb:130",
+      "app/controllers/api/v1/accounts/crm/booking_profiles_controller.rb:107"
     ],
     "sem_corpo": false
   },
@@ -15007,6 +15218,8 @@
           "insurance_manage",
           "automation_view",
           "automation_manage",
+          "agendamento_view",
+          "agendamento_manage",
           "label_manage",
           "attribute_manage",
           "macro_manage",
@@ -21510,6 +21723,80 @@
     ],
     "sem_corpo": false
   },
+  "PUT crm/booking_pages/:id": {
+    "campos": {
+      "booking_window_days": {},
+      "brand": {
+        "campos": {
+          "color": {},
+          "headline": {}
+        },
+        "tipo": "objeto"
+      },
+      "buffer_minutes": {},
+      "contact_phone": {},
+      "default_pipeline_id": {},
+      "default_stage_id": {},
+      "description": {},
+      "duration_minutes": {},
+      "invite_text": {},
+      "invite_ttl_days": {},
+      "locations": {
+        "campos": {
+          "address": {},
+          "label": {},
+          "type": {},
+          "url": {}
+        },
+        "tipo": "objeto"
+      },
+      "min_notice_minutes": {},
+      "slot_durations": {
+        "tipo": "lista"
+      },
+      "timezone": {},
+      "title": {},
+      "working_hours": {
+        "campos": {
+          "end_hour": {},
+          "start_hour": {},
+          "weekdays": {
+            "tipo": "lista"
+          }
+        },
+        "tipo": "objeto"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/crm/booking_pages#update",
+    "corpo_plano": true,
+    "envelope": "booking_page",
+    "modelo": "Channel::Email",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:43",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:202",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:185",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:108"
+    ],
+    "sem_corpo": false
+  },
+  "PUT crm/booking_pages/:id/people": {
+    "campos": {
+      "user_ids": {
+        "tipo": "lista",
+        "tipo_pela_leitura": "nome"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/crm/booking_pages#update_people",
+    "modelo": "Channel::Email",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:90",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:91",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:108"
+    ],
+    "sem_corpo": false
+  },
   "PUT crm/booking_profiles/:id": {
     "campos": {
       "assignment_mode": {
@@ -21559,7 +21846,7 @@
         "tipo": "booleano"
       },
       "inbox_id": {
-        "nao_pode_ficar_vazio": true,
+        "obrigatorio": "condicional",
         "tipo": "inteiro"
       },
       "timezone": {
@@ -21587,10 +21874,10 @@
     "modelo": "Crm::AgentBookingProfile",
     "origem": [
       "app/controllers/api/v1/accounts/crm/booking_profiles_controller.rb:27",
-      "app/controllers/api/v1/accounts/crm/booking_profiles_controller.rb:120",
+      "app/controllers/api/v1/accounts/crm/booking_profiles_controller.rb:121",
       "app/controllers/api/v1/accounts/crm/booking_profiles_controller.rb:78",
       "app/controllers/api/v1/accounts/crm/booking_profiles_controller.rb:75",
-      "app/controllers/api/v1/accounts/crm/booking_profiles_controller.rb:106"
+      "app/controllers/api/v1/accounts/crm/booking_profiles_controller.rb:107"
     ],
     "sem_corpo": false
   },
@@ -22636,6 +22923,8 @@
           "insurance_manage",
           "automation_view",
           "automation_manage",
+          "agendamento_view",
+          "agendamento_manage",
           "label_manage",
           "attribute_manage",
           "macro_manage",

@@ -1,0 +1,28 @@
+pt_BR:
+  crm:
+    booking_v2:
+      locations:
+        whatsapp_video: 'Vídeo no WhatsApp'
+        whatsapp_voice: 'Ligação no WhatsApp'
+        custom_link: 'Link da reunião'
+        in_person: 'Presencial'
+        google_meet: 'Google Meet'
+        teams: 'Microsoft Teams'
+      contact_request:
+        follow_up_title: 'Ligar para %{name}: pediu contato pela página de agendamento'
+      invite:
+        default_text: 'Oi, {nome}! Escolha o melhor horário para você: {link}'
+        default_text_without_name: 'Oi! Escolha o melhor horário para você: {link}'
+      templates:
+        sales_30:
+          title: 'Conversa de vendas de 30 min'
+          description: 'Escolha um horário e a gente conversa por vídeo no WhatsApp.'
+        consult_45:
+          title: 'Consulta de 45 min'
+          description: 'Escolha um horário para a consulta presencial.'
+        visit_60:
+          title: 'Visita de 60 min'
+          description: 'Escolha um horário para a visita presencial de uma hora.'
+        blank:
+          title: 'Nova página de agendamento'
+          description: ''

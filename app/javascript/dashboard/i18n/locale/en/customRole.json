@@ -165,6 +165,12 @@
           "LEVEL_VIEW": "Sees the rules.",
           "LEVEL_MANAGE": "Creates and edits rules."
         },
+        "SCHEDULING": {
+          "NAME": "Scheduling",
+          "HINT": "Booking pages and their numbers. Booking a time for a customer needs no permission.",
+          "LEVEL_VIEW": "Sees the booking pages and their numbers.",
+          "LEVEL_MANAGE": "Creates, publishes and pauses booking pages."
+        },
         "LABELS": {
           "NAME": "Labels",
           "HINT": "Everyone applies existing labels",

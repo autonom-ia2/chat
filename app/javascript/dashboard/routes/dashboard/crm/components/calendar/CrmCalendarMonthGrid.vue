@@ -16,6 +16,10 @@ import {
   EVENT_TYPE_META,
   ptBR,
 } from './calendarEvents.js';
+import {
+  isInternalMeeting,
+  resolveMeetingLocation,
+} from '../../helpers/meetingLocation';
 
 const props = defineProps({
   cursorDate: {
@@ -62,10 +66,23 @@ const isMeetingEvent = event => event?.event_type === 'meeting';
 // rendered muted/dashed, never clickable into a card/detail, never draggable.
 const isExternalEvent = event => event?.event_type === 'external';
 
-const meetingIconClass = event =>
-  event?.provider === 'microsoft' || event?.online_meeting_type === 'teams'
+// Reunião interna não tem Meet nem Teams: ícone e dica do local próprio.
+// Google e Microsoft seguem com o ícone da marca.
+const INTERNAL_GROUP_ICON = 'i-lucide-calendar-clock';
+
+const meetingIconClass = event => {
+  const location = resolveMeetingLocation(event);
+  if (location.isInternal) return location.icon;
+  return event?.provider === 'microsoft' ||
+    event?.online_meeting_type === 'teams'
     ? 'i-logos-microsoft-teams'
     : 'i-logos-google-meet';
+};
+
+const meetingLocationLabel = event => {
+  const location = resolveMeetingLocation(event);
+  return location.isInternal ? t(location.labelKey) : undefined;
+};
 
 const groupForEvent = event =>
   isMeetingEvent(event) ? MEETING_GROUP : EVENT_TYPE_GROUP(event.event_type);
@@ -112,15 +129,23 @@ const DENSE_THRESHOLD = MAX_VISIBLE + 1;
 const isDense = day => dayCount(day) > DENSE_THRESHOLD;
 const aggregateEventsByGroup = (events = []) => {
   const counts = {};
+  const internalCounts = {};
   events.forEach(event => {
     const group = groupForEvent(event);
     counts[group] = (counts[group] || 0) + 1;
+    if (isMeetingEvent(event) && isInternalMeeting(event))
+      internalCounts[group] = (internalCounts[group] || 0) + 1;
   });
   return Object.entries(counts)
     .map(([group, count]) => ({
       group,
       count,
       meta: metaForGroup(group),
+      // Só reuniões internas no dia: o chip não pode mostrar o ícone do Meet.
+      icon:
+        internalCounts[group] === count
+          ? INTERNAL_GROUP_ICON
+          : metaForGroup(group).icon,
     }))
     .sort((a, b) => b.count - a.count);
 };
@@ -316,6 +341,7 @@ const onEventClick = event => {
                   v-if="isMeetingEvent(event)"
                   class="size-3.5 shrink-0"
                   :class="meetingIconClass(event)"
+                  :title="meetingLocationLabel(event)"
                   aria-hidden="true"
                 />
                 <span
@@ -360,7 +386,7 @@ const onEventClick = event => {
                       class="flex items-center w-full gap-1.5 rounded px-1.5 py-0.5 text-xs font-medium tabular-nums"
                       :class="g.meta.pillClass"
                     >
-                      <span class="size-3.5 shrink-0" :class="g.meta.icon" />
+                      <span class="size-3.5 shrink-0" :class="g.icon" />
                       {{ g.count }}
                     </span>
                   </button>
@@ -401,6 +427,7 @@ const onEventClick = event => {
                         v-if="isMeetingEvent(event)"
                         class="size-3.5 shrink-0"
                         :class="meetingIconClass(event)"
+                        :title="meetingLocationLabel(event)"
                         aria-hidden="true"
                       />
                       <span

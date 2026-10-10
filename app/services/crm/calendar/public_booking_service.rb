@@ -152,6 +152,11 @@ module Crm
                            [LOCK_NS_INBOX, effective_inbox.id]
                          end
         ActiveRecord::Base.connection.execute("SELECT pg_advisory_xact_lock(#{namespace.to_i}, #{key.to_i})")
+        # Agendamento v2 (#1188) reserva o mesmo responsável sob o lock de agente: tomado DEPOIS do da caixa (mesma
+        # ordem do Crm::BookingV2::Booker), para v1 e v2 não marcarem o mesmo horário nem travarem em ciclo.
+        return if host_agent.blank? || namespace == LOCK_NS_AGENT
+
+        ActiveRecord::Base.connection.execute("SELECT pg_advisory_xact_lock(#{LOCK_NS_AGENT}, #{host_agent.id.to_i})")
       end
 
       def name
@@ -229,7 +234,15 @@ module Crm
         buffer = profile.buffer_minutes.minutes
         scope = Crm::Meeting.where(account_id: account.id, status: :scheduled)
         scope = shared_calendar? ? scope.where(created_by_id: host_agent&.id) : scope.where(inbox_id: effective_inbox.id)
-        scope.where('starts_at < ? AND ends_at > ?', ends_at + buffer, starts_at - buffer).exists?
+        scope.where('starts_at < ? AND ends_at > ?', ends_at + buffer, starts_at - buffer).exists? || internal_slot_taken?(buffer)
+      end
+
+      # Reunião interna (#1188, sem provedor) do mesmo responsável também ocupa o horário.
+      def internal_slot_taken?(buffer)
+        return false if host_agent.blank?
+
+        Crm::Meeting.where(account_id: account.id, status: :scheduled, provider: :internal, created_by_id: host_agent.id)
+                    .where('starts_at < ? AND ends_at > ?', ends_at + buffer, starts_at - buffer).exists?
       end
 
       def broadcast_card_created(card)

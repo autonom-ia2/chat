@@ -90,14 +90,19 @@ class Public::Api::V1::BookingController < PublicController
   def resolve_booking_context
     @link = Crm::AgentBookingLink.enabled.find_by(slug: params[:slug])
     if @link.present?
-      profile = @link.booking_profile
-      @profile = profile if profile&.enabled? && profile.assignment_mode_per_agent?
+      @profile = per_agent_legacy_profile(@link.booking_profile)
       @link = nil if @profile.blank?
       return
     end
 
-    profile = Crm::AgentBookingProfile.enabled.find_by(slug: params[:slug])
+    # Página nova (page_version 2) só é servida pela API v2, com as proteções dela (#1188).
+    profile = Crm::AgentBookingProfile.legacy_pages.enabled.find_by(slug: params[:slug])
     @profile = profile if profile&.assignment_mode_fixed?
+  end
+
+  # Página nova (page_version 2) só é servida pela API v2 (#1188).
+  def per_agent_legacy_profile(profile)
+    profile if profile&.enabled? && profile.legacy_page? && profile.assignment_mode_per_agent?
   end
 
   # For #confirm the token is the real authorization, but we still bind it to the

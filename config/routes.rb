@@ -51,6 +51,8 @@ Rails.application.routes.draw do
     # email-verified booking.
     get '/book/:slug', to: 'public_booking/pages#show', as: :public_booking_page
     get '/book/:slug/confirm', to: 'public_booking/pages#show', as: :public_booking_confirm_page
+    # Link por cliente e de gestão da reunião (#1189/#1190): sempre a página v2.
+    get '/b/:code', to: 'public_booking/pages#invite', as: :public_booking_invite_page
     get '/l/:code', to: 'public/tracked_links#show', as: :public_tracked_link
     # Kit do desenvolvedor do link de site (CA-1.6, #1068).
     get '/l/:code/kit', to: 'public/tracked_link_kits#show', as: :public_tracked_link_kit
@@ -384,12 +386,33 @@ Rails.application.routes.draw do
                 delete 'agent_links/:link_id', action: :destroy_agent_link
               end
             end
+            # Agendamento WhatsApp-first (#1187): páginas novas (page_version 2), flag crm_booking_v2 + módulo agendamento.
+            resources :booking_pages, only: [:index, :show, :create, :update, :destroy] do
+              member do
+                post :publish
+                post :pause
+                post :preview_token
+                post :logo
+                post :photo
+                get :people
+                put :people, action: :update_people
+              end
+            end
+            # Link por cliente (#1190): botão Agendar da conversa e do card.
+            resources :booking_invites, only: [:index, :create, :destroy] do
+              member do
+                post :deliver
+              end
+            end
           end
           namespace :autonomia do
             # #284 — feedback do ATENDENTE ("resposta errada") numa mensagem do agente. Aberto a qualquer
             # membro da conta (não é admin-only como o resto de agents/). Declarado ANTES de resources
             # :agents para nunca casar com agents/:id.
             post 'agents/message_reports', to: 'agents/message_reports#create'
+            # #1181 — leituras da nova jornada de Agentes (atrás da flag autonomia_agents_journey).
+            get 'numeros_da_semana', to: 'numeros_da_semana#index'
+            get 'canais_ocupados', to: 'canais_ocupados#index'
             resources :agents, only: [:index, :show, :create, :update, :destroy] do
               member do
                 post :test,    to: 'agents/playground#test'
@@ -1142,6 +1165,19 @@ Rails.application.routes.draw do
         post 'booking/:slug/confirm', to: 'booking#confirm'
         get 'booking/:slug', to: 'booking#show'
         post 'booking/:slug', to: 'booking#create'
+      end
+
+      # Agendamento WhatsApp-first (#1187): link por cliente `/b/<code>` (#1190). Só o código opaco autoriza.
+      namespace :v2 do
+        get 'invites/:code', to: 'invites#show'
+        post 'invites/:code/viewed', to: 'invites#viewed'
+        # Página pública v2 (#1189): só o slug opaco (página ou link individual) autoriza; ICS com token no caminho.
+        get 'booking/:slug/slots', to: 'booking#slots'
+        get 'booking/:slug/next_slot', to: 'booking#next_slot'
+        post 'booking/:slug/contact_request', to: 'booking#contact_request'
+        get 'booking/:slug', to: 'booking#show'
+        post 'booking/:slug', to: 'booking#create'
+        get 'ics/:token', to: 'ics#show'
       end
     end
   end

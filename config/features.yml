@@ -310,3 +310,16 @@
   display_name: Email template import (Importar modelo de e-mail)
   enabled: false
   column: feature_flags_ext_1
+
+# Agentes — nova jornada Conte · Confira · Comece (#1181). Desligada: menu, rotas e telas iguais ao main; as leituras L1/L2 respondem 404.
+- name: autonomia_agents_journey
+  display_name: Agents new journey (Agentes — nova jornada)
+  enabled: false
+  column: feature_flags_ext_1
+
+# Agendamento WhatsApp-first (#1187): página de agendamento sem Google/Microsoft, link por cliente e avisos.
+# Piloto por conta no Super Admin. Desligada: rotas v2 respondem 404 e a gaveta antiga continua.
+- name: crm_booking_v2
+  display_name: Agendamento WhatsApp-first (CRM)
+  enabled: false
+  column: feature_flags_ext_1

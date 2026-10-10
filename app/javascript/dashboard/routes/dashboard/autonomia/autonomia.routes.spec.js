@@ -6,6 +6,11 @@ import { routes } from './autonomia.routes';
 const store = vi.hoisted(() => ({ getters: {}, dispatch: vi.fn() }));
 vi.mock('dashboard/store', () => ({ default: store }));
 
+// #1181: a lista de agentes passa por um seletor fino que decide pela flag.
+vi.mock('./agentes/entrada/AgentesListaEntrada.vue', () => ({
+  default: { name: 'AgentesListaEntrada' },
+}));
+
 const rota = name => routes.find(route => route.name === name);
 const entrar = async name => {
   const next = vi.fn();
@@ -81,5 +86,38 @@ describe('guardas da Autonomia com link direto', () => {
       name: 'home',
       params: { accountId: '9' },
     });
+  });
+});
+
+// #1181: só o componente da lista muda; nome, caminho, meta e guarda continuam
+// os mesmos, e o Construtor e a página do agente ficam intocados.
+describe('entrada da lista de agentes (#1181)', () => {
+  it('a rota da lista abre o seletor, com o mesmo caminho, meta e guarda', async () => {
+    const lista = rota('autonomia_agents_index');
+    const { default: componente } = await lista.component();
+
+    expect(componente.name).toBe('AgentesListaEntrada');
+    expect(lista.path).toBe('/app/accounts/:accountId/agents');
+    expect(lista.meta).toEqual({
+      permissions: ['administrator', 'autonomia_view', 'autonomia_manage'],
+    });
+    expect(lista.beforeEnter).toBe(rota('autonomia_agent_panel').beforeEnter);
+  });
+
+  it('o Construtor e a página do agente continuam com o mesmo caminho, meta e props', () => {
+    const construtor = rota('autonomia_agents_builder');
+    const painel = rota('autonomia_agent_panel');
+
+    expect(construtor.path).toBe('/app/accounts/:accountId/agents/new');
+    expect(construtor.meta).toEqual({
+      permissions: ['administrator', 'autonomia_manage'],
+    });
+    expect(painel.props({ params: { agentId: '7' } })).toEqual({
+      agentId: '7',
+      tab: 'test',
+    });
+    expect(painel.props({ params: { agentId: '7', tab: 'channels' } })).toEqual(
+      { agentId: '7', tab: 'channels' }
+    );
   });
 });

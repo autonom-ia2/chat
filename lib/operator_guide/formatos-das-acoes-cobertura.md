@@ -5,18 +5,18 @@ Gerado por `bundle exec rails autonomia:guia:formatos` a partir do código (#900
 
 | | Ações |
 |---|---|
-| No catálogo | 559 |
-| Sem corpo | 163 |
-| Com corpo | 396 |
-| Com corpo e formato completo | 322 (81,3%) |
-| Com corpo e formato incompleto | 74 |
+| No catálogo | 572 |
+| Sem corpo | 168 |
+| Com corpo | 404 |
+| Com corpo e formato completo | 327 (80,9%) |
+| Com corpo e formato incompleto | 77 |
 
 ## Por dentro dos campos
 
 | | Total |
 |---|---|
-| Campos aninhados com vocabulário | 17 de 168 |
-| Leituras cruas tipadas | 113 de 188 |
+| Campos aninhados com vocabulário | 17 de 171 |
+| Leituras cruas tipadas | 115 de 193 |
 
 ## Incompletas por motivo
 
@@ -24,7 +24,7 @@ Uma ação pode ter mais de um motivo.
 
 | Motivo | Ações |
 |---|---|
-| leitura crua sem tipo | 59 |
+| leitura crua sem tipo | 62 |
 | aceita qualquer campo | 5 |
 | params inteiro repassado | 9 |
 | lê o corpo cru | 2 |
@@ -70,6 +70,9 @@ Uma ação pode ter mais de um motivo.
 - `POST conversations/:id/toggle_typing_status` — params inteiro repassado a ::Conversations::TypingStatusManager.new
 - `POST conversations/:id/transcript` — leitura crua sem tipo: email (repassada a ConversationReplyMailer.with(account: @conversation.accou...)
 - `POST conversations/filter` — aceita qualquer campo (permit! em app/controllers/api/v1/accounts/conversations_controller.rb:52); params inteiro repassado a ::Conversations::FilterService.new
+- `POST crm/booking_invites/:id/deliver` — leitura crua sem tipo: text (repassada a ::Crm::BookingV2::InviteDeliverer.new)
+- `POST crm/booking_pages/:id/logo` — leitura crua sem tipo: file
+- `POST crm/booking_pages/:id/photo` — leitura crua sem tipo: file
 - `POST crm/cards/:card_id/contact` — leitura crua sem tipo: contact
 - `POST crm/cards/:id/close` — leitura crua sem tipo: result (repassada a ::Crm::Cards::Closer.new)
 - `POST crm/cards/bulk` — leitura crua sem tipo: action_name, bulk_action
@@ -148,6 +151,9 @@ Uma ação pode ter mais de um motivo.
 - `api/v1/accounts/contacts#export` column_names — o código não converte nem compara o valor
 - `api/v1/accounts/conversations#create` message — repassada a Messages::MessageBuilder.new
 - `api/v1/accounts/conversations#transcript` email — repassada a ConversationReplyMailer.with(account: @conversation.accou...
+- `api/v1/accounts/crm/booking_invites#deliver` text — repassada a ::Crm::BookingV2::InviteDeliverer.new
+- `api/v1/accounts/crm/booking_pages#logo` file — o código não converte nem compara o valor
+- `api/v1/accounts/crm/booking_pages#photo` file — o código não converte nem compara o valor
 - `api/v1/accounts/crm/cards#close` result — repassada a ::Crm::Cards::Closer.new
 - `api/v1/accounts/crm/cards/bulk#create` action_name — o código não converte nem compara o valor
 - `api/v1/accounts/crm/cards/bulk#create` bulk_action — o código não converte nem compara o valor
@@ -192,8 +198,8 @@ O Guia recusa parâmetro que a leitura não lê. Leitura sem lista conhecida nã
 
 | | Leituras |
 |---|---|
-| No catálogo | 330 |
-| Com parâmetros conhecidos | 279 |
+| No catálogo | 336 |
+| Com parâmetros conhecidos | 285 |
 | Sem parâmetros conhecidos | 51 |
 
 ### Leituras sem parâmetros conhecidos
