@@ -1,6 +1,16 @@
 # Instagram assistido — handoff operacional para o Codex
 
-## 1. Comece aqui
+## Retomada atual — 07/10/2026, 17:26 UTC
+
+Esta atualização substitui os estados e próximos passos do handoff histórico de 10:14 UTC preservado abaixo. Não retomar o antigo bloqueio GeoNext nem reinstalar #1089/#1112. Leia primeiro `docs/audit/995-deploy-verification-20261007.md` e `latest_recovery_checkpoint` no manifesto de evidências; revalide estado vivo antes de operar.
+
+- #1112 está MERGED (`2cc6b4fb6e275e26c04ae126c06ac1b4f0b63b26`) e instalada na VPS. AWS nas duas stacks executa `383ed42f82659a2891ca59e506e9ea86e8002e1d`, descendente aprovado. O workspace M4 permanece no path abaixo; continuação documental na branch `codex/995-instagram-provider-evidence-20261007`.
+- Sessões legítimas publicadas em ambas as stacks; duas renovações naturais por stack comprovadas antes dos reinícios. Oito units enabled/active e publishers com CPUQuota=200% permanente; reinício controlado e limites foram aceitos, sem reboot do host.
+- Ativação assistida restrita às contas aprovadas e liberação global de criação foram autorizadas/aplicadas. Envio Meta permanece bloqueado. Não repetir apply/deploy para carregar configuração já confirmada.
+- **Bloqueio atual:** chamadas autenticadas do Client Rails recebem Meta HTTP 400/HTML antes dos parsers. Browser legítimo responde Roles HTTP 200 com papéis completos e continua renovando sessões. Um par com a mesma sessão refutou `server_timestamps` faltante como causa; GET público com o mesmo transporte respondeu 200. Não existe causa específica ou patch comprovado para a rejeição autenticada.
+- Conexão/OAuth/teste e reconexão real da caixa continuam pendentes; #995 permanece aberta. Não pedir outro login sem challenge real nem adaptar headers/TLS/proxy por tentativa. Próximo trabalho deve esclarecer o contrato legítimo de leitura/typeahead e a diferença relevante do Client; o contrato natural de typeahead ainda não foi observado. Preserve sandbox, identidade, locks, sessão canônica e os seis deltas antigos não aprovados.
+
+## 1. Handoff histórico — comece aqui
 
 Consolidação de 07/10/2026. GitHub e worktrees relidos às 10:07 UTC (07:07 de Brasília). Este documento entrega continuidade; NÃO declara Instagram conectado, não encerra a #995 e não autoriza ignorar verificações. Nesta entrega não se executou novo login, publicação, alteração de configuração ou manutenção da VPS.
 
