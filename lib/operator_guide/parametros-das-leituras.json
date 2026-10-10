@@ -995,6 +995,26 @@
       "until"
     ]
   },
+  "crm/booking_invites": {
+    "controller": "api/v1/accounts/crm/booking_invites#index",
+    "parametros": [
+      "card_id",
+      "contact_id",
+      "conversation_id"
+    ]
+  },
+  "crm/booking_pages": {
+    "controller": "api/v1/accounts/crm/booking_pages#index",
+    "parametros": []
+  },
+  "crm/booking_pages/:id": {
+    "controller": "api/v1/accounts/crm/booking_pages#show",
+    "parametros": []
+  },
+  "crm/booking_pages/:id/people": {
+    "controller": "api/v1/accounts/crm/booking_pages#people",
+    "parametros": []
+  },
   "crm/booking_profiles": {
     "controller": "api/v1/accounts/crm/booking_profiles#index",
     "parametros": []

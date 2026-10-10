@@ -8,6 +8,7 @@ files:
       - /app/javascript/dashboard/i18n/locale/en/campaignImport.json
       - /app/javascript/dashboard/i18n/locale/en/campaignJourney.json
       - /app/javascript/dashboard/i18n/locale/en/brandKits.json
+      - /app/javascript/dashboard/i18n/locale/en/booking.json
       - /app/javascript/dashboard/i18n/locale/en/crm.json
       - /app/javascript/dashboard/i18n/locale/en/emailCampaignProtection.json
       - /app/javascript/dashboard/i18n/locale/en/emailTemplateImport.json

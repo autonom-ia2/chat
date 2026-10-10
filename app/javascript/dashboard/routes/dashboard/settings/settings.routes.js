@@ -5,6 +5,7 @@ import {
   CANNED_RESPONSE_MANAGE_PERMISSION,
   INBOX_PERMISSIONS,
   AUTOMATION_PERMISSIONS,
+  SCHEDULING_PERMISSIONS,
 } from 'dashboard/constants/permissions.js';
 import {
   getUserPermissions,
@@ -26,6 +27,7 @@ const SETTINGS_LANDINGS = [
   { name: 'automation_list', permissions: AUTOMATION_PERMISSIONS },
   { name: 'macros_wrapper', permissions: ['macro_manage'] },
   { name: 'sla_list', permissions: ['sla_manage'] },
+  { name: 'settings_booking', permissions: SCHEDULING_PERMISSIONS },
 ];
 
 import account from './account/account.routes';
@@ -51,6 +53,7 @@ import security from './security/security.routes';
 import conversationWorkflow from './conversationWorkflow/conversationWorkflow.routes';
 import captain from './captain/captain.routes';
 import prospecting from './prospecting/prospecting.routes';
+import booking from './booking/booking.routes';
 import data from './data/data.routes';
 
 export default {
@@ -102,5 +105,6 @@ export default {
     ...conversationWorkflow.routes,
     ...captain.routes,
     ...prospecting.routes,
+    ...booking.routes,
   ],
 };

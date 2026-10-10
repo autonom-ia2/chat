@@ -143,6 +143,12 @@ export const MODULE_GROUPS = [
         levels: { view: 'automation_view', manage: 'automation_manage' },
       },
       {
+        key: 'SCHEDULING',
+        icon: 'i-lucide-calendar-clock',
+        settings: true,
+        levels: { view: 'agendamento_view', manage: 'agendamento_manage' },
+      },
+      {
         key: 'LABELS',
         icon: 'i-lucide-tags',
         settings: true,

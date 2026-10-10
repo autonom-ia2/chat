@@ -183,6 +183,48 @@ describe('CrmCardDrawer timeline copy', () => {
     }
   );
 
+  it('says who received a reassigned meeting, in plain words', () => {
+    const wrapper = mountDrawer();
+    const reassigned = activity(
+      1,
+      'meeting_host_reassigned',
+      { meeting_id: 9, from_user_id: 3, to_user_id: 4 },
+      { labels: { to_user_id: 'Camila Torres' } }
+    );
+
+    const described = wrapper.vm.describeActivity(reassigned);
+
+    expect(described.title).toBe('Meeting moved to Camila Torres');
+    expect(described.icon).toBe('i-lucide-user-check');
+    expect(described.title).not.toContain('#4');
+    wrapper.unmount();
+  });
+
+  it('falls back to a nameless title when the new host name is missing', () => {
+    const wrapper = mountDrawer();
+    const { title } = wrapper.vm.describeActivity(
+      activity(1, 'meeting_host_reassigned', { to_user_id: 4 })
+    );
+
+    expect(title).toBe('Meeting moved to someone else');
+    wrapper.unmount();
+  });
+
+  it('has the pt_BR copy for the reassigned meeting', () => {
+    const ptBR = { locale: 'pt_BR' };
+
+    expect(
+      t(
+        'CRM_KANBAN.DRAWER.ACTIVITY_MEETING_HOST_REASSIGNED_TO',
+        { name: 'Camila' },
+        ptBR
+      )
+    ).toBe('Reunião passou para Camila');
+    expect(
+      t('CRM_KANBAN.DRAWER.ACTIVITY_MEETING_HOST_REASSIGNED', {}, ptBR)
+    ).toBe('Reunião passou para outra pessoa');
+  });
+
   it('does not use the cadence touch as an attempt counter on a sent AI follow-up', () => {
     const wrapper = mountDrawer();
     const { detail } = wrapper.vm.describeActivity(

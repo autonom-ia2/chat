@@ -1,0 +1,28 @@
+en:
+  crm:
+    booking_v2:
+      locations:
+        whatsapp_video: 'WhatsApp video call'
+        whatsapp_voice: 'WhatsApp voice call'
+        custom_link: 'Meeting link'
+        in_person: 'In person'
+        google_meet: 'Google Meet'
+        teams: 'Microsoft Teams'
+      contact_request:
+        follow_up_title: 'Call %{name}: asked to be contacted from the booking page'
+      invite:
+        default_text: 'Hi, {nome}! Pick the best time for you: {link}'
+        default_text_without_name: 'Hi! Pick the best time for you: {link}'
+      templates:
+        sales_30:
+          title: '30-minute sales call'
+          description: 'Pick a time and we will talk on a WhatsApp video call.'
+        consult_45:
+          title: '45-minute consultation'
+          description: 'Pick a time for an in-person consultation.'
+        visit_60:
+          title: '60-minute visit'
+          description: 'Pick a time for a one-hour in-person visit.'
+        blank:
+          title: 'New booking page'
+          description: ''

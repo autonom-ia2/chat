@@ -165,6 +165,12 @@
           "LEVEL_VIEW": "Vê as regras.",
           "LEVEL_MANAGE": "Cria e altera regras."
         },
+        "SCHEDULING": {
+          "NAME": "Agendamento",
+          "HINT": "Páginas de agendamento e seus números. Marcar horário para um cliente não precisa de permissão.",
+          "LEVEL_VIEW": "Vê as páginas de agendamento e os números.",
+          "LEVEL_MANAGE": "Cria, publica e pausa páginas de agendamento."
+        },
         "LABELS": {
           "NAME": "Etiquetas",
           "HINT": "Todos aplicam as etiquetas existentes",
