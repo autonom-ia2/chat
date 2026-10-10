@@ -237,6 +237,33 @@ RSpec.describe 'CTWA campaigns API', type: :request do
     )
   end
 
+  it 'counts two won cards of the same conversation as two sales and never counts a service funnel (#1151)' do
+    account, user = create_account_and_user
+    inbox = create_crm_inbox(account: account, members: [user])
+    pipeline, stage = create_crm_pipeline(account: account, user: user)
+    service, service_stage = create_crm_pipeline(account: account, user: user, name: 'Sinistros')
+    conversation = create_source_conversation(account: account, inbox: inbox, source_id: 'ad-a', source: 'meta_ctwa', headline: 'Meta A')
+    closed_at = Time.zone.parse('2026-07-04T10:00:00Z')
+    [10_000, 5_000].each do |value_cents|
+      create_closed_card(account: account, pipeline: pipeline, stage: stage, conversation: conversation,
+                         value_cents: value_cents, currency: 'BRL', status: :won, closed_at: closed_at)
+    end
+    create_closed_card(account: account, pipeline: service, stage: service_stage, conversation: conversation,
+                       value_cents: 7_000, currency: 'BRL', status: :won, closed_at: closed_at)
+    service.update!(counts_as_sale: false)
+    window = { include_origin_metrics: true, since: '2026-07-01T00:00:00Z', until: '2026-07-31T23:59:59Z' }
+
+    get "/api/v1/accounts/#{account.id}/ctwa_campaigns", params: window, headers: auth_headers(user)
+
+    expect(response.parsed_body['origin_metrics']).to eq(
+      [{ 'source' => 'meta_ctwa', 'won_count' => 2, 'won_value_by_currency' => [{ 'currency' => 'BRL', 'value_cents' => 15_000 }] }]
+    )
+
+    get "/api/v1/accounts/#{account.id}/ctwa_campaigns", params: window.merge(pipeline_id: service.id), headers: auth_headers(user)
+
+    expect(response.parsed_body['origin_metrics']).to eq([])
+  end
+
   it 'hides campaigns from inboxes outside the agent visibility (admin still sees them)' do
     account, admin = create_account_and_user
     outsider, = create_crm_agent(account: account)
