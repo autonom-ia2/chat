@@ -1,4 +1,9 @@
-import { useWhatsappEmbeddedSignup } from '../useWhatsappEmbeddedSignup';
+import {
+  useWhatsappEmbeddedSignup,
+  FINISH_AFTER_CODE_MS,
+  SIGNUP_SAFETY_CAP_MS,
+  SIGNUP_TIMEOUT_CODE,
+} from '../useWhatsappEmbeddedSignup';
 import {
   setupFacebookSdk,
   initWhatsAppEmbeddedSignup,
@@ -51,6 +56,11 @@ describe('useWhatsappEmbeddedSignup', () => {
   let registeredListener;
 
   const emit = data => signupCallback(data);
+
+  // Fake timers must never leak into the next test, even when an assertion fails.
+  afterEach(() => {
+    vi.useRealTimers();
+  });
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -176,14 +186,100 @@ describe('useWhatsappEmbeddedSignup', () => {
 
     const { runEmbeddedSignup, isAuthenticating } = useWhatsappEmbeddedSignup();
     const result = runEmbeddedSignup();
-    const assertion = expect(result).rejects.toThrow(/timed out/);
+    const assertion = expect(result).rejects.toMatchObject({
+      message: expect.stringMatching(/timed out waiting for business data/),
+      code: SIGNUP_TIMEOUT_CODE,
+    });
 
-    await vi.advanceTimersByTimeAsync(5 * 60 * 1000);
+    await vi.advanceTimersByTimeAsync(FINISH_AFTER_CODE_MS);
     await assertion;
     // The composable must unlock, otherwise a retry is impossible.
     expect(isAuthenticating.value).toBe(false);
+  });
 
-    vi.useRealTimers();
+  // #1228: a coexistence signup done calmly took more than 5 minutes inside Meta's
+  // window; the old cap reported an error although Meta had finished.
+  it('keeps waiting while the person is still inside the Facebook window', async () => {
+    vi.useFakeTimers();
+    const code = createDeferred();
+    initWhatsAppEmbeddedSignup.mockReturnValue(code.promise);
+
+    const { runEmbeddedSignup, isAuthenticating } = useWhatsappEmbeddedSignup();
+    const result = runEmbeddedSignup();
+    const pending = Symbol('pending');
+
+    await vi.advanceTimersByTimeAsync(20 * 60 * 1000);
+    expect(isAuthenticating.value).toBe(true);
+    await expect(
+      Promise.race([result, Promise.resolve(pending)])
+    ).resolves.toBe(pending);
+
+    emit({ event: 'FINISH', data: VALID_BUSINESS });
+    code.resolve('slow-code');
+
+    await expect(result).resolves.toMatchObject({
+      code: 'slow-code',
+      waba_id: 'waba-1',
+    });
+  });
+
+  it('resolves when Meta confirms within the wait after the window closes', async () => {
+    vi.useFakeTimers();
+    initWhatsAppEmbeddedSignup.mockResolvedValue('auth-code');
+
+    const { runEmbeddedSignup } = useWhatsappEmbeddedSignup();
+    const result = runEmbeddedSignup();
+
+    await vi.advanceTimersByTimeAsync(FINISH_AFTER_CODE_MS - 1);
+    emit({ event: 'FINISH', data: VALID_BUSINESS });
+
+    await expect(result).resolves.toMatchObject({ code: 'auth-code' });
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('does not start the short wait when Meta confirmed before the window closed', async () => {
+    vi.useFakeTimers();
+    const code = createDeferred();
+    initWhatsAppEmbeddedSignup.mockReturnValue(code.promise);
+
+    const { runEmbeddedSignup } = useWhatsappEmbeddedSignup();
+    const result = runEmbeddedSignup();
+
+    emit({ event: 'FINISH', data: VALID_BUSINESS });
+    await vi.advanceTimersByTimeAsync(FINISH_AFTER_CODE_MS * 5);
+    code.resolve('late-code');
+
+    await expect(result).resolves.toMatchObject({ code: 'late-code' });
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  // #1228: Meta said it finished, then the window closed without a code. Saying
+  // "cancelled" would tell the user nothing happened.
+  it('does not report a cancel after Meta confirmed the signup', async () => {
+    const code = createDeferred();
+    initWhatsAppEmbeddedSignup.mockReturnValue(code.promise);
+
+    const { runEmbeddedSignup } = useWhatsappEmbeddedSignup();
+    const result = runEmbeddedSignup();
+
+    emit({ event: 'FINISH', data: VALID_BUSINESS });
+    code.reject(new Error('Login cancelled'));
+
+    await expect(result).rejects.toMatchObject({ code: SIGNUP_TIMEOUT_CODE });
+  });
+
+  it('gives up on a Facebook window that never answers at all', async () => {
+    vi.useFakeTimers();
+    initWhatsAppEmbeddedSignup.mockReturnValue(createDeferred().promise);
+
+    const { runEmbeddedSignup } = useWhatsappEmbeddedSignup();
+    const result = runEmbeddedSignup();
+    const assertion = expect(result).rejects.toMatchObject({
+      code: SIGNUP_TIMEOUT_CODE,
+    });
+
+    await vi.advanceTimersByTimeAsync(SIGNUP_SAFETY_CAP_MS);
+    await assertion;
   });
 
   // Root cause of the Royalty Seguros incident (27/07): Meta refused the
