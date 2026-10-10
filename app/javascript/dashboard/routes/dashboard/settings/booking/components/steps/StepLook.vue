@@ -5,8 +5,7 @@ import BookingImageUpload from '../BookingImageUpload.vue';
 import { BRAND_COLORS, MAX_TEXT } from '../../constants';
 
 // Passo 5: a cara da página — logo, foto, cor (entre opções prontas) e a frase
-// de boas-vindas. Os avisos por WhatsApp chegam numa fase seguinte (F2-A) e
-// por isso não aparecem aqui.
+// de boas-vindas. Os avisos no WhatsApp têm passo próprio (StepNotices).
 defineProps({
   form: { type: Object, required: true },
   logoUrl: { type: String, default: '' },

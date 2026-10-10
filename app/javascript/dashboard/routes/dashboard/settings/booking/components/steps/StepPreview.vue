@@ -1,16 +1,21 @@
 <script setup>
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import BookingPreviewCard from '../BookingPreviewCard.vue';
 import BookingDestination from '../BookingDestination.vue';
+import BookingNoticesSummary from '../BookingNoticesSummary.vue';
+import BookingPostMeeting from '../BookingPostMeeting.vue';
 import BookingPageLinks from '../BookingPageLinks.vue';
+import BookingTestInvite from '../BookingTestInvite.vue';
 import { MISSING_STEP, STEP } from '../../constants';
 
-// Passo 6: a prévia, para onde vai quem marcar e Publicar. Se a publicação
-// voltar com pendências, cada uma vira uma linha com "Resolver", que leva ao
-// passo certo; a do funil abre o "Alterar" daqui mesmo. Publicada: link, QR
-// code e Copiar link.
-defineProps({
+// Último passo: a prévia, para onde vai quem marcar, os avisos no WhatsApp e
+// Publicar. Se a publicação voltar com pendências, cada uma vira uma linha com
+// "Resolver", que leva ao passo certo; a do funil abre o "Alterar" daqui
+// mesmo. "Depois da reunião" (#1193) diz para onde vai o card depois de
+// "Aconteceu". Publicada: o link (ou um por pessoa), QR code, Copiar link e, com número de avisos,
+// "Testar no meu WhatsApp" (J3-A11).
+const props = defineProps({
   form: { type: Object, required: true },
   page: { type: Object, required: true },
   peopleNames: { type: String, default: '' },
@@ -20,9 +25,20 @@ defineProps({
   missing: { type: Array, default: () => [] },
 });
 
-const emit = defineEmits(['fix', 'saveDestination']);
+const emit = defineEmits(['fix', 'saveDestination', 'pageUpdated']);
 const { t } = useI18n();
 const destination = ref(null);
+
+// O teste sai pelo número de avisos: só para quem pode mudar a página e enxerga esse número
+// (o servidor recusa os outros).
+const canTest = computed(
+  () =>
+    props.canManage &&
+    !!props.page.notice_inbox_id &&
+    (props.page.notice_inbox_options || []).some(
+      inbox => inbox.id === props.page.notice_inbox_id
+    )
+);
 
 const fix = item => {
   if (MISSING_STEP[item] === STEP.PREVIA) {
@@ -57,6 +73,20 @@ const fix = item => {
       :can-manage="canManage"
       :saving="savingDestination"
       @save="emit('saveDestination', $event)"
+    />
+
+    <BookingNoticesSummary
+      :form="form"
+      :inbox-options="page.notice_inbox_options || []"
+      :can-manage="canManage"
+      @alter="emit('fix', STEP.AVISOS)"
+    />
+
+    <BookingPostMeeting
+      :page-id="page.id"
+      :post-meeting="page.post_meeting || {}"
+      :can-manage="canManage"
+      @saved="emit('pageUpdated', $event)"
     />
 
     <div
@@ -105,6 +135,7 @@ const fix = item => {
         </p>
       </div>
       <BookingPageLinks :page="page" />
+      <BookingTestInvite v-if="canTest" :page-id="page.id" />
     </div>
     <span v-else-if="publishing" class="sr-only" role="status">
       {{ t('BOOKING.PREVIEW.PUBLISHING') }}

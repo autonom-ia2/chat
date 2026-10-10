@@ -1,4 +1,4 @@
-import { flushPromises, mount } from '@vue/test-utils';
+import { config, flushPromises, mount } from '@vue/test-utils';
 import BookingPagesAPI from 'dashboard/api/crmBookingPages';
 import CrmKanbanAPI from 'dashboard/api/crmKanban';
 import { canManage } from 'dashboard/composables/useCanManage';
@@ -13,6 +13,14 @@ vi.mock('vue-i18n', () => ({
   }),
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
+vi.mock('vue-router', () => ({
+  useRoute: () => ({ name: 'settings_booking', params: { accountId: '1' } }),
+}));
+
+// As abas "Páginas" e "Resultados" (#1194) são links do roteador.
+config.global.stubs = {
+  RouterLink: { props: ['to'], template: '<a :data-to="to.name"><slot /></a>' },
+};
 vi.mock('dashboard/composables/useCanManage', async () => {
   const { ref } = await import('vue');
   const flag = ref(true);
@@ -57,6 +65,21 @@ describe('BookingSettingsPage', () => {
     CrmKanbanAPI.getStages.mockResolvedValue({
       data: { payload: [{ id: 30, name: 'Nova' }] },
     });
+  });
+
+  it('mostra as abas Páginas e Resultados na lista e some com elas no assistente', async () => {
+    const wrapper = mount(BookingSettingsPage);
+    await flushPromises();
+    const tabs = wrapper.findAll('[data-tab]');
+    expect(tabs.map(tab => tab.attributes('data-to'))).toEqual([
+      'settings_booking',
+      'settings_booking_results',
+    ]);
+    expect(tabs[0].attributes('aria-current')).toBe('page');
+    expect(tabs[1].attributes('aria-current')).toBeUndefined();
+
+    await wrapper.find('[data-create]').trigger('click');
+    expect(wrapper.find('[data-tab]').exists()).toBe(false);
   });
 
   it('quem gerencia cria uma página pelo assistente', async () => {

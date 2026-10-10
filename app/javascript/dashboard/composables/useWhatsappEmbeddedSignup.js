@@ -29,9 +29,17 @@ import {
 // or fails with a clear error when there are none or several, so refusing them
 // up front would break a signup that works today.
 
-// Meta closes its popup without any event in some failure modes. Without a
-// deadline the caller spins indefinitely with no way to tell the user why.
-const SIGNUP_TIMEOUT_MS = 5 * 60 * 1000;
+// #1228: there is no short deadline while the person is still inside Meta's window.
+// A 5-minute cap counted from FB.login reported an error for coexistence signups that
+// Meta completed (terms, QR code, history import and permission review take longer),
+// and the inbox was left connected at Meta but without webhooks. The short deadline
+// only starts once FB.login returns the code, i.e. the popup is done: Meta closes its
+// popup without the FINISH event in some failure modes, and without a deadline the
+// caller would spin with no way to tell the user why. The long cap only guards a popup
+// that never answers at all.
+export const FINISH_AFTER_CODE_MS = 60 * 1000;
+export const SIGNUP_SAFETY_CAP_MS = 30 * 60 * 1000;
+export const SIGNUP_TIMEOUT_CODE = 'WHATSAPP_SIGNUP_TIMEOUT';
 
 export function useWhatsappEmbeddedSignup() {
   const { t } = useI18n();
@@ -49,18 +57,20 @@ export function useWhatsappEmbeddedSignup() {
       let messageHandler;
       let lastEvent = null;
 
-      let timeoutId;
+      let safetyTimeoutId;
+      let finishTimeoutId;
 
       const settle = (fn, value) => {
         if (settled) return;
         settled = true;
-        clearTimeout(timeoutId);
+        clearTimeout(safetyTimeoutId);
+        clearTimeout(finishTimeoutId);
         window.removeEventListener('message', messageHandler);
         isAuthenticating.value = false;
         fn(value);
       };
 
-      timeoutId = setTimeout(() => {
+      const failWithTimeout = () => {
         // Name what is missing: this is the difference between a silent hang
         // and an actionable report from whoever hit it.
         const missing = [
@@ -69,13 +79,15 @@ export function useWhatsappEmbeddedSignup() {
         ]
           .filter(Boolean)
           .join(' and ');
-        settle(
-          reject,
-          new Error(
-            `WhatsApp signup timed out waiting for ${missing} (last event: ${lastEvent || 'none'})`
-          )
+        const error = new Error(
+          `WhatsApp signup timed out waiting for ${missing} (last event: ${lastEvent || 'none'})`
         );
-      }, SIGNUP_TIMEOUT_MS);
+        // Callers tell this apart from a refusal: Meta may have finished on its side.
+        error.code = SIGNUP_TIMEOUT_CODE;
+        settle(reject, error);
+      };
+
+      safetyTimeoutId = setTimeout(failWithTimeout, SIGNUP_SAFETY_CAP_MS);
 
       // Both the auth code and the business data arrive asynchronously and in
       // no fixed order; only resolve once we're holding both.
@@ -131,10 +143,18 @@ export function useWhatsappEmbeddedSignup() {
             window.chatwootConfig?.whatsappConfigurationId
           );
           resolveIfReady();
+          if (!settled) {
+            finishTimeoutId = setTimeout(failWithTimeout, FINISH_AFTER_CODE_MS);
+          }
         } catch (error) {
           // FB.login() rejects with 'Login cancelled' when the user dismisses
           // the popup — treat it as a cancel rather than an error.
-          if (error.message === 'Login cancelled') {
+          if (error.message === 'Login cancelled' && businessData) {
+            // #1228: Meta already reported the signup as finished, so this is not a
+            // cancel; without the code it cannot be saved, and the caller must not
+            // tell the user that nothing happened.
+            failWithTimeout();
+          } else if (error.message === 'Login cancelled') {
             settle(resolve, null);
           } else {
             settle(reject, error);

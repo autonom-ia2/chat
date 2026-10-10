@@ -10,7 +10,8 @@ import ZoneNote from './ZoneNote.vue';
 
 // Dia (J1 "Escolhe o dia", J2 "Abre a página"): atalho do horário mais cedo no topo (J1-A13, J2-A8) e os dias
 // da janela em que a página atende (dia fechado não vira botão). Os dias são do fuso da página; os horários aparecem
-// no relógio de quem abre (RA-08).
+// no relógio de quem abre (RA-08). Ao mudar o horário de uma reunião (J5) a duração é a dela, e a saída é manter o
+// horário de agora em vez de pedir contato. Ao marcar de novo depois de cancelada, "Voltar" leva à reunião.
 const {
   page,
   slots,
@@ -24,14 +25,17 @@ const {
   chooseDuration,
   chooseEarliest,
   openNoSlot,
+  manage,
 } = useFlow();
 const { t, locale } = useI18n();
 
-const heading = computed(() =>
-  greetingName.value
+const isRescheduling = computed(() => manage.isRescheduling.value);
+const heading = computed(() => {
+  if (isRescheduling.value) return t('BOOKING_V2.RESCHEDULE.DATE_TITLE');
+  return greetingName.value
     ? t('BOOKING_V2.DATE.HELLO', { name: greetingName.value })
-    : t('BOOKING_V2.DATE.TITLE')
-);
+    : t('BOOKING_V2.DATE.TITLE');
+});
 const earliest = computed(() =>
   slots.nextSlot.value
     ? whenLabel(slots.nextSlot.value, locale.value, clientZone)
@@ -68,7 +72,7 @@ const selectedDuration = computed({
     </h1>
 
     <ChoiceCards
-      v-if="durationOptions.length > 1"
+      v-if="durationOptions.length > 1 && !isRescheduling"
       v-model="selectedDuration"
       name="booking-duration"
       :legend="t('BOOKING_V2.DATE.DURATION_TITLE')"
@@ -110,8 +114,22 @@ const selectedDuration = computed({
       <ZoneNote v-if="isOtherClock" />
     </div>
 
-    <ActionButton variant="ghost" @click="openNoSlot">
+    <ActionButton
+      v-if="isRescheduling"
+      variant="ghost"
+      @click="manage.returnToManage"
+    >
+      {{ t('BOOKING_V2.RESCHEDULE.KEEP') }}
+    </ActionButton>
+    <ActionButton v-else variant="ghost" @click="openNoSlot">
       {{ t('BOOKING_V2.NO_SLOT.LINK') }}
+    </ActionButton>
+    <ActionButton
+      v-if="manage.isRebooking.value"
+      variant="ghost"
+      @click="manage.returnToManage"
+    >
+      {{ t('BOOKING_V2.BACK') }}
     </ActionButton>
   </section>
 </template>

@@ -35,4 +35,29 @@ RSpec.describe 'Api::V1::Accounts::Crm::Meetings location', type: :request do
 
     expect(payload).to include('location_type' => 'whatsapp_video', 'location' => { 'label' => nil, 'address' => nil })
   end
+
+  # #1192: resposta do cliente e avisos no WhatsApp, para o card e o calendário (F2-B).
+  it 'devolve a confirmação do cliente, se ele parou os avisos e os avisos em ordem' do
+    meeting = create_internal_meeting(world: world, starts_at: 2.days.from_now, confirmation_status: :confirmed,
+                                      reminders_stopped_at: Time.current)
+    hour = Crm::MeetingNotice.create!(meeting: meeting, account: account, kind: 'hour_before', due_at: meeting.starts_at - 1.hour,
+                                      status: :skipped, skip_reason: 'stopped')
+    booked = Crm::MeetingNotice.create!(meeting: meeting, account: account, kind: 'booked', due_at: 1.hour.ago, status: :sent)
+
+    payload = fetch(meeting)
+
+    expect(payload).to include(
+      'booking' => false, 'confirmation_status' => 'confirmed', 'notices_stopped' => true,
+      'notices' => [
+        { 'kind' => 'booked', 'due_at' => booked.due_at.iso8601, 'status' => 'sent', 'skip_reason' => nil },
+        { 'kind' => 'hour_before', 'due_at' => hour.due_at.iso8601, 'status' => 'skipped', 'skip_reason' => 'stopped' }
+      ]
+    )
+  end
+
+  it 'marca booking verdadeiro na reunião que veio de uma página de agendamento' do
+    meeting = create_internal_meeting(world: world, starts_at: 2.days.from_now, metadata: { 'booking_profile_id' => world.profile.id })
+
+    expect(fetch(meeting)).to include('booking' => true, 'confirmation_status' => 'pending', 'notices_stopped' => false)
+  end
 end

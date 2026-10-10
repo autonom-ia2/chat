@@ -12,6 +12,7 @@ import { newRequestId } from '../helpers/requestId';
 import { useBookingForm } from './useBookingForm';
 import { useFormToken } from './useFormToken';
 import { useInvite } from './useInvite';
+import { useManage } from './useManage';
 import { useSlots } from './useSlots';
 import { useStepHistory } from './useStepHistory';
 
@@ -20,7 +21,10 @@ export const STEPS = Object.freeze({
   NOT_FOUND: 'not_found',
   ERROR: 'error',
   PAUSED: 'paused',
-  ALREADY: 'already',
+  MANAGE: 'manage',
+  MANAGE_CANCEL: 'manage_cancel',
+  MANAGE_STOP: 'manage_stop',
+  RESCHEDULE: 'reschedule',
   DATE: 'date',
   TIME: 'time',
   DETAILS: 'details',
@@ -29,24 +33,33 @@ export const STEPS = Object.freeze({
   NO_SLOT: 'no_slot',
 });
 
-// Telas do agendamento em si: só nelas o "voltar" do celular troca de tela.
+// Telas de escolher dia e hora (marcar ou remarcar): entre elas o "voltar" do celular refaz a tela anterior.
 const BOOKING_STEPS = [
   STEPS.DATE,
   STEPS.TIME,
   STEPS.DETAILS,
   STEPS.CONFIRM,
   STEPS.NO_SLOT,
+  STEPS.RESCHEDULE,
 ];
 
 const FLOW_KEY = Symbol('bookingFlow');
 
-// `/book/:slug` (link público ou de pessoa) e `/b/:code` (link do cliente). `?preview=` só no link de página.
+// `/book/:slug` (link público ou de pessoa) e `/b/:code` (link do cliente). `?preview=` só no link de página;
+// `?stop_notices=1` só no link do cliente (o "Parar avisos" das mensagens automáticas).
 export const parseRoute = (pathname, search) => {
   const parts = String(pathname || '')
     .split('/')
     .filter(Boolean);
-  const preview = new URLSearchParams(search || '').get('preview') || null;
-  if (parts[0] === 'b' && parts[1]) return { code: parts[1], slug: null };
+  const params = new URLSearchParams(search || '');
+  const preview = params.get('preview') || null;
+  if (parts[0] === 'b' && parts[1]) {
+    return {
+      code: parts[1],
+      slug: null,
+      stopNotices: params.get('stop_notices') === '1',
+    };
+  }
   if (parts[0] === 'book' && parts[1]) {
     return { code: null, slug: parts[1], preview };
   }
@@ -94,7 +107,8 @@ export function useBookingFlow(location = window.location) {
       ? bookingDays(
           timeZone.value,
           page.value.booking_window_days,
-          page.value.weekdays
+          page.value.weekdays,
+          page.value.closed_dates
         )
       : []
   );
@@ -129,8 +143,6 @@ export function useBookingFlow(location = window.location) {
     () => invite.firstName.value || form.name.trim().split(' ')[0] || ''
   );
   const captchaRequired = computed(() => !!page.value?.captcha_site_key);
-  const detailsStep = () =>
-    invite.isInvite.value ? STEPS.CONFIRM : STEPS.DETAILS;
 
   const goTo = next => {
     bookingForm.clearErrors();
@@ -145,19 +157,7 @@ export function useBookingFlow(location = window.location) {
     slotsApi.loadSlots(date);
   };
 
-  // Volta pelo histórico: refaz a tela pedida com o que já foi escolhido; sem o dado, cai no dia. Reserva feita não
-  // se desfaz com o voltar.
-  const restoreStep = target => {
-    if (!BOOKING_STEPS.includes(step.value)) return null;
-    if (target === STEPS.TIME && selectedDate.value) {
-      return showTimes(selectedDate.value);
-    }
-    if (target === detailsStep() && selectedSlot.value) return goTo(target);
-    if (target === STEPS.NO_SLOT) return goTo(STEPS.NO_SLOT);
-    return goTo(STEPS.DATE);
-  };
-
-  const history = useStepHistory(restoreStep);
+  const history = useStepHistory();
 
   // Tela nova por escolha da pessoa: entra no histórico (a mesma tela de novo só substitui).
   const navigate = next => {
@@ -175,18 +175,84 @@ export function useBookingFlow(location = window.location) {
     slotsApi.loadNextSlot();
   };
 
+  const backToTimes = () => {
+    history.replace(STEPS.TIME);
+    showTimes(selectedDate.value);
+    slotNotice.value = 'BOOKING_V2.ERRORS.SLOT_UNAVAILABLE';
+    slotsApi.loadNextSlot();
+  };
+
+  // Duração, local e nome do convite para uma reserva nova (a primeira, ou outra depois de cancelada).
+  const prepareBooking = () => {
+    duration.value = page.value.duration_minutes;
+    locationType.value = locations.value[0]?.type || null;
+    if (invite.firstName.value) form.name = invite.firstName.value;
+    requestId = null;
+  };
+
+  const manage = useManage({
+    steps: STEPS,
+    step,
+    page,
+    invite,
+    history,
+    goTo,
+    finishOn,
+    duration,
+    durations,
+    selectedDate,
+    selectedSlot,
+    slots: slotsApi,
+    backToTimes,
+    prepareBooking,
+    stopRequested: !!route.stopNotices,
+  });
+
+  const detailsStep = () => {
+    if (manage.isRescheduling.value) return STEPS.RESCHEDULE;
+    return invite.isInvite.value ? STEPS.CONFIRM : STEPS.DETAILS;
+  };
+
+  // Volta pelo histórico: refaz a tela pedida com o que já foi escolhido; sem o dado, cai no dia. Reserva feita e
+  // ação concluída na tela da reunião não se desfazem com o voltar; das outras telas da gestão, volta para ela.
+  const restoreStep = target => {
+    if (step.value === STEPS.MANAGE) return null;
+    if (invite.isScheduled.value && !BOOKING_STEPS.includes(target)) {
+      return manage.show();
+    }
+    if (!BOOKING_STEPS.includes(step.value)) return null;
+    if (target === STEPS.TIME && selectedDate.value) {
+      return showTimes(selectedDate.value);
+    }
+    if (target === detailsStep() && selectedSlot.value) return goTo(target);
+    if (target === STEPS.NO_SLOT) return goTo(STEPS.NO_SLOT);
+    return goTo(STEPS.DATE);
+  };
+
+  history.restoreWith(restoreStep);
+
+  // Convite agendado abre a reunião mesmo com a página pausada: o cliente ainda precisa poder cancelar.
   const showPage = data => {
     page.value = data;
     formToken.markIssued();
     applyBrandColor(data?.brand?.color);
+    if (invite.isScheduled.value) return manage.open();
     if (data?.paused) return finishOn(STEPS.PAUSED);
     if (!isValidTimeZone(data?.timezone)) return finishOn(STEPS.ERROR);
 
-    duration.value = data.duration_minutes;
-    locationType.value = locations.value[0]?.type || null;
-    if (invite.firstName.value) form.name = invite.firstName.value;
-    if (invite.isScheduled.value) return finishOn(STEPS.ALREADY);
+    prepareBooking();
     return startBooking();
+  };
+
+  // Convite agendado abre a reunião mesmo quando a página não abre mais (responsável que saiu, página apagada): o
+  // cliente ainda vê o horário e pode cancelar; sem os dados da página, como página pausada.
+  const loadPage = async () => {
+    try {
+      return await getPage(slug.value, route.preview);
+    } catch (error) {
+      if (error?.status !== 404 || !invite.isScheduled.value) throw error;
+      return { slug: slug.value, paused: true };
+    }
   };
 
   const load = async () => {
@@ -197,7 +263,7 @@ export function useBookingFlow(location = window.location) {
         slug.value = data?.page_slug || null;
       }
       if (!slug.value) return finishOn(STEPS.NOT_FOUND);
-      return showPage(await getPage(slug.value, route.preview));
+      return showPage(await loadPage());
     } catch (error) {
       return finishOn(error?.status === 404 ? STEPS.NOT_FOUND : STEPS.ERROR);
     }
@@ -231,7 +297,7 @@ export function useBookingFlow(location = window.location) {
   // "Voltar" da página: pelo histórico quando há (o mesmo caminho do voltar do celular); senão direto.
   const goBack = () => {
     if (history.back()) return null;
-    if (step.value === STEPS.DETAILS || step.value === STEPS.CONFIRM) {
+    if (step.value === detailsStep()) {
       history.replace(STEPS.TIME);
       return showTimes(selectedDate.value);
     }
@@ -246,13 +312,6 @@ export function useBookingFlow(location = window.location) {
 
   const startPhoneChange = () => {
     isChangingPhone.value = true;
-  };
-
-  const backToTimes = () => {
-    history.replace(STEPS.TIME);
-    showTimes(selectedDate.value);
-    slotNotice.value = 'BOOKING_V2.ERRORS.SLOT_UNAVAILABLE';
-    slotsApi.loadNextSlot();
   };
 
   const bookingPayload = () => ({
@@ -307,6 +366,8 @@ export function useBookingFlow(location = window.location) {
       requestId = null;
       goTo(STEPS.DONE);
       history.replace(STEPS.DONE);
+      // Marcou de novo pelo convite: a tela da reunião (pelo "voltar") já mostra o horário novo.
+      if (manage.isRebooking.value) manage.refresh();
     } catch (error) {
       if (!isRetriable(error)) requestId = null;
       if (error?.code === 'slot_unavailable') backToTimes();
@@ -353,6 +414,7 @@ export function useBookingFlow(location = window.location) {
 
   const flow = {
     STEPS,
+    manage,
     step,
     page,
     invite,

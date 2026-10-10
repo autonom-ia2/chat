@@ -39,7 +39,13 @@ import { useCrmOrigin } from '../composables/useCrmOrigin';
 import CrmCardPill from './CrmCardPill.vue';
 import CrmCardMetaConversion from './CrmCardMetaConversion.vue';
 import BookingInviteButton from 'dashboard/components-next/Booking/BookingInviteButton.vue';
+import CrmCardNextMeeting from './calendar/CrmCardNextMeeting.vue';
 import CrmOriginList from './CrmOriginList.vue';
+import {
+  formatBookingTime,
+  noticeKindKey,
+  skipReasonKey,
+} from '../helpers/meetingNotices';
 import CrmCardLeadForm from './CrmCardLeadForm.vue';
 import CrmCardCustomFields from './CrmCardCustomFields.vue';
 
@@ -1122,6 +1128,48 @@ const ACTIVITY_META = {
     icon: 'i-lucide-user-check',
     tone: 'info',
   },
+  // Agendamento (#1192): o que o cliente fez pelo link e aviso no WhatsApp que não saiu.
+  booking_client_confirmed: {
+    key: 'ACTIVITY_BOOKING_CLIENT_CONFIRMED',
+    icon: 'i-lucide-circle-check',
+    tone: 'positive',
+  },
+  booking_client_canceled: {
+    key: 'ACTIVITY_BOOKING_CLIENT_CANCELED',
+    icon: 'i-lucide-calendar-x',
+    tone: 'negative',
+  },
+  booking_client_rescheduled: {
+    key: 'ACTIVITY_BOOKING_CLIENT_RESCHEDULED',
+    icon: 'i-lucide-calendar-clock',
+    tone: 'info',
+  },
+  booking_client_rebooked: {
+    key: 'ACTIVITY_BOOKING_CLIENT_REBOOKED',
+    icon: 'i-lucide-calendar-plus',
+    tone: 'positive',
+  },
+  booking_notice_failed: {
+    key: 'ACTIVITY_BOOKING_NOTICE_FAILED',
+    icon: 'i-lucide-message-circle-warning',
+    tone: 'negative',
+  },
+  booking_notices_stopped: {
+    key: 'ACTIVITY_BOOKING_NOTICES_STOPPED',
+    icon: 'i-lucide-bell-off',
+    tone: 'muted',
+  },
+  // Dia da reunião (#1193): o agente lembrou o cliente e mandou o link para remarcar.
+  booking_agent_reminded: {
+    key: 'ACTIVITY_BOOKING_AGENT_REMINDED',
+    icon: 'i-lucide-bell-ring',
+    tone: 'info',
+  },
+  booking_rebook_link_sent: {
+    key: 'ACTIVITY_BOOKING_REBOOK_LINK_SENT',
+    icon: 'i-lucide-calendar-plus',
+    tone: 'info',
+  },
   automation_owner_assigned: {
     key: 'ACTIVITY_AUTOMATION_OWNER_ASSIGNED',
     icon: 'i-lucide-user-check',
@@ -1231,9 +1279,18 @@ const ACTIVITY_TONE_CLASSES = {
   muted: 'bg-n-slate-4 text-n-slate-10',
 };
 
+// Agendamento (#1192): o que o cliente fez pelo link leva by: 'client' no
+// payload ("Aviso não saiu" leva by: 'system'). Só eventos do agendamento.
+const isClientBookingEvent = activity =>
+  String(activity.event_type || '').startsWith('booking_') &&
+  activity.payload?.by === 'client';
+
 // AI work runs as a system actor (actor_type === 'system'). ai_dismissed is a
 // human action (actor_type === 'user'), so it is NOT keyed on the 'ai_' prefix.
 const activityActor = activity => {
+  if (isClientBookingEvent(activity)) {
+    return t('CRM_KANBAN.DRAWER.CLIENT_ACTOR');
+  }
   if (activity.actor_type === 'system') {
     return activity.event_type?.startsWith('ai_')
       ? t('CRM_KANBAN.DRAWER.AI_ACTOR')
@@ -1376,6 +1433,47 @@ const activityDetail = activity => {
       return t('CRM_KANBAN.DRAWER.ACTIVITY_DETAIL_FOLLOW_UP_RESCHEDULED', {
         time: relativeTimeFromISO(dueAt, locale.value),
       });
+    }
+    case 'booking_client_rescheduled': {
+      const from = formatBookingTime(activity.payload?.from, locale.value);
+      const to = formatBookingTime(activity.payload?.starts_at, locale.value);
+      if (from && to)
+        return t('CRM_KANBAN.DRAWER.ACTIVITY_DETAIL_BOOKING_MOVED', {
+          from,
+          to,
+        });
+      return to
+        ? t('CRM_KANBAN.DRAWER.ACTIVITY_DETAIL_BOOKING_TIME', { time: to })
+        : '';
+    }
+    case 'booking_notice_failed': {
+      const kind = noticeKindKey(activity.payload?.kind);
+      const reason = activity.payload?.reason;
+      const base = 'CRM_KANBAN.CALENDAR.MEETING_DETAIL.NOTICES';
+      if (!kind) return '';
+      // Motivo de pulo conhecido tem texto; erro do envio (classe, interrupted,
+      // delivery_failed) aparece como "Falhou".
+      const reasonKey = skipReasonKey(reason);
+      const reasonText = t(
+        reasonKey === 'OTHER'
+          ? `${base}.STATUS.FAILED`
+          : `${base}.SKIP_REASONS.${reasonKey}`
+      );
+      return t('CRM_KANBAN.DRAWER.ACTIVITY_DETAIL_BOOKING_NOTICE_FAILED', {
+        kind: t(`${base}.KINDS.${kind}`),
+        reason: reasonText,
+      });
+    }
+    case 'booking_client_confirmed':
+    case 'booking_client_canceled':
+    case 'booking_client_rebooked':
+    case 'booking_notices_stopped':
+    case 'booking_agent_reminded':
+    case 'booking_rebook_link_sent': {
+      const time = formatBookingTime(activity.payload?.starts_at, locale.value);
+      return time
+        ? t('CRM_KANBAN.DRAWER.ACTIVITY_DETAIL_BOOKING_TIME', { time })
+        : '';
     }
     case 'meeting_scheduled':
     case 'meeting_rescheduled':
@@ -1744,6 +1842,11 @@ useFixedPanelPresence(computed(() => props.show));
           tabindex="-1"
           class="grid gap-4 outline-none"
         >
+          <!-- Próxima reunião do card (#1193): status do cliente, Chamar e Lembrar. -->
+          <CrmCardNextMeeting
+            v-if="meetingsEnabled && card?.id"
+            :card-id="card.id"
+          />
           <label class="grid gap-2 text-sm text-n-slate-12">
             <span>{{ t('CRM_KANBAN.DRAWER.STAGE') }}</span>
             <ChoiceSelect

@@ -476,6 +476,16 @@ class Rack::Attack
     req.ip if req.post? && segments.size == 2 && segments.last == 'viewed'
   end
 
+  # Gestão da reunião pelo link do convite (#1192): POST .../:code/confirm, cancel, reschedule e stop_notices. Mesma
+  # comparação em pedaços, sem expressão regular.
+  PUBLIC_BOOKING_INVITE_ACTIONS = %w[confirm cancel reschedule stop_notices].freeze
+
+  throttle('public_booking_invites/manage_ip', limit: ENV.fetch('RATE_LIMIT_PUBLIC_BOOKING_INVITES_MANAGE', '30').to_i,
+                                               period: 1.hour) do |req|
+    segments = public_booking_invite_segments(req)
+    req.ip if req.post? && segments.size == 2 && PUBLIC_BOOKING_INVITE_ACTIONS.include?(segments.last)
+  end
+
   # Página pública v2 (#1189): /public/api/v2/booking/:slug (GET página, POST reserva), .../slots e .../next_slot
   # (GET), .../contact_request (POST) e /public/api/v2/ics/:token (GET). Mesmo método do convite: caminho normalizado
   # e comparado em pedaços, sem expressão regular.

@@ -60,8 +60,8 @@ class Crm::BookingV2::InviteCreator
   end
 
   def pending_invites(contact)
-    Crm::BookingInvite.where(account_id: account.id, contact_id: contact.id, created_by_id: user.id,
-                             canceled_at: nil, scheduled_at: nil)
+    Crm::BookingInvite.real.where(account_id: account.id, contact_id: contact.id, created_by_id: user.id,
+                                  canceled_at: nil, scheduled_at: nil)
                       .where('expires_at > ?', Time.current).includes(booking_link: :agent).order(:id)
   end
 

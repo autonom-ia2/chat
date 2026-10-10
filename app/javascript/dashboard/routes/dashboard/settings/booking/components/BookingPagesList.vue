@@ -174,6 +174,7 @@ onMounted(load);
             @publish="emit('publish', $event)"
             @pause="pause"
             @delete="remove"
+            @reassigned="load"
           />
         </li>
       </ul>

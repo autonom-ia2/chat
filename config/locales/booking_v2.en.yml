@@ -13,6 +13,22 @@ en:
       invite:
         default_text: 'Hi, {nome}! Pick the best time for you: {link}'
         default_text_without_name: 'Hi! Pick the best time for you: {link}'
+      notices:
+        when_format: "%m/%d at %H:%M"
+        booked: "Hi%{name}! Your appointment is booked for %{when}. To confirm, change or cancel: %{link}"
+        rescheduled: "Hi%{name}! Your appointment was moved to %{when}. To confirm, change or cancel: %{link}"
+        day_before: "Hi%{name}! Reminder: your appointment is tomorrow, %{when}. To confirm, change or cancel: %{link}"
+        hour_before: "Hi%{name}! Your appointment starts in 1 hour (%{when}). To confirm, change or cancel: %{link}"
+        stop_line: "To stop these messages: %{link}"
+        test_prefix: "This is a test of your booking page. Your client receives a link like this one:"
+      remind:
+        text: "Hi%{name}! Just a reminder of your appointment on %{when}. Can you confirm here? %{link}"
+      agent_alerts:
+        confirmed: "%{name} confirmed the appointment of %{when}"
+        canceled: "%{name} canceled the appointment of %{when}"
+        rescheduled: "%{name} moved the appointment to %{when}"
+        rebooked: "%{name} booked again, for %{when}"
+        notice_failed: "The WhatsApp reminder to %{name} could not be sent. The appointment of %{when} stays booked: talk to the client."
       templates:
         sales_30:
           title: '30-minute sales call'

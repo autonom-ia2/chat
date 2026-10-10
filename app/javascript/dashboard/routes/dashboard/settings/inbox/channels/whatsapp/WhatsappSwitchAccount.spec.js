@@ -9,6 +9,7 @@ const runEmbeddedSignup = vi.fn();
 
 vi.mock('dashboard/composables/useWhatsappEmbeddedSignup', () => ({
   useWhatsappEmbeddedSignup: () => ({ runEmbeddedSignup }),
+  SIGNUP_TIMEOUT_CODE: 'WHATSAPP_SIGNUP_TIMEOUT',
 }));
 vi.mock('./utils', () => ({
   setupFacebookSdk: vi.fn(() => Promise.resolve()),
@@ -198,6 +199,24 @@ describe('WhatsappSwitchAccount', () => {
     expect(wrapper.find('[data-test="switch-account-done"]').exists()).toBe(
       true
     );
+  });
+
+  // #1228: when Facebook times out, Meta may have finished; never say it refused.
+  it('does not say Facebook refused when the Facebook window timed out', async () => {
+    runEmbeddedSignup.mockRejectedValue(
+      Object.assign(new Error('timed out'), { code: 'WHATSAPP_SIGNUP_TIMEOUT' })
+    );
+    const wrapper = mountCard();
+    await confirmChecklist(wrapper);
+    await openFacebook(wrapper);
+
+    expect(wrapper.find('[data-test="switch-account-unknown"]').exists()).toBe(
+      true
+    );
+    expect(wrapper.find('[data-test="switch-account-failed"]').exists()).toBe(
+      false
+    );
+    expect(wrapper.emitted('switched')).toHaveLength(1);
   });
 
   it('does not claim a result when the server did not answer', async () => {

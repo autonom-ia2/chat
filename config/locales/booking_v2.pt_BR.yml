@@ -13,6 +13,22 @@ pt_BR:
       invite:
         default_text: 'Oi, {nome}! Escolha o melhor horário para você: {link}'
         default_text_without_name: 'Oi! Escolha o melhor horário para você: {link}'
+      notices:
+        when_format: "%d/%m às %H:%M"
+        booked: "Oi%{name}! Seu horário está marcado para %{when}. Para confirmar, mudar ou cancelar: %{link}"
+        rescheduled: "Oi%{name}! Seu horário mudou para %{when}. Para confirmar, mudar ou cancelar: %{link}"
+        day_before: "Oi%{name}! Lembrete: seu horário é amanhã, %{when}. Para confirmar, mudar ou cancelar: %{link}"
+        hour_before: "Oi%{name}! Seu horário começa em 1 hora (%{when}). Para confirmar, mudar ou cancelar: %{link}"
+        stop_line: "Para parar estes avisos: %{link}"
+        test_prefix: "Este é um teste da sua página de agendamento. Seu cliente recebe um link igual a este:"
+      remind:
+        text: "Oi%{name}! Passando para lembrar do seu horário em %{when}. Pode confirmar por aqui? %{link}"
+      agent_alerts:
+        confirmed: "%{name} confirmou o horário de %{when}"
+        canceled: "%{name} cancelou o horário de %{when}"
+        rescheduled: "%{name} mudou o horário para %{when}"
+        rebooked: "%{name} marcou de novo, para %{when}"
+        notice_failed: "O aviso no WhatsApp para %{name} não saiu. O horário de %{when} continua marcado: fale com o cliente."
       templates:
         sales_30:
           title: 'Conversa de vendas de 30 min'

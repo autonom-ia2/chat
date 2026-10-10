@@ -1,11 +1,12 @@
-import { mount, flushPromises } from '@vue/test-utils';
+import { config, mount, flushPromises } from '@vue/test-utils';
 import BookingPagesAPI from 'dashboard/api/crmBookingPages';
 import CrmKanbanAPI from 'dashboard/api/crmKanban';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import BookingWizard from '../components/BookingWizard.vue';
 
-// Assistente de seis passos (#1187, J3): cada passo, voltar sem perder,
-// Meet/Teams só com caixa conectada e publicação com pendências.
+// Assistente de sete passos (#1187, J3; avisos no WhatsApp #1192): cada passo,
+// voltar sem perder, Meet/Teams só com caixa conectada e publicação com
+// pendências.
 vi.mock('vue-i18n', () => ({
   useI18n: () => ({
     t: (key, values) =>
@@ -22,8 +23,18 @@ vi.mock('dashboard/api/crmBookingPages', () => ({
     updatePeople: vi.fn(),
     publish: vi.fn(),
     uploadImage: vi.fn(),
+    testInvite: vi.fn(),
   },
 }));
+
+// Modelos aprovados da caixa vêm do store de caixas (inboxes/getFilteredWhatsAppTemplates).
+const templatesGetter = vi.fn(() => []);
+config.global.provide = {
+  ...config.global.provide,
+  store: {
+    getters: { 'inboxes/getFilteredWhatsAppTemplates': templatesGetter },
+  },
+};
 vi.mock('dashboard/api/crmKanban', () => ({
   default: { getPipelines: vi.fn(), getStages: vi.fn() },
 }));
@@ -69,7 +80,7 @@ const mountWizard = async (pageId = 7, page = fullPage()) => {
   return wrapper;
 };
 
-// Abre uma página existente e avança até o passo pedido (2 a 6).
+// Abre uma página existente e avança até o passo pedido (2 a 7).
 const openAtStep = async (step, page = fullPage()) => {
   // Como o backend: toda resposta traz a página inteira, com as caixas de agenda.
   BookingPagesAPI.update.mockImplementation((_id, body) =>
@@ -353,12 +364,12 @@ describe('BookingWizard', () => {
     const file = (type, size = 10) =>
       new File(['x'.repeat(size)], 'imagem', { type });
 
-    it('não mostra controles de aviso por WhatsApp (chegam na F2-A)', async () => {
+    it('só cuida da marca: os avisos têm passo próprio', async () => {
       const wrapper = await openAtStep(5);
       expect(currentStep(wrapper)).toBe('CARA');
       expect(wrapper.text()).not.toContain('NOTICES');
       expect(wrapper.findAll('[data-color]')).toHaveLength(6);
-      expect(primary(wrapper).attributes('data-action')).toBe('SEE_PREVIEW');
+      expect(primary(wrapper).attributes('data-action')).toBe('CONTINUE');
     });
 
     it('recusa arquivo que não é PNG, JPEG ou WebP sem chamar a API', async () => {
@@ -411,13 +422,97 @@ describe('BookingWizard', () => {
         color: '#0B7A5A',
         headline: 'Vamos conversar',
       });
-      expect(currentStep(wrapper)).toBe('PREVIA');
+      expect(currentStep(wrapper)).toBe('AVISOS');
     });
   });
 
-  describe('passo 6, prévia e publicar', () => {
-    it('mostra a prévia e a frase do funil com Alterar', async () => {
+  describe('passo 6, avisos no WhatsApp', () => {
+    const WAHA = {
+      id: 13,
+      name: 'Celular',
+      provider: 'waha',
+      needs_templates: false,
+    };
+
+    it('escolhe número, jogo e prazo e salva no Continuar', async () => {
+      const page = fullPage({ notice_inbox_options: [WAHA] });
+      const wrapper = await openAtStep(6, page);
+      expect(currentStep(wrapper)).toBe('AVISOS');
+      expect(primary(wrapper).attributes('data-action')).toBe('SEE_PREVIEW');
+      // O número não foi mexido: o PATCH dos passos anteriores não o leva.
+      expect('notice_inbox_id' in lastPayload()).toBe(false);
+      await wrapper
+        .findAllComponents(ChoiceSelect)[0]
+        .vm.$emit('update:modelValue', 13);
+      await wrapper.find('[data-choice="light"] input').setValue(true);
+      await wrapper.find('[data-choice="1440"] input').setValue(true);
+      await continueStep(wrapper);
+      expect(lastPayload()).toMatchObject({
+        notice_inbox_id: 13,
+        notice_preset: 'light',
+        notice_templates: {},
+        cancel_until_minutes: 1440,
+      });
+      expect(currentStep(wrapper)).toBe('PREVIA');
+    });
+
+    it('número de avisos recusado (422) tem aviso próprio', async () => {
       const wrapper = await openAtStep(6);
+      BookingPagesAPI.update.mockRejectedValue({
+        response: {
+          status: 422,
+          data: { error: 'crm.booking_v2.notice_inbox_invalid' },
+        },
+      });
+      await continueStep(wrapper);
+      expect(wrapper.find('[data-save-error]').text()).toBe(
+        'BOOKING.WIZARD.SERVER_ERRORS.NOTICE_INBOX_GONE'
+      );
+      expect(currentStep(wrapper)).toBe('AVISOS');
+    });
+
+    it('prévia resume os avisos e Alterar volta ao passo deles', async () => {
+      const wrapper = await openAtStep(7);
+      expect(wrapper.find('[data-notices-summary]').text()).toContain(
+        'BOOKING.PREVIEW.NOTICES_OFF'
+      );
+      await wrapper.find('[data-notices-alter]').trigger('click');
+      expect(currentStep(wrapper)).toBe('AVISOS');
+    });
+
+    it('publicada com número de avisos oferece Testar no meu WhatsApp', async () => {
+      const page = fullPage({
+        enabled: true,
+        notice_inbox_id: 13,
+        notice_inbox_options: [WAHA],
+      });
+      const wrapper = await openAtStep(7, page);
+      expect(wrapper.find('[data-published] [data-test-start]').text()).toBe(
+        'BOOKING.NOTICES.TEST.BUTTON'
+      );
+    });
+
+    it('número de avisos que a pessoa não enxerga: sem o botão de teste (o servidor recusaria)', async () => {
+      const page = fullPage({
+        enabled: true,
+        notice_inbox_id: 99,
+        notice_inbox_options: [WAHA],
+      });
+      const wrapper = await openAtStep(7, page);
+      expect(wrapper.find('[data-published]').exists()).toBe(true);
+      expect(wrapper.find('[data-test-start]').exists()).toBe(false);
+    });
+
+    it('publicada sem número de avisos não oferece o teste', async () => {
+      const wrapper = await openAtStep(7, fullPage({ enabled: true }));
+      expect(wrapper.find('[data-published]').exists()).toBe(true);
+      expect(wrapper.find('[data-test-start]').exists()).toBe(false);
+    });
+  });
+
+  describe('passo 7, prévia e publicar', () => {
+    it('mostra a prévia e a frase do funil com Alterar', async () => {
+      const wrapper = await openAtStep(7);
       await flushPromises();
       expect(wrapper.find('[data-preview-title]').text()).toBe(
         'Conversa de vendas'
@@ -432,7 +527,7 @@ describe('BookingWizard', () => {
     });
 
     it('Alterar troca funil e etapa por ChoiceSelect e salva', async () => {
-      const wrapper = await openAtStep(6);
+      const wrapper = await openAtStep(7);
       await flushPromises();
       await wrapper.find('[data-alter]').trigger('click');
       const form = wrapper.find('[data-destination-form]');
@@ -456,7 +551,7 @@ describe('BookingWizard', () => {
           data: { missing: ['host', 'working_hours'] },
         },
       });
-      const wrapper = await openAtStep(6);
+      const wrapper = await openAtStep(7);
       await continueStep(wrapper);
       const items = wrapper
         .findAll('[data-missing-item]')
@@ -474,7 +569,7 @@ describe('BookingWizard', () => {
       BookingPagesAPI.publish.mockImplementation(() =>
         reply(fullPage({ enabled: true }))
       );
-      const wrapper = await openAtStep(6);
+      const wrapper = await openAtStep(7);
       await continueStep(wrapper);
       expect(BookingPagesAPI.publish).toHaveBeenCalledWith(7);
       const published = wrapper.find('[data-published]');
@@ -506,7 +601,7 @@ describe('BookingWizard', () => {
           })
         )
       );
-      const wrapper = await openAtStep(6);
+      const wrapper = await openAtStep(7);
       await continueStep(wrapper);
       const published = wrapper.find('[data-published]');
       expect(published.text()).not.toContain('/book/abc');
@@ -520,7 +615,7 @@ describe('BookingWizard', () => {
       BookingPagesAPI.publish.mockRejectedValue({
         response: { status: 422, data: { missing: ['pipeline'] } },
       });
-      const wrapper = await openAtStep(6);
+      const wrapper = await openAtStep(7);
       await flushPromises();
       await continueStep(wrapper);
       expect(wrapper.find('[data-missing]').text()).toContain(
@@ -542,7 +637,7 @@ describe('BookingWizard', () => {
       BookingPagesAPI.publish.mockRejectedValue({
         response: { status: 422, data: { missing: ['outra_coisa'] } },
       });
-      const wrapper = await openAtStep(6);
+      const wrapper = await openAtStep(7);
       await continueStep(wrapper);
       expect(wrapper.find('[data-missing-item="outra_coisa"]').exists()).toBe(
         true
@@ -554,7 +649,7 @@ describe('BookingWizard', () => {
     it('abre direto na prévia quando o cartão pede Publicar', async () => {
       BookingPagesAPI.show.mockImplementation(() => reply(fullPage()));
       const wrapper = mount(BookingWizard, {
-        props: { pageId: 7, initialStep: 6 },
+        props: { pageId: 7, initialStep: 7 },
       });
       await flushPromises();
       expect(currentStep(wrapper)).toBe('PREVIA');

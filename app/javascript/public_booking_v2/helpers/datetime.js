@@ -41,21 +41,26 @@ export const weekdayOf = iso => {
   return new Date(Date.UTC(year, month - 1, day)).getUTCDay();
 };
 
-// Hoje (no fuso da página) e os próximos `windowDays` dias, só nos dias da semana em que a página atende. Sem a
-// lista de dias (`weekdays`), todos.
+// Hoje (no fuso da página) e os próximos `windowDays` dias, só nos dias da semana em que a página atende e fora das
+// datas fechadas (`closedDates`, feriados que a página fecha: YYYY-MM-DD no fuso da página). Sem a lista de dias
+// (`weekdays`), todos os da semana; sem datas fechadas, nenhuma.
 export const bookingDays = (
   timeZone,
   windowDays,
   weekdays,
+  closedDates = [],
   now = new Date()
 ) => {
   const count = Math.min(Math.max(Number(windowDays) || 0, 0), MAX_WINDOW_DAYS);
   const { year, month, day } = parseIsoDate(dateInZone(now, timeZone));
-  const days = Array.from({ length: count + 1 }, (_, offset) =>
+  const closed = Array.isArray(closedDates) ? closedDates : [];
+  return Array.from({ length: count + 1 }, (_, offset) =>
     new Date(Date.UTC(year, month - 1, day + offset)).toISOString().slice(0, 10)
+  ).filter(
+    iso =>
+      (!Array.isArray(weekdays) || weekdays.includes(weekdayOf(iso))) &&
+      !closed.includes(iso)
   );
-  if (!Array.isArray(weekdays)) return days;
-  return days.filter(iso => weekdays.includes(weekdayOf(iso)));
 };
 
 // Rótulo de um dia da agenda: é uma data de calendário, então formatamos ao meio-dia UTC em UTC.

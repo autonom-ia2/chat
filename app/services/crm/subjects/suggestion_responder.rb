@@ -5,7 +5,7 @@
 # vira o assunto atual), dá o nome sugerido ao assunto atual, ou volta a um assunto aberto. Ignorar só marca a
 # sugestão. Tudo no lock da conversa, e só vale para sugestão ainda esperando: outra pessoa pode ter respondido, ou uma
 # mensagem nova ter trocado a sugestão. Sugestão que deixou de fazer sentido (card fechado ou apagado, funil arquivado
-# ou fora da caixa) expira, para o aviso não ficar preso na tela.
+# ou fora da caixa, caixa que saiu do modo Sugerir — #1221) expira, para o aviso não ficar preso na tela.
 class Crm::Subjects::SuggestionResponder
   class Error < StandardError
     attr_reader :code
@@ -16,9 +16,11 @@ class Crm::Subjects::SuggestionResponder
     end
   end
 
-  SEM_SENTIDO = %w[closed_card pipeline_unavailable].freeze
+  SEM_SENTIDO = %w[closed_card pipeline_unavailable mode_changed].freeze
 
   def self.applicable?(decision)
+    return false unless Crm::Subjects.sugerir?(decision.conversation)
+
     case decision.action
     when 'create' then pipeline_stage(decision).present?
     when 'rename', 'focus' then decision.card&.open? || false
@@ -75,6 +77,7 @@ class Crm::Subjects::SuggestionResponder
 
   def expirar_sem_sentido!
     return if self.class.applicable?(@decision)
+    raise Error, 'mode_changed' unless Crm::Subjects.sugerir?(@conversation)
 
     raise Error, @decision.action == 'create' ? 'pipeline_unavailable' : 'closed_card'
   end

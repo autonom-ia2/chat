@@ -999,6 +999,88 @@
           "UPDATE_FAILED": "Could not update meeting",
           "CANCEL_FAILED": "Could not cancel meeting",
           "OUTCOME_FAILED": "Could not record meeting outcome"
+        },
+        "CLIENT": {
+          "TITLE": "Customer reply",
+          "CONFIRMED": "Confirmed",
+          "CHANGE_REQUESTED": "Asked to change",
+          "PENDING": "Has not replied yet",
+          "STOPPED": "Asked not to get notices"
+        },
+        "NOTICES": {
+          "TITLE": "WhatsApp notices",
+          "KINDS": {
+            "BOOKED": "When booked",
+            "RESCHEDULED": "Time changed",
+            "DAY_BEFORE": "1 day before",
+            "HOUR_BEFORE": "1 hour before"
+          },
+          "STATUS": {
+            "PENDING": "Will go out",
+            "SENDING": "Going out now",
+            "SENT": "Sent",
+            "SKIPPED": "Did not go out",
+            "FAILED": "Failed"
+          },
+          "SKIP_REASONS": {
+            "DISABLED": "notices are turned off in this account",
+            "CANCELED": "the time was cancelled",
+            "PAST_DUE": "the notice time had already passed",
+            "STALE": "the time changed after the notice was planned",
+            "TOO_CLOSE": "it would be too close to another notice",
+            "REPLACED": "the new time notice went out instead",
+            "OPTED_OUT": "the customer does not accept messages",
+            "STOPPED": "the customer asked to stop",
+            "NO_INBOX": "the page has no WhatsApp for notices",
+            "NO_INVITE": "the time did not come from a link",
+            "NO_CONTACT": "the time has no contact",
+            "NO_PHONE": "the customer has no WhatsApp number",
+            "UNSUPPORTED_INBOX": "this WhatsApp does not send notices",
+            "TEMPLATE_REQUIRED": "no approved message and the customer has not talked to you in the last 24 hours",
+            "TEMPLATE_WITHOUT_LINK": "the approved message has no booking link",
+            "TEMPLATE_UNSUPPORTED": "the approved message asks for data the notice does not fill in",
+            "WAHA_OUTSIDE_WINDOW": "the customer has not talked to you in the last 24 hours",
+            "NUMBER_CAP": "this number already got many messages today",
+            "ACCOUNT_CAP": "the account reached the daily notice limit",
+            "OTHER": "another reason"
+          },
+          "FAILED_HINT": "Talk to the customer to confirm the time."
+        }
+      },
+      "MEETING_DAY": {
+        "NEXT_MEETING": "Next meeting",
+        "PHONE_LABEL": "Number",
+        "CALL": "Call on WhatsApp",
+        "CALL_HINT": "WhatsApp opens the chat with the client. To start the video call, tap the camera icon in WhatsApp itself.",
+        "CALL_HINT_VOICE": "WhatsApp opens the chat with the client. To call, tap the phone icon in WhatsApp itself.",
+        "REMIND": "Remind",
+        "REMIND_HINT": "Sends the client a short message asking to confirm the time.",
+        "REMIND_SENT": "Reminder sent",
+        "REMIND_SENT_HINT": "The message went out in the conversation.",
+        "REBOOK_TITLE": "Send {name} a link to pick another time",
+        "REBOOK_TITLE_NO_NAME": "Send the client a link to pick another time",
+        "REBOOK_SEND": "Send link",
+        "REBOOK_SENT": "Link sent in the conversation.",
+        "NOT_NOW": "Not now",
+        "MOVE_QUESTION": "Move to the \"{stage}\" stage?",
+        "MOVE_HINT": "This way the card does not get forgotten in the current stage.",
+        "MOVE": "Move",
+        "MOVED": "The card went to the \"{stage}\" stage.",
+        "MOVE_FAILED": "Could not move the card. Try again.",
+        "COPY_LINK": "Copy link",
+        "COPIED": "Link copied",
+        "REFUSED": {
+          "NOT_REMINDABLE": "This meeting can no longer get a reminder.",
+          "ALREADY_CONFIRMED": "The client already confirmed.",
+          "STOPPED": "The client asked not to get messages about this meeting. Nothing was sent.",
+          "NO_INVITE": "This meeting has no client link. Nothing was sent.",
+          "RECENTLY_REMINDED": "You reminded the client a few minutes ago. Wait a little before trying again.",
+          "RECENTLY_SENT": "The link went out a few minutes ago. Wait a little before sending it again.",
+          "NO_CONVERSATION": "There is no conversation with this client that you can answer. Copy the link and send it another way.",
+          "CANNOT_REPLY": "The client needs to send a message first. Copy the link and send it another way.",
+          "NOT_REBOOKABLE": "This only works after you mark “No-show”.",
+          "NO_PAGE": "No booking page is live right now. Publish a page in Settings › Booking.",
+          "OTHER": "Could not send. Try again."
         }
       },
       "MEETING_STATES": {
@@ -1356,7 +1438,19 @@
         "TIMELINE_TOUCH_REMINDER": "Touch {n}: AI generated a team reminder"
       },
       "LEAD_FORM_TITLE": "Form details",
-      "LEAD_FORM_CAPTURED": "Filled {time}"
+      "LEAD_FORM_CAPTURED": "Filled {time}",
+      "CLIENT_ACTOR": "Customer",
+      "ACTIVITY_BOOKING_CLIENT_CONFIRMED": "Customer confirmed the time",
+      "ACTIVITY_BOOKING_CLIENT_CANCELED": "Customer cancelled the time",
+      "ACTIVITY_BOOKING_CLIENT_RESCHEDULED": "Customer changed the time",
+      "ACTIVITY_BOOKING_CLIENT_REBOOKED": "Customer booked another time",
+      "ACTIVITY_BOOKING_NOTICE_FAILED": "WhatsApp notice did not go out",
+      "ACTIVITY_BOOKING_NOTICES_STOPPED": "Customer asked not to get notices",
+      "ACTIVITY_BOOKING_AGENT_REMINDED": "Client reminded about the meeting",
+      "ACTIVITY_BOOKING_REBOOK_LINK_SENT": "Link sent to pick another time",
+      "ACTIVITY_DETAIL_BOOKING_TIME": "Time: {time}",
+      "ACTIVITY_DETAIL_BOOKING_MOVED": "From {from} to {to}",
+      "ACTIVITY_DETAIL_BOOKING_NOTICE_FAILED": "{kind}: {reason}"
     },
     "COPILOT": {
       "TITLE": "Copilot",
