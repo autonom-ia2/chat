@@ -14,6 +14,11 @@ withFullI18n('pt_BR');
 vi.mock('vue-router', () => ({
   useRouter: () => ({ resolve: rota => ({ href: `/app/${rota.name}` }) }),
 }));
+// Sem a agenda nova na conta (#1253): a linha Marca reuniões fica fora, como na conta comum.
+vi.mock('dashboard/composables/store', async () => {
+  const { computed } = await import('vue');
+  return { useMapGetter: () => computed(() => undefined) };
+});
 vi.mock('../../composables/usePermissoesDaJornada', async () => {
   const { computed } = await import('vue');
   return {

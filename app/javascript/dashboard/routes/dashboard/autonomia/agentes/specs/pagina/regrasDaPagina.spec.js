@@ -65,6 +65,27 @@ describe('regras da página do agente', () => {
     expect(gavetasPermitidas(cotacao, false)).toEqual([]);
   });
 
+  it('opens the booking drawer only for managers, with the new booking on the account', () => {
+    const comAgenda = { agendaNova: true };
+    expect(gavetasPermitidas({ mode: 'guided' }, true, comAgenda)).toContain(
+      GAVETA.AGENDA
+    );
+    expect(gavetasPermitidas({ mode: 'guided' }, true)).not.toContain(
+      GAVETA.AGENDA
+    );
+    expect(gavetasPermitidas({ mode: 'guided' }, false, comAgenda)).toEqual([
+      GAVETA.TESTAR,
+      GAVETA.SABE,
+      GAVETA.VERSOES,
+    ]);
+    expect(
+      gavetasPermitidas({ agent_type: 'insurance_quote' }, true, comAgenda)
+    ).not.toContain(GAVETA.AGENDA);
+    expect(
+      gavetasPermitidas({ booking_available: false }, true, comAgenda)
+    ).not.toContain(GAVETA.AGENDA);
+  });
+
   it('has no where-and-when for an internal agent', () => {
     const permitidas = gavetasPermitidas({ actuation: 'internal' }, true);
     expect(permitidas).not.toContain(GAVETA.ONDE);

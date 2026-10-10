@@ -3,14 +3,17 @@ import { computed, onMounted, ref, useId, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
-import CrmBookingPagesAPI from 'dashboard/api/crmBookingPages';
+import {
+  SEM_PAGINA,
+  idDaPagina,
+  useAgendaDoAgente,
+} from '../../agentes/composables/useAgendaDoAgente';
 
 // #1196 — "Marcar reuniões": a página de agendamento que a IA usa para
 // oferecer horários e marcar. Escolher a página liga a agenda do agente; "Não
-// marcar" desliga. Some quando a conta não tem a agenda nova (a API de páginas
-// responde 404), quando a pessoa não pode ver as páginas ou quando o agente
-// não recebe a agenda (`booking_available: false`, o Agente de Cotação).
-// O id da página é comparado como número: a config pode trazê-lo em texto.
+// marcar" desliga. Quando aparece (agenda nova na conta, permissão de ver as
+// páginas, `booking_available`) é regra de useAgendaDoAgente, a mesma da
+// página nova do agente (#1253).
 const props = defineProps({
   agent: { type: Object, default: () => ({}) },
   isSaving: { type: Boolean, default: false },
@@ -20,66 +23,39 @@ const emit = defineEmits(['submit']);
 
 const { t } = useI18n();
 
-const OFF = '';
 const fieldId = useId();
 
-const toPageId = value => {
-  const id = Number(value);
-  return Number.isInteger(id) && id > 0 ? id : OFF;
-};
+const {
+  paginas: pages,
+  disponivel: isAvailable,
+  opcoes: options,
+  paginaDe,
+  carregar,
+} = useAgendaDoAgente(() => props.agent);
 
-const acceptsBooking = computed(() => props.agent?.booking_available !== false);
+const selected = ref(SEM_PAGINA);
 
-const pages = ref([]);
-const isAvailable = ref(false);
-const selected = ref(OFF);
-
-const options = computed(() => [
-  { value: OFF, label: t('BOOKING.AI_AGENT.OFF') },
-  ...pages.value.map(page => ({
-    value: toPageId(page.id),
-    label: page.enabled
-      ? page.title || t('BOOKING.CARD.UNTITLED')
-      : t('BOOKING.AI_AGENT.PAUSED_PAGE', {
-          title: page.title || t('BOOKING.CARD.UNTITLED'),
-        }),
-  })),
-]);
-
-const selectedPage = computed(() =>
-  pages.value.find(page => toPageId(page.id) === selected.value)
-);
-
-const loadPages = async () => {
-  if (!acceptsBooking.value) return;
-  try {
-    const { data } = await CrmBookingPagesAPI.get();
-    pages.value = data.payload || [];
-    isAvailable.value = true;
-  } catch {
-    isAvailable.value = false;
-  }
-};
+const selectedPage = computed(() => paginaDe(selected.value));
 
 watch(
   () => props.agent,
   agent => {
-    selected.value = toPageId(agent?.config?.booking_page_id);
+    selected.value = idDaPagina(agent?.config?.booking_page_id);
   },
   { immediate: true }
 );
 
 const handleSubmit = () => {
-  emit('submit', selected.value === OFF ? null : selected.value);
+  emit('submit', selected.value === SEM_PAGINA ? null : selected.value);
 };
 
-onMounted(loadPages);
+onMounted(carregar);
 </script>
 
 <template>
   <div class="contents">
     <section
-      v-if="acceptsBooking && isAvailable"
+      v-if="isAvailable"
       class="flex flex-col gap-4 pt-2 border-t border-n-weak"
     >
       <div class="flex flex-col">

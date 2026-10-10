@@ -1,9 +1,11 @@
 <script setup>
-import { computed, ref, useId } from 'vue';
+import { computed, onMounted, ref, useId } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import AgenteBotao from '../AgenteBotao.vue';
 import { usePermissoesDaJornada } from '../../composables/usePermissoesDaJornada';
+import { useAgendaDoAgente } from '../../composables/useAgendaDoAgente';
+import { useAgendaNovaNaConta } from '../../composables/useAgendaNovaNaConta';
 
 // #1181 PR3 (protótipo T07, blocksT07) — os blocos claros da página do agente:
 // - Testar: a pergunta vai para a gaveta Testar;
@@ -59,6 +61,27 @@ const textoSabe = computed(
     props.agente.knowledge_summary ||
     t(`${NS}.BLOCO_SABE.TEXTO`, { nome: props.nome })
 );
+
+// #1253 — Marca reuniões: a mesma regra do "Marcar reuniões" do painel antigo (useAgendaDoAgente).
+// Só com a agenda nova na conta (`crm_booking_v2`); some na cotação, no agente sem agenda e quando
+// a API de páginas responde erro (inclusive para quem não vê Agendamento).
+const agendaNaConta = useAgendaNovaNaConta();
+const agenda = useAgendaDoAgente(() => props.agente);
+const mostrarAgenda = computed(
+  () => agendaNaConta.value && !props.cotacao && agenda.disponivel.value
+);
+const textoAgenda = computed(() => {
+  const pagina = agenda.paginaDe(agenda.paginaSalva.value);
+  if (!pagina) return t(`${NS}.BLOCO_AGENDA.NAO_MARCA`, { nome: props.nome });
+  return t(`${NS}.BLOCO_AGENDA.MARCA_PELA`, {
+    nome: props.nome,
+    pagina: agenda.nomeDaPagina(pagina),
+  });
+});
+
+onMounted(() => {
+  if (agendaNaConta.value && !props.cotacao) agenda.carregar();
+});
 </script>
 
 <template>
@@ -299,6 +322,42 @@ const textoSabe = computed(
             {{ t(`${NS}.ALTERAR`) }}
           </AgenteBotao>
         </template>
+      </div>
+
+      <div
+        v-if="mostrarAgenda"
+        data-linha="agenda"
+        role="group"
+        :aria-labelledby="`${base}-agenda`"
+        class="flex flex-col gap-3 p-5 sm:flex-row sm:items-start"
+      >
+        <div class="flex items-start flex-1 min-w-0 gap-3">
+          <span
+            class="grid rounded-lg place-items-center size-9 shrink-0 bg-n-alpha-2"
+            aria-hidden="true"
+          >
+            <span class="i-lucide-calendar-check size-5 text-n-slate-11" />
+          </span>
+          <div class="flex flex-col flex-1 min-w-0 gap-1">
+            <h3
+              :id="`${base}-agenda`"
+              class="m-0 text-sm font-semibold text-n-slate-11"
+            >
+              {{ t(`${NS}.BLOCO_AGENDA.TITULO`) }}
+            </h3>
+            <p class="m-0 text-sm text-n-slate-12">{{ textoAgenda }}</p>
+          </div>
+        </div>
+        <AgenteBotao
+          v-if="podeGerenciar"
+          data-alterar="agenda"
+          class="max-sm:w-full max-sm:ring-1 max-sm:ring-inset max-sm:ring-n-blue-9 shrink-0"
+          variante="fantasma"
+          :aria-label="t(`${NS}.BLOCO_AGENDA.ALTERAR_ARIA`)"
+          @click="emit('abrir', 'agenda')"
+        >
+          {{ t(`${NS}.ALTERAR`) }}
+        </AgenteBotao>
       </div>
     </section>
 

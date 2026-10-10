@@ -11,6 +11,7 @@ export const GAVETA = {
   FOTO: 'foto',
   VERSOES: 'versoes',
   INSTRUCOES: 'instrucoes',
+  AGENDA: 'agenda',
 };
 
 // O `:tab` da página antiga (links do Guia, da Central e de favoritos) abre a gaveta equivalente.
@@ -46,9 +47,17 @@ export const estadoDeOperacao = agente => {
 export const podeMudarConversando = agente =>
   !ehManual(agente) && !ehCotacao(agente);
 
+// O agente recebe a agenda da IA (#1196): o servidor manda `booking_available: false` quando não.
+export const recebeAgenda = agente => agente?.booking_available !== false;
+
 // Gavetas que cada tipo de agente e cada papel podem abrir. Quem só vê testa e lê; a cotação mostra
-// só nome, foto, horário, estado e números; o interno não tem canal.
-export const gavetasPermitidas = (agente, podeGerenciar) => {
+// só nome, foto, horário, estado e números; o interno não tem canal. A agenda (#1253) só abre para
+// quem gerencia, com a agenda nova na conta e para o agente que recebe a agenda.
+export const gavetasPermitidas = (
+  agente,
+  podeGerenciar,
+  { agendaNova = false } = {}
+) => {
   if (ehCotacao(agente)) {
     return podeGerenciar ? [GAVETA.ONDE, GAVETA.VOLTAR, GAVETA.FOTO] : [];
   }
@@ -59,6 +68,7 @@ export const gavetasPermitidas = (agente, podeGerenciar) => {
     GAVETA.FOTO,
     GAVETA.INSTRUCOES,
     ...(ehInterno(agente) ? [] : [GAVETA.ONDE, GAVETA.VOLTAR]),
+    ...(agendaNova && recebeAgenda(agente) ? [GAVETA.AGENDA] : []),
   ];
   return [...leitura, ...escrita];
 };

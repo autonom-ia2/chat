@@ -794,6 +794,12 @@
           "TEXTO": "What {nome} knows and how it answers live in the quoting module.",
           "ABRIR": "Open in the quoting module"
         },
+        "BLOCO_AGENDA": {
+          "TITULO": "Books meetings",
+          "NAO_MARCA": "{nome} doesn't book meetings.",
+          "MARCA_PELA": "{nome} offers times from your booking page {pagina}.",
+          "ALTERAR_ARIA": "Change how meetings are booked"
+        },
         "SEMANA": {
           "ROTULO": "This week in numbers",
           "VAZIA": "No conversations this week yet. The numbers show up here as soon as {nome} answers someone.",
@@ -1044,6 +1050,17 @@
         "VOLTAR_INTERNO": {
           "ERRO": "Could not start answering.",
           "FEITO": "{nome} is answering again."
+        },
+        "GAVETA_AGENDA": {
+          "TITULO": "Book meetings",
+          "TEXTO": "{nome} offers free times from a booking page and books the meeting in the chat.",
+          "CARREGANDO": "Loading your booking pages…",
+          "ERRO_LER": "Could not load your booking pages.",
+          "GARANTIA": "Nothing changed.",
+          "SALVAR": "Save",
+          "SALVANDO": "Saving…",
+          "PRONTO": "Done.",
+          "ERRO": "Could not save."
         }
       },
       "CRIAR": {

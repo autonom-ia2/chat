@@ -794,6 +794,12 @@
           "TEXTO": "O que {nome} sabe e como responde fica no módulo de cotação.",
           "ABRIR": "Abrir no módulo de cotação"
         },
+        "BLOCO_AGENDA": {
+          "TITULO": "Marca reuniões",
+          "NAO_MARCA": "{nome} não marca reuniões.",
+          "MARCA_PELA": "{nome} oferece horários da sua página de agendamento {pagina}.",
+          "ALTERAR_ARIA": "Alterar como marca reuniões"
+        },
         "SEMANA": {
           "ROTULO": "Números desta semana",
           "VAZIA": "Ainda sem conversas esta semana. Os números aparecem aqui assim que {nome} responder alguém.",
@@ -1044,6 +1050,17 @@
         "VOLTAR_INTERNO": {
           "ERRO": "Não deu para começar a atender.",
           "FEITO": "{nome} voltou a atender."
+        },
+        "GAVETA_AGENDA": {
+          "TITULO": "Marcar reuniões",
+          "TEXTO": "{nome} oferece horários livres de uma página de agendamento e marca a reunião na conversa.",
+          "CARREGANDO": "Carregando suas páginas de agendamento…",
+          "ERRO_LER": "Não deu para ler suas páginas de agendamento.",
+          "GARANTIA": "Nada mudou.",
+          "SALVAR": "Salvar",
+          "SALVANDO": "Salvando…",
+          "PRONTO": "Pronto.",
+          "ERRO": "Não deu para salvar."
         }
       },
       "CRIAR": {
