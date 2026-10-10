@@ -284,6 +284,19 @@ class CrmKanbanAPI extends ApiClient {
     });
   }
 
+  // Multifunil 5b (#1145): responder à sugestão de assunto da IA.
+  acceptSubjectSuggestion(conversationId, suggestionId) {
+    return axios.post(
+      `${this.url}/conversations/${conversationId}/subject_suggestions/${suggestionId}/accept`
+    );
+  }
+
+  dismissSubjectSuggestion(conversationId, suggestionId) {
+    return axios.post(
+      `${this.url}/conversations/${conversationId}/subject_suggestions/${suggestionId}/dismiss`
+    );
+  }
+
   getConversationCardStages(conversationIds) {
     return axios.get(`${this.url}/conversations/card_stages`, {
       params: { conversation_ids: conversationIds },

@@ -13929,11 +13929,33 @@
     "controller": "api/v1/accounts/crm/conversation_cards#focus",
     "modelo": "Crm::Card",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/conversation_cards_controller.rb:12",
-      "app/controllers/api/v1/accounts/crm/conversation_cards_controller.rb:13",
-      "app/controllers/api/v1/accounts/crm/conversation_cards_controller.rb:25"
+      "app/controllers/api/v1/accounts/crm/conversation_cards_controller.rb:31",
+      "app/controllers/api/v1/accounts/crm/conversation_cards_controller.rb:32",
+      "app/controllers/api/v1/accounts/crm/conversation_cards_controller.rb:44"
     ],
     "sem_corpo": false
+  },
+  "POST crm/conversations/:conversation_id/subject_suggestions/:suggestion_id/accept": {
+    "completo": true,
+    "controller": "api/v1/accounts/crm/conversation_cards#accept_suggestion",
+    "modelo": "Crm::Card",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/conversation_cards_controller.rb:13",
+      "app/controllers/api/v1/accounts/crm/conversation_cards_controller.rb:50",
+      "app/controllers/api/v1/accounts/crm/conversation_cards_controller.rb:44"
+    ],
+    "sem_corpo": true
+  },
+  "POST crm/conversations/:conversation_id/subject_suggestions/:suggestion_id/dismiss": {
+    "completo": true,
+    "controller": "api/v1/accounts/crm/conversation_cards#dismiss_suggestion",
+    "modelo": "Crm::Card",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/conversation_cards_controller.rb:22",
+      "app/controllers/api/v1/accounts/crm/conversation_cards_controller.rb:50",
+      "app/controllers/api/v1/accounts/crm/conversation_cards_controller.rb:44"
+    ],
+    "sem_corpo": true
   },
   "POST crm/follow_ups": {
     "campos": {

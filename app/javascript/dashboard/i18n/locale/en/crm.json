@@ -1398,7 +1398,15 @@
         "MORE_HINT": "{count} more open subject(s) in this conversation",
         "MAKE_CURRENT_HINT": "Click to work on this subject",
         "REPLY_IN": "This message goes to:",
-        "PIPELINE_STAGE": "{pipeline} · {stage}"
+        "PIPELINE_STAGE": "{pipeline} · {stage}",
+        "SUGGESTION_CREATE": "Looks like a new subject: {title} ({pipeline}).",
+        "SUGGESTION_CREATE_ACCEPT": "Create subject",
+        "SUGGESTION_RENAME": "Looks like this subject is: {title}.",
+        "SUGGESTION_RENAME_ACCEPT": "Use this name",
+        "SUGGESTION_FOCUS": "Looks like the customer is back to: {title}.",
+        "SUGGESTION_FOCUS_ACCEPT": "Handle this subject",
+        "SUGGESTION_DISMISS": "Dismiss",
+        "SUGGESTION_ERROR": "Could not answer the suggestion. It may have changed; check the subjects again."
       }
     },
     "PIPELINE_DRAWER": {
