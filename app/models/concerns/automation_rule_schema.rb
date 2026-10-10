@@ -98,7 +98,7 @@ class AutomationRuleSchema
     return unless @conta
 
     @personalizados ||= @conta.custom_attribute_definitions.where.not(attribute_model: :card_attribute)
-                               .distinct.pluck(:attribute_key) - padrao
+                              .distinct.pluck(:attribute_key) - padrao
   end
 
   def propriedades_da_condicao
