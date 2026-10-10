@@ -42,11 +42,26 @@ class Crm::InboxSetting < ApplicationRecord
   # Multifunil (#1145): o que a IA faz quando identifica o assunto da conversa. Desligada é o padrão.
   enum subject_ai_mode: { off: 0, suggest: 1, auto: 2 }, _prefix: :subject_ai
 
+  after_update_commit :expirar_sugestoes_de_assunto, if: :saiu_do_modo_sugerir?
+
   validates :inbox_id, uniqueness: { scope: :account_id }
   validate :linked_records_must_belong_to_account
   validate :default_stage_must_belong_to_default_pipeline
 
   private
+
+  # #1221: a caixa deixou de sugerir (outro modo ou CRM desligado). As sugestões que esperavam resposta saem da tela.
+  def saiu_do_modo_sugerir?
+    return false unless saved_change_to_subject_ai_mode? || saved_change_to_crm_enabled?
+
+    !(subject_ai_suggest? && crm_enabled?)
+  end
+
+  def expirar_sugestoes_de_assunto
+    conversas = account.conversations.where(inbox_id: inbox_id).select(:id)
+    Crm::SubjectDecision.suggested.where(account_id: account_id, conversation_id: conversas)
+                        .update_all(state: 'expired', updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+  end
 
   def linked_records_must_belong_to_account
     validate_same_account(:inbox)

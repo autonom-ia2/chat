@@ -16,6 +16,12 @@ module Crm::Subjects
   FEATURE = 'assunto'.freeze
   FEATURE_REVISAO = 'assunto_revisao'.freeze
 
+  # A caixa da conversa está no modo Sugerir: só aí uma sugestão esperando faz sentido (#1221).
+  def self.sugerir?(conversation)
+    Crm::InboxSetting.exists?(account_id: conversation.account_id, inbox_id: conversation.inbox_id, crm_enabled: true,
+                              subject_ai_mode: :suggest)
+  end
+
   # A caixa da conversa tem o CRM e a IA de assunto ligados.
   def self.ligado?(conversation)
     Crm::InboxSetting.where(account_id: conversation.account_id, inbox_id: conversation.inbox_id, crm_enabled: true)
