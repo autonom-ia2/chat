@@ -138,7 +138,7 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingInvites', type: :request do
       invite = Crm::BookingInvite.find(payload['id'])
       expect(payload).to include(
         'code' => invite.code, 'url' => "https://app.example.com/b/#{invite.code}", 'state' => 'created',
-        'text' => "Oi, Marcos! Escolha o melhor horário para a gente conversar: https://app.example.com/b/#{invite.code}",
+        'text' => "Oi, Marcos! Escolha o melhor horário para você: https://app.example.com/b/#{invite.code}",
         'booking_page' => { 'id' => world.profile.id, 'title' => world.profile.title },
         'contact' => { 'id' => world.contact.id, 'name' => 'Marcos Lima' }, 'sent_at' => nil, 'first_opened_at' => nil,
         'scheduled_at' => nil

@@ -2,8 +2,8 @@ en:
   crm:
     booking_v2:
       invite:
-        default_text: 'Hi, {nome}! Pick the best time for us to talk: {link}'
-        default_text_without_name: 'Hi! Pick the best time for us to talk: {link}'
+        default_text: 'Hi, {nome}! Pick the best time for you: {link}'
+        default_text_without_name: 'Hi! Pick the best time for you: {link}'
       templates:
         sales_30:
           title: '30-minute sales call'

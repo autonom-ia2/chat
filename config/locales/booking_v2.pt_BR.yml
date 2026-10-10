@@ -2,8 +2,8 @@ pt_BR:
   crm:
     booking_v2:
       invite:
-        default_text: 'Oi, {nome}! Escolha o melhor horário para a gente conversar: {link}'
-        default_text_without_name: 'Oi! Escolha o melhor horário para a gente conversar: {link}'
+        default_text: 'Oi, {nome}! Escolha o melhor horário para você: {link}'
+        default_text_without_name: 'Oi! Escolha o melhor horário para você: {link}'
       templates:
         sales_30:
           title: 'Conversa de vendas de 30 min'
