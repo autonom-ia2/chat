@@ -3,12 +3,14 @@
 # Table name: crm_pipelines
 #
 #  id            :bigint           not null, primary key
+#  counts_as_sale :boolean          default(TRUE), not null
 #  description   :text
 #  is_default    :boolean          default(FALSE), not null
 #  metadata      :jsonb            not null
 #  name          :string           not null
 #  position      :integer          default(0), not null
 #  status        :integer          default("active"), not null
+#  when_to_use   :text
 #  created_at    :datetime         not null
 #  updated_at    :datetime         not null
 #  account_id    :bigint           not null
@@ -41,11 +43,26 @@ class Crm::Pipeline < ApplicationRecord
   enum status: { active: 0, archived: 1 }
 
   before_validation :initialize_followup_days, on: :create
+  before_save :turn_off_conversion_sync, unless: :counts_as_sale?
+
+  MAX_WHEN_TO_USE = 1_000
 
   validates :name, presence: true
+  # Multifunil (#1145): o "Quando usar" que a IA lê para saber se um pedido é deste funil.
+  validates :when_to_use, length: { maximum: MAX_WHEN_TO_USE }
   validates :metadata, jsonb_attributes_length: true
 
   private
+
+  # Funil que não conta como venda (#1144) não manda nada para Meta nem Google, nem mudança de etapa: a sincronização
+  # é desligada ao salvar, para não virar conversão de anúncio por engano.
+  def turn_off_conversion_sync
+    config = (metadata || {}).deep_dup
+    %w[meta_sync google_sync].each do |key|
+      config[key] = config[key].merge('enabled' => false) if config[key].is_a?(Hash)
+    end
+    self.metadata = config
+  end
 
   def initialize_followup_days
     config = (metadata || {}).deep_dup

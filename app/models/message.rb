@@ -68,6 +68,7 @@ class Message < ApplicationRecord
   before_validation :validate_waha_history_import_marker, prepend: true
   before_validation :ensure_content_type
   before_validation :prevent_message_flooding
+  before_validation :sanitize_crm_subject, on: :create
   before_save :ensure_processed_message_content
   before_save :ensure_in_reply_to
 
@@ -363,6 +364,12 @@ class Message < ApplicationRecord
 
     message_content = text_content_quoted || html_content_quoted || content
     self.processed_message_content = message_content&.truncate(150_000)
+  end
+
+  # O assunto do CRM que a mensagem carrega (#1143) é conferido antes de gravar: id que não for de um card desta conversa
+  # nunca chega ao banco, a webhooks nem ao tempo real.
+  def sanitize_crm_subject
+    Crm::Conversations::MessageSubject.new(self).sanitize
   end
 
   # fetch the in_reply_to message and set the external id

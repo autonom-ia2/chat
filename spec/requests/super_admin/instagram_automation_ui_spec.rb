@@ -178,7 +178,7 @@ RSpec.describe 'Super Admin Instagram automation UI', type: :request do
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include('window.chatwootSettings', 'window.chatwootSDK', 'window.$chatwoot.setUser')
-    expect(response.body).to include(super_admin.email, super_admin.name)
+    expect(response.body).to include(super_admin.email, CGI.escapeHTML(super_admin.name))
     expect(InstallationConfig.find_by!(name: 'INSTALLATION_IDENTIFIER').value).to be_present
   end
 

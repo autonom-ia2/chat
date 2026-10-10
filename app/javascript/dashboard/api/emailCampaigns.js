@@ -51,8 +51,11 @@ class EmailCampaignsAPI extends ApiClient {
     return axios.get(`${this.url}/${id}/recipients?page=${page}`);
   }
 
-  sendTest(id, toEmail) {
-    return axios.post(`${this.url}/${id}/test_send`, { to_email: toEmail });
+  // One address or a list of up to 5 (#1093).
+  sendTest(id, toEmails) {
+    return axios.post(`${this.url}/${id}/test_send`, {
+      to_emails: [toEmails].flat(),
+    });
   }
 
   placeholders(id) {

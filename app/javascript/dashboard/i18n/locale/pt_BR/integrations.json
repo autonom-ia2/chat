@@ -18,6 +18,8 @@
           "CRM_CARD_MOVED": "Um card foi movido para outra etapa.",
           "CRM_CARD_WON": "Um card foi marcado como ganho.",
           "CRM_CARD_LOST": "Um card foi marcado como perdido.",
+          "CRM_CARD_RESOLVED": "Um card foi marcado como resolvido (funil que não é de venda).",
+          "CRM_CARD_CANCELLED": "Um card foi marcado como cancelado (funil que não é de venda).",
           "CRM_CARD_REOPENED": "Um card fechado foi reaberto.",
           "CRM_CARD_ARCHIVED": "Um card foi arquivado."
         }
@@ -105,6 +107,8 @@
             "CRM_CARD_MOVED": "Card do CRM movido para outra etapa",
             "CRM_CARD_WON": "Card do CRM ganho",
             "CRM_CARD_LOST": "Card do CRM perdido",
+            "CRM_CARD_RESOLVED": "Card do CRM resolvido",
+            "CRM_CARD_CANCELLED": "Card do CRM cancelado",
             "CRM_CARD_REOPENED": "Card do CRM reaberto",
             "CRM_CARD_ARCHIVED": "Card do CRM arquivado"
           }

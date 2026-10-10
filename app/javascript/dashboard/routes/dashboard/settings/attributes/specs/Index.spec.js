@@ -20,13 +20,17 @@ vi.mock('dashboard/composables/useAccount', () => ({
   }),
 }));
 
+// #1146: a aba Card depende do CRM ligado na instalação.
+const globalConfigRef = { value: { crmKanbanEnabled: true } };
+
 vi.mock('dashboard/composables/store', () => ({
   useStore: () => ({
     dispatch: vi.fn(),
     subscribe: vi.fn(),
     getters: { getCurrentUserID: 1 },
   }),
-  useMapGetter: () => ({ value: [] }),
+  useMapGetter: name =>
+    name === 'globalConfig/get' ? globalConfigRef : { value: [] },
   useStoreGetters: () => ({
     'attributes/getUIFlags': {
       value: {
@@ -53,6 +57,11 @@ vi.mock('dashboard/composables/store', () => ({
             id: 3,
             attribute_model: 'company_attribute',
             attribute_display_name: 'Company field',
+          },
+          {
+            id: 4,
+            attribute_model: 'card_attribute',
+            attribute_display_name: 'Card field',
           },
         ].filter(item => item.attribute_model === model),
     },
@@ -140,6 +149,25 @@ describe('Custom attributes settings - company model', () => {
     expect(wrapper.find('[data-tab="2"]').exists()).toBe(false);
   });
 
+  it('exposes the CRM Card model as its own tab, even without Companies', async () => {
+    testState.companiesEnabled = false;
+    const wrapper = await mountIndex();
+
+    expect(wrapper.find('[data-tab="2"]').exists()).toBe(false);
+    await wrapper.find('[data-tab="3"]').trigger('click');
+    await nextTick();
+
+    expect(wrapper.findAll('.attribute-item').map(item => item.text())).toEqual(
+      ['card_attribute']
+    );
+    expect(wrapper.text()).toContain('ATTRIBUTES_MGMT.TABS.CARD');
+
+    // The create form opened from this tab preselects the Card model (id 3).
+    expect(
+      AddAttribute.data.call({ selectedAttributeModelTab: 3 }).attributeModel
+    ).toBe(3);
+  });
+
   it('filters the Company model from the create form when not allowed', () => {
     const withoutCompany = AddAttribute.computed.models.call({
       showCompanyModel: false,
@@ -153,11 +181,22 @@ describe('Custom attributes settings - company model', () => {
     expect(withoutCompany.map(item => item.key)).toEqual([
       'CONVERSATION',
       'CONTACT',
+      'CARD',
     ]);
     expect(withCompany.map(item => item.key)).toEqual([
       'CONVERSATION',
       'CONTACT',
       'COMPANY',
+      'CARD',
     ]);
+    expect(withCompany.find(item => item.key === 'CARD').id).toBe(3);
   });
+});
+
+it('hides the Card tab when the CRM is off on the installation (#1146)', async () => {
+  globalConfigRef.value = { crmKanbanEnabled: false };
+  const wrapper = await mountIndex();
+
+  expect(wrapper.find('[data-tab="3"]').exists()).toBe(false);
+  globalConfigRef.value = { crmKanbanEnabled: true };
 });

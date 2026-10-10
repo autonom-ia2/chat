@@ -1,39 +1,36 @@
-require 'open3'
-
 namespace :email_campaign_templates do
-  desc 'Compile sanitized shared templates before publishing their HTML assets (requires frontend dependencies)'
+  desc 'Compile the shared library to its versioned HTML and run the quality gate (build time; needs frontend dependencies)'
   task compile: :environment do
-    compiler = Rails.root.join('lib/tasks/support/mjml_compile.js')
-    prepared = EmailCampaigns::TemplateCatalog.entries.map do |entry|
-      mjml = EmailCampaigns::TemplateCatalog.body(entry)
-      html, error, status = Open3.capture3('node', compiler.to_s, stdin_data: mjml, chdir: Rails.root.to_s)
-      raise "Template compilation failed: #{entry.fetch('key')} (#{error.bytesize} diagnostic bytes)" unless status.success? && html.present?
+    catalog = EmailCampaigns::TemplateCatalog
+    prepared = catalog.entries.map do |entry|
+      compiled = catalog.compile(entry)
+      violations = EmailCampaigns::QualityGate.new(mjml: catalog.body(entry), html: compiled.html,
+                                                   compile_errors: compiled.errors).violations
+      if violations.any?
+        details = violations.map { |violation| "  #{violation.check}: #{violation.detail}" }.join("\n")
+        raise "Template #{entry.fetch('key')} failed the quality gate:\n#{details}"
+      end
 
-      html = "#{html.lines.map(&:rstrip).join("\n")}\n"
-      [EmailCampaigns::TemplateCatalog::ROOT.join(entry.fetch('path')).sub_ext('.html'), html]
+      [catalog.html_path(entry), compiled.html]
     end
     prepared.each { |path, html| path.write(html) }
-    puts "Compiled #{prepared.length} shared templates with protected footers."
+    puts "Compiled #{prepared.length} shared templates; quality gate passed."
   end
 
-  desc 'Restore the 14 shared gallery templates without changing account-owned templates'
+  desc 'Publish the shared library (global templates only). Dry-run by default; APPLY=1 writes. Needs FRONTEND_URL'
   task seed: :environment do
-    prepared = EmailCampaigns::TemplateCatalog.entries.map do |entry|
-      mjml = EmailCampaigns::TemplateCatalog.body(entry)
-      html = EmailCampaigns::TemplateCatalog::ROOT.join(entry.fetch('path')).sub_ext('.html').read
-      unless html.include?('{{ unsubscribe_url }}') && html.include?('footer-locked')
-        raise "Template preview missing protected footer: #{entry.fetch('key')}"
-      end
+    apply = ENV['APPLY'] == '1'
+    seeder = EmailCampaigns::TemplateLibrarySeeder.new(base_url: ENV.fetch('FRONTEND_URL', nil))
+    report = apply ? seeder.apply! : seeder.plan
 
-      [entry, mjml, html]
+    puts(apply ? 'mode: apply' : 'mode: dry_run (nothing written; APPLY=1 writes)')
+    { create: report.created, update: report.updated, unchanged: report.unchanged }.each do |action, entries|
+      entries.each { |entry| puts "#{action}: #{entry.fetch('key')}" }
     end
-    # Prepare all designs before the bounded write; never publish a partial catalog.
-    EmailCampaignTemplate.transaction do
-      prepared.each do |entry, mjml, html|
-        template = EmailCampaignTemplate.find_or_initialize_by(account_id: nil, name: entry.fetch('name'))
-        template.update!(body_mjml: mjml, body_html: html, category: entry.fetch('category'))
-      end
-    end
-    puts "Restored #{prepared.length} shared templates. Account templates preserved."
+    report.retired.each { |template| puts "retire: id=#{template.id} #{template.name}" }
+    report.unknown.each { |template| puts "keep (global outside the catalog): id=#{template.id} #{template.name}" }
+    puts "account templates: #{EmailCampaignTemplate.where.not(account_id: nil).count} (never touched)"
+    puts "totals: create=#{report.created.size} update=#{report.updated.size} unchanged=#{report.unchanged.size} " \
+         "retire=#{report.retired.size} unknown_kept=#{report.unknown.size}"
   end
 end

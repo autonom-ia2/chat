@@ -205,7 +205,7 @@ module Crm
       def auto_stop_reason
         return 'spent' if state['spent']
         return 'max_touches' if touch > max_touches
-        return 'won_lost' if @card.won? || @card.lost? || @card.archived?
+        return 'won_lost' unless @card.open?
 
         consent_reason = consent_stop_reason
         return consent_reason if consent_reason

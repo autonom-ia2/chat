@@ -1,5 +1,6 @@
 import {
   MODULES,
+  MODULE_GROUPS,
   PRESETS,
   PROFILES,
   BLANK_PROFILE,
@@ -39,6 +40,61 @@ describe('permissionMatrix', () => {
       expect(getLevel(moduleByKey('CONTACTS'), ['contact_manage'])).toBe(
         LEVELS.MANAGE
       );
+    });
+  });
+
+  // #1188: módulo de função "Agendamento"; agendamento_manage implica _view no backend.
+  describe('scheduling', () => {
+    const scheduling = moduleByKey('SCHEDULING');
+
+    it('lives in the account settings group, next to automations', () => {
+      const group = MODULE_GROUPS.find(g => g.key === 'SETTINGS');
+      const keys = group.modules.map(module => module.key);
+
+      expect(keys).toContain('SCHEDULING');
+      expect(keys.indexOf('SCHEDULING')).toBe(keys.indexOf('AUTOMATIONS') + 1);
+      expect(scheduling.settings).toBe(true);
+      expect(scheduling.icon).toBe('i-lucide-calendar-clock');
+    });
+
+    it('uses the agendamento keys for view and manage', () => {
+      expect(scheduling.levels).toEqual({
+        view: 'agendamento_view',
+        manage: 'agendamento_manage',
+      });
+    });
+
+    it('stores only the highest key and reads manage as manage', () => {
+      const permissions = setLevel(scheduling, LEVELS.MANAGE, [
+        'agendamento_view',
+      ]);
+
+      expect(permissions).toEqual(['agendamento_manage']);
+      expect(getLevel(scheduling, permissions)).toBe(LEVELS.MANAGE);
+    });
+
+    it('reads manage alone as including view, and view as only view', () => {
+      expect(getLevel(scheduling, ['agendamento_manage'])).toBe(LEVELS.MANAGE);
+      expect(getLevel(scheduling, ['agendamento_view'])).toBe(LEVELS.VIEW);
+      expect(getLevel(scheduling, ['automation_manage'])).toBe(LEVELS.NONE);
+    });
+
+    it('clears both keys on no access and keeps other modules', () => {
+      expect(
+        setLevel(scheduling, LEVELS.NONE, [
+          'agendamento_manage',
+          'agendamento_view',
+          'automation_view',
+        ])
+      ).toEqual(['automation_view']);
+    });
+
+    it('offers no access, view and edit in the fixed positions', () => {
+      expect(levelSlots(scheduling)).toEqual([
+        LEVELS.NONE,
+        LEVELS.VIEW,
+        LEVELS.MANAGE,
+      ]);
     });
   });
 

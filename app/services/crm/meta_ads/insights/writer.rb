@@ -1,7 +1,8 @@
 # Grava as linhas da Insights API (#1073): uma por anúncio e dia em Crm::MetaAdInsightDaily e, com
 # posicionamento, em Crm::MetaAdPlacementDaily. Sempre por upsert no índice único: reler um dia sobrescreve
 # (CA-2.4). Os nomes de anúncio, conjunto e campanha que vêm junto renovam o cache de nomes
-# (Crm::MetaAdObject), sem tocar na prévia nem na miniatura do anúncio.
+# (Crm::MetaAdObject), sem tocar na prévia nem na miniatura do anúncio. A frequência de 7 dias (F5) vai para
+# Crm::MetaAdFrequencyWindow, uma linha por anúncio e fim de janela.
 class Crm::MetaAds::Insights::Writer
   ATTRIBUTION_WINDOW = '7d_click'.freeze
   CONVERSATION_ACTION = 'onsite_conversion.messaging_conversation_started_7d'.freeze
@@ -32,7 +33,29 @@ class Crm::MetaAds::Insights::Writer
     records.size
   end
 
+  # A frequência de `window_days` dias por anúncio (F5, D5.4). `date_end` é o `date_stop` que a Meta devolveu,
+  # nunca "ontem" calculado aqui: é ele que diz ao consultor se a janela ainda vale.
+  def frequency_windows!(rows, window_days:)
+    records = rows.filter_map { |row| window_record(row, window_days) }.index_by { |record| record.values_at(:ad_id, :date_end) }.values
+    return 0 if records.empty?
+
+    Crm::MetaAdFrequencyWindow.upsert_all(records, unique_by: :idx_crm_meta_ad_freq_windows_unique) # rubocop:disable Rails/SkipsModelValidations
+    records.size
+  end
+
   private
+
+  def window_record(row, window_days)
+    return if row['ad_id'].blank?
+
+    {
+      account_id: @connection.account_id, ad_account_id: @connection.ad_account_id, ad_id: row['ad_id'].to_s,
+      adset_id: row['adset_id'].presence, window_days: window_days, date_end: Date.iso8601(row['date_stop'].to_s),
+      impressions: row['impressions'].to_i, reach: row['reach'].to_i, frequency: row['frequency'].presence&.to_d, fetched_at: @now
+    }
+  rescue ArgumentError
+    nil
+  end
 
   def ad_record(row)
     base = base_record(row)

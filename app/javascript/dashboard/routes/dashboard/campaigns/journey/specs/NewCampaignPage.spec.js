@@ -42,9 +42,10 @@ vi.mock(
 
 const route = vi.hoisted(() => ({ value: null }));
 const push = vi.fn();
+const replace = vi.fn();
 vi.mock('vue-router', () => ({
   useRoute: () => route.value,
-  useRouter: () => ({ push }),
+  useRouter: () => ({ push, replace }),
 }));
 const alert = vi.fn();
 vi.mock('dashboard/composables', () => ({
@@ -195,6 +196,7 @@ beforeEach(() => {
   preview.mockReset();
   preview.mockResolvedValue({ data: { payload: null } });
   push.mockClear();
+  replace.mockClear();
   alert.mockClear();
   window.localStorage.clear();
 });
@@ -453,7 +455,8 @@ describe('Nova campanha — Passo 2 and 3 (PRD §6.3, §6.4)', () => {
     create.mockRejectedValue({
       response: { status: 422, data: { code: 'invalid_variable_bindings' } },
     });
-    const wrapper = mountPage();
+    // Reload in the middle of the journey (#1093): the address carries ?draft=1.
+    const wrapper = mountPage({ query: { draft: '1' } });
     await flushPromises();
 
     expect(wrapper.find('[data-step="3"]').attributes('aria-current')).toBe(
@@ -487,7 +490,8 @@ describe('Nova campanha — Passo 2 and 3 (PRD §6.3, §6.4)', () => {
       },
       step: 2,
     });
-    const wrapper = mountPage();
+    // Reload in the middle of the journey (#1093): the address carries ?draft=1.
+    const wrapper = mountPage({ query: { draft: '1' } });
     await flushPromises();
 
     expect(wrapper.find('select').exists()).toBe(false);
@@ -534,13 +538,159 @@ describe('Nova campanha — Passo 2 and 3 (PRD §6.3, §6.4)', () => {
       },
       step: 3,
     });
-    const wrapper = mountPage();
+    // Reload in the middle of the journey (#1093): the address carries ?draft=1.
+    const wrapper = mountPage({ query: { draft: '1' } });
     await flushPromises();
     await vi.advanceTimersByTimeAsync(500);
     await flushPromises();
 
     expect(wrapper.find('[data-reason="opted_out"]').text()).toContain('−3');
     expect(wrapper.find('[data-test="receivers"]').text()).toBe('95');
+    wrapper.unmount();
+  });
+});
+
+// #1093: the entry intent comes from the address. "Nova campanha" (no query) never drops the
+// person silently into an old draft; it asks first.
+describe('Nova campanha — campanha sem terminar (#1093)', () => {
+  const OLD_EMAIL_DRAFT = {
+    title: 'Novidades de setembro',
+    audienceId: 5,
+    channel: 'email',
+    emailSender: 'identity:4',
+    emailCampaignId: 54,
+    step: 2,
+  };
+
+  it('"Nova campanha" with a pending draft asks first and shows only that choice', async () => {
+    saveDraft(1, OLD_EMAIL_DRAFT);
+    const wrapper = mountPage();
+    await flushPromises();
+
+    const resume = wrapper.find('[data-test="draft-resume"]');
+    expect(resume.text()).toContain(
+      'You have an unfinished campaign: Novidades de setembro.'
+    );
+    expect(resume.text()).toContain('It stays saved in the e-mail list.');
+    expect(resume.findAll('button').map(button => button.text())).toEqual([
+      'Continue this one',
+      'Start a new one',
+    ]);
+    // Nothing of the old journey shows before the choice.
+    expect(wrapper.find('[data-step="1"]').exists()).toBe(false);
+    expect(wrapper.find('[data-test="email-step"]').exists()).toBe(false);
+    expect(loadDraft(1)).toMatchObject({ emailCampaignId: 54 });
+    wrapper.unmount();
+  });
+
+  it('a draft without a name is called "no name", and without e-mail there is no e-mail line', async () => {
+    saveDraft(1, { audienceId: 5, step: 1 });
+    const wrapper = mountPage();
+    await flushPromises();
+
+    const resume = wrapper.find('[data-test="draft-resume"]');
+    expect(resume.text()).toContain(
+      'You have an unfinished campaign: no name.'
+    );
+    expect(resume.text()).not.toContain('e-mail list');
+    wrapper.unmount();
+  });
+
+  it('"Continuar essa" resumes at the stored step and marks the address', async () => {
+    saveDraft(1, { ...OLD_EMAIL_DRAFT, emailCampaignId: null });
+    const wrapper = mountPage();
+    await flushPromises();
+
+    await wrapper.find('[data-test="draft-continue"]').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.find('[data-test="draft-resume"]').exists()).toBe(false);
+    expect(wrapper.find('[data-step="2"]').attributes('aria-current')).toBe(
+      'step'
+    );
+    expect(replace).toHaveBeenCalledWith({ query: { draft: '1' } });
+    wrapper.unmount();
+  });
+
+  it('"Começar uma nova" clears the stored draft and starts empty at Passo 1', async () => {
+    saveDraft(1, OLD_EMAIL_DRAFT);
+    const wrapper = mountPage();
+    await flushPromises();
+
+    await wrapper.find('[data-test="draft-start-new"]').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.find('[data-test="draft-resume"]').exists()).toBe(false);
+    expect(wrapper.find('[data-step="1"]').attributes('aria-current')).toBe(
+      'step'
+    );
+    expect(
+      wrapper.find('[data-audience-option="5"]').attributes('aria-pressed')
+    ).toBe('false');
+    expect(loadDraft(1)).toBeNull();
+    wrapper.unmount();
+  });
+
+  it('without a pending draft, "Nova campanha" opens Passo 1 directly', async () => {
+    const wrapper = mountPage();
+    await flushPromises();
+
+    expect(wrapper.find('[data-test="draft-resume"]').exists()).toBe(false);
+    expect(wrapper.find('[data-step="1"]').attributes('aria-current')).toBe(
+      'step'
+    );
+    expect(replace).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
+  it('back from the editor (?email=<id>) resumes directly when it is the stored e-mail', async () => {
+    saveDraft(1, OLD_EMAIL_DRAFT);
+    const wrapper = mountPage({ query: { email: '54' } });
+    await flushPromises();
+
+    expect(wrapper.find('[data-test="draft-resume"]').exists()).toBe(false);
+    expect(wrapper.find('[data-step="2"]').attributes('aria-current')).toBe(
+      'step'
+    );
+    expect(loadDraft(1)).toMatchObject({ emailCampaignId: 54 });
+    wrapper.unmount();
+  });
+
+  it('?email=<id> of another e-mail starts fresh', async () => {
+    saveDraft(1, OLD_EMAIL_DRAFT);
+    const wrapper = mountPage({ query: { email: '99' } });
+    await flushPromises();
+
+    expect(wrapper.find('[data-test="draft-resume"]').exists()).toBe(false);
+    expect(wrapper.find('[data-step="1"]').attributes('aria-current')).toBe(
+      'step'
+    );
+    expect(loadDraft(1)).toBeNull();
+    wrapper.unmount();
+  });
+
+  it('a reload in the middle (?draft=1) keeps the work', async () => {
+    saveDraft(1, OLD_EMAIL_DRAFT);
+    const wrapper = mountPage({ query: { draft: '1' } });
+    await flushPromises();
+
+    expect(wrapper.find('[data-test="draft-resume"]').exists()).toBe(false);
+    expect(wrapper.find('[data-step="2"]').attributes('aria-current')).toBe(
+      'step'
+    );
+    wrapper.unmount();
+  });
+
+  it('marks the address as soon as a new draft starts, so a reload does not lose it', async () => {
+    const wrapper = mountPage();
+    await flushPromises();
+    expect(replace).not.toHaveBeenCalled();
+
+    await wrapper.find('[data-audience-option="5"]').trigger('click');
+    await flushPromises();
+
+    expect(replace).toHaveBeenCalledWith({ query: { draft: '1' } });
+    expect(loadDraft(1)).toMatchObject({ audienceId: 5 });
     wrapper.unmount();
   });
 });

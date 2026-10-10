@@ -1,7 +1,7 @@
 # Conexão guiada de Anúncios da Meta (#1047): lista as contas de anúncios que a conta pode usar, lista os
 # Pixels de uma conta e grava a escolha só depois de ler a conta de verdade (CA-1.2).
 #
-# Modo `token`: o token colado pelo cliente (já salvo na conexão) lista as contas dele.
+# Modos `token` e `facebook_login`: o token do próprio cliente (já salvo na conexão) lista as contas dele.
 # Modo `partner`: o token da plataforma lê as contas que clientes compartilharam com o portfólio da
 # plataforma. Como esse token enxerga contas de todos os clientes, cada conta do Chat2You só vê e só escolhe
 # contas cujo portfólio dono é um portfólio do seu próprio WhatsApp (Crm::MetaAds::Portfolios) e que nenhuma
@@ -28,7 +28,7 @@ class Crm::MetaAds::Setup
 
   # [{ id:, name:, currency:, active:, spend_30d:, ready:, recommended: }], a recomendada primeiro.
   def ad_accounts(mode)
-    candidates = mode == 'partner' ? partner_candidates : token_candidates
+    candidates = mode == 'partner' ? partner_candidates : token_candidates(mode)
     with_spend(candidates)
   end
 
@@ -64,18 +64,19 @@ class Crm::MetaAds::Setup
   end
 
   def client_for(mode)
-    token = mode == 'partner' ? Crm::MetaAds::Platform.token : saved_token
+    token = mode == 'partner' ? Crm::MetaAds::Platform.token : saved_token(mode)
     raise Error, (mode == 'partner' ? 'platform_unavailable' : 'token_missing') if token.blank?
 
     @client = Meta::AdsGraphClient.new(access_token: token)
   end
 
-  def saved_token
-    connection.access_token if connection.persisted? && connection.token_mode?
+  # O token do cliente só vale para o modo com que ele foi salvo: trocar de modo pede conectar de novo.
+  def saved_token(mode)
+    connection.access_token if connection.persisted? && connection.own_token? && connection.mode == mode
   end
 
-  def token_candidates
-    result = client_for('token').ad_accounts
+  def token_candidates(mode)
+    result = client_for(mode).ad_accounts
     raise_graph!(result) unless result.ok
 
     Array(result.data.to_h['data']).map { |row| candidate(row, ready: true) }

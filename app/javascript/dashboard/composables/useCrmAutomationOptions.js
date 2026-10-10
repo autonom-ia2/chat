@@ -9,7 +9,7 @@ const stages = ref([]);
 // Promessa da carga em andamento: a edição espera por ela antes de montar a regra salva.
 let loading = Promise.resolve();
 
-const CARD_STATUSES = ['open', 'won', 'lost'];
+const CARD_STATUSES = ['open', 'won', 'lost', 'resolved', 'cancelled'];
 
 export const isCrmAutomationKey = key => key.includes('crm_');
 

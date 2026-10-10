@@ -2,6 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
+import { readdirSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import {
@@ -128,6 +129,42 @@ test('typed commands reject extra fields, unsupported operations and client succ
     assert.throws(() => validateRequest(invalid), /publication_failed/);
 });
 
+test('search completion accepts the legacy candidate and an optional tester status', () => {
+  const candidate = {
+    id: '178414000000000001',
+    username: 'latency.synthetic',
+    name: 'Synthetic',
+    avatar_url: null,
+  };
+  const completion = results => ({
+    type: 'browser_operation',
+    operation: 'complete',
+    action: 'search',
+    id,
+    request_id: '22222222-2222-4222-8222-222222222222',
+    claim: '33333333-3333-4333-8333-333333333333',
+    captured_at: stamp,
+    results,
+  });
+  for (const testerStatus of ['absent', 'pending', 'accepted', null]) {
+    const payload = completion([{ ...candidate, tester_status: testerStatus }]);
+    assert.deepEqual(validateRequest(payload), payload);
+  }
+  assert.deepEqual(
+    validateRequest(completion([candidate])),
+    completion([candidate])
+  );
+  for (const invalid of [
+    { ...candidate, tester_status: 'CONFIRMED' },
+    { ...candidate, tester_status: '' },
+    { ...candidate, tester_status: null, extra: 'x' },
+  ])
+    assert.throws(
+      () => validateRequest(completion([invalid])),
+      /publication_failed/
+    );
+});
+
 test('bootstrap accepts all five canonical values and bounds strings without secrets', () => {
   assert.deepEqual(
     validateRequest({ type: 'session', operation: 'bootstrap' }),
@@ -245,7 +282,6 @@ test('waiter has no session prerequisite, claims before opening browser, shares 
     'operator_claim',
     'manager_heartbeat',
     'bootstrap',
-    'manager_heartbeat',
     'browser',
     'manager',
     'operator_read',
@@ -274,17 +310,26 @@ test('operator required returns to polling without automatically opening another
   assert.equal(h.events.filter(value => value === 'browser').length, 1);
 });
 
-for (const option of ['childFailure', 'claimLost']) {
-  test(`${option} fails the claimed request even when transport response is uncertain`, async () => {
-    const h = waiterHarness({ [option]: true });
-    await assert.rejects(
-      runWaiter(env, h.dependencies),
-      /operator_runtime_failed/
-    );
-    assert.equal(h.current().state, 'failed');
-    assert.equal(h.events.includes('manager'), false);
-  });
-}
+test('child failure fails the claimed request without launching the manager', async () => {
+  const h = waiterHarness({ childFailure: true });
+  await assert.rejects(
+    runWaiter(env, h.dependencies),
+    /operator_runtime_failed/
+  );
+  assert.equal(h.current().state, 'failed');
+  assert.equal(h.events.includes('manager'), false);
+});
+
+test('lost claim reply reconciles the same running request without claiming twice', async () => {
+  const h = waiterHarness({ claimLost: true });
+  await runWaiter(env, h.dependencies);
+  assert.equal(h.current().state, 'succeeded');
+  assert.equal(
+    h.events.filter(value => value.operation === 'operator_claim').length,
+    1
+  );
+  assert.equal(h.events.filter(value => value === 'manager').length, 1);
+});
 
 test('SIGTERM uses independent bounded cleanup to fail a live claim', async () => {
   const h = waiterHarness({ shutdown: true });
@@ -314,7 +359,7 @@ test('malformed reply never starts a browser', async () => {
   assert.equal(h.events.includes('browser'), false);
 });
 
-test('stubborn runtime child escalates cancellation and settles within 30 seconds', async () => {
+test('stubborn runtime child escalates cancellation at 28s and waits for its exit', async () => {
   const child = new EventEmitter();
   const killed = [];
   child.kill = signal => killed.push(signal);
@@ -331,10 +376,18 @@ test('stubborn runtime child escalates cancellation and settles within 30 second
     spawnImpl: () => child,
     clock,
   });
+  let drained = false;
+  running.then(() => {
+    drained = true;
+  });
   shutdown.abort();
   assert.deepEqual(killed, ['SIGTERM']);
   assert.equal(timers.get(1).delay, 28000);
   timers.get(1).fn();
+  await Promise.resolve();
+  assert.equal(drained, false);
+  assert.deepEqual(killed, ['SIGTERM', 'SIGKILL']);
+  child.emit('exit', null);
   assert.equal(await running, 143);
   assert.deepEqual(killed, ['SIGTERM', 'SIGKILL']);
   assert.equal(timers.size, 0);
@@ -362,10 +415,28 @@ test('forced publisher emits only canonical bounded typed replies including boot
   const synthetic = source
     .replace('/usr/bin/id -u 2>/dev/null', 'printf 0')
     .replace(
+      '/usr/bin/docker exec -i chatwoot-web bundle exec ruby scripts/instagram_testers/session_publisher.rb --channel',
+      '/bin/cat'
+    )
+    .replace(
       '/usr/bin/docker exec -i chatwoot-web bundle exec ruby scripts/instagram_testers/session_publisher.rb 2>/dev/null',
       '/bin/cat'
     );
   assert.equal(synthetic.includes('/usr/bin/docker'), false);
+  assert.match(synthetic, /exec 4<&0/);
+  assert.match(source, /--channel <&4 >&3/);
+  assert.match(synthetic, /\/bin\/cat <&4 >&3/);
+  assert.match(synthetic, /exec 4<&-/);
+  const runSynthetic = (input, command = '') =>
+    spawnSync('/bin/sh', ['-c', synthetic], {
+      input,
+      encoding: 'utf8',
+      timeout: 3000,
+      env: {
+        SUDO_USER: 'chatwoot_publisher',
+        ...(command ? { SSH_ORIGINAL_COMMAND: command } : {}),
+      },
+    });
   for (const [reply, code] of [
     [JSON.stringify(envelope(request)), 0],
     [JSON.stringify({ type: 'session', version: id }), 0],
@@ -406,17 +477,47 @@ test('forced publisher emits only canonical bounded typed replies including boot
     ['x'.repeat(1025), 2],
     [JSON.stringify(envelope()) + '\nlog', 2],
   ]) {
-    const result = spawnSync('/bin/sh', ['-c', synthetic], {
-      input: reply,
-      encoding: 'utf8',
-      env: { SUDO_USER: 'chatwoot_publisher' },
-    });
+    const result = runSynthetic(reply);
+    assert.equal(result.error, undefined, reply);
     assert.equal(result.status, code, reply);
     assert.equal(result.stdout, code === 0 ? `${reply}\n` : '');
     assert.equal(
       result.stderr,
       code === 0 ? '' : 'instagram_publisher_transport_failed\n'
     );
+  }
+  const channelFrames = [
+    JSON.stringify({ type: 'session', version: id }),
+    JSON.stringify(bootstrap),
+    JSON.stringify(envelope(request)),
+  ].join('\n');
+  const beforeChannel = readdirSync('/tmp').filter(name =>
+    name.startsWith('instagram-publisher-channel.')
+  );
+  const channel = runSynthetic(
+    `${channelFrames}\n`,
+    'instagram_publisher_channel_v1'
+  );
+  assert.equal(channel.error, undefined);
+  assert.equal(channel.status, 0);
+  assert.equal(channel.stdout, `${channelFrames}\n`);
+  assert.equal(channel.stderr, '');
+  assert.deepEqual(
+    readdirSync('/tmp').filter(name =>
+      name.startsWith('instagram-publisher-channel.')
+    ),
+    beforeChannel
+  );
+  for (const [input, command] of [
+    ['not-json\n', 'instagram_publisher_channel_v1'],
+    [`${'x'.repeat(2049)}\n`, 'instagram_publisher_channel_v1'],
+    ['ignored\n', 'instagram_publisher_unknown_v1'],
+  ]) {
+    const result = runSynthetic(input, command);
+    assert.equal(result.error, undefined, `${command}:${input.length}`);
+    assert.equal(result.status, 2, `${command}:${input.length}`);
+    assert.equal(result.stdout, '');
+    assert.equal(result.stderr, 'instagram_publisher_transport_failed\n');
   }
 });
 

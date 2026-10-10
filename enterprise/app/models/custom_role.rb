@@ -42,6 +42,8 @@
 # - 'prospecting_view_all_searches': see every search of the account (and its leads), not only one's own (#732).
 # - 'insurance_view' / 'insurance_manage': insurance quoting (Cotação) connection and quote agent.
 # - 'automation_view' / 'automation_manage': automation rules.
+# - 'agendamento_view' / 'agendamento_manage': booking pages (Configurações › Agendamento) and their numbers.
+#   manage creates, publishes and pauses pages. Hosting a booking or scheduling for a client needs no key.
 # - 'label_manage', 'attribute_manage', 'macro_manage' (team-wide macros), 'sla_manage': account settings.
 
 class CustomRole < ApplicationRecord
@@ -83,6 +85,8 @@ class CustomRole < ApplicationRecord
     insurance_manage
     automation_view
     automation_manage
+    agendamento_view
+    agendamento_manage
     label_manage
     attribute_manage
     macro_manage

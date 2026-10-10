@@ -52,7 +52,7 @@ class InstallTests(unittest.TestCase):
         (self.vps / 'gateway.mjs').write_text('// synthetic gateway, never executed\n')
         (self.vps / 'gateway-auth.mjs').write_text('// synthetic auth, never executed\n')
         (self.vps / 'web').mkdir()
-        for name in ('publisher-broker.mjs', 'publisher-client.mjs', 'publisher-socket.mjs'):
+        for name in installer.PUBLISHER_MODULES:
             (self.vps / name).write_text('// synthetic publisher module; never executed\n')
         for name in ('console.html', 'console.js', 'enter.html', 'enter.js'):
             (self.vps / 'web' / name).write_text('synthetic inert asset\n')
@@ -900,6 +900,30 @@ class ConfigTests(SyntheticAccounts, unittest.TestCase):
                 'NODE_OPTIONS': '--inspect=0.0.0.0', 'PWDEBUG': '1'}.items():
             with self.subTest(key=key), self.assertRaises(ValueError):
                 check.validate('hub2you', 'manager', baseline | {key: value}, 123)
+
+    def test_manager_search_status_flag_is_optional_literal_and_off_in_examples(self):
+        self.assert_manager_flag_optional_literal_off('INSTAGRAM_TESTER_SEARCH_STATUS_ENABLED')
+
+    def test_manager_warm_invite_flag_is_optional_literal_and_off_in_examples(self):
+        self.assert_manager_flag_optional_literal_off('INSTAGRAM_TESTER_WARM_INVITE_ENABLED')
+
+    def assert_manager_flag_optional_literal_off(self, flag):
+        for stack in check.STACKS:
+            baseline = self.envs[stack, 'manager']
+            self.assertEqual(baseline[flag], 'false')
+            without = {key: value for key, value in baseline.items() if key != flag}
+            for values in (without, baseline | {flag: 'true'}, baseline):
+                check.validate(stack, 'manager', values, 123)
+                self.path.write_text(''.join(f'{key}={value}\n' for key, value in values.items()))
+                self.assertEqual(pair.read_literals(self.path, 'manager'), values)
+            for value in ('TRUE', '1', '', 'yes'):
+                with self.subTest(stack=stack, value=value), self.assertRaises(ValueError):
+                    check.validate(stack, 'manager', baseline | {flag: value}, 123)
+            for role in ('display', 'gateway', 'publisher'):
+                values = self.envs[stack, role] | {flag: 'false'}
+                self.path.write_text(''.join(f'{key}={value}\n' for key, value in values.items()))
+                with self.subTest(stack=stack, role=role), self.assertRaises(ValueError):
+                    pair.read_literals(self.path, role)
 
     def test_literal_parser_rejects_duplicate_unknown_expansion_and_placeholders(self):
         values = self.envs['hub2you', 'gateway']

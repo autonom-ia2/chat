@@ -10,6 +10,8 @@ Não há migração de schema, mudança de credenciais, permissão, DNS ou infra
 
 ## Modelos prontos
 
+> **Substituído em #1082:** a biblioteca passou a ter 13 modelos em português, com fotos servidas pela própria instalação e checagem de qualidade no CI. O seed agora é dry-run por padrão (`APPLY=1` grava) e roda em produção pelo workflow `ops-email-templates-seed.yml`. Publicação, verificação e rollback: [`docs/runbooks/email-biblioteca-modelos.md`](../runbooks/email-biblioteca-modelos.md). O texto abaixo registra a entrega de 01/10.
+
 Os 14 designs globais são editáveis. Mantêm os nomes originais e as fontes MJML licenciadas, acompanhados de HTML sanitizado e compilado com descadastro protegido. Textos, imagens, marcas e links de exemplo precisam ser adaptados à campanha. Isso não impede usar o design imediatamente no editor.
 
 Em desenvolvimento, depois de alterar uma fonte, compile e revise os ativos antes do commit:

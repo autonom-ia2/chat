@@ -1,0 +1,126 @@
+{
+  "text": [
+    {
+      "name": "real campaign 54 text: search citation with the openai utm",
+      "input": "Um agente que coleta datas e dados dos viajantes, apresenta propostas e gera um comparativo de planos no WhatsApp. ([viagem.hub2you.ai](https://viagem.hub2you.ai/?utm_source=openai))",
+      "expected": "Um agente que coleta datas e dados dos viajantes, apresenta propostas e gera um comparativo de planos no WhatsApp. (<a href=\"https://viagem.hub2you.ai/\">viagem.hub2you.ai</a>)"
+    },
+    {
+      "name": "real campaign 54 text: citation without query",
+      "input": "([hub2you.ai](https://hub2you.ai/))",
+      "expected": "(<a href=\"https://hub2you.ai/\">hub2you.ai</a>)"
+    },
+    {
+      "name": "keeps the other query params and escapes the href",
+      "input": "Veja ([site.com](https://site.com/p?cit=502&utm_source=openai&def=x)).",
+      "expected": "Veja (<a href=\"https://site.com/p?cit=502&amp;def=x\">site.com</a>)."
+    },
+    {
+      "name": "escapes the href even when the query is untouched",
+      "input": "[k](https://a.test/?a=1&b=2)",
+      "expected": "<a href=\"https://a.test/?a=1&amp;b=2\">k</a>"
+    },
+    {
+      "name": "keeps a utm_source that is not openai",
+      "input": "[ok](https://a.test/?utm_source=news)",
+      "expected": "<a href=\"https://a.test/?utm_source=news\">ok</a>"
+    },
+    {
+      "name": "several citations in one text",
+      "input": "A ([a.test](http://a.test/x?utm_source=openai)) e B ([b.test](https://b.test/)).",
+      "expected": "A (<a href=\"http://a.test/x\">a.test</a>) e B (<a href=\"https://b.test/\">b.test</a>)."
+    },
+    {
+      "name": "non-http scheme stays as text",
+      "input": "[mau](javascript:alert(1)) e [m](mailto:a@b.test)",
+      "expected": "[mau](javascript:alert(1)) e [m](mailto:a@b.test)"
+    },
+    {
+      "name": "brackets that are not markdown links stay",
+      "input": "[x] (y) e texto [sem link]",
+      "expected": "[x] (y) e texto [sem link]"
+    },
+    {
+      "name": "label with a bracket: only the inner link is converted",
+      "input": "[a [b](https://a.test/)",
+      "expected": "[a <a href=\"https://a.test/\">b</a>"
+    },
+    {
+      "name": "blank label stays as text",
+      "input": "[ ](https://a.test/)",
+      "expected": "[ ](https://a.test/)"
+    },
+    {
+      "name": "label is kept as written (already HTML content)",
+      "input": "[Saiba &amp; mais](https://a.test/)",
+      "expected": "<a href=\"https://a.test/\">Saiba &amp; mais</a>"
+    },
+    {
+      "name": "balanced parentheses inside the url",
+      "input": "([wiki](https://pt.wikipedia.org/wiki/Foo_(bar)))",
+      "expected": "(<a href=\"https://pt.wikipedia.org/wiki/Foo_(bar)\">wiki</a>)"
+    },
+    {
+      "name": "url with a space or never closed stays as text",
+      "input": "[s](https://a.test/a b) e [u](https://a.test/",
+      "expected": "[s](https://a.test/a b) e [u](https://a.test/"
+    },
+    {
+      "name": "url the Ruby URI parser rejects stays as text",
+      "input": "[l](https://a.test/{{x}}) [c](https://café.test/) [p](https://a.test/%zz) [h](https://a.test/#a#b) [q](https://a.test/?q=%ZZ&utm_source=openai) [n](https://a.test:8a/) [at](https://a@b@c.test/)",
+      "expected": "[l](https://a.test/{{x}}) [c](https://café.test/) [p](https://a.test/%zz) [h](https://a.test/#a#b) [q](https://a.test/?q=%ZZ&utm_source=openai) [n](https://a.test:8a/) [at](https://a@b@c.test/)"
+    },
+    {
+      "name": "uppercase scheme: accepted, lowercased when the query is rewritten",
+      "input": "[A](HTTPS://A.Test/?utm_source=openai&b=1) [B](HTTPS://B.Test/)",
+      "expected": "<a href=\"https://A.Test/?b=1\">A</a> <a href=\"HTTPS://B.Test/\">B</a>"
+    },
+    {
+      "name": "fragment and userinfo survive the rewrite",
+      "input": "[f](https://u:p@a.test:8443/x?b=1&utm_source=openai#frag?y/z)",
+      "expected": "<a href=\"https://u:p@a.test:8443/x?b=1#frag?y/z\">f</a>"
+    },
+    {
+      "name": "default port is dropped when the query is rewritten",
+      "input": "[p](https://a.test:443/x?utm_source=openai&b=1) [h](http://a.test:80/?utm_source=openai) [e](https://a.test:/x?utm_source=openai)",
+      "expected": "<a href=\"https://a.test/x?b=1\">p</a> <a href=\"http://a.test/\">h</a> <a href=\"https://a.test/x\">e</a>"
+    },
+    {
+      "name": "rewritten query is form-encoded again",
+      "input": "[r](https://a.test/?q=a%20b&x=%7e&s=*-._~!&k={x}&e=1=2&utm_source=openai)",
+      "expected": "<a href=\"https://a.test/?q=a+b&amp;x=%7E&amp;s=*-._%7E%21&amp;k=%7Bx%7D&amp;e=1%3D2\">r</a>"
+    },
+    {
+      "name": "empty query pieces are kept like Ruby decode_www_form",
+      "input": "[e](https://a.test/?a&&utm_source=openai&)",
+      "expected": "<a href=\"https://a.test/?a=&amp;=\">e</a>"
+    },
+    {
+      "name": "the openai utm is matched decoded and every copy is dropped",
+      "input": "[m](https://a.test/?utm_source=open%61i&utm_source=openai)",
+      "expected": "<a href=\"https://a.test/\">m</a>"
+    },
+    {
+      "name": "url without path and empty query",
+      "input": "[a](https://a.test?utm_source=openai) [b](https://b.test/?)",
+      "expected": "<a href=\"https://a.test\">a</a> <a href=\"https://b.test/?\">b</a>"
+    },
+    {
+      "name": "text without markdown links is unchanged",
+      "input": "Oi {{ contact.name }}, tudo bem? <br/> 1 > 0",
+      "expected": "Oi {{ contact.name }}, tudo bem? <br/> 1 > 0"
+    }
+  ],
+  "mjml": [
+    {
+      "name": "converts only inside mj-text and mj-button content",
+      "input": "<mjml><mj-body><mj-section><mj-column><mj-text color=\"#111\">Veja ([a.test](https://a.test/?utm_source=openai))</mj-text><mj-button href=\"https://b.test/\">[b](https://b.test/)</mj-button><mj-raw>[c](https://c.test/)</mj-raw><!-- [d](https://d.test/) --><mj-image alt=\"[e](https://e.test/)\" src=\"https://e.test/x.png\"></mj-image></mj-column></mj-section></mj-body></mjml>",
+      "expected": "<mjml><mj-body><mj-section><mj-column><mj-text color=\"#111\">Veja (<a href=\"https://a.test/\">a.test</a>)</mj-text><mj-button href=\"https://b.test/\"><a href=\"https://b.test/\">b</a></mj-button><mj-raw>[c](https://c.test/)</mj-raw><!-- [d](https://d.test/) --><mj-image alt=\"[e](https://e.test/)\" src=\"https://e.test/x.png\"></mj-image></mj-column></mj-section></mj-body></mjml>"
+    },
+    {
+      "name": "MJML without citations is unchanged",
+      "input": "<mjml><mj-body><mj-section><mj-column><mj-text>Oi<br/>tudo bem?</mj-text></mj-column></mj-section></mj-body></mjml>",
+      "expected": "<mjml><mj-body><mj-section><mj-column><mj-text>Oi<br/>tudo bem?</mj-text></mj-column></mj-section></mj-body></mjml>"
+    }
+  ]
+}

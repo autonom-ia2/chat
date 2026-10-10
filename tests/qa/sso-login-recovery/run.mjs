@@ -132,6 +132,13 @@ async function runScenario(name, options, action) {
       sso_token: 'synthetic-one-time-token',
       sso_source: options.ssoSource || 'autonomia',
     });
+    if (options.callbackError) {
+      query.delete('email');
+      query.delete('sso_token');
+      query.delete('sso_source');
+      query.set('error', options.callbackError);
+      query.set('auto_redirect', String(options.autoRedirect !== false));
+    }
     if (options.redirectTo) query.set('redirect_to', options.redirectTo);
     if (options.configuredAuthUrl) {
       query.set('configured_auth_url', options.configuredAuthUrl);
@@ -168,6 +175,180 @@ try {
   await mkdir(output, { recursive: true });
   ({ server } = await startServer());
   browser = await chromium.launch({ headless: true });
+
+  await Promise.all(
+    ['autonomia-sso-account', 'autonomia-sso-state'].map(callbackError =>
+      check(
+        `callback ${callbackError} returns to Auth without local login`,
+        async () => {
+          const record = await runScenario(
+            `callback-${callbackError}`,
+            { callbackError, redirectTo: '/app/accounts/7/dashboard' },
+            async ({ page, record: scenario }) => {
+              await page.getByTestId('synthetic-auth-login').waitFor();
+              const url = new URL(page.url());
+              assert(
+                url.origin === origin,
+                'Callback recovery left the trusted origin'
+              );
+              assert(
+                url.searchParams.get('prompt') === 'login',
+                'Missing prompt=login'
+              );
+              assert(
+                url.searchParams.get('return_to') ===
+                  '/app/accounts/7/dashboard',
+                'Callback recovery lost the internal target'
+              );
+              assert(
+                scenario.apiAttempts === 0,
+                'Callback recovery attempted local login'
+              );
+              assert(
+                scenario.authNavigations === 1,
+                'Callback recovery did not navigate once'
+              );
+              assert(
+                !url.searchParams.has('error'),
+                'Callback error leaked into the retry URL'
+              );
+              assert(
+                !url.searchParams.has('email'),
+                'Email leaked into the retry URL'
+              );
+              await screenshot(page, `callback-${callbackError}-auth-return`);
+            }
+          );
+          return {
+            apiAttempts: record.apiAttempts,
+            authNavigations: record.authNavigations,
+          };
+        }
+      )
+    )
+  );
+
+  await check(
+    'generic callback failure does not restart Auth or attempt tokenless login',
+    async () => {
+      const record = await runScenario(
+        'generic-callback-failure',
+        { callbackError: 'autonomia-sso-error' },
+        async ({ page, record: scenario }) => {
+          await page.getByTestId('autonomia_sso_error').waitFor();
+          assert(
+            scenario.authNavigations === 0,
+            'Generic failure restarted Auth'
+          );
+          assert(
+            scenario.apiAttempts === 0,
+            'Callback attempted tokenless login'
+          );
+          assert(
+            (await page.getByTestId('autonomia_sso_retry').count()) === 0,
+            'Tokenless local retry is visible'
+          );
+          await screenshot(page, 'generic-callback-failure');
+        }
+      );
+      return {
+        apiAttempts: record.apiAttempts,
+        authNavigations: record.authNavigations,
+      };
+    }
+  );
+
+  await check(
+    'disabled automatic SSO keeps account rejection on the manual recovery screen',
+    async () => {
+      const record = await runScenario(
+        'account-rejection-auto-disabled',
+        { callbackError: 'autonomia-sso-account', autoRedirect: false },
+        async ({ page, record: scenario }) => {
+          await page.getByTestId('autonomia_sso_error').waitFor();
+          assert(
+            scenario.authNavigations === 0,
+            'Disabled automatic SSO restarted Auth'
+          );
+          assert(
+            scenario.apiAttempts === 0,
+            'Account rejection attempted local login'
+          );
+          await screenshot(page, 'account-rejection-auto-disabled');
+        }
+      );
+      return {
+        apiAttempts: record.apiAttempts,
+        authNavigations: record.authNavigations,
+      };
+    }
+  );
+
+  await check(
+    'cancelled OAuth stays on the login form after query cleanup',
+    async () => {
+      const record = await runScenario(
+        'cancelled-callback',
+        { callbackError: 'autonomia-sso-cancelled' },
+        async ({ page, record: scenario }) => {
+          await page.getByTestId('email_input').waitFor();
+          await page.waitForFunction(
+            () => !window.location.search.includes('error=')
+          );
+          assert(
+            scenario.authNavigations === 0,
+            'Cancelled OAuth restarted Auth'
+          );
+          assert(
+            scenario.apiAttempts === 0,
+            'Cancelled OAuth attempted local login'
+          );
+          assert(
+            await page.getByTestId('email_input').isVisible(),
+            'Login form disappeared after cancellation'
+          );
+          await screenshot(page, 'cancelled-callback');
+        }
+      );
+      return {
+        apiAttempts: record.apiAttempts,
+        authNavigations: record.authNavigations,
+      };
+    }
+  );
+
+  await check(
+    'neutral callback error keeps the login form after query cleanup',
+    async () => {
+      const record = await runScenario(
+        'neutral-callback-error',
+        { callbackError: 'no-account-found' },
+        async ({ page, record: scenario }) => {
+          await page.getByTestId('email_input').waitFor();
+          await page.waitForFunction(
+            () => !window.location.search.includes('error=')
+          );
+          assert(
+            await page.getByTestId('email_input').isVisible(),
+            'Login form disappeared'
+          );
+          assert(
+            scenario.apiAttempts === 0,
+            'Neutral error attempted local login'
+          );
+          assert(
+            scenario.authNavigations === 0,
+            'Neutral error was redirected to Auth'
+          );
+          await screenshot(page, 'neutral-callback-error-login-form');
+        }
+      );
+      return {
+        apiAttempts: record.apiAttempts,
+        authNavigations: record.authNavigations,
+      };
+    }
+  );
 
   await check(
     '422 validation failure stops loading and returns once to trusted Auth',

@@ -4,10 +4,14 @@
 // mjmlCanonical.js) minus <mj-title> and <mj-preview>: grapesjs-mjml has no component for them and
 // prints their text at the top of the canvas. They are held aside and put back on export, so the
 // saved MJML and the sent HTML (subject title, inbox preview text) keep them.
+// Web-search citations left as markdown by old AI drafts are linked first (citationLinks.js), so
+// the canvas shows real links and the next save stores them.
 // Plain string scanning on canonical MJML — no regex.
 import { canonicalizeMjml } from './mjmlCanonical';
+import { linkMjmlCitations } from './citationLinks';
 
-const HELD_TAGS = ['mj-title', 'mj-preview'];
+// mj-font (#1076): the brand font of an identity e-mail; one per family, all held.
+const HELD_TAGS = ['mj-title', 'mj-preview', 'mj-font'];
 
 // [start, end) of the first <tag ...>...</tag> in mjml, or null.
 const elementRange = (mjml, tag) => {
@@ -21,15 +25,21 @@ const elementRange = (mjml, tag) => {
 const cutTag = ({ mjml, held }, tag) => {
   const range = elementRange(mjml, tag);
   if (!range) return { mjml, held };
-  return {
-    mjml: mjml.slice(0, range[0]) + mjml.slice(range[1]),
-    held: held + mjml.slice(range[0], range[1]),
-  };
+  return cutTag(
+    {
+      mjml: mjml.slice(0, range[0]) + mjml.slice(range[1]),
+      held: held + mjml.slice(range[0], range[1]),
+    },
+    tag
+  );
 };
 
 // -> { mjml: for setComponents, held: head markup to give back on export }
 export const prepareMjmlForEditor = source =>
-  HELD_TAGS.reduce(cutTag, { mjml: canonicalizeMjml(source), held: '' });
+  HELD_TAGS.reduce(cutTag, {
+    mjml: canonicalizeMjml(linkMjmlCitations(source)),
+    held: '',
+  });
 
 const afterOpenTag = (mjml, tag) => {
   const start = mjml.indexOf(`<${tag}`);

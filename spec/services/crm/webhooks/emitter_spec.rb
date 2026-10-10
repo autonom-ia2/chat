@@ -47,6 +47,16 @@ RSpec.describe Crm::Webhooks::Emitter do
     end
   end
 
+  context 'when a non-sale funnel closes a card (#1144)' do
+    it 'dispatches crm.card.resolved to the subscribing webhook' do
+      create(:webhook, account: account, webhook_type: :account_type, subscriptions: ['crm.card.resolved'])
+      emit(event_type: 'resolved')
+
+      expect(Rails.configuration.dispatcher).to have_received(:dispatch)
+        .with('crm.card.resolved', anything, hash_including(account_id: account.id))
+    end
+  end
+
   context 'when a pipeline opted into Meta sync for the event' do
     let(:pipeline_metadata) { { 'meta_sync' => { 'enabled' => true, 'events' => { 'won' => true } } } }
 

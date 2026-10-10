@@ -26,6 +26,8 @@ import WhatsAppApiCampaignDialog from 'dashboard/components-next/Campaigns/Pages
 import SMSCampaignDialog from 'dashboard/components-next/Campaigns/Pages/CampaignPage/SMSCampaign/SMSCampaignDialog.vue';
 import LiveChatCampaignDialog from 'dashboard/components-next/Campaigns/Pages/CampaignPage/LiveChatCampaign/LiveChatCampaignDialog.vue';
 import EmailResultActions from 'dashboard/components-next/CampaignResult/EmailResultActions.vue';
+import CampaignTabs from 'dashboard/components-next/CampaignJourney/CampaignTabs.vue';
+import BrandKitNudge from 'dashboard/components-next/BrandKits/BrandKitNudge.vue';
 import {
   CAMPAIGN_CHANNELS,
   CHANNEL_ICONS,
@@ -233,6 +235,8 @@ useOnEnter(fetchAll);
           {{ t('CAMPAIGN_JOURNEY.SIDEBAR.CAMPAIGNS') }}
         </span>
       </nav>
+      <CampaignTabs active="campaigns" />
+      <BrandKitNudge v-if="features.emailCampaigns" />
       <header class="mb-7 flex flex-wrap items-start justify-between gap-4">
         <div class="min-w-0">
           <h1

@@ -123,7 +123,10 @@ const onlyDigits = value =>
 const form = reactive({
   name: '',
   description: '',
+  whenToUse: '',
   monthlyTarget: '',
+  countsAsSale: true,
+  outcomeLabels: { success: '', failure: '' },
   stages: [],
   metaSync: {
     enabled: false,
@@ -137,6 +140,19 @@ const form = reactive({
     conversionNames: { won: '' },
   },
 });
+// Placeholder dos nomes dos desfechos: o padrão que a tela usa quando ficam em branco (#1144).
+const defaultOutcomeLabels = computed(() =>
+  form.countsAsSale
+    ? {
+        success: t('CRM_KANBAN.DRAWER.STATUS_WON'),
+        failure: t('CRM_KANBAN.DRAWER.STATUS_LOST'),
+      }
+    : {
+        success: t('CRM_KANBAN.DRAWER.STATUS_RESOLVED'),
+        failure: t('CRM_KANBAN.DRAWER.STATUS_CANCELLED'),
+      }
+);
+
 const newPipelineInbox = reactive({
   inboxId: '',
   defaultStageId: '',
@@ -336,8 +352,15 @@ const resetForm = () => {
   form.name = pipeline.name || t('CRM_KANBAN.PIPELINE_DRAWER.DEFAULT_NAME');
   form.description =
     pipeline.description || t('CRM_KANBAN.PIPELINE_DRAWER.DEFAULT_DESCRIPTION');
+  form.whenToUse = pipeline.when_to_use || '';
   const targetCents = pipeline.metadata?.goals?.monthly_target_cents;
   form.monthlyTarget = targetCents ? Number(targetCents) / 100 : '';
+  form.countsAsSale = pipeline.counts_as_sale ?? true;
+  const outcomeLabels = pipeline.metadata?.outcome_labels || {};
+  form.outcomeLabels = {
+    success: outcomeLabels.success || '',
+    failure: outcomeLabels.failure || '',
+  };
   const metaSync = pipeline.metadata?.meta_sync || {};
   form.metaSync = {
     enabled: Boolean(metaSync.enabled),
@@ -482,8 +505,14 @@ const onSubmit = async () => {
       id: props.pipeline?.id,
       name: form.name.trim(),
       description: form.description.trim(),
+      when_to_use: form.whenToUse.trim(),
       is_default: props.pipeline?.is_default ?? !isEditing.value,
       position: props.pipeline?.position || 1,
+      counts_as_sale: form.countsAsSale,
+      outcome_labels: {
+        success: form.outcomeLabels.success.trim(),
+        failure: form.outcomeLabels.failure.trim(),
+      },
       goal: {
         monthly_target_cents:
           Number(form.monthlyTarget) > 0
@@ -686,6 +715,77 @@ useFixedPanelPresence(computed(() => props.show));
           </label>
 
           <label v-if="view === 'adjustments'" class="grid gap-1">
+            <span class="text-heading-3 text-n-slate-12">
+              {{ t('CRM_KANBAN.PIPELINE_DRAWER.WHEN_TO_USE') }}
+            </span>
+            <span class="text-sm text-n-slate-11">
+              {{ t('CRM_KANBAN.PIPELINE_DRAWER.WHEN_TO_USE_HELP') }}
+            </span>
+            <textarea
+              v-model="form.whenToUse"
+              rows="3"
+              maxlength="1000"
+              data-pipeline-when-to-use
+              class="reset-base !mb-0 w-full rounded-lg border-0 bg-n-alpha-black2 px-3 py-2.5 text-sm text-n-slate-12 outline outline-1 outline-n-weak transition-all placeholder:text-n-slate-10 focus:outline-n-brand"
+              :placeholder="
+                t('CRM_KANBAN.PIPELINE_DRAWER.WHEN_TO_USE_PLACEHOLDER')
+              "
+            />
+          </label>
+
+          <section
+            v-if="view === 'adjustments'"
+            data-pipeline-outcome
+            class="grid gap-4 rounded-2xl border border-n-slate-4 bg-n-surface-1 p-4"
+          >
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <h3 class="mb-1 text-sm font-medium text-n-slate-12">
+                  {{ t('CRM_KANBAN.PIPELINE_DRAWER.COUNTS_AS_SALE') }}
+                </h3>
+                <p class="mb-0 text-xs leading-5 text-n-slate-11">
+                  {{
+                    form.countsAsSale
+                      ? t('CRM_KANBAN.PIPELINE_DRAWER.COUNTS_AS_SALE_ON')
+                      : t('CRM_KANBAN.PIPELINE_DRAWER.COUNTS_AS_SALE_OFF')
+                  }}
+                </p>
+              </div>
+              <label
+                class="relative inline-flex min-h-11 min-w-11 shrink-0 cursor-pointer items-center"
+              >
+                <input
+                  v-model="form.countsAsSale"
+                  :aria-label="t('CRM_KANBAN.PIPELINE_DRAWER.COUNTS_AS_SALE')"
+                  type="checkbox"
+                  class="peer sr-only"
+                />
+                <span
+                  class="h-5 w-9 rounded-full bg-n-alpha-2 transition-colors after:absolute after:left-0.5 after:top-[0.875rem] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-transform peer-checked:bg-n-brand peer-checked:after:translate-x-4"
+                />
+              </label>
+            </div>
+            <div class="grid gap-3 sm:grid-cols-2">
+              <Input
+                v-model="form.outcomeLabels.success"
+                :label="t('CRM_KANBAN.PIPELINE_DRAWER.OUTCOME_SUCCESS')"
+                :placeholder="defaultOutcomeLabels.success"
+              />
+              <Input
+                v-model="form.outcomeLabels.failure"
+                :label="t('CRM_KANBAN.PIPELINE_DRAWER.OUTCOME_FAILURE')"
+                :placeholder="defaultOutcomeLabels.failure"
+              />
+            </div>
+            <span class="text-xs text-n-slate-11">
+              {{ t('CRM_KANBAN.PIPELINE_DRAWER.OUTCOME_HELP') }}
+            </span>
+          </section>
+
+          <label
+            v-if="view === 'adjustments' && form.countsAsSale"
+            class="grid gap-1"
+          >
             <span class="text-heading-3 text-n-slate-12">
               {{ t('CRM_KANBAN.PIPELINE_DRAWER.MONTHLY_TARGET') }}
             </span>
@@ -1177,6 +1277,7 @@ useFixedPanelPresence(computed(() => props.show));
                   </div>
                 </details>
                 <section
+                  v-if="form.countsAsSale"
                   class="grid gap-4 rounded-2xl border border-n-slate-5 bg-n-surface-1 p-4 sm:p-5"
                 >
                   <div class="flex items-start gap-3">
@@ -1310,7 +1411,7 @@ useFixedPanelPresence(computed(() => props.show));
           </section>
 
           <div
-            v-if="isEditing && view === 'adjustments'"
+            v-if="isEditing && view === 'adjustments' && form.countsAsSale"
             class="mt-3 grid gap-2"
           >
             <h3 class="mb-0 text-lg font-semibold text-n-slate-12">
@@ -1321,7 +1422,7 @@ useFixedPanelPresence(computed(() => props.show));
             </p>
           </div>
           <section
-            v-if="isEditing && view === 'adjustments'"
+            v-if="isEditing && view === 'adjustments' && form.countsAsSale"
             class="grid gap-4 border-t border-n-weak pt-4"
           >
             <div class="flex items-start justify-between gap-3">
@@ -1439,7 +1540,7 @@ useFixedPanelPresence(computed(() => props.show));
           </section>
 
           <section
-            v-if="isEditing && view === 'adjustments'"
+            v-if="isEditing && view === 'adjustments' && form.countsAsSale"
             class="grid gap-4 border-t border-n-weak pt-4"
           >
             <div class="flex items-start justify-between gap-3">

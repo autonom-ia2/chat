@@ -11,10 +11,12 @@ module Crm
       # caller (single-card #close, BulkAction#change_status!) consistent without
       # each one re-implementing the mapping.
       RESULTS = { 'won' => :won, 'lost' => :lost, 'reopen' => :open }.freeze
-      EVENT_TYPES = { 'won' => 'won', 'lost' => 'lost', 'reopen' => 'reopen' }.freeze
+      # Event type by the status actually written: num funil que não conta como venda (#1144) o desfecho grava
+      # resolved/cancelled, e o evento acompanha.
+      EVENT_TYPES = { won: 'won', lost: 'lost', resolved: 'resolved', cancelled: 'cancelled', open: 'reopen' }.freeze
       # External verb -> internal verb. 'open' (frontend "set to open") maps to
       # the 'reopen' transition; all other verbs pass through unchanged.
-      VERB_ALIASES = { 'open' => 'reopen' }.freeze
+      VERB_ALIASES = { 'open' => 'reopen', 'resolved' => 'won', 'cancelled' => 'lost' }.freeze
 
       class InvalidResult < StandardError; end
 
@@ -31,8 +33,10 @@ module Crm
         target_status = RESULTS[@result]
         raise InvalidResult, "unknown result: #{@result}" if target_status.blank?
 
+        @target_status = Crm::Cards::Outcome.status_for(@card.pipeline, target_status).to_sym
+
         ActiveRecord::Base.transaction do
-          @card.update!(close_attributes(target_status))
+          @card.update!(close_attributes(@target_status))
           log_activity!
         end
         @card
@@ -49,7 +53,7 @@ module Crm
             attributes[:currency] = @currency if @currency.present?
             lock_value_to_human!(attributes)
           end
-        when :lost
+        when :lost, :cancelled
           attributes[:lost_reason] = @lost_reason if @lost_reason.present?
         when :open
           attributes[:lost_reason] = nil
@@ -69,16 +73,16 @@ module Crm
         Crm::ActivityLogger.new(
           card: @card,
           actor: @actor,
-          event_type: EVENT_TYPES[@result],
+          event_type: EVENT_TYPES[@target_status],
           payload: activity_payload
         ).perform
       end
 
       def activity_payload
-        case @result
-        when 'won'
+        case @target_status
+        when :won
           { value_cents: @card.value_cents, currency: @card.currency }
-        when 'lost'
+        when :lost, :cancelled
           { lost_reason: @card.lost_reason }.compact
         else
           {}

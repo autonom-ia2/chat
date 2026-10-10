@@ -70,6 +70,9 @@ jobs:
       POSTGRES_PASSWORD: synthetic-ci-only
       POSTGRES_DATABASE: relationships_757_test
       REDIS_URL: redis://127.0.0.1:6379/0
+      # Specs que renderizam pagina disparam o build do Vite neste job: mesmo heap do build de producao
+      # (docker/Dockerfile, NODE_OPTIONS). Sem isso o Node estoura (~3,3 GB) e as telas respondem 500 (#1118).
+      NODE_OPTIONS: --max-old-space-size=6144
     steps:
       - uses: actions/checkout@v4
         with:
@@ -86,7 +89,8 @@ jobs:
           ruby-version: '3.4.4'
           bundler-cache: true
       - name: Disposable runner converter dependencies
-        run: sudo apt-get update && sudo apt-get install -y libvips42 poppler-utils ffmpeg
+        timeout-minutes: 15
+        run: .github/scripts/apt-install.sh libvips42 poppler-utils ffmpeg
       - run: pnpm install --frozen-lockfile
       - name: No new regex AST gate
         run: pnpm relationships:check

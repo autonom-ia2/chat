@@ -1,0 +1,47 @@
+{
+  "utc": "2026-10-08T13:50:15.441188+00:00",
+  "result": {
+    "status": "passed",
+    "aws_identity_matches": true,
+    "current_matches_cli": true,
+    "calls": 5,
+    "steady_pause_ms": 0,
+    "cpu_ms": [
+      242.248,
+      5.939,
+      10.728,
+      10.638,
+      15.892
+    ],
+    "rss_bytes": 92061696,
+    "same_current": true,
+    "elapsed_ms": [
+      1458.852,
+      146.971,
+      147.393,
+      152.095,
+      161.211
+    ],
+    "max_attempts": 1,
+    "value_cache": false,
+    "node_version": "v22.23.3",
+    "meta_called": false,
+    "production_mutated": false,
+    "live_service_unchanged": true,
+    "cpu_quota_percent": 50,
+    "memory_max_bytes": 536870912,
+    "node_archive_sha256": "df450af89261115ef9f9e3830c3eeb2cc9213b63c720b1af623cb5dcbe2e02de",
+    "system_node_unchanged": true,
+    "bundle_sha256": "83440776c029fe7a2b619a253f3f12014bb251a6718188483820073659d68851",
+    "live_cpu_quota_before": "2s",
+    "unit_exit_code": 0,
+    "source_sha256": "664fe366cccce38cf819aa69a69c3d7981fdfdda390fbb9b81d38cd2162a3202",
+    "staging_removed": true,
+    "transient_removed": true
+  },
+  "scope": "Isolated disposable unit; exact candidate SDK reader; real AWS CURRENT; no host Node replacement, production service changes or Meta calls.",
+  "limits": [
+    "Only SDK import/read tested with official Node archive. Full VPS installer, Chrome, external Meta and OAuth reconnection are separate checks.",
+    "Current deployed /usr/bin/node remains18.19.1; installer gate>=22.12 unchanged."
+  ]
+}

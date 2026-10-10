@@ -18,11 +18,18 @@ class Crm::MetaAds::NameResolver
   MIN_ID_LENGTH = 6
   MAX_ID_LENGTH = 30
   FIELDS = {
-    'ad' => 'name,account_id,adset{id,name},campaign{id,name},preview_shareable_link,creative{thumbnail_url}',
+    'ad' => 'name,account_id,adset{id,name},campaign{id,name},preview_shareable_link,creative{image_url,thumbnail_url}',
     'adset' => 'name,account_id,campaign{id,name}',
     'campaign' => 'name,account_id'
   }.freeze
   UNKNOWN_TYPE_FIELDS = 'name,account_id'.freeze
+  # A miniatura do criativo (64 px, anúncio em vídeo) só preenche linha sem imagem: não passa por cima da imagem de
+  # 1080 px que o Crm::MetaAds::AdImages já gravou (#1088). As outras colunas são trocadas como sempre.
+  REPLACED_COLUMNS = %i[object_type name campaign_id adset_id preview_url fetched_at updated_at].freeze
+  KEEP_BIG_IMAGE = Arel.sql(
+    (REPLACED_COLUMNS.map { |column| "#{column} = EXCLUDED.#{column}" } +
+      ['thumbnail_url = COALESCE(crm_meta_ad_objects.thumbnail_url, EXCLUDED.thumbnail_url)']).join(', ')
+  )
 
   class PermissionDenied < StandardError; end
   class GraphUnavailable < StandardError; end
@@ -120,9 +127,26 @@ class Crm::MetaAds::NameResolver
   # true quando a Graph trouxe algum nome. O ID do lote que não veio na resposta entra no cache negativo.
   def store(data, batch, type)
     rows = cache_rows(data, type)
-    Crm::MetaAdObject.upsert_all(rows, unique_by: :idx_crm_meta_ad_objects_account_object) if rows.any? # rubocop:disable Rails/SkipsModelValidations
+    small_ids = small_image_ids(data)
+    small, full = rows.partition { |item| small_ids.include?(item[:meta_object_id]) }
+    write_rows(full)
+    write_rows(small, on_duplicate: KEEP_BIG_IMAGE)
     remember_missing(batch - rows.pluck(:meta_object_id), type)
     rows.any?
+  end
+
+  def write_rows(rows, **)
+    Crm::MetaAdObject.upsert_all(rows, unique_by: :idx_crm_meta_ad_objects_account_object, **) if rows.any? # rubocop:disable Rails/SkipsModelValidations
+  end
+
+  # Anúncios cuja imagem veio só da miniatura do criativo, sem image_url (anúncio em vídeo, em geral).
+  def small_image_ids(data)
+    data.to_h.values.filter_map do |object|
+      creative = object['creative'] if object.is_a?(Hash)
+      next unless creative.is_a?(Hash) && http_url(creative['image_url']).nil? && http_url(creative['thumbnail_url'])
+
+      object['id'].to_s
+    end
   end
 
   # Cache negativo: linha sem nome e com fetched_at de agora. fresh_ids a conta como resolvida e
@@ -168,9 +192,16 @@ class Crm::MetaAds::NameResolver
       account_id: @account.id, meta_object_id: object['id'].to_s, object_type: type,
       name: object['name'].to_s.first(Crm::MetaAdObject::NAME_LIMIT).presence,
       campaign_id: campaign_id&.to_s, adset_id: adset_id&.to_s,
-      preview_url: http_url(object['preview_shareable_link']), thumbnail_url: http_url(object.dig('creative', 'thumbnail_url')),
+      preview_url: http_url(object['preview_shareable_link']), thumbnail_url: creative_image(object['creative']),
       fetched_at: now, created_at: now, updated_at: now
     }
+  end
+
+  # A imagem original do anúncio (#1088); sem ela (vídeo), a miniatura do criativo.
+  def creative_image(creative)
+    return unless creative.is_a?(Hash)
+
+    http_url(creative['image_url']) || http_url(creative['thumbnail_url'])
   end
 
   def names_for(ids)

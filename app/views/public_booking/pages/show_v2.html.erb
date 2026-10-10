@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="<%= @html_lang %>">
+  <head>
+    <meta charset="utf-8" />
+    <title><%= @page_title %></title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="referrer" content="same-origin" />
+    <script>
+      window.globalConfig = <%= raw @global_config.to_json %>
+    </script>
+    <%= vite_client_tag %>
+    <%= vite_javascript_tag 'public_booking_v2' %>
+  </head>
+  <body>
+    <div id="app"></div>
+  </body>
+</html>

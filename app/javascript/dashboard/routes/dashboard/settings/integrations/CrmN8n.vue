@@ -18,13 +18,15 @@ const integration = useFunctionGetter('integrations/getIntegration', 'crm_n8n');
 const uiFlags = useMapGetter('integrations/getUIFlags');
 const accountId = computed(() => store.getters.getCurrentAccountId);
 
-// The 6 MVP trigger events (plan D3). Canonical dotted strings match
+// CRM trigger events (plan D3; resolved/cancelled from #1144). Canonical dotted strings match
 // Webhook::CRM_WEBHOOK_EVENTS / Events::Types::CRM_CARD_* exactly.
 const TRIGGER_EVENTS = [
   'crm.card.created',
   'crm.card.moved',
   'crm.card.won',
   'crm.card.lost',
+  'crm.card.resolved',
+  'crm.card.cancelled',
   'crm.card.reopened',
   'crm.card.archived',
 ];

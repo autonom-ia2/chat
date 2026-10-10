@@ -103,6 +103,7 @@ module Autonomia
         [
           @agent.scaffold,
           @agent.instrucao_do_sistema,
+          ::Autonomia::Agents::Tools::Native::Agenda.instrucao(@agent),
           persona_block,
           guardrails_block,
           handoff_block,

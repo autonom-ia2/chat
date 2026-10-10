@@ -135,6 +135,20 @@ class Meta::AdsGraphClient
     each_page("#{report_run_id}/insights", { limit: INSIGHTS_PAGE_LIMIT }, &)
   end
 
+  # Anúncios da conta com o criativo (#1088): `image_url` é a imagem original, no formato dela; anúncio em vídeo
+  # não tem, e a miniatura padrão do criativo tem 64 px.
+  AD_CREATIVE_FIELDS = 'id,name,adset_id,campaign_id,creative{id,image_url,thumbnail_url}'.freeze
+  THUMBNAIL_SIZE = 1080
+
+  def ads_with_creatives(ad_account_id)
+    paged("act_#{ad_account_id}/ads", fields: AD_CREATIVE_FIELDS)
+  end
+
+  # Miniatura do criativo em tamanho grande (anúncio em vídeo, sem `image_url`).
+  def creative_thumbnail(creative_id)
+    get(creative_id.to_s, fields: 'thumbnail_url', thumbnail_width: THUMBNAIL_SIZE, thumbnail_height: THUMBNAIL_SIZE)
+  end
+
   def ad_account_pixels(ad_account_id)
     paged("act_#{ad_account_id}/adspixels", fields: PIXEL_FIELDS)
   end

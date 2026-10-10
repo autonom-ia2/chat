@@ -7,19 +7,22 @@ RSpec.describe Crm::MetaAds::InsightsSyncJob do
   let(:admin) { create(:user, account: account, role: :administrator) }
   let(:agent) { create(:user, account: account, role: :agent) }
 
+  # Relógio fixo: o resumo diz "hoje" no fuso da conta de anúncios, e a linha da Meta é de 06/10.
   it 'lê, avisa só os administradores com o resumo e solta a trava' do
-    stub_meta_insights(ad_account_id, date_preset: 'today', rows: [meta_insights_row(date: '2026-10-06', spend: '42.50')])
-    Crm::MetaAds::Insights::Refresh.claim(connection.id, 'today')
-    admin
-    agent
+    travel_to(Time.zone.parse('2026-10-06T15:00:00-03:00')) do
+      stub_meta_insights(ad_account_id, date_preset: 'today', rows: [meta_insights_row(date: '2026-10-06', spend: '42.50')])
+      Crm::MetaAds::Insights::Refresh.claim(connection.id, 'today')
+      admin
+      agent
 
-    expect { described_class.perform_now(connection.id, 'today') }
-      .to have_enqueued_job(ActionCableBroadcastJob).with(
-        [admin.pubsub_token], 'crm.meta_ads.insights_updated',
-        hash_including(account_id: account.id, date: Date.new(2026, 10, 6), spend: '42.5', currency: 'BRL', conversations: 3,
-                       refreshing: false)
-      )
-    expect(Crm::MetaAds::Insights::Refresh.running?(connection.id)).to be(false)
+      expect { described_class.perform_now(connection.id, 'today') }
+        .to have_enqueued_job(ActionCableBroadcastJob).with(
+          [admin.pubsub_token], 'crm.meta_ads.insights_updated',
+          hash_including(account_id: account.id, date: Date.new(2026, 10, 6), spend: '42.5', currency: 'BRL', conversations: 3,
+                         refreshing: false)
+        )
+      expect(Crm::MetaAds::Insights::Refresh.running?(connection.id)).to be(false)
+    end
   end
 
   it 'avisa a tela e solta a trava mesmo quando a Meta falha' do
@@ -36,6 +39,10 @@ RSpec.describe Crm::MetaAds::InsightsSyncJob do
     admin
     stub_meta_insights(ad_account_id, date_preset: 'last_3d', rows: [])
     stub_meta_insights(ad_account_id, date_preset: 'last_3d', breakdowns: 'publisher_platform,platform_position', rows: [])
+    # A frequência de 7 dias (F5) vem depois do posicionamento.
+    stub_request(:get, meta_graph_url("act_#{ad_account_id}/insights"))
+      .with(query: hash_including('date_preset' => 'last_7d'))
+      .to_return(status: 200, body: { data: [] }.to_json, headers: { 'Content-Type' => 'application/json' })
 
     expect { described_class.perform_now(connection.id, 'recent') }.not_to have_enqueued_job(ActionCableBroadcastJob)
   end

@@ -3,7 +3,7 @@ require 'rails_helper'
 RSpec.describe EmailCampaigns::Ai::PollJob do
   let(:account) { create(:account) }
   let(:campaign) do
-    instance_double(EmailCampaign, account: account, ai_processing?: true, ai_generation_token: 'generation', ai_succeed!: true)
+    instance_double(EmailCampaign, id: 123, account: account, ai_processing?: true, ai_generation_token: 'generation', ai_succeed!: true)
   end
   let(:client) { instance_double(Crm::Ai::ResponsesClient, retrieve: result, delete: true) }
   let(:result) do

@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "kind": "synthetic_local_browser_operation_fixture",
+  "production_mutated": false,
+  "meta_called": false,
+  "configuration": {
+    "app_id": "10001",
+    "business_id": "10002",
+    "roles_doc_id": "10003",
+    "admin_id": "12345",
+    "roles_path": "/apps/10001/roles/roles/?business_id=10002",
+    "roles_aaid": "9000001"
+  },
+  "target": {
+    "id": "178414000000000001",
+    "username": "latency.synthetic",
+    "name": "Synthetic Latency Fixture"
+  },
+  "scenarios": {
+    "search": {
+      "action": "search",
+      "target": "result",
+      "roles_target_status": "ABSENT",
+      "typeahead_entries": "target"
+    },
+    "status_accepted": {
+      "action": "status",
+      "target": "target",
+      "roles_target_status": "CONFIRMED",
+      "typeahead_entries": "none"
+    },
+    "invite_unknown": {
+      "action": "invite",
+      "target": "target",
+      "roles_target_status": "ABSENT",
+      "typeahead_entries": "target",
+      "invite_response": "missing_success_field"
+    }
+  },
+  "provided_reference_series_seconds": [
+    80.966,
+    42.506,
+    66.306,
+    45.017,
+    51.028,
+    129.345
+  ],
+  "provided_ten_x_targets_seconds": [
+    8.0966,
+    4.2506,
+    6.6306,
+    4.5017,
+    5.1028,
+    12.9345
+  ],
+  "reference_mapping": "ordered_series_only; semantic labels were not present in the supplied receipt"
+}

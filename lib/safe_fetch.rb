@@ -24,7 +24,13 @@ module SafeFetch
   # que gotejam, linhas de controle do chunked) está em `SafeFetch::Deadline`.
   DEFAULT_TOTAL_TIMEOUT = nil
 
-  Result = Data.define(:tempfile, :filename, :content_type) do
+  # `url` is where the redirects ended (the base for the page's relative addresses) and `charset` the one the
+  # Content-Type announced, lower-case — both nil when unknown.
+  Result = Data.define(:tempfile, :filename, :content_type, :url, :charset) do
+    def initialize(tempfile:, filename:, content_type:, url: nil, charset: nil)
+      super
+    end
+
     def original_filename
       filename
     end

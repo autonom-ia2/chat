@@ -7,20 +7,21 @@ class Api::V1::Accounts::Instagram::AuthorizationsController < Api::V1::Accounts
   rescue_from Instagram::Testers::Error, with: :render_tester_error
 
   def create
+    if browser_assisted_authorization?
+      render json: Instagram::Testers::BrowserAuthorization.new.prepare(
+        account_id: Current.account.id, actor_id: current_user.id,
+        selection_token: params.permit(:tester_selection_token)[:tester_selection_token],
+        authorization_attestation: params.permit(:tester_authorization_attestation)[:tester_authorization_attestation],
+        return_to: params.permit(:return_to)[:return_to]
+      ), status: :ok
+      return
+    end
+
     oauth_state = authorization_state
     raise Instagram::Testers::Error, 'meta_unavailable' if oauth_state.blank?
 
     # https://developers.facebook.com/docs/instagram-platform/instagram-api-with-instagram-login/business-login#step-1--get-authorization
-    redirect_url = instagram_client.auth_code.authorize_url(
-      {
-        redirect_uri: "#{base_url}/instagram/callback",
-        scope: REQUIRED_SCOPES.join(','),
-        enable_fb_login: '0',
-        force_reauth: 'true',
-        response_type: 'code',
-        state: oauth_state
-      }
-    )
+    redirect_url = instagram_authorization_url(oauth_state)
     if redirect_url
       render json: { success: true, url: redirect_url }
     else
@@ -29,6 +30,12 @@ class Api::V1::Accounts::Instagram::AuthorizationsController < Api::V1::Accounts
   end
 
   private
+
+  def browser_assisted_authorization?
+    Instagram::Testers::BrowserOperationStore.runtime_enabled? &&
+      Current.account.feature_enabled?('instagram_assisted_onboarding') &&
+      !params.key?(:inbox_id) && params[:return_to] != 'inbox'
+  end
 
   def ensure_meta_available
     raise Instagram::Testers::Error, 'forbidden' unless Current.account.feature_enabled?('channel_instagram')

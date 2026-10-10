@@ -30,6 +30,71 @@ RSpec.describe Crm::Ai::AttributeExtractorApplier do
     )
   end
 
+  describe 'campos do card (#1146)' do
+    let(:second_card) do
+      account.crm_cards.create!(pipeline: pipeline, stage: stage, title: 'HB20', contact: contact, primary_conversation: conversation,
+                                currency: 'BRL')
+    end
+
+    def extract(target_card, card_items: [], contact_items: [])
+      described_class.new(card: target_card, extracted_attributes: { contact: contact_items, conversation: [], card: card_items },
+                          prefix: '').perform
+    end
+
+    def item(key, value)
+      { key: key, value: value, confidence: 0.9, evidence: value }
+    end
+
+    it 'dois cards da mesma conversa guardam valores diferentes no mesmo campo, sem um sobrescrever o outro' do
+      create_attribute(key: 'placa', model: 'card_attribute', type: 'text')
+
+      extract(card, card_items: [item('placa', 'ABC1D23')])
+      # O segundo pedido vira o assunto atual da conversa, e a IA avalia o card dele.
+      Crm::Cards::Focus.new(account: account, card: second_card, conversation: conversation).perform
+      extract(second_card, card_items: [item('placa', 'XYZ9K87')])
+
+      expect(card.reload.custom_attributes).to eq('placa' => 'ABC1D23')
+      expect(second_card.reload.custom_attributes).to eq('placa' => 'XYZ9K87')
+      expect(contact.reload.custom_attributes).not_to have_key('placa')
+    end
+
+    it 'dado da pessoa continua no contato, mesmo com a mesma chave existindo no card' do
+      create_attribute(key: 'cidade', model: 'contact_attribute', type: 'text')
+      create_attribute(key: 'cidade', model: 'card_attribute', type: 'text')
+
+      result = extract(card, contact_items: [item('cidade', 'Campinas')], card_items: [item('cidade', 'Sorocaba')])
+
+      expect(result.applied.pluck(:target)).to contain_exactly('contact', 'card')
+      expect(contact.reload.custom_attributes['cidade']).to eq('Campinas')
+      expect(card.reload.custom_attributes['cidade']).to eq('Sorocaba')
+      expect(card.metadata.dig('ai', 'extracted_attributes').keys).to contain_exactly('cidade', 'card:cidade')
+    end
+
+    it 'card que não é o assunto atual da conversa não recebe campo de card' do
+      create_attribute(key: 'placa', model: 'card_attribute', type: 'text')
+      Crm::CardConversation.find_or_create_by!(account: account, card: card, conversation: conversation).update!(focused_at: 2.hours.ago)
+      Crm::CardConversation.find_or_create_by!(account: account, card: second_card, conversation: conversation)
+                           .update!(focused_at: 1.minute.ago)
+
+      result = extract(card, card_items: [item('placa', 'XYZ9K87')])
+
+      expect(card.reload.custom_attributes).to eq({})
+      expect(result.rejected).to contain_exactly(hash_including(key: 'placa', reason: 'not_current_subject'))
+    end
+
+    it 'não sobrescreve campo do card já preenchido e recusa chave que não é de card' do
+      create_attribute(key: 'placa', model: 'card_attribute', type: 'text')
+      create_attribute(key: 'cpf_titular', model: 'contact_attribute', type: 'text')
+      card.update!(custom_attributes: { 'placa' => 'ABC1D23' })
+
+      result = extract(card, card_items: [item('placa', 'OUTRA99'), item('cpf_titular', '123')])
+
+      expect(card.reload.custom_attributes).to eq('placa' => 'ABC1D23')
+      expect(result.rejected).to contain_exactly(hash_including(key: 'placa', reason: 'already_filled'),
+                                                 hash_including(key: 'cpf_titular', reason: 'unknown_key'))
+    end
+  end
+
   it 'fills empty contact and conversation attributes with coerced values and audit metadata' do
     create_attribute(key: 'sw_cidade', model: 'contact_attribute', type: 'text')
     create_attribute(key: 'sw_valor_conta_luz', model: 'contact_attribute', type: 'number')

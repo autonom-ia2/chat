@@ -12,6 +12,7 @@ module Enterprise::Concerns::Account
     # CRM integration tokens (per-account scoped API credentials, plan §3.2). EE-only
     # alongside custom_roles since each token provisions a managed CustomRole.
     has_many :crm_integration_tokens, dependent: :destroy_async, class_name: 'Crm::IntegrationToken'
+    has_many :mcp_integration_tokens, dependent: :destroy_async, class_name: 'Mcp::IntegrationToken'
 
     has_many :captain_assistants, dependent: :destroy_async, class_name: 'Captain::Assistant'
     has_many :captain_assistant_responses, dependent: :destroy_async, class_name: 'Captain::AssistantResponse'

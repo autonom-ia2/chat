@@ -1,0 +1,22 @@
+pt_BR:
+  activerecord:
+    errors:
+      models:
+        brand_kit:
+          attributes:
+            appearance:
+              invalid_field: "tem um valor inválido em %{field}"
+            logo:
+              invalid_type: "precisa ser uma imagem PNG, JPEG, WebP ou GIF"
+              too_large: "precisa ter no máximo 5 MB"
+  brand_kits:
+    import_errors:
+      invalid_url: "Digite o endereço completo do site, por exemplo https://suaempresa.com.br."
+      unsafe_url: "Este endereço aponta para uma rede privada ou local e não pode ser lido."
+      http_error: "O site não respondeu direito. Confira o endereço e tente de novo."
+      page_too_large: "A página do site é grande demais para ler."
+      not_html: "Este endereço não é uma página da web."
+      timeout: "O site demorou demais para responder. Tente de novo em alguns minutos."
+      fetch_failed: "Não conseguimos acessar o site. Confira o endereço e tente de novo."
+      stale: "A leitura anterior foi interrompida. Comece uma nova."
+      internal_error: "Algo deu errado ao ler o site. Tente de novo."

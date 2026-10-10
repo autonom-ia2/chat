@@ -53,7 +53,7 @@ RSpec.describe 'CRM meta_ads_connection API', type: :request do
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body.keys).to contain_exactly('configured', 'status', 'mode', 'last_checked_at', 'last_error', 'verified_at',
                                                            'destinations', 'ad_account', 'pixel', 'partner', 'whatsapp_portfolio',
-                                                           'client_portfolio_id', 'sales_signal')
+                                                           'client_portfolio_id', 'sales_signal', 'facebook_login')
       expect(response.parsed_body).to include('mode' => 'token', 'destinations' => { 'whatsapp' => false, 'site' => false })
       expect(response.parsed_body).to include('configured' => true, 'status' => 'active')
       expect_no_token_in(response.body)
@@ -222,6 +222,187 @@ RSpec.describe 'CRM meta_ads_connection API', type: :request do
     end
   end
 
+  describe 'GET panel (#1088)' do
+    let(:connection) { create_meta_ads_insights_connection(account) }
+
+    after do
+      Crm::MetaAds::Insights::Refresh.release(connection.id, 'today')
+      Crm::MetaAds::Insights::Backfill.release(connection.id)
+      Redis::Alfred.delete("#{Crm::MetaAds::LinksBackfillJob::RUNNING_KEY}:#{connection.id}")
+    end
+
+    # O consultor de verdade (sem stub): grava o run do dia e devolve o Advice dele.
+    it 'devolve o painel do período com o consultor, e pede a leitura de hoje' do
+      connection.update!(insights_backfilled_at: 1.day.ago, links_backfilled_at: 1.day.ago)
+
+      expect do
+        get "#{path}/panel", params: { days: 7 }, headers: auth_headers(admin)
+      end.to have_enqueued_job(Crm::MetaAds::InsightsSyncJob).with(connection.id, 'today')
+
+      panel = response.parsed_body['panel']
+      expect(panel).to include('days' => 7, 'currency' => 'BRL', 'refreshing' => true, 'meta_comparison' => nil, 'response_time' => nil)
+      expect(panel).not_to have_key('action')
+      expect(panel['totals']).to include('spend' => 0.0, 'conversations' => 0, 'sales' => 0)
+      expect(panel['confidence']).to include('window_days' => 7, 'conversations' => 0)
+      run = Crm::MetaAdvisorRun.sole
+      expect(panel['advice']).to include('run_id' => run.id, 'local_date' => run.local_date.iso8601, 'rules_version' => 'f5.2')
+      expect(panel['advice']['actions'].pluck('kind')).to eq(%w[no_data])
+    end
+
+    it 'com conversa de anúncio no período: a Meta × nós até ontem, o tempo de resposta e o consultor' do
+      travel_to(Time.zone.parse('2026-10-07T15:00:00-03:00')) do
+        connection.update!(destinations: { 'whatsapp' => true }, insights_backfilled_at: 1.day.ago, links_backfilled_at: 1.day.ago)
+        Crm::MetaAdInsightDaily.create!(account: account, ad_account_id: connection.ad_account_id, ad_id: '1', date: Date.new(2026, 10, 6),
+                                        currency: 'BRL', spend: 30, conversations_started: 5, attribution_window: '7d_click',
+                                        fetched_at: Time.current)
+        conversation = create(:conversation, account: account)
+        Crm::MetaAdLink.create!(account: account, conversation: conversation, touch_key: 'k1', origin: 'whatsapp',
+                                certainty: 'ad', ad_id: '1', ad_account_id: connection.ad_account_id, touched_at: 1.day.ago)
+        create(:message, account: account, inbox: conversation.inbox, conversation: conversation, message_type: :incoming, created_at: 1.day.ago)
+        create(:message, account: account, inbox: conversation.inbox, conversation: conversation, message_type: :outgoing,
+                         created_at: 1.day.ago + 6.minutes)
+
+        allow(Crm::MetaAds::Panel::ResponseTime).to receive(:new).and_call_original
+
+        get "#{path}/panel", params: { days: 30 }, headers: auth_headers(admin)
+
+        # Com 30 dias o tempo de resposta sai dos fatos do consultor: uma consulta só, a dos fatos.
+        expect(Crm::MetaAds::Panel::ResponseTime).to have_received(:new).once
+        panel = response.parsed_body['panel']
+        expect(panel['meta_comparison']).to eq(
+          'days' => 30, 'until' => '2026-10-06', 'explanation' => nil,
+          'rows' => [{ 'destination' => 'whatsapp', 'meta' => 5, 'ours' => 1, 'difference' => -4, 'explanation' => 'meta_higher' }]
+        )
+        expect(panel['response_time']).to eq('days' => 30, 'median_seconds' => 360.0, 'answered' => 1, 'unanswered' => 0, 'slow' => 1,
+                                             'target_seconds' => 300)
+        expect(panel['advice']).to include('run_id' => Crm::MetaAdvisorRun.sole.id, 'local_date' => '2026-10-07')
+        expect(panel['advice']['actions'].first).to include('kind' => 'wait', 'ad_id' => '1')
+      end
+    end
+
+    # D5.11: a métrica de aceite conta só o que o painel mostrou; o Guia lê o painel pelo token de API.
+    it 'só o painel (sessão) marca as ações como mostradas; o pedido pelo token de API não' do
+      travel_to(Time.zone.parse('2026-10-07T15:00:00-03:00')) do
+        connection.update!(insights_backfilled_at: 1.day.ago, links_backfilled_at: 1.day.ago)
+        Crm::MetaAdLink.create!(account: account, conversation: create(:conversation, account: account), touch_key: 'k1', origin: 'whatsapp',
+                                certainty: 'campaign', ad_account_id: connection.ad_account_id, touched_at: 1.day.ago)
+        allow(Crm::MetaAds::Advisor::Rules).to receive(:evaluate).and_wrap_original do |original, *args, **options|
+          original.call(*args, **options).map { |result| result[:key] == 'tracking' ? result.merge(status: 'fail') : result }
+        end
+
+        get "#{path}/panel", params: { days: 7 }, headers: auth_headers(admin)
+        action = Crm::MetaAdvisorAction.find_by!(account_id: account.id, kind: 'fix_tracking')
+        expect(action.shown_at).to be_nil
+
+        get "#{path}/panel", params: { days: 7 }, headers: admin.create_new_auth_token
+        expect(response).to have_http_status(:ok)
+        expect(action.reload.shown_at).to eq(Time.current)
+      end
+    end
+
+    it 'sem conta de anúncios devolve vazio' do
+      get "#{path}/panel", headers: auth_headers(admin)
+
+      expect(response.parsed_body).to eq('panel' => nil)
+    end
+
+    it 'agente recebe 403' do
+      get "#{path}/panel", headers: auth_headers(agent)
+
+      expect(response).to have_http_status(:forbidden)
+    end
+  end
+
+  describe 'GET panel_list (#1110, F5)' do
+    let(:pipeline) { create_crm_pipeline(account: account, user: admin).first }
+    let(:quote_stage) do
+      account.crm_pipeline_stages.create!(pipeline: pipeline, name: 'Proposta', position: 1, metadata: { 'funnel_stage_type' => 'opportunity' })
+    end
+
+    it 'devolve a lista da etapa, da mesma coorte do painel' do
+      travel_to(Time.zone.parse('2026-10-07T15:00:00-03:00')) do
+        connection = create_meta_ads_insights_connection(account)
+        conversation = create(:conversation, account: account)
+        Crm::MetaAdLink.create!(account: account, conversation: conversation, touch_key: 'k1', origin: 'whatsapp', certainty: 'ad',
+                                ad_id: '1', ad_account_id: connection.ad_account_id, touched_at: 2.days.ago)
+        card = Crm::Card.create!(account: account, pipeline: pipeline, stage: quote_stage, title: 'Cotação', currency: 'BRL',
+                                 primary_conversation: conversation, value_cents: 150_000, last_message_at: 5.days.ago)
+
+        get "#{path}/panel_list", params: { step: 'quotes', days: 7 }, headers: auth_headers(admin)
+
+        expect(response).to have_http_status(:ok)
+        list = response.parsed_body['list']
+        expect(list).to include('step' => 'quotes', 'days' => 7, 'total' => 1)
+        expect(list['items'].sole).to include('conversation_id' => conversation.id, 'card_id' => card.id, 'title' => 'Cotação',
+                                              'stage_name' => 'Proposta', 'status' => 'open', 'value' => 1500.0, 'stalled' => true)
+      end
+    end
+
+    it 'etapa fora da lista dá 422 invalid_step' do
+      create_meta_ads_insights_connection(account)
+
+      get "#{path}/panel_list", params: { step: 'spend', days: 7 }, headers: auth_headers(admin)
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body).to eq('error' => 'invalid_step')
+    end
+
+    it 'sem conexão devolve vazio' do
+      get "#{path}/panel_list", params: { step: 'quotes' }, headers: auth_headers(admin)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body).to eq('list' => nil)
+    end
+
+    it 'agente recebe 403' do
+      get "#{path}/panel_list", params: { step: 'quotes' }, headers: auth_headers(agent)
+
+      expect(response).to have_http_status(:forbidden)
+    end
+  end
+
+  describe 'GET panel_ad (#1088, F3b)' do
+    let(:ad_id) { '120254710362980416' }
+
+    it 'devolve o anúncio por dentro, só do banco' do
+      travel_to(Time.zone.parse('2026-10-06T15:00:00-03:00')) do
+        connection = create_meta_ads_insights_connection(account)
+        Crm::MetaAdInsightDaily.create!(account: account, ad_account_id: connection.ad_account_id, ad_id: ad_id, date: Date.new(2026, 10, 6),
+                                        currency: 'BRL', spend: 42.5, attribution_window: '7d_click', fetched_at: Time.current)
+
+        expect do
+          get "#{path}/panel_ad", params: { ad_id: ad_id, days: 7 }, headers: auth_headers(admin)
+        end.not_to have_enqueued_job(Crm::MetaAds::InsightsSyncJob)
+
+        ad = response.parsed_body['ad']
+        expect(ad).to include('ad_id' => ad_id, 'days' => 7, 'spend' => 42.5, 'verdict' => 'early', 'quotes_list' => [])
+        expect(ad['reason']).to include('kind' => 'early', 'missing_conversations' => 20)
+        expect(ad['daily'].last).to eq('date' => '2026-10-06', 'spend' => 42.5, 'conversations' => 0)
+      end
+    end
+
+    it 'anúncio sem dado no período devolve vazio' do
+      create_meta_ads_insights_connection(account)
+
+      get "#{path}/panel_ad", params: { ad_id: ad_id }, headers: auth_headers(admin)
+
+      expect(response.parsed_body).to eq('ad' => nil)
+    end
+
+    it 'sem conexão devolve vazio' do
+      get "#{path}/panel_ad", params: { ad_id: ad_id }, headers: auth_headers(admin)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body).to eq('ad' => nil)
+    end
+
+    it 'agente recebe 403' do
+      get "#{path}/panel_ad", params: { ad_id: ad_id }, headers: auth_headers(agent)
+
+      expect(response).to have_http_status(:forbidden)
+    end
+  end
+
   describe 'POST insights (#1073)' do
     let(:connection) { create_meta_ads_insights_connection(account) }
 
@@ -266,9 +447,12 @@ RSpec.describe 'CRM meta_ads_connection API', type: :request do
       expect do
         post "#{path}/insights", headers: auth_headers(admin), as: :json
       end.to have_enqueued_job(Crm::MetaAds::InsightsBackfillJob).with(connection.id)
-      expect(response.parsed_body['insights']).to include('backfilling' => true)
+                                                                 .and have_enqueued_job(Crm::MetaAds::LinksBackfillJob).with(connection.id)
+      expect(response.parsed_body['insights']).to include('backfilling' => true, 'ad_conversations_today' => 0)
+      expect(response.parsed_body['insights']['confidence']).to include('conversations' => 0, 'window_days' => 30)
     ensure
       Crm::MetaAds::Insights::Backfill.release(connection.id)
+      Redis::Alfred.delete("#{Crm::MetaAds::LinksBackfillJob::RUNNING_KEY}:#{connection.id}")
     end
 
     it 'sem conexão devolve vazio' do

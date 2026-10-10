@@ -8,9 +8,9 @@ class Api::V1::Accounts::Crm::BookingProfilesController < Api::V1::Accounts::Crm
 
   def index
     authorize ::Crm::AgentBookingProfile
-    profiles = policy_scope(::Crm::AgentBookingProfile)
-               .includes(:inbox, :default_pipeline, :default_stage, :default_assignee)
-               .order(:id)
+    profiles = policy_scope(::Crm::AgentBookingProfile).legacy_pages
+                                                       .includes(:inbox, :default_pipeline, :default_stage, :default_assignee)
+                                                       .order(:id)
     render json: { payload: profiles.map { |profile| serialize(profile) } }
   end
 
@@ -103,7 +103,8 @@ class Api::V1::Accounts::Crm::BookingProfilesController < Api::V1::Accounts::Crm
   end
 
   def fetch_profile
-    @profile = Current.account.crm_agent_booking_profiles.find(params[:id])
+    # Páginas novas (page_version 2) são da BookingPagesController; a gaveta antiga não as vê nem edita.
+    @profile = Current.account.crm_agent_booking_profiles.legacy_pages.find(params[:id])
   end
 
   def validated_inbox_id

@@ -145,8 +145,8 @@ export const actions = {
       commit(types.SET_EMAIL_CAMPAIGN_UI_FLAG, { isUpdating: false });
     }
   },
-  sendTest: async (_, { id, toEmail }) => {
-    const response = await EmailCampaignsAPI.sendTest(id, toEmail);
+  sendTest: async (_, { id, toEmails }) => {
+    const response = await EmailCampaignsAPI.sendTest(id, toEmails);
     return response.data;
   },
   fetchPlaceholders: async (_, id) => {

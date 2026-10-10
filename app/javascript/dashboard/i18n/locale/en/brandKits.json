@@ -1,0 +1,245 @@
+{
+  "BRAND_KITS": {
+    "TABS": {
+      "LABEL": "Campaign sections",
+      "CAMPAIGNS": "Campaigns",
+      "IDENTITY": "Visual identity"
+    },
+    "NUDGE": {
+      "TEXT": "Your e-mails don't look like your brand yet.",
+      "ACTION": "Use my website"
+    },
+    "LINE": {
+      "LABEL": "Identity:",
+      "DEFAULT": "(default)",
+      "CHANGE": "Change",
+      "MANAGE": "Manage"
+    },
+    "RESULT": {
+      "IDENTITY": "Identity: {name}, {mode}"
+    },
+    "QUALITY": {
+      "FAILED": "The e-mail still has a problem that blocks sending, even after one fix. Try creating it again.",
+      "WARNINGS_TITLE": "Check before sending",
+      "CHECKS": {
+        "CONTRAST": "Some text is hard to read on its background color.",
+        "BUTTON_HEIGHT": "Some button is too small to tap on a phone.",
+        "IMAGE_ALT": "Some image has no description.",
+        "SUBJECT_VARIANTS": "The AI suggested fewer than 3 subjects.",
+        "HTML_SIZE_NEAR": "The e-mail is close to the size at which Gmail cuts the end. Shorten it if you can.",
+        "OTHER": "Some block needs a fix."
+      }
+    },
+    "PICKER": {
+      "LABEL": "Identity",
+      "NONE": "No identity",
+      "NONE_HINT": "The AI picks the colors. Use a website to make it look like your brand.",
+      "DEFAULT": "Default",
+      "KIT_HINT": "Logo, colors, font and footer of this identity.",
+      "CHANGE": "Change",
+      "OTHER_SITE": "Use another website",
+      "SEE_ALL": "See all identities",
+      "OTHER_SITE_TITLE": "Use another website in this e-mail",
+      "OTHER_SITE_HINT": "We read the website now and use its logo, colors and font.",
+      "SAVE_AS_KIT": "Save as identity ({name})",
+      "USE_KIT": "Use {name}",
+      "NO_SITE": "Back",
+      "MODE_LABEL": "E-mail colors",
+      "MODES": {
+        "LIGHT": "Light background (recommended)",
+        "DARK": "Dark background"
+      },
+      "ARIAL_NOTE": "Some e-mails show Arial.",
+      "SAVED": "Identity {name} saved. It shows in Visual identity.",
+      "SAVED_WITHOUT_LOGO": "Identity {name} saved, but without the logo. Upload the logo in Visual identity.",
+      "SAVE_FAILED": "Could not save the identity. The e-mail uses the website anyway.",
+      "UNAVAILABLE": "This identity is no longer available. Choose another one."
+    },
+    "EMAIL_PANEL": {
+      "TITLE": "Identity of this e-mail",
+      "NONE": "No identity",
+      "FROM_SITE": "website read for this e-mail",
+      "CHANGE": "Change",
+      "USE": "Use",
+      "FROM_IDENTITY": "The footer, networks and logo come from the identity. To change them for good, edit them in"
+    },
+    "PREVIEW": {
+      "TITLE": "E-mail preview",
+      "WITH_FONT": "See with the font",
+      "WITH_ARIAL": "See with Arial",
+      "FROM": "From: {name}",
+      "SUBJECT": "Subject: {subject}",
+      "SAMPLE_SUBJECT": "All your support in one place",
+      "SAMPLE_TITLE": "All your support in one place",
+      "SAMPLE_TEXT": "Answer your customers on WhatsApp, on the website and by e-mail without switching screens.",
+      "ITEM_1": "Every conversation in one list",
+      "ITEM_2": "Ready answers for every day",
+      "ITEM_3": "Reports that are easy to read",
+      "SAMPLE_BUTTON": "I want to see it",
+      "SAMPLE_NOTE": "It takes a few minutes to start."
+    },
+    "COLORS": {
+      "CHANGE": "Change",
+      "CHANGE_ARIA": "Change the color {role}",
+      "PICK": "Pick the color",
+      "CODE": "Color code",
+      "DONE": "Done",
+      "INVALID": "Use a code like #1a2b3c.",
+      "ROLES": {
+        "PRIMARY": { "LABEL": "Buttons and highlights", "HINT": "Buttons and important links" },
+        "ACCENT": { "LABEL": "Details", "HINT": "Lines, icons and bullets" },
+        "INK": { "LABEL": "Text", "HINT": "Most of the text" },
+        "MUTED": { "LABEL": "Soft text", "HINT": "Small notes and footer" },
+        "BACKGROUND": { "LABEL": "Background", "HINT": "The e-mail background" },
+        "BAND": { "LABEL": "Top band", "HINT": "Where the logo shows" }
+      }
+    },
+    "LOOK": {
+      "LOGO_TITLE": "Logo",
+      "LOGO_HINT": "Choose the e-mail logo.",
+      "LOGO_CURRENT": "Current logo",
+      "LOGO_FROM_SITE": {
+        "TOP": "Logo at the top of the website",
+        "ICON": "Website icon"
+      },
+      "LOGO_UPLOADED": "Uploaded logo",
+      "LOGO_RECOMMENDED": "Recommended",
+      "LOGO_UPLOAD": "Upload another",
+      "BAND_TOO_LIGHT": "This logo is white and the top band is light. It will not show. Choose a dark band.",
+      "WHITE_LOGO_ON_BAND": "This logo is white. In the e-mail, it sits on the dark top band.",
+      "COLORS_TITLE": "E-mail colors",
+      "COLORS_HINT": "The website has a light background. In e-mail, a light background is easier to read and looks the same in more apps.",
+      "COLORS_HINT_DARK_SITE": "The website is dark. In e-mail, a light background is easier to read and looks the same in more apps.",
+      "MODE_LABEL": "Color version",
+      "MODES": {
+        "LIGHT": { "LABEL": "Light background", "HINT": "Recommended for e-mail" },
+        "DARK": { "LABEL": "Dark background", "HINT": "Like the website" }
+      },
+      "FOUND_COLORS": "Colors found on the website:",
+      "RESET_COLORS": "Back to the suggested colors",
+      "FONTS_TITLE": "Fonts",
+      "FONT_ROLES": {
+        "HEADING_FONT": "Titles",
+        "BODY_FONT": "Text"
+      },
+      "FONT_ARIAL": "Arial",
+      "FONT_CHANGE": "Change the font of the {role}",
+      "ARIAL_TITLE": "Some e-mails show Arial.",
+      "ARIAL_TEXT": "Some e-mail apps do not show website fonts. There, the text shows in Arial."
+    },
+    "FOOTER": {
+      "NAME_TITLE": "Name of this identity",
+      "NAME_LABEL": "Name",
+      "FIRST_IS_DEFAULT": "This is your first identity. It will be the default for new e-mails.",
+      "SOCIAL_TITLE": "Social networks",
+      "SOCIAL_HINT": "They show in the e-mail footer.",
+      "SOCIAL_EMPTY": "No network yet.",
+      "CHANGE": "Change",
+      "REMOVE": "Remove",
+      "LINK_LABEL": "Network link",
+      "LINK_PLACEHOLDER": "instagram.com/yourcompany",
+      "NETWORK_LABEL": "Network",
+      "DONE": "Done",
+      "ADD": "Add network",
+      "ADD_CONFIRM": "Add",
+      "CANCEL": "Cancel",
+      "FOOTER_TITLE": "E-mail footer",
+      "FOOTER_HINT": "The first line of the footer. The rest of the footer is always the same.",
+      "COMPANY": "Company name",
+      "SITE": "Website",
+      "ADDRESS": "Address",
+      "ADDRESS_PLACEHOLDER": "Street, number, city",
+      "ADDRESS_MISSING": "The website shows no address. Want to write it?"
+    },
+    "READER": {
+      "ADDRESS_LABEL": "Website address",
+      "ADDRESS_PLACEHOLDER": "yourcompany.com",
+      "READ": "Read the website",
+      "ERROR": "We could not read the website. Check the address and try again.",
+      "READING": "Reading {site}",
+      "READ_DONE": "Done: we read {site}",
+      "WAIT_HINT": "It takes less than a minute. You can wait here.",
+      "ITEMS": {
+        "LOGO": "The logo",
+        "COLORS": "The colors",
+        "FONTS": "The fonts",
+        "SOCIAL": "The networks and the footer"
+      },
+      "FOUND": "nothing found | found 1 | found {count}"
+    },
+    "CARD": {
+      "NO_SITE": "no website",
+      "AND": " and ",
+      "DEFAULT": "Default",
+      "ARCHIVED": "Archived",
+      "EDIT": "Edit",
+      "MORE": "More actions for {name}",
+      "MAKE_DEFAULT": "Make default",
+      "MAKE_DEFAULT_HINT": "New e-mails use it",
+      "ARCHIVE": "Archive",
+      "ARCHIVE_HINT": "Leaves the list. You can bring it back",
+      "ARCHIVE_DEFAULT_HINT": "Make another one the default first",
+      "RESTORE": "Restore",
+      "ARCHIVE_CONFIRM_TITLE": "Archive {name}?",
+      "ARCHIVE_CONFIRM_TEXT": "It leaves the list and new e-mails. E-mails already made do not change.",
+      "BACK": "Back"
+    },
+    "EDITOR": {
+      "BACK_TO_LIST": "Back to Visual identity",
+      "NEW_TITLE": "New identity",
+      "EDIT_TITLE": "Edit identity: {name}",
+      "STEPS": {
+        "SITE": "Website",
+        "CONFIRM": "Check",
+        "SAVE": "Save"
+      },
+      "SITE_TITLE": "What is your website address?",
+      "SITE_HINT": "We look at the home page and bring the logo, colors, fonts and networks.",
+      "CHECK": "Check",
+      "PART": "Part {part} of 2",
+      "TABS": {
+        "LABEL": "Parts of the identity",
+        "LOOK": "Logo, colors and fonts",
+        "FOOTER": "Networks and footer"
+      },
+      "BACK": "Back",
+      "CANCEL": "Cancel",
+      "CONTINUE": "Continue",
+      "SAVE": "Save",
+      "ERRORS": {
+        "NAME": "Give it a name that is not on the list yet.",
+        "APPEARANCE": "Check the network links and the website. One of them is wrong.",
+        "GENERIC": "Could not save. Try again."
+      }
+    },
+    "PAGE": {
+      "BREADCRUMB": "Path",
+      "SUBTITLE": "Logo, colors and font your e-mails use.",
+      "EMPTY": "Keep your brand's logo, colors and font. Every new e-mail already comes with them.",
+      "USE_MY_SITE": "Use my website",
+      "NEW": "New identity",
+      "SAVED": "Identity saved. New e-mails already come with it.",
+      "CREATE_EMAIL": "Create an e-mail",
+      "FROM_CAMPAIGN": "You came from your campaign.",
+      "BACK_TO_CAMPAIGN": "Back to the campaign",
+      "LOAD_ERROR": "We could not load the identities. Try again.",
+      "ARCHIVED_COUNT": "Archived: {count}",
+      "SEE_ARCHIVED": "See",
+      "ARCHIVED_TITLE": "Archived identities",
+      "ARCHIVED_SUBTITLE": "They do not show in new e-mails. Restore one to use it again.",
+      "ARCHIVED_EMPTY": "No archived identity.",
+      "BACK_TO_LIST": "Back to the list",
+      "UPDATED": "{name} saved.",
+      "DEFAULT_CHANGED": "{name} is now the default.",
+      "ARCHIVED_DONE": "{name} archived. E-mails already made do not change.",
+      "RESTORED": "{name} is back on the list.",
+      "ACTION_ERROR": "That did not work. Try again."
+    },
+    "SITE_REQUEST": {
+      "USED": "I used the identity of {host}, as you asked.",
+      "UNREADABLE": "I could not read {host}. I used the default identity.",
+      "SAVE": "Save as identity",
+      "SAVE_FAILED": "Could not save the identity. Try again in Visual identity."
+    }
+  }
+}

@@ -41,22 +41,22 @@ module AccessTokenAuthHelper
     BOT_ACCESSIBLE_ENDPOINTS.fetch(params[:controller], []).include?(params[:action])
   end
 
-  # CRM integration token auth (plan §3.2, B-T3). Guarded by defined? so CE builds
-  # — which never autoload the EE-only Crm::IntegrationToken — skip this entirely
-  # and never NameError on the api_access_token path. Returns true when the
-  # request was handled (authorized OR rejected) so the caller stops.
+  # Scoped integration-token auth. Class-name matching keeps CE builds from
+  # autoloading EE-only constants while allowing both CRM and MCP credentials.
   def handle_integration_token_auth!
-    return false unless defined?(Crm::IntegrationToken) && @resource.is_a?(Crm::IntegrationToken)
+    return false unless integration_token_resource?(@resource)
 
     token = @resource
 
     # Fail-closed: revoked token, or a token whose managed account_user/custom_role
     # was nullified (revocation race) must NEVER fall through to the blank-role
     # CRM superuser path (B-T2).
-    if token.revoked? || token.account_user.blank? || token.account_user.custom_role.blank?
+    unless integration_token_active?(token)
       render_unauthorized('Invalid Access Token')
       return true
     end
+
+    token.sync_inbox_memberships! if token.respond_to?(:sync_inbox_memberships!)
 
     # Resolve to the backing human User + managed AccountUser so Pundit / the EE
     # CrmPermissions policy see a real account_user with the granular custom_role.
@@ -73,5 +73,20 @@ module AccessTokenAuthHelper
 
   def integration_token_request?
     current_integration_token.present?
+  end
+
+  def mcp_integration_token_request?
+    current_integration_token&.class&.name == 'Mcp::IntegrationToken'
+  end
+
+  private
+
+  def integration_token_active?(token)
+    !token.revoked? && token.account_user.present? && token.account_user.custom_role.present? &&
+      (!token.respond_to?(:authorizer_eligible?) || token.authorizer_eligible?)
+  end
+
+  def integration_token_resource?(resource)
+    resource&.class&.name.in?(%w[Crm::IntegrationToken Mcp::IntegrationToken])
   end
 end

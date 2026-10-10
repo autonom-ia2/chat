@@ -1,0 +1,73 @@
+pt_BR:
+  meta_ads_whatsapp_report:
+    date_format: "%d/%m"
+    number:
+      separator: ","
+      delimiter: "."
+    currency_units:
+      BRL: "R$"
+      USD: "US$"
+      EUR: "€"
+    summary:
+      title: "Anúncios da Meta — ontem, %{date}"
+      test_prefix: "[Teste]"
+      spend: "Investido: %{value}"
+      conversations:
+        one: "Conversas: %{count}"
+        other: "Conversas: %{count}"
+      conversations_with_cost:
+        one: "Conversas: %{count} (%{cost} por conversa)"
+        other: "Conversas: %{count} (%{cost} por conversa)"
+      quotes_sales: "Propostas: %{quotes} · Vendas: %{sales}"
+      quotes_sales_value: "Propostas: %{quotes} · Vendas: %{sales} (%{value})"
+      best_ad:
+        one: "Melhor anúncio: %{name}, com %{count} conversa"
+        other: "Melhor anúncio: %{name}, com %{count} conversas"
+      action: "O que fazer hoje: %{text}"
+      link: "Ver o painel: %{url}"
+    alert:
+      text: "Atenção: o anúncio %{name} gastou %{value} hoje e ainda não trouxe nenhuma conversa."
+      hint: "Vale conferir se ele leva para o WhatsApp certo. Ver o painel: %{url}"
+    actions:
+      stalled_quotes:
+        one: "Retome a proposta parada há mais de %{days} dias (%{value})."
+        other: "Retome as %{count} propostas paradas há mais de %{days} dias (%{value})."
+      fix_tracking:
+        one: "Confira de qual anúncio veio %{count} conversa sem anúncio identificado."
+        other: "Confira de qual anúncio vieram %{count} conversas sem anúncio identificado."
+      wait: "Nada a corrigir. Siga com os anúncios como estão."
+      on_track: "Nada parado. Veja no painel o veredito de cada anúncio."
+      no_data: "Ainda não há gasto nem conversa de anúncio nos últimos 30 dias."
+      # F5 (#1110): os tipos do consultor que a F4 não tinha pela regra. Os valores chegam já formatados
+      # (Crm::MetaAds::Advisor::Format).
+      slow_response:
+        median: "Responda mais rápido às conversas de anúncio: nos últimos %{window_days} dias, metade esperou mais de %{median_seconds} pela primeira resposta. Sem resposta: %{unanswered}. Responder em até %{target_seconds} ajuda a vender."
+        no_median: "Responda as conversas de anúncio: nos últimos %{window_days} dias, nenhuma teve resposta. Sem resposta: %{unanswered}. Responder em até %{target_seconds} ajuda a vender."
+        unanswered: "Responda as conversas de anúncio: nos últimos %{window_days} dias, parte delas ficou sem resposta. Sem resposta: %{unanswered}. Responder em até %{target_seconds} ajuda a vender."
+      review_ad:
+        no_sales: "Revise o anúncio %{ad_name}: trouxe %{conversations} conversas e nenhuma venda, com %{spend} investidos. Olhe a imagem, o texto e o que as pessoas perguntam antes de desligar."
+        above_average: "Revise o anúncio %{ad_name}: cada venda custou %{cost_per_sale}, acima da média de %{target_cost_per_sale} dos anúncios que vendem."
+      refresh_creative:
+        ctr: "Troque a imagem ou o texto de %{ad_name}: as pessoas clicam %{ctr_drop_pct} menos do que nas semanas anteriores."
+        frequency: "Troque a imagem ou o texto de %{ad_name}: cada pessoa já viu o anúncio %{frequency_7d} vezes nos últimos %{window_days} dias."
+        both: "Troque a imagem ou o texto de %{ad_name}: as pessoas clicam %{ctr_drop_pct} menos do que nas semanas anteriores, e cada uma já viu o anúncio %{frequency_7d} vezes nos últimos %{window_days} dias."
+      scale_ad: "%{ad_name} vende abaixo da média de %{target_cost_per_sale} há %{weeks} semanas. Aumente o valor por dia do anúncio em até %{max_increase_pct} no Gerenciador da Meta, e só de novo daqui a %{cooldown_days} dias."
+      auction_pressure: "Aparecer para mil pessoas ficou %{cpm_change_pct} mais caro nos últimos %{window_days} dias, e os cliques continuam iguais: é a concorrência, não o seu anúncio. Não troque o anúncio por isso."
+    # As variáveis do modelo do Oficial (sempre pt_BR): {{3}} junta conversas, propostas e vendas.
+    template:
+      results: "%{conversations}, %{quotes} e %{sales}"
+      conversations:
+        one: "%{count} conversa"
+        other: "%{count} conversas"
+      quotes:
+        one: "%{count} proposta"
+        other: "%{count} propostas"
+      sales:
+        one: "%{count} venda"
+        other: "%{count} vendas"
+    # Texto exato para criar no Gerenciador do WhatsApp (categoria UTILITY, idioma pt_BR). A Meta recusa modelo que
+    # começa ou termina com variável, ou com variável demais para o tamanho do texto: texto fixo antes e depois, e só
+    # 4 variáveis no resumo.
+    templates:
+      summary: "Olá! Este é o resumo diário dos seus anúncios na Meta, referente a {{1}}. Investimento: {{2}}. Resultado: {{3}}. O que fazer hoje: {{4}} Os detalhes de cada anúncio estão no painel de Anúncios da Meta."
+      alert: "Atenção: o anúncio {{1}} gastou {{2}} hoje e ainda não trouxe nenhuma conversa. Vale conferir no painel de Anúncios da Meta."

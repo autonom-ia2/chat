@@ -3,7 +3,8 @@
 # Table name: crm_meeting_guests
 #
 #  id          :bigint           not null, primary key
-#  email       :string           not null
+#  email       :string
+#  phone_number :string
 #  guest_type  :integer          default("contact_guest"), not null
 #  metadata    :jsonb            not null
 #  name        :string
@@ -43,8 +44,29 @@ class Crm::MeetingGuest < ApplicationRecord
   enum guest_type: { contact_guest: 0, external_email: 1, internal_user: 2 }
   enum rsvp_status: { rsvp_pending: 0, rsvp_accepted: 1, rsvp_declined: 2, rsvp_tentative: 3 }
 
-  validates :email, :guest_type, presence: true
+  # Convidado precisa de e-mail OU telefone (WhatsApp). Vazio vira NULL para a unicidade ignorar quem não tem.
+  before_validation :normalize_contact_fields
+
+  validates :guest_type, presence: true
   validates :account_id, :meeting_id, presence: true
-  validates :email, uniqueness: { scope: [:account_id, :meeting_id] }
+  validates :email, presence: true, if: -> { phone_number.blank? }
+  validates :phone_number, presence: true, if: -> { email.blank? }
+  validates :email, uniqueness: { scope: [:account_id, :meeting_id] }, allow_nil: true
+  validates :phone_number, uniqueness: { scope: [:account_id, :meeting_id] }, allow_nil: true
+  validate :phone_number_must_be_e164
   validates :metadata, jsonb_attributes_length: true
+
+  private
+
+  def normalize_contact_fields
+    self.email = email.to_s.strip.presence
+    self.phone_number = phone_number.to_s.strip.presence
+  end
+
+  def phone_number_must_be_e164
+    return if phone_number.blank?
+    return if phone_number.start_with?('+') && TelephoneNumber.valid?(phone_number)
+
+    errors.add(:phone_number, 'must be a valid E.164 number')
+  end
 end

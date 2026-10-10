@@ -1,0 +1,18 @@
+en:
+  # Number formatting for the Meta ads advisor (#1110, F5): Crm::MetaAds::Advisor::Format.
+  meta_ads_advisor:
+    number:
+      separator: "."
+      delimiter: ","
+    currency_units:
+      BRL: "R$"
+      USD: "US$"
+      EUR: "€"
+    duration:
+      less_than_minute: "less than 1 min"
+      minutes: "%{count} min"
+      hours: "%{count} h"
+      hours_minutes: "%{hours} h %{minutes} min"
+      days:
+        one: "%{count} day"
+        other: "%{count} days"

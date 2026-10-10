@@ -432,3 +432,30 @@ describe('ReplyBox', () => {
     });
   });
 });
+
+describe('ReplyBox CRM subject', () => {
+  it('sends the chosen subject with the message, and nothing without one', async () => {
+    const { wrapper, store } = mountWith({
+      inbox: { channel_type: 'Channel::Api' },
+    });
+    const dispatch = vi.spyOn(store, 'dispatch').mockResolvedValue();
+
+    await wrapper.vm.sendMessage({ conversationId: 1, message: 'Oi' });
+    expect(dispatch).toHaveBeenCalledWith('createPendingMessageAndSend', {
+      conversationId: 1,
+      message: 'Oi',
+    });
+
+    wrapper.vm.crmSubjectCardId = 5;
+    await wrapper.vm.sendMessage({
+      conversationId: 1,
+      message: 'Segue a proposta',
+      contentAttributes: { in_reply_to: 3 },
+    });
+    expect(dispatch).toHaveBeenCalledWith('createPendingMessageAndSend', {
+      conversationId: 1,
+      message: 'Segue a proposta',
+      contentAttributes: { in_reply_to: 3, crm_card_id: 5 },
+    });
+  });
+});

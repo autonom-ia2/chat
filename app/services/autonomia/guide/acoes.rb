@@ -92,7 +92,9 @@ class Autonomia::Guide::Acoes
     # #1047 — escolher a conta troca de onde a plataforma lê e atribui o usuário do sistema na Meta; avisar a
     # Meta grava etapas do funil e liga envio de eventos para fora; destinos mudam a configuração da conexão.
     'POST crm/meta_ads_connection/selection', 'PATCH crm/meta_ads_connection/funnel',
-    'PATCH crm/meta_ads_connection/destinations'
+    'PATCH crm/meta_ads_connection/destinations',
+    # #1069 — entrar com o Facebook grava uma credencial nova da Meta e troca de onde a plataforma lê.
+    'POST crm/meta_ads_connection/facebook_login'
   ].freeze
 
   # `mensagem` é para a pessoa (a tela do clique mostra); `dica` e `aviso` são

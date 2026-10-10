@@ -166,6 +166,10 @@
     "controller": "api/v1/accounts/autonomia/agents/build_threads#show",
     "parametros": []
   },
+  "autonomia/canais_ocupados": {
+    "controller": "api/v1/accounts/autonomia/canais_ocupados#index",
+    "parametros": []
+  },
   "autonomia/conversations/:conversation_id/copilot/agents": {
     "controller": "api/v1/accounts/autonomia/conversation_copilot#agents",
     "parametros": []
@@ -224,6 +228,12 @@
   "autonomia/invite_connection/:inbox_id/connection": {
     "controller": "api/v1/accounts/autonomia/invite_connections#connection",
     "parametros": []
+  },
+  "autonomia/numeros_da_semana": {
+    "controller": "api/v1/accounts/autonomia/numeros_da_semana#index",
+    "parametros": [
+      "agent_id"
+    ]
   },
   "autonomia/pendencias_do_guia": {
     "controller": "api/v1/accounts/autonomia/pendencias_do_guia#index",
@@ -303,6 +313,20 @@
   },
   "autonomia/vigias/:id": {
     "controller": "api/v1/accounts/autonomia/vigias#show",
+    "parametros": []
+  },
+  "brand_kit_imports/:id": {
+    "controller": "api/v1/accounts/brand_kit_imports#show",
+    "parametros": []
+  },
+  "brand_kits": {
+    "controller": "api/v1/accounts/brand_kits#index",
+    "parametros": [
+      "archived"
+    ]
+  },
+  "brand_kits/:id": {
+    "controller": "api/v1/accounts/brand_kits#show",
     "parametros": []
   },
   "branded_email_layout": {
@@ -971,6 +995,34 @@
       "until"
     ]
   },
+  "crm/booking_invites": {
+    "controller": "api/v1/accounts/crm/booking_invites#index",
+    "parametros": [
+      "card_id",
+      "contact_id",
+      "conversation_id"
+    ]
+  },
+  "crm/booking_pages": {
+    "controller": "api/v1/accounts/crm/booking_pages#index",
+    "parametros": []
+  },
+  "crm/booking_pages/:id": {
+    "controller": "api/v1/accounts/crm/booking_pages#show",
+    "parametros": []
+  },
+  "crm/booking_pages/:id/people": {
+    "controller": "api/v1/accounts/crm/booking_pages#people",
+    "parametros": []
+  },
+  "crm/booking_pages/reassign_preview": {
+    "controller": "api/v1/accounts/crm/booking_pages#reassign_preview",
+    "parametros": [
+      "from_user_id",
+      "page_id",
+      "to_user_id"
+    ]
+  },
   "crm/booking_profiles": {
     "controller": "api/v1/accounts/crm/booking_profiles#index",
     "parametros": []
@@ -978,6 +1030,21 @@
   "crm/booking_profiles/:id/agent_links": {
     "controller": "api/v1/accounts/crm/booking_profiles#agent_links",
     "parametros": []
+  },
+  "crm/booking_stats": {
+    "controller": "api/v1/accounts/crm/booking_stats#show",
+    "parametros": [
+      "period",
+      "scope"
+    ]
+  },
+  "crm/booking_stats/opened_not_booked": {
+    "controller": "api/v1/accounts/crm/booking_stats#opened_not_booked",
+    "parametros": [
+      "page",
+      "period",
+      "scope"
+    ]
   },
   "crm/calendar/available_slots": {
     "controller": "api/v1/accounts/crm/calendar#available_slots",
@@ -1038,6 +1105,10 @@
   },
   "crm/conversations/:conversation_id/card": {
     "controller": "api/v1/accounts/crm/cards#by_conversation",
+    "parametros": []
+  },
+  "crm/conversations/:conversation_id/cards": {
+    "controller": "api/v1/accounts/crm/conversation_cards#index",
     "parametros": []
   },
   "crm/conversations/card_stages": {
@@ -1109,12 +1180,36 @@
     "controller": "api/v1/accounts/crm/meta_ads_connections#funnels",
     "parametros": []
   },
+  "crm/meta_ads_connection/panel": {
+    "controller": "api/v1/accounts/crm/meta_ads_connections#panel",
+    "parametros": [
+      "days"
+    ]
+  },
+  "crm/meta_ads_connection/panel_ad": {
+    "controller": "api/v1/accounts/crm/meta_ads_connections#panel_ad",
+    "parametros": [
+      "ad_id",
+      "days"
+    ]
+  },
+  "crm/meta_ads_connection/panel_list": {
+    "controller": "api/v1/accounts/crm/meta_ads_connections#panel_list",
+    "parametros": [
+      "days",
+      "step"
+    ]
+  },
   "crm/meta_ads_connection/pixels": {
     "controller": "api/v1/accounts/crm/meta_ads_connections#pixels",
     "parametros": [
       "ad_account_id",
       "mode"
     ]
+  },
+  "crm/meta_ads_connection/whatsapp_report": {
+    "controller": "api/v1/accounts/crm/meta_ads_whatsapp_reports#show",
+    "parametros": []
   },
   "crm/meta_conversions": {
     "controller": "api/v1/accounts/crm/meta_conversions#index",
@@ -1130,6 +1225,10 @@
       "since",
       "until"
     ]
+  },
+  "crm/my_booking_hours": {
+    "controller": "api/v1/accounts/crm/my_booking_hours#show",
+    "parametros": []
   },
   "crm/pipelines": {
     "controller": "api/v1/accounts/crm/pipelines#index",
@@ -1425,6 +1524,14 @@
     "controller": "api/v1/accounts/email_campaigns/sender_identities#show",
     "parametros": []
   },
+  "email_campaigns/template_imports": {
+    "controller": "api/v1/accounts/email_campaigns/template_imports#index",
+    "parametros": []
+  },
+  "email_campaigns/template_imports/:id": {
+    "controller": "api/v1/accounts/email_campaigns/template_imports#show",
+    "parametros": []
+  },
   "email_campaigns/templates": {
     "controller": "api/v1/accounts/email_campaigns/templates#index",
     "parametros": [
@@ -1493,6 +1600,10 @@
   },
   "instagram/testers/configuration": {
     "controller": "api/v1/accounts/instagram/testers#configuration",
+    "parametros": []
+  },
+  "instagram/testers/operations/:id": {
+    "controller": "api/v1/accounts/instagram/testers#operation",
     "parametros": []
   },
   "instagram/testers/search": {
@@ -1794,6 +1905,10 @@
   },
   "whatsapp_calls/:id": {
     "controller": "api/v1/accounts/whatsapp_calls#show",
+    "parametros": []
+  },
+  "whatsapp_hybrid_connections/:inbox_id": {
+    "controller": "api/v1/accounts/whatsapp_hybrid_connections#show",
     "parametros": []
   }
 }

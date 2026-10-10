@@ -1,5 +1,7 @@
 # O que a tela mostra da coleta (#1073): o gasto do dia, com moeda e conversas iniciadas, quando foi lido, se há
-# leitura em andamento e se a carga de 90 dias ainda está chegando.
+# leitura em andamento e se a carga de 90 dias ainda está chegando. As conversas que vieram de anúncio e o
+# "quanto confiar" são contados do nosso lado (Crm::MetaAds::Links::Stats, F2b): a Meta só conta conversa de
+# anúncio que leva direto ao WhatsApp.
 #
 # O dia é o da conta de anúncios, no fuso dela (`today` diz qual é hoje lá). Se a leitura de hoje já rodou e não
 # trouxe linha, hoje ainda não teve gasto: a tela mostra zero de hoje, não o último dia com gasto.
@@ -17,7 +19,7 @@ class Crm::MetaAds::Insights::Summary
     {
       synced_at: @connection.insights_synced_at, refreshing: refreshing, today: @today,
       backfilling: @connection.insights_backfilled_at.nil? && Crm::MetaAds::Insights::Backfill.running?(@connection.id)
-    }.merge(day)
+    }.merge(day).merge(Crm::MetaAds::Links::Stats.new(@connection).payload)
   end
 
   private

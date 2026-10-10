@@ -2,6 +2,7 @@ import { emitter } from 'shared/helpers/mitt';
 import { BUS_EVENTS } from 'shared/constants/busEvents';
 import types from '../mutation-types';
 import CrmKanbanAPI from '../../api/crmKanban';
+import { CLOSED_STATUSES } from 'dashboard/routes/dashboard/crm/helpers/cardOutcome';
 
 const emptyBoard = () => ({ pipeline: null, stages: [] });
 
@@ -463,9 +464,19 @@ const defaultPipelinePayload = pipeline => ({
   description: pipeline?.description || 'Funil inicial do CRM Kanban',
   is_default: pipeline?.is_default ?? true,
   position: pipeline?.position || 1,
+  // "Conta como venda" e os nomes dos desfechos (#1144): false também vai (#1197).
+  ...(pipeline?.counts_as_sale !== undefined
+    ? { counts_as_sale: pipeline.counts_as_sale }
+    : {}),
+  ...(pipeline?.outcome_labels
+    ? { outcome_labels: pipeline.outcome_labels }
+    : {}),
   ...(pipeline?.goal ? { goal: pipeline.goal } : {}),
   ...(pipeline?.meta_sync ? { meta_sync: pipeline.meta_sync } : {}),
   ...(pipeline?.google_sync ? { google_sync: pipeline.google_sync } : {}),
+  ...(pipeline?.when_to_use !== undefined
+    ? { when_to_use: pipeline.when_to_use }
+    : {}),
 });
 
 const normalizeStagePayload = (stage, index) => ({
@@ -1166,8 +1177,8 @@ export const actions = {
       return dispatch('moveCard', { cardId: id, stageId: fields.stage_id });
     }
 
-    // Won/lost route to the close path (status is NOT a permitted PATCH field).
-    if (fields.status === 'won' || fields.status === 'lost') {
+    // Closing results route to the close path (status is NOT a permitted PATCH field).
+    if (CLOSED_STATUSES.includes(fields.status)) {
       return dispatch('closeCard', { id, result: fields.status, ...fields });
     }
 

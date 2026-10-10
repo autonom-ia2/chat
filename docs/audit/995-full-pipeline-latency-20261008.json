@@ -1,0 +1,169 @@
+{
+  "recorded_at": "2026-10-08T19:11:12.429Z",
+  "candidate_sha": "f8e143a0cb69041b0fbc7b3ebecb6ab57cd2183d",
+  "aws_sha": "28e1e0ac8b3835577f7469368f03a86d1a8dab0d",
+  "vps_current_sha": "61f20cfd107361a431fda51f02cace751cc4978d",
+  "release_gate_passed": false,
+  "status": "latency_not_proven",
+  "samples": [
+    {
+      "sample": 1,
+      "action": "search",
+      "request_id_sha256": "cc42ec975a3e880f5faaa9ecf06a39ee328e776d72594bc3bca39ca0f5472b8e",
+      "state": "ready",
+      "api_started_at": "2026-10-08T19:08:27.109813Z",
+      "created_at": "2026-10-08T19:08:27.142Z",
+      "completed_at": "2026-10-08T19:08:40.370Z",
+      "enqueue_to_publication_ms": 13228,
+      "caller_observed_ms": 13683.955,
+      "frontend_poll_interval_ms": 1000,
+      "polls": 12,
+      "exact_profile": true,
+      "exclusive_record_confirmed": true,
+      "executor_ms": 10009,
+      "queue_claim_to_executor_ms": 2862,
+      "executor_to_publication_ms": 357
+    },
+    {
+      "sample": 1,
+      "action": "status",
+      "request_id_sha256": "f081347a78fa9c2ea87a29a221a40b7e45292d9ba00ce21080aa9cc3736fb706",
+      "state": "ready",
+      "api_started_at": "2026-10-08T19:08:41.833124Z",
+      "created_at": "2026-10-08T19:08:41.868Z",
+      "completed_at": "2026-10-08T19:08:51.072Z",
+      "enqueue_to_publication_ms": 9204,
+      "caller_observed_ms": 10060.016,
+      "frontend_poll_interval_ms": 1000,
+      "polls": 9,
+      "tester_status": "accepted",
+      "fresh_attestation_present": true,
+      "exclusive_record_confirmed": true,
+      "executor_ms": 6042,
+      "queue_claim_to_executor_ms": 1983,
+      "executor_to_publication_ms": 1178
+    },
+    {
+      "sample": 2,
+      "action": "search",
+      "request_id_sha256": "2da66a822285f089d382e5020bb5c52fefe40c75b26a0d4bb4d66a6fb6978137",
+      "state": "ready",
+      "api_started_at": "2026-10-08T19:08:52.929211Z",
+      "created_at": "2026-10-08T19:08:52.955Z",
+      "completed_at": "2026-10-08T19:09:05.358Z",
+      "enqueue_to_publication_ms": 12403,
+      "caller_observed_ms": 12572.641,
+      "frontend_poll_interval_ms": 1000,
+      "polls": 11,
+      "exact_profile": true,
+      "exclusive_record_confirmed": true,
+      "executor_ms": 10480,
+      "queue_claim_to_executor_ms": 1612,
+      "executor_to_publication_ms": 311
+    },
+    {
+      "sample": 2,
+      "action": "status",
+      "request_id_sha256": "afa7bfd7ef611239f02cfec59818b7163dd7f585e339909ba3bec8bb10aef697",
+      "state": "ready",
+      "api_started_at": "2026-10-08T19:09:06.538058Z",
+      "created_at": "2026-10-08T19:09:06.571Z",
+      "completed_at": "2026-10-08T19:09:14.637Z",
+      "enqueue_to_publication_ms": 8066,
+      "caller_observed_ms": 9075.4,
+      "frontend_poll_interval_ms": 1000,
+      "polls": 8,
+      "tester_status": "accepted",
+      "fresh_attestation_present": true,
+      "exclusive_record_confirmed": true,
+      "executor_ms": 6259,
+      "queue_claim_to_executor_ms": 1081,
+      "executor_to_publication_ms": 727
+    },
+    {
+      "sample": 3,
+      "action": "search",
+      "request_id_sha256": "5c8bcd5f597ee3ad41379cd5f5ca4c7a83a8cf558c2f9c70829e306def618d93",
+      "state": "ready",
+      "api_started_at": "2026-10-08T19:09:16.652987Z",
+      "created_at": "2026-10-08T19:09:16.678Z",
+      "completed_at": "2026-10-08T19:09:25.523Z",
+      "enqueue_to_publication_ms": 8845,
+      "caller_observed_ms": 9101.308,
+      "frontend_poll_interval_ms": 1000,
+      "polls": 8,
+      "exact_profile": true,
+      "exclusive_record_confirmed": true,
+      "executor_ms": 7129,
+      "queue_claim_to_executor_ms": 1429,
+      "executor_to_publication_ms": 286
+    },
+    {
+      "sample": 3,
+      "action": "status",
+      "request_id_sha256": "b5c85ceb6994c174fc83912c9ad16970dfd211019ac188519e6175b9040446d7",
+      "state": "ready",
+      "api_started_at": "2026-10-08T19:09:26.795528Z",
+      "created_at": "2026-10-08T19:09:26.825Z",
+      "completed_at": "2026-10-08T19:09:34.267Z",
+      "enqueue_to_publication_ms": 7442,
+      "caller_observed_ms": 8024.671,
+      "frontend_poll_interval_ms": 1000,
+      "polls": 7,
+      "tester_status": "accepted",
+      "fresh_attestation_present": true,
+      "exclusive_record_confirmed": true,
+      "executor_ms": 5936,
+      "queue_claim_to_executor_ms": 768,
+      "executor_to_publication_ms": 738
+    }
+  ],
+  "handoff": {
+    "success": true,
+    "elapsed_ms": 135.163,
+    "observation_including_queue_reads_ms": 168.11,
+    "new_browser_operations": 0,
+    "original_oauth_url_valid": true,
+    "url_followed": false
+  },
+  "reconciliation": {
+    "exact_six_operations": true,
+    "stages": {
+      "executor": {
+        "count": 6,
+        "matches_exact_samples": true
+      },
+      "claim": {
+        "count": 6,
+        "matches_exact_samples": true
+      },
+      "complete": {
+        "count": 6,
+        "matches_exact_samples": true
+      }
+    }
+  },
+  "restoration": {
+    "original_manager_restored": true,
+    "observed_production_units_running": 8,
+    "other_seven_observed_unit_main_pids_unchanged": true,
+    "verified_resource_fields": [
+      "CPUQuotaPerSecUSec",
+      "MemoryMax"
+    ],
+    "observed_unit_restart_counts_zero": true,
+    "original_socket_inode_unchanged": true,
+    "current_symlink_unchanged": true
+  },
+  "new_invites": 0,
+  "dm_sends": 0,
+  "oauth_followed": false,
+  "notes": [
+    "Full API/controller/queue/executor/publication pipeline measured on actual resources.",
+    "No merge/deploy. Six own request hashes reconciled exactly in claim, executor and complete.",
+    "Publisher CPU200 matches existing production quota; CPU50 cold opening failed before Meta.",
+    "Parallel production release changed AWS revision; source pin and preflight refreshed.",
+    "Restoration evidence covers observed systemd unit PIDs and CPUQuota/MemoryMax, not all host processes or every infrastructure property.",
+    "Detailed browser request telemetry reached its cap during assets; per-operation executor and transport timings remain complete. Next pilot reserves details for critical requests."
+  ]
+}

@@ -2,7 +2,7 @@
 # record authorization and card visibility remain the responsibility of each caller.
 class Api::V1::Accounts::Crm::ProfileOpportunitiesController < Api::V1::Accounts::Crm::BaseController
   RESULTS_PER_PAGE = 5
-  RESULTS = %w[active all open won lost archived].freeze
+  RESULTS = %w[active all open won lost resolved cancelled archived].freeze
 
   private
 

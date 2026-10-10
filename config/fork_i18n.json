@@ -12,6 +12,12 @@
       "file": "campaignJourney.json"
     },
     {
+      "file": "brandKits.json"
+    },
+    {
+      "file": "booking.json"
+    },
+    {
       "file": "resultJourney.json"
     },
     {
@@ -22,6 +28,9 @@
     },
     {
       "file": "emailCampaignProtection.json"
+    },
+    {
+      "file": "emailTemplateImport.json"
     },
     {
       "file": "financial.json"

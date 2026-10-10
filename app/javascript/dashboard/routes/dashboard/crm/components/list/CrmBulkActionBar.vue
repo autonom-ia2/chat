@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { outcomeLabels, outcomeStatuses } from '../../helpers/cardOutcome';
 
 import Button from 'dashboard/components-next/button/Button.vue';
 import SelectMenu from 'dashboard/components-next/selectmenu/SelectMenu.vue';
@@ -23,6 +24,11 @@ const props = defineProps({
   isBusy: {
     type: Boolean,
     default: false,
+  },
+  // Funil atual: decide os desfechos e os nomes deles (#1144).
+  pipeline: {
+    type: Object,
+    default: null,
   },
 });
 
@@ -52,11 +58,15 @@ const ownerOptions = computed(() =>
   }))
 );
 
-const statusOptions = computed(() => [
-  { value: 'open', label: t('CRM_KANBAN.CARD_STATUS.OPEN') },
-  { value: 'won', label: t('CRM_KANBAN.CALENDAR.EVENT.WIN') },
-  { value: 'lost', label: t('CRM_KANBAN.CALENDAR.EVENT.LOSE') },
-]);
+const statusOptions = computed(() => {
+  const statuses = outcomeStatuses(props.pipeline);
+  const labels = outcomeLabels(t, props.pipeline);
+  return [
+    { value: 'open', label: t('CRM_KANBAN.CARD_STATUS.OPEN') },
+    { value: statuses.success, label: labels.success },
+    { value: statuses.failure, label: labels.failure },
+  ];
+});
 
 const selectedCountLabel = computed(() =>
   t('CRM_KANBAN.BULK.SELECTED', { count: props.count })

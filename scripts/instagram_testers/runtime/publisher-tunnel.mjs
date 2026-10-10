@@ -16,6 +16,7 @@ const PUBLIC_KEY_DATA = /^[A-Za-z0-9+/]+={0,2}$/;
 const MAX_OUTPUT_BYTES = 2048;
 const HOST_KEY_DOCUMENT = 'ChatwootInstagramPublisherHostKey';
 export const PUBLISH_BUDGET_MS = 25_000;
+export const PUBLISHER_CHANNEL_COMMAND = 'instagram_publisher_channel_v1';
 
 function delay(milliseconds) {
   return new Promise(resolve => {
@@ -107,7 +108,12 @@ export function startSessionArguments(config, localPort) {
   ]);
 }
 
-export function publisherSshArguments(config, localPort, knownHostsPath) {
+export function publisherSshArguments(
+  config,
+  localPort,
+  knownHostsPath,
+  remoteCommand = ''
+) {
   requireSafe(config && PRIVATE_PATH.test(config.sshKey));
   requireSafe(
     Number.isInteger(localPort) && localPort >= 1024 && localPort <= 65535
@@ -115,7 +121,10 @@ export function publisherSshArguments(config, localPort, knownHostsPath) {
   requireSafe(
     typeof knownHostsPath === 'string' && PRIVATE_PATH.test(knownHostsPath)
   );
-  return [
+  requireSafe(
+    remoteCommand === '' || remoteCommand === PUBLISHER_CHANNEL_COMMAND
+  );
+  const args = [
     '-T',
     '-o',
     'BatchMode=yes',
@@ -147,6 +156,8 @@ export function publisherSshArguments(config, localPort, knownHostsPath) {
     String(localPort),
     'chatwoot_publisher@127.0.0.1',
   ];
+  if (remoteCommand) args.push(remoteCommand);
+  return args;
 }
 
 export function parsePublisherOutput(output, type) {

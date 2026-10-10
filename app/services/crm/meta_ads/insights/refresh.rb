@@ -17,13 +17,21 @@ class Crm::MetaAds::Insights::Refresh
     def request!(connection)
       return false unless connection.active? && connection.ad_account_id.present?
 
-      Crm::MetaAds::InsightsBackfillJob.start(connection) if connection.insights_backfilled_at.nil?
+      start_missing_loads(connection)
       return running?(connection.id) unless stale?(connection)
       return false if Crm::MetaAds::Insights::Usage.paused?(connection.ad_account_id)
       return true unless claim(connection.id, TODAY)
 
       Crm::MetaAds::InsightsSyncJob.perform_later(connection.id, TODAY)
       true
+    end
+
+    # Carga de 90 dias (Meta) e das ligações conversa → anúncio (banco) que ainda não rodaram; imagem dos
+    # anúncios, uma vez por dia.
+    def start_missing_loads(connection)
+      Crm::MetaAds::InsightsBackfillJob.start(connection) if connection.insights_backfilled_at.nil?
+      Crm::MetaAds::LinksBackfillJob.start(connection) if connection.links_backfilled_at.nil?
+      Crm::MetaAds::AdImagesJob.start(connection)
     end
 
     def stale?(connection)

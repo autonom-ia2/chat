@@ -30,8 +30,12 @@ class EmailCampaigns::Presentation::Errors
     IMPORT_CODES.include?(value) ? value : 'import_failed'
   end
 
+  # AI generation codes the editor explains on its own (#1076).
+  AI_CODES = %w[quality_gate_failed].freeze
+
   def self.campaign_code(value)
     return if value.blank?
+    return value if AI_CODES.include?(value)
 
     PROTECTION_CODES.key?(value) ? value : 'email_campaign.failed'
   end

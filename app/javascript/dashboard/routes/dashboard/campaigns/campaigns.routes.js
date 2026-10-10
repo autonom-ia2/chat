@@ -2,6 +2,7 @@ import { frontendURL } from 'dashboard/helper/URLHelper.js';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { CAMPAIGN_PERMISSIONS } from 'dashboard/constants/permissions.js';
 import { campaignJourneyRoutes } from './journey/campaignJourney.routes';
+import store from 'dashboard/store';
 
 const CampaignsPageRouteView = () =>
   import('./pages/CampaignsPageRouteView.vue');
@@ -22,15 +23,46 @@ const meta = {
   permissions: ['administrator', ...CAMPAIGN_PERMISSIONS],
 };
 
+const emailCampaignsOn = () =>
+  window.globalConfig?.EMAIL_CAMPAIGN_ENABLED === 'true' &&
+  window.globalConfig?.CRM_KANBAN_ENABLED === 'true';
+
 const requireEmailCampaigns = (to, _from, next) => {
-  if (
-    window.globalConfig?.EMAIL_CAMPAIGN_ENABLED === 'true' &&
-    window.globalConfig?.CRM_KANBAN_ENABLED === 'true'
-  ) {
+  if (emailCampaignsOn()) {
     next();
     return;
   }
   next({ name: 'campaigns_sms_index', params: to.params });
+};
+
+// "Trazer meu modelo" (#1099): besides e-mail campaigns, the account needs the flag
+// email_template_import — meta.featureFlag only hides the menu, it does not close the address.
+// With a direct link or F5 the guard runs before the account is in the store, so it loads the
+// account first (as the Autonomia routes do). Off, or an account that does not load: back to the
+// library, where the button does not show.
+const accountOf = async to => {
+  const accountId = Number(to.params.accountId);
+  const loaded = store.getters['accounts/getAccount'](accountId);
+  if (loaded?.id) return loaded;
+  try {
+    await store.dispatch('accounts/get');
+  } catch {
+    return null;
+  }
+  return store.getters['accounts/getAccount'](accountId);
+};
+
+export const requireTemplateImport = async (to, from, next) => {
+  if (!emailCampaignsOn()) {
+    requireEmailCampaigns(to, from, next);
+    return;
+  }
+  const account = await accountOf(to);
+  if (account?.features?.[FEATURE_FLAGS.EMAIL_TEMPLATE_IMPORT]) {
+    next();
+    return;
+  }
+  next({ name: 'campaigns_email_templates', params: to.params });
 };
 
 const campaignsRoutes = {
@@ -151,6 +183,17 @@ const campaignsRoutes = {
           meta,
           beforeEnter: requireEmailCampaigns,
           component: () => import('./pages/EmailTemplatesPage.vue'),
+        },
+        {
+          // "Trazer meu modelo" (#1099): só com a flag da conta e quem gerencia campanhas.
+          path: 'email_campaigns/templates/import/:importId?',
+          name: 'campaigns_email_template_import',
+          meta: {
+            featureFlag: FEATURE_FLAGS.EMAIL_TEMPLATE_IMPORT,
+            permissions: ['administrator', 'campaign_manage'],
+          },
+          beforeEnter: requireTemplateImport,
+          component: () => import('./pages/EmailTemplateImportPage.vue'),
         },
         ...campaignJourneyRoutes,
       ],

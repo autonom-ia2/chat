@@ -26,6 +26,40 @@ RSpec.describe Crm::ConversationObserverListener do
     expect(Crm::SyncConversationCardJob).to have_been_enqueued.with(conversation.id, message.id)
   end
 
+  describe 'IA de assunto (#1145)' do
+    let(:account) { create_account_and_user.first }
+    let(:inbox) { create_crm_inbox(account: account, members: []) }
+    let(:contact) { account.contacts.create!(name: 'Assunto', phone_number: '+5511987654321') }
+    let(:conversation) { create_crm_conversation(account: account, inbox: inbox, contact: contact) }
+
+    def ligar(mode)
+      account.crm_inbox_settings.find_or_initialize_by(inbox: inbox).update!(crm_enabled: true, subject_ai_mode: mode)
+    end
+
+    it 'pergunta o assunto da mensagem do cliente, depois da espera, quando a caixa tem a IA ligada' do
+      ligar(:suggest)
+      message = create_message(conversation: conversation, sender: contact)
+      clear_enqueued_jobs
+
+      described_class.instance.message_created(event_for(message))
+
+      expect(Crm::Subjects::IdentifyJob).to have_been_enqueued.with(conversation.id, message.id)
+    end
+
+    it 'não pergunta com a IA desligada nem pela mensagem da equipe' do
+      ligar(:off)
+      do_cliente = create_message(conversation: conversation, sender: contact)
+      da_equipe = create_message(conversation: conversation, sender: create(:user, account: account), message_type: :outgoing)
+      clear_enqueued_jobs
+
+      described_class.instance.message_created(event_for(do_cliente))
+      ligar(:auto)
+      described_class.instance.message_created(event_for(da_equipe))
+
+      expect(Crm::Subjects::IdentifyJob).not_to have_been_enqueued
+    end
+  end
+
   it 'ignores private notes and activity messages' do
     account, user = create_account_and_user
     inbox = create_crm_inbox(account: account, members: [user])

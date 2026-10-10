@@ -80,6 +80,19 @@ describe ContactMergeAction do
       end
     end
 
+    context 'when um dos contatos já é cliente (#1144)' do
+      it 'o contato que fica vira cliente com a data mais antiga' do
+        base_contact.update!(contact_type: :lead)
+        mergee_contact.update!(contact_type: :customer, customer_since: 2.years.ago.beginning_of_day)
+
+        contact_merge
+
+        base_contact.reload
+        expect(base_contact).to be_customer
+        expect(base_contact.customer_since).to eq(2.years.ago.beginning_of_day)
+      end
+    end
+
     context 'when um dos contatos recusou mensagens ativas (chat#713)' do
       let(:admin) { create(:user, account: account) }
 
@@ -173,6 +186,118 @@ describe ContactMergeAction do
         contact_merge
 
         expect(base_contact.reload).not_to be_opted_out
+      end
+    end
+
+    context 'when o contato absorvido tem vínculos do CRM' do
+      let(:agent) { create_crm_agent(account: account).first }
+      let(:pipeline_and_stage) { create_crm_pipeline(account: account, user: agent) }
+      let(:pipeline) { pipeline_and_stage.first }
+      let(:stage) { pipeline_and_stage.last }
+
+      def create_card(contact, title)
+        account.crm_cards.create!(pipeline: pipeline, stage: stage, owner: agent, contact: contact, title: title)
+      end
+
+      def create_meeting(card)
+        meeting = Crm::Meeting.new(account: account, card: card, created_by: agent, title: 'Reunião', provider: 0,
+                                   starts_at: 1.day.from_now, ends_at: 1.day.from_now + 1.hour, timezone: 'UTC')
+        meeting.save!(validate: false)
+        meeting
+      end
+
+      def create_meeting_guest(card, contact, email, meeting: create_meeting(card))
+        Crm::MeetingGuest.create!(account: account, meeting: meeting, contact: contact, email: email, guest_type: :contact_guest)
+      end
+
+      it 'move os cards do absorvido para o contato que fica' do
+        card = create_card(mergee_contact, 'Card do absorvido')
+
+        contact_merge
+
+        expect(card.reload.contact_id).to eq(base_contact.id)
+      end
+
+      it 'mantém os cards que já eram do contato que fica' do
+        card = create_card(base_contact, 'Card do base')
+
+        contact_merge
+
+        expect(card.reload.contact_id).to eq(base_contact.id)
+      end
+
+      it 'não move card de outra conta que aponte para o id do absorvido' do
+        other_account = create(:account)
+        other_user = create_crm_agent(account: other_account).first
+        other_pipeline, other_stage = create_crm_pipeline(account: other_account, user: other_user)
+        foreign = other_account.crm_cards.create!(pipeline: other_pipeline, stage: other_stage, owner: other_user, title: 'Card de outra conta')
+        foreign.update_columns(contact_id: mergee_contact.id) # rubocop:disable Rails/SkipsModelValidations
+
+        contact_merge
+
+        expect(foreign.reload.contact_id).to be_nil
+      end
+
+      it 'move os links por cliente do absorvido em vez de apagá-los (#1190)' do
+        page = create_booking_profile(account: account, host: agent)
+        invite = Crm::BookingInvite.create!(account: account, booking_profile: page, contact: mergee_contact,
+                                            created_by: agent, expires_at: 7.days.from_now)
+        kept = Crm::BookingInvite.create!(account: account, booking_profile: page, contact: base_contact,
+                                          created_by: agent, expires_at: 7.days.from_now)
+
+        contact_merge
+
+        expect(invite.reload.contact_id).to eq(base_contact.id)
+        expect(kept.reload.contact_id).to eq(base_contact.id)
+      end
+
+      it 'passa o "parar avisos" do absorvido para o contato que fica (#1192)' do
+        stop = Crm::BookingNoticeStop.create!(account: account, contact: mergee_contact, reason: 'client_link')
+
+        contact_merge
+
+        expect(stop.reload.contact_id).to eq(base_contact.id)
+        expect(Crm::BookingNoticeStop.where(account_id: account.id).pluck(:contact_id)).to eq([base_contact.id])
+      end
+
+      it 'mantém uma única parada quando os dois tinham parado os avisos (#1192)' do
+        kept = Crm::BookingNoticeStop.create!(account: account, contact: base_contact, reason: 'client_link')
+        Crm::BookingNoticeStop.create!(account: account, contact: mergee_contact, reason: 'client_link')
+
+        expect { contact_merge }.not_to raise_error
+
+        expect(Crm::BookingNoticeStop.where(account_id: account.id).pluck(:id, :contact_id)).to eq([[kept.id, base_contact.id]])
+      end
+
+      it 'move os follow-ups do absorvido em vez de apagá-los' do
+        card = create_card(mergee_contact, 'Card com follow-up')
+        follow_up = account.crm_follow_ups.create!(card: card, contact: mergee_contact, created_by: agent, title: 'Retornar',
+                                                   due_at: 1.day.from_now, timezone: 'UTC')
+
+        contact_merge
+
+        expect(follow_up.reload.contact_id).to eq(base_contact.id)
+      end
+
+      it 'move o convidado de reunião do absorvido para o contato que fica' do
+        card = create_card(mergee_contact, 'Card com reunião')
+        guest = create_meeting_guest(card, mergee_contact, 'novo@new.com')
+
+        contact_merge
+
+        expect(guest.reload.contact_id).to eq(base_contact.id)
+      end
+
+      it 'não quebra a mescla quando os dois já são convidados da mesma reunião' do
+        card = create_card(mergee_contact, 'Card com reunião')
+        meeting = create_meeting(card)
+        base_guest = create_meeting_guest(card, base_contact, 'old@old.com', meeting: meeting)
+        mergee_guest = create_meeting_guest(card, mergee_contact, 'new@new.com', meeting: meeting)
+
+        expect { contact_merge }.not_to raise_error
+
+        expect(base_guest.reload.contact_id).to eq(base_contact.id)
+        expect(Crm::MeetingGuest.exists?(mergee_guest.id)).to be(false)
       end
     end
 

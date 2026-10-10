@@ -22,7 +22,8 @@
     },
     "AUTONOMIA": {
       "LABEL": "Entrar com Autonomia",
-      "AUTH_ERROR": "Não foi possível validar seu acesso pela Autonomia. Estamos levando você de volta para entrar novamente.",
+      "AUTH_ERROR": "Não foi possível validar seu acesso pela Autonomia. Entre novamente para tentar.",
+      "CANCELLED_ERROR": "O login pela Autonomia foi cancelado. Você pode iniciar novamente quando desejar.",
       "TRANSIENT_ERROR": "Não foi possível concluir seu acesso. Verifique sua conexão e tente novamente.",
       "RETRY": "Tentar novamente",
       "RESTART": "Entrar novamente pela Autonomia"

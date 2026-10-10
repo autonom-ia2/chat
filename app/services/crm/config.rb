@@ -14,6 +14,14 @@ module Crm
       BOOLEAN.cast(ENV.fetch('CRM_CALENDAR_MEETINGS_ENABLED', false))
     end
 
+    # Agendamento WhatsApp-first (#1187): liga por conta (flag `crm_booking_v2`, piloto no Super Admin) e só
+    # existe se o calendário de reuniões da instalação estiver ligado.
+    def self.booking_v2_enabled?(account)
+      return false if account.blank?
+
+      calendar_meetings_enabled? && account.feature_enabled?('crm_booking_v2')
+    end
+
     def self.calendar_ms_simulate?
       return BOOLEAN.cast(ENV['CRM_CALENDAR_MS_SIMULATE']) == true if ENV.key?('CRM_CALENDAR_MS_SIMULATE')
 

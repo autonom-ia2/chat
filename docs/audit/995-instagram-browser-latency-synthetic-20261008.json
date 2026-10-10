@@ -1,0 +1,61 @@
+{
+  "status": "passed",
+  "benchmark": "browser_operation_local_synthetic",
+  "production_mutated": false,
+  "meta_called": false,
+  "browser_headless": true,
+  "page_reused": true,
+  "context_reused": true,
+  "monotonic_clock": "process.hrtime.bigint",
+  "iterations": 20,
+  "scenarios": [
+    "search",
+    "status_accepted",
+    "invite_unknown"
+  ],
+  "summaries": {
+    "search": {
+      "sample_count": 20,
+      "successful_samples": 20,
+      "total_ms": {
+        "min": 173.51,
+        "median": 182.348,
+        "p95": 195.279,
+        "max": 269.723
+      }
+    },
+    "status_accepted": {
+      "sample_count": 20,
+      "successful_samples": 20,
+      "total_ms": {
+        "min": 75.565,
+        "median": 80.013,
+        "p95": 88.529,
+        "max": 91.167
+      }
+    },
+    "invite_unknown": {
+      "sample_count": 20,
+      "successful_samples": 20,
+      "total_ms": {
+        "min": 354.292,
+        "median": 364.886,
+        "p95": 385.772,
+        "max": 385.799
+      }
+    }
+  },
+  "limits": [
+    "Synthetic local HTTPS/proxy transport; no Meta or AWS latency.",
+    "Reference series is retained in supplied order because the receipt did not provide semantic labels.",
+    "UI fixture renders the target option before the synthetic typeahead response to keep the local run deterministic; HTTP and executor phases remain real."
+  ],
+  "execution": {
+    "node": "m2",
+    "ticket": "m4-8658e517759e407aa203d0fe5a4ab958",
+    "worker": "m2-f550a8586e894fcb9be706bfc3478c21",
+    "return_code": 0,
+    "duration_seconds": 22.402,
+    "receipt_sha256": "5c0f2927cfcc00640891e882faa160aceef39c830b70b2c7664f713352d1c01d"
+  }
+}

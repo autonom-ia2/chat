@@ -51,6 +51,8 @@ Rails.application.routes.draw do
     # email-verified booking.
     get '/book/:slug', to: 'public_booking/pages#show', as: :public_booking_page
     get '/book/:slug/confirm', to: 'public_booking/pages#show', as: :public_booking_confirm_page
+    # Link por cliente e de gestão da reunião (#1189/#1190): sempre a página v2.
+    get '/b/:code', to: 'public_booking/pages#invite', as: :public_booking_invite_page
     get '/l/:code', to: 'public/tracked_links#show', as: :public_tracked_link
     # Kit do desenvolvedor do link de site (CA-1.6, #1068).
     get '/l/:code/kit', to: 'public/tracked_link_kits#show', as: :public_tracked_link_kit
@@ -66,6 +68,17 @@ Rails.application.routes.draw do
   get '/api/v1/autonomia/product-invitations/validate', to: 'public/api/v1/autonomia/product_invitations#validate'
   namespace :api, defaults: { format: 'json' } do
     namespace :v1 do
+      namespace :autonomia do
+        namespace :connect do
+          resource :agents, only: [] do
+            get :accounts
+            post :integration, action: :create
+            post 'integration/rotate', action: :rotate
+            delete :integration, action: :destroy
+          end
+        end
+      end
+
       # ----------------------------------
       # start of account scoped api routes
       resources :accounts, only: [:create, :show, :update] do
@@ -298,6 +311,9 @@ Rails.application.routes.draw do
                 post :sync
                 post :record_outcome
                 post :summarize
+                # Dia da reunião (#1193): "Lembrar" e "Enviar link para marcar outro horário".
+                post :remind, to: 'meeting_actions#remind'
+                post :rebook_link, to: 'meeting_actions#rebook_link'
               end
               collection do
                 post :suggest_times
@@ -310,6 +326,7 @@ Rails.application.routes.draw do
             end
             resource :google_conversion_feed, only: [:create]
             resource :meta_ads_connection, only: [:show, :update, :destroy] do
+              post :facebook_login
               get :ad_accounts
               get :pixels
               post :selection
@@ -318,9 +335,29 @@ Rails.application.routes.draw do
               patch :funnel
               post :suggest_stages
               post :insights
+              get :panel
+              get :panel_ad
+              get :panel_list
+            end
+            # Anúncios da Meta F4 (#1100): ação do dia e mensagem sugerida pela IA; resumo e alerta no WhatsApp.
+            scope 'meta_ads_connection' do
+              post :daily_action, to: 'meta_ads_ai#daily_action'
+              post :quote_message, to: 'meta_ads_ai#quote_message'
+              get :whatsapp_report, to: 'meta_ads_whatsapp_reports#show'
+              patch :whatsapp_report, to: 'meta_ads_whatsapp_reports#update'
+              post 'whatsapp_report/test', to: 'meta_ads_whatsapp_reports#test_send'
+              # F5 (#1110): abrir, aceitar e dispensar cada ação do consultor.
+              post 'advisor_actions/:id/open', to: 'meta_ads_advisor_actions#open'
+              post 'advisor_actions/:id/accept', to: 'meta_ads_advisor_actions#accept'
+              post 'advisor_actions/:id/dismiss', to: 'meta_ads_advisor_actions#dismiss'
             end
             get 'conversations/card_stages', to: 'cards#card_stages'
             get 'conversations/:conversation_id/card', to: 'cards#by_conversation'
+            get 'conversations/:conversation_id/cards', to: 'conversation_cards#index'
+            post 'conversations/:conversation_id/focus', to: 'conversation_cards#focus'
+            # Multifunil 5b (#1145): responder à sugestão de assunto da IA.
+            post 'conversations/:conversation_id/subject_suggestions/:suggestion_id/accept', to: 'conversation_cards#accept_suggestion'
+            post 'conversations/:conversation_id/subject_suggestions/:suggestion_id/dismiss', to: 'conversation_cards#dismiss_suggestion'
             get :kanban, to: 'kanban#index'
             scope :reports, controller: :reports do
               get :pipelines, action: :pipelines, as: :crm_report_pipelines
@@ -353,12 +390,48 @@ Rails.application.routes.draw do
                 delete 'agent_links/:link_id', action: :destroy_agent_link
               end
             end
+            # Agendamento WhatsApp-first (#1187): páginas novas (page_version 2), flag crm_booking_v2 + módulo agendamento.
+            resources :booking_pages, only: [:index, :show, :create, :update, :destroy] do
+              # Passar reuniões de uma pessoa para outra (#1195): prévia sem gravar e a passagem.
+              collection do
+                get :reassign_preview
+                post :reassign
+              end
+              member do
+                post :publish
+                post :pause
+                post :preview_token
+                post :logo
+                post :photo
+                get :people
+                put :people, action: :update_people
+                post :test_invite
+              end
+            end
+            # Meus horários (#1195): a própria pessoa ajusta dias e horas de agendamento e pausa a agenda.
+            get :my_booking_hours, to: 'my_booking_hours#show'
+            put :my_booking_hours, to: 'my_booking_hours#update'
+            # Link por cliente (#1190): botão Agendar da conversa e do card.
+            resources :booking_invites, only: [:index, :create, :destroy] do
+              member do
+                post :deliver
+                post :copied
+              end
+            end
+            # Painel de resultados do agendamento (#1194): números do período e "abriram e não marcaram".
+            resource :booking_stats, only: [:show] do
+              get :opened_not_booked
+              post 'opened_not_booked/:invite_id/resend', action: :resend, as: :resend_opened_not_booked
+            end
           end
           namespace :autonomia do
             # #284 — feedback do ATENDENTE ("resposta errada") numa mensagem do agente. Aberto a qualquer
             # membro da conta (não é admin-only como o resto de agents/). Declarado ANTES de resources
             # :agents para nunca casar com agents/:id.
             post 'agents/message_reports', to: 'agents/message_reports#create'
+            # #1181 — leituras da nova jornada de Agentes (atrás da flag autonomia_agents_journey).
+            get 'numeros_da_semana', to: 'numeros_da_semana#index'
+            get 'canais_ocupados', to: 'canais_ocupados#index'
             resources :agents, only: [:index, :show, :create, :update, :destroy] do
               member do
                 post :test,    to: 'agents/playground#test'
@@ -506,6 +579,12 @@ Rails.application.routes.draw do
               resources :saved_presets, only: [:create, :update, :destroy]
             end
           end
+          # Identidade visual (#1076): kits de marca da conta e importação a partir do site.
+          resources :brand_kits, only: [:index, :show, :create, :update, :destroy] do
+            post :set_default, on: :member
+            post :restore, on: :member
+          end
+          resources :brand_kit_imports, only: [:create, :show]
           namespace :email_campaigns do
             post 'maintenance/backfills', to: 'maintenance#create'
             get 'maintenance/backfills/:id', to: 'maintenance#show'
@@ -545,7 +624,18 @@ Rails.application.routes.draw do
             post 'ai/generate',                to: 'ai#generate'
             post 'ai/rewrite',                 to: 'ai#rewrite'
             get  'ai/campaigns/:id/status',    to: 'ai#status'
+            delete 'ai/campaigns/:id/adjustment', to: 'ai#discard_adjustment'
+            post 'ai/campaigns/:id/adjustment/apply', to: 'ai#apply_adjustment'
+            post 'ai/campaigns/:id/adjustment/undo', to: 'ai#undo_adjustment'
             resources :templates, only: [:index, :show, :create, :destroy]
+            # Importar modelo (#1099): colar/arquivo/endereço → job → acompanhar → corrigir → salvar em "Meus modelos".
+            resources :template_imports, only: [:index, :create, :show] do
+              member do
+                post :save
+                post :fix
+                post :rebuild
+              end
+            end
             resources :reports, only: [:index, :show] do
               member do
                 get :clicks
@@ -651,6 +741,7 @@ Rails.application.routes.draw do
               resources :labels, only: [:create, :index]
               resources :notes
               resource :opt_out, only: [:create, :destroy]
+              resource :customer, only: [:create, :destroy]
               if ChatwootApp.enterprise?
                 resources :media, only: [:index, :show] do
                   member { get :preview }
@@ -754,6 +845,13 @@ Rails.application.routes.draw do
               post :reconnect
             end
           end
+          resources :whatsapp_hybrid_connections, only: [:show, :update, :destroy], param: :inbox_id do
+            member do
+              post :connect, action: :create
+              post :request_code
+              post :reconnect
+            end
+          end
           resources :labels, only: [:index, :show, :create, :update, :destroy]
 
           resources :notifications, only: [:index, :update, :destroy] do
@@ -809,6 +907,7 @@ Rails.application.routes.draw do
             get 'testers/search', to: 'testers#search'
             post 'testers/status', to: 'testers#status'
             post 'testers/invite', to: 'testers#invite'
+            get 'testers/operations/:id', to: 'testers#operation'
           end
 
           namespace :tiktok do
@@ -1086,6 +1185,24 @@ Rails.application.routes.draw do
         get 'booking/:slug', to: 'booking#show'
         post 'booking/:slug', to: 'booking#create'
       end
+
+      # Agendamento WhatsApp-first (#1187): link por cliente `/b/<code>` (#1190). Só o código opaco autoriza.
+      namespace :v2 do
+        get 'invites/:code', to: 'invites#show'
+        post 'invites/:code/viewed', to: 'invites#viewed'
+        # Gestão da reunião pelo mesmo link (#1192).
+        post 'invites/:code/confirm', to: 'invites#confirm'
+        post 'invites/:code/cancel', to: 'invites#cancel'
+        post 'invites/:code/reschedule', to: 'invites#reschedule'
+        post 'invites/:code/stop_notices', to: 'invites#stop_notices'
+        # Página pública v2 (#1189): só o slug opaco (página ou link individual) autoriza; ICS com token no caminho.
+        get 'booking/:slug/slots', to: 'booking#slots'
+        get 'booking/:slug/next_slot', to: 'booking#next_slot'
+        post 'booking/:slug/contact_request', to: 'booking#contact_request'
+        get 'booking/:slug', to: 'booking#show'
+        post 'booking/:slug', to: 'booking#create'
+        get 'ics/:token', to: 'ics#show'
+      end
     end
   end
 
@@ -1123,6 +1240,7 @@ Rails.application.routes.draw do
   post 'webhooks/sms/:phone_number', to: 'webhooks/sms#process_payload'
   get 'webhooks/whatsapp/:phone_number', to: 'webhooks/whatsapp#verify'
   post 'webhooks/whatsapp/:phone_number', to: 'webhooks/whatsapp#process_payload'
+  post 'webhooks/whatsapp_hybrid/:public_id', to: 'webhooks/whatsapp_hybrid#create'
   get 'webhooks/instagram', to: 'webhooks/instagram#verify'
   post 'webhooks/instagram', to: 'webhooks/instagram#events'
   post 'webhooks/tiktok', to: 'webhooks/tiktok#events'

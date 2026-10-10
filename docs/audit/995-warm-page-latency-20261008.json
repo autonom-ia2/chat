@@ -1,0 +1,388 @@
+{
+  "date": "2026-10-08",
+  "issue": 995,
+  "pr": 1163,
+  "status": "tenfold_backend_gate_passed",
+  "scope": {
+    "stack": "hub2you",
+    "account_id": 18,
+    "allowed_actions": [
+      "search",
+      "status",
+      "normal_oauth_url_preparation"
+    ],
+    "oauth_followed": false
+  },
+  "source_hashes": {
+    "scripts/instagram_testers/session-manager.mjs": "6b65b1a465ca7f00abf7d59227e3f69b039545c4c107cb511b94c79a69c48ee3",
+    "scripts/instagram_testers/session-observer.mjs": "1652c684772e0903c610cda279c9f1e9211a9c8dfc02fcab6daa838ef1d75463",
+    "scripts/instagram_testers/browser-operations.mjs": "1426fbbcc653e5ed4854e8656d2374d22dc9789073da78087f49f62951b9c1ff",
+    "scripts/instagram_testers/runtime/entrypoint.mjs": "4ed32db50bd887affe731a5ab5ce1b168461769d78cf3b161a82904947454aa5",
+    "scripts/instagram_testers/runtime/operator-protocol.mjs": "0cfb99f7bf3327d0dd653fc5f18d8549777e741db70380b105d771dbf03e5d40",
+    ".codex/1163-pilot-manager.mjs": "7e42d3b17e9907f45233d3f14247d7eb73c9cd5b56361dc226070adff32fd59e",
+    ".codex/1163-pilot-publisher.mjs": "4e1252e606de69022593b05866b3fb5ea15e3b692c7133255c490ef504911ae9"
+  },
+  "local_validation": {
+    "node": {
+      "executed": 380,
+      "passed": 380,
+      "failed": 0
+    },
+    "eslint": {
+      "files": 5,
+      "errors": 0,
+      "warnings": 0
+    },
+    "warm_browser_fixture": {
+      "status": "passed",
+      "production_mutated": false,
+      "meta_called": false,
+      "warm_status_sequence": [
+        "accepted",
+        "absent",
+        "accepted"
+      ],
+      "repeated_searches": 2,
+      "goto_count": 2,
+      "roles_requests": 8,
+      "invite_requests": 0,
+      "expired_rejected": true,
+      "invite_cold_reseeded": true,
+      "status_after_invite_reused_warm": true,
+      "initial_roles_post_pinned": true,
+      "cancel_close_controls_in_fixture": true,
+      "abort_invalidated": true,
+      "page_close_invalidated": true,
+      "login_navigation_failclosed": true,
+      "csrf_terminal_reason_preserved": true,
+      "proxy_terminal_reason_preserved": true,
+      "configuration_mismatch_rejected": true,
+      "aaid_mismatch_rejected": true,
+      "response_500_rejected": true,
+      "incomplete_response_rejected": true,
+      "duplicate_roles_rejected": true,
+      "dialog_guards_fail_closed": true,
+      "concurrent_refresh_serialized": true
+    },
+    "ui_failure_cases": {
+      "executed": 6,
+      "passed": 6
+    },
+    "workflow_yaml": "parsed",
+    "commit_hook": {
+      "status": "local_husky_runtime_missing",
+      "detail": "The worktree lacks .husky/_/husky.sh. None of the staged files matches app JS/Vue, SCSS or Ruby hook targets. The changed executor/manager/fixtures were linted explicitly and passed; commit uses a command-local hooksPath override without changing repository configuration."
+    }
+  },
+  "findings": {
+    "prior_warm_read": {
+      "search_ms": 4991,
+      "status_ms": 4321,
+      "search_executor_ms": 2403,
+      "status_executor_ms": 507,
+      "status_queue_claim_ms": 2502,
+      "status_publication_ms": 1312
+    },
+    "repeated_search_failure": {
+      "phase": "tester_dialog_reset",
+      "visible_dialogs": 1,
+      "cancel_visible_enabled": 1,
+      "close_visible_enabled": 1,
+      "reason": "combined locator counted two distinct public cancel controls"
+    },
+    "changes": [
+      "reuse same canonical Meta Page with a new pinned RolesTable_Query every operation",
+      "Cancel unique exact before Close fallback",
+      "serial browser-operation queue pause 1000ms to 250ms; deadlines unchanged",
+      "publisher CPU200% template aligned with observed running production service"
+    ]
+  },
+  "limits": [
+    "Three controlled pairs with existing production resources and the approved profile; not a peak-load percentile guarantee.",
+    "10x comparison uses the same backend metric as the historical logs. Caller observation includes the unchanged frontend 1000ms polling and local HTTP latency, and is listed separately.",
+    "Cross-host phase timestamps may include clock skew; the backend gate uses only the AWS clock.",
+    "OAuth preparation succeeded; URL was not followed. Completed connection and reconnection remain unverified."
+  ],
+  "release": {
+    "merged": false,
+    "deployed": false
+  },
+  "real_pilot": {
+    "started_at": "2026-10-08T20:03:23.760562+00:00",
+    "aws_sha": "28e1e0ac8b3835577f7469368f03a86d1a8dab0d",
+    "archive_sha256": "daf28aa67226d8700f4cd8d7fa8a975c901b9ec2e3fabe4e3e39e75087bcbd2c",
+    "manager_profile": "existing exclusive legitimate Hub2You profile; no clone",
+    "backend_samples": [
+      {
+        "sample": 1,
+        "action": "search",
+        "request_id_sha256": "c299b7702b1af8e85d8cd7bcf62f1bb5c2836190879d6f640fd029cd98378fea",
+        "state": "ready",
+        "api_started_at": "2026-10-08T20:04:11.910023Z",
+        "created_at": "2026-10-08T20:04:12.041Z",
+        "completed_at": "2026-10-08T20:04:18.412Z",
+        "enqueue_to_publication_ms": 6371,
+        "caller_observed_ms": 7287.86,
+        "frontend_poll_interval_ms": 1000,
+        "polls": 6,
+        "exact_profile": true,
+        "exclusive_record_confirmed": true,
+        "executor_ms": 2921,
+        "queue_and_claim_ms": 3142,
+        "executor_to_publication_ms": 308,
+        "fresh_warm_anchor": true,
+        "browser_counts": {
+          "roles_requests": 1,
+          "roles_responses": 1,
+          "typeahead_requests": 1,
+          "navigations": 0,
+          "invite_requests": 0,
+          "mutation_requests": 0
+        }
+      },
+      {
+        "sample": 1,
+        "action": "status",
+        "request_id_sha256": "ba57ab8594f4b6763acb42028e8a3b936ee49df8e4781c0a114aae8545a32cc2",
+        "state": "ready",
+        "api_started_at": "2026-10-08T20:04:20.231910Z",
+        "created_at": "2026-10-08T20:04:20.286Z",
+        "completed_at": "2026-10-08T20:04:23.770Z",
+        "enqueue_to_publication_ms": 3484,
+        "caller_observed_ms": 4705.711,
+        "frontend_poll_interval_ms": 1000,
+        "polls": 4,
+        "tester_status": "accepted",
+        "fresh_attestation_present": true,
+        "exclusive_record_confirmed": true,
+        "executor_ms": 486,
+        "queue_and_claim_ms": 1705,
+        "executor_to_publication_ms": 1293,
+        "fresh_warm_anchor": true,
+        "browser_counts": {
+          "roles_requests": 1,
+          "roles_responses": 1,
+          "typeahead_requests": 0,
+          "navigations": 0,
+          "invite_requests": 0,
+          "mutation_requests": 0
+        }
+      },
+      {
+        "sample": 2,
+        "action": "search",
+        "request_id_sha256": "058d9a95ec740b9d265fcd7c26f934e7f5cc7b08248e8b90ffdb059925dd071b",
+        "state": "ready",
+        "api_started_at": "2026-10-08T20:04:25.974384Z",
+        "created_at": "2026-10-08T20:04:26.002Z",
+        "completed_at": "2026-10-08T20:04:32.273Z",
+        "enqueue_to_publication_ms": 6271,
+        "caller_observed_ms": 6831.174,
+        "frontend_poll_interval_ms": 1000,
+        "polls": 6,
+        "exact_profile": true,
+        "exclusive_record_confirmed": true,
+        "executor_ms": 2009,
+        "queue_and_claim_ms": 3953,
+        "executor_to_publication_ms": 310,
+        "fresh_warm_anchor": true,
+        "browser_counts": {
+          "roles_requests": 1,
+          "roles_responses": 1,
+          "typeahead_requests": 1,
+          "navigations": 0,
+          "invite_requests": 0,
+          "mutation_requests": 0
+        }
+      },
+      {
+        "sample": 2,
+        "action": "status",
+        "request_id_sha256": "c67a546cbb318939ee9d988b404fe91f079eb66da18daa472083ecf1a3335e9c",
+        "state": "ready",
+        "api_started_at": "2026-10-08T20:04:33.847957Z",
+        "created_at": "2026-10-08T20:04:33.875Z",
+        "completed_at": "2026-10-08T20:04:37.272Z",
+        "enqueue_to_publication_ms": 3397,
+        "caller_observed_ms": 3661.032,
+        "frontend_poll_interval_ms": 1000,
+        "polls": 3,
+        "tester_status": "accepted",
+        "fresh_attestation_present": true,
+        "exclusive_record_confirmed": true,
+        "executor_ms": 427,
+        "queue_and_claim_ms": 1923,
+        "executor_to_publication_ms": 1048,
+        "fresh_warm_anchor": true,
+        "browser_counts": {
+          "roles_requests": 1,
+          "roles_responses": 1,
+          "typeahead_requests": 0,
+          "navigations": 0,
+          "invite_requests": 0,
+          "mutation_requests": 0
+        }
+      },
+      {
+        "sample": 3,
+        "action": "search",
+        "request_id_sha256": "a73940319eedc7014669c3bf01aed492a3eae2843ddeefbc2a459f4a2772877b",
+        "state": "ready",
+        "api_started_at": "2026-10-08T20:04:38.550216Z",
+        "created_at": "2026-10-08T20:04:38.587Z",
+        "completed_at": "2026-10-08T20:04:43.218Z",
+        "enqueue_to_publication_ms": 4631,
+        "caller_observed_ms": 5657.927,
+        "frontend_poll_interval_ms": 1000,
+        "polls": 5,
+        "exact_profile": true,
+        "exclusive_record_confirmed": true,
+        "executor_ms": 2393,
+        "queue_and_claim_ms": 1720,
+        "executor_to_publication_ms": 519,
+        "fresh_warm_anchor": true,
+        "browser_counts": {
+          "roles_requests": 1,
+          "roles_responses": 1,
+          "typeahead_requests": 1,
+          "navigations": 0,
+          "invite_requests": 0,
+          "mutation_requests": 0
+        }
+      },
+      {
+        "sample": 3,
+        "action": "status",
+        "request_id_sha256": "ad3c7a60400563debec5bace0605c0a53adea79e6a1d993667cd327a388ff978",
+        "state": "ready",
+        "api_started_at": "2026-10-08T20:04:45.254649Z",
+        "created_at": "2026-10-08T20:04:45.288Z",
+        "completed_at": "2026-10-08T20:04:48.579Z",
+        "enqueue_to_publication_ms": 3291,
+        "caller_observed_ms": 3573.445,
+        "frontend_poll_interval_ms": 1000,
+        "polls": 3,
+        "tester_status": "accepted",
+        "fresh_attestation_present": true,
+        "exclusive_record_confirmed": true,
+        "executor_ms": 474,
+        "queue_and_claim_ms": 1625,
+        "executor_to_publication_ms": 1192,
+        "fresh_warm_anchor": true,
+        "browser_counts": {
+          "roles_requests": 1,
+          "roles_responses": 1,
+          "typeahead_requests": 0,
+          "navigations": 0,
+          "invite_requests": 0,
+          "mutation_requests": 0
+        }
+      }
+    ],
+    "gate": {
+      "metric": "Rails browser-operation created_at to updated_at; both on the same AWS server",
+      "search_baseline_ms": 80966,
+      "status_baseline_ms": 42506,
+      "search_max_ms": 8096.6,
+      "status_max_ms": 4250.6,
+      "passed": true,
+      "all_samples_passed": true
+    },
+    "caller_observation": {
+      "search_range_ms": [
+        5657.927,
+        7287.86
+      ],
+      "status_range_ms": [
+        3573.445,
+        4705.711
+      ],
+      "frontend_poll_interval_ms": 1000,
+      "not_equal_to_backend_metric": true
+    },
+    "normal_oauth_handoff": {
+      "success": true,
+      "elapsed_ms": 140.284,
+      "observation_including_queue_reads_ms": 165.381,
+      "new_browser_operations": 0,
+      "original_oauth_url_valid": true,
+      "url_followed": false
+    },
+    "reconciliation": {
+      "exact_six_operations": true,
+      "stages": {
+        "executor": {
+          "count": 6,
+          "matches_exact_samples": true
+        },
+        "claim": {
+          "count": 6,
+          "matches_exact_samples": true
+        },
+        "complete": {
+          "count": 6,
+          "matches_exact_samples": true
+        }
+      },
+      "fresh_roles_query_each_operation": true,
+      "extra_navigations": 0,
+      "fresh_warm_anchor_each_operation": true,
+      "invite_post_attempts": 0,
+      "graphql_mutation_attempts": 0
+    },
+    "public_dialog_controls": [
+      {
+        "visible_dialogs": 1,
+        "cancel_visible": 1,
+        "cancel_enabled": 1,
+        "close_visible": 1,
+        "close_enabled": 1
+      },
+      {
+        "visible_dialogs": 1,
+        "cancel_visible": 1,
+        "cancel_enabled": 1,
+        "close_visible": 1,
+        "close_enabled": 1
+      },
+      {
+        "visible_dialogs": 1,
+        "cancel_visible": 1,
+        "cancel_enabled": 1,
+        "close_visible": 1,
+        "close_enabled": 1
+      }
+    ],
+    "publisher_cold_preparation_ms": 16720.872
+  },
+  "restoration": {
+    "original_manager_restored": true,
+    "eight_units_active_running": true,
+    "other_seven_main_pids_preserved": true,
+    "resource_fields_checked": [
+      "CPUQuotaPerSecUSec",
+      "MemoryMax",
+      "MemoryHigh",
+      "TasksMax"
+    ],
+    "resource_fields_preserved": true,
+    "zero_service_restart_counters": true,
+    "current_unchanged": "/opt/instagram-meta/releases/61f20cfd107361a431fda51f02cace751cc4978d",
+    "original_socket_inode_preserved": true,
+    "global_queue_zero": true,
+    "own_artifacts_removed": true,
+    "post_api": {
+      "status": "ok",
+      "http_status": 200,
+      "configuration_available": true,
+      "queue_length": 0,
+      "running": 0,
+      "queued": 0
+    },
+    "temporary_ssh_shutdown": {
+      "exit_code": 255,
+      "utc": "2026-10-08T20:05:08.649Z",
+      "context": "Observed during controlled teardown after the six verified operation replies. Not counted as a successful transport exit."
+    }
+  }
+}

@@ -641,8 +641,6 @@
     },
     "RESULT_FILTER": {
       "OPEN": "Em andamento",
-      "WON": "Ganho",
-      "LOST": "Perdido",
       "ARCHIVED": "Arquivado"
     },
     "PRIORITY": {
@@ -719,8 +717,6 @@
       "LOADING": "Carregando cards…",
       "RESET_COLUMNS": "Restaurar colunas",
       "STATUS_OPEN": "Aberto",
-      "STATUS_WON": "Ganho",
-      "STATUS_LOST": "Perdido",
       "SAVE": "Salvar",
       "SAVED_VIEWS": {
         "PRIVATE": "Privada",
@@ -923,6 +919,13 @@
         "AI_UNAVAILABLE": "A IA está indisponível no momento.",
         "CANCEL": "Cancelar"
       },
+      "MEETING_LOCATION": {
+        "WHATSAPP_VIDEO": "Vídeo no WhatsApp",
+        "WHATSAPP_VOICE": "Ligação no WhatsApp",
+        "CUSTOM_LINK": "Link do agente",
+        "IN_PERSON": "Presencial",
+        "NO_ONLINE": "Sem videochamada"
+      },
       "MEETING_DETAIL": {
         "TITLE": "Detalhes da reunião",
         "STATUS_LABEL": "Status",
@@ -996,6 +999,88 @@
           "UPDATE_FAILED": "Não foi possível atualizar a reunião",
           "CANCEL_FAILED": "Não foi possível cancelar a reunião",
           "OUTCOME_FAILED": "Não foi possível registrar o resultado da reunião"
+        },
+        "CLIENT": {
+          "TITLE": "Resposta do cliente",
+          "CONFIRMED": "Confirmou",
+          "CHANGE_REQUESTED": "Pediu para mudar",
+          "PENDING": "Ainda não respondeu",
+          "STOPPED": "Pediu para não receber avisos"
+        },
+        "NOTICES": {
+          "TITLE": "Avisos no WhatsApp",
+          "KINDS": {
+            "BOOKED": "Ao marcar",
+            "RESCHEDULED": "Horário mudou",
+            "DAY_BEFORE": "1 dia antes",
+            "HOUR_BEFORE": "1 hora antes"
+          },
+          "STATUS": {
+            "PENDING": "Vai sair",
+            "SENDING": "Saindo agora",
+            "SENT": "Enviado",
+            "SKIPPED": "Não saiu",
+            "FAILED": "Falhou"
+          },
+          "SKIP_REASONS": {
+            "DISABLED": "os avisos estão desligados nesta conta",
+            "CANCELED": "o horário foi cancelado",
+            "PAST_DUE": "a hora do aviso já tinha passado",
+            "STALE": "o horário mudou depois que o aviso foi marcado",
+            "TOO_CLOSE": "ficaria perto demais de outro aviso",
+            "REPLACED": "saiu o aviso do horário novo no lugar",
+            "OPTED_OUT": "o cliente não aceita mensagens",
+            "STOPPED": "o cliente pediu para parar",
+            "NO_INBOX": "a página está sem WhatsApp de avisos",
+            "NO_INVITE": "o horário não veio de um link",
+            "NO_CONTACT": "o horário está sem contato",
+            "NO_PHONE": "o cliente não tem WhatsApp cadastrado",
+            "UNSUPPORTED_INBOX": "este WhatsApp não manda avisos",
+            "TEMPLATE_REQUIRED": "falta mensagem aprovada e o cliente não falou com você nas últimas 24 horas",
+            "TEMPLATE_WITHOUT_LINK": "a mensagem aprovada não tem o link do horário",
+            "TEMPLATE_UNSUPPORTED": "a mensagem aprovada pede dados que o aviso não preenche",
+            "WAHA_OUTSIDE_WINDOW": "o cliente não falou com você nas últimas 24 horas",
+            "NUMBER_CAP": "este número já recebeu muitas mensagens hoje",
+            "ACCOUNT_CAP": "a conta chegou ao limite de avisos do dia",
+            "OTHER": "outro motivo"
+          },
+          "FAILED_HINT": "Fale com o cliente para confirmar o horário."
+        }
+      },
+      "MEETING_DAY": {
+        "NEXT_MEETING": "Próxima reunião",
+        "PHONE_LABEL": "Número",
+        "CALL": "Chamar no WhatsApp",
+        "CALL_HINT": "O WhatsApp abre a conversa com o cliente. Para a chamada de vídeo, toque no ícone da câmera no próprio WhatsApp.",
+        "CALL_HINT_VOICE": "O WhatsApp abre a conversa com o cliente. Para ligar, toque no ícone do telefone no próprio WhatsApp.",
+        "REMIND": "Lembrar",
+        "REMIND_HINT": "Manda ao cliente uma mensagem curta pedindo para confirmar o horário.",
+        "REMIND_SENT": "Lembrete enviado",
+        "REMIND_SENT_HINT": "A mensagem saiu na conversa.",
+        "REBOOK_TITLE": "Enviar link para {name} marcar outro horário",
+        "REBOOK_TITLE_NO_NAME": "Enviar link para o cliente marcar outro horário",
+        "REBOOK_SEND": "Enviar link",
+        "REBOOK_SENT": "Link enviado na conversa.",
+        "NOT_NOW": "Agora não",
+        "MOVE_QUESTION": "Mover para a etapa \"{stage}\"?",
+        "MOVE_HINT": "Assim o card não fica esquecido na etapa de agora.",
+        "MOVE": "Mover",
+        "MOVED": "O card foi para a etapa \"{stage}\".",
+        "MOVE_FAILED": "Não deu para mover o card. Tente de novo.",
+        "COPY_LINK": "Copiar link",
+        "COPIED": "Link copiado",
+        "REFUSED": {
+          "NOT_REMINDABLE": "Esta reunião não pode mais receber lembrete.",
+          "ALREADY_CONFIRMED": "O cliente já confirmou.",
+          "STOPPED": "O cliente pediu para não receber mensagens sobre esta reunião. Nada foi enviado.",
+          "NO_INVITE": "Esta reunião não tem o link do cliente. Nada foi enviado.",
+          "RECENTLY_REMINDED": "Você lembrou o cliente há poucos minutos. Espere um pouco para tentar de novo.",
+          "RECENTLY_SENT": "O link saiu há poucos minutos. Espere um pouco para mandar de novo.",
+          "NO_CONVERSATION": "Não há conversa com este cliente que você possa responder. Copie o link e envie de outro jeito.",
+          "CANNOT_REPLY": "O cliente precisa mandar mensagem primeiro. Copie o link e envie de outro jeito.",
+          "NOT_REBOOKABLE": "Isto só funciona depois de marcar “Não compareceu”.",
+          "NO_PAGE": "Nenhuma página de agendamento está no ar agora. Publique uma em CRM › Agendamento.",
+          "OTHER": "Não deu para enviar. Tente de novo."
         }
       },
       "MEETING_STATES": {
@@ -1068,6 +1153,8 @@
       "CARD_ARCHIVE_ERROR": "Não foi possível arquivar o card.",
       "CARD_WON": "Negócio marcado como ganho.",
       "CARD_LOST": "Negócio marcado como perdido.",
+      "CARD_RESOLVED": "Card marcado como resolvido.",
+      "CARD_CANCELLED": "Card marcado como cancelado.",
       "CARD_REOPENED": "Negócio reaberto.",
       "CARD_CLOSE_ERROR": "Não foi possível atualizar o status do negócio.",
       "CARD_MOVED": "Card movido.",
@@ -1142,6 +1229,16 @@
       "TAB_TIMELINE": "Histórico",
       "TAB_RETURNS": "Retornos",
       "TAB_HISTORY": "Histórico",
+      "CARD_FIELDS": {
+        "TITLE": "Campos do card",
+        "HELP": "Informações próprias deste negócio.",
+        "EMPTY_ADMIN": "Ainda não há campos do card. Crie em Configurações → Atributos personalizados → Card.",
+        "OPEN_SETTINGS": "Criar campos do card",
+        "UPDATE_SUCCESS": "Campo do card salvo",
+        "UPDATE_ERROR": "Não foi possível salvar o campo do card",
+        "DELETE_SUCCESS": "Campo do card limpo",
+        "DELETE_ERROR": "Não foi possível limpar o campo do card"
+      },
       "MORE_DETAILS": "Mais detalhes",
       "LOADING_DETAILS": "Carregando detalhes atualizados...",
       "CONTACT_NAME": "Nome",
@@ -1177,6 +1274,8 @@
       "ACTIVITY_MOVE": "Card movido",
       "ACTIVITY_WON": "Negócio ganho",
       "ACTIVITY_LOST": "Negócio perdido",
+      "ACTIVITY_RESOLVED": "Resolvido",
+      "ACTIVITY_CANCELLED": "Cancelado",
       "ACTIVITY_REOPEN": "Negócio reaberto",
       "ACTIVITY_ARCHIVE": "Card arquivado",
       "ACTIVITY_LINK_CONVERSATION": "Conversa vinculada",
@@ -1198,6 +1297,8 @@
       "ACTIVITY_MEETING_RESCHEDULED": "Reunião reagendada",
       "ACTIVITY_MEETING_CANCELED": "Reunião cancelada",
       "ACTIVITY_MEETING_OUTCOME": "Resultado da reunião registrado",
+      "ACTIVITY_MEETING_HOST_REASSIGNED": "Reunião passou para outra pessoa",
+      "ACTIVITY_MEETING_HOST_REASSIGNED_TO": "Reunião passou para {name}",
       "ACTIVITY_AUTOMATION_OWNER_ASSIGNED": "Responsável atribuído por automação",
       "ACTIVITY_AUTOMATION_STAGE_MOVED": "Etapa alterada por automação",
       "ACTIVITY_AUTOMATION_FOLLOW_UP_CREATED": "Retorno criado por automação",
@@ -1290,6 +1391,8 @@
       "STATUS_WON": "Ganho",
       "STATUS_LOST": "Perdido",
       "STATUS_ARCHIVED": "Arquivado",
+      "STATUS_RESOLVED": "Resolvido",
+      "STATUS_CANCELLED": "Cancelado",
       "WIN_DEAL": "Ganhar",
       "LOSE_DEAL": "Perder",
       "REOPEN_DEAL": "Reabrir",
@@ -1302,6 +1405,8 @@
       "LOSE_REASON_LABEL": "Motivo (opcional)",
       "LOSE_REASON_PLACEHOLDER": "Por que o negócio foi perdido?",
       "LOSE_CONFIRM": "Marcar como perdido",
+      "CLOSE_AS_TITLE": "Fechar como {label}",
+      "MARK_AS": "Marcar como {label}",
       "CANCEL": "Cancelar",
       "SAVE": "Salvar",
       "CREATE": "Criar card",
@@ -1333,7 +1438,19 @@
         "TIMELINE_TOUCH_REMINDER": "Toque {n}: a IA gerou um lembrete para a equipe"
       },
       "LEAD_FORM_TITLE": "Dados do formulário",
-      "LEAD_FORM_CAPTURED": "Preenchido {time}"
+      "LEAD_FORM_CAPTURED": "Preenchido {time}",
+      "CLIENT_ACTOR": "Cliente",
+      "ACTIVITY_BOOKING_CLIENT_CONFIRMED": "Cliente confirmou o horário",
+      "ACTIVITY_BOOKING_CLIENT_CANCELED": "Cliente cancelou o horário",
+      "ACTIVITY_BOOKING_CLIENT_RESCHEDULED": "Cliente mudou o horário",
+      "ACTIVITY_BOOKING_CLIENT_REBOOKED": "Cliente marcou outro horário",
+      "ACTIVITY_BOOKING_NOTICE_FAILED": "Aviso no WhatsApp não saiu",
+      "ACTIVITY_BOOKING_NOTICES_STOPPED": "Cliente pediu para não receber avisos",
+      "ACTIVITY_BOOKING_AGENT_REMINDED": "Cliente lembrado da reunião",
+      "ACTIVITY_BOOKING_REBOOK_LINK_SENT": "Link enviado para marcar outro horário",
+      "ACTIVITY_DETAIL_BOOKING_TIME": "Horário: {time}",
+      "ACTIVITY_DETAIL_BOOKING_MOVED": "De {from} para {to}",
+      "ACTIVITY_DETAIL_BOOKING_NOTICE_FAILED": "{kind}: {reason}"
     },
     "COPILOT": {
       "TITLE": "Copiloto",
@@ -1356,18 +1473,45 @@
     },
     "CONVERSATION": {
       "TITLE": "CRM",
-      "DESCRIPTION": "Crie ou reutilize um card para acompanhar esta conversa no Kanban.",
-      "PIPELINE": "Funil",
-      "STAGE": "Etapa",
-      "CREATE_CARD": "Criar card no CRM",
+      "DESCRIPTION": "Cada assunto desta conversa é um card no CRM.",
       "OPEN_CRM": "Abrir CRM",
       "NO_PIPELINES": "Nenhum funil CRM ativo. Um administrador precisa criar um funil primeiro.",
-      "CARD_READY": "Card pronto no CRM.",
       "CREATE_ERROR": "Não foi possível criar o card no CRM.",
       "LOAD_ERROR": "Não foi possível carregar funis ou etapas do CRM.",
-      "STAGE_BADGE_LABEL": "Etapa atual",
       "STAGE_BADGE_EMPTY": "Ainda não está em nenhum funil.",
-      "CONTACT_LABELS_TITLE": "Etiquetas do contato"
+      "CONTACT_LABELS_TITLE": "Etiquetas do contato",
+      "SUBJECTS": {
+        "LABEL": "Assuntos desta conversa",
+        "NEW": "Novo assunto",
+        "LOADING": "Carregando assuntos…",
+        "LOAD_ERROR": "Não foi possível carregar os assuntos.",
+        "RETRY": "Tentar de novo",
+        "EMPTY": "Nenhum assunto ainda. Crie o primeiro para acompanhar esta conversa no CRM.",
+        "CURRENT": "Atual",
+        "CURRENT_HINT": "Assunto atual desta conversa",
+        "SWITCHED": "Agora tratando: {title}",
+        "SWITCH_ERROR": "Não foi possível trocar o assunto atual.",
+        "NEW_TITLE": "Novo assunto",
+        "NEW_DESCRIPTION": "O assunto vira um card no funil escolhido, começa na primeira etapa e passa a ser o assunto atual.",
+        "PIPELINE_QUESTION": "Em qual funil?",
+        "TITLE_LABEL": "Sobre o que é?",
+        "TITLE_PLACEHOLDER": "Ex.: Cotação — Onix 2021",
+        "CREATE": "Criar assunto",
+        "CREATED": "Assunto criado.",
+        "MORE": "+{count}",
+        "MORE_HINT": "Mais {count} assunto(s) aberto(s) nesta conversa",
+        "MAKE_CURRENT_HINT": "Clique para tratar este assunto",
+        "REPLY_IN": "Este envio fica no assunto:",
+        "PIPELINE_STAGE": "{pipeline} · {stage}",
+        "SUGGESTION_CREATE": "Parece um novo assunto: {title} ({pipeline}).",
+        "SUGGESTION_CREATE_ACCEPT": "Criar assunto",
+        "SUGGESTION_RENAME": "Parece que este assunto é: {title}.",
+        "SUGGESTION_RENAME_ACCEPT": "Usar este nome",
+        "SUGGESTION_FOCUS": "Parece que o cliente voltou a falar de: {title}.",
+        "SUGGESTION_FOCUS_ACCEPT": "Tratar este assunto",
+        "SUGGESTION_DISMISS": "Ignorar",
+        "SUGGESTION_ERROR": "Não foi possível responder à sugestão. Ela pode ter mudado; veja os assuntos de novo."
+      }
     },
     "PIPELINE_DRAWER": {
       "CREATE_TITLE": "Novo funil",
@@ -1385,6 +1529,15 @@
       "NAME_PLACEHOLDER": "Ex.: Vendas, Pós-venda, Renovações",
       "DESCRIPTION": "Descrição",
       "DESCRIPTION_PLACEHOLDER": "Como este funil deve ser usado pela equipe",
+      "WHEN_TO_USE": "Quando usar",
+      "WHEN_TO_USE_HELP": "A IA lê este texto para saber quando uma conversa é deste funil. Diga quais produtos ou casos entram aqui.",
+      "WHEN_TO_USE_PLACEHOLDER": "Ex.: venda dos nossos dois produtos, Agentes de IA e Chat2You.",
+      "COUNTS_AS_SALE": "Fechar com sucesso aqui conta como venda",
+      "COUNTS_AS_SALE_ON": "Os cards fecham como Ganho ou Perdido, entram no total de vendas e podem avisar seus anúncios.",
+      "COUNTS_AS_SALE_OFF": "Os cards fecham como Resolvido ou Cancelado. Não entram no total de vendas nem avisam anúncios. Bom para pós-venda, sinistro, suporte.",
+      "OUTCOME_SUCCESS": "Nome para quando dá certo",
+      "OUTCOME_FAILURE": "Nome para quando não dá certo",
+      "OUTCOME_HELP": "Opcional. Ex.: \"Contratado\" e \"Desistiu\". Em branco, usa o nome padrão.",
       "MONTHLY_TARGET": "Meta mensal de vendas (R$)",
       "MONTHLY_TARGET_PLACEHOLDER": "Ex.: 50000",
       "MONTHLY_TARGET_HELP": "Alimenta o box de Meta no dashboard. Deixe vazio para sem meta.",
@@ -1523,6 +1676,11 @@
       "DEFAULT_STAGE": "Etapa padrão",
       "FIRST_STAGE": "Primeira etapa do funil",
       "AUTO_CREATE": "Criar card automaticamente",
+      "SUBJECT_AI": "IA identifica o assunto",
+      "SUBJECT_AI_OFF": "Desligada",
+      "SUBJECT_AI_SUGGEST": "Sugerir: a equipe confirma",
+      "SUBJECT_AI_AUTO": "Automática: a IA cria e dá nome aos cards",
+      "SUBJECT_AI_HELP": "Quando o cliente pede algo novo, a IA dá nome ao assunto e abre o card dele no funil certo. Na dúvida, não muda nada.",
       "PIPELINE_SWITCH": "Esta caixa de entrada sai do funil {de} e passa a alimentar {para}. Os cards que já existem no funil anterior ficam onde estão.",
       "SAVE": "Salvar",
       "SAVED": "Salvo",
@@ -1759,6 +1917,53 @@
         "SAVED": "Página de agendamento salva",
         "SAVE_ERROR": "Não foi possível salvar a página de agendamento.",
         "LOAD_ERROR": "Não foi possível carregar as páginas de agendamento."
+      }
+    },
+    "BOOKING_INVITE": {
+      "BUTTON": "Agendar",
+      "BUTTON_HINT": "Gerar o link de agenda deste cliente",
+      "TITLE": "Link de agenda para {name}",
+      "TITLE_NO_NAME": "Link de agenda",
+      "LOADING": "Preparando o link…",
+      "PAGE": "Página: {title}",
+      "PAGE_LABEL": "Página de agendamento",
+      "VALID_UNTIL": "Vale até {date}",
+      "TEXT_LABEL": "Texto do convite",
+      "TEXT_NEEDS_LINK": "O texto precisa ter o link.",
+      "SEND": "Enviar na conversa",
+      "COPY": "Copiar link",
+      "COPIED": "Link copiado. Cole onde quiser.",
+      "SENT": "Mensagem enviada na conversa.",
+      "CANCEL_LINK": "Cancelar link",
+      "CANCELED": "Link cancelado.",
+      "CANCEL_CONFIRM": {
+        "TITLE": "Cancelar o link?",
+        "DESCRIPTION": "O cliente não vai mais conseguir marcar por ele.",
+        "YES": "Sim, cancelar",
+        "BACK": "Voltar"
+      },
+      "NEW_LINK": "Criar novo link",
+      "CLOSE": "Fechar",
+      "STATE": {
+        "CREATED": "Ainda não enviado",
+        "SENT": "Enviado",
+        "OPENED": "Aberto",
+        "SCHEDULED": "Agendado",
+        "EXPIRED": "Venceu",
+        "CANCELED": "Cancelado"
+      },
+      "EMPTY": {
+        "ADMIN": "Publique uma página de agendamento para gerar links para seus clientes.",
+        "AGENT": "Peça ao administrador para publicar uma página de agendamento.",
+        "OPEN_SETTINGS": "Ir para Agendamento"
+      },
+      "ERRORS": {
+        "LOAD": "Não foi possível abrir o link agora. Tente de novo.",
+        "SEND": "Não foi possível enviar. Confira se o texto tem o link e se o cliente pode receber mensagem.",
+        "COPY": "Não foi possível copiar o link.",
+        "CANCEL": "Não foi possível cancelar o link.",
+        "CANNOT_REPLY": "O cliente precisa mandar mensagem primeiro. Copie o link e envie de outro jeito.",
+        "FORBIDDEN": "Você não tem acesso a isto."
       }
     },
     "RELATIONSHIP": {
@@ -2117,7 +2322,39 @@
         "OPEN_META": "Abrir a Meta",
         "DETAILS": "Ver o caminho na Meta",
         "DETAILS_TEXT": "Configurações do negócio › Usuários › Parceiros › Adicionar › Conceder a um parceiro acesso aos seus ativos. Marque a conta de anúncios com \"Ver desempenho\" e o conjunto de dados (Pixel) do site.",
-        "TOKEN_LINK": "Prefere usar uma chave de acesso?"
+        "TOKEN_LINK": "Prefere usar uma chave de acesso?",
+        "FACEBOOK": {
+          "TITLE": "Entre com o seu Facebook",
+          "LEAD": "Use o mesmo Facebook em que você cria os seus anúncios. Leva um minuto.",
+          "HOW_LABEL": "O que vai acontecer",
+          "HOW_1_TITLE": "Abre uma janela do Facebook",
+          "HOW_1_TEXT": "Se pedir, entre com o seu e-mail e senha do Facebook.",
+          "HOW_2_TITLE": "Deixe tudo marcado",
+          "HOW_2_TEXT": "O Facebook mostra suas contas e o que vamos usar. Não desmarque nada e toque em \"Continuar\" até o fim.",
+          "HOW_3_TITLE": "Você volta para cá",
+          "HOW_3_TEXT": "A janela fecha sozinha e a gente segue daqui.",
+          "CTA": "Entrar com o Facebook",
+          "WAITING": "A janela do Facebook está aberta. Deixe tudo marcado e toque em \"Continuar\" até o fim.",
+          "TRUST_PASSWORD": "Não vemos sua senha",
+          "TRUST_ADS": "Nada muda nos seus anúncios sem você pedir",
+          "TRUST_OFF": "Você pode desligar quando quiser",
+          "OTHER_WAYS": "Prefere outro jeito de conectar?",
+          "PARTNER_TITLE": "Compartilhar com a {partner}",
+          "PARTNER_TEXT": "Você libera a conta de anúncios para a {partner} no Gerenciador de Negócios. Leva uns 5 minutos.",
+          "PARTNER_CTA": "Ver os passos",
+          "TOKEN_TITLE": "Usar uma chave de acesso",
+          "TOKEN_TEXT": "Para quem já tem uma chave gerada na Meta.",
+          "TOKEN_CTA": "Colar a chave",
+          "POPUP_TITLE": "A janela do Facebook não abriu",
+          "POPUP_TEXT": "O navegador pode ter bloqueado. Libere e tente de novo:",
+          "POPUP_STEP_1": "Toque no ícone de janela bloqueada no fim da barra de endereço.",
+          "POPUP_STEP_2": "Escolha \"Sempre permitir\" para este site.",
+          "POPUP_STEP_3": "Toque em \"Entrar de novo\".",
+          "NO_AD_ACCOUNT_TITLE": "Faltou marcar a conta de anúncios",
+          "NO_ACCESS_TITLE": "O Facebook não deixou ver seus anúncios",
+          "RETRY": "Entrar de novo",
+          "BACK": "Voltar para Entrar com o Facebook"
+        }
       },
       "ACCOUNT": {
         "TITLE": "Qual conta paga os seus anúncios?",
@@ -2146,7 +2383,8 @@
         "PIXEL_CHANGE": "Alterar",
         "VIA_PARTNER": "Lendo pela {partner}",
         "VIA_TOKEN": "Lendo pela sua chave de acesso",
-        "SWITCH": "Trocar"
+        "SWITCH": "Trocar",
+        "VIA_FACEBOOK": "Lendo pela sua entrada com o Facebook"
       },
       "DESTINATIONS": {
         "TITLE": "Para onde seus anúncios levam o cliente?",
@@ -2210,12 +2448,40 @@
         "NEXT_PANEL": "Próxima etapa: um painel com quanto custou cada venda, anúncio por anúncio.",
         "SPEND_TODAY": "Gasto hoje",
         "SPEND_ON": "Gasto em {date}",
-        "SPEND_CONVERSATIONS": "{count} conversas iniciadas",
+        "SPEND_CONVERSATIONS": "1 conversa veio de anúncios hoje | {count} conversas vieram de anúncios hoje",
         "SPEND_UPDATED": "atualizado {time}",
         "SPEND_REFRESHING": "atualizando…",
         "SPEND_EMPTY": "O gasto dos anúncios aparece aqui depois da primeira leitura da Meta.",
         "ACCESS_LOST_HINT": "A Meta não deixa mais a gente ler esta conta de anúncios. Compartilhe de novo ou conecte outra conta.",
-        "SPEND_BACKFILLING": "Buscando os últimos 90 dias na Meta…"
+        "SPEND_BACKFILLING": "Buscando os últimos 90 dias na Meta…",
+        "CONFIDENCE": {
+          "TITLE": "Quanto confiar nos números",
+          "TITLE_PERIOD": "Quanto confiar nos números — últimos {days} dias",
+          "TOTAL": "Nos últimos {days} dias, 1 conversa veio de anúncios da Meta. Veja o quanto sabemos de qual anúncio a trouxe: | Nos últimos {days} dias, {count} conversas vieram de anúncios da Meta. Veja o quanto sabemos de qual anúncio trouxe cada uma:",
+          "EMPTY": "Assim que chegarem conversas de anúncios, mostramos aqui de qual anúncio cada uma veio.",
+          "AD": "Anúncio certo",
+          "AD_NAME": "Anúncio achado pelo nome",
+          "CAMPAIGN": "Só a campanha",
+          "UNKNOWN": "Veio da Meta, sem saber o anúncio",
+          "FIX": "Cole o texto do passo 3 em todos os anúncios que levam ao site para saber o anúncio",
+          "SHARE": "{share}%",
+          "META": {
+            "WHATSAPP": {
+              "LINE": "Até ontem, a Meta diz {meta} conversa iniciada pelo WhatsApp; nós contamos {ours}. | Até ontem, a Meta diz {meta} conversas iniciadas pelo WhatsApp; nós contamos {ours}.",
+              "CLOSE": "Os dois números batem.",
+              "META_HIGHER": "A Meta também conta quem já conversava com você; conversa encaminhada ou de contato salvo chega sem origem para nós.",
+              "OURS_HIGHER": "Contamos toda conversa que chegou pelo anúncio, inclusive de quem clicou antes e voltou; a Meta só conta até 7 dias depois do clique."
+            },
+            "SITE": {
+              "LINE": "Até ontem, a Meta diz {meta} contato pelo site (visitas à página: {visits}); pelo botão do site, nós contamos {ours}. | Até ontem, a Meta diz {meta} contatos pelo site (visitas à página: {visits}); pelo botão do site, nós contamos {ours}.",
+              "CLOSE": "Os dois números batem.",
+              "META_HIGHER": "A Meta conta quem deixou contato no site; nem todo mundo clica depois para conversar no WhatsApp.",
+              "OURS_HIGHER": "Contamos toda conversa que veio pelo botão do site, mesmo de quem não deixou contato lá."
+            },
+            "NO_META_DATA": "A Meta ainda não mandou o número deste período."
+          }
+        },
+        "MODE_FACEBOOK": "Pela entrada com o Facebook"
       },
       "ERRORS": {
         "PLATFORM_UNAVAILABLE": "Compartilhar ainda não está disponível. Por enquanto, use uma chave de acesso.",
@@ -2231,6 +2497,10 @@
         "TOKEN_INVALID": "A Meta recusou a chave salva. Cole uma chave nova ou compartilhe a conta.",
         "INVALID_AD_ACCOUNT": "Essa conta de anúncios não é válida.",
         "NOT_CONNECTED": "Conecte a Meta antes.",
+        "LOGIN_FAILED": "O Facebook não confirmou a entrada. Tente de novo.",
+        "LOGIN_UNAVAILABLE": "Entrar com o Facebook não está disponível agora. Use outro jeito de conectar.",
+        "MISSING_ADS_READ": "O Facebook não deixou ver seus anúncios. Entre de novo e libere o acesso às suas contas de anúncios.",
+        "NO_AD_ACCOUNT": "Nenhuma conta de anúncios foi escolhida. Entre de novo e marque pelo menos uma.",
         "GENERIC": "Não deu certo agora. Tente de novo."
       },
       "MOVED": "Os anúncios da Meta agora têm página própria: conexão, nomes dos anúncios e vendas para a Meta.",
@@ -2284,6 +2554,311 @@
         "FINISH": "Terminar",
         "LATER": "Agora não",
         "BEFORE": "Antes: {value}"
+      },
+      "PANEL": {
+        "TABS": {
+          "RESULT": "Resultado",
+          "CONNECTION": "Conexão",
+          "LABEL": "O que ver"
+        },
+        "HEADLINE": "Você investiu {spend}. Vieram {conversations} e {sales}.",
+        "PERIOD": "{days} dias",
+        "PERIOD_LABEL": "Período",
+        "PERIOD_CTX": "Últimos {days} dias",
+        "PERIOD_HINT": "O que aconteceu com as pessoas que chegaram por anúncio nos últimos {days} dias.",
+        "TODAY": "O que fazer hoje",
+        "SEVERAL_ADS": "vários anúncios",
+        "ACTION": {
+          "STALLED_QUOTES": {
+            "TEXT": "1 proposta de anúncio está parada há mais de {days} dias. Ela veio de \"{ad}\". | {count} propostas de anúncio estão paradas há mais de {days} dias. A maior parte veio de \"{ad}\".",
+            "WHY": "Por quê: somam {value} em negociação. Retomar quem já pediu proposta custa menos que anunciar de novo.",
+            "BUTTON": "Ver a proposta | Ver as {count} propostas"
+          },
+          "FIX_TRACKING": {
+            "TEXT": "Não sabemos de qual anúncio veio 1 conversa. | Não sabemos de qual anúncio vieram {unknown} conversas.",
+            "WHY": "Por quê: sem o anúncio, o custo por venda de cada um fica errado. Das {conversations} conversas de anúncio dos últimos 30 dias, {unknown} estão sem anúncio.",
+            "BUTTON": "Corrigir no passo 3"
+          },
+          "WAIT": {
+            "TEXT": "Nada a corrigir agora. Siga com os anúncios como estão.",
+            "WHY": "Por quê: um anúncio só ganha veredito depois de 20 conversas. O que mais trouxe até agora, \"{ad}\", precisa de mais {missing}."
+          },
+          "ON_TRACK": {
+            "TEXT": "Nada parado. Veja abaixo o veredito de cada anúncio.",
+            "WHY": "Por quê: seus anúncios já têm conversas suficientes para comparar o custo de cada venda."
+          },
+          "NO_DATA": {
+            "TEXT": "Ainda não há gasto nem conversa de anúncio neste período.",
+            "WHY": "Por quê: os números aparecem assim que um anúncio gastar ou trouxer a primeira conversa."
+          },
+          "SLOW_RESPONSE": {
+            "TEXT": "Metade das conversas de anúncio dos últimos {windowDays} dias esperou mais de {medianSeconds} pela resposta. | Metade das conversas de anúncio dos últimos {windowDays} dias esperou mais de {medianSeconds} pela resposta, e 1 ficou sem resposta. | Metade das conversas de anúncio dos últimos {windowDays} dias esperou mais de {medianSeconds} pela resposta, e {unanswered} ficaram sem resposta.",
+            "TEXT_UNANSWERED": "1 conversa de anúncio dos últimos {windowDays} dias ficou sem resposta. | {unanswered} conversas de anúncio dos últimos {windowDays} dias ficaram sem resposta.",
+            "WHY": "Por quê: responder em até {targetSeconds} muda a venda. Quem espera muito procura outra empresa.",
+            "BUTTON": "Ver as conversas mais demoradas"
+          },
+          "REVIEW_AD": {
+            "TEXT": "Revise \"{ad}\": ele trouxe {conversations} conversas e {sales} vendas com {spend}.",
+            "WHY": "Por quê: seus anúncios que vendem custam em média {targetCostPerSale} por venda.",
+            "TEXT_NO_SALES": "Revise \"{ad}\": ele trouxe {conversations} conversas e nenhuma venda com {spend}.",
+            "WHY_NO_SALES": "Por quê: seus anúncios que vendem custam em média {targetCostPerSale} por venda. Olhe a imagem, o texto e quem atende essas conversas antes de desligar.",
+            "TEXT_ABOVE_AVERAGE": "Revise \"{ad}\": cada venda dele custa {costPerSale}.",
+            "WHY_ABOVE_AVERAGE": "Por quê: seus anúncios que vendem custam em média {targetCostPerSale} por venda. Ele trouxe {conversations} conversas e {sales} vendas com {spend}.",
+            "BUTTON": "Abrir o anúncio"
+          },
+          "REFRESH_CREATIVE": {
+            "TEXT": "Troque a imagem ou o texto de \"{ad}\".",
+            "WHY": "Por quê: o anúncio está cansando quem o vê.",
+            "TEXT_CTR": "Troque a imagem ou o texto de \"{ad}\": as pessoas estão clicando menos.",
+            "WHY_CTR": "Por quê: as pessoas clicam {ctrDropPct} menos nele do que nas semanas anteriores. Uma imagem ou um texto novo costuma trazer o interesse de volta.",
+            "TEXT_FREQUENCY": "Troque a imagem ou o texto de \"{ad}\": as mesmas pessoas já o viram muitas vezes.",
+            "WHY_FREQUENCY": "Por quê: cada pessoa já viu esse anúncio {frequency7d} vezes nos últimos {windowDays} dias. Quem vê o mesmo anúncio muitas vezes para de prestar atenção.",
+            "TEXT_BOTH": "Troque a imagem ou o texto de \"{ad}\": as pessoas clicam menos e já o viram muitas vezes.",
+            "WHY_BOTH": "Por quê: as pessoas clicam {ctrDropPct} menos nele do que nas semanas anteriores, e cada uma já o viu {frequency7d} vezes nos últimos {windowDays} dias.",
+            "BUTTON": "Abrir o anúncio"
+          },
+          "SCALE_AD": {
+            "TEXT": "Aumente o valor por dia do anúncio \"{ad}\" em até {maxIncreasePct}.",
+            "WHY": "Por quê: ele vende por {costPerSale}, abaixo da média de {targetCostPerSale}, há {weeks} semanas. Depois de aumentar, espere {cooldownDays} dias antes de aumentar de novo.",
+            "BUTTON": "Abrir no Gerenciador da Meta"
+          },
+          "AUCTION_PRESSURE": {
+            "TEXT": "Não troque seus anúncios por causa do preço desta semana.",
+            "WHY": "Por quê: aparecer para mil pessoas ficou {cpmChangePct} mais caro nos últimos {windowDays} dias, de {cpmBaseline} para {cpmRecent}, e os cliques continuam iguais. É a concorrência, não o seu anúncio.",
+            "BUTTON": "Entendi"
+          },
+          "DONE": "Feito",
+          "DISMISS": "Dispensar",
+          "DONE_LABEL": "Feita"
+        },
+        "PATH_TITLE": "O caminho do seu dinheiro",
+        "PATH": {
+          "SPEND": "investidos",
+          "CONVERSATIONS": "conversa | conversas",
+          "QUOTES": "proposta | propostas",
+          "SALES": "venda | vendas"
+        },
+        "EACH": "{value} cada",
+        "PER_SALE": "{value} por venda",
+        "RETURN": "Cada R$ 1 investido voltou {value}",
+        "OPEN_QUOTES": "Vendas chegando: 1 proposta aberta | Vendas chegando: {count} propostas abertas",
+        "ADS_TITLE": "Seus anúncios, por venda",
+        "ADS_EMPTY": "Assim que um anúncio gastar ou trouxer conversa, ele aparece aqui.",
+        "AD_NO_NAME": "Anúncio sem nome",
+        "OPEN_AD": "Ver por dentro",
+        "OPEN_AD_LABEL": "Ver por dentro o anúncio {name}",
+        "AD_QUOTES": "1 proposta aberta | {count} propostas abertas",
+        "VERDICT": {
+          "UP": "Aumentar · base suficiente",
+          "KEEP": "Manter",
+          "SIGNAL": "Sinal inicial",
+          "REVIEW": "Revisar o anúncio",
+          "EARLY": "Ainda é cedo"
+        },
+        "STALLED_TITLE": "1 proposta parada | {count} propostas paradas",
+        "STALLED_SINCE": "Sem resposta {time}",
+        "OPEN_CONVERSATION": "Abrir conversa",
+        "COUNT": {
+          "CONVERSATIONS": "{n} conversa | {n} conversas",
+          "SALES": "{n} venda | {n} vendas"
+        },
+        "STALLED_MORE": "e mais {count} no CRM",
+        "REACHED": "{share}% chegaram",
+        "SALES_VALUE": "· {value}",
+        "AD_STATS": {
+          "SPEND": "Investido",
+          "CONVERSATIONS": "Conversas",
+          "SALES": "Vendas"
+        },
+        "DURATION": {
+          "SECONDS": "menos de 1 min",
+          "MINUTES": "{n} min",
+          "HOURS": "{n} h",
+          "DAYS": "{n} dia | {n} dias"
+        },
+        "RESPONSE_TIME": {
+          "LABEL": "Tempo de resposta:",
+          "NOTE": "metade respondida em até esse tempo",
+          "UNANSWERED": "1 sem resposta | {count} sem resposta"
+        },
+        "PATH_LIST": {
+          "TITLE_CONVERSATIONS": "Conversas de anúncio",
+          "TITLE_QUOTES": "Propostas",
+          "TITLE_SALES": "Vendas",
+          "TITLE_SLOW_REPLIES": "Conversas mais demoradas para responder",
+          "TOTAL_CONVERSATIONS": "1 conversa | {count} conversas",
+          "TOTAL_QUOTES": "1 proposta | {count} propostas",
+          "TOTAL_SALES": "1 venda | {count} vendas",
+          "TOTAL_SLOW_REPLIES": "1 conversa | {count} conversas",
+          "LAST_30_DAYS": "últimos 30 dias",
+          "EMPTY": "Nada nesta etapa no período.",
+          "ERROR": "Não foi possível carregar a lista agora.",
+          "RETRY": "Tentar de novo",
+          "SHOWING": "Mostrando {shown} de {total}",
+          "OPEN_CONVERSATION": "Abrir conversa",
+          "OPEN_CARD": "Abrir no CRM",
+          "OPEN": "Ver a lista",
+          "CLOSE": "Fechar a lista",
+          "OPEN_LABEL": "Ver a lista de {step}",
+          "NO_TITLE": "Sem nome",
+          "ANSWERED_IN": "Respondida em {duration}",
+          "NO_ANSWER": "Sem resposta",
+          "WON": "Ganha",
+          "LOST": "Perdida"
+        }
+      },
+      "AD_DETAIL": {
+        "BACK": "Voltar ao painel",
+        "CAMPAIGN": "Campanha",
+        "ADSET": "Conjunto",
+        "EMPTY": "Não encontramos números deste anúncio neste período.",
+        "ERROR": "Não conseguimos carregar este anúncio agora. Tentamos de novo sozinhos daqui a pouco.",
+        "RETRY": "Tentar de novo",
+        "PREVIEW": "Ver como aparece na Meta",
+        "NO_VALUE": "—",
+        "TILES": {
+          "COST_PER_SALE": "Custo por venda",
+          "AVERAGE": "Média da conta",
+          "SPEND": "Investido",
+          "QUOTES": "Propostas",
+          "SALES": "Vendas",
+          "CONVERSATIONS": "Conversas"
+        },
+        "WHY_TITLE": "Por quê",
+        "REASON": {
+          "EARLY": "Ainda não dá para dizer se este anúncio vende. Ele trouxe 1 conversa e precisa de mais {missing}. Voltamos a olhar quando chegar a 20 conversas. | Ainda não dá para dizer se este anúncio vende. Ele trouxe {count} conversas e precisa de mais {missing}. Voltamos a olhar quando chegar a 20 conversas.",
+          "NO_SALES": "Ele trouxe 1 conversa e nenhuma venda. Com {spend} investidos, vale revisar a imagem, o texto ou o público. | Ele trouxe {count} conversas e nenhuma venda. Com {spend} investidos, vale revisar a imagem, o texto ou o público.",
+          "SIGNAL": "Ele fez 1 venda com {spend} investidos. Ainda é pouco para comparar com a média da conta: o veredito vem a partir de 3 vendas. | Ele fez {count} vendas com {spend} investidos. Ainda é pouco para comparar com a média da conta: o veredito vem a partir de 3 vendas.",
+          "BELOW_AVERAGE": "Cada venda deste anúncio custou {cost}, {difference} a menos que a média da conta ({average}). Com 1 venda, a base já é suficiente. | Cada venda deste anúncio custou {cost}, {difference} a menos que a média da conta ({average}). Com {count} vendas, a base já é suficiente.",
+          "NEAR_AVERAGE": "Cada venda deste anúncio custou {cost}, perto da média da conta ({average}). Vale manter como está.",
+          "ABOVE_AVERAGE": "Cada venda deste anúncio custou {cost}, {difference} a mais que a média da conta ({average}). Revise o anúncio antes de pôr mais verba."
+        },
+        "MEANWHILE_TITLE": "Enquanto isso",
+        "MEANWHILE": "1 proposta aberta deste anúncio espera resposta. Retomar essa conversa é o que dá para fazer agora. | {count} propostas abertas deste anúncio esperam resposta. Retomar essas conversas é o que dá para fazer agora.",
+        "MEANWHILE_SEE": "Ver as propostas",
+        "CHART_TITLE": "Gasto e conversas por dia",
+        "LEGEND_SPEND": "Gasto",
+        "LEGEND_CONVERSATIONS": "Conversas",
+        "CHART_DAY": "{date}: {spend} · 1 conversa | {date}: {spend} · {count} conversas",
+        "CHART_SCALE": "Maior gasto num dia: {spend} · mais conversas num dia: 1 | Maior gasto num dia: {spend} · mais conversas num dia: {count}",
+        "DAYS_TOGGLE": "Ver dia a dia",
+        "DAYS_DATE": "Dia",
+        "QUOTES_TITLE": "Propostas deste anúncio",
+        "QUOTES_EMPTY": "Nenhuma proposta deste anúncio neste período ainda.",
+        "WON": "Vendida"
+      },
+      "AI": {
+        "DAILY": {
+          "BADGE": "Escrito pela IA",
+          "WRITING": "A IA está escrevendo…",
+          "AI_ERROR": "A IA não respondeu agora; esta é a ação pela regra.",
+          "FAILED": "Não foi possível falar com a IA agora; esta é a ação pela regra.",
+          "WHY_LABEL": "Por quê:",
+          "DISMISS_FAILED": "Não foi possível dispensar agora. Tente de novo.",
+          "DONE_FAILED": "Não foi possível marcar como feita agora. Tente de novo.",
+          "ALREADY_RESOLVED": "Esta ação já foi resolvida em outra tela. A lista foi atualizada."
+        },
+        "QUOTE": {
+          "SUGGEST": "Sugerir mensagem",
+          "WRITING": "Escrevendo…",
+          "LABEL": "Mensagem sugerida — revise antes de enviar",
+          "SOURCE": "Porque o cliente disse: “{quote}”",
+          "SEND": "Enviar na conversa",
+          "SENT": "Mensagem enviada na conversa.",
+          "SENT_STATE": "Enviada",
+          "SEND_FAILED": "A mensagem não foi enviada. Tente de novo ou abra a conversa.",
+          "COPY": "Copiar",
+          "COPIED": "Mensagem copiada.",
+          "COPY_FAILED": "Não deu para copiar. Selecione o texto e copie à mão.",
+          "FAILED": "Não foi possível sugerir uma mensagem agora. Tente de novo daqui a pouco.",
+          "REASONS": {
+            "CLOSED": "O cliente já fechou o negócio. Não há o que retomar aqui.",
+            "DECLINED": "O cliente já disse que não. Melhor não insistir.",
+            "NOTHING_OPEN": "Não há nada em aberto para retomar nesta conversa.",
+            "WINDOW_CLOSED": "Já se passaram mais de 24 horas da última mensagem do cliente: o WhatsApp só aceita um modelo aprovado. Abra a conversa para enviar um.",
+            "AI_UNAVAILABLE": "A IA está desligada nesta conta.",
+            "CREDENTIALS_MISSING": "A IA ainda não foi configurada nesta conta.",
+            "AI_INVALID": "A IA não conseguiu escrever uma mensagem que combine com esta conversa. Abra a conversa para escrever a sua.",
+            "UNSAFE_CONTENT": "A conversa tem link, chave de pagamento ou contato que não veio da sua equipe. Por segurança, escreva esta mensagem você mesmo.",
+            "AI_ERROR": "A IA não respondeu agora. Tente de novo daqui a pouco."
+          }
+        }
+      },
+      "WHATSAPP_REPORT": {
+        "EYEBROW": "Resumo no WhatsApp",
+        "TITLE": "Receba os números dos anúncios no seu WhatsApp",
+        "HINT": "Uma mensagem por dia com o resultado de ontem, e um aviso quando um anúncio gastar sem trazer conversa. Vem desligado; você decide.",
+        "LOADING": "Carregando…",
+        "LOAD_ERROR": "Não foi possível carregar o resumo no WhatsApp.",
+        "RETRY": "Tentar de novo",
+        "SUMMARY_TOGGLE": "Resumo diário",
+        "SUMMARY_TOGGLE_HINT": "Todo dia às {time} ({zone}), com os números de ontem.",
+        "ALERT_TOGGLE": "Alerta de gasto sem conversa",
+        "ALERT_TOGGLE_HINT": "Às {time} ({zone}), quando um anúncio gastou hoje e não trouxe nenhuma conversa. No máximo 1 por dia.",
+        "ORIGIN_LABEL": "De qual número sai",
+        "ORIGIN_PLACEHOLDER": "Escolha um número conectado",
+        "ORIGIN_EMPTY": "Nenhum número de WhatsApp está conectado agora. Conecte um em Caixas de entrada para usar o resumo.",
+        "ORIGIN_GONE": "O número escolhido antes não está conectado agora. Escolha outro.",
+        "KIND": {
+          "WAHA": "WhatsApp API",
+          "WHATSAPP_CLOUD": "WhatsApp Oficial"
+        },
+        "KIND_HINT": {
+          "WAHA": "Envia texto simples. Para proteger o número, saem no máximo 2 mensagens por dia.",
+          "WHATSAPP_CLOUD": "O WhatsApp Oficial só envia com modelo aprovado pela Meta. Veja abaixo."
+        },
+        "PHONE_LABEL": "Número que recebe",
+        "PHONE_PLACEHOLDER": "(11) 99999-0000",
+        "PHONE_HINT": "Com DDD. Use o seu número, não o de um cliente.",
+        "REPLY_NOTE": "Se você responder a mensagem, ela aparece como conversa nessa caixa.",
+        "TEMPLATES": {
+          "TITLE": "Modelos da Meta",
+          "HINT": "Crie estes dois modelos no Gerenciador do WhatsApp, na categoria Utilidade e no idioma Português (BR). Enquanto um modelo não estiver aprovado, a mensagem dele não sai.",
+          "SUMMARY": "Resumo diário",
+          "ALERT": "Alerta",
+          "NAME": "Nome do modelo:",
+          "COPY_NAME": "Copiar nome",
+          "COPY_TEXT": "Copiar texto",
+          "COPIED": "Copiado.",
+          "COPY_FAILED": "Não deu para copiar. Selecione o texto e copie à mão.",
+          "BLOCKED": "Sem este modelo aprovado, nada é enviado.",
+          "STATUS": {
+            "APPROVED": "Aprovado",
+            "PENDING": "Em análise",
+            "REJECTED": "Recusado",
+            "MISSING": "Não criado"
+          }
+        },
+        "SAVE": "Salvar",
+        "SAVED": "Resumo no WhatsApp salvo.",
+        "DISCARD": "Descartar mudanças",
+        "TEST": "Enviar teste",
+        "TEST_HINT": "Envia agora o resumo de ontem, marcado como teste.",
+        "TEST_NEEDS_SAVE": "Salve o número que envia e o número que recebe antes de testar.",
+        "TEST_NEEDS_SAVE_CHANGES": "Salve ou descarte as mudanças antes de testar.",
+        "TEST_NEEDS_ORIGIN": "O número que envia não está conectado agora. Escolha outro e salve antes de testar.",
+        "TEST_SENT": "Teste enviado às {time}. Confira o seu WhatsApp.",
+        "HISTORY": {
+          "TITLE": "Últimos envios",
+          "SUMMARY": "Último resumo: {time}",
+          "ALERT": "Último alerta: {time}",
+          "NONE": "Nenhuma mensagem enviada ainda.",
+          "ERROR": "Último problema, {time}: {message}",
+          "NOTHING_TO_REPORT": "Ontem não teve gasto nem conversa, então nenhum resumo foi enviado ({time})."
+        },
+        "ERRORS": {
+          "INVALID_PHONE": "Este número não parece válido. Coloque o DDD e o número, por exemplo (11) 99999-0000.",
+          "PHONE_REQUIRED": "Informe o número que vai receber as mensagens.",
+          "ORIGIN_REQUIRED": "Escolha de qual número as mensagens saem.",
+          "INBOX_NOT_CONNECTED": "Este número não está conectado agora. Escolha outro.",
+          "TEMPLATE_NOT_APPROVED": "O WhatsApp Oficial só envia com o modelo aprovado pela Meta. Aprove o modelo ou escolha um número do WhatsApp API.",
+          "NOT_CONNECTED": "Conecte a Meta antes de ligar o resumo.",
+          "RATE_LIMITED": "Você já enviou 3 testes nesta hora. Tente mais tarde.",
+          "SEND_FAILED": "O WhatsApp não aceitou o envio. Confira a conexão do número que envia.",
+          "SEND_UNCERTAIN": "Não deu para confirmar se chegou. Confira o seu WhatsApp antes de tentar de novo.",
+          "WHATSAPP_NUMBER_NOT_FOUND": "Este número não tem WhatsApp.",
+          "GENERIC": "Não deu certo agora. Tente de novo."
+        }
       }
     }
   },

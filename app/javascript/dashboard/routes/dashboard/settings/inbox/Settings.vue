@@ -19,6 +19,7 @@ import DuplicateInboxBanner from './channels/instagram/DuplicateInboxBanner.vue'
 import MicrosoftReauthorize from './channels/microsoft/Reauthorize.vue';
 import GoogleReauthorize from './channels/google/Reauthorize.vue';
 import WhatsappReauthorize from './channels/whatsapp/Reauthorize.vue';
+import WhatsappSwitchAccount from './channels/whatsapp/WhatsappSwitchAccount.vue';
 import InboxHealthAPI from 'dashboard/api/inboxHealth';
 import PreChatFormSettings from './PreChatForm/Settings.vue';
 import WeeklyAvailability from './components/WeeklyAvailability.vue';
@@ -27,6 +28,8 @@ import ConfigurationPage from './settingsPage/ConfigurationPage.vue';
 import ConnectionPage from './settingsPage/ConnectionPage.vue';
 import VoiceConfigurationPage from './settingsPage/VoiceConfigurationPage.vue';
 import WhatsappCallingPage from './settingsPage/WhatsappCallingPage.vue';
+import WhatsappHybridPage from './settingsPage/WhatsappHybridPage.vue';
+import WhatsappHybridAPI from 'dashboard/api/whatsappHybrid';
 import CustomerSatisfactionPage from './settingsPage/CustomerSatisfactionPage.vue';
 import CollaboratorsPage from './settingsPage/CollaboratorsPage.vue';
 import BotConfiguration from './components/BotConfiguration.vue';
@@ -63,6 +66,7 @@ export default {
     ConnectionPage,
     VoiceConfigurationPage,
     WhatsappCallingPage,
+    WhatsappHybridPage,
     CustomerSatisfactionPage,
     FacebookReauthorize,
     GreetingsEditor,
@@ -81,6 +85,7 @@ export default {
     InstagramReauthorize,
     TiktokReauthorize,
     WhatsappReauthorize,
+    WhatsappSwitchAccount,
     DuplicateInboxBanner,
     Editor,
     Avatar,
@@ -100,6 +105,7 @@ export default {
   },
   data() {
     return {
+      hybridAvailable: false,
       avatarFile: null,
       avatarUrl: '',
       greetingEnabled: true,
@@ -265,6 +271,16 @@ export default {
           {
             key: 'whatsapp-health',
             name: this.$t('INBOX_MGMT.TABS.ACCOUNT_HEALTH'),
+          },
+        ];
+      }
+
+      if (this.hybridAvailable) {
+        visibleToAllChannelTabs = [
+          ...visibleToAllChannelTabs,
+          {
+            key: 'whatsapp-api',
+            name: this.$t('INBOX_MGMT.TABS.WHATSAPP_API'),
           },
         ];
       }
@@ -471,6 +487,7 @@ export default {
         if (newInbox?.id !== oldInbox?.id) {
           this.syncInboxData();
           this.fetchHealthData();
+          this.checkHybridAvailability();
           this.$nextTick(() => {
             this.setTabFromRouteParam();
             this.openWhatsAppManualMigrationIfRequested();
@@ -485,8 +502,20 @@ export default {
   mounted() {
     this.fetchSharedData();
     this.openWhatsAppManualMigrationIfRequested();
+    this.checkHybridAvailability();
   },
   methods: {
+    // chat#1067: a aba "WhatsApp API" só aparece quando o servidor libera o híbrido para a caixa.
+    async checkHybridAvailability() {
+      this.hybridAvailable = false;
+      if (!this.isAWhatsAppCloudChannel) return;
+      try {
+        const { data } = await WhatsappHybridAPI.show(this.inbox.id);
+        this.hybridAvailable = Boolean(data.available);
+      } catch {
+        this.hybridAvailable = false;
+      }
+    },
     openWhatsAppManualMigrationDialog() {
       this.$refs.whatsappManualMigrationDialog?.open();
     },
@@ -625,6 +654,11 @@ export default {
       } finally {
         this.isLoadingHealth = false;
       }
+    },
+    // chat#1217: a caixa ganhou conta e número novos na Meta; recarrega os dois.
+    async onWhatsAppAccountSwitched() {
+      await this.$store.dispatch('inboxes/get');
+      await this.fetchHealthData();
     },
     goToWhatsAppConfiguration() {
       const configurationTabIndex = this.tabs.findIndex(
@@ -1457,6 +1491,9 @@ export default {
         >
           <WhatsappCallingPage :inbox="inbox" />
         </div>
+        <div v-if="selectedTabKey === 'whatsapp-api'" class="mx-6 max-w-4xl">
+          <WhatsappHybridPage :inbox="inbox" />
+        </div>
         <div v-if="selectedTabKey === 'csat'">
           <CustomerSatisfactionPage :inbox="inbox" />
         </div>
@@ -1470,6 +1507,12 @@ export default {
           <BotConfiguration :inbox="inbox" />
         </div>
         <div v-if="selectedTabKey === 'whatsapp-health'">
+          <!-- chat#1217: trocar a caixa de conta do WhatsApp sem perder a caixa -->
+          <WhatsappSwitchAccount
+            :inbox="inbox"
+            :health-data="healthData"
+            @switched="onWhatsAppAccountSwitched"
+          />
           <AccountHealth
             :health-data="healthData"
             :health-error="healthError"

@@ -32,15 +32,19 @@ const paginationLabel = computed(() =>
 const results = computed(() => [
   { value: 'active', label: label('ACTIVE') },
   { value: 'all', label: label('ALL') },
-  ...['open', 'won', 'lost', 'archived'].map(value => ({
-    value,
-    label: t(`CRM_KANBAN.DRAWER.STATUS_${value.toUpperCase()}`),
-  })),
+  ...['open', 'won', 'lost', 'resolved', 'cancelled', 'archived'].map(
+    value => ({
+      value,
+      label: t(`CRM_KANBAN.DRAWER.STATUS_${value.toUpperCase()}`),
+    })
+  ),
 ]);
 const tones = {
   open: 'bg-n-blue-3 text-n-blue-11',
   won: 'bg-n-teal-3 text-n-teal-11',
   lost: 'bg-n-ruby-3 text-n-ruby-11',
+  resolved: 'bg-n-teal-3 text-n-teal-11',
+  cancelled: 'bg-n-ruby-3 text-n-ruby-11',
   archived: 'bg-n-slate-4 text-n-slate-11',
 };
 const amount = card => {

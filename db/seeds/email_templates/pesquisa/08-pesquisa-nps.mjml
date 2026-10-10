@@ -1,0 +1,82 @@
+<mjml>
+  <mj-head>
+    <mj-title>{{ nome }}, você nos indicaria? Leva um clique</mj-title>
+  </mj-head>
+  <mj-body width="600px" background-color="#e3f4f6">
+    <mj-section background-color="#0b2530" padding="22px 24px">
+      <mj-column>
+        <mj-text font-family="Arial, Helvetica, sans-serif" font-size="20px" font-weight="700" color="#ffffff" align="left" line-height="1.2" letter-spacing="1px" padding="0">Sua marca</mj-text>
+      </mj-column>
+    </mj-section>
+    <mj-section background-color="#ffffff" padding="44px 24px 32px">
+      <mj-column>
+        <mj-text font-family="Arial, Helvetica, sans-serif" font-size="15px" font-weight="700" color="#155e75" align="left" line-height="1.3" letter-spacing="2px" padding="0 0 12px">SUA OPINIÃO</mj-text>
+        <mj-text font-family="Arial, Helvetica, sans-serif" font-size="30px" font-weight="800" color="#0b2530" align="left" line-height="1.2" padding="0">{{ nome }}, você nos indicaria para um amigo?</mj-text>
+        <mj-text font-family="Arial, Helvetica, sans-serif" font-size="18px" color="#3b5560" align="left" line-height="1.6" padding="12px 0 0">Leva só um clique. Escolha uma nota de 0 a 10.</mj-text>
+      </mj-column>
+    </mj-section>
+    <mj-section background-color="#ecfeff" padding="28px 20px 0">
+      <mj-group>
+        <mj-column width="16.66%" padding="4px" inner-background-color="#155e75" inner-border-radius="8px">
+          <mj-text font-family="Arial, Helvetica, sans-serif" font-size="20px" font-weight="700" color="#ffffff" align="center" line-height="48px" padding="0"><a href="https://seusite.com.br/pesquisa?nota=0" style="display:block;color:#ffffff;text-decoration:none;line-height:48px;">0</a></mj-text>
+        </mj-column>
+        <mj-column width="16.66%" padding="4px" inner-background-color="#155e75" inner-border-radius="8px">
+          <mj-text font-family="Arial, Helvetica, sans-serif" font-size="20px" font-weight="700" color="#ffffff" align="center" line-height="48px" padding="0"><a href="https://seusite.com.br/pesquisa?nota=1" style="display:block;color:#ffffff;text-decoration:none;line-height:48px;">1</a></mj-text>
+        </mj-column>
+        <mj-column width="16.66%" padding="4px" inner-background-color="#155e75" inner-border-radius="8px">
+          <mj-text font-family="Arial, Helvetica, sans-serif" font-size="20px" font-weight="700" color="#ffffff" align="center" line-height="48px" padding="0"><a href="https://seusite.com.br/pesquisa?nota=2" style="display:block;color:#ffffff;text-decoration:none;line-height:48px;">2</a></mj-text>
+        </mj-column>
+        <mj-column width="16.66%" padding="4px" inner-background-color="#155e75" inner-border-radius="8px">
+          <mj-text font-family="Arial, Helvetica, sans-serif" font-size="20px" font-weight="700" color="#ffffff" align="center" line-height="48px" padding="0"><a href="https://seusite.com.br/pesquisa?nota=3" style="display:block;color:#ffffff;text-decoration:none;line-height:48px;">3</a></mj-text>
+        </mj-column>
+        <mj-column width="16.66%" padding="4px" inner-background-color="#155e75" inner-border-radius="8px">
+          <mj-text font-family="Arial, Helvetica, sans-serif" font-size="20px" font-weight="700" color="#ffffff" align="center" line-height="48px" padding="0"><a href="https://seusite.com.br/pesquisa?nota=4" style="display:block;color:#ffffff;text-decoration:none;line-height:48px;">4</a></mj-text>
+        </mj-column>
+        <mj-column width="16.66%" padding="4px" inner-background-color="#155e75" inner-border-radius="8px">
+          <mj-text font-family="Arial, Helvetica, sans-serif" font-size="20px" font-weight="700" color="#ffffff" align="center" line-height="48px" padding="0"><a href="https://seusite.com.br/pesquisa?nota=5" style="display:block;color:#ffffff;text-decoration:none;line-height:48px;">5</a></mj-text>
+        </mj-column>
+      </mj-group>
+    </mj-section>
+    <mj-section background-color="#ecfeff" padding="0 20px 12px">
+      <mj-group>
+        <mj-column width="8.33%">
+          <mj-spacer height="1px"></mj-spacer>
+        </mj-column>
+        <mj-column width="16.66%" padding="4px" inner-background-color="#155e75" inner-border-radius="8px">
+          <mj-text font-family="Arial, Helvetica, sans-serif" font-size="20px" font-weight="700" color="#ffffff" align="center" line-height="48px" padding="0"><a href="https://seusite.com.br/pesquisa?nota=6" style="display:block;color:#ffffff;text-decoration:none;line-height:48px;">6</a></mj-text>
+        </mj-column>
+        <mj-column width="16.66%" padding="4px" inner-background-color="#155e75" inner-border-radius="8px">
+          <mj-text font-family="Arial, Helvetica, sans-serif" font-size="20px" font-weight="700" color="#ffffff" align="center" line-height="48px" padding="0"><a href="https://seusite.com.br/pesquisa?nota=7" style="display:block;color:#ffffff;text-decoration:none;line-height:48px;">7</a></mj-text>
+        </mj-column>
+        <mj-column width="16.66%" padding="4px" inner-background-color="#155e75" inner-border-radius="8px">
+          <mj-text font-family="Arial, Helvetica, sans-serif" font-size="20px" font-weight="700" color="#ffffff" align="center" line-height="48px" padding="0"><a href="https://seusite.com.br/pesquisa?nota=8" style="display:block;color:#ffffff;text-decoration:none;line-height:48px;">8</a></mj-text>
+        </mj-column>
+        <mj-column width="16.66%" padding="4px" inner-background-color="#155e75" inner-border-radius="8px">
+          <mj-text font-family="Arial, Helvetica, sans-serif" font-size="20px" font-weight="700" color="#ffffff" align="center" line-height="48px" padding="0"><a href="https://seusite.com.br/pesquisa?nota=9" style="display:block;color:#ffffff;text-decoration:none;line-height:48px;">9</a></mj-text>
+        </mj-column>
+        <mj-column width="16.66%" padding="4px" inner-background-color="#155e75" inner-border-radius="8px">
+          <mj-text font-family="Arial, Helvetica, sans-serif" font-size="20px" font-weight="700" color="#ffffff" align="center" line-height="48px" padding="0"><a href="https://seusite.com.br/pesquisa?nota=10" style="display:block;color:#ffffff;text-decoration:none;line-height:48px;">10</a></mj-text>
+        </mj-column>
+        <mj-column width="8.33%">
+          <mj-spacer height="1px"></mj-spacer>
+        </mj-column>
+      </mj-group>
+    </mj-section>
+    <mj-section background-color="#ecfeff" padding="4px 24px 28px">
+      <mj-group>
+        <mj-column>
+          <mj-text font-family="Arial, Helvetica, sans-serif" font-size="15px" color="#3b5560" align="left" line-height="1.4" padding="0">0 = nada provável</mj-text>
+        </mj-column>
+        <mj-column>
+          <mj-text font-family="Arial, Helvetica, sans-serif" font-size="15px" color="#3b5560" align="right" line-height="1.4" padding="0">10 = com certeza</mj-text>
+        </mj-column>
+      </mj-group>
+    </mj-section>
+    <mj-section background-color="#ffffff" padding="32px 24px 40px">
+      <mj-column>
+        <mj-text font-family="Arial, Helvetica, sans-serif" font-size="16px" color="#3b5560" align="left" line-height="1.6" padding="0">Cada resposta é lida pelo nosso time. Obrigado por ajudar a gente a melhorar.</mj-text>
+      </mj-column>
+    </mj-section>
+    <mj-section css-class="footer-locked" background-color="#f4f4f4" padding="20px 16px"><mj-column><mj-text font-family="Arial, Helvetica, sans-serif" font-size="12px" color="#4b5563" align="center" line-height="1.6">Nome da sua empresa · Endereço da empresa<br/>Você recebeu este e-mail porque está em nossa lista de contatos.<br/><a href="{{ unsubscribe_url }}" style="color:#4b5563;text-decoration:underline;">Cancelar inscrição</a></mj-text></mj-column></mj-section>
+  </mj-body>
+</mjml>

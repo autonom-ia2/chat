@@ -10,6 +10,7 @@ const AudiencesPage = () => import('./AudiencesPage.vue');
 const NewAudiencePage = () => import('./NewAudiencePage.vue');
 const NewCampaignPage = () => import('./NewCampaignPage.vue');
 const LiveChatJourneyPage = () => import('./LiveChatJourneyPage.vue');
+const BrandKitsPage = () => import('./BrandKitsPage.vue');
 
 const meta = {
   featureFlag: FEATURE_FLAGS.CAMPAIGNS,
@@ -39,6 +40,24 @@ const requireJourney = (to, _from, next) => {
     return;
   }
   next(backToOldCampaigns(to));
+};
+
+// Identidade visual (#1076): BRAND_KITS_ENABLED and e-mail campaigns on; otherwise Campanha.
+export const isBrandKitsEnabled = () =>
+  window.globalConfig?.BRAND_KITS_ENABLED === 'true' &&
+  window.globalConfig?.EMAIL_CAMPAIGN_ENABLED === 'true' &&
+  window.globalConfig?.CRM_KANBAN_ENABLED === 'true';
+
+const requireBrandKits = (to, _from, next) => {
+  if (isCampaignJourneyEnabled() && isBrandKitsEnabled()) {
+    next();
+    return;
+  }
+  next(
+    isCampaignJourneyEnabled()
+      ? { name: 'campaigns_journey_index', params: to.params }
+      : backToOldCampaigns(to)
+  );
 };
 
 // CAMPAIGN_IMPORT_ENABLED turns Públicos off (PRD §8.0).
@@ -98,6 +117,28 @@ export const campaignJourneyRoutes = [
     meta: manageMeta,
     beforeEnter: requireJourney,
     component: LiveChatJourneyPage,
+  },
+  // Identidade visual (#1076): a tab of Campanha; reading needs campaign_view, changing campaign_manage.
+  {
+    path: 'identity',
+    name: 'campaigns_journey_brand_kits',
+    meta,
+    beforeEnter: requireBrandKits,
+    component: BrandKitsPage,
+  },
+  {
+    path: 'identity/new',
+    name: 'campaigns_journey_brand_kit_new',
+    meta: manageMeta,
+    beforeEnter: requireBrandKits,
+    component: BrandKitsPage,
+  },
+  {
+    path: 'identity/:kitId',
+    name: 'campaigns_journey_brand_kit_edit',
+    meta: manageMeta,
+    beforeEnter: requireBrandKits,
+    component: BrandKitsPage,
   },
   ...campaignResultRoutes({ requireJourney }),
 ];

@@ -1,0 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter&display=swap");
+:root{--brand-primary:#7a3e9d;--brand-accent:#e8a33d;--text:#2b2b2b}
+body{background-color:#fffaf3;color:var(--text);font-family:"Open Sans",Arial,sans-serif}
+h1,h2{font-family:'Lora',Georgia,serif;color:#3b1f4f}
+a{color:#7a3e9d}

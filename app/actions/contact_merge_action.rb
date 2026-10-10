@@ -18,6 +18,7 @@ class ContactMergeAction
       merge_contact_notes
       merge_calls
       merge_prospecting_leads
+      merge_crm_records
       merge_and_remove_mergee_contact
     end
     @base_contact
@@ -62,6 +63,49 @@ class ContactMergeAction
                                 .update_all(contact_id: @base_contact.id, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
   end
 
+  # O contato absorvido é apagado logo depois. Sem isto, os cards ficariam sem contato (o Rails anula o vínculo) e os
+  # follow-ups e convidados de reunião seriam apagados em cascata pelo banco.
+  def merge_crm_records
+    merge_crm_cards
+    merge_crm_follow_ups
+    merge_crm_meeting_guests
+    merge_crm_booking_invites
+    merge_crm_booking_notice_stops
+  end
+
+  # #1192: "parar avisos" é da pessoa. Se só o absorvido tinha parado, a parada passa para o que fica; se os dois
+  # tinham, fica a do que fica (único por conta e contato) e a do absorvido some com ele.
+  def merge_crm_booking_notice_stops
+    stops = Crm::BookingNoticeStop.where(account_id: @account.id, contact_id: @mergee_contact.id)
+    return stops.delete_all if Crm::BookingNoticeStop.stopped?(account_id: @account.id, contact_id: @base_contact.id)
+
+    stops.update_all(contact_id: @base_contact.id) # rubocop:disable Rails/SkipsModelValidations
+  end
+
+  # #1190: o link por cliente é do contato; sem isto a FK em cascata apagaria os convites do absorvido.
+  def merge_crm_booking_invites
+    Crm::BookingInvite.where(account_id: @account.id, contact_id: @mergee_contact.id)
+                      .update_all(contact_id: @base_contact.id, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+  end
+
+  def merge_crm_cards
+    Crm::Card.where(account_id: @account.id, contact_id: @mergee_contact.id)
+             .update_all(contact_id: @base_contact.id, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+  end
+
+  def merge_crm_follow_ups
+    Crm::FollowUp.where(account_id: @account.id, contact_id: @mergee_contact.id)
+                 .update_all(contact_id: @base_contact.id, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+  end
+
+  # Quem já é convidado da reunião pelo contato que fica não precisa de um segundo convite: o do absorvido some com ele.
+  def merge_crm_meeting_guests
+    base_meeting_ids = Crm::MeetingGuest.where(account_id: @account.id, contact_id: @base_contact.id).select(:meeting_id)
+    Crm::MeetingGuest.where(account_id: @account.id, contact_id: @mergee_contact.id)
+                     .where.not(meeting_id: base_meeting_ids)
+                     .update_all(contact_id: @base_contact.id, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+  end
+
   def merge_and_remove_mergee_contact
     [@base_contact, @mergee_contact].sort_by(&:id).each(&:lock!)
     mergable_attribute_keys = %w[identifier name email phone_number additional_attributes custom_attributes]
@@ -71,12 +115,20 @@ class ContactMergeAction
     # attributes in base contact are given preference
     merged_attributes = mergee_contact_attributes.deep_merge(base_contact_attributes)
     @mergee_contact.reload
-    merged_attributes = merged_attributes.merge(inherited_opt_out)
+    merged_attributes = merged_attributes.merge(inherited_opt_out).merge(inherited_customer)
 
     @mergee_contact.destroy!
     Rails.configuration.dispatcher.dispatch(CONTACT_MERGED, Time.zone.now, contact: @base_contact,
                                                                            tokens: [@base_contact.contact_inboxes.filter_map(&:pubsub_token)])
     @base_contact.update!(merged_attributes)
+  end
+
+  # #1144: cliente é da pessoa. Se um dos dois já era cliente, o que fica é cliente, com a data mais antiga.
+  def inherited_customer
+    customers = [@base_contact, @mergee_contact].select(&:customer?)
+    return {} if customers.empty?
+
+    { 'contact_type' => 'customer', 'customer_since' => customers.filter_map(&:customer_since).min }
   end
 
   # chat#713: a recusa de mensagens ativas é da pessoa. Se só o contato absorvido tinha recusado, a recusa (data, origem

@@ -47,6 +47,8 @@ export const FEATURE_FLAGS = {
   CHANNEL_INSTAGRAM: 'channel_instagram',
   INSTAGRAM_ASSISTED_ONBOARDING: 'instagram_assisted_onboarding',
   META_ADS_HUB: 'meta_ads_hub',
+  EMAIL_TEMPLATE_IMPORT: 'email_template_import',
+  AUTONOMIA_AGENTS_JOURNEY: 'autonomia_agents_journey',
   CHANNEL_TIKTOK: 'channel_tiktok',
   CHANNEL_VOICE: 'channel_voice',
   CONTACT_CHATWOOT_SUPPORT_TEAM: 'contact_chatwoot_support_team',

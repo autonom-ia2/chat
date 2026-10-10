@@ -1,7 +1,7 @@
 import { createApp } from 'vue';
 import { createStore } from 'vuex';
 import { createPinia } from 'pinia';
-import { createRouter, createMemoryHistory } from 'vue-router';
+import { createRouter, createWebHistory, RouterView } from 'vue-router';
 import { createI18n } from 'vue-i18n';
 import axios from 'axios';
 import FloatingVue from 'floating-vue';
@@ -24,7 +24,7 @@ window.chatwootConfig = {
   apiHost: `${window.location.origin}/`,
   allowedLoginMethods: ['email'],
   autonomiaSsoEnabled: 'true',
-  autonomiaSsoAutoRedirect: 'false',
+  autonomiaSsoAutoRedirect: params.get('auto_redirect') || 'false',
   autonomiaSsoUrl:
     params.get('configured_auth_url') || '/auth/autonomia?source=visual-gate',
   signupEnabled: 'false',
@@ -41,10 +41,22 @@ window.history.replaceState(
 
 const Login = (await import('v3/views/login/Index.vue')).default;
 const router = createRouter({
-  history: createMemoryHistory(),
-  routes: [{ path: '/app/login', component: Login }],
+  history: createWebHistory(),
+  routes: [
+    {
+      path: '/app/login',
+      component: Login,
+      props: route => ({
+        email: route.query.email || '',
+        ssoAuthToken: route.query.sso_token || '',
+        ssoSource: route.query.sso_source || '',
+        redirectTo: route.query.redirect_to || '',
+        authError: route.query.error || '',
+      }),
+    },
+  ],
 });
-await router.push('/app/login');
+await router.push(`/app/login${search ? `?${search}` : ''}`);
 const store = createStore({
   modules: {
     globalConfig: {
@@ -66,12 +78,7 @@ const i18n = createI18n({
   messages: { [locale]: messages },
   missing: (language, key) => window.qa.missing.push({ language, key }),
 });
-const app = createApp(Login, {
-  email: params.get('email') || '',
-  ssoAuthToken: params.get('sso_token') || '',
-  ssoSource: params.get('sso_source') || '',
-  redirectTo: params.get('redirect_to') || '',
-});
+const app = createApp(RouterView);
 app.config.errorHandler = (error, instance, info) => {
   window.qa.vueErrors.push({ message: error.message, info });
 };

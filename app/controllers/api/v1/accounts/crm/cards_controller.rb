@@ -42,13 +42,16 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     # Chatwoot's frontend identifies conversations by display_id (per-account).
     conversation = Current.account.conversations.find_by!(display_id: params[:conversation_id])
     authorize_crm_conversation!(conversation)
-    card = ::Crm::Cards::ConversationCardFinder.new(account: Current.account).find(conversation)
+    # Só cards que a pessoa pode ver: o selo traz título, funil e etapa.
+    cards = ::Crm::Cards::ConversationCardFinder.new(account: Current.account).all(conversation)
+    card = cards.where(id: policy_scope(::Crm::Card).select(:id)).includes(:stage, :pipeline).first
     render json: { payload: stage_badge_payload(card) }
   end
 
   # Bulk stage lookup for the conversation list (virtual stage chips). Returns
   # { conversation_id => stage_badge } only for conversations the requester can
-  # see that have an OPEN card. Capped at 100 ids per call.
+  # see that have an OPEN card. Capped at 100 ids per call. One badge per
+  # conversation: the current subject, plus how many open subjects it has.
   def card_stages
     # Frontend sends display_ids (Chatwoot's per-account conversation identifier);
     # respond keyed by the SAME display_id so the client can match.
@@ -59,20 +62,7 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
                            .select { |conversation| crm_visibility.visible?(conversation) }
     return render(json: { payload: {} }) if conversations.blank?
 
-    display_by_global = conversations.index_by(&:id).transform_values(&:display_id)
-    multiple = Current.account.crm_pipelines.count > 1
-    payload = ::Crm::Card.open
-                         .where(account_id: Current.account.id, conversation_id: conversations.map(&:id))
-                         .includes(:stage, :pipeline)
-                         .each_with_object({}) do |card, acc|
-      next if card.stage.blank?
-
-      display_id = display_by_global[card.conversation_id]
-      next if display_id.blank?
-
-      acc[display_id] = stage_badge_payload(card).merge(multiple_pipelines: multiple)
-    end
-    render json: { payload: payload }
+    render json: { payload: conversation_badges(conversations) }
   end
 
   def create
@@ -114,8 +104,7 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     if attributes.present?
       mark_value_source_human!(attributes) if attributes.key?(:value_cents)
       mark_score_source_manual!(attributes) if score_changed_by_hand?(attributes)
-      @card.update!(attributes)
-      ::Crm::ActivityLogger.new(card: @card, actor: Current.user, event_type: 'update', payload: attributes).perform
+      apply_update!(attributes)
       broadcast_card(::Events::Types::CRM_CARD_UPDATED)
     end
     render :show
@@ -245,6 +234,10 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     @card = card
     authorize @card, :update?
     attributes = permitted_params.slice(*UPSERT_ATTRIBUTES.map(&:to_s)).compact
+    # Campos do card (#1146): o upsert junta com o que já está salvo, como o PATCH.
+    if permitted_params[:custom_attributes].present?
+      attributes['custom_attributes'] = @card.custom_attributes.to_h.merge(permitted_params[:custom_attributes].to_h).compact
+    end
     if attributes.present?
       @card.update!(attributes)
       ::Crm::ActivityLogger.new(card: @card, actor: Current.user, event_type: 'update', payload: attributes).perform
@@ -297,11 +290,32 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     attributes[:metadata] = metadata
   end
 
+  # Um selo por conversa (o assunto atual) e quantos assuntos abertos ela tem, chaveados pelo display_id.
+  def conversation_badges(conversations)
+    display_by_global = conversations.index_by(&:id).transform_values(&:display_id)
+    multiple = Current.account.crm_pipelines.count > 1
+    subjects_count = Hash.new(0)
+    # Principal ou vinculada (#1197): mesma regra do ConversationCardFinder, numa consulta para a lista toda.
+    badges = ::Crm::Cards::ConversationCardFinder.new(account: Current.account).all_for(conversations.map(&:id))
+                                                 .where(status: :open)
+                                                 .where(id: policy_scope(::Crm::Card).select(:id))
+                                                 .includes(:stage, :pipeline)
+                                                 .each_with_object({}) do |card, acc|
+      display_id = display_by_global[card.listed_conversation_id]
+      next if card.stage.blank? || display_id.blank?
+
+      subjects_count[display_id] += 1
+      acc[display_id] ||= stage_badge_payload(card).merge(multiple_pipelines: multiple)
+    end
+    badges.each { |display_id, badge| badge[:subjects_count] = subjects_count[display_id] }
+  end
+
   def stage_badge_payload(card)
     return if card.blank? || card.stage.blank?
 
     {
       card_id: card.id,
+      title: card.title,
       pipeline_name: card.pipeline&.name,
       stage_name: card.stage.name,
       stage_color: card.stage.color,
@@ -345,25 +359,45 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
         existing = external_id && Current.account.crm_cards.find_by(external_id: external_id)
         next upsert_existing_card!(existing, permitted_params) if existing
 
-        @card = create_authorized_card(permitted_params)
+        @card, created = create_authorized_card(permitted_params)
         authorize @card, :show?
-        broadcast_card(::Events::Types::CRM_CARD_CREATED)
-        render :show, status: :created
+        broadcast_card(::Events::Types::CRM_CARD_CREATED) if created
+        render :show, status: created ? :created : :ok
       end
     end
   end
 
+  # Devolve [card, criado?]. Com conversation_id, segue o contrato de from_conversation (#1197): a conversa com card
+  # aberto devolve o assunto atual; card novo nela só com new_subject.
   def create_authorized_card(permitted_params)
     conversation = conversation_from_params(permitted_params)
     resolved_params = resolved_create_params(permitted_params, conversation: conversation)
     create_authorizer.authorize!(resolved_params, conversation: conversation)
     if @registration
-      return @registration.perform do |contact|
+      card = @registration.perform do |contact|
         ::Crm::Cards::Creator.new(account: Current.account, user: Current.user, params: resolved_params.merge(contact_id: contact.id)).perform
       end
+      return [card, true]
     end
 
-    ::Crm::Cards::Creator.new(account: Current.account, user: Current.user, params: resolved_params, conversation: conversation).perform
+    current = current_open_card(conversation, resolved_params)
+    return [current, false] if current
+
+    [::Crm::Cards::Creator.new(account: Current.account, user: Current.user, params: resolved_params, conversation: conversation).perform, true]
+  end
+
+  # O card aberto da conversa no funil pedido, que o agente enxerga. Trava a conversa (como from_conversation) para duas
+  # chamadas juntas não criarem dois cards. Com external_id a integração cuida do próprio card: cria e, nas próximas
+  # chamadas, atualiza pelo external_id. Funil diferente é outro assunto: card novo. Sem funil no pedido, o assunto atual.
+  def current_open_card(conversation, resolved_params)
+    return if conversation.blank? || resolved_params[:external_id].present?
+    return if ActiveModel::Type::Boolean.new.cast(params[:new_subject])
+
+    conversation.lock!
+    cards = ::Crm::Cards::ConversationCardFinder.new(account: Current.account).all(conversation)
+                                                .where(id: policy_scope(::Crm::Card).select(:id), status: :open)
+    cards = cards.where(pipeline_id: resolved_params[:pipeline_id]) if resolved_params[:pipeline_id].present?
+    cards.first
   end
 
   def broadcast_card(event_name)
@@ -397,7 +431,8 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
       account: Current.account,
       user: Current.user,
       conversation: conversation,
-      requested_params: create_params.to_h.with_indifferent_access
+      requested_params: create_params.to_h.with_indifferent_access,
+      new_subject: ActiveModel::Type::Boolean.new.cast(params[:new_subject]) || false
     )
   end
 
@@ -407,23 +442,6 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     conversation = Current.account.conversations.find(permitted_params[:conversation_id])
     authorize_crm_conversation!(conversation)
     conversation
-  end
-
-  def crm_visibility
-    @crm_visibility ||= ::Crm::Conversations::Visibility.new(
-      account: Current.account,
-      user: Current.user,
-      account_user: Current.account_user
-    )
-  end
-
-  def authorize_crm_conversation!(conversation)
-    authorize conversation, :show?
-    ::Crm::Conversations::AccessAuthorizer.new(
-      account: Current.account,
-      user: Current.user,
-      account_user: Current.account_user
-    ).authorize!(conversation)
   end
 
   def create_authorizer
@@ -443,7 +461,7 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     parameter_set(:card).permit(
       :pipeline_id, :stage_id, :contact_id, :conversation_id, :inbox_id, :owner_id, :team_id,
       :title, :description, :value_cents, :currency, :status, :lost_reason, :source,
-      :priority, :score, :expected_close_at, :external_id, metadata: {}
+      :priority, :score, :expected_close_at, :external_id, metadata: {}, custom_attributes: {}
     )
   end
 
@@ -456,7 +474,22 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
   def update_params
     parameter_set(:card).permit(
       :title, :description, :value_cents, :currency, :lost_reason, :source,
-      :priority, :score, :expected_close_at, :external_id, :owner_id, metadata: {}
+      :priority, :score, :expected_close_at, :external_id, :owner_id, metadata: {}, custom_attributes: {}
     )
+  end
+
+  # Campos do card (#1146): o PATCH manda só o que mudou. Junta com o que já está salvo (chave com null sai), com o card
+  # travado, para duas edições ao mesmo tempo não apagarem o campo uma da outra.
+  def apply_update!(attributes)
+    ActiveRecord::Base.transaction do
+      registro = attributes.dup
+      if attributes.key?(:custom_attributes)
+        @card.lock!
+        attributes[:custom_attributes] = @card.custom_attributes.to_h.merge(attributes[:custom_attributes].to_h).compact
+      end
+      @card.update!(attributes)
+      # O histórico (e o webhook) registram só os campos que o pedido mandou, não o hash inteiro já juntado.
+      ::Crm::ActivityLogger.new(card: @card, actor: Current.user, event_type: 'update', payload: registro).perform
+    end
   end
 end

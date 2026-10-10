@@ -1,0 +1,6 @@
+{
+  "about": "Single source of the locked e-mail footer (#1081). Read by lockedFooter.js (editor block, starter e-mail) and by EmailCampaigns::LockedFooter (AI prompt, sanitizer fallback). Brand-neutral pt-BR; text #4b5563 on #f4f4f4 (contrast >= 4.5, WCAG AA); explicit Arial so MJML imports no web font.",
+  "mjml": "<mj-section css-class=\"footer-locked\" background-color=\"#f4f4f4\" padding=\"20px 16px\"><mj-column><mj-text font-family=\"Arial, Helvetica, sans-serif\" font-size=\"12px\" color=\"#4b5563\" align=\"center\" line-height=\"1.6\">Você recebeu este e-mail porque está em nossa lista de contatos.<br/><a href=\"{{ unsubscribe_url }}\" style=\"color:#4b5563;text-decoration:underline;\">Cancelar inscrição</a></mj-text></mj-column></mj-section>",
+  "identity_placeholder": "Nome da sua empresa · Endereço da empresa",
+  "social_placeholder": "<mj-social font-family=\"Arial, Helvetica, sans-serif\" font-size=\"12px\" icon-size=\"24px\" mode=\"horizontal\" align=\"center\" padding=\"0 0 8px\"><mj-social-element name=\"facebook\" href=\"https://facebook.com/\"></mj-social-element><mj-social-element name=\"instagram\" href=\"https://instagram.com/\"></mj-social-element><mj-social-element name=\"linkedin\" href=\"https://linkedin.com/\"></mj-social-element><mj-social-element name=\"youtube\" href=\"https://youtube.com/\"></mj-social-element></mj-social>"
+}

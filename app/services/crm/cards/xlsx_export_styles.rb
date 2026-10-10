@@ -15,7 +15,8 @@ class Crm::Cards::XlsxExportStyles
   # [texto, fundo] de cada valor, no espírito dos selos da tela.
   STATUS_COLORS = {
     'open' => %w[FF1D4ED8 FFDBEAFE], 'won' => %w[FF15803D FFDCFCE7],
-    'lost' => %w[FFB91C1C FFFEE2E2], 'archived' => %w[FF475569 FFF1F5F9]
+    'lost' => %w[FFB91C1C FFFEE2E2], 'archived' => %w[FF475569 FFF1F5F9],
+    'resolved' => %w[FF15803D FFDCFCE7], 'cancelled' => %w[FFB91C1C FFFEE2E2]
   }.freeze
   PRIORITY_COLORS = {
     'urgent' => %w[FFB91C1C FFFEE2E2], 'high' => %w[FFC2410C FFFFEDD5],

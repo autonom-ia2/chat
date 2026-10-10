@@ -55,6 +55,33 @@ RSpec.describe Crm::MetaAds::NameResolver do
       expect(Crm::MetaAdObject.find_by(meta_object_id: ad_id).preview_url).to eq('https://fb.me/adspreview/abc')
     end
 
+    it 'prefere a imagem original do criativo à miniatura pequena (#1088)' do
+      body = ad_body(ad_id).merge(creative: { id: '9', image_url: 'https://scontent/capa-1080x1350.jpg',
+                                              thumbnail_url: 'https://scontent/64px.jpg' })
+      stub_meta_object(id: ad_id, fields: ad_fields, body: body)
+
+      expect(resolver.resolve([ad_id], type: 'ad')[ad_id]).to include(thumbnail_url: 'https://scontent/capa-1080x1350.jpg')
+    end
+
+    it 'não troca a imagem de 1080 px do AdImages pela miniatura de 64 px do vídeo (#1088)' do
+      Crm::MetaAdObject.create!(account_id: account.id, meta_object_id: ad_id, object_type: 'ad', name: 'Antigo',
+                                thumbnail_url: 'https://scontent/video-1080.jpg', fetched_at: nil)
+      body = ad_body(ad_id).merge(preview_shareable_link: 'https://fb.me/adspreview/v',
+                                  creative: { id: '9', thumbnail_url: 'https://scontent/64px.jpg' })
+      stub_meta_object(id: ad_id, fields: ad_fields, body: body)
+
+      expected = { name: 'Video 2', preview_url: 'https://fb.me/adspreview/v', thumbnail_url: 'https://scontent/video-1080.jpg' }
+      expect(resolver.resolve([ad_id], type: 'ad')[ad_id]).to include(expected)
+      expect(Crm::MetaAdObject.find_by(meta_object_id: ad_id).fetched_at).to be_present
+    end
+
+    it 'usa a miniatura do vídeo quando a linha ainda não tem imagem (#1088)' do
+      body = ad_body(ad_id).merge(creative: { id: '9', thumbnail_url: 'https://scontent/64px.jpg' })
+      stub_meta_object(id: ad_id, fields: ad_fields, body: body)
+
+      expect(resolver.resolve([ad_id], type: 'ad')[ad_id]).to include(thumbnail_url: 'https://scontent/64px.jpg')
+    end
+
     it 'no modo parceiro só grava objeto da conta de anúncios conectada (#1047)' do
       AiProviderCredential.create!(provider: 'meta_ads', api_key: MetaAdsHelpers::TEST_TOKEN)
       channel = create(:channel_whatsapp, account: account, sync_templates: false, validate_provider_config: false)

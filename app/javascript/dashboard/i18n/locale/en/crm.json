@@ -641,8 +641,6 @@
     },
     "RESULT_FILTER": {
       "OPEN": "In progress",
-      "WON": "Won",
-      "LOST": "Lost",
       "ARCHIVED": "Archived"
     },
     "PRIORITY": {
@@ -719,8 +717,6 @@
       "LOADING": "Loading cards…",
       "RESET_COLUMNS": "Reset columns",
       "STATUS_OPEN": "Open",
-      "STATUS_WON": "Won",
-      "STATUS_LOST": "Lost",
       "SAVE": "Save",
       "SAVED_VIEWS": {
         "PRIVATE": "Private",
@@ -923,6 +919,13 @@
         "AI_UNAVAILABLE": "AI is unavailable right now.",
         "CANCEL": "Cancel"
       },
+      "MEETING_LOCATION": {
+        "WHATSAPP_VIDEO": "WhatsApp video",
+        "WHATSAPP_VOICE": "WhatsApp call",
+        "CUSTOM_LINK": "Agent's link",
+        "IN_PERSON": "In person",
+        "NO_ONLINE": "No video call"
+      },
       "MEETING_DETAIL": {
         "TITLE": "Meeting details",
         "STATUS_LABEL": "Status",
@@ -996,6 +999,88 @@
           "UPDATE_FAILED": "Could not update meeting",
           "CANCEL_FAILED": "Could not cancel meeting",
           "OUTCOME_FAILED": "Could not record meeting outcome"
+        },
+        "CLIENT": {
+          "TITLE": "Customer reply",
+          "CONFIRMED": "Confirmed",
+          "CHANGE_REQUESTED": "Asked to change",
+          "PENDING": "Has not replied yet",
+          "STOPPED": "Asked not to get notices"
+        },
+        "NOTICES": {
+          "TITLE": "WhatsApp notices",
+          "KINDS": {
+            "BOOKED": "When booked",
+            "RESCHEDULED": "Time changed",
+            "DAY_BEFORE": "1 day before",
+            "HOUR_BEFORE": "1 hour before"
+          },
+          "STATUS": {
+            "PENDING": "Will go out",
+            "SENDING": "Going out now",
+            "SENT": "Sent",
+            "SKIPPED": "Did not go out",
+            "FAILED": "Failed"
+          },
+          "SKIP_REASONS": {
+            "DISABLED": "notices are turned off in this account",
+            "CANCELED": "the time was cancelled",
+            "PAST_DUE": "the notice time had already passed",
+            "STALE": "the time changed after the notice was planned",
+            "TOO_CLOSE": "it would be too close to another notice",
+            "REPLACED": "the new time notice went out instead",
+            "OPTED_OUT": "the customer does not accept messages",
+            "STOPPED": "the customer asked to stop",
+            "NO_INBOX": "the page has no WhatsApp for notices",
+            "NO_INVITE": "the time did not come from a link",
+            "NO_CONTACT": "the time has no contact",
+            "NO_PHONE": "the customer has no WhatsApp number",
+            "UNSUPPORTED_INBOX": "this WhatsApp does not send notices",
+            "TEMPLATE_REQUIRED": "no approved message and the customer has not talked to you in the last 24 hours",
+            "TEMPLATE_WITHOUT_LINK": "the approved message has no booking link",
+            "TEMPLATE_UNSUPPORTED": "the approved message asks for data the notice does not fill in",
+            "WAHA_OUTSIDE_WINDOW": "the customer has not talked to you in the last 24 hours",
+            "NUMBER_CAP": "this number already got many messages today",
+            "ACCOUNT_CAP": "the account reached the daily notice limit",
+            "OTHER": "another reason"
+          },
+          "FAILED_HINT": "Talk to the customer to confirm the time."
+        }
+      },
+      "MEETING_DAY": {
+        "NEXT_MEETING": "Next meeting",
+        "PHONE_LABEL": "Number",
+        "CALL": "Call on WhatsApp",
+        "CALL_HINT": "WhatsApp opens the chat with the client. To start the video call, tap the camera icon in WhatsApp itself.",
+        "CALL_HINT_VOICE": "WhatsApp opens the chat with the client. To call, tap the phone icon in WhatsApp itself.",
+        "REMIND": "Remind",
+        "REMIND_HINT": "Sends the client a short message asking to confirm the time.",
+        "REMIND_SENT": "Reminder sent",
+        "REMIND_SENT_HINT": "The message went out in the conversation.",
+        "REBOOK_TITLE": "Send {name} a link to pick another time",
+        "REBOOK_TITLE_NO_NAME": "Send the client a link to pick another time",
+        "REBOOK_SEND": "Send link",
+        "REBOOK_SENT": "Link sent in the conversation.",
+        "NOT_NOW": "Not now",
+        "MOVE_QUESTION": "Move to the \"{stage}\" stage?",
+        "MOVE_HINT": "This way the card does not get forgotten in the current stage.",
+        "MOVE": "Move",
+        "MOVED": "The card went to the \"{stage}\" stage.",
+        "MOVE_FAILED": "Could not move the card. Try again.",
+        "COPY_LINK": "Copy link",
+        "COPIED": "Link copied",
+        "REFUSED": {
+          "NOT_REMINDABLE": "This meeting can no longer get a reminder.",
+          "ALREADY_CONFIRMED": "The client already confirmed.",
+          "STOPPED": "The client asked not to get messages about this meeting. Nothing was sent.",
+          "NO_INVITE": "This meeting has no client link. Nothing was sent.",
+          "RECENTLY_REMINDED": "You reminded the client a few minutes ago. Wait a little before trying again.",
+          "RECENTLY_SENT": "The link went out a few minutes ago. Wait a little before sending it again.",
+          "NO_CONVERSATION": "There is no conversation with this client that you can answer. Copy the link and send it another way.",
+          "CANNOT_REPLY": "The client needs to send a message first. Copy the link and send it another way.",
+          "NOT_REBOOKABLE": "This only works after you mark “No-show”.",
+          "NO_PAGE": "No booking page is live right now. Publish a page in CRM › Scheduling.",
+          "OTHER": "Could not send. Try again."
         }
       },
       "MEETING_STATES": {
@@ -1068,6 +1153,8 @@
       "CARD_ARCHIVE_ERROR": "Could not archive the card.",
       "CARD_WON": "Deal marked as won.",
       "CARD_LOST": "Deal marked as lost.",
+      "CARD_RESOLVED": "Card marked as resolved.",
+      "CARD_CANCELLED": "Card marked as cancelled.",
       "CARD_REOPENED": "Deal reopened.",
       "CARD_CLOSE_ERROR": "Could not update the deal status.",
       "CARD_MOVED": "Card moved.",
@@ -1142,6 +1229,16 @@
       "TAB_TIMELINE": "Timeline",
       "TAB_RETURNS": "Returns",
       "TAB_HISTORY": "History",
+      "CARD_FIELDS": {
+        "TITLE": "Card fields",
+        "HELP": "Information specific to this deal.",
+        "EMPTY_ADMIN": "No card fields yet. Create them in Settings → Custom attributes → Card.",
+        "OPEN_SETTINGS": "Create card fields",
+        "UPDATE_SUCCESS": "Card field saved",
+        "UPDATE_ERROR": "Could not save the card field",
+        "DELETE_SUCCESS": "Card field cleared",
+        "DELETE_ERROR": "Could not clear the card field"
+      },
       "MORE_DETAILS": "More details",
       "LOADING_DETAILS": "Loading updated details...",
       "CONTACT_NAME": "Name",
@@ -1177,6 +1274,8 @@
       "ACTIVITY_MOVE": "Card moved",
       "ACTIVITY_WON": "Deal won",
       "ACTIVITY_LOST": "Deal lost",
+      "ACTIVITY_RESOLVED": "Resolved",
+      "ACTIVITY_CANCELLED": "Cancelled",
       "ACTIVITY_REOPEN": "Deal reopened",
       "ACTIVITY_ARCHIVE": "Card archived",
       "ACTIVITY_LINK_CONVERSATION": "Conversation linked",
@@ -1198,6 +1297,8 @@
       "ACTIVITY_MEETING_RESCHEDULED": "Meeting rescheduled",
       "ACTIVITY_MEETING_CANCELED": "Meeting cancelled",
       "ACTIVITY_MEETING_OUTCOME": "Meeting outcome recorded",
+      "ACTIVITY_MEETING_HOST_REASSIGNED": "Meeting moved to someone else",
+      "ACTIVITY_MEETING_HOST_REASSIGNED_TO": "Meeting moved to {name}",
       "ACTIVITY_AUTOMATION_OWNER_ASSIGNED": "Owner assigned by automation",
       "ACTIVITY_AUTOMATION_STAGE_MOVED": "Stage changed by automation",
       "ACTIVITY_AUTOMATION_FOLLOW_UP_CREATED": "Follow-up created by automation",
@@ -1290,6 +1391,8 @@
       "STATUS_WON": "Won",
       "STATUS_LOST": "Lost",
       "STATUS_ARCHIVED": "Archived",
+      "STATUS_RESOLVED": "Resolved",
+      "STATUS_CANCELLED": "Cancelled",
       "WIN_DEAL": "Win",
       "LOSE_DEAL": "Lose",
       "REOPEN_DEAL": "Reopen",
@@ -1302,6 +1405,8 @@
       "LOSE_REASON_LABEL": "Reason (optional)",
       "LOSE_REASON_PLACEHOLDER": "Why was the deal lost?",
       "LOSE_CONFIRM": "Mark as lost",
+      "CLOSE_AS_TITLE": "Close as {label}",
+      "MARK_AS": "Mark as {label}",
       "CANCEL": "Cancel",
       "SAVE": "Save",
       "CREATE": "Create card",
@@ -1333,7 +1438,19 @@
         "TIMELINE_TOUCH_REMINDER": "Touch {n}: AI generated a team reminder"
       },
       "LEAD_FORM_TITLE": "Form details",
-      "LEAD_FORM_CAPTURED": "Filled {time}"
+      "LEAD_FORM_CAPTURED": "Filled {time}",
+      "CLIENT_ACTOR": "Customer",
+      "ACTIVITY_BOOKING_CLIENT_CONFIRMED": "Customer confirmed the time",
+      "ACTIVITY_BOOKING_CLIENT_CANCELED": "Customer cancelled the time",
+      "ACTIVITY_BOOKING_CLIENT_RESCHEDULED": "Customer changed the time",
+      "ACTIVITY_BOOKING_CLIENT_REBOOKED": "Customer booked another time",
+      "ACTIVITY_BOOKING_NOTICE_FAILED": "WhatsApp notice did not go out",
+      "ACTIVITY_BOOKING_NOTICES_STOPPED": "Customer asked not to get notices",
+      "ACTIVITY_BOOKING_AGENT_REMINDED": "Client reminded about the meeting",
+      "ACTIVITY_BOOKING_REBOOK_LINK_SENT": "Link sent to pick another time",
+      "ACTIVITY_DETAIL_BOOKING_TIME": "Time: {time}",
+      "ACTIVITY_DETAIL_BOOKING_MOVED": "From {from} to {to}",
+      "ACTIVITY_DETAIL_BOOKING_NOTICE_FAILED": "{kind}: {reason}"
     },
     "COPILOT": {
       "TITLE": "Copilot",
@@ -1356,18 +1473,45 @@
     },
     "CONVERSATION": {
       "TITLE": "CRM",
-      "DESCRIPTION": "Create or reuse a card to track this conversation in the Kanban.",
-      "PIPELINE": "Pipeline",
-      "STAGE": "Stage",
-      "CREATE_CARD": "Create CRM card",
+      "DESCRIPTION": "Each subject of this conversation is a card in the CRM.",
       "OPEN_CRM": "Open CRM",
       "NO_PIPELINES": "No active CRM pipeline. An administrator needs to create a pipeline first.",
-      "CARD_READY": "Card ready in CRM.",
       "CREATE_ERROR": "Could not create the CRM card.",
       "LOAD_ERROR": "Could not load CRM pipelines or stages.",
-      "STAGE_BADGE_LABEL": "Current stage",
       "STAGE_BADGE_EMPTY": "Not in any pipeline yet.",
-      "CONTACT_LABELS_TITLE": "Contact labels"
+      "CONTACT_LABELS_TITLE": "Contact labels",
+      "SUBJECTS": {
+        "LABEL": "Subjects in this conversation",
+        "NEW": "New subject",
+        "LOADING": "Loading subjects…",
+        "LOAD_ERROR": "Could not load the subjects.",
+        "RETRY": "Try again",
+        "EMPTY": "No subject yet. Create the first one to follow this conversation in the CRM.",
+        "CURRENT": "Current",
+        "CURRENT_HINT": "Current subject of this conversation",
+        "SWITCHED": "Now working on: {title}",
+        "SWITCH_ERROR": "Could not change the current subject.",
+        "NEW_TITLE": "New subject",
+        "NEW_DESCRIPTION": "The subject becomes a card in the chosen funnel, starts at its first stage and becomes the current subject.",
+        "PIPELINE_QUESTION": "Which funnel?",
+        "TITLE_LABEL": "What is it about?",
+        "TITLE_PLACEHOLDER": "E.g.: Quote — Onix 2021",
+        "CREATE": "Create subject",
+        "CREATED": "Subject created.",
+        "MORE": "+{count}",
+        "MORE_HINT": "{count} more open subject(s) in this conversation",
+        "MAKE_CURRENT_HINT": "Click to work on this subject",
+        "REPLY_IN": "This message goes to:",
+        "PIPELINE_STAGE": "{pipeline} · {stage}",
+        "SUGGESTION_CREATE": "Looks like a new subject: {title} ({pipeline}).",
+        "SUGGESTION_CREATE_ACCEPT": "Create subject",
+        "SUGGESTION_RENAME": "Looks like this subject is: {title}.",
+        "SUGGESTION_RENAME_ACCEPT": "Use this name",
+        "SUGGESTION_FOCUS": "Looks like the customer is back to: {title}.",
+        "SUGGESTION_FOCUS_ACCEPT": "Handle this subject",
+        "SUGGESTION_DISMISS": "Dismiss",
+        "SUGGESTION_ERROR": "Could not answer the suggestion. It may have changed; check the subjects again."
+      }
     },
     "PIPELINE_DRAWER": {
       "CREATE_TITLE": "New pipeline",
@@ -1385,6 +1529,15 @@
       "NAME_PLACEHOLDER": "E.g. Sales, Post-sales, Renewals",
       "DESCRIPTION": "Description",
       "DESCRIPTION_PLACEHOLDER": "How this pipeline should be used by the team",
+      "WHEN_TO_USE": "When to use",
+      "WHEN_TO_USE_HELP": "The AI reads this to know when a conversation belongs to this pipeline. Name the products or cases that come here.",
+      "WHEN_TO_USE_PLACEHOLDER": "E.g.: sales of our two products, AI Agents and Chat2You.",
+      "COUNTS_AS_SALE": "Closing successfully here counts as a sale",
+      "COUNTS_AS_SALE_ON": "Cards close as Won or Lost, count toward sales totals and can notify your ads.",
+      "COUNTS_AS_SALE_OFF": "Cards close as Resolved or Cancelled. They never count as sales nor notify ads. Good for after-sales, claims, support.",
+      "OUTCOME_SUCCESS": "Name when it works out",
+      "OUTCOME_FAILURE": "Name when it doesn't work out",
+      "OUTCOME_HELP": "Optional. E.g. \"Hired\" and \"Gave up\". Leave blank to use the default name.",
       "MONTHLY_TARGET": "Monthly sales target (R$)",
       "MONTHLY_TARGET_PLACEHOLDER": "E.g. 50000",
       "MONTHLY_TARGET_HELP": "Drives the Goal box on the dashboard. Leave empty for no target.",
@@ -1523,6 +1676,11 @@
       "DEFAULT_STAGE": "Default stage",
       "FIRST_STAGE": "First pipeline stage",
       "AUTO_CREATE": "Create card automatically",
+      "SUBJECT_AI": "AI identifies the subject",
+      "SUBJECT_AI_OFF": "Off",
+      "SUBJECT_AI_SUGGEST": "Suggest: the team confirms",
+      "SUBJECT_AI_AUTO": "Automatic: the AI creates and names the cards",
+      "SUBJECT_AI_HELP": "When the customer asks for something new, the AI names the subject and opens its card in the right pipeline. When unsure, it changes nothing.",
       "PIPELINE_SWITCH": "This inbox leaves the {de} pipeline and starts feeding {para}. Cards already in the previous pipeline stay where they are.",
       "SAVE": "Save",
       "SAVED": "Saved",
@@ -1758,6 +1916,53 @@
         "SAVED": "Booking page saved",
         "SAVE_ERROR": "Could not save the booking page.",
         "LOAD_ERROR": "Could not load booking pages."
+      }
+    },
+    "BOOKING_INVITE": {
+      "BUTTON": "Schedule",
+      "BUTTON_HINT": "Create this client's scheduling link",
+      "TITLE": "Scheduling link for {name}",
+      "TITLE_NO_NAME": "Scheduling link",
+      "LOADING": "Getting the link ready…",
+      "PAGE": "Page: {title}",
+      "PAGE_LABEL": "Scheduling page",
+      "VALID_UNTIL": "Valid until {date}",
+      "TEXT_LABEL": "Invitation text",
+      "TEXT_NEEDS_LINK": "The text needs to include the link.",
+      "SEND": "Send in the conversation",
+      "COPY": "Copy link",
+      "COPIED": "Link copied. Paste it anywhere.",
+      "SENT": "Message sent in the conversation.",
+      "CANCEL_LINK": "Cancel link",
+      "CANCELED": "Link canceled.",
+      "CANCEL_CONFIRM": {
+        "TITLE": "Cancel the link?",
+        "DESCRIPTION": "The client won't be able to book with it anymore.",
+        "YES": "Yes, cancel",
+        "BACK": "Back"
+      },
+      "NEW_LINK": "Create a new link",
+      "CLOSE": "Close",
+      "STATE": {
+        "CREATED": "Not sent yet",
+        "SENT": "Sent",
+        "OPENED": "Opened",
+        "SCHEDULED": "Scheduled",
+        "EXPIRED": "Expired",
+        "CANCELED": "Canceled"
+      },
+      "EMPTY": {
+        "ADMIN": "Publish a scheduling page to create links for your clients.",
+        "AGENT": "Ask the administrator to publish a scheduling page.",
+        "OPEN_SETTINGS": "Go to Scheduling"
+      },
+      "ERRORS": {
+        "LOAD": "Couldn't open the link right now. Try again.",
+        "SEND": "Couldn't send. Check that the text has the link and that the client can receive messages.",
+        "COPY": "Couldn't copy the link.",
+        "CANCEL": "Couldn't cancel the link.",
+        "CANNOT_REPLY": "The client needs to message you first. Copy the link and send it another way.",
+        "FORBIDDEN": "You don't have access to this."
       }
     },
     "RELATIONSHIP": {
@@ -2116,7 +2321,39 @@
         "OPEN_META": "Open Meta",
         "DETAILS": "See the path on Meta",
         "DETAILS_TEXT": "Business settings › Users › Partners › Add › Give a partner access to your assets. Select the ad account with \"View performance\" and the website dataset (Pixel).",
-        "TOKEN_LINK": "Prefer an access key?"
+        "TOKEN_LINK": "Prefer an access key?",
+        "FACEBOOK": {
+          "TITLE": "Sign in with your Facebook",
+          "LEAD": "Use the same Facebook you create your ads with. It takes a minute.",
+          "HOW_LABEL": "What will happen",
+          "HOW_1_TITLE": "A Facebook window opens",
+          "HOW_1_TEXT": "If it asks, sign in with your Facebook email and password.",
+          "HOW_2_TITLE": "Leave everything checked",
+          "HOW_2_TEXT": "Facebook shows your accounts and what we will use. Don't uncheck anything and tap \"Continue\" until the end.",
+          "HOW_3_TITLE": "You come back here",
+          "HOW_3_TEXT": "The window closes by itself and we take it from here.",
+          "CTA": "Sign in with Facebook",
+          "WAITING": "The Facebook window is open. Leave everything checked and tap \"Continue\" until the end.",
+          "TRUST_PASSWORD": "We never see your password",
+          "TRUST_ADS": "Nothing changes in your ads unless you ask",
+          "TRUST_OFF": "You can turn it off whenever you want",
+          "OTHER_WAYS": "Prefer another way to connect?",
+          "PARTNER_TITLE": "Share with {partner}",
+          "PARTNER_TEXT": "You give {partner} access to your ad account in Meta Business Manager. It takes about 5 minutes.",
+          "PARTNER_CTA": "See the steps",
+          "TOKEN_TITLE": "Use an access key",
+          "TOKEN_TEXT": "For those who already have a key created on Meta.",
+          "TOKEN_CTA": "Paste the key",
+          "POPUP_TITLE": "The Facebook window didn't open",
+          "POPUP_TEXT": "Your browser may have blocked it. Allow it and try again:",
+          "POPUP_STEP_1": "Tap the blocked window icon at the end of the address bar.",
+          "POPUP_STEP_2": "Choose \"Always allow\" for this site.",
+          "POPUP_STEP_3": "Tap \"Sign in again\".",
+          "NO_AD_ACCOUNT_TITLE": "The ad account was not checked",
+          "NO_ACCESS_TITLE": "Facebook didn't let us see your ads",
+          "RETRY": "Sign in again",
+          "BACK": "Back to Sign in with Facebook"
+        }
       },
       "ACCOUNT": {
         "TITLE": "Which account pays for your ads?",
@@ -2145,7 +2382,8 @@
         "PIXEL_CHANGE": "Change",
         "VIA_PARTNER": "Reading through {partner}",
         "VIA_TOKEN": "Reading with your access key",
-        "SWITCH": "Change"
+        "SWITCH": "Change",
+        "VIA_FACEBOOK": "Reading with your Facebook sign-in"
       },
       "DESTINATIONS": {
         "TITLE": "Where do your ads take the customer?",
@@ -2209,12 +2447,40 @@
         "NEXT_PANEL": "Next step: a dashboard with what each sale cost, ad by ad.",
         "SPEND_TODAY": "Spent today",
         "SPEND_ON": "Spent on {date}",
-        "SPEND_CONVERSATIONS": "{count} conversations started",
+        "SPEND_CONVERSATIONS": "1 conversation from ads today | {count} conversations from ads today",
         "SPEND_UPDATED": "updated {time}",
         "SPEND_REFRESHING": "updating…",
         "SPEND_EMPTY": "Ad spend shows up here after the first read from Meta.",
         "ACCESS_LOST_HINT": "Meta no longer lets us read this ad account. Share it again or connect another account.",
-        "SPEND_BACKFILLING": "Fetching the last 90 days from Meta…"
+        "SPEND_BACKFILLING": "Fetching the last 90 days from Meta…",
+        "CONFIDENCE": {
+          "TITLE": "How much to trust the numbers",
+          "TITLE_PERIOD": "How much to trust the numbers — last {days} days",
+          "TOTAL": "In the last {days} days, 1 conversation came from Meta ads. This is how well we know which ad brought it: | In the last {days} days, {count} conversations came from Meta ads. This is how well we know which ad brought each one:",
+          "EMPTY": "As soon as conversations arrive from ads, we show here which ad brought each one.",
+          "AD": "Exact ad",
+          "AD_NAME": "Ad found by its name",
+          "CAMPAIGN": "Only the campaign",
+          "UNKNOWN": "From Meta, ad unknown",
+          "FIX": "Paste the step 3 text in every ad that goes to the site to know the ad",
+          "SHARE": "{share}%",
+          "META": {
+            "WHATSAPP": {
+              "LINE": "Until yesterday, Meta says {meta} conversation started on WhatsApp; we counted {ours}. | Until yesterday, Meta says {meta} conversations started on WhatsApp; we counted {ours}.",
+              "CLOSE": "The two numbers match.",
+              "META_HIGHER": "Meta also counts people who were already talking to you; a forwarded conversation or one from a saved contact reaches us without an origin.",
+              "OURS_HIGHER": "We count every conversation that came from the ad, including people who clicked before and came back; Meta only counts up to 7 days after the click."
+            },
+            "SITE": {
+              "LINE": "Until yesterday, Meta says {meta} contact on the site (page visits: {visits}); through the site button, we counted {ours}. | Until yesterday, Meta says {meta} contacts on the site (page visits: {visits}); through the site button, we counted {ours}.",
+              "CLOSE": "The two numbers match.",
+              "META_HIGHER": "Meta counts people who left their contact on the site; not everyone clicks afterwards to talk on WhatsApp.",
+              "OURS_HIGHER": "We count every conversation that came through the site button, even from people who did not leave their contact there."
+            },
+            "NO_META_DATA": "Meta has not sent the number for this period yet."
+          }
+        },
+        "MODE_FACEBOOK": "By Facebook sign-in"
       },
       "ERRORS": {
         "PLATFORM_UNAVAILABLE": "Sharing is not available yet. For now, use an access key.",
@@ -2230,6 +2496,10 @@
         "TOKEN_INVALID": "Meta refused the saved key. Paste a new key or share the account.",
         "INVALID_AD_ACCOUNT": "This ad account is not valid.",
         "NOT_CONNECTED": "Connect Meta first.",
+        "LOGIN_FAILED": "Facebook didn't confirm the sign-in. Try again.",
+        "LOGIN_UNAVAILABLE": "Signing in with Facebook isn't available right now. Use another way to connect.",
+        "MISSING_ADS_READ": "Facebook didn't allow us to see your ads. Sign in again and allow access to your ad accounts.",
+        "NO_AD_ACCOUNT": "No ad account was chosen. Sign in again and pick at least one.",
         "GENERIC": "That did not work. Try again."
       },
       "MOVED": "Meta ads now have their own page: connection, ad names and sales to Meta.",
@@ -2283,6 +2553,311 @@
         "FINISH": "Finish",
         "LATER": "Not now",
         "BEFORE": "Before: {value}"
+      },
+      "PANEL": {
+        "TABS": {
+          "RESULT": "Results",
+          "CONNECTION": "Connection",
+          "LABEL": "What to see"
+        },
+        "HEADLINE": "You invested {spend}. {conversations} and {sales} came in.",
+        "PERIOD": "{days} days",
+        "PERIOD_LABEL": "Period",
+        "PERIOD_CTX": "Last {days} days",
+        "PERIOD_HINT": "What happened to the people who came from ads in the last {days} days.",
+        "TODAY": "What to do today",
+        "SEVERAL_ADS": "several ads",
+        "ACTION": {
+          "STALLED_QUOTES": {
+            "TEXT": "1 quote from ads has been stalled for more than {days} days. It came from \"{ad}\". | {count} quotes from ads have been stalled for more than {days} days. Most came from \"{ad}\".",
+            "WHY": "Why: they add up to {value} in negotiation. Following up with someone who asked for a quote costs less than advertising again.",
+            "BUTTON": "See the quote | See the {count} quotes"
+          },
+          "FIX_TRACKING": {
+            "TEXT": "We do not know which ad brought 1 conversation. | We do not know which ad brought {unknown} conversations.",
+            "WHY": "Why: without the ad, the cost per sale of each one is wrong. Of the {conversations} conversations from ads in the last 30 days, {unknown} have no ad.",
+            "BUTTON": "Fix it in step 3"
+          },
+          "WAIT": {
+            "TEXT": "Nothing to fix now. Keep your ads as they are.",
+            "WHY": "Why: an ad only gets a verdict after 20 conversations. The one that brought the most so far, \"{ad}\", needs {missing} more."
+          },
+          "ON_TRACK": {
+            "TEXT": "Nothing stalled. See the verdict of each ad below.",
+            "WHY": "Why: your ads already have enough conversations to compare the cost of each sale."
+          },
+          "NO_DATA": {
+            "TEXT": "There is no ad spend or conversation in this period yet.",
+            "WHY": "Why: the numbers show up as soon as an ad spends or brings the first conversation."
+          },
+          "SLOW_RESPONSE": {
+            "TEXT": "Half of the ad conversations in the last {windowDays} days waited more than {medianSeconds} for an answer. | Half of the ad conversations in the last {windowDays} days waited more than {medianSeconds} for an answer, and 1 got none. | Half of the ad conversations in the last {windowDays} days waited more than {medianSeconds} for an answer, and {unanswered} got none.",
+            "TEXT_UNANSWERED": "1 ad conversation in the last {windowDays} days got no answer. | {unanswered} ad conversations in the last {windowDays} days got no answer.",
+            "WHY": "Why: answering within {targetSeconds} changes the sale. Whoever waits too long looks for someone else.",
+            "BUTTON": "See the slowest conversations"
+          },
+          "REVIEW_AD": {
+            "TEXT": "Review \"{ad}\": it brought {conversations} conversations and {sales} sales with {spend}.",
+            "WHY": "Why: your ads that sell average {targetCostPerSale} per sale.",
+            "TEXT_NO_SALES": "Review \"{ad}\": it brought {conversations} conversations and no sale with {spend}.",
+            "WHY_NO_SALES": "Why: your ads that sell average {targetCostPerSale} per sale. Look at the image, the text and who answers these conversations before turning it off.",
+            "TEXT_ABOVE_AVERAGE": "Review \"{ad}\": each sale from it costs {costPerSale}.",
+            "WHY_ABOVE_AVERAGE": "Why: your ads that sell average {targetCostPerSale} per sale. It brought {conversations} conversations and {sales} sales with {spend}.",
+            "BUTTON": "Open the ad"
+          },
+          "REFRESH_CREATIVE": {
+            "TEXT": "Change the image or the text of \"{ad}\".",
+            "WHY": "Why: the ad is wearing out the people who see it.",
+            "TEXT_CTR": "Change the image or the text of \"{ad}\": people are clicking less.",
+            "WHY_CTR": "Why: people click {ctrDropPct} less on it than in the previous weeks. A new image or text usually brings the interest back.",
+            "TEXT_FREQUENCY": "Change the image or the text of \"{ad}\": the same people have seen it many times.",
+            "WHY_FREQUENCY": "Why: each person has already seen this ad {frequency7d} times in the last {windowDays} days. Whoever sees the same ad many times stops paying attention.",
+            "TEXT_BOTH": "Change the image or the text of \"{ad}\": people click less and have seen it many times.",
+            "WHY_BOTH": "Why: people click {ctrDropPct} less on it than in the previous weeks, and each one has already seen it {frequency7d} times in the last {windowDays} days.",
+            "BUTTON": "Open the ad"
+          },
+          "SCALE_AD": {
+            "TEXT": "Raise the daily amount of \"{ad}\" by up to {maxIncreasePct}.",
+            "WHY": "Why: it has sold for {costPerSale}, below your average of {targetCostPerSale}, for {weeks} weeks. After raising it, wait {cooldownDays} days before raising it again.",
+            "BUTTON": "Open in Meta Ads Manager"
+          },
+          "AUCTION_PRESSURE": {
+            "TEXT": "Do not change your ads because of this week’s price.",
+            "WHY": "Why: showing to a thousand people got {cpmChangePct} more expensive in the last {windowDays} days, from {cpmBaseline} to {cpmRecent}, and clicks stayed the same. It is the competition, not your ad.",
+            "BUTTON": "Got it"
+          },
+          "DONE": "Done",
+          "DISMISS": "Dismiss",
+          "DONE_LABEL": "Done"
+        },
+        "PATH_TITLE": "Where your money went",
+        "PATH": {
+          "SPEND": "invested",
+          "CONVERSATIONS": "conversation | conversations",
+          "QUOTES": "quote | quotes",
+          "SALES": "sale | sales"
+        },
+        "EACH": "{value} each",
+        "PER_SALE": "{value} per sale",
+        "RETURN": "Each R$ 1 invested returned {value}",
+        "OPEN_QUOTES": "Sales on the way: 1 open quote | Sales on the way: {count} open quotes",
+        "ADS_TITLE": "Your ads, by sale",
+        "ADS_EMPTY": "As soon as an ad spends or brings a conversation, it shows up here.",
+        "AD_NO_NAME": "Unnamed ad",
+        "OPEN_AD": "See inside",
+        "OPEN_AD_LABEL": "See inside the ad {name}",
+        "AD_QUOTES": "1 open quote | {count} open quotes",
+        "VERDICT": {
+          "UP": "Increase · enough data",
+          "KEEP": "Keep",
+          "SIGNAL": "Early signal",
+          "REVIEW": "Review the ad",
+          "EARLY": "Too early"
+        },
+        "STALLED_TITLE": "1 stalled quote | {count} stalled quotes",
+        "STALLED_SINCE": "No reply {time}",
+        "OPEN_CONVERSATION": "Open conversation",
+        "COUNT": {
+          "CONVERSATIONS": "{n} conversation | {n} conversations",
+          "SALES": "{n} sale | {n} sales"
+        },
+        "STALLED_MORE": "and {count} more in the CRM",
+        "REACHED": "{share}% got there",
+        "SALES_VALUE": "· {value}",
+        "AD_STATS": {
+          "SPEND": "Invested",
+          "CONVERSATIONS": "Conversations",
+          "SALES": "Sales"
+        },
+        "DURATION": {
+          "SECONDS": "less than 1 min",
+          "MINUTES": "{n} min",
+          "HOURS": "{n} h",
+          "DAYS": "{n} day | {n} days"
+        },
+        "RESPONSE_TIME": {
+          "LABEL": "Response time:",
+          "NOTE": "half answered within this time",
+          "UNANSWERED": "1 unanswered | {count} unanswered"
+        },
+        "PATH_LIST": {
+          "TITLE_CONVERSATIONS": "Conversations from ads",
+          "TITLE_QUOTES": "Quotes",
+          "TITLE_SALES": "Sales",
+          "TITLE_SLOW_REPLIES": "Slowest conversations to answer",
+          "TOTAL_CONVERSATIONS": "1 conversation | {count} conversations",
+          "TOTAL_QUOTES": "1 quote | {count} quotes",
+          "TOTAL_SALES": "1 sale | {count} sales",
+          "TOTAL_SLOW_REPLIES": "1 conversation | {count} conversations",
+          "LAST_30_DAYS": "last 30 days",
+          "EMPTY": "Nothing in this step for the period.",
+          "ERROR": "We could not load the list right now.",
+          "RETRY": "Try again",
+          "SHOWING": "Showing {shown} of {total}",
+          "OPEN_CONVERSATION": "Open conversation",
+          "OPEN_CARD": "Open in the CRM",
+          "OPEN": "See the list",
+          "CLOSE": "Close the list",
+          "OPEN_LABEL": "See the list of {step}",
+          "NO_TITLE": "No name",
+          "ANSWERED_IN": "Answered in {duration}",
+          "NO_ANSWER": "No answer",
+          "WON": "Won",
+          "LOST": "Lost"
+        }
+      },
+      "AD_DETAIL": {
+        "BACK": "Back to the panel",
+        "CAMPAIGN": "Campaign",
+        "ADSET": "Ad set",
+        "EMPTY": "We found no numbers for this ad in this period.",
+        "ERROR": "We could not load this ad now. We will try again on our own in a moment.",
+        "RETRY": "Try again",
+        "PREVIEW": "See how it shows on Meta",
+        "NO_VALUE": "—",
+        "TILES": {
+          "COST_PER_SALE": "Cost per sale",
+          "AVERAGE": "Account average",
+          "SPEND": "Invested",
+          "QUOTES": "Quotes",
+          "SALES": "Sales",
+          "CONVERSATIONS": "Conversations"
+        },
+        "WHY_TITLE": "Why",
+        "REASON": {
+          "EARLY": "It is too early to say whether this ad sells. It brought 1 conversation and needs {missing} more. We will look again when it reaches 20 conversations. | It is too early to say whether this ad sells. It brought {count} conversations and needs {missing} more. We will look again when it reaches 20 conversations.",
+          "NO_SALES": "It brought 1 conversation and no sale. With {spend} invested, it is worth reviewing the image, the text or the audience. | It brought {count} conversations and no sale. With {spend} invested, it is worth reviewing the image, the text or the audience.",
+          "SIGNAL": "It made 1 sale with {spend} invested. Still too few to compare with the account average: the verdict comes from 3 sales on. | It made {count} sales with {spend} invested. Still too few to compare with the account average: the verdict comes from 3 sales on.",
+          "BELOW_AVERAGE": "Each sale from this ad cost {cost}, {difference} less than the account average ({average}). With 1 sale, the base is already enough. | Each sale from this ad cost {cost}, {difference} less than the account average ({average}). With {count} sales, the base is already enough.",
+          "NEAR_AVERAGE": "Each sale from this ad cost {cost}, close to the account average ({average}). It is worth keeping it as it is.",
+          "ABOVE_AVERAGE": "Each sale from this ad cost {cost}, {difference} more than the account average ({average}). Review the ad before putting more money in."
+        },
+        "MEANWHILE_TITLE": "Meanwhile",
+        "MEANWHILE": "1 open quote from this ad is waiting for an answer. Picking it up is what you can do now. | {count} open quotes from this ad are waiting for an answer. Picking them up is what you can do now.",
+        "MEANWHILE_SEE": "See the quotes",
+        "CHART_TITLE": "Spend and conversations per day",
+        "LEGEND_SPEND": "Spend",
+        "LEGEND_CONVERSATIONS": "Conversations",
+        "CHART_DAY": "{date}: {spend} · 1 conversation | {date}: {spend} · {count} conversations",
+        "CHART_SCALE": "Highest spend in a day: {spend} · most conversations in a day: 1 | Highest spend in a day: {spend} · most conversations in a day: {count}",
+        "DAYS_TOGGLE": "See day by day",
+        "DAYS_DATE": "Day",
+        "QUOTES_TITLE": "Quotes from this ad",
+        "QUOTES_EMPTY": "No quote from this ad in this period yet.",
+        "WON": "Sold"
+      },
+      "AI": {
+        "DAILY": {
+          "BADGE": "Written by AI",
+          "WRITING": "AI is writing…",
+          "AI_ERROR": "The AI did not answer right now; this is the action by the rule.",
+          "FAILED": "We could not reach the AI right now; this is the action by the rule.",
+          "WHY_LABEL": "Why:",
+          "DISMISS_FAILED": "We could not dismiss it right now. Try again.",
+          "DONE_FAILED": "We could not mark it as done right now. Try again.",
+          "ALREADY_RESOLVED": "This action was already handled on another screen. The list has been updated."
+        },
+        "QUOTE": {
+          "SUGGEST": "Suggest message",
+          "WRITING": "Writing…",
+          "LABEL": "Suggested message — review before sending",
+          "SOURCE": "Because the customer said: “{quote}”",
+          "SEND": "Send in the conversation",
+          "SENT": "Message sent in the conversation.",
+          "SENT_STATE": "Sent",
+          "SEND_FAILED": "The message was not sent. Try again or open the conversation.",
+          "COPY": "Copy",
+          "COPIED": "Message copied.",
+          "COPY_FAILED": "Couldn't copy. Select the text and copy it by hand.",
+          "FAILED": "We could not suggest a message right now. Try again in a moment.",
+          "REASONS": {
+            "CLOSED": "The customer already closed the deal. Nothing to resume here.",
+            "DECLINED": "The customer already said no. Better not to insist.",
+            "NOTHING_OPEN": "There is nothing open to resume in this conversation.",
+            "WINDOW_CLOSED": "More than 24 hours since the customer's last message: WhatsApp only accepts an approved template. Open the conversation to send one.",
+            "AI_UNAVAILABLE": "AI is turned off for this account.",
+            "CREDENTIALS_MISSING": "AI is not set up for this account yet.",
+            "AI_INVALID": "The AI could not write a message that fits this conversation. Open the conversation to write yours.",
+            "UNSAFE_CONTENT": "The conversation has a link, payment key or contact that did not come from your team. To be safe, write this message yourself.",
+            "AI_ERROR": "The AI did not answer right now. Try again in a moment."
+          }
+        }
+      },
+      "WHATSAPP_REPORT": {
+        "EYEBROW": "WhatsApp summary",
+        "TITLE": "Get your ad numbers on your WhatsApp",
+        "HINT": "One message a day with yesterday's results, and a warning when an ad spends without bringing conversations. It starts off; you decide.",
+        "LOADING": "Loading…",
+        "LOAD_ERROR": "Could not load the WhatsApp summary.",
+        "RETRY": "Try again",
+        "SUMMARY_TOGGLE": "Daily summary",
+        "SUMMARY_TOGGLE_HINT": "Every day at {time} ({zone}), with yesterday's numbers.",
+        "ALERT_TOGGLE": "Spend without conversations alert",
+        "ALERT_TOGGLE_HINT": "At {time} ({zone}), when an ad spent today and brought no conversation. At most 1 a day.",
+        "ORIGIN_LABEL": "Sent from",
+        "ORIGIN_PLACEHOLDER": "Choose a connected number",
+        "ORIGIN_EMPTY": "No WhatsApp number is connected right now. Connect one in Inboxes to use the summary.",
+        "ORIGIN_GONE": "The number chosen before is not connected now. Choose another one.",
+        "KIND": {
+          "WAHA": "WhatsApp API",
+          "WHATSAPP_CLOUD": "Official WhatsApp"
+        },
+        "KIND_HINT": {
+          "WAHA": "Sends plain text. To protect the number, at most 2 messages go out a day.",
+          "WHATSAPP_CLOUD": "Official WhatsApp only sends with a template approved by Meta. See below."
+        },
+        "PHONE_LABEL": "Number that receives",
+        "PHONE_PLACEHOLDER": "+1 555 123 4567",
+        "PHONE_HINT": "With area code. Use your own number, not a customer's.",
+        "REPLY_NOTE": "If you reply to the message, it shows up as a conversation in that inbox.",
+        "TEMPLATES": {
+          "TITLE": "Meta templates",
+          "HINT": "Create these two templates in WhatsApp Manager, category Utility, language Portuguese (BR). While a template is not approved, its message is not sent.",
+          "SUMMARY": "Daily summary",
+          "ALERT": "Alert",
+          "NAME": "Template name:",
+          "COPY_NAME": "Copy name",
+          "COPY_TEXT": "Copy text",
+          "COPIED": "Copied.",
+          "COPY_FAILED": "Could not copy. Select the text and copy it by hand.",
+          "BLOCKED": "Without this template approved, nothing is sent.",
+          "STATUS": {
+            "APPROVED": "Approved",
+            "PENDING": "Under review",
+            "REJECTED": "Rejected",
+            "MISSING": "Not created"
+          }
+        },
+        "SAVE": "Save",
+        "SAVED": "WhatsApp summary saved.",
+        "DISCARD": "Discard changes",
+        "TEST": "Send test",
+        "TEST_HINT": "Sends yesterday's summary now, marked as a test.",
+        "TEST_NEEDS_SAVE": "Save the sending number and the receiving number before testing.",
+        "TEST_NEEDS_SAVE_CHANGES": "Save or discard your changes before testing.",
+        "TEST_NEEDS_ORIGIN": "The sending number is not connected now. Choose another one and save before testing.",
+        "TEST_SENT": "Test sent at {time}. Check your WhatsApp.",
+        "HISTORY": {
+          "TITLE": "Last messages",
+          "SUMMARY": "Last summary: {time}",
+          "ALERT": "Last alert: {time}",
+          "NONE": "No message sent yet.",
+          "ERROR": "Last problem, {time}: {message}",
+          "NOTHING_TO_REPORT": "Yesterday had no spend and no conversations, so no summary went out ({time})."
+        },
+        "ERRORS": {
+          "INVALID_PHONE": "This number does not look valid. Include the country and area code.",
+          "PHONE_REQUIRED": "Enter the number that receives the messages.",
+          "ORIGIN_REQUIRED": "Choose the number the messages are sent from.",
+          "INBOX_NOT_CONNECTED": "This number is not connected right now. Choose another one.",
+          "TEMPLATE_NOT_APPROVED": "Official WhatsApp only sends with the template approved by Meta. Get it approved or choose a WhatsApp API number.",
+          "NOT_CONNECTED": "Connect Meta before turning on the summary.",
+          "RATE_LIMITED": "You already sent 3 tests in this hour. Try again later.",
+          "SEND_FAILED": "WhatsApp did not accept the message. Check the connection of the sending number.",
+          "SEND_UNCERTAIN": "We could not confirm it arrived. Check your WhatsApp before trying again.",
+          "WHATSAPP_NUMBER_NOT_FOUND": "This number has no WhatsApp.",
+          "GENERIC": "It did not work this time. Try again."
+        }
       }
     }
   },

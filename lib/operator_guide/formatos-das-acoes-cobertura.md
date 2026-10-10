@@ -5,18 +5,18 @@ Gerado por `bundle exec rails autonomia:guia:formatos` a partir do código (#900
 
 | | Ações |
 |---|---|
-| No catálogo | 527 |
-| Sem corpo | 144 |
-| Com corpo | 383 |
-| Com corpo e formato completo | 308 (80,4%) |
-| Com corpo e formato incompleto | 75 |
+| No catálogo | 580 |
+| Sem corpo | 172 |
+| Com corpo | 408 |
+| Com corpo e formato completo | 330 (80,9%) |
+| Com corpo e formato incompleto | 78 |
 
 ## Por dentro dos campos
 
 | | Total |
 |---|---|
-| Campos aninhados com vocabulário | 17 de 151 |
-| Leituras cruas tipadas | 108 de 181 |
+| Campos aninhados com vocabulário | 17 de 185 |
+| Leituras cruas tipadas | 119 de 198 |
 
 ## Incompletas por motivo
 
@@ -24,7 +24,7 @@ Uma ação pode ter mais de um motivo.
 
 | Motivo | Ações |
 |---|---|
-| leitura crua sem tipo | 60 |
+| leitura crua sem tipo | 63 |
 | aceita qualquer campo | 5 |
 | params inteiro repassado | 9 |
 | lê o corpo cru | 2 |
@@ -35,11 +35,10 @@ Uma ação pode ter mais de um motivo.
 
 - `DELETE assignment_policies/:assignment_policy_id/inboxes/:id` — a rota não tem a action no controller: a chamada dá erro
 - `DELETE inboxes/:inbox_id/conference` — leitura crua sem tipo: call_sid
-- `PATCH crm/pipelines/:id` — leitura crua sem tipo: goal, google_sync, meta_sync
+- `PATCH crm/pipelines/:id` — leitura crua sem tipo: goal, google_sync, meta_sync, outcome_labels
 - `PATCH crm/pipelines/:pipeline_id/ai_settings` — aceita qualquer campo (permit! em app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:58)
 - `PATCH crm/stages/:id` — leitura crua sem tipo: funnel_stage_type
 - `PATCH ctwa_tracked_links/:id` — leitura crua sem tipo: ctwa_tracked_link
-- `PATCH inboxes/:id` — leitura crua sem tipo: waha_history_connection
 - `PATCH portals/:id` — leitura crua sem tipo: portal.config.analytics
 - `PATCH relationships/:entity/:id/values` — leitura crua sem tipo: field
 - `PATCH relationships/configuration` — leitura crua sem tipo: configuration
@@ -71,18 +70,23 @@ Uma ação pode ter mais de um motivo.
 - `POST conversations/:id/toggle_typing_status` — params inteiro repassado a ::Conversations::TypingStatusManager.new
 - `POST conversations/:id/transcript` — leitura crua sem tipo: email (repassada a ConversationReplyMailer.with(account: @conversation.accou...)
 - `POST conversations/filter` — aceita qualquer campo (permit! em app/controllers/api/v1/accounts/conversations_controller.rb:52); params inteiro repassado a ::Conversations::FilterService.new
+- `POST crm/booking_invites/:id/deliver` — leitura crua sem tipo: text (repassada a ::Crm::BookingV2::InviteDeliverer.new)
+- `POST crm/booking_pages/:id/logo` — leitura crua sem tipo: file
+- `POST crm/booking_pages/:id/photo` — leitura crua sem tipo: file
+- `POST crm/booking_pages/:id/test_invite` — leitura crua sem tipo: phone (repassada a ::Crm::BookingV2::TestInvite.new)
 - `POST crm/cards/:card_id/contact` — leitura crua sem tipo: contact
 - `POST crm/cards/:id/close` — leitura crua sem tipo: result (repassada a ::Crm::Cards::Closer.new)
 - `POST crm/cards/bulk` — leitura crua sem tipo: action_name, bulk_action
 - `POST crm/meetings/:id/sync` — leitura crua sem tipo: force
 - `POST crm/meetings/suggest_times` — leitura crua sem tipo: date, duration_minutes
-- `POST crm/pipelines` — leitura crua sem tipo: goal
+- `POST crm/pipelines` — leitura crua sem tipo: goal, outcome_labels
 - `POST crm/pipelines/:pipeline_id/stages` — leitura crua sem tipo: funnel_stage_type
 - `POST ctwa_tracked_links` — leitura crua sem tipo: ctwa_tracked_link
 - `POST data_imports` — params inteiro repassado a DataImportSkipLogFinder.new
 - `POST data_imports/:id/abandon` — params inteiro repassado a DataImportSkipLogFinder.new
 - `POST data_imports/:id/retry` — params inteiro repassado a DataImportSkipLogFinder.new
 - `POST data_imports/:id/start` — params inteiro repassado a DataImportSkipLogFinder.new
+- `POST email_campaigns/ai/generate` — leitura crua sem tipo: brand_mode (repassada a modes.include?)
 - `POST email_campaigns/campaigns/:id/resolve_video` — leitura crua sem tipo: poster_url, url (repassada a EmailCampaigns::VideoAsset.from_url)
 - `POST email_campaigns/maintenance/backfills` — lê o corpo cru da requisição
 - `POST email_campaigns/maintenance/backfills/:id/retry` — lê o corpo cru da requisição
@@ -101,11 +105,10 @@ Uma ação pode ter mais de um motivo.
 - `POST whatsapp_calls/:id/terminate` — leitura crua sem tipo: sdp_answer (repassada a Whatsapp::CallService.new)
 - `POST whatsapp_calls/:id/upload_recording` — leitura crua sem tipo: recording (repassada a @call.message.attachments.create!)
 - `POST whatsapp_calls/initiate` — leitura crua sem tipo: sdp_offer (repassada a provider_service.initiate_call)
-- `PUT crm/pipelines/:id` — leitura crua sem tipo: goal, google_sync, meta_sync
+- `PUT crm/pipelines/:id` — leitura crua sem tipo: goal, google_sync, meta_sync, outcome_labels
 - `PUT crm/pipelines/:pipeline_id/ai_settings` — aceita qualquer campo (permit! em app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:58)
 - `PUT crm/stages/:id` — leitura crua sem tipo: funnel_stage_type
 - `PUT ctwa_tracked_links/:id` — leitura crua sem tipo: ctwa_tracked_link
-- `PUT inboxes/:id` — leitura crua sem tipo: waha_history_connection
 - `PUT portals/:id` — leitura crua sem tipo: portal.config.analytics
 - `PUT relationships/configuration` — leitura crua sem tipo: configuration
 
@@ -149,6 +152,10 @@ Uma ação pode ter mais de um motivo.
 - `api/v1/accounts/contacts#export` column_names — o código não converte nem compara o valor
 - `api/v1/accounts/conversations#create` message — repassada a Messages::MessageBuilder.new
 - `api/v1/accounts/conversations#transcript` email — repassada a ConversationReplyMailer.with(account: @conversation.accou...
+- `api/v1/accounts/crm/booking_invites#deliver` text — repassada a ::Crm::BookingV2::InviteDeliverer.new
+- `api/v1/accounts/crm/booking_pages#logo` file — o código não converte nem compara o valor
+- `api/v1/accounts/crm/booking_pages#photo` file — o código não converte nem compara o valor
+- `api/v1/accounts/crm/booking_pages#test_invite` phone — repassada a ::Crm::BookingV2::TestInvite.new
 - `api/v1/accounts/crm/cards#close` result — repassada a ::Crm::Cards::Closer.new
 - `api/v1/accounts/crm/cards/bulk#create` action_name — o código não converte nem compara o valor
 - `api/v1/accounts/crm/cards/bulk#create` bulk_action — o código não converte nem compara o valor
@@ -157,13 +164,16 @@ Uma ação pode ter mais de um motivo.
 - `api/v1/accounts/crm/meetings#suggest_times` duration_minutes — o código não converte nem compara o valor
 - `api/v1/accounts/crm/meetings#sync` force — o código não converte nem compara o valor
 - `api/v1/accounts/crm/pipelines#create` goal — o código não converte nem compara o valor
+- `api/v1/accounts/crm/pipelines#create` outcome_labels — o código não converte nem compara o valor
 - `api/v1/accounts/crm/pipelines#update` goal — o código não converte nem compara o valor
 - `api/v1/accounts/crm/pipelines#update` google_sync — o código não converte nem compara o valor
 - `api/v1/accounts/crm/pipelines#update` meta_sync — o código não converte nem compara o valor
+- `api/v1/accounts/crm/pipelines#update` outcome_labels — o código não converte nem compara o valor
 - `api/v1/accounts/crm/stages#create` funnel_stage_type — o código não converte nem compara o valor
 - `api/v1/accounts/crm/stages#update` funnel_stage_type — o código não converte nem compara o valor
 - `api/v1/accounts/ctwa_tracked_links#create` ctwa_tracked_link — o código não converte nem compara o valor
 - `api/v1/accounts/ctwa_tracked_links#update` ctwa_tracked_link — o código não converte nem compara o valor
+- `api/v1/accounts/email_campaigns/ai#generate` brand_mode — repassada a modes.include?
 - `api/v1/accounts/email_campaigns/reputations#override` duration_seconds — repassada a ::EmailCampaigns::Reputation::Evaluator.new(Current.accou...
 - `api/v1/accounts/email_campaigns/reputations#override` message_budget — repassada a ::EmailCampaigns::Reputation::Evaluator.new(Current.accou...
 - `api/v1/accounts/email_campaigns/reputations#override` reason — repassada a ::EmailCampaigns::Reputation::Evaluator.new(Current.accou...
@@ -171,7 +181,6 @@ Uma ação pode ter mais de um motivo.
 - `api/v1/accounts/email_campaigns/videos#resolve` poster_url — o código não converte nem compara o valor
 - `api/v1/accounts/email_campaigns/videos#resolve` url — repassada a EmailCampaigns::VideoAsset.from_url
 - `api/v1/accounts/inboxes#set_agent_bot` agent_bot — repassada a AgentBot.accessible_to(Current.account).find
-- `api/v1/accounts/inboxes#update` waha_history_connection — o código não converte nem compara o valor
 - `api/v1/accounts/integrations/hooks#process_event` event — repassada a @hook.process_event
 - `api/v1/accounts/integrations/slack#create` code — repassada a Integrations::Slack::HookBuilder.new
 - `api/v1/accounts/portals#create` portal.config.analytics — o código não converte nem compara o valor
@@ -191,8 +200,8 @@ O Guia recusa parâmetro que a leitura não lê. Leitura sem lista conhecida nã
 
 | | Leituras |
 |---|---|
-| No catálogo | 318 |
-| Com parâmetros conhecidos | 267 |
+| No catálogo | 340 |
+| Com parâmetros conhecidos | 289 |
 | Sem parâmetros conhecidos | 51 |
 
 ### Leituras sem parâmetros conhecidos

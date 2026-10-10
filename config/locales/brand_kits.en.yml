@@ -1,0 +1,22 @@
+en:
+  activerecord:
+    errors:
+      models:
+        brand_kit:
+          attributes:
+            appearance:
+              invalid_field: "has an invalid value in %{field}"
+            logo:
+              invalid_type: "must be a PNG, JPEG, WebP or GIF image"
+              too_large: "must be at most 5 MB"
+  brand_kits:
+    import_errors:
+      invalid_url: "Enter the full website address, for example https://yourcompany.com."
+      unsafe_url: "This address points to a private or local network and cannot be read."
+      http_error: "The website did not respond correctly. Check the address and try again."
+      page_too_large: "The website page is too large to read."
+      not_html: "This address is not a web page."
+      timeout: "The website took too long to respond. Try again in a few minutes."
+      fetch_failed: "We could not reach the website. Check the address and try again."
+      stale: "The previous reading was interrupted. Start a new one."
+      internal_error: "Something went wrong while reading the website. Try again."

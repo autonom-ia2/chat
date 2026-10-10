@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<!-- Fixture "estilo HubSpot": HTML obtido pela opção de exportar/ver código de um e-mail enviado
+     ou de um modelo codificado. Mistura HubL ({{ contact.firstname }}, {% if %}, {{ unsubscribe_link }},
+     módulos {% module %}) com HTML final; classes hse-*, hs_cos_wrapper; imagens em hubfs. -->
+<html lang="pt-br" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta name="x-apple-disable-message-reformatting">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>{{ subject }}</title>
+<!--[if mso]><xml><o:OfficeDocumentSettings><o:AllowPNG/><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml><![endif]-->
+<style type="text/css">
+  body { margin:0 !important; padding:0 !important; }
+  #hs_cos_wrapper_main a { color:#0F62FE; }
+  .hse-body-background { background-color:#F5F8FA; }
+  .hse-section .hse-column-container { max-width:600px !important; width:600px !important; }
+  .hse-column { display:inline-block; vertical-align:top; }
+  .hse-button a:hover { opacity:.9; }
+  @media only screen and (max-width:639px) {
+    img.stretch-on-mobile, .hs_rss_email_entries_table img, .hs-stretch-cta .hs-cta-img { height:auto !important; width:100% !important; }
+    .hse-section .hse-column-container { width:100% !important; }
+    .hse-column { display:block !important; width:100% !important; }
+  }
+</style>
+</head>
+<body bgcolor="#F5F8FA" style="margin:0 !important;padding:0 !important;font-family:Arial,sans-serif;font-size:15px;color:#23496D;word-break:break-word;">
+<!--[if gte mso 9]><v:background xmlns:v="urn:schemas-microsoft-com:vml" fill="t"><v:fill type="tile" size="100%,100%" color="#F5F8FA"/></v:background><![endif]-->
+<div class="hse-body-background" style="background-color:#F5F8FA;" bgcolor="#F5F8FA">
+  <table role="presentation" class="hse-body-wrapper-table" cellpadding="0" cellspacing="0" style="border-spacing:0 !important;border-collapse:collapse;margin:0;padding:0;width:100% !important;min-width:320px !important;height:100% !important;" width="100%" height="100%">
+    <tbody><tr><td class="hse-body-wrapper-td" valign="top" style="padding-top:20px;">
+      <div id="hs_cos_wrapper_main" class="hs_cos_wrapper hs_cos_wrapper_widget hs_cos_wrapper_type_dnd_area" data-hs-cos-general-type="widget" data-hs-cos-type="dnd_area">
+
+        <div id="section-0" class="hse-section">
+          <!--[if !((mso)|(IE))]><!-- -->
+          <div class="hse-column-container" style="min-width:280px;max-width:600px;width:100%;margin-left:auto;margin-right:auto;background-color:#FFFFFF;" bgcolor="#FFFFFF">
+          <!--<![endif]-->
+          <!--[if (mso)|(IE)]><div class="hse-column-container" style="min-width:280px;max-width:600px;width:100%;margin:0 auto;background-color:#FFFFFF;" bgcolor="#FFFFFF"><table align="center" style="width:600px;" cellpadding="0" cellspacing="0" role="presentation"><tr style="background-color:#FFFFFF;"><![endif]-->
+            <!--[if (mso)|(IE)]><td valign="top" style="width:600px;"><![endif]-->
+            <div id="column-0-0" class="hse-column hse-size-12">
+              <div id="hs_cos_wrapper_module-0-0-0" class="hs_cos_wrapper hs_cos_wrapper_widget hs_cos_wrapper_type_module" data-hs-cos-general-type="widget" data-hs-cos-type="module">
+                <table class="hse-image-wrapper" role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                  <tbody><tr><td align="center" valign="top" style="padding:20px;">
+                    <a href="http://exemplo.hs-sites.example.com/?utm_campaign=lancamento&amp;utm_medium=email&amp;_hsenc=p2ANqtz-abc&amp;_hsmi=123456&amp;utm_content=123456&amp;utm_source=hs_email" target="_blank" data-hs-link-id="0">
+                      <img alt="Logo" src="https://exemplo.hubspotusercontent.example.com/hubfs/1234567/logo-empresa.png" style="outline:none;text-decoration:none;max-width:100%;font-size:16px;" width="160" align="middle" class="stretch-on-mobile">
+                    </a>
+                  </td></tr></tbody>
+                </table>
+              </div>
+              <div id="hs_cos_wrapper_module-0-0-1" class="hs_cos_wrapper hs_cos_wrapper_widget hs_cos_wrapper_type_module" data-hs-cos-general-type="widget" data-hs-cos-type="module">
+                <table role="presentation" class="hse-text-wrapper" width="100%" cellpadding="0" cellspacing="0">
+                  <tbody><tr><td id="hs_cos_wrapper_module-0-0-1_" class="hs_cos_wrapper hs_cos_wrapper_widget hs_cos_wrapper_type_rich_text" style="color:#23496D;font-family:Arial,sans-serif;font-size:15px;padding:10px 20px;line-height:175%;" data-hs-cos-general-type="widget" data-hs-cos-type="rich_text">
+                    <h1 style="margin:0;font-size:28px;line-height:1.3;color:#0B2545;">Oi, {{ personalization_token('contact.firstname', 'tudo bem') }}!</h1>
+                    <p style="margin:12px 0;">A {{ contact.company }} acaba de ganhar acesso ao novo painel. Sabemos que como {{ contact.jobtitle }} você vai gostar.</p>
+                    {% if contact.lifecyclestage == "customer" %}<p style="margin:12px 0;">Obrigado por ser cliente.</p>{% endif %}
+                    <p style="margin:12px 0;">Qualquer dúvida, responda para {{ owner.email }}.</p>
+                  </td></tr></tbody>
+                </table>
+              </div>
+              {% module "cta_principal" path="@hubspot/button" label="Botão principal" button_text="Acessar o painel" %}
+              <div id="hs_cos_wrapper_module-0-0-2" class="hs_cos_wrapper hs_cos_wrapper_widget hs_cos_wrapper_type_module" data-hs-cos-general-type="widget" data-hs-cos-type="module">
+                <table class="hse-button" role="presentation" cellpadding="0" cellspacing="0" align="center" width="100%">
+                  <tbody><tr><td align="center" style="padding:10px 20px 30px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" style="border-collapse:separate !important;">
+                      <tbody><tr><td align="center" valign="middle" bgcolor="#0F62FE" role="presentation" style="border-radius:8px;cursor:auto;background-color:#0F62FE;padding:12px 18px;">
+                        <a href="https://exemplo.hs-sites.example.com/painel?_hsenc=p2ANqtz-abc&amp;_hsmi=123456" target="_blank" style="color:#ffffff;font-size:16px;font-family:Arial,sans-serif;text-decoration:none;font-weight:normal;" data-hs-link-id="1">Acessar o painel</a>
+                      </td></tr></tbody>
+                    </table>
+                  </td></tr></tbody>
+                </table>
+              </div>
+            </div>
+            <!--[if (mso)|(IE)]></td><![endif]-->
+          <!--[if (mso)|(IE)]></tr></table><![endif]-->
+          </div>
+        </div>
+
+        <div id="section-1" class="hse-section hse-section-last">
+          <div class="hse-column-container" style="min-width:280px;max-width:600px;width:100%;margin-left:auto;margin-right:auto;">
+            <div id="column-1-0" class="hse-column hse-size-12">
+              <table role="presentation" class="hse-footer hse-secondary" width="100%" cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;color:#23496D;line-height:135%;font-size:12px;text-align:center;">
+                <tbody><tr><td align="center" valign="top" style="padding:10px 20px 25px;">
+                  <p style="margin:0;">{{ site_settings.company_name }}, {{ site_settings.company_street_address_1 }}, {{ site_settings.company_city }}</p>
+                  <p style="margin:8px 0 0;">
+                    <a data-unsubscribe="true" href="{{ unsubscribe_link_all }}" style="color:#00A4BD;">Cancelar inscrição</a>
+                    <a data-unsubscribe="true" href="{{ unsubscribe_link }}" style="color:#00A4BD;">Gerenciar preferências</a>
+                  </p>
+                  <p style="margin:8px 0 0;"><a href="{{ view_as_page_url }}" style="color:#00A4BD;">Ver como página</a></p>
+                </td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </td></tr></tbody>
+  </table>
+</div>
+<img src="https://track.hubspot.example.com/__ptq.gif?k=14&amp;r=abc&amp;bvt=email&amp;bvcid=123" alt="" width="1" height="1" border="0" style="display:none!important;min-height:1px!important;width:1px!important;border-width:0!important;margin:0!important;padding:0!important;">
+</body>
+</html>

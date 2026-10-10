@@ -1,0 +1,132 @@
+{
+  "utc": "2026-10-08T13:58:33.704059+00:00",
+  "result": {
+    "services": [
+      {
+        "MainPID": "3005325",
+        "NRestarts": "0",
+        "BindReadOnlyPaths": "/opt/instagram-meta-tools/node-v24.21.0-linux-x64/bin/node:/usr/bin/node:rbind",
+        "ActiveState": "active",
+        "DropInPaths": "/etc/systemd/system/instagram-vps-manager@.service.d/20-private-node.conf",
+        "unit": "instagram-vps-manager@hub2you.service",
+        "effective_node_sha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+        "dropins": [
+          {
+            "path": "/etc/systemd/system/instagram-vps-manager@.service.d/20-private-node.conf",
+            "sha256": "21296e432301fe7634c65c399c24c692799745466e0e7ce1e829775c112ec1ba",
+            "runtime_lines": [
+              "BindReadOnlyPaths=/opt/instagram-meta-tools/node-v24.21.0-linux-x64/bin/node:/usr/bin/node"
+            ]
+          }
+        ]
+      },
+      {
+        "MainPID": "2683473",
+        "NRestarts": "0",
+        "BindReadOnlyPaths": "/opt/instagram-meta-tools/node-v24.21.0-linux-x64/bin/node:/usr/bin/node:rbind",
+        "ActiveState": "active",
+        "DropInPaths": "/etc/systemd/system/instagram-vps-manager@.service.d/20-private-node.conf",
+        "unit": "instagram-vps-manager@autonomia.service",
+        "effective_node_sha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+        "dropins": [
+          {
+            "path": "/etc/systemd/system/instagram-vps-manager@.service.d/20-private-node.conf",
+            "sha256": "21296e432301fe7634c65c399c24c692799745466e0e7ce1e829775c112ec1ba",
+            "runtime_lines": [
+              "BindReadOnlyPaths=/opt/instagram-meta-tools/node-v24.21.0-linux-x64/bin/node:/usr/bin/node"
+            ]
+          }
+        ]
+      },
+      {
+        "MainPID": "2683374",
+        "NRestarts": "0",
+        "BindReadOnlyPaths": "/opt/instagram-meta-tools/node-v24.21.0-linux-x64/bin/node:/usr/bin/node:rbind",
+        "ActiveState": "active",
+        "DropInPaths": "/etc/systemd/system/instagram-vps-gateway@.service.d/20-private-node.conf",
+        "unit": "instagram-vps-gateway@hub2you.service",
+        "effective_node_sha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+        "dropins": [
+          {
+            "path": "/etc/systemd/system/instagram-vps-gateway@.service.d/20-private-node.conf",
+            "sha256": "21296e432301fe7634c65c399c24c692799745466e0e7ce1e829775c112ec1ba",
+            "runtime_lines": [
+              "BindReadOnlyPaths=/opt/instagram-meta-tools/node-v24.21.0-linux-x64/bin/node:/usr/bin/node"
+            ]
+          }
+        ]
+      },
+      {
+        "MainPID": "2683371",
+        "NRestarts": "0",
+        "BindReadOnlyPaths": "/opt/instagram-meta-tools/node-v24.21.0-linux-x64/bin/node:/usr/bin/node:rbind",
+        "ActiveState": "active",
+        "DropInPaths": "/etc/systemd/system/instagram-vps-gateway@.service.d/20-private-node.conf",
+        "unit": "instagram-vps-gateway@autonomia.service",
+        "effective_node_sha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+        "dropins": [
+          {
+            "path": "/etc/systemd/system/instagram-vps-gateway@.service.d/20-private-node.conf",
+            "sha256": "21296e432301fe7634c65c399c24c692799745466e0e7ce1e829775c112ec1ba",
+            "runtime_lines": [
+              "BindReadOnlyPaths=/opt/instagram-meta-tools/node-v24.21.0-linux-x64/bin/node:/usr/bin/node"
+            ]
+          }
+        ]
+      },
+      {
+        "MainPID": "2683404",
+        "NRestarts": "0",
+        "BindReadOnlyPaths": "/opt/instagram-meta-tools/node-v24.21.0-linux-x64/bin/node:/usr/bin/node:rbind",
+        "ActiveState": "active",
+        "DropInPaths": "/etc/systemd/system/instagram-vps-publisher@.service.d/20-private-node.conf /etc/systemd/system/instagram-vps-publisher@hub2you.service.d/30-cpu-quota.conf",
+        "unit": "instagram-vps-publisher@hub2you.service",
+        "effective_node_sha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+        "dropins": [
+          {
+            "path": "/etc/systemd/system/instagram-vps-publisher@.service.d/20-private-node.conf",
+            "sha256": "21296e432301fe7634c65c399c24c692799745466e0e7ce1e829775c112ec1ba",
+            "runtime_lines": [
+              "BindReadOnlyPaths=/opt/instagram-meta-tools/node-v24.21.0-linux-x64/bin/node:/usr/bin/node"
+            ]
+          },
+          {
+            "path": "/etc/systemd/system/instagram-vps-publisher@hub2you.service.d/30-cpu-quota.conf",
+            "sha256": "41c6db5c35846b239a0da96950bc1e599703b0b1aabbb274a6f99f95d168ea43",
+            "runtime_lines": [
+              "CPUQuota=200%"
+            ]
+          }
+        ]
+      },
+      {
+        "MainPID": "2683405",
+        "NRestarts": "0",
+        "BindReadOnlyPaths": "/opt/instagram-meta-tools/node-v24.21.0-linux-x64/bin/node:/usr/bin/node:rbind",
+        "ActiveState": "active",
+        "DropInPaths": "/etc/systemd/system/instagram-vps-publisher@.service.d/20-private-node.conf /etc/systemd/system/instagram-vps-publisher@autonomia.service.d/30-cpu-quota.conf",
+        "unit": "instagram-vps-publisher@autonomia.service",
+        "effective_node_sha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+        "dropins": [
+          {
+            "path": "/etc/systemd/system/instagram-vps-publisher@.service.d/20-private-node.conf",
+            "sha256": "21296e432301fe7634c65c399c24c692799745466e0e7ce1e829775c112ec1ba",
+            "runtime_lines": [
+              "BindReadOnlyPaths=/opt/instagram-meta-tools/node-v24.21.0-linux-x64/bin/node:/usr/bin/node"
+            ]
+          },
+          {
+            "path": "/etc/systemd/system/instagram-vps-publisher@autonomia.service.d/30-cpu-quota.conf",
+            "sha256": "41c6db5c35846b239a0da96950bc1e599703b0b1aabbb274a6f99f95d168ea43",
+            "runtime_lines": [
+              "CPUQuota=200%"
+            ]
+          }
+        ]
+      }
+    ],
+    "host_node_version": "v18.19.1",
+    "read_only": true
+  },
+  "scope": "Read-only runtime inventory; MainPID mount namespace and fixed Node bind hashes. No service mutation."
+}

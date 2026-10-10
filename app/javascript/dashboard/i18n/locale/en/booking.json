@@ -1,0 +1,516 @@
+{
+  "BOOKING": {
+    "PAGE": {
+      "TITLE": "Scheduling",
+      "SUBTITLE": "Create the page where clients book a time with you.",
+      "BACK_TO_CALENDAR": "Back to calendar"
+    },
+    "LIST": {
+      "LOADING": "Loading the pages",
+      "ERROR": "We couldn't load the pages.",
+      "RETRY": "Try again",
+      "EMPTY": "You don't have a booking page yet.",
+      "EMPTY_VIEW_ONLY": "There are no booking pages yet.",
+      "CREATE": "Create page",
+      "NEW": "New page",
+      "LABEL": "Booking pages"
+    },
+    "CARD": {
+      "UNTITLED": "Untitled page",
+      "UPCOMING": "No meetings booked | 1 meeting booked | {count} meetings booked",
+      "STATUS": {
+        "LIVE": "Live",
+        "PAUSED": "Paused",
+        "DRAFT": "Draft"
+      },
+      "ATTENTION": "The person who attends can't take meetings right now. Tap Edit and choose someone else.",
+      "EDIT": "Edit",
+      "VIEW": "View",
+      "PAUSE": "Pause page",
+      "PUBLISH": "Publish",
+      "DELETE": "Delete",
+      "CONFIRM_DELETE": "Delete this page? The link will stop working.",
+      "CONFIRM_YES": "Yes, delete",
+      "CONFIRM_NO": "Cancel",
+      "DELETE_BLOCKED": "This page has booked meetings. Pause the page instead of deleting it.",
+      "DELETED": "Page deleted.",
+      "PAUSED_OK": "Page paused.",
+      "ACTION_ERROR": "That didn't work. Try again.",
+      "ORPHANED": "No meetings left with {name} | 1 meeting stayed with {name}, who no longer attends. Use Move meetings. | {count} meetings stayed with {name}, who no longer attends. Use Move meetings.",
+      "PERSON_PAUSED": "{name} paused their schedule.",
+      "REMOVED_PERSON": "Removed person"
+    },
+    "LINK": {
+      "COPY": "Copy link",
+      "COPIED": "Link copied.",
+      "COPY_ERROR": "We couldn't copy it. Select the link and copy it.",
+      "QR": "QR code",
+      "QR_HIDE": "Hide QR code",
+      "QR_ALT": "QR code of the booking page",
+      "QR_ERROR": "We couldn't create the QR code.",
+      "OPEN": "Open",
+      "OPEN_LABEL": "Open the page in a new tab",
+      "PER_PERSON_TITLE": "One link for each person",
+      "PER_PERSON_HINT": "Customers book through the link of the person who will serve them. Share each person's link.",
+      "PERSON_LABEL": "Link of {name}"
+    },
+    "STEPS": {
+      "LABEL": "Steps to create the page",
+      "COUNT": "Step {current} of {total}",
+      "MODELO": "Template",
+      "CONTE": "Name and team",
+      "ONDE": "Where",
+      "QUANDO": "Days and hours",
+      "CARA": "Your brand",
+      "AVISOS": "Notices",
+      "PREVIA": "Preview and publish",
+      "DONE": "done"
+    },
+    "WIZARD": {
+      "BACK": "Back",
+      "BACK_TO_LIST": "Back to the list",
+      "CONTINUE": "Continue",
+      "SEE_PREVIEW": "See how it looks",
+      "PUBLISH": "Publish",
+      "DONE": "Back to the list",
+      "SAVE_ERROR": "We couldn't save. Check and try again.",
+      "LOAD_ERROR": "We couldn't open the page.",
+      "LIVE_NOTICE": "This page is live. What you change applies as soon as you tap Continue.",
+      "ERRORS": {
+        "TITLE": "Write the name the client sees.",
+        "PEOPLE": "Choose who attends.",
+        "LOCATION": "Choose where the appointment happens.",
+        "LINK": "Paste the full link, starting with https://",
+        "ADDRESS": "Write the address.",
+        "CALENDAR": "Choose the calendar email inbox.",
+        "WEEKDAYS": "Choose at least one day.",
+        "HOURS": "The end time must be after the start time.",
+        "IMAGE_TYPE": "Use a PNG, JPEG or WebP image.",
+        "IMAGE_SIZE": "The image can be up to 2 MB.",
+        "IMAGE_UPLOAD": "We couldn't upload the image. Try another one."
+      },
+      "SERVER_ERRORS": {
+        "CALENDAR_GONE": "That calendar email inbox is no longer available. Choose another one or remove Google Meet and Teams.",
+        "PEOPLE_GONE": "Someone you chose can no longer take meetings. Choose again.",
+        "LOCATIONS": "One of the places can no longer be used. Check where the appointment happens.",
+        "HOURS": "Check the days and times.",
+        "PIPELINE": "That pipeline or stage no longer exists. Choose another one.",
+        "BRAND": "Check the color and the welcome message.",
+        "NOTICE_INBOX_GONE": "This WhatsApp can no longer send notices. Choose another one or leave it without notices.",
+        "NOTICE_TEMPLATES": "One of the chosen messages does not work for notices. Choose another one from the list.",
+        "NOTICES": "Check the notices and the deadline to change."
+      }
+    },
+    "TEMPLATE": {
+      "TITLE": "What do you want to book?",
+      "USE": "Use this template",
+      "POPULAR": "Most used",
+      "CREATE_ERROR": "We couldn't create the page. Try again.",
+      "SALES": {
+        "NAME": "Sales call",
+        "HINT": "30 minutes · WhatsApp video"
+      },
+      "CONSULT": {
+        "NAME": "Appointment",
+        "HINT": "45 minutes · in person"
+      },
+      "VISIT": {
+        "NAME": "Visit",
+        "HINT": "60 minutes · in person"
+      },
+      "BLANK": {
+        "NAME": "Start from scratch",
+        "HINT": "You fill in everything"
+      }
+    },
+    "ABOUT": {
+      "TITLE": "What is the appointment called?",
+      "NAME_LABEL": "Name the client sees",
+      "DURATION_LABEL": "How long does it take?",
+      "PEOPLE_LABEL": "Who attends?",
+      "PEOPLE_HINT": "Tap to choose. It can be more than one person.",
+      "PEOPLE_LOADING": "Loading the team",
+      "PEOPLE_ERROR": "We couldn't load the team.",
+      "PEOPLE_EMPTY": "Nobody on the team can attend yet."
+    },
+    "WHERE": {
+      "TITLE": "Where will the appointment be?",
+      "HINT": "Choose one or more.",
+      "RECOMMENDED": "Recommended",
+      "WHATSAPP_VIDEO": {
+        "NAME": "WhatsApp video",
+        "HINT": "You call the client at the time"
+      },
+      "WHATSAPP_VOICE": {
+        "NAME": "WhatsApp call",
+        "HINT": "Voice only"
+      },
+      "CUSTOM_LINK": {
+        "NAME": "My link",
+        "HINT": "Zoom, Meet or another one you already use"
+      },
+      "IN_PERSON": {
+        "NAME": "In person",
+        "HINT": "The client comes to the address"
+      },
+      "GOOGLE_MEET": {
+        "NAME": "Google Meet",
+        "HINT": "The link comes from your Google calendar"
+      },
+      "TEAMS": {
+        "NAME": "Microsoft Teams",
+        "HINT": "The link comes from your Microsoft calendar"
+      },
+      "LINK_LABEL": "Your link",
+      "LINK_PLACEHOLDER": "https://",
+      "ADDRESS_LABEL": "Address",
+      "ADDRESS_PLACEHOLDER": "Street, number and city",
+      "CALENDAR_LABEL": "Calendar email inbox",
+      "CALENDAR_HINT": "Google Meet and Teams show up here when you connect an email inbox.",
+      "CALENDAR_DISCONNECTED": "The calendar email inbox was disconnected. Remove this place or connect it again."
+    },
+    "WHEN": {
+      "TITLE": "When do you attend?",
+      "DAYS_LABEL": "Days",
+      "FROM": "From",
+      "TO": "To",
+      "NOTICE_LABEL": "Minimum notice",
+      "NOTICE_NONE": "No notice",
+      "NOTICE_VALUE": "{value} in advance",
+      "BUFFER_LABEL": "Break",
+      "BUFFER_NONE": "No break",
+      "BUFFER_VALUE": "{value} between one time slot and the next",
+      "EXTRA_LABEL": "Other durations (optional)",
+      "EXTRA_HINT": "The client chooses how long they want.",
+      "HOLIDAYS_LABEL": "Holidays",
+      "HOLIDAYS_TOGGLE": "Close on national holidays",
+      "HOLIDAYS_ON_HINT": "Nobody can book on national holidays.",
+      "HOLIDAYS_OFF_HINT": "National holidays stay open like any other day."
+    },
+    "WEEKDAYS": {
+      "SUN": "Sun",
+      "MON": "Mon",
+      "TUE": "Tue",
+      "WED": "Wed",
+      "THU": "Thu",
+      "FRI": "Fri",
+      "SAT": "Sat"
+    },
+    "WEEKDAYS_LONG": {
+      "SUN": "Sunday",
+      "MON": "Monday",
+      "TUE": "Tuesday",
+      "WED": "Wednesday",
+      "THU": "Thursday",
+      "FRI": "Friday",
+      "SAT": "Saturday"
+    },
+    "FORMAT": {
+      "MINUTES": "{n} minutes",
+      "ONE_HOUR": "1 hour",
+      "HOURS": "{n} hours",
+      "MIXED": "{hours} h {minutes} min",
+      "ONE_DAY": "1 day",
+      "DAYS": "{n} days",
+      "HOUR": "{hour}:00",
+      "DAY_RANGE": "{first} to {last}"
+    },
+    "LOOK": {
+      "TITLE": "Make it yours",
+      "LOGO": "Logo",
+      "PHOTO": "Your photo",
+      "UPLOAD": "Upload image",
+      "CHANGE": "Change image",
+      "UPLOADING": "Uploading…",
+      "IMAGE_HINT": "PNG, JPEG or WebP, up to 2 MB.",
+      "COLOR_LABEL": "Color",
+      "COLORS": {
+        "BLUE": "Blue",
+        "GREEN": "Green",
+        "RED": "Red",
+        "AMBER": "Amber",
+        "PURPLE": "Purple",
+        "GRAPHITE": "Graphite"
+      },
+      "HEADLINE_LABEL": "Welcome sentence",
+      "HEADLINE_PLACEHOLDER": "Pick the best time for you",
+      "LOGO_ALT": "Company logo",
+      "PHOTO_ALT": "Photo of who attends"
+    },
+    "NOTICES": {
+      "TITLE": "WhatsApp notices",
+      "INTRO": "The customer gets a message with the day, the time and a link to confirm, change or cancel. Every message has a way to stop receiving them.",
+      "INBOX_LABEL": "Which WhatsApp sends the notice?",
+      "INBOX_NONE": "No notices",
+      "INBOX_CURRENT": "The WhatsApp already chosen",
+      "NO_INBOXES": "No connected WhatsApp can send notices yet. When there is one, it shows up here.",
+      "CHANNEL": {
+        "OFFICIAL": "This is the official WhatsApp. If the customer has not talked to you in the last 24 hours, the notice only goes out with a message approved by Meta. Choose those messages below.",
+        "WAHA": "From this number, the notice only goes out if the customer talked to you in the last 24 hours. This keeps the number safe from being blocked.",
+        "API": "From this number, the notice goes out right away when the customer talked to you in the last 24 hours. Otherwise it goes out with the ready message chosen below."
+      },
+      "PRESET_LABEL": "When should the customer be notified?",
+      "PRESETS": {
+        "STANDARD": {
+          "LABEL": "When booked, 1 day before and 1 hour before",
+          "HINT": "Three messages. Almost nobody forgets.",
+          "SUMMARY": "when booked, 1 day before and 1 hour before"
+        },
+        "LIGHT": {
+          "LABEL": "When booked and 1 hour before",
+          "HINT": "Two messages.",
+          "SUMMARY": "when booked and 1 hour before"
+        },
+        "MINIMAL": {
+          "LABEL": "Only when booked",
+          "HINT": "One message, with the day, the time and the link.",
+          "SUMMARY": "only when booked"
+        }
+      },
+      "RECOMMENDED": "Recommended",
+      "SAMPLE_LABEL": "This is what the customer gets",
+      "SAMPLE_TEXT": "Hi, Ana! Your time is booked for 10/14 at 3:00 PM. To confirm, change or cancel: chat.example.com/b/AB3K9QXZ\nTo stop these notices: chat.example.com/b/AB3K9QXZ",
+      "TEMPLATES_LABEL": "Messages approved by Meta",
+      "TEMPLATES_HINT": "Choose an approved message for each notice. To show up here, it needs the booking link in place of {link}. It can use {name} for the customer name and {when} for the day and time.",
+      "TEMPLATES_EMPTY": "This WhatsApp has no approved message with the booking link yet. Without one, the notice only goes out to people who talked to you in the last 24 hours. Ask whoever manages WhatsApp to create one on Meta.",
+      "TEMPLATE_NONE": "No approved message",
+      "SAMPLE_NAME": "Ana",
+      "SAMPLE_WHEN": "10/14 at 3:00 PM",
+      "SAMPLE_LINK": "(booking link)",
+      "TEMPLATE_OPTION_LANGUAGE": "{preview} · {language}",
+      "TEMPLATE_SAVED": "The message already chosen",
+      "MISSING_TEMPLATES": "No ready message for: {kinds}. That notice only goes out to people who talked to you in the last 24 hours.",
+      "API_TEMPLATES_LABEL": "Ready messages of this WhatsApp",
+      "API_TEMPLATES_HINT": "Choose a ready message for each notice. The day, the time and the link go at the end of it.",
+      "API_TEMPLATES_EMPTY": "This WhatsApp has no ready message yet. Without one, the notice only goes out to people who talked to you in the last 24 hours.",
+      "API_TEMPLATES_FAILED": "Could not see the ready messages of this WhatsApp. Ask an administrator to choose them.",
+      "TEMPLATE_FOR": "Approved message for the notice {notice}",
+      "KINDS": {
+        "BOOKED": "When booked",
+        "RESCHEDULED": "When the time changes",
+        "DAY_BEFORE": "1 day before",
+        "HOUR_BEFORE": "1 hour before"
+      },
+      "CANCEL_LABEL": "Until when can the customer change or cancel?",
+      "CANCEL_HINT": "After that, the link shows the time but does not allow changes. The customer then talks to you.",
+      "CANCEL_VALUE": "Up to {value} before",
+      "CANCEL_ANYTIME": "Up to the booked time",
+      "TEST": {
+        "BUTTON": "Test on my WhatsApp",
+        "PHONE_LABEL": "Your WhatsApp",
+        "PHONE_HINT": "You get a link just like the customer does. If you book a time with it, the time is really booked.",
+        "PHONE_PLACEHOLDER": "+1 555 123 4567",
+        "SEND": "Send test",
+        "SENT": "Done. Check your WhatsApp.",
+        "ERRORS": {
+          "NO_INBOX": "This page has no notices. Choose a WhatsApp in the notices step.",
+          "FORBIDDEN": "You do not have access to this WhatsApp. Ask an administrator to run the test.",
+          "NOT_PUBLISHED": "Publish the page before testing.",
+          "INVALID_PHONE": "Check the number. Include the country and area code, for example +1 555 123 4567.",
+          "OUTSIDE_WINDOW": "First send a “hi” from your phone to the company WhatsApp. Then tap Send test again.",
+          "NUMBER_CAP": "This number already got many messages today. Try tomorrow or use another number.",
+          "STOPPED": "This number asked not to get messages. Use another number.",
+          "CONVERSATION_FORBIDDEN": "This number already talks to the company in a conversation you cannot open. Use another number.",
+          "CANNOT_SEND": "Could not send from this WhatsApp. Check that it is connected.",
+          "FAILED": "Could not send right now. Try again."
+        }
+      }
+    },
+    "PREVIEW": {
+      "TITLE": "This is what the client will see",
+      "SCHEDULE": "{days}, from {from} to {to}",
+      "DEFAULT_HEADLINE": "Pick the best time for you",
+      "WITH": "With {name}",
+      "PICK_TIME": "Choose a time",
+      "DESTINATION": "Whoever books goes to the {pipeline} pipeline, {stage} stage, with {people}.",
+      "DESTINATION_NO_PIPELINE": "Whoever books stays with {people}. No pipeline is chosen yet.",
+      "DEFAULT_PIPELINE": "default",
+      "DEFAULT_STAGE": "first",
+      "NOBODY": "nobody yet",
+      "ALTER": "Change",
+      "PIPELINE_LABEL": "Pipeline",
+      "STAGE_LABEL": "Stage",
+      "SAVE": "Save",
+      "CANCEL": "Cancel",
+      "PIPELINES_ERROR": "We couldn't load the pipelines.",
+      "MISSING_TITLE": "Almost ready to publish:",
+      "MISSING": {
+        "HOST": "Choose who attends",
+        "LOCATION": "Choose where the appointment happens",
+        "WORKING_HOURS": "Choose the days you attend",
+        "PIPELINE": "Choose which pipeline new bookings go to"
+      },
+      "FIX": "Fix it",
+      "PUBLISHED_TITLE": "Your page is live.",
+      "PUBLISHED_TEXT": "Send the link to your clients or show the QR code.",
+      "PUBLISHING": "Publishing",
+      "NOTICES_ON": "The customer gets a WhatsApp notice {when}, from the number {inbox}.",
+      "NOTICES_ON_NO_NAME": "The customer gets a WhatsApp notice {when}.",
+      "NOTICES_OFF": "No WhatsApp notices. The customer sees the time on screen and in their calendar.",
+      "NOTICES_WINDOW_ONLY": "Only for people who talked to you in the last 24 hours.",
+      "NOTICES_ALTER": "Change the WhatsApp notices",
+      "CANCEL_UNTIL": "They can change or cancel up to {value} before.",
+      "CANCEL_ANYTIME": "They can change or cancel up to the booked time."
+    },
+    "POST_MEETING": {
+      "TITLE": "After the meeting",
+      "OFF": "When someone marks “It happened”, the card stays where it is.",
+      "SOME_STAGE": "the chosen stage",
+      "SUMMARY_ASK": "When someone marks “It happened”, we ask whether the card goes to the “{stage}” stage.",
+      "SUMMARY_AUTO": "When someone marks “It happened”, the card goes to the “{stage}” stage by itself.",
+      "SCOPE_HINT": "Only cards in the page pipeline or in the pipeline of this stage change. A card from another pipeline stays where it is.",
+      "STAGE_LABEL": "Stage after the meeting",
+      "MODE_LABEL": "How to move",
+      "MODES": {
+        "ASK": {
+          "LABEL": "Ask first",
+          "HINT": "The person chooses “Move” or “Not now”."
+        },
+        "AUTO": {
+          "LABEL": "Move by itself",
+          "HINT": "The card changes stage and it shows in the card history."
+        }
+      },
+      "TURN_OFF": "Do not move the card",
+      "SAVE_ERROR": "Could not save. Check the stage and try again."
+    },
+    "VIEW": {
+      "READ_ONLY": "You can see this page, but you can't change it."
+    },
+    "RESULTS": {
+      "MENU": "My numbers",
+      "TAB_PAGES": "Pages",
+      "TAB_RESULTS": "Results",
+      "TABS_LABEL": "Scheduling sections",
+      "TITLE_TEAM": "Scheduling results",
+      "TITLE_MINE": "My numbers",
+      "SUBTITLE": "See if your scheduling links are turning into booked meetings.",
+      "PERIOD_LABEL": "Period",
+      "PERIOD_7": "7 days",
+      "PERIOD_30": "30 days",
+      "SCOPE_LABEL": "Whose numbers",
+      "SCOPE_MINE": "Only mine",
+      "SCOPE_TEAM": "Whole team",
+      "LOADING": "Loading the numbers",
+      "ERROR": "We could not load the numbers.",
+      "RETRY": "Try again",
+      "EMPTY": "Nothing happened in the last {days} days.",
+      "SEE_30": "See 30 days",
+      "REFRESH": "Refresh",
+      "NUMBERS_LABEL": "Numbers for the last {days} days",
+      "CONFIRMED": "Confirmed through the link: {count}",
+      "NUMBERS": {
+        "SENT": {
+          "LABEL": "Links sent",
+          "HINT": "Scheduling links sent or copied to clients."
+        },
+        "OPENED": {
+          "LABEL": "Opened",
+          "HINT": "Clients who opened the link."
+        },
+        "BOOKED": {
+          "LABEL": "Booked",
+          "HINT": "Times booked through the links and the page."
+        },
+        "ATTENDED": {
+          "LABEL": "Showed up",
+          "HINT": "Meetings marked as \"the client came\"."
+        },
+        "NO_SHOW": {
+          "LABEL": "Missed",
+          "HINT": "Meetings marked as \"the client did not come\"."
+        }
+      },
+      "ORIGINS": {
+        "TITLE": "Where the bookings came from",
+        "CONVERSATION": "Link sent in a conversation",
+        "PUBLIC_LINK": "Page link (bio, website, ad)",
+        "CONTACT_REQUEST": "Contact request",
+        "AI": "AI assistant",
+        "EMPTY": "No time booked in this period yet."
+      },
+      "LIST": {
+        "TITLE": "Opened the link and did not book",
+        "HINT_MINE": "Only clients who got your link. Nobody gets a message unless you tap.",
+        "HINT_TEAM": "Only clients you can see. Nobody gets a message unless someone taps.",
+        "LOADING": "Loading the list",
+        "ERROR": "We could not load the list.",
+        "EMPTY": "Nobody opened the link without booking in the last {days} days.",
+        "OPENED": "Opened {when}",
+        "VIA": "{page} · sent by {name}",
+        "RESEND": "Send again",
+        "RESEND_LABEL": "Send the link again to {name}",
+        "RESENT": "Sent again",
+        "SENT_OK": "Link sent in the conversation.",
+        "NO_CONVERSATION": "No conversation. Use the Schedule button on the card.",
+        "MORE": "See more",
+        "ERRORS": {
+          "CANNOT_REPLY": "The conversation is closed. The client needs to send a message first.",
+          "NO_CONVERSATION": "This client has no conversation. Use the Schedule button on the card.",
+          "NO_PAGE": "The page of this link is not live.",
+          "FORBIDDEN": "You cannot send to this client.",
+          "GENERIC": "We could not send. Try again."
+        }
+      }
+    },
+    "REASSIGN": {
+      "OPEN": "Move meetings",
+      "TITLE": "Move meetings to someone else",
+      "HINT": "We check that the new person is free at each time before moving.",
+      "FROM": "From",
+      "TO": "To",
+      "CHOOSE": "Choose a person",
+      "ONLY_THIS_PAGE": "Only this page",
+      "PREVIEW": "See before moving",
+      "WILL_MOVE": "No meetings to move | 1 meeting will move to {name} | {count} meetings will move to {name}",
+      "CONFLICTS": "{name} is already busy at these times. These meetings stay as they are:",
+      "CONFIRM": "Move to {name}",
+      "CANCEL": "Cancel",
+      "CLOSE": "Close",
+      "DONE": "No meetings moved | Done: 1 meeting moved to {name} | Done: {count} meetings moved to {name}",
+      "DONE_CONFLICTS": "1 meeting stayed as it was because {name} was busy. | {count} meetings stayed as they were because {name} was busy.",
+      "PEOPLE_INVALID": "This person cannot take meetings. Choose someone else.",
+      "ERROR": "That did not work. Try again.",
+      "FORMER": "{name} (no longer attends)"
+    },
+    "MY_HOURS": {
+      "MENU": "My hours",
+      "TITLE": "My hours",
+      "SUBTITLE": "Choose when you take meetings. It always stays within the pages' hours.",
+      "LIMIT": "Pages' limit: {days}, {from} to {to}",
+      "PAUSE_TITLE": "Your schedule is open",
+      "PAUSE_HINT": "Customers can book with you at the times below.",
+      "PAUSED_TITLE": "Your schedule is paused",
+      "PAUSED_HINT": "Nobody books with you until you come back.",
+      "PAUSE": "Pause my schedule",
+      "RESUME": "Take meetings again",
+      "PAUSED_OK": "Schedule paused.",
+      "RESUMED_OK": "Schedule open again.",
+      "NO_PAGES": "You are not on any booking page yet. When the admin adds you, your hours show up here.",
+      "DENIED": "You do not take meetings in this account.",
+      "SAVE": "Save my hours",
+      "USE_PAGE": "Use the page hours",
+      "SAVED": "Hours saved.",
+      "ERRORS": {
+        "DAYS": "Choose at least one day. To stop taking meetings, use \"Pause my schedule\".",
+        "HOURS": "The end must be after the start.",
+        "OUTSIDE": "That time goes past the pages' limit. Choose within it.",
+        "NO_PAGES": "You are not on any booking page yet.",
+        "GENERIC": "That did not work. Try again."
+      }
+    },
+    "AI_AGENT": {
+      "TITLE": "Book meetings",
+      "DESCRIPTION": "The agent offers real times from a booking page and books the meeting in the conversation.",
+      "PAGE_LABEL": "Booking page",
+      "OFF": "Don't book",
+      "PAUSED_PAGE": "{title} (paused)",
+      "PAUSED_HINT": "This page is paused. While it stays paused, the agent tells the client and hands the conversation to a person.",
+      "HINT": "The meeting goes to the page owner, or to the person assigned to the conversation when the page has one link per person.",
+      "EMPTY": "Create a booking page in CRM > Scheduling to let the agent book meetings.",
+      "SAVE": "Save",
+      "BOOKED_BY_AI": "Booked by the AI",
+      "BOOKED_BY_AI_DETAIL": "Booked by the AI: {title}"
+    }
+  }
+}

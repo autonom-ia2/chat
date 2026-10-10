@@ -34,6 +34,11 @@ const label = computed(() => {
     : stage.value.stage_name;
 });
 
+// Conversa com mais de um assunto aberto (#1143): o selo mostra o atual e quantos outros há.
+const otherSubjects = computed(() =>
+  Math.max((stage.value?.subjects_count || 0) - 1, 0)
+);
+
 // O selo abre o card no CRM (a ficha já aberta, no funil certo). O clique não
 // chega ao cartão da conversa, que abriria a conversa junto.
 const abrirNoCrm = () => {
@@ -59,6 +64,19 @@ const abrirNoCrm = () => {
     <span class="max-w-[13rem] truncate text-xs text-n-slate-11">{{
       label
     }}</span>
+    <span
+      v-if="otherSubjects"
+      class="flex-shrink-0 rounded-full bg-n-alpha-2 px-1 text-[10px] font-semibold leading-4 text-n-slate-11"
+      :title="
+        $t('CRM_KANBAN.CONVERSATION.SUBJECTS.MORE_HINT', {
+          count: otherSubjects,
+        })
+      "
+    >
+      {{
+        $t('CRM_KANBAN.CONVERSATION.SUBJECTS.MORE', { count: otherSubjects })
+      }}
+    </span>
   </button>
   <div
     v-else-if="label"
@@ -70,5 +88,18 @@ const abrirNoCrm = () => {
     <span class="max-w-[13rem] truncate text-xs text-n-slate-11">{{
       label
     }}</span>
+    <span
+      v-if="otherSubjects"
+      class="flex-shrink-0 rounded-full bg-n-alpha-2 px-1 text-[10px] font-semibold leading-4 text-n-slate-11"
+      :title="
+        $t('CRM_KANBAN.CONVERSATION.SUBJECTS.MORE_HINT', {
+          count: otherSubjects,
+        })
+      "
+    >
+      {{
+        $t('CRM_KANBAN.CONVERSATION.SUBJECTS.MORE', { count: otherSubjects })
+      }}
+    </span>
   </div>
 </template>

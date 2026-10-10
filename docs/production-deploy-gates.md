@@ -18,12 +18,29 @@ decide): `**`, `.*`, `.*/**`, `!.github/**`, `!docs/**`, `!*.md`, `!**/*.md`,
 `app/**/*.md`, `lib/operator_guide/**`, `lib/central_de_ajuda/**`, `config/onboarding/**`. `paths-ignore` não aceita
 reinclusão com `!`, por isso a troca.
 
+Desde #995, alterações somente em `scripts/instagram_testers/session-manager.mjs`,
+`browser-operations.mjs`,
+`tests/instagram_testers/**` e `tests/qa/instagram-automation/**` também não
+disparam AWS. Essas duas fontes são instaladas separadamente na VPS; os testes
+não mudam a aplicação publicada. A exclusão é específica: o publisher Ruby,
+wrappers SSH, módulos compartilhados e demais arquivos continuam disparando
+o deploy. Um push misto com mudança na aplicação também dispara normalmente.
+Desde #1180, `scripts/instagram_testers/runtime/vps/release/**` (a ferramenta de
+release da VPS, executada só no Mac do operador) também fica fora; o restante de
+`runtime/vps/` continua disparando AWS de forma conservadora.
+O teste `tests/instagram_testers/deploy-paths_test.py` verifica as duas stacks
+e a preservação do deploy manual, rollback, manuais e dependências.
+
 Para executar um dos workflows à mão, o operador precisa:
 
 1. selecionar a branch `main`;
 2. escolher `deploy` ou `rollback`;
 3. marcar `confirm_production=true`;
-4. passar pelos gates configurados no Environment `production`.
+4. ter a vez dada pela sessão Orquestração (regra em [processo-de-release.md](processo-de-release.md#deploy-manual)).
+
+O Environment `production` **não tem regra de proteção** (sem revisor, sem restrição de branch: conferido em
+09/10/2026). A restrição à `main` vem da condição `if: github.ref == 'refs/heads/main'` dos jobs. Por decisão do
+Rodrigo (09/10/2026, #1173), o controle do disparo manual é de processo, não de revisor obrigatório.
 
 Workflows:
 

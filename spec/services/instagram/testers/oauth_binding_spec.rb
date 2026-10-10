@@ -6,14 +6,18 @@ RSpec.describe Instagram::Testers::OauthBinding do
   let(:configuration) { instance_double(Instagram::Testers::Configuration, app_id: '10001', ensure_available!: nil) }
   let(:selection) { instance_double(Instagram::Testers::Selection) }
   let(:client) { instance_double(Instagram::Testers::Client) }
+  # The outer group owns these shared fixtures; nested proof examples inherit the hooks.
+  # rubocop:disable RSpec/DescribedClass
   let(:target) do
     { 'id' => '17841400000000001', 'username' => 'demo_company', 'app_id' => '10001', 'account_id' => account.id.to_s,
-      'actor_id' => actor.id.to_s, 'installation' => described_class.installation }
+      'actor_id' => actor.id.to_s, 'installation' => Instagram::Testers::OauthBinding.installation }
   end
   let(:payload) do
-    { 'tester_selection' => target, 'installation' => described_class.installation, 'state_version' => described_class::STATE_VERSION,
+    { 'tester_selection' => target, 'installation' => Instagram::Testers::OauthBinding.installation,
+      'state_version' => Instagram::Testers::OauthBinding::STATE_VERSION,
       'sub' => account.id, 'actor_id' => actor.id, 'iat' => Time.current.to_i, 'exp' => 15.minutes.from_now.to_i, 'jti' => SecureRandom.uuid }
   end
+  # rubocop:enable RSpec/DescribedClass
 
   around do |example|
     with_modified_env('FRONTEND_URL' => 'https://autonomia.example') { example.run }
@@ -136,6 +140,105 @@ RSpec.describe Instagram::Testers::OauthBinding do
     [state.merge('iat' => 16.minutes.ago.to_i, 'exp' => 1.minute.ago.to_i),
      state.merge('iat' => 1.minute.from_now.to_i), state.merge('exp' => 16.minutes.from_now.to_i)].each do |invalid|
       expect { described_class.claim!(invalid) }.to(raise_error { |error| expect(error.code).to eq('invalid_selection') })
+    end
+  end
+
+  describe Instagram::Testers::AuthorizationAttestation do
+    let(:attestation_selection) do
+      { 'id' => '17841400000000001', 'username' => 'demo_company', 'app_id' => '10001', 'account_id' => '16',
+        'actor_id' => '2', 'installation' => Instagram::Testers::OauthBinding.installation }
+    end
+    let(:operation_id) { SecureRandom.uuid }
+    let(:request_id) { SecureRandom.uuid }
+    let(:token) do
+      described_class.issue(selection: attestation_selection, operation_id: operation_id, request_id: request_id,
+                            source_action: 'status')
+    end
+
+    around { |example| with_modified_env('FRONTEND_URL' => 'https://autonomia.example') { example.run } }
+
+    it 'binds the full accepted selection and consumes a status proof once' do
+      expect(Redis::Alfred).to receive(:set).with(
+        a_string_starting_with("#{described_class::KEY_PREFIX}:"), 'used', nx: true, ex: described_class::TTL.to_i
+      ).and_return(true, false)
+
+      payload = described_class.consume!(token: token, selection: attestation_selection)
+      expect(payload).to include('status' => 'accepted', 'source_action' => 'status', 'operation_id' => operation_id,
+                                 'request_id' => request_id, 'attested_at' => a_string_matching(/Z\z/))
+      expect do
+        described_class.consume!(token: token, selection: attestation_selection)
+      end.to(raise_error { |error| expect(error.code).to eq('unknown_status') })
+    end
+
+    it 'maps an expired proof to unknown_status and scope mismatches to invalid_selection' do
+      issued = token
+      travel 6.minutes do
+        expect { described_class.consume!(token: issued, selection: attestation_selection) }.to raise_error do |error|
+          expect(error.code).to eq('unknown_status')
+        end
+      end
+
+      expect(Redis::Alfred).not_to receive(:set)
+      expect do
+        described_class.consume!(token: token, selection: attestation_selection.merge('username' => 'other_profile'))
+      end.to(raise_error { |error| expect(error.code).to eq('invalid_selection') })
+    end
+
+    it 'allows an accepted invite proof with the same bounded schema' do
+      invite_token = described_class.issue(selection: attestation_selection, operation_id: operation_id, request_id: request_id,
+                                           source_action: 'invite')
+      allow(Redis::Alfred).to receive(:set).and_return(true)
+
+      expect(described_class.consume!(token: invite_token, selection: attestation_selection)).to include('source_action' => 'invite')
+    end
+  end
+
+  describe Instagram::Testers::BrowserOperations do
+    let(:store) { instance_double(Instagram::Testers::BrowserOperationStore) }
+    let(:operations) { described_class.new(store: store) }
+    let(:operation_selection) do
+      { 'id' => '17841400000000001', 'username' => 'demo_company', 'app_id' => '10001', 'account_id' => '16',
+        'actor_id' => '2', 'installation' => Instagram::Testers::OauthBinding.installation }
+    end
+    let(:operation) do
+      { 'id' => SecureRandom.uuid, 'request_id' => SecureRandom.uuid, 'action' => 'status', 'account_id' => '16',
+        'actor_id' => '2', 'app_id' => '10001', 'installation' => operation_selection.fetch('installation'),
+        'selection' => operation_selection }
+    end
+    let(:request) do
+      { 'id' => operation.fetch('id'), 'request_id' => operation.fetch('request_id'), 'claim' => SecureRandom.uuid,
+        'status' => 'accepted', 'target_id' => operation_selection.fetch('id') }
+    end
+
+    around { |example| with_modified_env('FRONTEND_URL' => 'https://autonomia.example') { example.run } }
+
+    it 'emits an attestation only after a status is reconciled as accepted' do
+      completed = nil
+      allow(operations).to receive(:reconcile_status).and_return('accepted')
+      allow(store).to receive(:complete) { |**attributes| completed = attributes.fetch(:result) }
+      allow(Redis::Alfred).to receive(:set).and_return(true)
+
+      operations.send(:complete_status, request, operation)
+
+      expect(completed).to include('status' => 'accepted', 'authorization_attestation' => a_string_matching(/\A.+\z/))
+      expect(Instagram::Testers::AuthorizationAttestation.consume!(token: completed.fetch('authorization_attestation'),
+                                                                   selection: operation_selection)).to include('status' => 'accepted')
+    end
+
+    it 'emits the same proof for an accepted invite that did not write' do
+      operation = self.operation.merge('action' => 'invite')
+      request = self.request.merge('status' => 'accepted', 'invited' => false, 'write_started' => false)
+      completed = nil
+      outcome = instance_double(Instagram::Testers::InvitationOutcome)
+      allow(operations).to receive(:invitation_outcome).and_return(outcome)
+      allow(outcome).to receive(:reconcile).and_return('accepted')
+      allow(store).to receive(:complete) { |**attributes| completed = attributes.fetch(:result) }
+      allow(Redis::Alfred).to receive(:set).and_return(true)
+
+      operations.send(:complete_invite, request, operation)
+
+      expect(completed).to include('status' => 'accepted', 'invited' => false,
+                                   'authorization_attestation' => a_string_matching(/\A.+\z/))
     end
   end
 end

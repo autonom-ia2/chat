@@ -10,6 +10,7 @@ import Avatar from 'next/avatar/Avatar.vue';
 import SLACardLabel from './components/SLACardLabel.vue';
 import ConversationCallButton from './ConversationCallButton.vue';
 import CrmConversationCardButton from './CrmConversationCardButton.vue';
+import BookingInviteButton from 'dashboard/components-next/Booking/BookingInviteButton.vue';
 import ConversationCampaignMark from 'dashboard/components-next/CampaignJourney/ConversationCampaignMark.vue';
 import { BULLET } from 'dashboard/components-next/CampaignJourney/textMarks';
 import wootConstants from 'dashboard/constants/globals';
@@ -178,6 +179,7 @@ const copyConversationId = async () => {
       />
       <ConversationCallButton :inbox="inbox" :chat="currentChat" />
       <CrmConversationCardButton :chat="currentChat" />
+      <BookingInviteButton :conversation="currentChat" />
       <MoreActions :conversation-id="currentChat.id" />
     </div>
   </div>

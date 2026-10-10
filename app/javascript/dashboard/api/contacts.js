@@ -110,6 +110,15 @@ class ContactAPI extends ApiClient {
     return axios.delete(`${this.url}/${contactId}/opt_out`);
   }
 
+  // Lead ou cliente (#1144): rota própria, fora da edição comum.
+  markCustomer(contactId) {
+    return axios.post(`${this.url}/${contactId}/customer`);
+  }
+
+  removeCustomer(contactId) {
+    return axios.delete(`${this.url}/${contactId}/customer`);
+  }
+
   exportContacts(queryPayload) {
     return axios.post(`${this.url}/export`, queryPayload);
   }

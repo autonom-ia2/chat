@@ -52,6 +52,25 @@ RSpec.describe Crm::MetaAds::EnrichTouchesJob do
       expect(touch.except('ad_name', 'adset_name', 'campaign_name')).to eq(ctwa_touch)
     end
 
+    it 'depois dos nomes, liga a conversa ao anúncio e avisa a tela (#1073, F2b)' do
+      Crm::MetaAdsConnection.find_by!(account_id: account.id).update!(ad_account_id: '2196424464528988', ad_account_timezone: 'America/Sao_Paulo')
+      set_touches([ctwa_touch])
+      stub_ad
+
+      connection = Crm::MetaAdsConnection.find_by!(account_id: account.id)
+      Redis::Alfred.delete("#{Crm::MetaAds::Insights::Broadcaster::THROTTLE_PREFIX}:#{connection.id}")
+
+      expect { described_class.perform_now(conversation.id) }.to have_enqueued_job(ActionCableBroadcastJob)
+      expect(Crm::MetaAdLink.find_by!(conversation: conversation))
+        .to have_attributes(certainty: 'ad', ad_id: ad_id, campaign_id: campaign_id, origin: 'whatsapp')
+
+      # Rajada: a segunda ligação dentro de 30 s não avisa de novo.
+      set_touches([ctwa_touch, ctwa_touch.merge('ctwa_clid' => 'clid-2')])
+      expect { described_class.perform_now(conversation.id) }.not_to have_enqueued_job(ActionCableBroadcastJob)
+    ensure
+      Redis::Alfred.delete("#{Crm::MetaAds::Insights::Broadcaster::THROTTLE_PREFIX}:#{connection.id}") if connection
+    end
+
     it 'site: utm_content/utm_term/utm_campaign viram nomes e o headline "Origem · <ID>" vira "Origem · <nome>"' do
       set_touches([site_touch])
       stub_ad
@@ -159,6 +178,13 @@ RSpec.describe Crm::MetaAds::EnrichTouchesJob do
     after do
       Redis::Alfred.delete("#{described_class::KEY_PREFIX}:#{conversation.id}")
       Redis::Alfred.delete("#{described_class::KEY_PREFIX}:#{conversation.id}:trailing")
+    end
+
+    it 'enfileira também toque de anúncio do site só com o fbclid da Meta, para ligar a conversa (#1073)' do
+      create_meta_ads_connection(account)
+      touch = { 'source' => 'tracked_link', 'source_id' => 'site:ABC234:none', 'fbclid' => 'fb-1' }
+
+      expect { described_class.enqueue_for(conversation, touch) }.to have_enqueued_job(described_class).with(conversation.id)
     end
 
     it 'enfileira depois de uma atribuição com ID e segura as seguintes por 5 minutos' do

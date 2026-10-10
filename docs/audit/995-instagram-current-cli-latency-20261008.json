@@ -1,0 +1,37 @@
+{
+  "utc": "2026-10-08T12:52:28.735503+00:00",
+  "result": {
+    "status": "passed",
+    "aws_identity_matches": true,
+    "calls": 5,
+    "same_current": true,
+    "elapsed_ms": [
+      4660.364,
+      4737.497,
+      4365.624,
+      4512.955,
+      3905.681
+    ],
+    "meta_called": false,
+    "production_mutated": false,
+    "live_service_unchanged": true,
+    "cpu_quota_percent": 50,
+    "memory_max_bytes": 536870912,
+    "live_cpu_quota_before": "2s",
+    "unit_exit_code": 0,
+    "source_sha256": "9b66b895a200c9d23369f23313adca1503bb3d1396b0e76d8ee97933b5a895c1",
+    "staging_removed": true,
+    "transient_removed": true
+  },
+  "limits": [
+    "Leituras reais STS/SSM na VPS; nenhuma chamada Meta, OAuth ou dado de cliente.",
+    "Transient com CPU50%/512MiB/64 tasks; publisher vivo observado CPU200% e preservado.",
+    "Mede AWS CLI com perfil atual, n\u00e3o transporte SSM/SSH/Rails nem resposta completa."
+  ],
+  "summary_ms": {
+    "min": 3905.681,
+    "median": 4512.955,
+    "max": 4737.497,
+    "samples": 5
+  }
+}

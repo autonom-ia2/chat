@@ -1,0 +1,88 @@
+{
+  "captured_at": "2026-10-08T18:21:09.646Z",
+  "scope": "authorized Hub2You account18 placementseg",
+  "aws_sha": "49a5b76b86f9574af427a08fc8d8e80a38565c78",
+  "active_vps_sha": "61f20cfd107361a431fda51f02cace751cc4978d",
+  "real_meta_records": [
+    {
+      "action": "search",
+      "state": "ready",
+      "created_at": "2026-10-08T18:15:12.484Z",
+      "updated_at": "2026-10-08T18:16:37.821Z",
+      "deadline": "2026-10-08T18:20:12.484Z",
+      "elapsed_ms": 85337
+    },
+    {
+      "action": "status",
+      "state": "ready",
+      "created_at": "2026-10-08T18:16:38.987Z",
+      "updated_at": "2026-10-08T18:17:52.233Z",
+      "deadline": "2026-10-08T18:21:38.987Z",
+      "elapsed_ms": 73246
+    }
+  ],
+  "active_transport": {
+    "utc": "2026-10-08T18:20:45.224843+00:00",
+    "vps_sha": "61f20cfd107361a431fda51f02cace751cc4978d",
+    "measurement": "active VPS publisher socket -> AWS session version read -> VPS",
+    "samples": [
+      {
+        "sample": 1,
+        "elapsed_ms": 22706.073,
+        "success": true
+      },
+      {
+        "sample": 2,
+        "elapsed_ms": 24712.94,
+        "success": true
+      }
+    ],
+    "production_read_only": true,
+    "meta_called": false,
+    "unit_unchanged": true,
+    "current_unchanged": true
+  },
+  "persistent_transport": {
+    "status": "passed",
+    "open_ms": 9627.534,
+    "samples": [
+      {
+        "sample": 1,
+        "elapsed_ms": 11822.761,
+        "ok": true
+      },
+      {
+        "sample": 2,
+        "elapsed_ms": 387.044,
+        "ok": true
+      },
+      {
+        "sample": 3,
+        "elapsed_ms": 385.612,
+        "ok": true
+      },
+      {
+        "sample": 4,
+        "elapsed_ms": 389.185,
+        "ok": true
+      }
+    ],
+    "meta_called": false,
+    "writes": false,
+    "process_exit_code": 0,
+    "current_unchanged": true,
+    "vps_active_sha": "61f20cfd107361a431fda51f02cace751cc4978d",
+    "measured_channel_sha": "49a5b76b86f9574af427a08fc8d8e80a38565c78"
+  },
+  "new_invites": 0,
+  "dm_sends": 0,
+  "oauth_followed": false,
+  "release_activated": false,
+  "limits": [
+    "Four-operation controller exceeded its total watchdog; two surviving Redis records recovered independently.",
+    "Two old collectors failed; corrected sorted-set reader and bounded scan recovered timestamps.",
+    "Warm transport measurement does not include Meta UI/network, queue, OAuth or reconnection.",
+    "Cold creation/open and first frame are reported separately; not counted as warm milliseconds.",
+    "Three warm samples prove observed latency, not production percentile or SLA."
+  ]
+}

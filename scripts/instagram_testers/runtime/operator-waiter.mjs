@@ -11,6 +11,10 @@ import {
 import { parseEnvelope } from './operator-protocol.mjs';
 
 const POLL_MS = 30000;
+const TRANSPORT_MS = 30000;
+const LEASE_MARGIN_MS = 5000;
+const MIN_RENEW_WAIT_MS = 1000;
+const REQUEST_BUDGET_MS = 3600000;
 const BROWSER = fileURLToPath(
   new URL('../session-browser.mjs', import.meta.url)
 );
@@ -43,7 +47,8 @@ export function runtimeChild(
       settled = true;
       clock.clearTimeout(timer);
       signal.removeEventListener('abort', stop);
-      if (error) reject(new Error('operator_runtime_failed'));
+      if (signal.aborted) done(143);
+      else if (error) reject(new Error('operator_runtime_failed'));
       else done(code);
     };
     const kill = type => {
@@ -58,7 +63,6 @@ export function runtimeChild(
       kill('SIGTERM');
       timer = clock.setTimeout(() => {
         kill('SIGKILL');
-        finish(null, 143);
       }, 28000);
     };
     signal.addEventListener('abort', stop, { once: true });
@@ -90,7 +94,7 @@ export async function runWaiter(
   let activeId;
   let offline = false;
   const send = async (payload, signal = shutdown.signal) => {
-    const scope = deadlineScope(signal, clock);
+    const scope = deadlineScope(signal, clock, TRANSPORT_MS, now);
     try {
       const result = parseEnvelope(
         JSON.stringify(
@@ -115,49 +119,108 @@ export async function runWaiter(
       scope.close();
     }
   };
-  const trackedChild = async (script, childEnv, request) => {
-    const budget = Date.parse(request.created_at) + 3600000 - now();
+  const supervise = request => {
+    const budget = Date.parse(request.created_at) + REQUEST_BUDGET_MS - now();
     if (budget <= 0) throw new Error('operator_runtime_failed');
-    const scope = deadlineScope(shutdown.signal, clock, budget);
-    let renewing = true;
-    const renew = (async () => {
-      while (!scope.signal.aborted && renewing) {
-        await pause(POLL_MS, scope.signal, clock);
-        if (scope.signal.aborted || !renewing) break;
-        try {
+    const scope = deadlineScope(shutdown.signal, clock, budget, now);
+    const children = new AbortController();
+    const stopChildren = () => children.abort(scope.signal.reason);
+    scope.signal.addEventListener('abort', stopChildren, { once: true });
+    let expiry;
+    let expiresAt;
+    let renewing;
+    let succeeded = false;
+    const confirm = status => {
+      if (succeeded) return;
+      scope.signal.throwIfAborted();
+      const current = status.request;
+      if (current?.id !== request.id)
+        throw new Error('operator_runtime_failed');
+      if (current.state === 'succeeded') {
+        succeeded = true; // Only the publisher can produce this receipt. Never replay publication.
+        clock.clearTimeout(expiry);
+        children.abort();
+        return;
+      }
+      expiresAt = Math.min(
+        Date.parse(current.expires_at),
+        Date.parse(request.created_at) + REQUEST_BUDGET_MS
+      );
+      const remaining = expiresAt - now();
+      if (current.state !== 'running' || remaining <= 0)
+        throw new Error('operator_runtime_failed');
+      clock.clearTimeout(expiry);
+      expiry = clock.setTimeout(() => scope.close(), remaining);
+    };
+    const reconcile = async () =>
+      confirm(await send({ operation: 'operator_read' }, scope.signal));
+    const heartbeat = async () => {
+      try {
+        confirm(
           await send(
             {
               operation: 'manager_heartbeat',
               state: 'operator_required',
               control_available: false,
-              request_id: activeId,
+              request_id: request.id,
             },
             scope.signal
-          );
-        } catch {
-          // A successful publication ends the lease; distinguish its receipt from a lost lease.
-          const status = await send(
-            { operation: 'operator_read' },
-            scope.signal
-          );
-          if (
-            status.request?.id === activeId &&
-            status.request.state === 'succeeded'
           )
-            break;
-          throw new Error('operator_runtime_failed');
-        }
+        );
+      } catch {
+        if (succeeded) return;
+        scope.signal.throwIfAborted();
+        // A lost reply can hide a renewal or a real publication. Only a read can resolve it.
+        await reconcile();
       }
-    })().catch(() => {
-      scope.close();
-    });
-    try {
-      return await scope.wait(child(script, childEnv, scope.signal));
-    } finally {
-      renewing = false;
-      scope.close();
-      await renew;
-    }
+    };
+    return {
+      scope,
+      confirm,
+      reconcile,
+      get succeeded() {
+        return succeeded;
+      },
+      start: async () => {
+        await heartbeat();
+        renewing = (async () => {
+          while (!scope.signal.aborted && !succeeded) {
+            const wait = Math.max(
+              MIN_RENEW_WAIT_MS,
+              Math.min(
+                POLL_MS,
+                expiresAt - now() - 2 * TRANSPORT_MS - LEASE_MARGIN_MS
+              )
+            );
+            await pause(wait, scope.signal, clock);
+            if (scope.signal.aborted || succeeded) break;
+            await heartbeat();
+          }
+        })().catch(() => {
+          // Closing a completed supervision also cancels its pending pause.
+          if (!succeeded && !scope.signal.aborted) scope.close();
+        });
+      },
+      child: async (script, childEnv) => {
+        scope.signal.throwIfAborted();
+        let code;
+        try {
+          // Await process drainage even when the lease or a real success cancels it.
+          code = await child(script, childEnv, children.signal);
+        } catch (error) {
+          if (!succeeded || !children.signal.aborted) throw error;
+        }
+        if (succeeded) return 0;
+        scope.signal.throwIfAborted();
+        return code;
+      },
+      close: async () => {
+        scope.close();
+        clock.clearTimeout(expiry);
+        await renewing;
+        scope.signal.removeEventListener('abort', stopChildren);
+      },
+    };
   };
   try {
     while (!shutdown.signal.aborted) {
@@ -185,23 +248,34 @@ export async function runWaiter(
       }
       const request = status.request;
       activeId = request.id; // Set before claim: its transport response can be lost after a real claim.
+      const lease = supervise(request);
       try {
-        const claimed = await send({
-          operation: 'operator_claim',
-          id: activeId,
-        });
-        if (
-          claimed.request?.id !== activeId ||
-          claimed.request.state !== 'running'
-        )
-          throw new Error('publication_failed');
-        await send({
-          operation: 'manager_heartbeat',
-          state: 'operator_required',
-          control_available: false,
-          request_id: activeId,
-        });
-        const scope = deadlineScope(shutdown.signal, clock);
+        try {
+          lease.confirm(
+            await send(
+              { operation: 'operator_claim', id: activeId },
+              lease.scope.signal
+            )
+          );
+        } catch {
+          lease.scope.signal.throwIfAborted();
+          await lease.reconcile();
+        }
+        if (lease.succeeded) {
+          activeId = undefined;
+          return;
+        }
+        await lease.start();
+        if (lease.succeeded) {
+          activeId = undefined;
+          return;
+        }
+        const scope = deadlineScope(
+          lease.scope.signal,
+          clock,
+          TRANSPORT_MS,
+          now
+        );
         let bootstrap;
         try {
           bootstrap = parseEnvelope(
@@ -220,13 +294,6 @@ export async function runWaiter(
           scope.close();
         }
         observerConfiguration(env, bootstrap); // Validate proxy without changing its authentication policy.
-        // Bootstrap can consume a transport budget. Renew before starting the human browser.
-        await send({
-          operation: 'manager_heartbeat',
-          state: 'operator_required',
-          control_available: false,
-          request_id: activeId,
-        });
         const browserEnv = { ...env, ...bootstrap.metadata };
         delete browserEnv.INSTAGRAM_TESTER_RECONNECT_REQUEST_ID;
         if (env.INSTAGRAM_TESTER_OPERATOR_REQUEST_FILE) {
@@ -235,33 +302,37 @@ export async function runWaiter(
             Math.floor(Date.parse(request.created_at) / 1000) + 3600
           );
         }
-        let code = await trackedChild(BROWSER, browserEnv, request);
-        if (shutdown.signal.aborted) break;
-        if (code === 0)
-          code = await trackedChild(
-            MANAGER,
-            { ...browserEnv, INSTAGRAM_TESTER_RECONNECT_REQUEST_ID: activeId },
-            request
-          );
-        if (shutdown.signal.aborted) break;
-        const current = await send({ operation: 'operator_read' });
-        if (
-          current.request?.id === activeId &&
-          current.request.state === 'succeeded' &&
-          code === 0
-        ) {
+        let code = lease.succeeded ? 0 : await lease.child(BROWSER, browserEnv);
+        if (shutdown.signal.aborted && !lease.succeeded) break;
+        if (code === 0 && !lease.succeeded)
+          code = await lease.child(MANAGER, {
+            ...browserEnv,
+            INSTAGRAM_TESTER_RECONNECT_REQUEST_ID: activeId,
+          });
+        if (shutdown.signal.aborted && !lease.succeeded) break;
+        if (!lease.succeeded) await lease.reconcile();
+        if (lease.succeeded) {
           activeId = undefined;
           return;
         }
-        await send({
-          operation: 'operator_complete',
-          id: activeId,
-          state: code === 2 ? 'operator_required' : 'failed',
-        });
+        await send(
+          {
+            operation: 'operator_complete',
+            id: activeId,
+            state: code === 2 ? 'operator_required' : 'failed',
+          },
+          lease.scope.signal
+        );
         activeId = undefined;
       } catch {
+        if (lease.succeeded) {
+          activeId = undefined;
+          return;
+        }
         if (shutdown.signal.aborted) break;
         throw new Error('operator_runtime_failed');
+      } finally {
+        await lease.close();
       }
     }
   } finally {

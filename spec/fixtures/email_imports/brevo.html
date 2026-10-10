@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<!-- Fixture "estilo Brevo (ex-Sendinblue)": editor de arrasta-e-solta, CSS em <style>,
+     Brevo Template Language ({{ contact.X }}, filtros, {% if %}), {{ mirror }} e {{ unsubscribe }}. -->
+<head>
+<title>{{ params.assunto | default : "Novidades do mês" }}</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!--[if !mso]><!-->
+<link href="https://fonts.example-fonts.com/css2?family=Lato:wght@400;700&display=swap" rel="stylesheet">
+<style type="text/css">@import url('https://fonts.example-fonts.com/css2?family=Lato:wght@400;700&display=swap');</style>
+<!--<![endif]-->
+<style type="text/css">
+  #outlook a { padding:0; }
+  body { margin:0; padding:0; -webkit-text-size-adjust:100%; -ms-text-size-adjust:100%; }
+  table, td { border-collapse:collapse; mso-table-lspace:0pt; mso-table-rspace:0pt; }
+  img { border:0; height:auto; line-height:100%; outline:none; text-decoration:none; -ms-interpolation-mode:bicubic; }
+  p { display:block; margin:13px 0; }
+  .r-btn a { text-decoration:none; }
+  .r-col-50 { width:50% !important; max-width:50%; }
+  [data-ogsc] .dark-invert { color:#ffffff !important; }
+  @media (prefers-color-scheme: dark) { .dark-bg { background:#111827 !important; } }
+  @media only screen and (max-width:480px) {
+    .r-col-50 { width:100% !important; max-width:100% !important; }
+    .r-pad { padding-left:16px !important; padding-right:16px !important; }
+  }
+</style>
+<!--[if mso]>
+<xml><o:OfficeDocumentSettings><o:AllowPNG/><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml>
+<style type="text/css">.r-col-50 { width:300px !important; }</style>
+<![endif]-->
+</head>
+<body style="word-spacing:normal;background-color:#F4F4F4;">
+<div style="display:none;font-size:1px;color:#F4F4F4;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">Três dicas rápidas para este mês</div>
+<div class="dark-bg" style="background-color:#F4F4F4;">
+  <!--[if mso | IE]><table align="center" border="0" cellpadding="0" cellspacing="0" style="width:600px;" width="600"><tr><td style="line-height:0px;font-size:0px;mso-line-height-rule:exactly;"><![endif]-->
+  <div style="margin:0 auto;max-width:600px;">
+    <table align="center" border="0" cellpadding="0" cellspacing="0" role="presentation" style="width:100%;">
+      <tbody><tr><td style="direction:ltr;font-size:0;padding:8px 0;text-align:center;">
+        <div style="font-family:Lato,Arial,sans-serif;font-size:12px;color:#666666;text-align:right;padding:0 20px;">
+          <a href="{{ mirror }}" style="color:#666666;">Abrir no navegador</a>
+        </div>
+      </td></tr></tbody>
+    </table>
+  </div>
+  <!--[if mso | IE]></td></tr></table><![endif]-->
+
+  <div style="background:#FFFFFF;margin:0 auto;max-width:600px;">
+    <table align="center" border="0" cellpadding="0" cellspacing="0" role="presentation" style="background:#FFFFFF;width:100%;">
+      <tbody><tr><td class="r-pad" style="direction:ltr;font-size:0;padding:24px 32px;text-align:center;">
+        <img src="https://img-cache.brevo.example.com/v2/logo-empresa.png" alt="Logo da empresa" width="140" style="display:inline-block;width:140px;">
+        <div style="font-family:Lato,Arial,sans-serif;font-size:24px;font-weight:700;line-height:32px;color:#111111;text-align:left;margin-top:24px;">
+          {% if contact.FIRSTNAME %}Olá, {{ contact.FIRSTNAME | capitalize }}!{% else %}Olá!{% endif %}
+        </div>
+        <div style="font-family:Lato,Arial,sans-serif;font-size:16px;line-height:24px;color:#333333;text-align:left;">
+          <p>Separamos três dicas para {{ contact.EMPRESA | default : "sua empresa" }} economizar tempo.</p>
+          <p>Seu e-mail cadastrado é {{ contact.EMAIL }}. Seu cargo: {{ contact.CARGO }}.</p>
+        </div>
+      </td></tr></tbody>
+    </table>
+  </div>
+
+  <!-- duas colunas com display:inline-block e ghost table -->
+  <div style="background:#FFFFFF;margin:0 auto;max-width:600px;">
+    <table align="center" border="0" cellpadding="0" cellspacing="0" role="presentation" style="background:#FFFFFF;width:100%;">
+      <tbody><tr><td style="direction:ltr;font-size:0;padding:0 16px 16px;text-align:center;">
+        <!--[if mso | IE]><table role="presentation" border="0" cellpadding="0" cellspacing="0"><tr><td style="vertical-align:top;width:284px;"><![endif]-->
+        <div class="r-col-50" style="font-size:0;text-align:left;direction:ltr;display:inline-block;vertical-align:top;width:100%;">
+          <table border="0" cellpadding="0" cellspacing="0" role="presentation" width="100%">
+            <tr><td style="padding:8px 16px;">
+              <img src="https://img-cache.brevo.example.com/v2/dica-1.jpg" alt="Dica 1" width="252" style="display:block;width:100%;max-width:252px;">
+              <div style="font-family:Lato,Arial,sans-serif;font-size:16px;line-height:22px;color:#333333;padding-top:8px;">Organize a agenda da semana em 10 minutos.</div>
+            </td></tr>
+          </table>
+        </div>
+        <!--[if mso | IE]></td><td style="vertical-align:top;width:284px;"><![endif]-->
+        <div class="r-col-50" style="font-size:0;text-align:left;direction:ltr;display:inline-block;vertical-align:top;width:100%;">
+          <table border="0" cellpadding="0" cellspacing="0" role="presentation" width="100%">
+            <tr><td style="padding:8px 16px;">
+              <img src="https://img-cache.brevo.example.com/v2/dica-2.jpg" alt="Dica 2" width="252" style="display:block;width:100%;max-width:252px;">
+              <div style="font-family:Lato,Arial,sans-serif;font-size:16px;line-height:22px;color:#333333;padding-top:8px;">Responda clientes com modelos prontos.</div>
+            </td></tr>
+          </table>
+        </div>
+        <!--[if mso | IE]></td></tr></table><![endif]-->
+      </td></tr></tbody>
+    </table>
+  </div>
+
+  <div style="background:#FFFFFF;margin:0 auto;max-width:600px;">
+    <table align="center" border="0" cellpadding="0" cellspacing="0" role="presentation" style="background:#FFFFFF;width:100%;">
+      <tbody><tr><td align="center" style="padding:8px 32px 32px;">
+        <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:separate;line-height:100%;">
+          <tr><td align="center" bgcolor="#0B996E" role="presentation" style="border:none;border-radius:24px;background:#0B996E;" valign="middle" class="r-btn">
+            <a href="https://exemplo.r.brevo.example.com/mk/cl/f/AbCdEfGh123?u=https%3A%2F%2Fexemplo-empresa.example.com%2Fdicas" style="display:inline-block;background:#0B996E;color:#ffffff;font-family:Lato,Arial,sans-serif;font-size:14px;font-weight:700;line-height:120%;margin:0;text-decoration:none;padding:10px 25px;border-radius:24px;" target="_blank">Ler as dicas</a>
+          </td></tr>
+        </table>
+      </td></tr></tbody>
+    </table>
+  </div>
+
+  <div style="margin:0 auto;max-width:600px;">
+    <table align="center" border="0" cellpadding="0" cellspacing="0" role="presentation" style="width:100%;">
+      <tbody><tr><td style="padding:16px 32px;font-family:Lato,Arial,sans-serif;font-size:12px;line-height:18px;color:#888888;text-align:center;">
+        <p>{{ organization.name }} — Rua Exemplo, 200, Cidade/UF</p>
+        <p>Este e-mail foi enviado para {{ contact.EMAIL }}.<br>
+        Não quer mais receber? <a href="{{ unsubscribe }}" style="color:#888888;">Descadastre-se aqui</a>.</p>
+        <p>{{{ update_profile }}}</p>
+        <img src="https://img-cache.brevo.example.com/v2/selo-plataforma.png" alt="Enviado pela plataforma" width="90">
+      </td></tr></tbody>
+    </table>
+  </div>
+</div>
+</body>
+</html>

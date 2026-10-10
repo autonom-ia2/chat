@@ -19,6 +19,9 @@ json.sent_at campaign.sent_at
 json.ai_status campaign.ai_status
 json.ai_error EmailCampaigns::Presentation::Errors.campaign_code(campaign.ai_error)
 json.ai_subject_variants campaign.ai_subject_variants
+# Identidade visual usada pela IA e avisos do controle de qualidade (#1076).
+json.brand_identity campaign.brand_identity
+json.ai_quality_warnings campaign.ai_quality_warnings
 json.recipients_count campaign.recipients_count
 json.sent_count campaign.sent_count
 json.failed_count campaign.failed_count

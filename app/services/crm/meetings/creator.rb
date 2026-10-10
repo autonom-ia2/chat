@@ -21,6 +21,8 @@ class Crm::Meetings::Creator
   end
 
   def perform
+    return internal_creator.perform if internal_location?
+
     sanitized_params = Crm::Meetings::Sanitizer.new(@params).sanitize!
     guests = build_guest_list(sanitized_params)
 
@@ -42,6 +44,17 @@ class Crm::Meetings::Creator
   end
 
   private
+
+  # Agendamento WhatsApp-first (#1188): local pedido que não é Meet/Teams vira reunião interna, sem provedor.
+  # Sem `location_type` nos params o fluxo Google/Microsoft segue idêntico.
+  def internal_location?
+    type = @params[:location_type].presence || @params['location_type'].presence
+    type.present? && %w[google_meet teams].exclude?(type.to_s)
+  end
+
+  def internal_creator
+    Crm::Meetings::InternalCreator.new(account: @account, card: @card, inbox: @inbox, scheduled_by: @scheduled_by, params: @params)
+  end
 
   def build_guest_list(params)
     guests = []
@@ -112,6 +125,7 @@ class Crm::Meetings::Creator
         external_event_id: nil,
         online_meeting_url: nil,
         status: :draft,
+        source: params[:source].presence,
         metadata: draft_metadata(params)
       )
       meeting.save!(validate: false)
@@ -247,8 +261,10 @@ class Crm::Meetings::Creator
     meeting.update_columns(status: Crm::Meeting.statuses[:failed], metadata: metadata, updated_at: Time.current)
   end
 
+  # `booking_metadata` (página de agendamento nova, #1188): booking_profile_id, booking_link_id, booking_request_id e
+  # consent entram já no rascunho. Sem ele, o metadado é o de sempre.
   def draft_metadata(params)
-    { 'reminder_minutes_before' => reminder_minutes_before(params) }
+    { 'reminder_minutes_before' => reminder_minutes_before(params) }.merge(params[:booking_metadata].to_h.stringify_keys)
   end
 
   def reminder_minutes_before(params)

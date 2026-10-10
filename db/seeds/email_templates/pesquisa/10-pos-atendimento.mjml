@@ -1,0 +1,45 @@
+<mjml>
+  <mj-head>
+    <mj-title>Como foi o seu atendimento, {{ nome }}?</mj-title>
+  </mj-head>
+  <mj-body width="600px" background-color="#e8f7f0">
+    <mj-section background-color="#0d2b20" padding="22px 24px">
+      <mj-column>
+        <mj-text font-family="Arial, Helvetica, sans-serif" font-size="20px" font-weight="700" color="#ffffff" align="left" line-height="1.2" letter-spacing="1px" padding="0">Sua marca</mj-text>
+      </mj-column>
+    </mj-section>
+    <mj-section background-color="#e8f7f0" padding="44px 24px 36px">
+      <mj-column>
+        <mj-text font-family="Arial, Helvetica, sans-serif" font-size="15px" font-weight="700" color="#047857" align="left" line-height="1.3" letter-spacing="2px" padding="0 0 12px">ATENDIMENTO CONCLUÍDO</mj-text>
+        <mj-text font-family="Arial, Helvetica, sans-serif" font-size="32px" font-weight="800" color="#0d2b20" align="left" line-height="1.2" padding="0">Obrigado pela conversa, {{ nome }}</mj-text>
+        <mj-text font-family="Arial, Helvetica, sans-serif" font-size="18px" color="#3c5a4e" align="left" line-height="1.6" padding="12px 0 0">Esperamos ter resolvido tudo. Conta para a gente como foi?</mj-text>
+      </mj-column>
+    </mj-section>
+    <mj-wrapper background-color="#e8f7f0" padding="0 24px 40px">
+      <mj-section background-color="#ffffff" padding="32px 24px" border="1px solid #cdeadb" border-radius="12px">
+        <mj-column>
+          <mj-text font-family="Arial, Helvetica, sans-serif" font-size="20px" font-weight="700" color="#0d2b20" align="center" line-height="1.4" padding="0">Sua avaliação leva menos de 1 minuto.</mj-text>
+          <mj-text font-family="Arial, Helvetica, sans-serif" font-size="16px" color="#3c5a4e" align="center" line-height="1.6" padding="8px 0 0">São só duas perguntas rápidas.</mj-text>
+          <mj-button href="https://seusite.com.br" background-color="#047857" color="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="16px" font-weight="700" line-height="20px" border-radius="8px" inner-padding="15px 32px" align="center" padding="24px 0 0">Avaliar o atendimento</mj-button>
+        </mj-column>
+      </mj-section>
+    </mj-wrapper>
+    <mj-section background-color="#ffffff" padding="40px 24px">
+      <mj-column>
+        <mj-text font-family="Arial, Helvetica, sans-serif" font-size="22px" font-weight="700" color="#0d2b20" align="left" line-height="1.3" padding="0 0 20px">O que fazemos com a sua resposta</mj-text>
+        <mj-divider border-color="#047857" border-width="4px" width="40px" align="left" padding="0 0 12px"></mj-divider>
+        <mj-text font-family="Arial, Helvetica, sans-serif" font-size="18px" font-weight="700" color="#0d2b20" align="left" line-height="1.3" padding="0">A gente lê cada uma</mj-text>
+        <mj-text font-family="Arial, Helvetica, sans-serif" font-size="16px" color="#3c5a4e" align="left" line-height="1.6" padding="6px 0 24px">Pessoas do nosso time leem todas as avaliações.</mj-text>
+        <mj-divider border-color="#047857" border-width="4px" width="40px" align="left" padding="0 0 12px"></mj-divider>
+        <mj-text font-family="Arial, Helvetica, sans-serif" font-size="18px" font-weight="700" color="#0d2b20" align="left" line-height="1.3" padding="0">Usamos para melhorar</mj-text>
+        <mj-text font-family="Arial, Helvetica, sans-serif" font-size="16px" color="#3c5a4e" align="left" line-height="1.6" padding="6px 0 0">Sua opinião vira mudança no atendimento.</mj-text>
+      </mj-column>
+    </mj-section>
+    <mj-section background-color="#ffffff" padding="0 24px 40px">
+      <mj-column>
+        <mj-text font-family="Arial, Helvetica, sans-serif" font-size="15px" color="#3c5a4e" align="left" line-height="1.6" padding="0">Precisa de mais alguma coisa? Responda este e-mail.</mj-text>
+      </mj-column>
+    </mj-section>
+    <mj-section css-class="footer-locked" background-color="#f4f4f4" padding="20px 16px"><mj-column><mj-text font-family="Arial, Helvetica, sans-serif" font-size="12px" color="#4b5563" align="center" line-height="1.6">Nome da sua empresa · Endereço da empresa<br/>Você recebeu este e-mail porque está em nossa lista de contatos.<br/><a href="{{ unsubscribe_url }}" style="color:#4b5563;text-decoration:underline;">Cancelar inscrição</a></mj-text></mj-column></mj-section>
+  </mj-body>
+</mjml>

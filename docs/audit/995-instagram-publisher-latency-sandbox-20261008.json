@@ -1,0 +1,364 @@
+{
+  "baseline": {
+    "containers": {
+      "count": 115,
+      "sha256": "a1e0ccca15687c4d8daf2099f5ace45265cc1431fb85be5a88c3f3771a6c22c6"
+    },
+    "networks": {
+      "count": 12,
+      "sha256": "0321c4f8cc2b59a1c5cc45974e945ce9d12d363c5342a1ce041cf353d01b07cf"
+    },
+    "volumes": {
+      "count": 26,
+      "sha256": "6922be6eabba35b8f0b1bc4ec6560177d3e81c3ce948784227b7c0a4a98e8be5"
+    }
+  },
+  "browser_calls": 0,
+  "cleanup_errors": [],
+  "execution_performed": true,
+  "external_calls": false,
+  "final": {
+    "containers": {
+      "count": 115,
+      "sha256": "a1e0ccca15687c4d8daf2099f5ace45265cc1431fb85be5a88c3f3771a6c22c6"
+    },
+    "networks": {
+      "count": 12,
+      "sha256": "0321c4f8cc2b59a1c5cc45974e945ce9d12d363c5342a1ce041cf353d01b07cf"
+    },
+    "volumes": {
+      "count": 26,
+      "sha256": "6922be6eabba35b8f0b1bc4ec6560177d3e81c3ce948784227b7c0a4a98e8be5"
+    }
+  },
+  "harness": {
+    "sha256": "32d4a55f9e980ddd88c721d4de01b2670267bc008cf6ae6a55f81a6fcb2e5401"
+  },
+  "harness_result": {
+    "actual_session_publisher_processes": true,
+    "browser_calls": 0,
+    "cold_search": [
+      {
+        "claim_ms": 7249.55,
+        "complete_ms": 6899.896,
+        "enqueue_ms": 80.614,
+        "poll_ms": 64.947,
+        "read_ms": 7615.397,
+        "total_ms": 21910.922
+      },
+      {
+        "claim_ms": 8459.341,
+        "complete_ms": 6704.023,
+        "enqueue_ms": 137.459,
+        "poll_ms": 24.459,
+        "read_ms": 5855.103,
+        "total_ms": 21180.858
+      },
+      {
+        "claim_ms": 6790.869,
+        "complete_ms": 6733.06,
+        "enqueue_ms": 103.45,
+        "poll_ms": 21.775,
+        "read_ms": 7071.389,
+        "total_ms": 20720.986
+      }
+    ],
+    "cold_status": [
+      {
+        "claim_ms": 8514.604,
+        "complete_ms": 8643.445,
+        "enqueue_ms": 101.69,
+        "oauth_direct_ms": 92.544,
+        "poll_ms": 25.465,
+        "read_ms": 6352.221,
+        "total_ms": 23637.552
+      },
+      {
+        "claim_ms": 10215.989,
+        "complete_ms": 8378.494,
+        "enqueue_ms": 113.279,
+        "oauth_direct_ms": 72.64,
+        "poll_ms": 24.744,
+        "read_ms": 5715.252,
+        "total_ms": 24447.879
+      },
+      {
+        "claim_ms": 7108.648,
+        "complete_ms": 8802.592,
+        "enqueue_ms": 139.88,
+        "oauth_direct_ms": 83.912,
+        "poll_ms": 35.278,
+        "read_ms": 6468.522,
+        "total_ms": 22556.632
+      }
+    ],
+    "external_calls": false,
+    "harness": "publisher_latency_integration",
+    "meta_latency_included": false,
+    "mode": "sandbox",
+    "oauth_calls": 0,
+    "preflight_oauth_original_flow_passed": true,
+    "production_mutated": false,
+    "provider_calls": 0,
+    "queue_wait_included": false,
+    "rails_env": "production",
+    "ssm_ssh_latency_included": false,
+    "status": "passed",
+    "warm_empty_read_ms": [
+      3.197,
+      0.768,
+      1.131,
+      0.533,
+      1.869,
+      3.649,
+      0.697,
+      0.864,
+      1.473,
+      0.671,
+      1.003,
+      1.384,
+      0.855,
+      0.819,
+      1.164,
+      1.248,
+      2.795,
+      1.355,
+      1.051,
+      1.215
+    ],
+    "warm_opening_ms": 5184.171,
+    "warm_rss_kib": 268440,
+    "warm_search": [
+      {
+        "claim_ms": 730.151,
+        "complete_ms": 42.149,
+        "enqueue_ms": 84.875,
+        "poll_ms": 27.192,
+        "read_ms": 2.583,
+        "total_ms": 887.28
+      },
+      {
+        "claim_ms": 37.152,
+        "complete_ms": 37.176,
+        "enqueue_ms": 102.592,
+        "poll_ms": 65.429,
+        "read_ms": 3.292,
+        "total_ms": 245.973
+      },
+      {
+        "claim_ms": 21.293,
+        "complete_ms": 36.129,
+        "enqueue_ms": 155.197,
+        "poll_ms": 64.873,
+        "read_ms": 4.667,
+        "total_ms": 282.464
+      },
+      {
+        "claim_ms": 19.106,
+        "complete_ms": 35.254,
+        "enqueue_ms": 109.515,
+        "poll_ms": 44.036,
+        "read_ms": 2.074,
+        "total_ms": 210.273
+      },
+      {
+        "claim_ms": 18.348,
+        "complete_ms": 17.705,
+        "enqueue_ms": 89.069,
+        "poll_ms": 25.602,
+        "read_ms": 2.361,
+        "total_ms": 153.554
+      },
+      {
+        "claim_ms": 13.844,
+        "complete_ms": 14.187,
+        "enqueue_ms": 91.409,
+        "poll_ms": 24.157,
+        "read_ms": 2.565,
+        "total_ms": 146.412
+      }
+    ],
+    "warm_status": [
+      {
+        "claim_ms": 15.343,
+        "complete_ms": 38.593,
+        "enqueue_ms": 102.518,
+        "oauth_direct_ms": 41.631,
+        "poll_ms": 13.759,
+        "read_ms": 2.741,
+        "total_ms": 173.024
+      },
+      {
+        "claim_ms": 19.288,
+        "complete_ms": 22.595,
+        "enqueue_ms": 90.713,
+        "oauth_direct_ms": 74.245,
+        "poll_ms": 24.457,
+        "read_ms": 3.912,
+        "total_ms": 161.047
+      },
+      {
+        "claim_ms": 20.535,
+        "complete_ms": 19.444,
+        "enqueue_ms": 91.488,
+        "oauth_direct_ms": 49.969,
+        "poll_ms": 18.461,
+        "read_ms": 2.514,
+        "total_ms": 152.515
+      },
+      {
+        "claim_ms": 15.467,
+        "complete_ms": 13.796,
+        "enqueue_ms": 92.057,
+        "oauth_direct_ms": 46.963,
+        "poll_ms": 89.165,
+        "read_ms": 2.062,
+        "total_ms": 212.639
+      },
+      {
+        "claim_ms": 26.147,
+        "complete_ms": 26.401,
+        "enqueue_ms": 103.999,
+        "oauth_direct_ms": 73.131,
+        "poll_ms": 25.628,
+        "read_ms": 2.706,
+        "total_ms": 185.004
+      },
+      {
+        "claim_ms": 15.152,
+        "complete_ms": 18.057,
+        "enqueue_ms": 83.932,
+        "oauth_direct_ms": 53.105,
+        "poll_ms": 19.437,
+        "read_ms": 3.546,
+        "total_ms": 140.196
+      }
+    ]
+  },
+  "images": {
+    "app_image_id": "sha256:7beb3c8f225b359c1b3573ab0c830c3babb28fa4eb2db322ee887db309b7dd63",
+    "app_manifest": "sha256:5391a92cd64d6b01c212b33ea8c95ee9b933798490631f268d46a2d147b1bed4",
+    "app_repository": "354307071110.dkr.ecr.us-east-1.amazonaws.com/chatwoot-autonomia-prod",
+    "app_source_sha": "8589beb5504fe59a21ed907db9c1d434c6eec0e9",
+    "postgres_manifest": "sha256:1d50c689b0a6511b9ea0a15615281c81a59fd04a08eb35057ec8646fb3a2118a",
+    "postgres_production_rds_minor": "18.3",
+    "postgres_runtime_minor": "18.6",
+    "redis_image": "redis:7.4.9-alpine",
+    "redis_image_id": "sha256:487efc0616382465781b8fdc3d6d1db449e6fd80ae23bf48432a2da6b6929908"
+  },
+  "input_staging_removed": true,
+  "launcher_exit_code": 0,
+  "launcher_sha256": "236949ac4ddff27e2871d524e2e4767f8a65ec0b4cd33144953bb0222a2db0c4",
+  "oauth_calls": 0,
+  "overlays": [
+    {
+      "sha256": "a46a9cff71468946d8c9d40c427cb913f3042bf5ffeb0ba2d82819547499e061",
+      "target": "app/services/instagram/testers/browser_operations.rb"
+    },
+    {
+      "sha256": "545802344fefce8ac8e8abdbdacc2dcb296776bfe8682677567a2d44c93aa753",
+      "target": "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb"
+    },
+    {
+      "sha256": "dc473409d0952482a622f3a15efa1d1c200ff38ccd5eb65afa3b047b3c0a150f",
+      "target": "app/services/instagram/testers/authorization_attestation.rb"
+    },
+    {
+      "sha256": "6535de6c3157e3866e697247fc84fb6ab7c4ef4f58969432aea157a2f4e3ab80",
+      "target": "app/services/instagram/testers/browser_authorization.rb"
+    },
+    {
+      "sha256": "c3fea95947f0303e235441f6a0b112873a536e8e11965e48ca69380b3c84bae0",
+      "target": "scripts/instagram_testers/session_publisher.rb"
+    },
+    {
+      "sha256": "a3b65159826bae7d2525577ef7bcfd26285bbd53c2f2661b835925115bd70b01",
+      "target": "scripts/instagram_testers/session_publisher-baseline.rb"
+    },
+    {
+      "sha256": "20da27378b2da64faefea32ca7479fa0df8a9b3654e585cfbddaf5b17168e095",
+      "target": ".codex/oauth-original-flow-integration.rb"
+    }
+  ],
+  "production_mutated": false,
+  "provider_calls": 0,
+  "sandbox": {
+    "cleanup_verified": true,
+    "cleanup_window_seconds": 90,
+    "coordination_tls": true,
+    "global_deadline_seconds": 600,
+    "network_internal": true,
+    "persistent_data_volumes": false,
+    "published_ports": false,
+    "readonly_code_mounts": true,
+    "synthetic_provider": true
+  },
+  "status": "passed",
+  "utc": "2026-10-08T12:56:27.690634+00:00",
+  "limits": [
+    "Imagem OCI real de produ\u00e7\u00e3o com overlays candidatos somente leitura; DB/Redis TLS descart\u00e1veis e provedor sint\u00e9tico.",
+    "N\u00e3o inclui consulta CURRENT, t\u00fanel SSM/SSH, fila manager15s ou lat\u00eancia Meta.",
+    "Mem\u00f3ria RSS do filho Rails n\u00e3o \u00e9 mem\u00f3ria agregada do container ou broker.",
+    "3 pares cold/6 pares warm; n\u00e3o estimar p99 com essa amostra.",
+    "OAuth direto realRailsAPI apenas gera URL/estado; n\u00e3o chamaOAuthMeta nem testa reconex\u00e3oOAuthreal.",
+    "Compara\u00e7\u00e3o cold/warm inclui boot/processo Rails e comunica\u00e7\u00e3o local por pipes; n\u00e3o \u00e9 custo puro do servi\u00e7o Rails."
+  ],
+  "summaries": {
+    "cold_search": {
+      "samples": 3,
+      "median_total_ms": 21180.858,
+      "max_total_ms": 21910.922,
+      "median_phase_ms": {
+        "claim_ms": 7249.55,
+        "complete_ms": 6733.06,
+        "enqueue_ms": 103.45,
+        "poll_ms": 24.459,
+        "read_ms": 7071.389,
+        "total_ms": 21180.858
+      }
+    },
+    "cold_status": {
+      "samples": 3,
+      "median_total_ms": 23637.552,
+      "max_total_ms": 24447.879,
+      "median_phase_ms": {
+        "claim_ms": 8514.604,
+        "complete_ms": 8643.445,
+        "enqueue_ms": 113.279,
+        "oauth_direct_ms": 83.912,
+        "poll_ms": 25.465,
+        "read_ms": 6352.221,
+        "total_ms": 23637.552
+      }
+    },
+    "warm_search": {
+      "samples": 6,
+      "median_total_ms": 228.123,
+      "max_total_ms": 887.28,
+      "median_phase_ms": {
+        "claim_ms": 20.2,
+        "complete_ms": 35.691,
+        "enqueue_ms": 97.001,
+        "poll_ms": 35.614,
+        "read_ms": 2.574,
+        "total_ms": 228.123
+      }
+    },
+    "warm_status": {
+      "samples": 6,
+      "median_total_ms": 167.036,
+      "max_total_ms": 212.639,
+      "median_phase_ms": {
+        "claim_ms": 17.378,
+        "complete_ms": 21.02,
+        "enqueue_ms": 91.773,
+        "oauth_direct_ms": 51.537,
+        "poll_ms": 21.947,
+        "read_ms": 2.724,
+        "total_ms": 167.036
+      }
+    },
+    "search_publisher_process_speedup": 92.848,
+    "status_publisher_process_speedup": 141.512
+  }
+}

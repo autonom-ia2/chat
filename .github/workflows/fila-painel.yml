@@ -1,0 +1,188 @@
+name: Fila - painel
+
+# Painel durável da fila de deploy (Issue #1237), atualizado sozinho. Existe para a fila não depender de uma
+# sessão estar viva: qualquer sessão (ou o Rodrigo) lê o estado aqui e assume. Regras em docs/processo-de-release.md.
+#
+# Também deixa rastro, sem travar ninguém (decisão do Rodrigo: controle de processo, não de revisor):
+#   - push num PR com `fila:pedido` tira o rótulo (regra "sem push depois do pedido");
+#   - PR que entra na main sem `fila:pedido` nem `hotfix` gera alerta no painel;
+#   - deploy disparado à mão (workflow_dispatch) gera alerta no painel.
+#
+# Seguro com pull_request_target: não faz checkout nem roda código do PR; só lê metadados e escreve rótulos e
+# comentários. Liberar = enfileirar: nenhum rótulo muda nessa hora, porque cada rótulo novo refaz os checks
+# obrigatórios do Guia e da Central e segura o PR fora da fila (lote de 10/10). O repositório é público: título
+# de PR entra no painel sem markdown ativo, menção nem link.
+
+on:
+  pull_request_target:
+    types: [opened, reopened, closed, labeled, unlabeled, synchronize]
+  workflow_run:
+    workflows: ['Deploy Hub2You Chatwoot Blue Green', 'Deploy Autonomia Chatwoot Blue Green']
+    types: [requested, completed]
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  issues: write
+  pull-requests: write
+
+env:
+  PAINEL: '1237'
+
+jobs:
+  # Reage ao evento (rótulos e alertas). Sem concurrency: um evento nunca é cancelado por outro.
+  # Rótulo que não é da fila (labeled/unlabeled) não acorda nenhum dos dois jobs.
+  eventos:
+    if: >-
+      (github.event_name == 'pull_request_target' || github.event_name == 'workflow_run') &&
+      (!contains(fromJSON('["labeled","unlabeled"]'), github.event.action) ||
+      startsWith(github.event.label.name, 'fila:') || github.event.label.name == 'hotfix')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Rótulos e alertas
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const painel = Number(process.env.PAINEL);
+            const ev = context.eventName;
+            const p = context.payload;
+            const alertas = [];
+            const nomes = (labels) => (labels || []).map((l) => l.name);
+            // O rótulo pode já ter saído (outro run, ou à mão): 404 não é erro.
+            const tirar = async (issue_number, name) => {
+              try {
+                await github.rest.issues.removeLabel({ owner, repo, issue_number, name });
+              } catch (e) {
+                if (e.status !== 404) throw e;
+              }
+            };
+
+            if (ev === 'pull_request_target') {
+              const pr = p.pull_request;
+              const labels = nomes(pr.labels);
+              if (p.action === 'synchronize' && labels.includes('fila:pedido')) {
+                await tirar(pr.number, 'fila:pedido');
+                const quais = '`fila:pedido`';
+                await github.rest.issues.createComment({ owner, repo, issue_number: pr.number,
+                  body: `Push depois do pedido de vaga: ${quais} saiu automaticamente. Com a CI verde no head novo, peça a vaga de novo (docs/processo-de-release.md).` });
+                alertas.push(`↩️ #${pr.number} recebeu push depois do pedido de vaga; ${quais} retirado.`);
+              }
+              if (p.action === 'closed' && pr.merged && pr.base.ref === 'main') {
+                if (labels.includes('fila:pedido') || labels.includes('hotfix')) {
+                  if (labels.includes('fila:pedido')) await tirar(pr.number, 'fila:pedido');
+                  await github.rest.issues.addLabels({ owner, repo, issue_number: pr.number, labels: ['fila:validar'] });
+                } else {
+                  alertas.push(`⚠️ #${pr.number} entrou na main **sem** \`fila:pedido\` nem \`hotfix\` (por ${pr.merged_by ? pr.merged_by.login : '?'}).`);
+                }
+              }
+            }
+            if (ev === 'workflow_run' && p.workflow_run.event === 'workflow_dispatch' && p.action === 'requested') {
+              const r = p.workflow_run;
+              alertas.push(`🔧 Deploy manual disparado: ${r.name} em \`${r.head_sha.slice(0, 10)}\` (${r.html_url}).`);
+            }
+            for (const a of alertas) {
+              await github.rest.issues.createComment({ owner, repo, issue_number: painel, body: a });
+            }
+
+  # Reescreve o painel com o estado atual. Só o mais recente importa: um run novo cancela o anterior.
+  painel:
+    needs: eventos
+    if: >-
+      !cancelled() &&
+      (!contains(fromJSON('["labeled","unlabeled"]'), github.event.action) ||
+      startsWith(github.event.label.name, 'fila:') || github.event.label.name == 'hotfix')
+    concurrency:
+      group: fila-painel
+      cancel-in-progress: true
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Atualizar o painel
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const painel = Number(process.env.PAINEL);
+            const nomes = (labels) => (labels || []).map((l) => l.name);
+            const PROIBIDOS = ['|', '`', '@', '[', ']', '<', '>', '*', '_', '#', '!'];
+            const titulo = (t) => {
+              const limpo = [...t].map((c) => (PROIBIDOS.includes(c) ? ' ' : c)).join('').trim();
+              return limpo.length > 90 ? `${limpo.slice(0, 89)}…` : limpo;
+            };
+
+            const agora = new Date().toISOString().slice(0, 16).replace('T', ' ');
+            const main = (await github.rest.repos.getBranch({ owner, repo, branch: 'main' })).data.commit.sha;
+            let fila = [];
+            try {
+              const q = await github.graphql(`query($o:String!,$r:String!){repository(owner:$o,name:$r){mergeQueue(branch:"main"){entries(first:20){nodes{position state pullRequest{number title}}}}}}`, { o: owner, r: repo });
+              fila = q.repository.mergeQueue ? q.repository.mergeQueue.entries.nodes : 'desligada';
+            } catch (e) {
+              core.warning(`Fila de merge ilegível: ${e.message}`);
+              fila = null;
+            }
+            // Deploy ok = job "Deploy Green" com sucesso. Um rollback manual também conclui o run com success.
+            const deploys = [];
+            for (const wf of ['deploy-hub2you-blue-green.yml', 'deploy-autonomia-blue-green.yml']) {
+              const runs = (await github.rest.actions.listWorkflowRuns({ owner, repo, workflow_id: wf, branch: 'main', per_page: 20 })).data.workflow_runs;
+              const ultimo = runs[0];
+              let ok = null;
+              for (const r of runs.filter((run) => run.conclusion === 'success')) {
+                const jobs = (await github.rest.actions.listJobsForWorkflowRun({ owner, repo, run_id: r.id })).data.jobs;
+                if (jobs.some((j) => j.name === 'Deploy Green' && j.conclusion === 'success')) {
+                  ok = r;
+                  break;
+                }
+              }
+              deploys.push({ wf, ultimo, ok });
+            }
+            const abertos = await github.paginate(github.rest.pulls.list, { owner, repo, state: 'open', per_page: 100 });
+            const comRotulo = (rotulo) => abertos.filter((pr) => nomes(pr.labels).includes(rotulo));
+            const validar = (await github.paginate(github.rest.issues.listForRepo, { owner, repo, labels: 'fila:validar', state: 'all', per_page: 100 }))
+              .filter((i) => i.pull_request);
+            const linha = (pr) => `- #${pr.number} ${titulo(pr.title)}${pr.draft ? ' _(rascunho)_' : ''}`;
+            const lista = (prs) => (prs.length ? prs.map(linha).join('\n') : '_nenhum_');
+            const producao = ({ wf, ultimo, ok }) => {
+              const nome = wf.includes('hub2you') ? 'Hub2You' : 'Autonom.ia';
+              const andamento = ultimo && ultimo.status !== 'completed' ? ` · **em andamento:** \`${ultimo.head_sha.slice(0, 10)}\`` : '';
+              const falhou = ultimo && ultimo.conclusion === 'failure' ? ` · ⚠️ último deploy FALHOU em \`${ultimo.head_sha.slice(0, 10)}\`` : '';
+              return `- ${nome}: último deploy ok em \`${ok ? ok.head_sha.slice(0, 10) : '?'}\`${andamento}${falhou}`;
+            };
+            const filaTexto = () => {
+              if (fila === null) return '_não foi possível ler_';
+              if (fila === 'desligada') return '_fila de merge desligada na main_';
+              if (!fila.length) return '_vazia_';
+              return fila.map((e) => `- ${e.position}. #${e.pullRequest.number} ${titulo(e.pullRequest.title)} (${e.state})`).join('\n');
+            };
+
+            const corpo = [
+              'Painel da fila de deploy do chat2you. **Atualizado sozinho** pelo workflow `fila-painel.yml`. Não edite à mão.',
+              '',
+              'Regras: `docs/processo-de-release.md`. Quem coordena: sessão **Orquestração Deploy**. **O pedido do Rodrigo prevalece sempre**; com a Orquestração fora, o OK direto dele libera (a sessão enfileira citando o OK no PR).',
+              '',
+              `**Atualizado:** ${agora} UTC · **main:** \`${main.slice(0, 10)}\``,
+              '',
+              '## Produção',
+              ...deploys.map(producao),
+              '',
+              '## Fila de merge (GitHub)',
+              filaTexto(),
+              '',
+              '## Enfileirados, esperando checks (auto-merge)',
+              lista(abertos.filter((pr) => pr.auto_merge)),
+              '',
+              '## Hotfix (`hotfix`)',
+              lista(comRotulo('hotfix')),
+              '',
+              '## Pedidos de vaga (`fila:pedido`)',
+              lista(comRotulo('fila:pedido')),
+              '',
+              '## Em produção aguardando "ok, SHA" (`fila:validar`)',
+              lista(validar),
+            ].join('\n');
+
+            await github.rest.issues.update({ owner, repo, issue_number: painel, body: corpo });

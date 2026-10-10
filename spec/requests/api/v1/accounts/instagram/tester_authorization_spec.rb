@@ -48,6 +48,109 @@ RSpec.describe 'Instagram authorization with tester selection', type: :request d
     expect(query['scope']).to eq(Instagram::IntegrationHelper::REQUIRED_SCOPES.join(','))
   end
 
+  describe 'browser-assisted accepted-role authorization' do
+    let(:authorization_attestation) do
+      selected = Instagram::Testers::Selection.new(account_id: account.id, actor_id: administrator.id, app_id: '10001')
+                                              .verify(selection_token)
+      Instagram::Testers::AuthorizationAttestation.issue(
+        selection: selected, operation_id: SecureRandom.uuid, request_id: SecureRandom.uuid, source_action: 'status'
+      )
+    end
+
+    before do
+      allow(Instagram::Testers::BrowserOperationStore).to receive(:runtime_enabled?).and_return(true)
+    end
+
+    it 'prepares directly, consumes the attestation once and does not enqueue authorization' do
+      expect(Instagram::Testers::BrowserOperations).not_to receive(:new)
+      post path, params: { tester_selection_token: selection_token,
+                           tester_authorization_attestation: authorization_attestation, return_to: 'onboarding' },
+                 headers: headers, as: :json
+
+      expect(response).to have_http_status(:ok)
+      state = JWT.decode(Rack::Utils.parse_query(URI.parse(response.parsed_body.fetch('url')).query).fetch('state'),
+                         'synthetic_secret', true, algorithm: 'HS256').first
+      expect(state['tester_selection']).to include('id' => candidate[:id], 'username' => candidate[:username])
+      expect(state['jti']).to match(/\A[0-9a-f-]{36}\z/)
+
+      post path, params: { tester_selection_token: selection_token,
+                           tester_authorization_attestation: authorization_attestation }, headers: headers, as: :json
+      expect(response).to have_http_status(:bad_gateway)
+      expect(response.parsed_body).to eq('error_code' => 'unknown_status')
+    end
+
+    it 'fails closed with unknown_status when the accepted-role proof is absent' do
+      post path, params: { tester_selection_token: selection_token }, headers: headers, as: :json
+
+      expect(response).to have_http_status(:bad_gateway)
+      expect(response.parsed_body).to eq('error_code' => 'unknown_status')
+    end
+
+    it 'rejects an attestation scoped to another profile without consuming it' do
+      selected = Instagram::Testers::Selection.new(account_id: account.id, actor_id: administrator.id, app_id: '10001')
+                                              .verify(selection_token)
+      foreign = selected.merge('username' => 'another_profile')
+      attestation = Instagram::Testers::AuthorizationAttestation.issue(
+        selection: foreign, operation_id: SecureRandom.uuid, request_id: SecureRandom.uuid, source_action: 'status'
+      )
+
+      post path, params: { tester_selection_token: selection_token, tester_authorization_attestation: attestation },
+                 headers: headers, as: :json
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body).to eq('error_code' => 'invalid_selection')
+    end
+
+    it 'rejects attestations scoped to another account or actor' do
+      selected = Instagram::Testers::Selection.new(account_id: account.id, actor_id: administrator.id, app_id: '10001')
+                                              .verify(selection_token)
+      %w[account_id actor_id].each do |scope_key|
+        attestation = Instagram::Testers::AuthorizationAttestation.issue(
+          selection: selected.merge(scope_key => '999999'), operation_id: SecureRandom.uuid, request_id: SecureRandom.uuid,
+          source_action: 'status'
+        )
+        post path, params: { tester_selection_token: selection_token, tester_authorization_attestation: attestation },
+                   headers: headers, as: :json
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response.parsed_body).to eq('error_code' => 'invalid_selection')
+      end
+    end
+
+    it 'maps an expired attestation to unknown_status' do
+      attestation = authorization_attestation
+      travel 6.minutes do
+        post path, params: { tester_selection_token: selection_token,
+                             tester_authorization_attestation: attestation }, headers: headers, as: :json
+        expect(response).to have_http_status(:bad_gateway)
+        expect(response.parsed_body).to eq('error_code' => 'unknown_status')
+      end
+    end
+
+    it 'rechecks current ACL after consuming the role proof' do
+      allow(Instagram::Testers::OauthBinding).to receive(:authorize!).and_raise(Instagram::Testers::Error.new('forbidden'))
+      post path, params: { tester_selection_token: selection_token,
+                           tester_authorization_attestation: authorization_attestation }, headers: headers, as: :json
+      expect(response).to have_http_status(:forbidden)
+      expect(response.parsed_body).to eq('error_code' => 'forbidden')
+    end
+
+    it 'generates a fresh OAuth nonce for each accepted proof' do
+      selected = Instagram::Testers::Selection.new(account_id: account.id, actor_id: administrator.id, app_id: '10001')
+                                              .verify(selection_token)
+      states = Array.new(2) do
+        attestation = Instagram::Testers::AuthorizationAttestation.issue(
+          selection: selected, operation_id: SecureRandom.uuid, request_id: SecureRandom.uuid, source_action: 'status'
+        )
+        post path, params: { tester_selection_token: selection_token,
+                             tester_authorization_attestation: attestation }, headers: headers, as: :json
+        expect(response).to have_http_status(:ok)
+        query = Rack::Utils.parse_query(URI.parse(response.parsed_body.fetch('url')).query)
+        JWT.decode(query.fetch('state'), 'synthetic_secret', true, algorithm: 'HS256').first.fetch('jti')
+      end
+
+      expect(states.first).not_to eq(states.last)
+    end
+  end
+
   it 'does not issue a bound OAuth URL for pending status' do
     allow(client).to receive(:status).and_return('pending')
     post path, params: { tester_selection_token: selection_token }, headers: headers, as: :json

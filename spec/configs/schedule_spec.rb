@@ -21,4 +21,17 @@ RSpec.context 'with valid schedule.yml' do
     # ensure that no duplicates exist
     expect(schedule_keys.count).to eq(schedule_keys.uniq.count)
   end
+
+  # O sidekiq-cron enfileira cada job com `set(queue:).perform_later(*args)`. Um método do job que sobrescreva o
+  # ActiveJob por engano (ex.: um `enqueue` privado, #1073) só quebra nesse caminho, nunca no perform_now dos testes.
+  it 'enqueues every ActiveJob entry the way sidekiq-cron does' do
+    schedule = YAML.load_file(Rails.root.join('config/schedule.yml'))
+
+    schedule.each_value do |entry|
+      klass = entry['class'].constantize
+      next unless klass < ActiveJob::Base
+
+      expect { klass.set(queue: entry['queue']).perform_later(*Array(entry['args'])) }.not_to raise_error, entry['class']
+    end
+  end
 end

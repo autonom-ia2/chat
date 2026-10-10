@@ -1,0 +1,161 @@
+{
+  "baseline": {
+    "containers": {
+      "count": 115,
+      "sha256": "a1e0ccca15687c4d8daf2099f5ace45265cc1431fb85be5a88c3f3771a6c22c6"
+    },
+    "networks": {
+      "count": 12,
+      "sha256": "0321c4f8cc2b59a1c5cc45974e945ce9d12d363c5342a1ce041cf353d01b07cf"
+    },
+    "volumes": {
+      "count": 26,
+      "sha256": "6922be6eabba35b8f0b1bc4ec6560177d3e81c3ce948784227b7c0a4a98e8be5"
+    }
+  },
+  "browser_calls": 0,
+  "cleanup_errors": [],
+  "execution_performed": true,
+  "external_calls": false,
+  "final": {
+    "containers": {
+      "count": 115,
+      "sha256": "a1e0ccca15687c4d8daf2099f5ace45265cc1431fb85be5a88c3f3771a6c22c6"
+    },
+    "networks": {
+      "count": 12,
+      "sha256": "0321c4f8cc2b59a1c5cc45974e945ce9d12d363c5342a1ce041cf353d01b07cf"
+    },
+    "volumes": {
+      "count": 26,
+      "sha256": "6922be6eabba35b8f0b1bc4ec6560177d3e81c3ce948784227b7c0a4a98e8be5"
+    }
+  },
+  "harness": {
+    "sha256": "20da27378b2da64faefea32ca7479fa0df8a9b3654e585cfbddaf5b17168e095"
+  },
+  "harness_result": {
+    "api_boundary": {
+      "enqueue_accepted": true,
+      "foreign_poll_rejected": true,
+      "poll_ready": true,
+      "selection_verified": true
+    },
+    "authorization_boundary": {
+      "acl_rejected": true,
+      "authorization_queue_absent": true,
+      "expired_rejected": true,
+      "foreign_scope_rejected": true,
+      "fresh_direct_ok": true,
+      "oauth_call": false,
+      "old_attestation_single_use_rejected": true,
+      "old_attestation_within_ttl_ok": true,
+      "provider_call": false,
+      "service_acl_revalidation": true,
+      "single_use_rejected": true
+    },
+    "baseline": {
+      "complete_received": true,
+      "error_code": "meta_unavailable",
+      "executor_shape_valid": true,
+      "rails_state": "failed"
+    },
+    "browser_calls": 0,
+    "dangerous_redis_commands": false,
+    "harness": "oauth_original_flow_integration",
+    "isolated_services": {
+      "database_transaction_rolled_back": true,
+      "external_calls_disabled": true,
+      "postgres_loopback": false,
+      "queue_adapter_test": true,
+      "redis_loopback": false,
+      "redis_namespace_isolated": true
+    },
+    "mode": "sandbox",
+    "oauth_calls": 0,
+    "patched": {
+      "complete_received": true,
+      "executor_shape_valid": true,
+      "rails_state": "ready",
+      "selection_token_present": true,
+      "selection_verified": true,
+      "stored_result_present": true
+    },
+    "production_mutated": false,
+    "provider_calls": 0,
+    "provider_reconnection_exercised": false,
+    "reauthorization_boundary": {
+      "http_ok": true,
+      "provider_call": false,
+      "state_bound": true
+    },
+    "rejection_checks": {
+      "deadline": true,
+      "extra_fields": true,
+      "foreign_actor": true,
+      "malformed_candidate": true,
+      "wrong_claim": true
+    },
+    "source_constant_sorted": true,
+    "status": "passed",
+    "status_boundary": {
+      "authorization_attestation_present": true,
+      "enqueue_accepted": true,
+      "poll_ready": true,
+      "status_accepted": true
+    },
+    "transport_reconnect": {
+      "client_recreated": true,
+      "result_ready": true,
+      "selection_verified": true
+    }
+  },
+  "images": {
+    "app_image_id": "sha256:7beb3c8f225b359c1b3573ab0c830c3babb28fa4eb2db322ee887db309b7dd63",
+    "app_manifest": "sha256:5391a92cd64d6b01c212b33ea8c95ee9b933798490631f268d46a2d147b1bed4",
+    "app_repository": "354307071110.dkr.ecr.us-east-1.amazonaws.com/chatwoot-autonomia-prod",
+    "app_source_sha": "8589beb5504fe59a21ed907db9c1d434c6eec0e9",
+    "postgres_manifest": "sha256:1d50c689b0a6511b9ea0a15615281c81a59fd04a08eb35057ec8646fb3a2118a",
+    "postgres_production_rds_minor": "18.3",
+    "postgres_runtime_minor": "18.6",
+    "redis_image": "redis:7.4.9-alpine",
+    "redis_image_id": "sha256:487efc0616382465781b8fdc3d6d1db449e6fd80ae23bf48432a2da6b6929908"
+  },
+  "input_staging_removed": true,
+  "launcher_exit_code": 0,
+  "launcher_sha256": "0a5dafae2b32c46c20b3455987d5e59fc11c07a71b4cdb58381cda3728b21d6b",
+  "oauth_calls": 0,
+  "overlays": [
+    {
+      "sha256": "a46a9cff71468946d8c9d40c427cb913f3042bf5ffeb0ba2d82819547499e061",
+      "target": "app/services/instagram/testers/browser_operations.rb"
+    },
+    {
+      "sha256": "545802344fefce8ac8e8abdbdacc2dcb296776bfe8682677567a2d44c93aa753",
+      "target": "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb"
+    },
+    {
+      "sha256": "dc473409d0952482a622f3a15efa1d1c200ff38ccd5eb65afa3b047b3c0a150f",
+      "target": "app/services/instagram/testers/authorization_attestation.rb"
+    },
+    {
+      "sha256": "6535de6c3157e3866e697247fc84fb6ab7c4ef4f58969432aea157a2f4e3ab80",
+      "target": "app/services/instagram/testers/browser_authorization.rb"
+    }
+  ],
+  "production_mutated": false,
+  "provider_calls": 0,
+  "sandbox": {
+    "cleanup_verified": true,
+    "cleanup_window_seconds": 90,
+    "coordination_tls": true,
+    "global_deadline_seconds": 600,
+    "network_internal": true,
+    "persistent_data_volumes": false,
+    "published_ports": false,
+    "readonly_code_mounts": true,
+    "synthetic_provider": true
+  },
+  "status": "passed",
+  "utc": "2026-10-08T11:53:20.628451+00:00"
+}

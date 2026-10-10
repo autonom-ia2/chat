@@ -107,6 +107,19 @@ describe('#mutations', () => {
       });
       expect(state.allConversations[0].can_reply).toEqual(true);
     });
+
+    it('clears the WhatsApp API reply hint when the window reopens', () => {
+      const state = {
+        allConversations: [
+          { id: 1, can_reply: true, whatsapp_api_reply: true },
+        ],
+      };
+      mutations[types.SET_CONVERSATION_CAN_REPLY](state, {
+        conversationId: 1,
+        canReply: true,
+      });
+      expect(state.allConversations[0].whatsapp_api_reply).toEqual(false);
+    });
   });
 
   describe('#ADD_MESSAGE', () => {

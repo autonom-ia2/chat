@@ -1,11 +1,14 @@
 class Crm::Cards::FromConversationHandler
   Result = Struct.new(:card, :created, keyword_init: true)
 
-  def initialize(account:, user:, conversation:, requested_params:)
+  # new_subject: a pessoa pediu um assunto novo nesta conversa (#1142). Sem ele, reaproveita o card que a conversa
+  # já tem (assunto atual), como sempre.
+  def initialize(account:, user:, conversation:, requested_params:, new_subject: false)
     @account = account
     @user = user
     @conversation = conversation
     @requested_params = requested_params
+    @new_subject = new_subject
   end
 
   def perform
@@ -28,6 +31,8 @@ class Crm::Cards::FromConversationHandler
   private
 
   def existing_card
+    return if @new_subject
+
     ::Crm::Cards::ConversationCardFinder.new(account: @account).find(@conversation)
   end
 

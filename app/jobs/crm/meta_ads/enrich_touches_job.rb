@@ -1,4 +1,6 @@
-# Resolve os nomes da Meta nos toques de uma conversa (#1034). Ver Crm::MetaAds::TouchEnricher.
+# Resolve os nomes da Meta nos toques de uma conversa (#1034) e liga a conversa ao anúncio (#1073, F2b). Ver
+# Crm::MetaAds::TouchEnricher e Crm::MetaAds::Links::Linker. A ligação vem depois dos nomes: o anúncio do
+# clique para o WhatsApp só sabe a campanha depois que o nome foi resolvido e foi para o cache.
 #
 # Enfileirado por Ctwa::CampaignBuilder.attribute! depois de cada toque gravado que tenha algum ID,
 # no máximo uma vez por conversa a cada THROTTLE. Um toque que chega dentro da janela não se perde:
@@ -10,7 +12,7 @@ class Crm::MetaAds::EnrichTouchesJob < ApplicationJob
   KEY_PREFIX = 'crm:meta_ads:enrich'.freeze
 
   def self.enqueue_for(conversation, touch)
-    return unless Crm::MetaAds::TouchEnricher.meta_ids?(touch)
+    return unless Crm::MetaAds::TouchEnricher.meta_ids?(touch) || Crm::MetaAds::Links::Linker.meta_touch?(touch)
     return unless Crm::MetaAdsConnection.active.exists?(account_id: conversation.account_id)
 
     if claim("#{KEY_PREFIX}:#{conversation.id}")
@@ -30,5 +32,8 @@ class Crm::MetaAds::EnrichTouchesJob < ApplicationJob
     return unless Crm::MetaAdsConnection.active.exists?(account_id: conversation.account_id)
 
     Crm::MetaAds::TouchEnricher.new(conversation).perform
+    linked = Crm::MetaAds::Links::Linker.new(conversation.reload).perform
+    connection = Crm::MetaAdsConnection.active_for(conversation.account_id)
+    Crm::MetaAds::Insights::Broadcaster.broadcast_throttled(connection) if linked.positive? && connection&.ad_account_id.present?
   end
 end

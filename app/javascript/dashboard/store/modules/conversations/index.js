@@ -369,6 +369,8 @@ export const mutations = {
     const [chat] = _state.allConversations.filter(c => c.id === conversationId);
     if (chat) {
       chat.can_reply = canReply;
+      // Fork chat#1067: mensagem recebida reabre a janela oficial, a resposta volta para a Cloud.
+      if (canReply) chat.whatsapp_api_reply = false;
     }
   },
 

@@ -9,13 +9,14 @@ import NextButton from 'dashboard/components-next/button/Button.vue';
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
 import TextArea from 'dashboard/components-next/textarea/TextArea.vue';
-import Select from 'dashboard/components-next/select/Select.vue';
+import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import Switch from 'dashboard/components-next/switch/Switch.vue';
 import Icon from 'dashboard/components-next/icon/Icon.vue';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import BuilderChat from '../builder/BuilderChat.vue';
 import AgentAudienceForm from './AgentAudienceForm.vue';
 import AgentScheduleForm from './AgentScheduleForm.vue';
+import AgentBookingForm from './AgentBookingForm.vue';
 
 const props = defineProps({
   agent: {
@@ -158,6 +159,11 @@ const saveAudience = ({ audience, audienceUnknownContact }) =>
 const saveResponseWindow = responseWindow =>
   saveSettings({
     config: { ...buildPayload().config, response_window: responseWindow },
+  });
+// #1196 — the booking page the AI uses to offer times and book; null turns it off.
+const saveBookingPage = bookingPageId =>
+  saveSettings({
+    config: { ...buildPayload().config, booking_page_id: bookingPageId },
   });
 
 const onAvatarUpload = async ({ file, url }) => {
@@ -462,7 +468,7 @@ onMounted(loadHistory);
         <label class="text-sm font-medium text-n-slate-12">
           {{ t('AGENTS.TUNE.ACTUATION_LABEL') }}
         </label>
-        <Select
+        <ChoiceSelect
           v-model="form.actuation"
           :options="ACTUATION_OPTIONS"
           :aria-label="t('AGENTS.TUNE.ACTUATION_LABEL')"
@@ -488,7 +494,7 @@ onMounted(loadHistory);
         <label class="text-sm font-medium text-n-slate-12">
           {{ t('AGENTS.TUNE.TONE') }}
         </label>
-        <Select
+        <ChoiceSelect
           v-model="form.tone"
           :options="TONE_OPTIONS"
           :aria-label="t('AGENTS.TUNE.TONE')"
@@ -500,7 +506,7 @@ onMounted(loadHistory);
         <label class="text-sm font-medium text-n-slate-12">
           {{ t('AGENTS.TUNE.HANDOFF_STRATEGY') }}
         </label>
-        <Select
+        <ChoiceSelect
           v-model="form.handoff_strategy"
           :options="HANDOFF_OPTIONS"
           :aria-label="t('AGENTS.TUNE.HANDOFF_STRATEGY')"
@@ -585,6 +591,13 @@ onMounted(loadHistory);
         @submit="saveResponseWindow"
       />
     </section>
+
+    <!-- #1196: the AI offers times and books through a booking page. -->
+    <AgentBookingForm
+      :agent="agent"
+      :is-saving="isSaving"
+      @submit="saveBookingPage"
+    />
 
     <!-- G2: instruction history + rollback. -->
     <section class="flex flex-col gap-4 pt-2 border-t border-n-weak">

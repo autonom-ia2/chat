@@ -1,0 +1,28 @@
+{
+  "base_sha": "372ca4eb5da63a6d87d01d3c40f78344b4c2d7cf",
+  "reviewers": [
+    "nexo_revisao",
+    "iris_captura"
+  ],
+  "verdict": "approved",
+  "blocking_callback_exception_fixed": true,
+  "read_received_phase_added": true,
+  "privacy": "fixed phases, counters, booleans and allowlisted enums only; no identifiers, URLs, headers, bodies or secrets",
+  "existing_manager_tests": {
+    "executed": 55,
+    "passed": 55,
+    "failed": 0,
+    "skipped": 0
+  },
+  "operational_harness": {
+    "redaction_verified": true,
+    "throwing_callback_noninterference_verified": true,
+    "terminal_envelope_unchanged": true,
+    "meta_called": false
+  },
+  "syntax_check": "passed",
+  "diff_check": "passed",
+  "prettier_check": "passed",
+  "production_changed_for_this_patch": false,
+  "historical_failure_reproduced": false
+}

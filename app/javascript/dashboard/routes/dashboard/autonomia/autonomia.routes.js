@@ -9,9 +9,14 @@ import store from 'dashboard/store';
 // Lazy-loaded pages (owned by HUB / CONSTRUTOR / PAINEL implementers).
 // Dynamic imports keep this NAV module self-contained and code-split the
 // Autonomia bundle out of the main dashboard chunk.
-const AgentsHubPage = () => import('./pages/AgentsHubPage.vue');
-const AgentBuilderPage = () => import('./pages/AgentBuilderPage.vue');
-const AgentPanelPage = () => import('./pages/AgentPanelPage.vue');
+// #1181: a lista, a criação e a página do agente passam por seletores que escolhem a
+// página antiga ou a nova pela flag autonomia_agents_journey (a antiga continua no mesmo pedaço).
+const AgentesListaEntrada = () =>
+  import('./agentes/entrada/AgentesListaEntrada.vue');
+const AgentesCriarEntrada = () =>
+  import('./agentes/entrada/AgentesCriarEntrada.vue');
+const AgentePaginaEntrada = () =>
+  import('./agentes/entrada/AgentePaginaEntrada.vue');
 const ProspectingSearchPage = () =>
   import('./prospecting/pages/ProspectingSearchPage.vue');
 const ProspectingListsPage = () =>
@@ -116,14 +121,14 @@ export const routes = [
     name: 'autonomia_agents_index',
     meta: agentsMeta,
     beforeEnter: ensureAutonomiaEnabled,
-    component: AgentsHubPage,
+    component: AgentesListaEntrada,
   },
   {
     path: frontendURL('accounts/:accountId/agents/new'),
     name: 'autonomia_agents_builder',
     meta: agentsManageMeta,
     beforeEnter: ensureAutonomiaEnabled,
-    component: AgentBuilderPage,
+    component: AgentesCriarEntrada,
   },
   {
     path: frontendURL(
@@ -132,7 +137,7 @@ export const routes = [
     name: 'autonomia_agent_panel',
     meta: agentsMeta,
     beforeEnter: ensureAutonomiaEnabled,
-    component: AgentPanelPage,
+    component: AgentePaginaEntrada,
     props: route => ({
       agentId: route.params.agentId,
       tab: route.params.tab || 'test',

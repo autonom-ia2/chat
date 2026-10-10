@@ -153,6 +153,7 @@
     "husky": "^7.0.0",
     "jsdom": "^27.2.0",
     "lint-staged": "^16.2.7",
+    "mjml-browser": "4.18.0",
     "postcss": "^8.5.23",
     "postcss-import": "^16.1.0",
     "postcss-preset-env": "^8.5.1",

@@ -10,6 +10,11 @@ import {
 } from 'vue';
 import { useStore } from 'vuex';
 import { useI18n } from 'vue-i18n';
+import {
+  STATUS_PILL_CLASSES,
+  cardStatusLabel,
+  countsAsSale,
+} from '../helpers/cardOutcome';
 import { useRoute, useRouter } from 'vue-router';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import CrmCardRelationshipPanel from './CrmCardRelationshipPanel.vue';
@@ -33,8 +38,16 @@ import MetaConversionsAPI from 'dashboard/api/metaConversions';
 import { useCrmOrigin } from '../composables/useCrmOrigin';
 import CrmCardPill from './CrmCardPill.vue';
 import CrmCardMetaConversion from './CrmCardMetaConversion.vue';
+import BookingInviteButton from 'dashboard/components-next/Booking/BookingInviteButton.vue';
+import CrmCardNextMeeting from './calendar/CrmCardNextMeeting.vue';
 import CrmOriginList from './CrmOriginList.vue';
+import {
+  formatBookingTime,
+  noticeKindKey,
+  skipReasonKey,
+} from '../helpers/meetingNotices';
 import CrmCardLeadForm from './CrmCardLeadForm.vue';
+import CrmCardCustomFields from './CrmCardCustomFields.vue';
 
 const props = defineProps({
   show: { type: Boolean, default: false },
@@ -396,16 +409,38 @@ const completedFollowUps = computed(() =>
 // --- Deal close (Win / Lose / Reopen) ---------------------------------------
 const cardStatus = computed(() => props.card?.status || 'open');
 const isDealOpen = computed(() => cardStatus.value === 'open');
+const cardPipeline = computed(() => {
+  const id = Number(props.card?.pipeline_id || props.pipelineId);
+  return props.pipelines.find(pipeline => pipeline.id === id);
+});
+const isSalePipeline = computed(() => countsAsSale(cardPipeline.value));
 const statusLabel = computed(() =>
-  t(`CRM_KANBAN.DRAWER.STATUS_${String(cardStatus.value).toUpperCase()}`)
+  cardStatusLabel(t, cardStatus.value, cardPipeline.value)
 );
 const statusPillClass = computed(
-  () =>
-    ({
-      won: 'bg-n-teal-3 text-n-teal-11',
-      lost: 'bg-n-ruby-3 text-n-ruby-11',
-      archived: 'bg-n-slate-4 text-n-slate-10',
-    })[cardStatus.value] || 'bg-n-blue-3 text-n-blue-11'
+  () => STATUS_PILL_CLASSES[cardStatus.value] || 'bg-n-blue-3 text-n-blue-11'
+);
+// Funil de venda sem nome próprio mantém "Ganhar"/"Perder"; os outros mostram o nome do desfecho (#1144).
+const customOutcomeLabels = computed(
+  () => cardPipeline.value?.metadata?.outcome_labels || {}
+);
+const winDealLabel = computed(() =>
+  isSalePipeline.value && !customOutcomeLabels.value.success
+    ? t('CRM_KANBAN.DRAWER.WIN_DEAL')
+    : cardStatusLabel(
+        t,
+        isSalePipeline.value ? 'won' : 'resolved',
+        cardPipeline.value
+      )
+);
+const loseDealLabel = computed(() =>
+  isSalePipeline.value && !customOutcomeLabels.value.failure
+    ? t('CRM_KANBAN.DRAWER.LOSE_DEAL')
+    : cardStatusLabel(
+        t,
+        isSalePipeline.value ? 'lost' : 'cancelled',
+        cardPipeline.value
+      )
 );
 
 const conversationStatusLabel = status => {
@@ -437,6 +472,11 @@ const loseReason = ref('');
 
 const openWinDialog = () => {
   if (!props.canManageCards) return;
+  // Fora de venda não há valor a confirmar: fecha direto (Reabrir desfaz).
+  if (!isSalePipeline.value) {
+    emit('closeDeal', { result: 'won' });
+    return;
+  }
   winAmount.value = props.card?.value_cents
     ? Number(props.card.value_cents) / 100
     : '';
@@ -974,6 +1014,16 @@ const ACTIVITY_META = {
   move: { key: 'ACTIVITY_MOVE', icon: 'i-lucide-arrow-right', tone: 'info' },
   won: { key: 'ACTIVITY_WON', icon: 'i-lucide-trophy', tone: 'positive' },
   lost: { key: 'ACTIVITY_LOST', icon: 'i-lucide-circle-x', tone: 'negative' },
+  resolved: {
+    key: 'ACTIVITY_RESOLVED',
+    icon: 'i-lucide-circle-check',
+    tone: 'positive',
+  },
+  cancelled: {
+    key: 'ACTIVITY_CANCELLED',
+    icon: 'i-lucide-circle-x',
+    tone: 'negative',
+  },
   reopen: {
     key: 'ACTIVITY_REOPEN',
     icon: 'i-lucide-rotate-ccw',
@@ -1070,6 +1120,56 @@ const ACTIVITY_META = {
     icon: 'i-lucide-circle-check',
     tone: 'info',
   },
+  // Agendamento (#1188): quem atendia saiu da conta e a reunião foi para outra pessoa. `nameLabel` põe o nome de
+  // quem recebeu no título (labels.to_user_id, resolvido no backend).
+  meeting_host_reassigned: {
+    key: 'ACTIVITY_MEETING_HOST_REASSIGNED',
+    nameLabel: 'to_user_id',
+    icon: 'i-lucide-user-check',
+    tone: 'info',
+  },
+  // Agendamento (#1192): o que o cliente fez pelo link e aviso no WhatsApp que não saiu.
+  booking_client_confirmed: {
+    key: 'ACTIVITY_BOOKING_CLIENT_CONFIRMED',
+    icon: 'i-lucide-circle-check',
+    tone: 'positive',
+  },
+  booking_client_canceled: {
+    key: 'ACTIVITY_BOOKING_CLIENT_CANCELED',
+    icon: 'i-lucide-calendar-x',
+    tone: 'negative',
+  },
+  booking_client_rescheduled: {
+    key: 'ACTIVITY_BOOKING_CLIENT_RESCHEDULED',
+    icon: 'i-lucide-calendar-clock',
+    tone: 'info',
+  },
+  booking_client_rebooked: {
+    key: 'ACTIVITY_BOOKING_CLIENT_REBOOKED',
+    icon: 'i-lucide-calendar-plus',
+    tone: 'positive',
+  },
+  booking_notice_failed: {
+    key: 'ACTIVITY_BOOKING_NOTICE_FAILED',
+    icon: 'i-lucide-message-circle-warning',
+    tone: 'negative',
+  },
+  booking_notices_stopped: {
+    key: 'ACTIVITY_BOOKING_NOTICES_STOPPED',
+    icon: 'i-lucide-bell-off',
+    tone: 'muted',
+  },
+  // Dia da reunião (#1193): o agente lembrou o cliente e mandou o link para remarcar.
+  booking_agent_reminded: {
+    key: 'ACTIVITY_BOOKING_AGENT_REMINDED',
+    icon: 'i-lucide-bell-ring',
+    tone: 'info',
+  },
+  booking_rebook_link_sent: {
+    key: 'ACTIVITY_BOOKING_REBOOK_LINK_SENT',
+    icon: 'i-lucide-calendar-plus',
+    tone: 'info',
+  },
   automation_owner_assigned: {
     key: 'ACTIVITY_AUTOMATION_OWNER_ASSIGNED',
     icon: 'i-lucide-user-check',
@@ -1102,14 +1202,14 @@ const ACTIVITY_META = {
   },
   ai_handoff: {
     key: 'ACTIVITY_AI_HANDOFF',
-    icon: 'i-lucide-user-round-check',
+    icon: 'i-lucide-user-check',
     tone: 'info',
   },
   // Fase D: handoff do agente nativo Autonom.ia. Reusa o mesmo visual do handoff
   // do Kanban; o detalhe nunca expõe motivo bruto do LLM (payload só ids/strategy).
   autonomia_handoff: {
     key: 'ACTIVITY_AUTONOMIA_HANDOFF',
-    icon: 'i-lucide-user-round-check',
+    icon: 'i-lucide-user-check',
     tone: 'info',
   },
   ai_followup_planned: {
@@ -1154,7 +1254,7 @@ const ACTIVITY_META = {
   },
   ai_handoff_pickup: {
     key: 'ACTIVITY_AI_HANDOFF_PICKUP',
-    icon: 'i-lucide-user-round-check',
+    icon: 'i-lucide-user-check',
     tone: 'positive',
   },
   ai_handoff_escalation: {
@@ -1179,9 +1279,18 @@ const ACTIVITY_TONE_CLASSES = {
   muted: 'bg-n-slate-4 text-n-slate-10',
 };
 
+// Agendamento (#1192): o que o cliente fez pelo link leva by: 'client' no
+// payload ("Aviso não saiu" leva by: 'system'). Só eventos do agendamento.
+const isClientBookingEvent = activity =>
+  String(activity.event_type || '').startsWith('booking_') &&
+  activity.payload?.by === 'client';
+
 // AI work runs as a system actor (actor_type === 'system'). ai_dismissed is a
 // human action (actor_type === 'user'), so it is NOT keyed on the 'ai_' prefix.
 const activityActor = activity => {
+  if (isClientBookingEvent(activity)) {
+    return t('CRM_KANBAN.DRAWER.CLIENT_ACTOR');
+  }
   if (activity.actor_type === 'system') {
     return activity.event_type?.startsWith('ai_')
       ? t('CRM_KANBAN.DRAWER.AI_ACTOR')
@@ -1325,10 +1434,60 @@ const activityDetail = activity => {
         time: relativeTimeFromISO(dueAt, locale.value),
       });
     }
+    case 'booking_client_rescheduled': {
+      const from = formatBookingTime(activity.payload?.from, locale.value);
+      const to = formatBookingTime(activity.payload?.starts_at, locale.value);
+      if (from && to)
+        return t('CRM_KANBAN.DRAWER.ACTIVITY_DETAIL_BOOKING_MOVED', {
+          from,
+          to,
+        });
+      return to
+        ? t('CRM_KANBAN.DRAWER.ACTIVITY_DETAIL_BOOKING_TIME', { time: to })
+        : '';
+    }
+    case 'booking_notice_failed': {
+      const kind = noticeKindKey(activity.payload?.kind);
+      const reason = activity.payload?.reason;
+      const base = 'CRM_KANBAN.CALENDAR.MEETING_DETAIL.NOTICES';
+      if (!kind) return '';
+      // Motivo de pulo conhecido tem texto; erro do envio (classe, interrupted,
+      // delivery_failed) aparece como "Falhou".
+      const reasonKey = skipReasonKey(reason);
+      const reasonText = t(
+        reasonKey === 'OTHER'
+          ? `${base}.STATUS.FAILED`
+          : `${base}.SKIP_REASONS.${reasonKey}`
+      );
+      return t('CRM_KANBAN.DRAWER.ACTIVITY_DETAIL_BOOKING_NOTICE_FAILED', {
+        kind: t(`${base}.KINDS.${kind}`),
+        reason: reasonText,
+      });
+    }
+    case 'booking_client_confirmed':
+    case 'booking_client_canceled':
+    case 'booking_client_rebooked':
+    case 'booking_notices_stopped':
+    case 'booking_agent_reminded':
+    case 'booking_rebook_link_sent': {
+      const time = formatBookingTime(activity.payload?.starts_at, locale.value);
+      return time
+        ? t('CRM_KANBAN.DRAWER.ACTIVITY_DETAIL_BOOKING_TIME', { time })
+        : '';
+    }
     case 'meeting_scheduled':
     case 'meeting_rescheduled':
     case 'meeting_canceled': {
       const title = activity.payload?.title;
+      // #1196 (J6-A4): reunião marcada pela IA na conversa.
+      if (
+        activity.event_type === 'meeting_scheduled' &&
+        activity.payload?.source === 'ai'
+      ) {
+        return t('BOOKING.AI_AGENT.BOOKED_BY_AI_DETAIL', {
+          title: title || '',
+        });
+      }
       return title
         ? t('CRM_KANBAN.DRAWER.ACTIVITY_DETAIL_MEETING', { title })
         : '';
@@ -1338,13 +1497,20 @@ const activityDetail = activity => {
   }
 };
 
+// Título com o nome de quem recebeu, quando o evento tem `nameLabel` e o nome veio; senão, o título fixo.
+const activityTitle = (activity, meta) => {
+  if (!meta.key) return t('CRM_KANBAN.DRAWER.ACTIVITY_GENERIC');
+  const name = meta.nameLabel ? activity.labels?.[meta.nameLabel] : null;
+  return name
+    ? t(`CRM_KANBAN.DRAWER.${meta.key}_TO`, { name })
+    : t(`CRM_KANBAN.DRAWER.${meta.key}`);
+};
+
 // Single source of truth for rendering a timeline entry. Hard non-JSON
 // fallback: unknown event types still produce a humanized label + icon.
 const describeActivity = activity => {
   const meta = ACTIVITY_META[activity.event_type] || FALLBACK_META;
-  const title = meta.key
-    ? t(`CRM_KANBAN.DRAWER.${meta.key}`)
-    : t('CRM_KANBAN.DRAWER.ACTIVITY_GENERIC');
+  const title = activityTitle(activity, meta);
   return {
     title,
     icon: meta.icon,
@@ -1600,7 +1766,7 @@ useFixedPanelPresence(computed(() => props.show));
                 outline
                 class="!outline-n-weak !rounded-lg"
                 icon="i-lucide-trophy"
-                :label="t('CRM_KANBAN.DRAWER.WIN_DEAL')"
+                :label="winDealLabel"
                 @click="guardRelationship(openWinDialog)"
               />
               <Button
@@ -1609,7 +1775,7 @@ useFixedPanelPresence(computed(() => props.show));
                 outline
                 class="!outline-n-weak !rounded-lg"
                 icon="i-lucide-circle-x"
-                :label="t('CRM_KANBAN.DRAWER.LOSE_DEAL')"
+                :label="loseDealLabel"
                 @click="guardRelationship(openLoseDialog)"
               />
             </template>
@@ -1685,6 +1851,11 @@ useFixedPanelPresence(computed(() => props.show));
           tabindex="-1"
           class="grid gap-4 outline-none"
         >
+          <!-- Próxima reunião do card (#1193): status do cliente, Chamar e Lembrar. -->
+          <CrmCardNextMeeting
+            v-if="meetingsEnabled && card?.id"
+            :card-id="card.id"
+          />
           <label class="grid gap-2 text-sm text-n-slate-12">
             <span>{{ t('CRM_KANBAN.DRAWER.STAGE') }}</span>
             <ChoiceSelect
@@ -1864,6 +2035,12 @@ useFixedPanelPresence(computed(() => props.show));
               />
             </label>
           </div>
+
+          <CrmCardCustomFields
+            v-if="isEditing && card?.id"
+            :card="card"
+            :can-manage="canManageCards"
+          />
 
           <details
             class="group rounded-xl border border-n-weak bg-n-surface-1 p-1"
@@ -2505,6 +2682,7 @@ useFixedPanelPresence(computed(() => props.show));
             color="slate"
             @click="guardRelationship(scheduleMeeting)"
           />
+          <BookingInviteButton v-if="canManageCards" :card="card" show-status />
         </div>
         <div
           v-else-if="!isEditing"
@@ -2641,7 +2819,13 @@ useFixedPanelPresence(computed(() => props.show));
       >
         <div class="w-full max-w-sm p-5 rounded-xl bg-n-solid-1 shadow-lg">
           <h3 class="mb-3 text-base font-medium text-n-slate-12">
-            {{ t('CRM_KANBAN.DRAWER.LOSE_DIALOG_TITLE') }}
+            {{
+              isSalePipeline
+                ? t('CRM_KANBAN.DRAWER.LOSE_DIALOG_TITLE')
+                : t('CRM_KANBAN.DRAWER.CLOSE_AS_TITLE', {
+                    label: loseDealLabel,
+                  })
+            }}
           </h3>
           <Input
             v-model="loseReason"
@@ -2658,7 +2842,11 @@ useFixedPanelPresence(computed(() => props.show));
               @click="showLoseDialog = false"
             />
             <Button
-              :label="t('CRM_KANBAN.DRAWER.LOSE_CONFIRM')"
+              :label="
+                isSalePipeline
+                  ? t('CRM_KANBAN.DRAWER.LOSE_CONFIRM')
+                  : t('CRM_KANBAN.DRAWER.MARK_AS', { label: loseDealLabel })
+              "
               ruby
               sm
               icon="i-lucide-circle-x"

@@ -60,6 +60,11 @@ const ERROR_KEYS = {
   token_invalid: 'TOKEN_INVALID',
   invalid_ad_account: 'INVALID_AD_ACCOUNT',
   not_connected: 'NOT_CONNECTED',
+  login_failed: 'LOGIN_FAILED',
+  login_unavailable: 'LOGIN_UNAVAILABLE',
+  missing_ads_read: 'MISSING_ADS_READ',
+  no_ad_account: 'NO_AD_ACCOUNT',
+  invalid_token: 'TOKEN_INVALID',
 };
 
 export const errorMessageKey = error => {
@@ -75,4 +80,130 @@ export const currentStep = connection => {
   if (!destinations.whatsapp && !destinations.site) return 3;
   if (!connection.sales_signal?.enabled) return 4;
   return 5;
+};
+
+// Dinheiro com centavos só quando há centavos ("R$ 163,51", "R$ 842"), como no painel (#1088).
+export const amount = (value, currency, locale) =>
+  new Intl.NumberFormat(intlLocale(locale), {
+    style: 'currency',
+    currency: currency || 'BRL',
+    minimumFractionDigits: Number.isInteger(Number(value)) ? 0 : 2,
+    maximumFractionDigits: 2,
+  }).format(Number(value || 0));
+
+// Duração para leigo (#1110, F5, §5.3), sempre arredondada para baixo: "menos de 1 min", "6 min", "1 h 20 min",
+// "2 dias". A partir de 48 h vira dias, como no servidor (Advisor::Format). null sem número.
+const MINUTE = 60;
+const HOUR = 60 * MINUTE;
+const DAY = 24 * HOUR;
+const DAYS_FROM = 48 * HOUR;
+const DURATION = 'CRM_KANBAN.META_ADS_HUB.PANEL.DURATION';
+
+export const duration = (seconds, t) => {
+  if (seconds === null || seconds === undefined || seconds === '') return null;
+  const value = Math.max(0, Math.floor(Number(seconds)));
+  if (Number.isNaN(value)) return null;
+  if (value < MINUTE) return t(`${DURATION}.SECONDS`);
+  if (value < HOUR) {
+    return t(`${DURATION}.MINUTES`, { n: Math.floor(value / MINUTE) });
+  }
+  if (value < DAYS_FROM) {
+    const hours = t(`${DURATION}.HOURS`, { n: Math.floor(value / HOUR) });
+    const minutes = Math.floor((value % HOUR) / MINUTE);
+    return minutes
+      ? `${hours} ${t(`${DURATION}.MINUTES`, { n: minutes })}`
+      : hours;
+  }
+  const days = Math.floor(value / DAY);
+  return t(`${DURATION}.DAYS`, { n: days }, days);
+};
+
+// O tipo de cada fato das ações do consultor (#1110, F5, tabela §2): o mesmo Advisor::Format::TYPES do servidor,
+// para a regra na tela sair com os mesmos números que o WhatsApp. Dinheiro em unidade, porcentagem em fração.
+export const FACT_TYPES = {
+  count: 'count',
+  value: 'money',
+  days: 'days',
+  ad_name: 'text',
+  median_seconds: 'duration',
+  answered: 'count',
+  unanswered: 'count',
+  target_seconds: 'duration',
+  window_days: 'days',
+  conversations: 'count',
+  unknown: 'count',
+  identified_pct: 'percent',
+  sales: 'count',
+  spend: 'money',
+  cost_per_sale: 'money',
+  target_cost_per_sale: 'money',
+  ctr_drop_pct: 'percent',
+  frequency_7d: 'decimal1',
+  max_increase_pct: 'percent',
+  weeks: 'count',
+  cooldown_days: 'days',
+  cpm_change_pct: 'percent',
+  cpm_recent: 'money',
+  cpm_baseline: 'money',
+  missing_conversations: 'count',
+};
+
+const numberIn = (locale, options) =>
+  new Intl.NumberFormat(intlLocale(locale), options);
+
+// Um fato já formatado pelo tipo; null sem valor ou sem tipo (o texto da regra mostra o que tiver).
+export const formatFact = (key, raw, { t, currency, locale }) => {
+  const type = FACT_TYPES[key];
+  if (!type || raw === null || raw === undefined || raw === '') return null;
+  switch (type) {
+    case 'money':
+      return amount(raw, currency, locale);
+    case 'count':
+    case 'days':
+      return numberIn(locale, { maximumFractionDigits: 0 }).format(
+        Math.round(Number(raw))
+      );
+    case 'percent':
+      return numberIn(locale, {
+        style: 'percent',
+        maximumFractionDigits: 0,
+      }).format(Number(raw));
+    case 'decimal1':
+      return numberIn(locale, {
+        minimumFractionDigits: 1,
+        maximumFractionDigits: 1,
+      }).format(Number(raw));
+    case 'duration':
+      return duration(raw, t);
+    default:
+      return String(raw);
+  }
+};
+
+// Veredito de cada anúncio (#1088): fundo claro do tom com texto escuro do mesmo tom. Os dois mudam juntos
+// no tema escuro, então o contraste se mantém. Usado no cartão do painel e no anúncio por dentro.
+export const VERDICT_CLASSES = {
+  up: 'bg-n-teal-3 text-n-teal-11',
+  keep: 'bg-n-blue-3 text-n-blue-11',
+  signal: 'bg-n-amber-3 text-n-amber-11',
+  review: 'bg-n-ruby-3 text-n-ruby-11',
+  early: 'bg-n-alpha-2 text-n-slate-11',
+};
+
+// Sem a imagem do anúncio, cada um ganha uma cor, para não virarem cartões iguais. Cores fixas e escuras (o
+// nome vai em branco por cima): as do tema clareiam no modo escuro. A cor sai do ID do anúncio, não da posição
+// na lista: o cartão e o anúncio por dentro mostram a mesma cor, e ela não muda quando a ordem muda.
+const THUMBS = [
+  'from-[#2563EB] to-[#0D2344]',
+  'from-[#B45309] to-[#78350F]',
+  'from-[#0F766E] to-[#134E4A]',
+  'from-[#4F46E5] to-[#312E81]',
+];
+
+export const thumbClass = adId => {
+  const sum = [...String(adId ?? '')].reduce(
+    (total, char) => total + char.charCodeAt(0),
+    0
+  );
+  return THUMBS[sum % THUMBS.length];
 };

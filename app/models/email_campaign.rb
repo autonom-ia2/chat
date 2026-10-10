@@ -131,6 +131,14 @@ class EmailCampaign < ApplicationRecord
     end
   end
 
+  # The account does not e-mail this address: it is suppressed (bounce, complaint, unsubscribe) or
+  # belongs to a contact who refused messages. Same protection as the real send
+  # (EmailCampaigns::DeliveryClaim); the test send refuses it too (#1093).
+  def refuses_address?(email)
+    EmailSuppression.suppressed?(account, email) ||
+      account.contacts.opted_out.exists?(['lower(email) = ?', email.to_s.strip.downcase])
+  end
+
   # Don't let an empty campaign go out: require rendered HTML or MJML source before sending.
   def body_present?
     body_html.present? || body_mjml.present?
@@ -258,15 +266,41 @@ class EmailCampaign < ApplicationRecord
 
   # Grava o conteúdo gerado no rascunho (mjml; o body_html é compilado no editor ao salvar, igual ao
   # fluxo síncrono atual) e marca pronto. Retorna true só se ESTA geração ainda era a ativa.
-  def ai_succeed!(token, subject:, preheader:, body_mjml:, subject_variants:)
+  # draft: { subject:, preheader:, body_mjml:, subject_variants: }. brand_identity: a identidade visual
+  # usada (#1076); quality_warnings: o que o controle de qualidade ainda aponta depois da correção.
+  def ai_succeed!(token, draft, brand_identity: {}, quality_warnings: [])
     ai_guarded_update(
       token,
-      subject: subject.to_s.strip.presence || self.subject,
-      preheader: preheader.to_s.presence,
-      body_mjml: body_mjml,
-      ai_subject_variants: Array(subject_variants),
+      brand_identity: brand_identity.to_h, ai_quality_warnings: Array(quality_warnings),
+      subject: draft[:subject].to_s.strip.presence || subject,
+      preheader: draft[:preheader].to_s.presence,
+      body_mjml: draft[:body_mjml],
+      ai_subject_variants: Array(draft[:subject_variants]),
       ai_status: self.class.ai_statuses[:ready], ai_error: nil, ai_completed_at: Time.current
     )
+  end
+
+  # Troca o pedido acompanhado (correção do controle de qualidade, #1076) só se ele ainda for o `from`:
+  # dois ticks que viram o mesmo pedido pronto não abrem duas correções.
+  def ai_swap_response!(token, from:, to:)
+    return false if token.blank?
+
+    rows = EmailCampaign.where(id: id, ai_generation_token: token, ai_status: self.class.ai_statuses[:processing],
+                               ai_provider_response_id: from)
+                        .update_all(ai_provider_response_id: to, updated_at: Time.current)
+    rows.positive?
+  end
+
+  # "Ajustar com IA" (#1095): the adjusted e-mail is a proposal the person applies in the editor
+  # (EmailCampaigns::Ai::Adjustment); only the generation is marked ready, the body stays as it was.
+  def ai_propose!(token)
+    ai_guarded_update(token, ai_status: self.class.ai_statuses[:ready], ai_error: nil, ai_completed_at: Time.current)
+  end
+
+  # "Ajustar com IA" applied with a site asked for in the request (#1111): the identity the adjustment used, written
+  # alone so it never saves the rest of the campaign.
+  def record_brand_identity!(identity)
+    update_columns(brand_identity: identity.to_h, updated_at: Time.current)
   end
 
   def ai_fail!(token, message)

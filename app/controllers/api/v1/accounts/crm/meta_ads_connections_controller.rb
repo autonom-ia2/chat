@@ -4,6 +4,8 @@
 #          ligado ao WhatsApp oficial já avisa a Meta das vendas.
 # PUT    → modo `token`: testa o token colado (ads_read concedido e ao menos uma conta de anúncios) e grava.
 # DELETE → apaga a conexão. Os nomes já resolvidos ficam nos toques e no cache.
+# POST facebook_login → modo `facebook_login` (#1069): troca o código do "Entrar com Facebook" por token,
+#                       testa como o PUT e grava. A escolha da conta segue pelo passo 2 com mode=facebook_login.
 #
 # Conexão guiada (#1047):
 # GET   ad_accounts?mode=  → contas de anúncios que esta conta pode usar, a recomendada primeiro
@@ -18,13 +20,24 @@
 # POST  insights → último dia lido da conta de anúncios; pede a leitura de hoje se tiver mais de 5 minutos.
 #                  O fim da leitura chega pelo canal de tempo real (crm.meta_ads.insights_updated).
 #
+# Painel (#1088):
+# GET   panel?days=7|30 → o painel do dia a dia (Crm::MetaAds::Panel::Report); também pede a leitura de hoje.
+#       F5 (#1110): mais o consultor (`advice`, até 3 ações, sempre de 30 dias), a Meta × nós do período
+#       (`meta_comparison`) e o tempo de resposta do período (`response_time`).
+# GET   panel_ad?ad_id=&days=7|30 → um anúncio por dentro (Crm::MetaAds::Panel::AdDetail). Só banco: abrir o
+#       anúncio não chama a Meta nem pede leitura (o painel por trás já pediu).
+# GET   panel_list?step=conversations|quotes|sales|slow_replies&days=7|30 → a lista por trás de cada etapa do
+#       caminho do dinheiro (Crm::MetaAds::Panel::PathList, F5). Só banco. Etapa fora da lista: 422 invalid_step.
+#
 # Quem não é administrador recebe 403 (não 401: a sessão é válida, só falta a permissão).
 class Api::V1::Accounts::Crm::MetaAdsConnectionsController < Api::V1::Accounts::Crm::BaseController
   include DeferInteractiveAi
 
   # Tokens da Meta têm algumas centenas de caracteres; o teto barra corpos absurdos antes da Graph.
   MAX_TOKEN_LENGTH = 2048
-  READ_ACTIONS = %w[show ad_accounts pixels funnels insights].freeze
+  SELECTION_RESET = { ad_account_id: nil, ad_account_name: nil, ad_account_business_id: nil, ad_account_timezone: nil,
+                      pixel_id: nil, pixel_name: nil, verified_at: nil }.freeze
+  READ_ACTIONS = %w[show ad_accounts pixels funnels insights panel panel_ad panel_list].freeze
 
   before_action :ensure_administrator
   before_action :ensure_mode, only: [:ad_accounts, :pixels, :selection]
@@ -39,12 +52,29 @@ class Api::V1::Accounts::Crm::MetaAdsConnectionsController < Api::V1::Accounts::
     return render_unprocessable('access_token_too_long') if token.length > MAX_TOKEN_LENGTH
     return render_unprocessable('encryption_not_configured') unless Chatwoot.encryption_configured?
 
-    error = token_error(Meta::AdsGraphClient.new(access_token: token))
+    error = ::Crm::MetaAds::TokenCheck.error_for(token)
     return render_unprocessable(error) if error
 
     save_connection!(token)
     Crm::MetaAds::BackfillJob.perform_later(Current.account.id)
     render json: payload
+  end
+
+  def facebook_login
+    code = params[:code].to_s.strip
+    return render_unprocessable('code_required') if code.blank?
+    return render_unprocessable('code_too_long') if code.length > MAX_TOKEN_LENGTH
+    return render_unprocessable('encryption_not_configured') unless Chatwoot.encryption_configured?
+
+    token = ::Crm::MetaAds::FacebookLogin.new.exchange!(code)
+    error = ::Crm::MetaAds::TokenCheck.error_for(token)
+    return render_unprocessable(error) if error
+
+    save_connection!(token, mode: 'facebook_login')
+    Crm::MetaAds::BackfillJob.perform_later(Current.account.id)
+    render json: payload
+  rescue ::Crm::MetaAds::FacebookLogin::Error => e
+    render_unprocessable(e.code)
   end
 
   def destroy
@@ -58,6 +88,31 @@ class Api::V1::Accounts::Crm::MetaAdsConnectionsController < Api::V1::Accounts::
 
     refreshing = ::Crm::MetaAds::Insights::Refresh.request!(connection)
     render json: { insights: ::Crm::MetaAds::Insights::Summary.payload(connection, refreshing: refreshing) }
+  end
+
+  def panel
+    connection = current_connection
+    return render json: { panel: nil } if connection.blank? || connection.ad_account_id.blank?
+
+    refreshing = ::Crm::MetaAds::Insights::Refresh.request!(connection)
+    report = ::Crm::MetaAds::Panel::Report.new(connection, days: params[:days])
+    render json: { panel: panel_payload(connection, report).merge(synced_at: connection.reload.insights_synced_at, refreshing: refreshing) }
+  end
+
+  def panel_ad
+    connection = current_connection
+    return render json: { ad: nil } if connection.blank? || connection.ad_account_id.blank?
+
+    render json: { ad: ::Crm::MetaAds::Panel::AdDetail.new(connection, ad_id: params[:ad_id], days: params[:days]).payload }
+  end
+
+  def panel_list
+    return render_unprocessable('invalid_step') unless ::Crm::MetaAds::Panel::PathList::STEPS.include?(params[:step])
+
+    connection = current_connection
+    return render json: { list: nil } if connection.blank? || connection.ad_account_id.blank?
+
+    render json: { list: ::Crm::MetaAds::Panel::PathList.new(connection, step: params[:step], days: params[:days]).payload }
   end
 
   def ad_accounts
@@ -137,31 +192,13 @@ class Api::V1::Accounts::Crm::MetaAdsConnectionsController < Api::V1::Accounts::
     render_unprocessable('invalid_mode') unless ::Crm::MetaAdsConnection::MODES.include?(params[:mode])
   end
 
-  # Ordem: a Meta respondeu? o token vale? tem ads_read? enxerga alguma conta de anúncios?
-  # Sem conta atribuída o token "funciona", mas nenhum nome aparece: melhor recusar já aqui.
-  def token_error(client)
-    permissions = client.permissions
-    return graph_failure(permissions) unless permissions.ok
-    return 'missing_ads_read' unless Meta::AdsGraphClient.ads_read_granted?(permissions.data)
-
-    accounts = client.ad_accounts_sample
-    return graph_failure(accounts) unless accounts.ok
-
-    'no_ad_account' if Array(accounts.data.to_h['data']).empty?
-  end
-
-  def graph_failure(result)
-    return 'meta_unavailable' if result.transient?
-    return 'missing_ads_read' if result.scope_error?
-
-    'invalid_token'
-  end
-
-  # Colar um token novo volta a conexão ao modo `token`; a conta de anúncios escolhida antes só continua
-  # se o novo token também a enxergar, o que a escolha seguinte confere.
-  def save_connection!(token)
+  # Colar um token novo (ou entrar com o Facebook) volta a conexão ao modo do token. No mesmo modo, a conta de
+  # anúncios escolhida antes continua e a escolha seguinte confere se o novo token a enxerga. Trocar de modo
+  # (#1069) limpa a escolha: o token novo não pode passar a ler a conta antiga sem a pessoa escolher de novo.
+  def save_connection!(token, mode: 'token')
     connection = ::Crm::MetaAdsConnection.find_or_initialize_by(account_id: Current.account.id)
-    connection.update!(access_token: token, mode: 'token', status: 'active', last_checked_at: Time.current, last_error: nil)
+    connection.assign_attributes(SELECTION_RESET) if connection.persisted? && connection.mode != mode
+    connection.update!(access_token: token, mode: mode, status: 'active', last_checked_at: Time.current, last_error: nil)
   end
 
   def setup
@@ -172,10 +209,35 @@ class Api::V1::Accounts::Crm::MetaAdsConnectionsController < Api::V1::Accounts::
     ::Crm::MetaAdsConnection.find_by(account_id: Current.account.id)
   end
 
+  # O consultor recebe o Report da própria requisição: com 30 dias, os fatos dele reaproveitam a mesma coorte.
+  # Pedido pelo token de API (o Guia) não marca as ações como mostradas: a métrica de aceite é do painel (D5.11).
+  def panel_payload(connection, report)
+    report.payload.merge(
+      meta_comparison: ::Crm::MetaAds::Panel::MetaComparison.new(connection, report).payload,
+      response_time: response_time(connection, report),
+      advice: ::Crm::MetaAds::Advisor::Analysis.current(connection, locale: I18n.locale.to_s, report: report,
+                                                                    shown: !authenticate_by_access_token?)
+    )
+  end
+
+  # Sem conversa de anúncio no período não há o que medir. Com 30 dias é a mesma janela dos fatos do consultor
+  # (§4.2): sai do cache deles, sem refazer a consulta sobre `messages` a cada GET.
+  def response_time(connection, report)
+    return if report.cohort.conversation_ads.empty?
+
+    payload = if report.days == ::Crm::MetaAds::Advisor::Facts::COHORT_DAYS
+                ::Crm::MetaAds::Advisor::Facts.new(connection, report: report).payload.dig(:account, :response)
+              else
+                ::Crm::MetaAds::Panel::ResponseTime.new(account_id: connection.account_id, range: report.range).payload
+              end
+    payload.merge(days: report.days)
+  end
+
   def payload
     connection = current_connection
     ::Crm::MetaAdsConnection.public_payload_for(connection).merge(
       partner: ::Crm::MetaAds::Platform.public_payload,
+      facebook_login: ::Crm::MetaAds::FacebookLogin.public_payload,
       whatsapp_portfolio: setup.portfolio_ids.any?,
       # Portfólio do cliente na Meta: o "Abrir a Meta" do passo 1 cai direto em Parceiros dele (#1068).
       client_portfolio_id: setup.portfolio_ids.first,

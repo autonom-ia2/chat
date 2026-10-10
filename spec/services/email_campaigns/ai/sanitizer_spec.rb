@@ -81,4 +81,155 @@ RSpec.describe EmailCampaigns::Ai::Sanitizer, :aggregate_failures do
     expect(out.index('footer-locked')).to be < out.index('</mj-body>')
     expect(described_class.new(out).perform).to eq(out)
   end
+
+  describe 'parser-based allowlist (#1104)' do
+    def clean(body)
+      described_class.new(wrap(body)).perform
+    end
+
+    def safe!(out)
+      expect(out.downcase).not_to include('<script', 'javascript', 'vbscript', 'onerror', 'onload', 'onclick', '<iframe', '<svg', '<math',
+                                          'expression', 'data:text')
+    end
+
+    it 'blocks script schemes hidden by entities, case, whitespace and double encoding' do
+      ['&#106;&#97;vascript:alert(1)', '&#x6A;avascript:alert(1)', '&#0000106avascript:alert(1)', 'javascript&colon;alert(1)',
+       'java&Tab;script:alert(1)', 'java&NewLine;script:alert(1)', 'JaVaScRiPt:alert(1)', "java\nscript:alert(1)",
+       '&amp;#106;avascript:alert(1)', 'VBScript:msgbox(1)', 'data:text/html;base64,PHNjcmlwdD4='].each do |href|
+        out = clean(%(<mj-button href="#{href}">Ir</mj-button><mj-text><a href="#{href}">a</a></mj-text>))
+
+        expect(out).to include('<mj-button href="#">Ir</mj-button>', '<a href="#">a</a>')
+        safe!(out)
+      end
+    end
+
+    it 'blocks a script scheme behind control characters in HTML' do
+      out = clean(%(<mj-text><a href=" \u0001java\u0002script:alert(1)">a</a><img src="\tjavascript:alert(1)"></mj-text>))
+
+      expect(out).to include('<a href="#">a</a>', '<img src="#">')
+      safe!(out)
+    end
+
+    it 'keeps safe schemes, relative links, anchors and Liquid placeholders exactly as written' do
+      body = '<mj-image src="https://x.test/a.png?w=1&amp;h=2"></mj-image>' \
+             '<mj-button href="https://loja.test/oferta?c={{ nome }}">Ir</mj-button><mj-text><a href="mailto:{{ email }}">eu</a>' \
+             '<a href="mailto:oi@loja.test">e-mail</a> <a href="tel:+5511999999999">tel</a> <a href="/p?x=1">rel</a> ' \
+             '<a href="#topo">topo</a> Olá {{ nome }}, {% if pontos > 10 %}parabéns{% endif %}&nbsp;<br/>' \
+             '<span style="color:#111;background-image:url(https://x.test/bg.png)">fim</span></mj-text>'
+
+      expect(clean(body)).to include(body)
+    end
+
+    it 'drops inline event handlers in any case, quoted or not, in MJML and in HTML' do
+      out = clean('<mj-image src="https://x.test/a.png" onload="x()"></mj-image>' \
+                  "<mj-text><img src=\"https://x.test/b.png\" OnError=alert(1)><b onmouseover='x()'>b</b></mj-text>")
+
+      expect(out).to include('<mj-image src="https://x.test/a.png"></mj-image>', '<img src="https://x.test/b.png">', '<b>b</b>')
+      expect(out.downcase).not_to include('onmouseover')
+      safe!(out)
+    end
+
+    it 'never lets nested or split tags reassemble into a script' do
+      ['<scr<script>ipt>alert(1)</script>', '<<script>script>alert(1)<</script>/script>', '<scr<iframe></iframe>ipt>alert(1)</script>',
+       '<SCRIPT SRC=//x.test/x.js></SCRIPT>', '<scr<script>x</script>ipt src=//x.test/x.js></scr<script>x</script>ipt>'].each do |payload|
+        out = clean("<mj-text>a#{payload}b</mj-text>")
+
+        safe!(out)
+        expect(out).to include('<mj-text>a')
+      end
+    end
+
+    it 'drops SVG and MathML, including mutation tricks' do
+      svg = clean('<mj-text>antes<svg onload=alert(1)><script>alert(1)</script><a xlink:href="javascript:alert(1)">x</a></svg> depois</mj-text>')
+      math = clean('<mj-text><math><mtext><table><mglyph><style><img src=x onerror=alert(1)></style></mglyph></table></mtext></math></mj-text>')
+
+      expect(svg).to include('<mj-text>antes depois</mj-text>')
+      safe!(svg)
+      safe!(math)
+    end
+
+    it 'drops dangerous CSS from inline styles and keeps the other declarations' do
+      out = clean('<mj-text><span style="color:#111;width:expression(alert(1))">a</span>' \
+                  '<span style="background:url(javascript:alert(1));font-weight:700">b</span>' \
+                  '<span style="background:u\\72l(javascript:alert(1))">c</span><span style="behavior:url(x.htc)">d</span></mj-text>')
+
+      expect(out).to include('<span style="color:#111">a</span>', '<span style="font-weight:700">b</span>', '<span>c</span>',
+                             '<span>d</span>')
+      expect(out).not_to include('x.htc', '\\72')
+      safe!(out)
+    end
+
+    it 'removes active elements from the MJML tree, comments, raw blocks and head text' do
+      out = described_class.new(
+        '<mjml><mj-head><mj-title>T<script>alert(1)</script></mj-title><mj-style>.a{color:red}</style><script>alert(1)</script></mj-style>' \
+        '<mj-preview>P<img src=x onerror=alert(1)></mj-preview></mj-head><mj-body><!--[if mso]><script>alert(1)</script><![endif]-->' \
+        '<mj-section><mj-column><script>alert(1)</script><iframe src="https://x.test"></iframe><mj-text>Oi' \
+        '<!--[if mso]><script>alert(1)</script><![endif]--></mj-text><mj-raw><object data="x.swf"></object><form action="javascript:x()">' \
+        '<input></form><embed src="x"><base href="https://x.test"><table><tr><td>raw</td></tr></table></mj-raw>' \
+        '<mj-text><a href="{{ unsubscribe_url }}">Sair</a></mj-text></mj-column></mj-section></mj-body></mjml>'
+      ).perform
+
+      expect(out).to include('<mj-title>T</mj-title>', '<mj-text>Oi</mj-text>', '<table><tbody><tr><td>raw</td></tr></tbody></table>')
+      expect(out.downcase).not_to include('<object', '<form', '<embed', '<base', '</style>', 'x.swf')
+      safe!(out)
+    end
+
+    it 'drops content nested deeper than the parser reads instead of keeping it unchecked' do
+      out = clean("<mj-text>#{'<div>' * 500}<script>alert(1)</script></mj-text>")
+
+      expect(out).to include('<mj-text></mj-text>')
+      safe!(out)
+    end
+
+    it 'drops CDATA and other bogus markup in ending content, nested or not' do
+      ['a<![CDATA[<script>alert(1)</script>]]>b', '<![CDATA[<![CDATA[<img src=x onerror=alert(1)>]]>]]>',
+       '<![cdata[<svg onload=alert(1)>]]>', '<?x <script>alert(1)</script> ?>', '</ <script>alert(1)</script>>'].each do |payload|
+        text = clean("<mj-text>#{payload}</mj-text>")
+        raw = clean("<mj-raw>#{payload}</mj-raw>")
+
+        [text, raw].each { |out| safe!(out) }
+        expect([text, raw].join.upcase).not_to include('CDATA', '<?')
+      end
+    end
+
+    it 'drops CDATA from the MJML tree' do
+      out = clean('<![CDATA[<script>alert(1)</script>]]><mj-text>Oi</mj-text><![CDATA[x]]>')
+
+      expect(out).to include('<mj-column><mj-text>Oi</mj-text></mj-column>')
+      expect(out).not_to include('CDATA')
+      safe!(out)
+    end
+
+    it 'keeps MSO conditional comments only when what they hide passes the allowlist' do
+      mso = '<!--[if mso]><table role="presentation"><tr><td width="300"><![endif]-->Oi<!--[if mso]></td></tr></table><![endif]-->'
+      revealed = '<!--[if !mso]><!-->web<!--<![endif]-->'
+      out = clean("<mj-raw>#{mso}</mj-raw><mj-text>#{revealed} <!-- nota --></mj-text>" \
+                  '<mj-text>a<!--[if mso]><script>alert(1)</script><![endif]-->b<!--[if mso]><img src=x onerror=alert(1)><![endif]-->c' \
+                  '<!-- <img src=x onerror=alert(1)> -->d<!--[if mso]><a href="javascript:x()">x</a><![endif]-->e</mj-text>')
+
+      expect(out).to include("<mj-raw>#{mso}</mj-raw>", "<mj-text>#{revealed} <!-- nota --></mj-text>", '<mj-text>abcde</mj-text>')
+      safe!(out)
+    end
+
+    it 'neutralizes Liquid in an address unless it is the unsubscribe placeholder or follows a fixed safe scheme' do
+      ['{% if x %}javascript:alert(1){% endif %}', '{{ link }}', '{{link}}', '{{ link }}/x', '/p?x={{ id }}', '&#123;&#123; link }}',
+       'https:{{ x }}', '{%- raw -%}https://x.test{%- endraw -%}'].each do |href|
+        out = clean(%(<mj-button href="#{href}">Ir</mj-button><mj-text><a href="#{href}">a</a></mj-text>))
+
+        expect(out).to include('<mj-button href="#">Ir</mj-button>', '<a href="#">a</a>')
+      end
+
+      kept = clean('<mj-text><a href="{{unsubscribe_url}}">s</a> <a href="https://{{ dominio }}/p">p</a> <a href="tel:{{ fone }}">t</a></mj-text>')
+      expect(kept).to include('<a href="{{unsubscribe_url}}">s</a> <a href="https://{{ dominio }}/p">p</a> <a href="tel:{{ fone }}">t</a>')
+    end
+
+    it 'repairs and cleans MJML that is not well-formed instead of keeping it as written' do
+      out = described_class.new('<mjml><mj-body><mj-section><mj-column><mj-image src="javascript:alert(1)">' \
+                                '<mj-text>x<script>alert(1)</script></mj-text></mj-column></mj-section></mj-body></mjml>').perform
+
+      expect(out).to include('src="#"', 'footer-locked', '{{ unsubscribe_url }}')
+      safe!(out)
+      expect(described_class.new(out).perform).to eq(out)
+    end
+  end
 end

@@ -93,6 +93,13 @@ crm_follow_up_due_job:
   class: 'Crm::FollowUpDueJob'
   queue: scheduled_jobs
 
+# Agendamento WhatsApp-first (#1192): avisos no WhatsApp vencidos (ao marcar, 1 dia antes, 1 hora antes). Sai sem
+# consultar com CRM_CALENDAR_MEETINGS_ENABLED desligado; a flag da conta é conferida no envio.
+crm_booking_v2_notice_dispatch_job:
+  cron: '*/1 * * * *'
+  class: 'Crm::BookingV2::NoticeDispatchJob'
+  queue: scheduled_jobs
+
 # executed every 6 hours; feature flags checked inside the job
 crm_ai_stale_cards_job:
   cron: '0 */6 * * *'
@@ -190,6 +197,12 @@ email_campaign_retry_sweep_job:
   cron: '*/5 * * * *'
   class: 'EmailCampaigns::RetrySweepJob'
   queue: scheduled_jobs
+
+# executed daily; removes e-mail template imports nobody saved within 7 days, with their images (#1099).
+email_campaign_template_import_cleanup_job:
+  cron: '40 3 * * *'
+  class: 'EmailCampaigns::Import::CleanupJob'
+  queue: housekeeping
 
 # executed every 10 minutes; pauses tenants over bounce/complaint limits. Flag checked inside the job.
 email_campaign_guardrail_sweep_job:
@@ -290,3 +303,26 @@ crm_meta_ads_insights_recent_job:
   class: 'Crm::MetaAds::InsightsScheduleJob'
   queue: scheduled_jobs
   args: ['recent']
+
+# Anúncios da Meta F4b (#1100): resumo de ontem no WhatsApp do dono às 8h de Brasília (11:00 UTC). Vem desligado;
+# só conexões que ligaram o resumo. No máximo um por dia (trava no DeliverJob).
+crm_meta_ads_whatsapp_summary_job:
+  cron: '0 11 * * *'
+  class: 'Crm::MetaAds::WhatsappReport::ScheduleJob'
+  queue: scheduled_jobs
+  args: ['summary']
+
+# Anúncios da Meta F4b (#1100): alerta de anúncio que gastou hoje sem trazer conversa, às 16h30 de Brasília
+# (19:30 UTC). Só conexões que ligaram o alerta; no máximo um por dia.
+crm_meta_ads_whatsapp_alert_job:
+  cron: '30 19 * * *'
+  class: 'Crm::MetaAds::WhatsappReport::ScheduleJob'
+  queue: scheduled_jobs
+  args: ['alert']
+
+# Anúncios da Meta F5 (#1110): apaga análises do consultor com mais de 90 dias, ações com mais de 400 e janelas de
+# frequência com mais de 35, às 5h30 de Brasília (08:30 UTC), depois da leitura das 4h.
+crm_meta_ads_advisor_prune_job:
+  cron: '30 8 * * *'
+  class: 'Crm::MetaAds::Advisor::PruneJob'
+  queue: low

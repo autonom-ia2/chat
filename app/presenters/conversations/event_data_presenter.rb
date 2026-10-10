@@ -3,6 +3,7 @@ class Conversations::EventDataPresenter < SimpleDelegator
     {
       additional_attributes: additional_attributes,
       can_reply: can_reply?,
+      whatsapp_api_reply: whatsapp_api_reply?, # fork chat#1067: aviso no editor
       channel: inbox.try(:channel_type),
       contact_inbox: contact_inbox,
       id: display_id,
@@ -33,17 +34,17 @@ class Conversations::EventDataPresenter < SimpleDelegator
   private
 
   # Convite R3 pendente do card CRM vinculado (badge na lista de conversas).
-  # Só consulta quando o CRM AI está ligado (find_by indexado por
-  # conversation_id); nil quando não há convite ativo — o front não renderiza.
+  # Só consulta quando o CRM AI está ligado; olha todos os cards abertos da
+  # conversa, o assunto atual primeiro (#1197) — sem card aberto, o assunto atual
+  # (#1141); nil quando não há convite ativo — o front não renderiza.
   def crm_handoff_invite
     # Referência direta (sem defined?): defined? não dispara o autoload do
     # Zeitwerk e retornava nil com Crm::Ai ainda não carregado no processo.
     return unless Crm::Ai::Config.enabled?
 
-    card = account.crm_cards.find_by(conversation_id: id)
-    return if card.blank?
-
-    Crm::Ai::HandoffInvitePayload.for_card(card)
+    cards = Crm::Cards::ConversationCardFinder.new(account: account).all(self).to_a
+    candidates = cards.select(&:open?).presence || cards.first(1)
+    candidates.lazy.filter_map { |card| Crm::Ai::HandoffInvitePayload.for_card(card) }.first
   end
 
   def push_messages

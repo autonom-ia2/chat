@@ -18,6 +18,8 @@
           "CRM_CARD_MOVED": "A card moved to a different stage.",
           "CRM_CARD_WON": "A card was marked as won.",
           "CRM_CARD_LOST": "A card was marked as lost.",
+          "CRM_CARD_RESOLVED": "A card was marked as resolved (funnel that is not a sale).",
+          "CRM_CARD_CANCELLED": "A card was marked as cancelled (funnel that is not a sale).",
           "CRM_CARD_REOPENED": "A closed card was reopened.",
           "CRM_CARD_ARCHIVED": "A card was archived."
         }
@@ -105,6 +107,8 @@
             "CRM_CARD_MOVED": "CRM card moved to another stage",
             "CRM_CARD_WON": "CRM card won",
             "CRM_CARD_LOST": "CRM card lost",
+            "CRM_CARD_RESOLVED": "CRM card resolved",
+            "CRM_CARD_CANCELLED": "CRM card cancelled",
             "CRM_CARD_REOPENED": "CRM card reopened",
             "CRM_CARD_ARCHIVED": "CRM card archived"
           }

@@ -177,6 +177,38 @@ RSpec.describe 'CRM cards API', type: :request do
     expect(account.crm_card_conversations.where(conversation_id: conversation.id).count).to eq(1)
   end
 
+  it 'creates a second open card in the same conversation and pipeline when a new subject is requested' do
+    account, user = create_account_and_user
+    agent, = create_crm_agent(account: account)
+    inbox = create_crm_inbox(account: account, members: [agent])
+    contact = account.contacts.create!(name: 'Cliente Dois Assuntos', phone_number: '+5511987654321')
+    conversation = create_crm_conversation(account: account, inbox: inbox, contact: contact, assignee: agent)
+    pipeline, stage = create_crm_pipeline(account: account, user: user)
+    account.crm_pipeline_inboxes.create!(pipeline: pipeline, inbox: inbox, default_stage: stage, created_by: user)
+    url = "/api/v1/accounts/#{account.id}/crm/cards/from_conversation"
+
+    post url, params: { conversation_display_id: conversation.display_id, card: { pipeline_id: pipeline.id, title: 'Agentes de IA' } },
+              headers: auth_headers(user)
+    first_card_id = response.parsed_body['payload']['id']
+
+    post url, params: { conversation_display_id: conversation.display_id, new_subject: true,
+                        card: { pipeline_id: pipeline.id, title: 'Chat2You' } },
+              headers: auth_headers(user)
+
+    expect(response).to have_http_status(:created)
+    second_card_id = response.parsed_body['payload']['id']
+    expect(second_card_id).not_to eq(first_card_id)
+    expect(account.crm_cards.open.where(conversation_id: conversation.id, pipeline_id: pipeline.id).pluck(:title))
+      .to contain_exactly('Agentes de IA', 'Chat2You')
+
+    get "/api/v1/accounts/#{account.id}/crm/conversations/#{conversation.display_id}/card", headers: auth_headers(user)
+    expect(response.parsed_body.dig('payload', 'card_id')).to eq(second_card_id)
+
+    get "/api/v1/accounts/#{account.id}/crm/conversations/card_stages",
+        params: { conversation_ids: [conversation.display_id] }, headers: auth_headers(user)
+    expect(response.parsed_body.dig('payload', conversation.display_id.to_s, 'card_id')).to eq(second_card_id)
+  end
+
   it 'moves a card and records an activity' do
     account, user = create_account_and_user
     pipeline, first_stage = create_crm_pipeline(account: account, user: user)
@@ -194,6 +226,47 @@ RSpec.describe 'CRM cards API', type: :request do
     move_activity = card.activities.where(event_type: 'move').last
     expect(move_activity.payload['from_stage_id']).to eq(first_stage.id)
     expect(move_activity.payload['to_stage_id']).to eq(second_stage.id)
+  end
+
+  it 'junta os campos do card ao que já estava salvo, e null tira o campo (#1146)' do
+    account, user = create_account_and_user
+    pipeline, stage = create_crm_pipeline(account: account, user: user)
+    card = account.crm_cards.create!(pipeline: pipeline, stage: stage, title: 'Onix',
+                                     custom_attributes: { 'placa' => 'ABC1D23', 'ano' => 2021, 'cor' => 'prata' })
+
+    patch "/api/v1/accounts/#{account.id}/crm/cards/#{card.id}",
+          params: { card: { custom_attributes: { ano: 2022, cor: nil } } }, headers: auth_headers(user), as: :json
+
+    expect(response).to have_http_status(:ok)
+    expect(card.reload.custom_attributes).to eq('placa' => 'ABC1D23', 'ano' => 2022)
+    expect(response.parsed_body.dig('payload', 'custom_attributes')).to eq('placa' => 'ABC1D23', 'ano' => 2022)
+  end
+
+  it 'o histórico do PATCH registra só os campos enviados, não o hash inteiro (#1146)' do
+    account, user = create_account_and_user
+    pipeline, stage = create_crm_pipeline(account: account, user: user)
+    card = account.crm_cards.create!(pipeline: pipeline, stage: stage, title: 'Onix', custom_attributes: { 'placa' => 'ABC1D23' })
+
+    patch "/api/v1/accounts/#{account.id}/crm/cards/#{card.id}",
+          params: { card: { custom_attributes: { ano: 2022 } } }, headers: auth_headers(user), as: :json
+
+    expect(card.activities.where(event_type: 'update').last.payload).to eq('custom_attributes' => { 'ano' => 2022 })
+  end
+
+  it 'cria o card com os campos enviados e o upsert por external_id junta com o que já existe (#1146)' do
+    account, user = create_account_and_user
+    pipeline, stage = create_crm_pipeline(account: account, user: user)
+    base = { pipeline_id: pipeline.id, stage_id: stage.id, title: 'Onix', external_id: 'erp-7' }
+
+    post "/api/v1/accounts/#{account.id}/crm/cards",
+         params: { card: base.merge(custom_attributes: { placa: 'ABC1D23' }) }, headers: auth_headers(user), as: :json
+    expect(response).to have_http_status(:created)
+    card = account.crm_cards.find_by!(external_id: 'erp-7')
+    expect(card.custom_attributes).to eq('placa' => 'ABC1D23')
+
+    post "/api/v1/accounts/#{account.id}/crm/cards",
+         params: { card: base.merge(custom_attributes: { ano: 2021 }) }, headers: auth_headers(user), as: :json
+    expect(card.reload.custom_attributes).to eq('placa' => 'ABC1D23', 'ano' => 2021)
   end
 
   it 'does not move a card through the generic update endpoint' do

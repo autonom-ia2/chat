@@ -17,6 +17,8 @@
     "INITIATED_AT": "Iniciado em",
     "IP_ADDRESS": "Endereço IP",
     "CREATED_AT_LABEL": "Criado",
+    "CUSTOMER": "Cliente",
+    "CUSTOMER_SINCE": "Cliente desde {date}",
     "NEW_MESSAGE": "Nova Mensagem",
     "CALL": "Chamada",
     "CALL_INITIATED": "Efetuando chamada…",
@@ -508,6 +510,29 @@
         "DELETE": {
           "SUCCESS_MESSAGE": "Avatar excluído com sucesso",
           "ERROR_MESSAGE": "Não foi possível excluir o avatar. Por favor, tente novamente mais tarde."
+        }
+      },
+      "CUSTOMER": {
+        "TITLE": "Cliente",
+        "BADGE": "Cliente",
+        "SINCE": "Cliente desde {date}",
+        "DESCRIPTION": "Vira cliente sozinho quando um card é ganho num funil de venda. Marque aqui se ele já comprou de outro jeito.",
+        "MARK": "Marcar como cliente",
+        "UNDO": "Não é cliente",
+        "MARK_DIALOG": {
+          "TITLE": "Marcar como cliente",
+          "DESCRIPTION": "O contato passa a aparecer como cliente, a partir de hoje. Cards e conversas não mudam.",
+          "CONFIRM": "Sim, marcar"
+        },
+        "UNDO_DIALOG": {
+          "TITLE": "Tirar de cliente",
+          "DESCRIPTION": "O contato volta a ser lead e perde a data de cliente. Cards e conversas não mudam.",
+          "CONFIRM": "Sim, tirar"
+        },
+        "API": {
+          "MARK_SUCCESS": "Contato marcado como cliente",
+          "UNDO_SUCCESS": "Contato voltou a ser lead",
+          "ERROR": "Não foi possível salvar. Tente de novo."
         }
       },
       "OPT_OUT": {

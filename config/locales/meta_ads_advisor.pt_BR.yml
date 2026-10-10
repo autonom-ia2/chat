@@ -1,0 +1,18 @@
+pt_BR:
+  # Formatação dos números do consultor de anúncios (#1110, F5): Crm::MetaAds::Advisor::Format.
+  meta_ads_advisor:
+    number:
+      separator: ","
+      delimiter: "."
+    currency_units:
+      BRL: "R$"
+      USD: "US$"
+      EUR: "€"
+    duration:
+      less_than_minute: "menos de 1 min"
+      minutes: "%{count} min"
+      hours: "%{count} h"
+      hours_minutes: "%{hours} h %{minutes} min"
+      days:
+        one: "%{count} dia"
+        other: "%{count} dias"

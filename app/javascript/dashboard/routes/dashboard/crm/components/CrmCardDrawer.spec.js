@@ -86,9 +86,50 @@ const mountDrawer = (props = {}) =>
         CrmCardAutoFollowupStatus: true,
         PhoneNumberInput: true,
         CrmOpportunityContactPicker: true,
+        BookingInviteButton: true,
       },
     },
   });
+
+describe('CrmCardDrawer card fields (#1146)', () => {
+  afterEach(() => {
+    delete storeGetters['attributes/getCardAttributes'];
+  });
+
+  it('shows the card fields with their values on an existing card', () => {
+    storeGetters['attributes/getCardAttributes'] = [
+      {
+        id: 1,
+        attributeKey: 'plan',
+        attributeDisplayName: 'Plano',
+        attributeDisplayType: 'text',
+      },
+    ];
+    const wrapper = mountDrawer({
+      card: {
+        id: 5,
+        title: 'Card A',
+        stage_id: 10,
+        custom_attributes: { plan: 'Pro' },
+      },
+    });
+
+    const section = wrapper.find('[data-testid="crm-card-custom-fields"]');
+    expect(section.exists()).toBe(true);
+    expect(section.find('[data-field="plan"]').text()).toContain('Pro');
+  });
+
+  it('keeps the card fields out of the create form', () => {
+    storeGetters['attributes/getCardAttributes'] = [
+      { id: 1, attributeKey: 'plan', attributeDisplayName: 'Plano' },
+    ];
+    const wrapper = mountDrawer({ mode: 'create', card: null });
+
+    expect(
+      wrapper.find('[data-testid="crm-card-custom-fields"]').exists()
+    ).toBe(false);
+  });
+});
 
 describe('CrmCardDrawer form reset vs realtime churn', () => {
   it('keeps in-progress card edits when props.stages churns (realtime/poll)', async () => {

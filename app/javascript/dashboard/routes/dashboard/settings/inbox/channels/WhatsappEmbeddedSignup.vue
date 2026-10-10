@@ -4,7 +4,10 @@ import { useStore } from 'vuex';
 import { useRouter } from 'vue-router';
 import { useI18n, I18nT } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
-import { useWhatsappEmbeddedSignup } from 'dashboard/composables/useWhatsappEmbeddedSignup';
+import {
+  useWhatsappEmbeddedSignup,
+  SIGNUP_TIMEOUT_CODE,
+} from 'dashboard/composables/useWhatsappEmbeddedSignup';
 import Icon from 'next/icon/Icon.vue';
 import NextButton from 'next/button/Button.vue';
 import Banner from 'next/banner/Banner.vue';
@@ -103,6 +106,12 @@ const launchEmbeddedSignup = async () => {
   try {
     credentials = await runEmbeddedSignup();
   } catch (error) {
+    // #1228: Meta may have finished on its side; refresh and say so plainly.
+    if (error?.code === SIGNUP_TIMEOUT_CODE) {
+      store.dispatch('inboxes/get');
+      useAlert(t('INBOX_MGMT.ADD.WHATSAPP.EMBEDDED_SIGNUP.NOT_CONFIRMED'));
+      return;
+    }
     useAlert(
       error.message ||
         t('INBOX_MGMT.ADD.WHATSAPP.EMBEDDED_SIGNUP.SDK_LOAD_ERROR')

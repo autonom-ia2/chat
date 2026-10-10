@@ -636,6 +636,8 @@ pt_BR:
         won: 'Ganho'
         lost: 'Perdido'
         archived: 'Arquivado'
+        resolved: 'Resolvido'
+        cancelled: 'Cancelado'
       priorities:
         low: 'Baixa'
         medium: 'Média'
@@ -914,6 +916,9 @@ pt_BR:
         linha_media: '%{nome}: %{valor} agora, mais de %{vezes} vezes a média da semana (%{media}).'
         resumo: 'Ontem eu guardei %{n} avisos para não te encher de mensagem:'
         pausada: 'Pausei a vigia "%{nome}": quem criou não é mais administrador. Se ainda quiser, ligue de novo ou me peça.'
+        whatsapp_api_caiu: 'O WhatsApp API da caixa "%{caixa}" desconectou. Até reconectar na aba WhatsApp API da caixa, respostas depois de 24 horas precisam de modelo aprovado. Quer que eu mostre como reconectar?'
+        whatsapp_api_perto_do_limite: 'O WhatsApp avisou que está perto de limitar conversas novas na caixa "%{caixa}" (o ciclo acaba em %{fim}). Já diminuí a velocidade de envio pelo WhatsApp API. Evite puxar conversa com contatos novos por lá por enquanto. Quer ver os números?'
+        whatsapp_api_bloqueado: 'O WhatsApp bloqueou conversas novas pelo WhatsApp API na caixa "%{caixa}" até %{fim}. Respostas para quem já conversa com você continuam; para contatos novos, use um modelo aprovado. Quer que eu explique?'
       needs_confirmation: 'Isto não tem volta, então precisa da sua confirmação na tela antes.'
       undo:
         already_undone: 'Isto já foi desfeito.'
@@ -955,6 +960,7 @@ pt_BR:
     agents:
       instrucao_mantida: 'A instrução do Agente de Cotação é mantida pela Autonom.ia e não se edita por aqui. O nome, o horário e o comportamento foram escolhidos na aba Cotação, ao criar o agente.'
       escolhas_incompletas: "O Agente de Cotação não conseguiu montar a instrução: a escolha '%{campo}' está faltando no cadastro dele. Isso não se corrige por aqui — acione o suporte da Autonom.ia."
+      booking_page_forbidden: 'Só quem pode ver o Agendamento (CRM › Agendamento) escolhe a página que a IA usa para marcar.'
       operate:
         handoff_default: 'Não quero te passar uma informação imprecisa. Vou encaminhar seu atendimento para alguém do nosso time continuar com você.'
         handoff_defaults:

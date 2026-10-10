@@ -8,6 +8,7 @@
 #  additional_attributes :jsonb
 #  blocked               :boolean          default(FALSE), not null
 #  contact_type          :integer          default("visitor")
+#  customer_since        :datetime
 #  country_code          :string           default("")
 #  custom_attributes     :jsonb
 #  email                 :string
@@ -51,6 +52,7 @@ class Contact < ApplicationRecord
   include Labelable
   include LlmFormattable
   include ContactOptOut
+  include ContactCustomer
 
   validates :account_id, presence: true
   validates :email, allow_blank: true, uniqueness: { scope: [:account_id], case_sensitive: false },
@@ -187,11 +189,14 @@ class Contact < ApplicationRecord
   end
 
   def self.resolved_contacts(use_crm_v2: false)
-    return where(contact_type: 'lead') if use_crm_v2
+    # Lead que vira cliente no ganho (#1166) continua na lista (#1197).
+    return where(contact_type: %i[lead customer]) if use_crm_v2
 
     # Explicitly registered leads may have only a name. Keep them visible in the
     # classic list too, without promoting anonymous widget visitors to contacts.
-    where("contacts.email <> '' OR contacts.phone_number <> '' OR contacts.identifier <> ''").or(where(contact_type: :lead))
+    # A lead promoted to customer (won card, #1197) stays visible as well.
+    where("contacts.email <> '' OR contacts.phone_number <> '' OR contacts.identifier <> ''")
+      .or(where(contact_type: :lead)).or(where(contact_type: :customer))
   end
 
   def discard_invalid_attrs

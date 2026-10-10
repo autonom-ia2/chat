@@ -1,0 +1,108 @@
+name: Email import fidelity report
+
+# Fidelidade do importador de modelos de e-mail (#1099, entrega D). Em PR que toca o motor do importador, compila o
+# original limpo e o importado de cada modelo de spec/fixtures/email_imports, tira foto em 600 e 375 px (imagens em
+# cinza, nada vindo da rede), compara por faixa vertical e publica o relatório como artefato e no resumo do job.
+# Meta registrada: pelo menos 70% de área editável por modelo. É relatório, não trava (continue-on-error) até os
+# números estabilizarem.
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/services/email_campaigns/import/**'
+      - 'app/services/email_campaigns/mjml_canonicalizer.rb'
+      - 'app/services/email_campaigns/locked_footer.rb'
+      - 'app/services/email_campaigns/mjml_compiler.rb'
+      - 'spec/fixtures/email_imports/**'
+      - 'lib/email_import_fidelity/**'
+      - 'lib/tasks/email_import_fidelity.rake'
+      - 'scripts/email-import-fidelity/**'
+      - '.github/workflows/email-import-fidelity.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: email-import-fidelity-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  CI: 'true'
+  TZ: UTC
+  RAILS_ENV: test
+  RACK_ENV: test
+  FRONTEND_URL: https://example.test
+  SECRET_KEY_BASE: email-import-fidelity-synthetic-test-only-0000000000000000000000000000000000000000000000000000000000
+  AWS_EC2_METADATA_DISABLED: 'true'
+  HUSKY: '0'
+  BUNDLE_FROZEN: 'true'
+  POSTGRES_HOST: 127.0.0.1
+  POSTGRES_PORT: '5432'
+  POSTGRES_USERNAME: fidelity
+  POSTGRES_PASSWORD: fidelity-synthetic
+  POSTGRES_DATABASE: fidelity_test
+  REDIS_URL: redis://127.0.0.1:6379/0
+
+jobs:
+  report:
+    name: Original vs imported, 600 and 375 px
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    continue-on-error: true
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: fidelity
+          POSTGRES_PASSWORD: fidelity-synthetic
+          POSTGRES_DB: fidelity_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U fidelity -d fidelity_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install locked root dependencies (mjml-browser)
+        run: pnpm install --frozen-lockfile
+      - name: Install the repository's Playwright and its Chromium
+        working-directory: tests/playwright
+        run: |
+          pnpm install --frozen-lockfile --prod=false --ignore-scripts
+          pnpm exec playwright install --with-deps chromium
+      - name: Schema
+        run: bundle exec rake db:create db:schema:load
+      - name: Pages - original cleaned and imported, images grey
+        run: bundle exec rails "autonomia:email_import:fidelidade[tmp/email-import-fidelity]"
+      - name: Screenshots and band comparison
+        run: node scripts/email-import-fidelity/shoot.mjs tmp/email-import-fidelity
+      - name: Report in the job summary
+        if: always()
+        run: |
+          if [[ -f tmp/email-import-fidelity/report.md ]]; then
+            cat tmp/email-import-fidelity/report.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Upload the report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: email-import-fidelity
+          retention-days: 14
+          if-no-files-found: ignore
+          path: tmp/email-import-fidelity

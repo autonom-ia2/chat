@@ -5,6 +5,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   mkdtemp,
+  lstat,
   open,
   readFile,
   realpath,
@@ -12,6 +13,7 @@ import {
   unlink,
   writeFile,
 } from 'node:fs/promises';
+import { readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { EventEmitter } from 'node:events';
@@ -22,6 +24,7 @@ import {
   privateProfile,
   managerExitCode,
   isAllowedBrowserRequest,
+  handleBrowserRoute,
 } from '../../scripts/instagram_testers/session-manager.mjs';
 
 const INITIAL_VERSION = '11111111-1111-4111-8111-111111111111';
@@ -50,6 +53,18 @@ const baseEnv = {
   INSTAGRAM_TESTER_PROXY_AUTH_MODE: 'ip',
   INSTAGRAM_TESTER_PROXY_IDENTITY: '93.184.216.34:8080',
 };
+const loadingDocuments = JSON.parse(
+  readFileSync(
+    new URL('./fixtures/loading-documents.json', import.meta.url),
+    'utf8'
+  )
+);
+const loadingDocumentIds = Object.fromEntries(
+  Object.entries(loadingDocuments).map(([name, document]) => [
+    name,
+    document.doc_id,
+  ])
+);
 
 const bootstrapMetadata = Object.fromEntries(
   Object.entries(baseEnv).filter(([key]) => !key.includes('PROXY'))
@@ -83,6 +98,7 @@ const rolesUrl = 'https://developers.facebook.com/apps/' +
   process.env.INSTAGRAM_META_DEVELOPER_APP_ID + '/roles/roles/?business_id=' +
   process.env.INSTAGRAM_META_BUSINESS_ID;
 const body = ${JSON.stringify(rolesResponse)};
+const loadingDocumentIds = ${JSON.stringify(loadingDocumentIds)};
 const fields = new URLSearchParams({
   __user: process.env.INSTAGRAM_TESTER_ADMIN_USER_ID,
   __bid: process.env.INSTAGRAM_META_BUSINESS_ID,
@@ -93,12 +109,14 @@ const fields = new URLSearchParams({
   lsd: 'synthetic-lsd',
   jazoest: '1234',
   __req: '1',
+  __aaid: '67890',
 }).toString();
 
 class Request {
+  constructor(requestFields = fields) { this.requestFields = requestFields; }
   url() { return 'https://developers.facebook.com/api/graphql/'; }
   method() { return 'POST'; }
-  postData() { return fields; }
+  postData() { return this.requestFields; }
   async allHeaders() {
     return {
       cookie: 'c_user=' + process.env.INSTAGRAM_TESTER_ADMIN_USER_ID + '; xs=synthetic',
@@ -109,13 +127,17 @@ class Request {
 }
 
 class Response {
-  constructor(status) { this.responseStatus = status; }
+  constructor(status, responseRequest = new Request(), responseBody = body) {
+    this.responseStatus = status;
+    this.responseRequest = responseRequest;
+    this.responseBody = responseBody;
+  }
   url() { return 'https://developers.facebook.com/api/graphql/'; }
-  request() { return new Request(); }
+  request() { return this.responseRequest; }
   status() { return this.responseStatus; }
   async text() {
     if (mode === 'html') process.emit('SIGTERM');
-    return mode === 'html' ? '<html>login</html>' : body;
+    return mode === 'html' ? '<html>login</html>' : this.responseBody;
   }
 }
 
@@ -130,6 +152,7 @@ class Page extends EventEmitter {
     this.currentUrl = rolesUrl;
   }
   url() { return this.currentUrl; }
+  async evaluate() { return 200; }
   async goto() {
     if (mode === 'redirect') this.currentUrl = 'https://www.facebook.com/login/';
     if (mode === 'checkpoint-redirect') {
@@ -143,6 +166,52 @@ class Page extends EventEmitter {
           : 200;
     const navigationStatus =
       mode === 'status-401' || mode === 'status-403' ? responseStatus : 200;
+    const dispatch = async request => {
+      let continued = false;
+      let aborted = false;
+      await routeHandler({
+        request: () => request,
+        continue: async () => { continued = true; },
+        abort: async () => { aborted = true; },
+      });
+      appendFileSync(
+        process.env.SYNTHETIC_ROUTE_FILE,
+        JSON.stringify({
+          name: new URLSearchParams(request.postData()).get('fb_api_req_friendly_name'),
+          continued,
+          aborted,
+        }) + '\\n'
+      );
+      if (!continued || aborted) throw new Error('synthetic_route_not_continued');
+    };
+    if (mode === 'loading-before-roles') {
+      for (const [name, variables] of [
+        ['GeoNextAppControllerContainerQuery', { appID: process.env.INSTAGRAM_META_DEVELOPER_APP_ID }],
+        ['DeveloperHeaderComponentContainerQuery', {
+          businessID: process.env.INSTAGRAM_META_BUSINESS_ID,
+          businessID_is_null: false,
+        }],
+        ['DeveloperAppVisibilityToggleLazyLoadedQuery', { appID: process.env.INSTAGRAM_META_DEVELOPER_APP_ID }],
+        ['DeveloperAppBannerQuery', { appID: process.env.INSTAGRAM_META_DEVELOPER_APP_ID }],
+        ['DeveloperAppDashboardSidebarNavigationV2Query', { appID: process.env.INSTAGRAM_META_DEVELOPER_APP_ID }],
+      ]) {
+        const loadingFields = new URLSearchParams({
+          __user: process.env.INSTAGRAM_TESTER_ADMIN_USER_ID,
+          __bid: process.env.INSTAGRAM_META_BUSINESS_ID,
+          av: process.env.INSTAGRAM_TESTER_ADMIN_USER_ID,
+          doc_id: loadingDocumentIds[name],
+          fb_api_req_friendly_name: name,
+          variables: JSON.stringify(variables),
+        }).toString();
+        const loadingRequest = new Request(loadingFields);
+        await dispatch(loadingRequest);
+        this.emit('response', new Response(200, loadingRequest, JSON.stringify({
+          data: { fetch__Application: { id: process.env.INSTAGRAM_META_DEVELOPER_APP_ID } },
+        })));
+      }
+    }
+    const rolesRequest = new Request(fields);
+    await dispatch(rolesRequest);
     if (
       ![
         'redirect',
@@ -151,17 +220,18 @@ class Page extends EventEmitter {
         'status-403',
       ].includes(mode)
     ) {
-      this.emit('response', new Response(responseStatus));
+      this.emit('response', new Response(responseStatus, rolesRequest));
     }
     return new Navigation(navigationStatus);
   }
 }
 
+let routeHandler;
 class Context extends EventEmitter {
   constructor() { super(); this.page = new Page(); }
   pages() { return [this.page]; }
   async newPage() { return this.page; }
-  async route() {}
+  async route(_pattern, handler) { routeHandler = handler; }
   async close() { this.emit('close'); }
 }
 
@@ -185,11 +255,13 @@ async function fixture(mode) {
   const runtime = join(root, 'fake-playwright.mjs');
   const operationLog = join(root, 'operations.jsonl');
   const launch = join(root, 'launch.jsonl');
+  const routeLog = join(root, 'routes.jsonl');
   await writeFile(runtime, fakeRuntime, { mode: 0o600 });
   return {
     root,
     operations: operationLog,
     launch,
+    routes: routeLog,
     env: {
       ...baseEnv,
       INSTAGRAM_TESTER_BROWSER_PROFILE: profile,
@@ -204,6 +276,7 @@ async function fixture(mode) {
       SYNTHETIC_MODE: mode,
       SYNTHETIC_OPS_FILE: operationLog,
       SYNTHETIC_LAUNCH_FILE: launch,
+      SYNTHETIC_ROUTE_FILE: routeLog,
       ...baseEnv,
     },
   };
@@ -283,6 +356,47 @@ test('publishes one observed session with the expected version and proxy binding
       baseEnv.INSTAGRAM_TESTER_ADMIN_USER_ID
     );
     assert.equal(publication.app_id, baseEnv.INSTAGRAM_META_DEVELOPER_APP_ID);
+  } finally {
+    process.emit('SIGTERM');
+    if (settled) await settled;
+    await cleanup(data);
+  }
+});
+
+test('allows pinned loading queries before RolesTable and publishes exactly once from RolesTable', async () => {
+  const data = await fixture('loading-before-roles');
+  let settled;
+  try {
+    settled = withProcessEnv(data.processEnv, () =>
+      run(data.env).then(
+        () => null,
+        error => error
+      )
+    );
+    const entries = await waitForOperation(data.operations, 'publish');
+    process.emit('SIGTERM');
+    const error = await settled;
+    assert.equal(error, null);
+    assert.deepEqual(
+      entries.map(entry => entry.operation),
+      ['bootstrap', 'publish']
+    );
+    const routes = await readOperations(data.routes);
+    assert.deepEqual(
+      routes.map(route => route.name),
+      [
+        'GeoNextAppControllerContainerQuery',
+        'DeveloperHeaderComponentContainerQuery',
+        'DeveloperAppVisibilityToggleLazyLoadedQuery',
+        'DeveloperAppBannerQuery',
+        'DeveloperAppDashboardSidebarNavigationV2Query',
+        'RolesTable_Query',
+      ]
+    );
+    assert.equal(
+      routes.every(route => route.continued && !route.aborted),
+      true
+    );
   } finally {
     process.emit('SIGTERM');
     if (settled) await settled;
@@ -480,12 +594,32 @@ function deferred() {
   return { promise, resolve: resolvePromise, reject: rejectPromise };
 }
 
+function refreshTimings(data) {
+  return data.stderr
+    .filter(line => line.startsWith('{'))
+    .map(line => JSON.parse(line))
+    .filter(line => line.event === 'instagram_manager_refresh_timing');
+}
+
+// Every line except the per-cycle refresh timing, which B5 adds to each cycle.
+function operationalStderr(data) {
+  return data.stderr.filter(
+    line => !line.startsWith('{"event":"instagram_manager_refresh_timing"')
+  );
+}
+
 async function syntheticManager(t, options = {}) {
   const data = await fixture('valid');
   if (options.vps) {
     data.env.INSTAGRAM_TESTER_RUNTIME_MODE = 'vps';
     data.env.INSTAGRAM_TESTER_CHROMIUM_SANDBOX = 'true';
   }
+  if (options.browserOperations)
+    data.env.INSTAGRAM_TESTER_BROWSER_OPERATIONS_ENABLED = 'true';
+  if (options.searchStatus !== undefined)
+    data.env.INSTAGRAM_TESTER_SEARCH_STATUS_ENABLED = options.searchStatus;
+  if (options.warmInvite !== undefined)
+    data.env.INSTAGRAM_TESTER_WARM_INVITE_ENABLED = options.warmInvite;
   if (options.reconnectId)
     data.env.INSTAGRAM_TESTER_RECONNECT_REQUEST_ID = options.reconnectId;
   const clock = new FakeClock();
@@ -509,6 +643,7 @@ async function syntheticManager(t, options = {}) {
     lsd: 'synthetic-lsd',
     jazoest: '1234',
     __req: '1',
+    __aaid: '67890',
   }).toString();
   const request = {
     url: () => 'https://developers.facebook.com/api/graphql/',
@@ -530,6 +665,11 @@ async function syntheticManager(t, options = {}) {
   let navigations = 0;
   let routeHandler;
   page.url = () => options.redirect || config.rolesUrl;
+  page.isClosed = () => options.closedPrimary === true;
+  page.evaluate = async () => 200;
+  page.close = async () => {
+    options.closedPrimary = true;
+  };
   const navigated = [];
   page.goto = async url => {
     navigated.push(url);
@@ -546,6 +686,19 @@ async function syntheticManager(t, options = {}) {
     });
     assert.equal(continued, true);
     if (options.pendingNavigation) return new Promise(() => {});
+    if (options.backgroundMethod) {
+      page.emit('response', {
+        url: request.url,
+        request: () => ({
+          ...request,
+          method: () => options.backgroundMethod,
+          postData: () => options.backgroundBody ?? null,
+          allHeaders: options.backgroundHeaders,
+        }),
+        status: () => 200,
+        text: async () => '',
+      });
+    }
     const body = deferred();
     bodies.push(body);
     if (!options.pendingBody) body.resolve(rolesResponse);
@@ -571,6 +724,17 @@ async function syntheticManager(t, options = {}) {
   let versionReads = 0;
   let currentVersion = options.initialVersion || null;
   let publications = 0;
+  const browserRequest = options.browserRequest || {
+    type: 'browser_operation',
+    operation: 'request',
+    id: '33333333-3333-4333-8333-333333333333',
+    request_id: '44444444-4444-4444-8444-444444444444',
+    claim: '55555555-5555-4555-8555-555555555555',
+    action: 'search',
+    app_id: baseEnv.INSTAGRAM_META_DEVELOPER_APP_ID,
+    username: 'synthetic.user',
+    deadline: '2999-01-01T00:00:00.000Z',
+  };
   const pendingPublish = deferred();
   const pendingInvalidation = deferred();
   const cleanupWaiting = deferred();
@@ -620,13 +784,14 @@ async function syntheticManager(t, options = {}) {
         launchPersistentContext: async () => context,
       },
     }),
+    executeOperation: options.executeOperation,
     publish: async (_command, payload, { signal }) => {
       entries.push({ payload, signal, at: clock.time });
       signal.throwIfAborted();
       if (payload.operation === 'bootstrap') {
         versionReads += 1;
         if (options.failVersion === versionReads)
-          throw new Error('publication_failed');
+          throw new Error(options.failVersionMessage || 'publication_failed');
         if (options.pendingVersion) return new Promise(() => {});
         const latest =
           options.changedMetadata && versionReads > 1
@@ -653,6 +818,63 @@ async function syntheticManager(t, options = {}) {
           },
           request: null,
         };
+      }
+      if (payload.type === 'browser_operation') {
+        const publishDelay = options.browserPublishDelayMs?.[payload.operation];
+        if (publishDelay)
+          await new Promise((resolveDelay, rejectDelay) => {
+            const timer = clock.setTimeout(resolveDelay, publishDelay);
+            signal.addEventListener(
+              'abort',
+              () => {
+                clock.clearTimeout(timer);
+                rejectDelay(signal.reason);
+              },
+              { once: true }
+            );
+          });
+        if (payload.operation === 'invite_permit') {
+          // Like the real publishers, a pending permit settles only on abort.
+          if (options.pendingPermit)
+            return new Promise((_resolvePermit, rejectPermit) => {
+              signal.addEventListener(
+                'abort',
+                () => rejectPermit(signal.reason),
+                { once: true }
+              );
+            });
+          return {
+            type: 'browser_operation',
+            operation: 'invite_permit',
+            id: payload.id,
+            request_id: payload.request_id,
+            claim: payload.claim,
+            decision: 'write',
+            status: 'absent',
+          };
+        }
+        if (payload.operation === 'read')
+          return {
+            type: 'browser_operation',
+            operation: 'read',
+            request:
+              clock.time >= (options.browserRequestReadyAt ?? 1000)
+                ? browserRequest
+                : null,
+          };
+        if (payload.operation === 'claim')
+          return {
+            type: 'browser_operation',
+            operation: 'claim',
+            request: browserRequest,
+          };
+        if (payload.operation === 'complete')
+          return {
+            type: 'browser_operation',
+            operation: 'complete',
+            id: payload.id,
+            request_id: payload.request_id,
+          };
       }
       publications += 1;
       if (options.rejectPublication === publications) {
@@ -687,6 +909,7 @@ async function syntheticManager(t, options = {}) {
     clock,
     signals,
     entries,
+    browserRequest,
     bodies,
     headers,
     stdout,
@@ -696,6 +919,7 @@ async function syntheticManager(t, options = {}) {
     pendingInvalidation,
     cleanupWaiting,
     page,
+    route: (...args) => routeHandler(...args),
     navigated,
     navigations: () => navigations,
     closed: () => closed,
@@ -705,6 +929,127 @@ async function syntheticManager(t, options = {}) {
     ),
   };
 }
+
+test('polls browser operations at 250 ms and executes a queued request once', async t => {
+  const executions = [];
+  let observedWarm;
+  const data = await syntheticManager(t, {
+    vps: true,
+    browserOperations: true,
+    browserRequestReadyAt: 249,
+    executeOperation: async ({ request, page, warmMetaPage }) => {
+      assert.equal(warmMetaPage.valid, true);
+      assert.equal(warmMetaPage.page, page);
+      assert.equal(warmMetaPage.source, 'manager_refresh');
+      assert.equal(warmMetaPage.rolesAaid, '67890');
+      observedWarm = warmMetaPage;
+      executions.push(request);
+      return {
+        type: 'browser_operation',
+        operation: 'complete',
+        action: request.action,
+        id: request.id,
+        request_id: request.request_id,
+        claim: request.claim,
+        captured_at: '2026-10-08T12:00:00.000Z',
+        results: [],
+      };
+    },
+  });
+  const browserEntries = () =>
+    data.entries.filter(entry => entry.payload.type === 'browser_operation');
+  try {
+    await data.clock.advance(249);
+    assert.equal(executions.length, 0);
+    assert.equal(
+      browserEntries().filter(entry => entry.payload.operation === 'claim')
+        .length,
+      0
+    );
+
+    await data.clock.advance(1);
+    const reads = browserEntries().filter(
+      entry => entry.payload.operation === 'read'
+    );
+    const claims = browserEntries().filter(
+      entry => entry.payload.operation === 'claim'
+    );
+    const completions = browserEntries().filter(
+      entry => entry.payload.operation === 'complete'
+    );
+    assert.deepEqual(
+      reads.map(entry => entry.at),
+      [0, 250]
+    );
+    assert.equal(claims.length, 1);
+    assert.equal(completions.length, 1);
+    assert.equal(executions.length, 1);
+    assert.equal(observedWarm.disposed, false);
+    assert.equal(
+      data.entries.filter(entry => entry.payload.operation === 'bootstrap')
+        .length,
+      1
+    );
+    assert.equal(
+      data.entries.filter(entry => entry.payload.operation === 'authorization')
+        .length,
+      0
+    );
+    data.signals.emit('SIGTERM');
+    assert.equal(await data.settled, null);
+    assert.equal(observedWarm.disposed, true);
+    assert.equal(observedWarm.valid, false);
+    assert.equal(observedWarm.formBody, null);
+  } finally {
+    data.signals.emit('SIGTERM');
+  }
+});
+
+async function executorFlag(t, flag, value) {
+  let observed = 'executor_not_called';
+  const data = await syntheticManager(t, {
+    vps: true,
+    browserOperations: true,
+    browserRequestReadyAt: 249,
+    [flag]: value,
+    executeOperation: async options => {
+      observed = options[flag];
+      const { request } = options;
+      return {
+        type: 'browser_operation',
+        operation: 'complete',
+        action: request.action,
+        id: request.id,
+        request_id: request.request_id,
+        claim: request.claim,
+        captured_at: '2026-10-08T12:00:00.000Z',
+        results: [],
+      };
+    },
+  });
+  try {
+    await data.clock.advance(250);
+    data.signals.emit('SIGTERM');
+    assert.equal(await data.settled, null);
+  } finally {
+    data.signals.emit('SIGTERM');
+  }
+  return observed;
+}
+
+test('search status reaches the executor only when its flag is exactly true', async t => {
+  assert.equal(await executorFlag(t, 'searchStatus', undefined), false);
+  assert.equal(await executorFlag(t, 'searchStatus', 'true'), true);
+  for (const value of ['TRUE', '1', 'false', ''])
+    assert.equal(await executorFlag(t, 'searchStatus', value), false);
+});
+
+test('warm invite reaches the executor only when its flag is exactly true', async t => {
+  assert.equal(await executorFlag(t, 'warmInvite', undefined), false);
+  assert.equal(await executorFlag(t, 'warmInvite', 'true'), true);
+  for (const value of ['TRUE', '1', 'false', ''])
+    assert.equal(await executorFlag(t, 'warmInvite', value), false);
+});
 
 test('three refresh cycles preserve opaque CAS versions and the 15-minute interval', async t => {
   const data = await syntheticManager(t);
@@ -746,7 +1091,7 @@ for (const failVersion of [1, 2]) {
     );
     await data.clock.advance(1);
     assert.equal(data.stdout.includes('instagram_session_recovered\n'), true);
-    assert.equal(data.stderr.length, 1);
+    assert.equal(operationalStderr(data).length, 1);
     data.signals.emit('SIGTERM');
     assert.equal(await data.settled, null);
   });
@@ -764,7 +1109,7 @@ for (const pending of [
     await data.clock.advance(30000);
     assert.equal(data.entries[0].signal.aborted, true);
     assert.equal(data.page.listenerCount('response'), 0);
-    assert.deepEqual(data.stderr, [
+    assert.deepEqual(operationalStderr(data), [
       'instagram_session_session_update_rejected\n',
     ]);
     const count = data.entries.length;
@@ -1229,4 +1574,606 @@ test('VPS cadence leaves room for its full cycle before the backend heartbeat ex
   assert.ok(780000 + 120000 < 960000);
   data.signals.emit('SIGTERM');
   assert.equal(await data.settled, null);
+});
+
+for (const [method, body, label] of [
+  ['GET', null, 'GET'],
+  ['HEAD', null, 'HEAD'],
+  ['POST', 'fb_api_req_friendly_name=OtherRead_Query', 'unrelated POST'],
+  [
+    'POST',
+    'fb_api_req_friendly_name=RolesTable_Query&doc_id=invalid',
+    'invalid roles POST',
+  ],
+]) {
+  test(`ignores background ${label} GraphQL before reserving a roles publication`, async t => {
+    let backgroundHeaderReads = 0;
+    const data = await syntheticManager(t, {
+      backgroundMethod: method,
+      backgroundBody: body,
+      backgroundHeaders: () => {
+        backgroundHeaderReads += 1;
+        return new Promise(() => {});
+      },
+    });
+    assert.equal(backgroundHeaderReads, 0);
+    const publications = data.entries.filter(
+      entry => entry.payload.operation === 'publish'
+    );
+    assert.equal(publications.length, 1);
+    assert.equal(publications[0].payload.expected_version, null);
+    assert.equal(
+      publications[0].payload.session.user_id,
+      baseEnv.INSTAGRAM_TESTER_ADMIN_USER_ID
+    );
+    assert.equal(data.headers.length, 1);
+    assert.deepEqual(operationalStderr(data), []);
+  });
+}
+
+for (const operation of ['continue', 'abort']) {
+  test(`persistent guard contains a rejected route.${operation} and still processes search then status`, async t => {
+    const executions = [];
+    const data = await syntheticManager(t, {
+      vps: true,
+      browserOperations: true,
+      executeOperation: async ({ request }) => {
+        executions.push(request.action);
+        return {
+          type: 'browser_operation',
+          operation: 'complete',
+          action: request.action,
+          id: request.id,
+          request_id: request.request_id,
+          claim: request.claim,
+          captured_at: '2026-10-08T12:00:00.000Z',
+          ...(request.action === 'search'
+            ? { results: [] }
+            : {
+                target_id: request.target_id,
+                status: 'accepted',
+              }),
+        };
+      },
+    });
+    const rejectedRoute = {
+      request: () => ({
+        url: () =>
+          operation === 'continue'
+            ? configuration(baseEnv).rolesUrl
+            : 'https://unapproved.invalid/',
+        method: () => 'GET',
+        postData: () => null,
+      }),
+      continue: async () => {
+        assert.equal(operation, 'continue');
+        throw new Error('route.continue: Route is already handled!');
+      },
+      abort: async () => {
+        throw new Error('route.abort: Route is already handled!');
+      },
+    };
+    await assert.doesNotReject(data.route(rejectedRoute));
+    await data.clock.advance(1000);
+    data.browserRequest.action = 'status';
+    data.browserRequest.target_id = '10004';
+    await data.clock.advance(250);
+    assert.deepEqual(executions, ['search', 'status']);
+    assert.equal(data.closed(), 0);
+    assert.ok(
+      data.stderr.includes('{"event":"instagram_browser_route_failed"}\n')
+    );
+    let blocked = false;
+    // Check an unapproved request separately from the handled route.
+    await data.route({
+      request: () => ({
+        url: () => 'https://unapproved.invalid/',
+        method: () => 'POST',
+        postData: () => '',
+      }),
+      continue: async () => {
+        assert.fail('unapproved request continued');
+      },
+      abort: async () => {
+        blocked = true;
+      },
+    });
+    assert.equal(blocked, true);
+  });
+}
+
+for (const count of [1, 1000]) {
+  test(`contains ${count} concurrent rejected browser routes without losing the next operation`, async t => {
+    let executions = 0;
+    const data = await syntheticManager(t, {
+      vps: true,
+      browserOperations: true,
+      executeOperation: async ({ request }) => {
+        executions += 1;
+        return {
+          type: 'browser_operation',
+          operation: 'complete',
+          action: request.action,
+          id: request.id,
+          request_id: request.request_id,
+          claim: request.claim,
+          captured_at: '2026-10-08T12:00:00.000Z',
+          results: [],
+        };
+      },
+    });
+    await Promise.all(
+      Array.from({ length: count }, (_, index) =>
+        data.route({
+          request: () => ({
+            url: () =>
+              index % 2
+                ? 'https://unapproved.invalid/'
+                : configuration(baseEnv).rolesUrl,
+            method: () => 'GET',
+            postData: () => null,
+          }),
+          continue: async () => {
+            throw new Error('route.continue: Route is already handled!');
+          },
+          abort: async () => {
+            throw new Error(
+              'route.abort: Target page, context or browser has been closed'
+            );
+          },
+        })
+      )
+    );
+    await data.clock.advance(1000);
+    assert.equal(executions, 1);
+    assert.equal(data.closed(), 0);
+    assert.equal(
+      data.stderr.filter(
+        value => value === '{"event":"instagram_browser_route_failed"}\n'
+      ).length,
+      count
+    );
+  });
+}
+
+test('route failure diagnostics cannot reject the browser callback', async () => {
+  await assert.doesNotReject(
+    handleBrowserRoute(
+      {
+        request: () => {
+          throw new Error('synthetic_request_closed');
+        },
+        abort: async () => {
+          throw new Error('synthetic_route_closed');
+        },
+      },
+      configuration(baseEnv),
+      {
+        write: () => {
+          throw new Error('synthetic_pipe_closed');
+        },
+      }
+    )
+  );
+});
+
+test('publishes the closed-page failure once, then releases the browser and profile before another read', async t => {
+  let data;
+  data = await syntheticManager(t, {
+    vps: true,
+    browserOperations: true,
+    executeOperation: async ({ request }) => {
+      await data.page.close();
+      return {
+        type: 'browser_operation',
+        operation: 'complete',
+        action: request.action,
+        id: request.id,
+        request_id: request.request_id,
+        claim: request.claim,
+        captured_at: '2026-10-08T12:00:00.000Z',
+        error_code: 'meta_unavailable',
+      };
+    },
+  });
+  await data.clock.advance(1000);
+  const error = await data.settled;
+  assert.equal(error?.message, 'browser_runtime_required');
+  const completions = data.entries.filter(
+    entry =>
+      entry.payload.type === 'browser_operation' &&
+      entry.payload.operation === 'complete'
+  );
+  assert.equal(completions.length, 1);
+  assert.equal(completions[0].payload.error_code, 'meta_unavailable');
+  const reads = data.entries.filter(
+    entry =>
+      entry.payload.type === 'browser_operation' &&
+      entry.payload.operation === 'read'
+  ).length;
+  await data.clock.advance(2000);
+  assert.equal(
+    data.entries.filter(
+      entry =>
+        entry.payload.type === 'browser_operation' &&
+        entry.payload.operation === 'read'
+    ).length,
+    reads
+  );
+  assert.equal(data.closed(), 1);
+  await assert.rejects(lstat(data.lockPath), { code: 'ENOENT' });
+});
+
+test('does not expose a warm page or claim work before the publication CAS resolves', async t => {
+  const warmStates = [];
+  const data = await syntheticManager(t, {
+    vps: true,
+    browserOperations: true,
+    pendingPublish: true,
+    browserRequestReadyAt: 0,
+    executeOperation: async ({ request, warmMetaPage }) => {
+      warmStates.push(warmMetaPage);
+      return {
+        type: 'browser_operation',
+        operation: 'complete',
+        action: request.action,
+        id: request.id,
+        request_id: request.request_id,
+        claim: request.claim,
+        captured_at: '2026-10-08T12:00:00.000Z',
+        results: [],
+      };
+    },
+  });
+  assert.equal(
+    data.entries.some(entry => entry.payload.operation === 'publish'),
+    true
+  );
+  assert.equal(
+    data.entries.some(entry => entry.payload.type === 'browser_operation'),
+    false
+  );
+  assert.equal(warmStates.length, 0);
+  data.pendingPublish.resolve(PUBLISHED_VERSION);
+  await drain();
+  assert.equal(warmStates.length, 1);
+  assert.equal(warmStates[0].valid, true);
+  data.signals.emit('SIGTERM');
+  assert.equal(await data.settled, null);
+  assert.equal(warmStates[0].formBody, null);
+});
+
+const INVITE_TARGET_ID = '178414000000000001';
+const inviteBrowserRequest = Object.freeze({
+  type: 'browser_operation',
+  operation: 'request',
+  id: '33333333-3333-4333-8333-333333333333',
+  request_id: '44444444-4444-4444-8444-444444444444',
+  claim: '55555555-5555-4555-8555-555555555555',
+  action: 'invite',
+  app_id: baseEnv.INSTAGRAM_META_DEVELOPER_APP_ID,
+  username: 'synthetic.user',
+  target_id: INVITE_TARGET_ID,
+  deadline: '2999-01-01T00:00:00.000Z',
+});
+
+function browserCompletion(request, fields) {
+  return {
+    type: 'browser_operation',
+    operation: 'complete',
+    action: request.action,
+    id: request.id,
+    request_id: request.request_id,
+    claim: request.claim,
+    captured_at: '2026-10-08T12:00:00.000Z',
+    ...fields,
+  };
+}
+
+function browserOperationEntries(data, operation) {
+  return data.entries.filter(
+    entry =>
+      entry.payload.type === 'browser_operation' &&
+      entry.payload.operation === operation
+  );
+}
+
+function lifecycleDiagnostics(data) {
+  return data.stderr
+    .filter(line => line.startsWith('{'))
+    .map(line => JSON.parse(line))
+    .filter(line => line.event === 'instagram_browser_operation_lifecycle');
+}
+
+test('passes a deadline that reserves the completion publish', async t => {
+  const deadlines = [];
+  const data = await syntheticManager(t, {
+    vps: true,
+    browserOperations: true,
+    browserRequestReadyAt: 0,
+    browserPublishDelayMs: { read: 20000, claim: 20000 },
+    executeOperation: async ({ request, deadlineAt }) => {
+      deadlines.push(deadlineAt);
+      return browserCompletion(request, { results: [] });
+    },
+  });
+  await data.clock.advance(40000);
+  await drain();
+  const [read] = browserOperationEntries(data, 'read');
+  const [claim] = browserOperationEntries(data, 'claim');
+  assert.equal(read.at, 0);
+  assert.equal(claim.at, 20000);
+  assert.equal(deadlines.length, 1);
+  assert.equal(Number.isFinite(deadlines[0]), true);
+  assert.ok(deadlines[0] <= claim.at + 120000 - 35000);
+  assert.ok(deadlines[0] <= read.at + 120000 - 35000);
+  // 80 s of scope remain after the slow read and claim; 35 s stay reserved.
+  assert.equal(deadlines[0], 40000 + 80000 - 35000);
+  data.signals.emit('SIGTERM');
+});
+
+test('publishes a truthful completion when execution exhausts its budget, then restarts', async t => {
+  const observed = {};
+  const data = await syntheticManager(t, {
+    vps: true,
+    browserOperations: true,
+    browserRequestReadyAt: 0,
+    browserRequest: inviteBrowserRequest,
+    executeOperation: async ({ request, signal, deadlineAt }) => {
+      observed.deadlineAt = deadlineAt;
+      await new Promise(resolveAbort => {
+        signal.addEventListener('abort', resolveAbort, { once: true });
+      });
+      observed.abortedAt = observed.clock.time;
+      return browserCompletion(request, {
+        target_id: request.target_id,
+        error_code: 'invite_unknown',
+        write_started: true,
+      });
+    },
+  });
+  observed.clock = data.clock;
+  const [read] = browserOperationEntries(data, 'read');
+  await data.clock.advance(120000);
+  const error = await data.settled;
+  const completions = browserOperationEntries(data, 'complete');
+  assert.equal(completions.length, 1);
+  assert.equal(completions[0].payload.error_code, 'invite_unknown');
+  assert.equal(completions[0].payload.write_started, true);
+  assert.ok(completions[0].at <= observed.deadlineAt + 1000);
+  assert.ok(completions[0].at < read.at + 120000);
+  assert.equal(
+    lifecycleDiagnostics(data).some(line => line.complete_received === true),
+    true
+  );
+  assert.equal(error?.message, 'browser_runtime_required');
+});
+
+test('permit publish honors timeoutMs and frees the channel', async t => {
+  let data;
+  const permit = {};
+  data = await syntheticManager(t, {
+    vps: true,
+    browserOperations: true,
+    // The first read is empty, so the executor runs after `data` is bound.
+    browserRequestReadyAt: 250,
+    browserRequest: inviteBrowserRequest,
+    pendingPermit: true,
+    executeOperation: async ({ request, permitInvite }) => {
+      if (permit.started !== undefined)
+        return browserCompletion(request, {
+          target_id: request.target_id,
+          error_code: 'meta_unavailable',
+          write_started: false,
+        });
+      permit.started = data.clock.time;
+      try {
+        await permitInvite(
+          {
+            captured_at: '2026-10-08T12:00:00.000Z',
+            target_id: request.target_id,
+            username: request.username,
+            status: 'absent',
+          },
+          { timeoutMs: 1000 }
+        );
+        permit.outcome = 'resolved';
+      } catch {
+        permit.outcome = 'rejected';
+        permit.rejectedAfter = data.clock.time - permit.started;
+      }
+      return browserCompletion(request, {
+        target_id: request.target_id,
+        error_code: 'meta_unavailable',
+        write_started: false,
+      });
+    },
+  });
+  await data.clock.advance(250);
+  assert.equal(permit.started, 250);
+  await data.clock.advance(1000);
+  await drain();
+  assert.equal(permit.outcome, 'rejected');
+  assert.equal(permit.rejectedAfter, 1000);
+  assert.equal(browserOperationEntries(data, 'invite_permit').length, 1);
+  const completions = browserOperationEntries(data, 'complete');
+  assert.equal(completions.length, 1);
+  assert.equal(completions[0].at, permit.started + 1000);
+  assert.equal(completions[0].payload.error_code, 'meta_unavailable');
+  assert.equal(
+    lifecycleDiagnostics(data).some(line => line.complete_received === true),
+    true
+  );
+  data.signals.emit('SIGTERM');
+  assert.equal(await data.settled, null);
+});
+
+function nonNegativeInteger(value) {
+  return Number.isInteger(value) && value >= 0;
+}
+
+function requestIdentifiers(request) {
+  return [
+    request.id,
+    request.request_id,
+    request.claim,
+    request.username,
+    request.target_id,
+  ].filter(Boolean);
+}
+
+test('the lifecycle line times each publish and the executor without identifiers', async t => {
+  let data;
+  data = await syntheticManager(t, {
+    vps: true,
+    browserOperations: true,
+    browserRequestReadyAt: 0,
+    browserRequest: inviteBrowserRequest,
+    browserPublishDelayMs: {
+      read: 100,
+      claim: 200,
+      invite_permit: 300,
+      complete: 400,
+    },
+    executeOperation: async ({ request, permitInvite, onTiming }) => {
+      await new Promise(resolveDelay => {
+        data.clock.setTimeout(resolveDelay, 500);
+      });
+      await permitInvite(
+        {
+          captured_at: '2026-10-08T12:00:00.000Z',
+          target_id: request.target_id,
+          username: request.username,
+          status: 'absent',
+        },
+        { timeoutMs: 5000 }
+      );
+      onTiming({
+        event: 'instagram_browser_operation_timing',
+        action: 'invite',
+        result: 'ok',
+        total_ms: 800,
+        phases: {
+          roles_capture: 120,
+          invite_permit: 300,
+          [request.username]: 9,
+          roles_status: -1,
+          invite_response: 1.5,
+        },
+        invite_response_class: 'success_true',
+        target_id: request.target_id,
+      });
+      return browserCompletion(request, {
+        target_id: request.target_id,
+        status: 'pending',
+        invited: true,
+        write_started: true,
+      });
+    },
+  });
+  await data.clock.advance(1500);
+  await drain();
+  const [line] = lifecycleDiagnostics(data);
+  assert.equal(line.complete_received, true);
+  assert.deepEqual(line.timings_ms, {
+    read: 100,
+    claim: 200,
+    execute: 800,
+    permit: 300,
+    complete: 400,
+  });
+  assert.deepEqual(line.phases_ms, { roles_capture: 120, invite_permit: 300 });
+  const timing = data.stderr
+    .filter(value => value.startsWith('{'))
+    .map(value => JSON.parse(value))
+    .filter(value => value.event === 'instagram_browser_operation_timing');
+  assert.equal(timing.length, 1);
+  assert.deepEqual(timing[0], {
+    event: 'instagram_browser_operation_timing',
+    action: 'invite',
+    result: 'ok',
+    total_ms: 800,
+    phases: { roles_capture: 120, invite_permit: 300 },
+    invite_response_class: 'success_true',
+  });
+  const serialized = data.stderr.join('');
+  requestIdentifiers(inviteBrowserRequest).forEach(value =>
+    assert.equal(serialized.includes(value), false)
+  );
+  data.signals.emit('SIGTERM');
+});
+
+test('timings_ms has exactly five non-negative integers and permit 0 when unused', async t => {
+  const data = await syntheticManager(t, {
+    vps: true,
+    browserOperations: true,
+    browserRequestReadyAt: 0,
+    executeOperation: async ({ request }) =>
+      browserCompletion(request, { results: [] }),
+  });
+  await data.clock.advance(1);
+  const [line] = lifecycleDiagnostics(data);
+  assert.deepEqual(Object.keys(line.timings_ms).sort(), [
+    'claim',
+    'complete',
+    'execute',
+    'permit',
+    'read',
+  ]);
+  Object.values(line.timings_ms).forEach(value =>
+    assert.equal(nonNegativeInteger(value), true)
+  );
+  assert.equal(line.timings_ms.permit, 0);
+  assert.deepEqual(line.phases_ms, {});
+  const serialized = JSON.stringify(line);
+  requestIdentifiers(data.browserRequest).forEach(value =>
+    assert.equal(serialized.includes(value), false)
+  );
+  data.signals.emit('SIGTERM');
+  assert.equal(await data.settled, null);
+});
+
+test('each refresh cycle writes one timing line with an enum outcome', async t => {
+  const data = await syntheticManager(t);
+  await data.clock.advance(900000);
+  await data.clock.advance(900000);
+  const lines = refreshTimings(data);
+  assert.equal(lines.length, 3);
+  lines.forEach(line => {
+    assert.deepEqual(Object.keys(line).sort(), [
+      'event',
+      'outcome',
+      'total_ms',
+    ]);
+    assert.equal(line.outcome, 'healthy');
+    assert.equal(nonNegativeInteger(line.total_ms), true);
+  });
+  data.signals.emit('SIGTERM');
+  assert.equal(await data.settled, null);
+});
+
+test('a failing refresh cycle logs its enum outcome, never the error message', async t => {
+  const data = await syntheticManager(t, {
+    failVersion: 2,
+    failVersionMessage: 'https://secret.example/x',
+  });
+  await data.clock.advance(900000);
+  assert.deepEqual(
+    refreshTimings(data).map(line => line.outcome),
+    ['healthy', 'session_update_rejected']
+  );
+  assert.equal(data.stderr.join('').includes('secret.example'), false);
+  data.signals.emit('SIGTERM');
+  assert.equal(await data.settled, null);
+});
+
+test('an operator-required refresh cycle logs operator_required', async t => {
+  const data = await syntheticManager(t, {
+    redirect: 'https://www.facebook.com/login/',
+  });
+  assert.equal((await data.settled)?.message, 'operator_required');
+  assert.deepEqual(
+    refreshTimings(data).map(line => line.outcome),
+    ['operator_required']
+  );
 });

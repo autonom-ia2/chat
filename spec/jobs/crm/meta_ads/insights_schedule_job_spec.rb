@@ -30,10 +30,18 @@ RSpec.describe Crm::MetaAds::InsightsScheduleJob do
   end
 
   it 'recentes: com a carga feita, lê os 3 dias' do
-    connection.update!(insights_backfilled_at: 1.day.ago)
+    connection.update!(insights_backfilled_at: 1.day.ago, links_backfilled_at: 1.day.ago)
 
     expect { described_class.perform_now('recent') }
       .to have_enqueued_job(Crm::MetaAds::InsightsSyncJob).with(connection.id, 'recent')
+  end
+
+  it 'recentes: sem as ligações dos 90 dias, começa essa carga também (F2b)' do
+    connection.update!(insights_backfilled_at: 1.day.ago)
+
+    expect { described_class.perform_now('recent') }.to have_enqueued_job(Crm::MetaAds::LinksBackfillJob).with(connection.id)
+  ensure
+    Redis::Alfred.delete("#{Crm::MetaAds::LinksBackfillJob::RUNNING_KEY}:#{connection.id}")
   end
 
   it 'escopo desconhecido é erro' do
