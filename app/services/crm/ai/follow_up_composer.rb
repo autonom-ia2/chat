@@ -232,6 +232,8 @@ module Crm
       # o cliente por algo que ele não deve.
       def turn_owner_rules
         <<~RULES.strip
+          PEDIDO DESTE CARD: se "other_subjects" vier preenchido, o cliente tem outros pedidos abertos nesta conversa, cada um com o seu card. Este follow-up é SÓ sobre este card ("card.title"): o loop aberto tem de ser deste pedido; não retome nem cite os outros pedidos.
+
           PRIMEIRA PERGUNTA — de quem é a vez (next_action_owner):
           - "cliente": nós perguntamos ou pedimos algo e ele não respondeu, OU já entregamos o que ele pediu (proposta, orçamento, valor, simulação, documento) e a decisão agora é dele. Entregamos e ele sumiu = vez do cliente, mesmo sem pergunta nossa.
           - "empresa": nós prometemos algo e não entregamos, ou o cliente perguntou e não foi respondido.
@@ -308,6 +310,7 @@ module Crm
           last_message_role: last_message_role,
           tone_instructions: @tone_instructions
         }
+        payload[:other_subjects] = @context[:other_subjects] if @context[:other_subjects].present?
         payload[:cadence] = @cadence if @cadence.present?
         payload[:candidates] = candidates_for_input if choose_template_mode?
         payload.to_json

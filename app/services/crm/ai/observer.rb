@@ -16,12 +16,21 @@ module Crm
 
       def schedule_token
         token = Time.current.to_f
-        metadata = (@card.metadata || {}).deep_dup
-        metadata['ai'] = (metadata['ai'] || {}).merge(
-          'evaluate_after' => (Time.current + Config::DEBOUNCE_SECONDS.seconds).iso8601,
-          'evaluate_token' => token
-        )
-        @card.update!(metadata: metadata)
+        # Lido de novo dentro da trava: o card em memória pode ser de antes de outro processo gravar o metadata
+        # (estado do follow-up, última avaliação) e sobrescrevê-lo.
+        # Um registro novo, não o @card: quem chamou pode ter alterações ainda não salvas nele.
+        Crm::Card.transaction do
+          fresh = Crm::Card.lock.find(@card.id)
+          metadata = (fresh.metadata || {}).deep_dup
+          metadata['ai'] = (metadata['ai'] || {}).merge(
+            'evaluate_after' => (Time.current + Config::DEBOUNCE_SECONDS.seconds).iso8601,
+            'evaluate_token' => token
+          )
+          fresh.update!(metadata: metadata)
+          # Quem chamou continua com o metadata gravado: um save seguinte dele não apaga o token.
+          @card.metadata = fresh.metadata
+          @card.clear_attribute_changes([:metadata])
+        end
         token
       end
     end

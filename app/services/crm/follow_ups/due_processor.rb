@@ -22,15 +22,21 @@ class Crm::FollowUps::DueProcessor
     log_processing_error(follow_up, e)
   end
 
+  # O que manda mensagem ao cliente passa pela trava da conversa (#1147): uma automática por vez, a outra adiada.
   def dispatch(follow_up)
+    return process_overdue(follow_up) unless ai_followup?(follow_up) || follow_up.auto_send_message?
+    return dispatch_automatico(follow_up) if lembrete_interno?(follow_up)
+
+    Crm::FollowUps::ConversationSendGate.new(follow_up, now: @now).perform { dispatch_automatico(follow_up) }
+  end
+
+  def dispatch_automatico(follow_up)
     if ai_followup?(follow_up)
       process_ai_followup(follow_up)
-    elsif follow_up.auto_send_message? && ai_callback?(follow_up)
+    elsif ai_callback?(follow_up)
       process_ai_callback(follow_up)
-    elsif follow_up.auto_send_message?
-      process_auto_send(follow_up)
     else
-      process_overdue(follow_up)
+      process_auto_send(follow_up)
     end
   end
 
@@ -43,6 +49,12 @@ class Crm::FollowUps::DueProcessor
 
   def ai_followup?(follow_up)
     follow_up.metadata.to_h['source'] == 'ai_followup'
+  end
+
+  # Cadência em modo lembrete: a IA avisa a equipe, nada vai ao cliente. Não espera a vez da conversa.
+  def lembrete_interno?(follow_up)
+    ai_followup?(follow_up) && follow_up.card.present? &&
+      Crm::Ai::Config.auto_followup_settings(follow_up.card.pipeline)['mode'] == 'ai_reminder'
   end
 
   def ai_callback?(follow_up)
