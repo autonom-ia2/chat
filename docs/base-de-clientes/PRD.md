@@ -19,7 +19,7 @@ cliente costuma trazer.
 | **Configurações → Dados** (do Chatwoot) | `settings/data/`, feature da conta `data_import` (desligada por padrão em `config/features.yml`) | Não. A tela importa só de Intercom e Freshdesk, e a exportação diz "em breve". O CSV antigo do Chatwoot (`ContactsController#import`) continua sendo o usado quando a #1006 está desligada. O Chatwoot está mudando essas tabelas na branch `codex/cw-8215-contact-data-parity`. |
 | **Importar contatos** (nossa, #1006) | menu ⋮ de Contatos; `ContactImports::*` sobre `CampaignImports::*`; contrato em `docs/campaigns/publicos/contact-imports-1006.md` | **Sim, é a base desta F1.** Está em produção desde 06/10 (#1038). |
 | Opt-out por contato (#737) | `contacts.opted_out_at`, `opt_out_source` | Sim, para consentimento. |
-| Tipo do contato (Chatwoot) | `contacts.contact_type`: `visitor`, `lead`, `customer` | Sim, para "lead × cliente". **A importação de hoje não preenche** (ver §5). |
+| Tipo do contato | `contacts.contact_type` (`visitor`, `lead`, `customer`) do Chatwoot; o fork promove a cliente com `ContactCustomer` (#1144: ganho de venda ou marcação manual, com `customer_since`) | Sim, para "lead × cliente". **A importação de hoje não preenche** (ver §5). |
 
 O que a #1006 já faz, e que esta entrega **não refaz**:
 
@@ -88,9 +88,13 @@ O que entra, em cima da #1006:
    inteira. Assim não dá para ligar a base de clientes só na conta piloto. A F1 troca isso por
    uma feature da conta, sem depender de Campanhas.
 3. **Tipo do contato.** A planilha pode dizer quem é cliente e quem é lead. O modelo propõe
-   qual coluna diz isso e como os valores dela se traduzem, e grava em `contact_type`. Sem
-   uma coluna dessas, a importação pergunta uma vez: "todos aqui são clientes?". Nenhum
-   contato importado fica como `visitor`. Contato que já existia não perde o tipo que tem.
+   qual coluna diz isso e como os valores dela se traduzem. Sem uma coluna dessas, a
+   importação pergunta uma vez: "todos aqui são clientes?". A gravação segue a regra do
+   multifunil, sem caminho paralelo: cliente passa por `ContactCustomer#become_customer!`
+   (que guarda `customer_since`) e o resto vira `lead`, como os cards do CRM já fazem
+   (`Crm::Cards::ContactCreator`). Contato que já existia não perde o tipo que tem: cliente
+   nunca volta a lead pela importação. Se a planilha trouxer "cliente desde", usar essa data
+   em `customer_since` é pergunta da F0.
 4. **Consentimento.** Se a planilha disser quem não quer receber mensagem, a importação grava
    `opted_out_at`. Para isso precisa de uma origem nova em `ContactOptOut::OPT_OUT_SOURCES`
    (hoje só `prospecting`, `email_unsubscribe` e `manual`) e do lugar dela na precedência da
@@ -116,11 +120,12 @@ numa conta piloto com um arquivo real da F0.
 
 ## 5. Riscos e limites conhecidos
 
-- **Contato importado pode sumir da lista (achado nesta revisão).** O `Importer` cria o
-  contato só com nome, celular e e-mail, então ele nasce `visitor`. Com o CRM novo
-  (`crm_v2`) ligado, `Contact.resolved_contacts` mostra só `lead` e `customer`, e o contato
-  importado não aparece em Contatos. Isso já vale para a #1006 em produção e precisa ser
-  conferido antes da F1, nas contas que têm `crm_v2`.
+- **Contato importado nasce `visitor`.** O `Importer` cria o contato só com nome, celular e
+  e-mail, enquanto os cards do CRM criam `lead`. Hoje isso não esconde ninguém: com
+  `crm_v2` desligado, a lista de Contatos mostra quem tem celular ou e-mail, e todo contato
+  importado tem um dos dois. Só com `crm_v2` ligado a lista filtra por `lead`/`customer`.
+  Essa flag é do Chatwoot (`chatwoot_internal`, desligada por padrão) e o fork não a liga.
+  A F1 resolve a diferença no item 3.
 - **Desfazer contato que já existia.** `campaign_import_rows` guarda qual contato a linha
   tocou, mas não o valor que ele tinha antes, nem a empresa que ganhou, nem os atributos
   que a importação juntou (`ContactImports::CustomAttributes#merge!`). Para devolver tudo
@@ -151,3 +156,4 @@ numa conta piloto com um arquivo real da F0.
    10 MB por arquivo, 50 mil linhas em CSV e 20 mil em XLSX.
 5. Uma pessoa aparece em várias linhas (várias compras, vários contratos)?
 6. Vem de qual sistema (planilha feita à mão, Kommo, RD, ERP)? Isso orienta a F3.
+7. Traz a data em que a pessoa virou cliente ("cliente desde", primeira compra)?
