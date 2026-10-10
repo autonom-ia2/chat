@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_09_26_180000) do
+ActiveRecord::Schema[7.2].define(version: 2026_09_29_153000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -189,6 +189,14 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_26_180000) do
     t.index ["document_ids"], name: "index_agent_sessions_on_document_ids", using: :gin
     t.index ["used_faq_ids"], name: "index_agent_sessions_on_used_faq_ids", using: :gin
     t.index ["user_id"], name: "index_agent_sessions_on_user_id"
+  end
+
+  create_table "ai_provider_credentials", force: :cascade do |t|
+    t.string "provider", null: false
+    t.text "api_key", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["provider"], name: "index_ai_provider_credentials_on_provider", unique: true
   end
 
   create_table "applied_slas", force: :cascade do |t|
@@ -520,7 +528,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_26_180000) do
     t.string "faixa", default: "", null: false
     t.index ["account_id", "slug", "created_at"], name: "idx_autonomia_tool_runs_account_slug"
     t.index ["conversation_id", "created_at"], name: "idx_autonomia_tool_runs_conversation"
-    t.index ["conversation_id", "slug", "faixa"], name: "idx_autonomia_tool_runs_active", unique: true, where: "((status)::text = ANY ((ARRAY['pending'::character varying, 'running'::character varying])::text[]))"
+    t.index ["conversation_id", "slug", "faixa"], name: "idx_autonomia_tool_runs_active", unique: true, where: "((status)::text = ANY (ARRAY[('pending'::character varying)::text, ('running'::character varying)::text]))"
     t.index ["execution_key"], name: "idx_autonomia_tool_runs_execution_key", unique: true
   end
 
@@ -693,7 +701,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_26_180000) do
     t.index ["account_id"], name: "idx_autonomia_prospecting_leads_consent_refused", where: "(consent_refused_at IS NOT NULL)"
     t.index ["account_id"], name: "index_autonomia_prospecting_leads_on_account_id"
     t.index ["company_profile_id"], name: "idx_autonomia_prospecting_leads_company_profile"
-    t.index ["company_research_status"], name: "idx_autonomia_prospecting_leads_research_status", where: "((company_research_status)::text = ANY ((ARRAY['queued'::character varying, 'researching'::character varying, 'waiting_capacity'::character varying])::text[]))"
+    t.index ["company_research_status"], name: "idx_autonomia_prospecting_leads_research_status", where: "((company_research_status)::text = ANY (ARRAY[('queued'::character varying)::text, ('researching'::character varying)::text, ('waiting_capacity'::character varying)::text]))"
     t.index ["contact_id"], name: "index_autonomia_prospecting_leads_on_contact_id"
     t.index ["crm_card_id"], name: "index_autonomia_prospecting_leads_on_crm_card_id"
     t.index ["prospect_search_id"], name: "index_autonomia_prospecting_leads_on_search_id"
@@ -2239,6 +2247,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_26_180000) do
     t.datetime "completed_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.jsonb "schema_resolution", default: {}, null: false
     t.index ["email_campaign_id"], name: "idx_email_campaign_imports_active", unique: true, where: "(status = ANY (ARRAY[0, 1]))"
     t.index ["email_campaign_id"], name: "index_email_campaign_imports_on_email_campaign_id"
     t.index ["status", "updated_at"], name: "index_email_campaign_imports_on_status_and_updated_at"

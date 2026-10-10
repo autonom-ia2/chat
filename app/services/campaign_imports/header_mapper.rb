@@ -14,7 +14,9 @@ module CampaignImports
       @mode = mode
     end
 
-    def perform
+    def perform(explicit_mapping: nil)
+      return explicit_result(explicit_mapping) if explicit_mapping
+
       mapping = {}
       duplicated = []
 
@@ -26,15 +28,8 @@ module CampaignImports
         mapping[logical_name] ||= index
       end
 
-      errors = []
-      errors << 'missing_name_header' unless mapping.key?(:name)
-      if @mode == :email
-        errors << 'missing_email_header' unless mapping.key?(:email)
-      else
-        errors << 'missing_phone_number_header' unless mapping.key?(:phone_number)
-      end
+      errors = required_errors(mapping)
       errors += duplicated.uniq.map { |column| "duplicated_#{column}_header" }
-
       Result.new(mapping: mapping, errors: errors, extra_columns: extra_columns(mapping))
     end
 
@@ -52,8 +47,6 @@ module CampaignImports
       value.unicode_normalize(:nfkd).gsub(/\p{Mn}/, '')
     end
 
-    # Normalized custom-data key: trim, NFKD without accents, downcase,
-    # spaces/dashes -> underscore, strip anything outside [a-z0-9_].
     def self.normalize_key(header)
       transliterate(header.to_s.strip)
         .downcase
@@ -63,12 +56,30 @@ module CampaignImports
 
     private
 
+    def explicit_result(mapping)
+      normalized = mapping.to_h.symbolize_keys.compact
+      valid_indices = normalized.values.all? { |index| index.is_a?(Integer) && index.between?(0, @headers.length - 1) }
+      unique_indices = normalized.values.uniq.length == normalized.values.length
+      return Result.new(mapping: normalized, errors: ['invalid_header_mapping'], extra_columns: {}) unless valid_indices && unique_indices
+
+      Result.new(mapping: normalized, errors: required_errors(normalized), extra_columns: extra_columns(normalized))
+    end
+
+    def required_errors(mapping)
+      errors = []
+      errors << 'missing_name_header' if @mode != :email && !mapping.key?(:name)
+      if @mode == :email
+        errors << 'missing_email_header' unless mapping.key?(:email)
+      else
+        errors << 'missing_phone_number_header' unless mapping.key?(:phone_number)
+      end
+      errors
+    end
+
     def normalized_headers
       @normalized_headers ||= @headers.map { |header| self.class.normalize(header) }
     end
 
-    # Email mode keeps every unmapped column as a normalized custom-data key.
-    # Post-normalization collisions get a `_2` suffix.
     def extra_columns(mapping)
       return {} unless @mode == :email
 
@@ -86,9 +97,6 @@ module CampaignImports
       columns
     end
 
-    # In :email mode only name/email are logical columns; phone-like headers
-    # (telefone/celular/whatsapp/numero/...) fall through to extra_columns and
-    # never trigger a duplicated_phone_number_header error.
     def logical_name_for(header)
       candidates = @mode == :email ? ALIASES.slice(:name, :email) : ALIASES
       candidates.each do |logical_name, aliases|
@@ -101,6 +109,7 @@ module CampaignImports
 
     def email_header_contains_alias?(logical_name, header)
       return false unless @mode == :email && logical_name == :email
+      return false if header.include?('@')
 
       EMAIL_CONTAINS_ALIASES
         .map { |item| self.class.normalize(item) }

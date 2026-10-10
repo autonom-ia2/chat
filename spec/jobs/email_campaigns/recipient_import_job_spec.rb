@@ -22,6 +22,25 @@ RSpec.describe EmailCampaigns::RecipientImportJob do
     expect([campaign.email_campaign_recipients.count, import.email_campaign_import_issues.count]).to eq([1, 1])
   end
 
+  it 'keeps the uploaded file retryable when TypeSafe analysis is temporarily unavailable' do
+    import.source_file.attach(
+      io: StringIO.new("SEGURADO;MAIL PRINCIPAL\nAna;ana@example.org\n"),
+      filename: 'ambiguous.csv', content_type: 'text/csv'
+    )
+    allow(TypesafeAi::Config).to receive_messages(enabled?: true, configured?: true)
+    resolver = instance_double(TypesafeAi::ImportSchemaResolver)
+    allow(TypesafeAi::ImportSchemaResolver).to receive(:new).and_return(resolver)
+    allow(resolver).to receive(:resolve).and_raise(TypesafeAi::ImportSchemaResolver::Error, 'typesafe_unavailable')
+
+    described_class.perform_now(import.id)
+
+    expect(import.reload).to be_failed
+    expect(import.error_code).to eq('typesafe_unavailable')
+    expect(import).to be_retryable
+    expect(import.source_file).to be_attached
+    expect(campaign.email_campaign_recipients).not_to exist
+  end
+
   it 'rolls back inserted recipients and issues if completion fails' do
     allow(EmailCampaignImport).to receive(:find_by).with(id: import.id).and_return(import)
     allow(import).to receive(:update!).and_call_original

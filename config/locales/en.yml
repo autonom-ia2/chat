@@ -980,6 +980,12 @@ en:
         help_center_query_translation: 'Help center query translation'
         audio_transcription: 'Audio transcription'
         help_center_search: 'Help center search'
+    typesafe:
+      configure_key: 'Configure the TypeSafe API key first.'
+      encryption_unavailable: 'ACTIVE_RECORD_ENCRYPTION is not configured.'
+      connection_ok: 'TypeSafe AI connection is working.'
+      connection_failed: 'TypeSafe AI connection failed: %{code}'
+      unsupported_model: 'Unsupported TypeSafe model'
     push_diagnostics:
       user_not_found: 'User not found.'
       no_subscriptions_to_test: 'Select at least one subscription to test.'

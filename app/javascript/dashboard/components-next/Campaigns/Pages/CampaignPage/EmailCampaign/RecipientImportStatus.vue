@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue';
+import { recipientImportError } from 'dashboard/helper/emailCampaignImport';
 import { useI18n } from 'vue-i18n';
 import {
   NS,
@@ -12,7 +13,8 @@ const currentImport = computed(() => props.campaign.recipient_import);
 const message = computed(() => {
   const value = currentImport.value;
   if (!value) return '';
-  if (value.status === 'failed') return t(`${NS}.ERROR`);
+  if (value.status === 'failed')
+    return recipientImportError(t, value.error_code);
   return ['queued', 'processing', 'completed'].includes(value.status)
     ? t(`${NS}.IMPORT_${value.status.toUpperCase()}`)
     : t(`${NS}.STATUS.unknown`);

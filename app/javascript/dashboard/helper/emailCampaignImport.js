@@ -11,6 +11,15 @@ export const recipientImportError = (t, code) => {
     row_limit_exceeded: 'ROW_LIMIT',
     import_in_progress: 'IN_PROGRESS',
     file_expired: 'EXPIRED',
+    missing_email_header: 'HEADERS',
+    schema_not_resolved: 'HEADERS',
+    schema_too_wide: 'INVALID_FILE',
+    typesafe_not_configured: 'FAILED',
+    typesafe_invalid_key: 'FAILED',
+    typesafe_rate_limited: 'FAILED',
+    typesafe_overloaded: 'FAILED',
+    typesafe_unavailable: 'FAILED',
+    typesafe_invalid_response: 'FAILED',
   };
   const headerError = code
     ?.split(',')
