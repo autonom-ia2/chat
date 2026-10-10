@@ -81,6 +81,7 @@ class Crm::Subjects::Identifier
   # O aviso em tempo real sai com a decisão já gravada: falhar aqui não desfaz nem repete nada.
   def avisar
     Crm::Cards::Broadcaster.broadcast(@decisao.card, @evento) if @evento && @decisao.card
+    Crm::Subjects::Notifier.notify(@conversation) if %w[applied suggested].include?(@decisao&.state)
   end
 
   # Jev inseguro, ou pedido novo (precisa de nome): o modelo maior decide. Inseguro também, nada muda.
