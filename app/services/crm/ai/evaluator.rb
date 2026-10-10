@@ -217,7 +217,7 @@ module Crm
       end
 
       def attribute_schema
-        return { contact: [], conversation: [] } unless attribute_extraction_enabled?
+        return { contact: [], conversation: [], card: [] } unless attribute_extraction_enabled?
 
         @attribute_schema ||= AttributeSchemaBuilder.new(
           account: @account,

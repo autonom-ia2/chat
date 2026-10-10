@@ -312,7 +312,7 @@ RSpec.describe Crm::Ai::Evaluator do
       }
     )
 
-    expect(Crm::Ai::StageClassifier).to receive(:new).with(hash_including(attribute_schema: { contact: [], conversation: [] }))
+    expect(Crm::Ai::StageClassifier).to receive(:new).with(hash_including(attribute_schema: { contact: [], conversation: [], card: [] }))
                                                       .and_return(classifier)
     expect(Crm::Ai::AttributeExtractorApplier).not_to receive(:new)
 

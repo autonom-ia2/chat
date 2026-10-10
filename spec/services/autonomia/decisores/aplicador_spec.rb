@@ -57,6 +57,28 @@ RSpec.describe Autonomia::Decisores::Aplicador do
     expect(card.reload.title).to eq('Seguro auto')
   end
 
+  context 'with a card field destination (#1146)' do
+    let(:campos) { [{ chave: 'placa', descricao: 'Placa do carro', destino: 'card.atributo:placa' }] }
+
+    before { create(:custom_attribute_definition, account: account, attribute_key: 'placa', attribute_model: 'card_attribute') }
+
+    it 'grava no campo do card do assunto atual, não no contato' do
+      pipeline, stage = create_crm_pipeline(account: account, user: user)
+      card = account.crm_cards.create!(pipeline: pipeline, stage: stage, contact: contact, primary_conversation: conversation, title: 'Onix')
+
+      expect(aplicar('placa' => 'ABC1D23').aplicados).to eq('placa' => 'ABC1D23')
+      expect(card.reload.custom_attributes).to eq('placa' => 'ABC1D23')
+      expect(contact.reload.custom_attributes).not_to have_key('placa')
+    end
+
+    it 'recusa destino de campo de card que não existe na conta' do
+      decisor = build(:autonomia_decisor, account: account, campos: [{ chave: 'x', descricao: 'X', destino: 'card.atributo:inexistente' }])
+
+      expect(decisor).not_to be_valid
+      expect(decisor.errors[:campos].join).to include('card.atributo:placa')
+    end
+  end
+
   # O texto é de terceiros: assinatura, nome citado, ou o lead seguinte do mesmo portal.
   context 'when o destino já tem valor' do
     let(:contact) do

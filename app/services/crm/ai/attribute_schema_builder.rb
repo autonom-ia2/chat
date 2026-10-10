@@ -18,16 +18,17 @@ module Crm
       end
 
       def perform
-        { contact: payload_for(:contact_attribute), conversation: payload_for(:conversation_attribute) }
+        { contact: payload_for(:contact_attribute), conversation: payload_for(:conversation_attribute),
+          card: payload_for(:card_attribute) }
       end
 
       private
 
-      # Prefixo vazio (default) = todos os campos customizados de contato/conversa entram no schema.
+      # Prefixo vazio (default) = todos os campos customizados de contato, conversa e card entram no schema.
       def definitions
         @definitions ||= begin
           scope = @account.custom_attribute_definitions
-                          .where(attribute_model: %i[contact_attribute conversation_attribute]).to_a
+                          .where(attribute_model: %i[contact_attribute conversation_attribute card_attribute]).to_a
           @prefix.present? ? scope.select { |definition| definition.attribute_key.to_s.start_with?(@prefix) } : scope
         end
       end

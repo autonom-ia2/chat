@@ -94,7 +94,10 @@ class AutomationRuleSchema
   end
 
   def personalizados
-    @personalizados ||= @conta ? @conta.custom_attribute_definitions.distinct.pluck(:attribute_key) - padrao : nil
+    # Campo de card (#1146) não é condição de regra de conversa/contato.
+    @personalizados ||= if @conta
+                         @conta.custom_attribute_definitions.where.not(attribute_model: :card_attribute).distinct.pluck(:attribute_key) - padrao
+                       end
   end
 
   def propriedades_da_condicao

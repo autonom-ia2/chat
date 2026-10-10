@@ -63,6 +63,7 @@ class Autonomia::Decisores::Aplicador
   private
 
   def gravar(destino, valor)
+    return gravar_atributo_do_card(destino.delete_prefix(Autonomia::Decisor::ATRIBUTO_DE_CARD), valor) if atributo_do_card?(destino)
     return gravar_no_card(DO_CARD.fetch(destino), valor) if destino.start_with?('card.')
     return 'sem contato na conversa' if contato.blank?
 
@@ -197,6 +198,21 @@ class Autonomia::Decisores::Aplicador
     return 'já tinha valor' unless @card_novo || @trocar || card[atributo].blank?
 
     card.update!(atributo => valor)
+    Crm::Cards::Broadcaster.broadcast(card, Events::Types::CRM_CARD_UPDATED)
+    :gravado
+  end
+
+  def atributo_do_card?(destino)
+    destino.start_with?(Autonomia::Decisor::ATRIBUTO_DE_CARD)
+  end
+
+  # Campo próprio do card (#1146): o card do gatilho ou o assunto atual da conversa.
+  def gravar_atributo_do_card(chave, valor)
+    card = @card || card_da_conversa
+    return :sem_card if card.blank?
+    return 'já tinha valor' unless @card_novo || @trocar || card.custom_attributes.to_h[chave].blank?
+
+    card.with_lock { card.update!(custom_attributes: card.custom_attributes.to_h.merge(chave => valor)) }
     Crm::Cards::Broadcaster.broadcast(card, Events::Types::CRM_CARD_UPDATED)
     :gravado
   end

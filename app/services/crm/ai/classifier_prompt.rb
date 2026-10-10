@@ -127,11 +127,16 @@ module Crm::Ai::ClassifierPrompt
   ATTR_EXTRACTION = <<~ATTR.strip
     EXTRAÇÃO DE ATRIBUTOS CUSTOMIZADOS:
     Além de classificar o estágio, extraia atributos customizados quando houver evidência clara na conversa.
-    Os atributos permitidos chegam nos DADOS DE ENTRADA em "attribute_schema", separados em "contact" e
-    "conversation". Use SOMENTE as chaves fornecidas ali, no grupo correto. Nunca invente chaves, nunca mova
-    uma chave entre grupos e nunca use atributos ausentes do schema.
+    Os atributos permitidos chegam nos DADOS DE ENTRADA em "attribute_schema", separados em "contact",
+    "conversation" e "card". "contact" é dado da pessoa (vale para todos os pedidos dela); "card" é dado deste
+    pedido em particular (ex.: a placa do carro desta cotação), e outro pedido do mesmo cliente tem os seus.
+    Quando "card.subject_started_at" vier preenchido, a conversa já tratou de outro pedido antes: preencha "card"
+    SOMENTE com o que foi dito a partir desse horário (compare com o "created_at" das mensagens). O que veio antes
+    é de outro pedido e nunca vai para "card".
+    Use SOMENTE as chaves fornecidas ali, no grupo correto. Nunca invente chaves, nunca mova uma chave entre
+    grupos e nunca use atributos ausentes do schema.
     Se "attribute_schema" estiver vazio ou não houver evidência clara, retorne arrays vazios em
-    "extracted_attributes.contact" e "extracted_attributes.conversation".
+    "extracted_attributes.contact", "extracted_attributes.conversation" e "extracted_attributes.card".
     Para cada item extraído, preencha "key", "value", "confidence" e "evidence". "evidence" deve ser um
     trecho curto da conversa que sustente o valor.
     Regras por tipo:
@@ -147,7 +152,7 @@ module Crm::Ai::ClassifierPrompt
   KNOWN_ATTRS = <<~KNOWN.strip
     ATRIBUTOS JÁ CONHECIDOS:
     Os DADOS DE ENTRADA trazem em "known_attributes" os valores JÁ salvos deste card, separados em
-    "contact" e "conversation". Trate-os como verdade estabelecida sobre o cliente/negócio e use-os como
+    "contact", "conversation" e "card". Trate-os como verdade estabelecida sobre o cliente/negócio e use-os como
     contexto ao decidir o estágio (ex.: um valor já registrado pode sustentar que uma etapa foi concluída).
     Não repita em "extracted_attributes" um valor que já conste igual em "known_attributes"; só extraia
     quando a conversa trouxer um valor NOVO ou uma correção do que já está salvo.

@@ -1147,6 +1147,16 @@
       "TAB_TIMELINE": "Timeline",
       "TAB_RETURNS": "Returns",
       "TAB_HISTORY": "History",
+      "CARD_FIELDS": {
+        "TITLE": "Card fields",
+        "HELP": "Information specific to this deal.",
+        "EMPTY_ADMIN": "No card fields yet. Create them in Settings → Custom attributes → Card.",
+        "OPEN_SETTINGS": "Create card fields",
+        "UPDATE_SUCCESS": "Card field saved",
+        "UPDATE_ERROR": "Could not save the card field",
+        "DELETE_SUCCESS": "Card field cleared",
+        "DELETE_ERROR": "Could not clear the card field"
+      },
       "MORE_DETAILS": "More details",
       "LOADING_DETAILS": "Loading updated details...",
       "CONTACT_NAME": "Name",
