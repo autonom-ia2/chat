@@ -80,9 +80,16 @@ o estado ficam em [`liberacoes-por-conta.md`](liberacoes-por-conta.md).
 - Antes de fechar, a Orquestração confere: versão de migration repetida entre os PRs; arquivos gerados do Guia e da
   Central em dia (`pnpm guia:check`, `pnpm central:check`, `rails autonomia:guia:formatos:check`); PR empilhado só
   depois que o de baixo virar `MERGED`; e a linha "Liberação" de cada PR.
-- "Lote fechado, pode enfileirar": cada sessão roda `gh pr merge <N> --match-head-commit <sha>`. Antes disso, não.
-- Refazer CI = fechar e reabrir o PR. Não usar `gh run rerun` (reaproveita o merge ref antigo) nem mesclar a `main`
-  "para atualizar" (só se o GitHub disser `CONFLICTING`).
+- Lote fechado: a Orquestração enfileira todos de uma vez (`gh pr merge <N> --match-head-commit <sha>`), sem mexer
+  em rótulo. A sessão dona não enfileira nem dá push depois do pedido.
+- Refazer CI = fechar e reabrir o PR. `gh run rerun --failed` só quando a `main` não andou desde aquela CI (o merge
+  ref antigo ainda é o atual). Não mesclar a `main` "para atualizar" (só se o GitHub disser `CONFLICTING`).
+- **Um lote, um deploy.** A fila de merge entra na `main` grupo a grupo, e cada push disparava o seu deploy (em
+  10/10 três lotes saíram em dois deploys cada). O job "Esperar a fila de merge" dos dois deploys espera a fila
+  esvaziar (teto de 25 min) e, se houver execução de push mais nova viva ou já concluída com sucesso, sai sem
+  deployar: a mais nova sobe a `main` inteira. A trava de concorrência fica nos jobs `deploy` e `rollback`, então a
+  espera não segura o rollback. Cancelar à mão o deploy mais novo cancela também os commits que ele cobria:
+  disparar de novo pelo `workflow_dispatch`.
 
 ### Depois do deploy
 
