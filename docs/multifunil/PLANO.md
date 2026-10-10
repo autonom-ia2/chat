@@ -131,3 +131,15 @@ A Entrega 3 precisa de uma conta com **mais de um funil** para o piloto do acess
 ## 9. Pendências
 
 1. Conta para o piloto do acesso por funil (Entrega 3): precisa de mais de um funil.
+
+## 10. Decisões de 09/10/2026 (Rodrigo)
+
+- **Migrations:** quantas forem precisas, sempre aditivas e com índice. Não há mais "uma migration só na Entrega 2".
+- **R15 sem chave por funil:** ganho em funil de venda promove o contato a Cliente em todas as contas (#1166). `promotes_contact` fica de fora.
+- **Criar card por API com conversa** (`POST /crm/cards`): card novo só com `new_subject`; sem ele, devolve o assunto atual (#1197).
+- **PR 5 em dois:**
+  - **5a** (#1145): "Quando usar" no funil (`crm_pipelines.when_to_use`), modo da IA na caixa (`crm_inbox_settings.subject_ai_mode`: Desligada / Sugerir / Automática), a decisão por mensagem (`crm_subject_decisions`) e o modo Automática.
+  - **5b:** o aviso "Parece um novo assunto" no painel Assuntos, com Criar e Ignorar (as sugestões já ficam gravadas pelo 5a).
+- **Nome do assunto:** o Jev só escolhe; quando o pedido é novo, o modelo maior escreve o nome ("Agentes de IA", "Seguro do Onix"). Sem nome, nada muda.
+- **Card criado sozinho pela caixa** nasce com o nome do contato: o primeiro assunto identificado dá nome a ele, em vez de criar outro card.
+- **Antes de ligar na conta 16:** medir o custo por conversa com o modo Sugerir (a correção da seção 7: a IA é o PR 5, não o PR 8).
