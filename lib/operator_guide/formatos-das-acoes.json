@@ -17953,7 +17953,6 @@
     "origem": [
       "app/controllers/api/v1/accounts/whatsapp/authorizations_controller.rb:10",
       "app/controllers/api/v1/accounts/whatsapp/authorizations_controller.rb:33",
-      "app/controllers/api/v1/accounts/whatsapp/authorizations_controller.rb:65",
       "app/controllers/api/v1/accounts/whatsapp/authorizations_controller.rb:34",
       "app/controllers/api/v1/accounts/whatsapp/authorizations_controller.rb:81",
       "app/controllers/api/v1/accounts/whatsapp/authorizations_controller.rb:80",
