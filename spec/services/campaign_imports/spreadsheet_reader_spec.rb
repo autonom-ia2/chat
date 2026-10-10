@@ -55,6 +55,53 @@ RSpec.describe CampaignImports::SpreadsheetReader, :aggregate_failures do
     expect(result.resolution).to include('method' => 'deterministic', 'needs_confirmation' => true)
   end
 
+  context 'without a header row' do
+    let(:headless) { "Ana Souza,11987654321,ana@x.com.br\nBeto Lima,21987654321,beto@x.com.br\nCaio Reis,,\n" }
+    let(:answer) do
+      jev({ name: { index: 0, confidence: 0.95 }, phone: { index: 1, confidence: 0.95 },
+            email: { index: 2, confidence: 0.95 }, company: { index: nil, confidence: 0.95 } })
+    end
+
+    it 'reads every line as data under untitled columns and asks the user to confirm them' do
+      result = described_class.new(parsed(headless), ai_resolver: answer, jev_enabled: true).perform
+
+      expect(result.headers).to eq(['', '', ''])
+      expect(result.rows.size).to eq(3)
+      expect(result.resolution).to include('header_row' => 0, 'needs_confirmation' => true)
+      expect(result.mapping).to include('phone' => 1, 'email' => 2)
+    end
+
+    it 'imports after the user chooses the columns' do
+      result = described_class.new(parsed(headless), explicit_mapping: { 'name' => 0, 'phone' => 1, 'email' => 2 },
+                                                     pinned_header: { header_row: 0, table_index: 0 }).perform
+
+      expect(result).not_to be_needs_column_choice
+      expect(result.rows.size).to eq(3)
+    end
+  end
+
+  it 'keeps the header below a one-cell title that carries a phone' do
+    content = "Clientes - (11) 98765-4321,,\nNome,Celular,Email\nAna,11987654321,ana@x.com.br\n"
+    resolver = jev({ name: { index: 0, confidence: 0.95 }, phone: { index: 1, confidence: 0.95 },
+                     email: { index: 2, confidence: 0.95 }, company: { index: nil, confidence: 0.95 } })
+
+    result = described_class.new(parsed(content), ai_resolver: resolver, jev_enabled: true).perform
+
+    expect(result.resolution['header_row']).to eq(2)
+    expect(result.headers).to eq(%w[Nome Celular Email])
+  end
+
+  it 'never takes a line that comes after contact data as the header' do
+    content = "Nome,Celular\nAna,11987654321\nBeto,\nCaio,21987654321\n"
+    resolver = jev({ name: { index: 0, confidence: 0.95 }, phone: { index: 1, confidence: 0.95 },
+                     email: { index: nil, confidence: 0.95 }, company: { index: nil, confidence: 0.95 } })
+
+    result = described_class.new(parsed(content), ai_resolver: resolver, jev_enabled: true).perform
+
+    expect(result.resolution['header_row']).to eq(1)
+    expect(result.rows.size).to eq(3)
+  end
+
   it 'refuses a manual choice without a phone or email column' do
     expect do
       described_class.new(parsed(content), explicit_mapping: { 'name' => 0, 'company' => 3 },

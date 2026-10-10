@@ -90,16 +90,14 @@ class CampaignImports::AudienceValidator < CampaignImports::Validator
   end
 
   def email_fields(raw, result)
-    {
-      email: result&.email, email_hash: result && Digest::SHA256.hexdigest(result.email),
-      email_masked: raw.present? ? EmailCampaigns::EmailNormalizer.mask(raw.downcase) : nil
-    }
+    masked = result ? EmailCampaigns::EmailNormalizer.mask(result.email) : CampaignImports::CellValues.masked_emails(raw)
+    { email: result&.email, email_hash: result && Digest::SHA256.hexdigest(result.email), email_masked: raw.present? ? masked : nil }
   end
 
   def normalize_with(normalizer, value)
     return [nil, nil] if value.blank?
 
-    [normalizer.normalize!(value), nil]
+    [CampaignImports::CellValues.normalize!(normalizer, value), nil]
   rescue CampaignImports::PhoneNormalizer::Error, EmailCampaigns::EmailNormalizer::Error => e
     [nil, e.message]
   end

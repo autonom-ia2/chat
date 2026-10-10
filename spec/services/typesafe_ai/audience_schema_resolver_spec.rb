@@ -39,6 +39,19 @@ RSpec.describe TypesafeAi::AudienceSchemaResolver, :aggregate_failures do
     ).once
   end
 
+  it 'sends the share of valid mobiles and emails so a generic header still reads as a phone column' do
+    allow(client).to receive(:evaluate).and_return(
+      response(phone: answer('column_1'), email: answer('none'), name: answer('column_0'), company: answer('none'))
+    )
+
+    resolver.resolve(candidate)
+
+    expect(client).to have_received(:evaluate) do |state:, **|
+      expect(state[:profiles][1]).to include(valid_phone_share: 1.0, valid_email_share: 0.0)
+      expect(state[:profiles][0]).to include(valid_phone_share: 0.0)
+    end
+  end
+
   it 'rejects an answer from another model than the pinned one' do
     allow(client).to receive(:evaluate).and_return(
       response(model: 'jev-latest', phone: answer('column_1'), email: answer('none'), name: answer('column_0'), company: answer('none'))

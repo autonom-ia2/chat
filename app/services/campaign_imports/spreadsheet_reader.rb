@@ -146,10 +146,17 @@ class CampaignImports::SpreadsheetReader
     targets = targets.transform_values { |entry| entry.merge('header' => entry['column'] && candidate.headers[entry['column']]) }
     mapping = targets.transform_values { |entry| entry['column'] }
     uncertain = targets.reject { |_target, entry| entry['confident'] }.keys
-    needs_confirmation = uncertain.any? || mapping.values_at(*CONTACT_TARGETS).all?(&:nil?)
+    needs_confirmation = confirmation_needed?(candidate, mapping, uncertain)
     extra_columns = extra_columns_for(columns, mapping.values.compact)
     Result.new(headers: candidate.headers, rows: candidate.rows, mapping: mapping, extra_columns: extra_columns,
                resolution: resolution_for(candidate, columns, targets, jev, needs_confirmation, uncertain))
+  end
+
+  # Without a header row the first line is data too: the user always confirms what each column is.
+  def confirmation_needed?(candidate, mapping, uncertain)
+    return true if uncertain.any? || mapping.values_at(*CONTACT_TARGETS).all?(&:nil?)
+
+    candidate.untitled && @explicit_mapping.nil?
   end
 
   def resolution_for(candidate, columns, targets, jev, needs_confirmation, uncertain) # rubocop:disable Metrics/ParameterLists -- one flat record

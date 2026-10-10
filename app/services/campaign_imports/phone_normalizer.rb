@@ -34,7 +34,19 @@ module CampaignImports
 
       private
 
+      # Ways a spreadsheet writes the same mobile: the long-distance trunk 0 ("011 98765-4321", or
+      # "0055…" for the international prefix) and the legacy eight-digit mobile from before the ninth
+      # digit, restored by the WhatsApp normalizer (Anatel: only 6-9 ranges, never a landline).
+      def national_digits(digits)
+        digits = digits[1..] while digits.start_with?('0')
+        digits = "55#{digits}" if digits.length == 10
+        return digits unless digits.length == 12 && digits.start_with?('55')
+
+        Whatsapp::PhoneNormalizers::BrazilPhoneNormalizer.new.normalize(digits)
+      end
+
       def local_mobile_number(digits)
+        digits = national_digits(digits)
         case digits.length
         when 11
           digits
