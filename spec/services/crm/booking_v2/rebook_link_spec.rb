@@ -37,7 +37,7 @@ RSpec.describe Crm::BookingV2::RebookLink do
                                       conversation_id: conversation.id, created_by_id: world.host.id, state: 'sent')
     message = conversation.messages.last
     expect(message).to have_attributes(sender: world.host, message_type: 'outgoing', private: false)
-    expect(message.content).to eq("Oi, Marcos! Escolha o melhor horário para a gente conversar: #{invite.url}")
+    expect(message.content).to eq("Oi, Marcos! Escolha o melhor horário para você: #{invite.url}")
     activity = world.card.activities.find_by(event_type: 'booking_rebook_link_sent')
     expect(activity.payload).to include('meeting_id' => meeting.id, 'invite_id' => invite.id, 'message_id' => message.id)
   end
