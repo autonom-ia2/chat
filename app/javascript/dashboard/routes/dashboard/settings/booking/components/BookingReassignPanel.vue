@@ -137,6 +137,8 @@ onMounted(async () => {
 
 const SECONDARY =
   'inline-flex items-center gap-2 min-h-11 px-4 rounded-xl text-base font-medium ring-1 ring-inset focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand disabled:opacity-60 disabled:cursor-not-allowed';
+// Separador visual entre dois trechos já traduzidos (não é texto a traduzir).
+const SEPARATOR = ' · ';
 </script>
 
 <template>
@@ -226,7 +228,7 @@ const SECONDARY =
               :data-conflict="item.meeting_id"
               class="text-base text-n-slate-12"
             >
-              {{ when(item.starts_at) }} · {{ item.title }}
+              {{ when(item.starts_at) }}{{ SEPARATOR }}{{ item.title }}
             </li>
           </ul>
         </template>

@@ -134,6 +134,8 @@ const viaText = row =>
     : row.page.title;
 
 watch(() => [props.period, props.scope], load, { immediate: true });
+// Separador visual entre dois trechos já traduzidos (não é texto a traduzir).
+const SEPARATOR = ' · ';
 </script>
 
 <template>
@@ -219,7 +221,7 @@ watch(() => [props.period, props.scope], load, { immediate: true });
               {{ row.contact.name }}
             </span>
             <span class="text-sm text-n-slate-11">
-              {{ openedText(row) }} · {{ viaText(row) }}
+              {{ openedText(row) }}{{ SEPARATOR }}{{ viaText(row) }}
             </span>
             <span
               v-if="notices[row.id]"
