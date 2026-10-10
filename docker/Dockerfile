@@ -19,7 +19,8 @@ ENV RAILS_SERVE_STATIC_FILES ${RAILS_SERVE_STATIC_FILES}
 ARG RAILS_ENV=production
 ENV RAILS_ENV ${RAILS_ENV}
 
-ARG NODE_OPTIONS="--max-old-space-size=4096 --openssl-legacy-provider"
+# 6144: com a onda 2 do agendamento (#1209) o vite build passou de 4 GB e o deploy de 10/10 falhou por heap (runner 16 GB).
+ARG NODE_OPTIONS="--max-old-space-size=6144 --openssl-legacy-provider"
 ENV NODE_OPTIONS ${NODE_OPTIONS}
 
 ENV BUNDLE_PATH="/gems"
