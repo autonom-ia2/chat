@@ -51,6 +51,8 @@ RSpec.describe 'CRM concurrent contact creation', :relationships_committed_fixtu
   after do
     release_validation << true
     workers.each { |worker| worker.join(1) || worker.kill.join }
+  ensure
+    # Runs even when a worker died: `join` re-raises its error and would skip the cleanup.
     Contact.skip_callback(:validation, :after, validation_barrier)
     Crm::Activity.where(account_id: account.id).delete_all
     account.crm_cards.destroy_all
@@ -59,7 +61,12 @@ RSpec.describe 'CRM concurrent contact creation', :relationships_committed_fixtu
     account.account_users.destroy_all
     IdempotencyKey.where(account: account).delete_all
     account.destroy!
+    # `destroy_async` associations never run here: the job is only enqueued.
+    NotificationSetting.where(user_id: admin.id).delete_all
+    AccessToken.where(owner: admin).delete_all
     admin.destroy!
+    # Without a transaction the audits (audited gem) written by account callbacks stay as well.
+    Audited::Audit.where(associated: account).or(Audited::Audit.where(auditable: account)).delete_all
   end
 
   # Connection/barrier helpers are shared across the three real endpoint races.
