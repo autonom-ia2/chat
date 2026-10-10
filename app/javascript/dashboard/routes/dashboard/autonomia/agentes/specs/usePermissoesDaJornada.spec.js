@@ -53,6 +53,15 @@ describe('usePermissoesDaJornada', () => {
   it('hides "Escolher quem recebe" when the CRM AI is off on the install', () => {
     getters.getCurrentUser = usuario(['administrator']);
     window.globalConfig = { CRM_KANBAN_ENABLED: 'true' };
-    expect(usePermissoesDaJornada().podeEscolherQuemRecebe.value).toBe(false);
+    const { podeEscolherQuemRecebe, crmLigado } = usePermissoesDaJornada();
+    expect(podeEscolherQuemRecebe.value).toBe(false);
+    expect(crmLigado.value).toBe(false);
+  });
+
+  it('tells the CRM assignment screen exists apart from the permission', () => {
+    getters.getCurrentUser = usuario(['custom_role', 'autonomia_manage']);
+    const { podeEscolherQuemRecebe, crmLigado } = usePermissoesDaJornada();
+    expect(podeEscolherQuemRecebe.value).toBe(false);
+    expect(crmLigado.value).toBe(true);
   });
 });

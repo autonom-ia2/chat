@@ -12,7 +12,14 @@ const props = defineProps({
     type: String,
     default: 'primario',
     validator: v =>
-      ['primario', 'contorno', 'fantasma', 'branco', 'perigo'].includes(v),
+      [
+        'primario',
+        'contorno',
+        'fantasma',
+        'branco',
+        'perigo',
+        'aviso',
+      ].includes(v),
   },
   tamanho: {
     type: String,
@@ -41,6 +48,9 @@ const VARIANTES = {
     'bg-n-solid-1 text-n-blue-11 ring-1 ring-inset ring-n-blue-9 hover:bg-n-blue-2 focus-visible:outline-n-blue-11',
   fantasma:
     'bg-transparent text-n-blue-11 hover:bg-n-alpha-2 focus-visible:outline-n-blue-11',
+  // Ação sem volta (protótipo .btn-warn): âmbar escuro #8A4F00 com branco, 6,6:1 nos dois temas.
+  aviso:
+    'bg-[#8A4F00] text-white hover:bg-[#723F00] dark:hover:bg-[#A35E00] focus-visible:outline-[#8A4F00]',
   branco:
     'bg-white text-[#0D2344] hover:bg-n-slate-2 focus-visible:outline-white',
 };

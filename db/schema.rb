@@ -2084,6 +2084,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_15_100000) do
     t.datetime "next_follow_up_at"
     t.datetime "closed_at"
     t.string "external_id"
+    t.jsonb "custom_attributes", default: {}, null: false
     t.index "lower((title)::text) gin_trgm_ops", name: "idx_crm_cards_title_trgm", using: :gin
     t.index ["account_id", "contact_id"], name: "idx_crm_cards_contact"
     t.index ["account_id", "conversation_id", "status", "id"], name: "idx_crm_cards_conversation"

@@ -22,7 +22,7 @@ module Crm
         classification = refresh_handoff_classification_if_needed(classification, result)
         run_handoff(classification)
         run_callback(classification)
-        run_attribute_extraction(classification)
+        attribute_extraction.apply(classification[:extracted_attributes])
         ScoreApplier.new(card: @card, signals: classification[:score_signals]).perform
         result
       rescue ResponsesClient::Error => e
@@ -65,16 +65,9 @@ module Crm
         effort = Config::CLASSIFY_REASONING_EFFORT
 
         StageClassifier.new(
-          card: @card,
-          client: client,
-          stages: stages,
-          context: context,
-          model: model,
-          reasoning_effort: effort,
-          handoff_enabled: handoff_config[:enabled],
-          handoff_trigger: handoff_config[:trigger],
-          eligible_agents: eligible_agent_names,
-          attribute_schema: attribute_schema
+          card: @card, client: client, stages: stages, context: context, model: model, reasoning_effort: effort,
+          handoff_enabled: handoff_config[:enabled], handoff_trigger: handoff_config[:trigger],
+          eligible_agents: eligible_agent_names, attribute_schema: attribute_extraction.schema
         ).perform
       end
 
@@ -89,22 +82,11 @@ module Crm
 
       def refresh_handoff_classification_if_needed(classification, result)
         return classification unless result.status == :auto_moved
-        return classification if handoff_requested?(classification[:handoff])
+        return classification if HandoffIntent.requested?(classification[:handoff])
         return classification unless handoff_config[:enabled]
 
         handoff_classification = classify_stage(enrich_media: false)
         classification.merge(handoff: handoff_classification[:handoff])
-      end
-
-      def handoff_requested?(handoff)
-        return false if handoff.blank?
-
-        data = handoff.respond_to?(:with_indifferent_access) ? handoff.with_indifferent_access : handoff.to_h
-        intent = data[:intent].to_s
-        return true if intent == 'transferir'
-        return false if %w[continuar consultar].include?(intent)
-
-        ActiveModel::Type::Boolean.new.cast(data[:should_handoff])
       end
 
       def eligible_agent_names
@@ -134,19 +116,6 @@ module Crm
         Crm::FollowUps::CallbackScheduler.new(card: @card, callback: classification[:callback_request]).perform
       rescue StandardError => e
         Rails.logger.error("[CRM AI callback] #{e.class}: #{e.message}")
-      end
-
-      def run_attribute_extraction(classification)
-        return unless attribute_extraction_enabled?
-
-        AttributeExtractorApplier.new(
-          card: @card,
-          extracted_attributes: classification[:extracted_attributes],
-          prefix: Config.attribute_extraction_prefix(@card.pipeline),
-          min_confidence: Config.attribute_extraction_min_confidence(@card.pipeline)
-        ).perform
-      rescue StandardError => e
-        Rails.logger.error("[CRM AI attribute extraction] #{e.class}: #{e.message}")
       end
 
       def apply_classification(classification)
@@ -209,20 +178,8 @@ module Crm
         @stages ||= @card.pipeline.stages.order(:position, :id).to_a
       end
 
-      def attribute_extraction_enabled?
-        return @attribute_extraction_enabled if defined?(@attribute_extraction_enabled)
-
-        @attribute_extraction_enabled = Config.attribute_extraction_enabled? &&
-                                        Config.pipeline_attribute_extraction_enabled?(@card.pipeline)
-      end
-
-      def attribute_schema
-        return { contact: [], conversation: [] } unless attribute_extraction_enabled?
-
-        @attribute_schema ||= AttributeSchemaBuilder.new(
-          account: @account,
-          prefix: Config.attribute_extraction_prefix(@card.pipeline)
-        ).perform
+      def attribute_extraction
+        @attribute_extraction ||= AttributeExtraction.new(card: @card)
       end
 
       def ai_metadata

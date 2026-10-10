@@ -1,4 +1,4 @@
-// Configurações › Agendamento (#1187, F1-D). Opções prontas da tela: o
+// CRM › Agendamento (#1187, F1-D). Opções prontas da tela: o
 // administrador escolhe, não digita número. Os limites seguem o modelo do
 // backend (Crm::AgentBookingProfile e Crm::BookingPageSettings).
 

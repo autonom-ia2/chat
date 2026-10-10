@@ -84,6 +84,13 @@ const aoEscolher = evento => {
   juntar(evento.target.files);
   evento.target.value = '';
 };
+
+// #1181 PR2 — quem usa abre o seletor de arquivos por fora ("Mande aqui.", "Mandar outro") e
+// devolve o foco ao campo.
+defineExpose({
+  abrirArquivos: () => seletor.value?.click(),
+  focar: () => campo.value?.focus(),
+});
 </script>
 
 <template>

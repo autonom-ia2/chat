@@ -51,7 +51,7 @@ jobs:
     env:
       RAILS_ENV: test
       # Mesmo teto de memoria do job de RSpec (#1118).
-      NODE_OPTIONS: --max-old-space-size=4096
+      NODE_OPTIONS: --max-old-space-size=6144
 
     steps:
       - uses: actions/checkout@v4

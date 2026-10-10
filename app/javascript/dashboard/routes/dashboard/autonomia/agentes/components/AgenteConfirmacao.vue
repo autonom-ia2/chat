@@ -11,6 +11,8 @@ defineProps({
   titulo: { type: String, required: true },
   texto: { type: String, default: '' },
   confirmar: { type: String, required: true },
+  // Rótulo do botão que fecha sem fazer nada (padrão "Cancelar"; ex.: "Continuar aqui").
+  cancelar: { type: String, default: '' },
   perigo: { type: Boolean, default: true },
   carregando: { type: Boolean, default: false },
 });
@@ -44,7 +46,7 @@ defineExpose({ abrir, fechar });
           :desabilitado="carregando"
           @click="fechar"
         >
-          {{ t('AGENTS.JORNADA.COMUM.CANCELAR') }}
+          {{ cancelar || t('AGENTS.JORNADA.COMUM.CANCELAR') }}
         </AgenteBotao>
         <AgenteBotao
           :variante="perigo ? 'perigo' : 'primario'"

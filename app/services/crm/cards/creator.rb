@@ -3,7 +3,7 @@ module Crm
     class Creator
       ATTRIBUTES = %i[
         pipeline_id stage_id contact_id conversation_id inbox_id owner_id team_id title description
-        value_cents currency status lost_reason source priority score expected_close_at metadata external_id
+        value_cents currency status lost_reason source priority score expected_close_at metadata external_id custom_attributes
       ].freeze
 
       def initialize(account:, user:, params:, conversation: nil)

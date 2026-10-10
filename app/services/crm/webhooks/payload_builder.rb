@@ -65,6 +65,8 @@ module Crm
         data[:contact] = contact_payload
         data[:owner] = owner_payload
         data[:inbox] = inbox_payload
+        # Campos do card (#1146) podem guardar CPF, placa: saem só com o mesmo opt-in de dados pessoais do contato.
+        data[:custom_attributes] = @card.custom_attributes if @include_contact_pii
         data.compact!
       end
 

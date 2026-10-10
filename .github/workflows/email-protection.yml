@@ -102,7 +102,7 @@ jobs:
       REDIS_URL: redis://127.0.0.1:6379/0
       # Specs que renderizam pagina disparam o build do Vite neste job: mesmo heap do build de producao
       # (docker/Dockerfile, NODE_OPTIONS). Sem isso o Node estoura (~3,3 GB) e as telas respondem 500 (#1118).
-      NODE_OPTIONS: --max-old-space-size=4096
+      NODE_OPTIONS: --max-old-space-size=6144
     steps:
       - uses: actions/checkout@v4
         with:
@@ -229,7 +229,7 @@ jobs:
         # Mesmo heap do build de producao (docker/Dockerfile, NODE_OPTIONS): sem teto explicito o Node do runner
         # (~3,3 GB) estoura no build do Vite (#1118).
         env:
-          NODE_OPTIONS: --max-old-space-size=4096
+          NODE_OPTIONS: --max-old-space-size=6144
         run: |
           bundle exec vite build --mode test
           compgen -G 'public/vite-test/assets/dashboard-*.css' > /dev/null

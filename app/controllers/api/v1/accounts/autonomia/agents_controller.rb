@@ -1,6 +1,21 @@
 class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autonomia::BaseController
   before_action :fetch_agent, only: [:show, :update, :destroy, :avatar]
 
+  # #1211 — `config.native_tool_slugs` com ferramenta de outro fluxo (ou que não existe). Recusa com o
+  # slug na resposta, nunca descarte silencioso: quem pediu fica sabendo que a ferramenta não ligou.
+  # `code` separa o valor que nem é uma lista (`slugs` vazio) da lista com slug recusado.
+  class FerramentaNativaNaoPermitida < StandardError
+    attr_reader :slugs, :code
+
+    def initialize(slugs, code: 'native_tool_not_allowed')
+      @slugs = slugs
+      @code = code
+      super()
+    end
+  end
+
+  rescue_from FerramentaNativaNaoPermitida, with: :render_ferramenta_nativa_nao_permitida
+
   # Andaime mínimo aplicado pelo backend em modo manual (IP oculto) — embrulha a instrução do
   # usuário com guardrails de segurança/formato/handoff. Nunca vem do params nem é exposto.
   MANUAL_SCAFFOLD = <<~SCAFFOLD.freeze
@@ -22,7 +37,11 @@ class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autono
   def create
     raise ::Autonomia::Agents::Agent::InstrucaoMantida if instrucao_mantida_pelo_tipo?(params.dig(:agent, :agent_type))
 
-    @agent = agents_scope.new(agent_params)
+    attrs = agent_params
+    return if recusar_pagina_de_agendamento_sem_permissao(attrs[:config])
+
+    @agent = agents_scope.new(attrs.except(:config))
+    merge_config!(attrs[:config]) if attrs.key?(:config)
     @agent.created_by = Current.user
     apply_manual_scaffold
     @agent.save!
@@ -45,6 +64,8 @@ class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autono
     discard_generated_instruction_on_manual_switch
     instruction_before = @agent.instruction
     attrs = agent_params
+    return if recusar_pagina_de_agendamento_sem_permissao(attrs[:config])
+
     @agent.assign_attributes(attrs.except(:config))
     merge_config!(attrs[:config]) if attrs.key?(:config)
     return if reject_internal_with_channels
@@ -158,10 +179,32 @@ class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autono
     permitted = %i[name agent_type mode tone greeting fallback_message handoff_rule human_card
                    enabled status actuation]
     permitted << :instruction if manual_mode?
-    attrs = params.require(:agent).permit(*permitted, starter_questions: [], config: {})
-    attrs[:config] = sanitized_config(attrs[:config]) if attrs[:config].present?
+    # Hash simples, não Parameters: um Hash gravado dentro de Parameters volta como "não permitido" no `new` (500).
+    attrs = params.require(:agent).permit(*permitted, starter_questions: [], config: {}).to_h
+    attrs[:config] = config_conferido(attrs[:config]) if attrs[:config].present?
     permit_audience_config(attrs)
     attrs
+  end
+
+  # #1211 — `permit(config: {})` deixava passar qualquer slug do catálogo, e o agente comum ganhava as
+  # ferramentas do Guia da Plataforma. A lista permitida é a do fluxo do agente
+  # (`Tools::Registry.permitidas_para`); `null` e lista vazia seguem aceitos (desligam todas).
+  def config_conferido(config)
+    sanitized_config(config).tap { |limpo| recusar_ferramentas_de_outro_fluxo(limpo['native_tool_slugs']) }
+  end
+
+  def recusar_ferramentas_de_outro_fluxo(pedidos)
+    return if pedidos.nil?
+    raise FerramentaNativaNaoPermitida.new([], code: 'native_tool_slugs_not_a_list') unless pedidos.is_a?(Array)
+
+    permitidos = ::Autonomia::Agents::Tools::Registry.permitidas_para(@agent || agents_scope.new).map(&:slug)
+    recusados = pedidos.map(&:to_s) - permitidos
+    raise FerramentaNativaNaoPermitida, recusados if recusados.any?
+  end
+
+  def render_ferramenta_nativa_nao_permitida(error)
+    render json: { error: I18n.t('autonomia.agents.native_tool_not_allowed'), code: error.code, slugs: error.slugs },
+           status: :unprocessable_entity
   end
 
   # #284 (Entrega 2a) — o público-alvo é uma árvore recursiva (grupos com arrays de hashes) que o
@@ -197,6 +240,21 @@ class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autono
     return value.to_unsafe_h if value.respond_to?(:to_unsafe_h)
 
     value.to_h
+  end
+
+  # #1196 — escolher (ou trocar) a página de agendamento da IA pede poder ver Agendamento: administrador ou função com
+  # `agendamento_view` (`_manage` implica). Reenviar a página que já está salva (quem manda o config inteiro de volta)
+  # não é escolher.
+  def recusar_pagina_de_agendamento_sem_permissao(config)
+    chave = ::Autonomia::Agents::Tools::Native::Agenda::CONFIG_KEY
+    return false unless config.respond_to?(:key?) && config.key?(chave)
+
+    salva = @agent ? @agent.config.to_h[chave] : nil
+    return false if config[chave].to_s == salva.to_s
+    return false if Current.account_user&.permission_granted?('agendamento_view')
+
+    render_unprocessable(I18n.t('autonomia.agents.booking_page_forbidden'))
+    true
   end
 
   def manual_mode?

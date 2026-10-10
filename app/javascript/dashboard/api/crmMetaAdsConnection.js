@@ -26,7 +26,15 @@ class CrmMetaAdsConnectionAPI extends ApiClient {
     return axios.delete(this.url);
   }
 
-  // mode: 'partner' | 'token' → { ad_accounts: [...] }, recommended first.
+  // "Sign in with Facebook" (#1069): the code from Facebook Login for Business
+  // is exchanged and tested on the server, like update. 422 with error
+  // 'login_failed', 'missing_ads_read', 'no_ad_account' or 'meta_unavailable'.
+  facebookLogin(code) {
+    return axios.post(`${this.url}/facebook_login`, { code });
+  }
+
+  // mode: 'partner' | 'token' | 'facebook_login' → { ad_accounts: [...] },
+  // recommended first.
   adAccounts(mode) {
     return axios.get(`${this.url}/ad_accounts`, { params: { mode } });
   }

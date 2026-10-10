@@ -1,8 +1,8 @@
-// Configurações › Agendamento (#1187, F1-D): permissões da rota, guarda da flag
-// (instalação + conta, com F5) e o item do menu.
+// CRM › Agendamento (#1187, F1-D; no CRM desde o #1212): permissões da rota,
+// guarda da flag (instalação + conta, com F5) e o item do menu.
 import bookingRoutes, {
   ensureBookingEnabled,
-  ensureBookingResultsEnabled,
+  ensureCrmBookingEnabled,
 } from '../booking.routes';
 import {
   bookingResultsSidebarItems,
@@ -42,9 +42,37 @@ describe('rota settings_booking', () => {
     window.globalConfig = { CRM_CALENDAR_MEETINGS_ENABLED: 'true' };
   });
 
-  it('fica em accounts/:accountId/settings/booking com o guarda da flag', () => {
-    expect(parent.path).toBe('/app/accounts/:accountId/settings/booking');
-    expect(parent.beforeEnter).toBe(ensureBookingEnabled);
+  it('fica em accounts/:accountId/crm/booking, com o guarda do CRM e da flag', () => {
+    expect(parent.path).toBe('/app/accounts/:accountId/crm/booking');
+    expect(parent.beforeEnter).toBe(ensureCrmBookingEnabled);
+  });
+
+  it('exige o CRM ligado na instalação, além da flag do agendamento', async () => {
+    store.getters['accounts/getAccount'] = () => withFlag(true);
+    window.globalConfig.CRM_KANBAN_ENABLED = 'true';
+    const open = vi.fn();
+    await parent.beforeEnter({ params: { accountId: '9' } }, {}, open);
+    expect(open).toHaveBeenCalledWith();
+
+    window.globalConfig.CRM_KANBAN_ENABLED = 'false';
+    const blocked = vi.fn();
+    await parent.beforeEnter({ params: { accountId: '9' } }, {}, blocked);
+    expect(blocked).toHaveBeenCalledWith({
+      name: 'home',
+      params: { accountId: '9' },
+    });
+  });
+
+  it.each([
+    ['settings/booking', 'settings_booking'],
+    ['settings/booking/results', 'settings_booking_results'],
+  ])('o endereço antigo %s leva ao novo, com a mesma query', (old, name) => {
+    const moved = bookingRoutes.routes.find(
+      route => route.path === `/app/accounts/:accountId/${old}`
+    );
+    const to = { params: { accountId: '9' }, query: { from: 'link' } };
+    expect(moved.redirect(to)).toEqual({ name, ...to });
+    expect(moved.name).toBeUndefined();
   });
 
   it('abre para administrador e para as duas chaves de Agendamento, e só', () => {
@@ -117,8 +145,9 @@ describe('item do menu Agendamento', () => {
     window.globalConfig = { CRM_CALENDAR_MEETINGS_ENABLED: 'true' };
   });
 
-  it('aparece para o administrador com a flag ligada', () => {
+  it('aparece para o administrador com a flag ligada, como item do CRM', () => {
     const [item] = build({ isAdministrator: true });
+    expect(item.name).toBe('CRM Booking');
     expect(item.label).toBe('SIDEBAR.BOOKING');
     expect(item.to).toEqual({ name: 'settings_booking' });
   });
@@ -155,7 +184,7 @@ describe('Meus horários (#1195): rota e item do menu', () => {
 
   it('fica no CRM, com o guarda da flag, aberta a quem pode atender e só', () => {
     expect(myHours.path).toBe('/app/accounts/:accountId/crm/my-booking-hours');
-    expect(myHours.beforeEnter).toBe(ensureBookingResultsEnabled);
+    expect(myHours.beforeEnter).toBe(ensureCrmBookingEnabled);
     expect(myHours.meta.permissions).toEqual([
       'administrator',
       'agent',
@@ -186,7 +215,7 @@ describe('Meus horários (#1195): rota e item do menu', () => {
   });
 });
 
-// Painel de resultados (#1194, J7-A5, J8-A12): aba nas Configurações para quem
+// Painel de resultados (#1194, J7-A5, J8-A12): aba do Agendamento para quem
 // tem o módulo e "Meus números" no CRM para quem atende.
 describe('rotas do painel de resultados', () => {
   const results = parent.children.find(
@@ -204,7 +233,7 @@ describe('rotas do painel de resultados', () => {
     };
   });
 
-  it('a aba Resultados fica em settings/booking/results, com as mesmas permissões e a equipe', () => {
+  it('a aba Resultados fica em crm/booking/results, com as mesmas permissões e a equipe', () => {
     expect(results.path).toBe('results');
     expect(results.meta.permissions).toEqual([
       'administrator',

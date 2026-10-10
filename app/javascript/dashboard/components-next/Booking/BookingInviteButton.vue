@@ -118,7 +118,7 @@ const badgeState = computed(() => {
   return BADGE_STATES.includes(state) ? state : '';
 });
 
-// Admin ou função com `agendamento_manage` vê o atalho para Configurações › Agendamento (J8-A3).
+// Admin ou função com `agendamento_manage` vê o atalho para CRM › Agendamento (J8-A3).
 const canOpenSettings = computed(() => {
   if (store.getters.getCurrentRole === 'administrator') return true;
   return getUserPermissions(

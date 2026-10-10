@@ -60,7 +60,7 @@ jobs:
       AWS_EC2_METADATA_DISABLED: 'true'
       # Specs que renderizam pagina disparam o build do Vite neste job: mesmo heap do build de producao
       # (docker/Dockerfile, NODE_OPTIONS). Sem isso o Node estoura (~3,3 GB) e as telas respondem 500 (#1118).
-      NODE_OPTIONS: --max-old-space-size=4096
+      NODE_OPTIONS: --max-old-space-size=6144
     steps:
       - uses: actions/checkout@v4
       - uses: ruby/setup-ruby@v1

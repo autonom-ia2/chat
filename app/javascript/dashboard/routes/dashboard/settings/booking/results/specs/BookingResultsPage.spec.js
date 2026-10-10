@@ -15,12 +15,20 @@ vi.mock('vue-router', () => ({
   useRoute: () => ({ name: 'settings_booking_results', params: {} }),
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
+// "Voltar para o calendário" (#1212) só aparece para quem abre o Calendário.
+vi.mock(
+  'dashboard/routes/dashboard/crm/composables/useCrmPermissions',
+  async () => {
+    const { ref } = await import('vue');
+    return { useCrmPermissions: () => ({ canViewCrm: ref(true) }) };
+  }
+);
 vi.mock('dashboard/api/crmBookingStats', () => ({
   default: { show: vi.fn(), openedNotBooked: vi.fn(), resend: vi.fn() },
 }));
 
 config.global.stubs = {
-  RouterLink: { props: ['to'], template: '<a><slot /></a>' },
+  RouterLink: { props: ['to'], template: '<a :data-to="to.name"><slot /></a>' },
 };
 
 const totals = {
@@ -96,7 +104,19 @@ describe('BookingResultsPage', () => {
     expect(origins[0].find('.w-full').exists()).toBe(true);
   });
 
-  it('pede a equipe na porta das Configurações e "só os meus" na porta do CRM', async () => {
+  it('tem o Voltar para o calendário na aba do Agendamento, não em Meus números', async () => {
+    const tab = mountPage({ entry: 'settings' });
+    await flushPromises();
+    const back = tab.find('[data-back-to-calendar]');
+    expect(back.attributes('data-to')).toBe('crm_calendar_index');
+    expect(back.text()).toBe('BOOKING.PAGE.BACK_TO_CALENDAR');
+
+    const mine = mountPage({ entry: 'crm' });
+    await flushPromises();
+    expect(mine.find('[data-back-to-calendar]').exists()).toBe(false);
+  });
+
+  it('pede a equipe na porta do Agendamento e "só os meus" na porta do CRM', async () => {
     mountPage({ entry: 'settings' });
     await flushPromises();
     expect(BookingStatsAPI.show).toHaveBeenLastCalledWith({

@@ -131,7 +131,7 @@ class Crm::MetaCapi::DispatchJob < ApplicationJob
   def ads_token_for?(ads_connection, row)
     return false unless ads_connection&.readable?
 
-    ads_connection.token_mode? || ads_connection.pixel_id.to_s == row.dataset_id.to_s
+    ads_connection.own_token? || ads_connection.pixel_id.to_s == row.dataset_id.to_s
   end
 
   def website_credentials(card)

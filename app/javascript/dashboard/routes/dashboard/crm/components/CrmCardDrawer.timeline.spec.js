@@ -369,4 +369,23 @@ describe('CrmCardDrawer contact save failure', () => {
     expect(wrapper.emitted('refreshCard')).toBeUndefined();
     wrapper.unmount();
   });
+
+  // #1196 (J6-A4): the meeting the AI booked is identifiable on the card.
+  it('says the AI booked the meeting, and only for AI bookings', () => {
+    const wrapper = mountDrawer();
+    const byAi = activity(1, 'meeting_scheduled', {
+      title: 'Conversa de 30 min',
+      source: 'ai',
+    });
+    const byLink = activity(2, 'meeting_scheduled', {
+      title: 'Conversa de 30 min',
+      source: 'public_link',
+    });
+
+    expect(wrapper.vm.describeActivity(byAi).detail).toBe(
+      'Booked by the AI: Conversa de 30 min'
+    );
+    expect(wrapper.vm.describeActivity(byLink).detail).not.toContain('AI');
+    wrapper.unmount();
+  });
 });

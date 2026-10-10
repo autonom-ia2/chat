@@ -16,7 +16,9 @@ const href = computed(() => safeAbsoluteUrl(props.url));
 </script>
 
 <template>
-  <ActionButton v-if="href" :href="href" :variant="variant" external>
-    {{ label || t('BOOKING_V2.HELP.WHATSAPP') }}
-  </ActionButton>
+  <div class="contents">
+    <ActionButton v-if="href" :href="href" :variant="variant" external>
+      {{ label || t('BOOKING_V2.HELP.WHATSAPP') }}
+    </ActionButton>
+  </div>
 </template>

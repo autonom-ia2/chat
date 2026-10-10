@@ -108,6 +108,7 @@ class Crm::Card < ApplicationRecord
   validates :value_cents, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
   validates :score, numericality: { only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: 100 }
   validates :metadata, jsonb_attributes_length: true
+  validates :custom_attributes, jsonb_attributes_length: true
   validate :linked_records_must_belong_to_account
   validate :stage_must_belong_to_pipeline
   validate :outcome_must_match_pipeline

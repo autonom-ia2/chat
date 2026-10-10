@@ -47,6 +47,7 @@ import {
   skipReasonKey,
 } from '../helpers/meetingNotices';
 import CrmCardLeadForm from './CrmCardLeadForm.vue';
+import CrmCardCustomFields from './CrmCardCustomFields.vue';
 
 const props = defineProps({
   show: { type: Boolean, default: false },
@@ -1478,6 +1479,15 @@ const activityDetail = activity => {
     case 'meeting_rescheduled':
     case 'meeting_canceled': {
       const title = activity.payload?.title;
+      // #1196 (J6-A4): reunião marcada pela IA na conversa.
+      if (
+        activity.event_type === 'meeting_scheduled' &&
+        activity.payload?.source === 'ai'
+      ) {
+        return t('BOOKING.AI_AGENT.BOOKED_BY_AI_DETAIL', {
+          title: title || '',
+        });
+      }
       return title
         ? t('CRM_KANBAN.DRAWER.ACTIVITY_DETAIL_MEETING', { title })
         : '';
@@ -2025,6 +2035,12 @@ useFixedPanelPresence(computed(() => props.show));
               />
             </label>
           </div>
+
+          <CrmCardCustomFields
+            v-if="isEditing && card?.id"
+            :card="card"
+            :can-manage="canManageCards"
+          />
 
           <details
             class="group rounded-xl border border-n-weak bg-n-surface-1 p-1"

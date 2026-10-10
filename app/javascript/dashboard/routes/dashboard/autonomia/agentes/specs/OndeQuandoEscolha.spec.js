@@ -9,6 +9,7 @@ vi.mock('../composables/usePermissoesDaJornada', async () => {
     usePermissoesDaJornada: () => ({
       podeConectarCanal: computed(() => true),
       podeEscolherQuemRecebe: computed(() => permissoes.quemRecebe),
+      crmLigado: computed(() => true),
     }),
   };
 });

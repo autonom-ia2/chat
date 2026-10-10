@@ -2,7 +2,7 @@
 import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
 
-// Configurações › Agendamento: "Páginas" e "Resultados" (#1194). Links de
+// CRM › Agendamento: "Páginas" e "Resultados" (#1194). Links de
 // verdade (o endereço muda e dá para favoritar); a aba aberta tem aria-current.
 const { t } = useI18n();
 const route = useRoute();

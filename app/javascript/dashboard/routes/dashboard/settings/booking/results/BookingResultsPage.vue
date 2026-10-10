@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import BookingStatsAPI from 'dashboard/api/crmBookingStats';
 import BookingSettingsTabs from '../components/BookingSettingsTabs.vue';
+import BookingBackToCalendar from '../components/BookingBackToCalendar.vue';
 import ResultsToggle from './ResultsToggle.vue';
 import ResultsNumbers from './ResultsNumbers.vue';
 import ResultsOrigins from './ResultsOrigins.vue';
@@ -10,7 +11,7 @@ import OpenedNotBookedList from './OpenedNotBookedList.vue';
 import { DEFAULT_PERIOD, PERIODS, isEmptyTotals } from './resultsFormat';
 
 // Painel de resultados do agendamento (#1194, J7). Duas portas:
-// - Configurações › Agendamento › Resultados (`entry: 'settings'`): abre na
+// - CRM › Agendamento › Resultados (`entry: 'settings'`): abre na
 //   equipe para o administrador e para `agendamento_view`;
 // - CRM › Meus números (`entry: 'crm'`): abre nos números da própria pessoa.
 // Quem pode ver a equipe troca entre "Só os meus" e "Equipe toda"; o servidor
@@ -85,6 +86,8 @@ load();
 
 <template>
   <div class="flex flex-col w-full max-w-3xl gap-6 mx-auto">
+    <BookingBackToCalendar v-if="entry === 'settings'" />
+
     <header class="flex flex-col gap-2">
       <h1 class="m-0 text-3xl font-semibold text-n-slate-12">{{ title }}</h1>
       <p class="m-0 text-lg text-n-slate-11">

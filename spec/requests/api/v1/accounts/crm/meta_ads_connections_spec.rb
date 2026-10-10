@@ -53,7 +53,7 @@ RSpec.describe 'CRM meta_ads_connection API', type: :request do
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body.keys).to contain_exactly('configured', 'status', 'mode', 'last_checked_at', 'last_error', 'verified_at',
                                                            'destinations', 'ad_account', 'pixel', 'partner', 'whatsapp_portfolio',
-                                                           'client_portfolio_id', 'sales_signal')
+                                                           'client_portfolio_id', 'sales_signal', 'facebook_login')
       expect(response.parsed_body).to include('mode' => 'token', 'destinations' => { 'whatsapp' => false, 'site' => false })
       expect(response.parsed_body).to include('configured' => true, 'status' => 'active')
       expect_no_token_in(response.body)

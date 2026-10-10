@@ -27,7 +27,7 @@ const emit = defineEmits(['update:onde', 'update:quando']);
 
 const { t } = useI18n();
 const router = useRouter();
-const { podeEscolherQuemRecebe } = usePermissoesDaJornada();
+const { podeEscolherQuemRecebe, crmLigado } = usePermissoesDaJornada();
 
 const NS = 'AGENTS.JORNADA.ONDE_QUANDO';
 const QUANDO = {
@@ -132,8 +132,12 @@ const linkQuemRecebe = computed(
       <p
         v-if="troca"
         data-troca
-        class="flex items-start gap-2 p-3 m-0 text-sm rounded-xl bg-n-amber-2 text-n-slate-12"
+        class="flex items-start gap-2 p-3 m-0 text-sm rounded-xl bg-n-amber-2 ring-1 ring-inset ring-n-amber-6 text-n-slate-12"
       >
+        <span
+          class="i-lucide-triangle-alert size-5 shrink-0 text-n-amber-11"
+          aria-hidden="true"
+        />
         {{
           t('AGENTS.JORNADA.ONDE_QUANDO.TROCA', {
             outro: troca.nome,
@@ -177,7 +181,7 @@ const linkQuemRecebe = computed(
         <span class="i-lucide-external-link size-4" aria-hidden="true" />
         <span class="sr-only">{{ t('AGENTS.JORNADA.COMUM.NOVA_ABA') }}</span>
       </a>
-      <p v-else class="m-0 text-n-slate-11">
+      <p v-else-if="crmLigado" class="m-0 text-n-slate-11">
         {{ t('AGENTS.JORNADA.ONDE_QUANDO.QUEM_RECEBE_SEM_PERMISSAO') }}
       </p>
     </div>

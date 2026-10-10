@@ -5,7 +5,6 @@ import {
   CANNED_RESPONSE_MANAGE_PERMISSION,
   INBOX_PERMISSIONS,
   AUTOMATION_PERMISSIONS,
-  SCHEDULING_PERMISSIONS,
 } from 'dashboard/constants/permissions.js';
 import {
   getUserPermissions,
@@ -27,7 +26,6 @@ const SETTINGS_LANDINGS = [
   { name: 'automation_list', permissions: AUTOMATION_PERMISSIONS },
   { name: 'macros_wrapper', permissions: ['macro_manage'] },
   { name: 'sla_list', permissions: ['sla_manage'] },
-  { name: 'settings_booking', permissions: SCHEDULING_PERMISSIONS },
 ];
 
 import account from './account/account.routes';

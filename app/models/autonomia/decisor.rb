@@ -18,6 +18,8 @@ class Autonomia::Decisor < ApplicationRecord
   MAX_CAMPOS = 10
   ORIGENS = %w[pessoa guia].freeze
   ATRIBUTO_DE_CONTATO = 'contato.atributo:'.freeze
+  # Campo próprio do card (#1146), de um atributo de card que já existe na conta.
+  ATRIBUTO_DE_CARD = 'card.atributo:'.freeze
   # contato.cargo e contato.biografia são os campos "Cargo" e "Biografia" da ficha do contato (#1000).
   DESTINOS = %w[contato.nome contato.telefone contato.email contato.cargo contato.biografia empresa.nome card.titulo
                 card.descricao].freeze
@@ -166,13 +168,21 @@ class Autonomia::Decisor < ApplicationRecord
   end
 
   def destino_valido?(destino)
-    return DESTINOS.include?(destino) unless destino.start_with?(ATRIBUTO_DE_CONTATO)
+    return atributos_de_contato.include?(destino.delete_prefix(ATRIBUTO_DE_CONTATO)) if destino.start_with?(ATRIBUTO_DE_CONTATO)
+    return atributos_de_card.include?(destino.delete_prefix(ATRIBUTO_DE_CARD)) if destino.start_with?(ATRIBUTO_DE_CARD)
 
-    atributos_de_contato.include?(destino.delete_prefix(ATRIBUTO_DE_CONTATO))
+    DESTINOS.include?(destino)
   end
 
   def destinos_aceitos
-    DESTINOS + atributos_de_contato.map { |chave| "#{ATRIBUTO_DE_CONTATO}#{chave}" }
+    DESTINOS + atributos_de_contato.map { |chave| "#{ATRIBUTO_DE_CONTATO}#{chave}" } +
+      atributos_de_card.map { |chave| "#{ATRIBUTO_DE_CARD}#{chave}" }
+  end
+
+  def atributos_de_card
+    return [] if account.blank?
+
+    @atributos_de_card ||= account.custom_attribute_definitions.where(attribute_model: 'card_attribute').pluck(:attribute_key)
   end
 
   def atributos_de_contato

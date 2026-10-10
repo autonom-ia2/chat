@@ -4,6 +4,8 @@
 #          ligado ao WhatsApp oficial já avisa a Meta das vendas.
 # PUT    → modo `token`: testa o token colado (ads_read concedido e ao menos uma conta de anúncios) e grava.
 # DELETE → apaga a conexão. Os nomes já resolvidos ficam nos toques e no cache.
+# POST facebook_login → modo `facebook_login` (#1069): troca o código do "Entrar com Facebook" por token,
+#                       testa como o PUT e grava. A escolha da conta segue pelo passo 2 com mode=facebook_login.
 #
 # Conexão guiada (#1047):
 # GET   ad_accounts?mode=  → contas de anúncios que esta conta pode usar, a recomendada primeiro
@@ -33,6 +35,8 @@ class Api::V1::Accounts::Crm::MetaAdsConnectionsController < Api::V1::Accounts::
 
   # Tokens da Meta têm algumas centenas de caracteres; o teto barra corpos absurdos antes da Graph.
   MAX_TOKEN_LENGTH = 2048
+  SELECTION_RESET = { ad_account_id: nil, ad_account_name: nil, ad_account_business_id: nil, ad_account_timezone: nil,
+                      pixel_id: nil, pixel_name: nil, verified_at: nil }.freeze
   READ_ACTIONS = %w[show ad_accounts pixels funnels insights panel panel_ad panel_list].freeze
 
   before_action :ensure_administrator
@@ -48,12 +52,29 @@ class Api::V1::Accounts::Crm::MetaAdsConnectionsController < Api::V1::Accounts::
     return render_unprocessable('access_token_too_long') if token.length > MAX_TOKEN_LENGTH
     return render_unprocessable('encryption_not_configured') unless Chatwoot.encryption_configured?
 
-    error = token_error(Meta::AdsGraphClient.new(access_token: token))
+    error = ::Crm::MetaAds::TokenCheck.error_for(token)
     return render_unprocessable(error) if error
 
     save_connection!(token)
     Crm::MetaAds::BackfillJob.perform_later(Current.account.id)
     render json: payload
+  end
+
+  def facebook_login
+    code = params[:code].to_s.strip
+    return render_unprocessable('code_required') if code.blank?
+    return render_unprocessable('code_too_long') if code.length > MAX_TOKEN_LENGTH
+    return render_unprocessable('encryption_not_configured') unless Chatwoot.encryption_configured?
+
+    token = ::Crm::MetaAds::FacebookLogin.new.exchange!(code)
+    error = ::Crm::MetaAds::TokenCheck.error_for(token)
+    return render_unprocessable(error) if error
+
+    save_connection!(token, mode: 'facebook_login')
+    Crm::MetaAds::BackfillJob.perform_later(Current.account.id)
+    render json: payload
+  rescue ::Crm::MetaAds::FacebookLogin::Error => e
+    render_unprocessable(e.code)
   end
 
   def destroy
@@ -171,31 +192,13 @@ class Api::V1::Accounts::Crm::MetaAdsConnectionsController < Api::V1::Accounts::
     render_unprocessable('invalid_mode') unless ::Crm::MetaAdsConnection::MODES.include?(params[:mode])
   end
 
-  # Ordem: a Meta respondeu? o token vale? tem ads_read? enxerga alguma conta de anúncios?
-  # Sem conta atribuída o token "funciona", mas nenhum nome aparece: melhor recusar já aqui.
-  def token_error(client)
-    permissions = client.permissions
-    return graph_failure(permissions) unless permissions.ok
-    return 'missing_ads_read' unless Meta::AdsGraphClient.ads_read_granted?(permissions.data)
-
-    accounts = client.ad_accounts_sample
-    return graph_failure(accounts) unless accounts.ok
-
-    'no_ad_account' if Array(accounts.data.to_h['data']).empty?
-  end
-
-  def graph_failure(result)
-    return 'meta_unavailable' if result.transient?
-    return 'missing_ads_read' if result.scope_error?
-
-    'invalid_token'
-  end
-
-  # Colar um token novo volta a conexão ao modo `token`; a conta de anúncios escolhida antes só continua
-  # se o novo token também a enxergar, o que a escolha seguinte confere.
-  def save_connection!(token)
+  # Colar um token novo (ou entrar com o Facebook) volta a conexão ao modo do token. No mesmo modo, a conta de
+  # anúncios escolhida antes continua e a escolha seguinte confere se o novo token a enxerga. Trocar de modo
+  # (#1069) limpa a escolha: o token novo não pode passar a ler a conta antiga sem a pessoa escolher de novo.
+  def save_connection!(token, mode: 'token')
     connection = ::Crm::MetaAdsConnection.find_or_initialize_by(account_id: Current.account.id)
-    connection.update!(access_token: token, mode: 'token', status: 'active', last_checked_at: Time.current, last_error: nil)
+    connection.assign_attributes(SELECTION_RESET) if connection.persisted? && connection.mode != mode
+    connection.update!(access_token: token, mode: mode, status: 'active', last_checked_at: Time.current, last_error: nil)
   end
 
   def setup
@@ -234,6 +237,7 @@ class Api::V1::Accounts::Crm::MetaAdsConnectionsController < Api::V1::Accounts::
     connection = current_connection
     ::Crm::MetaAdsConnection.public_payload_for(connection).merge(
       partner: ::Crm::MetaAds::Platform.public_payload,
+      facebook_login: ::Crm::MetaAds::FacebookLogin.public_payload,
       whatsapp_portfolio: setup.portfolio_ids.any?,
       # Portfólio do cliente na Meta: o "Abrir a Meta" do passo 1 cai direto em Parceiros dele (#1068).
       client_portfolio_id: setup.portfolio_ids.first,

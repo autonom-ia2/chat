@@ -146,9 +146,12 @@ class Autonomia::Decisores::Estado
   def ler_card
     return {} if card.nil?
 
-    valor = card.value_cents.to_i.positive? ? "#{card.value_cents / 100.0} #{card.currency}" : nil
-    { card: { title: card.title, stage: card.stage&.name, pipeline: card.pipeline&.name, value: valor, status: card.status,
-              metadata: curto(card.metadata) }.compact_blank }
+    { card: { title: card.title, stage: card.stage&.name, pipeline: card.pipeline&.name, value: valor_do_card, status: card.status,
+              metadata: curto(card.metadata), attributes: curto(card.custom_attributes) }.compact_blank }
+  end
+
+  def valor_do_card
+    "#{card.value_cents / 100.0} #{card.currency}" if card.value_cents.to_i.positive?
   end
 
   def ler_empresa
