@@ -80,9 +80,9 @@ class Crm::BookingV2::Booker
     ensure_slot_available!(include_provider: true)
     result = ActiveRecord::Base.transaction do
       acquire_locks!
-      existing_result || book_if_host_still_eligible!.tap { |booked| on_booked&.call(booked) }
+      existing_result || book!.tap { |booked| on_booked&.call(booked) }
     end
-    ActiveRecord.after_all_transactions_commit { broadcast_card_created(result.card) } unless result.existing || @card
+    ActiveRecord.after_all_transactions_commit { broadcast_card_created(result.card) } if @card_created
     result
   end
 
@@ -123,12 +123,6 @@ class Crm::BookingV2::Booker
     PROVIDER_LOCATIONS.key?(location['type'])
   end
 
-  def book_if_host_still_eligible!
-    raise ArgumentError, 'host_unavailable' unless Crm::BookingV2::HostEligibility.eligible?(account: account, user: host)
-
-    book!
-  end
-
   def acquire_locks!
     connection = ActiveRecord::Base.connection
     connection.execute("SELECT pg_advisory_xact_lock(#{LOCK_NS_INBOX}, #{profile.inbox_id.to_i})") if profile.inbox_id.present?
@@ -153,12 +147,16 @@ class Crm::BookingV2::Booker
                 .where(id: Crm::MeetingGuest.where(account_id: account.id, phone_number: phone_candidates).select(:meeting_id))
   end
 
+  # Dentro das travas: o responsável é conferido de novo (quem sai da conta toma a mesma trava de agente).
   def book!
+    raise ArgumentError, 'host_unavailable' unless Crm::BookingV2::HostEligibility.eligible?(account: account, user: host)
     raise ArgumentError, 'too_many_open' if guest_meetings.where('crm_meetings.starts_at > ?', Time.current).count >= MAX_OPEN_MEETINGS
 
     ensure_slot_available!(include_provider: false)
     contact = find_or_create_contact!
-    card = @card || create_card!(contact)
+    # Card aberto do contato no funil da página recebe a reunião (o Kanban não mostra a pessoa duas vezes).
+    card = @card || account.crm_cards.active.where(contact_id: contact.id, pipeline_id: pipeline_id).order(updated_at: :desc).first ||
+           create_card!(contact)
     meeting = create_meeting!(card)
     Result.new(meeting: meeting, contact: contact, card: card, existing: false)
   end
@@ -180,6 +178,7 @@ class Crm::BookingV2::Booker
   end
 
   def create_card!(contact)
+    @card_created = true
     Crm::Cards::Creator.new(
       account: account, user: nil,
       params: {
@@ -224,9 +223,7 @@ class Crm::BookingV2::Booker
   end
 
   def extra_guests(card)
-    return [] if email.blank? || card.contact&.email.to_s.casecmp?(email)
-
-    [email]
+    email.blank? || card.contact&.email.to_s.casecmp?(email) ? [] : [email]
   end
 
   def booking_metadata
