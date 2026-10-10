@@ -196,7 +196,8 @@ RSpec.describe Account do
         feature_meta_ads_hub: 1 << 11,
         feature_email_template_import: 1 << 12,
         feature_autonomia_agents_journey: 1 << 13,
-        feature_crm_booking_v2: 1 << 14
+        feature_crm_booking_v2: 1 << 14,
+        feature_customer_base: 1 << 15
       )
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_whatsapp_manual_transfer]).to eq(1)
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_data_import]).to eq(2)
