@@ -47,6 +47,39 @@ RSpec.describe Autonomia::Agents::Tools::Registry do
     expect(described_class.for_agent(agent).size).to eq(1)
   end
 
+  # #1211 — a lista é a do fluxo do agente. Um slug do Guia já gravado num agente de conta não chega ao modelo.
+  describe 'the list allowed for the agent flow' do
+    let(:guia) do
+      Autonomia::Agents::Agent.create!(
+        account: account, name: 'Guia', agent_type: 'custom', status: :active, enabled: true, instruction: 'Guie.',
+        config: { 'system_key' => Autonomia::Guide::Seed::SYSTEM_KEY, 'native_tool_slugs' => Autonomia::Guide::Seed::FERRAMENTAS }
+      )
+    end
+
+    before { described_class.all.each { |tool| allow(tool).to receive(:available_for?).and_return(true) } }
+
+    it 'puts every catalogued tool in exactly one flow' do
+      expect(described_class::DE_ATENDIMENTO + described_class::DO_GUIA).to match_array(described_class.all)
+      expect(described_class::DE_ATENDIMENTO & described_class::DO_GUIA).to be_empty
+    end
+
+    it 'does not offer a Platform Guide tool stored in an account agent' do
+      agent.update!(config: agent.config.merge('native_tool_slugs' => Autonomia::Guide::Seed::FERRAMENTAS + [capabilities_tool.slug]))
+
+      expect(described_class.for_agent(agent)).to eq([capabilities_tool])
+    end
+
+    it 'offers the Platform Guide every tool its seed turns on, and no customer-service tool' do
+      guia.update!(config: guia.config.merge('native_tool_slugs' => Autonomia::Guide::Seed::FERRAMENTAS + [capabilities_tool.slug]))
+
+      expect(described_class.for_agent(guia).map(&:slug)).to eq(Autonomia::Guide::Seed::FERRAMENTAS)
+    end
+
+    it 'keeps every tool of the quote agent deploy list inside the customer-service flow' do
+      expect(Autonomia::Insurance::QuoteAgent::Builder::TODAS_AS_TOOLS - described_class::DE_ATENDIMENTO.map(&:slug)).to be_empty
+    end
+  end
+
   # FATIA 2 DO #420: o Agente de Cotação usa a lista do deploy (`QuoteAgent::Builder.ferramentas_mantidas`),
   # e não a gravada em `native_tool_slugs`. Os outros tipos de agente continuam com a gravada (acima).
   it 'offers the deploy list to the quote agent, whatever list is stored in its config' do

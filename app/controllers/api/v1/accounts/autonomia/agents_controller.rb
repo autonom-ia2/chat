@@ -1,6 +1,19 @@
 class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autonomia::BaseController
   before_action :fetch_agent, only: [:show, :update, :destroy, :avatar]
 
+  # #1211 — `config.native_tool_slugs` com ferramenta de outro fluxo (ou que não existe). Recusa com o
+  # slug na resposta, nunca descarte silencioso: quem pediu fica sabendo que a ferramenta não ligou.
+  class FerramentaNativaNaoPermitida < StandardError
+    attr_reader :slugs
+
+    def initialize(slugs)
+      @slugs = slugs
+      super()
+    end
+  end
+
+  rescue_from FerramentaNativaNaoPermitida, with: :render_ferramenta_nativa_nao_permitida
+
   # Andaime mínimo aplicado pelo backend em modo manual (IP oculto) — embrulha a instrução do
   # usuário com guardrails de segurança/formato/handoff. Nunca vem do params nem é exposto.
   MANUAL_SCAFFOLD = <<~SCAFFOLD.freeze
@@ -159,9 +172,30 @@ class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autono
                    enabled status actuation]
     permitted << :instruction if manual_mode?
     attrs = params.require(:agent).permit(*permitted, starter_questions: [], config: {})
-    attrs[:config] = sanitized_config(attrs[:config]) if attrs[:config].present?
+    attrs[:config] = config_conferido(attrs[:config]) if attrs[:config].present?
     permit_audience_config(attrs)
     attrs
+  end
+
+  # #1211 — `permit(config: {})` deixava passar qualquer slug do catálogo, e o agente comum ganhava as
+  # ferramentas do Guia da Plataforma. A lista permitida é a do fluxo do agente
+  # (`Tools::Registry.permitidas_para`); `null` e lista vazia seguem aceitos (desligam todas).
+  def config_conferido(config)
+    sanitized_config(config).tap { |limpo| recusar_ferramentas_de_outro_fluxo(limpo['native_tool_slugs']) }
+  end
+
+  def recusar_ferramentas_de_outro_fluxo(pedidos)
+    return if pedidos.nil?
+    raise FerramentaNativaNaoPermitida, [] unless pedidos.is_a?(Array)
+
+    permitidos = ::Autonomia::Agents::Tools::Registry.permitidas_para(@agent || agents_scope.new).map(&:slug)
+    recusados = pedidos.map(&:to_s) - permitidos
+    raise FerramentaNativaNaoPermitida, recusados if recusados.any?
+  end
+
+  def render_ferramenta_nativa_nao_permitida(error)
+    render json: { error: I18n.t('autonomia.agents.native_tool_not_allowed'), code: 'native_tool_not_allowed', slugs: error.slugs },
+           status: :unprocessable_entity
   end
 
   # #284 (Entrega 2a) — o público-alvo é uma árvore recursiva (grupos com arrays de hashes) que o
