@@ -339,4 +339,26 @@ RSpec.describe Crm::BookingV2::Booker do
       expect(result.card.contact_id).to eq(result.contact.id)
     end
   end
+
+  describe 'contato que já tem card aberto, pelo link público' do
+    it 'põe a reunião no card aberto do funil da página, sem criar outro nem avisar card novo' do
+      world.card
+      result = nil
+      expect { result = book(phone: world.contact.phone_number) }.not_to change(Crm::Card, :count)
+
+      expect(result.meeting.card_id).to eq(world.card.id)
+      expect(Crm::Cards::Broadcaster).not_to have_received(:broadcast)
+    end
+
+    it 'cria card novo quando o card aberto do contato é de outro funil' do
+      other_pipeline, other_stage = create_crm_pipeline(account: account, user: world.host)
+      world.card.update!(pipeline: other_pipeline, stage: other_stage)
+
+      result = book(phone: world.contact.phone_number)
+
+      expect(result.card).not_to eq(world.card)
+      expect(result.card).to have_attributes(pipeline_id: world.pipeline.id, contact_id: world.contact.id)
+      expect(Crm::Cards::Broadcaster).to have_received(:broadcast).with(result.card, Events::Types::CRM_CARD_CREATED).once
+    end
+  end
 end
