@@ -308,192 +308,204 @@ watch(
   },
   { immediate: true }
 );
+// Separador visual entre dois trechos já traduzidos (não é texto a traduzir).
+const SEPARATOR = ' · ';
 </script>
 
 <template>
-  <div v-if="isEnabled && hasScope" class="flex items-center gap-2">
-    <NextButton
-      type="button"
-      icon="i-lucide-calendar-plus"
-      :label="t('CRM_KANBAN.BOOKING_INVITE.BUTTON')"
-      :title="t('CRM_KANBAN.BOOKING_INVITE.BUTTON_HINT')"
-      aria-haspopup="dialog"
-      slate
-      faded
-      sm
-      class="relative before:absolute before:inset-x-0 before:-inset-y-1.5"
-      data-booking-invite-trigger
-      @click="openPanel"
-    />
-    <span
-      v-if="showStatus && badgeState"
-      class="rounded-full px-2 py-0.5 text-xs font-medium"
-      :class="stateToneClass(badgeState)"
-      data-booking-invite-badge
-    >
-      {{ t(stateLabelKey(badgeState)) }}
-    </span>
-
-    <Dialog
-      ref="dialogRef"
-      :title="title"
-      :show-cancel-button="false"
-      :show-confirm-button="false"
-      width="md"
-    >
-      <div
-        v-if="isLoading && !invite"
-        role="status"
-        class="py-6 text-center text-sm text-n-slate-11"
+  <div class="contents">
+    <div v-if="isEnabled && hasScope" class="flex items-center gap-2">
+      <NextButton
+        type="button"
+        icon="i-lucide-calendar-plus"
+        :label="t('CRM_KANBAN.BOOKING_INVITE.BUTTON')"
+        :title="t('CRM_KANBAN.BOOKING_INVITE.BUTTON_HINT')"
+        aria-haspopup="dialog"
+        slate
+        faded
+        sm
+        class="relative before:absolute before:inset-x-0 before:-inset-y-1.5"
+        data-booking-invite-trigger
+        @click="openPanel"
+      />
+      <span
+        v-if="showStatus && badgeState"
+        class="rounded-full px-2 py-0.5 text-xs font-medium"
+        :class="stateToneClass(badgeState)"
+        data-booking-invite-badge
       >
-        {{ t('CRM_KANBAN.BOOKING_INVITE.LOADING') }}
-      </div>
+        {{ t(stateLabelKey(badgeState)) }}
+      </span>
 
-      <div v-else-if="hasNoPage" class="flex flex-col gap-4" data-booking-empty>
-        <p class="mb-0 text-sm text-n-slate-12">
-          {{
-            canOpenSettings
-              ? t('CRM_KANBAN.BOOKING_INVITE.EMPTY.ADMIN')
-              : t('CRM_KANBAN.BOOKING_INVITE.EMPTY.AGENT')
-          }}
-        </p>
-        <NextButton
-          v-if="showSettingsShortcut"
-          type="button"
-          lg
-          icon="i-lucide-settings"
-          :label="t('CRM_KANBAN.BOOKING_INVITE.EMPTY.OPEN_SETTINGS')"
-          data-booking-open-settings
-          @click="openSettings"
-        />
-      </div>
-
-      <div v-else-if="invite" class="flex flex-col gap-4">
-        <div class="flex flex-wrap items-center justify-between gap-2">
-          <p class="mb-0 text-sm text-n-slate-11">
-            <template v-if="pageOptions.length <= 1">
-              {{ t('CRM_KANBAN.BOOKING_INVITE.PAGE', { title: pageTitle }) }}
-              ·
-            </template>
-            {{
-              t('CRM_KANBAN.BOOKING_INVITE.VALID_UNTIL', { date: validUntil })
-            }}
-          </p>
-          <span
-            role="status"
-            class="rounded-full px-2 py-0.5 text-xs font-medium"
-            :class="stateToneClass(shownState)"
-            data-booking-invite-state
-          >
-            {{ t(stateLabelKey(shownState)) }}
-          </span>
+      <Dialog
+        ref="dialogRef"
+        :title="title"
+        :show-cancel-button="false"
+        :show-confirm-button="false"
+        width="md"
+      >
+        <div
+          v-if="isLoading && !invite"
+          role="status"
+          class="py-6 text-center text-sm text-n-slate-11"
+        >
+          {{ t('CRM_KANBAN.BOOKING_INVITE.LOADING') }}
         </div>
 
-        <ChoiceSelect
-          v-if="pageOptions.length > 1"
-          v-model="pageId"
-          :options="pageOptions"
-          :aria-label="t('CRM_KANBAN.BOOKING_INVITE.PAGE_LABEL')"
-          :disabled="isLoading"
-          @change="changePage"
-        />
+        <div
+          v-else-if="hasNoPage"
+          class="flex flex-col gap-4"
+          data-booking-empty
+        >
+          <p class="mb-0 text-sm text-n-slate-12">
+            {{
+              canOpenSettings
+                ? t('CRM_KANBAN.BOOKING_INVITE.EMPTY.ADMIN')
+                : t('CRM_KANBAN.BOOKING_INVITE.EMPTY.AGENT')
+            }}
+          </p>
+          <NextButton
+            v-if="showSettingsShortcut"
+            type="button"
+            lg
+            icon="i-lucide-settings"
+            :label="t('CRM_KANBAN.BOOKING_INVITE.EMPTY.OPEN_SETTINGS')"
+            data-booking-open-settings
+            @click="openSettings"
+          />
+        </div>
 
-        <template v-if="isInviteActive">
-          <div class="flex flex-col gap-1">
-            <label :for="textId" class="text-sm font-medium text-n-slate-12">
-              {{ t('CRM_KANBAN.BOOKING_INVITE.TEXT_LABEL') }}
-            </label>
-            <textarea
-              :id="textId"
-              v-model="text"
-              rows="4"
-              class="w-full resize-y rounded-lg border border-n-weak bg-n-alpha-black2 px-3 py-2 text-sm text-n-slate-12 focus:outline-2 focus:outline-n-brand"
-              :aria-describedby="textHasLink ? undefined : `${textId}-hint`"
-              data-booking-invite-text
-            />
-            <p
-              v-if="!textHasLink"
-              :id="`${textId}-hint`"
-              class="mb-0 text-xs text-n-ruby-11"
-            >
-              {{ t('CRM_KANBAN.BOOKING_INVITE.TEXT_NEEDS_LINK') }}
+        <div v-else-if="invite" class="flex flex-col gap-4">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <p class="mb-0 text-sm text-n-slate-11">
+              <template v-if="pageOptions.length <= 1">
+                {{ t('CRM_KANBAN.BOOKING_INVITE.PAGE', { title: pageTitle })
+                }}{{ SEPARATOR }}
+              </template>
+              {{
+                t('CRM_KANBAN.BOOKING_INVITE.VALID_UNTIL', { date: validUntil })
+              }}
             </p>
+            <span
+              role="status"
+              class="rounded-full px-2 py-0.5 text-xs font-medium"
+              :class="stateToneClass(shownState)"
+              data-booking-invite-state
+            >
+              {{ t(stateLabelKey(shownState)) }}
+            </span>
           </div>
 
-          <div class="flex flex-col gap-2 sm:flex-row">
-            <NextButton
-              v-if="conversationId"
-              type="button"
-              lg
-              class="w-full sm:flex-1"
-              icon="i-lucide-send"
-              :label="t('CRM_KANBAN.BOOKING_INVITE.SEND')"
-              :is-loading="isSending"
-              :disabled="!textHasLink || isSending"
-              data-booking-send
-              @click="sendInConversation"
-            />
-            <NextButton
-              type="button"
-              lg
-              class="w-full sm:flex-1"
-              :variant="conversationId ? 'outline' : 'solid'"
-              :color="conversationId ? 'slate' : 'blue'"
-              icon="i-lucide-copy"
-              :label="t('CRM_KANBAN.BOOKING_INVITE.COPY')"
-              data-booking-copy
-              @click="copyLink"
-            />
-          </div>
-        </template>
+          <ChoiceSelect
+            v-if="pageOptions.length > 1"
+            v-model="pageId"
+            :options="pageOptions"
+            :aria-label="t('CRM_KANBAN.BOOKING_INVITE.PAGE_LABEL')"
+            :disabled="isLoading"
+            @change="changePage"
+          />
 
-        <NextButton
-          v-else
-          type="button"
-          lg
-          icon="i-lucide-refresh-cw"
-          :label="t('CRM_KANBAN.BOOKING_INVITE.NEW_LINK')"
-          :is-loading="isLoading"
-          data-booking-new
-          @click="newLink"
-        />
-      </div>
+          <template v-if="isInviteActive">
+            <div class="flex flex-col gap-1">
+              <label :for="textId" class="text-sm font-medium text-n-slate-12">
+                {{ t('CRM_KANBAN.BOOKING_INVITE.TEXT_LABEL') }}
+              </label>
+              <textarea
+                :id="textId"
+                v-model="text"
+                rows="4"
+                class="w-full resize-y rounded-lg border border-n-weak bg-n-alpha-black2 px-3 py-2 text-sm text-n-slate-12 focus:outline-2 focus:outline-n-brand"
+                :aria-describedby="textHasLink ? undefined : `${textId}-hint`"
+                data-booking-invite-text
+              />
+              <p
+                v-if="!textHasLink"
+                :id="`${textId}-hint`"
+                class="mb-0 text-xs text-n-ruby-11"
+              >
+                {{ t('CRM_KANBAN.BOOKING_INVITE.TEXT_NEEDS_LINK') }}
+              </p>
+            </div>
 
-      <div class="flex items-center justify-between gap-2">
-        <NextButton
-          v-if="invite && isInviteActive && !hasNoPage"
-          type="button"
-          ghost
-          ruby
-          class="min-h-11"
-          :label="t('CRM_KANBAN.BOOKING_INVITE.CANCEL_LINK')"
-          :is-loading="isCanceling"
-          data-booking-cancel
-          @click="askCancel"
-        />
-        <span v-else />
-        <NextButton
-          type="button"
-          ghost
-          slate
-          class="min-h-11"
-          :label="t('CRM_KANBAN.BOOKING_INVITE.CLOSE')"
-          data-booking-close
-          @click="closePanel"
-        />
-      </div>
-    </Dialog>
+            <div class="flex flex-col gap-2 sm:flex-row">
+              <NextButton
+                v-if="conversationId"
+                type="button"
+                lg
+                class="w-full sm:flex-1"
+                icon="i-lucide-send"
+                :label="t('CRM_KANBAN.BOOKING_INVITE.SEND')"
+                :is-loading="isSending"
+                :disabled="!textHasLink || isSending"
+                data-booking-send
+                @click="sendInConversation"
+              />
+              <NextButton
+                type="button"
+                lg
+                class="w-full sm:flex-1"
+                :variant="conversationId ? 'outline' : 'solid'"
+                :color="conversationId ? 'slate' : 'blue'"
+                icon="i-lucide-copy"
+                :label="t('CRM_KANBAN.BOOKING_INVITE.COPY')"
+                data-booking-copy
+                @click="copyLink"
+              />
+            </div>
+          </template>
 
-    <Dialog
-      ref="cancelConfirmRef"
-      type="alert"
-      :title="t('CRM_KANBAN.BOOKING_INVITE.CANCEL_CONFIRM.TITLE')"
-      :description="t('CRM_KANBAN.BOOKING_INVITE.CANCEL_CONFIRM.DESCRIPTION')"
-      :cancel-button-label="t('CRM_KANBAN.BOOKING_INVITE.CANCEL_CONFIRM.BACK')"
-      :confirm-button-label="t('CRM_KANBAN.BOOKING_INVITE.CANCEL_CONFIRM.YES')"
-      :is-loading="isCanceling"
-      width="sm"
-      @confirm="cancelLink"
-    />
+          <NextButton
+            v-else
+            type="button"
+            lg
+            icon="i-lucide-refresh-cw"
+            :label="t('CRM_KANBAN.BOOKING_INVITE.NEW_LINK')"
+            :is-loading="isLoading"
+            data-booking-new
+            @click="newLink"
+          />
+        </div>
+
+        <div class="flex items-center justify-between gap-2">
+          <NextButton
+            v-if="invite && isInviteActive && !hasNoPage"
+            type="button"
+            ghost
+            ruby
+            class="min-h-11"
+            :label="t('CRM_KANBAN.BOOKING_INVITE.CANCEL_LINK')"
+            :is-loading="isCanceling"
+            data-booking-cancel
+            @click="askCancel"
+          />
+          <span v-else />
+          <NextButton
+            type="button"
+            ghost
+            slate
+            class="min-h-11"
+            :label="t('CRM_KANBAN.BOOKING_INVITE.CLOSE')"
+            data-booking-close
+            @click="closePanel"
+          />
+        </div>
+      </Dialog>
+
+      <Dialog
+        ref="cancelConfirmRef"
+        type="alert"
+        :title="t('CRM_KANBAN.BOOKING_INVITE.CANCEL_CONFIRM.TITLE')"
+        :description="t('CRM_KANBAN.BOOKING_INVITE.CANCEL_CONFIRM.DESCRIPTION')"
+        :cancel-button-label="
+          t('CRM_KANBAN.BOOKING_INVITE.CANCEL_CONFIRM.BACK')
+        "
+        :confirm-button-label="
+          t('CRM_KANBAN.BOOKING_INVITE.CANCEL_CONFIRM.YES')
+        "
+        :is-loading="isCanceling"
+        width="sm"
+        @confirm="cancelLink"
+      />
+    </div>
   </div>
 </template>

@@ -50,6 +50,8 @@ const notices = computed(() =>
 const hasFailure = computed(() =>
   (props.meeting.notices || []).some(notice => notice.status === 'failed')
 );
+// Separador visual entre dois trechos já traduzidos (não é texto a traduzir).
+const SEPARATOR = ' · ';
 </script>
 
 <template>
@@ -96,7 +98,7 @@ const hasFailure = computed(() =>
           <span class="min-w-0 text-sm text-n-slate-12">
             {{ notice.kindLabel }}
             <span v-if="notice.when" class="text-xs text-n-slate-10">
-              · {{ notice.when }}
+              {{ SEPARATOR }}{{ notice.when }}
             </span>
           </span>
           <span
