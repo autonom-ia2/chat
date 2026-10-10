@@ -48,7 +48,10 @@
       "QR_ALT": "QR code of the booking page",
       "QR_ERROR": "We couldn't create the QR code.",
       "OPEN": "Open",
-      "OPEN_LABEL": "Open the page in a new tab"
+      "OPEN_LABEL": "Open the page in a new tab",
+      "PER_PERSON_TITLE": "One link for each person",
+      "PER_PERSON_HINT": "Customers book through the link of the person who will serve them. Share each person's link.",
+      "PERSON_LABEL": "Link of {name}"
     },
     "STEPS": {
       "LABEL": "Steps to create the page",
@@ -58,9 +61,9 @@
       "ONDE": "Where",
       "QUANDO": "Days and hours",
       "CARA": "Your brand",
+      "AVISOS": "Notices",
       "PREVIA": "Preview and publish",
-      "DONE": "done",
-      "AVISOS": "Notices"
+      "DONE": "done"
     },
     "WIZARD": {
       "BACK": "Back",
@@ -75,7 +78,7 @@
       "ERRORS": {
         "TITLE": "Write the name the client sees.",
         "PEOPLE": "Choose who attends.",
-        "LOCATION": "Choose where the conversation happens.",
+        "LOCATION": "Choose where the appointment happens.",
         "LINK": "Paste the full link, starting with https://",
         "ADDRESS": "Write the address.",
         "CALENDAR": "Choose the calendar email inbox.",
@@ -88,7 +91,7 @@
       "SERVER_ERRORS": {
         "CALENDAR_GONE": "That calendar email inbox is no longer available. Choose another one or remove Google Meet and Teams.",
         "PEOPLE_GONE": "Someone you chose can no longer take meetings. Choose again.",
-        "LOCATIONS": "One of the places can no longer be used. Check where the conversation happens.",
+        "LOCATIONS": "One of the places can no longer be used. Check where the appointment happens.",
         "HOURS": "Check the days and times.",
         "PIPELINE": "That pipeline or stage no longer exists. Choose another one.",
         "BRAND": "Check the color and the welcome message.",
@@ -120,7 +123,7 @@
       }
     },
     "ABOUT": {
-      "TITLE": "What is the conversation called?",
+      "TITLE": "What is the appointment called?",
       "NAME_LABEL": "Name the client sees",
       "DURATION_LABEL": "How long does it take?",
       "PEOPLE_LABEL": "Who attends?",
@@ -130,7 +133,7 @@
       "PEOPLE_EMPTY": "Nobody on the team can attend yet."
     },
     "WHERE": {
-      "TITLE": "Where will the conversation be?",
+      "TITLE": "Where will the appointment be?",
       "HINT": "Choose one or more.",
       "RECOMMENDED": "Recommended",
       "WHATSAPP_VIDEO": {
@@ -175,7 +178,7 @@
       "NOTICE_VALUE": "{value} in advance",
       "BUFFER_LABEL": "Break",
       "BUFFER_NONE": "No break",
-      "BUFFER_VALUE": "{value} between conversations",
+      "BUFFER_VALUE": "{value} between one time slot and the next",
       "EXTRA_LABEL": "Other durations (optional)",
       "EXTRA_HINT": "The client chooses how long they want.",
       "HOLIDAYS_LABEL": "Holidays",
@@ -229,61 +232,9 @@
         "GRAPHITE": "Graphite"
       },
       "HEADLINE_LABEL": "Welcome sentence",
-      "HEADLINE_PLACEHOLDER": "Pick the best time to talk",
+      "HEADLINE_PLACEHOLDER": "Pick the best time for you",
       "LOGO_ALT": "Company logo",
       "PHOTO_ALT": "Photo of who attends"
-    },
-    "PREVIEW": {
-      "TITLE": "This is what the client will see",
-      "SCHEDULE": "{days}, from {from} to {to}",
-      "DEFAULT_HEADLINE": "Pick the best time to talk",
-      "WITH": "With {name}",
-      "PICK_TIME": "Choose a time",
-      "DESTINATION": "Whoever books goes to the {pipeline} pipeline, {stage} stage, with {people}.",
-      "DESTINATION_NO_PIPELINE": "Whoever books stays with {people}. No pipeline is chosen yet.",
-      "DEFAULT_PIPELINE": "default",
-      "DEFAULT_STAGE": "first",
-      "NOBODY": "nobody yet",
-      "ALTER": "Change",
-      "PIPELINE_LABEL": "Pipeline",
-      "STAGE_LABEL": "Stage",
-      "SAVE": "Save",
-      "CANCEL": "Cancel",
-      "PIPELINES_ERROR": "We couldn't load the pipelines.",
-      "MISSING_TITLE": "Almost ready to publish:",
-      "MISSING": {
-        "HOST": "Choose who attends",
-        "LOCATION": "Choose where the conversation happens",
-        "WORKING_HOURS": "Choose the days you attend",
-        "PIPELINE": "Choose which pipeline new bookings go to"
-      },
-      "FIX": "Fix it",
-      "PUBLISHED_TITLE": "Your page is live.",
-      "PUBLISHED_TEXT": "Send the link to your clients or show the QR code.",
-      "PUBLISHING": "Publishing",
-      "NOTICES_ON": "The customer gets a WhatsApp notice {when}, from the number {inbox}.",
-      "NOTICES_ON_NO_NAME": "The customer gets a WhatsApp notice {when}.",
-      "NOTICES_OFF": "No WhatsApp notices. The customer sees the time on screen and in their calendar.",
-      "NOTICES_WINDOW_ONLY": "Only for people who talked to you in the last 24 hours.",
-      "NOTICES_ALTER": "Change the WhatsApp notices",
-      "CANCEL_UNTIL": "They can change or cancel up to {value} before.",
-      "CANCEL_ANYTIME": "They can change or cancel up to the booked time."
-    },
-    "VIEW": {
-      "READ_ONLY": "You can see this page, but you can't change it."
-    },
-    "AI_AGENT": {
-      "TITLE": "Book meetings",
-      "DESCRIPTION": "The agent offers real times from a booking page and books the meeting in the conversation.",
-      "PAGE_LABEL": "Booking page",
-      "OFF": "Don't book",
-      "PAUSED_PAGE": "{title} (paused)",
-      "PAUSED_HINT": "This page is paused. While it stays paused, the agent tells the client and hands the conversation to a person.",
-      "HINT": "The meeting goes to the page owner, or to the person assigned to the conversation when the page has one link per person.",
-      "EMPTY": "Create a booking page in Settings > Scheduling to let the agent book meetings.",
-      "SAVE": "Save",
-      "BOOKED_BY_AI": "Booked by the AI",
-      "BOOKED_BY_AI_DETAIL": "Booked by the AI: {title}"
     },
     "NOTICES": {
       "TITLE": "WhatsApp notices",
@@ -364,6 +315,42 @@
         }
       }
     },
+    "PREVIEW": {
+      "TITLE": "This is what the client will see",
+      "SCHEDULE": "{days}, from {from} to {to}",
+      "DEFAULT_HEADLINE": "Pick the best time for you",
+      "WITH": "With {name}",
+      "PICK_TIME": "Choose a time",
+      "DESTINATION": "Whoever books goes to the {pipeline} pipeline, {stage} stage, with {people}.",
+      "DESTINATION_NO_PIPELINE": "Whoever books stays with {people}. No pipeline is chosen yet.",
+      "DEFAULT_PIPELINE": "default",
+      "DEFAULT_STAGE": "first",
+      "NOBODY": "nobody yet",
+      "ALTER": "Change",
+      "PIPELINE_LABEL": "Pipeline",
+      "STAGE_LABEL": "Stage",
+      "SAVE": "Save",
+      "CANCEL": "Cancel",
+      "PIPELINES_ERROR": "We couldn't load the pipelines.",
+      "MISSING_TITLE": "Almost ready to publish:",
+      "MISSING": {
+        "HOST": "Choose who attends",
+        "LOCATION": "Choose where the appointment happens",
+        "WORKING_HOURS": "Choose the days you attend",
+        "PIPELINE": "Choose which pipeline new bookings go to"
+      },
+      "FIX": "Fix it",
+      "PUBLISHED_TITLE": "Your page is live.",
+      "PUBLISHED_TEXT": "Send the link to your clients or show the QR code.",
+      "PUBLISHING": "Publishing",
+      "NOTICES_ON": "The customer gets a WhatsApp notice {when}, from the number {inbox}.",
+      "NOTICES_ON_NO_NAME": "The customer gets a WhatsApp notice {when}.",
+      "NOTICES_OFF": "No WhatsApp notices. The customer sees the time on screen and in their calendar.",
+      "NOTICES_WINDOW_ONLY": "Only for people who talked to you in the last 24 hours.",
+      "NOTICES_ALTER": "Change the WhatsApp notices",
+      "CANCEL_UNTIL": "They can change or cancel up to {value} before.",
+      "CANCEL_ANYTIME": "They can change or cancel up to the booked time."
+    },
     "POST_MEETING": {
       "TITLE": "After the meeting",
       "OFF": "When someone marks “It happened”, the card stays where it is.",
@@ -385,6 +372,9 @@
       },
       "TURN_OFF": "Do not move the card",
       "SAVE_ERROR": "Could not save. Check the stage and try again."
+    },
+    "VIEW": {
+      "READ_ONLY": "You can see this page, but you can't change it."
     },
     "RESULTS": {
       "MENU": "My numbers",
@@ -507,6 +497,19 @@
         "NO_PAGES": "You are not on any booking page yet.",
         "GENERIC": "That did not work. Try again."
       }
+    },
+    "AI_AGENT": {
+      "TITLE": "Book meetings",
+      "DESCRIPTION": "The agent offers real times from a booking page and books the meeting in the conversation.",
+      "PAGE_LABEL": "Booking page",
+      "OFF": "Don't book",
+      "PAUSED_PAGE": "{title} (paused)",
+      "PAUSED_HINT": "This page is paused. While it stays paused, the agent tells the client and hands the conversation to a person.",
+      "HINT": "The meeting goes to the page owner, or to the person assigned to the conversation when the page has one link per person.",
+      "EMPTY": "Create a booking page in Settings > Scheduling to let the agent book meetings.",
+      "SAVE": "Save",
+      "BOOKED_BY_AI": "Booked by the AI",
+      "BOOKED_BY_AI_DETAIL": "Booked by the AI: {title}"
     }
   }
 }

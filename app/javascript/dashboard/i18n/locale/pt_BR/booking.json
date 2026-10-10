@@ -48,7 +48,10 @@
       "QR_ALT": "QR code da página de agendamento",
       "QR_ERROR": "Não deu para gerar o QR code.",
       "OPEN": "Abrir",
-      "OPEN_LABEL": "Abrir a página em outra aba"
+      "OPEN_LABEL": "Abrir a página em outra aba",
+      "PER_PERSON_TITLE": "Um link para cada pessoa",
+      "PER_PERSON_HINT": "O cliente marca pelo link da pessoa que vai atender. Divulgue o link de cada pessoa.",
+      "PERSON_LABEL": "Link de {name}"
     },
     "STEPS": {
       "LABEL": "Passos para criar a página",
@@ -58,9 +61,9 @@
       "ONDE": "Onde acontece",
       "QUANDO": "Dias e horas",
       "CARA": "Sua marca",
+      "AVISOS": "Avisos",
       "PREVIA": "Prévia e publicar",
-      "DONE": "concluído",
-      "AVISOS": "Avisos"
+      "DONE": "concluído"
     },
     "WIZARD": {
       "BACK": "Voltar",
@@ -75,7 +78,7 @@
       "ERRORS": {
         "TITLE": "Escreva o nome que o cliente vê.",
         "PEOPLE": "Escolha quem atende.",
-        "LOCATION": "Escolha onde vai ser a conversa.",
+        "LOCATION": "Escolha onde vai ser o atendimento.",
         "LINK": "Cole o link completo, começando com https://",
         "ADDRESS": "Escreva o endereço.",
         "CALENDAR": "Escolha a caixa de e-mail da agenda.",
@@ -88,7 +91,7 @@
       "SERVER_ERRORS": {
         "CALENDAR_GONE": "Essa caixa de e-mail da agenda não está mais disponível. Escolha outra ou tire o Google Meet e o Teams.",
         "PEOPLE_GONE": "Alguém que você escolheu não pode mais atender. Escolha de novo.",
-        "LOCATIONS": "Um dos lugares não pode mais ser usado. Confira onde vai ser a conversa.",
+        "LOCATIONS": "Um dos lugares não pode mais ser usado. Confira onde vai ser o atendimento.",
         "HOURS": "Confira os dias e os horários.",
         "PIPELINE": "Esse funil ou etapa não existe mais. Escolha outro.",
         "BRAND": "Confira a cor e a frase de boas-vindas.",
@@ -120,7 +123,7 @@
       }
     },
     "ABOUT": {
-      "TITLE": "Como se chama a conversa?",
+      "TITLE": "Como se chama o atendimento?",
       "NAME_LABEL": "Nome que o cliente vê",
       "DURATION_LABEL": "Quanto tempo dura?",
       "PEOPLE_LABEL": "Quem atende?",
@@ -130,7 +133,7 @@
       "PEOPLE_EMPTY": "Ninguém da equipe pode atender ainda."
     },
     "WHERE": {
-      "TITLE": "Onde vai ser a conversa?",
+      "TITLE": "Onde vai ser o atendimento?",
       "HINT": "Escolha um ou mais.",
       "RECOMMENDED": "Recomendado",
       "WHATSAPP_VIDEO": {
@@ -175,7 +178,7 @@
       "NOTICE_VALUE": "{value} de antecedência",
       "BUFFER_LABEL": "Intervalo",
       "BUFFER_NONE": "Sem intervalo",
-      "BUFFER_VALUE": "{value} entre conversas",
+      "BUFFER_VALUE": "{value} entre um horário e outro",
       "EXTRA_LABEL": "Outras durações (opcional)",
       "EXTRA_HINT": "O cliente escolhe quanto tempo quer.",
       "HOLIDAYS_LABEL": "Feriados",
@@ -229,61 +232,9 @@
         "GRAPHITE": "Grafite"
       },
       "HEADLINE_LABEL": "Frase de boas-vindas",
-      "HEADLINE_PLACEHOLDER": "Escolha o melhor horário para conversar",
+      "HEADLINE_PLACEHOLDER": "Escolha o melhor horário para você",
       "LOGO_ALT": "Logo da empresa",
       "PHOTO_ALT": "Foto de quem atende"
-    },
-    "PREVIEW": {
-      "TITLE": "Assim o cliente vai ver",
-      "SCHEDULE": "{days}, das {from} às {to}",
-      "DEFAULT_HEADLINE": "Escolha o melhor horário para conversar",
-      "WITH": "Com {name}",
-      "PICK_TIME": "Escolher horário",
-      "DESTINATION": "Quem marcar vai para o funil {pipeline}, etapa {stage}, com {people}.",
-      "DESTINATION_NO_PIPELINE": "Quem marcar fica com {people}. Ainda não há funil escolhido.",
-      "DEFAULT_PIPELINE": "padrão",
-      "DEFAULT_STAGE": "inicial",
-      "NOBODY": "ninguém ainda",
-      "ALTER": "Alterar",
-      "PIPELINE_LABEL": "Funil",
-      "STAGE_LABEL": "Etapa",
-      "SAVE": "Salvar",
-      "CANCEL": "Cancelar",
-      "PIPELINES_ERROR": "Não deu para carregar os funis.",
-      "MISSING_TITLE": "Falta pouco para publicar:",
-      "MISSING": {
-        "HOST": "Escolher quem atende",
-        "LOCATION": "Escolher onde vai ser a conversa",
-        "WORKING_HOURS": "Escolher os dias de atendimento",
-        "PIPELINE": "Escolher para qual funil vai quem marcar"
-      },
-      "FIX": "Resolver",
-      "PUBLISHED_TITLE": "Sua página está no ar.",
-      "PUBLISHED_TEXT": "Mande o link para seus clientes ou mostre o QR code.",
-      "PUBLISHING": "Publicando",
-      "NOTICES_ON": "O cliente recebe aviso no WhatsApp {when}, pelo número {inbox}.",
-      "NOTICES_ON_NO_NAME": "O cliente recebe aviso no WhatsApp {when}.",
-      "NOTICES_OFF": "Sem avisos no WhatsApp. O cliente vê o horário na tela e na agenda dele.",
-      "NOTICES_WINDOW_ONLY": "Só para quem falou com você nas últimas 24 horas.",
-      "NOTICES_ALTER": "Alterar os avisos no WhatsApp",
-      "CANCEL_UNTIL": "Ele pode mudar ou cancelar até {value} antes.",
-      "CANCEL_ANYTIME": "Ele pode mudar ou cancelar até a hora marcada."
-    },
-    "VIEW": {
-      "READ_ONLY": "Você pode ver esta página, mas não pode mudar."
-    },
-    "AI_AGENT": {
-      "TITLE": "Marcar reuniões",
-      "DESCRIPTION": "O agente oferece horários reais de uma página de agendamento e marca a reunião na conversa.",
-      "PAGE_LABEL": "Página de agendamento",
-      "OFF": "Não marcar",
-      "PAUSED_PAGE": "{title} (pausada)",
-      "PAUSED_HINT": "Esta página está pausada. Enquanto ela estiver assim, o agente avisa o cliente e passa a conversa para uma pessoa.",
-      "HINT": "A reunião fica com quem atende a página ou, se a página tem um link por pessoa, com quem está atribuído à conversa.",
-      "EMPTY": "Crie uma página em Configurações > Agendamento para o agente marcar reuniões.",
-      "SAVE": "Salvar",
-      "BOOKED_BY_AI": "Agendada pela IA",
-      "BOOKED_BY_AI_DETAIL": "Agendada pela IA: {title}"
     },
     "NOTICES": {
       "TITLE": "Avisos no WhatsApp",
@@ -364,6 +315,42 @@
         }
       }
     },
+    "PREVIEW": {
+      "TITLE": "Assim o cliente vai ver",
+      "SCHEDULE": "{days}, das {from} às {to}",
+      "DEFAULT_HEADLINE": "Escolha o melhor horário para você",
+      "WITH": "Com {name}",
+      "PICK_TIME": "Escolher horário",
+      "DESTINATION": "Quem marcar vai para o funil {pipeline}, etapa {stage}, com {people}.",
+      "DESTINATION_NO_PIPELINE": "Quem marcar fica com {people}. Ainda não há funil escolhido.",
+      "DEFAULT_PIPELINE": "padrão",
+      "DEFAULT_STAGE": "inicial",
+      "NOBODY": "ninguém ainda",
+      "ALTER": "Alterar",
+      "PIPELINE_LABEL": "Funil",
+      "STAGE_LABEL": "Etapa",
+      "SAVE": "Salvar",
+      "CANCEL": "Cancelar",
+      "PIPELINES_ERROR": "Não deu para carregar os funis.",
+      "MISSING_TITLE": "Falta pouco para publicar:",
+      "MISSING": {
+        "HOST": "Escolher quem atende",
+        "LOCATION": "Escolher onde vai ser o atendimento",
+        "WORKING_HOURS": "Escolher os dias de atendimento",
+        "PIPELINE": "Escolher para qual funil vai quem marcar"
+      },
+      "FIX": "Resolver",
+      "PUBLISHED_TITLE": "Sua página está no ar.",
+      "PUBLISHED_TEXT": "Mande o link para seus clientes ou mostre o QR code.",
+      "PUBLISHING": "Publicando",
+      "NOTICES_ON": "O cliente recebe aviso no WhatsApp {when}, pelo número {inbox}.",
+      "NOTICES_ON_NO_NAME": "O cliente recebe aviso no WhatsApp {when}.",
+      "NOTICES_OFF": "Sem avisos no WhatsApp. O cliente vê o horário na tela e na agenda dele.",
+      "NOTICES_WINDOW_ONLY": "Só para quem falou com você nas últimas 24 horas.",
+      "NOTICES_ALTER": "Alterar os avisos no WhatsApp",
+      "CANCEL_UNTIL": "Ele pode mudar ou cancelar até {value} antes.",
+      "CANCEL_ANYTIME": "Ele pode mudar ou cancelar até a hora marcada."
+    },
     "POST_MEETING": {
       "TITLE": "Depois da reunião",
       "OFF": "Quando alguém marca “Aconteceu”, o card fica onde está.",
@@ -385,6 +372,9 @@
       },
       "TURN_OFF": "Não mover o card",
       "SAVE_ERROR": "Não deu para salvar. Confira a etapa e tente de novo."
+    },
+    "VIEW": {
+      "READ_ONLY": "Você pode ver esta página, mas não pode mudar."
     },
     "RESULTS": {
       "MENU": "Meus números",
@@ -507,6 +497,19 @@
         "NO_PAGES": "Você ainda não atende em nenhuma página de agendamento.",
         "GENERIC": "Não deu certo. Tente de novo."
       }
+    },
+    "AI_AGENT": {
+      "TITLE": "Marcar reuniões",
+      "DESCRIPTION": "O agente oferece horários reais de uma página de agendamento e marca a reunião na conversa.",
+      "PAGE_LABEL": "Página de agendamento",
+      "OFF": "Não marcar",
+      "PAUSED_PAGE": "{title} (pausada)",
+      "PAUSED_HINT": "Esta página está pausada. Enquanto ela estiver assim, o agente avisa o cliente e passa a conversa para uma pessoa.",
+      "HINT": "A reunião fica com quem atende a página ou, se a página tem um link por pessoa, com quem está atribuído à conversa.",
+      "EMPTY": "Crie uma página em Configurações > Agendamento para o agente marcar reuniões.",
+      "SAVE": "Salvar",
+      "BOOKED_BY_AI": "Agendada pela IA",
+      "BOOKED_BY_AI_DETAIL": "Agendada pela IA: {title}"
     }
   }
 }

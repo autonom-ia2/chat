@@ -126,6 +126,47 @@ describe('BookingPagesList', () => {
     );
   });
 
+  it('página com um link por pessoa: uma linha por pessoa, sem o endereço da página', async () => {
+    const perPerson = page(1, {
+      assignment_mode: 'per_agent',
+      public_url: null,
+      links: [
+        {
+          agent_id: 11,
+          agent_name: 'Bia',
+          url: 'https://chat.exemplo.com/book/bia',
+          enabled: true,
+        },
+        {
+          agent_id: 12,
+          agent_name: 'Caio',
+          url: 'https://chat.exemplo.com/book/caio',
+          enabled: true,
+        },
+      ],
+    });
+    BookingPagesAPI.get.mockResolvedValue({ data: { payload: [perPerson] } });
+    const wrapper = mountList();
+    await flushPromises();
+    const card = wrapper.find('[data-page]');
+    expect(card.text()).not.toContain('/book/slug-1');
+    expect(card.find('[data-person-links]').text()).toContain(
+      'BOOKING.LINK.PER_PERSON_TITLE'
+    );
+    const rows = card.findAll('[data-person-link]');
+    expect(rows).toHaveLength(2);
+    expect(rows[0].text()).toContain('Bia');
+    expect(rows[0].find('[data-open]').attributes('href')).toBe(
+      'https://chat.exemplo.com/book/bia'
+    );
+    expect(rows[1].find('[data-qr-toggle]').exists()).toBe(true);
+    await rows[1].find('[data-copy]').trigger('click');
+    await flushPromises();
+    expect(copyTextToClipboard).toHaveBeenCalledWith(
+      'https://chat.exemplo.com/book/caio'
+    );
+  });
+
   it('aviso de atenção quando quem atende não pode receber reuniões', async () => {
     BookingPagesAPI.get.mockResolvedValue({
       data: { payload: [page(1, { attention: true }), page(2)] },
