@@ -6,7 +6,8 @@
 # ferramenta nativa carrega credencial e assinatura, então a superfície precisa ser fechada.
 module Autonomia::Agents::Tools::Registry
   # Ordem estável: entra no prompt nesta ordem quando o agente liga várias.
-  TOOLS = [
+  # CADA FERRAMENTA PERTENCE A UM FLUXO (#1211), e a lista é a do fluxo: `permitidas_para`.
+  DE_ATENDIMENTO = [
     # Ordem é a da jornada: o que a corretora cota, cotar, e o que o contrato diz.
     Autonomia::Agents::Tools::Native::InsuranceCapabilities,
     # UMA ferramenta para os onze ramos. Havia duas — uma só de auto, com os campos digitados à
@@ -24,9 +25,16 @@ module Autonomia::Agents::Tools::Registry
     Autonomia::Agents::Tools::Native::CepLookup,
     Autonomia::Agents::Tools::Native::AtividadeLookup,
     Autonomia::Agents::Tools::Native::InsuranceGeneralConditions,
+    # #1196 — a agenda da IA: ligadas ao escolher a página de agendamento do agente (`config['booking_page_id']`).
+    Autonomia::Agents::Tools::Native::HorariosDisponiveis,
+    Autonomia::Agents::Tools::Native::AgendarReuniao
+  ].freeze
+
+  DO_GUIA = [
     # Guia da Plataforma (#568, #590): ler a conta, propor mudança nela e levar
     # a pessoa até a tela, com a permissão de quem está logado. Ligadas só no
-    # agente do Guia, que o `Seed` semeia — nenhum agente de conta as enxerga.
+    # agente do Guia, que o `Seed` semeia — nenhum agente de conta as enxerga
+    # (`permitidas_para`, que a API e o catálogo do turno consultam).
     Autonomia::Agents::Tools::Native::GuiaLeitura,
     Autonomia::Agents::Tools::Native::GuiaAcao,
     # #855 — o Guia executa o que tem desfazer, passo a passo, no mesmo turno.
@@ -48,11 +56,10 @@ module Autonomia::Agents::Tools::Registry
     Autonomia::Agents::Tools::Native::GuiaLembrar,
     Autonomia::Agents::Tools::Native::GuiaEsquecer,
     # #936 — o Guia planeja um trabalho grande: receita, amostra e o botão Começar para a pessoa.
-    Autonomia::Agents::Tools::Native::GuiaTarefa,
-    # #1196 — a agenda da IA: ligadas ao escolher a página de agendamento do agente (`config['booking_page_id']`).
-    Autonomia::Agents::Tools::Native::HorariosDisponiveis,
-    Autonomia::Agents::Tools::Native::AgendarReuniao
+    Autonomia::Agents::Tools::Native::GuiaTarefa
   ].freeze
+
+  TOOLS = (DE_ATENDIMENTO + DO_GUIA).freeze
 
   module_function
 
@@ -68,13 +75,27 @@ module Autonomia::Agents::Tools::Registry
     TOOLS.map(&:slug)
   end
 
+  # A LISTA PERMITIDA É A DO FLUXO DO AGENTE (#1211). O Guia da Plataforma é o agente de sistema que o
+  # `Guide::Seed` semeia (`system_key`, que a API nunca aceita do cliente); todo o resto é atendimento.
+  # Antes disto a API gravava em `native_tool_slugs` qualquer slug do catálogo, e quem editava um agente
+  # comum ligava nele as ferramentas do Guia.
+  def permitidas_para(agent)
+    do_guia?(agent) ? DO_GUIA : DE_ATENDIMENTO
+  end
+
+  def do_guia?(agent)
+    agent.config.to_h['system_key'] == ::Autonomia::Guide::Seed::SYSTEM_KEY
+  end
+
   # Ferramentas realmente utilizáveis por este agente: ligadas (`Agent#ferramentas_nativas`: a lista do
-  # deploy para o Agente de Cotação, a config para os demais) E disponíveis (o gate `available_for?` evita
+  # deploy para o Agente de Cotação, a config para os demais), DO FLUXO DELE (`permitidas_para` — um slug
+  # de outro fluxo já gravado no banco não chega ao modelo) E disponíveis (o gate `available_for?` evita
   # oferecer no prompt algo que vai falhar por falta de configuração).
   def for_agent(agent)
     enabled = Array(agent.ferramentas_nativas).map(&:to_s)
     return [] if enabled.empty?
 
-    enabled.filter_map { |slug| find(slug) }.uniq.select { |tool| tool.available_for?(agent) }
+    permitidas = permitidas_para(agent)
+    enabled.filter_map { |slug| find(slug) }.uniq.select { |tool| permitidas.include?(tool) && tool.available_for?(agent) }
   end
 end
