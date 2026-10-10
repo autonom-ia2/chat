@@ -127,8 +127,8 @@
     "completo": true,
     "controller": "api/v1/accounts/autonomia/agents#destroy",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:58",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:85"
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:64",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:91"
     ],
     "sem_corpo": true
   },
@@ -142,10 +142,10 @@
     "completo": true,
     "controller": "api/v1/accounts/autonomia/agents#avatar",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:63",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:75",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:73",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:85"
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:69",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:81",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:79",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:91"
     ],
     "sem_corpo": false
   },
@@ -572,7 +572,7 @@
     "controller": "api/v1/accounts/crm/meta_ads_connections#destroy",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:59"
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:80"
     ],
     "sem_corpo": true
   },
@@ -3490,13 +3490,13 @@
     "envelope": "agent",
     "modelo": "Autonomia::Agents::Agent",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:43",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:161",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:173",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:203",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:147",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:111",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:85"
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:47",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:168",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:180",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:225",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:153",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:117",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:91"
     ],
     "sem_corpo": false
   },
@@ -3510,10 +3510,10 @@
     "completo": true,
     "controller": "api/v1/accounts/autonomia/agents#avatar",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:63",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:75",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:73",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:85"
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:69",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:81",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:79",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:91"
     ],
     "sem_corpo": false
   },
@@ -5125,8 +5125,8 @@
     "envelope": "meta_ads_connection",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:45",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:254"
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:49",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:258"
     ],
     "sem_corpo": false
   },
@@ -5135,7 +5135,7 @@
     "controller": "api/v1/accounts/crm/meta_ads_connections#destinations",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:118"
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:139"
     ],
     "sem_corpo": true
   },
@@ -5161,10 +5161,10 @@
     "controller": "api/v1/accounts/crm/meta_ads_connections#funnel",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:132",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:250",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:136",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:135"
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:153",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:254",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:157",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:156"
     ],
     "sem_corpo": false
   },
@@ -10247,9 +10247,9 @@
     "modelo": "Autonomia::Agents::Agent",
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:22",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:161",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:173",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:203",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:168",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:180",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:225",
       "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:23"
     ],
     "sem_corpo": false
@@ -14462,12 +14462,28 @@
     ],
     "sem_corpo": true
   },
+  "POST crm/meta_ads_connection/facebook_login": {
+    "campos": {
+      "code": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/crm/meta_ads_connections#facebook_login",
+    "modelo": "Crm::MetaAdsConnection",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:63",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:64"
+    ],
+    "sem_corpo": false
+  },
   "POST crm/meta_ads_connection/insights": {
     "completo": true,
     "controller": "api/v1/accounts/crm/meta_ads_connections#insights",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:64"
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:85"
     ],
     "sem_corpo": true
   },
@@ -14498,7 +14514,8 @@
         "tipo": "string",
         "um_de": [
           "token",
-          "partner"
+          "partner",
+          "facebook_login"
         ]
       },
       "pixel_id": {
@@ -14509,9 +14526,9 @@
     "controller": "api/v1/accounts/crm/meta_ads_connections#selection",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:109",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:110",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:171"
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:130",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:131",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:192"
     ],
     "sem_corpo": false
   },
@@ -14526,9 +14543,9 @@
     "controller": "api/v1/accounts/crm/meta_ads_connections#suggest_stages",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:146",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:150",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:149"
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:167",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:171",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:170"
     ],
     "sem_corpo": false
   },
@@ -20829,13 +20846,13 @@
     "envelope": "agent",
     "modelo": "Autonomia::Agents::Agent",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:43",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:161",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:173",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:203",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:147",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:111",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:85"
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:47",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:168",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:180",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:225",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:153",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:117",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:91"
     ],
     "sem_corpo": false
   },
@@ -22345,8 +22362,8 @@
     "envelope": "meta_ads_connection",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:45",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:254"
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:49",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:258"
     ],
     "sem_corpo": false
   },

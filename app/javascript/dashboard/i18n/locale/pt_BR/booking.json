@@ -2,7 +2,8 @@
   "BOOKING": {
     "PAGE": {
       "TITLE": "Agendamento",
-      "SUBTITLE": "Crie a página onde o cliente marca um horário com você."
+      "SUBTITLE": "Crie a página onde o cliente marca um horário com você.",
+      "BACK_TO_CALENDAR": "Voltar para o calendário"
     },
     "LIST": {
       "LOADING": "Carregando as páginas",
@@ -497,6 +498,19 @@
         "NO_PAGES": "Você ainda não atende em nenhuma página de agendamento.",
         "GENERIC": "Não deu certo. Tente de novo."
       }
+    },
+    "AI_AGENT": {
+      "TITLE": "Marcar reuniões",
+      "DESCRIPTION": "O agente oferece horários reais de uma página de agendamento e marca a reunião na conversa.",
+      "PAGE_LABEL": "Página de agendamento",
+      "OFF": "Não marcar",
+      "PAUSED_PAGE": "{title} (pausada)",
+      "PAUSED_HINT": "Esta página está pausada. Enquanto ela estiver assim, o agente avisa o cliente e passa a conversa para uma pessoa.",
+      "HINT": "A reunião fica com quem atende a página ou, se a página tem um link por pessoa, com quem está atribuído à conversa.",
+      "EMPTY": "Crie uma página em CRM > Agendamento para o agente marcar reuniões.",
+      "SAVE": "Salvar",
+      "BOOKED_BY_AI": "Agendada pela IA",
+      "BOOKED_BY_AI_DETAIL": "Agendada pela IA: {title}"
     }
   }
 }

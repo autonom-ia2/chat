@@ -7,6 +7,11 @@ import { useEmitter } from 'dashboard/composables/emitter';
 import { useMapGetter, useStore } from 'dashboard/composables/store';
 import { defaultFilters } from 'dashboard/store/modules/crmKanban';
 import { useCrmPermissions } from '../composables/useCrmPermissions';
+import { getUserPermissions } from 'dashboard/helper/permissionsHelper.js';
+import {
+  canSeeBookingSettings,
+  isBookingV2Available,
+} from 'dashboard/routes/dashboard/settings/booking/bookingAccess';
 import { declararContexto } from 'dashboard/composables/useContextoDaTela';
 import crmMeetingsAPI from 'dashboard/api/crmMeetings';
 import CtwaCampaignsAPI from 'dashboard/api/ctwaCampaigns';
@@ -94,6 +99,8 @@ const listSelection = useMapGetter('crmKanban/getListSelection');
 const savedViews = useMapGetter('crmKanban/getSavedViews');
 const currentUser = useMapGetter('getCurrentUser');
 const currentAccountId = useMapGetter('getCurrentAccountId');
+const currentRole = useMapGetter('getCurrentRole');
+const getAccount = useMapGetter('accounts/getAccount');
 const inboxes = useMapGetter('inboxes/getInboxes');
 const agents = useMapGetter('agents/getAgents');
 const teams = useMapGetter('teams/getTeams');
@@ -1005,7 +1012,28 @@ const closeInboxSettingsDrawer = () => {
   showInboxSettingsDrawer.value = false;
 };
 
-const openBookingProfilesDrawer = () => {
+// Botão Agendamento do Calendário (#1212): com o agendamento novo ligado na
+// conta, leva à página nova (CRM › Agendamento) para quem pode vê-la; desligado,
+// abre a gaveta antiga para quem gerencia funis, como sempre.
+const isBookingV2 = computed(() =>
+  isBookingV2Available(getAccount.value(currentAccountId.value))
+);
+const canOpenBooking = computed(() => {
+  if (!isBookingV2.value) return canManagePipelines.value;
+  return canSeeBookingSettings({
+    isAdministrator: currentRole.value === 'administrator',
+    permissions: getUserPermissions(currentUser.value, currentAccountId.value),
+  });
+});
+
+const openBooking = () => {
+  if (isBookingV2.value) {
+    router.push({
+      name: 'settings_booking',
+      params: { accountId: currentAccountId.value },
+    });
+    return;
+  }
   showBookingProfilesDrawer.value = true;
 };
 
@@ -2053,16 +2081,14 @@ onUnmounted(() => {
         />
         <Button
           v-if="
-            canManagePipelines &&
-            isMeetingFeatureEnabled &&
-            viewMode === 'calendar'
+            canOpenBooking && isMeetingFeatureEnabled && viewMode === 'calendar'
           "
           :label="t('CRM_KANBAN.BOOKING.ADMIN.ACTION_SHORT')"
           icon="i-lucide-calendar-clock"
           slate
           outline
           class="!rounded-lg min-h-11 !outline-n-weak bg-n-surface-1"
-          @click="openBookingProfilesDrawer"
+          @click="openBooking"
         />
         <Popover
           v-if="canManagePipelines || (!isCalendarOnly && canManageAi)"

@@ -15,6 +15,17 @@ const emit = defineEmits(['update:modelValue']);
 
 const botoes = ref([]);
 
+// Opção âmbar (caixa com outro agente): fundo e borda âmbar quando não marcada. Antes o fundo
+// âmbar disputava com bg-n-solid-1 na mesma lista de classes e perdia. O título fica slate-12:
+// âmbar 11 sobre âmbar 2 dá 4,45:1, abaixo do AA para texto de 14 px.
+const classeDaOpcao = opcao => {
+  if (opcao.valor === props.modelValue) {
+    return 'ring-2 ring-n-blue-11 bg-n-blue-2';
+  }
+  if (opcao.ambar) return 'ring-n-amber-6 bg-n-amber-2 hover:bg-n-amber-3';
+  return 'ring-n-slate-7 bg-n-solid-1 hover:bg-n-slate-2';
+};
+
 const disponiveis = () => props.opcoes.filter(opcao => !opcao.desabilitada);
 
 const comFoco = opcao => {
@@ -66,10 +77,7 @@ const aoTeclar = (evento, opcao) => {
       :tabindex="comFoco(opcao) ? '0' : '-1'"
       class="flex items-start w-full gap-3 px-4 py-3 text-start transition rounded-xl min-h-11 ring-1 ring-inset focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-n-blue-11"
       :class="[
-        opcao.valor === modelValue
-          ? 'ring-2 ring-n-blue-11 bg-n-blue-2'
-          : 'ring-n-slate-7 bg-n-solid-1 hover:bg-n-slate-2',
-        opcao.ambar && opcao.valor !== modelValue ? 'bg-n-amber-2' : '',
+        classeDaOpcao(opcao),
         opcao.desabilitada ? 'cursor-not-allowed opacity-70' : '',
       ]"
       @click="escolher(opcao)"
