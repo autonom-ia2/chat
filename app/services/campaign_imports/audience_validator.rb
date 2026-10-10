@@ -1,5 +1,3 @@
-require 'digest'
-
 # Validates a Públicos (#992) spreadsheet. Unlike the WhatsApp base validator it reads name,
 # mobile phone, email and company (all optional) through SpreadsheetReader and keeps the other
 # columns per row. A row is valid when it has a valid phone OR a valid email; the first
@@ -37,11 +35,19 @@ class CampaignImports::AudienceValidator < CampaignImports::Validator
 
   def read(parsed_file)
     manual = previous_resolution['manual_mapping']
-    return CampaignImports::SpreadsheetReader.new(parsed_file).perform unless manual
+    return CampaignImports::SpreadsheetReader.new(parsed_file, reading: contact_reading).perform unless manual
 
     CampaignImports::SpreadsheetReader.new(
-      parsed_file, explicit_mapping: manual, pinned_header: previous_resolution.slice('header_row', 'table_index')
+      parsed_file, explicit_mapping: manual, pinned_header: previous_resolution.slice('header_row', 'table_index'), reading: contact_reading
     ).perform
+  end
+
+  def contact_reading
+    @contact_reading ||= CampaignImports::ContactReading.for(campaign_import.account)
+  end
+
+  def row_contacts
+    @row_contacts ||= CampaignImports::AudienceRowContacts.new(contact_reading)
   end
 
   def previous_resolution
@@ -66,42 +72,12 @@ class CampaignImports::AudienceValidator < CampaignImports::Validator
 
   def audience_row(row, mapping)
     name, phone, email, company = mapping.values_at(*TARGETS).map { |index| value_at(row, index) }
-    contact = contact_fields(phone, email)
+    contact = row_contacts.fields(phone, email)
     errors = audience_formula_errors(row, mapping) + contact.delete(:errors)
     contact.merge(
       row_number: row.row_number, raw_name: name, normalized_name: name.squish,
       company_name: company.squish.presence, extra_values: extra_values(row), errors: errors
     )
-  end
-
-  # A row needs a valid phone or a valid email; when it has neither, say why (or that both are missing).
-  def contact_fields(phone, email)
-    phone_result, phone_error = normalize_with(CampaignImports::PhoneNormalizer, phone)
-    email_result, email_error = normalize_with(EmailCampaigns::EmailNormalizer, email)
-    reasons = [phone_error, email_error].compact.presence || ['missing_contact']
-    phone_fields(phone, phone_result).merge(email_fields(email, email_result), errors: phone_result || email_result ? [] : reasons)
-  end
-
-  def phone_fields(raw, result)
-    {
-      raw_phone_masked: result&.masked || CampaignImports::PhoneNormalizer.mask_raw(raw),
-      normalized_phone: result&.phone_number, normalized_phone_hash: result&.hash
-    }
-  end
-
-  def email_fields(raw, result)
-    {
-      email: result&.email, email_hash: result && Digest::SHA256.hexdigest(result.email),
-      email_masked: raw.present? ? EmailCampaigns::EmailNormalizer.mask(raw.downcase) : nil
-    }
-  end
-
-  def normalize_with(normalizer, value)
-    return [nil, nil] if value.blank?
-
-    [normalizer.normalize!(value), nil]
-  rescue CampaignImports::PhoneNormalizer::Error, EmailCampaigns::EmailNormalizer::Error => e
-    [nil, e.message]
   end
 
   # Only the bound columns become contact data; extra columns are kept as written and every
@@ -146,7 +122,10 @@ class CampaignImports::AudienceValidator < CampaignImports::Validator
   def ready_attributes(row_results, valid_rows, invalid_rows, plan)
     attributes = super.merge(audience_attributes(valid_rows))
     companies = CampaignImports::CompanyPreview.new(campaign_import.account, valid_rows).perform
-    attributes.merge(validation_summary: attributes[:validation_summary].merge(companies: companies))
+    summary = attributes[:validation_summary].merge(companies: companies)
+    # customer_base (#1246): how many legacy mobiles got the ninth digit, so the pilot can audit them.
+    summary = summary.merge(ninth_digit_added: valid_rows.count { |row| row[:ninth_digit_added] }) if contact_reading.customer_base?
+    attributes.merge(validation_summary: summary)
   end
 
   def mark_validation_failed(global_errors, row_results, exception: nil)
