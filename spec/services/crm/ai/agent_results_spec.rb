@@ -30,8 +30,8 @@ RSpec.describe Crm::Ai::AgentResults do
     )
   end
 
-  def preco(nome, valor)
-    { 'nome' => nome, 'desfecho' => 'com_preco', 'premio' => { 'amount' => valor, 'basis' => 'annual' } }
+  def preco(nome, valor, basis = 'total')
+    { 'nome' => nome, 'desfecho' => 'com_preco', 'premio' => { 'amount' => valor, 'basis' => basis } }
   end
 
   it 'resume a cotação terminada: o bem, o menor prêmio e quantas seguradoras cotaram' do
@@ -42,7 +42,8 @@ RSpec.describe Crm::Ai::AgentResults do
 
     expect(resultados.size).to eq(1)
     expect(resultados.first[:tool]).to eq(cotacao.slug)
-    expect(resultados.first[:summary]).to eq('Cotação de seguro auto — Onix ABC1D23: menor prêmio R$ 1.950,00 (Allianz); 2 seguradora(s) com preço.')
+    expect(resultados.first[:summary])
+      .to eq('Cotação de seguro auto — Onix ABC1D23: menor prêmio R$ 1.950,00 no total (Allianz); 2 seguradora(s) com preço.')
   end
 
   it 'deixa de fora o que veio antes do card, o que não terminou, a cotação sem preço e outra conversa' do
@@ -69,6 +70,33 @@ RSpec.describe Crm::Ai::AgentResults do
     run_de(status: 'failed', handle: handle_com_preco, criado_em: 1.minute.from_now)
 
     expect(described_class.new(card: card, conversation_ids: [conversation.id]).perform.first[:summary]).to include('R$ 1.950,00')
+  end
+
+  describe 'menor prêmio com períodos diferentes (critério da lista ao cliente)' do
+    def resumo(ofertas)
+      card
+      run_de(status: 'done', criado_em: 1.minute.from_now,
+             handle: { 'produto' => 'auto', 'resultado_por_seguradora' => ofertas })
+      described_class.new(card: card, conversation_ids: [conversation.id]).perform.first&.dig(:summary)
+    end
+
+    it 'o total ganha da mensalidade mais barata e do preço sem período' do
+      texto = resumo('bp' => preco('Bp Assinatura', 351.59, 'monthly'), 'porto' => preco('Porto', 1321.25),
+                     'x' => preco('Sem Base', 100, nil))
+
+      expect(texto).to include('R$ 1.321,25 no total (Porto)')
+      expect(texto).to include('3 seguradora(s) com preço')
+    end
+
+    it 'sem nenhum total, vale a menor mensalidade, dita por mês' do
+      texto = resumo('bp' => preco('Bp Assinatura', 351.59, 'monthly'), 'x' => preco('Sem Base', 100, nil))
+
+      expect(texto).to include('R$ 351,59 por mês (Bp Assinatura)')
+    end
+
+    it 'só preço sem período: não há o que resumir' do
+      expect(resumo('x' => preco('Sem Base', 100, nil))).to be_nil
+    end
   end
 
   it 'ferramenta do catálogo sem resumo próprio não entra' do
