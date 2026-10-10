@@ -11,7 +11,10 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import Checkbox from 'dashboard/components-next/checkbox/Checkbox.vue';
 import whatsappChannel from 'dashboard/api/channel/whatsappChannel';
 import InboxHealthAPI from 'dashboard/api/inboxHealth';
-import { useWhatsappEmbeddedSignup } from 'dashboard/composables/useWhatsappEmbeddedSignup';
+import {
+  useWhatsappEmbeddedSignup,
+  SIGNUP_TIMEOUT_CODE,
+} from 'dashboard/composables/useWhatsappEmbeddedSignup';
 import { setupFacebookSdk } from './utils';
 
 const props = defineProps({
@@ -126,8 +129,14 @@ const openFacebook = async () => {
     } else {
       step.value = 'cancelled';
     }
-  } catch {
-    step.value = 'failed';
+  } catch (error) {
+    // #1228: o Facebook pode ter terminado do lado da Meta; não dizer que recusou.
+    if (error?.code === SIGNUP_TIMEOUT_CODE) {
+      step.value = 'unknown';
+      emit('switched');
+    } else {
+      step.value = 'failed';
+    }
   } finally {
     isFlowRunning.value = false;
     showDialog();
@@ -173,7 +182,7 @@ const RESULT_LOOK = {
 const resultLook = computed(() => RESULT_LOOK[step.value]);
 
 const tryAgain = () => {
-  if (['failed', 'unknown'].includes(step.value)) {
+  if (step.value === 'failed') {
     step.value = 'checklist';
     return;
   }

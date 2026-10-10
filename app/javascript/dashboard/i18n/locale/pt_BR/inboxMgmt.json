@@ -488,7 +488,8 @@
           "RESTRICTED_WARNING": "O cadastro integrado do WhatsApp está temporariamente indisponível devido a um problema na API da Meta, e não por uma falha no Chatwoot. Você pode utilizar a configuração manual para números compatíveis com a Cloud API. Estamos trabalhando em conjunto com a Meta para resolver a situação o mais rápido possível.",
           "STATUS_LINK": "Ver atualizações de status",
           "CALLING_ENABLE_FAILED": "Sua caixa de entrada do WhatsApp está pronta, mas as chamadas de voz não puderam ser ativadas — este número ainda não está cadastrado na API de Chamadas do WhatsApp Business. Entre em contato com a Meta ou com seu provedor de soluções WhatsApp Business para realizar o cadastro e, depois, ative as chamadas nas configurações de Chamadas da caixa de entrada.",
-          "SDK_LOAD_ERROR": "Não foi possível carregar o cadastro do WhatsApp. Tente novamente."
+          "SDK_LOAD_ERROR": "Não foi possível carregar o cadastro do WhatsApp. Tente novamente.",
+          "NOT_CONFIRMED": "Não conseguimos confirmar a conexão com o WhatsApp. Confira suas caixas de entrada antes de tentar de novo."
         },
         "API": {
           "ERROR_MESSAGE": "Não foi possível salvar o canal do WhatsApp",
@@ -1916,7 +1917,7 @@
         "CANCELLED": "Nada mudou nesta caixa. Quando quiser, é só tentar de novo.",
         "FAILED": "Nada mudou nesta caixa. Confira se o número saiu da conta antiga, se você escolheu o {phone} no Facebook e se o código foi digitado no celular certo. Depois, tente de novo.",
         "TEST_TIP": "Faça um teste: mande um \"oi\" de outro celular para o {phone} e veja a conversa aparecer.",
-        "UNKNOWN": "O WhatsApp não respondeu a tempo, então ainda não sabemos se a troca foi gravada. Feche esta janela e confira os dados da conta nesta tela antes de tentar de novo.",
+        "UNKNOWN": "Não conseguimos confirmar com o WhatsApp se a troca terminou. Confira os dados da conta nesta tela. Se a empresa nova ainda não aparecer, toque em Tentar de novo.",
         "RETRY_FAILED": "O recebimento ainda não ligou. Espere um minuto e toque no botão de novo."
       },
       "ACTIONS": {

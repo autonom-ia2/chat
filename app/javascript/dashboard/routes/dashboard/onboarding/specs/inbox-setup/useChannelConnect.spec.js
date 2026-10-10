@@ -2,12 +2,18 @@ import { effectScope, ref } from 'vue';
 import instagramClient from 'dashboard/api/channel/instagramClient';
 import { useChannelConnect } from '../../inbox-setup/useChannelConnect';
 
+const { runEmbeddedSignup, dispatch } = vi.hoisted(() => ({
+  runEmbeddedSignup: vi.fn(),
+  dispatch: vi.fn(),
+}));
 const assisted = ref(false);
 const entitled = ref(true);
 const disabled = ref(false);
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: key => key }) }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
-vi.mock('dashboard/composables/store', () => ({ useStore: () => ({}) }));
+vi.mock('dashboard/composables/store', () => ({
+  useStore: () => ({ dispatch }),
+}));
 vi.mock('dashboard/composables/useAccount', () => ({
   useAccount: () => ({
     isMetaInboxCreationDisabled: disabled,
@@ -16,7 +22,8 @@ vi.mock('dashboard/composables/useAccount', () => ({
   }),
 }));
 vi.mock('dashboard/composables/useWhatsappEmbeddedSignup', () => ({
-  useWhatsappEmbeddedSignup: () => ({ runEmbeddedSignup: vi.fn() }),
+  useWhatsappEmbeddedSignup: () => ({ runEmbeddedSignup }),
+  SIGNUP_TIMEOUT_CODE: 'WHATSAPP_SIGNUP_TIMEOUT',
 }));
 vi.mock('dashboard/api/channel/instagramClient', () => ({
   default: {
@@ -95,4 +102,22 @@ describe('onboarding Instagram account gate', () => {
       expect(instagramClient.generateAuthorization).not.toHaveBeenCalled();
     }
   );
+});
+
+// #1228: Meta may have finished the signup; never show the generic failure.
+describe('onboarding WhatsApp signup that Facebook did not confirm', () => {
+  it('refreshes the inboxes and says the connection was not confirmed', async () => {
+    const { useAlert } = await import('dashboard/composables');
+    runEmbeddedSignup.mockRejectedValueOnce(
+      Object.assign(new Error('timed out'), { code: 'WHATSAPP_SIGNUP_TIMEOUT' })
+    );
+
+    await connect.connectWhatsapp();
+
+    expect(dispatch).toHaveBeenCalledWith('inboxes/get');
+    expect(useAlert).toHaveBeenCalledWith(
+      'INBOX_MGMT.ADD.WHATSAPP.EMBEDDED_SIGNUP.NOT_CONFIRMED'
+    );
+    expect(useAlert).not.toHaveBeenCalledWith('ONBOARDING_INBOX_SETUP.ERROR');
+  });
 });
