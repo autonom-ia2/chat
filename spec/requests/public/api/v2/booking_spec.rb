@@ -110,6 +110,7 @@ RSpec.describe 'Public::Api::V2::Booking', type: :request do
         'slug' => profile.slug, 'paused' => false, 'preview' => false, 'title' => 'Conversa de 30 min', 'description' => nil,
         'agent_name' => 'Camila', 'agent_photo_url' => nil, 'duration_minutes' => 30, 'durations' => [30],
         'timezone' => 'America/Sao_Paulo', 'booking_window_days' => 14, 'weekdays' => [1, 2, 3, 4, 5],
+        'closed_dates' => [],
         'brand' => { 'color' => '#1F6FEB', 'headline' => 'Fale com a gente', 'logo_url' => nil, 'photo_url' => nil },
         'locations' => [{ 'type' => 'whatsapp_video', 'label' => 'Vídeo no WhatsApp', 'requires_email' => false }],
         'contact_whatsapp_url' => 'https://wa.me/5511933334444', 'captcha_site_key' => nil, 'notices_enabled' => false
@@ -140,6 +141,44 @@ RSpec.describe 'Public::Api::V2::Booking', type: :request do
                                        { 'type' => 'whatsapp_video', 'label' => 'Vídeo no WhatsApp', 'requires_email' => false }])
       expect(body['weekdays']).to eq([1, 3, 6])
       expect(body['timezone']).to eq('America/Sao_Paulo')
+    end
+
+    # 12/10/2026 (hoje, segunda) é feriado nacional; 02/11 é o próximo, fora da janela de 14 dias. O mundo de teste
+    # desliga `close_holidays`; aqui volta ao padrão real (ligado).
+    describe 'closed_dates (J2-A8)' do
+      before { profile.update!(close_holidays: true) }
+
+      it 'manda os feriados da janela, no fuso da página, quando a página fecha feriados' do
+        get base
+
+        expect(body['closed_dates']).to eq(['2026-10-12'])
+      end
+
+      it 'não manda feriado fora da janela, e manda quando a janela o alcança' do
+        get base
+        expect(body['closed_dates']).not_to include('2026-11-02')
+
+        profile.update!(booking_window_days: 30)
+        get base
+        expect(body['closed_dates']).to eq(%w[2026-10-12 2026-11-02])
+      end
+
+      it 'não manda nenhuma data quando a página atende em feriado' do
+        profile.update!(close_holidays: false)
+
+        get base
+
+        expect(body['closed_dates']).to eq([])
+      end
+
+      it 'conta a janela a partir de hoje no fuso da página, não em UTC' do
+        # 01:30 UTC de 13/10 ainda é 12/10 em São Paulo (feriado), mas já é 13/10 em UTC.
+        travel_to Time.utc(2026, 10, 13, 1, 30, 0)
+
+        get base
+
+        expect(body['closed_dates']).to eq(['2026-10-12'])
+      end
     end
 
     it 'mostra a chave do captcha só quando a instalação tem a chave do servidor' do

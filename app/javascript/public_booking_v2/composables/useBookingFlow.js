@@ -107,7 +107,8 @@ export function useBookingFlow(location = window.location) {
       ? bookingDays(
           timeZone.value,
           page.value.booking_window_days,
-          page.value.weekdays
+          page.value.weekdays,
+          page.value.closed_dates
         )
       : []
   );
