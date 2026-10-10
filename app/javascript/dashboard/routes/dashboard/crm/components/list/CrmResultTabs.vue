@@ -1,7 +1,11 @@
 <script setup>
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { outcomeLabels, outcomeStatuses } from '../../helpers/cardOutcome';
+import {
+  outcomeGroup,
+  outcomeLabels,
+  outcomeStatuses,
+} from '../../helpers/cardOutcome';
 
 // List-only status tabs. `value` maps to the server `result` filter (card
 // status open/won/lost), NOT the conversation status (open/pending/resolved).
@@ -35,7 +39,11 @@ const tabs = computed(() => {
 
 // No fallback to 'open' here: when result is '' (Filtros "Todos" / a legacy
 // saved view) or 'archived', no everyday-outcome tab should read as active.
-const isActive = value => props.modelValue === value;
+// won/resolved and lost/cancelled share a tab: the server filters them together.
+const isActive = value =>
+  props.modelValue === value ||
+  (outcomeGroup(value) !== null &&
+    outcomeGroup(value) === outcomeGroup(props.modelValue));
 </script>
 
 <template>

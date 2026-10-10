@@ -123,6 +123,7 @@ const onlyDigits = value =>
 const form = reactive({
   name: '',
   description: '',
+  whenToUse: '',
   monthlyTarget: '',
   countsAsSale: true,
   outcomeLabels: { success: '', failure: '' },
@@ -351,6 +352,7 @@ const resetForm = () => {
   form.name = pipeline.name || t('CRM_KANBAN.PIPELINE_DRAWER.DEFAULT_NAME');
   form.description =
     pipeline.description || t('CRM_KANBAN.PIPELINE_DRAWER.DEFAULT_DESCRIPTION');
+  form.whenToUse = pipeline.when_to_use || '';
   const targetCents = pipeline.metadata?.goals?.monthly_target_cents;
   form.monthlyTarget = targetCents ? Number(targetCents) / 100 : '';
   form.countsAsSale = pipeline.counts_as_sale ?? true;
@@ -503,6 +505,7 @@ const onSubmit = async () => {
       id: props.pipeline?.id,
       name: form.name.trim(),
       description: form.description.trim(),
+      when_to_use: form.whenToUse.trim(),
       is_default: props.pipeline?.is_default ?? !isEditing.value,
       position: props.pipeline?.position || 1,
       counts_as_sale: form.countsAsSale,
@@ -707,6 +710,25 @@ useFixedPanelPresence(computed(() => props.show));
               class="reset-base !mb-0 w-full rounded-lg border-0 bg-n-alpha-black2 px-3 py-2.5 text-sm text-n-slate-12 outline outline-1 outline-n-weak transition-all placeholder:text-n-slate-10 focus:outline-n-brand"
               :placeholder="
                 t('CRM_KANBAN.PIPELINE_DRAWER.DESCRIPTION_PLACEHOLDER')
+              "
+            />
+          </label>
+
+          <label v-if="view === 'adjustments'" class="grid gap-1">
+            <span class="text-heading-3 text-n-slate-12">
+              {{ t('CRM_KANBAN.PIPELINE_DRAWER.WHEN_TO_USE') }}
+            </span>
+            <span class="text-sm text-n-slate-11">
+              {{ t('CRM_KANBAN.PIPELINE_DRAWER.WHEN_TO_USE_HELP') }}
+            </span>
+            <textarea
+              v-model="form.whenToUse"
+              rows="3"
+              maxlength="1000"
+              data-pipeline-when-to-use
+              class="reset-base !mb-0 w-full rounded-lg border-0 bg-n-alpha-black2 px-3 py-2.5 text-sm text-n-slate-12 outline outline-1 outline-n-weak transition-all placeholder:text-n-slate-10 focus:outline-n-brand"
+              :placeholder="
+                t('CRM_KANBAN.PIPELINE_DRAWER.WHEN_TO_USE_PLACEHOLDER')
               "
             />
           </label>
