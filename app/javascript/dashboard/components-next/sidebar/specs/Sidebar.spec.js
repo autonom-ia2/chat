@@ -125,7 +125,7 @@ describe('Sidebar: Agendamento no grupo CRM', () => {
 
   it('função só com Agendamento, sem CRM, ainda recebe o grupo CRM com o item', () => {
     seat({ role: 'agent', customRoleId: 7, keys: ['agendamento_view'] });
-    expect(childrenOf(mountSidebar(), 'CRM')).toContain('CRM Booking');
+    expect(childrenOf(mountSidebar(), 'CRM')).toEqual(['CRM Booking']);
   });
 
   it('função sem CRM e sem Agendamento continua sem o grupo CRM', () => {

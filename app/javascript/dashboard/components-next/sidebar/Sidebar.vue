@@ -242,7 +242,8 @@ const canManageCrmSla = computed(() => {
 });
 
 // Agendamento mora no CRM (#1212): função só com Agendamento vê o grupo com
-// esse item; os demais itens seguem cortados pela permissão de cada rota.
+// esse item e mais nenhum; Kanban, Calendário, Meus horários e Meus números só
+// aparecem para quem vê o CRM.
 const crmBookingItems = computed(() =>
   bookingSidebarItems({
     account: currentAccount.value(accountId.value),
@@ -954,29 +955,37 @@ const menuItems = computed(() => {
             label: t('SIDEBAR.CRM'),
             icon: 'i-lucide-kanban-square',
             children: [
-              {
-                name: 'CRM Kanban',
-                label: t('SIDEBAR.CRM_KANBAN'),
-                to: accountScopedRoute('crm_kanban_index'),
-                activeOn: ['crm_kanban_index'],
-              },
-              {
-                name: 'CRM Calendar',
-                label: t('SIDEBAR.CRM_CALENDAR'),
-                to: accountScopedRoute('crm_calendar_index'),
-                activeOn: ['crm_calendar_index'],
-              },
+              ...(canViewCrm.value
+                ? [
+                    {
+                      name: 'CRM Kanban',
+                      label: t('SIDEBAR.CRM_KANBAN'),
+                      to: accountScopedRoute('crm_kanban_index'),
+                      activeOn: ['crm_kanban_index'],
+                    },
+                    {
+                      name: 'CRM Calendar',
+                      label: t('SIDEBAR.CRM_CALENDAR'),
+                      to: accountScopedRoute('crm_calendar_index'),
+                      activeOn: ['crm_calendar_index'],
+                    },
+                  ]
+                : []),
               ...crmBookingItems.value,
-              ...myBookingHoursSidebarItems({
-                account: currentAccount.value(accountId.value),
-                t,
-                accountScopedRoute,
-              }),
-              ...bookingResultsSidebarItems({
-                account: currentAccount.value(accountId.value),
-                t,
-                accountScopedRoute,
-              }),
+              ...(canViewCrm.value
+                ? [
+                    ...myBookingHoursSidebarItems({
+                      account: currentAccount.value(accountId.value),
+                      t,
+                      accountScopedRoute,
+                    }),
+                    ...bookingResultsSidebarItems({
+                      account: currentAccount.value(accountId.value),
+                      t,
+                      accountScopedRoute,
+                    }),
+                  ]
+                : []),
               ...(canViewCrmReports.value
                 ? [
                     {
