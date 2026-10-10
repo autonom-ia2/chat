@@ -53,6 +53,7 @@ class Crm::Subjects::SuggestionResponder
     end
     Crm::Cards::Broadcaster.broadcast(card, evento)
     Crm::Subjects::Notifier.notify(@conversation)
+    Crm::Ai::Observer.new(card: card).schedule_evaluation if @decision.action == 'create'
     card
   end
 

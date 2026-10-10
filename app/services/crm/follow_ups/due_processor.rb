@@ -22,15 +22,20 @@ class Crm::FollowUps::DueProcessor
     log_processing_error(follow_up, e)
   end
 
+  # O que manda mensagem ao cliente passa pela trava da conversa (#1147): uma automática por vez, a outra adiada.
   def dispatch(follow_up)
+    return process_overdue(follow_up) unless ai_followup?(follow_up) || follow_up.auto_send_message?
+
+    Crm::FollowUps::ConversationSendGate.new(follow_up, now: @now).perform { dispatch_automatico(follow_up) }
+  end
+
+  def dispatch_automatico(follow_up)
     if ai_followup?(follow_up)
       process_ai_followup(follow_up)
-    elsif follow_up.auto_send_message? && ai_callback?(follow_up)
+    elsif ai_callback?(follow_up)
       process_ai_callback(follow_up)
-    elsif follow_up.auto_send_message?
-      process_auto_send(follow_up)
     else
-      process_overdue(follow_up)
+      process_auto_send(follow_up)
     end
   end
 

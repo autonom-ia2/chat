@@ -15,6 +15,8 @@ module Crm
         return Result.new(status: :skipped, error: 'pipeline_ai_disabled') unless pipeline_ai_enabled?
         return Result.new(status: :skipped, error: 'debounced') if debounced? && @trigger != 'manual'
         return Result.new(status: :skipped, error: 'card_not_open') unless @card.open?
+        # Multifunil (#1147): só o assunto atual da conversa é avaliado; "Avaliar agora" é escolha da pessoa.
+        return Result.new(status: :skipped, error: 'not_current_subject') unless @trigger == 'manual' || ::Crm::Cards::CurrentSubject.card?(@card)
 
         classification = classify_stage
         result = apply_classification(classification)

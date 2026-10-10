@@ -71,6 +71,8 @@ module Crm
       # retried forever.
       MAX_RETRIES = 3
       CONTACT_DISABLED_REASON = 'contact_disabled'.freeze
+      # Multifunil (#1147): o cliente falando de outro pedido adia a cadência deste card por um ciclo curto.
+      OTHER_SUBJECT_WAIT = 6.hours
 
       def initialize(follow_up:, now: Time.current)
         @follow_up = follow_up
@@ -81,6 +83,9 @@ module Crm
       def perform
         stop_reason = auto_stop_reason
         return stop_cadence(stop_reason) if stop_reason.present?
+
+        outro = customer_replied_about_other_subject
+        return postpone_for_other_subject(outro) if outro
 
         return reschedule(compute_due(@now)) if outside_schedule?(@now)
 
@@ -123,6 +128,9 @@ module Crm
         @now = execution_time
         stop_reason = auto_stop_reason
         return stop_cadence(stop_reason) if stop_reason.present?
+
+        outro = customer_replied_about_other_subject
+        return postpone_for_other_subject(outro) if outro
         return Result.rescheduled(@follow_up) unless Crm::Ai::Config.enabled? && config['enabled']
         return reschedule(compute_due(@now)) if outside_schedule?(@now)
         # A reminder's composition cannot become a customer message (or vice versa).
@@ -237,23 +245,38 @@ module Crm
       end
 
       # A newer inbound message than the last touch we sent (or, before the first
-      # send, than when this follow-up was created) means the customer re-engaged.
+      # send, than when this follow-up was created) means the customer re-engaged — with THIS card only when
+      # it is the conversation's current subject (multifunil, #1147): a reply about another request does not stop it.
       def customer_replied_since_scheduling?
-        conversation = @follow_up.conversation
-        return false if conversation.blank?
-
-        last_incoming = conversation.messages.incoming.reorder(id: :desc).first
-        return false if last_incoming.blank?
-
-        baseline = reply_baseline_at
-        return false if baseline.blank?
-
-        last_incoming.created_at > baseline
+        new_customer_reply.present? && ::Crm::Cards::CurrentSubject.card?(@card)
       end
 
+      # The customer is talking about ANOTHER request of the same conversation: postpone this cadence, never stop it.
+      def customer_replied_about_other_subject
+        reply = new_customer_reply
+        reply if reply && !::Crm::Cards::CurrentSubject.card?(@card)
+      end
+
+      def new_customer_reply
+        conversation = @follow_up.conversation
+        return if conversation.blank?
+
+        last_incoming = conversation.messages.incoming.reorder(id: :desc).first
+        baseline = reply_baseline_at
+        last_incoming if last_incoming && baseline && last_incoming.created_at > baseline
+      end
+
+      # The reply about another request, once postponed for, stops counting (`reply_seen_at`).
       def reply_baseline_at
-        last_sent = state['last_sent_at'].presence
-        (last_sent && parse_time(last_sent)) || @follow_up.created_at
+        [state['last_sent_at'], state['reply_seen_at']].filter_map { |value| parse_time(value) if value.present? }
+                                                       .push(@follow_up.created_at).compact.max
+      end
+
+      def postpone_for_other_subject(reply)
+        next_due = compute_due(@now + OTHER_SUBJECT_WAIT)
+        merge_state!('reply_seen_at' => reply.created_at.iso8601)
+        log_activity('ai_followup_postponed', reason: 'other_subject', next_due_at: next_due.iso8601, touch: touch)
+        reschedule(next_due)
       end
 
       # ---- (a)/(c) compose via the AI brain + single gate ----------------------
