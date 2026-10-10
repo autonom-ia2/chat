@@ -3,7 +3,7 @@ import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import BookingPreviewCard from '../BookingPreviewCard.vue';
 import BookingDestination from '../BookingDestination.vue';
-import BookingLinkActions from '../BookingLinkActions.vue';
+import BookingPageLinks from '../BookingPageLinks.vue';
 import { MISSING_STEP, STEP } from '../../constants';
 
 // Passo 6: a prévia, para onde vai quem marcar e Publicar. Se a publicação
@@ -104,7 +104,7 @@ const fix = item => {
           {{ t('BOOKING.PREVIEW.PUBLISHED_TEXT') }}
         </p>
       </div>
-      <BookingLinkActions v-if="page.public_url" :url="page.public_url" />
+      <BookingPageLinks :page="page" />
     </div>
     <span v-else-if="publishing" class="sr-only" role="status">
       {{ t('BOOKING.PREVIEW.PUBLISHING') }}

@@ -1,10 +1,11 @@
 <script setup>
 import { computed, nextTick, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import BookingLinkActions from './BookingLinkActions.vue';
+import BookingPageLinks from './BookingPageLinks.vue';
 
 // Um cartão por página: nome, situação (No ar, Pausada ou Rascunho), aviso de
-// atenção, o link (só no ar) e, para quem pode mudar, Editar, Pausar/Publicar e
+// atenção, o link (só no ar; com um link por pessoa, um
+// por pessoa) e, para quem pode mudar, Editar, Pausar/Publicar e
 // Excluir (com confirmação).
 const props = defineProps({
   page: { type: Object, required: true },
@@ -95,10 +96,7 @@ const confirmDelete = () => {
       {{ t('BOOKING.CARD.ATTENTION') }}
     </p>
 
-    <BookingLinkActions
-      v-if="published && page.public_url"
-      :url="page.public_url"
-    />
+    <BookingPageLinks v-if="published" :page="page" />
 
     <p
       v-if="notice"

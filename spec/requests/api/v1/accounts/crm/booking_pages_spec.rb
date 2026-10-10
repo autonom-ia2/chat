@@ -448,6 +448,44 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingPages', type: :request do
     end
   end
 
+  # O endereço-base de uma página com um link por pessoa responde 404 por desenho: o painel não pode oferecê-lo.
+  describe 'public links' do
+    def page_from_index
+      call(admin, :get, base)
+      body['payload'].find { |item| item['id'] == page.id }
+    end
+
+    it 'gives a fixed page its own address and no per-person links' do
+      call(admin, :get, "#{base}/#{page.id}")
+      shown = body['payload']
+
+      expect(shown['public_url']).to end_with("/book/#{page.slug}")
+      expect(shown['links']).to eq([])
+      expect(page_from_index['public_url']).to end_with("/book/#{page.slug}")
+    end
+
+    it 'gives a per-person page no base address and only enabled links of people who can still take meetings' do
+      seller = create(:user, account: account, role: :agent, name: 'Bia Vendas')
+      lost_access = create(:user, account: account, role: :agent)
+      paused = create(:user, account: account, role: :agent)
+      page.update!(assignment_mode: :per_agent)
+      seller_link = page.agent_booking_links.create!(account: account, agent: seller)
+      page.agent_booking_links.create!(account: account, agent: lost_access)
+      page.agent_booking_links.create!(account: account, agent: paused, enabled: false)
+      lost_access.account_users.find_by(account: account).update!(custom_role: create(:custom_role, account: account, permissions: ['campaign_view']))
+
+      call(admin, :get, "#{base}/#{page.id}")
+      [body['payload'], page_from_index].each do |shown|
+        expect(shown['public_url']).to be_nil
+        expect(shown['links']).to eq(
+          [{ 'agent_id' => seller.id, 'agent_name' => 'Bia Vendas', 'url' => shown['links'].first['url'], 'enabled' => true }]
+        )
+        expect(shown['links'].first['url']).to end_with("/book/#{seller_link.slug}")
+      end
+      expect(response.body).not_to include(seller.email)
+    end
+  end
+
   describe 'isolation' do
     it 'answers 404 for a page of another account and for a legacy page' do
       other = build_booking_world(account: create(:account), host_name: 'Outra')
