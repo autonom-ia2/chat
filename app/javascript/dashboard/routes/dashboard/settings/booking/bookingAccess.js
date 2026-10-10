@@ -1,7 +1,7 @@
 import { SCHEDULING_PERMISSIONS } from 'dashboard/constants/permissions.js';
 import { BOOKING_V2_FEATURE } from './constants';
 
-// Quem vê Configurações › Agendamento (#1187): o calendário ligado na instalação
+// Quem vê CRM › Agendamento (#1187): o calendário ligado na instalação
 // (CRM_CALENDAR_MEETINGS_ENABLED) E a flag da conta (`crm_booking_v2`), como
 // `Crm::Config.booking_v2_enabled?` no backend. Desligada, a tela some e a
 // gaveta antiga do Kanban continua como hoje.
@@ -11,10 +11,12 @@ export const isBookingV2Available = account =>
 
 // Administrador ou função com agendamento_view/_manage. Agente sem função não
 // vê (J8-A3): o roteador corta pela permissão da rota, e aqui o item nem nasce.
+// A mesma regra abre o botão Agendamento do Calendário (#1212).
 export const canSeeBookingSettings = ({ isAdministrator, permissions }) =>
   isAdministrator ||
   SCHEDULING_PERMISSIONS.some(key => permissions.includes(key));
 
+// Fica no grupo CRM, logo abaixo do Calendário (#1212).
 export const bookingSidebarItems = ({
   account,
   isAdministrator,
@@ -29,9 +31,8 @@ export const bookingSidebarItems = ({
 
   return [
     {
-      name: 'Settings Booking',
+      name: 'CRM Booking',
       label: t('SIDEBAR.BOOKING'),
-      icon: 'i-lucide-calendar-check',
       to: accountScopedRoute('settings_booking'),
       activeOn: ['settings_booking', 'settings_booking_results'],
     },

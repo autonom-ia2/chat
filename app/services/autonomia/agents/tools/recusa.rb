@@ -77,7 +77,19 @@ module Autonomia::Agents::Tools::Recusa
                           '(CEP fora do formato, inexistente ou de cidade de CEP único)',
     'consulta_de_cep_indisponivel' => 'o portal não respondeu à consulta de CEP',
     'atividade_sem_termos' => 'a busca de atividade veio sem termo de busca utilizável',
-    'busca_de_atividade_indisponivel' => 'o portal não respondeu à busca de atividade'
+    'busca_de_atividade_indisponivel' => 'o portal não respondeu à busca de atividade',
+    # #1196: a agenda da IA (`horarios_disponiveis`, `agendar_reuniao`).
+    'agenda_sem_pagina' => 'a página de agendamento do agente não existe nesta conta, não é página nova ou a agenda está desligada',
+    'agenda_pausada' => 'a página de agendamento está pausada ou sem responsável que possa atender',
+    'agenda_sem_horarios' => 'a página de agendamento não tem horário livre na janela',
+    'agenda_parametro_invalido' => 'data, horário, duração ou local fora do formato ou do que a página oferece',
+    'agenda_sem_conversa' => 'não há conversa para marcar a reunião (Testar, Copiloto, playground)',
+    'agenda_sem_telefone' => 'o contato da conversa não tem telefone válido e o modelo não mandou um',
+    'agenda_sem_email' => 'o local escolhido (Meet/Teams) pede o e-mail do cliente e o contato não tem nem o modelo mandou um',
+    'agenda_turno_de_evento' => 'o turno foi acionado por um aviso do sistema, e a agenda não marca reunião que o cliente não pediu',
+    'agenda_horario_ocupado' => 'o horário escolhido foi ocupado antes da reserva; o modelo recebeu novas opções',
+    'agenda_limite_de_reunioes' => 'o telefone já tem o máximo de reuniões abertas nesta agenda',
+    'agenda_indisponivel' => 'a reserva falhou por um motivo do sistema (responsável, funil ou calendário)'
   }.freeze
   SEM_DESCRICAO = 'motivo fora do catálogo: falta a frase em MOTIVOS'.freeze
   DESCONHECIDA = 'desconhecida'.freeze

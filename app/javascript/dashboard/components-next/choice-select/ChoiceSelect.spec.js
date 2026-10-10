@@ -39,6 +39,13 @@ describe('ChoiceSelect', () => {
     expect(trigger.attributes('aria-label')).toBe('Idioma preferido');
   });
 
+  it('dá ao botão o id pedido, para um <label for> visível', () => {
+    wrapper = mountSelect('pt_BR', { triggerId: 'campo-idioma' });
+    expect(wrapper.get('[role="combobox"]').attributes('id')).toBe(
+      'campo-idioma'
+    );
+  });
+
   it('abre com seta para baixo na opção escolhida e confirma com Enter', async () => {
     wrapper = mountSelect();
     const trigger = wrapper.get('[role="combobox"]');

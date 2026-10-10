@@ -30,6 +30,11 @@ RSpec.describe 'Api::V1::Accounts::Crm::Meetings location', type: :request do
     expect(payload.keys).to include('provider', 'online_meeting_url', 'guests', 'scheduled_by')
   end
 
+  # J6-A4 (#1196): a reunião marcada pela IA é identificável no card.
+  it 'devolve a origem da reunião' do
+    expect(fetch(create_internal_meeting(world: world, starts_at: 2.days.from_now, source: 'ai'))).to include('source' => 'ai')
+  end
+
   it 'devolve rótulo e endereço vazios quando a reunião não tem local gravado' do
     payload = fetch(create_internal_meeting(world: world, starts_at: 2.days.from_now))
 

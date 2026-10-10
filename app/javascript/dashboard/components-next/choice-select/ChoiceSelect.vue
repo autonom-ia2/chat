@@ -39,6 +39,8 @@ const props = defineProps({
   // toque continua com 44 px. A largura, nos dois tamanhos, é a da maior opção
   // (como no select nativo), a menos que quem usa defina outra.
   compact: { type: Boolean, default: false },
+  // id do botão, para um <label for> visível de quem usa apontar para o campo.
+  triggerId: { type: String, default: undefined },
 });
 
 // Como o @change do select nativo: só quando a escolha muda, já com o
@@ -309,6 +311,7 @@ onClickOutside(
       {{ medida }}
     </span>
     <button
+      :id="triggerId"
       ref="trigger"
       type="button"
       role="combobox"
