@@ -15,11 +15,11 @@ Uma caixa de WhatsApp oficial precisava sair do portfólio da Meta da Autonom.ia
   - erro tipado quando o número devolvido não é o da caixa;
   - `ready_to_receive` na resposta, porque a assinatura do webhook falha em silêncio;
   - quando a conta muda, descarta os modelos da conta antiga e agenda a sincronização dos novos.
-- **Nome da caixa:** o serviço do Chatwoot renomeia a caixa para o nome verificado da conta nova. Comportamento mantido; em aberto com o Rodrigo.
+- **Nome da caixa:** o serviço do Chatwoot renomeia a caixa para o nome verificado na Meta. Por decisão do Rodrigo (10/10/2026), a caixa mantém o nome escolhido pela operação, que é usado no dia a dia. `Whatsapp::SwitchAccount::KeepInboxName` (prepend em `Whatsapp::ReauthorizationService`) deixa de repassar esse nome. Vale para toda reconexão.
 
 ## Validação local
 
-- RSpec: `spec/services/whatsapp/switch_account`, `spec/controllers/api/v1/accounts/whatsapp/`, `embedded_signup_service_spec`, `reauthorization_service_spec`, `webhook_setup_service_spec` e `models/channel/whatsapp_spec`. 102 exemplos, 0 falhas.
+- RSpec: `spec/services/whatsapp/switch_account`, `spec/controllers/api/v1/accounts/whatsapp/`, `embedded_signup_service_spec`, `reauthorization_service_spec`, `webhook_setup_service_spec` e `models/channel/whatsapp_spec`. 103 exemplos, 0 falhas.
 - Vitest: `settings/inbox/` com timeout maior, por carga da máquina. 14 arquivos e 170 testes passaram. Depois disso, o spec da tela nova (`WhatsappSwitchAccount.spec.js`) foi ampliado para 11 testes, que passaram.
 - RuboCop nos arquivos novos: sem ocorrências. ESLint: 0 erros, e o `--fix` só mudou formatação.
 - `pnpm i18n:fork:check` passou, e `pnpm guia:check` está em dia (sem rota nova).
