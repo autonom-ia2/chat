@@ -82,39 +82,86 @@ RSpec.describe CampaignImports::AudienceValidator, :aggregate_failures do
     end
   end
 
-  describe 'cells with several values and files without a header' do
-    it 'takes the first valid email of the cell and never stores the others in clear' do
+  describe 'customer_base reading (#1246)' do
+    def import_for(content, customer_base:, **answers)
       account, user = create_account_and_user
+      account.enable_features!('customer_base') if customer_base
       enable_audience_jev
-      stub_audience_jev(phone: 'none', email: 'column_1', name: 'column_0', company: 'none')
-      content = "Nome,Emails\nAna,ana@alfa.com.br; ana.souza@beta.com.br\nBia,bia@; bia@\n"
-      campaign_import = create_audience_import(account: account, user: user, content: content)
-
-      described_class.new(campaign_import).perform
-
-      rows = campaign_import.reload.campaign_import_rows.order(:row_number)
-      expect(campaign_import.valid_rows).to eq(1)
-      expect(rows.pluck(:email_masked)).to eq(['a**@alfa.com.br', 'b**@; b**@'])
+      stub_audience_jev(**answers)
+      create_audience_import(account: account, user: user, content: content)
     end
 
-    it 'asks for the columns of a file without a header and keeps its first line as data' do
-      account, user = create_account_and_user
-      enable_audience_jev
-      stub_audience_jev(phone: 'column_1', email: 'none', name: 'column_0', company: 'none')
-      content = "Ana,11987654321\nBia,21987654321\n"
-      campaign_import = create_audience_import(account: account, user: user, content: content)
+    let(:multi_email) { "Nome,Emails\nAna,ana@alfa.com.br; ana.souza@beta.com.br\nBia,bia@; bia@\nCaio,caio@gama.com.br\n" }
+    let(:legacy_phone) { "Nome,Celular\nAna,(11) 8765-4321\nBia,21987654321\n" }
+    let(:headless) { "Ana,11987654321\nBia,21987654321\n" }
 
-      described_class.new(campaign_import).perform
+    context 'when on' do
+      it 'takes the first valid email of the cell and never stores the others in clear' do
+        campaign_import = import_for(multi_email, customer_base: true, phone: 'none', email: 'column_1', name: 'column_0', company: 'none')
 
-      expect(campaign_import.reload).to be_needs_column_choice
-      expect(campaign_import.schema_resolution).to include('header_row' => 0, 'needs_confirmation' => true)
+        described_class.new(campaign_import).perform
 
-      manual = { 'name' => 0, 'phone' => 1, 'email' => nil, 'company' => nil }
-      campaign_import.update!(schema_resolution: campaign_import.schema_resolution.merge('manual_mapping' => manual))
-      described_class.new(campaign_import).perform
+        rows = campaign_import.reload.campaign_import_rows.order(:row_number)
+        expect(campaign_import.valid_rows).to eq(2)
+        expect(rows.pluck(:email_masked)).to eq(['a**@alfa.com.br', 'b**@; b**@', 'c***@gama.com.br'])
+      end
 
-      expect(campaign_import.reload).to be_ready_to_confirm
-      expect(campaign_import.valid_rows).to eq(2)
+      it 'restores the ninth digit of a legacy mobile and counts it in the summary' do
+        campaign_import = import_for(legacy_phone, customer_base: true, phone: 'column_1', email: 'none', name: 'column_0', company: 'none')
+
+        described_class.new(campaign_import).perform
+
+        campaign_import.reload
+        expect(campaign_import.valid_rows).to eq(2)
+        expect(campaign_import.validation_summary['ninth_digit_added']).to eq(1)
+      end
+
+      it 'asks for the columns of a file without a header and keeps its first line as data' do
+        campaign_import = import_for(headless, customer_base: true, phone: 'column_1', email: 'none', name: 'column_0', company: 'none')
+
+        described_class.new(campaign_import).perform
+
+        expect(campaign_import.reload).to be_needs_column_choice
+        expect(campaign_import.schema_resolution).to include('header_row' => 0, 'needs_confirmation' => true)
+
+        manual = { 'name' => 0, 'phone' => 1, 'email' => nil, 'company' => nil }
+        campaign_import.update!(schema_resolution: campaign_import.schema_resolution.merge('manual_mapping' => manual))
+        described_class.new(campaign_import).perform
+
+        expect(campaign_import.reload).to be_ready_to_confirm
+        expect(campaign_import.valid_rows).to eq(2)
+      end
+    end
+
+    context 'when off' do
+      it 'keeps a cell with two emails invalid and masked as before' do
+        campaign_import = import_for(multi_email, customer_base: false, phone: 'none', email: 'column_1', name: 'column_0', company: 'none')
+
+        described_class.new(campaign_import).perform
+
+        rows = campaign_import.reload.campaign_import_rows.order(:row_number)
+        expect(campaign_import.valid_rows).to eq(1)
+        expect(rows.pluck(:email_masked)).to eq(['a**@alfa.com.br; ana.souza@beta.com.br', 'b**@; bia@', 'c***@gama.com.br'])
+      end
+
+      it 'keeps refusing a legacy mobile and adds nothing to the summary' do
+        campaign_import = import_for(legacy_phone, customer_base: false, phone: 'column_1', email: 'none', name: 'column_0', company: 'none')
+
+        described_class.new(campaign_import).perform
+
+        campaign_import.reload
+        expect(campaign_import.valid_rows).to eq(1)
+        expect(campaign_import.validation_summary).not_to have_key('ninth_digit_added')
+      end
+
+      it 'keeps refusing a file without a header' do
+        campaign_import = import_for(headless, customer_base: false, phone: 'column_1', email: 'none', name: 'column_0', company: 'none')
+
+        described_class.new(campaign_import).perform
+
+        expect(campaign_import.reload).to be_validation_failed
+        expect(campaign_import.validation_summary['errors']).to have_key('empty_file')
+      end
     end
   end
 

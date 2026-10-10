@@ -1,6 +1,8 @@
-# Grava o resultado da bateria (#1246): resultados.json com tudo e RELATORIO.md para ler.
+# Grava o resultado da bateria (#1246): resultados.json com tudo e RELATORIO.md para ler, com a
+# leitura nova (flag customer_base) ao lado da clássica (sem a flag, igual ao main).
 class BaseDeClientesEval::Relatorio
   ORDEM = %w[critico sugestao_errada_confiante sugestao_errada parou_com_erro perguntou_a_toa perfeito].freeze
+  MOTORES = { 'nova' => 'Leitura nova (customer_base)', 'classica' => 'Leitura clássica (sem a flag)' }.freeze
 
   def initialize(resultados, gasto:, chamadas:, tokens:)
     @resultados = resultados
@@ -16,16 +18,13 @@ class BaseDeClientesEval::Relatorio
 
   private
 
-  def jev
-    @resultados.select { |resultado| resultado[:motor] == 'jev' }
-  end
-
-  def sem_jev
-    @resultados.select { |resultado| resultado[:motor] == 'sem_jev' }
+  def do_motor(motor)
+    @resultados.select { |resultado| resultado[:motor] == motor }
   end
 
   def markdown
-    [cabecalho, placar('Com o Jev', jev), placar('Sem o Jev (só os apelidos de cabeçalho)', sem_jev), tabela, problemas].join("\n\n")
+    placares = MOTORES.filter_map { |motor, titulo| placar(titulo, do_motor(motor)) if do_motor(motor).any? }
+    [cabecalho, *placares, tabela, problemas].join("\n\n")
   end
 
   def cabecalho
@@ -38,41 +37,53 @@ class BaseDeClientesEval::Relatorio
   end
 
   def placar(titulo, lista)
-    return "## #{titulo}\n\nSem resultados." if lista.empty?
-
     contagem = lista.pluck(:veredicto).tally
     linhas = ORDEM.filter_map { |veredicto| "| #{veredicto} | #{contagem[veredicto]} |" if contagem[veredicto] }
-    "## #{titulo} (#{lista.size} leituras)\n\n| Veredicto | Leituras |\n|---|---|\n#{linhas.join("\n")}"
+    "## #{titulo} (#{lista.size} leituras)\n\n| Veredicto | Leituras |\n|---|---|\n#{linhas.join("\n")}\n\n#{linhas_do_placar(lista)}"
+  end
+
+  # Linhas da primeira repetição de cada caso (as linhas não dependem da repetição, só as colunas).
+  def linhas_do_placar(lista)
+    primeiras = lista.select { |resultado| resultado[:repeticao] == 1 }
+    soma = ->(chave) { primeiras.sum { |resultado| resultado.dig(:linhas, chave) || 0 } }
+    alcance = primeiras.sum { |resultado| resultado[:alcance_humano] }
+    acertos = soma.call(:validas) - soma.call(:inventadas)
+    "Linhas: #{acertos} de #{alcance} alcançadas · perdidas #{alcance - acertos} · **inventadas #{soma.call(:inventadas)}**"
   end
 
   def tabela
-    linhas = jev.group_by { |resultado| resultado[:caso] }.map do |caso, leituras|
-      base = sem_jev.find { |resultado| resultado[:caso] == caso }
-      "| #{caso} | #{leituras.first[:nivel]} | #{leituras.first[:titulo]} | #{veredictos(leituras)} | #{base&.dig(:veredicto)} | " \
-        "#{linhas_texto(leituras.first)} | #{leituras.filter_map { |leitura| leitura[:segundos] }.max} |"
+    linhas = @resultados.group_by { |resultado| resultado[:caso] }.map do |caso, leituras|
+      nova = leituras.select { |leitura| leitura[:motor] == 'nova' }
+      classica = leituras.select { |leitura| leitura[:motor] == 'classica' }
+      "| #{caso} | #{leituras.first[:nivel]} | #{leituras.first[:titulo]} | #{veredictos(nova)} | #{linhas_texto(nova.first)} | " \
+        "#{veredictos(classica)} | #{linhas_texto(classica.first)} |"
     end
-    "## Por caso\n\n| Caso | Nível | Planilha | Com Jev | Sem Jev | Linhas alcançadas / uma pessoa alcançaria | Seg. |\n" \
+    "## Por caso\n\n| Caso | Nível | Planilha | Nova | Linhas (nova) | Clássica | Linhas (clássica) |\n" \
       "|---|---|---|---|---|---|---|\n#{linhas.join("\n")}"
   end
 
   def veredictos(leituras)
+    return '—' if leituras.empty?
+
     leituras.pluck(:veredicto).tally.map { |veredicto, total| total > 1 ? "#{veredicto} ×#{total}" : veredicto }.join(', ')
   end
 
   def linhas_texto(resultado)
-    linhas = resultado[:linhas]
+    linhas = resultado&.dig(:linhas)
     return '—' unless linhas
 
-    texto = "#{linhas[:validas]} / #{resultado[:alcance_humano]}"
+    texto = "#{linhas[:validas] - linhas[:inventadas]} / #{resultado[:alcance_humano]}"
+    texto += " (**#{linhas[:inventadas]} inventadas**)" if linhas[:inventadas].positive?
     texto += " (#{linhas[:repetidas]} repetidas)" if linhas[:repetidas].positive?
     texto
   end
 
   def problemas
-    itens = jev.reject { |resultado| resultado[:veredicto] == 'perfeito' }.uniq { |resultado| [resultado[:caso], resultado[:veredicto]] }
-    return "## Problemas\n\nNenhum." if itens.empty?
+    itens = do_motor('nova').reject { |resultado| resultado[:veredicto] == 'perfeito' }
+                            .uniq { |resultado| [resultado[:caso], resultado[:veredicto]] }
+    return "## Problemas da leitura nova\n\nNenhum." if itens.empty?
 
-    "## Problemas\n\n#{itens.map { |resultado| problema(resultado) }.join("\n")}"
+    "## Problemas da leitura nova\n\n#{itens.map { |resultado| problema(resultado) }.join("\n")}"
   end
 
   def problema(resultado)

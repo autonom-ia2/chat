@@ -1,19 +1,20 @@
 # A spreadsheet cell may hold more than one phone or email ("a@x.com; b@y.com",
-# "(11) 98765-4321 / (11) 3456-7890"). The first part that the normalizer accepts is the
-# contact; the whole cell is tried first, so a single value never changes meaning.
+# "(11) 98765-4321 / (11) 3456-7890"). The first part that the block accepts is the contact; the
+# whole cell is tried first, so a single value never changes meaning. Used by the customer_base
+# reading (CampaignImports::ContactReading).
 module CampaignImports::CellValues
   SEPARATORS = [';', ',', '/', '|', "\n"].freeze
 
   module_function
 
-  # normalizer: CampaignImports::PhoneNormalizer or EmailCampaigns::EmailNormalizer (anything with normalize! and Error).
-  # Raises the error of the whole cell when no part is valid, so the row keeps the same reason.
-  def normalize!(normalizer, value)
-    normalizer.normalize!(value)
-  rescue normalizer::Error => e
+  # error: the class the block raises for an invalid value. Raises the error of the whole cell
+  # when no part is valid, so the row keeps the same reason.
+  def first_valid(value, error)
+    yield(value)
+  rescue error => e
     parts(value).each do |part|
-      return normalizer.normalize!(part)
-    rescue normalizer::Error
+      return yield(part)
+    rescue error
       next
     end
     raise e

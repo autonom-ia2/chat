@@ -93,6 +93,17 @@ module BaseDeClientesEval::Dados
     celular(sorteio(CELULAR_FORMATOS.keys))
   end
 
+  # Celular dos EUA nos jeitos de escrever de lá. Não é número brasileiro: importar como +55 seria
+  # mandar mensagem para um estranho.
+  def celular_exterior
+    area = sorteio(%w[917 718 646 212 305 786 954 617])
+    linha = "#{rng.rand(6..9)}#{digitos(2)}"
+    final = digitos(4)
+    valor = sorteio(["#{area} #{linha} #{final}", "(#{area}) #{linha}-#{final}", "#{area}-#{linha}-#{final}",
+                     "+1 #{area} #{linha} #{final}", "+1 (#{area}) #{linha}-#{final}"])
+    Celula.new(valor: valor, alcanca: false)
+  end
+
   def fixo
     Celula.new(valor: "(#{sorteio(DDDS)}) #{rng.rand(2..5)}#{digitos(3)}-#{digitos(4)}", alcanca: false)
   end

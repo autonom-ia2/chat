@@ -4,7 +4,8 @@
 # follow it. The choice is structural (contact data below, known headers, filled cells), it
 # never reads the meaning of a header.
 #
-# A row that comes after the first data row is data, not a header (a person without phone or
+# With the customer_base reading (#1246, CampaignImports::ContactReading):
+# a row that comes after the first data row is data, not a header (a person without phone or
 # email, a totals line). A data row has contact data and at least two filled cells, so a title
 # such as "Clientes — (11) 98765-4321" in one cell above the header does not count.
 #
@@ -22,22 +23,24 @@ class CampaignImports::HeaderLocator
     end
   end
 
-  def initialize(parsed)
+  def initialize(parsed, reading: CampaignImports::ContactReading::CLASSIC)
     @parsed = parsed
+    @reading = reading
   end
 
   def perform(header_row: nil, table_index: nil)
     return pinned(header_row, table_index.to_i) if header_row
 
     candidates = tables.each_with_index.flat_map { |table, index| table_candidates(table, index) }
-    candidates.max_by { |candidate| score(candidate) } || untitled_candidate
+    best = candidates.max_by { |candidate| score(candidate) }
+    best || (untitled_candidate if @reading.customer_base?)
   end
 
   private
 
   def pinned(header_row, table_index)
     table = tables[table_index]
-    return untitled(table, table_index) if table && header_row == UNTITLED_HEADER_ROW
+    return untitled(table, table_index) if table && header_row == UNTITLED_HEADER_ROW && @reading.customer_base?
 
     header_index = table&.rows&.index { |row| row.row_number == header_row }
     raise Error, 'header_row_not_found' unless header_index
@@ -46,7 +49,7 @@ class CampaignImports::HeaderLocator
   end
 
   def table_candidates(table, table_index)
-    contact_rows = table.rows.map { |row| row.values.any? { |value| CampaignImports::ContactValues.contact?(value) } }
+    contact_rows = table.rows.map { |row| row.values.any? { |value| @reading.contact?(value) } }
     last_contact_row = contact_rows.rindex(true)
     first_data_row = first_data_row(table, contact_rows)
     positions = table.rows.each_index.select { |index| header_position?(table, contact_rows, first_data_row, index) }
@@ -64,7 +67,7 @@ class CampaignImports::HeaderLocator
 
   # No header row: the table with the most contact rows, read whole.
   def untitled_candidate
-    counts = tables.map { |table| table.rows.count { |row| row.values.any? { |value| CampaignImports::ContactValues.contact?(value.to_s) } } }
+    counts = tables.map { |table| table.rows.count { |row| row.values.any? { |value| @reading.contact?(value.to_s) } } }
     best = counts.each_index.max_by { |index| [counts[index], -index] }
     untitled(tables[best], best) if best && counts[best].positive?
   end
@@ -96,7 +99,10 @@ class CampaignImports::HeaderLocator
     strings.any? { |value| value.strip.present? } && strings.all? { |value| CampaignImports::ContactValues.readable?(value) }
   end
 
+  # Only the customer_base reading stops looking for the header at the first data row.
   def first_data_row(table, contact_rows)
+    return unless @reading.customer_base?
+
     table.rows.each_index.find { |index| contact_rows[index] && filled_cells(table.rows[index]) >= MIN_DATA_ROW_CELLS }
   end
 

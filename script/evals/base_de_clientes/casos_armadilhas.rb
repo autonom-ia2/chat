@@ -131,10 +131,15 @@ module BaseDeClientesEval::Casos::Armadilhas
   end
 
   caso 'c46', 'Título com telefone e e-mail acima do cabeçalho', nivel: 3, formato: 'xlsx',
-                                                                   alvos: { phone: 'Celular', email: 'E-mail', name: 'Nome' },
-                                                                   nota: 'Papel timbrado: o contato da empresa no título não é dado.' do
+                                                                 alvos: { phone: 'Celular', email: 'E-mail', name: 'Nome' },
+                                                                 nota: 'Papel timbrado: o contato da empresa no título não é dado.' do
     aba(%w[Nome Celular E-mail], 40, antes: [['Corretora Alfa — (11) 98765-4321 — contato@alfa.com.br'], []]) do
       [D.nome, D.celular, D.email]
     end
+  end
+
+  caso 'c47', 'Clientes no exterior: celulares dos EUA no meio', nivel: 3, alvos: { phone: 'Celular', email: 'E-mail', name: 'Nome' },
+                                                                 nota: 'Número de fora não pode virar +55.' do
+    aba(%w[Nome Celular E-mail], 40) { [D.nome, D.chance(0.3) ? D.celular_exterior : D.celular, D.chance(0.5) ? D.email : vazio] }
   end
 end

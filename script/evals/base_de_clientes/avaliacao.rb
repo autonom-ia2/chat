@@ -12,7 +12,7 @@
 class BaseDeClientesEval::Avaliacao
   ALVOS = %i[phone email name company].freeze
 
-  # rodada: { motor: 'jev' | 'sem_jev', repeticao:, segundos:, jev_bruto: (a resposta do Jev, quando houve) }
+  # rodada: { motor: 'nova' | 'classica', leitura: ContactReading, repeticao:, segundos:, jev_bruto: (a resposta do Jev) }
   def initialize(caso, leitura, rodada)
     @caso = caso
     @leitura = leitura
@@ -98,25 +98,35 @@ class BaseDeClientesEval::Avaliacao
     perguntou? ? 'sugestao_errada_confiante' : 'critico'
   end
 
-  # Quantas linhas o motor consegue alcançar com as colunas que escolheu (ou sugeriu), contra
-  # quantas uma pessoa alcançaria. Repetidas contam aqui; o validador fica com a primeira.
+  # Linha a linha, contra o gabarito: perdidas são as que uma pessoa alcançaria e o motor não;
+  # inventadas, as que o motor aceita sem ninguém alcançável nela (um número do exterior lido como +55).
+  # Repetidas contam aqui; o validador fica com a primeira.
   def linhas
     telefone, email = @leitura.mapping.values_at('phone', 'email')
-    validas = @leitura.rows.select { |linha| alcanca?(linha, telefone, email) }
-    chaves = validas.map { |linha| chave(linha, telefone, email) }
-    { total: @leitura.rows.size, validas: validas.size, repetidas: chaves.size - chaves.uniq.size,
-      perdidas: [@caso.alcance_humano - validas.size, 0].max }
+    aceitas = @leitura.rows.select { |linha| alcanca?(linha, telefone, email) }
+    acertos = aceitas.count { |linha| humano?(linha) }
+    chaves = aceitas.map { |linha| chave(linha, telefone, email) }
+    { total: @leitura.rows.size, validas: aceitas.size, repetidas: chaves.size - chaves.uniq.size,
+      perdidas: @caso.alcance_humano - acertos, inventadas: aceitas.size - acertos }
+  end
+
+  def humano?(linha)
+    @caso.alcance_por_linha.fetch(linha.row_number, false)
+  end
+
+  def leitura_de_contato
+    @rodada.fetch(:leitura)
   end
 
   def alcanca?(linha, telefone, email)
-    CampaignImports::ContactValues.phone?(valor(linha, telefone)) || CampaignImports::ContactValues.email?(valor(linha, email))
+    leitura_de_contato.phone?(valor(linha, telefone)) || leitura_de_contato.email?(valor(linha, email))
   end
 
   def chave(linha, telefone, email)
     numero = valor(linha, telefone)
-    return valor(linha, email).strip.downcase unless CampaignImports::ContactValues.phone?(numero)
+    return valor(linha, email).strip.downcase unless leitura_de_contato.phone?(numero)
 
-    CampaignImports::CellValues.normalize!(CampaignImports::PhoneNormalizer, numero).phone_number
+    leitura_de_contato.phone(numero).phone_number
   end
 
   def valor(linha, indice)

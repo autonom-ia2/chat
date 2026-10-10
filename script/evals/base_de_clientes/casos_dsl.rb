@@ -5,7 +5,8 @@
 # - nil: o certo é "não tem essa coluna".
 # pode_perguntar: alvos em que perguntar à pessoa é aceitável (há duas leituras honestas).
 # decisao :auto: o motor deveria resolver sozinho; :perguntar: o certo é parar e pedir a escolha.
-BaseDeClientesEval::Aba = Struct.new(:nome, :linhas, :alcance, :cabecalho, keyword_init: true)
+# alcance_por_linha: { número da linha na planilha => uma pessoa alcançaria quem está nela? }
+BaseDeClientesEval::Aba = Struct.new(:nome, :linhas, :alcance, :cabecalho, :alcance_por_linha, keyword_init: true)
 
 BaseDeClientesEval::Caso = Struct.new(:id, :titulo, :nivel, :formato, :opcoes, :abas, :aba_alvo, :alvos, :pode_perguntar, :decisao,
                                       :nota, keyword_init: true) do
@@ -15,6 +16,10 @@ BaseDeClientesEval::Caso = Struct.new(:id, :titulo, :nivel, :formato, :opcoes, :
 
   def alcance_humano
     abas.fetch(aba_alvo).alcance
+  end
+
+  def alcance_por_linha
+    abas.fetch(aba_alvo).alcance_por_linha
   end
 end
 
@@ -38,12 +43,16 @@ module BaseDeClientesEval::CasosDsl
   # O bloco devolve uma linha; células de contato são Dados::Celula, o resto é valor solto.
   def aba(cabecalhos, linhas, nome: 'Planilha1', antes: [], depois: [], sem_cabecalho: false, &)
     corpo = Array.new(linhas, &)
-    alcance = corpo.count { |linha| linha.any? { |celula| celula.is_a?(BaseDeClientesEval::Dados::Celula) && celula.alcanca } }
     topo = sem_cabecalho ? antes : [*antes, cabecalhos]
-    BaseDeClientesEval::Aba.new(nome: nome, linhas: [*topo, *corpo.map { |linha| valores(linha) }, *depois], alcance: alcance,
-                                cabecalho: sem_cabecalho ? antes.size : antes.size + 1)
+    alcance_por_linha = corpo.each_with_index.to_h { |linha, indice| [topo.size + indice + 1, alcancavel?(linha)] }
+    BaseDeClientesEval::Aba.new(nome: nome, linhas: [*topo, *corpo.map { |linha| valores(linha) }, *depois],
+                                alcance: alcance_por_linha.values.count(true), cabecalho: topo.size, alcance_por_linha: alcance_por_linha)
   end
   # rubocop:enable Metrics/ParameterLists
+
+  def alcancavel?(linha)
+    linha.any? { |celula| celula.is_a?(BaseDeClientesEval::Dados::Celula) && celula.alcanca }
+  end
 
   def valores(linha)
     linha.map { |celula| celula.is_a?(BaseDeClientesEval::Dados::Celula) ? celula.valor : celula }

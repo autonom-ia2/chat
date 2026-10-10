@@ -39,16 +39,31 @@ RSpec.describe TypesafeAi::AudienceSchemaResolver, :aggregate_failures do
     ).once
   end
 
-  it 'sends the share of valid mobiles and emails so a generic header still reads as a phone column' do
-    allow(client).to receive(:evaluate).and_return(
-      response(phone: answer('column_1'), email: answer('none'), name: answer('column_0'), company: answer('none'))
-    )
+  describe 'share_hint (customer_base reading, #1246)' do
+    before do
+      allow(client).to receive(:evaluate).and_return(
+        response(phone: answer('column_1'), email: answer('none'), name: answer('column_0'), company: answer('none'))
+      )
+    end
 
-    resolver.resolve(candidate)
+    it 'sends the share of valid values and the phone question that trusts it when on' do
+      described_class.new(client: client, model: 'jev-1.13.0', share_hint: true).resolve(candidate)
 
-    expect(client).to have_received(:evaluate) do |state:, **|
-      expect(state[:profiles][1]).to include(valid_phone_share: 1.0, valid_email_share: 0.0)
-      expect(state[:profiles][0]).to include(valid_phone_share: 0.0)
+      expect(client).to have_received(:evaluate) do |state:, questions:, **|
+        expect(state[:profiles][1]).to include(valid_phone_share: 1.0, valid_email_share: 0.0)
+        expect(state[:task]).to eq(described_class::STATE_TASK_WITH_SHARE)
+        expect(questions[:phone_column][:instructions]).to eq(described_class::PHONE_WITH_SHARE)
+      end
+    end
+
+    it 'sends the request every account has when off' do
+      resolver.resolve(candidate)
+
+      expect(client).to have_received(:evaluate) do |state:, questions:, **|
+        expect(state[:profiles][1].keys).to eq(%i[non_blank_count valid_phone_count valid_email_count examples])
+        expect(state[:task]).to eq(described_class::STATE_TASK)
+        expect(questions[:phone_column][:instructions]).to eq(described_class::TARGETS[:phone])
+      end
     end
   end
 

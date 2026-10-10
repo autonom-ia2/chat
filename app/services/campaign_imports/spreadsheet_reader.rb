@@ -25,16 +25,21 @@ class CampaignImports::SpreadsheetReader
 
   # explicit_mapping: { 'name' => Integer|nil, 'phone' => ..., 'email' => ..., 'company' => ... }
   # pinned_header: { header_row: 3, table_index: 0 } keeps the header found before the user chose the columns.
-  def initialize(parsed, explicit_mapping: nil, pinned_header: {}, ai_resolver: nil, jev_enabled: CampaignImports::JevConfig.available?)
+  # reading: CampaignImports::ContactReading of the account (CLASSIC unless the account has customer_base).
+  # rubocop:disable Metrics/ParameterLists -- the reader's options, each with its default
+  def initialize(parsed, explicit_mapping: nil, pinned_header: {}, ai_resolver: nil, jev_enabled: CampaignImports::JevConfig.available?,
+                 reading: CampaignImports::ContactReading::CLASSIC)
+    @reading = reading
     @parsed = parsed
     @explicit_mapping = explicit_mapping&.to_h&.transform_keys(&:to_s)
     @pinned_header = pinned_header.to_h.symbolize_keys.slice(:header_row, :table_index)
     @ai_resolver = ai_resolver
     @jev_enabled = jev_enabled
   end
+  # rubocop:enable Metrics/ParameterLists
 
   def perform
-    candidate = CampaignImports::HeaderLocator.new(@parsed).perform(**@pinned_header)
+    candidate = CampaignImports::HeaderLocator.new(@parsed, reading: @reading).perform(**@pinned_header)
     raise Error, 'empty_file' if candidate.nil? || candidate.rows.empty?
 
     columns = column_profiles(candidate)
@@ -53,8 +58,8 @@ class CampaignImports::SpreadsheetReader
       values = column_values(candidate.rows, index)
       {
         index: index, header: header, non_blank_count: values.size,
-        valid_phone_count: values.count { |value| CampaignImports::ContactValues.phone?(value) },
-        valid_email_count: values.count { |value| CampaignImports::ContactValues.email?(value) },
+        valid_phone_count: values.count { |value| @reading.phone?(value) },
+        valid_email_count: values.count { |value| @reading.email?(value) },
         examples: masked.fetch(index).fetch(:examples)
       }
     end
@@ -135,7 +140,7 @@ class CampaignImports::SpreadsheetReader
   end
 
   def ai_resolver
-    @ai_resolver || TypesafeAi::AudienceSchemaResolver.new
+    @ai_resolver || TypesafeAi::AudienceSchemaResolver.new(share_hint: @reading.customer_base?)
   end
 
   def target_entry(index, source:, confident:, confidence: nil)
