@@ -28,4 +28,17 @@ RSpec.describe Rack::Attack do
     expect(chave(nome, '/public/api/v2/invites/AB23cd45', metodo: 'POST')).to be_nil
     expect(chave(nome, '/public/api/v2/invites/AB23cd45/other', metodo: 'POST')).to be_nil
   end
+
+  # #1192: gestão da reunião pelo mesmo link (confirmar, cancelar, remarcar, parar avisos), por hora.
+  it 'conta os POST de gestão da reunião por IP e nada mais' do
+    nome = 'public_booking_invites/manage_ip'
+
+    %w[confirm cancel reschedule stop_notices].each do |acao|
+      expect(chave(nome, "/public/api/v2/invites/AB23cd45/#{acao}", metodo: 'POST')).to eq('203.0.113.9'), acao
+    end
+    expect(chave(nome, '/public//api/v2/invites/AB23cd45/cancel/', metodo: 'POST')).to eq('203.0.113.9')
+    expect(chave(nome, '/public/api/v2/invites/AB23cd45/cancel')).to be_nil
+    expect(chave(nome, '/public/api/v2/invites/AB23cd45/viewed', metodo: 'POST')).to be_nil
+    expect(chave(nome, '/public/api/v2/invites/AB23cd45', metodo: 'POST')).to be_nil
+  end
 end

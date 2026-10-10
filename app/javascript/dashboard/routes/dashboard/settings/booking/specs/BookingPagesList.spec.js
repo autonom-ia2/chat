@@ -3,6 +3,7 @@ import { useAlert } from 'dashboard/composables';
 import BookingPagesAPI from 'dashboard/api/crmBookingPages';
 import { copyTextToClipboard } from 'shared/helpers/clipboard';
 import BookingPagesList from '../components/BookingPagesList.vue';
+import BookingReassignPanel from '../components/BookingReassignPanel.vue';
 
 // Lista de páginas (#1187, F1-D): estados, cartões, ações e quem só vê.
 vi.mock('vue-i18n', () => ({
@@ -21,6 +22,9 @@ vi.mock('dashboard/api/crmBookingPages', () => ({
     publish: vi.fn(),
     pause: vi.fn(),
     delete: vi.fn(),
+    people: vi.fn(),
+    reassignPreview: vi.fn(),
+    reassign: vi.fn(),
   },
 }));
 
@@ -43,6 +47,7 @@ const WRITE_BUTTONS = [
   '[data-pause]',
   '[data-publish]',
   '[data-delete]',
+  '[data-reassign]',
 ];
 
 describe('BookingPagesList', () => {
@@ -134,6 +139,40 @@ describe('BookingPagesList', () => {
     expect(cards[1].find('[data-attention]').exists()).toBe(false);
   });
 
+  it('o admin vê quem pausou a agenda e as reuniões que ficaram com quem saiu (#1195)', async () => {
+    BookingPagesAPI.get.mockResolvedValue({
+      data: {
+        payload: [
+          page(1, {
+            paused_people: [{ id: 5, name: 'Rita' }],
+            orphaned: [
+              { id: 9, name: 'Vendedor', upcoming_meetings_count: 2 },
+              { id: 10, name: null, upcoming_meetings_count: 1 },
+            ],
+          }),
+          page(2),
+        ],
+      },
+    });
+    const wrapper = mountList(false);
+    await flushPromises();
+    const cards = wrapper.findAll('[data-page]');
+
+    expect(cards[0].find('[data-paused-person="5"]').text()).toBe(
+      'BOOKING.CARD.PERSON_PAUSED {"name":"Rita"}'
+    );
+    expect(cards[0].find('[data-orphaned]').attributes('role')).toBe('status');
+    expect(cards[0].find('[data-orphaned-person="9"]').text()).toBe(
+      'BOOKING.CARD.ORPHANED {"name":"Vendedor","count":2}'
+    );
+    expect(cards[0].find('[data-orphaned-person="10"]').text()).toBe(
+      'BOOKING.CARD.ORPHANED {"name":"BOOKING.CARD.REMOVED_PERSON","count":1}'
+    );
+    expect(cards[0].find('[data-attention]').exists()).toBe(false);
+    expect(cards[1].find('[data-paused-people]').exists()).toBe(false);
+    expect(cards[1].find('[data-orphaned]').exists()).toBe(false);
+  });
+
   it('copiar link usa a área de transferência e avisa', async () => {
     BookingPagesAPI.get.mockResolvedValue({ data: { payload: [page(1)] } });
     const wrapper = mountList();
@@ -159,6 +198,53 @@ describe('BookingPagesList', () => {
     expect(wrapper.find('[data-copy]').exists()).toBe(true);
     await wrapper.find('[data-view]').trigger('click');
     expect(wrapper.emitted('view')[0][0].id).toBe(1);
+  });
+
+  it('Passar reuniões abre o painel no cartão e, depois de passar, recarrega a lista', async () => {
+    BookingPagesAPI.get.mockResolvedValue({
+      data: { payload: [page(1, { upcoming_meetings_count: 2 })] },
+    });
+    BookingPagesAPI.people.mockResolvedValue({
+      data: {
+        payload: [
+          { id: 4, name: 'Rui' },
+          { id: 5, name: 'Camila' },
+        ],
+      },
+    });
+    BookingPagesAPI.reassign.mockResolvedValue({
+      data: { payload: { moved: 2, conflicts: [] } },
+    });
+    BookingPagesAPI.reassignPreview.mockResolvedValue({
+      data: { payload: { moved: 2, conflicts: [] } },
+    });
+    const wrapper = mountList();
+    await flushPromises();
+    await wrapper.find('[data-reassign]').trigger('click');
+    await flushPromises();
+    expect(wrapper.find('[data-reassign-panel]').exists()).toBe(true);
+    expect(BookingPagesAPI.people).toHaveBeenCalledWith(1);
+
+    const panel = wrapper.findComponent(BookingReassignPanel);
+    panel.vm.$emit('done', { moved: 2, conflicts: [] });
+    panel.vm.$emit('close');
+    await flushPromises();
+
+    expect(wrapper.find('[data-reassign-panel]').exists()).toBe(false);
+    expect(BookingPagesAPI.get).toHaveBeenCalledTimes(2);
+  });
+
+  it('fechar o painel sem passar nada não recarrega a lista', async () => {
+    BookingPagesAPI.get.mockResolvedValue({ data: { payload: [page(1)] } });
+    BookingPagesAPI.people.mockResolvedValue({ data: { payload: [] } });
+    const wrapper = mountList();
+    await flushPromises();
+    await wrapper.find('[data-reassign]').trigger('click');
+    await flushPromises();
+    await wrapper.find('[data-cancel-reassign]').trigger('click');
+    await flushPromises();
+    expect(wrapper.find('[data-reassign-panel]').exists()).toBe(false);
+    expect(BookingPagesAPI.get).toHaveBeenCalledTimes(1);
   });
 
   it('quem só vê, sem páginas, não recebe botão de criar', async () => {

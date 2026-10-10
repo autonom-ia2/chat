@@ -2689,12 +2689,15 @@
     {
      "id": "10.17",
      "titulo": "Página de agendamento: o cliente marca o horário sozinho",
-     "para_que_serve": "Criar, publicar e pausar a página onde o cliente marca a conversa sozinho, sem caixa de e-mail, e mandar o link ou o QR code.",
+     "para_que_serve": "Criar, publicar e pausar a página onde o cliente marca a conversa sozinho, sem caixa de e-mail, e mandar o link ou o QR code; fechar feriados, passar reuniões para outra pessoa e Meus horários.",
      "publico": "admin",
      "prioridade": "P2",
      "assuntos": [],
      "rotas": [
-      "settings_booking"
+      "settings_booking",
+      "crm_my_booking_hours",
+      "settings_booking_results",
+      "crm_booking_results"
      ],
      "me_leve_ate_la": {
       "rota": "settings_booking",
@@ -2704,7 +2707,9 @@
      "prints": [],
      "fontes": [
       "porques: Criar e publicar a página de agendamento",
-      "porques: Quem pode o quê no Agendamento"
+      "porques: Quem pode o quê no Agendamento",
+      "porques: Ver os resultados do agendamento da equipe",
+      "porques: Ver meus números de agendamento"
      ],
      "revisar": false,
      "nota": null

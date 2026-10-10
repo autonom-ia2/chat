@@ -92,7 +92,8 @@
     "MANAGE_TITLE": "Keep this link to change or cancel",
     "COPY": "Copy link",
     "COPIED": "Link copied.",
-    "OPEN": "Open link"
+    "OPEN": "Open link",
+    "MESSAGE": "You will get a WhatsApp message with this time."
   },
   "PAUSED": {
     "TITLE": "Booking is closed for now",
@@ -109,12 +110,55 @@
     "BODY": "Please try again in a few minutes.",
     "RETRY": "Try again"
   },
-  "ALREADY": {
-    "TITLE": "You are already booked",
-    "BODY": "Your time with {name} is already booked.",
-    "BODY_NO_NAME": "Your time is already booked.",
-    "CHANGE": "To change the time, talk to us on WhatsApp.",
-    "WHATSAPP": "Chat on WhatsApp"
+  "MANAGE": {
+    "TITLE": "Your appointment",
+    "TITLE_CONFIRMED": "You are confirmed",
+    "TITLE_RESCHEDULED": "Time updated",
+    "TITLE_STOPPED": "Done, updates stopped",
+    "TITLE_CANCELED": "Appointment canceled",
+    "TITLE_PAST": "This time has passed",
+    "BADGE_CONFIRMED": "You confirmed",
+    "BADGE_CHANGE_REQUESTED": "You asked to change",
+    "JOIN": "Join",
+    "CONFIRM": "I will be there",
+    "RESCHEDULE": "Change time",
+    "CANCEL": "Cancel",
+    "STOP": "Stop updates",
+    "STOPPED": "You no longer get updates.",
+    "LOCKED": "You could change or cancel here until {deadline}.",
+    "LOCKED_NO_DEADLINE": "You can no longer change or cancel here.",
+    "LOCKED_WHATSAPP": "Now, talk to us on WhatsApp.",
+    "PAST_BODY": "If you need anything, talk to us on WhatsApp.",
+    "PAST_BODY_NO_CONTACT": "If you need anything, contact the business.",
+    "CANCELED_BODY": "If you want, book another time.",
+    "CANCELED_BODY_CLOSED": "To book again, talk to us on WhatsApp.",
+    "CANCELED_BODY_NO_CONTACT": "To book again, contact the business.",
+    "BOOK_AGAIN": "Book another time",
+    "CANCEL_SCREEN": {
+      "TITLE": "Cancel this appointment?",
+      "BODY": "The time becomes free for someone else.",
+      "YES": "Yes, cancel",
+      "NO": "No, keep my time"
+    },
+    "STOP_SCREEN": {
+      "TITLE": "Stop updates?",
+      "BODY": "You will no longer get automatic messages about your appointments.",
+      "KEEPS": "Your appointment is still booked.",
+      "YES": "Stop updates",
+      "NO": "Back"
+    },
+    "ERRORS": {
+      "TOO_LATE": "It is too late to change or cancel here.",
+      "NOT_CHANGEABLE": "This appointment can no longer be changed here.",
+      "FAILED": "That did not work now. Please try again."
+    }
+  },
+  "RESCHEDULE": {
+    "DATE_TITLE": "Which day do you want instead?",
+    "CONFIRM_TITLE": "Change to this time?",
+    "BEFORE": "It was: {when}",
+    "SUBMIT": "Confirm new time",
+    "KEEP": "Keep my time"
   },
   "ERRORS": {
     "SLOT_UNAVAILABLE": "That time was just taken. Please pick another one.",

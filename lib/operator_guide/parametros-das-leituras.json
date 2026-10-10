@@ -1005,6 +1005,14 @@
     "controller": "api/v1/accounts/crm/booking_pages#people",
     "parametros": []
   },
+  "crm/booking_pages/reassign_preview": {
+    "controller": "api/v1/accounts/crm/booking_pages#reassign_preview",
+    "parametros": [
+      "from_user_id",
+      "page_id",
+      "to_user_id"
+    ]
+  },
   "crm/booking_profiles": {
     "controller": "api/v1/accounts/crm/booking_profiles#index",
     "parametros": []
@@ -1012,6 +1020,21 @@
   "crm/booking_profiles/:id/agent_links": {
     "controller": "api/v1/accounts/crm/booking_profiles#agent_links",
     "parametros": []
+  },
+  "crm/booking_stats": {
+    "controller": "api/v1/accounts/crm/booking_stats#show",
+    "parametros": [
+      "period",
+      "scope"
+    ]
+  },
+  "crm/booking_stats/opened_not_booked": {
+    "controller": "api/v1/accounts/crm/booking_stats#opened_not_booked",
+    "parametros": [
+      "page",
+      "period",
+      "scope"
+    ]
   },
   "crm/calendar/available_slots": {
     "controller": "api/v1/accounts/crm/calendar#available_slots",
@@ -1192,6 +1215,10 @@
       "since",
       "until"
     ]
+  },
+  "crm/my_booking_hours": {
+    "controller": "api/v1/accounts/crm/my_booking_hours#show",
+    "parametros": []
   },
   "crm/pipelines": {
     "controller": "api/v1/accounts/crm/pipelines#index",

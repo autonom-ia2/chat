@@ -102,3 +102,50 @@ describe('CrmCalendarEventPopover: local da reunião', () => {
     unsafe.unmount();
   });
 });
+
+describe('CrmCalendarEventPopover: resposta do cliente (#1192)', () => {
+  it('mostra o selo quando o evento traz a resposta', () => {
+    const wrapper = mountPopover(
+      meeting({
+        booking: true,
+        confirmation_status: 'confirmed',
+        notices_stopped: true,
+      })
+    );
+    expect(wrapper.find('[data-test="meeting-confirmation"]').text()).toBe(
+      'CRM_KANBAN.CALENDAR.MEETING_DETAIL.CLIENT.CONFIRMED'
+    );
+    expect(wrapper.text()).toContain(
+      'CRM_KANBAN.CALENDAR.MEETING_DETAIL.CLIENT.STOPPED'
+    );
+  });
+
+  it('reunião da página ainda sem resposta mostra "ainda não respondeu" (J4-A5)', () => {
+    const wrapper = mountPopover(
+      meeting({ booking: true, confirmation_status: 'pending' })
+    );
+    expect(wrapper.find('[data-test="meeting-confirmation"]').text()).toBe(
+      'CRM_KANBAN.CALENDAR.MEETING_DETAIL.CLIENT.PENDING'
+    );
+  });
+
+  it('reunião comum não ganha selo, nem quando o contato parou os avisos', () => {
+    const wrapper = mountPopover(meeting());
+    expect(wrapper.find('[data-test="meeting-confirmation"]').exists()).toBe(
+      false
+    );
+    const stopped = mountPopover(
+      meeting({
+        booking: false,
+        confirmation_status: 'pending',
+        notices_stopped: true,
+      })
+    );
+    expect(stopped.find('[data-test="meeting-confirmation"]').exists()).toBe(
+      false
+    );
+    expect(stopped.text()).not.toContain(
+      'CRM_KANBAN.CALENDAR.MEETING_DETAIL.CLIENT.STOPPED'
+    );
+  });
+});

@@ -12,6 +12,14 @@
 # Dois pedidos do mesmo convite ao mesmo tempo: o segundo encontra o convite já agendado e a transação dele desfaz a
 # reunião. Contato, card e conversa vêm do convite. O telefone é o do contato; se o cliente trocou o número ("Mudar o
 # número") ou o contato não tem, vale o digitado, só para esta reunião (o contato não muda). `source: 'invite'`.
+# No mesmo bloco o convite guarda `scheduled_at` e `meeting`; convite de teste (#1192) marca a reunião `test: true`.
+#
+# Marcar de novo (#1192): convite cuja reunião foi cancelada (pelo cliente, pelo agente ou por outro motivo) e que ainda
+# vale como link de gestão (`active?`, até 1 dia depois do fim da reunião cancelada) aceita uma reserva nova pelo próprio
+# link, sem pedir nome e WhatsApp de novo. Mesmas regras de cima: só o contato do convite, mesma conferência travada
+# (a reunião que o convite aponta ainda é a cancelada), mesma regra de `request_id`. A reunião nova passa a ser a do
+# convite (`meeting`, `scheduled_at`), e o card registra `booking_client_rebooked` (com aviso ao responsável) na mesma
+# transação. Dois pedidos ao mesmo tempo: o segundo encontra o convite já com a reunião nova e desfaz a dele.
 #
 # Reenvio (duplo toque, rede que repete): só com o mesmo `request_id` (16 a 64 letras, dígitos, `-` ou `_`, sorteado
 # pelo navegador por tentativa), gravado na reunião e no convite. Mesma chave devolve a mesma reserva; sem chave ou
@@ -36,6 +44,13 @@ class Crm::BookingV2::PublicBooking
     return false unless invite.account_id == page.account.id && invite.booking_profile_id == page.profile.id
 
     invite.booking_link_id.nil? || invite.booking_link_id == page.link&.id
+  end
+
+  # A reunião do convite foi cancelada e o link de gestão ainda vale: o mesmo contato pode marcar de novo por ele.
+  # Também usado pelo GET do convite (`can_rebook`).
+  def self.rebookable?(invite)
+    invite.present? && invite.canceled_at.nil? && invite.scheduled_at.present? && invite.meeting.present? &&
+      invite.meeting.canceled? && invite.active?
   end
 
   def initialize(page:, params:)
@@ -87,22 +102,38 @@ class Crm::BookingV2::PublicBooking
   def book_with_invite
     invite = Crm::BookingInvite.find_by(code: invite_code)
     raise ArgumentError, 'booking_failed' unless self.class.invite_for_page?(invite, page)
-    return repeated_invite_booking(invite) if invite.scheduled_at.present?
+
+    canceled = invite.meeting if self.class.rebookable?(invite)
+    return repeated_invite_booking(invite) if invite.scheduled_at.present? && canceled.nil?
     raise ArgumentError, 'booking_failed' unless invite.active?
 
-    result = invite_booker(invite).perform { |booked| attach_meeting!(invite, booked.meeting) }
+    result = invite_booker(invite).perform { |booked| attach_meeting!(invite, booked.meeting, canceled) }
     return repeated_invite_booking(invite.reload) if result.existing
 
     Outcome.new(meeting: result.meeting, invite: invite, existing: false)
   end
 
-  # Dentro da transação do `Booker`: trava o convite e confere de novo. Qualquer recusa desfaz a reunião.
-  def attach_meeting!(invite, meeting)
+  # Dentro da transação do `Booker`: trava o convite e confere de novo. Qualquer recusa desfaz a reunião. Marcar de
+  # novo (`canceled`): o convite ainda aponta a mesma reunião cancelada (outro pedido não chegou antes).
+  def attach_meeting!(invite, meeting, canceled)
     invite.lock!
-    usable = invite.scheduled_at.nil? && invite.active? && meeting.card.contact_id == invite.contact_id
+    usable = invite_free?(invite, canceled) && invite.active? && meeting.card.contact_id == invite.contact_id
     raise ArgumentError, 'booking_failed' unless usable
 
     invite.update!(scheduled_at: Time.current, meeting: meeting, metadata: invite.metadata.to_h.merge('request_id' => request_id).compact)
+    mark_test_meeting!(meeting) if invite.metadata.to_h['test'] == true
+    Crm::BookingV2::Notices::AgentAlert.new(meeting, 'rebooked', canceled_meeting_id: canceled.id).perform if canceled
+  end
+
+  def invite_free?(invite, canceled)
+    return invite.scheduled_at.nil? unless canceled
+
+    invite.meeting_id == canceled.id && self.class.rebookable?(invite)
+  end
+
+  # Reunião marcada por convite de "Testar no meu WhatsApp" (#1192): fica fora dos números (`Crm::Meeting.real`).
+  def mark_test_meeting!(meeting)
+    meeting.update!(metadata: meeting.metadata.to_h.merge('test' => true))
   end
 
   def invite_booker(invite)

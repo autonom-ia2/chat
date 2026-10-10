@@ -167,6 +167,19 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingPages', type: :request do
       expect(page.reload.invite_ttl_days).to eq(3)
     end
 
+    it 'liga e desliga os feriados nacionais fechados (#1195) e devolve a opção na página' do
+      page.update!(close_holidays: true)
+
+      call(admin, :patch, "#{base}/#{page.id}", { close_holidays: false })
+      expect(response).to have_http_status(:ok)
+      expect(body['payload']).to include('close_holidays' => false)
+      expect(page.reload.close_holidays).to be(false)
+
+      call(admin, :patch, "#{base}/#{page.id}", { close_holidays: true })
+      expect(body['payload']).to include('close_holidays' => true)
+      expect(page.reload.close_holidays).to be(true)
+    end
+
     it 'refuses a funnel or stage from another account' do
       other = build_booking_world(account: create(:account), host_name: 'Outra')
 
@@ -224,6 +237,23 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingPages', type: :request do
         expect(body['error']).to eq('crm.booking_v2.calendar_inbox_invalid')
       end
       expect(page.reload.inbox_id).to be_nil
+    end
+
+    it 'quem não enxerga a caixa de agenda já gravada salva os outros passos reenviando a mesma caixa, mas não troca a caixa' do
+      page.update!(inbox: google, locations: [{ 'type' => 'google_meet' }])
+      manager = role_user('agendamento_manage')
+      other = create(:channel_email, account: account, provider: 'google', calendar_enabled: true).inbox
+
+      call(manager, :patch, "#{base}/#{page.id}", { booking_page: { calendar_inbox_id: google.id, title: 'Novo título' } })
+
+      expect(response).to have_http_status(:ok)
+      expect(page.reload).to have_attributes(inbox_id: google.id, title: 'Novo título')
+
+      call(manager, :patch, "#{base}/#{page.id}", { booking_page: { calendar_inbox_id: other.id } })
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(body['error']).to eq('crm.booking_v2.calendar_inbox_invalid')
+      expect(page.reload.inbox_id).to eq(google.id)
     end
 
     it 'aceita durações extras como texto' do
@@ -472,6 +502,30 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingPages', type: :request do
       expect(body['payload'].pluck('id')).to eq([page.id])
       expect(body['payload'].first).to include('upcoming_meetings_count' => 1, 'attention' => false, 'enabled' => true,
                                                'missing' => [])
+    end
+
+    it 'index mostra quem atende e pausou a agenda e quem saiu com reunião, só com id e nome (#1195)' do
+      seller = create(:user, account: account, role: :agent, name: 'Vendedor', email: 'vendedor@exemplo.com')
+      paused_agent = create(:user, account: account, role: :agent, name: 'Rita Pausada', email: 'rita@exemplo.com')
+      page.update!(assignment_mode: :per_agent)
+      page.agent_booking_links.create!(account: account, agent: world.host)
+      page.agent_booking_links.create!(account: account, agent: paused_agent)
+      Crm::AgentAvailability.create!(account: account, user: paused_agent, paused: true)
+      outsider = create(:user, account: account, role: :agent)
+      Crm::AgentAvailability.create!(account: account, user: outsider, paused: true)
+      create_internal_meeting(world: world, starts_at: 1.day.from_now, created_by: seller, metadata: { 'booking_profile_id' => page.id })
+      seller.account_users.find_by(account: account).destroy!
+
+      call(admin, :get, base)
+
+      item = body['payload'].find { |entry| entry['id'] == page.id }
+      expect(item['paused_people']).to eq([{ 'id' => paused_agent.id, 'name' => 'Rita Pausada' }])
+      expect(item['orphaned']).to eq([{ 'id' => seller.id, 'name' => 'Vendedor', 'upcoming_meetings_count' => 1 }])
+      expect(response.body).not_to include('rita@exemplo.com', 'vendedor@exemplo.com')
+
+      call(admin, :get, "#{base}/#{page.id}")
+      expect(body['payload']).to include('paused_people' => [{ 'id' => paused_agent.id, 'name' => 'Rita Pausada' }],
+                                         'orphaned' => [{ 'id' => seller.id, 'name' => 'Vendedor', 'upcoming_meetings_count' => 1 }])
     end
 
     it 'index tells what a disabled page still needs, so the screen can show Draft or Paused' do

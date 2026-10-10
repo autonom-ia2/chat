@@ -95,7 +95,11 @@ class Api::V1::Accounts::Crm::CalendarController < Api::V1::Accounts::Crm::BaseC
         provider: meeting.provider,
         online_meeting_type: meeting.online_meeting_type,
         online_meeting_url: meeting.online_meeting_url,
-        guests_count: meeting.meeting_guests.size
+        guests_count: meeting.meeting_guests.size,
+        # Página de agendamento (#1192): selo de confirmação do cliente no popover.
+        booking: meeting.booking?,
+        confirmation_status: meeting.confirmation_status,
+        notices_stopped: meeting.reminders_stopped_at.present?
       }
     end
   end

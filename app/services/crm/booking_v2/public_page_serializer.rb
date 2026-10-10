@@ -7,6 +7,7 @@
 #
 # `timezone`: nome IANA do fuso da página (o navegador não entende os nomes do Rails, como "Brasilia"). `weekdays`: dias
 # da semana em que a página atende (0 = domingo ... 6 = sábado), para a página não oferecer dia fechado.
+# `notices_enabled` (#1192): a página tem caixa de avisos utilizável; a tela mostra o aviso de consentimento.
 class Crm::BookingV2::PublicPageSerializer
   include Rails.application.routes.url_helpers
 
@@ -52,7 +53,7 @@ class Crm::BookingV2::PublicPageSerializer
   end
 
   def form
-    { form_token: self.class.form_token(page.slug), captcha_site_key: captcha_site_key, notices_enabled: false }
+    { form_token: self.class.form_token(page.slug), captcha_site_key: captcha_site_key, notices_enabled: profile.notices_usable? }
   end
 
   def host_name

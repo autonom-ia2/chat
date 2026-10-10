@@ -39,10 +39,55 @@ describe('bookingPageForm', () => {
       working_hours: { start_hour: 8, end_hour: 12, weekdays: [1, 3] },
       min_notice_minutes: 60,
       buffer_minutes: 5,
+      close_holidays: true,
       brand: { color: '#B3263E', headline: 'Oi' },
       default_pipeline_id: 2,
       default_stage_id: 20,
+      notice_preset: 'standard',
+      notice_templates: {},
+      cancel_until_minutes: 120,
+      notice_inbox_id: null,
     });
+  });
+
+  it('feriados fechados vêm ligados e só desligam quando a página diz false', () => {
+    expect(pageToForm(page).closeHolidays).toBe(true);
+    expect(pageToForm({ ...page, close_holidays: true }).closeHolidays).toBe(
+      true
+    );
+    const off = pageToForm({ ...page, close_holidays: false });
+    expect(off.closeHolidays).toBe(false);
+    expect(formToPayload(off).close_holidays).toBe(false);
+  });
+
+  it('avisos: ida e volta com caixa, jogo, modelos e prazo', () => {
+    const withNotices = {
+      ...page,
+      notice_inbox_id: 12,
+      notice_preset: 'light',
+      notice_templates: {
+        booked: { name: 'aviso_marcado', language: 'pt_BR' },
+        day_before: { name: 'fora_do_jogo', language: 'pt_BR' },
+      },
+      cancel_until_minutes: 1440,
+    };
+    const payload = formToPayload(pageToForm(withNotices));
+    expect(payload.notice_inbox_id).toBe(12);
+    expect(payload.notice_preset).toBe('light');
+    expect(payload.cancel_until_minutes).toBe(1440);
+    // "1 dia antes" não está no jogo leve: o modelo dele não vai.
+    expect(payload.notice_templates).toEqual({
+      booked: { name: 'aviso_marcado', language: 'pt_BR' },
+    });
+  });
+
+  it('caixa de avisos só vai no PATCH quando muda', () => {
+    const saved = { ...page, notice_inbox_id: 12 };
+    const form = pageToForm(saved);
+    expect('notice_inbox_id' in formToPayload(form, saved)).toBe(false);
+    const off = formToPayload({ ...form, noticeInboxId: null }, saved);
+    expect(off.notice_inbox_id).toBeNull();
+    expect(off.notice_templates).toEqual({});
   });
 
   it('caixa de agenda só vai junto com Meet ou Teams', () => {

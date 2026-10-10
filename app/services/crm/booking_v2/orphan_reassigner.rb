@@ -7,13 +7,19 @@
 # futuras internas (`provider: :internal`) ou criadas por uma página nova (`metadata['booking_profile_id']`), e
 # links de páginas `page_version: 2`. Reunião Google/Microsoft antiga e link de página antiga ficam como estão.
 #
+# Sem dupla reserva (#1195): antes de passar, confere se quem recebe está livre naquele horário, com a mesma regra e
+# as mesmas travas do "Passar reuniões" (`HostSchedule`): as de agente de quem sai e de todos que podem receber, numa
+# vez só e em ordem crescente. Ocupada, a reunião NÃO passa: fica com quem saiu e a página aparece com aviso de
+# atenção (`AttentionReport#orphaned`), com o nome da pessoa e quantas reuniões ficaram; o admin escolhe para quem
+# passar em "Passar reuniões". O mesmo vale para reunião sem ninguém para receber e para reunião com dado inválido.
+#
 # Ligado ao `after_destroy_commit` de `AccountUser` em `config/initializers/crm_booking_account_user.rb`.
 class Crm::BookingV2::OrphanReassigner
-  EVENT_TYPE = 'meeting_host_reassigned'.freeze
+  EVENT_TYPE = Crm::BookingV2::MeetingHandover::EVENT_TYPE
 
   def initialize(account_id:, user_id:)
     @account = Account.find_by(id: account_id)
-    @user_id = user_id
+    @user_id = user_id.presence&.to_i
   end
 
   def perform
@@ -22,11 +28,13 @@ class Crm::BookingV2::OrphanReassigner
     return if account.account_users.exists?(user_id: user_id)
 
     # Mesma trava de agente da reserva (Booker): uma reserva em andamento termina antes de olharmos as reuniões, e
-    # a próxima já vê a pessoa fora da conta.
+    # a próxima já vê a pessoa fora da conta. Quem pode receber é calculado antes, para travar todos na mesma ordem.
     ActiveRecord::Base.transaction do
-      ActiveRecord::Base.connection.execute("SELECT pg_advisory_xact_lock(#{Crm::BookingV2::Booker::LOCK_NS_AGENT}, #{user_id.to_i})")
+      Crm::BookingV2::HostSchedule.lock!(locked_ids)
       disable_links
-      orphan_meetings.find_each { |meeting| reassign(meeting) }
+      Crm::AgentAvailability.where(account_id: account.id, user_id: user_id).delete_all
+      schedule = Crm::BookingV2::HostSchedule.new(account: account)
+      orphan_meetings.each { |meeting| reassign(meeting, schedule) }
     end
   end
 
@@ -46,22 +54,42 @@ class Crm::BookingV2::OrphanReassigner
 
   def orphan_meetings
     # Só reuniões das páginas novas: as demais seguem o comportamento de sempre do sistema.
-    account.crm_meetings.upcoming.by_agent(user_id).where("crm_meetings.metadata ->> 'booking_profile_id' IS NOT NULL").includes(:card)
+    account.crm_meetings.upcoming.by_agent(user_id).where("crm_meetings.metadata ->> 'booking_profile_id' IS NOT NULL")
+           .includes(:card, :reminder).order(:starts_at, :id)
   end
 
-  def reassign(meeting)
+  # Quem sai, o responsável de cada página das reuniões dela e o primeiro administrador.
+  def locked_ids
+    @locked_ids ||= begin
+      page_ids = orphan_meetings.filter_map { |meeting| meeting.metadata.to_h[Crm::BookingV2::AttentionReport::PAGE_KEY] }.uniq
+      hosts = account.crm_agent_booking_profiles.where(id: page_ids).pluck(:default_assignee_id)
+      [user_id, *hosts, first_administrator&.id].compact.uniq
+    end
+  end
+
+  def reassign(meeting, schedule)
     profile = page_of(meeting)
     new_host = page_host(profile)
     fallback = new_host.blank?
     new_host ||= first_administrator
-    return log_no_host(meeting) if new_host.blank?
+    return keep(meeting, 'no_host') if new_host.blank?
+    # A página trocou de responsável depois das travas: sem a trava dele não dá para conferir a agenda.
+    return keep(meeting, 'host_changed', new_host) unless locked_ids.include?(new_host.id)
+    return keep(meeting, 'host_busy', new_host) unless schedule.free?(meeting, new_host.id)
 
-    meeting.update!(created_by: new_host)
+    hand_over(meeting, new_host, schedule)
     log_reassignment(meeting, new_host, profile, fallback)
-    log(meeting, new_host, profile)
   rescue ActiveRecord::RecordInvalid => e
-    # Uma reunião com dado antigo inválido não trava as outras; fica no log para o admin tratar.
-    Rails.logger.warn("[booking_v2] meeting #{meeting.id} not reassigned: #{e.record.errors.full_messages.to_sentence}")
+    # Uma reunião com dado antigo inválido não trava as outras; fica com quem saiu e aparece na atenção do admin.
+    keep(meeting, "invalid: #{e.record.errors.full_messages.to_sentence}")
+  end
+
+  # Ponto de salvamento por reunião: se a atividade do card falhar, a troca de responsável dela volta junto.
+  def hand_over(meeting, new_host, schedule)
+    ActiveRecord::Base.transaction(requires_new: true) do
+      Crm::BookingV2::MeetingHandover.new(meeting: meeting, from_user_id: user_id, to_user: new_host).perform
+    end
+    schedule.reserve(meeting, new_host.id)
   end
 
   def page_of(meeting)
@@ -82,8 +110,12 @@ class Crm::BookingV2::OrphanReassigner
     @first_administrator ||= account.account_users.human.administrator.where.not(user_id: user_id).order(:id).first&.user
   end
 
-  def log_no_host(meeting)
-    Rails.logger.warn("[booking_v2] meeting #{meeting.id} has no host to take over after user #{user_id} left account #{account.id}")
+  # A reunião fica com quem saiu: o `AttentionReport` mostra a página com aviso até o admin passar a reunião.
+  def keep(meeting, reason, candidate = nil)
+    Rails.logger.warn(
+      "[booking_v2] meeting #{meeting.id} kept with user #{user_id} after leaving account #{account.id} " \
+      "(#{reason}, candidate #{candidate&.id.inspect})"
+    )
   end
 
   def log_reassignment(meeting, new_host, profile, fallback)
@@ -92,12 +124,5 @@ class Crm::BookingV2::OrphanReassigner
       "[booking_v2] meeting #{meeting.id} reassigned from user #{user_id} to user #{new_host.id} (#{target}) " \
       "account #{account.id} booking_profile #{profile&.id.inspect}"
     )
-  end
-
-  def log(meeting, new_host, profile)
-    Crm::ActivityLogger.new(
-      card: meeting.card, actor: nil, event_type: EVENT_TYPE,
-      payload: { meeting_id: meeting.id, from_user_id: user_id, to_user_id: new_host.id, booking_profile_id: profile&.id }
-    ).perform
   end
 end

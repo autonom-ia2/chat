@@ -5,6 +5,11 @@
 # A reunião aponta a página por `metadata['booking_profile_id']` (gravado por quem reserva pela página v2).
 # `attention?` olha só a página pedida (a lista e a tela de uma página não varrem as outras); `entries` é o
 # relatório da conta inteira.
+#
+# Reuniões que ficaram com quem não atende mais (#1195): reunião futura de página nova cujo responsável (`created_by`)
+# não é mais elegível — saiu da conta e quem recebia estava ocupado (`OrphanReassigner`), ou perdeu a função. Fica à
+# parte de `attention?` (que diz "quem atende a página não pode receber"): `orphaned` dá a pessoa e quantas reuniões,
+# o cartão da página mostra o aviso até o admin passar essas reuniões em "Passar reuniões", e `entries` traz as duas.
 class Crm::BookingV2::AttentionReport
   PAGE_KEY = 'booking_profile_id'.freeze
 
@@ -30,13 +35,19 @@ class Crm::BookingV2::AttentionReport
   end
 
   def entries
-    @entries ||= pages.flat_map { |profile| entries_for(profile) }
+    @entries ||= pages.flat_map { |profile| entries_for(profile) + orphan_entries(profile) }
   end
 
   def attention?(profile)
     return false unless profile.new_page? && profile.account_id == account.id
 
     flagged_hosts(profile).any?
+  end
+
+  # [{ id:, name:, upcoming_meetings_count: }] de quem não atende mais e ainda tem reunião futura desta página. Uma
+  # consulta para as páginas novas da conta inteira, feita uma vez por relatório. Nome sim, e-mail nunca.
+  def orphaned(profile)
+    orphan_rows.fetch(profile.id, [])
   end
 
   private
@@ -71,7 +82,39 @@ class Crm::BookingV2::AttentionReport
     Entry.new(profile: profile, link: link, user_id: user_id, reason: reason, upcoming_meetings_count: count)
   end
 
+  def orphan_entries(profile)
+    orphaned(profile).map do |person|
+      Entry.new(profile: profile, link: nil, user_id: person[:id], reason: 'meetings_orphaned',
+                upcoming_meetings_count: person[:upcoming_meetings_count])
+    end
+  end
+
+  def orphan_rows
+    @orphan_rows ||= begin
+      counts = upcoming_by_page_and_host
+      users = User.where(id: counts.keys.map(&:last).uniq).index_by(&:id)
+      counts.each_with_object(Hash.new { |hash, key| hash[key] = [] }) do |((page_id, user_id), count), rows|
+        next if eligible?(users[user_id])
+
+        rows[page_id] << { id: user_id, name: users[user_id]&.name, upcoming_meetings_count: count }
+      end
+    end
+  end
+
+  # { [page_id, created_by_id] => quantidade } das reuniões futuras das páginas novas da conta.
+  def upcoming_by_page_and_host
+    page_ids = account.crm_agent_booking_profiles.new_pages.pluck(:id).map(&:to_s)
+    return {} if page_ids.empty?
+
+    account.crm_meetings.upcoming.where("crm_meetings.metadata ->> 'booking_profile_id' IN (?)", page_ids)
+           .group(Arel.sql("crm_meetings.metadata ->> 'booking_profile_id'"), :created_by_id).count
+           .transform_keys { |page_id, user_id| [page_id.to_i, user_id] }
+  end
+
   def eligible?(user)
-    Crm::BookingV2::HostEligibility.eligible?(account: account, user: user)
+    return false if user.blank?
+
+    @eligible ||= {}
+    @eligible.fetch(user.id) { @eligible[user.id] = Crm::BookingV2::HostEligibility.eligible?(account: account, user: user) }
   end
 end
