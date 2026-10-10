@@ -7,7 +7,10 @@ class CampaignImports::ColumnProfiler
     ('0'..'9').index_with('0'), ' +-().,/:;_'.each_char.to_h { |char| [char, char] }
   ).freeze
 
-  def initialize(rows)
+  # reveal_area_codes (customer_base reading, #1246): phones and emails go in the CampaignImports::JevMask
+  # shape (country code, DDD and email domain visible) instead of all zeros and "[email address]".
+  def initialize(rows, reveal_area_codes: false)
+    @reveal_area_codes = reveal_area_codes
     @email_positions = Hash.new { |hash, index| hash[index] = [] }
     rows.each_with_index do |row, position|
       row.values.each_with_index { |value, index| @email_positions[index] << position if email_like?(value.to_s) }
@@ -20,8 +23,7 @@ class CampaignImports::ColumnProfiler
       values = profiled_values(sample, index)
       positions = @email_positions[index]
       valid_emails = positions.size - (positions.bsearch_index { |position| position > header_index } || positions.size)
-      examples = values.uniq.first(EXAMPLE_COUNT).map { |value| example_value(value) }
-      examples.unshift('[email address]') if valid_emails.positive? && examples.exclude?('[email address]')
+      examples = examples_for(values, valid_emails)
       {
         sampled_rows: sample.size, total_rows: rows.size, total_valid_emails: valid_emails, non_blank_count: values.length,
         email_like_count: values.count { |value| email_like?(value) },
@@ -32,7 +34,17 @@ class CampaignImports::ColumnProfiler
 
   private
 
+  # With the area codes revealed the example already shows the email (domain only), so no marker is added.
+  def examples_for(values, valid_emails)
+    examples = values.uniq.first(EXAMPLE_COUNT).map { |value| example_value(value) }
+    return examples if @reveal_area_codes || valid_emails.zero? || examples.include?('[email address]')
+
+    ['[email address]', *examples]
+  end
+
   def example_value(value)
+    revealed = @reveal_area_codes && CampaignImports::JevMask.mask(value.first(EXAMPLE_LENGTH))
+    return revealed if revealed
     return '[email address]' if email_like?(value)
     return '[malformed email address]' if value.include?('@')
 

@@ -52,7 +52,8 @@ class BaseDeClientesEval::Avaliacao
     escolhas = @jev_bruto&.dig(:targets)&.transform_values do |resposta|
       [resposta[:index] && @leitura.headers[resposta[:index]], resposta[:confidence]]
     end
-    { status: jev['status'], schema_probability: jev['schema_probability'], erro: jev['error'], escolhas: escolhas }.compact
+    { status: jev['status'], schema_probability: jev['schema_probability'], erro: jev['error'], escolhas: escolhas,
+      pais: jev['phone_country'] }.compact
   end
 
   def alvo_resultado(alvo)
@@ -114,8 +115,10 @@ class BaseDeClientesEval::Avaliacao
     @caso.alcance_por_linha.fetch(linha.row_number, false)
   end
 
+  # A leitura nova só põe o 9 quando o Jev disse que a coluna é do Brasil, como o validador faz.
   def leitura_de_contato
-    @rodada.fetch(:leitura)
+    brasil = CampaignImports::PhoneCountry.from(resolucao, {}, @leitura.mapping['phone']).brazil?
+    @leitura_de_contato ||= @rodada.fetch(:leitura).with_legacy_mobiles(brasil)
   end
 
   def alcanca?(linha, telefone, email)

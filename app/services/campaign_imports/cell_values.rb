@@ -26,6 +26,12 @@ module CampaignImports::CellValues
     addresses.map { |address| EmailCampaigns::EmailNormalizer.mask(address.downcase) }.join('; ')
   end
 
+  # Every number of the cell masked on its own (country code and last 4 digits, PhoneMask).
+  def masked_phones(value)
+    numbers = parts(value).presence || [value.to_s.strip]
+    numbers.map { |number| CampaignImports::PhoneNormalizer.mask_raw(number) }.join('; ')
+  end
+
   def parts(value)
     pieces = SEPARATORS.reduce([value.to_s]) { |found, separator| found.flat_map { |piece| piece.split(separator) } }
     pieces = pieces.map(&:strip).reject(&:empty?)
