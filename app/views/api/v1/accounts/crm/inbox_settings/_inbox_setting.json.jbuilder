@@ -1,5 +1,5 @@
 json.extract! inbox_setting, :id, :account_id, :inbox_id, :crm_enabled, :default_pipeline_id,
-              :default_stage_id, :visibility_mode, :auto_create_card, :created_at, :updated_at
+              :default_stage_id, :visibility_mode, :auto_create_card, :subject_ai_mode, :created_at, :updated_at
 
 if inbox_setting.inbox
   json.inbox do
