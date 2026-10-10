@@ -1,5 +1,9 @@
 # JSON das páginas de agendamento novas (page_version 2) para a tela de Configurações › Agendamento (#1187).
 # Pessoas aparecem só por id, nome e foto: e-mail nunca sai daqui. Não lista membros de caixa (J8-A5).
+#
+# Página com um link por pessoa (`per_agent`): o endereço-base `/book/<slug-da-página>` responde 404 por desenho (o
+# cliente só marca pelo link de cada pessoa). Então `public_url` vem nulo e `links` traz um link por pessoa — só os
+# ligados de quem ainda pode atender (HostEligibility), para o admin nunca copiar e divulgar um link morto.
 class Crm::BookingV2::PageSerializer
   include Rails.application.routes.url_helpers
 
@@ -20,7 +24,7 @@ class Crm::BookingV2::PageSerializer
   def summary
     {
       id: profile.id, slug: profile.slug, title: profile.title, enabled: profile.enabled, public_url: public_url,
-      locations: profile.locations, assignment_mode: profile.assignment_mode,
+      links: links, locations: profile.locations, assignment_mode: profile.assignment_mode,
       upcoming_meetings_count: upcoming_meetings_count,
       attention: attention
     }
@@ -65,8 +69,22 @@ class Crm::BookingV2::PageSerializer
     return [self.class.person(profile.default_assignee)].compact if profile.assignment_mode_fixed?
 
     profile.agent_booking_links.select(&:enabled?).map do |link|
-      self.class.person(link.agent).merge(link_slug: link.slug, public_url: "#{base_url}/book/#{link.slug}")
+      self.class.person(link.agent).merge(link_slug: link.slug, public_url: link_url(link))
     end
+  end
+
+  def links
+    return [] if profile.assignment_mode_fixed?
+
+    profile.agent_booking_links.select(&:enabled?).filter_map do |link|
+      next unless Crm::BookingV2::HostEligibility.eligible?(account: profile.account, user: link.agent)
+
+      { agent_id: link.agent_id, agent_name: link.agent.name, url: link_url(link), enabled: link.enabled }
+    end
+  end
+
+  def link_url(link)
+    "#{base_url}/book/#{link.slug}"
   end
 
   def attachment_url(attachment)
@@ -76,6 +94,8 @@ class Crm::BookingV2::PageSerializer
   end
 
   def public_url
+    return if profile.assignment_mode_per_agent?
+
     "#{base_url}/book/#{profile.slug}"
   end
 

@@ -45,7 +45,10 @@
       "QR_ALT": "QR code of the booking page",
       "QR_ERROR": "We couldn't create the QR code.",
       "OPEN": "Open",
-      "OPEN_LABEL": "Open the page in a new tab"
+      "OPEN_LABEL": "Open the page in a new tab",
+      "PER_PERSON_TITLE": "One link for each person",
+      "PER_PERSON_HINT": "Customers book through the link of the person who will serve them. Share each person's link.",
+      "PERSON_LABEL": "Link of {name}"
     },
     "STEPS": {
       "LABEL": "Steps to create the page",
@@ -71,7 +74,7 @@
       "ERRORS": {
         "TITLE": "Write the name the client sees.",
         "PEOPLE": "Choose who attends.",
-        "LOCATION": "Choose where the conversation happens.",
+        "LOCATION": "Choose where the appointment happens.",
         "LINK": "Paste the full link, starting with https://",
         "ADDRESS": "Write the address.",
         "CALENDAR": "Choose the calendar email inbox.",
@@ -84,7 +87,7 @@
       "SERVER_ERRORS": {
         "CALENDAR_GONE": "That calendar email inbox is no longer available. Choose another one or remove Google Meet and Teams.",
         "PEOPLE_GONE": "Someone you chose can no longer take meetings. Choose again.",
-        "LOCATIONS": "One of the places can no longer be used. Check where the conversation happens.",
+        "LOCATIONS": "One of the places can no longer be used. Check where the appointment happens.",
         "HOURS": "Check the days and times.",
         "PIPELINE": "That pipeline or stage no longer exists. Choose another one.",
         "BRAND": "Check the color and the welcome message."
@@ -113,7 +116,7 @@
       }
     },
     "ABOUT": {
-      "TITLE": "What is the conversation called?",
+      "TITLE": "What is the appointment called?",
       "NAME_LABEL": "Name the client sees",
       "DURATION_LABEL": "How long does it take?",
       "PEOPLE_LABEL": "Who attends?",
@@ -123,7 +126,7 @@
       "PEOPLE_EMPTY": "Nobody on the team can attend yet."
     },
     "WHERE": {
-      "TITLE": "Where will the conversation be?",
+      "TITLE": "Where will the appointment be?",
       "HINT": "Choose one or more.",
       "RECOMMENDED": "Recommended",
       "WHATSAPP_VIDEO": {
@@ -168,7 +171,7 @@
       "NOTICE_VALUE": "{value} in advance",
       "BUFFER_LABEL": "Break",
       "BUFFER_NONE": "No break",
-      "BUFFER_VALUE": "{value} between conversations",
+      "BUFFER_VALUE": "{value} between one time slot and the next",
       "EXTRA_LABEL": "Other durations (optional)",
       "EXTRA_HINT": "The client chooses how long they want."
     },
@@ -218,14 +221,14 @@
         "GRAPHITE": "Graphite"
       },
       "HEADLINE_LABEL": "Welcome sentence",
-      "HEADLINE_PLACEHOLDER": "Pick the best time to talk",
+      "HEADLINE_PLACEHOLDER": "Pick the best time for you",
       "LOGO_ALT": "Company logo",
       "PHOTO_ALT": "Photo of who attends"
     },
     "PREVIEW": {
       "TITLE": "This is what the client will see",
       "SCHEDULE": "{days}, from {from} to {to}",
-      "DEFAULT_HEADLINE": "Pick the best time to talk",
+      "DEFAULT_HEADLINE": "Pick the best time for you",
       "WITH": "With {name}",
       "PICK_TIME": "Choose a time",
       "DESTINATION": "Whoever books goes to the {pipeline} pipeline, {stage} stage, with {people}.",
@@ -242,7 +245,7 @@
       "MISSING_TITLE": "Almost ready to publish:",
       "MISSING": {
         "HOST": "Choose who attends",
-        "LOCATION": "Choose where the conversation happens",
+        "LOCATION": "Choose where the appointment happens",
         "WORKING_HOURS": "Choose the days you attend",
         "PIPELINE": "Choose which pipeline new bookings go to"
       },
