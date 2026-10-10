@@ -488,7 +488,16 @@
         "GOAL_INFO": "Attainment of this month's sales target (won value this month ÷ target). Pacing compares it to how much of the month has passed.",
         "GOAL_ON_TRACK": "On track",
         "GOAL_BEHIND": "Behind",
-        "GOAL_EMPTY": "No target set. Set it in Edit pipeline."
+        "GOAL_EMPTY": "No target set. Set it in Edit pipeline.",
+        "RESOLVED": "Resolved",
+        "RESOLVED_INFO": "Cards marked as resolved within the selected period. A service pipeline never counts as a sale.",
+        "CANCELLED": "Cancelled",
+        "CANCELLED_INFO": "Cards marked as cancelled within the selected period. A service pipeline never counts as a sale.",
+        "OPEN_WORK": "Open now",
+        "OPEN_WORK_INFO": "People, conversations and open cards in this pipeline, counted apart: one conversation can hold several cards.",
+        "OPEN_PEOPLE": "People",
+        "OPEN_CONVERSATIONS": "Conversations",
+        "OPEN_CARDS": "Cards"
       },
       "MEETINGS": {
         "TITLE": "Meetings",
@@ -513,7 +522,9 @@
         "TITLE": "Throughput (closed)",
         "WON": "Won",
         "LOST": "Lost",
-        "EMPTY": "No deals closed in the period."
+        "EMPTY": "No deals closed in the period.",
+        "RESOLVED": "Resolved",
+        "CANCELLED": "Cancelled"
       },
       "FOLLOW_UPS": {
         "TITLE": "Follow-ups",

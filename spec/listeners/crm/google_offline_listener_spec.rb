@@ -47,6 +47,19 @@ RSpec.describe Crm::GoogleOfflineListener do
     end
   end
 
+  context 'when the funnel does not count as sale (#1151)' do
+    let(:pipeline) do
+      account.crm_pipelines.create!(name: 'Sinistros', created_by: user, status: :active, counts_as_sale: false, metadata: pipeline_metadata)
+    end
+
+    it 'never enqueues a conversion, even when the sync was configured on' do
+      described_class.instance.crm_card_won(event_for)
+      described_class.instance.crm_card_moved(event_for)
+
+      expect(Crm::GoogleOffline::RecordJob).not_to have_been_enqueued
+    end
+  end
+
   it 'does not enqueue when the card does not exist' do
     described_class.instance.crm_card_won(event_for(0))
 

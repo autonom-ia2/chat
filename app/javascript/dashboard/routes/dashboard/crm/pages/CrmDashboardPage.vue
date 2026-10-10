@@ -11,6 +11,12 @@ import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import ReportMetricCard from 'dashboard/routes/dashboard/settings/reports/components/ReportMetricCard.vue';
 import BarChart from 'shared/components/charts/BarChart.vue';
+import {
+  openWork,
+  outcomeKpis,
+  showsSales,
+  throughputDatasets,
+} from '../helpers/dashboardOutcomes';
 
 const { t } = useI18n();
 const { resolvedLocale } = useLocale();
@@ -226,27 +232,29 @@ const hasAiActivity = computed(() => {
   return ai.ai_auto_moves + ai.ai_accepted + ai.ai_dismissed > 0;
 });
 
+// Funil de atendimento (#1151) mostra resolvidos e cancelados, nunca venda.
+const isSaleFunnel = computed(() => showsSales(summary.value));
+const outcomeCards = computed(() => outcomeKpis(summary.value));
+const openWorkItems = computed(() => openWork(summary.value));
+
+const throughputSets = computed(() => throughputDatasets(throughput.value));
+
 const throughputCollection = computed(() => {
   const series = throughput.value?.series || [];
   return {
     labels: series.map(point => point.date),
-    datasets: [
-      {
-        label: t('CRM_KANBAN.DASHBOARD.THROUGHPUT.WON'),
-        backgroundColor: '#16a34a',
-        data: series.map(point => point.won),
-      },
-      {
-        label: t('CRM_KANBAN.DASHBOARD.THROUGHPUT.LOST'),
-        backgroundColor: '#e11d48',
-        data: series.map(point => point.lost),
-      },
-    ],
+    datasets: throughputSets.value.map(set => ({
+      label: t(`CRM_KANBAN.DASHBOARD.THROUGHPUT.${set.labelKey}`),
+      backgroundColor: set.color,
+      data: series.map(point => point[set.key] || 0),
+    })),
   };
 });
 
 const hasThroughput = computed(() =>
-  (throughput.value?.series || []).some(point => point.won + point.lost > 0)
+  (throughput.value?.series || []).some(point =>
+    throughputSets.value.some(set => (point[set.key] || 0) > 0)
+  )
 );
 
 const workloadLabel = entry => {
@@ -508,42 +516,78 @@ onMounted(async () => {
     <div v-else class="flex flex-col gap-6 p-6">
       <!-- KPI row -->
       <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-        <div class="p-4 border rounded-xl border-n-weak bg-n-solid-1">
+        <div
+          v-for="kpi in outcomeCards"
+          :key="kpi.key"
+          class="p-4 border rounded-xl border-n-weak bg-n-solid-1"
+        >
           <ReportMetricCard
-            :label="t('CRM_KANBAN.DASHBOARD.KPI.WON')"
-            :value="formatNumber(summary?.won_count)"
-            :info-text="t('CRM_KANBAN.DASHBOARD.KPI.WON_INFO')"
+            :label="t(`CRM_KANBAN.DASHBOARD.KPI.${kpi.key}`)"
+            :value="formatNumber(kpi.value)"
+            :info-text="t(`CRM_KANBAN.DASHBOARD.KPI.${kpi.key}_INFO`)"
           />
         </div>
         <div class="p-4 border rounded-xl border-n-weak bg-n-solid-1">
-          <ReportMetricCard
-            :label="t('CRM_KANBAN.DASHBOARD.KPI.LOST')"
-            :value="formatNumber(summary?.lost_count)"
-            :info-text="t('CRM_KANBAN.DASHBOARD.KPI.LOST_INFO')"
-          />
+          <h3
+            class="flex items-center gap-1 m-0 text-sm font-medium text-n-slate-11"
+          >
+            <span>{{ t('CRM_KANBAN.DASHBOARD.KPI.OPEN_WORK') }}</span>
+            <fluent-icon
+              v-tooltip="t('CRM_KANBAN.DASHBOARD.KPI.OPEN_WORK_INFO')"
+              size="14"
+              icon="info"
+              class="mt-0.5 text-n-slate-10"
+            />
+          </h3>
+          <dl class="grid grid-cols-3 gap-2 mt-1 mb-0">
+            <div
+              v-for="item in openWorkItems"
+              :key="item.key"
+              class="flex flex-col-reverse"
+            >
+              <dt class="text-xs text-n-slate-11">
+                {{ t(`CRM_KANBAN.DASHBOARD.KPI.OPEN_${item.key}`) }}
+              </dt>
+              <dd class="m-0 text-2xl text-n-slate-12">
+                {{ formatNumber(item.value) }}
+              </dd>
+            </div>
+          </dl>
         </div>
-        <div class="p-4 border rounded-xl border-n-weak bg-n-solid-1">
+        <div
+          v-if="isSaleFunnel"
+          class="p-4 border rounded-xl border-n-weak bg-n-solid-1"
+        >
           <ReportMetricCard
             :label="t('CRM_KANBAN.DASHBOARD.KPI.WIN_RATE')"
             :value="formatPercent(summary?.win_rate)"
             :info-text="t('CRM_KANBAN.DASHBOARD.KPI.WIN_RATE_INFO')"
           />
         </div>
-        <div class="p-4 border rounded-xl border-n-weak bg-n-solid-1">
+        <div
+          v-if="isSaleFunnel"
+          class="p-4 border rounded-xl border-n-weak bg-n-solid-1"
+        >
           <ReportMetricCard
             :label="t('CRM_KANBAN.DASHBOARD.KPI.WIN_RATE_VALUE')"
             :value="formatPercent(summary?.win_rate_by_value)"
             :info-text="t('CRM_KANBAN.DASHBOARD.KPI.WIN_RATE_VALUE_INFO')"
           />
         </div>
-        <div class="p-4 border rounded-xl border-n-weak bg-n-solid-1">
+        <div
+          v-if="isSaleFunnel"
+          class="p-4 border rounded-xl border-n-weak bg-n-solid-1"
+        >
           <ReportMetricCard
             :label="t('CRM_KANBAN.DASHBOARD.KPI.WON_VALUE')"
             :value="formatCurrencyList(summary?.won_value_by_currency)"
             :info-text="t('CRM_KANBAN.DASHBOARD.KPI.WON_VALUE_INFO')"
           />
         </div>
-        <div class="p-4 border rounded-xl border-n-weak bg-n-solid-1">
+        <div
+          v-if="isSaleFunnel"
+          class="p-4 border rounded-xl border-n-weak bg-n-solid-1"
+        >
           <ReportMetricCard
             :label="t('CRM_KANBAN.DASHBOARD.KPI.LOST_VALUE')"
             :value="formatCurrencyList(summary?.lost_value_by_currency)"
@@ -557,7 +601,10 @@ onMounted(async () => {
             :info-text="t('CRM_KANBAN.DASHBOARD.KPI.OPEN_VALUE_INFO')"
           />
         </div>
-        <div class="p-4 border rounded-xl border-n-weak bg-n-solid-1">
+        <div
+          v-if="isSaleFunnel"
+          class="p-4 border rounded-xl border-n-weak bg-n-solid-1"
+        >
           <h3
             class="flex items-center gap-1 m-0 text-sm font-medium text-n-slate-11"
           >
