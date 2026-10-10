@@ -3,6 +3,7 @@ import { computed, reactive, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import ComboBox from 'dashboard/components-next/combobox/ComboBox.vue';
+import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import { useKeyboardEvents } from 'dashboard/composables/useKeyboardEvents';
 import { useFixedPanelPresence } from 'dashboard/composables/useFixedPanelState';
@@ -51,6 +52,7 @@ const toForm = (setting = {}) => {
     auto_create_card: jaConfigurada ? Boolean(setting.auto_create_card) : true,
     default_pipeline_id: setting.default_pipeline_id || '',
     default_stage_id: setting.default_stage_id || '',
+    subject_ai_mode: setting.subject_ai_mode || 'off',
   };
 };
 
@@ -63,6 +65,7 @@ const FIELDS = [
   'auto_create_card',
   'default_pipeline_id',
   'default_stage_id',
+  'subject_ai_mode',
 ];
 
 const sameForm = (first, second) =>
@@ -117,6 +120,13 @@ const toOption = (value, label) => ({ value, label });
 const visibilityOptions = computed(() => [
   toOption('all_inbox_cards', t('CRM_KANBAN.INBOX_SETTINGS.ALL_INBOX_CARDS')),
   toOption('assigned_only', t('CRM_KANBAN.INBOX_SETTINGS.ASSIGNED_ONLY')),
+]);
+
+// Multifunil (#1145): o que a IA faz quando identifica o assunto da conversa.
+const subjectAiOptions = computed(() => [
+  toOption('off', t('CRM_KANBAN.INBOX_SETTINGS.SUBJECT_AI_OFF')),
+  toOption('suggest', t('CRM_KANBAN.INBOX_SETTINGS.SUBJECT_AI_SUGGEST')),
+  toOption('auto', t('CRM_KANBAN.INBOX_SETTINGS.SUBJECT_AI_AUTO')),
 ]);
 
 const pipelineOptions = computed(() => [
@@ -206,6 +216,7 @@ const saveInbox = inbox => {
     auto_create_card: form.crm_enabled && form.auto_create_card,
     default_pipeline_id: form.default_pipeline_id || null,
     default_stage_id: form.default_stage_id || null,
+    subject_ai_mode: form.crm_enabled ? form.subject_ai_mode : 'off',
   });
 };
 
@@ -377,6 +388,23 @@ useFixedPanelPresence(computed(() => props.show));
                   }}
                 </span>
               </p>
+
+              <div class="grid gap-1 md:col-span-2">
+                <span class="text-xs font-medium text-n-slate-11">
+                  {{ t('CRM_KANBAN.INBOX_SETTINGS.SUBJECT_AI') }}
+                </span>
+                <ChoiceSelect
+                  v-model="formFor(inbox).subject_ai_mode"
+                  :options="subjectAiOptions"
+                  :aria-label="t('CRM_KANBAN.INBOX_SETTINGS.SUBJECT_AI')"
+                  :disabled="!formFor(inbox).crm_enabled"
+                  data-subject-ai-mode
+                  class="w-full"
+                />
+                <span class="text-xs text-n-slate-11">
+                  {{ t('CRM_KANBAN.INBOX_SETTINGS.SUBJECT_AI_HELP') }}
+                </span>
+              </div>
 
               <div class="flex items-end justify-between gap-3">
                 <label

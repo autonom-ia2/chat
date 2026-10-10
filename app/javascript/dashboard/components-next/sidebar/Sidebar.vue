@@ -39,6 +39,7 @@ import {
   bookingSidebarItems,
   myBookingHoursSidebarItems,
 } from 'dashboard/routes/dashboard/settings/booking/bookingAccess';
+import { agentsSidebarItems } from 'dashboard/routes/dashboard/autonomia/agentes/utils/agentsSidebar';
 import { withCampaignJourney } from 'dashboard/components-next/CampaignJourney/journeySidebar';
 import ChannelLeaf from './ChannelLeaf.vue';
 import ChannelIcon from 'next/icon/ChannelIcon.vue';
@@ -149,6 +150,13 @@ const hasAutonomiaAgentsFeature = computed(
 );
 const autonomiaAgentsFlag = computed(
   () => autonomiaAgentsMasterFlag.value && hasAutonomiaAgentsFeature.value
+);
+// Nova jornada de Agentes (#1181): o menu vira um item só, "Agentes".
+const agentsJourneyOn = computed(() =>
+  isFeatureEnabledonAccount.value(
+    accountId.value,
+    FEATURE_FLAGS.AUTONOMIA_AGENTS_JOURNEY
+  )
 );
 const emailCampaignEnabled = computed(
   () =>
@@ -806,34 +814,12 @@ const menuItems = computed(() => {
         'automation_list',
       ],
     },
-    ...(autonomiaAgentsEnabled.value
-      ? [
-          {
-            name: 'Agents',
-            label: t('SIDEBAR.AGENTS_AUTONOMIA'),
-            icon: 'i-lucide-bot',
-            activeOn: [
-              'autonomia_agents_index',
-              'autonomia_agents_builder',
-              'autonomia_agent_panel',
-            ],
-            children: [
-              {
-                name: 'My Agents',
-                label: t('SIDEBAR.AGENTS_HUB'),
-                to: accountScopedRoute('autonomia_agents_index'),
-                activeOn: ['autonomia_agents_index', 'autonomia_agent_panel'],
-              },
-              {
-                name: 'Agent Builder',
-                label: t('SIDEBAR.AGENTS_BUILDER'),
-                to: accountScopedRoute('autonomia_agents_builder'),
-                activeOn: ['autonomia_agents_builder'],
-              },
-            ],
-          },
-        ]
-      : []),
+    ...agentsSidebarItems({
+      isVisible: autonomiaAgentsEnabled.value,
+      journeyOn: agentsJourneyOn.value,
+      t,
+      accountScopedRoute,
+    }),
     ...prospectingSidebarItems({
       isVisible: autonomiaProspectingEnabled.value,
       t,
