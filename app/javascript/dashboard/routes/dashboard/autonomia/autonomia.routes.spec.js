@@ -10,6 +10,10 @@ vi.mock('dashboard/store', () => ({ default: store }));
 vi.mock('./agentes/entrada/AgentesListaEntrada.vue', () => ({
   default: { name: 'AgentesListaEntrada' },
 }));
+// #1181: a criação e a página do agente também passam por seletores, com a mesma regra.
+vi.mock('./agentes/entrada/AgentesCriarEntrada.vue', () => ({
+  default: { name: 'AgentesCriarEntrada' },
+}));
 vi.mock('./agentes/entrada/AgentePaginaEntrada.vue', () => ({
   default: { name: 'AgentePaginaEntrada' },
 }));
@@ -92,8 +96,8 @@ describe('guardas da Autonomia com link direto', () => {
   });
 });
 
-// #1181: só o componente da lista e o da página do agente mudam (seletores); nome,
-// caminho, meta, guarda e props continuam os mesmos, e o Construtor fica intocado.
+// #1181: só os componentes da lista, da criação e da página do agente mudam (seletores);
+// nome, caminho, meta, guarda e props continuam os mesmos.
 describe('entrada da lista de agentes (#1181)', () => {
   it('a rota da lista abre o seletor, com o mesmo caminho, meta e guarda', async () => {
     const lista = rota('autonomia_agents_index');
@@ -105,6 +109,32 @@ describe('entrada da lista de agentes (#1181)', () => {
       permissions: ['administrator', 'autonomia_view', 'autonomia_manage'],
     });
     expect(lista.beforeEnter).toBe(rota('autonomia_agent_panel').beforeEnter);
+  });
+
+  it('a rota do Construtor abre o seletor da criação, com o mesmo caminho, meta e guarda', async () => {
+    const construtor = rota('autonomia_agents_builder');
+    const { default: componente } = await construtor.component();
+
+    expect(componente.name).toBe('AgentesCriarEntrada');
+    expect(construtor.path).toBe('/app/accounts/:accountId/agents/new');
+    expect(construtor.meta).toEqual({
+      permissions: ['administrator', 'autonomia_manage'],
+    });
+    expect(construtor.beforeEnter).toBe(
+      rota('autonomia_agent_panel').beforeEnter
+    );
+    expect(construtor.props).toBeUndefined();
+  });
+
+  it('o Construtor continua barrando quem não tem o módulo ligado', async () => {
+    window.globalConfig = { AUTONOMIA_AGENTS_ENABLED: 'true' };
+    store.dispatch.mockReset();
+    contaCarregaDepois({ id: 9, autonomia_agents_enabled: false });
+    const next = await entrar('autonomia_agents_builder');
+    expect(next).toHaveBeenCalledWith({
+      name: 'home',
+      params: { accountId: '9' },
+    });
   });
 
   it('o Construtor e a página do agente continuam com o mesmo caminho, meta e props', () => {

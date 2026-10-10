@@ -598,7 +598,8 @@
         "ESCREVENDO": "Typing…",
         "USOU": "used: {arquivo}",
         "IDEIAS": "Ideas to start with",
-        "QUEM_DISSE": "{quem}:"
+        "QUEM_DISSE": "{quem}:",
+        "FOTO_ENVIADA": "Photo sent"
       },
       "MENU": {
         "AGENTES": "Agents",
@@ -1043,6 +1044,150 @@
         "VOLTAR_INTERNO": {
           "ERRO": "Could not start answering.",
           "FEITO": "{nome} is answering again."
+        }
+      },
+      "CRIAR": {
+        "TITULO": "Create agent",
+        "VOLTAR": "Back to Agents",
+        "ERRO_ABRIR": "This agent could not be opened right now.",
+        "ERRO_ABRIR_GARANTIA": "Nothing changed.",
+        "CARREGANDO": "Opening the agent",
+        "ETAPAS": {
+          "ROTULO": "Steps",
+          "CONTE": "Tell",
+          "CONFIRA": "Check",
+          "COMECE": "Start",
+          "FEITO": "(done)",
+          "COMPACTO": "Step {n} of 3 · {nome}",
+          "PRONTO": "Done"
+        },
+        "SAIR": {
+          "TITULO": "Leave now?",
+          "TEXTO": "{nome} stays on the list as Not finished.",
+          "FICAR": "Stay here",
+          "SAIR": "Leave",
+          "FEITO": "{nome} stayed on the list as Not finished.",
+          "DEPOIS": "Not now, finish later"
+        },
+        "CONTE": {
+          "ROTULO": "Conversation to create the agent",
+          "INTRO": "I will ask you a few short questions. The agent only starts answering when you say so.",
+          "CONVERSA": "Conversation",
+          "ASSISTENTE": "Creation assistant:",
+          "VOCE": "You:",
+          "PENSANDO": "Thinking…",
+          "DEMORANDO": "This is taking longer than usual. You can wait here.",
+          "ESPERE": "Wait for the previous answer.",
+          "CONTINUAR": "Let's pick up where we left off.",
+          "FECHOU": "Done. {nome} already knows the main things. See how {nome} answers.",
+          "ERRO": "I could not answer right now.",
+          "ERRO_GARANTIA": "What you told me is saved.",
+          "ANEXO_FRASE": "Do you have a menu, a price list or your website? {acao} It is optional.",
+          "ANEXO_ACAO": "Send it here.",
+          "EXEMPLO_DO_MEU_JEITO": "E.g.: answer price and delivery questions for my store",
+          "MAIS": "Want to tell me anything else? Write here.",
+          "FOTO": "I sent a photo.",
+          "TESTAR_AGORA": "Test now",
+          "TESTAR_AGORA_TEXTO": "You can tell me more later.",
+          "VER_EXEMPLO": "See the example",
+          "VER_COMO": "See how {nome} answers",
+          "IDEIAS": {
+            "ROUPAS": "Clothing store",
+            "DOCES": "Bakery",
+            "ESTETICA": "Beauty clinic",
+            "OFICINA": "Car repair shop"
+          }
+        },
+        "MATERIAL": {
+          "VOCE_MANDOU": "You sent:",
+          "LENDO": "Reading…",
+          "PRONTO": "Ready",
+          "FILA": "I will read it as soon as we start",
+          "ATENCAO": "I could not read this file",
+          "ATENCAO_TEXTO": "Send another file or tell me in the conversation.",
+          "GRANDE": "This file is over 25 MB. Try a smaller one.",
+          "MANDAR_OUTRO": "Send another",
+          "TIRAR": "Remove",
+          "TIRAR_ARIA": "Remove {nome}"
+        },
+        "EXEMPLO": {
+          "TITULO": "This is what your customers will see",
+          "LEGENDA": "After you tell me about it, {nome} answers the way your business does."
+        },
+        "CONFIRA": {
+          "TITULO": "Test it as if you were a customer",
+          "TEXTO": "Nobody gets these messages. It is just a test.",
+          "VAZIO": "Tap a question or write your own.",
+          "VAZIO_CELULAR": "Tap a question below to test.",
+          "ESCREVA": "Write a question",
+          "PERGUNTAS_ROTULO": "Questions to test",
+          "ATENDIDO_POR": "Answered by {nome}",
+          "ESCREVENDO": "{nome} is typing…",
+          "LIMPAR": "Clear test",
+          "ATUALIZADO": "Updated. Test again.",
+          "PASSARIA": "Here {nome} would pass the conversation to the team.",
+          "RESPONDEU_ERRADO": "Wrong answer?",
+          "RESPONDEU_ERRADO_RASCUNHO": "I asked: {pergunta} {nome} answered: {resposta} This is wrong because ",
+          "FOTO": "Look at this photo.",
+          "FALHA": "{nome} did not answer right now.",
+          "FALHA_GARANTIA": "This does not affect your customers.",
+          "DEMORA": "This is taking too long. Try again.",
+          "INCOMPLETO": "{nome} does not know enough yet. Tell a bit more on the side.",
+          "INCOMPLETO_CELULAR": "{nome} does not know enough yet. Tell a bit more.",
+          "PERGUNTE": "Ask a question to see how {nome} answers.",
+          "COMECAR_NO": "Start answering on {canal}",
+          "COMECAR_TEXTO": "{nome} starts answering your customers’ messages.",
+          "VOLTAR_CONVERSA": "Back to the conversation",
+          "PERGUNTAS": {
+            "QUANTO_CUSTA": "How much is it?",
+            "SABADO": "Are you open on Saturday?",
+            "PESSOA": "I want to talk to a person",
+            "PEDIDO": "I want to place an order",
+            "DESCONTO": "Is there a discount?",
+            "AJUDA": "Hi, I need help",
+            "TROCAR": "I want to exchange a product"
+          }
+        },
+        "CANAL": {
+          "WHATSAPP": "WhatsApp",
+          "INSTAGRAM": "Instagram",
+          "SITE": "website chat",
+          "EMAIL": "email",
+          "FACEBOOK": "Facebook",
+          "TELEGRAM": "Telegram"
+        },
+        "COMECE": {
+          "COMECAR": "Start answering",
+          "TROCAR": "Swap and start answering",
+          "VOLTAR_TESTE": "Back to the test",
+          "ERRO_INTERNO": "Could not start answering. Nothing changed: {nome} is still not answering."
+        },
+        "PRONTO": {
+          "TITULO": "{nome} is now answering on {canal}",
+          "TITULO_SEM_CANAL": "{nome} is now answering",
+          "AGORA": "Whoever messages {canal} now talks to {nome}.",
+          "DENTRO": "{nome} answers on {canal} only during business hours.",
+          "FORA": "{nome} answers on {canal} only outside business hours.",
+          "EQUIPE": "When {nome} does not know, the conversation goes to the team.",
+          "TROCA": "{outro} stopped answering on {canal}.",
+          "VER": "See {nome}"
+        },
+        "HORARIO": {
+          "DIAS": {
+            "0": "Sun",
+            "1": "Mon",
+            "2": "Tue",
+            "3": "Wed",
+            "4": "Thu",
+            "5": "Fri",
+            "6": "Sat"
+          },
+          "INTERVALO": "{inicio} to {fim}",
+          "FAIXA": "{dias}, {abre} to {fecha}",
+          "DIA_TODO": "{dias}, all day",
+          "E": "{antes}, and {depois}",
+          "HORA": "{h}:00",
+          "HORA_MIN": "{h}:{m}"
         }
       }
     }

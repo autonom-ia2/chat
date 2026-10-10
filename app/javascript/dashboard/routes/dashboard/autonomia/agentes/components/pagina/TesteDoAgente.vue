@@ -126,6 +126,15 @@ defineExpose({ focar });
       @acao="teste.tentarDeNovo()"
     />
     <AgenteErro
+      v-else-if="aviso?.tipo === AVISO_TESTE.OFFLINE"
+      data-aviso="offline"
+      tom="ambar"
+      :titulo="t('AGENTS.JORNADA.ERRO.OFFLINE')"
+      :garantia="t('AGENTS.JORNADA.ERRO.OFFLINE_GARANTIA')"
+      :acao="t('AGENTS.JORNADA.COMUM.TENTAR_DE_NOVO')"
+      @acao="teste.tentarDeNovo()"
+    />
+    <AgenteErro
       v-else-if="aviso?.tipo === AVISO_TESTE.INCOMPLETO"
       data-aviso="incompleto"
       tom="ambar"

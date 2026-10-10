@@ -128,6 +128,36 @@ describe('GavetaTestar (T08)', () => {
     wrapper.unmount();
   });
 
+  it('says the person is offline (not that the agent failed) and retries', async () => {
+    store.dispatch
+      .mockRejectedValueOnce(
+        Object.assign(new Error('Network Error'), { code: 'ERR_NETWORK' })
+      )
+      .mockResolvedValueOnce({ reply: 'Oi!' });
+    const wrapper = montar({ pergunta: 'Oi' });
+    await flushPromises();
+    const aviso = no('[data-aviso="offline"]');
+    expect(aviso.textContent).toContain('AGENTS.JORNADA.ERRO.OFFLINE');
+    expect(no('[data-aviso="falha"]')).toBeNull();
+    aviso.querySelector('button').click();
+    await flushPromises();
+    expect(no('[data-aviso]')).toBeNull();
+    expect(todos('[data-balao]')).toHaveLength(2);
+    wrapper.unmount();
+  });
+
+  it('a 422 from the test says the agent does not know enough yet', async () => {
+    store.dispatch.mockRejectedValueOnce(
+      Object.assign(new Error('422'), { response: { status: 422 } })
+    );
+    const wrapper = montar({ pergunta: 'Oi' });
+    await flushPromises();
+    expect(no('[data-aviso="incompleto"]').textContent).toContain(
+      'AGENTS.JORNADA.PAGINA.TESTE.INCOMPLETO'
+    );
+    wrapper.unmount();
+  });
+
   it('offers "Wrong answer?" only to whoever can change by chatting', async () => {
     store.dispatch.mockResolvedValue({
       reply: 'Abrimos sim.',

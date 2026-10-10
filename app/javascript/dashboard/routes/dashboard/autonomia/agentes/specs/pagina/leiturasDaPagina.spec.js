@@ -139,7 +139,7 @@ describe('useTesteDoAgente', () => {
     });
     expect(teste.mensagens.value).toEqual([
       { de: 'cliente', texto: 'Vocês abrem no sábado?' },
-      { de: 'agente', texto: 'Abrimos sim.', usou: [] },
+      { de: 'agente', texto: 'Abrimos sim.' },
       { de: 'agente', texto: 'Das 9h às 13h.', usou: ['horarios.pdf'] },
     ]);
     expect(JSON.stringify(teste.mensagens.value)).not.toContain('0.91');
