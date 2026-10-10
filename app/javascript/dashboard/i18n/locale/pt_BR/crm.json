@@ -522,7 +522,7 @@
         "TITLE": "Throughput (fechados)",
         "WON": "Ganhos",
         "LOST": "Perdidos",
-        "EMPTY": "Nenhum negócio fechado no período.",
+        "EMPTY": "Nada fechado no período.",
         "RESOLVED": "Resolvidos",
         "CANCELLED": "Cancelados"
       },

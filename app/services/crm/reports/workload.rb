@@ -2,8 +2,9 @@ module Crm
   module Reports
     # Open-card workload by the card OWNER (#1151). One conversation can hold
     # several cards, each with its own owner, so the conversation assignee says
-    # nothing about who carries the card. A card without owner goes to the bot that
-    # answers its inbox, or to nobody. Bounded scan to keep the query predictable.
+    # nothing about who carries the card. A card without owner (old card, or owner
+    # cleared in bulk) falls back to what the board shows: the conversation assignee,
+    # then the inbox bot, then nobody. Bounded scan to keep the query predictable.
     class Workload < BaseReport
       MAX_CARDS = 5000
 
@@ -27,7 +28,7 @@ module Crm
 
       def open_cards
         scope = account.crm_cards.where(status: Crm::Card.statuses[:open])
-                       .includes(:owner, primary_conversation: { inbox: { agent_bot_inbox: :agent_bot } },
+                       .includes(:owner, primary_conversation: [:assignee, { inbox: { agent_bot_inbox: :agent_bot } }],
                                          inbox: { agent_bot_inbox: :agent_bot })
         pipeline.present? ? scope.where(pipeline_id: pipeline.id) : scope
       end
@@ -35,8 +36,7 @@ module Crm
       def responsible(card)
         return { type: 'agent', id: card.owner.id, name: card.owner.name } if card.owner.present?
 
-        bot = card.responsible_agent_bot
-        { type: 'bot', id: bot.id, name: bot.name } if bot.present?
+        card.responsible_descriptor
       end
 
       def bucket_key(descriptor)

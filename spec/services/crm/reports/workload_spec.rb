@@ -37,13 +37,22 @@ RSpec.describe Crm::Reports::Workload do
     )
   end
 
-  it 'leaves a card without owner out of the conversation assignee workload' do
+  it 'falls back to what the board shows when the card has no owner: the conversation assignee' do
     create_card(owner: nil)
 
-    expect(workload).to eq([{ key: 'none', type: 'none', name: nil, count: 1 }])
+    expect(workload).to eq([{ key: "agent:#{attendant.id}", type: 'agent', name: 'Atendente', count: 1 }])
   end
 
-  it 'gives a card without owner to the inbox bot when one answers the inbox' do
+  it 'never gives a card without owner to the bot while a human holds the conversation' do
+    bot = create(:agent_bot, account: account, name: 'Bot da caixa')
+    AgentBotInbox.create!(inbox: inbox, agent_bot: bot, status: :active)
+    create_card(owner: nil)
+
+    expect(workload.pluck(:type)).to eq(['agent'])
+  end
+
+  it 'gives a card without owner to the inbox bot when nobody holds the conversation' do
+    conversation.update!(assignee: nil)
     bot = create(:agent_bot, account: account, name: 'Bot da caixa')
     AgentBotInbox.create!(inbox: inbox, agent_bot: bot, status: :active)
     create_card(owner: nil)

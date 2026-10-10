@@ -33,11 +33,13 @@ module Crm
         sale = pipeline.counts_as_sale?
         won = closed_with(sale ? :won : nil)
         lost = closed_with(sale ? :lost : nil)
+        won_count = won.count
+        lost_count = lost.count
 
         {
-          won_count: won.count,
-          lost_count: lost.count,
-          win_rate: win_rate(won.count, lost.count),
+          won_count: won_count,
+          lost_count: lost_count,
+          win_rate: win_rate(won_count, lost_count),
           win_rate_by_value: win_rate_by_value(won, lost),
           won_value_by_currency: currency_amount(won),
           lost_value_by_currency: currency_amount(lost),

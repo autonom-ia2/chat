@@ -527,7 +527,9 @@ onMounted(async () => {
             :info-text="t(`CRM_KANBAN.DASHBOARD.KPI.${kpi.key}_INFO`)"
           />
         </div>
-        <div class="p-4 border rounded-xl border-n-weak bg-n-solid-1">
+        <div
+          class="col-span-2 p-4 border rounded-xl border-n-weak bg-n-solid-1"
+        >
           <h3
             class="flex items-center gap-1 m-0 text-sm font-medium text-n-slate-11"
           >
@@ -543,12 +545,12 @@ onMounted(async () => {
             <div
               v-for="item in openWorkItems"
               :key="item.key"
-              class="flex flex-col-reverse"
+              class="flex flex-col-reverse min-w-0"
             >
               <dt class="text-xs text-n-slate-11">
                 {{ t(`CRM_KANBAN.DASHBOARD.KPI.OPEN_${item.key}`) }}
               </dt>
-              <dd class="m-0 text-2xl text-n-slate-12">
+              <dd class="m-0 text-xl truncate text-n-slate-12">
                 {{ formatNumber(item.value) }}
               </dd>
             </div>
@@ -594,7 +596,10 @@ onMounted(async () => {
             :info-text="t('CRM_KANBAN.DASHBOARD.KPI.LOST_VALUE_INFO')"
           />
         </div>
-        <div class="p-4 border rounded-xl border-n-weak bg-n-solid-1">
+        <div
+          v-if="isSaleFunnel"
+          class="p-4 border rounded-xl border-n-weak bg-n-solid-1"
+        >
           <ReportMetricCard
             :label="t('CRM_KANBAN.DASHBOARD.KPI.OPEN_VALUE')"
             :value="formatCurrencyList(summary?.open_value_by_currency)"
