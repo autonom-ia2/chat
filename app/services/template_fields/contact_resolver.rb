@@ -38,7 +38,7 @@ class TemplateFields::ContactResolver
   # Celular do Brasil como a pessoa lê, "(11) 98765-4321"; de outro país, no formato internacional.
   def phone
     number = contact.phone_number.to_s
-    parsed = number.present? && TelephoneNumber.parse(number)
+    parsed = TelephoneNumber.parse(number) if number.present?
     return number unless parsed&.valid?
 
     parsed.country&.country_id == BRAZIL ? parsed.national_number(formatted: true) : parsed.international_number(formatted: true)

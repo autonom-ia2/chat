@@ -8,9 +8,10 @@
 #               '3' => { 'source' => 'fixed',   'value' => 'Equipe Hub2You' } }
 #   defaults: { '2' => 'em breve' }   # a default alone works as a fixed text
 #
-# The older sources stay valid and read through the same catalog: 'contact' (name → cliente.nome,
-# first_name → cliente.primeiro_nome, company → empresa_cliente.nome) and 'column' (the raw cell,
-# as before). A 'field' binding accepts the keys an audience fills (TemplateFields::Catalog.in_audience?):
+# The older sources stay valid and read exactly as before, so existing campaigns send the same text:
+# 'contact' (name, first_name = first word of the name, company) and 'column' (the raw cell). The one
+# first name rule (no first name when the name is only a phone) is the catalog key cliente.primeiro_nome.
+# A 'field' binding accepts the keys an audience fills (TemplateFields::Catalog.in_audience?):
 # cliente.*, empresa_cliente.*, minha_empresa.* and publico.<column>, the column formatted by its
 # type (column_types, CampaignImports::ColumnTypes).
 #
@@ -31,6 +32,7 @@ class CampaignJourney::VariableBindings
   end
 
   SOURCES = %w[contact column fixed field].freeze
+  # The catalog key each older contact field matches, for the coverage check only.
   CONTACT_FIELDS = { 'name' => 'cliente.nome', 'first_name' => 'cliente.primeiro_nome', 'company' => 'empresa_cliente.nome' }.freeze
   # Catalog keys the audience coverage checks against the spreadsheet row (CampaignImports::VariableCoverage).
   COVERAGE_FIELDS = { 'cliente.nome' => 'name', 'cliente.primeiro_nome' => 'name', 'empresa_cliente.nome' => 'company' }.freeze
@@ -45,6 +47,8 @@ class CampaignJourney::VariableBindings
     @bindings = bindings.to_h.to_h { |key, bound| [key.to_s, bound.to_h.stringify_keys.slice('source', 'value')] }
     @defaults = defaults.to_h.to_h { |key, text| [key.to_s, text.to_s.squish] }.compact_blank
     @column_types = column_types.to_h
+    # Only a 'field' binding reads the catalog (and the account); older column and fixed bindings read nothing more.
+    @catalog_bindings = @bindings.values.any? { |bound| bound['source'] == 'field' }
   end
 
   def any?
@@ -72,10 +76,11 @@ class CampaignJourney::VariableBindings
 
   # => [{ '1' => 'Ana', '2' => '10/2026' }, []] or [{ ... }, ['2']] when a value is missing.
   def resolve(contact, extra_values)
-    fields = field_resolver(contact, extra_values.to_h)
+    row = extra_values.to_h
+    fields = field_resolver(contact, row) if @catalog_bindings
     values = keys.to_h do |key|
       bound = bindings[key]
-      [key, (bound && value_for(bound, fields, extra_values.to_h)).to_s.squish.presence || defaults[key]]
+      [key, (bound && value_for(bound, contact, fields, row)).to_s.squish.presence || defaults[key]]
     end
     [values.compact, values.select { |_key, value| value.nil? }.keys]
   end
@@ -142,24 +147,35 @@ class CampaignJourney::VariableBindings
     end
   end
 
-  def value_for(bound, fields, extra_values)
+  def value_for(bound, contact, fields, extra_values)
     case bound['source']
     when 'fixed' then bound['value']
     when 'column' then extra_values[bound['value']]
-    when 'contact', 'field' then fields.value(catalog_key(bound))
+    when 'contact' then contact_field(contact, bound['value'])
+    when 'field' then fields.value(bound['value'])
+    end
+  end
+
+  # The older 'contact' source reads exactly as before #1331 (existing campaigns keep their values; the one
+  # first name rule is for the catalog key cliente.primeiro_nome).
+  def contact_field(contact, field)
+    case field
+    when 'name' then contact.name
+    when 'first_name' then contact.name.to_s.split.first
+    when 'company' then contact.try(:company)&.name.presence || contact.additional_attributes.to_h['company_name']
     end
   end
 
   def field_resolver(contact, extra_values)
     TemplateFields::Resolver.new(
-      TemplateFields::ContactResolver.new(contact), account_resolver(contact.account),
+      TemplateFields::ContactResolver.new(contact), account_resolver(contact),
       TemplateFields::AudienceResolver.new(columns: extra_values.keys, values: extra_values, types: @column_types)
     )
   end
 
-  # One per account for the whole send: the brand kit is read once.
-  def account_resolver(account)
+  # One per account for the whole send: the account and its brand kit are read once.
+  def account_resolver(contact)
     @account_resolvers ||= {}
-    @account_resolvers[account.id] ||= TemplateFields::AccountResolver.new(account)
+    @account_resolvers[contact.account_id] ||= TemplateFields::AccountResolver.new(contact.account)
   end
 end

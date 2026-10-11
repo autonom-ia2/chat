@@ -89,12 +89,32 @@ RSpec.describe CampaignJourney::VariableBindings, :aggregate_failures do
       expect(missing).to eq(['2'])
     end
 
-    it 'uses the one first name rule: a name that is only a phone has no first name' do
+    # Existing campaigns keep sending what they sent: the older contact source is not touched by the new rule.
+    it 'keeps the older contact first name as it was, even for a name that is only a phone' do
+      ana.contact.update!(name: '+55 11 98765-4321', additional_attributes: { 'company_name' => 'Padaria Sol' })
+
+      values, missing = resolve(
+        '1' => { 'source' => 'contact', 'value' => 'first_name' }, '2' => { 'source' => 'contact', 'value' => 'name' },
+        '3' => { 'source' => 'contact', 'value' => 'company' }
+      )
+
+      expect([values, missing]).to eq([{ '1' => '+55', '2' => '+55 11 98765-4321', '3' => 'Padaria Sol' }, []])
+    end
+
+    it 'uses the one first name rule on the catalog key: a name that is only a phone has no first name' do
       ana.contact.update!(name: '+55 11 98765-4321')
 
-      values, missing = resolve('1' => { 'source' => 'contact', 'value' => 'first_name' })
+      values, missing = resolve('1' => { 'source' => 'field', 'value' => 'cliente.primeiro_nome' })
 
       expect([values, missing]).to eq([{}, ['1']])
+    end
+
+    it 'reads no account or catalog when only older column and fixed bindings exist' do
+      allow(TemplateFields::AccountResolver).to receive(:new).and_call_original
+
+      resolve('1' => { 'source' => 'column', 'value' => 'Vencimento' }, '2' => { 'source' => 'fixed', 'value' => 'Equipe' })
+
+      expect(TemplateFields::AccountResolver).not_to have_received(:new)
     end
   end
 end

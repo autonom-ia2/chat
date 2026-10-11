@@ -7,6 +7,8 @@
 #
 # Só leitura. Os valores vão literais para a Meta (nunca pelo Liquid, #1021).
 class TemplateFields::Resolver
+  DEAL_GROUP = 'negocio'.freeze
+
   def initialize(*resolvers)
     @resolvers = resolvers.compact
   end
@@ -17,18 +19,25 @@ class TemplateFields::Resolver
         TemplateFields::AudienceResolver.new(columns: columns, values: values, types: types))
   end
 
-  # Um card já resolvido (num job) ou lido pelo escopo do CRM (`DealResolver.visible_card`). attendant: quem envia.
+  # Um card já resolvido: num job, o do job; com uma pessoa, lido antes por `policy_scope(::Crm::Card)`. attendant: quem envia.
   def self.for_card(card, attendant: nil)
     new(card.contact && TemplateFields::ContactResolver.new(card.contact), TemplateFields::AccountResolver.new(card.account),
         TemplateFields::DealResolver.new(card), attendant && TemplateFields::AttendantResolver.new(attendant))
   end
 
-  # A reunião do agendamento: o contato do convite, a conta, o horário e o card da reunião.
-  def self.for_meeting(meeting, invite: nil)
+  # A reunião do agendamento: o contato do convite, a conta e o horário. Quem recebe é o cliente convidado, então o
+  # card da reunião (negocio.*) só entra quando o modelo pede um campo dele (requested_keys = as chaves do modelo).
+  def self.for_meeting(meeting, invite: nil, requested_keys: [])
     contact = invite&.contact || meeting.card&.contact
+    deal = meeting.card if deal_requested?(requested_keys)
     new(contact && TemplateFields::ContactResolver.new(contact), TemplateFields::AccountResolver.new(meeting.account),
-        TemplateFields::MeetingResolver.new(meeting, invite: invite), meeting.card && TemplateFields::DealResolver.new(meeting.card))
+        TemplateFields::MeetingResolver.new(meeting, invite: invite), deal && TemplateFields::DealResolver.new(deal))
   end
+
+  def self.deal_requested?(keys)
+    Array(keys).any? { |key| TemplateFields::Catalog.group(key) == DEAL_GROUP }
+  end
+  private_class_method :deal_requested?
 
   def keys
     @resolvers.flat_map(&:keys).uniq

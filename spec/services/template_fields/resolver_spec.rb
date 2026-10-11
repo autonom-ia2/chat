@@ -22,14 +22,22 @@ RSpec.describe TemplateFields::Resolver do
       expect(expected).to eq(['Marcos', '20/10 às 10:00', invite.url])
     end
 
-    it 'reads date and time apart in the meeting time zone, plus the card and the account' do
+    it 'reads date and time apart in the meeting time zone, plus the account' do
       resolver = described_class.for_meeting(meeting, invite: invite)
 
       expect(resolver.value('horario.data')).to eq('20/10/2026')
       expect(resolver.value('horario.hora')).to eq('10:00')
-      expect(resolver.value('negocio.titulo')).to eq(world.card.title)
       expect(resolver.value('minha_empresa.nome')).to eq('Clínica Bem-Estar')
       expect(resolver.keys).not_to include('publico.Plano', 'atendente.nome')
+    end
+
+    # The invitee is the customer: the card of the meeting goes only when the template asks for one of its fields.
+    it 'leaves the deal out unless the template asks for it' do
+      expect(described_class.for_meeting(meeting, invite: invite).keys.select { |key| key.start_with?('negocio.') }).to be_empty
+      expect(described_class.for_meeting(meeting, invite: invite).value('negocio.titulo')).to be_nil
+
+      asked = described_class.for_meeting(meeting, invite: invite, requested_keys: %w[cliente.primeiro_nome negocio.titulo])
+      expect(asked.value('negocio.titulo')).to eq(world.card.title)
     end
 
     it 'has no management link without an invite' do

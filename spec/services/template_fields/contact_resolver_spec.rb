@@ -32,6 +32,10 @@ RSpec.describe TemplateFields::ContactResolver do
     expect(value('cliente.telefone', foreign)).to eq('+1 202-555-0123')
   end
 
+  it 'has no mobile for a contact without phone' do
+    expect(value('cliente.telefone', create(:contact, account: account, phone_number: nil))).to be_nil
+  end
+
   it 'gives the customer date only to a customer, in the account time zone' do
     expect(value('cliente.cliente_desde')).to be_nil
 
