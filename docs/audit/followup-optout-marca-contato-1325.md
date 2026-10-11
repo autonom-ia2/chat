@@ -58,3 +58,23 @@ Sim, pela API. Lido no código, sem mudar política: `CardsController#fetch_card
 - Vitest: 3 arquivos, 16 testes, todos passando. ESLint: sem ocorrências.
 - `pnpm i18n:fork:check`: 16 catálogos cobertos. `pnpm central:check`: em dia (189 artigos); restam 6 evidências antigas de `crm.json` na 10.09, anteriores a este PR. `pnpm guia:check`: em dia.
 - Specs novos: reset lê a marca com o card travado; card que mudou de contato libera o contato marcado; liberação com prova concorrente não apaga a recusa; `contact_for` diferente de `card.contact` (marca e toque usam o contato da conversa); erro de banco chama o modelo uma vez.
+
+## Terceira revisão (commit 169e471208)
+
+- **Ordem de locks: follow-up -> card -> contato.** É a ordem do DueProcessor (trava o follow-up) e do AutoFollowupRunner (trava o card depois, `auto_followup_runner.rb`, comentário de `apply_current_composition`). O `reset_auto_followup` agora abre uma transação, trava os toques `ai_followup` ativos do card (`FOR UPDATE`, por id), depois o card (`lock!`, que relê a marca), cancela, grava e libera os contatos (cada `release_opt_out!` trava um contato, por id). O `OptOutDecision` trava card -> contato. O `release_opt_out!` trava só o contato e lê os cards da prova sem lock. Nada neste PR trava contato antes de card. Toque criado depois da primeira leitura não é cancelado pelo reset: travá-lo depois do card inverteria a ordem, e o estado zerado já o torna inofensivo.
+- **Inversão pré-existente, anotada e não corrigida aqui:** `ContactMergeAction#merge_and_remove_mergee_contact` trava os dois contatos (`lock!`, por id) e depois chama `@mergee_contact.destroy!`, cujo `has_many :crm_cards, dependent: :nullify` (`contact.rb:68`) escreve em `crm_cards` depois do lock dos contatos: contato -> card, o inverso da ordem acima. Na prática os cards do absorvido já passaram para o que fica (`merge_crm_cards`) antes, então o nullify costuma não achar linha, mas a ordem existe. Não muda neste PR.
+- **Spec do lock prova o lock.** O stub fica no `Crm::Card#lock!` e faz o "sim" chegar logo antes de o lock valer. O spec confere que o stub rodou e que o contato estava recusado (`follow_up_reply`) antes do reset. Mutação conferida de fato no snapshot do M2: tirando o `@card.lock!` (só a transação), o spec falha com `expected {ran: true, contact_opted_out: "follow_up_reply"}, got {ran: false, contact_opted_out: nil}`; o arquivo foi restaurado depois.
+- **Revertido:** a troca do `AutoFollowupTouchBuilder#contact_id` da segunda revisão. Ela mistura chaves entre toques pendentes e novos e mexe em relatório e no teto do runner; fica fora deste PR. O `CardOptOut.contact_for` segue como o resolvedor do opt-out.
+- **Predicado:** `CardOptOut.card_opted_out?` volta a comparar com `'true'` exato, igual ao `OPTED_OUT_SQL`. O planner aceita mais formas de verdadeiro de propósito (fail closed).
+- **Recusa da pessoa:** `source_for` e `possible_for?` reconhecem a prova de qualquer contato da mesma conta com o mesmo telefone ou e-mail (`CardOptOut.same_person`/`person_marked?`), como as outras origens. O reset do último card marcado libera o contato marcado e os que herdaram a recusa pela mesma pessoa.
+  - Limite encontrado: a validação do contato não deixa repetir telefone nem e-mail na conta (e o e-mail tem índice único no banco). Então "outro contato com o mesmo telefone" só existe em dado gravado sem validar (cadastro antigo, importação ou API); o spec cria o contato assim. Um contato novo que nasce depois de o marcado ser apagado não herda, porque a prova aponta para um contato que não existe mais. Para isso, o "sim" teria de guardar o telefone e o e-mail no card. Fica como pergunta de produto.
+  - Corrida residual: um "sim" trava só o contato marcado. Se o reset de outro card liberar, ao mesmo tempo, um contato que herdou a recusa pela mesma pessoa, esse contato pode perder a recusa até a próxima herança.
+
+### Validação da terceira revisão (11/10/2026, mesmo snapshot, RSpec e RuboCop no M2)
+
+- RSpec, os mesmos 17 grupos: 1403 exemplos, 0 falhas, 3 pendentes (quarentena antiga).
+- `rails autonomia:guia:formatos` regerado; `autonomia:guia:formatos:check`: em dia.
+- RuboCop nos 14 arquivos Ruby do PR: sem ocorrências.
+- Vitest: 3 arquivos, 16 testes, todos passando. ESLint: sem ocorrências.
+- `pnpm i18n:fork:check`: 16 catálogos cobertos. `pnpm central:check`: em dia (189 artigos; restam as 6 evidências antigas de `crm.json` na 10.09). `pnpm guia:check`: em dia.
+- Mutação do lock: falha como esperado (acima).

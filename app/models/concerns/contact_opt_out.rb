@@ -75,7 +75,8 @@ module ContactOptOut
   # alcança o contato), a recusa fica com essa origem em vez de sumir e voltar sozinha na próxima edição do contato. Se a
   # própria origem ainda se sustenta (outro card do contato continua marcado), nada muda e retorna false.
   # A prova é conferida com o contato travado: o "sim" noutro card grava o card e depois trava o contato
-  # (Crm::FollowUps::OptOutDecision), então ou ele já está visível aqui, ou grava a recusa de novo depois.
+  # (Crm::FollowUps::OptOutDecision), então ou ele já está visível aqui, ou grava a recusa de novo depois. Aqui só o
+  # contato é travado; os cards da prova são lidos sem lock, para nunca travar contato -> card.
   def release_opt_out!(source:, by:)
     source = validated_opt_out_source(source)
 

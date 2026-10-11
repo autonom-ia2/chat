@@ -141,26 +141,53 @@ RSpec.describe 'CRM auto follow-up opt-out + manual reset regression flow', type
     expect(contact.reload).not_to be_opted_out
   end
 
-  # Corrida: o "sim" grava o card entre a carga do card pelo controller e o reset. Com o card travado, o reset lê a marca
-  # já gravada e libera a recusa junto; lendo fora do lock, zeraria o card e deixaria a recusa do contato sem prova.
+  # Corrida: o "sim" grava o card entre a carga do card pelo controller e o lock do card. O stub do lock! faz esse "sim"
+  # chegar logo antes de o lock valer. Com o lock, o reset relê a marca e libera a recusa junto. Sem o lock (só uma
+  # transação), o stub não roda; lendo a marca antes do lock, o reset zeraria o card e deixaria a recusa sem prova.
   it 'o RESET lê a marca do card com o card travado' do
     account, user = create_account_and_user
     _pipeline, card, = build_stalled_card(account: account, user: user)
     contact = card.contact
-    allow_any_instance_of(Crm::Card).to receive(:with_lock).and_wrap_original do |original, *args, &block| # rubocop:disable RSpec/AnyInstance
-      if original.receiver.id == card.id && !contact.reload.opted_out?
+    expect(contact).not_to be_opted_out
+    race = { ran: false, contact_opted_out: nil }
+    allow_any_instance_of(Crm::Card).to receive(:lock!).and_wrap_original do |original, *args| # rubocop:disable RSpec/AnyInstance
+      if original.receiver.id == card.id && !race[:ran]
+        race[:ran] = true
         Crm::Card.where(id: card.id).update_all( # rubocop:disable Rails/SkipsModelValidations
           metadata: { 'ai' => { 'auto_followup_state' => { 'opted_out' => true, 'opt_out_contact_id' => contact.id } } }
         )
         contact.opt_out!(source: 'follow_up_reply')
+        race[:contact_opted_out] = contact.reload.opt_out_source
       end
-      original.call(*args, &block)
+      original.call(*args)
     end
 
     reset!(account, user, card)
 
+    expect(race).to eq(ran: true, contact_opted_out: 'follow_up_reply')
     expect(card.reload.metadata['ai']['auto_followup_state']['opted_out']).to be(false)
     expect(contact.reload).not_to be_opted_out
+  end
+
+  # chat#1325: a recusa é da pessoa do telefone ou do e-mail, como as outras origens herdáveis.
+  it 'contato novo com o mesmo telefone herda a follow_up_reply, e o RESET do último card marcado libera os dois' do
+    account, user = create_account_and_user
+    _pipeline, card, conversation = build_stalled_card(account: account, user: user)
+    card.update!(metadata: { 'ai' => { 'auto_followup_state' => { 'active' => true } } })
+    reply_opt_out(card, conversation)
+    asked = card.contact
+    expect(asked.reload.opt_out_source).to eq('follow_up_reply')
+
+    # A validação do contato não deixa repetir telefone na conta, mas o banco deixa (não há índice único): é o caso de
+    # cadastro antigo, importação ou API que gravou sem validar.
+    twin = account.contacts.new(name: 'Mesmo número', phone_number: asked.phone_number)
+    perform_enqueued_jobs(only: Contacts::OptOutInheritanceJob) { twin.save!(validate: false) }
+    expect(twin.reload.opt_out_source).to eq('follow_up_reply')
+
+    reset!(account, user, card.reload)
+
+    expect(asked.reload).not_to be_opted_out
+    expect(twin.reload).not_to be_opted_out
   end
 
   it 'card que mudou de contato depois do pedido: o RESET libera o contato marcado, não o atual' do

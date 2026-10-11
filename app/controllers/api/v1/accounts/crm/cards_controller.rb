@@ -201,13 +201,16 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
   # spent (reached max_touches, was stopped, or skipped). Cancels any still-active
   # ai_followup touches, clears the cadence state to an un-armed shape so the next
   # planner sweep starts a new cycle, then broadcasts the updated card.
-  # O reset é o dono da recusa 'follow_up_reply' do contato (chat#1325). Tudo vai numa transação só, com o card travado:
-  # a leitura da marca, a gravação e a liberação não se cruzam com a decisão do modelo (OptOutDecision trava o mesmo card).
+  # O reset é o dono da recusa 'follow_up_reply' do contato (chat#1325). Tudo vai numa transação só, travando na ordem
+  # follow-up -> card -> contato, a mesma do DueProcessor/AutoFollowupRunner e do OptOutDecision (card -> contato):
+  # primeiro os toques ai_followup ativos do card (por id), depois o card, cuja marca é relida com ele travado, e por
+  # último os contatos, na liberação (por id). Toque criado depois da primeira leitura não é cancelado aqui: travá-lo
+  # depois do card inverteria a ordem, e o estado zerado já o torna inofensivo.
   def reset_auto_followup
-    @card.with_lock do
-      @card.follow_ups.active.find_each do |follow_up|
-        follow_up.update!(status: :canceled) if follow_up.metadata.to_h['source'] == 'ai_followup'
-      end
+    ActiveRecord::Base.transaction do
+      ai_follow_ups = @card.follow_ups.active.where("crm_follow_ups.metadata->>'source' = 'ai_followup'").order(:id).lock.to_a
+      @card.lock!
+      ai_follow_ups.each { |follow_up| follow_up.update!(status: :canceled) }
       reset_auto_followup_state!
     end
 
@@ -401,13 +404,18 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
   end
 
   # Zera o estado do follow-up e, se este card estava parado a pedido do cliente, libera a recusa 'follow_up_reply' do
-  # contato que a marca prova (o gravado no "sim", mesmo que o card tenha mudado de contato depois). Só ela, nunca a de
-  # outra origem, e só quando nenhum outro card continua marcado para esse contato (Crm::FollowUps::CardOptOut,
-  # release_opt_out!). Sem isso, o card re-armado ficaria parado no runner (contact_opted_out?). Chamado com o card travado.
+  # contato que a marca prova (o gravado no "sim", mesmo que o card tenha mudado de contato depois) e dos contatos que a
+  # herdaram pelo mesmo telefone ou e-mail. Só ela, nunca a de outra origem, e só quando nenhum outro card continua
+  # marcado para a pessoa (Crm::FollowUps::CardOptOut, release_opt_out!). Sem isso, o card re-armado ficaria parado no
+  # runner (contact_opted_out?). Chamado com o card travado.
   def reset_auto_followup_state!
     marked_contact = ::Crm::FollowUps::CardOptOut.marked_contact(@card) if ::Crm::FollowUps::CardOptOut.card_opted_out?(@card)
     @card.update!(metadata: reset_auto_followup_metadata)
-    marked_contact&.release_opt_out!(source: 'follow_up_reply', by: Current.user)
+    return if marked_contact.nil?
+
+    ::Crm::FollowUps::CardOptOut.same_person(marked_contact).where(opt_out_source: 'follow_up_reply').order(:id).each do |contact|
+      contact.release_opt_out!(source: 'follow_up_reply', by: Current.user)
+    end
   end
 
   def reset_auto_followup_metadata

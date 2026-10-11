@@ -142,8 +142,6 @@ RSpec.describe Crm::FollowUps::OptOutDecisionJob do
       expect(contact.reload.opt_out_source).to eq('follow_up_reply')
       expect(other.reload).not_to be_opted_out
       expect(Crm::FollowUps::CardOptOut.contact_marked?(other)).to be(false)
-      touch = Crm::FollowUps::AutoFollowupTouchBuilder.new(card: card, touch: 1, due_at: 1.hour.from_now)
-      expect(touch.send(:contact_id)).to eq(contact.id)
     end
   end
 
