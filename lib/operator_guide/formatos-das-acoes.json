@@ -11768,6 +11768,16 @@
     ],
     "sem_corpo": true
   },
+  "POST campaign_journey/campaign_pauses/:id/resume": {
+    "completo": true,
+    "controller": "api/v1/accounts/campaign_journey/campaign_pauses#resume",
+    "modelo": "CampaignPause",
+    "origem": [
+      "app/controllers/api/v1/accounts/campaign_journey/campaign_pauses_controller.rb:14",
+      "app/controllers/api/v1/accounts/campaign_journey/campaign_pauses_controller.rb:28"
+    ],
+    "sem_corpo": true
+  },
   "POST campaign_journey/campaigns": {
     "campos": {
       "delivery_mode": {},
