@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_10_15_100000) do
+ActiveRecord::Schema[7.2].define(version: 2026_10_15_120000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -2047,6 +2047,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_15_100000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.datetime "focused_at"
+    t.bigint "focused_by_id"
     t.index ["account_id", "card_id", "conversation_id"], name: "idx_crm_card_conversations_unique", unique: true
     t.index ["account_id", "card_id"], name: "idx_crm_card_conversations_card"
     t.index ["account_id", "conversation_id"], name: "idx_crm_card_conversations_conversation"

@@ -4,6 +4,9 @@
 # no assunto atual, voltou a um assunto aberto, ou é um pedido novo num funil da caixa. O modelo maior entra só na
 # dúvida e quando é preciso dar nome ao assunto (o Jev só escolhe, não escreve). Na dúvida, nada muda.
 # Nunca regex nem lista de palavras para interpretar o cliente (R17).
+#
+# Ligada em Automática por padrão (#1260), com o mesmo interruptor da IA do card: só funis com a IA do funil ligada.
+# Automática respeita a pessoa: o que ela acabou de escolher ou fechar vira sugestão, não troca sozinha.
 module Crm::Subjects
   # Espera depois da última mensagem, como a avaliação de etapa: uma rajada vira uma pergunta só.
   DEBOUNCE = 15.seconds
@@ -15,16 +18,25 @@ module Crm::Subjects
   MAX_ASSUNTOS = 8
   FEATURE = 'assunto'.freeze
   FEATURE_REVISAO = 'assunto_revisao'.freeze
+  # A IA não troca sozinha o assunto que uma pessoa escolheu por este tempo: vira sugestão (#1260).
+  RESPEITO_AO_FOCO = 4.hours
+  # Card que a pessoa fechou ou arquivou não é recriado sozinho, e sugestão dispensada não volta, por este tempo.
+  RESPEITO_AO_FECHAMENTO = 24.hours
 
-  # A caixa da conversa está no modo Sugerir: só aí uma sugestão esperando faz sentido (#1221).
+  # A caixa aceita sugestão esperando uma pessoa: no modo Sugerir e também na Automática, que sugere em vez de agir
+  # quando respeita a pessoa (#1260). Desligada, a sugestão perde o sentido (#1221).
   def self.sugerir?(conversation)
-    Crm::InboxSetting.exists?(account_id: conversation.account_id, inbox_id: conversation.inbox_id, crm_enabled: true,
-                              subject_ai_mode: :suggest)
-  end
-
-  # A caixa da conversa tem o CRM e a IA de assunto ligados.
-  def self.ligado?(conversation)
     Crm::InboxSetting.where(account_id: conversation.account_id, inbox_id: conversation.inbox_id, crm_enabled: true)
                      .where.not(subject_ai_mode: :off).exists?
+  end
+
+  # A IA do CRM está ligada na instalação e a caixa da conversa tem o CRM e a IA de assunto ligados.
+  def self.ligado?(conversation)
+    Crm::Ai::Config.enabled? && sugerir?(conversation)
+  end
+
+  # O mesmo interruptor da IA do card: funil com a IA desligada fica fora da IA de assunto.
+  def self.ia_do_funil?(pipeline)
+    Crm::Ai::Config.pipeline_ai_settings(pipeline)[:enabled] != false
   end
 end

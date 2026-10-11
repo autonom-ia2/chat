@@ -50,11 +50,12 @@ class Crm::InboxSetting < ApplicationRecord
 
   private
 
-  # #1221: a caixa deixou de sugerir (outro modo ou CRM desligado). As sugestões que esperavam resposta saem da tela.
+  # #1221: a caixa deixou de sugerir (IA de assunto ou CRM desligados). As sugestões que esperavam resposta saem da tela.
   def saiu_do_modo_sugerir?
     return false unless saved_change_to_subject_ai_mode? || saved_change_to_crm_enabled?
 
-    !(subject_ai_suggest? && crm_enabled?)
+    # Automática também mostra sugestão quando respeita a pessoa (#1260): só Desligada ou CRM desligado as tiram.
+    subject_ai_off? || !crm_enabled?
   end
 
   # O painel aberto dessas conversas lê de novo (aviso em tempo real), em vez de mostrar a sugestão até recarregar.
