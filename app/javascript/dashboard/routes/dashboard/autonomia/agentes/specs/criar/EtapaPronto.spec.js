@@ -73,6 +73,12 @@ describe('EtapaPronto', () => {
     expect(montar().findAll('[data-heroi]')).toHaveLength(1);
   });
 
+  it('clips the rings without becoming a scroll container', () => {
+    const heroi = montar().get('[data-heroi]');
+    expect(heroi.classes()).toContain('overflow-clip');
+    expect(heroi.classes()).not.toContain('overflow-hidden');
+  });
+
   it('never says "Ligar"', () => {
     expect(montar().text()).not.toContain('Ligar');
   });

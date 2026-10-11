@@ -49,7 +49,7 @@ const isEmpty = computed(
       id="step-heading"
       data-step-heading
       tabindex="-1"
-      class="text-2xl font-bold text-slate-900 focus:outline-none"
+      class="text-2xl font-bold text-bk-strong focus:outline-none"
     >
       {{ t('BOOKING_V2.TIME.TITLE') }}
     </h1>
@@ -57,7 +57,7 @@ const isEmpty = computed(
     <p
       v-if="slotNotice"
       role="alert"
-      class="rounded-xl bg-yellow-100 p-4 text-base font-medium text-yellow-900"
+      class="rounded-xl bg-bk-warn p-4 text-base font-medium text-bk-warn-ink"
     >
       {{ t(slotNotice) }}
     </p>
@@ -66,19 +66,19 @@ const isEmpty = computed(
       v-if="isLoading"
       role="status"
       aria-live="polite"
-      class="text-base text-slate-600"
+      class="text-base text-bk-soft"
     >
       {{ t('BOOKING_V2.TIME.LOADING') }}
     </p>
 
     <div v-else-if="hasFailed" role="alert" class="flex flex-col gap-3">
-      <p class="text-base text-slate-800">{{ t('BOOKING_V2.TIME.FAILED') }}</p>
+      <p class="text-base text-bk-body">{{ t('BOOKING_V2.TIME.FAILED') }}</p>
       <ActionButton variant="secondary" @click="chooseDay(selectedDate)">
         {{ t('BOOKING_V2.TIME.RETRY') }}
       </ActionButton>
     </div>
 
-    <p v-else-if="isEmpty" class="text-base text-slate-800">
+    <p v-else-if="isEmpty" class="text-base text-bk-body">
       {{ t('BOOKING_V2.TIME.EMPTY') }}
     </p>
 
@@ -89,7 +89,7 @@ const isEmpty = computed(
       <li v-for="item in items" :key="item.iso">
         <button
           type="button"
-          class="min-h-12 w-full rounded-xl border-2 border-slate-200 bg-white px-2 py-3 text-base font-semibold text-slate-900 hover:border-[var(--brand)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand)]"
+          class="min-h-12 w-full rounded-xl border-2 border-bk-line bg-bk-field px-2 py-3 text-base font-semibold text-bk-strong hover:border-[var(--brand)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand)]"
           @click="chooseSlot(item.iso)"
         >
           {{ item.label }}

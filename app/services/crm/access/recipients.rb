@@ -20,6 +20,12 @@ class Crm::Access::Recipients
     card.nil? || card_blocked_user_ids(card).exclude?(user.id)
   end
 
+  # Administrador e usuário de integração não têm acesso por funil, como no ConversationScope (#1148, PR D).
+  def self.unrestricted_user_ids(account_id, user_ids)
+    account_users = AccountUser.where(account_id: account_id, user_id: user_ids)
+    account_users.administrator.or(account_users.where(integration: true)).pluck(:user_id)
+  end
+
   def initialize(conversation)
     @conversation = conversation
   end
@@ -61,7 +67,7 @@ class Crm::Access::Recipients
       admins = if accesses.empty?
                  []
                else
-                 AccountUser.where(account_id: @conversation.account_id, user_id: accesses.map(&:user_id)).administrator.pluck(:user_id)
+                 self.class.unrestricted_user_ids(@conversation.account_id, accesses.map(&:user_id))
                end
       accesses.reject { |access| admins.include?(access.user_id) }
     end

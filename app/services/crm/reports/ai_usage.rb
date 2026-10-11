@@ -3,7 +3,7 @@ class Crm::Reports::AiUsage < Crm::Reports::BaseReport
   GROUP_BY_OPTIONS = %w[hour day].freeze
   RESOURCE_FEATURES = {
     'Organizar cards' => %w[avaliacao_card],
-    'Lembretes de retorno' => %w[follow_up],
+    'Lembretes de retorno' => %w[follow_up follow_up_saida],
     'Criação de e-mail' => %w[email],
     'Resumos' => %w[resumo resumo_reuniao],
     'Assistente de respostas' => %w[copilot agente_resposta],

@@ -14,6 +14,11 @@ class Crm::AgentAvailability < ApplicationRecord
   belongs_to :account
   belongs_to :user
 
+  # Identidade salva (#1289): a foto desta pessoa nas páginas de agendamento (ver Crm::BookingV2::BrandIdentity).
+  # Salvar a identidade de uma página com foto CRIA esta linha para quem atende (`BrandIdentity#save_photo`), com
+  # horário vazio e sem pausa: existir linha não quer dizer que a pessoa mexeu em "Meus horários" (ver `custom_hours?`).
+  has_one_attached :booking_photo
+
   validates :user_id, uniqueness: { scope: :account_id }
   validate :user_must_belong_to_account
   validate :working_hours_must_be_sane

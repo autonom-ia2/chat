@@ -33,6 +33,15 @@ module BookingHelpers
     )
   end
 
+  # Anexo posto direto, sem passar pela validação da página: como um arquivo que entrou antes de a conferência de
+  # conteúdo existir (#1303), ou por um caminho que não valida. Troca o anexo que houver. Devolve o registro relido.
+  def attach_unchecked(record, name, content, filename: 'logo.png', content_type: 'image/png')
+    blob = ActiveStorage::Blob.create_and_upload!(io: StringIO.new(content), filename: filename, content_type: content_type, identify: false)
+    ActiveStorage::Attachment.where(record: record, name: name.to_s).delete_all
+    ActiveStorage::Attachment.create!(record: record, name: name.to_s, blob: blob)
+    record.reload
+  end
+
   def build_booking_world(account:, host_name: 'Camila Torres')
     host = create(:user, account: account, role: :agent, name: host_name)
     pipeline, stage = create_crm_pipeline(account: account, user: host)

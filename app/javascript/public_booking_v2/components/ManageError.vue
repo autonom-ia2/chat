@@ -14,7 +14,7 @@ const { t } = useI18n();
     <div v-if="manage.error.value" class="flex flex-col gap-3">
       <p
         role="alert"
-        class="rounded-xl bg-red-50 p-4 text-base font-medium text-red-900"
+        class="rounded-xl bg-bk-danger p-4 text-base font-medium text-bk-danger-ink"
       >
         {{ t(manage.error.value) }}
       </p>

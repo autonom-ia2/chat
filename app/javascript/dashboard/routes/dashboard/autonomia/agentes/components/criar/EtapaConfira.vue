@@ -130,7 +130,7 @@ const respondeuErrado = () => {
     class="flex flex-col min-w-0 gap-4"
     :class="celular ? 'pb-80' : ''"
   >
-    <div class="flex flex-col gap-1">
+    <div class="relative flex flex-col gap-1">
       <!-- No celular o título da tela já diz isso: aqui fica só para o leitor de tela. -->
       <h2
         id="confira-titulo"
@@ -269,7 +269,7 @@ const respondeuErrado = () => {
           :href="linkConectarCanal"
           target="_blank"
           rel="noopener noreferrer"
-          class="inline-flex items-center justify-center w-full gap-2 px-6 text-base font-semibold text-white rounded-xl min-h-14 bg-n-blue-11 dark:text-n-slate-1 hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-n-blue-11"
+          class="relative inline-flex items-center justify-center w-full gap-2 px-6 text-base font-semibold text-white rounded-xl min-h-14 bg-n-blue-11 dark:text-n-slate-1 hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-n-blue-11"
         >
           {{ t('AGENTS.JORNADA.HEROI.CONECTAR_CANAL') }}
           <span class="i-lucide-external-link size-5" aria-hidden="true" />

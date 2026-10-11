@@ -33,9 +33,9 @@ const copy = async () => {
 <template>
   <div
     data-testid="manage-link"
-    class="flex flex-col gap-3 rounded-2xl border-2 border-slate-200 bg-white p-4"
+    class="flex flex-col gap-3 rounded-2xl border-2 border-bk-line bg-bk-card p-4"
   >
-    <label for="manage-link" class="text-base font-semibold text-slate-900">
+    <label for="manage-link" class="text-base font-semibold text-bk-strong">
       {{ t('BOOKING_V2.DONE.MANAGE_TITLE') }}
     </label>
     <input
@@ -44,7 +44,7 @@ const copy = async () => {
       :value="url"
       type="text"
       readonly
-      class="min-h-12 w-full rounded-xl border-2 border-slate-300 bg-slate-50 px-4 py-3 text-base text-slate-900 focus:border-[var(--brand)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)]"
+      class="min-h-12 w-full rounded-xl border-2 border-bk-line-field bg-bk-inset px-4 py-3 text-base text-bk-strong focus:border-[var(--brand)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)]"
       @focus="$event.target.select()"
     />
     <ActionButton variant="secondary" @click="copy">
@@ -53,7 +53,7 @@ const copy = async () => {
     <ActionButton :href="url" variant="ghost" external>
       {{ t('BOOKING_V2.DONE.OPEN') }}
     </ActionButton>
-    <p role="status" class="text-base text-slate-700">
+    <p role="status" class="text-base text-bk-medium">
       {{ isCopied ? t('BOOKING_V2.DONE.COPIED') : '' }}
     </p>
   </div>

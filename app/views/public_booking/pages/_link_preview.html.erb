@@ -1,0 +1,15 @@
+<%# Prévia do link (#1282): Open Graph para o WhatsApp. Só dados da página, nunca do cliente; neutra quando a página não pode ser marcada. %>
+<% title = preview.title || installation_name %>
+<meta property="og:type" content="website" />
+<meta property="og:title" content="<%= title %>" />
+<% if preview.description.present? %>
+<meta property="og:description" content="<%= preview.description %>" />
+<meta name="description" content="<%= preview.description %>" />
+<% end %>
+<meta property="og:url" content="<%= url %>" />
+<meta property="og:image" content="<%= preview.image_url %>" />
+<meta property="og:image:type" content="image/png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="<%= title %>" />
+<meta name="twitter:card" content="summary_large_image" />

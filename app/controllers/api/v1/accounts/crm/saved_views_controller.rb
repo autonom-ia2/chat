@@ -36,7 +36,7 @@ class Api::V1::Accounts::Crm::SavedViewsController < Api::V1::Accounts::Crm::Bas
   private
 
   def fetch_saved_view
-    @saved_view = policy_scope(::Crm::SavedView).find(params[:id])
+    @saved_view = visible_pipeline_views(policy_scope(::Crm::SavedView)).find(params[:id])
   end
 
   # Acesso por funil (#1148, PR D): visão de um funil que a pessoa não tem não aparece nem pode ser gravada.

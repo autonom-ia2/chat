@@ -596,7 +596,7 @@
         "CLIENTE": "Customer",
         "AGENTE": "Agent",
         "ESCREVENDO": "Typing…",
-        "USOU": "used: {arquivo}",
+        "USOU": "Used: {arquivo}",
         "IDEIAS": "Ideas to start with",
         "QUEM_DISSE": "{quem}:",
         "FOTO_ENVIADA": "Photo sent"
@@ -728,6 +728,10 @@
         "ANEXOS": "Files going along"
       },
       "PAGINA": {
+        "FERRAMENTAS": {
+          "MENU": "Tools",
+          "TITULO": "Tools"
+        },
         "VOLTAR_LISTA": "Back to Agents",
         "TITULO_SR": "Agent page",
         "CARREGANDO": "Loading the agent",
@@ -796,9 +800,26 @@
         },
         "BLOCO_AGENDA": {
           "TITULO": "Books meetings",
-          "NAO_MARCA": "{nome} doesn't book meetings.",
-          "MARCA_PELA": "{nome} offers times from your booking page {pagina}.",
           "ALTERAR_ARIA": "Change how meetings are booked"
+        },
+        "AGENDA_ESTADO": {
+          "ATIVA": "{nome} offers times from the page {pagina}.",
+          "PAUSADA": "The page {pagina} is paused. {nome} will pass the conversation to the team until you turn the page back on.",
+          "PAUSADA_SO_VER": "The page {pagina} is paused. {nome} will pass the conversation to the team.",
+          "SEM_NINGUEM": "Nobody takes meetings on the page {pagina}. {nome} will pass the conversation to the team.",
+          "AGENDA_PAUSADA": "The calendar of who takes meetings on the page {pagina} is paused. {nome} will pass the conversation to the team until the hours are resumed.",
+          "NAO_EXISTE": "The chosen page no longer exists. Choose another one or choose Don't book.",
+          "NAO_EXISTE_SO_VER": "The chosen page no longer exists. {nome} will pass the conversation to the team.",
+          "NENHUMA": "{nome} doesn't book meetings.",
+          "ABRIR_PAGINAS": "Open booking pages",
+          "ESCOLHA": "Choose a page",
+          "FUSO": "Times in the business time zone ({fuso}).",
+          "RECEBE": {
+            "FIXO": "The meeting goes to {nome}.",
+            "FIXO_SEM_NOME": "The meeting goes to the person in charge of the page.",
+            "POR_PESSOA": "The meeting goes to whoever is handling the conversation, if that person takes meetings on the page. If not, it goes to {nome}.",
+            "POR_PESSOA_SEM_NOME": "The meeting goes to whoever is handling the conversation, if that person takes meetings on the page. If not, it goes to the first person on the page's list."
+          }
         },
         "SEMANA": {
           "ROTULO": "This week in numbers",

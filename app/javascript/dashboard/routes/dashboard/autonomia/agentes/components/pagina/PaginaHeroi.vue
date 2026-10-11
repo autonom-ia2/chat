@@ -47,7 +47,7 @@ const aoVoltar = evento => {
     <!-- Só os anéis são recortados: o menu de Mais opções precisa sair do herói. -->
     <span
       aria-hidden="true"
-      class="absolute inset-0 overflow-hidden pointer-events-none rounded-3xl"
+      class="absolute inset-0 overflow-clip pointer-events-none rounded-3xl"
     >
       <span
         class="absolute rounded-full -end-16 -top-24 size-80 border-[3rem] border-n-blue-9 opacity-15"

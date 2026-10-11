@@ -19,6 +19,17 @@ const alerta = vi.hoisted(() => vi.fn());
 vi.mock('dashboard/composables', () => ({ useAlert: alerta }));
 const paginasApi = vi.hoisted(() => ({ get: vi.fn() }));
 vi.mock('dashboard/api/crmBookingPages', () => ({ default: paginasApi }));
+vi.mock('vue-router', () => ({
+  useRouter: () => ({ resolve: rota => ({ href: `/app/${rota.name}` }) }),
+}));
+vi.mock('../../composables/usePermissoesDaJornada', async () => {
+  const { computed } = await import('vue');
+  return {
+    usePermissoesDaJornada: () => ({
+      podeAbrirAgendamento: computed(() => false),
+    }),
+  };
+});
 
 const no = seletor => document.querySelector(seletor);
 const todos = seletor => [...document.querySelectorAll(seletor)];
@@ -309,7 +320,8 @@ describe('GavetaFotoNome (T12)', () => {
       expect(link.className).toContain('font-semibold');
       expect(link.className).toContain('text-n-blue-11');
       expect(link.className).toContain('hover:underline');
-      expect(link.className).toContain('py-3');
+      // Área de toque de 44 px pelo ::after, sem padding que afaste o link da vírgula.
+      expect(link.className).toContain('after:-inset-y-3');
       expect(no('[data-acao-texto]')).toBeNull();
       await clicar('[data-ir-mudar]');
       expect(wrapper.emitted('mudar')).toHaveLength(1);
@@ -647,9 +659,10 @@ describe('GavetaAgenda (#1253)', () => {
     }
   );
 
+  // Sem página salva: com uma salva e apagada, a gaveta diz "não existe mais" (GavetaAgenda.spec.js).
   it('says how to create a page when the account has none, without Save', async () => {
     paginasApi.get.mockResolvedValue({ data: { payload: [] } });
-    const wrapper = await montar();
+    const wrapper = await montar({ config: { booking_page_id: null } });
     expect(no('[data-sem-paginas]')).not.toBeNull();
     expect(no('[data-salvar]')).toBeNull();
     wrapper.unmount();

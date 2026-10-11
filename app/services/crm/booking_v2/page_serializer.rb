@@ -26,15 +26,16 @@ class Crm::BookingV2::PageSerializer
 
   def summary
     {
-      id: profile.id, slug: profile.slug, title: profile.title, enabled: profile.enabled, public_url: public_url,
-      links: links, locations: profile.locations, assignment_mode: profile.assignment_mode,
-      upcoming_meetings_count: upcoming_meetings_count,
+      id: profile.id, slug: profile.slug, short_name: profile.short_name, account_address: profile.booking_account_address,
+      title: profile.title, enabled: profile.enabled, public_url: public_url, links: links, locations: profile.locations,
+      assignment_mode: profile.assignment_mode, upcoming_meetings_count: upcoming_meetings_count,
       attention: attention, orphaned: @orphaned, paused_people: paused_people
     }
   end
 
   def full
-    summary.merge(settings, branding, assignment).merge(created_at: profile.created_at&.iso8601, updated_at: profile.updated_at&.iso8601)
+    summary.merge(settings, branding, assignment)
+           .merge(identity: identity, preview: preview, created_at: profile.created_at&.iso8601, updated_at: profile.updated_at&.iso8601)
   end
 
   private
@@ -84,22 +85,49 @@ class Crm::BookingV2::PageSerializer
   def branding
     {
       template_key: profile.template_key, brand: profile.brand, contact_phone: profile.contact_phone,
-      logo_url: attachment_url(profile.logo), photo_url: attachment_url(profile.photo)
+      logo_url: attachment_url(profile.logo), logo_dark_url: attachment_url(profile.logo_dark), photo_url: attachment_url(profile.photo)
     }
+  end
+
+  # Identidade salva da conta (#1289), para o passo "Sua marca": o que "Usar a identidade salva" traria para esta
+  # página. `saved` falso = nada salvo ainda (a tela não oferece usar).
+  def identity
+    saved = brand_identity
+    saved.data.symbolize_keys.merge(
+      saved: saved.any_for?(profile), logo_url: attachment_url(saved.logo), logo_dark_url: attachment_url(saved.logo_dark),
+      photo_url: attachment_url(saved.photo_of(saved.host_of(profile)))
+    )
+  end
+
+  # O que a prévia do painel precisa para mostrar os mesmos dias da página pública (#1289): o fuso com nome IANA e
+  # os feriados fechados, pela mesma conta da página (`Crm::BookingV2::OpenDays`).
+  def preview
+    zone = ActiveSupport::TimeZone[profile.resolved_timezone]
+    { timezone: zone&.tzinfo&.name, closed_dates: Crm::BookingV2::OpenDays.new(profile, zone).to_h[:closed_dates] }
+  end
+
+  # Como a página pública: a foto que a pessoa guardou para as páginas vem antes da foto do perfil dela.
+  def person(user)
+    data = self.class.person(user)
+    data&.merge(booking_photo_url: attachment_url(brand_identity.photo_of(user)))
+  end
+
+  def brand_identity
+    @brand_identity ||= Crm::BookingV2::BrandIdentity.new(profile.account)
   end
 
   def assignment
     {
       default_pipeline_id: profile.default_pipeline_id, default_stage_id: profile.default_stage_id,
-      host: self.class.person(profile.default_assignee), people: people
+      host: person(profile.default_assignee), people: people
     }
   end
 
   def people
-    return [self.class.person(profile.default_assignee)].compact if profile.assignment_mode_fixed?
+    return [person(profile.default_assignee)].compact if profile.assignment_mode_fixed?
 
     profile.agent_booking_links.select(&:enabled?).map do |link|
-      self.class.person(link.agent).merge(link_slug: link.slug, public_url: link_url(link))
+      person(link.agent).merge(link_slug: link.slug, public_url: link_url(link))
     end
   end
 
@@ -113,12 +141,13 @@ class Crm::BookingV2::PageSerializer
     end
   end
 
+  # Link curto (`/a/<conta>/<página>/<pessoa>`) quando a página tem nome (#1282, #1299); senão o `/book/<slug>` de sempre.
   def link_url(link)
-    "#{base_url}/book/#{link.slug}"
+    Crm::BookingV2::ShortLink.url_for(profile, link: link)
   end
 
   def attachment_url(attachment)
-    return unless attachment.attached?
+    return unless attachment&.attached?
 
     url_for(attachment)
   end
@@ -126,10 +155,6 @@ class Crm::BookingV2::PageSerializer
   def public_url
     return if profile.assignment_mode_per_agent?
 
-    "#{base_url}/book/#{profile.slug}"
-  end
-
-  def base_url
-    ENV.fetch('FRONTEND_URL', '').to_s.chomp('/')
+    Crm::BookingV2::ShortLink.url_for(profile)
   end
 end

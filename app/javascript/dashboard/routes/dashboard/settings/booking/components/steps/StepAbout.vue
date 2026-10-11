@@ -3,14 +3,23 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import BookingField from '../BookingField.vue';
+import BookingAddressField from '../BookingAddressField.vue';
 import BookingToggle from '../BookingToggle.vue';
 import { DURATION_OPTIONS } from '../../constants';
 import { formatMinutes } from '../../bookingFormat';
 
-// Passo 2: nome que o cliente vê, quanto tempo dura e quem atende. Já vem
-// preenchido pelo modelo; a pessoa só confere ou troca.
+// Passo 2: nome que o cliente vê, o endereço da página (#1282, #1299: link
+// pronto, recolhido, com "Mudar endereço"), quanto tempo dura e quem atende.
+// Já vem preenchido pelo modelo; a pessoa só confere ou troca.
 const props = defineProps({
   form: { type: Object, required: true },
+  pageId: { type: Number, default: null },
+  // O `<conta>` do link curto, que o servidor manda com a página.
+  accountAddress: { type: String, default: '' },
+  // O endereço que a página já tem salvo ('' = nenhum).
+  savedShortName: { type: String, default: '' },
+  // O servidor recusou o endereço ao salvar o passo.
+  addressRefused: { type: Boolean, default: false },
   people: { type: Array, default: () => [] },
   // 'loading' | 'error' | 'ready'
   peopleState: { type: String, default: 'ready' },
@@ -25,6 +34,15 @@ const durationOptions = computed(() => {
     ? DURATION_OPTIONS
     : [...DURATION_OPTIONS, props.form.durationMinutes].sort((a, b) => a - b);
   return values.map(value => ({ value, label: formatMinutes(t, value) }));
+});
+
+const addressError = computed(() => {
+  if (props.error === 'SHORT_NAME') {
+    return t('BOOKING.WIZARD.ERRORS.SHORT_NAME');
+  }
+  return props.addressRefused
+    ? t('BOOKING.WIZARD.SERVER_ERRORS.SHORT_NAME')
+    : '';
 });
 
 const togglePerson = id => {
@@ -51,6 +69,16 @@ const togglePerson = id => {
       :label="t('BOOKING.ABOUT.NAME_LABEL')"
       :error="error === 'TITLE' ? t('BOOKING.WIZARD.ERRORS.TITLE') : ''"
       @update:model-value="emit('change', { title: $event })"
+    />
+
+    <BookingAddressField
+      :model-value="form.shortName"
+      :title="form.title"
+      :page-id="pageId"
+      :account-address="accountAddress"
+      :saved-name="savedShortName"
+      :error="addressError"
+      @update:model-value="emit('change', { shortName: $event })"
     />
 
     <div class="flex flex-col gap-2">

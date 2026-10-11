@@ -175,7 +175,7 @@ const linkQuemRecebe = computed(
         :href="linkQuemRecebe"
         target="_blank"
         rel="noopener noreferrer"
-        class="inline-flex items-center gap-1 font-medium underline min-h-11 w-fit text-n-blue-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-blue-11"
+        class="relative inline-flex items-center gap-1 font-medium underline min-h-11 w-fit text-n-blue-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-blue-11"
       >
         {{ t('AGENTS.JORNADA.ONDE_QUANDO.ESCOLHER_QUEM_RECEBE') }}
         <span class="i-lucide-external-link size-4" aria-hidden="true" />
