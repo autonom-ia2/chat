@@ -3,6 +3,7 @@ import { withFullI18n } from 'test-i18n';
 import AgenteSemana from '../../components/pagina/AgenteSemana.vue';
 import PaginaBlocos from '../../components/pagina/PaginaBlocos.vue';
 import PaginaHeroi from '../../components/pagina/PaginaHeroi.vue';
+import GavetaFotoNome from '../../components/pagina/GavetaFotoNome.vue';
 import { ESTADO } from '../../utils/estadoDoAgente';
 import en from '../../../../../../i18n/locale/en/agents.json';
 import ptBR from '../../../../../../i18n/locale/pt_BR/agents.json';
@@ -17,7 +18,10 @@ vi.mock('vue-router', () => ({
 // Sem a agenda nova na conta (#1253): a linha Marca reuniões fica fora, como na conta comum.
 vi.mock('dashboard/composables/store', async () => {
   const { computed } = await import('vue');
-  return { useMapGetter: () => computed(() => undefined) };
+  return {
+    useMapGetter: () => computed(() => undefined),
+    useStore: () => ({ dispatch: vi.fn() }),
+  };
 });
 vi.mock('../../composables/usePermissoesDaJornada', async () => {
   const { computed } = await import('vue');
@@ -98,6 +102,77 @@ describe('cópia da página do agente em pt_BR', () => {
     expect(wrapper.get('[role="switch"]').attributes('aria-label')).toBe(
       'Bia atendendo os clientes'
     );
+  });
+
+  describe('gaveta Nome / Foto e nome', () => {
+    const montarGaveta = props =>
+      mount(GavetaFotoNome, {
+        attachTo: document.body,
+        props: { agente: { ...AGENTE, actuation: 'external' }, ...props },
+      });
+
+    afterEach(() => {
+      document.body.innerHTML = '';
+    });
+
+    it('says the customer sees the channel photo, in short sentences', () => {
+      const wrapper = montarGaveta({
+        canal: { nome: 'WhatsApp do Centro', foto: 'https://x/whats.png' },
+        temCanal: true,
+      });
+      const texto = document.body.textContent;
+      expect(texto).toContain('Nome');
+      expect(texto).not.toContain('Foto e nome');
+      expect(texto).not.toContain('Trocar foto');
+      expect(texto).toContain(
+        'Seus clientes veem a foto do canal WhatsApp do Centro.'
+      );
+      expect(texto).toContain(
+        'O nome aparece aqui no painel. Se você pedir outro nome em Mudar conversando, ele muda e a gente avisa.'
+      );
+      wrapper.unmount();
+    });
+
+    it('says how to add a photo when the channel has none', () => {
+      const wrapper = montarGaveta({
+        canal: { nome: 'WhatsApp do Centro', foto: '' },
+        temCanal: true,
+      });
+      expect(document.body.textContent).toContain(
+        'O canal WhatsApp do Centro ainda não tem foto. Para seus clientes verem uma foto aqui, coloque-a nas configurações da caixa de entrada.'
+      );
+      wrapper.unmount();
+    });
+
+    it('makes "Mudar conversando" a link inside the same sentence', () => {
+      const wrapper = montarGaveta({ podeMudar: true });
+      expect(document.querySelector('[data-ir-mudar]').textContent).toBe(
+        'Mudar conversando'
+      );
+      expect(document.querySelector('[data-nota]').textContent).toContain(
+        'Se você pedir outro nome em Mudar conversando, ele muda e a gente avisa.'
+      );
+      wrapper.unmount();
+    });
+
+    it('says what happens before the first channel, neutral with {nome}', () => {
+      const wrapper = montarGaveta();
+      expect(document.body.textContent).toContain(
+        'Quando Bia atender num canal, a foto será a desse canal.'
+      );
+      wrapper.unmount();
+    });
+
+    it('keeps "Foto e nome" and "Trocar foto" for the internal agent', () => {
+      const wrapper = montarGaveta({
+        agente: { ...AGENTE, actuation: 'internal' },
+      });
+      const texto = document.body.textContent;
+      expect(texto).toContain('Foto e nome');
+      expect(texto).toContain('Trocar foto');
+      expect(texto).not.toContain('clientes veem');
+      wrapper.unmount();
+    });
   });
 });
 

@@ -40,6 +40,7 @@ import {
   podeMudarConversando,
   quandoDoAgente,
 } from '../utils/pagina';
+import { caixaDaFoto, usaFotoDoCanal } from '../utils/fotoDoCanal';
 
 // #1181 PR3 — página única do agente (protótipo T07), atrás da flag autonomia_agents_journey.
 // Herói navy (nome, onde responde, interruptor Atendendo/Parado, ação principal e Mais opções),
@@ -121,6 +122,16 @@ const umCanal = computed(() =>
     : null
 );
 
+// Externo: o cliente vê a foto da caixa (a primeira de "Responde no …"); sem ela, a foto própria.
+const canalDaFoto = computed(() =>
+  canais.estado.value === 'pronto'
+    ? caixaDaFoto(agente.value, atuais.value, caixas.value)
+    : null
+);
+const foto = computed(
+  () => canalDaFoto.value?.foto || agente.value?.avatar_url || ''
+);
+
 const ondeNoHeroi = computed(() => {
   if (interno.value) return '';
   if (!temCanal.value) return t(`${NS}.NENHUM_CANAL`);
@@ -164,14 +175,15 @@ const itensMais = computed(() => {
     icone: 'i-lucide-history',
   };
   if (!podeGerenciar.value) return cotacao.value ? [] : [versoes];
-  const foto = {
+  const soNome = usaFotoDoCanal(agente.value);
+  const fotoENome = {
     chave: GAVETA.FOTO,
-    texto: t(`${NS}.FOTO.TITULO`),
-    icone: 'i-lucide-image',
+    texto: soNome ? t(`${NS}.FOTO.TITULO_NOME`) : t(`${NS}.FOTO.TITULO`),
+    icone: soNome ? 'i-lucide-user-pen' : 'i-lucide-image',
   };
-  if (cotacao.value) return [foto];
+  if (cotacao.value) return [fotoENome];
   return [
-    foto,
+    fotoENome,
     versoes,
     {
       chave: GAVETA.INSTRUCOES,
@@ -302,6 +314,12 @@ const mudar = (origem, inicial = null) => {
   origemMudar.value = origem;
   testeInicial.value = inicial;
   vista.value = 'mudar';
+};
+
+// "Mudar conversando" da nota da gaveta Nome / Foto e nome: mesmo efeito do botão do herói.
+const mudarDaGaveta = () => {
+  nomeSugerido.value = '';
+  mudar('geral');
 };
 
 const sairDoMudar = () => {
@@ -498,7 +516,7 @@ const tirarPergunta = id => {
       <template v-else>
         <PaginaHeroi
           :nome="nome"
-          :foto="agente.avatar_url || ''"
+          :foto="foto"
           :estado="estadoDaPagina"
           :onde="ondeNoHeroi"
           :href-lista="hrefLista"
@@ -610,6 +628,10 @@ const tirarPergunta = id => {
         v-else-if="aberta === GAVETA.FOTO"
         :agente="agente"
         :nome-sugerido="nomeSugerido"
+        :canal="canalDaFoto"
+        :tem-canal="temCanal"
+        :pode-mudar="podeMudar"
+        @mudar="mudarDaGaveta"
         @fechar="fechar"
       />
       <GavetaVersoes
