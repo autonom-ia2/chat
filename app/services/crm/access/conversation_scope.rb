@@ -1,16 +1,19 @@
-# O funil do card libera a visão da conversa (multifunil 8/11, #1148, R2–R5). Um lugar só para a regra: lista de
-# conversas, link, busca, tempo real, notificações, contadores e CRM leem daqui.
+# O funil do card libera a visão da conversa (multifunil 8/11, #1148, R2–R5). Um lugar só para a regra. Neste PR (A)
+# leem daqui a lista de conversas, o link e a busca; tempo real, notificações e contadores entram no PR B, e o CRM
+# (Crm::Conversations::Visibility, Broadcaster) no PR C. Até lá nenhuma linha de acesso pode ser criada (ver #1149).
 #
 # Por pessoa e por caixa (Crm::InboxAgentAccess). Sem linha, ou linha que libera tudo, nada muda: vale a regra de caixa
 # de sempre (R5). Com restrição, numa caixa a pessoa vê a conversa quando:
 # - está atribuída a ela ou ela participa (atribuído e participante sempre veem, decisão do Rodrigo em 11/10);
 # - senão, se não é "Só as suas": algum card da conversa está num funil dela, ou a conversa não tem card e ela tem a
 #   triagem (R3).
-# Administrador vê tudo. Card arquivado não conta como card, como no ConversationCardFinder.
+# Administrador vê tudo. Card arquivado, resolvido ou cancelado não conta como card (RELEASED).
 #
 # Este filtro só RESTRINGE: quem chama já aplicou a regra de caixa (membro da caixa, time, função personalizada).
 class Crm::Access::ConversationScope
-  ARCHIVED = Crm::Card.statuses[:archived]
+  # Card que não prende a conversa ao funil (decisão do Rodrigo, 11/10): arquivado, e resolvido ou cancelado (funil de
+  # atendimento: o caso acabou, a conversa reaberta volta para a triagem). Ganho e perdido seguem com o funil.
+  RELEASED = Crm::Card.statuses.values_at(:archived, :resolved, :cancelled).freeze
 
   # account_user: quem já tem (a Policy) passa e poupa a consulta.
   def initialize(user:, account:, account_user: nil)
@@ -43,13 +46,18 @@ class Crm::Access::ConversationScope
 
   private
 
+  # Uma consulta só para quem não tem linha (o caso de todo mundo hoje); o papel só é lido quando há restrição.
+  # AgentBot não tem acesso por funil: o id dele pode coincidir com o de uma pessoa.
   def restrictions
-    @restrictions ||= if administrator?
-                        []
-                      else
-                        Crm::InboxAgentAccess.where(account_id: @account.id, user_id: @user.id)
-                                             .includes(:agent_pipelines).select(&:restricts?)
-                      end
+    @restrictions ||= begin
+      rows = if @user.is_a?(User)
+               Crm::InboxAgentAccess.where(account_id: @account.id, user_id: @user.id)
+                                    .includes(:agent_pipelines).select(&:restricts?)
+             else
+               []
+             end
+      rows.empty? || administrator? ? [] : rows
+    end
   end
 
   def administrator?
@@ -63,7 +71,7 @@ class Crm::Access::ConversationScope
       parts << "NOT (#{card_exists_sql})" if access.triage?
     end
     ActiveRecord::Base.sanitize_sql_array(
-      ["(#{parts.compact.join(' OR ')})", { user_id: @user.id, account_id: @account.id, archived: ARCHIVED,
+      ["(#{parts.compact.join(' OR ')})", { user_id: @user.id, account_id: @account.id, released: RELEASED,
                                             pipeline_ids: access.agent_pipelines.map(&:pipeline_id) }]
     )
   end
@@ -86,10 +94,10 @@ class Crm::Access::ConversationScope
   # idx_crm_card_conversations_conversation), e a lista não percorre os cards uma vez por conversa.
   def card_exists_sql(pipeline_filter = '')
     '(EXISTS (SELECT 1 FROM crm_cards crm_access_cards WHERE crm_access_cards.account_id = :account_id ' \
-      "AND crm_access_cards.conversation_id = conversations.id AND crm_access_cards.status <> :archived#{pipeline_filter}) " \
+      "AND crm_access_cards.conversation_id = conversations.id AND crm_access_cards.status NOT IN (:released)#{pipeline_filter}) " \
       'OR EXISTS (SELECT 1 FROM crm_card_conversations crm_access_links INNER JOIN crm_cards crm_access_cards ' \
       'ON crm_access_cards.id = crm_access_links.card_id AND crm_access_cards.account_id = :account_id ' \
       'WHERE crm_access_links.account_id = :account_id AND crm_access_links.conversation_id = conversations.id ' \
-      "AND crm_access_cards.status <> :archived#{pipeline_filter}))"
+      "AND crm_access_cards.status NOT IN (:released)#{pipeline_filter}))"
   end
 end

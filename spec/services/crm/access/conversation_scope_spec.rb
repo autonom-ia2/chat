@@ -171,4 +171,26 @@ RSpec.describe Crm::Access::ConversationScope do
 
     expect(visible).to contain_exactly(conversa_vendas, conversa_sinistro, conversa_triagem, conversa_outra_caixa)
   end
+
+  describe 'card encerrado (decisão de 11/10)' do
+    it 'perdido continua prendendo a conversa ao funil dele' do
+      account.crm_cards.find_by(conversation_id: conversa_sinistro.id).update!(status: :lost)
+      access(pipelines: [vendas], triage: true)
+
+      expect(allows?(conversa_sinistro)).to be(false)
+    end
+
+    %i[resolved cancelled].each do |status|
+      it "#{status} solta a conversa para a triagem" do
+        atendimento = create_crm_pipeline(account: account, user: admin, name: 'Suporte')
+        atendimento.first.update!(counts_as_sale: false)
+        conversa = conversation_with_card(atendimento)
+        account.crm_cards.find_by(conversation_id: conversa.id).update!(status: status)
+        access(pipelines: [vendas], triage: true)
+
+        expect(allows?(conversa)).to be(true)
+        expect(visible).to include(conversa)
+      end
+    end
+  end
 end

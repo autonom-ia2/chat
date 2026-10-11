@@ -155,3 +155,7 @@ A Entrega 3 precisa de uma conta com **mais de um funil** para o piloto do acess
   real, notificações e contadores), C (CRM e Copiloto no mesmo filtro). Sem linha configurada nada muda, então cada PR
   entra no ar sem efeito; a tela (#1149) só depois do C. Revisão de segurança em cada PR.
 - **Busca:** quem tem acesso por funil busca pelo banco (o índice do Elasticsearch não conhece o funil do card).
+- **Card encerrado (11/10):** ganho e perdido continuam prendendo a conversa ao funil de quem estava; resolvido e
+  cancelado (funil de atendimento) soltam a conversa para a triagem, como o arquivado. Distribuição automática (PR B):
+  o rodízio só escolhe quem tem o funil do card (ou a triagem, sem card); atribuir à mão e mencionar continuam
+  liberando. A dinâmica de fechar/reabrir conversa por caixa entra na análise do PR B.

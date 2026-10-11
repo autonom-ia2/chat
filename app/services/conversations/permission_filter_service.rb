@@ -24,7 +24,7 @@ class Conversations::PermissionFilterService
                else
                  conversations.where(inbox: user.inboxes.where(account_id: account.id))
                end
-    Crm::Access::ConversationScope.new(user: user, account: account).apply(by_inbox)
+    Crm::Access::ConversationScope.new(user: user, account: account, account_user: account_user).apply(by_inbox)
   end
 
   # Same rows as accessible_conversations. `inbox_id + 0` keeps the planner from
@@ -42,7 +42,9 @@ class Conversations::PermissionFilterService
   end
 
   def account_user
-    AccountUser.find_by(account_id: account.id, user_id: user.id)
+    return @account_user if defined?(@account_user)
+
+    @account_user = AccountUser.find_by(account_id: account.id, user_id: user.id)
   end
 
   def user_role
