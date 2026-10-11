@@ -396,8 +396,12 @@ Rails.application.routes.draw do
               collection do
                 get :reassign_preview
                 post :reassign
+                # Marcar pela agenda no painel (#1265): páginas que servem, horários e a reunião.
+                get :bookable, to: 'booking_page_meetings#index'
               end
               member do
+                get :slots, to: 'booking_page_meetings#slots'
+                post :meetings, to: 'booking_page_meetings#create'
                 post :publish
                 post :pause
                 post :preview_token

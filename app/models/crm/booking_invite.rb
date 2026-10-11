@@ -10,7 +10,8 @@ class Crm::BookingInvite < ApplicationRecord
   # Sem 0/O/o, 1/l/I: quem lê o link em voz alta ou digita de um print não erra.
   CODE_ALPHABET = '23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz'.chars.freeze
   CODE_LENGTH = 8
-  CHANNELS = %w[conversation copy ai public].freeze
+  # `panel` (#1265): reunião marcada pela atendente no painel; o convite é só o link de gestão dos avisos.
+  CHANNELS = %w[conversation copy ai public panel].freeze
   # Depois de virar reunião, o mesmo link serve para gerir a reunião até 1 dia depois do fim dela (J5-A2).
   MANAGE_GRACE = 1.day
 
