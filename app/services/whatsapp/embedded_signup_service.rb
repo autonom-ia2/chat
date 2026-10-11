@@ -1,4 +1,7 @@
 class Whatsapp::EmbeddedSignupService
+  # Meta's longest event name (FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING) has 39 characters.
+  TRACE_VALUE_LIMIT = 64
+
   def initialize(account:, params:, inbox_id: nil)
     @account = account
     @code = params[:code]
@@ -6,6 +9,8 @@ class Whatsapp::EmbeddedSignupService
     @phone_number_id = params[:phone_number_id]
     @inbox_id = inbox_id
     @is_coexistence = ActiveModel::Type::Boolean.new.cast(params[:is_coexistence])
+    @signup_event = trace_value(params[:signup_event])
+    @signup_version = trace_value(params[:signup_version])
   end
 
   def perform
@@ -15,6 +20,7 @@ class Whatsapp::EmbeddedSignupService
     phone_info = fetch_phone_info(access_token)
 
     channel = create_or_reauthorize_channel(access_token, phone_info)
+    record_signup_trace(channel)
     # NOTE: We call setup_webhooks explicitly here instead of relying on after_commit callback because:
     # 1. Reauthorization flow updates an existing channel (not a create), so after_commit on: :create won't trigger
     # 2. We need to run check_channel_health_and_prompt_reauth after webhook setup completes
@@ -30,6 +36,7 @@ class Whatsapp::EmbeddedSignupService
     # Skip health check on reauth (avoids false disconnect emails) and on coexistence signups
     # (Meta's health data can lag several minutes behind a fresh FINISH event).
     check_channel_health_and_prompt_reauth(channel) if @inbox_id.blank? && !@is_coexistence
+    log_signup_completed(channel)
     channel
 
   rescue StandardError => e
@@ -38,6 +45,40 @@ class Whatsapp::EmbeddedSignupService
   end
 
   private
+
+  # #1315: keeps how Meta finished this signup (terminal event, payload version, coexistence)
+  # on the channel. The container log is lost on every blue-green deploy, so the database is
+  # the only durable record of which Embedded Signup version actually connected each number.
+  # update_column on purpose: a save would re-run validate_provider_config (two Graph calls)
+  # for keys that do not touch the credentials. Each signup overwrites the previous trace: the
+  # stored token is the latest one, so the latest signup is what the trace must describe. An
+  # empty event means none reached us: the reauthorize grace window ran out, or the browser
+  # still ran a bundle from before #1315.
+  def record_signup_trace(channel)
+    trace = {
+      'signup_event' => @signup_event,
+      'signup_version' => @signup_version,
+      'signup_is_coexistence' => @is_coexistence,
+      'signup_completed_at' => Time.current.iso8601
+    }
+    # rubocop:disable Rails/SkipsModelValidations
+    channel.update_column(:provider_config, channel.provider_config.merge(trace))
+    # rubocop:enable Rails/SkipsModelValidations
+  end
+
+  def log_signup_completed(channel)
+    Rails.logger.info(
+      "[WHATSAPP] Embedded signup completed account_id=#{@account.id} channel_id=#{channel.id} " \
+      "reauthorization=#{@inbox_id.present?} event=#{@signup_event.presence || 'none'} " \
+      "version=#{@signup_version.presence || 'none'} coexistence=#{@is_coexistence.inspect}"
+    )
+  end
+
+  # Client-sent values go to the log and the database: keep only the characters Meta uses
+  # in event names and versions, bounded, so a crafted value cannot forge log lines.
+  def trace_value(value)
+    value.to_s.delete('^A-Za-z0-9_.').first(TRACE_VALUE_LIMIT)
+  end
 
   def exchange_code_for_token
     Whatsapp::TokenExchangeService.new(@code).perform

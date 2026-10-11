@@ -76,6 +76,14 @@ export const COMPLETION_RESULTS = Object.freeze([
 export const coexistenceSignal = result =>
   result?.type === SIGNUP_RESULT.FINISH ? result.isCoexistence : null;
 
+// What Meta reported for the completion (#1315): the terminal event and the payload
+// version. Sent with the code so the backend records how each number was connected;
+// without it a v4 signup and an older one leave the same trace.
+export const signupTrace = data => ({
+  signup_event: typeof data?.event === 'string' ? data.event : '',
+  signup_version: data?.version == null ? '' : String(data.version),
+});
+
 // Maps a WA_EMBEDDED_SIGNUP payload onto the outcomes callers act on. v4 spells the
 // explicit failure event `ERROR` where v3 used `error`, and also reports user-facing
 // failures as a CANCEL carrying an error_message — a bare CANCEL is a deliberate

@@ -18292,6 +18292,8 @@
       },
       "is_coexistence": {},
       "phone_number_id": {},
+      "signup_event": {},
+      "signup_version": {},
       "waba_id": {}
     },
     "completo": true,
