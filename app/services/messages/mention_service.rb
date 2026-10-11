@@ -68,7 +68,18 @@ class Messages::MentionService
 
   def add_mentioned_users_as_participants(validated_mentioned_ids)
     validated_mentioned_ids.each do |user_id|
+      next if self_mention_restricted?(user_id)
+
       message.conversation.conversation_participants.find_or_create_by(user_id: user_id)
     end
+  end
+
+  # Acesso por funil (#1148): quem tem acesso restrito não vira participante se mencionando; mencionado por outra
+  # pessoa, sim (decisão do Rodrigo, 11/10).
+  def self_mention_restricted?(user_id)
+    return false unless self_mention?(user_id)
+
+    Crm::Access::ConversationScope.new(user: message.sender, account: message.account)
+                                  .restricted_in?(message.conversation.inbox_id)
   end
 end

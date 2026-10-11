@@ -44,6 +44,11 @@ class Crm::Access::ConversationScope
     restrictions.any?
   end
 
+  # A pessoa tem acesso por funil nesta caixa (participação dela não é automática, ver ParticipationListener).
+  def restricted_in?(inbox_id)
+    restrictions.any? { |access| access.inbox_id == inbox_id }
+  end
+
   private
 
   # Uma consulta só para quem não tem linha (o caso de todo mundo hoje); o papel só é lido quando há restrição.
