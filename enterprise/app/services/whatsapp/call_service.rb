@@ -110,6 +110,7 @@ class Whatsapp::CallService
       data: { id: call.id, call_id: call.provider_call_id, provider: call.provider,
               conversation_id: call.conversation_id, account_id: call.account_id }.merge(extra)
     }
-    ActionCable.server.broadcast("account_#{call.account_id}", payload)
+    # Acesso por funil (#1148, parte C): só a quem pode ver a conversa.
+    Crm::Access::CallStreams.for(call.conversation).each { |stream| ActionCable.server.broadcast(stream, payload) }
   end
 end

@@ -2,6 +2,8 @@
 # restrição, as chaves das caixas livres seguem no SCARD (o escopo diz que tudo nelas é visível); só as chaves das caixas
 # restritas são lidas por id (SMEMBERS) e filtradas pelo escopo da lista (Crm::Access::ConversationScope).
 class Conversations::UnreadCounts::FunnelCounts
+  BATCH = 1000
+
   def initialize(account:, scope:)
     @account = account
     @scope = scope
@@ -26,7 +28,10 @@ class Conversations::UnreadCounts::FunnelCounts
 
   def visible_counts(keys)
     ids_by_key = ::Conversations::UnreadCounts::Store.members_for_keys(keys)
-    visible = @scope.apply(@account.conversations.where(id: ids_by_key.values.flatten.uniq)).pluck(:id).to_set
+    # Em lotes: os conjuntos são de não lidas, mas numa conta grande podem passar de milhares (#1148, parte C).
+    visible = ids_by_key.values.flatten.uniq.each_slice(BATCH).with_object(Set.new) do |ids, set|
+      set.merge(@scope.apply(@account.conversations.where(id: ids)).pluck(:id))
+    end
     ids_by_key.transform_values { |ids| ids.count { |conversation_id| visible.include?(conversation_id) } }
   end
 end

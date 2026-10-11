@@ -238,13 +238,9 @@ class Whatsapp::IncomingCallService
     User.where(id: user_ids).pluck(:pubsub_token).compact
   end
 
-  def broadcast(call, event, streams: account_streams, **extra)
+  def broadcast(call, event, streams: Crm::Access::CallStreams.for(call.conversation), **extra)
     payload = { event: event, data: base_payload(call).merge(extra) }
     streams.each { |s| ActionCable.server.broadcast(s, payload) }
-  end
-
-  def account_streams
-    ["account_#{inbox.account_id}"]
   end
 
   def base_payload(call)

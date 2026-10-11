@@ -11,7 +11,8 @@ class Crm::Cards::VisibleScopeQuery
     return base if administrator?
     return base.none if @user.blank?
 
-    visible_to_agent(base)
+    # Acesso por funil (#1148, parte C): o card de funil que a pessoa não tem não aparece no CRM.
+    Crm::Access::CardScope.new(user: @user, account: @account, account_user: @account_user).apply(visible_to_agent(base))
   end
 
   private

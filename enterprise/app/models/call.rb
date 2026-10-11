@@ -123,7 +123,8 @@ class Call < ApplicationRecord
       data: { id: id, call_id: provider_call_id, provider: provider,
               conversation_id: conversation_id, account_id: account_id }.merge(extra)
     }
-    ActionCable.server.broadcast("account_#{account_id}", payload)
+    # Acesso por funil (#1148, parte C): só a quem pode ver a conversa.
+    Crm::Access::CallStreams.for(conversation).each { |stream| ActionCable.server.broadcast(stream, payload) }
   end
 
   def from_number

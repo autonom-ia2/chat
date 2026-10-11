@@ -24,6 +24,8 @@ class Crm::Kanban::BoardPayloadBuilder
     @company_by_card_id = Crm::Cards::CompanyResolver.for_cards(
       cards_by_stage.values.flat_map { |cards, _has_more| cards }
     )
+    # Acesso por funil (#1148, parte C): a visibilidade das conversas do quadro (principais e vinculadas) numa consulta só.
+    @conversation_visibility.preload_cards(cards_by_stage.values.flat_map { |cards, _has_more| cards })
 
     {
       pipeline: pipeline_payload,

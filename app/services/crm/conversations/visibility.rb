@@ -5,8 +5,10 @@ class Crm::Conversations::Visibility
     @account_user = account_user
   end
 
+  # Acesso por funil (#1148, parte C): o CRM passa pela mesma regra da lista de conversas.
   def visible?(conversation)
     return false unless base_visible?(conversation)
+    return false unless funnel_scope.allows?(conversation)
     return true if unrestricted_inbox?(conversation)
 
     assigned_or_participating?(conversation)
@@ -14,6 +16,21 @@ class Crm::Conversations::Visibility
 
   # SQL equivalent of visible? for filters/counts. Filtering after pagination
   # would still expose matches or drop authorized rows from the current page.
+  # Kanban e lista: a regra do funil para todas as conversas da página de uma vez (#1148, parte C).
+  def preload(conversations)
+    funnel_scope.preload(conversations)
+  end
+
+  # Cards de uma página (Kanban, lista, exportação, calendário, drawer): a conversa principal e as vinculadas de cada
+  # card de uma vez. Sem acesso por funil, nada a fazer.
+  def preload_cards(cards)
+    return unless funnel_scope.restricted?
+
+    cards = cards.compact
+    linked = Crm::CardConversation.where(account_id: @account.id, card_id: cards.map(&:id)).pluck(:conversation_id)
+    funnel_scope.preload_ids(cards.map(&:conversation_id) + linked)
+  end
+
   def scope(conversations)
     base = conversations.where(account_id: @account.id)
     return base if administrator?
@@ -22,10 +39,14 @@ class Crm::Conversations::Visibility
     unrestricted = base.where(inbox_id: user_inbox_ids).where.not(inbox_id: assigned_only_inbox_ids)
     restricted = base.where(inbox_id: assigned_only_inbox_ids)
     participants = ConversationParticipant.where(account_id: @account.id, user_id: @user.id).select(:conversation_id)
-    unrestricted.or(restricted.where(assignee_id: @user.id)).or(restricted.where(id: participants))
+    funnel_scope.apply(unrestricted.or(restricted.where(assignee_id: @user.id)).or(restricted.where(id: participants)))
   end
 
   private
+
+  def funnel_scope
+    @funnel_scope ||= Crm::Access::ConversationScope.new(user: @user, account: @account, account_user: @account_user)
+  end
 
   def base_visible?(conversation)
     return false if conversation.blank?

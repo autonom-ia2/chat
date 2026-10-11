@@ -167,7 +167,11 @@ class Crm::Card < ApplicationRecord
   private
 
   def invalidate_funnel_counts
-    Crm::Access::CountInvalidation.card_changed!(account_id)
+    return unless Crm::Access::AccountFlag.any?(account_id)
+
+    previous_conversation_id = saved_changes['conversation_id']&.first
+    conversation_ids = [conversation_id, previous_conversation_id] + card_conversations.pluck(:conversation_id)
+    Crm::Access::CountInvalidation.card_changed!(account_id, conversation_ids)
   end
 
   def ensure_activity_defaults
