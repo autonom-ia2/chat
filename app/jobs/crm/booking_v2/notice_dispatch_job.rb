@@ -11,6 +11,10 @@
 # - erro inesperado no envio vira `failed` com a classe do erro (log + tracker);
 # - `sent` quer dizer mensagem criada, não entregue: aviso enviado nas últimas DELIVERY_CHECK cuja mensagem o
 #   provedor marcou depois como `failed` vira `failed: delivery_failed` (1 SELECT pelo mesmo índice, LIMIT 200).
+#
+# WAHA fora do ar (#1270): cada rodada leva um `Notices::WahaOutage`. Depois do primeiro erro ou timeout de uma caixa
+# WAHA, os outros avisos dela na rodada não chamam a WAHA e voltam para a fila (`Notices::Sender`), sem esperar o
+# timeout um por um. Esses avisos em espera entram no fim do lote (`DUE_ORDER`).
 class Crm::BookingV2::NoticeDispatchJob < ApplicationJob
   queue_as :scheduled_jobs
 
@@ -26,13 +30,22 @@ class Crm::BookingV2::NoticeDispatchJob < ApplicationJob
 
     fail_stale!
     fail_undelivered!
+    @waha_outage = Crm::BookingV2::Notices::WahaOutage.new
     due_ids.each { |id| dispatch(id) }
   end
 
   private
 
+  # Avisos que esperam a WAHA voltar (devolvidos à fila pelo `Sender`, #1270) vão depois dos demais e, entre eles, o
+  # que foi tentado há mais tempo vem primeiro: uma caixa WAHA parada não toma o lote dos avisos das outras caixas.
+  WAITING_WAHA = "crm_meeting_notices.error_code = 'waha_unavailable'".freeze
+  DUE_ORDER = Arel.sql(
+    "CASE WHEN #{WAITING_WAHA} THEN 1 ELSE 0 END, " \
+    "CASE WHEN #{WAITING_WAHA} THEN crm_meeting_notices.updated_at ELSE crm_meeting_notices.due_at END"
+  )
+
   def due_ids
-    Crm::MeetingNotice.pending.where('due_at <= ?', Time.current).order(:due_at).limit(BATCH).pluck(:id)
+    Crm::MeetingNotice.pending.where('due_at <= ?', Time.current).order(DUE_ORDER).limit(BATCH).pluck(:id)
   end
 
   def claim(id)
@@ -45,7 +58,8 @@ class Crm::BookingV2::NoticeDispatchJob < ApplicationJob
   def dispatch(id)
     return unless claim(id)
 
-    Crm::BookingV2::Notices::Sender.new(Crm::MeetingNotice.includes(meeting: [:account, { card: :contact }]).find(id)).perform
+    notice = Crm::MeetingNotice.includes(meeting: [:account, { card: :contact }]).find(id)
+    Crm::BookingV2::Notices::Sender.new(notice, waha_outage: @waha_outage).perform
   rescue StandardError => e
     Rails.logger.error("CRM booking notice dispatch #{id} failed: #{e.class.name}")
     ChatwootExceptionTracker.new(e, account: Crm::MeetingNotice.find_by(id: id)&.account).capture_exception

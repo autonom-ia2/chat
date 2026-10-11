@@ -6,16 +6,16 @@
 #   `{{3}}` (link de gestão, onde fica o "Parar avisos", J2-A9/RA-18) → `template_without_link`; modelo que pede o que o
 #   aviso não preenche (variável além de `{{1}}`..`{{3}}` no corpo, variável ou mídia no topo, botão com link variável:
 #   a Meta recusaria) → `template_unsupported`.
-# - WAHA (`MessagingWindow` o libera sempre, por isso regra própria): só com mensagem RECEBIDA do cliente nas últimas
-#   24 h nesta caixa → texto; senão `waha_outside_window` (risco de bloqueio do número, J5-A5).
+# - WAHA (#1270, decisão do Rodrigo em 11/10): texto, sem exigir mensagem do cliente nas últimas 24 h; sem conversa e
+#   sem telefone → `no_phone`. Os tetos (4 por número em 24 h e o teto por conta) e o "Parar avisos" são conferidos
+#   antes, no `Notices::Sender` e no `TestInvite`, e contêm o risco de bloqueio do número.
 # - Canal API de campanhas (não WAHA): janela do canal → texto; fora dela, modelo do canal por id; senão
 #   `template_required`.
 #
 # Conversa: a indicada (a do convite) quando é desta caixa e deste contato; senão a mais recente do contato nesta
-# caixa; sem nenhuma, o modelo pode abrir uma nova (o `Delivery` cria). Sem conversa e sem modelo, o número digitado
-# no link público não recebe mensagem automática (reduz abuso com número de terceiros).
+# caixa; sem nenhuma, o modelo (ou o texto da WAHA) abre uma nova (o `Delivery` cria). No oficial e no canal API, sem
+# conversa e sem modelo, o número digitado no link público não recebe mensagem automática.
 class Crm::BookingV2::Notices::Route
-  WAHA_WINDOW = 24.hours
   # Variável do corpo do modelo da Meta que recebe o link de gestão (`Notices::Delivery`).
   LINK_PLACEHOLDER = '{{3}}'.freeze
   # Variáveis do corpo que o aviso preenche: {{1}} primeiro nome, {{2}} dia e hora, {{3}} link de gestão.
@@ -107,8 +107,9 @@ class Crm::BookingV2::Notices::Route
   end
 
   def waha
-    recent = conversation.present? && conversation.messages.incoming.exists?(['messages.created_at > ?', WAHA_WINDOW.ago])
-    recent ? session : skip('waha_outside_window')
+    return skip('no_phone') if conversation.nil? && contact.phone_number.blank?
+
+    session
   end
 
   def api

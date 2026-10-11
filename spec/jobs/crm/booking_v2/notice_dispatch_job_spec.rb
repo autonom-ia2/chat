@@ -117,4 +117,67 @@ RSpec.describe Crm::BookingV2::NoticeDispatchJob do
       expect(failure_alerts).to be_empty
     end
   end
+
+  it 'avisos que esperam a WAHA vão para o fim do lote, o tentado há mais tempo primeiro (#1270)' do
+    waiting_recent = notice('booked', due_at: 3.hours.ago, error_code: 'waha_unavailable', updated_at: 1.minute.ago)
+    waiting_old = notice('rescheduled', due_at: 2.hours.ago, error_code: 'waha_unavailable', updated_at: 5.minutes.ago)
+    fresh_late = notice('hour_before', due_at: 1.minute.ago)
+    fresh_early = notice('day_before', due_at: 10.minutes.ago)
+    order = []
+    allow(Crm::BookingV2::Notices::Sender).to receive(:new) do |record|
+      order << record.id
+      instance_double(Crm::BookingV2::Notices::Sender, perform: true)
+    end
+
+    described_class.perform_now
+
+    expect(order).to eq([fresh_early.id, fresh_late.id, waiting_old.id, waiting_recent.id])
+  end
+
+  # #1270: WAHA fora do ar numa rodada. A caixa é consultada uma vez só; os avisos dela voltam à fila e saem na rodada
+  # em que a WAHA volta.
+  describe 'caixa WAHA fora do ar' do
+    let(:inbox) do
+      create(:channel_api, account: account, additional_attributes: { 'provider' => 'waha', 'session' => '5511900001111' }).inbox
+    end
+    let(:check_url) { 'https://waha.test/api/contacts/check-exists' }
+    let(:meeting) do
+      create_internal_meeting(world: world, starts_at: 3.days.from_now, metadata: { 'booking_profile_id' => world.profile.id })
+    end
+
+    around do |example|
+      with_modified_env('WAHA_API_URL' => 'https://waha.test', 'WAHA_API_KEY' => 'chave-waha-teste',
+                        'FRONTEND_URL' => 'https://app.example.com') { example.run }
+    end
+
+    before do
+      account.enable_features('crm_booking_v2')
+      account.save!
+      world.profile.update!(notice_inbox: inbox)
+      create_booking_invite(world: world, meeting: meeting, scheduled_at: Time.current, channel: 'public')
+    end
+
+    it 'consulta a WAHA uma vez na rodada, devolve os avisos à fila sem alertar e manda quando ela volta' do
+      first = notice('booked', due_at: 2.minutes.ago)
+      second = notice('rescheduled', due_at: 1.minute.ago)
+      down = stub_request(:get, check_url).with(query: hash_including(session: '5511900001111')).to_timeout
+
+      described_class.perform_now
+
+      expect(down).to have_been_made.once
+      expect([first, second].map { |item| item.reload.status }).to eq(%w[pending pending])
+      expect(failure_alerts).to be_empty
+
+      WebMock.reset!
+      stub_request(:get, check_url).with(query: hash_including(session: '5511900001111'))
+                                   .to_return(status: 200, body: { numberExists: true, chatId: '5511912345678@c.us' }.to_json,
+                                              headers: { 'Content-Type' => 'application/json' })
+
+      described_class.perform_now
+
+      expect([first, second].map { |item| item.reload.status }).to eq(%w[sent sent])
+      expect(first.reload.attempts).to eq(2)
+      expect(failure_alerts).to be_empty
+    end
+  end
 end
