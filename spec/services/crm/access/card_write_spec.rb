@@ -181,6 +181,48 @@ RSpec.describe 'Acesso por funil: mexer no card', type: :request do
     end
   end
 
+  describe '"Só as suas" e só triagem (decisão do Rodrigo em 11/10)' do
+    def access!(only_own:, triage:)
+      Crm::InboxAgentAccess.create!(account: account, inbox: inbox, user: vendas_agent, all_pipelines: false, triage: triage,
+                                    only_own: only_own)
+    end
+
+    it 'em "Só as suas", mexe no próprio card (editar, fechar, trocar de etapa), mas não muda de funil' do
+      access!(only_own: true, triage: false)
+      proposta = create_crm_stage(account: account, pipeline: vendas.first, name: 'Proposta')
+
+      patch card_url(card_vendas), params: { card: { title: 'Meu' } }, headers: headers, as: :json
+      expect(response).to have_http_status(:ok)
+      post card_url(card_vendas, 'move'), params: { stage_id: proposta.id }, headers: headers, as: :json
+      expect(response).to have_http_status(:ok)
+      post card_url(card_vendas, 'move'), params: { stage_id: sinistro.last.id }, headers: headers, as: :json
+      expect(forbidden?).to be(true)
+      post card_url(card_vendas, 'close'), params: { result: 'won' }, headers: headers, as: :json
+      expect(response).to have_http_status(:ok)
+
+      expect(card_vendas.reload).to have_attributes(title: 'Meu', pipeline_id: vendas.first.id, status: 'won')
+    end
+
+    it 'só com a triagem, mexe no card da conversa que atende' do
+      access!(only_own: false, triage: true)
+
+      patch card_url(card_sinistro), params: { card: { title: 'Atendo' } }, headers: headers, as: :json
+
+      expect(response).to have_http_status(:ok)
+    end
+
+    it 'não mexe no card dos outros' do
+      access!(only_own: true, triage: false)
+      alheio = account.crm_cards.create!(pipeline: vendas.first, stage: vendas.last, title: 'Alheio', inbox: inbox, contact: contact,
+                                         owner: admin)
+
+      patch card_url(alheio), params: { card: { title: 'X' } }, headers: headers, as: :json
+
+      expect(response.status).to be_in([401, 404])
+      expect(alheio.reload.title).to eq('Alheio')
+    end
+  end
+
   describe 'sem nenhuma linha de acesso (todas as contas hoje)' do
     it 'o dono mexe no card de qualquer funil, como antes' do
       patch card_url(card_sinistro), params: { card: { title: 'Outro' } }, headers: headers, as: :json
