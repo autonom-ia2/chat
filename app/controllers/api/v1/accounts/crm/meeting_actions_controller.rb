@@ -42,6 +42,13 @@ class Api::V1::Accounts::Crm::MeetingActionsController < Api::V1::Accounts::Crm:
   def fetch_meeting
     @meeting = Current.account.crm_meetings.where(card_id: policy_scope(::Crm::Card).select(:id)).find(params[:id])
     authorize @meeting.card, :show?
+    ensure_card_funnel!(@meeting.card)
+  end
+
+  # Acesso por funil (#1148, decisão b): lembrar o cliente e mandar novo link é mexer no card; exige o funil dele.
+  def ensure_card_funnel!(card)
+    guard = ::Crm::Access::CardGuard.new(user: Current.user, account: Current.account, account_user: Current.account_user)
+    raise Pundit::NotAuthorizedError unless guard.edit_allowed?(card)
   end
 
   def client

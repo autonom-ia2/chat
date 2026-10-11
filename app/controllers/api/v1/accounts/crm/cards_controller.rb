@@ -149,6 +149,10 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
   def link_conversation
     conversation = Current.account.conversations.find(params[:conversation_id])
     authorize_crm_conversation!(conversation)
+    # Acesso por funil (#1148, decisão b): vincular põe a conversa no funil do card, então a pessoa precisa ter esse
+    # funil também na caixa da conversa.
+    raise Pundit::NotAuthorizedError unless card_guard.create_allowed?(@card.pipeline_id, conversation: conversation, inbox_id: @card.inbox_id)
+
     @card = ::Crm::Cards::ConversationLinker.new(
       card: @card,
       conversation: conversation,

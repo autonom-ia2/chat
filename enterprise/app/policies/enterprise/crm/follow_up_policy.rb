@@ -14,7 +14,7 @@ module Enterprise::Crm::FollowUpPolicy
   end
 
   def update?
-    crm_permission?('crm_manage_cards') && show?
+    crm_permission?('crm_manage_cards') && show? && card_funnel_member?
   end
 
   def destroy?

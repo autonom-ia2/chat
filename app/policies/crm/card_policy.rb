@@ -16,8 +16,9 @@ class Crm::CardPolicy < ApplicationPolicy
     account_user.present?
   end
 
+  # Acesso por funil (#1148, decisão do Rodrigo em 11/10): mexer no card exige o funil dele (ver funnel_member?).
   def update?
-    show?
+    show? && funnel_member?
   end
 
   def destroy?
@@ -56,6 +57,7 @@ class Crm::CardPolicy < ApplicationPolicy
     update?
   end
 
+  # O resumo é gravado no card: também exige o funil dele.
   def summarize?
     update?
   end
@@ -83,6 +85,13 @@ class Crm::CardPolicy < ApplicationPolicy
 
   def visible_scope
     Pundit.policy_scope!(user_context, Crm::Card)
+  end
+
+  # A regra do mover (Crm::Access::CardGuard) com o funil do próprio card: a pessoa precisa ver todas as conversas do
+  # card e ter o funil dele nas caixas envolvidas. Quem só vê o card (dono ou atendente sem o funil) continua vendo, mas
+  # não fecha, arquiva, reabre, edita nem vincula. Sem acesso por funil, sempre verdadeiro.
+  def funnel_member?
+    Crm::Access::CardGuard.new(user: user, account: account, account_user: account_user).edit_allowed?(record)
   end
 end
 
