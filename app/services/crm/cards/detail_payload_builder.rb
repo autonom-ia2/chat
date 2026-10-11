@@ -12,7 +12,7 @@ class Crm::Cards::DetailPayloadBuilder
   end
 
   def perform
-    payload_options = { user: @user, account_user: @account_user }
+    payload_options = { user: @user, account_user: @account_user, conversation_visibility: conversation_visibility }
     payload_options[:company] = @company unless @company.equal?(UNRESOLVED_COMPANY)
     Crm::Cards::PayloadBuilder.new(@card, **payload_options).perform.merge(
       linked_conversations: linked_conversations_payload,
@@ -21,6 +21,12 @@ class Crm::Cards::DetailPayloadBuilder
   end
 
   private
+
+  # Acesso por funil (#1148, parte C): as conversas do card (principal e vinculadas) numa consulta só.
+  def conversation_visibility
+    @conversation_visibility ||= Crm::Conversations::Visibility.new(account: @account, user: @user, account_user: @account_user)
+                                                               .tap { |visibility| visibility.preload_cards([@card]) }
+  end
 
   def linked_conversations_payload
     visible_linked_conversations.map { |conversation| conversation_payload(conversation) }

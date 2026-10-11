@@ -15,6 +15,11 @@ class Crm::Access::Recipients
   # Card (parte C): ver Crm::Access::CardRecipients.
   def self.card_blocked_user_ids(card) = Crm::Access::CardRecipients.new(card).blocked_user_ids
 
+  # Quem recebe algo do card fora da lista de destinatários (o responsável pelo lembrete): sem card, nada a esconder.
+  def self.card_visible_to?(card, user)
+    card.nil? || card_blocked_user_ids(card).exclude?(user.id)
+  end
+
   def initialize(conversation)
     @conversation = conversation
   end
@@ -36,12 +41,31 @@ class Crm::Access::Recipients
 
   def blocked_user_ids
     @blocked_user_ids ||= begin
-      accesses = restricted_accesses
-      accesses.empty? ? [] : blocked_among(accesses)
+      people = restricted_people
+      people.empty? ? [] : blocked_among(people)
     end
   end
 
+  # Quem tem linha restritiva nesta caixa (fora administrador): só a visão dessas pessoas depende do card
+  # (Crm::Access::VisibilitySync).
+  def restricted_user_ids
+    restricted_people.map(&:user_id)
+  end
+
   private
+
+  # Administrador vê tudo, mesmo com linha (como no ConversationScope).
+  def restricted_people
+    @restricted_people ||= begin
+      accesses = restricted_accesses
+      admins = if accesses.empty?
+                 []
+               else
+                 AccountUser.where(account_id: @conversation.account_id, user_id: accesses.map(&:user_id)).administrator.pluck(:user_id)
+               end
+      accesses.reject { |access| admins.include?(access.user_id) }
+    end
+  end
 
   def restricted_accesses
     return [] unless Crm::Access::AccountFlag.any?(@conversation.account_id)
@@ -50,14 +74,9 @@ class Crm::Access::Recipients
                          .includes(:agent_pipelines).select(&:restricts?)
   end
 
-  # Administrador vê tudo, mesmo com linha (como no ConversationScope).
-  def blocked_among(accesses)
-    admins = AccountUser.where(account_id: @conversation.account_id, user_id: accesses.map(&:user_id))
-                        .administrator.pluck(:user_id)
+  def blocked_among(people)
     facts = conversation_facts
-    accesses.reject { |access| admins.include?(access.user_id) }
-            .reject { |access| Crm::Access::ConversationScope.visible_by_facts?(access, access.user_id, facts) }
-            .map(&:user_id)
+    people.reject { |access| Crm::Access::ConversationScope.visible_by_facts?(access, access.user_id, facts) }.map(&:user_id)
   end
 
   def conversation_facts

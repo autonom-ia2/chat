@@ -223,6 +223,8 @@ class Crm::FollowUps::DueProcessor
   def notify_auto_send_failed(follow_up)
     user = follow_up.assignee
     return if user.blank? || user.pubsub_token.blank?
+    # Acesso por funil (#1148, parte C): quem não vê o card não recebe o título dele.
+    return unless Crm::Access::Recipients.card_visible_to?(follow_up.card, user)
 
     ActionCableBroadcastJob.perform_later(
       [user.pubsub_token],

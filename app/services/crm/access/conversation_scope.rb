@@ -44,11 +44,17 @@ class Crm::Access::ConversationScope
 
   # Responde de uma vez para várias conversas (Kanban, lista): uma consulta em vez de uma por conversa.
   def preload(conversations)
-    pending = conversations.compact.reject { |conversation| allowed_cache.key?(conversation.id) }
-    return if pending.empty? || restrictions.empty?
+    preload_ids(conversations.compact.map(&:id))
+  end
 
-    allowed = apply(Conversation.where(id: pending.map(&:id))).pluck(:id).to_set
-    pending.each { |conversation| allowed_cache[conversation.id] = allowed.include?(conversation.id) }
+  def preload_ids(conversation_ids)
+    return if restrictions.empty?
+
+    pending = conversation_ids.compact.uniq.reject { |id| allowed_cache.key?(id) }
+    return if pending.empty?
+
+    allowed = apply(Conversation.where(id: pending)).pluck(:id).to_set
+    pending.each { |id| allowed_cache[id] = allowed.include?(id) }
   end
 
   # A pessoa tem alguma caixa restrita: quem tem atalho de "vê tudo" (busca) precisa filtrar.

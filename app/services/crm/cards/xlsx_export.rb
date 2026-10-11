@@ -118,6 +118,7 @@ class Crm::Cards::XlsxExport
       break if batch.empty?
 
       @company_by_card_id = Crm::Cards::CompanyResolver.for_cards(batch)
+      conversation_visibility.preload_cards(batch)
       batch.each(&block)
       offset += BATCH_SIZE
     end
