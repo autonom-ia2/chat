@@ -31,6 +31,7 @@ RSpec.describe TemplateFields::Format do
     it 'formats the machine forms the reader produces' do
       expect(described_class.audience_value('2026-10-14', 'data')).to eq('14/10/2026')
       expect(described_class.audience_value('2026-10-14 15:00', 'data')).to eq('14/10/2026 15:00')
+      expect(described_class.audience_value('2026-10-14 15:00:30', 'data')).to eq('14/10/2026 15:00:30')
       expect(described_class.audience_value('1234.5', 'moeda')).to eq('R$ 1.234,50')
       expect(described_class.audience_value('1234.5599999999999', 'moeda')).to eq('R$ 1.234,56')
       expect(described_class.audience_value('80', 'moeda')).to eq('R$ 80,00')

@@ -10,7 +10,7 @@ module TemplateFields::Format
   BRL = 'BRL'.freeze
   BRL_UNIT = 'R$'.freeze
   ISO_DATE_LENGTH = 10
-  ISO_TIME_LENGTH = 5
+  ISO_TIME_PARTS = (2..3) # "15:00" ou "15:00:30"
   # "1.234" é mil e duzentos e trinta e quatro em pt-BR e 1,234 em inglês: três casas depois do ponto ficam como estão.
   AMBIGUOUS_FRACTION = 3
 
@@ -65,7 +65,8 @@ module TemplateFields::Format
   end
 
   def iso_time_shape?(text)
-    text.length == ISO_TIME_LENGTH && text[2] == ':' && digits?(text.delete(':'))
+    parts = text.split(':', -1)
+    ISO_TIME_PARTS.cover?(parts.size) && parts.all? { |part| part.length == 2 && digits?(part) }
   end
 
   # "1234.5" ou "-80" => R$; qualquer outra escrita fica como está.
