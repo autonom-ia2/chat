@@ -4,10 +4,14 @@
 # Provedor fora do ar ou resposta fora do schema: tenta de novo (cinco vezes, por uns minutos). Esgotado, ou sem chave de
 # IA na conta, a falha fica gravada no estado do card (`opt_out_decision`) e no log — nada é engolido. Enquanto a decisão
 # não sai, o planner não re-arma o card (fail closed, `AutoFollowupPlanner#opt_out_undecided?`).
+#
+# Erro de banco ao gravar a decisão (o card e, no "sim", a recusa do contato vão juntos numa transação, #1325): nada fica
+# gravado pela metade, e o job tenta de novo pelo mesmo caminho, com o mesmo teto. Esgotado, grava "falhou".
 class Crm::FollowUps::OptOutDecisionJob < ApplicationJob
   queue_as :low
 
-  retry_on Crm::Ai::ResponsesClient::Error, Crm::Ai::OptOutClassifier::InvalidAnswer, wait: :polynomially_longer, attempts: 5 do |job, error|
+  retry_on Crm::Ai::ResponsesClient::Error, Crm::Ai::OptOutClassifier::InvalidAnswer, ActiveRecord::ActiveRecordError,
+           wait: :polynomially_longer, attempts: 5 do |job, error|
     job.decision&.record_failure('falhou', error)
   end
 

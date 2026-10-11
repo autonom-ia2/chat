@@ -201,20 +201,14 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
   # spent (reached max_touches, was stopped, or skipped). Cancels any still-active
   # ai_followup touches, clears the cadence state to an un-armed shape so the next
   # planner sweep starts a new cycle, then broadcasts the updated card.
+  # O reset é o dono da recusa 'follow_up_reply' do contato (chat#1325), e tudo vai numa transação só.
   def reset_auto_followup
-    @card.follow_ups.active.find_each do |follow_up|
-      follow_up.update!(status: :canceled) if follow_up.metadata.to_h['source'] == 'ai_followup'
+    @card.transaction do
+      @card.follow_ups.active.find_each do |follow_up|
+        follow_up.update!(status: :canceled) if follow_up.metadata.to_h['source'] == 'ai_followup'
+      end
+      reset_auto_followup_state!
     end
-
-    metadata = (@card.metadata || {}).deep_dup
-    metadata['ai'] ||= {}
-    metadata['ai']['auto_followup_state'] = {
-      'active' => false, 'spent' => false, 'touch' => 0,
-      'stopped_reason' => nil, 'opted_out' => false,
-      'next_due_at' => nil, 'last_sent_at' => nil,
-      'last_marketing_template_sent_at' => nil, 'touches' => []
-    }
-    @card.update!(metadata: metadata)
 
     ::Crm::ActivityLogger.new(
       card: @card, actor: Current.user, event_type: 'ai_followup_reset',
@@ -403,6 +397,30 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
                                                 .where(id: policy_scope(::Crm::Card).select(:id), status: :open)
     cards = cards.where(pipeline_id: resolved_params[:pipeline_id]) if resolved_params[:pipeline_id].present?
     cards.first
+  end
+
+  # Zera o estado do follow-up e, se este card estava parado a pedido do cliente, libera a recusa 'follow_up_reply' do
+  # contato. Só ela, nunca a de outra origem, e só quando nenhum outro card do contato continua marcado: a marca do card
+  # é a prova da recusa (Crm::FollowUps::CardOptOut, release_opt_out!). Sem isso, o card re-armado ficaria parado no
+  # runner (contact_opted_out?).
+  def reset_auto_followup_state!
+    was_opted_out = ::Crm::FollowUps::CardOptOut.card_opted_out?(@card)
+    @card.update!(metadata: reset_auto_followup_metadata)
+    return unless was_opted_out
+
+    ::Crm::FollowUps::CardOptOut.contact_for(@card)&.release_opt_out!(source: 'follow_up_reply', by: Current.user)
+  end
+
+  def reset_auto_followup_metadata
+    metadata = (@card.metadata || {}).deep_dup
+    metadata['ai'] ||= {}
+    metadata['ai']['auto_followup_state'] = {
+      'active' => false, 'spent' => false, 'touch' => 0,
+      'stopped_reason' => nil, 'opted_out' => false,
+      'next_due_at' => nil, 'last_sent_at' => nil,
+      'last_marketing_template_sent_at' => nil, 'touches' => []
+    }
+    metadata
   end
 
   def broadcast_card(event_name)

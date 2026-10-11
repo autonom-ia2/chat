@@ -65,6 +65,74 @@ RSpec.describe Crm::FollowUps::OptOutDecisionJob do
     end
   end
 
+  describe 'recusa no contato (chat#1325)' do
+    let(:contact) { conversation.contact }
+
+    it '"sim" também grava a recusa no contato, com a origem follow_up_reply' do
+      message = reply('Não quero mais receber, obrigado')
+      model_answers('sim', 'pedido_explicito_de_parar')
+
+      described_class.perform_now(card.id, message.id)
+
+      contact.reload
+      expect(contact).to be_opted_out
+      expect(contact.opt_out_source).to eq('follow_up_reply')
+      expect(contact.opted_out_by_id).to be_nil
+    end
+
+    it '"sim" não troca a recusa que o contato já tinha por outra origem' do
+      user = create(:user, account: account)
+      contact.opt_out!(source: 'manual', by: user)
+      refused_at = contact.reload.opted_out_at
+      message = reply('Parem de mandar mensagem')
+      model_answers('sim', 'pedido_explicito_de_parar')
+
+      described_class.perform_now(card.id, message.id)
+
+      contact.reload
+      expect(contact.opt_out_source).to eq('manual')
+      expect(contact.opted_out_by_id).to eq(user.id)
+      expect(contact.opted_out_at).to eq(refused_at)
+      expect(state).to include('opted_out' => true)
+    end
+
+    it '"nao" não marca o contato' do
+      message = reply('agora não dá, depois a gente vê')
+      model_answers('nao', 'ambigua')
+
+      described_class.perform_now(card.id, message.id)
+
+      expect(contact.reload).not_to be_opted_out
+    end
+
+    it 'erro de banco ao gravar o contato desfaz o card junto, tenta de novo e, esgotado, grava "falhou"' do
+      message = reply('SAIR')
+      model_answers('sim', 'pedido_explicito_de_parar')
+      allow_any_instance_of(Contact).to receive(:opt_out!).and_raise(ActiveRecord::RecordNotSaved) # rubocop:disable RSpec/AnyInstance
+      allow(Rails.logger).to receive(:error)
+
+      perform_enqueued_jobs(only: described_class) { described_class.perform_later(card.id, message.id) }
+
+      expect(client).to have_received(:create).exactly(5).times
+      expect(state).to include('opted_out' => false, 'opt_out_decision' => 'falhou', 'opt_out_motivo' => 'ActiveRecord::RecordNotSaved')
+      expect(card.activities.where(event_type: 'ai_followup_stopped').where("payload->>'trigger' = 'opt_out_decision'")).to be_empty
+      expect(contact.reload).not_to be_opted_out
+      expect(Rails.logger).to have_received(:error)
+        .with("[crm][ai][opt_out] card_id=#{card.id} message_id=#{message.id} decisao=falhou erro=ActiveRecord::RecordNotSaved")
+    end
+
+    it 'grava no contato do card, o mesmo a quem o follow-up escreve' do
+      message = reply('SAIR')
+      model_answers('sim', 'pedido_explicito_de_parar')
+
+      described_class.perform_now(card.id, message.id)
+
+      expect(Crm::FollowUps::CardOptOut.contact_for(card.reload)).to eq(contact)
+      expect(Crm::FollowUps::CardOptOut.contact_marked?(contact)).to be(true)
+      expect(contact.reload.opt_out_source).to eq('follow_up_reply')
+    end
+  end
+
   it 'nota privada do time não vai ao modelo como contexto' do
     conversation.messages.create!(account_id: account.id, inbox_id: conversation.inbox_id, message_type: :outgoing,
                                   content: 'Oi! Ainda tem interesse no orçamento?')

@@ -544,6 +544,7 @@
           "PROSPECTING": "Prospecção",
           "EMAIL_UNSUBSCRIBE": "Descadastro de e-mail",
           "MANUAL": "Marcado pela equipe",
+          "FOLLOW_UP_REPLY": "Pediu para parar no follow-up",
           "UNKNOWN": "Não informada"
         },
         "MARK": "Marcar que não quer receber",
@@ -555,7 +556,8 @@
         },
         "ORIGIN_HINT": {
           "PROSPECTING": "Esta recusa veio da Prospecção. Ela só sai no lead, pelo \"Desfazer: pode ser contatado\".",
-          "EMAIL_UNSUBSCRIBE": "Esta recusa veio do descadastro de e-mail feito pela própria pessoa e não se desfaz por aqui."
+          "EMAIL_UNSUBSCRIBE": "Esta recusa veio do descadastro de e-mail feito pela própria pessoa e não se desfaz por aqui.",
+          "FOLLOW_UP_REPLY": "Esta recusa veio de uma resposta ao follow-up da IA pedindo para parar. Ela sai quando o \"Reativar retorno automático\" é usado em todos os cards do CRM em que a pessoa pediu para parar."
         },
         "UNDO_DIALOG": {
           "TITLE": "Desfazer recusa",

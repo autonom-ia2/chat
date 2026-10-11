@@ -3,6 +3,12 @@
 # humano resetou a cadência, o planner a re-armou ou outra resposta chegou depois, a decisão velha não sobrescreve
 # nada. A conferência se repete dentro do lock, porque a chamada ao modelo leva segundos.
 #
+# No "sim", o contato do card (Crm::FollowUps::CardOptOut.contact_for, o mesmo a quem o follow-up escreve) também ganha a
+# recusa de mensagens ativas, com a origem 'follow_up_reply' (#1325): é por `contact.opted_out?` que campanhas, avisos e o
+# runner perguntam se a pessoa pediu para parar. Card e contato gravam na mesma transação: se o contato falha, o card
+# volta a `pendente` e o job tenta de novo (OptOutDecisionJob). Contato que já tinha recusado, por qualquer origem, fica
+# como está (opt_out! é idempotente). A marca do card é a prova da recusa; quem a desfaz é o reset do follow-up no drawer.
+#
 # O log leva card, mensagem, decisão e motivo (códigos fechados). Nunca o texto da mensagem.
 class Crm::FollowUps::OptOutDecision
   # Decisões que liberam o card para um ciclo novo. Qualquer outra (pendente, falhou, sem_credencial) segura o planner.
@@ -50,6 +56,8 @@ class Crm::FollowUps::OptOutDecision
         'opt_out_decision' => decision, 'opt_out_motivo' => motivo, **extra
       )
       @card.update!(metadata: metadata)
+      Crm::FollowUps::CardOptOut.contact_for(@card)&.opt_out!(source: 'follow_up_reply') if opted_out
+      true
     end
   end
 

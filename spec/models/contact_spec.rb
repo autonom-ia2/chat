@@ -243,8 +243,8 @@ RSpec.describe Contact do
       end
     end
 
-    it 'aceita as três origens conhecidas' do
-      %w[prospecting email_unsubscribe manual].each do |source|
+    it 'aceita as origens conhecidas' do
+      %w[prospecting email_unsubscribe manual follow_up_reply].each do |source|
         other = create(:contact, account: account)
         other.opt_out!(source: source)
         expect(other.reload.opt_out_source).to eq(source)
@@ -302,6 +302,32 @@ RSpec.describe Contact do
 
       expect(contact.opt_in!(source: 'manual')).to be(true)
       expect(contact.reload.opted_out?).to be(false)
+    end
+
+    it 'release_opt_out! tira só a recusa da origem informada (chat#1325)' do
+      contact.opt_out!(source: 'manual', by: user)
+
+      expect(contact.release_opt_out!(source: 'follow_up_reply', by: user)).to be(false)
+      expect(contact.reload.opt_out_source).to eq('manual')
+
+      other = create(:contact, account: account)
+      other.opt_out!(source: 'follow_up_reply')
+      expect(other.release_opt_out!(source: 'manual', by: user)).to be(false)
+      expect(other.reload.opt_out_source).to eq('follow_up_reply')
+
+      expect(other.release_opt_out!(source: 'follow_up_reply', by: user)).to be(true)
+      expect(other.reload.opted_out?).to be(false)
+      expect { other.release_opt_out!(source: 'outra', by: user) }.to raise_error(ArgumentError)
+    end
+
+    it 'release_opt_out! passa a recusa para a origem que a herança ainda sustenta' do
+      contact.update!(email: 'ana@example.com')
+      contact.opt_out!(source: 'follow_up_reply')
+      allow(EmailSuppression).to receive(:unsubscribed?).and_return(true)
+
+      expect(contact.release_opt_out!(source: 'follow_up_reply', by: user)).to be(true)
+
+      expect(contact.reload.opt_out_source).to eq('email_unsubscribe')
     end
 
     it 'transfer_opt_out! troca só a origem gravada, mantendo a data da recusa' do
