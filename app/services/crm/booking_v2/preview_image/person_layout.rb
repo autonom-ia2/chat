@@ -16,10 +16,10 @@ class Crm::BookingV2::PreviewImage::PersonLayout < Crm::BookingV2::PreviewImage:
 
   def draw
     @canvas = Canvas.new(from: Palette::WHITE, to: Palette.mix(Palette::PAPER, brand, 0.1))
-    canvas.rounded([16, Canvas::HEIGHT], 0, brand, at: [0, 0])
+    canvas.rounded([16, Canvas::HEIGHT], 0, accent, at: [0, 0])
     portrait
     chips(text_column)
-    pill(fill: brand, ink: Palette::WHITE, left: COLUMN)
+    brand_pill(left: COLUMN)
   end
 
   # "Com <nome>" e o serviço. Devolve onde as etiquetas começam.

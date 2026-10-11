@@ -81,6 +81,27 @@ RSpec.describe Crm::AgentBookingProfile, type: :model do
       expect(build_profile(brand: { 'color' => 'red;background:url(x)' })).not_to be_valid
     end
 
+    it 'aceita qualquer cor #RRGGBB que a pessoa escolher, clara ou escura, em maiúsculas ou minúsculas (#1289)' do
+      %w[#FFE066 #ffe066 #FFFFFF #000000 #a1B2c3].each do |color|
+        expect(build_profile(brand: { 'color' => color })).to be_valid, "recusou #{color}"
+      end
+      ['#FFE06', '#FFE0666', 'FFE0660', '#FFE06 ', "#FFE066\n", '#ＦＦＥ０６６', 'rgb(1,2,3)', 123_456].each do |color|
+        expect(build_profile(brand: { 'color' => color })).not_to be_valid, "aceitou #{color.inspect}"
+      end
+    end
+
+    it 'valida o lado da logo: esquerda, centro ou direita; sem valor também vale (#1289)' do
+      %w[left center right].each do |align|
+        expect(build_profile(brand: { 'logo_align' => align })).to be_valid
+      end
+      expect(build_profile(brand: {})).to be_valid
+
+      profile = build_profile(brand: { logo_align: 'top' })
+      expect(profile).not_to be_valid
+      expect(profile.errors[:brand]).to include('invalid logo alignment')
+      expect(build_profile(brand: { 'logo_align' => 'left; x' })).not_to be_valid
+    end
+
     it 'limita rótulo e endereço dos locais ao MAX_TEXT' do
       limit = described_class::MAX_TEXT
       expect(build_profile(locations: [{ 'type' => 'in_person', 'address' => 'a' * limit, 'label' => 'b' * limit }])).to be_valid

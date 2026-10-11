@@ -265,7 +265,45 @@
       "HEADLINE_LABEL": "Welcome sentence",
       "HEADLINE_PLACEHOLDER": "Pick the best time for you",
       "LOGO_ALT": "Company logo",
-      "PHOTO_ALT": "Photo of who attends"
+      "PHOTO_ALT": "Photo of who attends",
+      "LOGO_HINT": "Square, wide or tall: it shows whole, without stretching.",
+      "LOGO_ALIGN_LABEL": "Where the logo sits",
+      "LOGO_ALIGN": {
+        "LEFT": "Left",
+        "CENTER": "Center",
+        "RIGHT": "Right"
+      },
+      "CUSTOM_COLOR": "Another color",
+      "COLOR_HINT": "Button text turns light or dark by itself, so it stays easy to read.",
+      "SAMPLE_TITLE": "How it looks on the page",
+      "SAMPLE_PRIMARY": "Confirm",
+      "SAMPLE_SECONDARY": "I want this one",
+      "IDENTITY": {
+        "SAVED_TITLE": "You already have a saved look",
+        "SAVED_TEXT": "The logo, color, sentence and photo you saved for every page.",
+        "USE": "Use the saved look",
+        "SAVE_HINT": "Save this logo, color, sentence and photo once. New pages will start with them.",
+        "SAVE": "Save as the account look",
+        "SAVED": "Saved: logo, color, sentence and the photo of who attends this page. New pages will start like this.",
+        "APPLIED": "Done. This page now has the saved look.",
+        "SAVED_NO_PHOTO": "Saved: logo, color and sentence, without the photo. The photo belongs to each person: it is only kept when the page has one person and a photo.",
+        "CONFIRM": "This replaces the logo, color, logo side, sentence and photo of this page with the saved ones, including what you just changed.",
+        "CONFIRM_YES": "Yes, use it",
+        "CONFIRM_NO": "No, keep it"
+      },
+      "PHOTO_CARD": {
+        "USING_PROFILE_MINE": "We are using your profile photo.",
+        "USING_PROFILE_OTHER": "We are using {name}'s profile photo.",
+        "USING_SAVED": "We are using the photo saved in the account look.",
+        "GOES_TO_PROFILE": "This photo will also go to your profile.",
+        "OTHER_PERSON": "You are setting up {name}'s page. The photo is only for booking: {name}'s profile does not change.",
+        "SHARED_PAGE": "This page has one link per person. The photo is for the page: nobody's profile changes.",
+        "CHOICE_TITLE": "Where does the new photo go?",
+        "ONLY_HERE": "Only on this booking page",
+        "ALSO_PROFILE": "On my profile too",
+        "SEND": "Send photo",
+        "CANCEL": "Cancel"
+      }
     },
     "NOTICES": {
       "TITLE": "WhatsApp notices",
@@ -364,10 +402,6 @@
     },
     "PREVIEW": {
       "TITLE": "This is what the client will see",
-      "SCHEDULE": "{days}, from {from} to {to}",
-      "DEFAULT_HEADLINE": "Pick the best time for you",
-      "WITH": "With {name}",
-      "PICK_TIME": "Choose a time",
       "DESTINATION": "Whoever books goes to the {pipeline} pipeline, {stage} stage, with {people}.",
       "DESTINATION_NO_PIPELINE": "Whoever books stays with {people}. No pipeline is chosen yet.",
       "DEFAULT_PIPELINE": "default",

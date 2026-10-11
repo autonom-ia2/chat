@@ -49,7 +49,7 @@ class Crm::BookingV2::PreviewImage::LightLayout < Crm::BookingV2::PreviewImage::
     top = MARGIN + 46
     used = title(Palette::INK, at: [MARGIN, top], box: [width, pill_top - top - 96], sizes: TITLE_SIZES)
     line(facts_text, Palette::MUTED, at: [MARGIN, top + used + 36], width: width)
-    pill(fill: brand, ink: Palette::WHITE)
+    brand_pill
   end
 
   def calendar
@@ -62,7 +62,7 @@ class Crm::BookingV2::PreviewImage::LightLayout < Crm::BookingV2::PreviewImage::
   # Faixa de cima na cor da página: o cartão inteiro na cor, coberto de branco da faixa para baixo.
   def header
     below = [icon_left, icon_top + HEADER]
-    canvas.rounded(ICON_SIZE, ICON_RADIUS, brand, at: [icon_left, icon_top])
+    canvas.rounded(ICON_SIZE, ICON_RADIUS, accent, at: [icon_left, icon_top])
     canvas.rounded([ICON, ICON - HEADER], ICON_RADIUS, Palette::WHITE, at: below)
     canvas.rounded([ICON, ICON_RADIUS], 0, Palette::WHITE, at: below)
   end
@@ -82,7 +82,7 @@ class Crm::BookingV2::PreviewImage::LightLayout < Crm::BookingV2::PreviewImage::
 
   def dot(row, column)
     at = [icon_left + 36 + (column * DOT_STEP_X), icon_top + HEADER + 34 + (row * DOT_STEP_Y)]
-    return canvas.rounded(DOT_SIZE, DOT / 2, brand, at: at) if [row, column] == CHOSEN
+    return canvas.rounded(DOT_SIZE, DOT / 2, accent, at: at) if [row, column] == CHOSEN
 
     canvas.rounded(DOT_SIZE, 10, Palette.mix(Palette::PAPER, Palette::MUTED, 0.2), at: at)
   end

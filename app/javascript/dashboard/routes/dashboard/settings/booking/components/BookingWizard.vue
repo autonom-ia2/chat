@@ -1,6 +1,7 @@
 <script setup>
 import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useStore } from 'vuex';
 import BookingSteps from './BookingSteps.vue';
 import StepTemplate from './steps/StepTemplate.vue';
 import StepAbout from './steps/StepAbout.vue';
@@ -22,6 +23,7 @@ const props = defineProps({
 
 const emit = defineEmits(['close']);
 const { t } = useI18n();
+const store = useStore();
 
 const {
   step,
@@ -38,6 +40,8 @@ const {
   uploading,
   uploadError,
   missing,
+  identityState,
+  identityBusy,
   savingDestination,
   peopleNames,
   load,
@@ -49,11 +53,16 @@ const {
   goTo,
   publish,
   upload,
+  applyIdentity,
+  saveIdentity,
   saveDestination,
 } = useBookingWizard({
   pageId: props.pageId,
   initialStep: props.initialStep,
   onClose: () => emit('close'),
+  // A foto virou também a do perfil (#1298): o avatar do painel acompanha
+  // sem recarregar, relendo o usuário como a tela de perfil faz.
+  onProfilePhoto: () => store.dispatch('validityCheck'),
 });
 
 onMounted(load);
@@ -160,12 +169,15 @@ const blockedByMissing = computed(
           <StepLook
             v-else-if="step === STEP.CARA"
             :form="form"
-            :logo-url="page.logo_url || ''"
-            :photo-url="page.photo_url || ''"
+            :page="page"
             :uploading="uploading"
             :upload-error="uploadError"
+            :identity-state="identityState"
+            :identity-busy="identityBusy"
             @change="change"
             @upload="upload"
+            @apply-identity="applyIdentity"
+            @save-identity="saveIdentity"
           />
           <StepNotices
             v-else-if="step === STEP.AVISOS"

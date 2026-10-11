@@ -11,14 +11,14 @@ const model = defineModel({ type: [String, Number], default: null });
 </script>
 
 <template>
-  <fieldset class="flex flex-col gap-2">
-    <legend class="mb-1 text-base font-semibold text-slate-900">
+  <fieldset class="m-0 flex flex-col gap-2 border-0 p-0">
+    <legend class="mb-1 p-0 text-base font-semibold text-slate-900">
       {{ legend }}
     </legend>
     <label
       v-for="option in options"
       :key="option.value"
-      class="flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border-2 bg-white px-4 py-3 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-[var(--brand)] has-[:focus-visible]:ring-offset-2"
+      class="flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border-2 border-solid bg-white px-4 py-3 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-[var(--brand)] has-[:focus-visible]:ring-offset-2"
       :class="
         model === option.value
           ? 'border-[var(--brand)]'
@@ -34,7 +34,7 @@ const model = defineModel({ type: [String, Number], default: null });
       />
       <span
         aria-hidden="true"
-        class="flex size-5 shrink-0 items-center justify-center rounded-full border-2"
+        class="flex size-5 shrink-0 items-center justify-center rounded-full border-2 border-solid"
         :class="
           model === option.value ? 'border-[var(--brand)]' : 'border-slate-400'
         "

@@ -465,4 +465,8 @@ export function useBookingFlow(location = window.location) {
   return flow;
 }
 
-export const useFlow = () => inject(FLOW_KEY);
+// `null` fora de um fluxo (o cabeçalho sozinho, num teste): quem usa já trata.
+export const useFlow = () => inject(FLOW_KEY, null);
+
+// A prévia do painel (#1289) monta as mesmas telas com um fluxo de mentira: é por aqui que ela o entrega.
+export const provideFlow = flow => provide(FLOW_KEY, flow);

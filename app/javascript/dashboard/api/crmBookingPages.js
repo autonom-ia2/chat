@@ -33,10 +33,22 @@ class CrmBookingPagesAPI extends ApiClient {
     return axios.post(`${this.url}/${id}/pause`);
   }
 
-  uploadImage(id, kind, file) {
+  // `applyToProfile` (#1298): a foto vira também a foto do perfil de quem
+  // envia. O servidor só aceita quando quem envia é a pessoa da página.
+  uploadImage(id, kind, file, { applyToProfile = false } = {}) {
     const body = new FormData();
     body.append('file', file);
+    if (applyToProfile) body.append('apply_to_profile', 'true');
     return axios.post(`${this.url}/${id}/${kind}`, body);
+  }
+
+  // Identidade salva da conta (#1289): usar nesta página e salvar a partir dela.
+  applyIdentity(id) {
+    return axios.post(`${this.url}/${id}/apply_identity`);
+  }
+
+  saveIdentity(id) {
+    return axios.post(`${this.url}/${id}/save_identity`);
   }
 
   // Endereço da página (#1282): com `name`, diz se está livre; só com `title`,

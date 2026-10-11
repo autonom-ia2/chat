@@ -2,9 +2,13 @@
 # link de pessoa), 1200×630, sem dia nem hora (a prévia fica em cache) e sem nenhum dado de cliente.
 #
 # Três desenhos, escolhidos sozinhos (`Content#design`):
-# - `brand` (A): cor e logo da página, nome do atendimento e a chamada.
+# - `brand` (A): cor e logo da página (sem logo, a foto de quem atende), nome do atendimento e a chamada.
 # - `person` (B): foto de quem atende, serviço, duração e local. Só no link de uma pessoa que tem foto.
-# - `light` (C): claro, com ícone de agenda. Página sem logo nem foto.
+# - `light` (C): claro, com ícone de agenda. Página sem logo e sem nenhuma foto.
+#
+# A foto de quem atende segue a ordem da página pública (#1289): a foto da página, depois a que a pessoa guardou para
+# as páginas de agendamento e, por último, a do perfil dela (`Content#person_photo`). A cor da página pode ser
+# qualquer #RRGGBB, inclusive bem clara: ver `Palette`.
 #
 # `Art` é o que o desenho precisa, já resolvido (textos prontos e bytes das imagens): o `Renderer` não consulta nada.
 module Crm::BookingV2::PreviewImage

@@ -65,7 +65,7 @@ const whatsappUrl = computed(
     <div class="flex flex-col items-center gap-3 text-center">
       <span
         aria-hidden="true"
-        class="flex size-16 items-center justify-center rounded-full bg-[var(--brand)] text-3xl font-bold text-white"
+        class="flex size-16 items-center justify-center rounded-full bg-[var(--brand-fill)] text-3xl font-bold text-[var(--brand-on)] ring-1 ring-inset ring-[var(--brand)]"
       >
         <span class="i-lucide-check" />
       </span>

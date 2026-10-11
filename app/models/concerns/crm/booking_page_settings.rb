@@ -8,6 +8,8 @@ module Crm::BookingPageSettings
   LOCATION_TYPES = %w[whatsapp_video whatsapp_voice custom_link in_person google_meet teams].freeze
   TEMPLATE_KEYS = %w[sales_30 consult_45 visit_60 blank].freeze
   HEX_DIGITS = '0123456789abcdefABCDEF'.freeze
+  # De que lado a logo fica no topo da página (#1289). Sem valor, a página usa a esquerda.
+  LOGO_ALIGNS = %w[left center right].freeze
   # Meet e Teams só existem com a caixa do provedor conectada e com agenda.
   CALENDAR_LOCATIONS = { 'google_meet' => :google?, 'teams' => :microsoft? }.freeze
   MAX_LOCATIONS = 6
@@ -119,6 +121,7 @@ module Crm::BookingPageSettings
     color = brand['color']
     errors.add(:brand, 'invalid color') if color.present? && !hex_color?(color)
     errors.add(:brand, 'headline too long') if brand['headline'].to_s.length > MAX_TEXT
+    errors.add(:brand, 'invalid logo alignment') if brand['logo_align'].present? && LOGO_ALIGNS.exclude?(brand['logo_align'])
   end
 
   def hex_color?(value)
