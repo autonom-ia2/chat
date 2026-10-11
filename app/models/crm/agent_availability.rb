@@ -14,6 +14,9 @@ class Crm::AgentAvailability < ApplicationRecord
   belongs_to :account
   belongs_to :user
 
+  # Identidade salva (#1289): a foto desta pessoa nas páginas de agendamento (ver Crm::BookingV2::BrandIdentity).
+  has_one_attached :booking_photo
+
   validates :user_id, uniqueness: { scope: :account_id }
   validate :user_must_belong_to_account
   validate :working_hours_must_be_sane

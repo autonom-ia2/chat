@@ -7,8 +7,11 @@ import BookingWizard from '../components/BookingWizard.vue';
 // Assistente de sete passos (#1187, J3; avisos no WhatsApp #1192): cada passo,
 // voltar sem perder, Meet/Teams só com caixa conectada e publicação com
 // pendências.
+// `locale` e `mergeLocaleMessage`: a prévia monta as telas da página pública (#1289).
 vi.mock('vue-i18n', () => ({
   useI18n: () => ({
+    locale: { value: 'pt_BR' },
+    mergeLocaleMessage: () => {},
     t: (key, values) =>
       values === undefined ? key : `${key} ${JSON.stringify(values)}`,
   }),
@@ -23,6 +26,8 @@ vi.mock('dashboard/api/crmBookingPages', () => ({
     updatePeople: vi.fn(),
     publish: vi.fn(),
     uploadImage: vi.fn(),
+    applyIdentity: vi.fn(),
+    saveIdentity: vi.fn(),
     testInvite: vi.fn(),
   },
 }));
@@ -421,6 +426,7 @@ describe('BookingWizard', () => {
       expect(lastPayload().brand).toEqual({
         color: '#0B7A5A',
         headline: 'Vamos conversar',
+        logo_align: 'left',
       });
       expect(currentStep(wrapper)).toBe('AVISOS');
     });
@@ -510,13 +516,279 @@ describe('BookingWizard', () => {
     });
   });
 
+  describe('passo 5: cor própria, lado da logo e identidade salva (#1289)', () => {
+    const LOGO = 'https://cdn.exemplo.com/logo.png';
+    const IDENTITY = {
+      saved: true,
+      color: '#ffe066',
+      logo_align: 'center',
+      headline: 'Bem-vindo',
+      logo_url: LOGO,
+      photo_url: null,
+    };
+
+    it('mantém as cores prontas e oferece Outra cor, que vai no PATCH', async () => {
+      const wrapper = await openAtStep(5);
+      expect(wrapper.findAll('[data-color]')).toHaveLength(6);
+      const custom = wrapper.find('[data-custom-color]');
+      expect(custom.text()).toContain('BOOKING.LOOK.CUSTOM_COLOR');
+      expect(custom.attributes('data-selected')).toBe('false');
+
+      await custom.find('input[type="color"]').setValue('#ffe066');
+      expect(
+        wrapper.find('[data-custom-color]').attributes('data-selected')
+      ).toBe('true');
+      expect(wrapper.find('[data-custom-color-value]').text()).toBe('#ffe066');
+      expect(
+        wrapper
+          .findAll('[data-color]')
+          .filter(button => button.attributes('aria-pressed') === 'true')
+      ).toHaveLength(0);
+
+      await continueStep(wrapper);
+      expect(lastPayload().brand.color).toBe('#ffe066');
+    });
+
+    it('a amostra mostra a cor escolhida com o texto do botão legível', async () => {
+      const wrapper = await openAtStep(5);
+      await wrapper
+        .find('[data-custom-color] input[type="color"]')
+        .setValue('#ffe066');
+      await flushPromises();
+      const sample = wrapper.find('[data-brand-sample]').element;
+      expect(sample.style.getPropertyValue('--brand-fill')).toBe('#ffe066');
+      expect(sample.style.getPropertyValue('--brand-on')).toBe('#000000');
+
+      await wrapper.find('[data-color="#0D2344"]').trigger('click');
+      await flushPromises();
+      expect(sample.style.getPropertyValue('--brand-fill')).toBe('#0d2344');
+      expect(sample.style.getPropertyValue('--brand-on')).toBe('#ffffff');
+    });
+
+    it('sem logo não pergunta o lado; com logo, três cartões e o padrão é a esquerda', async () => {
+      const without = await openAtStep(5);
+      expect(without.find('[data-logo-aligns]').exists()).toBe(false);
+
+      const wrapper = await openAtStep(5, fullPage({ logo_url: LOGO }));
+      const cards = wrapper.findAll('button[data-logo-align]');
+      expect(cards.map(card => card.attributes('data-logo-align'))).toEqual([
+        'left',
+        'center',
+        'right',
+      ]);
+      expect(wrapper.find('select').exists()).toBe(false);
+      expect(
+        wrapper
+          .find('button[data-logo-align="left"]')
+          .attributes('aria-pressed')
+      ).toBe('true');
+
+      await wrapper.find('button[data-logo-align="center"]').trigger('click');
+      expect(
+        wrapper
+          .find('[data-brand-sample] [data-logo-box]')
+          .attributes('data-logo-align')
+      ).toBe('center');
+      await continueStep(wrapper);
+      expect(lastPayload().brand.logo_align).toBe('center');
+    });
+
+    it('logo salva volta com o lado que foi escolhido', async () => {
+      const wrapper = await openAtStep(
+        5,
+        fullPage({ logo_url: LOGO, brand: { logo_align: 'right' } })
+      );
+      expect(
+        wrapper
+          .find('button[data-logo-align="right"]')
+          .attributes('aria-pressed')
+      ).toBe('true');
+    });
+
+    it('a logo aparece inteira no envio (não cortada); a foto preenche o círculo', async () => {
+      const wrapper = await openAtStep(
+        5,
+        fullPage({ logo_url: LOGO, photo_url: 'https://cdn.exemplo.com/f.png' })
+      );
+      expect(wrapper.find('[data-logo] img').classes()).toContain(
+        'object-contain'
+      );
+      expect(wrapper.find('[data-logo] img').classes()).not.toContain(
+        'object-cover'
+      );
+      expect(wrapper.find('[data-photo] img').classes()).toContain(
+        'object-cover'
+      );
+    });
+
+    it('sem identidade salva não oferece usar; o administrador pode salvar', async () => {
+      const wrapper = await openAtStep(
+        5,
+        fullPage({ can_save_identity: true })
+      );
+      expect(wrapper.find('[data-use-identity]').exists()).toBe(false);
+      expect(wrapper.find('[data-save-identity]').exists()).toBe(true);
+    });
+
+    it('quem não é administrador usa a identidade, mas não vê Salvar como identidade', async () => {
+      const wrapper = await openAtStep(
+        5,
+        fullPage({ identity: IDENTITY, can_save_identity: false })
+      );
+      expect(wrapper.find('[data-use-identity]').exists()).toBe(true);
+      expect(wrapper.find('[data-save-identity]').exists()).toBe(false);
+    });
+
+    it('Usar a identidade salva pede confirmação antes de trocar o que está na tela', async () => {
+      const wrapper = await openAtStep(5, fullPage({ identity: IDENTITY }));
+      await wrapper.find('[data-color="#0B7A5A"]').trigger('click');
+
+      await wrapper.find('[data-use-identity]').trigger('click');
+      const box = wrapper.find('[data-identity-confirm]');
+      expect(box.attributes('role')).toBe('alertdialog');
+      expect(box.text()).toContain('BOOKING.LOOK.IDENTITY.CONFIRM');
+      expect(BookingPagesAPI.applyIdentity).not.toHaveBeenCalled();
+
+      // Esc fecha a pergunta e devolve o foco ao botão; o "Não" também.
+      await box.trigger('keydown', { key: 'Escape' });
+      await flushPromises();
+      expect(wrapper.find('[data-identity-confirm]').exists()).toBe(false);
+      await wrapper.find('[data-use-identity]').trigger('click');
+      await wrapper.find('[data-identity-confirm-no]').trigger('click');
+      await flushPromises();
+      expect(BookingPagesAPI.applyIdentity).not.toHaveBeenCalled();
+      expect(wrapper.find('[data-identity-confirm]').exists()).toBe(false);
+      expect(
+        wrapper.find('[data-color="#0B7A5A"]').attributes('aria-pressed')
+      ).toBe('true');
+    });
+
+    it('confirmado, traz logo, cor, lado e frase para a página', async () => {
+      const applied = fullPage({
+        identity: IDENTITY,
+        logo_url: LOGO,
+        brand: {
+          color: '#ffe066',
+          logo_align: 'center',
+          headline: 'Bem-vindo',
+        },
+      });
+      BookingPagesAPI.applyIdentity.mockImplementation(() => reply(applied));
+      const wrapper = await openAtStep(5, fullPage({ identity: IDENTITY }));
+
+      await wrapper.find('[data-use-identity]').trigger('click');
+      await wrapper.find('[data-identity-confirm-yes]').trigger('click');
+      await flushPromises();
+
+      expect(BookingPagesAPI.applyIdentity).toHaveBeenCalledWith(7);
+      expect(wrapper.find('[data-logo] img').attributes('src')).toBe(LOGO);
+      expect(wrapper.find('[data-custom-color-value]').text()).toBe('#ffe066');
+      expect(
+        wrapper
+          .find('button[data-logo-align="center"]')
+          .attributes('aria-pressed')
+      ).toBe('true');
+      expect(wrapper.find('[data-headline] input').element.value).toBe(
+        'Bem-vindo'
+      );
+      expect(wrapper.find('[data-identity-notice]').text()).toBe(
+        'BOOKING.LOOK.IDENTITY.APPLIED'
+      );
+    });
+
+    it('identidade sem frase limpa a frase da página', async () => {
+      BookingPagesAPI.applyIdentity.mockImplementation(() =>
+        reply(fullPage({ identity: IDENTITY, brand: { color: '#ffe066' } }))
+      );
+      const wrapper = await openAtStep(5, fullPage({ identity: IDENTITY }));
+      await wrapper.find('[data-headline] input').setValue('Frase antiga');
+
+      await wrapper.find('[data-use-identity]').trigger('click');
+      await wrapper.find('[data-identity-confirm-yes]').trigger('click');
+      await flushPromises();
+
+      expect(wrapper.find('[data-headline] input').element.value).toBe('');
+    });
+
+    it('Salvar como identidade salva a página primeiro e diz o que foi guardado', async () => {
+      BookingPagesAPI.saveIdentity.mockImplementation(() =>
+        reply(fullPage({ identity: IDENTITY, can_save_identity: true }))
+      );
+      const wrapper = await openAtStep(
+        5,
+        fullPage({ can_save_identity: true })
+      );
+      await wrapper.find('[data-color="#0B7A5A"]').trigger('click');
+      BookingPagesAPI.update.mockClear();
+
+      await wrapper.find('[data-save-identity]').trigger('click');
+      await flushPromises();
+
+      expect(lastPayload().brand.color).toBe('#0B7A5A');
+      expect(BookingPagesAPI.saveIdentity).toHaveBeenCalledWith(7);
+      expect(BookingPagesAPI.update.mock.invocationCallOrder[0]).toBeLessThan(
+        BookingPagesAPI.saveIdentity.mock.invocationCallOrder[0]
+      );
+      // A página não tem foto enviada: nada de foto foi guardado, e o aviso diz isso.
+      expect(wrapper.find('[data-identity-notice]').text()).toBe(
+        'BOOKING.LOOK.IDENTITY.SAVED_NO_PHOTO'
+      );
+      expect(wrapper.find('[data-use-identity]').exists()).toBe(true);
+      expect(currentStep(wrapper)).toBe('CARA');
+    });
+
+    it('com a foto guardada, o aviso inclui a foto', async () => {
+      BookingPagesAPI.saveIdentity.mockImplementation(() =>
+        reply(
+          fullPage({
+            identity: {
+              ...IDENTITY,
+              photo_url: 'https://cdn.exemplo.com/f.png',
+            },
+            photo_url: 'https://cdn.exemplo.com/f.png',
+            can_save_identity: true,
+          })
+        )
+      );
+      const wrapper = await openAtStep(
+        5,
+        fullPage({ can_save_identity: true })
+      );
+      await wrapper.find('[data-save-identity]').trigger('click');
+      await flushPromises();
+      expect(wrapper.find('[data-identity-notice]').text()).toBe(
+        'BOOKING.LOOK.IDENTITY.SAVED'
+      );
+    });
+
+    it('falha ao salvar a identidade mostra o motivo do servidor e não sai do passo', async () => {
+      BookingPagesAPI.saveIdentity.mockRejectedValue({
+        response: {
+          status: 422,
+          data: { errors: { brand: ['invalid color'] } },
+        },
+      });
+      const wrapper = await openAtStep(
+        5,
+        fullPage({ can_save_identity: true })
+      );
+      await wrapper.find('[data-save-identity]').trigger('click');
+      await flushPromises();
+      expect(wrapper.find('[data-save-error]').text()).toBe(
+        'BOOKING.WIZARD.SERVER_ERRORS.BRAND'
+      );
+      expect(wrapper.find('[data-identity-notice]').exists()).toBe(false);
+      expect(currentStep(wrapper)).toBe('CARA');
+    });
+  });
+
   describe('passo 7, prévia e publicar', () => {
     it('mostra a prévia e a frase do funil com Alterar', async () => {
       const wrapper = await openAtStep(7);
       await flushPromises();
-      expect(wrapper.find('[data-preview-title]').text()).toBe(
-        'Conversa de vendas'
-      );
+      expect(
+        wrapper.find('[data-preview] [data-brand-header]').text()
+      ).toContain('Conversa de vendas');
       const sentence = wrapper.find('[data-destination]').text();
       expect(sentence).toContain('BOOKING.PREVIEW.DESTINATION');
       expect(sentence).toContain('"pipeline":"Vendas"');

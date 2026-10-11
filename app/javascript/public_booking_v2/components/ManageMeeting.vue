@@ -107,7 +107,7 @@ const canceledBody = computed(() => {
         class="flex size-14 items-center justify-center rounded-full text-2xl"
         :class="
           result && !isCanceled
-            ? 'bg-[var(--brand)] font-bold text-white'
+            ? 'bg-[var(--brand-fill)] font-bold text-[var(--brand-on)] ring-1 ring-inset ring-[var(--brand)]'
             : 'bg-slate-100 text-slate-600'
         "
       >

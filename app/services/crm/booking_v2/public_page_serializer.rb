@@ -27,6 +27,15 @@ class Crm::BookingV2::PublicPageSerializer
     Crm::BookingV2::Tokens.generate('form', { 's' => slug, 't' => Time.current.to_i }, expires_in: FORM_TOKEN_TTL)
   end
 
+  # Feriados nacionais que fecham a página, de hoje até o fim da janela, no fuso dela. A prévia do painel (#1289)
+  # usa a mesma conta, para mostrar os mesmos dias que a página.
+  def self.closed_dates(profile, time_zone)
+    return [] unless profile.close_holidays?
+
+    today = Time.current.in_time_zone(time_zone || 'UTC').to_date
+    (today..(today + profile.booking_window_days)).select { |day| Crm::Calendar::Holidays.holiday?(day) }.map(&:iso8601)
+  end
+
   def initialize(page)
     @page = page
     @profile = page.profile
@@ -39,7 +48,7 @@ class Crm::BookingV2::PublicPageSerializer
   def full
     {
       slug: page.slug, paused: false, preview: page.preview?, title: profile.title, description: profile.description,
-      agent_name: host_name, agent_photo_url: page.host&.avatar_url.presence, brand: brand, locations: locations,
+      agent_name: host_name, agent_photo_url: host_photo_url, brand: brand, locations: locations,
       contact_whatsapp_url: self.class.whatsapp_url(profile)
     }.merge(schedule, form)
   end
@@ -56,10 +65,7 @@ class Crm::BookingV2::PublicPageSerializer
   end
 
   def closed_dates
-    return [] unless profile.close_holidays?
-
-    today = Time.current.in_time_zone(page.time_zone || 'UTC').to_date
-    (today..(today + profile.booking_window_days)).select { |day| Crm::Calendar::Holidays.holiday?(day) }.map(&:iso8601)
+    self.class.closed_dates(profile, page.time_zone)
   end
 
   def form
@@ -70,10 +76,18 @@ class Crm::BookingV2::PublicPageSerializer
     page.host&.available_name.presence || profile.title
   end
 
+  # A foto que a pessoa guardou para as páginas de agendamento (#1289) vem antes da foto do perfil dela.
+  def host_photo_url
+    saved = Crm::BookingV2::BrandIdentity.new(profile.account).photo_of(page.host)
+    saved ? url_for(saved) : page.host&.avatar_url.presence
+  end
+
+  # `logo_align` (#1289): de que lado a logo fica (left, center ou right); sem valor salvo, left.
   def brand
     data = profile.brand.to_h
     {
       color: data['color'].presence, headline: data['headline'].presence,
+      logo_align: data['logo_align'].presence || Crm::BookingPageSettings::LOGO_ALIGNS.first,
       logo_url: attachment_url(profile.logo), photo_url: attachment_url(profile.photo)
     }
   end

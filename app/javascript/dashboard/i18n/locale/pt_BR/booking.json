@@ -236,7 +236,32 @@
       "HEADLINE_LABEL": "Frase de boas-vindas",
       "HEADLINE_PLACEHOLDER": "Escolha o melhor horário para você",
       "LOGO_ALT": "Logo da empresa",
-      "PHOTO_ALT": "Foto de quem atende"
+      "PHOTO_ALT": "Foto de quem atende",
+      "LOGO_HINT": "Quadrada, deitada ou em pé: aparece inteira, sem esticar.",
+      "LOGO_ALIGN_LABEL": "Onde a logo fica",
+      "LOGO_ALIGN": {
+        "LEFT": "À esquerda",
+        "CENTER": "No centro",
+        "RIGHT": "À direita"
+      },
+      "CUSTOM_COLOR": "Outra cor",
+      "COLOR_HINT": "O texto dos botões fica claro ou escuro sozinho, para dar leitura.",
+      "SAMPLE_TITLE": "Assim fica na página",
+      "SAMPLE_PRIMARY": "Confirmar",
+      "SAMPLE_SECONDARY": "Quero este",
+      "IDENTITY": {
+        "SAVED_TITLE": "Você já tem uma identidade salva",
+        "SAVED_TEXT": "A logo, a cor, a frase e a foto que você guardou para todas as páginas.",
+        "USE": "Usar a identidade salva",
+        "SAVE_HINT": "Guarde esta logo, cor, frase e foto uma vez só. As próximas páginas já começam com elas.",
+        "SAVE": "Salvar como identidade da conta",
+        "SAVED": "Identidade salva: logo, cor, frase e a foto de quem atende esta página. As próximas páginas já começam assim.",
+        "APPLIED": "Pronto. Esta página está com a identidade salva.",
+        "SAVED_NO_PHOTO": "Identidade salva: logo, cor e frase, sem a foto. A foto é de cada pessoa: só é guardada quando a página tem uma pessoa só e uma foto enviada.",
+        "CONFIRM": "Isso troca a logo, a cor, o lado da logo, a frase e a foto desta página pelo que está salvo, inclusive o que você acabou de mudar.",
+        "CONFIRM_YES": "Sim, usar",
+        "CONFIRM_NO": "Não, deixar como está"
+      }
     },
     "NOTICES": {
       "TITLE": "Avisos no WhatsApp",
@@ -335,10 +360,6 @@
     },
     "PREVIEW": {
       "TITLE": "Assim o cliente vai ver",
-      "SCHEDULE": "{days}, das {from} às {to}",
-      "DEFAULT_HEADLINE": "Escolha o melhor horário para você",
-      "WITH": "Com {name}",
-      "PICK_TIME": "Escolher horário",
       "DESTINATION": "Quem marcar vai para o funil {pipeline}, etapa {stage}, com {people}.",
       "DESTINATION_NO_PIPELINE": "Quem marcar fica com {people}. Ainda não há funil escolhido.",
       "DEFAULT_PIPELINE": "padrão",

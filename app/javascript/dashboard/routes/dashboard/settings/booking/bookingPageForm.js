@@ -3,6 +3,7 @@ import {
   CALENDAR_LOCATIONS,
   IMAGE_TYPES,
   DEFAULT_CANCEL_UNTIL,
+  DEFAULT_LOGO_ALIGN,
   DEFAULT_NOTICE_PRESET,
   MAX_IMAGE_BYTES,
   MISSING_STEP,
@@ -42,6 +43,7 @@ export const pageToForm = page => {
     closeHolidays: page.close_holidays !== false,
     color: page.brand?.color || BRAND_COLORS[0].hex,
     headline: page.brand?.headline || '',
+    logoAlign: page.brand?.logo_align || DEFAULT_LOGO_ALIGN,
     pipelineId: page.default_pipeline_id ?? null,
     stageId: page.default_stage_id ?? null,
     noticeInboxId: page.notice_inbox_id ?? null,
@@ -83,7 +85,11 @@ const basePayload = form => ({
   min_notice_minutes: form.minNoticeMinutes,
   buffer_minutes: form.bufferMinutes,
   close_holidays: form.closeHolidays,
-  brand: { color: form.color, headline: form.headline.trim() },
+  brand: {
+    color: form.color,
+    headline: form.headline.trim(),
+    logo_align: form.logoAlign,
+  },
   default_pipeline_id: form.pipelineId,
   default_stage_id: form.stageId,
   notice_preset: form.noticePreset,
@@ -180,5 +186,15 @@ export const serverProblem = data => {
 export const firstMissingStep = missing =>
   Math.min(...missing.map(item => MISSING_STEP[item] || STEP.PREVIA));
 
-export const brandSwatch = hex =>
-  (BRAND_COLORS.find(color => color.hex === hex) || BRAND_COLORS[0]).swatch;
+// A cor é uma das prontas? Senão é "Outra cor", escolhida pela pessoa (#1289).
+export const presetColor = hex =>
+  BRAND_COLORS.find(
+    color => color.hex.toLowerCase() === String(hex || '').toLowerCase()
+  ) || null;
+
+// O que "Usar a identidade salva" muda no formulário: só o que a página devolveu.
+export const brandFormPatch = page => ({
+  color: page.brand?.color || BRAND_COLORS[0].hex,
+  headline: page.brand?.headline || '',
+  logoAlign: page.brand?.logo_align || DEFAULT_LOGO_ALIGN,
+});

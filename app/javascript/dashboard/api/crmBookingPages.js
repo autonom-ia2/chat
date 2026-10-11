@@ -39,6 +39,15 @@ class CrmBookingPagesAPI extends ApiClient {
     return axios.post(`${this.url}/${id}/${kind}`, body);
   }
 
+  // Identidade salva da conta (#1289): usar nesta página e salvar a partir dela.
+  applyIdentity(id) {
+    return axios.post(`${this.url}/${id}/apply_identity`);
+  }
+
+  saveIdentity(id) {
+    return axios.post(`${this.url}/${id}/save_identity`);
+  }
+
   people(id) {
     return axios.get(`${this.url}/${id}/people`);
   }

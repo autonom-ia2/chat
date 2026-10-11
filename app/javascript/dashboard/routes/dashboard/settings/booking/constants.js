@@ -94,6 +94,17 @@ export const BRAND_COLORS = [
   { key: 'GRAPHITE', hex: '#2B2F36', swatch: 'bg-[#2B2F36]' },
 ];
 
+// A pessoa também pode escolher qualquer outra cor (#1289): o servidor aceita
+// #RRGGBB e a página calcula o texto claro ou escuro por cima dela.
+
+// De que lado a logo fica no topo da página (Crm::BookingPageSettings::LOGO_ALIGNS).
+export const LOGO_ALIGNS = [
+  { key: 'left', i18n: 'LEFT', icon: 'i-lucide-align-left' },
+  { key: 'center', i18n: 'CENTER', icon: 'i-lucide-align-center' },
+  { key: 'right', i18n: 'RIGHT', icon: 'i-lucide-align-right' },
+];
+export const DEFAULT_LOGO_ALIGN = 'left';
+
 // Logo e foto: o mesmo que o backend aceita (sem SVG, até 2 MB).
 export const IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
 export const MAX_IMAGE_BYTES = 2 * 1024 * 1024;

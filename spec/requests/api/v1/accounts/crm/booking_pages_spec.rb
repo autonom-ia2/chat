@@ -47,10 +47,13 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingPages', type: :request do
         agent: create(:user, account: account, role: :agent), other_role: role_user('crm_view', 'crm_admin')
       }
     end
-    let(:route_names) { %i[index show people create update publish pause preview_token logo photo update_people destroy] }
+    let(:route_names) do
+      %i[index show people create update publish pause preview_token logo photo apply_identity save_identity update_people destroy]
+    end
     let(:reads) { %i[index show people] }
     let(:expected) do
-      { admin: route_names, manage: route_names, view: reads, agent: [], other_role: [] }
+      # Salvar a identidade grava na conta: só o administrador (#1289).
+      { admin: route_names, manage: route_names - [:save_identity], view: reads, agent: [], other_role: [] }
     end
 
     # Página nova a cada chamada: o destroy de uma pessoa não pode esconder a rota da seguinte.
@@ -62,6 +65,7 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingPages', type: :request do
         publish: [:post, "#{member}/publish", {}], pause: [:post, "#{member}/pause", {}],
         preview_token: [:post, "#{member}/preview_token", {}],
         logo: [:post, "#{member}/logo", { file: png_upload }], photo: [:post, "#{member}/photo", { file: png_upload }],
+        apply_identity: [:post, "#{member}/apply_identity", {}], save_identity: [:post, "#{member}/save_identity", {}],
         update_people: [:put, "#{member}/people", { user_ids: [world.host.id] }], destroy: [:delete, member, {}]
       }.fetch(name)
     end
@@ -128,7 +132,7 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingPages', type: :request do
 
       expect(response).to have_http_status(:created)
       expect(body.dig('payload', 'host', 'id')).to eq(manager.id)
-      expect(body.dig('payload', 'host').keys).to match_array(%w[id name avatar_url])
+      expect(body.dig('payload', 'host').keys).to match_array(%w[id name avatar_url booking_photo_url])
       expect(body.dig('payload', 'locations')).to eq([])
     end
 

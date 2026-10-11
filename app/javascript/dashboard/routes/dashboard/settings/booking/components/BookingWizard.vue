@@ -38,6 +38,8 @@ const {
   uploading,
   uploadError,
   missing,
+  identityState,
+  identityBusy,
   savingDestination,
   peopleNames,
   load,
@@ -49,6 +51,8 @@ const {
   goTo,
   publish,
   upload,
+  applyIdentity,
+  saveIdentity,
   saveDestination,
 } = useBookingWizard({
   pageId: props.pageId,
@@ -158,12 +162,15 @@ const blockedByMissing = computed(
           <StepLook
             v-else-if="step === STEP.CARA"
             :form="form"
-            :logo-url="page.logo_url || ''"
-            :photo-url="page.photo_url || ''"
+            :page="page"
             :uploading="uploading"
             :upload-error="uploadError"
+            :identity-state="identityState"
+            :identity-busy="identityBusy"
             @change="change"
             @upload="upload"
+            @apply-identity="applyIdentity"
+            @save-identity="saveIdentity"
           />
           <StepNotices
             v-else-if="step === STEP.AVISOS"

@@ -109,6 +109,9 @@ class Account < ApplicationRecord
   has_many :crm_ai_stage_suggestions, class_name: 'Crm::AiStageSuggestion', dependent: :destroy_async
   has_many :crm_agent_booking_profiles, class_name: 'Crm::AgentBookingProfile', dependent: :destroy_async
   has_many :crm_agent_booking_links, class_name: 'Crm::AgentBookingLink', dependent: :destroy_async
+  # Identidade salva das páginas de agendamento (#1289): a logo da conta. Cor, lado da logo e frase ficam em
+  # `settings['booking_identity']` (ver Crm::BookingV2::BrandIdentity).
+  has_one_attached :booking_identity_logo
   has_many :crm_calendar_sync_states, class_name: 'Crm::CalendarSyncState', dependent: :destroy_async
   has_one :autonomia_prospecting_setting, class_name: 'Autonomia::Prospecting::Setting', dependent: :destroy_async
   has_many :autonomia_prospecting_searches, class_name: 'Autonomia::Prospecting::Search', dependent: :destroy_async

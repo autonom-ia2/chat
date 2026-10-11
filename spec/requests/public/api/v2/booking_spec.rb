@@ -111,7 +111,7 @@ RSpec.describe 'Public::Api::V2::Booking', type: :request do
         'agent_name' => 'Camila', 'agent_photo_url' => nil, 'duration_minutes' => 30, 'durations' => [30],
         'timezone' => 'America/Sao_Paulo', 'booking_window_days' => 14, 'weekdays' => [1, 2, 3, 4, 5],
         'closed_dates' => [],
-        'brand' => { 'color' => '#1F6FEB', 'headline' => 'Fale com a gente', 'logo_url' => nil, 'photo_url' => nil },
+        'brand' => { 'color' => '#1F6FEB', 'headline' => 'Fale com a gente', 'logo_align' => 'left', 'logo_url' => nil, 'photo_url' => nil },
         'locations' => [{ 'type' => 'whatsapp_video', 'label' => 'Vídeo no WhatsApp', 'requires_email' => false }],
         'contact_whatsapp_url' => 'https://wa.me/5511933334444', 'captcha_site_key' => nil, 'notices_enabled' => false
       )
@@ -202,7 +202,7 @@ RSpec.describe 'Public::Api::V2::Booking', type: :request do
       expect(response).to have_http_status(:ok)
       expect(body).to eq(
         'slug' => profile.slug, 'paused' => true, 'title' => 'Conversa de 30 min',
-        'brand' => { 'color' => '#1F6FEB', 'headline' => 'Fale com a gente', 'logo_url' => nil, 'photo_url' => nil },
+        'brand' => { 'color' => '#1F6FEB', 'headline' => 'Fale com a gente', 'logo_align' => 'left', 'logo_url' => nil, 'photo_url' => nil },
         'contact_whatsapp_url' => 'https://wa.me/5511933334444'
       )
       get "#{base}/slots", params: { date: '2026-10-20' }

@@ -2,6 +2,7 @@ import { computed, ref } from 'vue';
 import BookingPagesAPI from 'dashboard/api/crmBookingPages';
 import { STEP } from '../constants';
 import {
+  brandFormPatch,
   formToPayload,
   imageProblem,
   pageToForm,
@@ -43,6 +44,10 @@ export const useBookingWizard = ({ pageId, initialStep, onClose }) => {
   const uploading = ref(null);
   const uploadError = ref(null);
   const missing = ref([]);
+  // Identidade salva (#1289): 'applied' | 'saved' depois que deu certo; a
+  // falha vira o aviso de "não salvou" de sempre, com o motivo do servidor.
+  const identityState = ref(null);
+  const identityBusy = ref(false);
   const savingDestination = ref(false);
 
   const loadPeople = async () => {
@@ -185,6 +190,30 @@ export const useBookingWizard = ({ pageId, initialStep, onClose }) => {
     }
   };
 
+  // "Usar a identidade salva": o servidor põe logo, foto, cor, lado e frase na
+  // página e devolve; o formulário acompanha.
+  const applyIdentity = () => {
+    identityState.value = null;
+    return attempt(async () => {
+      const { data } = await BookingPagesAPI.applyIdentity(page.value.id);
+      page.value = data.payload;
+      change(brandFormPatch(data.payload));
+      identityState.value = 'applied';
+    }, identityBusy);
+  };
+
+  // "Salvar como identidade da conta": primeiro salva o que está na tela,
+  // depois guarda a identidade a partir da página.
+  const saveIdentity = () => {
+    identityState.value = null;
+    return attempt(async () => {
+      await saveStep();
+      const { data } = await BookingPagesAPI.saveIdentity(page.value.id);
+      page.value = data.payload;
+      identityState.value = 'saved';
+    }, identityBusy);
+  };
+
   const saveDestination = ({ pipelineId, stageId }) =>
     attempt(async () => {
       const { data } = await BookingPagesAPI.update(page.value.id, {
@@ -221,6 +250,8 @@ export const useBookingWizard = ({ pageId, initialStep, onClose }) => {
     uploading,
     uploadError,
     missing,
+    identityState,
+    identityBusy,
     savingDestination,
     peopleNames,
     load,
@@ -232,6 +263,8 @@ export const useBookingWizard = ({ pageId, initialStep, onClose }) => {
     goTo,
     publish,
     upload,
+    applyIdentity,
+    saveIdentity,
     saveDestination,
   };
 };
