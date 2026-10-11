@@ -226,4 +226,43 @@ describe('#crmKanban mutations', () => {
 
     expect(commit).toHaveBeenCalledWith(types.REMOVE_CRM_KANBAN_CARD, 10);
   });
+
+  it('syncs the customer badge of a contact on board and list cards (#1258)', () => {
+    const state = {
+      board: {
+        stages: [
+          {
+            id: 1,
+            cards: [
+              { id: 11, contact: { id: 7, name: 'Ana', contact_type: 'lead' } },
+              { id: 12, contact: { id: 8, name: 'Bia', contact_type: 'lead' } },
+            ],
+          },
+        ],
+      },
+      cardsList: [{ id: 11, contact: { id: 7, contact_type: 'lead' } }],
+    };
+
+    mutations[types.SYNC_CRM_CARD_CONTACT](state, {
+      id: 7,
+      contact_type: 'customer',
+      customer_since: 1773576000,
+    });
+
+    const [ana, bia] = state.board.stages[0].cards;
+    expect(ana.contact).toEqual({
+      id: 7,
+      name: 'Ana',
+      contact_type: 'customer',
+      customer_since: 1773576000,
+    });
+    expect(bia.contact.contact_type).toBe('lead');
+    expect(state.cardsList[0].contact.contact_type).toBe('customer');
+  });
+
+  it('ignores contact events without the customer fields', () => {
+    const commit = vi.fn();
+    actions.syncCardContact({ commit }, { id: 7, name: 'Ana' });
+    expect(commit).not.toHaveBeenCalled();
+  });
 });

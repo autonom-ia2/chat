@@ -23,6 +23,7 @@ RSpec.describe Crm::Subjects::Identifier do
     allow(Crm::Ai::CredentialResolver).to receive(:new).and_return(instance_double(Crm::Ai::CredentialResolver, resolve: { api_key: 'k' }))
     allow(Crm::Ai::ResponsesClient).to receive(:new).and_return(cliente)
     allow(cliente).to receive(:create)
+    allow(Crm::Ai::Config).to receive(:enabled?).and_return(true)
   end
 
   def incoming(content)
@@ -377,5 +378,126 @@ RSpec.describe Crm::Subjects::Identifier do
 
     expect(Crm::AiUsageEvent.where(account_id: account.id).pluck(:feature)).to include('assunto')
     expect(Crm::Ai::ResponsesClient).to have_received(:new).with(hash_including(feature: 'assunto_revisao', account: account))
+  end
+
+  describe 'ligada por padrão, respeitando a pessoa (#1260)' do
+    it 'caixa nova nasce Desligada: quem liga é o admin, caixa por caixa' do
+      outra = create(:inbox, account: account)
+
+      expect(account.crm_inbox_settings.create!(inbox: outra, crm_enabled: true)).to be_subject_ai_off
+    end
+
+    it 'funil com a IA do funil desligada fica de fora: não pergunta nada' do
+      comercial.update!(metadata: { 'ai' => { 'enabled' => false } })
+      requests = stub_jev("novo_#{comercial.id}")
+
+      expect(identify(incoming('Quero o Chat2You'))).to be_nil
+      expect(requests).to be_empty
+    end
+
+    it 'IA do CRM desligada na instalação: não pergunta nada' do
+      allow(Crm::Ai::Config).to receive(:enabled?).and_return(false)
+      requests = stub_jev("novo_#{comercial.id}")
+
+      expect(identify(incoming('Quero o Chat2You'))).to be_nil
+      expect(requests).to be_empty
+    end
+
+    it 'assunto escolhido por uma pessoa há pouco: voltar a outro vira sugestão' do
+      agentes = create_card(title: 'Agentes de IA', focused_at: 2.hours.ago)
+      chat2you = create_card(title: 'Chat2You', focused_at: 1.hour.ago)
+      Crm::Cards::Focus.new(account: account, card: chat2you, conversation: conversation, user: admin).perform
+      stub_jev("card_#{agentes.id}")
+
+      decision = identify(incoming('Voltando aos agentes'))
+
+      expect(decision).to have_attributes(action: 'focus', state: 'suggested', card_id: agentes.id)
+      expect(finder.find(conversation)).to eq(chat2you)
+    end
+
+    it 'escolha da pessoa de mais de 4 h atrás não segura mais a IA' do
+      agentes = create_card(title: 'Agentes de IA', focused_at: 6.hours.ago)
+      chat2you = create_card(title: 'Chat2You', focused_at: 5.hours.ago)
+      Crm::CardConversation.find_by(card: chat2you, conversation: conversation).update!(focused_by_id: admin.id)
+      stub_jev("card_#{agentes.id}")
+
+      expect(identify(incoming('Voltando aos agentes'))).to have_attributes(action: 'focus', state: 'applied')
+    end
+
+    it 'card daquele funil fechado há pouco: o pedido novo vira sugestão, não card' do
+      create_card(title: 'Agentes de IA', focused_at: 1.hour.ago).update!(status: :lost)
+      create_card(title: 'Chat2You', focused_at: 2.hours.ago)
+      stub_jev("novo_#{comercial.id}")
+      stub_review(resposta: "novo_#{comercial.id}", titulo: 'Agentes de IA')
+
+      expect { identify(incoming('Quero os agentes de novo')) }.not_to change(Crm::Card, :count)
+      expect(Crm::SubjectDecision.last).to have_attributes(action: 'create', state: 'suggested')
+    end
+
+    it 'sugestão dispensada não volta: nem sugere de novo nem chama o modelo maior' do
+      create_card(title: 'Agentes de IA', focused_at: 1.hour.ago)
+      Crm::SubjectDecision.create!(account: account, conversation: conversation, mode: 'auto', action: 'create',
+                                   state: 'dismissed', pipeline: comercial, title: 'Chat2You')
+      stub_jev("novo_#{comercial.id}")
+
+      decision = identify(incoming('E o Chat2You?'))
+
+      expect(decision).to have_attributes(state: 'kept', reason: 'sugestao_dispensada')
+      expect(cliente).not_to have_received(:create)
+    end
+
+    it 'card de funil com a IA desligada não é opção para voltar' do
+      suporte = account.crm_pipelines.create!(name: 'Suporte', created_by: admin, status: :active,
+                                              metadata: { 'ai' => { 'enabled' => false } })
+      etapa = account.crm_pipeline_stages.create!(pipeline: suporte, name: 'Aberto', position: 0)
+      fora = account.crm_cards.create!(pipeline: suporte, stage: etapa, contact: contact, primary_conversation: conversation,
+                                       inbox: inbox, title: 'Troca de senha')
+      Crm::CardConversation.find_or_create_by!(account: account, card: fora, conversation: conversation).update!(focused_at: 2.hours.ago)
+      create_card(title: 'Agentes de IA', focused_at: 1.hour.ago)
+      requests = stub_jev('sem_assunto')
+
+      identify(incoming('Oi'))
+
+      expect(requests.first['questions']['decisao']['criteria'].keys).not_to include("card_#{fora.id}")
+    end
+
+    it 'card arquivado há pouco naquele funil: o pedido novo vira sugestão' do
+      create_card(title: 'Agentes de IA', focused_at: 1.hour.ago).update!(status: :archived)
+      create_card(title: 'Chat2You', focused_at: 2.hours.ago)
+      stub_jev("novo_#{comercial.id}")
+      stub_review(resposta: "novo_#{comercial.id}", titulo: 'Agentes de IA')
+
+      expect { identify(incoming('Quero os agentes de novo')) }.not_to change(Crm::Card, :count)
+      expect(Crm::SubjectDecision.last).to have_attributes(action: 'create', state: 'suggested')
+    end
+
+    it 'sugestão de nome dispensada também não volta' do
+      create_card(title: 'Joana Lima', focused_at: 1.hour.ago)
+      Crm::SubjectDecision.create!(account: account, conversation: conversation, mode: 'auto', action: 'rename',
+                                   state: 'dismissed', pipeline: comercial, title: 'Chat2You')
+      stub_jev("novo_#{comercial.id}")
+
+      expect(identify(incoming('Quero o Chat2You'))).to have_attributes(state: 'kept', reason: 'sugestao_dispensada')
+    end
+
+    it 'sugestão esquecida há mais de 24 h não prende a conversa' do
+      create_card(title: 'Agentes de IA', focused_at: 1.hour.ago, metadata: { 'subject' => { 'source' => 'ai' } })
+      antiga = Crm::SubjectDecision.create!(account: account, conversation: conversation, mode: 'auto', action: 'create',
+                                            state: 'suggested', pipeline: comercial, title: 'Chat2You')
+      antiga.update_columns(updated_at: 2.days.ago) # rubocop:disable Rails/SkipsModelValidations
+      stub_jev("novo_#{comercial.id}")
+      stub_review(resposta: "novo_#{comercial.id}", titulo: 'Chat2You')
+
+      expect(identify(incoming('E o Chat2You?'))).to have_attributes(action: 'create', state: 'applied')
+    end
+
+    it 'card criado pelo sistema não tira o assunto que uma pessoa escolheu' do
+      chat2you = create_card(title: 'Chat2You', focused_at: 1.hour.ago)
+      Crm::Cards::Focus.new(account: account, card: chat2you, conversation: conversation, user: admin).perform
+      Crm::Cards::Creator.new(account: account, user: nil, conversation: conversation,
+                              params: { pipeline_id: comercial.id, stage_id: first_stage.id, title: 'Outro' }).perform
+
+      expect(finder.find(conversation)).to eq(chat2you)
+    end
   end
 end

@@ -183,17 +183,27 @@ class Crm::Conversations::CardSyncer
     attributes[:last_activity_at] = real_message_at
   end
 
-  # Auto-synced cards mirror the conversation assignee exactly (set on assign,
+  # Auto-synced cards mirror the assignee of THEIR OWN (primary) conversation exactly (set on assign,
   # clear on unassign) so owner stays a clean human field and reflects realtime.
-  # Manually-owned cards are only filled when blank and never auto-cleared.
+  # Manually-owned cards, and cards reused or adopted by another conversation of the contact (#1273: a
+  # new conversation not yet distributed must not wipe the owner), are only filled when blank.
   def sync_assignment?(card)
-    return true if auto_synced_card?(card)
+    return true if auto_synced_card?(card) && own_conversation?(card)
 
     @conversation.assignee_id.present? && card.owner_id.blank?
   end
 
+  # Same rule for the team: only the card's own conversation overwrites it.
   def sync_team?(card)
-    @conversation.team_id.present? && (auto_synced_card?(card) || card.team_id.blank?)
+    return false if @conversation.team_id.blank?
+
+    (auto_synced_card?(card) && own_conversation?(card)) || card.team_id.blank?
+  end
+
+  # Read before conversation_id is filled on adoption: a card without a primary conversation is not
+  # "own" yet, so adopting it only fills blanks.
+  def own_conversation?(card)
+    card.conversation_id == @conversation.id
   end
 
   def values_equal?(current_value, next_value)

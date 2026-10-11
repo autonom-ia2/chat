@@ -108,4 +108,14 @@ RSpec.describe Crm::Cards::PayloadBuilder do
     expect(hidden_payload[:conversation_id]).to be_nil
     expect(hidden_payload[:contact_labels]).to eq(%w[lote-01])
   end
+
+  it 'exposes the contact type and customer date for the Kanban customer badge (#1258)' do
+    conversation = create_conversation
+    conversation.contact.update!(contact_type: :customer, customer_since: Time.zone.parse('2026-03-15 12:00'))
+    card = create_card(conversation: conversation)
+
+    contact = payload_for(card, user: admin, account_user: admin_account_user)[:contact]
+
+    expect(contact).to include(contact_type: 'customer', customer_since: Time.zone.parse('2026-03-15 12:00').to_i)
+  end
 end

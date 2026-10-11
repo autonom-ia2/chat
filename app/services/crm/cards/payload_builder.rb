@@ -212,7 +212,10 @@ class Crm::Cards::PayloadBuilder
       # server-side on update, so the drawer only sends what changed.
       location: @card.contact.location,
       additional_attributes: @card.contact.additional_attributes || {},
-      custom_attributes: @card.contact.custom_attributes || {}
+      custom_attributes: @card.contact.custom_attributes || {},
+      # Selo "Cliente" no card do Kanban (#1258).
+      contact_type: @card.contact.contact_type,
+      customer_since: @card.contact.customer_since&.to_i
     }
   end
 

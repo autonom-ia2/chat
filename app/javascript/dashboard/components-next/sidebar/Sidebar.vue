@@ -34,11 +34,7 @@ import SidebarChangelogCard from './SidebarChangelogCard.vue';
 import SidebarChangelogButton from './SidebarChangelogButton.vue';
 import GuideSidebarEntry from 'dashboard/components/autonomia/guide/GuideSidebarEntry.vue';
 import { prospectingSidebarItems } from 'dashboard/routes/dashboard/autonomia/prospecting/utils/prospectingSidebar';
-import {
-  bookingResultsSidebarItems,
-  bookingSidebarItems,
-  myBookingHoursSidebarItems,
-} from 'dashboard/routes/dashboard/settings/booking/bookingAccess';
+import { bookingSidebarGroup } from 'dashboard/routes/dashboard/settings/booking/bookingAccess';
 import { agentsSidebarItems } from 'dashboard/routes/dashboard/autonomia/agentes/utils/agentsSidebar';
 import { withCampaignJourney } from 'dashboard/components-next/CampaignJourney/journeySidebar';
 import ChannelLeaf from './ChannelLeaf.vue';
@@ -249,14 +245,15 @@ const canManageCrmSla = computed(() => {
   return permissions.includes(CRM_ADMIN_PERMISSION);
 });
 
-// Agendamento mora no CRM (#1212): função só com Agendamento vê o grupo com
-// esse item e mais nenhum; Kanban, Calendário, Meus horários e Meus números só
-// aparecem para quem vê o CRM.
-const crmBookingItems = computed(() =>
-  bookingSidebarItems({
+// Agendamento mora no CRM (#1212) como subgrupo (#1264): função só com
+// Agendamento vê o grupo CRM só com ele, e dentro só Páginas e links; Kanban,
+// Calendário, Meus horários e Meus números só aparecem para quem vê o CRM.
+const crmBookingGroup = computed(() =>
+  bookingSidebarGroup({
     account: currentAccount.value(accountId.value),
     isAdministrator: isAdministrator.value,
     permissions: getUserPermissions(currentUser.value, accountId.value),
+    canViewCrm: canViewCrm.value,
     t,
     accountScopedRoute,
   })
@@ -265,7 +262,7 @@ const crmBookingItems = computed(() =>
 const showCrmSidebarEntry = computed(
   () =>
     crmKanbanEnabled.value &&
-    (canViewCrm.value || crmBookingItems.value.length > 0)
+    (canViewCrm.value || crmBookingGroup.value.length > 0)
 );
 
 const hasFilteredUnreadCounts = computed(() => {
@@ -957,21 +954,7 @@ const menuItems = computed(() => {
                     },
                   ]
                 : []),
-              ...crmBookingItems.value,
-              ...(canViewCrm.value
-                ? [
-                    ...myBookingHoursSidebarItems({
-                      account: currentAccount.value(accountId.value),
-                      t,
-                      accountScopedRoute,
-                    }),
-                    ...bookingResultsSidebarItems({
-                      account: currentAccount.value(accountId.value),
-                      t,
-                      accountScopedRoute,
-                    }),
-                  ]
-                : []),
+              ...crmBookingGroup.value,
               ...(canViewCrmReports.value
                 ? [
                     {

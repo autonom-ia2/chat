@@ -23,7 +23,7 @@ module Crm
           end
           # Vincular é tratar deste pedido nesta conversa (#1147): ele vira o assunto atual, e a IA e o follow-up
           # passam a valer para ele ali. Vínculo que já existia não rouba o foco de ninguém.
-          Crm::Cards::Focus.new(account: @card.account, card: @card, conversation: @conversation).perform if novo
+          Crm::Cards::Focus.new(account: @card.account, card: @card, conversation: @conversation, user: @actor).perform if novo
 
           update_card_from_conversation! if primary
           link.update!(is_primary: true) if primary && !link.is_primary?

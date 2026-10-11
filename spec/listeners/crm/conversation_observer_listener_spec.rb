@@ -32,8 +32,21 @@ RSpec.describe Crm::ConversationObserverListener do
     let(:contact) { account.contacts.create!(name: 'Assunto', phone_number: '+5511987654321') }
     let(:conversation) { create_crm_conversation(account: account, inbox: inbox, contact: contact) }
 
+    before { allow(Crm::Ai::Config).to receive(:enabled?).and_return(true) }
+
     def ligar(mode)
       account.crm_inbox_settings.find_or_initialize_by(inbox: inbox).update!(crm_enabled: true, subject_ai_mode: mode)
+    end
+
+    it 'não pergunta com a IA do CRM desligada na instalação (#1260)' do
+      ligar(:auto)
+      allow(Crm::Ai::Config).to receive(:enabled?).and_return(false)
+      message = create_message(conversation: conversation, sender: contact)
+      clear_enqueued_jobs
+
+      described_class.instance.message_created(event_for(message))
+
+      expect(Crm::Subjects::IdentifyJob).not_to have_been_enqueued
     end
 
     it 'pergunta o assunto da mensagem do cliente, depois da espera, quando a caixa tem a IA ligada' do

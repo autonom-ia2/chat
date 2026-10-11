@@ -6,6 +6,7 @@ import bookingRoutes, {
 } from '../booking.routes';
 import {
   bookingResultsSidebarItems,
+  bookingSidebarGroup,
   bookingSidebarItems,
   myBookingHoursSidebarItems,
 } from '../bookingAccess';
@@ -145,10 +146,10 @@ describe('item do menu Agendamento', () => {
     window.globalConfig = { CRM_CALENDAR_MEETINGS_ENABLED: 'true' };
   });
 
-  it('aparece para o administrador com a flag ligada, como item do CRM', () => {
+  it('aparece para o administrador com a flag ligada, como Páginas e links', () => {
     const [item] = build({ isAdministrator: true });
     expect(item.name).toBe('CRM Booking');
-    expect(item.label).toBe('SIDEBAR.BOOKING');
+    expect(item.label).toBe('BOOKING.PAGE.MENU');
     expect(item.to).toEqual({ name: 'settings_booking' });
   });
 
@@ -304,5 +305,61 @@ describe('rotas do painel de resultados', () => {
       'settings_booking',
       'settings_booking_results',
     ]);
+  });
+});
+
+// CRM › Agendamento vira subgrupo (#1264): Páginas e links, Meus horários e
+// Meus números, cada um com a regra que já tinha.
+describe('subgrupo Agendamento do CRM', () => {
+  const build = (overrides = {}) =>
+    bookingSidebarGroup({
+      account: withFlag(true),
+      isAdministrator: false,
+      permissions: [],
+      canViewCrm: false,
+      t: key => key,
+      accountScopedRoute: name => ({ name }),
+      ...overrides,
+    });
+  const childNames = group => group.children.map(child => child.name);
+
+  beforeEach(() => {
+    window.globalConfig = { CRM_CALENDAR_MEETINGS_ENABLED: 'true' };
+  });
+
+  it('administrador vê o subgrupo com os três filhos, na ordem', () => {
+    const [group] = build({ isAdministrator: true, canViewCrm: true });
+    expect(group.name).toBe('CRM Scheduling');
+    expect(group.label).toBe('SIDEBAR.BOOKING');
+    expect(group.icon).toBe('i-lucide-calendar-clock');
+    expect(childNames(group)).toEqual([
+      'CRM Booking',
+      'CRM My Booking Hours',
+      'CRM Booking Results',
+    ]);
+  });
+
+  it('função só com Agendamento vê só Páginas e links', () => {
+    const [group] = build({ permissions: ['agendamento_view'] });
+    expect(childNames(group)).toEqual(['CRM Booking']);
+  });
+
+  it('quem vê o CRM sem o módulo Agendamento vê Meus horários e Meus números', () => {
+    const [group] = build({ permissions: ['crm_view'], canViewCrm: true });
+    expect(childNames(group)).toEqual([
+      'CRM My Booking Hours',
+      'CRM Booking Results',
+    ]);
+  });
+
+  it('some sem filhos: sem CRM nem Agendamento, ou com a flag desligada', () => {
+    expect(build({ permissions: ['label_manage'] })).toEqual([]);
+    expect(
+      build({
+        isAdministrator: true,
+        canViewCrm: true,
+        account: withFlag(false),
+      })
+    ).toEqual([]);
   });
 });

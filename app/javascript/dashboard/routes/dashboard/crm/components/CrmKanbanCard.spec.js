@@ -232,3 +232,40 @@ describe('CrmKanbanCard bubble shortcut', () => {
     expect(wrapper.text()).toContain('CRM_KANBAN.CARD.RESPONSIBLE_AI');
   });
 });
+
+describe('CrmKanbanCard customer badge (#1258)', () => {
+  it('puts the badge on the person line when the card has a company', () => {
+    const wrapper = mountCard({
+      ...CONVERSATION_CARD,
+      company: { id: 7, name: 'Ourocorretoradeseguros' },
+      contact: { id: 10, name: 'nilvandro', contact_type: 'customer' },
+    });
+
+    expect(
+      wrapper.find('[data-crm-card-person] [data-customer-badge]').exists()
+    ).toBe(true);
+    expect(wrapper.findAll('[data-customer-badge]')).toHaveLength(1);
+  });
+
+  it('follows the name on the top line when there is no company', () => {
+    const wrapper = mountCard({
+      ...CONVERSATION_CARD,
+      contact: { id: 10, name: 'Ana Clara Souza', contact_type: 'customer' },
+    });
+
+    expect(
+      wrapper.find('[data-crm-card-identity] [data-customer-badge]').exists()
+    ).toBe(true);
+    expect(wrapper.findAll('[data-customer-badge]')).toHaveLength(1);
+  });
+
+  it('shows no badge for a lead', () => {
+    const wrapper = mountCard({
+      ...CONVERSATION_CARD,
+      company: { id: 7, name: 'Norte Logística' },
+      contact: { id: 10, name: 'Mariana Costa', contact_type: 'lead' },
+    });
+
+    expect(wrapper.find('[data-customer-badge]').exists()).toBe(false);
+  });
+});

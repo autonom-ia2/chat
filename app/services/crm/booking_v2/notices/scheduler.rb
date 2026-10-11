@@ -78,8 +78,10 @@ class Crm::BookingV2::Notices::Scheduler
     @profile = self.class.profile_for(meeting)
   end
 
+  # `metadata.notify_client: false` (#1265): a atendente marcou sem "Avisar o cliente"; nem ao remarcar sai aviso.
   def active?
-    meeting.scheduled? && profile&.notices_usable? && Crm::Config.booking_v2_enabled?(meeting.account)
+    meeting.scheduled? && meeting.metadata.to_h['notify_client'] != false && profile&.notices_usable? &&
+      Crm::Config.booking_v2_enabled?(meeting.account)
   end
 
   def kinds

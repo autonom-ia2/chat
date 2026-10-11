@@ -1090,7 +1090,7 @@
           "NO_CONVERSATION": "There is no conversation with this client that you can answer. Copy the link and send it another way.",
           "CANNOT_REPLY": "The client needs to send a message first. Copy the link and send it another way.",
           "NOT_REBOOKABLE": "This only works after you mark “No-show”.",
-          "NO_PAGE": "No booking page is live right now. Publish a page in CRM › Scheduling.",
+          "NO_PAGE": "No booking page is live right now. Publish a page in CRM › Scheduling › Pages and links.",
           "OTHER": "Could not send. Try again."
         }
       },
@@ -1691,7 +1691,7 @@
       "SUBJECT_AI_OFF": "Off",
       "SUBJECT_AI_SUGGEST": "Suggest: the team confirms",
       "SUBJECT_AI_AUTO": "Automatic: the AI creates and names the cards",
-      "SUBJECT_AI_HELP": "When the customer asks for something new, the AI names the subject and opens its card in the right pipeline. When unsure, it changes nothing.",
+      "SUBJECT_AI_HELP": "When the customer asks for something new, the AI names the subject and opens its card in the right pipeline. When unsure, it changes nothing. What a person just chose or closed becomes a suggestion, never an automatic change. Only pipelines with the pipeline AI on.",
       "PIPELINE_SWITCH": "This inbox leaves the {de} pipeline and starts feeding {para}. Cards already in the previous pipeline stay where they are.",
       "SAVE": "Save",
       "SAVED": "Saved",
@@ -2869,6 +2869,57 @@
           "WHATSAPP_NUMBER_NOT_FOUND": "This number has no WhatsApp.",
           "GENERIC": "It did not work this time. Try again."
         }
+      }
+    },
+    "BOOKING_AGENDA": {
+      "TAB_AGENDA": "By the scheduling page",
+      "TAB_PROVIDER": "With Google/Microsoft invite",
+      "TABS_LABEL": "How to schedule",
+      "PAGE_LABEL": "Page",
+      "DAY_LABEL": "Day",
+      "TIME_LABEL": "Time",
+      "DURATION_LABEL": "Duration",
+      "DURATION_OPTION": "{minutes} min",
+      "LOCATION_LABEL": "Where",
+      "LOCATION_VALUE": "Where: {place}",
+      "LOADING": "Loading the schedule…",
+      "SLOTS_LOADING": "Looking for free times…",
+      "NO_SLOTS": "No free time on this day.",
+      "NEXT_SLOT": "See the next free day",
+      "RETRY": "Try again",
+      "NOTIFY": "Notify the client on WhatsApp",
+      "NOTIFY_HINT": "Sends the confirmation and the reminders.",
+      "SAVE": "Save",
+      "SAVING": "Saving…",
+      "SUCCESS": "Meeting scheduled.",
+      "CLIENT": "Client: {name}",
+      "TIMEZONE_HINT": "Times in {timezone}",
+      "PICK_TIME": "Choose a time.",
+      "SEND_LINK": "Send a link for the client to choose",
+      "LINK_TITLE": "Link for the client",
+      "LINK_SEND": "Send in the conversation",
+      "LINK_COPY": "Copy link",
+      "LINK_COPIED": "Link copied. Paste it anywhere.",
+      "LINK_SENT": "Message sent in the conversation.",
+      "LINK_BACK": "Back",
+      "EMPTY": {
+        "TITLE": "Create your scheduling page",
+        "DESC": "With a page, you choose a free time here and the client gets the notice on WhatsApp.",
+        "AGENT": "Ask the administrator to publish a scheduling page.",
+        "OPEN": "Go to scheduling pages"
+      },
+      "ERRORS": {
+        "LOAD": "Could not load the schedule. Try again.",
+        "SLOT_TAKEN": "This time was just taken. Choose another.",
+        "NO_PHONE": "The client has no valid WhatsApp number. Add it to the contact.",
+        "NO_CONTACT": "This deal has no client. Link a contact first.",
+        "EMAIL_REQUIRED": "This place sends the invite by e-mail and the client has no e-mail.",
+        "TOO_MANY_OPEN": "This client already has too many meetings booked.",
+        "FORBIDDEN": "You do not have access to this.",
+        "GENERIC": "Could not schedule now. Try again.",
+        "LINK": "Could not prepare the link. Try again.",
+        "CANNOT_REPLY": "This conversation cannot receive messages now. Copy the link instead.",
+        "CARD_CLOSED": "This deal is closed. Reopen it to schedule."
       }
     }
   },
