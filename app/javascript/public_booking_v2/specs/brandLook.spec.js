@@ -2,20 +2,29 @@ import { mount } from '@vue/test-utils';
 import ActionButton from '../components/ActionButton.vue';
 import BrandHeader from '../components/BrandHeader.vue';
 import {
+  DARK_SURFACE,
   DARK_TEXT,
   DEFAULT_BRAND_COLOR,
+  LIGHT_SURFACE,
   LIGHT_TEXT,
+  LOGO_DARK_MODES,
   applyBrandColor,
   brandTokens,
   contrastBetween,
   contrastWithWhite,
   logoAlignOf,
+  logoDarkModeOf,
+  readableBrandColorDark,
   textOnColor,
 } from '../helpers/brand';
 
-// Cor livre, contraste e logo da página pública (#1289).
+// Cor livre, contraste e logo da página pública (#1289), nos dois temas (#1295).
 const AA = 4.5;
-const WHITE = '#ffffff';
+// As superfícies escuras em que a cor da marca vira texto ou borda: cartão, campo e caixa (assets/_booking-theme.scss;
+// o theme.spec.js confere que DARK_SURFACE é a mais clara delas).
+const DARK_SURFACES = ['#17191e', '#1e2127', DARK_SURFACE];
+// As claras: cartão e campo (brancos) e a caixa, que é o fundo do botão secundário com o mouse em cima.
+const LIGHT_SURFACES = ['#ffffff', LIGHT_SURFACE];
 
 // Uma grade de cores espalhada pelo cubo RGB inteiro (4.096 cores).
 const STEPS = Array.from({ length: 16 }, (_, index) => index * 17);
@@ -32,13 +41,33 @@ describe('cor livre: texto claro ou escuro por cima da cor', () => {
     expect(textOnColor('#ffffff')).toBe(DARK_TEXT);
   });
 
-  it('qualquer cor tem contraste AA no botão e na borda', () => {
+  it('qualquer cor tem contraste AA no botão e na borda, no tema claro e no escuro', () => {
     const failures = GRID.filter(color => {
-      const { fill, on, ink } = brandTokens(color);
-      return contrastBetween(fill, on) < AA || contrastBetween(ink, WHITE) < AA;
+      const { fill, on, ink, inkDark } = brandTokens(color);
+      return (
+        contrastBetween(fill, on) < AA ||
+        LIGHT_SURFACES.some(surface => contrastBetween(ink, surface) < AA) ||
+        DARK_SURFACES.some(surface => contrastBetween(inkDark, surface) < AA)
+      );
     });
     expect(GRID).toHaveLength(4096);
     expect(failures).toEqual([]);
+  });
+
+  it('no escuro a cor escura é clareada sem perder o tom; a clara fica como é', () => {
+    const navy = readableBrandColorDark('#0D2344');
+    expect(navy).not.toBe('#0d2344');
+    expect(contrastBetween(navy, DARK_SURFACE)).toBeGreaterThanOrEqual(AA);
+    // Continua azul: o canal azul segue o maior e o vermelho o menor.
+    const [r, g, b] = [1, 3, 5].map(at => parseInt(navy.slice(at, at + 2), 16));
+    expect(b).toBeGreaterThan(g);
+    expect(g).toBeGreaterThan(r);
+
+    expect(readableBrandColorDark('#FFE066')).toBe('#ffe066');
+    expect(readableBrandColorDark('#000000')).not.toBe('#000000');
+    expect(
+      contrastBetween(readableBrandColorDark('#000000'), DARK_SURFACE)
+    ).toBeGreaterThanOrEqual(AA);
   });
 
   it('o fundo é a cor que a pessoa escolheu, sem escurecer', () => {
@@ -50,29 +79,37 @@ describe('cor livre: texto claro ou escuro por cima da cor', () => {
   });
 
   it('cor escura fica igual no fundo e na borda', () => {
-    expect(brandTokens('#0B7A5A')).toEqual({
+    expect(brandTokens('#0B7A5A')).toMatchObject({
       fill: '#0b7a5a',
       ink: '#0b7a5a',
       on: LIGHT_TEXT,
     });
   });
 
-  it('cor inválida usa a cor padrão nos três valores', () => {
-    expect(brandTokens('red; background: url(x)')).toEqual({
+  it('cor inválida usa a cor padrão em todos os valores', () => {
+    const tokens = brandTokens('red; background: url(x)');
+    expect(tokens).toEqual({
       fill: DEFAULT_BRAND_COLOR,
       ink: DEFAULT_BRAND_COLOR,
+      inkDark: readableBrandColorDark(DEFAULT_BRAND_COLOR),
       on: LIGHT_TEXT,
     });
+    expect(
+      contrastBetween(tokens.inkDark, DARK_SURFACE)
+    ).toBeGreaterThanOrEqual(AA);
   });
 
-  it('aplica os três valores no elemento', () => {
+  it('aplica no elemento o fundo, o texto por cima e as duas versões legíveis; quem escolhe entre elas é o CSS', () => {
     const root = document.createElement('div');
     applyBrandColor('#FFE066', root);
     expect(root.style.getPropertyValue('--brand-fill')).toBe('#ffe066');
     expect(root.style.getPropertyValue('--brand-on')).toBe(DARK_TEXT);
     expect(
-      contrastWithWhite(root.style.getPropertyValue('--brand'))
+      contrastWithWhite(root.style.getPropertyValue('--brand-ink-light'))
     ).toBeGreaterThanOrEqual(AA);
+    expect(root.style.getPropertyValue('--brand-ink-dark')).toBe('#ffe066');
+    // `--brand` não é gravado por script: vem do tema (assets/_booking-theme.scss).
+    expect(root.style.getPropertyValue('--brand')).toBe('');
   });
 
   it('o botão principal usa o fundo, o texto por cima e o contorno legível', () => {
@@ -157,5 +194,143 @@ describe('logo: lado e formato', () => {
         'text-[var(--brand-on)]',
       ])
     );
+  });
+});
+
+describe('logo por tema (#1295)', () => {
+  const LOGO = 'https://cdn.exemplo.com/logo.png';
+  const LOGO_DARK = 'https://cdn.exemplo.com/logo-escura.png';
+  const LIGHT_ONLY = '[display:var(--bk-light-only,block)]';
+  const DARK_ONLY = '[display:var(--bk-dark-only,none)]';
+  const PLATE = ['bg-[var(--bk-plate)]', 'p-[var(--bk-plate-pad)]'];
+
+  const header = brand =>
+    mount(BrandHeader, {
+      props: {
+        page: {
+          title: 'Conversa',
+          agent_name: 'Camila',
+          duration_minutes: 30,
+          brand: { logo_url: LOGO, ...brand },
+        },
+      },
+    });
+  const logos = wrapper => wrapper.findAll('[data-logo-box] img');
+
+  it('o modo sai do que o servidor manda; o que a página não conhece vira placa', () => {
+    expect(logoDarkModeOf({ darkUrl: LOGO_DARK, source: 'generated' })).toBe(
+      LOGO_DARK_MODES.OWN
+    );
+    expect(logoDarkModeOf({ darkUrl: LOGO_DARK, source: 'uploaded' })).toBe(
+      LOGO_DARK_MODES.OWN
+    );
+    expect(logoDarkModeOf({ darkUrl: null, source: 'same' })).toBe(
+      LOGO_DARK_MODES.SAME
+    );
+    [undefined, null, 'plate', 'generated', 'uploaded', 'qualquer'].forEach(
+      source =>
+        expect(logoDarkModeOf({ darkUrl: null, source })).toBe(
+          LOGO_DARK_MODES.PLATE
+        )
+    );
+  });
+
+  it.each(['uploaded', 'generated'])(
+    'com logo para o escuro (%s): as duas imagens, cada uma só no seu tema, sem placa',
+    source => {
+      const wrapper = header({
+        logo_dark_url: LOGO_DARK,
+        logo_dark_source: source,
+      });
+      const [light, dark] = logos(wrapper);
+
+      expect(logos(wrapper)).toHaveLength(2);
+      expect(light.attributes('src')).toBe(LOGO);
+      expect(light.classes()).toContain(LIGHT_ONLY);
+      expect(light.classes()).not.toContain(DARK_ONLY);
+      expect(dark.attributes('src')).toBe(LOGO_DARK);
+      expect(dark.classes()).toContain(DARK_ONLY);
+      expect(dark.classes()).not.toContain(LIGHT_ONLY);
+      [light, dark].forEach(image => {
+        expect(image.classes()).toEqual(
+          expect.arrayContaining(['object-contain', 'max-h-full'])
+        );
+        expect(image.classes()).not.toEqual(expect.arrayContaining(PLATE));
+        expect(image.attributes('alt')).toBe(light.attributes('alt'));
+      });
+      expect(wrapper.find('[data-logo-box]').attributes('data-logo-dark')).toBe(
+        'own'
+      );
+    }
+  );
+
+  it('logo que já se lê no escuro: uma imagem só, sempre à mostra, sem placa', () => {
+    const wrapper = header({ logo_dark_source: 'same' });
+    const [only] = logos(wrapper);
+
+    expect(logos(wrapper)).toHaveLength(1);
+    expect(only.attributes('src')).toBe(LOGO);
+    expect(only.classes()).toContain('block');
+    expect(only.classes()).not.toEqual(expect.arrayContaining(PLATE));
+    expect(only.classes()).not.toContain(LIGHT_ONLY);
+    expect(wrapper.find('[data-logo-box]').attributes('data-logo-dark')).toBe(
+      'same'
+    );
+  });
+
+  it.each([['plate'], [undefined], ['qualquer']])(
+    'sem versão para o escuro (%s): a logo de sempre com a placa do tema',
+    source => {
+      const wrapper = header({ logo_dark_source: source });
+      const [only] = logos(wrapper);
+
+      expect(logos(wrapper)).toHaveLength(1);
+      expect(only.attributes('src')).toBe(LOGO);
+      expect(only.classes()).toEqual(
+        expect.arrayContaining(['block', 'rounded-lg', ...PLATE])
+      );
+      expect(only.classes()).toEqual(
+        expect.arrayContaining(['object-contain', 'max-h-full'])
+      );
+      expect(wrapper.find('[data-logo-box]').attributes('data-logo-dark')).toBe(
+        'plate'
+      );
+    }
+  );
+
+  it('a imagem do escuro não carregou: cai na placa, nunca logo invisível', async () => {
+    const wrapper = header({
+      logo_dark_url: LOGO_DARK,
+      logo_dark_source: 'generated',
+    });
+    await wrapper.find('[data-logo-for-dark]').trigger('error');
+
+    expect(logos(wrapper)).toHaveLength(1);
+    expect(logos(wrapper)[0].classes()).toEqual(expect.arrayContaining(PLATE));
+    expect(wrapper.find('[data-logo-box]').exists()).toBe(true);
+
+    // Trocaram a imagem: a nova ganha a chance de carregar.
+    await wrapper.setProps({
+      page: {
+        title: 'Conversa',
+        agent_name: 'Camila',
+        brand: {
+          logo_url: LOGO,
+          logo_dark_url: 'https://cdn.exemplo.com/outra.png',
+          logo_dark_source: 'uploaded',
+        },
+      },
+    });
+    expect(logos(wrapper)).toHaveLength(2);
+  });
+
+  it('endereço perigoso na logo do escuro é ignorado', () => {
+    const wrapper = header({
+      // eslint-disable-next-line no-script-url
+      logo_dark_url: 'javascript:alert(1)',
+      logo_dark_source: 'generated',
+    });
+    expect(logos(wrapper)).toHaveLength(1);
+    expect(logos(wrapper)[0].classes()).toEqual(expect.arrayContaining(PLATE));
   });
 });

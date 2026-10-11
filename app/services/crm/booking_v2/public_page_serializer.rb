@@ -83,12 +83,16 @@ class Crm::BookingV2::PublicPageSerializer
   end
 
   # `logo_align` (#1289): de que lado a logo fica (left, center ou right); sem valor salvo, left.
+  # Tema escuro (#1295): `logo_dark_url` é a logo para fundo escuro, quando há uma (enviada ou gerada), e
+  # `logo_dark_source` diz de onde ela veio. Sem imagem própria, `same` = a logo de sempre serve no escuro; qualquer
+  # outro valor (ou nenhum) = a página mostra a logo de sempre sobre uma placa clara.
   def brand
     data = profile.brand.to_h
     {
       color: data['color'].presence, headline: data['headline'].presence,
       logo_align: data['logo_align'].presence || Crm::BookingPageSettings::LOGO_ALIGNS.first,
-      logo_url: attachment_url(profile.logo), photo_url: attachment_url(profile.photo)
+      logo_url: attachment_url(profile.logo), logo_dark_url: attachment_url(profile.logo_dark),
+      logo_dark_source: data[Crm::BookingPageSettings::LOGO_DARK_SOURCE].presence, photo_url: attachment_url(profile.photo)
     }
   end
 

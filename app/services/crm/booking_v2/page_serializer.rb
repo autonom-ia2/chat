@@ -85,7 +85,7 @@ class Crm::BookingV2::PageSerializer
   def branding
     {
       template_key: profile.template_key, brand: profile.brand, contact_phone: profile.contact_phone,
-      logo_url: attachment_url(profile.logo), photo_url: attachment_url(profile.photo)
+      logo_url: attachment_url(profile.logo), logo_dark_url: attachment_url(profile.logo_dark), photo_url: attachment_url(profile.photo)
     }
   end
 
@@ -94,7 +94,7 @@ class Crm::BookingV2::PageSerializer
   def identity
     saved = brand_identity
     saved.data.symbolize_keys.merge(
-      saved: saved.any_for?(profile), logo_url: attachment_url(saved.logo),
+      saved: saved.any_for?(profile), logo_url: attachment_url(saved.logo), logo_dark_url: attachment_url(saved.logo_dark),
       photo_url: attachment_url(saved.photo_of(saved.host_of(profile)))
     )
   end

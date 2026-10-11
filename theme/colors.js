@@ -287,4 +287,29 @@ export const colors = {
       border: 'rgba(var(--label-border))',
     },
   },
+
+  // Página pública de agendamento (#1295): cores com tema claro e escuro. Os valores ficam em
+  // app/javascript/public_booking_v2/assets/_booking-theme.scss.
+  bk: {
+    page: 'rgb(var(--bk-page) / <alpha-value>)',
+    card: 'rgb(var(--bk-card) / <alpha-value>)',
+    field: 'rgb(var(--bk-field) / <alpha-value>)',
+    inset: 'rgb(var(--bk-inset) / <alpha-value>)',
+    chip: 'rgb(var(--bk-chip) / <alpha-value>)',
+    strong: 'rgb(var(--bk-strong) / <alpha-value>)',
+    body: 'rgb(var(--bk-body) / <alpha-value>)',
+    medium: 'rgb(var(--bk-medium) / <alpha-value>)',
+    soft: 'rgb(var(--bk-soft) / <alpha-value>)',
+    line: 'rgb(var(--bk-line) / <alpha-value>)',
+    'line-field': 'rgb(var(--bk-line-field) / <alpha-value>)',
+    'line-hover': 'rgb(var(--bk-line-hover) / <alpha-value>)',
+    warn: 'rgb(var(--bk-warn) / <alpha-value>)',
+    'warn-ink': 'rgb(var(--bk-warn-ink) / <alpha-value>)',
+    danger: 'rgb(var(--bk-danger) / <alpha-value>)',
+    'danger-ink': 'rgb(var(--bk-danger-ink) / <alpha-value>)',
+    'danger-text': 'rgb(var(--bk-danger-text) / <alpha-value>)',
+    'danger-line': 'rgb(var(--bk-danger-line) / <alpha-value>)',
+    ok: 'rgb(var(--bk-ok) / <alpha-value>)',
+    'ok-ink': 'rgb(var(--bk-ok-ink) / <alpha-value>)',
+  },
 };

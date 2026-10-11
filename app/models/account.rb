@@ -112,6 +112,8 @@ class Account < ApplicationRecord
   # Identidade salva das páginas de agendamento (#1289): a logo da conta. Cor, lado da logo e frase ficam em
   # `settings['booking_identity']` (ver Crm::BookingV2::BrandIdentity).
   has_one_attached :booking_identity_logo
+  # A logo de fundo escuro que acompanha a da identidade (#1295), quando há uma (enviada ou gerada).
+  has_one_attached :booking_identity_logo_dark
   has_many :crm_calendar_sync_states, class_name: 'Crm::CalendarSyncState', dependent: :destroy_async
   has_one :autonomia_prospecting_setting, class_name: 'Autonomia::Prospecting::Setting', dependent: :destroy_async
   has_many :autonomia_prospecting_searches, class_name: 'Autonomia::Prospecting::Search', dependent: :destroy_async

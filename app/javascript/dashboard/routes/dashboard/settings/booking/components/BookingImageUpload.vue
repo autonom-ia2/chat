@@ -3,7 +3,8 @@ import { computed, useTemplateRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { IMAGE_TYPES } from '../constants';
 
-// Enviar logo ou foto, com a prévia da imagem já salva. A conferência de tipo e
+// Enviar uma imagem (hoje, a foto), com a prévia da já salva. A logo tem cartão
+// próprio, com as duas versões (BookingLogoCard, #1295). A conferência de tipo e
 // tamanho é de quem usa (o assistente), que mostra o aviso em `error`. A foto
 // (`round`) preenche o círculo; a logo aparece inteira, em qualquer formato
 // (quadrada, deitada ou em pé), como na página.
@@ -14,8 +15,6 @@ const props = defineProps({
   busy: { type: Boolean, default: false },
   error: { type: String, default: '' },
   round: { type: Boolean, default: false },
-  // Linha a mais de ajuda, embaixo do formato aceito.
-  hint: { type: String, default: '' },
 });
 
 const emit = defineEmits(['pick']);
@@ -78,7 +77,6 @@ const onFile = event => {
         <p class="m-0 text-sm text-n-slate-11">
           {{ t('BOOKING.LOOK.IMAGE_HINT') }}
         </p>
-        <p v-if="hint" class="m-0 text-sm text-n-slate-11">{{ hint }}</p>
       </div>
     </div>
     <input

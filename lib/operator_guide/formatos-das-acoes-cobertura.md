@@ -5,18 +5,18 @@ Gerado por `bundle exec rails autonomia:guia:formatos` a partir do código (#900
 
 | | Ações |
 |---|---|
-| No catálogo | 585 |
-| Sem corpo | 174 |
-| Com corpo | 411 |
-| Com corpo e formato completo | 332 (80,8%) |
-| Com corpo e formato incompleto | 79 |
+| No catálogo | 587 |
+| Sem corpo | 175 |
+| Com corpo | 412 |
+| Com corpo e formato completo | 332 (80,6%) |
+| Com corpo e formato incompleto | 80 |
 
 ## Por dentro dos campos
 
 | | Total |
 |---|---|
 | Campos aninhados com vocabulário | 17 de 185 |
-| Leituras cruas tipadas | 121 de 201 |
+| Leituras cruas tipadas | 121 de 202 |
 
 ## Incompletas por motivo
 
@@ -24,7 +24,7 @@ Uma ação pode ter mais de um motivo.
 
 | Motivo | Ações |
 |---|---|
-| leitura crua sem tipo | 64 |
+| leitura crua sem tipo | 65 |
 | aceita qualquer campo | 5 |
 | params inteiro repassado | 9 |
 | lê o corpo cru | 2 |
@@ -72,6 +72,7 @@ Uma ação pode ter mais de um motivo.
 - `POST conversations/filter` — aceita qualquer campo (permit! em app/controllers/api/v1/accounts/conversations_controller.rb:52); params inteiro repassado a ::Conversations::FilterService.new
 - `POST crm/booking_invites/:id/deliver` — leitura crua sem tipo: text (repassada a ::Crm::BookingV2::InviteDeliverer.new)
 - `POST crm/booking_pages/:id/logo` — leitura crua sem tipo: file
+- `POST crm/booking_pages/:id/logo_dark` — leitura crua sem tipo: file
 - `POST crm/booking_pages/:id/notice_templates/create` — leitura crua sem tipo: kinds (repassada a requests.start!)
 - `POST crm/booking_pages/:id/photo` — leitura crua sem tipo: file
 - `POST crm/booking_pages/:id/test_invite` — leitura crua sem tipo: phone (repassada a ::Crm::BookingV2::TestInvite.new)
@@ -156,6 +157,7 @@ Uma ação pode ter mais de um motivo.
 - `api/v1/accounts/crm/booking_invites#deliver` text — repassada a ::Crm::BookingV2::InviteDeliverer.new
 - `api/v1/accounts/crm/booking_pages#create_notice_templates` kinds — repassada a requests.start!
 - `api/v1/accounts/crm/booking_pages#logo` file — o código não converte nem compara o valor
+- `api/v1/accounts/crm/booking_pages#logo_dark` file — o código não converte nem compara o valor
 - `api/v1/accounts/crm/booking_pages#photo` file — o código não converte nem compara o valor
 - `api/v1/accounts/crm/booking_pages#test_invite` phone — repassada a ::Crm::BookingV2::TestInvite.new
 - `api/v1/accounts/crm/cards#close` result — repassada a ::Crm::Cards::Closer.new

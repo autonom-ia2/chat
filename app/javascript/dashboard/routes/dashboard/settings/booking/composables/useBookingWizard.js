@@ -190,6 +190,21 @@ export const useBookingWizard = ({ pageId, initialStep, onClose }) => {
     }
   };
 
+  // Tira a logo de fundo escuro enviada pela pessoa (#1295); o servidor devolve
+  // a página já com a que ele gera.
+  const removeLogoDark = async () => {
+    uploadError.value = null;
+    uploading.value = 'logo_dark';
+    try {
+      const { data } = await BookingPagesAPI.removeLogoDark(page.value.id);
+      page.value = data.payload;
+    } catch {
+      uploadError.value = { kind: 'logo_dark', key: 'IMAGE_REMOVE' };
+    } finally {
+      uploading.value = null;
+    }
+  };
+
   // "Usar a identidade salva": o servidor põe logo, foto, cor, lado e frase na
   // página e devolve; o formulário acompanha.
   const applyIdentity = () => {
@@ -263,6 +278,7 @@ export const useBookingWizard = ({ pageId, initialStep, onClose }) => {
     goTo,
     publish,
     upload,
+    removeLogoDark,
     applyIdentity,
     saveIdentity,
     saveDestination,

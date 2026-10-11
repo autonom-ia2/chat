@@ -30,7 +30,7 @@ const describedBy = computed(
 
 <template>
   <div class="flex flex-col gap-1">
-    <label :for="id" class="text-base font-medium text-slate-800">
+    <label :for="id" class="text-base font-medium text-bk-body">
       {{ label }}
     </label>
     <input
@@ -42,16 +42,16 @@ const describedBy = computed(
       :required="required"
       :aria-invalid="error ? 'true' : undefined"
       :aria-describedby="describedBy"
-      class="min-h-12 w-full rounded-xl border-2 bg-white px-4 py-3 text-base text-slate-900 focus:border-[var(--brand)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)]"
-      :class="error ? 'border-red-600' : 'border-slate-300'"
+      class="min-h-12 w-full rounded-xl border-2 bg-bk-field px-4 py-3 text-base text-bk-strong focus:border-[var(--brand)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)]"
+      :class="error ? 'border-bk-danger-line' : 'border-bk-line-field'"
     />
-    <p v-if="hint" :id="`${id}-hint`" class="text-base text-slate-600">
+    <p v-if="hint" :id="`${id}-hint`" class="text-base text-bk-soft">
       {{ hint }}
     </p>
     <p
       v-if="error"
       :id="`${id}-error`"
-      class="text-base font-medium text-red-700"
+      class="text-base font-medium text-bk-danger-text"
     >
       {{ errorText }}
     </p>

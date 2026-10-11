@@ -505,8 +505,18 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/booking_pages#destroy",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:77",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:146"
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:78",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:147"
+    ],
+    "sem_corpo": true
+  },
+  "DELETE crm/booking_pages/:id/logo_dark": {
+    "completo": true,
+    "controller": "api/v1/accounts/crm/booking_pages#destroy_logo_dark",
+    "modelo": "Inbox",
+    "origem": [
+      "app/controllers/concerns/crm/booking_page_brand.rb:24",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:147"
     ],
     "sem_corpo": true
   },
@@ -4817,10 +4827,10 @@
     "modelo": "Inbox",
     "origem": [
       "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:48",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:210",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:211",
       "app/controllers/concerns/crm/booking_page_inboxes.rb:44",
       "app/controllers/concerns/crm/booking_page_inboxes.rb:25",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:146"
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:147"
     ],
     "sem_corpo": false
   },
@@ -13462,8 +13472,8 @@
     "controller": "api/v1/accounts/crm/booking_pages#apply_identity",
     "modelo": "Inbox",
     "origem": [
-      "app/controllers/concerns/crm/booking_page_brand.rb:16",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:146"
+      "app/controllers/concerns/crm/booking_page_brand.rb:33",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:147"
     ],
     "sem_corpo": true
   },
@@ -13478,9 +13488,26 @@
       "leitura crua sem tipo: file"
     ],
     "origem": [
-      "app/controllers/concerns/crm/booking_page_brand.rb:8",
-      "app/controllers/concerns/crm/booking_page_brand.rb:33",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:146"
+      "app/controllers/concerns/crm/booking_page_brand.rb:9",
+      "app/controllers/concerns/crm/booking_page_brand.rb:50",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:147"
+    ],
+    "sem_corpo": false
+  },
+  "POST crm/booking_pages/:id/logo_dark": {
+    "campos": {
+      "file": {}
+    },
+    "completo": false,
+    "controller": "api/v1/accounts/crm/booking_pages#logo_dark",
+    "modelo": "Inbox",
+    "motivos": [
+      "leitura crua sem tipo: file"
+    ],
+    "origem": [
+      "app/controllers/concerns/crm/booking_page_brand.rb:17",
+      "app/controllers/concerns/crm/booking_page_brand.rb:50",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:147"
     ],
     "sem_corpo": false
   },
@@ -13526,10 +13553,10 @@
     "controller": "api/v1/accounts/crm/booking_pages#notice_template_suggestions",
     "modelo": "Crm::MeetingNotice",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:117",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:118",
       "app/controllers/concerns/crm/booking_page_notice_templates.rb:53",
       "app/controllers/concerns/crm/booking_page_notice_templates.rb:48",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:146"
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:147"
     ],
     "sem_corpo": false
   },
@@ -13548,10 +13575,10 @@
       "leitura crua sem tipo: kinds (repassada a requests.start!)"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:125",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:126",
       "app/controllers/concerns/crm/booking_page_notice_templates.rb:37",
       "app/controllers/concerns/crm/booking_page_notice_templates.rb:48",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:146"
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:147"
     ],
     "sem_corpo": false
   },
@@ -13560,8 +13587,8 @@
     "controller": "api/v1/accounts/crm/booking_pages#pause",
     "modelo": "Inbox",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:72",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:146"
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:73",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:147"
     ],
     "sem_corpo": true
   },
@@ -13576,9 +13603,9 @@
       "leitura crua sem tipo: file"
     ],
     "origem": [
-      "app/controllers/concerns/crm/booking_page_brand.rb:12",
-      "app/controllers/concerns/crm/booking_page_brand.rb:33",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:146"
+      "app/controllers/concerns/crm/booking_page_brand.rb:29",
+      "app/controllers/concerns/crm/booking_page_brand.rb:50",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:147"
     ],
     "sem_corpo": false
   },
@@ -13586,8 +13613,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/booking_pages#preview_token",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:85",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:146"
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:86",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:147"
     ],
     "sem_corpo": true
   },
@@ -13596,8 +13623,8 @@
     "controller": "api/v1/accounts/crm/booking_pages#publish",
     "modelo": "Inbox",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:64",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:146"
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:65",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:147"
     ],
     "sem_corpo": true
   },
@@ -13606,8 +13633,8 @@
     "controller": "api/v1/accounts/crm/booking_pages#save_identity",
     "modelo": "Inbox",
     "origem": [
-      "app/controllers/concerns/crm/booking_page_brand.rb:21",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:146"
+      "app/controllers/concerns/crm/booking_page_brand.rb:38",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:147"
     ],
     "sem_corpo": true
   },
@@ -13621,9 +13648,9 @@
       "leitura crua sem tipo: phone (repassada a ::Crm::BookingV2::TestInvite.new)"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:57",
       "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:58",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:146"
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:59",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:147"
     ],
     "sem_corpo": false
   },
@@ -13646,9 +13673,9 @@
     "controller": "api/v1/accounts/crm/booking_pages#reassign",
     "modelo": "Crm::AgentBookingProfile",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:110",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:133",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:132"
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:111",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:134",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:133"
     ],
     "sem_corpo": false
   },
@@ -22176,10 +22203,10 @@
     "modelo": "Inbox",
     "origem": [
       "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:48",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:210",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:211",
       "app/controllers/concerns/crm/booking_page_inboxes.rb:44",
       "app/controllers/concerns/crm/booking_page_inboxes.rb:25",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:146"
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:147"
     ],
     "sem_corpo": false
   },
@@ -22194,9 +22221,9 @@
     "controller": "api/v1/accounts/crm/booking_pages#update_people",
     "modelo": "Inbox",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:96",
       "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:97",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:146"
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:98",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:147"
     ],
     "sem_corpo": false
   },

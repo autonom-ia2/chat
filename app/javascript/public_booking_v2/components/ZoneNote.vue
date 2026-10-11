@@ -13,7 +13,7 @@ const zone = computed(() => zoneLabel(clientZone, locale.value));
 </script>
 
 <template>
-  <p data-testid="zone-note" class="text-base text-slate-600">
+  <p data-testid="zone-note" class="text-base text-bk-soft">
     {{ t('BOOKING_V2.ZONE', { zone }) }}
   </p>
 </template>

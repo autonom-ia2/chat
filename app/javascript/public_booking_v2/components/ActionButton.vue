@@ -22,7 +22,7 @@ const VARIANTS = {
   primary:
     'bg-[var(--brand-fill)] text-[var(--brand-on)] shadow-sm ring-1 ring-inset ring-[var(--brand)] hover:shadow-md',
   secondary:
-    'border-2 border-solid border-[var(--brand)] bg-white text-[var(--brand)] hover:bg-slate-50',
+    'border-2 border-solid border-[var(--brand)] bg-bk-field text-[var(--brand)] hover:bg-bk-inset',
   ghost:
     'bg-transparent text-[var(--brand)] underline-offset-4 hover:underline',
 };
