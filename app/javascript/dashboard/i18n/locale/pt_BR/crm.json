@@ -1053,6 +1053,7 @@
             "WAHA_OUTSIDE_WINDOW": "o cliente não falou com você nas últimas 24 horas",
             "NO_WHATSAPP": "o número do cliente não tem WhatsApp",
             "WAHA_UNAVAILABLE": "o WhatsApp não oficial não respondeu; confira se ele está conectado",
+            "WAHA_REFUSED": "o WhatsApp não oficial recusou a consulta deste número",
             "NUMBER_CAP": "este número já recebeu muitas mensagens hoje",
             "ACCOUNT_CAP": "a conta chegou ao limite de avisos do dia",
             "OTHER": "outro motivo"

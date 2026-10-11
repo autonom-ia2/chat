@@ -10,16 +10,23 @@
 #
 # O chat id confirmado vira o `waha_whatsapp_chat_id`, como a WAHA faz a cada mensagem recebida; os outros atributos
 # do contato ficam. Recusa, sem abrir conversa: `no_whatsapp` (o número não tem WhatsApp) e `waha_unavailable`
-# (integração sem configuração, caixa sem sessão, WAHA com erro, sem resposta ou com resposta fora do formato). A
+# (integração sem configuração, caixa sem sessão, WAHA com erro, sem resposta ou com resposta fora do formato) e
+# `waha_refused` (a WAHA recusou o pedido). A
 # consulta só lê: com erro ou timeout nada saiu, e quem chama decide se tenta de novo (o `Sender` devolve o aviso à
 # fila até o limite do tipo; o teste recusa na hora). A consulta espera no máximo LOOKUP_TIMEOUT segundos e, com
-# `outage` (a rodada do cron), uma caixa que falhou não é consultada de novo na mesma rodada.
+# `outage` (a rodada do cron, `Notices::WahaOutage`), não consulta de novo o que já falhou na rodada. Pedido que a WAHA
+# recusa de vez (4xx que não seja 408, 425 ou 429) é `waha_refused`, definitivo.
 class Crm::BookingV2::Notices::WahaChat
   CHAT_ID = 'waha_whatsapp_chat_id'.freeze
   JID = 'waha_whatsapp_jid'.freeze
   LID = 'waha_whatsapp_lid'.freeze
   LID_SUFFIX = '@lid'.freeze
   LOOKUP_TIMEOUT = 5
+  # 4xx passageiros: tempo esgotado, cedo demais e pedidos demais. Voltam para a fila como o 5xx.
+  TRANSIENT_STATUSES = [408, 425, 429].freeze
+
+  # A WAHA respondeu 200, mas sem o que a consulta promete: problema desta sessão, não do servidor.
+  MalformedAnswer = Class.new(StandardError)
 
   # Só o caminho de texto da WAHA sem conversa abre uma; o oficial e o canal API nunca passam por aqui.
   def self.needed?(decision, inbox)
@@ -34,9 +41,9 @@ class Crm::BookingV2::Notices::WahaChat
     @outage = outage
   end
 
-  # A recusa foi falha da WAHA na consulta (erro 5xx, sem conexão, timeout, resposta fora do formato, caixa já marcada
-  # na rodada): vale tentar de novo depois. Integração sem configuração, caixa sem sessão e pedido recusado pela WAHA
-  # (4xx) não mudam sozinhos: não.
+  # A recusa foi falha da WAHA na consulta (5xx, 408, 425, 429, sem conexão, timeout, resposta fora do formato, WAHA ou
+  # caixa já marcada na rodada): vale tentar de novo depois. Integração sem configuração, caixa sem sessão e pedido
+  # recusado pela WAHA (os outros 4xx) não mudam sozinhos: não.
   def retryable?
     @retryable == true
   end
@@ -47,16 +54,24 @@ class Crm::BookingV2::Notices::WahaChat
     return 'waha_unavailable' unless Waha::Config.enabled? && session.present?
     return transient_failure if outage&.down?(inbox)
 
-    store_or_refuse(lookup)
+    store_or_refuse(timed_lookup)
+  rescue MalformedAnswer
+    log_failure('MalformedAnswer')
+    outage&.inbox_down!(inbox)
+    transient_failure
   rescue Waha::Client::Error => e
     # A mensagem do erro traz a URL com o telefone: no log vai só a classe.
-    Rails.logger.warn("CRM booking notice WAHA lookup failed for inbox #{inbox.id}: #{e.class.name}")
+    log_failure(e.class.name)
     lookup_failure(e)
   end
 
   private
 
   attr_reader :inbox, :contact, :outage
+
+  def timed_lookup
+    outage ? outage.timed { lookup } : lookup
+  end
 
   def store_or_refuse(chat_id)
     return 'no_whatsapp' if chat_id.blank?
@@ -65,16 +80,18 @@ class Crm::BookingV2::Notices::WahaChat
     nil
   end
 
-  # A WAHA respondeu e recusou o pedido (4xx: chave, sessão ou número que ela não aceita). Respondeu rápido e não
-  # muda sozinha: não é caixa fora do ar, e tentar de novo não adianta.
-  def refused_request?(error)
-    error.status.to_i.between?(400, 499)
+  def log_failure(name)
+    Rails.logger.warn("CRM booking notice WAHA lookup failed for inbox #{inbox.id}: #{name}")
   end
 
+  # Sem resposta (timeout, conexão) ou 5xx: o servidor WAHA, que é um só, fica fora na rodada. 408, 425 e 429 só
+  # devolvem o aviso à fila. Os outros 4xx (chave, sessão ou número que a WAHA não aceita) vieram rápido e não mudam
+  # sozinhos: recusa definitiva.
   def lookup_failure(error)
-    return 'waha_unavailable' if refused_request?(error)
+    status = error.status.to_i
+    return 'waha_refused' if status.between?(400, 499) && TRANSIENT_STATUSES.exclude?(status)
 
-    outage&.down!(inbox)
+    outage&.server_down! unless TRANSIENT_STATUSES.include?(status)
     transient_failure
   end
 
@@ -88,13 +105,13 @@ class Crm::BookingV2::Notices::WahaChat
   end
 
   # O chat id, '' quando o número não tem WhatsApp. Resposta fora do formato (sem objeto, ou "existe" sem chat id) não
-  # diz nada do número: é falha da WAHA.
+  # diz nada do número: é falha desta sessão da WAHA.
   def lookup
     phone = contact.phone_number.to_s.delete_prefix('+')
     result = client.check_contact_exists(phone: phone, session: session, timeout: LOOKUP_TIMEOUT)
-    raise Waha::Client::Error, 'check-exists sem objeto' unless result.is_a?(Hash)
+    raise MalformedAnswer unless result.is_a?(Hash)
     return '' unless ActiveModel::Type::Boolean.new.cast(result['numberExists'])
-    raise Waha::Client::Error, 'check-exists sem chatId' if result['chatId'].blank?
+    raise MalformedAnswer if result['chatId'].blank?
 
     result['chatId'].to_s
   end

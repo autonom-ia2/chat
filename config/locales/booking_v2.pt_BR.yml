@@ -32,6 +32,7 @@ pt_BR:
         reasons:
           no_whatsapp: "O número do cliente não tem WhatsApp."
           waha_unavailable: "O WhatsApp não oficial não respondeu: confira se ele está conectado."
+          waha_refused: "O WhatsApp não oficial recusou a consulta deste número."
       templates:
         sales_30:
           title: 'Conversa de vendas de 30 min'

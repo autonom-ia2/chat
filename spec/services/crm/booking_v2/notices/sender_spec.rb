@@ -168,6 +168,10 @@ RSpec.describe Crm::BookingV2::Notices::Sender do
                                    .to_return(status: 200, body: body.to_json, headers: { 'Content-Type' => 'application/json' })
     end
 
+    def other_waha_inbox
+      create(:channel_api, account: account, additional_attributes: { 'provider' => 'waha', 'session' => 'outra' }).inbox
+    end
+
     def waha_sent_elsewhere(count, at:)
       count.times do |index|
         other = create_internal_meeting(world: world, starts_at: Time.zone.parse('2026-10-25T13:00:00Z') + index.days)
@@ -336,7 +340,7 @@ RSpec.describe Crm::BookingV2::Notices::Sender do
       expect(alerts.count).to eq(1)
     end
 
-    it 'na mesma rodada, depois da primeira falha a caixa não é consultada de novo e os avisos dela voltam à fila' do
+    it 'na mesma rodada, depois de uma falha do servidor a WAHA não é consultada de novo e os avisos voltam à fila' do
       check = waha_fails(:timeout)
       outage = Crm::BookingV2::Notices::WahaOutage.new
       first = claimed
@@ -348,21 +352,76 @@ RSpec.describe Crm::BookingV2::Notices::Sender do
       expect(check).to have_been_made.once
       expect([first, second].map { |notice| notice.reload.status }).to eq(%w[pending pending])
       expect(alerts.count).to eq(0)
-      # Só a caixa que falhou fica marcada: as outras continuam sendo consultadas na rodada.
-      other_inbox = create(:channel_api, account: account, additional_attributes: { 'provider' => 'waha', 'session' => 'outra' }).inbox
-      expect([outage.down?(inbox), outage.down?(other_inbox)]).to eq([true, false])
+      # O servidor WAHA é um só: timeout, sem conexão ou 5xx tiram todas as caixas WAHA da rodada.
+      expect([outage.down?(inbox), outage.down?(other_waha_inbox)]).to eq([true, true])
     end
 
-    it 'WAHA que recusa o pedido (4xx) não é caixa fora do ar: pula na hora, sem marcar a caixa nem voltar à fila' do
+    it 'resposta fora do formato é problema da sessão: só essa caixa sai da rodada' do
+      waha_answers(numberExists: true)
+      outage = Crm::BookingV2::Notices::WahaOutage.new
+
+      described_class.new(claimed, waha_outage: outage).perform
+
+      expect([outage.down?(inbox), outage.down?(other_waha_inbox)]).to eq([true, false])
+    end
+
+    it '429 (e 408, 425) é passageiro: o aviso volta à fila, sem alertar e sem tirar a WAHA da rodada' do
+      [429, 408, 425].each do |status|
+        WebMock.reset!
+        check = waha_fails(status: status, body: 'calma')
+        outage = Crm::BookingV2::Notices::WahaOutage.new
+        notice = claimed
+        other = claimed('rescheduled')
+
+        described_class.new(notice, waha_outage: outage).perform
+        described_class.new(other, waha_outage: outage).perform
+
+        expect(check).to have_been_made.twice
+        expect([notice, other].map { |item| item.reload.status }).to eq(%w[pending pending]), "status #{status}"
+        expect(notice.error_code).to eq('waha_unavailable')
+        expect(outage.down?(inbox)).to be(false)
+        Crm::MeetingNotice.delete_all
+      end
+      expect(alerts.count).to eq(0)
+    end
+
+    it 'WAHA que recusa o pedido (outros 4xx): waha_refused na hora, com o motivo no alerta, sem marcar a WAHA nem voltar à fila' do
       waha_fails(status: 422, body: 'telefone recusado')
       outage = Crm::BookingV2::Notices::WahaOutage.new
       notice = claimed
 
       described_class.new(notice, waha_outage: outage).perform
 
-      expect(notice.reload).to have_attributes(status: 'skipped', skip_reason: 'waha_unavailable')
+      expect(notice.reload).to have_attributes(status: 'skipped', skip_reason: 'waha_refused')
       expect(outage.down?(inbox)).to be(false)
-      expect(alerts.count).to eq(1)
+      expect(alerts.sole.title).to end_with('O WhatsApp não oficial recusou a consulta deste número.')
+    end
+
+    it 'orçamento da rodada: somados 20 s de consulta, o resto volta à fila sem consultar a WAHA' do
+      check = waha_answers(numberExists: false)
+      ticks = [0, 12, 12, 24].each
+      outage = Crm::BookingV2::Notices::WahaOutage.new(clock: -> { ticks.next })
+      slow = [claimed, claimed('rescheduled')]
+      late = claimed('day_before')
+
+      (slow + [late]).each { |notice| described_class.new(notice, waha_outage: outage).perform }
+
+      expect(check).to have_been_made.twice
+      expect(slow.map { |notice| notice.reload.skip_reason }).to eq(%w[no_whatsapp no_whatsapp])
+      expect(late.reload).to have_attributes(status: 'pending', error_code: 'waha_unavailable')
+    end
+
+    it 'só devolve à fila o aviso que ainda é o sending desta tentativa' do
+      notice = claimed
+      stub_request(:get, check_url).with(query: hash_including(session: '5511900001111')).to_return do
+        # Outro processo deu o aviso por preso enquanto a WAHA respondia.
+        Crm::MeetingNotice.where(id: notice.id).update_all(status: Crm::MeetingNotice.statuses[:failed], error_code: 'interrupted') # rubocop:disable Rails/SkipsModelValidations
+        { status: 500, body: 'erro' }
+      end
+
+      described_class.new(notice).perform
+
+      expect(notice.reload).to have_attributes(status: 'failed', error_code: 'interrupted')
     end
 
     it 'aviso que esperava a WAHA e é pulado por outro motivo não guarda a marca da espera' do

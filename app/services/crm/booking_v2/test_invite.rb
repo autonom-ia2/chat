@@ -13,7 +13,7 @@
 #
 # Recusas (`Refused`, com `reason` quando é do canal): notice_inbox_missing, notice_inbox_forbidden (reason
 # `conversation_forbidden` quando é a conversa), page_not_published, invalid_phone, cannot_send (pela WAHA sem
-# conversa, também `no_whatsapp` e `waha_unavailable`, de `Notices::WahaChat`).
+# conversa, também `no_whatsapp`, `waha_unavailable` e `waha_refused`, de `Notices::WahaChat`).
 class Crm::BookingV2::TestInvite
   class Refused < StandardError
     attr_reader :reason

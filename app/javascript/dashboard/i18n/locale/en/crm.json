@@ -1053,6 +1053,7 @@
             "WAHA_OUTSIDE_WINDOW": "the customer has not talked to you in the last 24 hours",
             "NO_WHATSAPP": "the client's number has no WhatsApp",
             "WAHA_UNAVAILABLE": "the unofficial WhatsApp did not answer; check that it is connected",
+            "WAHA_REFUSED": "the unofficial WhatsApp refused to look up this number",
             "NUMBER_CAP": "this number already got many messages today",
             "ACCOUNT_CAP": "the account reached the daily notice limit",
             "OTHER": "another reason"

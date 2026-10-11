@@ -56,6 +56,7 @@ const SKIP_REASONS = [
   'account_cap',
   'no_whatsapp',
   'waha_unavailable',
+  'waha_refused',
 ];
 
 const NOTICE_KINDS = ['booked', 'rescheduled', 'day_before', 'hour_before'];

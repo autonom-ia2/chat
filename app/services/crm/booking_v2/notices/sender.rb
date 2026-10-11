@@ -15,7 +15,8 @@
 #    dois processos ao mesmo tempo se enxergam e o teto nunca é ultrapassado (no limite, os dois podem recusar).
 # 6. Regra do canal (`Notices::Route`): janela e modelo aprovado no oficial e no canal API; WAHA manda texto sem janela.
 #    WAHA sem conversa: antes de abrir uma, o chat id real vem da WAHA (`Notices::WahaChat`) → `no_whatsapp` ou
-#    `waha_unavailable` quando não dá. `no_whatsapp` é definitivo. `waha_unavailable` não: a consulta não mandou nada,
+#    `waha_unavailable` quando não dá, ou `waha_refused` quando a WAHA recusa o pedido. `no_whatsapp` e `waha_refused`
+#    são definitivos. `waha_unavailable` não: a consulta não mandou nada,
 #    então o aviso volta para `pending` (marcado em `error_code`), sem chamar o responsável, e o cron tenta de novo
 #    até o limite do tipo (`#waha_retry_until`); passado o limite, ou se a reunião começa antes, pula com
 #    `waha_unavailable` e avisa o responsável uma vez. `#will_send?` não faz essa consulta (a tela pública não espera
@@ -163,7 +164,14 @@ class Crm::BookingV2::Notices::Sender
   def waha_retry_or_skip!(reason)
     return skip!(reason) unless waha_chat.retryable? && Time.current < waha_retry_until
 
-    notice.update!(status: :pending, error_code: WAHA_UNAVAILABLE)
+    requeue_waiting_waha!
+  end
+
+  # Só devolve o aviso que ainda é o `sending` desta tentativa: se outro processo mexeu nele no meio (o cron o deu por
+  # preso, a reunião foi remarcada), vale o que o outro gravou.
+  def requeue_waiting_waha!
+    Crm::MeetingNotice.where(id: notice.id, status: :sending, attempts: notice.attempts)
+                      .update_all(status: Crm::MeetingNotice.statuses[:pending], error_code: WAHA_UNAVAILABLE, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
   end
 
   def waha_retry_until

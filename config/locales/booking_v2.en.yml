@@ -32,6 +32,7 @@ en:
         reasons:
           no_whatsapp: "The client's number has no WhatsApp."
           waha_unavailable: "The unofficial WhatsApp did not answer: check that it is connected."
+          waha_refused: "The unofficial WhatsApp refused to look up this number."
       templates:
         sales_30:
           title: '30-minute sales call'
