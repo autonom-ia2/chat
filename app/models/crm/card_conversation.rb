@@ -39,6 +39,8 @@ class Crm::CardConversation < ApplicationRecord
 
   validates :conversation_id, uniqueness: { scope: [:account_id, :card_id] }
   validate :linked_records_must_belong_to_account
+  # Acesso por funil (#1148): vínculo novo ou desfeito muda quem vê a conversa.
+  after_commit -> { Crm::Access::CountInvalidation.card_changed!(account_id) }, on: [:create, :destroy]
 
   private
 

@@ -25,7 +25,8 @@ module Crm
         require_online: false,
         suggested_name: nil,
         pool_type: 'inbox',
-        pool_id: nil
+        pool_id: nil,
+        conversation: nil
       )
         @inbox = inbox
         @account_id = account_id
@@ -35,6 +36,7 @@ module Crm
         @suggested_name = suggested_name
         @pool_type = pool_type
         @pool_id = pool_id
+        @conversation = conversation
       end
 
       def perform
@@ -49,13 +51,19 @@ module Crm
 
       def eligible_members
         @eligible_members ||= begin
-          members = @inbox ? @inbox.members.to_a : []
+          members = inbox_members
           if @pool_type == 'user' && @pool_id.present?
             members.select { |user| user.id == @pool_id }.presence || members
           else
             members
           end
         end
+      end
+
+      # Acesso por funil (#1148): a IA só passa a conversa para quem pode vê-la.
+      def inbox_members
+        members = @inbox ? @inbox.members.to_a : []
+        @conversation ? Crm::Access::Recipients.new(@conversation).filter(members) : members
       end
 
       # direct: assign to the agent the AI matched by name (must be an inbox

@@ -142,6 +142,8 @@ class Conversations::UnreadCounts::Counter
   end
 
   def counts_for_grouped_keys(keys_by_id)
+    return ::Conversations::UnreadCounts::FunnelCounts.new(account: account, scope: funnel_scope).counts_for(keys_by_id) if funnel_scope.restricted?
+
     counts_by_key = store.counts_for_keys(keys_by_id.values.flatten)
 
     keys_by_id.each_with_object({}) do |(id, keys), result|
@@ -149,6 +151,9 @@ class Conversations::UnreadCounts::Counter
       result[id.to_s] = count if count.positive?
     end
   end
+
+  # Acesso por funil (#1148): ver FunnelCounts.
+  def funnel_scope = (@funnel_scope ||= Crm::Access::ConversationScope.new(user: user, account: account, account_user: account_user))
 
   def assignment_mode?
     %i[unassigned_and_mine mine].include?(permission_mode)
