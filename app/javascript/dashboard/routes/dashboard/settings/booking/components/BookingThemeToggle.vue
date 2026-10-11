@@ -31,7 +31,7 @@ const labelId = useId();
         v-for="theme in PAGE_THEMES"
         :key="theme.key"
         :data-theme-option="theme.key"
-        class="inline-flex items-center justify-center gap-2 min-h-11 px-4 m-0 rounded-xl text-base font-medium cursor-pointer text-n-slate-11 transition has-[:checked]:bg-n-solid-1 has-[:checked]:text-n-slate-12 has-[:checked]:shadow-sm has-[:checked]:ring-1 has-[:checked]:ring-inset has-[:checked]:ring-n-weak has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-n-brand"
+        class="relative inline-flex items-center justify-center gap-2 min-h-11 px-4 m-0 rounded-xl text-base font-medium cursor-pointer text-n-slate-11 transition has-[:checked]:bg-n-solid-1 has-[:checked]:text-n-slate-12 has-[:checked]:shadow-sm has-[:checked]:ring-1 has-[:checked]:ring-inset has-[:checked]:ring-n-weak has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-n-brand"
       >
         <input
           v-model="model"

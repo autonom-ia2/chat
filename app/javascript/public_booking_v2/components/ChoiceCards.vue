@@ -18,7 +18,7 @@ const model = defineModel({ type: [String, Number], default: null });
     <label
       v-for="option in options"
       :key="option.value"
-      class="flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border-2 border-solid bg-bk-field px-4 py-3 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-[var(--brand)] has-[:focus-visible]:ring-offset-2 has-[:focus-visible]:ring-offset-bk-card"
+      class="relative flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border-2 border-solid bg-bk-field px-4 py-3 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-[var(--brand)] has-[:focus-visible]:ring-offset-2 has-[:focus-visible]:ring-offset-bk-card"
       :class="
         model === option.value
           ? 'border-[var(--brand)]'
