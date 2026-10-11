@@ -57,9 +57,9 @@ class Crm::CardPolicy < ApplicationPolicy
     update?
   end
 
-  # Resumo é leitura da conversa (o controller confere a visibilidade dela): não exige o funil do card.
+  # O resumo é gravado no card: também exige o funil dele.
   def summarize?
-    show?
+    update?
   end
 
   def reset_auto_followup?

@@ -534,7 +534,7 @@
     "controller": "api/v1/accounts/crm/cards#destroy",
     "origem": [
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:118",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:359"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:363"
     ],
     "sem_corpo": true
   },
@@ -542,8 +542,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/follow_ups#destroy",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:63",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:97"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:64",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:98"
     ],
     "sem_corpo": true
   },
@@ -4972,8 +4972,8 @@
     "modelo": "Crm::Card",
     "origem": [
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:105",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:521",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:359"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:525",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:363"
     ],
     "sem_corpo": false
   },
@@ -5032,9 +5032,9 @@
     "envelope": "follow_up",
     "modelo": "Crm::FollowUp",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:55",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:191",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:97"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:56",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:198",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:98"
     ],
     "sem_corpo": false
   },
@@ -13362,7 +13362,7 @@
     "controller": "api/v1/accounts/crm/ai_suggestions#accept",
     "origem": [
       "app/controllers/api/v1/accounts/crm/ai_suggestions_controller.rb:5",
-      "app/controllers/api/v1/accounts/crm/ai_suggestions_controller.rb:36"
+      "app/controllers/api/v1/accounts/crm/ai_suggestions_controller.rb:38"
     ],
     "sem_corpo": true
   },
@@ -13371,7 +13371,7 @@
     "controller": "api/v1/accounts/crm/ai_suggestions#dismiss",
     "origem": [
       "app/controllers/api/v1/accounts/crm/ai_suggestions_controller.rb:19",
-      "app/controllers/api/v1/accounts/crm/ai_suggestions_controller.rb:36"
+      "app/controllers/api/v1/accounts/crm/ai_suggestions_controller.rb:38"
     ],
     "sem_corpo": true
   },
@@ -13842,8 +13842,8 @@
     "modelo": "Crm::Card",
     "origem": [
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:72",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:476",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:409",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:480",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:413",
       "app/controllers/concerns/crm/opportunity_registration.rb:7"
     ],
     "sem_corpo": false
@@ -13896,7 +13896,7 @@
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:142",
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:141",
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:140",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:359"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:363"
     ],
     "sem_corpo": false
   },
@@ -13904,8 +13904,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/cards#evaluate_ai",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:191",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:359"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:195",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:363"
     ],
     "sem_corpo": true
   },
@@ -13919,9 +13919,9 @@
     "controller": "api/v1/accounts/crm/cards#link_contact",
     "modelo": "Contact",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:173",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:174",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:359"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:177",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:178",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:363"
     ],
     "sem_corpo": false
   },
@@ -13940,9 +13940,9 @@
     "modelo": "Conversation",
     "origem": [
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:152",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:159",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:163",
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:153",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:359"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:363"
     ],
     "sem_corpo": false
   },
@@ -13959,7 +13959,7 @@
     "origem": [
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:125",
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:127",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:359"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:363"
     ],
     "sem_corpo": false
   },
@@ -13967,8 +13967,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/cards#reset_auto_followup",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:207",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:359"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:211",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:363"
     ],
     "sem_corpo": true
   },
@@ -13976,8 +13976,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/cards#summarize",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:195",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:359"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:199",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:363"
     ],
     "sem_corpo": true
   },
@@ -13985,8 +13985,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/cards#unlink_contact",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:180",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:359"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:184",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:363"
     ],
     "sem_corpo": true
   },
@@ -14000,9 +14000,9 @@
     "controller": "api/v1/accounts/crm/cards#unlink_conversation",
     "modelo": "Conversation",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:165",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:166",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:359"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:169",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:170",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:363"
     ],
     "sem_corpo": false
   },
@@ -14152,10 +14152,10 @@
     "modelo": "Crm::Card",
     "origem": [
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:94",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:476",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:450",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:366",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:364"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:480",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:454",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:370",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:368"
     ],
     "sem_corpo": false
   },
@@ -14255,7 +14255,7 @@
     "modelo": "Crm::FollowUp",
     "origem": [
       "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:44",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:191"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:198"
     ],
     "sem_corpo": false
   },
@@ -14263,8 +14263,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/follow_ups#cancel",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:71",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:97"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:72",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:98"
     ],
     "sem_corpo": true
   },
@@ -14272,8 +14272,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/follow_ups#complete",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:67",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:97"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:68",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:98"
     ],
     "sem_corpo": true
   },
@@ -14281,8 +14281,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/follow_ups#dismiss_reminder",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:75",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:97"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:76",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:98"
     ],
     "sem_corpo": true
   },
@@ -14295,9 +14295,9 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/follow_ups#reschedule",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:83",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:87",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:97"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:84",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:88",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:98"
     ],
     "sem_corpo": false
   },
@@ -22326,8 +22326,8 @@
     "modelo": "Crm::Card",
     "origem": [
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:105",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:521",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:359"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:525",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:363"
     ],
     "sem_corpo": false
   },
@@ -22386,9 +22386,9 @@
     "envelope": "follow_up",
     "modelo": "Crm::FollowUp",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:55",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:191",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:97"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:56",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:198",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:98"
     ],
     "sem_corpo": false
   },

@@ -106,6 +106,12 @@ class Crm::StageAutomations::StepExecutor
     @card.account.users.joins(:account_users).find_by(id: owner_id, account_users: { account_id: @card.account_id })
   end
 
+  # Acesso por funil (#1148, decisão b): a automação move em nome de quem moveu; não leva o card para um funil que essa
+  # pessoa não pode mover (o mesmo CardGuard do /move e da reunião). Sem pessoa (IA, sistema), nada muda.
+  def actor_can_move_to?(target_stage)
+    Crm::Access::CardGuard.new(user: @actor, account: @card.account).move_allowed?(@card, target_stage.pipeline_id)
+  end
+
   def move_stage!
     depth = @automation_context[:depth].to_i
     return Result.failed('automation_depth_exceeded') if depth >= MAX_AUTOMATION_DEPTH
@@ -113,6 +119,7 @@ class Crm::StageAutomations::StepExecutor
     target_stage = @card.account.crm_pipeline_stages.find_by(id: config['target_stage_id'])
     return Result.failed('target_stage_not_found') if target_stage.blank?
     return Result.ok(skipped: true) if @card.stage_id == target_stage.id
+    return Result.failed('funnel_not_allowed') unless actor_can_move_to?(target_stage)
 
     Crm::Cards::Mover.new(
       card: @card,
