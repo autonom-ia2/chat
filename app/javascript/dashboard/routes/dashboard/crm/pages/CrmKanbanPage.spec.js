@@ -1,6 +1,7 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import { defineComponent, h, ref } from 'vue';
 import CrmKanbanPage from './CrmKanbanPage.vue';
+import { useEmitter } from 'dashboard/composables/emitter';
 import CrmKanbanZoom from '../components/CrmKanbanZoom.vue';
 import {
   KANBAN_ZOOM_CLASSES,
@@ -430,6 +431,23 @@ it('loads all authorized stages for card details independently of board filters'
     wrapper.findComponent({ name: 'CrmCardDrawer' }).attributes('stages')
   ).toBeTruthy();
   expect(wrapper.vm.cardDrawerStages).toEqual(STAGES);
+  wrapper.unmount();
+});
+
+it('abre o card pedido pelo alerta do agendamento com o quadro já aberto', async () => {
+  const wrapper = await mountPage();
+  const [, openCard] = useEmitter.mock.calls.findLast(
+    ([eventName]) => eventName === 'CRM_OPEN_CARD'
+  );
+  dispatch.mockImplementation(async (type, payload) =>
+    type === 'crmKanban/fetchCard' ? { id: payload, pipeline_id: 1 } : []
+  );
+
+  openCard(42);
+  await flushPromises();
+
+  expect(dispatch).toHaveBeenCalledWith('crmKanban/fetchCard', 42);
+  expect(wrapper.vm.selectedCard).toMatchObject({ id: 42 });
   wrapper.unmount();
 });
 
