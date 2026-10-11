@@ -225,6 +225,21 @@ describe Whatsapp::EmbeddedSignupService do
         expect(Rails.logger).to have_received(:info).with(a_string_including('event=none version=none coexistence=nil'))
       end
 
+      it 'still connects the number and logs the error when the trace cannot be stored' do
+        # Reason: the trace is evidence; a failed write must not reach the rescue that fails the signup.
+        allow(real_channel).to receive(:update_column).and_raise(ActiveRecord::StatementInvalid, 'db down')
+        allow(Rails.logger).to receive(:error)
+
+        result = described_class.new(account: account, params: trace_params).perform
+
+        expect(result).to eq(real_channel)
+        expect(real_channel).to have_received(:setup_webhooks)
+        expect(Rails.logger).to have_received(:error).with(
+          "[WHATSAPP] Embedded signup trace not recorded channel_id=#{real_channel.id} error_class=ActiveRecord::StatementInvalid"
+        )
+        expect(Rails.logger).not_to have_received(:error).with(a_string_including('Embedded signup failed'))
+      end
+
       it 'keeps the history sync request that runs after the trace is stored' do
         # Reason: HistorySyncService mutates provider_config in place and saves; it must not lose either write.
         client = instance_double(Whatsapp::FacebookApiClient, start_smb_app_data_sync: { 'request_id' => 'req-1' })

@@ -64,6 +64,11 @@ class Whatsapp::EmbeddedSignupService
     # rubocop:disable Rails/SkipsModelValidations
     channel.update_column(:provider_config, channel.provider_config.merge(trace))
     # rubocop:enable Rails/SkipsModelValidations
+  rescue StandardError => e
+    # The trace is evidence, not part of the connection: the channel and its token are already
+    # saved, so failing here must not turn a working signup into an error for the customer.
+    # Class only: the message of a failed write on provider_config is not needed here and could echo its values.
+    Rails.logger.error("[WHATSAPP] Embedded signup trace not recorded channel_id=#{channel.id} error_class=#{e.class}")
   end
 
   def log_signup_completed(channel)
