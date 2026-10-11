@@ -43,8 +43,14 @@ const panelPage = facts => ({
   booking_window_days: 7,
   close_holidays: true,
   working_hours: { start_hour: 9, end_hour: 17, weekdays: [1, 2, 3, 4, 5] },
-  brand: { color: '#FFE066', headline: 'Vamos conversar', logo_align: 'right' },
+  brand: {
+    color: '#FFE066',
+    headline: 'Vamos conversar',
+    logo_align: 'right',
+    ...(facts.logoDarkSource ? { logo_dark_source: facts.logoDarkSource } : {}),
+  },
   logo_url: LOGO,
+  logo_dark_url: facts.logoDark || null,
   photo_url: facts.pagePhoto,
   people: [
     {
@@ -76,7 +82,14 @@ const publicPage = facts => {
     booking_window_days: 7,
     weekdays: [1, 2, 3, 4, 5],
     closed_dates: facts.closedDates,
-    brand: { ...panel.brand, logo_url: LOGO, photo_url: facts.pagePhoto },
+    // O servidor manda sempre as duas chaves do tema escuro, com valor ou nulo (PublicPageSerializer#brand).
+    brand: {
+      ...panel.brand,
+      logo_url: LOGO,
+      logo_dark_url: facts.logoDark || null,
+      logo_dark_source: facts.logoDarkSource || null,
+      photo_url: facts.pagePhoto,
+    },
     locations: [{ type: 'whatsapp_video', requires_email: false }],
     form_token: 'form-token',
     captcha_site_key: null,
@@ -85,6 +98,7 @@ const publicPage = facts => {
 };
 
 const PANEL_PAGE = panelPage(FACTS);
+const LOGO_DARK = 'https://cdn.exemplo.com/logo-escura.png';
 
 // Elemento → { tag, classes em ordem, filhos }. Texto e atributos ficam de fora: o que se compara é a estrutura.
 const shape = element => ({
@@ -228,18 +242,25 @@ describe('prévia do assistente × página pública', () => {
     expect(header.text()).toContain('Vamos conversar');
   });
 
-  it('a prévia aplica a cor do mesmo jeito que a página: três valores no próprio elemento', async () => {
+  it('a prévia aplica a cor do mesmo jeito que a página: os mesmos valores no próprio elemento', async () => {
     const page = await mountPublicPage();
     const preview = await mountPreview();
     const root = preview.find('[data-preview]').element;
-    ['--brand', '--brand-fill', '--brand-on'].forEach(name => {
+    [
+      '--brand-ink-light',
+      '--brand-ink-dark',
+      '--brand-fill-light',
+      '--brand-on-light',
+      '--brand-fill-dark',
+      '--brand-on-dark',
+    ].forEach(name => {
       expect(root.style.getPropertyValue(name)).toBe(
         document.documentElement.style.getPropertyValue(name)
       );
       expect(root.style.getPropertyValue(name)).not.toBe('');
     });
-    expect(root.style.getPropertyValue('--brand-fill')).toBe('#ffe066');
-    expect(root.style.getPropertyValue('--brand-on')).toBe('#000000');
+    expect(root.style.getPropertyValue('--brand-fill-light')).toBe('#ffe066');
+    expect(root.style.getPropertyValue('--brand-on-light')).toBe('#000000');
     expect(page.exists()).toBe(true);
   });
 
@@ -266,5 +287,82 @@ describe('prévia do assistente × página pública', () => {
     expect(sample.find('[data-logo-box]').attributes('data-logo-align')).toBe(
       'right'
     );
+  });
+});
+
+// Tema claro e escuro (#1295): a prévia mostra os dois com o seletor "Claro / Escuro", e nos dois ela é a página.
+describe('prévia × página nos dois temas', () => {
+  const pick = async (wrapper, theme) => {
+    await wrapper.find(`[data-theme-option="${theme}"] input`).setValue(true);
+    await flushPromises();
+  };
+  const themeOf = wrapper =>
+    wrapper.find('[data-preview]').attributes('data-booking-theme');
+
+  it.each([
+    ['logo gerada', { logoDark: LOGO_DARK, logoDarkSource: 'generated' }],
+    ['logo enviada', { logoDark: LOGO_DARK, logoDarkSource: 'uploaded' }],
+    ['a mesma logo', { logoDarkSource: 'same' }],
+    ['logo na placa', { logoDarkSource: 'plate' }],
+    ['página de antes do tema (sem origem)', {}],
+  ])('%s: mesma árvore no claro e no escuro', async (_, logo) => {
+    const facts = { ...FACTS, ...logo };
+    const preview = await mountPreview(BookingPreviewCard, facts);
+    const page = await mountPublicPage(facts);
+    const real = shape(page.find('[data-page-card]').element);
+
+    expect(shape(preview.find('[data-page-card]').element)).toEqual(real);
+    expect(themeOf(preview)).toBe('light');
+
+    await pick(preview, 'dark');
+    expect(themeOf(preview)).toBe('dark');
+    // O tema é só CSS: trocar não muda um elemento nem uma classe.
+    expect(shape(preview.find('[data-page-card]').element)).toEqual(real);
+    const sources = card =>
+      card.findAll('[data-logo-box] img').map(image => image.attributes('src'));
+    expect(sources(preview)).toEqual(sources(page));
+    expect(preview.find('[data-logo-box]').attributes('data-logo-dark')).toBe(
+      page.find('[data-logo-box]').attributes('data-logo-dark')
+    );
+  });
+
+  it('a página de verdade não força tema: quem escolhe é o aparelho', async () => {
+    const page = await mountPublicPage();
+    expect(page.find('[data-booking-theme]').exists()).toBe(false);
+    expect(document.documentElement.hasAttribute('data-booking-theme')).toBe(
+      false
+    );
+  });
+
+  it('o seletor é um grupo de rádios (sem lista nativa) e fica fora da página mostrada', async () => {
+    const preview = await mountPreview();
+    const toggle = preview.find('[data-theme-toggle]');
+    const radios = toggle.findAll('input[type="radio"]');
+
+    expect(preview.find('select').exists()).toBe(false);
+    expect(toggle.find('[role="radiogroup"]').exists()).toBe(true);
+    expect(radios.map(radio => radio.element.value)).toEqual(['light', 'dark']);
+    expect(radios.map(radio => radio.element.checked)).toEqual([true, false]);
+    expect(toggle.element.closest('[data-booking-theme]')).toBeNull();
+    expect(toggle.element.closest('[inert]')).toBeNull();
+  });
+
+  it('a amostra do passo Sua marca tem o mesmo seletor e a cor fica no pedaço que troca de tema', async () => {
+    const sample = await mountPreview(BookingBrandSample, {
+      ...FACTS,
+      logoDark: LOGO_DARK,
+      logoDarkSource: 'generated',
+    });
+    const shown = sample.find('[data-sample-page]');
+
+    expect(shown.attributes('data-booking-theme')).toBe('light');
+    expect(shown.element.style.getPropertyValue('--brand-ink-dark')).not.toBe(
+      ''
+    );
+    await pick(sample, 'dark');
+    expect(shown.attributes('data-booking-theme')).toBe('dark');
+    expect(
+      sample.find('[data-logo-box] [data-logo-for-dark]').attributes('src')
+    ).toBe(LOGO_DARK);
   });
 });

@@ -73,7 +73,7 @@ const whatsappUrl = computed(
         id="step-heading"
         data-step-heading
         tabindex="-1"
-        class="text-2xl font-bold text-slate-900 focus:outline-none"
+        class="text-2xl font-bold text-bk-strong focus:outline-none"
       >
         {{
           greetingName
@@ -83,13 +83,13 @@ const whatsappUrl = computed(
       </h1>
     </div>
     <div
-      class="flex flex-col gap-1 rounded-2xl border-2 border-slate-200 bg-slate-50 p-4"
+      class="flex flex-col gap-1 rounded-2xl border-2 border-bk-line bg-bk-inset p-4"
     >
-      <p class="text-lg font-semibold text-slate-900 first-letter:uppercase">
+      <p class="text-lg font-semibold text-bk-strong first-letter:uppercase">
         {{ when }}
       </p>
-      <p class="text-base text-slate-800">{{ locationText }}</p>
-      <p v-if="address" class="text-base text-slate-800">
+      <p class="text-base text-bk-body">{{ locationText }}</p>
+      <p v-if="address" class="text-base text-bk-body">
         {{ t('BOOKING_V2.ADDRESS', { address }) }}
       </p>
       <ZoneNote v-if="isOtherClock" />
@@ -97,7 +97,7 @@ const whatsappUrl = computed(
     <p
       v-if="willMessage"
       data-testid="done-message-promise"
-      class="text-base text-slate-800"
+      class="text-base text-bk-body"
     >
       {{ t('BOOKING_V2.DONE.MESSAGE') }}
     </p>
@@ -128,7 +128,7 @@ const whatsappUrl = computed(
       />
     </div>
     <ManageLink v-if="manageUrl" :url="manageUrl" />
-    <p v-if="agentName" class="text-center text-base text-slate-600">
+    <p v-if="agentName" class="text-center text-base text-bk-soft">
       {{ t('BOOKING_V2.DONE.NOTIFIED', { name: agentName }) }}
     </p>
   </section>

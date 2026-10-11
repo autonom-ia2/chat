@@ -53,6 +53,7 @@ const {
   goTo,
   publish,
   upload,
+  removeLogoDark,
   applyIdentity,
   saveIdentity,
   saveDestination,
@@ -180,6 +181,7 @@ const blockedByMissing = computed(
             :identity-busy="identityBusy"
             @change="change"
             @upload="upload"
+            @remove-logo-dark="removeLogoDark"
             @apply-identity="applyIdentity"
             @save-identity="saveIdentity"
           />

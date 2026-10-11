@@ -98,7 +98,8 @@
         "IMAGE_TYPE": "Use uma imagem PNG, JPEG ou WebP.",
         "IMAGE_SIZE": "A imagem pode ter até 2 MB.",
         "IMAGE_UPLOAD": "Não deu para enviar a imagem. Tente outra.",
-        "SHORT_NAME": "Confira o endereço da página."
+        "SHORT_NAME": "Confira o endereço da página.",
+        "IMAGE_REMOVE": "Não deu para tirar a imagem. Tente de novo."
       },
       "SERVER_ERRORS": {
         "CALENDAR_GONE": "Essa caixa de e-mail da agenda não está mais disponível. Escolha outra ou tire o Google Meet e o Teams.",
@@ -304,6 +305,22 @@
         "ALSO_PROFILE": "Também no meu perfil",
         "SEND": "Enviar foto",
         "CANCEL": "Cancelar"
+      },
+      "LOGO_LIGHT": {
+        "TITLE": "Em fundo claro"
+      },
+      "LOGO_DARK": {
+        "TITLE": "Em fundo escuro",
+        "ALT": "Logo da empresa para fundo escuro",
+        "REMOVE": "Voltar para a criada por nós",
+        "ORIGIN": {
+          "NONE": "Envie a logo. A versão para fundo escuro é criada na hora.",
+          "CREATING": "Criando a versão para fundo escuro…",
+          "GENERATED": "Criamos esta versão para fundo escuro. Se preferir, envie a sua.",
+          "SAME": "Sua logo já fica boa no escuro.",
+          "PLATE": "Não deu para criar uma versão clara; no escuro ela aparece sobre uma placa.",
+          "UPLOADED": "Você enviou esta versão para fundo escuro."
+        }
       }
     },
     "NOTICES": {
@@ -593,6 +610,11 @@
       "SAVE": "Salvar",
       "BOOKED_BY_AI": "Agendada pela IA",
       "BOOKED_BY_AI_DETAIL": "Agendada pela IA: {title}"
+    },
+    "THEME": {
+      "LABEL": "A página segue o tema do aparelho do cliente. Veja nos dois:",
+      "LIGHT": "Claro",
+      "DARK": "Escuro"
     }
   }
 }

@@ -42,7 +42,7 @@ const onExpire = () => {
     <p
       v-if="page.notices_enabled"
       data-testid="notices-consent"
-      class="text-base text-slate-700"
+      class="text-base text-bk-medium"
     >
       {{ t('BOOKING_V2.DETAILS.NOTICE') }}
     </p>
@@ -50,7 +50,7 @@ const onExpire = () => {
     <p
       v-if="isPreview"
       data-testid="preview-no-booking"
-      class="rounded-xl bg-yellow-100 p-4 text-base font-medium text-yellow-900"
+      class="rounded-xl bg-bk-warn p-4 text-base font-medium text-bk-warn-ink"
     >
       {{ t('BOOKING_V2.PREVIEW_NO_BOOKING') }}
     </p>
@@ -65,7 +65,7 @@ const onExpire = () => {
       <div v-if="formError" class="flex flex-col gap-3">
         <p
           role="alert"
-          class="rounded-xl bg-red-50 p-4 text-base font-medium text-red-900"
+          class="rounded-xl bg-bk-danger p-4 text-base font-medium text-bk-danger-ink"
         >
           {{ t(formError) }}
         </p>

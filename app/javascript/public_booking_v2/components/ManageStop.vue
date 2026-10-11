@@ -18,17 +18,17 @@ const { t } = useI18n();
       id="step-heading"
       data-step-heading
       tabindex="-1"
-      class="text-2xl font-bold text-slate-900 focus:outline-none"
+      class="text-2xl font-bold text-bk-strong focus:outline-none"
     >
       {{ t('BOOKING_V2.MANAGE.STOP_SCREEN.TITLE') }}
     </h1>
-    <p class="text-base text-slate-800">
+    <p class="text-base text-bk-body">
       {{ t('BOOKING_V2.MANAGE.STOP_SCREEN.BODY') }}
     </p>
     <p
       v-if="!manage.isCanceled.value"
       data-testid="stop-keeps-meeting"
-      class="text-base font-semibold text-slate-900"
+      class="text-base font-semibold text-bk-strong"
     >
       {{ t('BOOKING_V2.MANAGE.STOP_SCREEN.KEEPS') }}
     </p>

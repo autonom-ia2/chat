@@ -415,6 +415,9 @@ Rails.application.routes.draw do
                 post :pause
                 post :preview_token
                 post :logo
+                # Logo para fundo escuro (#1295): enviar a própria, ou tirar a enviada e voltar para a gerada.
+                post :logo_dark
+                delete :logo_dark, action: :destroy_logo_dark
                 post :photo
                 # Identidade salva da conta (#1289): usar na página e salvar a partir da página.
                 post :apply_identity

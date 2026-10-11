@@ -7,7 +7,9 @@ RSpec.describe Crm::BookingPagePolicy, type: :policy do
   let(:page) { create_booking_profile(account: account, host: admin) }
 
   let(:read_actions) { %i[index? show? people?] }
-  let(:write_actions) { %i[create? update? destroy? publish? pause? preview_token? logo? photo? update_people? apply_identity?] }
+  let(:write_actions) do
+    %i[create? update? destroy? publish? pause? preview_token? logo? logo_dark? destroy_logo_dark? photo? update_people? apply_identity?]
+  end
 
   def policy_for(user, record)
     described_class.new({ user: user, account: account, account_user: user.account_users.find_by(account: account) }, record)

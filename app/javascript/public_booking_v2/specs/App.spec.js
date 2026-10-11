@@ -570,16 +570,16 @@ describe('page states', () => {
 
   it('applies a valid brand color and ignores an invalid one', async () => {
     await mountApp();
-    expect(document.documentElement.style.getPropertyValue('--brand')).toBe(
-      '#0b7a5a'
-    );
+    expect(
+      document.documentElement.style.getPropertyValue('--brand-ink-light')
+    ).toBe('#0b7a5a');
 
     await mountApp({
       page: { ...PAGE, brand: { color: 'red;background:url(x)' } },
     });
-    expect(document.documentElement.style.getPropertyValue('--brand')).toBe(
-      DEFAULT_BRAND_COLOR
-    );
+    expect(
+      document.documentElement.style.getPropertyValue('--brand-ink-light')
+    ).toBe(DEFAULT_BRAND_COLOR);
   });
 });
 
