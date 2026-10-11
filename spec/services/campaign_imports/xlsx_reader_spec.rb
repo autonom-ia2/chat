@@ -21,14 +21,14 @@ RSpec.describe CampaignImports::XlsxReader do
     %(<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData><row r="1">#{row.join}</row></sheetData></worksheet>)
   end
 
-  def xlsx(cells, with_styles: true, date1904: false)
+  def xlsx(cells, with_styles: true, date1904: false, styles_xml: styles)
     files = {
       'xl/workbook.xml' => workbook(date1904: date1904),
       'xl/_rels/workbook.xml.rels' => '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' \
                                       '<Relationship Id="rId1" Target="worksheets/sheet1.xml"/></Relationships>',
       'xl/worksheets/sheet1.xml' => sheet(cells)
     }
-    files['xl/styles.xml'] = styles if with_styles
+    files['xl/styles.xml'] = styles_xml if with_styles
     build_zip(files)
   end
 
@@ -44,5 +44,11 @@ RSpec.describe CampaignImports::XlsxReader do
 
   it 'keeps the serial of a file without styles' do
     expect(described_class.new(xlsx([['46309', 1]], with_styles: false)).rows.first.values).to eq(['46309'])
+  end
+
+  it 'still reads a file whose styles part is broken, numbers as written' do
+    broken = xlsx([['46309', 1], ['Ana', nil]], styles_xml: '<styleSheet><cellXfs><xf numFmtId="14"></cellXfs>')
+
+    expect(described_class.new(broken).rows.first.values).to eq(%w[46309 Ana])
   end
 end

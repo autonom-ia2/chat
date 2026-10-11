@@ -42,6 +42,18 @@ RSpec.describe CampaignImports::CellValues do
       expect(described_class.excel_serial('44847', :date, date1904: true)).to eq('2026-10-14')
     end
 
+    it 'keeps the seconds when the format shows them' do
+      expect(described_class.excel_serial('0.62535', :time)).to eq('15:01')
+      expect(described_class.excel_serial('0.62535', :time_seconds)).to eq('15:00:30')
+      expect(described_class.excel_serial('46309.62535', :datetime_seconds)).to eq('2026-10-14 15:00:30')
+    end
+
+    it 'keeps what is not a number between 0 and the last Excel day' do
+      expect(described_class.excel_serial('2958465', :date)).to eq('9999-12-31')
+      expect(described_class.excel_serial('2958466', :date)).to eq('2958466')
+      expect(described_class.excel_serial('1e300', :date)).to eq('1e300')
+    end
+
     it 'keeps what is not a non-negative number' do
       expect(described_class.excel_serial('14/10/2026', :date)).to eq('14/10/2026')
       expect(described_class.excel_serial('', :date)).to eq('')
