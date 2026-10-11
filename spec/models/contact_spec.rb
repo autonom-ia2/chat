@@ -336,4 +336,13 @@ RSpec.describe Contact do
       expect(contact.opted_out_by_id).to be_nil
     end
   end
+
+  describe '#push_event_data' do
+    it 'carries the customer fields, so the contact.updated event keeps the Cliente badge (#1258)' do
+      contact = create(:contact, contact_type: :customer, customer_since: Time.zone.parse('2026-03-15 12:00'))
+
+      expect(contact.push_event_data).to include(contact_type: 'customer',
+                                                 customer_since: Time.zone.parse('2026-03-15 12:00').to_i)
+    end
+  end
 end

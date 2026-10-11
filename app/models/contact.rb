@@ -166,6 +166,9 @@ class Contact < ApplicationRecord
       phone_number: phone_number,
       thumbnail: avatar_url,
       blocked: blocked,
+      # O front troca o contato inteiro ao receber contact.updated: sem estes dois, o selo "Cliente" sumia (#1258).
+      contact_type: contact_type,
+      customer_since: customer_since&.to_i,
       type: 'contact'
     }
     data[:company_id] = company_id if account.feature_enabled?('companies')

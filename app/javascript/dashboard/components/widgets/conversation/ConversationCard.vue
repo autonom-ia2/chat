@@ -16,6 +16,7 @@ import Checkbox from 'dashboard/components-next/checkbox/Checkbox.vue';
 import CrmConversationStageChip from 'dashboard/components-next/Conversation/ConversationCard/CrmConversationStageChip.vue';
 import { useCrmPermissions } from 'dashboard/routes/dashboard/crm/composables/useCrmPermissions';
 import { useCrmConversationStage } from 'dashboard/routes/dashboard/crm/composables/useCrmConversationStages';
+import CustomerBadge from 'dashboard/components-next/customer-badge/CustomerBadge.vue';
 
 const props = defineProps({
   chat: { type: Object, required: true },
@@ -208,12 +209,18 @@ watch(
           />
         </div>
       </div>
-      <h4
-        class="conversation--user text-sm my-0 mx-2 capitalize pt-0.5 text-ellipsis overflow-hidden whitespace-nowrap flex-1 min-w-0 ltr:pr-16 rtl:pl-16 text-n-slate-12"
-        :class="hasUnread ? 'font-semibold' : 'font-medium'"
+      <!-- Selo "Cliente" ao lado do nome (#1258): o nome corta com "…", o selo não. -->
+      <div
+        class="flex items-center gap-1.5 my-0 mx-2 pt-0.5 flex-1 min-w-0 ltr:pr-16 rtl:pl-16"
       >
-        {{ currentContact.name }}
-      </h4>
+        <h4
+          class="conversation--user text-sm my-0 capitalize text-ellipsis overflow-hidden whitespace-nowrap min-w-0 text-n-slate-12"
+          :class="hasUnread ? 'font-semibold' : 'font-medium'"
+        >
+          {{ currentContact.name }}
+        </h4>
+        <CustomerBadge :contact="currentContact" />
+      </div>
       <VoiceCallStatus
         v-if="voiceCallData.status"
         key="voice-status-row"

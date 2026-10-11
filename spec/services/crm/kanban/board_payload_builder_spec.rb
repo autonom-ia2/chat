@@ -238,4 +238,13 @@ RSpec.describe Crm::Kanban::BoardPayloadBuilder do
 
     expect(cards.pluck(:id)).to contain_exactly(card.id)
   end
+
+  it 'sends the contact type for the customer badge on the board (#1258)' do
+    conversation = create_conversation
+    conversation.contact.update!(contact_type: :customer, customer_since: Time.zone.parse('2026-03-15 12:00'))
+    create_card(conversation: conversation)
+
+    expect(board_cards.first[:contact]).to include(contact_type: 'customer',
+                                                   customer_since: Time.zone.parse('2026-03-15 12:00').to_i)
+  end
 end

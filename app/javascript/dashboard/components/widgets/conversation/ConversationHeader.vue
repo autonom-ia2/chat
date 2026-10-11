@@ -20,6 +20,7 @@ import { useInbox } from 'dashboard/composables/useInbox';
 import { useAlert } from 'dashboard/composables';
 import { useI18n } from 'vue-i18n';
 import { copyTextToClipboard } from 'shared/helpers/clipboard';
+import CustomerBadge from 'dashboard/components-next/customer-badge/CustomerBadge.vue';
 
 const props = defineProps({
   chat: {
@@ -138,6 +139,7 @@ const copyConversationId = async () => {
           >
             {{ currentContact.name }}
           </span>
+          <CustomerBadge :contact="currentContact" show-since />
           <fluent-icon
             v-if="!isHMACVerified"
             v-tooltip="$t('CONVERSATION.UNVERIFIED_SESSION')"
