@@ -148,8 +148,9 @@
     },
     "ADDRESS": {
       "LABEL": "Endereço da página",
-      "HINT": "É o link que você manda para o cliente. Use letras, números e hífen.",
+      "HINT": "Mude só o final do link. Use letras, números e hífen.",
       "PREVIEW": "O link fica assim: {url}",
+      "CHANGE": "Mudar endereço",
       "EMPTY": "Sem endereço, a página usa um link comprido.",
       "CHECKING": "Conferindo o endereço",
       "FREE": "Este endereço está livre.",
@@ -161,7 +162,7 @@
         "INVALID_CHARS": "Use só letras sem acento, números e hífen.",
         "HYPHEN_EDGE": "O endereço não pode começar nem terminar com hífen.",
         "RESERVED": "Este endereço é do sistema. Escolha outro.",
-        "TAKEN": "Este endereço já tem dono. Escolha outro."
+        "TAKEN": "Outra página sua já usa este endereço. Escolha outro."
       }
     },
     "WHERE": {

@@ -26,9 +26,9 @@ class Crm::BookingV2::PageSerializer
 
   def summary
     {
-      id: profile.id, slug: profile.slug, short_name: profile.short_name, title: profile.title, enabled: profile.enabled, public_url: public_url,
-      links: links, locations: profile.locations, assignment_mode: profile.assignment_mode,
-      upcoming_meetings_count: upcoming_meetings_count,
+      id: profile.id, slug: profile.slug, short_name: profile.short_name, account_address: profile.booking_account_address,
+      title: profile.title, enabled: profile.enabled, public_url: public_url, links: links, locations: profile.locations,
+      assignment_mode: profile.assignment_mode, upcoming_meetings_count: upcoming_meetings_count,
       attention: attention, orphaned: @orphaned, paused_people: paused_people
     }
   end
@@ -141,7 +141,7 @@ class Crm::BookingV2::PageSerializer
     end
   end
 
-  # Link curto quando a página tem nome (#1282); senão o `/book/<slug>` de sempre.
+  # Link curto (`/a/<conta>/<página>/<pessoa>`) quando a página tem nome (#1282, #1299); senão o `/book/<slug>` de sempre.
   def link_url(link)
     Crm::BookingV2::ShortLink.url_for(profile, link: link)
   end

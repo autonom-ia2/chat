@@ -1,15 +1,16 @@
 require 'rails_helper'
 
-# Link curto no painel (#1282): gravar o nome curto da página, conferir se está livre, sugerir a partir do título e
-# devolver os links já no formato curto. Só quem gerencia páginas (`agendamento_manage`) mexe; tudo atrás da flag.
+# Link curto no painel (#1282, #1299): gravar o nome curto da página, conferir se está livre NA CONTA, sugerir a partir
+# do título e devolver os links já no formato curto (`/a/<conta>/<página>`). Só quem gerencia páginas (`agendamento_manage`) mexe; tudo atrás da flag.
 RSpec.describe 'Api::V1::Accounts::Crm::BookingPages short name', type: :request do
-  let(:account) { create(:account) }
+  let(:account) { create(:account, name: 'Hub Dois') }
   let!(:admin) { create(:user, account: account, role: :administrator, name: 'Admin Ana') }
   let(:world) { build_booking_world(account: account, host_name: 'Camila Torres') }
   let(:page) { world.profile }
   let(:base) { "/api/v1/accounts/#{account.id}/crm/booking_pages" }
   let(:other_account) { create(:account) }
   let(:other_page) { build_booking_world(account: other_account).profile }
+  let(:second_page) { create_booking_profile(account: account, host: world.host) }
 
   around do |example|
     with_modified_env('CRM_KANBAN_ENABLED' => 'true', 'CRM_CALENDAR_MEETINGS_ENABLED' => 'true', 'FRONTEND_URL' => 'https://chat.exemplo.com') do
@@ -40,8 +41,8 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingPages short name', type: :request
   end
 
   describe 'GET short_name' do
-    it 'diz que o nome está livre, ou o que impede' do
-      other_page.update!(short_name: 'clinica-viva')
+    it 'diz que o nome está livre na conta, ou o que impede' do
+      second_page.update!(short_name: 'clinica-viva')
 
       cases = { 'clinica-nova' => nil, 'clinica-viva' => 'taken', 'admin' => 'reserved', 'ab' => 'too_short', 'clínica' => 'invalid_chars' }
       cases.each do |name, problem|
@@ -52,23 +53,38 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingPages short name', type: :request
       end
     end
 
-    it 'libera para a página o nome que já é dela, mas não o de página de outra conta passada como dona' do
+    it 'libera para a página o nome que já é dela, e a página de outra conta passada como dona não muda a resposta' do
       page.update!(short_name: 'minha-agenda')
-      other_page.update!(short_name: 'clinica-viva')
+      second_page.update!(short_name: 'clinica-viva')
 
       call(admin, :get, "#{base}/short_name", name: 'minha-agenda', page_id: page.id)
       expect(payload['available']).to be(true)
+
+      call(admin, :get, "#{base}/short_name", name: 'minha-agenda', page_id: second_page.id)
+      expect(payload).to include('available' => false, 'problem' => 'taken')
 
       call(admin, :get, "#{base}/short_name", name: 'clinica-viva', page_id: other_page.id)
       expect(payload).to include('available' => false, 'problem' => 'taken')
     end
 
-    it 'sugere um nome a partir do título, com número se já tem dono' do
-      other_page.update!(short_name: 'avaliacao-gratuita')
+    it 'não revela nome de página de outra conta: para esta conta ele está livre' do
+      other_page.update!(short_name: 'so-da-outra')
+
+      call(admin, :get, "#{base}/short_name", name: 'so-da-outra')
+      expect(payload).to eq('name' => 'so-da-outra', 'available' => true, 'problem' => nil)
+
+      call(admin, :get, "#{base}/short_name", title: 'Só da outra')
+      expect(payload).to eq('suggestion' => 'so-da-outra')
+    end
+
+    it 'sugere um nome a partir do título, com número se outra página da conta já usa' do
+      second_page.update!(short_name: 'avaliacao-gratuita')
 
       call(admin, :get, "#{base}/short_name", title: 'Avaliação Gratuita')
-
       expect(payload).to eq('suggestion' => 'avaliacao-gratuita-2')
+
+      call(admin, :get, "#{base}/short_name", title: 'Avaliação Gratuita', page_id: second_page.id)
+      expect(payload).to eq('suggestion' => 'avaliacao-gratuita')
     end
 
     it 'só responde a quem gerencia páginas' do
@@ -91,12 +107,83 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingPages short name', type: :request
     end
   end
 
+  describe 'onde o endereço da conta nasce' do
+    def addresses
+      Crm::BookingAccountAddress.pluck(:account_id, :name)
+    end
+
+    # Como uma conta que ficou sem endereço (página de antes do deploy em que o preenchimento falhou).
+    def forget_address!
+      page.update_column(:short_name, 'clinica-viva') # rubocop:disable Rails/SkipsModelValidations
+      Crm::BookingAccountAddress.delete_all
+    end
+
+    it 'nenhuma leitura cria: lista, página, conferência e sugestão devolvem o link comprido e não gravam nada' do
+      forget_address!
+
+      call(admin, :get, base)
+      expect(payload.first).to include('short_name' => 'clinica-viva', 'account_address' => nil, 'public_url' => "https://chat.exemplo.com/book/#{page.slug}")
+
+      call(admin, :get, "#{base}/#{page.id}")
+      expect(payload).to include('account_address' => nil, 'public_url' => "https://chat.exemplo.com/book/#{page.slug}")
+
+      call(admin, :get, "#{base}/short_name", name: 'outro-nome', page_id: page.id)
+      call(admin, :get, "#{base}/short_name", title: 'Consulta')
+      expect(response).to have_http_status(:ok)
+
+      expect(addresses).to eq([])
+    end
+
+    it 'salvar a página cria o endereço da conta, e a resposta já traz o link curto' do
+      forget_address!
+
+      call(admin, :patch, "#{base}/#{page.id}", booking_page: { title: 'Outro título' })
+
+      expect(response).to have_http_status(:ok)
+      expect(addresses).to eq([[account.id, 'hub-dois']])
+      expect(payload).to include('account_address' => 'hub-dois', 'public_url' => 'https://chat.exemplo.com/a/hub-dois/clinica-viva')
+    end
+
+    it 'criar página (a primeira da conta) cria o endereço, uma vez só' do
+      admin
+      Crm::BookingAccountAddress.delete_all
+
+      2.times { call(admin, :post, base, { template_key: 'sales_30' }) }
+
+      expect(response).to have_http_status(:created)
+      expect(addresses).to eq([[account.id, 'hub-dois']])
+      expect(payload['account_address']).to eq('hub-dois')
+    end
+
+    it 'publicar a página cria o endereço' do
+      forget_address!
+      page.update_column(:enabled, false) # rubocop:disable Rails/SkipsModelValidations
+
+      call(admin, :post, "#{base}/#{page.id}/publish")
+
+      expect(response).to have_http_status(:ok)
+      expect(addresses).to eq([[account.id, 'hub-dois']])
+      expect(payload['public_url']).to eq('https://chat.exemplo.com/a/hub-dois/clinica-viva')
+    end
+
+    it 'gravar página antiga (page_version 1) não cria endereço' do
+      host = world.host
+      inbox = create(:channel_email, account: account, provider: 'google', calendar_enabled: true).inbox
+      Crm::BookingAccountAddress.delete_all
+
+      create_booking_profile(account: account, host: host, page_version: Crm::AgentBookingProfile::LEGACY_PAGE, inbox: inbox)
+
+      expect(addresses).to eq([])
+    end
+  end
+
   describe 'PATCH com short_name' do
     it 'grava o nome em minúsculas e passa a devolver o link curto' do
       call(admin, :patch, "#{base}/#{page.id}", booking_page: { short_name: ' Clinica-Viva ' })
 
       expect(response).to have_http_status(:ok)
-      expect(payload).to include('short_name' => 'clinica-viva', 'public_url' => 'https://chat.exemplo.com/a/clinica-viva')
+      expect(payload).to include('short_name' => 'clinica-viva', 'account_address' => 'hub-dois',
+                                 'public_url' => 'https://chat.exemplo.com/a/hub-dois/clinica-viva')
       expect(page.reload.short_name).to eq('clinica-viva')
     end
 
@@ -108,8 +195,17 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingPages short name', type: :request
       expect(payload).to include('short_name' => nil, 'public_url' => "https://chat.exemplo.com/book/#{page.slug}")
     end
 
-    it 'recusa nome que já é de outra conta, do sistema ou mal formado, dizendo o motivo' do
+    it 'aceita o nome que outra conta já usa numa página dela' do
       other_page.update!(short_name: 'clinica-viva')
+
+      call(admin, :patch, "#{base}/#{page.id}", booking_page: { short_name: 'clinica-viva' })
+
+      expect(response).to have_http_status(:ok)
+      expect(payload['public_url']).to eq('https://chat.exemplo.com/a/hub-dois/clinica-viva')
+    end
+
+    it 'recusa nome que já é de outra página da conta, do sistema ou mal formado, dizendo o motivo' do
+      second_page.update!(short_name: 'clinica-viva')
 
       { 'clinica-viva' => 'taken', 'admin' => 'reserved', 'a b' => 'invalid_chars' }.each do |name, problem|
         call(admin, :patch, "#{base}/#{page.id}", booking_page: { short_name: name })
@@ -121,8 +217,8 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingPages short name', type: :request
     end
 
     it 'responde 422, e não 500, quando o índice único barra uma gravação simultânea' do
+      second_page.update!(short_name: 'clinica-viva')
       allow(Crm::BookingV2::ShortName).to receive(:problem).and_return(nil)
-      other_page.update!(short_name: 'clinica-viva')
 
       call(admin, :patch, "#{base}/#{page.id}", booking_page: { short_name: 'clinica-viva' })
 
@@ -145,11 +241,11 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingPages short name', type: :request
     it 'lista com o link curto quando existe e com o comprido quando não' do
       page
       call(admin, :get, base)
-      expect(payload.first).to include('short_name' => nil, 'public_url' => "https://chat.exemplo.com/book/#{page.slug}")
+      expect(payload.first).to include('short_name' => nil, 'account_address' => 'hub-dois', 'public_url' => "https://chat.exemplo.com/book/#{page.slug}")
 
       page.update!(short_name: 'clinica-viva')
       call(admin, :get, base)
-      expect(payload.first).to include('short_name' => 'clinica-viva', 'public_url' => 'https://chat.exemplo.com/a/clinica-viva')
+      expect(payload.first).to include('short_name' => 'clinica-viva', 'public_url' => 'https://chat.exemplo.com/a/hub-dois/clinica-viva')
     end
 
     it 'dá um link curto por pessoa, com apelido, na página com um link por pessoa' do
@@ -159,7 +255,7 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingPages short name', type: :request
 
       expect(response).to have_http_status(:ok)
       expect(payload['public_url']).to be_nil
-      expect(payload['links'].pluck('url')).to eq(%w[https://chat.exemplo.com/a/clinica-viva/camila https://chat.exemplo.com/a/clinica-viva/bruno])
+      expect(payload['links'].pluck('url')).to eq(%w[https://chat.exemplo.com/a/hub-dois/clinica-viva/camila https://chat.exemplo.com/a/hub-dois/clinica-viva/bruno])
       expect(payload['people'].pluck('public_url')).to eq(payload['links'].pluck('url'))
     end
 
@@ -168,7 +264,7 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingPages short name', type: :request
 
       call(admin, :patch, "#{base}/#{page.id}", booking_page: { short_name: 'clinica-viva' })
 
-      expect(payload['links'].pluck('url')).to eq(%w[https://chat.exemplo.com/a/clinica-viva/camila https://chat.exemplo.com/a/clinica-viva/bruno])
+      expect(payload['links'].pluck('url')).to eq(%w[https://chat.exemplo.com/a/hub-dois/clinica-viva/camila https://chat.exemplo.com/a/hub-dois/clinica-viva/bruno])
     end
   end
 end

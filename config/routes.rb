@@ -54,9 +54,10 @@ Rails.application.routes.draw do
     # Imagem de prévia do link (#1282): o `og:image` das páginas de agendamento. A versão no caminho só decide o cache.
     get '/book/:slug/preview/:version', to: 'public_booking/preview_images#show', as: :public_booking_preview_image,
                                         defaults: { format: :png }, constraints: { format: 'png' }
-    # Link curto próprio (#1282): `/a/<nome>` abre a página; `/a/<nome>/<pessoa>`, o link de uma pessoa.
-    get '/a/:name', to: 'public_booking/pages#short', as: :public_booking_short_page
-    get '/a/:name/:person', to: 'public_booking/pages#short', as: :public_booking_short_person_page
+    # Link curto próprio (#1282, #1299): `/a/<conta>/<página>` abre a página; `/a/<conta>/<página>/<pessoa>`, o link
+    # de uma pessoa. O formato antigo (`/a/<página>` e `/a/<página>/<pessoa>`) cai nas mesmas rotas: quem decide o que
+    # cada pedaço é fica em `Crm::BookingV2::ShortLink.resolve`.
+    get '/a/:first(/:second(/:third))', to: 'public_booking/pages#short', as: :public_booking_short_page
     # Link por cliente e de gestão da reunião (#1189/#1190): sempre a página v2.
     get '/b/:code', to: 'public_booking/pages#invite', as: :public_booking_invite_page
     get '/l/:code', to: 'public/tracked_links#show', as: :public_tracked_link
