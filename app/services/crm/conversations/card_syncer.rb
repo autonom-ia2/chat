@@ -165,9 +165,18 @@ class Crm::Conversations::CardSyncer
 
     merge_activity_attributes(attributes)
     attributes[:conversation_id] = @conversation.id if card.conversation_id.blank?
-    attributes[:owner_id] = @conversation.assignee_id if sync_assignment?(card)
+    attributes[:owner_id] = @conversation.assignee_id if sync_assignment?(card) && assignee_can_own?(card)
     attributes[:team_id] = @conversation.team_id if sync_team?(card)
     attributes.reject { |key, value| values_equal?(card.public_send(key), value) }
+  end
+
+  # Acesso por funil (#1148, decisão a): o atendente só vira dono se tiver o funil do card; senão o dono fica como está.
+  # Desatribuir (sem atendente) segue zerando o dono, como antes.
+  def assignee_can_own?(card)
+    return true if @conversation.assignee_id == card.owner_id
+
+    Crm::Access::CardGuard.new(user: nil, account: @account)
+                          .owner_allowed?(@conversation.assignee_id, inbox_id: card.inbox_id, pipeline_id: card.pipeline_id)
   end
 
   # Assignment/team syncs arrive without @message; they must not move the card's

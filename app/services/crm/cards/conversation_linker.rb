@@ -81,12 +81,21 @@ module Crm
           conversation_id: @conversation.id,
           contact_id: @card.contact_id || @conversation.contact_id,
           inbox_id: @card.inbox_id || @conversation.inbox_id,
-          owner_id: @card.owner_id || @conversation.assignee_id,
+          owner_id: @card.owner_id || derived_owner_id,
           team_id: @card.team_id || @conversation.team_id,
           source: @card.source.presence || @conversation.inbox&.channel_type,
           last_message_at: Crm::Conversations::LastRealMessageAt.for(@conversation),
           last_activity_at: Time.current
         )
+      end
+
+      # Acesso por funil (#1148, decisão a): o atendente só vira dono do card sem dono se tiver o funil dele (ou se quem
+      # vincula é administrador); senão o card segue sem dono.
+      def derived_owner_id
+        assignee_id = @conversation.assignee_id
+        guard = Crm::Access::CardGuard.new(user: @actor, account: @card.account)
+        allowed = guard.owner_allowed?(assignee_id, inbox_id: @card.inbox_id || @conversation.inbox_id, pipeline_id: @card.pipeline_id)
+        allowed ? assignee_id : nil
       end
 
       def log_activity(event_type)

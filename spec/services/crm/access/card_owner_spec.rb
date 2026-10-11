@@ -49,6 +49,50 @@ RSpec.describe 'Acesso por funil: dono do card', type: :request do
       expect(card.reload.owner_id).to eq(livre_agent.id)
     end
 
+    it 'passa para outra pessoa que tem o funil' do
+      colega = create_crm_agent(account: account, name: 'Vendas 2').first
+      inbox.add_members([colega.id])
+      restrict(colega, vendas)
+
+      set_owner(colega)
+
+      expect(response).to have_http_status(:ok)
+      expect(card.reload.owner_id).to eq(colega.id)
+    end
+
+    it 'o upsert por external_id também recusa' do
+      card.update!(external_id: 'ext-1')
+
+      post "/api/v1/accounts/#{account.id}/crm/cards",
+           params: { external_id: 'ext-1', pipeline_id: vendas.first.id, stage_id: vendas.last.id, title: 'Vendas', owner_id: sinistro_agent.id },
+           headers: vendas_agent.create_new_auth_token, as: :json
+
+      expect(response.parsed_body['error']).to eq('crm.owner_without_funnel')
+      expect(card.reload.owner_id).to eq(vendas_agent.id)
+    end
+
+    it 'o atendente sem o funil não vira dono pela conversa (sincronização e vínculo)' do
+      conversa = create_crm_conversation(account: account, inbox: inbox, contact: card.contact, assignee: sinistro_agent)
+      sem_dono = account.crm_cards.create!(pipeline: vendas.first, stage: vendas.last, title: 'Sem dono', inbox: inbox,
+                                           contact: card.contact, primary_conversation: conversa)
+
+      Crm::Conversations::CardSyncer.new(conversation: conversa).perform
+      expect(sem_dono.reload.owner_id).to be_nil
+
+      outro = account.crm_cards.create!(pipeline: vendas.first, stage: vendas.last, title: 'Outro', inbox: inbox, contact: card.contact)
+      Crm::Cards::ConversationLinker.new(card: outro, conversation: conversa, actor: vendas_agent, primary: true).link
+      expect(outro.reload.owner_id).to be_nil
+    end
+
+    it 'token de integração (n8n, MCP) escolhe qualquer pessoa, como o administrador; bot não' do
+      robo = create_crm_agent(account: account, name: 'n8n').first
+      AccountUser.find_by(account: account, user: robo).update!(integration: true)
+      args = { inbox_id: inbox.id, pipeline_id: vendas.first.id }
+
+      expect(Crm::Access::CardGuard.new(user: robo, account: account).owner_allowed?(sinistro_agent.id, **args)).to be(true)
+      expect(Crm::Access::CardGuard.new(user: create(:agent_bot), account: account).owner_allowed?(sinistro_agent.id, **args)).to be(false)
+    end
+
     it 'o administrador escolhe qualquer pessoa' do
       set_owner(sinistro_agent, as: admin)
 

@@ -35,15 +35,16 @@ class Crm::Access::CardGuard
     pipeline_allowed_in?([inbox_id, conversation&.inbox_id], pipeline_id)
   end
 
-  # Dono do card (#1148, decisão do Rodrigo em 11/10): só vira dono quem tem o funil do card na caixa dele; o
-  # administrador escolhe qualquer pessoa. Sem acesso por funil na conta, ninguém é barrado.
+  # Dono do card (#1148, decisão do Rodrigo em 11/10): só vira dono quem tem o funil do card na caixa dele. O
+  # administrador escolhe qualquer pessoa, e o token de integração (n8n, MCP), que o administrador configura, também.
+  # Sem acesso por funil na conta, ninguém é barrado. Dono fora da conta não passa.
   def owner_allowed?(owner_id, inbox_id:, pipeline_id:)
     return true if owner_id.blank? || inbox_id.blank? || pipeline_id.blank?
     return true unless Crm::Access::AccountFlag.any?(@account.id)
-    return true if administrator?
+    return true if unrestricted_actor?
 
     owner = @account.users.find_by(id: owner_id)
-    owner.nil? || Crm::Access::CardScope.new(user: owner, account: @account).pipeline_allowed?(inbox_id, pipeline_id)
+    owner.present? && Crm::Access::CardScope.new(user: owner, account: @account).pipeline_allowed?(inbox_id, pipeline_id)
   end
 
   def ensure_owner_allowed!(owner_id, inbox_id:, pipeline_id:)
@@ -52,8 +53,12 @@ class Crm::Access::CardGuard
 
   private
 
-  def administrator?
-    (@account_user || AccountUser.find_by(account_id: @account.id, user_id: @user&.id))&.administrator?
+  # AgentBot e sistema não contam: o id de um bot pode coincidir com o de uma pessoa.
+  def unrestricted_actor?
+    return false unless @user.is_a?(User)
+
+    account_user = @account_user || AccountUser.find_by(account_id: @account.id, user_id: @user.id)
+    account_user.present? && (account_user.administrator? || account_user.integration?)
   end
 
   def pipeline_allowed_in?(inbox_ids, pipeline_id)
