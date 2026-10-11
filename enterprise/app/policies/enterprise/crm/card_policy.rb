@@ -17,8 +17,9 @@ module Enterprise::Crm::CardPolicy
     crm_permission?('crm_manage_cards')
   end
 
+  # Acesso por funil (#1148): mexer no card exige o funil dele (Crm::CardPolicy#funnel_member?).
   def update?
-    crm_permission?('crm_manage_cards') && show?
+    crm_permission?('crm_manage_cards') && show? && funnel_member?
   end
 
   def destroy?
@@ -26,7 +27,7 @@ module Enterprise::Crm::CardPolicy
   end
 
   def move?
-    (crm_permission?('crm_move_cards') || crm_permission?('crm_manage_cards')) && show?
+    (crm_permission?('crm_move_cards') || crm_permission?('crm_manage_cards')) && show? && funnel_member?
   end
 
   def from_conversation?
@@ -50,7 +51,7 @@ module Enterprise::Crm::CardPolicy
   end
 
   def evaluate_ai?
-    crm_permission?('crm_manage_ai') && show?
+    crm_permission?('crm_manage_ai') && show? && funnel_member?
   end
 
   def summarize?
@@ -58,7 +59,7 @@ module Enterprise::Crm::CardPolicy
   end
 
   def reset_auto_followup?
-    crm_permission?('crm_manage_ai') && show?
+    crm_permission?('crm_manage_ai') && show? && funnel_member?
   end
 
   def current_ai_suggestion?
