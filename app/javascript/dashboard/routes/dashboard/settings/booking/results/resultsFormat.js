@@ -29,6 +29,7 @@ const ORIGIN_I18N = {
   conversation: 'CONVERSATION',
   public_link: 'PUBLIC_LINK',
   contact_request: 'CONTACT_REQUEST',
+  team: 'TEAM',
   ai: 'AI',
 };
 export const originLabelKey = key =>

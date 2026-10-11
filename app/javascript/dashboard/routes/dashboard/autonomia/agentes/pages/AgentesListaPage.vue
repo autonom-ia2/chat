@@ -13,6 +13,7 @@ import {
   contarEstados,
   ordenarAgentes,
 } from '../utils/estadoDoAgente';
+import { fotoDoAgente } from '../utils/fotoDoCanal';
 import { MODELOS, MODELO_DO_MEU_JEITO } from '../constants/modelos';
 import AgentesHeroi from '../components/AgentesHeroi.vue';
 import AgenteCartao from '../components/AgenteCartao.vue';
@@ -138,6 +139,9 @@ const canaisDe = agente =>
   ocupacao.estado.value === 'pronto'
     ? canaisDoAgente(agente.id, ocupacao.canais.value)
     : null;
+
+// Externo aparece com a foto da caixa em que atende; sem ela (ou sem a L2), com a foto própria.
+const fotoDe = agente => fotoDoAgente(agente, canaisDe(agente), caixas.value);
 
 const pedirExclusao = agente => {
   pendenteExcluir.value = agente;
@@ -317,6 +321,7 @@ onMounted(() => carregar());
               :href="enderecoDe(agente)"
               :numeros="semana.numerosDe(agente.id)"
               :canais="canaisDe(agente)"
+              :foto="fotoDe(agente)"
               :pode-gerenciar="podeGerenciar"
               @abrir="abrirAgente"
               @abrir-cotacao="abrirCotacao"

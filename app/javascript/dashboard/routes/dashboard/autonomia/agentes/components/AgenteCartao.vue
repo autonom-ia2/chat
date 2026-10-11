@@ -17,6 +17,8 @@ const props = defineProps({
   agente: { type: Object, required: true },
   numeros: { type: Object, default: null },
   canais: { type: Array, default: null },
+  // Foto já resolvida pela lista (a do canal no agente externo, utils/fotoDoCanal); sem ela, a própria.
+  foto: { type: String, default: '' },
   podeGerenciar: { type: Boolean, default: false },
   // Endereço da página do agente (ou do módulo de cotação): abrir em outra aba continua funcionando.
   href: { type: String, required: true },
@@ -28,6 +30,9 @@ const { t } = useI18n();
 const estado = computed(() => estadoDoAgente(props.agente));
 const nome = computed(
   () => props.agente.name || t('AGENTS.JORNADA.COMUM.NOVO_AGENTE')
+);
+const fotoDoCartao = computed(
+  () => props.foto || props.agente.avatar_url || ''
 );
 const interno = computed(() => props.agente.actuation === 'internal');
 const quantosCanais = computed(() => props.agente.channels_count || 0);
@@ -84,7 +89,7 @@ const itensDoMenu = computed(() => [
       class="flex flex-col h-full gap-3 p-5 shadow-sm rounded-2xl bg-n-solid-1 ring-1 ring-inset ring-n-weak dark:ring-n-slate-6"
     >
       <div class="flex items-start gap-3">
-        <AgenteAvatar :nome="nome" :src="agente.avatar_url || ''" />
+        <AgenteAvatar :nome="nome" :src="fotoDoCartao" />
         <div class="flex flex-col gap-1 grow min-w-0">
           <h2 class="m-0 text-base font-semibold truncate text-n-slate-12">
             {{ nome }}
@@ -125,7 +130,7 @@ const itensDoMenu = computed(() => [
       <span class="flex items-start w-full gap-3">
         <AgenteAvatar
           :nome="nome"
-          :src="agente.avatar_url || ''"
+          :src="fotoDoCartao"
           :tom="atendendo ? 'atendendo' : 'neutro'"
         />
         <span class="flex flex-col gap-1 grow min-w-0">

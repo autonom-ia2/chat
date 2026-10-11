@@ -51,8 +51,18 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingPageMeetings', type: :request do
                                       'id' => world.profile.id, 'title' => 'Conversa de 30 min', 'timezone' => 'America/Sao_Paulo',
                                       'duration_minutes' => 30, 'durations' => [30, 60], 'notices' => true,
                                       'locations' => [{ 'type' => 'whatsapp_video', 'label' => 'Vídeo no WhatsApp',
-                                                        'needs_email' => false }]
+                                                        'needs_email' => false }],
+                                      'booking_window_days' => 14, 'weekdays' => [1, 2, 3, 4, 5], 'closed_dates' => []
                                     }])
+    end
+
+    # 12/10/2026 (hoje) é feriado nacional. O mundo de teste desliga `close_holidays`; aqui volta ao padrão (ligado).
+    it 'sends the holidays the page closes and the IANA name of the zone, for the day cards' do
+      world.profile.update!(close_holidays: true, timezone: 'Brasilia')
+
+      call(world.host, :get, "#{base}/bookable")
+
+      expect(body['payload'].first).to include('timezone' => 'America/Sao_Paulo', 'closed_dates' => ['2026-10-12'])
     end
   end
 
@@ -113,10 +123,13 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingPageMeetings', type: :request do
 
       book(notify: false)
       expect(Crm::MeetingNotice.count).to eq(0)
+      expect(Crm::Meeting.sole.metadata).not_to have_key('notice_basis')
 
       book(starts_at: '2026-10-21T10:00:00-03:00', notify: true)
       meeting = Crm::Meeting.order(:id).last
       expect(meeting.notices.pluck(:kind)).to include('booked')
+      # #1271: com o aviso, fica o motivo de mandar mensagem a quem não marcou sozinho.
+      expect(meeting.metadata).to include('notice_basis' => 'combinado_com_atendente', 'booked_by_user_id' => world.host.id)
     end
 
     it 'keeps the client without notices when rescheduled after booking without notify' do

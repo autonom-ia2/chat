@@ -1,6 +1,7 @@
 import { nextTick, reactive } from 'vue';
 import { mount, flushPromises } from '@vue/test-utils';
 import AgentePage from '../../pages/AgentePage.vue';
+import { comNotaDaGaveta, semMensagens } from './i18nDaNota';
 
 // T07 · página do agente: estados (carregando, erro, não existe, parado, sem canal, escrito à mão,
 // sem números, sem conversas), permissões, gavetas pelo :tab antigo, Parar/Voltar a atender,
@@ -108,12 +109,13 @@ const preparar = ({
   semana = { answered: 12, handed: 3 },
   canais = L2,
   perguntas = [],
+  caixas = [{ id: 1, working_hours_enabled: false }],
 } = {}) => {
   store.state = reactive({
     records: [],
     'autonomiaSources/getKnowledgeSources': [],
     'autonomiaSources/getUIFlags': { fetchingList: false },
-    'inboxes/getInboxes': [{ id: 1, working_hours_enabled: false }],
+    'inboxes/getInboxes': caixas,
     'autonomiaBuildThreads/getMessages': [],
     'autonomiaBuildThreads/getUIFlags': {},
   });
@@ -724,6 +726,154 @@ describe('AgentePage', () => {
       const wrapper = await montar();
       expect(no('[data-linha="agenda"]')).toBeNull();
       expect(paginasApi.get).not.toHaveBeenCalled();
+      wrapper.unmount();
+    });
+  });
+
+  // O agente externo aparece para o cliente com a foto do canal conectado; o interno tem foto própria.
+  describe('foto do canal', () => {
+    const FOTO_CANAL = 'https://x/whats.png';
+    const comFotoNoCanal = (extra = {}) =>
+      preparar({
+        agente: bia({ avatar_url: 'https://x/propria.png' }),
+        caixas: [
+          { id: 1, working_hours_enabled: false, avatar_url: FOTO_CANAL },
+        ],
+        ...extra,
+      });
+    const fotoDoHeroi = () =>
+      no('[data-heroi] [data-avatar] img')?.getAttribute('src');
+
+    it('shows the channel photo in the hero and offers only the name', async () => {
+      comFotoNoCanal();
+      const wrapper = await montar();
+      expect(fotoDoHeroi()).toBe(FOTO_CANAL);
+
+      await clicar('[data-mais]');
+      const item = no('[data-item="foto"]');
+      expect(item.textContent).toContain('FOTO.TITULO_NOME');
+      item.click();
+      await flushPromises();
+
+      const gaveta = no('[role="dialog"]');
+      expect(gaveta.textContent).toContain('FOTO.TITULO_NOME');
+      expect(gaveta.querySelector('[data-trocar-foto]')).toBeNull();
+      expect(gaveta.querySelector('[data-tirar-foto]')).toBeNull();
+      expect(gaveta.querySelector('[data-seletor]')).toBeNull();
+      expect(
+        gaveta.querySelector('[data-avatar] img').getAttribute('src')
+      ).toBe(FOTO_CANAL);
+      expect(
+        gaveta.querySelector('[data-foto-do-canal]').textContent
+      ).toContain('FOTO.FOTO_DO_CANAL');
+      wrapper.unmount();
+    });
+
+    it('falls back to the agent photo when the inbox has none', async () => {
+      comFotoNoCanal({
+        caixas: [{ id: 1, working_hours_enabled: false, avatar_url: '' }],
+      });
+      const wrapper = await montar();
+      expect(fotoDoHeroi()).toBe('https://x/propria.png');
+      wrapper.unmount();
+    });
+
+    it('uses the first inbox, in the order of "Answers on…", with more than one', async () => {
+      comFotoNoCanal({
+        canais: [
+          {
+            inbox_id: 2,
+            name: 'Instagram',
+            occupied_by: { kind: 'agent', agent_id: 7 },
+          },
+          L2[0],
+        ],
+        caixas: [
+          { id: 1, working_hours_enabled: false, avatar_url: FOTO_CANAL },
+          {
+            id: 2,
+            working_hours_enabled: false,
+            avatar_url: 'https://x/i.png',
+          },
+        ],
+      });
+      const wrapper = await montar();
+      expect(fotoDoHeroi()).toBe('https://x/i.png');
+      wrapper.unmount();
+    });
+
+    it('keeps the own photo and "Change photo" for the internal agent', async () => {
+      comFotoNoCanal({
+        agente: bia({
+          actuation: 'internal',
+          channels_count: 0,
+          avatar_url: 'https://x/propria.png',
+        }),
+      });
+      const wrapper = await montar();
+      expect(fotoDoHeroi()).toBe('https://x/propria.png');
+      await clicar('[data-mais]');
+      const item = no('[data-item="foto"]');
+      expect(item.textContent).toContain('FOTO.TITULO');
+      expect(item.textContent).not.toContain('TITULO_NOME');
+      item.click();
+      await flushPromises();
+      expect(no('[role="dialog"] [data-trocar-foto]')).not.toBeNull();
+      expect(no('[data-foto-do-canal]')).toBeNull();
+      wrapper.unmount();
+    });
+
+    it('keeps the quoting agent with its own photo and "Photo and name"', async () => {
+      comFotoNoCanal({
+        agente: bia({
+          agent_type: 'insurance_quote',
+          avatar_url: 'https://x/propria.png',
+        }),
+      });
+      const wrapper = await montar();
+      expect(fotoDoHeroi()).toBe('https://x/propria.png');
+      await clicar('[data-mais]');
+      expect(no('[data-item="foto"]').textContent).not.toContain('TITULO_NOME');
+      wrapper.unmount();
+    });
+
+    it('goes from the drawer note to Mudar conversando, like the hero button', async () => {
+      comNotaDaGaveta();
+      onTestFinished(semMensagens);
+      comFotoNoCanal();
+      const wrapper = await montar();
+      await clicar('[data-mais]');
+      await clicar('[data-item="foto"]');
+      const link = no('[role="dialog"] [data-ir-mudar]');
+      expect(link.textContent).toContain('FOTO.NOTA_ACAO');
+      await clicar('[data-ir-mudar]');
+      expect(no('[role="dialog"]')).toBeNull();
+      expect(no('[data-heroi]')).toBeNull();
+      expect(no('[data-abertura]')).not.toBeNull();
+      wrapper.unmount();
+    });
+
+    it('shows "Mudar conversando" only in bold for an agent written by hand', async () => {
+      comNotaDaGaveta();
+      onTestFinished(semMensagens);
+      comFotoNoCanal({ agente: bia({ mode: 'manual' }) });
+      const wrapper = await montar();
+      await clicar('[data-mais]');
+      await clicar('[data-item="foto"]');
+      expect(no('[data-ir-mudar]')).toBeNull();
+      expect(no('[role="dialog"] [data-acao-texto]').textContent).toContain(
+        'FOTO.NOTA_ACAO'
+      );
+      wrapper.unmount();
+    });
+
+    it('shows the channel photo to view-only seats, with nothing to write', async () => {
+      estado.podeGerenciar = false;
+      comFotoNoCanal();
+      const wrapper = await montar();
+      expect(fotoDoHeroi()).toBe(FOTO_CANAL);
+      await clicar('[data-mais]');
+      expect(no('[data-item="foto"]')).toBeNull();
       wrapper.unmount();
     });
   });

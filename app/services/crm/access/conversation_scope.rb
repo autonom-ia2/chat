@@ -49,13 +49,31 @@ class Crm::Access::ConversationScope
     restrictions.any? { |access| access.inbox_id == inbox_id }
   end
 
+  def restricted_inbox_ids
+    restrictions.map(&:inbox_id)
+  end
+
+  # A mesma regra do #condition, avaliada em memória sobre os dados de UMA conversa (Crm::Access::Recipients, que
+  # decide muitas pessoas por evento). Mudou a regra num, mude no outro: o spec de paridade compara os dois.
+  # facts: assignee_id, participant_ids, card_pipeline_ids (cards que prendem, ver RELEASED).
+  def self.visible_by_facts?(access, user_id, facts)
+    return true if facts[:assignee_id] == user_id || facts[:participant_ids].include?(user_id)
+    return false if access.only_own?
+
+    pipelines = facts[:card_pipeline_ids]
+    return access.triage? if pipelines.empty?
+    return true if access.all_pipelines?
+
+    access.agent_pipelines.map(&:pipeline_id).intersect?(pipelines)
+  end
+
   private
 
   # Uma consulta só para quem não tem linha (o caso de todo mundo hoje); o papel só é lido quando há restrição.
   # AgentBot não tem acesso por funil: o id dele pode coincidir com o de uma pessoa.
   def restrictions
     @restrictions ||= begin
-      rows = if @user.is_a?(User)
+      rows = if @user.is_a?(User) && Crm::Access::AccountFlag.any?(@account.id)
                Crm::InboxAgentAccess.where(account_id: @account.id, user_id: @user.id)
                                     .includes(:agent_pipelines).select(&:restricts?)
              else

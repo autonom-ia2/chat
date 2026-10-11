@@ -16,11 +16,17 @@ en:
       notices:
         when_format: "%m/%d at %H:%M"
         booked: "Hi%{name}! Your appointment is booked for %{when}. To confirm, change or cancel: %{link}"
+        booked_by_team: "Hi%{name}! %{booker} booked your appointment for %{when}. To confirm, change or cancel: %{link}"
         rescheduled: "Hi%{name}! Your appointment was moved to %{when}. To confirm, change or cancel: %{link}"
         day_before: "Hi%{name}! Reminder: your appointment is tomorrow, %{when}. To confirm, change or cancel: %{link}"
         hour_before: "Hi%{name}! Your appointment starts in 1 hour (%{when}). To confirm, change or cancel: %{link}"
         stop_line: "To stop these messages: %{link}"
         test_prefix: "This is a test of your booking page. Your client receives a link like this one:"
+      notice_templates:
+        meta_failed: "Meta did not answer. Try again in a few minutes."
+        permission_denied: "This WhatsApp connection is not allowed to create templates. Reconnect the inbox in Settings › Inboxes and try again."
+        meta_rejected: "Meta did not approve it."
+        platform_reason: "Ready message made for this notice and approved by Meta."
       remind:
         text: "Hi%{name}! Just a reminder of your appointment on %{when}. Can you confirm here? %{link}"
       agent_alerts:
@@ -29,6 +35,10 @@ en:
         rescheduled: "%{name} moved the appointment to %{when}"
         rebooked: "%{name} booked again, for %{when}"
         notice_failed: "The WhatsApp reminder to %{name} could not be sent. The appointment of %{when} stays booked: talk to the client."
+        reasons:
+          no_whatsapp: "The client's number has no WhatsApp."
+          waha_unavailable: "The unofficial WhatsApp did not answer: check that it is connected."
+          waha_refused: "The unofficial WhatsApp refused to look up this number."
       templates:
         sales_30:
           title: '30-minute sales call'

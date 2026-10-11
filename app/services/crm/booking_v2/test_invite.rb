@@ -5,14 +5,15 @@
 # convites e dos números (F2-C usa `Crm::BookingInvite.real`); a reunião marcada por ele também leva `test: true`
 # (`Crm::Meeting.real` a exclui). Vale a mesma regra de canal dos avisos (`Notices::Route`, só texto: fora da janela
 # do WhatsApp oficial é preciso mandar uma mensagem ao número da empresa antes), a mesma parada (recusou mensagens
-# ou parou os avisos) e o mesmo teto por número.
+# ou parou os avisos) e os mesmos tetos (por número e, desde #1270, por conta).
 #
 # Quem testa precisa enxergar a caixa de avisos (`policy_scope(::Inbox)`, o mesmo escopo da escolha da caixa) e, se a
 # mensagem vai para uma conversa que já existe, poder responder nela (`ConversationPolicy#show?`, o mesmo critério do
 # envio de mensagem do painel). Tudo é decidido antes de gravar: recusa não cria contato nem convite.
 #
 # Recusas (`Refused`, com `reason` quando é do canal): notice_inbox_missing, notice_inbox_forbidden (reason
-# `conversation_forbidden` quando é a conversa), page_not_published, invalid_phone, cannot_send.
+# `conversation_forbidden` quando é a conversa), page_not_published, invalid_phone, cannot_send (pela WAHA sem
+# conversa, também `no_whatsapp`, `waha_unavailable` e `waha_refused`, de `Notices::WahaChat`).
 class Crm::BookingV2::TestInvite
   class Refused < StandardError
     attr_reader :reason
@@ -37,6 +38,7 @@ class Crm::BookingV2::TestInvite
               page.account.contacts.new(name: user.name, phone_number: phone)
     decision = Crm::BookingV2::Notices::Route.new(inbox: page.notice_inbox, contact: contact).decide
     ensure_can_send!(contact, decision)
+    ensure_waha_chat!(contact, decision)
     contact.save! if contact.new_record?
     send_invite!(contact, decision)
   end
@@ -57,6 +59,15 @@ class Crm::BookingV2::TestInvite
     raise Refused.new('cannot_send', decision.reason) unless decision.send?
     raise Refused.new('notice_inbox_forbidden', 'conversation_forbidden') unless can_reply?(decision.conversation)
     raise Refused.new('cannot_send', 'number_cap') if number_capped?(contact)
+    raise Refused.new('cannot_send', 'account_cap') if account_capped?
+  end
+
+  # WAHA sem conversa (#1270): o chat id vem da WAHA antes de gravar o contato; sem ele, recusa sem gravar nada.
+  def ensure_waha_chat!(contact, decision)
+    return unless Crm::BookingV2::Notices::WahaChat.needed?(decision, page.notice_inbox)
+
+    problem = Crm::BookingV2::Notices::WahaChat.new(inbox: page.notice_inbox, contact: contact).prepare
+    raise Refused.new('cannot_send', problem) if problem
   end
 
   def stopped?(contact)
@@ -77,6 +88,11 @@ class Crm::BookingV2::TestInvite
 
   def number_capped?(contact)
     Crm::BookingV2::Notices::Sender.recent_for_contact(contact) >= Crm::BookingV2::Notices::Sender::NUMBER_LIMIT
+  end
+
+  # Pela WAHA o teste sai para qualquer número (#1270): o teto por conta também vale para ele.
+  def account_capped?
+    Crm::BookingV2::Notices::Sender.recent_for_account(page.account_id) >= Crm::BookingV2::Notices::Sender.account_limit
   end
 
   def send_invite!(contact, decision)

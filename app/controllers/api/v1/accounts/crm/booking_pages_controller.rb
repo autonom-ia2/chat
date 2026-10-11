@@ -6,6 +6,7 @@
 # só do administrador e só com páginas v1.
 class Api::V1::Accounts::Crm::BookingPagesController < Api::V1::Accounts::Crm::BaseController
   include ::Crm::BookingPageInboxes
+  include ::Crm::BookingPageNoticeTemplates
 
   PREVIEW_TTL = 1.hour
 
@@ -115,6 +116,19 @@ class Api::V1::Accounts::Crm::BookingPagesController < Api::V1::Accounts::Crm::B
     render json: { payload: reassigner.perform }
   rescue ::Crm::BookingV2::Reassigner::InvalidPeople
     render_unprocessable('crm.booking_v2.people_invalid')
+  end
+
+  # Modelos de aviso do WhatsApp oficial (#1272): sugestão da IA e criação na Meta (`Crm::BookingPageNoticeTemplates`).
+  def notice_template_suggestions
+    render_notice_template_suggestions
+  end
+
+  def notice_templates
+    render_notice_template_requests
+  end
+
+  def create_notice_templates
+    render_created_notice_templates
   end
 
   private

@@ -27,5 +27,8 @@ export const BUS_EVENTS = {
   // (responsible=bot/none, AI-pending) is active and the card cannot be
   // classified client-side; the board page refetches the active view.
   CRM_BOARD_REFETCH: 'CRM_BOARD_REFETCH',
+  // Pedido para o quadro do CRM, já aberto, abrir um card (alerta do
+  // agendamento, #1291). Fora do quadro vale a URL com `card_id`.
+  CRM_OPEN_CARD: 'CRM_OPEN_CARD',
   MFA_STATE_CHANGED: 'MFA_STATE_CHANGED',
 };

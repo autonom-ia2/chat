@@ -16,8 +16,14 @@ class Crm::BookingPagePolicy < ApplicationPolicy
     view?
   end
 
-  %i[create? update? destroy? publish? pause? preview_token? logo? photo? update_people? test_invite? reassign? reassign_preview?].each do |action|
+  %i[create? update? destroy? publish? pause? preview_token? logo? photo? update_people? test_invite? reassign? reassign_preview?
+     notice_template_suggestions? notice_templates?].each do |action|
     define_method(action) { manage? }
+  end
+
+  # Criar modelos na Meta (#1272) escreve na conta do WhatsApp do cliente: só o administrador da conta.
+  def create_notice_templates?
+    manage? && account_user&.administrator? == true
   end
 
   class Scope < ApplicationPolicy::Scope

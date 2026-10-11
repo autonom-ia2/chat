@@ -43,7 +43,13 @@ const PAGE = {
   locations: [
     { type: 'whatsapp_video', label: 'Vídeo no WhatsApp', needs_email: false },
   ],
+  booking_window_days: 14,
+  weekdays: [1, 2, 3, 4, 5],
+  closed_dates: [],
 };
+// Terça, 20/10/2099, 23h30 em São Paulo (em UTC já é dia 21): o dia em que a
+// janela abre é o primeiro que a página oferece, no fuso dela.
+const NOW = new Date('2099-10-20T23:30:00-03:00');
 const SLOT = '2099-10-20T10:00:00-03:00';
 const GOOGLE_INBOX = { id: 9, calendar_enabled: true, provider: 'google' };
 const CARD = {
@@ -89,6 +95,8 @@ describe('CrmCalendarMeetingScheduler', () => {
   });
 
   beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(NOW);
     window.globalConfig = { CRM_CALENDAR_MEETINGS_ENABLED: 'true' };
     setStore();
     crmBookingPagesAPI.bookable.mockResolvedValue({
@@ -100,6 +108,7 @@ describe('CrmCalendarMeetingScheduler', () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.clearAllMocks();
     document.body.innerHTML = '';
   });
@@ -120,6 +129,9 @@ describe('CrmCalendarMeetingScheduler', () => {
     });
     expect(wrapper.get('[data-booking-agenda-notify]').element.checked).toBe(
       true
+    );
+    expect(wrapper.get('[data-booking-agenda-notify-when]').text()).toBe(
+      'Use quando o cliente combinou o horário com você.'
     );
 
     await wrapper.get('[data-booking-agenda-slots] button').trigger('click');

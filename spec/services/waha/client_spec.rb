@@ -4,6 +4,43 @@ RSpec.describe Waha::Client do
   let(:config) { class_double(Waha::Config, api_url: 'https://waha.example', api_key: 'test-key') }
   let(:client) { described_class.new(config: config) }
 
+  describe '#check_contact_exists' do
+    let(:url) { 'https://waha.example/api/contacts/check-exists?phone=5511912345678&session=vendas' }
+
+    it 'passes the per-call timeout to HTTParty and keeps the default when none is given' do
+      stub_request(:get, url).to_return(status: 200, headers: { 'Content-Type' => 'application/json' },
+                                        body: { numberExists: true, chatId: '5511912345678@c.us' }.to_json)
+      allow(HTTParty).to receive(:get).and_call_original
+
+      result = client.check_contact_exists(phone: '5511912345678', session: 'vendas', timeout: 5)
+      client.check_contact_exists(phone: '5511912345678', session: 'vendas')
+
+      expect(result).to eq('numberExists' => true, 'chatId' => '5511912345678@c.us')
+      expect(HTTParty).to have_received(:get).with(url, hash_including(timeout: 5)).once
+      expect(HTTParty).to have_received(:get).with(url, hash_including(timeout: described_class::DEFAULT_TIMEOUT)).once
+    end
+
+    it 'fills Error#status with the HTTP code the engine answered' do
+      stub_request(:get, url).to_return(status: 429, body: 'slow down')
+      expect { client.check_contact_exists(phone: '5511912345678', session: 'vendas') }
+        .to raise_error(described_class::Error) { |error| expect(error.status).to eq(429) }
+
+      stub_request(:get, url).to_return(status: 404, body: 'no session')
+      expect { client.check_contact_exists(phone: '5511912345678', session: 'vendas') }
+        .to raise_error(described_class::NotFound) { |error| expect(error.status).to eq(404) }
+    end
+
+    it 'leaves Error#status empty when the engine did not answer' do
+      stub_request(:get, url).to_raise(Net::ReadTimeout)
+      expect { client.check_contact_exists(phone: '5511912345678', session: 'vendas', timeout: 5) }
+        .to raise_error(described_class::Timeout) { |error| expect(error.status).to be_nil }
+
+      stub_request(:get, url).to_raise(Errno::ECONNREFUSED)
+      expect { client.check_contact_exists(phone: '5511912345678', session: 'vendas') }
+        .to raise_error(described_class::Error) { |error| expect(error.status).to be_nil }
+    end
+  end
+
   it 'creates a session with apps when provided' do
     apps = [{ id: 'br_123', session: '5511999999999', app: 'brazilian-phone-numbers', enabled: true, config: {} }]
     request = stub_request(:post, 'https://waha.example/api/sessions')

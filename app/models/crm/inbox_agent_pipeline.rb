@@ -8,6 +8,7 @@ class Crm::InboxAgentPipeline < ApplicationRecord
 
   validates :pipeline_id, uniqueness: { scope: :access_id }
   validate :pipeline_must_belong_to_account
+  after_commit -> { Crm::Access::CountInvalidation.access_changed!(account_id, access&.user_id) }
 
   private
 

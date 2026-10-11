@@ -49,6 +49,15 @@
       "QR_HIDE": "Esconder QR code",
       "QR_ALT": "QR code da página de agendamento",
       "QR_ERROR": "Não deu para gerar o QR code.",
+      "QR_DOWNLOAD": "Baixar QR code",
+      "QR_DOWNLOAD_LABEL": "Baixar QR code, arquivo {file}",
+      "QR_DOWNLOAD_SVG": "Baixar em SVG (para gráfica)",
+      "QR_DOWNLOAD_SVG_LABEL": "Baixar em SVG (para gráfica), arquivo {file}",
+      "QR_DOWNLOADING": "Baixando {file}. Procure na pasta de downloads.",
+      "QR_DOWNLOAD_ERROR": "Não deu para gerar o arquivo. Tente de novo.",
+      "QR_DOWNLOAD_RETRY": "Não baixou? Abra a imagem e salve por lá.",
+      "QR_DOWNLOAD_BLOCKED": "Seu navegador não deixou baixar. Abra a imagem e salve por lá.",
+      "QR_DOWNLOAD_OPEN": "Abrir {file}",
       "OPEN": "Abrir",
       "OPEN_LABEL": "Abrir a página em outra aba",
       "PER_PERSON_TITLE": "Um link para cada pessoa",
@@ -247,7 +256,7 @@
       "NO_INBOXES": "Nenhum WhatsApp conectado pode mandar avisos ainda. Quando houver um, ele aparece aqui.",
       "CHANNEL": {
         "OFFICIAL": "Este é o WhatsApp oficial. Se o cliente não falou com você nas últimas 24 horas, o aviso só sai com uma mensagem aprovada pela Meta. Escolha essas mensagens logo abaixo.",
-        "WAHA": "Por este número, o aviso só sai se o cliente falou com você nas últimas 24 horas. Assim o número não corre risco de bloqueio.",
+        "WAHA": "Por este número não oficial, o aviso sai mesmo sem o cliente ter falado com você. Muitos avisos assim podem fazer o WhatsApp bloquear o número.",
         "API": "Por este número, o aviso sai na hora quando o cliente falou com você nas últimas 24 horas. Fora disso, sai com a mensagem pronta escolhida abaixo."
       },
       "PRESET_LABEL": "Quando avisar o cliente?",
@@ -286,6 +295,20 @@
       "API_TEMPLATES_EMPTY": "Este WhatsApp ainda não tem mensagem pronta. Sem ela, o aviso só sai para quem falou com você nas últimas 24 horas.",
       "API_TEMPLATES_FAILED": "Não deu para ver as mensagens prontas deste WhatsApp. Peça a um administrador para escolher.",
       "TEMPLATE_FOR": "Mensagem aprovada para o aviso {notice}",
+      "AUTO": {
+        "SUGGESTED": "Sugerido",
+        "SUGGESTING": "Procurando a melhor mensagem para cada aviso…",
+        "CREATE_HINT": "Alguns avisos não têm mensagem aprovada que sirva. Podemos mandar mensagens prontas para a Meta aprovar.",
+        "CREATE_BUTTON": "Criar os modelos na Meta",
+        "CREATING": "Enviando para a Meta…",
+        "SENDING": "Enviando para a Meta…",
+        "PENDING": "Em aprovação na Meta",
+        "APPROVED": "Aprovado",
+        "REJECTED": "Recusado: {reason}",
+        "FAILED": "Não foi enviado: {reason}",
+        "RETRY": "Tentar de novo",
+        "CREATE_FAILED": "Não deu para enviar para a Meta agora. Tente de novo."
+      },
       "KINDS": {
         "BOOKED": "Ao marcar",
         "RESCHEDULED": "Quando o horário muda",
@@ -310,6 +333,8 @@
           "INVALID_PHONE": "Confira o número. Use o DDD, por exemplo (11) 98888-0000.",
           "OUTSIDE_WINDOW": "Mande antes um “oi” do seu celular para o WhatsApp da empresa. Depois toque em Enviar teste de novo.",
           "NUMBER_CAP": "Este número já recebeu muitas mensagens hoje. Tente amanhã ou use outro número.",
+          "ACCOUNT_CAP": "A conta já mandou o máximo de avisos de hoje. Tente amanhã.",
+          "NO_WHATSAPP": "Este número não tem WhatsApp. Confira o número ou use outro.",
           "STOPPED": "Este número pediu para não receber mensagens. Use outro número.",
           "CONVERSATION_FORBIDDEN": "Este número já conversa com a empresa numa conversa que você não pode abrir. Use outro número.",
           "CANNOT_SEND": "Não deu para mandar por este WhatsApp. Confira se ele está conectado.",
@@ -348,7 +373,7 @@
       "NOTICES_ON": "O cliente recebe aviso no WhatsApp {when}, pelo número {inbox}.",
       "NOTICES_ON_NO_NAME": "O cliente recebe aviso no WhatsApp {when}.",
       "NOTICES_OFF": "Sem avisos no WhatsApp. O cliente vê o horário na tela e na agenda dele.",
-      "NOTICES_WINDOW_ONLY": "Só para quem falou com você nas últimas 24 horas.",
+      "NOTICES_UNOFFICIAL_RISK": "Número não oficial: muitos avisos para quem não falou com você podem fazer o WhatsApp bloquear o número.",
       "NOTICES_ALTER": "Alterar os avisos no WhatsApp",
       "CANCEL_UNTIL": "Ele pode mudar ou cancelar até {value} antes.",
       "CANCEL_ANYTIME": "Ele pode mudar ou cancelar até a hora marcada."
@@ -411,7 +436,7 @@
         },
         "BOOKED": {
           "LABEL": "Marcaram",
-          "HINT": "Horários marcados pelos links e pela página."
+          "HINT": "Horários marcados pelos links, pela página e pela equipe."
         },
         "ATTENDED": {
           "LABEL": "Compareceram",
@@ -427,6 +452,7 @@
         "CONVERSATION": "Link mandado na conversa",
         "PUBLIC_LINK": "Link da página (bio, site, anúncio)",
         "CONTACT_REQUEST": "Pedido de contato",
+        "TEAM": "Pela equipe",
         "AI": "Atendente de IA",
         "EMPTY": "Nenhum horário marcado neste período."
       },

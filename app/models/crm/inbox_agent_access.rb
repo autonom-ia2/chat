@@ -12,6 +12,9 @@ class Crm::InboxAgentAccess < ApplicationRecord
   validates :user_id, uniqueness: { scope: [:account_id, :inbox_id] }
   validate :inbox_must_belong_to_account
   validate :user_must_belong_to_account
+  after_commit -> { Crm::Access::CountInvalidation.access_changed!(account_id, user_id) }
+  after_commit -> { Crm::Access::AccountFlag.mark_present!(account_id) }, on: :create
+  after_commit -> { Crm::Access::AccountFlag.reset!(account_id) }, on: :destroy
 
   # Todos os funis, triagem e todas as conversas: o mesmo que não ter linha.
   def restricts?

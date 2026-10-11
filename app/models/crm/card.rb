@@ -101,6 +101,8 @@ class Crm::Card < ApplicationRecord
   # Ganho só existe em funil que conta como venda: quem comprou vira cliente (#1144). No modelo, para valer em todo
   # caminho que grava o ganho (fechar, criar já ganho, lote, automação).
   after_save :promote_contact_to_customer, if: -> { saved_change_to_status?(to: 'won') && contact.present? }
+  # Acesso por funil (#1148): funil, status e conversa principal do card decidem quem vê a conversa.
+  after_commit :invalidate_funnel_counts, if: -> { saved_changes.keys.intersect?(%w[pipeline_id status conversation_id]) }
 
   validates :title, presence: true
   validates :currency, presence: true
@@ -163,6 +165,10 @@ class Crm::Card < ApplicationRecord
   end
 
   private
+
+  def invalidate_funnel_counts
+    Crm::Access::CountInvalidation.card_changed!(account_id)
+  end
 
   def ensure_activity_defaults
     self.entered_stage_at ||= Time.current

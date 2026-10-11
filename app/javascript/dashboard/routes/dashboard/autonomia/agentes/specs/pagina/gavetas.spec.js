@@ -5,6 +5,7 @@ import GavetaFotoNome from '../../components/pagina/GavetaFotoNome.vue';
 import GavetaVersoes from '../../components/pagina/GavetaVersoes.vue';
 import GavetaInstrucoes from '../../components/pagina/GavetaInstrucoes.vue';
 import GavetaAgenda from '../../components/pagina/GavetaAgenda.vue';
+import { comNotaDaGaveta, semMensagens } from './i18nDaNota';
 
 const store = vi.hoisted(() => ({ dispatch: vi.fn(), getters: {} }));
 vi.mock('dashboard/composables/store', async () => {
@@ -204,14 +205,140 @@ describe('GavetaTestar (T08)', () => {
 });
 
 describe('GavetaFotoNome (T12)', () => {
+  // Foto própria só no agente interno (copiloto da equipe); o externo usa a foto do canal.
   const montar = props =>
     mount(GavetaFotoNome, {
       attachTo: document.body,
       props: {
-        agente: { ...AGENTE, avatar_url: 'https://x/foto.png' },
+        agente: {
+          ...AGENTE,
+          actuation: 'internal',
+          avatar_url: 'https://x/foto.png',
+        },
         ...props,
       },
     });
+
+  describe('agente externo', () => {
+    const EXTERNO = {
+      ...AGENTE,
+      actuation: 'external',
+      avatar_url: 'https://x/propria.png',
+    };
+    const montarExterno = props =>
+      mount(GavetaFotoNome, {
+        attachTo: document.body,
+        props: { agente: EXTERNO, ...props },
+      });
+
+    it('shows the channel photo read-only and only the name to change', async () => {
+      const wrapper = montarExterno({
+        canal: { nome: 'WhatsApp do Centro', foto: 'https://x/whats.png' },
+        temCanal: true,
+      });
+      expect(no('[role="dialog"]').textContent).toContain('FOTO.TITULO_NOME');
+      expect(no('[data-trocar-foto]')).toBeNull();
+      expect(no('[data-tirar-foto]')).toBeNull();
+      expect(no('[data-seletor]')).toBeNull();
+      expect(no('[data-avatar] img').getAttribute('src')).toBe(
+        'https://x/whats.png'
+      );
+      expect(no('[data-foto-do-canal]').textContent).toContain(
+        'FOTO.FOTO_DO_CANAL'
+      );
+      expect(no('[data-nota]').textContent).toContain('FOTO.NOTA');
+      wrapper.unmount();
+    });
+
+    it('saves only the name and never touches the own photo', async () => {
+      store.dispatch.mockResolvedValue({});
+      const wrapper = montarExterno({
+        canal: { nome: 'WhatsApp do Centro', foto: 'https://x/whats.png' },
+        temCanal: true,
+      });
+      await digitar('[data-nome]', 'Rosa');
+      await clicar('[data-salvar]');
+      expect(store.dispatch.mock.calls).toEqual([
+        ['autonomiaAgents/update', { id: 7, name: 'Rosa' }],
+      ]);
+      wrapper.unmount();
+    });
+
+    it('falls back to the own photo and says how to add one when the channel has none', () => {
+      const wrapper = montarExterno({
+        canal: { nome: 'E-mail', foto: '' },
+        temCanal: true,
+      });
+      expect(no('[data-avatar] img').getAttribute('src')).toBe(
+        'https://x/propria.png'
+      );
+      expect(no('[data-foto-do-canal]').textContent).toContain(
+        'FOTO.FOTO_CANAL_SEM_FOTO'
+      );
+      wrapper.unmount();
+    });
+
+    it('says the photo will be the channel one when there is no channel yet', () => {
+      const wrapper = montarExterno({
+        agente: { ...EXTERNO, avatar_url: '' },
+      });
+      expect(no('[data-avatar]').textContent).toBe('B');
+      expect(no('[data-foto-do-canal]').textContent).toContain(
+        'FOTO.FOTO_SEM_CANAL'
+      );
+      wrapper.unmount();
+    });
+
+    it('speaks of the channel in general when its name could not be read', () => {
+      const wrapper = montarExterno({ temCanal: true });
+      expect(no('[data-foto-do-canal]').textContent).toContain(
+        'FOTO.FOTO_DO_CANAL_GERAL'
+      );
+      wrapper.unmount();
+    });
+  });
+
+  describe('nota com Mudar conversando', () => {
+    beforeEach(comNotaDaGaveta);
+    afterEach(semMensagens);
+
+    it('turns "Mudar conversando" in the note into a link for who can change by chatting', async () => {
+      const wrapper = montar({ podeMudar: true });
+      const link = no('[data-nota] [data-ir-mudar]');
+      expect(link.tagName).toBe('BUTTON');
+      expect(link.className).toContain('font-semibold');
+      expect(link.className).toContain('text-n-blue-11');
+      expect(link.className).toContain('hover:underline');
+      expect(link.className).toContain('py-3');
+      expect(no('[data-acao-texto]')).toBeNull();
+      await clicar('[data-ir-mudar]');
+      expect(wrapper.emitted('mudar')).toHaveLength(1);
+      expect(store.dispatch).not.toHaveBeenCalled();
+      wrapper.unmount();
+    });
+
+    it('keeps "Mudar conversando" in bold, with no action, without permission to change', () => {
+      const wrapper = montar();
+      expect(no('[data-ir-mudar]')).toBeNull();
+      expect(no('[data-nota] [data-acao-texto]').tagName).toBe('B');
+      expect(no('[data-nota] button')).toBeNull();
+      wrapper.unmount();
+    });
+  });
+
+  it('keeps "Photo and name" and "Change photo" for the internal agent', () => {
+    const wrapper = montar({
+      canal: { nome: 'WhatsApp do Centro', foto: 'https://x/whats.png' },
+    });
+    expect(no('[role="dialog"]').textContent).toContain('FOTO.TITULO');
+    expect(no('[role="dialog"]').textContent).not.toContain('TITULO_NOME');
+    expect(no('[data-trocar-foto]')).not.toBeNull();
+    expect(no('[data-avatar] img').getAttribute('src')).toBe(
+      'https://x/foto.png'
+    );
+    expect(no('[data-foto-do-canal]')).toBeNull();
+    wrapper.unmount();
+  });
 
   it('saves only the name, with a partial PATCH', async () => {
     store.dispatch.mockResolvedValue({});

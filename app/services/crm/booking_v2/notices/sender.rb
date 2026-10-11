@@ -13,7 +13,14 @@
 #    estão saindo agora (`sending`, de outro processo) e os testes de "Testar no meu WhatsApp". Por número = por
 #    contato: o telefone é único por conta (validação do `Contact`). Como o cron marca `sending` ANTES de contar,
 #    dois processos ao mesmo tempo se enxergam e o teto nunca é ultrapassado (no limite, os dois podem recusar).
-# 6. Regra do canal (`Notices::Route`): janela, modelo aprovado, WAHA só com mensagem do cliente em 24 h.
+# 6. Regra do canal (`Notices::Route`): janela e modelo aprovado no oficial e no canal API; WAHA manda texto sem janela.
+#    WAHA sem conversa: antes de abrir uma, o chat id real vem da WAHA (`Notices::WahaChat`) → `no_whatsapp` ou
+#    `waha_unavailable` quando não dá, ou `waha_refused` quando a WAHA recusa o pedido. `no_whatsapp` e `waha_refused`
+#    são definitivos. `waha_unavailable` não: a consulta não mandou nada,
+#    então o aviso volta para `pending` (marcado em `error_code`), sem chamar o responsável, e o cron tenta de novo
+#    até o limite do tipo (`#waha_retry_until`); passado o limite, ou se a reunião começa antes, pula com
+#    `waha_unavailable` e avisa o responsável uma vez. `#will_send?` não faz essa consulta (a tela pública não espera
+#    a WAHA).
 # 7. Envio (`Notices::Delivery`) → `sent` com a mensagem; erro do envio → `failed` com a classe do erro (e o erro vai
 #    ao tracker). Falha de entrega posterior do provedor: ver `NoticeDispatchJob` (`delivery_failed`).
 #
@@ -27,6 +34,11 @@ class Crm::BookingV2::Notices::Sender
   # Pulos esperados (o cliente parou, a reunião acabou): não chamam o responsável.
   QUIET_REASONS = %w[disabled canceled past_due stale opted_out stopped].freeze
   STALE_TOLERANCE = 1.minute
+  WAHA_UNAVAILABLE = 'waha_unavailable'.freeze
+  # Até quando vale tentar de novo um aviso que esperou a WAHA (#1270): o "ao marcar" e o "remarcado" ainda servem até
+  # 2 h depois do vencimento; o de 1 dia antes, até 6 h antes da reunião; o de 1 hora antes, até o início.
+  WAHA_RETRY_AFTER_DUE = 2.hours
+  WAHA_RETRY_DAY_BEFORE_MARGIN = 6.hours
 
   def self.account_limit
     Integer(ENV.fetch(ACCOUNT_LIMIT_ENV, DEFAULT_ACCOUNT_LIMIT).to_s, exception: false) || DEFAULT_ACCOUNT_LIMIT
@@ -59,17 +71,22 @@ class Crm::BookingV2::Notices::Sender
 
   private_class_method :automatic, :recent_tests
 
-  def initialize(notice)
+  # waha_outage: as caixas WAHA que já falharam nesta rodada do cron (`Notices::WahaOutage`).
+  def initialize(notice, waha_outage: nil)
     @notice = notice
     @meeting = notice.meeting
+    @waha_outage = waha_outage
   end
 
   def perform
     reason = blocking_reason
-    return skip!(reason) if reason
+    return skip!(waha_gave_up?(reason) ? WAHA_UNAVAILABLE : reason) if reason
 
     decision = route.decide
     return skip!(decision.reason) unless decision.send?
+
+    waha_problem = waha_chat.prepare if Crm::BookingV2::Notices::WahaChat.needed?(decision, profile.notice_inbox)
+    return waha_retry_or_skip!(waha_problem) if waha_problem
 
     deliver!(decision)
   end
@@ -81,7 +98,7 @@ class Crm::BookingV2::Notices::Sender
 
   private
 
-  attr_reader :notice, :meeting
+  attr_reader :notice, :meeting, :waha_outage
 
   def blocking_reason
     meeting_reason || stop_reason || setup_reason || cap_reason
@@ -138,6 +155,38 @@ class Crm::BookingV2::Notices::Sender
                                                   template: profile.notice_template(notice.kind))
   end
 
+  # WAHA sem conversa: pergunta o chat id antes de abrir uma (`Notices::WahaChat`, #1270).
+  def waha_chat
+    @waha_chat ||= Crm::BookingV2::Notices::WahaChat.new(inbox: profile.notice_inbox, contact: contact, outage: waha_outage)
+  end
+
+  # A consulta à WAHA falhou sem mandar nada: dentro do limite, o aviso volta para a fila sem chamar o responsável.
+  def waha_retry_or_skip!(reason)
+    return skip!(reason) unless waha_chat.retryable? && Time.current < waha_retry_until
+
+    requeue_waiting_waha!
+  end
+
+  # Só devolve o aviso que ainda é o `sending` desta tentativa: se outro processo mexeu nele no meio (o cron o deu por
+  # preso, a reunião foi remarcada), vale o que o outro gravou.
+  def requeue_waiting_waha!
+    Crm::MeetingNotice.where(id: notice.id, status: :sending, attempts: notice.attempts)
+                      .update_all(status: Crm::MeetingNotice.statuses[:pending], error_code: WAHA_UNAVAILABLE, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+  end
+
+  def waha_retry_until
+    case notice.kind
+    when 'day_before' then meeting.starts_at - WAHA_RETRY_DAY_BEFORE_MARGIN
+    when 'hour_before' then meeting.starts_at
+    else notice.due_at + WAHA_RETRY_AFTER_DUE
+    end
+  end
+
+  # A reunião começou enquanto o aviso esperava a WAHA: o motivo que o responsável precisa ver é a WAHA, não o horário.
+  def waha_gave_up?(reason)
+    reason == 'past_due' && notice.error_code == WAHA_UNAVAILABLE
+  end
+
   def deliver!(decision)
     message = delivery(decision).perform
     notice.update!(status: :sent, sent_at: Time.current, message_id: message.id, skip_reason: nil, error_code: nil)
@@ -158,8 +207,10 @@ class Crm::BookingV2::Notices::Sender
     )
   end
 
+  # A marca de espera da WAHA (`error_code`) só fica quando é ela o motivo do pulo.
   def skip!(reason)
-    notice.update!(status: :skipped, skip_reason: reason)
+    waited_waha = notice.error_code == WAHA_UNAVAILABLE && reason != WAHA_UNAVAILABLE
+    notice.update!({ status: :skipped, skip_reason: reason }.merge(waited_waha ? { error_code: nil } : {}))
     alert! unless QUIET_REASONS.include?(reason)
   end
 

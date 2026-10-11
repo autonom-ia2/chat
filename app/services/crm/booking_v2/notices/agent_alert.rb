@@ -8,6 +8,8 @@
 # - Aviso ao responsável pelo caminho que o CRM já usa para chamar a pessoa: uma tarefa vencendo agora
 #   (`Crm::FollowUp`, lembrete), que o cron de tarefas transforma em push/e-mail conforme as preferências dela e que
 #   aparece no aviso de tarefas do painel. Parar avisos só registra. Aviso que não saiu avisa UMA vez por reunião.
+#   O `metadata` leva o que o cartão do painel precisa para dizer o que houve sem parecer tarefa atrasada (#1291):
+#   `source`, `event`, o cliente, o horário e, no aviso que não saiu, o tipo do aviso e o motivo.
 #
 # Nunca altera a reunião (J5-A4).
 class Crm::BookingV2::Notices::AgentAlert
@@ -70,13 +72,36 @@ class Crm::BookingV2::Notices::AgentAlert
       account_id: meeting.account_id, card: card, contact: card.contact, assignee: meeting.created_by, created_by: nil,
       title: title.first(255), due_at: Time.current, timezone: meeting.timezone.presence || 'UTC',
       follow_up_type: :task, automation_mode: :reminder_only, status: :pending,
-      metadata: { 'source' => SOURCE, 'meeting_id' => meeting.id, 'event' => event }
+      metadata: alert_metadata
     )
   end
 
+  def alert_metadata
+    details = payload.to_h.with_indifferent_access.slice(:kind, :reason).transform_values(&:to_s)
+    { 'source' => SOURCE, 'meeting_id' => meeting.id, 'event' => event, 'contact_name' => client_name,
+      'starts_at' => meeting.starts_at.iso8601 }.merge(details.to_h).compact_blank
+  end
+
+  def client_name
+    card.contact&.name.presence || card.title
+  end
+
   def title
-    name = card.contact&.name.presence || card.title
-    I18n.t("crm.booking_v2.agent_alerts.#{event}", name: name, when: Crm::BookingV2::Notices::Text.when_text(meeting),
-                                                   locale: Crm::BookingV2::Notices::Text.locale(meeting.account))
+    text = I18n.t("crm.booking_v2.agent_alerts.#{event}", name: client_name, when: Crm::BookingV2::Notices::Text.when_text(meeting),
+                                                          locale: locale)
+    [text, reason_text].compact.join(' ')
+  end
+
+  # Motivo em texto simples depois do aviso, quando a atendente pode agir sobre ele (#1270).
+  def reason_text
+    reason = payload.to_h.with_indifferent_access[:reason].to_s
+    return if reason.blank?
+
+    key = "crm.booking_v2.agent_alerts.reasons.#{reason}"
+    I18n.t(key, locale: locale) if I18n.exists?(key, locale)
+  end
+
+  def locale
+    Crm::BookingV2::Notices::Text.locale(meeting.account)
   end
 end
