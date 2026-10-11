@@ -4,12 +4,13 @@ import { useI18n } from 'vue-i18n';
 import BookingBrandSample from '../BookingBrandSample.vue';
 import BookingField from '../BookingField.vue';
 import BookingIdentity from '../BookingIdentity.vue';
-import BookingImageUpload from '../BookingImageUpload.vue';
+import BookingLogoCard from '../BookingLogoCard.vue';
 import BookingPhotoCard from '../BookingPhotoCard.vue';
 import { BRAND_COLORS, LOGO_ALIGNS, MAX_TEXT } from '../../constants';
 import { presetColor } from '../../bookingPageForm';
 
-// Passo 5: a cara da página — logo (e de que lado ela fica), foto, cor (uma
+// Passo 5: a cara da página — logo (para fundo claro e para fundo escuro,
+// #1295, e de que lado ela fica), foto, cor (uma
 // das prontas ou outra, escolhida pela pessoa) e a frase de boas-vindas, com
 // uma amostra da página ao vivo. A identidade salva da conta (#1289) poupa
 // refazer isso a cada página. Os avisos no WhatsApp têm passo próprio.
@@ -17,7 +18,7 @@ const props = defineProps({
   form: { type: Object, required: true },
   // A página como a API devolve: logo, foto, pessoas e a identidade salva.
   page: { type: Object, required: true },
-  // 'logo' | 'photo' | null
+  // 'logo' | 'logo_dark' | 'photo' | null
   uploading: { type: String, default: null },
   // { kind, key } do último envio recusado.
   uploadError: { type: Object, default: null },
@@ -26,7 +27,13 @@ const props = defineProps({
   identityBusy: { type: Boolean, default: false },
 });
 
-const emit = defineEmits(['change', 'upload', 'applyIdentity', 'saveIdentity']);
+const emit = defineEmits([
+  'change',
+  'upload',
+  'removeLogoDark',
+  'applyIdentity',
+  'saveIdentity',
+]);
 const { t } = useI18n();
 
 const SELECTED = 'ring-2 ring-n-blue-9 bg-n-blue-2';
@@ -67,16 +74,16 @@ const savesPhoto = computed(
       @apply="emit('applyIdentity')"
       @save="emit('saveIdentity')"
     >
-      <div class="grid items-start gap-4 sm:grid-cols-2">
-        <BookingImageUpload
-          data-logo
-          :label="t('BOOKING.LOOK.LOGO')"
-          :alt="t('BOOKING.LOOK.LOGO_ALT')"
-          :url="page.logo_url || ''"
-          :busy="uploading === 'logo'"
-          :error="errorFor('logo', uploadError)"
-          :hint="t('BOOKING.LOOK.LOGO_HINT')"
-          @pick="emit('upload', { kind: 'logo', file: $event })"
+      <div class="flex flex-col gap-4">
+        <BookingLogoCard
+          :page="page"
+          :uploading="uploading"
+          :errors="{
+            logo: errorFor('logo', uploadError),
+            logoDark: errorFor('logo_dark', uploadError),
+          }"
+          @pick="emit('upload', $event)"
+          @remove-dark="emit('removeLogoDark')"
         />
         <BookingPhotoCard
           :page="page"

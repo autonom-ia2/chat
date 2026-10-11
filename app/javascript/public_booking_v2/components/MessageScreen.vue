@@ -15,7 +15,7 @@ defineSlots();
   >
     <span
       aria-hidden="true"
-      class="flex size-14 items-center justify-center rounded-full bg-slate-100 text-2xl text-slate-600"
+      class="flex size-14 items-center justify-center rounded-full bg-bk-chip text-2xl text-bk-soft"
     >
       <span :class="icon" />
     </span>
@@ -23,11 +23,11 @@ defineSlots();
       id="step-heading"
       data-step-heading
       tabindex="-1"
-      class="text-2xl font-bold text-slate-900 focus:outline-none"
+      class="text-2xl font-bold text-bk-strong focus:outline-none"
     >
       {{ title }}
     </h1>
-    <p v-if="body" class="text-base text-slate-700">{{ body }}</p>
+    <p v-if="body" class="text-base text-bk-medium">{{ body }}</p>
     <div class="flex w-full flex-col gap-3">
       <slot />
     </div>

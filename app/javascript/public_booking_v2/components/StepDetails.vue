@@ -50,19 +50,19 @@ const onlyLocation = computed(() =>
       id="step-heading"
       data-step-heading
       tabindex="-1"
-      class="text-2xl font-bold text-slate-900 focus:outline-none"
+      class="text-2xl font-bold text-bk-strong focus:outline-none"
     >
       {{ t('BOOKING_V2.DETAILS.TITLE') }}
     </h1>
     <div
       v-if="onlyLocation"
       data-testid="only-location"
-      class="flex flex-col gap-1 rounded-2xl border-2 border-slate-200 bg-slate-50 p-4"
+      class="flex flex-col gap-1 rounded-2xl border-2 border-bk-line bg-bk-inset p-4"
     >
-      <p class="text-base font-semibold text-slate-900">
+      <p class="text-base font-semibold text-bk-strong">
         {{ locationName(onlyLocation, t) }}
       </p>
-      <p class="text-base text-slate-800">
+      <p class="text-base text-bk-body">
         {{ locationHint(onlyLocation, t) }}
       </p>
     </div>

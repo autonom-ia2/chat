@@ -31,6 +31,8 @@ export const publicPageFrom = (form, page) => {
       headline: form.headline,
       logo_align: form.logoAlign,
       logo_url: page.logo_url || null,
+      logo_dark_url: page.logo_dark_url || null,
+      logo_dark_source: page.brand?.logo_dark_source || null,
       photo_url: page.photo_url || null,
     },
   };

@@ -32,7 +32,7 @@ const before = computed(() =>
       id="step-heading"
       data-step-heading
       tabindex="-1"
-      class="text-2xl font-bold text-slate-900 focus:outline-none"
+      class="text-2xl font-bold text-bk-strong focus:outline-none"
     >
       {{ t('BOOKING_V2.RESCHEDULE.CONFIRM_TITLE') }}
     </h1>
@@ -40,7 +40,7 @@ const before = computed(() =>
     <p
       v-if="before"
       data-testid="reschedule-before"
-      class="text-base text-slate-700"
+      class="text-base text-bk-medium"
     >
       {{ t('BOOKING_V2.RESCHEDULE.BEFORE', { when: before }) }}
     </p>

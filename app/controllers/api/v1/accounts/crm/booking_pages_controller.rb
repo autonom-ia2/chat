@@ -46,7 +46,8 @@ class Api::V1::Accounts::Crm::BookingPagesController < Api::V1::Accounts::Crm::B
   end
 
   def update
-    @page.update!(page_params.merge(calendar_inbox_attributes).merge(notice_inbox_attributes))
+    @page.with_lock { @page.update!(keep_logo_dark_source(page_params).merge(calendar_inbox_attributes).merge(notice_inbox_attributes)) }
+    ensure_logo_dark
     render_page
   rescue InvalidInbox => e
     render_unprocessable(e.message)

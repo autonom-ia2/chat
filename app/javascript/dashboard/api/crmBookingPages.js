@@ -42,6 +42,12 @@ class CrmBookingPagesAPI extends ApiClient {
     return axios.post(`${this.url}/${id}/${kind}`, body);
   }
 
+  // Tira a logo de fundo escuro que a pessoa enviou (#1295): o servidor volta
+  // para a que ele gera a partir da logo.
+  removeLogoDark(id) {
+    return axios.delete(`${this.url}/${id}/logo_dark`);
+  }
+
   // Identidade salva da conta (#1289): usar nesta página e salvar a partir dela.
   applyIdentity(id) {
     return axios.post(`${this.url}/${id}/apply_identity`);

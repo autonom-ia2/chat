@@ -98,7 +98,8 @@
         "IMAGE_TYPE": "Use a PNG, JPEG or WebP image.",
         "IMAGE_SIZE": "The image can be up to 2 MB.",
         "IMAGE_UPLOAD": "We couldn't upload the image. Try another one.",
-        "SHORT_NAME": "Check the page address."
+        "SHORT_NAME": "Check the page address.",
+        "IMAGE_REMOVE": "Could not remove the image. Try again."
       },
       "SERVER_ERRORS": {
         "CALENDAR_GONE": "That calendar email inbox is no longer available. Choose another one or remove Google Meet and Teams.",
@@ -303,6 +304,22 @@
         "ALSO_PROFILE": "On my profile too",
         "SEND": "Send photo",
         "CANCEL": "Cancel"
+      },
+      "LOGO_LIGHT": {
+        "TITLE": "On a light background"
+      },
+      "LOGO_DARK": {
+        "TITLE": "On a dark background",
+        "ALT": "Company logo for dark backgrounds",
+        "REMOVE": "Go back to the one we made",
+        "ORIGIN": {
+          "NONE": "Upload the logo. The dark background version is made right away.",
+          "CREATING": "Making the dark background version…",
+          "GENERATED": "We made this version for dark backgrounds. You can upload your own if you prefer.",
+          "SAME": "Your logo already looks good on dark.",
+          "PLATE": "We could not make a light version; on dark it shows on a plate.",
+          "UPLOADED": "You uploaded this version for dark backgrounds."
+        }
       }
     },
     "NOTICES": {
@@ -592,6 +609,11 @@
       "SAVE": "Save",
       "BOOKED_BY_AI": "Booked by the AI",
       "BOOKED_BY_AI_DETAIL": "Booked by the AI: {title}"
+    },
+    "THEME": {
+      "LABEL": "The page follows the customer's device theme. See both:",
+      "LIGHT": "Light",
+      "DARK": "Dark"
     }
   }
 }
