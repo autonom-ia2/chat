@@ -5,8 +5,10 @@ class Crm::Conversations::Visibility
     @account_user = account_user
   end
 
+  # Acesso por funil (#1148, parte C): o CRM passa pela mesma regra da lista de conversas.
   def visible?(conversation)
     return false unless base_visible?(conversation)
+    return false unless funnel_scope.allows?(conversation)
     return true if unrestricted_inbox?(conversation)
 
     assigned_or_participating?(conversation)
@@ -22,10 +24,14 @@ class Crm::Conversations::Visibility
     unrestricted = base.where(inbox_id: user_inbox_ids).where.not(inbox_id: assigned_only_inbox_ids)
     restricted = base.where(inbox_id: assigned_only_inbox_ids)
     participants = ConversationParticipant.where(account_id: @account.id, user_id: @user.id).select(:conversation_id)
-    unrestricted.or(restricted.where(assignee_id: @user.id)).or(restricted.where(id: participants))
+    funnel_scope.apply(unrestricted.or(restricted.where(assignee_id: @user.id)).or(restricted.where(id: participants)))
   end
 
   private
+
+  def funnel_scope
+    @funnel_scope ||= Crm::Access::ConversationScope.new(user: @user, account: @account, account_user: @account_user)
+  end
 
   def base_visible?(conversation)
     return false if conversation.blank?

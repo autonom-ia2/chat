@@ -1084,3 +1084,15 @@ describe('#addMentions', () => {
     });
   });
 });
+
+describe('#removeConversationLocally (#1148)', () => {
+  it('takes the conversation out of the list without calling the API', () => {
+    const deleteSpy = vi.spyOn(axios, 'delete');
+
+    actions.removeConversationLocally({ commit, dispatch }, 42);
+
+    expect(commit).toHaveBeenCalledWith(types.DELETE_CONVERSATION, 42);
+    expect(dispatch).toHaveBeenCalledWith('conversationStats/get');
+    expect(deleteSpy).not.toHaveBeenCalled();
+  });
+});

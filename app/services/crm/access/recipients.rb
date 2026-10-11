@@ -12,6 +12,9 @@ class Crm::Access::Recipients
     new(conversation).filter(conversation.inbox.members)
   end
 
+  # Card (parte C): ver Crm::Access::CardRecipients.
+  def self.card_blocked_user_ids(card) = Crm::Access::CardRecipients.new(card).blocked_user_ids
+
   def initialize(conversation)
     @conversation = conversation
   end

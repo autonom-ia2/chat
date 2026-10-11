@@ -120,6 +120,7 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
   def move
     with_idempotency do
       target_stage = Current.account.crm_pipeline_stages.find(params[:stage_id])
+      ensure_pipeline_allowed!(@card.inbox_id, target_stage.pipeline_id)
       @card = ::Crm::Cards::Mover.new(card: @card, actor: Current.user, target_stage: target_stage).perform
       broadcast_card(::Events::Types::CRM_CARD_MOVED)
       render :show
@@ -234,6 +235,7 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     @card = card
     authorize @card, :update?
     attributes = permitted_params.slice(*UPSERT_ATTRIBUTES.map(&:to_s)).compact
+    ensure_pipeline_allowed!(@card.inbox_id, upsert_pipeline_id(attributes)) if attributes.key?('pipeline_id') || attributes.key?('stage_id')
     # Campos do card (#1146): o upsert junta com o que já está salvo, como o PATCH.
     if permitted_params[:custom_attributes].present?
       attributes['custom_attributes'] = @card.custom_attributes.to_h.merge(permitted_params[:custom_attributes].to_h).compact
@@ -471,6 +473,16 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
   # closed_at, and stage-move side effects). `owner_id` IS permitted so the list
   # view can inline-assign / reassign an owner (authorized via card :update? +
   # same-account validation on the model).
+  # Acesso por funil (#1148, parte C): mover ou gravar o card num funil exige ter esse funil na caixa do card.
+  def ensure_pipeline_allowed!(inbox_id, pipeline_id)
+    scope = ::Crm::Access::CardScope.new(user: Current.user, account: Current.account, account_user: Current.account_user)
+    raise Pundit::NotAuthorizedError unless scope.pipeline_allowed?(inbox_id, pipeline_id)
+  end
+
+  def upsert_pipeline_id(attributes)
+    attributes['pipeline_id'].presence || Current.account.crm_pipeline_stages.find_by(id: attributes['stage_id'])&.pipeline_id
+  end
+
   def update_params
     parameter_set(:card).permit(
       :title, :description, :value_cents, :currency, :lost_reason, :source,

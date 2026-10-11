@@ -59,7 +59,16 @@ class Crm::Cards::DetailPayloadBuilder
     return conversations if administrator?
 
     preload_conversation_permissions(conversations)
-    conversations.select { |conversation| conversation_visible_to_agent?(conversation) }
+    funnel_visible(conversations.select { |conversation| conversation_visible_to_agent?(conversation) })
+  end
+
+  # Acesso por funil (#1148, parte C): o drawer do card não lista conversa que o funil esconde.
+  def funnel_visible(conversations)
+    funnel = Crm::Access::ConversationScope.new(user: @user, account: @account)
+    return conversations unless funnel.restricted?
+
+    allowed = funnel.apply(@account.conversations.where(id: conversations.map(&:id))).pluck(:id).to_set
+    conversations.select { |conversation| allowed.include?(conversation.id) }
   end
 
   def preload_conversation_permissions(conversations)

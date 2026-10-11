@@ -48,6 +48,11 @@ class Crm::Access::ConversationScope
     restrictions.map(&:inbox_id)
   end
 
+  # A linha que restringe a pessoa nesta caixa, ou nil (CardScope usa a mesma leitura).
+  def access_for(inbox_id)
+    restrictions.find { |access| access.inbox_id == inbox_id }
+  end
+
   # A mesma regra do #condition, avaliada em memória sobre os dados de UMA conversa (Crm::Access::Recipients, que
   # decide muitas pessoas por evento). Mudou a regra num, mude no outro: o spec de paridade compara os dois.
   # facts: assignee_id, participant_ids, card_pipeline_ids (cards que prendem, ver RELEASED).

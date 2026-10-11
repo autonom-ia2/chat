@@ -75,16 +75,15 @@ class Whatsapp::CallPermissionReplyService
     end
   end
 
+  # Acesso por funil (#1148, parte C): só a quem pode ver a conversa.
   def broadcast_permission_granted(contact, conversation)
-    ActionCable.server.broadcast(
-      "account_#{inbox.account_id}",
-      {
-        event: 'voice_call.permission_granted',
-        data: {
-          account_id: inbox.account_id, conversation_id: conversation.id,
-          contact_name: contact.name, contact_phone: contact.phone_number
-        }
+    payload = {
+      event: 'voice_call.permission_granted',
+      data: {
+        account_id: inbox.account_id, conversation_id: conversation.id,
+        contact_name: contact.name, contact_phone: contact.phone_number
       }
-    )
+    }
+    Crm::Access::CallStreams.for(conversation).each { |stream| ActionCable.server.broadcast(stream, payload) }
   end
 end
