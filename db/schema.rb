@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_10_17_100100) do
+ActiveRecord::Schema[7.2].define(version: 2026_10_20_100000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -3839,6 +3839,25 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_17_100100) do
     t.index ["session_name"], name: "index_whatsapp_hybrid_connections_on_session_name", unique: true
   end
 
+  create_table "whatsapp_template_profiles", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "inbox_id", null: false
+    t.string "waba_id", null: false
+    t.string "meta_template_id"
+    t.string "name", null: false
+    t.string "language", null: false
+    t.string "friendly_name"
+    t.jsonb "fields", default: {}, null: false
+    t.jsonb "header_media", default: {}, null: false
+    t.string "system_owner"
+    t.bigint "created_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "waba_id"], name: "idx_whatsapp_template_profiles_waba"
+    t.index ["created_by_id"], name: "index_whatsapp_template_profiles_on_created_by_id"
+    t.index ["inbox_id", "name", "language"], name: "idx_whatsapp_template_profiles_unique", unique: true
+  end
+
   create_table "working_hours", force: :cascade do |t|
     t.bigint "inbox_id"
     t.bigint "account_id"
@@ -4107,6 +4126,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_17_100100) do
   add_foreign_key "whatsapp_api_message_templates", "inboxes", on_delete: :nullify
   add_foreign_key "whatsapp_api_message_templates", "users", column: "created_by_id"
   add_foreign_key "whatsapp_api_message_templates", "users", column: "updated_by_id"
+  add_foreign_key "whatsapp_template_profiles", "accounts", on_delete: :cascade
+  add_foreign_key "whatsapp_template_profiles", "inboxes", on_delete: :cascade
+  add_foreign_key "whatsapp_template_profiles", "users", column: "created_by_id", on_delete: :nullify
   # no candidate create_trigger statement could be found, creating an adapter-specific one
   execute(<<-SQL)
 CREATE OR REPLACE FUNCTION public.email_reputation_audit_append_only()

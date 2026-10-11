@@ -879,6 +879,17 @@
     ],
     "sem_corpo": true
   },
+  "DELETE inboxes/:inbox_id/whatsapp_templates/:id": {
+    "completo": true,
+    "controller": "api/v1/accounts/inboxes/whatsapp_templates#destroy",
+    "modelo": "Crm::Card",
+    "origem": [
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:26",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:27",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:48"
+    ],
+    "sem_corpo": true
+  },
   "DELETE integrations/hooks/:id": {
     "completo": true,
     "controller": "api/v1/accounts/integrations/hooks#destroy",
@@ -6061,6 +6072,8 @@
           "automation_manage",
           "agendamento_view",
           "agendamento_manage",
+          "whatsapp_templates_view",
+          "whatsapp_templates_manage",
           "label_manage",
           "attribute_manage",
           "macro_manage",
@@ -6603,6 +6616,46 @@
       "app/controllers/api/v1/accounts/whatsapp_api_message_templates_controller.rb:49",
       "app/controllers/api/v1/accounts/whatsapp_api_message_templates_controller.rb:38",
       "app/controllers/api/v1/accounts/whatsapp_api_message_templates_controller.rb:45"
+    ],
+    "sem_corpo": false
+  },
+  "PATCH inboxes/:inbox_id/whatsapp_templates/:id": {
+    "campos": {
+      "category": {},
+      "components": {
+        "tipo": "lista",
+        "tipo_pela_leitura": "uso"
+      },
+      "fields": {
+        "tipo": "objeto_livre"
+      },
+      "friendly_name": {},
+      "header_media": {
+        "campos": {
+          "blob_signed_id": {},
+          "byte_size": {},
+          "content_type": {},
+          "file_name": {},
+          "handle": {}
+        },
+        "tipo": "objeto"
+      },
+      "language": {},
+      "message_send_ttl_seconds": {},
+      "name": {},
+      "parameter_format": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/inboxes/whatsapp_templates#update",
+    "corpo_plano": false,
+    "envelope": "template",
+    "modelo": "Crm::Card",
+    "origem": [
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:22",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:64",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:67",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:23",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:48"
     ],
     "sem_corpo": false
   },
@@ -15516,6 +15569,8 @@
           "automation_manage",
           "agendamento_view",
           "agendamento_manage",
+          "whatsapp_templates_view",
+          "whatsapp_templates_manage",
           "label_manage",
           "attribute_manage",
           "macro_manage",
@@ -16798,6 +16853,103 @@
       "app/controllers/api/v1/accounts/whatsapp_api_message_templates_controller.rb:14",
       "app/controllers/api/v1/accounts/whatsapp_api_message_templates_controller.rb:49",
       "app/controllers/api/v1/accounts/whatsapp_api_message_templates_controller.rb:38"
+    ],
+    "sem_corpo": false
+  },
+  "POST inboxes/:inbox_id/whatsapp_templates": {
+    "campos": {
+      "category": {},
+      "components": {
+        "tipo": "lista",
+        "tipo_pela_leitura": "uso"
+      },
+      "fields": {
+        "tipo": "objeto_livre"
+      },
+      "friendly_name": {},
+      "header_media": {
+        "campos": {
+          "blob_signed_id": {},
+          "byte_size": {},
+          "content_type": {},
+          "file_name": {},
+          "handle": {}
+        },
+        "tipo": "objeto"
+      },
+      "language": {},
+      "message_send_ttl_seconds": {},
+      "name": {},
+      "parameter_format": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/inboxes/whatsapp_templates#create",
+    "corpo_plano": false,
+    "envelope": "template",
+    "modelo": "Crm::Card",
+    "origem": [
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:18",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:64",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:67",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:48"
+    ],
+    "sem_corpo": false
+  },
+  "POST inboxes/:inbox_id/whatsapp_templates/:id/duplicate": {
+    "campos": {
+      "category": {},
+      "components": {
+        "tipo": "lista",
+        "tipo_pela_leitura": "uso"
+      },
+      "fields": {
+        "tipo": "objeto_livre"
+      },
+      "friendly_name": {},
+      "header_media": {
+        "campos": {
+          "blob_signed_id": {},
+          "byte_size": {},
+          "content_type": {},
+          "file_name": {},
+          "handle": {}
+        },
+        "tipo": "objeto"
+      },
+      "language": {},
+      "message_send_ttl_seconds": {},
+      "name": {},
+      "parameter_format": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/inboxes/whatsapp_templates#duplicate",
+    "corpo_plano": false,
+    "envelope": "template",
+    "modelo": "Crm::Card",
+    "origem": [
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:31",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:64",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:67",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:32",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:48"
+    ],
+    "sem_corpo": false
+  },
+  "POST inboxes/:inbox_id/whatsapp_templates/media": {
+    "campos": {
+      "file": {}
+    },
+    "completo": false,
+    "controller": "api/v1/accounts/inboxes/whatsapp_templates#media",
+    "modelo": "Crm::Card",
+    "motivos": [
+      "leitura crua sem tipo: file (repassada a manager.upload)"
+    ],
+    "origem": [
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:35",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:38",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:36",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:48"
     ],
     "sem_corpo": false
   },
@@ -23324,6 +23476,8 @@
           "automation_manage",
           "agendamento_view",
           "agendamento_manage",
+          "whatsapp_templates_view",
+          "whatsapp_templates_manage",
           "label_manage",
           "attribute_manage",
           "macro_manage",
@@ -23861,6 +24015,46 @@
       "app/controllers/api/v1/accounts/whatsapp_api_message_templates_controller.rb:49",
       "app/controllers/api/v1/accounts/whatsapp_api_message_templates_controller.rb:38",
       "app/controllers/api/v1/accounts/whatsapp_api_message_templates_controller.rb:45"
+    ],
+    "sem_corpo": false
+  },
+  "PUT inboxes/:inbox_id/whatsapp_templates/:id": {
+    "campos": {
+      "category": {},
+      "components": {
+        "tipo": "lista",
+        "tipo_pela_leitura": "uso"
+      },
+      "fields": {
+        "tipo": "objeto_livre"
+      },
+      "friendly_name": {},
+      "header_media": {
+        "campos": {
+          "blob_signed_id": {},
+          "byte_size": {},
+          "content_type": {},
+          "file_name": {},
+          "handle": {}
+        },
+        "tipo": "objeto"
+      },
+      "language": {},
+      "message_send_ttl_seconds": {},
+      "name": {},
+      "parameter_format": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/inboxes/whatsapp_templates#update",
+    "corpo_plano": false,
+    "envelope": "template",
+    "modelo": "Crm::Card",
+    "origem": [
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:22",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:64",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:67",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:23",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:48"
     ],
     "sem_corpo": false
   },

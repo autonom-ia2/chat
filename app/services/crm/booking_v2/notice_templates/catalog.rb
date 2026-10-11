@@ -26,6 +26,11 @@ class Crm::BookingV2::NoticeTemplates::Catalog
     TEMPLATES.keys
   end
 
+  # Os nomes dos modelos da plataforma (protegidos na tela de Modelos, #1330).
+  def self.names
+    kinds.map { |kind| name_for(kind) }
+  end
+
   def self.name_for(kind)
     TEMPLATES.fetch(kind.to_s)[:name]
   end

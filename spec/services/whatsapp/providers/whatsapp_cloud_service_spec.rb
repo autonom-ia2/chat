@@ -409,7 +409,7 @@ describe Whatsapp::Providers::WhatsappCloudService do
             :get,
             'https://graph.facebook.com/v14.0/123456789/message_templates'
           ).with(
-            headers: { 'Authorization' => 'Bearer business-token' }
+            query: hash_including({}), headers: { 'Authorization' => 'Bearer business-token' }
           ).to_return(status: 200, headers: response_headers, body: { data: [] }.to_json)
 
           subject.sync_templates
@@ -426,7 +426,7 @@ describe Whatsapp::Providers::WhatsappCloudService do
             :get,
             'https://graph.facebook.com/v14.0/123456789/message_templates'
           ).with(
-            headers: { 'Authorization' => 'Bearer test_key' }
+            query: hash_including({}), headers: { 'Authorization' => 'Bearer test_key' }
           ).to_return(status: 200, headers: response_headers, body: { data: [] }.to_json)
 
           subject.sync_templates
@@ -445,7 +445,7 @@ describe Whatsapp::Providers::WhatsappCloudService do
             :get,
             'https://graph.facebook.com/v14.0/123456789/message_templates'
           ).with(
-            headers: { 'Authorization' => 'Bearer test_key' }
+            query: hash_including({}), headers: { 'Authorization' => 'Bearer test_key' }
           ).to_return(status: 200, headers: response_headers, body: { data: [] }.to_json)
 
           subject.sync_templates
@@ -457,7 +457,7 @@ describe Whatsapp::Providers::WhatsappCloudService do
       it 'updated the message templates' do
         request_headers = { 'Authorization' => 'Bearer test_key' }
         stub_request(:get, 'https://graph.facebook.com/v14.0/123456789/message_templates')
-          .with(headers: request_headers)
+          .with(query: hash_including({}), headers: request_headers)
           .to_return(
             status: 200,
             headers: response_headers,
@@ -469,8 +469,8 @@ describe Whatsapp::Providers::WhatsappCloudService do
               }
             }.to_json
           )
-        stub_request(:get, 'https://graph.facebook.com/v14.0/123456789/message_templates?after=cursor-1')
-          .with(headers: request_headers)
+        stub_request(:get, 'https://graph.facebook.com/v14.0/123456789/message_templates')
+          .with(query: hash_including('after' => 'cursor-1'), headers: request_headers)
           .to_return(
             status: 200,
             headers: response_headers,
@@ -482,8 +482,8 @@ describe Whatsapp::Providers::WhatsappCloudService do
               }
             }.to_json
           )
-        stub_request(:get, 'https://graph.facebook.com/v14.0/123456789/message_templates?after=cursor-2')
-          .with(headers: request_headers)
+        stub_request(:get, 'https://graph.facebook.com/v14.0/123456789/message_templates')
+          .with(query: hash_including('after' => 'cursor-2'), headers: request_headers)
           .to_return(
             status: 200,
             headers: response_headers,
@@ -501,7 +501,7 @@ describe Whatsapp::Providers::WhatsappCloudService do
 
       it 'does not bump the inbox cache key when no templates are returned' do
         stub_request(:get, 'https://graph.facebook.com/v14.0/123456789/message_templates')
-          .with(headers: { 'Authorization' => 'Bearer test_key' })
+          .with(query: hash_including({}), headers: { 'Authorization' => 'Bearer test_key' })
           .to_return(status: 200, headers: response_headers, body: { data: [] }.to_json)
 
         expect(whatsapp_channel.account).not_to receive(:update_cache_key)
@@ -510,7 +510,7 @@ describe Whatsapp::Providers::WhatsappCloudService do
 
       it 'updates message_templates_last_updated even when template request fails' do
         stub_request(:get, 'https://graph.facebook.com/v14.0/123456789/message_templates')
-          .with(headers: { 'Authorization' => 'Bearer test_key' })
+          .with(query: hash_including({}), headers: { 'Authorization' => 'Bearer test_key' })
           .to_return(status: 401)
 
         timstamp = whatsapp_channel.reload.message_templates_last_updated
