@@ -672,6 +672,7 @@ const tirarPergunta = id => {
       <GavetaFerramentas
         v-else-if="aberta === GAVETA.FERRAMENTAS"
         :agente="agente"
+        :nome="nome"
         @fechar="fechar"
       />
     </template>
