@@ -490,7 +490,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Criar follow-ups e lembretes no CRM
 - intent: "Como crio um lembrete?"; "Como programo follow-up de WhatsApp?"; "Como vejo follow-ups atrasados?"
-- onde_fica: Sidebar > CRM > CRM Kanban > abrir card > aba Retornos; ou CRM > Calendário > clique no dia
+- onde_fica: Sidebar > CRM > CRM Kanban > abrir card > aba Retornos; ou CRM > Calendário (com o agendamento novo ligado na conta: CRM > Agendamento > Calendário) > clique no dia
 - rota: `crm_kanban_index` - `/app/accounts/:accountId/crm`
 - gate: papel `administrator` ou `agent` ou `crm_view`
 - pre_requisitos: card existente; para retorno com mensagem, a conversa vinculada precisa existir e a janela/template do canal pode ser exigida.
@@ -531,7 +531,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Usar calendário CRM e agendar reunião
 - intent: "Onde fica o calendário CRM?"; "Como agendo uma reunião no card?"; "Como evitar conflito de agenda?"
-- onde_fica: Sidebar > CRM > CRM Calendar; ou CRM Kanban > visualização Calendário
+- onde_fica: Sidebar > CRM > Calendário; com o agendamento novo ligado na conta, CRM > Agendamento > Calendário (o subgrupo Agendamento vem fechado no menu: clique nele para abrir); ou CRM Kanban > visualização Calendário
 - rota: `crm_calendar_index` - `/app/accounts/:accountId/crm/calendar`
 - gate: papel `administrator` ou `agent` ou `crm_view`
 - pre_requisitos: caixa de e-mail Google ou Microsoft conectada com calendário ativo; card CRM existente para a reunião.
@@ -549,7 +549,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Criar e publicar a página de agendamento
 - intent: Como crio uma página para o cliente marcar horário?; Onde fica o link de agendamento sem Google ou Microsoft?; Como mando o link ou o QR code de agendamento?; Como pauso a página de agendamento?; Por que não consigo publicar a página?; Como escolho para qual funil vai quem marcar?
-- onde_fica: CRM > Agendamento > Páginas e links; também pelo botão Agendamento no topo do CRM > Calendário
+- onde_fica: CRM > Agendamento > Páginas e links (o subgrupo Agendamento vem fechado no menu: clique nele para abrir); também pelo botão Agendamento no topo do CRM > Agendamento > Calendário
 - rota: `settings_booking` - `/app/accounts/:accountId/crm/booking`
 - gate: papel `administrator` ou `agendamento_view` ou `agendamento_manage`
 - perfil: criar, editar, publicar, pausar e excluir exige administrador ou função com Agendamento em Editar; com Agendamento em Ver a pessoa vê as páginas, a prévia e o link (copiar, QR code, abrir), mas não vê Criar página, Editar, Pausar, Publicar, Excluir nem Alterar. Agente sem função e função sem o módulo Agendamento não veem o item no menu.
@@ -571,7 +571,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Atender no dia da reunião marcada pela página de agendamento
 - intent: Onde vejo as reuniões de hoje?; Como sei se o cliente confirmou a reunião?; Como lembro o cliente da reunião?; Como chamo o cliente no WhatsApp na hora da reunião?; Como faço a chamada de vídeo no WhatsApp?; O cliente faltou, como mando o link para marcar outro horário?; Como registro que a reunião aconteceu?
-- onde_fica: CRM Calendar > visão Agenda > Hoje (escolha Meus para ver só as suas); o detalhe abre ao clicar na reunião; no card, a Próxima reunião aparece no topo do Resumo
+- onde_fica: CRM > Agendamento > Calendário > visão Agenda > Hoje (escolha Meus para ver só as suas); o detalhe abre ao clicar na reunião; no card, a Próxima reunião aparece no topo do Resumo
 - rota: `crm_calendar_index` - `/app/accounts/:accountId/crm/calendar`
 - gate: papel `administrator` ou `agent` ou `crm_view`
 - perfil: quem vê o card vê a reunião; Lembrar e Enviar link mandam mensagem na conversa do cliente, então só funcionam para quem pode responder essa conversa (sem isso, aparece Copiar link); Enviar link para marcar outro horário também pede poder usar o link do cliente (o mesmo do botão Agendar).
@@ -648,7 +648,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Sincronizar RSVP, reagendar e registrar no-show
 - intent: "Como vejo se o convidado da reunião aceitou ou recusou?"; "Onde vejo o RSVP / confirmação de presença dos convidados da reunião?"; "Como marco no-show (não compareceu)?"; "Como cancelo ou reagendo uma reunião?"; "Status de presença dos convidados da reunião no calendário."
-- onde_fica: Sidebar > CRM > CRM Calendar > abrir evento de reunião
+- onde_fica: Sidebar > CRM > Calendário (com o agendamento novo ligado na conta: CRM > Agendamento > Calendário) > abrir evento de reunião
 - rota: `crm_calendar_index` - `/app/accounts/:accountId/crm/calendar`
 - gate: papel `administrator` ou `agent` ou `crm_view`
 - pre_requisitos: reunião criada pelo CRM ou pelo link público; calendário conectado ao provedor.
@@ -1453,7 +1453,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Usar e filtrar o calendário CRM por tipo de evento
 - intent: Como filtro o calendário por tipo?; Como mostro só reuniões / só follow-ups no calendário?; Como escondo os eventos externos do calendário?; O que são os chips Lembretes, WhatsApp, Previsões, Reuniões e Externos?
-- onde_fica: Sidebar > CRM > Calendário (ou CRM Kanban > visualização Calendário) > chips de tipo no cabeçalho do calendário
+- onde_fica: Sidebar > CRM > Calendário; com o agendamento novo ligado na conta, CRM > Agendamento > Calendário (ou CRM Kanban > visualização Calendário) > chips de tipo no cabeçalho do calendário
 - rota: `crm_calendar_index` - `/app/accounts/:accountId/crm/calendar`
 - gate: papel `administrator` ou `agent` ou `crm_view`
 - pre_requisitos: ao menos um funil; para ver reuniões/externos, caixa Google ou Microsoft com calendário ativo.

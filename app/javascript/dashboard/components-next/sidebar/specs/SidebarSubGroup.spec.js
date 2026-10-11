@@ -1,5 +1,5 @@
 import { mount } from '@vue/test-utils';
-import { ref } from 'vue';
+import { nextTick, reactive, ref } from 'vue';
 import SidebarSubGroup from '../SidebarSubGroup.vue';
 import { LOCAL_STORAGE_KEYS } from 'dashboard/constants/localStorage';
 import { provideSidebarContext } from '../provider';
@@ -28,6 +28,48 @@ const children = [
     to: { name: 'team_conversations' },
   },
 ];
+
+const leafStub = {
+  props: {
+    label: { type: String, required: true },
+    hideTreeLine: { type: Boolean, default: false },
+    thinTreeLine: { type: Boolean, default: false },
+  },
+  template: '<li class="sidebar-leaf">{{ label }}</li>',
+};
+
+// CRM › Agendamento (#1288): recolhível que nasce fechado. `state` é reativo
+// para o teste trocar a tela ativa sem montar de novo.
+const schedulingChildren = [
+  { name: 'CRM Calendar', label: 'Calendário', to: { name: 'calendar' } },
+  { name: 'CRM Booking', label: 'Páginas e links', to: { name: 'booking' } },
+];
+
+const mountScheduling = (overrides = {}) => {
+  const state = reactive({
+    name: 'CRM:CRM Scheduling',
+    label: 'Agendamento',
+    icon: 'i-lucide-calendar-clock',
+    children: schedulingChildren,
+    isExpanded: true,
+    collapsible: true,
+    defaultCollapsed: true,
+    activeChild: undefined,
+    ...overrides,
+  });
+  const wrapper = mount(
+    {
+      components: { SidebarSubGroup },
+      setup() {
+        provideSidebarContext({});
+        return { state };
+      },
+      template: '<SidebarSubGroup v-bind="state" />',
+    },
+    { global: { stubs: { SidebarGroupLeaf: leafStub } } }
+  );
+  return { wrapper, state };
+};
 
 const mountSubGroup = props => {
   return mount(
@@ -89,7 +131,7 @@ describe('SidebarSubGroup', () => {
     window.localStorage.clear();
   });
 
-  it('shows the only child of a non-collapsible subgroup (CRM › Agendamento for a scheduling-only role)', () => {
+  it('shows the only child of a non-collapsible subgroup', () => {
     const wrapper = mountSubGroup({
       name: 'CRM:CRM Scheduling',
       label: 'Agendamento',
@@ -190,5 +232,165 @@ describe('SidebarSubGroup', () => {
     expect(wrapper.find('button').attributes('aria-expanded')).toBe('true');
     expect(wrapper.find('.sidebar-leaf').isVisible()).toBe(true);
     expect(storedSections).toEqual({});
+  });
+
+  describe('defaultCollapsed (CRM › Agendamento, #1288)', () => {
+    const storedSections = () =>
+      JSON.parse(
+        window.localStorage.getItem(
+          LOCAL_STORAGE_KEYS.SIDEBAR_MINIMIZED_SECTIONS
+        )
+      );
+    const isOpen = wrapper =>
+      wrapper.find('button').attributes('aria-expanded') === 'true';
+    // v-show direto no estilo: o isVisible() do test-utils não acompanha a
+    // folha que some depois de ter aparecido.
+    const visibleLeaves = wrapper =>
+      wrapper
+        .findAll('.sidebar-leaf')
+        .filter(leaf => leaf.element.style.display !== 'none')
+        .map(leaf => leaf.text());
+
+    it('starts collapsed when nothing is stored', () => {
+      const { wrapper } = mountScheduling();
+
+      expect(isOpen(wrapper)).toBe(false);
+      expect(visibleLeaves(wrapper)).toEqual([]);
+      expect(storedSections()).toBeNull();
+    });
+
+    it('opens by itself on a child screen, without storing a choice, and closes again when leaving', async () => {
+      const { wrapper, state } = mountScheduling({
+        activeChild: schedulingChildren[0],
+      });
+
+      expect(isOpen(wrapper)).toBe(true);
+      expect(visibleLeaves(wrapper)).toEqual(['Calendário', 'Páginas e links']);
+      expect(storedSections()).toBeNull();
+
+      state.activeChild = { name: 'CRM Kanban' };
+      await nextTick();
+
+      expect(isOpen(wrapper)).toBe(false);
+      expect(visibleLeaves(wrapper)).toEqual([]);
+    });
+
+    it('opens when the route moves to a child after mount', async () => {
+      const { wrapper, state } = mountScheduling();
+
+      state.activeChild = schedulingChildren[1];
+      await nextTick();
+
+      expect(isOpen(wrapper)).toBe(true);
+    });
+
+    it('remembers a manual open, across screens and mounts', async () => {
+      const { wrapper, state } = mountScheduling();
+
+      await wrapper.find('button').trigger('click');
+
+      expect(isOpen(wrapper)).toBe(true);
+      expect(storedSections()).toEqual({ '1:CRM:CRM Scheduling': false });
+
+      state.activeChild = schedulingChildren[0];
+      await nextTick();
+      state.activeChild = { name: 'CRM Kanban' };
+      await nextTick();
+
+      expect(isOpen(wrapper)).toBe(true);
+      expect(isOpen(mountScheduling().wrapper)).toBe(true);
+    });
+
+    it('remembers a manual close made on a child screen', async () => {
+      const { wrapper, state } = mountScheduling({
+        activeChild: schedulingChildren[0],
+      });
+
+      await wrapper.find('button').trigger('click');
+
+      expect(isOpen(wrapper)).toBe(false);
+      expect(storedSections()).toEqual({ '1:CRM:CRM Scheduling': true });
+
+      state.activeChild = schedulingChildren[1];
+      await nextTick();
+
+      expect(isOpen(wrapper)).toBe(false);
+    });
+
+    it('opens again when coming back to a child screen after a manual close, and keeps the stored close for the other screens', async () => {
+      const { wrapper, state } = mountScheduling({
+        activeChild: schedulingChildren[0],
+      });
+      await wrapper.find('button').trigger('click');
+
+      state.activeChild = { name: 'CRM Kanban' };
+      await nextTick();
+      expect(isOpen(wrapper)).toBe(false);
+
+      state.activeChild = schedulingChildren[0];
+      await nextTick();
+      expect(isOpen(wrapper)).toBe(true);
+      expect(storedSections()).toEqual({ '1:CRM:CRM Scheduling': true });
+
+      state.activeChild = { name: 'CRM Kanban' };
+      await nextTick();
+      expect(isOpen(wrapper)).toBe(false);
+    });
+
+    it('follows a choice made in another tab', async () => {
+      const { wrapper } = mountScheduling();
+
+      window.localStorage.setItem(
+        LOCAL_STORAGE_KEYS.SIDEBAR_MINIMIZED_SECTIONS,
+        JSON.stringify({ '1:CRM:CRM Scheduling': false })
+      );
+      window.dispatchEvent(
+        new StorageEvent('storage', {
+          key: LOCAL_STORAGE_KEYS.SIDEBAR_MINIMIZED_SECTIONS,
+        })
+      );
+      await nextTick();
+
+      expect(isOpen(wrapper)).toBe(true);
+    });
+
+    it('closes again after a manual open followed by a manual close', async () => {
+      const { wrapper } = mountScheduling();
+
+      await wrapper.find('button').trigger('click');
+      await wrapper.find('button').trigger('click');
+
+      expect(isOpen(wrapper)).toBe(false);
+      expect(isOpen(mountScheduling().wrapper)).toBe(false);
+    });
+
+    it('does not change subgroups without the prop: open by default, close stores true, reopen clears the key', async () => {
+      const { wrapper } = mountScheduling({ defaultCollapsed: false });
+
+      expect(isOpen(wrapper)).toBe(true);
+      expect(storedSections()).toBeNull();
+
+      await wrapper.find('button').trigger('click');
+      expect(isOpen(wrapper)).toBe(false);
+      expect(storedSections()).toEqual({ '1:CRM:CRM Scheduling': true });
+
+      await wrapper.find('button').trigger('click');
+      expect(isOpen(wrapper)).toBe(true);
+      expect(storedSections()).toEqual({});
+    });
+
+    it('does not change subgroups without the prop: the active child still clears a stored close', () => {
+      window.localStorage.setItem(
+        LOCAL_STORAGE_KEYS.SIDEBAR_MINIMIZED_SECTIONS,
+        JSON.stringify({ '1:CRM:CRM Scheduling': true })
+      );
+      const { wrapper } = mountScheduling({
+        defaultCollapsed: false,
+        activeChild: schedulingChildren[0],
+      });
+
+      expect(isOpen(wrapper)).toBe(true);
+      expect(storedSections()).toEqual({});
+    });
   });
 });
