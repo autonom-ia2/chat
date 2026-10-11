@@ -642,9 +642,9 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/stages#destroy",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:35",
       "app/controllers/api/v1/accounts/crm/stages_controller.rb:36",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:60"
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:37",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:62"
     ],
     "sem_corpo": false
   },
@@ -5869,62 +5869,34 @@
   },
   "PATCH crm/stages/:id": {
     "campos": {
-      "color": {
-        "tipo": "string"
-      },
-      "description": {
-        "tipo": "string"
-      },
+      "color": {},
+      "description": {},
       "funnel_stage_type": {},
-      "is_lost_stage": {
-        "padrao": false,
-        "tipo": "booleano"
-      },
-      "is_won_stage": {
-        "padrao": false,
-        "tipo": "booleano"
-      },
+      "is_lost_stage": {},
+      "is_won_stage": {},
       "metadata": {
         "tipo": "objeto_livre"
       },
-      "name": {
-        "nao_pode_ficar_vazio": true,
-        "tipo": "string"
-      },
-      "position": {
-        "padrao": 0,
-        "tipo": "inteiro"
-      },
-      "sla_seconds": {
-        "tipo": "inteiro"
-      },
-      "sla_warning_seconds": {
-        "tipo": "inteiro"
-      },
-      "win_probability": {
-        "max": 100,
-        "min": 0,
-        "padrao": 0,
-        "tipo": "inteiro"
-      },
-      "wip_limit": {
-        "tipo": "inteiro"
-      }
+      "name": {},
+      "position": {},
+      "sla_seconds": {},
+      "sla_warning_seconds": {},
+      "win_probability": {},
+      "wip_limit": {}
     },
     "completo": false,
     "controller": "api/v1/accounts/crm/stages#update",
     "corpo_plano": true,
     "envelope": "stage",
-    "modelo": "Crm::PipelineStage",
     "motivos": [
       "leitura crua sem tipo: funnel_stage_type"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:30",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:69",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:95",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:92",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:60"
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:31",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:81",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:107",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:104",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:62"
     ],
     "sem_corpo": false
   },
@@ -14804,11 +14776,11 @@
       "leitura crua sem tipo: funnel_stage_type"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:17",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:69",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:95",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:92",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:56"
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:18",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:81",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:107",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:104",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:58"
     ],
     "sem_corpo": false
   },
@@ -15355,16 +15327,16 @@
   "POST crm/stages/reorder": {
     "campos": {
       "stage_ids": {
-        "tipo": "lista",
-        "tipo_pela_leitura": "nome"
+        "tipo": "lista"
       }
     },
     "completo": true,
     "controller": "api/v1/accounts/crm/stages#reorder",
-    "modelo": "Crm::PipelineStage",
+    "modelo": "Crm::Pipeline",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:46",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:76"
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:47",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:88",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:49"
     ],
     "sem_corpo": false
   },
@@ -23161,62 +23133,34 @@
   },
   "PUT crm/stages/:id": {
     "campos": {
-      "color": {
-        "tipo": "string"
-      },
-      "description": {
-        "tipo": "string"
-      },
+      "color": {},
+      "description": {},
       "funnel_stage_type": {},
-      "is_lost_stage": {
-        "padrao": false,
-        "tipo": "booleano"
-      },
-      "is_won_stage": {
-        "padrao": false,
-        "tipo": "booleano"
-      },
+      "is_lost_stage": {},
+      "is_won_stage": {},
       "metadata": {
         "tipo": "objeto_livre"
       },
-      "name": {
-        "nao_pode_ficar_vazio": true,
-        "tipo": "string"
-      },
-      "position": {
-        "padrao": 0,
-        "tipo": "inteiro"
-      },
-      "sla_seconds": {
-        "tipo": "inteiro"
-      },
-      "sla_warning_seconds": {
-        "tipo": "inteiro"
-      },
-      "win_probability": {
-        "max": 100,
-        "min": 0,
-        "padrao": 0,
-        "tipo": "inteiro"
-      },
-      "wip_limit": {
-        "tipo": "inteiro"
-      }
+      "name": {},
+      "position": {},
+      "sla_seconds": {},
+      "sla_warning_seconds": {},
+      "win_probability": {},
+      "wip_limit": {}
     },
     "completo": false,
     "controller": "api/v1/accounts/crm/stages#update",
     "corpo_plano": true,
     "envelope": "stage",
-    "modelo": "Crm::PipelineStage",
     "motivos": [
       "leitura crua sem tipo: funnel_stage_type"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:30",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:69",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:95",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:92",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:60"
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:31",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:81",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:107",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:104",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:62"
     ],
     "sem_corpo": false
   },

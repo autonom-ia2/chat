@@ -83,6 +83,31 @@ RSpec.describe Crm::Access::VisiblePipelines do
       expect(visible).not_to include('Filial')
     end
 
+    it 'funil desvinculado da caixa, com cards dela, não vira avulso' do
+      restrict(agent)
+      account.crm_cards.create!(pipeline: sinistro.first, stage: sinistro.last, title: 'S', inbox: inbox)
+      Crm::PipelineInbox.where(pipeline: sinistro.first).destroy_all
+
+      expect(visible).not_to include('Sinistro')
+      expect(visible).to include('Prospecção')
+    end
+
+    it 'caixa livre em "só atribuídas" põe os funis no Kanban, mas não no painel' do
+      restrict(agent)
+      account.crm_inbox_settings.create!(inbox: outra_caixa, crm_enabled: true, visibility_mode: :assigned_only)
+
+      expect(visible).to include('Instagram')
+      expect(report_visible).not_to include('Instagram')
+    end
+
+    it 'card avulso só vai para um funil que a pessoa enxerga' do
+      restrict(agent)
+      guard = Crm::Access::CardGuard.new(user: agent, account: account)
+
+      expect(guard.create_allowed?(sinistro.first.id, conversation: nil, inbox_id: nil)).to be(false)
+      expect(guard.create_allowed?(vendas.first.id, conversation: nil, inbox_id: nil)).to be(true)
+    end
+
     it 'administrador vê todos os funis, mesmo com linha' do
       restrict(admin)
 
@@ -128,6 +153,32 @@ RSpec.describe Crm::Access::VisiblePipelines do
 
       get api('crm/reports/summary'), headers: headers
       expect(response.parsed_body.dig('payload', 'pipeline', 'name')).to be_in(%w[Vendas Instagram Prospecção])
+    end
+
+    it 'o funil padrão escondido não vira o relatório padrão' do
+      sinistro.first.update!(is_default: true)
+
+      get api('crm/reports/summary'), headers: headers
+
+      expect(response.parsed_body.dig('payload', 'pipeline', 'name')).to be_in(%w[Vendas Instagram Prospecção])
+    end
+
+    it 'etapa e visão salva de funil escondido são 404 também por id' do
+      view = saved_view(sinistro, 'Minha visão antiga')
+      Crm::SavedView.where(id: view.id).update_all(user_id: agent.id) # rubocop:disable Rails/SkipsModelValidations
+
+      patch api("crm/saved_views/#{view.id}"), params: { saved_view: { name: 'Outra' } }, headers: headers, as: :json
+      expect(response).to have_http_status(:not_found)
+      patch api("crm/stages/#{sinistro.last.id}"), params: { stage: { name: 'X' } }, headers: headers, as: :json
+      expect(response).to have_http_status(:not_found)
+    end
+
+    it 'a Prospecção não mostra o funil, a etapa nem o dono do card de um funil escondido' do
+      card = account.crm_cards.create!(pipeline: sinistro.first, stage: sinistro.last, title: 'S', inbox: inbox)
+      visibility = Autonomia::Prospecting::Visibility.new(AccountUser.find_by(account: account, user: agent))
+      payload = { 'crm_presence' => { 'card_id' => card.id, 'pipeline_name' => 'Sinistro', 'stage_name' => 'Novo Lead' } }
+
+      expect(visibility.lead_payload(payload)['crm_presence']).to eq('card_id' => card.id)
     end
 
     it 'sem funil nenhum no painel, não há relatório (nada da conta inteira)' do
@@ -211,6 +262,15 @@ RSpec.describe Crm::Access::VisiblePipelines do
       AccountUser.find_by(account: account, user: bot_user).update!(integration: true)
 
       expect(described_class.new(user: bot_user, account: account).restricted?).to be(false)
+    end
+  end
+
+  describe Crm::Access::Recipients do
+    it 'usuário de integração com linha antiga também não é barrado no tempo real' do
+      robo = create_crm_agent(account: account, name: 'n8n').first
+      AccountUser.find_by(account: account, user: robo).update!(integration: true)
+
+      expect(described_class.unrestricted_user_ids(account.id, [robo.id, agent.id])).to contain_exactly(robo.id)
     end
   end
 
