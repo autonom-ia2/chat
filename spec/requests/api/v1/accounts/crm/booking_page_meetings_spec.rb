@@ -113,10 +113,13 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingPageMeetings', type: :request do
 
       book(notify: false)
       expect(Crm::MeetingNotice.count).to eq(0)
+      expect(Crm::Meeting.sole.metadata).not_to have_key('notice_basis')
 
       book(starts_at: '2026-10-21T10:00:00-03:00', notify: true)
       meeting = Crm::Meeting.order(:id).last
       expect(meeting.notices.pluck(:kind)).to include('booked')
+      # #1271: com o aviso, fica o motivo de mandar mensagem a quem não marcou sozinho.
+      expect(meeting.metadata).to include('notice_basis' => 'combinado_com_atendente', 'booked_by_user_id' => world.host.id)
     end
 
     it 'keeps the client without notices when rescheduled after booking without notify' do

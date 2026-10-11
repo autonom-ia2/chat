@@ -2,9 +2,15 @@
 # link de gestão (`/b/<code>`) e SEMPRE a linha para parar os avisos (J2-A9, RA-18). O link de parar é o mesmo link
 # de gestão com `?stop_notices=1`: a página abre já oferecendo "Parar avisos".
 #
+# Reunião marcada pela equipe no painel (#1271, `source: 'panel'`): o aviso "ao marcar" diz quem marcou ("Oi, Ana!
+# Juliana marcou seu horário para …"), pelo nome de exibição ou o primeiro nome de `metadata.booked_by_user_id`.
+# Sem essa pessoa (apagada ou sem nome), fica o texto de sempre. Só no texto livre: os valores do modelo aprovado
+# ({{1}} {{2}} {{3}}) não mudam.
+#
 # `when_text` também alimenta o modelo aprovado ({{2}}) e as notificações ao agente.
 class Crm::BookingV2::Notices::Text
   STOP_PARAM = '?stop_notices=1'.freeze
+  TEAM_BOOKED_KIND = 'booked'.freeze
 
   def self.when_text(meeting)
     zone = ActiveSupport::TimeZone[meeting.timezone.to_s] || Time.zone
@@ -27,7 +33,8 @@ class Crm::BookingV2::Notices::Text
   end
 
   def to_s
-    body = I18n.t("crm.booking_v2.notices.#{kind}", name: name_part, when: self.class.when_text(meeting), link: invite.url, locale: locale)
+    body = I18n.t("crm.booking_v2.notices.#{body_key}", name: name_part, booker: booker_name,
+                                                        when: self.class.when_text(meeting), link: invite.url, locale: locale)
     "#{body}\n\n#{stop_line}"
   end
 
@@ -45,6 +52,33 @@ class Crm::BookingV2::Notices::Text
   private
 
   attr_reader :meeting, :invite, :kind
+
+  def body_key
+    booker_name.present? ? 'booked_by_team' : kind
+  end
+
+  # Nome de quem marcou pelo painel, só para o aviso "ao marcar".
+  def booker_name
+    return @booker_name if defined?(@booker_name)
+
+    @booker_name = team_booked? ? user_first_name(booker) : nil
+  end
+
+  def team_booked?
+    kind == TEAM_BOOKED_KIND && meeting.source == Crm::BookingV2::PanelBooking::SOURCE
+  end
+
+  def booker
+    user_id = meeting.metadata.to_h['booked_by_user_id']
+    user_id.present? ? meeting.account.users.find_by(id: user_id) : nil
+  end
+
+  # O nome de exibição, se a pessoa escolheu um; senão, o primeiro nome do cadastro.
+  def user_first_name(user)
+    return nil if user.nil?
+
+    user.display_name.to_s.strip.presence || user.name.to_s.split.first.presence
+  end
 
   def stop_line
     I18n.t('crm.booking_v2.notices.stop_line', link: self.class.stop_url(invite), locale: locale)

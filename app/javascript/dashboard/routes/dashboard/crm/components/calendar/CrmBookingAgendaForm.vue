@@ -445,6 +445,9 @@ defineExpose({ submit, isShowingLink });
           <span class="text-xs text-n-slate-11">
             {{ t('CRM_KANBAN.BOOKING_AGENDA.NOTIFY_HINT') }}
           </span>
+          <span class="text-xs text-n-slate-11" data-booking-agenda-notify-when>
+            {{ t('CRM_KANBAN.BOOKING_AGENDA.NOTIFY_WHEN') }}
+          </span>
         </span>
       </label>
 

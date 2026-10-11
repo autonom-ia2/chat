@@ -410,7 +410,7 @@
         },
         "BOOKED": {
           "LABEL": "Booked",
-          "HINT": "Times booked through the links and the page."
+          "HINT": "Times booked through the links, the page and by the team."
         },
         "ATTENDED": {
           "LABEL": "Showed up",
@@ -426,6 +426,7 @@
         "CONVERSATION": "Link sent in a conversation",
         "PUBLIC_LINK": "Page link (bio, website, ad)",
         "CONTACT_REQUEST": "Contact request",
+        "TEAM": "By the team",
         "AI": "AI assistant",
         "EMPTY": "No time booked in this period yet."
       },
