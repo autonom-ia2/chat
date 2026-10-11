@@ -31,9 +31,9 @@ class SearchService
   end
 
   def filter_conversations
-    conversations_query = current_account.conversations.where(inbox_id: accessable_inbox_ids)
-                                         .joins('INNER JOIN contacts ON conversations.contact_id = contacts.id')
-                                         .where("cast(conversations.display_id as text) ILIKE :search OR contacts.name ILIKE :search OR contacts.email
+    visible = funnel_scope.apply(current_account.conversations.where(inbox_id: accessable_inbox_ids))
+    conversations_query = visible.joins('INNER JOIN contacts ON conversations.contact_id = contacts.id')
+                                 .where("cast(conversations.display_id as text) ILIKE :search OR contacts.name ILIKE :search OR contacts.email
                             ILIKE :search OR contacts.phone_number ILIKE :search OR contacts.identifier ILIKE :search", search: "%#{search_query}%")
 
     if current_account.feature_enabled?('advanced_search')
@@ -63,8 +63,9 @@ class SearchService
     use_gin_search ? filter_messages_with_gin : filter_messages_with_like
   end
 
+  # O índice do Elasticsearch não conhece o funil do card (#1148): quem tem acesso por funil busca pelo banco.
   def should_run_advanced_search?
-    ChatwootApp.advanced_search_allowed? && current_account.feature_enabled?('advanced_search')
+    ChatwootApp.advanced_search_allowed? && current_account.feature_enabled?('advanced_search') && !funnel_scope.restricted?
   end
 
   def advanced_search; end
@@ -107,7 +108,13 @@ class SearchService
   def message_base_query
     query = current_account.messages.where('created_at >= ?', 3.months.ago)
     query = query.where(inbox_id: accessable_inbox_ids) unless should_skip_inbox_filtering?
+    query = query.where(conversation_id: funnel_scope.apply(current_account.conversations).select(:id)) if funnel_scope.restricted?
     query
+  end
+
+  # Acesso por funil (#1148): só restringe quem tem caixa com acesso configurado.
+  def funnel_scope
+    @funnel_scope ||= Crm::Access::ConversationScope.new(user: current_user, account: current_account)
   end
 
   def apply_message_filters(query)

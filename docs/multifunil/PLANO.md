@@ -157,3 +157,19 @@ A Entrega 3 precisa de uma conta com **mais de um funil** para o piloto do acess
   - card nomeado por uma pessoa nunca é renomeado.
 - **Sugestão vale em Sugerir e em Automática** (#1221 passa a expirar só quando a IA de assunto ou o CRM são desligados).
 - **Custo:** medido na conta 16 depois do deploy. O OK para ligar em todas as contas é do Rodrigo, com a estimativa no PR.
+
+## 12. Decisões de 11/10/2026 (Rodrigo) — acesso por funil (#1148)
+
+- **R6 muda: não migrar.** Hoje "Agente vê apenas atribuídos" só esconde cards no CRM; lista, link, busca e tempo
+  real mostram todas as conversas da caixa. Migrar para "Só as suas" tiraria visão de conversa no deploy. Todos começam
+  em "Todos os funis, Todas"; o admin restringe na tela nova (#1149). A opção antiga continua valendo só para cards.
+- **Atribuído e participante sempre veem** a conversa, mesmo sem o funil (menção continua funcionando).
+- **O time não fura o funil:** quem chega pela equipe também passa pelo acesso por funil.
+- **Três PRs, tela por último:** A (tabelas + `Crm::Access::ConversationScope` na lista, no link e na busca), B (tempo
+  real, notificações e contadores), C (CRM e Copiloto no mesmo filtro). Sem linha configurada nada muda, então cada PR
+  entra no ar sem efeito; a tela (#1149) só depois do C. Revisão de segurança em cada PR.
+- **Busca:** quem tem acesso por funil busca pelo banco (o índice do Elasticsearch não conhece o funil do card).
+- **Card encerrado (11/10):** ganho e perdido continuam prendendo a conversa ao funil de quem estava; resolvido e
+  cancelado (funil de atendimento) soltam a conversa para a triagem, como o arquivado. Distribuição automática (PR B):
+  o rodízio só escolhe quem tem o funil do card (ou a triagem, sem card); atribuir à mão e mencionar continuam
+  liberando. A dinâmica de fechar/reabrir conversa por caixa entra na análise do PR B.
