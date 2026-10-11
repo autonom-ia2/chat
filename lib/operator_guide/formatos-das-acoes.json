@@ -4972,7 +4972,7 @@
     "modelo": "Crm::Card",
     "origem": [
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:101",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:487",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:498",
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:347"
     ],
     "sem_corpo": false
@@ -13799,8 +13799,8 @@
     "modelo": "Crm::Card",
     "origem": [
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:68",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:463",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:396",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:464",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:397",
       "app/controllers/concerns/crm/opportunity_registration.rb:7"
     ],
     "sem_corpo": false
@@ -14109,8 +14109,8 @@
     "modelo": "Crm::Card",
     "origem": [
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:90",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:463",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:437",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:464",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:438",
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:354",
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:352"
     ],
@@ -22283,7 +22283,7 @@
     "modelo": "Crm::Card",
     "origem": [
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:101",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:487",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:498",
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:347"
     ],
     "sem_corpo": false

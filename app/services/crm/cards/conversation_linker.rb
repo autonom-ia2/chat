@@ -9,6 +9,12 @@ module Crm
       end
 
       def link
+        card = locked_link
+        sync_access!
+        card
+      end
+
+      def locked_link
         @card.with_lock do
           validate_contact_compatibility!
           primary = @requested_primary || @card.conversation_id.blank?
@@ -33,7 +39,7 @@ module Crm
       end
 
       def unlink
-        @card.with_lock do
+        card = @card.with_lock do
           Crm::CardConversation.where(card: @card, conversation: @conversation).destroy_all
           if @card.conversation_id == @conversation.id
             @card.update!(conversation_id: nil, last_activity_at: Time.current)
@@ -43,9 +49,17 @@ module Crm
           log_activity('conversation_unlinked')
           @card.reload
         end
+        sync_access!
+        card
       end
 
       private
+
+      # Acesso por funil (#1148, parte C): o reload dentro da trava zera saved_changes e o after_commit do card não vê
+      # a troca de conversa. A conversa vinculada ou desvinculada é sincronizada aqui, depois da trava.
+      def sync_access!
+        Crm::Access::CountInvalidation.card_changed!(@card.account_id, [@conversation.id, @card.conversation_id])
+      end
 
       # This entry point is independent of ContactLinker: checking only a contact
       # swap still allowed the reverse operation to attach somebody else's chat.

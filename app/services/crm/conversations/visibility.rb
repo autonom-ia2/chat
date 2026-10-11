@@ -16,6 +16,11 @@ class Crm::Conversations::Visibility
 
   # SQL equivalent of visible? for filters/counts. Filtering after pagination
   # would still expose matches or drop authorized rows from the current page.
+  # Kanban e lista: a regra do funil para todas as conversas da página de uma vez (#1148, parte C).
+  def preload(conversations)
+    funnel_scope.preload(conversations)
+  end
+
   def scope(conversations)
     base = conversations.where(account_id: @account.id)
     return base if administrator?

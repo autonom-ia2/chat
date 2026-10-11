@@ -123,11 +123,11 @@ module Crm
       # The same visible scope the CardPolicy::Scope resolves, so a bulk request
       # can only ever touch cards the caller can see one-by-one.
       def move_forbidden?(card, target_stage)
-        target_stage.present? && !card_scope.pipeline_allowed?(card.inbox_id, target_stage.pipeline_id)
+        target_stage.present? && !card_guard.move_allowed?(card, target_stage.pipeline_id)
       end
 
-      def card_scope
-        @card_scope ||= Crm::Access::CardScope.new(user: @user, account: @account, account_user: @account_user)
+      def card_guard
+        @card_guard ||= Crm::Access::CardGuard.new(user: @user, account: @account, account_user: @account_user)
       end
 
       def visible_scope

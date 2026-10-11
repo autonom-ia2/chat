@@ -32,6 +32,8 @@ module Crm::Access::VisibilitySync
   # A conversa sem atendente que ganhou funil volta ao rodízio (decisão de 11/10: o card nasce depois da conversa).
   def reassign(conversation)
     return unless conversation.open? && conversation.assignee_id.blank? && conversation.inbox.enable_auto_assignment?
+    # Só onde o funil decide alguma coisa: caixa sem linha restritiva segue com o rodízio de sempre (revisão da parte C).
+    return unless Crm::InboxAgentAccess.where(account_id: conversation.account_id, inbox_id: conversation.inbox_id).any?(&:restricts?)
 
     if conversation.inbox.auto_assignment_v2_enabled?
       AutoAssignment::AssignmentJob.enqueue_for_inbox(conversation.inbox_id)

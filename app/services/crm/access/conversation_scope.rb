@@ -32,11 +32,23 @@ class Crm::Access::ConversationScope
     end
   end
 
+  # Guarda o resultado por conversa: o payload de um card pergunta várias vezes pela mesma conversa (#1148, parte C).
   def allows?(conversation)
     access = restrictions.find { |item| item.inbox_id == conversation.inbox_id }
     return true if access.nil?
 
-    Conversation.where(id: conversation.id).where(condition(access)).exists?
+    allowed_cache.fetch(conversation.id) do
+      allowed_cache[conversation.id] = Conversation.where(id: conversation.id).where(condition(access)).exists?
+    end
+  end
+
+  # Responde de uma vez para várias conversas (Kanban, lista): uma consulta em vez de uma por conversa.
+  def preload(conversations)
+    pending = conversations.compact.reject { |conversation| allowed_cache.key?(conversation.id) }
+    return if pending.empty? || restrictions.empty?
+
+    allowed = apply(Conversation.where(id: pending.map(&:id))).pluck(:id).to_set
+    pending.each { |conversation| allowed_cache[conversation.id] = allowed.include?(conversation.id) }
   end
 
   # A pessoa tem alguma caixa restrita: quem tem atalho de "vê tudo" (busca) precisa filtrar.
@@ -68,6 +80,10 @@ class Crm::Access::ConversationScope
   end
 
   private
+
+  def allowed_cache
+    @allowed_cache ||= {}
+  end
 
   # Uma consulta só para quem não tem linha (o caso de todo mundo hoje); o papel só é lido quando há restrição.
   # AgentBot não tem acesso por funil: o id dele pode coincidir com o de uma pessoa.
