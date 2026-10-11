@@ -10,7 +10,8 @@
 # como está (opt_out! é idempotente). O card guarda qual contato marcou (CardOptOut::CONTACT_KEY): a marca é a prova da
 # recusa desse contato, e quem a desfaz é o reset do follow-up no drawer. O lock do contato vem depois do card gravado,
 # para um reset concorrente noutro card enxergar esta marca antes de liberar (ContactOptOut#release_opt_out!). Ordem de
-# locks: card -> contato, a mesma do reset (follow-up -> card -> contato); nada aqui trava contato antes de card.
+# locks: card -> contato, o mesmo trecho final do reset (follow-up -> card -> contato); nada aqui trava contato antes
+# de card.
 #
 # O log leva card, mensagem, decisão e motivo (códigos fechados). Nunca o texto da mensagem.
 class Crm::FollowUps::OptOutDecision

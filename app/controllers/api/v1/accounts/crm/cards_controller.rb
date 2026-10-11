@@ -202,10 +202,13 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
   # ai_followup touches, clears the cadence state to an un-armed shape so the next
   # planner sweep starts a new cycle, then broadcasts the updated card.
   # O reset é o dono da recusa 'follow_up_reply' do contato (chat#1325). Tudo vai numa transação só, travando na ordem
-  # follow-up -> card -> contato, a mesma do DueProcessor/AutoFollowupRunner e do OptOutDecision (card -> contato):
-  # primeiro os toques ai_followup ativos do card (por id), depois o card, cuja marca é relida com ele travado, e por
-  # último os contatos, na liberação (por id). Toque criado depois da primeira leitura não é cancelado aqui: travá-lo
-  # depois do card inverteria a ordem, e o estado zerado já o torna inofensivo.
+  # follow-up -> card -> contato: primeiro os toques ai_followup ativos do card (por id), depois o card, cuja marca é
+  # relida com ele travado, e por último o contato, na liberação. É a ordem do caminho principal do DueProcessor/
+  # AutoFollowupRunner (follow-up -> card) e combina com o OptOutDecision (card -> contato). O caminho de parada do
+  # runner (stop_cadence/stop_closure/skip -> cancel_pending_siblings) faz card -> toques irmãos; o cruzamento com ele
+  # pode dar deadlock, que o banco resolve abortando um dos lados, sem corromper dado. Já existia no runner (#1342).
+  # Toque criado pelo planner depois da primeira leitura não é cancelado aqui (travá-lo depois do card inverteria a
+  # ordem), e o runner não lê state['active'], então ele pode sair. Janela estreita, já existente, registrada no #1342.
   def reset_auto_followup
     ActiveRecord::Base.transaction do
       ai_follow_ups = @card.follow_ups.active.where("crm_follow_ups.metadata->>'source' = 'ai_followup'").order(:id).lock.to_a
