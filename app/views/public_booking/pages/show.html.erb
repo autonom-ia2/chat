@@ -2,6 +2,7 @@
 <html>
   <head>
     <title><%= @global_config['INSTALLATION_NAME'] %></title>
+    <%= render 'public_booking/pages/link_preview', preview: @link_preview, url: @link_preview_url, installation_name: @global_config['INSTALLATION_NAME'] %>
     <%= csrf_meta_tags %>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
     <script>

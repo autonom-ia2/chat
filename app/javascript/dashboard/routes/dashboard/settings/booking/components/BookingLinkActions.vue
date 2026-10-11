@@ -4,10 +4,15 @@ import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import { copyTextToClipboard } from 'shared/helpers/clipboard';
 import BookingPageQr from './BookingPageQr.vue';
+import BookingQrDownload from './BookingQrDownload.vue';
 
 // Copiar link, QR code e Abrir: o que a pessoa faz com o link pronto. Não
 // muda nada na página, então quem só vê também usa.
-defineProps({ url: { type: String, required: true } });
+defineProps({
+  url: { type: String, required: true },
+  // Nome para o arquivo do QR code baixado (#1290).
+  name: { type: String, default: '' },
+});
 
 const { t } = useI18n();
 const showQr = ref(false);
@@ -60,6 +65,9 @@ const copy = async url => {
         {{ t('BOOKING.LINK.OPEN') }}
       </a>
     </div>
-    <BookingPageQr v-if="showQr" :url="url" />
+    <template v-if="showQr">
+      <BookingPageQr :url="url" />
+      <BookingQrDownload :url="url" :name="name" />
+    </template>
   </div>
 </template>

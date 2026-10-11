@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_10_15_130000) do
+ActiveRecord::Schema[7.2].define(version: 2026_10_16_100000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1928,10 +1928,12 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_15_130000) do
     t.boolean "close_holidays", default: true, null: false
     t.string "post_meeting_mode", default: "ask", null: false
     t.bigint "post_meeting_stage_id"
+    t.string "short_name"
     t.index ["account_id"], name: "index_crm_agent_booking_profiles_on_account_id"
     t.index ["inbox_id"], name: "index_crm_agent_booking_profiles_on_inbox_id"
     t.index ["notice_inbox_id"], name: "index_crm_agent_booking_profiles_on_notice_inbox_id"
     t.index ["post_meeting_stage_id"], name: "index_crm_agent_booking_profiles_on_post_meeting_stage_id"
+    t.index ["short_name"], name: "index_crm_agent_booking_profiles_on_short_name", unique: true
     t.index ["slug"], name: "index_crm_agent_booking_profiles_on_slug", unique: true
   end
 

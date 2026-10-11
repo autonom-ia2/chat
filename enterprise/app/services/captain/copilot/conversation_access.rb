@@ -13,9 +13,9 @@ module Captain::Copilot::ConversationAccess
     return conversations.none if account_user.blank?
 
     conversations = base_accessible_conversations(conversations, account, user, account_user)
-    return conversations if account_user.custom_role_id.blank?
-
-    filter_by_custom_role(conversations, account, user, account_user)
+    conversations = filter_by_custom_role(conversations, account, user, account_user) if account_user.custom_role_id.present?
+    # Acesso por funil (#1148): o Copiloto não lê conversa que a lista e o link escondem.
+    Crm::Access::ConversationScope.new(user: user, account: account, account_user: account_user).apply(conversations)
   end
 
   def base_accessible_conversations(conversations, account, user, account_user)

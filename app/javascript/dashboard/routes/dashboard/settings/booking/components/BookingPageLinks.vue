@@ -16,7 +16,11 @@ const links = computed(() => props.page.links || []);
 </script>
 
 <template>
-  <BookingLinkActions v-if="page.public_url" :url="page.public_url" />
+  <BookingLinkActions
+    v-if="page.public_url"
+    :url="page.public_url"
+    :name="page.title"
+  />
   <div v-else-if="links.length" data-person-links class="flex flex-col gap-3">
     <div class="flex flex-col gap-1">
       <p class="m-0 text-base font-semibold text-n-slate-12">
@@ -42,7 +46,10 @@ const links = computed(() => props.page.links || []);
             t('BOOKING.LINK.PERSON_LABEL', { name: link.agent_name })
           "
         >
-          <BookingLinkActions :url="link.url" />
+          <BookingLinkActions
+            :url="link.url"
+            :name="`${page.title || ''} ${link.agent_name || ''}`"
+          />
         </div>
       </li>
     </ul>

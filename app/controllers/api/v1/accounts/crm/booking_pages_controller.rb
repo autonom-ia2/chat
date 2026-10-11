@@ -156,7 +156,7 @@ class Api::V1::Accounts::Crm::BookingPagesController < Api::V1::Accounts::Crm::B
     page = @page.reload
     payload = ::Crm::BookingV2::PageSerializer.new(page, attention: report.attention?(page), orphaned: report.orphaned(page)).full
     payload = payload.merge(calendar_options: calendar_inbox_options, notice_inbox_options: notice_inboxes.as_json,
-                            can_save_identity: ::Crm::BookingPagePolicy.new(pundit_user, page).save_identity?)
+                            can_save_identity: ::Crm::BookingPagePolicy.new(pundit_user, page).save_identity?, **photo_owner_payload)
     render json: { payload: payload }, status: status
   end
 
@@ -209,7 +209,7 @@ class Api::V1::Accounts::Crm::BookingPagesController < Api::V1::Accounts::Crm::B
   # `post_meeting` (#1193): `Crm::BookingV2::PostMeetingParams`.
   def page_params
     parameter_set(:booking_page).permit(
-      :title, :description, :duration_minutes, :buffer_minutes, :booking_window_days, :min_notice_minutes,
+      :title, :short_name, :description, :duration_minutes, :buffer_minutes, :booking_window_days, :min_notice_minutes,
       :timezone, :contact_phone, :default_pipeline_id, :default_stage_id, :invite_text, :invite_ttl_days, :close_holidays,
       :notice_preset, :cancel_until_minutes,
       slot_durations: [], working_hours: [:start_hour, :end_hour, { weekdays: [] }],

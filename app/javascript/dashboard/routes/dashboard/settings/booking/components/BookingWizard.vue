@@ -1,6 +1,7 @@
 <script setup>
 import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useStore } from 'vuex';
 import BookingSteps from './BookingSteps.vue';
 import StepTemplate from './steps/StepTemplate.vue';
 import StepAbout from './steps/StepAbout.vue';
@@ -22,6 +23,7 @@ const props = defineProps({
 
 const emit = defineEmits(['close']);
 const { t } = useI18n();
+const store = useStore();
 
 const {
   step,
@@ -59,6 +61,9 @@ const {
   pageId: props.pageId,
   initialStep: props.initialStep,
   onClose: () => emit('close'),
+  // A foto virou também a do perfil (#1298): o avatar do painel acompanha
+  // sem recarregar, relendo o usuário como a tela de perfil faz.
+  onProfilePhoto: () => store.dispatch('validityCheck'),
 });
 
 onMounted(load);
@@ -141,6 +146,8 @@ const blockedByMissing = computed(
           <StepAbout
             v-if="step === STEP.CONTE"
             :form="form"
+            :page-id="page.id"
+            :saved-short-name="page.short_name || ''"
             :people="people"
             :people-state="peopleState"
             :error="error"

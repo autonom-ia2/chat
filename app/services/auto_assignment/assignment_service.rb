@@ -75,7 +75,9 @@ class AutoAssignment::AssignmentService
     round_robin_selector.select_agent(agents)
   end
 
+  # Time e acesso por funil (#1148): o rodízio só escolhe quem pode ver a conversa (decisão do Rodrigo, 11/10).
   def filter_agents_by_team(agents, conversation)
+    agents = Crm::Access::Recipients.new(conversation).filter_members(agents) if conversation.present?
     return agents if conversation&.team_id.blank?
 
     team = conversation.team

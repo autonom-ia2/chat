@@ -20,6 +20,9 @@ const props = defineProps({
   sortOptions: { type: Array, default: () => [] },
   activeSort: { type: String, default: '' },
   collapsible: { type: Boolean, default: false },
+  // Recolhível que nasce fechado (#1288). Sem escolha guardada vale o padrão;
+  // a escolha manual fica no mesmo localStorage dos outros subgrupos.
+  defaultCollapsed: { type: Boolean, default: false },
   showTreeLine: { type: Boolean, default: false },
   endTreeLine: { type: Boolean, default: false },
 });
@@ -45,11 +48,19 @@ const minimizedSections = ref(getMinimizedSections());
 const storageKey = computed(() =>
   accountId.value ? `${accountId.value}:${props.name}` : props.name
 );
-const isSubGroupExpanded = computed(
-  () => !props.collapsible || !minimizedSections.value[storageKey.value]
-);
 const hasActiveChild = computed(() =>
   props.children.some(child => child.name === props.activeChild?.name)
+);
+// Subgrupo que nasce fechado abre sozinho ao entrar na tela de um filho, mesmo
+// que a pessoa o tenha fechado antes (como os outros subgrupos, a tela ativa
+// nunca fica escondida na chegada). Isso não vira escolha guardada: ao sair da
+// tela ele volta ao que a pessoa deixou.
+const isOpenedByActiveChild = ref(false);
+const isMinimized = computed(
+  () => minimizedSections.value[storageKey.value] ?? props.defaultCollapsed
+);
+const isSubGroupExpanded = computed(
+  () => !props.collapsible || isOpenedByActiveChild.value || !isMinimized.value
 );
 
 const accessibleItems = computed(() =>
@@ -84,17 +95,25 @@ const toggleSubGroup = () => {
 
   if (isSubGroupExpanded.value) {
     LocalStorage.updateJsonStore(minimizedSectionsKey, storageKey.value, true);
+  } else if (props.defaultCollapsed) {
+    LocalStorage.updateJsonStore(minimizedSectionsKey, storageKey.value, false);
   } else {
     LocalStorage.deleteFromJsonStore(minimizedSectionsKey, storageKey.value);
   }
 
+  isOpenedByActiveChild.value = false;
   minimizedSections.value = getMinimizedSections();
 };
 
 const expandSubGroupOnActiveChild = () => {
-  if (!props.collapsible || !hasActiveChild.value || isSubGroupExpanded.value) {
+  if (!props.collapsible) return;
+
+  if (props.defaultCollapsed) {
+    isOpenedByActiveChild.value = hasActiveChild.value;
     return;
   }
+
+  if (!hasActiveChild.value || isSubGroupExpanded.value) return;
 
   LocalStorage.deleteFromJsonStore(minimizedSectionsKey, storageKey.value);
   minimizedSections.value = getMinimizedSections();

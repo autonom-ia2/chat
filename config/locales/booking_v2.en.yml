@@ -8,6 +8,13 @@ en:
         in_person: 'In person'
         google_meet: 'Google Meet'
         teams: 'Microsoft Teams'
+      link_preview:
+        call: 'Choose a time'
+        description_call: 'Choose the time that works best for you'
+        with_host: 'With %{name}'
+        minutes: '%{count} min'
+        hours: '%{count} h'
+        hours_minutes: '%{hours} h %{minutes} min'
       contact_request:
         follow_up_title: 'Call %{name}: asked to be contacted from the booking page'
       invite:

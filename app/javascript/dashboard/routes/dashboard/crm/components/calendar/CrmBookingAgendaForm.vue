@@ -2,6 +2,8 @@
 // Marcar pela agenda (#1265): dentro da janela "Agendar reunião", a atendente
 // escolhe a página publicada, o dia e um horário livre (a mesma regra da
 // página pública), e salva. A reunião sai pelo Booker do agendamento novo.
+// O dia vem em cartões (#1285): só os dias em que a página atende, com o dia
+// do horário mais cedo em destaque.
 // Ação secundária: mandar o link para o cliente escolher (mesma API do botão
 // Agendar da conversa, `booking_invites`).
 import { computed, ref, watch } from 'vue';
@@ -10,9 +12,10 @@ import crmBookingPagesAPI from 'dashboard/api/crmBookingPages';
 import BookingInvitesAPI from 'dashboard/api/crmBookingInvites';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
-import Input from 'dashboard/components-next/input/Input.vue';
 import { useAlert } from 'dashboard/composables';
 import { copyTextToClipboard } from 'shared/helpers/clipboard';
+import { bookingDays } from '../../../../../../public_booking_v2/helpers/datetime';
+import CrmBookingDayCards from './CrmBookingDayCards.vue';
 
 const props = defineProps({
   pages: { type: Array, required: true },
@@ -47,6 +50,7 @@ const duration = ref(null);
 const location = ref('');
 const slots = ref([]);
 const nextSlot = ref(null);
+const earliestDay = ref('');
 const startsAt = ref('');
 const notify = ref(false);
 const isLoadingSlots = ref(false);
@@ -57,6 +61,7 @@ const invite = ref(null);
 const isPreparingLink = ref(false);
 const isSendingLink = ref(false);
 let slotsRequest = 0;
+let earliestRequest = 0;
 
 const page = computed(
   () => props.pages.find(item => item.id === pageId.value) || props.pages[0]
@@ -82,13 +87,27 @@ const conversationId = computed(
 );
 const contactName = computed(() => props.card?.contact?.name || '');
 
-const pad = value => String(value).padStart(2, '0');
-const toDateInput = value => {
-  const date = value ? new Date(value) : new Date();
-  const safe = Number.isNaN(date.getTime()) ? new Date() : date;
-  return `${safe.getFullYear()}-${pad(safe.getMonth() + 1)}-${pad(safe.getDate())}`;
-};
-const todayInput = () => toDateInput(new Date());
+// Os dias em que a página atende, pela mesma conta da página pública: a
+// janela, os dias da semana e os feriados que ela fecha, no fuso da página.
+const days = computed(() =>
+  page.value
+    ? bookingDays(
+        page.value.timezone,
+        page.value.booking_window_days,
+        page.value.weekdays,
+        page.value.closed_dates
+      )
+    : []
+);
+// Dia pedido que a página não oferece (passado, fechado, fora da janela) cai
+// no primeiro que ela oferece: a agenda não marca fora deles.
+const offeredDay = wanted =>
+  days.value.includes(wanted) ? wanted : days.value[0] || '';
+// O ISO do horário vem com o fuso da página: o dia dele são os 10 primeiros
+// caracteres.
+const dayOf = iso => String(iso || '').slice(0, 10);
+const earliestIn = payload =>
+  dayOf(payload?.slots?.length ? payload.slots[0] : payload?.next_slot);
 
 // O ISO vem com o fuso da página: a hora mostrada é a dela.
 const timeLabel = iso =>
@@ -110,11 +129,17 @@ const resetForPage = () => {
 };
 
 const loadSlots = async () => {
-  if (!page.value || !day.value) return;
   slotsRequest += 1;
   const current = slotsRequest;
-  isLoadingSlots.value = true;
   startsAt.value = '';
+  // Página sem dia aberto: nada do dia anterior fica escolhido nem à vista.
+  if (!page.value || !day.value) {
+    slots.value = [];
+    nextSlot.value = null;
+    isLoadingSlots.value = false;
+    return;
+  }
+  isLoadingSlots.value = true;
   try {
     const { data } = await crmBookingPagesAPI.slots(page.value.id, {
       date: day.value,
@@ -123,6 +148,9 @@ const loadSlots = async () => {
     if (current !== slotsRequest) return;
     slots.value = data?.payload?.slots || [];
     nextSlot.value = data?.payload?.next_slot || null;
+    if (day.value === days.value[0]) {
+      earliestDay.value = earliestIn(data?.payload);
+    }
   } catch {
     if (current !== slotsRequest) return;
     slots.value = [];
@@ -133,10 +161,33 @@ const loadSlots = async () => {
   }
 };
 
-// O próximo livre: o dia dele no fuso da página são os 10 primeiros caracteres.
+// O dia do horário mais cedo (o destaque dos cartões) sai da mesma consulta
+// de horários, feita no primeiro dia oferecido: ou ele tem horário, ou a
+// resposta aponta o próximo livre. Quando o dia aberto já é o primeiro, a
+// resposta do `loadSlots` serve e esta consulta não sai.
+const loadEarliest = async () => {
+  earliestRequest += 1;
+  const current = earliestRequest;
+  const first = days.value[0];
+  earliestDay.value = '';
+  if (!page.value || !first || first === day.value) return;
+  try {
+    const { data } = await crmBookingPagesAPI.slots(page.value.id, {
+      date: first,
+      duration: duration.value,
+    });
+    if (current === earliestRequest) {
+      earliestDay.value = earliestIn(data?.payload);
+    }
+  } catch {
+    // Sem o destaque a escolha segue igual; falha de agenda aparece no
+    // carregamento dos horários do dia.
+  }
+};
+
 const goToNextSlot = () => {
   if (!nextSlot.value) return;
-  day.value = nextSlot.value.slice(0, 10);
+  day.value = dayOf(nextSlot.value);
 };
 
 const errorMessage = exception => {
@@ -240,17 +291,19 @@ watch(
   }
 );
 watch(pageId, resetForPage, { immediate: true });
+// Outra página pode não oferecer o dia que estava escolhido.
+watch(days, () => {
+  day.value = offeredDay(day.value);
+});
 watch([pageId, day, duration], () => {
   error.value = '';
   showErrors.value = false;
   loadSlots();
 });
+watch([pageId, duration], loadEarliest);
 
-// Dia passado (ou nenhum) abre em hoje: a agenda não marca no passado.
-day.value =
-  props.initialDay && props.initialDay >= todayInput()
-    ? props.initialDay
-    : todayInput();
+day.value = offeredDay(props.initialDay);
+loadEarliest();
 
 // Com o link na tela, a janela esconde o Salvar: a ação ali é enviar ou copiar.
 const isShowingLink = computed(() => Boolean(invite.value));
@@ -333,10 +386,10 @@ defineExpose({ submit, isShowingLink });
         />
       </div>
 
-      <Input
+      <CrmBookingDayCards
         v-model="day"
-        type="date"
-        :min="todayInput()"
+        :days="days"
+        :earliest-day="earliestDay"
         :label="t('CRM_KANBAN.BOOKING_AGENDA.DAY_LABEL')"
       />
 
@@ -351,7 +404,7 @@ defineExpose({ submit, isShowingLink });
         />
       </div>
 
-      <fieldset class="flex flex-col gap-2">
+      <fieldset v-if="day" class="flex flex-col gap-2">
         <legend class="mb-1 text-sm font-medium text-n-slate-12">
           {{ t('CRM_KANBAN.BOOKING_AGENDA.TIME_LABEL') }}
         </legend>

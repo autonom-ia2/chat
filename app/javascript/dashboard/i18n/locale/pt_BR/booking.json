@@ -49,6 +49,15 @@
       "QR_HIDE": "Esconder QR code",
       "QR_ALT": "QR code da página de agendamento",
       "QR_ERROR": "Não deu para gerar o QR code.",
+      "QR_DOWNLOAD": "Baixar QR code",
+      "QR_DOWNLOAD_LABEL": "Baixar QR code, arquivo {file}",
+      "QR_DOWNLOAD_SVG": "Baixar em SVG (para gráfica)",
+      "QR_DOWNLOAD_SVG_LABEL": "Baixar em SVG (para gráfica), arquivo {file}",
+      "QR_DOWNLOADING": "Baixando {file}. Procure na pasta de downloads.",
+      "QR_DOWNLOAD_ERROR": "Não deu para gerar o arquivo. Tente de novo.",
+      "QR_DOWNLOAD_RETRY": "Não baixou? Abra a imagem e salve por lá.",
+      "QR_DOWNLOAD_BLOCKED": "Seu navegador não deixou baixar. Abra a imagem e salve por lá.",
+      "QR_DOWNLOAD_OPEN": "Abrir {file}",
       "OPEN": "Abrir",
       "OPEN_LABEL": "Abrir a página em outra aba",
       "PER_PERSON_TITLE": "Um link para cada pessoa",
@@ -89,6 +98,7 @@
         "IMAGE_TYPE": "Use uma imagem PNG, JPEG ou WebP.",
         "IMAGE_SIZE": "A imagem pode ter até 2 MB.",
         "IMAGE_UPLOAD": "Não deu para enviar a imagem. Tente outra.",
+        "SHORT_NAME": "Confira o endereço da página.",
         "IMAGE_REMOVE": "Não deu para tirar a imagem. Tente de novo."
       },
       "SERVER_ERRORS": {
@@ -100,7 +110,8 @@
         "BRAND": "Confira a cor e a frase de boas-vindas.",
         "NOTICE_INBOX_GONE": "Esse WhatsApp não pode mais mandar avisos. Escolha outro ou deixe sem avisos.",
         "NOTICE_TEMPLATES": "Uma das mensagens escolhidas não serve para os avisos. Escolha outra da lista.",
-        "NOTICES": "Confira os avisos e o prazo para mudar."
+        "NOTICES": "Confira os avisos e o prazo para mudar.",
+        "SHORT_NAME": "Este endereço não pode ser usado. Escolha outro."
       }
     },
     "TEMPLATE": {
@@ -134,6 +145,24 @@
       "PEOPLE_LOADING": "Carregando a equipe",
       "PEOPLE_ERROR": "Não deu para carregar a equipe.",
       "PEOPLE_EMPTY": "Ninguém da equipe pode atender ainda."
+    },
+    "ADDRESS": {
+      "LABEL": "Endereço da página",
+      "HINT": "É o link que você manda para o cliente. Use letras, números e hífen.",
+      "PREVIEW": "O link fica assim: {url}",
+      "EMPTY": "Sem endereço, a página usa um link comprido.",
+      "CHECKING": "Conferindo o endereço",
+      "FREE": "Este endereço está livre.",
+      "OWN": "Este é o endereço da página hoje.",
+      "CHANGE_WARNING": "Se você mudar, o link antigo para de abrir.",
+      "PROBLEMS": {
+        "TOO_SHORT": "Use pelo menos 3 letras ou números.",
+        "TOO_LONG": "Use até 40 letras ou números.",
+        "INVALID_CHARS": "Use só letras sem acento, números e hífen.",
+        "HYPHEN_EDGE": "O endereço não pode começar nem terminar com hífen.",
+        "RESERVED": "Este endereço é do sistema. Escolha outro.",
+        "TAKEN": "Este endereço já tem dono. Escolha outro."
+      }
     },
     "WHERE": {
       "TITLE": "Onde vai ser o atendimento?",
@@ -262,6 +291,19 @@
         "CONFIRM": "Isso troca a logo, a cor, o lado da logo, a frase e a foto desta página pelo que está salvo, inclusive o que você acabou de mudar.",
         "CONFIRM_YES": "Sim, usar",
         "CONFIRM_NO": "Não, deixar como está"
+      },
+      "PHOTO_CARD": {
+        "USING_PROFILE_MINE": "Estamos usando a foto do seu perfil.",
+        "USING_PROFILE_OTHER": "Estamos usando a foto do perfil de {name}.",
+        "USING_SAVED": "Estamos usando a foto guardada na identidade.",
+        "GOES_TO_PROFILE": "Esta foto também vai para o seu perfil.",
+        "OTHER_PERSON": "Você está montando a página de {name}. A foto vale só para o agendamento: o perfil de {name} não muda.",
+        "SHARED_PAGE": "Esta página tem um link por pessoa. A foto vale para a página: o perfil de ninguém muda.",
+        "CHOICE_TITLE": "Onde a foto nova vai valer?",
+        "ONLY_HERE": "Só nesta página de agendamento",
+        "ALSO_PROFILE": "Também no meu perfil",
+        "SEND": "Enviar foto",
+        "CANCEL": "Cancelar"
       },
       "LOGO_LIGHT": {
         "TITLE": "Em fundo claro"

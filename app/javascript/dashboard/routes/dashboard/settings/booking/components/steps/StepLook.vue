@@ -4,8 +4,8 @@ import { useI18n } from 'vue-i18n';
 import BookingBrandSample from '../BookingBrandSample.vue';
 import BookingField from '../BookingField.vue';
 import BookingIdentity from '../BookingIdentity.vue';
-import BookingImageUpload from '../BookingImageUpload.vue';
 import BookingLogoCard from '../BookingLogoCard.vue';
+import BookingPhotoCard from '../BookingPhotoCard.vue';
 import { BRAND_COLORS, LOGO_ALIGNS, MAX_TEXT } from '../../constants';
 import { presetColor } from '../../bookingPageForm';
 
@@ -45,10 +45,14 @@ const errorFor = (kind, uploadError) =>
     : '';
 
 const chosenPreset = computed(() => presetColor(props.form.color));
-// A foto é de cada pessoa: a identidade só guarda a foto de página com uma
-// pessoa só e foto enviada (Crm::BookingV2::BrandIdentity#save_photo).
+// A foto é de cada pessoa: a identidade só guarda a foto de página de uma
+// pessoa fixa (não a de um link por pessoa) e com foto enviada
+// (Crm::BookingV2::BrandIdentity#save_photo).
 const savesPhoto = computed(
-  () => !!props.page.photo_url && (props.page.people || []).length === 1
+  () =>
+    props.page.assignment_mode === 'fixed' &&
+    !!props.page.photo_url &&
+    !!props.page.host
 );
 </script>
 
@@ -81,15 +85,11 @@ const savesPhoto = computed(
           @pick="emit('upload', $event)"
           @remove-dark="emit('removeLogoDark')"
         />
-        <BookingImageUpload
-          data-photo
-          round
-          :label="t('BOOKING.LOOK.PHOTO')"
-          :alt="t('BOOKING.LOOK.PHOTO_ALT')"
-          :url="page.photo_url || ''"
+        <BookingPhotoCard
+          :page="page"
           :busy="uploading === 'photo'"
           :error="errorFor('photo', uploadError)"
-          @pick="emit('upload', { kind: 'photo', file: $event })"
+          @upload="emit('upload', $event)"
         />
       </div>
 

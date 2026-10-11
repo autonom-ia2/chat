@@ -49,6 +49,15 @@
       "QR_HIDE": "Hide QR code",
       "QR_ALT": "QR code of the booking page",
       "QR_ERROR": "We couldn't create the QR code.",
+      "QR_DOWNLOAD": "Download QR code",
+      "QR_DOWNLOAD_LABEL": "Download QR code, file {file}",
+      "QR_DOWNLOAD_SVG": "Download as SVG (for print shops)",
+      "QR_DOWNLOAD_SVG_LABEL": "Download as SVG (for print shops), file {file}",
+      "QR_DOWNLOADING": "Downloading {file}. Look in your downloads folder.",
+      "QR_DOWNLOAD_ERROR": "We couldn't create the file. Try again.",
+      "QR_DOWNLOAD_RETRY": "Didn't download? Open the image and save it from there.",
+      "QR_DOWNLOAD_BLOCKED": "Your browser didn't allow the download. Open the image and save it from there.",
+      "QR_DOWNLOAD_OPEN": "Open {file}",
       "OPEN": "Open",
       "OPEN_LABEL": "Open the page in a new tab",
       "PER_PERSON_TITLE": "One link for each person",
@@ -89,6 +98,7 @@
         "IMAGE_TYPE": "Use a PNG, JPEG or WebP image.",
         "IMAGE_SIZE": "The image can be up to 2 MB.",
         "IMAGE_UPLOAD": "We couldn't upload the image. Try another one.",
+        "SHORT_NAME": "Check the page address.",
         "IMAGE_REMOVE": "Could not remove the image. Try again."
       },
       "SERVER_ERRORS": {
@@ -100,7 +110,8 @@
         "BRAND": "Check the color and the welcome message.",
         "NOTICE_INBOX_GONE": "This WhatsApp can no longer send notices. Choose another one or leave it without notices.",
         "NOTICE_TEMPLATES": "One of the chosen messages does not work for notices. Choose another one from the list.",
-        "NOTICES": "Check the notices and the deadline to change."
+        "NOTICES": "Check the notices and the deadline to change.",
+        "SHORT_NAME": "This address cannot be used. Choose another one."
       }
     },
     "TEMPLATE": {
@@ -134,6 +145,24 @@
       "PEOPLE_LOADING": "Loading the team",
       "PEOPLE_ERROR": "We couldn't load the team.",
       "PEOPLE_EMPTY": "Nobody on the team can attend yet."
+    },
+    "ADDRESS": {
+      "LABEL": "Page address",
+      "HINT": "This is the link you send to your customer. Use letters, numbers and hyphens.",
+      "PREVIEW": "Your link will be: {url}",
+      "EMPTY": "With no address, the page uses a long link.",
+      "CHECKING": "Checking the address",
+      "FREE": "This address is free.",
+      "OWN": "This is the page address today.",
+      "CHANGE_WARNING": "If you change it, the old link stops opening.",
+      "PROBLEMS": {
+        "TOO_SHORT": "Use at least 3 letters or numbers.",
+        "TOO_LONG": "Use up to 40 letters or numbers.",
+        "INVALID_CHARS": "Use only letters without accents, numbers and hyphens.",
+        "HYPHEN_EDGE": "The address cannot start or end with a hyphen.",
+        "RESERVED": "This address belongs to the system. Choose another one.",
+        "TAKEN": "This address is already taken. Choose another one."
+      }
     },
     "WHERE": {
       "TITLE": "Where will the appointment be?",
@@ -262,6 +291,19 @@
         "CONFIRM": "This replaces the logo, color, logo side, sentence and photo of this page with the saved ones, including what you just changed.",
         "CONFIRM_YES": "Yes, use it",
         "CONFIRM_NO": "No, keep it"
+      },
+      "PHOTO_CARD": {
+        "USING_PROFILE_MINE": "We are using your profile photo.",
+        "USING_PROFILE_OTHER": "We are using {name}'s profile photo.",
+        "USING_SAVED": "We are using the photo saved in the account look.",
+        "GOES_TO_PROFILE": "This photo will also go to your profile.",
+        "OTHER_PERSON": "You are setting up {name}'s page. The photo is only for booking: {name}'s profile does not change.",
+        "SHARED_PAGE": "This page has one link per person. The photo is for the page: nobody's profile changes.",
+        "CHOICE_TITLE": "Where does the new photo go?",
+        "ONLY_HERE": "Only on this booking page",
+        "ALSO_PROFILE": "On my profile too",
+        "SEND": "Send photo",
+        "CANCEL": "Cancel"
       },
       "LOGO_LIGHT": {
         "TITLE": "On a light background"
