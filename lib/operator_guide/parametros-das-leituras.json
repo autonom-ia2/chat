@@ -1040,6 +1040,14 @@
       "to_user_id"
     ]
   },
+  "crm/booking_pages/short_name": {
+    "controller": "api/v1/accounts/crm/booking_page_short_names#show",
+    "parametros": [
+      "name",
+      "page_id",
+      "title"
+    ]
+  },
   "crm/booking_profiles": {
     "controller": "api/v1/accounts/crm/booking_profiles#index",
     "parametros": []

@@ -136,6 +136,8 @@ const blockedByMissing = computed(
           <StepAbout
             v-if="step === STEP.CONTE"
             :form="form"
+            :page-id="page.id"
+            :saved-short-name="page.short_name || ''"
             :people="people"
             :people-state="peopleState"
             :error="error"

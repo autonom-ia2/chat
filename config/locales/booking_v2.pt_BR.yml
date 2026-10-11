@@ -8,6 +8,13 @@ pt_BR:
         in_person: 'Presencial'
         google_meet: 'Google Meet'
         teams: 'Microsoft Teams'
+      link_preview:
+        call: 'Escolher horário'
+        description_call: 'Escolha o melhor horário para você'
+        with_host: 'Com %{name}'
+        minutes: '%{count} min'
+        hours: '%{count} h'
+        hours_minutes: '%{hours} h %{minutes} min'
       contact_request:
         follow_up_title: 'Ligar para %{name}: pediu contato pela página de agendamento'
       invite:

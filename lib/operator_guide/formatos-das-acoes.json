@@ -4698,6 +4698,7 @@
           "min_notice_minutes": {},
           "notice_preset": {},
           "notice_templates": {},
+          "short_name": {},
           "slot_durations": {
             "tipo": "lista"
           },
@@ -4789,6 +4790,7 @@
         },
         "tipo": "objeto"
       },
+      "short_name": {},
       "slot_durations": {
         "tipo": "lista"
       },
@@ -22035,6 +22037,7 @@
           "min_notice_minutes": {},
           "notice_preset": {},
           "notice_templates": {},
+          "short_name": {},
           "slot_durations": {
             "tipo": "lista"
           },
@@ -22126,6 +22129,7 @@
         },
         "tipo": "objeto"
       },
+      "short_name": {},
       "slot_durations": {
         "tipo": "lista"
       },
