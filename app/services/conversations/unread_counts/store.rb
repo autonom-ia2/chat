@@ -80,6 +80,17 @@ class Conversations::UnreadCounts::Store
       keys.zip(counts).to_h
     end
 
+    # Os ids de cada conjunto, para quem tem acesso por funil (#1148) contar só o que pode ver.
+    def members_for_keys(keys)
+      keys = keys.compact_blank
+      return {} if keys.blank?
+
+      members = Redis::Alfred.pipelined do |pipeline|
+        keys.each { |key| pipeline.smembers(key) }
+      end
+      keys.zip(members.map { |ids| Array(ids).map(&:to_i) }).to_h
+    end
+
     def memberships_for_keys(keys, conversation_id)
       keys = keys.compact_blank
       return {} if keys.blank?

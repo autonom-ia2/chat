@@ -143,7 +143,8 @@ module Crm
           require_online: require_online,
           suggested_name: @handoff[:suggested_agent],
           pool_type: settings[:pool_type],
-          pool_id: settings[:pool_id]
+          pool_id: settings[:pool_id],
+          conversation: @conversation
         )
         @member_selector.perform
       end
