@@ -1195,6 +1195,10 @@ export const actions = {
     }
   },
 
+  syncCardContact: ({ commit }, contact) => {
+    if (!contact?.id || !('contact_type' in contact)) return;
+    commit(types.SYNC_CRM_CARD_CONTACT, contact);
+  },
   handleRealtimeCardEvent: ({ commit, state: $state }, { event, card }) => {
     if (!card?.id || !$state.board.pipeline?.id) return;
 
@@ -1433,6 +1437,28 @@ export const mutations = {
         cards: (stage.cards || []).filter(card => card.id !== cardId),
       })),
     };
+  },
+  // Contato virou (ou deixou de ser) Cliente (#1258): o selo dos cards dele no quadro e na lista acompanha.
+  [types.SYNC_CRM_CARD_CONTACT]($state, contact) {
+    const sync = card =>
+      card.contact?.id === contact.id
+        ? {
+            ...card,
+            contact: {
+              ...card.contact,
+              contact_type: contact.contact_type,
+              customer_since: contact.customer_since,
+            },
+          }
+        : card;
+    $state.board = {
+      ...$state.board,
+      stages: ($state.board.stages || []).map(stage => ({
+        ...stage,
+        cards: (stage.cards || []).map(sync),
+      })),
+    };
+    $state.cardsList = ($state.cardsList || []).map(sync);
   },
 };
 

@@ -216,7 +216,8 @@ const saveInbox = inbox => {
     auto_create_card: form.crm_enabled && form.auto_create_card,
     default_pipeline_id: form.default_pipeline_id || null,
     default_stage_id: form.default_stage_id || null,
-    subject_ai_mode: form.crm_enabled ? form.subject_ai_mode : 'off',
+    // CRM desligado já desliga a IA de assunto no servidor; guardar a escolha faz ela valer quando o CRM voltar.
+    subject_ai_mode: form.subject_ai_mode,
   });
 };
 

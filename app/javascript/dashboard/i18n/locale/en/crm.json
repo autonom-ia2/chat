@@ -1090,7 +1090,7 @@
           "NO_CONVERSATION": "There is no conversation with this client that you can answer. Copy the link and send it another way.",
           "CANNOT_REPLY": "The client needs to send a message first. Copy the link and send it another way.",
           "NOT_REBOOKABLE": "This only works after you mark “No-show”.",
-          "NO_PAGE": "No booking page is live right now. Publish a page in CRM › Scheduling.",
+          "NO_PAGE": "No booking page is live right now. Publish a page in CRM › Scheduling › Pages and links.",
           "OTHER": "Could not send. Try again."
         }
       },
@@ -1691,7 +1691,7 @@
       "SUBJECT_AI_OFF": "Off",
       "SUBJECT_AI_SUGGEST": "Suggest: the team confirms",
       "SUBJECT_AI_AUTO": "Automatic: the AI creates and names the cards",
-      "SUBJECT_AI_HELP": "When the customer asks for something new, the AI names the subject and opens its card in the right pipeline. When unsure, it changes nothing.",
+      "SUBJECT_AI_HELP": "When the customer asks for something new, the AI names the subject and opens its card in the right pipeline. When unsure, it changes nothing. What a person just chose or closed becomes a suggestion, never an automatic change. Only pipelines with the pipeline AI on.",
       "PIPELINE_SWITCH": "This inbox leaves the {de} pipeline and starts feeding {para}. Cards already in the previous pipeline stay where they are.",
       "SAVE": "Save",
       "SAVED": "Saved",

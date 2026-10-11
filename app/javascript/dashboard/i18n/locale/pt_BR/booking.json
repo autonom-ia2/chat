@@ -3,7 +3,8 @@
     "PAGE": {
       "TITLE": "Agendamento",
       "SUBTITLE": "Crie a página onde o cliente marca um horário com você.",
-      "BACK_TO_CALENDAR": "Voltar para o calendário"
+      "BACK_TO_CALENDAR": "Voltar para o calendário",
+      "MENU": "Páginas e links"
     },
     "LIST": {
       "LOADING": "Carregando as páginas",
@@ -508,7 +509,7 @@
       "PAUSED_PAGE": "{title} (pausada)",
       "PAUSED_HINT": "Esta página está pausada. Enquanto ela estiver assim, o agente avisa o cliente e passa a conversa para uma pessoa.",
       "HINT": "A reunião fica com quem atende a página ou, se a página tem um link por pessoa, com quem está atribuído à conversa.",
-      "EMPTY": "Crie uma página em CRM > Agendamento para o agente marcar reuniões.",
+      "EMPTY": "Crie uma página em CRM > Agendamento > Páginas e links para o agente marcar reuniões.",
       "SAVE": "Salvar",
       "BOOKED_BY_AI": "Agendada pela IA",
       "BOOKED_BY_AI_DETAIL": "Agendada pela IA: {title}"

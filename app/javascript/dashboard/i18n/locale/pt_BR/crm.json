@@ -1090,7 +1090,7 @@
           "NO_CONVERSATION": "Não há conversa com este cliente que você possa responder. Copie o link e envie de outro jeito.",
           "CANNOT_REPLY": "O cliente precisa mandar mensagem primeiro. Copie o link e envie de outro jeito.",
           "NOT_REBOOKABLE": "Isto só funciona depois de marcar “Não compareceu”.",
-          "NO_PAGE": "Nenhuma página de agendamento está no ar agora. Publique uma em CRM › Agendamento.",
+          "NO_PAGE": "Nenhuma página de agendamento está no ar agora. Publique uma em CRM › Agendamento › Páginas e links.",
           "OTHER": "Não deu para enviar. Tente de novo."
         }
       },
@@ -1691,7 +1691,7 @@
       "SUBJECT_AI_OFF": "Desligada",
       "SUBJECT_AI_SUGGEST": "Sugerir: a equipe confirma",
       "SUBJECT_AI_AUTO": "Automática: a IA cria e dá nome aos cards",
-      "SUBJECT_AI_HELP": "Quando o cliente pede algo novo, a IA dá nome ao assunto e abre o card dele no funil certo. Na dúvida, não muda nada.",
+      "SUBJECT_AI_HELP": "Quando o cliente pede algo novo, a IA dá nome ao assunto e abre o card dele no funil certo. Na dúvida, não muda nada. O que uma pessoa acabou de escolher ou fechar vira sugestão, nunca muda sozinho. Só nos funis com a IA do funil ligada.",
       "PIPELINE_SWITCH": "Esta caixa de entrada sai do funil {de} e passa a alimentar {para}. Os cards que já existem no funil anterior ficam onde estão.",
       "SAVE": "Salvar",
       "SAVED": "Salvo",

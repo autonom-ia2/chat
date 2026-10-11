@@ -42,6 +42,7 @@ De onde vem o estado de uma conta nova (`before_create`):
 | `instagram_assisted_onboarding` | Instagram assistido (#995) |
 | `meta_ads_hub` | Anúncios da Meta (#1100) |
 | `email_template_import` | Importar modelo de e-mail (#1099) |
+| `crm_booking_v2` | Agendamento WhatsApp-first (#1187): página de agendamento sem Google/Microsoft, link por cliente, avisos no WhatsApp, Resultados, IA marcando horário e "+ Novo › Reunião" pela agenda (#1265). Também exige `CRM_CALENDAR_MEETINGS_ENABLED=true` na stack (ligado nas duas). Desligada = página e gaveta antigas, sem deploy |
 | `customer_base` | Base de clientes (#1240): leitura nova da planilha na importação de contatos e em Públicos (#1246). Desligada = leitura igual ao `main`, provado linha a linha em `docs/base-de-clientes/BATERIA-F0.md` |
 
 ### Do Chatwoot, oferecidas aos clientes
@@ -116,5 +117,6 @@ Cada linha precisa de uma decisão do Rodrigo: liberar para todas, manter em pil
 | `instagram_assisted_onboarding` | as duas | hub2you 16, 18; autonomia 1, 23 | pendente | |
 | `email_template_import` | autonomia | nenhuma | pendente | |
 | `customer_base` (dona: sessão Base de Clientes, #1240) | hub2you | 16 | piloto | 24/10/2026 (proposta) |
+| `crm_booking_v2` (dona: sessão Agendamento CRM, #1187) | hub2you | 1 (desde 11/10/2026) e 16 (desde 10/10/2026) | piloto. Consentimento decidido pelo Rodrigo em 11/10 (#1271): marcação pela equipe = o cliente combinou o horário com a atendente; "Avisar o cliente" vem ligado com a frase de orientação, o aviso diz quem marcou e o motivo fica registrado na reunião (`metadata.notice_basis`). Falta o teste do Rodrigo pelo playbook para decidir a liberação nas demais contas | |
 | flags que faltam na conta 23 do autonomia | autonomia | 23 | pendente (conta nova não recebe flag de `feature_flags_ext_1`) | |
 | flags que faltam na conta 5 do hub2you | hub2you | 5 | pendente | |
