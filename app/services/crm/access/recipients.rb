@@ -41,6 +41,8 @@ class Crm::Access::Recipients
   private
 
   def restricted_accesses
+    return [] unless Crm::Access::AccountFlag.any?(@conversation.account_id)
+
     Crm::InboxAgentAccess.where(account_id: @conversation.account_id, inbox_id: @conversation.inbox_id)
                          .includes(:agent_pipelines).select(&:restricts?)
   end

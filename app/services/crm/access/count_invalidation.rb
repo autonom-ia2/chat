@@ -5,7 +5,7 @@ module Crm::Access::CountInvalidation
   module_function
 
   def card_changed!(account_id)
-    return unless Crm::InboxAgentAccess.exists?(account_id: account_id)
+    return unless Crm::Access::AccountFlag.any?(account_id)
 
     account = Account.find_by(id: account_id)
     ::Conversations::UnreadCounts::FilteredCountInvalidator.new(account).conversation_changed! if account

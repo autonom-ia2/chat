@@ -68,7 +68,7 @@ class Crm::Access::ConversationScope
   # AgentBot não tem acesso por funil: o id dele pode coincidir com o de uma pessoa.
   def restrictions
     @restrictions ||= begin
-      rows = if @user.is_a?(User)
+      rows = if @user.is_a?(User) && Crm::Access::AccountFlag.any?(@account.id)
                Crm::InboxAgentAccess.where(account_id: @account.id, user_id: @user.id)
                                     .includes(:agent_pipelines).select(&:restricts?)
              else
