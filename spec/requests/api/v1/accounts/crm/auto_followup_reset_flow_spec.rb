@@ -47,13 +47,23 @@ RSpec.describe 'CRM auto follow-up opt-out + manual reset regression flow', type
     expect(card.reload.metadata['ai']['auto_followup_state']['active']).to be(true)
   end
 
-  # Passo 2: cliente responde "SAIR" — cancelador cancela o toque pendente e marca opted_out.
+  # O modelo (simulado, sem chamada paga) decide que "SAIR" foi pedido para parar.
+  def reply_opt_out(card, conversation)
+    opt_out_message = create_incoming_message(conversation: conversation, content: 'SAIR')
+    opt_out_message.update!(created_at: 21.hours.ago)
+    classifier = instance_double(Crm::Ai::OptOutClassifier, perform: { decision: 'sim', motivo: 'pedido_explicito_de_parar' })
+    allow(Crm::Ai::OptOutClassifier).to receive(:new).and_return(classifier)
+    perform_enqueued_jobs(only: Crm::FollowUps::OptOutDecisionJob) do
+      Crm::FollowUps::AutoFollowupCanceler.new(card: card, message: opt_out_message).maybe_cancel
+    end
+  end
+
+  # Passo 2: cliente responde "SAIR" — cancelador cancela o toque pendente e o modelo (simulado, sem chamada paga)
+  # decide que foi pedido para parar, no OptOutDecisionJob (#1317), que marca opted_out.
   # Data recuada 21h para que, depois do RESET no passo 4, esta mesma mensagem já satisfaça o
   # radar de elegibilidade do planner no passo 5 (last_inbound precisa estar >= 1o intervalo).
   def assert_opt_out_stops_cadence(card, conversation)
-    opt_out_message = create_incoming_message(conversation: conversation, content: 'SAIR')
-    opt_out_message.update!(created_at: 21.hours.ago)
-    Crm::FollowUps::AutoFollowupCanceler.new(card: card, message: opt_out_message).maybe_cancel
+    reply_opt_out(card, conversation)
 
     state = card.reload.metadata['ai']['auto_followup_state']
     expect(state['opted_out']).to be(true)
