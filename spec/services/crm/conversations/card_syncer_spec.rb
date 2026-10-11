@@ -425,4 +425,37 @@ RSpec.describe Crm::Conversations::CardSyncer do
       private: private
     )
   end
+  # #1273: conversa NOVA, ainda sem atendente, reaproveita o card criado automaticamente de outra conversa do contato.
+  # O card não pode perder o dono só porque a conversa nova ainda não foi distribuída.
+  it 'keeps the owner of a reused auto-created card when the new conversation has no assignee yet' do
+    account, admin = create_account_and_user
+    inbox = create_crm_inbox(account: account, members: [admin])
+    contact = account.contacts.create!(name: 'Lead Volta', phone_number: '+5511987650001')
+    pipeline, stage = create_crm_pipeline(account: account, user: admin)
+    account.crm_pipeline_inboxes.create!(pipeline: pipeline, inbox: inbox, default_stage: stage, auto_create_card: true, created_by: admin)
+    first = create_crm_conversation(account: account, inbox: inbox, contact: contact, assignee: admin)
+    card = described_class.new(conversation: first, message: create_crm_message(conversation: first, sender: contact)).perform
+    expect(card.reload.owner).to eq(admin)
+
+    second = create_crm_conversation(account: account, inbox: inbox, contact: contact)
+    reused = described_class.new(conversation: second, message: create_crm_message(conversation: second, sender: contact)).perform
+
+    expect(reused.id).to eq(card.id)
+    expect(card.reload.owner).to eq(admin)
+  end
+
+  it 'still mirrors the assignee of the card own conversation, set and cleared' do
+    account, admin = create_account_and_user
+    inbox = create_crm_inbox(account: account, members: [admin])
+    contact = account.contacts.create!(name: 'Lead Espelho', phone_number: '+5511987650002')
+    pipeline, stage = create_crm_pipeline(account: account, user: admin)
+    account.crm_pipeline_inboxes.create!(pipeline: pipeline, inbox: inbox, default_stage: stage, auto_create_card: true, created_by: admin)
+    conversation = create_crm_conversation(account: account, inbox: inbox, contact: contact, assignee: admin)
+    card = described_class.new(conversation: conversation, message: create_crm_message(conversation: conversation, sender: contact)).perform
+
+    conversation.update!(assignee: nil)
+    described_class.new(conversation: conversation.reload).perform
+
+    expect(card.reload.owner).to be_nil
+  end
 end
