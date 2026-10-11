@@ -132,7 +132,10 @@ class Crm::Kanban::CardPayloadBuilder
     {
       id: @card.contact.id,
       name: @card.contact.name,
-      phone_number: @card.contact.phone_number
+      phone_number: @card.contact.phone_number,
+      # Selo "Cliente" no card do quadro (#1258).
+      contact_type: @card.contact.contact_type,
+      customer_since: @card.contact.customer_since&.to_i
     }
   end
 

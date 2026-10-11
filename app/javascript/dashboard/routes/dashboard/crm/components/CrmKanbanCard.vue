@@ -56,9 +56,15 @@ const railStyle = computed(() => ({
 const identity = computed(() =>
   buildCrmCardIdentity(props.card, t('CRM_KANBAN.CARD.STANDALONE'))
 );
-const identityAriaName = computed(() =>
-  crmCardIdentityLabel(props.card, t('CRM_KANBAN.CARD.STANDALONE'))
-);
+// O leitor de tela também ouve "Cliente" (#1258): o selo é visual dentro do botão.
+const identityAriaName = computed(() => {
+  const label = crmCardIdentityLabel(
+    props.card,
+    t('CRM_KANBAN.CARD.STANDALONE')
+  );
+  if (props.card.contact?.contact_type !== 'customer') return label;
+  return `${label}, ${t('CONTACT_PANEL.CUSTOMER')}`;
+});
 const companyName = computed(() => identity.value.company);
 const identityMain = computed(() => identity.value.main);
 const identityPerson = computed(() => identity.value.person);
@@ -362,18 +368,16 @@ const canOpenConversation = computed(
               class="mt-0.5 size-4 shrink-0 text-n-slate-11"
               aria-hidden="true"
             />
-            <span
-              class="min-w-0 line-clamp-2 break-words text-base font-semibold leading-6 text-n-slate-12"
-              :data-crm-card-company="companyName || undefined"
-              :title="identityMain"
-            >
-              {{ identityMain }}
-              <!-- Sem empresa, o nome da pessoa é a linha de cima: o selo segue o nome e desce se faltar espaço. -->
-              <CustomerBadge
-                v-if="!identityPerson"
-                :contact="card.contact"
-                class="ms-1.5"
-              />
+            <!-- Sem empresa, o nome da pessoa é a linha de cima: o selo segue o nome e desce se faltar espaço. -->
+            <span class="flex min-w-0 flex-wrap items-center gap-x-1.5">
+              <span
+                class="min-w-0 line-clamp-2 break-words text-base font-semibold leading-6 text-n-slate-12"
+                :data-crm-card-company="companyName || undefined"
+                :title="identityMain"
+              >
+                {{ identityMain }}
+              </span>
+              <CustomerBadge v-if="!identityPerson" :contact="card.contact" />
             </span>
           </span>
           <!-- Com empresa, o selo fica na linha da pessoa (quem é cliente é o contato, #1258); o nome corta com "…". -->
