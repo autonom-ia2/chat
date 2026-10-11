@@ -15,7 +15,7 @@ class Crm::Subjects::Identifier
 
   def perform
     setting = Crm::InboxSetting.find_by(account_id: @account.id, inbox_id: @conversation.inbox_id, crm_enabled: true)
-    return if setting.nil? || setting.subject_ai_off?
+    return if setting.nil? || setting.subject_ai_off? || !Crm::Ai::Config.enabled?
     return existente if existente || pipelines.empty?
 
     @mode = setting.subject_ai_mode
@@ -66,7 +66,8 @@ class Crm::Subjects::Identifier
   def perguntar
     @jev = TypesafeAi::Decisor.new(feature: Crm::Subjects::FEATURE).decidir(decisor: question, estado: estado)
     opcao = question.opcao(@jev.resposta)
-    return concluir(state: 'kept', action: 'create', pipeline: opcao.pipeline, reason: 'sugestao_pendente') if ja_sugerido?(opcao)
+    repetida = sugestao_repetida(opcao)
+    return concluir(state: 'kept', **alvo(opcao), reason: repetida) if repetida
 
     escolha = revisar?(opcao) ? revisar : Escolha.new(opcao: opcao, decided_by: 'jev')
     return if escolha.nil?
@@ -97,10 +98,29 @@ class Crm::Subjects::Identifier
     @jev.certeza < Crm::Subjects::CERTEZA_MINIMA || opcao.tipo == :novo
   end
 
-  # Modo Sugerir: o pedido novo naquele funil já espera uma pessoa. Não paga o modelo maior de novo a cada mensagem.
-  def ja_sugerido?(opcao)
-    @mode == 'suggest' && opcao.tipo == :novo &&
-      Crm::SubjectDecision.suggested.exists?(conversation_id: @conversation.id, pipeline_id: opcao.pipeline.id)
+  # A mesma sugestão já espera uma pessoa, ou ela acabou de dispensá-la (#1260): nada a fazer, sem pagar o modelo maior.
+  # Vale por RESPEITO_AO_FECHAMENTO: depois disso a IA pode sugerir de novo, e uma sugestão esquecida não prende a
+  # conversa para sempre.
+  def sugestao_repetida(opcao)
+    decisoes = mesma_sugestao(opcao)
+    return 'sugestao_pendente' if decisoes.exists?(state: 'suggested')
+
+    'sugestao_dispensada' if decisoes.exists?(state: 'dismissed')
+  end
+
+  # Pedido novo num funil vira card novo ou nome do atual sem nome; voltar a um assunto é foco naquele card.
+  def mesma_sugestao(opcao)
+    return Crm::SubjectDecision.none unless %i[novo card].include?(opcao.tipo)
+
+    recentes = Crm::SubjectDecision.where(conversation_id: @conversation.id)
+                                   .where(updated_at: Crm::Subjects::RESPEITO_AO_FECHAMENTO.ago..)
+    return recentes.where(action: 'focus', card_id: opcao.card.id) if opcao.tipo == :card
+
+    recentes.where(action: %w[create rename], pipeline_id: opcao.pipeline.id)
+  end
+
+  def alvo(opcao)
+    opcao.tipo == :novo ? { action: 'create', pipeline_id: opcao.pipeline.id } : { action: 'focus', card_id: opcao.card.id }
   end
 
   def revisar
@@ -116,8 +136,11 @@ class Crm::Subjects::Identifier
 
   def question
     @question ||= begin
-      cards = Crm::Cards::ConversationCardFinder.new(account: @account).all(@conversation).includes(:pipeline, :contact).to_a.select(&:open?)
-      Crm::Subjects::Question.new(account: @account, pipelines: pipelines, cards: cards, atual: cards.first)
+      abertos = Crm::Cards::ConversationCardFinder.new(account: @account).all(@conversation).includes(:pipeline, :contact).to_a.select(&:open?)
+      # Voltar a um assunto só entre os funis com a IA ligada (#1260); o atual segue sendo o atual, de qualquer funil.
+      ids = pipelines.map(&:id)
+      cards = abertos.select { |card| ids.include?(card.pipeline_id) }
+      Crm::Subjects::Question.new(account: @account, pipelines: pipelines, cards: cards, atual: abertos.first)
     end
   end
 
@@ -125,11 +148,12 @@ class Crm::Subjects::Identifier
     @estado ||= Autonomia::Decisores::Estado.new(conversation: @conversation, message: @message, leituras: LEITURAS)
   end
 
-  # Os funis ativos ligados à caixa da conversa, com etapa para o card nascer, na ordem do CRM.
+  # Os funis ativos ligados à caixa da conversa, com etapa para o card nascer e a IA do funil ligada, na ordem do CRM.
   def pipelines
     @pipelines ||= @account.crm_pipelines.active.joins(:pipeline_inboxes, :stages)
                            .where(crm_pipeline_inboxes: { inbox_id: @conversation.inbox_id })
                            .order(:position, :id).distinct.to_a
+                           .select { |pipeline| Crm::Subjects.ia_do_funil?(pipeline) }
   end
 
   def cota_esgotada?

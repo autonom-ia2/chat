@@ -89,6 +89,28 @@ describe('SidebarSubGroup', () => {
     window.localStorage.clear();
   });
 
+  it('shows the only child of a non-collapsible subgroup (CRM › Agendamento for a scheduling-only role)', () => {
+    const wrapper = mountSubGroup({
+      name: 'CRM:CRM Scheduling',
+      label: 'Agendamento',
+      icon: 'i-lucide-calendar-clock',
+      collapsible: false,
+      children: [
+        {
+          name: 'Booking',
+          label: 'Páginas e links',
+          to: { name: 'settings_booking' },
+          activeOn: ['settings_booking', 'settings_booking_results'],
+        },
+      ],
+    });
+
+    const leaves = wrapper.findAll('.sidebar-leaf');
+    expect(leaves).toHaveLength(1);
+    expect(leaves[0].text()).toBe('Páginas e links');
+    expect(leaves[0].isVisible()).toBe(true);
+  });
+
   it('keeps collapsible sections expanded by default', () => {
     const wrapper = mountSubGroup();
 

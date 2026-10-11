@@ -354,6 +354,8 @@ class ActionCableConnector extends BaseActionCableConnector {
 
   onContactUpdate = data => {
     this.app.$store.dispatch('contacts/updateContact', data);
+    // Selo "Cliente" nos cards do CRM já carregados (#1258).
+    this.app.$store.dispatch('crmKanban/syncCardContact', data);
   };
 
   onNotificationCreated = data => {

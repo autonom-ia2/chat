@@ -15,6 +15,7 @@ import Icon from 'dashboard/components-next/icon/Icon.vue';
 import CrmConversationStageChip from './CrmConversationStageChip.vue';
 import { useCrmPermissions } from 'dashboard/routes/dashboard/crm/composables/useCrmPermissions';
 import { useCrmConversationStage } from 'dashboard/routes/dashboard/crm/composables/useCrmConversationStages';
+import CustomerBadge from 'dashboard/components-next/customer-badge/CustomerBadge.vue';
 
 const props = defineProps({
   chat: { type: Object, required: true },
@@ -169,11 +170,15 @@ const selectedModel = computed({
         :hide-thumbnail="false"
       />
 
-      <h4
-        class="text-heading-3 my-0 capitalize truncate text-n-slate-12 font-medium w-32 flex-shrink-0"
-      >
-        {{ currentContact.name }}
-      </h4>
+      <div class="flex w-32 flex-shrink-0 min-w-0 flex-col items-start gap-0.5">
+        <h4
+          class="text-heading-3 my-0 capitalize truncate max-w-full text-n-slate-12 font-medium"
+        >
+          {{ currentContact.name }}
+        </h4>
+        <!-- Selo "Cliente" (#1258): na coluna estreita do modo expandido, vai abaixo do nome. -->
+        <CustomerBadge :contact="currentContact" />
+      </div>
 
       <CardContent
         :last-message="lastMessageInChat"

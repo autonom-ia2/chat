@@ -34,7 +34,7 @@ class Api::V1::Accounts::Crm::ConversationCardsController < Api::V1::Accounts::C
     # Ganho, perdido ou arquivado não volta a ser o assunto da conversa: pedido novo vira card novo.
     return render_unprocessable('crm.conversation_cards.closed_card') unless card.open?
 
-    ::Crm::Cards::Focus.new(account: Current.account, card: card, conversation: @conversation).perform
+    ::Crm::Cards::Focus.new(account: Current.account, card: card, conversation: @conversation, user: Current.user).perform
     render json: { payload: { card_id: card.id } }
   end
 

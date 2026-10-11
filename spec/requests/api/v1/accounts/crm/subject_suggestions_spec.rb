@@ -182,9 +182,9 @@ RSpec.describe 'CRM subject suggestions API', type: :request do
     expect(decision.reload.state).to eq('expired')
   end
 
-  it 'aceitar sugestão de caixa que não está mais em Sugerir não cria card' do
+  it 'aceitar sugestão de caixa com a IA de assunto desligada não cria card' do
     decision = suggestion(action: 'create', title: 'Chat2You')
-    setting.update_columns(subject_ai_mode: Crm::InboxSetting.subject_ai_modes[:auto]) # rubocop:disable Rails/SkipsModelValidations
+    setting.update_columns(subject_ai_mode: Crm::InboxSetting.subject_ai_modes[:off]) # rubocop:disable Rails/SkipsModelValidations
 
     expect { accept(decision) }.not_to change(Crm::Card, :count)
     expect(response.parsed_body['error']).to eq('crm.conversation_cards.mode_changed')
@@ -226,5 +226,38 @@ RSpec.describe 'CRM subject suggestions API', type: :request do
 
     expect { accept(decision, user: outsider) }.not_to change(Crm::Card, :count)
     expect(response).to have_http_status(:unauthorized)
+  end
+
+  describe 'Automática respeitando a pessoa (#1260)' do
+    it 'aceitar em caixa Automática vale, e a escolha fica registrada como da pessoa' do
+      setting.update!(subject_ai_mode: :auto)
+      agentes = card('Agentes de IA', focused_at: 2.hours.ago)
+      card('Chat2You', focused_at: 1.hour.ago)
+      decision = suggestion(action: 'focus', target: agentes)
+
+      accept(decision)
+
+      expect(response).to have_http_status(:ok)
+      expect(Crm::CardConversation.find_by(card: agentes, conversation: conversation).focused_by_id).to eq(agent.id)
+    end
+
+    it 'sugestão de nome não troca o nome que uma pessoa deu depois' do
+      atual = card('Joana Lima', focused_at: 1.hour.ago)
+      decision = suggestion(action: 'rename', title: 'Chat2You', target: atual)
+      atual.update!(title: 'Cotação do Onix')
+
+      accept(decision)
+
+      expect(atual.reload.title).to eq('Cotação do Onix')
+      expect(decision.reload.state).to eq('expired')
+    end
+
+    it 'pedido novo em funil que desligou a IA não vira card' do
+      card('Agentes de IA', focused_at: 1.hour.ago)
+      decision = suggestion(action: 'create', title: 'Chat2You')
+      pipeline.update!(metadata: { 'ai' => { 'enabled' => false } })
+
+      expect { accept(decision) }.not_to change(Crm::Card, :count)
+    end
   end
 end
