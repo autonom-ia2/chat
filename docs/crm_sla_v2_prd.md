@@ -36,7 +36,7 @@
 ---
 
 ## 2. Decisões travadas (PO)
-- **#1 Grupos:** toggle **"Excluir grupos"** na criação do SLA → **não criar SLA** para conversa de grupo (detecção comprovada: JID termina em `@g.us`; também ignorar `@broadcast`/`status@broadcast`/`@newsletter`).
+- **#1 Grupos:** toggle **"Excluir grupos"** na criação do SLA → **não criar SLA** para conversa de grupo (detecção: o chat id do WhatsApp termina em `@g.us`; também ignorar `@broadcast`/`status@broadcast`/`@newsletter` — de onde o chat id é lido, ver §3.2).
 - **#2 IA:** usar a máquina de leitura/resumo do CRM. **Só no momento da quebra**, a IA decide se há cliente realmente esperando; se não (pausa saudável/encerrou) → **não conta**. Aplica a **NRT + RT** (e FRT quando a última msg não pede resposta). Decisão cacheada (barato).
 - **#3 Horário:** corrigir o bug **e** suportar **vários blocos por dia + fuso** (dinâmica cal.com). Feriados **ficam para depois**.
 - **IMPORTANTE 1 — Horário por agente:** toggle **"Definir/Editar horário de atendimento"** na criação/edição do agente. Precedência no cálculo do SLA: **horário do agente atribuído > horário da caixa > 24/7**.
@@ -60,10 +60,12 @@
 **Exemplo:** expediente 09–18 (1 bloco). FRT = 2h. Cliente escreve **17h** → conta 1h hoje, **pausa à noite**, retoma 9h, **viola 10h** do dia seguinte. Com almoço (09–12 e 13–18), as 12–13 também não contam.
 
 ### 3.2 Exclusão de grupos (comprovado WAHA/Evolution)
-- **Detecção:** a conversa é grupo quando o identificador salvo (`contact_inbox.source_id`) **termina em `@g.us`**. Denylist de não-1:1: `@g.us`, `@broadcast`/`status@broadcast`, `@newsletter`. (Comprovado nas docs — §11. O novo `@lid` afeta só 1:1, não quebra a regra de grupo.)
+- **Detecção:** a conversa é grupo quando o **chat id do WhatsApp termina em `@g.us`**. Denylist de não-1:1: `@g.us`, `@broadcast`/`status@broadcast`, `@newsletter`. (O formato do JID está comprovado nas docs — §11. O novo `@lid` afeta só 1:1, não quebra a regra de grupo.)
+- **Onde está o chat id (corrigido em 11/10/2026, #1276):** em caixa WAHA (`Channel::Api`) ele **não** está no `contact_inbox.source_id`. O app Chatwoot da WAHA cria o contato pela API pública da caixa sem `source_id`, e `Public::Api::V1::Inboxes::ContactsController#create` grava um `SecureRandom.uuid`. O chat id real fica nos atributos do contato: `waha_whatsapp_chat_id` e `waha_whatsapp_jid` (e `waha_whatsapp_lid`, só 1:1). O detector lê esses dois atributos e mantém o `source_id` como fallback, para provedor que grave o JID ali.
+- **Na prática hoje:** grupos são ignorados na própria sessão WAHA, por decisão de produto (sujam as conversas): `Waha::Config.session_ignore` (`WAHA_IGNORE_GROUPS`, ligado por padrão) e `WhatsappHybrid::SessionManager::SESSION_IGNORE`. A exclusão no SLA é defesa para caixa antiga ou instalação que religue grupos.
 - **Onde aplica:** ao **auto-aplicar** (3.4) ou via ação `add_sla`, se a conversa for de grupo e o toggle "Excluir grupos" estiver ligado → **não cria `AppliedSla`**. Salvaguarda: o avaliador também pula grupo (defensivo).
 - **Toggle por política:** `exclude_groups` (default **ligado**).
-- Helper novo: `conversation.whatsapp_group?` (lê o `source_id` do contact_inbox primário).
+- Detector: `Crm::WhatsappGroupDetector.group_conversation?(conversation)` (atributos do contato primeiro, `source_id` como fallback).
 
 ### 3.3 IA "pausa saudável" — não contar quebra ⭐ (o diferencial)
 - **Serviço novo** `Sla::AiBreachGuard` (reusa `Crm::Ai::ContextBuilder` + `ResponsesClient` + `CredentialResolver`). Schema: `{ customer_waiting: boolean, reason: string, confidence: number }`.
@@ -103,8 +105,8 @@ No `EvaluateAppliedSlaService`, para cada prazo configurado:
 6. Ao **resolver**: `hit` (sem quebras) ou `missed` (com quebras).
 
 ## 6. Mapa de arquivos (reuso vs novo)
-**Reuso:** `enterprise/app/services/sla/evaluate_applied_sla_service.rb` (motor — alterado), `enterprise/app/models/{sla_policy,applied_sla,sla_event}.rb`, `enterprise/app/services/enterprise/action_service.rb` (add_sla), `Crm::Ai::{ContextBuilder,ResponsesClient,CredentialResolver}`, `components-next/Conversation/Sla/SLACardLabel.vue`, `crm.routes.js`, `Reports::DataSource` (business hours), `contact_inbox.source_id`.
-**Novo:** `ServiceSchedule` model + cálculo de tempo útil (`Sla::BusinessTimeCalculator`), `Sla::AiBreachGuard`, helper `conversation.whatsapp_group?`, hook de auto-aplicar no conversation_created, UI de horário (caixa + **agente**, multi-bloco), tela de SLA no CRM, badge no card, endpoints de schedule, i18n.
+**Reuso:** `enterprise/app/services/sla/evaluate_applied_sla_service.rb` (motor — alterado), `enterprise/app/models/{sla_policy,applied_sla,sla_event}.rb`, `enterprise/app/services/enterprise/action_service.rb` (add_sla), `Crm::Ai::{ContextBuilder,ResponsesClient,CredentialResolver}`, `components-next/Conversation/Sla/SLACardLabel.vue`, `crm.routes.js`, `Reports::DataSource` (business hours), atributos `waha_whatsapp_*` do contato (chat id; `contact_inbox.source_id` só como fallback).
+**Novo:** `ServiceSchedule` model + cálculo de tempo útil (`Sla::BusinessTimeCalculator`), `Sla::AiBreachGuard`, `Crm::WhatsappGroupDetector`, hook de auto-aplicar no conversation_created, UI de horário (caixa + **agente**, multi-bloco), tela de SLA no CRM, badge no card, endpoints de schedule, i18n.
 **EE overlay:** mudanças de SLA sob `enterprise/`; novos modelos gated por `feature_enabled?('sla')`.
 
 ## 7. Faseamento (ondas)
@@ -135,10 +137,10 @@ Cada onda: orquestração (impl disjunto + review paralelo + fix-pass) → gates
 - **Regressão no motor de SLA** (compartilhado com o nativo) — mitigado: comportamento novo **só quando os toggles ligam**; 24/7 continua default.
 - **EE/Zeitwerk** (modelos novos namespaceados) — mitigado pelo gate `eager_load`.
 - **Custo de IA** — mitigado: só no momento da quebra + cache.
-- **Detecção de grupo** depende do `source_id` estar no formato JID — confirmado (WAHA). Para canais futuros, a denylist cobre broadcast/newsletter.
+- **Detecção de grupo** depende de o chat id estar disponível. A premissa original ("`source_id` no formato JID — confirmado (WAHA)") era **falsa**: na WAHA o `source_id` é um uuid e o chat id fica nos atributos do contato (§3.2, #1276). Se a WAHA mudar o nome desses atributos, a detecção deixa de reconhecer grupo sem erro visível — o spec `spec/services/crm/whatsapp_group_detector_spec.rb` fixa os nomes. Para canais futuros, a denylist cobre broadcast/newsletter.
 - **Fuso/Horário de verão** — usar fuso IANA (ex. America/Sao_Paulo) resolve DST automaticamente.
 
 ## 11. Referências
 - **Código SLA (mapa):** `enterprise/app/models/{sla_policy,applied_sla,sla_event}.rb`, `enterprise/app/services/sla/evaluate_applied_sla_service.rb`, `enterprise/app/jobs/sla/*`, `config/schedule.yml` (cron 5 min), `app/models/working_hour.rb`, `components-next/Conversation/Sla/SLACardLabel.vue`, `crm.routes.js`, `app/services/crm/cards/payload_builder.rb`.
-- **Grupo (comprovado):** Grupo = JID **`@g.us`** em ambos os provedores. WAHA: `payload.from` termina em `@g.us` (https://waha.devlike.pro/docs/how-to/receive-messages/ , .../groups/). Evolution: `key.remoteJid` termina em `@g.us`, individual `@s.whatsapp.net`, e `key.participant` só existe em grupo (https://doc.evolution-api.com/v2/api-reference/group-controller/find-group-by-jid). Denylist extra: `@broadcast`/`status@broadcast`, `@newsletter`. Gotcha `@lid` afeta só 1:1 (WAHA #1907) — não quebra a regra de grupo.
+- **Grupo (comprovado):** Grupo = JID **`@g.us`** em ambos os provedores. WAHA: `payload.from` termina em `@g.us` (https://waha.devlike.pro/docs/how-to/receive-messages/ , .../groups/) — isso vale para o **payload do webhook da WAHA**; no Chatwoot o valor chega como atributo do contato (`waha_whatsapp_chat_id`), não como `source_id` (§3.2). Evolution: `key.remoteJid` termina em `@g.us`, individual `@s.whatsapp.net`, e `key.participant` só existe em grupo (https://doc.evolution-api.com/v2/api-reference/group-controller/find-group-by-jid). Denylist extra: `@broadcast`/`status@broadcast`, `@newsletter`. Gotcha `@lid` afeta só 1:1 (WAHA #1907) — não quebra a regra de grupo.
 - **Docs relacionados:** [[crm_roadmap_status]], `docs/crm_ai_followup_prd.md` (padrão de IA reusado), progress.md.
