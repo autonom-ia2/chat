@@ -17,6 +17,8 @@ module Crm::BookingPageSettings
   MAX_DESCRIPTION = 2000
   MAX_IMAGE_BYTES = 2.megabytes
   IMAGE_TYPES = %w[image/png image/jpeg image/webp].freeze
+  # Os anexos de imagem da página. Anexo novo entra aqui e ganha a conferência inteira (#1303).
+  IMAGE_ATTACHMENTS = %i[logo photo].freeze
 
   included do
     before_validation :normalize_json_settings
@@ -128,15 +130,10 @@ module Crm::BookingPageSettings
     value.is_a?(String) && value.length == 7 && value.start_with?('#') && value.delete_prefix('#').chars.all? { |char| HEX_DIGITS.include?(char) }
   end
 
-  # Logo e foto vão para a página pública: só PNG, JPEG ou WebP (SVG pode carregar script) e até 2 MB.
+  # Logo e foto vão para a página pública: só PNG, JPEG ou WebP de verdade (SVG pode carregar script) e até 2 MB. A
+  # regra inteira está em `Crm::BookingV2::ImageFile` (#1303).
   def validate_images
-    %i[logo photo].each do |name|
-      attachment = public_send(name)
-      next unless attachment.attached?
-
-      errors.add(name, 'must be a PNG, JPEG or WebP image') unless IMAGE_TYPES.include?(attachment.content_type)
-      errors.add(name, 'is too large') if attachment.byte_size > MAX_IMAGE_BYTES
-    end
+    ::Crm::BookingV2::ImageFile.validate(self, IMAGE_ATTACHMENTS, only_changed: true)
   end
 
   def validate_contact_phone

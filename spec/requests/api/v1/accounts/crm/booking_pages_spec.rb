@@ -422,6 +422,191 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingPages', type: :request do
       expect(page.reload.logo).not_to be_attached
     end
 
+    # Conteúdo de verdade (#1303): o tipo guardado vem do nome do arquivo quando o Marcel não reconhece o conteúdo. Um
+    # SVG chamado logo.png com a marcação depois de 4 KB de espaços entrava como image/png (o navegador ainda o lê como SVG).
+    describe 'conteúdo do arquivo' do
+      let(:png) { Rails.root.join('spec/assets/avatar.png').binread }
+      let(:big_svg) { %(#{' ' * 5000}<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>) }
+
+      def vips!
+        require 'image_processing/vips'
+      rescue LoadError => e
+        skip "libvips indisponível nesta máquina: #{e.class}"
+      end
+
+      def expect_refused(kind, reason)
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(body['reason']).to eq(reason)
+        expect(body['error']).to be_present
+        expect(body['errors']).to have_key(kind.to_s)
+        expect(page.reload.public_send(kind)).not_to be_attached
+      end
+
+      it 'recusa SVG grande chamado logo.png com Content-Type de imagem' do
+        upload(admin, :logo, temp_upload('logo.png', big_svg, 'image/png'))
+
+        expect_refused(:logo, 'image_content')
+        expect(body['error']).to include('PNG, JPEG or WebP')
+      end
+
+      # HTML o Marcel reconhece mesmo depois de 4 KB: é recusado já pelo tipo guardado.
+      it 'recusa HTML disfarçado de foto.jpg' do
+        html = "#{' ' * 5000}<!DOCTYPE html><html><body><script>alert(1)</script></body></html>"
+        upload(admin, :photo, temp_upload('foto.jpg', html, 'image/jpeg'))
+
+        expect_refused(:photo, 'image_type')
+      end
+
+      it 'recusa arquivo de outro formato com nome de imagem, reconhecido ou não pelo Marcel' do
+        upload(admin, :logo, temp_upload('logo.webp', "RIFF#{[36].pack('V')}WAVEfmt #{'x' * 5000}".b, 'image/webp'))
+        expect_refused(:logo, 'image_type')
+
+        upload(admin, :logo, temp_upload('logo.webp', "RIFF#{[36].pack('V')}WEBX#{'x' * 5000}".b, 'image/webp'))
+        expect_refused(:logo, 'image_content')
+      end
+
+      it 'recusa arquivo vazio e arquivo cortado no meio da assinatura' do
+        ['', png.byteslice(0, 6)].each do |content|
+          upload(admin, :logo, temp_upload('logo.png', content, 'image/png'))
+
+          expect_refused(:logo, 'image_content')
+        end
+      end
+
+      it 'aceita JPEG e WebP de verdade, e guarda o tipo do conteúdo' do
+        { 'booking_small.jpg' => 'image/jpeg', 'booking_small.webp' => 'image/webp' }.each do |name, type|
+          upload(admin, :photo, Rack::Test::UploadedFile.new(Rails.root.join('spec/assets', name), type))
+
+          expect(response).to have_http_status(:ok), "recusou #{name}: #{response.body}"
+          expect(page.reload.photo.content_type).to eq(type)
+          expect(page.photo.download).to eq(Rails.root.join('spec/assets', name).binread)
+        end
+      end
+
+      it 'o tipo vem do conteúdo: JPEG enviado como logo.png fica guardado como JPEG' do
+        jpeg = Rails.root.join('spec/assets/booking_small.jpg').binread
+        upload(admin, :logo, temp_upload('logo.png', jpeg, 'image/png'))
+
+        expect(response).to have_http_status(:ok)
+        expect(page.reload.logo.content_type).to eq('image/jpeg')
+      end
+
+      it 'PNG de verdade com HTML colado no fim continua sendo servido como PNG' do
+        upload(admin, :logo, temp_upload('logo.png', "#{png}<script>alert(1)</script>", 'image/png'))
+
+        expect(response).to have_http_status(:ok)
+        expect(page.reload.logo.content_type).to eq('image/png')
+      end
+
+      it 'recusa arquivo que só tem a assinatura de PNG e não abre' do
+        vips!
+        upload(admin, :logo, temp_upload('logo.png', "#{png.byteslice(0, 8)}#{'lixo' * 2000}", 'image/png'))
+
+        expect_refused(:logo, 'image_content')
+      end
+
+      it 'recusa imagem pequena em bytes e enorme em pixels' do
+        vips!
+        bomb = Vips::Image.black(5000, 4000).pngsave_buffer
+        expect(bomb.bytesize).to be < 100.kilobytes
+        upload(admin, :photo, temp_upload('foto.png', bomb, 'image/png'))
+
+        expect_refused(:photo, 'image_pixels')
+      end
+
+      it 'sem a libvips, vale a assinatura e fica registrado' do
+        allow(Crm::BookingV2::PreviewImage::Canvas).to receive(:load!).and_raise(LoadError, 'cannot load such file -- vips')
+        allow(Rails.logger).to receive(:warn)
+
+        upload(admin, :logo, png_upload)
+
+        expect(response).to have_http_status(:ok)
+        expect(Rails.logger).to have_received(:warn).with('Booking image opened without libvips (LoadError): only the file signature was checked')
+      end
+
+      it 'diz o motivo também para tipo e tamanho' do
+        upload(admin, :photo, temp_upload('x.svg', '<svg xmlns="http://www.w3.org/2000/svg"/>', 'image/svg+xml'))
+        expect_refused(:photo, 'image_type')
+
+        upload(admin, :logo, temp_upload('big.png', "#{png.byteslice(0, 8)}#{"\0" * 3.megabytes}".b, 'image/png'))
+        expect_refused(:logo, 'image_size')
+      end
+
+      it 'salvar outra coisa da página não baixa a logo de novo' do
+        upload(admin, :logo, png_upload)
+        allow(ActiveStorage::Blob.service).to receive(:download).and_call_original
+
+        call(admin, :patch, "#{base}/#{page.id}", { title: 'Outro nome' })
+
+        expect(response).to have_http_status(:ok)
+        expect(ActiveStorage::Blob.service).not_to have_received(:download)
+      end
+    end
+
+    describe 'pré-aquecimento da prévia do link (#1303)' do
+      let(:warm_job) { Crm::BookingV2::PreviewImageWarmJob }
+      let(:queued_key) { Crm::BookingV2::PreviewImage::Warmup.queued_key(page.id) }
+
+      before { Redis::Alfred.delete(queued_key) }
+      after { Redis::Alfred.delete(queued_key) }
+
+      # O job começa apagando a marca de "já está na fila": a gravação seguinte enfileira outro.
+      def run_warm_job
+        allow(Crm::BookingV2::PreviewImage::Warmup).to receive(:page).and_return([])
+        warm_job.perform_now(page.id)
+      end
+
+      it 'enviar a logo e salvar o título mandam desenhar a imagem em job' do
+        expect { upload(admin, :logo, png_upload) }.to have_enqueued_job(warm_job).with(page.id).on_queue('low')
+        run_warm_job
+        expect { call(admin, :patch, "#{base}/#{page.id}", { title: 'Outro nome' }) }.to have_enqueued_job(warm_job).with(page.id)
+      end
+
+      it 'gravações seguidas deixam um job só esperando na fila' do
+        expect do
+          5.times { |index| call(admin, :patch, "#{base}/#{page.id}", { title: "Nome #{index}" }) }
+        end.to have_enqueued_job(warm_job).with(page.id).once
+      end
+
+      it 'ações que não mudam a imagem não mandam desenhar' do
+        expect do
+          call(admin, :post, "#{base}/#{page.id}/preview_token")
+          call(admin, :post, "#{base}/#{page.id}/save_identity")
+        end.not_to have_enqueued_job(warm_job)
+      end
+
+      it 'falha ao enfileirar é registrada e a gravação responde normalmente' do
+        allow(warm_job).to receive(:perform_later).and_raise(Redis::CannotConnectError, 'sem Redis')
+        allow(Rails.logger).to receive(:error)
+
+        call(admin, :patch, "#{base}/#{page.id}", { title: 'Outro nome' })
+
+        expect(response).to have_http_status(:ok)
+        expect(page.reload.title).to eq('Outro nome')
+        expect(Rails.logger).to have_received(:error).with('Booking preview warmup not queued: Redis::CannotConnectError')
+        expect(Redis::Alfred.exists?(queued_key)).to be(false)
+      end
+
+      it 'não manda desenhar em leitura, em gravação recusada nem em página fora do ar' do
+        paused = create_booking_profile(account: account, host: world.host, enabled: false)
+
+        expect do
+          call(admin, :get, "#{base}/#{page.id}")
+          call(admin, :patch, "#{base}/#{page.id}", { brand: { color: 'amarelo' } })
+          call(admin, :patch, "#{base}/#{paused.id}", { title: 'Outro nome' })
+          call(admin, :post, "#{base}/#{page.id}/pause")
+          call(admin, :delete, "#{base}/#{paused.id}")
+        end.not_to have_enqueued_job(warm_job)
+      end
+
+      it 'publicar manda desenhar' do
+        call(admin, :post, "#{base}/#{page.id}/pause")
+        Redis::Alfred.delete(queued_key)
+
+        expect { call(admin, :post, "#{base}/#{page.id}/publish") }.to have_enqueued_job(warm_job).with(page.id)
+      end
+    end
+
     it 'refuses a request without a file' do
       upload(admin, :logo, nil)
 

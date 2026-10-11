@@ -8,6 +8,7 @@ import {
   pageToForm,
   serverProblem,
   stepProblem,
+  uploadProblem,
 } from '../bookingPageForm';
 import { joinNames } from '../bookingFormat';
 
@@ -192,8 +193,8 @@ export const useBookingWizard = ({
       );
       page.value = data.payload;
       if (data.payload.photo_owner?.profile_updated) onProfilePhoto?.();
-    } catch {
-      uploadError.value = { kind, key: 'IMAGE_UPLOAD' };
+    } catch (refusal) {
+      uploadError.value = { kind, key: uploadProblem(refusal) };
     } finally {
       uploading.value = null;
     }

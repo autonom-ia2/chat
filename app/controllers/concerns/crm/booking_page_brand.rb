@@ -5,6 +5,13 @@
 module Crm::BookingPageBrand
   extend ActiveSupport::Concern
 
+  # Só as gravações que podem mudar a imagem de prévia do link (#1303).
+  PREVIEW_ACTIONS = %i[update publish logo photo apply_identity update_people].freeze
+
+  included do
+    after_action :warm_link_preview, only: PREVIEW_ACTIONS
+  end
+
   def logo
     upload(:logo)
   end
@@ -42,6 +49,30 @@ module Crm::BookingPageBrand
       yield if block_given?
     end
     render_page
+  rescue ActiveRecord::RecordInvalid => e
+    render_upload_refused(e.record, name)
+  end
+
+  # A resposta de qualquer gravação recusada, mais `reason` quando o problema é o arquivo (#1303): `image_size`,
+  # `image_type`, `image_content` ou `image_pixels` (`Crm::BookingV2::ImageFile`), para a tela dizer o que trocar.
+  def render_upload_refused(record, name)
+    reason = record.errors.details[name].pick(:error)
+    render json: { error: record.errors.full_messages.first, errors: record.errors.to_hash, reason: reason }.compact,
+           status: :unprocessable_entity
+  end
+
+  # Pré-aquece a imagem de prévia do link (#1303): gravação da página que deu certo (marca, logo, foto, título, pessoas,
+  # publicar) manda desenhar em job a imagem que o WhatsApp vai pedir, em vez de deixar o desenho para o primeiro pedido
+  # público. Página fora do ar não tem imagem própria. No máximo um job esperando por página; ele não desenha o que já
+  # está guardado. A gravação já foi feita: falha ao enfileirar é registrada e não vira erro para a tela (a imagem ainda
+  # é desenhada no primeiro pedido).
+  def warm_link_preview
+    return if !response.successful? || @page.nil? || !@page.enabled?
+
+    ::Crm::BookingV2::PreviewImage::Warmup.later_once(@page)
+  rescue StandardError => e
+    Rails.logger.error("Booking preview warmup not queued: #{e.class.name}")
+    ChatwootExceptionTracker.new(e, account: Current.account).capture_exception
   end
 
   def upload_params

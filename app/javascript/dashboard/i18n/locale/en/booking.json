@@ -97,6 +97,8 @@
         "HOURS": "The end time must be after the start time.",
         "IMAGE_TYPE": "Use a PNG, JPEG or WebP image.",
         "IMAGE_SIZE": "The image can be up to 2 MB.",
+        "IMAGE_CONTENT": "This file is not a real image. Save it again as PNG or JPEG and try once more.",
+        "IMAGE_PIXELS": "This image is too big. Use a smaller one, up to 16 megapixels.",
         "IMAGE_UPLOAD": "We couldn't upload the image. Try another one.",
         "SHORT_NAME": "Check the page address."
       },

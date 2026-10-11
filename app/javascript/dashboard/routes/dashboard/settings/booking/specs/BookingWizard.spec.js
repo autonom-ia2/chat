@@ -419,6 +419,23 @@ describe('BookingWizard', () => {
       );
     });
 
+    it('diz o que trocar quando o servidor recusa o conteúdo do arquivo', async () => {
+      BookingPagesAPI.uploadImage.mockRejectedValue({
+        response: { status: 422, data: { reason: 'image_content' } },
+      });
+      const wrapper = await openAtStep(5);
+      const input = wrapper.find('[data-logo] [data-file]');
+      Object.defineProperty(input.element, 'files', {
+        value: [file('image/png')],
+        configurable: true,
+      });
+      await input.trigger('change');
+      await flushPromises();
+      expect(wrapper.find('[data-logo]').text()).toContain(
+        'BOOKING.WIZARD.ERRORS.IMAGE_CONTENT'
+      );
+    });
+
     it('cor escolhida e frase vão no PATCH', async () => {
       const wrapper = await openAtStep(5);
       await wrapper.find('[data-color="#0B7A5A"]').trigger('click');
