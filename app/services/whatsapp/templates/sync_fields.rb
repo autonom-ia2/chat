@@ -9,22 +9,30 @@
 # Prependido em `Whatsapp::Providers::WhatsappCloudService` por `config/initializers/whatsapp_templates.rb`. A
 # paginação segue a do Chatwoot (cursor `paging.cursors.after`); a recursão passa por este método, então toda página
 # pede os mesmos campos.
+#
+# Se a Graph recusar um campo (400, código 100), o sync desce de nível em vez de parar de atualizar a lista:
+# `full` (FIELDS) → `minimal` (MINIMAL_FIELDS, o que o envio e o agendamento leem) → `none` (sem `fields=`, como o
+# Chatwoot; aí o motivo de recusa some, por isso `error` no log). O nível escolhido vale para as páginas seguintes.
 module Whatsapp::Templates::SyncFields
   FIELDS = %w[id name language status category sub_category previous_category correct_category parameter_format
               components rejected_reason quality_score].join(',').freeze
+  MINIMAL_FIELDS = %w[id name language status category components rejected_reason].join(',').freeze
+  LEVELS = { 'full' => FIELDS, 'minimal' => MINIMAL_FIELDS }.freeze
+  NEXT_LEVEL = { 'full' => 'minimal', 'minimal' => 'none' }.freeze
   # A Graph responde 400 com o código 100 quando não reconhece um parâmetro (um campo, por exemplo).
   INVALID_PARAMETER = 100
 
   def fetch_whatsapp_templates(after: nil)
-    return super if @sync_without_fields
+    level = sync_fields_level
+    return super if level == 'none'
 
-    query = { fields: FIELDS }
+    query = { fields: LEVELS.fetch(level) }
     query[:after] = after if after.present?
     response = HTTParty.get("#{business_account_path}/message_templates",
                             headers: { 'Authorization' => "Bearer #{whatsapp_channel.template_access_token}" }, query: query)
     if fields_refused?(response)
-      refused_fields(response)
-      return super
+      lower_fields_level(response)
+      return fetch_whatsapp_templates(after: after)
     end
     return failed_sync(response) unless response.success?
 
@@ -36,12 +44,15 @@ module Whatsapp::Templates::SyncFields
 
   private
 
-  # Se a versão da Graph recusar algum campo, o resto deste sync segue como antes (sem `fields=`) em vez de parar de
-  # atualizar a lista. Fica no log para corrigir a lista de campos.
-  def refused_fields(response)
-    @sync_without_fields = true
-    Rails.logger.warn("[whatsapp][templates] sync_fields_refused account_id=#{whatsapp_channel.account_id} " \
-                      "inbox_id=#{whatsapp_channel.inbox&.id} http=#{response.code}")
+  def sync_fields_level
+    @sync_fields_level ||= 'full'
+  end
+
+  def lower_fields_level(response)
+    @sync_fields_level = NEXT_LEVEL.fetch(sync_fields_level)
+    message = "[whatsapp][templates] sync_fields_refused fields_level=#{@sync_fields_level} " \
+              "account_id=#{whatsapp_channel.account_id} inbox_id=#{whatsapp_channel.inbox&.id} http=#{response.code}"
+    @sync_fields_level == 'none' ? Rails.logger.error(message) : Rails.logger.warn(message)
   end
 
   def fields_refused?(response)

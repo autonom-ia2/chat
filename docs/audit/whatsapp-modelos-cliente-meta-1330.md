@@ -11,8 +11,9 @@ Só backend. Tela (D), Jev (E) e webhook (I) ficam fora.
   `FacebookApiClient`. O sync segue na URL do Chatwoot (v14.0, que a Meta atende pela versão mais antiga em vigor).
 - **Sync com `fields=`** por prepend com nome próprio (`Whatsapp::Templates::SyncFields`), em initializer com
   `prepend_once`; fica à frente do módulo de voz do enterprise, que não mexe no sync. Os campos cobrem todos os leitores
-  atuais de `message_templates`. Se a Graph recusar um campo (400, código 100), aquele sync segue sem `fields=` e avisa
-  no log, em vez de parar de atualizar a lista.
+  atuais de `message_templates`. Se a Graph recusar um campo (400, código 100), o sync desce para o conjunto mínimo
+  (`id,name,language,status,category,components,rejected_reason`) e, se também recusado, segue sem `fields=`; o log diz
+  `fields_level=minimal|none` (`none` como erro, porque o motivo de recusa some). O nível vale para as páginas seguintes.
 - **Estado do fork na tabela `whatsapp_template_profiles`** (migration 20261020100000, só aditiva). Sem perfil, o modelo
   aparece pelo nome técnico: nada que funciona hoje depende do perfil.
 - **Modelos do sistema** (avisos do agendamento por `Catalog.names`, `chat2you_resumo_anuncios`,
@@ -22,7 +23,7 @@ Só backend. Tela (D), Jev (E) e webhook (I) ficam fora.
   `campaign_*`). A matriz e o front ficam com a D.
 - **"Onde está em uso":** campanhas abertas, avisos do agendamento e follow-ups pendentes/atrasados. Follow-up só via
   `policy_scope(::Crm::Card)`; campanha exige `campaign_view` e página `agendamento_view`. O que a pessoa não vê vira só
-  `uso_oculto: true`. Apagar ou alterar conteúdo com qualquer uso devolve 422.
+  `uso_oculto: true`. Página de agendamento volta só com id e título (sem o link público). Apagar ou alterar conteúdo com qualquer uso devolve 422.
 
 ## Efeito esperado no deploy
 

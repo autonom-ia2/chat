@@ -56,19 +56,59 @@ RSpec.describe Whatsapp::Templates::SyncFields do
     expect(guard.send(:authentication_template?)).to be(false)
   end
 
-  it 'com a Graph recusando um campo, sincroniza como antes (sem fields=) e avisa no log' do
-    stub_request(:get, url).with(query: hash_including('fields' => fields))
-                           .to_return(status: 400, headers: json, body: { error: { code: 100, message: 'x' } }.to_json)
-    plain = stub_request(:get, url).with(query: {}).to_return(page([bare], 'cursor-1'))
-    plain_second = stub_request(:get, url).with(query: { 'after' => 'cursor-1' }).to_return(page([complete]))
-    allow(Rails.logger).to receive(:warn)
+  describe 'níveis de campos quando a Graph recusa um campo' do
+    let(:minimal) { described_class::MINIMAL_FIELDS }
+    let(:refused) { { status: 400, headers: json, body: { error: { code: 100, message: 'x' } }.to_json } }
 
-    channel.provider_service.sync_templates
+    before do
+      allow(Rails.logger).to receive(:warn)
+      allow(Rails.logger).to receive(:error)
+    end
 
-    expect(plain).to have_been_requested.once
-    expect(plain_second).to have_been_requested.once
-    expect(channel.reload.message_templates).to eq([bare, complete])
-    expect(Rails.logger).to have_received(:warn).with(a_string_including('sync_fields_refused'))
+    it 'full: com todos os campos aceitos, nada no log' do
+      full = stub_request(:get, url).with(query: { 'fields' => fields }).to_return(page([complete]))
+
+      channel.provider_service.sync_templates
+
+      expect(full).to have_been_requested.once
+      expect(Rails.logger).not_to have_received(:warn).with(a_string_including('sync_fields_refused'))
+      expect(Rails.logger).not_to have_received(:error)
+    end
+
+    it 'minimal: recusou o conjunto completo, usa o mínimo estável em todas as páginas e avisa' do
+      stub_request(:get, url).with(query: hash_including('fields' => fields)).to_return(refused)
+      first = stub_request(:get, url).with(query: { 'fields' => minimal }).to_return(page([complete], 'cursor-1'))
+      second = stub_request(:get, url).with(query: { 'fields' => minimal, 'after' => 'cursor-1' }).to_return(page([bare]))
+
+      channel.provider_service.sync_templates
+
+      expect(first).to have_been_requested.once
+      expect(second).to have_been_requested.once
+      expect(a_request(:get, url).with(query: hash_including('fields' => fields))).to have_been_made.once
+      expect(channel.reload.message_templates).to eq([complete, bare])
+      expect(Rails.logger).to have_received(:warn).with(a_string_including('fields_level=minimal'))
+      expect(Rails.logger).not_to have_received(:error)
+    end
+
+    it 'none: recusou também o mínimo, sincroniza sem fields= em todas as páginas e registra erro' do
+      stub_request(:get, url).with(query: hash_including('fields' => fields)).to_return(refused)
+      stub_request(:get, url).with(query: hash_including('fields' => minimal)).to_return(refused)
+      plain = stub_request(:get, url).with(query: {}).to_return(page([bare], 'cursor-1'))
+      plain_second = stub_request(:get, url).with(query: { 'after' => 'cursor-1' }).to_return(page([complete]))
+
+      channel.provider_service.sync_templates
+
+      expect(plain).to have_been_requested.once
+      expect(plain_second).to have_been_requested.once
+      expect(a_request(:get, url).with(query: hash_including('fields' => minimal))).to have_been_made.once
+      expect(channel.reload.message_templates).to eq([bare, complete])
+      expect(Rails.logger).to have_received(:warn).with(a_string_including('fields_level=minimal'))
+      expect(Rails.logger).to have_received(:error).with(a_string_including('fields_level=none'))
+    end
+
+    it 'o mínimo cobre o que o envio e o agendamento leem' do
+      expect(minimal.split(',')).to contain_exactly('id', 'name', 'language', 'status', 'category', 'components', 'rejected_reason')
+    end
   end
 
   it 'erro que não é de campo (token inválido) segue o caminho de antes: nada muda na lista' do

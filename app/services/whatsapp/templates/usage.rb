@@ -84,8 +84,8 @@ class Whatsapp::Templates::Usage
   end
 
   def booking_page_row(page)
-    kinds = page.notice_kinds.select { |kind| same_template?(page.notice_template(kind)) }
-    { id: page.id, title: page.title, slug: page.slug, notices: kinds } if kinds.any?
+    # Só id e título: a tela leva ao painel (crm/booking), nunca ao link público da página.
+    { id: page.id, title: page.title } if page.notice_kinds.any? { |kind| same_template?(page.notice_template(kind)) }
   end
 
   def same_template?(template)

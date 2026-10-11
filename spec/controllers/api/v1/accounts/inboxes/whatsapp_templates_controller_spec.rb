@@ -282,7 +282,7 @@ RSpec.describe 'Api::V1::Accounts::Inboxes::WhatsappTemplates', type: :request d
 
       body = response.parsed_body
       expect(body['campaigns'].pluck('title')).to eq(['Campanha'])
-      expect(body['booking_pages'].first['notices']).to eq(['booked'])
+      expect(body['booking_pages']).to eq([{ 'id' => world.profile.id, 'title' => world.profile.title }])
       expect(body['follow_ups'].pluck('title')).to eq(['Retorno'])
       expect(body).to include('uso_oculto' => false, 'in_use' => true)
     end
