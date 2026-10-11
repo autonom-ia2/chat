@@ -71,7 +71,7 @@ describe('CrmInboxSettingsDrawer', () => {
     expect(wrapper.findAll('.combobox')).toHaveLength(6);
   });
 
-  it('saves the subject AI mode chosen for the inbox (#1145), off while the CRM is off', async () => {
+  it('saves the subject AI mode chosen for the inbox (#1145), kept while the CRM is off (#1260)', async () => {
     const wrapper = mountDrawer();
     const [first, second] = sections(wrapper);
 
@@ -92,7 +92,7 @@ describe('CrmInboxSettingsDrawer', () => {
     });
     expect(wrapper.emitted('save')[1][0]).toMatchObject({
       inboxId: 2,
-      subject_ai_mode: 'off',
+      subject_ai_mode: 'suggest',
     });
   });
 

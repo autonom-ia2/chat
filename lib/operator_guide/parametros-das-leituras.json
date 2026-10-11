@@ -1021,6 +1021,17 @@
     "controller": "api/v1/accounts/crm/booking_pages#people",
     "parametros": []
   },
+  "crm/booking_pages/:id/slots": {
+    "controller": "api/v1/accounts/crm/booking_page_meetings#slots",
+    "parametros": [
+      "date",
+      "duration"
+    ]
+  },
+  "crm/booking_pages/bookable": {
+    "controller": "api/v1/accounts/crm/booking_page_meetings#index",
+    "parametros": []
+  },
   "crm/booking_pages/reassign_preview": {
     "controller": "api/v1/accounts/crm/booking_pages#reassign_preview",
     "parametros": [

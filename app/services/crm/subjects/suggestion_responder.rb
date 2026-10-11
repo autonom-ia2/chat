@@ -23,15 +23,22 @@ class Crm::Subjects::SuggestionResponder
 
     case decision.action
     when 'create' then pipeline_stage(decision).present?
-    when 'rename', 'focus' then decision.card&.open? || false
+    when 'focus' then card_aberto?(decision.card)
+    # Uma pessoa deu nome ao card depois da sugestão: aceitar não troca o nome dela (#1260).
+    when 'rename' then card_aberto?(decision.card) && !Crm::Subjects::Naming.named?(decision.card)
     else false
     end
   end
 
-  # A primeira etapa do funil sugerido, se ele segue ativo e ligado à caixa da conversa.
+  def self.card_aberto?(card)
+    card.present? && card.open?
+  end
+
+  # A primeira etapa do funil sugerido, se ele segue ativo, ligado à caixa da conversa e com a IA do funil ligada.
   def self.pipeline_stage(decision)
     pipeline = decision.pipeline
-    return unless pipeline&.active? && pipeline.pipeline_inboxes.exists?(inbox_id: decision.conversation.inbox_id)
+    return unless pipeline&.active? && Crm::Subjects.ia_do_funil?(pipeline)
+    return unless pipeline.pipeline_inboxes.exists?(inbox_id: decision.conversation.inbox_id)
 
     pipeline.stages.order(:position, :id).first
   end
@@ -112,7 +119,7 @@ class Crm::Subjects::SuggestionResponder
   end
 
   def focar(card)
-    Crm::Cards::Focus.new(account: @account, card: card, conversation: @conversation).perform
+    Crm::Cards::Focus.new(account: @account, card: card, conversation: @conversation, user: @user).perform
     card
   end
 end

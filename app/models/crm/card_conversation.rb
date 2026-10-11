@@ -4,6 +4,7 @@
 #
 #  id              :bigint           not null, primary key
 #  focused_at      :datetime
+#  focused_by_id   :bigint
 #  is_primary      :boolean          default(FALSE), not null
 #  created_at      :datetime         not null
 #  updated_at      :datetime         not null
