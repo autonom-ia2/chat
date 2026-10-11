@@ -121,6 +121,9 @@ describe('CrmCalendarMeetingScheduler', () => {
     expect(wrapper.get('[data-booking-agenda-notify]').element.checked).toBe(
       true
     );
+    expect(wrapper.get('[data-booking-agenda-notify-when]').text()).toBe(
+      'Use quando o cliente combinou o horário com você.'
+    );
 
     await wrapper.get('[data-booking-agenda-slots] button').trigger('click');
     await wrapper.get('form').trigger('submit');

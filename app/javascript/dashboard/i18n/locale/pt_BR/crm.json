@@ -2890,6 +2890,7 @@
       "RETRY": "Tentar de novo",
       "NOTIFY": "Avisar o cliente no WhatsApp",
       "NOTIFY_HINT": "Manda a confirmação e os lembretes.",
+      "NOTIFY_WHEN": "Use quando o cliente combinou o horário com você.",
       "SAVE": "Salvar",
       "SAVING": "Salvando…",
       "SUCCESS": "Reunião marcada.",

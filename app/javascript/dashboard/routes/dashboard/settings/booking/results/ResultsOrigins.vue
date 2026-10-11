@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { barWidthClass, originLabelKey } from './resultsFormat';
 
 // De onde vieram os horários marcados (J7-A3): conversa, link da página,
-// pedido de contato e, quando houver, a IA. Barra simples + o número escrito.
+// pedido de contato, pela equipe (marcada no painel) e, quando houver, a IA. Barra simples + o número escrito.
 const props = defineProps({
   origins: { type: Array, required: true },
 });

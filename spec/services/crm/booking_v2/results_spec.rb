@@ -142,12 +142,48 @@ RSpec.describe Crm::BookingV2::Results do
 
       expect(results.origins).to eq([
                                       { key: 'conversation', count: 2 }, { key: 'public_link', count: 1 },
-                                      { key: 'contact_request', count: 1 }
+                                      { key: 'contact_request', count: 1 }, { key: 'team', count: 0 }
                                     ])
       expect(results.origins.sum { |row| row[:count] }).to eq(results.totals[:booked])
 
       meeting(source: 'ai')
       expect(results.origins.last).to eq(key: 'ai', count: 1)
+    end
+  end
+
+  # #1271: reunião marcada pela equipe no painel (`source: 'panel'`).
+  describe 'meetings booked by the team' do
+    let(:booker) { create(:user, account: account, role: :agent, name: 'Juliana Melo') }
+
+    def team_meeting(**attrs)
+      meeting(source: 'panel', metadata: { 'booked_by_user_id' => booker.id }, **attrs)
+    end
+
+    it 'counts them as booked, attended and missed, under the "team" origin' do
+      team_meeting
+      meeting(source: 'invite')
+      finished(source: 'panel', outcome: 'held')
+      finished(source: 'panel', outcome: 'no_show')
+
+      expect(results.totals).to include(booked: 4, attended: 1, no_show: 1)
+      expect(results.origins).to include({ key: 'team', count: 3 }, { key: 'conversation', count: 1 })
+      expect(results.origins.sum { |row| row[:count] }).to eq(results.totals[:booked])
+    end
+
+    it 'keeps the link conversion with links only: the panel invite is never sent nor opened' do
+      booked = team_meeting
+      invite(channel: 'panel', scheduled_at: 1.day.ago, sent_at: 1.day.ago, first_opened_at: 2.days.ago, meeting: booked,
+             created_by: booker)
+
+      expect(results.totals).to include(sent: 0, opened: 0, booked: 1)
+      expect(results(user: booker).totals).to include(sent: 0, opened: 0)
+    end
+
+    it 'counts in "Meus números" for who hosts the meeting, not for who booked it' do
+      team_meeting
+
+      expect(results(user: world.host).totals).to include(booked: 1)
+      expect(results(user: booker).totals).to include(booked: 0)
     end
   end
 end

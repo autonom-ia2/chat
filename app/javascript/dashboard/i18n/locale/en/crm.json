@@ -2889,6 +2889,7 @@
       "RETRY": "Try again",
       "NOTIFY": "Notify the client on WhatsApp",
       "NOTIFY_HINT": "Sends the confirmation and the reminders.",
+      "NOTIFY_WHEN": "Use it when the client agreed on the time with you.",
       "SAVE": "Save",
       "SAVING": "Saving…",
       "SUCCESS": "Meeting scheduled.",

@@ -411,7 +411,7 @@
         },
         "BOOKED": {
           "LABEL": "Marcaram",
-          "HINT": "Horários marcados pelos links e pela página."
+          "HINT": "Horários marcados pelos links, pela página e pela equipe."
         },
         "ATTENDED": {
           "LABEL": "Compareceram",
@@ -427,6 +427,7 @@
         "CONVERSATION": "Link mandado na conversa",
         "PUBLIC_LINK": "Link da página (bio, site, anúncio)",
         "CONTACT_REQUEST": "Pedido de contato",
+        "TEAM": "Pela equipe",
         "AI": "Atendente de IA",
         "EMPTY": "Nenhum horário marcado neste período."
       },

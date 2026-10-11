@@ -49,6 +49,7 @@ const stats = (overrides = {}) => ({
       { key: 'conversation', count: 12 },
       { key: 'public_link', count: 5 },
       { key: 'contact_request', count: 2 },
+      { key: 'team', count: 3 },
     ],
     ...overrides,
   },
@@ -99,7 +100,10 @@ describe('BookingResultsPage', () => {
       'conversation',
       'public_link',
       'contact_request',
+      'team',
     ]);
+    expect(origins[3].text()).toContain('BOOKING.RESULTS.ORIGINS.TEAM');
+    expect(origins[3].text()).toContain('3');
     expect(origins[0].text()).toContain('12');
     expect(origins[0].find('.w-full').exists()).toBe(true);
   });
