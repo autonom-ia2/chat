@@ -32,6 +32,7 @@ describe('bookingPageForm', () => {
     const payload = formToPayload(pageToForm(page));
     expect(payload).toEqual({
       title: 'Visita',
+      short_name: '',
       duration_minutes: 60,
       slot_durations: [30],
       locations: [{ type: 'in_person', address: 'Rua A, 1' }],
@@ -40,7 +41,7 @@ describe('bookingPageForm', () => {
       min_notice_minutes: 60,
       buffer_minutes: 5,
       close_holidays: true,
-      brand: { color: '#B3263E', headline: 'Oi' },
+      brand: { color: '#B3263E', headline: 'Oi', logo_align: 'left' },
       default_pipeline_id: 2,
       default_stage_id: 20,
       notice_preset: 'standard',

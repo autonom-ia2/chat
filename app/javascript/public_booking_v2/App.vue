@@ -8,6 +8,7 @@ import ManageMeeting from './components/ManageMeeting.vue';
 import ManageStop from './components/ManageStop.vue';
 import NoSlot from './components/NoSlot.vue';
 import NotFound from './components/NotFound.vue';
+import PageCard from './components/PageCard.vue';
 import Paused from './components/Paused.vue';
 import RescheduleConfirm from './components/RescheduleConfirm.vue';
 import StepConfirm from './components/StepConfirm.vue';
@@ -63,9 +64,7 @@ onMounted(load);
       >
         {{ t('BOOKING_V2.PREVIEW') }}
       </p>
-      <div
-        class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8"
-      >
+      <PageCard>
         <p
           v-if="step === STEPS.LOADING"
           role="status"
@@ -75,7 +74,7 @@ onMounted(load);
           {{ t('BOOKING_V2.LOADING') }}
         </p>
         <component :is="screen" v-else-if="screen" />
-      </div>
+      </PageCard>
     </main>
   </div>
 </template>

@@ -62,6 +62,11 @@ class Crm::Access::ConversationScope
     restrictions.any?
   end
 
+  # A pessoa tem acesso por funil nesta caixa (participação dela não é automática, ver ParticipationListener).
+  def restricted_in?(inbox_id)
+    restrictions.any? { |access| access.inbox_id == inbox_id }
+  end
+
   def restricted_inbox_ids
     restrictions.map(&:inbox_id)
   end

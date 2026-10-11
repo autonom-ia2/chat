@@ -163,6 +163,7 @@ describe('AgentePaginaEntrada', () => {
       ['knowledge', 'sabe'],
       ['channels', 'onde'],
       ['performance', 'conversas'],
+      ['tools', 'ferramentas'],
       ['tune', ''],
       ['publish', ''],
     ])('maps the old tab %s to the drawer "%s"', async (tab, gaveta) => {

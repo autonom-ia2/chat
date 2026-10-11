@@ -26,6 +26,7 @@
 #  account_id          :bigint           not null
 #  default_assignee_id :bigint
 #  page_version        :integer          default(1), not null
+#  short_name          :string
 #  post_meeting_mode   :string           default("ask"), not null
 #  post_meeting_stage_id :bigint
 #  default_pipeline_id :bigint
@@ -36,6 +37,7 @@
 #
 #  index_crm_agent_booking_profiles_on_account_id  (account_id)
 #  index_crm_agent_booking_profiles_on_inbox_id    (inbox_id)
+#  index_crm_agent_booking_profiles_on_short_name  (short_name) UNIQUE
 #  index_crm_agent_booking_profiles_on_slug        (slug) UNIQUE
 #
 # Foreign Keys
@@ -47,6 +49,7 @@ class Crm::AgentBookingProfile < ApplicationRecord
   include Crm::BookingPageSettings
   include Crm::BookingNoticeSettings
   include Crm::BookingPostMeetingSettings
+  include Crm::BookingShortName
 
   self.table_name = 'crm_agent_booking_profiles'
 
@@ -102,6 +105,8 @@ class Crm::AgentBookingProfile < ApplicationRecord
 
   has_one_attached :logo
   has_one_attached :photo
+  # Imagem de prévia do link (#1282), desenhada pelo sistema: `Crm::BookingV2::PreviewImage::Store`.
+  has_one_attached :preview_image
 
   def legacy_page?
     page_version == LEGACY_PAGE

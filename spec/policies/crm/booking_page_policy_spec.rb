@@ -7,7 +7,7 @@ RSpec.describe Crm::BookingPagePolicy, type: :policy do
   let(:page) { create_booking_profile(account: account, host: admin) }
 
   let(:read_actions) { %i[index? show? people?] }
-  let(:write_actions) { %i[create? update? destroy? publish? pause? preview_token? logo? photo? update_people?] }
+  let(:write_actions) { %i[create? update? destroy? publish? pause? preview_token? logo? photo? update_people? apply_identity?] }
 
   def policy_for(user, record)
     described_class.new({ user: user, account: account, account_user: user.account_users.find_by(account: account) }, record)
@@ -32,6 +32,19 @@ RSpec.describe Crm::BookingPagePolicy, type: :policy do
     (read_actions + write_actions).each do |action|
       expect(policy_for(admin, other_page).public_send(action)).to be(false), "cross-account #{action} allowed"
     end
+  end
+
+  it 'lets whoever manages pages use the saved identity, but only the administrator save it to the account (#1289)' do
+    manager = create(:user, account: account, role: :agent)
+    manager.account_users.find_by(account: account).update!(custom_role: create(:custom_role, account: account, permissions: %w[agendamento_manage]))
+    other_account = create(:account)
+    other_page = create_booking_profile(account: other_account, host: create(:user, account: other_account, role: :administrator))
+
+    expect(policy_for(manager, page).apply_identity?).to be(true)
+    expect(policy_for(manager, page).save_identity?).to be(false)
+    expect(policy_for(admin, page).save_identity?).to be(true)
+    expect(policy_for(agent, page).save_identity?).to be(false)
+    expect(policy_for(admin, other_page).save_identity?).to be(false)
   end
 
   it 'lets whoever manages pages ask for notice template suggestions, but only the administrator create them on Meta' do

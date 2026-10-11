@@ -32,7 +32,7 @@ class Crm::BookingV2::OrphanReassigner
     ActiveRecord::Base.transaction do
       Crm::BookingV2::HostSchedule.lock!(locked_ids)
       disable_links
-      Crm::AgentAvailability.where(account_id: account.id, user_id: user_id).delete_all
+      drop_availability
       schedule = Crm::BookingV2::HostSchedule.new(account: account)
       orphan_meetings.each { |meeting| reassign(meeting, schedule) }
     end
@@ -41,6 +41,12 @@ class Crm::BookingV2::OrphanReassigner
   private
 
   attr_reader :account, :user_id
+
+  # `destroy_all`, não `delete_all`: a foto guardada para as páginas (#1289) é um anexo, e só o destroy o apaga
+  # (depois do commit).
+  def drop_availability
+    Crm::AgentAvailability.where(account_id: account.id, user_id: user_id).destroy_all
+  end
 
   # Sem validação de propósito: a do link exige que o agente seja da conta, e ele acabou de sair. Desligar é o
   # único efeito; o mesmo padrão do Agents::DestroyJob ao desatribuir conversas.

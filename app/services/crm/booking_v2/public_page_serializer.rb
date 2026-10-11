@@ -38,7 +38,7 @@ class Crm::BookingV2::PublicPageSerializer
   def full
     {
       slug: page.slug, paused: false, preview: page.preview?, title: profile.title, description: profile.description,
-      agent_name: host_name, agent_photo_url: page.host&.avatar_url.presence, brand: brand, locations: locations,
+      agent_name: host_name, agent_photo_url: host_photo_url, brand: brand, locations: locations,
       contact_whatsapp_url: self.class.whatsapp_url(profile)
     }.merge(schedule, form)
   end
@@ -60,10 +60,18 @@ class Crm::BookingV2::PublicPageSerializer
     page.host&.available_name.presence || profile.title
   end
 
+  # A foto que a pessoa guardou para as páginas de agendamento (#1289) vem antes da foto do perfil dela.
+  def host_photo_url
+    saved = Crm::BookingV2::BrandIdentity.new(profile.account).photo_of(page.host)
+    saved ? url_for(saved) : page.host&.avatar_url.presence
+  end
+
+  # `logo_align` (#1289): de que lado a logo fica (left, center ou right); sem valor salvo, left.
   def brand
     data = profile.brand.to_h
     {
       color: data['color'].presence, headline: data['headline'].presence,
+      logo_align: data['logo_align'].presence || Crm::BookingPageSettings::LOGO_ALIGNS.first,
       logo_url: attachment_url(profile.logo), photo_url: attachment_url(profile.photo)
     }
   end

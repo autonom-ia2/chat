@@ -167,7 +167,7 @@ defineExpose({ focar });
       :desabilitado="digitando"
       @escolher="perguntar"
     />
-    <form class="flex items-end gap-2" @submit.prevent="enviar">
+    <form class="relative flex items-end gap-2" @submit.prevent="enviar">
       <label :for="campoId" class="sr-only">{{ t(`${NS}.ESCREVA`) }}</label>
       <textarea
         :id="campoId"

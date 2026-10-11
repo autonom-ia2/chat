@@ -4,7 +4,7 @@ import { useStore } from 'dashboard/composables/store';
 // #1181 — o celular de teste do agente, o mesmo na criação (Confira, T04) e na página do agente
 // (T08 e a coluna do celular em T11). Pergunta como cliente pelo `autonomiaAgents/test` (sandbox:
 // ninguém recebe e nada vai para a base) e toca a resposta em partes, com a espera de cada uma,
-// como o canal de verdade entrega. Embaixo da última parte, "usou: <arquivo>" quando o agente se
+// como o canal de verdade entrega. Embaixo da última parte, "Usou: <arquivo>" quando o agente se
 // apoiou na base; a última parte também diz se ele passaria a conversa para a equipe. Nunca guarda
 // nem mostra confiança, nota ou percentual. Fotos vão como data-url só neste turno e aparecem no
 // balão do cliente; foto sem texto vai com `textoSoFoto` (a API exige uma mensagem).

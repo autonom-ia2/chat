@@ -1125,12 +1125,12 @@ describe('meeting management /b/:code (F2-A)', () => {
     expect(wrapper.find('[data-testid="zone-note"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="manage-badge"]').exists()).toBe(false);
     expect(findAction(wrapper, 'Vou estar lá').classes()).toContain(
-      'bg-[var(--brand)]'
+      'bg-[var(--brand-fill)]'
     );
     expect(
       wrapper
         .findAll('button, a')
-        .filter(node => node.classes().includes('bg-[var(--brand)]'))
+        .filter(node => node.classes().includes('bg-[var(--brand-fill)]'))
     ).toHaveLength(1);
     expect(findAction(wrapper, 'Mudar horário')).toBeDefined();
     expect(findAction(wrapper, 'Cancelar')).toBeDefined();
@@ -1244,7 +1244,7 @@ describe('meeting management /b/:code (F2-A)', () => {
     expect(heading(wrapper)).toBe('Horário cancelado');
     const again = findAction(wrapper, 'Marcar outro horário');
     expect(again.element.tagName).toBe('BUTTON');
-    expect(again.classes()).toContain('bg-[var(--brand)]');
+    expect(again.classes()).toContain('bg-[var(--brand-fill)]');
     [
       'Salvar na minha agenda',
       'Pôr na Agenda do Google',

@@ -7,8 +7,11 @@ import BookingSettingsPage from '../BookingSettingsPage.vue';
 
 // A tela inteira por perfil (#1187, J8): quem gerencia cria e edita; quem só
 // vê abre a página em modo leitura, sem nenhum botão que mude algo.
+// `locale` e `mergeLocaleMessage`: a prévia monta as telas da página pública (#1289).
 vi.mock('vue-i18n', () => ({
   useI18n: () => ({
+    locale: { value: 'pt_BR' },
+    mergeLocaleMessage: () => {},
     t: (key, values) =>
       values === undefined ? key : `${key} ${JSON.stringify(values)}`,
   }),
@@ -144,7 +147,9 @@ describe('BookingSettingsPage', () => {
     await flushPromises();
     const view = wrapper.find('[data-page-view]');
     expect(view.exists()).toBe(true);
-    expect(view.find('[data-preview-title]').text()).toBe('Conversa de vendas');
+    expect(view.find('[data-preview] [data-brand-header]').text()).toContain(
+      'Conversa de vendas'
+    );
     expect(view.find('[data-alter]').exists()).toBe(false);
     expect(view.find('[data-primary]').exists()).toBe(false);
     expect(view.find('[data-copy]').exists()).toBe(true);

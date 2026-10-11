@@ -45,9 +45,15 @@ const BOOKING_STEPS = [
 
 const FLOW_KEY = Symbol('bookingFlow');
 
-// `/book/:slug` (link público ou de pessoa) e `/b/:code` (link do cliente). `?preview=` só no link de página;
-// `?stop_notices=1` só no link do cliente (o "Parar avisos" das mensagens automáticas).
-export const parseRoute = (pathname, search) => {
+// O link curto `/a/<nome>` (#1282) não traz o slug no endereço: o servidor resolve o nome e entrega o slug na
+// casca, em `<meta name="booking-slug">`. Sem a meta, o nome não existe.
+export const shortLinkSlug = (root = document) =>
+  root.querySelector('meta[name="booking-slug"]')?.content || null;
+
+// `/book/:slug` (link público ou de pessoa), `/a/:nome` (link curto, com o slug vindo de `shortSlug`) e `/b/:code`
+// (link do cliente). `?preview=` só no link de página; `?stop_notices=1` só no link do cliente (o "Parar avisos"
+// das mensagens automáticas).
+export const parseRoute = (pathname, search, shortSlug = null) => {
   const parts = String(pathname || '')
     .split('/')
     .filter(Boolean);
@@ -63,6 +69,9 @@ export const parseRoute = (pathname, search) => {
   if (parts[0] === 'book' && parts[1]) {
     return { code: null, slug: parts[1], preview };
   }
+  if (parts[0] === 'a' && parts[1]) {
+    return { code: null, slug: shortSlug || null, preview };
+  }
   return { code: null, slug: null };
 };
 
@@ -71,7 +80,7 @@ const focusFirstInvalid = () =>
   nextTick(() => document.querySelector('[aria-invalid="true"]')?.focus());
 
 export function useBookingFlow(location = window.location) {
-  const route = parseRoute(location.pathname, location.search);
+  const route = parseRoute(location.pathname, location.search, shortLinkSlug());
   const step = ref(STEPS.LOADING);
   const page = ref(null);
   const slug = ref(route.slug);
@@ -456,4 +465,8 @@ export function useBookingFlow(location = window.location) {
   return flow;
 }
 
-export const useFlow = () => inject(FLOW_KEY);
+// `null` fora de um fluxo (o cabeçalho sozinho, num teste): quem usa já trata.
+export const useFlow = () => inject(FLOW_KEY, null);
+
+// A prévia do painel (#1289) monta as mesmas telas com um fluxo de mentira: é por aqui que ela o entrega.
+export const provideFlow = flow => provide(FLOW_KEY, flow);

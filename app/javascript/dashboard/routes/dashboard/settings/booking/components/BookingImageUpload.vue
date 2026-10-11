@@ -4,7 +4,9 @@ import { useI18n } from 'vue-i18n';
 import { IMAGE_TYPES } from '../constants';
 
 // Enviar logo ou foto, com a prévia da imagem já salva. A conferência de tipo e
-// tamanho é de quem usa (o assistente), que mostra o aviso em `error`.
+// tamanho é de quem usa (o assistente), que mostra o aviso em `error`. A foto
+// (`round`) preenche o círculo; a logo aparece inteira, em qualquer formato
+// (quadrada, deitada ou em pé), como na página.
 const props = defineProps({
   label: { type: String, required: true },
   alt: { type: String, required: true },
@@ -12,6 +14,8 @@ const props = defineProps({
   busy: { type: Boolean, default: false },
   error: { type: String, default: '' },
   round: { type: Boolean, default: false },
+  // Linha a mais de ajuda, embaixo do formato aceito.
+  hint: { type: String, default: '' },
 });
 
 const emit = defineEmits(['pick']);
@@ -40,7 +44,13 @@ const onFile = event => {
         class="grid place-items-center overflow-hidden size-20 shrink-0 bg-n-alpha-2"
         :class="round ? 'rounded-full' : 'rounded-xl'"
       >
-        <img v-if="url" :src="url" :alt="alt" class="size-full object-cover" />
+        <img
+          v-if="url"
+          :src="url"
+          :alt="alt"
+          class="size-20"
+          :class="round ? 'object-cover' : 'p-1 object-contain'"
+        />
         <span
           v-else
           class="i-lucide-image size-7 text-n-slate-10"
@@ -68,6 +78,7 @@ const onFile = event => {
         <p class="m-0 text-sm text-n-slate-11">
           {{ t('BOOKING.LOOK.IMAGE_HINT') }}
         </p>
+        <p v-if="hint" class="m-0 text-sm text-n-slate-11">{{ hint }}</p>
       </div>
     </div>
     <input
