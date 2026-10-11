@@ -295,6 +295,7 @@ export const colors = {
     card: 'rgb(var(--bk-card) / <alpha-value>)',
     field: 'rgb(var(--bk-field) / <alpha-value>)',
     inset: 'rgb(var(--bk-inset) / <alpha-value>)',
+    hover: 'rgb(var(--bk-hover) / <alpha-value>)',
     chip: 'rgb(var(--bk-chip) / <alpha-value>)',
     strong: 'rgb(var(--bk-strong) / <alpha-value>)',
     body: 'rgb(var(--bk-body) / <alpha-value>)',

@@ -2,7 +2,13 @@ import { readFileSync, readdirSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { colors } from '../../../../theme/colors';
-import { DARK_SURFACE, LIGHT_SURFACE, contrastBetween } from '../helpers/brand';
+import {
+  DARK_CARD,
+  DARK_SURFACE,
+  LIGHT_SURFACE,
+  brandTokens,
+  contrastBetween,
+} from '../helpers/brand';
 
 // Tema claro e escuro da página pública (#1295): as cores ficam num arquivo só, o tema vem do aparelho por CSS (sem
 // script) e a prévia do painel força um tema com `data-booking-theme`. Este teste lê os arquivos de verdade.
@@ -55,7 +61,7 @@ const toHex = triple =>
     .join('')}`;
 const hexOf = (theme, token) => toHex(theme[`--bk-${token}`]);
 
-const SURFACES = ['card', 'field', 'inset'];
+const SURFACES = ['card', 'field', 'inset', 'hover'];
 const TEXTS = ['strong', 'body', 'medium', 'soft'];
 const AA = 4.5;
 
@@ -148,13 +154,21 @@ describe('cores da página: um arquivo, dois temas', () => {
     expect(luminance('card')).toBeGreaterThan(luminance('page'));
     expect(luminance('field')).toBeGreaterThan(luminance('card'));
     expect(luminance('inset')).toBeGreaterThanOrEqual(luminance('field'));
+    // O botão secundário com o mouse em cima muda de verdade no escuro.
+    expect(
+      contrastBetween(hexOf(DARK, 'hover'), hexOf(DARK, 'field'))
+    ).toBeGreaterThan(1.15);
+    expect(read(root, 'components', 'ActionButton.vue')).toContain(
+      'hover:bg-bk-hover'
+    );
     expect(DARK['--bk-plate']).toBe('#ffffff');
     expect(DARK['--bk-plate-pad']).not.toBe('0px');
   });
 
   it('as superfícies usadas na conta da cor da marca são as do arquivo de cores', () => {
-    expect(LIGHT_SURFACE).toBe(hexOf(LIGHT, 'inset'));
-    expect(DARK_SURFACE).toBe(hexOf(DARK, 'inset'));
+    expect(LIGHT_SURFACE).toBe(hexOf(LIGHT, 'hover'));
+    expect(DARK_SURFACE).toBe(hexOf(DARK, 'hover'));
+    expect(DARK_CARD).toBe(hexOf(DARK, 'card'));
     // A mais escura do claro e a mais clara do escuro: se a cor passa nelas, passa nas outras.
     SURFACES.forEach(surface =>
       expect(contrastBetween(LIGHT_SURFACE, '#000000')).toBeLessThanOrEqual(
@@ -171,6 +185,15 @@ describe('cores da página: um arquivo, dois temas', () => {
   it('cada tema escolhe a versão legível da cor da marca e qual logo aparece', () => {
     expect(LIGHT['--brand'].startsWith('var(--brand-ink-light,')).toBe(true);
     expect(DARK['--brand'].startsWith('var(--brand-ink-dark,')).toBe(true);
+    expect(LIGHT['--brand-fill']).toBe('var(--brand-fill-light, #1d4ed8)');
+    expect(LIGHT['--brand-on']).toBe('var(--brand-on-light, #ffffff)');
+    // Antes de a página dizer a cor, o escuro usa a cor padrão já clareada para o botão.
+    const fallback = brandTokens('#1d4ed8');
+    expect(DARK['--brand-fill']).toBe(
+      `var(--brand-fill-dark, ${fallback.fillDark})`
+    );
+    expect(DARK['--brand-on']).toBe(`var(--brand-on-dark, ${fallback.onDark})`);
+    expect(DARK['--brand']).toBe(`var(--brand-ink-dark, ${fallback.inkDark})`);
     expect([LIGHT['--bk-light-only'], LIGHT['--bk-dark-only']]).toEqual([
       'block',
       'none',

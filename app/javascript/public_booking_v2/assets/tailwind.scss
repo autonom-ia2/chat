@@ -9,10 +9,6 @@
 // fundo do documento é pintado antes de o Vue montar a tela (junto com a meta `color-scheme` do layout).
 :root {
   @include booking-light;
-
-  // Antes de a página dizer a cor da marca (carregando, ou a página não abriu), os botões usam a cor padrão.
-  --brand-fill: #1d4ed8;
-  --brand-on: #ffffff;
 }
 
 @media (prefers-color-scheme: dark) {

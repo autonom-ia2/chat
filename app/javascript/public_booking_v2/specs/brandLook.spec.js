@@ -2,12 +2,14 @@ import { mount } from '@vue/test-utils';
 import ActionButton from '../components/ActionButton.vue';
 import BrandHeader from '../components/BrandHeader.vue';
 import {
+  DARK_CARD,
   DARK_SURFACE,
   DARK_TEXT,
   DEFAULT_BRAND_COLOR,
   LIGHT_SURFACE,
   LIGHT_TEXT,
   LOGO_DARK_MODES,
+  MIN_BUTTON_CONTRAST,
   applyBrandColor,
   brandTokens,
   contrastBetween,
@@ -22,9 +24,10 @@ import {
 const AA = 4.5;
 // As superfícies escuras em que a cor da marca vira texto ou borda: cartão, campo e caixa (assets/_booking-theme.scss;
 // o theme.spec.js confere que DARK_SURFACE é a mais clara delas).
-const DARK_SURFACES = ['#17191e', '#1e2127', DARK_SURFACE];
-// As claras: cartão e campo (brancos) e a caixa, que é o fundo do botão secundário com o mouse em cima.
-const LIGHT_SURFACES = ['#ffffff', LIGHT_SURFACE];
+const DARK_SURFACES = [DARK_CARD, '#1e2127', '#21242b', DARK_SURFACE];
+// As claras: cartão e campo (brancos) e o fundo do botão secundário com o mouse em cima.
+const LIGHT_CARD = '#ffffff';
+const LIGHT_SURFACES = [LIGHT_CARD, LIGHT_SURFACE];
 
 // Uma grade de cores espalhada pelo cubo RGB inteiro (4.096 cores).
 const STEPS = Array.from({ length: 16 }, (_, index) => index * 17);
@@ -43,15 +46,100 @@ describe('cor livre: texto claro ou escuro por cima da cor', () => {
 
   it('qualquer cor tem contraste AA no botão e na borda, no tema claro e no escuro', () => {
     const failures = GRID.filter(color => {
-      const { fill, on, ink, inkDark } = brandTokens(color);
+      const { fill, on, ink, inkDark, fillDark, onDark } = brandTokens(color);
       return (
         contrastBetween(fill, on) < AA ||
+        contrastBetween(fillDark, onDark) < AA ||
         LIGHT_SURFACES.some(surface => contrastBetween(ink, surface) < AA) ||
         DARK_SURFACES.some(surface => contrastBetween(inkDark, surface) < AA)
       );
     });
     expect(GRID).toHaveLength(4096);
     expect(failures).toEqual([]);
+  });
+
+  // O botão principal é o elemento mais forte da tela. No escuro, o próprio fundo se separa do cartão por 3:1 ou
+  // mais, em qualquer cor (cor escura é clareada).
+  it('tema escuro: em qualquer cor, o fundo do botão principal tem 3:1 ou mais contra o cartão', () => {
+    const failures = GRID.filter(
+      color =>
+        contrastBetween(brandTokens(color).fillDark, DARK_CARD) <
+        MIN_BUTTON_CONTRAST
+    );
+    expect(failures).toEqual([]);
+    // A regra age de verdade: muitas cores da grade são escuras demais como vieram.
+    const lifted = GRID.filter(
+      color => brandTokens(color).fillDark !== brandTokens(color).fill
+    );
+    expect(lifted.length).toBeGreaterThan(500);
+    lifted.forEach(color =>
+      expect(contrastBetween(color, DARK_CARD)).toBeLessThan(
+        MIN_BUTTON_CONTRAST
+      )
+    );
+  });
+
+  // No claro, o fundo é sempre a cor que a pessoa escolheu. Cor clara (amarelo) não chega a 3:1 contra o cartão
+  // branco: quem separa o botão do cartão, nesses casos, é o contorno na versão legível da cor. O teste confere as
+  // duas coisas em separado: que o contorno existe no botão e que, toda vez que o fundo não basta, o contorno basta.
+  it('tema claro: o fundo é a cor escolhida, e quando ela é clara o contorno separa o botão do cartão', () => {
+    const needsRing = GRID.filter(
+      color => contrastBetween(color, LIGHT_CARD) < MIN_BUTTON_CONTRAST
+    );
+    expect(needsRing.length).toBeGreaterThan(500);
+    expect(needsRing).toContain('#ffff66');
+    GRID.forEach(color => expect(brandTokens(color).fill).toBe(color));
+    const failures = needsRing.filter(
+      color =>
+        contrastBetween(brandTokens(color).ink, LIGHT_CARD) <
+        MIN_BUTTON_CONTRAST
+    );
+    expect(failures).toEqual([]);
+    // O contorno é parte do botão principal, na cor legível do tema.
+    expect(
+      mount(ActionButton, { slots: { default: 'Confirmar' } }).classes()
+    ).toEqual(
+      expect.arrayContaining(['ring-1', 'ring-inset', 'ring-[var(--brand)]'])
+    );
+  });
+
+  it('no escuro, cor escura vira um fundo mais claro do mesmo tom, com o texto que dá leitura', () => {
+    const navy = brandTokens('#0D2344');
+    expect(navy.fill).toBe('#0d2344');
+    expect(navy.fillDark).not.toBe('#0d2344');
+    expect(contrastBetween('#0d2344', DARK_CARD)).toBeLessThan(
+      MIN_BUTTON_CONTRAST
+    );
+    expect(contrastBetween(navy.fillDark, DARK_CARD)).toBeGreaterThanOrEqual(
+      MIN_BUTTON_CONTRAST
+    );
+    expect(contrastBetween(navy.fillDark, navy.onDark)).toBeGreaterThanOrEqual(
+      AA
+    );
+    // Continua azul.
+    const [r, g, b] = [1, 3, 5].map(at =>
+      parseInt(navy.fillDark.slice(at, at + 2), 16)
+    );
+    expect(b).toBeGreaterThan(g);
+    expect(g).toBeGreaterThan(r);
+
+    // Cor que já se destaca do cartão escuro fica como a pessoa escolheu.
+    expect(brandTokens('#FFE066')).toMatchObject({
+      fillDark: '#ffe066',
+      onDark: DARK_TEXT,
+    });
+    expect(brandTokens('#0B7A5A')).toMatchObject({
+      fillDark: '#0b7a5a',
+      onDark: LIGHT_TEXT,
+    });
+    // Preto: cinza com texto legível, nunca botão invisível.
+    const black = brandTokens('#000000');
+    expect(contrastBetween(black.fillDark, DARK_CARD)).toBeGreaterThanOrEqual(
+      MIN_BUTTON_CONTRAST
+    );
+    expect(
+      contrastBetween(black.fillDark, black.onDark)
+    ).toBeGreaterThanOrEqual(AA);
   });
 
   it('no escuro a cor escura é clareada sem perder o tom; a clara fica como é', () => {
@@ -93,6 +181,8 @@ describe('cor livre: texto claro ou escuro por cima da cor', () => {
       ink: DEFAULT_BRAND_COLOR,
       inkDark: readableBrandColorDark(DEFAULT_BRAND_COLOR),
       on: LIGHT_TEXT,
+      fillDark: brandTokens(DEFAULT_BRAND_COLOR).fillDark,
+      onDark: LIGHT_TEXT,
     });
     expect(
       contrastBetween(tokens.inkDark, DARK_SURFACE)
@@ -102,14 +192,26 @@ describe('cor livre: texto claro ou escuro por cima da cor', () => {
   it('aplica no elemento o fundo, o texto por cima e as duas versões legíveis; quem escolhe entre elas é o CSS', () => {
     const root = document.createElement('div');
     applyBrandColor('#FFE066', root);
-    expect(root.style.getPropertyValue('--brand-fill')).toBe('#ffe066');
-    expect(root.style.getPropertyValue('--brand-on')).toBe(DARK_TEXT);
+    expect(root.style.getPropertyValue('--brand-fill-light')).toBe('#ffe066');
+    expect(root.style.getPropertyValue('--brand-on-light')).toBe(DARK_TEXT);
+    expect(root.style.getPropertyValue('--brand-fill-dark')).toBe('#ffe066');
+    expect(root.style.getPropertyValue('--brand-on-dark')).toBe(DARK_TEXT);
     expect(
       contrastWithWhite(root.style.getPropertyValue('--brand-ink-light'))
     ).toBeGreaterThanOrEqual(AA);
     expect(root.style.getPropertyValue('--brand-ink-dark')).toBe('#ffe066');
-    // `--brand` não é gravado por script: vem do tema (assets/_booking-theme.scss).
-    expect(root.style.getPropertyValue('--brand')).toBe('');
+    // `--brand`, `--brand-fill` e `--brand-on` não são gravados por script: vêm do tema
+    // (assets/_booking-theme.scss).
+    ['--brand', '--brand-fill', '--brand-on'].forEach(name =>
+      expect(root.style.getPropertyValue(name)).toBe('')
+    );
+
+    applyBrandColor('#0D2344', root);
+    expect(root.style.getPropertyValue('--brand-fill-light')).toBe('#0d2344');
+    expect(root.style.getPropertyValue('--brand-fill-dark')).toBe(
+      brandTokens('#0D2344').fillDark
+    );
+    expect(root.style.getPropertyValue('--brand-on-dark')).toBe(LIGHT_TEXT);
   });
 
   it('o botão principal usa o fundo, o texto por cima e o contorno legível', () => {

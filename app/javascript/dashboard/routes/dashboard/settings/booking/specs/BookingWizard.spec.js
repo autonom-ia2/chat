@@ -563,13 +563,17 @@ describe('BookingWizard', () => {
       const sample = wrapper.find(
         '[data-brand-sample] [data-sample-page]'
       ).element;
-      expect(sample.style.getPropertyValue('--brand-fill')).toBe('#ffe066');
-      expect(sample.style.getPropertyValue('--brand-on')).toBe('#000000');
+      expect(sample.style.getPropertyValue('--brand-fill-light')).toBe(
+        '#ffe066'
+      );
+      expect(sample.style.getPropertyValue('--brand-on-light')).toBe('#000000');
 
       await wrapper.find('[data-color="#0D2344"]').trigger('click');
       await flushPromises();
-      expect(sample.style.getPropertyValue('--brand-fill')).toBe('#0d2344');
-      expect(sample.style.getPropertyValue('--brand-on')).toBe('#ffffff');
+      expect(sample.style.getPropertyValue('--brand-fill-light')).toBe(
+        '#0d2344'
+      );
+      expect(sample.style.getPropertyValue('--brand-on-light')).toBe('#ffffff');
     });
 
     it('sem logo não pergunta o lado; com logo, três cartões e o padrão é a esquerda', async () => {

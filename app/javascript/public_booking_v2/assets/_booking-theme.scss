@@ -9,18 +9,21 @@
 // É a exceção consciente à regra "só Tailwind", no mesmo molde das cores do painel (`_next-colors.scss`).
 //
 // Cada cor é "R G B" para o Tailwind poder aplicar transparência. Os valores do tema claro são os que a página já
-// usava (não muda nada para quem está no claro). `--brand` é a cor da marca em versão legível: o JS grava as duas
-// (`--brand-ink-light` e `--brand-ink-dark`, helpers/brand.js) e o tema escolhe.
+// usava (não muda nada para quem está no claro). A cor da marca tem uma versão por tema para o texto (`--brand`), para
+// o fundo do botão principal (`--brand-fill`) e para o texto por cima dele (`--brand-on`): o JS grava as duas de cada
+// (helpers/brand.js) e o tema escolhe. Os valores depois da vírgula valem antes de a página dizer a cor (carregando,
+// ou quando ela não abriu).
 // O scss-lint do projeto é antigo e não conhece `color-scheme`.
 // scss-lint:disable PropertySortOrder, PropertySpelling
 @mixin booking-light {
   color-scheme: light;
 
-  // Superfícies: fundo da página, cartão, campo/botão, caixa de resumo e selo.
+  // Superfícies: fundo da página, cartão, campo/botão, caixa de resumo, botão com o mouse em cima e selo.
   --bk-page: 224 225 230;
   --bk-card: 255 255 255;
   --bk-field: 255 255 255;
   --bk-inset: 240 240 243;
+  --bk-hover: 240 240 243;
   --bk-chip: 224 225 230;
 
   // Texto, do mais forte ao mais fraco.
@@ -45,6 +48,8 @@
   --bk-ok-ink: 32 87 62;
 
   --brand: var(--brand-ink-light, #1d4ed8);
+  --brand-fill: var(--brand-fill-light, #1d4ed8);
+  --brand-on: var(--brand-on-light, #ffffff);
 
   // Logo por tema: qual das duas imagens aparece, e a placa clara atrás da logo que não tem versão para o escuro.
   --bk-light-only: block;
@@ -60,6 +65,7 @@
   --bk-card: 23 25 30;
   --bk-field: 30 33 39;
   --bk-inset: 33 36 43;
+  --bk-hover: 46 50 60;
   --bk-chip: 42 46 54;
 
   --bk-strong: 237 238 240;
@@ -80,7 +86,9 @@
   --bk-ok: 20 56 40;
   --bk-ok-ink: 177 241 203;
 
-  --brand: var(--brand-ink-dark, #93acf0);
+  --brand: var(--brand-ink-dark, #a5baf2);
+  --brand-fill: var(--brand-fill-dark, #3966e4);
+  --brand-on: var(--brand-on-dark, #ffffff);
 
   --bk-light-only: none;
   --bk-dark-only: block;

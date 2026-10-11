@@ -12,7 +12,9 @@ Por cima do #1289. Sem migration.
 - **Tema só com CSS.** As cores da página viraram variáveis `--bk-*` em `app/javascript/public_booking_v2/assets/_booking-theme.scss`: claro em `:root`, escuro em `@media (prefers-color-scheme: dark)`. O layout ganhou `<meta name="color-scheme" content="light dark">`. Nenhum script decide tema, então nada pisca. É a exceção consciente à regra "só Tailwind", no molde de `_next-colors.scss`; as classes saem de `theme/colors.js` (chave `bk`).
 - **Tema claro igual ao de antes.** Os valores claros são os que as classes antigas já resolviam. Mudou uma coisa: a cor da marca usada como texto agora passa no AA também no fundo do botão secundário com o mouse em cima (`#f0f0f3`), que antes ficava abaixo para algumas cores livres.
 - **`data-booking-theme="light|dark"` força o tema num pedaço da tela.** É o que a prévia do painel usa para mostrar os dois, seja qual for o tema do painel. O painel importa só o arquivo de cores, sem a regra do aparelho.
-- **Cor da marca.** O JS grava `--brand-ink-light` (escurecida até AA) e `--brand-ink-dark` (clareada em HSL, sem perder o tom, até 6:1 sobre a superfície escura mais clara). O CSS escolhe `--brand` pelo tema. `--brand-fill` e `--brand-on` não mudaram.
+- **Cor da marca.** O JS grava `--brand-ink-light` (escurecida até AA) e `--brand-ink-dark` (clareada em HSL, sem perder o tom, até 6:1 sobre a superfície escura mais clara). O CSS escolhe `--brand` pelo tema.
+- **Botão principal.** O fundo e o texto por cima também têm uma versão por tema (`--brand-fill-light|dark`, `--brand-on-light|dark`). No escuro, cor que fica abaixo de 3:1 contra o cartão (azul-marinho, preto) é clareada em HSL até passar de 3:1, e o texto por cima é branco ou preto, o que der 4,5:1: azul-marinho `#0D2344` vira `#256bcc` com texto branco. Cor que já se destaca fica como foi escolhida. No claro, cor clara (amarelo) continua sendo o fundo: o que a separa do cartão branco é o contorno na versão legível da cor (4,5:1). O spec das 4.096 cores confere texto × fundo (4,5:1) nos dois temas e fundo × cartão (3:1) no escuro. No claro, o fundo não é mexido: o spec confere que, sempre que ele fica abaixo de 3:1 contra o cartão branco, o contorno passa de 3:1 e está no botão.
+- **Botão secundário com o mouse em cima** tem cor própria (`--bk-hover`): igual à de antes no claro e visivelmente mais clara que o campo no escuro.
 - **Logo por tema sem JavaScript.** Com imagem própria para o escuro, as duas `<img>` ficam no HTML e uma variável do tema mostra uma só. Sem ela, a mesma imagem serve aos dois (`same`) ou ganha uma placa branca arredondada no escuro (`plate`). Valor desconhecido ou imagem que não carrega caem na placa: nunca logo invisível.
 - **Onde fica guardado.** Anexo `logo_dark` na página e `brand.logo_dark_source` (`uploaded`, `generated`, `same`, `plate`), gravado só pelo servidor. Na identidade da conta: anexo `booking_identity_logo_dark` e a origem em `settings['booking_identity']`.
 - **Geração no próprio pedido, sem fila.** Com libvips (`image_processing`, nenhuma gem nova), numa cópia de até 800 px. Medido: 30 a 220 ms, inclusive num PNG de 16 megapixels. Acima de 16 megapixels a imagem nem é aberta.
@@ -52,6 +54,17 @@ Segunda passada, sobre as correções: um achado alto, corrigido. Um erro ao ger
 Conferido e descartado com teste: PNG de 16 bits e PNG em tons de cinza saem certos.
 
 Ficou como está, registrado: dois "salvar" juntos numa página antiga podem gerar a logo de fundo escuro duas vezes (o resultado é o mesmo); falha do armazenamento depois da gravação deixa a origem `uploaded` com o arquivo ausente, e a página pública cai na placa quando a imagem não carrega.
+
+## União com o #1289 fechado (06003d7fe8)
+
+A base andou durante o trabalho (main, #1298 e o ajuste da imagem de prévia). Foi unida por merge, com os conflitos lidos dos dois lados:
+
+- `booking_page_brand.rb`: o envio ficou com a transação e o `apply_to_profile` do #1298. A logo gera a de fundo escuro depois de gravada, fora da transação.
+- `StepLook.vue`: cartão da Logo e cartão "Sua foto", um embaixo do outro. `BookingImageUpload` voltou a ter a linha de ajuda, que o cartão "Sua foto" usa.
+- `booking.json`, `BookingWizard.spec.js` e `porques.md`: os dois lados. Gerados: regerados.
+- Imagem de prévia do link: não muda de tema e não foi tocada. Ela usa a logo de fundo claro sobre um cartão branco, que é o par certo. Trocar pela de fundo escuro conforme a cor da página abriria um caso novo (logo clara sobre cor clara) sem ganho.
+
+Depois da união: RSpec amplo do agendamento, 64 arquivos, 839 exemplos, 0 falhas; Vitest, 26 arquivos, 554 testes, 0 falhas.
 
 ## Fora desta entrega
 

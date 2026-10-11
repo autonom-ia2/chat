@@ -4,19 +4,29 @@
 //                      contraste AA (4,5:1) com a superfície clara mais difícil, escurecemos aos poucos até ter;
 //   --brand-ink-dark   o mesmo para o tema escuro: clareamos aos poucos, sem tirar a cor (azul-marinho vira azul-claro,
 //                      não cinza), até passar com folga do AA sobre a superfície escura;
-//   --brand-fill       a cor exatamente como a pessoa escolheu (fundo de botão e de selo), nos dois temas;
-//   --brand-on         o texto por cima do fundo: branco quando dá contraste AA, preto quando a cor é clara.
-// Quem escolhe entre as duas versões legíveis é o CSS, pelo tema (`--brand`, em assets/_booking-theme.scss): nenhum
-// script decide tema, então nada pisca.
+//   --brand-fill-light a cor exatamente como a pessoa escolheu (fundo do botão principal e dos selos);
+//   --brand-fill-dark  o fundo do botão no tema escuro: a cor escolhida, a não ser que ela quase suma no cartão
+//                      escuro (menos de 3:1); aí a cor é clareada, sem perder o tom, até se destacar dele (azul-marinho
+//                      vira azul médio), para o botão continuar o mais forte da tela;
+//   --brand-on-light e --brand-on-dark  o texto por cima de cada fundo: branco quando dá contraste AA, senão preto.
+// Quem escolhe entre as versões é o CSS, pelo tema (`--brand`, `--brand-fill` e `--brand-on`, em
+// assets/_booking-theme.scss): nenhum script decide tema, então nada pisca.
+//
+// No tema claro, a cor clara (amarelo) continua sendo o fundo do botão: o contorno na versão legível da cor é o que
+// o separa do cartão branco (3:1 ou mais).
 export const DEFAULT_BRAND_COLOR = '#1d4ed8';
 export const LIGHT_TEXT = '#ffffff';
 export const DARK_TEXT = '#000000';
-// A superfície mais difícil de cada tema em que a cor da marca vira texto: `--bk-inset`, o fundo do botão secundário
-// com o mouse em cima (no claro é a mais escura delas; no escuro, a mais clara). Passando nela, passa no cartão e no
-// campo. Um teste confere que estes dois valores são os do arquivo de cores.
+// A superfície mais difícil de cada tema em que a cor da marca vira texto: `--bk-hover`, o fundo do botão secundário
+// com o mouse em cima (no claro é a mais escura delas; no escuro, a mais clara). Passando nela, passa no cartão, no
+// campo e na caixa. Um teste confere que estes dois valores são os do arquivo de cores.
 export const LIGHT_SURFACE = '#f0f0f3';
-export const DARK_SURFACE = '#21242b';
+export const DARK_SURFACE = '#2e323c';
 const MIN_CONTRAST = 4.5;
+// O cartão do tema escuro (`--bk-card`), onde o botão principal fica, e o contraste mínimo entre o botão e ele
+// (WCAG, elemento de interface).
+export const DARK_CARD = '#17191e';
+export const MIN_BUTTON_CONTRAST = 3;
 // No escuro, texto colorido no limite do AA parece apagado: a cor é clareada até 6:1.
 const DARK_THEME_CONTRAST = 6;
 const DARKEN_FACTOR = 0.9;
@@ -134,11 +144,21 @@ export const readableBrandColorDark = color =>
 
 export const brandTokens = color => {
   const fill = isHexColor(color) ? color.toLowerCase() : DEFAULT_BRAND_COLOR;
+  // Cor escura sobre o cartão escuro: o botão parece desligado. A cor é clareada até se destacar do cartão.
+  const fillDark = readableOn(
+    fill,
+    DARK_CARD,
+    lighten,
+    DEFAULT_BRAND_COLOR_DARK,
+    MIN_BUTTON_CONTRAST
+  );
   return {
     ink: readableBrandColor(color),
     inkDark: readableBrandColorDark(color),
     fill,
     on: textOnColor(fill),
+    fillDark,
+    onDark: textOnColor(fillDark),
   };
 };
 
@@ -146,8 +166,10 @@ export const applyBrandColor = (color, root = document.documentElement) => {
   const tokens = brandTokens(color);
   root.style.setProperty('--brand-ink-light', tokens.ink);
   root.style.setProperty('--brand-ink-dark', tokens.inkDark);
-  root.style.setProperty('--brand-fill', tokens.fill);
-  root.style.setProperty('--brand-on', tokens.on);
+  root.style.setProperty('--brand-fill-light', tokens.fill);
+  root.style.setProperty('--brand-on-light', tokens.on);
+  root.style.setProperty('--brand-fill-dark', tokens.fillDark);
+  root.style.setProperty('--brand-on-dark', tokens.onDark);
   return tokens.ink;
 };
 

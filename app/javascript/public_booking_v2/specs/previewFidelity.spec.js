@@ -249,16 +249,18 @@ describe('prévia do assistente × página pública', () => {
     [
       '--brand-ink-light',
       '--brand-ink-dark',
-      '--brand-fill',
-      '--brand-on',
+      '--brand-fill-light',
+      '--brand-on-light',
+      '--brand-fill-dark',
+      '--brand-on-dark',
     ].forEach(name => {
       expect(root.style.getPropertyValue(name)).toBe(
         document.documentElement.style.getPropertyValue(name)
       );
       expect(root.style.getPropertyValue(name)).not.toBe('');
     });
-    expect(root.style.getPropertyValue('--brand-fill')).toBe('#ffe066');
-    expect(root.style.getPropertyValue('--brand-on')).toBe('#000000');
+    expect(root.style.getPropertyValue('--brand-fill-light')).toBe('#ffe066');
+    expect(root.style.getPropertyValue('--brand-on-light')).toBe('#000000');
     expect(page.exists()).toBe(true);
   });
 
