@@ -330,6 +330,27 @@ RSpec.describe Contact do
       expect(contact.reload.opt_out_source).to eq('email_unsubscribe')
     end
 
+    # Corrida: um "sim" noutro card grava a marca enquanto a liberação espera o lock do contato. A prova é conferida
+    # depois do lock, então a recusa fica.
+    it 'release_opt_out! confere a prova com o contato travado e não apaga a marca de um "sim" concorrente' do
+      contact.opt_out!(source: 'follow_up_reply')
+      pipeline, stage = create_crm_pipeline(account: account, user: user)
+      concurrent_card = account.crm_cards.create!(pipeline: pipeline, stage: stage, contact: contact, title: 'Outro assunto')
+      marked = false
+      concurrent_state = { 'opted_out' => true, 'opt_out_contact_id' => contact.id }
+      allow(contact).to receive(:with_lock).and_wrap_original do |original, *args, &block|
+        unless marked
+          marked = true
+          concurrent_card.update!(metadata: { 'ai' => { 'auto_followup_state' => concurrent_state } })
+        end
+        original.call(*args, &block)
+      end
+
+      expect(contact.release_opt_out!(source: 'follow_up_reply', by: user)).to be(false)
+
+      expect(contact.reload.opt_out_source).to eq('follow_up_reply')
+    end
+
     it 'transfer_opt_out! troca só a origem gravada, mantendo a data da recusa' do
       contact.opt_out!(source: 'prospecting')
       refused_at = contact.reload.opted_out_at

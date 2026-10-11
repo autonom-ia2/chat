@@ -57,8 +57,9 @@ module Crm
         @resolved_sender ||= @card.owner || conversation&.assignee || @card.account.administrators.first
       end
 
+      # O mesmo contato do runner e da recusa do follow-up (chat#1325): o da conversa primária, senão o do card.
       def contact_id
-        @card.contact_id || conversation&.contact_id
+        ::Crm::FollowUps::CardOptOut.contact_for(@card)&.id
       end
 
       def inbox_id

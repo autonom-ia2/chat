@@ -7,12 +7,16 @@
 # recusa de mensagens ativas, com a origem 'follow_up_reply' (#1325): é por `contact.opted_out?` que campanhas, avisos e o
 # runner perguntam se a pessoa pediu para parar. Card e contato gravam na mesma transação: se o contato falha, o card
 # volta a `pendente` e o job tenta de novo (OptOutDecisionJob). Contato que já tinha recusado, por qualquer origem, fica
-# como está (opt_out! é idempotente). A marca do card é a prova da recusa; quem a desfaz é o reset do follow-up no drawer.
+# como está (opt_out! é idempotente). O card guarda qual contato marcou (CardOptOut::CONTACT_KEY): a marca é a prova da
+# recusa desse contato, e quem a desfaz é o reset do follow-up no drawer. O lock do contato vem depois do card gravado,
+# para um reset concorrente noutro card enxergar esta marca antes de liberar (ContactOptOut#release_opt_out!).
 #
 # O log leva card, mensagem, decisão e motivo (códigos fechados). Nunca o texto da mensagem.
 class Crm::FollowUps::OptOutDecision
   # Decisões que liberam o card para um ciclo novo. Qualquer outra (pendente, falhou, sem_credencial) segura o planner.
   CLEARED = %w[nao nao_se_aplica].freeze
+  # Cobre as cinco tentativas do job com folga (OptOutDecisionJob, espera polinomial).
+  CLASSIFICATION_TTL = 1.hour
 
   def initialize(card:, message:)
     @card = card
@@ -22,7 +26,7 @@ class Crm::FollowUps::OptOutDecision
   def perform
     return unless pending?
 
-    result = Crm::Ai::OptOutClassifier.new(account: @card.account, message: @message).perform
+    result = classify
     opted_out = result[:decision] == 'sim'
     return unless update_state(decision: result[:decision], motivo: result[:motivo], opted_out: opted_out)
 
@@ -45,20 +49,34 @@ class Crm::FollowUps::OptOutDecision
     state['opt_out_decision'] == 'pendente' && state['stopped_message_id'] == @message.id
   end
 
+  # A decisão do modelo fica guardada por mensagem: se a gravação falha por erro de banco e o job tenta de novo, a nova
+  # tentativa só regrava, sem pagar outra chamada ao modelo. Erro do provedor não entra no cache.
+  def classify
+    Rails.cache.fetch("crm:opt_out_decision:#{@message.id}", expires_in: CLASSIFICATION_TTL) do
+      Crm::Ai::OptOutClassifier.new(account: @card.account, message: @message).perform
+    end
+  end
+
   def update_state(decision:, motivo:, opted_out:)
     @card.with_lock do
       next false unless pending?
 
-      metadata = (@card.metadata || {}).deep_dup
-      metadata['ai'] ||= {}
-      extra = opted_out ? { 'opted_out' => true, 'stopped_reason' => 'opt_out' } : {}
-      metadata['ai']['auto_followup_state'] = auto_followup_state.merge(
-        'opt_out_decision' => decision, 'opt_out_motivo' => motivo, **extra
-      )
-      @card.update!(metadata: metadata)
-      Crm::FollowUps::CardOptOut.contact_for(@card)&.opt_out!(source: 'follow_up_reply') if opted_out
+      contact = opted_out ? Crm::FollowUps::CardOptOut.contact_for(@card) : nil
+      @card.update!(metadata: decided_metadata(decision, motivo, opted_out, contact))
+      contact&.opt_out!(source: 'follow_up_reply')
       true
     end
+  end
+
+  def decided_metadata(decision, motivo, opted_out, contact)
+    metadata = (@card.metadata || {}).deep_dup
+    metadata['ai'] ||= {}
+    extra = opted_out ? { 'opted_out' => true, 'stopped_reason' => 'opt_out' } : {}
+    extra[Crm::FollowUps::CardOptOut::CONTACT_KEY] = contact.id if contact
+    metadata['ai']['auto_followup_state'] = auto_followup_state.merge(
+      'opt_out_decision' => decision, 'opt_out_motivo' => motivo, **extra
+    )
+    metadata
   end
 
   def auto_followup_state

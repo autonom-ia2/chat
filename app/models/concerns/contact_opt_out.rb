@@ -74,15 +74,20 @@ module ContactOptOut
   # ainda sustenta a recusa (card marcado pelo pedido de parar no follow-up, e-mail descadastrado ou lead recusado que
   # alcança o contato), a recusa fica com essa origem em vez de sumir e voltar sozinha na próxima edição do contato. Se a
   # própria origem ainda se sustenta (outro card do contato continua marcado), nada muda e retorna false.
+  # A prova é conferida com o contato travado: o "sim" noutro card grava o card e depois trava o contato
+  # (Crm::FollowUps::OptOutDecision), então ou ele já está visível aqui, ou grava a recusa de novo depois.
   def release_opt_out!(source:, by:)
     source = validated_opt_out_source(source)
-    return false unless opted_out? && opt_out_source == source
 
-    remaining_source = Contacts::OptOutInheritance.new(account: account).source_for(self)
-    return false if remaining_source == source
-    return transfer_opt_out!(from: source, to: remaining_source) if remaining_source
+    with_lock do
+      next false unless opted_out? && opt_out_source == source
 
-    opt_in!(by: by, source: source)
+      remaining_source = Contacts::OptOutInheritance.new(account: account).source_for(self)
+      next false if remaining_source == source
+      next transfer_opt_out!(from: source, to: remaining_source) if remaining_source
+
+      opt_in!(by: by, source: source)
+    end
   end
 
   def release_manual_opt_out!(by:)

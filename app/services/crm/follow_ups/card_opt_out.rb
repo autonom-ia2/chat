@@ -1,29 +1,57 @@
 # O pedido de parar no follow-up de IA (#1317) fica marcado no card (`auto_followup_state.opted_out`). Essa marca é a
-# prova da recusa 'follow_up_reply' do contato (#1325): enquanto algum card do contato estiver marcado, a recusa vale.
+# prova da recusa 'follow_up_reply' do contato (#1325): enquanto algum card marcado apontar para o contato, a recusa vale.
 #
 # - contact_for: o contato de um card, na mesma ordem do follow-up de IA. O planner cria o toque na conversa primária do
 #   card, e o runner (AutoFollowupRunner#followup_contact) pergunta pelo contato dessa conversa; sem conversa, o do card.
-#   O "sim" do modelo marca, o reset do drawer libera e a herança consulta sempre por aqui.
-# - marked_cards_for: os cards da conta cujo contato (pela mesma ordem) é o informado e que estão marcados.
+# - No "sim", o card guarda qual contato foi marcado (CONTACT_KEY). É esse contato que a marca prova e que o reset libera,
+#   mesmo que depois o card seja ligado a outro contato ou perca a conversa. Card marcado antes da chave usa contact_for.
+# - transfer_marks!: na fusão de contatos, as marcas do contato absorvido passam para o que fica.
 class Crm::FollowUps::CardOptOut
-  OPTED_OUT_SQL = "crm_cards.metadata->'ai'->'auto_followup_state'->>'opted_out' = 'true'".freeze
+  CONTACT_KEY = 'opt_out_contact_id'.freeze
+  STATE_SQL = "crm_cards.metadata->'ai'->'auto_followup_state'".freeze
+  OPTED_OUT_SQL = "#{STATE_SQL}->>'opted_out' = 'true'".freeze
+  MARKED_CONTACT_SQL = "#{STATE_SQL}->>'#{CONTACT_KEY}'".freeze
 
-  def self.contact_for(card)
-    card.primary_conversation&.contact || card.contact
-  end
+  class << self
+    def contact_for(card)
+      card.primary_conversation&.contact || card.contact
+    end
 
-  def self.card_opted_out?(card)
-    card.metadata.to_h.dig('ai', 'auto_followup_state', 'opted_out').to_s == 'true'
-  end
+    def card_opted_out?(card)
+      Crm::Ai::Config::BOOLEAN.cast(state(card)['opted_out']) == true
+    end
 
-  def self.marked_cards_for(contact)
-    marked = Crm::Card.where(account_id: contact.account_id).where(OPTED_OUT_SQL)
-    by_conversation = marked.where(conversation_id: Conversation.where(contact_id: contact.id).select(:id))
-    by_contact = marked.where(conversation_id: nil, contact_id: contact.id)
-    by_conversation.or(by_contact)
-  end
+    # O contato que a marca do card prova: o gravado no "sim" ou, em card antigo, o de contact_for.
+    def marked_contact(card)
+      contact_id = state(card)[CONTACT_KEY]
+      return contact_for(card) if contact_id.blank?
 
-  def self.contact_marked?(contact)
-    marked_cards_for(contact).exists?
+      Contact.find_by(id: contact_id, account_id: card.account_id)
+    end
+
+    def marked_cards_for(contact)
+      marked = Crm::Card.where(account_id: contact.account_id).where(OPTED_OUT_SQL)
+      by_marker = marked.where("#{MARKED_CONTACT_SQL} = ?", contact.id.to_s)
+      legacy = marked.where("#{MARKED_CONTACT_SQL} IS NULL")
+      by_conversation = legacy.where(conversation_id: Conversation.where(contact_id: contact.id).select(:id))
+      by_contact = legacy.where(conversation_id: nil, contact_id: contact.id)
+      by_marker.or(by_conversation).or(by_contact)
+    end
+
+    def contact_marked?(contact)
+      marked_cards_for(contact).exists?
+    end
+
+    def transfer_marks!(account:, from:, to:)
+      Crm::Card.where(account_id: account.id).where("#{MARKED_CONTACT_SQL} = ?", from.id.to_s).update_all( # rubocop:disable Rails/SkipsModelValidations
+        ["metadata = jsonb_set(metadata, '{ai,auto_followup_state,#{CONTACT_KEY}}', to_jsonb(?::bigint))", to.id]
+      )
+    end
+
+    private
+
+    def state(card)
+      card.metadata.to_h.dig('ai', 'auto_followup_state').to_h
+    end
   end
 end

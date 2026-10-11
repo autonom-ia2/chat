@@ -141,6 +141,45 @@ RSpec.describe 'CRM auto follow-up opt-out + manual reset regression flow', type
     expect(contact.reload).not_to be_opted_out
   end
 
+  # Corrida: o "sim" grava o card entre a carga do card pelo controller e o reset. Com o card travado, o reset lê a marca
+  # já gravada e libera a recusa junto; lendo fora do lock, zeraria o card e deixaria a recusa do contato sem prova.
+  it 'o RESET lê a marca do card com o card travado' do
+    account, user = create_account_and_user
+    _pipeline, card, = build_stalled_card(account: account, user: user)
+    contact = card.contact
+    allow_any_instance_of(Crm::Card).to receive(:with_lock).and_wrap_original do |original, *args, &block| # rubocop:disable RSpec/AnyInstance
+      if original.receiver.id == card.id && !contact.reload.opted_out?
+        Crm::Card.where(id: card.id).update_all( # rubocop:disable Rails/SkipsModelValidations
+          metadata: { 'ai' => { 'auto_followup_state' => { 'opted_out' => true, 'opt_out_contact_id' => contact.id } } }
+        )
+        contact.opt_out!(source: 'follow_up_reply')
+      end
+      original.call(*args, &block)
+    end
+
+    reset!(account, user, card)
+
+    expect(card.reload.metadata['ai']['auto_followup_state']['opted_out']).to be(false)
+    expect(contact.reload).not_to be_opted_out
+  end
+
+  it 'card que mudou de contato depois do pedido: o RESET libera o contato marcado, não o atual' do
+    account, user = create_account_and_user
+    _pipeline, card, = build_stalled_card(account: account, user: user)
+    asked = card.contact
+    asked.opt_out!(source: 'follow_up_reply')
+    newcomer = account.contacts.create!(name: 'Outro', phone_number: '+5511987650001')
+    newcomer.opt_out!(source: 'follow_up_reply')
+    card.update!(contact: newcomer, primary_conversation: nil,
+                 metadata: { 'ai' => { 'auto_followup_state' => { 'opted_out' => true, 'opt_out_contact_id' => asked.id } } })
+    expect(Crm::FollowUps::CardOptOut.contact_marked?(asked)).to be(true)
+
+    reset!(account, user, card)
+
+    expect(asked.reload).not_to be_opted_out
+    expect(newcomer.reload.opt_out_source).to eq('follow_up_reply')
+  end
+
   it 'o RESET de um card que nunca parou a pedido do cliente não libera nada' do
     account, user = create_account_and_user
     _pipeline, card, = build_stalled_card(account: account, user: user)

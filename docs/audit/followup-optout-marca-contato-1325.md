@@ -35,3 +35,26 @@ Desde o #1318 (#1317), o modelo decide se a resposta ao follow-up de IA foi pedi
 - `pnpm i18n:fork:check`: 16 catálogos, chaves e parâmetros en/pt_BR cobertos.
 - `pnpm central:check`: em dia (189 artigos). `pnpm guia:check`: em dia.
 - Revisão independente (`caveman:cavecrew-reviewer`): 2 graves e 8 riscos, todos tratados nesta versão (reset de outro card, fusão perdendo a recusa, contato divergente, transação do reset, falha no job, comentário da elegibilidade, specs e este registro).
+
+## Segunda revisão (commit 84b520273b)
+
+- **Reset com o card travado.** `reset_auto_followup` roda dentro de `@card.with_lock`: a leitura da marca, a gravação do card e a liberação do contato acontecem com o card travado, o mesmo lock da decisão do modelo.
+- **Liberação com o contato travado.** `release_opt_out!` pega o lock do contato e só então confere a prova (`source_for`). O "sim" grava o card e depois trava o contato (`opt_out!` trava sempre, mesmo quando não muda nada), então um "sim" concorrente noutro card ou já está visível, ou grava a recusa de novo depois.
+- **Contato marcado guardado no card.** No "sim", o estado guarda `opt_out_contact_id`. A prova (`CardOptOut.marked_cards_for`) e o reset usam esse contato; card antigo sem a chave usa `contact_for`. Trocar o contato ou a conversa do card não deixa recusa sem prova. Na fusão, `CardOptOut.transfer_marks!` passa a chave do absorvido para o que fica. O texto da tela do contato diz isso.
+- **Nova tentativa sem chamar o modelo de novo.** O resultado do classificador fica em `Rails.cache` por mensagem (`crm:opt_out_decision:<id>`, 1 hora). Com erro de banco, o modelo é chamado uma vez e as 5 tentativas só regravam.
+- **Resolvedor único.** `AutoFollowupTouchBuilder#contact_id` passa a usar `CardOptOut.contact_for` (antes: contato do card primeiro, conversa depois).
+- **Predicado único.** `CardOptOut.card_opted_out?` usa `Crm::Ai::Config::BOOLEAN.cast`, como o planner.
+- **Central 10.09:** a evidência `crm.json:1012 "Reativar follow-up"` passou para a chave real `CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.REACTIVATE` (`crm.json:1447`, "Reativar retorno automático").
+
+### Card arquivado pode ser resetado?
+
+Sim, pela API. Lido no código, sem mudar política: `CardsController#fetch_card` busca em `policy_scope(::Crm::Card)` (`Crm::Cards::VisibleScopeQuery`, sem filtro de status), `Crm::CardPolicy#reset_auto_followup?` é `update?` → `show?` (visibilidade) e, no EE, `crm_permission?('crm_manage_ai') && show?`; nenhum dos dois olha `status`. `reset_auto_followup` também não. O planner só re-arma card `open?`, então o reset de um card arquivado zera o estado e libera a recusa `follow_up_reply` (se for o último card marcado), mas não volta a enviar. Enquanto não é resetado, o card arquivado marcado continua sustentando a recusa do contato.
+
+### Validação da segunda revisão (11/10/2026, mesmo snapshot, RSpec e RuboCop no M2)
+
+- RSpec, os mesmos 17 grupos: 1402 exemplos, 0 falhas, 3 pendentes (quarentena antiga). Uma rodada anterior, antes de regerar os formatos, deu 1402 exemplos, 1 falha (`formatos_spec`, só números de linha).
+- `rails autonomia:guia:formatos` regerado; `autonomia:guia:formatos:check`: em dia.
+- RuboCop nos 15 arquivos Ruby do PR: sem ocorrências (uma de alinhamento de hash no spec foi corrigida à mão e rodada de novo).
+- Vitest: 3 arquivos, 16 testes, todos passando. ESLint: sem ocorrências.
+- `pnpm i18n:fork:check`: 16 catálogos cobertos. `pnpm central:check`: em dia (189 artigos); restam 6 evidências antigas de `crm.json` na 10.09, anteriores a este PR. `pnpm guia:check`: em dia.
+- Specs novos: reset lê a marca com o card travado; card que mudou de contato libera o contato marcado; liberação com prova concorrente não apaga a recusa; `contact_for` diferente de `card.contact` (marca e toque usam o contato da conversa); erro de banco chama o modelo uma vez.

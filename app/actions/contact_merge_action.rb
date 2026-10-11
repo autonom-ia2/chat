@@ -99,6 +99,8 @@ class ContactMergeAction
   def merge_crm_cards
     Crm::Card.where(account_id: @account.id, contact_id: @mergee_contact.id)
              .update_all(contact_id: @base_contact.id, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+    # chat#1325: o pedido de parar no follow-up marcado para o absorvido continua provando a recusa do que fica.
+    Crm::FollowUps::CardOptOut.transfer_marks!(account: @account, from: @mergee_contact, to: @base_contact)
   end
 
   def merge_crm_follow_ups

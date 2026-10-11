@@ -156,13 +156,15 @@ describe ContactMergeAction do
 
       it 'recusa manual do que fica vence o pedido de parar no follow-up do absorvido, que volta quando a manual é desfeita' do
         pipeline, stage = create_crm_pipeline(account: account, user: admin)
-        account.crm_cards.create!(pipeline: pipeline, stage: stage, contact: mergee_contact, title: 'Pediu para parar',
-                                  metadata: { 'ai' => { 'auto_followup_state' => { 'opted_out' => true } } })
+        state = { 'opted_out' => true, 'opt_out_contact_id' => mergee_contact.id }
+        card = account.crm_cards.create!(pipeline: pipeline, stage: stage, contact: mergee_contact, title: 'Pediu para parar',
+                                         metadata: { 'ai' => { 'auto_followup_state' => state } })
         base_contact.opt_out!(source: 'manual', by: admin)
         mergee_contact.opt_out!(source: 'follow_up_reply')
 
         contact_merge
         expect(base_contact.reload.opt_out_source).to eq('manual')
+        expect(card.reload.metadata['ai']['auto_followup_state']['opt_out_contact_id']).to eq(base_contact.id)
 
         base_contact.release_manual_opt_out!(by: admin)
 
