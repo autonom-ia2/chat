@@ -4,7 +4,16 @@ module Waha
   # Cliente HTTP fino do motor externo (WAHA). Autentica via X-Api-Key. Levanta
   # Waha::Client::Error em qualquer falha, com status + corpo para diagnóstico.
   class Client
-    class Error < StandardError; end
+    # status: o código HTTP quando a WAHA respondeu; nil quando não houve resposta (conexão, timeout).
+    class Error < StandardError
+      attr_reader :status
+
+      def initialize(message = nil, status: nil)
+        super(message)
+        @status = status
+      end
+    end
+
     # A resposta não chegou: não dá para saber se o motor executou o pedido.
     class Timeout < Error; end
     # O recurso não existe no motor (ex.: sessão já apagada).
@@ -120,9 +129,10 @@ module Waha
       delete("/api/apps/#{app_id}")
     end
 
-    def check_contact_exists(phone:, session:)
+    # timeout: segundos de espera desta consulta (quem chama dentro de um lote, como o cron de avisos, usa menos).
+    def check_contact_exists(phone:, session:, timeout: DEFAULT_TIMEOUT)
       query = URI.encode_www_form(phone: phone, session: session)
-      get("/api/contacts/check-exists?#{query}")
+      get("/api/contacts/check-exists?#{query}", timeout: timeout)
     end
 
     # Read-only capability probe. When the module is enabled but no App is configured
@@ -155,8 +165,8 @@ module Waha
       request(:post, path, body)
     end
 
-    def get(path)
-      request(:get, path)
+    def get(path, timeout: DEFAULT_TIMEOUT)
+      request(:get, path, timeout: timeout)
     end
 
     def put(path, body)
@@ -167,14 +177,14 @@ module Waha
       request(:delete, path)
     end
 
-    def request(method, path, body = nil)
+    def request(method, path, body = nil, timeout: DEFAULT_TIMEOUT)
       response = HTTParty.public_send(
         method, "#{@base}#{path}",
-        headers: headers, body: body.nil? ? nil : body.to_json, timeout: DEFAULT_TIMEOUT
+        headers: headers, body: body.nil? ? nil : body.to_json, timeout: timeout
       )
       unless response.success?
         error_class = response.code == 404 ? NotFound : Error
-        raise error_class, "WAHA #{method.upcase} #{path} -> #{response.code}: #{response.body.to_s[0, 300]}"
+        raise error_class.new("WAHA #{method.upcase} #{path} -> #{response.code}: #{response.body.to_s[0, 300]}", status: response.code)
       end
 
       response.parsed_response

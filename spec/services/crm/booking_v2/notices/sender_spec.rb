@@ -240,27 +240,145 @@ RSpec.describe Crm::BookingV2::Notices::Sender do
       expect(alerts.sole.title).to end_with('O número do cliente não tem WhatsApp.')
     end
 
-    it 'WAHA com erro: não abre conversa e pula com waha_unavailable, sem reenviar' do
-      check = stub_request(:get, check_url).with(query: hash_including(session: '5511900001111')).to_return(status: 500, body: 'erro')
+    def waha_fails(response = { status: 500, body: 'erro' })
+      stub = stub_request(:get, check_url).with(query: hash_including(session: '5511900001111'))
+      response == :timeout ? stub.to_raise(Net::ReadTimeout) : stub.to_return(response)
+    end
+
+    # O cron toma o aviso de novo numa rodada seguinte, em `at`. (`travel_to` sem bloco: o `around` já viaja no tempo
+    # e desfaz tudo no fim do exemplo.)
+    def next_round(notice, at:)
+      travel_to(at)
+      notice.reload.update!(status: :sending, attempts: notice.attempts + 1)
+      described_class.new(notice).perform
+    end
+
+    it 'WAHA com erro: não abre conversa, não chama o agente e devolve o aviso à fila para a próxima rodada' do
+      check = waha_fails
       notice = claimed
 
       expect { described_class.new(notice).perform }.not_to change(Conversation, :count)
 
       expect(check).to have_been_made.once
-      expect(notice.reload).to have_attributes(status: 'skipped', skip_reason: 'waha_unavailable', message_id: nil)
-      expect(alerts.sole.title).to end_with('O WhatsApp não oficial não respondeu: confira se ele está conectado.')
+      expect(notice.reload).to have_attributes(status: 'pending', skip_reason: nil, error_code: 'waha_unavailable', message_id: nil)
+      expect(alerts.count).to eq(0)
     end
 
-    it 'WAHA sem resposta (timeout): não abre conversa e pula com waha_unavailable' do
-      stub_request(:get, check_url).with(query: hash_including(session: '5511900001111')).to_raise(Net::ReadTimeout)
+    it 'WAHA sem resposta (timeout): devolve o aviso à fila, sem abrir conversa nem chamar o agente' do
+      waha_fails(:timeout)
       notice = claimed
 
       expect { described_class.new(notice).perform }.not_to change(Conversation, :count)
 
-      expect(notice.reload).to have_attributes(status: 'skipped', skip_reason: 'waha_unavailable')
+      expect(notice.reload).to have_attributes(status: 'pending', error_code: 'waha_unavailable')
+      expect(alerts.count).to eq(0)
     end
 
-    it 'caixa WAHA sem sessão: pula com waha_unavailable sem chamar a WAHA' do
+    it 'a consulta usa o timeout curto, não o padrão do cliente' do
+      client = instance_double(Waha::Client)
+      allow(Waha::Client).to receive(:new).and_return(client)
+      allow(client).to receive(:check_contact_exists).and_return('numberExists' => true, 'chatId' => '5511912345678@c.us')
+
+      described_class.new(claimed).perform
+
+      expect(client).to have_received(:check_contact_exists).with(phone: '5511912345678', session: '5511900001111', timeout: 5)
+    end
+
+    it 'quando a WAHA volta, o aviso devolvido sai na rodada seguinte e a marca da espera some' do
+      waha_fails
+      notice = claimed
+      described_class.new(notice).perform
+      WebMock.reset!
+      waha_answers(numberExists: true, chatId: '5511912345678@c.us')
+
+      next_round(notice, at: 1.minute.from_now)
+
+      expect(notice.reload).to have_attributes(status: 'sent', error_code: nil, skip_reason: nil)
+      expect(Message.find(notice.message_id).conversation.inbox_id).to eq(inbox.id)
+      expect(alerts.count).to eq(0)
+    end
+
+    it '"ao marcar": passadas 2 h do vencimento com a WAHA fora, pula com waha_unavailable e avisa o agente uma vez' do
+      waha_fails
+      notice = claimed
+      described_class.new(notice).perform
+      next_round(notice, at: notice.due_at + 119.minutes)
+      expect(notice.reload.status).to eq('pending')
+      expect(alerts.count).to eq(0)
+
+      next_round(notice, at: notice.due_at + 121.minutes)
+
+      expect(notice.reload).to have_attributes(status: 'skipped', skip_reason: 'waha_unavailable', message_id: nil)
+      expect(alerts.sole.title).to end_with('O WhatsApp não oficial não respondeu: confira se ele está conectado.')
+    end
+
+    it '"1 dia antes": tenta até 6 h antes da reunião; depois pula e avisa' do
+      waha_fails
+      notice = claimed('day_before')
+
+      next_round(notice, at: meeting.starts_at - 6.hours - 1.minute)
+      expect(notice.reload.status).to eq('pending')
+
+      next_round(notice, at: meeting.starts_at - 6.hours + 1.minute)
+      expect(notice.reload).to have_attributes(status: 'skipped', skip_reason: 'waha_unavailable')
+      expect(alerts.count).to eq(1)
+    end
+
+    it '"1 hora antes": tenta até o início; começada a reunião, pula com waha_unavailable (não past_due) e avisa' do
+      waha_fails
+      notice = claimed('hour_before')
+
+      next_round(notice, at: meeting.starts_at - 1.minute)
+      expect(notice.reload.status).to eq('pending')
+
+      next_round(notice, at: meeting.starts_at + 1.minute)
+      expect(notice.reload).to have_attributes(status: 'skipped', skip_reason: 'waha_unavailable')
+      expect(alerts.count).to eq(1)
+    end
+
+    it 'na mesma rodada, depois da primeira falha a caixa não é consultada de novo e os avisos dela voltam à fila' do
+      check = waha_fails(:timeout)
+      outage = Crm::BookingV2::Notices::WahaOutage.new
+      first = claimed
+      second = claimed('rescheduled')
+
+      described_class.new(first, waha_outage: outage).perform
+      described_class.new(second, waha_outage: outage).perform
+
+      expect(check).to have_been_made.once
+      expect([first, second].map { |notice| notice.reload.status }).to eq(%w[pending pending])
+      expect(alerts.count).to eq(0)
+      # Só a caixa que falhou fica marcada: as outras continuam sendo consultadas na rodada.
+      other_inbox = create(:channel_api, account: account, additional_attributes: { 'provider' => 'waha', 'session' => 'outra' }).inbox
+      expect([outage.down?(inbox), outage.down?(other_inbox)]).to eq([true, false])
+    end
+
+    it 'WAHA que recusa o pedido (4xx) não é caixa fora do ar: pula na hora, sem marcar a caixa nem voltar à fila' do
+      waha_fails(status: 422, body: 'telefone recusado')
+      outage = Crm::BookingV2::Notices::WahaOutage.new
+      notice = claimed
+
+      described_class.new(notice, waha_outage: outage).perform
+
+      expect(notice.reload).to have_attributes(status: 'skipped', skip_reason: 'waha_unavailable')
+      expect(outage.down?(inbox)).to be(false)
+      expect(alerts.count).to eq(1)
+    end
+
+    it 'aviso que esperava a WAHA e é pulado por outro motivo não guarda a marca da espera' do
+      waha_fails
+      notice = claimed
+      described_class.new(notice).perform
+      expect(notice.reload.error_code).to eq('waha_unavailable')
+      Crm::BookingNoticeStop.create!(account: account, contact: world.contact)
+
+      next_round(notice, at: 1.minute.from_now)
+
+      expect(notice.reload).to have_attributes(status: 'skipped', skip_reason: 'stopped', error_code: nil)
+      expect(alerts.count).to eq(0)
+    end
+
+    it 'caixa WAHA sem sessão não muda sozinha: pula na hora com waha_unavailable, sem chamar a WAHA nem voltar à fila' do
       inbox.channel.update!(additional_attributes: { 'provider' => 'waha' })
       notice = claimed
 
@@ -279,13 +397,22 @@ RSpec.describe Crm::BookingV2::Notices::Sender do
       expect(a_request(:get, check_url)).not_to have_been_made
     end
 
-    it 'WAHA que diz que o número existe mas não manda o chat id: waha_unavailable, não no_whatsapp' do
+    it 'WAHA que diz que o número existe mas não manda o chat id: falha da WAHA (volta à fila), não no_whatsapp' do
       waha_answers(numberExists: true)
       notice = claimed
 
       expect { described_class.new(notice).perform }.not_to change(Conversation, :count)
 
-      expect(notice.reload).to have_attributes(status: 'skipped', skip_reason: 'waha_unavailable')
+      expect(notice.reload).to have_attributes(status: 'pending', error_code: 'waha_unavailable')
+    end
+
+    it 'no_whatsapp continua definitivo: não volta à fila, mesmo dentro do limite' do
+      waha_answers(numberExists: false)
+      notice = claimed
+
+      described_class.new(notice).perform
+
+      expect(notice.reload).to have_attributes(status: 'skipped', skip_reason: 'no_whatsapp', error_code: nil)
     end
 
     it '#will_send? não espera a WAHA (a tela pública não chama o motor)' do
