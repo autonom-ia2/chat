@@ -91,4 +91,29 @@ RSpec.describe 'Acesso por funil sem linhas: entrega igual à main' do # rubocop
 
     expect(service.send(:fallback_agent_streams, call)).to match_array([agent, other, admin].map(&:pubsub_token).uniq)
   end
+
+  describe Crm::Access::AccountFlag do
+    it 'corrida: um "0" lido antes da criação não apaga o "1" que a criação gravou (falha fechado)' do
+      key = described_class.key(account.id)
+      Redis::Alfred.delete(key)
+      allow(Crm::InboxAgentAccess).to receive(:exists?).and_wrap_original do |original, *args, **kwargs|
+        result = original.call(*args, **kwargs) # t0: o leitor vê 0 linhas
+        Crm::InboxAgentAccess.create!(account: account, inbox: inbox, user: agent, all_pipelines: false) # t1: criação
+        result
+      end
+
+      expect(described_class.any?(account.id)).to be(true) # t2: o leitor não sobrescreve
+      expect(Redis::Alfred.get(key)).to eq('1')
+    end
+
+    it 'apagar o acesso remove a chave e a próxima leitura recalcula' do
+      access = Crm::InboxAgentAccess.create!(account: account, inbox: inbox, user: agent, all_pipelines: false)
+      expect(described_class.any?(account.id)).to be(true)
+
+      access.destroy!
+
+      expect(Redis::Alfred.get(described_class.key(account.id))).to be_nil
+      expect(described_class.any?(account.id)).to be(false)
+    end
+  end
 end
