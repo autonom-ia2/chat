@@ -59,6 +59,31 @@ class CrmBookingPagesAPI extends ApiClient {
     });
   }
 
+  // Marcar pela agenda no painel (#1265): páginas publicadas que servem,
+  // horários livres do dia e a reunião do card (ou do contato).
+  bookable() {
+    return axios.get(`${this.url}/bookable`);
+  }
+
+  slots(id, { date, duration } = {}) {
+    return axios.get(`${this.url}/${id}/slots`, { params: { date, duration } });
+  }
+
+  book(
+    id,
+    { cardId, contactId, startsAt, duration, location, notify, requestId }
+  ) {
+    return axios.post(`${this.url}/${id}/meetings`, {
+      card_id: cardId,
+      contact_id: contactId,
+      starts_at: startsAt,
+      duration,
+      location,
+      notify,
+      request_id: requestId,
+    });
+  }
+
   reassign({ fromUserId, toUserId, pageId }) {
     return axios.post(
       `${this.url}/reassign`,

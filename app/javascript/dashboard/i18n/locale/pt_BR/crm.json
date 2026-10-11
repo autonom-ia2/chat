@@ -2871,6 +2871,57 @@
           "GENERIC": "Não deu certo agora. Tente de novo."
         }
       }
+    },
+    "BOOKING_AGENDA": {
+      "TAB_AGENDA": "Pela página de agendamento",
+      "TAB_PROVIDER": "Com convite do Google/Microsoft",
+      "TABS_LABEL": "Como marcar",
+      "PAGE_LABEL": "Página",
+      "DAY_LABEL": "Dia",
+      "TIME_LABEL": "Horário",
+      "DURATION_LABEL": "Duração",
+      "DURATION_OPTION": "{minutes} min",
+      "LOCATION_LABEL": "Onde",
+      "LOCATION_VALUE": "Onde: {place}",
+      "LOADING": "Carregando a agenda…",
+      "SLOTS_LOADING": "Procurando horários livres…",
+      "NO_SLOTS": "Nenhum horário livre neste dia.",
+      "NEXT_SLOT": "Ver o próximo dia livre",
+      "RETRY": "Tentar de novo",
+      "NOTIFY": "Avisar o cliente no WhatsApp",
+      "NOTIFY_HINT": "Manda a confirmação e os lembretes.",
+      "SAVE": "Salvar",
+      "SAVING": "Salvando…",
+      "SUCCESS": "Reunião marcada.",
+      "CLIENT": "Cliente: {name}",
+      "TIMEZONE_HINT": "Horários no fuso {timezone}",
+      "PICK_TIME": "Escolha um horário.",
+      "SEND_LINK": "Mandar link para o cliente escolher",
+      "LINK_TITLE": "Link para o cliente",
+      "LINK_SEND": "Enviar na conversa",
+      "LINK_COPY": "Copiar link",
+      "LINK_COPIED": "Link copiado. Cole onde quiser.",
+      "LINK_SENT": "Mensagem enviada na conversa.",
+      "LINK_BACK": "Voltar",
+      "EMPTY": {
+        "TITLE": "Crie sua página de agendamento",
+        "DESC": "Com uma página, você escolhe um horário livre aqui e o cliente recebe o aviso no WhatsApp.",
+        "AGENT": "Peça ao administrador para publicar uma página de agendamento.",
+        "OPEN": "Ir para páginas de agendamento"
+      },
+      "ERRORS": {
+        "LOAD": "Não foi possível carregar a agenda. Tente de novo.",
+        "SLOT_TAKEN": "Esse horário acabou de ser ocupado. Escolha outro.",
+        "NO_PHONE": "O cliente não tem um WhatsApp válido. Adicione no contato.",
+        "NO_CONTACT": "Este negócio não tem cliente. Vincule um contato primeiro.",
+        "EMAIL_REQUIRED": "Esse local manda o convite por e-mail e o cliente não tem e-mail.",
+        "TOO_MANY_OPEN": "Esse cliente já tem reuniões marcadas demais.",
+        "FORBIDDEN": "Você não tem acesso a isto.",
+        "GENERIC": "Não foi possível marcar agora. Tente de novo.",
+        "LINK": "Não foi possível preparar o link. Tente de novo.",
+        "CANNOT_REPLY": "Esta conversa não pode receber mensagem agora. Copie o link.",
+        "CARD_CLOSED": "Este negócio está fechado. Reabra para marcar."
+      }
     }
   },
   "crm": {
