@@ -78,7 +78,10 @@ const voltar = async () => {
 
 <template>
   <AgenteGaveta :titulo="t(`${NS}.TITULO`)" @fechar="emit('fechar')">
-    <div v-if="estado === 'carregando'" class="flex justify-center py-6">
+    <div
+      v-if="estado === 'carregando'"
+      class="relative flex justify-center py-6"
+    >
       <p role="status" class="sr-only">{{ t(`${NS}.CARREGANDO`) }}</p>
       <Spinner :size="24" aria-hidden="true" />
     </div>

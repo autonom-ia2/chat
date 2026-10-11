@@ -34,6 +34,7 @@ vi.mock('../../composables/usePermissoesDaJornada', async () => {
     usePermissoesDaJornada: () => ({
       podeConectarCanal: computed(() => estado.podeGerenciar),
       podeEscolherQuemRecebe: computed(() => estado.quemRecebe),
+      podeAbrirAgendamento: computed(() => estado.podeGerenciar),
       crmLigado: computed(() => estado.crm),
     }),
   };
@@ -55,6 +56,7 @@ vi.mock('vue-router', () => ({
 const agentesApi = vi.hoisted(() => ({
   show: vi.fn(),
   analyticsConversations: vi.fn(),
+  getTools: vi.fn(),
 }));
 vi.mock('dashboard/api/autonomia/agents', () => ({ default: agentesApi }));
 const jornadaApi = vi.hoisted(() => ({
@@ -167,6 +169,7 @@ describe('AgentePage', () => {
     rota.params = { agentId: '7' };
     store.dispatch.mockReset();
     store.commit.mockReset();
+    agentesApi.getTools.mockReset();
     router.push.mockReset();
     router.replace.mockReset();
     alerta.mockReset();
@@ -247,9 +250,11 @@ describe('AgentePage', () => {
       const wrapper = await montar();
       const heroi = no('[data-heroi]');
       expect(heroi.className).not.toContain('overflow-hidden');
+      expect(heroi.className).not.toContain('overflow-clip');
+      // overflow-clip (não hidden): recorta os anéis sem virar contêiner de rolagem.
       expect(
         heroi.querySelector('span[aria-hidden="true"]').className
-      ).toContain('overflow-hidden');
+      ).toContain('overflow-clip');
       await clicar('[data-mais]');
       expect(todos('[role="menuitem"]').map(i => i.dataset.item)).toEqual([
         'foto',
@@ -874,6 +879,80 @@ describe('AgentePage', () => {
       expect(fotoDoHeroi()).toBe(FOTO_CANAL);
       await clicar('[data-mais]');
       expect(no('[data-item="foto"]')).toBeNull();
+      wrapper.unmount();
+    });
+  });
+
+  // Regressão do piloto (conta 16): o painel antigo tinha a aba "Ferramentas" para o SuperAdmin que
+  // gerencia; a página nova a oferece em "Mais opções", numa gaveta com o PanelTools existente.
+  describe('ferramentas (SuperAdmin)', () => {
+    const comoSuperAdmin = () => {
+      store.state.getCurrentUser = { id: 1, type: 'SuperAdmin' };
+      agentesApi.getTools.mockResolvedValue({ data: { payload: [] } });
+    };
+
+    it('lets a SuperAdmin open Tools from More options, in a trapped drawer', async () => {
+      comoSuperAdmin();
+      const wrapper = await montar();
+      await clicar('[data-mais]');
+      expect(todos('[role="menuitem"]').map(i => i.dataset.item)).toEqual([
+        'foto',
+        'versoes',
+        'instrucoes',
+        'ferramentas',
+        'excluir',
+      ]);
+      expect(no('[data-item="ferramentas"]').textContent).toContain(
+        'FERRAMENTAS.MENU'
+      );
+      await clicar('[data-item="ferramentas"]');
+      const gaveta = no('[role="dialog"]');
+      expect(gaveta.getAttribute('aria-modal')).toBe('true');
+      expect(gaveta.textContent).toContain('FERRAMENTAS.TITULO');
+      expect(gaveta.querySelector('[data-ferramentas]')).not.toBeNull();
+      expect(agentesApi.getTools).toHaveBeenCalledWith(7);
+      wrapper.unmount();
+    });
+
+    it('hides Tools from an account admin who is not SuperAdmin', async () => {
+      store.state.getCurrentUser = {
+        id: 2,
+        type: 'User',
+        role: 'administrator',
+      };
+      const wrapper = await montar({ gaveta: 'ferramentas' });
+      expect(no('[role="dialog"]')).toBeNull();
+      await clicar('[data-mais]');
+      expect(no('[data-item="ferramentas"]')).toBeNull();
+      expect(agentesApi.getTools).not.toHaveBeenCalled();
+      wrapper.unmount();
+    });
+
+    it('hides Tools from a SuperAdmin seat that only views', async () => {
+      comoSuperAdmin();
+      estado.podeGerenciar = false;
+      const wrapper = await montar();
+      await clicar('[data-mais]');
+      expect(no('[data-item="ferramentas"]')).toBeNull();
+      wrapper.unmount();
+    });
+
+    it('offers Tools on the quoting agent too, like the old panel', async () => {
+      preparar({ agente: bia({ agent_type: 'insurance_quote' }) });
+      comoSuperAdmin();
+      const wrapper = await montar();
+      await clicar('[data-mais]');
+      expect(todos('[role="menuitem"]').map(i => i.dataset.item)).toEqual([
+        'foto',
+        'ferramentas',
+      ]);
+      wrapper.unmount();
+    });
+
+    it('opens Tools from the old :tab "tools" for a SuperAdmin', async () => {
+      comoSuperAdmin();
+      const wrapper = await montar({ gaveta: 'ferramentas' });
+      expect(no('[role="dialog"] [data-ferramentas]')).not.toBeNull();
       wrapper.unmount();
     });
   });

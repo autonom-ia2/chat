@@ -7,7 +7,11 @@ export { default as PublicPageCard } from '../../../../../public_booking_v2/comp
 export { default as PublicStepDate } from '../../../../../public_booking_v2/components/StepDate.vue';
 export { default as publicMessages } from '../../../../../public_booking_v2/i18n';
 export { provideFlow } from '../../../../../public_booking_v2/composables/useBookingFlow';
-export { applyBrandColor } from '../../../../../public_booking_v2/helpers/brand';
+export {
+  LOGO_DARK_MODES,
+  applyBrandColor,
+  logoDarkModeOf,
+} from '../../../../../public_booking_v2/helpers/brand';
 export {
   bookingDays,
   clientTimeZone,

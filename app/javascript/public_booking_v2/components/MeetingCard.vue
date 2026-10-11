@@ -50,13 +50,13 @@ const isOtherClock = computed(
 <template>
   <div
     data-testid="meeting-card"
-    class="flex flex-col gap-1 rounded-2xl border-2 border-slate-200 bg-slate-50 p-4"
+    class="flex flex-col gap-1 rounded-2xl border-2 border-bk-line bg-bk-inset p-4"
   >
-    <p class="text-lg font-semibold text-slate-900 first-letter:uppercase">
+    <p class="text-lg font-semibold text-bk-strong first-letter:uppercase">
       {{ when }}
     </p>
-    <p class="text-base text-slate-800">{{ placeText }}</p>
-    <p v-if="address" class="text-base text-slate-800">
+    <p class="text-base text-bk-body">{{ placeText }}</p>
+    <p v-if="address" class="text-base text-bk-body">
       {{ t('BOOKING_V2.ADDRESS', { address }) }}
     </p>
     <ZoneNote v-if="isOtherClock" />

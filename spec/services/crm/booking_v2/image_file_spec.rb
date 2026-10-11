@@ -138,7 +138,7 @@ RSpec.describe Crm::BookingV2::ImageFile do
 
   describe 'na validação da página' do
     it 'cobre todos os anexos de imagem da página' do
-      expect(Crm::BookingPageSettings::IMAGE_ATTACHMENTS).to eq(%i[logo photo])
+      expect(Crm::BookingPageSettings::IMAGE_ATTACHMENTS).to eq(%i[logo logo_dark photo])
     end
 
     it 'recusa o arquivo disfarçado na logo e na foto, e a página segue salvável depois de tirar o arquivo' do

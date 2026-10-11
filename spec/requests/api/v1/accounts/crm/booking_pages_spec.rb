@@ -48,7 +48,8 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingPages', type: :request do
       }
     end
     let(:route_names) do
-      %i[index show people create update publish pause preview_token logo photo apply_identity save_identity update_people destroy]
+      %i[index show people create update publish pause preview_token logo logo_dark destroy_logo_dark photo apply_identity
+         save_identity update_people destroy]
     end
     let(:reads) { %i[index show people] }
     let(:expected) do
@@ -59,12 +60,15 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingPages', type: :request do
     # Página nova a cada chamada: o destroy de uma pessoa não pode esconder a rota da seguinte.
     def route(name, target)
       member = "#{base}/#{target.id}"
+      # A logo de fundo escuro só é aceita em página que já tem logo.
+      target.logo.attach(io: Rails.root.join('spec/assets/avatar.png').open, filename: 'avatar.png', content_type: 'image/png') if name == :logo_dark
       {
         index: [:get, base, {}], show: [:get, member, {}], people: [:get, "#{member}/people", {}],
         create: [:post, base, { template_key: 'sales_30' }], update: [:patch, member, { title: 'Novo' }],
         publish: [:post, "#{member}/publish", {}], pause: [:post, "#{member}/pause", {}],
         preview_token: [:post, "#{member}/preview_token", {}],
         logo: [:post, "#{member}/logo", { file: png_upload }], photo: [:post, "#{member}/photo", { file: png_upload }],
+        logo_dark: [:post, "#{member}/logo_dark", { file: png_upload }], destroy_logo_dark: [:delete, "#{member}/logo_dark", {}],
         apply_identity: [:post, "#{member}/apply_identity", {}], save_identity: [:post, "#{member}/save_identity", {}],
         update_people: [:put, "#{member}/people", { user_ids: [world.host.id] }], destroy: [:delete, member, {}]
       }.fetch(name)

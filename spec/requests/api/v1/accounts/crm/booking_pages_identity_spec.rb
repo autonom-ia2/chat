@@ -71,7 +71,7 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingPages identity', type: :request d
     it 'sem nada salvo, diz que não há identidade' do
       call(admin, :get, "#{base}/#{page.id}")
 
-      expect(body.dig('payload', 'identity')).to eq({ 'saved' => false, 'logo_url' => nil, 'photo_url' => nil })
+      expect(body.dig('payload', 'identity')).to eq({ 'saved' => false, 'logo_url' => nil, 'logo_dark_url' => nil, 'photo_url' => nil })
     end
   end
 
@@ -149,7 +149,7 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingPages identity', type: :request d
 
       expect(response).to have_http_status(:ok)
       other.reload
-      expect(other.brand).to eq({ 'color' => '#FFE066', 'logo_align' => 'center', 'headline' => 'Vamos conversar' })
+      expect(other.brand).to include('color' => '#FFE066', 'logo_align' => 'center', 'headline' => 'Vamos conversar')
       expect(other.logo.blob).to eq(page.logo.blob)
       expect(other.photo.blob).to eq(page.photo.blob)
       expect(body.dig('payload', 'logo_url')).to be_present
@@ -218,7 +218,7 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingPages identity', type: :request d
 
       expect(response).to have_http_status(:created)
       created = account.crm_agent_booking_profiles.find(body.dig('payload', 'id'))
-      expect(created.brand).to eq({ 'color' => '#FFE066', 'logo_align' => 'center', 'headline' => 'Vamos conversar' })
+      expect(created.brand).to include('color' => '#FFE066', 'logo_align' => 'center', 'headline' => 'Vamos conversar')
       expect(created.logo.blob).to eq(page.logo.blob)
       expect(body.dig('payload', 'logo_url')).to be_present
       expect(body.dig('payload', 'identity', 'saved')).to be(true)

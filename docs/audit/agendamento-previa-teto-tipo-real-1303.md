@@ -36,9 +36,13 @@ revisão de segurança do #1302 e condição para ligar `crm_booking_v2` em cont
   produção o arquivo é recusado, com registro. O conteúdo só é lido
   do anexo que muda na gravação. A tela recebe `reason` (`image_size`, `image_type`, `image_content`, `image_pixels`)
   e mostra uma frase simples (en e pt_BR).
-- **Anexo novo entra com uma linha**: `IMAGE_ATTACHMENTS = %i[logo photo]` em `Crm::BookingPageSettings`. Na união
-  com `feat/1295-tema-logo`, a linha vira `%i[logo logo_dark photo]` (e o laço de `validate_images` daquela branch
-  sai, porque a regra mora no `ImageFile`).
+- **Anexo novo entra com uma linha**: `IMAGE_ATTACHMENTS = %i[logo logo_dark photo]` em `Crm::BookingPageSettings`.
+  Na mescla com a `main` (#1304, logo de fundo escuro) o laço de `validate_images` do #1304 saiu: a regra mora só no
+  `ImageFile`. A logo de fundo escuro enviada pela pessoa é recusada com o motivo (`reason`); a gerada pelo motor é
+  PNG e passa (spec com a libvips); se um dia o motor devolver algo que não passa, a página fica na placa. Na
+  identidade, `save_from!` confere a de fundo escuro antes de copiar, e a salva que não passa não vai para a página
+  (a página gera a dela). As ações da logo de fundo escuro não enfileiram o pré-aquecimento: a prévia do link não
+  usa essa logo.
 - **Identidade salva**: `save_from!` confere logo e foto da página (conteúdo lido do armazenamento) antes de copiar;
   não passou, 422 e nada é salvo. `assign_to`/`apply_to!` não põem na página a imagem salva que não passa, e aplicam o
   resto; a página nova nasce sem ela em vez de não nascer.

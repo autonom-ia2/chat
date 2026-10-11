@@ -277,7 +277,7 @@ onBeforeUnmount(() => {
             <div class="flex flex-col gap-3">
               <p
                 data-abertura
-                class="px-4 py-3 m-0 text-sm rounded-2xl rounded-es-md bg-n-slate-2 text-n-slate-12"
+                class="relative px-4 py-3 m-0 text-sm rounded-2xl rounded-es-md bg-n-slate-2 text-n-slate-12"
               >
                 <span class="sr-only">{{ t(`${NS}.ASSISTENTE`) }}</span>
                 {{ t(`${NS}.ABERTURA`, { nome }) }}
@@ -308,7 +308,7 @@ onBeforeUnmount(() => {
               <span class="i-lucide-sparkles size-4" />
             </span>
             <p
-              class="px-4 py-3 m-0 text-sm whitespace-pre-line rounded-2xl max-w-[85%]"
+              class="relative px-4 py-3 m-0 text-sm whitespace-pre-line rounded-2xl max-w-[85%]"
               :class="
                 mensagem.role === 'user'
                   ? 'bg-n-blue-3 text-n-slate-12 rounded-ee-md'

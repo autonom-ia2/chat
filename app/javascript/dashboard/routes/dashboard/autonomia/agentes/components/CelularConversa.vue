@@ -1,11 +1,13 @@
 <script setup>
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { nomeSemExtensao } from '../utils/nomeDoArquivo';
 
 // #1181 — celular no estilo WhatsApp: balões do cliente (direita, verde) e do agente (esquerda).
 // Serve ao exemplo dos modelos (mini, com o selo "Exemplo") e ao teste (tamanho cheio, com cabeçalho
-// e aria-live para anunciar a resposta). Embaixo da resposta, "usou: <arquivo>" quando o agente se
-// apoiou num arquivo. Nunca mostra confiança, nota ou percentual.
+// e aria-live para anunciar a resposta). Embaixo da resposta, "Usou: <arquivo sem extensão>" quando o
+// agente se apoiou num arquivo: quebra dentro do balão, no máximo 2 linhas, nome inteiro no title.
+// Nunca mostra confiança, nota ou percentual.
 // mensagens: [{ de: 'cliente' | 'agente', texto, hora?, usou?: [nome do arquivo], fotos?: [url] }], ou
 // { de: 'aviso', texto } para uma faixa no meio da conversa (ex.: "aqui passaria para a equipe").
 // Slots (#1181 PR2, teste da criação): `acao` no cabeçalho, `depois` embaixo das mensagens (vazio,
@@ -50,7 +52,7 @@ const quem = de =>
     </span>
     <!-- Moldura escura nos dois temas e fundo menta pontilhado (--device e --chat-bg do protótipo). -->
     <div
-      class="overflow-hidden border-[6px] shadow-sm rounded-[1.75rem] border-[#1C2024] dark:border-[#0B0C0E] bg-[#EEF7F4] dark:bg-[#0F1A19] bg-[radial-gradient(rgba(0,112,95,0.07)_1.2px,transparent_1.3px)] dark:bg-[radial-gradient(rgba(11,216,182,0.05)_1.2px,transparent_1.3px)] bg-[length:12px_12px]"
+      class="relative overflow-hidden border-[6px] shadow-sm rounded-[1.75rem] border-[#1C2024] dark:border-[#0B0C0E] bg-[#EEF7F4] dark:bg-[#0F1A19] bg-[radial-gradient(rgba(0,112,95,0.07)_1.2px,transparent_1.3px)] dark:bg-[radial-gradient(rgba(11,216,182,0.05)_1.2px,transparent_1.3px)] bg-[length:12px_12px]"
       :class="mini ? 'max-w-72 mx-auto' : 'w-full max-w-sm mx-auto'"
     >
       <p v-if="rotuloSr" class="sr-only">{{ rotuloSr }}</p>
@@ -87,7 +89,7 @@ const quem = de =>
           <div
             v-else
             :data-balao="mensagem.de"
-            class="flex flex-col max-w-[85%] px-3 py-2 text-sm leading-relaxed shadow-sm rounded-2xl text-n-slate-12"
+            class="relative flex flex-col min-w-0 max-w-[85%] px-3 py-2 text-sm leading-relaxed shadow-sm rounded-2xl text-n-slate-12 [overflow-wrap:anywhere]"
             :class="
               mensagem.de === 'cliente'
                 ? 'self-end bg-[#D9FDD3] dark:bg-n-teal-4 rounded-ee-md'
@@ -115,17 +117,25 @@ const quem = de =>
               v-for="arquivo in mensagem.usou || []"
               :key="arquivo"
               data-usou
-              class="inline-flex items-center gap-1 mt-1 text-xs text-n-slate-11"
+              :title="arquivo"
+              class="flex items-start min-w-0 gap-1 mt-1 text-xs text-n-slate-11"
             >
-              <span class="i-lucide-file-text size-3.5" aria-hidden="true" />
-              {{ t('AGENTS.JORNADA.COMUM.USOU', { arquivo }) }}
+              <span
+                class="i-lucide-file-text size-3.5 shrink-0 mt-px"
+                aria-hidden="true"
+              />
+              <span class="min-w-0 line-clamp-2 [overflow-wrap:anywhere]">{{
+                t('AGENTS.JORNADA.COMUM.USOU', {
+                  arquivo: nomeSemExtensao(arquivo),
+                })
+              }}</span>
             </span>
           </div>
         </template>
         <div
           v-if="digitando"
           data-digitando
-          class="flex items-center self-start gap-1 px-3 py-3 bg-white shadow-sm dark:bg-n-solid-2 rounded-2xl rounded-es-md"
+          class="relative flex items-center self-start gap-1 px-3 py-3 bg-white shadow-sm dark:bg-n-solid-2 rounded-2xl rounded-es-md"
         >
           <span class="sr-only">{{
             t('AGENTS.JORNADA.COMUM.ESCREVENDO')

@@ -268,4 +268,14 @@ describe('AgentesHeroi', () => {
     );
     expect(wrapper.text()).toContain('Respondem seus clientes.');
   });
+
+  // Piloto: com overflow-hidden o herói é contêiner de rolagem, e o foco programático no botão
+  // rolava 64 px na horizontal (o título "Agentes" cortava). overflow-clip recorta os anéis sem rolar.
+  it('clips the rings without becoming a scroll container', () => {
+    const heroi = mount(AgentesHeroi, { props: { titulo: 'Agentes' } }).get(
+      '[data-heroi]'
+    );
+    expect(heroi.classes()).toContain('overflow-clip');
+    expect(heroi.classes()).not.toContain('overflow-hidden');
+  });
 });

@@ -51,7 +51,9 @@ describe('brand color', () => {
     );
     const root = document.createElement('div');
     applyBrandColor(`${SCRIPT}alert(1)`, root);
-    expect(root.style.getPropertyValue('--brand')).toBe(DEFAULT_BRAND_COLOR);
+    expect(root.style.getPropertyValue('--brand-ink-light')).toBe(
+      DEFAULT_BRAND_COLOR
+    );
   });
 
   it('keeps a readable color as it is', () => {

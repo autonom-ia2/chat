@@ -51,6 +51,7 @@ class Crm::Subjects::SuggestionResponder
   end
 
   def accept
+    ensure_funnel_allowed!
     card = nil
     evento = nil
     travado do
@@ -71,6 +72,16 @@ class Crm::Subjects::SuggestionResponder
   end
 
   private
+
+  # Acesso por funil (#1148, parte C): aceitar só cria card num funil que a pessoa tem, e só foca/renomeia card que ela vê.
+  def ensure_funnel_allowed!
+    allowed = if @decision.action == 'create'
+                Crm::Access::CardGuard.new(user: @user, account: @account).create_allowed?(@decision.pipeline_id, conversation: @conversation)
+              else
+                @decision.card.nil? || Crm::Access::CardScope.new(user: @user, account: @account).allows?(@decision.card)
+              end
+    raise Pundit::NotAuthorizedError unless allowed
+  end
 
   def travado(&)
     Crm::Conversations::SyncLock.new(account: @account, conversation: @conversation).perform do

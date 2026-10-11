@@ -104,6 +104,8 @@ class Crm::AgentBookingProfile < ApplicationRecord
   scope :new_pages, -> { where(page_version: NEW_PAGE) }
 
   has_one_attached :logo
+  # A logo para fundo escuro (#1295): enviada pela pessoa ou gerada da logo (Crm::BookingV2::LogoDark).
+  has_one_attached :logo_dark
   has_one_attached :photo
   # Imagem de prévia do link (#1282), desenhada pelo sistema: `Crm::BookingV2::PreviewImage::Store`.
   has_one_attached :preview_image

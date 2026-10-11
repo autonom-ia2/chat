@@ -47,11 +47,11 @@ watch(isContactRequested, isDone => {
         id="step-heading"
         data-step-heading
         tabindex="-1"
-        class="text-2xl font-bold text-slate-900 focus:outline-none"
+        class="text-2xl font-bold text-bk-strong focus:outline-none"
       >
         {{ t('BOOKING_V2.NO_SLOT.DONE_TITLE') }}
       </h1>
-      <p class="text-base text-slate-800">
+      <p class="text-base text-bk-body">
         {{ t('BOOKING_V2.NO_SLOT.DONE_BODY') }}
       </p>
       <WhatsAppButton :url="page.contact_whatsapp_url" />
@@ -61,11 +61,11 @@ watch(isContactRequested, isDone => {
         id="step-heading"
         data-step-heading
         tabindex="-1"
-        class="text-2xl font-bold text-slate-900 focus:outline-none"
+        class="text-2xl font-bold text-bk-strong focus:outline-none"
       >
         {{ t('BOOKING_V2.NO_SLOT.TITLE') }}
       </h1>
-      <p class="text-base text-slate-800">{{ body }}</p>
+      <p class="text-base text-bk-body">{{ body }}</p>
       <form
         class="flex flex-col gap-5"
         novalidate

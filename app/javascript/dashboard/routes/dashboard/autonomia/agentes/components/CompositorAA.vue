@@ -135,7 +135,7 @@ defineExpose({
         </button>
       </li>
     </ul>
-    <div class="flex items-end gap-2">
+    <div class="relative flex items-end gap-2">
       <template v-if="anexar">
         <button
           type="button"

@@ -105,6 +105,14 @@ export const LOGO_ALIGNS = [
 ];
 export const DEFAULT_LOGO_ALIGN = 'left';
 
+// Os dois temas da página pública (#1295). Ela segue o aparelho do cliente; a
+// prévia do painel deixa ver os dois.
+export const PAGE_THEMES = [
+  { key: 'light', i18n: 'LIGHT', icon: 'i-lucide-sun' },
+  { key: 'dark', i18n: 'DARK', icon: 'i-lucide-moon' },
+];
+export const DEFAULT_PAGE_THEME = 'light';
+
 // Logo e foto: o mesmo que o backend aceita (sem SVG, até 2 MB).
 export const IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
 export const MAX_IMAGE_BYTES = 2 * 1024 * 1024;

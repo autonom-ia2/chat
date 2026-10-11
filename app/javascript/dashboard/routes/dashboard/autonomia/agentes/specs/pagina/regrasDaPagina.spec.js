@@ -5,6 +5,7 @@ import {
   fecharFrase,
   gavetaDaAba,
   gavetasPermitidas,
+  ehSuperAdmin,
   idiomaDoNavegador,
   chaveDoMotivo,
   estadoDeOperacao,
@@ -22,6 +23,7 @@ describe('regras da página do agente', () => {
     expect(gavetaDaAba('knowledge')).toBe(GAVETA.SABE);
     expect(gavetaDaAba('channels')).toBe(GAVETA.ONDE);
     expect(gavetaDaAba('performance')).toBe(GAVETA.CONVERSAS);
+    expect(gavetaDaAba('tools')).toBe(GAVETA.FERRAMENTAS);
     expect(gavetaDaAba('tune')).toBeNull();
     expect(gavetaDaAba('publish')).toBeNull();
     expect(gavetaDaAba(undefined)).toBeNull();
@@ -63,6 +65,31 @@ describe('regras da página do agente', () => {
       GAVETA.FOTO,
     ]);
     expect(gavetasPermitidas(cotacao, false)).toEqual([]);
+  });
+
+  // Regressão do piloto: a aba "Ferramentas" do painel antigo (SuperAdmin que gerencia, qualquer tipo
+  // de agente) sumiu na página nova. Mesmo critério do AgentPanelPage.
+  it('opens Tools only for a SuperAdmin who manages, on any kind of agent', () => {
+    const sa = { superAdmin: true };
+    const guiado = { mode: 'guided' };
+    const cotacao = { agent_type: 'insurance_quote' };
+    const interno = { actuation: 'internal' };
+    expect(gavetasPermitidas(guiado, true, sa)).toContain(GAVETA.FERRAMENTAS);
+    expect(gavetasPermitidas(interno, true, sa)).toContain(GAVETA.FERRAMENTAS);
+    expect(gavetasPermitidas(cotacao, true, sa)).toEqual([
+      GAVETA.ONDE,
+      GAVETA.VOLTAR,
+      GAVETA.FOTO,
+      GAVETA.FERRAMENTAS,
+    ]);
+    expect(gavetasPermitidas(guiado, true)).not.toContain(GAVETA.FERRAMENTAS);
+    expect(gavetasPermitidas(guiado, false, sa)).not.toContain(
+      GAVETA.FERRAMENTAS
+    );
+    expect(gavetasPermitidas(cotacao, false, sa)).toEqual([]);
+    expect(ehSuperAdmin({ type: 'SuperAdmin' })).toBe(true);
+    expect(ehSuperAdmin({ type: 'User' })).toBe(false);
+    expect(ehSuperAdmin(null)).toBe(false);
   });
 
   it('opens the booking drawer only for managers, with the new booking on the account', () => {

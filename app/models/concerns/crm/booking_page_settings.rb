@@ -10,6 +10,9 @@ module Crm::BookingPageSettings
   HEX_DIGITS = '0123456789abcdefABCDEF'.freeze
   # De que lado a logo fica no topo da página (#1289). Sem valor, a página usa a esquerda.
   LOGO_ALIGNS = %w[left center right].freeze
+  # De onde veio a logo de fundo escuro (#1295): quem grava é o servidor (Crm::BookingV2::LogoDark), nunca o formulário.
+  LOGO_DARK_SOURCE = 'logo_dark_source'.freeze
+  LOGO_DARK_SOURCES = %w[uploaded generated same plate].freeze
   # Meet e Teams só existem com a caixa do provedor conectada e com agenda.
   CALENDAR_LOCATIONS = { 'google_meet' => :google?, 'teams' => :microsoft? }.freeze
   MAX_LOCATIONS = 6
@@ -18,7 +21,7 @@ module Crm::BookingPageSettings
   MAX_IMAGE_BYTES = 2.megabytes
   IMAGE_TYPES = %w[image/png image/jpeg image/webp].freeze
   # Os anexos de imagem da página. Anexo novo entra aqui e ganha a conferência inteira (#1303).
-  IMAGE_ATTACHMENTS = %i[logo photo].freeze
+  IMAGE_ATTACHMENTS = %i[logo logo_dark photo].freeze
 
   included do
     before_validation :normalize_json_settings
@@ -123,15 +126,21 @@ module Crm::BookingPageSettings
     color = brand['color']
     errors.add(:brand, 'invalid color') if color.present? && !hex_color?(color)
     errors.add(:brand, 'headline too long') if brand['headline'].to_s.length > MAX_TEXT
+    validate_brand_choices
+  end
+
+  # Valores de lista fechada dentro de `brand`: sem valor também vale.
+  def validate_brand_choices
     errors.add(:brand, 'invalid logo alignment') if brand['logo_align'].present? && LOGO_ALIGNS.exclude?(brand['logo_align'])
+    errors.add(:brand, 'invalid dark logo source') if brand[LOGO_DARK_SOURCE].present? && LOGO_DARK_SOURCES.exclude?(brand[LOGO_DARK_SOURCE])
   end
 
   def hex_color?(value)
     value.is_a?(String) && value.length == 7 && value.start_with?('#') && value.delete_prefix('#').chars.all? { |char| HEX_DIGITS.include?(char) }
   end
 
-  # Logo e foto vão para a página pública: só PNG, JPEG ou WebP de verdade (SVG pode carregar script) e até 2 MB. A
-  # regra inteira está em `Crm::BookingV2::ImageFile` (#1303).
+  # Logo (a de fundo claro e a de fundo escuro, enviada ou gerada) e foto vão para a página pública: só PNG, JPEG ou
+  # WebP de verdade (SVG pode carregar script) e até 2 MB. A regra inteira está em `Crm::BookingV2::ImageFile` (#1303).
   def validate_images
     ::Crm::BookingV2::ImageFile.validate(self, IMAGE_ATTACHMENTS, only_changed: true)
   end

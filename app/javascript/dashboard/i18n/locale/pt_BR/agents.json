@@ -596,7 +596,7 @@
         "CLIENTE": "Cliente",
         "AGENTE": "Agente",
         "ESCREVENDO": "Escrevendo…",
-        "USOU": "usou: {arquivo}",
+        "USOU": "Usou: {arquivo}",
         "IDEIAS": "Ideias para começar",
         "QUEM_DISSE": "{quem}:",
         "FOTO_ENVIADA": "Foto enviada"
@@ -728,6 +728,10 @@
         "ANEXOS": "Arquivos que vão junto"
       },
       "PAGINA": {
+        "FERRAMENTAS": {
+          "MENU": "Ferramentas",
+          "TITULO": "Ferramentas"
+        },
         "VOLTAR_LISTA": "Voltar para Agentes",
         "TITULO_SR": "Página do agente",
         "CARREGANDO": "Carregando o agente",
@@ -796,9 +800,26 @@
         },
         "BLOCO_AGENDA": {
           "TITULO": "Marca reuniões",
-          "NAO_MARCA": "{nome} não marca reuniões.",
-          "MARCA_PELA": "{nome} oferece horários da sua página de agendamento {pagina}.",
           "ALTERAR_ARIA": "Alterar como marca reuniões"
+        },
+        "AGENDA_ESTADO": {
+          "ATIVA": "{nome} oferece horários da página {pagina}.",
+          "PAUSADA": "A página {pagina} está pausada. {nome} vai passar a conversa para a equipe até você reativar a página.",
+          "PAUSADA_SO_VER": "A página {pagina} está pausada. {nome} vai passar a conversa para a equipe.",
+          "SEM_NINGUEM": "Ninguém atende a página {pagina}. {nome} vai passar a conversa para a equipe.",
+          "AGENDA_PAUSADA": "A agenda de quem atende a página {pagina} está pausada. {nome} vai passar a conversa para a equipe até os horários serem retomados.",
+          "NAO_EXISTE": "A página escolhida não existe mais. Escolha outra ou escolha Não marcar.",
+          "NAO_EXISTE_SO_VER": "A página escolhida não existe mais. {nome} vai passar a conversa para a equipe.",
+          "NENHUMA": "{nome} não marca reuniões.",
+          "ABRIR_PAGINAS": "Abrir páginas de agendamento",
+          "ESCOLHA": "Escolha uma página",
+          "FUSO": "Horários no fuso da empresa ({fuso}).",
+          "RECEBE": {
+            "FIXO": "A reunião fica com {nome}.",
+            "FIXO_SEM_NOME": "A reunião fica com a pessoa responsável pela página.",
+            "POR_PESSOA": "A reunião fica com quem estiver atendendo a conversa, se essa pessoa atende a página. Senão, fica com {nome}.",
+            "POR_PESSOA_SEM_NOME": "A reunião fica com quem estiver atendendo a conversa, se essa pessoa atende a página. Senão, fica com a primeira pessoa da lista da página."
+          }
         },
         "SEMANA": {
           "ROTULO": "Números desta semana",

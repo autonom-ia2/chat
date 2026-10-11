@@ -16,8 +16,8 @@ class Crm::BookingPagePolicy < ApplicationPolicy
     view?
   end
 
-  %i[create? update? destroy? publish? pause? preview_token? logo? photo? update_people? test_invite? reassign? reassign_preview?
-     notice_template_suggestions? notice_templates? apply_identity?].each do |action|
+  %i[create? update? destroy? publish? pause? preview_token? logo? logo_dark? destroy_logo_dark? photo? update_people? test_invite?
+     reassign? reassign_preview? notice_template_suggestions? notice_templates? apply_identity?].each do |action|
     define_method(action) { manage? }
   end
 
