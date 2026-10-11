@@ -44,6 +44,7 @@ class Api::V1::Accounts::Crm::FollowUpsController < Api::V1::Accounts::Crm::Base
   def create
     authorize ::Crm::FollowUp
     card = visible_card(params_for_create[:card_id])
+    ensure_card_funnel!(card)
     conversation = resolved_conversation(card, params_for_create)
     authorize_conversation!(conversation) if conversation.present?
     attributes = resolved_follow_up_params(card, params_for_create, conversation)
@@ -116,6 +117,12 @@ class Api::V1::Accounts::Crm::FollowUpsController < Api::V1::Accounts::Crm::Base
 
   def visible_card(card_id)
     policy_scope(::Crm::Card).find(card_id)
+  end
+
+  # Acesso por funil (#1148, decisão b): criar lembrete é mexer no card; exige o funil dele.
+  def ensure_card_funnel!(card)
+    guard = ::Crm::Access::CardGuard.new(user: Current.user, account: Current.account, account_user: Current.account_user)
+    raise Pundit::NotAuthorizedError unless guard.move_allowed?(card, card.pipeline_id)
   end
 
   def visible_conversation(conversation_id)

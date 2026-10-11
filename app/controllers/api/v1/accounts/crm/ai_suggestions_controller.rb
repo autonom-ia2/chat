@@ -6,7 +6,7 @@ class Api::V1::Accounts::Crm::AiSuggestionsController < Api::V1::Accounts::Crm::
     authorize @suggestion, :accept?
     return render_unprocessable('crm.ai.suggestion_not_pending') unless @suggestion.pending?
 
-    ensure_move_allowed!
+    ensure_move_allowed!(@suggestion.card.pipeline_id, @suggestion.to_stage.pipeline_id)
     @card = Crm::Ai::SuggestionApplier.new(
       card: @suggestion.card,
       suggestion: @suggestion,
@@ -19,6 +19,8 @@ class Api::V1::Accounts::Crm::AiSuggestionsController < Api::V1::Accounts::Crm::
   def dismiss
     authorize @suggestion, :dismiss?
     return render_unprocessable('crm.ai.suggestion_not_pending') unless @suggestion.pending?
+
+    ensure_move_allowed!(@suggestion.card.pipeline_id)
 
     @suggestion.update!(status: :dismissed)
     Crm::ActivityLogger.new(
@@ -36,9 +38,10 @@ class Api::V1::Accounts::Crm::AiSuggestionsController < Api::V1::Accounts::Crm::
     @suggestion = Current.account.crm_ai_stage_suggestions.find(params[:id])
   end
 
-  # Acesso por funil (#1148, parte C): aceitar move o card, então vale o mesmo CardGuard do /move.
-  def ensure_move_allowed!
+  # Acesso por funil (#1148): aceitar move o card (o mesmo CardGuard do /move, com o funil do card e o de destino) e
+  # recusar mexe nele (decisão b: exige o funil do card).
+  def ensure_move_allowed!(*pipeline_ids)
     guard = Crm::Access::CardGuard.new(user: Current.user, account: Current.account, account_user: Current.account_user)
-    raise Pundit::NotAuthorizedError unless guard.move_allowed?(@suggestion.card, @suggestion.to_stage.pipeline_id)
+    raise Pundit::NotAuthorizedError unless pipeline_ids.uniq.all? { |pipeline_id| guard.move_allowed?(@suggestion.card, pipeline_id) }
   end
 end

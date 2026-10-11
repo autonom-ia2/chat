@@ -36,8 +36,9 @@ RSpec.describe 'Acesso por funil: mexer no card', type: :request do
     user.create_new_auth_token
   end
 
+  # O Chatwoot responde 401 a toda negação do Pundit (RequestExceptionHandler); o front não desloga por isso.
   def forbidden?
-    response.status.in?([401, 403])
+    response.status == 401
   end
 
   def bulk(card, action, payload = {})
@@ -87,6 +88,72 @@ RSpec.describe 'Acesso por funil: mexer no card', type: :request do
       expect(bulk(card_sinistro, 'assign', owner_id: admin.id)['failed']).to contain_exactly({ 'id' => card_sinistro.id, 'error' => 'forbidden' })
 
       expect(card_sinistro.reload).to have_attributes(status: 'open', owner_id: vendas_agent.id)
+    end
+
+    it 'nem vincula ao card uma conversa de outra caixa onde ela não tem o funil do card' do
+      instagram = create_crm_inbox(account: account, name: 'Instagram', members: [vendas_agent])
+      Crm::InboxAgentAccess.create!(account: account, inbox: instagram, user: vendas_agent, all_pipelines: false, triage: false)
+      dela = create_crm_conversation(account: account, inbox: instagram, contact: contact, assignee: vendas_agent)
+
+      post card_url(card_vendas, 'link_conversation'), params: { conversation_id: dela.id }, headers: headers, as: :json
+
+      expect(forbidden?).to be(true)
+      expect(card_vendas.card_conversations.pluck(:conversation_id)).not_to include(dela.id)
+    end
+
+    it 'nem cria ou muda lembrete do card' do
+      follow_up = account.crm_follow_ups.create!(card: card_sinistro, title: 'Retornar', due_at: 1.day.from_now, timezone: 'UTC',
+                                                 automation_mode: :reminder_only, assignee: vendas_agent, created_by: admin)
+
+      post "/api/v1/accounts/#{account.id}/crm/follow_ups",
+           params: { follow_up: { card_id: card_sinistro.id, title: 'Novo', due_at: 1.day.from_now, timezone: 'UTC' } }, headers: headers, as: :json
+      expect(forbidden?).to be(true)
+      patch "/api/v1/accounts/#{account.id}/crm/follow_ups/#{follow_up.id}", params: { follow_up: { title: 'Outro' } }, headers: headers, as: :json
+      expect(forbidden?).to be(true)
+
+      expect(follow_up.reload.title).to eq('Retornar')
+    end
+
+    describe 'com a IA do CRM', type: :request do
+      around { |example| with_modified_env(CRM_AI_ENABLED: 'true') { example.run } }
+
+      before do
+        role = create(:custom_role, account: account, permissions: %w[crm_view crm_manage_cards crm_manage_ai conversation_manage])
+        AccountUser.find_by(account: account, user: vendas_agent).update!(custom_role: role)
+      end
+
+      it 'não gera o resumo (gravado no card) nem recusa a sugestão de etapa' do
+        vistoria = create_crm_stage(account: account, pipeline: sinistro.first, name: 'Vistoria')
+        suggestion = account.crm_ai_stage_suggestions.create!(card: card_sinistro, from_stage: sinistro.last, to_stage: vistoria,
+                                                              confidence: 0.9, model_used: 'test')
+
+        post card_url(card_sinistro, 'summarize'), headers: headers, as: :json
+        expect(forbidden?).to be(true)
+        post "/api/v1/accounts/#{account.id}/crm/ai_suggestions/#{suggestion.id}/dismiss", headers: headers, as: :json
+        expect(forbidden?).to be(true)
+
+        expect(suggestion.reload).to be_pending
+      end
+
+      it 'no funil dela, recusa a sugestão normalmente' do
+        proposta = create_crm_stage(account: account, pipeline: vendas.first, name: 'Proposta')
+        suggestion = account.crm_ai_stage_suggestions.create!(card: card_vendas, from_stage: vendas.last, to_stage: proposta,
+                                                              confidence: 0.9, model_used: 'test')
+
+        post "/api/v1/accounts/#{account.id}/crm/ai_suggestions/#{suggestion.id}/dismiss", headers: headers, as: :json
+
+        expect(response).to have_http_status(:ok)
+        expect(suggestion.reload).to be_dismissed
+      end
+    end
+
+    it 'a automação da etapa não leva o card para um funil que quem moveu não pode mover' do
+      step = instance_double(Crm::StageAutomationStep, action_type: 'move_stage', action_config: { 'target_stage_id' => sinistro.last.id })
+
+      result = Crm::StageAutomations::StepExecutor.new(card: card_vendas, step: step, actor: vendas_agent).perform
+
+      expect(result.error).to eq('funnel_not_allowed')
+      expect(card_vendas.reload.pipeline_id).to eq(vendas.first.id)
     end
 
     it 'no funil dela, mexe normalmente' do

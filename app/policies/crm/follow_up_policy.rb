@@ -11,8 +11,9 @@ class Crm::FollowUpPolicy < ApplicationPolicy
     account_user.present?
   end
 
+  # Acesso por funil (#1148, decisão b): o lembrete é do card; mexer nele exige o funil do card.
   def update?
-    show?
+    show? && card_funnel_member?
   end
 
   def destroy?
@@ -46,6 +47,11 @@ class Crm::FollowUpPolicy < ApplicationPolicy
 
   def visible_card_scope
     Pundit.policy_scope!(user_context, Crm::Card)
+  end
+
+  def card_funnel_member?
+    card = record.card
+    card.nil? || Crm::Access::CardGuard.new(user: user, account: account, account_user: account_user).move_allowed?(card, card.pipeline_id)
   end
 end
 

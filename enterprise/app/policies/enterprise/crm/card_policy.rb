@@ -55,7 +55,7 @@ module Enterprise::Crm::CardPolicy
   end
 
   def summarize?
-    crm_permission?('crm_manage_ai') && show?
+    crm_permission?('crm_manage_ai') && show? && funnel_member?
   end
 
   def reset_auto_followup?
