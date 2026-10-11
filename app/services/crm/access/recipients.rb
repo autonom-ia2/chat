@@ -94,10 +94,14 @@ class Crm::Access::Recipients
   end
 
   # Funis dos cards que prendem a conversa: a principal de cada card ou um vínculo em crm_card_conversations.
+  # Card aberto manda (decisão do Rodrigo em 11/10): com card aberto, só os funis dos abertos; senão os dos ganhos e
+  # perdidos. Mesma regra do ConversationScope#pipelines_sql.
   def card_pipeline_ids
     linked = Crm::CardConversation.where(account_id: @conversation.account_id, conversation_id: @conversation.id).select(:card_id)
     cards = Crm::Card.where(account_id: @conversation.account_id)
                      .where.not(status: Crm::Access::ConversationScope::RELEASED)
-    cards.where(conversation_id: @conversation.id).or(cards.where(id: linked)).distinct.pluck(:pipeline_id)
+    rows = cards.where(conversation_id: @conversation.id).or(cards.where(id: linked)).distinct.pluck(:pipeline_id, :status)
+    open = rows.select { |_pipeline_id, status| status == 'open' }
+    (open.presence || rows).map(&:first).uniq
   end
 end
