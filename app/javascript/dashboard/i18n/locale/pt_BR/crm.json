@@ -793,6 +793,7 @@
         "CANCEL": "Cancelar",
         "ADVANCED_HINT": "Escolha o negócio e clique em Continuar — abriremos o card dele para configurar os detalhes.",
         "MEETING_HINT": "Escolha o negócio e clique em Continuar para configurar a reunião (caixa de entrada, convidados, horário).",
+        "MEETING_HINT_AGENDA": "Escolha o negócio e toque em Continuar para ver os dias e horários livres.",
         "MEETING_SOON": "Reunião chega em breve. Por enquanto, use Lembrete ou Mais opções.",
         "MEETING": "Reunião"
       },
@@ -2887,6 +2888,10 @@
       "SLOTS_LOADING": "Procurando horários livres…",
       "NO_SLOTS": "Nenhum horário livre neste dia.",
       "NEXT_SLOT": "Ver o próximo dia livre",
+      "MORE_DAYS": "Ver mais dias",
+      "EARLIEST_DAY": "Mais cedo",
+      "EARLIEST_DAY_SPOKEN": "{day}, o dia livre mais cedo",
+      "NO_DAYS": "Esta página não tem dia aberto para marcar.",
       "RETRY": "Tentar de novo",
       "NOTIFY": "Avisar o cliente no WhatsApp",
       "NOTIFY_HINT": "Manda a confirmação e os lembretes.",
