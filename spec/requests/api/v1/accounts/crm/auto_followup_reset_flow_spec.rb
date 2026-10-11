@@ -135,9 +135,11 @@ RSpec.describe 'CRM auto follow-up opt-out + manual reset regression flow', type
     card_b = other_card(account, user, contact, opted_out: true)
 
     reset!(account, user, card_b)
+    expect(response.parsed_body['contact_opt_out']).to eq('kept_other_cards')
     expect(contact.reload.opt_out_source).to eq('follow_up_reply')
 
     reset!(account, user, card_a)
+    expect(response.parsed_body['contact_opt_out']).to eq('released')
     expect(contact.reload).not_to be_opted_out
   end
 

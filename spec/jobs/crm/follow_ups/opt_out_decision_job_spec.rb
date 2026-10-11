@@ -106,14 +106,14 @@ RSpec.describe Crm::FollowUps::OptOutDecisionJob do
       expect(contact.reload).not_to be_opted_out
     end
 
-    it 'erro de banco ao gravar o contato desfaz o card junto, tenta de novo sem chamar o modelo de novo e, esgotado, grava "falhou"' do
+    it 'deadlock ao gravar o contato desfaz o card junto, tenta de novo sem chamar o modelo de novo e, esgotado, grava "falhou"' do
       allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new)
       message = reply('SAIR')
       model_answers('sim', 'pedido_explicito_de_parar')
       attempts = 0
       allow_any_instance_of(Contact).to receive(:opt_out!) do # rubocop:disable RSpec/AnyInstance
         attempts += 1
-        raise ActiveRecord::RecordNotSaved
+        raise ActiveRecord::Deadlocked
       end
       allow(Rails.logger).to receive(:error)
 
@@ -121,11 +121,31 @@ RSpec.describe Crm::FollowUps::OptOutDecisionJob do
 
       expect(client).to have_received(:create).once
       expect(attempts).to eq(5)
-      expect(state).to include('opted_out' => false, 'opt_out_decision' => 'falhou', 'opt_out_motivo' => 'ActiveRecord::RecordNotSaved')
+      expect(state).to include('opted_out' => false, 'opt_out_decision' => 'falhou', 'opt_out_motivo' => 'ActiveRecord::Deadlocked')
       expect(card.activities.where(event_type: 'ai_followup_stopped').where("payload->>'trigger' = 'opt_out_decision'")).to be_empty
       expect(contact.reload).not_to be_opted_out
       expect(Rails.logger).to have_received(:error)
-        .with("[crm][ai][opt_out] card_id=#{card.id} message_id=#{message.id} decisao=falhou erro=ActiveRecord::RecordNotSaved")
+        .with("[crm][ai][opt_out] card_id=#{card.id} message_id=#{message.id} decisao=falhou erro=ActiveRecord::Deadlocked")
+    end
+
+    it 'erro que não passa sozinho (registro inválido) não tenta de novo: falha na hora e o card continua pendente' do
+      message = reply('SAIR')
+      model_answers('sim', 'pedido_explicito_de_parar')
+      attempts = 0
+      allow_any_instance_of(Contact).to receive(:opt_out!) do # rubocop:disable RSpec/AnyInstance
+        attempts += 1
+        raise ActiveRecord::RecordInvalid
+      end
+
+      queued = -> { enqueued_jobs.count { |job| job[:job] == described_class } }
+      queued_before = queued.call
+
+      expect { described_class.perform_now(card.id, message.id) }.to raise_error(ActiveRecord::RecordInvalid)
+
+      expect(attempts).to eq(1)
+      expect(queued.call).to eq(queued_before)
+      expect(state).to include('opt_out_decision' => 'pendente')
+      expect(contact.reload).not_to be_opted_out
     end
 
     it 'com card.contact diferente do contato da conversa, marca o da conversa, o mesmo a quem o follow-up escreve' do

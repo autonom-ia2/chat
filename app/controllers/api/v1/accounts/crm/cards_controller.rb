@@ -218,7 +218,7 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
       ai_follow_ups = @card.follow_ups.active.where("crm_follow_ups.metadata->>'source' = 'ai_followup'").order(:id).lock.to_a
       @card.lock!
       ai_follow_ups.each { |follow_up| follow_up.update!(status: :canceled) }
-      reset_auto_followup_state!
+      @contact_opt_out = reset_auto_followup_state!
     end
 
     ::Crm::ActivityLogger.new(
@@ -420,10 +420,25 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
   # contato que a marca prova (o gravado no "sim", mesmo que o card tenha mudado de contato depois). Só ela, nunca a de
   # outra origem, e só quando nenhum outro card continua marcado para esse contato (Crm::FollowUps::CardOptOut,
   # release_opt_out!). Sem isso, o card re-armado ficaria parado no runner (contact_opted_out?). Chamado com o card travado.
+  # Devolve o que aconteceu com a recusa do contato (release_follow_up_reply), para a resposta e o aviso do drawer.
   def reset_auto_followup_state!
     marked_contact = ::Crm::FollowUps::CardOptOut.marked_contact(@card) if ::Crm::FollowUps::CardOptOut.card_opted_out?(@card)
     @card.update!(metadata: reset_auto_followup_metadata)
-    marked_contact&.release_opt_out!(source: 'follow_up_reply', by: Current.user)
+    release_follow_up_reply(marked_contact)
+  end
+
+  # A recusa do contato vale para a conta inteira: tirá-la exige a mesma permissão do painel do contato
+  # (ContactPolicy#update?, com o override do EE), além da de IA do CRM no funil que o reset já confere. Sem ela, o reset
+  # limpa só o card e a recusa continua.
+  def release_follow_up_reply(contact)
+    return 'none' unless contact&.opt_out_source == 'follow_up_reply'
+    return 'kept_no_permission' unless policy(contact).update?
+
+    contact.release_opt_out!(source: 'follow_up_reply', by: Current.user)
+    contact.reload
+    return 'released' unless contact.opted_out?
+
+    contact.opt_out_source == 'follow_up_reply' ? 'kept_other_cards' : 'kept_other_source'
   end
 
   def reset_auto_followup_metadata

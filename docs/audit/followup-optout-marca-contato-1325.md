@@ -107,3 +107,22 @@ Sim, pela API. Lido no código, sem mudar política: `CardsController#fetch_card
 - `autonomia:guia:formatos:check`: em dia. RuboCop nos 14 arquivos Ruby do PR: sem ocorrências.
 - Vitest: 3 arquivos, 16 testes, todos passando. ESLint: sem ocorrências.
 - `pnpm i18n:fork:check`: 16 catálogos cobertos. `pnpm central:check`: em dia (189 artigos; restam as 6 evidências antigas de `crm.json` na 10.09). `pnpm guia:check`: em dia.
+
+## Revisão do PR #1343 (depois do merge bbbf2ee894)
+
+- **Consentimento (MEDIUM).** A recusa do contato vale para a conta inteira, e o reset conferia só `CardPolicy#reset_auto_followup?` (IA do CRM no funil). Agora o reset só chama `release_opt_out!` se o usuário também passar em `ContactPolicy#update?` para aquele contato, o mesmo caminho do painel (`authorize_contact_update`), com o override do EE (`relationship_record_write?`: administrador, sem função personalizada, ou `contact_manage`). No OSS, `ContactPolicy#update?` é `true`. Sem a permissão, o reset limpa só o card e a recusa continua.
+- **Resposta do reset:** campo `contact_opt_out` = `released` | `kept_other_cards` | `kept_other_source` | `kept_no_permission` | `none`. `kept_other_source` entrou além dos quatro pedidos: a recusa saiu da origem `follow_up_reply` mas continua por outra que a herança sustenta (e-mail descadastrado, lead recusado).
+- **Drawer:** `CrmCardAutoFollowupStatus` usa o mesmo `useAlert` do reset, com as frases "Retorno reativado. A recusa do contato continua: outro card ainda a segura." / "...: só quem pode editar contatos pode removê-la." / "...continua por outra origem." (en + pt_BR).
+- **Job:** `retry_on` só para erro transitório de banco (`ActiveRecord::Deadlocked`, `LockWaitTimeout`, `ConnectionNotEstablished`, `QueryCanceled`, todos existentes no Rails 7.2.3.1). `RecordInvalid`/`RecordNotFound` falham na hora, sem nova tentativa.
+- Comentário de `Contacts::OptOutBackfill` atualizado (a `follow_up_reply` vem primeiro no `source_for`, e não entra no backfill).
+- Specs: EE sem `contact_manage` (`kept_no_permission`, card resetado, recusa mantida); com `contact_manage` (`released`); card arquivado resetado (documenta o comportamento atual); `none`; `kept_other_cards`; erro não transitório sem nova tentativa; alerta do drawer por resultado.
+- Fica para #1342/#1319: `Deadlocked` → 409 no reset, índice parcial, specs de `transfer_marks!` com card antigo e de `SegmentEligibility` com `opt_out_contact_id`.
+
+### Validação da revisão do PR (11/10/2026, mesmo snapshot, RSpec e RuboCop no M2)
+
+- RSpec, os mesmos 17 grupos mais o spec EE novo: 1407 exemplos, 0 falhas, 3 pendentes (quarentena antiga). A rodada anterior deu 2 falhas, corrigidas: `formatos_spec` (números de linha, regerado) e o spec de erro não transitório (o helper `perform_enqueued_jobs` embrulha a exceção; passou a usar `perform_now` e conferir que nada foi reenfileirado).
+- `rails autonomia:guia:formatos` regerado; `autonomia:guia:formatos:check`: em dia.
+- RuboCop nos 17 arquivos Ruby do PR (inclui o jbuilder e o spec EE): sem ocorrências.
+- Vitest (tela do contato e drawer): 3 arquivos, 21 testes, todos passando.
+- ESLint: 0 erros. Os avisos `no-missing-keys` de `CRM_KANBAN` são do mesmo tipo dos que o arquivo já tinha na main (25 lá); o aviso de chave dinâmica foi evitado com chamadas `t()` literais.
+- `pnpm i18n:fork:check`: 16 catálogos, 24244 mensagens. `pnpm central:check`: em dia. `pnpm guia:check`: em dia.

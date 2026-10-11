@@ -138,12 +138,26 @@ const resetButtonLabel = computed(() =>
     : t('CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.RESET')
 );
 
+// chat#1325: quando a recusa do contato continua depois do reset, o aviso diz por quê.
+const resetResultMessage = result => {
+  if (result === 'kept_other_cards') {
+    return t('CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.RESET_KEPT_OTHER_CARDS');
+  }
+  if (result === 'kept_no_permission') {
+    return t('CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.RESET_KEPT_NO_PERMISSION');
+  }
+  if (result === 'kept_other_source') {
+    return t('CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.RESET_KEPT_OTHER_SOURCE');
+  }
+  return t('CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.RESET_SUCCESS');
+};
+
 const resetCycle = async () => {
   if (!props.canManageAi || !cardId.value || isResetting.value) return;
   isResetting.value = true;
   try {
-    await CrmKanbanAPI.resetAutoFollowup(cardId.value);
-    useAlert(t('CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.RESET_SUCCESS'));
+    const response = await CrmKanbanAPI.resetAutoFollowup(cardId.value);
+    useAlert(resetResultMessage(response?.data?.contact_opt_out));
     reactivateDialogRef.value?.close();
     emit('reset');
   } catch {
