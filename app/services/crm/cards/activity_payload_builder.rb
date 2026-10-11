@@ -215,7 +215,9 @@ class Crm::Cards::ActivityPayloadBuilder
   end
 
   def visibility
+    # Acesso por funil (#1148, parte C): as conversas das atividades numa consulta só.
     @visibility ||= Crm::Conversations::Visibility.new(account: @account, user: @user, account_user: @account_user)
+                                                  .tap { |visibility| visibility.preload(conversations.values) }
   end
 
   def administrator?

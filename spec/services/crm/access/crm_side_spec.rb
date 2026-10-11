@@ -159,6 +159,8 @@ RSpec.describe 'Acesso por funil no CRM' do # rubocop:disable RSpec/DescribeClas
 
     it 'mudar o card de funil agenda a sincronização da conversa' do
       card_sinistro
+      # A sincronização de quando o card nasceu já rodou (sem isso a mudança cai na que está na fila).
+      Crm::Access::CountInvalidation.sync_started!([conversa.id])
 
       expect { card_sinistro.update!(pipeline: vendas.first, stage: vendas.last) }
         .to have_enqueued_job(Crm::Access::VisibilitySyncJob).with(array_including(conversa.id))

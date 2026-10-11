@@ -21,6 +21,16 @@ class Crm::Conversations::Visibility
     funnel_scope.preload(conversations)
   end
 
+  # Cards de uma página (Kanban, lista, exportação, calendário, drawer): a conversa principal e as vinculadas de cada
+  # card de uma vez. Sem acesso por funil, nada a fazer.
+  def preload_cards(cards)
+    return unless funnel_scope.restricted?
+
+    cards = cards.compact
+    linked = Crm::CardConversation.where(account_id: @account.id, card_id: cards.map(&:id)).pluck(:conversation_id)
+    funnel_scope.preload_ids(cards.map(&:conversation_id) + linked)
+  end
+
   def scope(conversations)
     base = conversations.where(account_id: @account.id)
     return base if administrator?

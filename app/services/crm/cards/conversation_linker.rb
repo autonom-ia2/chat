@@ -9,8 +9,10 @@ module Crm
       end
 
       def link
+        previous_primary_id = @card.conversation_id
         card = locked_link
-        sync_access!
+        # Card antigo pode ter a principal sem linha de vínculo: quando outra vira principal, ela sai do card.
+        sync_access!(card.conversation_id == previous_primary_id ? nil : previous_primary_id)
         card
       end
 
@@ -56,9 +58,10 @@ module Crm
       private
 
       # Acesso por funil (#1148, parte C): o reload dentro da trava zera saved_changes e o after_commit do card não vê
-      # a troca de conversa. A conversa vinculada ou desvinculada é sincronizada aqui, depois da trava.
-      def sync_access!
-        Crm::Access::CountInvalidation.card_changed!(@card.account_id, [@conversation.id, @card.conversation_id])
+      # a troca de conversa. A conversa vinculada ou desvinculada (e a principal que saiu do card) é sincronizada aqui,
+      # depois da trava; a que o aviso do vínculo já pôs na fila não entra de novo.
+      def sync_access!(previous_primary_id = nil)
+        Crm::Access::CountInvalidation.card_changed!(@card.account_id, [@conversation.id, previous_primary_id])
       end
 
       # This entry point is independent of ContactLinker: checking only a contact

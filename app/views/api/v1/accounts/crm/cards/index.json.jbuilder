@@ -3,6 +3,7 @@ conversation_visibility = Crm::Conversations::Visibility.new(
   user: Current.user,
   account_user: Current.account_user
 )
+conversation_visibility.preload_cards(@cards.to_a)
 
 json.payload do
   json.array! @cards do |card|

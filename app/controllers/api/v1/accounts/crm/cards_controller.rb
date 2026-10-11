@@ -58,8 +58,10 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     display_ids = Array(params[:conversation_ids]).filter_map { |id| id.to_s[/\d+/]&.to_i }.uniq.first(100)
     return render(json: { payload: {} }) if display_ids.blank?
 
-    conversations = Current.account.conversations.where(display_id: display_ids)
-                           .select { |conversation| crm_visibility.visible?(conversation) }
+    conversations = Current.account.conversations.where(display_id: display_ids).to_a
+    # Acesso por funil (#1148, parte C): a regra do funil para a página inteira numa consulta só.
+    crm_visibility.preload(conversations)
+    conversations = conversations.select { |conversation| crm_visibility.visible?(conversation) }
     return render(json: { payload: {} }) if conversations.blank?
 
     render json: { payload: conversation_badges(conversations) }

@@ -4,7 +4,8 @@
 # rota de mover card que já existe.
 #
 # Nada a oferecer (nil): reunião sem página nova, página sem etapa (ou com funil arquivado), card que não está aberto,
-# que já está nessa etapa ou que está num funil fora do fluxo da página. Uma vez por reunião: quem chama
+# que já está nessa etapa, que está num funil fora do fluxo da página ou que quem marcou não pode mover para lá (acesso
+# por funil). Uma vez por reunião: quem chama
 # (`RecordOutcomeService`) garante, sob trava, que só o primeiro "Aconteceu" chega aqui.
 class Crm::BookingV2::PostMeeting
   def initialize(meeting:, actor:)
@@ -33,8 +34,17 @@ class Crm::BookingV2::PostMeeting
     return unless meeting.outcome_held? && profile.present?
 
     stage = profile.post_meeting_target
-    card = meeting.card
-    stage if stage.present? && card.open? && card.stage_id != stage.id && same_flow?(card, stage)
+    stage if stage.present? && movable?(meeting.card, stage)
+  end
+
+  def movable?(card, stage)
+    card.open? && card.stage_id != stage.id && same_flow?(card, stage) && move_allowed?(card, stage)
+  end
+
+  # Acesso por funil (#1148, parte C): o mesmo CardGuard do /move. Quem marcou "Aconteceu" só leva o card para um funil
+  # que pode mover; sem isso não há o que oferecer (no modo `ask`, o "Mover" daria 403).
+  def move_allowed?(card, stage)
+    Crm::Access::CardGuard.new(user: actor, account: card.account).move_allowed?(card, stage.pipeline_id)
   end
 
   # Só o card que está no fluxo da página: no funil para onde a página manda quem marca ou no funil da etapa

@@ -43,7 +43,7 @@ class Api::V1::Accounts::Crm::CalendarController < Api::V1::Accounts::Crm::BaseC
   end
 
   def follow_up_events
-    filtered_follow_ups.order(:due_at, :id).limit(limit).map do |follow_up|
+    due_follow_ups.map do |follow_up|
       {
         id: "follow_up_#{follow_up.id}",
         event_type: "follow_up_#{follow_up.automation_mode}",
@@ -60,7 +60,7 @@ class Api::V1::Accounts::Crm::CalendarController < Api::V1::Accounts::Crm::BaseC
   end
 
   def expected_close_events
-    filtered_cards.where.not(expected_close_at: nil).order(:expected_close_at, :id).limit(limit).map do |card|
+    expected_close_cards.map do |card|
       {
         id: "expected_close_#{card.id}",
         event_type: 'expected_close',
@@ -79,7 +79,7 @@ class Api::V1::Accounts::Crm::CalendarController < Api::V1::Accounts::Crm::BaseC
   def meeting_events
     return [] unless Crm::Config.calendar_meetings_enabled?(Current.account)
 
-    filtered_meetings.scheduled.order(:starts_at, :id).limit(limit).map do |meeting|
+    scheduled_meetings.map do |meeting|
       {
         id: "meeting_#{meeting.id}",
         event_type: 'meeting',
@@ -188,6 +188,25 @@ class Api::V1::Accounts::Crm::CalendarController < Api::V1::Accounts::Crm::BaseC
   def visible_card_conversation_id(card)
     return if card.primary_conversation.blank?
     return card.conversation_id if conversation_visibility.visible?(card.primary_conversation)
+  end
+
+  # Acesso por funil (#1148, parte C): cada lista do calendário pré-carrega a visibilidade das conversas numa consulta só.
+  def due_follow_ups
+    follow_ups = filtered_follow_ups.order(:due_at, :id).limit(limit).to_a
+    conversation_visibility.preload(follow_ups.map(&:conversation))
+    follow_ups
+  end
+
+  def expected_close_cards
+    cards = filtered_cards.where.not(expected_close_at: nil).order(:expected_close_at, :id).limit(limit).to_a
+    conversation_visibility.preload(cards.map(&:primary_conversation))
+    cards
+  end
+
+  def scheduled_meetings
+    meetings = filtered_meetings.scheduled.order(:starts_at, :id).limit(limit).to_a
+    conversation_visibility.preload(meetings.filter_map(&:card).map(&:primary_conversation))
+    meetings
   end
 
   def conversation_visibility
