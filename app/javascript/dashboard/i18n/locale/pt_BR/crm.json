@@ -1057,6 +1057,7 @@
             "WAHA_REFUSED": "o WhatsApp não oficial recusou a consulta deste número",
             "NUMBER_CAP": "este número já recebeu muitas mensagens hoje",
             "ACCOUNT_CAP": "a conta chegou ao limite de avisos do dia",
+            "TOLD_IN_CONVERSATION": "a IA já confirmou na conversa",
             "OTHER": "outro motivo"
           },
           "FAILED_HINT": "Fale com o cliente para confirmar o horário."

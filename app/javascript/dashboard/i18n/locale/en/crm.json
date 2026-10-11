@@ -1057,6 +1057,7 @@
             "WAHA_REFUSED": "the unofficial WhatsApp refused to look up this number",
             "NUMBER_CAP": "this number already got many messages today",
             "ACCOUNT_CAP": "the account reached the daily notice limit",
+            "TOLD_IN_CONVERSATION": "the AI already confirmed it in the conversation",
             "OTHER": "another reason"
           },
           "FAILED_HINT": "Talk to the customer to confirm the time."

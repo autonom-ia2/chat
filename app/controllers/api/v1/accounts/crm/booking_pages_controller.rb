@@ -26,7 +26,8 @@ class Api::V1::Accounts::Crm::BookingPagesController < Api::V1::Accounts::Crm::B
     pages = pages_scope.includes(:default_assignee, agent_booking_links: :agent).order(:id).to_a
     counts = ::Crm::BookingV2::AttentionReport.upcoming_counts(pages)
     paused = ::Crm::AgentAvailability.where(account_id: Current.account.id, paused: true).pluck(:user_id).to_set
-    payload = pages.map { |page| page_summary(page, report, counts, paused) }
+    invite_pages = ::Crm::BookingV2::InvitePages.new(Current.account)
+    payload = pages.map { |page| page_summary(page, report, counts, paused, invite_pages) }
     render json: { payload: payload }
   end
 
@@ -169,10 +170,12 @@ class Api::V1::Accounts::Crm::BookingPagesController < Api::V1::Accounts::Crm::B
     }
   end
 
-  # O cartão da lista. `missing` só para página desligada: com algo faltando, a tela mostra Rascunho.
-  def page_summary(page, report, counts, paused_user_ids)
+  # O cartão da lista. `missing` só para página desligada: com algo faltando, a tela mostra Rascunho. `invite_pages`:
+  # um só para a lista (a elegibilidade de quem atende sai numa consulta, #1305).
+  def page_summary(page, report, counts, paused_user_ids, invite_pages)
     serializer = ::Crm::BookingV2::PageSerializer.new(page, attention: report.attention?(page), upcoming_meetings_count: counts.fetch(page.id, 0),
-                                                            paused_user_ids: paused_user_ids, orphaned: report.orphaned(page))
+                                                            paused_user_ids: paused_user_ids, orphaned: report.orphaned(page),
+                                                            invite_pages: invite_pages)
     serializer.summary.merge(missing: page.enabled? ? [] : publish_blockers(page))
   end
 
