@@ -7,9 +7,8 @@
 #
 # `timezone`: nome IANA do fuso da página (o navegador não entende os nomes do Rails, como "Brasilia"). `weekdays`: dias
 # da semana em que a página atende (0 = domingo ... 6 = sábado), para a página não oferecer dia fechado.
-# `closed_dates` (#1195, J2-A8): feriados nacionais (`Crm::Calendar::Holidays`) da janela, de hoje a
-# `booking_window_days` no fuso da página, como YYYY-MM-DD. Só com `close_holidays` ligado: são os dias em que `Slots`
-# não oferece horário, e a página os trata como dia fechado em vez de deixar o cliente tocar à toa.
+# `closed_dates` (#1195, J2-A8): feriados da janela que a página fecha; a página os trata como dia fechado em vez de
+# deixar o cliente tocar à toa. Os três campos de dias vêm de `Crm::BookingV2::OpenDays`, os mesmos do painel.
 # `notices_enabled` (#1192): a página tem caixa de avisos utilizável; a tela mostra o aviso de consentimento.
 class Crm::BookingV2::PublicPageSerializer
   include Rails.application.routes.url_helpers
@@ -25,15 +24,6 @@ class Crm::BookingV2::PublicPageSerializer
 
   def self.form_token(slug)
     Crm::BookingV2::Tokens.generate('form', { 's' => slug, 't' => Time.current.to_i }, expires_in: FORM_TOKEN_TTL)
-  end
-
-  # Feriados nacionais que fecham a página, de hoje até o fim da janela, no fuso dela. A prévia do painel (#1289)
-  # usa a mesma conta, para mostrar os mesmos dias que a página.
-  def self.closed_dates(profile, time_zone)
-    return [] unless profile.close_holidays?
-
-    today = Time.current.in_time_zone(time_zone || 'UTC').to_date
-    (today..(today + profile.booking_window_days)).select { |day| Crm::Calendar::Holidays.holiday?(day) }.map(&:iso8601)
   end
 
   def initialize(page)
@@ -58,14 +48,8 @@ class Crm::BookingV2::PublicPageSerializer
   attr_reader :page, :profile
 
   def schedule
-    {
-      duration_minutes: profile.duration_minutes, durations: profile.durations, timezone: page.time_zone&.tzinfo&.name,
-      booking_window_days: profile.booking_window_days, weekdays: profile.weekdays.sort, closed_dates: closed_dates
-    }
-  end
-
-  def closed_dates
-    self.class.closed_dates(profile, page.time_zone)
+    { duration_minutes: profile.duration_minutes, durations: profile.durations, timezone: page.time_zone&.tzinfo&.name }
+      .merge(Crm::BookingV2::OpenDays.new(profile, page.time_zone).to_h)
   end
 
   def form

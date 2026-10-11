@@ -26,7 +26,7 @@ class Crm::BookingV2::PageSerializer
 
   def summary
     {
-      id: profile.id, slug: profile.slug, title: profile.title, enabled: profile.enabled, public_url: public_url,
+      id: profile.id, slug: profile.slug, short_name: profile.short_name, title: profile.title, enabled: profile.enabled, public_url: public_url,
       links: links, locations: profile.locations, assignment_mode: profile.assignment_mode,
       upcoming_meetings_count: upcoming_meetings_count,
       attention: attention, orphaned: @orphaned, paused_people: paused_people
@@ -100,10 +100,10 @@ class Crm::BookingV2::PageSerializer
   end
 
   # O que a prévia do painel precisa para mostrar os mesmos dias da página pública (#1289): o fuso com nome IANA e
-  # os feriados fechados, pela mesma conta do `PublicPageSerializer`.
+  # os feriados fechados, pela mesma conta da página (`Crm::BookingV2::OpenDays`).
   def preview
     zone = ActiveSupport::TimeZone[profile.resolved_timezone]
-    { timezone: zone&.tzinfo&.name, closed_dates: Crm::BookingV2::PublicPageSerializer.closed_dates(profile, zone) }
+    { timezone: zone&.tzinfo&.name, closed_dates: Crm::BookingV2::OpenDays.new(profile, zone).to_h[:closed_dates] }
   end
 
   # Como a página pública: a foto que a pessoa guardou para as páginas vem antes da foto do perfil dela.
@@ -141,8 +141,9 @@ class Crm::BookingV2::PageSerializer
     end
   end
 
+  # Link curto quando a página tem nome (#1282); senão o `/book/<slug>` de sempre.
   def link_url(link)
-    "#{base_url}/book/#{link.slug}"
+    Crm::BookingV2::ShortLink.url_for(profile, link: link)
   end
 
   def attachment_url(attachment)
@@ -154,10 +155,6 @@ class Crm::BookingV2::PageSerializer
   def public_url
     return if profile.assignment_mode_per_agent?
 
-    "#{base_url}/book/#{profile.slug}"
-  end
-
-  def base_url
-    ENV.fetch('FRONTEND_URL', '').to_s.chomp('/')
+    Crm::BookingV2::ShortLink.url_for(profile)
   end
 end

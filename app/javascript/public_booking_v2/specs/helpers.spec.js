@@ -31,7 +31,7 @@ import {
 } from '../helpers/phone';
 import { newRequestId } from '../helpers/requestId';
 import { safeAbsoluteUrl, safeUrl } from '../helpers/url';
-import { parseRoute } from '../composables/useBookingFlow';
+import { parseRoute, shortLinkSlug } from '../composables/useBookingFlow';
 
 // Montado em partes para o lint não confundir o teste com uso de `javascript:`.
 const SCRIPT = ['java', 'script:'].join('');
@@ -231,6 +231,35 @@ describe('routes and locations', () => {
       false
     );
     expect(parseRoute('/other', '')).toEqual({ code: null, slug: null });
+  });
+
+  // Link curto (#1282): o slug não está no endereço, vem da casca.
+  it('reads the short link /a/:name with the slug the server resolved', () => {
+    expect(parseRoute('/a/clinica-viva', '?preview=tk', 'slug-1')).toEqual({
+      code: null,
+      slug: 'slug-1',
+      preview: 'tk',
+    });
+    expect(parseRoute('/a/clinica-viva/ana', '', 'slug-ana')).toEqual({
+      code: null,
+      slug: 'slug-ana',
+      preview: null,
+    });
+    // Nome que o servidor não achou: sem slug, a página mostra "não encontrada".
+    expect(parseRoute('/a/nao-existe', '').slug).toBeNull();
+    // O slug da casca só vale no link curto.
+    expect(parseRoute('/book/conversa', '', 'slug-1').slug).toBe('conversa');
+    expect(parseRoute('/a', '', 'slug-1')).toEqual({ code: null, slug: null });
+  });
+
+  it('reads the resolved slug from the page shell', () => {
+    const root = document.implementation.createHTMLDocument('');
+    expect(shortLinkSlug(root)).toBeNull();
+    const meta = root.createElement('meta');
+    meta.setAttribute('name', 'booking-slug');
+    meta.setAttribute('content', 'slug-1');
+    root.head.appendChild(meta);
+    expect(shortLinkSlug(root)).toBe('slug-1');
   });
 
   it('maps unknown location types to a generic label', () => {

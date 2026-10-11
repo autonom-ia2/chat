@@ -23,7 +23,8 @@ class Crm::Subjects::Notifier
   private
 
   def tokens
-    users = @conversation.inbox.members.to_a | @conversation.account.administrators.to_a
+    # Acesso por funil (#1148): o aviso de assunto não vai a quem o funil esconde.
+    users = Crm::Access::Recipients.inbox_members(@conversation).to_a | @conversation.account.administrators.to_a
     users.filter_map(&:pubsub_token)
   end
 end

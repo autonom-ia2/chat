@@ -32,6 +32,11 @@ class Crm::BookingPagePolicy < ApplicationPolicy
     manage? && account_user&.administrator? == true
   end
 
+  # Link curto (#1282): conferir se um nome está livre responde sobre a instalação inteira; só quem gerencia páginas.
+  def short_name?
+    manage?
+  end
+
   class Scope < ApplicationPolicy::Scope
     def resolve
       scope.where(account_id: account.id).new_pages

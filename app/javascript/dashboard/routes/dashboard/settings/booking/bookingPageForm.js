@@ -10,6 +10,7 @@ import {
   STEP,
 } from './constants';
 import { noticeTemplatesPayload } from './bookingNotices';
+import { addressProblem } from './bookingAddress';
 
 // Converte a página da API (PageSerializer#full) no formulário do assistente e
 // de volta. Funções puras: o assistente guarda um formulário só, e voltar um
@@ -29,6 +30,7 @@ export const pageToForm = page => {
   const hours = page.working_hours || {};
   return {
     title: page.title || '',
+    shortName: page.short_name || '',
     durationMinutes: page.duration_minutes || 30,
     slotDurations: [...(page.slot_durations || [])],
     peopleIds: (page.people || []).map(person => person.id),
@@ -71,6 +73,8 @@ const usesCalendar = form =>
 // sem eles, a página não fica presa a caixa nenhuma.
 const basePayload = form => ({
   title: form.title.trim(),
+  // Endereço da página (#1282): vazio tira o link curto.
+  short_name: form.shortName,
   duration_minutes: form.durationMinutes,
   slot_durations: form.slotDurations.filter(
     minutes => minutes !== form.durationMinutes
@@ -129,6 +133,7 @@ const locationProblem = item => {
 export const stepProblem = (step, form) => {
   if (step === STEP.CONTE) {
     if (!form.title.trim()) return 'TITLE';
+    if (addressProblem(form.shortName)) return 'SHORT_NAME';
     if (!form.peopleIds.length) return 'PEOPLE';
   }
   if (step === STEP.ONDE) {
@@ -158,6 +163,7 @@ const SERVER_ERROR_CODES = {
   'crm.booking_v2.notice_inbox_invalid': 'NOTICE_INBOX_GONE',
 };
 const SERVER_ERROR_FIELDS = {
+  short_name: 'SHORT_NAME',
   locations: 'LOCATIONS',
   working_hours: 'HOURS',
   min_notice_minutes: 'HOURS',

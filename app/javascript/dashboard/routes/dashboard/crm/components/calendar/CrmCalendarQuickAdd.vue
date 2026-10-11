@@ -5,6 +5,7 @@ import { format } from 'date-fns';
 import { ptBR, enUS } from 'date-fns/locale';
 
 import CrmKanbanAPI from 'dashboard/api/crmKanban';
+import crmBookingPagesAPI from 'dashboard/api/crmBookingPages';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
 import ComboBox from 'dashboard/components-next/combobox/ComboBox.vue';
@@ -17,6 +18,8 @@ const props = defineProps({
   pipelineId: { type: [String, Number], default: null },
   defaultType: { type: String, default: 'reminder' },
   meetingsEnabled: { type: Boolean, default: false },
+  // Agendamento novo ligado na conta (`isBookingV2Available`).
+  bookingV2: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['create', 'moreOptions', 'scheduleMeeting', 'close']);
@@ -210,12 +213,43 @@ const confirmLabel = computed(() => {
   return t('CRM_KANBAN.CALENDAR.QUICK_ADD.CONTINUE');
 });
 
+// Dica da reunião (#1285): com o agendamento novo e uma página que serve (o
+// mesmo critério da janela seguinte para abrir a agenda), o Continuar leva aos
+// dias e horários livres, e a dica diz isso. Sem a flag ou sem página, a
+// janela seguinte é a do Google/Microsoft e a dica antiga continua.
+const hasAgenda = ref(false);
+const isCheckingAgenda = ref(false);
+let agendaRequest = 0;
+const checkAgenda = async () => {
+  agendaRequest += 1;
+  const current = agendaRequest;
+  hasAgenda.value = false;
+  isCheckingAgenda.value = false;
+  if (!props.show || !props.bookingV2 || type.value !== 'meeting') return;
+
+  isCheckingAgenda.value = true;
+  try {
+    const { data } = await crmBookingPagesAPI.bookable();
+    if (current !== agendaRequest) return;
+    hasAgenda.value = (data?.payload || []).length > 0;
+  } catch {
+    // Sem acesso ou com falha, fica a dica antiga; a janela seguinte mostra
+    // o erro dela, com "Tentar de novo".
+  } finally {
+    if (current === agendaRequest) isCheckingAgenda.value = false;
+  }
+};
+watch(() => [props.show, props.bookingV2, type.value], checkAgenda);
+
 // Meeting → Continuar opens the scheduler (not the card), so the hint differs.
-const advancedHintKey = computed(() =>
-  type.value === 'meeting'
-    ? 'CRM_KANBAN.CALENDAR.QUICK_ADD.MEETING_HINT'
-    : 'CRM_KANBAN.CALENDAR.QUICK_ADD.ADVANCED_HINT'
-);
+const advancedHintKey = computed(() => {
+  if (type.value !== 'meeting') {
+    return 'CRM_KANBAN.CALENDAR.QUICK_ADD.ADVANCED_HINT';
+  }
+  return hasAgenda.value
+    ? 'CRM_KANBAN.CALENDAR.QUICK_ADD.MEETING_HINT_AGENDA'
+    : 'CRM_KANBAN.CALENDAR.QUICK_ADD.MEETING_HINT';
+});
 
 const onConfirm = () => {
   if (!canSave.value) return;
@@ -349,8 +383,9 @@ const onClose = () => emit('close');
       </fieldset>
 
       <p
-        v-if="!isQuickType"
+        v-if="!isQuickType && !isCheckingAgenda"
         class="mb-0 rounded-lg bg-n-alpha-1 px-3 py-2 text-xs text-n-slate-11"
+        data-quick-add-hint
       >
         {{ t(advancedHintKey) }}
       </p>

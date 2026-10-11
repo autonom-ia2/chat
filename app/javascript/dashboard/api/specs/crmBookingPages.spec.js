@@ -37,6 +37,18 @@ describe('#CrmBookingPagesAPI', () => {
     expect(axiosMock.delete).toHaveBeenCalledWith(`${BASE}/4`);
   });
 
+  // Endereço da página (#1282): conferir se está livre ou pedir uma sugestão.
+  it('confere o endereço da página e pede sugestão pelo nome', () => {
+    crmBookingPages.shortName({ name: 'clinica-viva', pageId: 4 });
+    crmBookingPages.shortName({ title: 'Clínica Viva', pageId: 4 });
+    expect(axiosMock.get).toHaveBeenNthCalledWith(1, `${BASE}/short_name`, {
+      params: { name: 'clinica-viva', title: undefined, page_id: 4 },
+    });
+    expect(axiosMock.get).toHaveBeenNthCalledWith(2, `${BASE}/short_name`, {
+      params: { name: undefined, title: 'Clínica Viva', page_id: 4 },
+    });
+  });
+
   it('cria a partir de um modelo, com nome só quando vem', () => {
     crmBookingPages.create({ templateKey: 'sales_30' });
     crmBookingPages.create({ templateKey: 'blank', title: 'Conversa' });

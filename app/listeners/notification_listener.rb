@@ -3,7 +3,8 @@ class NotificationListener < BaseListener
     conversation, account = extract_conversation_and_account(event)
     return if conversation.pending?
 
-    conversation.inbox.members.each do |agent|
+    # Acesso por funil (#1148): quem o funil esconde não é avisado de conversa nova.
+    Crm::Access::Recipients.inbox_members(conversation).each do |agent|
       NotificationBuilder.new(
         notification_type: 'conversation_creation',
         user: agent,
@@ -17,7 +18,8 @@ class NotificationListener < BaseListener
     conversation, account = extract_conversation_and_account(event)
     return if conversation.pending?
 
-    conversation.inbox.members.each do |agent|
+    # Acesso por funil (#1148): quem o funil esconde não é avisado de conversa nova.
+    Crm::Access::Recipients.inbox_members(conversation).each do |agent|
       NotificationBuilder.new(
         notification_type: 'conversation_creation',
         user: agent,

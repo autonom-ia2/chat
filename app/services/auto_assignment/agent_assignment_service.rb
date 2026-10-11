@@ -68,7 +68,15 @@ class AutoAssignment::AgentAssignmentService
     # Hence taking an intersection of online agents and allowed member ids
 
     # the online user ids are string, since its from redis, allowed member ids are integer, since its from active record
-    @allowed_online_agent_ids ||= online_agent_ids & allowed_agent_ids&.map(&:to_s)
+    @allowed_online_agent_ids ||= begin
+      ids = online_agent_ids & allowed_agent_ids&.map(&:to_s)
+      ids.is_a?(Array) ? ids - funnel_blocked_ids : ids
+    end
+  end
+
+  # Acesso por funil (#1148): o rodízio só escolhe quem pode ver a conversa.
+  def funnel_blocked_ids
+    Crm::Access::Recipients.new(conversation).blocked_user_ids.map(&:to_s)
   end
 
   def round_robin_manage_service

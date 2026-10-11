@@ -3,14 +3,19 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import BookingField from '../BookingField.vue';
+import BookingAddressField from '../BookingAddressField.vue';
 import BookingToggle from '../BookingToggle.vue';
 import { DURATION_OPTIONS } from '../../constants';
 import { formatMinutes } from '../../bookingFormat';
 
-// Passo 2: nome que o cliente vê, quanto tempo dura e quem atende. Já vem
-// preenchido pelo modelo; a pessoa só confere ou troca.
+// Passo 2: nome que o cliente vê, o endereço da página (#1282, sugerido a
+// partir do nome), quanto tempo dura e quem atende. Já vem preenchido pelo
+// modelo; a pessoa só confere ou troca.
 const props = defineProps({
   form: { type: Object, required: true },
+  pageId: { type: Number, default: null },
+  // O endereço que a página já tem salvo ('' = nenhum).
+  savedShortName: { type: String, default: '' },
   people: { type: Array, default: () => [] },
   // 'loading' | 'error' | 'ready'
   peopleState: { type: String, default: 'ready' },
@@ -51,6 +56,17 @@ const togglePerson = id => {
       :label="t('BOOKING.ABOUT.NAME_LABEL')"
       :error="error === 'TITLE' ? t('BOOKING.WIZARD.ERRORS.TITLE') : ''"
       @update:model-value="emit('change', { title: $event })"
+    />
+
+    <BookingAddressField
+      :model-value="form.shortName"
+      :title="form.title"
+      :page-id="pageId"
+      :saved-name="savedShortName"
+      :error="
+        error === 'SHORT_NAME' ? t('BOOKING.WIZARD.ERRORS.SHORT_NAME') : ''
+      "
+      @update:model-value="emit('change', { shortName: $event })"
     />
 
     <div class="flex flex-col gap-2">

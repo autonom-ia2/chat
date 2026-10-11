@@ -4699,6 +4699,7 @@
           "min_notice_minutes": {},
           "notice_preset": {},
           "notice_templates": {},
+          "short_name": {},
           "slot_durations": {
             "tipo": "lista"
           },
@@ -4791,6 +4792,7 @@
         },
         "tipo": "objeto"
       },
+      "short_name": {},
       "slot_durations": {
         "tipo": "lista"
       },
@@ -13501,12 +13503,12 @@
     "controller": "api/v1/accounts/crm/booking_page_meetings#create",
     "modelo": "Crm::Card",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/booking_page_meetings_controller.rb:35",
-      "app/controllers/api/v1/accounts/crm/booking_page_meetings_controller.rb:83",
-      "app/controllers/api/v1/accounts/crm/booking_page_meetings_controller.rb:70",
-      "app/controllers/api/v1/accounts/crm/booking_page_meetings_controller.rb:65",
-      "app/controllers/api/v1/accounts/crm/booking_page_meetings_controller.rb:64",
-      "app/controllers/api/v1/accounts/crm/booking_page_meetings_controller.rb:57"
+      "app/controllers/api/v1/accounts/crm/booking_page_meetings_controller.rb:37",
+      "app/controllers/api/v1/accounts/crm/booking_page_meetings_controller.rb:85",
+      "app/controllers/api/v1/accounts/crm/booking_page_meetings_controller.rb:72",
+      "app/controllers/api/v1/accounts/crm/booking_page_meetings_controller.rb:67",
+      "app/controllers/api/v1/accounts/crm/booking_page_meetings_controller.rb:66",
+      "app/controllers/api/v1/accounts/crm/booking_page_meetings_controller.rb:59"
     ],
     "sem_corpo": false
   },
@@ -22054,6 +22056,7 @@
           "min_notice_minutes": {},
           "notice_preset": {},
           "notice_templates": {},
+          "short_name": {},
           "slot_durations": {
             "tipo": "lista"
           },
@@ -22146,6 +22149,7 @@
         },
         "tipo": "objeto"
       },
+      "short_name": {},
       "slot_durations": {
         "tipo": "lista"
       },

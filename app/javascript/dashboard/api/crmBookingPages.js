@@ -51,6 +51,14 @@ class CrmBookingPagesAPI extends ApiClient {
     return axios.post(`${this.url}/${id}/save_identity`);
   }
 
+  // Endereço da página (#1282): com `name`, diz se está livre; só com `title`,
+  // sugere um. `pageId` é a página que já pode ser a dona do nome.
+  shortName({ name, title, pageId } = {}) {
+    return axios.get(`${this.url}/short_name`, {
+      params: { name, title, page_id: pageId },
+    });
+  }
+
   people(id) {
     return axios.get(`${this.url}/${id}/people`);
   }
