@@ -51,7 +51,7 @@ class Crm::FollowUpPolicy < ApplicationPolicy
 
   def card_funnel_member?
     card = record.card
-    card.nil? || Crm::Access::CardGuard.new(user: user, account: account, account_user: account_user).move_allowed?(card, card.pipeline_id)
+    card.nil? || Crm::Access::CardGuard.new(user: user, account: account, account_user: account_user).edit_allowed?(card)
   end
 end
 

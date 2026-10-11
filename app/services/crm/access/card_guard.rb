@@ -20,6 +20,14 @@ class Crm::Access::CardGuard
     pipeline_allowed_in?([card.inbox_id] + conversations.map(&:inbox_id), pipeline_id)
   end
 
+  # Mexer no card (#1148, decisão b): ter o funil do card na caixa dele e nas das conversas dele. Não exige ver as
+  # conversas: card arquivado ou resolvido solta a conversa para a triagem, e quem tem o funil precisa poder reabri-lo.
+  def edit_allowed?(card)
+    return true unless @scope.restricted?
+
+    pipeline_allowed_in?([card.inbox_id] + card_conversations(card).map(&:inbox_id), card.pipeline_id)
+  end
+
   def create_allowed?(pipeline_id, conversation:, inbox_id: nil)
     return true unless @scope.restricted?
 

@@ -24,6 +24,7 @@ class Api::V1::Accounts::Crm::BookingInvitesController < Api::V1::Accounts::Crm:
   end
 
   def create
+    ensure_card_funnel!(client_card) if client_card
     creator = ::Crm::BookingV2::InviteCreator.new(
       account: Current.account, user: Current.user, page_id: params[:booking_page_id].presence,
       client: { card: client_card, conversation: client_conversation, contact: client_contact_param }
@@ -89,6 +90,12 @@ class Api::V1::Accounts::Crm::BookingInvitesController < Api::V1::Accounts::Crm:
     return if params[:card_id].blank?
 
     @client_card ||= Current.account.crm_cards.find(params[:card_id]).tap { |card| authorize card, :show? }
+  end
+
+  # Acesso por funil (#1148, decisão b): criar o convite põe a reunião no card; é mexer nele e exige o funil dele.
+  def ensure_card_funnel!(card)
+    guard = ::Crm::Access::CardGuard.new(user: Current.user, account: Current.account, account_user: Current.account_user)
+    raise Pundit::NotAuthorizedError unless guard.edit_allowed?(card)
   end
 
   def client_conversation
