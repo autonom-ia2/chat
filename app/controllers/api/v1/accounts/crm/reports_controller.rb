@@ -1,8 +1,9 @@
 class Api::V1::Accounts::Crm::ReportsController < Api::V1::Accounts::Crm::BaseController
   before_action :authorize_reports
+  before_action :ensure_visible_pipeline, except: :pipelines
 
   def pipelines
-    options = Current.account.crm_pipelines.order(:position, :id).map do |pipeline|
+    options = report_pipelines.order(:position, :id).map do |pipeline|
       { id: pipeline.id, name: pipeline.name, is_default: pipeline.is_default }
     end
     render json: { payload: options }
@@ -47,9 +48,29 @@ class Api::V1::Accounts::Crm::ReportsController < Api::V1::Accounts::Crm::BaseCo
     authorize %i[crm report], :view?
   end
 
+  # Quem tem acesso por funil e não enxerga funil nenhum fica sem relatório: sem funil, alguns relatórios somariam a
+  # conta inteira.
   def render_report(builder_class)
-    payload = builder_class.new(account: Current.account, params: report_params).perform
+    return render json: { payload: nil } if visible_pipelines.restricted? && report_pipelines.none?
+
+    payload = builder_class.new(account: Current.account, params: report_params, pipelines: report_pipelines).perform
     render json: { payload: payload }
+  end
+
+  # Acesso por funil (#1148, PR D): o painel só mostra os funis da pessoa; pedir o relatório de outro funil é 404.
+  def ensure_visible_pipeline
+    return if params[:pipeline_id].blank? || !visible_pipelines.restricted?
+
+    report_pipelines.find(params[:pipeline_id])
+  end
+
+  def report_pipelines
+    @report_pipelines ||= visible_pipelines.apply_to_reports(Current.account.crm_pipelines)
+  end
+
+  def visible_pipelines
+    @visible_pipelines ||= Crm::Access::VisiblePipelines.new(user: Current.user, account: Current.account,
+                                                             account_user: Current.account_user)
   end
 
   def report_params

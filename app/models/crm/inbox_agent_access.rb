@@ -27,7 +27,14 @@ class Crm::InboxAgentAccess < ApplicationRecord
     errors.add(:inbox_id, 'must belong to the account') if inbox && inbox.account_id != account_id
   end
 
+  # Usuário de integração (token do n8n, MCP) não tem acesso por funil (#1148, PR D, decisão do Rodrigo em 11/10): o
+  # alcance dele é o escopo do token, e uma restrição o faria ver só parte das conversas sem erro nenhum.
   def user_must_belong_to_account
-    errors.add(:user_id, 'must belong to the account') if user && !AccountUser.exists?(account_id: account_id, user_id: user_id)
+    return if user.nil?
+
+    account_user = AccountUser.find_by(account_id: account_id, user_id: user_id)
+    return errors.add(:user_id, 'must belong to the account') if account_user.nil?
+
+    errors.add(:user_id, 'must not be an integration user') if account_user.integration?
   end
 end

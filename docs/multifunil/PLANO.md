@@ -178,3 +178,10 @@ A Entrega 3 precisa de uma conta com **mais de um funil** para o piloto do acess
   vitalício). Ser mencionado por outra pessoa continua liberando. Vai em PR próprio.
 - **Card nasce depois da conversa (11/10):** o intervalo sem card é triagem (R3). Quando o card nasce, quem passa a
   ver recebe o aviso em tempo real e o rodízio roda de novo. Vai no PR C (eventos do card).
+- **Funis visíveis (11/10, PR D):** o seletor de funil do Kanban, as etapas e o painel do CRM (relatórios e resumo da
+  Meta) mostram só os funis da pessoa; administrador vê todos. Funil da pessoa: ligado a uma caixa em que ela é membro
+  sem restrição, liberado na caixa em que ela tem restrição, ou sem caixa nenhuma (avulso). Em "Só as suas" os funis da
+  caixa aparecem no Kanban (só com os cards dela), mas não no painel, que soma os cards dos outros. Pedir o relatório de
+  outro funil responde 404; sem funil nenhum no painel, não há relatório. A soma da CTWA e a contagem por etapa contam
+  só os cards que a pessoa vê. Usuário de integração (token do n8n, MCP) não pode ter linha de acesso: o alcance dele é
+  o escopo do token. O consumo de IA continua da conta inteira (é custo, não número de funil).

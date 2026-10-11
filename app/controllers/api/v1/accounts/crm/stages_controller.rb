@@ -10,7 +10,8 @@ class Api::V1::Accounts::Crm::StagesController < Api::V1::Accounts::Crm::BaseCon
     @stages_count = @stages.count
     # One grouped query instead of N — the funnel-edit drawer needs the real (all-status)
     # count per stage to warn before a delete that the backend would otherwise reject.
-    @cards_count_by_stage = Crm::Card.where(stage_id: @stages.map(&:id)).group(:stage_id).count
+    # Acesso por funil (#1148, PR D): quem tem restrição conta só os cards que vê.
+    @cards_count_by_stage = card_scope.apply(Crm::Card.where(stage_id: @stages.map(&:id))).group(:stage_id).count
   end
 
   def create
@@ -58,6 +59,10 @@ class Api::V1::Accounts::Crm::StagesController < Api::V1::Accounts::Crm::BaseCon
   def fetch_stage
     @stage = policy_scope(::Crm::PipelineStage).find(params[:id])
     authorize @stage
+  end
+
+  def card_scope
+    ::Crm::Access::CardScope.new(user: Current.user, account: Current.account, account_user: Current.account_user)
   end
 
   def stage_params
