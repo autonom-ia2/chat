@@ -147,6 +147,18 @@ RSpec.describe Crm::BookingV2::ShortName do
       expect(second_page.errors[:short_name]).to eq(['taken'])
     end
 
+    it 'limpa a memória do endereço no reload' do
+      page
+      Crm::BookingAccountAddress.delete_all
+      fresh = Crm::AgentBookingProfile.find(page.id)
+      expect(fresh.booking_account_address).to be_nil
+
+      Crm::BookingV2::AccountAddress.ensure!(account)
+
+      expect(fresh.booking_account_address).to be_nil
+      expect(fresh.reload.booking_account_address).to eq(Crm::BookingV2::AccountAddress.name_for(account))
+    end
+
     it 'grava a página mesmo quando o endereço da conta não nasce, e tenta de novo na gravação seguinte' do
       Crm::BookingAccountAddress.delete_all
       allow(Crm::BookingV2::AccountAddress).to receive(:ensure!).and_raise(ActiveRecord::RecordNotUnique, 'endereço: 5 tentativas')
@@ -155,12 +167,34 @@ RSpec.describe Crm::BookingV2::ShortName do
       page.update!(short_name: 'clinica-viva')
 
       expect(page.reload.short_name).to eq('clinica-viva')
-      expect(Crm::BookingV2::ShortLink.path_for(page)).to eq("/book/#{page.slug}")
+      expect(Crm::BookingAccountAddress.count).to eq(0)
+      expect(Crm::BookingV2::ShortLink.path_for(Crm::AgentBookingProfile.find(page.id))).to eq("/book/#{page.slug}")
       expect(Rails.logger).to have_received(:error).with(a_string_including('[booking_account_address]')).at_least(:once)
 
       allow(Crm::BookingV2::AccountAddress).to receive(:ensure!).and_call_original
       page.update!(title: 'Outro título')
-      expect(Crm::BookingV2::ShortLink.path_for(page)).to start_with('/a/')
+      expect(Crm::BookingV2::ShortLink.path_for(Crm::AgentBookingProfile.find(page.id))).to start_with('/a/')
+    end
+
+    it 'o endereço da conta nasce depois do commit da página, e uma falha de banco não desfaz a página' do
+      Crm::BookingAccountAddress.delete_all
+      allow(Crm::BookingV2::AccountAddress).to receive(:ensure!).and_raise(ActiveRecord::LockWaitTimeout, 'trava de teste')
+      allow(Rails.logger).to receive(:error)
+
+      page.update!(short_name: 'clinica-viva')
+
+      expect(Crm::AgentBookingProfile.find(page.id).short_name).to eq('clinica-viva')
+      expect(Crm::BookingAccountAddress.count).to eq(0)
+
+      allow(Crm::BookingV2::AccountAddress).to receive(:ensure!).and_call_original
+      seen = []
+      Crm::AgentBookingProfile.transaction do
+        page.update!(title: 'Dentro da transação')
+        seen << Crm::BookingAccountAddress.count
+      end
+      # Dentro da transação da página o endereço ainda não existe; ele nasce no commit.
+      expect(seen).to eq([0])
+      expect(Crm::BookingAccountAddress.pluck(:account_id)).to eq([account.id])
     end
 
     it 'não tem mais o índice único global' do

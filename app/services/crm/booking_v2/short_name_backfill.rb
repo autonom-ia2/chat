@@ -14,6 +14,8 @@
 class Crm::BookingV2::ShortNameBackfill
   # `accounts`: contas em que algo foi gravado; `pages`: páginas que ganharam nome.
   Result = Struct.new(:accounts, :pages, :failed_account_ids)
+  # Uma trava ou impasse com uma gravação do painel no mesmo instante desfaz a conta inteira; ela tenta mais uma vez.
+  ATTEMPTS = 2
 
   def self.run
     new.run
@@ -22,7 +24,7 @@ class Crm::BookingV2::ShortNameBackfill
   def run
     result = Result.new(0, 0, [])
     ::Account.where(id: ::Crm::AgentBookingProfile.new_pages.select(:account_id)).find_each do |account|
-      address_created, pages = backfill(account)
+      address_created, pages = backfill_with_retry(account)
       result.pages += pages
       result.accounts += 1 if address_created || pages.positive?
     rescue StandardError => e
@@ -33,6 +35,17 @@ class Crm::BookingV2::ShortNameBackfill
   end
 
   private
+
+  def backfill_with_retry(account)
+    tries = 0
+    begin
+      tries += 1
+      backfill(account)
+    rescue ActiveRecord::TransactionRollbackError, ActiveRecord::LockWaitTimeout
+      retry if tries < ATTEMPTS
+      raise
+    end
+  end
 
   def backfill(account)
     ::Crm::AgentBookingProfile.transaction do

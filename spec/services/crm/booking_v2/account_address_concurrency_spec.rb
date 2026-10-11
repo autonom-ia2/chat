@@ -85,6 +85,8 @@ RSpec.describe Crm::BookingV2::AccountAddress, :relationships_committed_fixtures
     end
 
     expect(name).to eq('corrida-endereco-2')
+    # A primeira tentativa bateu no índice único dentro da transação de quem chamou; a segunda gravou.
+    expect(attempts).to eq([nil, 'corrida-endereco-2'])
     expect(addresses).to eq([[account.id, 'corrida-endereco-2'], [other_account.id, 'corrida-endereco']])
   end
 end

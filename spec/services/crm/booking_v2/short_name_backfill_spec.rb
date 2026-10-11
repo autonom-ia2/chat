@@ -83,7 +83,9 @@ RSpec.describe Crm::BookingV2::ShortNameBackfill do
 
     run_as_before_deploy
 
-    expect(Crm::BookingAccountAddress.order(:account_id).pluck(:name)).to eq(%w[clinica-viva clinica-viva-2])
+    # As contas passam em ordem de id: a mais antiga fica com o nome, a outra com o número.
+    expect(Crm::BookingAccountAddress.pluck(:account_id, :name))
+      .to contain_exactly([other_account.id, 'clinica-viva'], [account.id, 'clinica-viva-2'])
     expect([page, other_page].map { |item| item.reload.short_name }).to eq(%w[consulta consulta])
   end
 
@@ -119,6 +121,20 @@ RSpec.describe Crm::BookingV2::ShortNameBackfill do
 
     expect(described_class.run.to_a).to eq([0, 0, []])
     expect(page.reload.short_name).to eq('escolhido-agora')
+  end
+
+  it 'tenta a conta de novo uma vez quando bate numa trava com o painel' do
+    page.update_column(:short_name, nil) # rubocop:disable Rails/SkipsModelValidations
+    calls = 0
+    allow(Crm::BookingV2::ShortName).to receive(:suggest).and_wrap_original do |original, *args, **options|
+      calls += 1
+      raise ActiveRecord::Deadlocked, 'impasse de teste' if calls == 1
+
+      original.call(*args, **options)
+    end
+
+    expect(run_as_before_deploy.to_a).to eq([1, 1, []])
+    expect(page.reload.short_name).to eq('conversa-de-30-min')
   end
 
   it 'não toca página antiga (page_version 1)' do

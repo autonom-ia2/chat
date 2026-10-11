@@ -19,7 +19,7 @@ module Crm::BookingShortName
     validate :short_name_must_be_usable, if: -> { short_name.present? && will_save_change_to_short_name? }
     around_save :report_short_name_race
     after_save :name_people_in_short_link, if: -> { saved_change_to_short_name? && short_name.present? }
-    after_save :ensure_booking_account_address, if: :new_page?
+    after_commit :ensure_booking_account_address, on: %i[create update], if: :new_page?
   end
 
   # O `<conta>` do link curto desta página, ou nil se a conta ainda não tem endereço. Só lê: o endereço da conta nasce
@@ -27,7 +27,12 @@ module Crm::BookingShortName
   def booking_account_address
     return @booking_account_address if defined?(@booking_account_address)
 
-    @booking_account_address = ::Crm::BookingV2::AccountAddress.name_for(account)
+    @booking_account_address = ::Crm::BookingV2::AccountAddress.name_for_id(account_id)
+  end
+
+  def reload(*)
+    remove_instance_variable(:@booking_account_address) if defined?(@booking_account_address)
+    super
   end
 
   private
@@ -53,12 +58,13 @@ module Crm::BookingShortName
     raise ActiveRecord::RecordInvalid, self
   end
 
-  # A página nunca deixa de ser gravada por causa do endereço da conta: se ele não nasce agora (todas as tentativas
-  # perderam a disputa do nome), fica o registro no log, a página segue com o link comprido e a próxima gravação tenta
-  # de novo. `ensure!` grava em savepoint, então a falha não desfaz a gravação da página.
+  # Depois do commit da página, fora da transação dela: a gravação da página não espera nem segura a linha do
+  # endereço, e duas gravações (ou a página e o preenchimento do deploy) não se travam uma à outra. A página nunca deixa
+  # de ser gravada por causa do endereço: se ele não nasce agora (disputa perdida em todas as voltas, trava, banco
+  # fora), fica o registro no log, a página segue com o link comprido e a próxima gravação tenta de novo.
   def ensure_booking_account_address
     @booking_account_address = ::Crm::BookingV2::AccountAddress.ensure!(account)
-  rescue ActiveRecord::RecordNotUnique => e
+  rescue ActiveRecord::ActiveRecordError => e
     Rails.logger.error("[booking_account_address] conta #{account_id}: #{e.message}")
     @booking_account_address = nil
   end

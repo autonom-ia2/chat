@@ -7,12 +7,19 @@
 # Leitura não cria endereço: conta sem endereço numa leitura segue com o link comprido. Ainda não há tela para trocar.
 #
 # Um endereço de conta não pode ser igual ao nome de página de OUTRA conta: o link antigo `/a/<página>` (#1282)
-# continua abrindo enquanto o nome for de uma página só, e um endereço de conta igual passaria na frente dele.
+# continua abrindo enquanto o nome for de uma página só, e um endereço de conta igual passaria na frente dele. O
+# contrário pode, de propósito: a página com nome igual ao endereço de outra conta abre pelo endereço da própria conta,
+# e o endereço alheio nunca a alcança (`ShortLink.resolve` fica dentro da conta do primeiro pedaço). Barrar esse nome
+# faria a conferência do painel revelar endereços de outras contas.
 class Crm::BookingV2::AccountAddress
   CREATE_TRIES = 5
 
   def self.name_for(account)
-    ::Crm::BookingAccountAddress.where(account_id: account.id).pick(:name)
+    name_for_id(account.id)
+  end
+
+  def self.name_for_id(account_id)
+    ::Crm::BookingAccountAddress.where(account_id: account_id).pick(:name)
   end
 
   # O endereço da conta, criando se ainda não existe. Pode ser chamado quantas vezes for: os índices únicos garantem
