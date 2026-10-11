@@ -34,10 +34,13 @@ vi.mock('dashboard/api/crmBookingPages', () => ({
 
 // Modelos aprovados da caixa vêm do store de caixas (inboxes/getFilteredWhatsAppTemplates).
 const templatesGetter = vi.fn(() => []);
+// O painel relê o usuário (validityCheck) quando a foto vira a do perfil (#1298).
+const storeDispatch = vi.fn();
 config.global.provide = {
   ...config.global.provide,
   store: {
     getters: { 'inboxes/getFilteredWhatsAppTemplates': templatesGetter },
+    dispatch: storeDispatch,
   },
 };
 vi.mock('dashboard/api/crmKanban', () => ({
@@ -408,7 +411,8 @@ describe('BookingWizard', () => {
       expect(BookingPagesAPI.uploadImage).toHaveBeenCalledWith(
         7,
         'photo',
-        photo
+        photo,
+        { applyToProfile: false }
       );
       expect(wrapper.find('[data-photo] img').attributes('src')).toBe(
         'https://cdn.exemplo.com/foto.png'
@@ -746,6 +750,8 @@ describe('BookingWizard', () => {
               photo_url: 'https://cdn.exemplo.com/f.png',
             },
             photo_url: 'https://cdn.exemplo.com/f.png',
+            assignment_mode: 'fixed',
+            host: { id: 1, name: 'Maria' },
             can_save_identity: true,
           })
         )
@@ -758,6 +764,29 @@ describe('BookingWizard', () => {
       await flushPromises();
       expect(wrapper.find('[data-identity-notice]').text()).toBe(
         'BOOKING.LOOK.IDENTITY.SAVED'
+      );
+    });
+
+    it('página com um link por pessoa não guarda foto, mesmo com foto e uma pessoa só', async () => {
+      BookingPagesAPI.saveIdentity.mockImplementation(() =>
+        reply(
+          fullPage({
+            identity: IDENTITY,
+            photo_url: 'https://cdn.exemplo.com/f.png',
+            assignment_mode: 'per_agent',
+            host: null,
+            can_save_identity: true,
+          })
+        )
+      );
+      const wrapper = await openAtStep(
+        5,
+        fullPage({ can_save_identity: true })
+      );
+      await wrapper.find('[data-save-identity]').trigger('click');
+      await flushPromises();
+      expect(wrapper.find('[data-identity-notice]').text()).toBe(
+        'BOOKING.LOOK.IDENTITY.SAVED_NO_PHOTO'
       );
     });
 
@@ -779,6 +808,220 @@ describe('BookingWizard', () => {
       );
       expect(wrapper.find('[data-identity-notice]').exists()).toBe(false);
       expect(currentStep(wrapper)).toBe('CARA');
+    });
+  });
+
+  describe('passo 5: a foto de quem atende e a foto do perfil (#1298)', () => {
+    const AVATAR = 'https://cdn.exemplo.com/perfil.png';
+    const NEW_PHOTO = 'https://cdn.exemplo.com/nova.png';
+    const png = () => new File(['x'], 'foto.png', { type: 'image/png' });
+    const mine = (extra = {}) => ({
+      name: 'Maria',
+      mine: true,
+      profile_url: AVATAR,
+      profile_updated: false,
+      ...extra,
+    });
+
+    const pick = async (wrapper, picked = png()) => {
+      const input = wrapper.find('[data-photo] [data-file]');
+      Object.defineProperty(input.element, 'files', {
+        value: [picked],
+        configurable: true,
+      });
+      await input.trigger('change');
+      await flushPromises();
+      return picked;
+    };
+    const uploadArgs = () => BookingPagesAPI.uploadImage.mock.calls.at(-1);
+
+    beforeEach(() => {
+      storeDispatch.mockClear();
+      BookingPagesAPI.uploadImage.mockImplementation(() =>
+        reply(fullPage({ photo_url: NEW_PHOTO, photo_owner: mine() }))
+      );
+    });
+
+    it('quem tem foto no perfil já vê essa foto em uso, com Trocar', async () => {
+      const wrapper = await openAtStep(5, fullPage({ photo_owner: mine() }));
+      const card = wrapper.find('[data-photo]');
+      expect(card.find('img').attributes('src')).toBe(AVATAR);
+      expect(card.text()).toContain(
+        'BOOKING.LOOK.PHOTO_CARD.USING_PROFILE_MINE'
+      );
+      expect(card.find('[data-upload]').text()).toBe('BOOKING.LOOK.CHANGE');
+      expect(card.find('[data-photo-notice]').exists()).toBe(false);
+    });
+
+    it('a foto da página vem antes da guardada, e a guardada antes da do perfil', async () => {
+      const saved = 'https://cdn.exemplo.com/guardada.png';
+      const host = { id: 1, name: 'Maria', booking_photo_url: saved };
+      const withSaved = await openAtStep(
+        5,
+        fullPage({ photo_owner: mine(), host })
+      );
+      expect(withSaved.find('[data-photo] img').attributes('src')).toBe(saved);
+      expect(withSaved.find('[data-photo]').text()).toContain(
+        'BOOKING.LOOK.PHOTO_CARD.USING_SAVED'
+      );
+
+      const own = await openAtStep(
+        5,
+        fullPage({ photo_owner: mine(), host, photo_url: NEW_PHOTO })
+      );
+      expect(own.find('[data-photo] img').attributes('src')).toBe(NEW_PHOTO);
+      expect(own.find('[data-photo]').text()).not.toContain('USING_');
+    });
+
+    it('ao trocar, pergunta onde vale em dois cartões; o padrão é só nesta página', async () => {
+      const wrapper = await openAtStep(5, fullPage({ photo_owner: mine() }));
+      const photo = await pick(wrapper);
+
+      expect(BookingPagesAPI.uploadImage).not.toHaveBeenCalled();
+      const box = wrapper.find('[data-photo-choice]');
+      expect(box.attributes('role')).toBe('alertdialog');
+      expect(wrapper.find('select').exists()).toBe(false);
+      const cards = box.findAll('[data-photo-target]');
+      expect(cards.map(card => card.attributes('data-photo-target'))).toEqual([
+        'page',
+        'profile',
+      ]);
+      expect(cards.map(card => card.attributes('aria-checked'))).toEqual([
+        'true',
+        'false',
+      ]);
+      // Tab para só na marcada; a seta troca a opção e volta.
+      expect(cards.map(card => card.attributes('tabindex'))).toEqual([
+        '0',
+        '-1',
+      ]);
+      await cards[0].trigger('keydown', { key: 'ArrowDown' });
+      expect(
+        wrapper.find('[data-photo-target="profile"]').attributes('aria-checked')
+      ).toBe('true');
+      await cards[1].trigger('keydown', { key: 'ArrowUp' });
+      expect(
+        wrapper.find('[data-photo-target="page"]').attributes('aria-checked')
+      ).toBe('true');
+
+      await box.find('[data-photo-choice-send]').trigger('click');
+      await flushPromises();
+      expect(uploadArgs()).toEqual([
+        7,
+        'photo',
+        photo,
+        { applyToProfile: false },
+      ]);
+      expect(storeDispatch).not.toHaveBeenCalled();
+      expect(wrapper.find('[data-photo-choice]').exists()).toBe(false);
+      expect(wrapper.find('[data-photo] img').attributes('src')).toBe(
+        NEW_PHOTO
+      );
+    });
+
+    it('"Também no meu perfil" manda o pedido e o painel relê o usuário', async () => {
+      BookingPagesAPI.uploadImage.mockImplementation(() =>
+        reply(
+          fullPage({
+            photo_url: NEW_PHOTO,
+            photo_owner: mine({
+              profile_url: NEW_PHOTO,
+              profile_updated: true,
+            }),
+          })
+        )
+      );
+      const wrapper = await openAtStep(5, fullPage({ photo_owner: mine() }));
+      const photo = await pick(wrapper);
+
+      await wrapper.find('[data-photo-target="profile"]').trigger('click');
+      expect(
+        wrapper.find('[data-photo-target="profile"]').attributes('aria-checked')
+      ).toBe('true');
+      await wrapper.find('[data-photo-choice-send]').trigger('click');
+      await flushPromises();
+
+      expect(uploadArgs()).toEqual([
+        7,
+        'photo',
+        photo,
+        { applyToProfile: true },
+      ]);
+      expect(storeDispatch).toHaveBeenCalledWith('validityCheck');
+    });
+
+    it('cancelar (ou Esc) não envia nada', async () => {
+      const wrapper = await openAtStep(5, fullPage({ photo_owner: mine() }));
+      await pick(wrapper);
+      await wrapper.find('[data-photo-choice-cancel]').trigger('click');
+      await flushPromises();
+      expect(wrapper.find('[data-photo-choice]').exists()).toBe(false);
+
+      await pick(wrapper);
+      await wrapper
+        .find('[data-photo-choice]')
+        .trigger('keydown', { key: 'Escape' });
+      await flushPromises();
+      expect(wrapper.find('[data-photo-choice]').exists()).toBe(false);
+      expect(BookingPagesAPI.uploadImage).not.toHaveBeenCalled();
+    });
+
+    it('sem foto no perfil: avisa antes e a foto vai para os dois, sem perguntar', async () => {
+      const wrapper = await openAtStep(
+        5,
+        fullPage({ photo_owner: mine({ profile_url: null }) })
+      );
+      const card = wrapper.find('[data-photo]');
+      expect(card.find('img').exists()).toBe(false);
+      expect(card.find('[data-photo-notice]').text()).toContain(
+        'BOOKING.LOOK.PHOTO_CARD.GOES_TO_PROFILE'
+      );
+
+      const photo = await pick(wrapper);
+      expect(wrapper.find('[data-photo-choice]').exists()).toBe(false);
+      expect(uploadArgs()).toEqual([
+        7,
+        'photo',
+        photo,
+        { applyToProfile: true },
+      ]);
+    });
+
+    it('administrador na página de outra pessoa: troca só o agendamento e a tela diz isso', async () => {
+      const other = mine({ name: 'Bia', mine: false });
+      const wrapper = await openAtStep(5, fullPage({ photo_owner: other }));
+      const card = wrapper.find('[data-photo]');
+      expect(card.find('img').attributes('src')).toBe(AVATAR);
+      expect(card.text()).toContain(
+        'BOOKING.LOOK.PHOTO_CARD.USING_PROFILE_OTHER {"key":"USING_PROFILE_OTHER","name":"Bia"}'
+      );
+      expect(card.find('[data-photo-notice]').text()).toContain(
+        'BOOKING.LOOK.PHOTO_CARD.OTHER_PERSON'
+      );
+
+      const photo = await pick(wrapper);
+      expect(wrapper.find('[data-photo-choice]').exists()).toBe(false);
+      expect(uploadArgs()).toEqual([
+        7,
+        'photo',
+        photo,
+        { applyToProfile: false },
+      ]);
+      expect(storeDispatch).not.toHaveBeenCalled();
+    });
+
+    it('página com um link por pessoa: a foto é da página e o perfil de ninguém muda', async () => {
+      const wrapper = await openAtStep(5, fullPage({ photo_owner: null }));
+      expect(wrapper.find('[data-photo-notice]').text()).toContain(
+        'BOOKING.LOOK.PHOTO_CARD.SHARED_PAGE'
+      );
+      const photo = await pick(wrapper);
+      expect(uploadArgs()).toEqual([
+        7,
+        'photo',
+        photo,
+        { applyToProfile: false },
+      ]);
     });
   });
 

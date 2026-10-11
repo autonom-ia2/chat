@@ -155,7 +155,7 @@ class Api::V1::Accounts::Crm::BookingPagesController < Api::V1::Accounts::Crm::B
     page = @page.reload
     payload = ::Crm::BookingV2::PageSerializer.new(page, attention: report.attention?(page), orphaned: report.orphaned(page)).full
     payload = payload.merge(calendar_options: calendar_inbox_options, notice_inbox_options: notice_inboxes.as_json,
-                            can_save_identity: ::Crm::BookingPagePolicy.new(pundit_user, page).save_identity?)
+                            can_save_identity: ::Crm::BookingPagePolicy.new(pundit_user, page).save_identity?, **photo_owner_payload)
     render json: { payload: payload }, status: status
   end
 

@@ -13462,24 +13462,22 @@
     "controller": "api/v1/accounts/crm/booking_pages#apply_identity",
     "modelo": "Inbox",
     "origem": [
-      "app/controllers/concerns/crm/booking_page_brand.rb:16",
+      "app/controllers/concerns/crm/booking_page_brand.rb:19",
       "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:146"
     ],
     "sem_corpo": true
   },
   "POST crm/booking_pages/:id/logo": {
     "campos": {
+      "apply_to_profile": {},
       "file": {}
     },
-    "completo": false,
+    "completo": true,
     "controller": "api/v1/accounts/crm/booking_pages#logo",
     "modelo": "Inbox",
-    "motivos": [
-      "leitura crua sem tipo: file"
-    ],
     "origem": [
       "app/controllers/concerns/crm/booking_page_brand.rb:8",
-      "app/controllers/concerns/crm/booking_page_brand.rb:33",
+      "app/controllers/concerns/crm/booking_page_brand.rb:48",
       "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:146"
     ],
     "sem_corpo": false
@@ -13567,17 +13565,15 @@
   },
   "POST crm/booking_pages/:id/photo": {
     "campos": {
+      "apply_to_profile": {},
       "file": {}
     },
-    "completo": false,
+    "completo": true,
     "controller": "api/v1/accounts/crm/booking_pages#photo",
     "modelo": "Inbox",
-    "motivos": [
-      "leitura crua sem tipo: file"
-    ],
     "origem": [
-      "app/controllers/concerns/crm/booking_page_brand.rb:12",
-      "app/controllers/concerns/crm/booking_page_brand.rb:33",
+      "app/controllers/concerns/crm/booking_page_brand.rb:15",
+      "app/controllers/concerns/crm/booking_page_brand.rb:48",
       "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:146"
     ],
     "sem_corpo": false
@@ -13606,7 +13602,7 @@
     "controller": "api/v1/accounts/crm/booking_pages#save_identity",
     "modelo": "Inbox",
     "origem": [
-      "app/controllers/concerns/crm/booking_page_brand.rb:21",
+      "app/controllers/concerns/crm/booking_page_brand.rb:24",
       "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:146"
     ],
     "sem_corpo": true

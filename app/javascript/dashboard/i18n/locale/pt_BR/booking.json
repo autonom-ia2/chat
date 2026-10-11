@@ -261,6 +261,19 @@
         "CONFIRM": "Isso troca a logo, a cor, o lado da logo, a frase e a foto desta página pelo que está salvo, inclusive o que você acabou de mudar.",
         "CONFIRM_YES": "Sim, usar",
         "CONFIRM_NO": "Não, deixar como está"
+      },
+      "PHOTO_CARD": {
+        "USING_PROFILE_MINE": "Estamos usando a foto do seu perfil.",
+        "USING_PROFILE_OTHER": "Estamos usando a foto do perfil de {name}.",
+        "USING_SAVED": "Estamos usando a foto guardada na identidade.",
+        "GOES_TO_PROFILE": "Esta foto também vai para o seu perfil.",
+        "OTHER_PERSON": "Você está montando a página de {name}. A foto vale só para o agendamento: o perfil de {name} não muda.",
+        "SHARED_PAGE": "Esta página tem um link por pessoa. A foto vale para a página: o perfil de ninguém muda.",
+        "CHOICE_TITLE": "Onde a foto nova vai valer?",
+        "ONLY_HERE": "Só nesta página de agendamento",
+        "ALSO_PROFILE": "Também no meu perfil",
+        "SEND": "Enviar foto",
+        "CANCEL": "Cancelar"
       }
     },
     "NOTICES": {

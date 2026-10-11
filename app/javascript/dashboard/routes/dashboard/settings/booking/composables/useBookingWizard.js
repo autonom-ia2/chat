@@ -24,7 +24,12 @@ const saveErrorFrom = failure => {
 // página inteira: voltar um passo não perde o que foi digitado. Cada
 // "Continuar" confere o passo e salva (PATCH); o último passo publica.
 // `initialStep` abre uma página existente direto num passo (ex.: a prévia).
-export const useBookingWizard = ({ pageId, initialStep, onClose }) => {
+export const useBookingWizard = ({
+  pageId,
+  initialStep,
+  onClose,
+  onProfilePhoto,
+}) => {
   const openingStep = VALID_STEPS.includes(initialStep)
     ? initialStep
     : STEP.CONTE;
@@ -171,7 +176,9 @@ export const useBookingWizard = ({ pageId, initialStep, onClose }) => {
     }
   };
 
-  const upload = async ({ kind, file }) => {
+  // `applyToProfile` (#1298): a foto vira também a do perfil de quem envia;
+  // quando o servidor confirma, `onProfilePhoto` atualiza o avatar do painel.
+  const upload = async ({ kind, file, applyToProfile = false }) => {
     const problem = imageProblem(file);
     uploadError.value = problem ? { kind, key: problem } : null;
     if (problem) return;
@@ -180,9 +187,11 @@ export const useBookingWizard = ({ pageId, initialStep, onClose }) => {
       const { data } = await BookingPagesAPI.uploadImage(
         page.value.id,
         kind,
-        file
+        file,
+        { applyToProfile }
       );
       page.value = data.payload;
+      if (data.payload.photo_owner?.profile_updated) onProfilePhoto?.();
     } catch {
       uploadError.value = { kind, key: 'IMAGE_UPLOAD' };
     } finally {

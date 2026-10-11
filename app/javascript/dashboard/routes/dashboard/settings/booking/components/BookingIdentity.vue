@@ -1,5 +1,5 @@
 <script setup>
-import { computed, nextTick, ref, useId, useTemplateRef } from 'vue';
+import { computed, nextTick, ref, useId, useTemplateRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 // Identidade salva da conta (#1289), em volta dos campos do passo Sua marca:
@@ -46,10 +46,23 @@ const closeConfirm = async () => {
   useButton.value?.focus();
 };
 
+// "Sim": o botão fica desligado enquanto a identidade é aplicada, então o
+// foco só volta para ele quando termina.
+const refocusWhenDone = ref(false);
 const confirmApply = () => {
-  closeConfirm();
+  confirming.value = false;
+  refocusWhenDone.value = true;
   emit('apply');
 };
+watch(
+  () => props.busy,
+  async busy => {
+    if (busy || !refocusWhenDone.value) return;
+    refocusWhenDone.value = false;
+    await nextTick();
+    useButton.value?.focus();
+  }
+);
 
 // Diz o que foi guardado: a foto é de cada pessoa e só entra quando a página
 // tem uma pessoa só e uma foto enviada.
