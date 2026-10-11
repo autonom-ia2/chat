@@ -254,6 +254,7 @@ watch(
     <template v-if="isCollapsed">
       <div
         ref="triggerRef"
+        data-sidebar-group-trigger
         class="relative"
         @mouseenter="handleMouseEnter"
         @mouseleave="handleMouseLeave"
@@ -318,6 +319,7 @@ watch(
             :icon="child.icon"
             :children="child.children"
             :collapsible="child.collapsible"
+            :default-collapsed="child.defaultCollapsed"
             :show-tree-line="child.showTreeLine"
             :end-tree-line="child.showTreeLine && isLastVisibleChild(child)"
             :is-expanded="isExpanded"

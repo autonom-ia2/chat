@@ -308,8 +308,8 @@ describe('rotas do painel de resultados', () => {
   });
 });
 
-// CRM › Agendamento vira subgrupo (#1264): Páginas e links, Meus horários e
-// Meus números, cada um com a regra que já tinha.
+// CRM › Agendamento vira subgrupo (#1264): Calendário (#1288), Páginas e
+// links, Meus horários e Meus números, cada um com a regra que já tinha.
 describe('subgrupo Agendamento do CRM', () => {
   const build = (overrides = {}) =>
     bookingSidebarGroup({
@@ -327,26 +327,52 @@ describe('subgrupo Agendamento do CRM', () => {
     window.globalConfig = { CRM_CALENDAR_MEETINGS_ENABLED: 'true' };
   });
 
-  it('administrador vê o subgrupo com os três filhos, na ordem', () => {
+  it('administrador vê o subgrupo com os quatro filhos, Calendário primeiro', () => {
     const [group] = build({ isAdministrator: true, canViewCrm: true });
     expect(group.name).toBe('CRM Scheduling');
     expect(group.label).toBe('SIDEBAR.BOOKING');
     expect(group.icon).toBe('i-lucide-calendar-clock');
     expect(childNames(group)).toEqual([
+      'CRM Calendar',
       'CRM Booking',
+      'CRM My Booking Hours',
+      'CRM Booking Results',
+    ]);
+    expect(group.children[0]).toEqual({
+      name: 'CRM Calendar',
+      label: 'SIDEBAR.CRM_CALENDAR',
+      to: { name: 'crm_calendar_index' },
+      activeOn: ['crm_calendar_index'],
+    });
+  });
+
+  it('nasce recolhível e fechado, com a linha da árvore', () => {
+    const [group] = build({ isAdministrator: true, canViewCrm: true });
+    expect(group).toMatchObject({
+      collapsible: true,
+      defaultCollapsed: true,
+      showTreeLine: true,
+    });
+  });
+
+  it('função só com Agendamento vê só Páginas e links, sem Calendário', () => {
+    const [group] = build({ permissions: ['agendamento_view'] });
+    expect(childNames(group)).toEqual(['CRM Booking']);
+  });
+
+  it('agente comum com CRM vê Calendário, Meus horários e Meus números', () => {
+    const [group] = build({ canViewCrm: true });
+    expect(childNames(group)).toEqual([
+      'CRM Calendar',
       'CRM My Booking Hours',
       'CRM Booking Results',
     ]);
   });
 
-  it('função só com Agendamento vê só Páginas e links', () => {
-    const [group] = build({ permissions: ['agendamento_view'] });
-    expect(childNames(group)).toEqual(['CRM Booking']);
-  });
-
-  it('quem vê o CRM sem o módulo Agendamento vê Meus horários e Meus números', () => {
+  it('quem vê o CRM sem o módulo Agendamento vê Calendário, Meus horários e Meus números', () => {
     const [group] = build({ permissions: ['crm_view'], canViewCrm: true });
     expect(childNames(group)).toEqual([
+      'CRM Calendar',
       'CRM My Booking Hours',
       'CRM Booking Results',
     ]);
@@ -361,5 +387,10 @@ describe('subgrupo Agendamento do CRM', () => {
         account: withFlag(false),
       })
     ).toEqual([]);
+  });
+
+  it('calendário desligado na instalação: o subgrupo não nasce só por causa do Calendário', () => {
+    window.globalConfig = { CRM_CALENDAR_MEETINGS_ENABLED: 'false' };
+    expect(build({ isAdministrator: true, canViewCrm: true })).toEqual([]);
   });
 });
