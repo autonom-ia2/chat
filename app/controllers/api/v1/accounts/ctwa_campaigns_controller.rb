@@ -177,8 +177,10 @@ class Api::V1::Accounts::CtwaCampaignsController < Api::V1::Accounts::BaseContro
       filters << 'crm_cards.pipeline_id = ?'
       binds << params[:pipeline_id]
     end
+    # Acesso por funil (#1148, PR D, decisão do Rodrigo em 11/10): a soma conta só os cards que a pessoa vê no CRM.
+    filters << Crm::Access::CardScope.new(user: Current.user, account: Current.account, account_user: Current.account_user).ids_condition
 
-    [filters, binds]
+    [filters.compact, binds]
   end
 
   def since_time

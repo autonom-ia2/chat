@@ -10,7 +10,9 @@ class Api::V1::Accounts::Crm::StagesController < Api::V1::Accounts::Crm::BaseCon
     @stages_count = @stages.count
     # One grouped query instead of N — the funnel-edit drawer needs the real (all-status)
     # count per stage to warn before a delete that the backend would otherwise reject.
-    @cards_count_by_stage = Crm::Card.where(stage_id: @stages.map(&:id)).group(:stage_id).count
+    # Acesso por funil (#1148, PR D): quem tem restrição conta só os cards que vê (inclusive "só atribuídas").
+    cards = card_scope.restricted? ? policy_scope(::Crm::Card) : ::Crm::Card
+    @cards_count_by_stage = cards.where(stage_id: @stages.map(&:id)).group(:stage_id).count
   end
 
   def create
@@ -44,6 +46,7 @@ class Api::V1::Accounts::Crm::StagesController < Api::V1::Accounts::Crm::BaseCon
 
   def reorder
     authorize ::Crm::PipelineStage, :reorder?
+    ensure_visible_stages!(Array(params[:stage_ids]))
     return render_unprocessable('crm.invalid_stage_reorder') unless stage_reorderer.perform == Crm::PipelineStages::Reorderer::SUCCESS
 
     head :ok
@@ -56,8 +59,22 @@ class Api::V1::Accounts::Crm::StagesController < Api::V1::Accounts::Crm::BaseCon
   end
 
   def fetch_stage
-    @stage = policy_scope(::Crm::PipelineStage).find(params[:id])
+    @stage = visible_stages.find(params[:id])
     authorize @stage
+  end
+
+  # Acesso por funil (#1148, PR D): etapa de funil que a pessoa não vê é 404 (mesmo para quem gerencia funis).
+  def visible_stages
+    policy_scope(::Crm::PipelineStage).where(pipeline_id: policy_scope(::Crm::Pipeline).select(:id))
+  end
+
+  def ensure_visible_stages!(stage_ids)
+    return unless card_scope.restricted?
+    raise ActiveRecord::RecordNotFound unless visible_stages.where(id: stage_ids).count == stage_ids.uniq.size
+  end
+
+  def card_scope
+    @card_scope ||= ::Crm::Access::CardScope.new(user: Current.user, account: Current.account, account_user: Current.account_user)
   end
 
   def stage_params

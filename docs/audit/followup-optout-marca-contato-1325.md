@@ -95,3 +95,15 @@ Sim, pela API. Lido no código, sem mudar política: `CardsController#fetch_card
 - RuboCop nos 14 arquivos Ruby do PR: sem ocorrências.
 - Vitest: 3 arquivos, 16 testes, todos passando. ESLint: sem ocorrências.
 - `pnpm i18n:fork:check`: 16 catálogos cobertos. `pnpm central:check`: em dia (189 artigos; restam as 6 evidências antigas de `crm.json` na 10.09). `pnpm guia:check`: em dia.
+
+## Merge com a main (depois do commit 6eed804b7e)
+
+- `git merge origin/main` (c1187a627e), sem rebase. `cards_controller.rb` juntou sozinho: ficam o acesso por funil da main (#1148: `policy_scope`, `card_guard`, `multiple_pipelines?`) e o nosso `reset_auto_followup`. A 10.09 conflitou só numa evidência de linha, resolvida com a linha real. O `formatos-das-acoes.json` foi regerado com `rails autonomia:guia:formatos`, sem resolver à mão; a diferença para a main é só de números de linha. Evidências da Central acertadas com `pnpm central:check`.
+- A main não mexeu em `db/`, `Gemfile` nem `package.json`; o snapshot existente recebeu os 98 arquivos que mudaram desde a base dele (`8f60c61457`), nos dois nós.
+
+### Validação sobre o merge (11/10/2026, mesmo snapshot, RSpec e RuboCop no M2)
+
+- RSpec, os mesmos 17 grupos: 1402 exemplos, 0 falhas, 3 pendentes (quarentena antiga).
+- `autonomia:guia:formatos:check`: em dia. RuboCop nos 14 arquivos Ruby do PR: sem ocorrências.
+- Vitest: 3 arquivos, 16 testes, todos passando. ESLint: sem ocorrências.
+- `pnpm i18n:fork:check`: 16 catálogos cobertos. `pnpm central:check`: em dia (189 artigos; restam as 6 evidências antigas de `crm.json` na 10.09). `pnpm guia:check`: em dia.

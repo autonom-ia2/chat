@@ -14,10 +14,11 @@ class Autonomia::Prospecting::LeadBroadcaster
     @account = lead.account
   end
 
+  # Um envio por grupo de quem recebe o mesmo lead: com ou sem o detalhe da nota, e vendo ou não o card do CRM do lead
+  # (acesso por funil, #1148).
   def broadcast
-    with_details, without_details = viewers.partition(&:score_details?)
-    deliver(with_details, full_payload)
-    deliver(without_details, restricted_payload(without_details.first))
+    viewers.group_by { |visibility| [visibility.score_details?, visibility.crm_card_visible?(@lead.crm_card_id)] }
+           .each_value { |group| deliver(group, payload_for(group.first)) }
   end
 
   private
@@ -36,13 +37,7 @@ class Autonomia::Prospecting::LeadBroadcaster
   end
 
   # JSON puro (chaves string): o job serializa sem depender de BigDecimal nem de Time.
-  def full_payload
-    { 'account_id' => @account.id, 'lead' => lead_json }
-  end
-
-  def restricted_payload(visibility)
-    return if visibility.nil?
-
+  def payload_for(visibility)
     { 'account_id' => @account.id, 'lead' => visibility.lead_payload(lead_json) }
   end
 

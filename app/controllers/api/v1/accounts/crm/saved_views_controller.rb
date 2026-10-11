@@ -6,12 +6,13 @@ class Api::V1::Accounts::Crm::SavedViewsController < Api::V1::Accounts::Crm::Bas
 
   def index
     authorize ::Crm::SavedView
-    @saved_views = policy_scope(::Crm::SavedView).ordered
+    @saved_views = visible_pipeline_views(policy_scope(::Crm::SavedView).ordered)
     @saved_views = @saved_views.where(pipeline_id: params[:pipeline_id]) if params[:pipeline_id].present?
   end
 
   def create
     authorize ::Crm::SavedView
+    ensure_visible_pipeline!
     @saved_view = ::Crm::SavedView.new(saved_view_params)
     @saved_view.account = Current.account
     @saved_view.user = Current.user
@@ -21,6 +22,7 @@ class Api::V1::Accounts::Crm::SavedViewsController < Api::V1::Accounts::Crm::Bas
 
   def update
     authorize @saved_view
+    ensure_visible_pipeline!
     @saved_view.update!(saved_view_params)
     render :show
   end
@@ -34,7 +36,26 @@ class Api::V1::Accounts::Crm::SavedViewsController < Api::V1::Accounts::Crm::Bas
   private
 
   def fetch_saved_view
-    @saved_view = policy_scope(::Crm::SavedView).find(params[:id])
+    @saved_view = visible_pipeline_views(policy_scope(::Crm::SavedView)).find(params[:id])
+  end
+
+  # Acesso por funil (#1148, PR D): visão de um funil que a pessoa não tem não aparece nem pode ser gravada.
+  def visible_pipeline_views(views)
+    return views unless visible_pipelines.restricted?
+
+    views.where(pipeline_id: nil).or(views.where(pipeline_id: visible_pipelines.apply(Current.account.crm_pipelines).select(:id)))
+  end
+
+  def ensure_visible_pipeline!
+    pipeline_id = saved_view_params[:pipeline_id]
+    return if pipeline_id.blank? || !visible_pipelines.restricted?
+
+    visible_pipelines.apply(Current.account.crm_pipelines).find(pipeline_id)
+  end
+
+  def visible_pipelines
+    @visible_pipelines ||= Crm::Access::VisiblePipelines.new(user: Current.user, account: Current.account,
+                                                             account_user: Current.account_user)
   end
 
   def saved_view_params
