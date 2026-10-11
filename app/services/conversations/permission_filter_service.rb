@@ -16,10 +16,15 @@ class Conversations::PermissionFilterService
 
   private
 
+  # A regra de caixa, mais o acesso por funil (#1148): sem acesso configurado, nada muda. As funções personalizadas (EE)
+  # partem daqui e herdam o filtro.
   def accessible_conversations
-    return hinted_accessible_conversations if @plan_hint_selective_filter
-
-    conversations.where(inbox: user.inboxes.where(account_id: account.id))
+    by_inbox = if @plan_hint_selective_filter
+                 hinted_accessible_conversations
+               else
+                 conversations.where(inbox: user.inboxes.where(account_id: account.id))
+               end
+    Crm::Access::ConversationScope.new(user: user, account: account, account_user: account_user).apply(by_inbox)
   end
 
   # Same rows as accessible_conversations. `inbox_id + 0` keeps the planner from
@@ -37,7 +42,9 @@ class Conversations::PermissionFilterService
   end
 
   def account_user
-    AccountUser.find_by(account_id: account.id, user_id: user.id)
+    return @account_user if defined?(@account_user)
+
+    @account_user = AccountUser.find_by(account_id: account.id, user_id: user.id)
   end
 
   def user_role
