@@ -88,7 +88,8 @@
         "HOURS": "O horário final precisa ser depois do inicial.",
         "IMAGE_TYPE": "Use uma imagem PNG, JPEG ou WebP.",
         "IMAGE_SIZE": "A imagem pode ter até 2 MB.",
-        "IMAGE_UPLOAD": "Não deu para enviar a imagem. Tente outra."
+        "IMAGE_UPLOAD": "Não deu para enviar a imagem. Tente outra.",
+        "SHORT_NAME": "Confira o endereço da página."
       },
       "SERVER_ERRORS": {
         "CALENDAR_GONE": "Essa caixa de e-mail da agenda não está mais disponível. Escolha outra ou tire o Google Meet e o Teams.",
@@ -99,7 +100,8 @@
         "BRAND": "Confira a cor e a frase de boas-vindas.",
         "NOTICE_INBOX_GONE": "Esse WhatsApp não pode mais mandar avisos. Escolha outro ou deixe sem avisos.",
         "NOTICE_TEMPLATES": "Uma das mensagens escolhidas não serve para os avisos. Escolha outra da lista.",
-        "NOTICES": "Confira os avisos e o prazo para mudar."
+        "NOTICES": "Confira os avisos e o prazo para mudar.",
+        "SHORT_NAME": "Este endereço não pode ser usado. Escolha outro."
       }
     },
     "TEMPLATE": {
@@ -133,6 +135,24 @@
       "PEOPLE_LOADING": "Carregando a equipe",
       "PEOPLE_ERROR": "Não deu para carregar a equipe.",
       "PEOPLE_EMPTY": "Ninguém da equipe pode atender ainda."
+    },
+    "ADDRESS": {
+      "LABEL": "Endereço da página",
+      "HINT": "É o link que você manda para o cliente. Use letras, números e hífen.",
+      "PREVIEW": "O link fica assim: {url}",
+      "EMPTY": "Sem endereço, a página usa um link comprido.",
+      "CHECKING": "Conferindo o endereço",
+      "FREE": "Este endereço está livre.",
+      "OWN": "Este é o endereço da página hoje.",
+      "CHANGE_WARNING": "Se você mudar, o link antigo para de abrir.",
+      "PROBLEMS": {
+        "TOO_SHORT": "Use pelo menos 3 letras ou números.",
+        "TOO_LONG": "Use até 40 letras ou números.",
+        "INVALID_CHARS": "Use só letras sem acento, números e hífen.",
+        "HYPHEN_EDGE": "O endereço não pode começar nem terminar com hífen.",
+        "RESERVED": "Este endereço é do sistema. Escolha outro.",
+        "TAKEN": "Este endereço já tem dono. Escolha outro."
+      }
     },
     "WHERE": {
       "TITLE": "Onde vai ser o atendimento?",

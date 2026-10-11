@@ -32,6 +32,7 @@ describe('bookingPageForm', () => {
     const payload = formToPayload(pageToForm(page));
     expect(payload).toEqual({
       title: 'Visita',
+      short_name: '',
       duration_minutes: 60,
       slot_durations: [30],
       locations: [{ type: 'in_person', address: 'Rua A, 1' }],

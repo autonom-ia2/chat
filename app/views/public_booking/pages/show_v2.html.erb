@@ -3,9 +3,13 @@
   <head>
     <meta charset="utf-8" />
     <title><%= @page_title %></title>
+    <%= render 'public_booking/pages/link_preview', preview: @link_preview, url: @link_preview_url, installation_name: @global_config['INSTALLATION_NAME'] %>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex, nofollow" />
     <meta name="referrer" content="same-origin" />
+    <% if @booking_slug.present? %>
+    <meta name="booking-slug" content="<%= @booking_slug %>" />
+    <% end %>
     <script>
       window.globalConfig = <%= raw @global_config.to_json %>
     </script>
