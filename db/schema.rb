@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_10_15_120100) do
+ActiveRecord::Schema[7.2].define(version: 2026_10_15_120000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -2183,7 +2183,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_15_120100) do
     t.boolean "auto_create_card", default: false, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.integer "subject_ai_mode", default: 2, null: false
+    t.integer "subject_ai_mode", default: 0, null: false
     t.index ["account_id", "crm_enabled"], name: "index_crm_inbox_settings_on_account_id_and_crm_enabled"
     t.index ["account_id", "inbox_id"], name: "index_crm_inbox_settings_on_account_id_and_inbox_id", unique: true
     t.index ["account_id"], name: "index_crm_inbox_settings_on_account_id"

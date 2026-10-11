@@ -52,7 +52,7 @@ const toForm = (setting = {}) => {
     auto_create_card: jaConfigurada ? Boolean(setting.auto_create_card) : true,
     default_pipeline_id: setting.default_pipeline_id || '',
     default_stage_id: setting.default_stage_id || '',
-    subject_ai_mode: setting.subject_ai_mode || 'auto',
+    subject_ai_mode: setting.subject_ai_mode || 'off',
   };
 };
 

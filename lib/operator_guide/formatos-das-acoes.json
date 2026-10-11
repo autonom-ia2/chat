@@ -5055,7 +5055,7 @@
         "tipo": "inteiro"
       },
       "subject_ai_mode": {
-        "padrao": "auto",
+        "padrao": "off",
         "tipo": "string",
         "um_de": [
           "off",

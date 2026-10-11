@@ -381,10 +381,10 @@ RSpec.describe Crm::Subjects::Identifier do
   end
 
   describe 'ligada por padrão, respeitando a pessoa (#1260)' do
-    it 'caixa nova nasce em Automática' do
+    it 'caixa nova nasce Desligada: quem liga é o admin, caixa por caixa' do
       outra = create(:inbox, account: account)
 
-      expect(account.crm_inbox_settings.create!(inbox: outra, crm_enabled: true)).to be_subject_ai_auto
+      expect(account.crm_inbox_settings.create!(inbox: outra, crm_enabled: true)).to be_subject_ai_off
     end
 
     it 'funil com a IA do funil desligada fica de fora: não pergunta nada' do

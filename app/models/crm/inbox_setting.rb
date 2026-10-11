@@ -5,7 +5,7 @@
 #  id                  :bigint           not null, primary key
 #  auto_create_card    :boolean          default(FALSE), not null
 #  crm_enabled         :boolean          default(FALSE), not null
-#  subject_ai_mode     :integer          default("auto"), not null
+#  subject_ai_mode     :integer          default("off"), not null
 #  visibility_mode     :integer          default("all_inbox_cards"), not null
 #  created_at          :datetime         not null
 #  updated_at          :datetime         not null

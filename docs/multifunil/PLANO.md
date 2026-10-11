@@ -146,7 +146,10 @@ A Entrega 3 precisa de uma conta com **mais de um funil** para o piloto do acess
 
 ## 11. Decisões de 10/10/2026 (Rodrigo) — IA de assunto ligada (#1260)
 
-- **Ligada em Automática para todas, já no deploy**, com o mesmo interruptor da IA do card: só funis com a IA do funil ligada e com a IA do CRM ligada na instalação. A migration põe as caixas no padrão antigo (Desligada) em Automática; a caixa ainda pode escolher Sugerir ou Desligada.
+- ~~Ligada em Automática para todas, já no deploy~~ — **revisto pelo Rodrigo em 11/10**: o padrão continua
+  **Desligada**; ele liga caixa por caixa em CRM → Configurar caixas para ver o comportamento antes de ligar para
+  todos. A migration que mudava o padrão e as caixas saiu do #1262. Vale o mesmo interruptor da IA do card: só funis com
+  a IA do funil ligada e com a IA do CRM ligada na instalação.
 - **Respeita a pessoa, como a IA de etapa:**
   - assunto escolhido por uma pessoa (foco ou aceite) → por 4 h a IA não troca nem cria sozinha: sugere;
   - card daquele funil fechado ou arquivado na conversa nas últimas 24 h → a IA não recria sozinha: sugere;
