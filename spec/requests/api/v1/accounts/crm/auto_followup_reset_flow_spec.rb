@@ -169,27 +169,6 @@ RSpec.describe 'CRM auto follow-up opt-out + manual reset regression flow', type
     expect(contact.reload).not_to be_opted_out
   end
 
-  # chat#1325: a recusa é da pessoa do telefone ou do e-mail, como as outras origens herdáveis.
-  it 'contato novo com o mesmo telefone herda a follow_up_reply, e o RESET do último card marcado libera os dois' do
-    account, user = create_account_and_user
-    _pipeline, card, conversation = build_stalled_card(account: account, user: user)
-    card.update!(metadata: { 'ai' => { 'auto_followup_state' => { 'active' => true } } })
-    reply_opt_out(card, conversation)
-    asked = card.contact
-    expect(asked.reload.opt_out_source).to eq('follow_up_reply')
-
-    # A validação do contato não deixa repetir telefone na conta, mas o banco deixa (não há índice único): é o caso de
-    # cadastro antigo, importação ou API que gravou sem validar.
-    twin = account.contacts.new(name: 'Mesmo número', phone_number: asked.phone_number)
-    perform_enqueued_jobs(only: Contacts::OptOutInheritanceJob) { twin.save!(validate: false) }
-    expect(twin.reload.opt_out_source).to eq('follow_up_reply')
-
-    reset!(account, user, card.reload)
-
-    expect(asked.reload).not_to be_opted_out
-    expect(twin.reload).not_to be_opted_out
-  end
-
   it 'card que mudou de contato depois do pedido: o RESET libera o contato marcado, não o atual' do
     account, user = create_account_and_user
     _pipeline, card, = build_stalled_card(account: account, user: user)

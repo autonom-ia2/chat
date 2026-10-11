@@ -404,18 +404,13 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
   end
 
   # Zera o estado do follow-up e, se este card estava parado a pedido do cliente, libera a recusa 'follow_up_reply' do
-  # contato que a marca prova (o gravado no "sim", mesmo que o card tenha mudado de contato depois) e dos contatos que a
-  # herdaram pelo mesmo telefone ou e-mail. Só ela, nunca a de outra origem, e só quando nenhum outro card continua
-  # marcado para a pessoa (Crm::FollowUps::CardOptOut, release_opt_out!). Sem isso, o card re-armado ficaria parado no
-  # runner (contact_opted_out?). Chamado com o card travado.
+  # contato que a marca prova (o gravado no "sim", mesmo que o card tenha mudado de contato depois). Só ela, nunca a de
+  # outra origem, e só quando nenhum outro card continua marcado para esse contato (Crm::FollowUps::CardOptOut,
+  # release_opt_out!). Sem isso, o card re-armado ficaria parado no runner (contact_opted_out?). Chamado com o card travado.
   def reset_auto_followup_state!
     marked_contact = ::Crm::FollowUps::CardOptOut.marked_contact(@card) if ::Crm::FollowUps::CardOptOut.card_opted_out?(@card)
     @card.update!(metadata: reset_auto_followup_metadata)
-    return if marked_contact.nil?
-
-    ::Crm::FollowUps::CardOptOut.same_person(marked_contact).where(opt_out_source: 'follow_up_reply').order(:id).each do |contact|
-      contact.release_opt_out!(source: 'follow_up_reply', by: Current.user)
-    end
+    marked_contact&.release_opt_out!(source: 'follow_up_reply', by: Current.user)
   end
 
   def reset_auto_followup_metadata

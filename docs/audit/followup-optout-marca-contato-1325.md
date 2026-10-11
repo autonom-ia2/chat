@@ -78,3 +78,18 @@ Sim, pela API. Lido no código, sem mudar política: `CardsController#fetch_card
 - Vitest: 3 arquivos, 16 testes, todos passando. ESLint: sem ocorrências.
 - `pnpm i18n:fork:check`: 16 catálogos cobertos. `pnpm central:check`: em dia (189 artigos; restam as 6 evidências antigas de `crm.json` na 10.09). `pnpm guia:check`: em dia.
 - Mutação do lock: falha como esperado (acima).
+
+## Decisão sobre a recusa por pessoa (depois do commit 56a1854417)
+
+- **Revertido** o item "Recusa da pessoa" da terceira revisão (`CardOptOut.same_person`/`person_marked?`, o uso em `source_for`/`possible_for?` e a liberação, no reset, dos contatos que herdaram). A prova volta a ser do contato marcado: `opt_out_contact_id` ou, em card antigo, `contact_for`, como no 169e471208. O resto da terceira revisão fica: ordem de locks follow-up -> card -> contato, spec do lock com mutação, `AutoFollowupTouchBuilder` revertido e predicado `'true'` exato.
+- **A `follow_up_reply` é por contato.** Telefone e e-mail são únicos por conta (validação do contato; o e-mail também tem índice único no banco), então outro contato da mesma pessoa quase não existe, e a herança por pessoa trazia uma corrida residual.
+- **Limitação conhecida:** se o contato marcado for apagado e nascer outro com o mesmo número, o novo não herda a recusa. Segue para o #1319.
+- Central e textos da tela conferidos: nenhum promete herança por pessoa para essa origem. A 09.04 passou a dizer que a recusa do follow-up "fica só neste contato".
+
+### Validação depois da reversão (11/10/2026, mesmo snapshot, RSpec e RuboCop no M2)
+
+- RSpec, os mesmos 17 grupos: 1402 exemplos, 0 falhas, 3 pendentes (quarentena antiga). Uma rodada antes de regerar os formatos deu 1 falha, só no `formatos_spec` (números de linha do controller).
+- `rails autonomia:guia:formatos` regerado; `autonomia:guia:formatos:check`: em dia.
+- RuboCop nos 14 arquivos Ruby do PR: sem ocorrências.
+- Vitest: 3 arquivos, 16 testes, todos passando. ESLint: sem ocorrências.
+- `pnpm i18n:fork:check`: 16 catálogos cobertos. `pnpm central:check`: em dia (189 artigos; restam as 6 evidências antigas de `crm.json` na 10.09). `pnpm guia:check`: em dia.
