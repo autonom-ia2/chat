@@ -190,3 +190,6 @@ A Entrega 3 precisa de uma conta com **mais de um funil** para o piloto do acess
   fechar, arquivar, reabrir, vincular e desvincular conversa; quem só vê o card (dono ou atendente sem o funil)
   continua vendo, mas não altera; (c) a IA continua lendo os outros pedidos abertos da conversa (a pessoa já vê a
   conversa de onde a informação vem). (a) e (b) em PRs próprios depois do PR D; a tela #1149 só depois deles.
+- **"Só as suas" e só triagem (11/10, Rodrigo):** quem não tem funil nenhum na caixa mexe nos cards que são dela
+  (dona do card ou atendente da conversa principal): edita, fecha, troca de etapa e põe lembrete, sem mudar de funil e
+  sem mexer no card dos outros. Vira dona pela conversa que atende (sincronização, vínculo e card criado da conversa).
