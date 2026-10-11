@@ -21,6 +21,11 @@ en:
         hour_before: "Hi%{name}! Your appointment starts in 1 hour (%{when}). To confirm, change or cancel: %{link}"
         stop_line: "To stop these messages: %{link}"
         test_prefix: "This is a test of your booking page. Your client receives a link like this one:"
+      notice_templates:
+        meta_failed: "Meta did not answer. Try again in a few minutes."
+        permission_denied: "This WhatsApp connection is not allowed to create templates. Reconnect the inbox in Settings › Inboxes and try again."
+        meta_rejected: "Meta did not approve it."
+        platform_reason: "Ready message made for this notice and approved by Meta."
       remind:
         text: "Hi%{name}! Just a reminder of your appointment on %{when}. Can you confirm here? %{link}"
       agent_alerts:

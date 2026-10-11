@@ -18,6 +18,7 @@ import {
   usableTemplates,
 } from '../../bookingNotices';
 import { formatMinutes } from '../../bookingFormat';
+import { useNoticeTemplateSuggestions } from '../../useNoticeTemplateSuggestions';
 
 // Passo 6: avisos no WhatsApp (#1192, J5-A8). Por qual número sai, qual jogo
 // de avisos (cartões prontos, sem digitar horário), a mensagem pronta de cada
@@ -30,6 +31,8 @@ const props = defineProps({
   // Modelos já gravados na página: voltam quando a pessoa volta ao número salvo.
   savedInboxId: { type: Number, default: null },
   savedTemplates: { type: Object, default: () => ({}) },
+  // Página do assistente: os pedidos de modelo à Meta ficam nela (#1272).
+  pageId: { type: Number, default: null },
 });
 
 const emit = defineEmits(['change']);
@@ -199,6 +202,52 @@ const chooseTemplate = (kind, choice) => {
 
 const kinds = computed(() => templateKinds(props.form.noticePreset));
 
+// WhatsApp oficial (#1272): a IA sugere a mensagem de cada aviso vazio e, para
+// quem pode, cria na Meta as que faltam; cada aviso mostra o estado do pedido.
+const {
+  suggestions,
+  requests,
+  loading: suggesting,
+  creating,
+  createFailed,
+  showCreate,
+  isSuggested,
+  canRetry,
+  markTouched,
+  createOnMeta,
+  retry,
+} = useNoticeTemplateSuggestions({
+  pageId: () => props.pageId,
+  form: () => props.form,
+  inbox: computed(() => (isOfficial.value ? chosenInbox.value : null)),
+  kinds,
+  onChange: change => emit('change', change),
+});
+// Escolha da pessoa (inclusive "nenhuma"): a sugestão não mexe mais no aviso.
+const chooseByHand = (kind, choice) => {
+  markTouched(kind);
+  chooseTemplate(kind, choice);
+};
+const REQUEST_TEXTS = {
+  sending: 'SENDING',
+  pending: 'PENDING',
+  approved: 'APPROVED',
+  rejected: 'REJECTED',
+  failed: 'FAILED',
+};
+// Aprovado e já escolhido no aviso: a linha some.
+const requestText = kind => {
+  const request = requests.value[kind];
+  const key = REQUEST_TEXTS[request?.state];
+  if (!key) return '';
+  if (
+    request.state === 'approved' &&
+    templateChoice(request) === templateValue(kind)
+  )
+    return '';
+  return t(`BOOKING.NOTICES.AUTO.${key}`, { reason: request.reason || '' });
+};
+
 // Avisos sem mensagem pronta: a pessoa sabe antes de salvar que esses só saem
 // para quem falou com a empresa nas últimas 24 horas.
 const missingKinds = computed(() =>
@@ -315,9 +364,18 @@ const emptyText = computed(() => {
           :data-template-kind="kind"
           class="flex flex-col gap-2"
         >
-          <p class="m-0 text-base font-medium text-n-slate-12">
-            {{ t(`BOOKING.NOTICES.KINDS.${kind.toUpperCase()}`) }}
-          </p>
+          <div class="flex flex-wrap items-center gap-2">
+            <p class="m-0 text-base font-medium text-n-slate-12">
+              {{ t(`BOOKING.NOTICES.KINDS.${kind.toUpperCase()}`) }}
+            </p>
+            <span
+              v-if="isOfficial && isSuggested(kind)"
+              data-suggested
+              class="px-2 py-0.5 text-sm font-medium rounded-full bg-n-teal-3 text-n-teal-11"
+            >
+              {{ t('BOOKING.NOTICES.AUTO.SUGGESTED') }}
+            </span>
+          </div>
           <ChoiceSelect
             :model-value="templateValue(kind)"
             :options="templateOptionsFor(kind)"
@@ -326,9 +384,76 @@ const emptyText = computed(() => {
                 notice: t(`BOOKING.NOTICES.KINDS.${kind.toUpperCase()}`),
               })
             "
-            @update:model-value="chooseTemplate(kind, $event)"
+            @update:model-value="chooseByHand(kind, $event)"
           />
+          <p
+            v-if="isOfficial && isSuggested(kind) && suggestions[kind].reason"
+            data-suggested-reason
+            class="m-0 text-sm text-n-slate-11"
+          >
+            {{ suggestions[kind].reason }}
+          </p>
+          <div
+            v-if="isOfficial && requestText(kind)"
+            class="flex flex-wrap items-center gap-3"
+          >
+            <p
+              data-request-state
+              role="status"
+              class="m-0 text-sm text-n-slate-11"
+            >
+              {{ requestText(kind) }}
+            </p>
+            <button
+              v-if="canRetry(kind)"
+              type="button"
+              data-retry
+              class="inline-flex items-center px-3 text-sm font-semibold min-h-11 rounded-xl text-n-slate-12 bg-n-solid-1 ring-1 ring-inset ring-n-weak hover:bg-n-alpha-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand disabled:opacity-60 disabled:cursor-not-allowed"
+              :disabled="creating"
+              @click="retry(kind)"
+            >
+              {{ t('BOOKING.NOTICES.AUTO.RETRY') }}
+            </button>
+          </div>
         </div>
+        <p
+          v-if="isOfficial && suggesting"
+          data-suggesting
+          role="status"
+          class="m-0 text-sm text-n-slate-11"
+        >
+          {{ t('BOOKING.NOTICES.AUTO.SUGGESTING') }}
+        </p>
+        <div
+          v-if="isOfficial && showCreate"
+          data-create-templates
+          class="flex flex-col items-start gap-2"
+        >
+          <p class="m-0 text-base text-n-slate-11">
+            {{ t('BOOKING.NOTICES.AUTO.CREATE_HINT') }}
+          </p>
+          <button
+            type="button"
+            data-create-templates-button
+            class="inline-flex items-center px-4 text-base font-semibold min-h-11 rounded-xl text-n-slate-12 bg-n-solid-1 ring-1 ring-inset ring-n-weak hover:bg-n-alpha-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand disabled:opacity-60 disabled:cursor-not-allowed"
+            :disabled="creating"
+            @click="createOnMeta"
+          >
+            {{
+              creating
+                ? t('BOOKING.NOTICES.AUTO.CREATING')
+                : t('BOOKING.NOTICES.AUTO.CREATE_BUTTON')
+            }}
+          </button>
+        </div>
+        <p
+          v-if="isOfficial && createFailed"
+          data-create-error
+          role="alert"
+          class="m-0 text-base text-n-ruby-11"
+        >
+          {{ t('BOOKING.NOTICES.AUTO.CREATE_FAILED') }}
+        </p>
         <p
           v-if="templates.length && missingKinds"
           data-missing-templates

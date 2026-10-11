@@ -112,6 +112,13 @@ export const NOTICE_PRESETS = [
 export const DEFAULT_NOTICE_PRESET = 'standard';
 // O aviso de "horário mudou" sai quando o cliente remarca, em qualquer jogo.
 export const RESCHEDULED_NOTICE = 'rescheduled';
+// Todos os avisos (Crm::MeetingNotice::KINDS).
+export const NOTICE_KINDS = [
+  'booked',
+  RESCHEDULED_NOTICE,
+  'day_before',
+  'hour_before',
+];
 
 // Até quando o cliente pode mudar ou cancelar, em minutos antes do horário.
 export const CANCEL_UNTIL_OPTIONS = [60, 120, 1440];

@@ -5,18 +5,18 @@ Gerado por `bundle exec rails autonomia:guia:formatos` a partir do código (#900
 
 | | Ações |
 |---|---|
-| No catálogo | 580 |
+| No catálogo | 582 |
 | Sem corpo | 172 |
-| Com corpo | 408 |
-| Com corpo e formato completo | 330 (80,9%) |
-| Com corpo e formato incompleto | 78 |
+| Com corpo | 410 |
+| Com corpo e formato completo | 331 (80,7%) |
+| Com corpo e formato incompleto | 79 |
 
 ## Por dentro dos campos
 
 | | Total |
 |---|---|
 | Campos aninhados com vocabulário | 17 de 185 |
-| Leituras cruas tipadas | 119 de 198 |
+| Leituras cruas tipadas | 120 de 200 |
 
 ## Incompletas por motivo
 
@@ -24,7 +24,7 @@ Uma ação pode ter mais de um motivo.
 
 | Motivo | Ações |
 |---|---|
-| leitura crua sem tipo | 63 |
+| leitura crua sem tipo | 64 |
 | aceita qualquer campo | 5 |
 | params inteiro repassado | 9 |
 | lê o corpo cru | 2 |
@@ -72,6 +72,7 @@ Uma ação pode ter mais de um motivo.
 - `POST conversations/filter` — aceita qualquer campo (permit! em app/controllers/api/v1/accounts/conversations_controller.rb:52); params inteiro repassado a ::Conversations::FilterService.new
 - `POST crm/booking_invites/:id/deliver` — leitura crua sem tipo: text (repassada a ::Crm::BookingV2::InviteDeliverer.new)
 - `POST crm/booking_pages/:id/logo` — leitura crua sem tipo: file
+- `POST crm/booking_pages/:id/notice_templates/create` — leitura crua sem tipo: kinds (repassada a requests.start!)
 - `POST crm/booking_pages/:id/photo` — leitura crua sem tipo: file
 - `POST crm/booking_pages/:id/test_invite` — leitura crua sem tipo: phone (repassada a ::Crm::BookingV2::TestInvite.new)
 - `POST crm/cards/:card_id/contact` — leitura crua sem tipo: contact
@@ -153,6 +154,7 @@ Uma ação pode ter mais de um motivo.
 - `api/v1/accounts/conversations#create` message — repassada a Messages::MessageBuilder.new
 - `api/v1/accounts/conversations#transcript` email — repassada a ConversationReplyMailer.with(account: @conversation.accou...
 - `api/v1/accounts/crm/booking_invites#deliver` text — repassada a ::Crm::BookingV2::InviteDeliverer.new
+- `api/v1/accounts/crm/booking_pages#create_notice_templates` kinds — repassada a requests.start!
 - `api/v1/accounts/crm/booking_pages#logo` file — o código não converte nem compara o valor
 - `api/v1/accounts/crm/booking_pages#photo` file — o código não converte nem compara o valor
 - `api/v1/accounts/crm/booking_pages#test_invite` phone — repassada a ::Crm::BookingV2::TestInvite.new
@@ -200,8 +202,8 @@ O Guia recusa parâmetro que a leitura não lê. Leitura sem lista conhecida nã
 
 | | Leituras |
 |---|---|
-| No catálogo | 340 |
-| Com parâmetros conhecidos | 289 |
+| No catálogo | 341 |
+| Com parâmetros conhecidos | 290 |
 | Sem parâmetros conhecidos | 51 |
 
 ### Leituras sem parâmetros conhecidos
