@@ -247,7 +247,7 @@
       "NO_INBOXES": "Nenhum WhatsApp conectado pode mandar avisos ainda. Quando houver um, ele aparece aqui.",
       "CHANNEL": {
         "OFFICIAL": "Este é o WhatsApp oficial. Se o cliente não falou com você nas últimas 24 horas, o aviso só sai com uma mensagem aprovada pela Meta. Escolha essas mensagens logo abaixo.",
-        "WAHA": "Por este número, o aviso só sai se o cliente falou com você nas últimas 24 horas. Assim o número não corre risco de bloqueio.",
+        "WAHA": "Por este número não oficial, o aviso sai mesmo sem o cliente ter falado com você. Muitos avisos assim podem fazer o WhatsApp bloquear o número.",
         "API": "Por este número, o aviso sai na hora quando o cliente falou com você nas últimas 24 horas. Fora disso, sai com a mensagem pronta escolhida abaixo."
       },
       "PRESET_LABEL": "Quando avisar o cliente?",
@@ -310,6 +310,7 @@
           "INVALID_PHONE": "Confira o número. Use o DDD, por exemplo (11) 98888-0000.",
           "OUTSIDE_WINDOW": "Mande antes um “oi” do seu celular para o WhatsApp da empresa. Depois toque em Enviar teste de novo.",
           "NUMBER_CAP": "Este número já recebeu muitas mensagens hoje. Tente amanhã ou use outro número.",
+          "ACCOUNT_CAP": "A conta já mandou o máximo de avisos de hoje. Tente amanhã.",
           "STOPPED": "Este número pediu para não receber mensagens. Use outro número.",
           "CONVERSATION_FORBIDDEN": "Este número já conversa com a empresa numa conversa que você não pode abrir. Use outro número.",
           "CANNOT_SEND": "Não deu para mandar por este WhatsApp. Confira se ele está conectado.",
@@ -348,7 +349,7 @@
       "NOTICES_ON": "O cliente recebe aviso no WhatsApp {when}, pelo número {inbox}.",
       "NOTICES_ON_NO_NAME": "O cliente recebe aviso no WhatsApp {when}.",
       "NOTICES_OFF": "Sem avisos no WhatsApp. O cliente vê o horário na tela e na agenda dele.",
-      "NOTICES_WINDOW_ONLY": "Só para quem falou com você nas últimas 24 horas.",
+      "NOTICES_UNOFFICIAL_RISK": "Número não oficial: muitos avisos para quem não falou com você podem fazer o WhatsApp bloquear o número.",
       "NOTICES_ALTER": "Alterar os avisos no WhatsApp",
       "CANCEL_UNTIL": "Ele pode mudar ou cancelar até {value} antes.",
       "CANCEL_ANYTIME": "Ele pode mudar ou cancelar até a hora marcada."

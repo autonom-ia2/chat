@@ -114,8 +114,8 @@ const TEST_ERRORS = {
 };
 const TEST_REASONS = {
   template_required: 'OUTSIDE_WINDOW',
-  waha_outside_window: 'OUTSIDE_WINDOW',
   number_cap: 'NUMBER_CAP',
+  account_cap: 'ACCOUNT_CAP',
   stopped: 'STOPPED',
   conversation_forbidden: 'CONVERSATION_FORBIDDEN',
 };

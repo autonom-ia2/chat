@@ -174,11 +174,11 @@ describe('bookingNotices', () => {
       testInviteProblem({ error: 'cannot_send', reason: 'template_required' })
     ).toBe('OUTSIDE_WINDOW');
     expect(
-      testInviteProblem({ error: 'cannot_send', reason: 'waha_outside_window' })
-    ).toBe('OUTSIDE_WINDOW');
-    expect(
       testInviteProblem({ error: 'cannot_send', reason: 'number_cap' })
     ).toBe('NUMBER_CAP');
+    expect(
+      testInviteProblem({ error: 'cannot_send', reason: 'account_cap' })
+    ).toBe('ACCOUNT_CAP');
     expect(
       testInviteProblem({ error: 'cannot_send', reason: 'no_phone' })
     ).toBe('CANNOT_SEND');
@@ -427,7 +427,7 @@ describe('BookingNoticesSummary', () => {
       props: { form: form({ noticeInboxId: 13 }), inboxOptions: [WAHA] },
     });
     expect(waha.find('[data-notices-window]').text()).toBe(
-      'BOOKING.PREVIEW.NOTICES_WINDOW_ONLY'
+      'BOOKING.PREVIEW.NOTICES_UNOFFICIAL_RISK'
     );
 
     const readOnly = mount(BookingNoticesSummary, {
@@ -483,7 +483,7 @@ describe('BookingTestInvite', () => {
     BookingPagesAPI.testInvite.mockRejectedValue({
       response: {
         status: 422,
-        data: { error: 'cannot_send', reason: 'waha_outside_window' },
+        data: { error: 'cannot_send', reason: 'template_required' },
       },
     });
     const wrapper = await openForm();

@@ -5,7 +5,7 @@
 # convites e dos números (F2-C usa `Crm::BookingInvite.real`); a reunião marcada por ele também leva `test: true`
 # (`Crm::Meeting.real` a exclui). Vale a mesma regra de canal dos avisos (`Notices::Route`, só texto: fora da janela
 # do WhatsApp oficial é preciso mandar uma mensagem ao número da empresa antes), a mesma parada (recusou mensagens
-# ou parou os avisos) e o mesmo teto por número.
+# ou parou os avisos) e os mesmos tetos (por número e, desde #1270, por conta).
 #
 # Quem testa precisa enxergar a caixa de avisos (`policy_scope(::Inbox)`, o mesmo escopo da escolha da caixa) e, se a
 # mensagem vai para uma conversa que já existe, poder responder nela (`ConversationPolicy#show?`, o mesmo critério do
@@ -57,6 +57,7 @@ class Crm::BookingV2::TestInvite
     raise Refused.new('cannot_send', decision.reason) unless decision.send?
     raise Refused.new('notice_inbox_forbidden', 'conversation_forbidden') unless can_reply?(decision.conversation)
     raise Refused.new('cannot_send', 'number_cap') if number_capped?(contact)
+    raise Refused.new('cannot_send', 'account_cap') if account_capped?
   end
 
   def stopped?(contact)
@@ -77,6 +78,11 @@ class Crm::BookingV2::TestInvite
 
   def number_capped?(contact)
     Crm::BookingV2::Notices::Sender.recent_for_contact(contact) >= Crm::BookingV2::Notices::Sender::NUMBER_LIMIT
+  end
+
+  # Pela WAHA o teste sai para qualquer número (#1270): o teto por conta também vale para ele.
+  def account_capped?
+    Crm::BookingV2::Notices::Sender.recent_for_account(page.account_id) >= Crm::BookingV2::Notices::Sender.account_limit
   end
 
   def send_invite!(contact, decision)

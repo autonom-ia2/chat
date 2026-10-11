@@ -74,6 +74,36 @@ RSpec.describe 'Public::Api::V2::Booking notices', type: :request do
     expect(Crm::Meeting.sole.card.contact_id).to eq(world.contact.id)
   end
 
+  describe 'caixa de avisos WAHA (#1270)' do
+    let(:inbox) { create(:channel_api, account: account, additional_attributes: { 'provider' => 'waha' }).inbox }
+
+    before { profile.update!(notice_inbox: inbox) }
+
+    it 'sem conversa nem mensagem do cliente: promete a mensagem, porque o aviso sai' do
+      book(phone: '(21) 98888-7777')
+
+      expect(response.parsed_body).to include('confirmed' => true, 'notice_will_send' => true)
+    end
+
+    it 'número que já recebeu 4 mensagens automáticas em 24 h: não promete (teto por número)' do
+      contact = account.contacts.create!(name: 'Marcos Lima', phone_number: '+5521988887777')
+      4.times { create_booking_invite(world: world, contact: contact, card: nil, metadata: { 'test' => true }, sent_at: 1.hour.ago) }
+
+      book(phone: '(21) 98888-7777')
+
+      expect(response.parsed_body).to include('confirmed' => true, 'notice_will_send' => false)
+    end
+
+    it 'número que parou os avisos: não promete' do
+      contact = account.contacts.create!(name: 'Marcos Lima', phone_number: '+5521988887777')
+      Crm::BookingNoticeStop.create!(account: account, contact: contact)
+
+      book(phone: '(21) 98888-7777')
+
+      expect(response.parsed_body).to include('confirmed' => true, 'notice_will_send' => false)
+    end
+  end
+
   it 'com modelo aprovado para o aviso "ao marcar": promete a mensagem mesmo sem conversa' do
     inbox.channel.update!(message_templates: [{ 'name' => 'aviso', 'language' => 'pt_BR', 'status' => 'APPROVED',
                                                 'components' => [{ 'type' => 'BODY', 'text' => 'Oi {{1}}, veja: {{3}}' }] }])

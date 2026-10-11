@@ -194,12 +194,47 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingPages notices', type: :request do
       expect(response).to have_http_status(:ok)
     end
 
+    it 'pela WAHA manda a número que nunca falou com a empresa: cria o contato, abre a conversa e manda (#1270)' do
+      expect { call(admin, :post, path, phone: '+5511955554444') }.to change(Contact, :count).by(1).and change(Conversation, :count).by(1)
+
+      expect(response).to have_http_status(:ok)
+      conversation = Conversation.sole
+      expect(conversation).to have_attributes(inbox_id: waha.id, contact_id: Contact.find_by(phone_number: '+5511955554444').id)
+      expect(conversation.messages.outgoing.sole.content).to include("https://app.example.com/b/#{Crm::BookingInvite.sole.code}")
+    end
+
     it 'recusa com o motivo do canal quando não pode mandar, sem criar convite nem contato' do
+      page.update!(notice_inbox: cloud)
+
       expect { call(admin, :post, path, phone: '+5511955554444') }.not_to change(Contact, :count)
 
       expect(response).to have_http_status(:unprocessable_entity)
-      expect(response.parsed_body).to eq('error' => 'cannot_send', 'reason' => 'waha_outside_window')
+      expect(response.parsed_body).to eq('error' => 'cannot_send', 'reason' => 'template_required')
       expect(Crm::BookingInvite.count).to eq(0)
+    end
+
+    it 'pela WAHA o teto por número segura o teste sem a janela, sem criar convite' do
+      contact = account.contacts.create!(name: 'Admin Ana', phone_number: '+5511955554444')
+      4.times { create_booking_invite(world: world, contact: contact, card: nil, metadata: { 'test' => true }, sent_at: 1.hour.ago) }
+
+      expect { call(admin, :post, path, phone: '+5511955554444') }.not_to change(Crm::BookingInvite, :count)
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body).to eq('error' => 'cannot_send', 'reason' => 'number_cap')
+      expect(Message.outgoing.count).to eq(0)
+    end
+
+    it 'pela WAHA o teto por conta segura o teste a número novo, sem criar contato nem convite' do
+      create_booking_invite(world: world, metadata: { 'test' => true }, sent_at: 1.hour.ago)
+
+      expect do
+        with_modified_env('CRM_BOOKING_NOTICES_ACCOUNT_DAILY_LIMIT' => '1') { call(admin, :post, path, phone: '+5511955554444') }
+      end.not_to change(Contact, :count)
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body).to eq('error' => 'cannot_send', 'reason' => 'account_cap')
+      expect(Crm::BookingInvite.count).to eq(1)
+      expect(Message.outgoing.count).to eq(0)
     end
 
     it 'recusa telefone inválido, página sem caixa de avisos e página despublicada' do

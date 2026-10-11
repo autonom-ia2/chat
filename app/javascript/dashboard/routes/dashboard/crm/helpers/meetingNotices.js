@@ -50,6 +50,7 @@ const SKIP_REASONS = [
   'template_required',
   'template_without_link',
   'template_unsupported',
+  // Não sai mais desde #1270; fica para os avisos antigos que já foram pulados por ele.
   'waha_outside_window',
   'number_cap',
   'account_cap',

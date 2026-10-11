@@ -13,7 +13,7 @@
 #    estão saindo agora (`sending`, de outro processo) e os testes de "Testar no meu WhatsApp". Por número = por
 #    contato: o telefone é único por conta (validação do `Contact`). Como o cron marca `sending` ANTES de contar,
 #    dois processos ao mesmo tempo se enxergam e o teto nunca é ultrapassado (no limite, os dois podem recusar).
-# 6. Regra do canal (`Notices::Route`): janela, modelo aprovado, WAHA só com mensagem do cliente em 24 h.
+# 6. Regra do canal (`Notices::Route`): janela e modelo aprovado no oficial e no canal API; WAHA manda texto sempre.
 # 7. Envio (`Notices::Delivery`) → `sent` com a mensagem; erro do envio → `failed` com a classe do erro (e o erro vai
 #    ao tracker). Falha de entrega posterior do provedor: ver `NoticeDispatchJob` (`delivery_failed`).
 #

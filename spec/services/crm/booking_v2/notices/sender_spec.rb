@@ -1,7 +1,7 @@
 require 'rails_helper'
 
 # Envio dos avisos (#1192): J5-A1 (texto dentro da janela, modelo aprovado fora), J5-A4 (falha registra e avisa,
-# nunca altera a reunião), J5-A5 (WAHA só dentro da janela), J2-A9/RA-18 (toda mensagem tem como parar, quem parou
+# nunca altera a reunião), #1270 (WAHA sem janela de 24 h, com os tetos), J2-A9/RA-18 (toda mensagem tem como parar, quem parou
 # não recebe), tetos e kill-switch.
 RSpec.describe Crm::BookingV2::Notices::Sender do
   let(:account) { create(:account, locale: 'pt_BR') }
@@ -148,27 +148,101 @@ RSpec.describe Crm::BookingV2::Notices::Sender do
     end
   end
 
-  describe 'WAHA (J5-A5)' do
+  # #1270: pela WAHA o aviso sai sem exigir mensagem do cliente nas últimas 24 h; os tetos, o "Parar avisos" e a flag
+  # da conta continuam segurando.
+  describe 'WAHA (#1270, sem janela de 24 h)' do
     let(:inbox) { create(:channel_api, account: account, additional_attributes: { 'provider' => 'waha' }).inbox }
 
-    it 'não manda sem mensagem do cliente nas últimas 24 h, mesmo com conversa' do
-      open_window!(at: 25.hours.ago)
-      notice = claimed
-
-      expect { described_class.new(notice).perform }.not_to change(Message.outgoing, :count)
-
-      expect(notice.reload).to have_attributes(status: 'skipped', skip_reason: 'waha_outside_window')
-      expect(alerts.count).to eq(1)
+    def waha_sent_elsewhere(count, at:)
+      count.times do |index|
+        other = create_internal_meeting(world: world, starts_at: Time.zone.parse('2026-10-25T13:00:00Z') + index.days)
+        Crm::MeetingNotice.create!(meeting: other, account: account, kind: 'booked', due_at: at, status: :sent, sent_at: at)
+      end
     end
 
-    it 'manda texto quando o cliente escreveu há menos de 24 h' do
-      conversation = open_window!(at: 23.hours.ago)
+    it 'manda texto na conversa que já existe, mesmo sem mensagem do cliente nas últimas 24 h' do
+      conversation = open_window!(at: 25.hours.ago)
       notice = claimed
 
       described_class.new(notice).perform
 
-      expect(notice.reload.status).to eq('sent')
-      expect(Message.find(notice.message_id).conversation_id).to eq(conversation.id)
+      expect(notice.reload).to have_attributes(status: 'sent', skip_reason: nil)
+      message = Message.find(notice.message_id)
+      expect(message).to have_attributes(conversation_id: conversation.id, content_attributes: include('crm_booking_notice' => true))
+      expect(message.content).to include(invite.url)
+      expect(alerts.count).to eq(0)
+    end
+
+    it 'sem conversa nenhuma nesta caixa, abre uma para o contato e manda o texto' do
+      notice = claimed
+
+      expect { described_class.new(notice).perform }.to change(Conversation, :count).by(1)
+
+      conversation = Message.find(notice.reload.message_id).conversation
+      expect(notice.status).to eq('sent')
+      expect(conversation).to have_attributes(inbox_id: inbox.id, contact_id: world.contact.id)
+    end
+
+    it 'sem conversa e sem telefone no contato, pula com no_phone e avisa o agente' do
+      world.contact.update!(phone_number: nil)
+      notice = claimed
+
+      expect { described_class.new(notice).perform }.not_to change(Message, :count)
+
+      expect(notice.reload).to have_attributes(status: 'skipped', skip_reason: 'no_phone')
+      expect(alerts.count).to eq(1)
+    end
+
+    it 'teto por número segura sem a janela: o 5º aviso automático em 24 h não sai' do
+      waha_sent_elsewhere(4, at: 2.hours.ago)
+      notice = claimed
+
+      expect { described_class.new(notice).perform }.not_to change(Message.outgoing, :count)
+
+      expect(notice.reload).to have_attributes(status: 'skipped', skip_reason: 'number_cap')
+    end
+
+    it 'teto por número conta os testes de "Testar no meu WhatsApp" também pela WAHA' do
+      waha_sent_elsewhere(3, at: 2.hours.ago)
+      create_booking_invite(world: world, metadata: { 'test' => true }, sent_at: 1.hour.ago)
+      notice = claimed
+
+      described_class.new(notice).perform
+
+      expect(notice.reload).to have_attributes(status: 'skipped', skip_reason: 'number_cap')
+    end
+
+    it 'teto por conta segura sem a janela' do
+      other = create_internal_meeting(world: world, starts_at: Time.zone.parse('2026-10-21T13:00:00Z'))
+      Crm::MeetingNotice.create!(meeting: other, account: account, kind: 'booked', due_at: 1.hour.ago, status: :sent, sent_at: 1.hour.ago)
+      notice = claimed
+
+      expect do
+        with_modified_env('CRM_BOOKING_NOTICES_ACCOUNT_DAILY_LIMIT' => '1') { described_class.new(notice).perform }
+      end.not_to change(Message.outgoing, :count)
+
+      expect(notice.reload).to have_attributes(status: 'skipped', skip_reason: 'account_cap')
+    end
+
+    it 'contato que parou os avisos não recebe pela WAHA' do
+      Crm::BookingNoticeStop.create!(account: account, contact: world.contact)
+      notice = claimed
+
+      expect { described_class.new(notice).perform }.not_to change(Message.outgoing, :count)
+
+      expect(notice.reload).to have_attributes(status: 'skipped', skip_reason: 'stopped')
+    end
+
+    it 'com a flag crm_booking_v2 desligada nada muda: não sai, não abre conversa e will_send? é falso' do
+      account.disable_features('crm_booking_v2')
+      account.save!
+      notice = claimed
+
+      expect(described_class.new(notice).will_send?).to be(false)
+      expect { described_class.new(notice).perform }.not_to change(Conversation, :count)
+
+      expect(notice.reload).to have_attributes(status: 'skipped', skip_reason: 'disabled', message_id: nil)
+      expect(Message.outgoing.count).to eq(0)
     end
   end
 
