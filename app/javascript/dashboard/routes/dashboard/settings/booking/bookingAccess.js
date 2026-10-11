@@ -40,8 +40,8 @@ export const bookingSidebarItems = ({
   ];
 };
 
-// CRM › Agendamento › Meus números (#1194, J8-A12): entra nos filhos do CRM, que já só
-// aparece para quem vê o CRM; aqui só a flag do agendamento novo.
+// CRM › Agendamento › Meus números (#1194, J8-A12): fica no subgrupo Agendamento do CRM e só entra
+// para quem vê o CRM (bookingSidebarGroup); aqui só a flag do agendamento novo.
 export const bookingResultsSidebarItems = ({
   account,
   t,
@@ -59,8 +59,8 @@ export const bookingResultsSidebarItems = ({
   ];
 };
 
-// CRM › Agendamento › Meus horários (#1195, J8-A11): fica no grupo CRM,
-// para quem já vê o CRM (o grupo só nasce para essas pessoas). Não pede as
+// CRM › Agendamento › Meus horários (#1195, J8-A11): fica no subgrupo Agendamento do CRM,
+// só para quem já vê o CRM (bookingSidebarGroup). Não pede as
 // chaves de Agendamento: o agente comum ajusta a própria agenda.
 export const myBookingHoursSidebarItems = ({
   account,
