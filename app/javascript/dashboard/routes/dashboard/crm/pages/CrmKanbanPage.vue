@@ -1762,9 +1762,14 @@ const closeMeetingDetail = () => {
   selectedMeetingEvent.value = null;
 };
 
-const scheduleMeeting = async () => {
+// Pela agenda (#1265, `source: 'panel'`) não há convite por e-mail: outro aviso.
+const scheduleMeeting = async meeting => {
   closeMeetingScheduler();
-  useAlert(t('CRM_KANBAN.CALENDAR.MEETING_SCHEDULER.SUCCESS'));
+  useAlert(
+    meeting?.source === 'panel'
+      ? t('CRM_KANBAN.BOOKING_AGENDA.SUCCESS')
+      : t('CRM_KANBAN.CALENDAR.MEETING_SCHEDULER.SUCCESS')
+  );
   await refreshSelectedCard();
   await syncCalendarIfActive();
 };
@@ -2581,6 +2586,7 @@ onUnmounted(() => {
       :card-contact-email="meetingSchedulerCard?.contact?.email"
       :card-contact-name="meetingSchedulerCard?.contact?.name"
       :meeting="meetingSchedulerMeeting"
+      :card="meetingSchedulerCard"
       @create="scheduleMeeting"
       @updated="onMeetingRescheduled"
       @close="closeMeetingScheduler"
