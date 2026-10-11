@@ -453,9 +453,54 @@ RSpec.describe Crm::Conversations::CardSyncer do
     conversation = create_crm_conversation(account: account, inbox: inbox, contact: contact, assignee: admin)
     card = described_class.new(conversation: conversation, message: create_crm_message(conversation: conversation, sender: contact)).perform
 
+    expect(card.reload.owner).to eq(admin)
+
     conversation.update!(assignee: nil)
     described_class.new(conversation: conversation.reload).perform
 
     expect(card.reload.owner).to be_nil
+  end
+
+  describe 'another conversation of the contact reusing the auto-created card (#1273)' do
+    let(:account_and_admin) { create_account_and_user }
+    let(:account) { account_and_admin.first }
+    let(:admin) { account_and_admin.last }
+    let(:other_agent) { create(:user, account: account, role: :agent) }
+    let(:inbox) { create_crm_inbox(account: account, members: [admin, other_agent]) }
+    let(:contact) { account.contacts.create!(name: 'Lead Duas Conversas', phone_number: '+5511987650003') }
+    let(:pipeline_and_stage) { create_crm_pipeline(account: account, user: admin) }
+
+    before do
+      pipeline, stage = pipeline_and_stage
+      account.crm_pipeline_inboxes.create!(pipeline: pipeline, inbox: inbox, default_stage: stage, auto_create_card: true, created_by: admin)
+    end
+
+    def sync(conversation)
+      described_class.new(conversation: conversation, message: create_crm_message(conversation: conversation, sender: contact)).perform
+    end
+
+    it 'does not overwrite owner nor team with another agent and team' do
+      first_team = create(:team, account: account)
+      other_team = create(:team, account: account)
+      # Chatwoot tira o atendente que não é do time da conversa.
+      create(:team_member, team: first_team, user: admin)
+      create(:team_member, team: other_team, user: other_agent)
+      card = sync(create_crm_conversation(account: account, inbox: inbox, contact: contact, assignee: admin, team: first_team))
+
+      sync(create_crm_conversation(account: account, inbox: inbox, contact: contact, assignee: other_agent, team: other_team))
+
+      expect(card.reload).to have_attributes(owner_id: admin.id, team_id: first_team.id)
+    end
+
+    it 'fills an empty owner and team' do
+      team = create(:team, account: account)
+      create(:team_member, team: team, user: other_agent)
+      card = sync(create_crm_conversation(account: account, inbox: inbox, contact: contact))
+      expect(card.reload.owner).to be_nil
+
+      sync(create_crm_conversation(account: account, inbox: inbox, contact: contact, assignee: other_agent, team: team))
+
+      expect(card.reload).to have_attributes(owner_id: other_agent.id, team_id: team.id)
+    end
   end
 end
