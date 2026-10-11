@@ -309,7 +309,8 @@ describe('GavetaFotoNome (T12)', () => {
       expect(link.className).toContain('font-semibold');
       expect(link.className).toContain('text-n-blue-11');
       expect(link.className).toContain('hover:underline');
-      expect(link.className).toContain('py-3');
+      // Área de toque de 44 px pelo ::after, sem padding que afaste o link da vírgula.
+      expect(link.className).toContain('after:-inset-y-3');
       expect(no('[data-acao-texto]')).toBeNull();
       await clicar('[data-ir-mudar]');
       expect(wrapper.emitted('mudar')).toHaveLength(1);

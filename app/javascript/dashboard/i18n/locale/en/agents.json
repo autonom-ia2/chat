@@ -596,7 +596,7 @@
         "CLIENTE": "Customer",
         "AGENTE": "Agent",
         "ESCREVENDO": "Typing…",
-        "USOU": "used: {arquivo}",
+        "USOU": "Used: {arquivo}",
         "IDEIAS": "Ideas to start with",
         "QUEM_DISSE": "{quem}:",
         "FOTO_ENVIADA": "Photo sent"
@@ -728,6 +728,10 @@
         "ANEXOS": "Files going along"
       },
       "PAGINA": {
+        "FERRAMENTAS": {
+          "MENU": "Tools",
+          "TITULO": "Tools"
+        },
         "VOLTAR_LISTA": "Back to Agents",
         "TITULO_SR": "Agent page",
         "CARREGANDO": "Loading the agent",

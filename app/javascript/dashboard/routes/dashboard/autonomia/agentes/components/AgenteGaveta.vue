@@ -11,9 +11,12 @@ import TeleportWithDirection from 'dashboard/components-next/TeleportWithDirecti
 // AudienceSidePanel): fora do contêiner que rola, a rolagem não vaza para a lista por trás, e um
 // ancestral com transform não prende o `fixed`. A página por trás não rola enquanto ela está
 // aberta. Quem usa monta com v-if e fecha no evento `fechar`.
-defineProps({
+const props = defineProps({
   titulo: { type: String, required: true },
   larga: { type: Boolean, default: false },
+  // Opcional: devolve false quando fechar agora perderia trabalho (ex.: formulário aberto dentro
+  // da gaveta). Vale para Esc e clique no fundo; o botão X do formulário de dentro continua dele.
+  podeFechar: { type: Function, default: null },
 });
 
 const emit = defineEmits(['fechar']);
@@ -33,10 +36,15 @@ onBeforeUnmount(() => {
   travaRolagem.value = false;
 });
 
+const pedirFechar = () => {
+  if (props.podeFechar && !props.podeFechar()) return;
+  emit('fechar');
+};
+
 useModalFocus({
   container: painel,
   initial: fechar,
-  onClose: () => emit('fechar'),
+  onClose: pedirFechar,
 });
 </script>
 
@@ -46,7 +54,7 @@ useModalFocus({
       data-fundo
       role="presentation"
       class="fixed inset-0 z-40 bg-n-alpha-black1"
-      @click="emit('fechar')"
+      @click="pedirFechar"
     />
     <aside
       ref="painel"

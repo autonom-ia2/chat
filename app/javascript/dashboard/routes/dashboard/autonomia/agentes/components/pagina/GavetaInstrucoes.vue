@@ -85,7 +85,7 @@ const salvar = async () => {
     <p :id="`${base}-dica`" class="m-0 text-sm text-n-slate-11">
       {{ t(`${NS}.DICA`, { nome }) }}
     </p>
-    <div class="flex flex-col gap-1">
+    <div class="relative flex flex-col gap-1">
       <label :for="`${base}-campo`" class="sr-only">
         {{ t(`${NS}.TITULO`, { nome }) }}
       </label>

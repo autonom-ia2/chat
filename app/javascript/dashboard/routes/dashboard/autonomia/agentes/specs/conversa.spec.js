@@ -39,6 +39,32 @@ describe('CelularConversa', () => {
     expect(wrapper.text()).not.toContain('0.87');
   });
 
+  // Piloto conta 16: nome longo sem espaço vazava do balão. O nome quebra em qualquer ponto, fica
+  // em no máximo 2 linhas e o nome inteiro (com extensão) vai no title.
+  it('keeps a long file name with no spaces inside the bubble', () => {
+    const arquivo = 'hub2you_base_conhecimento_agente_vendas_v1.pdf';
+    const wrapper = mount(CelularConversa, {
+      props: { mensagens: [{ de: 'agente', texto: 'Oi', usou: [arquivo] }] },
+    });
+    const balao = wrapper.get('[data-balao="agente"]');
+    const usou = wrapper.get('[data-usou]');
+    const nome = usou.get('.line-clamp-2');
+
+    expect(balao.classes()).toEqual(
+      expect.arrayContaining([
+        'min-w-0',
+        'max-w-[85%]',
+        '[overflow-wrap:anywhere]',
+      ])
+    );
+    expect(usou.classes()).toContain('min-w-0');
+    expect(usou.attributes('title')).toBe(arquivo);
+    expect(nome.classes()).toEqual(
+      expect.arrayContaining(['min-w-0', '[overflow-wrap:anywhere]'])
+    );
+    expect(usou.get('[aria-hidden="true"]').classes()).toContain('shrink-0');
+  });
+
   it('shows the typing bubble while the agent writes', () => {
     const wrapper = mount(CelularConversa, {
       props: { mensagens: [], digitando: true },

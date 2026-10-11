@@ -85,6 +85,19 @@ describe('cópia do celular em pt_BR', () => {
     });
     const nomes = wrapper.findAll('[data-balao] .sr-only').map(n => n.text());
     expect(nomes).toEqual(['Cliente:', 'Agente:']);
-    expect(wrapper.get('[data-usou]').text()).toBe('usou: tabela.pdf');
+    expect(wrapper.get('[data-usou]').text()).toBe('Usou: tabela');
+  });
+
+  // Piloto conta 16: "usou: hub2you_base_…_v1.pdf" vazava do balão no celular de teste.
+  it('says "Usou:" with a long name without extension, inside the bubble', () => {
+    const arquivo = 'hub2you_base_conhecimento_agente_vendas_v1.pdf';
+    const wrapper = mount(CelularConversa, {
+      props: { mensagens: [{ de: 'agente', texto: 'Oi', usou: [arquivo] }] },
+    });
+    const usou = wrapper.get('[data-usou]');
+    expect(usou.text()).toBe(
+      'Usou: hub2you_base_conhecimento_agente_vendas_v1'
+    );
+    expect(usou.attributes('title')).toBe(arquivo);
   });
 });
