@@ -22,6 +22,11 @@ pt_BR:
         hour_before: "Oi%{name}! Seu horário começa em 1 hora (%{when}). Para confirmar, mudar ou cancelar: %{link}"
         stop_line: "Para parar estes avisos: %{link}"
         test_prefix: "Este é um teste da sua página de agendamento. Seu cliente recebe um link igual a este:"
+      notice_templates:
+        meta_failed: "A Meta não respondeu. Tente de novo em alguns minutos."
+        permission_denied: "A conexão deste WhatsApp não tem permissão para criar modelos. Reconecte a caixa em Configurações › Caixas de entrada e tente de novo."
+        meta_rejected: "A Meta não aprovou."
+        platform_reason: "Mensagem pronta feita para este aviso e aprovada pela Meta."
       remind:
         text: "Oi%{name}! Passando para lembrar do seu horário em %{when}. Pode confirmar por aqui? %{link}"
       agent_alerts:

@@ -410,6 +410,10 @@ Rails.application.routes.draw do
                 get :people
                 put :people, action: :update_people
                 post :test_invite
+                # Modelos de aviso do WhatsApp oficial (#1272): sugestão da IA, estado dos pedidos e criação na Meta.
+                post :notice_template_suggestions
+                get :notice_templates
+                post 'notice_templates/create', action: :create_notice_templates
               end
             end
             # Meus horários (#1195): a própria pessoa ajusta dias e horas de agendamento e pausa a agenda.

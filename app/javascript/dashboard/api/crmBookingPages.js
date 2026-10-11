@@ -52,6 +52,29 @@ class CrmBookingPagesAPI extends ApiClient {
     return axios.post(`${this.url}/${id}/test_invite`, { phone });
   }
 
+  // Modelos de aviso do WhatsApp oficial (#1272): a IA sugere um por aviso
+  // entre os aprovados da caixa; criar enfileira o envio à Meta dos que faltam
+  // e `noticeTemplateRequests` acompanha o estado de cada um.
+  noticeTemplateSuggestions(id, inboxId, kinds) {
+    return axios.post(`${this.url}/${id}/notice_template_suggestions`, {
+      inbox_id: inboxId,
+      kinds,
+    });
+  }
+
+  noticeTemplateRequests(id, inboxId) {
+    return axios.get(`${this.url}/${id}/notice_templates`, {
+      params: { inbox_id: inboxId },
+    });
+  }
+
+  createNoticeTemplates(id, inboxId, kinds) {
+    return axios.post(`${this.url}/${id}/notice_templates/create`, {
+      inbox_id: inboxId,
+      kinds,
+    });
+  }
+
   // Passar reuniões (#1195): `pageId` vazio = todas as páginas. A prévia não grava.
   reassignPreview({ fromUserId, toUserId, pageId }) {
     return axios.get(`${this.url}/reassign_preview`, {

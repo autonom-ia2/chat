@@ -1011,6 +1011,12 @@
     "controller": "api/v1/accounts/crm/booking_pages#show",
     "parametros": []
   },
+  "crm/booking_pages/:id/notice_templates": {
+    "controller": "api/v1/accounts/crm/booking_pages#notice_templates",
+    "parametros": [
+      "inbox_id"
+    ]
+  },
   "crm/booking_pages/:id/people": {
     "controller": "api/v1/accounts/crm/booking_pages#people",
     "parametros": []

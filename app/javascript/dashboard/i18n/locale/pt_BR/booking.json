@@ -286,6 +286,20 @@
       "API_TEMPLATES_EMPTY": "Este WhatsApp ainda não tem mensagem pronta. Sem ela, o aviso só sai para quem falou com você nas últimas 24 horas.",
       "API_TEMPLATES_FAILED": "Não deu para ver as mensagens prontas deste WhatsApp. Peça a um administrador para escolher.",
       "TEMPLATE_FOR": "Mensagem aprovada para o aviso {notice}",
+      "AUTO": {
+        "SUGGESTED": "Sugerido",
+        "SUGGESTING": "Procurando a melhor mensagem para cada aviso…",
+        "CREATE_HINT": "Alguns avisos não têm mensagem aprovada que sirva. Podemos mandar mensagens prontas para a Meta aprovar.",
+        "CREATE_BUTTON": "Criar os modelos na Meta",
+        "CREATING": "Enviando para a Meta…",
+        "SENDING": "Enviando para a Meta…",
+        "PENDING": "Em aprovação na Meta",
+        "APPROVED": "Aprovado",
+        "REJECTED": "Recusado: {reason}",
+        "FAILED": "Não foi enviado: {reason}",
+        "RETRY": "Tentar de novo",
+        "CREATE_FAILED": "Não deu para enviar para a Meta agora. Tente de novo."
+      },
       "KINDS": {
         "BOOKED": "Ao marcar",
         "RESCHEDULED": "Quando o horário muda",
