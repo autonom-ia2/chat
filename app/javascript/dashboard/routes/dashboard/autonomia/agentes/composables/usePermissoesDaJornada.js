@@ -4,14 +4,19 @@ import {
   getUserPermissions,
   hasPermissions,
 } from 'dashboard/helper/permissionsHelper';
-import { CRM_MANAGE_AI_PERMISSION } from 'dashboard/constants/permissions';
+import {
+  CRM_MANAGE_AI_PERMISSION,
+  SCHEDULING_PERMISSIONS,
+} from 'dashboard/constants/permissions';
 
 // #1181 (DECISOES.md item 8) — links para telas de fora do módulo só aparecem para quem pode
 // abri-las. As listas repetem o `meta.permissions` das rotas de destino:
 // settings_inbox_new (inbox.routes.js) e crm_handoff_settings_index (assignmentPolicy.routes.js,
-// que também exige CRM e IA do CRM ligados na instalação).
+// que também exige CRM e IA do CRM ligados na instalação) e settings_booking (booking.routes.js,
+// Páginas de agendamento: mora no CRM, então exige o CRM ligado na instalação).
 const CONECTAR_CANAL = ['administrator', 'inbox_manage'];
 const QUEM_RECEBE = ['administrator', CRM_MANAGE_AI_PERMISSION];
+const AGENDAMENTO = ['administrator', ...SCHEDULING_PERMISSIONS];
 
 const crmComIaLigado = () =>
   window.globalConfig?.CRM_KANBAN_ENABLED === 'true' &&
@@ -32,9 +37,20 @@ export function usePermissoesDaJornada() {
     () => crmComIaLigado() && hasPermissions(QUEM_RECEBE, permissoes.value)
   );
 
+  const podeAbrirAgendamento = computed(
+    () =>
+      window.globalConfig?.CRM_KANBAN_ENABLED === 'true' &&
+      hasPermissions(AGENDAMENTO, permissoes.value)
+  );
+
   // Sem CRM e IA do CRM na instalação, a tela de Atribuição não existe: quem usa esconde o "Peça a
   // um administrador", que só faz sentido quando falta permissão.
   const crmLigado = computed(() => crmComIaLigado());
 
-  return { podeConectarCanal, podeEscolherQuemRecebe, crmLigado };
+  return {
+    podeConectarCanal,
+    podeEscolherQuemRecebe,
+    podeAbrirAgendamento,
+    crmLigado,
+  };
 }

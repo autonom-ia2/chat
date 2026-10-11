@@ -3,6 +3,7 @@ import { computed, onMounted, ref, useId } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import AgenteBotao from '../AgenteBotao.vue';
+import AgendaEstado from './AgendaEstado.vue';
 import { usePermissoesDaJornada } from '../../composables/usePermissoesDaJornada';
 import { useAgendaDoAgente } from '../../composables/useAgendaDoAgente';
 import { useAgendaNovaNaConta } from '../../composables/useAgendaNovaNaConta';
@@ -37,7 +38,8 @@ const emit = defineEmits([
 
 const { t } = useI18n();
 const router = useRouter();
-const { podeEscolherQuemRecebe, crmLigado } = usePermissoesDaJornada();
+const { podeEscolherQuemRecebe, podeAbrirAgendamento, crmLigado } =
+  usePermissoesDaJornada();
 const NS = 'AGENTS.JORNADA.PAGINA';
 const base = `blocos-${useId()}`;
 const pergunta = ref('');
@@ -70,14 +72,17 @@ const agenda = useAgendaDoAgente(() => props.agente);
 const mostrarAgenda = computed(
   () => agendaNaConta.value && !props.cotacao && agenda.disponivel.value
 );
-const textoAgenda = computed(() => {
+// #1181 (item A) — a frase diz o estado real da página salva (AgendaEstado).
+const estadoAgenda = computed(() => agenda.estadoDe(agenda.paginaSalva.value));
+const paginaAgenda = computed(() => {
   const pagina = agenda.paginaDe(agenda.paginaSalva.value);
-  if (!pagina) return t(`${NS}.BLOCO_AGENDA.NAO_MARCA`, { nome: props.nome });
-  return t(`${NS}.BLOCO_AGENDA.MARCA_PELA`, {
-    nome: props.nome,
-    pagina: agenda.nomeDaPagina(pagina),
-  });
+  return pagina ? agenda.tituloDaPagina(pagina) : '';
 });
+const linkPaginas = computed(() =>
+  podeAbrirAgendamento.value
+    ? router.resolve({ name: 'settings_booking' }).href
+    : ''
+);
 
 onMounted(() => {
   if (agendaNaConta.value && !props.cotacao) agenda.carregar();
@@ -348,7 +353,13 @@ onMounted(() => {
             >
               {{ t(`${NS}.BLOCO_AGENDA.TITULO`) }}
             </h3>
-            <p class="m-0 text-sm text-n-slate-12">{{ textoAgenda }}</p>
+            <AgendaEstado
+              :estado="estadoAgenda"
+              :nome="nome"
+              :pagina="paginaAgenda"
+              :link-paginas="linkPaginas"
+              :gerencia="podeGerenciar"
+            />
           </div>
         </div>
         <AgenteBotao

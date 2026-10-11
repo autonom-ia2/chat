@@ -50,6 +50,22 @@ describe('usePermissoesDaJornada', () => {
     expect(podeEscolherQuemRecebe.value).toBe(false);
   });
 
+  // #1181 (item A) — "Abrir páginas de agendamento": o meta de settings_booking e o CRM ligado.
+  it('opens the booking pages for an admin or the scheduling keys, with the CRM on', () => {
+    getters.getCurrentUser = usuario(['administrator']);
+    expect(usePermissoesDaJornada().podeAbrirAgendamento.value).toBe(true);
+
+    getters.getCurrentUser = usuario(['custom_role', 'agendamento_view']);
+    expect(usePermissoesDaJornada().podeAbrirAgendamento.value).toBe(true);
+
+    getters.getCurrentUser = usuario(['custom_role', 'autonomia_manage']);
+    expect(usePermissoesDaJornada().podeAbrirAgendamento.value).toBe(false);
+
+    getters.getCurrentUser = usuario(['administrator']);
+    window.globalConfig = { CRM_KANBAN_ENABLED: 'false' };
+    expect(usePermissoesDaJornada().podeAbrirAgendamento.value).toBe(false);
+  });
+
   it('hides "Escolher quem recebe" when the CRM AI is off on the install', () => {
     getters.getCurrentUser = usuario(['administrator']);
     window.globalConfig = { CRM_KANBAN_ENABLED: 'true' };
