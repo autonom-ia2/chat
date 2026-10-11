@@ -464,6 +464,24 @@ RSpec.describe Sla::EvaluateAppliedSlaService do
       end
     end
 
+    # WAHA inboxes keep a uuid as source_id; the chat id lives on the contact (#1276).
+    context 'when a WAHA inbox group carries the chat id on the contact and the policy excludes groups' do
+      let(:inbox) { create(:inbox, account: account, timezone: 'America/Sao_Paulo', channel: create(:channel_api, account: account)) }
+      let(:conversation) do
+        contact = create(:contact, account: account, custom_attributes: { 'waha_whatsapp_chat_id' => '120363000000000000@g.us' })
+        contact_inbox = create(:contact_inbox, contact: contact, inbox: inbox, source_id: SecureRandom.uuid)
+        create(:conversation, account: account, inbox: inbox, contact: contact, contact_inbox: contact_inbox, assignee: user_1,
+                              sla_policy: business_hours_policy, created_at: conversation_created_at, last_activity_at: conversation_created_at)
+      end
+
+      it 'never records a breach' do
+        travel_to(Time.zone.at(applied_sla.frt_due_at) + 1.day) { described_class.new(applied_sla: applied_sla).perform }
+
+        expect(SlaEvent.where(applied_sla: applied_sla)).not_to exist
+        expect(applied_sla.reload.sla_status).to eq('active')
+      end
+    end
+
     context 'when the AI breach guard decides the customer is not waiting' do
       before do
         allow(Sla::AiBreachGuard).to receive(:new).and_return(instance_double(Sla::AiBreachGuard, skip_breach?: true))

@@ -13,13 +13,15 @@ module Crm
     def self.group_conversation?(conversation)
       return false unless WHATSAPP_CHANNEL_TYPES.include?(conversation&.inbox&.channel_type)
 
-      chat_ids(conversation).any? { |chat_id| chat_id.to_s.strip.downcase.end_with?(*NON_DIRECT_JID_SUFFIXES) }
+      chat_id(conversation).to_s.strip.downcase.end_with?(*NON_DIRECT_JID_SUFFIXES)
     end
 
-    # The source_id stays as a fallback for providers that do store the JID there.
-    def self.chat_ids(conversation)
-      conversation.contact&.custom_attributes.to_h.values_at(*WAHA_CHAT_ID_ATTRIBUTES) + [conversation.contact_inbox&.source_id]
+    # First one present wins; the source_id stays as a fallback for providers
+    # that do store the JID there.
+    def self.chat_id(conversation)
+      waha_chat_ids = conversation.contact&.custom_attributes.to_h.values_at(*WAHA_CHAT_ID_ATTRIBUTES)
+      (waha_chat_ids + [conversation.contact_inbox&.source_id]).find(&:present?)
     end
-    private_class_method :chat_ids
+    private_class_method :chat_id
   end
 end

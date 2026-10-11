@@ -46,6 +46,15 @@ RSpec.describe Crm::WhatsappGroupDetector do
       end
     end
 
+    context 'when the WAHA chat id is direct but the source_id looks like a group' do
+      let(:custom_attributes) { { 'waha_whatsapp_chat_id' => '554299999999@c.us' } }
+      let(:source_id) { '120363000000000000@g.us' }
+
+      it 'trusts the WAHA chat id over the fallback' do
+        expect(described_class.group_conversation?(conversation)).to be(false)
+      end
+    end
+
     context 'when the contact has no WAHA attributes' do
       it 'is not a group for a uuid source_id' do
         expect(described_class.group_conversation?(conversation)).to be(false)
