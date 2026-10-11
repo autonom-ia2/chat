@@ -100,8 +100,29 @@ RSpec.describe 'Acesso por funil: dono do card', type: :request do
       expect(card.reload.owner_id).to eq(sinistro_agent.id)
     end
 
-    # Criar não precisa da regra: sem conversa, quem não é administrador só cria card com si mesmo de dono
-    # (Crm::Cards::CreateAuthorizer); da conversa, o dono é o atendente dela (Crm::Cards::Creator).
+    it 'card criado da conversa: atendente sem o funil não vira dono (fica quem criou)' do
+      conversa = create_crm_conversation(account: account, inbox: inbox, contact: card.contact, assignee: sinistro_agent)
+
+      novo = Crm::Cards::Creator.new(account: account, user: vendas_agent, conversation: conversa,
+                                     params: { pipeline_id: vendas.first.id, stage_id: vendas.last.id, title: 'Novo' }).perform
+
+      expect(novo.owner_id).to eq(vendas_agent.id)
+    end
+
+    it 'atendente com o funil, ou em "Só as suas", vira dono pela conversa' do
+      colega = create_crm_agent(account: account, name: 'Só as suas').first
+      inbox.add_members([colega.id])
+      Crm::InboxAgentAccess.create!(account: account, inbox: inbox, user: colega, all_pipelines: false, triage: false, only_own: true)
+      [vendas_agent, colega].each do |atendente|
+        conversa = create_crm_conversation(account: account, inbox: inbox, contact: card.contact, assignee: atendente)
+        sem_dono = account.crm_cards.create!(pipeline: vendas.first, stage: vendas.last, title: 'Sem dono', inbox: inbox,
+                                             contact: card.contact, primary_conversation: conversa)
+
+        Crm::Conversations::CardSyncer.new(conversation: conversa).perform
+
+        expect(sem_dono.reload.owner_id).to eq(atendente.id)
+      end
+    end
 
     it 'o lote também recusa, card a card' do
       post "/api/v1/accounts/#{account.id}/crm/cards/bulk",
@@ -114,6 +135,16 @@ RSpec.describe 'Acesso por funil: dono do card', type: :request do
   end
 
   describe 'sem nenhuma linha de acesso (todas as contas hoje)' do
+    it 'o atendente vira dono pela conversa, como antes' do
+      conversa = create_crm_conversation(account: account, inbox: inbox, contact: card.contact, assignee: sinistro_agent)
+      sem_dono = account.crm_cards.create!(pipeline: vendas.first, stage: vendas.last, title: 'Sem dono', inbox: inbox,
+                                           contact: card.contact, primary_conversation: conversa)
+
+      Crm::Conversations::CardSyncer.new(conversation: conversa).perform
+
+      expect(sem_dono.reload.owner_id).to eq(sinistro_agent.id)
+    end
+
     it 'qualquer pessoa vira dona, como antes' do
       set_owner(sinistro_agent)
 

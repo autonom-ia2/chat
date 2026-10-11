@@ -91,7 +91,7 @@ class Crm::CardPolicy < ApplicationPolicy
   # card e ter o funil dele nas caixas envolvidas. Quem só vê o card (dono ou atendente sem o funil) continua vendo, mas
   # não fecha, arquiva, reabre, edita nem vincula. Sem acesso por funil, sempre verdadeiro.
   def funnel_member?
-    Crm::Access::CardGuard.new(user: user, account: account, account_user: account_user).move_allowed?(record, record.pipeline_id)
+    Crm::Access::CardGuard.new(user: user, account: account, account_user: account_user).edit_allowed?(record)
   end
 end
 

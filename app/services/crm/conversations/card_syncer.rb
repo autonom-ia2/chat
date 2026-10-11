@@ -176,7 +176,7 @@ class Crm::Conversations::CardSyncer
     return true if @conversation.assignee_id == card.owner_id
 
     Crm::Access::CardGuard.new(user: nil, account: @account)
-                          .owner_allowed?(@conversation.assignee_id, inbox_id: card.inbox_id, pipeline_id: card.pipeline_id)
+                          .assignee_can_own?(@conversation.assignee_id, inbox_id: @conversation.inbox_id, pipeline_id: card.pipeline_id)
   end
 
   # Assignment/team syncs arrive without @message; they must not move the card's

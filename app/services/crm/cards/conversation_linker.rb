@@ -94,7 +94,7 @@ module Crm
       def derived_owner_id
         assignee_id = @conversation.assignee_id
         guard = Crm::Access::CardGuard.new(user: @actor, account: @card.account)
-        allowed = guard.owner_allowed?(assignee_id, inbox_id: @card.inbox_id || @conversation.inbox_id, pipeline_id: @card.pipeline_id)
+        allowed = guard.assignee_can_own?(assignee_id, inbox_id: @card.inbox_id || @conversation.inbox_id, pipeline_id: @card.pipeline_id)
         allowed ? assignee_id : nil
       end
 

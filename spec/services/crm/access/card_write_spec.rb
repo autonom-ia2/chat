@@ -56,19 +56,15 @@ RSpec.describe 'Acesso por funil: mexer no card', type: :request do
       expect(response).to have_http_status(:ok)
     end
 
-    it 'mas não editam, fecham, arquivam nem movem dentro do funil dele' do
-      vistoria = create_crm_stage(account: account, pipeline: sinistro.first, name: 'Vistoria')
-
+    it 'mas não editam, fecham nem arquivam' do
       patch card_url(card_sinistro), params: { card: { title: 'Outro' } }, headers: headers, as: :json
       expect(forbidden?).to be(true)
       post card_url(card_sinistro, 'close'), params: { result: 'won' }, headers: headers, as: :json
       expect(forbidden?).to be(true)
       delete card_url(card_sinistro), headers: headers, as: :json
       expect(forbidden?).to be(true)
-      post card_url(card_sinistro, 'move'), params: { stage_id: vistoria.id }, headers: headers, as: :json
-      expect(forbidden?).to be(true)
 
-      expect(card_sinistro.reload).to have_attributes(title: 'Sinistro', status: 'open', stage_id: sinistro.last.id)
+      expect(card_sinistro.reload).to have_attributes(title: 'Sinistro', status: 'open')
     end
 
     it 'nem vinculam nem desvinculam conversa' do
@@ -109,6 +105,8 @@ RSpec.describe 'Acesso por funil: mexer no card', type: :request do
            params: { follow_up: { card_id: card_sinistro.id, title: 'Novo', due_at: 1.day.from_now, timezone: 'UTC' } }, headers: headers, as: :json
       expect(forbidden?).to be(true)
       patch "/api/v1/accounts/#{account.id}/crm/follow_ups/#{follow_up.id}", params: { follow_up: { title: 'Outro' } }, headers: headers, as: :json
+      expect(forbidden?).to be(true)
+      post "/api/v1/accounts/#{account.id}/crm/follow_ups/#{follow_up.id}/complete", headers: headers, as: :json
       expect(forbidden?).to be(true)
 
       expect(follow_up.reload.title).to eq('Retornar')
@@ -156,6 +154,16 @@ RSpec.describe 'Acesso por funil: mexer no card', type: :request do
       expect(card_vendas.reload.pipeline_id).to eq(vendas.first.id)
     end
 
+    it 'reabre card arquivado do funil dela mesmo sem ver a conversa (que voltou para a triagem)' do
+      arquivado = account.crm_cards.create!(pipeline: vendas.first, stage: vendas.last, title: 'Antigo', inbox: inbox, contact: contact,
+                                            primary_conversation: create_crm_conversation(account: account, inbox: inbox, contact: contact))
+      arquivado.update!(status: :archived)
+
+      patch card_url(arquivado), params: { card: { title: 'Antigo revisto' } }, headers: headers, as: :json
+
+      expect(response).to have_http_status(:ok)
+    end
+
     it 'no funil dela, mexe normalmente' do
       patch card_url(card_vendas), params: { card: { title: 'Proposta enviada' } }, headers: headers, as: :json
       expect(response).to have_http_status(:ok)
@@ -170,6 +178,48 @@ RSpec.describe 'Acesso por funil: mexer no card', type: :request do
 
       expect(response).to have_http_status(:ok)
       expect(card_sinistro.reload.title).to eq('Revisado')
+    end
+  end
+
+  describe '"Só as suas" e só triagem (decisão do Rodrigo em 11/10)' do
+    def access!(only_own:, triage:)
+      Crm::InboxAgentAccess.create!(account: account, inbox: inbox, user: vendas_agent, all_pipelines: false, triage: triage,
+                                    only_own: only_own)
+    end
+
+    it 'em "Só as suas", mexe no próprio card (editar, fechar, trocar de etapa), mas não muda de funil' do
+      access!(only_own: true, triage: false)
+      proposta = create_crm_stage(account: account, pipeline: vendas.first, name: 'Proposta')
+
+      patch card_url(card_vendas), params: { card: { title: 'Meu' } }, headers: headers, as: :json
+      expect(response).to have_http_status(:ok)
+      post card_url(card_vendas, 'move'), params: { stage_id: proposta.id }, headers: headers, as: :json
+      expect(response).to have_http_status(:ok)
+      post card_url(card_vendas, 'move'), params: { stage_id: sinistro.last.id }, headers: headers, as: :json
+      expect(forbidden?).to be(true)
+      post card_url(card_vendas, 'close'), params: { result: 'won' }, headers: headers, as: :json
+      expect(response).to have_http_status(:ok)
+
+      expect(card_vendas.reload).to have_attributes(title: 'Meu', pipeline_id: vendas.first.id, status: 'won')
+    end
+
+    it 'só com a triagem, mexe no card da conversa que atende' do
+      access!(only_own: false, triage: true)
+
+      patch card_url(card_sinistro), params: { card: { title: 'Atendo' } }, headers: headers, as: :json
+
+      expect(response).to have_http_status(:ok)
+    end
+
+    it 'não mexe no card dos outros' do
+      access!(only_own: true, triage: false)
+      alheio = account.crm_cards.create!(pipeline: vendas.first, stage: vendas.last, title: 'Alheio', inbox: inbox, contact: contact,
+                                         owner: admin)
+
+      patch card_url(alheio), params: { card: { title: 'X' } }, headers: headers, as: :json
+
+      expect(response.status).to be_in([401, 404])
+      expect(alheio.reload.title).to eq('Alheio')
     end
   end
 

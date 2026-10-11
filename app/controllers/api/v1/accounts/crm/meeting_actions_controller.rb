@@ -48,7 +48,7 @@ class Api::V1::Accounts::Crm::MeetingActionsController < Api::V1::Accounts::Crm:
   # Acesso por funil (#1148, decisão b): lembrar o cliente e mandar novo link é mexer no card; exige o funil dele.
   def ensure_card_funnel!(card)
     guard = ::Crm::Access::CardGuard.new(user: Current.user, account: Current.account, account_user: Current.account_user)
-    raise Pundit::NotAuthorizedError unless guard.move_allowed?(card, card.pipeline_id)
+    raise Pundit::NotAuthorizedError unless guard.edit_allowed?(card)
   end
 
   def client
