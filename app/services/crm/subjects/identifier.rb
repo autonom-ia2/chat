@@ -83,6 +83,14 @@ class Crm::Subjects::Identifier
   def avisar
     Crm::Cards::Broadcaster.broadcast(@decisao.card, @evento) if @evento && @decisao.card
     Crm::Subjects::Notifier.notify(@conversation) if %w[applied suggested].include?(@decisao&.state)
+    avaliar_card_novo
+  end
+
+  # Card novo do pedido é o assunto atual: a IA avalia ele, não o anterior (#1147). A troca de foco agenda em Focus.
+  def avaliar_card_novo
+    return unless @decisao&.state == 'applied' && @decisao.action == 'create'
+
+    Crm::Ai::Observer.new(card: @decisao.card).schedule_evaluation
   end
 
   # Jev inseguro, ou pedido novo (precisa de nome): o modelo maior decide. Inseguro também, nada muda.

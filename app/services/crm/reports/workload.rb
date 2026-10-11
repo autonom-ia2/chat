@@ -1,8 +1,10 @@
 module Crm
   module Reports
-    # Open-card workload by real-time responsible (human assignee/owner, bot, or
-    # nobody), reusing Card#responsible_descriptor so the report matches what the
-    # board shows. Bounded scan to keep the query predictable.
+    # Open-card workload by the card OWNER (#1151). One conversation can hold
+    # several cards, each with its own owner, so the conversation assignee says
+    # nothing about who carries the card. A card without owner (old card, or owner
+    # cleared in bulk) falls back to what the board shows: the conversation assignee,
+    # then the inbox bot, then nobody. Bounded scan to keep the query predictable.
     class Workload < BaseReport
       MAX_CARDS = 5000
 
@@ -12,7 +14,7 @@ module Crm
         open_cards.find_each(batch_size: 500).with_index do |card, index|
           break if index >= MAX_CARDS
 
-          descriptor = card.responsible_descriptor
+          descriptor = responsible(card)
           key = bucket_key(descriptor)
           entry = buckets[key]
           entry[:name] ||= descriptor&.dig(:name)
@@ -26,8 +28,15 @@ module Crm
 
       def open_cards
         scope = account.crm_cards.where(status: Crm::Card.statuses[:open])
-                       .includes(:owner, primary_conversation: :assignee, inbox: { agent_bot_inbox: :agent_bot })
+                       .includes(:owner, primary_conversation: [:assignee, { inbox: { agent_bot_inbox: :agent_bot } }],
+                                         inbox: { agent_bot_inbox: :agent_bot })
         pipeline.present? ? scope.where(pipeline_id: pipeline.id) : scope
+      end
+
+      def responsible(card)
+        return { type: 'agent', id: card.owner.id, name: card.owner.name } if card.owner.present?
+
+        card.responsible_descriptor
       end
 
       def bucket_key(descriptor)

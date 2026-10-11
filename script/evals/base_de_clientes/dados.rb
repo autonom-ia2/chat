@@ -7,6 +7,9 @@
 module BaseDeClientesEval::Dados
   DDDS = %w[11 12 13 15 16 19 21 22 24 27 31 32 34 35 41 43 44 47 48 51 53 54 61 62 65 67 71 73 79 81 83 84 85 86 91 92 98].freeze
   DOMINIOS = %w[gmail.com hotmail.com outlook.com yahoo.com.br uol.com.br terra.com.br empresa.com.br].freeze
+  # O domínio do e-mail vai ao Jev (JevMask): planilha de outro país usa os domínios de lá.
+  DOMINIOS_EUA = %w[gmail.com yahoo.com outlook.com company.com aol.com].freeze
+  DOMINIOS_MEXICO = %w[gmail.com hotmail.com empresa.com.mx prodigy.net.mx yahoo.com.mx].freeze
   STATUS = ['Ativo', 'Inativo', 'Prospect', 'Cancelado', 'Em negociação'].freeze
   CIDADES = ['São Paulo', 'Campinas', 'Rio de Janeiro', 'Belo Horizonte', 'Curitiba', 'Porto Alegre', 'Recife', 'Salvador', 'Fortaleza',
              'Goiânia'].freeze
@@ -59,9 +62,9 @@ module BaseDeClientesEval::Dados
     sorteio(CIDADES)
   end
 
-  def email_de(nome_pessoa)
+  def email_de(nome_pessoa, dominios = DOMINIOS)
     base = I18n.transliterate(nome_pessoa.to_s).downcase.split.first(2).join('.').delete('^a-z.')
-    "#{base.presence || 'contato'}#{rng.rand(100)}@#{sorteio(DOMINIOS)}"
+    "#{base.presence || 'contato'}#{rng.rand(100)}@#{sorteio(dominios)}"
   end
 
   # Celular brasileiro: DDD + 9 + 8 dígitos.
@@ -104,12 +107,28 @@ module BaseDeClientesEval::Dados
     Celula.new(valor: valor, alcanca: false)
   end
 
+  # Celular dos EUA escrito tudo junto e sem o +1, com o primeiro dígito do assinante entre 6 e 9: os
+  # dígitos sozinhos não o distinguem de um celular brasileiro antigo ("9176551234" = DDD 91 + 7655-1234).
+  def celular_eua_junto
+    Celula.new(valor: "#{sorteio(%w[917 718 212 646 305 786 214 312])}#{rng.rand(6..9)}#{digitos(6)}", alcanca: false)
+  end
+
+  # Celular brasileiro antigo (8 dígitos depois do DDD) escrito tudo junto: só o contexto diz que é do Brasil.
+  def celular_antigo_junto
+    Celula.new(valor: "#{sorteio(DDDS)}#{rng.rand(6..9)}#{digitos(7)}", alcanca: true)
+  end
+
+  # Celular do México tudo junto (10 dígitos): Cidade do México começa com 55, que também é DDD do RS.
+  def celular_mexico_junto
+    Celula.new(valor: "#{sorteio(%w[55 81 33])}#{rng.rand(6..9)}#{digitos(7)}", alcanca: false)
+  end
+
   def fixo
     Celula.new(valor: "(#{sorteio(DDDS)}) #{rng.rand(2..5)}#{digitos(3)}-#{digitos(4)}", alcanca: false)
   end
 
-  def email(nome_pessoa = nome)
-    Celula.new(valor: email_de(nome_pessoa), alcanca: true)
+  def email(nome_pessoa = nome, dominios: DOMINIOS)
+    Celula.new(valor: email_de(nome_pessoa, dominios), alcanca: true)
   end
 
   def cpf(mascara: true)

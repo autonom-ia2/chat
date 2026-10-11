@@ -149,6 +149,14 @@ module Crm::Ai::ClassifierPrompt
     omita o campo em vez de preencher.
   ATTR
 
+  # Multifunil (#1147): a conversa pode ter outros pedidos abertos; a etapa e os campos são só DESTE card.
+  OTHER_SUBJECTS = <<~OTHER.strip
+    OUTROS PEDIDOS NA MESMA CONVERSA:
+    Quando "other_subjects" vier preenchido, o cliente tem outros pedidos abertos nesta conversa (cada um com o seu card).
+    Decida a etapa, o handoff e os campos SOMENTE deste card ("card.title"). Mensagem que trata de outro pedido não
+    move este card, não conta como avanço dele e não preenche os campos dele.
+  OTHER
+
   KNOWN_ATTRS = <<~KNOWN.strip
     ATRIBUTOS JÁ CONHECIDOS:
     Os DADOS DE ENTRADA trazem em "known_attributes" os valores JÁ salvos deste card, separados em
@@ -191,6 +199,7 @@ module Crm::Ai::ClassifierPrompt
     CALLBACK,
     ATTR_EXTRACTION,
     KNOWN_ATTRS,
+    OTHER_SUBJECTS,
     OUTPUT_DISCIPLINE,
     EXAMPLES
   ].join("\n\n").freeze

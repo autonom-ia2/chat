@@ -11,14 +11,19 @@ module CampaignImports
 
     class << self
       # national_formats (customer_base reading, #1246): also the other ways a Brazilian sheet writes a
-      # mobile. See #national_mobile_number.
-      def normalize!(raw_phone, national_formats: false)
+      # mobile. See #national_mobile_number. legacy_mobiles: the ninth digit may be added to a 10-digit
+      # number without country code — only when Jev said the column is Brazilian (ContactReading).
+      def normalize!(raw_phone, national_formats: false, legacy_mobiles: false)
         sanitized = raw_phone.to_s.strip.delete_prefix("'")
         raise Error, 'blank_phone_number' if sanitized.empty?
         raise Error, 'formula_phone_number' if CsvSanitizer.formula_like?(sanitized, allow_phone_plus: true)
 
         digits = sanitized.gsub(/\D/, '')
-        local_number, ninth_digit_added = national_formats ? national_mobile_number(sanitized, digits) : [local_mobile_number(digits), false]
+        local_number, ninth_digit_added = if national_formats
+                                            national_mobile_number(sanitized, digits, legacy_mobiles)
+                                          else
+                                            [local_mobile_number(digits), false]
+                                          end
         raise Error, 'invalid_brazilian_mobile_number' if local_number.nil? || local_number.empty?
 
         normalized = "+55#{local_number}"
@@ -71,12 +76,12 @@ module CampaignImports
       #   via the WhatsApp normalizer) when it is written the Brazilian way: the DDD apart, never in
       #   another country's grouping such as "917 555 1234";
       # - the DDD must be one of Anatel's.
-      def national_mobile_number(written, digits)
+      def national_mobile_number(written, digits, legacy_mobiles)
         digits = written.include?('+') ? after_country_code(written) : national_digits(digits)
         return if digits.nil? || DDDS.exclude?(digits[0, 2])
 
         return [local_mobile_number(digits), false] unless digits.length == LEGACY_NATIONAL_LENGTH
-        return unless brazilian_grouping?(written)
+        return unless legacy_mobiles && brazilian_grouping?(written)
 
         [local_mobile_number(Whatsapp::PhoneNormalizers::BrazilPhoneNormalizer.new.normalize("55#{digits}")), true]
       end

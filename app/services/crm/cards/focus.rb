@@ -21,6 +21,8 @@ class Crm::Cards::Focus
   def perform
     link = Crm::CardConversation.find_or_create_by!(account: @account, card: @card, conversation: @conversation)
     link.update!(focused_at: Time.current, focused_by_id: @user&.id)
+    # O assunto mudou: a IA avalia o card que passou a ser o atual (#1147); o anterior deixa de ser avaliado.
+    Crm::Ai::Observer.new(card: @card).schedule_evaluation
     link
   end
 end

@@ -138,7 +138,12 @@ module Crm
           default_hour: @context.dig(:temporal, :default_hour) || 9,
           attribute_schema: @attribute_schema,
           known_attributes: known_attributes_payload
-        }.to_json
+        }.merge(other_subjects_payload).to_json
+      end
+
+      # Só quando a conversa tem outros pedidos (#1147): com um pedido só, a entrada fica igual à de antes.
+      def other_subjects_payload
+        @context[:other_subjects].present? ? { other_subjects: @context[:other_subjects] } : {}
       end
 
       # Valores já salvos, restritos às chaves do attribute_schema (conjunto pequeno definido pelo

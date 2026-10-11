@@ -40,12 +40,21 @@ class CampaignImports::HeaderLocator
 
   def pinned(header_row, table_index)
     table = tables[table_index]
-    return untitled(table, table_index) if table && header_row == UNTITLED_HEADER_ROW && @reading.customer_base?
+    return untitled_pin(table, table_index) if header_row == UNTITLED_HEADER_ROW
 
     header_index = table&.rows&.index { |row| row.row_number == header_row }
     raise Error, 'header_row_not_found' unless header_index
 
     build(table, table_index, header_index, contact_below: true)
+  end
+
+  # header_row 0 is saved by the customer_base reading; without the flag that table is read as the classic
+  # reading would, its own header row found again.
+  def untitled_pin(table, table_index)
+    raise Error, 'header_row_not_found' unless table
+    return untitled(table, table_index) if @reading.customer_base?
+
+    table_candidates(table, table_index).max_by { |candidate| score(candidate) }
   end
 
   def table_candidates(table, table_index)

@@ -97,7 +97,8 @@ RSpec.describe CampaignImports::AudienceValidator, :aggregate_failures do
 
     context 'when on' do
       it 'takes the first valid email of the cell and never stores the others in clear' do
-        campaign_import = import_for(multi_email, customer_base: true, phone: 'none', email: 'column_1', name: 'column_0', company: 'none')
+        campaign_import = import_for(multi_email, customer_base: true, phone: 'none', email: 'column_1', name: 'column_0', company: 'none',
+                                                  phone_country: 'unknown')
 
         described_class.new(campaign_import).perform
 
@@ -106,18 +107,61 @@ RSpec.describe CampaignImports::AudienceValidator, :aggregate_failures do
         expect(rows.pluck(:email_masked)).to eq(['a**@alfa.com.br', 'b**@; b**@', 'c***@gama.com.br'])
       end
 
-      it 'restores the ninth digit of a legacy mobile and counts it in the summary' do
-        campaign_import = import_for(legacy_phone, customer_base: true, phone: 'column_1', email: 'none', name: 'column_0', company: 'none')
+      it 'restores the ninth digit when Jev says the phone column is Brazilian' do
+        campaign_import = import_for(legacy_phone, customer_base: true, phone: 'column_1', email: 'none', name: 'column_0', company: 'none',
+                                                   phone_country: 'brazil')
 
         described_class.new(campaign_import).perform
 
         campaign_import.reload
         expect(campaign_import.valid_rows).to eq(2)
-        expect(campaign_import.validation_summary['ninth_digit_added']).to eq(1)
+        expect(campaign_import.validation_summary).to include('phone_country' => 'brazil', 'ninth_digit_added' => 1, 'legacy_mobiles_refused' => 0)
+      end
+
+      it 'does not carry the Brazil answer to another phone column the person picks by hand' do
+        two_columns = "Nome,Celular,Recado\nAna,(11) 8765-4321,(21) 8765-4321\nBia,(11) 97777-1234,(21) 97777-1234\n"
+        campaign_import = import_for(two_columns, customer_base: true, phone: 'column_1', email: 'none', name: 'column_0', company: 'none',
+                                                  phone_country: 'brazil')
+        described_class.new(campaign_import).perform
+        expect(campaign_import.reload.valid_rows).to eq(2)
+
+        manual = { 'name' => 0, 'phone' => 2, 'email' => nil, 'company' => nil }
+        campaign_import.update!(schema_resolution: campaign_import.schema_resolution.merge('manual_mapping' => manual))
+        described_class.new(campaign_import).perform
+
+        campaign_import.reload
+        expect(campaign_import.valid_rows).to eq(1)
+        expect(campaign_import.validation_summary).to include('ninth_digit_added' => 0, 'legacy_mobiles_refused' => 1)
+      end
+
+      it 'explains a file left without valid rows because Jev did not judge the phone column Brazilian' do
+        only_legacy = "Nome,Celular\nAna,(11) 8765-4321\n"
+        campaign_import = import_for(only_legacy, customer_base: true, phone: 'column_1', email: 'none', name: 'column_0', company: 'none',
+                                                  phone_country: 'other')
+
+        described_class.new(campaign_import).perform
+
+        campaign_import.reload
+        expect(campaign_import).to be_validation_failed
+        expect(campaign_import.validation_summary).to include('phone_country' => 'other', 'legacy_mobiles_refused' => 1)
+      end
+
+      it 'never adds the ninth digit when Jev says another country or cannot tell, and says how many stayed out' do
+        %w[other unknown].each do |country|
+          campaign_import = import_for(legacy_phone, customer_base: true, phone: 'column_1', email: 'none', name: 'column_0', company: 'none',
+                                                     phone_country: country)
+
+          described_class.new(campaign_import).perform
+
+          campaign_import.reload
+          expect(campaign_import.valid_rows).to eq(1), country
+          expect(campaign_import.validation_summary).to include('phone_country' => country, 'ninth_digit_added' => 0, 'legacy_mobiles_refused' => 1)
+        end
       end
 
       it 'asks for the columns of a file without a header and keeps its first line as data' do
-        campaign_import = import_for(headless, customer_base: true, phone: 'column_1', email: 'none', name: 'column_0', company: 'none')
+        campaign_import = import_for(headless, customer_base: true, phone: 'column_1', email: 'none', name: 'column_0', company: 'none',
+                                               phone_country: 'brazil')
 
         described_class.new(campaign_import).perform
 

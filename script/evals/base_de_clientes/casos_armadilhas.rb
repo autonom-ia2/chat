@@ -142,4 +142,24 @@ module BaseDeClientesEval::Casos::Armadilhas
                                                                  nota: 'Número de fora não pode virar +55.' do
     aba(%w[Nome Celular E-mail], 40) { [D.nome, D.chance(0.3) ? D.celular_exterior : D.celular, D.chance(0.5) ? D.email : vazio] }
   end
+
+  caso 'c48', 'Planilha dos EUA: celular tudo junto, sem o +1', nivel: 3,
+                                                                alvos: { phone: 'Phone', email: 'Email', name: 'First Name' },
+                                                                nota: 'O Jev tem de dizer que não é Brasil: nenhum número vira +55.' do
+    aba(['First Name', 'Last Name', 'Phone', 'Email', 'City', 'State', 'ZIP'], 40) do
+      [D.primeiro_nome, D.sobrenome, D.celular_eua_junto, D.email(dominios: D::DOMINIOS_EUA), 'New York', 'NY', D.digitos(5)]
+    end
+  end
+
+  caso 'c49', 'Base brasileira antiga: celular tudo junto, sem o 9', nivel: 3,
+                                                                     alvos: { phone: 'Celular', name: 'Nome' },
+                                                                     nota: 'O Jev tem de dizer Brasil pelo contexto (CPF, UF, CEP).' do
+    aba(%w[Nome Celular CPF Cidade UF CEP], 40) { [D.nome, D.celular_antigo_junto, D.cpf, D.cidade, 'SP', D.cep] }
+  end
+
+  caso 'c50', 'Sem pistas: nome e número dos EUA tudo junto', nivel: 3, alvos: { phone: 'Number', name: 'Contact' },
+                                                              pode_perguntar: %i[phone],
+                                                              nota: 'Sem contexto, o certo é não pôr o 9 (outro país ou "não sei").' do
+    aba(%w[Contact Number], 40) { [D.nome, D.celular_eua_junto] }
+  end
 end

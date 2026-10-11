@@ -12,14 +12,23 @@ class CampaignImports::AudienceRowContacts
     phone_result, phone_error = normalize(phone) { |value| @reading.phone(value) }
     email_result, email_error = normalize(email) { |value| @reading.email(value) }
     reasons = [phone_error, email_error].compact.presence || ['missing_contact']
-    phone_fields(phone, phone_result).merge(email_fields(email, email_result), errors: phone_result || email_result ? [] : reasons)
+    errors = phone_result || email_result ? [] : reasons
+    phone_fields(phone, phone_result).merge(email_fields(email, email_result))
+                                     .merge(errors: errors, legacy_mobile_refused: legacy_mobile_refused?(phone, phone_result))
   end
 
   private
 
+  # A legacy mobile the customer_base reading could read, left out because the column was not judged Brazilian.
+  def legacy_mobile_refused?(raw, result)
+    return false if result || raw.blank? || !@reading.customer_base? || @reading.legacy_mobiles?
+
+    @reading.with_legacy_mobiles(true).phone?(raw)
+  end
+
   def phone_fields(raw, result)
     {
-      raw_phone_masked: result&.masked || CampaignImports::PhoneNormalizer.mask_raw(raw),
+      raw_phone_masked: result&.masked || masked_phone(raw),
       normalized_phone: result&.phone_number, normalized_phone_hash: result&.hash,
       ninth_digit_added: result&.ninth_digit_added == true
     }
@@ -28,6 +37,13 @@ class CampaignImports::AudienceRowContacts
   def email_fields(raw, result)
     { email: result&.email, email_hash: result && Digest::SHA256.hexdigest(result.email),
       email_masked: raw.present? ? masked_email(raw, result) : nil }
+  end
+
+  # customer_base: every number of an invalid cell is masked on its own, never the first one whole.
+  def masked_phone(raw)
+    return CampaignImports::PhoneNormalizer.mask_raw(raw) unless @reading.customer_base?
+
+    CampaignImports::CellValues.masked_phones(raw)
   end
 
   # customer_base: every address of the cell is masked, not only the first ("ana@x.com; ana@y.com").

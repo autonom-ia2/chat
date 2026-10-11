@@ -108,4 +108,19 @@ module BaseDeClientesEval::Casos::Controle
        D::Celula.new(valor: "p:#{D.celular(:e164).valor}", alcanca: true), D.email, 'Seguro auto']
     end
   end
+
+  caso 'h17', 'México: celular tudo junto, cabeçalho em espanhol', nivel: 3,
+                                                                   alvos: { phone: 'Teléfono', email: 'Correo', name: 'Nombre' },
+                                                                   nota: 'Número mexicano não pode virar +55.' do
+    aba(%w[Nombre Teléfono Correo Ciudad Estado C.P.], 40) do
+      [D.nome, D.celular_mexico_junto, D.email(dominios: D::DOMINIOS_MEXICO), 'Monterrey', 'Nuevo León', D.digitos(5)]
+    end
+  end
+
+  caso 'h18', 'Export brasileiro em inglês com celular antigo', nivel: 3,
+                                                                alvos: { phone: 'Mobile', email: 'Email', name: 'Full Name' },
+                                                                pode_perguntar: %i[phone],
+                                                                nota: 'Sem reconhecer o Brasil, o celular antigo fica de fora: perda, não erro.' do
+    aba(['Full Name', 'Mobile', 'Email', 'CPF', 'City'], 40) { [D.nome, D.celular_antigo_junto, D.email, D.cpf, D.cidade] }
+  end
 end

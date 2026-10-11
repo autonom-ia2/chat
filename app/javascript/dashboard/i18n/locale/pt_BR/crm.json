@@ -488,7 +488,16 @@
         "GOAL_INFO": "Cumprimento da meta de vendas do mês (valor ganho no mês ÷ meta). O pacing compara isso com quanto do mês já passou.",
         "GOAL_ON_TRACK": "No ritmo",
         "GOAL_BEHIND": "Atrasado",
-        "GOAL_EMPTY": "Sem meta definida. Defina em Editar funil."
+        "GOAL_EMPTY": "Sem meta definida. Defina em Editar funil.",
+        "RESOLVED": "Resolvidos",
+        "RESOLVED_INFO": "Cards marcados como resolvidos no período selecionado. Funil de atendimento nunca conta como venda.",
+        "CANCELLED": "Cancelados",
+        "CANCELLED_INFO": "Cards marcados como cancelados no período selecionado. Funil de atendimento nunca conta como venda.",
+        "OPEN_WORK": "Em aberto",
+        "OPEN_WORK_INFO": "Pessoas, conversas e cards abertos neste funil, contados à parte: uma conversa pode ter vários cards.",
+        "OPEN_PEOPLE": "Pessoas",
+        "OPEN_CONVERSATIONS": "Conversas",
+        "OPEN_CARDS": "Cards"
       },
       "MEETINGS": {
         "TITLE": "Reuniões",
@@ -513,7 +522,9 @@
         "TITLE": "Throughput (fechados)",
         "WON": "Ganhos",
         "LOST": "Perdidos",
-        "EMPTY": "Nenhum negócio fechado no período."
+        "EMPTY": "Nada fechado no período.",
+        "RESOLVED": "Resolvidos",
+        "CANCELLED": "Cancelados"
       },
       "FOLLOW_UPS": {
         "TITLE": "Retornos",
