@@ -41,7 +41,7 @@
 | sla store gaps | `store/modules/sla.js` has get/create/delete only. `EDIT_SLA` mutation-type already exists (`mutation-types.js:366`). `api/sla.js` extends `ApiClient` → inherited `update(id, obj)` works, NO api change needed. Store needs a new `update` action + `EDIT_SLA` mutation + `isUpdating` flag |
 | settings/sla importers | ONLY `app/javascript/dashboard/routes/dashboard/settings/settings.routes.js` (line 22 import, line 63 spread). Route name `sla_list` referenced ONLY by `Sidebar.vue:851`. No other importer exists — verified by grep |
 | Message model gotcha | `default_scope` orders ASC — always `.reorder(created_at: :desc)` for recent messages |
-| Conversation → JID | `conversation.contact_inbox.source_id` (`belongs_to :contact_inbox`, `app/models/conversation.rb:105`) |
+| Conversation → JID | ~~`conversation.contact_inbox.source_id`~~ — **errado para caixa WAHA** (lá o `source_id` é uuid). O chat id fica em `contact.custom_attributes` (`waha_whatsapp_chat_id` / `waha_whatsapp_jid`); `source_id` é só fallback. Ver PRD §3.2 e #1276. |
 | EE conversation concern | `enterprise/app/models/enterprise/concerns/conversation.rb` — `has_one :applied_sla`; AppliedSla auto-created in `around_save` when `sla_policy_id` changes (so auto-apply only needs `conversation.update!(sla_policy_id:)`) |
 | ActionService add_sla | `enterprise/app/services/enterprise/action_service.rb` — `@account`, `@conversation` ivars available |
 
