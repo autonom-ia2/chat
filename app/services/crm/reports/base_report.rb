@@ -7,9 +7,11 @@ module Crm
       DEFAULT_RANGE_DAYS = 30
       MAX_RANGE_DAYS = 366
 
-      def initialize(account:, params: {})
+      # pipelines: os funis que a pessoa enxerga (acesso por funil, #1148, PR D); sem restrição, todos os da conta.
+      def initialize(account:, params: {}, pipelines: nil)
         @account = account
         @params = params || {}
+        @pipelines = pipelines || account.crm_pipelines
       end
 
       def perform
@@ -18,15 +20,15 @@ module Crm
 
       private
 
-      attr_reader :account, :params
+      attr_reader :account, :params, :pipelines
 
       def pipeline
-        @pipeline ||= account.crm_pipelines.find_by(id: params[:pipeline_id]) || default_pipeline
+        @pipeline ||= pipelines.find_by(id: params[:pipeline_id]) || default_pipeline
       end
 
       def default_pipeline
-        account.crm_pipelines.find_by(is_default: true) ||
-          account.crm_pipelines.order(:position, :id).first
+        pipelines.find_by(is_default: true) ||
+          pipelines.order(:position, :id).first
       end
 
       def since

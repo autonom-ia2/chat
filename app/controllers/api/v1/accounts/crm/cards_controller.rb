@@ -31,7 +31,7 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     authorize ::Crm::Card, :export?
     export = ::Crm::Cards::XlsxExport.new(
       cards: filtered_cards, account: Current.account, user: Current.user, account_user: Current.account_user,
-      pipeline: Current.account.crm_pipelines.find_by(id: params[:pipeline_id])
+      pipeline: policy_scope(::Crm::Pipeline).find_by(id: params[:pipeline_id])
     )
     send_data export.generate, filename: export.filename, type: XLSX_CONTENT_TYPE, disposition: :attachment
   end
@@ -297,7 +297,7 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
   # Um selo por conversa (o assunto atual) e quantos assuntos abertos ela tem, chaveados pelo display_id.
   def conversation_badges(conversations)
     display_by_global = conversations.index_by(&:id).transform_values(&:display_id)
-    multiple = Current.account.crm_pipelines.count > 1
+    multiple = multiple_pipelines?
     subjects_count = Hash.new(0)
     # Principal ou vinculada (#1197): mesma regra do ConversationCardFinder, numa consulta para a lista toda.
     badges = ::Crm::Cards::ConversationCardFinder.new(account: Current.account).all_for(conversations.map(&:id))
@@ -323,8 +323,14 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
       pipeline_name: card.pipeline&.name,
       stage_name: card.stage.name,
       stage_color: card.stage.color,
-      multiple_pipelines: Current.account.crm_pipelines.count > 1
+      multiple_pipelines: multiple_pipelines?
     }
+  end
+
+  # Mais de um funil que a pessoa enxerga (acesso por funil, #1148 PR D): o selo mostra o nome do funil.
+  def multiple_pipelines?
+    @multiple_pipelines = policy_scope(::Crm::Pipeline).count > 1 unless defined?(@multiple_pipelines)
+    @multiple_pipelines
   end
 
   def ai_suggestion_payload(suggestion)

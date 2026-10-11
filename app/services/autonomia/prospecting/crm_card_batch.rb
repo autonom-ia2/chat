@@ -33,9 +33,10 @@ class Autonomia::Prospecting::CrmCardBatch
 
   private
 
-  # Funil e estágio errados valem para o lote inteiro: nada é tentado.
+  # Funil e estágio errados valem para o lote inteiro: nada é tentado. Acesso por funil (#1148, PR D): só um funil que a
+  # pessoa enxerga.
   def ensure_destination!
-    pipeline = @account.crm_pipelines.active.find(@pipeline_id)
+    pipeline = Crm::Access::VisiblePipelines.new(user: @user, account: @account).apply(@account.crm_pipelines).active.find(@pipeline_id)
     @account.crm_pipeline_stages.where(pipeline: pipeline).find(@stage_id)
   end
 

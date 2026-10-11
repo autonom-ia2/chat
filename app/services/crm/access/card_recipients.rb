@@ -25,7 +25,7 @@ class Crm::Access::CardRecipients
   end
 
   def admin_ids(accesses)
-    AccountUser.where(account_id: @card.account_id, user_id: accesses.map(&:user_id)).administrator.pluck(:user_id)
+    Crm::Access::Recipients.unrestricted_user_ids(@card.account_id, accesses.map(&:user_id))
   end
 
   def own_user_ids
