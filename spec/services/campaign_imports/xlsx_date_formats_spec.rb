@@ -23,6 +23,7 @@ RSpec.describe CampaignImports::XlsxDateFormats do
       expect(described_class.kind_for_code('0" dias"')).to be_nil
       expect(described_class.kind_for_code('@')).to be_nil
       expect(described_class.kind_for_code('[h]:mm:ss')).to be_nil
+      expect(described_class.kind_for_code('mm:ss')).to be_nil
     end
   end
 
@@ -43,10 +44,11 @@ RSpec.describe CampaignImports::XlsxDateFormats do
   end
 
   it 'reads the built-in dates of the East Asian locales and the built-in times with seconds' do
-    xml = '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><cellXfs count="4">' \
-          '<xf numFmtId="27"/><xf numFmtId="57"/><xf numFmtId="21"/><xf numFmtId="46"/></cellXfs></styleSheet>'
+    xml = '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><cellXfs count="6">' \
+          '<xf numFmtId="27"/><xf numFmtId="57"/><xf numFmtId="21"/><xf numFmtId="45"/><xf numFmtId="46"/><xf numFmtId="47"/>' \
+          '</cellXfs></styleSheet>'
 
-    expect((0..3).map { |index| described_class.new(xml).kind_of(index) }).to eq([:date, :date, :time_seconds, nil])
+    expect((0..5).map { |index| described_class.new(xml).kind_of(index) }).to eq([:date, :date, :time_seconds, nil, nil, nil])
   end
 
   it 'leaves every number as it is when styles.xml cannot be read' do

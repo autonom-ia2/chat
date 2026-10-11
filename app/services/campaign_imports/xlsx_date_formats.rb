@@ -9,9 +9,10 @@ require 'rexml/document'
 #
 # kind_of(style_index) => :date, :time, :datetime, :time_seconds, :datetime_seconds or nil.
 class CampaignImports::XlsxDateFormats
-  # 27-36 and 50-58 are the dates of the East Asian locales.
+  # 27-36 and 50-58 are the dates of the East Asian locales. 45 (mm:ss), 46 ([h]:mm:ss) and 47 (mmss.0) show a
+  # duration, not a time of day: they stay numbers.
   BUILT_IN = [14, 15, 16, 17, *27..36, *50..58].index_with(:date).merge(
-    18 => :time, 20 => :time, 19 => :time_seconds, 21 => :time_seconds, 45 => :time_seconds, 47 => :time_seconds,
+    18 => :time, 20 => :time, 19 => :time_seconds, 21 => :time_seconds,
     22 => :datetime
   ).freeze
   DATE_LETTERS = %w[d y].freeze
@@ -36,7 +37,7 @@ class CampaignImports::XlsxDateFormats
 
   def self.kind_for_code(code)
     letters = visible_letters(code.to_s.downcase)
-    return if letters.nil?
+    return if letters.nil? || minutes_and_seconds?(letters)
 
     time = TIME_LETTERS.intersect?(letters)
     date = DATE_LETTERS.intersect?(letters) || (letters.include?('m') && !time)
@@ -78,10 +79,15 @@ class CampaignImports::XlsxDateFormats
     [:bracket, nil]
   end
 
+  # "mm:ss" (seconds without hours or a date) shows a duration, not a time of day.
+  def self.minutes_and_seconds?(letters)
+    letters.include?('s') && letters.exclude?('h') && !DATE_LETTERS.intersect?(letters)
+  end
+
   def self.elapsed?(text)
     !text.empty? && text.chars.all? { |letter| ELAPSED_LETTERS.include?(letter) }
   end
-  private_class_method :step, :close_or_extend, :elapsed?
+  private_class_method :step, :close_or_extend, :elapsed?, :minutes_and_seconds?
 
   private
 

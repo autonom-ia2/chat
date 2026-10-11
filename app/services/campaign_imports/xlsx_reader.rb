@@ -148,8 +148,17 @@ module CampaignImports
     end
 
     # A number cell styled as a date or time goes out as text (CampaignImports::CellValues.excel_serial, #1331).
+    # A styles part the zip reader refuses (encrypted, too large, unknown compression) leaves numbers as written:
+    # the file imported before #1331 and still does.
     def date_formats
-      @date_formats ||= CampaignImports::XlsxDateFormats.new(@zip.read('xl/styles.xml'))
+      @date_formats ||= CampaignImports::XlsxDateFormats.new(styles_xml)
+    end
+
+    def styles_xml
+      @zip.read('xl/styles.xml')
+    rescue ArgumentError => e
+      Rails.logger.warn("[CampaignImports::XlsxReader] styles.xml skipped, numbers kept as written: #{e.message}")
+      nil
     end
 
     # The workbook counts days from 1904 instead of 1900 (old Mac files).

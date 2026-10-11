@@ -51,4 +51,16 @@ RSpec.describe CampaignImports::XlsxReader do
 
     expect(described_class.new(broken).rows.first.values).to eq(%w[46309 Ana])
   end
+
+  it 'still reads a file whose styles part the zip reader refuses, numbers as written' do
+    reader = described_class.new(xlsx([['46309', 1]]))
+    zip = reader.instance_variable_get(:@zip)
+    allow(zip).to receive(:read).and_wrap_original do |original, name|
+      raise ArgumentError, 'encrypted_xlsx_entry' if name == 'xl/styles.xml'
+
+      original.call(name)
+    end
+
+    expect(reader.rows.first.values).to eq(['46309'])
+  end
 end
