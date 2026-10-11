@@ -546,4 +546,104 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingPages logo dark', type: :request 
       expect(body['brand']).to include('logo_dark_url' => be_present, 'logo_dark_source' => 'generated')
     end
   end
+
+  # Tipo real do arquivo (#1303): a logo de fundo escuro passa pela mesma conferência da logo e da foto
+  # (`Crm::BookingV2::ImageFile`), enviada pela pessoa, gerada pelo motor ou copiada da identidade salva.
+  describe 'conferência do tipo real' do
+    let(:identity) { Crm::BookingV2::BrandIdentity.new(account.reload) }
+    let(:svg) { %(#{' ' * 5000}<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>) }
+
+    def disguised(name = 'logo-escura.png')
+      tmp = Tempfile.new([File.basename(name, '.*'), File.extname(name)])
+      tmp.binmode
+      tmp.write(svg)
+      tmp.rewind
+      Rack::Test::UploadedFile.new(tmp.path, 'image/png')
+    end
+
+    it 'recusa a logo de fundo escuro disfarçada, com o motivo, e deixa a gerada como estava' do
+      upload(admin, :logo)
+      generated = page.reload.logo_dark.blob
+
+      upload(admin, :logo_dark, disguised)
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(body['reason']).to eq('image_content')
+      expect(body['errors']).to have_key('logo_dark')
+      expect(page.reload.logo_dark.blob).to eq(generated)
+      expect(source_of).to eq('generated')
+    end
+
+    it 'a gerada pelo motor de verdade é PNG que passa na conferência' do
+      begin
+        require 'image_processing/vips'
+      rescue LoadError => e
+        skip "libvips indisponível nesta máquina: #{e.class}"
+      end
+      allow(engine).to receive(:call).and_call_original
+      logo = Tempfile.new(['logo', '.png'])
+      logo.binmode
+      logo.write(Vips::Image.black(80, 40).bandjoin([0, 0, 255]).cast(:uchar).copy(interpretation: :srgb)
+                            .draw_rect([13, 35, 68, 255], 10, 10, 60, 20, fill: true).pngsave_buffer)
+      logo.rewind
+
+      upload(admin, :logo, Rack::Test::UploadedFile.new(logo.path, 'image/png'))
+
+      expect(response).to have_http_status(:ok)
+      expect(source_of).to eq('generated')
+      expect(page.reload.logo_dark.content_type).to eq('image/png')
+      expect(Crm::BookingV2::ImageFile.problem(page, :logo_dark)).to be_nil
+    end
+
+    it 'motor que devolvesse algo que não é PNG: a regra recusa, a logo fica e a página vai para a placa' do
+      engine_returns('generated', 'isto não é um PNG')
+
+      upload(admin, :logo)
+
+      expect(response).to have_http_status(:ok)
+      expect(page.reload.logo).to be_attached
+      expect(page.logo_dark).not_to be_attached
+      expect(source_of).to eq('plate')
+    end
+
+    it 'salvar a identidade: logo de fundo escuro que não passa é recusada e nada é salvo' do
+      upload(admin, :logo)
+      attach_unchecked(page, :logo_dark, svg)
+
+      call(admin, :post, "#{base}/#{page.id}/save_identity")
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(body['errors']).to have_key('logo_dark')
+      expect(account.reload.booking_identity_logo).not_to be_attached
+      expect(account.booking_identity_logo_dark).not_to be_attached
+    end
+
+    it 'usar a identidade: logo de fundo escuro salva que não passa não vai para a página; a página gera a dela' do
+      upload(admin, :logo)
+      call(admin, :post, "#{base}/#{page.id}/save_identity")
+      attach_unchecked(account, :booking_identity_logo_dark, svg, filename: 'logo-fundo-escuro.png')
+      other = create_booking_profile(account: account, host: world.host)
+
+      call(admin, :post, "#{base}/#{other.id}/apply_identity")
+
+      expect(response).to have_http_status(:ok)
+      other.reload
+      expect(other.logo.blob).to eq(page.reload.logo.blob)
+      expect(other.logo_dark).to be_attached
+      expect(other.logo_dark.blob).not_to eq(account.reload.booking_identity_logo_dark.blob)
+      expect(Crm::BookingV2::ImageFile.problem(other, :logo_dark)).to be_nil
+    end
+
+    it 'enviar, tirar ou voltar para a gerada não manda desenhar a prévia do link, que não usa a logo de fundo escuro' do
+      upload(admin, :logo)
+      Redis::Alfred.delete(Crm::BookingV2::PreviewImage::Warmup.queued_key(page.id))
+
+      expect do
+        upload(admin, :logo_dark, file('sample.png'))
+        call(admin, :delete, "#{base}/#{page.id}/logo_dark")
+      end.not_to have_enqueued_job(Crm::BookingV2::PreviewImageWarmJob)
+    ensure
+      Redis::Alfred.delete(Crm::BookingV2::PreviewImage::Warmup.queued_key(page.id))
+    end
+  end
 end

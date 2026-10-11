@@ -97,6 +97,8 @@
         "HOURS": "O horário final precisa ser depois do inicial.",
         "IMAGE_TYPE": "Use uma imagem PNG, JPEG ou WebP.",
         "IMAGE_SIZE": "A imagem pode ter até 2 MB.",
+        "IMAGE_CONTENT": "Este arquivo não é uma imagem de verdade. Salve de novo como PNG ou JPEG e tente outra vez.",
+        "IMAGE_PIXELS": "Esta imagem é grande demais. Use uma menor, de até 16 megapixels.",
         "IMAGE_UPLOAD": "Não deu para enviar a imagem. Tente outra.",
         "SHORT_NAME": "Confira o endereço da página.",
         "IMAGE_REMOVE": "Não deu para tirar a imagem. Tente de novo."

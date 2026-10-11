@@ -155,6 +155,18 @@ export const imageProblem = file => {
   return null;
 };
 
+// Envio de imagem recusado pelo servidor (#1303): ele confere o conteúdo do
+// arquivo, que o navegador não vê, e diz o motivo em `reason`
+// (Crm::BookingV2::ImageFile). Sem motivo conhecido, o aviso de sempre.
+const UPLOAD_REASONS = {
+  image_type: 'IMAGE_TYPE',
+  image_content: 'IMAGE_CONTENT',
+  image_size: 'IMAGE_SIZE',
+  image_pixels: 'IMAGE_PIXELS',
+};
+export const uploadProblem = error =>
+  UPLOAD_REASONS[error?.response?.data?.reason] || 'IMAGE_UPLOAD';
+
 // Recusas do servidor (422) que têm aviso próprio. O código vem do
 // BookingPagesController; o campo, do errors do ActiveRecord::RecordInvalid.
 const SERVER_ERROR_CODES = {

@@ -58,6 +58,7 @@ class Crm::BookingV2::BrandIdentity
   # `settings` não é pisado por uma cópia velha daqui. (Quem grava `settings` sem travar a conta ainda pode pisar
   # esta chave; a coluna é regravada inteira, como em todo o resto do sistema.)
   def save_from!(page)
+    ensure_images!(page)
     brand = page.brand.to_h
     account.with_lock do
       keep_logos(page)
@@ -80,9 +81,9 @@ class Crm::BookingV2::BrandIdentity
   # O mesmo, sem gravar: para a página nova nascer com a identidade na mesma gravação que a cria.
   def assign_to(page)
     page.brand = page.brand.to_h.merge(data).compact
-    assign_logos(page) if logo.attached?
+    assign_logos(page) if usable?(logo)
     photo = photo_of(host_of(page))
-    page.photo = photo.blob if photo
+    page.photo = photo.blob if usable?(photo)
     page
   end
 
@@ -113,12 +114,37 @@ class Crm::BookingV2::BrandIdentity
   # origem (ou a origem promete uma imagem que não está mais lá): a de fundo escuro é gerada agora, a partir da logo.
   def assign_logos(page)
     page.logo = logo.blob
-    page.logo_dark = logo_dark.attached? ? logo_dark.blob : nil
+    page.logo_dark = usable?(logo_dark) ? logo_dark.blob : nil
     page.brand = page.brand.to_h.merge(LOGO_DARK_SOURCE => saved_logo_dark_source).compact
     generator = Crm::BookingV2::LogoDark.new(page)
     generator.assign_generated if generator.pending?
   end
 
+  # Antes de copiar (#1303): as duas logos (inclusive a de fundo escuro gerada) e a foto da página passam pela
+  # conferência inteira, com o conteúdo lido do armazenamento, mesmo que tenham entrado antes de a regra existir. Não
+  # passou: nada é salvo (nem `booking_identity_logo_dark`), e o erro sai como o de um envio recusado.
+  def ensure_images!(page)
+    page.errors.clear
+    Crm::BookingV2::ImageFile.validate(page, Crm::BookingPageSettings::IMAGE_ATTACHMENTS, only_changed: false)
+    raise ActiveRecord::RecordInvalid, page if page.errors.any?
+  end
+
+  # Imagem salva que hoje não passa na conferência não vai para a página: o resto da identidade é aplicado, e a
+  # página nova nasce sem ela em vez de não nascer.
+  def usable?(attached)
+    return false unless attached&.attached?
+
+    problem = Crm::BookingV2::ImageFile.problem(attached.record, attached.name)
+    Rails.logger.warn("Booking identity image skipped (account #{account.id}, #{attached.name}): #{problem}") if problem
+    problem.nil?
+  end
+
+  # ATENÇÃO: cria a linha de `Crm::AgentAvailability` de quem atende, se ela ainda não tiver uma. É de propósito: a
+  # foto salva é da PESSOA (uma por pessoa e conta), não da conta, e essa é a tabela que já tem uma linha por pessoa e
+  # conta; guardar ali evitou tabela nova e coluna em `users`. A linha nasce com `working_hours` vazio e
+  # `paused: false`, que é o mesmo que não ter linha: a pessoa continua seguindo o horário de cada página
+  # (`Crm::BookingV2::Slots`) e nada muda em "Meus horários". Quem conta ou lista essas linhas não pode ler
+  # "tem linha" como "a pessoa ajustou os horários": para isso existe `custom_hours?`.
   def save_photo(page)
     host = host_of(page)
     return if host.blank? || !page.photo.attached?
