@@ -10,6 +10,7 @@ import CardLabels from 'dashboard/components-next/Conversation/ConversationCard/
 import SLACardLabel from 'dashboard/components-next/Conversation/Sla/SLACardLabel.vue';
 import { useCrmOrigin } from '../composables/useCrmOrigin';
 import CrmCardPill from './CrmCardPill.vue';
+import CustomerBadge from 'dashboard/components-next/customer-badge/CustomerBadge.vue';
 import CrmOriginMorePopover from './CrmOriginMorePopover.vue';
 import {
   buildCrmCardIdentity,
@@ -367,15 +368,24 @@ const canOpenConversation = computed(
               :title="identityMain"
             >
               {{ identityMain }}
+              <!-- Sem empresa, o nome da pessoa é a linha de cima: o selo segue o nome e desce se faltar espaço. -->
+              <CustomerBadge
+                v-if="!identityPerson"
+                :contact="card.contact"
+                class="ms-1.5"
+              />
             </span>
           </span>
+          <!-- Com empresa, o selo fica na linha da pessoa (quem é cliente é o contato, #1258); o nome corta com "…". -->
           <span
             v-if="identityPerson"
-            class="ms-6 mt-0.5 block truncate text-sm font-normal leading-5 text-n-slate-11"
-            :title="identityPerson"
+            class="ms-6 mt-0.5 flex min-w-0 items-center gap-1.5 text-sm font-normal leading-5 text-n-slate-11"
             data-crm-card-person
           >
-            {{ identityPerson }}
+            <span class="min-w-0 truncate" :title="identityPerson">
+              {{ identityPerson }}
+            </span>
+            <CustomerBadge :contact="card.contact" />
           </span>
           <!-- Assunto do card num selo próprio (#1143, R18): empresa e nome continuam em destaque. -->
           <span
