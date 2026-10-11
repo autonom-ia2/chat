@@ -22,9 +22,11 @@ RSpec.describe 'Acesso por funil: card aberto manda' do # rubocop:disable RSpec/
     end
   end
 
-  def card(pipeline, status)
+  # linked: o card entra pela crm_card_conversations, sem ser a conversa principal dele.
+  def card(pipeline, status, linked: false)
     created = account.crm_cards.create!(pipeline: pipeline.first, stage: pipeline.last, title: "#{pipeline.first.name} #{status}",
-                                        inbox: inbox, contact: conversa.contact, primary_conversation: conversa)
+                                        inbox: inbox, contact: conversa.contact, primary_conversation: linked ? nil : conversa)
+    Crm::CardConversation.create!(account: account, card: created, conversation: conversa) if linked
     created.update_columns(status: Crm::Card.statuses[status]) unless status == :open # rubocop:disable Rails/SkipsModelValidations
     created
   end
@@ -51,6 +53,50 @@ RSpec.describe 'Acesso por funil: card aberto manda' do # rubocop:disable RSpec/
       card(sinistro, :won)
 
       expect_seen_by(vendas_agent)
+    end
+
+    it 'aberto vinculado e ganho principal: o aberto manda' do
+      card(vendas, :open, linked: true)
+      card(sinistro, :won)
+
+      expect_seen_by(vendas_agent)
+    end
+
+    it 'aberto principal e ganho vinculado: o aberto manda' do
+      card(vendas, :open)
+      card(sinistro, :won, linked: true)
+
+      expect_seen_by(vendas_agent)
+    end
+
+    it 'dois abertos em funis diferentes: os dois veem' do
+      card(vendas, :open)
+      card(sinistro, :open, linked: true)
+
+      expect_seen_by(vendas_agent, sinistro_agent)
+    end
+
+    it 'atendente do Sinistro continua vendo mesmo com aberto em Vendas' do
+      conversa.update!(assignee: sinistro_agent)
+      card(vendas, :open)
+      card(sinistro, :won)
+
+      expect_seen_by(vendas_agent, sinistro_agent)
+    end
+
+    it 'só perdido: o funil dele vê, a triagem não' do
+      card(vendas, :lost)
+
+      expect_seen_by(vendas_agent)
+    end
+
+    it 'o aberto vira ganho: a sincronização em tempo real entra na fila para a conversa' do
+      aberto = card(vendas, :open)
+      card(sinistro, :won)
+      Crm::Access::CountInvalidation.sync_started!([conversa.id])
+
+      expect { aberto.update!(status: :won) }.to have_enqueued_job(Crm::Access::VisibilitySyncJob).with(array_including(conversa.id))
+      expect_seen_by(vendas_agent, sinistro_agent)
     end
 
     it 'só ganho e perdido, em funis diferentes: os dois funis veem' do

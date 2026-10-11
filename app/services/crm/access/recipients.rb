@@ -101,7 +101,8 @@ class Crm::Access::Recipients
     cards = Crm::Card.where(account_id: @conversation.account_id)
                      .where.not(status: Crm::Access::ConversationScope::RELEASED)
     rows = cards.where(conversation_id: @conversation.id).or(cards.where(id: linked)).distinct.pluck(:pipeline_id, :status)
-    open = rows.select { |_pipeline_id, status| status == 'open' }
+    open_status = Crm::Card.statuses.key(Crm::Access::ConversationScope::OPEN.first)
+    open = rows.select { |_pipeline_id, status| status == open_status }
     (open.presence || rows).map(&:first).uniq
   end
 end

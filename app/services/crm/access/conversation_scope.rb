@@ -17,7 +17,8 @@ class Crm::Access::ConversationScope
   # atendimento: o caso acabou, a conversa reaberta volta para a triagem). Ganho e perdido seguem com o funil.
   RELEASED = Crm::Card.statuses.values_at(:archived, :resolved, :cancelled).freeze
   OPEN = [Crm::Card.statuses[:open]].freeze
-  CLOSED = Crm::Card.statuses.values_at(:won, :lost).freeze
+  # Ganho e perdido hoje; status novo que não solte a conversa entra aqui sozinho (paridade com o Recipients).
+  CLOSED = (Crm::Card.statuses.values - RELEASED - OPEN).freeze
 
   # account_user: quem já tem (a Policy) passa e poupa a consulta.
   def initialize(user:, account:, account_user: nil)
