@@ -9,6 +9,15 @@ class Crm::Cards::Focus
     @user = user
   end
 
+  # Uma pessoa escolheu o assunto atual desta conversa há menos de Crm::Subjects::RESPEITO_AO_FOCO. O atual é o foco
+  # mais recente entre os cards abertos, como no ConversationCardFinder.
+  def self.pessoa_escolheu?(account_id:, conversation_id:)
+    atual = Crm::CardConversation.joins(:card).merge(Crm::Card.open)
+                                 .where(account_id: account_id, conversation_id: conversation_id)
+                                 .where.not(focused_at: nil).order(focused_at: :desc).first
+    atual.present? && atual.focused_by_id.present? && atual.focused_at >= Crm::Subjects::RESPEITO_AO_FOCO.ago
+  end
+
   def perform
     link = Crm::CardConversation.find_or_create_by!(account: @account, card: @card, conversation: @conversation)
     link.update!(focused_at: Time.current, focused_by_id: @user&.id)

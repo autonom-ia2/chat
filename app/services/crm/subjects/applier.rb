@@ -62,9 +62,7 @@ class Crm::Subjects::Applier
   end
 
   def pessoa_escolheu_assunto?
-    atual = Crm::CardConversation.where(account_id: @account.id, conversation_id: @conversation.id)
-                                 .where.not(focused_at: nil).order(focused_at: :desc).first
-    atual.present? && atual.focused_by_id.present? && atual.focused_at >= Crm::Subjects::RESPEITO_AO_FOCO.ago
+    Crm::Cards::Focus.pessoa_escolheu?(account_id: @account.id, conversation_id: @conversation.id)
   end
 
   def pessoa_fechou_card?(pipeline)

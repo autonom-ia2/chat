@@ -72,6 +72,8 @@ module Crm
       end
 
       def link_primary_conversation(card)
+        # Card criado pelo sistema não tira o assunto que uma pessoa acabou de escolher (#1260): nasce sem foco.
+        sem_foco = @user.blank? && Crm::Cards::Focus.pessoa_escolheu?(account_id: @account.id, conversation_id: card.conversation_id)
         Crm::CardConversation.find_or_create_by!(
           account: @account,
           card: card,
@@ -80,7 +82,7 @@ module Crm
           link.is_primary = true
           link.linked_by = @user
           # Card novo vira o assunto atual da conversa (#1142): com outro card já aberto nela, é deste que se trata agora.
-          link.focused_at = Time.current
+          link.focused_at = Time.current unless sem_foco
           link.focused_by_id = @user&.id
         end
       end

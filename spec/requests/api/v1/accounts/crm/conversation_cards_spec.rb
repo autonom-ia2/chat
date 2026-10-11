@@ -41,6 +41,7 @@ RSpec.describe 'CRM conversation subjects API', type: :request do
     post "#{base_url}/focus", params: { card_id: first_id }, headers: auth_headers(agent)
 
     expect(response).to have_http_status(:ok)
+    expect(Crm::CardConversation.find_by(card_id: first_id, conversation: conversation).focused_by_id).to eq(agent.id)
     get "#{base_url}/cards", headers: auth_headers(agent)
     expect(response.parsed_body['payload'].first).to include('id' => first_id, 'current' => true)
 
