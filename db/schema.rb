@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_10_15_100000) do
+ActiveRecord::Schema[7.2].define(version: 2026_10_15_130000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -2172,6 +2172,30 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_15_100000) do
     t.index ["event_id"], name: "idx_crm_google_conv_event_id", unique: true
   end
 
+  create_table "crm_inbox_agent_accesses", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "inbox_id", null: false
+    t.bigint "user_id", null: false
+    t.boolean "all_pipelines", default: true, null: false
+    t.boolean "triage", default: true, null: false
+    t.boolean "only_own", default: false, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "user_id", "inbox_id"], name: "idx_crm_inbox_agent_accesses_unique", unique: true
+    t.index ["inbox_id"], name: "idx_crm_inbox_agent_accesses_inbox"
+    t.index ["user_id"], name: "index_crm_inbox_agent_accesses_on_user_id"
+  end
+
+  create_table "crm_inbox_agent_pipelines", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "access_id", null: false
+    t.bigint "pipeline_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["access_id", "pipeline_id"], name: "idx_crm_inbox_agent_pipelines_unique", unique: true
+    t.index ["pipeline_id"], name: "index_crm_inbox_agent_pipelines_on_pipeline_id"
+  end
+
   create_table "crm_inbox_settings", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "inbox_id"
@@ -3961,6 +3985,12 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_15_100000) do
   add_foreign_key "crm_follow_ups", "users", column: "assignee_id"
   add_foreign_key "crm_follow_ups", "users", column: "created_by_id"
   add_foreign_key "crm_google_conversion_events", "accounts", on_delete: :cascade
+  add_foreign_key "crm_inbox_agent_accesses", "accounts", on_delete: :cascade
+  add_foreign_key "crm_inbox_agent_accesses", "inboxes", on_delete: :cascade
+  add_foreign_key "crm_inbox_agent_accesses", "users", on_delete: :cascade
+  add_foreign_key "crm_inbox_agent_pipelines", "accounts", on_delete: :cascade
+  add_foreign_key "crm_inbox_agent_pipelines", "crm_inbox_agent_accesses", column: "access_id", on_delete: :cascade
+  add_foreign_key "crm_inbox_agent_pipelines", "crm_pipelines", column: "pipeline_id", on_delete: :cascade
   add_foreign_key "crm_inbox_settings", "accounts"
   add_foreign_key "crm_inbox_settings", "crm_pipeline_stages", column: "default_stage_id"
   add_foreign_key "crm_inbox_settings", "crm_pipelines", column: "default_pipeline_id"

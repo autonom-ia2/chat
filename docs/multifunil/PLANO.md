@@ -143,3 +143,15 @@ A Entrega 3 precisa de uma conta com **mais de um funil** para o piloto do acess
 - **Nome do assunto:** o Jev só escolhe; quando o pedido é novo, o modelo maior escreve o nome ("Agentes de IA", "Seguro do Onix"). Sem nome, nada muda.
 - **Card criado sozinho pela caixa** nasce com o nome do contato: o primeiro assunto identificado dá nome a ele, em vez de criar outro card.
 - **Antes de ligar na conta 16:** medir o custo por conversa com o modo Sugerir (a correção da seção 7: a IA é o PR 5, não o PR 8).
+
+## 12. Decisões de 11/10/2026 (Rodrigo) — acesso por funil (#1148)
+
+- **R6 muda: não migrar.** Hoje "Agente vê apenas atribuídos" só esconde cards no CRM; lista, link, busca e tempo
+  real mostram todas as conversas da caixa. Migrar para "Só as suas" tiraria visão de conversa no deploy. Todos começam
+  em "Todos os funis, Todas"; o admin restringe na tela nova (#1149). A opção antiga continua valendo só para cards.
+- **Atribuído e participante sempre veem** a conversa, mesmo sem o funil (menção continua funcionando).
+- **O time não fura o funil:** quem chega pela equipe também passa pelo acesso por funil.
+- **Três PRs, tela por último:** A (tabelas + `Crm::Access::ConversationScope` na lista, no link e na busca), B (tempo
+  real, notificações e contadores), C (CRM e Copiloto no mesmo filtro). Sem linha configurada nada muda, então cada PR
+  entra no ar sem efeito; a tela (#1149) só depois do C. Revisão de segurança em cada PR.
+- **Busca:** quem tem acesso por funil busca pelo banco (o índice do Elasticsearch não conhece o funil do card).
