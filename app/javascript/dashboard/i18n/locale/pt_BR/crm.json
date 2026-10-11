@@ -1636,7 +1636,16 @@
       "MODE_SNOOZE": "Modo adiar (conversa reaberta)",
       "COMPLETE": "Concluir",
       "DISMISS": "Dispensar",
-      "OPEN_CRM": "Abrir CRM"
+      "OPEN_CRM": "Abrir CRM",
+      "BOOKING_ALERT": {
+        "HEADING": "Agendamento",
+        "NOTICE_FAILED_HEADING": "Aviso não enviado",
+        "NOTICE_FAILED_BODY": "O aviso do horário de {name} ({when}) não saiu.",
+        "NOTICE_FAILED_BODY_REASON": "O aviso do horário de {name} ({when}) não saiu: {reason}.",
+        "NOTICE_FAILED_HINT": "O horário continua marcado. Fale com o cliente para confirmar.",
+        "OPEN_CARD": "Abrir o card",
+        "ACK": "Entendi"
+      }
     },
     "STAGE_AUTOMATIONS": {
       "TITLE": "Automações desta etapa",

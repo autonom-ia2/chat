@@ -1998,6 +1998,11 @@ const setViewMode = mode => {
 
 useEmitter(BUS_EVENTS.WEBSOCKET_RECONNECT_COMPLETED, handleRealtimeConnected);
 useEmitter(BUS_EVENTS.CRM_BOARD_REFETCH, handleServerFilterRefetch);
+// Com o quadro já aberto, a URL com `card_id` não reabre um card que já passou
+// por ela; o alerta do agendamento pede a abertura por aqui (#1291).
+useEmitter(BUS_EVENTS.CRM_OPEN_CARD, cardId =>
+  openCardFromBoard({ id: Number(cardId) })
+);
 
 onMounted(async () => {
   // "Ver no CRM" of a campaign result (#1007) opens the board filtered by that campaign mark.
