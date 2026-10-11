@@ -1,4 +1,6 @@
 class Conversations::UnreadCounts::Counter
+  include ::Conversations::UnreadCounts::FunnelAccess
+
   MANAGE_ALL_PERMISSION = 'conversation_manage'.freeze
   UNASSIGNED_PERMISSION = 'conversation_unassigned_manage'.freeze
   PARTICIPATING_PERMISSION = 'conversation_participating_manage'.freeze
@@ -77,14 +79,14 @@ class Conversations::UnreadCounts::Counter
   end
 
   def unread_inbox_counts
-    counts_for_grouped_keys(visible_inbox_ids.index_with { |inbox_id| inbox_keys_for_mode(inbox_id) })
+    counts_for_grouped_keys(visible_inbox_ids.index_with { |inbox_id| tag(inbox_keys_for_mode(inbox_id), inbox_id) })
   end
 
   def unread_label_counts
     keys_by_id = Hash.new { |hash, key| hash[key] = [] }
     sidebar_label_ids.each do |label_id|
       visible_inbox_ids.each do |inbox_id|
-        keys_by_id[label_id].concat(label_inbox_keys_for_mode(label_id, inbox_id))
+        keys_by_id[label_id].concat(tag(label_inbox_keys_for_mode(label_id, inbox_id), inbox_id))
       end
     end
 
@@ -95,7 +97,7 @@ class Conversations::UnreadCounts::Counter
     keys_by_id = Hash.new { |hash, key| hash[key] = [] }
     visible_team_ids.each do |team_id|
       visible_inbox_ids.each do |inbox_id|
-        keys_by_id[team_id].concat(team_inbox_keys_for_mode(team_id, inbox_id))
+        keys_by_id[team_id].concat(tag(team_inbox_keys_for_mode(team_id, inbox_id), inbox_id))
       end
     end
 
@@ -142,7 +144,7 @@ class Conversations::UnreadCounts::Counter
   end
 
   def counts_for_grouped_keys(keys_by_id)
-    return ::Conversations::UnreadCounts::FunnelCounts.new(account: account, scope: funnel_scope).counts_for(keys_by_id) if funnel_scope.restricted?
+    return funnel_counts.counts_for(keys_by_id, @key_inbox) if funnel_scope.restricted?
 
     counts_by_key = store.counts_for_keys(keys_by_id.values.flatten)
 
@@ -151,9 +153,6 @@ class Conversations::UnreadCounts::Counter
       result[id.to_s] = count if count.positive?
     end
   end
-
-  # Acesso por funil (#1148): ver FunnelCounts.
-  def funnel_scope = (@funnel_scope ||= Crm::Access::ConversationScope.new(user: user, account: account, account_user: account_user))
 
   def assignment_mode?
     %i[unassigned_and_mine mine].include?(permission_mode)

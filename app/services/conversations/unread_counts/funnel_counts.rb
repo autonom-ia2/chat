@@ -1,20 +1,32 @@
-# Acesso por funil (#1148): os conjuntos de não lidas em Redis são por caixa e não conhecem o funil. Quem tem restrição
-# conta os ids dos conjuntos que o escopo da lista deixa ver (Crm::Access::ConversationScope). Os conjuntos são só de
-# conversas não lidas, então a consulta é pequena. Quem não tem restrição segue no SCARD do Counter.
+# Acesso por funil (#1148): os conjuntos de não lidas em Redis são por caixa e não conhecem o funil. Para quem tem
+# restrição, as chaves das caixas livres seguem no SCARD (o escopo diz que tudo nelas é visível); só as chaves das caixas
+# restritas são lidas por id (SMEMBERS) e filtradas pelo escopo da lista (Crm::Access::ConversationScope).
 class Conversations::UnreadCounts::FunnelCounts
   def initialize(account:, scope:)
     @account = account
     @scope = scope
   end
 
-  def counts_for(keys_by_id)
-    ids_by_key = ::Conversations::UnreadCounts::Store.members_for_keys(keys_by_id.values.flatten.uniq)
-    candidates = ids_by_key.values.flatten.uniq
-    visible = @scope.apply(@account.conversations.where(id: candidates)).pluck(:id).to_set
+  # key_inbox: a caixa de cada chave, montada pelo Counter.
+  def counts_for(keys_by_id, key_inbox)
+    restricted = @scope.restricted_inbox_ids
+    keys = keys_by_id.values.flatten.uniq
+    restricted_keys, free_keys = keys.partition { |key| restricted.include?(key_inbox.to_h[key]) }
 
-    keys_by_id.each_with_object({}) do |(id, keys), result|
-      count = keys.sum { |key| ids_by_key.fetch(key, []).count { |conversation_id| visible.include?(conversation_id) } }
+    counts_by_key = ::Conversations::UnreadCounts::Store.counts_for_keys(free_keys)
+    counts_by_key.merge!(visible_counts(restricted_keys))
+
+    keys_by_id.each_with_object({}) do |(id, id_keys), result|
+      count = id_keys.sum { |key| counts_by_key[key].to_i }
       result[id.to_s] = count if count.positive?
     end
+  end
+
+  private
+
+  def visible_counts(keys)
+    ids_by_key = ::Conversations::UnreadCounts::Store.members_for_keys(keys)
+    visible = @scope.apply(@account.conversations.where(id: ids_by_key.values.flatten.uniq)).pluck(:id).to_set
+    ids_by_key.transform_values { |ids| ids.count { |conversation_id| visible.include?(conversation_id) } }
   end
 end

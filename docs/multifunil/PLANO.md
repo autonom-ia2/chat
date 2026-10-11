@@ -159,3 +159,8 @@ A Entrega 3 precisa de uma conta com **mais de um funil** para o piloto do acess
   cancelado (funil de atendimento) soltam a conversa para a triagem, como o arquivado. Distribuição automática (PR B):
   o rodízio só escolhe quem tem o funil do card (ou a triagem, sem card); atribuir à mão e mencionar continuam
   liberando. A dinâmica de fechar/reabrir conversa por caixa entra na análise do PR B.
+- **Participante (11/10, depois da revisão da parte B):** quem tem acesso restrito não pode se adicionar como
+  participante nem se auto-mencionar; ao reatribuir, quem saiu deixa de ser participante (atribuição não é passe
+  vitalício). Ser mencionado por outra pessoa continua liberando. Vai em PR próprio.
+- **Card nasce depois da conversa (11/10):** o intervalo sem card é triagem (R3). Quando o card nasce, quem passa a
+  ver recebe o aviso em tempo real e o rodízio roda de novo. Vai no PR C (eventos do card).

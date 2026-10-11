@@ -112,6 +112,20 @@ RSpec.describe 'Acesso por funil na entrega' do # rubocop:disable RSpec/Describe
   end
 
   describe Conversations::UnreadCounts::Counter do
+    it 'caixa livre segue no SCARD; só a caixa restrita é lida por id' do
+      free_inbox = create(:inbox, account: account)
+      create(:inbox_member, inbox: free_inbox, user: vendas_agent)
+      store = Conversations::UnreadCounts::Store
+      allow(store).to receive(:members_for_keys).and_return({})
+      allow(store).to receive(:counts_for_keys).and_call_original
+      counter = described_class.new(account: account, user: vendas_agent)
+      allow(counter).to receive(:visible_inbox_ids).and_return([free_inbox.id])
+
+      counter.send(:unread_inbox_counts)
+
+      expect(store).to have_received(:members_for_keys).with([])
+    end
+
     it 'conta só as não lidas que o funil deixa ver' do
       conversa_vendas = conversation_in(vendas)
       store = Conversations::UnreadCounts::Store
@@ -143,6 +157,66 @@ RSpec.describe 'Acesso por funil na entrega' do # rubocop:disable RSpec/Describe
       account.crm_cards.find_by(conversation_id: conversa.id).update!(pipeline: vendas.first, stage: vendas.last)
 
       expect(Conversations::UnreadCounts::FilteredCountInvalidator).not_to have_received(:new)
+    end
+  end
+
+  describe 'paridade da regra (memória do Recipients × SQL do link)' do
+    it 'decide igual para cada combinação de acesso e conversa' do
+      triagem = create(:conversation, account: account, inbox: inbox, contact: create(:contact, account: account))
+      participando = conversation_in(vendas)
+      ConversationParticipant.create!(account: account, conversation: participando, user: sinistro_agent)
+      conversas = [conversa, conversation_in(vendas), triagem, participando]
+      combos = [
+        { all_pipelines: true, triage: false, only_own: false }, { all_pipelines: false, triage: true, only_own: false },
+        { all_pipelines: false, triage: false, only_own: false }, { all_pipelines: true, triage: true, only_own: true }
+      ]
+
+      combos.each do |combo|
+        access = Crm::InboxAgentAccess.find_by(user: sinistro_agent)
+        access.update!(combo)
+        conversas.each do |item|
+          recipients = Crm::Access::Recipients.new(item).filter(inbox.members.reload).include?(sinistro_agent)
+          link = Crm::Access::ConversationScope.new(user: sinistro_agent, account: account).allows?(item)
+
+          expect(recipients).to eq(link), "acesso #{combo}, conversa #{item.id}"
+        end
+      end
+    end
+
+    it 'avalia todas as pessoas restritas com poucas consultas, sem crescer por pessoa' do
+      extra = Array.new(6) { create(:user, account: account, role: :agent) }
+      extra.each do |user|
+        create(:inbox_member, inbox: inbox, user: user)
+        restrict(user, vendas)
+      end
+
+      target = conversa
+      queries = 0
+      counter = ->(*) { queries += 1 }
+      ActiveSupport::Notifications.subscribed(counter, 'sql.active_record') do
+        Crm::Access::Recipients.new(target).blocked_user_ids
+      end
+
+      expect(queries).to be <= 6
+    end
+  end
+
+  describe 'Copiloto (EE)' do
+    it 'não lê conversa que o funil esconde' do
+      reader = Class.new { include Captain::Copilot::ConversationAccess }.new
+
+      expect(reader.send(:accessible_conversation, account: account, user: vendas_agent, display_id: conversa.display_id)).to be_nil
+      expect(reader.send(:accessible_conversation, account: account, user: sinistro_agent, display_id: conversa.display_id))
+        .to eq(conversa)
+    end
+  end
+
+  describe Crm::Subjects::Notifier do
+    it 'o aviso de assunto não vai para quem o funil esconde' do
+      tokens = described_class.new(conversa).send(:tokens)
+
+      expect(tokens).to include(sinistro_agent.pubsub_token, admin.pubsub_token)
+      expect(tokens).not_to include(vendas_agent.pubsub_token)
     end
   end
 end
