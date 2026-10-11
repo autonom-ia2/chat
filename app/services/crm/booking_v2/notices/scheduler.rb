@@ -5,8 +5,8 @@
 #   horário deles). Lembrete cujo horário já passou não é criado, nem o que cairia a menos de MIN_GAP de outro aviso
 #   da reunião (ex.: marcar 1h10 antes não manda "1 hora antes" 10 minutos depois do "marcado"). Repetir não duplica
 #   (único por reunião e aviso). A reunião guarda a conversa do convite e, se o contato já parou os avisos, nasce com
-#   eles parados. `skip` ({ aviso => motivo }, #1305): o aviso entra no plano (conta para a folga dos outros) mas
-#   nasce `skipped` com o motivo, como o "ao marcar" que a IA já disse na mesma conversa (`BookingNotices`).
+#   eles parados. `defer` ({ aviso => atraso }, #1305): o aviso vence depois, como o "ao marcar" da reunião que a IA
+#   confirma na mesma conversa (`BookingNotices`): no envio, ele só sai se a IA não chegou a responder ali.
 # - `reschedule!` (remarcar): `rescheduled` vence agora e os lembretes vão para o novo horário. Linhas de volta a
 #   pendente, menos a que está saindo agora (`sending`); lembrete que ficou no passado vira `skipped: 'past_due'`; o
 #   que cairia perto demais de outro vira `skipped: 'too_close'`; `booked` ainda pendente vira `skipped: 'replaced'`.
@@ -45,12 +45,12 @@ class Crm::BookingV2::Notices::Scheduler
     @meeting = meeting
   end
 
-  def schedule!(invite: nil, skip: {})
+  def schedule!(invite: nil, defer: {})
     return unless active?
 
     remember_context!(invite)
-    plan = kinds.index_with { |kind| due_at(kind) }
-    rows = plan.except(*too_close_kinds(plan, Time.current)).filter_map { |kind, due| row(kind, due, skip[kind]) }
+    plan = kinds.index_with { |kind| due_at(kind) + defer.fetch(kind, 0) }
+    rows = plan.except(*too_close_kinds(plan, Time.current)).filter_map { |kind, due| row(kind, due) }
     Crm::MeetingNotice.insert_all(rows, unique_by: %i[meeting_id kind]) if rows.any? # rubocop:disable Rails/SkipsModelValidations
   end
 
@@ -110,13 +110,11 @@ class Crm::BookingV2::Notices::Scheduler
     due < 1.minute.before(now)
   end
 
-  # `skip_reason` presente: a linha nasce pulada (registro de que o aviso não sai, e por quê).
-  def row(kind, due, skip_reason = nil)
+  def row(kind, due)
     return if past?(due, Time.current)
 
     now = Time.current
-    status = Crm::MeetingNotice.statuses[skip_reason ? :skipped : :pending]
-    { meeting_id: meeting.id, account_id: meeting.account_id, kind: kind, due_at: due, status: status, skip_reason: skip_reason,
+    { meeting_id: meeting.id, account_id: meeting.account_id, kind: kind, due_at: due, status: Crm::MeetingNotice.statuses[:pending],
       created_at: now, updated_at: now }
   end
 

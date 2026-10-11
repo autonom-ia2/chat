@@ -6,13 +6,41 @@
 # Roda DEPOIS do commit da reserva; repetir não duplica (o Scheduler é único por reunião e aviso). Erro aqui não
 # desfaz a reunião: vai ao rastreador e ao log, e `schedule` responde que o aviso não vai sair.
 #
-# `told_in`: a conversa em que o cliente já ouviu a confirmação (a da IA). Quando ela é da MESMA caixa de avisos da
-# página, o aviso "ao marcar" cairia na mesma conversa logo depois da resposta da IA, repetindo o que ela acabou de
-# dizer: ele nasce pulado (`told_in_conversation`) e os lembretes seguem. Em outra caixa (IA no Instagram, avisos no
-# WhatsApp) o aviso sai: é o canal dos avisos e leva o "Parar avisos".
+# NÃO REPETIR A CONFIRMAÇÃO NA MESMA CONVERSA. `told_in` é a conversa em que a IA está confirmando a reunião. Quando
+# ela é da MESMA caixa de avisos da página, o "ao marcar" cairia ali logo depois da resposta da IA. Então ele vence
+# CONFIRMATION_GRACE depois, e no envio (`Notices::Sender`, por `already_told?`) só sai se a conversa NÃO recebeu
+# mensagem de saída desde a reserva: com a resposta da IA lá, vira `told_in_conversation`; se o turno morreu antes de
+# responder, o cliente recebe o aviso com o link. A decisão olha só dados (caixa, conversa, mensagens de saída e
+# horários), nunca o texto. Os lembretes seguem normais. Em outra caixa (IA no Instagram, avisos no WhatsApp), o
+# aviso sai na hora: é o canal dos avisos e leva o "Parar avisos".
 class Crm::BookingV2::BookingNotices
   TOLD_IN_CONVERSATION = 'told_in_conversation'.freeze
   BOOKED = 'booked'.freeze
+  # Folga para a resposta da IA chegar à conversa antes de decidir o "ao marcar" (o turno tem teto de 120 s).
+  CONFIRMATION_GRACE = 5.minutes
+
+  # O "ao marcar" de reunião que a IA confirmou na conversa da caixa de avisos, e a conversa já recebeu resposta
+  # depois da reserva.
+  def self.already_told?(notice)
+    return false unless notice.kind == BOOKED
+
+    meeting = notice.meeting
+    conversation = told_conversation(meeting)
+    return false if conversation.nil? || !same_notice_inbox?(meeting, conversation)
+
+    conversation.messages.where(message_type: :outgoing, private: false).exists?(['created_at >= ?', meeting.created_at])
+  end
+
+  def self.told_conversation(meeting)
+    id = meeting.metadata.to_h['booked_in_conversation_id']
+    id.present? ? Conversation.find_by(id: id, account_id: meeting.account_id) : nil
+  end
+
+  def self.same_notice_inbox?(meeting, conversation)
+    profile = Crm::BookingV2::Notices::Scheduler.profile_for(meeting)
+    profile&.notice_inbox_id.present? && conversation.inbox_id == profile.notice_inbox_id
+  end
+  private_class_method :told_conversation
 
   def initialize(meeting:, invite:, told_in: nil)
     @meeting = meeting
@@ -22,7 +50,7 @@ class Crm::BookingV2::BookingNotices
 
   # -> true quando o aviso "ao marcar" vai de fato sair (a tela de sucesso só promete mensagem assim, J2-A6).
   def schedule
-    Crm::BookingV2::Notices::Scheduler.new(meeting).schedule!(invite: invite, skip: skipped_kinds)
+    Crm::BookingV2::Notices::Scheduler.new(meeting).schedule!(invite: invite, defer: deferred_kinds)
     notice = meeting.notices.find_by(kind: BOOKED)
     notice.present? && notice.pending? && Crm::BookingV2::Notices::Sender.new(notice).will_send?
   rescue StandardError => e
@@ -35,12 +63,7 @@ class Crm::BookingV2::BookingNotices
 
   attr_reader :meeting, :invite, :told_in
 
-  def skipped_kinds
-    told_in_notice_inbox? ? { BOOKED => TOLD_IN_CONVERSATION } : {}
-  end
-
-  def told_in_notice_inbox?
-    profile = Crm::BookingV2::Notices::Scheduler.profile_for(meeting)
-    told_in.present? && profile&.notice_inbox_id.present? && told_in.inbox_id == profile.notice_inbox_id
+  def deferred_kinds
+    told_in.present? && self.class.same_notice_inbox?(meeting, told_in) ? { BOOKED => CONFIRMATION_GRACE } : {}
   end
 end

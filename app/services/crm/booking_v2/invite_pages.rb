@@ -31,7 +31,8 @@ class Crm::BookingV2::InvitePages
   end
 
   # 'ativa' | 'pausada' (despublicada) | 'sem_responsavel' (ninguém que possa atender) | 'agenda_pausada' (quem
-  # atende pausou a própria agenda).
+  # atende pausou a própria agenda). Não confere conta nem versão: quem chama já escopou (`usable?`, o escopo da
+  # policy na tela, `Native::Agenda.pagina_de` na IA).
   def status(page)
     return PAUSED unless page.enabled?
     return NO_HOST unless attended?(page)
@@ -49,6 +50,11 @@ class Crm::BookingV2::InvitePages
 
   def link_usable?(link)
     link.enabled? && eligible?(link.agent)
+  end
+
+  # Quem pausou a própria agenda em Meus horários: uma consulta por instância.
+  def paused?(user)
+    user.present? && paused_ids.include?(user.id)
   end
 
   # O convite ainda leva a uma página que atende: a página utilizável e, se houver, o link individual também.
@@ -109,11 +115,6 @@ class Crm::BookingV2::InvitePages
 
   def eligible_ids
     @eligible_ids ||= Crm::BookingV2::HostEligibility.eligible_user_ids(account: account)
-  end
-
-  # Quem pausou a própria agenda em Meus horários: uma consulta por instância.
-  def paused?(user)
-    user.present? && paused_ids.include?(user.id)
   end
 
   def paused_ids

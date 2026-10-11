@@ -69,20 +69,41 @@ RSpec.describe Autonomia::Agents::Tools::Native::AgendarReuniao do
       expect(resposta['instrucao']).to include('link_de_gestao')
     end
 
-    it 'na mesma caixa da conversa: o "ao marcar" nasce pulado, os lembretes seguem e o cron não repete a confirmação' do
-      conversa = create(:conversation, account: account, inbox: notice_inbox, contact: world.contact)
-      create(:message, account: account, inbox: notice_inbox, conversation: conversa, message_type: :incoming, created_at: 1.hour.ago)
-      world.card.update!(conversation_id: conversa.id)
-      profile.update!(notice_inbox: notice_inbox)
+    describe 'na mesma caixa da conversa' do
+      let(:conversa) { create(:conversation, account: account, inbox: notice_inbox, contact: world.contact) }
 
-      agendar(entrega: entrega_em(conversa, 80))
+      before do
+        create(:message, account: account, inbox: notice_inbox, conversation: conversa, message_type: :incoming, created_at: 1.hour.ago)
+        world.card.update!(conversation_id: conversa.id)
+        profile.update!(notice_inbox: notice_inbox)
+        agendar(entrega: entrega_em(conversa, 80))
+      end
 
-      meeting = Crm::Meeting.sole
-      expect(kinds_e_status(meeting)).to eq(
-        [['booked', 'skipped', Crm::BookingV2::BookingNotices::TOLD_IN_CONVERSATION], ['day_before', 'pending', nil],
-         ['hour_before', 'pending', nil]]
-      )
-      expect { Crm::BookingV2::NoticeDispatchJob.perform_now }.not_to change(Message, :count)
+      def despachar_depois_da_folga
+        travel Crm::BookingV2::BookingNotices::CONFIRMATION_GRACE + 1.minute
+        Crm::BookingV2::NoticeDispatchJob.perform_now
+      end
+
+      it 'o "ao marcar" espera a resposta da IA; com ela na conversa, não repete a confirmação e os lembretes seguem' do
+        meeting = Crm::Meeting.sole
+        expect(meeting.notices.find_by(kind: 'booked').due_at).to eq(Time.current + Crm::BookingV2::BookingNotices::CONFIRMATION_GRACE)
+        expect { Crm::BookingV2::NoticeDispatchJob.perform_now }.not_to change(Message, :count)
+
+        create(:message, account: account, inbox: notice_inbox, conversation: conversa, message_type: :outgoing, content: 'Marcado!')
+        expect { despachar_depois_da_folga }.not_to change(Message, :count)
+
+        expect(kinds_e_status(meeting)).to eq(
+          [['booked', 'skipped', Crm::BookingV2::BookingNotices::TOLD_IN_CONVERSATION], ['day_before', 'pending', nil],
+           ['hour_before', 'pending', nil]]
+        )
+        # Pulo esperado: o responsável não é chamado (só fica a tarefa de lembrete da própria reunião).
+        expect(Crm::FollowUp.pluck(:metadata).pluck('source')).not_to include(Crm::BookingV2::Notices::AgentAlert::SOURCE)
+      end
+
+      it 'se a IA não chegou a responder (o turno morreu), o cliente recebe o "ao marcar" com o link' do
+        expect { despachar_depois_da_folga }.to change { conversa.messages.outgoing.count }.by(1)
+        expect(conversa.messages.outgoing.last.content).to include("/b/#{Crm::BookingInvite.sole.code}")
+      end
     end
 
     it 'em outra caixa: o "ao marcar" sai na conversa de avisos, e não na conversa da IA' do
@@ -191,6 +212,19 @@ RSpec.describe Autonomia::Agents::Tools::Native::AgendarReuniao do
       sem_agenda_no_turno('pagina_inexistente')
       expect(JSON.parse(agendar)).to include('motivo' => 'pagina_inexistente')
       expect(Crm::Meeting.count).to eq(0)
+    end
+
+    it 'atribuído com a agenda pausada numa página por pessoa: a IA usa o primeiro link de quem não pausou' do
+      colega = create(:user, account: account, role: :agent, name: 'Rui Prado')
+      profile.update!(assignment_mode: :per_agent, default_assignee: nil)
+      profile.agent_booking_links.create!(account: account, agent: world.host)
+      profile.agent_booking_links.create!(account: account, agent: colega)
+      Crm::AgentAvailability.create!(account: account, user: world.host, paused: true)
+      conversation.update!(assignee: world.host)
+
+      expect(agenda.estado(agent.reload)).to eq('ativa')
+      expect(JSON.parse(agendar)).to include('marcada' => true)
+      expect(Crm::Meeting.sole.created_by).to eq(colega)
     end
 
     it 'sem horário livre na janela: motivo estruturado' do

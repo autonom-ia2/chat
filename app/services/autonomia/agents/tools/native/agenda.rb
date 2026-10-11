@@ -9,7 +9,8 @@
 #
 # A REGRA DE HORÁRIO É A DA PÁGINA PÚBLICA (J6-A1): o mesmo `Crm::BookingV2::Slots`, com o mesmo responsável que a
 # página atende. Página `per_agent`: o link de quem está atribuído à conversa (a Atribuição do CRM decide quem atende,
-# de propósito); sem ele, o primeiro link ativo, como o convite (`InvitePages#link_for`).
+# de propósito); sem ele, ou com ele de agenda pausada em Meus horários, o primeiro link ativo de quem não pausou, como
+# o convite (`InvitePages#link_for`).
 #
 # NADA AQUI LÊ O QUE A PESSOA ESCREVEU (RA-09). Quem entende "a de quarta" é o modelo; as ferramentas recebem data,
 # horário ISO e duração e conferem por parser (`Date.iso8601`, `Time.iso8601`) e pelos limites da página.
@@ -158,10 +159,13 @@ module Autonomia::Agents::Tools::Native::Agenda
     conversation if conversation.present? && conversation.account_id == account.id
   end
 
+  # Quem está atribuído à conversa, a menos que tenha pausado a agenda (#1305): aí recebe o primeiro link ativo de
+  # quem não pausou, como sem ninguém atribuído. Pausado não tem horário, e a IA diria "sem horários".
   def link
     return @link if defined?(@link)
 
-    @link = paginas.link_for(pagina, conversa&.assignee)
+    atribuido = conversa&.assignee
+    @link = paginas.link_for(pagina, paginas.paused?(atribuido) ? nil : atribuido)
   end
 
   # O mesmo responsável do `Booker`: o do link individual ou o responsável padrão da página.
