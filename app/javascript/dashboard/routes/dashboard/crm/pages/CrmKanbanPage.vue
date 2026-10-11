@@ -2569,6 +2569,7 @@ onUnmounted(() => {
       :pipeline-id="currentPipelineId"
       :default-type="quickAddType"
       :meetings-enabled="isMeetingFeatureEnabled"
+      :booking-v2="isBookingV2"
       @create="onQuickAddCreate"
       @more-options="onQuickAddMoreOptions"
       @schedule-meeting="onQuickAddScheduleMeeting"

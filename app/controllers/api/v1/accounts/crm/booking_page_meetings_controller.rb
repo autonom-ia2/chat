@@ -4,7 +4,9 @@
 # Atrás da flag da conta (`crm_booking_v2`, 404 desligada) e da `Crm::BookingPageMeetingPolicy` (quem pode atender
 # pelo agendamento). Só páginas novas publicadas e com alguém para atender (`InvitePages#usable`); outra página é 404.
 #
-# - `GET bookable`: as páginas que servem, com durações, locais e se têm avisos no WhatsApp.
+# - `GET bookable`: as páginas que servem, com durações, locais e se têm avisos no WhatsApp. O fuso sai com o nome
+#   IANA (o navegador não entende os nomes do Rails) e os dias que a página oferece (`OpenDays`, os mesmos da página
+#   pública) montam os cartões de dia da janela (#1285).
 # - `GET :id/slots?date=&duration=`: horários livres do dia, no fuso da página; sem nenhum, o próximo livre.
 # - `POST :id/meetings` (`card_id` ou `contact_id`, `starts_at`, `duration`, `location`, `notify`, `request_id`):
 #   marca e devolve a reunião. Horário tomado = 409 `slot_unavailable`; outra recusa = 422 `crm.booking_v2.<código>`.
@@ -84,11 +86,12 @@ class Api::V1::Accounts::Crm::BookingPageMeetingsController < Api::V1::Accounts:
   end
 
   def page_payload(page)
+    zone = ActiveSupport::TimeZone[page.resolved_timezone]
     {
-      id: page.id, title: page.title, timezone: page.resolved_timezone, duration_minutes: page.duration_minutes,
+      id: page.id, title: page.title, timezone: zone.tzinfo.name, duration_minutes: page.duration_minutes,
       durations: page.durations, notices: page.notices_usable?,
       locations: Array(page.locations).select { |item| item.is_a?(Hash) }.map { |item| location_payload(item) }
-    }
+    }.merge(::Crm::BookingV2::OpenDays.new(page, zone).to_h)
   end
 
   def location_payload(location)

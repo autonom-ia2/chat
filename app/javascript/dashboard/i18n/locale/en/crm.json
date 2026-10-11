@@ -793,6 +793,7 @@
         "CANCEL": "Cancel",
         "ADVANCED_HINT": "Pick the deal and click Continue — we'll open its card to set up the details.",
         "MEETING_HINT": "Pick the deal and click Continue to set up the meeting (mailbox, guests, time).",
+        "MEETING_HINT_AGENDA": "Pick the deal and tap Continue to see the free days and times.",
         "MEETING_SOON": "Meetings are coming soon. For now, use Reminder or More options.",
         "MEETING": "Meeting"
       },
@@ -2889,6 +2890,10 @@
       "SLOTS_LOADING": "Looking for free times…",
       "NO_SLOTS": "No free time on this day.",
       "NEXT_SLOT": "See the next free day",
+      "MORE_DAYS": "See more days",
+      "EARLIEST_DAY": "Earliest",
+      "EARLIEST_DAY_SPOKEN": "{day}, the earliest free day",
+      "NO_DAYS": "This page has no open day to book.",
       "RETRY": "Try again",
       "NOTIFY": "Notify the client on WhatsApp",
       "NOTIFY_HINT": "Sends the confirmation and the reminders.",
