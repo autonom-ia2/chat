@@ -1,5 +1,5 @@
 # publico.<coluna> (#1331): a linha da planilha do Público (`campaign_import_rows.extra_values`), formatada pelo tipo
-# da coluna (`schema_resolution['extra_columns']`, CampaignImports::ColumnTypes). Coluna sem tipo vai como está.
+# da coluna (`schema_resolution['column_types']`, CampaignImports::ColumnTypes). Coluna sem tipo vai como está.
 class TemplateFields::AudienceResolver
   # columns: os cabeçalhos das colunas extras; values: { cabeçalho => valor } da linha; types: { cabeçalho => tipo }.
   def initialize(columns:, values:, types: {})

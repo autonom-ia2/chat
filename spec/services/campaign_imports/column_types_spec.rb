@@ -53,7 +53,7 @@ RSpec.describe CampaignImports::ColumnTypes, :aggregate_failures do
   end
 
   it 'reads the stored types of an audience' do
-    import = CampaignImport.new(schema_resolution: { 'extra_columns' => { 'Vencimento' => 'data' } })
+    import = CampaignImport.new(schema_resolution: { 'column_types' => { 'Vencimento' => 'data' } })
 
     expect(described_class.stored(import)).to eq('Vencimento' => 'data')
     expect(described_class.stored(CampaignImport.new(schema_resolution: {}))).to eq({})
@@ -68,6 +68,6 @@ RSpec.describe CampaignImports::ColumnTypes, :aggregate_failures do
 
     CampaignImports::AudienceValidator.new(import).perform
 
-    expect(import.reload.schema_resolution['extra_columns']).to eq('Vencimento' => 'data', 'Valor' => 'moeda', 'Obs' => nil)
+    expect(import.reload.schema_resolution['column_types']).to eq('Vencimento' => 'data', 'Valor' => 'moeda', 'Obs' => nil)
   end
 end

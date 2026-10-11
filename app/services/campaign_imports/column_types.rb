@@ -7,10 +7,10 @@
 # format do not tell): the column gets no type and its values go as written. Below MIN_CONFIDENCE counts as "none".
 #
 # perform => { 'Vencimento' => 'data', 'Observação' => nil }, or nil when Jev is off, failed or there is no extra
-# column (nothing is stored then). The validator stores it in campaign_imports.schema_resolution['extra_columns'].
+# column (nothing is stored then). The validator stores it in campaign_imports.schema_resolution['column_types'].
 class CampaignImports::ColumnTypes
   NONE = 'none'.freeze
-  RESOLUTION_KEY = 'extra_columns'.freeze
+  RESOLUTION_KEY = 'column_types'.freeze
   MAX_COLUMNS = 50
   MIN_CONFIDENCE = TypesafeAi::ImportSchemaResolver::MIN_MAPPING_CONFIDENCE
   TYPE_CRITERIA = {
