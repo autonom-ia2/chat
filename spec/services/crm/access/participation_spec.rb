@@ -89,4 +89,52 @@ RSpec.describe 'Acesso por funil e participação' do # rubocop:disable RSpec/De
       expect(response).to have_http_status(:success)
     end
   end
+
+  describe Crm::Ai::HandoffInviter do
+    it 'não convida (nem dá participação a) quem o funil esconde' do
+      Crm::InboxAgentAccess.find_by(user: restricted).update!(triage: false)
+      result = described_class.new(conversation: conversation, agent: restricted).perform
+
+      expect(result).to be(false)
+      expect(conversation.conversation_participants.where(user: restricted)).not_to exist
+    end
+
+    it 'convida quem pode ver a conversa' do
+      allow(NotificationBuilder).to receive(:new).and_return(instance_double(NotificationBuilder, perform: true))
+
+      expect(described_class.new(conversation: conversation, agent: free_agent).perform).to be(true)
+    end
+  end
+
+  describe 'casos de borda' do
+    it 'administrador com linha de acesso se adiciona e não perde participação ao reatribuir' do
+      Crm::InboxAgentAccess.create!(account: account, inbox: inbox, user: admin, all_pipelines: false, triage: false)
+
+      expect(Crm::Access::ConversationScope.new(user: admin, account: account).restricted_in?(inbox.id)).to be(false)
+    end
+
+    it 'evento sem changed_attributes (atribuição V2) não remove ninguém' do
+      ConversationParticipant.create!(account: account, conversation: conversation, user: restricted)
+      conversation.update!(assignee: free_agent)
+
+      ParticipationListener.instance.assignee_changed(
+        Events::Base.new(:'assignee.changed', Time.zone.now, conversation: conversation.reload, user: free_agent)
+      )
+
+      expect(conversation.conversation_participants.where(user: restricted)).to exist
+    end
+
+    it 'reatribuir tira toda participação de quem tem acesso restrito, inclusive a dada por menção (atribuição não é passe)' do
+      ConversationParticipant.create!(account: account, conversation: conversation, user: restricted)
+      conversation.update!(assignee: restricted)
+      conversation.update!(assignee: free_agent)
+      changes = conversation.previous_changes
+
+      ParticipationListener.instance.assignee_changed(
+        Events::Base.new(:'assignee.changed', Time.zone.now, conversation: conversation.reload, changed_attributes: changes)
+      )
+
+      expect(conversation.conversation_participants.where(user: restricted)).not_to exist
+    end
+  end
 end
