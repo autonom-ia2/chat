@@ -149,6 +149,25 @@ describe('BookingAddressField', () => {
       expect(changeButton(wrapper).attributes('aria-controls')).toBeUndefined();
     });
 
+    it('conta que ainda não tem endereço: mostra o link com a parte da conta em aberto, sem link quebrado', async () => {
+      const wrapper = mountField({
+        modelValue: 'clinica-viva',
+        savedName: 'clinica-viva',
+        accountAddress: '',
+      });
+
+      expect(preview(wrapper)).toContain(`${HOST}/a/…/clinica-viva`);
+      await openField(wrapper);
+      expect(wrapper.find('[data-address-prefix]').exists()).toBe(false);
+      const described = field(wrapper)
+        .attributes('aria-describedby')
+        .split(' ');
+      expect(described).toHaveLength(2);
+      described.forEach(part =>
+        expect(document.getElementById(part)).not.toBeNull()
+      );
+    });
+
     it('o botão é um botão de verdade, com alvo de toque de 44 px', () => {
       const button = changeButton(mountField());
 

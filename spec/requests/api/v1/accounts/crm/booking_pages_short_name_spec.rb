@@ -107,6 +107,76 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingPages short name', type: :request
     end
   end
 
+  describe 'onde o endereço da conta nasce' do
+    def addresses
+      Crm::BookingAccountAddress.pluck(:account_id, :name)
+    end
+
+    # Como uma conta que ficou sem endereço (página de antes do deploy em que o preenchimento falhou).
+    def forget_address!
+      page.update_column(:short_name, 'clinica-viva') # rubocop:disable Rails/SkipsModelValidations
+      Crm::BookingAccountAddress.delete_all
+    end
+
+    it 'nenhuma leitura cria: lista, página, conferência e sugestão devolvem o link comprido e não gravam nada' do
+      forget_address!
+
+      call(admin, :get, base)
+      expect(payload.first).to include('short_name' => 'clinica-viva', 'account_address' => nil, 'public_url' => "https://chat.exemplo.com/book/#{page.slug}")
+
+      call(admin, :get, "#{base}/#{page.id}")
+      expect(payload).to include('account_address' => nil, 'public_url' => "https://chat.exemplo.com/book/#{page.slug}")
+
+      call(admin, :get, "#{base}/short_name", name: 'outro-nome', page_id: page.id)
+      call(admin, :get, "#{base}/short_name", title: 'Consulta')
+      expect(response).to have_http_status(:ok)
+
+      expect(addresses).to eq([])
+    end
+
+    it 'salvar a página cria o endereço da conta, e a resposta já traz o link curto' do
+      forget_address!
+
+      call(admin, :patch, "#{base}/#{page.id}", booking_page: { title: 'Outro título' })
+
+      expect(response).to have_http_status(:ok)
+      expect(addresses).to eq([[account.id, 'hub-dois']])
+      expect(payload).to include('account_address' => 'hub-dois', 'public_url' => 'https://chat.exemplo.com/a/hub-dois/clinica-viva')
+    end
+
+    it 'criar página (a primeira da conta) cria o endereço, uma vez só' do
+      admin
+      Crm::BookingAccountAddress.delete_all
+
+      2.times { call(admin, :post, base, { template_key: 'sales_30' }) }
+
+      expect(response).to have_http_status(:created)
+      expect(addresses).to eq([[account.id, 'hub-dois']])
+      expect(payload['account_address']).to eq('hub-dois')
+    end
+
+    it 'publicar a página cria o endereço' do
+      forget_address!
+      page.update_column(:enabled, false) # rubocop:disable Rails/SkipsModelValidations
+
+      call(admin, :post, "#{base}/#{page.id}/publish")
+
+      expect(response).to have_http_status(:ok)
+      expect(addresses).to eq([[account.id, 'hub-dois']])
+      expect(payload['public_url']).to eq('https://chat.exemplo.com/a/hub-dois/clinica-viva')
+    end
+
+    it 'gravar página antiga (page_version 1) não cria endereço' do
+      host = world.host
+      inbox = create(:channel_email, account: account, provider: 'google', calendar_enabled: true).inbox
+      Crm::BookingAccountAddress.delete_all
+
+      create_booking_profile(account: account, host: host, page_version: Crm::AgentBookingProfile::LEGACY_PAGE, inbox: inbox)
+
+      expect(addresses).to eq([])
+    end
+  end
+
   describe 'PATCH com short_name' do
     it 'grava o nome em minúsculas e passa a devolver o link curto' do
       call(admin, :patch, "#{base}/#{page.id}", booking_page: { short_name: ' Clinica-Viva ' })

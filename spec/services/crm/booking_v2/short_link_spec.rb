@@ -225,19 +225,20 @@ RSpec.describe Crm::BookingV2::ShortLink do
   describe '.url_for' do
     it 'usa o link curto com a conta quando a página tem nome e o comprido quando não tem' do
       expect(described_class.url_for(profile)).to eq("https://chat.exemplo.com/book/#{profile.slug}")
-      expect(Crm::BookingAccountAddress.count).to eq(0)
 
       profile.update!(short_name: 'avaliacao')
       expect(described_class.url_for(profile)).to eq('https://chat.exemplo.com/a/clinica-viva/avaliacao')
     end
 
-    it 'cria o endereço da conta na primeira vez que a página com nome precisa dele' do
+    it 'só lê: conta sem endereço segue com o link comprido, da página e da pessoa, e nada é gravado' do
+      per_agent!(world.host, second)
       profile.update!(short_name: 'avaliacao')
+      Crm::BookingAccountAddress.delete_all
+      fresh = Crm::AgentBookingProfile.find(profile.id)
+
+      expect(described_class.url_for(fresh)).to eq("https://chat.exemplo.com/book/#{profile.slug}")
+      expect(described_class.url_for(fresh, link: link_of(second))).to eq("https://chat.exemplo.com/book/#{link_of(second).slug}")
       expect(Crm::BookingAccountAddress.count).to eq(0)
-
-      described_class.url_for(profile)
-
-      expect(Crm::BookingAccountAddress.pluck(:account_id, :name)).to eq([[account.id, 'clinica-viva']])
     end
 
     it 'usa o link curto da pessoa, e o comprido para a pessoa ainda sem apelido' do

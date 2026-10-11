@@ -147,6 +147,22 @@ RSpec.describe Crm::BookingV2::ShortName do
       expect(second_page.errors[:short_name]).to eq(['taken'])
     end
 
+    it 'grava a página mesmo quando o endereço da conta não nasce, e tenta de novo na gravação seguinte' do
+      Crm::BookingAccountAddress.delete_all
+      allow(Crm::BookingV2::AccountAddress).to receive(:ensure!).and_raise(ActiveRecord::RecordNotUnique, 'endereço: 5 tentativas')
+      allow(Rails.logger).to receive(:error)
+
+      page.update!(short_name: 'clinica-viva')
+
+      expect(page.reload.short_name).to eq('clinica-viva')
+      expect(Crm::BookingV2::ShortLink.path_for(page)).to eq("/book/#{page.slug}")
+      expect(Rails.logger).to have_received(:error).with(a_string_including('[booking_account_address]')).at_least(:once)
+
+      allow(Crm::BookingV2::AccountAddress).to receive(:ensure!).and_call_original
+      page.update!(title: 'Outro título')
+      expect(Crm::BookingV2::ShortLink.path_for(page)).to start_with('/a/')
+    end
+
     it 'não tem mais o índice único global' do
       indexes = ActiveRecord::Base.connection.indexes(:crm_agent_booking_profiles).index_by(&:name)
       per_account = indexes['index_crm_agent_booking_profiles_on_account_and_short_name']

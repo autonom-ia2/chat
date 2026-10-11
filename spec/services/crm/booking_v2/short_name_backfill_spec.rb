@@ -11,6 +11,12 @@ RSpec.describe Crm::BookingV2::ShortNameBackfill do
     create_booking_profile(account: of_account, host: host, **)
   end
 
+  # Como antes do deploy: páginas existem, nenhuma conta tem endereço (gravar página pelo modelo já cria o da conta).
+  def run_as_before_deploy
+    Crm::BookingAccountAddress.delete_all
+    described_class.run
+  end
+
   def snapshot
     {
       addresses: Crm::BookingAccountAddress.order(:id).pluck(:id, :account_id, :name, :updated_at),
@@ -23,7 +29,7 @@ RSpec.describe Crm::BookingV2::ShortNameBackfill do
     page.update!(title: 'Avaliação Gratuita')
     before_update = page.reload.updated_at
 
-    result = described_class.run
+    result = run_as_before_deploy
 
     expect(result.to_a).to eq([1, 1, []])
     expect(Crm::BookingAccountAddress.pluck(:account_id, :name)).to eq([[account.id, 'clinica-viva']])
@@ -34,17 +40,30 @@ RSpec.describe Crm::BookingV2::ShortNameBackfill do
     page.update!(short_name: 'meu-nome', title: 'Consulta')
     other = new_page(account, world.host, title: 'Consulta')
 
-    described_class.run
+    run_as_before_deploy
 
     expect(page.reload.short_name).to eq('meu-nome')
     expect(other.reload.short_name).to eq('consulta')
   end
 
-  it 'não mexe na conta em que todas as páginas já têm nome, nem cria endereço para ela' do
+  it 'conta em que todas as páginas já têm nome: só ganha o endereço da conta, e o link curto passa a valer' do
     page.update_column(:short_name, 'meu-nome') # rubocop:disable Rails/SkipsModelValidations
+    before_update = page.reload.updated_at
 
-    expect(described_class.run.to_a).to eq([0, 0, []])
-    expect(Crm::BookingAccountAddress.count).to eq(0)
+    expect(run_as_before_deploy.to_a).to eq([1, 0, []])
+
+    expect(Crm::BookingAccountAddress.pluck(:account_id, :name)).to eq([[account.id, 'clinica-viva']])
+    expect(page.reload).to have_attributes(short_name: 'meu-nome', updated_at: before_update)
+    expect(Crm::BookingV2::ShortLink.path_for(page)).to eq('/a/clinica-viva/meu-nome')
+  end
+
+  it 'conta que já tem endereço fica com ele, e as páginas sem nome dela ganham nome' do
+    page.update_column(:short_name, nil) # rubocop:disable Rails/SkipsModelValidations
+    Crm::BookingAccountAddress.find_by!(account_id: account.id).update!(name: 'meu-endereco')
+
+    expect(described_class.run.to_a).to eq([1, 1, []])
+    expect(Crm::BookingAccountAddress.pluck(:name)).to eq(['meu-endereco'])
+    expect(page.reload.short_name).to eq('conversa-de-30-min')
   end
 
   it 'numera duas páginas com o mesmo título na conta, na ordem em que foram criadas' do
@@ -52,7 +71,7 @@ RSpec.describe Crm::BookingV2::ShortNameBackfill do
     second = new_page(account, world.host, title: 'Consulta')
     third = new_page(account, world.host, title: 'consulta!')
 
-    described_class.run
+    run_as_before_deploy
 
     expect([page, second, third].map { |item| item.reload.short_name }).to eq(%w[consulta consulta-2 consulta-3])
   end
@@ -62,7 +81,7 @@ RSpec.describe Crm::BookingV2::ShortNameBackfill do
     other_page = build_booking_world(account: other_account).profile
     [page, other_page].each { |item| item.update!(title: 'Consulta') }
 
-    described_class.run
+    run_as_before_deploy
 
     expect(Crm::BookingAccountAddress.order(:account_id).pluck(:name)).to eq(%w[clinica-viva clinica-viva-2])
     expect([page, other_page].map { |item| item.reload.short_name }).to eq(%w[consulta consulta])
@@ -73,7 +92,7 @@ RSpec.describe Crm::BookingV2::ShortNameBackfill do
     page.update!(title: 'Book')
     blank = new_page(account, world.host, title: nil)
 
-    described_class.run
+    run_as_before_deploy
 
     expect(Crm::BookingAccountAddress.pluck(:name)).to eq(['agenda-admin'])
     expect([page, blank].map { |item| item.reload.short_name }).to eq(%w[agenda-book agenda])
@@ -86,16 +105,27 @@ RSpec.describe Crm::BookingV2::ShortNameBackfill do
     links.first.update_column(:metadata, { 'short_name' => 'aninha' }) # rubocop:disable Rails/SkipsModelValidations
     links.last.update_column(:metadata, {}) # rubocop:disable Rails/SkipsModelValidations
 
-    described_class.run
+    run_as_before_deploy
 
     expect(links.map { |link| Crm::BookingV2::PersonNames.for(link.reload) }).to eq(%w[aninha bruno])
+  end
+
+  it 'não troca o nome que alguém salvou na página entre a leitura e a gravação' do
+    page.update_column(:short_name, nil) # rubocop:disable Rails/SkipsModelValidations
+    allow(Crm::BookingV2::ShortName).to receive(:suggest).and_wrap_original do |original, *args, **options|
+      Crm::AgentBookingProfile.where(id: page.id).update_all(short_name: 'escolhido-agora') # rubocop:disable Rails/SkipsModelValidations
+      original.call(*args, **options)
+    end
+
+    expect(described_class.run.to_a).to eq([0, 0, []])
+    expect(page.reload.short_name).to eq('escolhido-agora')
   end
 
   it 'não toca página antiga (page_version 1)' do
     inbox = create(:channel_email, account: account, provider: 'google', calendar_enabled: true).inbox
     legacy = create_booking_profile(account: account, host: world.host, page_version: Crm::AgentBookingProfile::LEGACY_PAGE, inbox: inbox)
 
-    described_class.run
+    run_as_before_deploy
 
     expect(legacy.reload.short_name).to be_nil
   end
@@ -104,7 +134,7 @@ RSpec.describe Crm::BookingV2::ShortNameBackfill do
     page.update_column(:duration_minutes, 0) # rubocop:disable Rails/SkipsModelValidations
     expect(page.reload).not_to be_valid
 
-    described_class.run
+    run_as_before_deploy
 
     expect(page.reload.short_name).to eq('conversa-de-30-min')
   end
@@ -114,7 +144,7 @@ RSpec.describe Crm::BookingV2::ShortNameBackfill do
     new_page(account, world.host, title: 'Consulta')
     build_booking_world(account: create(:account, name: 'Clínica Viva')).profile
 
-    expect(described_class.run.to_a).to eq([2, 3, []])
+    expect(run_as_before_deploy.to_a).to eq([2, 3, []])
     first = snapshot
 
     travel_to(1.hour.from_now) do
@@ -133,7 +163,7 @@ RSpec.describe Crm::BookingV2::ShortNameBackfill do
       original.call(title, **options)
     end
 
-    result = described_class.run
+    result = run_as_before_deploy
 
     expect(result.to_a).to eq([1, 1, [account.id]])
     expect(page.reload.short_name).to be_nil
@@ -146,6 +176,7 @@ RSpec.describe Crm::BookingV2::ShortNameBackfill do
     page
     migration = BackfillBookingShortNames.new
     migration.verbose = false
+    Crm::BookingAccountAddress.delete_all
 
     migration.up
     expect(page.reload.short_name).to eq('conversa-de-30-min')

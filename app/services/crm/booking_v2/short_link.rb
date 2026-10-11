@@ -15,8 +15,8 @@
 # O primeiro pedaço nunca abre página de outra conta: endereço de conta não pode ser igual a nome de página de outra
 # conta (`AccountAddress.problem`), e com endereço de conta a busca fica dentro dela.
 #
-# `url_for` monta o endereço para divulgar: o curto quando a página tem nome (e, com pessoa, a pessoa tem apelido);
-# senão o `/book/<slug>` de sempre, que continua funcionando.
+# `url_for` monta o endereço para divulgar: o curto quando a página tem nome e a conta tem endereço (e, com pessoa,
+# a pessoa tem apelido); senão o `/book/<slug>` de sempre, que continua funcionando. Só lê: não cria endereço.
 class Crm::BookingV2::ShortLink
   def self.base_url
     ENV.fetch('FRONTEND_URL', '').to_s.chomp('/')
@@ -69,12 +69,9 @@ class Crm::BookingV2::ShortLink
   end
 
   def self.path_for(profile, link: nil)
-    return "/book/#{link ? link.slug : profile.slug}" if profile.short_name.blank?
+    segments = [profile.booking_account_address, profile.short_name.presence, (::Crm::BookingV2::PersonNames.for(link) if link)]
+    return "/book/#{link ? link.slug : profile.slug}" if segments.first(link ? 3 : 2).any?(&:nil?)
 
-    page_path = "/a/#{profile.booking_account_address}/#{profile.short_name}"
-    return page_path if link.nil?
-
-    person = ::Crm::BookingV2::PersonNames.for(link)
-    person ? "#{page_path}/#{person}" : "/book/#{link.slug}"
+    "/a/#{segments.compact.join('/')}"
   end
 end

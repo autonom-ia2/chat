@@ -20,7 +20,6 @@ RSpec.describe 'PublicBooking short links and link preview', type: :request do
     account.enable_features('crm_booking_v2')
     account.save!
     profile.update!(short_name: 'clinica-viva', title: 'Avaliação gratuita')
-    Crm::BookingV2::AccountAddress.ensure!(account)
     allow(GlobalConfig).to receive(:get).and_return('INSTALLATION_NAME' => 'Central de Atendimento')
     allow(ViteRuby.instance.manifest).to receive(:resolve_entries) do |*names, **|
       { scripts: names.map { |name| "/vite-test/assets/#{name}-entry.js" }, imports: [], stylesheets: [] }
@@ -233,11 +232,28 @@ RSpec.describe 'PublicBooking short links and link preview', type: :request do
       expect(response.body).not_to include('Página da outra conta')
 
       get '/a/outra-conta/clinica-viva'
-      expect(slug_meta).to be_nil
-
-      Crm::BookingV2::AccountAddress.ensure!(other_account)
-      get '/a/outra-conta/clinica-viva'
       expect(slug_meta).to eq(other.slug)
+
+      get '/a/hub-dois/clinica-viva'
+      expect(slug_meta).to eq(profile.slug)
+    end
+  end
+
+  describe 'leitura pública não grava' do
+    it 'abrir os links de uma conta sem endereço não cria endereço, e o link comprido segue abrindo' do
+      Crm::BookingAccountAddress.delete_all
+
+      # Sem o endereço da conta, só o formato antigo e o link comprido acham a página.
+      expected = { '/a/clinica-viva' => profile.slug, '/a/hub-dois' => nil, '/a/hub-dois/clinica-viva' => nil, "/book/#{profile.slug}" => nil }
+      expected.each do |path, slug|
+        get path
+
+        expect(response).to have_http_status(:ok), path
+        expect(slug_meta).to eq(slug), path
+      end
+
+      expect(meta('og:title')).to eq('Avaliação gratuita')
+      expect(Crm::BookingAccountAddress.count).to eq(0)
     end
   end
 

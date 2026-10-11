@@ -1,6 +1,7 @@
 # Nome curto da página nova (#1282, #1299): o `<página>` de `/a/<conta>/<página>`. Opcional (página sem nome segue em
 # `/book/<uuid>`), gravado em minúsculas e único dentro da conta. As regras de formato moram em
-# `Crm::BookingV2::ShortName`; o `<conta>` é o endereço da conta (`Crm::BookingV2::AccountAddress`).
+# `Crm::BookingV2::ShortName`; o `<conta>` é o endereço da conta (`Crm::BookingV2::AccountAddress`), que nasce junto
+# com a primeira gravação de uma página nova da conta.
 #
 # Unicidade em duas camadas: a validação dá o erro legível, e o índice único do banco garante quando duas páginas
 # pedem o mesmo nome ao mesmo tempo (as duas passam pela validação). Quem perde no índice recebe o mesmo erro de
@@ -18,11 +19,15 @@ module Crm::BookingShortName
     validate :short_name_must_be_usable, if: -> { short_name.present? && will_save_change_to_short_name? }
     around_save :report_short_name_race
     after_save :name_people_in_short_link, if: -> { saved_change_to_short_name? && short_name.present? }
+    after_save :ensure_booking_account_address, if: :new_page?
   end
 
-  # O `<conta>` do link curto desta página; nasce na primeira vez que alguém pede.
+  # O `<conta>` do link curto desta página, ou nil se a conta ainda não tem endereço. Só lê: o endereço da conta nasce
+  # quando uma página nova é gravada (criar, salvar, publicar) e no preenchimento do deploy, nunca numa leitura.
   def booking_account_address
-    @booking_account_address ||= ::Crm::BookingV2::AccountAddress.ensure!(account)
+    return @booking_account_address if defined?(@booking_account_address)
+
+    @booking_account_address = ::Crm::BookingV2::AccountAddress.name_for(account)
   end
 
   private
@@ -46,6 +51,16 @@ module Crm::BookingShortName
 
     errors.add(:short_name, 'taken')
     raise ActiveRecord::RecordInvalid, self
+  end
+
+  # A página nunca deixa de ser gravada por causa do endereço da conta: se ele não nasce agora (todas as tentativas
+  # perderam a disputa do nome), fica o registro no log, a página segue com o link comprido e a próxima gravação tenta
+  # de novo. `ensure!` grava em savepoint, então a falha não desfaz a gravação da página.
+  def ensure_booking_account_address
+    @booking_account_address = ::Crm::BookingV2::AccountAddress.ensure!(account)
+  rescue ActiveRecord::RecordNotUnique => e
+    Rails.logger.error("[booking_account_address] conta #{account_id}: #{e.message}")
+    @booking_account_address = nil
   end
 
   def name_people_in_short_link

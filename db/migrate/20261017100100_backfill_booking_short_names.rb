@@ -1,7 +1,7 @@
 # Dados (#1299): dá endereço curto às páginas de agendamento novas que só tinham o link comprido. Separada da
 # migration de esquema (20261017100000) de propósito: esta só grava linhas.
 #
-# O que grava, por conta que tem página nova sem nome (uma transação por conta):
+# O que grava, por conta que tem página nova (uma transação por conta):
 # - uma linha em `crm_booking_account_addresses`, se a conta ainda não tem endereço (nome da conta sem acento, em
 #   minúsculas, com número quando já tem dono);
 # - `crm_agent_booking_profiles.short_name` das páginas novas (page_version 2) em que ele está vazio (título da página
@@ -32,7 +32,7 @@ class BackfillBookingShortNames < ActiveRecord::Migration[7.2]
 
     MODELS.filter_map(&:safe_constantize).each(&:reset_column_information)
     result = service.run
-    say "contas: #{result.accounts}, páginas com nome novo: #{result.pages}, contas com falha: #{result.failed_account_ids.inspect}"
+    say "contas alteradas: #{result.accounts}, páginas com nome novo: #{result.pages}, contas com falha: #{result.failed_account_ids.inspect}"
   end
 
   def down; end

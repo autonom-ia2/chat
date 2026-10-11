@@ -22,7 +22,8 @@ import { addressProblem, addressUrl, cleanAddress } from '../bookingAddress';
 const props = defineProps({
   title: { type: String, default: '' },
   pageId: { type: Number, default: null },
-  // O `<conta>` do link: vem do servidor e não muda aqui.
+  // O `<conta>` do link: vem do servidor e não muda aqui. Vazio só na conta
+  // que ainda não tem endereço: ele nasce quando a página é salva.
   accountAddress: { type: String, default: '' },
   // O endereço que a página já tem salvo ('' = nenhum).
   savedName: { type: String, default: '' },
@@ -173,12 +174,19 @@ watch(
 const isChanging = computed(
   () => !!props.savedName && model.value !== props.savedName
 );
+// O que o leitor de tela lê junto do campo: só o que está na tela.
+const describedBy = computed(() =>
+  [props.accountAddress ? 'prefix' : null, 'hint', 'status']
+    .filter(Boolean)
+    .map(part => `${id}-${part}`)
+    .join(' ')
+);
 // A parte fixa antes do campo, sem o site: o link inteiro está na linha de cima.
 const prefix = computed(() => `…/a/${props.accountAddress}/`);
 const previewText = computed(() => {
   if (model.value) {
     return t('BOOKING.ADDRESS.PREVIEW', {
-      url: addressUrl(model.value, props.accountAddress),
+      url: addressUrl(model.value, props.accountAddress || '…'),
     });
   }
   // Recolhido e ainda sem endereço: a sugestão está a caminho.
@@ -251,7 +259,7 @@ const toggle = async () => {
           :value="model"
           :aria-labelledby="`${id}-label`"
           :aria-invalid="problemText ? 'true' : undefined"
-          :aria-describedby="`${id}-prefix ${id}-hint ${id}-status`"
+          :aria-describedby="describedBy"
           :class="accountAddress ? 'ps-0' : 'ps-4'"
           class="flex-1 min-w-0 reset-base !mb-0 min-h-12 pe-4 text-base border-0 bg-transparent text-n-slate-12 placeholder:text-n-slate-10 focus:outline-none focus:ring-0"
           @input="onInput"
