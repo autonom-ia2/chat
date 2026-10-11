@@ -12,6 +12,7 @@ export const GAVETA = {
   VERSOES: 'versoes',
   INSTRUCOES: 'instrucoes',
   AGENDA: 'agenda',
+  FERRAMENTAS: 'ferramentas',
 };
 
 // O `:tab` da página antiga (links do Guia, da Central e de favoritos) abre a gaveta equivalente.
@@ -21,6 +22,7 @@ const GAVETA_DA_ABA = {
   knowledge: GAVETA.SABE,
   channels: GAVETA.ONDE,
   performance: GAVETA.CONVERSAS,
+  tools: GAVETA.FERRAMENTAS,
 };
 
 export const gavetaDaAba = aba => GAVETA_DA_ABA[aba] || null;
@@ -50,16 +52,25 @@ export const podeMudarConversando = agente =>
 // O agente recebe a agenda da IA (#1196): o servidor manda `booking_available: false` quando não.
 export const recebeAgenda = agente => agente?.booking_available !== false;
 
+// Quem vê "Ferramentas": o mesmo critério da aba do painel antigo (AgentPanelPage) — usuário
+// SuperAdmin que gerencia, em qualquer tipo de agente (cotação e interno inclusive). O backend
+// (Agents::ToolsController) recusa quem não é SuperAdmin.
+export const ehSuperAdmin = usuario => usuario?.type === 'SuperAdmin';
+
 // Gavetas que cada tipo de agente e cada papel podem abrir. Quem só vê testa e lê; a cotação mostra
 // só nome, foto, horário, estado e números; o interno não tem canal. A agenda (#1253) só abre para
-// quem gerencia, com a agenda nova na conta e para o agente que recebe a agenda.
+// quem gerencia, com a agenda nova na conta e para o agente que recebe a agenda. Ferramentas, só
+// para o SuperAdmin que gerencia.
 export const gavetasPermitidas = (
   agente,
   podeGerenciar,
-  { agendaNova = false } = {}
+  { agendaNova = false, superAdmin = false } = {}
 ) => {
+  const ferramentas = podeGerenciar && superAdmin ? [GAVETA.FERRAMENTAS] : [];
   if (ehCotacao(agente)) {
-    return podeGerenciar ? [GAVETA.ONDE, GAVETA.VOLTAR, GAVETA.FOTO] : [];
+    return podeGerenciar
+      ? [GAVETA.ONDE, GAVETA.VOLTAR, GAVETA.FOTO, ...ferramentas]
+      : [];
   }
   const leitura = [GAVETA.TESTAR, GAVETA.SABE, GAVETA.VERSOES];
   if (!podeGerenciar) return leitura;
@@ -69,6 +80,7 @@ export const gavetasPermitidas = (
     GAVETA.INSTRUCOES,
     ...(ehInterno(agente) ? [] : [GAVETA.ONDE, GAVETA.VOLTAR]),
     ...(agendaNova && recebeAgenda(agente) ? [GAVETA.AGENDA] : []),
+    ...ferramentas,
   ];
   return [...leitura, ...escrita];
 };

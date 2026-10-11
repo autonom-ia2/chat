@@ -1,6 +1,11 @@
 # Cores da imagem de prévia (#1282). A cor da página vem como #RRGGBB; qualquer outra coisa usa a cor padrão da
-# página pública. Como o texto sobre ela é branco, a cor é escurecida aos poucos até ter contraste AA (4,5:1) com o
-# branco — a mesma regra da página pública (`public_booking_v2/helpers/brand.js`).
+# página pública. A pessoa pode escolher qualquer cor, inclusive bem clara (#1289), então o desenho trabalha com três
+# valores, como a página pública (`public_booking_v2/helpers/brand.js`):
+# - `fill`: a cor exatamente como foi escolhida, para os fundos (o fundo do desenho A, o botão, a faixa do ícone);
+# - `on`: o que vai por cima do fundo, branco ou escuro, o que der mais contraste (todo texto da imagem é grande:
+#   passa de 4:1 em qualquer cor, acima dos 3:1 pedidos para texto grande);
+# - `brand`: a cor em versão legível sobre fundo claro (texto e traços), escurecida aos poucos até ter contraste AA
+#   (4,5:1) com o branco.
 module Crm::BookingV2::PreviewImage::Palette
   DEFAULT = '#1d4ed8'.freeze
   HEX_DIGITS = '0123456789abcdef'.freeze
@@ -24,6 +29,18 @@ module Crm::BookingV2::PreviewImage::Palette
     [1, 3, 5].map { |start| hex[start, 2].to_i(16) }
   end
 
+  def fill(value)
+    rgb(value)
+  end
+
+  def on(color)
+    contrast(color, WHITE) >= contrast(color, INK) ? WHITE : INK
+  end
+
+  def light?(color)
+    on(color) == INK
+  end
+
   def brand(value)
     color = rgb(value)
     MAX_DARKEN_STEPS.times do
@@ -39,7 +56,13 @@ module Crm::BookingV2::PreviewImage::Palette
   end
 
   def contrast_with_white(color)
-    1.05 / (luminance(color) + 0.05)
+    contrast(color, WHITE)
+  end
+
+  # Contraste WCAG entre duas cores (de 1 a 21).
+  def contrast(color, other)
+    lighter, darker = [luminance(color), luminance(other)].sort.reverse
+    (lighter + 0.05) / (darker + 0.05)
   end
 
   def luminance(color)

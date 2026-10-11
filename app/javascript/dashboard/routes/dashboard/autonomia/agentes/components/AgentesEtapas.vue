@@ -55,7 +55,7 @@ const compacto = computed(() => {
           data-etapa
           :data-estado="passo.estado"
           :aria-current="passo.estado === 'agora' ? 'step' : undefined"
-          class="flex items-center gap-2"
+          class="relative flex items-center gap-2"
         >
           <span
             aria-hidden="true"

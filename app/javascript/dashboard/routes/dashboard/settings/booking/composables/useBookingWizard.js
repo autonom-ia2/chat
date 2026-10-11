@@ -2,6 +2,7 @@ import { computed, ref } from 'vue';
 import BookingPagesAPI from 'dashboard/api/crmBookingPages';
 import { STEP } from '../constants';
 import {
+  brandFormPatch,
   formToPayload,
   imageProblem,
   pageToForm,
@@ -23,7 +24,12 @@ const saveErrorFrom = failure => {
 // página inteira: voltar um passo não perde o que foi digitado. Cada
 // "Continuar" confere o passo e salva (PATCH); o último passo publica.
 // `initialStep` abre uma página existente direto num passo (ex.: a prévia).
-export const useBookingWizard = ({ pageId, initialStep, onClose }) => {
+export const useBookingWizard = ({
+  pageId,
+  initialStep,
+  onClose,
+  onProfilePhoto,
+}) => {
   const openingStep = VALID_STEPS.includes(initialStep)
     ? initialStep
     : STEP.CONTE;
@@ -43,6 +49,10 @@ export const useBookingWizard = ({ pageId, initialStep, onClose }) => {
   const uploading = ref(null);
   const uploadError = ref(null);
   const missing = ref([]);
+  // Identidade salva (#1289): 'applied' | 'saved' depois que deu certo; a
+  // falha vira o aviso de "não salvou" de sempre, com o motivo do servidor.
+  const identityState = ref(null);
+  const identityBusy = ref(false);
   const savingDestination = ref(false);
 
   const loadPeople = async () => {
@@ -166,7 +176,9 @@ export const useBookingWizard = ({ pageId, initialStep, onClose }) => {
     }
   };
 
-  const upload = async ({ kind, file }) => {
+  // `applyToProfile` (#1298): a foto vira também a do perfil de quem envia;
+  // quando o servidor confirma, `onProfilePhoto` atualiza o avatar do painel.
+  const upload = async ({ kind, file, applyToProfile = false }) => {
     const problem = imageProblem(file);
     uploadError.value = problem ? { kind, key: problem } : null;
     if (problem) return;
@@ -175,14 +187,40 @@ export const useBookingWizard = ({ pageId, initialStep, onClose }) => {
       const { data } = await BookingPagesAPI.uploadImage(
         page.value.id,
         kind,
-        file
+        file,
+        { applyToProfile }
       );
       page.value = data.payload;
+      if (data.payload.photo_owner?.profile_updated) onProfilePhoto?.();
     } catch {
       uploadError.value = { kind, key: 'IMAGE_UPLOAD' };
     } finally {
       uploading.value = null;
     }
+  };
+
+  // "Usar a identidade salva": o servidor põe logo, foto, cor, lado e frase na
+  // página e devolve; o formulário acompanha.
+  const applyIdentity = () => {
+    identityState.value = null;
+    return attempt(async () => {
+      const { data } = await BookingPagesAPI.applyIdentity(page.value.id);
+      page.value = data.payload;
+      change(brandFormPatch(data.payload));
+      identityState.value = 'applied';
+    }, identityBusy);
+  };
+
+  // "Salvar como identidade da conta": primeiro salva o que está na tela,
+  // depois guarda a identidade a partir da página.
+  const saveIdentity = () => {
+    identityState.value = null;
+    return attempt(async () => {
+      await saveStep();
+      const { data } = await BookingPagesAPI.saveIdentity(page.value.id);
+      page.value = data.payload;
+      identityState.value = 'saved';
+    }, identityBusy);
   };
 
   const saveDestination = ({ pipelineId, stageId }) =>
@@ -221,6 +259,8 @@ export const useBookingWizard = ({ pageId, initialStep, onClose }) => {
     uploading,
     uploadError,
     missing,
+    identityState,
+    identityBusy,
     savingDestination,
     peopleNames,
     load,
@@ -232,6 +272,8 @@ export const useBookingWizard = ({ pageId, initialStep, onClose }) => {
     goTo,
     publish,
     upload,
+    applyIdentity,
+    saveIdentity,
     saveDestination,
   };
 };

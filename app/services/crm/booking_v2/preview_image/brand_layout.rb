@@ -1,4 +1,8 @@
 # Desenho A (#1282), o padrão: fundo na cor da página, logo num cartão branco, nome do atendimento e a chamada.
+# O fundo é a cor exata da página (#1289), em degradê: clareia um pouco no canto de cima e escurece no de baixo. O
+# texto por cima (branco ou escuro) é o que tem mais contraste no PIOR dos dois cantos, não na cor chapada; em cor
+# clara o degradê escurece menos, para o texto escuro continuar legível embaixo. `Backdrop` é essa conta, à parte
+# para o spec medir qualquer cor.
 class Crm::BookingV2::PreviewImage::BrandLayout < Crm::BookingV2::PreviewImage::Layout
   MARK_TOP = MARGIN - 16
   LOGO_BOX = [300, 76].freeze
@@ -9,16 +13,39 @@ class Crm::BookingV2::PreviewImage::BrandLayout < Crm::BookingV2::PreviewImage::
   TITLE_GAP = 44
   TITLE_WIDTH = 940
   TITLE_SIZES = [84, 76, 68, 60, 54, 48].freeze
+  SHADE = 0.34
+  LIGHT_SHADE = 0.12
+  TINT = 0.1
+  BLACK = [0, 0, 0].freeze
+
+  # As duas pontas do degradê e a cor do texto por cima, para uma cor de página.
+  Backdrop = Data.define(:from, :to, :ink) do
+    def self.for(fill)
+      shade = Palette.light?(fill) ? LIGHT_SHADE : SHADE
+      from = Palette.mix(fill, Palette::WHITE, TINT)
+      to = Palette.mix(fill, BLACK, shade)
+      ink = [Palette::WHITE, Palette::INK].max_by { |color| [from, to].map { |stop| Palette.contrast(stop, color) }.min }
+      new(from: from, to: to, ink: ink)
+    end
+
+    # O menor contraste do texto com o fundo, entre os dois cantos.
+    def contrast
+      [from, to].map { |stop| Palette.contrast(stop, ink) }.min
+    end
+  end
 
   private
 
   def draw
-    @canvas = Canvas.new(from: Palette.mix(brand, Palette::WHITE, 0.1), to: Palette.mix(brand, [0, 0, 0], 0.34))
+    backdrop = Backdrop.for(fill)
+    ink = backdrop.ink
+    @canvas = Canvas.new(from: backdrop.from, to: backdrop.to)
     decorate
     top = mark
-    title(Palette::WHITE, at: [MARGIN, top], box: [TITLE_WIDTH, pill_top - top - TITLE_GAP], sizes: TITLE_SIZES)
-    aside = MARGIN + pill(fill: Palette::WHITE, ink: brand) + 36
-    line(facts_text, Palette::WHITE, at: [aside, pill_top + 26], width: Canvas::WIDTH - MARGIN - aside, style: { opacity: 0.86 })
+    title(ink, at: [MARGIN, top], box: [TITLE_WIDTH, pill_top - top - TITLE_GAP], sizes: TITLE_SIZES)
+    # O botão é o avesso do fundo: a cor do texto como fundo e, por cima, a ponta do degradê que mais contrasta.
+    aside = MARGIN + pill(fill: ink, ink: [backdrop.from, backdrop.to].max_by { |stop| Palette.contrast(stop, ink) }) + 36
+    line(facts_text, ink, at: [aside, pill_top + 26], width: Canvas::WIDTH - MARGIN - aside)
   end
 
   def decorate

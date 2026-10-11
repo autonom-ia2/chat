@@ -132,7 +132,7 @@ defineExpose({ abrirArquivos, focar: () => compositor.value?.focar() });
               <span class="i-lucide-sparkles size-4" />
             </span>
             <p
-              class="px-4 py-2.5 m-0 text-base leading-relaxed whitespace-pre-line rounded-2xl max-w-[85%] text-n-slate-12"
+              class="relative px-4 py-2.5 m-0 text-base leading-relaxed whitespace-pre-line rounded-2xl max-w-[85%] text-n-slate-12"
               :class="
                 fala.de === 'voce'
                   ? 'bg-n-blue-3 rounded-ee-md'

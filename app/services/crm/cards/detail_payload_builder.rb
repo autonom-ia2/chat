@@ -12,7 +12,7 @@ class Crm::Cards::DetailPayloadBuilder
   end
 
   def perform
-    payload_options = { user: @user, account_user: @account_user }
+    payload_options = { user: @user, account_user: @account_user, conversation_visibility: conversation_visibility }
     payload_options[:company] = @company unless @company.equal?(UNRESOLVED_COMPANY)
     Crm::Cards::PayloadBuilder.new(@card, **payload_options).perform.merge(
       linked_conversations: linked_conversations_payload,
@@ -21,6 +21,12 @@ class Crm::Cards::DetailPayloadBuilder
   end
 
   private
+
+  # Acesso por funil (#1148, parte C): as conversas do card (principal e vinculadas) numa consulta só.
+  def conversation_visibility
+    @conversation_visibility ||= Crm::Conversations::Visibility.new(account: @account, user: @user, account_user: @account_user)
+                                                               .tap { |visibility| visibility.preload_cards([@card]) }
+  end
 
   def linked_conversations_payload
     visible_linked_conversations.map { |conversation| conversation_payload(conversation) }
@@ -59,7 +65,16 @@ class Crm::Cards::DetailPayloadBuilder
     return conversations if administrator?
 
     preload_conversation_permissions(conversations)
-    conversations.select { |conversation| conversation_visible_to_agent?(conversation) }
+    funnel_visible(conversations.select { |conversation| conversation_visible_to_agent?(conversation) })
+  end
+
+  # Acesso por funil (#1148, parte C): o drawer do card não lista conversa que o funil esconde.
+  def funnel_visible(conversations)
+    funnel = Crm::Access::ConversationScope.new(user: @user, account: @account)
+    return conversations unless funnel.restricted?
+
+    allowed = funnel.apply(@account.conversations.where(id: conversations.map(&:id))).pluck(:id).to_set
+    conversations.select { |conversation| allowed.include?(conversation.id) }
   end
 
   def preload_conversation_permissions(conversations)

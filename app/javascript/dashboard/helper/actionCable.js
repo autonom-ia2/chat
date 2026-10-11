@@ -73,6 +73,7 @@ class ActionCableConnector extends BaseActionCableConnector {
       'notification.updated': this.onNotificationUpdated,
       'conversation.read': this.onConversationRead,
       'conversation.updated': this.onConversationUpdated,
+      'conversation.access_revoked': this.onConversationAccessRevoked,
       'conversation.unread_count_changed':
         this.onConversationUnreadCountChanged,
       'account.cache_invalidated': this.onCacheInvalidate,
@@ -183,6 +184,11 @@ class ActionCableConnector extends BaseActionCableConnector {
   onConversationUpdated = data => {
     this.app.$store.dispatch('updateConversation', data);
     this.fetchConversationStats();
+  };
+
+  // Acesso por funil (#1148): o card mudou de funil e a pessoa deixou de ver a conversa.
+  onConversationAccessRevoked = ({ id }) => {
+    this.app.$store.dispatch('removeConversationLocally', id);
   };
 
   onConversationUnreadCountChanged = () => {

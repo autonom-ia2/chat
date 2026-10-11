@@ -49,9 +49,11 @@ class Crm::FollowUps::Broadcaster
     }
   end
 
+  # Acesso por funil (#1148, parte C): o responsável pelo lembrete que não vê o card não recebe o título dele.
   def recipient_users
     users = card_recipient_users
-    users << @follow_up.assignee if @follow_up.assignee.present?
+    assignee = @follow_up.assignee
+    users << assignee if assignee.present? && Crm::Access::Recipients.card_visible_to?(@follow_up.card, assignee)
     users.compact.index_by(&:id).values
   end
 

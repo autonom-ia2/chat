@@ -111,7 +111,10 @@ onMounted(() => {
           </p>
         </div>
       </div>
-      <form class="flex flex-col gap-2 sm:flex-row" @submit.prevent="perguntar">
+      <form
+        class="relative flex flex-col gap-2 sm:flex-row"
+        @submit.prevent="perguntar"
+      >
         <label :for="`${base}-pergunta`" class="sr-only">
           {{ t(`${NS}.BLOCO_TESTAR.PERGUNTE`, { nome }) }}
         </label>
@@ -420,7 +423,7 @@ onMounted(() => {
         :href="linkQuemRecebe"
         target="_blank"
         rel="noopener noreferrer"
-        class="inline-flex items-center gap-1 text-sm font-semibold underline min-h-11 w-fit text-n-blue-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-blue-11"
+        class="relative inline-flex items-center gap-1 text-sm font-semibold underline min-h-11 w-fit text-n-blue-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-blue-11"
       >
         {{ t('AGENTS.JORNADA.ONDE_QUANDO.ESCOLHER_QUEM_RECEBE') }}
         <span class="i-lucide-external-link size-4" aria-hidden="true" />

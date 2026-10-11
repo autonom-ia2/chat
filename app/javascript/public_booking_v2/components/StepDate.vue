@@ -59,14 +59,14 @@ const selectedDuration = computed({
 <template>
   <section class="flex flex-col gap-6" aria-labelledby="step-heading">
     <BrandHeader :page="page" />
-    <p v-if="page.description" class="text-base text-slate-700">
+    <p v-if="page.description" class="m-0 text-base text-slate-700">
       {{ page.description }}
     </p>
     <h1
       id="step-heading"
       data-step-heading
       tabindex="-1"
-      class="text-2xl font-bold text-slate-900 focus:outline-none"
+      class="m-0 text-2xl font-bold text-slate-900 focus:outline-none"
     >
       {{ heading }}
     </h1>
@@ -81,9 +81,9 @@ const selectedDuration = computed({
 
     <div
       v-if="earliest"
-      class="flex flex-col gap-3 rounded-2xl border-2 border-[var(--brand)] bg-white p-4"
+      class="flex flex-col gap-3 rounded-2xl border-2 border-solid border-[var(--brand)] bg-white p-4"
     >
-      <p class="text-lg font-semibold text-slate-900">
+      <p class="m-0 text-lg font-semibold text-slate-900">
         {{ t('BOOKING_V2.DATE.EARLIEST', { when: earliest }) }}
       </p>
       <ActionButton variant="secondary" @click="chooseEarliest">
@@ -92,14 +92,16 @@ const selectedDuration = computed({
     </div>
 
     <div class="flex flex-col gap-3">
-      <h2 v-if="earliest" class="text-lg font-semibold text-slate-900">
+      <h2 v-if="earliest" class="m-0 text-lg font-semibold text-slate-900">
         {{ t('BOOKING_V2.DATE.OTHER_DAY') }}
       </h2>
-      <ul class="grid grid-cols-[repeat(auto-fill,minmax(5rem,1fr))] gap-2">
+      <ul
+        class="m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(5rem,1fr))] gap-2 p-0"
+      >
         <li v-for="item in dayItems" :key="item.iso">
           <button
             type="button"
-            class="flex min-h-16 w-full flex-col items-center justify-center rounded-xl border-2 border-slate-200 bg-white px-1 py-2 text-slate-900 hover:border-[var(--brand)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand)]"
+            class="flex min-h-16 w-full flex-col items-center justify-center rounded-xl border-2 border-solid border-slate-200 bg-white px-1 py-2 text-slate-900 hover:border-[var(--brand)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand)]"
             :aria-label="item.full"
             @click="chooseDay(item.iso)"
           >

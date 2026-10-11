@@ -416,6 +416,9 @@ Rails.application.routes.draw do
                 post :preview_token
                 post :logo
                 post :photo
+                # Identidade salva da conta (#1289): usar na página e salvar a partir da página.
+                post :apply_identity
+                post :save_identity
                 get :people
                 put :people, action: :update_people
                 post :test_invite

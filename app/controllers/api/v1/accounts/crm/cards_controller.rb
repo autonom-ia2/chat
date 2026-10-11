@@ -58,8 +58,10 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     display_ids = Array(params[:conversation_ids]).filter_map { |id| id.to_s[/\d+/]&.to_i }.uniq.first(100)
     return render(json: { payload: {} }) if display_ids.blank?
 
-    conversations = Current.account.conversations.where(display_id: display_ids)
-                           .select { |conversation| crm_visibility.visible?(conversation) }
+    conversations = Current.account.conversations.where(display_id: display_ids).to_a
+    # Acesso por funil (#1148, parte C): a regra do funil para a página inteira numa consulta só.
+    crm_visibility.preload(conversations)
+    conversations = conversations.select { |conversation| crm_visibility.visible?(conversation) }
     return render(json: { payload: {} }) if conversations.blank?
 
     render json: { payload: conversation_badges(conversations) }
@@ -120,6 +122,7 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
   def move
     with_idempotency do
       target_stage = Current.account.crm_pipeline_stages.find(params[:stage_id])
+      ensure_move_allowed!(@card, target_stage.pipeline_id)
       @card = ::Crm::Cards::Mover.new(card: @card, actor: Current.user, target_stage: target_stage).perform
       broadcast_card(::Events::Types::CRM_CARD_MOVED)
       render :show
@@ -234,6 +237,7 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     @card = card
     authorize @card, :update?
     attributes = permitted_params.slice(*UPSERT_ATTRIBUTES.map(&:to_s)).compact
+    ensure_move_allowed!(@card, upsert_pipeline_id(attributes)) if attributes.key?('pipeline_id') || attributes.key?('stage_id')
     # Campos do card (#1146): o upsert junta com o que já está salvo, como o PATCH.
     if permitted_params[:custom_attributes].present?
       attributes['custom_attributes'] = @card.custom_attributes.to_h.merge(permitted_params[:custom_attributes].to_h).compact
@@ -373,6 +377,7 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     conversation = conversation_from_params(permitted_params)
     resolved_params = resolved_create_params(permitted_params, conversation: conversation)
     create_authorizer.authorize!(resolved_params, conversation: conversation)
+    ensure_create_allowed!(resolved_params.to_h.with_indifferent_access, conversation)
     if @registration
       card = @registration.perform do |contact|
         ::Crm::Cards::Creator.new(account: Current.account, user: Current.user, params: resolved_params.merge(contact_id: contact.id)).perform
@@ -471,6 +476,26 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
   # closed_at, and stage-move side effects). `owner_id` IS permitted so the list
   # view can inline-assign / reassign an owner (authorized via card :update? +
   # same-account validation on the model).
+  # Acesso por funil (#1148, parte C): ver Crm::Access::CardGuard.
+  def card_guard
+    @card_guard ||= ::Crm::Access::CardGuard.new(user: Current.user, account: Current.account, account_user: Current.account_user)
+  end
+
+  def ensure_move_allowed!(card, pipeline_id)
+    raise Pundit::NotAuthorizedError unless card_guard.move_allowed?(card, pipeline_id)
+  end
+
+  def ensure_create_allowed!(params, conversation)
+    return if params[:pipeline_id].blank?
+    return if card_guard.create_allowed?(params[:pipeline_id], conversation: conversation, inbox_id: params[:inbox_id])
+
+    raise Pundit::NotAuthorizedError
+  end
+
+  def upsert_pipeline_id(attributes)
+    attributes['pipeline_id'].presence || Current.account.crm_pipeline_stages.find_by(id: attributes['stage_id'])&.pipeline_id
+  end
+
   def update_params
     parameter_set(:card).permit(
       :title, :description, :value_cents, :currency, :lost_reason, :source,

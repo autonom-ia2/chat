@@ -6,7 +6,7 @@
 # `record` é onde a imagem pronta fica guardada: o link da pessoa ou a página.
 class Crm::BookingV2::PreviewImage::Content
   # Muda quando o desenho muda, para as imagens guardadas serem refeitas.
-  RENDER_VERSION = 1
+  RENDER_VERSION = 2
   IMAGE_TYPES = Crm::BookingPageSettings::IMAGE_TYPES
   MAX_SOURCE_BYTES = 15.megabytes
   VERSION_LENGTH = 20
@@ -21,9 +21,9 @@ class Crm::BookingV2::PreviewImage::Content
   end
 
   def design
-    @design ||= if page.link && usable?(host_photo)
+    @design ||= if page.link && person_photo
                   :person
-                elsif usable?(profile.logo) || usable?(profile.photo)
+                elsif usable?(profile.logo) || person_photo
                   :brand
                 else
                   :light
@@ -53,15 +53,20 @@ class Crm::BookingV2::PreviewImage::Content
     profile.brand.to_h['color'].to_s
   end
 
-  def host_photo
-    page.host&.avatar
+  # A foto de quem atende, na mesma ordem da página pública (#1289): a foto da página, depois a que a pessoa guardou
+  # para as páginas de agendamento e, por último, a do perfil dela.
+  def person_photo
+    return @person_photo if defined?(@person_photo)
+
+    saved = ::Crm::BookingV2::BrandIdentity.new(profile.account).photo_of(page.host)
+    @person_photo = [profile.photo, saved, page.host&.avatar].find { |photo| usable?(photo) }
   end
 
   # [logo, foto] que o desenho escolhido usa; nil no que ele não usa.
   def sources
     case design
-    when :person then [nil, host_photo]
-    when :brand then usable?(profile.logo) ? [profile.logo, nil] : [nil, profile.photo]
+    when :person then [nil, person_photo]
+    when :brand then usable?(profile.logo) ? [profile.logo, nil] : [nil, person_photo]
     else [nil, nil]
     end
   end

@@ -489,6 +489,12 @@ const actions = {
     }
   },
 
+  // Acesso por funil (#1148): a pessoa deixou de ver a conversa (o card mudou de funil). Só tira da lista; não apaga.
+  removeConversationLocally: ({ commit, dispatch }, conversationId) => {
+    commit(types.DELETE_CONVERSATION, conversationId);
+    dispatch('conversationStats/get');
+  },
+
   deleteConversation: async ({ commit, dispatch }, conversationId) => {
     try {
       await ConversationApi.delete(conversationId);
