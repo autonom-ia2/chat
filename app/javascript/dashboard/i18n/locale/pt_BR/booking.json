@@ -311,6 +311,7 @@
           "OUTSIDE_WINDOW": "Mande antes um “oi” do seu celular para o WhatsApp da empresa. Depois toque em Enviar teste de novo.",
           "NUMBER_CAP": "Este número já recebeu muitas mensagens hoje. Tente amanhã ou use outro número.",
           "ACCOUNT_CAP": "A conta já mandou o máximo de avisos de hoje. Tente amanhã.",
+          "NO_WHATSAPP": "Este número não tem WhatsApp. Confira o número ou use outro.",
           "STOPPED": "Este número pediu para não receber mensagens. Use outro número.",
           "CONVERSATION_FORBIDDEN": "Este número já conversa com a empresa numa conversa que você não pode abrir. Use outro número.",
           "CANNOT_SEND": "Não deu para mandar por este WhatsApp. Confira se ele está conectado.",

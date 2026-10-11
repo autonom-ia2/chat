@@ -29,6 +29,9 @@ en:
         rescheduled: "%{name} moved the appointment to %{when}"
         rebooked: "%{name} booked again, for %{when}"
         notice_failed: "The WhatsApp reminder to %{name} could not be sent. The appointment of %{when} stays booked: talk to the client."
+        reasons:
+          no_whatsapp: "The client's number has no WhatsApp."
+          waha_unavailable: "The unofficial WhatsApp did not answer: check that it is connected."
       templates:
         sales_30:
           title: '30-minute sales call'

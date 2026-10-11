@@ -13,7 +13,9 @@
 #    estão saindo agora (`sending`, de outro processo) e os testes de "Testar no meu WhatsApp". Por número = por
 #    contato: o telefone é único por conta (validação do `Contact`). Como o cron marca `sending` ANTES de contar,
 #    dois processos ao mesmo tempo se enxergam e o teto nunca é ultrapassado (no limite, os dois podem recusar).
-# 6. Regra do canal (`Notices::Route`): janela e modelo aprovado no oficial e no canal API; WAHA manda texto sempre.
+# 6. Regra do canal (`Notices::Route`): janela e modelo aprovado no oficial e no canal API; WAHA manda texto sem janela.
+#    WAHA sem conversa: antes de abrir uma, o chat id real vem da WAHA (`Notices::WahaChat`) → `no_whatsapp` ou
+#    `waha_unavailable` quando não dá. `#will_send?` não faz essa consulta (a tela pública não espera a WAHA).
 # 7. Envio (`Notices::Delivery`) → `sent` com a mensagem; erro do envio → `failed` com a classe do erro (e o erro vai
 #    ao tracker). Falha de entrega posterior do provedor: ver `NoticeDispatchJob` (`delivery_failed`).
 #
@@ -70,6 +72,9 @@ class Crm::BookingV2::Notices::Sender
 
     decision = route.decide
     return skip!(decision.reason) unless decision.send?
+
+    waha_problem = waha_chat_problem(decision)
+    return skip!(waha_problem) if waha_problem
 
     deliver!(decision)
   end
@@ -136,6 +141,13 @@ class Crm::BookingV2::Notices::Sender
   def route
     @route ||= Crm::BookingV2::Notices::Route.new(inbox: profile.notice_inbox, contact: contact, conversation: meeting.conversation,
                                                   template: profile.notice_template(notice.kind))
+  end
+
+  # WAHA sem conversa: pergunta o chat id antes de abrir uma (`Notices::WahaChat`, #1270).
+  def waha_chat_problem(decision)
+    return unless Crm::BookingV2::Notices::WahaChat.needed?(decision, profile.notice_inbox)
+
+    Crm::BookingV2::Notices::WahaChat.new(inbox: profile.notice_inbox, contact: contact).prepare
   end
 
   def deliver!(decision)

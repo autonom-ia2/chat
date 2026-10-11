@@ -180,6 +180,12 @@ describe('bookingNotices', () => {
       testInviteProblem({ error: 'cannot_send', reason: 'account_cap' })
     ).toBe('ACCOUNT_CAP');
     expect(
+      testInviteProblem({ error: 'cannot_send', reason: 'no_whatsapp' })
+    ).toBe('NO_WHATSAPP');
+    expect(
+      testInviteProblem({ error: 'cannot_send', reason: 'waha_unavailable' })
+    ).toBe('CANNOT_SEND');
+    expect(
       testInviteProblem({ error: 'cannot_send', reason: 'no_phone' })
     ).toBe('CANNOT_SEND');
     expect(testInviteProblem({ error: 'notice_inbox_forbidden' })).toBe(

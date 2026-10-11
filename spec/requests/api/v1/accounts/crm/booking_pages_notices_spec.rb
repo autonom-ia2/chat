@@ -166,7 +166,21 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingPages notices', type: :request do
   describe 'POST test_invite (J3-A11)' do
     let(:path) { "#{member}/test_invite" }
 
-    before { page.update!(notice_inbox: waha) }
+    let(:check_url) { 'https://waha.test/api/contacts/check-exists' }
+
+    around do |example|
+      with_modified_env('WAHA_API_URL' => 'https://waha.test', 'WAHA_API_KEY' => 'chave-waha-teste') { example.run }
+    end
+
+    before do
+      waha.channel.update!(additional_attributes: waha.channel.additional_attributes.merge('session' => '5511900001111'))
+      page.update!(notice_inbox: waha)
+    end
+
+    def waha_answers(body)
+      stub_request(:get, check_url).with(query: { phone: '5511955554444', session: '5511900001111' })
+                                   .to_return(status: 200, body: body.to_json, headers: { 'Content-Type' => 'application/json' })
+    end
 
     def open_window_for(phone)
       contact = account.contacts.create!(name: 'Admin Ana', phone_number: phone)
@@ -194,13 +208,39 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingPages notices', type: :request do
       expect(response).to have_http_status(:ok)
     end
 
-    it 'pela WAHA manda a número que nunca falou com a empresa: cria o contato, abre a conversa e manda (#1270)' do
+    it 'pela WAHA manda a número que nunca falou com a empresa: chat id da WAHA no contato, conversa aberta e mensagem (#1270)' do
+      check = waha_answers(numberExists: true, chatId: '5511955554444@c.us')
+
       expect { call(admin, :post, path, phone: '+5511955554444') }.to change(Contact, :count).by(1).and change(Conversation, :count).by(1)
 
       expect(response).to have_http_status(:ok)
+      expect(check).to have_been_made.once
+      contact = Contact.find_by(phone_number: '+5511955554444')
+      expect(contact.custom_attributes).to include('waha_whatsapp_chat_id' => '5511955554444@c.us', 'waha_whatsapp_jid' => '5511955554444@c.us')
       conversation = Conversation.sole
-      expect(conversation).to have_attributes(inbox_id: waha.id, contact_id: Contact.find_by(phone_number: '+5511955554444').id)
+      expect(conversation).to have_attributes(inbox_id: waha.id, contact_id: contact.id)
       expect(conversation.messages.outgoing.sole.content).to include("https://app.example.com/b/#{Crm::BookingInvite.sole.code}")
+    end
+
+    it 'pela WAHA, número sem WhatsApp: recusa com no_whatsapp sem criar contato, convite nem conversa' do
+      waha_answers(numberExists: false)
+
+      expect { call(admin, :post, path, phone: '+5511955554444') }.not_to change(Contact, :count)
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body).to eq('error' => 'cannot_send', 'reason' => 'no_whatsapp')
+      expect(Crm::BookingInvite.count).to eq(0)
+      expect(Conversation.count).to eq(0)
+    end
+
+    it 'pela WAHA fora do ar: recusa com waha_unavailable sem gravar nada' do
+      stub_request(:get, check_url).with(query: hash_including(session: '5511900001111')).to_raise(Net::ReadTimeout)
+
+      expect { call(admin, :post, path, phone: '+5511955554444') }.not_to change(Contact, :count)
+
+      expect(response.parsed_body).to eq('error' => 'cannot_send', 'reason' => 'waha_unavailable')
+      expect(Crm::BookingInvite.count).to eq(0)
+      expect(Conversation.count).to eq(0)
     end
 
     it 'recusa com o motivo do canal quando não pode mandar, sem criar convite nem contato' do

@@ -83,6 +83,8 @@ RSpec.describe Crm::BookingV2::Notices::Sender do
         'processed_params' => { 'body' => { '1' => 'Marcos', '2' => '20/10 às 10:00', '3' => invite.url } }
       )
       expect(message.content).to eq("Oi Marcos, seu horário é 20/10 às 10:00. Gerencie aqui: #{invite.url}")
+      # #1270: abrir conversa no oficial não pergunta nada à WAHA.
+      expect(a_request(:get, %r{/api/contacts/check-exists})).not_to have_been_made
     end
 
     it 'fora da janela e sem modelo aprovado pula com template_required, avisa o agente uma vez e não mexe na reunião (J2-A6, J5-A4)' do
@@ -151,7 +153,20 @@ RSpec.describe Crm::BookingV2::Notices::Sender do
   # #1270: pela WAHA o aviso sai sem exigir mensagem do cliente nas últimas 24 h; os tetos, o "Parar avisos" e a flag
   # da conta continuam segurando.
   describe 'WAHA (#1270, sem janela de 24 h)' do
-    let(:inbox) { create(:channel_api, account: account, additional_attributes: { 'provider' => 'waha' }).inbox }
+    let(:inbox) do
+      create(:channel_api, account: account, additional_attributes: { 'provider' => 'waha', 'session' => '5511900001111' }).inbox
+    end
+    let(:check_url) { 'https://waha.test/api/contacts/check-exists' }
+
+    around do |example|
+      with_modified_env('WAHA_API_URL' => 'https://waha.test', 'WAHA_API_KEY' => 'chave-waha-teste') { example.run }
+    end
+
+    # WAHA falsa: responde a consulta do telefone do contato do mundo pela sessão da caixa.
+    def waha_answers(body)
+      stub_request(:get, check_url).with(query: { phone: '5511912345678', session: '5511900001111' })
+                                   .to_return(status: 200, body: body.to_json, headers: { 'Content-Type' => 'application/json' })
+    end
 
     def waha_sent_elsewhere(count, at:)
       count.times do |index|
@@ -160,7 +175,7 @@ RSpec.describe Crm::BookingV2::Notices::Sender do
       end
     end
 
-    it 'manda texto na conversa que já existe, mesmo sem mensagem do cliente nas últimas 24 h' do
+    it 'manda texto na conversa que já existe, mesmo sem mensagem do cliente nas últimas 24 h, sem perguntar à WAHA' do
       conversation = open_window!(at: 25.hours.ago)
       notice = claimed
 
@@ -171,16 +186,111 @@ RSpec.describe Crm::BookingV2::Notices::Sender do
       expect(message).to have_attributes(conversation_id: conversation.id, content_attributes: include('crm_booking_notice' => true))
       expect(message.content).to include(invite.url)
       expect(alerts.count).to eq(0)
+      expect(a_request(:get, check_url)).not_to have_been_made
     end
 
-    it 'sem conversa nenhuma nesta caixa, abre uma para o contato e manda o texto' do
+    it 'sem conversa: pergunta o chat id à WAHA, grava nos atributos do contato como a WAHA grava, abre a conversa e manda' do
+      check = waha_answers(numberExists: true, chatId: '551112345678@c.us')
       notice = claimed
 
       expect { described_class.new(notice).perform }.to change(Conversation, :count).by(1)
 
+      expect(check).to have_been_made.once
       conversation = Message.find(notice.reload.message_id).conversation
       expect(notice.status).to eq('sent')
       expect(conversation).to have_attributes(inbox_id: inbox.id, contact_id: world.contact.id)
+      # O número brasileiro sem o 9º dígito vem da WAHA: é ele que vale, não o telefone digitado.
+      expect(world.contact.reload.custom_attributes).to include('waha_whatsapp_chat_id' => '551112345678@c.us',
+                                                                'waha_whatsapp_jid' => '551112345678@c.us')
+      expect(conversation.contact_inbox.source_id).to be_present
+    end
+
+    it 'chat id @lid vira o chat id do contato e vai para waha_whatsapp_lid; jid e outros atributos ficam' do
+      world.contact.update!(custom_attributes: { 'waha_whatsapp_jid' => '5511912345678@c.us', 'waha_whatsapp_chat_id' => 'antigo@c.us',
+                                                 'origem' => 'site' })
+      waha_answers(numberExists: true, chatId: '123456789@lid')
+
+      described_class.new(claimed).perform
+
+      expect(world.contact.reload.custom_attributes).to eq(
+        'origem' => 'site', 'waha_whatsapp_jid' => '5511912345678@c.us',
+        'waha_whatsapp_chat_id' => '123456789@lid', 'waha_whatsapp_lid' => '123456789@lid'
+      )
+    end
+
+    it 'reaproveita o ContactInbox que o contato já tem nesta caixa (sem conversa aberta)' do
+      contact_inbox = ContactInboxBuilder.new(contact: world.contact, inbox: inbox, source_id: nil).perform
+      waha_answers(numberExists: true, chatId: '5511912345678@c.us')
+      notice = claimed
+
+      expect { described_class.new(notice).perform }.not_to change(ContactInbox, :count)
+
+      expect(Message.find(notice.reload.message_id).conversation.contact_inbox_id).to eq(contact_inbox.id)
+    end
+
+    it 'número sem WhatsApp: não abre conversa, pula com no_whatsapp e avisa o agente com o motivo em texto simples' do
+      waha_answers(numberExists: false)
+      notice = claimed
+
+      expect { described_class.new(notice).perform }.not_to change(Conversation, :count)
+
+      expect(notice.reload).to have_attributes(status: 'skipped', skip_reason: 'no_whatsapp')
+      expect(ContactInbox.where(inbox: inbox)).to be_empty
+      expect(world.contact.reload.custom_attributes).not_to have_key('waha_whatsapp_chat_id')
+      expect(alerts.sole.title).to end_with('O número do cliente não tem WhatsApp.')
+    end
+
+    it 'WAHA com erro: não abre conversa e pula com waha_unavailable, sem reenviar' do
+      check = stub_request(:get, check_url).with(query: hash_including(session: '5511900001111')).to_return(status: 500, body: 'erro')
+      notice = claimed
+
+      expect { described_class.new(notice).perform }.not_to change(Conversation, :count)
+
+      expect(check).to have_been_made.once
+      expect(notice.reload).to have_attributes(status: 'skipped', skip_reason: 'waha_unavailable', message_id: nil)
+      expect(alerts.sole.title).to end_with('O WhatsApp não oficial não respondeu: confira se ele está conectado.')
+    end
+
+    it 'WAHA sem resposta (timeout): não abre conversa e pula com waha_unavailable' do
+      stub_request(:get, check_url).with(query: hash_including(session: '5511900001111')).to_raise(Net::ReadTimeout)
+      notice = claimed
+
+      expect { described_class.new(notice).perform }.not_to change(Conversation, :count)
+
+      expect(notice.reload).to have_attributes(status: 'skipped', skip_reason: 'waha_unavailable')
+    end
+
+    it 'caixa WAHA sem sessão: pula com waha_unavailable sem chamar a WAHA' do
+      inbox.channel.update!(additional_attributes: { 'provider' => 'waha' })
+      notice = claimed
+
+      described_class.new(notice).perform
+
+      expect(notice.reload).to have_attributes(status: 'skipped', skip_reason: 'waha_unavailable')
+      expect(a_request(:get, check_url)).not_to have_been_made
+    end
+
+    it 'integração WAHA sem configuração (sem chave no ambiente): pula com waha_unavailable sem chamar a WAHA' do
+      notice = claimed
+
+      with_modified_env('WAHA_API_KEY' => '') { described_class.new(notice).perform }
+
+      expect(notice.reload).to have_attributes(status: 'skipped', skip_reason: 'waha_unavailable')
+      expect(a_request(:get, check_url)).not_to have_been_made
+    end
+
+    it 'WAHA que diz que o número existe mas não manda o chat id: waha_unavailable, não no_whatsapp' do
+      waha_answers(numberExists: true)
+      notice = claimed
+
+      expect { described_class.new(notice).perform }.not_to change(Conversation, :count)
+
+      expect(notice.reload).to have_attributes(status: 'skipped', skip_reason: 'waha_unavailable')
+    end
+
+    it '#will_send? não espera a WAHA (a tela pública não chama o motor)' do
+      expect(described_class.new(claimed).will_send?).to be(true)
+      expect(a_request(:get, check_url)).not_to have_been_made
     end
 
     it 'sem conversa e sem telefone no contato, pula com no_phone e avisa o agente' do
@@ -243,6 +353,7 @@ RSpec.describe Crm::BookingV2::Notices::Sender do
 
       expect(notice.reload).to have_attributes(status: 'skipped', skip_reason: 'disabled', message_id: nil)
       expect(Message.outgoing.count).to eq(0)
+      expect(a_request(:get, check_url)).not_to have_been_made
     end
   end
 
@@ -265,6 +376,8 @@ RSpec.describe Crm::BookingV2::Notices::Sender do
       expect(Message.find(notice.reload.message_id).content).to eq(
         "Oi Marcos, lembrete do seu horário.\n\n20/10 às 10:00 - #{invite.url}\n\nPara parar estes avisos: #{invite.url}?stop_notices=1"
       )
+      # #1270: o canal API (Evolution) não passa pela consulta da WAHA.
+      expect(a_request(:get, %r{/api/contacts/check-exists})).not_to have_been_made
     end
 
     it 'sem modelo e fora da janela pula com template_required' do

@@ -12,7 +12,8 @@
 # envio de mensagem do painel). Tudo é decidido antes de gravar: recusa não cria contato nem convite.
 #
 # Recusas (`Refused`, com `reason` quando é do canal): notice_inbox_missing, notice_inbox_forbidden (reason
-# `conversation_forbidden` quando é a conversa), page_not_published, invalid_phone, cannot_send.
+# `conversation_forbidden` quando é a conversa), page_not_published, invalid_phone, cannot_send (pela WAHA sem
+# conversa, também `no_whatsapp` e `waha_unavailable`, de `Notices::WahaChat`).
 class Crm::BookingV2::TestInvite
   class Refused < StandardError
     attr_reader :reason
@@ -37,6 +38,7 @@ class Crm::BookingV2::TestInvite
               page.account.contacts.new(name: user.name, phone_number: phone)
     decision = Crm::BookingV2::Notices::Route.new(inbox: page.notice_inbox, contact: contact).decide
     ensure_can_send!(contact, decision)
+    ensure_waha_chat!(contact, decision)
     contact.save! if contact.new_record?
     send_invite!(contact, decision)
   end
@@ -58,6 +60,14 @@ class Crm::BookingV2::TestInvite
     raise Refused.new('notice_inbox_forbidden', 'conversation_forbidden') unless can_reply?(decision.conversation)
     raise Refused.new('cannot_send', 'number_cap') if number_capped?(contact)
     raise Refused.new('cannot_send', 'account_cap') if account_capped?
+  end
+
+  # WAHA sem conversa (#1270): o chat id vem da WAHA antes de gravar o contato; sem ele, recusa sem gravar nada.
+  def ensure_waha_chat!(contact, decision)
+    return unless Crm::BookingV2::Notices::WahaChat.needed?(decision, page.notice_inbox)
+
+    problem = Crm::BookingV2::Notices::WahaChat.new(inbox: page.notice_inbox, contact: contact).prepare
+    raise Refused.new('cannot_send', problem) if problem
   end
 
   def stopped?(contact)

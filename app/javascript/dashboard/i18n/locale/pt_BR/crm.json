@@ -1051,6 +1051,8 @@
             "TEMPLATE_WITHOUT_LINK": "a mensagem aprovada não tem o link do horário",
             "TEMPLATE_UNSUPPORTED": "a mensagem aprovada pede dados que o aviso não preenche",
             "WAHA_OUTSIDE_WINDOW": "o cliente não falou com você nas últimas 24 horas",
+            "NO_WHATSAPP": "o número do cliente não tem WhatsApp",
+            "WAHA_UNAVAILABLE": "o WhatsApp não oficial não respondeu; confira se ele está conectado",
             "NUMBER_CAP": "este número já recebeu muitas mensagens hoje",
             "ACCOUNT_CAP": "a conta chegou ao limite de avisos do dia",
             "OTHER": "outro motivo"

@@ -311,6 +311,7 @@
           "OUTSIDE_WINDOW": "First send a “hi” from your phone to the company WhatsApp. Then tap Send test again.",
           "NUMBER_CAP": "This number already got many messages today. Try tomorrow or use another number.",
           "ACCOUNT_CAP": "The account has already sent the most notices allowed today. Try again tomorrow.",
+          "NO_WHATSAPP": "This number has no WhatsApp. Check the number or use another one.",
           "STOPPED": "This number asked not to get messages. Use another number.",
           "CONVERSATION_FORBIDDEN": "This number already talks to the company in a conversation you cannot open. Use another number.",
           "CANNOT_SEND": "Could not send from this WhatsApp. Check that it is connected.",

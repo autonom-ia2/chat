@@ -76,7 +76,21 @@ class Crm::BookingV2::Notices::AgentAlert
 
   def title
     name = card.contact&.name.presence || card.title
-    I18n.t("crm.booking_v2.agent_alerts.#{event}", name: name, when: Crm::BookingV2::Notices::Text.when_text(meeting),
-                                                   locale: Crm::BookingV2::Notices::Text.locale(meeting.account))
+    text = I18n.t("crm.booking_v2.agent_alerts.#{event}", name: name, when: Crm::BookingV2::Notices::Text.when_text(meeting),
+                                                          locale: locale)
+    [text, reason_text].compact.join(' ')
+  end
+
+  # Motivo em texto simples depois do aviso, quando a atendente pode agir sobre ele (#1270).
+  def reason_text
+    reason = payload.to_h.with_indifferent_access[:reason].to_s
+    return if reason.blank?
+
+    key = "crm.booking_v2.agent_alerts.reasons.#{reason}"
+    I18n.t(key, locale: locale) if I18n.exists?(key, locale)
+  end
+
+  def locale
+    Crm::BookingV2::Notices::Text.locale(meeting.account)
   end
 end
