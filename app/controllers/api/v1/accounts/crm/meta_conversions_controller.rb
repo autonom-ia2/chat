@@ -48,11 +48,15 @@ class Api::V1::Accounts::Crm::MetaConversionsController < Api::V1::Accounts::Crm
     scope
   end
 
-  # Acesso por funil (#1148, PR D): o resumo do painel soma só os funis da pessoa, como os relatórios.
+  # Acesso por funil (#1148, PR D): o resumo do painel soma só os funis da pessoa; pedir outro funil é 404, como nos
+  # relatórios.
   def visible_events
     events = Crm::MetaConversionEvent.where(account_id: Current.account.id)
     visible = Crm::Access::VisiblePipelines.new(user: Current.user, account: Current.account, account_user: Current.account_user)
-    visible.restricted? ? events.where(pipeline_id: visible.report_ids) : events
+    return events unless visible.restricted?
+
+    visible.apply_to_reports(Current.account.crm_pipelines).find(params[:pipeline_id]) if params[:pipeline_id].present?
+    events.where(pipeline_id: visible.report_ids)
   end
 
   # group(:status) returns the integer enum values; map them back to their names.

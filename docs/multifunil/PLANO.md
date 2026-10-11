@@ -185,3 +185,8 @@ A Entrega 3 precisa de uma conta com **mais de um funil** para o piloto do acess
   outro funil responde 404; sem funil nenhum no painel, não há relatório. A soma da CTWA e a contagem por etapa contam
   só os cards que a pessoa vê. Usuário de integração (token do n8n, MCP) não pode ter linha de acesso: o alcance dele é
   o escopo do token. O consumo de IA continua da conta inteira (é custo, não número de funil).
+- **Dono, mexer no card e contexto da IA (11/10, Rodrigo, depois da revisão da parte C):** (a) só vira dono do card
+  quem tem o funil dele (administrador escolhe qualquer pessoa); (b) mexer no card exige o funil dele, como mover:
+  fechar, arquivar, reabrir, vincular e desvincular conversa; quem só vê o card (dono ou atendente sem o funil)
+  continua vendo, mas não altera; (c) a IA continua lendo os outros pedidos abertos da conversa (a pessoa já vê a
+  conversa de onde a informação vem). (a) e (b) em PRs próprios depois do PR D; a tela #1149 só depois deles.

@@ -19,6 +19,8 @@ RSpec.describe Crm::Access::VisiblePipelines do
   around { |example| with_modified_env(CRM_KANBAN_ENABLED: 'true') { example.run } }
 
   before do
+    allow(Crm::Ai::ExchangeRate).to receive(:current).and_return(rate: BigDecimal('5.00'), fetched_at: Time.current.iso8601,
+                                                                 rate_unavailable: false)
     link(inbox, vendas, sinistro)
     link(outra_caixa, instagram)
     link(caixa_alheia, filial)
@@ -161,6 +163,57 @@ RSpec.describe Crm::Access::VisiblePipelines do
     end
   end
 
+  describe 'outras portas para um funil escondido (revisão do PR D)', type: :request do
+    around { |example| with_modified_env(CRM_AI_ENABLED: 'true') { example.run } }
+
+    before { restrict(agent) }
+
+    it 'o consumo de IA de um funil que a pessoa não tem é 404; sem funil, segue o da conta' do
+      get api('crm/ai_usage'), params: { pipeline_id: sinistro.first.id }, headers: headers
+      expect(response).to have_http_status(:not_found)
+
+      get api('crm/ai_usage'), headers: headers
+      expect(response).to have_http_status(:ok)
+    end
+
+    it 'o resumo da Meta de um funil escondido é 404' do
+      get api('crm/meta_conversions/summary'), params: { pipeline_id: sinistro.first.id }, headers: headers
+
+      expect(response).to have_http_status(:not_found)
+    end
+
+    it 'visão salva de funil escondido não aparece nem pode ser gravada' do
+      saved_view(sinistro, 'Sinistros abertos')
+      saved_view(vendas, 'Vendas da semana')
+
+      get api('crm/saved_views'), headers: headers
+      expect(response.parsed_body['payload'].pluck('name')).to contain_exactly('Vendas da semana')
+
+      post api('crm/saved_views'), params: { saved_view: { name: 'X', pipeline_id: sinistro.first.id, config: { columns: ['title'] } } },
+                                   headers: headers, as: :json
+      expect(response).to have_http_status(:not_found)
+    end
+
+    it 'a sugestão de assunto novo num funil que a pessoa não pode criar não aparece' do
+      conversation = suggested_conversation(sinistro)
+
+      get api("crm/conversations/#{conversation.display_id}/cards"), headers: headers
+
+      expect(response.parsed_body['suggestion']).to be_nil
+    end
+  end
+
+  describe Crm::Access::ConversationScope do
+    it 'usuário de integração com linha antiga não fica restrito' do
+      bot_user = create_crm_agent(account: account, name: 'n8n').first
+      inbox.add_members([bot_user.id])
+      Crm::InboxAgentAccess.create!(account: account, inbox: inbox, user: bot_user, all_pipelines: false, triage: false)
+      AccountUser.find_by(account: account, user: bot_user).update!(integration: true)
+
+      expect(described_class.new(user: bot_user, account: account).restricted?).to be(false)
+    end
+  end
+
   describe Crm::InboxAgentAccess do
     it 'usuário de integração (token do n8n, MCP) não pode ter acesso por funil' do
       bot_user = create(:user, account: account, role: :agent)
@@ -187,6 +240,40 @@ RSpec.describe Crm::Access::VisiblePipelines do
       get api("crm/pipelines/#{filial.first.id}/stages"), headers: headers
       expect(response).to have_http_status(:ok)
     end
+
+    it 'CTWA, visões salvas, consumo de IA e sugestão seguem como antes' do
+      conversation = conversation_from_campaign
+      won_card(vendas, conversation, 300_000)
+      won_card(sinistro, conversation, 800_000)
+      saved_view(sinistro, 'Sinistros abertos')
+
+      get api('ctwa_campaigns'), params: { include_origin_metrics: true, since: 2.days.ago.iso8601, until: 1.day.from_now.iso8601 },
+                                 headers: headers
+      expect(response.parsed_body['origin_metrics'].first['won_value_by_currency']).to eq([{ 'currency' => 'BRL', 'value_cents' => 1_100_000 }])
+
+      get api('crm/saved_views'), headers: headers
+      expect(response.parsed_body['payload'].pluck('name')).to include('Sinistros abertos')
+
+      get api("crm/conversations/#{suggested_conversation(sinistro).display_id}/cards"), headers: headers
+      expect(response.parsed_body['suggestion']).to include('pipeline_name' => 'Sinistro')
+
+      with_modified_env(CRM_AI_ENABLED: 'true') { get api('crm/ai_usage'), params: { pipeline_id: sinistro.first.id }, headers: headers }
+      expect(response).to have_http_status(:ok)
+    end
+  end
+
+  def saved_view((pipeline, _stage), name)
+    Crm::SavedView.create!(account: account, user: admin, pipeline: pipeline, name: name, visibility: :account,
+                           config: { 'columns' => ['title'] })
+  end
+
+  def suggested_conversation((pipeline, _stage))
+    account.crm_inbox_settings.find_or_create_by!(inbox: inbox) { |setting| setting.assign_attributes(crm_enabled: true, subject_ai_mode: :suggest) }
+    conversation = create_crm_conversation(account: account, inbox: inbox, contact: create(:contact, account: account), assignee: agent)
+    message = create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :incoming, content: 'oi')
+    Crm::SubjectDecision.create!(account: account, conversation: conversation, message: message, mode: 'suggest', action: 'create',
+                                 state: 'suggested', title: 'Batida no carro', pipeline: pipeline)
+    conversation
   end
 
   def create_meta_event(pipeline, value_cents)

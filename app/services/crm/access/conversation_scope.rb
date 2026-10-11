@@ -101,12 +101,15 @@ class Crm::Access::ConversationScope
              else
                []
              end
-      rows.empty? || administrator? ? [] : rows
+      rows.empty? || unrestricted_role? ? [] : rows
     end
   end
 
-  def administrator?
-    (@account_user || AccountUser.find_by(account_id: @account.id, user_id: @user.id))&.administrator?
+  # Administrador vê tudo. Usuário de integração (token do n8n, MCP) não tem acesso por funil nem com linha antiga
+  # (#1148, PR D): o alcance dele é o escopo do token.
+  def unrestricted_role?
+    account_user = @account_user || AccountUser.find_by(account_id: @account.id, user_id: @user.id)
+    account_user.present? && (account_user.administrator? || account_user.integration?)
   end
 
   def condition(access)

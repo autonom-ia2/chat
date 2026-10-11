@@ -39,7 +39,8 @@ class Crm::Access::VisiblePipelines
     (free_inbox_pipeline_ids + restricted_pipeline_ids(include_only_own) + unlinked_pipeline_ids).uniq
   end
 
-  # Caixa sem inbox (apagada) não liga o funil a nada.
+  # Caixa apagada (inbox_id nulo) não liga o funil a nada: os cards dela também ficam sem caixa (FK nullify) e o acesso
+  # por funil não os restringe, então o funil vira avulso, como eles.
   def links
     @links ||= Crm::PipelineInbox.where(account_id: @account.id).where.not(inbox_id: nil).pluck(:inbox_id, :pipeline_id)
   end
