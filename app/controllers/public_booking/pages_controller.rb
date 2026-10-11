@@ -15,10 +15,11 @@
 # slug é opaco (UUID) e a v1 já respondia 200 para todo slug, então a diferença só confirma o que quem tem o link já
 # sabe.
 #
-# Link curto (#1282): `/a/:name` e `/a/:name/:person` servem sempre a v2. A casca troca o nome curto pelo slug opaco
-# (`ShortLink.resolve`) e o entrega à página em `<meta name="booking-slug">`; a API pública continua recebendo só o
-# slug. Nome que não existe (ou que a API pública não abriria): a mesma casca, sem slug, e a página mostra "não
-# encontrada". Página pausada recebe o slug, como em `/book`: quem tem o link vê o aviso de pausa.
+# Link curto (#1282, #1299): `/a/<conta>/<página>` e `/a/<conta>/<página>/<pessoa>` (e o formato antigo, sem a conta)
+# servem sempre a v2. A casca troca o endereço curto pelo slug opaco (`ShortLink.resolve`) e o entrega à página em
+# `<meta name="booking-slug">`; a API pública continua recebendo só o slug. Endereço que não existe (ou que a API
+# pública não abriria): a mesma casca, sem slug, e a página mostra "não encontrada". Página pausada recebe o slug,
+# como em `/book`: quem tem o link vê o aviso de pausa.
 #
 # Prévia do link (#1282): as três rotas põem no `<head>` as tags Open Graph da `LinkPreview` — só dados da página,
 # nunca do cliente, e neutra quando a página não pode ser marcada. É a mesma revelação do risco aceito acima: a
@@ -38,7 +39,7 @@ class PublicBooking::PagesController < ActionController::Base
   end
 
   def short
-    page = find_page(::Crm::BookingV2::ShortLink.resolve(params[:name], params[:person]))
+    page = find_page(::Crm::BookingV2::ShortLink.resolve(params[:first], params[:second], params[:third]))
     # Só o slug que a API pública abre (no ar, pausada ou em prévia válida): o endereço-base de uma página com um
     # link por pessoa e o link de quem saiu da página não vão para a casca.
     @booking_slug = page&.slug

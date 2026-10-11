@@ -137,7 +137,11 @@ const blockedByMissing = computed(
             v-if="step === STEP.CONTE"
             :form="form"
             :page-id="page.id"
+            :account-address="page.account_address || ''"
             :saved-short-name="page.short_name || ''"
+            :address-refused="
+              saveError === 'BOOKING.WIZARD.SERVER_ERRORS.SHORT_NAME'
+            "
             :people="people"
             :people-state="peopleState"
             :error="error"

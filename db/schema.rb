@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_10_16_100000) do
+ActiveRecord::Schema[7.2].define(version: 2026_10_17_100100) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1929,11 +1929,11 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_16_100000) do
     t.string "post_meeting_mode", default: "ask", null: false
     t.bigint "post_meeting_stage_id"
     t.string "short_name"
+    t.index ["account_id", "short_name"], name: "index_crm_agent_booking_profiles_on_account_and_short_name", unique: true
     t.index ["account_id"], name: "index_crm_agent_booking_profiles_on_account_id"
     t.index ["inbox_id"], name: "index_crm_agent_booking_profiles_on_inbox_id"
     t.index ["notice_inbox_id"], name: "index_crm_agent_booking_profiles_on_notice_inbox_id"
     t.index ["post_meeting_stage_id"], name: "index_crm_agent_booking_profiles_on_post_meeting_stage_id"
-    t.index ["short_name"], name: "index_crm_agent_booking_profiles_on_short_name", unique: true
     t.index ["slug"], name: "index_crm_agent_booking_profiles_on_slug", unique: true
   end
 
@@ -1972,6 +1972,15 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_16_100000) do
     t.integer "cache_write_tokens", default: 0, null: false
     t.index ["account_id", "created_at"], name: "idx_crm_ai_usage_account_created"
     t.index ["account_id", "feature", "created_at"], name: "idx_crm_ai_usage_account_feature_created"
+  end
+
+  create_table "crm_booking_account_addresses", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "name", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_crm_booking_account_addresses_on_account_id", unique: true
+    t.index ["name"], name: "index_crm_booking_account_addresses_on_name", unique: true
   end
 
   create_table "crm_booking_invites", force: :cascade do |t|
@@ -3958,6 +3967,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_16_100000) do
   add_foreign_key "crm_ai_stage_suggestions", "crm_cards", column: "card_id", on_delete: :cascade
   add_foreign_key "crm_ai_stage_suggestions", "crm_pipeline_stages", column: "from_stage_id"
   add_foreign_key "crm_ai_stage_suggestions", "crm_pipeline_stages", column: "to_stage_id"
+  add_foreign_key "crm_booking_account_addresses", "accounts", on_delete: :cascade
   add_foreign_key "crm_booking_invites", "contacts", on_delete: :cascade
   add_foreign_key "crm_booking_invites", "conversations", on_delete: :nullify
   add_foreign_key "crm_booking_invites", "crm_agent_booking_links", column: "booking_link_id", on_delete: :nullify

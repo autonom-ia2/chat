@@ -35,10 +35,10 @@
 #
 # Indexes
 #
-#  index_crm_agent_booking_profiles_on_account_id  (account_id)
-#  index_crm_agent_booking_profiles_on_inbox_id    (inbox_id)
-#  index_crm_agent_booking_profiles_on_short_name  (short_name) UNIQUE
-#  index_crm_agent_booking_profiles_on_slug        (slug) UNIQUE
+#  index_crm_agent_booking_profiles_on_account_and_short_name  (account_id,short_name) UNIQUE
+#  index_crm_agent_booking_profiles_on_account_id              (account_id)
+#  index_crm_agent_booking_profiles_on_inbox_id                (inbox_id)
+#  index_crm_agent_booking_profiles_on_slug                    (slug) UNIQUE
 #
 # Foreign Keys
 #

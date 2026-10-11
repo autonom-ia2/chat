@@ -1,5 +1,6 @@
-# Nome curto da página nova (#1282): o `<nome>` de `/a/<nome>`. Opcional (página sem nome segue em `/book/<uuid>`),
-# gravado em minúsculas e único na instalação inteira. As regras de formato moram em `Crm::BookingV2::ShortName`.
+# Nome curto da página nova (#1282, #1299): o `<página>` de `/a/<conta>/<página>`. Opcional (página sem nome segue em
+# `/book/<uuid>`), gravado em minúsculas e único dentro da conta. As regras de formato moram em
+# `Crm::BookingV2::ShortName`; o `<conta>` é o endereço da conta (`Crm::BookingV2::AccountAddress`).
 #
 # Unicidade em duas camadas: a validação dá o erro legível, e o índice único do banco garante quando duas páginas
 # pedem o mesmo nome ao mesmo tempo (as duas passam pela validação). Quem perde no índice recebe o mesmo erro de
@@ -10,13 +11,18 @@
 module Crm::BookingShortName
   extend ActiveSupport::Concern
 
-  SHORT_NAME_INDEX = 'index_crm_agent_booking_profiles_on_short_name'.freeze
+  SHORT_NAME_INDEX = 'index_crm_agent_booking_profiles_on_account_and_short_name'.freeze
 
   included do
     before_validation :normalize_short_name
     validate :short_name_must_be_usable, if: -> { short_name.present? && will_save_change_to_short_name? }
     around_save :report_short_name_race
     after_save :name_people_in_short_link, if: -> { saved_change_to_short_name? && short_name.present? }
+  end
+
+  # O `<conta>` do link curto desta página; nasce na primeira vez que alguém pede.
+  def booking_account_address
+    @booking_account_address ||= ::Crm::BookingV2::AccountAddress.ensure!(account)
   end
 
   private
@@ -28,7 +34,7 @@ module Crm::BookingShortName
   def short_name_must_be_usable
     return errors.add(:short_name, 'only_new_pages') unless new_page?
 
-    problem = ::Crm::BookingV2::ShortName.problem(short_name, except_id: id)
+    problem = ::Crm::BookingV2::ShortName.problem(short_name, account_id: account_id, except_id: id)
     errors.add(:short_name, problem) if problem
   end
 

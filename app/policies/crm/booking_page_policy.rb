@@ -26,7 +26,7 @@ class Crm::BookingPagePolicy < ApplicationPolicy
     manage? && account_user&.administrator? == true
   end
 
-  # Link curto (#1282): conferir se um nome está livre responde sobre a instalação inteira; só quem gerencia páginas.
+  # Link curto (#1282, #1299): conferir se um nome está livre na conta; só quem gerencia páginas.
   def short_name?
     manage?
   end

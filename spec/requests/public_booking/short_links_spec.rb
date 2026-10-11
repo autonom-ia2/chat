@@ -1,10 +1,11 @@
 require 'rails_helper'
 
-# Link curto e prévia do link (#1282). `/a/<nome>` e `/a/<nome>/<pessoa>` servem a casca v2 com o slug resolvido; as
+# Link curto e prévia do link (#1282, #1299). `/a/<conta>/<página>` e `/a/<conta>/<página>/<pessoa>` (e o formato
+# antigo, sem a conta) servem a casca v2 com o slug resolvido; as
 # três rotas públicas (`/a`, `/book`, `/b`) levam Open Graph só com dados da página, e neutro quando a página não
 # pode ser marcada.
 RSpec.describe 'PublicBooking short links and link preview', type: :request do
-  let(:account) { create(:account, locale: 'pt_BR') }
+  let(:account) { create(:account, locale: 'pt_BR', name: 'Hub Dois') }
   let(:world) { build_booking_world(account: account, host_name: 'Ana Souza') }
   let(:profile) { world.profile }
   let(:colleague) { create(:user, account: account, role: :agent, name: 'Bruno Lima') }
@@ -19,6 +20,7 @@ RSpec.describe 'PublicBooking short links and link preview', type: :request do
     account.enable_features('crm_booking_v2')
     account.save!
     profile.update!(short_name: 'clinica-viva', title: 'Avaliação gratuita')
+    Crm::BookingV2::AccountAddress.ensure!(account)
     allow(GlobalConfig).to receive(:get).and_return('INSTALLATION_NAME' => 'Central de Atendimento')
     allow(ViteRuby.instance.manifest).to receive(:resolve_entries) do |*names, **|
       { scripts: names.map { |name| "/vite-test/assets/#{name}-entry.js" }, imports: [], stylesheets: [] }
@@ -54,9 +56,9 @@ RSpec.describe 'PublicBooking short links and link preview', type: :request do
     expect(response.body).not_to include('Avaliação gratuita')
   end
 
-  describe 'GET /a/:name' do
+  describe 'GET /a/:conta/:pagina' do
     it 'abre a página v2 com o slug resolvido, o título e a prévia da página' do
-      get '/a/clinica-viva'
+      get '/a/hub-dois/clinica-viva'
 
       expect(response).to have_http_status(:ok)
       expect(entry).to eq('/vite-test/assets/public_booking_v2-entry.js')
@@ -65,16 +67,16 @@ RSpec.describe 'PublicBooking short links and link preview', type: :request do
     end
 
     it 'leva título, descrição, endereço e tipo na prévia' do
-      get '/a/clinica-viva'
+      get '/a/hub-dois/clinica-viva'
 
       expect(meta('og:title')).to eq('Avaliação gratuita')
       expect(meta('og:description')).to eq('30 min · Vídeo no WhatsApp · Escolha o melhor horário para você')
-      expect(meta('og:url')).to eq('https://chat.exemplo.com/a/clinica-viva')
+      expect(meta('og:url')).to eq('https://chat.exemplo.com/a/hub-dois/clinica-viva')
       expect(meta('og:type')).to eq('website')
     end
 
     it 'aponta a imagem de 1200×630 no endereço com a versão, e o cartão grande do Twitter' do
-      get '/a/clinica-viva'
+      get '/a/hub-dois/clinica-viva'
 
       version = Crm::BookingV2::PreviewImage::Content.new(Crm::BookingV2::LinkPreview.for_slug(profile.slug)).version
       expect(meta('og:image')).to eq("https://chat.exemplo.com/book/#{profile.slug}/preview/#{version}.png")
@@ -83,20 +85,22 @@ RSpec.describe 'PublicBooking short links and link preview', type: :request do
     end
 
     it 'põe a prévia dentro do head, antes dos scripts' do
-      get '/a/clinica-viva'
+      get '/a/hub-dois/clinica-viva'
 
       head = response.body[0...response.body.index('</head>')]
       expect(head.index('og:title')).to be < head.index('<script')
     end
 
     it 'não liga para maiúsculas no nome' do
-      get '/a/Clinica-Viva'
+      get '/a/Hub-Dois/Clinica-Viva'
 
       expect(slug_meta).to eq(profile.slug)
     end
 
     it 'responde a mesma casca neutra, sem slug, para nome que não existe, do sistema ou mal formado' do
-      ['/a/nao-existe', '/a/admin', '/a/book', '/a/ab', "/a/#{profile.slug}", '/a/clinica-viva/ninguem'].each do |path|
+      paths = ['/a/nao-existe', '/a/admin', '/a/book', '/a/ab', "/a/#{profile.slug}", '/a/clinica-viva/ninguem', '/a/hub-dois/nao-existe',
+               '/a/hub-dois/admin', '/a/outra-conta/clinica-viva', '/a/hub-dois/clinica-viva/ninguem']
+      paths.each do |path|
         get path
 
         expect(response).to have_http_status(:ok), path
@@ -110,7 +114,7 @@ RSpec.describe 'PublicBooking short links and link preview', type: :request do
       account.disable_features('crm_booking_v2')
       account.save!
 
-      get '/a/clinica-viva'
+      get '/a/hub-dois/clinica-viva'
 
       expect(slug_meta).to be_nil
       expect_neutral_preview
@@ -119,7 +123,7 @@ RSpec.describe 'PublicBooking short links and link preview', type: :request do
     it 'entrega o slug da página pausada (a página mostra o aviso de pausa), com prévia neutra e sem o título' do
       profile.update!(enabled: false)
 
-      get '/a/clinica-viva'
+      get '/a/hub-dois/clinica-viva'
 
       expect(slug_meta).to eq(profile.slug)
       expect(html.at_css('title').text).not_to eq('Avaliação gratuita')
@@ -129,7 +133,7 @@ RSpec.describe 'PublicBooking short links and link preview', type: :request do
     it 'escapa o título que a pessoa escreveu' do
       profile.update!(title: 'Corte "premium" <b>& barba</b>')
 
-      get '/a/clinica-viva'
+      get '/a/hub-dois/clinica-viva'
 
       expect(meta('og:title')).to eq('Corte "premium" <b>& barba</b>')
       expect(response.body).not_to include('<b>& barba</b>')
@@ -138,28 +142,28 @@ RSpec.describe 'PublicBooking short links and link preview', type: :request do
     it 'corta título e descrição compridos' do
       profile.update!(title: "Consulta #{'muito ' * 20}longa", locations: [{ 'type' => 'in_person', 'address' => 'Rua A', 'label' => 'Sala ' * 30 }])
 
-      get '/a/clinica-viva'
+      get '/a/hub-dois/clinica-viva'
 
       expect(meta('og:title').length).to be <= 60
       expect(meta('og:description').length).to be <= 90
     end
   end
 
-  describe 'GET /a/:name/:person' do
+  describe 'GET /a/:conta/:pagina/:pessoa' do
     before { per_agent! }
 
     it 'abre o link da pessoa e diz quem atende na prévia' do
-      get '/a/clinica-viva/bruno'
+      get '/a/hub-dois/clinica-viva/bruno'
 
       link = profile.agent_booking_links.find_by(agent_id: colleague.id)
       expect(slug_meta).to eq(link.slug)
       expect(meta('og:title')).to eq('Avaliação gratuita')
       expect(meta('og:description')).to start_with("Com #{colleague.available_name} · 30 min")
-      expect(meta('og:url')).to eq('https://chat.exemplo.com/a/clinica-viva/bruno')
+      expect(meta('og:url')).to eq('https://chat.exemplo.com/a/hub-dois/clinica-viva/bruno')
     end
 
     it 'não abre nem entrega o slug do endereço-base da página com um link por pessoa' do
-      get '/a/clinica-viva'
+      get '/a/hub-dois/clinica-viva'
 
       expect(slug_meta).to be_nil
       expect(response.body).not_to include(profile.slug)
@@ -170,7 +174,7 @@ RSpec.describe 'PublicBooking short links and link preview', type: :request do
       old_slug = profile.agent_booking_links.find_by(agent_id: colleague.id).slug
       Crm::BookingV2::PagePeople.new(profile).assign!([world.host.id])
 
-      get '/a/clinica-viva/bruno'
+      get '/a/hub-dois/clinica-viva/bruno'
 
       expect(slug_meta).to be_nil
       expect(response.body).not_to include(old_slug)
@@ -180,9 +184,60 @@ RSpec.describe 'PublicBooking short links and link preview', type: :request do
     it 'trata o link da pessoa desligada como pausado: prévia neutra' do
       profile.agent_booking_links.find_by(agent_id: colleague.id).update!(enabled: false)
 
-      get '/a/clinica-viva/bruno'
+      get '/a/hub-dois/clinica-viva/bruno'
 
       expect_neutral_preview
+    end
+  end
+
+  describe 'GET /a/:conta' do
+    it 'abre a página da conta quando ela tem uma só no ar' do
+      get '/a/hub-dois'
+
+      expect(slug_meta).to eq(profile.slug)
+      expect(meta('og:title')).to eq('Avaliação gratuita')
+    end
+
+    it 'com mais de uma página no ar responde a casca de não encontrada, sem listar nem citar nenhuma' do
+      other = create_booking_profile(account: account, host: world.host, title: 'Outra página')
+
+      get '/a/hub-dois'
+
+      expect(slug_meta).to be_nil
+      expect_neutral_preview
+      [profile.slug, other.slug, 'Outra página', 'clinica-viva'].each { |secret| expect(response.body).not_to include(secret) }
+    end
+  end
+
+  describe 'formato antigo, sem a conta (#1282)' do
+    it 'continua abrindo `/a/<página>` e `/a/<página>/<pessoa>`' do
+      get '/a/clinica-viva'
+      expect(slug_meta).to eq(profile.slug)
+
+      per_agent!
+      get '/a/clinica-viva/bruno'
+      expect(slug_meta).to eq(profile.agent_booking_links.find_by(agent_id: colleague.id).slug)
+    end
+
+    it 'não abre a página de ninguém quando duas contas têm página com o mesmo nome' do
+      other_account = create(:account, name: 'Outra Conta')
+      other_account.enable_features('crm_booking_v2')
+      other_account.save!
+      other = build_booking_world(account: other_account).profile
+      other.update!(short_name: 'clinica-viva', title: 'Página da outra conta')
+
+      get '/a/clinica-viva'
+
+      expect(slug_meta).to be_nil
+      expect_neutral_preview
+      expect(response.body).not_to include('Página da outra conta')
+
+      get '/a/outra-conta/clinica-viva'
+      expect(slug_meta).to be_nil
+
+      Crm::BookingV2::AccountAddress.ensure!(other_account)
+      get '/a/outra-conta/clinica-viva'
+      expect(slug_meta).to eq(other.slug)
     end
   end
 

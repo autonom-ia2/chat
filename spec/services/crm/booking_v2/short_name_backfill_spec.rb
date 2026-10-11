@@ -1,0 +1,157 @@
+require 'rails_helper'
+
+# Preenchimento do endereço curto das páginas que já existiam (#1299), o que a migration `BackfillBookingShortNames`
+# roda no deploy: página sem nome ganha, página com nome fica como está, e rodar de novo não muda nada.
+RSpec.describe Crm::BookingV2::ShortNameBackfill do
+  let(:account) { create(:account, name: 'Clínica Viva') }
+  let(:world) { build_booking_world(account: account, host_name: 'Ana Souza') }
+  let(:page) { world.profile }
+
+  def new_page(of_account, host, **)
+    create_booking_profile(account: of_account, host: host, **)
+  end
+
+  def snapshot
+    {
+      addresses: Crm::BookingAccountAddress.order(:id).pluck(:id, :account_id, :name, :updated_at),
+      pages: Crm::AgentBookingProfile.order(:id).pluck(:id, :short_name, :updated_at),
+      people: Crm::AgentBookingLink.order(:id).pluck(:id, :metadata, :updated_at)
+    }
+  end
+
+  it 'dá à página sem nome o endereço da conta e um nome a partir do título' do
+    page.update!(title: 'Avaliação Gratuita')
+    before_update = page.reload.updated_at
+
+    result = described_class.run
+
+    expect(result.to_a).to eq([1, 1, []])
+    expect(Crm::BookingAccountAddress.pluck(:account_id, :name)).to eq([[account.id, 'clinica-viva']])
+    expect(page.reload).to have_attributes(short_name: 'avaliacao-gratuita', updated_at: before_update)
+  end
+
+  it 'mantém o nome da página que já tem, e ainda assim nomeia as outras da conta' do
+    page.update!(short_name: 'meu-nome', title: 'Consulta')
+    other = new_page(account, world.host, title: 'Consulta')
+
+    described_class.run
+
+    expect(page.reload.short_name).to eq('meu-nome')
+    expect(other.reload.short_name).to eq('consulta')
+  end
+
+  it 'não mexe na conta em que todas as páginas já têm nome, nem cria endereço para ela' do
+    page.update_column(:short_name, 'meu-nome') # rubocop:disable Rails/SkipsModelValidations
+
+    expect(described_class.run.to_a).to eq([0, 0, []])
+    expect(Crm::BookingAccountAddress.count).to eq(0)
+  end
+
+  it 'numera duas páginas com o mesmo título na conta, na ordem em que foram criadas' do
+    page.update!(title: 'Consulta')
+    second = new_page(account, world.host, title: 'Consulta')
+    third = new_page(account, world.host, title: 'consulta!')
+
+    described_class.run
+
+    expect([page, second, third].map { |item| item.reload.short_name }).to eq(%w[consulta consulta-2 consulta-3])
+  end
+
+  it 'numera o endereço de duas contas com o mesmo nome, e as páginas delas podem repetir o nome' do
+    other_account = create(:account, name: 'Clínica Viva')
+    other_page = build_booking_world(account: other_account).profile
+    [page, other_page].each { |item| item.update!(title: 'Consulta') }
+
+    described_class.run
+
+    expect(Crm::BookingAccountAddress.order(:account_id).pluck(:name)).to eq(%w[clinica-viva clinica-viva-2])
+    expect([page, other_page].map { |item| item.reload.short_name }).to eq(%w[consulta consulta])
+  end
+
+  it 'dá "agenda" na frente à conta e à página com nome do sistema, e um nome válido a título vazio' do
+    account.update!(name: 'Admin')
+    page.update!(title: 'Book')
+    blank = new_page(account, world.host, title: nil)
+
+    described_class.run
+
+    expect(Crm::BookingAccountAddress.pluck(:name)).to eq(['agenda-admin'])
+    expect([page, blank].map { |item| item.reload.short_name }).to eq(%w[agenda-book agenda])
+  end
+
+  it 'dá apelido às pessoas da página com um link por pessoa, sem trocar o de quem já tem' do
+    colleague = create(:user, account: account, role: :agent, name: 'Bruno Lima')
+    Crm::BookingV2::PagePeople.new(page).assign!([world.host.id, colleague.id])
+    links = page.agent_booking_links.order(:id).to_a
+    links.first.update_column(:metadata, { 'short_name' => 'aninha' }) # rubocop:disable Rails/SkipsModelValidations
+    links.last.update_column(:metadata, {}) # rubocop:disable Rails/SkipsModelValidations
+
+    described_class.run
+
+    expect(links.map { |link| Crm::BookingV2::PersonNames.for(link.reload) }).to eq(%w[aninha bruno])
+  end
+
+  it 'não toca página antiga (page_version 1)' do
+    inbox = create(:channel_email, account: account, provider: 'google', calendar_enabled: true).inbox
+    legacy = create_booking_profile(account: account, host: world.host, page_version: Crm::AgentBookingProfile::LEGACY_PAGE, inbox: inbox)
+
+    described_class.run
+
+    expect(legacy.reload.short_name).to be_nil
+  end
+
+  it 'nomeia mesmo a página que hoje não passaria em outra validação' do
+    page.update_column(:duration_minutes, 0) # rubocop:disable Rails/SkipsModelValidations
+    expect(page.reload).not_to be_valid
+
+    described_class.run
+
+    expect(page.reload.short_name).to eq('conversa-de-30-min')
+  end
+
+  it 'rodar de novo não muda nada' do
+    page
+    new_page(account, world.host, title: 'Consulta')
+    build_booking_world(account: create(:account, name: 'Clínica Viva')).profile
+
+    expect(described_class.run.to_a).to eq([2, 3, []])
+    first = snapshot
+
+    travel_to(1.hour.from_now) do
+      expect(described_class.run.to_a).to eq([0, 0, []])
+    end
+    expect(snapshot).to eq(first)
+  end
+
+  it 'a conta que falha é desfeita inteira, entra no relatório e não para as outras' do
+    other_account = create(:account, name: 'Outra Conta')
+    other_page = build_booking_world(account: other_account).profile
+    page
+    allow(Crm::BookingV2::ShortName).to receive(:suggest).and_wrap_original do |original, title, **options|
+      raise 'falha de teste' if options[:account_id] == account.id
+
+      original.call(title, **options)
+    end
+
+    result = described_class.run
+
+    expect(result.to_a).to eq([1, 1, [account.id]])
+    expect(page.reload.short_name).to be_nil
+    expect(Crm::BookingAccountAddress.pluck(:account_id)).to eq([other_account.id])
+    expect(other_page.reload.short_name).to eq('conversa-de-30-min')
+  end
+
+  it 'a migration roda o preenchimento e o `down` não apaga nada' do
+    require Rails.root.join('db/migrate/20261017100100_backfill_booking_short_names')
+    page
+    migration = BackfillBookingShortNames.new
+    migration.verbose = false
+
+    migration.up
+    expect(page.reload.short_name).to eq('conversa-de-30-min')
+
+    migration.down
+    expect(page.reload.short_name).to eq('conversa-de-30-min')
+    expect(Crm::BookingAccountAddress.count).to eq(1)
+  end
+end
