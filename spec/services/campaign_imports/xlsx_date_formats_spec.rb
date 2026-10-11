@@ -14,6 +14,7 @@ RSpec.describe CampaignImports::XlsxDateFormats do
     it 'tells when the format shows seconds' do
       expect(described_class.kind_for_code('hh:mm:ss')).to eq(:time_seconds)
       expect(described_class.kind_for_code('dd/mm/yyyy hh:mm:ss')).to eq(:datetime_seconds)
+      expect(described_class.kind_for_code('h:mm:ss AM/PM')).to eq(:time_seconds)
     end
 
     it 'leaves numbers, money, text and durations alone' do
@@ -23,7 +24,7 @@ RSpec.describe CampaignImports::XlsxDateFormats do
       expect(described_class.kind_for_code('0" dias"')).to be_nil
       expect(described_class.kind_for_code('@')).to be_nil
       expect(described_class.kind_for_code('[h]:mm:ss')).to be_nil
-      expect(described_class.kind_for_code('mm:ss')).to be_nil
+      expect(%w[mm:ss m:ss ss [h]:mm].map { |code| described_class.kind_for_code(code) }.uniq).to eq([nil])
     end
   end
 
