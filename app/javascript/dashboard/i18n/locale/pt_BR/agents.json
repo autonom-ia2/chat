@@ -596,7 +596,7 @@
         "CLIENTE": "Cliente",
         "AGENTE": "Agente",
         "ESCREVENDO": "Escrevendo…",
-        "USOU": "usou: {arquivo}",
+        "USOU": "Usou: {arquivo}",
         "IDEIAS": "Ideias para começar",
         "QUEM_DISSE": "{quem}:",
         "FOTO_ENVIADA": "Foto enviada"
@@ -728,6 +728,10 @@
         "ANEXOS": "Arquivos que vão junto"
       },
       "PAGINA": {
+        "FERRAMENTAS": {
+          "MENU": "Ferramentas",
+          "TITULO": "Ferramentas"
+        },
         "VOLTAR_LISTA": "Voltar para Agentes",
         "TITULO_SR": "Página do agente",
         "CARREGANDO": "Carregando o agente",

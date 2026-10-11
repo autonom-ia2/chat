@@ -174,7 +174,7 @@ onMounted(() => carregar());
 <template>
   <div class="w-full h-full overflow-y-auto bg-n-background">
     <div
-      class="flex flex-col w-full gap-6 px-4 py-6 pb-28 mx-auto md:px-6 md:pb-6"
+      class="relative flex flex-col w-full gap-6 px-4 py-6 pb-28 mx-auto md:px-6 md:pb-6"
       :class="vazia ? 'max-w-5xl' : 'max-w-6xl'"
     >
       <!-- T01 · nenhum agente ainda -->
@@ -213,7 +213,7 @@ onMounted(() => carregar());
             :href="linkConectarCanal"
             target="_blank"
             rel="noopener noreferrer"
-            class="inline-flex items-center gap-1 font-semibold underline min-h-11 w-fit text-n-slate-12 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-blue-11"
+            class="relative inline-flex items-center gap-1 font-semibold underline min-h-11 w-fit text-n-slate-12 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-blue-11"
           >
             {{ t('AGENTS.JORNADA.HEROI.CONECTAR_CANAL') }}
             <span class="i-lucide-external-link size-4" aria-hidden="true" />
