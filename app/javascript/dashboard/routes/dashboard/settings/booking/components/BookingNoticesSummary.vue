@@ -6,9 +6,10 @@ import { formatMinutes } from '../bookingFormat';
 
 // Os avisos no WhatsApp em uma frase, na prévia (#1192): quando o cliente é
 // avisado, por qual número e até quando pode mudar. Não promete o que não
-// sai: aviso sem mensagem pronta e número WAHA só alcançam quem falou com a
-// empresa nas últimas 24 horas (J2-A6). "Alterar" volta ao passo dos avisos;
-// quem só vê não tem o botão.
+// sai: aviso sem mensagem pronta só alcança quem falou com a empresa nas
+// últimas 24 horas (J2-A6). Número WAHA não depende da janela (#1270): a
+// ressalva é o risco de bloqueio. "Alterar" volta ao passo dos avisos; quem só vê não
+// tem o botão.
 const props = defineProps({
   form: { type: Object, required: true },
   inboxOptions: { type: Array, default: () => [] },
@@ -33,11 +34,12 @@ const sentence = computed(() => {
     : t('BOOKING.PREVIEW.NOTICES_ON_NO_NAME', { when });
 });
 
-// Ressalva da janela de 24 horas, quando ela vale para algum aviso.
+// Ressalva do número: risco de bloqueio na WAHA; janela de 24 horas quando
+// ela vale para algum aviso sem mensagem pronta.
 const windowNote = computed(() => {
   if (!props.form.noticeInboxId || !inbox.value) return '';
   if (inbox.value.provider === 'waha')
-    return t('BOOKING.PREVIEW.NOTICES_WINDOW_ONLY');
+    return t('BOOKING.PREVIEW.NOTICES_UNOFFICIAL_RISK');
   const missing = kindsWithoutTemplate(props.form, inbox.value)
     .map(kind => t(`BOOKING.NOTICES.KINDS.${kind.toUpperCase()}`))
     .join(', ');

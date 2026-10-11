@@ -49,6 +49,15 @@
       "QR_HIDE": "Hide QR code",
       "QR_ALT": "QR code of the booking page",
       "QR_ERROR": "We couldn't create the QR code.",
+      "QR_DOWNLOAD": "Download QR code",
+      "QR_DOWNLOAD_LABEL": "Download QR code, file {file}",
+      "QR_DOWNLOAD_SVG": "Download as SVG (for print shops)",
+      "QR_DOWNLOAD_SVG_LABEL": "Download as SVG (for print shops), file {file}",
+      "QR_DOWNLOADING": "Downloading {file}. Look in your downloads folder.",
+      "QR_DOWNLOAD_ERROR": "We couldn't create the file. Try again.",
+      "QR_DOWNLOAD_RETRY": "Didn't download? Open the image and save it from there.",
+      "QR_DOWNLOAD_BLOCKED": "Your browser didn't allow the download. Open the image and save it from there.",
+      "QR_DOWNLOAD_OPEN": "Open {file}",
       "OPEN": "Open",
       "OPEN_LABEL": "Open the page in a new tab",
       "PER_PERSON_TITLE": "One link for each person",
@@ -247,7 +256,7 @@
       "NO_INBOXES": "No connected WhatsApp can send notices yet. When there is one, it shows up here.",
       "CHANNEL": {
         "OFFICIAL": "This is the official WhatsApp. If the customer has not talked to you in the last 24 hours, the notice only goes out with a message approved by Meta. Choose those messages below.",
-        "WAHA": "From this number, the notice only goes out if the customer talked to you in the last 24 hours. This keeps the number safe from being blocked.",
+        "WAHA": "From this unofficial number, the notice goes out even if the customer has not talked to you. Many notices like that can make WhatsApp block the number.",
         "API": "From this number, the notice goes out right away when the customer talked to you in the last 24 hours. Otherwise it goes out with the ready message chosen below."
       },
       "PRESET_LABEL": "When should the customer be notified?",
@@ -286,6 +295,20 @@
       "API_TEMPLATES_EMPTY": "This WhatsApp has no ready message yet. Without one, the notice only goes out to people who talked to you in the last 24 hours.",
       "API_TEMPLATES_FAILED": "Could not see the ready messages of this WhatsApp. Ask an administrator to choose them.",
       "TEMPLATE_FOR": "Approved message for the notice {notice}",
+      "AUTO": {
+        "SUGGESTED": "Suggested",
+        "SUGGESTING": "Looking for the best message for each notice…",
+        "CREATE_HINT": "Some notices have no approved message that fits. We can send ready messages to Meta for approval.",
+        "CREATE_BUTTON": "Create the templates on Meta",
+        "CREATING": "Sending to Meta…",
+        "SENDING": "Sending to Meta…",
+        "PENDING": "Waiting for Meta approval",
+        "APPROVED": "Approved",
+        "REJECTED": "Refused: {reason}",
+        "FAILED": "Not sent: {reason}",
+        "RETRY": "Try again",
+        "CREATE_FAILED": "Could not send to Meta right now. Try again."
+      },
       "KINDS": {
         "BOOKED": "When booked",
         "RESCHEDULED": "When the time changes",
@@ -310,6 +333,8 @@
           "INVALID_PHONE": "Check the number. Include the country and area code, for example +1 555 123 4567.",
           "OUTSIDE_WINDOW": "First send a “hi” from your phone to the company WhatsApp. Then tap Send test again.",
           "NUMBER_CAP": "This number already got many messages today. Try tomorrow or use another number.",
+          "ACCOUNT_CAP": "The account has already sent the most notices allowed today. Try again tomorrow.",
+          "NO_WHATSAPP": "This number has no WhatsApp. Check the number or use another one.",
           "STOPPED": "This number asked not to get messages. Use another number.",
           "CONVERSATION_FORBIDDEN": "This number already talks to the company in a conversation you cannot open. Use another number.",
           "CANNOT_SEND": "Could not send from this WhatsApp. Check that it is connected.",
@@ -348,7 +373,7 @@
       "NOTICES_ON": "The customer gets a WhatsApp notice {when}, from the number {inbox}.",
       "NOTICES_ON_NO_NAME": "The customer gets a WhatsApp notice {when}.",
       "NOTICES_OFF": "No WhatsApp notices. The customer sees the time on screen and in their calendar.",
-      "NOTICES_WINDOW_ONLY": "Only for people who talked to you in the last 24 hours.",
+      "NOTICES_UNOFFICIAL_RISK": "Unofficial number: many notices to people who have not talked to you can make WhatsApp block the number.",
       "NOTICES_ALTER": "Change the WhatsApp notices",
       "CANCEL_UNTIL": "They can change or cancel up to {value} before.",
       "CANCEL_ANYTIME": "They can change or cancel up to the booked time."
@@ -411,7 +436,7 @@
         },
         "BOOKED": {
           "LABEL": "Booked",
-          "HINT": "Times booked through the links and the page."
+          "HINT": "Times booked through the links, the page and by the team."
         },
         "ATTENDED": {
           "LABEL": "Showed up",
@@ -427,6 +452,7 @@
         "CONVERSATION": "Link sent in a conversation",
         "PUBLIC_LINK": "Page link (bio, website, ad)",
         "CONTACT_REQUEST": "Contact request",
+        "TEAM": "By the team",
         "AI": "AI assistant",
         "EMPTY": "No time booked in this period yet."
       },

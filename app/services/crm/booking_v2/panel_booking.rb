@@ -17,13 +17,15 @@
 # Junto com a reunião, no bloco do Booker (mesma transação, sob as travas), nasce o convite `channel: 'panel'`: o link
 # de gestão que os avisos levam. Avisos no WhatsApp só com `notify` e página com caixa de avisos, agendados depois do
 # commit, como na página pública. Sem `notify`, a reunião guarda `notify_client: false` e o `Notices::Scheduler` não
-# agenda aviso nenhum, nem ao remarcar.
+# agenda aviso nenhum, nem ao remarcar. Com `notify`, a reunião guarda `notice_basis: 'combinado_com_atendente'`
+# (#1271: o motivo de avisar quem não marcou sozinho) e o aviso "ao marcar" diz quem marcou (`Notices::Text`).
 #
 # Reenvio: `request_id` (16 a 64 letras, dígitos, `-` ou `_`, sorteado pelo navegador por tentativa) devolve a mesma
 # reunião. Erros: ArgumentError com o código do Booker, ou `no_contact`/`booking_failed`.
 class Crm::BookingV2::PanelBooking
   SOURCE = 'panel'.freeze
   CHANNEL = 'panel'.freeze
+  NOTICE_BASIS = 'combinado_com_atendente'.freeze
   Outcome = Struct.new(:meeting, :invite, :existing, :notice_will_send, keyword_init: true)
 
   # `client`: { card:, contact: } já autorizados pelo controller.
@@ -86,15 +88,22 @@ class Crm::BookingV2::PanelBooking
     contact.email.presence
   end
 
-  # Dentro da transação do Booker, só para a reserva nova: quem marcou e o link de gestão.
+  # Dentro da transação do Booker, só para a reserva nova: quem marcou, se avisa o cliente e o link de gestão.
   def record_booking!(booked)
     meeting = booked.meeting
-    meeting.update!(metadata: meeting.metadata.to_h.merge('booked_by_user_id' => user.id, 'notify_client' => notify?))
+    meeting.update!(metadata: meeting.metadata.to_h.merge(booking_metadata))
     Crm::BookingInvite.create!(
       account: page.account, booking_profile: page, booking_link: link, contact: booked.contact, card: booked.card,
       conversation: invite_conversation(booked), meeting: meeting, created_by: user, channel: CHANNEL,
       scheduled_at: Time.current, expires_at: meeting.ends_at + Crm::BookingInvite::MANAGE_GRACE
     )
+  end
+
+  # Com aviso, fica registrado o motivo de mandar mensagem a quem não marcou sozinho (#1271): a atendente declarou,
+  # ao ligar "Avisar o cliente no WhatsApp", que o horário foi combinado com o cliente.
+  def booking_metadata
+    data = { 'booked_by_user_id' => user.id, 'notify_client' => notify? }
+    notify? ? data.merge('notice_basis' => NOTICE_BASIS) : data
   end
 
   def invite_conversation(booked)

@@ -34,7 +34,10 @@ import SidebarChangelogCard from './SidebarChangelogCard.vue';
 import SidebarChangelogButton from './SidebarChangelogButton.vue';
 import GuideSidebarEntry from 'dashboard/components/autonomia/guide/GuideSidebarEntry.vue';
 import { prospectingSidebarItems } from 'dashboard/routes/dashboard/autonomia/prospecting/utils/prospectingSidebar';
-import { bookingSidebarGroup } from 'dashboard/routes/dashboard/settings/booking/bookingAccess';
+import {
+  bookingSidebarGroup,
+  crmCalendarSidebarItem,
+} from 'dashboard/routes/dashboard/settings/booking/bookingAccess';
 import { agentsSidebarItems } from 'dashboard/routes/dashboard/autonomia/agentes/utils/agentsSidebar';
 import { withCampaignJourney } from 'dashboard/components-next/CampaignJourney/journeySidebar';
 import ChannelLeaf from './ChannelLeaf.vue';
@@ -248,6 +251,8 @@ const canManageCrmSla = computed(() => {
 // Agendamento mora no CRM (#1212) como subgrupo (#1264): função só com
 // Agendamento vê o grupo CRM só com ele, e dentro só Páginas e links; Kanban,
 // Calendário, Meus horários e Meus números só aparecem para quem vê o CRM.
+// Com o subgrupo, o Calendário é o primeiro filho dele (#1288); sem a flag do
+// agendamento novo não há subgrupo e o Calendário segue solto no CRM.
 const crmBookingGroup = computed(() =>
   bookingSidebarGroup({
     account: currentAccount.value(accountId.value),
@@ -946,12 +951,9 @@ const menuItems = computed(() => {
                       to: accountScopedRoute('crm_kanban_index'),
                       activeOn: ['crm_kanban_index'],
                     },
-                    {
-                      name: 'CRM Calendar',
-                      label: t('SIDEBAR.CRM_CALENDAR'),
-                      to: accountScopedRoute('crm_calendar_index'),
-                      activeOn: ['crm_calendar_index'],
-                    },
+                    ...(crmBookingGroup.value.length > 0
+                      ? []
+                      : [crmCalendarSidebarItem({ t, accountScopedRoute })]),
                   ]
                 : []),
               ...crmBookingGroup.value,

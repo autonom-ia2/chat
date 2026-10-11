@@ -171,6 +171,7 @@ const blockedByMissing = computed(
             :inbox-options="page.notice_inbox_options || []"
             :saved-inbox-id="page.notice_inbox_id ?? null"
             :saved-templates="page.notice_templates || {}"
+            :page-id="page.id ?? null"
             @change="change"
           />
           <StepPreview

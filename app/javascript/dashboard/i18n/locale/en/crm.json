@@ -793,6 +793,7 @@
         "CANCEL": "Cancel",
         "ADVANCED_HINT": "Pick the deal and click Continue — we'll open its card to set up the details.",
         "MEETING_HINT": "Pick the deal and click Continue to set up the meeting (mailbox, guests, time).",
+        "MEETING_HINT_AGENDA": "Pick the deal and tap Continue to see the free days and times.",
         "MEETING_SOON": "Meetings are coming soon. For now, use Reminder or More options.",
         "MEETING": "Meeting"
       },
@@ -1051,6 +1052,9 @@
             "TEMPLATE_WITHOUT_LINK": "the approved message has no booking link",
             "TEMPLATE_UNSUPPORTED": "the approved message asks for data the notice does not fill in",
             "WAHA_OUTSIDE_WINDOW": "the customer has not talked to you in the last 24 hours",
+            "NO_WHATSAPP": "the client's number has no WhatsApp",
+            "WAHA_UNAVAILABLE": "the unofficial WhatsApp did not answer; check that it is connected",
+            "WAHA_REFUSED": "the unofficial WhatsApp refused to look up this number",
             "NUMBER_CAP": "this number already got many messages today",
             "ACCOUNT_CAP": "the account reached the daily notice limit",
             "OTHER": "another reason"
@@ -1632,7 +1636,16 @@
       "MODE_SNOOZE": "Snooze mode (conversation reopened)",
       "COMPLETE": "Complete",
       "DISMISS": "Dismiss",
-      "OPEN_CRM": "Open CRM"
+      "OPEN_CRM": "Open CRM",
+      "BOOKING_ALERT": {
+        "HEADING": "Booking",
+        "NOTICE_FAILED_HEADING": "Notice not sent",
+        "NOTICE_FAILED_BODY": "The notice about {name}'s appointment ({when}) did not go out.",
+        "NOTICE_FAILED_BODY_REASON": "The notice about {name}'s appointment ({when}) did not go out: {reason}.",
+        "NOTICE_FAILED_HINT": "The appointment is still booked. Talk to the client to confirm.",
+        "OPEN_CARD": "Open the card",
+        "ACK": "Got it"
+      }
     },
     "STAGE_AUTOMATIONS": {
       "TITLE": "Automations for this stage",
@@ -2886,9 +2899,14 @@
       "SLOTS_LOADING": "Looking for free times…",
       "NO_SLOTS": "No free time on this day.",
       "NEXT_SLOT": "See the next free day",
+      "MORE_DAYS": "See more days",
+      "EARLIEST_DAY": "Earliest",
+      "EARLIEST_DAY_SPOKEN": "{day}, the earliest free day",
+      "NO_DAYS": "This page has no open day to book.",
       "RETRY": "Try again",
       "NOTIFY": "Notify the client on WhatsApp",
       "NOTIFY_HINT": "Sends the confirmation and the reminders.",
+      "NOTIFY_WHEN": "Use it when the client agreed on the time with you.",
       "SAVE": "Save",
       "SAVING": "Saving…",
       "SUCCESS": "Meeting scheduled.",

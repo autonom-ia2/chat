@@ -32,6 +32,7 @@ describe('resultsFormat', () => {
     expect(originLabelKey('public_link')).toBe(
       'BOOKING.RESULTS.ORIGINS.PUBLIC_LINK'
     );
+    expect(originLabelKey('team')).toBe('BOOKING.RESULTS.ORIGINS.TEAM');
     expect(originLabelKey('outra')).toBe(
       'BOOKING.RESULTS.ORIGINS.CONVERSATION'
     );

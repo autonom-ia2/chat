@@ -144,6 +144,46 @@ describe('AgentesListaPage', () => {
       wrapper.unmount();
     });
 
+    it('shows the external agent with the photo of its inbox, and the others with their own', async () => {
+      prepararStore({
+        agentes: [
+          agente(3, { name: 'Bia', avatar_url: 'https://x/propria.png' }),
+          agente(4, {
+            name: 'Copiloto',
+            actuation: 'internal',
+            channels_count: 0,
+            avatar_url: 'https://x/copiloto.png',
+          }),
+        ],
+      });
+      store.state['inboxes/getInboxes'] = [
+        { id: 10, avatar_url: 'https://x/whats.png' },
+      ];
+      const wrapper = await montar();
+      const fotos = wrapper
+        .findAll('[data-cartao] [data-avatar] img')
+        .map(img => img.attributes('src'));
+      expect(fotos).toEqual(['https://x/whats.png', 'https://x/copiloto.png']);
+      wrapper.unmount();
+    });
+
+    it('keeps the own photo on the card when the inbox names cannot be read', async () => {
+      prepararStore({
+        agentes: [
+          agente(3, { name: 'Bia', avatar_url: 'https://x/propria.png' }),
+        ],
+      });
+      store.state['inboxes/getInboxes'] = [
+        { id: 10, avatar_url: 'https://x/whats.png' },
+      ];
+      api.canaisOcupados.mockRejectedValue(new Error('500'));
+      const wrapper = await montar();
+      expect(
+        wrapper.get('[data-cartao] [data-avatar] img').attributes('src')
+      ).toBe('https://x/propria.png');
+      wrapper.unmount();
+    });
+
     it('drops the week line when the numbers cannot be read (t02-semnumeros)', async () => {
       api.semana.mockRejectedValue(new Error('500'));
       const wrapper = await montar();

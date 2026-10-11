@@ -117,6 +117,6 @@ Cada linha precisa de uma decisão do Rodrigo: liberar para todas, manter em pil
 | `instagram_assisted_onboarding` | as duas | hub2you 16, 18; autonomia 1, 23 | pendente | |
 | `email_template_import` | autonomia | nenhuma | pendente | |
 | `customer_base` (dona: sessão Base de Clientes, #1240) | hub2you | 16 | piloto | 24/10/2026 (proposta) |
-| `crm_booking_v2` (dona: sessão Agendamento CRM, #1187) | hub2you | 16 (desde 10/10/2026) | piloto. **Antes de ligar em qualquer outra conta**, o Rodrigo precisa decidir o consentimento do aviso no WhatsApp quando a atendente marca pelo painel (#1265): hoje "Avisar o cliente" vem ligado se a página tem avisos, e o cliente não escolheu o horário nem aceitou receber avisos. Teste do Rodrigo pelo playbook antes da decisão de liberar | |
+| `crm_booking_v2` (dona: sessão Agendamento CRM, #1187) | hub2you | 1 (desde 11/10/2026) e 16 (desde 10/10/2026) | piloto. Consentimento decidido pelo Rodrigo em 11/10 (#1271): marcação pela equipe = o cliente combinou o horário com a atendente; "Avisar o cliente" vem ligado com a frase de orientação, o aviso diz quem marcou e o motivo fica registrado na reunião (`metadata.notice_basis`). Falta o teste do Rodrigo pelo playbook para decidir a liberação nas demais contas | |
 | flags que faltam na conta 23 do autonomia | autonomia | 23 | pendente (conta nova não recebe flag de `feature_flags_ext_1`) | |
 | flags que faltam na conta 5 do hub2you | hub2you | 5 | pendente | |

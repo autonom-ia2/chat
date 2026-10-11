@@ -16,11 +16,17 @@ pt_BR:
       notices:
         when_format: "%d/%m às %H:%M"
         booked: "Oi%{name}! Seu horário está marcado para %{when}. Para confirmar, mudar ou cancelar: %{link}"
+        booked_by_team: "Oi%{name}! %{booker} marcou seu horário para %{when}. Para confirmar, mudar ou cancelar: %{link}"
         rescheduled: "Oi%{name}! Seu horário mudou para %{when}. Para confirmar, mudar ou cancelar: %{link}"
         day_before: "Oi%{name}! Lembrete: seu horário é amanhã, %{when}. Para confirmar, mudar ou cancelar: %{link}"
         hour_before: "Oi%{name}! Seu horário começa em 1 hora (%{when}). Para confirmar, mudar ou cancelar: %{link}"
         stop_line: "Para parar estes avisos: %{link}"
         test_prefix: "Este é um teste da sua página de agendamento. Seu cliente recebe um link igual a este:"
+      notice_templates:
+        meta_failed: "A Meta não respondeu. Tente de novo em alguns minutos."
+        permission_denied: "A conexão deste WhatsApp não tem permissão para criar modelos. Reconecte a caixa em Configurações › Caixas de entrada e tente de novo."
+        meta_rejected: "A Meta não aprovou."
+        platform_reason: "Mensagem pronta feita para este aviso e aprovada pela Meta."
       remind:
         text: "Oi%{name}! Passando para lembrar do seu horário em %{when}. Pode confirmar por aqui? %{link}"
       agent_alerts:
@@ -29,6 +35,10 @@ pt_BR:
         rescheduled: "%{name} mudou o horário para %{when}"
         rebooked: "%{name} marcou de novo, para %{when}"
         notice_failed: "O aviso no WhatsApp para %{name} não saiu. O horário de %{when} continua marcado: fale com o cliente."
+        reasons:
+          no_whatsapp: "O número do cliente não tem WhatsApp."
+          waha_unavailable: "O WhatsApp não oficial não respondeu: confira se ele está conectado."
+          waha_refused: "O WhatsApp não oficial recusou a consulta deste número."
       templates:
         sales_30:
           title: 'Conversa de vendas de 30 min'

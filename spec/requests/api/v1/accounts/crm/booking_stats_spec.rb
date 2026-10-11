@@ -133,7 +133,7 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingStats', type: :request do
       call(admin, :get, base, { period: 7 })
       expect(body['totals']).to eq('sent' => 2, 'opened' => 2, 'booked' => 2, 'confirmed' => 0, 'attended' => 0, 'no_show' => 0)
       expect(body['origins']).to eq([{ 'key' => 'conversation', 'count' => 1 }, { 'key' => 'public_link', 'count' => 1 },
-                                     { 'key' => 'contact_request', 'count' => 0 }])
+                                     { 'key' => 'contact_request', 'count' => 0 }, { 'key' => 'team', 'count' => 0 }])
       expect(response.body).not_to include('Paula', world.contact.name, '5511')
 
       call(world.host, :get, base, { period: 7 })

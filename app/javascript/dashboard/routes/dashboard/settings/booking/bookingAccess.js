@@ -78,12 +78,26 @@ export const myBookingHoursSidebarItems = ({
       ]
     : [];
 
-// CRM › Agendamento (#1264): subgrupo com Páginas e links, Meus horários e
-// Meus números. Cada filho segue a regra que já tinha: Páginas e links pede
-// admin ou função com Agendamento; Meus horários e Meus números pedem ver o
-// CRM. Sem filho nenhum, o subgrupo não nasce.
+// CRM › Calendário (`crm_calendar_index`). Com o agendamento novo ele é o
+// primeiro filho do subgrupo Agendamento (#1288); sem a flag o subgrupo não
+// existe e a barra lateral põe este mesmo item solto no CRM, como sempre foi.
+export const crmCalendarSidebarItem = ({ t, accountScopedRoute }) => ({
+  name: 'CRM Calendar',
+  label: t('SIDEBAR.CRM_CALENDAR'),
+  to: accountScopedRoute('crm_calendar_index'),
+  activeOn: ['crm_calendar_index'],
+});
+
+// CRM › Agendamento (#1264, #1288): subgrupo recolhível, fechado por padrão,
+// com Calendário, Páginas e links, Meus horários e Meus números. Cada filho
+// segue a regra que já tinha: Calendário, Meus horários e Meus números pedem
+// ver o CRM; Páginas e links pede admin ou função com Agendamento. Sem a flag
+// ou sem filho nenhum, o subgrupo não nasce.
 export const bookingSidebarGroup = ({ canViewCrm, ...args }) => {
+  if (!isBookingV2Available(args.account)) return [];
+
   const children = [
+    ...(canViewCrm ? [crmCalendarSidebarItem(args)] : []),
     ...bookingSidebarItems(args),
     ...(canViewCrm
       ? [
@@ -99,6 +113,9 @@ export const bookingSidebarGroup = ({ canViewCrm, ...args }) => {
       name: 'CRM Scheduling',
       label: args.t('SIDEBAR.BOOKING'),
       icon: 'i-lucide-calendar-clock',
+      collapsible: true,
+      defaultCollapsed: true,
+      showTreeLine: true,
       children,
     },
   ];
