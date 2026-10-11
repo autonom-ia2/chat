@@ -13,5 +13,6 @@ class Crm::InboxAgentPipeline < ApplicationRecord
 
   def pipeline_must_belong_to_account
     errors.add(:pipeline_id, 'must belong to the account') if pipeline && pipeline.account_id != account_id
+    errors.add(:access_id, 'must belong to the account') if access && access.account_id != account_id
   end
 end

@@ -165,6 +165,7 @@ RSpec.describe Crm::Access::ConversationScope do
 
   it 'linha de outra conta não vaza para esta' do
     outra_conta = create(:account)
+    AccountUser.create!(account: outra_conta, user: agent, role: :agent)
     outra_inbox = create_crm_inbox(account: outra_conta, members: [agent])
     Crm::InboxAgentAccess.create!(account: outra_conta, inbox: outra_inbox, user: agent, all_pipelines: false, triage: false)
 

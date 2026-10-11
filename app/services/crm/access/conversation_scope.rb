@@ -12,9 +12,11 @@
 class Crm::Access::ConversationScope
   ARCHIVED = Crm::Card.statuses[:archived]
 
-  def initialize(user:, account:)
+  # account_user: quem já tem (a Policy) passa e poupa a consulta.
+  def initialize(user:, account:, account_user: nil)
     @user = user
     @account = account
+    @account_user = account_user
   end
 
   # As conversas da relação que a pessoa pode ver.
@@ -51,14 +53,14 @@ class Crm::Access::ConversationScope
   end
 
   def administrator?
-    AccountUser.find_by(account_id: @account.id, user_id: @user.id)&.administrator?
+    (@account_user || AccountUser.find_by(account_id: @account.id, user_id: @user.id))&.administrator?
   end
 
   def condition(access)
     parts = [own_sql]
     unless access.only_own?
       parts << pipelines_sql(access)
-      parts << "NOT EXISTS (#{cards_sql})" if access.triage?
+      parts << "NOT (#{card_exists_sql})" if access.triage?
     end
     ActiveRecord::Base.sanitize_sql_array(
       ["(#{parts.compact.join(' OR ')})", { user_id: @user.id, account_id: @account.id, archived: ARCHIVED,
@@ -73,17 +75,21 @@ class Crm::Access::ConversationScope
   end
 
   def pipelines_sql(access)
-    return "EXISTS (#{cards_sql})" if access.all_pipelines?
+    return card_exists_sql if access.all_pipelines?
     return if access.agent_pipelines.empty?
 
-    "EXISTS (#{cards_sql} AND crm_access_cards.pipeline_id IN (:pipeline_ids))"
+    card_exists_sql(' AND crm_access_cards.pipeline_id IN (:pipeline_ids)')
   end
 
-  # Cards da conversa: a principal de cada card ou um vínculo em crm_card_conversations (#1141).
-  def cards_sql
-    'SELECT 1 FROM crm_cards crm_access_cards WHERE crm_access_cards.account_id = :account_id ' \
-      'AND crm_access_cards.status <> :archived AND (crm_access_cards.conversation_id = conversations.id ' \
-      'OR crm_access_cards.id IN (SELECT crm_card_conversations.card_id FROM crm_card_conversations ' \
-      'WHERE crm_card_conversations.account_id = :account_id AND crm_card_conversations.conversation_id = conversations.id))'
+  # A conversa tem card (não arquivado): a principal do card ou um vínculo em crm_card_conversations (#1141). Dois
+  # EXISTS em vez de um OR dentro da subconsulta: cada um entra pelo índice da conversa (idx_crm_cards_conversation e
+  # idx_crm_card_conversations_conversation), e a lista não percorre os cards uma vez por conversa.
+  def card_exists_sql(pipeline_filter = '')
+    '(EXISTS (SELECT 1 FROM crm_cards crm_access_cards WHERE crm_access_cards.account_id = :account_id ' \
+      "AND crm_access_cards.conversation_id = conversations.id AND crm_access_cards.status <> :archived#{pipeline_filter}) " \
+      'OR EXISTS (SELECT 1 FROM crm_card_conversations crm_access_links INNER JOIN crm_cards crm_access_cards ' \
+      'ON crm_access_cards.id = crm_access_links.card_id AND crm_access_cards.account_id = :account_id ' \
+      'WHERE crm_access_links.account_id = :account_id AND crm_access_links.conversation_id = conversations.id ' \
+      "AND crm_access_cards.status <> :archived#{pipeline_filter}))"
   end
 end

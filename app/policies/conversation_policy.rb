@@ -15,7 +15,7 @@ class ConversationPolicy < ApplicationPolicy
 
   # Caixa ou time, e o funil do card libera (#1148): o acesso por funil vale também para quem chega pelo time.
   def agent_can_view_conversation?
-    (inbox_access? || team_access?) && Crm::Access::ConversationScope.new(user: user, account: account).allows?(record)
+    (inbox_access? || team_access?) && Crm::Access::ConversationScope.new(user: user, account: account, account_user: account_user).allows?(record)
   end
 
   def administrator?

@@ -11,6 +11,7 @@ class Crm::InboxAgentAccess < ApplicationRecord
 
   validates :user_id, uniqueness: { scope: [:account_id, :inbox_id] }
   validate :inbox_must_belong_to_account
+  validate :user_must_belong_to_account
 
   # Todos os funis, triagem e todas as conversas: o mesmo que não ter linha.
   def restricts?
@@ -21,5 +22,9 @@ class Crm::InboxAgentAccess < ApplicationRecord
 
   def inbox_must_belong_to_account
     errors.add(:inbox_id, 'must belong to the account') if inbox && inbox.account_id != account_id
+  end
+
+  def user_must_belong_to_account
+    errors.add(:user_id, 'must belong to the account') if user && !AccountUser.exists?(account_id: account_id, user_id: user_id)
   end
 end
