@@ -210,31 +210,33 @@ Por isso **um campo criado pela importação aparece na aba Atributos, à direit
 
 ### 6.1 Nova página de Relacionamentos
 
+> **Termos (decidido em 11/10/2026, alinhado com o Multifunil):** a lista é **Contatos**, todo mundo que está na base. **Cliente** é só o estado de quem comprou (`contact_type = customer`, selo e "Cliente desde"). Quem não comprou aparece como "Ainda não compraram"; "Interessado" não entra no produto. "Base de clientes" fica como nome do épico; na tela, o verbo é "Trazer minha lista".
+
 **Estrutura e navegação.** Um item na barra lateral, "Relacionamentos", com abas no topo (`RelationshipTabs.vue`, 44 px):
 
 | Aba | Conteúdo | Observação |
 |---|---|---|
-| **Clientes** (padrão) | Lista de pessoas | É a primeira tela |
+| **Contatos** (padrão) | Lista de pessoas | É a primeira tela |
 | **Empresas** | Lista de empresas | Só com a flag `companies` |
 | **Informações** | As perguntas da conta (o que hoje é "Atributos") | Separa configurar de preencher; só quem tem `attribute_manage` |
 | **Listas trazidas** | Histórico de importações, com "Desfazer" | Pode morar dentro de Clientes, em "Mais opções" |
 
 **Primeira tela, com dados:**
-- Título "Clientes" e um botão principal: "Trazer minha lista", se a base estiver vazia ou pequena; senão "Adicionar cliente". O outro fica como segundo botão, com texto visível.
+- Título "Contatos" e um botão principal: "Trazer minha lista", se a base estiver vazia ou pequena; senão "Adicionar contato". O outro fica como segundo botão, com texto visível.
 - Busca grande, que tolera erro de digitação, por nome, telefone ou e-mail.
-- Pílulas com números reais: "820 clientes · 1.400 interessados · 32 não querem mensagens". Os dados saem de `contact_type` e `opted_out_at`, que ainda não estão no `/summary` (`summary.rb:4-8`).
-- Grupos prontos em botões, com nomes de gente: "Falou com você há pouco", "Sumiu há 1 a 3 meses", "Sumiu há mais de 3 meses", "Já é cliente", "Não quer mensagens". O Wati faz isso só com a última conversa. Faltam os filtros `contact_type` e `opted_out_at` em `filter_keys.yml` e `contactProvider.js`.
-- **Cartão do cliente:** nome, telefone, empresa ligada (não o texto livre), selo Cliente/Interessado, etapa do negócio aberto e um botão "Abrir". **Sem edição dentro do cartão.** Uma caixa de seleção visível dá a ação em massa no toque.
+- Pílulas com números reais: "820 clientes · 1.400 ainda não compraram · 32 não querem mensagens". Os dados saem de `contact_type` e `opted_out_at`, que ainda não estão no `/summary` (`summary.rb:4-8`).
+- Grupos prontos em botões, com nomes de gente: "Falou com você há pouco", "Sumiu há 1 a 3 meses", "Sumiu há mais de 3 meses", "Clientes", "Não quer mensagens". O Wati faz isso só com a última conversa. Faltam os filtros `contact_type` e `opted_out_at` em `filter_keys.yml` e `contactProvider.js`.
+- **Cartão do contato:** nome, telefone, empresa ligada (não o texto livre), selo Cliente (quem não comprou fica sem selo), etapa do negócio aberto e um botão "Abrir". **Sem edição dentro do cartão.** Uma caixa de seleção visível dá a ação em massa no toque.
 - Em "Mais opções": exportar, juntar repetidos, grupos salvos e etiquetas.
 
 **Estados vazios (1 frase + 1 botão):**
-- Conta sem clientes: "Você ainda não tem clientes aqui." → **Trazer minha lista**.
+- Conta sem contatos: "Você ainda não tem contatos aqui." → **Trazer minha lista**.
 - Busca sem resultado: "Ninguém com esse nome." → **Limpar busca**.
 - Empresas: "Nenhuma empresa ainda." → **Adicionar empresa** (hoje não tem botão, `CompaniesIndex.vue:190-197`).
 - Negócios na ficha: "Esta pessoa ainda não tem negócio." → **Criar negócio**. Nunca culpar o filtro.
 - Informações na ficha: "Nenhuma informação extra ainda." → **Criar informação**, só para quem pode.
 
-**Ficha do cliente:**
+**Ficha do contato:**
 - **Cabeçalho:** nome, selo "Cliente desde 03/2024" e "Veio da lista de 12/10". Um botão principal, **Conversar**; o resto em "Mais" (ligar, bloquear, juntar com outro, apagar).
 - **Faixa de até 6 destaques:** etapa do negócio, valor, último contato, empresa, mensagens (sim/não) e 1 informação escolhida.
 - **Centro (o que muda):** conversas e negócios como cartões. O negócio abre **no lugar**, numa gaveta (`AgenteGaveta.vue`), sem nova aba.
@@ -250,7 +252,7 @@ Etapas visíveis em texto: **Enviar → Conferir → Ver como fica → Pronto** 
 
 | # | Tela (título = pergunta) | Ação principal | Como funciona / base no código |
 |---|---|---|---|
-| 0 | "Traga sua lista de clientes" | **Escolher planilha** | Área de soltar + botão (`ContactImportPage.vue:262-278`); "Baixar planilha de exemplo"; uma frase: "Nada entra até você confirmar." |
+| 0 | "Traga sua lista" | **Escolher planilha** | Área de soltar + botão (`ContactImportPage.vue:262-278`); "Baixar planilha de exemplo"; uma frase: "Nada entra até você confirmar." |
 | 1 | "Lendo sua planilha…" → "Encontramos 4.812 linhas" | (automático) | `spreadsheet_reader`; limites de 10 MB, 50 mil linhas em CSV e 20 mil em XLSX (`config.rb:10-20`) explicados em frase simples se estourar |
 | 2 | "Qual coluna tem o celular?" (só se houver dúvida) | **Continuar** | `needs_column_choice` + `ContactImportColumns`; **pulada** quando a confiança é ≥ 0,8 |
 | 3 | "Arrumamos suas colunas. 3 precisam de você." | **Conferir** | Lista em cartões: as já resolvidas recolhidas, as duvidosas abertas |
@@ -258,12 +260,12 @@ Etapas visíveis em texto: **Enviar → Conferir → Ver como fica → Pronto** 
 | 3b | Se escolheu Negócio: **"Guardar também na ficha da pessoa?"** | Sim / Não | Grava duas definições (contato e card) e escreve nas duas; não há espelhamento hoje |
 | 3c | Coluna sem informação parecida: **"Criar uma informação nova"** | **Criar** | Nome sugerido do cabeçalho; **"Para que serve?"** já escrito a partir dos exemplos, com "Alterar"; tipo deduzido dos valores, com "Alterar". Grava pelo `DefinitionWriter` + `display!` (resolve o caso da seção 2.2). Na empresa: "Esta informação você preenche à mão." Texto honesto: "Vamos preencher quando o cliente falar disso numa conversa nova." |
 | 3d | Lista com valores parecidos: "'Sao Paulo' é o mesmo que 'SP'?" | Sim / Manter como está / Deixar em branco | Padrão Flatfile; listas precisam de opções únicas (`definition_writer.rb:67-72`) |
-| 4 | **"Essas pessoas já são suas clientes?"** | Todas / Nenhuma / Tem uma coluna que diz | `become_customer!` com `customer_since` da planilha quando houver; cliente nunca volta a interessado |
+| 4 | **"Essas pessoas já são suas clientes?"** | Todas / Nenhuma / Tem uma coluna que diz | `become_customer!` com `customer_since` da planilha quando houver; cliente nunca volta a lead pela importação |
 | 5 | Só se houver colunas de negócio: **"Em que funil e etapa esses negócios entram?"** | **Continuar** | `ChoiceSelect`, funil e etapa uma vez só; `Crm::Cards::Creator` com `external_id` e marca de origem no `metadata`; aviso se faltar coluna exigida pelo funil (lição do RD) |
 | 6 | **"De onde vieram esses contatos?"** | 3 cartões | Grava a origem, a data e quem importou no lote (seção 5) |
 | 7 | **"340 já estão aqui. O que fazer com eles?"** | **Completar só o que falta** (recomendado) / Atualizar com a planilha | Hoje só existe completar (`contact_blank_fields.rb`); "Atualizar" exige guardar o valor antigo e mostra quantos campos mudam |
-| 8 | **"Veja como fica"** | **Trazer 1.240 clientes** | Números grandes: "Vamos criar 1.240, completar 340, deixar 12 de fora". 3 fichas de exemplo como vão aparecer (padrão `AutomacaoResumo`). Blocos Pessoa / Empresa / Negócio / Origem com **Alterar** (`StepReview.vue`). Problemas em frase: "12 estão sem telefone. Importar sem eles · Ver quais". Hoje a prévia de empresa só conta, e de card não existe (`company_preview.rb:22-33`) |
-| 9 | **"Trazendo seus clientes…"** → **"Pronto"** | **Ver meus clientes** | Progresso real, em segundo plano. Resumo: criados, completados, de fora. Link "Baixar os que ficaram de fora". Botão **Desfazer esta importação** com prazo visível |
+| 8 | **"Veja como fica"** | **Trazer 1.240 contatos** | Números grandes: "Vamos criar 1.240, completar 340, deixar 12 de fora". 3 fichas de exemplo como vão aparecer (padrão `AutomacaoResumo`). Blocos Pessoa / Empresa / Negócio / Origem com **Alterar** (`StepReview.vue`). Problemas em frase: "12 estão sem telefone. Importar sem eles · Ver quais". Hoje a prévia de empresa só conta, e de card não existe (`company_preview.rb:22-33`) |
+| 9 | **"Trazendo seus contatos…"** → **"Pronto"** | **Ver meus contatos** | Progresso real, em segundo plano. Resumo: criados, completados, de fora. Link "Baixar os que ficaram de fora". Botão **Desfazer esta importação** com prazo visível |
 
 **Desfazer:** usar a máquina de estados que já existe (`campaign_import.rb:40-43,104-109`, padrão `undo_labels.rb:36-53`). Para isso, cada linha da importação passa a guardar o que fez: contato criado ou completado e com quais campos e valores anteriores, empresa criada ou ligada, card criado, mudança de tipo. Regras: não apagar contato que já recebeu conversa nem empresa ligada a outro contato (`PRD.md:129-136`).
 
