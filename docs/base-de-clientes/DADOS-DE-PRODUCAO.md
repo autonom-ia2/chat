@@ -10,13 +10,13 @@ Medição de 11/10/2026, nas duas instalações (Hub2You e Autonom.ia), em todas
 
 | | Hub2You | Autonom.ia |
 |---|---|---|
-| Contas ativas | 15 | 7 (2 sem contato) |
-| Contatos | 14.622 (mediana de 1.304 por conta, máximo 3.047) | 637 (mediana 8, máximo 400) |
-| Com telefone | 93,3% | 92,2% |
+| Contas ativas | 14, mais 1 conta de teste fora dos números | 7 (2 sem contato) |
+| Contatos | 13.870 (mediana de cerca de 1.300 por conta, máximo 3.047) | 637 (mediana 8, máximo 400) |
+| Com telefone | 98,3% | 92,2% |
 | Com e-mail | **1,0%** (145) | 1,9% (12) |
-| Nunca tiveram conversa | **57,3%** (8.381) | 24,6% |
+| Nunca tiveram conversa | **55,0%** (7.629) | 24,6% |
 | Marcados como cliente (`contact_type = customer`) | **4** (0,03%) | 0 |
-| Com negócio (card) | 19% | 72% |
+| Com negócio (card) | 20% | 72% |
 | Negócios ganhos | 70 de 3.098 | 0 de 477 |
 | Empresas cadastradas | 91, em 5 contas | 13, em 1 conta |
 | Campos de contato criados por pessoas (fora os de sistema) | 4, todos na conta do piloto | 16, em 3 contas |
@@ -24,13 +24,15 @@ Medição de 11/10/2026, nas duas instalações (Hub2You e Autonom.ia), em todas
 
 A plataforma é nova: o contato mais antigo é de junho/2026, e nenhum ficou mais de 6 meses sem escrever porque ainda não houve tempo para isso.
 
+**Conta de teste.** Uma conta ativa da Hub2You é de teste, como o Rodrigo confirmou: 752 contatos sem telefone, e-mail nem canal, criados num dia de junho, com 55 chaves de campo sem definição. Ela ficou fora dos números da Hub2You neste documento. A consulta a inclui, porque a conta está ativa; ao repetir, desconte-a.
+
 ### Tipos de conta (Hub2You)
 
 | Tipo | Contas | Contatos | Como o contato chegou | O que o caracteriza |
 |---|---|---|---|---|
-| **Agenda do WhatsApp sincronizada** | 4 | 6.328 | 1.300 a 1.700 contatos num dia só, na conexão da Coexistência | 68% a 99% nunca conversaram; telefones salvos sem o nono dígito; `last_activity_at` falha (seção 2.6) |
+| **Agenda do WhatsApp sincronizada** | 4 | 6.328 | 1.300 a 1.700 contatos num dia só, na conexão da Coexistência | 68% a 99% nunca conversaram; `last_activity_at` falha (seção 2.6) |
 | **Atendimento ativo** | 4 | 6.007 | Pela conversa, todo dia | Negócio criado sozinho pela conversa; uma delas tem exatamente 1 negócio por contato |
-| **Base que chegou de fora** | 2 | 2.085 | Num dia só, sem caixa de entrada | Uma tem 96% sem conversa; a outra tem 752 contatos sem telefone, e-mail nem canal, com 55 chaves de campo sem definição (provável teste ou importação de outra ferramenta; conferir) |
+| **Base que chegou de fora** | 1 | 1.333 | Num dia só, sem caixa de entrada | 96% sem conversa |
 | **Pequenas ou de teste** | 5 | 202 | Variado | Inclui a conta do piloto |
 
 ---
@@ -38,13 +40,13 @@ A plataforma é nova: o contato mais antigo é de junho/2026, e nenhum ficou mai
 ## 2. Achados e o que mudam no produto
 
 ### 2.1 A pessoa é o telefone, e 23% dos telefones estão sem o nono dígito
-- 93% dos contatos têm telefone e só 1% tem e-mail. Lista, busca e ficha giram em torno do telefone.
+- 98% dos contatos têm telefone e só 1% tem e-mail. Lista, busca e ficha giram em torno do telefone.
 - 76,7% dos telefones são celular brasileiro completo e **22,9% têm 12 dígitos** (55 + DDD + 8): fixo ou celular sem o nono dígito (a consulta não separou os dois). Varia muito por conta, de 0% a 95%, e passa de 30% em 5 contas.
-- Duplicado hoje é raro: 9 pares em 14.622, 8 deles só pela diferença do nono dígito. O `rake contacts:merge_ninth_digit_duplicates` (#990) já limpou o resto.
+- Duplicado hoje é raro: 9 pares em 13.870, 8 deles só pela diferença do nono dígito. O `rake contacts:merge_ninth_digit_duplicates` (#990) já limpou o resto.
 - **Implicação para a Base de clientes:** a planilha chega com o 9 (o motor da F0 completa o nono dígito). Se a F1 comparar o número exato, cada celular salvo sem o 9 vira um contato novo. **A F1 precisa casar o telefone com e sem o nono dígito**, como faz o bloco 6 (`pares_ignorando_nono_digito`). É o maior risco da ferramenta.
 
 ### 2.2 "Cliente" quase não existe nos dados
-- 94% dos contatos são `lead`, 6% `visitor` e só 4 são `customer`, todos marcados em outubro numa só conta.
+- 99,5% dos contatos são `lead`, 0,5% `visitor` e só 4 são `customer`, todos marcados em outubro numa só conta.
 - Dos 40 contatos com negócio ganho, 36 não estão marcados como cliente.
 - **Implicação:**
   - "Contatos" continua sendo o nome de todo mundo, e "cliente" vira um estado: quem comprou.
@@ -53,7 +55,7 @@ A plataforma é nova: o contato mais antigo é de junho/2026, e nenhum ficou mai
 
 ### 2.3 Empresas: o backfill não resolve, porque o dado não existe
 - 91 empresas na Hub2You, quase todas (87) só com nome e domínio, o formato da associação automática por e-mail. Nenhuma com CNPJ, nenhuma da Prospecção.
-- Só 0,8% dos contatos estão ligados a uma empresa e 0,9% têm o texto `company_name`.
+- Menos de 1% dos contatos está ligado a uma empresa (118) ou tem o texto `company_name` (126).
 - Simulação do que já existe no código:
   - **backfill por domínio do e-mail** (`rake companies:backfill`): criaria cerca de 11 empresas na Hub2You;
   - **backfill pelo `company_name`:** 8 na Hub2You e 49 numa conta da Autonom.ia, a que usa Prospecção.
@@ -73,7 +75,7 @@ A plataforma é nova: o contato mais antigo é de junho/2026, e nenhum ficou mai
   - A ficha não deve mostrar chave técnica (`waha_*`) para o usuário.
 
 ### 2.5 A maior parte da base nunca conversou
-- 57% dos contatos da Hub2You nunca tiveram conversa, e 62% nunca escreveram. 85% desses sem conversa estão nas contas de agenda sincronizada e de base que chegou de fora.
+- 55% dos contatos da Hub2You nunca tiveram conversa, e 60% nunca escreveram. 84% desses sem conversa estão nas contas de agenda sincronizada e na base que chegou de fora.
 - Só 0,1% (12 pessoas) aparece em mais de um tipo de canal, e 85% de quem conversou teve uma conversa só (p90 = 2).
 - **Implicação para a lista e os grupos (LG):**
   - A lista precisa separar quem conversou de quem só está na agenda, e "Nunca conversou" é um grupo pronto necessário.
@@ -93,7 +95,7 @@ A plataforma é nova: o contato mais antigo é de junho/2026, e nenhum ficou mai
 ### 2.8 Negócios nascem da conversa e não têm dado próprio
 - 94% dos negócios da Hub2You nasceram de uma conversa de WhatsApp (a origem gravada é o canal da conversa; 10 contas têm caixa que cria negócio sozinha). 28% têm valor e nenhum tem campo personalizado. Metade dos abertos está parada há mais de 30 dias.
 - Na Autonom.ia, 35 negócios vieram da Prospecção, e 38 têm `external_id`.
-- **Implicação para a D2** (criar negócio na importação): as colunas de negócio da planilha vão ser os primeiros campos de card da plataforma. A ficha da pessoa mostra os negócios dela, já que 19% dos contatos têm um.
+- **Implicação para a D2** (criar negócio na importação): as colunas de negócio da planilha vão ser os primeiros campos de card da plataforma. A ficha da pessoa mostra os negócios dela, já que 20% dos contatos têm um.
 
 ### 2.9 Ninguém usou a importação nova ainda
 - Na Hub2You: as 2 importações de teste do piloto e 13 importações antigas de campanha numa só conta. Na Autonom.ia, nenhuma.
@@ -116,5 +118,5 @@ A plataforma é nova: o contato mais antigo é de junho/2026, e nenhum ficou mai
 2. **Atividade:** corrigir `last_activity_at` nas mensagens de histórico da Coexistência e fazer backfill. Bloqueia os grupos prontos.
 3. **Termos:** "Contatos" como nome geral; "cliente" como estado (quem comprou), marcado pela importação e, se decidido, pelo negócio ganho.
 4. **Empresas:** corrigir a lista de e-mail grátis antes de importar e-mail em volume. Não rodar o backfill por domínio esperando volume, porque ele traria cerca de 11 empresas.
-5. **Conferir com o Rodrigo** a conta com 752 contatos sem telefone, e-mail nem canal.
+5. **Conta de teste:** confirmada pelo Rodrigo. Descontar ao repetir a consulta.
 6. **Repetir esta consulta** depois do piloto da Base de clientes.
