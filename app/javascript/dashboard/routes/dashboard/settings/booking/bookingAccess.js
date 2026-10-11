@@ -16,7 +16,8 @@ export const canSeeBookingSettings = ({ isAdministrator, permissions }) =>
   isAdministrator ||
   SCHEDULING_PERMISSIONS.some(key => permissions.includes(key));
 
-// Fica no grupo CRM, logo abaixo do Calendário (#1212).
+// CRM › Agendamento › Páginas e links (#1212, #1264): a lista de páginas,
+// com a aba Resultados.
 export const bookingSidebarItems = ({
   account,
   isAdministrator,
@@ -32,14 +33,14 @@ export const bookingSidebarItems = ({
   return [
     {
       name: 'CRM Booking',
-      label: t('SIDEBAR.BOOKING'),
+      label: t('BOOKING.PAGE.MENU'),
       to: accountScopedRoute('settings_booking'),
       activeOn: ['settings_booking', 'settings_booking_results'],
     },
   ];
 };
 
-// CRM › Meus números (#1194, J8-A12): entra nos filhos do CRM, que já só
+// CRM › Agendamento › Meus números (#1194, J8-A12): entra nos filhos do CRM, que já só
 // aparece para quem vê o CRM; aqui só a flag do agendamento novo.
 export const bookingResultsSidebarItems = ({
   account,
@@ -58,7 +59,7 @@ export const bookingResultsSidebarItems = ({
   ];
 };
 
-// Meus horários (#1195, J8-A11): fica no grupo CRM, ao lado do Calendário,
+// CRM › Agendamento › Meus horários (#1195, J8-A11): fica no grupo CRM,
 // para quem já vê o CRM (o grupo só nasce para essas pessoas). Não pede as
 // chaves de Agendamento: o agente comum ajusta a própria agenda.
 export const myBookingHoursSidebarItems = ({
@@ -76,3 +77,29 @@ export const myBookingHoursSidebarItems = ({
         },
       ]
     : [];
+
+// CRM › Agendamento (#1264): subgrupo com Páginas e links, Meus horários e
+// Meus números. Cada filho segue a regra que já tinha: Páginas e links pede
+// admin ou função com Agendamento; Meus horários e Meus números pedem ver o
+// CRM. Sem filho nenhum, o subgrupo não nasce.
+export const bookingSidebarGroup = ({ canViewCrm, ...args }) => {
+  const children = [
+    ...bookingSidebarItems(args),
+    ...(canViewCrm
+      ? [
+          ...myBookingHoursSidebarItems(args),
+          ...bookingResultsSidebarItems(args),
+        ]
+      : []),
+  ];
+  if (children.length === 0) return [];
+
+  return [
+    {
+      name: 'CRM Scheduling',
+      label: args.t('SIDEBAR.BOOKING'),
+      icon: 'i-lucide-calendar-clock',
+      children,
+    },
+  ];
+};
