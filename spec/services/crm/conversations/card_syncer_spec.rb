@@ -425,4 +425,82 @@ RSpec.describe Crm::Conversations::CardSyncer do
       private: private
     )
   end
+  # #1273: conversa NOVA, ainda sem atendente, reaproveita o card criado automaticamente de outra conversa do contato.
+  # O card não pode perder o dono só porque a conversa nova ainda não foi distribuída.
+  it 'keeps the owner of a reused auto-created card when the new conversation has no assignee yet' do
+    account, admin = create_account_and_user
+    inbox = create_crm_inbox(account: account, members: [admin])
+    contact = account.contacts.create!(name: 'Lead Volta', phone_number: '+5511987650001')
+    pipeline, stage = create_crm_pipeline(account: account, user: admin)
+    account.crm_pipeline_inboxes.create!(pipeline: pipeline, inbox: inbox, default_stage: stage, auto_create_card: true, created_by: admin)
+    first = create_crm_conversation(account: account, inbox: inbox, contact: contact, assignee: admin)
+    card = described_class.new(conversation: first, message: create_crm_message(conversation: first, sender: contact)).perform
+    expect(card.reload.owner).to eq(admin)
+
+    second = create_crm_conversation(account: account, inbox: inbox, contact: contact)
+    reused = described_class.new(conversation: second, message: create_crm_message(conversation: second, sender: contact)).perform
+
+    expect(reused.id).to eq(card.id)
+    expect(card.reload.owner).to eq(admin)
+  end
+
+  it 'still mirrors the assignee of the card own conversation, set and cleared' do
+    account, admin = create_account_and_user
+    inbox = create_crm_inbox(account: account, members: [admin])
+    contact = account.contacts.create!(name: 'Lead Espelho', phone_number: '+5511987650002')
+    pipeline, stage = create_crm_pipeline(account: account, user: admin)
+    account.crm_pipeline_inboxes.create!(pipeline: pipeline, inbox: inbox, default_stage: stage, auto_create_card: true, created_by: admin)
+    conversation = create_crm_conversation(account: account, inbox: inbox, contact: contact, assignee: admin)
+    card = described_class.new(conversation: conversation, message: create_crm_message(conversation: conversation, sender: contact)).perform
+
+    expect(card.reload.owner).to eq(admin)
+
+    conversation.update!(assignee: nil)
+    described_class.new(conversation: conversation.reload).perform
+
+    expect(card.reload.owner).to be_nil
+  end
+
+  describe 'another conversation of the contact reusing the auto-created card (#1273)' do
+    let(:account_and_admin) { create_account_and_user }
+    let(:account) { account_and_admin.first }
+    let(:admin) { account_and_admin.last }
+    let(:other_agent) { create(:user, account: account, role: :agent) }
+    let(:inbox) { create_crm_inbox(account: account, members: [admin, other_agent]) }
+    let(:contact) { account.contacts.create!(name: 'Lead Duas Conversas', phone_number: '+5511987650003') }
+    let(:pipeline_and_stage) { create_crm_pipeline(account: account, user: admin) }
+
+    before do
+      pipeline, stage = pipeline_and_stage
+      account.crm_pipeline_inboxes.create!(pipeline: pipeline, inbox: inbox, default_stage: stage, auto_create_card: true, created_by: admin)
+    end
+
+    def sync(conversation)
+      described_class.new(conversation: conversation, message: create_crm_message(conversation: conversation, sender: contact)).perform
+    end
+
+    it 'does not overwrite owner nor team with another agent and team' do
+      first_team = create(:team, account: account)
+      other_team = create(:team, account: account)
+      # Chatwoot tira o atendente que não é do time da conversa.
+      create(:team_member, team: first_team, user: admin)
+      create(:team_member, team: other_team, user: other_agent)
+      card = sync(create_crm_conversation(account: account, inbox: inbox, contact: contact, assignee: admin, team: first_team))
+
+      sync(create_crm_conversation(account: account, inbox: inbox, contact: contact, assignee: other_agent, team: other_team))
+
+      expect(card.reload).to have_attributes(owner_id: admin.id, team_id: first_team.id)
+    end
+
+    it 'fills an empty owner and team' do
+      team = create(:team, account: account)
+      create(:team_member, team: team, user: other_agent)
+      card = sync(create_crm_conversation(account: account, inbox: inbox, contact: contact))
+      expect(card.reload.owner).to be_nil
+
+      sync(create_crm_conversation(account: account, inbox: inbox, contact: contact, assignee: other_agent, team: team))
+
+      expect(card.reload).to have_attributes(owner_id: other_agent.id, team_id: team.id)
+    end
+  end
 end
