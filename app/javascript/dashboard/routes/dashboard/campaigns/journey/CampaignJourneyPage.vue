@@ -28,6 +28,11 @@ import LiveChatCampaignDialog from 'dashboard/components-next/Campaigns/Pages/Ca
 import EmailResultActions from 'dashboard/components-next/CampaignResult/EmailResultActions.vue';
 import CampaignTabs from 'dashboard/components-next/CampaignJourney/CampaignTabs.vue';
 import BrandKitNudge from 'dashboard/components-next/BrandKits/BrandKitNudge.vue';
+// Fork (Modelos do WhatsApp): campanhas paradas por causa do modelo (flag whatsapp_templates_journey).
+import AvisoCampanhasParadas from '../modelos/ponte/AvisoCampanhasParadas.vue';
+// Fork (#1332): campanha com pausa aberta aparece como "Parada", com o motivo curto (com ou sem a flag).
+import whatsappTemplatesAPI from 'dashboard/api/whatsappTemplates';
+import { motivoDaPausa } from '../modelos/helpers/motivoDaPausa';
 import {
   CAMPAIGN_CHANNELS,
   CHANNEL_ICONS,
@@ -79,9 +84,12 @@ const CREATION_DIALOGS = {
   [CAMPAIGN_CHANNELS.LIVE_CHAT]: LiveChatCampaignDialog,
 };
 
+// Fork (#1332): { [campaignId]: motivo } das pausas abertas.
+const pauses = ref({});
 const rows = computed(() =>
   buildJourneyRows({
     campaigns: campaigns.value || [],
+    pauses: pauses.value,
     whatsappApiCampaigns: features.value.whatsappApiCampaigns
       ? whatsappApiCampaigns.value || []
       : [],
@@ -105,6 +113,11 @@ const channelLabel = channel =>
   t(`CAMPAIGN_JOURNEY.CHANNELS.${CHANNEL_LABEL_KEYS[channel]}`);
 const statusLabel = status =>
   t(`CAMPAIGN_JOURNEY.STATUS.${status.toUpperCase()}`);
+// Fork (#1332): parada pelo modelo (pausa aberta), com o motivo curto.
+const rowStatusLabel = row =>
+  row.stopReason
+    ? t('CAMPAIGN_JOURNEY.STATUS.STOPPED')
+    : statusLabel(row.status);
 
 const STATUS_CLASSES = {
   [JOURNEY_STATUSES.DRAFT]: 'bg-n-alpha-2 text-n-slate-11',
@@ -165,9 +178,25 @@ const alwaysOn = computed(
     rows.value.filter(row => row.status === JOURNEY_STATUSES.ALWAYS_ON).length
 );
 
+// Fork (#1332): pausas abertas (campaign_pauses). Sem permissão ou sem resposta, a lista fica como sempre.
+const loadPauses = async () => {
+  try {
+    const { data } = await whatsappTemplatesAPI.getCampaignPauses();
+    pauses.value = Object.fromEntries(
+      (data?.payload || []).map(pause => [
+        pause.campaign.id,
+        motivoDaPausa(pause),
+      ])
+    );
+  } catch {
+    pauses.value = {};
+  }
+};
+
 const fetchAll = async () => {
   isLoading.value = true;
   hasLoadError.value = false;
+  loadPauses();
   const requests = [
     store.dispatch('inboxes/get'),
     store.dispatch('campaigns/get'),
@@ -237,6 +266,7 @@ useOnEnter(fetchAll);
       </nav>
       <CampaignTabs active="campaigns" />
       <BrandKitNudge v-if="features.emailCampaigns" />
+      <AvisoCampanhasParadas class="mb-5" />
       <header class="mb-7 flex flex-wrap items-start justify-between gap-4">
         <div class="min-w-0">
           <h1
@@ -423,7 +453,7 @@ useOnEnter(fetchAll);
             v-for="row in visibleRows"
             :key="row.key"
             :data-row="row.key"
-            class="grid gap-3 border-b border-n-weak px-4 py-4 last:border-0 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_8rem_auto] md:items-center xl:px-6"
+            class="grid gap-3 border-b border-n-weak px-4 py-4 last:border-0 xl:grid-cols-[minmax(0,1fr)_14rem_6rem_12rem_10rem] xl:items-center xl:gap-4 xl:px-6"
           >
             <div class="flex min-w-0 items-center gap-3">
               <span
@@ -444,28 +474,42 @@ useOnEnter(fetchAll);
                 </p>
               </div>
             </div>
-            <p class="mb-0 text-sm text-n-slate-12">
-              <span class="text-xs text-n-slate-11 md:hidden">
+            <p class="mb-0 text-sm text-n-slate-12 xl:whitespace-nowrap">
+              <span class="text-xs text-n-slate-11 xl:hidden">
                 {{ t(`${NS}.WHEN`) }}{{ COLON }}
               </span>
               {{ formatWhen(row) }}
             </p>
-            <p class="mb-0 text-sm text-n-slate-11">
+            <p
+              class="mb-0 text-sm text-n-slate-11"
+              :class="row.total === null ? 'hidden xl:block' : ''"
+            >
               <template v-if="row.total !== null">
                 {{
                   t(`${NS}.SENT_OF`, { sent: row.sent ?? 0, total: row.total })
                 }}
               </template>
             </p>
-            <p class="mb-0">
+            <p class="mb-0 flex flex-col items-start gap-0.5">
               <span
                 class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium"
-                :class="STATUS_CLASSES[row.status]"
+                :class="
+                  row.stopReason
+                    ? STATUS_CLASSES[JOURNEY_STATUSES.PAUSED]
+                    : STATUS_CLASSES[row.status]
+                "
               >
-                {{ statusLabel(row.status) }}
+                {{ rowStatusLabel(row) }}
+              </span>
+              <span
+                v-if="row.stopReason"
+                class="text-xs text-n-slate-11"
+                data-test="stop-reason"
+              >
+                {{ t(`CAMPAIGN_JOURNEY.STOP_REASONS.${row.stopReason}`) }}
               </span>
             </p>
-            <div class="flex items-center justify-end gap-1 md:w-40">
+            <div class="flex items-center gap-1 xl:justify-end">
               <router-link
                 :to="row.route"
                 class="flex min-h-11 items-center gap-1 rounded-xl px-2 text-sm font-medium text-n-blue-11 hover:bg-n-alpha-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"

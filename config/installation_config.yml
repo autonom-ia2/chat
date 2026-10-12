@@ -177,6 +177,28 @@
   description: 'Configure this if you want to use a different WhatsApp API version. Make sure its prefixed with `v`'
   value: 'v22.0'
   locked: false
+# Fork (#1332, épico #1320): preço por mensagem entregue do WhatsApp oficial, por país, cobrado pela Meta. Lido só por
+# Whatsapp::Pricing (docs/campaigns/modelos-whatsapp/precos.md). Tabela oficial da Meta para o Brasil em vigor desde
+# 01/10/2026; ao mudar, troque os valores e a data de vigência aqui ou no Super Admin.
+- name: WHATSAPP_MESSAGE_PRICES
+  display_title: 'WhatsApp message prices'
+  description: 'Price per delivered WhatsApp Cloud message, by country: currency, effective_from, prices per category (marketing, utility, authentication, service) and the free tier of service messages per phone number per month.'
+  value:
+    BR:
+      currency: BRL
+      effective_from: '2026-10-01'
+      prices:
+        marketing: '0.3217'
+        utility: '0.0350'
+        authentication: '0.0350'
+        service: '0.0350'
+      free_tier:
+        service:
+          messages: 1000
+          period: month
+          per: phone_number
+  locked: false
+  type: code
 # ------- End of WhatsApp Channel Related Config ------- #
 
 # ------- Meta Ads (Anuncios da Meta, #1047) ------- #

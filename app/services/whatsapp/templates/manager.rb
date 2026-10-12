@@ -48,7 +48,7 @@ class Whatsapp::Templates::Manager
 
   def update(template_id, attrs)
     attrs = attrs.to_h.deep_stringify_keys
-    template = protected_template!(template_id)
+    template = protected_template!(template_id, change: true)
     content = attrs.slice(*CONTENT_KEYS)
     draft = prepare_profile(template, attrs)
     if content.any?
@@ -113,12 +113,14 @@ class Whatsapp::Templates::Manager
     synced.find { |item| item['id'].to_s == template_id.to_s } || raise(Whatsapp::Templates::MetaClient::NotFound)
   end
 
-  def protected_template!(template_id)
+  # Alterar (`change`) aceita campanha parada pelo modelo; apagar não (Usage#blocks_change).
+  def protected_template!(template_id, change: false)
     template = find!(template_id)
     raise Refused, 'system_template' if system_owner(template).present?
 
     usage = usage_for(template)
-    raise Refused.new(usage[:uso_oculto] ? 'in_use_hidden' : 'in_use', usage: usage) if usage[:in_use]
+    blocked, hidden = change ? usage.values_at(:blocks_change, :blocks_change_hidden) : usage.values_at(:in_use, :uso_oculto)
+    raise Refused.new(hidden ? 'in_use_hidden' : 'in_use', usage: usage) if blocked
 
     template
   end

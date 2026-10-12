@@ -20,7 +20,8 @@
       "COMPLETED": "Completed",
       "CANCELLED": "Cancelled",
       "FAILED": "Failed",
-      "ALWAYS_ON": "Always on"
+      "ALWAYS_ON": "Always on",
+      "STOPPED": "Stopped"
     },
     "CHOOSER": {
       "TITLE": "Where will this campaign go?",
@@ -538,6 +539,17 @@
       "SAVED": "Changes saved.",
       "ERROR": "Could not save now. Try again.",
       "NOT_FOUND": "This live chat message was not found."
+    },
+    "STOP_REASONS": {
+      "modelo_pausado": "template paused by WhatsApp",
+      "modelo_recusado": "template rejected",
+      "modelo_em_analise": "template under review",
+      "modelo_mudou": "template changed",
+      "tipo_mudou": "template type changed",
+      "modelo_apagado": "template deleted",
+      "formato_nao_vai": "format not supported yet",
+      "nao_conferido": "could not check the template",
+      "outro": "stopped before sending"
     }
   }
 }

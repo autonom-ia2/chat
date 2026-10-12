@@ -401,6 +401,10 @@
       "whatsapp_api_campaign_ids"
     ]
   },
+  "campaign_journey/campaign_pauses": {
+    "controller": "api/v1/accounts/campaign_journey/campaign_pauses#index",
+    "parametros": []
+  },
   "campaign_journey/contact_origins/:id": {
     "controller": "api/v1/accounts/campaign_journey/contact_origins#show",
     "parametros": []
@@ -1960,6 +1964,14 @@
   },
   "whatsapp_hybrid_connections/:inbox_id": {
     "controller": "api/v1/accounts/whatsapp_hybrid_connections#show",
+    "parametros": []
+  },
+  "whatsapp_message_prices": {
+    "controller": "api/v1/accounts/whatsapp_message_prices#index",
+    "parametros": []
+  },
+  "whatsapp_template_inboxes": {
+    "controller": "api/v1/accounts/whatsapp_template_inboxes#index",
     "parametros": []
   }
 }

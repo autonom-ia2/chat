@@ -125,3 +125,43 @@ describe('Campanha list rows (PRD §6.1)', () => {
     expect(filterChannels([], [])).toEqual([]);
   });
 });
+
+// #1332: open pause (campaign_pauses) → shown as stopped with the short reason; only the label.
+describe('campaign stopped by its template', () => {
+  it('marks a waiting campaign with an open pause, keeping its real status and date', () => {
+    const cancelled = {
+      ...data.campaigns[0],
+      id: 5,
+      campaign_status: 'cancelled',
+    };
+    const rows = buildJourneyRows({
+      campaigns: [...data.campaigns, cancelled],
+      pauses: {
+        1: 'modelo_pausado',
+        2: 'modelo_recusado',
+        5: 'modelo_pausado',
+      },
+    });
+    const byKey = Object.fromEntries(rows.map(row => [row.key, row]));
+    const plain = buildJourneyRows(data).find(
+      row => row.key === 'whatsapp_official-1'
+    );
+
+    expect(byKey['whatsapp_official-1']).toMatchObject({
+      status: plain.status,
+      when: plain.when,
+      stopReason: 'modelo_pausado',
+    });
+    expect(byKey['whatsapp_official-5'].stopReason).toBe('');
+    expect(byKey['sms-2']).toMatchObject({
+      status: 'completed',
+      stopReason: '',
+    });
+  });
+
+  it('without pauses the rows are the usual ones', () => {
+    expect(buildJourneyRows(data)).toEqual(
+      buildJourneyRows({ ...data, pauses: {} })
+    );
+  });
+});

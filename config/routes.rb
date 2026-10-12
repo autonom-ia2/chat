@@ -238,6 +238,7 @@ Rails.application.routes.draw do
             resources :campaign_names, only: [:index]
             resources :recipient_previews, only: [:create]
             resource :overview, only: [:show]
+            get 'campaign_pauses', to: 'campaign_pauses#index', as: :campaign_pauses # #1332
             post 'campaign_pauses/:id/resume', to: 'campaign_pauses#resume', as: :campaign_pause_resume # #1329
             scope 'results/:channel/:id', controller: :results do
               get '/', action: :show, as: :result
@@ -922,6 +923,9 @@ Rails.application.routes.draw do
               post :media, on: :collection
             end
           end
+          # Tela de Modelos do WhatsApp (#1332): as caixas que têm modelos e o preço por envio.
+          resources :whatsapp_template_inboxes, only: [:index]
+          resources :whatsapp_message_prices, only: [:index]
 
           namespace :twitter do
             resource :authorization, only: [:create]

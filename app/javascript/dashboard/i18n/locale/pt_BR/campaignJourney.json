@@ -20,7 +20,8 @@
       "COMPLETED": "Concluída",
       "CANCELLED": "Cancelada",
       "FAILED": "Falhou",
-      "ALWAYS_ON": "Sempre ativa"
+      "ALWAYS_ON": "Sempre ativa",
+      "STOPPED": "Parada"
     },
     "CHOOSER": {
       "TITLE": "Por onde vai a campanha?",
@@ -538,6 +539,17 @@
       "SAVED": "Alterações salvas.",
       "ERROR": "Não foi possível salvar agora. Tente de novo.",
       "NOT_FOUND": "Esta mensagem do Chat ao vivo não foi achada."
+    },
+    "STOP_REASONS": {
+      "modelo_pausado": "modelo pausado pelo WhatsApp",
+      "modelo_recusado": "modelo recusado",
+      "modelo_em_analise": "modelo em análise",
+      "modelo_mudou": "modelo mudou",
+      "tipo_mudou": "tipo do modelo mudou",
+      "modelo_apagado": "modelo apagado",
+      "formato_nao_vai": "formato ainda não vai",
+      "nao_conferido": "não deu para conferir o modelo",
+      "outro": "parou antes de enviar"
     }
   }
 }
