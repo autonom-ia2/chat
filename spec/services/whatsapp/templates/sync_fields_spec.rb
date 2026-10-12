@@ -170,6 +170,18 @@ RSpec.describe Whatsapp::Templates::SyncFields do
       expect(channel.reload.message_templates).to eq([old])
     end
 
+    it 'lista zerada durante a busca (troca de conta do WhatsApp): não grava e devolve account_switched' do
+      stub_request(:get, url).with(query: { 'fields' => fields }).to_return do
+        channel.update_columns(message_templates: []) # rubocop:disable Rails/SkipsModelValidations
+        page([complete])
+      end
+
+      result = channel.provider_service.sync_templates
+
+      expect(result.code).to eq('account_switched')
+      expect(channel.reload.message_templates).to eq([])
+    end
+
     it 'sucesso: devolve ok com a contagem, troca a lista e renova o carimbo' do
       stub_request(:get, url).with(query: { 'fields' => fields }).to_return(page([complete, bare]))
 

@@ -55,12 +55,12 @@ module Whatsapp::Templates::ChannelList
   # Trava e relê só a coluna da lista (SELECT … FOR UPDATE na linha do canal), sem `with_lock`/`reload` no objeto de quem
   # chamou: `reload` descarta o cache das associações dele (a conta do canal) e recusaria um objeto com mudanças a salvar.
   # `update_columns` deixa o objeto de quem chamou com a lista nova (o envio da campanha lê dele). Bloco que devolve nil:
-  # nada é gravado.
+  # nada é gravado e o retorno é nil.
   def write!(channel, synced_at: nil)
     channel.class.transaction do
       current = entries(channel.class.where(id: channel.id).lock.pick(:message_templates))
       updated = yield(current)
-      next current if updated.nil?
+      next if updated.nil?
 
       attributes = { message_templates: updated }
       attributes[:message_templates_last_updated] = synced_at if synced_at

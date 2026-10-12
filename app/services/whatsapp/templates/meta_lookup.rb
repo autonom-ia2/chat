@@ -4,12 +4,12 @@
 # Meta could not be asked or did not answer (timeout, network error, non-2xx). The caller then
 # falls back to the inbox cache (channel.message_templates). Nothing is written here.
 #
-# #1382: also asks for `id` and `parameter_format`, because the dispatch gate writes the approved
-# item into the inbox list the send reads (Whatsapp::Templates::ChannelList), and the send needs
+# #1382: also asks for `id`, `parameter_format` and `rejected_reason` (a stale refusal reason is overwritten),
+# because the dispatch gate writes the approved item into the inbox list the send reads (Whatsapp::Templates::ChannelList), and the send needs
 # `parameter_format` to build named variables. If Meta refuses a field (400, code 100) it asks
 # again with the #1329 fields, as the sync does (Whatsapp::Templates::SyncFields).
 class Whatsapp::Templates::MetaLookup
-  FIELDS = 'id,name,language,status,category,parameter_format,components'.freeze
+  FIELDS = 'id,name,language,status,category,parameter_format,components,rejected_reason'.freeze
   BASE_FIELDS = 'name,language,status,category,components'.freeze
   INVALID_PARAMETER = 100
   TIMEOUT_SECONDS = 5

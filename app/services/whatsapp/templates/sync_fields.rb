@@ -33,7 +33,7 @@ module Whatsapp::Templates::SyncFields
   MAX_PAGES = 500
 
   # code: 'ok' | 'meta_unreachable' (5xx/429/rede) | 'permission_denied' (token ou permissão) | 'meta_refused' (outro 4xx)
-  #       | 'unexpected_body' (2xx sem a lista)
+  #       | 'unexpected_body' (2xx sem a lista) | 'account_switched' (a conta do WhatsApp da caixa foi trocada durante a busca)
   Result = Data.define(:code, :count) do
     def ok?
       code == 'ok'
@@ -55,8 +55,11 @@ module Whatsapp::Templates::SyncFields
     base = Channel::Whatsapp.where(id: whatsapp_channel.id).pick(:message_templates)
     templates = fetch_whatsapp_templates
     # Como no Chatwoot: resposta vazia não apaga a lista guardada (uma WABA sem nenhum modelo é rara; apagar por engano não).
-    Whatsapp::Templates::ChannelList.replace!(whatsapp_channel, templates, base: base) if templates.any?
-    Result.new(code: 'ok', count: templates.size)
+    return Result.new(code: 'ok', count: 0) if templates.empty?
+    return Result.new(code: 'ok', count: templates.size) if Whatsapp::Templates::ChannelList.replace!(whatsapp_channel, templates, base: base)
+
+    log_sync_failure('account_switched', 'list_reset_during_fetch')
+    Result.new(code: 'account_switched', count: 0)
   rescue Failed => e
     Result.new(code: e.code, count: 0)
   rescue *NETWORK_ERRORS => e
