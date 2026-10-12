@@ -169,7 +169,9 @@ export const conferirConteudo = (conteudo, contexto = {}) => {
       ok: contarLetras(conteudo.texto) <= limite,
       params: { limite },
     },
-    ...(['padrao', 'oferta'].includes(formato)
+    // Só quando há foto, vídeo ou documento no topo.
+    ...(['padrao', 'oferta'].includes(formato) &&
+    ['foto', 'video', 'documento'].includes(conteudo.topo?.tipo)
       ? [{ chave: 'TOPO_ARQUIVO', ok: topoCompleto(conteudo.topo) }]
       : []),
     // Carrossel e oferta só existem como divulgação.
