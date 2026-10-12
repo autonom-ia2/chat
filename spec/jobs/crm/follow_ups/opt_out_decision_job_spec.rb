@@ -65,6 +65,106 @@ RSpec.describe Crm::FollowUps::OptOutDecisionJob do
     end
   end
 
+  describe 'recusa no contato (chat#1325)' do
+    let(:contact) { conversation.contact }
+
+    it '"sim" também grava a recusa no contato, com a origem follow_up_reply' do
+      message = reply('Não quero mais receber, obrigado')
+      model_answers('sim', 'pedido_explicito_de_parar')
+
+      described_class.perform_now(card.id, message.id)
+
+      contact.reload
+      expect(contact).to be_opted_out
+      expect(contact.opt_out_source).to eq('follow_up_reply')
+      expect(contact.opted_out_by_id).to be_nil
+      expect(state[Crm::FollowUps::CardOptOut::CONTACT_KEY]).to eq(contact.id)
+    end
+
+    it '"sim" não troca a recusa que o contato já tinha por outra origem' do
+      user = create(:user, account: account)
+      contact.opt_out!(source: 'manual', by: user)
+      refused_at = contact.reload.opted_out_at
+      message = reply('Parem de mandar mensagem')
+      model_answers('sim', 'pedido_explicito_de_parar')
+
+      described_class.perform_now(card.id, message.id)
+
+      contact.reload
+      expect(contact.opt_out_source).to eq('manual')
+      expect(contact.opted_out_by_id).to eq(user.id)
+      expect(contact.opted_out_at).to eq(refused_at)
+      expect(state).to include('opted_out' => true)
+    end
+
+    it '"nao" não marca o contato' do
+      message = reply('agora não dá, depois a gente vê')
+      model_answers('nao', 'ambigua')
+
+      described_class.perform_now(card.id, message.id)
+
+      expect(contact.reload).not_to be_opted_out
+    end
+
+    it 'deadlock ao gravar o contato desfaz o card junto, tenta de novo sem chamar o modelo de novo e, esgotado, grava "falhou"' do
+      allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new)
+      message = reply('SAIR')
+      model_answers('sim', 'pedido_explicito_de_parar')
+      attempts = 0
+      allow_any_instance_of(Contact).to receive(:opt_out!) do # rubocop:disable RSpec/AnyInstance
+        attempts += 1
+        raise ActiveRecord::Deadlocked
+      end
+      allow(Rails.logger).to receive(:error)
+
+      perform_enqueued_jobs(only: described_class) { described_class.perform_later(card.id, message.id) }
+
+      expect(client).to have_received(:create).once
+      expect(attempts).to eq(5)
+      expect(state).to include('opted_out' => false, 'opt_out_decision' => 'falhou', 'opt_out_motivo' => 'ActiveRecord::Deadlocked')
+      expect(card.activities.where(event_type: 'ai_followup_stopped').where("payload->>'trigger' = 'opt_out_decision'")).to be_empty
+      expect(contact.reload).not_to be_opted_out
+      expect(Rails.logger).to have_received(:error)
+        .with("[crm][ai][opt_out] card_id=#{card.id} message_id=#{message.id} decisao=falhou erro=ActiveRecord::Deadlocked")
+    end
+
+    it 'erro que não passa sozinho (registro inválido) não tenta de novo: falha na hora e o card continua pendente' do
+      message = reply('SAIR')
+      model_answers('sim', 'pedido_explicito_de_parar')
+      attempts = 0
+      allow_any_instance_of(Contact).to receive(:opt_out!) do # rubocop:disable RSpec/AnyInstance
+        attempts += 1
+        raise ActiveRecord::RecordInvalid
+      end
+
+      queued = -> { enqueued_jobs.count { |job| job[:job] == described_class } }
+      queued_before = queued.call
+
+      expect { described_class.perform_now(card.id, message.id) }.to raise_error(ActiveRecord::RecordInvalid)
+
+      expect(attempts).to eq(1)
+      expect(queued.call).to eq(queued_before)
+      expect(state).to include('opt_out_decision' => 'pendente')
+      expect(contact.reload).not_to be_opted_out
+    end
+
+    it 'com card.contact diferente do contato da conversa, marca o da conversa, o mesmo a quem o follow-up escreve' do
+      other = account.contacts.create!(name: 'Outro', phone_number: "+55118#{rand(10_000_000..99_999_999)}")
+      card.update!(contact: other)
+      message = reply('SAIR')
+      model_answers('sim', 'pedido_explicito_de_parar')
+
+      described_class.perform_now(card.id, message.id)
+
+      card.reload
+      expect(Crm::FollowUps::CardOptOut.contact_for(card)).to eq(contact)
+      expect(state[Crm::FollowUps::CardOptOut::CONTACT_KEY]).to eq(contact.id)
+      expect(contact.reload.opt_out_source).to eq('follow_up_reply')
+      expect(other.reload).not_to be_opted_out
+      expect(Crm::FollowUps::CardOptOut.contact_marked?(other)).to be(false)
+    end
+  end
+
   it 'nota privada do time não vai ao modelo como contexto' do
     conversation.messages.create!(account_id: account.id, inbox_id: conversation.inbox_id, message_type: :outgoing,
                                   content: 'Oi! Ainda tem interesse no orçamento?')

@@ -76,11 +76,11 @@ class Autonomia::Prospecting::SegmentEligibility
     'not_ready' unless lead.status == ELIGIBLE_STATUS
   end
 
-  # A recusa gravada no contato (chat#713) vale de qualquer origem. Quem respondeu "parar" ao follow-up da IA ainda fica
-  # marcado só no card (Crm::FollowUps::AutoFollowupCanceler).
+  # A recusa gravada no contato (chat#713) vale de qualquer origem. Desde o chat#1325, o pedido de parar no follow-up de
+  # IA também grava no contato (origem 'follow_up_reply'), mas a prova dessa recusa é a marca no card, e é ela que se
+  # confere aqui também: cobre os cards marcados antes do chat#1325, cujo contato não tem a recusa gravada.
   def card_opted_out?(contact)
-    @account.crm_cards.where(contact_id: contact.id)
-            .exists?(["metadata->'ai'->'auto_followup_state'->>'opted_out' = 'true'"])
+    Crm::FollowUps::CardOptOut.contact_marked?(contact)
   end
 
   def whatsapp_verified?(lead)

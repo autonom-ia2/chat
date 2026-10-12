@@ -77,6 +77,7 @@ describe('ContactOptOutSection', () => {
   it.each([
     ['prospecting', 'PROSPECTING'],
     ['email_unsubscribe', 'EMAIL_UNSUBSCRIBE'],
+    ['follow_up_reply', 'FOLLOW_UP_REPLY'],
   ])(
     'recusa da origem %s não oferece desfazer aqui e diz onde ela sai',
     (source, key) => {

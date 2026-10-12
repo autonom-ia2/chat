@@ -36,7 +36,9 @@ RSpec.describe CampaignImports::VariableSuggester, :aggregate_failures do
       [{ key: '1', source: { 'source' => 'name' }, confidence: 0.93 },
        { key: '2', source: { 'source' => 'extra', 'column' => 'Vencimento' }, confidence: 0.91 }]
     )
-    expect(requests.first.dig('state', 'columns')).to eq(%w[Segurado Corretora Vencimento])
+    # The audience validation also asks Jev the column types (CampaignImports::ColumnTypes, #1331).
+    suggestion = requests.find { |request| request.dig('state', 'task') == described_class::TASK }
+    expect(suggestion.dig('state', 'columns')).to eq(%w[Segurado Corretora Vencimento])
     expect(requests.to_json).not_to include('Ana', 'Souza', '987654321', 'Alfa', '10/2026')
   end
 
@@ -64,5 +66,48 @@ RSpec.describe CampaignImports::VariableSuggester, :aggregate_failures do
     stub_request(:post, AudienceJevHelpers::JEV_URL).to_return(status: 400, body: '{}')
 
     expect(described_class.new(campaign_import, variables: variables).perform.pluck(:source)).to eq([nil, nil])
+  end
+
+  # #1331: with the catalog, Jev picks a field the system knows or a column, and the answer is the binding itself.
+  describe 'with the field catalog' do
+    def catalog_index(key)
+      TemplateFields::Catalog.fields.pluck(:key).select { |field| TemplateFields::Catalog.in_audience?(field) }.index(key)
+    end
+
+    it 'matches variables to catalog keys and to columns, labels and headers only' do
+      campaign_import.account.update!(locale: 'pt_BR')
+      enable_audience_jev
+      requests = []
+      vencimento = catalog_index('minha_empresa.site') + 1
+      stub_request(:post, AudienceJevHelpers::JEV_URL).to_return do |request|
+        requests << JSON.parse(request.body)
+        body = { model: 'jev-1.13.0', answers: {
+          variable_0: { type: 'choice', choice: "column_#{catalog_index('cliente.primeiro_nome')}", confidence: 0.94 },
+          variable_1: { type: 'choice', choice: "column_#{vencimento}", confidence: 0.9 }
+        } }
+        { status: 200, body: body.to_json }
+      end
+
+      result = described_class.new(campaign_import, variables: variables, catalog: true).perform
+
+      expect(result).to eq(
+        [{ key: '1', source: { 'source' => 'field', 'value' => 'cliente.primeiro_nome' }, confidence: 0.94 },
+         { key: '2', source: { 'source' => 'field', 'value' => 'publico.Vencimento' }, confidence: 0.9 }]
+      )
+      columns = requests.find { |request| request.dig('state', 'task') == described_class::CATALOG_TASK }.dig('state', 'columns')
+      expect(columns).to include('Primeiro nome do cliente', 'Vencimento')
+      expect(columns).not_to include('Nome do negócio', 'Dia e hora do horário')
+      expect(requests.to_json).not_to include('Ana', 'Souza', '987654321', 'Alfa', '10/2026')
+    end
+
+    it 'gives no suggestion when Jev says nothing fits' do
+      enable_audience_jev
+      stub_request(:post, AudienceJevHelpers::JEV_URL).to_return(
+        status: 200, body: { model: 'jev-1.13.0', answers: { variable_0: { type: 'choice', choice: 'none', confidence: 0.99 } } }.to_json
+      )
+
+      expect(described_class.new(campaign_import, variables: variables.first(1), catalog: true).perform)
+        .to eq([{ key: '1', source: nil, confidence: nil }])
+    end
   end
 end

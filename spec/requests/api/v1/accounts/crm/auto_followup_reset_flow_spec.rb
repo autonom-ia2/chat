@@ -69,6 +69,7 @@ RSpec.describe 'CRM auto follow-up opt-out + manual reset regression flow', type
     expect(state['opted_out']).to be(true)
     expect(state['active']).to be(false)
     expect(card.follow_ups.active.count).to eq(0)
+    expect(card.contact.reload.opt_out_source).to eq('follow_up_reply')
   end
 
   # Passo 3: varredura seguinte NÃO re-arma o card opted_out (guard `opted_out?`). follow_ups.count
@@ -108,6 +109,108 @@ RSpec.describe 'CRM auto follow-up opt-out + manual reset regression flow', type
     assert_opt_out_stops_cadence(card, conversation)
     assert_sweep_does_not_rearm(pipeline, card)
     assert_manual_reset_clears_state(account, user, card)
+    expect(card.contact.reload).not_to be_opted_out # chat#1325: o reset libera a recusa follow_up_reply
     assert_sweep_rearms_after_reset(pipeline, card)
+  end
+
+  def reset!(account, user, card)
+    post "/api/v1/accounts/#{account.id}/crm/cards/#{card.id}/reset_auto_followup", headers: auth_headers(user)
+    expect(response).to have_http_status(:ok)
+  end
+
+  def other_card(account, user, contact, opted_out:)
+    pipeline, stage = create_crm_pipeline(account: account, user: user, name: "Outro funil #{SecureRandom.hex(3)}")
+    account.crm_cards.create!(pipeline: pipeline, stage: stage, contact: contact, title: 'Outro assunto',
+                              metadata: { 'ai' => { 'auto_followup_state' => { 'opted_out' => opted_out } } })
+  end
+
+  # chat#1325: a marca no card é a prova da recusa follow_up_reply. Ela só sai quando nenhum card do contato a sustenta.
+  it 'o RESET de um card não libera a recusa que outro card do mesmo contato ainda sustenta' do
+    account, user = create_account_and_user
+    _pipeline, card_a, conversation = build_stalled_card(account: account, user: user)
+    card_a.update!(metadata: { 'ai' => { 'auto_followup_state' => { 'active' => true } } })
+    reply_opt_out(card_a, conversation)
+    contact = card_a.contact
+    expect(contact.reload.opt_out_source).to eq('follow_up_reply')
+    card_b = other_card(account, user, contact, opted_out: true)
+
+    reset!(account, user, card_b)
+    expect(response.parsed_body['contact_opt_out']).to eq('kept_other_cards')
+    expect(contact.reload.opt_out_source).to eq('follow_up_reply')
+
+    reset!(account, user, card_a)
+    expect(response.parsed_body['contact_opt_out']).to eq('released')
+    expect(contact.reload).not_to be_opted_out
+  end
+
+  # Corrida: o "sim" grava o card entre a carga do card pelo controller e o lock do card. O stub do lock! faz esse "sim"
+  # chegar logo antes de o lock valer. Com o lock, o reset relê a marca e libera a recusa junto. Sem o lock (só uma
+  # transação), o stub não roda; lendo a marca antes do lock, o reset zeraria o card e deixaria a recusa sem prova.
+  it 'o RESET lê a marca do card com o card travado' do
+    account, user = create_account_and_user
+    _pipeline, card, = build_stalled_card(account: account, user: user)
+    contact = card.contact
+    expect(contact).not_to be_opted_out
+    race = { ran: false, contact_opted_out: nil }
+    allow_any_instance_of(Crm::Card).to receive(:lock!).and_wrap_original do |original, *args| # rubocop:disable RSpec/AnyInstance
+      if original.receiver.id == card.id && !race[:ran]
+        race[:ran] = true
+        Crm::Card.where(id: card.id).update_all( # rubocop:disable Rails/SkipsModelValidations
+          metadata: { 'ai' => { 'auto_followup_state' => { 'opted_out' => true, 'opt_out_contact_id' => contact.id } } }
+        )
+        contact.opt_out!(source: 'follow_up_reply')
+        race[:contact_opted_out] = contact.reload.opt_out_source
+      end
+      original.call(*args)
+    end
+
+    reset!(account, user, card)
+
+    expect(race).to eq(ran: true, contact_opted_out: 'follow_up_reply')
+    expect(card.reload.metadata['ai']['auto_followup_state']['opted_out']).to be(false)
+    expect(contact.reload).not_to be_opted_out
+  end
+
+  it 'card que mudou de contato depois do pedido: o RESET libera o contato marcado, não o atual' do
+    account, user = create_account_and_user
+    _pipeline, card, = build_stalled_card(account: account, user: user)
+    asked = card.contact
+    asked.opt_out!(source: 'follow_up_reply')
+    newcomer = account.contacts.create!(name: 'Outro', phone_number: '+5511987650001')
+    newcomer.opt_out!(source: 'follow_up_reply')
+    card.update!(contact: newcomer, primary_conversation: nil,
+                 metadata: { 'ai' => { 'auto_followup_state' => { 'opted_out' => true, 'opt_out_contact_id' => asked.id } } })
+    expect(Crm::FollowUps::CardOptOut.contact_marked?(asked)).to be(true)
+
+    reset!(account, user, card)
+
+    expect(asked.reload).not_to be_opted_out
+    expect(newcomer.reload.opt_out_source).to eq('follow_up_reply')
+  end
+
+  it 'o RESET de um card que nunca parou a pedido do cliente não libera nada' do
+    account, user = create_account_and_user
+    _pipeline, card, = build_stalled_card(account: account, user: user)
+    card.contact.opt_out!(source: 'follow_up_reply')
+
+    reset!(account, user, card)
+
+    expect(card.contact.reload.opt_out_source).to eq('follow_up_reply')
+  end
+
+  # chat#1325: o reset é dono só da recusa follow_up_reply. A marcada pela equipe continua, e o runner segue parado.
+  it 'o RESET não libera a recusa do contato que veio de outra origem' do
+    account, user = create_account_and_user
+    _pipeline, card, = build_stalled_card(account: account, user: user)
+    card.update!(metadata: { 'ai' => { 'auto_followup_state' => { 'opted_out' => true } } })
+    card.contact.opt_out!(source: 'manual', by: user)
+
+    post "/api/v1/accounts/#{account.id}/crm/cards/#{card.id}/reset_auto_followup", headers: auth_headers(user)
+
+    expect(response).to have_http_status(:ok)
+    contact = card.contact.reload
+    expect(contact).to be_opted_out
+    expect(contact.opt_out_source).to eq('manual')
+    expect(contact.opted_out_by_id).to eq(user.id)
   end
 end

@@ -208,20 +208,21 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
   # spent (reached max_touches, was stopped, or skipped). Cancels any still-active
   # ai_followup touches, clears the cadence state to an un-armed shape so the next
   # planner sweep starts a new cycle, then broadcasts the updated card.
+  # O reset é o dono da recusa 'follow_up_reply' do contato (chat#1325). Tudo vai numa transação só, travando na ordem
+  # follow-up -> card -> contato: primeiro os toques ai_followup ativos do card (por id), depois o card, cuja marca é
+  # relida com ele travado, e por último o contato, na liberação. É a ordem do caminho principal do DueProcessor/
+  # AutoFollowupRunner (follow-up -> card) e combina com o OptOutDecision (card -> contato). O caminho de parada do
+  # runner (stop_cadence/stop_closure/skip -> cancel_pending_siblings) faz card -> toques irmãos; o cruzamento com ele
+  # pode dar deadlock, que o banco resolve abortando um dos lados, sem corromper dado. Já existia no runner (#1342).
+  # Toque criado pelo planner depois da primeira leitura não é cancelado aqui (travá-lo depois do card inverteria a
+  # ordem), e o runner não lê state['active'], então ele pode sair. Janela estreita, já existente, registrada no #1342.
   def reset_auto_followup
-    @card.follow_ups.active.find_each do |follow_up|
-      follow_up.update!(status: :canceled) if follow_up.metadata.to_h['source'] == 'ai_followup'
+    ActiveRecord::Base.transaction do
+      ai_follow_ups = @card.follow_ups.active.where("crm_follow_ups.metadata->>'source' = 'ai_followup'").order(:id).lock.to_a
+      @card.lock!
+      ai_follow_ups.each { |follow_up| follow_up.update!(status: :canceled) }
+      @contact_opt_out = reset_auto_followup_state!
     end
-
-    metadata = (@card.metadata || {}).deep_dup
-    metadata['ai'] ||= {}
-    metadata['ai']['auto_followup_state'] = {
-      'active' => false, 'spent' => false, 'touch' => 0,
-      'stopped_reason' => nil, 'opted_out' => false,
-      'next_due_at' => nil, 'last_sent_at' => nil,
-      'last_marketing_template_sent_at' => nil, 'touches' => []
-    }
-    @card.update!(metadata: metadata)
 
     ::Crm::ActivityLogger.new(
       card: @card, actor: Current.user, event_type: 'ai_followup_reset',
@@ -417,6 +418,43 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
                                                 .where(id: policy_scope(::Crm::Card).select(:id), status: :open)
     cards = cards.where(pipeline_id: resolved_params[:pipeline_id]) if resolved_params[:pipeline_id].present?
     cards.first
+  end
+
+  # Zera o estado do follow-up e, se este card estava parado a pedido do cliente, libera a recusa 'follow_up_reply' do
+  # contato que a marca prova (o gravado no "sim", mesmo que o card tenha mudado de contato depois). Só ela, nunca a de
+  # outra origem, e só quando nenhum outro card continua marcado para esse contato (Crm::FollowUps::CardOptOut,
+  # release_opt_out!). Sem isso, o card re-armado ficaria parado no runner (contact_opted_out?). Chamado com o card travado.
+  # Devolve o que aconteceu com a recusa do contato (release_follow_up_reply), para a resposta e o aviso do drawer.
+  def reset_auto_followup_state!
+    marked_contact = ::Crm::FollowUps::CardOptOut.marked_contact(@card) if ::Crm::FollowUps::CardOptOut.card_opted_out?(@card)
+    @card.update!(metadata: reset_auto_followup_metadata)
+    release_follow_up_reply(marked_contact)
+  end
+
+  # A recusa do contato vale para a conta inteira: tirá-la exige a mesma permissão do painel do contato
+  # (ContactPolicy#update?, com o override do EE), além da de IA do CRM no funil que o reset já confere. Sem ela, o reset
+  # limpa só o card e a recusa continua.
+  def release_follow_up_reply(contact)
+    return 'none' unless contact&.opt_out_source == 'follow_up_reply'
+    return 'kept_no_permission' unless policy(contact).update?
+
+    contact.release_opt_out!(source: 'follow_up_reply', by: Current.user)
+    contact.reload
+    return 'released' unless contact.opted_out?
+
+    contact.opt_out_source == 'follow_up_reply' ? 'kept_other_cards' : 'kept_other_source'
+  end
+
+  def reset_auto_followup_metadata
+    metadata = (@card.metadata || {}).deep_dup
+    metadata['ai'] ||= {}
+    metadata['ai']['auto_followup_state'] = {
+      'active' => false, 'spent' => false, 'touch' => 0,
+      'stopped_reason' => nil, 'opted_out' => false,
+      'next_due_at' => nil, 'last_sent_at' => nil,
+      'last_marketing_template_sent_at' => nil, 'touches' => []
+    }
+    metadata
   end
 
   def broadcast_card(event_name)

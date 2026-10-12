@@ -7,6 +7,7 @@ import {
   isValidBusinessData,
   classifySignupEvent,
   coexistenceSignal,
+  signupTrace,
   COMPLETION_RESULTS,
   SIGNUP_RESULT,
 } from 'dashboard/routes/dashboard/settings/inbox/channels/whatsapp/utils';
@@ -52,6 +53,7 @@ export function useWhatsappEmbeddedSignup() {
     return new Promise((resolve, reject) => {
       let authCode = null;
       let businessData = null;
+      let completionEvent = null;
       let isCoexistence = false;
       let settled = false;
       let messageHandler;
@@ -99,6 +101,7 @@ export function useWhatsappEmbeddedSignup() {
           waba_id: businessData.waba_id,
           phone_number_id: businessData.phone_number_id || '',
           is_coexistence: isCoexistence,
+          ...signupTrace(completionEvent),
         });
       };
 
@@ -118,6 +121,7 @@ export function useWhatsappEmbeddedSignup() {
             return;
           }
           businessData = data.data;
+          completionEvent = data;
           isCoexistence = coexistenceSignal(result);
           resolveIfReady();
         } else if (result.type === SIGNUP_RESULT.CANCEL) {
