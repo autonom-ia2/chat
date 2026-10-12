@@ -24,7 +24,9 @@ class AsyncDispatcher < BaseDispatcher
       ReportingEventListener.instance,
       WebhookListener.instance,
       Crm::MetaCapiListener.instance,
-      Crm::GoogleOfflineListener.instance
+      Crm::GoogleOfflineListener.instance,
+      # #1305: a confirmação da IA na conversa dispensa o aviso "ao marcar" repetido.
+      Crm::BookingNoticeToldListener.instance
     ]
   end
 end

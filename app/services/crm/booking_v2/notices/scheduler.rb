@@ -6,7 +6,8 @@
 #   da reunião (ex.: marcar 1h10 antes não manda "1 hora antes" 10 minutos depois do "marcado"). Repetir não duplica
 #   (único por reunião e aviso). A reunião guarda a conversa do convite e, se o contato já parou os avisos, nasce com
 #   eles parados. `defer` ({ aviso => atraso }, #1305): o aviso vence depois, como o "ao marcar" da reunião que a IA
-#   confirma na mesma conversa (`BookingNotices`): no envio, ele só sai se a IA não chegou a responder ali.
+#   confirma na mesma conversa (`BookingNotices`): no envio, ele só sai se a IA não chegou a responder ali. O atraso
+#   muda só o vencimento da linha: a folga entre avisos é calculada com o horário de sempre.
 # - `reschedule!` (remarcar): `rescheduled` vence agora e os lembretes vão para o novo horário. Linhas de volta a
 #   pendente, menos a que está saindo agora (`sending`); lembrete que ficou no passado vira `skipped: 'past_due'`; o
 #   que cairia perto demais de outro vira `skipped: 'too_close'`; `booked` ainda pendente vira `skipped: 'replaced'`.
@@ -49,8 +50,8 @@ class Crm::BookingV2::Notices::Scheduler
     return unless active?
 
     remember_context!(invite)
-    plan = kinds.index_with { |kind| due_at(kind) + defer.fetch(kind, 0) }
-    rows = plan.except(*too_close_kinds(plan, Time.current)).filter_map { |kind, due| row(kind, due) }
+    plan = kinds.index_with { |kind| due_at(kind) }
+    rows = plan.except(*too_close_kinds(plan, Time.current)).filter_map { |kind, due| row(kind, due + defer.fetch(kind, 0)) }
     Crm::MeetingNotice.insert_all(rows, unique_by: %i[meeting_id kind]) if rows.any? # rubocop:disable Rails/SkipsModelValidations
   end
 

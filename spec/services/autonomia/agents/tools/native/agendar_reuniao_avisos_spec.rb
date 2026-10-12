@@ -84,20 +84,62 @@ RSpec.describe Autonomia::Agents::Tools::Native::AgendarReuniao do
         Crm::BookingV2::NoticeDispatchJob.perform_now
       end
 
-      it 'o "ao marcar" espera a resposta da IA; com ela na conversa, não repete a confirmação e os lembretes seguem' do
+      def link_de_gestao
+        "https://app.example.com/b/#{Crm::BookingInvite.sole.code}"
+      end
+
+      def saida(conteudo)
+        create(:message, account: account, inbox: notice_inbox, conversation: conversa, message_type: :outgoing, content: conteudo)
+      end
+
+      def ouvir(mensagem)
+        Crm::BookingNoticeToldListener.instance.message_created(Events::Base.new('message.created', Time.zone.now, message: mensagem))
+      end
+
+      def status_do_marcado
+        Crm::Meeting.sole.notices.find_by(kind: 'booked').slice(:status, :skip_reason).values
+      end
+
+      it 'o "ao marcar" espera a resposta; a resposta da IA com o link o pula na hora e os lembretes seguem' do
         meeting = Crm::Meeting.sole
         expect(meeting.notices.find_by(kind: 'booked').due_at).to eq(Time.current + Crm::BookingV2::BookingNotices::CONFIRMATION_GRACE)
         expect { Crm::BookingV2::NoticeDispatchJob.perform_now }.not_to change(Message, :count)
 
-        create(:message, account: account, inbox: notice_inbox, conversation: conversa, message_type: :outgoing, content: 'Marcado!')
-        expect { despachar_depois_da_folga }.not_to change(Message, :count)
+        ouvir(saida("Marcado! Para mudar ou cancelar: #{link_de_gestao}"))
 
         expect(kinds_e_status(meeting)).to eq(
           [['booked', 'skipped', Crm::BookingV2::BookingNotices::TOLD_IN_CONVERSATION], ['day_before', 'pending', nil],
            ['hour_before', 'pending', nil]]
         )
+        expect { despachar_depois_da_folga }.not_to change(Message, :count)
         # Pulo esperado: o responsável não é chamado (só fica a tarefa de lembrete da própria reunião).
         expect(Crm::FollowUp.pluck(:metadata).pluck('source')).not_to include(Crm::BookingV2::Notices::AgentAlert::SOURCE)
+      end
+
+      it 'resposta gravada antes do cron mas ouvida depois dele: o envio confere e não duplica' do
+        resposta = saida("Pronto: #{link_de_gestao}")
+
+        expect { despachar_depois_da_folga }.not_to change(Message, :count)
+        expect(status_do_marcado).to eq(['skipped', Crm::BookingV2::BookingNotices::TOLD_IN_CONVERSATION])
+
+        expect { ouvir(resposta) }.not_to(change { Crm::MeetingNotice.order(:id).pluck(:status, :skip_reason) })
+      end
+
+      it 'pessoa da equipe respondeu sem o link e a IA não: o aviso sai com o link' do
+        ouvir(saida('Oi! Já vejo seu horário.'))
+        ouvir(saida('Segue o link da outra reunião: https://app.example.com/b/OUTRO123'))
+
+        expect(status_do_marcado).to eq(['pending', nil])
+        expect { despachar_depois_da_folga }.to change { conversa.messages.outgoing.count }.by(1)
+        expect(conversa.messages.outgoing.last.content).to include(link_de_gestao)
+      end
+
+      it 'nota privada com o link não conta como confirmação ao cliente' do
+        nota = create(:message, account: account, inbox: notice_inbox, conversation: conversa, message_type: :outgoing,
+                                private: true, content: link_de_gestao)
+        ouvir(nota)
+
+        expect(status_do_marcado).to eq(['pending', nil])
       end
 
       it 'se a IA não chegou a responder (o turno morreu), o cliente recebe o "ao marcar" com o link' do

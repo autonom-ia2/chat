@@ -17,6 +17,7 @@ RSpec.describe 'Agenda da IA sem regex' do # rubocop:disable RSpec/DescribeClass
       app/services/autonomia/agents/tools/native/agenda_respostas.rb
       app/services/crm/booking_v2/booking_notices.rb
       app/services/crm/booking_v2/invite_pages.rb
+      app/listeners/crm/booking_notice_told_listener.rb
     ]
   end
   let(:nos_de_regex) do
