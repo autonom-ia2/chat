@@ -86,7 +86,8 @@ class CampaignJourney::RecipientPreview
   end
 
   def bindings
-    @bindings ||= CampaignJourney::VariableBindings.new(@variable_bindings, @variable_defaults)
+    @bindings ||= CampaignJourney::VariableBindings.new(@variable_bindings, @variable_defaults,
+                                                        column_types: CampaignImports::ColumnTypes.stored(@campaign_import))
   end
 
   def sms_message

@@ -37,7 +37,9 @@ RSpec.describe CampaignImports::AudienceValidator, :aggregate_failures do
       rows = campaign_import.campaign_import_rows.order(:row_number)
       expect(rows.pluck(:company_name, :extra_values)).to eq([['Corretora Alfa', { 'Vencimento' => '10/2026' }],
                                                               ['Beta Seguros', { 'Vencimento' => '11/2026' }]])
-      expect(requests.size).to eq(1)
+      # #1331: a second request asks the type of the extra columns (CampaignImports::ColumnTypes), header and format only.
+      expect(requests.size).to eq(2)
+      expect(requests.last.dig('state', 'columns')).to eq([{ 'header' => 'Vencimento', 'format' => '00/0000' }])
     end
 
     # B4 / Q1: the request carries only headers, counts and masked formats.
