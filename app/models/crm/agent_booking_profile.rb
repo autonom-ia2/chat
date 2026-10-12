@@ -48,6 +48,7 @@
 class Crm::AgentBookingProfile < ApplicationRecord
   include Crm::BookingPageSettings
   include Crm::BookingNoticeSettings
+  include Crm::BookingNoticeTexts
   include Crm::BookingPostMeetingSettings
   include Crm::BookingShortName
 

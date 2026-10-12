@@ -279,6 +279,7 @@ Rails.application.routes.draw do
               resources :steps, controller: 'stage_automation_steps', only: [:create, :update, :destroy]
             end
             post 'cards/bulk', to: 'cards/bulk#create'
+            get 'cards/owner_options', to: 'cards#owner_options'
             get 'cards/summaries', to: 'cards/summaries#index'
             resources :cards, only: [:index, :create, :show, :update, :destroy] do
               resource :contact, only: [:create], controller: 'cards/contacts'
@@ -434,6 +435,8 @@ Rails.application.routes.draw do
                 post :notice_template_suggestions
                 get :notice_templates
                 post 'notice_templates/create', action: :create_notice_templates
+                # Texto dos avisos com IA (#1354): opções para um aviso, nada salvo.
+                post :notice_text_suggestions
               end
             end
             # Meus horários (#1195): a própria pessoa ajusta dias e horas de agendamento e pausa a agenda.

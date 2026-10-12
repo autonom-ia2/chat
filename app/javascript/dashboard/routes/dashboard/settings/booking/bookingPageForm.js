@@ -9,7 +9,8 @@ import {
   MISSING_STEP,
   STEP,
 } from './constants';
-import { noticeTemplatesPayload } from './bookingNotices';
+import { noticeTemplatesPayload, templateKinds } from './bookingNotices';
+import { noticeTextsPayload, noticeTextsProblem } from './bookingNoticeTexts';
 import { addressProblem } from './bookingAddress';
 
 // Converte a página da API (PageSerializer#full) no formulário do assistente e
@@ -51,6 +52,8 @@ export const pageToForm = page => {
     noticeInboxId: page.notice_inbox_id ?? null,
     noticePreset: page.notice_preset || DEFAULT_NOTICE_PRESET,
     noticeTemplates: { ...(page.notice_templates || {}) },
+    // Texto próprio de cada aviso (#1354), com as chaves do catálogo.
+    noticeTexts: { ...(page.notice_texts || {}) },
     cancelUntilMinutes: page.cancel_until_minutes ?? DEFAULT_CANCEL_UNTIL,
   };
 };
@@ -98,6 +101,7 @@ const basePayload = form => ({
   default_stage_id: form.stageId,
   notice_preset: form.noticePreset,
   notice_templates: noticeTemplatesPayload(form),
+  notice_texts: noticeTextsPayload(form, templateKinds(form.noticePreset)),
   cancel_until_minutes: form.cancelUntilMinutes,
 });
 
@@ -146,6 +150,12 @@ export const stepProblem = (step, form) => {
     if (!form.weekdays.length) return 'WEEKDAYS';
     if (form.startHour >= form.endHour) return 'HOURS';
   }
+  if (
+    step === STEP.AVISOS &&
+    form.noticeInboxId &&
+    noticeTextsProblem(form, templateKinds(form.noticePreset))
+  )
+    return 'NOTICE_TEXTS';
   return null;
 };
 
@@ -185,6 +195,7 @@ const SERVER_ERROR_FIELDS = {
   brand: 'BRAND',
   notice_inbox: 'NOTICE_INBOX_GONE',
   notice_templates: 'NOTICE_TEMPLATES',
+  notice_texts: 'NOTICE_TEXTS',
   notice_preset: 'NOTICES',
   cancel_until_minutes: 'NOTICES',
 };

@@ -73,6 +73,65 @@ RSpec.describe Crm::BookingV2::Notices::Text do
     end
   end
 
+  describe 'texto próprio da página (#1354)' do
+    let(:source) { 'public_link' }
+    let(:own) { 'Olá, {{cliente.primeiro_nome}}! Te esperamos na {{minha_empresa.nome}} em {{horario.data_hora}}. Mude em {{horario.link_gestao}}' }
+
+    def own_text(kind = 'booked', page: world.profile)
+      described_class.new(meeting: meeting, invite: invite, kind: kind, page: page)
+    end
+
+    before { world.profile.update!(notice_texts: { 'booked' => own }) }
+
+    it 'usa o texto do dono, preenchido pelo catálogo, e acrescenta sempre a linha de parar' do
+      expect(own_text.to_s).to eq(
+        "Olá, Marcos! Te esperamos na #{account.name} em 20/10 às 10:00. Mude em #{invite.url}\n\n#{stop_line}"
+      )
+    end
+
+    it 'sem nome do cliente, não deixa "Olá, !"' do
+      world.contact.update!(name: '+5511999998888')
+
+      expect(own_text.to_s).to start_with('Olá! Te esperamos')
+    end
+
+    it 'aviso sem texto próprio e chamada sem página seguem o padrão' do
+      expect(own_text('day_before').to_s).to start_with('Oi, Marcos! Lembrete: seu horário é amanhã')
+      expect(own_text(page: nil).to_s).to start_with('Oi, Marcos! Seu horário está marcado')
+    end
+
+    it 'texto gravado que não passa mais na conferência cai no padrão, com a linha de parar, e fica no log sem o texto' do
+      world.profile.update_columns(metadata: world.profile.metadata.merge('notice_texts' => { 'booked' => 'Oi {{cliente.cpf}}' })) # rubocop:disable Rails/SkipsModelValidations
+      allow(Rails.logger).to receive(:warn)
+
+      expect(own_text(page: world.profile.reload).to_s).to eq(
+        "Oi, Marcos! Seu horário está marcado para 20/10 às 10:00. Para confirmar, mudar ou cancelar: #{invite.url}\n\n#{stop_line}"
+      )
+      expect(Rails.logger).to have_received(:warn).with(a_string_including('custom_text_fallback'))
+      expect(Rails.logger).not_to have_received(:warn).with(a_string_including('cpf'))
+    end
+
+    it 'não usa texto de página de outra conta' do
+      other_account = create(:account)
+      other = create_booking_profile(account: other_account, host: create(:user, account: other_account), notice_texts: { 'booked' => own })
+
+      expect(own_text(page: other).to_s).to start_with('Oi, Marcos! Seu horário está marcado')
+    end
+
+    it 'não muda os valores do modelo aprovado nem o complemento do canal API' do
+      expect(own_text.template_values).to eq(['Marcos', '20/10 às 10:00', invite.url])
+      expect(own_text.appendix).to eq("20/10 às 10:00 - #{invite.url}\n\n#{stop_line}")
+    end
+
+    context 'when the team booked from the panel' do
+      let(:source) { 'panel' }
+
+      it 'usa o padrão que diz quem marcou' do
+        expect(own_text.to_s).to start_with('Oi, Marcos! Juliana marcou seu horário')
+      end
+    end
+  end
+
   context 'when the account is in English' do
     let(:account) { create(:account, locale: 'en') }
 

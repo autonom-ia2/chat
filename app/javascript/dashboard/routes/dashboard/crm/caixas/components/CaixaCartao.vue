@@ -5,7 +5,6 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import CaixaIcone from './CaixaIcone.vue';
 import FunilSelo from './FunilSelo.vue';
 import {
-  agentes,
   corDoFunil,
   faltaTriagem,
   funisDaCaixa,
@@ -30,7 +29,9 @@ const { t, locale } = useI18n();
 
 const ligada = computed(() => props.caixa.crm_enabled);
 const funis = computed(() => funisDaCaixa(props.caixa, props.funis));
-const pessoas = computed(() => agentes(props.caixa).length);
+// Todo mundo da caixa, administrador incluído: numa conta em que só há
+// administradores, "0 pessoas" diria que ninguém cuida, e todos veem tudo.
+const pessoas = computed(() => props.caixa.people.length);
 const triagem = computed(() =>
   juntar(quemFazTriagem(props.caixa).map(primeiroNome), locale.value)
 );
@@ -114,6 +115,9 @@ const aviso = computed(() => {
           {{ $t('CRM_CAIXAS.CARTAO.CUIDAM') }}
         </dt>
         <dd class="m-0 text-[0.9375rem] text-n-slate-12">
+          <span v-if="caixa.agent_bot" class="block">
+            {{ $t('CRM_CAIXAS.CARTAO.ROBO', { nome: caixa.agent_bot.name }) }}
+          </span>
           {{ $t('CRM_CAIXAS.CARTAO.PESSOAS', { n: pessoas }, pessoas) }}
           <template v-if="funis.length > 1 && triagem">
             {{ $t('CRM_CAIXAS.CARTAO.SEM_ASSUNTO', { nomes: triagem }) }}

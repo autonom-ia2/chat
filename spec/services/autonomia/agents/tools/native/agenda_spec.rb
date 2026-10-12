@@ -115,6 +115,17 @@ RSpec.describe Autonomia::Agents::Tools::Native::Agenda do
       expect(texto).to include('terça-feira, 20/10', 'whatsapp_video', 'America/Sao_Paulo')
     end
 
+    # #1362: o fuso é dado (`fuso`, `inicio` com offset), não vai no texto que o modelo repete ao cliente.
+    it 'leva o fuso como dado e fala os horários sem ele' do
+      resposta = JSON.parse(horarios(data: '2026-10-20'))
+
+      expect(resposta['fuso']).to eq('America/Sao_Paulo')
+      expect(resposta['horarios'].pluck('inicio')).to all(end_with('-03:00'))
+      expect(resposta['horarios'].pluck('quando')).to all(start_with('terça-feira, 20/10, '))
+      falas = resposta['horarios'].pluck('quando') + [resposta['instrucao']]
+      falas.each { |fala| expect(fala).not_to include('fuso', 'Sao_Paulo', 'Brasília') }
+    end
+
     it 'sem data, espalha até seis horários pelos próximos dias, cada um livre na página naquele dia' do
       escolhidos = opcoes(horarios)
 

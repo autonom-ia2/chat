@@ -358,7 +358,6 @@ onMounted(() => carregar());
 
     <AgenteGaveta
       v-if="gaveta"
-      larga
       :titulo="
         gaveta === 'criar'
           ? t('AGENTS.JORNADA.MENU.CRIAR_AGENTE')

@@ -1,4 +1,5 @@
 <script setup>
+import { semDonosBarrados } from '../../helpers/accessErrors';
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { outcomeLabels, outcomeStatuses } from '../../helpers/cardOutcome';
@@ -18,6 +19,11 @@ const props = defineProps({
     default: () => [],
   },
   owners: {
+    type: Array,
+    default: () => [],
+  },
+  // Quem não pode ser dono de algum card selecionado (#1149).
+  blockedOwnerIds: {
     type: Array,
     default: () => [],
   },
@@ -52,7 +58,7 @@ const stageOptions = computed(() =>
 );
 
 const ownerOptions = computed(() =>
-  (props.owners ?? []).map(owner => ({
+  semDonosBarrados(props.owners ?? [], props.blockedOwnerIds).map(owner => ({
     value: String(owner.id),
     label: owner.name ?? owner.available_name ?? '',
   }))

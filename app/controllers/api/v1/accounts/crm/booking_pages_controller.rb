@@ -7,6 +7,7 @@
 class Api::V1::Accounts::Crm::BookingPagesController < Api::V1::Accounts::Crm::BaseController
   include ::Crm::BookingPageInboxes
   include ::Crm::BookingPageNoticeTemplates
+  include ::Crm::BookingPageNoticeTexts
   include ::Crm::BookingPageBrand
 
   PREVIEW_TTL = 1.hour
@@ -128,6 +129,11 @@ class Api::V1::Accounts::Crm::BookingPagesController < Api::V1::Accounts::Crm::B
     render_created_notice_templates
   end
 
+  # "Escrever com IA" o texto de um aviso (#1354, `Crm::BookingPageNoticeTexts`): devolve opções, não salva.
+  def notice_text_suggestions
+    render_notice_text_suggestions
+  end
+
   private
 
   def reassigner
@@ -217,7 +223,8 @@ class Api::V1::Accounts::Crm::BookingPagesController < Api::V1::Accounts::Crm::B
       :notice_preset, :cancel_until_minutes,
       slot_durations: [], working_hours: [:start_hour, :end_hour, { weekdays: [] }],
       locations: [:type, :url, :address, :label], brand: [:color, :headline, :logo_align],
-      notice_templates: ::Crm::MeetingNotice::KINDS.index_with { %i[name language id] }
+      notice_templates: ::Crm::MeetingNotice::KINDS.index_with { %i[name language id] },
+      notice_texts: ::Crm::MeetingNotice::KINDS
     ).to_h.merge(::Crm::BookingV2::PostMeetingParams.attributes(parameter_set(:booking_page)))
   end
 end

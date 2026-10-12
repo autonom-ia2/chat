@@ -47,6 +47,7 @@ describe('bookingPageForm', () => {
       default_stage_id: 20,
       notice_preset: 'standard',
       notice_templates: {},
+      notice_texts: {},
       cancel_until_minutes: 120,
       notice_inbox_id: null,
     });
