@@ -93,11 +93,18 @@ export const fusoLegivel = (timezone, idioma) => {
 export const pessoasDaPagina = pagina =>
   Array.isArray(pagina?.pessoas) ? pagina.pessoas : [];
 
-// Os ids marcados ao abrir: todas sem restrição gravada; senão só as gravadas que ainda são da página
-// (pode dar nenhuma: a restrição ficou velha e o dono precisa escolher de novo).
+// Os ids marcados ao abrir: todas sem restrição gravada (ausente, null ou []); senão só as gravadas
+// que ainda são da página (pode dar nenhuma: a restrição ficou velha e o dono precisa escolher de
+// novo). Valor gravado que não é lista vale como ninguém, como no servidor (AgendaPessoas).
+export const restricaoGravada = gravados =>
+  gravados !== undefined &&
+  gravados !== null &&
+  !(Array.isArray(gravados) && !gravados.length);
+
 export const idsLiberados = (gravados, pessoas) => {
   const ids = pessoas.map(({ id }) => id);
-  if (!Array.isArray(gravados) || !gravados.length) return ids;
+  if (!restricaoGravada(gravados)) return ids;
+  if (!Array.isArray(gravados)) return [];
   const salvos = new Set(gravados.map(Number));
   return ids.filter(id => salvos.has(id));
 };

@@ -161,9 +161,15 @@ const saveResponseWindow = responseWindow =>
     config: { ...buildPayload().config, response_window: responseWindow },
   });
 // #1196 — the booking page the AI uses to offer times and book; null turns it off.
+// #1307 — a new page goes with everyone on it (`booking_agent_ids: []`): the people released for
+// the previous page do not count on the new one and would leave the AI with nobody.
 const saveBookingPage = bookingPageId =>
   saveSettings({
-    config: { ...buildPayload().config, booking_page_id: bookingPageId },
+    config: {
+      ...buildPayload().config,
+      booking_page_id: bookingPageId,
+      ...(bookingPageId ? { booking_agent_ids: [] } : {}),
+    },
   });
 
 const onAvatarUpload = async ({ file, url }) => {

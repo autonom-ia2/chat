@@ -203,6 +203,11 @@ describe('pessoas liberadas (#1307)', () => {
     }
   );
 
+  it('a saved value that is not a list means nobody, like the server', () => {
+    expect(idsLiberados('x', PESSOAS)).toEqual([]);
+    expect(idsLiberados({ a: 1 }, PESSOAS)).toEqual([]);
+  });
+
   it('keeps only the saved ids still on the page, in the page order, as numbers', () => {
     expect(idsLiberados(['3', 1, 99], PESSOAS)).toEqual([1, 3]);
     expect(idsLiberados([99], PESSOAS)).toEqual([]);

@@ -23,7 +23,9 @@ import {
   liberacaoParaSalvar,
   pessoasDaPagina,
   quemRecebe,
+  restricaoGravada,
 } from '../../utils/agendaDaPagina';
+import { idiomaDoNavegador } from '../../utils/pagina';
 
 // #1253 — Marcar reuniões na página nova do agente: a página de agendamento que o agente usa para
 // oferecer horários e marcar, ou "Não marcar". Mesma regra e mesma gravação do AgentBookingForm do
@@ -47,6 +49,7 @@ const { podeAbrirAgendamento } = usePermissoesDaJornada();
 const NS = 'AGENTS.JORNADA.PAGINA.GAVETA_AGENDA';
 const NS_ESTADO = 'AGENTS.JORNADA.PAGINA.AGENDA_ESTADO';
 const campoId = `agenda-${useId()}`;
+const erroPessoasId = `${campoId}-pessoas-erro`;
 
 const agenda = useAgendaDoAgente(() => props.agente);
 const escolhida = ref(agenda.paginaSalva.value);
@@ -81,15 +84,19 @@ const nenhumaMarcada = computed(
 const mudouPagina = computed(
   () => escolhida.value !== agenda.paginaSalva.value
 );
-const marcadasAoAbrir = computed(() =>
-  mudouPagina.value
-    ? pessoas.value.map(({ id }) => id)
-    : agenda.liberadasDe(escolhida.value)
-);
+const todas = () => pessoas.value.map(({ id }) => id);
+// O que fica marcado ao abrir e ao trocar de página: as gravadas na página salva; todas na página
+// nova e na página de uma pessoa só (ali não há escolha; salvar conserta uma restrição velha).
+const marcadasAoAbrir = () =>
+  mudouPagina.value || !mostraPessoas.value
+    ? todas()
+    : agenda.liberadasDe(escolhida.value);
+// Só a troca de página e a chegada da lista recomeçam a escolha: o agente atualizado com a gaveta
+// aberta não apaga o que o dono marcou.
 watch(
-  marcadasAoAbrir,
-  ids => {
-    marcadas.value = ids;
+  [escolhida, () => agenda.estado.value],
+  () => {
+    marcadas.value = marcadasAoAbrir();
   },
   { immediate: true }
 );
@@ -103,12 +110,26 @@ const marcar = (id, marcada) => {
 const liberacao = computed(() =>
   liberacaoParaSalvar(marcadas.value, pessoas.value)
 );
+// A liberação gravada desta página, como a tela a mostra: "quebrada" quando a restrição não tem
+// mais ninguém da página (a IA fica sem ninguém e salvar conserta).
+const gravadaNaPagina = computed(() => {
+  const liberadas = agenda.liberadasDe(escolhida.value);
+  const gravados = props.agente?.config?.booking_agent_ids;
+  if (restricaoGravada(gravados) && !liberadas.length) return 'quebrada';
+  return liberacaoParaSalvar(liberadas, pessoas.value).join();
+});
 const mudouPessoas = computed(
   () =>
-    mostraPessoas.value &&
-    liberacao.value.join() !==
-      liberacaoParaSalvar(marcadasAoAbrir.value, pessoas.value).join()
+    pessoas.value.length > 0 && liberacao.value.join() !== gravadaNaPagina.value
 );
+// O exemplo da dica: a primeira pessoa marcada com a agenda aberta (senão a primeira da página).
+const exemplo = computed(() => {
+  const marcadaAtiva = pessoas.value.find(
+    ({ id, ai_status: status }) =>
+      marcadas.value.includes(id) && status !== 'agenda_pausada'
+  );
+  return (marcadaAtiva || pessoas.value[0])?.nome || '';
+});
 const estado = computed(() => agenda.estadoDe(escolhida.value, marcadas.value));
 const tituloEscolhida = computed(() =>
   paginaEscolhida.value ? agenda.tituloDaPagina(paginaEscolhida.value) : ''
@@ -128,7 +149,7 @@ const textoRecebe = computed(() => {
   return t(`${NS_ESTADO}.RECEBE.${chave}`, { nome: recebe.nome });
 });
 const fuso = computed(() =>
-  fusoLegivel(paginaEscolhida.value?.timezone, locale.value)
+  fusoLegivel(paginaEscolhida.value?.timezone, idiomaDoNavegador(locale.value))
 );
 const placeholder = computed(() =>
   estado.value === ESTADO_PAGINA.NAO_EXISTE ? t(`${NS_ESTADO}.ESCOLHA`) : ''
@@ -259,6 +280,7 @@ onMounted(agenda.carregar);
           data-pessoas
           class="flex flex-col gap-2 p-0 m-0 border-0 min-w-0"
           :disabled="salvando"
+          :aria-describedby="nenhumaMarcada ? erroPessoasId : undefined"
         >
           <legend class="p-0 mb-1 text-sm font-medium text-n-slate-12">
             {{ t(`${NS}.PESSOAS.TITULO`, { nome }) }}
@@ -287,6 +309,7 @@ onMounted(agenda.carregar);
           </ul>
           <p
             v-if="nenhumaMarcada"
+            :id="erroPessoasId"
             data-pessoas-erro
             role="alert"
             class="m-0 text-sm text-n-ruby-11"
@@ -297,7 +320,7 @@ onMounted(agenda.carregar);
             {{
               t(`${NS}.PESSOAS.DICA`, {
                 nome,
-                exemplo: pessoas[0].nome,
+                exemplo,
               })
             }}
           </p>

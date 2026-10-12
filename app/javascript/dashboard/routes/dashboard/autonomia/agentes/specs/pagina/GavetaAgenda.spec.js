@@ -443,6 +443,48 @@ describe('GavetaAgenda · pessoas que a IA pode usar (#1307)', () => {
     });
   });
 
+  it('a single person with a stale saved restriction: shows active, and Save fixes it with []', async () => {
+    wrapper = await montar(32, { booking_agent_ids: [99] });
+    expect(no('[data-pessoas]')).toBeNull();
+    expect(no('[data-estado-agenda="ativa"]')).not.toBeNull();
+    await salvar();
+    expect(loja.dispatch).toHaveBeenCalledWith('autonomiaAgents/update', {
+      id: 7,
+      config: { booking_agent_ids: [] },
+    });
+  });
+
+  it('a single person already released: closes without writing', async () => {
+    wrapper = await montar(32, { booking_agent_ids: [23] });
+    await salvar();
+    expect(loja.dispatch).not.toHaveBeenCalled();
+  });
+
+  it('a saved value that is not a list counts as nobody, like the server', async () => {
+    wrapper = await montar(30, { booking_agent_ids: 'x' });
+    expect(marcadas()).toEqual([]);
+    expect(no('[data-estado-agenda="sem_ninguem"]')).not.toBeNull();
+  });
+
+  it('keeps the owner checks when the agent is updated with the drawer open', async () => {
+    wrapper = await montar(30);
+    await alternar(22);
+    await wrapper.setProps({
+      agente: { id: 7, config: { booking_page_id: 30, booking_agent_ids: [] } },
+    });
+    await flushPromises();
+    expect(marcadas()).toEqual([21, 23]);
+  });
+
+  it('links the "check one" message to the people group and uses an open person as example', async () => {
+    wrapper = await montar(30, { booking_agent_ids: [23, 22] });
+    expect(texto('[data-pessoas-dica]')).toContain('“Book with Roberto”');
+    await alternar(22);
+    await alternar(23);
+    const erro = no('[data-pessoas-erro]');
+    expect(no('[data-pessoas]').getAttribute('aria-describedby')).toBe(erro.id);
+  });
+
   it('"do not book" saves only the page as null', async () => {
     wrapper = await montar(30, { booking_agent_ids: [21] });
     no('[data-valor=""]').click();
