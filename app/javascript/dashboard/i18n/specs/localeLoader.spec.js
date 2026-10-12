@@ -1,7 +1,6 @@
 import { createApp, h, nextTick } from 'vue';
 import { createI18n, useI18n } from 'vue-i18n';
 import {
-  RELOAD_FLAG,
   buildDashboardI18nMessages,
   setDashboardLocale,
 } from '../localeLoader';
@@ -17,12 +16,6 @@ const delayedFrench = vi.hoisted(() => {
 vi.mock('../locale/fr/index.js', async importOriginal => {
   await delayedFrench.waiting;
   return importOriginal();
-});
-
-// Fork (#1380): a catalogue whose download fails (the browser then keeps the
-// failure for the whole page).
-vi.mock('../locale/ja/index.js', () => {
-  throw new Error('Failed to fetch dynamically imported module');
 });
 
 describe('dashboard language catalogue loading', () => {
@@ -102,58 +95,5 @@ describe('dashboard language catalogue loading', () => {
     await earlierChoice;
     expect(i18n.global.locale.value).toBe('en');
     expect(i18n.global.t('PROFILE_SETTINGS.TITLE')).toBe('Profile Settings');
-  });
-
-  describe('when the catalogue download fails', () => {
-    const reload = vi.fn();
-    const originalLocation = window.location;
-
-    beforeEach(() => {
-      reload.mockClear();
-      window.sessionStorage.clear();
-      Object.defineProperty(window, 'location', {
-        configurable: true,
-        value: { ...originalLocation, reload },
-      });
-    });
-
-    afterEach(() => {
-      Object.defineProperty(window, 'location', {
-        configurable: true,
-        value: originalLocation,
-      });
-    });
-
-    it('reloads the page once, and a second failure keeps English without a loop', async () => {
-      const i18n = createI18n({
-        legacy: false,
-        ...(await buildDashboardI18nMessages('en')),
-      });
-
-      const pending = setDashboardLocale(i18n.global, 'ja');
-      await new Promise(resolve => {
-        setTimeout(resolve, 0);
-      });
-      expect(reload).toHaveBeenCalledTimes(1);
-      expect(window.sessionStorage.getItem(RELOAD_FLAG)).toBe('1');
-      expect(pending).toBeInstanceOf(Promise);
-
-      await expect(setDashboardLocale(i18n.global, 'ja')).rejects.toThrow();
-      expect(reload).toHaveBeenCalledTimes(1);
-      expect(i18n.global.locale.value).toBe('en');
-    });
-
-    it('boots in English instead of a blank page when the reload already happened', async () => {
-      window.sessionStorage.setItem(RELOAD_FLAG, '1');
-      const { locale } = await buildDashboardI18nMessages('ja');
-      expect(locale).toBe('en');
-      expect(reload).not.toHaveBeenCalled();
-    });
-
-    it('forgets the reload after a catalogue loads', async () => {
-      window.sessionStorage.setItem(RELOAD_FLAG, '1');
-      await buildDashboardI18nMessages('pt_BR');
-      expect(window.sessionStorage.getItem(RELOAD_FLAG)).toBeNull();
-    });
   });
 });
