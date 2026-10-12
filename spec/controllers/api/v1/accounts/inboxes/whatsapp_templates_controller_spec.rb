@@ -74,6 +74,20 @@ RSpec.describe 'Api::V1::Accounts::Inboxes::WhatsappTemplates', type: :request d
   end
 
   describe 'GET index' do
+    # Produção (12/10/2026): caixas com message_templates = {} (objeto vazio, o padrão do sync vazio), não [].
+    it 'trata a lista guardada como objeto vazio ({}) como nenhum modelo, sem erro' do
+      channel.update_columns(message_templates: {}) # rubocop:disable Rails/SkipsModelValidations
+      manager = Whatsapp::Templates::Manager.new(inbox: inbox.reload, user: admin, account_user: admin.account_users.first,
+                                                 visible_cards: Crm::Card.none)
+
+      call(:get, base)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body['payload']).to eq([])
+      expect(manager.list).to eq([])
+      expect { manager.usage('11') }.to raise_error(Whatsapp::Templates::MetaClient::NotFound)
+    end
+
     it 'lista a lista sincronizada com o perfil; sem perfil, o nome amigável é o nome técnico' do
       WhatsappTemplateProfile.create!(account: account, inbox: inbox, waba_id: channel.waba_id, name: 'pedido_enviado',
                                       language: 'pt_BR', friendly_name: 'Pedido enviado', fields: { '1' => 'cliente.primeiro_nome' })

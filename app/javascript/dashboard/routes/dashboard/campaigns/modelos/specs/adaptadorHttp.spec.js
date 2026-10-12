@@ -315,3 +315,14 @@ describe('adaptador HTTP de Modelos', () => {
     expect(await adaptador.listarFormularios()).toEqual([]);
   });
 });
+
+describe('caixa sem modelos (message_templates = {} em produção)', () => {
+  it('lists nothing, without error, when the API answers an empty payload', async () => {
+    http.getTemplates.mockImplementation(() => ok({ payload: [] }));
+
+    const modelos = await adaptador.listarModelos({ atualizar: true });
+
+    expect(modelos).toHaveLength(0);
+    expect(modelos.parcial).toBe(false);
+  });
+});

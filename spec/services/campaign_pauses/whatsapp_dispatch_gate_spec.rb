@@ -69,6 +69,19 @@ RSpec.describe CampaignPauses::WhatsappDispatchGate, :aggregate_failures do
       expect(CampaignPause.open_for(campaign)).to have_attributes(source: 'system', reason_code: 'template_unverifiable')
     end
 
+    # Produção (12/10/2026): 6 caixas Cloud com message_templates = {} (objeto vazio), não [].
+    it 'pauses without sending when Meta is down and the cache is the empty object {}' do
+      sent = stub_graph_messages
+      stub_meta_template_lookup(503)
+      channel.update_columns(message_templates: {}, message_templates_last_updated: nil) # rubocop:disable Rails/SkipsModelValidations
+
+      dispatch
+
+      expect(sent).to be_empty
+      expect(CampaignPause.open_for(campaign)).to have_attributes(source: 'system', reason_code: 'templates_not_synced')
+      expect(campaign.reload.campaign_status).to eq('active')
+    end
+
     it 'pauses by the system, never sends blind nor stays processing, when the check itself breaks' do
       sent = stub_graph_messages
       allow(Whatsapp::Templates::DispatchCheck).to receive(:new).and_raise(NoMethodError)
