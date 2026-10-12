@@ -3666,5 +3666,136 @@
       "MUDAR": "Quero mudar algo",
       "MUDAR_PEDIDO": "Quero mudar uma coisa nesta automação."
     }
+  },
+  "CRM_CAIXAS": {
+    "LISTA": {
+      "TITULO": "Caixas no CRM",
+      "SUBTITULO": "Para cada caixa: o que chega, quem cuida e o que o sistema faz sozinho.",
+      "CARREGANDO": "Carregando as caixas",
+      "ERRO": "Não deu para carregar as caixas agora.",
+      "TENTAR_DE_NOVO": "Tentar de novo",
+      "VAZIO": "Você ainda não conectou nenhuma caixa. Conecte um WhatsApp, Instagram ou e-mail para começar.",
+      "CONECTAR": "Conectar uma caixa",
+      "LIGADAS": "{n} caixa no CRM | {n} caixas no CRM",
+      "FORA": "{n} fora do CRM | {n} fora do CRM",
+      "ADMIN": "Quem é administrador vê todas as conversas de todas as caixas."
+    },
+    "CARTAO": {
+      "NO_CRM": "No CRM",
+      "FORA": "Fora do CRM",
+      "FORA_TEXTO": "As conversas desta caixa ainda não viram cards.",
+      "SALVA": "Salva agora",
+      "AVISO_TRIAGEM": "Ninguém vê as conversas que ainda não têm assunto.",
+      "AVISO_LEGADO": "Hoje cada pessoa só vê as conversas atribuídas a ela. Revise quem vê o quê.",
+      "CHEGA": "Chega aqui",
+      "CUIDAM": "Quem cuida",
+      "PESSOAS": "{n} pessoa | {n} pessoas",
+      "SEM_ASSUNTO": "· sem assunto: {nomes}",
+      "SOZINHO": "O que acontece sozinho",
+      "ALTERAR": "Alterar",
+      "LIGAR": "Colocar no CRM"
+    },
+    "MODO_RESUMO": {
+      "AUTO": "O sistema cria o card quando entende o assunto.",
+      "SUGGEST": "O sistema sugere o assunto e a equipe confirma.",
+      "OFF": "Nada acontece sozinho: a equipe cria o card.",
+      "CHEGOU": "O card nasce assim que a conversa chega."
+    },
+    "ETAPAS": {
+      "ROTULO": "Etapas",
+      "CHEGA": "O que chega",
+      "CUIDAM": "Quem cuida",
+      "SOZINHO": "O que é automático",
+      "CONFIRA": "Confira"
+    },
+    "CHEGA": {
+      "TITULO": "O que chega por esta caixa?",
+      "SUBTITULO": "Marque os funis dos assuntos que os clientes trazem aqui."
+    },
+    "CUIDAM": {
+      "TITULO": "Quem cuida do quê?",
+      "SUBTITULO": "Toque nos assuntos de cada pessoa. Ela só vê as conversas deles."
+    },
+    "SOZINHO": {
+      "TITULO": "O que o sistema faz sozinho?",
+      "SUBTITULO": "Quando chega mensagem nova nesta caixa.",
+      "AUTO": "Criar o card quando entender o assunto",
+      "AUTO_TEXTO": "O sistema lê a conversa, escolhe o funil certo e cria o card.",
+      "AUTO_EXEMPLO": "O sistema entende que é {funil}, cria o card e entrega para {pessoa}, a próxima da vez.",
+      "SUGGEST": "Sugerir o assunto e esperar a equipe",
+      "SUGGEST_TEXTO": "O sistema mostra o funil que parece certo. Alguém confirma com um clique.",
+      "SUGGEST_EXEMPLO": "Aparece para a equipe: “Parece {funil}”. Quem confirmar cria o card.",
+      "OFF": "Não fazer nada sozinho",
+      "OFF_TEXTO": "A equipe cria cada card à mão.",
+      "OFF_EXEMPLO": "Nada acontece. Alguém da equipe lê e cria o card.",
+      "CHEGOU": "Criar o card assim que a conversa chegar",
+      "CHEGOU_TEXTO": "Toda conversa nova vira um card, sem esperar.",
+      "CHEGOU_EXEMPLO": "O card nasce em {funil}, na etapa {etapa}, e vai para {pessoa}.",
+      "RECOMENDADO": "Recomendado",
+      "EXEMPLO": "Exemplo",
+      "MENSAGEM": "Oi! Quanto custa?",
+      "NAO_ENTENDEU": "Se não der para entender o assunto, a conversa fica sem assunto e vai para quem cuida dessas conversas.",
+      "ALGUEM": "alguém da equipe",
+      "SEM_IA": "A IA está desligada em {funis}. Ligue em Editar funil → IA do funil para ela reconhecer esse assunto."
+    },
+    "CONFIRA": {
+      "TITULO": "Confira antes de salvar",
+      "SUBTITULO": "É assim que a caixa vai funcionar.",
+      "QUEM_VE": "Quem vê o quê",
+      "ADMIN": "vê tudo, porque é administrador.",
+      "NADA": "não vê nenhuma conversa desta caixa.",
+      "TODAS": "cuida de {assuntos}. Vê todas as conversas.",
+      "SO_SUAS": "cuida de {assuntos}. Vê só as conversas que atende.",
+      "SEM_ASSUNTO": "conversas sem assunto",
+      "SEM_ASSUNTO_TITULO": "Sem assunto",
+      "RODIZIO": "Quem recebe as conversas novas, um de cada vez",
+      "NINGUEM": "ninguém ainda",
+      "MUDA": "O que muda ao salvar",
+      "NADA_MUDOU": "Nada mudou.",
+      "SAI_DO_CRM": "Sem nenhum funil marcado, esta caixa sai do CRM. As conversas dela deixam de virar cards.",
+      "RODIZIO_NOME": "{nome}:"
+    },
+    "MUDA": {
+      "FUNIL_ENTRA": "{funil} passa a chegar por esta caixa.",
+      "FUNIL_SAI": "{funil} deixa de chegar por esta caixa.",
+      "PESSOA_SO_SUAS": "{nome} passa a ver só as conversas que atende.",
+      "PESSOA_TODAS": "{nome} passa a ver todas as conversas dos assuntos de que cuida.",
+      "MODO": "A partir de agora: {resumo}",
+      "PESSOA_GANHA": "{nome} passa a cuidar de {assuntos}.",
+      "PESSOA_PERDE": "{nome} deixa de cuidar de {assuntos}."
+    },
+    "FUNIS": {
+      "TIPO_SALES": "Vendas: termina em ganho ou perdido",
+      "TIPO_SERVICE": "Atendimento: termina em resolvido ou cancelado",
+      "ETAPA_INICIAL": "Em que etapa de {funil} o card começa?",
+      "NENHUM": "Sem nenhum funil, esta caixa fica fora do CRM."
+    },
+    "PESSOAS": {
+      "EXPLICA": "Quem está na caixa se define em Configurações → Caixas de entrada.",
+      "TODOS_TUDO": "Todos cuidam de tudo",
+      "LEGADO": "Hoje, nesta caixa, cada pessoa só vê as conversas atribuídas a ela. Quer manter assim ou usar o que você marcar abaixo?",
+      "LEGADO_MANTER": "Manter assim",
+      "FALTA_TRIAGEM": "Ninguém vai ver as conversas que ainda não têm assunto. Marque “Sem assunto” para pelo menos uma pessoa.",
+      "FALTA_TRIAGEM_CURTO": "Marque “Sem assunto” para alguém.",
+      "ADMIN_VE_TUDO": "Administrador: vê e mexe em tudo desta caixa.",
+      "CUIDA_DE": "Assuntos de {nome}",
+      "VE": "O que {nome} vê",
+      "SEM_ASSUNTO": "Sem assunto",
+      "TODAS": "Todas",
+      "SO_AS_QUE_ATENDE": "Só as que atende",
+      "NAO_VE": "Não vê nada",
+      "RODIZIO": "Quem cuida de um assunto recebe as conversas novas dele, um de cada vez.",
+      "SO_AS_QUE_ATENDE_EXPLICA": "“Só as que atende”: conversas em que a pessoa é atendente, participa ou é dona do card.",
+      "LEGADO_MUDAR": "Usar o que eu marcar",
+      "LEGADO_CURTO": "Escolha se cada pessoa continua vendo só as atribuídas."
+    },
+    "EDITOR": {
+      "ERRO": "Não deu para abrir esta caixa agora.",
+      "VOLTAR": "Voltar",
+      "CONTINUAR": "Continuar",
+      "SALVAR": "Salvar",
+      "SALVOU": "Caixa salva.",
+      "FALHOU": "Não deu para salvar. Tente de novo."
+    }
   }
 }

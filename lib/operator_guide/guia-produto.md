@@ -1,4 +1,4 @@
-# Guia da Plataforma Autonom.ia — base de conhecimento (210 fluxos)
+# Guia da Plataforma Autonom.ia — base de conhecimento (212 fluxos)
 
 > ARQUIVO GERADO por `pnpm guia:build`. Não edite à mão: a rota, o endereço e a
 > permissão saem do roteador do painel, e o texto humano fica em
@@ -436,6 +436,26 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - leitura: funis
 - nav_target: `crm_kanban_index`
 - highlight: `crm-new-pipeline`
+
+### Ver as caixas no CRM
+- intent: "Quais caixas estão no CRM?"; "Qual funil recebe as conversas do WhatsApp?"; "Quem cuida das conversas de cada caixa?"; "Por que esta caixa não cria cards?"
+- onde_fica: Sidebar > CRM > CRM Kanban > Configurar > Configurar caixas de entrada (com a tela nova ligada na conta)
+- rota: `crm_caixas` - `/app/accounts/:accountId/crm/caixas`
+- gate: feature flag `crm_configurar_caixas`; papel `administrator` ou `crm_admin`
+- pre_requisitos: administrador da conta ou função com crm_admin; ao menos uma caixa de entrada conectada.
+- passos: Cada caixa aparece num cartão com três frases: **Chega aqui** (os funis que a caixa atende), **Quem cuida** (quantas pessoas e quem vê as conversas ainda sem assunto) e **O que acontece sozinho**. Caixa fora do CRM tem o botão **Colocar no CRM**; as outras, **Alterar**.
+- gotchas: cartão com borda amarela tem algo a resolver e diz o quê (ninguém vê as conversas sem assunto, ou a caixa ainda está em "vê apenas atribuídos"); administrador vê todas as conversas de todas as caixas e não aparece com restrição; quem está na caixa continua sendo definido em Configurações > Caixas de entrada > Agentes.
+- nav_target: `crm_caixas`
+
+### Alterar o que chega numa caixa e quem cuida
+- intent: "Como ligo o CRM numa caixa?"; "Como faço a caixa atender mais de um funil?"; "Como faço um agente ver só as conversas dele?"; "Quem vê as conversas sem assunto?"; "Como a IA cria o card sozinha?"
+- onde_fica: Sidebar > CRM > Caixas no CRM > Alterar
+- rota: `crm_caixa` - `/app/accounts/:accountId/crm/caixas/:inboxId`
+- gate: feature flag `crm_configurar_caixas`; papel `administrator` ou `crm_admin`
+- pre_requisitos: administrador da conta ou função com crm_admin; funis criados no CRM.
+- passos: São quatro etapas e um **Salvar** no fim. **O que chega**: marque os funis dos assuntos que chegam pela caixa; com um funil só, escolha também a etapa em que o card começa. **Quem cuida**: para cada pessoa, toque nos assuntos dela (**Sem assunto** e os funis) e escolha **Todas** ou **Só as que atende**; **Todos cuidam de tudo** marca tudo para todos. **O que é automático**: com um funil, criar o card assim que a conversa chega ou não fazer nada; com vários, criar o card quando o sistema entende o assunto, só sugerir para a equipe confirmar, ou não fazer nada. **Confira**: a caixa em frases, com o que muda ao salvar.
+- gotchas: com mais de um funil não existe card criado na chegada num funil fixo — a conversa fica sem assunto até o card nascer; com mais de um funil, alguém precisa ter **Sem assunto**, senão a tela não deixa continuar; criar ou sugerir pelo assunto só funciona nos funis com a IA do funil ligada, e a tela avisa quando algum está desligado; quem cuida de um assunto recebe as conversas novas dele no rodízio; "Só as que atende" = conversas em que a pessoa é atendente, participa ou é dona do card; tirar todos os funis tira a caixa do CRM; caixa que estava em "vê apenas atribuídos" mostra **Manter assim**, que deixa cada pessoa em "Só as que atende".
+- nav_target: `crm_caixa`
 
 ### Criar card ou oportunidade no CRM
 - intent: "Como crio uma oportunidade?"; "Como adiciono um card no funil?"; "Como associo contato, caixa e responsável?"

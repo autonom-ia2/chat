@@ -22511,6 +22511,37 @@
     ],
     "sem_corpo": false
   },
+  "PUT crm/caixas/:inbox_id": {
+    "campos": {
+      "default_stage_id": {},
+      "legado": {},
+      "modo": {},
+      "people": {
+        "campos": {
+          "id": {},
+          "only_own": {},
+          "pipeline_ids": {
+            "tipo": "lista"
+          },
+          "triage": {}
+        },
+        "tipo": "objeto"
+      },
+      "pipeline_ids": {
+        "tipo": "lista"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/crm/caixas#update",
+    "corpo_plano": true,
+    "envelope": "caixa",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/caixas_controller.rb:18",
+      "app/controllers/api/v1/accounts/crm/caixas_controller.rb:52",
+      "app/controllers/api/v1/accounts/crm/caixas_controller.rb:48"
+    ],
+    "sem_corpo": false
+  },
   "PUT crm/cards/:id": {
     "campos": {
       "currency": {
