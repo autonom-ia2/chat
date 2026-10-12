@@ -13,6 +13,11 @@ import {
 import { rotuloDoCampo } from '../helpers/campos';
 import ModeloLinha from '../components/ModeloLinha.vue';
 import FranquiaDoMes from '../components/FranquiaDoMes.vue';
+import AvisoDeSituacao from '../components/AvisoDeSituacao.vue';
+import {
+  mudancasDeSituacao,
+  useConferenciaAutomatica,
+} from '../helpers/useConferenciaAutomatica';
 
 // Modelos de mensagem do WhatsApp (jornada 1): a lista com a situação de cada
 // um em palavras simples, a busca e o filtro por número. Sem número oficial ou
@@ -44,6 +49,21 @@ const carregar = async () => {
 };
 
 onMounted(carregar);
+
+// Enquanto houver modelo em análise, a lista confere sozinha a cada 60 s (#1394):
+// atualiza no lugar (busca, filtro e rolagem ficam) e avisa o que mudou.
+const mudancas = ref([]);
+const emAnalise = computed(
+  () =>
+    estado.value === 'pronto' &&
+    modelos.value.some(modelo => modelo.situacao === 'em_analise')
+);
+useConferenciaAutomatica(emAnalise, async () => {
+  const nova = await api.listarModelos({ atualizar: true });
+  const mudou = mudancasDeSituacao(modelos.value, nova);
+  if (mudou.length) mudancas.value = mudou;
+  modelos.value = nova;
+});
 
 const nomeDoNumero = computed(() =>
   Object.fromEntries(numeros.value.map(item => [item.id, item.nome]))
@@ -229,6 +249,8 @@ const conectarHref = computed(
             <span class="i-lucide-eye size-5 shrink-0" aria-hidden="true" />
             {{ $t('MODELOS_WHATSAPP.SO_VER') }}
           </p>
+
+          <AvisoDeSituacao :mudancas="mudancas" />
 
           <!-- #1382: o "Atualizar" falhou numa conta; a lista é a última guardada. -->
           <p
