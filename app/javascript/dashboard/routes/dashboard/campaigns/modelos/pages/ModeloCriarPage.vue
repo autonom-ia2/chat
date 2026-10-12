@@ -15,6 +15,7 @@ import {
   rascunhoDoObjetivo,
 } from '../helpers/conteudo';
 import { rascunhoDoFormato } from '../helpers/formatos';
+import { IDIOMA, nomeParaWhatsapp } from '../helpers/paraMeta';
 import { exemploDoCampo } from '../helpers/campos';
 import { useCanUseIA } from '../helpers/useCanUseIA';
 import AgenteGaveta from 'dashboard/routes/dashboard/autonomia/agentes/components/AgenteGaveta.vue';
@@ -51,6 +52,7 @@ const enviando = ref(false);
 const catalogo = ref(null);
 const formularios = ref([]);
 const verPrevia = ref(false);
+const existentes = ref([]);
 // "Criar com IA" é a entrega E (#1333): escondido até lá.
 const podeUsarIA = useCanUseIA();
 
@@ -157,11 +159,14 @@ const carregar = async () => {
   rascunho.value = null;
   modelo.value = null;
   try {
-    [numeros.value, catalogo.value, formularios.value] = await Promise.all([
-      api.listarNumeros(),
-      api.obterCatalogo(),
-      api.listarFormularios(),
-    ]);
+    [numeros.value, catalogo.value, formularios.value, existentes.value] =
+      await Promise.all([
+        api.listarNumeros(),
+        api.obterCatalogo(),
+        api.listarFormularios(),
+        // Para avisar de nome repetido já no Texto (sem a lista, o servidor avisa).
+        api.listarModelos().catch(() => []),
+      ]);
     const id = alterando.value ? route.params.id : route.query.de;
     if (id) {
       modelo.value = await api.obterModelo(id);
@@ -244,10 +249,30 @@ const originalNaMesmaConta = computed(() => {
   return mesmaConta ? modelo.value.conteudo : null;
 });
 
+// Nome que a conta do WhatsApp já tem no mesmo idioma: a Meta não cria de novo.
+// Devolve a sugestão de outro nome ("Retomar conversa 2") ou ''.
+const nomeRepetido = computed(() => {
+  if (alterando.value || !rascunho.value) return '';
+  const contas = numeros.value
+    .filter(numero => rascunho.value.numeros.includes(numero.id))
+    .map(numero => numero.conta.id);
+  const idioma = rascunho.value.idioma || IDIOMA;
+  const usados = existentes.value
+    .filter(item => contas.includes(item.conta) && item.idioma === idioma)
+    .map(item => item.nomeNoWhatsapp);
+  const nome = rascunho.value.nome.trim();
+  if (!nomeParaWhatsapp(nome) || !usados.includes(nomeParaWhatsapp(nome)))
+    return '';
+  let numero = 2;
+  while (usados.includes(nomeParaWhatsapp(`${nome} ${numero}`))) numero += 1;
+  return `${nome} ${numero}`;
+});
+
 const contexto = computed(() => ({
   temCatalogo: Boolean(catalogo.value),
   tipo: rascunho.value?.tipo,
   original: originalNaMesmaConta.value,
+  nomeRepetido: Boolean(nomeRepetido.value),
 }));
 
 // No carrossel, a etapa "Extras" vira "Cartões"; na oferta, "Oferta"; e assim por diante.
@@ -294,7 +319,10 @@ const podeSeguir = computed(() => {
       formato.value === 'codigo' || rascunho.value.conteudo.texto.length > 0;
     // "Começar do zero" pergunta o tipo: nada de aviso escondido por padrão.
     return Boolean(
-      rascunho.value.nome.trim() && temTexto && rascunho.value.tipo
+      rascunho.value.nome.trim() &&
+        temTexto &&
+        rascunho.value.tipo &&
+        !nomeRepetido.value
     );
   }
   if (etapa.value === 'numeros') return rascunho.value.numeros.length > 0;
@@ -365,6 +393,8 @@ const enviar = async () => {
         ...origem(),
         ids: salvos.map(salvo => salvo.id).join(','),
         modo: modo.value,
+        // Carrossel, oferta e código ainda não vão em campanha: o Enviado diz isso.
+        ...(formato.value === 'padrao' ? {} : { semCampanha: '1' }),
       },
     });
   } catch (erro) {
@@ -568,6 +598,7 @@ const proximaAlteracao = computed(() => {
                   v-model:rascunho="rascunho"
                   :destacar-fim="terminaComCampo"
                   :perguntar-tipo="perguntarTipo"
+                  :nome-repetido="nomeRepetido"
                 />
                 <ModeloConferencia
                   v-if="modo === 'corrigir'"

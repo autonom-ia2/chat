@@ -3,7 +3,8 @@
 //   fields, header_media }. `fields` guarda qual campo ocupa cada número
 // ({ '1': 'cliente.primeiro_nome' }), para a campanha ligar as variáveis sem
 // adivinhar. Sem expressão regular (regra do Rodrigo).
-import { campoParaPerfil } from './campos';
+import { campoParaPerfil, semFonteNaCampanha } from './campos';
+import { ajustarEspacosDosCampos } from './conteudo';
 import { ordenarBotoes, telefoneNaMeta } from './regraEstrutural';
 
 export const IDIOMA = 'pt_BR';
@@ -28,6 +29,12 @@ export const podeIrEmCampanha = modelo => {
     !botoes.some(botao => botao.tipo === 'copiar_codigo')
   );
 };
+
+// Vai em campanha de verdade: formato que a campanha envia e nenhum campo sem
+// fonte (como a data e hora do agendamento, num modelo do sistema).
+export const usavelEmCampanha = modelo =>
+  podeIrEmCampanha(modelo) &&
+  !Object.values(modelo.campos || {}).some(semFonteNaCampanha);
 
 // "Pesquisa de satisfação" → "pesquisa_de_satisfacao", o nome que a Meta aceita.
 export const nomeParaWhatsapp = nome =>
@@ -113,7 +120,7 @@ export const corpoComNumeros = (conteudo, { nomes } = {}) => {
     nomes
       ? nomes[campo] || nomeParaWhatsapp(campo)
       : String(ordem.indexOf(campo) + 1);
-  const texto = conteudo.texto
+  const texto = ajustarEspacosDosCampos(conteudo.texto)
     .map(pedaco => {
       if (pedaco.t !== 'campo') return pedaco.v;
       if (!ordem.includes(pedaco.v)) ordem.push(pedaco.v);

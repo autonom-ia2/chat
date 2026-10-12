@@ -12,6 +12,7 @@ pt_BR:
       template_not_found: "Este modelo não foi encontrado na conta do WhatsApp desta caixa."
       system_template: "Este modelo é usado pelo sistema. Não dá para alterar nem apagar aqui, mas dá para duplicar."
       name_taken: "Já existe um modelo com este nome e idioma. Escolha outro nome."
+      name_held: "Um modelo com este nome foi apagado há pouco, e o WhatsApp prende o nome por 30 dias. Escolha outro nome."
       in_use: "Este modelo tem envio agendado. Tire o modelo do que o usa antes de alterar ou apagar."
       in_use_hidden: "Este modelo está em uso onde você não tem acesso. Peça a um administrador."
       invalid_profile: "Confira o nome amigável e os campos deste modelo."

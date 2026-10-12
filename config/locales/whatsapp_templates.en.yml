@@ -12,6 +12,7 @@ en:
       template_not_found: "This template was not found on this inbox's WhatsApp account."
       system_template: "This template is used by the platform. It cannot be changed or deleted here, but you can duplicate it."
       name_taken: "A template with this name and language already exists. Choose another name."
+      name_held: "A template with this name was deleted recently, and WhatsApp holds the name for 30 days. Choose another name."
       in_use: "This template is scheduled to be sent. Remove it from what uses it before changing or deleting it."
       in_use_hidden: "This template is in use where you do not have access. Ask an administrator."
       invalid_profile: "Check the friendly name and the fields of this template."

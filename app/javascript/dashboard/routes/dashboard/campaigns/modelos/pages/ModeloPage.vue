@@ -5,6 +5,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { useAlert } from 'dashboard/composables';
 import Button from 'dashboard/components-next/button/Button.vue';
 import api from '../api/modelosWhatsapp';
+import { usavelEmCampanha } from '../helpers/paraMeta';
 import { SITUACOES } from '../constants';
 import { diaEMes, hora, haQuantoTempo, numero } from '../helpers/datas';
 import {
@@ -254,7 +255,11 @@ const confirmarApagar = async () => {
                 </p>
                 <div class="flex flex-wrap items-center gap-3 mt-1">
                   <Button
-                    v-if="situacao === 'pronto' && podeUsar"
+                    v-if="
+                      situacao === 'pronto' &&
+                      podeUsar &&
+                      usavelEmCampanha(modelo)
+                    "
                     data-usar
                     :label="$t('MODELOS_WHATSAPP.ACOES.USAR')"
                     icon="i-lucide-send"

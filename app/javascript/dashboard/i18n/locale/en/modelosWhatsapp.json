@@ -321,13 +321,13 @@
     },
     "TEXTO": {
       "NOME": "Template name",
-      "NOME_AJUDA": "Only your team sees this name.",
+      "NOME_AJUDA": "Only your team sees this name. It cannot repeat another template of the same WhatsApp account.",
       "MENSAGEM": "Message",
       "LETRAS": "{n} of {limite} characters",
       "EXEMPLOS": "Examples",
       "EXEMPLOS_AJUDA": "Already filled in. WhatsApp uses the examples only to understand the message. Your customers get the real data.",
       "SEM_EXEMPLO": "Write an example.",
-      "NOME_DA_EMPRESA": "It is the account name in Chat2You ({conta}). You can change it in the campaign.",
+      "NOME_DA_EMPRESA": "It is the account name in Chat2You ({conta}). In the campaign, it comes on its own and you can change it.",
       "TIPO": {
         "PERGUNTA": "What kind of message is this?",
         "aviso": {
@@ -338,7 +338,10 @@
           "ROTULO": "Promotion",
           "PARA": "Offer, news, invitation. Costs more per send."
         }
-      }
+      },
+      "FONTE_CADASTRO": "In the campaign, it comes from each customer’s record.",
+      "FONTE_COLUNA": "In the campaign, it comes from a column of your audience or is the same text for everyone.",
+      "NOME_REPETIDO": "There is already a template with this name in this WhatsApp account. Use another one, such as “{sugestao}”."
     },
     "TOPOS": {
       "nenhum": {
@@ -463,7 +466,8 @@
         "TEXTO_DIFERENTE": "The text or the footer changed from the original (WhatsApp refuses an identical copy in the same account)",
         "SEM_CHAVES": "The text and the footer have no double braces typed by hand",
         "FORMATO_DIVULGACAO": "This format goes as a promotion",
-        "CARTOES_MESMA_MIDIA": "All cards have the same kind of media (only photos or only videos)"
+        "CARTOES_MESMA_MIDIA": "All cards have the same kind of media (only photos or only videos)",
+        "NOME_LIVRE": "The name does not exist yet in this WhatsApp account"
       }
     },
     "QUEM_APROVA": {
@@ -507,11 +511,12 @@
         "PRONTO": {
           "TITULO": "Ready to use",
           "TEXTO": "Then just use it in a campaign.",
-          "CAMPANHA": "If WhatsApp approves it before the scheduled time, the campaign goes out on time. If not, it stays stopped and you tap Resume after the approval."
+          "CAMPANHA": "If WhatsApp approves it before the scheduled time, the campaign goes out on time. If not, it stays stopped and you tap Resume after the approval.",
+          "SEM_CAMPANHA": "It stays in the template list. This format cannot be used in campaigns yet."
         }
       },
       "VER_MODELOS": "See my templates",
-      "SITUACAO": "The status shows up here. It usually takes minutes, but it can take up to 24 hours.",
+      "SITUACAO": "The status shows up in the template list. It usually takes minutes, but it can take up to 24 hours.",
       "POR_CONTA": "{n} approval requests were sent, one for each WhatsApp account.",
       "VOLTAR_PARA_CAMPANHA": "Back to the campaign"
     },
@@ -663,7 +668,8 @@
         "RECUSADO": "rejected",
         "PAUSADO": "paused",
         "DESATIVADO": "disabled",
-        "LIMITE": "not created"
+        "LIMITE": "not created",
+        "SEM_FONTE": "has a field campaigns cannot fill"
       },
       "EM_ANALISE": "“{nome}” is still in review at WhatsApp. You can set up and schedule the campaign; sending now unlocks when it is approved.",
       "ENVIAR_AGORA_BLOQUEADO": "Sending now unlocks when WhatsApp approves the template. Pick a date to schedule.",

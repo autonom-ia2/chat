@@ -12,7 +12,11 @@ import {
 import { camposUsados, contarLetras } from '../../helpers/conteudo';
 import ModeloEditorTexto from '../ModeloEditorTexto.vue';
 import ModeloMelhorarComIA from '../ModeloMelhorarComIA.vue';
-import { exemploDoCampo, useRotuloDoCampo } from '../../helpers/campos';
+import {
+  exemploDoCampo,
+  ligacaoDoCatalogo,
+  useRotuloDoCampo,
+} from '../../helpers/campos';
 import { useCanUseIA } from '../../helpers/useCanUseIA';
 
 defineProps({
@@ -21,6 +25,8 @@ defineProps({
   // Modelo novo do zero, cópia ou correção de recusado: a pessoa diz o tipo. Num
   // modelo aprovado a Meta não deixa trocar o tipo, então não pergunta.
   perguntarTipo: { type: Boolean, default: false },
+  // Nome já usado na mesma conta do WhatsApp: a sugestão de outro (ou '').
+  nomeRepetido: { type: String, default: '' },
 });
 
 // Nome, texto e exemplos.
@@ -85,6 +91,18 @@ const mudarNome = nome => {
   rascunho.value = { ...rascunho.value, nome };
 };
 
+// De onde vem o valor de cada campo quando o modelo for usado numa campanha.
+const fonteDoCampo = campo => {
+  if (campo === 'nome_empresa') {
+    return t('MODELOS_WHATSAPP.TEXTO.NOME_DA_EMPRESA', {
+      conta: currentAccount.value?.name || '',
+    });
+  }
+  return ligacaoDoCatalogo(campo)
+    ? t('MODELOS_WHATSAPP.TEXTO.FONTE_CADASTRO')
+    : t('MODELOS_WHATSAPP.TEXTO.FONTE_COLUNA');
+};
+
 // "Começar do zero": a pessoa diz o tipo (aviso ou divulgação), sem padrão.
 const TIPOS_DO_ZERO = ['aviso', 'divulgacao'];
 const escolherTipo = tipo => {
@@ -105,7 +123,14 @@ const usarMelhoria = resposta => {
       :model-value="rascunho.nome"
       data-nome
       :label="$t('MODELOS_WHATSAPP.TEXTO.NOME')"
-      :message="$t('MODELOS_WHATSAPP.TEXTO.NOME_AJUDA')"
+      :message="
+        nomeRepetido
+          ? $t('MODELOS_WHATSAPP.TEXTO.NOME_REPETIDO', {
+              sugestao: nomeRepetido,
+            })
+          : $t('MODELOS_WHATSAPP.TEXTO.NOME_AJUDA')
+      "
+      :message-type="nomeRepetido ? 'error' : 'info'"
       @update:model-value="mudarNome"
     />
 
@@ -209,24 +234,28 @@ const usarMelhoria = resposta => {
         </p>
       </div>
       <div class="grid gap-4 sm:grid-cols-2">
-        <Input
+        <div
           v-for="campo in campos"
           :key="campo"
-          :data-exemplo="campo"
-          :model-value="conteudo.exemplos[campo] || ''"
-          :label="rotulo(campo)"
-          :message-type="conteudo.exemplos[campo] ? 'info' : 'error'"
-          :message="
-            !conteudo.exemplos[campo]
-              ? $t('MODELOS_WHATSAPP.TEXTO.SEM_EXEMPLO')
-              : campo === 'nome_empresa'
-                ? $t('MODELOS_WHATSAPP.TEXTO.NOME_DA_EMPRESA', {
-                    conta: currentAccount?.name || '',
-                  })
-                : ''
-          "
-          @update:model-value="valor => mudarExemplo(campo, valor)"
-        />
+          class="flex flex-col gap-1 min-w-0"
+        >
+          <Input
+            :data-exemplo="campo"
+            :model-value="conteudo.exemplos[campo] || ''"
+            :label="rotulo(campo)"
+            :message-type="conteudo.exemplos[campo] ? 'info' : 'error'"
+            :message="
+              conteudo.exemplos[campo]
+                ? ''
+                : $t('MODELOS_WHATSAPP.TEXTO.SEM_EXEMPLO')
+            "
+            @update:model-value="valor => mudarExemplo(campo, valor)"
+          />
+          <!-- De onde vem o valor de verdade na campanha (texto que quebra linha). -->
+          <p :data-fonte="campo" class="mb-0 text-xs text-n-slate-11">
+            {{ fonteDoCampo(campo) }}
+          </p>
+        </div>
       </div>
     </section>
     <ModeloMelhorarComIA

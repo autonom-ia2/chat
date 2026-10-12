@@ -8,7 +8,9 @@ import {
   corpoParaAlterar,
   corpoParaCriar,
   nomeParaWhatsapp,
+  usavelEmCampanha,
 } from '../helpers/paraMeta';
+import { ajustarEspacosDosCampos } from '../helpers/conteudo';
 import { ligacaoDoCatalogo, rotuloDoCampo } from '../helpers/campos';
 
 // Ida e volta entre o modelo da Meta (API de Modelos, #1330) e a tela (#1332).
@@ -237,6 +239,58 @@ describe('situação e o que a tela sabe editar (#1380)', () => {
       GRUPO
     );
     expect(catalogo.editavel).toBe(false);
+  });
+});
+
+describe('QA na tela (#1380)', () => {
+  it('A4: o espaço que o editor põe depois do campo não chega ao cliente', () => {
+    const pedacos = [
+      { t: 'texto', v: 'Olá, ' },
+      { t: 'campo', v: 'nome_cliente' },
+      { t: 'texto', v: ' ! Amanhã, dia ' },
+      { t: 'campo', v: 'data' },
+      { t: 'texto', v: '  e às ' },
+      { t: 'campo', v: 'horario' },
+      { t: 'texto', v: ' .' },
+    ];
+    expect(ajustarEspacosDosCampos(pedacos).map(p => p.v)).toEqual([
+      'Olá, ',
+      'nome_cliente',
+      '! Amanhã, dia ',
+      'data',
+      ' e às ',
+      'horario',
+      '.',
+    ]);
+    const corpo = corpoParaCriar({
+      nome: 'Aviso',
+      tipo: 'aviso',
+      conteudo: {
+        formato: 'padrao',
+        topo: { tipo: 'nenhum' },
+        texto: pedacos,
+        exemplos: { nome_cliente: 'Ana', data: '15/10', horario: '14h' },
+        rodape: '',
+        botoes: [],
+      },
+    });
+    expect(corpo.components[0].text).toBe(
+      'Olá, {{1}}! Amanhã, dia {{2}} e às {{3}}.'
+    );
+  });
+
+  it('A6: modelo com campo que a campanha não preenche não é oferecido para campanha', () => {
+    const base = {
+      conteudo: { formato: 'padrao', botoes: [] },
+      campos: { 1: 'nome_cliente' },
+    };
+    expect(usavelEmCampanha(base)).toBe(true);
+    expect(
+      usavelEmCampanha({
+        ...base,
+        campos: { 1: 'nome_cliente', 2: 'horario.data_hora' },
+      })
+    ).toBe(false);
   });
 });
 

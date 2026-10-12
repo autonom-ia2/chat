@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import { objetivoPorChave } from '../constants';
+import { usavelEmCampanha } from '../helpers/paraMeta';
 import { haQuantoTempo, numero } from '../helpers/datas';
 import ModeloSelo from './ModeloSelo.vue';
 import { useRotuloDoCampo } from '../helpers/campos';
@@ -82,7 +83,12 @@ const numeros = computed(() => {
 const acao = computed(() => {
   if (props.modelo.situacao === 'recusado' && props.podeCriar)
     return 'corrigir';
-  if (props.modelo.situacao === 'pronto' && props.podeUsar) return 'usar';
+  if (
+    props.modelo.situacao === 'pronto' &&
+    props.podeUsar &&
+    usavelEmCampanha(props.modelo)
+  )
+    return 'usar';
   return '';
 });
 </script>

@@ -28,6 +28,26 @@ export const juntarTextos = pedacos =>
     return [...lista, pedaco];
   }, []);
 
+// O editor põe um espaço depois de cada campo (para o cursor ter onde ficar).
+// No texto que vale, o espaço sai antes da pontuação ("Ana !" → "Ana!") e o
+// espaço repetido vira um só ("Ana  e" → "Ana e"). Sem expressão regular.
+const PONTUACAO = '.,!?:;)';
+const semEspacoSobrando = texto => {
+  let resto = texto;
+  while (resto.startsWith('  ')) resto = resto.slice(1);
+  return resto.startsWith(' ') &&
+    PONTUACAO.includes(resto.charAt(1)) &&
+    resto.length > 1
+    ? resto.slice(1)
+    : resto;
+};
+export const ajustarEspacosDosCampos = pedacos =>
+  pedacos.map((pedaco, indice) =>
+    pedaco.t === 'texto' && pedacos[indice - 1]?.t === 'campo'
+      ? { ...pedaco, v: semEspacoSobrando(pedaco.v) }
+      : pedaco
+  );
+
 // "Olá, [nome_cliente]!" → pedaços. Só vira campo o que está entre colchetes e
 // é um campo conhecido; o resto continua texto.
 export const lerTextoComCampos = (fonte, camposConhecidos) => {
@@ -169,6 +189,9 @@ export const conferirConteudo = (conteudo, contexto = {}) => {
   return [
     ...base,
     ...conferirFormato(conteudo, contexto),
+    ...('nomeRepetido' in contexto
+      ? [{ chave: 'NOME_LIVRE', ok: !contexto.nomeRepetido }]
+      : []),
     ...(contexto.original
       ? [
           {

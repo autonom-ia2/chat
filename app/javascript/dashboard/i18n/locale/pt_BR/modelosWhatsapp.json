@@ -321,13 +321,13 @@
     },
     "TEXTO": {
       "NOME": "Nome do modelo",
-      "NOME_AJUDA": "Só a sua equipe vê este nome.",
+      "NOME_AJUDA": "Só a sua equipe vê este nome. Ele não pode repetir outro modelo da mesma conta do WhatsApp.",
       "MENSAGEM": "Mensagem",
       "LETRAS": "{n} de {limite} letras",
       "EXEMPLOS": "Exemplos",
       "EXEMPLOS_AJUDA": "Já preenchemos. O WhatsApp usa os exemplos só para entender a mensagem. Seus clientes recebem os dados de verdade.",
       "SEM_EXEMPLO": "Escreva um exemplo.",
-      "NOME_DA_EMPRESA": "É o nome da conta no Chat2You ({conta}). Na campanha, dá para trocar.",
+      "NOME_DA_EMPRESA": "É o nome da conta no Chat2You ({conta}). Na campanha, vem sozinho e dá para trocar.",
       "TIPO": {
         "PERGUNTA": "Que tipo de mensagem é esta?",
         "aviso": {
@@ -338,7 +338,10 @@
           "ROTULO": "Divulgação",
           "PARA": "Oferta, novidade, convite. Custa mais por envio."
         }
-      }
+      },
+      "FONTE_CADASTRO": "Na campanha, vem do cadastro de cada cliente.",
+      "FONTE_COLUNA": "Na campanha, vem de uma coluna do seu público ou é o mesmo texto para todos.",
+      "NOME_REPETIDO": "Já existe um modelo com este nome nesta conta do WhatsApp. Use outro, por exemplo “{sugestao}”."
     },
     "TOPOS": {
       "nenhum": {
@@ -463,7 +466,8 @@
         "TEXTO_DIFERENTE": "O texto ou o rodapé mudou em relação ao original (o WhatsApp recusa cópia igual na mesma conta)",
         "SEM_CHAVES": "O texto e o rodapé não têm chaves duplas digitadas à mão",
         "FORMATO_DIVULGACAO": "Este formato vai como divulgação",
-        "CARTOES_MESMA_MIDIA": "Todos os cartões têm o mesmo tipo de mídia (só foto ou só vídeo)"
+        "CARTOES_MESMA_MIDIA": "Todos os cartões têm o mesmo tipo de mídia (só foto ou só vídeo)",
+        "NOME_LIVRE": "O nome ainda não existe nesta conta do WhatsApp"
       }
     },
     "QUEM_APROVA": {
@@ -507,11 +511,12 @@
         "PRONTO": {
           "TITULO": "Pronto para usar",
           "TEXTO": "Aí é só usar em uma campanha.",
-          "CAMPANHA": "Se o WhatsApp aprovar antes do horário, a campanha agendada sai no horário. Se não, ela fica parada e você toca em Retomar depois da aprovação."
+          "CAMPANHA": "Se o WhatsApp aprovar antes do horário, a campanha agendada sai no horário. Se não, ela fica parada e você toca em Retomar depois da aprovação.",
+          "SEM_CAMPANHA": "Ele fica na lista de modelos. Este formato ainda não dá para usar em campanha."
         }
       },
       "VER_MODELOS": "Ver meus modelos",
-      "SITUACAO": "A situação aparece aqui. Costuma levar minutos, mas pode levar até 24 horas.",
+      "SITUACAO": "A situação aparece na lista de modelos. Costuma levar minutos, mas pode levar até 24 horas.",
       "POR_CONTA": "Foram {n} pedidos de aprovação, um para cada conta do WhatsApp.",
       "VOLTAR_PARA_CAMPANHA": "Voltar para a campanha"
     },
@@ -663,7 +668,8 @@
         "RECUSADO": "recusado",
         "PAUSADO": "pausado",
         "DESATIVADO": "desativado",
-        "LIMITE": "não criado"
+        "LIMITE": "não criado",
+        "SEM_FONTE": "tem campo que a campanha não preenche"
       },
       "EM_ANALISE": "“{nome}” ainda está em análise no WhatsApp. Você pode montar e agendar a campanha; enviar agora libera quando ele for aprovado.",
       "ENVIAR_AGORA_BLOQUEADO": "Enviar agora libera quando o WhatsApp aprovar o modelo. Escolha uma data para agendar.",
