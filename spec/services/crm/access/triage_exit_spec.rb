@@ -66,6 +66,24 @@ RSpec.describe 'Acesso por funil: saída da triagem' do # rubocop:disable RSpec/
     expect(conversation.assignee_id).to eq(vendas_agent.id)
   end
 
+  it 'end to end: the card is born, the jobs run, someone with the funnel gets the conversation and the card, and it stops' do
+    inbox.update!(enable_auto_assignment: true)
+    allow(OnlineStatusTracker).to receive(:get_available_users)
+      .and_return([triagem, vendas_agent, pos_agent, propria].to_h { |user| [user.id.to_s, 'online'] })
+    allow(Crm::Access::VisibilitySync).to receive(:perform).and_call_original
+    conversation = conversation_with(triagem)
+
+    card = with_modified_env(CRM_KANBAN_ENABLED: 'true') do
+      perform_enqueued_jobs { card_in(conversation, vendas, owner: triagem) }
+    end
+
+    expect(conversation.reload.assignee_id).to eq(vendas_agent.id)
+    expect(card.reload.owner_id).to eq(vendas_agent.id)
+    # O card nascer agenda uma sincronização; o vínculo card↔conversa que o CardSyncer cria agenda a segunda, que já
+    # não muda nada (o novo atendente tem o funil). Não há terceira: a cadeia termina.
+    expect(Crm::Access::VisibilitySync).to have_received(:perform).at_most(:twice)
+  end
+
   it 'keeps the conversation with whoever already has the funnel of the card' do
     conversation = conversation_with(vendas_agent)
     card_in(conversation, vendas, owner: vendas_agent)
