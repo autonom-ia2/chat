@@ -31,7 +31,8 @@ class BaseRefreshOauthTokenService
     new_tokens = token_service.refresh!(refresh_params).to_hash.slice(:access_token, :refresh_token, :expires_at)
 
     update_channel_provider_config(new_tokens)
-    channel.reload.provider_config
+    # jsonb volta com chave string; o memo indiferente evita nil em `[:access_token]` (#1391).
+    @provider_config = channel.reload.provider_config.with_indifferent_access
   end
 
   # Provedores multi-recurso (Microsoft v2) fixam o escopo do recurso no refresh.
