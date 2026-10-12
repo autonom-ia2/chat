@@ -218,6 +218,37 @@ RSpec.describe CampaignPauses::WhatsappDispatchGate, :aggregate_failures do
       expect(pause.details).to include('stage' => 'inbox_list', 'template_name' => 'renovacao', 'lookup_source' => 'meta')
     end
 
+    # Prova para a Orquestração: a trava é só na linha da caixa da campanha, uma vez, antes de enviar; nenhuma chamada
+    # HTTP (Meta ou envio) acontece com ela aberta, e os envios não travam a caixa.
+    it 'locks only the campaign inbox row, once, with no HTTP call while the lock is held' do
+      channel.update_columns(message_templates: [template.merge('status' => 'PAUSED')]) # rubocop:disable Rails/SkipsModelValidations
+      inside_lock = false
+      allow_any_instance_of(Channel::Whatsapp).to receive(:with_lock).and_wrap_original do |original, *args, &block| # rubocop:disable RSpec/AnyInstance
+        original.call(*args) do
+          inside_lock = true
+          block.call
+        ensure
+          inside_lock = false
+        end
+      end
+      http_inside_lock = []
+      WebMock.after_request { http_inside_lock << inside_lock }
+      sent = stub_graph_messages
+      stub_meta_template_lookup([from_meta])
+      locks = []
+      callback = ->(*, payload) { locks << payload if payload[:sql].include?('FOR UPDATE') && payload[:sql].include?('channel_whatsapp') }
+
+      ActiveSupport::Notifications.subscribed(callback, 'sql.active_record') { dispatch }
+
+      expect(sent.size).to eq(2)
+      expect(http_inside_lock.size).to eq(3) # 1 lookup + 2 sends
+      expect(http_inside_lock).to all(be(false))
+      expect(locks.size).to eq(1)
+      expect(locks.first[:binds].first.value).to eq(channel.id)
+    ensure
+      WebMock::CallbackRegistry.reset
+    end
+
     it 'Meta down: reads the inbox list as before and writes nothing' do
       sent = stub_graph_messages
       allow(Whatsapp::Templates::ChannelList).to receive(:upsert!)

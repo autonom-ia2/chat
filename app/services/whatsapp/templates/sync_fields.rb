@@ -86,13 +86,14 @@ module Whatsapp::Templates::SyncFields
   def page_data(response)
     failed_sync(response) unless response.success?
 
-    data = response.parsed_response.is_a?(Hash) ? response.parsed_response['data'] : nil
+    body = parsed(response)
+    data = body.is_a?(Hash) ? body['data'] : nil
     unless data.is_a?(Array)
       log_sync_failure('unexpected_body', "http=#{response.code}")
       raise Failed, 'unexpected_body'
     end
 
-    [data, response.parsed_response.dig('paging', 'cursors', 'after')]
+    [data, body.dig('paging', 'cursors', 'after')]
   end
 
   def sync_fields_level
@@ -113,8 +114,16 @@ module Whatsapp::Templates::SyncFields
   end
 
   def graph_error(response)
-    error = response.parsed_response.is_a?(Hash) ? response.parsed_response['error'] : nil
+    body = parsed(response)
+    error = body.is_a?(Hash) ? body['error'] : nil
     error.is_a?(Hash) ? error : {}
+  end
+
+  # Corpo que não é JSON (página de erro de proxy, por exemplo) vale como sem corpo.
+  def parsed(response)
+    response.parsed_response
+  rescue JSON::ParserError
+    nil
   end
 
   def failed_sync(response)

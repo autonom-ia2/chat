@@ -190,6 +190,72 @@ RSpec.describe Whatsapp::Templates::SyncFields do
     end
   end
 
+  # Provas pedidas pela Orquestração (#1382): o sync vale para toda caixa WhatsApp Cloud, com ou sem flag.
+  describe 'provas para a Orquestração' do
+    let(:previous) do
+      [complete, bare, { 'id' => '3', 'name' => 'terceiro', 'language' => 'en', 'status' => 'PAUSED', 'quality_score' => { 'score' => 'RED' } }]
+    end
+
+    before do
+      channel.update_columns(message_templates: previous) # rubocop:disable Rails/SkipsModelValidations
+      allow(Rails.logger).to receive(:error)
+    end
+
+    def stored_json
+      Channel::Whatsapp.where(id: channel.id).pick(Arel.sql('message_templates::text'))
+    end
+
+    {
+      '5xx' => [{ status: 503, body: { error: { code: 2 } }.to_json }, 'meta_unreachable'],
+      'timeout' => [:timeout, 'meta_unreachable'],
+      'corpo inválido' => [{ status: 200, body: 'isto não é json' }, 'unexpected_body'],
+      '400 que não é de campo' => [{ status: 400, body: { error: { code: 132_000 } }.to_json }, 'meta_refused']
+    }.each do |label, (answer, code)|
+      it "página 2 com #{label}: a lista guardada fica idêntica (JSON inteiro), Result #{code} e log de erro" do
+        before_json = stored_json
+        stub_request(:get, url).with(query: { 'fields' => fields }).to_return(page([complete.merge('status' => 'APPROVED')], 'cursor-1'))
+        second = stub_request(:get, url).with(query: { 'fields' => fields, 'after' => 'cursor-1' })
+        answer == :timeout ? second.to_timeout : second.to_return(answer.merge(headers: json))
+
+        result = channel.provider_service.sync_templates
+
+        expect(stored_json).to eq(before_json)
+        expect(channel.reload.message_templates).to eq(previous)
+        expect(result.ok?).to be(false)
+        expect(result.code).to eq(code)
+        expect(Rails.logger).to have_received(:error).with(a_string_including("sync_failed code=#{code}"))
+      end
+    end
+
+    it 'a trava é só na linha desta caixa e nenhuma chamada HTTP acontece com a trava aberta' do
+      inside_lock = false
+      http_inside_lock = []
+      allow_any_instance_of(Channel::Whatsapp).to receive(:with_lock).and_wrap_original do |original, *args, &block| # rubocop:disable RSpec/AnyInstance
+        original.call(*args) do
+          inside_lock = true
+          block.call
+        ensure
+          inside_lock = false
+        end
+      end
+      stub_request(:get, url).with(query: { 'fields' => fields }).to_return do
+        http_inside_lock << inside_lock
+        page([complete])
+      end
+      locks = []
+      callback = lambda do |*, payload|
+        locks << payload if payload[:sql].include?('FOR UPDATE')
+      end
+
+      ActiveSupport::Notifications.subscribed(callback, 'sql.active_record') { channel.provider_service.sync_templates }
+
+      expect(http_inside_lock).to eq([false])
+      expect(locks.size).to eq(1)
+      expect(locks.first[:sql]).to include('"channel_whatsapp"."id" = $1').and include('FOR UPDATE')
+      expect(locks.first[:binds].first.value).to eq(channel.id)
+    end
+  end
+
   it 'erro que não é de campo (token inválido) segue o caminho de antes: nada muda na lista' do
     channel.update_columns(message_templates: [bare]) # rubocop:disable Rails/SkipsModelValidations
     stub_request(:get, url).with(query: hash_including('fields' => fields))
