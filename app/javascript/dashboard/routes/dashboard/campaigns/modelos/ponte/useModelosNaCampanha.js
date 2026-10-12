@@ -94,6 +94,7 @@ export function useModelosNaCampanha() {
     if (!podeIrEmCampanha(modelo)) return 'FORMATO_NAO_VAI';
     if (modelo.situacao === 'recusado') return 'RECUSADO';
     if (modelo.situacao === 'pausado') return 'PAUSADO';
+    if (modelo.situacao === 'desativado') return 'DESATIVADO';
     return '';
   };
 

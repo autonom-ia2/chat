@@ -190,6 +190,49 @@ describe('Meta → tela', () => {
   });
 });
 
+describe('situação e o que a tela sabe editar (#1380)', () => {
+  it('DISABLED e LIMIT_EXCEEDED ficam "desativado", não "pausado"', () => {
+    expect(modeloDaMeta(template({ status: 'PAUSED' }), GRUPO).situacao).toBe(
+      'pausado'
+    );
+    ['DISABLED', 'LIMIT_EXCEEDED'].forEach(status =>
+      expect(modeloDaMeta(template({ status }), GRUPO).situacao).toBe(
+        'desativado'
+      )
+    );
+  });
+
+  it('modelo feito fora com parte que a tela não edita não vira outra coisa', () => {
+    const corpo = { type: 'BODY', text: 'Oi.' };
+    const editavel = components =>
+      modeloDaMeta(template({ components }), GRUPO).editavel;
+    expect(editavel([corpo])).toBe(true);
+    expect(editavel([{ type: 'HEADER', format: 'LOCATION' }, corpo])).toBe(
+      false
+    );
+    expect(
+      editavel([
+        corpo,
+        { type: 'BUTTONS', buttons: [{ type: 'VOICE_CALL', text: 'Ligar' }] },
+      ])
+    ).toBe(false);
+    const autenticacao = modeloDaMeta(
+      template({
+        category: 'AUTHENTICATION',
+        components: [
+          { type: 'BODY' },
+          {
+            type: 'BUTTONS',
+            buttons: [{ type: 'OTP', otp_type: 'ONE_TAP', supported_apps: [] }],
+          },
+        ],
+      }),
+      GRUPO
+    );
+    expect(autenticacao.editavel).toBe(false);
+  });
+});
+
 describe('tela → Meta', () => {
   const rascunho = {
     nome: 'Pesquisa de satisfação',

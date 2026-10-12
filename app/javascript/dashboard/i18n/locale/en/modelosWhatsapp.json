@@ -34,7 +34,8 @@
         "EM_ANALISE": "Sent to WhatsApp {quando}",
         "PAUSADO": "WhatsApp paused it {quando}",
         "EM_ANALISE_SEM_DATA": "With WhatsApp for review",
-        "PAUSADO_SEM_DATA": "WhatsApp paused it"
+        "PAUSADO_SEM_DATA": "WhatsApp paused it",
+        "DESATIVADO": "Disabled by WhatsApp"
       },
       "CONTA": "Account {nome}",
       "PARCIAL": "We could not read the templates of one WhatsApp account now. Some templates may be missing from the list."
@@ -49,8 +50,8 @@
       "em_analise": {
         "ROTULO": "In review",
         "TITULO": "WhatsApp is looking at this template",
-        "EXPLICACAO": "Sent {quando}. It usually takes from minutes to a few hours. The status shows up here.",
-        "EXPLICACAO_SEM_DATA": "It usually takes from a few minutes to a few hours. The status shows up here."
+        "EXPLICACAO": "Sent {quando}. It usually takes minutes, but it can take up to 24 hours. The status shows up here.",
+        "EXPLICACAO_SEM_DATA": "It usually takes minutes, but it can take up to 24 hours. The status shows up here."
       },
       "recusado": {
         "ROTULO": "Rejected",
@@ -59,9 +60,15 @@
       "pausado": {
         "ROTULO": "Paused",
         "TITULO": "WhatsApp paused this template",
-        "EXPLICACAO": "Many people blocked the number or marked the message as unwanted. WhatsApp paused it {quando} and usually releases it after a few hours.",
+        "EXPLICACAO": "Many people blocked the number or marked the message as unwanted. WhatsApp paused it {quando}: the 1st pause lasts 3 hours and the 2nd, 6 hours. The 3rd time, it disables the template.",
         "DICA": "send only to people who know your business and say who is talking right at the start.",
-        "EXPLICACAO_SEM_DATA": "Many people blocked the number or reported the message as unwanted. WhatsApp usually releases it after a few hours."
+        "EXPLICACAO_SEM_DATA": "Many people blocked the number or marked the message as unwanted. The 1st pause lasts 3 hours and the 2nd, 6 hours. The 3rd time, WhatsApp disables the template."
+      },
+      "desativado": {
+        "ROTULO": "Disabled by WhatsApp",
+        "TITULO": "WhatsApp disabled this template",
+        "EXPLICACAO": "After repeated pauses for blocks and reports, WhatsApp disabled this template. It does not come back on its own and cannot be changed.",
+        "DICA": "duplicate the template, rewrite the text saying right at the start who is talking, and send it only to people who know your business."
       }
     },
     "RECUSAS": {
@@ -136,7 +143,8 @@
       "ALTERAR_DEPOIS": "You can change it again on {dia}, at {hora}.",
       "SEM_ALTERACOES": "This template was already changed 10 times this month. To change it now, duplicate it.",
       "EM_USO_NAO_ALTERA": "This template is still going to be sent in the places listed in \"Where it is used\". To change it, swap the template there first or duplicate it.",
-      "REGRA_DE_ALTERAR": "WhatsApp allows changing an approved template once a day, up to 10 times in 30 days."
+      "REGRA_DE_ALTERAR": "WhatsApp allows changing an approved template once a day, up to 10 times in 30 days.",
+      "NAO_EDITAVEL": "This template was made outside Chat2You and has parts this screen cannot edit. To change it, use WhatsApp Manager."
     },
     "USOS": {
       "TITULO": "Where it's in use",
@@ -205,22 +213,18 @@
       "FALHOU_UMA_CONTA": "The template was sent for one WhatsApp account, but not for the other. {motivo}"
     },
     "OBJETIVO": {
-      "DO_WHATSAPP": {
-        "TITULO": "Ready from WhatsApp",
-        "TEXTO": "Texts WhatsApp itself offers. They are usually approved faster."
-      },
       "SUGESTOES": {
         "TITULO": "To write your own way",
         "TEXTO": "A ready start you adjust as you like."
       },
-      "MAIS_RAPIDO": "Faster approval",
       "ESCOLHER": "Start with this one",
       "ESCREVER": "Start writing",
       "FORMATOS": {
         "TITULO": "Other formats",
         "TEXTO": "For when a regular message is not enough."
       },
-      "SO_DIVULGACAO": "Promotion only"
+      "SO_DIVULGACAO": "Promotion only",
+      "NAO_VAI_EM_CAMPANHA": "Not available in campaigns yet"
     },
     "OBJETIVOS": {
       "boas_vindas": {
@@ -312,8 +316,6 @@
       "NOME": "Template name",
       "NOME_AJUDA": "Only your team sees this name.",
       "MENSAGEM": "Message",
-      "PRONTO_DO_WHATSAPP": "Ready text from WhatsApp: that's why it's approved faster.",
-      "MEU_JEITO": "I'd rather write my own way",
       "LETRAS": "{n} of {limite} characters",
       "EXEMPLOS": "Examples",
       "EXEMPLOS_AJUDA": "Already filled in. WhatsApp uses the examples only to understand the message. Your customers get the real data.",
@@ -345,7 +347,7 @@
       },
       "documento": {
         "ROTULO": "Document",
-        "AJUDA": "Pick a PDF."
+        "AJUDA": "Pick a PDF. The same file goes to everyone: do not use it for one person’s bill or document."
       },
       "texto": {
         "ROTULO": "Title",
@@ -457,10 +459,11 @@
     },
     "QUEM_APROVA": {
       "TITULO": "WhatsApp is who approves it",
-      "TEMPO": "The review takes from minutes to a few hours.",
+      "TEMPO": "The review usually takes minutes, but it can take up to 24 hours.",
       "TIPO": "It should go in as {tipo}. WhatsApp may change the type, and that changes the cost of each message.",
       "AVISO": "The status shows up here, in the template list.",
-      "SO_DIVULGACAO": "This format exists only for promotion, so each message has the promotion cost."
+      "SO_DIVULGACAO": "This format exists only for promotion, so each message has the promotion cost.",
+      "NAO_VAI_EM_CAMPANHA": "This format cannot be used in campaigns yet."
     },
     "CELULAR": {
       "TITULO": "How the customer sees it",
@@ -494,17 +497,17 @@
         },
         "ANALISE": {
           "TITULO": "In review",
-          "TEXTO": "It takes from minutes to a few hours.",
+          "TEXTO": "It usually takes minutes, but it can take up to 24 hours.",
           "CAMPANHA": "Meanwhile, you can set up and schedule the campaign."
         },
         "PRONTO": {
           "TITULO": "Ready to use",
           "TEXTO": "Then just use it in a campaign.",
-          "CAMPANHA": "Once approved, the scheduled campaign goes out on time."
+          "CAMPANHA": "If WhatsApp approves it before the scheduled time, the campaign goes out on time. If not, it stays stopped and you tap Resume after the approval."
         }
       },
       "VER_MODELOS": "See my templates",
-      "SITUACAO": "The status shows up here. It usually takes from minutes to a few hours.",
+      "SITUACAO": "The status shows up here. It usually takes minutes, but it can take up to 24 hours.",
       "POR_CONTA": "{n} approval requests were sent, one for each WhatsApp account.",
       "VOLTAR_PARA_CAMPANHA": "Back to the campaign"
     },
@@ -555,7 +558,7 @@
       },
       "codigo": {
         "TITULO": "Verification code",
-        "PARA": "Sends a code so the customer confirms it is really them when signing in.",
+        "PARA": "For businesses with their own system that sends the access code. Chat2You does not send this template yet.",
         "ETAPA": "Code",
         "NOME_PADRAO": "Access code",
         "TEXTO_FIXO": "is your verification code.",
@@ -604,8 +607,7 @@
     "CODIGO": {
       "BOTAO": "Code button",
       "BOTOES_PARA": {
-        "copiar": "The customer taps and the code is copied.",
-        "preencher": "The code goes into your app on its own, on Android phones."
+        "copiar": "The customer taps and the code is copied."
       },
       "VALIDADE": "Code validity, in minutes",
       "VALIDADE_AJUDA": "From {min} to {max} minutes.",
@@ -625,11 +627,11 @@
     "PARADAS": {
       "TITULO": "{n} campaign stopped because of its template | {n} campaigns stopped because of their template",
       "MOTIVOS": {
-        "modelo_pausado": "WhatsApp paused the template “{modelo}”. The campaign goes out again when it comes back.",
+        "modelo_pausado": "WhatsApp paused the template “{modelo}”. When it comes back, tap Resume so the campaign goes out.",
         "modelo_recusado": "WhatsApp rejected the template “{modelo}”. Fix the template so the campaign can go out.",
         "modelo_mudou": "The template “{modelo}” changed. Check the campaign variables.",
         "tipo_mudou": "WhatsApp changed the type of the template “{modelo}” and the cost of each message. Confirm so the campaign continues.",
-        "modelo_em_analise": "The template “{modelo}” is under review again. The campaign goes out after WhatsApp approves it.",
+        "modelo_em_analise": "The template “{modelo}” is under review again. When WhatsApp approves it, tap Resume so the campaign goes out.",
         "modelo_apagado": "The template “{modelo}” no longer exists. Choose another template for the campaign.",
         "formato_nao_vai": "The template “{modelo}” has a format campaigns cannot send yet.",
         "nao_conferido": "We could not check the template “{modelo}” with WhatsApp. Nothing was sent.",
@@ -657,7 +659,8 @@
       "NAO_VAI": {
         "FORMATO_NAO_VAI": "cannot go in campaigns yet",
         "RECUSADO": "rejected",
-        "PAUSADO": "paused"
+        "PAUSADO": "paused",
+        "DESATIVADO": "disabled"
       },
       "EM_ANALISE": "“{nome}” is still in review at WhatsApp. You can set up and schedule the campaign; sending now unlocks when it is approved.",
       "ENVIAR_AGORA_BLOQUEADO": "Sending now unlocks when WhatsApp approves the template. Pick a date to schedule.",

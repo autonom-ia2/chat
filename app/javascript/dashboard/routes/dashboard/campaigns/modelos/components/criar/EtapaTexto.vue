@@ -23,8 +23,7 @@ defineProps({
   perguntarTipo: { type: Boolean, default: false },
 });
 
-// Nome, texto e exemplos. Modelo pronto do WhatsApp: o texto vem fixo (por isso
-// é aprovado mais rápido) e a pessoa pode trocar para escrever do jeito dela.
+// Nome, texto e exemplos.
 const rascunho = defineModel('rascunho', { type: Object, required: true });
 
 const { t } = useI18n();
@@ -92,10 +91,6 @@ const escolherTipo = tipo => {
   rascunho.value = { ...rascunho.value, tipo };
 };
 
-const escreverDoMeuJeito = () => {
-  rascunho.value = { ...rascunho.value, biblioteca: false };
-};
-
 // "Usar" na gaveta: o texto novo entra (os exemplos que a pessoa já tinha
 // ficam) e o tipo passa a ser o que a resposta prevê.
 const usarMelhoria = resposta => {
@@ -154,7 +149,7 @@ const usarMelhoria = resposta => {
           {{ $t('MODELOS_WHATSAPP.TEXTO.MENSAGEM') }}
         </h2>
         <Button
-          v-if="podeUsarIA && !rascunho.biblioteca && !textoFixo"
+          v-if="podeUsarIA && !textoFixo"
           data-melhorar-com-ia
           :label="$t('MODELOS_WHATSAPP.IA.MELHORAR_COM_IA')"
           icon="i-lucide-sparkles"
@@ -176,37 +171,6 @@ const usarMelhoria = resposta => {
         </p>
         <p class="mb-0 text-sm text-n-slate-11">
           {{ $t('MODELOS_WHATSAPP.FORMATOS.codigo.PARA_QUE_SERVE') }}
-        </p>
-      </div>
-
-      <div
-        v-else-if="rascunho.biblioteca"
-        data-texto-pronto
-        class="flex flex-col gap-3 p-5 rounded-xl bg-n-teal-2 ring-1 ring-inset ring-n-teal-6"
-      >
-        <p
-          class="mb-0 text-base leading-relaxed whitespace-pre-wrap text-n-slate-12"
-        >
-          <template v-for="(pedaco, indice) in conteudo.texto" :key="indice">
-            <span
-              v-if="pedaco.t === 'campo'"
-              class="px-1 text-sm font-medium rounded-md bg-n-blue-3 text-n-blue-11"
-            >
-              <span>{{ rotulo(pedaco.v) }}</span>
-            </span>
-            <span v-else>{{ pedaco.v }}</span>
-          </template>
-        </p>
-        <p class="mb-0 text-sm text-n-slate-11">
-          {{ $t('MODELOS_WHATSAPP.TEXTO.PRONTO_DO_WHATSAPP') }}
-          <button
-            type="button"
-            data-meu-jeito
-            class="font-medium min-h-11 text-n-blue-11 hover:underline"
-            @click="escreverDoMeuJeito"
-          >
-            {{ $t('MODELOS_WHATSAPP.TEXTO.MEU_JEITO') }}
-          </button>
         </p>
       </div>
 

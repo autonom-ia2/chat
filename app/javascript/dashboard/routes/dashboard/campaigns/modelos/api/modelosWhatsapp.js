@@ -36,7 +36,7 @@ import adaptador from './adaptadorHttp';
 // criarComIA / melhorarComIA: entrega E (#1333); hoje recusam e a tela esconde.
 //
 // Modelo = {
-//   id, nome, nomeNoWhatsapp, objetivo, biblioteca, sistema, idioma,
+//   id, nome, nomeNoWhatsapp, objetivo, sistema, idioma,
 //   situacao: 'pronto' | 'em_analise' | 'recusado' | 'pausado',
 //   tipo: 'aviso' | 'divulgacao' | 'codigo', tipoMudouPeloWhatsapp,
 //   conta, caixa (a caixa que fala com a Meta), numeros: [inbox_id],

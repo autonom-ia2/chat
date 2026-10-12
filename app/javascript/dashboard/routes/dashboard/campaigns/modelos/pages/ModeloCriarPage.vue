@@ -99,7 +99,6 @@ const doModelo = dados =>
   copiarRascunho({
     nome: dados.nome,
     objetivo: dados.objetivo,
-    biblioteca: dados.biblioteca,
     tipo: dados.tipo,
     idioma: dados.idioma,
     numeros: dados.numeros,
@@ -219,7 +218,6 @@ const usarOpcaoDaIA = opcao => {
   rascunho.value = {
     nome: opcao.nome,
     objetivo: 'em_branco',
-    biblioteca: false,
     tipo: opcao.tipo,
     idioma: idiomaDosProntos(),
     numeros: numerosDaPrimeiraConta(numeros.value),

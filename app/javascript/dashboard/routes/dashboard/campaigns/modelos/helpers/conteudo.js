@@ -177,7 +177,6 @@ export const rascunhoDoObjetivo = (chave, { t, campos }) => {
   return {
     nome: objetivo.chave === 'em_branco' ? '' : t(`${base}.TITULO`),
     objetivo: objetivo.chave,
-    biblioteca: Boolean(objetivo.biblioteca),
     tipo: objetivo.tipo,
     numeros: [],
     conteudo: {

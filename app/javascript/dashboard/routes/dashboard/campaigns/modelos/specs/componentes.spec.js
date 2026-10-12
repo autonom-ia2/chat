@@ -126,8 +126,13 @@ describe('EtapaObjetivo', () => {
     expect(wrapper.find('[data-formato="catalogo"]').exists()).toBe(false);
     expect(wrapper.find('[data-formato="formulario"]').exists()).toBe(false);
     expect(wrapper.find('[data-formato="carrossel"]').exists()).toBe(true);
-    expect(wrapper.text()).not.toContain(
-      en.MODELOS_WHATSAPP.OBJETIVO.MAIS_RAPIDO
+  });
+
+  it('says in plain words that the other formats do not go in campaigns yet', () => {
+    const wrapper = montar(EtapaObjetivo);
+    const avisos = wrapper.findAll('[data-nao-vai-em-campanha]');
+    expect(avisos.map(aviso => aviso.text())).toEqual(
+      Array(3).fill(en.MODELOS_WHATSAPP.OBJETIVO.NAO_VAI_EM_CAMPANHA)
     );
   });
 });

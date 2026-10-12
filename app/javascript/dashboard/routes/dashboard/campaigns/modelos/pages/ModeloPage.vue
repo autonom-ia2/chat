@@ -98,6 +98,7 @@ const explicacao = computed(() => {
       `MODELOS_WHATSAPP.RECUSAS.${modelo.value.recusa?.codigo || 'outro'}.EXPLICACAO`
     );
   }
+  if (situacao.value === 'desativado') return t(`${base}.EXPLICACAO`);
   if (modelo.value.enviosNoMes == null)
     return t(`${base}.EXPLICACAO_SEM_CONTA`);
   return t(
@@ -113,8 +114,8 @@ const dica = computed(() => {
       `MODELOS_WHATSAPP.RECUSAS.${modelo.value.recusa?.codigo || 'outro'}.COMO_RESOLVER`
     );
   }
-  if (situacao.value === 'pausado') {
-    return t('MODELOS_WHATSAPP.SITUACOES.pausado.DICA');
+  if (['pausado', 'desativado'].includes(situacao.value)) {
+    return t(`MODELOS_WHATSAPP.SITUACOES.${situacao.value}.DICA`);
   }
   return '';
 });
@@ -259,7 +260,10 @@ const confirmarApagar = async () => {
                   />
                   <Button
                     v-else-if="
-                      situacao === 'recusado' && podeCriar && !modelo.sistema
+                      situacao === 'recusado' &&
+                      podeCriar &&
+                      !modelo.sistema &&
+                      modelo.editavel
                     "
                     data-corrigir
                     :label="$t('MODELOS_WHATSAPP.ACOES.CORRIGIR')"
@@ -272,7 +276,10 @@ const confirmarApagar = async () => {
                   />
                   <Button
                     v-else-if="
-                      situacao === 'pausado' && podeCriar && !modelo.sistema
+                      situacao === 'pausado' &&
+                      podeCriar &&
+                      !modelo.sistema &&
+                      modelo.editavel
                     "
                     data-alterar-texto
                     :label="$t('MODELOS_WHATSAPP.ACOES.ALTERAR_TEXTO')"
@@ -388,10 +395,21 @@ const confirmarApagar = async () => {
                 </p>
               </details>
 
+              <p
+                v-if="podeCriar && !modelo.editavel"
+                data-nao-editavel
+                class="mb-0 text-sm text-n-slate-11"
+              >
+                {{ $t('MODELOS_WHATSAPP.MODELO.NAO_EDITAVEL') }}
+              </p>
               <div v-if="podeCriar" data-acoes class="flex flex-col gap-2">
                 <div class="flex flex-wrap items-center gap-2">
                   <Button
-                    v-if="situacao === 'pronto' && !modelo.sistema"
+                    v-if="
+                      situacao === 'pronto' &&
+                      !modelo.sistema &&
+                      modelo.editavel
+                    "
                     data-alterar
                     :label="$t('MODELOS_WHATSAPP.ACOES.ALTERAR')"
                     icon="i-lucide-pencil"
@@ -402,6 +420,7 @@ const confirmarApagar = async () => {
                     @click="ir('modelos_whatsapp_alterar')"
                   />
                   <Button
+                    v-if="modelo.editavel"
                     data-duplicar
                     :label="$t('MODELOS_WHATSAPP.ACOES.DUPLICAR')"
                     icon="i-lucide-copy"

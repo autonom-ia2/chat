@@ -15,8 +15,8 @@ const SITUACOES = {
   IN_APPEAL: 'em_analise',
   REJECTED: 'recusado',
   PAUSED: 'pausado',
-  DISABLED: 'pausado',
-  LIMIT_EXCEEDED: 'pausado',
+  DISABLED: 'desativado',
+  LIMIT_EXCEEDED: 'desativado',
 };
 // Já pedido para apagar na Meta: não aparece mais na lista.
 export const SITUACOES_FORA_DA_LISTA = ['PENDING_DELETION', 'DELETED'];
@@ -62,6 +62,15 @@ export const lerCorpo = (texto, campoDe) => {
   }
   return pedacos;
 };
+
+// O que a tela sabe editar sem perder nada: topo de texto, foto, vídeo ou
+// documento; botões de resposta, site, ligar e copiar código; código de
+// verificação de copiar. Modelo feito fora com outra coisa (topo de localização,
+// botão de ligação por voz, preenchimento automático) não é alterado nem
+// duplicado aqui: a conversão perderia essa parte sem aviso.
+const TOPOS_EDITAVEIS = ['TEXT', 'IMAGE', 'VIDEO', 'DOCUMENT'];
+const BOTOES_EDITAVEIS = ['QUICK_REPLY', 'URL', 'PHONE_NUMBER', 'COPY_CODE'];
+const PREENCHIMENTO_AUTOMATICO = ['ONE_TAP', 'ZERO_TAP'];
 
 // Variável → valor de exemplo que a Meta guardou (posicional ou com nome).
 const exemplosDoCorpo = corpo => {
@@ -182,6 +191,24 @@ const formatoDe = template => {
   return 'padrao';
 };
 
+export const editavelNaTela = template => {
+  const topo = componente(template, 'HEADER');
+  if (topo && !TOPOS_EDITAVEIS.includes(maiusculo(topo.format))) return false;
+  const botoes = botoesDe(componente(template, 'BUTTONS'));
+  const formato = formatoDe(template);
+  if (formato === 'codigo') {
+    return !botoes.some(
+      botao =>
+        PREENCHIMENTO_AUTOMATICO.includes(maiusculo(botao.otp_type)) ||
+        Array.isArray(botao.supported_apps)
+    );
+  }
+  if (formato !== 'padrao') return true;
+  return botoes.every(botao =>
+    BOTOES_EDITAVEIS.includes(maiusculo(botao.type))
+  );
+};
+
 // O conteúdo na tela e o mapa variável → campo (para a campanha ligar sozinha).
 // O perfil do Chat2You (fields, header_media) vem junto do modelo na API.
 export const conteudoDaMeta = (template, perfil = template) => {
@@ -260,8 +287,8 @@ export const modeloDaMeta = (template, grupo) => {
     nome: template.friendly_name || template.name,
     nomeNoWhatsapp: template.name,
     objetivo: conteudo.formato === 'padrao' ? 'em_branco' : conteudo.formato,
-    biblioteca: false,
     sistema: Boolean(template.system_owner),
+    editavel: editavelNaTela(template),
     idioma: template.language,
     // Variáveis com nome ({{primeiro_nome}}) continuam com nome ao alterar.
     formatoDosCampos:

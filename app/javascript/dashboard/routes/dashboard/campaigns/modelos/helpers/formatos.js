@@ -151,7 +151,6 @@ export const rascunhoDoFormato = (chave, { t, ler, exemplosDe }) => {
   return {
     nome: t(`${base}.NOME_PADRAO`),
     objetivo: chave,
-    biblioteca: false,
     tipo: formato.tipo,
     numeros: [],
     conteudo: { ...conteudo, ...especifico },

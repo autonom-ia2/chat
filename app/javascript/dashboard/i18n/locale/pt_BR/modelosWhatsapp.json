@@ -34,7 +34,8 @@
         "EM_ANALISE": "Enviado para o WhatsApp {quando}",
         "PAUSADO": "O WhatsApp pausou {quando}",
         "EM_ANALISE_SEM_DATA": "Com o WhatsApp para análise",
-        "PAUSADO_SEM_DATA": "O WhatsApp pausou"
+        "PAUSADO_SEM_DATA": "O WhatsApp pausou",
+        "DESATIVADO": "Desativado pelo WhatsApp"
       },
       "CONTA": "Conta {nome}",
       "PARCIAL": "Não conseguimos ler os modelos de uma conta do WhatsApp agora. Pode faltar modelo na lista."
@@ -49,8 +50,8 @@
       "em_analise": {
         "ROTULO": "Em análise",
         "TITULO": "O WhatsApp está olhando este modelo",
-        "EXPLICACAO": "Enviado {quando}. Costuma levar de minutos a algumas horas. A situação aparece aqui.",
-        "EXPLICACAO_SEM_DATA": "Costuma levar de minutos a algumas horas. A situação aparece aqui."
+        "EXPLICACAO": "Enviado {quando}. Costuma levar minutos, mas pode levar até 24 horas. A situação aparece aqui.",
+        "EXPLICACAO_SEM_DATA": "Costuma levar minutos, mas pode levar até 24 horas. A situação aparece aqui."
       },
       "recusado": {
         "ROTULO": "Recusado",
@@ -59,9 +60,15 @@
       "pausado": {
         "ROTULO": "Pausado",
         "TITULO": "O WhatsApp pausou este modelo",
-        "EXPLICACAO": "Muitas pessoas bloquearam o número ou marcaram a mensagem como indesejada. O WhatsApp pausou {quando} e costuma liberar depois de algumas horas.",
+        "EXPLICACAO": "Muitas pessoas bloquearam o número ou marcaram a mensagem como indesejada. O WhatsApp pausou {quando}: a 1ª pausa dura 3 horas e a 2ª, 6 horas. Na 3ª vez, ele desativa o modelo.",
         "DICA": "mande só para quem conhece a sua empresa e deixe claro, logo no começo, quem está falando.",
-        "EXPLICACAO_SEM_DATA": "Muitas pessoas bloquearam o número ou marcaram a mensagem como indesejada. O WhatsApp costuma liberar depois de algumas horas."
+        "EXPLICACAO_SEM_DATA": "Muitas pessoas bloquearam o número ou marcaram a mensagem como indesejada. A 1ª pausa dura 3 horas e a 2ª, 6 horas. Na 3ª vez, o WhatsApp desativa o modelo."
+      },
+      "desativado": {
+        "ROTULO": "Desativado pelo WhatsApp",
+        "TITULO": "O WhatsApp desativou este modelo",
+        "EXPLICACAO": "Depois de pausas seguidas por bloqueios e denúncias, o WhatsApp desativou este modelo. Ele não volta sozinho e não dá para alterar.",
+        "DICA": "duplique o modelo, reescreva o texto dizendo logo no começo quem está falando, e mande só para quem conhece a sua empresa."
       }
     },
     "RECUSAS": {
@@ -136,7 +143,8 @@
       "ALTERAR_DEPOIS": "Você poderá alterar de novo em {dia}, às {hora}.",
       "SEM_ALTERACOES": "Este modelo já foi alterado 10 vezes neste mês. Para mudar agora, duplique.",
       "EM_USO_NAO_ALTERA": "Este modelo ainda vai sair nos lugares de \"Onde está em uso\". Para mudar, troque o modelo lá primeiro ou duplique.",
-      "REGRA_DE_ALTERAR": "O WhatsApp deixa alterar um modelo aprovado 1 vez por dia, até 10 vezes em 30 dias."
+      "REGRA_DE_ALTERAR": "O WhatsApp deixa alterar um modelo aprovado 1 vez por dia, até 10 vezes em 30 dias.",
+      "NAO_EDITAVEL": "Este modelo foi feito fora do Chat2You e tem partes que esta tela não sabe editar. Para mudar, use o Gerenciador do WhatsApp."
     },
     "USOS": {
       "TITULO": "Onde está em uso",
@@ -205,22 +213,18 @@
       "FALHOU_UMA_CONTA": "O modelo foi enviado para uma conta do WhatsApp, mas não para a outra. {motivo}"
     },
     "OBJETIVO": {
-      "DO_WHATSAPP": {
-        "TITULO": "Prontos do WhatsApp",
-        "TEXTO": "Textos que o próprio WhatsApp oferece. Costumam ser aprovados mais rápido."
-      },
       "SUGESTOES": {
         "TITULO": "Para escrever do seu jeito",
         "TEXTO": "Um começo pronto que você ajusta como quiser."
       },
-      "MAIS_RAPIDO": "Aprovação mais rápida",
       "ESCOLHER": "Começar com este",
       "ESCREVER": "Começar a escrever",
       "FORMATOS": {
         "TITULO": "Outros formatos",
         "TEXTO": "Para quando uma mensagem comum não basta."
       },
-      "SO_DIVULGACAO": "Só para divulgação"
+      "SO_DIVULGACAO": "Só para divulgação",
+      "NAO_VAI_EM_CAMPANHA": "Ainda não dá para usar em campanha"
     },
     "OBJETIVOS": {
       "boas_vindas": {
@@ -312,8 +316,6 @@
       "NOME": "Nome do modelo",
       "NOME_AJUDA": "Só a sua equipe vê este nome.",
       "MENSAGEM": "Mensagem",
-      "PRONTO_DO_WHATSAPP": "Texto pronto do WhatsApp: por isso é aprovado mais rápido.",
-      "MEU_JEITO": "Prefiro escrever do meu jeito",
       "LETRAS": "{n} de {limite} letras",
       "EXEMPLOS": "Exemplos",
       "EXEMPLOS_AJUDA": "Já preenchemos. O WhatsApp usa os exemplos só para entender a mensagem. Seus clientes recebem os dados de verdade.",
@@ -345,7 +347,7 @@
       },
       "documento": {
         "ROTULO": "Documento",
-        "AJUDA": "Escolha um PDF."
+        "AJUDA": "Escolha um PDF. O mesmo arquivo vai para todas as pessoas: não use para boleto ou documento de uma pessoa só."
       },
       "texto": {
         "ROTULO": "Título",
@@ -457,10 +459,11 @@
     },
     "QUEM_APROVA": {
       "TITULO": "Quem aprova é o WhatsApp",
-      "TEMPO": "A análise leva de minutos a algumas horas.",
+      "TEMPO": "A análise costuma levar minutos, mas pode levar até 24 horas.",
       "TIPO": "Deve entrar como {tipo}. O WhatsApp pode mudar o tipo, e isso muda o custo de cada envio.",
       "AVISO": "A situação aparece aqui, na lista de modelos.",
-      "SO_DIVULGACAO": "Este formato só existe para divulgação, então cada envio tem o custo de divulgação."
+      "SO_DIVULGACAO": "Este formato só existe para divulgação, então cada envio tem o custo de divulgação.",
+      "NAO_VAI_EM_CAMPANHA": "Este formato ainda não dá para usar em campanha."
     },
     "CELULAR": {
       "TITULO": "Como o cliente vê",
@@ -494,17 +497,17 @@
         },
         "ANALISE": {
           "TITULO": "Em análise",
-          "TEXTO": "Leva de minutos a algumas horas.",
+          "TEXTO": "Costuma levar minutos, mas pode levar até 24 horas.",
           "CAMPANHA": "Enquanto isso, dá para montar e agendar a campanha."
         },
         "PRONTO": {
           "TITULO": "Pronto para usar",
           "TEXTO": "Aí é só usar em uma campanha.",
-          "CAMPANHA": "Quando aprovar, a campanha agendada sai no horário."
+          "CAMPANHA": "Se o WhatsApp aprovar antes do horário, a campanha agendada sai no horário. Se não, ela fica parada e você toca em Retomar depois da aprovação."
         }
       },
       "VER_MODELOS": "Ver meus modelos",
-      "SITUACAO": "A situação aparece aqui. Costuma levar de minutos a algumas horas.",
+      "SITUACAO": "A situação aparece aqui. Costuma levar minutos, mas pode levar até 24 horas.",
       "POR_CONTA": "Foram {n} pedidos de aprovação, um para cada conta do WhatsApp.",
       "VOLTAR_PARA_CAMPANHA": "Voltar para a campanha"
     },
@@ -555,7 +558,7 @@
       },
       "codigo": {
         "TITULO": "Código de verificação",
-        "PARA": "Manda um código para o cliente confirmar que é ele mesmo ao entrar.",
+        "PARA": "Para quem tem sistema próprio que manda o código de acesso. O Chat2You ainda não envia este modelo.",
         "ETAPA": "Código",
         "NOME_PADRAO": "Código de acesso",
         "TEXTO_FIXO": "é o seu código de verificação.",
@@ -604,8 +607,7 @@
     "CODIGO": {
       "BOTAO": "Botão do código",
       "BOTOES_PARA": {
-        "copiar": "O cliente toca e o código é copiado.",
-        "preencher": "O código entra sozinho no seu aplicativo, no celular Android."
+        "copiar": "O cliente toca e o código é copiado."
       },
       "VALIDADE": "Validade do código, em minutos",
       "VALIDADE_AJUDA": "De {min} a {max} minutos.",
@@ -625,11 +627,11 @@
     "PARADAS": {
       "TITULO": "{n} campanha parou por causa do modelo | {n} campanhas pararam por causa do modelo",
       "MOTIVOS": {
-        "modelo_pausado": "O WhatsApp pausou o modelo “{modelo}”. A campanha volta a sair quando ele voltar.",
+        "modelo_pausado": "O WhatsApp pausou o modelo “{modelo}”. Quando ele voltar, toque em Retomar para a campanha sair.",
         "modelo_recusado": "O WhatsApp recusou o modelo “{modelo}”. Corrija o modelo para a campanha sair.",
         "modelo_mudou": "O modelo “{modelo}” mudou. Confira as variáveis da campanha.",
         "tipo_mudou": "O WhatsApp mudou o tipo do modelo “{modelo}” e o custo de cada envio. Confirme para a campanha seguir.",
-        "modelo_em_analise": "O modelo “{modelo}” voltou para análise. A campanha sai depois que o WhatsApp aprovar.",
+        "modelo_em_analise": "O modelo “{modelo}” voltou para análise. Quando o WhatsApp aprovar, toque em Retomar para a campanha sair.",
         "modelo_apagado": "O modelo “{modelo}” não existe mais. Escolha outro modelo para a campanha.",
         "formato_nao_vai": "O modelo “{modelo}” tem um formato que a campanha ainda não sabe enviar.",
         "nao_conferido": "Não conseguimos conferir o modelo “{modelo}” com o WhatsApp. Nada foi enviado.",
@@ -657,7 +659,8 @@
       "NAO_VAI": {
         "FORMATO_NAO_VAI": "ainda não vai em campanha",
         "RECUSADO": "recusado",
-        "PAUSADO": "pausado"
+        "PAUSADO": "pausado",
+        "DESATIVADO": "desativado"
       },
       "EM_ANALISE": "“{nome}” ainda está em análise no WhatsApp. Você pode montar e agendar a campanha; enviar agora libera quando ele for aprovado.",
       "ENVIAR_AGORA_BLOQUEADO": "Enviar agora libera quando o WhatsApp aprovar o modelo. Escolha uma data para agendar.",

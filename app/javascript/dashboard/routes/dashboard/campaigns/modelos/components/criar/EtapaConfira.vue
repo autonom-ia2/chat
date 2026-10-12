@@ -86,6 +86,7 @@ const resumo = computed(() =>
     <ModeloQuemAprova
       :tipo="rascunho.tipo"
       :so-divulgacao="Boolean(formatoPorChave(conteudo.formato)?.soDivulgacao)"
+      :nao-vai-em-campanha="(conteudo.formato || 'padrao') !== 'padrao'"
     />
   </div>
 </template>

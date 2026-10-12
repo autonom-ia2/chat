@@ -2,9 +2,7 @@
 // Os textos moram no i18n (MODELOS_WHATSAPP.*); aqui ficam só chaves, ícones e
 // classes de cor escritas por inteiro, para o Tailwind encontrá-las.
 
-// Objetivos da galeria "Começar pronto". `biblioteca` (modelo pronto do próprio
-// WhatsApp, aprovação mais rápida) fica desligado: a API de Modelos (#1330) ainda
-// não cria pela biblioteca da Meta, e a tela não promete o que não cumpre. O texto de cada um está em
+// Objetivos da galeria "Começar pronto". O texto de cada um está em
 // MODELOS_WHATSAPP.OBJETIVOS.<chave>.TEXTO, com os campos escritos [assim].
 export const OBJETIVOS = [
   {
@@ -118,11 +116,19 @@ export const SITUACOES = {
     selo: 'bg-n-slate-3 text-n-slate-11',
     caixa: 'bg-n-slate-2 ring-n-slate-6',
   },
+  // DISABLED: o WhatsApp desligou depois de pausas seguidas. Não volta sozinho
+  // e não dá para alterar; o caminho é duplicar e reescrever.
+  desativado: {
+    icone: 'i-lucide-circle-off',
+    selo: 'bg-n-ruby-3 text-n-ruby-11',
+    caixa: 'bg-n-ruby-2 ring-n-ruby-6',
+  },
 };
 
 // Ordem da lista: o que precisa da pessoa vem primeiro.
 export const ORDEM_DAS_SITUACOES = [
   'recusado',
+  'desativado',
   'pausado',
   'em_analise',
   'pronto',

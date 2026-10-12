@@ -4,23 +4,12 @@ import { FORMATOS, OBJETIVO_EM_BRANCO, OBJETIVOS } from '../../constants';
 import { useCanUseIA } from '../../helpers/useCanUseIA';
 import FormatoMiniatura from './FormatoMiniatura.vue';
 
-// Começar pronto: primeiro os modelos prontos do WhatsApp (aprovação mais
-// rápida), depois as sugestões com texto livre e o "começar do zero".
+// Começar pronto: as sugestões com texto livre e o "começar do zero".
 const emit = defineEmits(['escolher', 'formato', 'ia']);
 
-const doWhatsapp = computed(() => OBJETIVOS.filter(item => item.biblioteca));
-const sugestoes = computed(() => [
-  ...OBJETIVOS.filter(item => !item.biblioteca),
-  OBJETIVO_EM_BRANCO,
+const grupos = computed(() => [
+  { chave: 'SUGESTOES', itens: [...OBJETIVOS, OBJETIVO_EM_BRANCO] },
 ]);
-
-// Grupo sem item (hoje, os prontos do WhatsApp) não aparece.
-const grupos = computed(() =>
-  [
-    { chave: 'DO_WHATSAPP', itens: doWhatsapp.value },
-    { chave: 'SUGESTOES', itens: sugestoes.value },
-  ].filter(grupo => grupo.itens.length)
-);
 
 // Formatos sem backend (catálogo, formulário) ficam fora: nenhum botão sem funcionar.
 const formatos = FORMATOS.filter(formato => formato.disponivel !== false);
@@ -95,13 +84,6 @@ const podeUsarIA = useCanUseIA();
                   aria-hidden="true"
                 />
               </span>
-              <span
-                v-if="objetivo.biblioteca"
-                class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-n-teal-3 text-n-teal-11"
-              >
-                <span class="i-lucide-zap size-3" aria-hidden="true" />
-                {{ $t('MODELOS_WHATSAPP.OBJETIVO.MAIS_RAPIDO') }}
-              </span>
             </span>
             <span class="flex flex-col gap-1">
               <span class="text-lg font-semibold leading-snug text-n-slate-12">
@@ -163,11 +145,20 @@ const podeUsarIA = useCanUseIA();
                 {{ $t(`MODELOS_WHATSAPP.FORMATOS.${formato.chave}.PARA`) }}
               </span>
             </span>
-            <span
-              v-if="formato.soDivulgacao"
-              class="self-start px-2 py-0.5 mt-auto text-xs font-medium rounded-full bg-n-amber-3 text-n-amber-11"
-            >
-              {{ $t('MODELOS_WHATSAPP.OBJETIVO.SO_DIVULGACAO') }}
+            <span class="flex flex-wrap gap-1.5 mt-auto">
+              <span
+                v-if="formato.soDivulgacao"
+                class="px-2 py-0.5 text-xs font-medium rounded-full bg-n-amber-3 text-n-amber-11"
+              >
+                {{ $t('MODELOS_WHATSAPP.OBJETIVO.SO_DIVULGACAO') }}
+              </span>
+              <!-- A campanha só envia a mensagem comum (podeIrEmCampanha). -->
+              <span
+                data-nao-vai-em-campanha
+                class="px-2 py-0.5 text-xs font-medium rounded-full bg-n-slate-3 text-n-slate-11"
+              >
+                {{ $t('MODELOS_WHATSAPP.OBJETIVO.NAO_VAI_EM_CAMPANHA') }}
+              </span>
             </span>
           </button>
         </li>
