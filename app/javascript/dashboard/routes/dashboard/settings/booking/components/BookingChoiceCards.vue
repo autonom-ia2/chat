@@ -4,6 +4,7 @@ import { useId } from 'vue';
 // Escolha única em cartões (jogo de avisos, prazo para mudar). Por baixo é um
 // grupo de rádios de verdade: setas do teclado trocam a escolha e o leitor de
 // tela ouve "1 de 3, selecionado". O cartão inteiro é o alvo (44 px ou mais).
+// O slot `option` troca só o conteúdo do cartão; o rádio e o alvo continuam aqui.
 defineProps({
   legend: { type: String, required: true },
   hint: { type: String, default: '' },
@@ -39,20 +40,23 @@ const name = useId();
           :checked="modelValue === option.value"
           @change="emit('update:modelValue', option.value)"
         />
-        <span class="flex items-start justify-between gap-2">
-          <span class="text-base font-semibold text-n-slate-12">
-            {{ option.label }}
+        <!-- #1370: quem usa pode desenhar o conteúdo do cartão (selo com cor, várias linhas). -->
+        <slot name="option" :option="option">
+          <span class="flex items-start justify-between gap-2">
+            <span class="text-base font-semibold text-n-slate-12">
+              {{ option.label }}
+            </span>
+            <span
+              v-if="option.badge"
+              class="px-2 py-0.5 text-sm font-semibold rounded-full shrink-0 bg-n-blue-3 text-n-blue-11"
+            >
+              {{ option.badge }}
+            </span>
           </span>
-          <span
-            v-if="option.badge"
-            class="px-2 py-0.5 text-sm font-semibold rounded-full shrink-0 bg-n-blue-3 text-n-blue-11"
-          >
-            {{ option.badge }}
+          <span v-if="option.hint" class="text-base text-n-slate-11">
+            {{ option.hint }}
           </span>
-        </span>
-        <span v-if="option.hint" class="text-base text-n-slate-11">
-          {{ option.hint }}
-        </span>
+        </slot>
       </label>
     </div>
   </fieldset>

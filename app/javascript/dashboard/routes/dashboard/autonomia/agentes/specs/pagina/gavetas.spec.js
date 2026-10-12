@@ -1,5 +1,5 @@
 import { nextTick } from 'vue';
-import { mount, flushPromises } from '@vue/test-utils';
+import { config, mount, flushPromises } from '@vue/test-utils';
 import GavetaTestar from '../../components/pagina/GavetaTestar.vue';
 import GavetaFotoNome from '../../components/pagina/GavetaFotoNome.vue';
 import GavetaVersoes from '../../components/pagina/GavetaVersoes.vue';
@@ -21,6 +21,7 @@ const paginasApi = vi.hoisted(() => ({ get: vi.fn() }));
 vi.mock('dashboard/api/crmBookingPages', () => ({ default: paginasApi }));
 vi.mock('vue-router', () => ({
   useRouter: () => ({ resolve: rota => ({ href: `/app/${rota.name}` }) }),
+  useRoute: () => ({ path: '/app/accounts/1/agents/7', params: {} }),
 }));
 vi.mock('../../composables/usePermissoesDaJornada', async () => {
   const { computed } = await import('vue');
@@ -458,6 +459,79 @@ describe('GavetaVersoes (T13)', () => {
     wrapper.unmount();
   });
 
+  it('says which way each "Voltar" went back to (#1369)', async () => {
+    config.global.plugins[0].global.setLocaleMessage('en', {
+      AGENTS: {
+        JORNADA: {
+          PAGINA: {
+            VERSOES: {
+              MOTIVO: {
+                ROLLBACK: 'Went back to a previous way',
+                ROLLBACK_DE: 'Went back to the way from {quando}',
+              },
+            },
+          },
+        },
+      },
+    });
+    store.dispatch.mockResolvedValue([
+      {
+        id: 5,
+        created_at: '2026-10-12T15:00:00Z',
+        reason: 'rollback',
+        instruction_hash: 'b',
+      },
+      {
+        id: 4,
+        created_at: '2026-10-11T15:00:00Z',
+        reason: 'rollback',
+        instruction_hash: 'a',
+      },
+      {
+        id: 3,
+        created_at: '2026-10-10T15:00:00Z',
+        reason: 'kb_refresh',
+        instruction_hash: 'b',
+      },
+      {
+        id: 2,
+        created_at: '2026-10-02T09:05:00Z',
+        reason: 'manual_edit',
+        instruction_hash: 'a',
+      },
+      // Voltou a um jeito que já saiu da lista (a API guarda os 50 mais novos).
+      {
+        id: 1,
+        created_at: '2026-09-28T10:00:00Z',
+        reason: 'rollback',
+        instruction_hash: 'z',
+      },
+      // Uma segunda versão com o texto "b": a volta da versão 5 fica ambígua.
+      {
+        id: 0,
+        created_at: '2026-09-20T10:00:00Z',
+        reason: 'manual_edit',
+        instruction_hash: 'b',
+      },
+    ]);
+    const wrapper = montar();
+    await flushPromises();
+
+    const linhas = todos('[data-versao]');
+    const quando = data =>
+      `${new Date(data).toLocaleDateString('en', { day: 'numeric', month: 'short' })}, ${new Date(data).toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' })}`;
+    // Ambígua (duas anteriores com o mesmo texto): frase genérica, sem data.
+    expect(linhas[0].textContent).toContain('Went back to a previous way');
+    expect(linhas[0].textContent).not.toContain('Went back to the way from');
+    // Só uma anterior com o mesmo texto: diz de quando é.
+    expect(linhas[1].textContent).toContain(
+      `Went back to the way from ${quando('2026-10-02T09:05:00Z')}`
+    );
+    expect(linhas[4].textContent).toContain('Went back to a previous way');
+    semMensagens();
+    wrapper.unmount();
+  });
+
   it('goes back to a version after confirming', async () => {
     store.dispatch.mockResolvedValue(VERSOES);
     store.getters['autonomiaAgents/getInstructionVersions'] = VERSOES;
@@ -569,15 +643,7 @@ describe('GavetaInstrucoes (T14)', () => {
 // #1253 — Marcar reuniões. O ChoiceSelect é trocado por botões que mostram as opções e mudam o
 // v-model, para o spec conferir as escolhas sem depender do popover.
 describe('GavetaAgenda (#1253)', () => {
-  const ChoiceSelect = {
-    props: ['modelValue', 'options', 'ariaLabel', 'triggerId', 'disabled'],
-    emits: ['update:modelValue'],
-    template: `<div data-escolha :id="triggerId">
-      <button v-for="opcao in options" :key="String(opcao.value)" type="button"
-        :data-valor="String(opcao.value)" :data-marcada="opcao.value === modelValue"
-        @click="$emit('update:modelValue', opcao.value)">{{ opcao.label }}</button>
-    </div>`,
-  };
+  // #1370 — os cartões são rádios de verdade (BookingChoiceCards): o teste marca o rádio.
   const PAGINAS = [
     { id: 3, title: 'Visita', enabled: true },
     { id: 5, title: 'Conversa', enabled: false },
@@ -589,7 +655,6 @@ describe('GavetaAgenda (#1253)', () => {
         agente: { ...AGENTE, config: { booking_page_id: 3 }, ...agente },
         nome: 'Bia',
       },
-      global: { stubs: { ChoiceSelect } },
     });
     await flushPromises();
     return wrapper;
@@ -602,13 +667,13 @@ describe('GavetaAgenda (#1253)', () => {
 
   it('offers "do not book" and each page, with the saved one chosen', async () => {
     const wrapper = await montar();
-    expect(todos('[data-escolha] button').map(b => b.dataset.valor)).toEqual([
+    expect(todos('[data-choice]').map(c => c.dataset.choice)).toEqual([
       '',
       '3',
       '5',
     ]);
-    expect(no('[data-valor="3"]').dataset.marcada).toBe('true');
-    expect(no('label').getAttribute('for')).toBe(no('[data-escolha]').id);
+    expect(no('[data-choice="3"] input').checked).toBe(true);
+    expect(no('[data-choice="3"] input').type).toBe('radio');
     expect(no('select')).toBeNull();
     wrapper.unmount();
   });
@@ -616,7 +681,7 @@ describe('GavetaAgenda (#1253)', () => {
   it('saves only the booking page, and null for "do not book"', async () => {
     store.dispatch.mockResolvedValue({});
     const wrapper = await montar();
-    await clicar('[data-valor=""]');
+    await clicar('[data-choice=""] input');
     await clicar('[data-salvar]');
     expect(store.dispatch).toHaveBeenCalledWith('autonomiaAgents/update', {
       id: 7,
@@ -648,7 +713,7 @@ describe('GavetaAgenda (#1253)', () => {
     async (_caso, falha) => {
       store.dispatch.mockRejectedValue(falha);
       const wrapper = await montar();
-      await clicar('[data-valor="5"]');
+      await clicar('[data-choice="5"] input');
       await clicar('[data-salvar]');
       expect(alerta).not.toHaveBeenCalled();
       const texto = no('[data-erro]').textContent;

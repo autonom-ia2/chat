@@ -63,6 +63,14 @@ import { useOnEnter } from 'dashboard/components-next/CampaignJourney/useOnEnter
 import { JOURNEY_EDITOR_QUERY } from './journeyRedirects';
 import { smsStats } from 'dashboard/components-next/CampaignJourney/smsSegments';
 import { useJourneyChannelForms } from 'dashboard/components-next/CampaignJourney/useJourneyChannelForms';
+// Fork (Modelos do WhatsApp): ponte com a tela de Modelos, ligada pela flag whatsapp_templates_journey.
+import { useModelosNaCampanha } from '../modelos/ponte/useModelosNaCampanha';
+import PonteAvisoDoModelo from '../modelos/ponte/PonteAvisoDoModelo.vue';
+import PonteCaixasReconectar from '../modelos/ponte/PonteCaixasReconectar.vue';
+import PontePrevia from '../modelos/ponte/PontePrevia.vue';
+import PonteSemModelo from '../modelos/ponte/PonteSemModelo.vue';
+import RevisaoDoModelo from '../modelos/ponte/RevisaoDoModelo.vue';
+import { rotuloDoCampo } from '../modelos/helpers/campos';
 import {
   buildEmailPayload,
   buildSmsPayload,
@@ -79,7 +87,18 @@ const route = useRoute();
 const router = useRouter();
 const store = useStore();
 const { currentAccount } = useAccount();
-const { channels, features } = useAvailableCampaignChannels();
+const { channels: connectedChannels, features } =
+  useAvailableCampaignChannels();
+// Fork (Modelos do WhatsApp): caixas, modelos e ligações vêm da ponte quando ela está ligada.
+const ponte = useModelosNaCampanha();
+const ponteAtiva = ponte.ativa;
+const caixasParaReconectar = ponte.caixasParaReconectar;
+const channels = computed(() => {
+  const list = connectedChannels.value;
+  const official = CAMPAIGN_CHANNELS.WHATSAPP_OFFICIAL;
+  if (!ponteAtiva.value || !ponte.temCaixaConectada.value) return list;
+  return list.includes(official) ? list : [official, ...list];
+});
 
 const accountId = useMapGetter('getCurrentAccountId');
 const inboxes = useMapGetter('inboxes/getInboxes');
@@ -114,7 +133,13 @@ const update = patch => {
     'templateId' in patch && patch.templateId !== draft.value.templateId;
   draft.value = {
     ...draft.value,
-    ...(templateChanged ? { bindings: {}, defaults: {}, mediaUrl: '' } : {}),
+    ...(templateChanged
+      ? {
+          bindings: ponte.ligacoesIniciais(patch.templateId),
+          defaults: {},
+          mediaUrl: '',
+        }
+      : {}),
     ...patch,
   };
 };
@@ -155,22 +180,39 @@ const cloudInboxes = computed(() =>
   )
 );
 const inboxOptions = computed(() =>
-  cloudInboxes.value.map(inbox => ({ value: inbox.id, label: inbox.name }))
+  ponteAtiva.value
+    ? ponte.opcoesDeCaixa.value
+    : cloudInboxes.value.map(inbox => ({ value: inbox.id, label: inbox.name }))
 );
-const templates = computed(() =>
-  draft.value.inboxId ? filteredTemplates.value(draft.value.inboxId) : []
-);
+const templates = computed(() => {
+  if (!draft.value.inboxId) return [];
+  return ponteAtiva.value
+    ? ponte.templates(draft.value.inboxId)
+    : filteredTemplates.value(draft.value.inboxId);
+});
 const templateOptions = computed(() =>
-  templates.value.map(template => ({
-    value: template.id,
-    label: `${template.name} · ${template.language || ''}`,
-  }))
+  ponteAtiva.value
+    ? ponte.opcoesDeModelo(draft.value.inboxId)
+    : templates.value.map(template => ({
+        value: template.id,
+        label: `${template.name} · ${template.language || ''}`,
+      }))
 );
 const template = computed(
   () => templates.value.find(item => item.id === draft.value.templateId) || null
 );
 const variables = computed(() =>
-  template.value ? templateVariables(template.value) : []
+  template.value
+    ? ponte.rotular(templateVariables(template.value), template.value.id)
+    : []
+);
+const modeloEscolhido = computed(() =>
+  ponte.modeloPorId(draft.value.templateId)
+);
+const remetente = computed(
+  () =>
+    ponte.caixas.value.find(caixa => caixa.id === draft.value.inboxId)?.conta
+      .nome || ''
 );
 const mediaHeader = computed(() =>
   template.value ? mediaHeaderOf(template.value) : null
@@ -178,6 +220,9 @@ const mediaHeader = computed(() =>
 
 const sourceLabel = binding => {
   if (binding.source === BINDING_SOURCES.COLUMN) return binding.value;
+  // Fork (Modelos do WhatsApp): campo do catálogo (#1331), pelo nome dele.
+  if (binding.source === BINDING_SOURCES.FIELD)
+    return rotuloDoCampo(t, binding.value);
   if (binding.source === BINDING_SOURCES.FIXED) return binding.value;
   return t(`${NS}.VARIABLES.CONTACT_FIELDS.${binding.value.toUpperCase()}`);
 };
@@ -238,7 +283,10 @@ const reach = computed(() =>
 const inboxName = computed(
   () =>
     (forms.inboxes.value || []).find(inbox => inbox.id === draft.value.inboxId)
-      ?.name || ''
+      ?.name ||
+    // Fork: caixa vinda da ponte de Modelos.
+    ponte.caixas.value.find(caixa => caixa.id === draft.value.inboxId)?.nome ||
+    ''
 );
 const channelLabel = computed(() =>
   draft.value.channel
@@ -248,9 +296,11 @@ const channelLabel = computed(() =>
 const bindingSummary = computed(() =>
   variables.value
     .filter(({ key }) => draft.value.bindings[key])
-    .map(
-      ({ key, variable }) =>
-        `{{${variable}}} ${sourceLabel(draft.value.bindings[key])}`
+    .map(({ key, variable, label }) =>
+      // Fork: com a ponte de Modelos, o nome do campo ("Nome do cliente") no lugar de {{1}}.
+      ponteAtiva.value
+        ? `${label}: ${sourceLabel(draft.value.bindings[key])}`
+        : `{{${variable}}} ${sourceLabel(draft.value.bindings[key])}`
     )
     .join(' · ')
 );
@@ -294,7 +344,7 @@ const messageMain = () => {
         })
       : t(`${NS}.EMAIL.CONTENT_EMPTY`);
   }
-  return template.value?.name || '';
+  return modeloEscolhido.value?.nome || template.value?.name || '';
 };
 const reviewBlocks = computed(() => [
   {
@@ -465,6 +515,25 @@ const createAudience = () => {
     query: { from: 'campaign' },
   });
 };
+
+// Fork: caixa sem modelo → cria o modelo e volta para esta campanha (rascunho guardado).
+const createTemplate = () => {
+  saveDraft(accountId.value, draft.value);
+  router.push({
+    name: 'modelos_whatsapp_novo',
+    query: { from: 'campaign', caixa: String(draft.value.inboxId) },
+  });
+};
+
+// Fork: modelo ainda em análise → dá para agendar; "Enviar agora" só depois de aprovado.
+const nowBlockedReason = computed(() =>
+  ponte.emAnalise(draft.value.templateId)
+    ? t('MODELOS_WHATSAPP.PONTE.ENVIAR_AGORA_BLOQUEADO')
+    : ''
+);
+watch(nowBlockedReason, reason => {
+  if (reason && draft.value.when === 'now') update({ when: 'later' });
+});
 
 const cancel = () => {
   clearDraft(accountId.value);
@@ -657,12 +726,24 @@ const startJourney = async initial => {
   draft.value = initial;
   searchQuery.value = '';
   audienceDetail.value = null;
-  const requests = [loadAudiences(), store.dispatch('inboxes/get')];
+  const requests = [
+    loadAudiences(),
+    store.dispatch('inboxes/get'),
+    ponte.carregar(),
+  ];
   if (features.value.emailCampaigns) {
     requests.push(store.dispatch('emailSenderIdentities/get'));
   }
   const results = await Promise.allSettled(requests);
   hasLoadError.value = results[0].status === 'rejected';
+  // Fork: aberta com um modelo (?modelo=), as variáveis já vêm ligadas.
+  if (
+    ponteAtiva.value &&
+    draft.value.templateId &&
+    !Object.keys(draft.value.bindings).length
+  ) {
+    update({ bindings: ponte.ligacoesIniciais(draft.value.templateId) });
+  }
   await loadAudienceDetail();
   forms.loadEmailCampaign();
   forms.loadApiTemplates(draft.value.inboxId);
@@ -674,9 +755,11 @@ const startJourney = async initial => {
 };
 
 const continuePending = () => startJourney(pendingDraft.value);
+// Fork: vindo de Modelos com um rascunho guardado, "começar de novo" já traz o modelo.
+const freshDraft = ref(null);
 const startNew = () => {
   clearDraft(accountId.value);
-  startJourney(emptyDraft());
+  startJourney(freshDraft.value || emptyDraft());
 };
 
 // Every visit (first mount or back to the kept-alive page) reads the address first (#1093).
@@ -684,7 +767,10 @@ useOnEnter(async () => {
   isActive = true;
   submitError.value = '';
   returned.value = route.query.returned === '1';
-  const entry = journeyEntry(route.query, loadDraft(accountId.value));
+  const entry = journeyEntry(route.query, loadDraft(accountId.value), {
+    withTemplates: ponte.flagLigada.value,
+  });
+  freshDraft.value = entry.novo || null;
   if (entry.pending) {
     pendingDraft.value = entry.pending;
     isLoading.value = false;
@@ -786,6 +872,7 @@ onBeforeUnmount(() => {
           :variables="variables"
           :columns="columns"
           :coverage="coverage"
+          :field-groups="ponte.gruposDeCampos.value"
           :media-header="mediaHeader"
           :preview-text="previewText"
           :can-continue="isMessageReady"
@@ -818,7 +905,25 @@ onBeforeUnmount(() => {
           @change-audience="goTo(1)"
           @back="goTo(1)"
           @continue="goTo(3)"
-        />
+        >
+          <template v-if="ponteAtiva" #caixa-aviso>
+            <PonteCaixasReconectar :caixas="caixasParaReconectar" />
+          </template>
+          <template v-if="ponteAtiva" #modelo-vazio>
+            <PonteSemModelo @criar="createTemplate" />
+          </template>
+          <template v-if="ponteAtiva" #modelo-aviso>
+            <PonteAvisoDoModelo :modelo="modeloEscolhido" />
+          </template>
+          <template v-if="modeloEscolhido" #previa>
+            <PontePrevia
+              :modelo="modeloEscolhido"
+              :bindings="draft.bindings"
+              :sample="sample"
+              :remetente="remetente"
+            />
+          </template>
+        </StepMessage>
 
         <StepReview
           v-else-if="draft.step === 3 && audience && isMessageReady"
@@ -835,12 +940,20 @@ onBeforeUnmount(() => {
           :time-zone="timeZone"
           :is-submitting="isSubmitting"
           :error-message="submitError"
+          :now-blocked-reason="nowBlockedReason"
           @update="update"
           @go="goTo"
           @back="goTo(2)"
           @submit="submit"
           @test-send="sendTestToMe"
-        />
+        >
+          <template v-if="modeloEscolhido" #modelo>
+            <RevisaoDoModelo
+              :modelo="modeloEscolhido"
+              :recebem="forms.preview.value?.receive ?? reach"
+            />
+          </template>
+        </StepReview>
       </template>
     </div>
   </section>

@@ -246,12 +246,21 @@ const fechar = () => {
   limparAbaDaUrl();
 };
 
+// #1370 — `?gaveta=` (a volta do assistente de páginas de agendamento) vale uma vez: sai da URL
+// assim que a gaveta abre, e um F5 não a reabre.
+const tirarGavetaDaConsulta = () => {
+  if (!route.query?.gaveta) return;
+  const { gaveta, ...resto } = route.query;
+  router.replace({ query: resto });
+};
+
 const abrirDaUrl = () => {
   if (!pronto.value || !props.gaveta || props.gaveta === gavetaDaUrlAberta) {
     return;
   }
   gavetaDaUrlAberta = props.gaveta;
   abrir(props.gaveta);
+  tirarGavetaDaConsulta();
 };
 
 watch(() => [props.gaveta, pronto.value], abrirDaUrl, { immediate: true });
@@ -667,6 +676,8 @@ const tirarPergunta = id => {
         v-else-if="aberta === GAVETA.AGENDA"
         :agente="agente"
         :nome="nome"
+        :pode-mudar="podeMudar"
+        @mudar="mudarDaGaveta"
         @fechar="fechar"
       />
       <GavetaFerramentas

@@ -48,6 +48,7 @@
 class Crm::AgentBookingProfile < ApplicationRecord
   include Crm::BookingPageSettings
   include Crm::BookingNoticeSettings
+  include Crm::BookingNoticeTexts
   include Crm::BookingPostMeetingSettings
   include Crm::BookingShortName
 
@@ -74,8 +75,10 @@ class Crm::AgentBookingProfile < ApplicationRecord
   belongs_to :default_pipeline, class_name: 'Crm::Pipeline', optional: true
   belongs_to :default_stage, class_name: 'Crm::PipelineStage', optional: true
   belongs_to :default_assignee, class_name: 'User', optional: true
-  has_many :agent_booking_links, class_name: 'Crm::AgentBookingLink',
-                                 foreign_key: :booking_profile_id, inverse_of: :booking_profile, dependent: :destroy
+  # Ordem definida (#1305): "o primeiro link ativo" (quem recebe sem ninguém atribuído) é o mesmo na lista de páginas,
+  # no convite, no painel e na IA, que leem a associação em consultas diferentes.
+  has_many :agent_booking_links, -> { order(:id) }, class_name: 'Crm::AgentBookingLink',
+                                                    foreign_key: :booking_profile_id, inverse_of: :booking_profile, dependent: :destroy
 
   before_validation :ensure_slug, on: :create
   before_validation :normalize_working_hours

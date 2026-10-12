@@ -599,7 +599,17 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
 
   def agendar_com_telefone
     conversation.contact.update!(phone_number: '+5521988887777')
-    na_agenda(Autonomia::Agents::Tools::Native::AgendarReuniao, { inicio: '2026-10-20T10:00:00-03:00' })
+    na_agenda(Autonomia::Agents::Tools::Native::AgendarReuniao, { inicio: '2026-10-20T10:00:00-03:00', cliente_confirmou: true })
+  end
+
+  # #1307: página com um link por pessoa e duas pessoas que podem atender (o responsável do mundo e uma colega).
+  def duas_pessoas_na_agenda
+    mundo = agenda_pronta
+    mundo.profile.update!(assignment_mode: :per_agent, default_assignee: nil)
+    [mundo.host, create(:user, account: account, role: :agent)].each do |user|
+      mundo.profile.agent_booking_links.create!(account: account, agent: user)
+    end
+    mundo
   end
 
   def booker_que_falha_com(codigo)
@@ -620,11 +630,53 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
           na_agenda(horarios, {})
         }
       },
+      # #1305: sem ninguém para atender é motivo próprio, o mesmo `ai_status` da tela de páginas.
       'agenda.rb#recusa_da_pagina#2' => {
-        espera: { motivo: 'agenda_pausada', slug: 'horarios_disponiveis' },
+        espera: { motivo: 'agenda_sem_responsavel', slug: 'horarios_disponiveis' },
+        dispara: lambda {
+          mundo = agenda_pronta
+          AccountUser.find_by(account: account, user: mundo.host).destroy!
+          na_agenda(horarios, {})
+        }
+      },
+      # A página no ar, mas quem atende pausou Meus horários: a IA diz isso em vez de "sem horários".
+      'agenda.rb#recusa_da_pagina#3' => {
+        espera: { motivo: 'agenda_de_quem_atende_pausada', slug: 'horarios_disponiveis' },
+        dispara: lambda {
+          mundo = agenda_pronta
+          Crm::AgentAvailability.create!(account: account, user: mundo.host, paused: true)
+          na_agenda(horarios, {})
+        }
+      },
+      'agenda.rb#recusa_da_pagina#4' => {
+        espera: { motivo: 'agenda_pagina_pausada', slug: 'horarios_disponiveis' },
         dispara: lambda {
           agenda_pronta.profile.update!(enabled: false)
           na_agenda(horarios, {})
+        }
+      },
+      # #1307: o pessoa_id que o modelo mandou não é de nenhuma pessoa liberada (forjado).
+      'agenda_com_quem.rb#recusa_da_pessoa#1' => {
+        espera: { motivo: 'agenda_pessoa_nao_liberada', slug: 'horarios_disponiveis' },
+        dispara: lambda {
+          agenda_pronta
+          na_agenda(horarios, { pessoa_id: 999_999 })
+        }
+      },
+      'agenda_com_quem.rb#recusa_da_pessoa#2' => {
+        espera: { motivo: 'agenda_pessoa_pausada', slug: 'horarios_disponiveis' },
+        dispara: lambda {
+          mundo = duas_pessoas_na_agenda
+          Crm::AgentAvailability.create!(account: account, user: mundo.host, paused: true)
+          na_agenda(horarios, { pessoa_id: mundo.host.id })
+        }
+      },
+      'agenda_com_quem.rb#recusa_pessoa_obrigatoria#1' => {
+        espera: { motivo: 'agenda_pessoa_obrigatoria', slug: 'agendar_reuniao' },
+        dispara: lambda {
+          duas_pessoas_na_agenda
+          agendar_com_telefone
+          expect(Crm::Meeting.count).to eq(0)
         }
       },
       'agenda.rb#recusa_sem_horarios#1' => {
@@ -661,7 +713,7 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
         dispara: lambda {
           agenda_pronta.profile.update_columns(locations: [{ 'type' => 'google_meet' }]) # rubocop:disable Rails/SkipsModelValidations
           conversation.contact.update!(phone_number: '+5521988887777', email: nil)
-          na_agenda(agendar, { inicio: '2026-10-20T10:00:00-03:00', local: 'google_meet' })
+          na_agenda(agendar, { inicio: '2026-10-20T10:00:00-03:00', local: 'google_meet', cliente_confirmou: true })
         }
       },
       'agendar_reuniao.rb#recusa_do_pedido#1' => {
@@ -669,7 +721,16 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
         dispara: lambda {
           agenda_pronta
           conversation.contact.update!(phone_number: nil)
-          na_agenda(agendar, { inicio: '2026-10-20T10:00:00-03:00' })
+          na_agenda(agendar, { inicio: '2026-10-20T10:00:00-03:00', cliente_confirmou: true })
+        }
+      },
+      # #1305: a confirmação do cliente é decidida pelo modelo; sem `true`, nada é marcado.
+      'agendar_reuniao.rb#recusa_sem_confirmacao#1' => {
+        espera: { motivo: 'agenda_sem_confirmacao', slug: 'agendar_reuniao' },
+        dispara: lambda {
+          agenda_pronta
+          na_agenda(agendar, { inicio: '2026-10-20T10:00:00-03:00', cliente_confirmou: false })
+          expect(Crm::Meeting.count).to eq(0)
         }
       },
       'agendar_reuniao.rb#tratar_erro#1' => {

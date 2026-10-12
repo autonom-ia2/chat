@@ -43,8 +43,17 @@ const offline = computed(
     typeof navigator !== 'undefined' &&
     navigator.onLine === false
 );
+// #1369 — as ideias respondem à primeira pergunta do Construtor: só aparecem depois que ela chega
+// (não durante o "Pensando…" da abertura nem quando a abertura falhou).
+const primeiraPerguntaChegou = computed(
+  () => !props.pensando && props.falas.some(fala => fala.de === 'assistente')
+);
 const mostrarIdeias = computed(
-  () => props.ideias.length > 0 && props.respostas === 0 && !props.fechada
+  () =>
+    props.ideias.length > 0 &&
+    props.respostas === 0 &&
+    !props.fechada &&
+    primeiraPerguntaChegou.value
 );
 const mostrarLinhaDoAnexo = computed(
   () => props.respostas >= 1 && !props.fechada

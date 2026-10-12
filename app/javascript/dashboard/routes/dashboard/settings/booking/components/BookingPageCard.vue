@@ -3,6 +3,7 @@ import { computed, nextTick, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import BookingPageLinks from './BookingPageLinks.vue';
 import BookingReassignPanel from './BookingReassignPanel.vue';
+import BookingStatusBadge from './BookingStatusBadge.vue';
 
 // Um cartão por página: nome, situação (No ar, Pausada ou Rascunho), aviso de
 // atenção, o link (só no ar; com um link por pessoa, um por pessoa) e, para quem
@@ -29,21 +30,6 @@ const { t } = useI18n();
 const confirming = ref(false);
 
 const published = computed(() => props.page.enabled === true);
-// Rascunho: desligada e ainda falta algo para publicar (o `missing` do index).
-const status = computed(() => {
-  if (published.value) return 'LIVE';
-  return props.page.missing?.length ? 'DRAFT' : 'PAUSED';
-});
-const statusLabel = computed(() => {
-  if (status.value === 'LIVE') return t('BOOKING.CARD.STATUS.LIVE');
-  if (status.value === 'DRAFT') return t('BOOKING.CARD.STATUS.DRAFT');
-  return t('BOOKING.CARD.STATUS.PAUSED');
-});
-const STATUS_TONE = {
-  LIVE: { badge: 'bg-n-teal-3 text-n-teal-11', dot: 'bg-n-teal-9' },
-  PAUSED: { badge: 'bg-n-slate-3 text-n-slate-11', dot: 'bg-n-slate-9' },
-  DRAFT: { badge: 'bg-n-amber-3 text-n-amber-11', dot: 'bg-n-amber-9' },
-};
 const title = computed(() => props.page.title || t('BOOKING.CARD.UNTITLED'));
 // Reuniões que ficaram com quem não atende mais (#1195) e quem pausou a agenda.
 const personName = person => person.name || t('BOOKING.CARD.REMOVED_PERSON');
@@ -88,19 +74,7 @@ const confirmDelete = () => {
           {{ t('BOOKING.CARD.UPCOMING', page.upcoming_meetings_count || 0) }}
         </p>
       </div>
-      <span
-        data-status
-        class="inline-flex items-center gap-2 px-3 py-1 text-sm font-semibold rounded-full"
-        :data-status-key="status"
-        :class="STATUS_TONE[status].badge"
-      >
-        <span
-          class="size-2 rounded-full"
-          :class="STATUS_TONE[status].dot"
-          aria-hidden="true"
-        />
-        {{ statusLabel }}
-      </span>
+      <BookingStatusBadge :page="page" />
     </header>
 
     <p

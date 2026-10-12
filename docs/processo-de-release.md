@@ -142,10 +142,23 @@ da instância nova e 5,5 minutos o desligamento da antiga. Em 04/10, com o cache
 build e 3 min 04 s de boot, que vinha depois do build (8 min 22 s do disparo à troca do tráfego). Desde o #974 a
 instância nova liga antes do build e espera a imagem chegar ao ECR, então o boot quase todo corre junto com o build.
 
+Desde o #1350 o desligamento da antiga é um job à parte, **Desligar a blue**, que roda depois do **Deploy Green** com
+sucesso e fora da trava do deploy: o próximo deploy já pode começar enquanto a antiga ainda está nos 5 min de
+rollback rápido. A política não mudou: a antiga fica ligada 5 min, depois é parada (é o rollback de um degrau), e a de
+dois deploys atrás é terminada. Antes de agir, o job relê o listener e os ponteiros `current`/`previous` do SSM: não
+para a antiga se um rollback a trouxe de volta, espera rollback em andamento acabar e não falha se um deploy mais novo
+já cuidou das instâncias. O run do deploy só termina depois desse job, mas o tráfego já está na nova desde o fim do
+**Deploy Green**: é ali que se confere o "ok, SHA".
+
 Deploy cancelado ou com falha antes da troca de tráfego (#972): se a instância nova estiver rodando o `deploy.sh`
 (migrations), ela não é terminada no meio. Ela se desliga sozinha quando ele acaba, fica parada com a tag
 `DeployCleanup=pending`, e o próximo deploy a termina. Se ela ainda estiver de pé, o próximo deploy espera até 30 min e,
 passado isso, a termina mesmo assim e segue: só uma migration de mais de 30 min é cortada.
+
+Falha antes de a imagem chegar ao ECR (build quebrado ou cancelado, #1350): a instância nova não rodou nada, então é
+terminada sempre, mesmo se a recuperação na antiga (suspender o Instagram assistido, religar o web) falhar. Essa falha
+continua falhando o job com o erro original. Todo deploy também avisa (`::warning::`, sem terminar nada) de instância
+ligada há mais de 2 h que não é a atual nem a anterior registradas.
 
 ## Regras do lote manual (25/09 a 04/10/2026)
 

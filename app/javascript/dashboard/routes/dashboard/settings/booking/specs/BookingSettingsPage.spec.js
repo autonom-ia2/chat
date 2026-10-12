@@ -17,8 +17,14 @@ vi.mock('vue-i18n', () => ({
   }),
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
+// `route.query` muda por teste (link direto do #1371); `router` grava a saída.
+const { route, router } = vi.hoisted(() => ({
+  route: { name: 'settings_booking', params: { accountId: '1' }, query: {} },
+  router: { push: vi.fn(), replace: vi.fn() },
+}));
 vi.mock('vue-router', () => ({
-  useRoute: () => ({ name: 'settings_booking', params: { accountId: '1' } }),
+  useRoute: () => route,
+  useRouter: () => router,
 }));
 
 // "Voltar para o calendário" (#1212) só aparece para quem abre o Calendário.
@@ -72,6 +78,7 @@ const page = {
 describe('BookingSettingsPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    route.query = {};
     canManage.value = true;
     canViewCrm.value = true;
     BookingPagesAPI.get.mockResolvedValue({ data: { payload: [page] } });
@@ -185,5 +192,90 @@ describe('BookingSettingsPage', () => {
     expect(rows[0].find('[data-link-url]').text()).toBe(
       'https://chat.exemplo.com/book/bia'
     );
+  });
+
+  // Link direto para o assistente de página nova (#1371), usado pela gaveta
+  // "Marcar reuniões" do agente de IA.
+  describe('?nova=1 e ?voltar=', () => {
+    const AGENT = '/app/accounts/1/autonomia/agentes/7?gaveta=reunioes';
+
+    it('nova=1 abre o assistente de página nova, sem a lista', async () => {
+      route.query = { nova: '1' };
+      const wrapper = mount(BookingSettingsPage);
+      await flushPromises();
+      expect(wrapper.find('[data-wizard]').exists()).toBe(true);
+      expect(wrapper.find('[data-template]').exists()).toBe(true);
+      expect(wrapper.find('[data-page]').exists()).toBe(false);
+    });
+
+    it('sem permissão de gerenciar, nova=1 abre a lista normalmente', async () => {
+      canManage.value = false;
+      route.query = { nova: '1', voltar: AGENT };
+      const wrapper = mount(BookingSettingsPage);
+      await flushPromises();
+      expect(wrapper.find('[data-wizard]').exists()).toBe(false);
+      expect(wrapper.find('[data-page]').exists()).toBe(true);
+    });
+
+    it('com voltar válido, sair do assistente diz só Voltar e leva para ele', async () => {
+      route.query = { nova: '1', voltar: AGENT };
+      const wrapper = mount(BookingSettingsPage);
+      await flushPromises();
+      const back = wrapper.find('[data-back]');
+      expect(back.text()).toBe('BOOKING.WIZARD.BACK');
+      await back.trigger('click');
+      expect(router.push).toHaveBeenCalledWith(AGENT);
+      expect(router.replace).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['endereço externo', 'https://evil.example.com/app/accounts/1/'],
+      ['sem esquema, com //', '//evil.example.com/app/accounts/1/'],
+      ['outra conta', '/app/accounts/2/crm/booking'],
+      ['// no meio', '/app/accounts/1//evil.example.com'],
+      ['barra invertida', '/app/accounts/1/\\evil.example.com'],
+      ['fora do painel', '/super_admin'],
+      ['.. para outra conta', '/app/accounts/1/../2/crm/kanban'],
+      ['.. para fora do painel', '/app/accounts/1/../../../super_admin'],
+      ['%2e%2e codificado', '/app/accounts/1/%2e%2e/2/crm/kanban'],
+      ['tab', '/app/accounts/1/crm/\tkanban'],
+      ['quebra de linha', '/app/accounts/1/crm/\nkanban'],
+      ['voltar como lista', ['/app/accounts/1/crm/kanban']],
+      ['o próprio Agendamento', '/app/accounts/1/crm/booking?nova=1'],
+    ])(
+      'voltar inválido (%s) é ignorado: volta para a lista e limpa a query',
+      async (_case, voltar) => {
+        route.query = { nova: '1', voltar, aba: 'x' };
+        const wrapper = mount(BookingSettingsPage);
+        await flushPromises();
+        const back = wrapper.find('[data-back]');
+        expect(back.text()).toBe('BOOKING.WIZARD.BACK_TO_LIST');
+        await back.trigger('click');
+        expect(router.push).not.toHaveBeenCalled();
+        expect(router.replace).toHaveBeenCalledWith({ query: { aba: 'x' } });
+        expect(wrapper.find('[data-wizard]').exists()).toBe(false);
+        expect(wrapper.find('[data-page]').exists()).toBe(true);
+      }
+    );
+
+    it('nova como lista não abre o assistente', async () => {
+      route.query = { nova: ['1'] };
+      const wrapper = mount(BookingSettingsPage);
+      await flushPromises();
+      expect(wrapper.find('[data-wizard]').exists()).toBe(false);
+      expect(wrapper.find('[data-page]').exists()).toBe(true);
+    });
+
+    it('sem query, sair do assistente não mexe no endereço', async () => {
+      const wrapper = mount(BookingSettingsPage);
+      await flushPromises();
+      await wrapper.find('[data-create]').trigger('click');
+      const back = wrapper.find('[data-back]');
+      expect(back.text()).toBe('BOOKING.WIZARD.BACK_TO_LIST');
+      await back.trigger('click');
+      expect(router.replace).not.toHaveBeenCalled();
+      expect(router.push).not.toHaveBeenCalled();
+      expect(wrapper.find('[data-page]').exists()).toBe(true);
+    });
   });
 });

@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref, watch, nextTick, useId } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useAlert } from 'dashboard/composables';
 import CrmKanbanAPI from 'dashboard/api/crmKanban';
 import { useAbortableRequest } from 'dashboard/composables/useAbortableRequest';
 import Button from 'dashboard/components-next/button/Button.vue';
@@ -9,6 +10,7 @@ import TextArea from 'dashboard/components-next/textarea/TextArea.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import CrmOpportunityContactPicker from './CrmOpportunityContactPicker.vue';
 import CrmOpportunityRegistration from './CrmOpportunityRegistration.vue';
+import { semDonosBarrados } from '../helpers/accessErrors';
 import {
   newRegistrationDraft,
   registrationPayload,
@@ -70,9 +72,14 @@ const pipelineOptions = computed(() =>
 const stageOptions = computed(() =>
   loadedStages.value.map(item => ({ value: item.id, label: item.name }))
 );
+// Acesso por funil (#1149): só aparece como dono quem tem o funil na caixa.
+const donosBarrados = ref([]);
 const ownerOptions = computed(() => [
   { value: '', label: t('CRM_KANBAN.DRAWER.USE_CURRENT_USER') },
-  ...props.agents.map(item => ({ value: item.id, label: item.name })),
+  ...semDonosBarrados(props.agents, donosBarrados.value).map(item => ({
+    value: item.id,
+    label: item.name,
+  })),
 ]);
 const inboxOptions = computed(() => [
   { value: '', label: t('CRM_KANBAN.DRAWER.NO_INBOX') },
@@ -130,6 +137,33 @@ const loadStages = async () => {
   }
 };
 watch(() => form.value.pipelineId, loadStages, { flush: 'sync' });
+
+// Só vale a resposta da última troca de funil ou caixa.
+let ultimaConsultaDeDonos = 0;
+const carregarDonosBarrados = async () => {
+  ultimaConsultaDeDonos += 1;
+  const consulta = ultimaConsultaDeDonos;
+  const { pipelineId, inboxId } = form.value;
+  let barrados = [];
+  if (pipelineId && inboxId) {
+    try {
+      const { data } = await CrmKanbanAPI.getOwnerOptions({
+        pipelineId,
+        inboxId,
+      });
+      barrados = data.payload.blocked || [];
+    } catch {
+      // Sem a lista, o servidor ainda recusa o dono sem o funil e a tela avisa.
+    }
+  }
+  if (consulta !== ultimaConsultaDeDonos) return;
+  donosBarrados.value = barrados;
+  if (barrados.includes(Number(form.value.ownerId))) {
+    form.value.ownerId = '';
+    useAlert(t('CRM_KANBAN.ACCESS.OWNER_WITHOUT_FUNNEL'));
+  }
+};
+watch(() => [form.value.pipelineId, form.value.inboxId], carregarDonosBarrados);
 watch(
   () => props.stages,
   stages => {

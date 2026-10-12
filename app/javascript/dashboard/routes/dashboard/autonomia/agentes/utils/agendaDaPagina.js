@@ -1,7 +1,7 @@
 // #1181 (item A) — o que a página de agendamento escolhida faz de verdade, só com o que GET
 // crm/booking_pages devolve. Campos preferidos (#1305, quando vierem): `ai_status` ("ativa" |
-// "pausada" | "sem_responsavel" | "agenda_pausada"), `recebe` ({ modo: "fixo" | "por_pessoa", nome })
-// e `timezone`. Sem eles, a lista de hoje (Crm::BookingV2::PageSerializer#summary): `enabled`;
+// "pausada" | "sem_responsavel" | "agenda_pausada") e `recebe` ({ modo: "fixo" | "por_pessoa", nome }).
+// O fuso não aparece na gaveta (#1370). Sem eles, a lista de hoje (PageSerializer#summary): `enabled`;
 // `assignment_mode`; `attention` (responsável único ausente ou que não pode atender); `links` (só os
 // ativos de quem pode atender, na ordem em que a IA procura o primeiro); `paused_people` (quem
 // atende e pausou "Meus horários": a IA não acha horário dessa pessoa, Slots#host_paused?). Página
@@ -71,17 +71,61 @@ export const quemRecebe = pagina => {
   return { modo, nome: nome || '' };
 };
 
-// Nome do fuso para leigo ("horário de Brasília"), pelo Intl no idioma da tela; o nome IANA cru
-// quando o navegador não conhece o fuso. Vazio sem fuso (a lista de hoje não traz).
-export const fusoLegivel = (timezone, idioma) => {
-  if (!timezone) return '';
-  try {
-    const partes = new Intl.DateTimeFormat(idioma, {
-      timeZone: timezone,
-      timeZoneName: 'longGeneric',
-    }).formatToParts(new Date());
-    return partes.find(parte => parte.type === 'timeZoneName')?.value || '';
-  } catch {
-    return timezone;
-  }
+// #1307 — as pessoas da página que o dono libera para a IA (`config.booking_agent_ids`). A lista
+// vem em `pessoas: [{ id, nome, ai_status: 'ativa' | 'agenda_pausada' }]`, na ordem fixa da página.
+// Gravado vazio (ausente, null ou []) = todas. A preferência por uma pessoa vai na instrução; aqui é
+// só quem a IA pode usar.
+export const pessoasDaPagina = pagina =>
+  Array.isArray(pagina?.pessoas) ? pagina.pessoas : [];
+
+// Os ids marcados ao abrir: todas sem restrição gravada (ausente, null ou []); senão só as gravadas
+// que ainda são da página (pode dar nenhuma: a restrição ficou velha e o dono precisa escolher de
+// novo). Valor gravado que não é lista vale como ninguém, como no servidor (AgendaPessoas).
+export const restricaoGravada = gravados =>
+  gravados !== undefined &&
+  gravados !== null &&
+  !(Array.isArray(gravados) && !gravados.length);
+
+export const idsLiberados = (gravados, pessoas) => {
+  const ids = pessoas.map(({ id }) => id);
+  if (!restricaoGravada(gravados)) return ids;
+  if (!Array.isArray(gravados)) return [];
+  const salvos = new Set(gravados.map(Number));
+  return ids.filter(id => salvos.has(id));
 };
+
+// O que vai para o servidor: [] com todas marcadas (vale também para quem entrar na página depois);
+// senão os ids marcados, na ordem da página.
+export const liberacaoParaSalvar = (marcadas, pessoas) => {
+  if (pessoas.every(({ id }) => marcadas.includes(id))) return [];
+  return pessoas.map(({ id }) => id).filter(id => marcadas.includes(id));
+};
+
+// O estado da página para este agente: a lista de páginas não sabe da liberação. Ninguém liberado
+// vira "ninguém atende"; todos os liberados com a agenda pausada viram "agenda pausada".
+export const estadoComLiberacao = (estado, pessoas, liberadas) => {
+  if (estado !== ESTADO_PAGINA.ATIVA || !pessoas.length) return estado;
+  if (!liberadas.length) return ESTADO_PAGINA.SEM_NINGUEM;
+  const pausadas = new Set(
+    pessoas
+      .filter(({ ai_status: status }) => status === 'agenda_pausada')
+      .map(({ id }) => id)
+  );
+  return liberadas.every(id => pausadas.has(id))
+    ? ESTADO_PAGINA.AGENDA_PAUSADA
+    : estado;
+};
+
+// #1307 — a página nova é outra (não "Não marcar" e não a salva, comparando como texto: a config pode
+// trazer o id em texto). Só então a liberação volta para todas (painel antigo, PanelTune).
+export const outraPaginaDeAgenda = (nova, salva) =>
+  Boolean(nova) && String(nova) !== String(salva ?? '');
+
+// #1370 — os locais da página como o assistente os nomeia (BOOKING.WHERE.<TIPO>.NAME), sem repetir.
+export const tiposDeLocal = pagina => [
+  ...new Set(
+    (Array.isArray(pagina?.locations) ? pagina.locations : [])
+      .map(local => local?.type)
+      .filter(Boolean)
+  ),
+];

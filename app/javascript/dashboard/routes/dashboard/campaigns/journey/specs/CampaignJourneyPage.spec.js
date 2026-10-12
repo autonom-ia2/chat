@@ -25,6 +25,13 @@ vi.mock(
   'dashboard/components-next/Campaigns/Pages/CampaignPage/LiveChatCampaign/LiveChatCampaignDialog.vue',
   () => stub('LiveChatCampaignDialog')
 );
+// #1332: pausas abertas (campaign_pauses) que a lista mostra como "Parada".
+const pausesApi = vi.hoisted(() => ({
+  getCampaignPauses: vi.fn(),
+  getInboxes: vi.fn(),
+  getTemplates: vi.fn(),
+}));
+vi.mock('dashboard/api/whatsappTemplates', () => ({ default: pausesApi }));
 const push = vi.fn();
 const currentRoute = { query: {} };
 vi.mock('vue-router', () => ({
@@ -306,6 +313,67 @@ describe('Campanha page (PRD §6.1, M1–M2)', () => {
     });
     expect(row.text()).toContain(`Começou em ${date}`);
     expect(row.text()).not.toContain('Sem data');
+    wrapper.unmount();
+  });
+});
+
+// #1332: a campanha parada pelo modelo (pausa aberta) aparece como "Parada", com o motivo
+// curto, com ou sem a flag de Modelos. Só exibição: nada muda na campanha.
+describe('Campanha parada pelo modelo', () => {
+  const PARADA = {
+    id: 31,
+    title: 'Reativar clientes',
+    campaign_type: 'one_off',
+    campaign_status: 'active',
+    scheduled_at: 1_800_000_000,
+    inbox: { name: 'Vendas', channel_type: 'Channel::Whatsapp' },
+  };
+
+  beforeEach(() => {
+    pausesApi.getCampaignPauses.mockReset();
+    pausesApi.getInboxes.mockRejectedValue(new Error('sem modelos'));
+  });
+
+  it('shows "Stopped" and the short reason instead of "Scheduled"', async () => {
+    pausesApi.getCampaignPauses.mockResolvedValue({
+      data: {
+        payload: [
+          {
+            id: 5,
+            source: 'template',
+            reason_code: 'template_not_approved',
+            details: { template_name: 'retomar', status: 'PAUSED' },
+            campaign: { id: 31, title: 'Reativar clientes', inbox_id: 3 },
+          },
+        ],
+      },
+    });
+    const { wrapper } = mountPage({
+      inboxes: [
+        { channel_type: 'Channel::Whatsapp', provider: 'whatsapp_cloud' },
+      ],
+      campaigns: [PARADA],
+    });
+    await flushPromises();
+
+    const row = wrapper.find('[data-test="stop-reason"]');
+    expect(row.text()).toBe('template paused by WhatsApp');
+    expect(wrapper.text()).toContain('Stopped');
+    wrapper.unmount();
+  });
+
+  it('keeps the usual list when the pauses cannot be read', async () => {
+    pausesApi.getCampaignPauses.mockRejectedValue(new Error('404'));
+    const { wrapper } = mountPage({
+      inboxes: [
+        { channel_type: 'Channel::Whatsapp', provider: 'whatsapp_cloud' },
+      ],
+      campaigns: [PARADA],
+    });
+    await flushPromises();
+
+    expect(wrapper.find('[data-test="stop-reason"]').exists()).toBe(false);
+    expect(wrapper.text()).toContain('Reativar clientes');
     wrapper.unmount();
   });
 });

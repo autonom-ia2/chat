@@ -413,7 +413,7 @@ en:
     online:
       delete: '%{contact_name} is Online, please try again later'
     opt_out:
-      undo_only_manual: 'Only an opt-out marked by the team can be undone here. Opt-outs from Prospecting are undone on the lead in Prospecting; email unsubscribes are not undone here.'
+      undo_only_manual: 'Only an opt-out marked by the team can be undone here. Opt-outs from Prospecting are undone on the lead in Prospecting; a request to stop in a follow-up reply ends when the follow-up is reactivated on every CRM card where the contact asked to stop; email unsubscribes are not undone here.'
   integration_apps:
     # Note: webhooks and dashboard_apps don't need short_description as they use different modal components
     dashboard_apps:
@@ -549,6 +549,7 @@ en:
       native_tool_not_allowed: 'This agent cannot use one or more of the requested native tools. Nothing was saved.'
       escolhas_incompletas: "The Quote Agent could not build its instruction: the choice '%{campo}' is missing from its record. This cannot be fixed here — contact Autonom.ia support."
       booking_page_forbidden: 'Only people who can see Scheduling (CRM › Scheduling) can choose the booking page the AI uses.'
+      booking_agent_ids_invalid: 'None of the chosen people can take meetings from this booking page. Pick people from the page, or leave it empty to use everyone.'
       operate:
         handoff_default: "Thanks for reaching out! I'm connecting you with a member of our team who will continue from here."
         connect_errors:

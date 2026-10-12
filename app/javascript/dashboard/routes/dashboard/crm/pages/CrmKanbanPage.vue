@@ -1,6 +1,9 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
+import { chaveDoCard, chaveDoErroDeAcesso } from '../helpers/accessErrors';
+import CrmKanbanAPI from 'dashboard/api/crmKanban';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import { useEmitter } from 'dashboard/composables/emitter';
@@ -112,6 +115,7 @@ const {
   canManagePipelines,
   canManageAi,
   canExportCrm,
+  canAdminCrm,
 } = useCrmPermissions();
 
 const CRM_CALENDAR_MEETINGS_FEATURE = 'CRM_CALENDAR_MEETINGS_ENABLED';
@@ -137,6 +141,17 @@ watch(isCalendarOnly, only => {
 const filters = ref({ ...storedFilters.value });
 const drawerMode = ref('create');
 const selectedCard = ref(null);
+// Acesso por funil (#1149): o card aberto diz se a pessoa pode mexer nele.
+// Card aberto para editar só libera os botões com a resposta do servidor (fecha
+// se o detalhe não carregar); card novo não tem essa trava.
+const podeMexerNoCard = computed(
+  () => drawerMode.value !== 'edit' || selectedCard.value?.can_edit === true
+);
+// Quem não pode ser dono, por card da lista (#1149).
+const donosBarradosPorCard = ref({});
+// Mostra a recusa por funil quando é ela; senão, o aviso de sempre.
+const avisarErro = (error, chavePadrao) =>
+  useAlert(t(chaveDoErroDeAcesso(error) || chavePadrao));
 const creationContact = ref(null);
 const showDrawer = ref(false);
 // Which tab the card drawer lands on when opened ('followups' from the calendar
@@ -465,6 +480,34 @@ const cardsListWithMeta = computed(() =>
   }))
 );
 
+// Acesso por funil (#1149): busca, para os cards da lista que ainda não têm,
+// quem não pode ser dono. Sem acesso por funil, o servidor responde vazio.
+const carregarDonosBarrados = async cards => {
+  const faltam = cards.filter(
+    card => !(chaveDoCard(card) in donosBarradosPorCard.value)
+  );
+  if (!faltam.length) return;
+  try {
+    const { data } = await CrmKanbanAPI.getOwnerOptions({
+      cardIds: faltam.map(card => card.id),
+    });
+    const novos = Object.fromEntries(
+      faltam.map(card => [chaveDoCard(card), data.payload.cards[card.id] || []])
+    );
+    donosBarradosPorCard.value = { ...donosBarradosPorCard.value, ...novos };
+  } catch {
+    // Sem a lista, o servidor ainda recusa o dono sem o funil e a tela avisa.
+  }
+};
+watch(cardsList, cards => carregarDonosBarrados(cards || []));
+const donosBarradosNaSelecao = computed(() => [
+  ...new Set(
+    (cardsList.value || [])
+      .filter(card => listSelection.value.includes(card.id))
+      .flatMap(card => donosBarradosPorCard.value[chaveDoCard(card)] || [])
+  ),
+]);
+
 watch(cardsList, loadMetaConversions);
 
 const showFiltersDrawer = ref(false);
@@ -746,9 +789,9 @@ const moveCardFromDetails = async stageId => {
       await loadActiveView(true);
     }
     useAlert(t('CRM_KANBAN.ALERTS.CARD_MOVED'));
-  } catch {
+  } catch (error) {
     if (accountId === String(route.params.accountId))
-      useAlert(t('CRM_KANBAN.ALERTS.CARD_MOVE_ERROR'));
+      avisarErro(error, 'CRM_KANBAN.ALERTS.CARD_MOVE_ERROR');
   }
 };
 
@@ -1003,7 +1046,28 @@ const loadInboxSettings = async () => {
   }
 };
 
+// Caixas no CRM (#1149): com a flag da conta, leva à tela nova; sem ela, a
+// gaveta antiga, como sempre.
+const isCaixasNoCrm = computed(
+  () =>
+    getAccount.value(currentAccountId.value)?.features?.[
+      FEATURE_FLAGS.CRM_CONFIGURAR_CAIXAS
+    ] === true
+);
+// A tela nova decide quem vê o quê: só administrador ou crm_admin (a gaveta
+// antiga continua com quem gerencia funis).
+const canOpenInboxSettings = computed(() =>
+  isCaixasNoCrm.value ? canAdminCrm.value : canManagePipelines.value
+);
+
 const openInboxSettingsDrawer = async () => {
+  if (isCaixasNoCrm.value) {
+    router.push({
+      name: 'crm_caixas',
+      params: { accountId: currentAccountId.value },
+    });
+    return;
+  }
   showInboxSettingsDrawer.value = true;
   await loadInboxSettings();
 };
@@ -1292,7 +1356,7 @@ const saveCard = async (payload, failed) => {
   } catch (error) {
     if (originAccount !== String(route.params.accountId)) return;
     failed?.(error);
-    useAlert(t('CRM_KANBAN.ALERTS.CARD_SAVE_ERROR'));
+    avisarErro(error, 'CRM_KANBAN.ALERTS.CARD_SAVE_ERROR');
   }
 };
 
@@ -1380,8 +1444,8 @@ const archiveCard = async () => {
     await store.dispatch('crmKanban/archiveCard', selectedCard.value.id);
     useAlert(t('CRM_KANBAN.ALERTS.CARD_ARCHIVED'));
     closeDrawer();
-  } catch {
-    useAlert(t('CRM_KANBAN.ALERTS.CARD_ARCHIVE_ERROR'));
+  } catch (error) {
+    avisarErro(error, 'CRM_KANBAN.ALERTS.CARD_ARCHIVE_ERROR');
   }
 };
 
@@ -1409,8 +1473,8 @@ const closeCardDeal = async payload => {
         `CRM_KANBAN.ALERTS.${CLOSE_ALERT_KEYS[detailedCard?.status] || 'CARD_REOPENED'}`
       )
     );
-  } catch {
-    useAlert(t('CRM_KANBAN.ALERTS.CARD_CLOSE_ERROR'));
+  } catch (error) {
+    avisarErro(error, 'CRM_KANBAN.ALERTS.CARD_CLOSE_ERROR');
   }
 };
 
@@ -1429,9 +1493,9 @@ const onDragChange = async (stage, event) => {
       stageId: stage.id,
     });
     useAlert(t('CRM_KANBAN.ALERTS.CARD_MOVED'));
-  } catch {
+  } catch (error) {
     store.commit('crmKanban/RESTORE_CRM_KANBAN_STAGES', dragSnapshot.value);
-    useAlert(t('CRM_KANBAN.ALERTS.CARD_MOVE_ERROR'));
+    avisarErro(error, 'CRM_KANBAN.ALERTS.CARD_MOVE_ERROR');
   } finally {
     dragSnapshot.value = null;
   }
@@ -1554,8 +1618,8 @@ const onListEditSave = async ({ cardId, field, value }) => {
       });
     }
     useAlert(t('CRM_KANBAN.EDIT.SAVED'));
-  } catch {
-    useAlert(t('CRM_KANBAN.EDIT.ERROR'));
+  } catch (error) {
+    avisarErro(error, 'CRM_KANBAN.EDIT.ERROR');
   }
 };
 
@@ -2113,7 +2177,11 @@ onUnmounted(() => {
           @click="openBooking"
         />
         <Popover
-          v-if="canManagePipelines || (!isCalendarOnly && canManageAi)"
+          v-if="
+            canManagePipelines ||
+            canOpenInboxSettings ||
+            (!isCalendarOnly && canManageAi)
+          "
           ref="configurationPopover"
           align="end"
           class="order-1"
@@ -2164,7 +2232,7 @@ onUnmounted(() => {
                 @click="runConfigurationAction(openHandoffSettings)"
               />
               <Button
-                v-if="canManagePipelines"
+                v-if="canOpenInboxSettings"
                 :label="t('CRM_KANBAN.ACTIONS.INBOX_SETTINGS')"
                 icon="i-lucide-inbox"
                 slate
@@ -2516,6 +2584,7 @@ onUnmounted(() => {
         :cards="cardsListWithMeta"
         :stages="stages"
         :owners="agents"
+        :owner-blocked="donosBarradosPorCard"
         :pipeline="selectedPipeline"
         :show-meta-column="isMetaSyncActive"
         :loading="uiFlags.isFetchingCardsList"
@@ -2542,6 +2611,7 @@ onUnmounted(() => {
         :count="listSelection.length"
         :stages="stages"
         :owners="agents"
+        :blocked-owner-ids="donosBarradosNaSelecao"
         :pipeline="selectedPipeline"
         :is-busy="uiFlags.isBulkActing"
         @move="onBulkMove"
@@ -2635,8 +2705,8 @@ onUnmounted(() => {
       :agents="agents"
       :inboxes="inboxes"
       :follow-ups="followUps"
-      :can-manage-cards="canManageCards"
-      :can-move-cards="canMoveCards"
+      :can-manage-cards="canManageCards && podeMexerNoCard"
+      :can-move-cards="canMoveCards && podeMexerNoCard"
       :is-moving-card="uiFlags.isMovingCard"
       :can-manage-ai="canManageAi"
       :is-saving="uiFlags.isCreatingCard || uiFlags.isUpdatingCard"

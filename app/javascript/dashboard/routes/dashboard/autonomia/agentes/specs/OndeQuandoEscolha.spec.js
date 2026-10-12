@@ -64,6 +64,51 @@ describe('OndeQuandoEscolha', () => {
     permissoes.quemRecebe = true;
   });
 
+  it('says the channel type next to each inbox name (#1369)', () => {
+    const wrapper = montar({
+      canais: [
+        {
+          inbox_id: 20,
+          name: 'HUBBER COMUNIDADE',
+          channel_type: 'Channel::Whatsapp',
+          occupied_by: null,
+        },
+        {
+          inbox_id: 21,
+          name: 'Clara',
+          channel_type: 'Channel::WebWidget',
+          occupied_by: null,
+        },
+        {
+          inbox_id: 22,
+          name: 'Integração',
+          channel_type: 'Channel::Api',
+          occupied_by: { kind: 'external' },
+        },
+        {
+          inbox_id: 23,
+          name: 'Twilio',
+          channel_type: 'Channel::TwilioSms',
+          occupied_by: null,
+        },
+      ],
+      onde: null,
+    });
+    const [whatsapp, site, api, twilio] = opcoes(wrapper, ONDE);
+    expect(whatsapp.text()).toContain('HUBBER COMUNIDADE');
+    expect(whatsapp.get('[data-etiqueta]').text()).toBe(
+      'AGENTS.JORNADA.ONDE_QUANDO.TIPO.WHATSAPP'
+    );
+    expect(site.get('[data-etiqueta]').text()).toBe(
+      'AGENTS.JORNADA.ONDE_QUANDO.TIPO.SITE'
+    );
+    expect(api.get('[data-etiqueta]').text()).toBe(
+      'AGENTS.JORNADA.ONDE_QUANDO.TIPO.API'
+    );
+    expect(twilio.find('[data-etiqueta]').exists()).toBe(false);
+    wrapper.unmount();
+  });
+
   it('never renders a native select', () => {
     const wrapper = montar();
     expect(wrapper.find('select').exists()).toBe(false);

@@ -230,6 +230,16 @@ describe('BookingWizard', () => {
       expect(wrapper.emitted('close')).toHaveLength(1);
     });
 
+    // #1370: com `?voltar=` válido, sair leva para outra tela (o agente).
+    it('sair diz Voltar para a lista; voltando para outra tela, só Voltar', async () => {
+      const wrapper = await mountWizard();
+      expect(wrapper.find('[data-back]').text()).toBe(
+        'BOOKING.WIZARD.BACK_TO_LIST'
+      );
+      await wrapper.setProps({ returnsElsewhere: true });
+      expect(wrapper.find('[data-back]').text()).toBe('BOOKING.WIZARD.BACK');
+    });
+
     it('erro ao salvar mostra o aviso e fica no passo', async () => {
       BookingPagesAPI.update.mockRejectedValue(new Error('rede'));
       const wrapper = await mountWizard();
@@ -1357,6 +1367,9 @@ describe('BookingWizard', () => {
       expect(published.find('[data-copy]').exists()).toBe(true);
       expect(published.find('[data-qr-toggle]').exists()).toBe(true);
       expect(primary(wrapper).attributes('data-action')).toBe('DONE');
+      expect(primary(wrapper).text()).toBe('BOOKING.WIZARD.DONE');
+      await wrapper.setProps({ returnsElsewhere: true });
+      expect(primary(wrapper).text()).toBe('BOOKING.WIZARD.BACK');
       await primary(wrapper).trigger('click');
       expect(wrapper.emitted('close')).toHaveLength(1);
     });

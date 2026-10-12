@@ -5,6 +5,8 @@
 # 2. Reunião não está mais marcada → `canceled`; qualquer aviso (também "marcado" e "remarcado" atrasados) de reunião
 #    que já começou → `past_due`; lembrete cujo vencimento não bate mais com o início da reunião (reunião mudou de
 #    horário sem reprogramar) → `stale`.
+# 2b. Reunião que a IA confirmou na própria conversa da caixa de avisos e ali já respondeu (`BookingNotices.already_told?`,
+#    #1305) → o "ao marcar" vira `told_in_conversation`, sem repetir a confirmação.
 # 3. Parada, nesta precedência: `Contact#opted_out?` → `opted_out`; "Parar avisos" do contato → `stopped`;
 #    avisos parados na reunião → `stopped`.
 # 4. Página sem caixa de avisos utilizável → `no_inbox`; convite (link de gestão) ausente → `no_invite`.
@@ -14,6 +16,8 @@
 #    contato: o telefone é único por conta (validação do `Contact`). Como o cron marca `sending` ANTES de contar,
 #    dois processos ao mesmo tempo se enxergam e o teto nunca é ultrapassado (no limite, os dois podem recusar).
 # 6. Regra do canal (`Notices::Route`): janela e modelo aprovado no oficial e no canal API; WAHA manda texto sem janela.
+#    Oficial sem modelo que resolva e WhatsApp Híbrido pronto para o contato (#1349): texto pela sessão também,
+#    mandado sem remetente para o roteador do Híbrido contar como `automation` (ver `#notice_sender`).
 #    WAHA sem conversa: antes de abrir uma, o chat id real vem da WAHA (`Notices::WahaChat`) → `no_whatsapp` ou
 #    `waha_unavailable` quando não dá, ou `waha_refused` quando a WAHA recusa o pedido. `no_whatsapp` e `waha_refused`
 #    são definitivos. `waha_unavailable` não: a consulta não mandou nada,
@@ -32,7 +36,8 @@ class Crm::BookingV2::Notices::Sender
   ACCOUNT_LIMIT_ENV = 'CRM_BOOKING_NOTICES_ACCOUNT_DAILY_LIMIT'.freeze
   DEFAULT_ACCOUNT_LIMIT = 300
   # Pulos esperados (o cliente parou, a reunião acabou): não chamam o responsável.
-  QUIET_REASONS = %w[disabled canceled past_due stale opted_out stopped].freeze
+  # `told_in_conversation` (#1305): a IA já confirmou a reunião na conversa (`BookingNotices::TOLD_IN_CONVERSATION`).
+  QUIET_REASONS = %w[disabled canceled past_due stale opted_out stopped told_in_conversation].freeze
   STALE_TOLERANCE = 1.minute
   WAHA_UNAVAILABLE = 'waha_unavailable'.freeze
   # Até quando vale tentar de novo um aviso que esperou a WAHA (#1270): o "ao marcar" e o "remarcado" ainda servem até
@@ -88,6 +93,11 @@ class Crm::BookingV2::Notices::Sender
     waha_problem = waha_chat.prepare if Crm::BookingV2::Notices::WahaChat.needed?(decision, profile.notice_inbox)
     return waha_retry_or_skip!(waha_problem) if waha_problem
 
+    # De novo logo antes de enviar (#1305): a confirmação da IA pode ter sido gravada depois da primeira conferência,
+    # com o aviso já em `sending` (fora do alcance do `BookingNotices.mark_told!`).
+    told = told_reason
+    return skip!(told) if told
+
     deliver!(decision)
   end
 
@@ -101,7 +111,11 @@ class Crm::BookingV2::Notices::Sender
   attr_reader :notice, :meeting, :waha_outage
 
   def blocking_reason
-    meeting_reason || stop_reason || setup_reason || cap_reason
+    meeting_reason || told_reason || stop_reason || setup_reason || cap_reason
+  end
+
+  def told_reason
+    Crm::BookingV2::BookingNotices::TOLD_IN_CONVERSATION if Crm::BookingV2::BookingNotices.already_told?(notice)
   end
 
   def meeting_reason
@@ -200,11 +214,18 @@ class Crm::BookingV2::Notices::Sender
   end
 
   def delivery(decision)
-    text = Crm::BookingV2::Notices::Text.new(meeting: meeting, invite: invite, kind: notice.kind)
+    text = Crm::BookingV2::Notices::Text.new(meeting: meeting, invite: invite, kind: notice.kind, page: profile)
     Crm::BookingV2::Notices::Delivery.new(
-      decision: decision, inbox: profile.notice_inbox, contact: contact, sender: meeting.created_by,
+      decision: decision, inbox: profile.notice_inbox, contact: contact, sender: notice_sender(decision),
       content: text.to_s, values: text.template_values, appendix: text.appendix
     )
+  end
+
+  # Pelo WhatsApp Híbrido (#1349) o aviso automático sai sem remetente, para o roteador do Híbrido contar como
+  # `automation` (com usuário viraria `human`). Fora desse caminho, o remetente é sempre quem marcou a reunião, como
+  # antes. O "Testar no meu WhatsApp" (`TestInvite`) não passa por aqui: ele manda sempre com o usuário que testou.
+  def notice_sender(decision)
+    decision.via == Crm::BookingV2::Notices::Route::HYBRID_WEB ? nil : meeting.created_by
   end
 
   # A marca de espera da WAHA (`error_code`) só fica quando é ela o motivo do pulo.

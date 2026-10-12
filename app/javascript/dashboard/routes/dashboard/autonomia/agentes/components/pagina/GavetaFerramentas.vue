@@ -183,12 +183,7 @@ onMounted(api.carregar);
 </script>
 
 <template>
-  <AgenteGaveta
-    larga
-    :titulo="titulo"
-    :pode-fechar="podeFechar"
-    @fechar="aoFechar"
-  >
+  <AgenteGaveta :titulo="titulo" :pode-fechar="podeFechar" @fechar="aoFechar">
     <div class="relative">
       <p role="status" class="sr-only">{{ anuncio }}</p>
     </div>

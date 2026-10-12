@@ -115,16 +115,11 @@ class Crm::BookingV2::PanelBooking
     ActiveModel::Type::Boolean.new.cast(params[:notify]) == true
   end
 
-  # Igual à página pública: agenda depois da reserva gravada; erro aqui não desfaz a reunião, só não promete mensagem.
+  # Pelo mesmo ponto da página pública e da IA (`BookingNotices`, #1305): agenda depois da reserva gravada; erro ali
+  # não desfaz a reunião, só não promete mensagem.
   def schedule_notices(meeting, invite)
     return false unless notify?
 
-    Crm::BookingV2::Notices::Scheduler.new(meeting).schedule!(invite: invite)
-    notice = meeting.notices.find_by(kind: 'booked')
-    notice.present? && notice.pending? && Crm::BookingV2::Notices::Sender.new(notice).will_send?
-  rescue StandardError => e
-    ChatwootExceptionTracker.new(e, account: page.account).capture_exception
-    Rails.logger.error("Panel booking notices not scheduled: #{e.class.name}")
-    false
+    Crm::BookingV2::BookingNotices.new(meeting: meeting, invite: invite).schedule
   end
 end

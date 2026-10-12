@@ -288,6 +288,18 @@ describe('GavetaFerramentas · nova ferramenta (F03–F06)', () => {
     wrapper.unmount();
   });
 
+  it('separates the "Exemplo:" label from the example text with one space', async () => {
+    const wrapper = await montar();
+    await clicar('#ferramentas-adicionar');
+    const exemplos = todos('[data-exemplo]').map(p => p.textContent.trim());
+    expect(exemplos.length).toBeGreaterThan(0);
+    exemplos.forEach(linha => {
+      expect(linha.startsWith('Exemplo: ')).toBe(true);
+      expect(linha.startsWith('Exemplo:  ')).toBe(false);
+    });
+    wrapper.unmount();
+  });
+
   it('warns once when "Quando usar" is empty and goes on at the second try', async () => {
     const wrapper = await montar();
     await clicar('#ferramentas-adicionar');

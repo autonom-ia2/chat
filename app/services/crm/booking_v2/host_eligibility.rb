@@ -18,6 +18,16 @@ class Crm::BookingV2::HostEligibility
     account_user.present? && !account_user.integration? && sees_cards?(account_user)
   end
 
+  # A mesma regra de `eligible?` para a conta inteira, numa consulta (#1305): quem lista várias páginas pergunta por
+  # várias pessoas e não pode fazer uma consulta por pessoa. -> Set de user_id.
+  def self.eligible_user_ids(account:)
+    return Set.new if account.blank?
+
+    scope = account.account_users
+    scope = scope.preload(:custom_role) if AccountUser.reflect_on_association(:custom_role)
+    scope.reject(&:integration?).select { |account_user| sees_cards?(account_user) }.to_set(&:user_id)
+  end
+
   def self.sees_cards?(account_user)
     return true if account_user.administrator? || account_user.custom_role_id.blank?
 

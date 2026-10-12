@@ -401,6 +401,10 @@
       "whatsapp_api_campaign_ids"
     ]
   },
+  "campaign_journey/campaign_pauses": {
+    "controller": "api/v1/accounts/campaign_journey/campaign_pauses#index",
+    "parametros": []
+  },
   "campaign_journey/contact_origins/:id": {
     "controller": "api/v1/accounts/campaign_journey/contact_origins#show",
     "parametros": []
@@ -1071,6 +1075,14 @@
       "scope"
     ]
   },
+  "crm/caixas": {
+    "controller": "api/v1/accounts/crm/caixas#index",
+    "parametros": []
+  },
+  "crm/caixas/:inbox_id": {
+    "controller": "api/v1/accounts/crm/caixas#show",
+    "parametros": []
+  },
   "crm/calendar/available_slots": {
     "controller": "api/v1/accounts/crm/calendar#available_slots",
     "parametros": [
@@ -1104,6 +1116,14 @@
     "controller": "api/v1/accounts/crm/cards#export",
     "motivos": [
       "params inteiro repassado a ::Crm::Cards::FilterQuery.new"
+    ]
+  },
+  "crm/cards/owner_options": {
+    "controller": "api/v1/accounts/crm/cards#owner_options",
+    "parametros": [
+      "card_ids",
+      "inbox_id",
+      "pipeline_id"
     ]
   },
   "crm/cards/summaries": {
@@ -1623,6 +1643,16 @@
     "controller": "api/v1/accounts/whatsapp_api_message_templates#index",
     "parametros": []
   },
+  "inboxes/:inbox_id/whatsapp_templates": {
+    "controller": "api/v1/accounts/inboxes/whatsapp_templates#index",
+    "parametros": [
+      "refresh"
+    ]
+  },
+  "inboxes/:inbox_id/whatsapp_templates/:id/usage": {
+    "controller": "api/v1/accounts/inboxes/whatsapp_templates#usage",
+    "parametros": []
+  },
   "instagram/testers/configuration": {
     "controller": "api/v1/accounts/instagram/testers#configuration",
     "parametros": []
@@ -1934,6 +1964,14 @@
   },
   "whatsapp_hybrid_connections/:inbox_id": {
     "controller": "api/v1/accounts/whatsapp_hybrid_connections#show",
+    "parametros": []
+  },
+  "whatsapp_message_prices": {
+    "controller": "api/v1/accounts/whatsapp_message_prices#index",
+    "parametros": []
+  },
+  "whatsapp_template_inboxes": {
+    "controller": "api/v1/accounts/whatsapp_template_inboxes#index",
     "parametros": []
   }
 }

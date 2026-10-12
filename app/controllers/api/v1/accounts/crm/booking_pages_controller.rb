@@ -7,6 +7,7 @@
 class Api::V1::Accounts::Crm::BookingPagesController < Api::V1::Accounts::Crm::BaseController
   include ::Crm::BookingPageInboxes
   include ::Crm::BookingPageNoticeTemplates
+  include ::Crm::BookingPageNoticeTexts
   include ::Crm::BookingPageBrand
 
   PREVIEW_TTL = 1.hour
@@ -26,7 +27,8 @@ class Api::V1::Accounts::Crm::BookingPagesController < Api::V1::Accounts::Crm::B
     pages = pages_scope.includes(:default_assignee, agent_booking_links: :agent).order(:id).to_a
     counts = ::Crm::BookingV2::AttentionReport.upcoming_counts(pages)
     paused = ::Crm::AgentAvailability.where(account_id: Current.account.id, paused: true).pluck(:user_id).to_set
-    payload = pages.map { |page| page_summary(page, report, counts, paused) }
+    invite_pages = ::Crm::BookingV2::InvitePages.new(Current.account)
+    payload = pages.map { |page| page_summary(page, report, counts, paused, invite_pages) }
     render json: { payload: payload }
   end
 
@@ -127,6 +129,11 @@ class Api::V1::Accounts::Crm::BookingPagesController < Api::V1::Accounts::Crm::B
     render_created_notice_templates
   end
 
+  # "Escrever com IA" o texto de um aviso (#1354, `Crm::BookingPageNoticeTexts`): devolve opções, não salva.
+  def notice_text_suggestions
+    render_notice_text_suggestions
+  end
+
   private
 
   def reassigner
@@ -170,10 +177,12 @@ class Api::V1::Accounts::Crm::BookingPagesController < Api::V1::Accounts::Crm::B
     }
   end
 
-  # O cartão da lista. `missing` só para página desligada: com algo faltando, a tela mostra Rascunho.
-  def page_summary(page, report, counts, paused_user_ids)
+  # O cartão da lista. `missing` só para página desligada: com algo faltando, a tela mostra Rascunho. `invite_pages`:
+  # um só para a lista (a elegibilidade de quem atende sai numa consulta, #1305).
+  def page_summary(page, report, counts, paused_user_ids, invite_pages)
     serializer = ::Crm::BookingV2::PageSerializer.new(page, attention: report.attention?(page), upcoming_meetings_count: counts.fetch(page.id, 0),
-                                                            paused_user_ids: paused_user_ids, orphaned: report.orphaned(page))
+                                                            paused_user_ids: paused_user_ids, orphaned: report.orphaned(page),
+                                                            invite_pages: invite_pages)
     serializer.summary.merge(missing: page.enabled? ? [] : publish_blockers(page))
   end
 
@@ -214,7 +223,8 @@ class Api::V1::Accounts::Crm::BookingPagesController < Api::V1::Accounts::Crm::B
       :notice_preset, :cancel_until_minutes,
       slot_durations: [], working_hours: [:start_hour, :end_hour, { weekdays: [] }],
       locations: [:type, :url, :address, :label], brand: [:color, :headline, :logo_align],
-      notice_templates: ::Crm::MeetingNotice::KINDS.index_with { %i[name language id] }
+      notice_templates: ::Crm::MeetingNotice::KINDS.index_with { %i[name language id] },
+      notice_texts: ::Crm::MeetingNotice::KINDS
     ).to_h.merge(::Crm::BookingV2::PostMeetingParams.attributes(parameter_set(:booking_page)))
   end
 end

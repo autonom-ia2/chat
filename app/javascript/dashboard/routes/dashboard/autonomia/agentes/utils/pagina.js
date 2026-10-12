@@ -27,6 +27,13 @@ const GAVETA_DA_ABA = {
 
 export const gavetaDaAba = aba => GAVETA_DA_ABA[aba] || null;
 
+// #1370 — `?gaveta=<nome>` também abre uma gaveta: o :tab antigo não tem a agenda. É por onde a volta
+// do assistente de páginas de CRM › Agendamento reabre "Marcar reuniões". A página tira a consulta
+// da URL ao abrir (F5 não reabre). O :tab antigo vence quando os dois vêm.
+export const gavetaDaUrl = (aba, consulta) =>
+  gavetaDaAba(aba) ||
+  (Object.values(GAVETA).includes(consulta) ? consulta : null);
+
 const TIPO_COTACAO = 'insurance_quote';
 
 export const ehCotacao = agente => agente?.agent_type === TIPO_COTACAO;
@@ -154,3 +161,34 @@ export const fecharFrase = texto => {
 // O locale do i18n vem como "pt_BR"; o Intl do navegador quer "pt-BR".
 export const idiomaDoNavegador = locale =>
   (locale || 'en').split('_').join('-');
+
+// #1369 — quando foi a última atividade de uma conversa. Nos últimos 7 dias (hoje e os 6 anteriores)
+// o dia da semana não se repete, então basta ele e a hora ("seg., 20:59"); antes disso, a data
+// ("28 de set., 20:59").
+const DIAS_COM_NOME = 6;
+const HORA = { hour: '2-digit', minute: '2-digit' };
+
+export const quandoFoi = (segundos, idioma, agora = new Date()) => {
+  const data = new Date(segundos * 1000);
+  const inicio = new Date(agora);
+  inicio.setHours(0, 0, 0, 0);
+  inicio.setDate(inicio.getDate() - DIAS_COM_NOME);
+  const formato =
+    data >= inicio
+      ? { weekday: 'short', ...HORA }
+      : { day: 'numeric', month: 'short', ...HORA };
+  return data.toLocaleString(idioma, formato);
+};
+
+// #1369 — de onde veio um jeito criado pelo "Voltar": o jeito anterior com o mesmo texto (mesmo
+// instruction_hash), só quando há exatamente um. Com dois ou mais não dá para saber qual deles foi
+// escolhido, e sem nenhum o jeito já saiu da lista (a API guarda os 50 mais novos): null, e a tela
+// usa a frase genérica. `versoes` vem do mais novo para o mais antigo, como a API devolve.
+export const origemDaVolta = (versao, versoes) => {
+  if (versao?.reason !== 'rollback' || !versao.instruction_hash) return null;
+  const posicao = versoes.indexOf(versao);
+  const iguais = versoes
+    .slice(posicao + 1)
+    .filter(item => item.instruction_hash === versao.instruction_hash);
+  return iguais.length === 1 ? iguais[0] : null;
+};

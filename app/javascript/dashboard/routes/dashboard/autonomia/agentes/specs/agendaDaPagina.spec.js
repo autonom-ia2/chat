@@ -1,8 +1,12 @@
 import {
   ESTADO_PAGINA,
   MODO_RECEBE,
+  estadoComLiberacao,
   estadoDaPagina,
-  fusoLegivel,
+  idsLiberados,
+  liberacaoParaSalvar,
+  outraPaginaDeAgenda,
+  pessoasDaPagina,
   quemRecebe,
 } from '../utils/agendaDaPagina';
 
@@ -164,16 +168,57 @@ describe('quemRecebe', () => {
   });
 });
 
-describe('fusoLegivel', () => {
-  it('names the zone for a lay reader in the screen language', () => {
-    // O texto exato é do ICU do navegador ("Horário Padrão de Brasília" no Node 24).
-    const fuso = fusoLegivel('America/Sao_Paulo', 'pt-BR');
-    expect(fuso.startsWith('Horário')).toBe(true);
-    expect(fuso.endsWith('de Brasília')).toBe(true);
+// #1307 — as pessoas da página liberadas para a IA (`booking_agent_ids`; vazio = todas).
+describe('pessoas liberadas (#1307)', () => {
+  const PESSOAS = [
+    { id: 1, nome: 'Ana', ai_status: 'ativa' },
+    { id: 2, nome: 'Caio', ai_status: 'agenda_pausada' },
+    { id: 3, nome: 'Lia', ai_status: 'ativa' },
+  ];
+
+  it('reads the people of a page, empty when the server does not send them', () => {
+    expect(pessoasDaPagina({ pessoas: PESSOAS })).toBe(PESSOAS);
+    expect(pessoasDaPagina({})).toEqual([]);
+    expect(pessoasDaPagina(undefined)).toEqual([]);
   });
 
-  it('is empty without a zone and the raw name for an unknown one', () => {
-    expect(fusoLegivel(undefined, 'en')).toBe('');
-    expect(fusoLegivel('Lua/Base', 'en')).toBe('Lua/Base');
+  it.each([[undefined], [null], [[]]])(
+    'saved %s means everyone on the page',
+    gravados => {
+      expect(idsLiberados(gravados, PESSOAS)).toEqual([1, 2, 3]);
+    }
+  );
+
+  it('a saved value that is not a list means nobody, like the server', () => {
+    expect(idsLiberados('x', PESSOAS)).toEqual([]);
+    expect(idsLiberados({ a: 1 }, PESSOAS)).toEqual([]);
+  });
+
+  it('keeps only the saved ids still on the page, in the page order, as numbers', () => {
+    expect(idsLiberados(['3', 1, 99], PESSOAS)).toEqual([1, 3]);
+    expect(idsLiberados([99], PESSOAS)).toEqual([]);
+  });
+
+  it('saves [] with everyone checked and the checked ids in page order otherwise', () => {
+    expect(liberacaoParaSalvar([3, 1, 2], PESSOAS)).toEqual([]);
+    expect(liberacaoParaSalvar([3, 1], PESSOAS)).toEqual([1, 3]);
+  });
+
+  it('turns an active page into "nobody" or "calendar paused" by the released people', () => {
+    const { ATIVA, SEM_NINGUEM, AGENDA_PAUSADA, PAUSADA } = ESTADO_PAGINA;
+    expect(estadoComLiberacao(ATIVA, PESSOAS, [1])).toBe(ATIVA);
+    expect(estadoComLiberacao(ATIVA, PESSOAS, [])).toBe(SEM_NINGUEM);
+    expect(estadoComLiberacao(ATIVA, PESSOAS, [2])).toBe(AGENDA_PAUSADA);
+    expect(estadoComLiberacao(PAUSADA, PESSOAS, [])).toBe(PAUSADA);
+    expect(estadoComLiberacao(ATIVA, [], [])).toBe(ATIVA);
+  });
+});
+
+describe('outraPaginaDeAgenda (#1307, painel antigo)', () => {
+  it('is true only for a real page different from the saved one', () => {
+    expect(outraPaginaDeAgenda(5, 3)).toBe(true);
+    expect(outraPaginaDeAgenda(5, null)).toBe(true);
+    expect(outraPaginaDeAgenda(5, '5')).toBe(false);
+    expect(outraPaginaDeAgenda(null, 3)).toBe(false);
   });
 });
