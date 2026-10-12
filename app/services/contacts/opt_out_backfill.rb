@@ -6,7 +6,8 @@
 #   com o mesmo e-mail, origem 'email_unsubscribe'.
 # - Lead recusado (consent_refused_at ou no_consent, qualquer status hoje): os contatos que a recusa alcança
 #   (ContactOptOutSync#mark_contacts!), origem 'prospecting'.
-# O e-mail vem primeiro, como em OptOutInheritance#source_for. opt_out! não muda recusa existente: rodar de novo é seguro.
+# O e-mail vem antes da Prospecção, como em OptOutInheritance#source_for (lá, a 'follow_up_reply' do card marcado vem
+# antes das duas, chat#1325; ela não entra aqui). opt_out! não muda recusa existente: rodar de novo é seguro.
 class Contacts::OptOutBackfill
   UNSUBSCRIBE = 'unsubscribe'.freeze
 

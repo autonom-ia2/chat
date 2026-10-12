@@ -104,6 +104,17 @@ RSpec.describe 'Contact opt-out API', type: :request do
       expect(contact.opt_out_source).to eq('prospecting')
     end
 
+    it 'não desfaz a recusa pedida no follow-up de IA: ela sai pelo reset do follow-up no card (chat#1325)' do
+      contact.opt_out!(source: 'follow_up_reply')
+
+      delete url, headers: agent.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq(I18n.t('contacts.opt_out.undo_only_manual'))
+      expect(contact.reload).to be_opted_out
+      expect(contact.opt_out_source).to eq('follow_up_reply')
+    end
+
     it 'não desfaz a recusa do descadastro de e-mail, e editar o contato depois não muda a marca' do
       contact.update!(email: 'ana@example.com')
       unsubscribe_email!('ana@example.com')
