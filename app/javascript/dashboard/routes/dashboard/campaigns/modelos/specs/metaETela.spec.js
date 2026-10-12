@@ -143,7 +143,6 @@ describe('Meta → tela', () => {
     }).conteudo;
     expect(oferta.oferta).toEqual({
       titulo: 'Só hoje',
-      terminaEm: '',
       link: 'https://h.com/o',
       botao: 'Ver',
       cupom: 'HUB30',
@@ -440,7 +439,7 @@ describe('tela → Meta', () => {
     expect(corpo.components[2].buttons[0].text).toBe('Sim');
   });
 
-  it('revisão: mudar só o fim da oferta não manda nada; recusado sempre manda', () => {
+  it('revisão: sem mudança no que vai à Meta, nada vai; recusado sempre manda', () => {
     const oferta = {
       formato: 'oferta',
       topo: { tipo: 'nenhum' },
@@ -450,7 +449,6 @@ describe('tela → Meta', () => {
       botoes: [],
       oferta: {
         titulo: 'Hoje',
-        terminaEm: '',
         link: 'https://x.com',
         cupom: 'A1',
         botao: 'Ver',
@@ -460,10 +458,7 @@ describe('tela → Meta', () => {
     const soData = {
       ...rascunho,
       tipo: 'divulgacao',
-      conteudo: {
-        ...oferta,
-        oferta: { ...oferta.oferta, terminaEm: '2999-01-01T10:00' },
-      },
+      conteudo: { ...oferta, topo: { tipo: 'nenhum', arquivo: '' } },
     };
     expect(corpoParaAlterar(soData, modelo).components).toBeUndefined();
     expect(

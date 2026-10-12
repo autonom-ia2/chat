@@ -10,11 +10,14 @@
 #   button_text_missing — QUICK_REPLY, URL or PHONE_NUMBER without text;
 #   button_text_long    — button text over 25 characters;
 #   url_missing         — URL button without the address;
+#   url_invalid         — URL that is not a full http(s) address with a domain;
+#   phone_invalid       — phone without "+" and the country code (8 to 15 digits);
 #   url_example         — URL ending in a variable without the example;
 #   stray_braces        — {{ or }} typed in the footer, a button text or the offer title (only the body has variables);
 #   phone_missing       — PHONE_NUMBER button without the number;
 #   copy_code_example   — COPY_CODE without an example code of 1 to 15 letters and digits;
 #   carousel_cards      — carousel without 2 to 10 cards;
+#   carousel_media      — cards with different media (a photo in one, a video in another);
 #   carousel_card       — a card without a media header, body text or buttons;
 #   offer_title         — limited-time offer without a title of 1 to 16 characters;
 #   offer_buttons       — limited-time offer without its URL button, or with a countdown and no COPY_CODE button.
@@ -30,6 +33,7 @@ module Whatsapp::Templates::SubmitFormat
   OFFER_TITLE_MAX = 16
   CARDS = (2..10)
   CODE_CHARACTERS = [*'a'..'z', *'A'..'Z', *'0'..'9'].to_set.freeze
+  DIGITS = ('0'..'9').to_set.freeze
 
   module_function
 
@@ -72,8 +76,10 @@ module Whatsapp::Templates::SubmitFormat
   BUTTON_CHECKS = {
     'QUICK_REPLY' => TEXT_CHECKS,
     'URL' => TEXT_CHECKS + [['url_missing', ->(button) { filled?(button['url']) }],
+                            ['url_invalid', ->(button) { blank?(button['url']) || url?(button['url']) }],
                             ['url_example', ->(button) { url_example?(button) }]],
-    'PHONE_NUMBER' => TEXT_CHECKS + [['phone_missing', ->(button) { filled?(button['phone_number']) }]],
+    'PHONE_NUMBER' => TEXT_CHECKS + [['phone_missing', ->(button) { filled?(button['phone_number']) }],
+                                     ['phone_invalid', ->(button) { blank?(button['phone_number']) || phone?(button['phone_number']) }]],
     'COPY_CODE' => [['copy_code_example', ->(button) { valid_code?(button['example']) }]]
   }.freeze
 
@@ -88,6 +94,20 @@ module Whatsapp::Templates::SubmitFormat
   def quick_replies_grouped?(buttons)
     kinds = buttons.map { |button| upcase(button['type']) == 'QUICK_REPLY' }
     kinds.each_cons(2).count { |current, following| current != following } <= 1
+  end
+
+  # http(s) and a host with a dot; a variable ending ({{1}}) is left out of the reading.
+  def url?(url)
+    uri = URI.parse(url.to_s.strip.split('{{').first.to_s)
+    %w[http https].include?(uri.scheme) && uri.host.to_s.include?('.')
+  rescue URI::InvalidURIError
+    false
+  end
+
+  # Country code first: "+" and 8 to 15 digits (what the screen sends).
+  def phone?(phone)
+    digits = phone.to_s.delete_prefix('+')
+    phone.to_s.start_with?('+') && digits.length.between?(8, 15) && digits.each_char.all? { |char| DIGITS.include?(char) }
   end
 
   # A URL with a variable at the end ({{1}}) goes with an example of that end.
@@ -112,8 +132,13 @@ module Whatsapp::Templates::SubmitFormat
 
     cards = Whatsapp::Templates::SendableFormat.hashes(carousel['cards'])
     return ['carousel_cards'] unless CARDS.cover?(cards.size)
+    return ['carousel_media'] if cards.map { |card| card_media(card) }.reject(&:empty?).uniq.size > 1
 
     cards.flat_map { |card| card_problems(Whatsapp::Templates::SendableFormat.hashes(card['components'])) }
+  end
+
+  def card_media(card)
+    upcase(component(Whatsapp::Templates::SendableFormat.hashes(card['components']), 'HEADER')&.dig('format'))
   end
 
   def card_problems(parts)

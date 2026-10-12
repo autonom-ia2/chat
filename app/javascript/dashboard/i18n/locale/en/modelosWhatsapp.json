@@ -404,8 +404,8 @@
       "TEXTO_DO_BOTAO": "Button text",
       "PROBLEMAS_DO_BOTAO": {
         "SEM_TEXTO": "Write the button text.",
-        "SITE_SEM_ENDERECO": "Write the website address.",
-        "LIGAR_SEM_NUMERO": "Write the phone number.",
+        "SITE_SEM_ENDERECO": "Write the full website address, starting with https://",
+        "LIGAR_SEM_NUMERO": "Write the phone number with the country code, for example +55 11 4000-0000.",
         "CODIGO_SEM_EXEMPLO": "1 to 15 letters and numbers, no spaces.",
         "SO_DIVULGACAO": "This button only exists in promotion messages. Remove it to send this as a service notice.",
         "TEXTO_LONGO": "The button text can have up to 25 characters.",
@@ -447,23 +447,23 @@
         "CARTOES_BOTOES": "Every card has 1 or 2 filled buttons",
         "CARTOES_IGUAIS": "The cards have the same buttons",
         "OFERTA_TITULO": "The offer has a title up to 16 characters",
-        "OFERTA_FIM": "The offer ends on a future date",
-        "OFERTA_LINK": "The offer has a link",
+        "OFERTA_LINK": "The offer has the full website address (https://…)",
         "CATALOGO": "The account has a catalog connected",
         "VALIDADE": "The validity is between 1 and 90 minutes",
         "FORMULARIO": "A form was picked",
         "FORMULARIO_BOTAO": "The form button has text",
         "TOPO_ARQUIVO": "The photo, video or document at the top was chosen",
-        "BOTAO_SITE": "Every website button has the address",
-        "BOTAO_LIGAR": "Every call button has the phone number",
+        "BOTAO_SITE": "Every website button has the full address (https://…)",
+        "BOTAO_LIGAR": "Every call button has the phone number with the country code",
         "BOTAO_CODIGO": "The copy code button has an example code of 1 to 15 letters and numbers",
         "SO_DIVULGACAO": "The “Copy code” button only exists in promotion messages",
-        "OFERTA_CUPOM": "The offer has a coupon of 1 to 15 letters and numbers",
+        "OFERTA_CUPOM": "If there is a coupon, it has 1 to 15 letters and numbers",
         "BOTOES_TAMANHO": "Every button has up to 25 characters",
         "BOTAO_SITE_EXEMPLO": "The website with a variable ending has an example",
         "TEXTO_DIFERENTE": "The text or the footer changed from the original (WhatsApp refuses an identical copy in the same account)",
         "SEM_CHAVES": "The text and the footer have no double braces typed by hand",
-        "FORMATO_DIVULGACAO": "This format goes as a promotion"
+        "FORMATO_DIVULGACAO": "This format goes as a promotion",
+        "CARTOES_MESMA_MIDIA": "All cards have the same kind of media (only photos or only videos)"
       }
     },
     "QUEM_APROVA": {
@@ -482,15 +482,10 @@
       "HORA": "10:42",
       "BOTAO_SEM_TEXTO": "Button text",
       "CARTOES": "Carousel cards",
-      "OFERTA_TERMINA": "Ends in {tempo}",
-      "OFERTA_ACABOU": "The offer has ended",
-      "DIAS": "{n} day | {n} days",
-      "HORAS": "{n} hour | {n} hours",
-      "E": " and ",
-      "MENOS_DE_1_HORA": "less than 1 hour",
       "CUPOM": "Coupon: {cupom}",
       "CATALOGO": "Catalog",
-      "VER_COMO_FICA": "See how it looks"
+      "VER_COMO_FICA": "See how it looks",
+      "OFERTA_CONTAGEM": "Shows how long is left"
     },
     "ENVIADO": {
       "TITULO": {
@@ -550,7 +545,7 @@
       },
       "oferta": {
         "TITULO": "Limited-time offer",
-        "PARA": "An offer with an end time. The customer sees how long is left.",
+        "PARA": "An offer with a highlighted title. With a coupon, the customer sees how long is left.",
         "ETAPA": "Offer",
         "NOME_PADRAO": "Flash offer",
         "TEXTO": "Hi, [nome_cliente]! For a short time: [desconto] off. See it in the button below.",
@@ -600,12 +595,10 @@
       "INTRO": "Promotion only. This format has no footer.",
       "TITULO": "Offer title",
       "TITULO_LIMITE": "{n} of {limite} characters",
-      "TERMINA": "When the offer ends",
-      "TERMINA_AJUDA": "The customer sees how long is left.",
       "LINK": "Offer link",
       "LINK_OBRIGATORIO": "Required: it is where the button goes.",
-      "CUPOM": "Coupon code",
-      "CUPOM_AJUDA": "1 to 15 letters and numbers, no spaces. It shows up with a button to copy it."
+      "CUPOM": "Coupon code (optional)",
+      "CUPOM_AJUDA": "1 to 15 letters and numbers, no spaces. With a coupon, the customer sees how long is left and a button to copy it."
     },
     "CATALOGO": {
       "SEM_CATALOGO": "Your WhatsApp account has no product catalog connected yet.",
@@ -683,7 +676,9 @@
         "DIVULGACAO": "Promotion message: people who asked not to receive are left out.",
         "POR_ENVIO": "{porEnvio} per message"
       },
-      "GRUPO_CATALOGO": "From the records"
+      "GRUPO_CATALOGO": "From the records",
+      "SEM_MODELO_LIBERADO": "No template of this WhatsApp account can go in a campaign right now: they are rejected, paused or in a format campaigns cannot send yet.",
+      "CORRIGIR": "Fix “{nome}”"
     },
     "IA": {
       "CRIAR_COM_IA": "Create with AI",

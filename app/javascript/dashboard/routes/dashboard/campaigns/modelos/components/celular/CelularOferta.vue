@@ -1,33 +1,9 @@
 <script setup>
-import { computed } from 'vue';
-import { useI18n } from 'vue-i18n';
-
-// Oferta por tempo limitado na prévia: o título, a contagem regressiva até o
-// fim e o cupom, como o WhatsApp mostra em cima do texto.
-const props = defineProps({
+// Oferta por tempo limitado na prévia: o título e, com cupom, a contagem do
+// tempo que falta (a data de fim entra em cada envio, então aqui é só o lugar
+// dela) e o cupom, como o WhatsApp mostra em cima do texto.
+defineProps({
   oferta: { type: Object, required: true },
-});
-
-const { t } = useI18n();
-const HORA_MS = 60 * 60 * 1000;
-const DIA_MS = 24 * HORA_MS;
-
-const faltam = computed(() => {
-  const ms = new Date(props.oferta.terminaEm).getTime() - Date.now();
-  if (!props.oferta.terminaEm || Number.isNaN(ms) || ms <= 0) {
-    return t('MODELOS_WHATSAPP.CELULAR.OFERTA_ACABOU');
-  }
-  const dias = Math.floor(ms / DIA_MS);
-  const horas = Math.floor((ms % DIA_MS) / HORA_MS);
-  const partes = [
-    dias ? t('MODELOS_WHATSAPP.CELULAR.DIAS', { n: dias }, dias) : '',
-    horas ? t('MODELOS_WHATSAPP.CELULAR.HORAS', { n: horas }, horas) : '',
-  ].filter(Boolean);
-  return t('MODELOS_WHATSAPP.CELULAR.OFERTA_TERMINA', {
-    tempo: partes.length
-      ? partes.join(t('MODELOS_WHATSAPP.CELULAR.E'))
-      : t('MODELOS_WHATSAPP.CELULAR.MENOS_DE_1_HORA'),
-  });
 });
 </script>
 
@@ -45,10 +21,14 @@ const faltam = computed(() => {
       <span class="text-sm font-semibold break-words text-n-slate-12">
         {{ oferta.titulo || $t('MODELOS_WHATSAPP.CELULAR.VAZIO') }}
       </span>
-      <span class="text-xs text-n-ruby-11">{{ faltam }}</span>
-      <span v-if="oferta.cupom" class="text-xs text-n-slate-11">
-        {{ $t('MODELOS_WHATSAPP.CELULAR.CUPOM', { cupom: oferta.cupom }) }}
-      </span>
+      <template v-if="oferta.cupom">
+        <span class="text-xs text-n-ruby-11">
+          {{ $t('MODELOS_WHATSAPP.CELULAR.OFERTA_CONTAGEM') }}
+        </span>
+        <span class="text-xs text-n-slate-11">
+          {{ $t('MODELOS_WHATSAPP.CELULAR.CUPOM', { cupom: oferta.cupom }) }}
+        </span>
+      </template>
     </span>
   </div>
 </template>

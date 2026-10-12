@@ -163,9 +163,17 @@ export function useModelosNaCampanha() {
   const emAnalise = templateId =>
     modeloPorId(templateId)?.situacao === 'em_analise';
 
+  // Um recusado que a pessoa pode corrigir, para o atalho da campanha sem modelo.
+  const recusadoParaCorrigir = inboxId =>
+    modelosDaCaixa(inboxId).find(
+      modelo =>
+        modelo.situacao === 'recusado' && modelo.editavel && !modelo.sistema
+    ) || null;
+
   return {
     ativa,
     flagLigada,
+    recusadoParaCorrigir,
     carregar,
     caixas,
     temCaixaConectada,

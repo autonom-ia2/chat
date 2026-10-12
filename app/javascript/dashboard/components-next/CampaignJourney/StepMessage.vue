@@ -58,6 +58,12 @@ const emit = defineEmits([
   'manageIdentity',
 ]);
 
+// Fork: a lista pode ter só modelos que não vão (recusado, pausado, formato):
+// aí o aviso de "sem modelo" aparece junto, com a saída (criar ou corrigir).
+const temModeloLiberado = computed(() =>
+  props.templateOptions.some(opcao => !opcao.disabled)
+);
+
 const NS = 'CAMPAIGN_JOURNEY.NEW_CAMPAIGN.MESSAGE';
 const { t } = useI18n();
 
@@ -279,7 +285,7 @@ const chooseChannel = card => {
               data-test="template-choice"
               @update:model-value="templateId => emit('update', { templateId })"
             />
-            <slot v-else name="modelo-vazio">
+            <slot v-if="!temModeloLiberado" name="modelo-vazio">
               <p class="m-0 text-sm text-n-slate-11">
                 {{ t(`${NS}.TEMPLATE_EMPTY`) }}
               </p>

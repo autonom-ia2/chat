@@ -4,8 +4,9 @@ import Input from 'dashboard/components-next/input/Input.vue';
 import { LIMITE_DO_TITULO_DA_OFERTA } from '../../constants';
 import EscolherArquivo from './EscolherArquivo.vue';
 
-// Oferta por tempo limitado: título, quando acaba (vira contagem regressiva na
-// prévia), o link (obrigatório) e, se quiser, um cupom. Foto ou vídeo no topo
+// Oferta por tempo limitado: título, o link (obrigatório) e, se quiser, um
+// cupom. Com cupom, o WhatsApp mostra quanto tempo falta (a data de fim entra em
+// cada envio, não no modelo). Foto ou vídeo no topo
 // é opcional; rodapé este formato não tem.
 const rascunho = defineModel('rascunho', { type: Object, required: true });
 
@@ -69,14 +70,6 @@ const tituloLongo = computed(
       "
       :message-type="tituloLongo ? 'error' : 'info'"
       @update:model-value="valor => mudarOferta('titulo', valor)"
-    />
-    <Input
-      :model-value="oferta.terminaEm"
-      data-oferta-fim
-      type="datetime-local"
-      :label="$t('MODELOS_WHATSAPP.OFERTA.TERMINA')"
-      :message="$t('MODELOS_WHATSAPP.OFERTA.TERMINA_AJUDA')"
-      @update:model-value="valor => mudarOferta('terminaEm', valor)"
     />
     <Input
       :model-value="oferta.link"

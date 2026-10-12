@@ -4,7 +4,7 @@
 // ({ '1': 'cliente.primeiro_nome' }), para a campanha ligar as variáveis sem
 // adivinhar. Sem expressão regular (regra do Rodrigo).
 import { campoParaPerfil } from './campos';
-import { ordenarBotoes } from './regraEstrutural';
+import { ordenarBotoes, telefoneNaMeta } from './regraEstrutural';
 
 export const IDIOMA = 'pt_BR';
 
@@ -60,7 +60,7 @@ const botaoNaMeta = botao => {
     return {
       type: 'PHONE_NUMBER',
       text: botao.texto,
-      phone_number: botao.valor,
+      phone_number: telefoneNaMeta(botao.valor),
     };
   }
   if (botao.tipo === 'copiar_codigo') {
@@ -165,10 +165,16 @@ const cartoesNaMeta = (cartoes, midias = []) => ({
   })),
 });
 
+// A contagem do tempo que falta (has_expiration) vai junto com o cupom: a data
+// de fim entra em cada envio, junto do código. Sem cupom, a oferta vai só com o
+// título em destaque, que a Meta aceita em qualquer leitura da regra.
 const ofertaNaMeta = oferta => [
   {
     type: 'LIMITED_TIME_OFFER',
-    limited_time_offer: { text: oferta.titulo, has_expiration: true },
+    limited_time_offer: {
+      text: oferta.titulo,
+      has_expiration: Boolean(oferta.cupom),
+    },
   },
 ];
 

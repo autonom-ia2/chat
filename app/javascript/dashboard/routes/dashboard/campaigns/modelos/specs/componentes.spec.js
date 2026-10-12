@@ -6,6 +6,7 @@ import CampanhasParadas from '../components/CampanhasParadas.vue';
 import EtapaObjetivo from '../components/criar/EtapaObjetivo.vue';
 import ModeloUsos from '../components/ModeloUsos.vue';
 import FranquiaDoMes from '../components/FranquiaDoMes.vue';
+import PonteSemModelo from '../ponte/PonteSemModelo.vue';
 
 const api = vi.hoisted(() => ({
   retomarCampanha: vi.fn(),
@@ -134,6 +135,20 @@ describe('EtapaObjetivo', () => {
     expect(avisos.map(aviso => aviso.text())).toEqual(
       Array(3).fill(en.MODELOS_WHATSAPP.OBJETIVO.NAO_VAI_EM_CAMPANHA)
     );
+  });
+});
+
+describe('PonteSemModelo', () => {
+  it('com modelos que não vão, diz por quê e oferece criar e corrigir', async () => {
+    const wrapper = montar(PonteSemModelo, {
+      props: { temModelos: true, paraCorrigir: { id: '9', nome: 'Boleto' } },
+    });
+    expect(wrapper.text()).toContain(
+      en.MODELOS_WHATSAPP.PONTE.SEM_MODELO_LIBERADO
+    );
+    expect(wrapper.find('[data-criar-modelo]').exists()).toBe(true);
+    await wrapper.find('[data-corrigir-modelo]').trigger('click');
+    expect(wrapper.emitted('corrigir')).toEqual([['9']]);
   });
 });
 

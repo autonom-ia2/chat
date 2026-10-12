@@ -138,7 +138,7 @@ describe('modelos prontos (#1380)', () => {
     const pedem = {
       promocao: ['BOTAO_SITE'],
       carrossel: ['CARTOES_MIDIA', 'CARTOES_BOTOES'],
-      oferta: ['OFERTA_LINK', 'OFERTA_CUPOM'],
+      oferta: ['OFERTA_LINK'],
     };
     lista.forEach(({ chave, deFabrica }) => {
       expect(JSON.stringify(deFabrica).toLowerCase(), chave).not.toContain(

@@ -29,3 +29,6 @@ en:
       button_text_long: "A button text can have up to 25 characters."
       url_example: "The website button with a variable ending needs an example of that ending."
       stray_braces: "Double braces can only be in the message text, not in the footer, the buttons or the offer title."
+      url_invalid: "The website button needs the full address, starting with https://."
+      phone_invalid: "The call button needs the phone number with the country code, for example +55 11 4000-0000."
+      carousel_media: "All carousel cards need the same kind of media: only photos or only videos."

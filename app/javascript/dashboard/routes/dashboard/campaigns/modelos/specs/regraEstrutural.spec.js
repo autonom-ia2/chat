@@ -99,22 +99,50 @@ describe('conferência antes de enviar', () => {
     expect(chaves).not.toContain('SO_DIVULGACAO');
   });
 
-  it('oferta sem cupom válido não envia (a contagem exige o botão de copiar)', () => {
-    const oferta = cupom => ({
+  it('oferta: cupom opcional, mas válido quando há; link completo', () => {
+    const oferta = (cupom, link = 'https://h.com') => ({
       formato: 'oferta',
-      oferta: {
-        titulo: 'Só hoje',
-        terminaEm: '2999-01-01T10:00',
-        link: 'https://h.com',
-        cupom,
-      },
+      oferta: { titulo: 'Só hoje', link, cupom },
     });
-    const cupom = valor =>
-      conferirFormato(oferta(valor)).find(item => item.chave === 'OFERTA_CUPOM')
-        .ok;
-    expect(cupom('HUB30')).toBe(true);
-    expect(cupom('')).toBe(false);
-    expect(cupom('HUB 30')).toBe(false);
+    const ok = (chave, ...args) =>
+      conferirFormato(oferta(...args)).find(item => item.chave === chave).ok;
+    expect(ok('OFERTA_CUPOM', 'HUB30')).toBe(true);
+    expect(ok('OFERTA_CUPOM', '')).toBe(true);
+    expect(ok('OFERTA_CUPOM', 'HUB 30')).toBe(false);
+    expect(ok('OFERTA_LINK', '', 'hub2you')).toBe(false);
+  });
+
+  it('B5: site sem https e domínio, ligar sem código do país não enviam', () => {
+    const site = valor => ({ tipo: 'site', texto: 'Ver', valor });
+    const ligar = valor => ({ tipo: 'ligar', texto: 'Ligar', valor });
+    expect(problemasDoBotao(site('hub2you'), 'aviso')).toEqual([
+      'SITE_SEM_ENDERECO',
+    ]);
+    expect(problemasDoBotao(site('https://sualoja.com.br'), 'aviso')).toEqual(
+      []
+    );
+    expect(problemasDoBotao(ligar('abc'), 'aviso')).toEqual([
+      'LIGAR_SEM_NUMERO',
+    ]);
+    expect(problemasDoBotao(ligar('11 99999-9999'), 'aviso')).toEqual([
+      'LIGAR_SEM_NUMERO',
+    ]);
+    expect(problemasDoBotao(ligar('+55 11 4000-0000'), 'aviso')).toEqual([]);
+  });
+
+  it('B4: carrossel com foto num cartão e vídeo noutro não envia', () => {
+    const cartao = midia => ({
+      midia,
+      local: 'blob:x',
+      texto: 'Novidade',
+      botoes: [{ tipo: 'site', texto: 'Ver', valor: 'https://h.com' }],
+    });
+    const mesma = cartoes =>
+      conferirFormato({ formato: 'carrossel', cartoes }).find(
+        item => item.chave === 'CARTOES_MESMA_MIDIA'
+      ).ok;
+    expect(mesma([cartao('foto'), cartao('foto')])).toBe(true);
+    expect(mesma([cartao('foto'), cartao('video')])).toBe(false);
   });
 
   it('cartão de carrossel com botão de site sem endereço não envia', () => {
@@ -223,23 +251,6 @@ describe('médios e baixos da auditoria (#1380)', () => {
       conferirFormato({ formato: 'codigo', codigo: { validade: valor } })[0].ok;
     expect(validade(10)).toBe(true);
     expect(validade(2.5)).toBe(false);
-  });
-
-  it('oferta lida da Meta (sem data de fim) não trava a alteração', () => {
-    const oferta = terminaEm => ({
-      formato: 'oferta',
-      oferta: {
-        titulo: 'Só hoje',
-        terminaEm,
-        link: 'https://h.com',
-        cupom: 'A1',
-      },
-    });
-    const fim = valor =>
-      conferirFormato(oferta(valor)).find(item => item.chave === 'OFERTA_FIM')
-        .ok;
-    expect(fim('')).toBe(true);
-    expect(fim('2000-01-01T10:00')).toBe(false);
   });
 });
 

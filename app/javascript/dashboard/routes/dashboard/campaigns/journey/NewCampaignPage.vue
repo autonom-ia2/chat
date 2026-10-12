@@ -525,6 +525,12 @@ const createTemplate = () => {
   });
 };
 
+// Fork: corrigir um modelo recusado guardando a campanha pela metade.
+const fixTemplate = id => {
+  saveDraft(accountId.value, draft.value);
+  router.push({ name: 'modelos_whatsapp_alterar', params: { id } });
+};
+
 // Fork: modelo ainda em análise → dá para agendar; "Enviar agora" só depois de aprovado.
 const nowBlockedReason = computed(() =>
   ponte.emAnalise(draft.value.templateId)
@@ -910,7 +916,12 @@ onBeforeUnmount(() => {
             <PonteCaixasReconectar :caixas="caixasParaReconectar" />
           </template>
           <template v-if="ponteAtiva" #modelo-vazio>
-            <PonteSemModelo @criar="createTemplate" />
+            <PonteSemModelo
+              :tem-modelos="templateOptions.length > 0"
+              :para-corrigir="ponte.recusadoParaCorrigir(draft.inboxId)"
+              @criar="createTemplate"
+              @corrigir="fixTemplate"
+            />
           </template>
           <template v-if="ponteAtiva" #modelo-aviso>
             <PonteAvisoDoModelo :modelo="modeloEscolhido" />

@@ -25,6 +25,41 @@ export const codigoDeExemploValido = codigo => {
   );
 };
 
+// Endereço de site completo: http(s) e um domínio com ponto. O final variável
+// ({{1}}) de modelo feito fora fica de fora da leitura. Lido pelo URL do próprio
+// navegador, sem expressão regular.
+export const enderecoValido = endereco => {
+  const base = (endereco || '').trim().split('{{')[0];
+  try {
+    const url = new URL(base);
+    return (
+      ['https:', 'http:'].includes(url.protocol) && url.hostname.includes('.')
+    );
+  } catch {
+    return false;
+  }
+};
+
+// Telefone com o código do país: começa com +, só números, espaço, traço e
+// parênteses, com 8 a 15 números. Vai para a Meta só com + e os números.
+const NUMEROS = '0123456789';
+const numerosDe = telefone =>
+  (telefone || '')
+    .split('')
+    .filter(letra => NUMEROS.includes(letra))
+    .join('');
+export const telefoneValido = telefone => {
+  const valor = (telefone || '').trim();
+  const quantos = numerosDe(valor).length;
+  return (
+    valor.startsWith('+') &&
+    valor.split('').every(letra => `${NUMEROS}+ -()`.includes(letra)) &&
+    quantos >= 8 &&
+    quantos <= 15
+  );
+};
+export const telefoneNaMeta = telefone => `+${numerosDe(telefone)}`;
+
 // Todos os problemas de um botão (lista vazia: está certo). `tipo` é o tipo
 // da mensagem (aviso, divulgacao, codigo). Botão só de divulgação num aviso não
 // é conferido além disso: ele tem de sair.
@@ -39,13 +74,17 @@ export const problemasDoBotao = (botao, tipo) => {
     temTexto &&
       (botao.texto || '').trim().length > LIMITE_DO_BOTAO &&
       'TEXTO_LONGO',
-    botao.tipo === 'site' && !temLetras(botao.valor) && 'SITE_SEM_ENDERECO',
+    botao.tipo === 'site' &&
+      !enderecoValido(botao.valor) &&
+      'SITE_SEM_ENDERECO',
     // Site com final variável ({{1}}), vindo de fora da tela: vai com o exemplo.
     botao.tipo === 'site' &&
       (botao.valor || '').includes('{{') &&
       !temLetras(botao.exemplo) &&
       'SITE_SEM_EXEMPLO',
-    botao.tipo === 'ligar' && !temLetras(botao.valor) && 'LIGAR_SEM_NUMERO',
+    botao.tipo === 'ligar' &&
+      !telefoneValido(botao.valor) &&
+      'LIGAR_SEM_NUMERO',
     botao.tipo === 'copiar_codigo' &&
       !codigoDeExemploValido(botao.valor) &&
       'CODIGO_SEM_EXEMPLO',

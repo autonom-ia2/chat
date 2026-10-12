@@ -404,8 +404,8 @@
       "TEXTO_DO_BOTAO": "Texto do botão",
       "PROBLEMAS_DO_BOTAO": {
         "SEM_TEXTO": "Escreva o texto do botão.",
-        "SITE_SEM_ENDERECO": "Escreva o endereço do site.",
-        "LIGAR_SEM_NUMERO": "Escreva o telefone.",
+        "SITE_SEM_ENDERECO": "Escreva o endereço completo do site, começando com https://",
+        "LIGAR_SEM_NUMERO": "Escreva o telefone com o código do país, por exemplo +55 11 4000-0000.",
         "CODIGO_SEM_EXEMPLO": "De 1 a 15 letras e números, sem espaço.",
         "SO_DIVULGACAO": "Esse botão só existe em mensagens de divulgação. Tire o botão para enviar como aviso de serviço.",
         "TEXTO_LONGO": "O texto do botão pode ter até 25 letras.",
@@ -447,23 +447,23 @@
         "CARTOES_BOTOES": "Todo cartão tem 1 ou 2 botões preenchidos",
         "CARTOES_IGUAIS": "Os cartões têm os mesmos botões",
         "OFERTA_TITULO": "A oferta tem título de até 16 letras",
-        "OFERTA_FIM": "A oferta acaba numa data futura",
-        "OFERTA_LINK": "A oferta tem link",
+        "OFERTA_LINK": "A oferta tem o endereço completo do site (https://…)",
         "CATALOGO": "A conta tem catálogo conectado",
         "VALIDADE": "A validade fica entre 1 e 90 minutos",
         "FORMULARIO": "Um formulário foi escolhido",
         "FORMULARIO_BOTAO": "O botão do formulário tem texto",
         "TOPO_ARQUIVO": "A foto, o vídeo ou o documento do topo foi escolhido",
-        "BOTAO_SITE": "Todo botão de site tem o endereço",
-        "BOTAO_LIGAR": "Todo botão de ligar tem o telefone",
+        "BOTAO_SITE": "Todo botão de site tem o endereço completo (https://…)",
+        "BOTAO_LIGAR": "Todo botão de ligar tem o telefone com o código do país",
         "BOTAO_CODIGO": "O botão de copiar código tem um código de exemplo de 1 a 15 letras e números",
         "SO_DIVULGACAO": "O botão “Copiar código” só existe em mensagens de divulgação",
-        "OFERTA_CUPOM": "A oferta tem um cupom de 1 a 15 letras e números",
+        "OFERTA_CUPOM": "Se tiver cupom, ele tem de 1 a 15 letras e números",
         "BOTOES_TAMANHO": "Todo botão tem até 25 letras",
         "BOTAO_SITE_EXEMPLO": "O site com final variável tem exemplo",
         "TEXTO_DIFERENTE": "O texto ou o rodapé mudou em relação ao original (o WhatsApp recusa cópia igual na mesma conta)",
         "SEM_CHAVES": "O texto e o rodapé não têm chaves duplas digitadas à mão",
-        "FORMATO_DIVULGACAO": "Este formato vai como divulgação"
+        "FORMATO_DIVULGACAO": "Este formato vai como divulgação",
+        "CARTOES_MESMA_MIDIA": "Todos os cartões têm o mesmo tipo de mídia (só foto ou só vídeo)"
       }
     },
     "QUEM_APROVA": {
@@ -482,15 +482,10 @@
       "HORA": "10:42",
       "BOTAO_SEM_TEXTO": "Texto do botão",
       "CARTOES": "Cartões do carrossel",
-      "OFERTA_TERMINA": "Termina em {tempo}",
-      "OFERTA_ACABOU": "A oferta acabou",
-      "DIAS": "{n} dia | {n} dias",
-      "HORAS": "{n} hora | {n} horas",
-      "E": " e ",
-      "MENOS_DE_1_HORA": "menos de 1 hora",
       "CUPOM": "Cupom: {cupom}",
       "CATALOGO": "Catálogo",
-      "VER_COMO_FICA": "Ver como fica"
+      "VER_COMO_FICA": "Ver como fica",
+      "OFERTA_CONTAGEM": "Mostra quanto tempo falta"
     },
     "ENVIADO": {
       "TITULO": {
@@ -550,7 +545,7 @@
       },
       "oferta": {
         "TITULO": "Oferta por tempo limitado",
-        "PARA": "Uma oferta com hora para acabar. O cliente vê quanto tempo falta.",
+        "PARA": "Uma oferta com título em destaque. Com cupom, o cliente vê quanto tempo falta.",
         "ETAPA": "Oferta",
         "NOME_PADRAO": "Oferta relâmpago",
         "TEXTO": "Oi, [nome_cliente]! Por pouco tempo: [desconto] de desconto. Veja no botão abaixo.",
@@ -600,12 +595,10 @@
       "INTRO": "Só para divulgação. Este formato não tem rodapé.",
       "TITULO": "Título da oferta",
       "TITULO_LIMITE": "{n} de {limite} letras",
-      "TERMINA": "Quando a oferta acaba",
-      "TERMINA_AJUDA": "O cliente vê quanto tempo falta.",
       "LINK": "Link da oferta",
       "LINK_OBRIGATORIO": "Obrigatório: é para onde o botão leva.",
-      "CUPOM": "Código do cupom",
-      "CUPOM_AJUDA": "De 1 a 15 letras e números, sem espaço. Aparece com um botão para copiar."
+      "CUPOM": "Código do cupom (opcional)",
+      "CUPOM_AJUDA": "De 1 a 15 letras e números, sem espaço. Com cupom, o cliente vê quanto tempo falta e um botão para copiar."
     },
     "CATALOGO": {
       "SEM_CATALOGO": "Sua conta do WhatsApp ainda não tem catálogo de produtos conectado.",
@@ -683,7 +676,9 @@
         "DIVULGACAO": "Mensagem de divulgação: quem pediu para não receber fica de fora.",
         "POR_ENVIO": "{porEnvio} por envio"
       },
-      "GRUPO_CATALOGO": "Do cadastro"
+      "GRUPO_CATALOGO": "Do cadastro",
+      "SEM_MODELO_LIBERADO": "Nenhum modelo desta conta do WhatsApp pode ir em campanha agora: estão recusados, pausados ou num formato que a campanha ainda não envia.",
+      "CORRIGIR": "Corrigir “{nome}”"
     },
     "IA": {
       "CRIAR_COM_IA": "Criar com IA",

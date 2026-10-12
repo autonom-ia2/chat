@@ -161,7 +161,6 @@ const ofertaDe = (template, botoes) => {
   const link = botoes.find(botao => maiusculo(botao.type) === 'URL');
   return {
     titulo: oferta?.limited_time_offer?.text || '',
-    terminaEm: '',
     link: link?.url || '',
     botao: link?.text || '',
     cupom:
