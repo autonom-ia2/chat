@@ -44,6 +44,8 @@
 # - 'automation_view' / 'automation_manage': automation rules.
 # - 'agendamento_view' / 'agendamento_manage': booking pages (Configurações › Agendamento) and their numbers.
 #   manage creates, publishes and pauses pages. Hosting a booking or scheduling for a client needs no key.
+# - 'whatsapp_templates_view' / 'whatsapp_templates_manage': WhatsApp (Cloud) message templates of the inboxes (#1330).
+#   manage creates, edits, duplicates and deletes them at Meta; platform templates stay read-only.
 # - 'label_manage', 'attribute_manage', 'macro_manage' (team-wide macros), 'sla_manage': account settings.
 
 class CustomRole < ApplicationRecord
@@ -87,6 +89,8 @@ class CustomRole < ApplicationRecord
     automation_manage
     agendamento_view
     agendamento_manage
+    whatsapp_templates_view
+    whatsapp_templates_manage
     label_manage
     attribute_manage
     macro_manage

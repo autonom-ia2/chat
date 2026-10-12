@@ -44,6 +44,7 @@ De onde vem o estado de uma conta nova (`before_create`):
 | `email_template_import` | Importar modelo de e-mail (#1099) |
 | `crm_booking_v2` | Agendamento WhatsApp-first (#1187): página de agendamento sem Google/Microsoft, link por cliente, avisos no WhatsApp, Resultados, IA marcando horário e "+ Novo › Reunião" pela agenda (#1265). Também exige `CRM_CALENDAR_MEETINGS_ENABLED=true` na stack (ligado nas duas). Desligada = página e gaveta antigas, sem deploy |
 | `customer_base` | Base de clientes (#1240): leitura nova da planilha na importação de contatos e em Públicos (#1246). Desligada = leitura igual ao `main`, provado linha a linha em `docs/base-de-clientes/BATERIA-F0.md` |
+| `whatsapp_templates_journey` | Modelos do WhatsApp (#1320/#1330): criar, editar, apagar, duplicar e subir mídia de modelos na Meta pela API nova. Desligada = essas escritas respondem 404 sem chamar a Meta; listar e "onde está em uso" seguem abertos. Bit 16 da `feature_flags_ext_1` |
 
 ### Do Chatwoot, oferecidas aos clientes
 

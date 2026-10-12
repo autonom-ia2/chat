@@ -60,6 +60,12 @@ email_health: { hard_bounce_rate, complaint_rate, sent, bounce_limit, complaint_
 campaigns: [{ channel, id, name, status, sent_at, sent, delivered, engagement: { kind, count, rate } | null,
 replied, reply_rate, email: { click_rate, hard_bounce_rate, unsubscribe_rate } | null }], meta }`.
 
+**Pausa (#1329).** WhatsApp Oficial e SMS trazem `campaign.pause` no Resultado e `pause` em cada linha
+da Gestão: `null` ou `{ id, source, reason_code, details, paused_at, paused_by_id, resumed_at, resumed_by_id }`
+(contrato em `docs/campaigns/pausas-1329.md`). A campanha pausada antes de sair continua `status: active`
+e aparece na Gestão, com `sent: 0`. Retomar: `POST …/campaign_journey/campaign_pauses/:id/resume`
+(`campaign_manage`).
+
 Permissões: `campaign_view` lê (Resultado, pessoas, Gestão); `campaign_manage` exporta (mesma regra do
 export dos relatórios de e-mail). Sem a permissão → 401. Campanha de outra conta ou de outro canal → 404.
 Flag desligada → 404. "Abrir conversa" (`conversation_display_id`) só vem para conversa que o agente
