@@ -79,7 +79,8 @@ de teste).
 - `spec/requests/public/api/v2/booking_spec.rb:121` é frágil: verifica que nenhum id interno (conta, página,
   responsável, funil) aparece entre os valores do payload, mas `booking_window_days` vale 14. Quando algum desses ids
   é 14, o teste falha sem haver vazamento. Aconteceu nesta auditoria (`expected [...] not to include 14`) e o exemplo
-  passou ao rodar sozinho. Comparar chaves, ou usar ids que não colidam, resolve.
+  passou ao rodar sozinho. **Corrigido no #1396** (já na main, 12/10/2026): a checagem passou a comparar os nomes das
+  chaves (`internal_id_keys`), não os valores. A auditoria rodou numa base anterior a ele.
 
 ## Resumo
 
@@ -117,7 +118,7 @@ Prova humana ou de aparelho (sem código):
 
 - **Spec frágil** `spec/requests/public/api/v2/booking_spec.rb:121`: compara os ids internos com todos os valores do
   payload, e `booking_window_days` vale 14; quando algum id cai em 14 o teste falha sem vazamento nenhum. Falhou uma
-  vez nesta auditoria e passou ao rodar de novo. → fica de fora → sem issue (precisa abrir).
+  vez nesta auditoria e passou ao rodar de novo. → **resolvido no #1396** (na main).
 - **RA-08 (ressalva)**: fora da página pública, fuso gravado inválido vira o da conta sem aviso; `slots.rb:91` com
   `|| UTC` morto. Só dado antigo. → fica de fora → sem issue (precisa abrir), se o Rodrigo quiser.
 
