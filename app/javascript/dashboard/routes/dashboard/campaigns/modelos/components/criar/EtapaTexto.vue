@@ -34,6 +34,9 @@ const props = defineProps({
   criarNovoCom: { type: Object, default: null },
   // Nome já usado na mesma conta do WhatsApp: a sugestão de outro (ou '').
   nomeRepetido: { type: String, default: '' },
+  // Cópia para mudar o tipo (#1394): a mesma conta não aceita texto igual, então
+  // a etapa pede, antes do editor, para mudar pelo menos uma palavra.
+  pedirTextoNovo: { type: Boolean, default: false },
 });
 
 // Nome, texto e exemplos.
@@ -236,6 +239,17 @@ const usarMelhoria = resposta => {
       </div>
 
       <template v-else>
+        <p
+          v-if="pedirTextoNovo"
+          data-mudar-texto
+          class="flex items-start gap-2.5 mb-0 text-[0.9375rem] text-n-slate-11"
+        >
+          <span
+            class="i-lucide-info mt-0.5 size-5 shrink-0 text-n-blue-10"
+            aria-hidden="true"
+          />
+          {{ $t('MODELOS_WHATSAPP.TEXTO.MUDAR_O_TEXTO') }}
+        </p>
         <ModeloEditorTexto
           :model-value="conteudo.texto"
           :rotulo="$t('MODELOS_WHATSAPP.TEXTO.MENSAGEM')"

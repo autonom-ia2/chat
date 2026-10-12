@@ -159,6 +159,7 @@ describe('Corrigir e alterar: o tipo vem travado (#1394)', () => {
       en.MODELOS_WHATSAPP.TEXTO.TIPO_TRAVADO.NAO_MUDA
     );
     expect(wrapper.find('[data-tipo-do-zero]').exists()).toBe(false);
+    expect(wrapper.find('[data-mudar-texto]').exists()).toBe(false);
     expect(wrapper.find('[data-criar-novo-com-texto]').text()).toBe(
       en.MODELOS_WHATSAPP.TEXTO.TIPO_TRAVADO.CRIAR_NOVO
     );
@@ -219,6 +220,10 @@ describe('Corrigir e alterar: o tipo vem travado (#1394)', () => {
       tipos.every(tipo => tipo.attributes('aria-checked') === 'false')
     ).toBe(true);
     expect(wrapper.find('[data-tipo-travado]').exists()).toBe(false);
+    // Mesmo texto na mesma conta: a etapa pede para mudar uma palavra (#1394).
+    expect(wrapper.find('[data-mudar-texto]').text()).toBe(
+      en.MODELOS_WHATSAPP.TEXTO.MUDAR_O_TEXTO
+    );
     expect(wrapper.find('[data-exemplo="nome_cliente"]').exists()).toBe(true);
     // Arquivo do topo: a regra de sempre (pede de novo).
     expect(wrapper.find('[data-aviso-copia]').text()).toContain(
@@ -258,6 +263,12 @@ describe('Corrigir e alterar: o tipo vem travado (#1394)', () => {
     expect(
       wrapper.find('[data-item="TOPO_ARQUIVO"]').attributes('data-ok')
     ).toBe('false');
+    // Texto igual ao original: a conferência diz o que fazer, em forma de instrução.
+    const igual = wrapper.find('[data-item="TEXTO_DIFERENTE"]');
+    expect(igual.attributes('data-ok')).toBe('false');
+    expect(igual.text()).toContain(
+      en.MODELOS_WHATSAPP.CONFERENCIA.ITENS.TEXTO_DIFERENTE
+    );
     expect(wrapper.find('[data-enviar]').attributes('disabled')).toBeDefined();
   });
 });

@@ -678,6 +678,7 @@ const proximaAlteracao = computed(() => {
                   :tipo-travado="tipoTravado"
                   :criar-novo-com="criarNovoCom"
                   :nome-repetido="nomeRepetido"
+                  :pedir-texto-novo="novoTipo"
                 />
                 <ModeloConferencia
                   v-if="modo === 'corrigir'"

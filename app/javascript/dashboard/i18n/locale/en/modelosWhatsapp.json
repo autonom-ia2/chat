@@ -355,7 +355,8 @@
         "TITULO": "Message type",
         "NAO_MUDA": "WhatsApp does not let you change the type of a template that already exists.",
         "CRIAR_NOVO": "To change the type, create a new template with this text"
-      }
+      },
+      "MUDAR_O_TEXTO": "Change at least one word of the text. WhatsApp does not accept two identical messages in the same account."
     },
     "TOPOS": {
       "nenhum": {
@@ -489,7 +490,7 @@
         "OFERTA_CUPOM": "If there is a coupon, it has 1 to 15 letters and numbers",
         "BOTOES_TAMANHO": "Every button has up to 25 characters",
         "BOTAO_SITE_EXEMPLO": "The website with a variable ending has an example",
-        "TEXTO_DIFERENTE": "The text or the footer changed from the original (WhatsApp refuses an identical copy in the same account)",
+        "TEXTO_DIFERENTE": "Change at least one word of the text or the footer. WhatsApp does not accept an identical copy.",
         "SEM_CHAVES": "The text and the footer have no double braces typed by hand",
         "FORMATO_DIVULGACAO": "This format goes as a promotion",
         "CARTOES_MESMA_MIDIA": "All cards have the same kind of media (only photos or only videos)",

@@ -355,7 +355,8 @@
         "TITULO": "Tipo da mensagem",
         "NAO_MUDA": "O WhatsApp não deixa mudar o tipo de um modelo que já existe.",
         "CRIAR_NOVO": "Para mudar o tipo, crie um modelo novo com este texto"
-      }
+      },
+      "MUDAR_O_TEXTO": "Mude pelo menos uma palavra do texto. O WhatsApp não aceita duas mensagens iguais na mesma conta."
     },
     "TOPOS": {
       "nenhum": {
@@ -489,7 +490,7 @@
         "OFERTA_CUPOM": "Se tiver cupom, ele tem de 1 a 15 letras e números",
         "BOTOES_TAMANHO": "Todo botão tem até 25 letras",
         "BOTAO_SITE_EXEMPLO": "O site com final variável tem exemplo",
-        "TEXTO_DIFERENTE": "O texto ou o rodapé mudou em relação ao original (o WhatsApp recusa cópia igual na mesma conta)",
+        "TEXTO_DIFERENTE": "Mude pelo menos uma palavra do texto ou do rodapé. O WhatsApp não aceita cópia igual.",
         "SEM_CHAVES": "O texto e o rodapé não têm chaves duplas digitadas à mão",
         "FORMATO_DIVULGACAO": "Este formato vai como divulgação",
         "CARTOES_MESMA_MIDIA": "Todos os cartões têm o mesmo tipo de mídia (só foto ou só vídeo)",
