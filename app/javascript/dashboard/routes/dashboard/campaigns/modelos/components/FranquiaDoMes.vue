@@ -53,45 +53,48 @@ const linhas = computed(() =>
 </script>
 
 <template>
-  <section
-    v-if="linhas.length"
-    data-franquia
-    class="flex flex-col gap-2 px-5 py-4 rounded-2xl ring-1 ring-inset ring-n-weak bg-n-solid-1"
-  >
-    <h2 class="m-0 text-base font-semibold text-n-slate-12">
-      {{ $t('MODELOS_WHATSAPP.FRANQUIA.TITULO') }}
-    </h2>
-    <p class="mb-0 text-sm text-n-slate-11">
-      {{
-        dinheiro
-          ? $t('MODELOS_WHATSAPP.FRANQUIA.EXPLICA', {
-              limite: numero(franquia.limite, locale),
-              valor: dinheiro,
-            })
-          : $t('MODELOS_WHATSAPP.FRANQUIA.EXPLICA_SEM_VALOR', {
-              limite: numero(franquia.limite, locale),
-            })
-      }}
-    </p>
-    <ul class="flex flex-col gap-1.5 p-0 m-0 list-none">
-      <li
-        v-for="linha in linhas"
-        :key="linha.id"
-        :data-franquia-numero="linha.id"
-        class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 text-[0.9375rem]"
-      >
-        <span class="font-medium break-words text-n-slate-12">
-          {{ linha.nome }}
-        </span>
-        <span
-          class="text-end"
-          :class="
-            linha.passou ? 'text-n-amber-11 font-medium' : 'text-n-slate-11'
-          "
+  <!-- Sem nada para mostrar, o embrulho não ocupa lugar (display: contents). -->
+  <div class="contents">
+    <section
+      v-if="linhas.length"
+      data-franquia
+      class="flex flex-col gap-2 px-5 py-4 rounded-2xl ring-1 ring-inset ring-n-weak bg-n-solid-1"
+    >
+      <h2 class="m-0 text-base font-semibold text-n-slate-12">
+        {{ $t('MODELOS_WHATSAPP.FRANQUIA.TITULO') }}
+      </h2>
+      <p class="mb-0 text-sm text-n-slate-11">
+        {{
+          dinheiro
+            ? $t('MODELOS_WHATSAPP.FRANQUIA.EXPLICA', {
+                limite: numero(franquia.limite, locale),
+                valor: dinheiro,
+              })
+            : $t('MODELOS_WHATSAPP.FRANQUIA.EXPLICA_SEM_VALOR', {
+                limite: numero(franquia.limite, locale),
+              })
+        }}
+      </p>
+      <ul class="flex flex-col gap-1.5 p-0 m-0 list-none">
+        <li
+          v-for="linha in linhas"
+          :key="linha.id"
+          :data-franquia-numero="linha.id"
+          class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 text-[0.9375rem]"
         >
-          {{ linha.texto }}
-        </span>
-      </li>
-    </ul>
-  </section>
+          <span class="font-medium break-words text-n-slate-12">
+            {{ linha.nome }}
+          </span>
+          <span
+            class="text-end"
+            :class="
+              linha.passou ? 'text-n-amber-11 font-medium' : 'text-n-slate-11'
+            "
+          >
+            {{ linha.texto }}
+          </span>
+        </li>
+      </ul>
+    </section>
+  </div>
 </template>

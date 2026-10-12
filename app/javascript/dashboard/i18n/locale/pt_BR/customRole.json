@@ -156,7 +156,7 @@
         "WHATSAPP_TEMPLATES": {
           "NAME": "Modelos do WhatsApp",
           "HINT": "Mensagens que o WhatsApp aprova antes do envio",
-          "LEVEL_VIEW": "Vê os modelos e usa em campanhas.",
+          "LEVEL_VIEW": "Vê os modelos e onde estão em uso.",
           "LEVEL_MANAGE": "Cria, altera e apaga modelos no WhatsApp."
         },
         "INBOXES": {

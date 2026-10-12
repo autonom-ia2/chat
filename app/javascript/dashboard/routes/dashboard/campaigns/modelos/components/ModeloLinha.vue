@@ -20,6 +20,10 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['abrir', 'corrigir', 'usar']);
+
+// Separador visual entre as partes da linha (não é texto para traduzir).
+const PONTO = '·';
+
 const { t, locale } = useI18n();
 const rotulo = useRotuloDoCampo();
 
@@ -129,8 +133,9 @@ const acao = computed(() => {
             <span
               v-if="pedaco.t === 'campo'"
               class="px-0.5 text-sm font-medium rounded bg-n-blue-2 text-n-blue-11"
-              >{{ rotulo(pedaco.v) }}</span
             >
+              <span>{{ rotulo(pedaco.v) }}</span>
+            </span>
             <span v-else>{{ pedaco.v }}</span>
           </template>
         </span>
@@ -149,7 +154,7 @@ const acao = computed(() => {
             {{ $t(`MODELOS_WHATSAPP.FORMATOS.${formato}.TITULO`) }}
           </span>
           <span>{{ frase }}</span>
-          <span v-if="numeros" aria-hidden="true">·</span>
+          <span v-if="numeros" aria-hidden="true">{{ PONTO }}</span>
           <span v-if="numeros" class="text-n-slate-10 font-normal">{{
             numeros
           }}</span>

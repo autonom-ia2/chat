@@ -21,6 +21,8 @@ const ICONES = {
   oculto: 'i-lucide-eye-off',
 };
 
+// Separador visual entre as partes da linha (não é texto para traduzir).
+const PONTO = '·';
 const { locale } = useI18n();
 // `data`: dia que ainda vai sair (campanha agendada, follow-up), no idioma da tela.
 const quando = uso => (uso.data ? diaEMes(uso.data, locale.value) : uso.quando);
@@ -57,9 +59,11 @@ const quando = uso => (uso.data ? diaEMes(uso.data, locale.value) : uso.quando);
         <span class="flex flex-col flex-1 min-w-0">
           <span class="text-sm text-n-slate-10">
             {{ $t(`MODELOS_WHATSAPP.USOS.TIPOS.${uso.tipo}`) }}
-            <template v-if="quando(uso)"> · {{ quando(uso) }}</template>
+            <template v-if="quando(uso)">
+              {{ PONTO }} {{ quando(uso) }}
+            </template>
             <template v-if="uso.pausada">
-              · {{ $t('MODELOS_WHATSAPP.USOS.PARADA') }}
+              {{ PONTO }} {{ $t('MODELOS_WHATSAPP.USOS.PARADA') }}
             </template>
           </span>
           <span class="break-words">

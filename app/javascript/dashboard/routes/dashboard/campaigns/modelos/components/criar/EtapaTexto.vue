@@ -148,8 +148,9 @@ const usarMelhoria = resposta => {
             <span
               v-if="pedaco.t === 'campo'"
               class="px-1 text-sm font-medium rounded-md bg-n-blue-3 text-n-blue-11"
-              >{{ rotulo(pedaco.v) }}</span
             >
+              <span>{{ rotulo(pedaco.v) }}</span>
+            </span>
             <span v-else>{{ pedaco.v }}</span>
           </template>
         </p>

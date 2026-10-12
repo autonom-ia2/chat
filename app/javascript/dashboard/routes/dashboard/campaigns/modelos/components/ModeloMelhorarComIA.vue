@@ -134,8 +134,11 @@ const melhorar = async () => {
                 <span
                   v-if="pedaco.t === 'campo'"
                   class="px-1 text-xs font-medium rounded bg-n-blue-3 text-n-blue-11"
-                  >{{ $t(`MODELOS_WHATSAPP.CAMPOS.${pedaco.v}.ROTULO`) }}</span
                 >
+                  <span>{{
+                    $t(`MODELOS_WHATSAPP.CAMPOS.${pedaco.v}.ROTULO`)
+                  }}</span>
+                </span>
                 <span v-else>{{ pedaco.v }}</span>
               </template>
             </p>

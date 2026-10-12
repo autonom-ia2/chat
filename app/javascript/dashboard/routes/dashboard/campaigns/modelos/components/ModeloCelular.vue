@@ -183,8 +183,9 @@ const vazio = computed(() => !pedacos.value.length);
               v-if="pedaco.t === 'exemplo'"
               class="px-0.5 rounded bg-n-amber-3 text-n-slate-12"
               :class="formato === 'codigo' ? 'font-semibold' : ''"
-              >{{ pedaco.v }}</mark
             >
+              <span>{{ pedaco.v }}</span>
+            </mark>
             <span v-else>{{ pedaco.v }}</span>
           </template>
         </p>

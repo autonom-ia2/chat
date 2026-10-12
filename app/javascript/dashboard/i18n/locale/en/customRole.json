@@ -156,7 +156,7 @@
         "WHATSAPP_TEMPLATES": {
           "NAME": "WhatsApp templates",
           "HINT": "Messages WhatsApp approves before sending",
-          "LEVEL_VIEW": "Sees templates and uses them in campaigns.",
+          "LEVEL_VIEW": "Sees templates and where they are used.",
           "LEVEL_MANAGE": "Creates, changes and deletes templates in WhatsApp."
         },
         "INBOXES": {

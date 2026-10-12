@@ -47,8 +47,9 @@ defineProps({
       <span class="flex items-center gap-1 p-1 rounded bg-n-solid-1">
         <span
           class="px-1 text-[0.625rem] font-bold rounded bg-n-amber-3 text-n-slate-12"
-          >{{ CODIGO_DE_EXEMPLO }}</span
         >
+          <span>{{ CODIGO_DE_EXEMPLO }}</span>
+        </span>
         <span class="w-12 h-1.5 rounded bg-n-slate-5" />
       </span>
       <span class="grid w-3/5 h-4 rounded place-items-center bg-n-solid-1">

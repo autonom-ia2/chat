@@ -9,6 +9,8 @@ import CampanhasParadas from '../components/CampanhasParadas.vue';
 // caminho para resolver e "Retomar". Só com a flag whatsapp_templates_journey
 // (a conta pode chegar depois da tela, por isso observa a flag). Sem permissão
 // para ver as pausas, não aparece.
+defineOptions({ inheritAttrs: false });
+
 const accountId = useMapGetter('getCurrentAccountId');
 const isFeatureEnabledonAccount = useMapGetter(
   'accounts/isFeatureEnabledonAccount'
@@ -37,9 +39,14 @@ watch(ativa, carregar, { immediate: true });
 </script>
 
 <template>
-  <CampanhasParadas
-    v-if="campanhas.length"
-    :campanhas="campanhas"
-    @retomada="carregar"
-  />
+  <!-- Sem campanha parada, o embrulho não ocupa lugar (display: contents); a classe que a
+       lista de campanhas passa vai para o aviso. -->
+  <div class="contents">
+    <CampanhasParadas
+      v-if="campanhas.length"
+      v-bind="$attrs"
+      :campanhas="campanhas"
+      @retomada="carregar"
+    />
+  </div>
 </template>
