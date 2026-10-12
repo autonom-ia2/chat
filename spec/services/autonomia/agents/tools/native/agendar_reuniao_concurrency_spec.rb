@@ -105,7 +105,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::AgendarReuniao, :relationships_
       Thread.current[:pause_after_check] = pause
       ActiveRecord::Base.connection_pool.with_connection do
         delivery = Autonomia::Agents::Tools::Delivery.new(conversation: conversation, agent_inbox: nil, origin_message_id: conversation.id)
-        outcome << described_class.new(agent: agent, params: { 'inicio' => slot }, delivery: delivery).call
+        outcome << described_class.new(agent: agent, params: { 'inicio' => slot, 'cliente_confirmou' => true }, delivery: delivery).call
       end
     end
     outcome
@@ -131,7 +131,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::AgendarReuniao, :relationships_
 
     expect(winner).to include('Reunião marcada')
     expect(loser).to include('NÃO foi marcado')
-    expect(loser.lines.select { |line| line.start_with?('- ') }).not_to be_empty
+    expect(JSON.parse(loser)['horarios']).not_to be_empty
     expect(loser).not_to include(slot)
     expect(Crm::Meeting.where(account_id: account.id, status: :scheduled, starts_at: Time.iso8601(slot)).count).to eq(1)
     expect(Crm::Meeting.where(account_id: account.id).pluck(:source)).to eq(['ai'])

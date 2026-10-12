@@ -3,7 +3,12 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import { usePermissoesDaJornada } from '../composables/usePermissoesDaJornada';
-import { TIPO_CANAL, tipoDoCanal, trocaNoCanal } from '../utils/canais';
+import {
+  TIPO_CANAL,
+  chaveDoTipoDaCaixa,
+  tipoDoCanal,
+  trocaNoCanal,
+} from '../utils/canais';
 import EscolhaRadio from './EscolhaRadio.vue';
 
 // #1181 — "Onde e quando {nome} atende" (protótipo T05 e T10). Onde: caixas da leitura L2 (livre,
@@ -36,7 +41,7 @@ const QUANDO = {
   outside_business_hours: 'FORA',
 };
 
-const opcaoDoCanal = canal => {
+const opcaoSemTipo = canal => {
   const tipo = tipoDoCanal(canal, props.agenteId);
   if (tipo === TIPO_CANAL.EXTERNO) {
     return {
@@ -60,6 +65,15 @@ const opcaoDoCanal = canal => {
     };
   }
   return { valor: canal.inbox_id, titulo: canal.name };
+};
+
+// #1369 — cada caixa diz o tipo de canal (WhatsApp, Instagram, chat do site…).
+const opcaoDoCanal = canal => {
+  const chave = chaveDoTipoDaCaixa(canal);
+  return {
+    ...opcaoSemTipo(canal),
+    etiqueta: chave ? t(`${NS}.TIPO.${chave}`) : '',
+  };
 };
 
 const opcoesOnde = computed(() => props.canais.map(opcaoDoCanal));

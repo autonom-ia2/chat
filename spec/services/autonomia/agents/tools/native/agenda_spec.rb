@@ -33,13 +33,16 @@ RSpec.describe Autonomia::Agents::Tools::Native::Agenda do
     horarios_tool.new(agent: agent, params: { 'data' => data, 'duracao_minutos' => duracao }, delivery: entrega).call
   end
 
+  # O modelo manda `cliente_confirmou: true` depois do "sim" do cliente (#1305); os exemplos que testam outra coisa
+  # partem daí.
   def agendar(inicio: slot, entrega: delivery, **extra)
-    agendar_tool.new(agent: agent, params: { 'inicio' => inicio }.merge(extra.stringify_keys), delivery: entrega).call
+    params = { 'inicio' => inicio, 'cliente_confirmou' => true }.merge(extra.stringify_keys)
+    agendar_tool.new(agent: agent, params: params, delivery: entrega).call
   end
 
-  # As opções que a ferramenta escreveu: a linha "- <iso> (<rótulo>)". Lê a NOSSA saída, não texto de pessoa.
+  # Os inícios que a ferramenta devolveu, em campos (#1307). Lê a NOSSA saída, não texto de pessoa.
   def opcoes(texto)
-    texto.lines.select { |linha| linha.start_with?('- ') }.map { |linha| linha.split[1] }
+    Array(JSON.parse(texto)['horarios']).pluck('inicio')
   end
 
   def slots_da_pagina(slug, date)
@@ -112,6 +115,17 @@ RSpec.describe Autonomia::Agents::Tools::Native::Agenda do
       expect(texto).to include('terça-feira, 20/10', 'whatsapp_video', 'America/Sao_Paulo')
     end
 
+    # #1362: o fuso é dado (`fuso`, `inicio` com offset), não vai no texto que o modelo repete ao cliente.
+    it 'leva o fuso como dado e fala os horários sem ele' do
+      resposta = JSON.parse(horarios(data: '2026-10-20'))
+
+      expect(resposta['fuso']).to eq('America/Sao_Paulo')
+      expect(resposta['horarios'].pluck('inicio')).to all(end_with('-03:00'))
+      expect(resposta['horarios'].pluck('quando')).to all(start_with('terça-feira, 20/10, '))
+      falas = resposta['horarios'].pluck('quando') + [resposta['instrucao']]
+      falas.each { |fala| expect(fala).not_to include('fuso', 'Sao_Paulo', 'Brasília') }
+    end
+
     it 'sem data, espalha até seis horários pelos próximos dias, cada um livre na página naquele dia' do
       escolhidos = opcoes(horarios)
 
@@ -122,7 +136,8 @@ RSpec.describe Autonomia::Agents::Tools::Native::Agenda do
       por_dia.each { |dia, isos| expect(slots_da_pagina(profile.slug, dia)).to include(*isos) }
     end
 
-    it 'usa o link de quem está atribuído à conversa numa página com um link por pessoa' do
+    # #1307: quem está atribuído à conversa não decide sozinho; vai ao modelo como dado, e o `pessoa_id` traz os dela.
+    it 'numa página com um link por pessoa, diz quem atende a conversa e, com pessoa_id, devolve os horários dela' do
       colega = create(:user, account: account, role: :agent, name: 'Colega')
       profile.update!(assignment_mode: :per_agent, default_assignee: nil)
       profile.agent_booking_links.create!(account: account, agent: world.host)
@@ -130,8 +145,12 @@ RSpec.describe Autonomia::Agents::Tools::Native::Agenda do
       conversation.update!(assignee: colega)
       create_internal_meeting(world: world, starts_at: Time.iso8601(slot), created_by: colega)
 
-      expect(opcoes(horarios(data: '2026-10-20'))).to eq(slots_da_pagina(link.slug, '2026-10-20').first(described_class::MAX_OPCOES))
-      expect(opcoes(horarios(data: '2026-10-20'))).not_to include(slot)
+      dela = horarios_tool.new(agent: agent, params: { 'data' => '2026-10-20', 'pessoa_id' => colega.id }, delivery: delivery).call
+      expect(opcoes(dela)).to eq(slots_da_pagina(link.slug, '2026-10-20').first(described_class::MAX_OPCOES))
+      expect(opcoes(dela)).not_to include(slot)
+      expect(JSON.parse(dela)['horarios'].pluck('pessoa_id').uniq).to eq([colega.id])
+      expect(JSON.parse(horarios(data: '2026-10-20'))['quem_atende_esta_conversa'])
+        .to eq('pessoa_id' => colega.id, 'pessoa_nome' => colega.available_name)
     end
 
     it 'com o dia cheio, avisa e devolve os próximos livres' do
@@ -160,7 +179,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::Agenda do
     end
 
     it 'cliente sem e-mail: não oferece o Meet e a escolha automática vai para um local sem e-mail' do
-      locais = horarios(data: '2026-10-20').lines.find { |linha| linha.start_with?('Locais possíveis') }
+      locais = JSON.parse(horarios(data: '2026-10-20'))['locais'].pluck('tipo')
       expect(locais).to include('whatsapp_video')
       expect(locais).not_to include('google_meet')
 
@@ -193,7 +212,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::Agenda do
     it 'só locais que pedem e-mail: mostra todos avisando que pedem o e-mail' do
       profile.update_columns(locations: [{ 'type' => 'google_meet' }]) # rubocop:disable Rails/SkipsModelValidations
 
-      expect(horarios(data: '2026-10-20')).to include('google_meet', 'pede o e-mail do cliente')
+      expect(JSON.parse(horarios(data: '2026-10-20'))['locais'].pluck('tipo', 'pede_email_do_cliente')).to eq([['google_meet', true]])
       expect(agendar).to include('Peça o e-mail ao cliente')
     end
   end
@@ -207,10 +226,11 @@ RSpec.describe Autonomia::Agents::Tools::Native::Agenda do
       expect(Crm::Meeting.count).to be_zero
     end
 
-    it 'responsável que não pode mais atender conta como pausada' do
+    it 'responsável que não pode mais atender: motivo próprio e passa para uma pessoa' do
       AccountUser.find_by(account: account, user: world.host).destroy!
 
-      expect(horarios).to include('pausada', 'should_handoff=true')
+      expect(JSON.parse(horarios)).to include('agenda_disponivel' => false, 'motivo' => 'sem_responsavel')
+      expect(horarios).to include('should_handoff=true')
     end
 
     it 'sem nenhum horário na janela: a IA diz isso e passa para uma pessoa' do

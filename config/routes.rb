@@ -238,6 +238,8 @@ Rails.application.routes.draw do
             resources :campaign_names, only: [:index]
             resources :recipient_previews, only: [:create]
             resource :overview, only: [:show]
+            get 'campaign_pauses', to: 'campaign_pauses#index', as: :campaign_pauses # #1332
+            post 'campaign_pauses/:id/resume', to: 'campaign_pauses#resume', as: :campaign_pause_resume # #1329
             scope 'results/:channel/:id', controller: :results do
               get '/', action: :show, as: :result
               get :recipients, as: :result_recipients
@@ -277,6 +279,7 @@ Rails.application.routes.draw do
               resources :steps, controller: 'stage_automation_steps', only: [:create, :update, :destroy]
             end
             post 'cards/bulk', to: 'cards/bulk#create'
+            get 'cards/owner_options', to: 'cards#owner_options'
             get 'cards/summaries', to: 'cards/summaries#index'
             resources :cards, only: [:index, :create, :show, :update, :destroy] do
               resource :contact, only: [:create], controller: 'cards/contacts'
@@ -384,6 +387,9 @@ Rails.application.routes.draw do
             get 'calendar/available_slots', to: 'calendar#available_slots'
             get :inbox_settings, to: 'inbox_settings#index'
             patch 'inbox_settings/:inbox_id', to: 'inbox_settings#update'
+            get :caixas, to: 'caixas#index'
+            get 'caixas/:inbox_id', to: 'caixas#show'
+            put 'caixas/:inbox_id', to: 'caixas#update'
             resources :integration_tokens, only: [:index, :create, :destroy] do
               member do
                 post :rotate
@@ -429,6 +435,8 @@ Rails.application.routes.draw do
                 post :notice_template_suggestions
                 get :notice_templates
                 post 'notice_templates/create', action: :create_notice_templates
+                # Texto dos avisos com IA (#1354): opções para um aviso, nada salvo.
+                post :notice_text_suggestions
               end
             end
             # Meus horários (#1195): a própria pessoa ajusta dias e horas de agendamento e pausa a agenda.
@@ -906,7 +914,18 @@ Rails.application.routes.draw do
 
           resources :inboxes, only: [] do
             resource :assignment_policy, only: [:show, :create, :destroy], module: :inboxes
+            # Modelos do WhatsApp oficial (#1330): API do fork, controller e policy próprios.
+            resources :whatsapp_templates, only: [:index, :create, :update, :destroy], module: :inboxes do
+              member do
+                post :duplicate
+                get :usage
+              end
+              post :media, on: :collection
+            end
           end
+          # Tela de Modelos do WhatsApp (#1332): as caixas que têm modelos e o preço por envio.
+          resources :whatsapp_template_inboxes, only: [:index]
+          resources :whatsapp_message_prices, only: [:index]
 
           namespace :twitter do
             resource :authorization, only: [:create]

@@ -52,6 +52,16 @@ RSpec.describe 'Public::Api::V2::Booking notices', type: :request do
     expect(Crm::MeetingNotice.count).to eq(0)
   end
 
+  # #1305: a página pública agenda pelo mesmo ponto do painel e da IA, sem conversa de origem.
+  it 'agenda os avisos pelo serviço único da reserva' do
+    profile.update!(notice_inbox: inbox)
+    allow(Crm::BookingV2::BookingNotices).to receive(:new).and_call_original
+
+    book
+
+    expect(Crm::BookingV2::BookingNotices).to have_received(:new).with(meeting: Crm::Meeting.sole, invite: Crm::BookingInvite.sole).once
+  end
+
   it 'com caixa mas sem conversa nem modelo: agenda os avisos, reserva confirmada e não promete mensagem (J2-A6)' do
     profile.update!(notice_inbox: inbox)
 

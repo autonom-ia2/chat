@@ -171,4 +171,17 @@ RSpec.describe Crm::BookingV2::Notices::Scheduler do
       [%w[booked sent] + [nil], %w[day_before skipped canceled], %w[hour_before skipped canceled]]
     )
   end
+
+  # #1305: o atraso do "ao marcar" (`defer`) muda só o vencimento dele; a folga entre avisos usa o horário de sempre.
+  it 'com o "ao marcar" adiado, a folga é calculada sem o atraso e o "1 hora antes" fica' do
+    [90, 95].each do |minutos|
+      soon = create_internal_meeting(world: world, starts_at: minutos.minutes.from_now, metadata: { 'booking_profile_id' => world.profile.id })
+
+      described_class.new(soon).schedule!(defer: { 'booked' => 5.minutes })
+
+      expect(soon.notices.order(:due_at).pluck(:kind, :due_at)).to eq(
+        [['booked', 5.minutes.from_now], ['hour_before', soon.starts_at - 1.hour]]
+      ), "início em #{minutos} min"
+    end
+  end
 end

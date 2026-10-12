@@ -58,11 +58,19 @@ const perguntar = () => {
   emit('perguntar', texto);
 };
 
-const textoSabe = computed(
-  () =>
-    props.agente.knowledge_summary ||
-    t(`${NS}.BLOCO_SABE.TEXTO`, { nome: props.nome })
-);
+// #1369 — sem o resumo da IA (ele só chega depois que os arquivos e sites são revisados), a frase
+// segue a contagem logo abaixo: com arquivo ou site, não diz que sabe só a conversa.
+const textoSabe = computed(() => {
+  if (props.agente.knowledge_summary) return props.agente.knowledge_summary;
+  if (!props.quantasFontes) {
+    return t(`${NS}.BLOCO_SABE.TEXTO`, { nome: props.nome });
+  }
+  return t(
+    `${NS}.BLOCO_SABE.TEXTO_COM_FONTES`,
+    { nome: props.nome },
+    props.quantasFontes
+  );
+});
 
 // #1253 — Marca reuniões: a mesma regra do "Marcar reuniões" do painel antigo (useAgendaDoAgente).
 // Só com a agenda nova na conta (`crm_booking_v2`); some na cotação, no agente sem agenda e quando

@@ -4,6 +4,17 @@
 # Página com um link por pessoa (`per_agent`): o endereço-base `/book/<slug-da-página>` responde 404 por desenho (o
 # cliente só marca pelo link de cada pessoa). Então `public_url` vem nulo e `links` traz um link por pessoa — só os
 # ligados de quem ainda pode atender (HostEligibility), para o admin nunca copiar e divulgar um link morto.
+#
+# Para a gaveta do agente de IA (#1305): `ai_status` ('ativa' | 'pausada' | 'sem_responsavel' | 'agenda_pausada') é
+# o mesmo estado que decide se a IA pode marcar por esta página (`InvitePages#status`, a regra única), e `recebe` diz
+# quem recebe a reunião quando ninguém está atribuído à conversa: `{ modo: 'fixo' | 'por_pessoa', nome: }` (nome de
+# exibição: no fixo, o do responsável da página; no por pessoa, o do primeiro link ativo de quem não pausou, o mesmo
+# `InvitePages#link_for` da IA; nulo sem ninguém que possa atender). `timezone` também vai no resumo. A lista passa
+# um `InvitePages` só para todas as páginas: uma consulta de elegibilidade e uma de pausas para a lista inteira.
+# `pessoas` (#1307): `[{ id, nome, ai_status }]`, quem atende a página e pode ser liberado para a IA, cada um com
+# 'ativa' ou 'agenda_pausada'; página de responsável único traz uma pessoa.
+# `duration_minutes` (#1371) também vai no resumo: a gaveta mostra quanto dura a reunião sem abrir a página inteira.
+# É coluna da própria página: não custa consulta na lista.
 class Crm::BookingV2::PageSerializer
   include Rails.application.routes.url_helpers
 
@@ -16,21 +27,22 @@ class Crm::BookingV2::PageSerializer
   # `upcoming_meetings_count`: a lista passa a contagem já feita em lote (AttentionReport.upcoming_counts); sem ela,
   # conta só esta página. `paused_user_ids`: quem pausou a própria agenda (#1195), também em lote na lista.
   # `orphaned`: `AttentionReport#orphaned` desta página.
-  def initialize(profile, attention: false, upcoming_meetings_count: nil, paused_user_ids: nil, orphaned: [])
+  def initialize(profile, attention: false, upcoming_meetings_count: nil, paused_user_ids: nil, orphaned: [], invite_pages: nil) # rubocop:disable Metrics/ParameterLists
     @profile = profile
     @attention = attention
     @upcoming_meetings_count = upcoming_meetings_count
     @paused_user_ids = paused_user_ids
     @orphaned = orphaned
+    @invite_pages = invite_pages
   end
 
   def summary
     {
       id: profile.id, slug: profile.slug, short_name: profile.short_name, account_address: profile.booking_account_address,
       title: profile.title, enabled: profile.enabled, public_url: public_url, links: links, locations: profile.locations,
-      assignment_mode: profile.assignment_mode, upcoming_meetings_count: upcoming_meetings_count,
+      assignment_mode: profile.assignment_mode, duration_minutes: profile.duration_minutes, upcoming_meetings_count: upcoming_meetings_count,
       attention: attention, orphaned: @orphaned, paused_people: paused_people
-    }
+    }.merge(for_ai_agent)
   end
 
   def full
@@ -41,6 +53,26 @@ class Crm::BookingV2::PageSerializer
   private
 
   attr_reader :profile, :attention
+
+  def invite_pages
+    @invite_pages ||= Crm::BookingV2::InvitePages.new(profile.account)
+  end
+
+  # O que a gaveta do agente de IA lê (#1305): o estado pela regra única, quem recebe e o fuso.
+  def for_ai_agent
+    { ai_status: invite_pages.status(profile), recebe: recebe, timezone: profile.resolved_timezone, pessoas: pessoas }
+  end
+
+  # As pessoas que a gaveta oferece para liberar (#1307), na ordem fixa do #1305 (`InvitePages#people`): só o nome de
+  # exibição e o estado de cada uma ('ativa' | 'agenda_pausada'). Nada de e-mail ou telefone.
+  def pessoas
+    invite_pages.people(profile).map { |pessoa| { id: pessoa.user.id, nome: pessoa.user.available_name, ai_status: pessoa.status } }
+  end
+
+  # Só o nome de exibição: nada de e-mail ou telefone de quem atende.
+  def recebe
+    { modo: profile.assignment_mode_fixed? ? 'fixo' : 'por_pessoa', nome: invite_pages.receiver(profile)&.available_name }
+  end
 
   def upcoming_meetings_count
     @upcoming_meetings_count || Crm::BookingV2::AttentionReport.upcoming_meetings(profile).count
@@ -78,7 +110,8 @@ class Crm::BookingV2::PageSerializer
   def notices
     {
       notice_inbox_id: profile.notice_inbox_id, notice_preset: profile.notice_preset, notice_templates: profile.notice_templates,
-      cancel_until_minutes: profile.cancel_until_minutes, post_meeting: profile.post_meeting_settings
+      cancel_until_minutes: profile.cancel_until_minutes, post_meeting: profile.post_meeting_settings,
+      notice_texts: profile.notice_texts, notice_text_setup: Crm::BookingV2::Notices::CustomTextSetup.new(profile).to_h
     }
   end
 
@@ -135,7 +168,7 @@ class Crm::BookingV2::PageSerializer
     return [] if profile.assignment_mode_fixed?
 
     profile.agent_booking_links.select(&:enabled?).filter_map do |link|
-      next unless Crm::BookingV2::HostEligibility.eligible?(account: profile.account, user: link.agent)
+      next unless invite_pages.link_usable?(link)
 
       { agent_id: link.agent_id, agent_name: link.agent.name, url: link_url(link), enabled: link.enabled }
     end

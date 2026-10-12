@@ -1,0 +1,17 @@
+pt_BR:
+  whatsapp_templates:
+    errors:
+      permission_denied: "A conexão deste WhatsApp não tem permissão para gerenciar modelos. Reconecte a caixa em Configurações › Caixas de entrada e tente de novo."
+      meta_failed: "A Meta não aceitou o pedido. Tente de novo em alguns minutos."
+      meta_unreachable: "A Meta não respondeu. Tente de novo em alguns minutos."
+      app_not_configured: "O app do WhatsApp não está configurado nesta instalação, então não dá para enviar arquivos à Meta."
+      media_invalid: "Use JPG ou PNG de até 5 MB, MP4 de até 16 MB ou PDF de até 100 MB."
+      media_required: "Este modelo tem foto, vídeo ou documento no topo. Envie o arquivo de novo para fazer a cópia."
+      inbox_not_supported: "Só dá para gerenciar modelos em caixas do WhatsApp oficial ligadas a uma conta do WhatsApp Business."
+      template_not_found: "Este modelo não foi encontrado na conta do WhatsApp desta caixa."
+      system_template: "Este modelo é usado pelo sistema. Não dá para alterar nem apagar aqui, mas dá para duplicar."
+      name_taken: "Já existe um modelo com este nome e idioma. Escolha outro nome."
+      in_use: "Este modelo tem envio agendado. Tire o modelo do que o usa antes de alterar ou apagar."
+      in_use_hidden: "Este modelo está em uso onde você não tem acesso. Peça a um administrador."
+      invalid_profile: "Confira o nome amigável e os campos deste modelo."
+      feature_disabled: "A gestão de modelos não está liberada para esta conta."

@@ -24,6 +24,8 @@ describe Whatsapp::OneoffCampaignService do
   end
 
   before do
+    # #1329: Meta unavailable, so the dispatch check reads channel.message_templates
+    stub_meta_template_lookup
     # Stub HTTP requests to WhatsApp API
     stub_request(:post, /graph\.facebook\.com.*messages/)
       .to_return(status: 200, body: { messages: [{ id: 'message_id_123' }] }.to_json, headers: { 'Content-Type' => 'application/json' })
@@ -272,6 +274,11 @@ describe Whatsapp::OneoffCampaignService do
       it 'skips contacts when liquid variables resolve to blank values' do
         contact = create(:contact, :with_phone_number, account: account, name: 'Jane', email: nil)
         contact.update_labels([label1.title])
+        # #1329: the template exists and is approved, so the dispatch check lets the send reach the liquid step.
+        whatsapp_channel.update!(message_templates: whatsapp_channel.message_templates + [
+          { 'name' => 'test_template', 'language' => 'en', 'status' => 'APPROVED', 'category' => 'UTILITY',
+            'components' => [{ 'type' => 'BODY', 'text' => 'Seu e-mail: {{email}}' }] }
+        ])
 
         campaign_with_blank_liquid = create(:campaign, inbox: whatsapp_inbox, account: account,
                                                        audience: [{ type: 'Label', id: label1.id }],

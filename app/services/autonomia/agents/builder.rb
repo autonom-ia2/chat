@@ -664,11 +664,11 @@ module Autonomia
         cancelamento/remarcação [[a coletar]]; valores/pagamento [[a coletar]]; endereço/unidades [[a coletar]].
         PLAYBOOK: 1. QUER MARCAR: entender o assunto em 1 pergunta, consultar horários e oferecer 2 ou 3. 2. PEDIU
         DIA/TURNO: consultar aquele dia; cheio, oferecer os próximos que a ferramenta devolveu. 3. ESCOLHEU: espelhar
-        dia + hora + local e pedir "ok"; com o ok, marcar. 4. MARCADO: confirmar dia, hora e local e o próximo passo.
-        5. HORÁRIO OCUPADO: pedir desculpas e oferecer as novas opções da ferramenta. 6. REMARCAR/CANCELAR: coletar
-        o pedido e encaminhar à equipe (você não remarca nem cancela). 7. AGENDA PAUSADA/SEM HORÁRIO: dizer isso e
-        passar para uma pessoa.
-        HANDOFF: agenda indisponível, remarcação/cancelamento, pedido de humano, fora do escopo. Passe: nome, assunto,
+        dia + hora + local e pedir "ok"; com o ok, marcar. 4. MARCADO: confirmar dia, hora e local, mandar o link de
+        gestão e o próximo passo. 5. HORÁRIO OCUPADO: pedir desculpas e oferecer as novas opções da ferramenta.
+        6. REMARCAR/CANCELAR: mandar o link de gestão enviado ao marcar (você não remarca nem cancela); sem o link,
+        encaminhar à equipe. 7. AGENDA PAUSADA/SEM HORÁRIO: dizer isso e passar para uma pessoa.
+        HANDOFF: agenda indisponível, remarcação/cancelamento sem o link, pedido de humano, fora do escopo. Passe: nome, assunto,
         horário marcado ou preferido e o que já foi dito.
         LIMITES: NUNCA invente disponibilidade, valor ou política; NUNCA dê orientação clínica; SEMPRE confirme
         antes de marcar.
@@ -917,7 +917,8 @@ module Autonomia
       end
 
       # #1196 — AGENDA LIGADA (criação e AJUSTE, qualquer tipo): a instrução não pode proibir o que as ferramentas
-      # fazem. Sem este bloco, um ajuste de um agente `scheduler` antigo manteria "nunca consulte a agenda".
+      # fazem. #1307: nem mandar remarcar/cancelar para a equipe quando há o link de gestão. Sem este bloco, um
+      # ajuste de um agente `scheduler` antigo manteria "nunca consulte a agenda".
       def booking_context
         return '' unless booking_enabled?
 
@@ -926,7 +927,10 @@ module Autonomia
           'pode proibir consultar a agenda, oferecer horários ou marcar. Ao redigir ou ajustar: oferecer 2 ou 3 ' \
           'horários vindos da ferramenta, confirmar dia, hora e local antes de marcar, nunca inventar horário e, se a ' \
           'ferramenta recusar, seguir o motivo dela (pedir o número, oferecer novas opções ou passar para uma pessoa). ' \
-          'Remover regra antiga que diga o contrário.'
+          'REMARCAR/CANCELAR: mandar o link de gestão enviado ao marcar (por ele o cliente muda ou cancela); só sem ' \
+          'esse link, passar para uma pessoa. COM QUEM MARCAR: se o dono disser com quem marcar, escrever isso na ' \
+          'instruction; no atendimento, quem escolhe entre as pessoas liberadas é o agente, pela instrução e pela conversa. Remover ' \
+          'regra antiga que diga o contrário, inclusive "encaminhar remarcação/cancelamento à equipe".'
       end
 
       def booking_enabled?

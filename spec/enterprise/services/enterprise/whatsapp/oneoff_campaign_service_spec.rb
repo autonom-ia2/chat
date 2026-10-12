@@ -28,6 +28,7 @@ RSpec.describe Enterprise::Whatsapp::OneoffCampaignService do
 
   before do
     account.enable_features!(:whatsapp_campaign)
+    stub_meta_template_lookup # #1329: Meta unavailable, the dispatch check reads channel.message_templates
     allow_any_instance_of(Whatsapp::OneoffCampaignService).to receive(:channel).and_return(whatsapp_channel) # rubocop:disable RSpec/AnyInstance
   end
 
@@ -59,15 +60,20 @@ RSpec.describe Enterprise::Whatsapp::OneoffCampaignService do
     contact = create(:contact, account: account, phone_number: nil)
     contact.update_labels([label.title])
     create(:contact_inbox, contact: contact, inbox: whatsapp_inbox, source_id: 'IN.2081978709342942')
+    # #1329: approved, sendable and with the category the campaign recorded, so the dispatch check lets
+    # the send reach Whatsapp::AuthenticationTemplateGuard, which skips the BSUID-only recipient.
     whatsapp_channel.update!(
       message_templates: [
         {
           'name' => 'ticket_status_updated',
           'language' => 'en',
-          'category' => 'AUTHENTICATION'
+          'status' => 'APPROVED',
+          'category' => 'AUTHENTICATION',
+          'components' => [{ 'type' => 'BODY', 'text' => 'Hello {{name}}, ticket {{ticket_id}}' }]
         }
       ]
     )
+    campaign.update!(template_params: template_params.merge('category' => 'AUTHENTICATION'))
 
     expect(whatsapp_channel).not_to receive(:send_template)
 

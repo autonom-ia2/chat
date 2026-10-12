@@ -47,5 +47,13 @@ RSpec.describe TemplateFields::Format do
       expect(described_class.audience_value("  linha\n  dois ", 'texto')).to eq('linha dois')
       expect(described_class.audience_value('  ', 'texto')).to be_nil
     end
+
+    # Pendência do #1341: coluna tipada como hora com segundos ("15:00:00", a leitura do XLSX) vai como "15:00".
+    it 'formats a time column without the seconds and keeps any other writing' do
+      expect(%w[15:00:00 09:30:15 15:00].map { |text| described_class.audience_value(text, 'hora') }).to eq(%w[15:00 09:30 15:00])
+      expect(['15h', 'às 3 da tarde', '25:00:00'].map { |text| described_class.audience_value(text, 'hora') })
+        .to eq(['15h', 'às 3 da tarde', '25:00:00'])
+      expect(described_class.audience_value('15:00:00', 'texto')).to eq('15:00:00')
+    end
   end
 end

@@ -132,9 +132,19 @@ const CHATWOOT_ROUTES = {
   }),
 };
 
-const fromChatwootCampaign = campaign => {
+// Fork (#1332): a campaign with an open pause (campaign_pauses, #1329) that still waits to go
+// (active or processing) carries `stopReason`; the page shows "Parada" and the short reason. The
+// status, date, filters and counters stay the ones the campaign really has.
+const WAITING_STATUSES = ['active', 'processing'];
+const stopReasonOf = (campaign, pauses) =>
+  WAITING_STATUSES.includes(campaign.campaign_status)
+    ? pauses[campaign.id] || ''
+    : '';
+
+const fromChatwootCampaign = (campaign, pauses = {}) => {
   const channel = chatwootChannel(campaign);
   if (!channel) return null;
+  const stopReason = stopReasonOf(campaign, pauses);
   return datedRow(
     {
       key: `${channel}-${campaign.id}`,
@@ -142,6 +152,7 @@ const fromChatwootCampaign = campaign => {
       name: campaign.title,
       detail: campaign.inbox?.name || '',
       status: chatwootStatus(campaign, channel),
+      stopReason,
       sent: null,
       total: null,
       route: CHATWOOT_ROUTES[channel](campaign),
@@ -201,13 +212,15 @@ const fromEmailCampaign = campaign =>
 /**
  * Rows of the "Campanha" list, newest first (drafts without date go last).
  */
+// `pauses`: { [campaignId]: reason } of the open pauses (fork, #1332).
 export const buildJourneyRows = ({
   campaigns = [],
   whatsappApiCampaigns = [],
   emailCampaigns = [],
+  pauses = {},
 } = {}) =>
   [
-    ...campaigns.map(fromChatwootCampaign),
+    ...campaigns.map(campaign => fromChatwootCampaign(campaign, pauses)),
     ...whatsappApiCampaigns.map(fromWhatsappApiCampaign),
     ...emailCampaigns.map(fromEmailCampaign),
   ]

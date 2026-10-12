@@ -1,4 +1,6 @@
 class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseController
+  rescue_from ::Crm::Access::CardGuard::OwnerWithoutFunnel, with: :render_owner_without_funnel
+
   include Crm::FilterParameters
 
   before_action :validate_crm_filter_parameters, only: %i[index export]
@@ -37,6 +39,14 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
   end
 
   def show; end
+
+  # Quem não pode ser dono (#1149): por card (lista e ação em lote) ou por funil e caixa (card novo).
+  def owner_options
+    authorize ::Crm::Card, :index?
+    options = ::Crm::Access::OwnerOptions.new(user: Current.user, account: Current.account, account_user: Current.account_user)
+    cards = policy_scope(::Crm::Card).where(id: Array(params[:card_ids]).first(::Crm::Access::OwnerOptions::MAX_CARDS))
+    render json: { payload: { cards: options.for_cards(cards), blocked: options.blocked_for_new_card(params[:inbox_id], params[:pipeline_id]) } }
+  end
 
   def by_conversation
     # Chatwoot's frontend identifies conversations by display_id (per-account).
@@ -103,6 +113,7 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
   def update
     attributes = update_params.to_h.with_indifferent_access
     strip_ai_metadata!(attributes)
+    ensure_new_owner_allowed!(attributes[:owner_id]) if attributes.key?(:owner_id)
     if attributes.present?
       mark_value_source_human!(attributes) if attributes.key?(:value_cents)
       mark_score_source_manual!(attributes) if score_changed_by_hand?(attributes)
@@ -243,6 +254,7 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     authorize @card, :update?
     attributes = permitted_params.slice(*UPSERT_ATTRIBUTES.map(&:to_s)).compact
     ensure_move_allowed!(@card, upsert_pipeline_id(attributes)) if attributes.key?('pipeline_id') || attributes.key?('stage_id')
+    ensure_new_owner_allowed!(attributes['owner_id'], pipeline_id: upsert_pipeline_id(attributes) || @card.pipeline_id) if attributes.key?('owner_id')
     # Campos do card (#1146): o upsert junta com o que já está salvo, como o PATCH.
     if permitted_params[:custom_attributes].present?
       attributes['custom_attributes'] = @card.custom_attributes.to_h.merge(permitted_params[:custom_attributes].to_h).compact
@@ -538,6 +550,25 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     return if card_guard.create_allowed?(params[:pipeline_id], conversation: conversation, inbox_id: params[:inbox_id])
 
     raise Pundit::NotAuthorizedError
+  end
+
+  # Dono do card (#1148, decisão a): só quem tem o funil do card; administrador escolhe qualquer pessoa.
+  def ensure_new_owner_allowed!(owner_id, pipeline_id: @card.pipeline_id)
+    return if owner_id.to_s == @card.owner_id.to_s
+
+    card_guard.ensure_owner_allowed!(owner_id, inbox_id: @card.inbox_id, pipeline_id: pipeline_id)
+  end
+
+  def render_owner_without_funnel
+    render_unprocessable(::Crm::Access::CardGuard::OwnerWithoutFunnel::CODE)
+  end
+
+  # Recusa por funil (#1148, decisão b; #1149): quem não tem o funil do card recebe um código que a tela traduz, em
+  # vez da recusa genérica. Mesmo status de sempre.
+  def render_unauthorized(message)
+    return super if @card.nil? || card_guard.edit_allowed?(@card)
+
+    render json: { error: ::Crm::Access::CardGuard::FUNNEL_REQUIRED }, status: :unauthorized
   end
 
   def upsert_pipeline_id(attributes)

@@ -36,7 +36,7 @@ module Crm
         card.primary_conversation = @conversation
         card.contact = @conversation.contact
         card.inbox = @conversation.inbox
-        card.owner = @conversation.assignee
+        card.owner = conversation_owner(card)
         card.team = @conversation.team
         card.source = @conversation.inbox&.channel_type
         card.title = derived_title if card.title.blank?
@@ -62,6 +62,16 @@ module Crm
             'team_id' => @conversation.team_id
           }
         )
+      end
+
+      # Acesso por funil (#1148, decisão a): o atendente só vira dono se pode ter o card (ver CardGuard#assignee_can_own?);
+      # senão o dono cai em quem cria.
+      def conversation_owner(card)
+        assignee = @conversation.assignee
+        return if assignee.nil?
+
+        guard = Crm::Access::CardGuard.new(user: @user, account: @account)
+        assignee if guard.assignee_can_own?(assignee.id, inbox_id: @conversation.inbox_id, pipeline_id: card.pipeline_id)
       end
 
       def default_owner(card)

@@ -101,7 +101,8 @@
         "IMAGE_PIXELS": "This image is too big. Use a smaller one, up to 16 megapixels.",
         "IMAGE_UPLOAD": "We couldn't upload the image. Try another one.",
         "SHORT_NAME": "Check the page address.",
-        "IMAGE_REMOVE": "Could not remove the image. Try again."
+        "IMAGE_REMOVE": "Could not remove the image. Try again.",
+        "NOTICE_TEXTS": "Check the notice messages: the link or the day and time is missing, or a message is too long."
       },
       "SERVER_ERRORS": {
         "CALENDAR_GONE": "That calendar email inbox is no longer available. Choose another one or remove Google Meet and Teams.",
@@ -113,7 +114,8 @@
         "NOTICE_INBOX_GONE": "This WhatsApp can no longer send notices. Choose another one or leave it without notices.",
         "NOTICE_TEMPLATES": "One of the chosen messages does not work for notices. Choose another one from the list.",
         "NOTICES": "Check the notices and the deadline to change.",
-        "SHORT_NAME": "This address cannot be used. Choose another one."
+        "SHORT_NAME": "This address cannot be used. Choose another one.",
+        "NOTICE_TEXTS": "One of the notice messages cannot be used. Check the message of each notice."
       }
     },
     "TEMPLATE": {
@@ -357,7 +359,6 @@
       },
       "RECOMMENDED": "Recommended",
       "SAMPLE_LABEL": "This is what the customer gets",
-      "SAMPLE_TEXT": "Hi, Ana! Your time is booked for 10/14 at 3:00 PM. To confirm, change or cancel: chat.example.com/b/AB3K9QXZ\nTo stop these notices: chat.example.com/b/AB3K9QXZ",
       "TEMPLATES_LABEL": "Messages approved by Meta",
       "TEMPLATES_HINT": "Choose an approved message for each notice. To show up here, it needs the booking link in place of {link}. It can use {name} for the customer name and {when} for the day and time.",
       "TEMPLATES_EMPTY": "This WhatsApp has no approved message with the booking link yet. Without one, the notice only goes out to people who talked to you in the last 24 hours. Ask whoever manages WhatsApp to create one on Meta.",
@@ -417,6 +418,46 @@
           "CONVERSATION_FORBIDDEN": "This number already talks to the company in a conversation you cannot open. Use another number.",
           "CANNOT_SEND": "Could not send from this WhatsApp. Check that it is connected.",
           "FAILED": "Could not send right now. Try again."
+        }
+      },
+      "TEXTS": {
+        "TITLE": "The message of each notice",
+        "WINDOW_NOTE": "This message is sent when the notice goes out as a regular message: through the unofficial number, or to people who talked to you in the last 24 hours. On the official WhatsApp, outside those 24 hours, the message approved by Meta is sent.",
+        "TONE_LABEL": "How the AI writes",
+        "TONES": {
+          "CURTO": {
+            "LABEL": "Short",
+            "HINT": "One or two sentences, straight to the point."
+          },
+          "SIMPATICO": {
+            "LABEL": "Friendly",
+            "HINT": "Uses the first name, warm without overdoing it."
+          },
+          "FORMAL": {
+            "LABEL": "Formal",
+            "HINT": "Polite, no slang and no emoji."
+          }
+        },
+        "CUSTOM": "Your message",
+        "DEFAULT": "Default message",
+        "TEAM_BOOKED": "When someone on the team books from the dashboard, the default message goes, saying who booked.",
+        "TEXT_LABEL": "Notice message",
+        "FIELDS_HINT": "What is in brackets the system fills in when sending. The line to stop notices always goes at the end.",
+        "INSERT": "+ {field}",
+        "WRITE_AI": "Write with AI",
+        "WRITING": "Writing…",
+        "RESET": "Back to the default message",
+        "OPTIONS_LABEL": "Pick a message. It goes into the field and you can still change it.",
+        "USE_OPTION": "Use this message",
+        "AI_FAILED": "We could not write it right now. Try again, or write it your own way.",
+        "ERRORS": {
+          "BLANK": "Write the notice message.",
+          "TOO_LONG": "The message is longer than {max} characters. Make it shorter.",
+          "MALFORMED": "A field is badly written. Delete it and use the buttons to add fields.",
+          "BRACKET": "There are brackets that are not a field. Remove the brackets or use the buttons to add fields.",
+          "UNKNOWN_FIELD": "This notice cannot fill one of the fields. Use only the buttons below.",
+          "MISSING_LINK": "The link to confirm, change or cancel is missing.",
+          "MISSING_WHEN": "The day and time are missing."
         }
       }
     },

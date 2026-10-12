@@ -7,7 +7,7 @@ class Crm::Reports::AiUsage < Crm::Reports::BaseReport
     'Criação de e-mail' => %w[email],
     'Resumos' => %w[resumo resumo_reuniao],
     'Assistente de respostas' => %w[copilot agente_resposta],
-    'Agendamento' => %w[sugestao_horario convite aviso_modelo],
+    'Agendamento' => %w[sugestao_horario convite aviso_modelo aviso_redacao],
     'Mídia' => %w[midia],
     'Base de conhecimento' => %w[kb_revisao kb_instrucao],
     'Construtor de agente' => %w[agente_builder],

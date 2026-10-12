@@ -219,6 +219,13 @@ describe('AgenteCriarPage', () => {
     });
     expect(etapaAtual()).toBe('AGENTS.JORNADA.CRIAR.ETAPAS.CONTE');
     expect(wrapper.find('[data-exemplo]').exists()).toBe(true);
+    // #1369 — as ideias esperam a primeira pergunta do Construtor (não aparecem no "Pensando…").
+    expect(wrapper.find('[data-ideias]').exists()).toBe(false);
+    store.state['autonomiaBuildThreads/getMessages'] = [
+      { role: 'assistant', content: 'Que tipo de negócio é o seu?' },
+    ];
+    store.state['autonomiaBuildThreads/getStatus'] = null;
+    await flushPromises();
     expect(wrapper.find('[data-ideias]').exists()).toBe(true);
     wrapper.unmount();
   });

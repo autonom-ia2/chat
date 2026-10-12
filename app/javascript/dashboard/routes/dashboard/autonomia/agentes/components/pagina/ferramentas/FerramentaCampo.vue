@@ -18,6 +18,12 @@ const props = defineProps({
 
 const { t } = useI18n();
 
+// O espaço vem daqui: o Vue apaga o espaço entre <b> e <span> em linhas separadas, e depender do fim
+// da string i18n deu "Exemplo:Use quando…".
+const rotuloDoExemplo = computed(
+  () => `${t('AGENTS.JORNADA.PAGINA.FERRAMENTAS.EXEMPLO')} `
+);
+
 const descricao = computed(
   () =>
     [
@@ -54,9 +60,7 @@ const descricao = computed(
       data-exemplo
       class="m-0 text-sm break-words text-n-slate-11"
     >
-      <b class="font-semibold">
-        {{ t('AGENTS.JORNADA.PAGINA.FERRAMENTAS.EXEMPLO') }}
-      </b>
+      <b class="font-semibold">{{ rotuloDoExemplo }}</b>
       <span :class="exemploMono ? 'font-mono' : ''">{{ exemplo }}</span>
     </p>
     <slot name="depois" />

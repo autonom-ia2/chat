@@ -13,7 +13,23 @@ export const BINDING_SOURCES = {
   CONTACT: 'contact',
   COLUMN: 'column',
   FIXED: 'fixed',
+  // Fork (Modelos do WhatsApp, #1332): a key of the field catalog (TemplateFields::Catalog, #1331).
+  FIELD: 'field',
 };
+
+const AUDIENCE_FIELD_PREFIX = 'publico.';
+// Catalog keys the audience rows answer for coverage; the account ones (minha_empresa.*) are
+// always present and the others are read at send time, like CampaignJourney::VariableBindings.
+const CATALOG_COVERAGE = {
+  'cliente.nome': { source: 'name' },
+  'cliente.primeiro_nome': { source: 'name' },
+  'empresa_cliente.nome': { source: 'company' },
+};
+
+const catalogCoverage = key =>
+  key.startsWith(AUDIENCE_FIELD_PREFIX)
+    ? { source: 'extra', column: key.slice(AUDIENCE_FIELD_PREFIX.length) }
+    : CATALOG_COVERAGE[key] || null;
 
 // Contact fields a variable can come from (i18n suffix under ...VARIABLES.CONTACT_FIELDS).
 export const CONTACT_FIELDS = ['first_name', 'name', 'company'];
@@ -154,7 +170,15 @@ export const coverageMapping = bindings =>
     Object.entries(bindings)
       .filter(([, binding]) => isBindingComplete(binding))
       .filter(([, binding]) => binding.source !== BINDING_SOURCES.FIXED)
+      .filter(
+        ([, binding]) =>
+          binding.source !== BINDING_SOURCES.FIELD ||
+          catalogCoverage(binding.value)
+      )
       .map(([key, binding]) => {
+        if (binding.source === BINDING_SOURCES.FIELD) {
+          return [key, catalogCoverage(binding.value)];
+        }
         if (binding.source === BINDING_SOURCES.COLUMN) {
           return [key, { source: 'extra', column: binding.value }];
         }
@@ -190,6 +214,28 @@ const contactValue = (field, sample) => {
  * Text the first person of the audience would get ("Como o cliente vê"). Without a sample
  * (or a value) the default text, or the bracketed label of the source, takes its place.
  */
+// Contact field, or the catalog keys a sample can answer (#1332); the rest shows the placeholder.
+const CATALOG_CONTACT_FIELDS = {
+  'cliente.nome': 'name',
+  'cliente.primeiro_nome': 'first_name',
+  'empresa_cliente.nome': 'company',
+};
+
+const sourceValue = (binding, sample) => {
+  if (binding.source !== BINDING_SOURCES.FIELD) {
+    return contactValue(binding.value, sample);
+  }
+  if (binding.value.startsWith(AUDIENCE_FIELD_PREFIX)) {
+    return (
+      sample?.extra_values?.[
+        binding.value.slice(AUDIENCE_FIELD_PREFIX.length)
+      ] || ''
+    );
+  }
+  const field = CATALOG_CONTACT_FIELDS[binding.value];
+  return field ? contactValue(field, sample) : '';
+};
+
 export const previewMessage = ({
   template,
   bindings,
@@ -204,7 +250,7 @@ export const previewMessage = ({
     const value =
       binding.source === BINDING_SOURCES.COLUMN
         ? sample?.extra_values?.[binding.value] || ''
-        : contactValue(binding.value, sample);
+        : sourceValue(binding, sample);
     return value || defaults[key] || placeholder(binding);
   };
   const variables = templateVariables(template);

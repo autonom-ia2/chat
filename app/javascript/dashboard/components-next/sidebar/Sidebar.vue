@@ -14,6 +14,7 @@ import { useSidebarKeyboardShortcuts } from './useSidebarKeyboardShortcuts';
 import { useScrollActiveItemIntoView } from 'dashboard/composables/useScrollActiveItemIntoView';
 import { vOnClickOutside } from '@vueuse/components';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
+import { ROTAS_DA_JORNADA as MODELOS_WHATSAPP_ROTAS } from 'dashboard/routes/dashboard/campaigns/modelos/constants';
 import { useWindowSize, useEventListener } from '@vueuse/core';
 import { getUserPermissions } from 'dashboard/helper/permissionsHelper.js';
 import {
@@ -155,6 +156,13 @@ const agentsJourneyOn = computed(() =>
   isFeatureEnabledonAccount.value(
     accountId.value,
     FEATURE_FLAGS.AUTONOMIA_AGENTS_JOURNEY
+  )
+);
+// Modelos WhatsApp, nova jornada: o mesmo item do menu abre a tela nova.
+const whatsappTemplatesJourneyOn = computed(() =>
+  isFeatureEnabledonAccount.value(
+    accountId.value,
+    FEATURE_FLAGS.WHATSAPP_TEMPLATES_JOURNEY
   )
 );
 const emailCampaignEnabled = computed(
@@ -1110,12 +1118,19 @@ const menuItems = computed(() => {
               },
             ]
           : []),
-        {
-          name: 'Campaign WhatsApp Templates',
-          label: t('SIDEBAR.CAMPAIGN_WHATSAPP_TEMPLATES'),
-          to: accountScopedRoute('campaigns_templates_index'),
-          activeOn: ['campaigns_templates_index'],
-        },
+        whatsappTemplatesJourneyOn.value
+          ? {
+              name: 'Campaign WhatsApp Templates',
+              label: t('SIDEBAR.CAMPAIGN_WHATSAPP_TEMPLATES'),
+              to: accountScopedRoute('modelos_whatsapp_lista'),
+              activeOn: MODELOS_WHATSAPP_ROTAS,
+            }
+          : {
+              name: 'Campaign WhatsApp Templates',
+              label: t('SIDEBAR.CAMPAIGN_WHATSAPP_TEMPLATES'),
+              to: accountScopedRoute('campaigns_templates_index'),
+              activeOn: ['campaigns_templates_index'],
+            },
         {
           name: 'WhatsApp',
           label: t('SIDEBAR.WHATSAPP_OFFICIAL'),
