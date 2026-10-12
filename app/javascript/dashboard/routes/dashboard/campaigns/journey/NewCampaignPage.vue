@@ -253,8 +253,8 @@ const isOfficialReady = computed(
   () =>
     Boolean(draft.value.inboxId) &&
     Boolean(template.value) &&
-    allBound(variables.value, draft.value.bindings) &&
-    (!mediaHeader.value || Boolean(draft.value.mediaUrl.trim()))
+    // Fork (#1382): topo com mídia sem link usa o arquivo do modelo; o link é opcional.
+    allBound(variables.value, draft.value.bindings)
 );
 const MESSAGE_READY = {
   [CAMPAIGN_CHANNELS.WHATSAPP_OFFICIAL]: () => isOfficialReady.value,

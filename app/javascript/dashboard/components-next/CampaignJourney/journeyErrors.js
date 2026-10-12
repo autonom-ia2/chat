@@ -34,6 +34,10 @@ const CREATE_ERRORS = {
   // #1004 (api-1004.md §4)
   sms_inbox_required: 'SMS_INBOX_REQUIRED',
   message_too_long: 'MESSAGE_TOO_LONG',
+  // Fork #1382: topo com foto, vídeo ou documento (Whatsapp::Templates::HeaderMedia).
+  header_media_required: 'HEADER_MEDIA_REQUIRED',
+  header_media_url_invalid: 'HEADER_MEDIA_URL_INVALID',
+  header_media_type_mismatch: 'HEADER_MEDIA_TYPE_MISMATCH',
 };
 
 export const createErrorKey = error => {

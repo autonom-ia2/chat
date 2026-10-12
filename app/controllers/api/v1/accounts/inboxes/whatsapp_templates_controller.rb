@@ -15,8 +15,14 @@ class Api::V1::Accounts::Inboxes::WhatsappTemplatesController < Api::V1::Account
   rescue_from Whatsapp::Templates::MetaClient::MetaError, with: :meta_refused
   rescue_from Whatsapp::Templates::Manager::Refused, with: :refused
 
+  # "Atualizar" pede a lista nova à Meta. Se o sync não deu certo (#1382, `SyncFields::Result`), a resposta diz isso com o
+  # código (422; 502 quando a Meta não respondeu), em vez de devolver a lista antiga como se fosse nova; a tela lê a lista
+  # guardada sem `refresh` e avisa.
   def index
-    @inbox.channel.sync_templates if ActiveModel::Type::Boolean.new.cast(params[:refresh])
+    if ActiveModel::Type::Boolean.new.cast(params[:refresh])
+      result = @inbox.channel.sync_templates
+      return render_sync_failure(result.code) if result.respond_to?(:ok?) && !result.ok?
+    end
     render json: { payload: manager.list, meta: { last_synced_at: @inbox.channel.reload.message_templates_last_updated } }
   end
 
@@ -90,6 +96,12 @@ class Api::V1::Accounts::Inboxes::WhatsappTemplatesController < Api::V1::Account
   def refused(error)
     render json: { error: error.code, message: I18n.t("whatsapp_templates.errors.#{error.code}") }.merge(error.details),
            status: :unprocessable_entity
+  end
+
+  def render_sync_failure(code)
+    status = code == 'meta_unreachable' ? :bad_gateway : :unprocessable_entity
+    message_key = code == 'permission_denied' ? 'permission_denied' : 'sync_failed'
+    render json: { error: 'sync_failed', code: code, message: I18n.t("whatsapp_templates.errors.#{message_key}") }, status: status
   end
 
   def render_error(code, status = :unprocessable_entity)

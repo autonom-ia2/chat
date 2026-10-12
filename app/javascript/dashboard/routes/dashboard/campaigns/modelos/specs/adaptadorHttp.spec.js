@@ -116,6 +116,32 @@ describe('adaptador HTTP de Modelos', () => {
     ]);
   });
 
+  it('when "Atualizar" fails, shows the saved list and says why, without calling it new (#1382)', async () => {
+    http.getTemplates.mockImplementation((caixa, opcoes = {}) => {
+      if (caixa === 8 && opcoes.refresh) {
+        return Promise.reject(
+          Object.assign(new Error('sync'), {
+            response: {
+              status: 422,
+              data: { error: 'sync_failed', code: 'permission_denied' },
+            },
+          })
+        );
+      }
+      return ok({ payload: caixa === 8 ? [TEMPLATE] : [] });
+    });
+
+    const modelos = await adaptador.listarModelos({ atualizar: true });
+
+    expect(http.getTemplates).toHaveBeenCalledWith(8, { refresh: true });
+    expect(http.getTemplates).toHaveBeenCalledWith(8);
+    expect(modelos).toHaveLength(1);
+    expect(modelos.parcial).toBe(false);
+    expect(modelos.naoAtualizou).toEqual([
+      { conta: 'Matriz', motivo: 'permission_denied' },
+    ]);
+  });
+
   it('keeps the list for a moment and reads again after a change', async () => {
     await adaptador.listarModelos();
     await adaptador.obterModelo('1001');
@@ -253,6 +279,11 @@ describe('adaptador HTTP de Modelos', () => {
     expect(
       motivoDaPausa({ source: 'system', reason_code: 'template_unverifiable' })
     ).toBe('nao_conferido');
+    // #1382: o sistema não achou o modelo; e topo de mídia sem o arquivo guardado.
+    expect(
+      motivoDaPausa({ source: 'system', reason_code: 'template_missing' })
+    ).toBe('modelo_apagado');
+    expect(motivo('template_media_missing')).toBe('arquivo_do_topo');
   });
 
   it('shows usage the person can see and only a notice for the rest', () => {

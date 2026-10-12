@@ -884,9 +884,9 @@
     "controller": "api/v1/accounts/inboxes/whatsapp_templates#destroy",
     "modelo": "Crm::Card",
     "origem": [
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:31",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:32",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:53"
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:37",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:38",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:59"
     ],
     "sem_corpo": true
   },
@@ -6670,11 +6670,11 @@
     "envelope": "template",
     "modelo": "Crm::Card",
     "origem": [
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:27",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:69",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:72",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:28",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:53"
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:33",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:75",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:78",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:34",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:59"
     ],
     "sem_corpo": false
   },
@@ -16945,10 +16945,10 @@
     "envelope": "template",
     "modelo": "Crm::Card",
     "origem": [
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:23",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:69",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:72",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:53"
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:29",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:75",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:78",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:59"
     ],
     "sem_corpo": false
   },
@@ -16963,10 +16963,10 @@
       "leitura crua sem tipo: file (repassada a manager.upload)"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:36",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:39",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:37",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:53"
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:42",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:45",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:43",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:59"
     ],
     "sem_corpo": false
   },
@@ -24119,11 +24119,11 @@
     "envelope": "template",
     "modelo": "Crm::Card",
     "origem": [
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:27",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:69",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:72",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:28",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:53"
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:33",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:75",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:78",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:34",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:59"
     ],
     "sem_corpo": false
   },

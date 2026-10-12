@@ -39,7 +39,9 @@
         "LIMITE": "Not created: template limit"
       },
       "CONTA": "Account {nome}",
-      "PARCIAL": "We could not read the templates of one WhatsApp account now. Some templates may be missing from the list."
+      "PARCIAL": "We could not read the templates of one WhatsApp account now. Some templates may be missing from the list.",
+      "NAO_ATUALIZOU": "We could not update the list of the account {conta} right now. This is the last saved list; try again in a few minutes.",
+      "NAO_ATUALIZOU_PERMISSAO": "We could not update the list of the account {conta}: the number lost its permission on WhatsApp. Reconnect the number in Settings › Inboxes. This is the last saved list."
     },
     "SITUACOES": {
       "pronto": {
@@ -660,7 +662,8 @@
         "modelo_apagado": "The template “{modelo}” no longer exists. Choose another template for the campaign.",
         "formato_nao_vai": "The template “{modelo}” has a format campaigns cannot send yet.",
         "nao_conferido": "We could not check the template “{modelo}” with WhatsApp. Nothing was sent.",
-        "outro": "The campaign stopped before sending. Nothing was sent."
+        "outro": "The campaign stopped before sending. Nothing was sent.",
+        "arquivo_do_topo": "The template “{modelo}” has a photo, video or document at the top and the file is not saved. Pick the file again in the template or add the link in the campaign."
       },
       "ACOES": {
         "ABRIR_MODELO": "See the template",

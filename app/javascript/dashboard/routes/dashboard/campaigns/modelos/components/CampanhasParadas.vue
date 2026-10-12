@@ -35,6 +35,7 @@ const ACAO = {
   modelo_pausado: 'ABRIR_MODELO',
   modelo_em_analise: 'ABRIR_MODELO',
   modelo_recusado: 'CORRIGIR_MODELO',
+  arquivo_do_topo: 'ABRIR_MODELO',
 };
 
 const destino = campanha =>

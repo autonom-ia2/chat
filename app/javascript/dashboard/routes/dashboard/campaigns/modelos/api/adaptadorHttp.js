@@ -30,6 +30,8 @@ export class ErroDaApi extends Error {
     this.codigo = dados.error || '';
     this.mensagem = dados.message || '';
     this.status = erro?.response?.status || 0;
+    // #1382: por que o "Atualizar" não deu certo (meta_unreachable, permission_denied…).
+    this.motivo = dados.code || '';
   }
 }
 
@@ -103,16 +105,34 @@ const gruposDe = lidas => {
   }));
 };
 
+// Pedir a lista nova à Meta pode falhar (#1382): aí vale a lista guardada, sem
+// `refresh`, e a tela avisa que não atualizou (com o porquê), sem dizer que é nova.
+const lerPayloadDoGrupo = async (grupo, atualizar) => {
+  try {
+    const { payload } = await chamar(
+      api.getTemplates(grupo.id, { refresh: atualizar })
+    );
+    return { payload, naoAtualizou: null };
+  } catch (erro) {
+    if (!atualizar || erro.codigo !== 'sync_failed') throw erro;
+    const { payload } = await chamar(api.getTemplates(grupo.id));
+    return {
+      payload,
+      naoAtualizou: { conta: grupo.conta.nome, motivo: erro.motivo },
+    };
+  }
+};
+
 const lerModelosDoGrupo = async (grupo, atualizar) => {
-  const { payload } = await chamar(
-    api.getTemplates(grupo.id, { refresh: atualizar })
-  );
-  return payload
+  const { payload, naoAtualizou } = await lerPayloadDoGrupo(grupo, atualizar);
+  const modelos = payload
     .filter(
       template =>
         !SITUACOES_FORA_DA_LISTA.includes(String(template.status).toUpperCase())
     )
     .map(template => modeloDaMeta(template, grupo));
+  modelos.naoAtualizou = naoAtualizou;
+  return modelos;
 };
 
 const lerModelos = async atualizar => {
@@ -125,6 +145,9 @@ const lerModelos = async atualizar => {
   const modelos = lidos.flatMap(item => item.value);
   // Uma conta do WhatsApp não respondeu: a lista avisa que pode faltar modelo.
   modelos.parcial = lidos.length < grupos.length;
+  modelos.naoAtualizou = lidos
+    .map(item => item.value.naoAtualizou)
+    .filter(Boolean);
   return modelos;
 };
 

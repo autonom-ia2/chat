@@ -113,6 +113,27 @@ RSpec.describe 'Api::V1::Accounts::Inboxes::WhatsappTemplates', type: :request d
       expect(response.parsed_body['payload']).to contain_exactly(a_hash_including('name' => 'pedido_enviado', 'friendly_name' => 'Pedido enviado'))
     end
 
+    # #1382: o "Atualizar" diz a verdade quando o sync não deu certo, em vez da lista antiga como se fosse nova.
+    it 'atualizar que falha responde com o código (502 quando a Meta não respondeu, 422 nos outros)' do
+      sync_url = "https://graph.facebook.com/v14.0/#{channel.waba_id}/message_templates"
+      stub_request(:get, sync_url).with(query: hash_including({})).to_return(status: 503)
+      allow_any_instance_of(Whatsapp::Providers::WhatsappCloudService).to receive(:sleep) # rubocop:disable RSpec/AnyInstance
+
+      call(:get, base, { refresh: true })
+
+      expect(response).to have_http_status(:bad_gateway)
+      expect(response.parsed_body).to include('error' => 'sync_failed', 'code' => 'meta_unreachable',
+                                              'message' => I18n.t('whatsapp_templates.errors.sync_failed', locale: 'pt_BR'))
+
+      stub_request(:get, sync_url).with(query: hash_including({})).to_return(status: 401, headers: json,
+                                                                             body: { error: { code: 190 } }.to_json)
+      call(:get, base, { refresh: true })
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body).to include('code' => 'permission_denied',
+                                              'message' => I18n.t('whatsapp_templates.errors.permission_denied', locale: 'pt_BR'))
+    end
+
     it 'caixa que não é do WhatsApp oficial com WABA não tem a API' do
       other = create(:channel_whatsapp, account: account, provider: 'default', sync_templates: false, validate_provider_config: false).inbox
 

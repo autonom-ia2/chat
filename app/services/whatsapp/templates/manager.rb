@@ -8,7 +8,8 @@
 # - criar e alterar o conteúdo só chegam à Meta com a forma que ela exige (`SubmitFormat`, #1380): o que não
 #   passa volta 422 com o código, sem nenhuma chamada à Graph;
 # - o estado do Chat2You fica no perfil (`WhatsappTemplateProfile`), que sobrevive ao sync. A lista da caixa só recebe o
-#   modelo criado/alterado até o próximo sync trazer a versão da Meta (mesmo caminho do `NoticeTemplates::Creator`).
+#   modelo criado/alterado até o próximo sync trazer a versão da Meta, gravado por `ChannelList` (trava na linha do
+#   canal; o mesmo escritor do sync e do `NoticeTemplates::Creator`, #1382).
 class Whatsapp::Templates::Manager
   # Pedido recusado por regra nossa: `code` vai para a tela traduzido; `details` completa (o uso, o modelo que já existe).
   class Refused < StandardError
@@ -47,7 +48,7 @@ class Whatsapp::Templates::Manager
     outcome = client.create(attrs)
     raise Refused.new('name_taken', template: outcome.template) unless outcome.created
 
-    record(outcome.template)
+    Whatsapp::Templates::ChannelList.upsert!(@inbox.channel, outcome.template)
     present(outcome.template, save_profile(draft, outcome.template))
   end
 
@@ -60,7 +61,8 @@ class Whatsapp::Templates::Manager
     if content.any?
       content = with_stored_media(content, template)
       client.update(template['id'], template['name'], content)
-      template = record(template.merge(content).merge('status' => 'PENDING'))
+      template = template.merge(content).merge('status' => 'PENDING')
+      Whatsapp::Templates::ChannelList.upsert!(@inbox.channel, template)
     end
     present(template, save_profile(draft, template))
   end
@@ -69,7 +71,7 @@ class Whatsapp::Templates::Manager
     template = protected_template!(template_id)
     client.delete_by_id(template['id'], template['name'])
     profile_for(template)&.destroy!
-    forget(template)
+    Whatsapp::Templates::ChannelList.remove!(@inbox.channel, template)
     true
   end
 
@@ -176,25 +178,5 @@ class Whatsapp::Templates::Manager
     raise Refused, 'media_invalid' unless blob && blob.metadata['account_id'].to_s == @inbox.account_id.to_s
 
     blob
-  end
-
-  # Põe (ou troca) o modelo na lista da caixa até o próximo sync trazer a lista da Meta.
-  def record(template)
-    others = synced.reject { |item| same?(item, template) }
-    write_list(others + [template])
-    template
-  end
-
-  def forget(template)
-    write_list(synced.reject { |item| same?(item, template) })
-  end
-
-  def same?(item, template)
-    item['name'] == template['name'] && item['language'].to_s.casecmp?(template['language'].to_s)
-  end
-
-  def write_list(templates)
-    @inbox.channel.update_columns(message_templates: templates) # rubocop:disable Rails/SkipsModelValidations
-    @inbox.account.update_cache_key('inbox')
   end
 end

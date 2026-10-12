@@ -39,7 +39,9 @@
         "LIMITE": "Não criado: limite de modelos"
       },
       "CONTA": "Conta {nome}",
-      "PARCIAL": "Não conseguimos ler os modelos de uma conta do WhatsApp agora. Pode faltar modelo na lista."
+      "PARCIAL": "Não conseguimos ler os modelos de uma conta do WhatsApp agora. Pode faltar modelo na lista.",
+      "NAO_ATUALIZOU": "Não foi possível atualizar agora a lista da conta {conta}. Mostramos a última lista guardada; tente de novo em alguns minutos.",
+      "NAO_ATUALIZOU_PERMISSAO": "Não foi possível atualizar a lista da conta {conta}: o número perdeu a permissão no WhatsApp. Reconecte o número em Configurações › Caixas de entrada. Mostramos a última lista guardada."
     },
     "SITUACOES": {
       "pronto": {
@@ -660,7 +662,8 @@
         "modelo_apagado": "O modelo “{modelo}” não existe mais. Escolha outro modelo para a campanha.",
         "formato_nao_vai": "O modelo “{modelo}” tem um formato que a campanha ainda não sabe enviar.",
         "nao_conferido": "Não conseguimos conferir o modelo “{modelo}” com o WhatsApp. Nada foi enviado.",
-        "outro": "A campanha parou antes de enviar. Nada foi enviado."
+        "outro": "A campanha parou antes de enviar. Nada foi enviado.",
+        "arquivo_do_topo": "O modelo “{modelo}” tem foto, vídeo ou documento no topo e o arquivo não está guardado. Escolha o arquivo de novo no modelo ou ponha o link na campanha."
       },
       "ACOES": {
         "ABRIR_MODELO": "Ver o modelo",

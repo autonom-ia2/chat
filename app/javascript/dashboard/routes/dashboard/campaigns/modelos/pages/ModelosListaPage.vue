@@ -230,6 +230,28 @@ const conectarHref = computed(
             {{ $t('MODELOS_WHATSAPP.SO_VER') }}
           </p>
 
+          <!-- #1382: o "Atualizar" falhou numa conta; a lista é a última guardada. -->
+          <p
+            v-for="falha in modelos.naoAtualizou || []"
+            :key="falha.conta"
+            data-nao-atualizou
+            role="status"
+            class="flex items-start gap-3 px-4 py-3 mb-0 text-[0.9375rem] rounded-xl bg-n-amber-2 text-n-slate-12"
+          >
+            <span
+              class="i-lucide-triangle-alert size-5 mt-0.5 shrink-0 text-n-amber-11"
+              aria-hidden="true"
+            />
+            {{
+              falha.motivo === 'permission_denied'
+                ? $t('MODELOS_WHATSAPP.LISTA.NAO_ATUALIZOU_PERMISSAO', {
+                    conta: falha.conta,
+                  })
+                : $t('MODELOS_WHATSAPP.LISTA.NAO_ATUALIZOU', {
+                    conta: falha.conta,
+                  })
+            }}
+          </p>
           <p
             v-if="modelos.parcial"
             data-lista-parcial

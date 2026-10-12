@@ -292,12 +292,16 @@ const chooseChannel = card => {
             </slot>
             <slot name="modelo-aviso" />
           </div>
+          <!-- Fork (#1382): sem link, vai o arquivo guardado com o modelo; o link é opcional. -->
           <Input
             v-if="mediaHeader"
             :model-value="draft.mediaUrl"
             type="url"
+            data-test="media-url"
             :label="t(`${NS}.MEDIA_LABEL`)"
             :placeholder="t(`${NS}.MEDIA_PLACEHOLDER`)"
+            :message="t(`${NS}.MEDIA_DEFAULT`)"
+            wrap-message
             custom-input-class="!h-11"
             @update:model-value="mediaUrl => emit('update', { mediaUrl })"
           />
