@@ -12,6 +12,10 @@ module Crm::Access::VisibilitySync
     return if conversation.nil?
     return unless Crm::Access::AccountFlag.any?(conversation.account_id)
 
+    # Saída da triagem e participantes (#1150): antes de decidir quem vê, porque pode tirar o atendente.
+    Crm::Access::TriageExit.new(conversation).perform
+    conversation.reload
+
     recipients = Crm::Access::Recipients.new(conversation)
     restricted = recipients.restricted_user_ids
     return if restricted.empty?
