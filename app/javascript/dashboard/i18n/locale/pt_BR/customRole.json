@@ -153,6 +153,12 @@
           "LEVEL_VIEW": "Vê campanhas e resultados.",
           "LEVEL_MANAGE": "Cria e dispara campanhas. Gera custo."
         },
+        "WHATSAPP_TEMPLATES": {
+          "NAME": "Modelos do WhatsApp",
+          "HINT": "Mensagens que o WhatsApp aprova antes do envio",
+          "LEVEL_VIEW": "Vê os modelos e usa em campanhas.",
+          "LEVEL_MANAGE": "Cria, altera e apaga modelos no WhatsApp."
+        },
         "INBOXES": {
           "NAME": "Caixas de entrada",
           "HINT": "Canais, QR do WhatsApp e membros",

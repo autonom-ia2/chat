@@ -141,7 +141,9 @@ const mountPage = ({ query = {} } = {}) => {
         }),
       }),
       accounts: module({
-        isFeatureEnabledonAccount: () => () => true,
+        // Todas as flags ligadas, menos a ponte de Modelos do WhatsApp (protótipo, outro spec).
+        isFeatureEnabledonAccount: () => (_accountId, flag) =>
+          flag !== 'whatsapp_templates_journey',
         getAccount: () => () => ({ id: 1, timezone: 'America/Sao_Paulo' }),
       }),
     },

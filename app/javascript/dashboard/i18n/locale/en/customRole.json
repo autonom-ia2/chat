@@ -153,6 +153,12 @@
           "LEVEL_VIEW": "Sees campaigns and their results.",
           "LEVEL_MANAGE": "Creates and sends campaigns. This has a cost."
         },
+        "WHATSAPP_TEMPLATES": {
+          "NAME": "WhatsApp templates",
+          "HINT": "Messages WhatsApp approves before sending",
+          "LEVEL_VIEW": "Sees templates and uses them in campaigns.",
+          "LEVEL_MANAGE": "Creates, changes and deletes templates in WhatsApp."
+        },
         "INBOXES": {
           "NAME": "Inboxes",
           "HINT": "Channels, WhatsApp QR and members",

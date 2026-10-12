@@ -2029,6 +2029,48 @@
 - gotchas: é a mesma tela de Configurações > Modelos, só com outro caminho no menu; por enquanto só administrador vê; só exibe e sincroniza, porque criar e editar modelo é sempre no provedor; os modelos das campanhas de e-mail são outra coisa e ficam dentro de cada campanha de e-mail.
 - nav_target: `campaigns_templates_index`
 
+### ver_modelos_de_mensagem_do_whatsapp
+- titulo: Ver os modelos de mensagem do WhatsApp e a situação de cada um
+- rota: modelos_whatsapp_lista
+- cobre: modelos_whatsapp_modelo
+- intent: Onde vejo os meus modelos de mensagem do WhatsApp?; Meu modelo foi aprovado?; Por que o WhatsApp recusou o meu modelo?; Por que o modelo está pausado?; Onde o modelo está sendo usado?; Quanto custa cada envio do modelo?; Quantas respostas grátis ainda tenho no mês?; Por que a minha campanha parou por causa do modelo?
+- onde_fica: Menu lateral > Campanhas > Modelos WhatsApp (com a nova tela de Modelos liberada na conta)
+- pre_requisitos: número do WhatsApp oficial (API oficial da Meta) conectado; ser administrador ou ter a função com Modelos do WhatsApp (ver ou editar)
+- passos: 1. Abra Campanhas > Modelos WhatsApp; 2. Veja a lista, com o que precisa de você primeiro (recusado, pausado, em análise e depois os prontos); 3. Busque pelo nome ou pelo texto, ou filtre por número; 4. Clique no modelo para ver a mensagem como o cliente vê, a situação explicada, o tipo e o custo por envio, e onde ele está em uso; 5. Em Respostas grátis do mês, confira quantas respostas cada número já mandou.
+- gotchas: quem aprova é o WhatsApp, e a situação chega pela lista que o Chat2You busca no WhatsApp ao abrir a tela; Divulgação custa bem mais por envio que Aviso de serviço, e o WhatsApp pode mudar o tipo sozinho (a tela avisa); os preços vêm da tabela oficial da Meta para o Brasil configurada na plataforma; modelo com o selo Usado pelo sistema (agendamento, Anúncios, pesquisa de satisfação) não se altera nem se apaga, só duplica; modelo em uso numa campanha agendada, num aviso do agendamento ou num follow-up não se altera nem se apaga até trocar o modelo lá; uso em funil que a pessoa não vê aparece só como em uso onde você não tem acesso; quando o modelo muda e uma campanha parada por causa dele pode seguir, use Retomar: ela confere o modelo de novo e só sai se estiver tudo certo; quem só vê não tem os botões de criar, alterar e apagar; com a tela nova desligada, o mesmo menu abre a lista antiga.
+- nav_target: `modelos_whatsapp_lista`
+
+### criar_modelo_de_mensagem_do_whatsapp
+- titulo: Criar um modelo de mensagem do WhatsApp e mandar para aprovação
+- rota: modelos_whatsapp_novo
+- cobre: modelos_whatsapp_enviado
+- intent: Como crio um modelo de mensagem do WhatsApp?; Como mando um modelo para o WhatsApp aprovar?; Como ponho foto, botão ou rodapé no modelo?; Como faço um carrossel, uma oferta com prazo ou um código de verificação?; Como duplico um modelo?; Como crio um modelo sem sair da campanha?
+- onde_fica: Campanhas > Modelos WhatsApp > Criar modelo (ou, na Nova campanha, Criar modelo quando a caixa não tem modelo pronto)
+- pre_requisitos: número do WhatsApp oficial conectado; ser administrador ou ter a função com Modelos do WhatsApp em editar; foto, vídeo ou PDF no computador se o modelo tiver arquivo no topo
+- passos: 1. Clique em Criar modelo; 2. Escolha um começo pronto, Começar do zero ou um dos outros formatos; 3. Em Texto, dê um nome que a equipe reconheça, escreva a mensagem e ponha os campos (Nome do cliente, Data…) com um exemplo em cada; 4. Em Extras, escolha o topo (e o arquivo), o rodapé e os botões; 5. Em Números, escolha a conta do WhatsApp; 6. Em Confira, veja o que o WhatsApp confere e clique em Enviar para aprovação; 7. Vindo da campanha, clique em Voltar para a campanha: o rascunho volta com o modelo novo escolhido.
+- gotchas: o modelo vale para todos os números da mesma conta do WhatsApp; escolhendo duas contas, saem dois pedidos, cada um com a sua análise; o texto não pode começar nem terminar com um campo, e todo campo precisa de exemplo, senão o WhatsApp recusa; o nome no WhatsApp sai do nome do modelo e não pode repetir, e um nome apagado fica preso por 30 dias; o arquivo do topo sobe para o WhatsApp só no envio; a análise leva de minutos a algumas horas; enquanto isso, a campanha pode ser montada e agendada, mas Enviar agora só libera depois da aprovação; catálogo de produtos, formulário e Criar com IA ainda não estão disponíveis.
+- nav_target: `modelos_whatsapp_novo`
+
+### corrigir_ou_alterar_modelo_do_whatsapp
+- titulo: Corrigir um modelo recusado ou alterar um modelo
+- rota: modelos_whatsapp_alterar
+- intent: Como corrijo um modelo que o WhatsApp recusou?; Como altero o texto de um modelo aprovado?; Por que não consigo alterar o modelo?; Quantas vezes posso alterar um modelo?; Como peço revisão de uma recusa?
+- onde_fica: Campanhas > Modelos WhatsApp > abrir o modelo > Corrigir (recusado), Alterar o texto (pausado) ou Alterar (pronto)
+- pre_requisitos: ser administrador ou ter a função com Modelos do WhatsApp em editar; o modelo não pode estar em uso nem ser do sistema
+- passos: 1. Abra o modelo na lista; 2. Leia o motivo e o Como resolver; 3. Clique em Corrigir, Alterar o texto ou Alterar; 4. Ajuste o texto e os extras, confira e clique em Reenviar para aprovação ou Enviar alteração.
+- gotchas: depois de alterar, o modelo volta para a análise do WhatsApp; o WhatsApp deixa alterar um modelo aprovado 1 vez por dia e até 10 vezes em 30 dias; nome e idioma não mudam (para isso, duplique); modelo em uso numa campanha agendada, aviso ou follow-up não muda: a tela mostra onde ele está e pede para trocar lá ou duplicar; o pedido de revisão de uma recusa só existe no Gerenciador do WhatsApp, e o link leva até lá.
+- nav_target: `modelos_whatsapp_alterar`
+
+### usar_modelo_do_whatsapp_em_campanha
+- titulo: Usar um modelo pronto em uma campanha
+- rota: modelos_whatsapp_usar
+- intent: Como uso um modelo aprovado numa campanha?; De qual número sai a campanha do modelo?; O que vai em cada campo do modelo na campanha?
+- onde_fica: Campanhas > Modelos WhatsApp > Usar em uma campanha (na lista ou no modelo)
+- pre_requisitos: modelo Pronto para usar; acesso a Campanhas para montar e enviar
+- passos: 1. Clique em Usar em uma campanha; 2. Com mais de um número, escolha de qual sai; 3. Confira o que vai em cada campo; 4. Clique em Continuar para a campanha e escolha o público; a caixa, o modelo e os campos já vêm escolhidos.
+- gotchas: Nome do cliente e Nome da empresa já vêm ligados ao cadastro (primeiro nome do contato e nome da sua empresa no Chat2You); os outros campos você liga a uma coluna do público ou escreve um texto fixo; havendo um rascunho de campanha guardado, a tela pergunta se continua ele ou começa de novo; carrossel, oferta, código de verificação e botão de copiar código ainda não vão em campanha.
+- nav_target: `modelos_whatsapp_usar`
+
 ### importar_dados_de_outra_ferramenta
 - titulo: Trazer contatos e conversas de outra ferramenta
 - rota: settings_data_imports

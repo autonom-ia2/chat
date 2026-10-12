@@ -28,6 +28,8 @@ import LiveChatCampaignDialog from 'dashboard/components-next/Campaigns/Pages/Ca
 import EmailResultActions from 'dashboard/components-next/CampaignResult/EmailResultActions.vue';
 import CampaignTabs from 'dashboard/components-next/CampaignJourney/CampaignTabs.vue';
 import BrandKitNudge from 'dashboard/components-next/BrandKits/BrandKitNudge.vue';
+// Fork (Modelos do WhatsApp): campanhas paradas por causa do modelo (flag whatsapp_templates_journey).
+import AvisoCampanhasParadas from '../modelos/ponte/AvisoCampanhasParadas.vue';
 import {
   CAMPAIGN_CHANNELS,
   CHANNEL_ICONS,
@@ -237,6 +239,7 @@ useOnEnter(fetchAll);
       </nav>
       <CampaignTabs active="campaigns" />
       <BrandKitNudge v-if="features.emailCampaigns" />
+      <AvisoCampanhasParadas class="mb-5" />
       <header class="mb-7 flex flex-wrap items-start justify-between gap-4">
         <div class="min-w-0">
           <h1
