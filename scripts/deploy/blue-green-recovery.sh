@@ -134,9 +134,10 @@ suspend_instagram_assisted() {
   script=$(cat "$(dirname "${BASH_SOURCE[0]}")/suspend-instagram-assisted.py") || return 1
   parameters=$(jq -cn --arg script "sudo python3 - <<'INSTAGRAM_RECOVERY'
 $script
-INSTAGRAM_RECOVERY" '["set -eu", $script, "sudo systemctl daemon-reload"]') || return 1
+INSTAGRAM_RECOVERY" '{commands: ["set -eu", $script, "sudo systemctl daemon-reload"]}') || return 1
+  # JSON completo: no formato `commands=[...]` o AWS CLI não decodifica o \n do JSON e o script chega quebrado (#1406).
   command_id=$(aws ssm send-command --instance-ids "$1" \
-    --document-name AWS-RunShellScript --parameters "commands=$parameters" \
+    --document-name AWS-RunShellScript --parameters "$parameters" \
     --query 'Command.CommandId' --output text) || return 1
   aws ssm wait command-executed --command-id "$command_id" --instance-id "$1" || {
     echo "instagram_recovery_suspension_failed:$1" >&2
