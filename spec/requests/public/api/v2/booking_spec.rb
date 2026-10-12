@@ -118,7 +118,7 @@ RSpec.describe 'Public::Api::V2::Booking', type: :request do
       )
       expect(Crm::BookingV2::Tokens.verify('form', body['form_token'])).to eq('s' => profile.slug, 't' => Time.current.to_i)
       expect(response.body).not_to include('camila.host@example.com')
-      [account.id, profile.id, world.host.id, world.pipeline.id].each { |id| expect(body.values).not_to include(id) }
+      expect(internal_id_keys(body)).to be_empty
     end
 
     it 'usa o rótulo escrito pelo dono e marca Meet/Teams como exigindo e-mail' do
@@ -352,7 +352,7 @@ RSpec.describe 'Public::Api::V2::Booking', type: :request do
         )
         expect(body['ics_url']).to start_with("#{frontend}/public/api/v2/ics/")
         %w[+5521988887777 5521988887777 camila.host@example.com].each { |secret| expect(response.body).not_to include(secret) }
-        [meeting.id, meeting.card_id, invite.id, account.id].each { |id| expect(body.values).not_to include(id) }
+        expect(internal_id_keys(body)).to be_empty
       end
 
       it 'cria contato sem e-mail, card no funil da página e reunião interna com consentimento' do
