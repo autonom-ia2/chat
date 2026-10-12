@@ -1,7 +1,7 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, ref, useId, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useStore } from 'dashboard/composables/store';
+import { useMapGetter, useStore } from 'dashboard/composables/store';
 import AgenteGaveta from '../AgenteGaveta.vue';
 import AgenteBotao from '../AgenteBotao.vue';
 import AgenteErro from '../AgenteErro.vue';
@@ -35,6 +35,7 @@ const emit = defineEmits(['fechar', 'perguntaResolvida', 'reler']);
 
 const { t } = useI18n();
 const store = useStore();
+const flagsDasFontes = useMapGetter('autonomiaSources/getUIFlags');
 const NS = 'AGENTS.JORNADA.PAGINA.SABE';
 const base = `sabe-${useId()}`;
 
@@ -175,10 +176,11 @@ const agendarReleitura = aoReler => {
   relogioReleitura = null;
   const esperando = Object.values(relendo.value).some(marca => !marca.visto);
   if (!esperando) return;
-  // A página relê a lista (`reler`): ela guarda a última lista lida e mostra o erro se falhar.
+  // A página relê a lista (`reler`): ela guarda a última lista lida (sem piscar a gaveta) e mostra
+  // o erro se falhar. Com uma leitura ainda em andamento, este intervalo passa sem pedir outra.
   relogioReleitura = setTimeout(() => {
     relogioReleitura = null;
-    emit('reler');
+    if (!flagsDasFontes.value?.fetchingList) emit('reler');
     aoReler();
   }, RELEITURA_MS);
 };

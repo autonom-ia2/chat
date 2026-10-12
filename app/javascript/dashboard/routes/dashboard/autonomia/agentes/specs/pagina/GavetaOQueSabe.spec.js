@@ -336,6 +336,21 @@ describe('GavetaOQueSabe', () => {
       wrapper.unmount();
     });
 
+    it('skips a re-read tick while the previous reading is still on its way', async () => {
+      const wrapper = montar({ fontes: [SITE] });
+      await pedirLerDeNovo();
+
+      store.state['autonomiaSources/getUIFlags'] = { fetchingList: true };
+      await vi.advanceTimersByTimeAsync(8000);
+      expect(wrapper.emitted('reler')).toBeUndefined();
+      expect(estadoDaLinha()).toBe('lendo');
+
+      store.state['autonomiaSources/getUIFlags'] = { fetchingList: false };
+      await vi.advanceTimersByTimeAsync(4000);
+      expect(wrapper.emitted('reler')).toHaveLength(1);
+      wrapper.unmount();
+    });
+
     it('stops after 60 s without the server starting, keeping the current state', async () => {
       const wrapper = montar({ fontes: [SITE] });
       await pedirLerDeNovo();
