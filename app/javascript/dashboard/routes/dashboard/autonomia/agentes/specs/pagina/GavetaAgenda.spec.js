@@ -9,7 +9,13 @@ import GavetaAgenda from '../../components/pagina/GavetaAgenda.vue';
 // (BookingChoiceCards): o teste marca o rádio do cartão.
 const permissao = vi.hoisted(() => ({ podeAbrirAgendamento: true }));
 const loja = vi.hoisted(() => ({ dispatch: vi.fn() }));
-const roteador = vi.hoisted(() => ({ push: vi.fn() }));
+const roteador = vi.hoisted(() => ({
+  push: vi.fn(),
+  resolve: vi.fn(rota => ({
+    href: `/app/${rota.name}`,
+    fullPath: `/caminho/${rota.name}`,
+  })),
+}));
 vi.mock('dashboard/composables/store', async () => {
   const { computed } = await import('vue');
   return {
@@ -20,7 +26,7 @@ vi.mock('dashboard/composables/store', async () => {
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
 vi.mock('vue-router', () => ({
   useRouter: () => ({
-    resolve: rota => ({ href: `/app/${rota.name}` }),
+    resolve: roteador.resolve,
     push: roteador.push,
   }),
   useRoute: () => ({
@@ -126,6 +132,7 @@ describe('GavetaAgenda · cartões e estado real da página (#1181 item A, #1370
   beforeEach(() => {
     permissao.podeAbrirAgendamento = true;
     roteador.push.mockReset();
+    roteador.resolve.mockClear();
     paginasApi.get.mockReset();
     paginasApi.get.mockResolvedValue({ data: { payload: PAGINAS } });
   });
@@ -184,7 +191,8 @@ describe('GavetaAgenda · cartões e estado real da página (#1181 item A, #1370
     });
     wrapper = await montar(3);
     const rascunho = no('[data-rascunho="6"]');
-    expect(rascunho.getAttribute('aria-disabled')).toBe('true');
+    expect(rascunho.hasAttribute('aria-disabled')).toBe(false);
+    expect(rascunho.dataset.atual).toBeUndefined();
     expect(rascunho.querySelector('input')).toBeNull();
     expect(no('[data-choice="6"]')).toBeNull();
     expect(rascunho.querySelector('[data-status]').dataset.statusKey).toBe(
@@ -198,6 +206,30 @@ describe('GavetaAgenda · cartões e estado real da página (#1181 item A, #1370
     const link = rascunho.querySelector('[data-abrir-rascunho]');
     expect(link.getAttribute('href')).toBe('/app/settings_booking');
     expect(link.getAttribute('target')).toBe('_blank');
+  });
+
+  it('a saved page that became a draft: marked as the current choice, own warning, can pick another', async () => {
+    paginasApi.get.mockResolvedValue({
+      data: {
+        payload: [
+          { id: 3, title: 'Visita', enabled: true, ai_status: 'ativa' },
+          { id: 6, title: 'Plantão', enabled: false, missing: ['host'] },
+        ],
+      },
+    });
+    wrapper = await montar(6);
+    const rascunho = no('[data-rascunho="6"]');
+    expect(rascunho.dataset.atual).toBe('true');
+    expect(rascunho.textContent).toContain('Current choice');
+    expect(rascunho.querySelector('[data-abrir-rascunho]')).toBeNull();
+    expect(escolhida()).toBeUndefined();
+    expect(texto('[data-estado-agenda="rascunho"] p')).toBe(
+      'Plantão is not published yet. Bia will pass the conversation to the team until you publish it.'
+    );
+    expect(no('[data-estado-agenda] [data-abrir-paginas]')).not.toBeNull();
+    await escolher(3);
+    expect(no('[data-rascunho="6"]').dataset.atual).toBeUndefined();
+    expect(no('[data-estado-agenda]')).toBeNull();
   });
 
   it('a draft without access to Agendamento: no link', async () => {
@@ -337,10 +369,16 @@ describe('GavetaAgenda · cartões e estado real da página (#1181 item A, #1370
     expect(no('[data-choice]')).toBeNull();
     expect(no('[data-salvar]')).toBeNull();
     no('[data-criar-pagina]').click();
+    // A volta é a rota nomeada da página do agente com ?gaveta=agenda (fullPath do roteador).
+    expect(roteador.resolve).toHaveBeenCalledWith({
+      name: 'autonomia_agent_panel',
+      params: { accountId: '1', agentId: 7 },
+      query: { gaveta: 'agenda' },
+    });
     expect(roteador.push).toHaveBeenCalledWith({
       name: 'settings_booking',
       params: { accountId: '1' },
-      query: { nova: 1, voltar: '/app/accounts/1/agents/7?gaveta=agenda' },
+      query: { nova: 1, voltar: '/caminho/autonomia_agent_panel' },
     });
   });
 
@@ -606,6 +644,16 @@ describe('GavetaAgenda · pessoas que a IA pode usar (#1307)', () => {
     wrapper = await montar(30);
     expect(no('[data-ir-mudar]')).toBeNull();
     expect(texto('[data-pessoas-dica] b')).toBe('Change by chatting');
+  });
+
+  it('the page cards stop answering while saving (inert, no nested fieldset)', async () => {
+    loja.dispatch.mockReturnValue(new Promise(() => {}));
+    wrapper = await montar(30);
+    expect(no('[data-escolha]').tagName).toBe('DIV');
+    expect(no('[data-escolha]').hasAttribute('inert')).toBe(false);
+    await escolher(31);
+    await salvar();
+    expect(no('[data-escolha]').hasAttribute('inert')).toBe(true);
   });
 
   it('"do not book" saves only the page as null', async () => {

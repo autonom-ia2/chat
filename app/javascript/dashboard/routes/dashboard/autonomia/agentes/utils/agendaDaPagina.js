@@ -121,11 +121,6 @@ export const estadoComLiberacao = (estado, pessoas, liberadas) => {
 export const outraPaginaDeAgenda = (nova, salva) =>
   Boolean(nova) && String(nova) !== String(salva ?? '');
 
-// #1370 — rascunho: desligada e ainda falta algo para publicar (o `missing` da lista, como o selo
-// de Páginas e links). Não é escolha na gaveta: a IA não marca por uma página que nunca foi ao ar.
-export const ehRascunho = pagina =>
-  pagina?.enabled !== true && Boolean(pagina?.missing?.length);
-
 // #1370 — os locais da página como o assistente os nomeia (BOOKING.WHERE.<TIPO>.NAME), sem repetir.
 export const tiposDeLocal = pagina => [
   ...new Set(

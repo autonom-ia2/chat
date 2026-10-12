@@ -28,8 +28,8 @@ import {
   quemRecebe,
   restricaoGravada,
   tiposDeLocal,
-  ehRascunho,
 } from '../../utils/agendaDaPagina';
+import { isDraftPage } from 'dashboard/routes/dashboard/settings/booking/bookingPageStatus';
 import { GAVETA } from '../../utils/pagina';
 
 // #1253 — Marcar reuniões na página nova do agente: a página de agendamento que o agente usa para
@@ -142,12 +142,17 @@ const CHAVE_DO_AVISO = {
   [ESTADO_PAGINA.SEM_NINGUEM]: 'SEM_NINGUEM',
   [ESTADO_PAGINA.AGENDA_PAUSADA]: 'AGENDA_PAUSADA',
 };
-const textoDoAviso = computed(() =>
-  t(`${NS_ESTADO}.${CHAVE_DO_AVISO[estado.value]}`, {
-    nome: props.nome,
-    pagina: tituloEscolhida.value,
-  })
+// #1370 — a página salva que virou rascunho: aviso próprio (ainda não publicada), não "pausada".
+const escolhidaEhRascunho = computed(() => isDraftPage(paginaEscolhida.value));
+const estadoDoAviso = computed(() =>
+  escolhidaEhRascunho.value ? 'rascunho' : estado.value
 );
+const textoDoAviso = computed(() => {
+  const chave = escolhidaEhRascunho.value
+    ? `${NS}.RASCUNHO.AVISO`
+    : `${NS_ESTADO}.${CHAVE_DO_AVISO[estado.value]}`;
+  return t(chave, { nome: props.nome, pagina: tituloEscolhida.value });
+});
 const hrefPaginas = computed(() =>
   podeAbrirAgendamento.value
     ? router.resolve({ name: 'settings_booking' }).href
@@ -164,7 +169,14 @@ const podeCriarPagina = computed(
 const rotaCriar = computed(() => ({
   name: 'settings_booking',
   params: { accountId: route.params.accountId },
-  query: { nova: 1, voltar: `${route.path}?gaveta=${GAVETA.AGENDA}` },
+  query: {
+    nova: 1,
+    voltar: router.resolve({
+      name: 'autonomia_agent_panel',
+      params: { accountId: route.params.accountId, agentId: props.agente.id },
+      query: { gaveta: GAVETA.AGENDA },
+    }).fullPath,
+  },
 }));
 const hrefCriar = computed(() => router.resolve(rotaCriar.value).href);
 const criarPagina = () => router.push(rotaCriar.value);
@@ -212,7 +224,7 @@ const cartoes = computed(() => [
     ],
   },
   ...agenda.paginas.value
-    .filter(pagina => !ehRascunho(pagina))
+    .filter(pagina => !isDraftPage(pagina))
     .map(pagina => ({
       value: idDaPagina(pagina.id),
       label: agenda.tituloDaPagina(pagina),
@@ -222,11 +234,14 @@ const cartoes = computed(() => [
 ]);
 // Rascunho não é escolha (decisão do Rodrigo, #1370): cartão apagado, fora do grupo de rádios, com o
 // que falta para publicar nas palavras do assistente (BOOKING.PREVIEW.MISSING) e o link das páginas.
-// A página pausada continua escolha: o dono pode retomá-la, e o aviso âmbar explica.
+// A página pausada continua escolha: o dono pode retomá-la, e o aviso âmbar explica. O rascunho que
+// já está salvo no agente aparece marcado como a escolha atual (sem ser escolha nova): o aviso diz o
+// que acontece e o dono escolhe outra página ou "Não marcar".
 const FALTAS = ['host', 'location', 'working_hours', 'pipeline'];
 const rascunhos = computed(() =>
-  agenda.paginas.value.filter(ehRascunho).map(pagina => ({
+  agenda.paginas.value.filter(isDraftPage).map(pagina => ({
     id: idDaPagina(pagina.id),
+    atual: idDaPagina(pagina.id) === escolhida.value,
     titulo: agenda.tituloDaPagina(pagina),
     pagina,
     faltas: pagina.missing
@@ -346,10 +361,10 @@ onMounted(agenda.carregar);
           @acao="salvar"
         />
 
-        <fieldset
+        <div
           data-escolha
-          class="flex flex-col gap-3 p-0 m-0 border-0 min-w-0"
-          :disabled="salvando"
+          class="flex flex-col gap-3 min-w-0"
+          :inert="salvando || undefined"
         >
           <BookingChoiceCards
             v-model="escolhida"
@@ -392,9 +407,20 @@ onMounted(agenda.carregar);
               v-for="rascunho in rascunhos"
               :key="rascunho.id"
               :data-rascunho="rascunho.id"
-              aria-disabled="true"
-              class="flex flex-col gap-1 p-4 rounded-2xl ring-1 ring-inset ring-n-weak bg-n-alpha-1"
+              :data-atual="rascunho.atual || undefined"
+              class="flex flex-col gap-1 p-4 rounded-2xl ring-inset"
+              :class="
+                rascunho.atual
+                  ? 'ring-2 ring-n-blue-9 bg-n-blue-2'
+                  : 'ring-1 ring-n-weak bg-n-alpha-1'
+              "
             >
+              <span
+                v-if="rascunho.atual"
+                class="text-xs font-semibold text-n-blue-11"
+              >
+                {{ t(`${NS}.RASCUNHO.ATUAL`) }}
+              </span>
               <span class="flex items-start justify-between gap-2">
                 <span
                   class="min-w-0 text-base font-semibold break-words text-n-slate-11"
@@ -425,7 +451,7 @@ onMounted(agenda.carregar);
                 </span>
               </span>
               <a
-                v-if="hrefPaginas"
+                v-if="hrefPaginas && !rascunho.atual"
                 data-abrir-rascunho
                 :href="hrefPaginas"
                 target="_blank"
@@ -453,11 +479,11 @@ onMounted(agenda.carregar);
             <span class="i-lucide-plus size-4" aria-hidden="true" />
             {{ t(`${NS}.CRIAR`) }}
           </a>
-        </fieldset>
+        </div>
 
         <div
           v-if="aviso"
-          :data-estado-agenda="estado"
+          :data-estado-agenda="estadoDoAviso"
           role="status"
           class="flex flex-col gap-2 p-4 rounded-2xl bg-n-amber-2 ring-1 ring-inset ring-n-amber-6"
         >

@@ -1367,7 +1367,9 @@
             "DURACAO": "{minutos} min"
           },
           "RASCUNHO": {
-            "DICA": "Publique a página para {nome} usar."
+            "DICA": "Publique a página para {nome} usar.",
+            "AVISO": "{pagina} ainda não está publicada. {nome} vai passar a conversa para a equipe até você publicar.",
+            "ATUAL": "Escolha atual"
           },
           "SEM_PAGINAS": {
             "TITULO": "Você ainda não tem uma página de agendamento",

@@ -1367,7 +1367,9 @@
             "DURACAO": "{minutos} min"
           },
           "RASCUNHO": {
-            "DICA": "Publish the page so {nome} can use it."
+            "DICA": "Publish the page so {nome} can use it.",
+            "AVISO": "{pagina} is not published yet. {nome} will pass the conversation to the team until you publish it.",
+            "ATUAL": "Current choice"
           },
           "SEM_PAGINAS": {
             "TITULO": "You don't have a booking page yet",
