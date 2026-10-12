@@ -238,6 +238,7 @@ Rails.application.routes.draw do
             resources :campaign_names, only: [:index]
             resources :recipient_previews, only: [:create]
             resource :overview, only: [:show]
+            post 'campaign_pauses/:id/resume', to: 'campaign_pauses#resume', as: :campaign_pause_resume # #1329
             scope 'results/:channel/:id', controller: :results do
               get '/', action: :show, as: :result
               get :recipients, as: :result_recipients
@@ -909,6 +910,14 @@ Rails.application.routes.draw do
 
           resources :inboxes, only: [] do
             resource :assignment_policy, only: [:show, :create, :destroy], module: :inboxes
+            # Modelos do WhatsApp oficial (#1330): API do fork, controller e policy próprios.
+            resources :whatsapp_templates, only: [:index, :create, :update, :destroy], module: :inboxes do
+              member do
+                post :duplicate
+                get :usage
+              end
+              post :media, on: :collection
+            end
           end
 
           namespace :twitter do

@@ -111,13 +111,31 @@ class CampaignJourney::CampaignOverview
 
   # ---- WhatsApp Oficial and SMS (Chatwoot one-off campaigns) ----------------------------------
 
+  # #1329: a campaign paused before going out stays `active`; it is listed with its open pause,
+  # whatever the period (it still waits for someone to act).
   def chatwoot_rows
-    campaigns = @account.campaigns.one_off.where(campaign_status: %i[processing completed])
-                        .where(scheduled_at: since..).includes(inbox: :channel).to_a
-                        .filter_map { |campaign| [campaign, F.channel_of(campaign)] }
-                        .select { |(_campaign, channel)| channel && wanted?(channel) }
+    campaigns = chatwoot_campaigns.filter_map { |campaign| [campaign, F.channel_of(campaign)] }
+                                  .select { |(_campaign, channel)| channel && wanted?(channel) }
     counts = chatwoot_counts(campaigns.map(&:first))
-    campaigns.map { |(campaign, channel)| chatwoot_row(campaign, channel, counts.fetch(campaign.id, {})) }
+    pauses = chatwoot_pauses(campaigns.map(&:first))
+    campaigns.map do |(campaign, channel)|
+      chatwoot_row(campaign, channel, counts.fetch(campaign.id, {})).merge(pause: pauses[campaign.id])
+    end
+  end
+
+  def chatwoot_campaigns
+    one_off = @account.campaigns.one_off
+    one_off.where(scheduled_at: since.., campaign_status: %i[processing completed]).or(one_off.where(id: paused_campaign_ids))
+           .includes(inbox: :channel).to_a
+  end
+
+  def paused_campaign_ids
+    CampaignPause.in_effect.where(account_id: @account.id, pausable_type: 'Campaign').select(:pausable_id)
+  end
+
+  def chatwoot_pauses(campaigns)
+    CampaignPause.in_effect.where(pausable_type: 'Campaign', pausable_id: campaigns.map(&:id))
+                 .to_h { |pause| [pause.pausable_id, pause.payload] }
   end
 
   def chatwoot_counts(campaigns)

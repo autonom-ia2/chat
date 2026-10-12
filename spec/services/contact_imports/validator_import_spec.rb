@@ -34,7 +34,9 @@ RSpec.describe ContactImports::Validator, :aggregate_failures do
       expect(CampaignImports::SpreadsheetReader).to have_received(:new).once
       expect(campaign_import.reload).to be_ready_to_confirm
       expect(campaign_import.schema_resolution['method']).to eq('jev')
-      expect(requests.size).to eq(1)
+      # #1331: the second request asks the type of the extra column (CampaignImports::ColumnTypes), header and format only.
+      expect(requests.size).to eq(2)
+      expect(requests.last.dig('state', 'columns')).to eq([{ 'header' => 'Vencimento', 'format' => '00/0000' }])
       expect(requests.first.dig('state', 'headers')).to eq(%w[Segurado Celular Email Corretora Vencimento])
       body = requests.to_json
       expect(body).not_to include('Ana', 'Souza', '98765', '4321', 'ana.souza', 'example.org', 'Alfa', '10/2026', '@')

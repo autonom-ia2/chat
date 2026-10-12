@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_10_17_100100) do
+ActiveRecord::Schema[7.2].define(version: 2026_10_20_100000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1229,6 +1229,24 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_17_100100) do
     t.index ["account_id"], name: "index_campaign_imports_on_account_id"
     t.index ["data_import_id"], name: "index_campaign_imports_on_data_import_id"
     t.index ["user_id"], name: "index_campaign_imports_on_user_id"
+  end
+
+  create_table "campaign_pauses", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "pausable_type", null: false
+    t.bigint "pausable_id", null: false
+    t.string "source", null: false
+    t.string "reason_code", null: false
+    t.jsonb "details", default: {}, null: false
+    t.bigint "paused_by_id"
+    t.datetime "paused_at", null: false
+    t.bigint "resumed_by_id"
+    t.datetime "resumed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_campaign_pauses_on_account_id"
+    t.index ["pausable_type", "pausable_id", "paused_at"], name: "idx_campaign_pauses_on_pausable"
+    t.index ["pausable_type", "pausable_id"], name: "idx_campaign_pauses_one_open", unique: true, where: "(resumed_at IS NULL)"
   end
 
   create_table "campaign_recipients", force: :cascade do |t|
@@ -3839,6 +3857,25 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_17_100100) do
     t.index ["session_name"], name: "index_whatsapp_hybrid_connections_on_session_name", unique: true
   end
 
+  create_table "whatsapp_template_profiles", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "inbox_id", null: false
+    t.string "waba_id", null: false
+    t.string "meta_template_id"
+    t.string "name", null: false
+    t.string "language", null: false
+    t.string "friendly_name"
+    t.jsonb "fields", default: {}, null: false
+    t.jsonb "header_media", default: {}, null: false
+    t.string "system_owner"
+    t.bigint "created_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "waba_id"], name: "idx_whatsapp_template_profiles_waba"
+    t.index ["created_by_id"], name: "index_whatsapp_template_profiles_on_created_by_id"
+    t.index ["inbox_id", "name", "language"], name: "idx_whatsapp_template_profiles_unique", unique: true
+  end
+
   create_table "working_hours", force: :cascade do |t|
     t.bigint "inbox_id"
     t.bigint "account_id"
@@ -3944,6 +3981,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_17_100100) do
   add_foreign_key "brand_kits", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "campaign_audience_links", "accounts", on_delete: :cascade
   add_foreign_key "campaign_audience_links", "campaign_imports", on_delete: :nullify
+  add_foreign_key "campaign_pauses", "accounts", on_delete: :cascade
+  add_foreign_key "campaign_pauses", "users", column: "paused_by_id", on_delete: :nullify
+  add_foreign_key "campaign_pauses", "users", column: "resumed_by_id", on_delete: :nullify
   add_foreign_key "campaign_recipients", "accounts", on_delete: :cascade
   add_foreign_key "campaign_recipients", "campaigns", on_delete: :cascade
   add_foreign_key "campaign_recipients", "contacts", on_delete: :cascade
@@ -4107,6 +4147,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_17_100100) do
   add_foreign_key "whatsapp_api_message_templates", "inboxes", on_delete: :nullify
   add_foreign_key "whatsapp_api_message_templates", "users", column: "created_by_id"
   add_foreign_key "whatsapp_api_message_templates", "users", column: "updated_by_id"
+  add_foreign_key "whatsapp_template_profiles", "accounts", on_delete: :cascade
+  add_foreign_key "whatsapp_template_profiles", "inboxes", on_delete: :cascade
+  add_foreign_key "whatsapp_template_profiles", "users", column: "created_by_id", on_delete: :nullify
   # no candidate create_trigger statement could be found, creating an adapter-specific one
   execute(<<-SQL)
 CREATE OR REPLACE FUNCTION public.email_reputation_audit_append_only()

@@ -126,9 +126,16 @@ class CampaignImports::AudienceValidator < CampaignImports::Validator
   # #998: what saving will do with companies, shown before the user confirms (read-only).
   def ready_attributes(row_results, valid_rows, invalid_rows, plan)
     attributes = super.merge(audience_attributes(valid_rows))
+    attributes = attributes.merge(schema_resolution: with_column_types(attributes[:schema_resolution]))
     companies = CampaignImports::CompanyPreview.new(campaign_import.account, valid_rows).perform
     summary = with_phone_country(attributes[:validation_summary].merge(companies: companies), row_results)
     attributes.merge(validation_summary: summary)
+  end
+
+  # #1331: the type of each extra column (CampaignImports::ColumnTypes), asked once the audience is ready.
+  def with_column_types(resolution)
+    types = CampaignImports::ColumnTypes.new(@reading).perform
+    types ? resolution.merge(CampaignImports::ColumnTypes::RESOLUTION_KEY => types) : resolution
   end
 
   def mark_validation_failed(global_errors, row_results, exception: nil)

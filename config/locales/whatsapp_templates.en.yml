@@ -1,0 +1,17 @@
+en:
+  whatsapp_templates:
+    errors:
+      permission_denied: "This WhatsApp connection is not allowed to manage templates. Reconnect the inbox in Settings › Inboxes and try again."
+      meta_failed: "Meta did not accept the request. Try again in a few minutes."
+      meta_unreachable: "Meta did not answer. Try again in a few minutes."
+      app_not_configured: "The WhatsApp app is not configured on this installation, so files cannot be sent to Meta."
+      media_invalid: "Use a JPG or PNG up to 5 MB, an MP4 up to 16 MB or a PDF up to 100 MB."
+      media_required: "This template has a picture, video or document at the top. Send the file again to make the copy."
+      inbox_not_supported: "Templates can only be managed on official WhatsApp inboxes connected to a WhatsApp Business account."
+      template_not_found: "This template was not found on this inbox's WhatsApp account."
+      system_template: "This template is used by the platform. It cannot be changed or deleted here, but you can duplicate it."
+      name_taken: "A template with this name and language already exists. Choose another name."
+      in_use: "This template is scheduled to be sent. Remove it from what uses it before changing or deleting it."
+      in_use_hidden: "This template is in use where you do not have access. Ask an administrator."
+      invalid_profile: "Check the friendly name and the fields of this template."
+      feature_disabled: "Template management is not enabled for this account."

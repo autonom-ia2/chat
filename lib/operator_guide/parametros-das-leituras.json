@@ -1631,6 +1631,16 @@
     "controller": "api/v1/accounts/whatsapp_api_message_templates#index",
     "parametros": []
   },
+  "inboxes/:inbox_id/whatsapp_templates": {
+    "controller": "api/v1/accounts/inboxes/whatsapp_templates#index",
+    "parametros": [
+      "refresh"
+    ]
+  },
+  "inboxes/:inbox_id/whatsapp_templates/:id/usage": {
+    "controller": "api/v1/accounts/inboxes/whatsapp_templates#usage",
+    "parametros": []
+  },
   "instagram/testers/configuration": {
     "controller": "api/v1/accounts/instagram/testers#configuration",
     "parametros": []
