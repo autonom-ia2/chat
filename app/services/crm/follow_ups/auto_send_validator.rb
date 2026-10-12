@@ -43,10 +43,29 @@ class Crm::FollowUps::AutoSendValidator
     # MessageSender), so the template is unknowable at create time. Skip the
     # create-time fallback gate for them; the message_body placeholder still guards.
     return if ai_driven?
-    return unless Crm::FollowUps::MessagingWindow.new(conversation, at: @follow_up.due_at).requires_template?
-    return if template_fallback_configured?(conversation)
+    # Já enviado: o MessageSender grava sent_message_id com um update! no próprio follow_up (ainda pending
+    # nesse instante), que passa por aqui de novo. Se o Híbrido cair bem nesse intervalo, essa revalidação não
+    # pode transformar um envio que já aconteceu em erro (corrida real, achado da revisão em #1349).
+    return if metadata['sent_message_id'].present?
+    # Fechar o follow-up (enviado, atrasado, cancelado) não reabre a pergunta do modelo: se o Híbrido caiu entre o
+    # agendamento e o envio, a falha precisa ser gravada em vez de a validação derrubar o update e travar a fila.
+    return if @follow_up.status_changed? && !@follow_up.pending?
+    return if team_template_fallback_satisfied?(conversation)
 
-    @follow_up.errors.add(:metadata, 'template fallback is required outside the messaging window')
+    # Tipo estável (não só a mensagem) para o controller devolver um código que a tela possa checar sem
+    # comparar texto (achado da revisão em #1349: comparar a mensagem do Rails por substring é frágil).
+    @follow_up.errors.add(:metadata, :template_fallback_required,
+                          message: 'template fallback is required outside the messaging window')
+  end
+
+  def team_template_fallback_satisfied?(conversation)
+    window = Crm::FollowUps::MessagingWindow.new(conversation, at: @follow_up.due_at)
+    return true unless window.requires_template?
+    return true if template_fallback_configured?(conversation)
+
+    # Sem modelo, o texto escrito pela equipe sai pelo WhatsApp API do Híbrido (chat#1349). Nada no metadata do
+    # cliente decide isso: o MessageSender refaz a pergunta no envio, com o Híbrido do momento.
+    window.hybrid_web_available?
   end
 
   def template_fallback_configured?(conversation)
@@ -65,7 +84,7 @@ class Crm::FollowUps::AutoSendValidator
   end
 
   def native_template_configured?
-    metadata['template_name'].to_s.strip.present? && metadata['template_language'].to_s.strip.present?
+    Crm::FollowUps::MetadataSanitizer.native_template_configured?(metadata)
   end
 
   def ai_followup?

@@ -14,6 +14,21 @@ class Crm::FollowUps::MetadataSanitizer
     touch
   ].freeze
 
+  # Escritas só pelo servidor (runners de IA): o cliente nunca as define (chat#1349).
+  SERVER_OWNED_KEYS = %w[delivery_transport hybrid_free_form_reason].freeze
+
+  def self.without_server_keys(metadata)
+    metadata.to_h.stringify_keys.except(*SERVER_OWNED_KEYS)
+  end
+
+  # Única fonte do que conta como "modelo nativo configurado": nome E idioma, os dois presentes. Usado pelo
+  # AutoSendValidator (criação) e pelo MessageSender (envio) — nome sem idioma nunca conta como configurado
+  # nos dois lados, senão um aceita e o outro recusa de forma enganosa (achado da revisão em #1349).
+  def self.native_template_configured?(metadata)
+    metadata = metadata.to_h.stringify_keys
+    metadata['template_name'].to_s.strip.present? && metadata['template_language'].to_s.strip.present?
+  end
+
   def initialize(metadata:, automation_mode:)
     @metadata = (metadata || {}).to_h.stringify_keys
     @automation_mode = automation_mode

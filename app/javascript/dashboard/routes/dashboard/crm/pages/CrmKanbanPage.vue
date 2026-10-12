@@ -1391,6 +1391,13 @@ const syncCalendarIfActive = async () => {
   if (viewMode.value === 'calendar') await loadCurrentCalendar();
 };
 
+// A mensagem crua do Rails (em inglês) nunca deve aparecer; quando o 422 é essa validação
+// específica, o card já sabe explicar — e a janela pode ter mudado entre o preenchimento e o
+// envio, então o aviso do drawer (verde/vermelho) precisa recarregar antes do operador tentar de novo.
+// Código estável (não o texto da mensagem, que é do Rails e pode mudar) — ver follow_ups_controller.rb.
+const isTemplateFallbackError = error =>
+  error?.response?.data?.code === 'template_fallback_required';
+
 const createFollowUp = async payload => {
   try {
     await store.dispatch('crmKanban/createFollowUp', payload);
@@ -1401,6 +1408,11 @@ const createFollowUp = async payload => {
     useAlert(t('CRM_KANBAN.ALERTS.FOLLOW_UP_CREATED'));
     await syncCalendarIfActive();
   } catch (error) {
+    if (isTemplateFallbackError(error)) {
+      await cardDrawerRef.value?.refreshMessagingWindow?.();
+      useAlert(t('CRM_KANBAN.ALERTS.FOLLOW_UP_TEMPLATE_REQUIRED'));
+      return;
+    }
     const apiMessage = error?.response?.data?.message;
     useAlert(apiMessage || t('CRM_KANBAN.ALERTS.FOLLOW_UP_SAVE_ERROR'));
   }

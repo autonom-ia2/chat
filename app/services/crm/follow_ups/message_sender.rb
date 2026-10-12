@@ -70,9 +70,28 @@ class Crm::FollowUps::MessageSender
     create_template_message(conversation, sender)
   end
 
-  # Só os runners de IA gravam o transporte; follow-up manual com metadata arbitrária pela API nunca vira WhatsApp API.
+  # Texto livre pelo WhatsApp API do Híbrido, por duas vias que nunca leem valor do cliente:
+  # - IA: os runners gravam o transporte no metadata; só a origem de IA o honra, então metadata arbitrária de um
+  #   follow-up manual pela API não vira WhatsApp API.
+  # - Equipe (manual ou etapa do funil): sem modelo, fora das 24h, em caixa com Híbrido. Deriva do estado de agora,
+  #   não de uma marca gravada, e vale também para o follow-up criado dentro da janela que venceu fora dela.
   def whatsapp_api_requested?
+    return @whatsapp_api_requested if defined?(@whatsapp_api_requested)
+
+    @whatsapp_api_requested = ai_whatsapp_api_requested? || team_whatsapp_api_requested?
+  end
+
+  def ai_whatsapp_api_requested?
     AI_SOURCES.include?(metadata['source']) && metadata[TRANSPORT_KEY] == WHATSAPP_API_TRANSPORT
+  end
+
+  def team_whatsapp_api_requested?
+    return false if AI_SOURCES.include?(metadata['source'])
+    # Mesma regra do AutoSendValidator (nome E idioma): nome sozinho não conta como modelo configurado, senão
+    # os dois lados divergem e o sender tenta o caminho de template com idioma vazio (achado da revisão).
+    return false if Crm::FollowUps::MetadataSanitizer.native_template_configured?(metadata)
+
+    whatsapp_window.hybrid_configured? && !whatsapp_window.can_send_session_message?
   end
 
   def whatsapp_api_available?
