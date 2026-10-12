@@ -117,7 +117,12 @@ module Autonomia
       end
 
       # -> Autonomia::Agents::AnswerResult
+      # O estado da agenda é lido uma vez no turno (gate das ferramentas e instrução, #1307).
       def answer
+        ::Autonomia::Agents::Tools::Native::Agenda.no_turno { answer_no_turno }
+      end
+
+      def answer_no_turno
         @conferencia_da_fala = conferencia_da_fala
         snippets = retrieve_snippets
         parsed = generate(snippets)
