@@ -84,6 +84,8 @@ module Crm
         # owner_id may be nil to unassign; an unchanged owner is a no-op.
         return if card.owner_id == owner_id&.to_i
 
+        # Acesso por funil (#1148, decisão a): só vira dono quem tem o funil do card.
+        card_guard.ensure_owner_allowed!(owner_id, inbox_id: card.inbox_id, pipeline_id: card.pipeline_id)
         card.update!(owner_id: owner_id, last_activity_at: Time.current)
         Crm::ActivityLogger.new(
           card: card, actor: @user, event_type: 'update', payload: { owner_id: card.owner_id }
