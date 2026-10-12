@@ -126,7 +126,11 @@ const retomar = async campanha => {
                 : $t('MODELOS_WHATSAPP.PARADAS.CORRIJA_PRIMEIRO')
             }}
             <router-link
-              v-if="campanha.modeloId && campanha.motivo !== 'nao_conferido'"
+              v-if="
+                !noModelo &&
+                campanha.modeloId &&
+                campanha.motivo !== 'nao_conferido'
+              "
               :to="{
                 name: 'modelos_whatsapp_modelo',
                 params: { id: campanha.modeloId },
