@@ -8,7 +8,11 @@ import AgenteGaveta from '../AgenteGaveta.vue';
 import AgenteBotao from '../AgenteBotao.vue';
 import AgenteErro from '../AgenteErro.vue';
 import DialogoAcao from './DialogoAcao.vue';
-import { chaveDoMotivo, idiomaDoNavegador } from '../../utils/pagina';
+import {
+  chaveDoMotivo,
+  idiomaDoNavegador,
+  origemDaVolta,
+} from '../../utils/pagina';
 
 // #1181 PR3 (protótipo T13, DECISOES.md item 6) — "Jeitos anteriores de responder": só o que a API
 // tem — data, hora e uma frase pelo motivo (atualizado pelo que sabe, escrito por você, voltou a um
@@ -56,7 +60,15 @@ const horaDe = versao =>
     hour: '2-digit',
     minute: '2-digit',
   });
+const quandoDe = versao => `${dataDe(versao)}, ${horaDe(versao)}`;
+
+// #1369 — o jeito criado pelo "Voltar" diz a qual jeito voltou quando só um jeito anterior tem o
+// mesmo texto (instruction_hash); com nenhum ou com vários, a frase genérica.
 const motivoDe = versao => {
+  const origem = origemDaVolta(versao, versoes.value);
+  if (origem) {
+    return t(`${NS}.MOTIVO.ROLLBACK_DE`, { quando: quandoDe(origem) });
+  }
   const chave = chaveDoMotivo(versao.reason);
   return chave ? t(`${NS}.MOTIVO.${chave}`) : '';
 };
@@ -114,7 +126,7 @@ const voltar = async () => {
       >
         <span :id="`versao-${versao.id}`" class="flex flex-col gap-0.5 grow">
           <span class="text-sm font-semibold tabular-nums text-n-slate-12">
-            {{ `${dataDe(versao)}, ${horaDe(versao)}` }}
+            {{ quandoDe(versao) }}
           </span>
           <span v-if="motivoDe(versao)" class="text-sm text-n-slate-11">
             {{ motivoDe(versao) }}

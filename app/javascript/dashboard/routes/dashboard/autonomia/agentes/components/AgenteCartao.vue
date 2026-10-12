@@ -20,6 +20,8 @@ const props = defineProps({
   // Foto já resolvida pela lista (a do canal no agente externo, utils/fotoDoCanal); sem ela, a própria.
   foto: { type: String, default: '' },
   podeGerenciar: { type: Boolean, default: false },
+  // #1369 — "Continuar" já clicado, esperando o Construtor abrir.
+  continuando: { type: Boolean, default: false },
   // Endereço da página do agente (ou do módulo de cotação): abrir em outra aba continua funcionando.
   href: { type: String, required: true },
 });
@@ -115,6 +117,7 @@ const itensDoMenu = computed(() => [
         class="mt-auto"
         icone-direita="i-lucide-arrow-right"
         :aria-label="t('AGENTS.JORNADA.CARTAO.CONTINUAR_ARIA', { nome })"
+        :carregando="continuando"
         @click="emit('continuar', agente)"
       >
         {{ t('AGENTS.JORNADA.CARTAO.CONTINUAR') }}

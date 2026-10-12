@@ -217,11 +217,13 @@ describe('BookingSettingsPage', () => {
       expect(wrapper.find('[data-page]').exists()).toBe(true);
     });
 
-    it('com voltar válido, sair do assistente leva para ele', async () => {
+    it('com voltar válido, sair do assistente diz só Voltar e leva para ele', async () => {
       route.query = { nova: '1', voltar: AGENT };
       const wrapper = mount(BookingSettingsPage);
       await flushPromises();
-      await wrapper.find('[data-back]').trigger('click');
+      const back = wrapper.find('[data-back]');
+      expect(back.text()).toBe('BOOKING.WIZARD.BACK');
+      await back.trigger('click');
       expect(router.push).toHaveBeenCalledWith(AGENT);
       expect(router.replace).not.toHaveBeenCalled();
     });
@@ -246,7 +248,9 @@ describe('BookingSettingsPage', () => {
         route.query = { nova: '1', voltar, aba: 'x' };
         const wrapper = mount(BookingSettingsPage);
         await flushPromises();
-        await wrapper.find('[data-back]').trigger('click');
+        const back = wrapper.find('[data-back]');
+        expect(back.text()).toBe('BOOKING.WIZARD.BACK_TO_LIST');
+        await back.trigger('click');
         expect(router.push).not.toHaveBeenCalled();
         expect(router.replace).toHaveBeenCalledWith({ query: { aba: 'x' } });
         expect(wrapper.find('[data-wizard]').exists()).toBe(false);
@@ -266,7 +270,9 @@ describe('BookingSettingsPage', () => {
       const wrapper = mount(BookingSettingsPage);
       await flushPromises();
       await wrapper.find('[data-create]').trigger('click');
-      await wrapper.find('[data-back]').trigger('click');
+      const back = wrapper.find('[data-back]');
+      expect(back.text()).toBe('BOOKING.WIZARD.BACK_TO_LIST');
+      await back.trigger('click');
       expect(router.replace).not.toHaveBeenCalled();
       expect(router.push).not.toHaveBeenCalled();
       expect(wrapper.find('[data-page]').exists()).toBe(true);

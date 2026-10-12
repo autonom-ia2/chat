@@ -51,6 +51,20 @@ describe('cópia da página do agente em pt_BR', () => {
     expect(passadas.text()).toContain('Quando não soube responder.');
   });
 
+  it('uses the singular for one conversation (#1369)', () => {
+    const wrapper = mount(AgenteSemana, {
+      props: { nome: 'Bia', numeros: { respondidas: 1, passadas: 1 } },
+    });
+    const [respondidas, passadas] = wrapper.findAll('[data-numero]');
+    expect(respondidas.text()).toContain('conversa respondida');
+    expect(respondidas.text()).not.toContain('conversas');
+    expect(respondidas.text()).toContain(
+      'Esta semana, Bia respondeu 1 conversa e passou 1 para a equipe.'
+    );
+    expect(passadas.text()).toContain('passada para a equipe');
+    expect(passadas.text()).not.toContain('passadas');
+  });
+
   it('writes the blocks with the Assignment sentence', () => {
     const wrapper = mount(PaginaBlocos, {
       props: {
@@ -65,7 +79,10 @@ describe('cópia da página do agente em pt_BR', () => {
     });
     const texto = wrapper.text();
     expect(texto).toContain('Pergunte como se fosse seu cliente.');
-    expect(texto).toContain('Bia sabe o que você contou na conversa.');
+    // #1369 — com arquivos e sites, a frase não diz que sabe só a conversa.
+    expect(texto).toContain(
+      'Bia sabe o que você contou na conversa e o que está nos arquivos e sites.'
+    );
     expect(texto).toContain('2 arquivos e sites');
     expect(texto).toContain('Há 1 pergunta de cliente para conferir.');
     expect(texto).toContain('No WhatsApp do Centro, sempre.');
@@ -79,6 +96,34 @@ describe('cópia da página do agente em pt_BR', () => {
     expect(texto).toContain(
       'Para mudar quando Bia passa, use Mudar conversando.'
     );
+  });
+
+  it('keeps the knowledge sentence in step with the files count (#1369)', () => {
+    const montarBlocos = (quantasFontes, agente = AGENTE) =>
+      mount(PaginaBlocos, {
+        props: {
+          agente,
+          nome: 'Bia',
+          temCanal: true,
+          textoOnde: '',
+          quantasFontes,
+        },
+      }).text();
+
+    const semFontes = montarBlocos(0);
+    expect(semFontes).toContain('Bia sabe o que você contou na conversa.');
+    expect(semFontes).toContain('Só o que você contou na conversa');
+
+    const umaFonte = montarBlocos(1);
+    expect(umaFonte).toContain(
+      'Bia sabe o que você contou na conversa e o que está no arquivo ou site.'
+    );
+    expect(umaFonte).toContain('1 arquivo ou site');
+
+    // O resumo da IA, quando já existe, continua valendo.
+    expect(
+      montarBlocos(1, { ...AGENTE, knowledge_summary: 'Sabe os preços.' })
+    ).toContain('Sabe os preços.');
   });
 
   it('writes the hero with the state words', () => {

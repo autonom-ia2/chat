@@ -28,22 +28,28 @@ const vazia = computed(
 
 const cartoes = computed(() => {
   if (!props.numeros) return [];
-  const { respondidas, passadas } = props.numeros;
+  const respondidas = Number(props.numeros.respondidas || 0);
+  const passadas = Number(props.numeros.passadas || 0);
+  // #1369 — plural pelo i18n ("respondeu 1 conversa", "1 conversa respondida").
   return [
     {
       aba: 'respondidas',
       numero: formatar(respondidas),
-      rotulo: t(`${NS}.RESPONDIDAS`),
-      nota: t(`${NS}.NOTA_RESPONDIDAS`, {
-        nome: props.nome,
-        n: formatar(respondidas),
-        m: formatar(passadas),
-      }),
+      rotulo: t(`${NS}.RESPONDIDAS`, respondidas),
+      nota: t(
+        `${NS}.NOTA_RESPONDIDAS`,
+        {
+          nome: props.nome,
+          n: formatar(respondidas),
+          m: formatar(passadas),
+        },
+        respondidas
+      ),
     },
     {
       aba: 'passadas',
       numero: formatar(passadas),
-      rotulo: t(`${NS}.PASSADAS`),
+      rotulo: t(`${NS}.PASSADAS`, passadas),
       nota: t(`${NS}.NOTA_PASSADAS`),
     },
   ];

@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
@@ -29,6 +29,11 @@ import AgenteConfirmacao from '../components/AgenteConfirmacao.vue';
 // Cotação → Falta terminar. Números da semana (L1) e nomes dos canais (L2) chegam em paralelo e,
 // se falharem, o cartão só perde a linha correspondente. Quem só vê não tem ação de escrita.
 // "Usar este" e "Do meu jeito" vão ao Construtor com ?modelo=; "Continuar" leva ?agente= (PR2).
+// #1369 — os cartões só aparecem quando a L1 e a L2 já responderam (ou falharam). Antes, eles
+// surgiam com a lista e cresciam depois: a linha da semana e o nome do canal chegavam e empurravam
+// para baixo os cartões seguintes — o rascunho fica por último —, e o primeiro clique em
+// "Continuar" ou no "⋯" caía onde o botão estava um instante antes. A espera tem teto (2,5 s):
+// se uma das leituras travar, os cartões aparecem assim mesmo e se completam quando ela chegar.
 const { t } = useI18n();
 const store = useStore();
 const router = useRouter();
@@ -48,14 +53,33 @@ const gaveta = ref(null);
 const confirmacao = ref(null);
 const pendenteExcluir = ref(null);
 const excluindo = ref(false);
+const continuando = ref(null);
+const esperaVencida = ref(false);
 
 const ESPERA_ANTES_DE_REPETIR_MS = 1500;
 const ESQUELETOS = 3;
+const ESPERA_MAXIMA_DAS_LEITURAS_MS = 2500;
+const ESPERA_MAXIMA_DO_CONSTRUTOR_MS = 8000;
+let relogioDasLeituras = null;
+let relogioDoConstrutor = null;
+let tentativaDeContinuar = 0;
 
 const lista = computed(() => ordenarAgentes(agentes.value));
 const contagem = computed(() => contarEstados(agentes.value));
 const vazia = computed(
   () => !carregando.value && !falhou.value && !agentes.value.length
+);
+const leiturasDosCartoes = computed(
+  () =>
+    esperaVencida.value ||
+    (semana.estado.value !== 'carregando' &&
+      ocupacao.estado.value !== 'carregando')
+);
+// Esqueleto até a lista chegar e, com agentes, até os cartões terem tudo o que mostram.
+const esperando = computed(
+  () =>
+    carregando.value ||
+    (!falhou.value && !vazia.value && !leiturasDosCartoes.value)
 );
 const semCanal = computed(() => !(caixas.value || []).length);
 
@@ -122,11 +146,33 @@ const abrirAgente = agente =>
 
 const abrirCotacao = () => router.push({ name: 'autonomia_insurance_agent' });
 
-const continuar = agente =>
-  router.push({
-    name: 'autonomia_agents_builder',
-    query: { agente: agente.id },
-  });
+// O Construtor é carregado à parte: enquanto ele chega, o botão mostra que está indo (um clique só).
+// Se a navegação não termina em 8 s, o botão volta a responder (e um clique novo não é desfeito
+// pelo fim atrasado do anterior).
+const soltarContinuar = () => {
+  clearTimeout(relogioDoConstrutor);
+  relogioDoConstrutor = null;
+  continuando.value = null;
+};
+
+const continuar = async agente => {
+  if (continuando.value) return;
+  tentativaDeContinuar += 1;
+  const minha = tentativaDeContinuar;
+  continuando.value = agente.id;
+  relogioDoConstrutor = setTimeout(
+    soltarContinuar,
+    ESPERA_MAXIMA_DO_CONSTRUTOR_MS
+  );
+  try {
+    await router.push({
+      name: 'autonomia_agents_builder',
+      query: { agente: agente.id },
+    });
+  } finally {
+    if (minha === tentativaDeContinuar) soltarContinuar();
+  }
+};
 
 const enderecoDe = agente =>
   router.resolve(
@@ -168,7 +214,16 @@ const excluir = async () => {
   }
 };
 
-onMounted(() => carregar());
+onMounted(() => {
+  carregar();
+  relogioDasLeituras = setTimeout(() => {
+    esperaVencida.value = true;
+  }, ESPERA_MAXIMA_DAS_LEITURAS_MS);
+});
+onBeforeUnmount(() => {
+  clearTimeout(relogioDasLeituras);
+  clearTimeout(relogioDoConstrutor);
+});
 </script>
 
 <template>
@@ -246,7 +301,7 @@ onMounted(() => carregar());
         >
           <template #detalhe>
             <p
-              v-if="!carregando && !falhou"
+              v-if="!esperando && !falhou"
               data-contagem
               class="m-0 text-sm tabular-nums text-white/80"
             >
@@ -270,7 +325,7 @@ onMounted(() => carregar());
           </template>
         </AgentesHeroi>
 
-        <template v-if="carregando">
+        <template v-if="esperando">
           <p role="status" class="sr-only">
             {{ t('AGENTS.JORNADA.LISTA.CARREGANDO') }}
           </p>
@@ -323,6 +378,7 @@ onMounted(() => carregar());
               :canais="canaisDe(agente)"
               :foto="fotoDe(agente)"
               :pode-gerenciar="podeGerenciar"
+              :continuando="continuando === agente.id"
               @abrir="abrirAgente"
               @abrir-cotacao="abrirCotacao"
               @continuar="continuar"

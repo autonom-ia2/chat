@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { useCanManage } from 'dashboard/composables/useCanManage';
@@ -42,13 +42,12 @@ const showList = () => {
 // desta conta (bookingReturnPath.js); senão a lista, sem `nova`/`voltar` no
 // endereço (um F5 não reabre o assistente). Vale também para o "Concluir" com
 // a página já no ar, de propósito: quem veio do agente volta para ele.
+const returnTo = computed(() =>
+  internalReturnPath(route.query?.voltar, route.params?.accountId)
+);
 const closeWizard = () => {
-  const returnTo = internalReturnPath(
-    route.query?.voltar,
-    route.params?.accountId
-  );
-  if (returnTo) {
-    router.push(returnTo);
+  if (returnTo.value) {
+    router.push(returnTo.value);
     return;
   }
   showList();
@@ -90,6 +89,7 @@ const view = page => {
       v-if="screen.mode === 'wizard' && canManage"
       :page-id="screen.pageId"
       :initial-step="screen.step"
+      :returns-elsewhere="Boolean(returnTo)"
       @close="closeWizard"
     />
     <BookingPageView

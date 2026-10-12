@@ -19,6 +19,9 @@ const props = defineProps({
   pageId: { type: Number, default: null },
   // Abre a página existente direto num passo (o "Publicar" do cartão usa a prévia).
   initialStep: { type: Number, default: null },
+  // Veio de outra tela com `?voltar=` válido (#1370): sair leva de volta para
+  // ela (ex.: o agente), então o botão diz só "Voltar", não "para a lista".
+  returnsElsewhere: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['close']);
@@ -88,7 +91,7 @@ const continueStep = async () => {
 };
 
 // Uma ação principal por tela: Continuar, Ver como fica, Publicar ou, com a
-// página no ar, Voltar para a lista.
+// página no ar, Voltar para a lista (só Voltar quando volta para outra tela).
 const primary = computed(() => {
   if (step.value === STEP.PREVIA) {
     return page.value?.enabled
@@ -100,6 +103,17 @@ const primary = computed(() => {
     action: continueStep,
   };
 });
+
+const leaveLabel = computed(() =>
+  props.returnsElsewhere
+    ? t('BOOKING.WIZARD.BACK')
+    : t('BOOKING.WIZARD.BACK_TO_LIST')
+);
+const primaryLabel = computed(() =>
+  primary.value.key === 'DONE' && props.returnsElsewhere
+    ? t('BOOKING.WIZARD.BACK')
+    : t(`BOOKING.WIZARD.${primary.value.key}`)
+);
 
 const blockedByMissing = computed(
   () => primary.value.key === 'PUBLISH' && missing.value.length > 0
@@ -131,7 +145,7 @@ const blockedByMissing = computed(
         class="self-start min-h-11 px-5 text-base font-medium rounded-xl ring-1 ring-inset ring-n-weak text-n-slate-12"
         @click="emit('close')"
       >
-        {{ t('BOOKING.WIZARD.BACK_TO_LIST') }}
+        {{ leaveLabel }}
       </button>
     </div>
 
@@ -238,11 +252,7 @@ const blockedByMissing = computed(
             class="i-lucide-arrow-left size-4 rtl:rotate-180"
             aria-hidden="true"
           />
-          {{
-            step <= STEP.CONTE
-              ? t('BOOKING.WIZARD.BACK_TO_LIST')
-              : t('BOOKING.WIZARD.BACK')
-          }}
+          {{ step <= STEP.CONTE ? leaveLabel : t('BOOKING.WIZARD.BACK') }}
         </button>
         <button
           v-if="step !== STEP.MODELO"
@@ -258,7 +268,7 @@ const blockedByMissing = computed(
             class="i-lucide-loader-circle size-4 animate-spin"
             aria-hidden="true"
           />
-          {{ t(`BOOKING.WIZARD.${primary.key}`) }}
+          {{ primaryLabel }}
         </button>
       </footer>
     </template>
