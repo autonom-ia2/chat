@@ -17,6 +17,7 @@ module Whatsapp::Templates::ChannelList
   # não traz ficam como estavam. Sem ele, a entrada é trocada inteira (item completo da Meta, como o do `Manager`).
   def upsert!(channel, item, merge: false, only_existing: false)
     write!(channel) do |list|
+      warn_id_clash(channel, list, item)
       index = list.index { |entry| same?(entry, item) }
       next(only_existing ? list : list + [item]) unless index
 
@@ -39,12 +40,25 @@ module Whatsapp::Templates::ChannelList
     end
   end
 
-  # A Meta não deixa dois modelos com o mesmo nome e idioma: mesmo id OU mesmo nome + idioma é o mesmo modelo (um modelo
-  # apagado e criado de novo ganha outro id e substitui a entrada antiga).
+  # A chave que a Meta garante única na WABA é nome + idioma (idioma sem diferenciar maiúscula, como o
+  # `Catalog.listed`): com nome dos dois lados, só ela decide. Assim um modelo apagado e criado de novo (outro id) troca
+  # a entrada antiga, e um id repetido com outro nome (#1383: o stub da Graph devolvia o mesmo id para dois avisos)
+  # nunca apaga outro modelo. Id só casa quando um dos lados vem sem nome e os dois têm id.
   def same?(entry, item)
     return false unless entry.is_a?(Hash) && item.is_a?(Hash)
-    return true if entry['id'].present? && entry['id'].to_s == item['id'].to_s
+    return same_key?(entry, item) if entry['name'].present? && item['name'].present?
 
+    entry['id'].present? && entry['id'].to_s == item['id'].to_s
+  end
+
+  # Id repetido com outro nome: não deveria acontecer na Meta; fica no log e o item entra como outro modelo.
+  def warn_id_clash(channel, list, item)
+    return unless item['id'].present? && list.any? { |entry| entry['id'].to_s == item['id'].to_s && !same?(entry, item) }
+
+    Rails.logger.warn "[whatsapp][templates] channel_list_id_clash channel_id=#{channel.id} meta_id=#{item['id']}"
+  end
+
+  def same_key?(entry, item)
     entry['name'] == item['name'] && entry['language'].to_s.casecmp?(item['language'].to_s)
   end
 

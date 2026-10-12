@@ -41,6 +41,31 @@ RSpec.describe Whatsapp::Templates::ChannelList do
       expect(channel.reload.message_templates).to eq([recreated, promo])
     end
 
+    # #1383 (CI do agendamento): o stub da Graph devolvia o mesmo id para dois avisos criados em sequência e o segundo
+    # apagava o primeiro. Nome + idioma é a chave única da Meta; id repetido com outro nome não sobrescreve.
+    it 'mesmo id com outro nome: entra como outro modelo, não apaga o primeiro, e avisa no log' do
+      allow(Rails.logger).to receive(:warn)
+      booked = { 'id' => '1', 'name' => 'aviso_marcado', 'language' => 'pt_BR', 'status' => 'PENDING' }
+      hour_before = { 'id' => '1', 'name' => 'aviso_uma_hora', 'language' => 'pt_BR', 'status' => 'PENDING' }
+      channel.update_columns(message_templates: []) # rubocop:disable Rails/SkipsModelValidations
+
+      described_class.upsert!(channel, booked)
+      described_class.upsert!(channel, hour_before)
+
+      expect(channel.reload.message_templates).to eq([booked, hour_before])
+      expect(Rails.logger).to have_received(:warn).with(a_string_including('channel_list_id_clash'))
+    end
+
+    it 'sem id dos dois lados e nomes diferentes: são modelos diferentes (nil não casa com nil)' do
+      booked = { 'name' => 'aviso_marcado', 'language' => 'pt_BR', 'status' => 'PENDING' }
+      hour_before = { 'name' => 'aviso_uma_hora', 'language' => 'pt_BR', 'status' => 'PENDING' }
+      channel.update_columns(message_templates: [booked]) # rubocop:disable Rails/SkipsModelValidations
+
+      described_class.upsert!(channel, hour_before)
+
+      expect(channel.reload.message_templates).to eq([booked, hour_before])
+    end
+
     it 'only_existing: não acrescenta modelo que não está na lista' do
       described_class.upsert!(channel, { 'name' => 'novo', 'language' => 'en' }, merge: true, only_existing: true)
 
