@@ -6,6 +6,20 @@ nada em produção.
 Fonte dos termos: `docs/agendamento-whatsapp-first/src/PRD.src.html` (seção "Termos de aceite globais", linhas
 241-262), com o mapa termo → PR de `docs/agendamento-whatsapp-first/PLANO-TECNICO.md` §5 (linhas 110-122).
 
+## Decisões do Rodrigo (12/10/2026, depois da auditoria)
+
+Respostas dadas no chat do Agendamento, em escolha entre opções:
+
+- **RA-13** (teste com 5 pessoas leigas): "Dispensar o termo". Sai do fechamento do épico.
+- **RA-14** (letra mínima de 16 px): "Só na página pública". O painel segue o padrão do sistema (14 px). Continua
+  valendo para o fechamento: AA, alvo de 44 px, zoom de 200% e leitor de tela.
+- **RA-07 e RA-18** (revisão dos textos) e **RA-15** (prints em aparelho real): "Dispensar". Os textos ficam como estão
+  e os prints em aparelho real não são exigidos. A parte de código do RA-18 (aviso antes de confirmar, "Parar avisos",
+  só nome e WhatsApp) segue conferida na tabela.
+
+Ficam para fechar o épico: RA-17 e RA-21 (código e spec, issue própria), RA-12 (rollback escrito), RA-06, RA-11,
+RA-14 e RA-20 (conferência no navegador, com prints) e RA-16 (tempo de carga medido).
+
 ## Como ler
 
 - **CUMPRIDO**: código e spec existem **e** a prova que o PRD pede para o termo está registrada.
