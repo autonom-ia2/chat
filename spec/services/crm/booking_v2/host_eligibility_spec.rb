@@ -47,4 +47,23 @@ RSpec.describe Crm::BookingV2::HostEligibility do
       expect(described_class.eligible?(account: account, user: user)).to be(false), "#{label} não deveria bastar"
     end
   end
+
+  # #1305: a mesma regra numa consulta, para a lista de páginas não perguntar pessoa por pessoa.
+  it 'eligible_user_ids dá o mesmo resultado de eligible? para cada pessoa da conta' do
+    agent = create(:user, account: account, role: :agent)
+    admin = create(:user, account: account, role: :administrator)
+    sem_cards = create(:user, account: account, role: :agent)
+    com_cards = create(:user, account: account, role: :agent)
+    grant(sem_cards, 'agendamento_manage')
+    grant(com_cards, 'crm_view')
+    create(:user, account: create(:account), role: :agent)
+    create(:account_user, account: account, user: create(:user), integration: true)
+
+    ids =described_class.eligible_user_ids(account: account)
+
+    expect(ids).to eq(Set[agent.id, admin.id, com_cards.id])
+    [agent, admin, sem_cards, com_cards].each do |user|
+      expect(ids.include?(user.id)).to eq(described_class.eligible?(account: account, user: user))
+    end
+  end
 end
