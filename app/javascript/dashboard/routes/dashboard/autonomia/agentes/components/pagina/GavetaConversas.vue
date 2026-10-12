@@ -76,7 +76,7 @@ const abas = computed(() => [
 </script>
 
 <template>
-  <AgenteGaveta larga :titulo="t(`${NS}.TITULO`)" @fechar="emit('fechar')">
+  <AgenteGaveta :titulo="t(`${NS}.TITULO`)" @fechar="emit('fechar')">
     <div
       role="group"
       :aria-label="t(`${NS}.MOSTRAR`)"
