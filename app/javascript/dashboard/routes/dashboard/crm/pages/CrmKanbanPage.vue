@@ -113,6 +113,7 @@ const {
   canManagePipelines,
   canManageAi,
   canExportCrm,
+  canAdminCrm,
 } = useCrmPermissions();
 
 const CRM_CALENDAR_MEETINGS_FEATURE = 'CRM_CALENDAR_MEETINGS_ENABLED';
@@ -1006,9 +1007,20 @@ const loadInboxSettings = async () => {
 
 // Caixas no CRM (#1149): com a flag da conta, leva à tela nova; sem ela, a
 // gaveta antiga, como sempre.
+const isCaixasNoCrm = computed(
+  () =>
+    getAccount.value(currentAccountId.value)?.features?.[
+      FEATURE_FLAGS.CRM_CONFIGURAR_CAIXAS
+    ] === true
+);
+// A tela nova decide quem vê o quê: só administrador ou crm_admin (a gaveta
+// antiga continua com quem gerencia funis).
+const canOpenInboxSettings = computed(() =>
+  isCaixasNoCrm.value ? canAdminCrm.value : canManagePipelines.value
+);
+
 const openInboxSettingsDrawer = async () => {
-  const account = getAccount.value(currentAccountId.value);
-  if (account?.features?.[FEATURE_FLAGS.CRM_CONFIGURAR_CAIXAS] === true) {
+  if (isCaixasNoCrm.value) {
     router.push({
       name: 'crm_caixas',
       params: { accountId: currentAccountId.value },
@@ -2112,7 +2124,11 @@ onUnmounted(() => {
           @click="openBooking"
         />
         <Popover
-          v-if="canManagePipelines || (!isCalendarOnly && canManageAi)"
+          v-if="
+            canManagePipelines ||
+            canOpenInboxSettings ||
+            (!isCalendarOnly && canManageAi)
+          "
           ref="configurationPopover"
           align="end"
           class="order-1"
@@ -2163,7 +2179,7 @@ onUnmounted(() => {
                 @click="runConfigurationAction(openHandoffSettings)"
               />
               <Button
-                v-if="canManagePipelines"
+                v-if="canOpenInboxSettings"
                 :label="t('CRM_KANBAN.ACTIONS.INBOX_SETTINGS')"
                 icon="i-lucide-inbox"
                 slate

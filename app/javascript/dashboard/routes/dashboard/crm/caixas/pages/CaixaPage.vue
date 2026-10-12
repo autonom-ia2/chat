@@ -108,6 +108,12 @@ const exemplo = computed(() => {
   };
 });
 
+const funisSemIa = computed(() =>
+  funisMarcados.value
+    .filter(funil => !funil.ai_enabled)
+    .map(funil => funil.name)
+);
+
 const bloqueio = computed(() => {
   if (etapa.value === 2 && semTriagem.value) {
     return t('CRM_CAIXAS.PESSOAS.FALTA_TRIAGEM_CURTO');
@@ -147,7 +153,9 @@ const salvar = async () => {
     await CrmCaixasAPI.salvar(route.params.inboxId, paraSalvar(form.value));
     useAlert(t('CRM_CAIXAS.EDITOR.SALVOU'));
     voltarParaLista({ salva: route.params.inboxId });
-  } catch {
+  } catch (error) {
+    // R7 conferida também no servidor: volta para a etapa que resolve.
+    if (error?.response?.data?.error?.code === 'crm.caixas.sem_triagem') ir(2);
     useAlert(t('CRM_CAIXAS.EDITOR.FALHOU'));
   } finally {
     salvando.value = false;
@@ -241,6 +249,7 @@ const salvar = async () => {
             v-else-if="etapa === 3"
             v-model:modo="form.modo"
             :um-funil="umFunil"
+            :funis-sem-ia="funisSemIa"
             v-bind="exemplo"
           />
           <EtapaConfira

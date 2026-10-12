@@ -8,10 +8,15 @@ const props = defineProps({
 });
 
 const ICONES = {
-  whatsapp: 'i-ri-whatsapp-line',
-  instagram: 'i-ri-instagram-line',
-  email: 'i-lucide-mail',
-  web_widget: 'i-lucide-globe',
+  'Channel::Whatsapp': 'i-ri-whatsapp-line',
+  'Channel::Instagram': 'i-ri-instagram-line',
+  'Channel::FacebookPage': 'i-ri-messenger-line',
+  'Channel::Email': 'i-lucide-mail',
+  'Channel::WebWidget': 'i-lucide-globe',
+  'Channel::Telegram': 'i-ri-telegram-line',
+  'Channel::Sms': 'i-lucide-message-square',
+  'Channel::TwilioSms': 'i-lucide-message-square',
+  'Channel::Api': 'i-lucide-plug',
 };
 
 const icone = computed(() => ICONES[props.canal] || 'i-lucide-inbox');

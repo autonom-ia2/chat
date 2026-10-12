@@ -37,34 +37,26 @@ export const paraFormulario = caixa => ({
   })),
 });
 
-export const paraSalvar = form => {
-  const { modo, ...resto } = form;
-  const umFunil = form.pipeline_ids.length === 1;
-  return {
-    ...resto,
-    crm_enabled: form.pipeline_ids.length > 0,
-    default_stage_id: umFunil ? form.default_stage_id : null,
-    auto_create_card: umFunil ? modo === 'chegou' : modo === 'auto',
-    subject_ai_mode: umFunil ? 'off' : modo,
-    people: form.people.map(pessoa => {
-      const todos = form.pipeline_ids.every(id =>
-        pessoa.pipeline_ids.includes(id)
-      );
-      const triage = umFunil ? todos : pessoa.triage;
-      return {
-        ...pessoa,
-        triage,
-        all_pipelines: triage && todos,
-        pipeline_ids: pessoa.pipeline_ids.filter(id =>
-          form.pipeline_ids.includes(id)
-        ),
-      };
-    }),
-  };
-};
-
 export const agentes = caixa =>
   caixa.people.filter(pessoa => !pessoa.administrator);
+
+// O que vai para o servidor: ele decide, pela quantidade de funis, se o card
+// nasce na chegada, pela IA de assunto ou à mão, e quem fica sem linha de
+// acesso (quem cuida de tudo). Administrador não vai: vê tudo sempre.
+export const paraSalvar = form => ({
+  pipeline_ids: form.pipeline_ids,
+  default_stage_id:
+    form.pipeline_ids.length === 1 ? form.default_stage_id : null,
+  modo: form.pipeline_ids.length ? form.modo : 'off',
+  people: agentes(form).map(pessoa => ({
+    id: pessoa.id,
+    triage: pessoa.triage,
+    only_own: pessoa.only_own,
+    pipeline_ids: pessoa.pipeline_ids.filter(id =>
+      form.pipeline_ids.includes(id)
+    ),
+  })),
+});
 
 // R7: com mais de um funil, alguém precisa ver as conversas ainda sem assunto.
 export const faltaTriagem = caixa =>

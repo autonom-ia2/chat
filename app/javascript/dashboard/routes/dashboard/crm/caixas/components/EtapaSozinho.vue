@@ -11,6 +11,8 @@ const props = defineProps({
   funil: { type: String, default: '' },
   etapa: { type: String, default: '' },
   pessoa: { type: String, default: '' },
+  // Funis marcados com a IA desligada: a IA de assunto não os reconhece.
+  funisSemIa: { type: Array, default: () => [] },
 });
 
 const modo = defineModel('modo', { type: String, required: true });
@@ -101,6 +103,20 @@ const chave = opcao => opcao.toUpperCase();
           class="mb-0 text-sm text-n-slate-11"
         >
           {{ $t('CRM_CAIXAS.SOZINHO.NAO_ENTENDEU') }}
+        </p>
+        <p
+          v-if="(opcao === 'auto' || opcao === 'suggest') && funisSemIa.length"
+          data-sem-ia
+          role="status"
+          class="mb-0 flex items-start gap-2 rounded-lg bg-n-amber-3 px-3 py-2 text-[0.9375rem] text-n-slate-12"
+        >
+          <span
+            class="i-lucide-triangle-alert mt-0.5 size-4 shrink-0 text-n-amber-11"
+            aria-hidden="true"
+          />
+          {{
+            $t('CRM_CAIXAS.SOZINHO.SEM_IA', { funis: funisSemIa.join(', ') })
+          }}
         </p>
       </div>
     </div>

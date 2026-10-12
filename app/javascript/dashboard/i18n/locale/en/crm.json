@@ -3730,7 +3730,8 @@
       "EXEMPLO": "Example",
       "MENSAGEM": "Hi! How much is it?",
       "NAO_ENTENDEU": "If the subject isn't clear, the conversation stays without a subject and goes to whoever handles those.",
-      "ALGUEM": "someone on the team"
+      "ALGUEM": "someone on the team",
+      "SEM_IA": "AI is off in {funis}. Turn it on in Edit pipeline → Pipeline AI so it can recognize this subject."
     },
     "CONFIRA": {
       "TITULO": "Review before saving",
