@@ -101,6 +101,15 @@ class CrmBookingPagesAPI extends ApiClient {
     });
   }
 
+  // Texto de um aviso escrito com IA (#1354): até 2 opções, nada é salvo.
+  // `tone`: curto, simpatico ou formal.
+  noticeTextSuggestions(id, kind, tone) {
+    return axios.post(`${this.url}/${id}/notice_text_suggestions`, {
+      kind,
+      tone,
+    });
+  }
+
   // Passar reuniões (#1195): `pageId` vazio = todas as páginas. A prévia não grava.
   reassignPreview({ fromUserId, toUserId, pageId }) {
     return axios.get(`${this.url}/reassign_preview`, {

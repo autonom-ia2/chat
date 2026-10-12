@@ -100,7 +100,8 @@ class Crm::BookingV2::PageSerializer
   def notices
     {
       notice_inbox_id: profile.notice_inbox_id, notice_preset: profile.notice_preset, notice_templates: profile.notice_templates,
-      cancel_until_minutes: profile.cancel_until_minutes, post_meeting: profile.post_meeting_settings
+      cancel_until_minutes: profile.cancel_until_minutes, post_meeting: profile.post_meeting_settings,
+      notice_texts: profile.notice_texts, notice_text_setup: Crm::BookingV2::Notices::CustomTextSetup.new(profile).to_h
     }
   end
 

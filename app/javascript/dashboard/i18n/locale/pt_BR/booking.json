@@ -101,7 +101,8 @@
         "IMAGE_PIXELS": "Esta imagem é grande demais. Use uma menor, de até 16 megapixels.",
         "IMAGE_UPLOAD": "Não deu para enviar a imagem. Tente outra.",
         "SHORT_NAME": "Confira o endereço da página.",
-        "IMAGE_REMOVE": "Não deu para tirar a imagem. Tente de novo."
+        "IMAGE_REMOVE": "Não deu para tirar a imagem. Tente de novo.",
+        "NOTICE_TEXTS": "Confira o texto dos avisos: falta o link ou o dia e a hora, ou passou do tamanho."
       },
       "SERVER_ERRORS": {
         "CALENDAR_GONE": "Essa caixa de e-mail da agenda não está mais disponível. Escolha outra ou tire o Google Meet e o Teams.",
@@ -113,7 +114,8 @@
         "NOTICE_INBOX_GONE": "Esse WhatsApp não pode mais mandar avisos. Escolha outro ou deixe sem avisos.",
         "NOTICE_TEMPLATES": "Uma das mensagens escolhidas não serve para os avisos. Escolha outra da lista.",
         "NOTICES": "Confira os avisos e o prazo para mudar.",
-        "SHORT_NAME": "Este endereço não pode ser usado. Escolha outro."
+        "SHORT_NAME": "Este endereço não pode ser usado. Escolha outro.",
+        "NOTICE_TEXTS": "Um dos textos dos avisos não pode ser usado. Confira o texto de cada aviso."
       }
     },
     "TEMPLATE": {
@@ -357,7 +359,6 @@
       },
       "RECOMMENDED": "Recomendado",
       "SAMPLE_LABEL": "Assim chega para o cliente",
-      "SAMPLE_TEXT": "Oi, Ana! Seu horário está marcado para 14/10 às 15:00. Para confirmar, mudar ou cancelar: chat.exemplo.com/b/AB3K9QXZ\nPara parar estes avisos: chat.exemplo.com/b/AB3K9QXZ",
       "TEMPLATES_LABEL": "Mensagens aprovadas pela Meta",
       "TEMPLATES_HINT": "Escolha uma mensagem aprovada para cada aviso. Para aparecer aqui, ela precisa ter o link do horário no lugar de {link}. Ela pode usar {name} para o nome do cliente e {when} para o dia e a hora.",
       "TEMPLATES_EMPTY": "Este WhatsApp ainda não tem mensagem aprovada com o link do horário. Sem ela, o aviso só sai para quem falou com você nas últimas 24 horas. Peça a quem cuida do WhatsApp para criar uma na Meta.",
@@ -417,6 +418,46 @@
           "CONVERSATION_FORBIDDEN": "Este número já conversa com a empresa numa conversa que você não pode abrir. Use outro número.",
           "CANNOT_SEND": "Não deu para mandar por este WhatsApp. Confira se ele está conectado.",
           "FAILED": "Não deu para enviar agora. Tente de novo."
+        }
+      },
+      "TEXTS": {
+        "TITLE": "O texto de cada aviso",
+        "WINDOW_NOTE": "Este texto vai quando o aviso sai como mensagem comum: pelo número não oficial, ou para quem falou com você nas últimas 24 horas. No WhatsApp oficial, fora dessas 24 horas, vai a mensagem aprovada pela Meta.",
+        "TONE_LABEL": "Como a IA escreve",
+        "TONES": {
+          "CURTO": {
+            "LABEL": "Curto",
+            "HINT": "Uma ou duas frases, direto ao ponto."
+          },
+          "SIMPATICO": {
+            "LABEL": "Simpático",
+            "HINT": "Chama pelo nome, caloroso sem exagero."
+          },
+          "FORMAL": {
+            "LABEL": "Formal",
+            "HINT": "Cordial, sem gíria e sem emoji."
+          }
+        },
+        "CUSTOM": "Texto seu",
+        "DEFAULT": "Texto padrão",
+        "TEAM_BOOKED": "Quando alguém da equipe marca pelo painel, vai o texto padrão, que diz quem marcou.",
+        "TEXT_LABEL": "Texto do aviso",
+        "FIELDS_HINT": "O que está entre colchetes o sistema preenche na hora. A frase para parar os avisos vai sempre no fim.",
+        "INSERT": "+ {field}",
+        "WRITE_AI": "Escrever com IA",
+        "WRITING": "Escrevendo…",
+        "RESET": "Voltar ao texto padrão",
+        "OPTIONS_LABEL": "Escolha um texto. Ele entra no campo e você ainda pode mudar.",
+        "USE_OPTION": "Usar este texto",
+        "AI_FAILED": "Não conseguimos escrever agora. Tente de novo ou escreva do seu jeito.",
+        "ERRORS": {
+          "BLANK": "Escreva o texto do aviso.",
+          "TOO_LONG": "O texto passou de {max} letras. Deixe mais curto.",
+          "MALFORMED": "Um campo está mal escrito. Apague e use os botões para pôr os campos.",
+          "BRACKET": "Há colchetes que não são um campo. Tire os colchetes ou use os botões para pôr os campos.",
+          "UNKNOWN_FIELD": "Este aviso não preenche um dos campos. Use só os botões abaixo.",
+          "MISSING_LINK": "Falta o link para confirmar, mudar ou cancelar.",
+          "MISSING_WHEN": "Falta o dia e a hora do horário."
         }
       }
     },
