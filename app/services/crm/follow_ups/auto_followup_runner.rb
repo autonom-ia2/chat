@@ -453,7 +453,7 @@ module Crm
         # Keep a generic body so AutoSendValidator's message_body check stays
         # satisfied; MessageSender ignores it for Api and uses it only as the
         # optional native body.
-        metadata['message_body'] = composition['message_body'].to_s.strip.presence || metadata['message_body']
+        metadata['message_body'] = composition['message_body'].to_s.strip.presence || Crm::FollowUps::AutoFollowupTouchBuilder::PLACEHOLDER_BODY
         # Persist the chosen template's Meta category so the 24h frequency cap can
         # target MARKETING only (Meta's 131049 cap is marketing-scoped). Api campaign
         # templates carry no category (nil) and are therefore never capped.

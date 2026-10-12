@@ -21,6 +21,7 @@ class Crm::FollowUps::MessageSender
   OPTED_OUT_REASON = 'opt_out'.freeze
   # Gravado no metadata pelos runners de IA (nunca por follow-up manual): o texto livre sai pelo WhatsApp API
   # do Híbrido, fora das 24h (chat#1349). O envio só obedece se o Híbrido continuar pronto neste momento.
+  AI_SOURCES = %w[ai_followup ai_callback].freeze
   TRANSPORT_KEY = 'delivery_transport'.freeze
   WHATSAPP_API_TRANSPORT = 'whatsapp_api'.freeze
   WHATSAPP_API_UNAVAILABLE = 'whatsapp_api_unavailable'.freeze
@@ -69,8 +70,9 @@ class Crm::FollowUps::MessageSender
     create_template_message(conversation, sender)
   end
 
+  # Só os runners de IA gravam o transporte; follow-up manual com metadata arbitrária pela API nunca vira WhatsApp API.
   def whatsapp_api_requested?
-    metadata[TRANSPORT_KEY] == WHATSAPP_API_TRANSPORT
+    AI_SOURCES.include?(metadata['source']) && metadata[TRANSPORT_KEY] == WHATSAPP_API_TRANSPORT
   end
 
   def whatsapp_api_available?

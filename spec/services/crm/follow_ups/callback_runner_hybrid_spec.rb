@@ -43,7 +43,7 @@ RSpec.describe Crm::FollowUps::CallbackRunner do
         .to include('crm_follow_up_id' => follow_up.id, 'crm_follow_up_transport' => 'whatsapp_api')
     end
 
-    it 'cai no lembrete quando o Híbrido cai entre a composição e o envio, sem criar mensagem' do
+    it 'falha com whatsapp_api_unavailable e agenda nova tentativa quando o Híbrido cai entre a composição e o envio' do
       stub_crm_hybrid_ai(crm_hybrid_ai_answer) { scenario[:connection].update!(status: 'disconnected') }
 
       result = nil
@@ -90,6 +90,25 @@ RSpec.describe Crm::FollowUps::CallbackRunner do
       expect(ai_call_modes).to eq(%w[choose_template free_form])
       expect(follow_up.reload.metadata).to include('delivery_transport' => 'whatsapp_api', 'hybrid_free_form_reason' => 'template_declined')
       expect(follow_up.metadata).not_to include('template_name')
+    end
+
+    it 'never reuses the free text of a failed hybrid attempt as the content of the template sent on retry' do
+      free_text = 'Oi! Texto livre que só valia pelo WhatsApp API.'
+      stub_crm_hybrid_ai(decline_template, crm_hybrid_ai_answer('message_body' => free_text)) do |call|
+        scenario[:connection].update!(status: 'disconnected') if call == 2
+      end
+      expect(run_callback.error).to eq('whatsapp_api_unavailable')
+      expect(follow_up.reload.metadata).to include('message_body' => free_text, 'delivery_transport' => 'whatsapp_api')
+
+      stub_crm_hybrid_ai(crm_hybrid_ai_answer('chosen_template' => crm_hybrid_template_pick, 'message_body' => '',
+                                              'template_variables' => [{ 'position' => '1', 'value' => 'Lead' }]))
+      result = described_class.new(follow_up: follow_up.reload, now: Time.current).perform
+
+      expect(result.status).to eq(:sent)
+      metadata = follow_up.reload.metadata
+      expect(metadata).to include('template_name' => 'retomada_orcamento', 'message_body' => Crm::FollowUps::CallbackScheduler::MESSAGE_PLACEHOLDER)
+      expect(metadata).not_to include('delivery_transport')
+      expect(Message.find(metadata['sent_message_id']).content).not_to include(free_text)
     end
 
     it 'vira lembrete quando a 2ª chamada também recusa' do

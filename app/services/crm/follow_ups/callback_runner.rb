@@ -193,7 +193,7 @@ module Crm
 
       def apply_template_metadata(metadata, composition)
         candidate = resolved_candidate(composition)
-        metadata['message_body'] = composition['message_body'].to_s.strip.presence || metadata['message_body']
+        metadata['message_body'] = composition['message_body'].to_s.strip.presence || Crm::FollowUps::CallbackScheduler::MESSAGE_PLACEHOLDER
         # Persist the chosen template's Meta category so the MARKETING-only 24h cap
         # can target it (api campaign templates carry no category → never capped).
         metadata['template_category'] = candidate[:category].to_s.downcase.presence

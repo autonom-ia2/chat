@@ -920,6 +920,7 @@
         "HUMAN": "Agents",
         "BOT": "Bots",
         "AUTOMATION": "Automations",
+        "CRM_FOLLOW_UP": "CRM follow-up",
         "CAMPAIGN": "Campaigns"
       },
       "ERRORS": {
