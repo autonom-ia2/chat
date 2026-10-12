@@ -4,6 +4,8 @@
 # Regras:
 # - modelo do sistema (`SystemTemplates`) não é criado, alterado nem apagado por aqui; duplicar pode;
 # - modelo em uso (`Usage`, inclusive uso que a pessoa não vê) não é apagado nem tem o conteúdo alterado;
+# - criar, alterar o conteúdo e duplicar só chegam à Meta com a forma que ela exige (`SubmitFormat`, #1380): o que não
+#   passa volta 422 com o código, sem nenhuma chamada à Graph;
 # - o estado do Chat2You fica no perfil (`WhatsappTemplateProfile`), que sobrevive ao sync. A lista da caixa só recebe o
 #   modelo criado/alterado até o próximo sync trazer a versão da Meta (mesmo caminho do `NoticeTemplates::Creator`).
 class Whatsapp::Templates::Manager
@@ -18,7 +20,8 @@ class Whatsapp::Templates::Manager
     end
   end
 
-  MEDIA_FORMATS = %w[IMAGE VIDEO DOCUMENT].freeze
+  include Whatsapp::Templates::HeaderMedia
+
   Draft = Struct.new(:profile, :blob)
   CONTENT_KEYS = %w[category components message_send_ttl_seconds].freeze
 
@@ -38,6 +41,7 @@ class Whatsapp::Templates::Manager
     attrs = attrs.to_h.deep_stringify_keys
     raise Refused, 'system_template' if Whatsapp::Templates::SystemTemplates.system?(attrs['name'])
 
+    check_format!(attrs)
     draft = prepare_profile(attrs, attrs)
     outcome = client.create(attrs)
     raise Refused.new('name_taken', template: outcome.template) unless outcome.created
@@ -50,8 +54,10 @@ class Whatsapp::Templates::Manager
     attrs = attrs.to_h.deep_stringify_keys
     template = protected_template!(template_id, change: true)
     content = attrs.slice(*CONTENT_KEYS)
+    check_format!(assume_stored_media(template.slice('category', 'components').merge(content), template)) if content.any?
     draft = prepare_profile(template, attrs)
     if content.any?
+      content = with_stored_media(content, template)
       client.update(template['id'], template['name'], content)
       template = record(template.merge(content).merge('status' => 'PENDING'))
     end
@@ -71,6 +77,8 @@ class Whatsapp::Templates::Manager
   def duplicate(template_id, attrs)
     attrs = attrs.to_h.deep_stringify_keys
     source = find!(template_id)
+    # O arquivo do topo sobe de novo logo abaixo; a forma do resto é conferida antes de qualquer chamada à Meta.
+    check_format!(source.merge('components' => fill_media(source['components'], STORED_MEDIA)))
     profile = profile_for(source)
     handle = attrs.dig('header_media', 'handle').presence || reupload(profile)
     copy = { 'friendly_name' => attrs['friendly_name'], 'fields' => profile&.fields,
@@ -101,6 +109,11 @@ class Whatsapp::Templates::Manager
 
   def client
     @client ||= Whatsapp::Templates::MetaClient.new(inbox: @inbox)
+  end
+
+  def check_format!(template)
+    problems = Whatsapp::Templates::SubmitFormat.problems(template)
+    raise Refused.new(problems.first, problems: problems) if problems.any?
   end
 
   def synced
@@ -191,24 +204,6 @@ class Whatsapp::Templates::Manager
     return unless profile_id && source_profile&.header_file&.attached?
 
     WhatsappTemplateProfile.find(profile_id).header_file.attach(source_profile.header_file.blob)
-  end
-
-  def reupload(profile)
-    return unless profile&.header_file&.attached?
-
-    profile.header_file.open do |file|
-      client.upload_media(io: file, file_name: profile.header_file.filename.to_s, content_type: profile.header_file.content_type)
-    end
-  end
-
-  def copy_components(components, handle)
-    Array(components).map do |component|
-      component = component.deep_dup
-      next component unless component['type'].to_s.casecmp?('HEADER') && MEDIA_FORMATS.include?(component['format'].to_s.upcase)
-      raise Refused, 'media_required' if handle.blank?
-
-      component.merge('example' => { 'header_handle' => [handle] })
-    end
   end
 
   # Põe (ou troca) o modelo na lista da caixa até o próximo sync trazer a lista da Meta.

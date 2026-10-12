@@ -8,6 +8,8 @@ module Whatsapp::Templates::GraphErrors
   MAX_ERROR = 300
   PERMISSION_CODES = [10, 190].freeze
   PERMISSION_RANGE = (200..299)
+  # 100/33: o objeto existe, mas este token não o alcança (WABA ou modelo de outra conta, permissão tirada).
+  NO_ACCESS = { code: 100, subcode: 33 }.freeze
   NETWORK_ERRORS = (Crm::Ai::ResponsesClient::NETWORK_ERRORS + [HTTParty::Error]).freeze
 
   private
@@ -58,9 +60,11 @@ module Whatsapp::Templates::GraphErrors
     response.parsed_response.is_a?(Hash) ? response.parsed_response : {}
   end
 
-  # Erro de permissão pelo código (10, 200–299) ou token inválido (190), nunca pela leitura do texto.
+  # Erro de permissão pelo código (10, 200–299, 100/33) ou token inválido (190), nunca pela leitura do texto.
   def permission_error?(error)
     code = error['code'].to_i
+    return true if code == NO_ACCESS[:code] && error['error_subcode'].to_i == NO_ACCESS[:subcode]
+
     PERMISSION_CODES.include?(code) || PERMISSION_RANGE.cover?(code)
   end
 
