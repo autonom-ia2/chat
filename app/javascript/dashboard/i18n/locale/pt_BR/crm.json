@@ -3690,7 +3690,7 @@
       "CHEGA": "Chega aqui",
       "CUIDAM": "Quem cuida",
       "PESSOAS": "{n} pessoa | {n} pessoas",
-      "SEM_ASSUNTO": "sem assunto: {nomes}",
+      "SEM_ASSUNTO": "· sem assunto: {nomes}",
       "SOZINHO": "O que acontece sozinho",
       "ALTERAR": "Alterar",
       "LIGAR": "Colocar no CRM"
@@ -3752,7 +3752,8 @@
       "NINGUEM": "ninguém ainda",
       "MUDA": "O que muda ao salvar",
       "NADA_MUDOU": "Nada mudou.",
-      "SAI_DO_CRM": "Sem nenhum funil marcado, esta caixa sai do CRM. As conversas dela deixam de virar cards."
+      "SAI_DO_CRM": "Sem nenhum funil marcado, esta caixa sai do CRM. As conversas dela deixam de virar cards.",
+      "RODIZIO_NOME": "{nome}:"
     },
     "MUDA": {
       "FUNIL_ENTRA": "{funil} passa a chegar por esta caixa.",

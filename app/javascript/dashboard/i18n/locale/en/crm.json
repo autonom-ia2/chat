@@ -3689,7 +3689,7 @@
       "CHEGA": "Comes in here",
       "CUIDAM": "Who handles it",
       "PESSOAS": "{n} person | {n} people",
-      "SEM_ASSUNTO": "no subject: {nomes}",
+      "SEM_ASSUNTO": "· no subject: {nomes}",
       "SOZINHO": "What happens automatically",
       "ALTERAR": "Change",
       "LIGAR": "Add to CRM"
@@ -3751,7 +3751,8 @@
       "NINGUEM": "nobody yet",
       "MUDA": "What changes when you save",
       "NADA_MUDOU": "Nothing changed.",
-      "SAI_DO_CRM": "With no pipeline selected, this inbox leaves the CRM. Its conversations stop becoming cards."
+      "SAI_DO_CRM": "With no pipeline selected, this inbox leaves the CRM. Its conversations stop becoming cards.",
+      "RODIZIO_NOME": "{nome}:"
     },
     "MUDA": {
       "FUNIL_ENTRA": "{funil} starts coming in through this inbox.",

@@ -116,7 +116,6 @@ const aviso = computed(() => {
         <dd class="m-0 text-[0.9375rem] text-n-slate-12">
           {{ $t('CRM_CAIXAS.CARTAO.PESSOAS', { n: pessoas }, pessoas) }}
           <template v-if="funis.length > 1 && triagem">
-            ·
             {{ $t('CRM_CAIXAS.CARTAO.SEM_ASSUNTO', { nomes: triagem }) }}
           </template>
         </dd>

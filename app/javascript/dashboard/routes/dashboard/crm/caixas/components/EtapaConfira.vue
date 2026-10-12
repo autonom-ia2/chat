@@ -158,7 +158,9 @@ const lista = computed(() =>
               :class="item.cor"
               aria-hidden="true"
             />
-            <strong class="font-semibold">{{ item.nome }}:</strong>
+            <strong class="font-semibold">
+              {{ $t('CRM_CAIXAS.CONFIRA.RODIZIO_NOME', { nome: item.nome }) }}
+            </strong>
             <span :class="item.quem ? '' : 'text-n-ruby-11'">
               {{ item.quem || $t('CRM_CAIXAS.CONFIRA.NINGUEM') }}
             </span>
