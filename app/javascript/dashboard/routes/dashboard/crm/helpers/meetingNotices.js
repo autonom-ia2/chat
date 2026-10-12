@@ -57,6 +57,8 @@ const SKIP_REASONS = [
   'no_whatsapp',
   'waha_unavailable',
   'waha_refused',
+  // #1305: o "ao marcar" que a IA já disse na mesma conversa, com o link de gestão.
+  'told_in_conversation',
 ];
 
 const NOTICE_KINDS = ['booked', 'rescheduled', 'day_before', 'hour_before'];

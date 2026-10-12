@@ -121,17 +121,11 @@ class Public::Api::V2::BookingController < PublicController
     raw.is_a?(ActionController::Parameters) ? raw.permit(:accepted, :text_key).to_h : {}
   end
 
-  # Avisos no WhatsApp (#1192): agenda depois da reserva gravada (repetir não duplica). `notice_will_send` diz se o
-  # aviso "ao marcar" vai de fato sair; sem isso a tela de sucesso não promete mensagem (J2-A6). A reserva já está
-  # gravada: erro aqui é registrado e a resposta segue como reserva confirmada, sem prometer mensagem.
+  # Avisos no WhatsApp (#1192): agenda depois da reserva gravada (repetir não duplica), pelo mesmo ponto do painel e da
+  # IA (`BookingNotices`, #1305). `notice_will_send` diz se o aviso "ao marcar" vai de fato sair; sem isso a tela de
+  # sucesso não promete mensagem (J2-A6). Erro ali é registrado e a resposta segue como reserva confirmada.
   def schedule_notices(outcome)
-    ::Crm::BookingV2::Notices::Scheduler.new(outcome.meeting).schedule!(invite: outcome.invite)
-    notice = outcome.meeting.notices.find_by(kind: 'booked')
-    notice.present? && notice.pending? && ::Crm::BookingV2::Notices::Sender.new(notice).will_send?
-  rescue StandardError => e
-    ChatwootExceptionTracker.new(e, account: @page.account).capture_exception
-    Rails.logger.error("Public booking v2 notices not scheduled: #{e.class.name}")
-    false
+    ::Crm::BookingV2::BookingNotices.new(meeting: outcome.meeting, invite: outcome.invite).schedule
   end
 
   def confirmation(outcome)

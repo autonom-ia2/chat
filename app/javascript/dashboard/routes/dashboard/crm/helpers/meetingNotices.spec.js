@@ -11,6 +11,10 @@ describe('skipReasonKey', () => {
     expect(skipReasonKey('waha_outside_window')).toBe('WAHA_OUTSIDE_WINDOW');
   });
 
+  it('dá texto ao "ao marcar" que a IA já disse na conversa (#1305)', () => {
+    expect(skipReasonKey('told_in_conversation')).toBe('TOLD_IN_CONVERSATION');
+  });
+
   it('motivo desconhecido cai em OTHER', () => {
     expect(skipReasonKey('qualquer_coisa')).toBe('OTHER');
     expect(skipReasonKey(undefined)).toBe('OTHER');

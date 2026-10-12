@@ -143,8 +143,33 @@ module CampaignImports
 
     private
 
+    def workbook
+      @workbook ||= document_for('xl/workbook.xml')
+    end
+
+    # A number cell styled as a date or time goes out as text (CampaignImports::CellValues.excel_serial, #1331).
+    # A styles part the zip reader refuses (encrypted, too large, unknown compression) leaves numbers as written:
+    # the file imported before #1331 and still does.
+    def date_formats
+      @date_formats ||= CampaignImports::XlsxDateFormats.new(styles_xml)
+    end
+
+    def styles_xml
+      @zip.read('xl/styles.xml')
+    rescue ArgumentError => e
+      Rails.logger.warn("[CampaignImports::XlsxReader] styles.xml skipped, numbers kept as written: #{e.message}")
+      nil
+    end
+
+    # The workbook counts days from 1904 instead of 1900 (old Mac files).
+    def date1904?
+      return @date1904 if defined?(@date1904)
+
+      flag = find_child(workbook.root, 'workbookPr')&.attributes&.[]('date1904').to_s
+      @date1904 = %w[1 true].include?(flag)
+    end
+
     def workbook_sheets
-      workbook = document_for('xl/workbook.xml')
       relationships = workbook_relationships
       sheets_node = find_child(workbook.root, 'sheets')
       result = []
@@ -220,9 +245,17 @@ module CampaignImports
         shared_strings[value_node(cell).to_s.to_i].to_s
       when 'inlineStr'
         text_content(cell)
+      when nil, 'n'
+        number_value(cell)
       else
         value_node(cell).to_s
       end
+    end
+
+    def number_value(cell)
+      value = value_node(cell).to_s
+      kind = date_formats.kind_of(cell.attributes['s'])
+      kind ? CampaignImports::CellValues.excel_serial(value, kind, date1904: date1904?) : value
     end
 
     def value_node(cell)

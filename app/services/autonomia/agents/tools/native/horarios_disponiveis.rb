@@ -41,8 +41,9 @@ class Autonomia::Agents::Tools::Native::HorariosDisponiveis < Autonomia::Agents:
       %w[data duracao_minutos]
     end
 
+    # Só com a página marcando agora (#1305): página apagada, pausada ou sem quem atenda não entra no turno.
     def available_for?(agent)
-      Autonomia::Agents::Tools::Native::Agenda.disponivel?(agent)
+      Autonomia::Agents::Tools::Native::Agenda.pode_marcar?(agent)
     end
   end
 

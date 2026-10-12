@@ -19,22 +19,16 @@ module Autonomia
         @conversation = conversation
       end
 
+      # Olha o `waha_whatsapp_chat_id` do contato e o `source_id` do ContactInbox; o jid fica de fora de propósito (#1324:
+      # passar a olhá-lo muda comportamento e vai em PR próprio).
       def blocked?
-        blocked_destination?(waha_chat_id) || blocked_destination?(contact_inbox_source_id)
+        destinations.any? { |destination| self.class.blocked_destination?(destination) }
       end
 
       private
 
-      def blocked_destination?(destination)
-        self.class.blocked_destination?(destination)
-      end
-
-      def waha_chat_id
-        contact&.custom_attributes.to_h['waha_whatsapp_chat_id']
-      end
-
-      def contact_inbox_source_id
-        contact_inbox&.source_id
+      def destinations
+        Waha::ContactChatId.values(contact, :chat_id, :source_id, contact_inbox: contact_inbox)
       end
 
       def contact

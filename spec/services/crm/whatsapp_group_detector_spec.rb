@@ -28,6 +28,30 @@ RSpec.describe Crm::WhatsappGroupDetector do
       end
     end
 
+    context 'when the WAHA chat id is blank and the jid is a group' do
+      let(:custom_attributes) { { 'waha_whatsapp_chat_id' => '  ', 'waha_whatsapp_jid' => '120363000000000000@g.us' } }
+
+      it 'skips the blank chat id and detects the group by the jid' do
+        expect(described_class.group_conversation?(conversation)).to be(true)
+      end
+    end
+
+    context 'when the WAHA chat id is direct and the jid is a group' do
+      let(:custom_attributes) { { 'waha_whatsapp_chat_id' => '554299999999@c.us', 'waha_whatsapp_jid' => '120363000000000000@g.us' } }
+
+      it 'trusts the chat id, the first one present' do
+        expect(described_class.group_conversation?(conversation)).to be(false)
+      end
+    end
+
+    context 'when only the WAHA lid is on the contact' do
+      let(:custom_attributes) { { 'waha_whatsapp_lid' => '120363000000000000@g.us' } }
+
+      it 'ignores the lid' do
+        expect(described_class.group_conversation?(conversation)).to be(false)
+      end
+    end
+
     context 'when the WAHA chat id is a broadcast or a channel' do
       it 'treats both as non direct' do
         %w[status@broadcast 120363000000000000@newsletter].each do |chat_id|

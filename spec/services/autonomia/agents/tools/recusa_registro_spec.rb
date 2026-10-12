@@ -599,7 +599,7 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
 
   def agendar_com_telefone
     conversation.contact.update!(phone_number: '+5521988887777')
-    na_agenda(Autonomia::Agents::Tools::Native::AgendarReuniao, { inicio: '2026-10-20T10:00:00-03:00' })
+    na_agenda(Autonomia::Agents::Tools::Native::AgendarReuniao, { inicio: '2026-10-20T10:00:00-03:00', cliente_confirmou: true })
   end
 
   def booker_que_falha_com(codigo)
@@ -620,7 +620,25 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
           na_agenda(horarios, {})
         }
       },
+      # #1305: sem ninguém para atender é motivo próprio, o mesmo `ai_status` da tela de páginas.
       'agenda.rb#recusa_da_pagina#2' => {
+        espera: { motivo: 'agenda_sem_responsavel', slug: 'horarios_disponiveis' },
+        dispara: lambda {
+          mundo = agenda_pronta
+          AccountUser.find_by(account: account, user: mundo.host).destroy!
+          na_agenda(horarios, {})
+        }
+      },
+      # A página no ar, mas quem atende pausou Meus horários: a IA diz isso em vez de "sem horários".
+      'agenda.rb#recusa_da_pagina#3' => {
+        espera: { motivo: 'agenda_de_quem_atende_pausada', slug: 'horarios_disponiveis' },
+        dispara: lambda {
+          mundo = agenda_pronta
+          Crm::AgentAvailability.create!(account: account, user: mundo.host, paused: true)
+          na_agenda(horarios, {})
+        }
+      },
+      'agenda.rb#recusa_da_pagina#4' => {
         espera: { motivo: 'agenda_pausada', slug: 'horarios_disponiveis' },
         dispara: lambda {
           agenda_pronta.profile.update!(enabled: false)
@@ -661,7 +679,7 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
         dispara: lambda {
           agenda_pronta.profile.update_columns(locations: [{ 'type' => 'google_meet' }]) # rubocop:disable Rails/SkipsModelValidations
           conversation.contact.update!(phone_number: '+5521988887777', email: nil)
-          na_agenda(agendar, { inicio: '2026-10-20T10:00:00-03:00', local: 'google_meet' })
+          na_agenda(agendar, { inicio: '2026-10-20T10:00:00-03:00', local: 'google_meet', cliente_confirmou: true })
         }
       },
       'agendar_reuniao.rb#recusa_do_pedido#1' => {
@@ -669,7 +687,16 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
         dispara: lambda {
           agenda_pronta
           conversation.contact.update!(phone_number: nil)
-          na_agenda(agendar, { inicio: '2026-10-20T10:00:00-03:00' })
+          na_agenda(agendar, { inicio: '2026-10-20T10:00:00-03:00', cliente_confirmou: true })
+        }
+      },
+      # #1305: a confirmação do cliente é decidida pelo modelo; sem `true`, nada é marcado.
+      'agendar_reuniao.rb#recusa_sem_confirmacao#1' => {
+        espera: { motivo: 'agenda_sem_confirmacao', slug: 'agendar_reuniao' },
+        dispara: lambda {
+          agenda_pronta
+          na_agenda(agendar, { inicio: '2026-10-20T10:00:00-03:00', cliente_confirmou: false })
+          expect(Crm::Meeting.count).to eq(0)
         }
       },
       'agendar_reuniao.rb#tratar_erro#1' => {

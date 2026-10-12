@@ -3,6 +3,8 @@ require 'prism'
 
 # RA-09 / J6-A2 (#1196): a agenda da IA não interpreta o que a pessoa escreveu com expressão regular nem lista de
 # palavras. Quem entende "a de quarta" é o modelo; as ferramentas recebem dados estruturados e conferem por parser.
+# #1305: a confirmação do cliente (`cliente_confirmou`) e a regra de não repetir o aviso na mesma conversa também
+# não: a primeira é decisão do modelo, a segunda compara caixas.
 # Pela árvore (Prism), não por texto: comentário que fala de regex não reprova; um `/x/`, `Regexp.new`, `match?`,
 # `=~` ou `scan` no código reprova com arquivo e linha.
 RSpec.describe 'Agenda da IA sem regex' do # rubocop:disable RSpec/DescribeClass
@@ -11,6 +13,11 @@ RSpec.describe 'Agenda da IA sem regex' do # rubocop:disable RSpec/DescribeClass
       app/services/autonomia/agents/tools/native/agenda.rb
       app/services/autonomia/agents/tools/native/horarios_disponiveis.rb
       app/services/autonomia/agents/tools/native/agendar_reuniao.rb
+      app/services/autonomia/agents/tools/native/agenda_instrucao.rb
+      app/services/autonomia/agents/tools/native/agenda_respostas.rb
+      app/services/crm/booking_v2/booking_notices.rb
+      app/services/crm/booking_v2/invite_pages.rb
+      app/listeners/crm/booking_notice_told_listener.rb
     ]
   end
   let(:nos_de_regex) do

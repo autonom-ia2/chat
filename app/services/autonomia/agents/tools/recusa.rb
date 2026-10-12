@@ -80,7 +80,11 @@ module Autonomia::Agents::Tools::Recusa
     'busca_de_atividade_indisponivel' => 'o portal não respondeu à busca de atividade',
     # #1196: a agenda da IA (`horarios_disponiveis`, `agendar_reuniao`).
     'agenda_sem_pagina' => 'a página de agendamento do agente não existe nesta conta, não é página nova ou a agenda está desligada',
-    'agenda_pausada' => 'a página de agendamento está pausada ou sem responsável que possa atender',
+    'agenda_pausada' => 'a página de agendamento está pausada',
+    # #1305: o motivo de "não marca" separado, o mesmo que a tela de páginas mostra (`InvitePages#status`).
+    'agenda_sem_responsavel' => 'a página de agendamento está sem ninguém que possa atender',
+    'agenda_de_quem_atende_pausada' => 'quem atende pela página pausou a própria agenda em Meus horários',
+    'agenda_sem_confirmacao' => 'o modelo chamou agendar_reuniao sem cliente_confirmou=true; nada foi marcado',
     'agenda_sem_horarios' => 'a página de agendamento não tem horário livre na janela',
     'agenda_parametro_invalido' => 'data, horário, duração ou local fora do formato ou do que a página oferece',
     'agenda_sem_conversa' => 'não há conversa para marcar a reunião (Testar, Copiloto, playground)',

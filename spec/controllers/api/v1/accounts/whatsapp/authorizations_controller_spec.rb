@@ -145,6 +145,26 @@ RSpec.describe 'WhatsApp Authorization API', type: :request do
                as: :json
         end
 
+        it 'passes the Meta signup event and version to the service (#1315)' do
+          whatsapp_channel = create(:channel_whatsapp, account: account, validate_provider_config: false, sync_templates: false)
+          inbox = create(:inbox, account: account, channel: whatsapp_channel)
+          embedded_signup_service = instance_double(Whatsapp::EmbeddedSignupService, perform: whatsapp_channel)
+
+          expect(Whatsapp::EmbeddedSignupService).to receive(:new).with(
+            account: account,
+            params: { code: 'test_code', waba_id: 'test_waba_id', signup_event: 'FINISH', signup_version: '3' },
+            inbox_id: nil
+          ).and_return(embedded_signup_service)
+          allow(whatsapp_channel).to receive(:inbox).and_return(inbox)
+
+          post "/api/v1/accounts/#{account.id}/whatsapp/authorization",
+               params: { code: 'test_code', waba_id: 'test_waba_id', signup_event: 'FINISH', signup_version: '3' },
+               headers: agent.create_new_auth_token,
+               as: :json
+
+          expect(response).to have_http_status(:success)
+        end
+
         it 'accepts phone_number_id as optional parameter' do
           whatsapp_channel = create(:channel_whatsapp, account: account, validate_provider_config: false, sync_templates: false)
           inbox = create(:inbox, account: account, channel: whatsapp_channel)

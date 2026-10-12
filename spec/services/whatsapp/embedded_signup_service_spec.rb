@@ -44,6 +44,7 @@ describe Whatsapp::EmbeddedSignupService do
 
       allow(channel).to receive(:setup_webhooks)
       allow(channel).to receive(:phone_number).and_return('+1234567890')
+      allow(channel).to receive_messages(id: 1, provider_config: {}, update_column: true)
 
       health_service = instance_double(Whatsapp::HealthService)
       allow(Whatsapp::HealthService).to receive(:new).and_return(health_service)
@@ -169,6 +170,103 @@ describe Whatsapp::EmbeddedSignupService do
       end
     end
 
+    context 'when recording how Meta finished the signup (#1315)' do
+      let(:real_channel) do
+        create(:channel_whatsapp, account: account, phone_number: '+1234567890',
+                                  provider_config: { 'source' => 'embedded_signup', 'api_key' => 'stored-token' },
+                                  validate_provider_config: false, sync_templates: false)
+      end
+      let(:trace_params) do
+        params.merge(signup_event: 'FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING', signup_version: '3', is_coexistence: 'true')
+      end
+
+      before do
+        channel_creation = instance_double(Whatsapp::ChannelCreationService, perform: real_channel)
+        allow(Whatsapp::ChannelCreationService).to receive(:new).and_return(channel_creation)
+        allow(real_channel).to receive(:setup_webhooks)
+      end
+
+      it 'keeps the event, version and coexistence on the channel without dropping its credentials' do
+        # Reason: the container log is lost on each blue-green deploy; the channel is the durable proof.
+        described_class.new(account: account, params: trace_params).perform
+
+        config = real_channel.reload.provider_config
+        expect(config).to include('source' => 'embedded_signup', 'signup_event' => 'FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING',
+                                  'signup_version' => '3', 'signup_is_coexistence' => true)
+        expect(config['signup_completed_at']).to be_present
+        expect(config['api_key']).to eq('stored-token')
+      end
+
+      it 'does not re-run the remote credential check to store the trace' do
+        # Reason: a save would call validate_provider_config, i.e. two Graph API requests per signup.
+        expect(real_channel).not_to receive(:save!)
+        expect(real_channel).not_to receive(:save)
+
+        described_class.new(account: account, params: trace_params).perform
+      end
+
+      it 'logs one success line with the trace and no credentials' do
+        allow(Rails.logger).to receive(:info)
+
+        described_class.new(account: account, params: trace_params).perform
+
+        expect(Rails.logger).to have_received(:info).with(
+          "[WHATSAPP] Embedded signup completed account_id=#{account.id} channel_id=#{real_channel.id} " \
+          'reauthorization=false event=FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING version=3 coexistence=true'
+        )
+      end
+
+      it 'records an unknown trace when an older client sends no event' do
+        allow(Rails.logger).to receive(:info)
+
+        described_class.new(account: account, params: params).perform
+
+        expect(real_channel.reload.provider_config).to include('signup_event' => '', 'signup_version' => '', 'signup_is_coexistence' => nil)
+        expect(Rails.logger).to have_received(:info).with(a_string_including('event=none version=none coexistence=nil'))
+      end
+
+      it 'still connects the number and logs the error when the trace cannot be stored' do
+        # Reason: the trace is evidence; a failed write must not reach the rescue that fails the signup.
+        allow(real_channel).to receive(:update_column).and_raise(ActiveRecord::StatementInvalid, 'db down')
+        allow(Rails.logger).to receive(:error)
+
+        result = described_class.new(account: account, params: trace_params).perform
+
+        expect(result).to eq(real_channel)
+        expect(real_channel).to have_received(:setup_webhooks)
+        expect(Rails.logger).to have_received(:error).with(
+          "[WHATSAPP] Embedded signup trace not recorded channel_id=#{real_channel.id} error_class=ActiveRecord::StatementInvalid"
+        )
+        expect(Rails.logger).not_to have_received(:error).with(a_string_including('Embedded signup failed'))
+      end
+
+      it 'keeps the history sync request that runs after the trace is stored' do
+        # Reason: HistorySyncService mutates provider_config in place and saves; it must not lose either write.
+        client = instance_double(Whatsapp::FacebookApiClient, start_smb_app_data_sync: { 'request_id' => 'req-1' })
+        allow(Whatsapp::FacebookApiClient).to receive(:new).and_return(client)
+
+        with_modified_env WHATSAPP_HISTORY_SYNC_ENABLED: 'true' do
+          described_class.new(account: account, params: trace_params).perform
+        end
+
+        config = real_channel.reload.provider_config
+        expect(config).to include('signup_event' => 'FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING',
+                                  'history_sync_request_ids' => { 'smb_app_state_sync' => 'req-1', 'history' => 'req-1' })
+        expect(config['history_sync_requested_at']).to be_present
+      end
+
+      it 'strips characters that could forge a log line from client-sent values' do
+        allow(Rails.logger).to receive(:info)
+        forged = params.merge(signup_event: "FINISH\n[WHATSAPP] fake=1 #{'A' * 100}", signup_version: '3; drop')
+
+        described_class.new(account: account, params: forged).perform
+
+        config = real_channel.reload.provider_config
+        expect(config['signup_event']).to eq("FINISHWHATSAPPfake1#{'A' * 45}")
+        expect(config['signup_version']).to eq('3drop')
+      end
+    end
+
     context 'with reauthorization flow' do
       let(:inbox_id) { 123 }
       let(:reauth_service) { instance_double(Whatsapp::ReauthorizationService) }
@@ -218,6 +316,16 @@ describe Whatsapp::EmbeddedSignupService do
 
           setup_reauthorization_mocks
           setup_health_service_mock
+        end
+
+        it 'records the trace of the reauthorization that just happened (#1315)' do
+          allow(Rails.logger).to receive(:info)
+          traced = described_class.new(account: account, params: params.merge(signup_event: 'FINISH', signup_version: '3'), inbox_id: inbox.id)
+
+          traced.perform
+
+          expect(whatsapp_channel.reload.provider_config).to include('signup_event' => 'FINISH', 'signup_version' => '3')
+          expect(Rails.logger).to have_received(:info).with(a_string_including('reauthorization=true event=FINISH version=3'))
         end
 
         it 'clears reauthorization flag when reauthorization completes' do
