@@ -1,0 +1,26 @@
+[
+  {
+    "rodada": "a-com-cache",
+    "titulo": "Modelos de mensagem",
+    "ok": true,
+    "pedidosDoCatalogo": 2,
+    "urls": [
+      "http://localhost:3321/vite-dev/dashboard/i18n/locale/pt_BR/index.js",
+      "http://localhost:3321/vite-dev/dashboard/i18n/locale/pt_BR/index.js"
+    ],
+    "lista": "lista",
+    "marcaDeRecarga": null
+  },
+  {
+    "rodada": "b-sem-cache",
+    "titulo": "Modelos de mensagem",
+    "ok": true,
+    "pedidosDoCatalogo": 2,
+    "urls": [
+      "http://localhost:3321/vite-dev/dashboard/i18n/locale/pt_BR/index.js",
+      "http://localhost:3321/vite-dev/dashboard/i18n/locale/pt_BR/index.js"
+    ],
+    "lista": "lista",
+    "marcaDeRecarga": null
+  }
+]

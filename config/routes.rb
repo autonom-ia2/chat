@@ -922,7 +922,6 @@ Rails.application.routes.draw do
             # Modelos do WhatsApp oficial (#1330): API do fork, controller e policy próprios.
             resources :whatsapp_templates, only: [:index, :create, :update, :destroy], module: :inboxes do
               member do
-                post :duplicate
                 get :usage
               end
               post :media, on: :collection

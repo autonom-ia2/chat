@@ -16,13 +16,15 @@ class Whatsapp::Templates::MetaClient
   # O modelo não está na WABA da caixa.
   class NotFound < StandardError; end
 
-  # A Meta recusou: `message` é o texto para quem usa. `own_text`: o texto é nosso, não o da Meta.
+  # A Meta recusou. `own_text`: `message` é texto nosso; sem ele, `message` é o texto da Meta (sem o token), que não vai
+  # para a tela (#1394). `code`: o código nosso (`name_taken`, `permission_denied`…) ou `meta_text` quando não há um.
   class MetaError < StandardError
-    attr_reader :own_text
+    attr_reader :own_text, :code
 
-    def initialize(message, own_text: false)
+    def initialize(message, own_text: false, code: nil)
       super(message)
       @own_text = own_text
+      @code = code || (own_text ? nil : 'meta_text')
     end
   end
 
@@ -33,7 +35,8 @@ class Whatsapp::Templates::MetaClient
   REQUEST_TIMEOUT = 10
   UPLOAD_TIMEOUT = 60
   CREATE_KEYS = %w[name language category components parameter_format message_send_ttl_seconds].freeze
-  EDIT_KEYS = %w[category components message_send_ttl_seconds].freeze
+  # A categoria não vai na edição: a Meta recusa a troca (#1394) e o `Manager` já barra antes.
+  EDIT_KEYS = %w[components message_send_ttl_seconds].freeze
   COMPONENT_KEYS = %w[type format text example buttons cards limited_time_offer add_security_recommendation
                       code_expiration_minutes].freeze
   # Tipos que a Resumable Upload API aceita para o exemplo do topo, com o teto de tamanho de cada um.
@@ -74,7 +77,7 @@ class Whatsapp::Templates::MetaClient
     end
   end
 
-  # Edita categoria, componentes ou validade (a Meta não deixa mudar nome nem idioma). Volta para análise na Meta.
+  # Edita componentes ou validade (a Meta não deixa mudar nome nem idioma; a categoria o produto não muda, #1394). Volta para análise na Meta.
   def update(template_id, name, body)
     ensure_owned!(template_id, name)
     body = body.to_h.deep_stringify_keys.slice(*EDIT_KEYS)
@@ -197,12 +200,12 @@ class Whatsapp::Templates::MetaClient
     limit = MEDIA_LIMITS[content_type.to_s]
     return if limit && size.positive? && size <= limit
 
-    raise MetaError.new(text('media_invalid'), own_text: true)
+    raise MetaError.new(text('media_invalid'), own_text: true, code: 'media_invalid')
   end
 
   def open_upload_session(file_name, content_type, size)
     app_id = GlobalConfigService.load('WHATSAPP_APP_ID', '').to_s
-    raise MetaError.new(text('app_not_configured'), own_text: true) if app_id.blank?
+    raise MetaError.new(text('app_not_configured'), own_text: true, code: 'app_not_configured') if app_id.blank?
 
     with_retry do
       response = HTTParty.post(graph_url("#{app_id}/uploads"), headers: oauth_headers, timeout: REQUEST_TIMEOUT,

@@ -8,7 +8,9 @@ import {
   corpoParaAlterar,
   corpoParaCriar,
   nomeParaWhatsapp,
+  usavelEmCampanha,
 } from '../helpers/paraMeta';
+import { ajustarEspacosDosCampos, previaCurta } from '../helpers/conteudo';
 import { ligacaoDoCatalogo, rotuloDoCampo } from '../helpers/campos';
 
 // Ida e volta entre o modelo da Meta (API de Modelos, #1330) e a tela (#1332).
@@ -143,8 +145,8 @@ describe('Meta → tela', () => {
     }).conteudo;
     expect(oferta.oferta).toEqual({
       titulo: 'Só hoje',
-      terminaEm: '',
       link: 'https://h.com/o',
+      botao: 'Ver',
       cupom: 'HUB30',
     });
 
@@ -187,6 +189,129 @@ describe('Meta → tela', () => {
     expect(recusaDe({ rejected_reason: 'NONE' }, conteudo)).toEqual({
       codigo: 'outro',
     });
+  });
+});
+
+describe('situação e o que a tela sabe editar (#1380)', () => {
+  it('PAUSED, DISABLED e LIMIT_EXCEEDED têm cada um a sua situação', () => {
+    const situacao = status =>
+      modeloDaMeta(template({ status }), GRUPO).situacao;
+    expect(situacao('PAUSED')).toBe('pausado');
+    expect(situacao('DISABLED')).toBe('desativado');
+    expect(situacao('LIMIT_EXCEEDED')).toBe('limite');
+  });
+
+  it('modelo feito fora com parte que a tela não edita não vira outra coisa', () => {
+    const corpo = { type: 'BODY', text: 'Oi.' };
+    const editavel = components =>
+      modeloDaMeta(template({ components }), GRUPO).editavel;
+    expect(editavel([corpo])).toBe(true);
+    expect(editavel([{ type: 'HEADER', format: 'LOCATION' }, corpo])).toBe(
+      false
+    );
+    expect(
+      editavel([
+        corpo,
+        { type: 'BUTTONS', buttons: [{ type: 'VOICE_CALL', text: 'Ligar' }] },
+      ])
+    ).toBe(false);
+    const autenticacao = modeloDaMeta(
+      template({
+        category: 'AUTHENTICATION',
+        components: [
+          { type: 'BODY' },
+          {
+            type: 'BUTTONS',
+            buttons: [{ type: 'OTP', otp_type: 'ONE_TAP', supported_apps: [] }],
+          },
+        ],
+      }),
+      GRUPO
+    );
+    expect(autenticacao.editavel).toBe(false);
+    const catalogo = modeloDaMeta(
+      template({
+        components: [
+          corpo,
+          { type: 'BUTTONS', buttons: [{ type: 'CATALOG', text: 'Ver' }] },
+        ],
+      }),
+      GRUPO
+    );
+    expect(catalogo.editavel).toBe(false);
+  });
+});
+
+describe('QA na tela (#1380)', () => {
+  it('A4: o espaço que o editor põe depois do campo não chega ao cliente', () => {
+    const pedacos = [
+      { t: 'texto', v: 'Olá, ' },
+      { t: 'campo', v: 'nome_cliente' },
+      { t: 'texto', v: ' ! Amanhã, dia ' },
+      { t: 'campo', v: 'data' },
+      { t: 'texto', v: '  e às ' },
+      { t: 'campo', v: 'horario' },
+      // O navegador digita às vezes o espaço que não quebra (U+00A0).
+      { t: 'texto', v: '\u00a0.' },
+    ];
+    expect(ajustarEspacosDosCampos(pedacos).map(p => p.v)).toEqual([
+      'Olá, ',
+      'nome_cliente',
+      '! Amanhã, dia ',
+      'data',
+      ' e às ',
+      'horario',
+      '.',
+    ]);
+    const corpo = corpoParaCriar({
+      nome: 'Aviso',
+      tipo: 'aviso',
+      conteudo: {
+        formato: 'padrao',
+        topo: { tipo: 'nenhum' },
+        texto: pedacos,
+        exemplos: { nome_cliente: 'Ana', data: '15/10', horario: '14h' },
+        rodape: '',
+        botoes: [],
+      },
+    });
+    expect(corpo.components[0].text).toBe(
+      'Olá, {{1}}! Amanhã, dia {{2}} e às {{3}}.'
+    );
+  });
+
+  it('L2: a prévia da lista corta entre palavras, nunca no meio de um campo', () => {
+    const rotulo = campo =>
+      ({ data: 'Data e hora do horário' })[campo] || campo;
+    const pedacos = [
+      { t: 'texto', v: 'Olá! Seu horário está marcado para ' },
+      { t: 'campo', v: 'data' },
+      { t: 'texto', v: '. Até lá!' },
+    ];
+    const { pedacos: curtos, cortado } = previaCurta(pedacos, rotulo, 50);
+    expect(cortado).toBe(true);
+    expect(curtos).toEqual([
+      { t: 'texto', v: 'Olá! Seu horário está marcado para ' },
+    ]);
+    expect(previaCurta(pedacos, rotulo, 200).cortado).toBe(false);
+    expect(
+      previaCurta([{ t: 'texto', v: 'uma frase bem comprida' }], rotulo, 12)
+        .pedacos
+    ).toEqual([{ t: 'texto', v: 'uma frase' }]);
+  });
+
+  it('A6: modelo com campo que a campanha não preenche não é oferecido para campanha', () => {
+    const base = {
+      conteudo: { formato: 'padrao', botoes: [] },
+      campos: { 1: 'nome_cliente' },
+    };
+    expect(usavelEmCampanha(base)).toBe(true);
+    expect(
+      usavelEmCampanha({
+        ...base,
+        campos: { 1: 'nome_cliente', 2: 'horario.data_hora' },
+      })
+    ).toBe(false);
   });
 });
 
@@ -241,7 +366,7 @@ describe('tela → Meta', () => {
     });
   });
 
-  it('on change sends no name or language, and the type only when it changed', () => {
+  it('on change sends no name, language or type (#1394)', () => {
     const corpo = corpoParaAlterar(
       {
         ...rascunho,
@@ -255,10 +380,171 @@ describe('tela → Meta', () => {
     expect(corpo.name).toBeUndefined();
     expect(corpo.category).toBeUndefined();
     expect(corpo.header_media).toBeUndefined();
-    expect(corpo.components[0].example.header_handle).toEqual(['4::old']);
-    expect(corpoParaAlterar(rascunho, { tipo: 'divulgacao' }).category).toBe(
-      'UTILITY'
+    // Sem arquivo novo, o topo vai sem o handle antigo (ele expira): o servidor
+    // sobe de novo o arquivo guardado no perfil.
+    expect(corpo.components[0]).toEqual({ type: 'HEADER', format: 'IMAGE' });
+    // #1394: a Meta não aceita trocar o tipo de um modelo que já existe. A
+    // edição nunca manda categoria, nem quando o rascunho chega com outro tipo.
+    const outroTipo = corpoParaAlterar(rascunho, {
+      tipo: 'divulgacao',
+      situacao: 'recusado',
+      conteudo: rascunho.conteudo,
+    });
+    expect(outroTipo.category).toBeUndefined();
+    expect(outroTipo.components).toBeDefined();
+  });
+
+  it('só o nome amigável mudou: nada de conteúdo vai para a Meta', () => {
+    const modelo = { tipo: 'aviso', conteudo: rascunho.conteudo };
+    const corpo = corpoParaAlterar({ ...rascunho, nome: 'Outro nome' }, modelo);
+    expect(corpo.components).toBeUndefined();
+    expect(corpo.category).toBeUndefined();
+    expect(corpo.friendly_name).toBe('Outro nome');
+  });
+
+  it('manda o idioma do texto (o da tela nos prontos, o do original na cópia)', () => {
+    expect(corpoParaCriar(rascunho, { midias }).language).toBe('pt_BR');
+    expect(
+      corpoParaCriar({ ...rascunho, idioma: 'en' }, { midias }).language
+    ).toBe('en');
+  });
+
+  it('respostas rápidas vão juntas, antes dos outros botões', () => {
+    const botoes = [
+      { tipo: 'resposta', texto: 'Sim', valor: '' },
+      { tipo: 'site', texto: 'Site', valor: 'https://x.com' },
+      { tipo: 'resposta', texto: 'Não', valor: '' },
+    ];
+    const corpo = corpoParaCriar(
+      { ...rascunho, conteudo: { ...rascunho.conteudo, botoes } },
+      { midias }
     );
+    expect(corpo.components[2].buttons.map(botao => botao.type)).toEqual([
+      'QUICK_REPLY',
+      'QUICK_REPLY',
+      'URL',
+    ]);
+  });
+
+  it('site com final variável volta com o exemplo (duplicar o modelo de satisfação)', () => {
+    const satisfacao = template({
+      components: [
+        { type: 'BODY', text: 'Como foi o atendimento?' },
+        {
+          type: 'BUTTONS',
+          buttons: [
+            {
+              type: 'URL',
+              text: 'Avaliar',
+              url: 'https://app.com/survey/responses/{{1}}',
+              example: ['12345'],
+            },
+          ],
+        },
+      ],
+    });
+    const { conteudo } = conteudoDaMeta(satisfacao);
+    const corpo = corpoParaCriar({ ...rascunho, conteudo }, {});
+    expect(corpo.components[1].buttons[0]).toEqual({
+      type: 'URL',
+      text: 'Avaliar',
+      url: 'https://app.com/survey/responses/{{1}}',
+      example: ['12345'],
+    });
+  });
+
+  it('modelo com variáveis nomeadas continua nomeado ao alterar, nunca vira {{1}}', () => {
+    const nomeado = template({
+      parameter_format: 'NAMED',
+      components: [
+        {
+          type: 'BODY',
+          text: 'Olá {{first_name}}, seu pedido saiu.',
+          example: {
+            body_text_named_params: [
+              { param_name: 'first_name', example: 'Ana' },
+            ],
+          },
+        },
+      ],
+      fields: {},
+    });
+    const modelo = modeloDaMeta(nomeado, GRUPO);
+    expect(modelo.formatoDosCampos).toBe('named');
+    const corpo = corpoParaAlterar(
+      {
+        ...modelo,
+        nome: modelo.nome,
+        conteudo: { ...modelo.conteudo, rodape: 'x' },
+      },
+      modelo
+    );
+    expect(corpo.components[0]).toEqual({
+      type: 'BODY',
+      text: 'Olá {{first_name}}, seu pedido saiu.',
+      example: {
+        body_text_named_params: [{ param_name: 'first_name', example: 'Ana' }],
+      },
+    });
+  });
+
+  it('revisão: campo novo num modelo nomeado ganha nome válido (sem ponto)', () => {
+    const modelo = {
+      tipo: 'aviso',
+      formatoDosCampos: 'named',
+      campos: { first_name: 'nome_cliente' },
+    };
+    const conteudo = {
+      ...rascunho.conteudo,
+      topo: { tipo: 'nenhum' },
+      texto: [
+        { t: 'texto', v: 'Oi ' },
+        { t: 'campo', v: 'nome_cliente' },
+        { t: 'texto', v: ', da ' },
+        { t: 'campo', v: 'cliente.primeiro_nome' },
+        { t: 'texto', v: '.' },
+      ],
+    };
+    const corpo = corpoParaAlterar({ ...rascunho, conteudo }, modelo);
+    expect(corpo.components[0].text).toBe(
+      'Oi {{first_name}}, da {{cliente_primeiro_nome}}.'
+    );
+  });
+
+  it('revisão: texto do botão vai sem espaço nas pontas', () => {
+    const botoes = [{ tipo: 'resposta', texto: '  Sim  ', valor: '' }];
+    const corpo = corpoParaCriar(
+      { ...rascunho, conteudo: { ...rascunho.conteudo, botoes } },
+      { midias }
+    );
+    expect(corpo.components[2].buttons[0].text).toBe('Sim');
+  });
+
+  it('revisão: sem mudança no que vai à Meta, nada vai; recusado sempre manda', () => {
+    const oferta = {
+      formato: 'oferta',
+      topo: { tipo: 'nenhum' },
+      texto: [{ t: 'texto', v: 'Corre!' }],
+      exemplos: {},
+      rodape: '',
+      botoes: [],
+      oferta: {
+        titulo: 'Hoje',
+        link: 'https://x.com',
+        cupom: 'A1',
+        botao: 'Ver',
+      },
+    };
+    const modelo = { tipo: 'divulgacao', conteudo: oferta };
+    const soData = {
+      ...rascunho,
+      tipo: 'divulgacao',
+      conteudo: { ...oferta, topo: { tipo: 'nenhum', arquivo: '' } },
+    };
+    expect(corpoParaAlterar(soData, modelo).components).toBeUndefined();
+    expect(
+      corpoParaAlterar(soData, { ...modelo, situacao: 'recusado' }).components
+    ).toBeDefined();
   });
 
   it('round-trips a created template back to the same screen content', () => {

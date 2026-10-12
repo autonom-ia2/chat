@@ -3,6 +3,7 @@
 defineProps({
   tipo: { type: String, required: true },
   soDivulgacao: { type: Boolean, default: false },
+  naoVaiEmCampanha: { type: Boolean, default: false },
 });
 </script>
 
@@ -33,6 +34,9 @@ defineProps({
               tipo: $t(`MODELOS_WHATSAPP.TIPOS.${tipo}.ROTULO`),
             })
           }}
+        </li>
+        <li v-if="naoVaiEmCampanha" data-nao-vai-em-campanha>
+          {{ $t('MODELOS_WHATSAPP.QUEM_APROVA.NAO_VAI_EM_CAMPANHA') }}
         </li>
         <li>{{ $t('MODELOS_WHATSAPP.QUEM_APROVA.AVISO') }}</li>
       </ul>

@@ -1099,8 +1099,6 @@
           "NAO_EXISTE_SO_VER": "A página escolhida não existe mais. {nome} vai passar a conversa para a equipe.",
           "NENHUMA": "{nome} não marca reuniões.",
           "ABRIR_PAGINAS": "Abrir páginas de agendamento",
-          "ESCOLHA": "Escolha uma página",
-          "FUSO": "Horários no fuso da empresa ({fuso}).",
           "RECEBE": {
             "FIXO": "A reunião fica com {nome}.",
             "FIXO_SEM_NOME": "A reunião fica com a pessoa responsável pela página.",
@@ -1368,7 +1366,8 @@
         },
         "GAVETA_AGENDA": {
           "TITULO": "Marcar reuniões",
-          "TEXTO": "{nome} oferece horários livres de uma página de agendamento e marca a reunião na conversa.",
+          "TEXTO": "{nome} oferece horários na conversa e já marca a reunião.",
+          "QUAL_PAGINA": "Qual página {nome} usa?",
           "CARREGANDO": "Carregando suas páginas de agendamento…",
           "ERRO_LER": "Não deu para ler suas páginas de agendamento.",
           "GARANTIA": "Nada mudou.",
@@ -1376,11 +1375,38 @@
           "SALVANDO": "Salvando…",
           "PRONTO": "Pronto.",
           "ERRO": "Não deu para salvar.",
+          "CRIAR": "Criar uma página",
+          "CARTAO": {
+            "NAO_MARCAR": "Não marcar reuniões",
+            "DURACAO": "{minutos} min"
+          },
+          "RASCUNHO": {
+            "DICA": "Publique a página para {nome} usar.",
+            "AVISO": "{pagina} ainda não está publicada. {nome} vai passar a conversa para a equipe até você publicar.",
+            "ATUAL": "Escolha atual"
+          },
+          "SEM_PAGINAS": {
+            "TITULO": "Você ainda não tem uma página de agendamento",
+            "TEXTO": "Na página você diz os dias, os horários e quem atende. São poucos passos. Depois volte aqui para {nome} marcar reuniões.",
+            "PECA": "Peça a quem cuida da conta para criar uma página em CRM › Agendamento."
+          },
           "PESSOAS": {
-            "TITULO": "Pessoas que {nome} pode usar",
+            "TITULO": "Com quem {nome} pode marcar",
+            "TODAS": "Todas as pessoas",
+            "TODAS_DICA": "Inclui quem entrar na página depois.",
             "PAUSADA": "agenda pausada",
             "NENHUMA": "Marque pelo menos uma pessoa.",
-            "DICA": "{nome} só marca reunião com as pessoas marcadas acima. Para preferir uma delas, diga em Mudar conversando. Exemplo: “Marque com {exemplo}”."
+            "DICA": "Quer que {nome} prefira uma pessoa? Diga em {acao}.",
+            "DICA_ACAO": "Mudar conversando"
+          },
+          "EXEMPLO": {
+            "TITULO": "Como o cliente vê",
+            "TEXTO": "{nome} vai oferecer horários assim:",
+            "SELO": "Exemplo",
+            "SR": "Exemplo de conversa em que {nome} oferece horários",
+            "CLIENTE": "Oi! Queria marcar um horário.",
+            "AGENTE": "Claro! Para {pagina}, tenho terça às 10h ou quarta às 15h. Qual fica melhor para você?",
+            "NOTA": "É só um exemplo. {nome} escreve com as próprias palavras e mostra os horários livres de verdade na hora da conversa."
           }
         }
       },

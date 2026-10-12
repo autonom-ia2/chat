@@ -921,6 +921,7 @@
         "HUMAN": "Atendentes",
         "BOT": "Robôs",
         "AUTOMATION": "Automações",
+        "CRM_FOLLOW_UP": "Follow-up do CRM",
         "CAMPAIGN": "Campanhas"
       },
       "ERRORS": {

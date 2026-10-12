@@ -2,7 +2,7 @@
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { CAMPOS } from '../constants';
-import { juntarTextos } from '../helpers/conteudo';
+import { ajustarEspacosDosCampos, juntarTextos } from '../helpers/conteudo';
 import { rotuloDoCampo as rotuloDoCampoDe } from '../helpers/campos';
 
 defineProps({
@@ -63,7 +63,9 @@ const lerNo = no => {
 };
 
 const aoDigitar = () => {
-  const lidos = juntarTextos(Array.from(caixa.value.childNodes).flatMap(lerNo));
+  const lidos = ajustarEspacosDosCampos(
+    juntarTextos(Array.from(caixa.value.childNodes).flatMap(lerNo))
+  );
   ultimoEmitido = JSON.stringify(lidos);
   pedacos.value = lidos;
 };

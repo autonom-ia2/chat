@@ -552,8 +552,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/follow_ups#destroy",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:64",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:98"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:60",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:94"
     ],
     "sem_corpo": true
   },
@@ -884,9 +884,9 @@
     "controller": "api/v1/accounts/inboxes/whatsapp_templates#destroy",
     "modelo": "Crm::Card",
     "origem": [
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:31",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:32",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:57"
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:37",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:38",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:59"
     ],
     "sem_corpo": true
   },
@@ -5076,9 +5076,9 @@
     "envelope": "follow_up",
     "modelo": "Crm::FollowUp",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:56",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:198",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:98"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:52",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:202",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:94"
     ],
     "sem_corpo": false
   },
@@ -6670,11 +6670,11 @@
     "envelope": "template",
     "modelo": "Crm::Card",
     "origem": [
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:27",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:73",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:76",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:28",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:57"
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:33",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:75",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:78",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:34",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:59"
     ],
     "sem_corpo": false
   },
@@ -14381,8 +14381,8 @@
     "envelope": "follow_up",
     "modelo": "Crm::FollowUp",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:44",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:198"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:40",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:202"
     ],
     "sem_corpo": false
   },
@@ -14390,8 +14390,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/follow_ups#cancel",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:72",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:98"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:68",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:94"
     ],
     "sem_corpo": true
   },
@@ -14399,8 +14399,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/follow_ups#complete",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:68",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:98"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:64",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:94"
     ],
     "sem_corpo": true
   },
@@ -14408,8 +14408,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/follow_ups#dismiss_reminder",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:76",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:98"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:72",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:94"
     ],
     "sem_corpo": true
   },
@@ -14422,9 +14422,9 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/follow_ups#reschedule",
     "origem": [
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:80",
       "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:84",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:88",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:98"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:94"
     ],
     "sem_corpo": false
   },
@@ -16965,50 +16965,10 @@
     "envelope": "template",
     "modelo": "Crm::Card",
     "origem": [
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:23",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:73",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:76",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:57"
-    ],
-    "sem_corpo": false
-  },
-  "POST inboxes/:inbox_id/whatsapp_templates/:id/duplicate": {
-    "campos": {
-      "category": {},
-      "components": {
-        "tipo": "lista",
-        "tipo_pela_leitura": "uso"
-      },
-      "fields": {
-        "tipo": "objeto_livre"
-      },
-      "friendly_name": {},
-      "header_media": {
-        "campos": {
-          "blob_signed_id": {},
-          "byte_size": {},
-          "content_type": {},
-          "file_name": {},
-          "handle": {}
-        },
-        "tipo": "objeto"
-      },
-      "language": {},
-      "message_send_ttl_seconds": {},
-      "name": {},
-      "parameter_format": {}
-    },
-    "completo": true,
-    "controller": "api/v1/accounts/inboxes/whatsapp_templates#duplicate",
-    "corpo_plano": false,
-    "envelope": "template",
-    "modelo": "Crm::Card",
-    "origem": [
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:36",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:73",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:76",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:37",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:57"
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:29",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:75",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:78",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:59"
     ],
     "sem_corpo": false
   },
@@ -17023,10 +16983,10 @@
       "leitura crua sem tipo: file (repassada a manager.upload)"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:40",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:42",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:45",
       "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:43",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:41",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:57"
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:59"
     ],
     "sem_corpo": false
   },
@@ -22688,9 +22648,9 @@
     "envelope": "follow_up",
     "modelo": "Crm::FollowUp",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:56",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:198",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:98"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:52",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:202",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:94"
     ],
     "sem_corpo": false
   },
@@ -24179,11 +24139,11 @@
     "envelope": "template",
     "modelo": "Crm::Card",
     "origem": [
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:27",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:73",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:76",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:28",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:57"
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:33",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:75",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:78",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:34",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:59"
     ],
     "sem_corpo": false
   },

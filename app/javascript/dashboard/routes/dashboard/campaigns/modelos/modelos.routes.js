@@ -41,9 +41,13 @@ export const exigirJornadaDeModelos = async (to, _from, next) => {
   next({ name: 'campaigns_templates_index', params: to.params });
 };
 
-const meta = permissions => ({
+// Quem só vê e abre "novo" ou "alterar" pelo endereço volta para a lista (que
+// já diz "você pode ver os modelos"), em vez de cair numa tela em branco.
+const LISTA = 'campaigns/modelos-whatsapp';
+const meta = (permissions, fallbackPath) => ({
   featureFlag: FEATURE_FLAGS.WHATSAPP_TEMPLATES_JOURNEY,
   permissions,
+  ...(fallbackPath ? { fallbackPath } : {}),
 });
 
 const base = 'accounts/:accountId/campaigns/modelos-whatsapp';
@@ -60,14 +64,14 @@ export const routes = [
     path: frontendURL(`${base}/novo`),
     name: 'modelos_whatsapp_novo',
     component: ModeloCriarPage,
-    meta: meta(PERMISSOES_PARA_CRIAR),
+    meta: meta(PERMISSOES_PARA_CRIAR, LISTA),
     beforeEnter: exigirJornadaDeModelos,
   },
   {
     path: frontendURL(`${base}/enviado`),
     name: 'modelos_whatsapp_enviado',
     component: ModeloEnviadoPage,
-    meta: meta(PERMISSOES_PARA_CRIAR),
+    meta: meta(PERMISSOES_PARA_CRIAR, LISTA),
     beforeEnter: exigirJornadaDeModelos,
   },
   {
@@ -81,7 +85,7 @@ export const routes = [
     path: frontendURL(`${base}/:id/alterar`),
     name: 'modelos_whatsapp_alterar',
     component: ModeloCriarPage,
-    meta: meta(PERMISSOES_PARA_CRIAR),
+    meta: meta(PERMISSOES_PARA_CRIAR, LISTA),
     beforeEnter: exigirJornadaDeModelos,
   },
   {

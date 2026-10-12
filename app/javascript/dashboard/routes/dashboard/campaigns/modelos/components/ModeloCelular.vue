@@ -91,7 +91,12 @@ const botoes = computed(() => {
     return [{ tipo: 'formulario', texto: conteudo.formulario.botao }];
   }
   if (formato.value === 'carrossel') return [];
-  return conteudo.botoes;
+  // O texto do "Copiar código" é fixo do WhatsApp: a prévia mostra o de verdade.
+  return conteudo.botoes.map(botao =>
+    botao.tipo === 'copiar_codigo'
+      ? { ...botao, texto: t('MODELOS_WHATSAPP.BOTOES_PRONTOS.COPIAR_CODIGO') }
+      : botao
+  );
 });
 
 const rodape = computed(() => {

@@ -455,12 +455,14 @@ RSpec.describe Conversation do
       expect(conversation.reload.status).to eq('open')
     end
 
-    it 'clears agent bot ownership' do
-      conversation.update!(ai_assignee: create(:agent_bot, account: conversation.account))
+    it 'keeps the agent bot as ai_assignee until a person takes over' do
+      agent_bot = create(:agent_bot, account: conversation.account)
+      conversation.update!(assignee: nil, ai_assignee: agent_bot, waiting_since: nil)
 
       conversation.bot_handoff!
 
-      expect(conversation.reload.ai_assignee).to be_nil
+      expect(conversation.reload).to have_attributes(status: 'open', ai_assignee: agent_bot)
+      expect(conversation.waiting_since).to be_present
     end
 
     it 'dispatches CONVERSATION_BOT_HANDOFF event' do

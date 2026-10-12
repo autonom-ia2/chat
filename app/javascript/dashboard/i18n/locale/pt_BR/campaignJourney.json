@@ -320,12 +320,13 @@
         "TEMPLATE_LABEL": "Modelo aprovado",
         "TEMPLATE_PLACEHOLDER": "Escolha o modelo",
         "TEMPLATE_EMPTY": "Esta caixa ainda não tem modelo aprovado.",
-        "MEDIA_LABEL": "Link do arquivo que aparece no topo da mensagem",
+        "MEDIA_LABEL": "Link de outro arquivo para o topo (opcional)",
         "MEDIA_PLACEHOLDER": "https://",
         "CONTINUE": "Continuar para revisão",
         "PREVIEW_TITLE": "Como o cliente vê",
         "PREVIEW_HINT": "Prévia com o primeiro contato do público.",
-        "PREVIEW_EMPTY": "Escolha um modelo para ver a prévia."
+        "PREVIEW_EMPTY": "Escolha um modelo para ver a prévia.",
+        "MEDIA_DEFAULT": "Sem link, vai o arquivo que foi aprovado com o modelo."
       },
       "VARIABLES": {
         "TITLE": "De onde vem cada parte da mensagem",
@@ -401,7 +402,10 @@
           "INVALID_SCHEDULE": "Escolha uma data e hora no futuro.",
           "FEATURE_DISABLED": "Campanhas de WhatsApp não estão ligadas nesta conta.",
           "SMS_INBOX_REQUIRED": "Escolha uma caixa de SMS conectada.",
-          "MESSAGE_TOO_LONG": "A mensagem é longa demais para SMS (no máximo 1.600 caracteres)."
+          "MESSAGE_TOO_LONG": "A mensagem é longa demais para SMS (no máximo 1.600 caracteres).",
+          "HEADER_MEDIA_REQUIRED": "Este modelo tem foto, vídeo ou documento no topo, mas o arquivo não está guardado. Ponha o link do arquivo ou escolha o arquivo de novo no modelo.",
+          "HEADER_MEDIA_URL_INVALID": "O link do arquivo precisa ser completo, começando com https://.",
+          "HEADER_MEDIA_TYPE_MISMATCH": "O arquivo do link não é do mesmo tipo do topo do modelo (foto, vídeo ou documento)."
         },
         "OPTED_OUT": "Recusaram mensagens",
         "REASONS": {

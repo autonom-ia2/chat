@@ -93,13 +93,10 @@ class Crm::BookingV2::NoticeTemplates::Creator
     }
   end
 
-  # Põe o modelo na lista da caixa até a próxima sincronia trazer a lista da Meta (que já o inclui).
+  # Põe o modelo na lista da caixa até a próxima sincronia trazer a lista da Meta (que já o inclui). Com trava e só a
+  # entrada deste modelo (#1382), para não apagar o que o sync ou a tela de Modelos gravaram no meio.
   def record(template)
-    templates = Catalog.templates_of(channel.inbox).reject do |item|
-      item['name'] == template['name'] && item['language'] == template['language']
-    end
-    channel.update_columns(message_templates: templates + [template]) # rubocop:disable Rails/SkipsModelValidations
-    channel.account.update_cache_key('inbox')
+    Whatsapp::Templates::ChannelList.upsert!(channel, template)
     template
   end
 

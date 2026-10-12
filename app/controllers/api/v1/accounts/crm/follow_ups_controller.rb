@@ -1,5 +1,10 @@
 class Api::V1::Accounts::Crm::FollowUpsController < Api::V1::Accounts::Crm::BaseController
   before_action :fetch_follow_up, only: [:show, :update, :destroy, :complete, :cancel, :dismiss_reminder, :reschedule]
+  # Soma um `code` estável ao 422 genérico quando é o fallback de template (achado da revisão em #1349).
+  rescue_from ActiveRecord::RecordInvalid do |exception|
+    log_handled_error(exception)
+    render json: Crm::FollowUps::RecordInvalidResponse.render(exception), status: :unprocessable_entity
+  end
 
   RESULTS_PER_PAGE = 50
   MAX_RESULTS_PER_PAGE = 100
@@ -10,16 +15,7 @@ class Api::V1::Accounts::Crm::FollowUpsController < Api::V1::Accounts::Crm::Base
 
     conversation = visible_conversation(params[:conversation_id])
     authorize_conversation!(conversation)
-    window = Crm::FollowUps::MessagingWindow.new(conversation, at: messaging_window_at)
-    render json: {
-      whatsapp_capable: window.whatsapp_capable?,
-      can_send_session_message: window.can_send_session_message?,
-      requires_template: window.requires_template?,
-      channel_type: conversation.inbox.channel_type,
-      whatsapp_api_inbox: conversation.inbox.channel_type == 'Channel::Api' && conversation.inbox.channel.whatsapp_api_campaign_channel?,
-      whatsapp_native_inbox: conversation.inbox.channel_type == 'Channel::Whatsapp',
-      inbox_id: conversation.inbox_id
-    }
+    render json: messaging_window_payload(conversation)
   end
 
   def index
@@ -107,12 +103,20 @@ class Api::V1::Accounts::Crm::FollowUpsController < Api::V1::Accounts::Crm::Base
     params.fetch(:per_page, RESULTS_PER_PAGE).to_i.clamp(1, MAX_RESULTS_PER_PAGE)
   end
 
-  def messaging_window_at
-    return nil if params[:at].blank?
-
-    Time.zone.parse(params[:at].to_s)
-  rescue ArgumentError
-    nil
+  def messaging_window_payload(conversation)
+    at = (Time.zone.parse(params[:at].to_s) rescue nil) if params[:at].present? # rubocop:disable Style/RescueModifier
+    window = Crm::FollowUps::MessagingWindow.new(conversation, at: at)
+    inbox = conversation.inbox
+    {
+      whatsapp_capable: window.whatsapp_capable?,
+      can_send_session_message: window.can_send_session_message?,
+      requires_template: window.requires_template?,
+      whatsapp_api_available: window.hybrid_web_available?,
+      channel_type: inbox.channel_type,
+      whatsapp_api_inbox: inbox.channel_type == 'Channel::Api' && inbox.channel.whatsapp_api_campaign_channel?,
+      whatsapp_native_inbox: inbox.channel_type == 'Channel::Whatsapp',
+      inbox_id: conversation.inbox_id
+    }
   end
 
   def visible_card(card_id)
@@ -130,11 +134,8 @@ class Api::V1::Accounts::Crm::FollowUpsController < Api::V1::Accounts::Crm::Base
   end
 
   def authorize_conversation!(conversation)
-    Crm::Conversations::AccessAuthorizer.new(
-      account: Current.account,
-      user: Current.user,
-      account_user: Current.account_user
-    ).authorize!(conversation)
+    Crm::Conversations::AccessAuthorizer.new(account: Current.account, user: Current.user,
+                                             account_user: Current.account_user).authorize!(conversation)
   end
 
   def resolved_follow_up_params(card, attributes, conversation)
@@ -190,8 +191,11 @@ class Api::V1::Accounts::Crm::FollowUpsController < Api::V1::Accounts::Crm::Base
     follow_up_params
   end
 
+  # Chaves que só o servidor escreve (transporte do Híbrido) nunca entram pelo metadata do cliente.
   def params_for_update
-    follow_up_params.except(:card_id, :conversation_id)
+    attributes = follow_up_params.except(:card_id, :conversation_id)
+    attributes[:metadata] &&= ::Crm::FollowUps::MetadataSanitizer.without_server_keys(attributes[:metadata])
+    attributes
   end
 
   def follow_up_params

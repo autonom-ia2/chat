@@ -21,9 +21,17 @@ class Conversations::AssignmentService
       end
       conversation.assignee = assignee
       conversation.ai_assignee = nil
+      hand_back_to_inbox_bot if assignee.nil?
       conversation.save!
     end
     assignee
+  end
+
+  # Desatribuir numa caixa com robô devolve a conversa a ele (#1377): sem pessoa, quem atende é o robô. Conversa de
+  # robô nunca fica pendente.
+  def hand_back_to_inbox_bot
+    conversation.ai_assignee = conversation.inbox_agent_bot
+    conversation.status = :open if conversation.ai_assignee.present? && conversation.pending?
   end
 
   def assign_agent_bot
@@ -40,7 +48,12 @@ class Conversations::AssignmentService
     conversation.with_lock do
       conversation.assignee = nil
       conversation.ai_assignee = ai_assignee
-      conversation.status = :pending
+      # Conversa de robô nunca fica pendente (#1377, regra do Rodrigo): o robô atende a conversa aberta, então
+      # entregar a ele uma conversa resolvida ou adiada a reabre. O Captain, que exigiria pendente, não é usado.
+      conversation.status = :open
+      conversation.snoozed_until = nil
+      # Entregar de novo a um robô encerra a espera de pessoa de uma passagem anterior.
+      conversation.end_bot_handoff_wait
       conversation.save!
     end
     ai_assignee

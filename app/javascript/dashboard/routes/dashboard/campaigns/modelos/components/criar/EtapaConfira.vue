@@ -2,8 +2,11 @@
 import { computed } from 'vue';
 import { formatoPorChave } from '../../constants';
 import Button from 'dashboard/components-next/button/Button.vue';
+import { previaCurta } from '../../helpers/conteudo';
+import { useRotuloDoCampo } from '../../helpers/campos';
 import ModeloConferencia from '../ModeloConferencia.vue';
 import ModeloQuemAprova from '../ModeloQuemAprova.vue';
+import CustoDoTipo from '../CustoDoTipo.vue';
 
 // Confira: o resumo de cada parte com "Alterar", a conferência do que pode
 // causar recusa e quem aprova.
@@ -19,6 +22,22 @@ const props = defineProps({
 const emit = defineEmits(['ir']);
 
 const conteudo = computed(() => props.rascunho.conteudo);
+
+// O começo da mensagem, com o nome de cada campo, embaixo do nome do modelo.
+const RETICENCIAS = '…';
+const rotulo = useRotuloDoCampo();
+const comecoDoTexto = computed(() => {
+  const { pedacos, cortado } = previaCurta(
+    conteudo.value.texto || [],
+    rotulo,
+    90
+  );
+  const texto = pedacos
+    .map(pedaco => (pedaco.t === 'campo' ? `[${rotulo(pedaco.v)}]` : pedaco.v))
+    .join('')
+    .trim();
+  return cortado ? `${texto}${RETICENCIAS}` : texto;
+});
 
 const nomesDosNumeros = computed(() =>
   props.numeros
@@ -55,12 +74,15 @@ const resumo = computed(() =>
         v-for="item in resumo"
         :key="item.etapa"
         :data-resumo="item.etapa"
-        class="flex flex-wrap items-center justify-between gap-3 px-5 py-4"
+        class="flex items-start justify-between gap-3 px-5 py-4"
       >
-        <span class="flex flex-col min-w-0">
+        <span class="flex flex-col flex-1 min-w-0">
           <span class="text-sm text-n-slate-10">
             {{
-              rotulos[item.etapa] || $t(`MODELOS_WHATSAPP.ETAPAS.${item.etapa}`)
+              item.etapa === 'texto'
+                ? $t('MODELOS_WHATSAPP.CONFIRA.NOME_E_TEXTO')
+                : rotulos[item.etapa] ||
+                  $t(`MODELOS_WHATSAPP.ETAPAS.${item.etapa}`)
             }}
           </span>
           <span class="text-base font-medium break-words text-n-slate-12">
@@ -70,6 +92,13 @@ const resumo = computed(() =>
                 : item.valor || $t('MODELOS_WHATSAPP.CONFIRA.FALTA_PREENCHER')
             }}
           </span>
+          <span
+            v-if="item.etapa === 'texto' && comecoDoTexto"
+            data-resumo-texto
+            class="text-sm break-words text-n-slate-11"
+          >
+            {{ comecoDoTexto }}
+          </span>
         </span>
         <Button
           :label="$t('MODELOS_WHATSAPP.ACOES.ALTERAR')"
@@ -77,15 +106,21 @@ const resumo = computed(() =>
           color="slate"
           variant="ghost"
           size="sm"
-          class="min-h-11"
+          class="min-h-11 shrink-0"
           @click="emit('ir', item.etapa)"
         />
       </li>
     </ul>
     <ModeloConferencia :conteudo="conteudo" :contexto="contexto" />
+    <!-- Quanto custa cada envio do tipo previsto (divulgação diz quanto a mais). -->
+    <CustoDoTipo
+      v-if="['aviso', 'divulgacao'].includes(rascunho.tipo)"
+      :tipo="rascunho.tipo"
+    />
     <ModeloQuemAprova
       :tipo="rascunho.tipo"
       :so-divulgacao="Boolean(formatoPorChave(conteudo.formato)?.soDivulgacao)"
+      :nao-vai-em-campanha="(conteudo.formato || 'padrao') !== 'padrao'"
     />
   </div>
 </template>

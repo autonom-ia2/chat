@@ -10,6 +10,8 @@
 # `closed_dates` (#1195, J2-A8): feriados da janela que a página fecha; a página os trata como dia fechado em vez de
 # deixar o cliente tocar à toa. Os três campos de dias vêm de `Crm::BookingV2::OpenDays`, os mesmos do painel.
 # `notices_enabled` (#1192): a página tem caixa de avisos utilizável; a tela mostra o aviso de consentimento.
+# `paused`: só o aviso de pausa e o WhatsApp da empresa; com o responsável ainda atendendo, também o `form` do pedido
+# de contato (RA-17, #1401). Sem ele, a tela mostra a saída que restar.
 class Crm::BookingV2::PublicPageSerializer
   include Rails.application.routes.url_helpers
 
@@ -32,7 +34,8 @@ class Crm::BookingV2::PublicPageSerializer
   end
 
   def paused
-    { slug: page.slug, paused: true, title: profile.title, brand: brand, contact_whatsapp_url: self.class.whatsapp_url(profile) }
+    base = { slug: page.slug, paused: true, title: profile.title, brand: brand, contact_whatsapp_url: self.class.whatsapp_url(profile) }
+    page.contactable? ? base.merge(form) : base
   end
 
   def full

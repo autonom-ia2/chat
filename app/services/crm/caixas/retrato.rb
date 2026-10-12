@@ -41,8 +41,8 @@ class Crm::Caixas::Retrato
 
   private
 
-  # O robô que atende primeiro na caixa: o mesmo que o card mostra como responsável quando não há pessoa
-  # (Crm::Card#responsible_agent_bot).
+  # O robô que atende primeiro na caixa. O card mostra este como responsável quando não há pessoa nem robô atribuído à
+  # conversa (Crm::Card#responsible_agent_bot, #1377).
   def robo(inbox)
     vinculo = inbox.agent_bot_inbox
     return unless vinculo&.active? && vinculo.agent_bot

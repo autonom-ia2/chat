@@ -3,15 +3,14 @@ import { computed } from 'vue';
 import Input from 'dashboard/components-next/input/Input.vue';
 import { VALIDADE_MAXIMA, VALIDADE_MINIMA } from '../../constants';
 
-// Código de verificação: o texto é fixo do WhatsApp. A pessoa escolhe o botão
-// (copiar ou preencher sozinho), a validade e o aviso de segurança. Sem link,
-// foto ou emoji.
+// Código de verificação: o texto é fixo do WhatsApp. A pessoa escolhe a
+// validade e o aviso de segurança. Sem link, foto ou emoji.
 const rascunho = defineModel('rascunho', { type: Object, required: true });
 
 const codigo = computed(() => rascunho.value.conteudo.codigo);
-// "Preencher automaticamente" (ONE_TAP) pede o pacote e a assinatura do aplicativo
-// Android da empresa, que o Chat2You ainda não guarda: por enquanto, só copiar.
-const BOTOES = [{ chave: 'copiar', icone: 'i-lucide-copy' }];
+// O botão é sempre "Copiar código": "Preencher automaticamente" (ONE_TAP) pede o
+// pacote e a assinatura do aplicativo Android da empresa, que o Chat2You ainda
+// não guarda. Com uma opção só, a tela diz qual é em vez de pedir para escolher.
 
 const mudar = (campo, valor) => {
   rascunho.value = {
@@ -38,44 +37,28 @@ const validadeErrada = computed(
       <h2 class="m-0 text-base font-semibold text-n-slate-12">
         {{ $t('MODELOS_WHATSAPP.CODIGO.BOTAO') }}
       </h2>
-      <div
-        role="radiogroup"
-        :aria-label="$t('MODELOS_WHATSAPP.CODIGO.BOTAO')"
-        class="grid gap-3 sm:grid-cols-2"
+      <p
+        data-botao-codigo="copiar"
+        class="flex items-start gap-3 p-4 mb-0 rounded-xl ring-1 ring-inset ring-n-weak bg-n-solid-1"
       >
-        <button
-          v-for="botao in BOTOES"
-          :key="botao.chave"
-          type="button"
-          role="radio"
-          :data-botao-codigo="botao.chave"
-          :aria-checked="codigo.botao === botao.chave"
-          class="flex items-start gap-3 p-4 text-start rounded-xl ring-1 ring-inset min-h-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
-          :class="
-            codigo.botao === botao.chave
-              ? 'ring-2 ring-n-blue-8 bg-n-blue-2'
-              : 'ring-n-weak bg-n-solid-1 hover:ring-n-blue-6'
-          "
-          @click="mudar('botao', botao.chave)"
+        <span
+          class="grid place-items-center size-10 shrink-0 rounded-lg bg-n-blue-3 text-n-blue-11"
         >
-          <span
-            class="grid place-items-center size-10 shrink-0 rounded-lg bg-n-blue-3 text-n-blue-11"
-          >
-            <span class="size-5" :class="botao.icone" aria-hidden="true" />
+          <span class="i-lucide-copy size-5" aria-hidden="true" />
+        </span>
+        <span class="flex flex-col gap-0.5">
+          <span class="text-[0.9375rem] font-semibold text-n-slate-12">
+            {{ $t('MODELOS_WHATSAPP.FORMATOS.codigo.BOTOES.copiar') }}
           </span>
-          <span class="flex flex-col gap-0.5">
-            <span class="text-[0.9375rem] font-semibold text-n-slate-12">
-              {{ $t(`MODELOS_WHATSAPP.FORMATOS.codigo.BOTOES.${botao.chave}`) }}
-            </span>
-            <span class="text-sm text-n-slate-11">
-              {{ $t(`MODELOS_WHATSAPP.CODIGO.BOTOES_PARA.${botao.chave}`) }}
-            </span>
+          <span class="text-sm text-n-slate-11">
+            {{ $t('MODELOS_WHATSAPP.CODIGO.BOTOES_PARA.copiar') }}
           </span>
-        </button>
-      </div>
+        </span>
+      </p>
     </section>
 
     <Input
+      wrap-message
       :model-value="codigo.validade"
       data-validade
       type="number"

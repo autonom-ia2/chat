@@ -50,6 +50,17 @@ module Autonomia
         agent_inbox
       end
 
+      # O espelho deste vínculo comanda a conversa (é o ai_assignee, ou a conversa está pending, legado) e ela não
+      # está à espera de pessoa: só então uma passagem nova vale. Desde o #1377 o robô segue como ai_assignee depois
+      # do `bot_handoff!` e a própria resposta dele reivindica a conversa, então "o espelho saiu" deixou de ser sinal
+      # de passagem feita; o sinal é a marca de espera, gravada pelo `bot_handoff!` na mesma gravação e apagada
+      # quando uma pessoa entra na conversa (ConversationBotHandoff). Chamar com estado fresco (dentro do with_lock).
+      def self.espelho_no_comando?(conversation, agent_inbox)
+        return false if conversation.bot_handoff_waiting?
+
+        conversation.assignee_agent_bot_id == agent_inbox.agent_bot_id || conversation.pending?
+      end
+
       # GUARD-RAIL DE TESTE (aditivo, FAIL-CLOSED). Quando o agente tem
       # `config['test_allowlist_phones']` (lista de números), ele SÓ pode atuar em conversas cujo
       # contato tenha telefone (E.164) batendo — só dígitos — com a lista. Permite testar em caixas

@@ -275,6 +275,8 @@ const SECONDARY =
             </div>
           </fieldset>
 
+          <!-- "Das" e "Até" com 44 px visíveis (RA-06, #1401); o ChoiceSelect
+               padrão mede 40 px e só a área de toque chega a 44. -->
           <div class="grid gap-4 sm:grid-cols-2">
             <div class="flex flex-col gap-2">
               <p class="m-0 text-base font-semibold text-n-slate-12">
@@ -282,6 +284,7 @@ const SECONDARY =
               </p>
               <ChoiceSelect
                 data-start
+                class="[&>button]:min-h-11"
                 :model-value="form.startHour"
                 :options="startOptions"
                 :aria-label="t('BOOKING.WHEN.FROM')"
@@ -294,6 +297,7 @@ const SECONDARY =
               </p>
               <ChoiceSelect
                 data-end
+                class="[&>button]:min-h-11"
                 :model-value="form.endHour"
                 :options="endOptions"
                 :aria-label="t('BOOKING.WHEN.TO')"

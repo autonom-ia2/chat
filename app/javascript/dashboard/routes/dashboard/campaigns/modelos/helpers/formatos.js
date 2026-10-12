@@ -8,23 +8,22 @@ import {
   VALIDADE_MINIMA,
   formatoPorChave,
 } from '../constants';
+import {
+  codigoDeExemploValido,
+  enderecoValido,
+  problemasDoBotao,
+} from './regraEstrutural';
 
 // Formatos além da mensagem comum: carrossel, oferta por tempo limitado,
 // catálogo, código de verificação e botão de formulário. Cada um guarda os
 // próprios dados dentro do conteúdo (conteudo.cartoes, conteudo.oferta…).
 // Sem expressão regular (regra do Rodrigo).
 
-const DIA_MS = 24 * 60 * 60 * 1000;
 const temLetras = texto => (texto || '').trim().length > 0;
 
-// Date → "2026-10-13T18:00", o valor do campo de data e hora do navegador.
-export const paraCampoDeData = data => {
-  const dois = numero => String(numero).padStart(2, '0');
-  return `${data.getFullYear()}-${dois(data.getMonth() + 1)}-${dois(data.getDate())}T${dois(data.getHours())}:${dois(data.getMinutes())}`;
-};
-
+// Carrossel é sempre divulgação.
 const botaoCompleto = botao =>
-  temLetras(botao.texto) && (botao.tipo !== 'site' || temLetras(botao.valor));
+  problemasDoBotao(botao, 'divulgacao').length === 0;
 
 const conferirCarrossel = ({ cartoes = [] }) => {
   const assinatura = cartao => cartao.botoes.map(botao => botao.tipo).join(',');
@@ -54,6 +53,11 @@ const conferirCarrossel = ({ cartoes = [] }) => {
           cartao.botoes.every(botaoCompleto)
       ),
     },
+    // A Meta quer o mesmo tipo de topo em todos os cartões.
+    {
+      chave: 'CARTOES_MESMA_MIDIA',
+      ok: cartoes.every(cartao => cartao.midia === cartoes[0].midia),
+    },
     {
       chave: 'CARTOES_IGUAIS',
       ok: cartoes.every(
@@ -70,11 +74,12 @@ const conferirOferta = ({ oferta }) => [
       temLetras(oferta.titulo) &&
       oferta.titulo.length <= LIMITE_DO_TITULO_DA_OFERTA,
   },
+  { chave: 'OFERTA_LINK', ok: enderecoValido(oferta.link) },
+  // Cupom é opcional; com ele, de 1 a 15 letras e números.
   {
-    chave: 'OFERTA_FIM',
-    ok: Boolean(oferta.terminaEm) && new Date(oferta.terminaEm) > new Date(),
+    chave: 'OFERTA_CUPOM',
+    ok: !oferta.cupom || codigoDeExemploValido(oferta.cupom),
   },
-  { chave: 'OFERTA_LINK', ok: temLetras(oferta.link) },
 ];
 
 export const conferirFormato = (conteudo, { temCatalogo = true } = {}) => {
@@ -88,7 +93,10 @@ export const conferirFormato = (conteudo, { temCatalogo = true } = {}) => {
     return [
       {
         chave: 'VALIDADE',
-        ok: validade >= VALIDADE_MINIMA && validade <= VALIDADE_MAXIMA,
+        ok:
+          Number.isInteger(Number(validade)) &&
+          validade >= VALIDADE_MINIMA &&
+          validade <= VALIDADE_MAXIMA,
       },
     ];
   }
@@ -125,7 +133,7 @@ export const rascunhoDoFormato = (chave, { t, ler, exemplosDe }) => {
           {
             tipo: 'site',
             texto: t(`${base}.BOTAO`),
-            valor: 'https://hub2you.com.br/novidades',
+            valor: '',
           },
         ],
       })),
@@ -133,9 +141,8 @@ export const rascunhoDoFormato = (chave, { t, ler, exemplosDe }) => {
     oferta: {
       oferta: {
         titulo: t(`${base}.TITULO_EXEMPLO`),
-        terminaEm: paraCampoDeData(new Date(Date.now() + 2 * DIA_MS)),
-        link: 'https://hub2you.com.br/ofertas',
-        cupom: t(`${base}.CUPOM_EXEMPLO`),
+        link: '',
+        cupom: '',
       },
     },
     catalogo: { catalogo: { botao: t(`${base}.BOTAO`) } },
@@ -147,7 +154,6 @@ export const rascunhoDoFormato = (chave, { t, ler, exemplosDe }) => {
   return {
     nome: t(`${base}.NOME_PADRAO`),
     objetivo: chave,
-    biblioteca: false,
     tipo: formato.tipo,
     numeros: [],
     conteudo: { ...conteudo, ...especifico },

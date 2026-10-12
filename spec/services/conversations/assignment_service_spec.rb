@@ -82,7 +82,7 @@ describe Conversations::AssignmentService do
         )
       end
 
-      it 'sets the agent bot, clears human assignee and marks the conversation pending' do
+      it 'sets the agent bot, clears human assignee and keeps the conversation open' do
         conversation.update!(assignee: agent, ai_assignee: nil, status: :open)
 
         result = service.perform
@@ -92,24 +92,24 @@ describe Conversations::AssignmentService do
         expect(conversation.assignee_agent_bot_id).to eq(agent_bot.id)
         expect(conversation.ai_assignee_type).to eq('AgentBot')
         expect(conversation.assignee_id).to be_nil
-        expect(conversation.status).to eq('pending')
+        expect(conversation.status).to eq('open')
       end
 
-      it 'marks a resolved conversation pending' do
+      it 'reopens a resolved conversation as open, never pending' do
         conversation.update!(status: :resolved)
 
         service.perform
 
-        expect(conversation.reload.status).to eq('pending')
+        expect(conversation.reload.status).to eq('open')
       end
 
-      it 'marks a snoozed conversation pending and clears the snooze timestamp' do
+      it 'reopens a snoozed conversation as open and clears the snooze timestamp' do
         conversation.update!(status: :snoozed, snoozed_until: 1.day.from_now)
 
         service.perform
 
         conversation.reload
-        expect(conversation.status).to eq('pending')
+        expect(conversation.status).to eq('open')
         expect(conversation.snoozed_until).to be_nil
       end
     end

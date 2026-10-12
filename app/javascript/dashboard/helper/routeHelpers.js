@@ -53,8 +53,13 @@ const validateActiveAccountRoutes = (to, user) => {
   const userPermissions = getUserPermissions(user, to.params.accountId);
 
   const isAccessible = routeIsAccessibleFor(to, userPermissions);
+  if (isAccessible) return null;
+  // Fork: a route can name where to go without permission (e.g. who only sees
+  // the WhatsApp templates opening "new" lands on the list, not on a blank page).
+  const { fallbackPath } = to.meta || {};
+  if (fallbackPath) return `accounts/${to.params.accountId}/${fallbackPath}`;
   // If the route is not accessible for the user, return to dashboard screen
-  return isAccessible ? null : defaultRedirectPage(to, userPermissions);
+  return defaultRedirectPage(to, userPermissions);
 };
 
 export const validateLoggedInRoutes = (to, user) => {

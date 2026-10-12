@@ -73,6 +73,19 @@ module BookingHelpers
                                    name: world.contact.name, guest_type: :contact_guest)
     meeting
   end
+
+  # Chaves de id interno (`id`, `*_id`, `*_ids`) em qualquer nível do JSON público. Confere a chave, não o valor: um id
+  # pequeno do banco de teste pode coincidir com um número legítimo do payload (duração 30, janela de 14 dias). Os specs
+  # que usam isto também comparam o payload inteiro com `eq`; as duas checagens andam juntas.
+  def internal_id_keys(payload)
+    case payload
+    when Hash
+      own = payload.keys.select { |key| key == 'id' || key.end_with?('_id', '_ids') }
+      own + payload.values.flat_map { |value| internal_id_keys(value) }
+    when Array then payload.flat_map { |item| internal_id_keys(item) }
+    else []
+    end
+  end
 end
 
 RSpec.configure do |config|

@@ -58,6 +58,12 @@ const emit = defineEmits([
   'manageIdentity',
 ]);
 
+// Fork: a lista pode ter só modelos que não vão (recusado, pausado, formato):
+// aí o aviso de "sem modelo" aparece junto, com a saída (criar ou corrigir).
+const temModeloLiberado = computed(() =>
+  props.templateOptions.some(opcao => !opcao.disabled)
+);
+
 const NS = 'CAMPAIGN_JOURNEY.NEW_CAMPAIGN.MESSAGE';
 const { t } = useI18n();
 
@@ -279,19 +285,23 @@ const chooseChannel = card => {
               data-test="template-choice"
               @update:model-value="templateId => emit('update', { templateId })"
             />
-            <slot v-else name="modelo-vazio">
+            <slot v-if="!temModeloLiberado" name="modelo-vazio">
               <p class="m-0 text-sm text-n-slate-11">
                 {{ t(`${NS}.TEMPLATE_EMPTY`) }}
               </p>
             </slot>
             <slot name="modelo-aviso" />
           </div>
+          <!-- Fork (#1382): sem link, vai o arquivo guardado com o modelo; o link é opcional. -->
           <Input
             v-if="mediaHeader"
             :model-value="draft.mediaUrl"
             type="url"
+            data-test="media-url"
             :label="t(`${NS}.MEDIA_LABEL`)"
             :placeholder="t(`${NS}.MEDIA_PLACEHOLDER`)"
+            :message="t(`${NS}.MEDIA_DEFAULT`)"
+            wrap-message
             custom-input-class="!h-11"
             @update:model-value="mediaUrl => emit('update', { mediaUrl })"
           />

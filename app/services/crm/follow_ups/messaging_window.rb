@@ -38,6 +38,27 @@ class Crm::FollowUps::MessagingWindow
     @at < last_incoming.created_at + window
   end
 
+  # Fora das 24h numa caixa Oficial com WhatsApp Híbrido (chat#1067) pronto, o texto livre do CRM sai pelo
+  # WhatsApp API (o roteador escolhe o transporte). Só vale para a origem crm_follow_up ligada na conexão.
+  # Pesa o banco só depois de passar pelo que o Config já responde (conta no piloto, caixa com conexão).
+  def hybrid_web_available?
+    return false unless hybrid_configured?
+    return false if can_send_session_message?
+
+    router = WhatsappHybrid::Router.new(@conversation)
+    router.web_ready? && router.connection.origin_enabled?(WhatsappHybrid::Router::CRM_FOLLOW_UP_ORIGIN)
+  end
+
+  # A caixa é Oficial (Cloud), a conta está no piloto e existe conexão do Híbrido (pronta ou não). Não olha a janela
+  # nem o estado da conexão: serve para distinguir "Híbrido caiu" de "esta caixa nunca teve Híbrido".
+  def hybrid_configured?
+    inbox = @conversation.inbox
+    return false unless inbox&.channel_type == 'Channel::Whatsapp'
+    return false unless WhatsappHybrid::Config.account_allowed?(inbox.account_id)
+
+    WhatsappHybrid::Config.hybrid_inbox?(inbox.id)
+  end
+
   # WhatsApp não-oficial via WAHA (Channel::Api provider 'waha'): sem janela/template.
   def waha_unrestricted?
     channel = @conversation.inbox&.channel

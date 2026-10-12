@@ -42,7 +42,7 @@ module Captain::Copilot::ConversationAccess
 
     if permissions.include?('conversation_unassigned_manage')
       scopes << conversations
-                .unassigned
+                .awaiting_person # inclui a que o robô passou e espera pessoa (#1377)
                 .or(conversations.assigned_to(user))
     end
 

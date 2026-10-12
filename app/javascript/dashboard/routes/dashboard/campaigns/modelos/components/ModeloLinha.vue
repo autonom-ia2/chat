@@ -3,9 +3,11 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import { objetivoPorChave } from '../constants';
+import { usavelEmCampanha } from '../helpers/paraMeta';
 import { haQuantoTempo, numero } from '../helpers/datas';
 import ModeloSelo from './ModeloSelo.vue';
 import { useRotuloDoCampo } from '../helpers/campos';
+import { previaCurta } from '../helpers/conteudo';
 
 // Um modelo na lista: nome pelo objetivo, o próprio texto (com os campos como
 // etiqueta), a situação e a próxima ação.
@@ -26,6 +28,9 @@ const PONTO = '·';
 
 const { t, locale } = useI18n();
 const rotulo = useRotuloDoCampo();
+// O começo do texto, cortado entre palavras (nunca no meio de um campo).
+const RETICENCIAS = '…';
+const previa = computed(() => previaCurta(props.modelo.conteudo.texto, rotulo));
 
 // Formato diferente da mensagem comum ganha uma etiqueta ("Carrossel").
 const formato = computed(() => {
@@ -55,6 +60,8 @@ const frase = computed(() => {
         })
       : t(`${base}.EM_ANALISE_SEM_DATA`);
   }
+  if (situacao === 'desativado') return t(`${base}.DESATIVADO`);
+  if (situacao === 'limite') return t(`${base}.LIMITE`);
   if (situacao === 'pausado') {
     return pausa?.desde
       ? t(`${base}.PAUSADO`, {
@@ -80,7 +87,12 @@ const numeros = computed(() => {
 const acao = computed(() => {
   if (props.modelo.situacao === 'recusado' && props.podeCriar)
     return 'corrigir';
-  if (props.modelo.situacao === 'pronto' && props.podeUsar) return 'usar';
+  if (
+    props.modelo.situacao === 'pronto' &&
+    props.podeUsar &&
+    usavelEmCampanha(props.modelo)
+  )
+    return 'usar';
   return '';
 });
 </script>
@@ -116,20 +128,16 @@ const acao = computed(() => {
             <span class="i-lucide-cog size-4" aria-hidden="true" />
             {{ $t('MODELOS_WHATSAPP.SISTEMA.SELO') }}
           </span>
-          <span v-if="nomeDaConta" class="text-sm text-n-slate-10">
-            {{ $t('MODELOS_WHATSAPP.LISTA.CONTA', { nome: nomeDaConta }) }}
-          </span>
         </span>
-        <span
-          class="text-[0.9375rem] leading-relaxed text-n-slate-11 line-clamp-2"
-        >
+        <!-- A conta sempre na própria linha: as colunas não mudam de lugar entre os cartões. -->
+        <span v-if="nomeDaConta" data-conta class="text-sm text-n-slate-10">
+          {{ $t('MODELOS_WHATSAPP.LISTA.CONTA', { nome: nomeDaConta }) }}
+        </span>
+        <span class="text-[0.9375rem] leading-relaxed text-n-slate-11">
           <span v-if="!modelo.conteudo.texto.length">
             {{ $t('MODELOS_WHATSAPP.FORMATOS.codigo.TEXTO_FIXO') }}
           </span>
-          <template
-            v-for="(pedaco, indice) in modelo.conteudo.texto"
-            :key="indice"
-          >
+          <template v-for="(pedaco, indice) in previa.pedacos" :key="indice">
             <span
               v-if="pedaco.t === 'campo'"
               class="px-0.5 text-sm font-medium rounded bg-n-blue-2 text-n-blue-11"
@@ -138,6 +146,9 @@ const acao = computed(() => {
             </span>
             <span v-else>{{ pedaco.v }}</span>
           </template>
+          <span v-if="previa.cortado" aria-hidden="true">{{
+            RETICENCIAS
+          }}</span>
         </span>
         <span
           class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm"

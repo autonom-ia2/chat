@@ -34,10 +34,14 @@
         "EM_ANALISE": "Sent to WhatsApp {quando}",
         "PAUSADO": "WhatsApp paused it {quando}",
         "EM_ANALISE_SEM_DATA": "With WhatsApp for review",
-        "PAUSADO_SEM_DATA": "WhatsApp paused it"
+        "PAUSADO_SEM_DATA": "WhatsApp paused it",
+        "DESATIVADO": "Disabled by WhatsApp",
+        "LIMITE": "Not created: template limit"
       },
       "CONTA": "Account {nome}",
-      "PARCIAL": "We could not read the templates of one WhatsApp account now. Some templates may be missing from the list."
+      "PARCIAL": "We could not read the templates of one WhatsApp account now. Some templates may be missing from the list.",
+      "NAO_ATUALIZOU": "We could not update the list of the account {conta} right now. This is the last saved list; try again in a few minutes.",
+      "NAO_ATUALIZOU_PERMISSAO": "We could not update the list of the account {conta}: the number lost its permission on WhatsApp. Reconnect the number in Settings › Inboxes. This is the last saved list."
     },
     "SITUACOES": {
       "pronto": {
@@ -49,8 +53,8 @@
       "em_analise": {
         "ROTULO": "In review",
         "TITULO": "WhatsApp is looking at this template",
-        "EXPLICACAO": "Sent {quando}. It usually takes from minutes to a few hours. The status shows up here.",
-        "EXPLICACAO_SEM_DATA": "It usually takes from a few minutes to a few hours. The status shows up here."
+        "EXPLICACAO": "Sent {quando}. It usually takes minutes, but it can take up to 24 hours. The status shows up here.",
+        "EXPLICACAO_SEM_DATA": "It usually takes minutes, but it can take up to 24 hours. The status shows up here."
       },
       "recusado": {
         "ROTULO": "Rejected",
@@ -59,9 +63,21 @@
       "pausado": {
         "ROTULO": "Paused",
         "TITULO": "WhatsApp paused this template",
-        "EXPLICACAO": "Many people blocked the number or marked the message as unwanted. WhatsApp paused it {quando} and usually releases it after a few hours.",
+        "EXPLICACAO": "Many people blocked the number or marked the message as unwanted. WhatsApp paused it {quando}: the 1st pause lasts 3 hours and the 2nd, 6 hours. The 3rd time, it disables the template.",
         "DICA": "send only to people who know your business and say who is talking right at the start.",
-        "EXPLICACAO_SEM_DATA": "Many people blocked the number or reported the message as unwanted. WhatsApp usually releases it after a few hours."
+        "EXPLICACAO_SEM_DATA": "Many people blocked the number or marked the message as unwanted. The 1st pause lasts 3 hours and the 2nd, 6 hours. The 3rd time, WhatsApp disables the template."
+      },
+      "desativado": {
+        "ROTULO": "Disabled by WhatsApp",
+        "TITULO": "WhatsApp disabled this template",
+        "EXPLICACAO": "After repeated pauses for blocks and reports, WhatsApp disabled this template. It does not come back on its own and cannot be changed.",
+        "DICA": "duplicate the template, rewrite the text saying right at the start who is talking, and send it only to people who know your business."
+      },
+      "limite": {
+        "ROTULO": "Not created: template limit",
+        "TITULO": "Not created: the WhatsApp account reached its template limit",
+        "EXPLICACAO": "WhatsApp did not create this template because the account already has the most templates it can have.",
+        "DICA": "delete the templates you no longer use and create this one again. If you need more templates, verify your business with Meta: verified accounts can have more."
       }
     },
     "RECUSAS": {
@@ -99,6 +115,11 @@
         "TITULO": "WhatsApp does not allow this content",
         "EXPLICACAO": "WhatsApp considered the text offensive or misleading.",
         "COMO_RESOLVER": "rewrite it clearly, saying who is talking and why, and send it again."
+      },
+      "botao_copiar_codigo": {
+        "TITULO": "The “Copy code” button has no code",
+        "EXPLICACAO": "WhatsApp asks for an example code in this button, and the button only exists in promotion messages.",
+        "COMO_RESOLVER": "if it is a notice, such as a payment reminder, remove the button and send the copy of the bill in the conversation; if it is a promotion, write an example code such as PROMO10."
       }
     },
     "TIPOS": {
@@ -126,12 +147,13 @@
       "CONTA": "WhatsApp account",
       "CONTA_EXPLICA": "Works on every number of this account.",
       "DETALHES": "Details",
-      "NOME_NO_WHATSAPP": "Name on WhatsApp: {nome} · Portuguese (Brazil)",
+      "NOME_NO_WHATSAPP": "Name on WhatsApp: {nome} · {idioma}",
       "ALTERACOES_RESTANTES": "You can still change it {n} time this month. | You can still change it {n} times this month.",
       "ALTERAR_DEPOIS": "You can change it again on {dia}, at {hora}.",
       "SEM_ALTERACOES": "This template was already changed 10 times this month. To change it now, duplicate it.",
       "EM_USO_NAO_ALTERA": "This template is still going to be sent in the places listed in \"Where it is used\". To change it, swap the template there first or duplicate it.",
-      "REGRA_DE_ALTERAR": "WhatsApp allows changing an approved template once a day, up to 10 times in 30 days."
+      "REGRA_DE_ALTERAR": "WhatsApp allows changing an approved template once a day, up to 10 times in 30 days.",
+      "NAO_EDITAVEL": "This template was made outside Chat2You and has parts this screen cannot edit. To change it, use WhatsApp Manager."
     },
     "USOS": {
       "TITULO": "Where it's in use",
@@ -146,7 +168,12 @@
       },
       "ABRIR": "Open",
       "OCULTO": "This template is in use where you do not have access. Ask an administrator.",
-      "PARADA": "stopped by the template"
+      "PARADA": "stopped by the template",
+      "SISTEMA": {
+        "agendamento": "Used by the platform in the booking notices.",
+        "anuncios": "Used by the platform in the Ads notices.",
+        "satisfacao": "Used by the platform in the satisfaction survey after a conversation."
+      }
     },
     "APAGAR": {
       "TITULO": "Delete “{nome}”?",
@@ -197,56 +224,54 @@
       "COPIA_DE": "{nome} (copy)",
       "AVISO_COPIA": "This is a copy of “{nome}”. Adjust what you want and pick a different name.",
       "FALHOU": "We couldn't send it now. Try again.",
-      "FALHOU_UMA_CONTA": "The template was sent for one WhatsApp account, but not for the other. {motivo}"
+      "FALHOU_UMA_CONTA": "The template was sent for one WhatsApp account, but not for the other. {motivo}",
+      "AVISO_COPIA_ARQUIVOS": "The copy does not take the files: pick again the photo, video or document at the top and on the cards.",
+      "AVISO_NOVO_TIPO": "New template with the text of “{nome}”. Pick the type and check the name."
     },
     "OBJETIVO": {
-      "DO_WHATSAPP": {
-        "TITULO": "Ready from WhatsApp",
-        "TEXTO": "Texts WhatsApp itself offers. They are usually approved faster."
-      },
       "SUGESTOES": {
         "TITULO": "To write your own way",
         "TEXTO": "A ready start you adjust as you like."
       },
-      "MAIS_RAPIDO": "Faster approval",
       "ESCOLHER": "Start with this one",
       "ESCREVER": "Start writing",
       "FORMATOS": {
         "TITULO": "Other formats",
         "TEXTO": "For when a regular message is not enough."
       },
-      "SO_DIVULGACAO": "Promotion only"
+      "SO_DIVULGACAO": "Promotion only",
+      "NAO_VAI_EM_CAMPANHA": "Not available in campaigns yet"
     },
     "OBJETIVOS": {
       "boas_vindas": {
         "TITULO": "Welcome",
         "PARA": "For people who just arrived.",
-        "TEXTO": "Hello, [nome_cliente]! Glad to have you with us at [nome_empresa]. Count on us here whenever you need."
+        "TEXTO": "Hello, [nome_cliente]! This is [nome_empresa]. Glad to have you with us. Whenever you need anything, just send us a message here."
       },
       "lembrete": {
         "TITULO": "Appointment reminder",
         "PARA": "To remind the customer of the booked time.",
-        "TEXTO": "Hello, [nome_cliente]! Just a reminder of your appointment on [data], at [horario]. Can we confirm?"
+        "TEXTO": "Hello, [nome_cliente]! A reminder of your appointment at [nome_empresa]: on [data], at [horario]. Do you confirm? Tap one of the options below."
       },
       "pesquisa": {
         "TITULO": "Satisfaction survey",
-        "PARA": "To learn how the service went.",
-        "TEXTO": "Hello, [nome_cliente]! How was your service with us? Your opinion helps a lot."
+        "PARA": "To learn how a service that already happened went.",
+        "TEXTO": "Hello, [nome_cliente]! You were served by [nome_empresa] on [data]. How was it? Tap one of the options below."
       },
       "promocao": {
         "TITULO": "Promotion",
         "PARA": "To tell about an offer with a deadline.",
-        "TEXTO": "Hi, [nome_cliente]! Only until [data]: [desconto] off the whole store. Want to take it?"
+        "TEXTO": "Hi, [nome_cliente]! Until [data], you get [desconto] off at [nome_empresa]. Want to take it? See the offers in the button below."
       },
       "cobranca": {
-        "TITULO": "Bill or payment slip",
-        "PARA": "To send the bill or remind of the due date.",
-        "TEXTO": "Hello, [nome_cliente]. Your bill of [valor] is due on [data]. The payment code is in the button below."
+        "TITULO": "Payment reminder",
+        "PARA": "To remind the customer of a payment that is coming due.",
+        "TEXTO": "Hello, [nome_cliente]. A reminder from [nome_empresa]: the payment of [valor] is due on [data]. If you have already paid, please disregard. If you need a copy of the bill, tap the button below."
       },
       "retomar": {
         "TITULO": "Resume conversation",
         "PARA": "To talk again to someone who went quiet.",
-        "TEXTO": "Hi, [nome_cliente]! Any questions left from our last conversation? Just reply here and we'll pick it up."
+        "TEXTO": "Hi, [nome_cliente]! This is [nome_empresa]. Any questions left from our last conversation? Just reply here and we will pick it up."
       },
       "em_branco": {
         "TITULO": "Start from scratch",
@@ -262,7 +287,9 @@
       "PODE_MELHORAR": "Could be better",
       "VER_OFERTAS": "See offers",
       "COPIAR_CODIGO": "Copy code",
-      "QUERO_CONTINUAR": "Let's continue"
+      "QUERO_CONTINUAR": "Let's continue",
+      "SEGUNDA_VIA": "I need a copy of the bill",
+      "JA_PAGUEI": "I have already paid"
     },
     "CAMPOS": {
       "nome_cliente": {
@@ -271,7 +298,7 @@
       },
       "nome_empresa": {
         "ROTULO": "Business name",
-        "EXEMPLO": "Hub2you"
+        "EXEMPLO": "Your Company"
       },
       "data": {
         "ROTULO": "Date",
@@ -291,7 +318,7 @@
       },
       "link": {
         "ROTULO": "Link",
-        "EXEMPLO": "hub2you.com.br/b/123"
+        "EXEMPLO": "yourstore.com/b/123"
       },
       "codigo": {
         "ROTULO": "Code",
@@ -303,15 +330,33 @@
     },
     "TEXTO": {
       "NOME": "Template name",
-      "NOME_AJUDA": "Only your team sees this name.",
+      "NOME_AJUDA": "Only your team sees this name. It cannot repeat another template of the same WhatsApp account.",
       "MENSAGEM": "Message",
-      "PRONTO_DO_WHATSAPP": "Ready text from WhatsApp: that's why it's approved faster.",
-      "MEU_JEITO": "I'd rather write my own way",
       "LETRAS": "{n} of {limite} characters",
       "EXEMPLOS": "Examples",
       "EXEMPLOS_AJUDA": "Already filled in. WhatsApp uses the examples only to understand the message. Your customers get the real data.",
       "SEM_EXEMPLO": "Write an example.",
-      "NOME_DA_EMPRESA": "It is the account name in Chat2You ({conta}). You can change it in the campaign."
+      "NOME_DA_EMPRESA": "It is the account name in Chat2You ({conta}). In the campaign, it comes on its own and you can change it.",
+      "TIPO": {
+        "PERGUNTA": "What kind of message is this?",
+        "aviso": {
+          "ROTULO": "Notice about something of the customer",
+          "PARA": "Order, appointment, payment, delivery. Costs less per send."
+        },
+        "divulgacao": {
+          "ROTULO": "Promotion",
+          "PARA": "Offer, news, invitation. Costs more per send."
+        }
+      },
+      "FONTE_CADASTRO": "In the campaign, it comes from each customer’s record.",
+      "FONTE_COLUNA": "In the campaign, it comes from a column of your audience or is the same text for everyone.",
+      "NOME_REPETIDO": "There is already a template with this name in this WhatsApp account. Use another one, such as “{sugestao}”.",
+      "TIPO_TRAVADO": {
+        "TITULO": "Message type",
+        "NAO_MUDA": "WhatsApp does not let you change the type of a template that already exists.",
+        "CRIAR_NOVO": "To change the type, create a new template with this text"
+      },
+      "MUDAR_O_TEXTO": "Change at least one word of the text. WhatsApp does not accept two identical messages in the same account."
     },
     "TOPOS": {
       "nenhum": {
@@ -327,7 +372,7 @@
       },
       "documento": {
         "ROTULO": "Document",
-        "AJUDA": "Pick a PDF."
+        "AJUDA": "Pick a PDF. The same file goes to everyone: do not use it for one person’s bill or document."
       },
       "texto": {
         "ROTULO": "Title",
@@ -356,10 +401,10 @@
       },
       "copiar_codigo": {
         "ROTULO": "Copy code",
-        "PARA": "For bills, Pix or coupons.",
+        "PARA": "For a discount coupon. Promotion messages only.",
         "EXEMPLO": "E.g.: Copy code",
         "VALOR": "Code example",
-        "VALOR_EXEMPLO": "2345 6789"
+        "VALOR_EXEMPLO": "PROMO10"
       }
     },
     "EXTRAS": {
@@ -368,13 +413,34 @@
       "ESCOLHER_ARQUIVO": "Pick file",
       "TROCAR_ARQUIVO": "Change file",
       "RODAPE": "Footer",
-      "RODAPE_EXEMPLO": "E.g.: Hub2you · open Monday to Friday",
+      "RODAPE_EXEMPLO": "E.g.: Your Company · open Monday to Friday",
       "RODAPE_LIMITE": "{n} of {limite} characters",
       "BOTOES": "Buttons",
       "BOTOES_LIMITE": "Up to 10 buttons. Open website: up to 2. Call and copy code: 1 each.",
       "ADICIONAR_BOTAO": "Add button",
       "TIRAR_BOTAO": "Remove",
-      "TEXTO_DO_BOTAO": "Button text"
+      "TEXTO_DO_BOTAO": "Button text",
+      "PROBLEMAS_DO_BOTAO": {
+        "SEM_TEXTO": "Write the button text.",
+        "SITE_SEM_ENDERECO": "Write the full website address, starting with https://",
+        "LIGAR_SEM_NUMERO": "Write the phone number with the country code, for example +55 11 4000-0000.",
+        "CODIGO_SEM_EXEMPLO": "1 to 15 letters and numbers, no spaces.",
+        "SO_DIVULGACAO": "This button only exists in promotion messages. Remove it to send this as a service notice.",
+        "TEXTO_LONGO": "The button text can have up to 25 characters.",
+        "SITE_SEM_EXEMPLO": "This button came from outside with a variable address ending and no example. Remove the button and create it again."
+      },
+      "LIMITE_DO_BOTAO": "{n} of {limite} characters",
+      "ARQUIVO_ERRADO": {
+        "foto": "Pick a JPG or PNG photo.",
+        "video": "Pick an MP4 video.",
+        "documento": "Pick a PDF file."
+      },
+      "ARQUIVO_GRANDE": {
+        "foto": "The photo can have up to 5 MB.",
+        "video": "The video can have up to 16 MB.",
+        "documento": "The PDF can have up to 100 MB."
+      },
+      "TOPO_AJUDA": "Optional. The same file goes to everyone who receives the message. Use it for something that is the same for everyone (menu, catalog, rules). A bill, receipt or document for each customer does not go here."
     },
     "NUMEROS": {
       "INTRO": "Pick where this template will work. Only official WhatsApp numbers show up.",
@@ -387,7 +453,8 @@
       "EXTRAS": "No extras | 1 extra | {n} extras",
       "FALTA_PREENCHER": "Still empty",
       "CARTOES": "{n} card | {n} cards",
-      "CODIGO": "{botao} · valid for {n} min"
+      "CODIGO": "{botao} · valid for {n} min",
+      "NOME_E_TEXTO": "Name and text"
     },
     "CONFERENCIA": {
       "TITULO": "What WhatsApp checks",
@@ -410,21 +477,34 @@
         "CARTOES_BOTOES": "Every card has 1 or 2 filled buttons",
         "CARTOES_IGUAIS": "The cards have the same buttons",
         "OFERTA_TITULO": "The offer has a title up to 16 characters",
-        "OFERTA_FIM": "The offer ends on a future date",
-        "OFERTA_LINK": "The offer has a link",
+        "OFERTA_LINK": "The offer has the full website address (https://…)",
         "CATALOGO": "The account has a catalog connected",
         "VALIDADE": "The validity is between 1 and 90 minutes",
         "FORMULARIO": "A form was picked",
         "FORMULARIO_BOTAO": "The form button has text",
-        "TOPO_ARQUIVO": "The photo, video or document at the top was chosen"
-      }
+        "TOPO_ARQUIVO": "The photo, video or document at the top was chosen",
+        "BOTAO_SITE": "Every website button has the full address (https://…)",
+        "BOTAO_LIGAR": "Every call button has the phone number with the country code",
+        "BOTAO_CODIGO": "The copy code button has an example code of 1 to 15 letters and numbers",
+        "SO_DIVULGACAO": "The “Copy code” button only exists in promotion messages",
+        "OFERTA_CUPOM": "If there is a coupon, it has 1 to 15 letters and numbers",
+        "BOTOES_TAMANHO": "Every button has up to 25 characters",
+        "BOTAO_SITE_EXEMPLO": "The website with a variable ending has an example",
+        "TEXTO_DIFERENTE": "Change at least one word of the text or the footer. WhatsApp does not accept an identical copy.",
+        "SEM_CHAVES": "The text and the footer have no double braces typed by hand",
+        "FORMATO_DIVULGACAO": "This format goes as a promotion",
+        "CARTOES_MESMA_MIDIA": "All cards have the same kind of media (only photos or only videos)",
+        "NOME_LIVRE": "The name does not exist yet in this WhatsApp account"
+      },
+      "LEMBRETE_ARQUIVO_IGUAL": "This file goes out the same to everyone."
     },
     "QUEM_APROVA": {
       "TITULO": "WhatsApp is who approves it",
-      "TEMPO": "The review takes from minutes to a few hours.",
+      "TEMPO": "The review usually takes minutes, but it can take up to 24 hours.",
       "TIPO": "It should go in as {tipo}. WhatsApp may change the type, and that changes the cost of each message.",
       "AVISO": "The status shows up here, in the template list.",
-      "SO_DIVULGACAO": "This format exists only for promotion, so each message has the promotion cost."
+      "SO_DIVULGACAO": "This format exists only for promotion, so each message has the promotion cost.",
+      "NAO_VAI_EM_CAMPANHA": "This format cannot be used in campaigns yet."
     },
     "CELULAR": {
       "TITULO": "How the customer sees it",
@@ -434,15 +514,10 @@
       "HORA": "10:42",
       "BOTAO_SEM_TEXTO": "Button text",
       "CARTOES": "Carousel cards",
-      "OFERTA_TERMINA": "Ends in {tempo}",
-      "OFERTA_ACABOU": "The offer has ended",
-      "DIAS": "{n} day | {n} days",
-      "HORAS": "{n} hour | {n} hours",
-      "E": " and ",
-      "MENOS_DE_1_HORA": "less than 1 hour",
       "CUPOM": "Coupon: {cupom}",
       "CATALOGO": "Catalog",
-      "VER_COMO_FICA": "See how it looks"
+      "VER_COMO_FICA": "See how it looks",
+      "OFERTA_CONTAGEM": "Ends in 2 days (example)"
     },
     "ENVIADO": {
       "TITULO": {
@@ -458,17 +533,18 @@
         },
         "ANALISE": {
           "TITULO": "In review",
-          "TEXTO": "It takes from minutes to a few hours.",
+          "TEXTO": "It usually takes minutes, but it can take up to 24 hours.",
           "CAMPANHA": "Meanwhile, you can set up and schedule the campaign."
         },
         "PRONTO": {
           "TITULO": "Ready to use",
           "TEXTO": "Then just use it in a campaign.",
-          "CAMPANHA": "Once approved, the scheduled campaign goes out on time."
+          "CAMPANHA": "If WhatsApp approves it before the scheduled time, the campaign goes out on time. If not, it stays stopped and you tap Resume after the approval.",
+          "SEM_CAMPANHA": "It stays in the template list. This format cannot be used in campaigns yet."
         }
       },
       "VER_MODELOS": "See my templates",
-      "SITUACAO": "The status shows up here. It usually takes from minutes to a few hours.",
+      "SITUACAO": "The status shows up in the template list. It usually takes minutes, but it can take up to 24 hours.",
       "POR_CONTA": "{n} approval requests were sent, one for each WhatsApp account.",
       "VOLTAR_PARA_CAMPANHA": "Back to the campaign"
     },
@@ -502,12 +578,11 @@
       },
       "oferta": {
         "TITULO": "Limited-time offer",
-        "PARA": "An offer with an end time. The customer sees how long is left.",
+        "PARA": "An offer with a highlighted title. With a coupon, the customer sees how long is left.",
         "ETAPA": "Offer",
         "NOME_PADRAO": "Flash offer",
-        "TEXTO": "Hi, [nome_cliente]! There is still time: [desconto] off until the offer ends.",
+        "TEXTO": "Hi, [nome_cliente]! For a short time: [desconto] off. See it in the button below.",
         "TITULO_EXEMPLO": "Today: 30% off",
-        "CUPOM_EXEMPLO": "HUB30",
         "BOTAO": "See offer"
       },
       "catalogo": {
@@ -520,7 +595,7 @@
       },
       "codigo": {
         "TITULO": "Verification code",
-        "PARA": "Sends a code so the customer confirms it is really them when signing in.",
+        "PARA": "For businesses with their own system that sends the access code. Chat2You does not send this template yet.",
         "ETAPA": "Code",
         "NOME_PADRAO": "Access code",
         "TEXTO_FIXO": "is your verification code.",
@@ -547,18 +622,17 @@
       "BOTOES_AJUDA": "Up to 2. They apply to every card; the text and link change on each one.",
       "CARTAO": "Card {n}",
       "TEXTO": "Card text",
-      "ADICIONAR": "Add card"
+      "ADICIONAR": "Add card",
+      "TIRAR": "Remove card"
     },
     "OFERTA": {
       "INTRO": "Promotion only. This format has no footer.",
       "TITULO": "Offer title",
       "TITULO_LIMITE": "{n} of {limite} characters",
-      "TERMINA": "When the offer ends",
-      "TERMINA_AJUDA": "The customer sees how long is left.",
       "LINK": "Offer link",
       "LINK_OBRIGATORIO": "Required: it is where the button goes.",
       "CUPOM": "Coupon code (optional)",
-      "CUPOM_AJUDA": "Shows up with a button to copy it."
+      "CUPOM_AJUDA": "1 to 15 letters and numbers, no spaces. With a coupon, the customer sees how long is left and a button to copy it."
     },
     "CATALOGO": {
       "SEM_CATALOGO": "Your WhatsApp account has no product catalog connected yet.",
@@ -569,8 +643,7 @@
     "CODIGO": {
       "BOTAO": "Code button",
       "BOTOES_PARA": {
-        "copiar": "The customer taps and the code is copied.",
-        "preencher": "The code goes into your app on its own, on Android phones."
+        "copiar": "The customer taps and the code is copied."
       },
       "VALIDADE": "Code validity, in minutes",
       "VALIDADE_AJUDA": "From {min} to {max} minutes.",
@@ -590,15 +663,16 @@
     "PARADAS": {
       "TITULO": "{n} campaign stopped because of its template | {n} campaigns stopped because of their template",
       "MOTIVOS": {
-        "modelo_pausado": "WhatsApp paused the template “{modelo}”. The campaign goes out again when it comes back.",
+        "modelo_pausado": "WhatsApp paused the template “{modelo}”. When it comes back, tap Resume so the campaign goes out.",
         "modelo_recusado": "WhatsApp rejected the template “{modelo}”. Fix the template so the campaign can go out.",
         "modelo_mudou": "The template “{modelo}” changed. Check the campaign variables.",
         "tipo_mudou": "WhatsApp changed the type of the template “{modelo}” and the cost of each message. Confirm so the campaign continues.",
-        "modelo_em_analise": "The template “{modelo}” is under review again. The campaign goes out after WhatsApp approves it.",
+        "modelo_em_analise": "The template “{modelo}” is under review again. When WhatsApp approves it, tap Resume so the campaign goes out.",
         "modelo_apagado": "The template “{modelo}” no longer exists. Choose another template for the campaign.",
         "formato_nao_vai": "The template “{modelo}” has a format campaigns cannot send yet.",
         "nao_conferido": "We could not check the template “{modelo}” with WhatsApp. Nothing was sent.",
-        "outro": "The campaign stopped before sending. Nothing was sent."
+        "outro": "The campaign stopped before sending. Nothing was sent.",
+        "arquivo_do_topo": "The template “{modelo}” has a photo, video or document at the top and the file is not saved. Pick the file again in the template or add the link in the campaign."
       },
       "ACOES": {
         "ABRIR_MODELO": "See the template",
@@ -612,7 +686,9 @@
       "RETOMAR_FALHOU": "We could not resume now. Try again.",
       "CORRIJA_PRIMEIRO": "Fix the template first.",
       "VER_MODELO": "Open “{modelo}”",
-      "AGUARDE_CONFERENCIA": "We could not check the template with WhatsApp yet. Resume unlocks when the check passes."
+      "AGUARDE_CONFERENCIA": "We could not check the template with WhatsApp yet. Resume unlocks when the check passes.",
+      "AGUARDE_LIBERAR": "Wait for WhatsApp to release the template. When it comes back, tap Resume.",
+      "AGUARDE_APROVAR": "Wait for WhatsApp to approve the template. Then tap Resume."
     },
     "PONTE": {
       "CAIXA_RECONECTAR": "{nome} · needs reconnecting",
@@ -622,7 +698,10 @@
       "NAO_VAI": {
         "FORMATO_NAO_VAI": "cannot go in campaigns yet",
         "RECUSADO": "rejected",
-        "PAUSADO": "paused"
+        "PAUSADO": "paused",
+        "DESATIVADO": "disabled",
+        "LIMITE": "not created",
+        "SEM_FONTE": "has a field campaigns cannot fill"
       },
       "EM_ANALISE": "“{nome}” is still in review at WhatsApp. You can set up and schedule the campaign; sending now unlocks when it is approved.",
       "ENVIAR_AGORA_BLOQUEADO": "Sending now unlocks when WhatsApp approves the template. Pick a date to schedule.",
@@ -635,7 +714,9 @@
         "DIVULGACAO": "Promotion message: people who asked not to receive are left out.",
         "POR_ENVIO": "{porEnvio} per message"
       },
-      "GRUPO_CATALOGO": "From the records"
+      "GRUPO_CATALOGO": "From the records",
+      "SEM_MODELO_LIBERADO": "No template of this WhatsApp account can go in a campaign right now: they are rejected, paused or in a format campaigns cannot send yet.",
+      "CORRIGIR": "Fix “{nome}”"
     },
     "IA": {
       "CRIAR_COM_IA": "Create with AI",
@@ -718,6 +799,10 @@
       "EXPLICA_SEM_VALOR": "WhatsApp gives {limite} free replies per number each month.",
       "USADAS": "{n} of {limite}",
       "PASSOU": "Over the {limite} free ones"
+    },
+    "CONFERENCIA_AUTOMATICA": {
+      "PRONTO": "“{nome}” is ready to use.",
+      "RECUSADO": "“{nome}” was rejected."
     }
   }
 }

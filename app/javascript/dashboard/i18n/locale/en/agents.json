@@ -1099,8 +1099,6 @@
           "NAO_EXISTE_SO_VER": "The chosen page no longer exists. {nome} will pass the conversation to the team.",
           "NENHUMA": "{nome} doesn't book meetings.",
           "ABRIR_PAGINAS": "Open booking pages",
-          "ESCOLHA": "Choose a page",
-          "FUSO": "Times in the business time zone ({fuso}).",
           "RECEBE": {
             "FIXO": "The meeting goes to {nome}.",
             "FIXO_SEM_NOME": "The meeting goes to the person in charge of the page.",
@@ -1368,7 +1366,8 @@
         },
         "GAVETA_AGENDA": {
           "TITULO": "Book meetings",
-          "TEXTO": "{nome} offers free times from a booking page and books the meeting in the chat.",
+          "TEXTO": "{nome} offers times in the chat and books the meeting right there.",
+          "QUAL_PAGINA": "Which page does {nome} use?",
           "CARREGANDO": "Loading your booking pages…",
           "ERRO_LER": "Could not load your booking pages.",
           "GARANTIA": "Nothing changed.",
@@ -1376,11 +1375,38 @@
           "SALVANDO": "Saving…",
           "PRONTO": "Done.",
           "ERRO": "Could not save.",
+          "CRIAR": "Create a page",
+          "CARTAO": {
+            "NAO_MARCAR": "Don't book meetings",
+            "DURACAO": "{minutos} min"
+          },
+          "RASCUNHO": {
+            "DICA": "Publish the page so {nome} can use it.",
+            "AVISO": "{pagina} is not published yet. {nome} will pass the conversation to the team until you publish it.",
+            "ATUAL": "Current choice"
+          },
+          "SEM_PAGINAS": {
+            "TITULO": "You don't have a booking page yet",
+            "TEXTO": "The page is where you set the days, the hours and who takes the meetings. It takes a few steps, then come back here so {nome} can book.",
+            "PECA": "Ask the person who manages the account to create a page in CRM › Scheduling."
+          },
           "PESSOAS": {
-            "TITULO": "People {nome} can use",
+            "TITULO": "Who {nome} can book with",
+            "TODAS": "All people",
+            "TODAS_DICA": "Includes whoever joins the page later.",
             "PAUSADA": "calendar paused",
             "NENHUMA": "Check at least one person.",
-            "DICA": "{nome} only books with the people checked above. To prefer one of them, say it in Change by chatting. Example: “Book with {exemplo}”."
+            "DICA": "Want {nome} to prefer one person? Say it in {acao}.",
+            "DICA_ACAO": "Change by chatting"
+          },
+          "EXEMPLO": {
+            "TITULO": "How the customer sees it",
+            "TEXTO": "{nome} will offer times like this:",
+            "SELO": "Example",
+            "SR": "Example of a chat where {nome} offers times",
+            "CLIENTE": "Hi! I'd like to book a time.",
+            "AGENTE": "Sure! For {pagina}, I have Tuesday at 10am or Wednesday at 3pm. Which one works best for you?",
+            "NOTA": "This is only an example. {nome} writes in their own words and shows the times that are really free during the chat."
           }
         }
       },

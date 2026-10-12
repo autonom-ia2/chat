@@ -73,7 +73,8 @@ module Autonomia
 
         pending = inbox.conversations.where(status: :pending)
         held_by_mirror = inbox.conversations.where(status: :open, assignee_agent_bot_id: agent_bot_id)
-        pending.or(held_by_mirror).find_each(&:bot_handoff!)
+        # Desligar não é passar a conversa: o robô sai de vez, sem ficar esperando pessoa (#1377).
+        pending.or(held_by_mirror).find_each { |conversation| conversation.bot_handoff!(keep_bot: false) }
       end
 
       private

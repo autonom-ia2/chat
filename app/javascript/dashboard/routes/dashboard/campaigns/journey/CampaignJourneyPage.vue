@@ -157,7 +157,13 @@ const formatWhen = row => {
 const nextScheduled = computed(
   () =>
     rows.value
-      .filter(row => row.status === JOURNEY_STATUSES.SCHEDULED && row.when)
+      // Fork: campanha agendada no passado (parada pelo modelo) não é o próximo envio.
+      .filter(
+        row =>
+          row.status === JOURNEY_STATUSES.SCHEDULED &&
+          row.when &&
+          row.when > Date.now()
+      )
       .sort((a, b) => a.when - b.when)[0] || null
 );
 const inPreparation = computed(
@@ -266,7 +272,7 @@ useOnEnter(fetchAll);
       </nav>
       <CampaignTabs active="campaigns" />
       <BrandKitNudge v-if="features.emailCampaigns" />
-      <AvisoCampanhasParadas class="mb-5" />
+      <AvisoCampanhasParadas class="mb-5" @retomada="fetchAll" />
       <header class="mb-7 flex flex-wrap items-start justify-between gap-4">
         <div class="min-w-0">
           <h1

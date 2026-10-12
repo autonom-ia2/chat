@@ -34,10 +34,14 @@
         "EM_ANALISE": "Enviado para o WhatsApp {quando}",
         "PAUSADO": "O WhatsApp pausou {quando}",
         "EM_ANALISE_SEM_DATA": "Com o WhatsApp para análise",
-        "PAUSADO_SEM_DATA": "O WhatsApp pausou"
+        "PAUSADO_SEM_DATA": "O WhatsApp pausou",
+        "DESATIVADO": "Desativado pelo WhatsApp",
+        "LIMITE": "Não criado: limite de modelos"
       },
       "CONTA": "Conta {nome}",
-      "PARCIAL": "Não conseguimos ler os modelos de uma conta do WhatsApp agora. Pode faltar modelo na lista."
+      "PARCIAL": "Não conseguimos ler os modelos de uma conta do WhatsApp agora. Pode faltar modelo na lista.",
+      "NAO_ATUALIZOU": "Não foi possível atualizar agora a lista da conta {conta}. Mostramos a última lista guardada; tente de novo em alguns minutos.",
+      "NAO_ATUALIZOU_PERMISSAO": "Não foi possível atualizar a lista da conta {conta}: o número perdeu a permissão no WhatsApp. Reconecte o número em Configurações › Caixas de entrada. Mostramos a última lista guardada."
     },
     "SITUACOES": {
       "pronto": {
@@ -49,8 +53,8 @@
       "em_analise": {
         "ROTULO": "Em análise",
         "TITULO": "O WhatsApp está olhando este modelo",
-        "EXPLICACAO": "Enviado {quando}. Costuma levar de minutos a algumas horas. A situação aparece aqui.",
-        "EXPLICACAO_SEM_DATA": "Costuma levar de minutos a algumas horas. A situação aparece aqui."
+        "EXPLICACAO": "Enviado {quando}. Costuma levar minutos, mas pode levar até 24 horas. A situação aparece aqui.",
+        "EXPLICACAO_SEM_DATA": "Costuma levar minutos, mas pode levar até 24 horas. A situação aparece aqui."
       },
       "recusado": {
         "ROTULO": "Recusado",
@@ -59,9 +63,21 @@
       "pausado": {
         "ROTULO": "Pausado",
         "TITULO": "O WhatsApp pausou este modelo",
-        "EXPLICACAO": "Muitas pessoas bloquearam o número ou marcaram a mensagem como indesejada. O WhatsApp pausou {quando} e costuma liberar depois de algumas horas.",
+        "EXPLICACAO": "Muitas pessoas bloquearam o número ou marcaram a mensagem como indesejada. O WhatsApp pausou {quando}: a 1ª pausa dura 3 horas e a 2ª, 6 horas. Na 3ª vez, ele desativa o modelo.",
         "DICA": "mande só para quem conhece a sua empresa e deixe claro, logo no começo, quem está falando.",
-        "EXPLICACAO_SEM_DATA": "Muitas pessoas bloquearam o número ou marcaram a mensagem como indesejada. O WhatsApp costuma liberar depois de algumas horas."
+        "EXPLICACAO_SEM_DATA": "Muitas pessoas bloquearam o número ou marcaram a mensagem como indesejada. A 1ª pausa dura 3 horas e a 2ª, 6 horas. Na 3ª vez, o WhatsApp desativa o modelo."
+      },
+      "desativado": {
+        "ROTULO": "Desativado pelo WhatsApp",
+        "TITULO": "O WhatsApp desativou este modelo",
+        "EXPLICACAO": "Depois de pausas seguidas por bloqueios e denúncias, o WhatsApp desativou este modelo. Ele não volta sozinho e não dá para alterar.",
+        "DICA": "duplique o modelo, reescreva o texto dizendo logo no começo quem está falando, e mande só para quem conhece a sua empresa."
+      },
+      "limite": {
+        "ROTULO": "Não criado: limite de modelos",
+        "TITULO": "Não criado: a conta do WhatsApp chegou ao limite de modelos",
+        "EXPLICACAO": "O WhatsApp não criou este modelo porque a conta já tem o máximo de modelos que ela pode ter.",
+        "DICA": "apague os modelos que você não usa mais e crie este de novo. Se precisar de mais modelos, verifique a sua empresa na Meta: contas verificadas podem ter mais."
       }
     },
     "RECUSAS": {
@@ -99,6 +115,11 @@
         "TITULO": "O WhatsApp não permite este conteúdo",
         "EXPLICACAO": "O WhatsApp achou o texto ofensivo ou enganoso.",
         "COMO_RESOLVER": "reescreva de forma clara, dizendo quem fala e por quê, e envie de novo."
+      },
+      "botao_copiar_codigo": {
+        "TITULO": "O botão “Copiar código” está sem código",
+        "EXPLICACAO": "O WhatsApp pede um código de exemplo nesse botão, e esse botão só existe em mensagens de divulgação.",
+        "COMO_RESOLVER": "se é um aviso, como um lembrete de pagamento, tire o botão e mande a segunda via pela conversa; se é divulgação, escreva um código de exemplo, como PROMO10."
       }
     },
     "TIPOS": {
@@ -126,12 +147,13 @@
       "CONTA": "Conta do WhatsApp",
       "CONTA_EXPLICA": "Vale para todos os números desta conta.",
       "DETALHES": "Detalhes",
-      "NOME_NO_WHATSAPP": "Nome no WhatsApp: {nome} · Português (Brasil)",
+      "NOME_NO_WHATSAPP": "Nome no WhatsApp: {nome} · {idioma}",
       "ALTERACOES_RESTANTES": "Você ainda pode alterar {n} vez neste mês. | Você ainda pode alterar {n} vezes neste mês.",
       "ALTERAR_DEPOIS": "Você poderá alterar de novo em {dia}, às {hora}.",
       "SEM_ALTERACOES": "Este modelo já foi alterado 10 vezes neste mês. Para mudar agora, duplique.",
       "EM_USO_NAO_ALTERA": "Este modelo ainda vai sair nos lugares de \"Onde está em uso\". Para mudar, troque o modelo lá primeiro ou duplique.",
-      "REGRA_DE_ALTERAR": "O WhatsApp deixa alterar um modelo aprovado 1 vez por dia, até 10 vezes em 30 dias."
+      "REGRA_DE_ALTERAR": "O WhatsApp deixa alterar um modelo aprovado 1 vez por dia, até 10 vezes em 30 dias.",
+      "NAO_EDITAVEL": "Este modelo foi feito fora do Chat2You e tem partes que esta tela não sabe editar. Para mudar, use o Gerenciador do WhatsApp."
     },
     "USOS": {
       "TITULO": "Onde está em uso",
@@ -146,7 +168,12 @@
       },
       "ABRIR": "Abrir",
       "OCULTO": "Este modelo está em uso onde você não tem acesso. Peça a um administrador.",
-      "PARADA": "parada pelo modelo"
+      "PARADA": "parada pelo modelo",
+      "SISTEMA": {
+        "agendamento": "Usado pelo sistema nos avisos do agendamento.",
+        "anuncios": "Usado pelo sistema nos avisos de Anúncios.",
+        "satisfacao": "Usado pelo sistema na pesquisa de satisfação depois do atendimento."
+      }
     },
     "APAGAR": {
       "TITULO": "Apagar “{nome}”?",
@@ -197,56 +224,54 @@
       "COPIA_DE": "{nome} (cópia)",
       "AVISO_COPIA": "Esta é uma cópia de “{nome}”. Ajuste o que quiser e escolha um nome diferente.",
       "FALHOU": "Não conseguimos enviar agora. Tente de novo.",
-      "FALHOU_UMA_CONTA": "O modelo foi enviado para uma conta do WhatsApp, mas não para a outra. {motivo}"
+      "FALHOU_UMA_CONTA": "O modelo foi enviado para uma conta do WhatsApp, mas não para a outra. {motivo}",
+      "AVISO_COPIA_ARQUIVOS": "A cópia não leva os arquivos: escolha de novo a foto, o vídeo ou o documento do topo e dos cartões.",
+      "AVISO_NOVO_TIPO": "Modelo novo com o texto de “{nome}”. Escolha o tipo e confira o nome."
     },
     "OBJETIVO": {
-      "DO_WHATSAPP": {
-        "TITULO": "Prontos do WhatsApp",
-        "TEXTO": "Textos que o próprio WhatsApp oferece. Costumam ser aprovados mais rápido."
-      },
       "SUGESTOES": {
         "TITULO": "Para escrever do seu jeito",
         "TEXTO": "Um começo pronto que você ajusta como quiser."
       },
-      "MAIS_RAPIDO": "Aprovação mais rápida",
       "ESCOLHER": "Começar com este",
       "ESCREVER": "Começar a escrever",
       "FORMATOS": {
         "TITULO": "Outros formatos",
         "TEXTO": "Para quando uma mensagem comum não basta."
       },
-      "SO_DIVULGACAO": "Só para divulgação"
+      "SO_DIVULGACAO": "Só para divulgação",
+      "NAO_VAI_EM_CAMPANHA": "Ainda não dá para usar em campanha"
     },
     "OBJETIVOS": {
       "boas_vindas": {
         "TITULO": "Boas-vindas",
         "PARA": "Para quem acabou de chegar.",
-        "TEXTO": "Olá, [nome_cliente]! Que bom ter você com a gente na [nome_empresa]. Pode contar com a gente por aqui sempre que precisar."
+        "TEXTO": "Olá, [nome_cliente]! Aqui é da [nome_empresa]. Que bom ter você com a gente. Quando precisar de alguma coisa, é só mandar mensagem por aqui."
       },
       "lembrete": {
         "TITULO": "Lembrete de agendamento",
         "PARA": "Para lembrar o cliente do horário marcado.",
-        "TEXTO": "Olá, [nome_cliente]! Passando para lembrar do seu horário em [data], às [horario]. Podemos confirmar?"
+        "TEXTO": "Olá, [nome_cliente]! Lembrete do seu horário na [nome_empresa]: dia [data], às [horario]. Você confirma? Toque em uma das opções abaixo."
       },
       "pesquisa": {
         "TITULO": "Pesquisa de satisfação",
-        "PARA": "Para saber como foi o atendimento.",
-        "TEXTO": "Olá, [nome_cliente]! Como foi o seu atendimento com a gente? Sua opinião ajuda muito."
+        "PARA": "Para saber como foi um atendimento que já aconteceu.",
+        "TEXTO": "Olá, [nome_cliente]! Você foi atendido pela [nome_empresa] no dia [data]. Como foi esse atendimento? Toque em uma opção abaixo."
       },
       "promocao": {
         "TITULO": "Promoção",
         "PARA": "Para avisar de uma oferta com prazo.",
-        "TEXTO": "Oi, [nome_cliente]! Só até [data]: [desconto] de desconto em toda a loja. Quer aproveitar?"
+        "TEXTO": "Oi, [nome_cliente]! Até [data], você tem [desconto] de desconto na [nome_empresa]. Quer aproveitar? Veja as ofertas no botão abaixo."
       },
       "cobranca": {
-        "TITULO": "Cobrança ou boleto",
-        "PARA": "Para mandar o boleto ou lembrar do vencimento.",
-        "TEXTO": "Olá, [nome_cliente]. O seu boleto de [valor] vence em [data]. O código para pagar está no botão abaixo."
+        "TITULO": "Lembrete de pagamento",
+        "PARA": "Para lembrar o cliente de um pagamento que vai vencer.",
+        "TEXTO": "Olá, [nome_cliente]. Lembrete da [nome_empresa]: o pagamento de [valor] vence em [data]. Se já pagou, pode desconsiderar. Se precisar da segunda via, toque no botão abaixo."
       },
       "retomar": {
         "TITULO": "Retomar conversa",
         "PARA": "Para voltar a falar com quem sumiu.",
-        "TEXTO": "Oi, [nome_cliente]! Ficou alguma dúvida da nossa última conversa? É só responder aqui que a gente continua."
+        "TEXTO": "Oi, [nome_cliente]! Aqui é da [nome_empresa]. Ficou alguma dúvida da nossa última conversa? É só responder aqui que a gente continua."
       },
       "em_branco": {
         "TITULO": "Começar do zero",
@@ -262,7 +287,9 @@
       "PODE_MELHORAR": "Pode melhorar",
       "VER_OFERTAS": "Ver ofertas",
       "COPIAR_CODIGO": "Copiar código",
-      "QUERO_CONTINUAR": "Quero continuar"
+      "QUERO_CONTINUAR": "Quero continuar",
+      "SEGUNDA_VIA": "Quero a segunda via",
+      "JA_PAGUEI": "Já paguei"
     },
     "CAMPOS": {
       "nome_cliente": {
@@ -271,7 +298,7 @@
       },
       "nome_empresa": {
         "ROTULO": "Nome da empresa",
-        "EXEMPLO": "Hub2you"
+        "EXEMPLO": "Sua Empresa"
       },
       "data": {
         "ROTULO": "Data",
@@ -291,7 +318,7 @@
       },
       "link": {
         "ROTULO": "Link",
-        "EXEMPLO": "hub2you.com.br/b/123"
+        "EXEMPLO": "sualoja.com.br/b/123"
       },
       "codigo": {
         "ROTULO": "Código",
@@ -303,15 +330,33 @@
     },
     "TEXTO": {
       "NOME": "Nome do modelo",
-      "NOME_AJUDA": "Só a sua equipe vê este nome.",
+      "NOME_AJUDA": "Só a sua equipe vê este nome. Ele não pode repetir outro modelo da mesma conta do WhatsApp.",
       "MENSAGEM": "Mensagem",
-      "PRONTO_DO_WHATSAPP": "Texto pronto do WhatsApp: por isso é aprovado mais rápido.",
-      "MEU_JEITO": "Prefiro escrever do meu jeito",
       "LETRAS": "{n} de {limite} letras",
       "EXEMPLOS": "Exemplos",
       "EXEMPLOS_AJUDA": "Já preenchemos. O WhatsApp usa os exemplos só para entender a mensagem. Seus clientes recebem os dados de verdade.",
       "SEM_EXEMPLO": "Escreva um exemplo.",
-      "NOME_DA_EMPRESA": "É o nome da conta no Chat2You ({conta}). Na campanha, dá para trocar."
+      "NOME_DA_EMPRESA": "É o nome da conta no Chat2You ({conta}). Na campanha, vem sozinho e dá para trocar.",
+      "TIPO": {
+        "PERGUNTA": "Que tipo de mensagem é esta?",
+        "aviso": {
+          "ROTULO": "Aviso sobre algo do cliente",
+          "PARA": "Pedido, horário, pagamento, entrega. Custa menos por envio."
+        },
+        "divulgacao": {
+          "ROTULO": "Divulgação",
+          "PARA": "Oferta, novidade, convite. Custa mais por envio."
+        }
+      },
+      "FONTE_CADASTRO": "Na campanha, vem do cadastro de cada cliente.",
+      "FONTE_COLUNA": "Na campanha, vem de uma coluna do seu público ou é o mesmo texto para todos.",
+      "NOME_REPETIDO": "Já existe um modelo com este nome nesta conta do WhatsApp. Use outro, por exemplo “{sugestao}”.",
+      "TIPO_TRAVADO": {
+        "TITULO": "Tipo da mensagem",
+        "NAO_MUDA": "O WhatsApp não deixa mudar o tipo de um modelo que já existe.",
+        "CRIAR_NOVO": "Para mudar o tipo, crie um modelo novo com este texto"
+      },
+      "MUDAR_O_TEXTO": "Mude pelo menos uma palavra do texto. O WhatsApp não aceita duas mensagens iguais na mesma conta."
     },
     "TOPOS": {
       "nenhum": {
@@ -327,7 +372,7 @@
       },
       "documento": {
         "ROTULO": "Documento",
-        "AJUDA": "Escolha um PDF."
+        "AJUDA": "Escolha um PDF. O mesmo arquivo vai para todas as pessoas: não use para boleto ou documento de uma pessoa só."
       },
       "texto": {
         "ROTULO": "Título",
@@ -356,10 +401,10 @@
       },
       "copiar_codigo": {
         "ROTULO": "Copiar código",
-        "PARA": "Para boleto, Pix ou cupom.",
+        "PARA": "Para cupom de desconto. Só em mensagens de divulgação.",
         "EXEMPLO": "Ex.: Copiar código",
         "VALOR": "Exemplo de código",
-        "VALOR_EXEMPLO": "2345 6789"
+        "VALOR_EXEMPLO": "PROMO10"
       }
     },
     "EXTRAS": {
@@ -368,13 +413,34 @@
       "ESCOLHER_ARQUIVO": "Escolher arquivo",
       "TROCAR_ARQUIVO": "Trocar arquivo",
       "RODAPE": "Rodapé",
-      "RODAPE_EXEMPLO": "Ex.: Hub2you · atendimento de segunda a sexta",
+      "RODAPE_EXEMPLO": "Ex.: Sua Empresa · atendimento de segunda a sexta",
       "RODAPE_LIMITE": "{n} de {limite} letras",
       "BOTOES": "Botões",
       "BOTOES_LIMITE": "Até 10 botões. Abrir site: até 2. Ligar e copiar código: 1 de cada.",
       "ADICIONAR_BOTAO": "Adicionar botão",
       "TIRAR_BOTAO": "Tirar",
-      "TEXTO_DO_BOTAO": "Texto do botão"
+      "TEXTO_DO_BOTAO": "Texto do botão",
+      "PROBLEMAS_DO_BOTAO": {
+        "SEM_TEXTO": "Escreva o texto do botão.",
+        "SITE_SEM_ENDERECO": "Escreva o endereço completo do site, começando com https://",
+        "LIGAR_SEM_NUMERO": "Escreva o telefone com o código do país, por exemplo +55 11 4000-0000.",
+        "CODIGO_SEM_EXEMPLO": "De 1 a 15 letras e números, sem espaço.",
+        "SO_DIVULGACAO": "Esse botão só existe em mensagens de divulgação. Tire o botão para enviar como aviso de serviço.",
+        "TEXTO_LONGO": "O texto do botão pode ter até 25 letras.",
+        "SITE_SEM_EXEMPLO": "Este botão veio de fora com o final do endereço variável e sem exemplo. Tire o botão e crie de novo."
+      },
+      "LIMITE_DO_BOTAO": "{n} de {limite} letras",
+      "ARQUIVO_ERRADO": {
+        "foto": "Escolha uma foto JPG ou PNG.",
+        "video": "Escolha um vídeo MP4.",
+        "documento": "Escolha um arquivo PDF."
+      },
+      "ARQUIVO_GRANDE": {
+        "foto": "A foto pode ter até 5 MB.",
+        "video": "O vídeo pode ter até 16 MB.",
+        "documento": "O PDF pode ter até 100 MB."
+      },
+      "TOPO_AJUDA": "Opcional. O mesmo arquivo vai para todas as pessoas que receberem. Use para algo igual para todos (cardápio, catálogo, regulamento). Boleto, comprovante ou documento de cada cliente não vão aqui."
     },
     "NUMEROS": {
       "INTRO": "Escolha onde este modelo vai valer. Só aparecem números do WhatsApp oficial.",
@@ -387,7 +453,8 @@
       "EXTRAS": "Sem extras | 1 extra | {n} extras",
       "FALTA_PREENCHER": "Falta preencher",
       "CARTOES": "{n} cartão | {n} cartões",
-      "CODIGO": "{botao} · vale {n} min"
+      "CODIGO": "{botao} · vale {n} min",
+      "NOME_E_TEXTO": "Nome e texto"
     },
     "CONFERENCIA": {
       "TITULO": "O que o WhatsApp confere",
@@ -410,21 +477,34 @@
         "CARTOES_BOTOES": "Todo cartão tem 1 ou 2 botões preenchidos",
         "CARTOES_IGUAIS": "Os cartões têm os mesmos botões",
         "OFERTA_TITULO": "A oferta tem título de até 16 letras",
-        "OFERTA_FIM": "A oferta acaba numa data futura",
-        "OFERTA_LINK": "A oferta tem link",
+        "OFERTA_LINK": "A oferta tem o endereço completo do site (https://…)",
         "CATALOGO": "A conta tem catálogo conectado",
         "VALIDADE": "A validade fica entre 1 e 90 minutos",
         "FORMULARIO": "Um formulário foi escolhido",
         "FORMULARIO_BOTAO": "O botão do formulário tem texto",
-        "TOPO_ARQUIVO": "A foto, o vídeo ou o documento do topo foi escolhido"
-      }
+        "TOPO_ARQUIVO": "A foto, o vídeo ou o documento do topo foi escolhido",
+        "BOTAO_SITE": "Todo botão de site tem o endereço completo (https://…)",
+        "BOTAO_LIGAR": "Todo botão de ligar tem o telefone com o código do país",
+        "BOTAO_CODIGO": "O botão de copiar código tem um código de exemplo de 1 a 15 letras e números",
+        "SO_DIVULGACAO": "O botão “Copiar código” só existe em mensagens de divulgação",
+        "OFERTA_CUPOM": "Se tiver cupom, ele tem de 1 a 15 letras e números",
+        "BOTOES_TAMANHO": "Todo botão tem até 25 letras",
+        "BOTAO_SITE_EXEMPLO": "O site com final variável tem exemplo",
+        "TEXTO_DIFERENTE": "Mude pelo menos uma palavra do texto ou do rodapé. O WhatsApp não aceita cópia igual.",
+        "SEM_CHAVES": "O texto e o rodapé não têm chaves duplas digitadas à mão",
+        "FORMATO_DIVULGACAO": "Este formato vai como divulgação",
+        "CARTOES_MESMA_MIDIA": "Todos os cartões têm o mesmo tipo de mídia (só foto ou só vídeo)",
+        "NOME_LIVRE": "O nome ainda não existe nesta conta do WhatsApp"
+      },
+      "LEMBRETE_ARQUIVO_IGUAL": "Esse arquivo vai igual para todos."
     },
     "QUEM_APROVA": {
       "TITULO": "Quem aprova é o WhatsApp",
-      "TEMPO": "A análise leva de minutos a algumas horas.",
+      "TEMPO": "A análise costuma levar minutos, mas pode levar até 24 horas.",
       "TIPO": "Deve entrar como {tipo}. O WhatsApp pode mudar o tipo, e isso muda o custo de cada envio.",
       "AVISO": "A situação aparece aqui, na lista de modelos.",
-      "SO_DIVULGACAO": "Este formato só existe para divulgação, então cada envio tem o custo de divulgação."
+      "SO_DIVULGACAO": "Este formato só existe para divulgação, então cada envio tem o custo de divulgação.",
+      "NAO_VAI_EM_CAMPANHA": "Este formato ainda não dá para usar em campanha."
     },
     "CELULAR": {
       "TITULO": "Como o cliente vê",
@@ -434,15 +514,10 @@
       "HORA": "10:42",
       "BOTAO_SEM_TEXTO": "Texto do botão",
       "CARTOES": "Cartões do carrossel",
-      "OFERTA_TERMINA": "Termina em {tempo}",
-      "OFERTA_ACABOU": "A oferta acabou",
-      "DIAS": "{n} dia | {n} dias",
-      "HORAS": "{n} hora | {n} horas",
-      "E": " e ",
-      "MENOS_DE_1_HORA": "menos de 1 hora",
       "CUPOM": "Cupom: {cupom}",
       "CATALOGO": "Catálogo",
-      "VER_COMO_FICA": "Ver como fica"
+      "VER_COMO_FICA": "Ver como fica",
+      "OFERTA_CONTAGEM": "Termina em 2 dias (exemplo)"
     },
     "ENVIADO": {
       "TITULO": {
@@ -458,17 +533,18 @@
         },
         "ANALISE": {
           "TITULO": "Em análise",
-          "TEXTO": "Leva de minutos a algumas horas.",
+          "TEXTO": "Costuma levar minutos, mas pode levar até 24 horas.",
           "CAMPANHA": "Enquanto isso, dá para montar e agendar a campanha."
         },
         "PRONTO": {
           "TITULO": "Pronto para usar",
           "TEXTO": "Aí é só usar em uma campanha.",
-          "CAMPANHA": "Quando aprovar, a campanha agendada sai no horário."
+          "CAMPANHA": "Se o WhatsApp aprovar antes do horário, a campanha agendada sai no horário. Se não, ela fica parada e você toca em Retomar depois da aprovação.",
+          "SEM_CAMPANHA": "Ele fica na lista de modelos. Este formato ainda não dá para usar em campanha."
         }
       },
       "VER_MODELOS": "Ver meus modelos",
-      "SITUACAO": "A situação aparece aqui. Costuma levar de minutos a algumas horas.",
+      "SITUACAO": "A situação aparece na lista de modelos. Costuma levar minutos, mas pode levar até 24 horas.",
       "POR_CONTA": "Foram {n} pedidos de aprovação, um para cada conta do WhatsApp.",
       "VOLTAR_PARA_CAMPANHA": "Voltar para a campanha"
     },
@@ -502,12 +578,11 @@
       },
       "oferta": {
         "TITULO": "Oferta por tempo limitado",
-        "PARA": "Uma oferta com hora para acabar. O cliente vê quanto tempo falta.",
+        "PARA": "Uma oferta com título em destaque. Com cupom, o cliente vê quanto tempo falta.",
         "ETAPA": "Oferta",
         "NOME_PADRAO": "Oferta relâmpago",
-        "TEXTO": "Oi, [nome_cliente]! Corre que dá tempo: [desconto] de desconto até a oferta acabar.",
+        "TEXTO": "Oi, [nome_cliente]! Por pouco tempo: [desconto] de desconto. Veja no botão abaixo.",
         "TITULO_EXEMPLO": "Só hoje: 30%",
-        "CUPOM_EXEMPLO": "HUB30",
         "BOTAO": "Ver oferta"
       },
       "catalogo": {
@@ -520,7 +595,7 @@
       },
       "codigo": {
         "TITULO": "Código de verificação",
-        "PARA": "Manda um código para o cliente confirmar que é ele mesmo ao entrar.",
+        "PARA": "Para quem tem sistema próprio que manda o código de acesso. O Chat2You ainda não envia este modelo.",
         "ETAPA": "Código",
         "NOME_PADRAO": "Código de acesso",
         "TEXTO_FIXO": "é o seu código de verificação.",
@@ -547,18 +622,17 @@
       "BOTOES_AJUDA": "Até 2. Valem para todos os cartões; o texto e o link mudam em cada um.",
       "CARTAO": "Cartão {n}",
       "TEXTO": "Texto do cartão",
-      "ADICIONAR": "Adicionar cartão"
+      "ADICIONAR": "Adicionar cartão",
+      "TIRAR": "Tirar cartão"
     },
     "OFERTA": {
       "INTRO": "Só para divulgação. Este formato não tem rodapé.",
       "TITULO": "Título da oferta",
       "TITULO_LIMITE": "{n} de {limite} letras",
-      "TERMINA": "Quando a oferta acaba",
-      "TERMINA_AJUDA": "O cliente vê quanto tempo falta.",
       "LINK": "Link da oferta",
       "LINK_OBRIGATORIO": "Obrigatório: é para onde o botão leva.",
       "CUPOM": "Código do cupom (opcional)",
-      "CUPOM_AJUDA": "Aparece com um botão para copiar."
+      "CUPOM_AJUDA": "De 1 a 15 letras e números, sem espaço. Com cupom, o cliente vê quanto tempo falta e um botão para copiar."
     },
     "CATALOGO": {
       "SEM_CATALOGO": "Sua conta do WhatsApp ainda não tem catálogo de produtos conectado.",
@@ -569,8 +643,7 @@
     "CODIGO": {
       "BOTAO": "Botão do código",
       "BOTOES_PARA": {
-        "copiar": "O cliente toca e o código é copiado.",
-        "preencher": "O código entra sozinho no seu aplicativo, no celular Android."
+        "copiar": "O cliente toca e o código é copiado."
       },
       "VALIDADE": "Validade do código, em minutos",
       "VALIDADE_AJUDA": "De {min} a {max} minutos.",
@@ -590,15 +663,16 @@
     "PARADAS": {
       "TITULO": "{n} campanha parou por causa do modelo | {n} campanhas pararam por causa do modelo",
       "MOTIVOS": {
-        "modelo_pausado": "O WhatsApp pausou o modelo “{modelo}”. A campanha volta a sair quando ele voltar.",
+        "modelo_pausado": "O WhatsApp pausou o modelo “{modelo}”. Quando ele voltar, toque em Retomar para a campanha sair.",
         "modelo_recusado": "O WhatsApp recusou o modelo “{modelo}”. Corrija o modelo para a campanha sair.",
         "modelo_mudou": "O modelo “{modelo}” mudou. Confira as variáveis da campanha.",
         "tipo_mudou": "O WhatsApp mudou o tipo do modelo “{modelo}” e o custo de cada envio. Confirme para a campanha seguir.",
-        "modelo_em_analise": "O modelo “{modelo}” voltou para análise. A campanha sai depois que o WhatsApp aprovar.",
+        "modelo_em_analise": "O modelo “{modelo}” voltou para análise. Quando o WhatsApp aprovar, toque em Retomar para a campanha sair.",
         "modelo_apagado": "O modelo “{modelo}” não existe mais. Escolha outro modelo para a campanha.",
         "formato_nao_vai": "O modelo “{modelo}” tem um formato que a campanha ainda não sabe enviar.",
         "nao_conferido": "Não conseguimos conferir o modelo “{modelo}” com o WhatsApp. Nada foi enviado.",
-        "outro": "A campanha parou antes de enviar. Nada foi enviado."
+        "outro": "A campanha parou antes de enviar. Nada foi enviado.",
+        "arquivo_do_topo": "O modelo “{modelo}” tem foto, vídeo ou documento no topo e o arquivo não está guardado. Escolha o arquivo de novo no modelo ou ponha o link na campanha."
       },
       "ACOES": {
         "ABRIR_MODELO": "Ver o modelo",
@@ -612,7 +686,9 @@
       "RETOMAR_FALHOU": "Não conseguimos retomar agora. Tente de novo.",
       "CORRIJA_PRIMEIRO": "Corrija o modelo primeiro.",
       "VER_MODELO": "Abrir “{modelo}”",
-      "AGUARDE_CONFERENCIA": "Ainda não deu para conferir o modelo com o WhatsApp. Retomar libera quando a conferência passar."
+      "AGUARDE_CONFERENCIA": "Ainda não deu para conferir o modelo com o WhatsApp. Retomar libera quando a conferência passar.",
+      "AGUARDE_LIBERAR": "Espere o WhatsApp liberar o modelo. Quando ele voltar, toque em Retomar.",
+      "AGUARDE_APROVAR": "Espere o WhatsApp aprovar o modelo. Depois, toque em Retomar."
     },
     "PONTE": {
       "CAIXA_RECONECTAR": "{nome} · precisa reconectar",
@@ -622,7 +698,10 @@
       "NAO_VAI": {
         "FORMATO_NAO_VAI": "ainda não vai em campanha",
         "RECUSADO": "recusado",
-        "PAUSADO": "pausado"
+        "PAUSADO": "pausado",
+        "DESATIVADO": "desativado",
+        "LIMITE": "não criado",
+        "SEM_FONTE": "tem campo que a campanha não preenche"
       },
       "EM_ANALISE": "“{nome}” ainda está em análise no WhatsApp. Você pode montar e agendar a campanha; enviar agora libera quando ele for aprovado.",
       "ENVIAR_AGORA_BLOQUEADO": "Enviar agora libera quando o WhatsApp aprovar o modelo. Escolha uma data para agendar.",
@@ -635,7 +714,9 @@
         "DIVULGACAO": "Mensagem de divulgação: quem pediu para não receber fica de fora.",
         "POR_ENVIO": "{porEnvio} por envio"
       },
-      "GRUPO_CATALOGO": "Do cadastro"
+      "GRUPO_CATALOGO": "Do cadastro",
+      "SEM_MODELO_LIBERADO": "Nenhum modelo desta conta do WhatsApp pode ir em campanha agora: estão recusados, pausados ou num formato que a campanha ainda não envia.",
+      "CORRIGIR": "Corrigir “{nome}”"
     },
     "IA": {
       "CRIAR_COM_IA": "Criar com IA",
@@ -718,6 +799,10 @@
       "EXPLICA_SEM_VALOR": "O WhatsApp dá {limite} respostas grátis por número a cada mês.",
       "USADAS": "{n} de {limite}",
       "PASSOU": "Passou das {limite} grátis"
+    },
+    "CONFERENCIA_AUTOMATICA": {
+      "PRONTO": "“{nome}” ficou pronto para usar.",
+      "RECUSADO": "“{nome}” foi recusado."
     }
   }
 }

@@ -597,6 +597,17 @@ describe('AgentePage', () => {
       wrapper.unmount();
     });
 
+    // #1370 — `?gaveta=` (a volta do assistente de páginas de agendamento) abre a gaveta uma vez:
+    // a consulta sai da URL ao abrir, sem levar o resto dela.
+    it('opens a drawer from ?gaveta= and drops only that query from the URL', async () => {
+      rota.query = { gaveta: 'sabe', origem: 'x' };
+      const wrapper = await montar({ gaveta: 'sabe' });
+      expect(no('[role="dialog"]').textContent).toContain('PAGINA.SABE.TITULO');
+      expect(router.replace).toHaveBeenCalledWith({ query: { origem: 'x' } });
+      delete rota.query;
+      wrapper.unmount();
+    });
+
     it('opens the conversations of the week for the old performance tab', async () => {
       agentesApi.analyticsConversations.mockResolvedValue({
         data: { payload: [] },

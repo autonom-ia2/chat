@@ -60,6 +60,7 @@ class Crm::Cards::FilterQuery
                     linked_conversations: :conversation_participants,
                     contact: Crm::Cards::CompanyResolver.contact_preload,
                     primary_conversation: [:conversation_participants, { applied_sla: :sla_policy }])
+          .preload(primary_conversation: :ai_assignee) # robô responsável (#1377), sem N+1 por card
   end
 
   def apply_filters(cards)

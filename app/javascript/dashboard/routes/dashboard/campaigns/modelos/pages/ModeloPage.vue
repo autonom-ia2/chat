@@ -5,8 +5,15 @@ import { useRoute, useRouter } from 'vue-router';
 import { useAlert } from 'dashboard/composables';
 import Button from 'dashboard/components-next/button/Button.vue';
 import api from '../api/modelosWhatsapp';
+import { usavelEmCampanha } from '../helpers/paraMeta';
 import { SITUACOES } from '../constants';
-import { diaEMes, hora, haQuantoTempo, numero } from '../helpers/datas';
+import {
+  diaEMes,
+  hora,
+  haQuantoTempo,
+  numero,
+  localeDoIntl,
+} from '../helpers/datas';
 import {
   usePodeCriarModelo,
   usePodeUsarEmCampanha,
@@ -16,6 +23,11 @@ import ModeloCelular from '../components/ModeloCelular.vue';
 import ModeloSelo from '../components/ModeloSelo.vue';
 import ModeloUsos from '../components/ModeloUsos.vue';
 import CampanhasParadas from '../components/CampanhasParadas.vue';
+import AvisoDeSituacao from '../components/AvisoDeSituacao.vue';
+import {
+  mudancasDeSituacao,
+  useConferenciaAutomatica,
+} from '../helpers/useConferenciaAutomatica';
 
 // Um modelo (jornadas 1, 3, 4 e 5): a mensagem no celular, a situação
 // explicada com a próxima ação, onde ele está em uso e o que dá para fazer.
@@ -61,6 +73,21 @@ const carregar = async () => {
 
 onMounted(carregar);
 
+// Em análise: a página confere sozinha a cada 60 s (#1394), sem voltar ao
+// "carregando", e avisa quando o modelo fica pronto ou é recusado.
+const mudancas = ref([]);
+const emAnalise = computed(
+  () => estado.value === 'pronto' && modelo.value?.situacao === 'em_analise'
+);
+useConferenciaAutomatica(emAnalise, async () => {
+  const lista = await api.listarModelos({ atualizar: true });
+  const novo = lista.find(item => item.id === modelo.value.id);
+  if (!novo) return;
+  const mudou = mudancasDeSituacao([modelo.value], [novo]);
+  if (mudou.length) mudancas.value = mudou;
+  modelo.value = novo;
+});
+
 const nomesDosNumeros = computed(() =>
   numeros.value
     .filter(item => modelo.value.numeros.includes(item.id))
@@ -74,6 +101,19 @@ const contaDoModelo = computed(
 );
 
 const situacao = computed(() => modelo.value.situacao);
+// "pt_BR" → "português (Brasil)", no idioma da tela.
+const nomeDoIdioma = computed(() => {
+  const codigo = (modelo.value.idioma || '').split('_').join('-');
+  try {
+    return (
+      new Intl.DisplayNames([localeDoIntl(locale.value)], {
+        type: 'language',
+      }).of(codigo) || codigo
+    );
+  } catch {
+    return codigo;
+  }
+});
 const caixa = computed(() => SITUACOES[situacao.value].caixa);
 
 const explicacao = computed(() => {
@@ -98,6 +138,9 @@ const explicacao = computed(() => {
       `MODELOS_WHATSAPP.RECUSAS.${modelo.value.recusa?.codigo || 'outro'}.EXPLICACAO`
     );
   }
+  if (['desativado', 'limite'].includes(situacao.value)) {
+    return t(`${base}.EXPLICACAO`);
+  }
   if (modelo.value.enviosNoMes == null)
     return t(`${base}.EXPLICACAO_SEM_CONTA`);
   return t(
@@ -113,8 +156,10 @@ const dica = computed(() => {
       `MODELOS_WHATSAPP.RECUSAS.${modelo.value.recusa?.codigo || 'outro'}.COMO_RESOLVER`
     );
   }
-  if (situacao.value === 'pausado') {
-    return t('MODELOS_WHATSAPP.SITUACOES.pausado.DICA');
+  // A dica do desativado é duplicar; sem cópia possível, vale o aviso de não editável.
+  if (situacao.value === 'desativado' && !modelo.value.editavel) return '';
+  if (['pausado', 'desativado', 'limite'].includes(situacao.value)) {
+    return t(`MODELOS_WHATSAPP.SITUACOES.${situacao.value}.DICA`);
   }
   return '';
 });
@@ -205,6 +250,7 @@ const confirmarApagar = async () => {
         </p>
 
         <template v-else>
+          <AvisoDeSituacao :mudancas="mudancas" />
           <header class="flex flex-col gap-2">
             <div class="flex flex-wrap items-center gap-3">
               <h1
@@ -249,7 +295,11 @@ const confirmarApagar = async () => {
                 </p>
                 <div class="flex flex-wrap items-center gap-3 mt-1">
                   <Button
-                    v-if="situacao === 'pronto' && podeUsar"
+                    v-if="
+                      situacao === 'pronto' &&
+                      podeUsar &&
+                      usavelEmCampanha(modelo)
+                    "
                     data-usar
                     :label="$t('MODELOS_WHATSAPP.ACOES.USAR')"
                     icon="i-lucide-send"
@@ -259,7 +309,10 @@ const confirmarApagar = async () => {
                   />
                   <Button
                     v-else-if="
-                      situacao === 'recusado' && podeCriar && !modelo.sistema
+                      situacao === 'recusado' &&
+                      podeCriar &&
+                      !modelo.sistema &&
+                      modelo.editavel
                     "
                     data-corrigir
                     :label="$t('MODELOS_WHATSAPP.ACOES.CORRIGIR')"
@@ -272,7 +325,10 @@ const confirmarApagar = async () => {
                   />
                   <Button
                     v-else-if="
-                      situacao === 'pausado' && podeCriar && !modelo.sistema
+                      situacao === 'pausado' &&
+                      podeCriar &&
+                      !modelo.sistema &&
+                      modelo.editavel
                     "
                     data-alterar-texto
                     :label="$t('MODELOS_WHATSAPP.ACOES.ALTERAR_TEXTO')"
@@ -369,29 +425,44 @@ const confirmarApagar = async () => {
                 </div>
               </dl>
 
-              <ModeloUsos :usos="usos" />
+              <ModeloUsos
+                :usos="usos"
+                :dono-do-sistema="modelo.donoDoSistema"
+              />
 
-              <details
-                class="px-6 py-4 rounded-2xl ring-1 ring-inset ring-n-weak bg-n-solid-1 group"
+              <!-- Detalhes sempre à vista: o nome que o WhatsApp conhece e o idioma. -->
+              <section
+                data-detalhes
+                class="flex flex-col gap-1 px-6 py-4 rounded-2xl ring-1 ring-inset ring-n-weak bg-n-solid-1"
               >
-                <summary
-                  class="text-[0.9375rem] font-medium cursor-pointer min-h-11 flex items-center text-n-slate-11"
-                >
+                <h3 class="m-0 text-base font-semibold text-n-slate-12">
                   {{ $t('MODELOS_WHATSAPP.MODELO.DETALHES') }}
-                </summary>
-                <p class="mt-2 mb-0 text-sm text-n-slate-11">
+                </h3>
+                <p class="mb-0 text-sm break-words text-n-slate-11">
                   {{
                     $t('MODELOS_WHATSAPP.MODELO.NOME_NO_WHATSAPP', {
                       nome: modelo.nomeNoWhatsapp,
+                      idioma: nomeDoIdioma,
                     })
                   }}
                 </p>
-              </details>
+              </section>
 
+              <p
+                v-if="podeCriar && !modelo.editavel"
+                data-nao-editavel
+                class="mb-0 text-sm text-n-slate-11"
+              >
+                {{ $t('MODELOS_WHATSAPP.MODELO.NAO_EDITAVEL') }}
+              </p>
               <div v-if="podeCriar" data-acoes class="flex flex-col gap-2">
                 <div class="flex flex-wrap items-center gap-2">
                   <Button
-                    v-if="situacao === 'pronto' && !modelo.sistema"
+                    v-if="
+                      situacao === 'pronto' &&
+                      !modelo.sistema &&
+                      modelo.editavel
+                    "
                     data-alterar
                     :label="$t('MODELOS_WHATSAPP.ACOES.ALTERAR')"
                     icon="i-lucide-pencil"
@@ -402,6 +473,7 @@ const confirmarApagar = async () => {
                     @click="ir('modelos_whatsapp_alterar')"
                   />
                   <Button
+                    v-if="modelo.editavel"
                     data-duplicar
                     :label="$t('MODELOS_WHATSAPP.ACOES.DUPLICAR')"
                     icon="i-lucide-copy"

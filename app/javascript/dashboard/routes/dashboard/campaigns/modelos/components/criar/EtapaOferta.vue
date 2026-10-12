@@ -1,11 +1,13 @@
 <script setup>
+import { andarComSetas } from '../../helpers/setas';
 import { computed } from 'vue';
 import Input from 'dashboard/components-next/input/Input.vue';
 import { LIMITE_DO_TITULO_DA_OFERTA } from '../../constants';
 import EscolherArquivo from './EscolherArquivo.vue';
 
-// Oferta por tempo limitado: título, quando acaba (vira contagem regressiva na
-// prévia), o link (obrigatório) e, se quiser, um cupom. Foto ou vídeo no topo
+// Oferta por tempo limitado: título, o link (obrigatório) e, se quiser, um
+// cupom. Com cupom, o WhatsApp mostra quanto tempo falta (a data de fim é dada
+// no envio, não no modelo; a campanha ainda não envia oferta).
 // é opcional; rodapé este formato não tem.
 const rascunho = defineModel('rascunho', { type: Object, required: true });
 
@@ -58,6 +60,7 @@ const tituloLongo = computed(
       {{ $t('MODELOS_WHATSAPP.OFERTA.INTRO') }}
     </p>
     <Input
+      wrap-message
       :model-value="oferta.titulo"
       data-oferta-titulo
       :label="$t('MODELOS_WHATSAPP.OFERTA.TITULO')"
@@ -71,14 +74,7 @@ const tituloLongo = computed(
       @update:model-value="valor => mudarOferta('titulo', valor)"
     />
     <Input
-      :model-value="oferta.terminaEm"
-      data-oferta-fim
-      type="datetime-local"
-      :label="$t('MODELOS_WHATSAPP.OFERTA.TERMINA')"
-      :message="$t('MODELOS_WHATSAPP.OFERTA.TERMINA_AJUDA')"
-      @update:model-value="valor => mudarOferta('terminaEm', valor)"
-    />
-    <Input
+      wrap-message
       :model-value="oferta.link"
       data-oferta-link
       :label="$t('MODELOS_WHATSAPP.OFERTA.LINK')"
@@ -90,6 +86,7 @@ const tituloLongo = computed(
       @update:model-value="valor => mudarOferta('link', valor)"
     />
     <Input
+      wrap-message
       :model-value="oferta.cupom"
       data-oferta-cupom
       :label="$t('MODELOS_WHATSAPP.OFERTA.CUPOM')"
@@ -104,6 +101,7 @@ const tituloLongo = computed(
         role="radiogroup"
         :aria-label="$t('MODELOS_WHATSAPP.EXTRAS.TOPO')"
         class="grid grid-cols-3 gap-3"
+        @keydown="andarComSetas"
       >
         <button
           v-for="item in TOPOS_DA_OFERTA"

@@ -523,12 +523,64 @@ describe('page states', () => {
     expect(api.getNextSlot).not.toHaveBeenCalled();
   });
 
-  it('404 shows a plain not-found screen', async () => {
+  // RA-17 (#1401): sem o WhatsApp da empresa, a página pausada pede o contato em vez de ficar sem saída.
+  it('paused page without WhatsApp turns into a contact request', async () => {
+    const wrapper = await mountApp({
+      page: {
+        slug: 'conversa',
+        paused: true,
+        title: 'Conversa',
+        brand: { color: '#0B7A5A' },
+        contact_whatsapp_url: null,
+        form_token: 'form-token',
+        captcha_site_key: null,
+        notices_enabled: false,
+      },
+    });
+    expect(wrapper.text()).toContain('A agenda está fechada agora');
+    expect(wrapper.text()).toContain('Deixe seu WhatsApp e chamamos você');
+
+    await wrapper.find('#contact-name').setValue('Ana Souza');
+    await wrapper.find('#contact-phone').setValue('11988880000');
+    await submit(wrapper);
+
+    expect(api.requestContact).toHaveBeenCalledWith(
+      'conversa',
+      expect.objectContaining({
+        name: 'Ana Souza',
+        phone: '+5511988880000',
+        company: '',
+        form_token: 'form-token',
+      })
+    );
+    expect(wrapper.text()).toContain('Pedido enviado!');
+    expect(api.createBooking).not.toHaveBeenCalled();
+  });
+
+  it('paused page with neither WhatsApp nor contact request sends back to WhatsApp', async () => {
+    const wrapper = await mountApp({
+      page: {
+        slug: 'conversa',
+        paused: true,
+        title: 'Conversa',
+        brand: { color: '#0B7A5A' },
+        contact_whatsapp_url: null,
+      },
+    });
+    const back = findAction(wrapper, 'Voltar ao WhatsApp');
+    expect(back.attributes('href')).toBe('https://wa.me/');
+    expect(wrapper.find('form').exists()).toBe(false);
+  });
+
+  it('404 shows a plain not-found screen with a way back to WhatsApp', async () => {
     setPath('/book/nope');
     api.getPage.mockRejectedValue(new api.ApiError(404, 'not_found'));
     const wrapper = mount(App);
     await flushPromises();
     expect(wrapper.text()).toContain('Este link não vale mais');
+    expect(wrapper.text()).toContain('Peça um link novo a quem te enviou.');
+    const back = findAction(wrapper, 'Voltar ao WhatsApp');
+    expect(back.attributes('href')).toBe('https://wa.me/');
   });
 
   it('other failures offer "Tentar de novo"', async () => {

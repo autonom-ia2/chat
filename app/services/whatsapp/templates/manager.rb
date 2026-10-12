@@ -1,11 +1,17 @@
 # O que a API de Modelos faz numa caixa do WhatsApp oficial (#1330): lista (lista sincronizada + perfis), cria, edita,
-# apaga, duplica e sobe o arquivo de exemplo do topo. A Meta é falada só pelo `MetaClient` (WABA e token da caixa).
+# apaga e sobe o arquivo de exemplo do topo (duplicar é criar: a tela manda o conteúdo da cópia). A Meta é falada só
+# pelo `MetaClient` (WABA e token da caixa).
 #
 # Regras:
-# - modelo do sistema (`SystemTemplates`) não é criado, alterado nem apagado por aqui; duplicar pode;
+# - modelo do sistema (`SystemTemplates`) não é criado, alterado nem apagado por aqui (a cópia pela tela pode);
 # - modelo em uso (`Usage`, inclusive uso que a pessoa não vê) não é apagado nem tem o conteúdo alterado;
+# - criar e alterar o conteúdo só chegam à Meta com a forma que ela exige (`SubmitFormat`, #1380): o que não
+#   passa volta 422 com o código, sem nenhuma chamada à Graph;
+# - a categoria não muda na edição (`SubmitFormat.edit_problems`, #1394): pedir outra volta 422
+#   `category_change_not_allowed`, sem chamada à Graph; trocar de tipo é criar um modelo novo;
 # - o estado do Chat2You fica no perfil (`WhatsappTemplateProfile`), que sobrevive ao sync. A lista da caixa só recebe o
-#   modelo criado/alterado até o próximo sync trazer a versão da Meta (mesmo caminho do `NoticeTemplates::Creator`).
+#   modelo criado/alterado até o próximo sync trazer a versão da Meta, gravado por `ChannelList` (trava na linha do
+#   canal; o mesmo escritor do sync e do `NoticeTemplates::Creator`, #1382).
 class Whatsapp::Templates::Manager
   # Pedido recusado por regra nossa: `code` vai para a tela traduzido; `details` completa (o uso, o modelo que já existe).
   class Refused < StandardError
@@ -18,9 +24,11 @@ class Whatsapp::Templates::Manager
     end
   end
 
-  MEDIA_FORMATS = %w[IMAGE VIDEO DOCUMENT].freeze
+  include Whatsapp::Templates::StoredMedia
+
   Draft = Struct.new(:profile, :blob)
-  CONTENT_KEYS = %w[category components message_send_ttl_seconds].freeze
+  # A categoria não está aqui: não muda na edição (#1394; a igual é ignorada e o modelo não volta para análise por ela).
+  CONTENT_KEYS = %w[components message_send_ttl_seconds].freeze
 
   def initialize(inbox:, user:, account_user:, visible_cards:)
     @inbox = inbox
@@ -38,22 +46,27 @@ class Whatsapp::Templates::Manager
     attrs = attrs.to_h.deep_stringify_keys
     raise Refused, 'system_template' if Whatsapp::Templates::SystemTemplates.system?(attrs['name'])
 
+    check_format!(attrs)
     draft = prepare_profile(attrs, attrs)
     outcome = client.create(attrs)
     raise Refused.new('name_taken', template: outcome.template) unless outcome.created
 
-    record(outcome.template)
+    Whatsapp::Templates::ChannelList.upsert!(@inbox.channel, outcome.template)
     present(outcome.template, save_profile(draft, outcome.template))
   end
 
   def update(template_id, attrs)
     attrs = attrs.to_h.deep_stringify_keys
     template = protected_template!(template_id, change: true)
+    check_edit!(template, attrs)
     content = attrs.slice(*CONTENT_KEYS)
+    check_format!(assume_stored_media(template.slice('category', 'components').merge(content), template)) if content.any?
     draft = prepare_profile(template, attrs)
     if content.any?
+      content = with_stored_media(content, template)
       client.update(template['id'], template['name'], content)
-      template = record(template.merge(content).merge('status' => 'PENDING'))
+      template = template.merge(content).merge('status' => 'PENDING')
+      Whatsapp::Templates::ChannelList.upsert!(@inbox.channel, template)
     end
     present(template, save_profile(draft, template))
   end
@@ -62,22 +75,8 @@ class Whatsapp::Templates::Manager
     template = protected_template!(template_id)
     client.delete_by_id(template['id'], template['name'])
     profile_for(template)&.destroy!
-    forget(template)
+    Whatsapp::Templates::ChannelList.remove!(@inbox.channel, template)
     true
-  end
-
-  # Cópia com outro nome (modelo do sistema também). Topo com mídia precisa de um arquivo novo na Meta: o handle do pedido
-  # ou o arquivo guardado no perfil do original.
-  def duplicate(template_id, attrs)
-    attrs = attrs.to_h.deep_stringify_keys
-    source = find!(template_id)
-    profile = profile_for(source)
-    handle = attrs.dig('header_media', 'handle').presence || reupload(profile)
-    copy = { 'friendly_name' => attrs['friendly_name'], 'fields' => profile&.fields,
-             'header_media' => attrs['header_media'] || profile&.header_media }
-    copied = create(duplicate_body(source, attrs, handle).merge(copy.compact))
-    share_media(profile, copied['profile_id']) unless attrs.dig('header_media', 'blob_signed_id')
-    copied
   end
 
   # O tipo do arquivo é o que o conteúdo diz (Marcel, o mesmo do ActiveStorage), não o que o navegador declarou.
@@ -101,6 +100,16 @@ class Whatsapp::Templates::Manager
 
   def client
     @client ||= Whatsapp::Templates::MetaClient.new(inbox: @inbox)
+  end
+
+  def check_format!(template)
+    problems = Whatsapp::Templates::SubmitFormat.problems(template)
+    raise Refused.new(problems.first, problems: problems) if problems.any?
+  end
+
+  def check_edit!(template, attrs)
+    problems = Whatsapp::Templates::SubmitFormat.edit_problems(template, attrs)
+    raise Refused.new(problems.first, problems: problems) if problems.any?
   end
 
   def synced
@@ -138,12 +147,6 @@ class Whatsapp::Templates::Manager
     template.merge('friendly_name' => profile&.friendly_name.presence || template['name'],
                    'fields' => profile&.fields || {}, 'header_media' => profile&.header_media || {},
                    'system_owner' => system_owner(template, profile), 'profile_id' => profile&.id)
-  end
-
-  def duplicate_body(source, attrs, handle)
-    { 'name' => attrs['name'], 'language' => attrs['language'].presence || source['language'],
-      'category' => source['category'], 'parameter_format' => source['parameter_format'],
-      'components' => copy_components(source['components'], handle) }.compact
   end
 
   def profile_for(template)
@@ -184,50 +187,5 @@ class Whatsapp::Templates::Manager
     raise Refused, 'media_invalid' unless blob && blob.metadata['account_id'].to_s == @inbox.account_id.to_s
 
     blob
-  end
-
-  # A cópia guarda o mesmo arquivo do original (para duplicar de novo sem pedir o arquivo).
-  def share_media(source_profile, profile_id)
-    return unless profile_id && source_profile&.header_file&.attached?
-
-    WhatsappTemplateProfile.find(profile_id).header_file.attach(source_profile.header_file.blob)
-  end
-
-  def reupload(profile)
-    return unless profile&.header_file&.attached?
-
-    profile.header_file.open do |file|
-      client.upload_media(io: file, file_name: profile.header_file.filename.to_s, content_type: profile.header_file.content_type)
-    end
-  end
-
-  def copy_components(components, handle)
-    Array(components).map do |component|
-      component = component.deep_dup
-      next component unless component['type'].to_s.casecmp?('HEADER') && MEDIA_FORMATS.include?(component['format'].to_s.upcase)
-      raise Refused, 'media_required' if handle.blank?
-
-      component.merge('example' => { 'header_handle' => [handle] })
-    end
-  end
-
-  # Põe (ou troca) o modelo na lista da caixa até o próximo sync trazer a lista da Meta.
-  def record(template)
-    others = synced.reject { |item| same?(item, template) }
-    write_list(others + [template])
-    template
-  end
-
-  def forget(template)
-    write_list(synced.reject { |item| same?(item, template) })
-  end
-
-  def same?(item, template)
-    item['name'] == template['name'] && item['language'].to_s.casecmp?(template['language'].to_s)
-  end
-
-  def write_list(templates)
-    @inbox.channel.update_columns(message_templates: templates) # rubocop:disable Rails/SkipsModelValidations
-    @inbox.account.update_cache_key('inbox')
   end
 end

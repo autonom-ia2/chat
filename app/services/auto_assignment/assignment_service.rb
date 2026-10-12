@@ -33,7 +33,8 @@ class AutoAssignment::AssignmentService
   end
 
   def unassigned_conversations(limit)
-    scope = inbox.conversations.unassigned.open
+    # Inclui as que o robô passou e seguem à espera de pessoa (#1377).
+    scope = inbox.conversations.awaiting_person.open
 
     # Skip stale backlog with no activity beyond the age threshold
     policy = inbox.assignment_policy
@@ -113,7 +114,7 @@ class AutoAssignment::AssignmentService
 
     Conversation.transaction do
       locked = inbox.conversations
-                    .where(id: conversation.id).unassigned
+                    .where(id: conversation.id).awaiting_person
                     .lock('FOR UPDATE SKIP LOCKED')
                     .first
       next false unless locked

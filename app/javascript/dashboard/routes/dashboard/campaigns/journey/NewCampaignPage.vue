@@ -253,8 +253,8 @@ const isOfficialReady = computed(
   () =>
     Boolean(draft.value.inboxId) &&
     Boolean(template.value) &&
-    allBound(variables.value, draft.value.bindings) &&
-    (!mediaHeader.value || Boolean(draft.value.mediaUrl.trim()))
+    // Fork (#1382): topo com mídia sem link usa o arquivo do modelo; o link é opcional.
+    allBound(variables.value, draft.value.bindings)
 );
 const MESSAGE_READY = {
   [CAMPAIGN_CHANNELS.WHATSAPP_OFFICIAL]: () => isOfficialReady.value,
@@ -523,6 +523,12 @@ const createTemplate = () => {
     name: 'modelos_whatsapp_novo',
     query: { from: 'campaign', caixa: String(draft.value.inboxId) },
   });
+};
+
+// Fork: corrigir um modelo recusado guardando a campanha pela metade.
+const fixTemplate = id => {
+  saveDraft(accountId.value, draft.value);
+  router.push({ name: 'modelos_whatsapp_alterar', params: { id } });
 };
 
 // Fork: modelo ainda em análise → dá para agendar; "Enviar agora" só depois de aprovado.
@@ -794,7 +800,10 @@ onBeforeUnmount(() => {
   <section
     class="flex h-full w-full min-w-0 flex-col overflow-y-auto bg-n-slate-2"
   >
-    <div class="mx-auto w-full max-w-[90rem] p-4 sm:p-5 lg:p-8">
+    <!-- Fork: folga embaixo no celular para o botão flutuante do menu não cobrir "Voltar". -->
+    <div
+      class="mx-auto w-full max-w-[90rem] p-4 pb-24 sm:p-5 sm:pb-24 md:pb-5 lg:p-8"
+    >
       <nav
         class="mb-5 flex flex-wrap items-center gap-2 text-xs text-n-slate-11"
         :aria-label="t('CAMPAIGN_JOURNEY.LIST.BREADCRUMB')"
@@ -910,7 +919,12 @@ onBeforeUnmount(() => {
             <PonteCaixasReconectar :caixas="caixasParaReconectar" />
           </template>
           <template v-if="ponteAtiva" #modelo-vazio>
-            <PonteSemModelo @criar="createTemplate" />
+            <PonteSemModelo
+              :tem-modelos="templateOptions.length > 0"
+              :para-corrigir="ponte.recusadoParaCorrigir(draft.inboxId)"
+              @criar="createTemplate"
+              @corrigir="fixTemplate"
+            />
           </template>
           <template v-if="ponteAtiva" #modelo-aviso>
             <PonteAvisoDoModelo :modelo="modeloEscolhido" />

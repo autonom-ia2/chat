@@ -39,6 +39,13 @@ RSpec.describe ConversationPolicy, type: :policy do
 
         expect(subject).not_to permit(context, conversation)
       end
+
+      it 'allows access to a conversation the bot handed off that waits for a person (#1377)' do
+        conversation = create(:conversation, account: account, inbox: inbox, ai_assignee: create(:agent_bot, account: account))
+        conversation.bot_handoff!
+
+        expect(subject).to permit(context, conversation.reload)
+      end
     end
 
     context 'when role grants conversation_participating_manage' do

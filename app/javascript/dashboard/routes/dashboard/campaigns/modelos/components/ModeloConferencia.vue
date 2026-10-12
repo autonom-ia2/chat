@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue';
-import { conferirConteudo } from '../helpers/conteudo';
+import { conferirConteudo, lembrarArquivoIgual } from '../helpers/conteudo';
 
 // O que costuma fazer o WhatsApp recusar, conferido antes de enviar. Ao vivo:
 // muda enquanto a pessoa corrige.
@@ -11,6 +11,9 @@ const props = defineProps({
 
 const itens = computed(() => conferirConteudo(props.conteudo, props.contexto));
 const problemas = computed(() => itens.value.filter(item => !item.ok).length);
+const lembrete = computed(() =>
+  lembrarArquivoIgual(props.conteudo, props.contexto)
+);
 </script>
 
 <template>
@@ -71,5 +74,16 @@ const problemas = computed(() => itens.value.filter(item => !item.ok).length);
         </span>
       </li>
     </ul>
+    <p
+      v-if="lembrete"
+      data-lembrete-arquivo-igual
+      class="flex items-start gap-2.5 mb-0 text-[0.9375rem] text-n-slate-11"
+    >
+      <span
+        class="i-lucide-info mt-0.5 size-5 shrink-0 text-n-blue-10"
+        aria-hidden="true"
+      />
+      {{ $t('MODELOS_WHATSAPP.CONFERENCIA.LEMBRETE_ARQUIVO_IGUAL') }}
+    </p>
   </section>
 </template>
