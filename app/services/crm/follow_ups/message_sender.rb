@@ -19,6 +19,12 @@ class Crm::FollowUps::MessageSender
   end
 
   OPTED_OUT_REASON = 'opt_out'.freeze
+  # Gravado no metadata pelos runners de IA (nunca por follow-up manual): o texto livre sai pelo WhatsApp API
+  # do Híbrido, fora das 24h (chat#1349). O envio só obedece se o Híbrido continuar pronto neste momento.
+  AI_SOURCES = %w[ai_followup ai_callback].freeze
+  TRANSPORT_KEY = 'delivery_transport'.freeze
+  WHATSAPP_API_TRANSPORT = 'whatsapp_api'.freeze
+  WHATSAPP_API_UNAVAILABLE = 'whatsapp_api_unavailable'.freeze
 
   def initialize(follow_up:)
     @follow_up = follow_up
@@ -27,15 +33,24 @@ class Crm::FollowUps::MessageSender
   def perform
     return Result.skipped unless deliverable?
     return Result.opted_out if contact_opted_out?
-    return delivery_failure('conversation_required') if @follow_up.conversation.blank?
-    return delivery_failure('not_whatsapp_capable') unless whatsapp_window.whatsapp_capable?
-    return delivery_failure('sender_required') if sender.blank?
+
+    precondition_error = delivery_precondition_error
+    return delivery_failure(precondition_error) if precondition_error
 
     message = deliver_message!
     persist_sent_message!(message)
     Result.sent(message)
   rescue StandardError => e
     Result.failed(e.message)
+  end
+
+  def delivery_precondition_error
+    return 'conversation_required' if @follow_up.conversation.blank?
+    return 'not_whatsapp_capable' unless whatsapp_window.whatsapp_capable?
+    return 'sender_required' if sender.blank?
+
+    # Nunca cai para template quando o texto era livre pelo WhatsApp API: falha clara e o runner recompõe.
+    WHATSAPP_API_UNAVAILABLE if whatsapp_api_requested? && !whatsapp_api_available?
   end
 
   def deliverable?
@@ -50,9 +65,18 @@ class Crm::FollowUps::MessageSender
 
   def deliver_message!
     conversation = @follow_up.conversation
-    return create_session_message(conversation, sender) if whatsapp_window.can_send_session_message?
+    return create_session_message(conversation, sender) if whatsapp_window.can_send_session_message? || whatsapp_api_requested?
 
     create_template_message(conversation, sender)
+  end
+
+  # Só os runners de IA gravam o transporte; follow-up manual com metadata arbitrária pela API nunca vira WhatsApp API.
+  def whatsapp_api_requested?
+    AI_SOURCES.include?(metadata['source']) && metadata[TRANSPORT_KEY] == WHATSAPP_API_TRANSPORT
+  end
+
+  def whatsapp_api_available?
+    whatsapp_window.can_send_session_message? || whatsapp_window.hybrid_web_available?
   end
 
   def delivery_failure(error)
@@ -76,9 +100,16 @@ class Crm::FollowUps::MessageSender
       ActionController::Parameters.new(
         content: metadata['message_body'].to_s.strip,
         private: false,
-        content_attributes: { crm_follow_up_id: @follow_up.id }
+        content_attributes: session_content_attributes
       )
     ).perform
+  end
+
+  def session_content_attributes
+    attributes = { crm_follow_up_id: @follow_up.id }
+    # Só marca quando o texto realmente depende do Híbrido (a janela oficial pode ter reaberto até o envio).
+    attributes[:crm_follow_up_transport] = WHATSAPP_API_TRANSPORT if whatsapp_api_requested? && !whatsapp_window.can_send_session_message?
+    attributes
   end
 
   def create_template_message(conversation, sender)

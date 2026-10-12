@@ -12,7 +12,8 @@
 # escreve a dela.
 #
 # Fora do modelo: atributos, título do card, telefone e e-mail. Fora da janela de 24 h do Oficial a IA nem é
-# chamada (texto livre falharia); a tela oferece só "Abrir conversa".
+# chamada (texto livre falharia), a menos que a conversa responda pelo WhatsApp API (Híbrido pronto); a tela
+# oferece só "Abrir conversa".
 class Crm::MetaAds::QuoteMessageSuggester
   MODEL = Crm::Ai::Config::MODEL_SUMMARY
   REASONING_EFFORT = Crm::Ai::Config::SUMMARY_REASONING_EFFORT
@@ -53,7 +54,12 @@ class Crm::MetaAds::QuoteMessageSuggester
   # 'ai_unavailable' | 'credentials_missing' | 'window_closed' | nil
   def unavailable_reason
     Crm::MetaAds::Advisor::Analysis.unavailable_reason(@card.account) ||
-      ('window_closed' if Crm::FollowUps::MessagingWindow.new(@conversation).requires_template?)
+      ('window_closed' if window_closed?)
+  end
+
+  # Fora das 24h o texto livre falharia, a não ser que a conversa responda pelo WhatsApp API (Híbrido pronto).
+  def window_closed?
+    Crm::FollowUps::MessagingWindow.new(@conversation).requires_template? && !@conversation.whatsapp_api_reply?
   end
 
   def perform

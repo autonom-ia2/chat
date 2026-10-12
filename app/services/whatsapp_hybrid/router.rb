@@ -2,6 +2,8 @@
 # A Cloud é sempre a primeira escolha. O Web só entra quando a janela oficial de 24h está fechada
 # e tudo abaixo é verdade. Template, pedido de contato e recursos Meta nunca passam por aqui.
 class WhatsappHybrid::Router
+  CRM_FOLLOW_UP_ORIGIN = 'crm_follow_up'.freeze
+
   def initialize(conversation)
     @conversation = conversation
   end
@@ -46,6 +48,8 @@ class WhatsappHybrid::Router
 
   def origin_of(message)
     return 'campaign' if message.additional_attributes.to_h['campaign_id'].present?
+    # Lido como hash Ruby: o campo é JSON dupla-codificado e `->>` em SQL sempre devolve NULL.
+    return CRM_FOLLOW_UP_ORIGIN if message.content_attributes.to_h['crm_follow_up_id'].present?
     return 'human' if message.sender_type == 'User'
     return 'bot' if message.sender_type.present?
 
