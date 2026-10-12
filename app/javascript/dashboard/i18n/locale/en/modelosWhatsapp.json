@@ -399,7 +399,7 @@
         "SEM_TEXTO": "Write the button text.",
         "SITE_SEM_ENDERECO": "Write the website address.",
         "LIGAR_SEM_NUMERO": "Write the phone number.",
-        "CODIGO_SEM_EXEMPLO": "Write an example code: 1 to 15 letters and numbers, no spaces.",
+        "CODIGO_SEM_EXEMPLO": "1 to 15 letters and numbers, no spaces.",
         "SO_DIVULGACAO": "This button only exists in promotion messages. Remove it to send this as a service notice.",
         "TEXTO_LONGO": "The button text can have up to 25 characters.",
         "SITE_SEM_EXEMPLO": "This button came from outside with a variable address ending and no example. Remove the button and create it again."

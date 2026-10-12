@@ -144,7 +144,7 @@ const iconeDoBotao = tipo =>
         v-else-if="conteudo.topo.tipo !== 'nenhum'"
         class="flex flex-wrap items-center gap-3 p-4 rounded-xl bg-n-slate-2"
       >
-        <span class="text-[0.9375rem] text-n-slate-12 break-all">
+        <span class="text-[0.9375rem] text-n-slate-12 break-words">
           {{
             conteudo.topo.arquivo ||
             $t(`MODELOS_WHATSAPP.TOPOS.${conteudo.topo.tipo}.AJUDA`)

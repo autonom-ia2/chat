@@ -399,7 +399,7 @@
         "SEM_TEXTO": "Escreva o texto do botão.",
         "SITE_SEM_ENDERECO": "Escreva o endereço do site.",
         "LIGAR_SEM_NUMERO": "Escreva o telefone.",
-        "CODIGO_SEM_EXEMPLO": "Escreva um código de exemplo: de 1 a 15 letras e números, sem espaço.",
+        "CODIGO_SEM_EXEMPLO": "De 1 a 15 letras e números, sem espaço.",
         "SO_DIVULGACAO": "Esse botão só existe em mensagens de divulgação. Tire o botão para enviar como aviso de serviço.",
         "TEXTO_LONGO": "O texto do botão pode ter até 25 letras.",
         "SITE_SEM_EXEMPLO": "Este botão veio de fora com o final do endereço variável e sem exemplo. Tire o botão e crie de novo."
