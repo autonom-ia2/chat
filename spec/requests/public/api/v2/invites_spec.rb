@@ -41,7 +41,7 @@ RSpec.describe 'Public::Api::V2::Invites', type: :request do
         'contact_first_name' => 'Marcos', 'phone_masked' => '(11) •••••-5678'
       )
       %w[marcos@example.com +5511912345678 5511912345678 912345678].each { |secret| expect(response.body).not_to include(secret) }
-      [account.id, world.contact.id, invite.id].each { |id| expect(response.parsed_body.values).not_to include(id) }
+      expect(internal_id_keys(response.parsed_body)).to be_empty
     end
 
     it 'says scheduled once the invite became a meeting, even after the deadline' do
