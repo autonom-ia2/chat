@@ -5,7 +5,8 @@
 #
 # index: campaign_view (CampaignPolicy#index?). Lists only open pauses of Chatwoot campaigns (WhatsApp
 # Oficial today), newest first, with the campaign, the reason and `ready_to_resume` (the template is approved again
-# and matches what the campaign recorded, read from the inbox cache) — the Modelos screen and the campaign list show
+# and matches what the campaign recorded, read from the freshest cached list of the same WhatsApp account —
+# CampaignPauses::ResumeReadiness) — the Modelos screen and the campaign list show
 # them with "Retomar". details never carry personal data (CampaignPause).
 # resume: campaign_manage (CampaignPolicy#update?). The pause must belong to the account. A Chatwoot
 # one-off campaign still `active` is fired again right away and its template is checked again

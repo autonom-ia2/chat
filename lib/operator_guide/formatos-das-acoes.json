@@ -11828,8 +11828,8 @@
     "controller": "api/v1/accounts/campaign_journey/campaign_pauses#resume",
     "modelo": "CampaignPause",
     "origem": [
-      "app/controllers/api/v1/accounts/campaign_journey/campaign_pauses_controller.rb:29",
-      "app/controllers/api/v1/accounts/campaign_journey/campaign_pauses_controller.rb:58"
+      "app/controllers/api/v1/accounts/campaign_journey/campaign_pauses_controller.rb:30",
+      "app/controllers/api/v1/accounts/campaign_journey/campaign_pauses_controller.rb:59"
     ],
     "sem_corpo": true
   },

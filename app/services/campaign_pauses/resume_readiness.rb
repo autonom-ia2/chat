@@ -3,7 +3,8 @@
 # Meta por campanha; ao retomar, o disparo pergunta à Meta de novo.
 #
 # A lista guardada é por caixa, e caixas da mesma conta do WhatsApp (WABA) dividem os modelos: vale a lista sincronizada
-# mais recente entre elas (a tela de Modelos sincroniza por uma caixa só do grupo).
+# mais recente entre elas (a tela de Modelos sincroniza por uma caixa só do grupo). Ao retomar, o disparo pergunta à
+# Meta pela caixa da campanha; se ela recusar, a campanha para de novo sem enviar (DispatchCheck).
 class CampaignPauses::ResumeReadiness
   def initialize(account)
     @account = account
@@ -18,6 +19,10 @@ class CampaignPauses::ResumeReadiness
     return false unless channel
 
     Whatsapp::Templates::DispatchCheck.new(campaign, channel: channel, lookup: false).call.ok?
+  rescue StandardError => e
+    # Uma campanha com dado estranho não derruba a lista inteira: só fica sem "Retomar".
+    Rails.logger.warn "[CampaignPauses::ResumeReadiness] campaign=#{campaign.id} ready check failed: #{e.class.name}"
+    false
   end
 
   private

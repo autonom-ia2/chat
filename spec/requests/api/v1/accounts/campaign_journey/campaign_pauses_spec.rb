@@ -123,11 +123,21 @@ RSpec.describe 'Campaign journey campaign pauses API (#1329)', :aggregate_failur
       channel.update_columns(message_templates: [CampaignJourneyHelpers::JOURNEY_TEMPLATE.merge('status' => 'PAUSED')], # rubocop:disable Rails/SkipsModelValidations
                              message_templates_last_updated: 2.hours.ago)
       sibling = create(:channel_whatsapp, account: account, provider: 'whatsapp_cloud', sync_templates: false, validate_provider_config: false)
-      sibling.update_columns(message_templates: [CampaignJourneyHelpers::JOURNEY_TEMPLATE], message_templates_last_updated: 1.minute.ago) # rubocop:disable Rails/SkipsModelValidations
+      sibling.update_columns(message_templates: [CampaignJourneyHelpers::JOURNEY_TEMPLATE], message_templates_last_updated: 1.minute.ago, # rubocop:disable Rails/SkipsModelValidations
+                             provider_config: sibling.provider_config.merge('business_account_id' => channel.waba_id))
 
       list
 
       expect(response.parsed_body['payload'].sole['ready_to_resume']).to be(true)
+    end
+
+    it 'answers the list even when one check breaks, with that campaign not ready' do
+      allow(Whatsapp::Templates::DispatchCheck).to receive(:new).and_raise(TypeError)
+
+      list
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body['payload'].sole['ready_to_resume']).to be(false)
     end
 
     it 'keeps the old campaigns list working with a paused campaign (account without the journey)' do
