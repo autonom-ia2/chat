@@ -602,6 +602,16 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
     na_agenda(Autonomia::Agents::Tools::Native::AgendarReuniao, { inicio: '2026-10-20T10:00:00-03:00', cliente_confirmou: true })
   end
 
+  # #1307: página com um link por pessoa e duas pessoas que podem atender (o responsável do mundo e uma colega).
+  def duas_pessoas_na_agenda
+    mundo = agenda_pronta
+    mundo.profile.update!(assignment_mode: :per_agent, default_assignee: nil)
+    [mundo.host, create(:user, account: account, role: :agent)].each do |user|
+      mundo.profile.agent_booking_links.create!(account: account, agent: user)
+    end
+    mundo
+  end
+
   def booker_que_falha_com(codigo)
     booker = instance_double(Crm::BookingV2::Booker)
     allow(Crm::BookingV2::Booker).to receive(:new).and_return(booker)
@@ -639,10 +649,34 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
         }
       },
       'agenda.rb#recusa_da_pagina#4' => {
-        espera: { motivo: 'agenda_pausada', slug: 'horarios_disponiveis' },
+        espera: { motivo: 'agenda_pagina_pausada', slug: 'horarios_disponiveis' },
         dispara: lambda {
           agenda_pronta.profile.update!(enabled: false)
           na_agenda(horarios, {})
+        }
+      },
+      # #1307: o pessoa_id que o modelo mandou não é de nenhuma pessoa liberada (forjado).
+      'agenda_com_quem.rb#recusa_da_pessoa#1' => {
+        espera: { motivo: 'agenda_pessoa_nao_liberada', slug: 'horarios_disponiveis' },
+        dispara: lambda {
+          agenda_pronta
+          na_agenda(horarios, { pessoa_id: 999_999 })
+        }
+      },
+      'agenda_com_quem.rb#recusa_da_pessoa#2' => {
+        espera: { motivo: 'agenda_pessoa_pausada', slug: 'horarios_disponiveis' },
+        dispara: lambda {
+          mundo = duas_pessoas_na_agenda
+          Crm::AgentAvailability.create!(account: account, user: mundo.host, paused: true)
+          na_agenda(horarios, { pessoa_id: mundo.host.id })
+        }
+      },
+      'agenda_com_quem.rb#recusa_pessoa_obrigatoria#1' => {
+        espera: { motivo: 'agenda_pessoa_obrigatoria', slug: 'agendar_reuniao' },
+        dispara: lambda {
+          duas_pessoas_na_agenda
+          agendar_com_telefone
+          expect(Crm::Meeting.count).to eq(0)
         }
       },
       'agenda.rb#recusa_sem_horarios#1' => {

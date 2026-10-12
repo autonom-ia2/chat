@@ -7,6 +7,8 @@
 # Sem essa pessoa (apagada ou sem nome), fica o texto de sempre. Só no texto livre: os valores do modelo aprovado
 # ({{1}} {{2}} {{3}}) não mudam.
 #
+# Todo aviso de texto livre começa dizendo de quem é (`from_line`, o nome da conta), #1307.
+#
 # `when_text` também alimenta o modelo aprovado ({{2}}) e as notificações ao agente.
 class Crm::BookingV2::Notices::Text
   STOP_PARAM = '?stop_notices=1'.freeze
@@ -35,7 +37,7 @@ class Crm::BookingV2::Notices::Text
   def to_s
     body = I18n.t("crm.booking_v2.notices.#{body_key}", name: name_part, booker: booker_name,
                                                         when: self.class.when_text(meeting), link: invite.url, locale: locale)
-    "#{body}\n\n#{stop_line}"
+    [from_line, body].compact.join("\n") + "\n\n#{stop_line}"
   end
 
   # Depois do corpo de um modelo do canal API (que só tem variáveis de contato): dia e hora, link de gestão e a
@@ -78,6 +80,14 @@ class Crm::BookingV2::Notices::Text
     return nil if user.nil?
 
     user.display_name.to_s.strip.presence || user.name.to_s.split.first.presence
+  end
+
+  # De quem é o aviso (#1307, #1322): o cliente pode ter falado com a IA em outro canal (Instagram) e o aviso sair por
+  # um WhatsApp com que ele nunca falou. O nome do negócio é o nome da conta. Só no texto livre da sessão: os modelos
+  # aprovados pela Meta (`Catalog`) não mudam.
+  def from_line
+    business = meeting.account.name.to_s.strip
+    business.empty? ? nil : I18n.t('crm.booking_v2.notices.from_line', business: business, locale: locale)
   end
 
   def stop_line

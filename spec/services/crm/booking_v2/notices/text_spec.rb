@@ -30,8 +30,18 @@ RSpec.describe Crm::BookingV2::Notices::Text do
 
   it 'says who booked in the first notice of a meeting booked by the team' do
     expect(text.to_s).to eq(
+      "Mensagem de #{account.name}\n" \
       "Oi, Marcos! Juliana marcou seu horário para 20/10 às 10:00. Para confirmar, mudar ou cancelar: #{invite.url}\n\n#{stop_line}"
     )
+  end
+
+  # #1307/#1322: o cliente pode ter falado com a IA em outro canal; o aviso diz de quem é, pelo nome do negócio (a conta).
+  it 'says whose notice it is with the business name, only in the session text' do
+    account.update!(name: 'Clínica Sol')
+
+    expect(text('day_before').to_s.lines.first).to eq("Mensagem de Clínica Sol\n")
+    expect(text.appendix).not_to include('Clínica Sol')
+    expect(text.template_values).not_to include('Clínica Sol')
   end
 
   it 'keeps the approved template values as they are' do
@@ -41,18 +51,18 @@ RSpec.describe Crm::BookingV2::Notices::Text do
   it 'prefers the display name the person chose' do
     booker.update!(display_name: 'Ju')
 
-    expect(text.to_s).to start_with('Oi, Marcos! Ju marcou seu horário para 20/10 às 10:00.')
+    expect(text.to_s).to start_with("Mensagem de #{account.name}\nOi, Marcos! Ju marcou seu horário para 20/10 às 10:00.")
   end
 
   it 'keeps the reminders as they are' do
-    expect(text('day_before').to_s).to start_with('Oi, Marcos! Lembrete: seu horário é amanhã, 20/10 às 10:00.')
+    expect(text('day_before').to_s).to start_with("Mensagem de #{account.name}\nOi, Marcos! Lembrete: seu horário é amanhã, 20/10 às 10:00.")
   end
 
   context 'when the person who booked left the account' do
     let(:metadata) { { 'booking_profile_id' => world.profile.id, 'booked_by_user_id' => booker.id + 1000 } }
 
     it 'falls back to the usual text' do
-      expect(text.to_s).to start_with('Oi, Marcos! Seu horário está marcado para 20/10 às 10:00.')
+      expect(text.to_s).to start_with("Mensagem de #{account.name}\nOi, Marcos! Seu horário está marcado para 20/10 às 10:00.")
     end
   end
 
@@ -61,7 +71,7 @@ RSpec.describe Crm::BookingV2::Notices::Text do
     let(:metadata) { { 'booking_profile_id' => world.profile.id, 'booked_by_user_id' => outsider.id } }
 
     it 'does not use that name and falls back to the usual text' do
-      expect(text.to_s).to start_with('Oi, Marcos! Seu horário está marcado para 20/10 às 10:00.')
+      expect(text.to_s).to start_with("Mensagem de #{account.name}\nOi, Marcos! Seu horário está marcado para 20/10 às 10:00.")
     end
   end
 
@@ -69,7 +79,7 @@ RSpec.describe Crm::BookingV2::Notices::Text do
     let(:source) { 'public_link' }
 
     it 'keeps the usual text even with someone in booked_by_user_id' do
-      expect(text.to_s).to start_with('Oi, Marcos! Seu horário está marcado para 20/10 às 10:00.')
+      expect(text.to_s).to start_with("Mensagem de #{account.name}\nOi, Marcos! Seu horário está marcado para 20/10 às 10:00.")
     end
   end
 
@@ -77,7 +87,7 @@ RSpec.describe Crm::BookingV2::Notices::Text do
     let(:account) { create(:account, locale: 'en') }
 
     it 'says who booked in English' do
-      expect(text.to_s).to start_with('Hi, Marcos! Juliana booked your appointment for 10/20 at 10:00.')
+      expect(text.to_s).to start_with("Message from #{account.name}\nHi, Marcos! Juliana booked your appointment for 10/20 at 10:00.")
     end
   end
 end

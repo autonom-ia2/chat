@@ -63,6 +63,7 @@ RSpec.describe Crm::BookingV2::Notices::Sender do
       expect(message).to have_attributes(conversation_id: conversation.id, message_type: 'outgoing')
       expect(message.additional_attributes.to_h['template_params']).to be_nil
       expect(message.content).to eq(
+        "Mensagem de #{account.name}\n" \
         "Oi, Marcos! Seu horário está marcado para 20/10 às 10:00. Para confirmar, mudar ou cancelar: #{invite.url}\n\n" \
         "Para parar estes avisos: #{invite.url}?stop_notices=1"
       )
