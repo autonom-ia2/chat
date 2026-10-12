@@ -7,6 +7,7 @@
 class Api::V1::Accounts::Crm::BookingPagesController < Api::V1::Accounts::Crm::BaseController
   include ::Crm::BookingPageInboxes
   include ::Crm::BookingPageNoticeTemplates
+  include ::Crm::BookingPageBrand
 
   PREVIEW_TTL = 1.hour
 
@@ -36,14 +37,17 @@ class Api::V1::Accounts::Crm::BookingPagesController < Api::V1::Accounts::Crm::B
   def create
     attributes = ::Crm::BookingV2::PageTemplates.attributes_for(params[:template_key].to_s, locale: account_locale)
     attributes[:title] = params[:title] if params[:title].present?
-    @page = Current.account.crm_agent_booking_profiles.create!(attributes.merge(new_page_defaults))
+    # Página nova já nasce com a identidade salva da conta (#1289), na mesma gravação que a cria.
+    @page = brand_identity.assign_to(Current.account.crm_agent_booking_profiles.new(attributes.merge(new_page_defaults)))
+    @page.save!
     render_page(status: :created)
   rescue ::Crm::BookingV2::PageTemplates::UnknownTemplate
     render_unprocessable('crm.booking_v2.unknown_template')
   end
 
   def update
-    @page.update!(page_params.merge(calendar_inbox_attributes).merge(notice_inbox_attributes))
+    @page.with_lock { @page.update!(keep_logo_dark_source(page_params).merge(calendar_inbox_attributes).merge(notice_inbox_attributes)) }
+    ensure_logo_dark
     render_page
   rescue InvalidInbox => e
     render_unprocessable(e.message)
@@ -83,14 +87,6 @@ class Api::V1::Accounts::Crm::BookingPagesController < Api::V1::Accounts::Crm::B
     expires_at = PREVIEW_TTL.from_now
     token = ::Crm::BookingV2::Tokens.generate('preview', { 'p' => @page.id }, expires_in: PREVIEW_TTL)
     render json: { payload: { token: token, expires_at: expires_at.iso8601 } }
-  end
-
-  def logo
-    upload(:logo)
-  end
-
-  def photo
-    upload(:photo)
   end
 
   def people
@@ -159,7 +155,8 @@ class Api::V1::Accounts::Crm::BookingPagesController < Api::V1::Accounts::Crm::B
     report = ::Crm::BookingV2::AttentionReport.new(account: Current.account)
     page = @page.reload
     payload = ::Crm::BookingV2::PageSerializer.new(page, attention: report.attention?(page), orphaned: report.orphaned(page)).full
-    payload = payload.merge(calendar_options: calendar_inbox_options, notice_inbox_options: notice_inboxes.as_json)
+    payload = payload.merge(calendar_options: calendar_inbox_options, notice_inbox_options: notice_inboxes.as_json,
+                            can_save_identity: ::Crm::BookingPagePolicy.new(pundit_user, page).save_identity?, **photo_owner_payload)
     render json: { payload: payload }, status: status
   end
 
@@ -205,15 +202,6 @@ class Api::V1::Accounts::Crm::BookingPagesController < Api::V1::Accounts::Crm::B
     ::Crm::BookingV2::HostEligibility.eligible?(account: Current.account, user: user)
   end
 
-  def upload(name)
-    file = params[:file]
-    return render_unprocessable('crm.booking_v2.file_missing') unless file.is_a?(ActionDispatch::Http::UploadedFile)
-
-    @page.public_send(:"#{name}=", file)
-    @page.save!
-    render_page
-  end
-
   def account_locale
     Current.account.locale.presence || I18n.default_locale
   end
@@ -221,11 +209,11 @@ class Api::V1::Accounts::Crm::BookingPagesController < Api::V1::Accounts::Crm::B
   # `post_meeting` (#1193): `Crm::BookingV2::PostMeetingParams`.
   def page_params
     parameter_set(:booking_page).permit(
-      :title, :description, :duration_minutes, :buffer_minutes, :booking_window_days, :min_notice_minutes,
+      :title, :short_name, :description, :duration_minutes, :buffer_minutes, :booking_window_days, :min_notice_minutes,
       :timezone, :contact_phone, :default_pipeline_id, :default_stage_id, :invite_text, :invite_ttl_days, :close_holidays,
       :notice_preset, :cancel_until_minutes,
       slot_durations: [], working_hours: [:start_hour, :end_hour, { weekdays: [] }],
-      locations: [:type, :url, :address, :label], brand: [:color, :headline],
+      locations: [:type, :url, :address, :label], brand: [:color, :headline, :logo_align],
       notice_templates: ::Crm::MeetingNotice::KINDS.index_with { %i[name language id] }
     ).to_h.merge(::Crm::BookingV2::PostMeetingParams.attributes(parameter_set(:booking_page)))
   end

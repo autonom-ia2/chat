@@ -5,7 +5,7 @@
 # vê o funil quando:
 # - ele está ligado a uma caixa em que ela é membro sem restrição;
 # - ou está liberado numa caixa em que ela é membro com restrição (todos os funis daquela caixa, ou os escolhidos);
-# - ou não está ligado a caixa nenhuma (funil de cards avulsos, que o acesso por funil não restringe, ver CardScope).
+# - ou não está ligado a caixa nenhuma e não guarda card de caixa que ela não tem livre (funil de cards avulsos).
 # Em "Só as suas" os funis da caixa aparecem no Kanban (ela trabalha os cards dela ali), mas não no painel: o relatório
 # soma os cards dos outros.
 class Crm::Access::VisiblePipelines
@@ -33,10 +33,17 @@ class Crm::Access::VisiblePipelines
     @report_ids ||= ids(include_only_own: false)
   end
 
+  # Card avulso (sem caixa): o CardGuard só deixa pôr num funil que a pessoa enxerga.
+  def visible?(pipeline_id)
+    !restricted? || ids(include_only_own: true).include?(pipeline_id.to_i)
+  end
+
   private
 
+  # include_only_own: o Kanban mostra também os funis em que ela só vê os próprios cards ("Só as suas" e caixa em "só
+  # atribuídas"); o painel não, porque soma os cards dos outros.
   def ids(include_only_own:)
-    (free_inbox_pipeline_ids + restricted_pipeline_ids(include_only_own) + unlinked_pipeline_ids).uniq
+    (free_inbox_pipeline_ids(include_only_own) + restricted_pipeline_ids(include_only_own) + unlinked_pipeline_ids).uniq
   end
 
   # Caixa apagada (inbox_id nulo) não liga o funil a nada: os cards dela também ficam sem caixa (FK nullify) e o acesso
@@ -49,8 +56,17 @@ class Crm::Access::VisiblePipelines
     @member_inbox_ids ||= @user.inboxes.where(account_id: @account.id).pluck(:id)
   end
 
-  def free_inbox_pipeline_ids
-    (member_inbox_ids - @scope.restricted_inbox_ids).flat_map { |inbox_id| inbox_pipeline_ids(inbox_id) }
+  def free_inbox_ids
+    @free_inbox_ids ||= member_inbox_ids - @scope.restricted_inbox_ids
+  end
+
+  def free_inbox_pipeline_ids(include_assigned_only)
+    inbox_ids = include_assigned_only ? free_inbox_ids : free_inbox_ids - assigned_only_inbox_ids
+    inbox_ids.flat_map { |inbox_id| inbox_pipeline_ids(inbox_id) }
+  end
+
+  def assigned_only_inbox_ids
+    @assigned_only_inbox_ids ||= @account.crm_inbox_settings.assigned_only.where(inbox_id: free_inbox_ids).pluck(:inbox_id)
   end
 
   # Linha de uma caixa da qual ela já saiu não libera nada.
@@ -71,7 +87,18 @@ class Crm::Access::VisiblePipelines
     links.filter_map { |link_inbox_id, pipeline_id| pipeline_id if link_inbox_id == inbox_id }
   end
 
+  # Funil sem caixa ligada é avulso só se não guarda card de caixa fora das caixas livres dela: um funil desvinculado da
+  # caixa continua com os cards dela, que o CardScope segue escondendo.
   def unlinked_pipeline_ids
-    @account.crm_pipelines.where.not(id: links.map(&:last)).pluck(:id)
+    @unlinked_pipeline_ids ||= begin
+      unlinked = @account.crm_pipelines.where.not(id: links.map(&:last)).pluck(:id)
+      hidden = if unlinked.empty?
+                 []
+               else
+                 Crm::Card.where(account_id: @account.id, pipeline_id: unlinked).where.not(inbox_id: nil)
+                          .where.not(inbox_id: free_inbox_ids).distinct.pluck(:pipeline_id)
+               end
+      unlinked - hidden
+    end
   end
 end

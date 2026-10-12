@@ -17,7 +17,7 @@ const tituloId = `heroi-${useId()}`;
   <section
     data-heroi
     :aria-labelledby="tituloId"
-    class="relative overflow-hidden rounded-3xl bg-[#0D2344] dark:bg-[#12305E] text-white"
+    class="relative overflow-clip rounded-3xl bg-[#0D2344] dark:bg-[#12305E] text-white"
     :class="compacto ? 'px-6 py-6 md:px-8' : 'px-6 py-10 md:px-12 md:py-12'"
   >
     <span

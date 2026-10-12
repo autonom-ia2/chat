@@ -95,8 +95,12 @@ class Crm::Access::CardGuard
     access.nil? || access.only_own? || (!access.all_pipelines? && access.agent_pipelines.empty?)
   end
 
+  # Card avulso (sem caixa e sem conversa): o funil precisa ser um dos que a pessoa enxerga (#1148, PR D).
   def pipeline_allowed_in?(inbox_ids, pipeline_id)
-    inbox_ids.compact.uniq.all? { |inbox_id| @card_scope.pipeline_allowed?(inbox_id, pipeline_id) }
+    inbox_ids = inbox_ids.compact.uniq
+    return Crm::Access::VisiblePipelines.new(user: @user, account: @account, account_user: @account_user).visible?(pipeline_id) if inbox_ids.empty?
+
+    inbox_ids.all? { |inbox_id| @card_scope.pipeline_allowed?(inbox_id, pipeline_id) }
   end
 
   def card_conversations(card)

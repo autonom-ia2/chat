@@ -16,14 +16,25 @@ class Crm::BookingPagePolicy < ApplicationPolicy
     view?
   end
 
-  %i[create? update? destroy? publish? pause? preview_token? logo? photo? update_people? test_invite? reassign? reassign_preview?
-     notice_template_suggestions? notice_templates?].each do |action|
+  %i[create? update? destroy? publish? pause? preview_token? logo? logo_dark? destroy_logo_dark? photo? update_people? test_invite?
+     reassign? reassign_preview? notice_template_suggestions? notice_templates? apply_identity?].each do |action|
     define_method(action) { manage? }
   end
 
   # Criar modelos na Meta (#1272) escreve na conta do WhatsApp do cliente: só o administrador da conta.
   def create_notice_templates?
     manage? && account_user&.administrator? == true
+  end
+
+  # Salvar a identidade (#1289) grava na conta e a foto de quem atende: "conta" não se delega por função, então só
+  # o administrador. Usar a identidade salva numa página é de quem gerencia páginas.
+  def save_identity?
+    manage? && account_user&.administrator? == true
+  end
+
+  # Link curto (#1282, #1299): conferir se um nome está livre na conta; só quem gerencia páginas.
+  def short_name?
+    manage?
   end
 
   class Scope < ApplicationPolicy::Scope

@@ -3,12 +3,14 @@ import {
   CALENDAR_LOCATIONS,
   IMAGE_TYPES,
   DEFAULT_CANCEL_UNTIL,
+  DEFAULT_LOGO_ALIGN,
   DEFAULT_NOTICE_PRESET,
   MAX_IMAGE_BYTES,
   MISSING_STEP,
   STEP,
 } from './constants';
 import { noticeTemplatesPayload } from './bookingNotices';
+import { addressProblem } from './bookingAddress';
 
 // Converte a página da API (PageSerializer#full) no formulário do assistente e
 // de volta. Funções puras: o assistente guarda um formulário só, e voltar um
@@ -28,6 +30,7 @@ export const pageToForm = page => {
   const hours = page.working_hours || {};
   return {
     title: page.title || '',
+    shortName: page.short_name || '',
     durationMinutes: page.duration_minutes || 30,
     slotDurations: [...(page.slot_durations || [])],
     peopleIds: (page.people || []).map(person => person.id),
@@ -42,6 +45,7 @@ export const pageToForm = page => {
     closeHolidays: page.close_holidays !== false,
     color: page.brand?.color || BRAND_COLORS[0].hex,
     headline: page.brand?.headline || '',
+    logoAlign: page.brand?.logo_align || DEFAULT_LOGO_ALIGN,
     pipelineId: page.default_pipeline_id ?? null,
     stageId: page.default_stage_id ?? null,
     noticeInboxId: page.notice_inbox_id ?? null,
@@ -69,6 +73,8 @@ const usesCalendar = form =>
 // sem eles, a página não fica presa a caixa nenhuma.
 const basePayload = form => ({
   title: form.title.trim(),
+  // Endereço da página (#1282): vazio tira o link curto.
+  short_name: form.shortName,
   duration_minutes: form.durationMinutes,
   slot_durations: form.slotDurations.filter(
     minutes => minutes !== form.durationMinutes
@@ -83,7 +89,11 @@ const basePayload = form => ({
   min_notice_minutes: form.minNoticeMinutes,
   buffer_minutes: form.bufferMinutes,
   close_holidays: form.closeHolidays,
-  brand: { color: form.color, headline: form.headline.trim() },
+  brand: {
+    color: form.color,
+    headline: form.headline.trim(),
+    logo_align: form.logoAlign,
+  },
   default_pipeline_id: form.pipelineId,
   default_stage_id: form.stageId,
   notice_preset: form.noticePreset,
@@ -123,6 +133,7 @@ const locationProblem = item => {
 export const stepProblem = (step, form) => {
   if (step === STEP.CONTE) {
     if (!form.title.trim()) return 'TITLE';
+    if (addressProblem(form.shortName)) return 'SHORT_NAME';
     if (!form.peopleIds.length) return 'PEOPLE';
   }
   if (step === STEP.ONDE) {
@@ -144,6 +155,18 @@ export const imageProblem = file => {
   return null;
 };
 
+// Envio de imagem recusado pelo servidor (#1303): ele confere o conteúdo do
+// arquivo, que o navegador não vê, e diz o motivo em `reason`
+// (Crm::BookingV2::ImageFile). Sem motivo conhecido, o aviso de sempre.
+const UPLOAD_REASONS = {
+  image_type: 'IMAGE_TYPE',
+  image_content: 'IMAGE_CONTENT',
+  image_size: 'IMAGE_SIZE',
+  image_pixels: 'IMAGE_PIXELS',
+};
+export const uploadProblem = error =>
+  UPLOAD_REASONS[error?.response?.data?.reason] || 'IMAGE_UPLOAD';
+
 // Recusas do servidor (422) que têm aviso próprio. O código vem do
 // BookingPagesController; o campo, do errors do ActiveRecord::RecordInvalid.
 const SERVER_ERROR_CODES = {
@@ -152,6 +175,7 @@ const SERVER_ERROR_CODES = {
   'crm.booking_v2.notice_inbox_invalid': 'NOTICE_INBOX_GONE',
 };
 const SERVER_ERROR_FIELDS = {
+  short_name: 'SHORT_NAME',
   locations: 'LOCATIONS',
   working_hours: 'HOURS',
   min_notice_minutes: 'HOURS',
@@ -180,5 +204,15 @@ export const serverProblem = data => {
 export const firstMissingStep = missing =>
   Math.min(...missing.map(item => MISSING_STEP[item] || STEP.PREVIA));
 
-export const brandSwatch = hex =>
-  (BRAND_COLORS.find(color => color.hex === hex) || BRAND_COLORS[0]).swatch;
+// A cor é uma das prontas? Senão é "Outra cor", escolhida pela pessoa (#1289).
+export const presetColor = hex =>
+  BRAND_COLORS.find(
+    color => color.hex.toLowerCase() === String(hex || '').toLowerCase()
+  ) || null;
+
+// O que "Usar a identidade salva" muda no formulário: só o que a página devolveu.
+export const brandFormPatch = page => ({
+  color: page.brand?.color || BRAND_COLORS[0].hex,
+  headline: page.brand?.headline || '',
+  logoAlign: page.brand?.logo_align || DEFAULT_LOGO_ALIGN,
+});

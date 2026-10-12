@@ -11,18 +11,18 @@ const model = defineModel({ type: [String, Number], default: null });
 </script>
 
 <template>
-  <fieldset class="flex flex-col gap-2">
-    <legend class="mb-1 text-base font-semibold text-slate-900">
+  <fieldset class="m-0 flex flex-col gap-2 border-0 p-0">
+    <legend class="mb-1 p-0 text-base font-semibold text-bk-strong">
       {{ legend }}
     </legend>
     <label
       v-for="option in options"
       :key="option.value"
-      class="flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border-2 bg-white px-4 py-3 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-[var(--brand)] has-[:focus-visible]:ring-offset-2"
+      class="relative flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border-2 border-solid bg-bk-field px-4 py-3 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-[var(--brand)] has-[:focus-visible]:ring-offset-2 has-[:focus-visible]:ring-offset-bk-card"
       :class="
         model === option.value
           ? 'border-[var(--brand)]'
-          : 'border-slate-200 hover:border-slate-400'
+          : 'border-bk-line hover:border-bk-line-hover'
       "
     >
       <input
@@ -34,9 +34,11 @@ const model = defineModel({ type: [String, Number], default: null });
       />
       <span
         aria-hidden="true"
-        class="flex size-5 shrink-0 items-center justify-center rounded-full border-2"
+        class="flex size-5 shrink-0 items-center justify-center rounded-full border-2 border-solid"
         :class="
-          model === option.value ? 'border-[var(--brand)]' : 'border-slate-400'
+          model === option.value
+            ? 'border-[var(--brand)]'
+            : 'border-bk-line-hover'
         "
       >
         <span
@@ -45,10 +47,10 @@ const model = defineModel({ type: [String, Number], default: null });
         />
       </span>
       <span class="flex flex-col">
-        <span class="text-base font-semibold text-slate-900">
+        <span class="text-base font-semibold text-bk-strong">
           {{ option.label }}
         </span>
-        <span v-if="option.hint" class="text-base text-slate-600">
+        <span v-if="option.hint" class="text-base text-bk-soft">
           {{ option.hint }}
         </span>
       </span>

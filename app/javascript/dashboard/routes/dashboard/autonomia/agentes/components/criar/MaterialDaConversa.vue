@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
+import { nomeSemExtensao } from '../../utils/nomeDoArquivo';
 
 // #1181 PR2 (protótipo materialMsg) — um arquivo ou foto mandado na conversa da criação, com o
 // estado em palavras: lendo, pronto, na fila (antes do rascunho existir), atenção (não deu para
@@ -16,18 +17,7 @@ const emit = defineEmits(['mandarOutro', 'tirar']);
 const { t } = useI18n();
 const NS = 'AGENTS.JORNADA.CRIAR.MATERIAL';
 
-// "Tabela de preços.pdf" vira "Tabela de preços" (extensão curta some, como no protótipo); endereço
-// de site fica inteiro.
-const nomeVisivel = computed(() => {
-  const nome = props.material.nome || '';
-  const ponto = nome.lastIndexOf('.');
-  const extensao = nome.slice(ponto + 1);
-  const site = nome.startsWith('www.') || nome.includes('/');
-  if (site || ponto <= 0 || extensao.length > 4 || extensao.includes(' ')) {
-    return nome;
-  }
-  return nome.slice(0, ponto);
-});
+const nomeVisivel = computed(() => nomeSemExtensao(props.material.nome));
 
 const problema = computed(() => ['atencao', 'grande'].includes(props.estado));
 const icone = computed(() => {
@@ -51,7 +41,7 @@ const icone = computed(() => {
         : 'bg-n-solid-1 ring-n-weak dark:ring-n-slate-6'
     "
   >
-    <p class="flex flex-wrap items-center gap-1.5 m-0 text-n-slate-12">
+    <p class="relative flex flex-wrap items-center gap-1.5 m-0 text-n-slate-12">
       <span class="sr-only">{{ t(`${NS}.VOCE_MANDOU`) }}</span>
       <span :class="icone" class="size-4 shrink-0" aria-hidden="true" />
       <span class="font-medium break-all">{{ nomeVisivel }}</span>

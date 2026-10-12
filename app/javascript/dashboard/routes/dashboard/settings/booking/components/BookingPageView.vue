@@ -50,12 +50,7 @@ const peopleNames = computed(() =>
       {{ t('BOOKING.LIST.LOADING') }}
     </p>
     <template v-else>
-      <BookingPreviewCard
-        :form="form"
-        :logo-url="page.logo_url || ''"
-        :photo-url="page.photo_url || ''"
-        :host-name="peopleNames"
-      />
+      <BookingPreviewCard :form="form" :page="page" />
       <BookingDestination
         :pipeline-id="form.pipelineId"
         :stage-id="form.stageId"

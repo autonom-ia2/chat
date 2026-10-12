@@ -155,6 +155,22 @@ describe('cópia da página do agente em pt_BR', () => {
       wrapper.unmount();
     });
 
+    // Piloto conta 16: sobrava espaço entre o link e a vírgula. A causa era o padding horizontal que
+    // o `button` ganha do _base.scss (px-2.5); o link zera o padding e cresce a área de toque pelo
+    // ::after, sem empurrar a linha.
+    it('glues "Mudar conversando" to the comma, with no side padding', () => {
+      const wrapper = montarGaveta({ podeMudar: true });
+      const link = document.querySelector('[data-ir-mudar]');
+      const nota = document.querySelector('[data-nota]').textContent;
+      expect(nota).toContain('Mudar conversando,');
+      expect(nota).not.toContain('Mudar conversando ,');
+      expect(link.classList).toContain('p-0');
+      expect(link.classList).toContain('after:-inset-y-3');
+      expect([...link.classList].some(c => c.startsWith('px-'))).toBe(false);
+      expect([...link.classList].some(c => c.startsWith('py-'))).toBe(false);
+      wrapper.unmount();
+    });
+
     it('says what happens before the first channel, neutral with {nome}', () => {
       const wrapper = montarGaveta();
       expect(document.body.textContent).toContain(
@@ -190,10 +206,17 @@ describe('catálogo da página', () => {
     );
   });
 
+  // "Ligar" é proibido para o agente (DECISOES item 9). Ferramenta não é agente: "Ligada/Desligada" e
+  // "Ligar ferramenta" foram aprovados pelo Rodrigo em 11/10/2026 (#1301), só em FERRAMENTAS.
   it('never says "Ligar" nor a confidence percentage', () => {
-    const textos = JSON.stringify(ptBR.AGENTS.JORNADA.PAGINA);
+    const { FERRAMENTAS, ...doAgente } = ptBR.AGENTS.JORNADA.PAGINA;
+    const textos = JSON.stringify(doAgente);
     ['Ligar', 'Ligado', '%', 'confiança', 'certeza'].forEach(palavra =>
       expect(textos).not.toContain(palavra)
+    );
+    // Nas ferramentas, "para ter certeza" (protótipo F09) é sobre testar, não nota de confiança.
+    ['%', 'confiança'].forEach(palavra =>
+      expect(JSON.stringify(FERRAMENTAS)).not.toContain(palavra)
     );
   });
 });

@@ -15,6 +15,10 @@ class Crm::Ai::HandoffInviter
   # à conversa), retorna false → o executor faz rollback (não grava participante nem
   # cooldown) e pula como 'invite_failed'. Não registra convite que ninguém recebe.
   def perform
+    # Acesso por funil (#1148): o convite do sistema não dá participação a quem o funil esconde (participante sempre
+    # vê). false → o executor faz rollback e registra 'invite_failed'.
+    return false unless Crm::Access::ConversationScope.new(user: @agent, account: @conversation.account).allows?(@conversation)
+
     add_participant!
     notify!.present?
   rescue ActiveRecord::RecordInvalid

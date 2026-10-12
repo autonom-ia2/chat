@@ -58,12 +58,7 @@ const fix = item => {
       {{ t('BOOKING.PREVIEW.TITLE') }}
     </h2>
 
-    <BookingPreviewCard
-      :form="form"
-      :logo-url="page.logo_url || ''"
-      :photo-url="page.photo_url || ''"
-      :host-name="peopleNames"
-    />
+    <BookingPreviewCard :form="form" :page="page" />
 
     <BookingDestination
       ref="destination"

@@ -229,12 +229,14 @@ const salvar = async () => {
         class="m-0 text-sm text-n-slate-11"
       >
         <template #acao>
-          <!-- `inline` + py-3: a área de toque cresce para 44 px sem empurrar as linhas do texto. -->
+          <!-- O `button` do _base.scss traz px-2.5/py-1 e align-middle: sem o p-0, sobrava espaço entre o
+               link e a vírgula. A área de toque de 44 px vem do ::after (absoluto, 12 px acima e
+               abaixo), que não ocupa lugar na linha nem a empurra. -->
           <button
             v-if="podeMudar"
             data-ir-mudar
             type="button"
-            class="inline py-3 font-semibold rounded text-n-blue-11 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-blue-11"
+            class="relative inline p-0 font-semibold align-baseline rounded text-n-blue-11 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-blue-11 after:absolute after:inset-x-0 after:-inset-y-3"
             @click="emit('mudar')"
           >
             {{ t(`${NS}.NOTA_ACAO`) }}

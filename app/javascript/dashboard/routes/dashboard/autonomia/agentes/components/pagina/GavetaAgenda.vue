@@ -1,17 +1,26 @@
 <script setup>
 import { computed, onMounted, ref, useId } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useRouter } from 'vue-router';
 import { useStore } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import AgenteGaveta from '../AgenteGaveta.vue';
 import AgenteBotao from '../AgenteBotao.vue';
 import AgenteErro from '../AgenteErro.vue';
+import AgendaEstado from './AgendaEstado.vue';
 import {
   ESTADO_AGENDA,
   SEM_PAGINA,
   useAgendaDoAgente,
 } from '../../composables/useAgendaDoAgente';
+import { usePermissoesDaJornada } from '../../composables/usePermissoesDaJornada';
+import {
+  ESTADO_PAGINA,
+  MODO_RECEBE,
+  fusoLegivel,
+  quemRecebe,
+} from '../../utils/agendaDaPagina';
 
 // #1253 — Marcar reuniões na página nova do agente: a página de agendamento que o agente usa para
 // oferecer horários e marcar, ou "Não marcar". Mesma regra e mesma gravação do AgentBookingForm do
@@ -25,9 +34,12 @@ const props = defineProps({
 
 const emit = defineEmits(['fechar']);
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const store = useStore();
+const router = useRouter();
+const { podeAbrirAgendamento } = usePermissoesDaJornada();
 const NS = 'AGENTS.JORNADA.PAGINA.GAVETA_AGENDA';
+const NS_ESTADO = 'AGENTS.JORNADA.PAGINA.AGENDA_ESTADO';
 const campoId = `agenda-${useId()}`;
 
 const agenda = useAgendaDoAgente(() => props.agente);
@@ -41,14 +53,41 @@ const carregando = computed(
 const erroLer = computed(
   () => agenda.estado.value === ESTADO_AGENDA.INDISPONIVEL
 );
-const semPaginas = computed(
-  () => agenda.disponivel.value && !agenda.paginas.value.length
+// Página salva que foi apagada, mesmo com a lista vazia: a gaveta diz que ela não existe mais e
+// deixa escolher "Não marcar", em vez de só ensinar a criar uma página.
+const temEscolha = computed(
+  () =>
+    agenda.paginas.value.length > 0 || agenda.paginaSalva.value !== SEM_PAGINA
 );
+const semPaginas = computed(() => agenda.disponivel.value && !temEscolha.value);
 const podeEscolher = computed(
-  () => agenda.disponivel.value && agenda.paginas.value.length > 0
+  () => agenda.disponivel.value && temEscolha.value
 );
-const pausada = computed(
-  () => agenda.paginaDe(escolhida.value)?.enabled === false
+// #1181 (item A) — o que a página escolhida faz de verdade, quem fica com a reunião e o fuso, só com
+// o que a lista de páginas traz (utils/agendaDaPagina). Segue a escolha da tela, antes de salvar.
+const paginaEscolhida = computed(() => agenda.paginaDe(escolhida.value));
+const estado = computed(() => agenda.estadoDe(escolhida.value));
+const tituloEscolhida = computed(() =>
+  paginaEscolhida.value ? agenda.tituloDaPagina(paginaEscolhida.value) : ''
+);
+const linkPaginas = computed(() =>
+  podeAbrirAgendamento.value
+    ? router.resolve({ name: 'settings_booking' }).href
+    : ''
+);
+const ativa = computed(() => estado.value === ESTADO_PAGINA.ATIVA);
+const textoRecebe = computed(() => {
+  const recebe = quemRecebe(paginaEscolhida.value);
+  if (!recebe) return '';
+  const fixo = recebe.modo === MODO_RECEBE.FIXO;
+  const chave = `${fixo ? 'FIXO' : 'POR_PESSOA'}${recebe.nome ? '' : '_SEM_NOME'}`;
+  return t(`${NS_ESTADO}.RECEBE.${chave}`, { nome: recebe.nome });
+});
+const fuso = computed(() =>
+  fusoLegivel(paginaEscolhida.value?.timezone, locale.value)
+);
+const placeholder = computed(() =>
+  estado.value === ESTADO_PAGINA.NAO_EXISTE ? t(`${NS_ESTADO}.ESCOLHA`) : ''
 );
 
 const salvar = async () => {
@@ -137,16 +176,30 @@ onMounted(agenda.carregar);
             :trigger-id="campoId"
             :options="agenda.opcoes.value"
             :aria-label="t('BOOKING.AI_AGENT.PAGE_LABEL')"
+            :placeholder="placeholder"
             :disabled="salvando"
             class="w-full"
           />
-          <p v-if="pausada" data-pausada class="m-0 text-sm text-n-amber-11">
-            {{ t('BOOKING.AI_AGENT.PAUSED_HINT') }}
+        </div>
+        <div data-estado class="flex flex-col gap-2" aria-live="polite">
+          <AgendaEstado
+            :estado="estado"
+            :nome="nome"
+            :pagina="tituloEscolhida"
+            :link-paginas="linkPaginas"
+            gerencia
+          />
+          <p
+            v-if="ativa && textoRecebe"
+            data-recebe
+            class="m-0 text-sm text-n-slate-11"
+          >
+            {{ textoRecebe }}
+          </p>
+          <p v-if="ativa && fuso" data-fuso class="m-0 text-sm text-n-slate-11">
+            {{ t(`${NS_ESTADO}.FUSO`, { fuso }) }}
           </p>
         </div>
-        <p class="m-0 text-sm text-n-slate-11">
-          {{ t('BOOKING.AI_AGENT.HINT') }}
-        </p>
       </template>
     </div>
     <template v-if="podeEscolher" #rodape>

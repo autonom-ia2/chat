@@ -14,6 +14,10 @@ const VueHcaptcha = defineAsyncComponent(
 );
 const { t, locale } = useI18n();
 const language = String(locale.value).split('_')[0];
+// O quadro do hCaptcha vem de fora e não enxerga as cores da página: recebe o tema do aparelho ao ser montado (#1295).
+const theme = window.matchMedia?.('(prefers-color-scheme: dark)').matches
+  ? 'dark'
+  : 'light';
 </script>
 
 <template>
@@ -22,6 +26,7 @@ const language = String(locale.value).split('_')[0];
     <VueHcaptcha
       :sitekey="siteKey"
       :language="language"
+      :theme="theme"
       @verify="token => emit('verify', token)"
       @expired="emit('expire')"
       @challenge-expired="emit('expire')"

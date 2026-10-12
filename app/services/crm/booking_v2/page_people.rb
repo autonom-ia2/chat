@@ -19,6 +19,8 @@ class Crm::BookingV2::PagePeople
     people = resolve(user_ids)
     ActiveRecord::Base.transaction do
       people.one? ? assign_fixed(people.first) : assign_per_agent(people)
+      # Apelido de cada pessoa no link curto (#1282): `/a/<nome>/<pessoa>`.
+      Crm::BookingV2::PersonNames.new(profile).assign_missing!
     end
   end
 

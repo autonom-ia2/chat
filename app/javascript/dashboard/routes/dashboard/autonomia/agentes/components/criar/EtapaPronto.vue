@@ -61,7 +61,7 @@ const conversa = computed(() =>
     <section
       data-heroi
       aria-labelledby="pronto-titulo"
-      class="relative overflow-hidden rounded-3xl bg-[#0D2344] dark:bg-[#12305E] text-white px-6 py-8 md:px-10 md:py-10"
+      class="relative overflow-clip rounded-3xl bg-[#0D2344] dark:bg-[#12305E] text-white px-6 py-8 md:px-10 md:py-10"
     >
       <span
         aria-hidden="true"

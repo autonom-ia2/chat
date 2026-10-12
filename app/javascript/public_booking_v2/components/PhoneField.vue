@@ -60,7 +60,7 @@ const onNationalInput = event => {
 
 <template>
   <fieldset class="flex flex-col gap-1">
-    <legend class="mb-1 text-base font-medium text-slate-800">
+    <legend class="mb-1 text-base font-medium text-bk-body">
       {{ label }}
     </legend>
     <div class="flex gap-2">
@@ -73,7 +73,7 @@ const onNationalInput = event => {
         type="tel"
         inputmode="tel"
         autocomplete="tel-country-code"
-        class="min-h-12 w-20 shrink-0 rounded-xl border-2 border-slate-300 bg-white px-3 py-3 text-base text-slate-900 focus:border-[var(--brand)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)]"
+        class="min-h-12 w-20 shrink-0 rounded-xl border-2 border-bk-line-field bg-bk-field px-3 py-3 text-base text-bk-strong focus:border-[var(--brand)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)]"
         @input="onCountryInput"
       />
       <label :for="id" class="sr-only">{{ label }}</label>
@@ -85,18 +85,18 @@ const onNationalInput = event => {
         autocomplete="tel-national"
         :aria-invalid="error ? 'true' : undefined"
         :aria-describedby="describedBy"
-        class="min-h-12 w-full min-w-0 rounded-xl border-2 bg-white px-4 py-3 text-base text-slate-900 focus:border-[var(--brand)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)]"
-        :class="error ? 'border-red-600' : 'border-slate-300'"
+        class="min-h-12 w-full min-w-0 rounded-xl border-2 bg-bk-field px-4 py-3 text-base text-bk-strong focus:border-[var(--brand)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)]"
+        :class="error ? 'border-bk-danger-line' : 'border-bk-line-field'"
         @input="onNationalInput"
       />
     </div>
-    <p :id="`${id}-hint`" class="text-base text-slate-600">
+    <p :id="`${id}-hint`" class="text-base text-bk-soft">
       {{ t('BOOKING_V2.DETAILS.PHONE_HINT') }}
     </p>
     <p
       v-if="error"
       :id="`${id}-error`"
-      class="text-base font-medium text-red-700"
+      class="text-base font-medium text-bk-danger-text"
     >
       {{ errorText }}
     </p>

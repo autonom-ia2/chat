@@ -97,7 +97,11 @@
         "HOURS": "O horário final precisa ser depois do inicial.",
         "IMAGE_TYPE": "Use uma imagem PNG, JPEG ou WebP.",
         "IMAGE_SIZE": "A imagem pode ter até 2 MB.",
-        "IMAGE_UPLOAD": "Não deu para enviar a imagem. Tente outra."
+        "IMAGE_CONTENT": "Este arquivo não é uma imagem de verdade. Salve de novo como PNG ou JPEG e tente outra vez.",
+        "IMAGE_PIXELS": "Esta imagem é grande demais. Use uma menor, de até 16 megapixels.",
+        "IMAGE_UPLOAD": "Não deu para enviar a imagem. Tente outra.",
+        "SHORT_NAME": "Confira o endereço da página.",
+        "IMAGE_REMOVE": "Não deu para tirar a imagem. Tente de novo."
       },
       "SERVER_ERRORS": {
         "CALENDAR_GONE": "Essa caixa de e-mail da agenda não está mais disponível. Escolha outra ou tire o Google Meet e o Teams.",
@@ -108,7 +112,8 @@
         "BRAND": "Confira a cor e a frase de boas-vindas.",
         "NOTICE_INBOX_GONE": "Esse WhatsApp não pode mais mandar avisos. Escolha outro ou deixe sem avisos.",
         "NOTICE_TEMPLATES": "Uma das mensagens escolhidas não serve para os avisos. Escolha outra da lista.",
-        "NOTICES": "Confira os avisos e o prazo para mudar."
+        "NOTICES": "Confira os avisos e o prazo para mudar.",
+        "SHORT_NAME": "Este endereço não pode ser usado. Escolha outro."
       }
     },
     "TEMPLATE": {
@@ -142,6 +147,25 @@
       "PEOPLE_LOADING": "Carregando a equipe",
       "PEOPLE_ERROR": "Não deu para carregar a equipe.",
       "PEOPLE_EMPTY": "Ninguém da equipe pode atender ainda."
+    },
+    "ADDRESS": {
+      "LABEL": "Endereço da página",
+      "HINT": "Mude só o final do link. Use letras, números e hífen.",
+      "PREVIEW": "O link fica assim: {url}",
+      "CHANGE": "Mudar endereço",
+      "EMPTY": "Sem endereço, a página usa um link comprido.",
+      "CHECKING": "Conferindo o endereço",
+      "FREE": "Este endereço está livre.",
+      "OWN": "Este é o endereço da página hoje.",
+      "CHANGE_WARNING": "Se você mudar, o link antigo para de abrir.",
+      "PROBLEMS": {
+        "TOO_SHORT": "Use pelo menos 3 letras ou números.",
+        "TOO_LONG": "Use até 40 letras ou números.",
+        "INVALID_CHARS": "Use só letras sem acento, números e hífen.",
+        "HYPHEN_EDGE": "O endereço não pode começar nem terminar com hífen.",
+        "RESERVED": "Este endereço é do sistema. Escolha outro.",
+        "TAKEN": "Outra página sua já usa este endereço. Escolha outro."
+      }
     },
     "WHERE": {
       "TITLE": "Onde vai ser o atendimento?",
@@ -245,7 +269,61 @@
       "HEADLINE_LABEL": "Frase de boas-vindas",
       "HEADLINE_PLACEHOLDER": "Escolha o melhor horário para você",
       "LOGO_ALT": "Logo da empresa",
-      "PHOTO_ALT": "Foto de quem atende"
+      "PHOTO_ALT": "Foto de quem atende",
+      "LOGO_HINT": "Quadrada, deitada ou em pé: aparece inteira, sem esticar.",
+      "LOGO_ALIGN_LABEL": "Onde a logo fica",
+      "LOGO_ALIGN": {
+        "LEFT": "À esquerda",
+        "CENTER": "No centro",
+        "RIGHT": "À direita"
+      },
+      "CUSTOM_COLOR": "Outra cor",
+      "COLOR_HINT": "O texto dos botões fica claro ou escuro sozinho, para dar leitura.",
+      "SAMPLE_TITLE": "Assim fica na página",
+      "SAMPLE_PRIMARY": "Confirmar",
+      "SAMPLE_SECONDARY": "Quero este",
+      "IDENTITY": {
+        "SAVED_TITLE": "Você já tem uma identidade salva",
+        "SAVED_TEXT": "A logo, a cor, a frase e a foto que você guardou para todas as páginas.",
+        "USE": "Usar a identidade salva",
+        "SAVE_HINT": "Guarde esta logo, cor, frase e foto uma vez só. As próximas páginas já começam com elas.",
+        "SAVE": "Salvar como identidade da conta",
+        "SAVED": "Identidade salva: logo, cor, frase e a foto de quem atende esta página. As próximas páginas já começam assim.",
+        "APPLIED": "Pronto. Esta página está com a identidade salva.",
+        "SAVED_NO_PHOTO": "Identidade salva: logo, cor e frase, sem a foto. A foto é de cada pessoa: só é guardada quando a página tem uma pessoa só e uma foto enviada.",
+        "CONFIRM": "Isso troca a logo, a cor, o lado da logo, a frase e a foto desta página pelo que está salvo, inclusive o que você acabou de mudar.",
+        "CONFIRM_YES": "Sim, usar",
+        "CONFIRM_NO": "Não, deixar como está"
+      },
+      "PHOTO_CARD": {
+        "USING_PROFILE_MINE": "Estamos usando a foto do seu perfil.",
+        "USING_PROFILE_OTHER": "Estamos usando a foto do perfil de {name}.",
+        "USING_SAVED": "Estamos usando a foto guardada na identidade.",
+        "GOES_TO_PROFILE": "Esta foto também vai para o seu perfil.",
+        "OTHER_PERSON": "Você está montando a página de {name}. A foto vale só para o agendamento: o perfil de {name} não muda.",
+        "SHARED_PAGE": "Esta página tem um link por pessoa. A foto vale para a página: o perfil de ninguém muda.",
+        "CHOICE_TITLE": "Onde a foto nova vai valer?",
+        "ONLY_HERE": "Só nesta página de agendamento",
+        "ALSO_PROFILE": "Também no meu perfil",
+        "SEND": "Enviar foto",
+        "CANCEL": "Cancelar"
+      },
+      "LOGO_LIGHT": {
+        "TITLE": "Em fundo claro"
+      },
+      "LOGO_DARK": {
+        "TITLE": "Em fundo escuro",
+        "ALT": "Logo da empresa para fundo escuro",
+        "REMOVE": "Voltar para a criada por nós",
+        "ORIGIN": {
+          "NONE": "Envie a logo. A versão para fundo escuro é criada na hora.",
+          "CREATING": "Criando a versão para fundo escuro…",
+          "GENERATED": "Criamos esta versão para fundo escuro. Se preferir, envie a sua.",
+          "SAME": "Sua logo já fica boa no escuro.",
+          "PLATE": "Não deu para criar uma versão clara; no escuro ela aparece sobre uma placa.",
+          "UPLOADED": "Você enviou esta versão para fundo escuro."
+        }
+      }
     },
     "NOTICES": {
       "TITLE": "Avisos no WhatsApp",
@@ -344,10 +422,6 @@
     },
     "PREVIEW": {
       "TITLE": "Assim o cliente vai ver",
-      "SCHEDULE": "{days}, das {from} às {to}",
-      "DEFAULT_HEADLINE": "Escolha o melhor horário para você",
-      "WITH": "Com {name}",
-      "PICK_TIME": "Escolher horário",
       "DESTINATION": "Quem marcar vai para o funil {pipeline}, etapa {stage}, com {people}.",
       "DESTINATION_NO_PIPELINE": "Quem marcar fica com {people}. Ainda não há funil escolhido.",
       "DEFAULT_PIPELINE": "padrão",
@@ -538,6 +612,11 @@
       "SAVE": "Salvar",
       "BOOKED_BY_AI": "Agendada pela IA",
       "BOOKED_BY_AI_DETAIL": "Agendada pela IA: {title}"
+    },
+    "THEME": {
+      "LABEL": "A página segue o tema do aparelho do cliente. Veja nos dois:",
+      "LIGHT": "Claro",
+      "DARK": "Escuro"
     }
   }
 }

@@ -94,6 +94,25 @@ export const BRAND_COLORS = [
   { key: 'GRAPHITE', hex: '#2B2F36', swatch: 'bg-[#2B2F36]' },
 ];
 
+// A pessoa também pode escolher qualquer outra cor (#1289): o servidor aceita
+// #RRGGBB e a página calcula o texto claro ou escuro por cima dela.
+
+// De que lado a logo fica no topo da página (Crm::BookingPageSettings::LOGO_ALIGNS).
+export const LOGO_ALIGNS = [
+  { key: 'left', i18n: 'LEFT', icon: 'i-lucide-align-left' },
+  { key: 'center', i18n: 'CENTER', icon: 'i-lucide-align-center' },
+  { key: 'right', i18n: 'RIGHT', icon: 'i-lucide-align-right' },
+];
+export const DEFAULT_LOGO_ALIGN = 'left';
+
+// Os dois temas da página pública (#1295). Ela segue o aparelho do cliente; a
+// prévia do painel deixa ver os dois.
+export const PAGE_THEMES = [
+  { key: 'light', i18n: 'LIGHT', icon: 'i-lucide-sun' },
+  { key: 'dark', i18n: 'DARK', icon: 'i-lucide-moon' },
+];
+export const DEFAULT_PAGE_THEME = 'light';
+
 // Logo e foto: o mesmo que o backend aceita (sem SVG, até 2 MB).
 export const IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
 export const MAX_IMAGE_BYTES = 2 * 1024 * 1024;

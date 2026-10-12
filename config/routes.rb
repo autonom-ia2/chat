@@ -51,6 +51,13 @@ Rails.application.routes.draw do
     # email-verified booking.
     get '/book/:slug', to: 'public_booking/pages#show', as: :public_booking_page
     get '/book/:slug/confirm', to: 'public_booking/pages#show', as: :public_booking_confirm_page
+    # Imagem de prévia do link (#1282): o `og:image` das páginas de agendamento. A versão no caminho só decide o cache.
+    get '/book/:slug/preview/:version', to: 'public_booking/preview_images#show', as: :public_booking_preview_image,
+                                        defaults: { format: :png }, constraints: { format: 'png' }
+    # Link curto próprio (#1282, #1299): `/a/<conta>/<página>` abre a página; `/a/<conta>/<página>/<pessoa>`, o link
+    # de uma pessoa. O formato antigo (`/a/<página>` e `/a/<página>/<pessoa>`) cai nas mesmas rotas: quem decide o que
+    # cada pedaço é fica em `Crm::BookingV2::ShortLink.resolve`.
+    get '/a/:first(/:second(/:third))', to: 'public_booking/pages#short', as: :public_booking_short_page
     # Link por cliente e de gestão da reunião (#1189/#1190): sempre a página v2.
     get '/b/:code', to: 'public_booking/pages#invite', as: :public_booking_invite_page
     get '/l/:code', to: 'public/tracked_links#show', as: :public_tracked_link
@@ -398,6 +405,8 @@ Rails.application.routes.draw do
                 post :reassign
                 # Marcar pela agenda no painel (#1265): páginas que servem, horários e a reunião.
                 get :bookable, to: 'booking_page_meetings#index'
+                # Link curto (#1282): o nome está livre? Sem nome, sugere um a partir do título.
+                get :short_name, to: 'booking_page_short_names#show'
               end
               member do
                 get :slots, to: 'booking_page_meetings#slots'
@@ -406,7 +415,13 @@ Rails.application.routes.draw do
                 post :pause
                 post :preview_token
                 post :logo
+                # Logo para fundo escuro (#1295): enviar a própria, ou tirar a enviada e voltar para a gerada.
+                post :logo_dark
+                delete :logo_dark, action: :destroy_logo_dark
                 post :photo
+                # Identidade salva da conta (#1289): usar na página e salvar a partir da página.
+                post :apply_identity
+                post :save_identity
                 get :people
                 put :people, action: :update_people
                 post :test_invite

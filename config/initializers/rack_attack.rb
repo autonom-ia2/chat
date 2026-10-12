@@ -538,6 +538,52 @@ class Rack::Attack
                       public_path_segments(req, PUBLIC_BOOKING_V2_ICS_PREFIX).size == 1)
   end
 
+  # Link curto e prévia do link (#1282). Mesmo método: caminho normalizado e comparado em pedaços, sem expressão regular.
+  # - `/a/<conta>`, `/a/<conta>/<página>` e `/a/<conta>/<página>/<pessoa>` (GET, #1299; o formato antigo `/a/<página>`
+  #   cabe nos mesmos tamanhos): o endereço curto é adivinhável, diferente do slug opaco de `/book`; o teto por IP (o
+  #   mesmo do GET da página na API v2) freia quem varre nomes.
+  # - `/book/<slug>/preview/<versão>.png` (GET): a imagem de prévia. Ela fica guardada e só é desenhada quando a marca
+  #   muda, mas cada pedido ainda lê o arquivo: teto por IP.
+  # - `.../crm/booking_pages/short_name` (GET, com login): "este nome está livre?". Desde o #1299 só olha as páginas
+  #   da própria conta; os tetos por IP e por conta continuam, para a tela não virar consulta em massa.
+  PUBLIC_BOOKING_SHORT_PREFIX = '/a/'.freeze
+  PUBLIC_BOOKING_PAGE_PREFIX = '/book/'.freeze
+  BOOKING_SHORT_NAME_CHECK_SUFFIX = '/crm/booking_pages/short_name'.freeze
+
+  throttle('public_booking_short/show_ip', limit: ENV.fetch('RATE_LIMIT_PUBLIC_BOOKING_SHORT', '60').to_i, period: 1.minute) do |req|
+    req.ip if (req.get? || req.head?) && public_path_segments(req, PUBLIC_BOOKING_SHORT_PREFIX).size.between?(1, 3)
+  end
+
+  throttle('public_booking_preview/image_ip', limit: ENV.fetch('RATE_LIMIT_PUBLIC_BOOKING_PREVIEW_IMAGE', '60').to_i,
+                                              period: 1.minute) do |req|
+    segments = public_path_segments(req, PUBLIC_BOOKING_PAGE_PREFIX)
+    req.ip if (req.get? || req.head?) && segments.size == 3 && segments[1] == 'preview'
+  end
+
+  BOOKING_SHORT_NAME_CHECK_PREFIX = '/api/v1/accounts/'.freeze
+
+  # Id da conta quando o pedido é a conferência de nome livre; nil para o resto.
+  def self.booking_short_name_check_account(req)
+    return unless req.get? || req.head?
+
+    path = ActionDispatch::Journey::Router::Utils.normalize_path(req.path_without_extensions)
+    return unless path.start_with?(BOOKING_SHORT_NAME_CHECK_PREFIX) && path.end_with?(BOOKING_SHORT_NAME_CHECK_SUFFIX)
+
+    account = path.delete_prefix(BOOKING_SHORT_NAME_CHECK_PREFIX).delete_suffix(BOOKING_SHORT_NAME_CHECK_SUFFIX)
+    account if account.to_i.to_s == account
+  end
+
+  throttle('booking_short_name/check_ip', limit: ENV.fetch('RATE_LIMIT_BOOKING_SHORT_NAME_CHECK', '30').to_i, period: 1.minute) do |req|
+    req.ip if booking_short_name_check_account(req)
+  end
+
+  # Por conta também: trocar de IP não abre mais consultas para a mesma conta.
+  BOOKING_SHORT_NAME_CHECK_ACCOUNT_LIMIT = ENV.fetch('RATE_LIMIT_BOOKING_SHORT_NAME_CHECK_ACCOUNT', '120').to_i
+
+  throttle('booking_short_name/check_account', limit: BOOKING_SHORT_NAME_CHECK_ACCOUNT_LIMIT, period: 1.minute) do |req|
+    booking_short_name_check_account(req)
+  end
+
   # CRM calendar push webhooks (S7-B): public + unauthenticated. Generous per-IP cap
   # (providers batch from their own ranges) just to bound abuse — the handler only
   # verifies a secret and enqueues, never trusts the payload.

@@ -8,6 +8,7 @@ import ManageMeeting from './components/ManageMeeting.vue';
 import ManageStop from './components/ManageStop.vue';
 import NoSlot from './components/NoSlot.vue';
 import NotFound from './components/NotFound.vue';
+import PageCard from './components/PageCard.vue';
 import Paused from './components/Paused.vue';
 import RescheduleConfirm from './components/RescheduleConfirm.vue';
 import StepConfirm from './components/StepConfirm.vue';
@@ -55,27 +56,25 @@ onMounted(load);
 </script>
 
 <template>
-  <div class="flex min-h-screen w-full justify-center bg-slate-100 px-4 py-6">
+  <div class="flex min-h-screen w-full justify-center bg-bk-page px-4 py-6">
     <main class="flex w-full max-w-md flex-col gap-4">
       <p
         v-if="isPreview"
-        class="rounded-xl bg-yellow-100 p-3 text-center text-base font-medium text-yellow-900"
+        class="rounded-xl bg-bk-warn p-3 text-center text-base font-medium text-bk-warn-ink"
       >
         {{ t('BOOKING_V2.PREVIEW') }}
       </p>
-      <div
-        class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8"
-      >
+      <PageCard>
         <p
           v-if="step === STEPS.LOADING"
           role="status"
           aria-live="polite"
-          class="py-10 text-center text-base text-slate-600"
+          class="py-10 text-center text-base text-bk-soft"
         >
           {{ t('BOOKING_V2.LOADING') }}
         </p>
         <component :is="screen" v-else-if="screen" />
-      </div>
+      </PageCard>
     </main>
   </div>
 </template>

@@ -79,8 +79,8 @@ const applyStockTemplate = () => {
     slug: 'consultar_estoque',
     description:
       'Consulta produtos disponíveis no estoque por termo de busca. Use quando o cliente perguntar por peça, aplicação, produto ou disponibilidade.',
-    endpoint_url:
-      'https://giraautopecas.api-autonomia.com/clients/gira-autopecas/stock/search',
+    // Exemplo genérico (decisão do Rodrigo, 11/10/2026, #1301): nenhuma URL de cliente real.
+    endpoint_url: 'https://api.sualoja.com.br/estoque/busca',
   });
   showFormModal.value = true;
 };

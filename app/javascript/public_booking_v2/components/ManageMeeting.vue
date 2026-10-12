@@ -28,11 +28,11 @@ const RESULT_TITLES = {
 const BADGES = {
   confirmed: {
     key: 'BOOKING_V2.MANAGE.BADGE_CONFIRMED',
-    classes: 'bg-green-50 text-green-900',
+    classes: 'bg-bk-ok text-bk-ok-ink',
   },
   change_requested: {
     key: 'BOOKING_V2.MANAGE.BADGE_CHANGE_REQUESTED',
-    classes: 'bg-yellow-100 text-yellow-900',
+    classes: 'bg-bk-warn text-bk-warn-ink',
   },
 };
 const NOTIFIED_RESULTS = ['confirmed', 'rescheduled', 'canceled'];
@@ -107,8 +107,8 @@ const canceledBody = computed(() => {
         class="flex size-14 items-center justify-center rounded-full text-2xl"
         :class="
           result && !isCanceled
-            ? 'bg-[var(--brand)] font-bold text-white'
-            : 'bg-slate-100 text-slate-600'
+            ? 'bg-[var(--brand-fill)] font-bold text-[var(--brand-on)] ring-1 ring-inset ring-[var(--brand)]'
+            : 'bg-bk-chip text-bk-soft'
         "
       >
         <span :class="icon" />
@@ -117,7 +117,7 @@ const canceledBody = computed(() => {
         id="step-heading"
         data-step-heading
         tabindex="-1"
-        class="text-2xl font-bold text-slate-900 focus:outline-none"
+        class="text-2xl font-bold text-bk-strong focus:outline-none"
       >
         {{ title }}
       </h1>
@@ -134,12 +134,12 @@ const canceledBody = computed(() => {
     <ManageError />
 
     <MeetingCard :meeting="meeting" :show-join="!isCanceled && !hasEnded" />
-    <p v-if="notified" class="text-center text-base text-slate-700">
+    <p v-if="notified" class="text-center text-base text-bk-medium">
       {{ notified }}
     </p>
 
     <div v-if="isCanceled" class="flex flex-col gap-3">
-      <p class="text-base text-slate-800">{{ canceledBody }}</p>
+      <p class="text-base text-bk-body">{{ canceledBody }}</p>
       <ActionButton
         v-if="manage.canRebook.value"
         :disabled="isWorking"
@@ -191,16 +191,16 @@ const canceledBody = computed(() => {
       <div
         v-else
         data-testid="manage-locked"
-        class="flex flex-col gap-3 rounded-2xl border-2 border-slate-200 p-4"
+        class="flex flex-col gap-3 rounded-2xl border-2 border-bk-line p-4"
       >
-        <p v-if="hasEnded" class="text-base text-slate-800">
+        <p v-if="hasEnded" class="text-base text-bk-body">
           {{
             hasWhatsApp
               ? t('BOOKING_V2.MANAGE.PAST_BODY')
               : t('BOOKING_V2.MANAGE.PAST_BODY_NO_CONTACT')
           }}
         </p>
-        <p v-else class="text-base text-slate-800">
+        <p v-else class="text-base text-bk-body">
           {{
             deadline
               ? t('BOOKING_V2.MANAGE.LOCKED', { deadline })
@@ -215,7 +215,7 @@ const canceledBody = computed(() => {
     <p
       v-if="meeting.notices_stopped"
       data-testid="notices-stopped"
-      class="text-center text-base text-slate-700"
+      class="text-center text-base text-bk-medium"
     >
       {{ t('BOOKING_V2.MANAGE.STOPPED') }}
     </p>

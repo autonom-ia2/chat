@@ -5,6 +5,7 @@ import {
   isWebUrl,
   pageToForm,
   stepProblem,
+  uploadProblem,
 } from '../bookingPageForm';
 import { formatMinutes, formatWeekdays } from '../bookingFormat';
 
@@ -32,6 +33,7 @@ describe('bookingPageForm', () => {
     const payload = formToPayload(pageToForm(page));
     expect(payload).toEqual({
       title: 'Visita',
+      short_name: '',
       duration_minutes: 60,
       slot_durations: [30],
       locations: [{ type: 'in_person', address: 'Rua A, 1' }],
@@ -40,7 +42,7 @@ describe('bookingPageForm', () => {
       min_notice_minutes: 60,
       buffer_minutes: 5,
       close_holidays: true,
-      brand: { color: '#B3263E', headline: 'Oi' },
+      brand: { color: '#B3263E', headline: 'Oi', logo_align: 'left' },
       default_pipeline_id: 2,
       default_stage_id: 20,
       notice_preset: 'standard',
@@ -140,6 +142,16 @@ describe('bookingPageForm', () => {
       'IMAGE_SIZE'
     );
     expect(imageProblem({ type: 'image/webp', size: 1024 })).toBeNull();
+  });
+
+  it('envio recusado: o motivo do servidor escolhe o aviso', () => {
+    const refused = reason => ({ response: { data: { reason } } });
+    expect(uploadProblem(refused('image_content'))).toBe('IMAGE_CONTENT');
+    expect(uploadProblem(refused('image_pixels'))).toBe('IMAGE_PIXELS');
+    expect(uploadProblem(refused('image_type'))).toBe('IMAGE_TYPE');
+    expect(uploadProblem(refused('image_size'))).toBe('IMAGE_SIZE');
+    expect(uploadProblem(refused('outro'))).toBe('IMAGE_UPLOAD');
+    expect(uploadProblem(new Error('rede'))).toBe('IMAGE_UPLOAD');
   });
 
   it('a primeira pendência leva ao passo que a resolve', () => {

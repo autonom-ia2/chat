@@ -19,6 +19,7 @@ import GavetaFotoNome from '../components/pagina/GavetaFotoNome.vue';
 import GavetaVersoes from '../components/pagina/GavetaVersoes.vue';
 import GavetaInstrucoes from '../components/pagina/GavetaInstrucoes.vue';
 import GavetaAgenda from '../components/pagina/GavetaAgenda.vue';
+import GavetaFerramentas from '../components/pagina/GavetaFerramentas.vue';
 import MudarConversando from '../components/pagina/MudarConversando.vue';
 import {
   ESTADO_PAGINA,
@@ -35,6 +36,7 @@ import {
   ehCotacao,
   ehInterno,
   ehManual,
+  ehSuperAdmin,
   estadoDeOperacao,
   gavetasPermitidas,
   podeMudarConversando,
@@ -68,6 +70,7 @@ const caixas = useMapGetter('inboxes/getInboxes');
 const fontes = useMapGetter('autonomiaSources/getKnowledgeSources');
 const flagsFontes = useMapGetter('autonomiaSources/getUIFlags');
 const agendaNova = useAgendaNovaNaConta();
+const usuario = useMapGetter('getCurrentUser');
 
 const aberta = ref(null);
 const vista = ref('pagina');
@@ -99,9 +102,11 @@ const interno = computed(() => ehInterno(agente.value));
 const podeMudar = computed(
   () => podeGerenciar.value && podeMudarConversando(agente.value)
 );
+const superAdmin = computed(() => ehSuperAdmin(usuario.value));
 const permitidas = computed(() =>
   gavetasPermitidas(agente.value, podeGerenciar.value, {
     agendaNova: agendaNova.value,
+    superAdmin: superAdmin.value,
   })
 );
 
@@ -181,7 +186,17 @@ const itensMais = computed(() => {
     texto: soNome ? t(`${NS}.FOTO.TITULO_NOME`) : t(`${NS}.FOTO.TITULO`),
     icone: soNome ? 'i-lucide-user-pen' : 'i-lucide-image',
   };
-  if (cotacao.value) return [fotoENome];
+  // Ferramentas: só o SuperAdmin que gerencia (gavetasPermitidas), como a aba do painel antigo.
+  const ferramentas = permitidas.value.includes(GAVETA.FERRAMENTAS)
+    ? [
+        {
+          chave: GAVETA.FERRAMENTAS,
+          texto: t(`${NS}.FERRAMENTAS.MENU`),
+          icone: 'i-lucide-wrench',
+        },
+      ]
+    : [];
+  if (cotacao.value) return [fotoENome, ...ferramentas];
   return [
     fotoENome,
     versoes,
@@ -192,6 +207,7 @@ const itensMais = computed(() => {
         : t(`${NS}.INSTRUCOES.MENU`),
       icone: 'i-lucide-pencil',
     },
+    ...ferramentas,
     {
       chave: 'excluir',
       texto: t(`${NS}.EXCLUIR.MENU`),
@@ -418,7 +434,7 @@ const tirarPergunta = id => {
 <template>
   <div class="w-full h-full overflow-y-auto bg-n-background">
     <div
-      class="flex flex-col w-full gap-6 px-4 py-6 mx-auto md:px-6"
+      class="relative flex flex-col w-full gap-6 px-4 py-6 mx-auto md:px-6"
       :class="vista === 'mudar' ? 'max-w-6xl' : 'max-w-[55rem]'"
     >
       <!-- t07-carregando -->
@@ -649,6 +665,12 @@ const tirarPergunta = id => {
       />
       <GavetaAgenda
         v-else-if="aberta === GAVETA.AGENDA"
+        :agente="agente"
+        :nome="nome"
+        @fechar="fechar"
+      />
+      <GavetaFerramentas
+        v-else-if="aberta === GAVETA.FERRAMENTAS"
         :agente="agente"
         :nome="nome"
         @fechar="fechar"
