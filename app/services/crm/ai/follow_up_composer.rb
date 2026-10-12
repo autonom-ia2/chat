@@ -282,7 +282,7 @@ module Crm
           MODE
         else
           <<~MODE.strip
-            MODO free_form (a conversa está DENTRO da janela de 24h):
+            MODO free_form (texto livre permitido nesta conversa):
             - Se should_send=true, escreva "message_body" para reabrir a conversa: tom de quem quer ajudar uma pessoa, NÃO vendedor; sem falsa urgência; sem pedir desculpas em excesso; no máximo 2-3 linhas curtas de chat com 1 CTA suave; personalize APENAS com fatos reais (use o primeiro nome se aparecer); retome explicitamente o ponto que ficou em aberto.
             - chosen_template NÃO é usado neste modo: devolva um objeto zerado (index=-1, kind="native", name="", id=null, language=null) e template_variables vazio.
           MODE
