@@ -153,6 +153,16 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 120
     environment: production
+    # Lidos pelo job desligar-blue. Só saem preenchidos quando o deploy chega ao fim com o tráfego na green.
+    outputs:
+      traffic_shift_done: ${{ steps.hand-off.outputs.traffic_shift_done }}
+      listener_arn: ${{ steps.hand-off.outputs.listener_arn }}
+      blue_instance_id: ${{ steps.hand-off.outputs.blue_instance_id }}
+      blue_tg_arn: ${{ steps.hand-off.outputs.blue_tg_arn }}
+      green_instance_id: ${{ steps.hand-off.outputs.green_instance_id }}
+      green_tg_arn: ${{ steps.hand-off.outputs.green_tg_arn }}
+      old_previous_instance_id: ${{ steps.hand-off.outputs.old_previous_instance_id }}
+      old_previous_tg_arn: ${{ steps.hand-off.outputs.old_previous_tg_arn }}
 
     steps:
       - name: Checkout
@@ -327,6 +337,7 @@ jobs:
             echo "TRAFFIC_SHIFT_DONE=false"
             echo "GREEN_WORKER_START_ATTEMPTED=false"
             echo "PREVIOUS_WRITE_ATTEMPTED=false"
+            echo "GREEN_IMAGE_PUBLISHED=false"
           } >> "$GITHUB_ENV"
 
       - name: Create green user data
@@ -680,6 +691,43 @@ jobs:
           sed -i "s|__ENV_PARAMETER__|$ENV_PARAMETER|g" "$RUNNER_TEMP/green-user-data.sh"
           sed -i "s|__IMAGE_URI__|$IMAGE_URI|g" "$RUNNER_TEMP/green-user-data.sh"
 
+      # #1350: green ligada há mais de 2 h que não é a atual nem o rollback (a previous) é esquecida, como a que ficou
+      # dois dias ligada depois de um build falho. Aqui só avisa: quem termina é uma pessoa, depois de conferir.
+      # Toda instância do stack nasce com BlueGreenRole=green, então a blue e a previous também aparecem no filtro e
+      # são puladas pelo id. Falha de leitura não segura o deploy.
+      - name: Warn about forgotten green instances
+        continue-on-error: true
+        run: |
+          current_instance=$(aws ssm get-parameter \
+            --name "$CURRENT_INSTANCE_PARAMETER" \
+            --query Parameter.Value \
+            --output text)
+          previous_instance=$(aws ssm get-parameter \
+            --name "$PREVIOUS_INSTANCE_PARAMETER" \
+            --query Parameter.Value \
+            --output text)
+          limit=$(date -u -d '2 hours ago' +%s)
+          aws ec2 describe-instances \
+            --filters "Name=tag:BlueGreenRole,Values=green" "Name=tag:Project,Values=chatwoot-autonomia" \
+              "Name=tag:Environment,Values=prod" "Name=instance-state-name,Values=running" \
+            --query "Reservations[].Instances[].[InstanceId,LaunchTime,Tags[?Key=='Name'].Value | [0]]" \
+            --output text > "$RUNNER_TEMP/running-greens.txt"
+          forgotten=0
+          while IFS=$'\t' read -r instance_id launch_time instance_name; do
+            if [ -z "$instance_id" ]; then
+              continue
+            fi
+            case "$instance_id" in
+              "$current_instance"|"$previous_instance"|"$BLUE_INSTANCE_ID") continue ;;
+            esac
+            if [ "$(date -u -d "$launch_time" +%s)" -lt "$limit" ]; then
+              echo "::warning::Green esquecida: $instance_id (Name=$instance_name, LaunchTime=$launch_time). Não é a atual nem a previous; conferir e terminar à mão."
+              forgotten=$((forgotten + 1))
+            fi
+          done < "$RUNNER_TEMP/running-greens.txt"
+          rm -f "$RUNNER_TEMP/running-greens.txt"
+          echo "Greens esquecidas: $forgotten"
+
       # Uma limpeza que pega a green rodando o deploy.sh (migrations) não a termina (#972): ela se desliga sozinha quando o
       # deploy.sh acaba e fica parada com a tag DeployCleanup=pending. Aqui essas greens são terminadas. Uma que ainda
       # esteja de pé segura o deploy por até 30 min, porque duas migrations juntas esbarram no lock do Rails; passado
@@ -761,6 +809,9 @@ jobs:
         env:
           IMAGE_URI: ${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
         run: |
+          # O build acima terminou: a imagem deste commit está no ECR e a green pode começar o deploy.sh a qualquer
+          # momento. Daqui em diante a limpeza segue a regra do #972; antes disso, termina a green sempre (#1350).
+          echo "GREEN_IMAGE_PUBLISHED=true" >> "$GITHUB_ENV"
           aws ssm put-parameter \
             --name "$RUNTIME_IMAGE_PARAMETER" \
             --type String \
@@ -987,39 +1038,21 @@ jobs:
           echo "SSO redirect smoke test failed"
           exit 1
 
-      - name: Stop blue instance and remove older rollback
+      # Tráfego e workers já estão na green. Parar a blue e terminar o rollback mais antigo agora é do job desligar-blue,
+      # fora da trava do deploy: os ~5,5 min dessa etapa deixam de segurar o próximo deploy.
+      - name: Hand off blue shutdown
+        id: hand-off
         run: |
-          echo "Keeping the previous active instance online for 5 minutes before stopping it."
-          echo "Rollback policy: keep only this immediately previous instance; terminate any older rollback instance recorded before this deploy."
-          sleep 300
-
-          aws ec2 stop-instances \
-            --instance-ids "$BLUE_INSTANCE_ID"
-          aws ec2 wait instance-stopped \
-            --instance-ids "$BLUE_INSTANCE_ID"
-
-          if [ -n "${OLD_PREVIOUS_INSTANCE_ID:-}" ] \
-            && [ "$OLD_PREVIOUS_INSTANCE_ID" != "$BLUE_INSTANCE_ID" ] \
-            && [ "$OLD_PREVIOUS_INSTANCE_ID" != "$GREEN_INSTANCE_ID" ]; then
-            old_state=$(aws ec2 describe-instances \
-              --instance-ids "$OLD_PREVIOUS_INSTANCE_ID" \
-              --query 'Reservations[0].Instances[0].State.Name' \
-              --output text 2>/dev/null || true)
-
-            if [ -n "$old_state" ] && [ "$old_state" != "None" ] && [ "$old_state" != "terminated" ] && [ "$old_state" != "shutting-down" ]; then
-              echo "Terminating older rollback instance $OLD_PREVIOUS_INSTANCE_ID (state=$old_state)."
-              aws ec2 terminate-instances \
-                --instance-ids "$OLD_PREVIOUS_INSTANCE_ID"
-            fi
-          fi
-
-          if [ -n "${OLD_PREVIOUS_TG_ARN:-}" ] \
-            && [ "$OLD_PREVIOUS_TG_ARN" != "$BLUE_TG_ARN" ] \
-            && [ "$OLD_PREVIOUS_TG_ARN" != "$GREEN_TG_ARN" ]; then
-            echo "Deleting older rollback target group $OLD_PREVIOUS_TG_ARN."
-            aws elbv2 delete-target-group \
-              --target-group-arn "$OLD_PREVIOUS_TG_ARN" || true
-          fi
+          {
+            echo "traffic_shift_done=$TRAFFIC_SHIFT_DONE"
+            echo "listener_arn=$LISTENER_ARN"
+            echo "blue_instance_id=$BLUE_INSTANCE_ID"
+            echo "blue_tg_arn=$BLUE_TG_ARN"
+            echo "green_instance_id=$GREEN_INSTANCE_ID"
+            echo "green_tg_arn=$GREEN_TG_ARN"
+            echo "old_previous_instance_id=$OLD_PREVIOUS_INSTANCE_ID"
+            echo "old_previous_tg_arn=$OLD_PREVIOUS_TG_ARN"
+          } >> "$GITHUB_OUTPUT"
 
       # O primeiro login dura 1 h e o job pode chegar a 120 min (#972): renova a credencial antes da limpeza.
       - name: Refresh AWS credentials for cleanup
@@ -1038,6 +1071,17 @@ jobs:
         run: |
           source scripts/deploy/blue-green-recovery.sh
           recovery_switch_status=0
+          # #1350: green que não recebeu a imagem (build falho ou cancelado antes do "Publish runtime image parameter")
+          # não rodou o deploy.sh nem recebeu tráfego ou worker. Ela é terminada sempre, na saída deste passo, mesmo
+          # quando a recuperação da blue abaixo falha; essa falha continua falhando o job com o erro original. O ECR
+          # confirma: só sem a imagem deste commit a green não pode ter começado migration (#972).
+          green_without_image=false
+          if [ -n "${GREEN_INSTANCE_ID:-}" ] && [ "${GREEN_IMAGE_PUBLISHED:-false}" != "true" ] \
+            && [ -z "${GREEN_TG_ARN:-}" ] && [ "${GREEN_WORKER_START_ATTEMPTED:-false}" != "true" ] \
+            && green_image_absent "$ECR_REPOSITORY" "$GITHUB_SHA"; then
+            green_without_image=true
+            trap 'terminate_green_without_image "$?"' EXIT
+          fi
           if [ -n "${BLUE_INSTANCE_ID:-}${BLUE_TG_ARN:-}${GREEN_INSTANCE_ID:-}${GREEN_TG_ARN:-}" ]; then
             # A known, unique blue binding is required before any mutation.
             if [ -z "${LISTENER_ARN:-}" ] || [ -z "${BLUE_TG_ARN:-}" ] || [ -z "${BLUE_INSTANCE_ID:-}" ]; then
@@ -1094,6 +1138,9 @@ jobs:
           # keep resources and return that original error instead of success.
           if [ "$recovery_switch_status" -ne 0 ]; then
             exit "$recovery_switch_status"
+          fi
+          if [ "$green_without_image" = "true" ]; then
+            terminate_green_without_image 0
           fi
           if [ -n "${GREEN_INSTANCE_ID:-}" ]; then
             sleep "$PUBLISHER_TRANSPORT_DRAIN_SECONDS"
@@ -1161,6 +1208,166 @@ jobs:
               aws ec2 terminate-instances \
                 --instance-ids "$GREEN_INSTANCE_ID"
             fi
+          fi
+
+  # Fora do caminho crítico: a janela de 5 min com a blue ligada (rollback rápido), a parada da blue e a terminação
+  # do rollback mais antigo rodavam no fim do job deploy e seguravam a trava do próximo deploy por ~5,5 min. Mesma
+  # política: fica só a imediatamente anterior (parada); a mais antiga, registrada antes deste deploy, é terminada.
+  #
+  # Corrida com o próximo deploy e com o rollback, que agora podem rodar durante a janela:
+  # - O próximo deploy lê a atual pelo listener (a green deste) e a previous pelo SSM (a blue deste). Este job nunca
+  #   mexe na green deste deploy, e parar a blue é o esperado para a previous: o rollback liga a previous parada. A
+  #   OLD_PREVIOUS do próximo deploy é a blue deste; quem a termina é o desligar-blue dele, que espera este acabar
+  #   (mesma trava por stack).
+  # - Antes de agir, este job lê AGORA o listener e os parâmetros current/previous-instance-id do SSM. A blue não é
+  #   parada se voltou a ser a atual (rollback na janela). A mais antiga só é terminada se não for a atual, nem a
+  #   previous, nem o destino do listener. Instância já parando, parada ou terminada por um deploy mais novo não
+  #   falha o job: ele só registra e segue.
+  # - Rollback em andamento: o job espera ele acabar antes de parar a blue. Sobra a janela de segundos entre essa
+  #   leitura e o stop. Na maior parte dela, o rollback que começa ali espera a blue parar e a liga de novo, ou falha
+  #   ao falar com ela parando, com o tráfego ainda na green (é só disparar de novo). Risco residual aceito: um
+  #   rollback que já passou da saúde da blue e troca o listener nesses segundos deixa o tráfego numa blue parada; o
+  #   rollback de novo a liga. Não usamos a trava do deploy aqui porque o GitHub cancela o pendente mais antigo do
+  #   grupo, e um desligamento na fila cancelaria um deploy esperando a vez.
+  # - Cancelar este job (ou o GitHub descartar um pendente desta trava) deixa a blue ligada; o próximo deploy a tem
+  #   como OLD_PREVIOUS e a termina.
+  desligar-blue:
+    name: Desligar a blue
+    needs: deploy
+    if: >-
+      !cancelled() && needs.deploy.result == 'success' && needs.deploy.outputs.traffic_shift_done == 'true'
+    # Trava própria, sem cancel-in-progress: não entra na fila do deploy e não cancela o desligamento anterior.
+    concurrency:
+      group: desligar-blue-hub2you
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+      actions: read
+    env:
+      LISTENER_ARN: ${{ needs.deploy.outputs.listener_arn }}
+      BLUE_INSTANCE_ID: ${{ needs.deploy.outputs.blue_instance_id }}
+      BLUE_TG_ARN: ${{ needs.deploy.outputs.blue_tg_arn }}
+      GREEN_INSTANCE_ID: ${{ needs.deploy.outputs.green_instance_id }}
+      GREEN_TG_ARN: ${{ needs.deploy.outputs.green_tg_arn }}
+      OLD_PREVIOUS_INSTANCE_ID: ${{ needs.deploy.outputs.old_previous_instance_id }}
+      OLD_PREVIOUS_TG_ARN: ${{ needs.deploy.outputs.old_previous_tg_arn }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Keep blue online for fast rollback
+        run: |
+          echo "A blue $BLUE_INSTANCE_ID fica ligada por 5 minutos antes de parar (janela de rollback rápido)."
+          sleep 300
+
+      - name: Wait for a running rollback
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const { workflow_id } = (await github.rest.actions.getWorkflowRun({ owner, repo, run_id: context.runId })).data;
+            const TETO_MS = 25 * 60 * 1000;
+            const inicio = Date.now();
+            const rollbackVivo = async () => {
+              const runs = (await github.rest.actions.listWorkflowRuns({ owner, repo, workflow_id, event: 'workflow_dispatch', per_page: 20 })).data.workflow_runs
+                .filter((r) => r.status !== 'completed');
+              for (const r of runs) {
+                const jobs = (await github.rest.actions.listJobsForWorkflowRun({ owner, repo, run_id: r.id })).data.jobs;
+                if (jobs.some((j) => j.name === 'Rollback To Previous Target Group' && j.status !== 'completed')) return r;
+              }
+              return null;
+            };
+            let vivo = await rollbackVivo();
+            while (vivo && Date.now() - inicio < TETO_MS) {
+              core.info(`Rollback em andamento (run ${vivo.id}); a blue só para depois dele.`);
+              await new Promise((ok) => setTimeout(ok, 15000));
+              vivo = await rollbackVivo();
+            }
+            if (vivo) core.setFailed(`Rollback (run ${vivo.id}) ainda em andamento depois de 25 min: a blue não foi parada.`);
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Stop blue instance and remove older rollback
+        run: |
+          source scripts/deploy/blue-green-recovery.sh
+          echo "Rollback policy: keep only this immediately previous instance; terminate any older rollback instance recorded before this deploy."
+
+          # Quem está no ar e quem é o rollback AGORA: um deploy ou um rollback pode ter rodado durante a janela.
+          read_listener_destination "$LISTENER_ARN"
+          current_instance=$(aws ssm get-parameter --name "$CURRENT_INSTANCE_PARAMETER" --query Parameter.Value --output text)
+          previous_instance=$(aws ssm get-parameter --name "$PREVIOUS_INSTANCE_PARAMETER" --query Parameter.Value --output text)
+          current_tg=$(aws ssm get-parameter --name "$CURRENT_TG_PARAMETER" --query Parameter.Value --output text)
+          previous_tg=$(aws ssm get-parameter --name "$PREVIOUS_TG_PARAMETER" --query Parameter.Value --output text)
+          echo "Agora: listener -> $ACTIVE_INSTANCE_ID; current=$current_instance; previous=$previous_instance"
+
+          if [ "$BLUE_INSTANCE_ID" = "$ACTIVE_INSTANCE_ID" ] || [ "$BLUE_INSTANCE_ID" = "$current_instance" ]; then
+            echo "::warning::A blue $BLUE_INSTANCE_ID voltou a ser a atual (rollback durante a janela): continua ligada."
+          else
+            instance_state "$BLUE_INSTANCE_ID"
+            case "$INSTANCE_STATE" in
+              pending|running)
+                aws ec2 stop-instances --instance-ids "$BLUE_INSTANCE_ID"
+                aws ec2 wait instance-stopped --instance-ids "$BLUE_INSTANCE_ID"
+                ;;
+              stopping)
+                aws ec2 wait instance-stopped --instance-ids "$BLUE_INSTANCE_ID"
+                ;;
+              stopped)
+                echo "A blue $BLUE_INSTANCE_ID já está parada."
+                ;;
+              shutting-down|terminated)
+                echo "A blue $BLUE_INSTANCE_ID já foi terminada por um deploy mais novo."
+                ;;
+              *)
+                echo "blue_green_instance_state_unknown:$BLUE_INSTANCE_ID:$INSTANCE_STATE" >&2
+                exit 1
+                ;;
+            esac
+          fi
+
+          if [ -n "${OLD_PREVIOUS_INSTANCE_ID:-}" ]; then
+            case "$OLD_PREVIOUS_INSTANCE_ID" in
+              "$BLUE_INSTANCE_ID"|"$GREEN_INSTANCE_ID"|"$ACTIVE_INSTANCE_ID"|"$current_instance"|"$previous_instance")
+                echo "A mais antiga $OLD_PREVIOUS_INSTANCE_ID está em uso agora: fica."
+                ;;
+              *)
+                instance_state "$OLD_PREVIOUS_INSTANCE_ID"
+                case "$INSTANCE_STATE" in
+                  shutting-down|terminated|None)
+                    echo "A mais antiga $OLD_PREVIOUS_INSTANCE_ID já foi terminada."
+                    ;;
+                  *)
+                    echo "Terminating older rollback instance $OLD_PREVIOUS_INSTANCE_ID (state=$INSTANCE_STATE)."
+                    aws ec2 terminate-instances --instance-ids "$OLD_PREVIOUS_INSTANCE_ID"
+                    ;;
+                esac
+                ;;
+            esac
+          fi
+
+          if [ -n "${OLD_PREVIOUS_TG_ARN:-}" ]; then
+            case "$OLD_PREVIOUS_TG_ARN" in
+              "$BLUE_TG_ARN"|"$GREEN_TG_ARN"|"$ACTIVE_TG_ARN"|"$current_tg"|"$previous_tg")
+                echo "O target group mais antigo $OLD_PREVIOUS_TG_ARN está em uso agora: fica."
+                ;;
+              *)
+                echo "Deleting older rollback target group $OLD_PREVIOUS_TG_ARN."
+                if ! aws elbv2 delete-target-group --target-group-arn "$OLD_PREVIOUS_TG_ARN"; then
+                  echo "::warning::Não deu para apagar o target group $OLD_PREVIOUS_TG_ARN (pode já ter sido apagado)."
+                fi
+                ;;
+            esac
           fi
 
   rollback:
@@ -1236,6 +1443,11 @@ jobs:
           fi
 
           if [ "$previous_state" = "stopped" ] || [ "$previous_state" = "stopping" ]; then
+            # O job desligar-blue pode estar parando a previous; a AWS só liga uma instância já parada.
+            if [ "$previous_state" = "stopping" ]; then
+              aws ec2 wait instance-stopped \
+                --instance-ids "$previous_instance_id"
+            fi
             aws ec2 start-instances \
               --instance-ids "$previous_instance_id"
             aws ec2 wait instance-running \
