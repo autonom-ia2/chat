@@ -40,6 +40,14 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
 
   def show; end
 
+  # Quem não pode ser dono (#1149): por card (lista e ação em lote) ou por funil e caixa (card novo).
+  def owner_options
+    authorize ::Crm::Card, :index?
+    options = ::Crm::Access::OwnerOptions.new(user: Current.user, account: Current.account, account_user: Current.account_user)
+    cards = policy_scope(::Crm::Card).where(id: Array(params[:card_ids]).first(::Crm::Access::OwnerOptions::MAX_CARDS))
+    render json: { payload: { cards: options.for_cards(cards), blocked: options.blocked_for_new_card(params[:inbox_id], params[:pipeline_id]) } }
+  end
+
   def by_conversation
     # Chatwoot's frontend identifies conversations by display_id (per-account).
     conversation = Current.account.conversations.find_by!(display_id: params[:conversation_id])
@@ -553,6 +561,14 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
 
   def render_owner_without_funnel
     render_unprocessable(::Crm::Access::CardGuard::OwnerWithoutFunnel::CODE)
+  end
+
+  # Recusa por funil (#1148, decisão b; #1149): quem não tem o funil do card recebe um código que a tela traduz, em
+  # vez da recusa genérica. Mesmo status de sempre.
+  def render_unauthorized(message)
+    return super if @card.nil? || card_guard.edit_allowed?(@card)
+
+    render json: { error: ::Crm::Access::CardGuard::FUNNEL_REQUIRED }, status: :unauthorized
   end
 
   def upsert_pipeline_id(attributes)

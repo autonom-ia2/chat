@@ -2,7 +2,9 @@ import { mount, flushPromises } from '@vue/test-utils';
 import CrmKanbanAPI from 'dashboard/api/crmKanban';
 import CrmOpportunityForm from './CrmOpportunityForm.vue';
 
-vi.mock('dashboard/api/crmKanban', () => ({ default: { getStages: vi.fn() } }));
+vi.mock('dashboard/api/crmKanban', () => ({
+  default: { getStages: vi.fn(), getOwnerOptions: vi.fn() },
+}));
 const makeForm = props =>
   mount(CrmOpportunityForm, {
     props: {
@@ -435,4 +437,26 @@ it('stops a new-record draft after record permission revocation without deleting
   await wrapper.vm.submit();
   expect(wrapper.emitted('save')).toBeUndefined();
   expect(wrapper.vm.form.title).toBe('Keep draft');
+});
+
+it('offers as owner only who handles the pipeline in the chosen inbox', async () => {
+  CrmKanbanAPI.getOwnerOptions.mockResolvedValue({
+    data: { payload: { cards: {}, blocked: [8] } },
+  });
+  wrapper = makeForm({
+    agents: [
+      { id: 8, name: 'Sem o funil' },
+      { id: 11, name: 'Com o funil' },
+    ],
+  });
+  wrapper.vm.form.ownerId = 8;
+  wrapper.vm.form.inboxId = 9;
+  await flushPromises();
+
+  expect(CrmKanbanAPI.getOwnerOptions).toHaveBeenCalledWith({
+    pipelineId: 1,
+    inboxId: 9,
+  });
+  expect(wrapper.vm.ownerOptions.map(option => option.value)).toEqual(['', 11]);
+  expect(wrapper.vm.form.ownerId).toBe('');
 });

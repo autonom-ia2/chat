@@ -1,4 +1,5 @@
 <script setup>
+import { chaveDoCard, semDonosBarrados } from '../../helpers/accessErrors';
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useVueTable, getCoreRowModel, FlexRender } from '@tanstack/vue-table';
@@ -25,6 +26,11 @@ const props = defineProps({
   stages: {
     type: Array,
     default: () => [],
+  },
+  // Quem não pode ser dono de cada card, por chaveDoCard (#1149).
+  ownerBlocked: {
+    type: Object,
+    default: () => ({}),
   },
   owners: {
     type: Array,
@@ -822,7 +828,12 @@ const onRowKeydown = (event, card) => {
                       :card="row.original"
                       :field="cell.column.columnDef.meta.field"
                       :stages="stages"
-                      :owners="owners"
+                      :owners="
+                        semDonosBarrados(
+                          owners,
+                          ownerBlocked[chaveDoCard(row.original)]
+                        )
+                      "
                       :pipeline="pipeline"
                       @save="
                         value =>

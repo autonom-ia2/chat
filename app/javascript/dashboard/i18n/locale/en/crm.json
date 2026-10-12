@@ -2943,6 +2943,10 @@
         "CANNOT_REPLY": "This conversation cannot receive messages now. Copy the link instead.",
         "CARD_CLOSED": "This deal is closed. Reopen it to schedule."
       }
+    },
+    "ACCESS": {
+      "OWNER_WITHOUT_FUNNEL": "This person doesn’t handle this card’s pipeline in this inbox. Choose someone else or give them the pipeline in Inboxes in CRM.",
+      "CARD_FUNNEL_REQUIRED": "You don’t handle this card’s pipeline. Ask an administrator to give you the pipeline in Inboxes in CRM."
     }
   },
   "crm": {

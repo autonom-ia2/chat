@@ -278,6 +278,7 @@ Rails.application.routes.draw do
               resources :steps, controller: 'stage_automation_steps', only: [:create, :update, :destroy]
             end
             post 'cards/bulk', to: 'cards/bulk#create'
+            get 'cards/owner_options', to: 'cards#owner_options'
             get 'cards/summaries', to: 'cards/summaries#index'
             resources :cards, only: [:index, :create, :show, :update, :destroy] do
               resource :contact, only: [:create], controller: 'cards/contacts'

@@ -2944,6 +2944,10 @@
         "CANNOT_REPLY": "Esta conversa não pode receber mensagem agora. Copie o link.",
         "CARD_CLOSED": "Este negócio está fechado. Reabra para marcar."
       }
+    },
+    "ACCESS": {
+      "OWNER_WITHOUT_FUNNEL": "Essa pessoa não cuida do funil deste card nesta caixa. Escolha outra pessoa ou libere o funil para ela em Caixas no CRM.",
+      "CARD_FUNNEL_REQUIRED": "Você não cuida do funil deste card. Peça a um administrador para liberar o funil para você em Caixas no CRM."
     }
   },
   "crm": {

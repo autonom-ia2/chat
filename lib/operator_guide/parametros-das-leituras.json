@@ -1114,6 +1114,14 @@
       "params inteiro repassado a ::Crm::Cards::FilterQuery.new"
     ]
   },
+  "crm/cards/owner_options": {
+    "controller": "api/v1/accounts/crm/cards#owner_options",
+    "parametros": [
+      "card_ids",
+      "inbox_id",
+      "pipeline_id"
+    ]
+  },
   "crm/cards/summaries": {
     "controller": "api/v1/accounts/crm/cards/summaries#index",
     "motivos": [

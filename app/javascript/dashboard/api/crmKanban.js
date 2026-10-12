@@ -39,6 +39,18 @@ class CrmKanbanAPI extends ApiClient {
     );
   }
 
+  // Quem não pode ser dono (#1149): por card ({ cardIds }) ou por funil e caixa
+  // ({ pipelineId, inboxId }). Sem acesso por funil na conta, ninguém.
+  getOwnerOptions({ cardIds = [], pipelineId, inboxId } = {}) {
+    return axios.get(`${this.url}/cards/owner_options`, {
+      params: {
+        card_ids: cardIds,
+        pipeline_id: pipelineId || undefined,
+        inbox_id: inboxId || undefined,
+      },
+    });
+  }
+
   getInboxSettings() {
     return axios.get(`${this.url}/inbox_settings`);
   }
