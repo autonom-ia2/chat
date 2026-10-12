@@ -34,3 +34,5 @@ pt_BR:
       url_invalid: "O botão de site precisa do endereço completo, começando com https://."
       phone_invalid: "O botão de ligar precisa do telefone com o código do país, por exemplo +55 11 4000-0000."
       carousel_media: "Todos os cartões do carrossel precisam do mesmo tipo de mídia: só foto ou só vídeo."
+      category_change_not_allowed: "O WhatsApp não deixa mudar o tipo de um modelo que já existe. Crie um modelo novo com este texto."
+      meta_text: "O WhatsApp não aceitou o pedido. Confira o texto, os exemplos e os botões e tente de novo."

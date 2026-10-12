@@ -123,6 +123,7 @@ RSpec.describe Whatsapp::Templates::MetaClient do
 
         expect { client.create(body) }.to raise_error(described_class::MetaError) { |error|
           expect(error.message).to eq(I18n.t("whatsapp_templates.errors.#{key}", locale: 'pt_BR'))
+          expect(error.code).to eq(key)
         }
       end
     end
@@ -134,6 +135,8 @@ RSpec.describe Whatsapp::Templates::MetaClient do
 
       expect { client.create(body) }.to raise_error(described_class::MetaError) { |error|
         expect(error.message).to eq('token [token] inválido')
+        expect(error.own_text).to be(false)
+        expect(error.code).to eq('meta_text')
       }
     end
   end
@@ -146,13 +149,13 @@ RSpec.describe Whatsapp::Templates::MetaClient do
       expect(lookup.with(query: hash_including('fields' => Whatsapp::Templates::SyncFields::FIELDS))).to have_been_requested
     end
 
-    it 'edita só depois de confirmar que o id é da WABA da caixa, mandando só categoria, componentes e validade' do
+    it 'edita só depois de confirmar que o id é da WABA da caixa, mandando só componentes e validade (a categoria não muda na edição, #1394)' do
       stub_lookup([remote])
       edit = stub_request(:post, "#{graph}/777").to_return(status: 200, headers: json, body: { success: true }.to_json)
 
       client.update('777', 'pedido_enviado', { components: body[:components], name: 'outro', category: 'MARKETING' })
 
-      expect(a_request(:post, "#{graph}/777").with { |request| JSON.parse(request.body).keys.sort == %w[category components] })
+      expect(a_request(:post, "#{graph}/777").with { |request| JSON.parse(request.body).keys.sort == %w[components] })
         .to have_been_made.once
       expect(edit).to have_been_requested.once
     end

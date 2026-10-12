@@ -7,6 +7,8 @@
 # - modelo em uso (`Usage`, inclusive uso que a pessoa não vê) não é apagado nem tem o conteúdo alterado;
 # - criar e alterar o conteúdo só chegam à Meta com a forma que ela exige (`SubmitFormat`, #1380): o que não
 #   passa volta 422 com o código, sem nenhuma chamada à Graph;
+# - a categoria não muda na edição (`SubmitFormat.edit_problems`, #1394): pedir outra volta 422
+#   `category_change_not_allowed`, sem chamada à Graph; trocar de tipo é criar um modelo novo;
 # - o estado do Chat2You fica no perfil (`WhatsappTemplateProfile`), que sobrevive ao sync. A lista da caixa só recebe o
 #   modelo criado/alterado até o próximo sync trazer a versão da Meta, gravado por `ChannelList` (trava na linha do
 #   canal; o mesmo escritor do sync e do `NoticeTemplates::Creator`, #1382).
@@ -25,7 +27,8 @@ class Whatsapp::Templates::Manager
   include Whatsapp::Templates::StoredMedia
 
   Draft = Struct.new(:profile, :blob)
-  CONTENT_KEYS = %w[category components message_send_ttl_seconds].freeze
+  # A categoria não está aqui: não muda na edição (#1394; a igual é ignorada e o modelo não volta para análise por ela).
+  CONTENT_KEYS = %w[components message_send_ttl_seconds].freeze
 
   def initialize(inbox:, user:, account_user:, visible_cards:)
     @inbox = inbox
@@ -55,6 +58,7 @@ class Whatsapp::Templates::Manager
   def update(template_id, attrs)
     attrs = attrs.to_h.deep_stringify_keys
     template = protected_template!(template_id, change: true)
+    check_edit!(template, attrs)
     content = attrs.slice(*CONTENT_KEYS)
     check_format!(assume_stored_media(template.slice('category', 'components').merge(content), template)) if content.any?
     draft = prepare_profile(template, attrs)
@@ -100,6 +104,11 @@ class Whatsapp::Templates::Manager
 
   def check_format!(template)
     problems = Whatsapp::Templates::SubmitFormat.problems(template)
+    raise Refused.new(problems.first, problems: problems) if problems.any?
+  end
+
+  def check_edit!(template, attrs)
+    problems = Whatsapp::Templates::SubmitFormat.edit_problems(template, attrs)
     raise Refused.new(problems.first, problems: problems) if problems.any?
   end
 
