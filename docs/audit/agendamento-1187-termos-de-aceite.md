@@ -23,6 +23,33 @@ anterior; caminho, comando e ETA de cada um).
 Ficam para fechar o épico: RA-17 e RA-21 (código e spec, issue própria), RA-06, RA-11,
 RA-14 e RA-20 (conferência no navegador, com prints) e RA-16 (tempo de carga medido).
 
+## Conferência no navegador e medição (12/10/2026, produção, conta 16)
+
+Página pública `https://chat.hub2you.ai/a/hub2you/chat2you/chat2you` e telas do painel do Agendamento, conferidas pelo
+gestor da sessão do Agendamento com Chrome (extensão e headless via DevTools Protocol). Só leitura: nada foi marcado.
+
+**Página pública (RA-06, RA-14, RA-20)**
+- Letra: menor tamanho 16 px; 0 de 39 textos abaixo de 16 px.
+- Contraste: 0 textos abaixo de AA (4,5:1), nos temas claro e escuro, com logo e foto.
+- Leitor de tela: 13 controles, todos com nome acessível; `lang="pt-BR"`, 1 `main`, 1 `h1` (que recebe o foco ao
+  trocar de passo, `tabindex=-1`). Nenhum `<select>`.
+- Toque: todos os controles com 44 px ou mais (o único item abaixo é o `h1`, que não é botão).
+- Teclado: Tab percorre "Quero este", os 10 dias e "Nenhum horário serve?" na ordem da tela; foco visível com contorno
+  de 2 px (`:focus-visible`).
+- Zoom 200% (largura de 320 px, critério de refluxo do WCAG): nada rola de lado e nenhum botão ou texto cortado, nos
+  dois temas. Prints: `img/agendamento-1187-pagina-320-light.jpg` e `img/agendamento-1187-pagina-320-dark.jpg`.
+
+**Painel (RA-06)** — Páginas e links, Meus horários, Meus números e Resultados: todos os controles com nome acessível,
+nenhum `<select>`. Abaixo de 44 px: só os campos "Das" e "Até" de Meus horários (40 px), corrigidos no #1401. O
+Calendário tem botões de 32 px, mas a tela é anterior ao épico; fica registrado, fora deste fechamento.
+
+**Tempo de carga (RA-16)** — Chrome headless, perfil "4G lento" do Lighthouse (150 ms de latência, 1,6 Mbps) e CPU 4x
+mais lenta, sem cache, 6 rodadas. "Pronta" = primeiro botão clicável na tela.
+- Pronta em 2,7 / 2,7 / 2,7 / 3,1 / 4,0 / 4,4 s: **mediana 2,9 s**, acima de 3 s em 2 das 6 rodadas.
+- Transferido: 366 KB. Os maiores: CSS 146 KB (é o CSS inteiro do sistema, 1,85 MB sem compressão), fonte Inter 109 KB,
+  Vue 61 KB, vue-i18n 20 KB, código da página 9 KB. O logo é baixado com 1254 px para aparecer pequeno.
+- Biblioteca pesada: nenhuma (só `vue` e `vue-i18n`; hCaptcha sob demanda).
+
 ## Como ler
 
 - **CUMPRIDO**: código e spec existem **e** a prova que o PRD pede para o termo está registrada.
