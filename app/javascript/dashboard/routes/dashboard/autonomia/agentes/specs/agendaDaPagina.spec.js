@@ -1,8 +1,12 @@
 import {
   ESTADO_PAGINA,
   MODO_RECEBE,
+  estadoComLiberacao,
   estadoDaPagina,
   fusoLegivel,
+  idsLiberados,
+  liberacaoParaSalvar,
+  pessoasDaPagina,
   quemRecebe,
 } from '../utils/agendaDaPagina';
 
@@ -175,5 +179,46 @@ describe('fusoLegivel', () => {
   it('is empty without a zone and the raw name for an unknown one', () => {
     expect(fusoLegivel(undefined, 'en')).toBe('');
     expect(fusoLegivel('Lua/Base', 'en')).toBe('Lua/Base');
+  });
+});
+
+// #1307 — as pessoas da página liberadas para a IA (`booking_agent_ids`; vazio = todas).
+describe('pessoas liberadas (#1307)', () => {
+  const PESSOAS = [
+    { id: 1, nome: 'Ana', ai_status: 'ativa' },
+    { id: 2, nome: 'Caio', ai_status: 'agenda_pausada' },
+    { id: 3, nome: 'Lia', ai_status: 'ativa' },
+  ];
+
+  it('reads the people of a page, empty when the server does not send them', () => {
+    expect(pessoasDaPagina({ pessoas: PESSOAS })).toBe(PESSOAS);
+    expect(pessoasDaPagina({})).toEqual([]);
+    expect(pessoasDaPagina(undefined)).toEqual([]);
+  });
+
+  it.each([[undefined], [null], [[]]])(
+    'saved %s means everyone on the page',
+    gravados => {
+      expect(idsLiberados(gravados, PESSOAS)).toEqual([1, 2, 3]);
+    }
+  );
+
+  it('keeps only the saved ids still on the page, in the page order, as numbers', () => {
+    expect(idsLiberados(['3', 1, 99], PESSOAS)).toEqual([1, 3]);
+    expect(idsLiberados([99], PESSOAS)).toEqual([]);
+  });
+
+  it('saves [] with everyone checked and the checked ids in page order otherwise', () => {
+    expect(liberacaoParaSalvar([3, 1, 2], PESSOAS)).toEqual([]);
+    expect(liberacaoParaSalvar([3, 1], PESSOAS)).toEqual([1, 3]);
+  });
+
+  it('turns an active page into "nobody" or "calendar paused" by the released people', () => {
+    const { ATIVA, SEM_NINGUEM, AGENDA_PAUSADA, PAUSADA } = ESTADO_PAGINA;
+    expect(estadoComLiberacao(ATIVA, PESSOAS, [1])).toBe(ATIVA);
+    expect(estadoComLiberacao(ATIVA, PESSOAS, [])).toBe(SEM_NINGUEM);
+    expect(estadoComLiberacao(ATIVA, PESSOAS, [2])).toBe(AGENDA_PAUSADA);
+    expect(estadoComLiberacao(PAUSADA, PESSOAS, [])).toBe(PAUSADA);
+    expect(estadoComLiberacao(ATIVA, [], [])).toBe(ATIVA);
   });
 });

@@ -85,3 +85,41 @@ export const fusoLegivel = (timezone, idioma) => {
     return timezone;
   }
 };
+
+// #1307 — as pessoas da página que o dono libera para a IA (`config.booking_agent_ids`). A lista
+// vem em `pessoas: [{ id, nome, ai_status: 'ativa' | 'agenda_pausada' }]`, na ordem fixa da página.
+// Gravado vazio (ausente, null ou []) = todas. A preferência por uma pessoa vai na instrução; aqui é
+// só quem a IA pode usar.
+export const pessoasDaPagina = pagina =>
+  Array.isArray(pagina?.pessoas) ? pagina.pessoas : [];
+
+// Os ids marcados ao abrir: todas sem restrição gravada; senão só as gravadas que ainda são da página
+// (pode dar nenhuma: a restrição ficou velha e o dono precisa escolher de novo).
+export const idsLiberados = (gravados, pessoas) => {
+  const ids = pessoas.map(({ id }) => id);
+  if (!Array.isArray(gravados) || !gravados.length) return ids;
+  const salvos = new Set(gravados.map(Number));
+  return ids.filter(id => salvos.has(id));
+};
+
+// O que vai para o servidor: [] com todas marcadas (vale também para quem entrar na página depois);
+// senão os ids marcados, na ordem da página.
+export const liberacaoParaSalvar = (marcadas, pessoas) => {
+  if (pessoas.every(({ id }) => marcadas.includes(id))) return [];
+  return pessoas.map(({ id }) => id).filter(id => marcadas.includes(id));
+};
+
+// O estado da página para este agente: a lista de páginas não sabe da liberação. Ninguém liberado
+// vira "ninguém atende"; todos os liberados com a agenda pausada viram "agenda pausada".
+export const estadoComLiberacao = (estado, pessoas, liberadas) => {
+  if (estado !== ESTADO_PAGINA.ATIVA || !pessoas.length) return estado;
+  if (!liberadas.length) return ESTADO_PAGINA.SEM_NINGUEM;
+  const pausadas = new Set(
+    pessoas
+      .filter(({ ai_status: status }) => status === 'agenda_pausada')
+      .map(({ id }) => id)
+  );
+  return liberadas.every(id => pausadas.has(id))
+    ? ESTADO_PAGINA.AGENDA_PAUSADA
+    : estado;
+};

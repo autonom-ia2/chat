@@ -1,10 +1,11 @@
 <script setup>
-import { computed, onMounted, ref, useId } from 'vue';
+import { computed, onMounted, ref, useId, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import { useStore } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
+import Checkbox from 'dashboard/components-next/checkbox/Checkbox.vue';
 import AgenteGaveta from '../AgenteGaveta.vue';
 import AgenteBotao from '../AgenteBotao.vue';
 import AgenteErro from '../AgenteErro.vue';
@@ -19,6 +20,8 @@ import {
   ESTADO_PAGINA,
   MODO_RECEBE,
   fusoLegivel,
+  liberacaoParaSalvar,
+  pessoasDaPagina,
   quemRecebe,
 } from '../../utils/agendaDaPagina';
 
@@ -27,6 +30,9 @@ import {
 // painel antigo (`config.booking_page_id` pela action `autonomiaAgents/update`; o servidor mescla o
 // config). Grava só se mudou. Quem não vê Agendamento recebe 422 do servidor: a mensagem dele vira
 // o aviso e o erro da gaveta.
+// #1307 — com mais de uma pessoa na página, o dono marca quem a IA pode usar
+// (`config.booking_agent_ids`; todas marcadas = [] = todas). Quem ela prefere vai na instrução.
+// Trocar de página volta para todas as pessoas da página nova: a liberação antiga não vale nela.
 const props = defineProps({
   agente: { type: Object, required: true },
   nome: { type: String, required: true },
@@ -66,7 +72,44 @@ const podeEscolher = computed(
 // #1181 (item A) — o que a página escolhida faz de verdade, quem fica com a reunião e o fuso, só com
 // o que a lista de páginas traz (utils/agendaDaPagina). Segue a escolha da tela, antes de salvar.
 const paginaEscolhida = computed(() => agenda.paginaDe(escolhida.value));
-const estado = computed(() => agenda.estadoDe(escolhida.value));
+const pessoas = computed(() => pessoasDaPagina(paginaEscolhida.value));
+const mostraPessoas = computed(() => pessoas.value.length > 1);
+const marcadas = ref([]);
+const nenhumaMarcada = computed(
+  () => mostraPessoas.value && !marcadas.value.length
+);
+const mudouPagina = computed(
+  () => escolhida.value !== agenda.paginaSalva.value
+);
+const marcadasAoAbrir = computed(() =>
+  mudouPagina.value
+    ? pessoas.value.map(({ id }) => id)
+    : agenda.liberadasDe(escolhida.value)
+);
+watch(
+  marcadasAoAbrir,
+  ids => {
+    marcadas.value = ids;
+  },
+  { immediate: true }
+);
+const marcar = (id, marcada) => {
+  marcadas.value = marcada
+    ? pessoas.value
+        .map(p => p.id)
+        .filter(i => i === id || marcadas.value.includes(i))
+    : marcadas.value.filter(i => i !== id);
+};
+const liberacao = computed(() =>
+  liberacaoParaSalvar(marcadas.value, pessoas.value)
+);
+const mudouPessoas = computed(
+  () =>
+    mostraPessoas.value &&
+    liberacao.value.join() !==
+      liberacaoParaSalvar(marcadasAoAbrir.value, pessoas.value).join()
+);
+const estado = computed(() => agenda.estadoDe(escolhida.value, marcadas.value));
 const tituloEscolhida = computed(() =>
   paginaEscolhida.value ? agenda.tituloDaPagina(paginaEscolhida.value) : ''
 );
@@ -77,6 +120,7 @@ const linkPaginas = computed(() =>
 );
 const ativa = computed(() => estado.value === ESTADO_PAGINA.ATIVA);
 const textoRecebe = computed(() => {
+  if (mostraPessoas.value) return '';
   const recebe = quemRecebe(paginaEscolhida.value);
   if (!recebe) return '';
   const fixo = recebe.modo === MODO_RECEBE.FIXO;
@@ -90,9 +134,22 @@ const placeholder = computed(() =>
   estado.value === ESTADO_PAGINA.NAO_EXISTE ? t(`${NS_ESTADO}.ESCOLHA`) : ''
 );
 
+// Só o que mudou. Página nova leva a liberação junto (todas = []), para a restrição de outra
+// página não deixar a agenda sem ninguém.
+const configParaSalvar = () => {
+  if (escolhida.value === SEM_PAGINA) return { booking_page_id: null };
+  if (mudouPagina.value) {
+    return {
+      booking_page_id: escolhida.value,
+      booking_agent_ids: liberacao.value,
+    };
+  }
+  return { booking_agent_ids: liberacao.value };
+};
+
 const salvar = async () => {
-  if (salvando.value) return;
-  if (escolhida.value === agenda.paginaSalva.value) {
+  if (salvando.value || nenhumaMarcada.value) return;
+  if (!mudouPagina.value && !mudouPessoas.value) {
     emit('fechar');
     return;
   }
@@ -101,10 +158,7 @@ const salvar = async () => {
   try {
     await store.dispatch('autonomiaAgents/update', {
       id: props.agente.id,
-      config: {
-        booking_page_id:
-          escolhida.value === SEM_PAGINA ? null : escolhida.value,
-      },
+      config: configParaSalvar(),
     });
     useAlert(t(`${NS}.PRONTO`));
     emit('fechar');
@@ -200,6 +254,54 @@ onMounted(agenda.carregar);
             {{ t(`${NS_ESTADO}.FUSO`, { fuso }) }}
           </p>
         </div>
+        <fieldset
+          v-if="mostraPessoas"
+          data-pessoas
+          class="flex flex-col gap-2 p-0 m-0 border-0 min-w-0"
+          :disabled="salvando"
+        >
+          <legend class="p-0 mb-1 text-sm font-medium text-n-slate-12">
+            {{ t(`${NS}.PESSOAS.TITULO`, { nome }) }}
+          </legend>
+          <ul class="flex flex-col gap-1 p-0 m-0 list-none">
+            <li v-for="pessoa in pessoas" :key="pessoa.id">
+              <label
+                :data-pessoa="pessoa.id"
+                class="flex items-center gap-3 px-3 min-h-11 rounded-xl cursor-pointer hover:bg-n-alpha-1"
+              >
+                <Checkbox
+                  :model-value="marcadas.includes(pessoa.id)"
+                  :disabled="salvando"
+                  @update:model-value="marcada => marcar(pessoa.id, marcada)"
+                />
+                <span class="text-sm text-n-slate-12">{{ pessoa.nome }}</span>
+                <span
+                  v-if="pessoa.ai_status === 'agenda_pausada'"
+                  data-pessoa-pausada
+                  class="text-xs text-n-amber-11"
+                >
+                  {{ t(`${NS}.PESSOAS.PAUSADA`) }}
+                </span>
+              </label>
+            </li>
+          </ul>
+          <p
+            v-if="nenhumaMarcada"
+            data-pessoas-erro
+            role="alert"
+            class="m-0 text-sm text-n-ruby-11"
+          >
+            {{ t(`${NS}.PESSOAS.NENHUMA`) }}
+          </p>
+          <p data-pessoas-dica class="m-0 text-sm text-n-slate-11">
+            {{
+              t(`${NS}.PESSOAS.DICA`, {
+                nome,
+                exemplo: pessoas[0].nome,
+              })
+            }}
+          </p>
+        </fieldset>
       </template>
     </div>
     <template v-if="podeEscolher" #rodape>
@@ -216,6 +318,7 @@ onMounted(agenda.carregar);
           data-salvar
           tamanho="lg"
           :carregando="salvando"
+          :desabilitado="nenhumaMarcada"
           :rotulo-carregando="t(`${NS}.SALVANDO`)"
           @click="salvar"
         >

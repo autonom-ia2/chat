@@ -2,7 +2,12 @@ import { computed, ref, toValue } from 'vue';
 import { useI18n } from 'vue-i18n';
 import CrmBookingPagesAPI from 'dashboard/api/crmBookingPages';
 import { recebeAgenda as agenteRecebeAgenda } from '../utils/pagina';
-import { estadoDaPagina } from '../utils/agendaDaPagina';
+import {
+  estadoComLiberacao,
+  estadoDaPagina,
+  idsLiberados,
+  pessoasDaPagina,
+} from '../utils/agendaDaPagina';
 
 // #1196 / #1253 — a página de agendamento que a IA usa para oferecer horários e marcar. Mesma regra
 // no painel antigo (AgentBookingForm) e na página nova do agente (linha "Marca reuniões" e
@@ -57,9 +62,24 @@ export function useAgendaDoAgente(agente) {
       ? undefined
       : paginas.value.find(pagina => idDaPagina(pagina.id) === id);
 
+  // #1307 — as pessoas da página `id` que este agente pode usar, como gravadas no agente.
+  const liberadasDe = id =>
+    idsLiberados(
+      toValue(agente)?.config?.booking_agent_ids,
+      pessoasDaPagina(paginaDe(id))
+    );
+
   // #1181 (item A) — estado real da página `id` (utils/agendaDaPagina): nenhuma, não existe mais,
-  // pausada, sem ninguém para atender ou ativa.
-  const estadoDe = id => estadoDaPagina(id !== SEM_PAGINA, paginaDe(id));
+  // pausada, sem ninguém para atender ou ativa. #1307: com as pessoas liberadas (as da tela ou, sem
+  // elas, as gravadas), ninguém liberado ou todos com a agenda pausada mudam o estado.
+  const estadoDe = (id, liberadas = liberadasDe(id)) => {
+    const pagina = paginaDe(id);
+    return estadoComLiberacao(
+      estadoDaPagina(id !== SEM_PAGINA, pagina),
+      pessoasDaPagina(pagina),
+      liberadas
+    );
+  };
 
   const carregar = async () => {
     if (!recebeAgenda.value) return;
@@ -82,6 +102,7 @@ export function useAgendaDoAgente(agente) {
     opcoes,
     paginaDe,
     estadoDe,
+    liberadasDe,
     tituloDaPagina,
     nomeDaPagina,
     carregar,

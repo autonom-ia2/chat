@@ -7,10 +7,11 @@ import GavetaAgenda from '../../components/pagina/GavetaAgenda.vue';
 // servidor (ai_status e recebe, #1305) quando vêm, e os de hoje quando não vêm. O ChoiceSelect vira
 // botões que mudam o v-model (mesmo stub do gavetas.spec.js).
 const permissao = vi.hoisted(() => ({ podeAbrirAgendamento: true }));
+const loja = vi.hoisted(() => ({ dispatch: vi.fn() }));
 vi.mock('dashboard/composables/store', async () => {
   const { computed } = await import('vue');
   return {
-    useStore: () => ({ dispatch: vi.fn() }),
+    useStore: () => loja,
     useMapGetter: () => computed(() => false),
   };
 });
@@ -107,11 +108,11 @@ const no = seletor => document.querySelector(seletor);
 const texto = seletor =>
   no(seletor)?.textContent.split(' ').filter(Boolean).join(' ');
 
-const montar = async bookingPageId => {
+const montar = async (bookingPageId, extra = {}) => {
   const wrapper = mount(GavetaAgenda, {
     attachTo: document.body,
     props: {
-      agente: { id: 7, config: { booking_page_id: bookingPageId } },
+      agente: { id: 7, config: { booking_page_id: bookingPageId, ...extra } },
       nome: 'Bia',
     },
     global: { stubs: { ChoiceSelect } },
@@ -277,5 +278,180 @@ describe('GavetaAgenda · estado real da página (#1181 item A)', () => {
     no('[data-valor=""]').click();
     await flushPromises();
     expect(no('[data-estado-agenda="nenhuma"]')).not.toBeNull();
+  });
+});
+
+// #1307 — as pessoas da página que a IA pode usar (`booking_agent_ids`; vazio = todas). A preferência
+// por uma delas vai na instrução; a gaveta só libera.
+describe('GavetaAgenda · pessoas que a IA pode usar (#1307)', () => {
+  let wrapper;
+  const PESSOAS = [
+    { id: 21, nome: 'Rodrigo', ai_status: 'ativa' },
+    { id: 22, nome: 'Roberto', ai_status: 'ativa' },
+    { id: 23, nome: 'Rita', ai_status: 'agenda_pausada' },
+  ];
+  const COM_PESSOAS = [
+    {
+      id: 30,
+      title: 'Reunião',
+      enabled: true,
+      ai_status: 'ativa',
+      recebe: { modo: 'por_pessoa', nome: 'Rodrigo' },
+      pessoas: PESSOAS,
+    },
+    {
+      id: 31,
+      title: 'Outra',
+      enabled: true,
+      ai_status: 'ativa',
+      recebe: { modo: 'por_pessoa', nome: 'Caio' },
+      pessoas: [
+        { id: 40, nome: 'Caio', ai_status: 'ativa' },
+        { id: 41, nome: 'Lia', ai_status: 'ativa' },
+      ],
+    },
+    {
+      id: 32,
+      title: 'Solo',
+      enabled: true,
+      ai_status: 'ativa',
+      recebe: { modo: 'fixo', nome: 'Rita' },
+      pessoas: [{ id: 23, nome: 'Rita', ai_status: 'ativa' }],
+    },
+  ];
+  const marcadas = () =>
+    [...document.querySelectorAll('[data-pessoa]')]
+      .filter(rotulo => rotulo.querySelector('input').checked)
+      .map(rotulo => Number(rotulo.dataset.pessoa));
+  const alternar = async id => {
+    no(`[data-pessoa="${id}"] input`).click();
+    await flushPromises();
+  };
+  const salvar = async () => {
+    no('[data-salvar]').click();
+    await flushPromises();
+  };
+
+  beforeEach(() => {
+    loja.dispatch.mockReset();
+    loja.dispatch.mockResolvedValue({});
+    paginasApi.get.mockReset();
+    paginasApi.get.mockResolvedValue({ data: { payload: COM_PESSOAS } });
+  });
+  afterEach(() => wrapper?.unmount());
+
+  it('lists every person checked when nothing is saved, in the page order, without the host line', async () => {
+    wrapper = await montar(30);
+    expect(texto('[data-pessoas] legend')).toBe('People Bia can use');
+    expect(marcadas()).toEqual([21, 22, 23]);
+    expect(texto('[data-pessoa="23"] [data-pessoa-pausada]')).toBe(
+      'calendar paused'
+    );
+    expect(no('[data-pessoa="21"] [data-pessoa-pausada]')).toBeNull();
+    expect(texto('[data-pessoas-dica]')).toBe(
+      'Bia only books with the people checked above. To prefer one of them, say it in Change by chatting. Example: “Book with Rodrigo”.'
+    );
+    expect(no('[data-recebe]')).toBeNull();
+    // A linha inteira é o alvo de toque (44 px), com a caixa dentro do rótulo.
+    expect(no('[data-pessoa="21"]').className).toContain('min-h-11');
+    expect(no('select')).toBeNull();
+  });
+
+  it('checks only the saved people that are still on the page', async () => {
+    wrapper = await montar(30, { booking_agent_ids: [22, 99] });
+    expect(marcadas()).toEqual([22]);
+  });
+
+  it('a single person on the page: no choice, keeps the host line', async () => {
+    wrapper = await montar(32);
+    expect(no('[data-pessoas]')).toBeNull();
+    expect(texto('[data-recebe]')).toBe('The meeting goes to Rita.');
+  });
+
+  it('saves only the people, keeping the page, and in the page order', async () => {
+    wrapper = await montar(30);
+    await alternar(22);
+    await salvar();
+    expect(loja.dispatch).toHaveBeenCalledWith('autonomiaAgents/update', {
+      id: 7,
+      config: { booking_agent_ids: [21, 23] },
+    });
+    expect(wrapper.emitted('fechar')).toHaveLength(1);
+  });
+
+  it('all checked again saves [] (everyone, including who joins later)', async () => {
+    wrapper = await montar(30, { booking_agent_ids: [21] });
+    await alternar(22);
+    await alternar(23);
+    await salvar();
+    expect(loja.dispatch).toHaveBeenCalledWith('autonomiaAgents/update', {
+      id: 7,
+      config: { booking_agent_ids: [] },
+    });
+  });
+
+  it('closes without writing when the people did not change, even with a stale saved id', async () => {
+    wrapper = await montar(30, { booking_agent_ids: [21, 99] });
+    await salvar();
+    expect(loja.dispatch).not.toHaveBeenCalled();
+    expect(wrapper.emitted('fechar')).toHaveLength(1);
+  });
+
+  it('nobody checked: says to check one and does not save', async () => {
+    wrapper = await montar(30, { booking_agent_ids: [21] });
+    await alternar(21);
+    expect(texto('[data-pessoas-erro]')).toBe('Check at least one person.');
+    expect(no('[data-pessoas-erro]').getAttribute('role')).toBe('alert');
+    expect(no('[data-salvar]').disabled).toBe(true);
+    await salvar();
+    expect(loja.dispatch).not.toHaveBeenCalled();
+  });
+
+  it('a saved restriction with nobody left on the page: nobody takes meetings until the owner picks', async () => {
+    wrapper = await montar(30, { booking_agent_ids: [99] });
+    expect(marcadas()).toEqual([]);
+    expect(no('[data-estado-agenda="sem_ninguem"]')).not.toBeNull();
+    await alternar(22);
+    expect(no('[data-estado-agenda="ativa"]')).not.toBeNull();
+  });
+
+  it('only people with the calendar paused checked: the calendar-paused state', async () => {
+    wrapper = await montar(30, { booking_agent_ids: [23] });
+    expect(no('[data-estado-agenda="agenda_pausada"]')).not.toBeNull();
+  });
+
+  it('changing the page starts with everyone on the new page and saves the page with []', async () => {
+    wrapper = await montar(30, { booking_agent_ids: [21] });
+    no('[data-valor="31"]').click();
+    await flushPromises();
+    expect(marcadas()).toEqual([40, 41]);
+    await salvar();
+    expect(loja.dispatch).toHaveBeenCalledWith('autonomiaAgents/update', {
+      id: 7,
+      config: { booking_page_id: 31, booking_agent_ids: [] },
+    });
+  });
+
+  it('changing to a page with one person also clears the old restriction', async () => {
+    wrapper = await montar(30, { booking_agent_ids: [21] });
+    no('[data-valor="32"]').click();
+    await flushPromises();
+    await salvar();
+    expect(loja.dispatch).toHaveBeenCalledWith('autonomiaAgents/update', {
+      id: 7,
+      config: { booking_page_id: 32, booking_agent_ids: [] },
+    });
+  });
+
+  it('"do not book" saves only the page as null', async () => {
+    wrapper = await montar(30, { booking_agent_ids: [21] });
+    no('[data-valor=""]').click();
+    await flushPromises();
+    expect(no('[data-pessoas]')).toBeNull();
+    await salvar();
+    expect(loja.dispatch).toHaveBeenCalledWith('autonomiaAgents/update', {
+      id: 7,
+      config: { booking_page_id: null },
+    });
   });
 });

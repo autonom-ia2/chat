@@ -1361,7 +1361,13 @@
           "SALVAR": "Save",
           "SALVANDO": "Saving…",
           "PRONTO": "Done.",
-          "ERRO": "Could not save."
+          "ERRO": "Could not save.",
+          "PESSOAS": {
+            "TITULO": "People {nome} can use",
+            "PAUSADA": "calendar paused",
+            "NENHUMA": "Check at least one person.",
+            "DICA": "{nome} only books with the people checked above. To prefer one of them, say it in Change by chatting. Example: “Book with {exemplo}”."
+          }
         }
       },
       "CRIAR": {
