@@ -125,6 +125,18 @@ RSpec.describe Autonomia::Agents::Tools::Native::AgendarReuniao do
         expect { ouvir(resposta) }.not_to(change { Crm::MeetingNotice.order(:id).pluck(:status, :skip_reason) })
       end
 
+      it 'resposta com o link gravada com o aviso já em envio (depois da primeira conferência): não duplica' do
+        travel Crm::BookingV2::BookingNotices::CONFIRMATION_GRACE + 1.minute
+        allow_any_instance_of(Crm::BookingV2::Notices::Route).to receive(:decide).and_wrap_original do |original, *args| # rubocop:disable RSpec/AnyInstance
+          saida("Marcado: #{link_de_gestao}") if conversa.messages.outgoing.none?
+          original.call(*args)
+        end
+
+        expect { Crm::BookingV2::NoticeDispatchJob.perform_now }.to change { conversa.messages.outgoing.count }.by(1)
+        expect(conversa.messages.outgoing.last.content).to eq("Marcado: #{link_de_gestao}")
+        expect(status_do_marcado).to eq(['skipped', Crm::BookingV2::BookingNotices::TOLD_IN_CONVERSATION])
+      end
+
       it 'pessoa da equipe respondeu sem o link e a IA não: o aviso sai com o link' do
         ouvir(saida('Oi! Já vejo seu horário.'))
         ouvir(saida('Segue o link da outra reunião: https://app.example.com/b/OUTRO123'))

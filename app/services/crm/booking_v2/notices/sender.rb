@@ -91,6 +91,11 @@ class Crm::BookingV2::Notices::Sender
     waha_problem = waha_chat.prepare if Crm::BookingV2::Notices::WahaChat.needed?(decision, profile.notice_inbox)
     return waha_retry_or_skip!(waha_problem) if waha_problem
 
+    # De novo logo antes de enviar (#1305): a confirmação da IA pode ter sido gravada depois da primeira conferência,
+    # com o aviso já em `sending` (fora do alcance do `BookingNotices.mark_told!`).
+    told = told_reason
+    return skip!(told) if told
+
     deliver!(decision)
   end
 
