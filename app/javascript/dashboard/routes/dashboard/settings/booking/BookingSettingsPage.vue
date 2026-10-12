@@ -1,6 +1,7 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useRoute, useRouter } from 'vue-router';
 import { useCanManage } from 'dashboard/composables/useCanManage';
 import BookingPagesList from './components/BookingPagesList.vue';
 import BookingWizard from './components/BookingWizard.vue';
@@ -8,18 +9,52 @@ import BookingPageView from './components/BookingPageView.vue';
 import BookingSettingsTabs from './components/BookingSettingsTabs.vue';
 import BookingBackToCalendar from './components/BookingBackToCalendar.vue';
 import { STEP } from './constants';
+import { internalReturnPath } from './bookingReturnPath';
 
 // CRM › Agendamento (#1187, F1-D): a lista de páginas, o assistente
 // de sete passos e, para quem só vê, a página em modo leitura. Escrever pede
 // `agendamento_manage` (o administrador tem).
 const { t } = useI18n();
+const route = useRoute();
+const router = useRouter();
 const canManage = useCanManage('agendamento_manage');
 
 // { mode: 'list' } | { mode: 'wizard', pageId, step } | { mode: 'view', pageId }
 const screen = ref({ mode: 'list' });
 
+// Link direto (#1371): `?nova=1` abre o assistente de página nova, só para
+// quem pode gerenciar (sem permissão, a lista de sempre). Vale ao abrir a tela
+// e também numa mudança só de query, com a tela já montada.
+watch(
+  () => route.query,
+  query => {
+    if (query?.nova === '1' && canManage.value) {
+      screen.value = { mode: 'wizard', pageId: null };
+    }
+  },
+  { immediate: true }
+);
+
 const showList = () => {
   screen.value = { mode: 'list' };
+};
+// Ao sair do assistente: para o `?voltar=` se for caminho interno do painel
+// desta conta (bookingReturnPath.js); senão a lista, sem `nova`/`voltar` no
+// endereço (um F5 não reabre o assistente). Vale também para o "Concluir" com
+// a página já no ar, de propósito: quem veio do agente volta para ele.
+const closeWizard = () => {
+  const returnTo = internalReturnPath(
+    route.query?.voltar,
+    route.params?.accountId
+  );
+  if (returnTo) {
+    router.push(returnTo);
+    return;
+  }
+  showList();
+  const { nova, voltar, ...rest } = route.query || {};
+  if (nova !== undefined || voltar !== undefined)
+    router.replace({ query: rest });
 };
 const create = () => {
   screen.value = { mode: 'wizard', pageId: null };
@@ -55,7 +90,7 @@ const view = page => {
       v-if="screen.mode === 'wizard' && canManage"
       :page-id="screen.pageId"
       :initial-step="screen.step"
-      @close="showList"
+      @close="closeWizard"
     />
     <BookingPageView
       v-else-if="screen.mode === 'view'"
