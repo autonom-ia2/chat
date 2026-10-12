@@ -1,15 +1,28 @@
-# Resumes a paused campaign (#1329). Backend only for now; the Resultado button comes later (#1320 D).
+# Paused campaigns (#1329) and how to resume them.
 #
-#   POST …/campaign_journey/campaign_pauses/:id/resume
+#   GET  …/campaign_journey/campaign_pauses              open pauses of the account's campaigns (#1332)
+#   POST …/campaign_journey/campaign_pauses/:id/resume   resume one pause
 #
-# campaign_manage required (CampaignPolicy#update?). The pause must belong to the account. A Chatwoot
+# index: campaign_view (CampaignPolicy#index?). Lists only open pauses of Chatwoot campaigns (WhatsApp
+# Oficial today), newest first, with the campaign and the reason — the Modelos screen and the campaign
+# list show them with "Retomar". details never carry personal data (CampaignPause).
+# resume: campaign_manage (CampaignPolicy#update?). The pause must belong to the account. A Chatwoot
 # one-off campaign still `active` is fired again right away and its template is checked again
 # (CampaignPauses::Resumer). 422 with `code`: pause_not_open | campaign_already_sent.
 # CAMPAIGN_JOURNEY_ENABLED off → 404.
 class Api::V1::Accounts::CampaignJourney::CampaignPausesController < Api::V1::Accounts::BaseController
+  LIST_LIMIT = 100
+
   before_action :ensure_campaign_journey_enabled
-  before_action :authorize_resume
-  before_action :fetch_pause
+  before_action :authorize_index, only: :index
+  before_action :authorize_resume, only: :resume
+  before_action :fetch_pause, only: :resume
+
+  def index
+    pauses = CampaignPause.in_effect.where(account_id: Current.account.id, pausable_type: 'Campaign')
+                          .includes(:pausable).order(paused_at: :desc).limit(LIST_LIMIT)
+    render json: { payload: pauses.filter_map { |pause| list_item(pause) } }
+  end
 
   def resume
     pause = ::CampaignPauses::Resumer.new(@pause, resumed_by: Current.user).perform
@@ -19,6 +32,20 @@ class Api::V1::Accounts::CampaignJourney::CampaignPausesController < Api::V1::Ac
   end
 
   private
+
+  def list_item(pause)
+    campaign = pause.pausable
+    return unless campaign
+
+    pause.payload.merge(
+      campaign: { id: campaign.id, display_id: campaign.display_id, title: campaign.title, inbox_id: campaign.inbox_id,
+                  scheduled_at: campaign.scheduled_at }
+    )
+  end
+
+  def authorize_index
+    authorize(Campaign, :index?)
+  end
 
   def authorize_resume
     authorize(Campaign, :update?)

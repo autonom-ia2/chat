@@ -13,6 +13,8 @@ module TemplateFields::Format
   ISO_TIME_PARTS = (2..3) # "15:00" ou "15:00:30"
   # "1.234" é mil e duzentos e trinta e quatro em pt-BR e 1,234 em inglês: três casas depois do ponto ficam como estão.
   AMBIGUOUS_FRACTION = 3
+  HOURS_IN_DAY = 24
+  MINUTES_IN_HOUR = 60
 
   module_function
 
@@ -46,6 +48,7 @@ module TemplateFields::Format
     formatted = case type
                 when 'data' then iso_date(text)
                 when 'moeda' then plain_amount(text)
+                when 'hora' then plain_time(text)
                 end
     (formatted || text).presence
   end
@@ -67,6 +70,16 @@ module TemplateFields::Format
   def iso_time_shape?(text)
     parts = text.split(':', -1)
     ISO_TIME_PARTS.cover?(parts.size) && parts.all? { |part| part.length == 2 && digits?(part) }
+  end
+
+  # "15:00:00" (a leitura do XLSX) => "15:00"; "15:00" fica; qualquer outra escrita ("15h", "às 3") fica como está.
+  def plain_time(text)
+    return unless iso_time_shape?(text)
+
+    hours, minutes = text.split(':').first(2)
+    return unless hours.to_i < HOURS_IN_DAY && minutes.to_i < MINUTES_IN_HOUR
+
+    "#{hours}:#{minutes}"
   end
 
   # "1234.5" ou "-80" => R$; qualquer outra escrita fica como está.
