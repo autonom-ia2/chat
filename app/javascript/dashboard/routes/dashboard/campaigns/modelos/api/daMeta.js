@@ -292,6 +292,7 @@ export const modeloDaMeta = (template, grupo) => {
     nomeNoWhatsapp: template.name,
     objetivo: conteudo.formato === 'padrao' ? 'em_branco' : conteudo.formato,
     sistema: Boolean(template.system_owner),
+    donoDoSistema: template.system_owner || '',
     editavel: editavelNaTela(template),
     idioma: template.language,
     // Variáveis com nome ({{primeiro_nome}}) continuam com nome ao alterar.

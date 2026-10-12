@@ -166,7 +166,12 @@
       },
       "ABRIR": "Open",
       "OCULTO": "This template is in use where you do not have access. Ask an administrator.",
-      "PARADA": "stopped by the template"
+      "PARADA": "stopped by the template",
+      "SISTEMA": {
+        "agendamento": "Used by the platform in the booking notices.",
+        "anuncios": "Used by the platform in the Ads notices.",
+        "satisfacao": "Used by the platform in the satisfaction survey after a conversation."
+      }
     },
     "APAGAR": {
       "TITULO": "Delete “{nome}”?",
@@ -217,7 +222,8 @@
       "COPIA_DE": "{nome} (copy)",
       "AVISO_COPIA": "This is a copy of “{nome}”. Adjust what you want and pick a different name.",
       "FALHOU": "We couldn't send it now. Try again.",
-      "FALHOU_UMA_CONTA": "The template was sent for one WhatsApp account, but not for the other. {motivo}"
+      "FALHOU_UMA_CONTA": "The template was sent for one WhatsApp account, but not for the other. {motivo}",
+      "AVISO_COPIA_ARQUIVOS": "The copy does not take the files: pick again the photo, video or document at the top and on the cards."
     },
     "OBJETIVO": {
       "SUGESTOES": {
@@ -414,7 +420,17 @@
         "TEXTO_LONGO": "The button text can have up to 25 characters.",
         "SITE_SEM_EXEMPLO": "This button came from outside with a variable address ending and no example. Remove the button and create it again."
       },
-      "LIMITE_DO_BOTAO": "{n} of {limite} characters"
+      "LIMITE_DO_BOTAO": "{n} of {limite} characters",
+      "ARQUIVO_ERRADO": {
+        "foto": "Pick a JPG or PNG photo.",
+        "video": "Pick an MP4 video.",
+        "documento": "Pick a PDF file."
+      },
+      "ARQUIVO_GRANDE": {
+        "foto": "The photo can have up to 5 MB.",
+        "video": "The video can have up to 16 MB.",
+        "documento": "The PDF can have up to 100 MB."
+      }
     },
     "NUMEROS": {
       "INTRO": "Pick where this template will work. Only official WhatsApp numbers show up.",
@@ -656,7 +672,9 @@
       "RETOMAR_FALHOU": "We could not resume now. Try again.",
       "CORRIJA_PRIMEIRO": "Fix the template first.",
       "VER_MODELO": "Open “{modelo}”",
-      "AGUARDE_CONFERENCIA": "We could not check the template with WhatsApp yet. Resume unlocks when the check passes."
+      "AGUARDE_CONFERENCIA": "We could not check the template with WhatsApp yet. Resume unlocks when the check passes.",
+      "AGUARDE_LIBERAR": "Wait for WhatsApp to release the template. When it comes back, tap Resume.",
+      "AGUARDE_APROVAR": "Wait for WhatsApp to approve the template. Then tap Resume."
     },
     "PONTE": {
       "CAIXA_RECONECTAR": "{nome} · needs reconnecting",

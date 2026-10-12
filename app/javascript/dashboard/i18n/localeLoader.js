@@ -19,9 +19,26 @@ const resolveLocale = locale => {
     : DEFAULT_LOCALE;
 };
 
+// The catalogue is a separate download. When it fails (a network blip, a
+// deploy swapping chunks), the screen used to stay in English for good; it is
+// fetched again a couple of times before giving up.
+const LOAD_ATTEMPTS = 3;
+const RETRY_DELAY_MS = 400;
+const importLocale = async (path, attempt = 1) => {
+  try {
+    return await localeLoaders[path]();
+  } catch (error) {
+    if (attempt >= LOAD_ATTEMPTS) throw error;
+    await new Promise(resolve => {
+      setTimeout(resolve, RETRY_DELAY_MS * attempt);
+    });
+    return importLocale(path, attempt + 1);
+  }
+};
+
 export const loadDashboardLocale = async locale => {
   const resolvedLocale = resolveLocale(locale);
-  const localeModule = await localeLoaders[localePath(resolvedLocale)]();
+  const localeModule = await importLocale(localePath(resolvedLocale));
 
   return {
     locale: resolvedLocale,

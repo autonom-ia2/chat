@@ -1,4 +1,5 @@
 <script setup>
+import { andarComSetas } from '../../helpers/setas';
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
@@ -108,6 +109,7 @@ const iconeDoBotao = tipo =>
         role="radiogroup"
         :aria-label="$t('MODELOS_WHATSAPP.EXTRAS.TOPO')"
         class="grid grid-cols-2 gap-3 sm:grid-cols-4"
+        @keydown="andarComSetas"
       >
         <button
           v-for="topo in TOPOS"
@@ -160,6 +162,7 @@ const iconeDoBotao = tipo =>
 
     <section class="flex flex-col gap-3">
       <Input
+        wrap-message
         :model-value="conteudo.rodape"
         data-rodape
         :label="$t('MODELOS_WHATSAPP.EXTRAS.RODAPE')"
@@ -232,6 +235,7 @@ const iconeDoBotao = tipo =>
           <div v-else class="grid gap-3 sm:grid-cols-2">
             <Input
               v-if="botao.tipo !== 'copiar_codigo'"
+              wrap-message
               :model-value="botao.texto"
               :maxlength="LIMITE_DO_BOTAO"
               :message="
@@ -252,6 +256,7 @@ const iconeDoBotao = tipo =>
             />
             <Input
               v-if="['site', 'ligar', 'copiar_codigo'].includes(botao.tipo)"
+              wrap-message
               :model-value="botao.valor"
               :label="$t(`MODELOS_WHATSAPP.TIPOS_DE_BOTAO.${botao.tipo}.VALOR`)"
               :message="mensagem(botao, PROBLEMAS_DO_VALOR)"

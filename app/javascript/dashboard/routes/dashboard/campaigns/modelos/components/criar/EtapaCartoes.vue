@@ -201,6 +201,7 @@ const aoEscolherArquivo = (indice, { arquivo, local }) =>
           class="grid gap-3 sm:grid-cols-2"
         >
           <Input
+            wrap-message
             :model-value="botao.texto"
             :maxlength="LIMITE_DO_BOTAO"
             :message="

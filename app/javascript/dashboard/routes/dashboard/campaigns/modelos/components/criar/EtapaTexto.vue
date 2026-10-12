@@ -1,4 +1,5 @@
 <script setup>
+import { andarComSetas } from '../../helpers/setas';
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
@@ -120,6 +121,7 @@ const usarMelhoria = resposta => {
 <template>
   <div data-etapa-texto class="flex flex-col gap-7">
     <Input
+      wrap-message
       :model-value="rascunho.nome"
       data-nome
       :label="$t('MODELOS_WHATSAPP.TEXTO.NOME')"
@@ -142,6 +144,7 @@ const usarMelhoria = resposta => {
         role="radiogroup"
         aria-labelledby="tipo-do-zero"
         class="grid gap-3 sm:grid-cols-2"
+        @keydown="andarComSetas"
       >
         <button
           v-for="tipo in TIPOS_DO_ZERO"
@@ -240,6 +243,7 @@ const usarMelhoria = resposta => {
           class="flex flex-col gap-1 min-w-0"
         >
           <Input
+            wrap-message
             :data-exemplo="campo"
             :model-value="conteudo.exemplos[campo] || ''"
             :label="rotulo(campo)"

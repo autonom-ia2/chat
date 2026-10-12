@@ -20,6 +20,15 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['retomada']);
+
+// Retomar ainda desligado: o que a pessoa faz até ele ligar. Pausado e em
+// análise não têm o que corrigir, é esperar o WhatsApp.
+const ESPERA = {
+  nao_conferido: 'AGUARDE_CONFERENCIA',
+  modelo_pausado: 'AGUARDE_LIBERAR',
+  modelo_em_analise: 'AGUARDE_APROVAR',
+};
+const oQueFazer = campanha => ESPERA[campanha.motivo] || 'CORRIJA_PRIMEIRO';
 const { t } = useI18n();
 
 const ACAO = {
@@ -125,11 +134,7 @@ const retomar = async campanha => {
             data-corrija-primeiro
             class="inline-flex flex-wrap items-center gap-x-1 text-sm font-medium text-n-amber-11"
           >
-            {{
-              campanha.motivo === 'nao_conferido'
-                ? $t('MODELOS_WHATSAPP.PARADAS.AGUARDE_CONFERENCIA')
-                : $t('MODELOS_WHATSAPP.PARADAS.CORRIJA_PRIMEIRO')
-            }}
+            {{ $t(`MODELOS_WHATSAPP.PARADAS.${oQueFazer(campanha)}`) }}
             <router-link
               v-if="
                 !noModelo &&

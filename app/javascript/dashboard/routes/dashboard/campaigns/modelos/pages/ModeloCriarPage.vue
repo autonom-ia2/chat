@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { useAlert } from 'dashboard/composables';
@@ -107,6 +107,16 @@ const doModelo = dados =>
     conteudo: dados.conteudo,
   });
 
+// O original tem arquivo no topo ou nos cartões: a cópia pede de novo.
+const copiaPedeArquivos = computed(() => {
+  const conteudo = modelo.value?.conteudo;
+  if (!conteudo) return false;
+  return (
+    ['foto', 'video', 'documento'].includes(conteudo.topo?.tipo) ||
+    Boolean(conteudo.cartoes?.length)
+  );
+});
+
 // A cópia é um modelo novo: o arquivo do topo e dos cartões sobe de novo (o
 // handle do original expira), então a conferência pede o arquivo.
 const semArquivos = conteudo => ({
@@ -202,6 +212,13 @@ watch(locale, () => {
     return;
   rascunho.value = rascunhoDaQuery();
   montadoDaQuery = JSON.stringify(rascunho.value);
+});
+
+// Trocou de etapa: o foco volta ao título, para o teclado e o leitor de tela
+// começarem do começo da etapa nova (não ficam perdidos no fim da página).
+const titulo = ref(null);
+watch(etapa, (nova, antiga) => {
+  if (antiga && nova !== antiga) nextTick(() => titulo.value?.focus());
 });
 
 const ir = proxima =>
@@ -483,7 +500,9 @@ const proximaAlteracao = computed(() => {
         <template v-else>
           <header class="flex flex-col gap-5">
             <h1
-              class="m-0 text-3xl font-bold tracking-tight md:text-4xl text-n-slate-12"
+              ref="titulo"
+              tabindex="-1"
+              class="m-0 text-3xl font-bold tracking-tight md:text-4xl text-n-slate-12 focus:outline-none"
             >
               {{ $t(`MODELOS_WHATSAPP.CRIAR.TITULO.${modo}`) }}
             </h1>
@@ -557,11 +576,22 @@ const proximaAlteracao = computed(() => {
               class="i-lucide-copy size-5 mt-0.5 shrink-0 text-n-blue-11"
               aria-hidden="true"
             />
-            <p class="mb-0 text-[0.9375rem] text-n-slate-12">
-              {{
-                $t('MODELOS_WHATSAPP.CRIAR.AVISO_COPIA', { nome: modelo.nome })
-              }}
-            </p>
+            <span class="flex flex-col gap-1">
+              <span class="text-[0.9375rem] text-n-slate-12">
+                {{
+                  $t('MODELOS_WHATSAPP.CRIAR.AVISO_COPIA', {
+                    nome: modelo.nome,
+                  })
+                }}
+              </span>
+              <span
+                v-if="copiaPedeArquivos"
+                data-aviso-copia-arquivos
+                class="text-[0.9375rem] font-medium text-n-slate-12"
+              >
+                {{ $t('MODELOS_WHATSAPP.CRIAR.AVISO_COPIA_ARQUIVOS') }}
+              </span>
+            </span>
           </section>
 
           <EtapaCriarComIA

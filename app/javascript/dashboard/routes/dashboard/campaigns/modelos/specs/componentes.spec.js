@@ -7,6 +7,7 @@ import EtapaObjetivo from '../components/criar/EtapaObjetivo.vue';
 import ModeloUsos from '../components/ModeloUsos.vue';
 import FranquiaDoMes from '../components/FranquiaDoMes.vue';
 import PonteSemModelo from '../ponte/PonteSemModelo.vue';
+import EscolherArquivo from '../components/criar/EscolherArquivo.vue';
 
 const api = vi.hoisted(() => ({
   retomarCampanha: vi.fn(),
@@ -93,11 +94,25 @@ describe('CampanhasParadas', () => {
     });
 
     expect(wrapper.find('[data-retomar]').attributes('disabled')).toBeDefined();
+    // Pausado não tem o que corrigir: é esperar o WhatsApp liberar.
     expect(wrapper.find('[data-corrija-primeiro]').text()).toContain(
-      en.MODELOS_WHATSAPP.PARADAS.CORRIJA_PRIMEIRO
+      en.MODELOS_WHATSAPP.PARADAS.AGUARDE_LIBERAR
     );
     await wrapper.find('[data-retomar]').trigger('click');
     expect(api.retomarCampanha).not.toHaveBeenCalled();
+  });
+
+  it('asks to fix only a rejected template', () => {
+    const wrapper = montar(CampanhasParadas, {
+      props: {
+        campanhas: [
+          { ...PARADA, motivo: 'modelo_recusado', podeRetomar: false },
+        ],
+      },
+    });
+    expect(wrapper.find('[data-corrija-primeiro]').text()).toContain(
+      en.MODELOS_WHATSAPP.PARADAS.CORRIJA_PRIMEIRO
+    );
   });
 
   it('hides "Resume" from who cannot manage campaigns', () => {
@@ -135,6 +150,40 @@ describe('EtapaObjetivo', () => {
     expect(avisos.map(aviso => aviso.text())).toEqual(
       Array(3).fill(en.MODELOS_WHATSAPP.OBJETIVO.NAO_VAI_EM_CAMPANHA)
     );
+  });
+});
+
+describe('EscolherArquivo', () => {
+  const escolher = async (wrapper, arquivo) => {
+    const input = wrapper.find('input[type="file"]');
+    Object.defineProperty(input.element, 'files', {
+      value: [arquivo],
+      configurable: true,
+    });
+    await input.trigger('change');
+  };
+
+  it('recusa arquivo grande ou do tipo errado logo ao escolher', async () => {
+    const wrapper = montar(EscolherArquivo, {
+      props: { aceita: 'image/jpeg,image/png' },
+    });
+    const grande = new File(['x'], 'foto.jpg', { type: 'image/jpeg' });
+    Object.defineProperty(grande, 'size', { value: 6 * 1024 * 1024 });
+    await escolher(wrapper, grande);
+    expect(wrapper.find('[data-arquivo-erro]').text()).toBe(
+      en.MODELOS_WHATSAPP.EXTRAS.ARQUIVO_GRANDE.foto
+    );
+    await escolher(
+      wrapper,
+      new File(['x'], 'nota.txt', { type: 'text/plain' })
+    );
+    expect(wrapper.find('[data-arquivo-erro]').text()).toBe(
+      en.MODELOS_WHATSAPP.EXTRAS.ARQUIVO_ERRADO.foto
+    );
+    expect(wrapper.emitted('escolhido')).toBeUndefined();
+    await escolher(wrapper, new File(['x'], 'ok.png', { type: 'image/png' }));
+    expect(wrapper.emitted('escolhido')).toHaveLength(1);
+    expect(wrapper.find('[data-arquivo-erro]').exists()).toBe(false);
   });
 });
 

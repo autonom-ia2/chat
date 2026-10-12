@@ -166,7 +166,12 @@
       },
       "ABRIR": "Abrir",
       "OCULTO": "Este modelo está em uso onde você não tem acesso. Peça a um administrador.",
-      "PARADA": "parada pelo modelo"
+      "PARADA": "parada pelo modelo",
+      "SISTEMA": {
+        "agendamento": "Usado pelo sistema nos avisos do agendamento.",
+        "anuncios": "Usado pelo sistema nos avisos de Anúncios.",
+        "satisfacao": "Usado pelo sistema na pesquisa de satisfação depois do atendimento."
+      }
     },
     "APAGAR": {
       "TITULO": "Apagar “{nome}”?",
@@ -217,7 +222,8 @@
       "COPIA_DE": "{nome} (cópia)",
       "AVISO_COPIA": "Esta é uma cópia de “{nome}”. Ajuste o que quiser e escolha um nome diferente.",
       "FALHOU": "Não conseguimos enviar agora. Tente de novo.",
-      "FALHOU_UMA_CONTA": "O modelo foi enviado para uma conta do WhatsApp, mas não para a outra. {motivo}"
+      "FALHOU_UMA_CONTA": "O modelo foi enviado para uma conta do WhatsApp, mas não para a outra. {motivo}",
+      "AVISO_COPIA_ARQUIVOS": "A cópia não leva os arquivos: escolha de novo a foto, o vídeo ou o documento do topo e dos cartões."
     },
     "OBJETIVO": {
       "SUGESTOES": {
@@ -414,7 +420,17 @@
         "TEXTO_LONGO": "O texto do botão pode ter até 25 letras.",
         "SITE_SEM_EXEMPLO": "Este botão veio de fora com o final do endereço variável e sem exemplo. Tire o botão e crie de novo."
       },
-      "LIMITE_DO_BOTAO": "{n} de {limite} letras"
+      "LIMITE_DO_BOTAO": "{n} de {limite} letras",
+      "ARQUIVO_ERRADO": {
+        "foto": "Escolha uma foto JPG ou PNG.",
+        "video": "Escolha um vídeo MP4.",
+        "documento": "Escolha um arquivo PDF."
+      },
+      "ARQUIVO_GRANDE": {
+        "foto": "A foto pode ter até 5 MB.",
+        "video": "O vídeo pode ter até 16 MB.",
+        "documento": "O PDF pode ter até 100 MB."
+      }
     },
     "NUMEROS": {
       "INTRO": "Escolha onde este modelo vai valer. Só aparecem números do WhatsApp oficial.",
@@ -656,7 +672,9 @@
       "RETOMAR_FALHOU": "Não conseguimos retomar agora. Tente de novo.",
       "CORRIJA_PRIMEIRO": "Corrija o modelo primeiro.",
       "VER_MODELO": "Abrir “{modelo}”",
-      "AGUARDE_CONFERENCIA": "Ainda não deu para conferir o modelo com o WhatsApp. Retomar libera quando a conferência passar."
+      "AGUARDE_CONFERENCIA": "Ainda não deu para conferir o modelo com o WhatsApp. Retomar libera quando a conferência passar.",
+      "AGUARDE_LIBERAR": "Espere o WhatsApp liberar o modelo. Quando ele voltar, toque em Retomar.",
+      "AGUARDE_APROVAR": "Espere o WhatsApp aprovar o modelo. Depois, toque em Retomar."
     },
     "PONTE": {
       "CAIXA_RECONECTAR": "{nome} · precisa reconectar",

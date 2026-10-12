@@ -4,6 +4,7 @@ import { formatoPorChave } from '../../constants';
 import Button from 'dashboard/components-next/button/Button.vue';
 import ModeloConferencia from '../ModeloConferencia.vue';
 import ModeloQuemAprova from '../ModeloQuemAprova.vue';
+import CustoDoTipo from '../CustoDoTipo.vue';
 
 // Confira: o resumo de cada parte com "Alterar", a conferência do que pode
 // causar recusa e quem aprova.
@@ -83,6 +84,11 @@ const resumo = computed(() =>
       </li>
     </ul>
     <ModeloConferencia :conteudo="conteudo" :contexto="contexto" />
+    <!-- Quanto custa cada envio do tipo previsto (divulgação diz quanto a mais). -->
+    <CustoDoTipo
+      v-if="['aviso', 'divulgacao'].includes(rascunho.tipo)"
+      :tipo="rascunho.tipo"
+    />
     <ModeloQuemAprova
       :tipo="rascunho.tipo"
       :so-divulgacao="Boolean(formatoPorChave(conteudo.formato)?.soDivulgacao)"

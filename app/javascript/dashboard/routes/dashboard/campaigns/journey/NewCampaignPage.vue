@@ -800,7 +800,10 @@ onBeforeUnmount(() => {
   <section
     class="flex h-full w-full min-w-0 flex-col overflow-y-auto bg-n-slate-2"
   >
-    <div class="mx-auto w-full max-w-[90rem] p-4 sm:p-5 lg:p-8">
+    <!-- Fork: folga embaixo no celular para o botão flutuante do menu não cobrir "Voltar". -->
+    <div
+      class="mx-auto w-full max-w-[90rem] p-4 pb-24 sm:p-5 sm:pb-24 md:pb-5 lg:p-8"
+    >
       <nav
         class="mb-5 flex flex-wrap items-center gap-2 text-xs text-n-slate-11"
         :aria-label="t('CAMPAIGN_JOURNEY.LIST.BREADCRUMB')"

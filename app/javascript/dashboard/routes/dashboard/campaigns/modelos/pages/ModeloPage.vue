@@ -385,7 +385,10 @@ const confirmarApagar = async () => {
                 </div>
               </dl>
 
-              <ModeloUsos :usos="usos" />
+              <ModeloUsos
+                :usos="usos"
+                :dono-do-sistema="modelo.donoDoSistema"
+              />
 
               <details
                 class="px-6 py-4 rounded-2xl ring-1 ring-inset ring-n-weak bg-n-solid-1 group"

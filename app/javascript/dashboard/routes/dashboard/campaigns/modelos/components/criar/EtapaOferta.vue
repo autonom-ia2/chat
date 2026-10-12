@@ -1,4 +1,5 @@
 <script setup>
+import { andarComSetas } from '../../helpers/setas';
 import { computed } from 'vue';
 import Input from 'dashboard/components-next/input/Input.vue';
 import { LIMITE_DO_TITULO_DA_OFERTA } from '../../constants';
@@ -59,6 +60,7 @@ const tituloLongo = computed(
       {{ $t('MODELOS_WHATSAPP.OFERTA.INTRO') }}
     </p>
     <Input
+      wrap-message
       :model-value="oferta.titulo"
       data-oferta-titulo
       :label="$t('MODELOS_WHATSAPP.OFERTA.TITULO')"
@@ -72,6 +74,7 @@ const tituloLongo = computed(
       @update:model-value="valor => mudarOferta('titulo', valor)"
     />
     <Input
+      wrap-message
       :model-value="oferta.link"
       data-oferta-link
       :label="$t('MODELOS_WHATSAPP.OFERTA.LINK')"
@@ -83,6 +86,7 @@ const tituloLongo = computed(
       @update:model-value="valor => mudarOferta('link', valor)"
     />
     <Input
+      wrap-message
       :model-value="oferta.cupom"
       data-oferta-cupom
       :label="$t('MODELOS_WHATSAPP.OFERTA.CUPOM')"
@@ -97,6 +101,7 @@ const tituloLongo = computed(
         role="radiogroup"
         :aria-label="$t('MODELOS_WHATSAPP.EXTRAS.TOPO')"
         class="grid grid-cols-3 gap-3"
+        @keydown="andarComSetas"
       >
         <button
           v-for="item in TOPOS_DA_OFERTA"

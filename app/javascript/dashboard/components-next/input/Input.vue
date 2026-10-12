@@ -22,6 +22,8 @@ const props = defineProps({
   min: { type: String, default: '' },
   max: { type: String, default: '' },
   autofocus: { type: Boolean, default: false },
+  // Fork: a mensagem quebra linha em vez de cortar com "…" (ajuda longa).
+  wrapMessage: { type: Boolean, default: false },
 });
 
 const emit = defineEmits([
@@ -145,8 +147,8 @@ onMounted(() => {
     />
     <p
       v-if="message"
-      class="min-w-0 mt-1 mb-0 text-label-small truncate transition-all duration-500 ease-in-out"
-      :class="messageClass"
+      class="min-w-0 mt-1 mb-0 text-label-small transition-all duration-500 ease-in-out"
+      :class="[messageClass, wrapMessage ? 'break-words' : 'truncate']"
     >
       {{ message }}
     </p>

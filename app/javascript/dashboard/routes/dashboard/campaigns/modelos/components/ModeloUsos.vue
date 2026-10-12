@@ -10,6 +10,8 @@ defineProps({
   usos: { type: Array, required: true },
   semMoldura: { type: Boolean, default: false },
   semTitulo: { type: Boolean, default: false },
+  // Modelo que a plataforma usa sozinha: quem usa (agendamento, anuncios, satisfacao).
+  donoDoSistema: { type: String, default: '' },
 });
 
 const ICONES = {
@@ -41,10 +43,20 @@ const quando = uso => (uso.data ? diaEMes(uso.data, locale.value) : uso.quando);
     <h3 v-if="!semTitulo" class="m-0 text-base font-semibold text-n-slate-12">
       {{ $t('MODELOS_WHATSAPP.USOS.TITULO') }}
     </h3>
-    <p v-if="!usos.length" class="mb-0 text-[0.9375rem] text-n-slate-11">
+    <p
+      v-if="donoDoSistema"
+      data-uso-sistema
+      class="mb-0 text-[0.9375rem] text-n-slate-12"
+    >
+      {{ $t(`MODELOS_WHATSAPP.USOS.SISTEMA.${donoDoSistema}`) }}
+    </p>
+    <p
+      v-if="!usos.length && !donoDoSistema"
+      class="mb-0 text-[0.9375rem] text-n-slate-11"
+    >
       {{ $t('MODELOS_WHATSAPP.USOS.NENHUM') }}
     </p>
-    <ul v-else class="flex flex-col gap-2 p-0 m-0 list-none">
+    <ul v-if="usos.length" class="flex flex-col gap-2 p-0 m-0 list-none">
       <li
         v-for="(uso, indice) in usos"
         :key="indice"
