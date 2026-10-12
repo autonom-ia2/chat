@@ -12,6 +12,8 @@ import {
 } from '../../constants';
 import {
   BOTOES_SO_DE_DIVULGACAO,
+  LIMITE_DO_BOTAO,
+  ordenarBotoes,
   problemasDoBotao,
 } from '../../helpers/regraEstrutural';
 
@@ -55,6 +57,7 @@ const tipoDisponivel = tipo =>
 const problemas = botao => problemasDoBotao(botao, rascunho.value.tipo);
 const PROBLEMAS_DO_VALOR = [
   'SITE_SEM_ENDERECO',
+  'SITE_SEM_EXEMPLO',
   'LIGAR_SEM_NUMERO',
   'CODIGO_SEM_EXEMPLO',
 ];
@@ -66,7 +69,10 @@ const mensagem = (botao, codigos) => {
 };
 
 const adicionarBotao = tipo => {
-  mudar('botoes', [...conteudo.value.botoes, { tipo, texto: '', valor: '' }]);
+  mudar(
+    'botoes',
+    ordenarBotoes([...conteudo.value.botoes, { tipo, texto: '', valor: '' }])
+  );
   escolhendoBotao.value = false;
 };
 
@@ -225,9 +231,19 @@ const iconeDoBotao = tipo =>
           </p>
           <div v-else class="grid gap-3 sm:grid-cols-2">
             <Input
+              v-if="botao.tipo !== 'copiar_codigo'"
               :model-value="botao.texto"
-              :message="mensagem(botao, ['SEM_TEXTO'])"
-              :message-type="mensagem(botao, ['SEM_TEXTO']) ? 'error' : 'info'"
+              :maxlength="LIMITE_DO_BOTAO"
+              :message="
+                mensagem(botao, ['SEM_TEXTO', 'TEXTO_LONGO']) ||
+                $t('MODELOS_WHATSAPP.EXTRAS.LIMITE_DO_BOTAO', {
+                  n: (botao.texto || '').length,
+                  limite: LIMITE_DO_BOTAO,
+                })
+              "
+              :message-type="
+                mensagem(botao, ['SEM_TEXTO', 'TEXTO_LONGO']) ? 'error' : 'info'
+              "
               :label="$t('MODELOS_WHATSAPP.EXTRAS.TEXTO_DO_BOTAO')"
               :placeholder="
                 $t(`MODELOS_WHATSAPP.TIPOS_DE_BOTAO.${botao.tipo}.EXEMPLO`)

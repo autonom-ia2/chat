@@ -108,7 +108,8 @@ const prontos = () =>
       }),
     }));
     return [...objetivos, ...formatos].map(pronto => {
-      const rascunho = preencher(pronto.rascunho);
+      // A tela marca o idioma do texto (o da tela) em cada pronto.
+      const rascunho = preencher({ ...pronto.rascunho, idioma });
       return {
         ...pronto,
         deFabrica: pronto.rascunho,

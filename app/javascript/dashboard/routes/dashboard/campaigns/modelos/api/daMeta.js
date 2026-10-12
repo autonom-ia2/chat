@@ -81,7 +81,16 @@ const exemplosDoCorpo = corpo => {
 const botaoDaMeta = botao => {
   const tipo = maiusculo(botao.type);
   if (tipo === 'URL') {
-    return { tipo: 'site', texto: botao.text || '', valor: botao.url || '' };
+    // O exemplo do final variável ({{1}}) volta junto ao alterar ou duplicar.
+    const exemplo = Array.isArray(botao.example)
+      ? botao.example[0]
+      : botao.example;
+    return {
+      tipo: 'site',
+      texto: botao.text || '',
+      valor: botao.url || '',
+      ...(exemplo ? { exemplo } : {}),
+    };
   }
   if (tipo === 'PHONE_NUMBER') {
     return {
@@ -254,6 +263,9 @@ export const modeloDaMeta = (template, grupo) => {
     biblioteca: false,
     sistema: Boolean(template.system_owner),
     idioma: template.language,
+    // Variáveis com nome ({{primeiro_nome}}) continuam com nome ao alterar.
+    formatoDosCampos:
+      maiusculo(template.parameter_format) === 'NAMED' ? 'named' : 'positional',
     situacao,
     tipo,
     tipoMudouPeloWhatsapp:

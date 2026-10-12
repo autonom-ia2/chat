@@ -101,12 +101,30 @@ const doModelo = dados =>
     objetivo: dados.objetivo,
     biblioteca: dados.biblioteca,
     tipo: dados.tipo,
+    idioma: dados.idioma,
     numeros: dados.numeros,
     conteudo: dados.conteudo,
   });
 
+// A cópia é um modelo novo: o arquivo do topo e dos cartões sobe de novo (o
+// handle do original expira), então a conferência pede o arquivo.
+const semArquivos = conteudo => ({
+  ...conteudo,
+  topo: { ...conteudo.topo, handle: '' },
+  ...(conteudo.cartoes && {
+    cartoes: conteudo.cartoes.map(cartao => ({ ...cartao, handle: '' })),
+  }),
+});
+
+// Os prontos só existem em português e inglês; outro idioma da tela cai no
+// inglês, que é o texto que aparece.
+const IDIOMAS_DOS_PRONTOS = ['pt_BR', 'en'];
+const idiomaDosProntos = () =>
+  IDIOMAS_DOS_PRONTOS.includes(locale.value) ? locale.value : 'en';
+
 // Rascunho novo de um formato (carrossel, oferta…), com os exemplos já preenchidos.
 const doFormato = chave => ({
+  idioma: idiomaDosProntos(),
   ...rascunhoDoFormato(chave, {
     t,
     ler: fonte => lerTextoComCampos(fonte, CAMPOS),
@@ -127,6 +145,7 @@ const rascunhoDaQuery = () => {
   if (!route.query.objetivo) return null;
   return {
     ...rascunhoDoObjetivo(route.query.objetivo, { t, campos: CAMPOS }),
+    idioma: idiomaDosProntos(),
     numeros: numerosDaPrimeiraConta(numeros.value),
   };
 };
@@ -159,6 +178,7 @@ const carregar = async () => {
         : {
             ...base,
             nome: t('MODELOS_WHATSAPP.CRIAR.COPIA_DE', { nome: base.nome }),
+            conteudo: semArquivos(base.conteudo),
           };
     } else {
       rascunho.value = rascunhoDaQuery();
@@ -186,6 +206,7 @@ const ir = proxima =>
 const escolherObjetivo = chave => {
   rascunho.value = {
     ...rascunhoDoObjetivo(chave, { t, campos: CAMPOS }),
+    idioma: idiomaDosProntos(),
     numeros: numerosDaPrimeiraConta(numeros.value),
   };
   router.replace({ query: { ...origem(), objetivo: chave, etapa: 'texto' } });
@@ -200,6 +221,7 @@ const usarOpcaoDaIA = opcao => {
     objetivo: 'em_branco',
     biblioteca: false,
     tipo: opcao.tipo,
+    idioma: idiomaDosProntos(),
     numeros: numerosDaPrimeiraConta(numeros.value),
     conteudo: opcao.conteudo,
   };
@@ -212,9 +234,22 @@ const escolherFormato = chave => {
 };
 
 const formato = computed(() => rascunho.value?.conteudo.formato || 'padrao');
+// Cópia na mesma conta do WhatsApp com o mesmo texto e rodapé do original: a
+// Meta recusa como repetido. A conferência pede para mudar o texto.
+const originalNaMesmaConta = computed(() => {
+  if (modo.value !== 'duplicar' || !modelo.value) return null;
+  const mesmaConta = numeros.value.some(
+    numero =>
+      rascunho.value?.numeros.includes(numero.id) &&
+      numero.conta.id === modelo.value.conta
+  );
+  return mesmaConta ? modelo.value.conteudo : null;
+});
+
 const contexto = computed(() => ({
   temCatalogo: Boolean(catalogo.value),
   tipo: rascunho.value?.tipo,
+  original: originalNaMesmaConta.value,
 }));
 
 // No carrossel, a etapa "Extras" vira "Cartões"; na oferta, "Oferta"; e assim por diante.
@@ -259,7 +294,10 @@ const podeSeguir = computed(() => {
   if (etapa.value === 'texto') {
     const temTexto =
       formato.value === 'codigo' || rascunho.value.conteudo.texto.length > 0;
-    return Boolean(rascunho.value.nome.trim() && temTexto);
+    // "Começar do zero" pergunta o tipo: nada de aviso escondido por padrão.
+    return Boolean(
+      rascunho.value.nome.trim() && temTexto && rascunho.value.tipo
+    );
   }
   if (etapa.value === 'numeros') return rascunho.value.numeros.length > 0;
   if (etapa.value === 'confira') {
@@ -270,6 +308,13 @@ const podeSeguir = computed(() => {
   }
   return true;
 });
+
+const perguntarTipo = computed(
+  () =>
+    modo.value !== 'alterar' &&
+    rascunho.value?.objetivo === 'em_branco' &&
+    (rascunho.value?.conteudo.formato || 'padrao') === 'padrao'
+);
 
 const terminaComCampo = computed(
   () =>
@@ -524,6 +569,7 @@ const proximaAlteracao = computed(() => {
                 <EtapaTexto
                   v-model:rascunho="rascunho"
                   :destacar-fim="terminaComCampo"
+                  :perguntar-tipo="perguntarTipo"
                 />
                 <ModeloConferencia
                   v-if="modo === 'corrigir'"

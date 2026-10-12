@@ -18,6 +18,9 @@ import { useCanUseIA } from '../../helpers/useCanUseIA';
 defineProps({
   // Na correção: marca a caixa de texto enquanto o problema existir.
   destacarFim: { type: Boolean, default: false },
+  // Modelo novo do zero, cópia ou correção de recusado: a pessoa diz o tipo. Num
+  // modelo aprovado a Meta não deixa trocar o tipo, então não pergunta.
+  perguntarTipo: { type: Boolean, default: false },
 });
 
 // Nome, texto e exemplos. Modelo pronto do WhatsApp: o texto vem fixo (por isso
@@ -83,6 +86,12 @@ const mudarNome = nome => {
   rascunho.value = { ...rascunho.value, nome };
 };
 
+// "Começar do zero": a pessoa diz o tipo (aviso ou divulgação), sem padrão.
+const TIPOS_DO_ZERO = ['aviso', 'divulgacao'];
+const escolherTipo = tipo => {
+  rascunho.value = { ...rascunho.value, tipo };
+};
+
 const escreverDoMeuJeito = () => {
   rascunho.value = { ...rascunho.value, biblioteca: false };
 };
@@ -104,6 +113,40 @@ const usarMelhoria = resposta => {
       :message="$t('MODELOS_WHATSAPP.TEXTO.NOME_AJUDA')"
       @update:model-value="mudarNome"
     />
+
+    <section v-if="perguntarTipo" data-tipo-do-zero class="flex flex-col gap-3">
+      <h2 id="tipo-do-zero" class="m-0 text-base font-semibold text-n-slate-12">
+        {{ $t('MODELOS_WHATSAPP.TEXTO.TIPO.PERGUNTA') }}
+      </h2>
+      <div
+        role="radiogroup"
+        aria-labelledby="tipo-do-zero"
+        class="grid gap-3 sm:grid-cols-2"
+      >
+        <button
+          v-for="tipo in TIPOS_DO_ZERO"
+          :key="tipo"
+          type="button"
+          role="radio"
+          :data-tipo="tipo"
+          :aria-checked="rascunho.tipo === tipo"
+          class="flex flex-col items-start gap-1 p-4 text-start rounded-xl min-h-11 ring-1 ring-inset focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+          :class="
+            rascunho.tipo === tipo
+              ? 'ring-2 ring-n-blue-8 bg-n-blue-2'
+              : 'ring-n-weak bg-n-solid-1 hover:ring-n-blue-6'
+          "
+          @click="escolherTipo(tipo)"
+        >
+          <span class="text-[0.9375rem] font-semibold text-n-slate-12">
+            {{ $t(`MODELOS_WHATSAPP.TEXTO.TIPO.${tipo}.ROTULO`) }}
+          </span>
+          <span class="text-sm text-n-slate-11">
+            {{ $t(`MODELOS_WHATSAPP.TEXTO.TIPO.${tipo}.PARA`) }}
+          </span>
+        </button>
+      </div>
+    </section>
 
     <section class="flex flex-col gap-3">
       <div class="flex flex-wrap items-end justify-between gap-2">

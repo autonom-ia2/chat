@@ -7,6 +7,7 @@
 // "Copiar código" só existe em mensagens de divulgação (MARKETING).
 export const BOTOES_SO_DE_DIVULGACAO = ['copiar_codigo'];
 export const CODIGO_MAXIMO = 15;
+export const LIMITE_DO_BOTAO = 25;
 
 const LETRAS_E_NUMEROS =
   'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -31,9 +32,19 @@ export const problemasDoBotao = (botao, tipo) => {
   if (BOTOES_SO_DE_DIVULGACAO.includes(botao.tipo) && tipo !== 'divulgacao') {
     return ['SO_DIVULGACAO'];
   }
+  // O texto do "Copiar código" é fixo do WhatsApp: a tela nem pede.
+  const temTexto = botao.tipo !== 'copiar_codigo';
   return [
-    !temLetras(botao.texto) && 'SEM_TEXTO',
+    temTexto && !temLetras(botao.texto) && 'SEM_TEXTO',
+    temTexto &&
+      (botao.texto || '').trim().length > LIMITE_DO_BOTAO &&
+      'TEXTO_LONGO',
     botao.tipo === 'site' && !temLetras(botao.valor) && 'SITE_SEM_ENDERECO',
+    // Site com final variável ({{1}}), vindo de fora da tela: vai com o exemplo.
+    botao.tipo === 'site' &&
+      (botao.valor || '').includes('{{') &&
+      !temLetras(botao.exemplo) &&
+      'SITE_SEM_EXEMPLO',
     botao.tipo === 'ligar' && !temLetras(botao.valor) && 'LIGAR_SEM_NUMERO',
     botao.tipo === 'copiar_codigo' &&
       !codigoDeExemploValido(botao.valor) &&
@@ -45,6 +56,17 @@ export const problemasDoBotao = (botao, tipo) => {
 // comum. Cada regra só aparece quando há um botão a que ela se aplica.
 const ITENS_DOS_BOTOES = [
   { chave: 'BOTOES', problema: 'SEM_TEXTO', aplica: () => true },
+  {
+    chave: 'BOTOES_TAMANHO',
+    problema: 'TEXTO_LONGO',
+    aplica: botao => botao.tipo !== 'copiar_codigo',
+  },
+  {
+    chave: 'BOTAO_SITE_EXEMPLO',
+    problema: 'SITE_SEM_EXEMPLO',
+    aplica: botao =>
+      botao.tipo === 'site' && (botao.valor || '').includes('{{'),
+  },
   {
     chave: 'BOTAO_SITE',
     problema: 'SITE_SEM_ENDERECO',
@@ -78,3 +100,10 @@ export const conferirBotoes = (botoes, tipo) =>
       problemasDoBotao(botao, tipo).includes(item.problema)
     ),
   }));
+
+// A Meta quer as respostas rápidas juntas: aqui, sempre antes dos outros botões,
+// cada grupo na ordem em que foi posto. A tela guarda e mostra nesta ordem.
+export const ordenarBotoes = botoes => [
+  ...botoes.filter(botao => botao.tipo === 'resposta'),
+  ...botoes.filter(botao => botao.tipo !== 'resposta'),
+];

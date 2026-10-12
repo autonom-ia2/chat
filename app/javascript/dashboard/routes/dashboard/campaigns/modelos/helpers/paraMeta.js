@@ -4,6 +4,7 @@
 // ({ '1': 'cliente.primeiro_nome' }), para a campanha ligar as variáveis sem
 // adivinhar. Sem expressão regular (regra do Rodrigo).
 import { campoParaPerfil } from './campos';
+import { ordenarBotoes } from './regraEstrutural';
 
 export const IDIOMA = 'pt_BR';
 
@@ -46,7 +47,14 @@ export const nomeParaWhatsapp = nome =>
 
 const botaoNaMeta = botao => {
   if (botao.tipo === 'site') {
-    return { type: 'URL', text: botao.texto, url: botao.valor };
+    // Final variável ({{1}}) só vem de modelo feito fora da tela: vai com o exemplo.
+    const variavel = (botao.valor || '').includes('{{');
+    return {
+      type: 'URL',
+      text: botao.texto,
+      url: botao.valor,
+      ...(variavel ? { example: [botao.exemplo] } : {}),
+    };
   }
   if (botao.tipo === 'ligar') {
     return {
@@ -62,47 +70,71 @@ const botaoNaMeta = botao => {
 };
 
 const botoesNaMeta = botoes =>
-  botoes.length ? [{ type: 'BUTTONS', buttons: botoes.map(botaoNaMeta) }] : [];
+  botoes.length
+    ? [{ type: 'BUTTONS', buttons: ordenarBotoes(botoes).map(botaoNaMeta) }]
+    : [];
 
 // Corpo com {{1}}, {{2}}… na ordem em que cada campo aparece, os exemplos e o
-// mapa número → campo.
-export const corpoComNumeros = conteudo => {
+// mapa número → campo. Modelo feito fora da tela com variáveis nomeadas
+// ({{primeiro_nome}}) continua nomeado: `nomes` (campo → nome original) faz o
+// corpo voltar com os mesmos nomes, nunca com números.
+const exemploDoCorpo = (ordem, conteudo, nomes) => {
+  if (!ordem.length) return {};
+  if (!nomes) {
+    return {
+      example: {
+        body_text: [ordem.map(campo => conteudo.exemplos[campo] || '')],
+      },
+    };
+  }
+  return {
+    example: {
+      body_text_named_params: ordem.map(campo => ({
+        param_name: nomes[campo] || campo,
+        example: conteudo.exemplos[campo] || '',
+      })),
+    },
+  };
+};
+
+export const corpoComNumeros = (conteudo, { nomes } = {}) => {
   const ordem = [];
+  const chaveDe = campo =>
+    nomes ? nomes[campo] || campo : String(ordem.indexOf(campo) + 1);
   const texto = conteudo.texto
     .map(pedaco => {
       if (pedaco.t !== 'campo') return pedaco.v;
       if (!ordem.includes(pedaco.v)) ordem.push(pedaco.v);
-      return `{{${ordem.indexOf(pedaco.v) + 1}}}`;
+      return `{{${chaveDe(pedaco.v)}}}`;
     })
     .join('');
   const corpo = {
     type: 'BODY',
     text: texto,
-    ...(ordem.length
-      ? {
-          example: {
-            body_text: [ordem.map(campo => conteudo.exemplos[campo] || '')],
-          },
-        }
-      : {}),
+    ...exemploDoCorpo(ordem, conteudo, nomes),
   };
   const fields = Object.fromEntries(
     ordem
-      .map((campo, indice) => [String(indice + 1), campoParaPerfil(campo)])
+      .map(campo => [chaveDe(campo), campoParaPerfil(campo)])
       .filter(([, valor]) => valor)
   );
   return { corpo, fields };
 };
 
-// Topo com arquivo: o handle do arquivo que acabou de subir ou, sem arquivo
-// novo, o que o perfil do modelo guardou.
+// Topo com arquivo: o handle do arquivo que acabou de subir. Sem arquivo novo
+// (alterar), vai sem handle: o handle antigo expira, e o servidor sobe de novo o
+// arquivo guardado no perfil (Whatsapp::Templates::HeaderMedia).
 const topoNaMeta = (topo, midia) => {
   if (topo?.tipo === 'texto') return [topo.componente];
   const formato = TOPO_NA_META[topo?.tipo];
   if (!formato) return [];
-  const handle = midia?.handle || topo.handle;
+  if (!midia?.handle) return [{ type: 'HEADER', format: formato }];
   return [
-    { type: 'HEADER', format: formato, example: { header_handle: [handle] } },
+    {
+      type: 'HEADER',
+      format: formato,
+      example: { header_handle: [midia.handle] },
+    },
   ];
 };
 
@@ -151,12 +183,12 @@ const codigoNaMeta = codigo => [
 // `textos.botaoDaOferta`: o texto do botão da oferta, no idioma da tela.
 export const componentesNaMeta = (
   conteudo,
-  { midias = {}, textos = {} } = {}
+  { midias = {}, textos = {}, nomes } = {}
 ) => {
   const formato = conteudo.formato || 'padrao';
   if (formato === 'codigo')
     return { components: codigoNaMeta(conteudo.codigo), fields: {} };
-  const { corpo, fields } = corpoComNumeros(conteudo);
+  const { corpo, fields } = corpoComNumeros(conteudo, { nomes });
   if (formato === 'carrossel') {
     return {
       components: [corpo, cartoesNaMeta(conteudo.cartoes, midias.cartoes)],
@@ -191,7 +223,8 @@ export const corpoParaCriar = (rascunho, opcoes = {}) => {
   const topo = opcoes.midias?.topo;
   return {
     name: nomeParaWhatsapp(rascunho.nome) || `modelo_${Date.now()}`,
-    language: IDIOMA,
+    // O idioma do texto: o da tela para os prontos, o do original na cópia.
+    language: rascunho.idioma || IDIOMA,
     category: CATEGORIA[rascunho.tipo] || CATEGORIA.aviso,
     parameter_format: 'positional',
     components,
@@ -201,18 +234,37 @@ export const corpoParaCriar = (rascunho, opcoes = {}) => {
   };
 };
 
+// Variáveis nomeadas do original: campo da tela → nome que a Meta conhece.
+const nomesDoModelo = modelo =>
+  modelo.formatoDosCampos === 'named'
+    ? Object.fromEntries(
+        Object.entries(modelo.campos || {}).map(([nome, campo]) => [
+          campo,
+          nome,
+        ])
+      )
+    : undefined;
+
 // Corpo do PATCH de alteração: a Meta não deixa trocar nome nem idioma; o tipo
-// só vai quando a pessoa mudou.
+// só vai quando a pessoa mudou. Sem mudança no conteúdo nem no tipo (só o nome
+// amigável), nada vai para a Meta: o modelo não volta para análise nem gasta
+// uma das alterações do mês.
 export const corpoParaAlterar = (rascunho, modelo, opcoes = {}) => {
-  const { components, fields } = componentesNaMeta(rascunho.conteudo, opcoes);
+  const mudouOTipo = rascunho.tipo !== modelo.tipo;
+  const mudouOConteudo =
+    mudouOTipo ||
+    Boolean(opcoes.midias?.topo) ||
+    JSON.stringify(rascunho.conteudo) !== JSON.stringify(modelo.conteudo);
+  const { components, fields } = componentesNaMeta(rascunho.conteudo, {
+    ...opcoes,
+    nomes: nomesDoModelo(modelo),
+  });
   const topo = opcoes.midias?.topo;
   return {
-    components,
+    ...(mudouOConteudo ? { components } : {}),
     friendly_name: rascunho.nome.trim(),
     fields,
-    ...(rascunho.tipo !== modelo.tipo
-      ? { category: CATEGORIA[rascunho.tipo] }
-      : {}),
+    ...(mudouOTipo ? { category: CATEGORIA[rascunho.tipo] } : {}),
     ...(topo ? { header_media: topo } : {}),
   };
 };

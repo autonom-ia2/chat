@@ -318,7 +318,18 @@
       "EXEMPLOS": "Exemplos",
       "EXEMPLOS_AJUDA": "Já preenchemos. O WhatsApp usa os exemplos só para entender a mensagem. Seus clientes recebem os dados de verdade.",
       "SEM_EXEMPLO": "Escreva um exemplo.",
-      "NOME_DA_EMPRESA": "É o nome da conta no Chat2You ({conta}). Na campanha, dá para trocar."
+      "NOME_DA_EMPRESA": "É o nome da conta no Chat2You ({conta}). Na campanha, dá para trocar.",
+      "TIPO": {
+        "PERGUNTA": "Que tipo de mensagem é esta?",
+        "aviso": {
+          "ROTULO": "Aviso sobre algo do cliente",
+          "PARA": "Pedido, horário, pagamento, entrega. Custa menos por envio."
+        },
+        "divulgacao": {
+          "ROTULO": "Divulgação",
+          "PARA": "Oferta, novidade, convite. Custa mais por envio."
+        }
+      }
     },
     "TOPOS": {
       "nenhum": {
@@ -387,8 +398,11 @@
         "SITE_SEM_ENDERECO": "Escreva o endereço do site.",
         "LIGAR_SEM_NUMERO": "Escreva o telefone.",
         "CODIGO_SEM_EXEMPLO": "Escreva um código de exemplo: de 1 a 15 letras e números, sem espaço.",
-        "SO_DIVULGACAO": "Esse botão só existe em mensagens de divulgação. Tire o botão para enviar como aviso de serviço."
-      }
+        "SO_DIVULGACAO": "Esse botão só existe em mensagens de divulgação. Tire o botão para enviar como aviso de serviço.",
+        "TEXTO_LONGO": "O texto do botão pode ter até 25 letras.",
+        "SITE_SEM_EXEMPLO": "Este botão veio de fora com o final do endereço variável e sem exemplo. Tire o botão e crie de novo."
+      },
+      "LIMITE_DO_BOTAO": "{n} de {limite} letras"
     },
     "NUMEROS": {
       "INTRO": "Escolha onde este modelo vai valer. Só aparecem números do WhatsApp oficial.",
@@ -435,7 +449,10 @@
         "BOTAO_LIGAR": "Todo botão de ligar tem o telefone",
         "BOTAO_CODIGO": "O botão de copiar código tem um código de exemplo de 1 a 15 letras e números",
         "SO_DIVULGACAO": "O botão “Copiar código” só existe em mensagens de divulgação",
-        "OFERTA_CUPOM": "A oferta tem um cupom de 1 a 15 letras e números"
+        "OFERTA_CUPOM": "A oferta tem um cupom de 1 a 15 letras e números",
+        "BOTOES_TAMANHO": "Todo botão tem até 25 letras",
+        "BOTAO_SITE_EXEMPLO": "O site com final variável tem exemplo",
+        "TEXTO_DIFERENTE": "O texto ou o rodapé mudou em relação ao original (o WhatsApp recusa cópia igual na mesma conta)"
       }
     },
     "QUEM_APROVA": {

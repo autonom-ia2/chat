@@ -68,11 +68,12 @@ export const OBJETIVOS = [
   },
 ];
 
+// Sem tipo: a pessoa escolhe aviso ou divulgação na etapa do texto.
 export const OBJETIVO_EM_BRANCO = {
   chave: 'em_branco',
   icone: 'i-lucide-pencil-line',
   tom: 'bg-n-slate-3 text-n-slate-11',
-  tipo: 'aviso',
+  tipo: null,
   botoes: [],
 };
 

@@ -10,6 +10,7 @@ import {
   CARTOES_MINIMO,
   LIMITE_DO_CARTAO,
 } from '../../constants';
+import { LIMITE_DO_BOTAO, ordenarBotoes } from '../../helpers/regraEstrutural';
 
 // Carrossel: de 2 a 10 cartões, cada um com foto ou vídeo, um texto curto e
 // até 2 botões. O WhatsApp exige os mesmos botões em todos os cartões, então os
@@ -61,7 +62,7 @@ const alternarTipo = tipo => {
       ...cartao,
       botoes: ligado
         ? cartao.botoes.filter(botao => botao.tipo !== tipo)
-        : [...cartao.botoes, { tipo, texto: '', valor: '' }],
+        : ordenarBotoes([...cartao.botoes, { tipo, texto: '', valor: '' }]),
     }))
   );
 };
@@ -201,6 +202,16 @@ const aoEscolherArquivo = (indice, { arquivo, local }) =>
         >
           <Input
             :model-value="botao.texto"
+            :maxlength="LIMITE_DO_BOTAO"
+            :message="
+              $t('MODELOS_WHATSAPP.EXTRAS.LIMITE_DO_BOTAO', {
+                n: (botao.texto || '').length,
+                limite: LIMITE_DO_BOTAO,
+              })
+            "
+            :message-type="
+              (botao.texto || '').length > LIMITE_DO_BOTAO ? 'error' : 'info'
+            "
             :label="$t(`MODELOS_WHATSAPP.TIPOS_DE_BOTAO.${botao.tipo}.ROTULO`)"
             :placeholder="
               $t(`MODELOS_WHATSAPP.TIPOS_DE_BOTAO.${botao.tipo}.EXEMPLO`)

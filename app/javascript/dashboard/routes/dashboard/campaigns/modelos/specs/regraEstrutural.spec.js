@@ -6,6 +6,7 @@ import { conferirConteudo, podeEnviar } from '../helpers/conteudo';
 import { conferirFormato } from '../helpers/formatos';
 import {
   codigoDeExemploValido,
+  ordenarBotoes,
   problemasDoBotao,
 } from '../helpers/regraEstrutural';
 import { recusaDe } from '../api/daMeta';
@@ -130,6 +131,56 @@ describe('conferência antes de enviar', () => {
       true
     );
     expect(botoesOk([cartao('https://h.com'), cartao('')])).toBe(false);
+  });
+});
+
+describe('regras da auditoria do payload (#1380)', () => {
+  it('B1: texto de botão até 25 letras', () => {
+    const botao = texto => ({ tipo: 'resposta', texto, valor: '' });
+    expect(falhas([botao('x'.repeat(25))], 'aviso')).toEqual([]);
+    expect(
+      falhas([botao('Quero falar com um atendente agora')], 'aviso')
+    ).toEqual(['BOTOES_TAMANHO']);
+  });
+
+  it('B4: o "Copiar código" não pede texto (é fixo do WhatsApp), só o código', () => {
+    const botao = { tipo: 'copiar_codigo', texto: '', valor: 'PROMO10' };
+    expect(problemasDoBotao(botao, 'divulgacao')).toEqual([]);
+  });
+
+  it('B3: site com final variável sem exemplo não envia', () => {
+    const site = exemplo => ({
+      tipo: 'site',
+      texto: 'Avaliar',
+      valor: 'https://app.com/r/{{1}}',
+      exemplo,
+    });
+    expect(falhas([site('')], 'aviso')).toEqual(['BOTAO_SITE_EXEMPLO']);
+    expect(falhas([site('123')], 'aviso')).toEqual([]);
+  });
+
+  it('B6: cópia na mesma conta precisa de texto ou rodapé diferente', () => {
+    const original = conteudo([]);
+    const igual = conferirConteudo(conteudo([]), { tipo: 'aviso', original });
+    expect(igual.find(item => item.chave === 'TEXTO_DIFERENTE').ok).toBe(false);
+    const mudou = conferirConteudo(
+      { ...conteudo([]), rodape: 'Sua Empresa' },
+      { tipo: 'aviso', original }
+    );
+    expect(mudou.find(item => item.chave === 'TEXTO_DIFERENTE').ok).toBe(true);
+    expect(
+      conferirConteudo(conteudo([]), { tipo: 'aviso' }).map(item => item.chave)
+    ).not.toContain('TEXTO_DIFERENTE');
+  });
+
+  it('B2: botão novo entra no grupo certo (respostas rápidas juntas)', () => {
+    expect(
+      ordenarBotoes([
+        { tipo: 'site' },
+        { tipo: 'resposta', texto: 'a' },
+        { tipo: 'resposta', texto: 'b' },
+      ]).map(botao => botao.tipo)
+    ).toEqual(['resposta', 'resposta', 'site']);
   });
 });
 

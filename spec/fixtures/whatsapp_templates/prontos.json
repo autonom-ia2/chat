@@ -6,7 +6,7 @@
     "pode_ir_em_campanha": true,
     "corpo": {
       "name": "welcome",
-      "language": "pt_BR",
+      "language": "en",
       "category": "MARKETING",
       "parameter_format": "positional",
       "components": [
@@ -46,7 +46,7 @@
     "pode_ir_em_campanha": true,
     "corpo": {
       "name": "appointment_reminder",
-      "language": "pt_BR",
+      "language": "en",
       "category": "UTILITY",
       "parameter_format": "positional",
       "components": [
@@ -94,7 +94,7 @@
     "pode_ir_em_campanha": true,
     "corpo": {
       "name": "satisfaction_survey",
-      "language": "pt_BR",
+      "language": "en",
       "category": "UTILITY",
       "parameter_format": "positional",
       "components": [
@@ -144,7 +144,7 @@
     "pode_ir_em_campanha": true,
     "corpo": {
       "name": "promotion",
-      "language": "pt_BR",
+      "language": "en",
       "category": "MARKETING",
       "parameter_format": "positional",
       "components": [
@@ -189,7 +189,7 @@
     "pode_ir_em_campanha": true,
     "corpo": {
       "name": "payment_reminder",
-      "language": "pt_BR",
+      "language": "en",
       "category": "UTILITY",
       "parameter_format": "positional",
       "components": [
@@ -237,7 +237,7 @@
     "pode_ir_em_campanha": true,
     "corpo": {
       "name": "resume_conversation",
-      "language": "pt_BR",
+      "language": "en",
       "category": "MARKETING",
       "parameter_format": "positional",
       "components": [
@@ -277,7 +277,7 @@
     "pode_ir_em_campanha": false,
     "corpo": {
       "name": "news",
-      "language": "pt_BR",
+      "language": "en",
       "category": "MARKETING",
       "parameter_format": "positional",
       "components": [
@@ -365,7 +365,7 @@
     "pode_ir_em_campanha": false,
     "corpo": {
       "name": "flash_offer",
-      "language": "pt_BR",
+      "language": "en",
       "category": "MARKETING",
       "parameter_format": "positional",
       "components": [
@@ -417,7 +417,7 @@
     "pode_ir_em_campanha": false,
     "corpo": {
       "name": "access_code",
-      "language": "pt_BR",
+      "language": "en",
       "category": "AUTHENTICATION",
       "parameter_format": "positional",
       "components": [

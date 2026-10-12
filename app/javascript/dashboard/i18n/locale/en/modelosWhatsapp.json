@@ -318,7 +318,18 @@
       "EXEMPLOS": "Examples",
       "EXEMPLOS_AJUDA": "Already filled in. WhatsApp uses the examples only to understand the message. Your customers get the real data.",
       "SEM_EXEMPLO": "Write an example.",
-      "NOME_DA_EMPRESA": "It is the account name in Chat2You ({conta}). You can change it in the campaign."
+      "NOME_DA_EMPRESA": "It is the account name in Chat2You ({conta}). You can change it in the campaign.",
+      "TIPO": {
+        "PERGUNTA": "What kind of message is this?",
+        "aviso": {
+          "ROTULO": "Notice about something of the customer",
+          "PARA": "Order, appointment, payment, delivery. Costs less per send."
+        },
+        "divulgacao": {
+          "ROTULO": "Promotion",
+          "PARA": "Offer, news, invitation. Costs more per send."
+        }
+      }
     },
     "TOPOS": {
       "nenhum": {
@@ -387,8 +398,11 @@
         "SITE_SEM_ENDERECO": "Write the website address.",
         "LIGAR_SEM_NUMERO": "Write the phone number.",
         "CODIGO_SEM_EXEMPLO": "Write an example code: 1 to 15 letters and numbers, no spaces.",
-        "SO_DIVULGACAO": "This button only exists in promotion messages. Remove it to send this as a service notice."
-      }
+        "SO_DIVULGACAO": "This button only exists in promotion messages. Remove it to send this as a service notice.",
+        "TEXTO_LONGO": "The button text can have up to 25 characters.",
+        "SITE_SEM_EXEMPLO": "This button came from outside with a variable address ending and no example. Remove the button and create it again."
+      },
+      "LIMITE_DO_BOTAO": "{n} of {limite} characters"
     },
     "NUMEROS": {
       "INTRO": "Pick where this template will work. Only official WhatsApp numbers show up.",
@@ -435,7 +449,10 @@
         "BOTAO_LIGAR": "Every call button has the phone number",
         "BOTAO_CODIGO": "The copy code button has an example code of 1 to 15 letters and numbers",
         "SO_DIVULGACAO": "The “Copy code” button only exists in promotion messages",
-        "OFERTA_CUPOM": "The offer has a coupon of 1 to 15 letters and numbers"
+        "OFERTA_CUPOM": "The offer has a coupon of 1 to 15 letters and numbers",
+        "BOTOES_TAMANHO": "Every button has up to 25 characters",
+        "BOTAO_SITE_EXEMPLO": "The website with a variable ending has an example",
+        "TEXTO_DIFERENTE": "The text or the footer changed from the original (WhatsApp refuses an identical copy in the same account)"
       }
     },
     "QUEM_APROVA": {

@@ -255,10 +255,106 @@ describe('tela → Meta', () => {
     expect(corpo.name).toBeUndefined();
     expect(corpo.category).toBeUndefined();
     expect(corpo.header_media).toBeUndefined();
-    expect(corpo.components[0].example.header_handle).toEqual(['4::old']);
+    // Sem arquivo novo, o topo vai sem o handle antigo (ele expira): o servidor
+    // sobe de novo o arquivo guardado no perfil.
+    expect(corpo.components[0]).toEqual({ type: 'HEADER', format: 'IMAGE' });
     expect(corpoParaAlterar(rascunho, { tipo: 'divulgacao' }).category).toBe(
       'UTILITY'
     );
+  });
+
+  it('só o nome amigável mudou: nada de conteúdo vai para a Meta', () => {
+    const modelo = { tipo: 'aviso', conteudo: rascunho.conteudo };
+    const corpo = corpoParaAlterar({ ...rascunho, nome: 'Outro nome' }, modelo);
+    expect(corpo.components).toBeUndefined();
+    expect(corpo.category).toBeUndefined();
+    expect(corpo.friendly_name).toBe('Outro nome');
+  });
+
+  it('manda o idioma do texto (o da tela nos prontos, o do original na cópia)', () => {
+    expect(corpoParaCriar(rascunho, { midias }).language).toBe('pt_BR');
+    expect(
+      corpoParaCriar({ ...rascunho, idioma: 'en' }, { midias }).language
+    ).toBe('en');
+  });
+
+  it('respostas rápidas vão juntas, antes dos outros botões', () => {
+    const botoes = [
+      { tipo: 'resposta', texto: 'Sim', valor: '' },
+      { tipo: 'site', texto: 'Site', valor: 'https://x.com' },
+      { tipo: 'resposta', texto: 'Não', valor: '' },
+    ];
+    const corpo = corpoParaCriar(
+      { ...rascunho, conteudo: { ...rascunho.conteudo, botoes } },
+      { midias }
+    );
+    expect(corpo.components[2].buttons.map(botao => botao.type)).toEqual([
+      'QUICK_REPLY',
+      'QUICK_REPLY',
+      'URL',
+    ]);
+  });
+
+  it('site com final variável volta com o exemplo (duplicar o modelo de satisfação)', () => {
+    const satisfacao = template({
+      components: [
+        { type: 'BODY', text: 'Como foi o atendimento?' },
+        {
+          type: 'BUTTONS',
+          buttons: [
+            {
+              type: 'URL',
+              text: 'Avaliar',
+              url: 'https://app.com/survey/responses/{{1}}',
+              example: ['12345'],
+            },
+          ],
+        },
+      ],
+    });
+    const { conteudo } = conteudoDaMeta(satisfacao);
+    const corpo = corpoParaCriar({ ...rascunho, conteudo }, {});
+    expect(corpo.components[1].buttons[0]).toEqual({
+      type: 'URL',
+      text: 'Avaliar',
+      url: 'https://app.com/survey/responses/{{1}}',
+      example: ['12345'],
+    });
+  });
+
+  it('modelo com variáveis nomeadas continua nomeado ao alterar, nunca vira {{1}}', () => {
+    const nomeado = template({
+      parameter_format: 'NAMED',
+      components: [
+        {
+          type: 'BODY',
+          text: 'Olá {{first_name}}, seu pedido saiu.',
+          example: {
+            body_text_named_params: [
+              { param_name: 'first_name', example: 'Ana' },
+            ],
+          },
+        },
+      ],
+      fields: {},
+    });
+    const modelo = modeloDaMeta(nomeado, GRUPO);
+    expect(modelo.formatoDosCampos).toBe('named');
+    const corpo = corpoParaAlterar(
+      {
+        ...modelo,
+        nome: modelo.nome,
+        conteudo: { ...modelo.conteudo, rodape: 'x' },
+      },
+      modelo
+    );
+    expect(corpo.components[0]).toEqual({
+      type: 'BODY',
+      text: 'Olá {{first_name}}, seu pedido saiu.',
+      example: {
+        body_text_named_params: [{ param_name: 'first_name', example: 'Ana' }],
+      },
+    });
   });
 
   it('round-trips a created template back to the same screen content', () => {

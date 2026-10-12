@@ -82,6 +82,16 @@ export const topoCompleto = topo =>
   TOPOS_SEM_ARQUIVO.includes(topo.tipo) ||
   Boolean(topo.local || topo.handle);
 
+// Cópia na mesma conta: o corpo ou o rodapé precisam mudar (a Meta recusa
+// modelo repetido).
+const textoMudou = (conteudo, original) => {
+  const juntar = texto => JSON.stringify(juntarTextos(texto || []));
+  return (
+    juntar(conteudo.texto) !== juntar(original.texto) ||
+    (conteudo.rodape || '') !== (original.rodape || '')
+  );
+};
+
 // O que pode fazer o WhatsApp recusar, conferido antes de enviar. Só regras de
 // forma (onde está o campo, exemplo, tamanho, botões completos): o sentido do
 // texto quem julga é o WhatsApp. `contexto.tipo` é o tipo da mensagem (aviso,
@@ -133,7 +143,18 @@ export const conferirConteudo = (conteudo, contexto = {}) => {
         ]
       : []),
   ];
-  return [...base, ...conferirFormato(conteudo, contexto)];
+  return [
+    ...base,
+    ...conferirFormato(conteudo, contexto),
+    ...(contexto.original
+      ? [
+          {
+            chave: 'TEXTO_DIFERENTE',
+            ok: textoMudou(conteudo, contexto.original),
+          },
+        ]
+      : []),
+  ];
 };
 
 export const podeEnviar = (conteudo, contexto) =>
