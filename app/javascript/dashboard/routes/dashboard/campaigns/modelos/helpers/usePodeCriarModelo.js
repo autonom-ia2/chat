@@ -1,4 +1,7 @@
+import { computed } from 'vue';
+import { useMapGetter } from 'dashboard/composables/store';
 import { useCanManage } from 'dashboard/composables/useCanManage';
+import { getUserPermissions } from 'dashboard/helper/permissionsHelper.js';
 
 // Criar, alterar, duplicar e apagar modelo: administrador ou função
 // personalizada com whatsapp_templates_manage (WhatsappTemplatePolicy, #1330).
@@ -16,4 +19,16 @@ export const PERMISSOES_PARA_CRIAR = [
 
 export function usePodeCriarModelo() {
   return useCanManage('whatsapp_templates_manage');
+}
+
+// "Usar em uma campanha" só para quem cria campanha (CampaignPolicy#create?):
+// administrador ou função com campaign_manage.
+export function usePodeUsarEmCampanha() {
+  const usuario = useMapGetter('getCurrentUser');
+  const contaId = useMapGetter('getCurrentAccountId');
+  return computed(() =>
+    getUserPermissions(usuario.value, contaId.value).some(permissao =>
+      ['administrator', 'campaign_manage'].includes(permissao)
+    )
+  );
 }

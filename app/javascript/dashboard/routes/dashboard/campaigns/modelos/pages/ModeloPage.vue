@@ -7,7 +7,10 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import api from '../api/modelosWhatsapp';
 import { SITUACOES } from '../constants';
 import { diaEMes, hora, haQuantoTempo, numero } from '../helpers/datas';
-import { usePodeCriarModelo } from '../helpers/usePodeCriarModelo';
+import {
+  usePodeCriarModelo,
+  usePodeUsarEmCampanha,
+} from '../helpers/usePodeCriarModelo';
 import ModeloApagar from '../components/ModeloApagar.vue';
 import ModeloCelular from '../components/ModeloCelular.vue';
 import ModeloSelo from '../components/ModeloSelo.vue';
@@ -20,6 +23,7 @@ const { t, locale } = useI18n();
 const route = useRoute();
 const router = useRouter();
 const podeCriar = usePodeCriarModelo();
+const podeUsar = usePodeUsarEmCampanha();
 
 const estado = ref('carregando');
 const modelo = ref(null);
@@ -244,7 +248,7 @@ const confirmarApagar = async () => {
                 </p>
                 <div class="flex flex-wrap items-center gap-3 mt-1">
                   <Button
-                    v-if="situacao === 'pronto'"
+                    v-if="situacao === 'pronto' && podeUsar"
                     data-usar
                     :label="$t('MODELOS_WHATSAPP.ACOES.USAR')"
                     icon="i-lucide-send"

@@ -15,6 +15,8 @@ const props = defineProps({
   // Nome da conta do WhatsApp, quando a empresa tem mais de uma.
   nomeDaConta: { type: String, default: '' },
   podeCriar: { type: Boolean, default: false },
+  // Quem não cria campanha não vê "Usar em uma campanha".
+  podeUsar: { type: Boolean, default: true },
 });
 
 const emit = defineEmits(['abrir', 'corrigir', 'usar']);
@@ -74,7 +76,7 @@ const numeros = computed(() => {
 const acao = computed(() => {
   if (props.modelo.situacao === 'recusado' && props.podeCriar)
     return 'corrigir';
-  if (props.modelo.situacao === 'pronto') return 'usar';
+  if (props.modelo.situacao === 'pronto' && props.podeUsar) return 'usar';
   return '';
 });
 </script>

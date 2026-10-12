@@ -3,7 +3,7 @@
     "CARREGANDO": "Loading the templates…",
     "ERRO": "We couldn't open the templates right now.",
     "TENTAR_DE_NOVO": "Try again",
-    "SO_VER": "You can see and use the templates. To create or change one, talk to whoever manages the account.",
+    "SO_VER": "You can see the templates. To create or change one, talk to whoever manages the account.",
     "ACOES": {
       "CRIAR": "Create template",
       "USAR": "Use in a campaign",

@@ -6,7 +6,10 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import api from '../api/modelosWhatsapp';
 import { ORDEM_DAS_SITUACOES } from '../constants';
-import { usePodeCriarModelo } from '../helpers/usePodeCriarModelo';
+import {
+  usePodeCriarModelo,
+  usePodeUsarEmCampanha,
+} from '../helpers/usePodeCriarModelo';
 import { rotuloDoCampo } from '../helpers/campos';
 import ModeloLinha from '../components/ModeloLinha.vue';
 import FranquiaDoMes from '../components/FranquiaDoMes.vue';
@@ -17,6 +20,7 @@ import FranquiaDoMes from '../components/FranquiaDoMes.vue';
 const { t } = useI18n();
 const router = useRouter();
 const podeCriar = usePodeCriarModelo();
+const podeUsar = usePodeUsarEmCampanha();
 
 const estado = ref('carregando');
 const numeros = ref([]);
@@ -279,6 +283,7 @@ const conectarHref = computed(
                 variasContas ? nomeDaConta[modelo.conta] || '' : ''
               "
               :pode-criar="podeCriar"
+              :pode-usar="podeUsar"
               @abrir="ir('modelos_whatsapp_modelo', { id: modelo.id })"
               @corrigir="ir('modelos_whatsapp_alterar', { id: modelo.id })"
               @usar="ir('modelos_whatsapp_usar', { id: modelo.id })"
