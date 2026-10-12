@@ -36,10 +36,20 @@ module Crm::FollowUps::HybridFreeForm
     hybrid_free_form? ? :free_form : @send_mode
   end
 
-  # Segunda chamada: havia candidatos e a composição por template não deu mensagem enviável. Encerramento
-  # (closure) nunca vira texto livre: para a cadência, ou vira lembrete, como sempre.
+  # Segunda chamada: havia candidatos e a composição por template não deu mensagem enviável PORQUE nenhum template
+  # serviu. Recusa por mérito (sem pendência, prazo não vencido) segue como skip, e encerramento (closure) nunca
+  # vira texto livre: para a cadência, ou vira lembrete, como sempre.
   def hybrid_free_form_retry?(composition)
-    @send_mode == :choose_template && @hybrid_ready && !closure?(composition) && !composable?(composition)
+    @send_mode == :choose_template && @hybrid_ready && !closure?(composition) && !composable?(composition) &&
+      no_template_fits?(composition)
+  end
+
+  # A IA disse que há o que enviar mas nenhum candidato serve, ou escolheu um índice que não existe na lista.
+  def no_template_fits?(composition)
+    return false if composition.blank?
+    return true if composition['decline_reason'].to_s == 'no_fitting_template'
+
+    Crm::Ai::Config::BOOLEAN.cast(composition['should_send']) && resolved_candidate(composition).blank?
   end
 
   # Compõe no modo escolhido; se couber a 2ª chamada em texto livre, devolve a composição dela.

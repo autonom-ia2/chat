@@ -21,6 +21,8 @@ module Crm
     # Anti-hallucination: the model MUST cite a literal transcript line in
     # open_loop_source; if no real open loop exists it returns should_send=false.
     class FollowUpComposer
+      DECLINE_REASONS = %w[none no_fitting_template nothing_to_send].freeze
+
       COMPOSE_SCHEMA = {
         name: 'crm_ai_followup',
         schema: {
@@ -94,10 +96,16 @@ module Crm
                            'aguardando, sem pedir nada.'
             },
             tone: { type: 'string', enum: %w[friendly neutral helpful] },
-            confidence: { type: 'number', minimum: 0, maximum: 1 }
+            confidence: { type: 'number', minimum: 0, maximum: 1 },
+            decline_reason: {
+              type: 'string',
+              enum: DECLINE_REASONS,
+              description: 'Só no modo choose_template com should_send=false: no_fitting_template = há pendência real mas nenhum ' \
+                           'candidato serve; nothing_to_send = não há o que enviar agora. Nos demais casos, none.'
+            }
           },
           required: %w[should_send closure_detected open_loop open_loop_source message_body chosen_template
-                       template_variables next_action_owner message_kind tone confidence],
+                       template_variables next_action_owner message_kind tone confidence decline_reason],
           additionalProperties: false
         }
       }.freeze
@@ -262,7 +270,7 @@ module Crm
           message_body é uma sugestão de abordagem dirigida à EQUIPE: diga o que verificar ou retomar, sem inventar fatos.
           Não escreva uma mensagem como se já estivesse sendo enviada ao cliente. Não consulte templates ou janela de 24h.
           message_kind=cobranca quando a pendência for do cliente; aviso_andamento quando for da empresa ou de terceiro.
-          chosen_template deve ser zerado (index=-1, kind="native", name="", id=null, language=null); template_variables=[].
+          chosen_template deve ser zerado (index=-1, kind="native", name="", id=null, language=null); template_variables=[]; decline_reason="none".
           tone reflete a abordagem e confidence reflete a evidência e adequação de gerar o lembrete agora.
           Considere as datas da conversa e cadence.interval_hours ao avaliar prazos. Não invente prazos.
           #{@tone_instructions}
@@ -279,12 +287,14 @@ module Crm
             - Preencha template_variables com os valores posicionais ("1","2",...) que o body do template usa (ex.: "1" = primeiro nome do contato, "2" = assunto curto do loop). Apenas valores reais, nunca texto livre de template.
             - Se NENHUM candidato for adequado ao loop aberto, defina should_send=false e chosen_template.index=-1.
             - NÃO escreva message_body neste modo (deixe vazio).
+            - Quando should_send=false, preencha decline_reason: "no_fitting_template" se há pendência real mas nenhum candidato serve; "nothing_to_send" se não há o que enviar agora. Quando should_send=true, decline_reason="none".
           MODE
         else
           <<~MODE.strip
             MODO free_form (texto livre permitido nesta conversa):
             - Se should_send=true, escreva "message_body" para reabrir a conversa: tom de quem quer ajudar uma pessoa, NÃO vendedor; sem falsa urgência; sem pedir desculpas em excesso; no máximo 2-3 linhas curtas de chat com 1 CTA suave; personalize APENAS com fatos reais (use o primeiro nome se aparecer); retome explicitamente o ponto que ficou em aberto.
             - chosen_template NÃO é usado neste modo: devolva um objeto zerado (index=-1, kind="native", name="", id=null, language=null) e template_variables vazio.
+            - decline_reason="none".
           MODE
         end
       end

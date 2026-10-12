@@ -405,7 +405,9 @@ module Crm
       # Distinguishes the terminal skip reason for the drawer/timeline. closure is
       # handled separately (stop_closure); here we only reach a non-closure skip.
       def skip_reason(composition)
-        return 'no_template' if @send_mode == :choose_template && resolved_candidate(composition).blank?
+        # Recusa por mérito (nothing_to_send) não é falta de template: é "não há o que enviar agora".
+        return 'no_template' if @send_mode == :choose_template && resolved_candidate(composition).blank? &&
+                                composition['decline_reason'].to_s != 'nothing_to_send'
 
         'no_open_loop'
       end
@@ -423,7 +425,8 @@ module Crm
           'message_kind' => composition['message_kind'].to_s,
           'open_loop' => composition['open_loop'].to_s,
           'open_loop_source' => composition['open_loop_source'].to_s,
-          'confidence' => composition['confidence'].to_f
+          'confidence' => composition['confidence'].to_f,
+          'decline_reason' => composition['decline_reason'].to_s
         }
       end
 

@@ -22,7 +22,8 @@ RSpec.describe Crm::FollowUps::CallbackRunner do
   end
 
   def decline_template(**overrides)
-    crm_hybrid_ai_answer({ 'should_send' => false, 'message_body' => '', 'confidence' => 0.2 }.merge(overrides))
+    crm_hybrid_ai_answer({ 'should_send' => false, 'message_body' => '', 'confidence' => 0.2,
+                           'decline_reason' => 'no_fitting_template' }.merge(overrides))
   end
 
   context 'without any approved template' do
@@ -109,6 +110,24 @@ RSpec.describe Crm::FollowUps::CallbackRunner do
       expect(metadata).to include('template_name' => 'retomada_orcamento', 'message_body' => Crm::FollowUps::CallbackScheduler::MESSAGE_PLACEHOLDER)
       expect(metadata).not_to include('delivery_transport')
       expect(Message.find(metadata['sent_message_id']).content).not_to include(free_text)
+    end
+
+    it 'turns into a reminder without a second call when the refusal is on the merits (nothing_to_send)' do
+      stub_crm_hybrid_ai(decline_template('decline_reason' => 'nothing_to_send'))
+
+      result = nil
+      expect { result = run_callback }.not_to change(Message, :count)
+
+      expect(result.status).to eq(:fallback)
+      expect(result.error).to eq('no_template')
+      expect(ai_call_modes).to eq(['choose_template'])
+    end
+
+    it 'makes the second call when should_send is true but the chosen index is not in the list' do
+      stub_crm_hybrid_ai(crm_hybrid_ai_answer('chosen_template' => crm_hybrid_template_pick(7)), crm_hybrid_ai_answer)
+
+      expect(run_callback.status).to eq(:sent)
+      expect(ai_call_modes).to eq(%w[choose_template free_form])
     end
 
     it 'vira lembrete quando a 2ª chamada também recusa' do

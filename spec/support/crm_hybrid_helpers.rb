@@ -53,7 +53,7 @@ module CrmHybridHelpers
     { 'should_send' => true, 'closure_detected' => false, 'open_loop' => 'Orçamento pedido pelo cliente',
       'open_loop_source' => TRANSCRIPT_LINE, 'message_body' => 'Oi! Passando para saber se ainda posso te ajudar com o orçamento.',
       'chosen_template' => NO_TEMPLATE, 'template_variables' => [], 'next_action_owner' => 'cliente',
-      'message_kind' => 'cobranca', 'tone' => 'friendly', 'confidence' => 0.9 }.merge(overrides)
+      'message_kind' => 'cobranca', 'tone' => 'friendly', 'confidence' => 0.9, 'decline_reason' => 'none' }.merge(overrides)
   end
 
   def crm_hybrid_template_pick(index = 0)

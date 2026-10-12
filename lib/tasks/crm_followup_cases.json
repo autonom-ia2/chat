@@ -649,5 +649,203 @@
         "created_at": "2026-08-04T08:02:00-03:00"
       }
     ]
+  },
+  {
+    "nome": "hibrido: proposta sem resposta, nenhum template serve",
+    "modo": "choose_template",
+    "agora": "2026-10-08T10:00",
+    "esperado": {
+      "should_send": "false",
+      "decline_reason": "no_fitting_template"
+    },
+    "candidates": [
+      {
+        "kind": "native",
+        "name": "confirmacao_de_consulta",
+        "language": "pt_BR",
+        "body": "Oi {{1}}, sua consulta esta confirmada para {{2}}.",
+        "variables": [
+          "1",
+          "2"
+        ],
+        "category": "utility"
+      },
+      {
+        "kind": "native",
+        "name": "aviso_de_entrega",
+        "language": "pt_BR",
+        "body": "Oi {{1}}, seu pedido saiu para entrega.",
+        "variables": [
+          "1"
+        ],
+        "category": "utility"
+      }
+    ],
+    "messages": [
+      {
+        "role": "customer",
+        "content": "Quanto fica o plano anual de pilates para duas pessoas?",
+        "created_at": "2026-10-01T09:00:00-03:00"
+      },
+      {
+        "role": "human_agent",
+        "content": "Segue a proposta do plano anual para duas pessoas: R$ 1.780 a vista. Qualquer duvida me chama.",
+        "created_at": "2026-10-01T09:20:00-03:00"
+      }
+    ],
+    "intervalo_horas": 24
+  },
+  {
+    "nome": "hibrido: pergunta sem resposta, nenhum template serve",
+    "modo": "choose_template",
+    "agora": "2026-10-08T10:00",
+    "esperado": {
+      "should_send": "false",
+      "decline_reason": "no_fitting_template"
+    },
+    "candidates": [
+      {
+        "kind": "native",
+        "name": "confirmacao_de_consulta",
+        "language": "pt_BR",
+        "body": "Oi {{1}}, sua consulta esta confirmada para {{2}}.",
+        "variables": [
+          "1",
+          "2"
+        ],
+        "category": "utility"
+      },
+      {
+        "kind": "native",
+        "name": "aviso_de_entrega",
+        "language": "pt_BR",
+        "body": "Oi {{1}}, seu pedido saiu para entrega.",
+        "variables": [
+          "1"
+        ],
+        "category": "utility"
+      }
+    ],
+    "messages": [
+      {
+        "role": "human_agent",
+        "content": "Para fechar o orcamento da reforma da cozinha, qual o tamanho do ambiente em metros quadrados?",
+        "created_at": "2026-10-01T15:00:00-03:00"
+      }
+    ],
+    "intervalo_horas": 24
+  },
+  {
+    "nome": "hibrido: cliente pediu ate sexta, prazo nao venceu",
+    "modo": "choose_template",
+    "agora": "2026-10-08T10:00",
+    "esperado": {
+      "should_send": "false",
+      "decline_reason": "nothing_to_send"
+    },
+    "candidates": [
+      {
+        "kind": "native",
+        "name": "retomada_de_orcamento",
+        "language": "pt_BR",
+        "body": "Oi {{1}}, conseguiu avaliar o orcamento que enviamos?",
+        "variables": [
+          "1"
+        ],
+        "category": "utility"
+      }
+    ],
+    "messages": [
+      {
+        "role": "human_agent",
+        "content": "Segue o orcamento do seguro residencial: R$ 96 por mes.",
+        "created_at": "2026-10-07T11:00:00-03:00"
+      },
+      {
+        "role": "customer",
+        "content": "Preciso falar com meu marido, te respondo amanha, sexta.",
+        "created_at": "2026-10-07T11:30:00-03:00"
+      }
+    ],
+    "intervalo_horas": 24
+  },
+  {
+    "nome": "hibrido: cliente viajando, volta dia 20",
+    "modo": "choose_template",
+    "agora": "2026-10-08T10:00",
+    "esperado": {
+      "should_send": "false",
+      "decline_reason": "nothing_to_send"
+    },
+    "candidates": [
+      {
+        "kind": "native",
+        "name": "retomada_de_orcamento",
+        "language": "pt_BR",
+        "body": "Oi {{1}}, conseguiu avaliar o orcamento que enviamos?",
+        "variables": [
+          "1"
+        ],
+        "category": "utility"
+      }
+    ],
+    "messages": [
+      {
+        "role": "human_agent",
+        "content": "Segue a cotacao do seguro viagem para a Argentina.",
+        "created_at": "2026-10-05T16:00:00-03:00"
+      },
+      {
+        "role": "customer",
+        "content": "Estou viajando a trabalho, volto dia 20 e te chamo.",
+        "created_at": "2026-10-05T16:40:00-03:00"
+      }
+    ],
+    "intervalo_horas": 24
+  },
+  {
+    "nome": "hibrido: template que encaixa",
+    "modo": "choose_template",
+    "agora": "2026-10-08T10:00",
+    "esperado": {
+      "should_send": "true",
+      "decline_reason": "none",
+      "chosen_index": "0"
+    },
+    "candidates": [
+      {
+        "kind": "native",
+        "name": "retomada_da_proposta",
+        "language": "pt_BR",
+        "body": "Oi {{1}}, conseguiu avaliar a proposta que te enviei?",
+        "variables": [
+          "1"
+        ],
+        "category": "utility"
+      },
+      {
+        "kind": "native",
+        "name": "aviso_de_entrega",
+        "language": "pt_BR",
+        "body": "Oi {{1}}, seu pedido saiu para entrega.",
+        "variables": [
+          "1"
+        ],
+        "category": "utility"
+      }
+    ],
+    "messages": [
+      {
+        "role": "customer",
+        "content": "Pode me mandar o valor do seguro do carro?",
+        "created_at": "2026-10-01T09:00:00-03:00"
+      },
+      {
+        "role": "human_agent",
+        "content": "Claro, Paula. Segue a proposta do seguro do carro: R$ 340 por mes. Qualquer duvida me chama.",
+        "created_at": "2026-10-01T09:20:00-03:00"
+      }
+    ],
+    "intervalo_horas": 24
   }
 ]

@@ -23,7 +23,8 @@ RSpec.describe Crm::FollowUps::AutoFollowupRunner do
   end
 
   def decline_template(**overrides)
-    crm_hybrid_ai_answer({ 'should_send' => false, 'message_body' => '', 'confidence' => 0.2 }.merge(overrides))
+    crm_hybrid_ai_answer({ 'should_send' => false, 'message_body' => '', 'confidence' => 0.2,
+                           'decline_reason' => 'no_fitting_template' }.merge(overrides))
   end
 
   context 'without any approved template' do
@@ -167,13 +168,33 @@ RSpec.describe Crm::FollowUps::AutoFollowupRunner do
       expect(follow_up.metadata).not_to include('template_name')
     end
 
-    it 'also makes the second call when the template comes with confidence below the floor' do
-      stub_crm_hybrid_ai(crm_hybrid_ai_answer('chosen_template' => crm_hybrid_template_pick,
-                                              'confidence' => Crm::Ai::Config::FOLLOWUP_MIN_CONFIDENCE - 0.01),
-                         crm_hybrid_ai_answer)
+    it 'does NOT make a second call when the refusal is on the merits (nothing_to_send)' do
+      stub_crm_hybrid_ai(decline_template('decline_reason' => 'nothing_to_send'))
+
+      result = nil
+      expect { result = run_touch }.not_to change(Message, :count)
+
+      expect(result.status).to eq(:skipped)
+      expect(ai_call_modes).to eq(['choose_template'])
+      expect(state).to include('spent' => true, 'stopped_reason' => 'no_open_loop')
+      expect(follow_up.reload.metadata).to include('decline_reason' => 'nothing_to_send')
+      expect(follow_up.metadata).not_to include('delivery_transport')
+    end
+
+    it 'makes the second call when should_send is true but the chosen index is not in the list' do
+      stub_crm_hybrid_ai(crm_hybrid_ai_answer('chosen_template' => crm_hybrid_template_pick(7)), crm_hybrid_ai_answer)
 
       expect(run_touch.status).to eq(:sent)
       expect(ai_call_modes).to eq(%w[choose_template free_form])
+      expect(follow_up.reload.metadata).to include('delivery_transport' => 'whatsapp_api', 'hybrid_free_form_reason' => 'template_declined')
+    end
+
+    it 'does not make a second call when the template fits but confidence is below the floor' do
+      stub_crm_hybrid_ai(crm_hybrid_ai_answer('chosen_template' => crm_hybrid_template_pick,
+                                              'confidence' => Crm::Ai::Config::FOLLOWUP_MIN_CONFIDENCE - 0.01))
+
+      expect(run_touch.status).to eq(:skipped)
+      expect(ai_call_modes).to eq(['choose_template'])
     end
 
     it 'never reuses the free text of a failed hybrid attempt as the content of the template sent on retry' do
@@ -199,7 +220,7 @@ RSpec.describe Crm::FollowUps::AutoFollowupRunner do
     end
 
     it 'skips the touch when the second call also declines' do
-      stub_crm_hybrid_ai(decline_template, decline_template)
+      stub_crm_hybrid_ai(decline_template, decline_template('decline_reason' => 'none'))
 
       result = nil
       expect { result = run_touch }.not_to change(Message, :count)
