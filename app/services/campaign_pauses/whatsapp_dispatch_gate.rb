@@ -36,7 +36,8 @@ module CampaignPauses::WhatsappDispatchGate
 
   def template_verdict
     verdict = Whatsapp::Templates::DispatchCheck.new(campaign, channel: channel).call
-    verdict.ok? ? send_list_verdict(verdict) : verdict
+    verdict = send_list_verdict(verdict) if verdict.ok?
+    verdict.ok? ? header_media_verdict(verdict) : verdict
   rescue StandardError => e
     Rails.logger.error "[CampaignPauses] campaign=#{campaign.id} template check failed: #{e.class.name}"
     Whatsapp::Templates::DispatchCheck::Verdict.new(reason_code: 'template_unverifiable', source: 'system',
@@ -52,6 +53,27 @@ module CampaignPauses::WhatsappDispatchGate
       reason_code: 'template_missing', source: 'system',
       details: verdict.details.slice(:template_name, :language, :lookup_source).merge(stage: 'inbox_list')
     )
+  end
+
+  # Media header without a typed link (#1382): the template's saved file, linked once per run, goes to every send.
+  def header_media_verdict(verdict)
+    return verdict unless Whatsapp::Templates::HeaderMedia.media_type(verdict.template)
+    return verdict if campaign.template_params.to_h.dig('processed_params', 'header', 'media_url').present?
+
+    @profile_header_media = Whatsapp::Templates::HeaderMedia.profile_media(inbox, verdict.template)
+    return verdict if @profile_header_media
+
+    Whatsapp::Templates::DispatchCheck::Verdict.new(
+      reason_code: 'template_media_missing', source: 'template', details: verdict.details.slice(:template_name, :language, :lookup_source)
+    )
+  end
+
+  def process_liquid_template_params(contact)
+    params = super
+    return params unless params && @profile_header_media
+
+    processed = params['processed_params'].to_h
+    params.merge('processed_params' => processed.merge('header' => processed['header'].to_h.merge(@profile_header_media)))
   end
 
   def keep_meta_version(template)

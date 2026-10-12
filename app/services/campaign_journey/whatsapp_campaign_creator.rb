@@ -35,8 +35,24 @@ class CampaignJourney::WhatsappCampaignCreator < CampaignJourney::AudienceCampai
     raise Error.new('template_not_found', 'The template is not approved in this inbox') unless template
 
     variables.validate!(@campaign_import, template_keys: CampaignJourney::TemplateVariableKeys.keys(template))
+    template_params
   rescue CampaignJourney::VariableBindings::Error => e
     raise Error.new(e.message, 'The message variables do not match the template or the audience', e.details.presence)
+  rescue Whatsapp::Templates::HeaderMedia::Invalid => e
+    raise Error.new(e.code, 'The template header needs the file saved with the template or a valid http(s) link of its type')
+  end
+
+  # #1382: a media header without a link uses the template's saved file at send time; a typed link is checked here.
+  def template_params
+    @template_params ||= begin
+      params = @attributes[:template_params].to_h.deep_stringify_keys
+      processed = params['processed_params']
+      if processed.is_a?(Hash) && Whatsapp::Templates::HeaderMedia.media_type(template)
+        header = Whatsapp::Templates::HeaderMedia.normalize!(processed['header'], template: template, inbox: inbox)
+        params = params.merge('processed_params' => processed.merge('header' => header))
+      end
+      params
+    end
   end
 
   def variables
@@ -46,7 +62,7 @@ class CampaignJourney::WhatsappCampaignCreator < CampaignJourney::AudienceCampai
   def campaign_attributes
     {
       title: @attributes[:title], inbox: inbox, scheduled_at: @scheduled_at,
-      template_params: @attributes[:template_params], message: @attributes[:message].presence || template_body.presence || template['name'],
+      template_params: template_params, message: @attributes[:message].presence || template_body.presence || template['name'],
       audience: []
     }
   end
