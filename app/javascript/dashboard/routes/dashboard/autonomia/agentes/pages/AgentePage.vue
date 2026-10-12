@@ -667,6 +667,8 @@ const tirarPergunta = id => {
         v-else-if="aberta === GAVETA.AGENDA"
         :agente="agente"
         :nome="nome"
+        :pode-mudar="podeMudar"
+        @mudar="mudarDaGaveta"
         @fechar="fechar"
       />
       <GavetaFerramentas

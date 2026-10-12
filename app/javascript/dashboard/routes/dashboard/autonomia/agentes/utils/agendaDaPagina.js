@@ -135,3 +135,12 @@ export const estadoComLiberacao = (estado, pessoas, liberadas) => {
 // trazer o id em texto). Só então a liberação volta para todas (painel antigo, PanelTune).
 export const outraPaginaDeAgenda = (nova, salva) =>
   Boolean(nova) && String(nova) !== String(salva ?? '');
+
+// #1370 — os locais da página como o assistente os nomeia (BOOKING.WHERE.<TIPO>.NAME), sem repetir.
+export const tiposDeLocal = pagina => [
+  ...new Set(
+    (Array.isArray(pagina?.locations) ? pagina.locations : [])
+      .map(local => local?.type)
+      .filter(Boolean)
+  ),
+];
