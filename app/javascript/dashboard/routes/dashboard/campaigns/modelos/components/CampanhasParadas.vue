@@ -171,13 +171,12 @@ const retomar = async campanha => {
           <span v-else aria-hidden="true" />
           <router-link
             :to="destino(campanha)"
-            class="inline-flex items-center justify-center w-full gap-1.5 px-3 text-sm font-semibold text-white whitespace-nowrap rounded-xl min-h-11 bg-n-brand hover:brightness-110"
+            class="inline-flex items-center justify-center w-full gap-1.5 px-3 py-1 text-sm font-semibold leading-tight text-center text-white rounded-xl min-h-11 bg-n-brand hover:brightness-110"
           >
             {{ $t(`MODELOS_WHATSAPP.PARADAS.ACOES.${rotuloDaAcao(campanha)}`) }}
-            <span
-              class="hidden i-lucide-arrow-right size-4 rtl:rotate-180 sm:inline-block"
-              aria-hidden="true"
-            />
+            <span class="hidden sm:inline-flex" aria-hidden="true">
+              <span class="i-lucide-arrow-right size-4 rtl:rotate-180" />
+            </span>
           </router-link>
         </span>
       </li>

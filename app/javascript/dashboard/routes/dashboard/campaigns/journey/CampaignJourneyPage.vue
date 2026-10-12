@@ -453,7 +453,7 @@ useOnEnter(fetchAll);
             v-for="row in visibleRows"
             :key="row.key"
             :data-row="row.key"
-            class="grid gap-3 border-b border-n-weak px-4 py-4 last:border-0 lg:grid-cols-[minmax(0,1fr)_14rem_6rem_12rem_10rem] lg:items-center lg:gap-4 xl:px-6"
+            class="grid gap-3 border-b border-n-weak px-4 py-4 last:border-0 xl:grid-cols-[minmax(0,1fr)_14rem_6rem_12rem_10rem] xl:items-center xl:gap-4 xl:px-6"
           >
             <div class="flex min-w-0 items-center gap-3">
               <span
@@ -474,15 +474,15 @@ useOnEnter(fetchAll);
                 </p>
               </div>
             </div>
-            <p class="mb-0 text-sm text-n-slate-12 lg:whitespace-nowrap">
-              <span class="text-xs text-n-slate-11 lg:hidden">
+            <p class="mb-0 text-sm text-n-slate-12 xl:whitespace-nowrap">
+              <span class="text-xs text-n-slate-11 xl:hidden">
                 {{ t(`${NS}.WHEN`) }}{{ COLON }}
               </span>
               {{ formatWhen(row) }}
             </p>
             <p
               class="mb-0 text-sm text-n-slate-11"
-              :class="row.total === null ? 'hidden lg:block' : ''"
+              :class="row.total === null ? 'hidden xl:block' : ''"
             >
               <template v-if="row.total !== null">
                 {{
@@ -509,7 +509,7 @@ useOnEnter(fetchAll);
                 {{ t(`CAMPAIGN_JOURNEY.STOP_REASONS.${row.stopReason}`) }}
               </span>
             </p>
-            <div class="flex items-center gap-1 lg:justify-end">
+            <div class="flex items-center gap-1 xl:justify-end">
               <router-link
                 :to="row.route"
                 class="flex min-h-11 items-center gap-1 rounded-xl px-2 text-sm font-medium text-n-blue-11 hover:bg-n-alpha-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
