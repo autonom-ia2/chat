@@ -78,8 +78,10 @@ def fake_aws():
     if operation == 'send-command':
         parameters = arg('--parameters')
         if parameters.startswith('commands='):
-            # O AWS CLI real não decodifica escapes JSON no formato abreviado: um \n vira texto e quebra o script (#1406).
-            assert '\\n' not in parameters, 'multi-line SSM command must use full JSON --parameters'
+            # O AWS CLI real só decodifica \" no formato abreviado: \n, \\ e afins viram texto e quebram o script (#1406).
+            assert '\n' not in parameters, 'multi-line SSM command must use full JSON --parameters'
+            escapes = [parameters[i + 1:i + 2] for i, char in enumerate(parameters) if char == '\\']
+            assert all(escape == '"' for escape in escapes), 'SSM shorthand only decodes \\" escapes'
             payload = json.loads(parameters.removeprefix('commands='))
             assert payload[0] == 'set -eu'
             command_kind = 'service'
@@ -88,6 +90,10 @@ def fake_aws():
             assert set(parameters) == {'commands'}
             payload = parameters['commands']
             if payload[0] == 'set -eu':
+                # Único JSON multi-linha hoje: a suspensão do Instagram, que precisa chegar inteira (#1406).
+                script = (Path(__file__).resolve().parents[2] / 'scripts/deploy/suspend-instagram-assisted.py').read_text().rstrip('\n')
+                assert payload == ['set -eu', f"sudo python3 - <<'INSTAGRAM_RECOVERY'\n{script}\nINSTAGRAM_RECOVERY",
+                                   'sudo systemctl daemon-reload']
                 command_kind = 'service'
             elif len(payload) != 1 or not isinstance(payload[0], str):
                 raise AssertionError('unexpected JSON SSM payload')
@@ -97,7 +103,9 @@ def fake_aws():
                 assert payload[0] == ('systemd-run --unit=green-retire --no-block sh -c '
                                       '"while [ -e /run/chatwoot-deploy.running ]; do sleep 5; done; shutdown -h now"')
                 command_kind = 'retirement'
-            if command_kind != 'service':
+            if command_kind == 'service':
+                assert arg('--instance-ids') in ('i-blue', 'i-green', 'i-older', 'i-next', 'i-other')
+            else:
                 assert arg('--instance-ids') == 'i-green'
         assert isinstance(payload, list) and all(isinstance(item, str) for item in payload)
         assert arg('--document-name') == 'AWS-RunShellScript'
@@ -886,7 +894,7 @@ sudo() { fake_step "$@" || return $?; if [ "$1" = tee ]; then cat >/dev/null; fi
                                  for call in state['calls']))
 
     def test_suspension_helper_preserves_published_process_base_env_and_outcomes(self):
-        helper = (ROOT / 'scripts/deploy/suspend-instagram-assisted.py').read_text()
+        helper = (ROOT / 'scripts/deploy/suspend-instagram-assisted.py').read_text().rstrip('\n')
         for old in (False, True):
             with self.subTest(old_blue=old):
                 app = self.directory / ('old-app' if old else 'new-app')
@@ -931,7 +939,7 @@ sudo() { fake_step "$@" || return $?; if [ "$1" = tee ]; then cat >/dev/null; fi
         fake = self.directory / 'systemctl'
         fake.write_text(f'#!/bin/sh\nif [ "$2" = chatwoot-web.service ]; then echo "ExecStart=/usr/bin/docker run --env-file {app}/.env previous-image:sha"; else echo "ExecStart=/bin/false"; fi\n')
         fake.chmod(0o700)
-        helper = (ROOT / 'scripts/deploy/suspend-instagram-assisted.py').read_text().replace(
+        helper = (ROOT / 'scripts/deploy/suspend-instagram-assisted.py').read_text().rstrip('\n').replace(
             "Path('/opt/chatwoot')", f'Path({str(app)!r})').replace(
             "Path('/etc/systemd/system')", f'Path({str(self.directory / "units")!r})')
         result = subprocess.run([sys.executable, '-c', helper], text=True, capture_output=True,
