@@ -15,6 +15,10 @@ class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autono
   end
 
   rescue_from FerramentaNativaNaoPermitida, with: :render_ferramenta_nativa_nao_permitida
+  # #1307 — liberação que não deixa ninguém da página: recusa em vez de virar "todas" em silêncio.
+  rescue_from ::Autonomia::Agents::Tools::Native::AgendaPessoas::Recusada do
+    render_unprocessable(I18n.t('autonomia.agents.booking_agent_ids_invalid'))
+  end
 
   # Andaime mínimo aplicado pelo backend em modo manual (IP oculto) — embrulha a instrução do
   # usuário com guardrails de segurança/formato/handoff. Nunca vem do params nem é exposto.
@@ -190,7 +194,10 @@ class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autono
   # ferramentas do Guia da Plataforma. A lista permitida é a do fluxo do agente
   # (`Tools::Registry.permitidas_para`); `null` e lista vazia seguem aceitos (desligam todas).
   def config_conferido(config)
-    sanitized_config(config).tap { |limpo| recusar_ferramentas_de_outro_fluxo(limpo['native_tool_slugs']) }
+    limpo = sanitized_config(config)
+    recusar_ferramentas_de_outro_fluxo(limpo['native_tool_slugs'])
+    # #1307 — `booking_agent_ids`: só pessoas da página escolhida, desta conta, como inteiros únicos (`AgendaPessoas`).
+    limpo.merge(::Autonomia::Agents::Tools::Native::AgendaPessoas.liberacao_conferida(limpo, salvo: config_salvo, account: Current.account))
   end
 
   def recusar_ferramentas_de_outro_fluxo(pedidos)
@@ -245,16 +252,27 @@ class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autono
   # #1196 — escolher (ou trocar) a página de agendamento da IA pede poder ver Agendamento: administrador ou função com
   # `agendamento_view` (`_manage` implica). Reenviar a página que já está salva (quem manda o config inteiro de volta)
   # não é escolher.
+  # #1307: liberar pessoas da página (`booking_agent_ids`) é a mesma escolha e pede a mesma permissão.
   def recusar_pagina_de_agendamento_sem_permissao(config)
-    chave = ::Autonomia::Agents::Tools::Native::Agenda::CONFIG_KEY
-    return false unless config.respond_to?(:key?) && config.key?(chave)
-
-    salva = @agent ? @agent.config.to_h[chave] : nil
-    return false if config[chave].to_s == salva.to_s
+    return false unless config.respond_to?(:key?) && (muda_a_pagina?(config) || muda_as_pessoas?(config))
     return false if Current.account_user&.permission_granted?('agendamento_view')
 
     render_unprocessable(I18n.t('autonomia.agents.booking_page_forbidden'))
     true
+  end
+
+  def muda_a_pagina?(config)
+    chave = ::Autonomia::Agents::Tools::Native::Agenda::CONFIG_KEY
+    config.key?(chave) && config[chave].to_s != (@agent ? @agent.config.to_h[chave] : nil).to_s
+  end
+
+  # O pedido cru (antes da conferência), para reenviar o que veio do GET não contar como mudança.
+  def muda_as_pessoas?(_config)
+    ::Autonomia::Agents::Tools::Native::AgendaPessoas.muda?(parameter_hash(params.dig(:agent, :config)).stringify_keys, salvo: config_salvo)
+  end
+
+  def config_salvo
+    @agent ? @agent.config.to_h : {}
   end
 
   def manual_mode?

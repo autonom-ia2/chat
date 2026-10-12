@@ -32,6 +32,7 @@ module CampaignJourneyHelpers
   def stub_graph_messages(failing: [], on_send: nil)
     sent = []
     matcher = ->(uri) { uri.host == 'graph.facebook.com' && uri.path.end_with?('/messages') }
+    stub_meta_template_lookup # #1329: Meta unavailable, so the dispatch check reads channel.message_templates
     stub_request(:post, matcher).to_return do |request|
       body = JSON.parse(request.body)
       sent << body

@@ -11,6 +11,8 @@
 # exibição: no fixo, o do responsável da página; no por pessoa, o do primeiro link ativo de quem não pausou, o mesmo
 # `InvitePages#link_for` da IA; nulo sem ninguém que possa atender). `timezone` também vai no resumo. A lista passa
 # um `InvitePages` só para todas as páginas: uma consulta de elegibilidade e uma de pausas para a lista inteira.
+# `pessoas` (#1307): `[{ id, nome, ai_status }]`, quem atende a página e pode ser liberado para a IA, cada um com
+# 'ativa' ou 'agenda_pausada'; página de responsável único traz uma pessoa.
 class Crm::BookingV2::PageSerializer
   include Rails.application.routes.url_helpers
 
@@ -56,7 +58,13 @@ class Crm::BookingV2::PageSerializer
 
   # O que a gaveta do agente de IA lê (#1305): o estado pela regra única, quem recebe e o fuso.
   def for_ai_agent
-    { ai_status: invite_pages.status(profile), recebe: recebe, timezone: profile.resolved_timezone }
+    { ai_status: invite_pages.status(profile), recebe: recebe, timezone: profile.resolved_timezone, pessoas: pessoas }
+  end
+
+  # As pessoas que a gaveta oferece para liberar (#1307), na ordem fixa do #1305 (`InvitePages#people`): só o nome de
+  # exibição e o estado de cada uma ('ativa' | 'agenda_pausada'). Nada de e-mail ou telefone.
+  def pessoas
+    invite_pages.people(profile).map { |pessoa| { id: pessoa.user.id, nome: pessoa.user.available_name, ai_status: pessoa.status } }
   end
 
   # Só o nome de exibição: nada de e-mail ou telefone de quem atende.

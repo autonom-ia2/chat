@@ -131,7 +131,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::AgendarReuniao, :relationships_
 
     expect(winner).to include('Reunião marcada')
     expect(loser).to include('NÃO foi marcado')
-    expect(loser.lines.select { |line| line.start_with?('- ') }).not_to be_empty
+    expect(JSON.parse(loser)['horarios']).not_to be_empty
     expect(loser).not_to include(slot)
     expect(Crm::Meeting.where(account_id: account.id, status: :scheduled, starts_at: Time.iso8601(slot)).count).to eq(1)
     expect(Crm::Meeting.where(account_id: account.id).pluck(:source)).to eq(['ai'])
