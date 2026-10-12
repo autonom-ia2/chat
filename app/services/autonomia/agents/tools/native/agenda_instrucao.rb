@@ -11,6 +11,9 @@
 # ela, preferir quem atende a conversa (se estiver liberado); senão, oferecer os horários das liberadas. QUEM DECIDE É
 # O MODELO: o código só lista quem pode e confere o `pessoa_id` que o modelo manda.
 #
+# FUSO (#1362): o fuso é dado das ferramentas (`fuso`, `inicio` com offset); a instrução manda falar o horário sem
+# ele, salvo se o cliente perguntar ou estiver em outro fuso. Quem percebe isso é o modelo; aqui nada lê texto.
+#
 # PRAZO (#1305): com `cancel_until_minutes`, o link de gestão só muda ou cancela até esse prazo (`ManageMeeting`
 # devolve `too_late` depois); a instrução diz o prazo.
 module Autonomia::Agents::Tools::Native::AgendaInstrucao
@@ -23,6 +26,9 @@ module Autonomia::Agents::Tools::Native::AgendaInstrucao
     - Quando o cliente quiser marcar, chame `horarios_disponiveis` e ofereça 2 ou 3 opções, com dia da semana, hora e
       com quem é.
     - Só ofereça horário que a ferramenta devolveu. NUNCA invente horário nem confirme sem a ferramenta.
+    - Os horários estão no fuso desta agenda (o campo `fuso` das ferramentas). Fale o horário sem citar o fuso, salvo
+      se o cliente perguntar ou disser que está em outro fuso: aí use o campo `fuso` (e o offset do `inicio`) para
+      explicar ou converter.
     - Antes de marcar, repita ao cliente o dia, a hora, o local e com quem é, e pergunte se pode marcar. Só depois que
       ele disser que sim, chame `agendar_reuniao` com o horário exatamente como a ferramenta devolveu, o `pessoa_id`
       desse horário e `cliente_confirmou: true`.

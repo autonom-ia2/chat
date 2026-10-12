@@ -12,6 +12,10 @@
 #   página tem um (`cancel_until_minutes`, o mesmo que o link de gestão aplica) e, em Meet/Teams, que o convite do
 #   calendário chega no e-mail do cliente (o provedor manda).
 #
+# FUSO É DADO, NÃO FALA (#1362): o fuso vai em `fuso` e no offset do `inicio`, nunca no texto pronto (`resumo`,
+# `quando`, `instrucao`). Repetir o fuso a cada horário gasta token e não ajuda; citar o fuso (o cliente perguntou
+# ou está em outro) é decisão do modelo, pela instrução "# Agenda".
+#
 # Usa o que a ferramenta já tem (`fuso`, `rotulo_do_local`, `contato`, `account`, `pagina`, `local_pede_email?`).
 module Autonomia::Agents::Tools::Native::AgendaRespostas
   CONFIRMADO = 'Confirme ao cliente o dia, a hora, o local e com quem é. Mande o link_de_gestao: por ele o cliente ' \
@@ -47,10 +51,15 @@ module Autonomia::Agents::Tools::Native::AgendaRespostas
     local = reuniao.metadata.to_h['location'].to_h
     minutos = ((reuniao.ends_at - reuniao.starts_at) / 60).round
     resposta(
-      marcada: true, resumo: resumo(hora, minutos, local), inicio: hora.iso8601, duracao_minutos: minutos,
+      marcada: true, resumo: resumo(hora, minutos, local), **inicio_em_campos(hora), duracao_minutos: minutos,
       local: rotulo_do_local(local), link_da_reuniao: reuniao.online_meeting_url.presence, endereco: local['address'].presence,
       link_de_gestao: convite_do_cliente(reuniao)&.url, instrucao: instrucao_confirmada(local), **com_quem_e(reuniao)
     )
+  end
+
+  # O início com offset e o fuso da página como DADO (#1362): o texto (`resumo`) não cita o fuso.
+  def inicio_em_campos(hora)
+    { inicio: hora.iso8601, fuso: fuso.tzinfo.name }
   end
 
   # Quem recebe a reunião: o responsável que o Booker gravou nela.
@@ -66,8 +75,7 @@ module Autonomia::Agents::Tools::Native::AgendaRespostas
 
   def resumo(hora, minutos, local)
     dia = ::Autonomia::Agents::Tools::Native::Agenda::DIAS_DA_SEMANA[hora.wday]
-    "Reunião marcada: #{dia}, #{hora.strftime('%d/%m, %H:%M')} (fuso #{fuso.tzinfo.name}), #{minutos} minutos, " \
-      "#{rotulo_do_local(local)}."
+    "Reunião marcada: #{dia}, #{hora.strftime('%d/%m, %H:%M')}, #{minutos} minutos, #{rotulo_do_local(local)}."
   end
 
   # O link de gestão é o convite da reunião que pertence ao contato DESTA conversa e nesta conta; nunca o de outro.
