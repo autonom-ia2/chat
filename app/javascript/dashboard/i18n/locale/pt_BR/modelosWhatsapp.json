@@ -36,7 +36,8 @@
         "EM_ANALISE_SEM_DATA": "Com o WhatsApp para análise",
         "PAUSADO_SEM_DATA": "O WhatsApp pausou"
       },
-      "CONTA": "Conta {nome}"
+      "CONTA": "Conta {nome}",
+      "PARCIAL": "Não conseguimos ler os modelos de uma conta do WhatsApp agora. Pode faltar modelo na lista."
     },
     "SITUACOES": {
       "pronto": {
@@ -129,7 +130,7 @@
       "ALTERACOES_RESTANTES": "Você ainda pode alterar {n} vez neste mês. | Você ainda pode alterar {n} vezes neste mês.",
       "ALTERAR_DEPOIS": "Você poderá alterar de novo em {dia}, às {hora}.",
       "SEM_ALTERACOES": "Este modelo já foi alterado 10 vezes neste mês. Para mudar agora, duplique.",
-      "EM_USO_NAO_ALTERA": "Este modelo ainda vai sair nos lugares abaixo. Para mudar, troque o modelo lá primeiro ou duplique.",
+      "EM_USO_NAO_ALTERA": "Este modelo ainda vai sair nos lugares de \"Onde está em uso\". Para mudar, troque o modelo lá primeiro ou duplique.",
       "REGRA_DE_ALTERAR": "O WhatsApp deixa alterar um modelo aprovado 1 vez por dia, até 10 vezes em 30 dias."
     },
     "USOS": {
@@ -194,7 +195,8 @@
       "CONTINUAR": "Continuar",
       "COPIA_DE": "{nome} (cópia)",
       "AVISO_COPIA": "Esta é uma cópia de “{nome}”. Ajuste o que quiser e escolha um nome diferente.",
-      "FALHOU": "Não conseguimos enviar agora. Tente de novo."
+      "FALHOU": "Não conseguimos enviar agora. Tente de novo.",
+      "FALHOU_UMA_CONTA": "O modelo foi enviado para uma conta do WhatsApp, mas não para a outra. {motivo}"
     },
     "OBJETIVO": {
       "DO_WHATSAPP": {

@@ -234,7 +234,9 @@ export const recusaDe = (template, conteudo) => {
 // grupo: { id (caixa que fala com a Meta), conta: { id, nome }, numeros: [inbox_id], envios: { nome: n } }
 export const modeloDaMeta = (template, grupo) => {
   const { conteudo, campos } = conteudoDaMeta(template);
-  const situacao = SITUACOES[maiusculo(template.status)] || 'em_analise';
+  // Situação que a tela não conhece: tratada como pausada, que não deixa usar em
+  // campanha (melhor travar do que agendar um envio que a Meta pode recusar).
+  const situacao = SITUACOES[maiusculo(template.status)] || 'pausado';
   const tipo = TIPOS[maiusculo(template.category)] || 'aviso';
   const anterior = maiusculo(template.previous_category);
   return {

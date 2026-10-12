@@ -163,6 +163,7 @@ export function useModelosNaCampanha() {
 
   return {
     ativa,
+    flagLigada,
     carregar,
     caixas,
     temCaixaConectada,

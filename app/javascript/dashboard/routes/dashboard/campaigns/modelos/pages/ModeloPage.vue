@@ -39,8 +39,9 @@ const carregar = async () => {
     const [dados, listaDeNumeros, listaDeUsos, paradas] = await Promise.all([
       api.obterModelo(route.params.id),
       api.listarNumeros(),
-      api.ondeEstaEmUso(route.params.id, { locale: locale.value }),
-      api.listarCampanhasParadas(),
+      api.ondeEstaEmUso(route.params.id),
+      // Sem permissão de ver campanhas, o modelo abre sem a lista de paradas.
+      api.listarCampanhasParadas().catch(() => []),
     ]);
     campanhasParadas.value = paradas.filter(
       campanha => campanha.modeloId === dados.id

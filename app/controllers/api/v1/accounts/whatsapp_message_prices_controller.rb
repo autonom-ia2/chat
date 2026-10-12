@@ -21,7 +21,7 @@ class Api::V1::Accounts::WhatsappMessagePricesController < Api::V1::Accounts::Ba
       country: COUNTRY, currency: any&.currency, effective_from: any&.effective_from,
       prices: prices.transform_values { |price| price&.amount&.to_s('F') },
       free_tier: tier ? { service: tier } : {},
-      service_usage: tier ? service_usage(tier[:messages]) : []
+      service_usage: tier ? service_usage : []
     } }
   end
 
@@ -31,10 +31,10 @@ class Api::V1::Accounts::WhatsappMessagePricesController < Api::V1::Accounts::Ba
     authorize(:whatsapp_message_price, :index?)
   end
 
-  def service_usage(free_messages)
+  def service_usage
     inboxes = Current.account.inboxes.where(channel_type: 'Channel::Whatsapp').includes(:channel).order(:id)
                      .select { |inbox| Whatsapp::Templates::MetaClient.supported?(inbox) }
-    counts = Whatsapp::ServiceMessageCount.new(account: Current.account, inbox_ids: inboxes.map(&:id), cap: free_messages + 1).perform
+    counts = Whatsapp::ServiceMessageCount.new(account: Current.account, inbox_ids: inboxes.map(&:id)).perform
     inboxes.map { |inbox| { inbox_id: inbox.id, name: inbox.name, messages: counts[inbox.id] } }
   end
 end

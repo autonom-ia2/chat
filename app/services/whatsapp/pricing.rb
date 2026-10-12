@@ -46,8 +46,9 @@ module Whatsapp::Pricing
     parse(GlobalConfig.get_value(CONFIG_KEY).presence || factory_value)
   end
 
+  # O arquivo não muda com o servidor no ar: lido uma vez.
   def factory_value
-    ConfigLoader.new.general_configs.find { |item| item['name'] == CONFIG_KEY }&.dig('value')
+    @factory_value ||= ConfigLoader.new.general_configs.find { |item| item['name'] == CONFIG_KEY }&.dig('value')
   end
 
   def parse(value)
@@ -62,7 +63,7 @@ module Whatsapp::Pricing
     return if value.blank?
 
     amount = BigDecimal(value.to_s)
-    amount.negative? ? nil : amount
+    amount.finite? && !amount.negative? ? amount : nil
   rescue ArgumentError
     nil
   end

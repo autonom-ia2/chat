@@ -20,12 +20,12 @@ RSpec.describe Whatsapp::ServiceMessageCount do
     message(message_type: :incoming)
     message(created_at: Time.zone.parse('2026-09-30 23:00'))
 
-    expect(described_class.new(account: account, inbox_ids: [inbox.id], cap: 1001, now: now).perform).to eq(inbox.id => 2)
+    expect(described_class.new(account: account, inbox_ids: [inbox.id], now: now).perform).to eq(inbox.id => 2)
   end
 
-  it 'stops counting at the cap' do
-    3.times { message }
+  it 'answers 0 for a number that sent nothing' do
+    other = create(:channel_whatsapp, account: account, provider: 'whatsapp_cloud', sync_templates: false, validate_provider_config: false)
 
-    expect(described_class.new(account: account, inbox_ids: [inbox.id], cap: 2, now: now).perform).to eq(inbox.id => 2)
+    expect(described_class.new(account: account, inbox_ids: [other.inbox.id], now: now).perform).to eq(other.inbox.id => 0)
   end
 end

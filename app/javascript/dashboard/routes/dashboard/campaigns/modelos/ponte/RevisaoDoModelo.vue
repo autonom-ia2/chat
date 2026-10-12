@@ -27,14 +27,17 @@ watch(
   { immediate: true }
 );
 
-const dinheiro = valor =>
+// Por envio com as casas da tabela da Meta (R$ 0,3217); o total em centavos.
+const CASAS_DO_PRECO = 4;
+const dinheiro = (valor, casas = 2) =>
   new Intl.NumberFormat(localeDoIntl(locale.value), {
     style: 'currency',
     currency: custo.value?.moeda || 'BRL',
+    maximumFractionDigits: casas,
   }).format(valor);
 
 const porEnvio = computed(() =>
-  custo.value ? dinheiro(custo.value.valor) : ''
+  custo.value ? dinheiro(custo.value.valor, CASAS_DO_PRECO) : ''
 );
 const total = computed(() =>
   custo.value ? dinheiro(custo.value.valor * props.recebem) : ''

@@ -31,7 +31,7 @@ export function useCustos() {
     return new Intl.NumberFormat(localeDoIntl(locale.value), {
       style: 'currency',
       currency: custo.moeda,
-      maximumFractionDigits: 3,
+      maximumFractionDigits: 4,
     }).format(custo.valor);
   };
 

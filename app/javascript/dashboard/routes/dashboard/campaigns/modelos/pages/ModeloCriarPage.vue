@@ -147,9 +147,7 @@ const carregar = async () => {
     const id = alterando.value ? route.params.id : route.query.de;
     if (id) {
       modelo.value = await api.obterModelo(id);
-      usos.value = alterando.value
-        ? await api.ondeEstaEmUso(id, { locale: locale.value })
-        : [];
+      usos.value = alterando.value ? await api.ondeEstaEmUso(id) : [];
       // Modelo em uso não muda (a API recusa): a tela mostra onde, em vez do formulário.
       if (alterando.value && usos.value.length) {
         estado.value = 'em_uso';
@@ -307,6 +305,14 @@ const enviar = async () => {
     const salvos = alterando.value
       ? [await api.alterarModelo(route.params.id, rascunho.value, opcoes)]
       : await api.criarModelo(rascunho.value, opcoes);
+    // Uma conta do WhatsApp criou e a outra não: segue com a criada e diz o que faltou.
+    if (salvos.falha) {
+      useAlert(
+        t('MODELOS_WHATSAPP.CRIAR.FALHOU_UMA_CONTA', {
+          motivo: salvos.falha.mensagem || '',
+        })
+      );
+    }
     router.push({
       name: 'modelos_whatsapp_enviado',
       query: {
@@ -384,6 +390,18 @@ const proximaAlteracao = computed(() => {
             {{ $t('MODELOS_WHATSAPP.ALTERAR.EM_USO_TEXTO') }}
           </p>
           <ModeloUsos :usos="usos" sem-moldura sem-titulo />
+          <Button
+            data-duplicar-em-uso
+            :label="$t('MODELOS_WHATSAPP.ACOES.DUPLICAR')"
+            icon="i-lucide-copy"
+            class="self-start !min-h-11 !rounded-xl"
+            @click="
+              router.push({
+                name: 'modelos_whatsapp_novo',
+                query: { de: modelo.id, etapa: 'texto' },
+              })
+            "
+          />
         </section>
 
         <template v-else>

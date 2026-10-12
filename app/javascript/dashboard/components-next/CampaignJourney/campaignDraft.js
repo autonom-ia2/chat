@@ -120,8 +120,10 @@ const templateEntry = (query, stored) => {
 // - `email=<id>`: back from the editor → the stored draft when it holds that e-mail, else fresh;
 // - `draft=1`: a reload in the middle → the stored draft;
 // - nothing: a fresh draft, or `pending` when a draft with work waits for the person to choose.
-export const journeyEntry = (query, stored) => {
-  if (query?.modelo) return templateEntry(query, stored);
+// - `modelo=&caixa=` (fork, Modelos do WhatsApp): only with `withTemplates` (flag whatsapp_templates_journey);
+//   without it the address is read as it always was.
+export const journeyEntry = (query, stored, { withTemplates = false } = {}) => {
+  if (withTemplates && query?.modelo) return templateEntry(query, stored);
   const audienceId = Number(query?.audience) || null;
   if (query?.returned === '1') {
     const base = stored || emptyDraft();

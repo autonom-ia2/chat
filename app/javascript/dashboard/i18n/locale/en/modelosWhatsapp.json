@@ -36,7 +36,8 @@
         "EM_ANALISE_SEM_DATA": "With WhatsApp for review",
         "PAUSADO_SEM_DATA": "WhatsApp paused it"
       },
-      "CONTA": "Account {nome}"
+      "CONTA": "Account {nome}",
+      "PARCIAL": "We could not read the templates of one WhatsApp account now. Some templates may be missing from the list."
     },
     "SITUACOES": {
       "pronto": {
@@ -129,7 +130,7 @@
       "ALTERACOES_RESTANTES": "You can still change it {n} time this month. | You can still change it {n} times this month.",
       "ALTERAR_DEPOIS": "You can change it again on {dia}, at {hora}.",
       "SEM_ALTERACOES": "This template was already changed 10 times this month. To change it now, duplicate it.",
-      "EM_USO_NAO_ALTERA": "This template is still going to be sent in the places below. To change it, swap the template there first or duplicate it.",
+      "EM_USO_NAO_ALTERA": "This template is still going to be sent in the places listed in \"Where it is used\". To change it, swap the template there first or duplicate it.",
       "REGRA_DE_ALTERAR": "WhatsApp allows changing an approved template once a day, up to 10 times in 30 days."
     },
     "USOS": {
@@ -194,7 +195,8 @@
       "CONTINUAR": "Continue",
       "COPIA_DE": "{nome} (copy)",
       "AVISO_COPIA": "This is a copy of “{nome}”. Adjust what you want and pick a different name.",
-      "FALHOU": "We couldn't send it now. Try again."
+      "FALHOU": "We couldn't send it now. Try again.",
+      "FALHOU_UMA_CONTA": "The template was sent for one WhatsApp account, but not for the other. {motivo}"
     },
     "OBJETIVO": {
       "DO_WHATSAPP": {

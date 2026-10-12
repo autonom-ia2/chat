@@ -13,3 +13,10 @@ export const guardarArquivo = arquivo => {
 };
 
 export const arquivoGuardado = chave => (chave ? arquivos.get(chave) : null);
+
+// Depois do envio, os arquivos do rascunho saem da memória.
+export const esquecerArquivos = conteudo => {
+  [conteudo?.topo?.local, ...(conteudo?.cartoes || []).map(c => c.local)]
+    .filter(Boolean)
+    .forEach(chave => arquivos.delete(chave));
+};

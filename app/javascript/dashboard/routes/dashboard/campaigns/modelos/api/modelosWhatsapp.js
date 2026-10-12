@@ -17,8 +17,8 @@ import adaptador from './adaptadorHttp';
 //   `conta.id` é o id da primeira caixa da conta (a tela nunca vê o id da WABA).
 // listarModelos({ atualizar }) → [Modelo]  (`atualizar`: pede a lista nova à Meta)
 // obterModelo(id) → Modelo
-// ondeEstaEmUso(id, { locale }) → [{ tipo: 'campanha' | 'agendamento' | 'crm'
-//   | 'oculto', nome, quando?, agendado, rota: { name, query? } | null }]
+// ondeEstaEmUso(id) → [{ tipo: 'campanha' | 'agendamento' | 'crm'
+//   | 'oculto', nome, data? (ISO), agendado, rota: { name, query? } | null }]
 //   Tudo ali ainda vai sair: enquanto houver um, apagar e alterar ficam
 //   bloqueados. `oculto`: em uso onde a pessoa não tem acesso (sem nome).
 // listarCampanhasParadas() → [{ id, pausaId, nome, modeloId, modeloNome,

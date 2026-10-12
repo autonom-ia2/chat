@@ -3,7 +3,7 @@
 // A Meta trabalha por conta do WhatsApp (WABA): cada grupo de caixas da mesma
 // conta é lido e alterado por uma caixa dele.
 import api from 'dashboard/api/whatsappTemplates';
-import { arquivoGuardado } from './arquivos';
+import { arquivoGuardado, esquecerArquivos } from './arquivos';
 import { SITUACOES_FORA_DA_LISTA, modeloDaMeta } from './daMeta';
 import { corpoParaAlterar, corpoParaCriar } from '../helpers/paraMeta';
 
@@ -50,9 +50,21 @@ const chamar = async promessa => {
 let lista = null; // { quando, promessa }
 let caixas = null;
 let precos = null;
+let contaDoCache = null;
 
 const esquecerLista = () => {
   lista = null;
+};
+
+// O que fica guardado é de uma conta só: trocou de conta (sem recarregar a página),
+// começa de novo.
+const contaAtual = () => window.location.pathname.split('/')[3] || '';
+const conferirConta = () => {
+  if (contaDoCache === contaAtual()) return;
+  contaDoCache = contaAtual();
+  lista = null;
+  caixas = null;
+  precos = null;
 };
 
 const numeroDaCaixa = caixa => ({
@@ -64,6 +76,7 @@ const numeroDaCaixa = caixa => ({
 });
 
 const lerCaixas = () => {
+  conferirConta();
   caixas ||= chamar(api.getInboxes()).then(({ payload }) => payload);
   caixas.catch(() => {
     caixas = null;
@@ -114,10 +127,14 @@ const lerModelos = async atualizar => {
   );
   const lidos = resultados.filter(item => item.status === 'fulfilled');
   if (grupos.length && !lidos.length) throw resultados[0].reason;
-  return lidos.flatMap(item => item.value);
+  const modelos = lidos.flatMap(item => item.value);
+  // Uma conta do WhatsApp não respondeu: a lista avisa que pode faltar modelo.
+  modelos.parcial = lidos.length < grupos.length;
+  return modelos;
 };
 
 const listarModelos = ({ atualizar = false } = {}) => {
+  conferirConta();
   const valida = lista && Date.now() - lista.quando < VALIDADE_DA_LISTA_MS;
   if (atualizar || !valida) {
     if (atualizar) caixas = null;
@@ -134,24 +151,14 @@ const obterModelo = async id => {
   return modelo;
 };
 
-const quando = (iso, locale) =>
-  iso
-    ? new Date(iso).toLocaleDateString(
-        (locale || 'pt-BR').split('_').join('-'),
-        {
-          day: '2-digit',
-          month: '2-digit',
-        }
-      )
-    : '';
-
 // "Onde está em uso" (#1330) → a lista da tela. Tudo ali ainda vai sair, por
 // isso bloqueia apagar e alterar. O que a pessoa não vê vem só como aviso.
-export const usosDaApi = (uso, locale) => [
+// `data` (ISO) a tela formata no idioma dela (ModeloUsos).
+export const usosDaApi = uso => [
   ...(uso.campaigns || []).map(campanha => ({
     tipo: 'campanha',
     nome: campanha.title,
-    quando: quando(campanha.scheduled_at, locale),
+    data: campanha.scheduled_at || null,
     agendado: true,
     rota: { name: 'campaigns_journey_index' },
   })),
@@ -164,7 +171,7 @@ export const usosDaApi = (uso, locale) => [
   ...(uso.follow_ups || []).map(retorno => ({
     tipo: 'crm',
     nome: retorno.title,
-    quando: quando(retorno.due_at, locale),
+    data: retorno.due_at || null,
     agendado: true,
     rota: {
       name: 'crm_kanban_index',
@@ -176,9 +183,9 @@ export const usosDaApi = (uso, locale) => [
     : []),
 ];
 
-const ondeEstaEmUso = async (id, { locale } = {}) => {
+const ondeEstaEmUso = async id => {
   const modelo = await obterModelo(id);
-  return usosDaApi(await chamar(api.getUsage(modelo.caixa, modelo.id)), locale);
+  return usosDaApi(await chamar(api.getUsage(modelo.caixa, modelo.id)));
 };
 
 // Por que a campanha parou → motivo da tela.
@@ -224,6 +231,7 @@ const listarCampanhasParadas = async () => {
 const retomarCampanha = pausaId => chamar(api.resumeCampaignPause(pausaId));
 
 const lerPrecos = () => {
+  conferirConta();
   precos ||= chamar(api.getPrices()).then(({ payload }) => payload);
   precos.catch(() => {
     precos = null;
@@ -273,23 +281,35 @@ const subirArquivos = async (conteudo, caixa) => {
 };
 
 // Um modelo por conta do WhatsApp: números de contas diferentes viram modelos
-// diferentes, cada um com a sua análise. Devolve a lista criada.
+// diferentes, cada um com a sua análise. Devolve a lista criada. Se uma conta
+// falhar depois de outra já ter criado, devolve as criadas com `falha` (o erro),
+// para a tela não mandar de novo o que já foi.
 const criarModelo = async (rascunho, { textos } = {}) => {
   const grupos = gruposDe(await lerCaixas()).filter(grupo =>
     grupo.numeros.some(id => rascunho.numeros.includes(id))
   );
   const criados = [];
-  // eslint-disable-next-line no-restricted-syntax
-  for (const grupo of grupos) {
-    // eslint-disable-next-line no-await-in-loop
-    const midias = await subirArquivos(rascunho.conteudo, grupo.id);
-    // eslint-disable-next-line no-await-in-loop
-    const criado = await chamar(
-      api.createTemplate(grupo.id, corpoParaCriar(rascunho, { midias, textos }))
-    );
-    criados.push(modeloDaMeta(criado, grupo));
+  try {
+    // eslint-disable-next-line no-restricted-syntax
+    for (const grupo of grupos) {
+      // eslint-disable-next-line no-await-in-loop
+      const midias = await subirArquivos(rascunho.conteudo, grupo.id);
+      // eslint-disable-next-line no-await-in-loop
+      const criado = await chamar(
+        api.createTemplate(
+          grupo.id,
+          corpoParaCriar(rascunho, { midias, textos })
+        )
+      );
+      criados.push(modeloDaMeta(criado, grupo));
+    }
+  } catch (erro) {
+    if (!criados.length) throw erro;
+    criados.falha = erro;
+  } finally {
+    esquecerLista();
   }
-  esquecerLista();
+  if (!criados.falha) esquecerArquivos(rascunho.conteudo);
   return criados;
 };
 
@@ -304,10 +324,14 @@ const alterarModelo = async (id, rascunho, { textos } = {}) => {
     )
   );
   esquecerLista();
-  const grupo = gruposDe(await lerCaixas()).find(
-    item => item.id === modelo.caixa
-  );
-  return modeloDaMeta(alterado, grupo);
+  esquecerArquivos(rascunho.conteudo);
+  // O grupo do modelo como estava: a caixa pode ter saído da conta no meio do caminho.
+  return modeloDaMeta(alterado, {
+    id: modelo.caixa,
+    conta: { id: modelo.conta },
+    numeros: modelo.numeros,
+    envios: null,
+  });
 };
 
 const apagarModelo = async id => {

@@ -737,7 +737,11 @@ const startJourney = async initial => {
   const results = await Promise.allSettled(requests);
   hasLoadError.value = results[0].status === 'rejected';
   // Fork: aberta com um modelo (?modelo=), as variáveis já vêm ligadas.
-  if (draft.value.templateId && !Object.keys(draft.value.bindings).length) {
+  if (
+    ponteAtiva.value &&
+    draft.value.templateId &&
+    !Object.keys(draft.value.bindings).length
+  ) {
     update({ bindings: ponte.ligacoesIniciais(draft.value.templateId) });
   }
   await loadAudienceDetail();
@@ -763,7 +767,9 @@ useOnEnter(async () => {
   isActive = true;
   submitError.value = '';
   returned.value = route.query.returned === '1';
-  const entry = journeyEntry(route.query, loadDraft(accountId.value));
+  const entry = journeyEntry(route.query, loadDraft(accountId.value), {
+    withTemplates: ponte.flagLigada.value,
+  });
   freshDraft.value = entry.novo || null;
   if (entry.pending) {
     pendingDraft.value = entry.pending;

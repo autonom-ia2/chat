@@ -226,6 +226,19 @@ const conectarHref = computed(
             {{ $t('MODELOS_WHATSAPP.SO_VER') }}
           </p>
 
+          <p
+            v-if="modelos.parcial"
+            data-lista-parcial
+            role="status"
+            class="flex items-center gap-3 px-4 py-3 mb-0 text-[0.9375rem] rounded-xl bg-n-amber-2 text-n-slate-12"
+          >
+            <span
+              class="i-lucide-triangle-alert size-5 shrink-0 text-n-amber-11"
+              aria-hidden="true"
+            />
+            {{ $t('MODELOS_WHATSAPP.LISTA.PARCIAL') }}
+          </p>
+
           <div class="flex flex-wrap items-center gap-3">
             <label class="relative flex-1 min-w-[min(100%,16rem)]">
               <span class="sr-only">{{

@@ -1,4 +1,7 @@
 <script setup>
+import { useI18n } from 'vue-i18n';
+import { diaEMes } from '../helpers/datas';
+
 // Onde o modelo está em uso (campanhas, avisos do agendamento, follow-ups do
 // CRM), cada um com o link para resolver. O que a pessoa não vê aparece só
 // como "em uso onde você não tem acesso", sem nome (acesso por funil).
@@ -17,6 +20,10 @@ const ICONES = {
   satisfacao: 'i-lucide-star',
   oculto: 'i-lucide-eye-off',
 };
+
+const { locale } = useI18n();
+// `data`: dia que ainda vai sair (campanha agendada, follow-up), no idioma da tela.
+const quando = uso => (uso.data ? diaEMes(uso.data, locale.value) : uso.quando);
 </script>
 
 <template>
@@ -50,7 +57,7 @@ const ICONES = {
         <span class="flex flex-col flex-1 min-w-0">
           <span class="text-sm text-n-slate-10">
             {{ $t(`MODELOS_WHATSAPP.USOS.TIPOS.${uso.tipo}`) }}
-            <template v-if="uso.quando"> · {{ uso.quando }}</template>
+            <template v-if="quando(uso)"> · {{ quando(uso) }}</template>
           </span>
           <span class="break-words">
             {{
