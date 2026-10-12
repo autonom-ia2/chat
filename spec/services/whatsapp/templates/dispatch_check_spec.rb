@@ -168,5 +168,23 @@ RSpec.describe Whatsapp::Templates::DispatchCheck, :aggregate_failures do
       expect(verdict.reason_code).to eq('template_unverifiable')
       expect(verdict.source).to eq('system')
     end
+
+    # Produção (12/10/2026): 6 caixas Cloud com message_templates = {} (o padrão quando o sync volta vazio), não [].
+    it 'reads an empty object cache like an empty list: templates_not_synced, without raising' do
+      stub_meta_template_lookup(500)
+      channel.update_columns(message_templates: {}, message_templates_last_updated: nil) # rubocop:disable Rails/SkipsModelValidations
+
+      verdict = check
+
+      expect(verdict.reason_code).to eq('templates_not_synced')
+      expect(verdict.source).to eq('system')
+    end
+
+    it 'reads an empty object cache like an empty list: template_unverifiable after a sync, without raising' do
+      stub_meta_template_lookup(500)
+      channel.update_columns(message_templates: {}, message_templates_last_updated: Time.current) # rubocop:disable Rails/SkipsModelValidations
+
+      expect(check).to have_attributes(reason_code: 'template_unverifiable', source: 'system')
+    end
   end
 end

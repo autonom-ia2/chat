@@ -3736,6 +3736,96 @@
      ],
      "revisar": false,
      "nota": null
+    },
+    {
+     "id": "13.25",
+     "titulo": "Ver os modelos de mensagem do WhatsApp e se foram aprovados",
+     "para_que_serve": "Entender a situação de cada modelo (aprovado, em análise, recusado, pausado), o tipo e o custo por envio, onde ele está em uso e as respostas grátis do mês.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [],
+     "rotas": [
+      "modelos_whatsapp_lista",
+      "modelos_whatsapp_modelo"
+     ],
+     "me_leve_ate_la": {
+      "rota": "modelos_whatsapp_lista",
+      "destaque": null
+     },
+     "requer": "whatsapp_templates_journey",
+     "prints": [],
+     "fontes": [
+      "porques: ver_modelos_de_mensagem_do_whatsapp"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "13.26",
+     "titulo": "Criar um modelo de mensagem do WhatsApp e mandar para aprovação",
+     "para_que_serve": "Escrever o modelo com os campos, os extras e a conta do WhatsApp, conferir antes e mandar para o WhatsApp aprovar, inclusive sem sair da campanha.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [],
+     "rotas": [
+      "modelos_whatsapp_novo",
+      "modelos_whatsapp_enviado"
+     ],
+     "me_leve_ate_la": {
+      "rota": "modelos_whatsapp_novo",
+      "destaque": null
+     },
+     "requer": "whatsapp_templates_journey",
+     "prints": [],
+     "fontes": [
+      "porques: criar_modelo_de_mensagem_do_whatsapp"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "13.27",
+     "titulo": "Corrigir um modelo recusado ou alterar um modelo",
+     "para_que_serve": "Entender o motivo da recusa, corrigir ou alterar o modelo, pedir revisão ao WhatsApp e retomar a campanha que parou por causa dele.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [],
+     "rotas": [
+      "modelos_whatsapp_alterar"
+     ],
+     "me_leve_ate_la": {
+      "rota": "modelos_whatsapp_lista",
+      "destaque": null
+     },
+     "requer": "whatsapp_templates_journey",
+     "prints": [],
+     "fontes": [
+      "porques: corrigir_ou_alterar_modelo_do_whatsapp"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "13.28",
+     "titulo": "Usar um modelo aprovado numa campanha",
+     "para_que_serve": "Abrir a campanha de WhatsApp Oficial com o número, o modelo e os campos já escolhidos, e ver o tipo e o custo por envio na revisão.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [],
+     "rotas": [
+      "modelos_whatsapp_usar"
+     ],
+     "me_leve_ate_la": {
+      "rota": "modelos_whatsapp_lista",
+      "destaque": null
+     },
+     "requer": "whatsapp_templates_journey",
+     "prints": [],
+     "fontes": [
+      "porques: usar_modelo_do_whatsapp_em_campanha"
+     ],
+     "revisar": false,
+     "nota": null
     }
    ]
   },

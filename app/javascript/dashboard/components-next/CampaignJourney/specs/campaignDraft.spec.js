@@ -41,6 +41,40 @@ describe('journeyEntry', () => {
   });
 });
 
+// #1332: ?modelo=&caixa= (Modelos do WhatsApp) only with the flag; without it the address is the usual one.
+describe('journeyEntry with a template', () => {
+  const query = { modelo: '1001', caixa: '7' };
+
+  it('ignores modelo when the templates journey is off', () => {
+    expect(journeyEntry(query, null)).toEqual({ draft: emptyDraft() });
+  });
+
+  it('opens WhatsApp Oficial with the box and the template when it is on', () => {
+    expect(journeyEntry(query, null, { withTemplates: true })).toEqual({
+      draft: {
+        ...emptyDraft(),
+        channel: 'whatsapp_official',
+        inboxId: 7,
+        templateId: '1001',
+        step: 1,
+      },
+    });
+  });
+
+  it('keeps the stored draft when coming back (returned=1)', () => {
+    const stored = { ...emptyDraft(), title: 'Guardada', audienceId: 5 };
+    expect(
+      journeyEntry({ ...query, returned: '1' }, stored, { withTemplates: true })
+        .draft
+    ).toMatchObject({
+      title: 'Guardada',
+      audienceId: 5,
+      templateId: '1001',
+      step: 2,
+    });
+  });
+});
+
 describe('hasDraftWork', () => {
   it('is false for an empty draft and true once something was chosen', () => {
     expect(hasDraftWork(null)).toBe(false);

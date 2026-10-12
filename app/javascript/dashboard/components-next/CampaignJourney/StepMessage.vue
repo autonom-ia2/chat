@@ -3,6 +3,8 @@
 // cards (connected channels; the ones the audience lacks say why), the campaign name with
 // the CRM tag notice and, for WhatsApp Oficial, Cloud inbox, approved template, where
 // each variable comes from and the preview. Other channels open their existing forms.
+// Fork (Modelos do WhatsApp): slots caixa-aviso, modelo-vazio, modelo-aviso e previa, que a
+// Nova campanha preenche com a ponte de Modelos quando a flag está ligada.
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
@@ -30,6 +32,8 @@ const props = defineProps({
   variables: { type: Array, default: () => [] },
   columns: { type: Array, default: () => [] },
   coverage: { type: Object, default: null },
+  // Fork (Modelos do WhatsApp): grupos extras de origem (campos do catálogo), só com a ponte ligada.
+  fieldGroups: { type: Array, default: () => [] },
   mediaHeader: { type: Object, default: null },
   previewText: { type: String, default: '' },
   canContinue: { type: Boolean, default: false },
@@ -260,6 +264,7 @@ const chooseChannel = card => {
             <p class="m-0 text-xs text-n-slate-11">
               {{ t(`${NS}.INBOX_HINT`) }}
             </p>
+            <slot name="caixa-aviso" />
           </div>
           <div v-if="draft.inboxId" class="flex flex-col gap-1">
             <span class="text-sm font-medium text-n-slate-12">
@@ -274,9 +279,12 @@ const chooseChannel = card => {
               data-test="template-choice"
               @update:model-value="templateId => emit('update', { templateId })"
             />
-            <p v-else class="m-0 text-sm text-n-slate-11">
-              {{ t(`${NS}.TEMPLATE_EMPTY`) }}
-            </p>
+            <slot v-else name="modelo-vazio">
+              <p class="m-0 text-sm text-n-slate-11">
+                {{ t(`${NS}.TEMPLATE_EMPTY`) }}
+              </p>
+            </slot>
+            <slot name="modelo-aviso" />
           </div>
           <Input
             v-if="mediaHeader"
@@ -294,12 +302,15 @@ const chooseChannel = card => {
             :defaults="draft.defaults"
             :columns="columns"
             :coverage="coverage"
+            :extra-groups="fieldGroups"
             @bind="(key, binding) => emit('bind', key, binding)"
             @default="(key, value) => emit('default', key, value)"
           />
         </template>
       </section>
-      <WhatsAppPreview v-if="!isEmail && !isSms" :text="previewText" />
+      <slot v-if="!isEmail && !isSms" name="previa">
+        <WhatsAppPreview :text="previewText" />
+      </slot>
     </div>
 
     <div class="flex flex-wrap justify-between gap-3">

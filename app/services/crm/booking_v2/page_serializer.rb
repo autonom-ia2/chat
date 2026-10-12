@@ -13,6 +13,8 @@
 # um `InvitePages` só para todas as páginas: uma consulta de elegibilidade e uma de pausas para a lista inteira.
 # `pessoas` (#1307): `[{ id, nome, ai_status }]`, quem atende a página e pode ser liberado para a IA, cada um com
 # 'ativa' ou 'agenda_pausada'; página de responsável único traz uma pessoa.
+# `duration_minutes` (#1371) também vai no resumo: a gaveta mostra quanto dura a reunião sem abrir a página inteira.
+# É coluna da própria página: não custa consulta na lista.
 class Crm::BookingV2::PageSerializer
   include Rails.application.routes.url_helpers
 
@@ -38,7 +40,7 @@ class Crm::BookingV2::PageSerializer
     {
       id: profile.id, slug: profile.slug, short_name: profile.short_name, account_address: profile.booking_account_address,
       title: profile.title, enabled: profile.enabled, public_url: public_url, links: links, locations: profile.locations,
-      assignment_mode: profile.assignment_mode, upcoming_meetings_count: upcoming_meetings_count,
+      assignment_mode: profile.assignment_mode, duration_minutes: profile.duration_minutes, upcoming_meetings_count: upcoming_meetings_count,
       attention: attention, orphaned: @orphaned, paused_people: paused_people
     }.merge(for_ai_agent)
   end

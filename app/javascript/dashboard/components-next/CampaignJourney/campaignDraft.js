@@ -2,6 +2,8 @@
 // account: `campaignJourney:draft:<accountId>` (docs/campaigns/publicos/
 // api-993-frontend-needs.md §7). Holds choices, never contact data. Storage can be blocked
 // (private window, policies): every access is guarded and the journey works without it.
+import { CAMPAIGN_CHANNELS } from './campaignChannels';
+
 export const DRAFT_VERSION = 1;
 
 export const draftKey = accountId => `campaignJourney:draft:${accountId}`;
@@ -86,13 +88,42 @@ export const hasDraftWork = draft =>
 // The address marks a journey in progress, so a reload keeps the work (#1093).
 export const DRAFT_QUERY = 'draft';
 
+// `modelo=<id da Meta>&caixa=<inbox_id>` (Modelos do WhatsApp: "Usar em uma campanha" e
+// "Voltar para a campanha"): WhatsApp Oficial com a caixa e o modelo já escolhidos. Com
+// `returned=1` segue o rascunho guardado; sem ele, um rascunho com trabalho vira pergunta e
+// `novo` é o que começa se a pessoa escolher começar de novo.
+const withTemplate = (base, query) => {
+  const templateId = String(query.modelo);
+  const sameTemplate = base.templateId === templateId;
+  return {
+    ...base,
+    channel: CAMPAIGN_CHANNELS.WHATSAPP_OFFICIAL,
+    inboxId: Number(query.caixa) || base.inboxId,
+    templateId,
+    ...(sameTemplate ? {} : { bindings: {}, defaults: {}, mediaUrl: '' }),
+    step: base.audienceId ? 2 : 1,
+  };
+};
+
+const templateEntry = (query, stored) => {
+  if (query.returned === '1') {
+    return { draft: withTemplate(stored || emptyDraft(), query) };
+  }
+  const novo = withTemplate(emptyDraft(), query);
+  if (hasDraftWork(stored)) return { draft: null, pending: stored, novo };
+  return { draft: novo };
+};
+
 // Where Nova campanha starts comes from the address, never silently from storage (#1093):
 // - `returned=1`: back from Novo público (J3) → the stored draft, with the new audience;
 // - `audience=<id>`: "Usar em nova campanha" (F3) → a fresh draft with that audience;
 // - `email=<id>`: back from the editor → the stored draft when it holds that e-mail, else fresh;
 // - `draft=1`: a reload in the middle → the stored draft;
 // - nothing: a fresh draft, or `pending` when a draft with work waits for the person to choose.
-export const journeyEntry = (query, stored) => {
+// - `modelo=&caixa=` (fork, Modelos do WhatsApp): only with `withTemplates` (flag whatsapp_templates_journey);
+//   without it the address is read as it always was.
+export const journeyEntry = (query, stored, { withTemplates = false } = {}) => {
+  if (withTemplates && query?.modelo) return templateEntry(query, stored);
   const audienceId = Number(query?.audience) || null;
   if (query?.returned === '1') {
     const base = stored || emptyDraft();

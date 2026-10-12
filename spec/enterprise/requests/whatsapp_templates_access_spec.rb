@@ -133,5 +133,21 @@ RSpec.describe 'Modelos do WhatsApp com função personalizada', type: :request 
       expect(response.parsed_body['uso_oculto']).to be(true)
       expect(response.body).not_to include('Segredo')
     end
+
+    # #1332: campanha parada pelo modelo que a pessoa não vê. Alterar passa (a conferência do disparo protege ao
+    # retomar); apagar continua barrado como uso oculto, sem o nome.
+    it 'campanha parada sem campaign_view: alterar passa, apagar fica barrado como uso oculto' do
+      campaign = create(:campaign, account: account, inbox: inbox, title: 'Segredo', message: 'x', campaign_type: :one_off,
+                                   scheduled_at: 1.hour.ago, template_params: { 'name' => 'retorno', 'language' => 'pt_BR' })
+      CampaignPauses::Pauser.new(campaign, source: 'template', reason_code: 'template_not_approved',
+                                           details: { template_name: 'retorno', status: 'PAUSED' }).perform
+
+      call(manager, :get, "#{base}/11/usage")
+      expect(response.parsed_body).to include('uso_oculto' => true, 'blocks_change' => false, 'campaigns' => [])
+
+      call(manager, :delete, "#{base}/11")
+      expect(response.parsed_body['error']).to eq('in_use_hidden')
+      expect(response.body).not_to include('Segredo')
+    end
   end
 end

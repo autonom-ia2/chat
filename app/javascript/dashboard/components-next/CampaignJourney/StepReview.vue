@@ -34,6 +34,9 @@ const props = defineProps({
   timeZone: { type: String, required: true },
   isSubmitting: { type: Boolean, default: false },
   errorMessage: { type: String, default: '' },
+  // Fork (Modelos do WhatsApp): motivo para "Enviar agora" ficar desativado (modelo ainda
+  // em análise). Vazio, as duas opções valem.
+  nowBlockedReason: { type: String, default: '' },
 });
 
 const emit = defineEmits(['update', 'go', 'back', 'submit', 'testSend']);
@@ -133,6 +136,7 @@ const submit = () => {
           @click="emit('go', block.step)"
         />
       </div>
+      <slot name="modelo" />
       <p
         class="m-0 flex flex-wrap items-center gap-2 border-b border-n-weak py-4 text-sm text-n-slate-12"
         data-test="review-crm"
@@ -156,7 +160,8 @@ const submit = () => {
             role="radio"
             :aria-checked="draft.when === option"
             :data-when="option"
-            class="min-h-11 rounded-xl border px-4 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
+            :disabled="option === 'now' && Boolean(nowBlockedReason)"
+            class="min-h-11 rounded-xl border px-4 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand disabled:cursor-not-allowed disabled:opacity-50"
             :class="
               draft.when === option
                 ? 'border-n-blue-8 bg-n-blue-2 text-n-blue-11'
@@ -167,6 +172,13 @@ const submit = () => {
             {{ option === 'now' ? t(`${NS}.NOW`) : t(`${NS}.LATER`) }}
           </button>
         </div>
+        <p
+          v-if="nowBlockedReason"
+          class="m-0 text-xs text-n-slate-11"
+          data-test="now-blocked"
+        >
+          {{ nowBlockedReason }}
+        </p>
         <Input
           v-if="isLater"
           :model-value="draft.scheduledAt"
