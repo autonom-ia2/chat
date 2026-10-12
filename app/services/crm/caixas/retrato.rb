@@ -34,11 +34,21 @@ class Crm::Caixas::Retrato
       subject_ai_mode: setting&.subject_ai_mode || 'off',
       auto_create_card: setting&.auto_create_card? || false,
       visibility_mode: setting&.visibility_mode || 'all_inbox_cards',
+      agent_bot: robo(inbox),
       people: pessoas(inbox)
     }
   end
 
   private
+
+  # O robô que atende primeiro na caixa: o mesmo que o card mostra como responsável quando não há pessoa
+  # (Crm::Card#responsible_agent_bot).
+  def robo(inbox)
+    vinculo = inbox.agent_bot_inbox
+    return unless vinculo&.active? && vinculo.agent_bot
+
+    { id: vinculo.agent_bot.id, name: vinculo.agent_bot.name }
+  end
 
   def pessoas(inbox)
     lista = membros.fetch(inbox.id, []).filter_map do |user|

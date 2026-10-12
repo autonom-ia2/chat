@@ -3678,7 +3678,8 @@
       "CONECTAR": "Conectar uma caixa",
       "LIGADAS": "{n} caixa no CRM | {n} caixas no CRM",
       "FORA": "{n} fora do CRM | {n} fora do CRM",
-      "ADMIN": "Quem é administrador vê todas as conversas de todas as caixas."
+      "ADMIN": "Quem é administrador vê todas as conversas de todas as caixas.",
+      "VOLTAR": "Kanban"
     },
     "CARTAO": {
       "NO_CRM": "No CRM",
@@ -3693,7 +3694,8 @@
       "SEM_ASSUNTO": "· sem assunto: {nomes}",
       "SOZINHO": "O que acontece sozinho",
       "ALTERAR": "Alterar",
-      "LIGAR": "Colocar no CRM"
+      "LIGAR": "Colocar no CRM",
+      "ROBO": "{nome} (agente de IA) atende primeiro"
     },
     "MODO_RESUMO": {
       "AUTO": "O sistema cria o card quando entende o assunto.",
@@ -3753,7 +3755,8 @@
       "MUDA": "O que muda ao salvar",
       "NADA_MUDOU": "Nada mudou.",
       "SAI_DO_CRM": "Sem nenhum funil marcado, esta caixa sai do CRM. As conversas dela deixam de virar cards.",
-      "RODIZIO_NOME": "{nome}:"
+      "RODIZIO_NOME": "{nome}:",
+      "ROBO": "Primeiro atende {nome}, o agente de IA. Depois, as pessoas abaixo."
     },
     "MUDA": {
       "FUNIL_ENTRA": "{funil} passa a chegar por esta caixa.",
@@ -3787,7 +3790,8 @@
       "RODIZIO": "Quem cuida de um assunto recebe as conversas novas dele, um de cada vez.",
       "SO_AS_QUE_ATENDE_EXPLICA": "“Só as que atende”: conversas em que a pessoa é atendente, participa ou é dona do card.",
       "LEGADO_MUDAR": "Usar o que eu marcar",
-      "LEGADO_CURTO": "Escolha se cada pessoa continua vendo só as atribuídas."
+      "LEGADO_CURTO": "Escolha se cada pessoa continua vendo só as atribuídas.",
+      "ROBO": "{nome}, o agente de IA desta caixa, atende primeiro. Quando a conversa passa para uma pessoa, vale o que estiver marcado aqui."
     },
     "EDITOR": {
       "ERRO": "Não deu para abrir esta caixa agora.",

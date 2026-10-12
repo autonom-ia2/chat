@@ -115,6 +115,9 @@ const aviso = computed(() => {
           {{ $t('CRM_CAIXAS.CARTAO.CUIDAM') }}
         </dt>
         <dd class="m-0 text-[0.9375rem] text-n-slate-12">
+          <span v-if="caixa.agent_bot" class="block">
+            {{ $t('CRM_CAIXAS.CARTAO.ROBO', { nome: caixa.agent_bot.name }) }}
+          </span>
           {{ $t('CRM_CAIXAS.CARTAO.PESSOAS', { n: pessoas }, pessoas) }}
           <template v-if="funis.length > 1 && triagem">
             {{ $t('CRM_CAIXAS.CARTAO.SEM_ASSUNTO', { nomes: triagem }) }}

@@ -22536,9 +22536,9 @@
     "corpo_plano": true,
     "envelope": "caixa",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/caixas_controller.rb:18",
-      "app/controllers/api/v1/accounts/crm/caixas_controller.rb:52",
-      "app/controllers/api/v1/accounts/crm/caixas_controller.rb:48"
+      "app/controllers/api/v1/accounts/crm/caixas_controller.rb:19",
+      "app/controllers/api/v1/accounts/crm/caixas_controller.rb:53",
+      "app/controllers/api/v1/accounts/crm/caixas_controller.rb:49"
     ],
     "sem_corpo": false
   },

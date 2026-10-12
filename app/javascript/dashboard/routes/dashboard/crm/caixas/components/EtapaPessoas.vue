@@ -16,6 +16,8 @@ const props = defineProps({
   faltaTriagem: { type: Boolean, default: false },
   // R6: caixa ainda em "Agente vê apenas atribuídos".
   legado: { type: Boolean, default: false },
+  // Robô que atende primeiro na caixa ({ id, name }), quando há.
+  robo: { type: Object, default: null },
   // 'manter', 'mudar' ou null enquanto a pessoa não escolheu.
   escolha: { type: String, default: null },
 });
@@ -69,6 +71,14 @@ const chipClasse = ativo =>
 
 <template>
   <div class="flex flex-col gap-5">
+    <p
+      v-if="robo"
+      data-robo
+      class="mb-0 flex items-start gap-2 rounded-xl bg-n-alpha-2 px-4 py-3 text-[0.9375rem] text-n-slate-12"
+    >
+      <span class="i-lucide-bot mt-0.5 size-4 shrink-0" aria-hidden="true" />
+      {{ $t('CRM_CAIXAS.PESSOAS.ROBO', { nome: robo.name }) }}
+    </p>
     <div
       v-if="legado"
       data-legado

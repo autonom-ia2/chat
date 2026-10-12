@@ -7,7 +7,8 @@ class Api::V1::Accounts::Crm::CaixasController < Api::V1::Accounts::Crm::BaseCon
   before_action :fetch_inbox, only: [:show, :update]
 
   def index
-    retrato = ::Crm::Caixas::Retrato.new(account: Current.account, inboxes: Current.account.inboxes.order(:name))
+    inboxes = Current.account.inboxes.includes(agent_bot_inbox: :agent_bot).order(:name)
+    retrato = ::Crm::Caixas::Retrato.new(account: Current.account, inboxes: inboxes)
     render json: { payload: { caixas: retrato.caixas, funis: retrato.funis } }
   end
 
