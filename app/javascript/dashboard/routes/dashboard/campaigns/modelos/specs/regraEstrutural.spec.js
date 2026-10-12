@@ -121,6 +121,12 @@ describe('conferência antes de enviar', () => {
     expect(problemasDoBotao(site('https://sualoja.com.br'), 'aviso')).toEqual(
       []
     );
+    // A mesma régua do servidor: só letras do teclado, sem espaço, com //.
+    ['https://café.com.br', 'https:x.com', 'https://a b.com'].forEach(valor =>
+      expect(problemasDoBotao(site(valor), 'aviso'), valor).toEqual([
+        'SITE_SEM_ENDERECO',
+      ])
+    );
     expect(problemasDoBotao(ligar('abc'), 'aviso')).toEqual([
       'LIGAR_SEM_NUMERO',
     ]);

@@ -53,9 +53,9 @@ module Whatsapp::Templates::GraphErrors
   def own_text_code(error)
     return 'permission_denied' if permission_error?(error)
     return 'not_found_or_no_access' if not_found_or_no_access?(error)
-    return 'meta_failed' if error['error_user_msg'].blank? && error['message'].blank?
+    return NAME_SUBCODES[error['error_subcode'].to_i] if NAME_SUBCODES.key?(error['error_subcode'].to_i)
 
-    NAME_SUBCODES[error['error_subcode'].to_i]
+    'meta_failed' if error['error_user_msg'].blank? && error['message'].blank?
   end
 
   # O erro da Graph API; no log só números (nada do texto, nada do token).

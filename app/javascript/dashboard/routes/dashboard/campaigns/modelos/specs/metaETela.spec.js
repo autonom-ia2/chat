@@ -251,7 +251,8 @@ describe('QA na tela (#1380)', () => {
       { t: 'campo', v: 'data' },
       { t: 'texto', v: '  e às ' },
       { t: 'campo', v: 'horario' },
-      { t: 'texto', v: ' .' },
+      // O navegador digita às vezes o espaço que não quebra (U+00A0).
+      { t: 'texto', v: '\u00a0.' },
     ];
     expect(ajustarEspacosDosCampos(pedacos).map(p => p.v)).toEqual([
       'Olá, ',

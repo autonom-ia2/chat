@@ -119,13 +119,18 @@ RSpec.describe Whatsapp::Templates::SubmitFormat do
       .to eq(['button_text_long'])
   end
 
-  it 'site com endereço completo e ligar com o código do país' do
+  it 'site com endereço completo (só ASCII, sem espaço, com //)' do
     site = ->(url) { template('UTILITY', buttons({ 'type' => 'URL', 'text' => 'Ver', 'url' => url })) }
-    ligar = ->(phone) { template('UTILITY', buttons({ 'type' => 'PHONE_NUMBER', 'text' => 'Ligar', 'phone_number' => phone })) }
     expect(described_class.problems(site.call('https://sualoja.com.br/x'))).to eq([])
     expect(described_class.problems(site.call('https://h.com/r/{{1}}').tap { |t| t['components'][1]['buttons'][0]['example'] = ['1'] }))
       .to eq([])
     expect(described_class.problems(site.call('hub2you'))).to eq(['url_invalid'])
+    expect(described_class.problems(site.call('https://café.com.br'))).to eq(['url_invalid'])
+    expect(described_class.problems(site.call('https:x.com'))).to eq(['url_invalid'])
+  end
+
+  it 'ligar com o código do país' do
+    ligar = ->(phone) { template('UTILITY', buttons({ 'type' => 'PHONE_NUMBER', 'text' => 'Ligar', 'phone_number' => phone })) }
     expect(described_class.problems(ligar.call('+551140000000'))).to eq([])
     expect(described_class.problems(ligar.call('abc'))).to eq(['phone_invalid'])
     expect(described_class.problems(ligar.call('11999999999'))).to eq(['phone_invalid'])

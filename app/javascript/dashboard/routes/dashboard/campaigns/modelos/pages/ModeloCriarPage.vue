@@ -174,7 +174,8 @@ const carregar = async () => {
         api.listarNumeros(),
         api.obterCatalogo(),
         api.listarFormularios(),
-        // Para avisar de nome repetido já no Texto (sem a lista, o servidor avisa).
+        // Para avisar de nome repetido já no Texto. Sem a lista, o aviso some e
+        // quem barra é o servidor (name_taken, com o texto traduzido).
         api.listarModelos().catch(() => []),
       ]);
     const id = alterando.value ? route.params.id : route.query.de;
@@ -273,9 +274,14 @@ const nomeRepetido = computed(() => {
   const contas = numeros.value
     .filter(numero => rascunho.value.numeros.includes(numero.id))
     .map(numero => numero.conta.id);
-  const idioma = rascunho.value.idioma || IDIOMA;
+  // Mesma comparação do adaptador: o idioma sem diferença de maiúsculas.
+  const idioma = (rascunho.value.idioma || IDIOMA).toLowerCase();
   const usados = existentes.value
-    .filter(item => contas.includes(item.conta) && item.idioma === idioma)
+    .filter(
+      item =>
+        contas.includes(item.conta) &&
+        (item.idioma || '').toLowerCase() === idioma
+    )
     .map(item => item.nomeNoWhatsapp);
   const nome = rascunho.value.nome.trim();
   if (!nomeParaWhatsapp(nome) || !usados.includes(nomeParaWhatsapp(nome)))

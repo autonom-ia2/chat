@@ -34,6 +34,7 @@ module Whatsapp::Templates::SubmitFormat
   CARDS = (2..10)
   CODE_CHARACTERS = [*'a'..'z', *'A'..'Z', *'0'..'9'].to_set.freeze
   DIGITS = ('0'..'9').to_set.freeze
+  URL_STARTS = %w[https:// http://].freeze
 
   module_function
 
@@ -96,10 +97,14 @@ module Whatsapp::Templates::SubmitFormat
     kinds.each_cons(2).count { |current, following| current != following } <= 1
   end
 
-  # http(s) and a host with a dot; a variable ending ({{1}}) is left out of the reading.
+  # Starts with http(s)://, printable ASCII without spaces (the screen's rule too) and a host with a dot; a variable
+  # ending ({{1}}) is left out of the reading.
   def url?(url)
-    uri = URI.parse(url.to_s.strip.split('{{').first.to_s)
-    %w[http https].include?(uri.scheme) && uri.host.to_s.include?('.')
+    base = url.to_s.split('{{').first.to_s
+    return false unless URL_STARTS.any? { |start| base.start_with?(start) }
+    return false unless base.each_char.all? { |char| char.ord.between?(33, 126) }
+
+    URI.parse(base).host.to_s.include?('.')
   rescue URI::InvalidURIError
     false
   end

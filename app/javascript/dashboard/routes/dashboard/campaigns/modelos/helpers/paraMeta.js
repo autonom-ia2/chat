@@ -59,7 +59,7 @@ const botaoNaMeta = botao => {
     return {
       type: 'URL',
       text: botao.texto,
-      url: botao.valor,
+      url: (botao.valor || '').trim(),
       ...(variavel ? { example: [botao.exemplo] } : {}),
     };
   }
@@ -172,9 +172,10 @@ const cartoesNaMeta = (cartoes, midias = []) => ({
   })),
 });
 
-// A contagem do tempo que falta (has_expiration) vai junto com o cupom: a data
-// de fim entra em cada envio, junto do código. Sem cupom, a oferta vai só com o
-// título em destaque, que a Meta aceita em qualquer leitura da regra.
+// A contagem do tempo que falta (has_expiration) vai junto com o cupom. A data
+// de fim não é do modelo: a Meta a recebe em cada envio (expiration_time_ms),
+// que a campanha ainda não faz. Sem cupom, a oferta vai só com o título em
+// destaque, que a Meta aceita em qualquer leitura da regra.
 const ofertaNaMeta = oferta => [
   {
     type: 'LIMITED_TIME_OFFER',
@@ -191,7 +192,11 @@ const botoesDaOferta = (oferta, textoDoBotao) => [
     buttons: [
       ...(oferta.cupom ? [{ type: 'COPY_CODE', example: oferta.cupom }] : []),
       // O texto do botão do original volta como estava; num modelo novo, o da tela.
-      { type: 'URL', text: oferta.botao || textoDoBotao, url: oferta.link },
+      {
+        type: 'URL',
+        text: oferta.botao || textoDoBotao,
+        url: (oferta.link || '').trim(),
+      },
     ],
   },
 ];

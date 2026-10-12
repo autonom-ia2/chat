@@ -6,8 +6,8 @@ import { LIMITE_DO_TITULO_DA_OFERTA } from '../../constants';
 import EscolherArquivo from './EscolherArquivo.vue';
 
 // Oferta por tempo limitado: título, o link (obrigatório) e, se quiser, um
-// cupom. Com cupom, o WhatsApp mostra quanto tempo falta (a data de fim entra em
-// cada envio, não no modelo). Foto ou vídeo no topo
+// cupom. Com cupom, o WhatsApp mostra quanto tempo falta (a data de fim é dada
+// no envio, não no modelo; a campanha ainda não envia oferta).
 // é opcional; rodapé este formato não tem.
 const rascunho = defineModel('rascunho', { type: Object, required: true });
 

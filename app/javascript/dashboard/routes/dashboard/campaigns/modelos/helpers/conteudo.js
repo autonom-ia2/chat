@@ -31,15 +31,22 @@ export const juntarTextos = pedacos =>
 // O editor põe um espaço depois de cada campo (para o cursor ter onde ficar).
 // No texto que vale, o espaço sai antes da pontuação ("Ana !" → "Ana!") e o
 // espaço repetido vira um só ("Ana  e" → "Ana e"). Sem expressão regular.
-const PONTUACAO = '.,!?:;)';
+// O navegador às vezes digita o espaço como "espaço que não quebra" (U+00A0):
+// conta como espaço também.
+const PONTUACAO = '.,!?:;)]}…”»%';
+const ESPACOS = [' ', '\u00a0'];
+const ehEspaco = letra => ESPACOS.includes(letra);
 const semEspacoSobrando = texto => {
   let resto = texto;
-  while (resto.startsWith('  ')) resto = resto.slice(1);
-  return resto.startsWith(' ') &&
-    PONTUACAO.includes(resto.charAt(1)) &&
-    resto.length > 1
-    ? resto.slice(1)
-    : resto;
+  while (ehEspaco(resto.charAt(0)) && ehEspaco(resto.charAt(1))) {
+    resto = resto.slice(1);
+  }
+  if (!ehEspaco(resto.charAt(0))) return resto;
+  const seguinte = resto.charAt(1);
+  if (seguinte && (PONTUACAO.includes(seguinte) || seguinte === '\n')) {
+    return resto.slice(1);
+  }
+  return ` ${resto.slice(1)}`;
 };
 export const ajustarEspacosDosCampos = pedacos =>
   pedacos.map((pedaco, indice) =>

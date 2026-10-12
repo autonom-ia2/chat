@@ -1,7 +1,7 @@
 <script setup>
-// Oferta por tempo limitado na prévia: o título e, com cupom, a contagem do
-// tempo que falta (a data de fim entra em cada envio, então aqui é só o lugar
-// dela) e o cupom, como o WhatsApp mostra em cima do texto.
+// Oferta por tempo limitado na prévia: o título e, com cupom, um exemplo da
+// contagem do tempo que falta (a data de fim é dada no envio) e o cupom, como o
+// WhatsApp mostra em cima do texto.
 defineProps({
   oferta: { type: Object, required: true },
 });

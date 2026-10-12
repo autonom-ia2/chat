@@ -25,16 +25,21 @@ export const codigoDeExemploValido = codigo => {
   );
 };
 
-// Endereço de site completo: http(s) e um domínio com ponto. O final variável
-// ({{1}}) de modelo feito fora fica de fora da leitura. Lido pelo URL do próprio
-// navegador, sem expressão regular.
+// Endereço de site completo: começa com http:// ou https://, só letras do
+// teclado sem espaço (a mesma régua do servidor, que lê com URI) e um domínio
+// com ponto. O final variável ({{1}}) de modelo feito fora fica de fora da
+// leitura. Sem expressão regular.
+const INICIOS = ['https://', 'http://'];
+const semEspacoEAscii = texto =>
+  texto
+    .split('')
+    .every(letra => letra.charCodeAt(0) > 32 && letra.charCodeAt(0) < 127);
 export const enderecoValido = endereco => {
   const base = (endereco || '').trim().split('{{')[0];
+  if (!INICIOS.some(inicio => base.startsWith(inicio))) return false;
+  if (!semEspacoEAscii(base)) return false;
   try {
-    const url = new URL(base);
-    return (
-      ['https:', 'http:'].includes(url.protocol) && url.hostname.includes('.')
-    );
+    return new URL(base).hostname.includes('.');
   } catch {
     return false;
   }
