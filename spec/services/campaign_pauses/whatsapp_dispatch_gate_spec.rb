@@ -151,6 +151,84 @@ RSpec.describe CampaignPauses::WhatsappDispatchGate, :aggregate_failures do
     end
   end
 
+  # #1382 (auditoria A1): a conferência perguntava à Meta e o envio lia a lista da caixa. Quando divergiam, a campanha
+  # passava e cada envio saía sem variáveis (components []), com todos falhando e a campanha "concluída".
+  describe 'check and send read the same template version (#1382)' do
+    let(:other) { { 'id' => '55', 'name' => 'outro', 'language' => 'pt_BR', 'status' => 'APPROVED', 'components' => [] } }
+    let(:from_meta) { template.merge('id' => '901', 'parameter_format' => 'POSITIONAL') }
+
+    def body_texts(sent)
+      sent.map { |body| Array(body.dig('template', 'components')).flat_map { |c| Array(c['parameters']).pluck('text') } }
+    end
+
+    it 'template paused by Meta and reactivated: the inbox list still says PAUSED, Meta says APPROVED → sends with variables' do
+      channel.update_columns(message_templates: [template.merge('status' => 'PAUSED', 'quality_score' => { 'score' => 'RED' }), other]) # rubocop:disable Rails/SkipsModelValidations
+      sent = stub_graph_messages
+      stub_meta_template_lookup([from_meta])
+
+      dispatch
+
+      expect(body_texts(sent)).to eq([['Equipe Hub2You'], ['Equipe Hub2You']])
+      expect(campaign.reload).to be_completed
+      list = channel.reload.message_templates
+      expect(list.first).to include('status' => 'APPROVED', 'id' => '901', 'quality_score' => { 'score' => 'RED' })
+      expect(list.last).to eq(other)
+    end
+
+    it 'second inbox of the same WABA: the campaign inbox list still says REJECTED → writes Meta version only there and sends' do
+      sibling = create(:channel_whatsapp, account: account, provider: 'whatsapp_cloud', validate_provider_config: false,
+                                          sync_templates: false, provider_config: channel.provider_config)
+      sibling.update_columns(message_templates: [template]) # rubocop:disable Rails/SkipsModelValidations
+      channel.update_columns(message_templates: [template.merge('status' => 'REJECTED')]) # rubocop:disable Rails/SkipsModelValidations
+      sent = stub_graph_messages
+      stub_meta_template_lookup([from_meta])
+
+      dispatch
+
+      expect(body_texts(sent)).to eq([['Equipe Hub2You'], ['Equipe Hub2You']])
+      expect(channel.reload.message_templates.first).to include('status' => 'APPROVED', 'id' => '901')
+      expect(sibling.reload.message_templates).to eq([template])
+    end
+
+    it 'list cut by a failed sync (template missing from it): adds the Meta version, keeps the others and sends' do
+      channel.update_columns(message_templates: [other]) # rubocop:disable Rails/SkipsModelValidations
+      sent = stub_graph_messages
+      stub_meta_template_lookup([from_meta])
+
+      dispatch
+
+      expect(body_texts(sent)).to eq([['Equipe Hub2You'], ['Equipe Hub2You']])
+      expect(channel.reload.message_templates).to eq([other, from_meta])
+    end
+
+    it 'pauses by the system with template_missing, sending nothing, when the send would not find the template' do
+      channel.update_columns(message_templates: [other]) # rubocop:disable Rails/SkipsModelValidations
+      allow(Whatsapp::Templates::ChannelList).to receive(:upsert!).and_raise(ActiveRecord::LockWaitTimeout)
+      sent = stub_graph_messages
+      stub_meta_template_lookup([from_meta])
+      campaign.update!(campaign_status: :processing)
+
+      dispatch
+
+      expect(sent).to be_empty
+      expect(CampaignRecipient.where(campaign: campaign)).to be_empty
+      expect(campaign.reload).to be_active
+      pause = CampaignPause.open_for(campaign)
+      expect(pause).to have_attributes(source: 'system', reason_code: 'template_missing')
+      expect(pause.details).to include('stage' => 'inbox_list', 'template_name' => 'renovacao', 'lookup_source' => 'meta')
+    end
+
+    it 'Meta down: reads the inbox list as before and writes nothing' do
+      sent = stub_graph_messages
+      allow(Whatsapp::Templates::ChannelList).to receive(:upsert!)
+
+      dispatch
+
+      expect(sent.size).to eq(2)
+      expect(Whatsapp::Templates::ChannelList).not_to have_received(:upsert!)
+    end
+  end
+
   describe 'trigger and resume' do
     before { stub_graph_messages }
 

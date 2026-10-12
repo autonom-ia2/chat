@@ -10,4 +10,6 @@ Rails.application.config.to_prepare do
   end
 
   prepend_once.call(Whatsapp::Providers::WhatsappCloudService, Whatsapp::Templates::SyncFields)
+  # chat#1382: a conferência do disparo pergunta ao envio se ele vai achar o modelo na lista da caixa.
+  prepend_once.call(Whatsapp::TemplateProcessorService, Whatsapp::Templates::ProcessorLookup)
 end

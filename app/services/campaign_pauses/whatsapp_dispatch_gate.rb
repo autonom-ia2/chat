@@ -9,6 +9,13 @@
 # (Whatsapp::AuthenticationTemplateGuard) stay where they are.
 # Every WhatsApp Cloud one-off campaign with template_params goes through the check. A check that
 # breaks never sends blind and never leaves the campaign stuck in `processing`: it pauses by the system.
+#
+# Check and send read the same template (#1382). The check asks Meta; the send
+# (Whatsapp::TemplateProcessorService) reads the inbox list. When Meta answered with the approved
+# template, that item is written into the campaign inbox's list (Whatsapp::Templates::ChannelList,
+# locked, only that entry), so a list still saying PAUSED, a sibling inbox of the same WABA not synced
+# yet or a list cut by a failed sync no longer make every send go out without variables. If the send
+# would still not find the template, the campaign pauses by the system with `template_missing`.
 module CampaignPauses::WhatsappDispatchGate
   def perform
     return super unless template_check_applies?
@@ -28,10 +35,29 @@ module CampaignPauses::WhatsappDispatchGate
   end
 
   def template_verdict
-    Whatsapp::Templates::DispatchCheck.new(campaign, channel: channel).call
+    verdict = Whatsapp::Templates::DispatchCheck.new(campaign, channel: channel).call
+    verdict.ok? ? send_list_verdict(verdict) : verdict
   rescue StandardError => e
     Rails.logger.error "[CampaignPauses] campaign=#{campaign.id} template check failed: #{e.class.name}"
     Whatsapp::Templates::DispatchCheck::Verdict.new(reason_code: 'template_unverifiable', source: 'system',
                                                     details: { error_class: e.class.name })
+  end
+
+  # `channel` is the object the send reads: ChannelList locks and reloads it, so the send sees the written item.
+  def send_list_verdict(verdict)
+    keep_meta_version(verdict.template) if verdict.details[:lookup_source] == Whatsapp::Templates::DispatchCheck::META
+    return verdict if Whatsapp::TemplateProcessorService.new(channel: channel, template_params: campaign.template_params).template_in_list?
+
+    Whatsapp::Templates::DispatchCheck::Verdict.new(
+      reason_code: 'template_missing', source: 'system',
+      details: verdict.details.slice(:template_name, :language, :lookup_source).merge(stage: 'inbox_list')
+    )
+  end
+
+  def keep_meta_version(template)
+    Whatsapp::Templates::ChannelList.upsert!(channel, template)
+  rescue StandardError => e
+    # The send-list check right after decides: the item may already be there from the sync.
+    Rails.logger.error "[CampaignPauses] campaign=#{campaign.id} meta template not kept: #{e.class.name}"
   end
 end
