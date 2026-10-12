@@ -4,6 +4,7 @@ import {
   estadoDaFonte,
   fecharFrase,
   gavetaDaAba,
+  gavetaDaUrl,
   gavetasPermitidas,
   ehSuperAdmin,
   idiomaDoNavegador,
@@ -29,6 +30,16 @@ describe('regras da página do agente', () => {
     expect(gavetaDaAba('tune')).toBeNull();
     expect(gavetaDaAba('publish')).toBeNull();
     expect(gavetaDaAba(undefined)).toBeNull();
+  });
+
+  // #1370 — a volta do assistente de páginas de agendamento reabre a agenda por `?gaveta=`.
+  it('opens a drawer from ?gaveta=, only with a known name, and the old tab wins', () => {
+    expect(gavetaDaUrl(undefined, 'agenda')).toBe(GAVETA.AGENDA);
+    expect(gavetaDaUrl(undefined, 'sabe')).toBe(GAVETA.SABE);
+    expect(gavetaDaUrl(undefined, 'qualquer')).toBeNull();
+    expect(gavetaDaUrl(undefined, ['agenda'])).toBeNull();
+    expect(gavetaDaUrl(undefined, undefined)).toBeNull();
+    expect(gavetaDaUrl('knowledge', 'agenda')).toBe(GAVETA.SABE);
   });
 
   it('reads the quoting agent as answering or stopped, like any other', () => {

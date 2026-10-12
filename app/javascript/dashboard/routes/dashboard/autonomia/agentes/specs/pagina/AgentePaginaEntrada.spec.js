@@ -173,6 +173,26 @@ describe('AgentePaginaEntrada', () => {
       expect(wrapper.get('[data-nova]').attributes('data-gaveta')).toBe(gaveta);
     });
 
+    // #1370 — a volta do assistente de páginas de agendamento (`?gaveta=agenda`).
+    it.each([
+      [{ gaveta: 'agenda' }, {}, 'agenda'],
+      [{ gaveta: 'nada' }, {}, ''],
+      [{ gaveta: 'agenda' }, { tab: 'knowledge' }, 'sabe'],
+    ])(
+      'reads ?gaveta=%o (params %o) as the drawer "%s"',
+      async (query, extra, gaveta) => {
+        comConta(conta(true));
+        rota.atual = reactive({ params: { agentId: '7', ...extra }, query });
+        const wrapper = mount(AgentePaginaEntrada, {
+          props: { agentId: '7', tab: extra.tab || 'test' },
+        });
+        await flushPromises();
+        expect(wrapper.get('[data-nova]').attributes('data-gaveta')).toBe(
+          gaveta
+        );
+      }
+    );
+
     it('remounts the new page when the route switches to another agent', async () => {
       comConta(conta(true));
       const wrapper = montar({ agentId: '7', tab: 'test' });

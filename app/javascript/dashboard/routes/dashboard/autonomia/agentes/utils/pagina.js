@@ -27,6 +27,13 @@ const GAVETA_DA_ABA = {
 
 export const gavetaDaAba = aba => GAVETA_DA_ABA[aba] || null;
 
+// #1370 — `?gaveta=<nome>` também abre uma gaveta: o :tab antigo não tem a agenda. É por onde a volta
+// do assistente de páginas de CRM › Agendamento reabre "Marcar reuniões". A página tira a consulta
+// da URL ao abrir (F5 não reabre). O :tab antigo vence quando os dois vêm.
+export const gavetaDaUrl = (aba, consulta) =>
+  gavetaDaAba(aba) ||
+  (Object.values(GAVETA).includes(consulta) ? consulta : null);
+
 const TIPO_COTACAO = 'insurance_quote';
 
 export const ehCotacao = agente => agente?.agent_type === TIPO_COTACAO;
