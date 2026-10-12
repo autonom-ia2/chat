@@ -78,6 +78,8 @@ def fake_aws():
     if operation == 'send-command':
         parameters = arg('--parameters')
         if parameters.startswith('commands='):
+            # O AWS CLI real não decodifica escapes JSON no formato abreviado: um \n vira texto e quebra o script (#1406).
+            assert '\\n' not in parameters, 'multi-line SSM command must use full JSON --parameters'
             payload = json.loads(parameters.removeprefix('commands='))
             assert payload[0] == 'set -eu'
             command_kind = 'service'
@@ -85,14 +87,18 @@ def fake_aws():
             parameters = json.loads(parameters)
             assert set(parameters) == {'commands'}
             payload = parameters['commands']
-            assert len(payload) == 1 and isinstance(payload[0], str)
-            if payload[0] == 'if [ -e /run/chatwoot-deploy.running ]; then echo DEPLOY_RUNNING; else echo DEPLOY_IDLE; fi':
+            if payload[0] == 'set -eu':
+                command_kind = 'service'
+            elif len(payload) != 1 or not isinstance(payload[0], str):
+                raise AssertionError('unexpected JSON SSM payload')
+            elif payload[0] == 'if [ -e /run/chatwoot-deploy.running ]; then echo DEPLOY_RUNNING; else echo DEPLOY_IDLE; fi':
                 command_kind = 'deploy-status'
             else:
                 assert payload[0] == ('systemd-run --unit=green-retire --no-block sh -c '
                                       '"while [ -e /run/chatwoot-deploy.running ]; do sleep 5; done; shutdown -h now"')
                 command_kind = 'retirement'
-            assert arg('--instance-ids') == 'i-green'
+            if command_kind != 'service':
+                assert arg('--instance-ids') == 'i-green'
         assert isinstance(payload, list) and all(isinstance(item, str) for item in payload)
         assert arg('--document-name') == 'AWS-RunShellScript'
     injected_failure = (operation == state.get('fail_operation') or
@@ -459,7 +465,8 @@ publisher_setup() {
                         result, failed = self.execute(script, fail_at=number, **initial)
                         tolerant_probe = (name == 'Cleanup failed green resources before traffic shift' and
                             (args[1] == 'get-command-invocation' or
-                             (args[1] == 'send-command' and args[args.index('--parameters')+1].startswith('{'))))
+                             (args[1] == 'send-command' and args[args.index('--parameters')+1].startswith('{')
+                              and json.loads(args[args.index('--parameters')+1])['commands'][0] != 'set -eu')))
                         if tolerant_probe:
                             self.assert_pointers(failed, 'tg-blue', 'i-blue')
                             self.assertEqual(failed['workers'], [['stop', 'i-green'], ['start', 'i-blue']])
