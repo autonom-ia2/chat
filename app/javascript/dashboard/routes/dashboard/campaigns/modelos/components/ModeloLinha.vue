@@ -156,23 +156,29 @@ const acao = computed(() => {
         </span>
       </span>
     </button>
-    <Button
-      v-if="acao === 'corrigir'"
-      data-corrigir
-      :label="$t('MODELOS_WHATSAPP.ACOES.CORRIGIR')"
-      icon="i-lucide-wrench"
-      color="ruby"
-      class="self-start min-h-11 sm:self-center shrink-0"
-      @click="emit('corrigir')"
-    />
-    <Button
-      v-else-if="acao === 'usar'"
-      data-usar
-      :label="$t('MODELOS_WHATSAPP.ACOES.USAR')"
-      icon="i-lucide-send"
-      variant="faded"
-      class="self-start min-h-11 sm:self-center shrink-0"
-      @click="emit('usar')"
-    />
+    <!-- Coluna de largura fixa: o texto e o botão ficam no mesmo lugar em todas as linhas. -->
+    <div
+      class="shrink-0 sm:flex sm:w-56 sm:justify-end"
+      :class="acao ? 'flex' : 'hidden'"
+    >
+      <Button
+        v-if="acao === 'corrigir'"
+        data-corrigir
+        :label="$t('MODELOS_WHATSAPP.ACOES.CORRIGIR')"
+        icon="i-lucide-wrench"
+        color="ruby"
+        class="min-h-11"
+        @click="emit('corrigir')"
+      />
+      <Button
+        v-else-if="acao === 'usar'"
+        data-usar
+        :label="$t('MODELOS_WHATSAPP.ACOES.USAR')"
+        icon="i-lucide-send"
+        variant="faded"
+        class="min-h-11"
+        @click="emit('usar')"
+      />
+    </div>
   </li>
 </template>

@@ -453,7 +453,7 @@ useOnEnter(fetchAll);
             v-for="row in visibleRows"
             :key="row.key"
             :data-row="row.key"
-            class="grid gap-3 border-b border-n-weak px-4 py-4 last:border-0 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_8rem_auto] md:items-center xl:px-6"
+            class="grid gap-3 border-b border-n-weak px-4 py-4 last:border-0 lg:grid-cols-[minmax(0,1fr)_14rem_6rem_12rem_10rem] lg:items-center lg:gap-4 xl:px-6"
           >
             <div class="flex min-w-0 items-center gap-3">
               <span
@@ -474,20 +474,23 @@ useOnEnter(fetchAll);
                 </p>
               </div>
             </div>
-            <p class="mb-0 text-sm text-n-slate-12">
-              <span class="text-xs text-n-slate-11 md:hidden">
+            <p class="mb-0 text-sm text-n-slate-12 lg:whitespace-nowrap">
+              <span class="text-xs text-n-slate-11 lg:hidden">
                 {{ t(`${NS}.WHEN`) }}{{ COLON }}
               </span>
               {{ formatWhen(row) }}
             </p>
-            <p class="mb-0 text-sm text-n-slate-11">
+            <p
+              class="mb-0 text-sm text-n-slate-11"
+              :class="row.total === null ? 'hidden lg:block' : ''"
+            >
               <template v-if="row.total !== null">
                 {{
                   t(`${NS}.SENT_OF`, { sent: row.sent ?? 0, total: row.total })
                 }}
               </template>
             </p>
-            <p class="mb-0">
+            <p class="mb-0 flex flex-col items-start gap-0.5">
               <span
                 class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium"
                 :class="
@@ -500,13 +503,13 @@ useOnEnter(fetchAll);
               </span>
               <span
                 v-if="row.stopReason"
-                class="block mt-0.5 text-xs text-n-slate-11"
+                class="text-xs text-n-slate-11"
                 data-test="stop-reason"
               >
                 {{ t(`CAMPAIGN_JOURNEY.STOP_REASONS.${row.stopReason}`) }}
               </span>
             </p>
-            <div class="flex items-center justify-end gap-1 md:w-40">
+            <div class="flex items-center gap-1 lg:justify-end">
               <router-link
                 :to="row.route"
                 class="flex min-h-11 items-center gap-1 rounded-xl px-2 text-sm font-medium text-n-blue-11 hover:bg-n-alpha-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"

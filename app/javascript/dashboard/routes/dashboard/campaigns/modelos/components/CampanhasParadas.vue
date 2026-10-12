@@ -98,7 +98,12 @@ const retomar = async campanha => {
         v-for="campanha in campanhas"
         :key="campanha.pausaId || campanha.id"
         :data-campanha-parada="campanha.id"
-        class="flex flex-wrap items-center justify-between gap-3 p-4 rounded-xl bg-n-solid-1"
+        class="grid gap-3 p-4 rounded-xl bg-n-solid-1"
+        :class="
+          noModelo
+            ? ''
+            : 'xl:grid-cols-[minmax(0,1fr)_24rem] xl:items-center xl:gap-6'
+        "
       >
         <span class="flex flex-col min-w-0 gap-0.5">
           <span
@@ -145,7 +150,12 @@ const retomar = async campanha => {
             </router-link>
           </span>
         </span>
-        <span class="flex flex-wrap items-center gap-2 shrink-0">
+        <!-- Duas vagas do mesmo tamanho: os botões ficam no mesmo lugar em todos os cartões.
+             Na página do modelo (coluna estreita), os botões vão abaixo do texto. -->
+        <span
+          class="grid w-full grid-cols-2 gap-2 max-w-[24rem]"
+          :class="noModelo ? '' : 'xl:max-w-none'"
+        >
           <Button
             v-if="gerenciaCampanhas && campanha.pausaId"
             data-retomar
@@ -153,18 +163,19 @@ const retomar = async campanha => {
             icon="i-lucide-play"
             color="slate"
             variant="faded"
-            class="!min-h-11 !rounded-xl"
+            class="!min-h-11 !rounded-xl !w-full !justify-center"
             :is-loading="retomando === campanha.pausaId"
             :disabled="!campanha.podeRetomar"
             @click="retomar(campanha)"
           />
+          <span v-else aria-hidden="true" />
           <router-link
             :to="destino(campanha)"
-            class="inline-flex items-center gap-2 px-4 text-sm font-semibold text-white rounded-xl min-h-11 bg-n-brand hover:brightness-110"
+            class="inline-flex items-center justify-center w-full gap-1.5 px-3 text-sm font-semibold text-white whitespace-nowrap rounded-xl min-h-11 bg-n-brand hover:brightness-110"
           >
             {{ $t(`MODELOS_WHATSAPP.PARADAS.ACOES.${rotuloDaAcao(campanha)}`) }}
             <span
-              class="i-lucide-arrow-right size-4 rtl:rotate-180"
+              class="hidden i-lucide-arrow-right size-4 rtl:rotate-180 sm:inline-block"
               aria-hidden="true"
             />
           </router-link>

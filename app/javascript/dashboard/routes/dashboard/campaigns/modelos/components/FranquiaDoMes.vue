@@ -78,12 +78,13 @@ const linhas = computed(() =>
         v-for="linha in linhas"
         :key="linha.id"
         :data-franquia-numero="linha.id"
-        class="flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5 text-[0.9375rem]"
+        class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 text-[0.9375rem]"
       >
         <span class="font-medium break-words text-n-slate-12">
           {{ linha.nome }}
         </span>
         <span
+          class="text-end"
           :class="
             linha.passou ? 'text-n-amber-11 font-medium' : 'text-n-slate-11'
           "
