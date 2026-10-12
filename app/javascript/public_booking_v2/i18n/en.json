@@ -99,12 +99,13 @@
     "PAUSED": {
       "TITLE": "Booking is closed for now",
       "BODY": "You cannot book here right now. Talk to us on WhatsApp.",
-      "BODY_NO_WHATSAPP": "You cannot book here right now. Please try again later.",
+      "BODY_NO_WHATSAPP": "You cannot book here right now. Go back to WhatsApp and talk to whoever sent you the link.",
+      "BODY_CONTACT": "You cannot book here right now. Leave your WhatsApp and we will reach out to you.",
       "WHATSAPP": "Chat on WhatsApp"
     },
     "NOT_FOUND": {
       "TITLE": "This link is no longer valid",
-      "BODY": "Ask the person who sent it for a new link."
+      "BODY": "Ask whoever sent you this link for a new one."
     },
     "ERROR_PAGE": {
       "TITLE": "We could not open the page",
@@ -172,7 +173,8 @@
       "CAPTCHA": "Confirm you are not a robot."
     },
     "HELP": {
-      "WHATSAPP": "Chat on WhatsApp"
+      "WHATSAPP": "Chat on WhatsApp",
+      "BACK_TO_WHATSAPP": "Back to WhatsApp"
     }
   }
 }
