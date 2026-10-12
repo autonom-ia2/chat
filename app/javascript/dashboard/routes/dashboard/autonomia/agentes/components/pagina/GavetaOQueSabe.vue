@@ -1,5 +1,5 @@
 <script setup>
-import { computed, nextTick, ref, useId } from 'vue';
+import { computed, nextTick, ref, useId, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useStore } from 'dashboard/composables/store';
 import AgenteGaveta from '../AgenteGaveta.vue';
@@ -140,13 +140,42 @@ const mandarSite = () => {
   });
 };
 
+// #1369 — "Ler de novo": a API aceita o pedido (202) e devolve o site como estava ("Pronto"); a
+// leitura só começa depois, num job, e a store não se relia porque nada parecia estar sendo lido.
+// Até o próprio site dizer que está lendo, que falhou ou que foi lido de novo (`synced_at` mudou),
+// a linha mostra "Lendo…" e a store continua se relendo (o mesmo intervalo de 4 s).
+// { [id da fonte]: synced_at no momento do pedido }
+const relendo = ref({});
+
+const voltouDaLeitura = fonte =>
+  fonte.status !== 'ready' ||
+  (fonte.synced_at ?? null) !== relendo.value[fonte.id];
+
+const acompanharLeitura = () => {
+  const ainda = lista.value.filter(
+    fonte => fonte.id in relendo.value && !voltouDaLeitura(fonte)
+  );
+  relendo.value = Object.fromEntries(
+    ainda.map(fonte => [fonte.id, relendo.value[fonte.id]])
+  );
+  if (!ainda.length) return;
+  store.dispatch('autonomiaSources/schedulePoll', {
+    agentId: props.agente.id,
+    records: ainda.map(fonte => ({ ...fonte, status: 'pending' })),
+  });
+};
+
+watch(lista, acompanharLeitura);
+
 const lerDeNovo = fonte =>
-  salvar(() =>
-    store.dispatch('autonomiaSources/resync', {
+  salvar(async () => {
+    await store.dispatch('autonomiaSources/resync', {
       agentId: props.agente.id,
       sourceId: fonte.id,
-    })
-  );
+    });
+    relendo.value = { ...relendo.value, [fonte.id]: fonte.synced_at ?? null };
+    acompanharLeitura();
+  });
 
 const pedirTirar = fonte => {
   tirando.value = fonte;
@@ -260,6 +289,7 @@ const tirar = () => remover(tirando.value);
         :key="fonte.id"
         :fonte="fonte"
         :nome-agente="nome"
+        :relendo="fonte.id in relendo"
         :pode-gerenciar="podeGerenciar"
         @ler-de-novo="lerDeNovo"
         @tirar="pedirTirar"

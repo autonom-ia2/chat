@@ -262,6 +262,77 @@ describe('GavetaOQueSabe', () => {
     wrapper.unmount();
   });
 
+  it('shows "Lendo…" right after "Ler de novo" until the website comes back (#1369)', async () => {
+    const site = fonte(4, {
+      source_type: 'link',
+      reference: 'loja.com',
+      synced_at: '2026-10-12T10:00:00Z',
+    });
+    preparar([site]);
+    const wrapper = montar();
+    await nextTick();
+    expect(no('[data-fonte]').dataset.estado).toBe('pronto');
+
+    no('[data-fonte] [aria-haspopup="menu"]').click();
+    await nextTick();
+    todos('[role="menuitem"]')[0].click();
+    await flushPromises();
+
+    // A API devolveu o site como estava ("ready"): a linha diz que está lendo e a store se relê.
+    expect(no('[data-fonte]').dataset.estado).toBe('lendo');
+    expect(no('[data-estado-texto]').textContent).toContain(
+      'AGENTS.JORNADA.PAGINA.SABE.LENDO'
+    );
+    expect(store.dispatch).toHaveBeenCalledWith(
+      'autonomiaSources/schedulePoll',
+      {
+        agentId: 7,
+        records: [expect.objectContaining({ id: 4, status: 'pending' })],
+      }
+    );
+
+    // A releitura da store ainda traz o site sem mudança: continua lendo e pede outra releitura.
+    store.dispatch.mockClear();
+    await wrapper.setProps({ fontes: [{ ...site }] });
+    expect(no('[data-fonte]').dataset.estado).toBe('lendo');
+    expect(store.dispatch).toHaveBeenCalledWith(
+      'autonomiaSources/schedulePoll',
+      expect.anything()
+    );
+
+    // O servidor começou a ler: quem diz é ele.
+    await wrapper.setProps({ fontes: [{ ...site, status: 'processing' }] });
+    expect(no('[data-fonte]').dataset.estado).toBe('lendo');
+
+    // Leu de novo: volta "Pronto" e a store para de se reler por causa dele.
+    store.dispatch.mockClear();
+    await wrapper.setProps({
+      fontes: [{ ...site, synced_at: '2026-10-12T10:05:00Z' }],
+    });
+    expect(no('[data-fonte]').dataset.estado).toBe('pronto');
+    expect(store.dispatch).not.toHaveBeenCalledWith(
+      'autonomiaSources/schedulePoll',
+      expect.anything()
+    );
+    wrapper.unmount();
+  });
+
+  it('goes back to the real state when the new reading fails (#1369)', async () => {
+    const site = fonte(4, { source_type: 'link', reference: 'loja.com' });
+    preparar([site]);
+    const wrapper = montar();
+    await nextTick();
+    no('[data-fonte] [aria-haspopup="menu"]').click();
+    await nextTick();
+    todos('[role="menuitem"]')[0].click();
+    await flushPromises();
+    expect(no('[data-fonte]').dataset.estado).toBe('lendo');
+
+    await wrapper.setProps({ fontes: [{ ...site, status: 'failed' }] });
+    expect(no('[data-fonte]').dataset.estado).toBe('falha');
+    wrapper.unmount();
+  });
+
   it('is read-only for view-only seats', async () => {
     preparar([fonte(3, { status: 'failed' })]);
     const wrapper = montar({ podeGerenciar: false, perguntas: [{ id: 1 }] });

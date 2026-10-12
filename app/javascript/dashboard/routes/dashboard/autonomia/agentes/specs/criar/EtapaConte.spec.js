@@ -43,6 +43,23 @@ describe('EtapaConte', () => {
     expect(wrapper.find('[data-ideias]').exists()).toBe(false);
   });
 
+  it('holds the ideas until the first Builder question arrives (#1369)', async () => {
+    const wrapper = montar({
+      falas: [],
+      pensando: true,
+      ideias: ['Loja de roupas', 'Confeitaria'],
+    });
+    expect(wrapper.find('[data-pensando]').exists()).toBe(true);
+    expect(wrapper.find('[data-ideias]').exists()).toBe(false);
+
+    // A abertura falhou: sem pergunta, sem ideias.
+    await wrapper.setProps({ pensando: false, falhou: true });
+    expect(wrapper.find('[data-ideias]').exists()).toBe(false);
+
+    await wrapper.setProps({ falas, falhou: false });
+    expect(wrapper.find('[data-ideias]').exists()).toBe(true);
+  });
+
   it('sends what was typed, with optional attachments, and clears the field', async () => {
     const wrapper = montar();
     await wrapper.get('textarea').setValue('Loja de roupas');

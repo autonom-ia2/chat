@@ -154,3 +154,34 @@ export const fecharFrase = texto => {
 // O locale do i18n vem como "pt_BR"; o Intl do navegador quer "pt-BR".
 export const idiomaDoNavegador = locale =>
   (locale || 'en').split('_').join('-');
+
+// #1369 — quando foi a última atividade de uma conversa. Nos últimos 7 dias (hoje e os 6 anteriores)
+// o dia da semana não se repete, então basta ele e a hora ("seg., 20:59"); antes disso, a data
+// ("28 de set., 20:59").
+const DIAS_COM_NOME = 6;
+const HORA = { hour: '2-digit', minute: '2-digit' };
+
+export const quandoFoi = (segundos, idioma, agora = new Date()) => {
+  const data = new Date(segundos * 1000);
+  const inicio = new Date(agora);
+  inicio.setHours(0, 0, 0, 0);
+  inicio.setDate(inicio.getDate() - DIAS_COM_NOME);
+  const formato =
+    data >= inicio
+      ? { weekday: 'short', ...HORA }
+      : { day: 'numeric', month: 'short', ...HORA };
+  return data.toLocaleString(idioma, formato);
+};
+
+// #1369 — de onde veio um jeito criado pelo "Voltar": o jeito mais antigo com o mesmo texto
+// (mesmo instruction_hash), anterior a ele. null quando esse jeito já saiu da lista (a API guarda
+// os 50 mais novos). `versoes` vem do mais novo para o mais antigo, como a API devolve.
+export const origemDaVolta = (versao, versoes) => {
+  if (versao?.reason !== 'rollback' || !versao.instruction_hash) return null;
+  const posicao = versoes.indexOf(versao);
+  const anteriores = versoes.slice(posicao + 1);
+  const iguais = anteriores.filter(
+    item => item.instruction_hash === versao.instruction_hash
+  );
+  return iguais[iguais.length - 1] || null;
+};

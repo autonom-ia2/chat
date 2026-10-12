@@ -12,6 +12,8 @@ const props = defineProps({
   fonte: { type: Object, required: true },
   nomeAgente: { type: String, required: true },
   podeGerenciar: { type: Boolean, default: false },
+  // #1369 — "Ler de novo" pedido e o site ainda não voltou da leitura: mostra "Lendo…".
+  relendo: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['lerDeNovo', 'tirar', 'mandarOutro']);
@@ -19,7 +21,9 @@ const emit = defineEmits(['lerDeNovo', 'tirar', 'mandarOutro']);
 const { t } = useI18n();
 const NS = 'AGENTS.JORNADA.PAGINA.SABE';
 
-const estado = computed(() => estadoDaFonte(props.fonte));
+const estado = computed(() =>
+  props.relendo ? 'lendo' : estadoDaFonte(props.fonte)
+);
 const site = computed(() => ehSite(props.fonte));
 const nome = computed(() => nomeDaFonte(props.fonte));
 

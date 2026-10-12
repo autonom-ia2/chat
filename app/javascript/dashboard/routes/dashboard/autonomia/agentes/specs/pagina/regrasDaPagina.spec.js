@@ -11,6 +11,8 @@ import {
   estadoDeOperacao,
   podeMudarConversando,
   quandoDoAgente,
+  quandoFoi,
+  origemDaVolta,
 } from '../../utils/pagina';
 import { horarioDaCaixa } from '../../utils/horarios';
 
@@ -234,5 +236,49 @@ describe('horário da caixa', () => {
       t
     );
     expect(texto).toBe('DIA_TODO(D6())');
+  });
+});
+
+describe('#1369 — quando foi e de onde veio', () => {
+  // Segunda, 12/10/2026, 15h (hora local).
+  const AGORA = new Date(2026, 9, 12, 15, 0);
+  const segundos = data => Math.floor(data.getTime() / 1000);
+  const comDia = { weekday: 'short', hour: '2-digit', minute: '2-digit' };
+  const comData = {
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  };
+
+  it('uses the weekday inside the last 7 days and the date before that', () => {
+    const hoje = new Date(2026, 9, 12, 9, 30);
+    const seisDiasAtras = new Date(2026, 9, 6, 0, 5);
+    const seteDiasAtras = new Date(2026, 9, 5, 23, 50);
+    expect(quandoFoi(segundos(hoje), 'pt-BR', AGORA)).toBe(
+      hoje.toLocaleString('pt-BR', comDia)
+    );
+    expect(quandoFoi(segundos(seisDiasAtras), 'pt-BR', AGORA)).toBe(
+      seisDiasAtras.toLocaleString('pt-BR', comDia)
+    );
+    expect(quandoFoi(segundos(seteDiasAtras), 'pt-BR', AGORA)).toBe(
+      seteDiasAtras.toLocaleString('pt-BR', comData)
+    );
+  });
+
+  it('finds the version a rollback went back to, by the same text', () => {
+    const versoes = [
+      { id: 5, reason: 'rollback', instruction_hash: 'a' },
+      { id: 4, reason: 'kb_refresh', instruction_hash: 'b' },
+      { id: 3, reason: 'rollback', instruction_hash: 'a' },
+      { id: 2, reason: 'manual_edit', instruction_hash: 'c' },
+      { id: 1, reason: 'manual_edit', instruction_hash: 'a' },
+    ];
+    expect(origemDaVolta(versoes[0], versoes)).toBe(versoes[4]);
+    expect(origemDaVolta(versoes[2], versoes)).toBe(versoes[4]);
+    expect(origemDaVolta(versoes[1], versoes)).toBeNull();
+    expect(
+      origemDaVolta({ id: 9, reason: 'rollback', instruction_hash: 'z' }, [])
+    ).toBeNull();
   });
 });

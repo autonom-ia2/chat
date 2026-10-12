@@ -698,6 +698,18 @@
         "SEM_CANAL_GARANTIA": "{nome} can already answer. You still need to choose where."
       },
       "ONDE_QUANDO": {
+        "TIPO": {
+          "WHATSAPP": "WhatsApp",
+          "INSTAGRAM": "Instagram",
+          "SITE": "Website chat",
+          "EMAIL": "Email",
+          "API": "API",
+          "FACEBOOK": "Facebook",
+          "TELEGRAM": "Telegram",
+          "SMS": "SMS",
+          "LINE": "LINE",
+          "TIKTOK": "TikTok"
+        },
         "TITULO": "Where and when {nome} answers",
         "ONDE": "Where it answers",
         "QUANDO": "When it answers",
@@ -1042,6 +1054,7 @@
         "BLOCO_SABE": {
           "TITULO": "What it knows",
           "TEXTO": "{nome} knows what you told in the conversation.",
+          "TEXTO_COM_FONTES": "{nome} knows what you told in the conversation and what is in the file or website. | {nome} knows what you told in the conversation and what is in the files and websites.",
           "ALTERAR_ARIA": "Change what it knows",
           "VER_ARIA": "View what it knows",
           "N_FONTES": "1 file or website | {n} files and websites",
@@ -1098,9 +1111,9 @@
         "SEMANA": {
           "ROTULO": "This week in numbers",
           "VAZIA": "No conversations this week yet. The numbers show up here as soon as {nome} answers someone.",
-          "RESPONDIDAS": "conversations answered",
-          "PASSADAS": "handed to the team",
-          "NOTA_RESPONDIDAS": "This week, {nome} answered {n} conversations and handed {m} to the team.",
+          "RESPONDIDAS": "conversation answered | conversations answered",
+          "PASSADAS": "handed to the team | handed to the team",
+          "NOTA_RESPONDIDAS": "This week, {nome} answered {n} conversation and handed {m} to the team. | This week, {nome} answered {n} conversations and handed {m} to the team.",
           "NOTA_PASSADAS": "When it did not know how to answer."
         },
         "CONVERSAS": {
@@ -1297,9 +1310,10 @@
           "LISTA": "Ways of answering, newest first",
           "CARREGANDO": "Loading the previous ways",
           "MOTIVO": {
-            "KB_REFRESH": "Updated from what it knows",
+            "KB_REFRESH": "Changed on its own when the files and websites changed",
             "MANUAL_EDIT": "Written by you",
-            "ROLLBACK": "Went back to a previous way"
+            "ROLLBACK": "Went back to a previous way",
+            "ROLLBACK_DE": "Went back to the way from {quando}"
           },
           "VOLTAR_ESTA": "Go back to this one",
           "VOLTANDO": "Going back…",

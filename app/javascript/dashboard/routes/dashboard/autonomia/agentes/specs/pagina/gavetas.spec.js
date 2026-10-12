@@ -1,5 +1,5 @@
 import { nextTick } from 'vue';
-import { mount, flushPromises } from '@vue/test-utils';
+import { config, mount, flushPromises } from '@vue/test-utils';
 import GavetaTestar from '../../components/pagina/GavetaTestar.vue';
 import GavetaFotoNome from '../../components/pagina/GavetaFotoNome.vue';
 import GavetaVersoes from '../../components/pagina/GavetaVersoes.vue';
@@ -455,6 +455,71 @@ describe('GavetaVersoes (T13)', () => {
     expect(linhas[2].textContent).toContain('VERSOES.MOTIVO.KB_REFRESH');
     expect(linhas[0].textContent).toContain('Oct');
     expect(document.body.textContent).not.toContain('Em uso');
+    wrapper.unmount();
+  });
+
+  it('says which way each "Voltar" went back to (#1369)', async () => {
+    config.global.plugins[0].global.setLocaleMessage('en', {
+      AGENTS: {
+        JORNADA: {
+          PAGINA: {
+            VERSOES: {
+              MOTIVO: {
+                ROLLBACK: 'Went back to a previous way',
+                ROLLBACK_DE: 'Went back to the way from {quando}',
+              },
+            },
+          },
+        },
+      },
+    });
+    store.dispatch.mockResolvedValue([
+      {
+        id: 5,
+        created_at: '2026-10-12T15:00:00Z',
+        reason: 'rollback',
+        instruction_hash: 'b',
+      },
+      {
+        id: 4,
+        created_at: '2026-10-11T15:00:00Z',
+        reason: 'rollback',
+        instruction_hash: 'a',
+      },
+      {
+        id: 3,
+        created_at: '2026-10-10T15:00:00Z',
+        reason: 'kb_refresh',
+        instruction_hash: 'b',
+      },
+      {
+        id: 2,
+        created_at: '2026-10-02T09:05:00Z',
+        reason: 'manual_edit',
+        instruction_hash: 'a',
+      },
+      // Voltou a um jeito que já saiu da lista (a API guarda os 50 mais novos).
+      {
+        id: 1,
+        created_at: '2026-09-28T10:00:00Z',
+        reason: 'rollback',
+        instruction_hash: 'z',
+      },
+    ]);
+    const wrapper = montar();
+    await flushPromises();
+
+    const linhas = todos('[data-versao]');
+    const quando = data =>
+      `${new Date(data).toLocaleDateString('en', { day: 'numeric', month: 'short' })}, ${new Date(data).toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' })}`;
+    expect(linhas[0].textContent).toContain(
+      `Went back to the way from ${quando('2026-10-10T15:00:00Z')}`
+    );
+    expect(linhas[1].textContent).toContain(
+      `Went back to the way from ${quando('2026-10-02T09:05:00Z')}`
+    );
+    expect(linhas[4].textContent).toContain('Went back to a previous way');
+    semMensagens();
     wrapper.unmount();
   });
 

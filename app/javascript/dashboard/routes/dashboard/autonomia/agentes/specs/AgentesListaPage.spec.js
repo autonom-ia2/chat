@@ -221,6 +221,69 @@ describe('AgentesListaPage', () => {
       wrapper.unmount();
     });
 
+    // #1369 — o primeiro clique em "Continuar" ou no "⋯" não respondia logo depois de abrir a lista:
+    // os cartões apareciam antes da L1/L2 e cresciam quando elas chegavam, empurrando o rascunho
+    // (sempre por último) para baixo do ponteiro. Agora os cartões só aparecem completos.
+    it('keeps the placeholders until the week numbers and inbox names arrive (#1369)', async () => {
+      let responderSemana;
+      let responderCanais;
+      api.semana.mockReturnValue(
+        new Promise(resolve => {
+          responderSemana = resolve;
+        })
+      );
+      api.canaisOcupados.mockReturnValue(
+        new Promise(resolve => {
+          responderCanais = resolve;
+        })
+      );
+      const wrapper = await montar();
+      expect(wrapper.find('[data-cartao]').exists()).toBe(false);
+      expect(wrapper.findAll('[data-esqueleto]').length).toBeGreaterThan(0);
+      expect(wrapper.find('[data-contagem]').exists()).toBe(false);
+
+      responderSemana({
+        data: { payload: [{ agent_id: 3, answered: 12, handed: 3 }] },
+      });
+      await flushPromises();
+      expect(wrapper.find('[data-cartao]').exists()).toBe(false);
+
+      responderCanais({ data: { payload: [] } });
+      await flushPromises();
+      expect(wrapper.find('[data-esqueleto]').exists()).toBe(false);
+      expect(wrapper.find('[data-semana]').exists()).toBe(true);
+
+      // Os cartões chegam completos: o primeiro clique já age.
+      await wrapper.get('[data-continuar]').trigger('click');
+      expect(router.push).toHaveBeenCalledTimes(1);
+      expect(router.push).toHaveBeenCalledWith({
+        name: 'autonomia_agents_builder',
+        query: { agente: 1 },
+      });
+      await wrapper.get('[aria-haspopup="menu"]').trigger('click');
+      expect(wrapper.find('[role="menu"]').exists()).toBe(true);
+      wrapper.unmount();
+    });
+
+    it('shows "Continuar" busy while the builder loads, and ignores a second click', async () => {
+      let terminar;
+      router.push.mockReturnValueOnce(
+        new Promise(resolve => {
+          terminar = resolve;
+        })
+      );
+      const wrapper = await montar();
+      const botao = wrapper.get('[data-continuar]');
+      await botao.trigger('click');
+      expect(botao.attributes('aria-busy')).toBe('true');
+      await botao.trigger('click');
+      expect(router.push).toHaveBeenCalledTimes(1);
+      terminar();
+      await flushPromises();
+      expect(botao.attributes('aria-busy')).toBeUndefined();
+      wrapper.unmount();
+    });
+
     it('deletes a draft only after the confirmation', async () => {
       const wrapper = await montar();
       await wrapper.get('[aria-haspopup="menu"]').trigger('click');

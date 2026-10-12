@@ -303,6 +303,37 @@ describe('GavetaConversas', () => {
     wrapper.unmount();
   });
 
+  it('shows the last activity, not when the conversation was created (#1369)', async () => {
+    const ultima = Math.floor(Date.now() / 1000) - 60;
+    const criada = ultima - 14 * 24 * 60 * 60;
+    agentesApi.analyticsConversations.mockResolvedValueOnce({
+      data: {
+        payload: [
+          {
+            conversation: {
+              id: 9,
+              display_id: 109,
+              contact_name: 'Rita',
+              created_at: criada,
+              last_activity_at: ultima,
+            },
+            occurred_at: criada,
+          },
+        ],
+      },
+    });
+    const wrapper = mount(GavetaConversas, {
+      attachTo: document.body,
+      props: { agentId: 7 },
+    });
+    await flushPromises();
+    const comDia = { weekday: 'short', hour: '2-digit', minute: '2-digit' };
+    expect(document.querySelector('[data-quando]').textContent.trim()).toBe(
+      new Date(ultima * 1000).toLocaleString('en', comDia)
+    );
+    wrapper.unmount();
+  });
+
   it('shows the standard error with a retry', async () => {
     agentesApi.analyticsConversations
       .mockRejectedValueOnce(new Error('500'))
