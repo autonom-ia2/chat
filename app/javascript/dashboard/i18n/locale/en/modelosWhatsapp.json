@@ -454,7 +454,8 @@
         "OFERTA_CUPOM": "The offer has a coupon of 1 to 15 letters and numbers",
         "BOTOES_TAMANHO": "Every button has up to 25 characters",
         "BOTAO_SITE_EXEMPLO": "The website with a variable ending has an example",
-        "TEXTO_DIFERENTE": "The text or the footer changed from the original (WhatsApp refuses an identical copy in the same account)"
+        "TEXTO_DIFERENTE": "The text or the footer changed from the original (WhatsApp refuses an identical copy in the same account)",
+        "SEM_CHAVES": "The text and the footer have no double braces typed by hand"
       }
     },
     "QUEM_APROVA": {

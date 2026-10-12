@@ -184,6 +184,47 @@ describe('regras da auditoria do payload (#1380)', () => {
   });
 });
 
+describe('médios e baixos da auditoria (#1380)', () => {
+  it('chaves duplas digitadas à mão no texto ou no rodapé não enviam', () => {
+    const comChaves = {
+      ...conteudo([]),
+      texto: [{ t: 'texto', v: 'Olá {{1}}, tudo bem?' }],
+    };
+    expect(falhas(comChaves.botoes, 'aviso')).toEqual([]);
+    const itens = conferirConteudo(comChaves, { tipo: 'aviso' });
+    expect(itens.find(item => item.chave === 'SEM_CHAVES').ok).toBe(false);
+    const rodape = conferirConteudo(
+      { ...conteudo([]), rodape: 'até }}' },
+      { tipo: 'aviso' }
+    );
+    expect(rodape.find(item => item.chave === 'SEM_CHAVES').ok).toBe(false);
+  });
+
+  it('validade do código só em minutos inteiros', () => {
+    const validade = valor =>
+      conferirFormato({ formato: 'codigo', codigo: { validade: valor } })[0].ok;
+    expect(validade(10)).toBe(true);
+    expect(validade(2.5)).toBe(false);
+  });
+
+  it('oferta lida da Meta (sem data de fim) não trava a alteração', () => {
+    const oferta = terminaEm => ({
+      formato: 'oferta',
+      oferta: {
+        titulo: 'Só hoje',
+        terminaEm,
+        link: 'https://h.com',
+        cupom: 'A1',
+      },
+    });
+    const fim = valor =>
+      conferirFormato(oferta(valor)).find(item => item.chave === 'OFERTA_FIM')
+        .ok;
+    expect(fim('')).toBe(true);
+    expect(fim('2000-01-01T10:00')).toBe(false);
+  });
+});
+
 describe('recusa da Meta por botão de copiar sem código', () => {
   it('explica o motivo na tela de corrigir', () => {
     const recusado = {

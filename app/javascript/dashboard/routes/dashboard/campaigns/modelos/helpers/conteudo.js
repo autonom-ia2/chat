@@ -116,8 +116,17 @@ export const conferirConteudo = (conteudo, contexto = {}) => {
           !temLetras(conteudo.texto[indice + 1].v) &&
           conteudo.texto[indice + 2]?.t === 'campo'))
   );
+  // Chaves digitadas à mão ({{ ou }}) viram variável sem exemplo na Meta.
+  const temChaves = texto =>
+    (texto || '').includes('{{') || (texto || '').includes('}}');
+  const semChaves = ![
+    ...conteudo.texto.filter(p => p.t === 'texto').map(p => p.v),
+    conteudo.rodape,
+  ].some(temChaves);
+
   const base = [
     { chave: 'TEM_TEXTO', ok: pedacos.some(p => p.t === 'texto') },
+    { chave: 'SEM_CHAVES', ok: semChaves },
     { chave: 'NAO_COMECA_COM_CAMPO', ok: primeiro?.t !== 'campo' },
     { chave: 'NAO_TERMINA_COM_CAMPO', ok: ultimo?.t !== 'campo' },
     { chave: 'CAMPOS_SEPARADOS', ok: !seguidos },

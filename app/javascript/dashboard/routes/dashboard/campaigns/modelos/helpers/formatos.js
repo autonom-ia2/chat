@@ -72,9 +72,11 @@ const conferirOferta = ({ oferta }) => [
       temLetras(oferta.titulo) &&
       oferta.titulo.length <= LIMITE_DO_TITULO_DA_OFERTA,
   },
+  // O fim da oferta não vai para a Meta (vai em cada envio): aqui só serve à
+  // prévia. Vazio (modelo lido da Meta) não trava; preenchido, tem de ser futuro.
   {
     chave: 'OFERTA_FIM',
-    ok: Boolean(oferta.terminaEm) && new Date(oferta.terminaEm) > new Date(),
+    ok: !oferta.terminaEm || new Date(oferta.terminaEm) > new Date(),
   },
   { chave: 'OFERTA_LINK', ok: temLetras(oferta.link) },
   // Com a contagem regressiva, a Meta exige o botão de copiar o cupom.
@@ -92,7 +94,10 @@ export const conferirFormato = (conteudo, { temCatalogo = true } = {}) => {
     return [
       {
         chave: 'VALIDADE',
-        ok: validade >= VALIDADE_MINIMA && validade <= VALIDADE_MAXIMA,
+        ok:
+          Number.isInteger(Number(validade)) &&
+          validade >= VALIDADE_MINIMA &&
+          validade <= VALIDADE_MAXIMA,
       },
     ];
   }

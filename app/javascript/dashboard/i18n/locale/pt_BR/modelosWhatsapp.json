@@ -454,7 +454,8 @@
         "OFERTA_CUPOM": "A oferta tem um cupom de 1 a 15 letras e números",
         "BOTOES_TAMANHO": "Todo botão tem até 25 letras",
         "BOTAO_SITE_EXEMPLO": "O site com final variável tem exemplo",
-        "TEXTO_DIFERENTE": "O texto ou o rodapé mudou em relação ao original (o WhatsApp recusa cópia igual na mesma conta)"
+        "TEXTO_DIFERENTE": "O texto ou o rodapé mudou em relação ao original (o WhatsApp recusa cópia igual na mesma conta)",
+        "SEM_CHAVES": "O texto e o rodapé não têm chaves duplas digitadas à mão"
       }
     },
     "QUEM_APROVA": {
