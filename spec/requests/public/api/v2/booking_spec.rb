@@ -118,7 +118,8 @@ RSpec.describe 'Public::Api::V2::Booking', type: :request do
       )
       expect(Crm::BookingV2::Tokens.verify('form', body['form_token'])).to eq('s' => profile.slug, 't' => Time.current.to_i)
       expect(response.body).not_to include('camila.host@example.com')
-      [account.id, profile.id, world.host.id, world.pipeline.id].each { |id| expect(body.values).not_to include(id) }
+      # Pelos nomes dos campos: comparar valores pegava por acaso um id igual a 30 (a duração) e falhava às vezes.
+      expect(body.keys).not_to include('id', 'account_id', 'host_id', 'pipeline_id', 'agent_id', 'inbox_id')
     end
 
     it 'usa o rótulo escrito pelo dono e marca Meet/Teams como exigindo e-mail' do
