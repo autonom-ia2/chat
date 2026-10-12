@@ -2,8 +2,9 @@
 # individual) é a única autorização; nunca há id de conta na URL e o Pundit não entra.
 #
 # 404 UNIFORME `{ error: 'not_found' }` para slug desconhecido, página antiga, flag da conta desligada e responsável
-# que não pode mais atender. Página pausada: o GET responde só o aviso de pausa (com o WhatsApp da empresa, para
-# não ser beco sem saída) e o resto responde 404. `?preview=<token>` mostra a página despublicada (GET e horários),
+# que não pode mais atender. Página pausada: o GET responde só o aviso de pausa (com o WhatsApp da empresa e, se o
+# responsável ainda atende, o formulário do pedido de contato, para não ser beco sem saída, RA-17) e só o pedido de
+# contato é aceito; marcar e ver horários respondem 404. `?preview=<token>` mostra a página despublicada (GET e horários),
 # mas nunca reserva.
 #
 # Envio de formulário (reserva e pedido de contato): honeypot `company` vazio, `form_token` emitido no GET para o
@@ -26,7 +27,9 @@ class Public::Api::V2::BookingController < PublicController
 
   before_action :set_page
   before_action :ensure_readable, only: [:slots, :next_slot]
-  before_action :ensure_bookable, :ensure_human, only: [:create, :contact_request]
+  before_action :ensure_bookable, only: [:create]
+  before_action :ensure_contactable, only: [:contact_request]
+  before_action :ensure_human, only: [:create, :contact_request]
   before_action :ensure_time_zone, only: [:slots, :next_slot, :create]
 
   rescue_from StandardError, with: :render_unexpected_error
@@ -83,6 +86,10 @@ class Public::Api::V2::BookingController < PublicController
 
   def ensure_bookable
     render_not_found unless @page.bookable?
+  end
+
+  def ensure_contactable
+    render_not_found unless @page.contactable?
   end
 
   # Levanta (500 + rastreador) quando o fuso gravado na página é inválido.

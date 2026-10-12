@@ -10,6 +10,8 @@
 # - `paused?`: página (ou link individual) despublicada e sem prévia válida. A página mostra só o aviso de pausa.
 # - `readable?`: pode mostrar dados e horários (publicada ou em prévia) e o responsável ainda pode atender.
 # - `bookable?`: pode reservar. A prévia NUNCA reserva: exige página e link publicados.
+# - `contactable?`: pode receber pedido de contato (RA-17, #1401): onde se reserva e também na página pausada, para o
+#   cliente não ficar sem saída; o responsável ainda precisa poder atender. A prévia também não recebe.
 #
 # `time_zone`: fuso em que a página mostra horários. A página nova valida o fuso ao salvar; um inválido gravado antes
 # disso levanta `InvalidTimeZone` em vez de cair em outro fuso em silêncio (RA-08). Sem fuso gravado vale o da conta.
@@ -62,6 +64,10 @@ class Crm::BookingV2::PublicPage
 
   def bookable?
     published? && host_eligible?
+  end
+
+  def contactable?
+    (published? || paused?) && host_eligible?
   end
 
   def host

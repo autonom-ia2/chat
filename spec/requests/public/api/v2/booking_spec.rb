@@ -195,25 +195,79 @@ RSpec.describe 'Public::Api::V2::Booking', type: :request do
       expect(response.body).not_to include('server-secret')
     end
 
-    it 'página pausada devolve só o aviso de pausa e o resto responde 404' do
+    it 'página pausada devolve só o aviso de pausa, com o formulário do pedido de contato, e não mostra nem marca horário' do
       profile.update!(enabled: false)
 
       get base
 
       expect(response).to have_http_status(:ok)
-      expect(body).to eq(
+      expect(body.except('form_token')).to eq(
         'slug' => profile.slug, 'paused' => true, 'title' => 'Conversa de 30 min',
         'brand' => { 'color' => '#1F6FEB', 'headline' => 'Fale com a gente', 'logo_align' => 'left', 'logo_url' => nil,
                      'logo_dark_url' => nil, 'logo_dark_source' => nil, 'photo_url' => nil },
-        'contact_whatsapp_url' => 'https://wa.me/5511933334444'
+        'contact_whatsapp_url' => 'https://wa.me/5511933334444', 'captcha_site_key' => nil, 'notices_enabled' => false
       )
+      expect(Crm::BookingV2::Tokens.verify('form', body['form_token'])).to include('s' => profile.slug)
       get "#{base}/slots", params: { date: '2026-10-20' }
       expect_not_found
       get "#{base}/next_slot"
       expect_not_found
       expect { book }.not_to change(Crm::Meeting, :count)
       expect_not_found
+    end
+  end
+
+  # Página pausada não é beco sem saída (RA-17, #1401): o cliente deixa nome e WhatsApp, como no "Nenhum horário serve?".
+  describe 'pedido de contato na página pausada' do
+    before { profile.update!(enabled: false, contact_phone: nil) }
+
+    it 'aceita o pedido: cria o card no funil da página e a ligação para o responsável' do
+      expect { ask_contact }.to change(Crm::Card, :count).by(1)
+
+      expect(response).to have_http_status(:created)
+      card = Crm::Card.find_by!(source: 'contact_request')
+      expect(card).to have_attributes(pipeline_id: world.pipeline.id, owner_id: world.host.id)
+      expect(Crm::FollowUp.sole).to have_attributes(card_id: card.id, follow_up_type: 'call', assignee_id: world.host.id)
+    end
+
+    it 'mantém as proteções: honeypot, token do formulário e limite por telefone' do
+      ask_contact(company: 'robô')
+      expect_error('booking_failed')
+      ask_contact(form_token: '')
+      expect_error('booking_failed')
+      2.times { ask_contact }
+      ask_contact
+      expect_error('too_many_open')
+      expect(Crm::Card.where(source: 'contact_request').count).to eq(2)
+    end
+
+    it 'link individual pausado também aceita, no nome da pessoa do link' do
+      seller = create(:user, account: account, role: :agent, name: 'Rita Lopes')
+      link = per_agent_link(seller)
+      link.update!(enabled: false)
+
+      ask_contact(link.slug)
+
+      expect(response).to have_http_status(:created)
+      expect(Crm::FollowUp.sole).to have_attributes(assignee_id: seller.id)
+    end
+
+    it 'com responsável que não pode mais atender: o aviso vem sem formulário e o pedido responde 404' do
+      role = create(:custom_role, account: account, permissions: ['agendamento_view'])
+      world.host.account_users.find_by(account: account).update!(custom_role: role)
+
+      get base
+      expect(body).to include('paused' => true, 'contact_whatsapp_url' => nil)
+      expect(body.keys).not_to include('form_token')
+
       expect { ask_contact }.not_to change(Crm::Card, :count)
+      expect_not_found
+    end
+
+    it 'a prévia continua sem receber pedido' do
+      preview = Crm::BookingV2::Tokens.generate('preview', { 'p' => profile.id }, expires_in: 1.hour)
+
+      expect { ask_contact(preview: preview) }.not_to change(Crm::Card, :count)
       expect_not_found
     end
   end

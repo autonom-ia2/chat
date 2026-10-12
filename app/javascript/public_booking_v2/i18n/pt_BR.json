@@ -99,12 +99,13 @@
     "PAUSED": {
       "TITLE": "A agenda está fechada agora",
       "BODY": "Não dá para marcar por aqui no momento. Fale com a gente no WhatsApp.",
-      "BODY_NO_WHATSAPP": "Não dá para marcar por aqui no momento. Tente de novo mais tarde.",
+      "BODY_NO_WHATSAPP": "Não dá para marcar por aqui no momento. Volte ao WhatsApp e fale com quem enviou o link.",
+      "BODY_CONTACT": "Não dá para marcar por aqui no momento. Deixe seu WhatsApp e chamamos você para combinar.",
       "WHATSAPP": "Falar no WhatsApp"
     },
     "NOT_FOUND": {
       "TITLE": "Este link não vale mais",
-      "BODY": "Peça um novo link para quem enviou."
+      "BODY": "Peça um link novo a quem te enviou."
     },
     "ERROR_PAGE": {
       "TITLE": "Não deu para abrir a página",
@@ -172,7 +173,8 @@
       "CAPTCHA": "Confirme que você não é um robô."
     },
     "HELP": {
-      "WHATSAPP": "Falar no WhatsApp"
+      "WHATSAPP": "Falar no WhatsApp",
+      "BACK_TO_WHATSAPP": "Voltar ao WhatsApp"
     }
   }
 }

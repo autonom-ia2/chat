@@ -4,25 +4,13 @@ import { useI18n } from 'vue-i18n';
 import { useFlow } from '../composables/useBookingFlow';
 import ActionButton from './ActionButton.vue';
 import BrandHeader from './BrandHeader.vue';
-import FormFooter from './FormFooter.vue';
-import PhoneField from './PhoneField.vue';
-import TextField from './TextField.vue';
+import ContactRequestForm from './ContactRequestForm.vue';
 import WhatsAppButton from './WhatsAppButton.vue';
 
 // "Nenhum horário serve?" (J2-A10): nome e WhatsApp viram pedido de contato no card, em vez de lead perdido. Pelo
 // link do cliente não pede de novo o que o convite já sabe (o servidor usa o contato do convite). Pedido enviado: o
 // foco vai para o título novo, e o leitor de tela anuncia que deu certo.
-const {
-  page,
-  form,
-  fieldErrors,
-  invite,
-  askName,
-  askPhone,
-  isContactRequested,
-  goBack,
-  submitContactRequest,
-} = useFlow();
+const { page, invite, askPhone, isContactRequested, goBack } = useFlow();
 const { t } = useI18n();
 
 const agentName = computed(() => page.value.agent_name || '');
@@ -66,30 +54,7 @@ watch(isContactRequested, isDone => {
         {{ t('BOOKING_V2.NO_SLOT.TITLE') }}
       </h1>
       <p class="text-base text-bk-body">{{ body }}</p>
-      <form
-        class="flex flex-col gap-5"
-        novalidate
-        @submit.prevent="submitContactRequest"
-      >
-        <TextField
-          v-if="askName"
-          id="contact-name"
-          v-model="form.name"
-          :label="t('BOOKING_V2.DETAILS.NAME')"
-          :error="fieldErrors.name"
-          autocomplete="name"
-          required
-        />
-        <PhoneField
-          v-if="askPhone"
-          id="contact-phone"
-          v-model:country="form.countryCode"
-          v-model:national="form.phone"
-          :label="t('BOOKING_V2.DETAILS.PHONE')"
-          :error="fieldErrors.phone"
-        />
-        <FormFooter :submit-label="t('BOOKING_V2.NO_SLOT.SUBMIT')" />
-      </form>
+      <ContactRequestForm />
       <ActionButton variant="ghost" @click="goBack">
         {{ t('BOOKING_V2.BACK') }}
       </ActionButton>
