@@ -99,6 +99,11 @@
         "TITULO": "WhatsApp does not allow this content",
         "EXPLICACAO": "WhatsApp considered the text offensive or misleading.",
         "COMO_RESOLVER": "rewrite it clearly, saying who is talking and why, and send it again."
+      },
+      "botao_copiar_codigo": {
+        "TITULO": "The “Copy code” button has no code",
+        "EXPLICACAO": "WhatsApp asks for an example code in this button, and the button only exists in promotion messages.",
+        "COMO_RESOLVER": "for a notice such as a bill, remove the button and send the bill as a document at the top; for a promotion, write an example code such as PROMO10."
       }
     },
     "TIPOS": {
@@ -356,10 +361,10 @@
       },
       "copiar_codigo": {
         "ROTULO": "Copy code",
-        "PARA": "For bills, Pix or coupons.",
+        "PARA": "For a discount coupon. Promotion messages only.",
         "EXEMPLO": "E.g.: Copy code",
         "VALOR": "Code example",
-        "VALOR_EXEMPLO": "2345 6789"
+        "VALOR_EXEMPLO": "PROMO10"
       }
     },
     "EXTRAS": {
@@ -374,7 +379,14 @@
       "BOTOES_LIMITE": "Up to 10 buttons. Open website: up to 2. Call and copy code: 1 each.",
       "ADICIONAR_BOTAO": "Add button",
       "TIRAR_BOTAO": "Remove",
-      "TEXTO_DO_BOTAO": "Button text"
+      "TEXTO_DO_BOTAO": "Button text",
+      "PROBLEMAS_DO_BOTAO": {
+        "SEM_TEXTO": "Write the button text.",
+        "SITE_SEM_ENDERECO": "Write the website address.",
+        "LIGAR_SEM_NUMERO": "Write the phone number.",
+        "CODIGO_SEM_EXEMPLO": "Write an example code: 1 to 15 letters and numbers, no spaces.",
+        "SO_DIVULGACAO": "This button only exists in promotion messages. Remove it to send this as a service notice."
+      }
     },
     "NUMEROS": {
       "INTRO": "Pick where this template will work. Only official WhatsApp numbers show up.",
@@ -416,7 +428,12 @@
         "VALIDADE": "The validity is between 1 and 90 minutes",
         "FORMULARIO": "A form was picked",
         "FORMULARIO_BOTAO": "The form button has text",
-        "TOPO_ARQUIVO": "The photo, video or document at the top was chosen"
+        "TOPO_ARQUIVO": "The photo, video or document at the top was chosen",
+        "BOTAO_SITE": "Every website button has the address",
+        "BOTAO_LIGAR": "Every call button has the phone number",
+        "BOTAO_CODIGO": "The copy code button has an example code of 1 to 15 letters and numbers",
+        "SO_DIVULGACAO": "The “Copy code” button only exists in promotion messages",
+        "OFERTA_CUPOM": "The offer has a coupon of 1 to 15 letters and numbers"
       }
     },
     "QUEM_APROVA": {
@@ -557,8 +574,8 @@
       "TERMINA_AJUDA": "The customer sees how long is left.",
       "LINK": "Offer link",
       "LINK_OBRIGATORIO": "Required: it is where the button goes.",
-      "CUPOM": "Coupon code (optional)",
-      "CUPOM_AJUDA": "Shows up with a button to copy it."
+      "CUPOM": "Coupon code",
+      "CUPOM_AJUDA": "1 to 15 letters and numbers, no spaces. It shows up with a button to copy it."
     },
     "CATALOGO": {
       "SEM_CATALOGO": "Your WhatsApp account has no product catalog connected yet.",

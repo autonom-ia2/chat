@@ -4,6 +4,7 @@
 // está pausado, quantas alterações restam) fica null e a tela não inventa.
 // Sem expressão regular (regra do Rodrigo): o texto é lido com indexOf/slice.
 import { campoDoPerfil } from '../helpers/campos';
+import { codigoDeExemploValido } from '../helpers/regraEstrutural';
 
 const ABRE = '{{';
 const FECHA = '}}';
@@ -216,11 +217,17 @@ export const conteudoDaMeta = (template, perfil = template) => {
 };
 
 // Motivo da recusa: o que a Meta disse ou, quando ela diz só "formato inválido",
-// o que dá para ver no próprio texto (campo no começo, no fim, exemplo faltando).
+// o que dá para ver no próprio modelo (botão "Copiar código" sem código, campo
+// no começo, no fim, exemplo faltando).
 export const recusaDe = (template, conteudo) => {
   const motivo = maiusculo(template.rejected_reason);
   if (RECUSAS[motivo]) return { codigo: RECUSAS[motivo] };
   if (motivo !== 'INVALID_FORMAT') return { codigo: 'outro' };
+  const copiarSemCodigo = (conteudo.botoes || []).some(
+    botao =>
+      botao.tipo === 'copiar_codigo' && !codigoDeExemploValido(botao.valor)
+  );
+  if (copiarSemCodigo) return { codigo: 'botao_copiar_codigo' };
   const pedacos = conteudo.texto.filter(
     pedaco => pedaco.t === 'campo' || pedaco.v.trim()
   );

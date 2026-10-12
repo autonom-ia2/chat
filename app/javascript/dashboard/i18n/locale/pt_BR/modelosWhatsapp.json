@@ -99,6 +99,11 @@
         "TITULO": "O WhatsApp não permite este conteúdo",
         "EXPLICACAO": "O WhatsApp achou o texto ofensivo ou enganoso.",
         "COMO_RESOLVER": "reescreva de forma clara, dizendo quem fala e por quê, e envie de novo."
+      },
+      "botao_copiar_codigo": {
+        "TITULO": "O botão “Copiar código” está sem código",
+        "EXPLICACAO": "O WhatsApp pede um código de exemplo nesse botão, e esse botão só existe em mensagens de divulgação.",
+        "COMO_RESOLVER": "se é um aviso, como um boleto, tire o botão e mande o boleto como documento no topo; se é divulgação, escreva um código de exemplo, como PROMO10."
       }
     },
     "TIPOS": {
@@ -356,10 +361,10 @@
       },
       "copiar_codigo": {
         "ROTULO": "Copiar código",
-        "PARA": "Para boleto, Pix ou cupom.",
+        "PARA": "Para cupom de desconto. Só em mensagens de divulgação.",
         "EXEMPLO": "Ex.: Copiar código",
         "VALOR": "Exemplo de código",
-        "VALOR_EXEMPLO": "2345 6789"
+        "VALOR_EXEMPLO": "PROMO10"
       }
     },
     "EXTRAS": {
@@ -374,7 +379,14 @@
       "BOTOES_LIMITE": "Até 10 botões. Abrir site: até 2. Ligar e copiar código: 1 de cada.",
       "ADICIONAR_BOTAO": "Adicionar botão",
       "TIRAR_BOTAO": "Tirar",
-      "TEXTO_DO_BOTAO": "Texto do botão"
+      "TEXTO_DO_BOTAO": "Texto do botão",
+      "PROBLEMAS_DO_BOTAO": {
+        "SEM_TEXTO": "Escreva o texto do botão.",
+        "SITE_SEM_ENDERECO": "Escreva o endereço do site.",
+        "LIGAR_SEM_NUMERO": "Escreva o telefone.",
+        "CODIGO_SEM_EXEMPLO": "Escreva um código de exemplo: de 1 a 15 letras e números, sem espaço.",
+        "SO_DIVULGACAO": "Esse botão só existe em mensagens de divulgação. Tire o botão para enviar como aviso de serviço."
+      }
     },
     "NUMEROS": {
       "INTRO": "Escolha onde este modelo vai valer. Só aparecem números do WhatsApp oficial.",
@@ -416,7 +428,12 @@
         "VALIDADE": "A validade fica entre 1 e 90 minutos",
         "FORMULARIO": "Um formulário foi escolhido",
         "FORMULARIO_BOTAO": "O botão do formulário tem texto",
-        "TOPO_ARQUIVO": "A foto, o vídeo ou o documento do topo foi escolhido"
+        "TOPO_ARQUIVO": "A foto, o vídeo ou o documento do topo foi escolhido",
+        "BOTAO_SITE": "Todo botão de site tem o endereço",
+        "BOTAO_LIGAR": "Todo botão de ligar tem o telefone",
+        "BOTAO_CODIGO": "O botão de copiar código tem um código de exemplo de 1 a 15 letras e números",
+        "SO_DIVULGACAO": "O botão “Copiar código” só existe em mensagens de divulgação",
+        "OFERTA_CUPOM": "A oferta tem um cupom de 1 a 15 letras e números"
       }
     },
     "QUEM_APROVA": {
@@ -557,8 +574,8 @@
       "TERMINA_AJUDA": "O cliente vê quanto tempo falta.",
       "LINK": "Link da oferta",
       "LINK_OBRIGATORIO": "Obrigatório: é para onde o botão leva.",
-      "CUPOM": "Código do cupom (opcional)",
-      "CUPOM_AJUDA": "Aparece com um botão para copiar."
+      "CUPOM": "Código do cupom",
+      "CUPOM_AJUDA": "De 1 a 15 letras e números, sem espaço. Aparece com um botão para copiar."
     },
     "CATALOGO": {
       "SEM_CATALOGO": "Sua conta do WhatsApp ainda não tem catálogo de produtos conectado.",

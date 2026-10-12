@@ -5,6 +5,7 @@ import {
   objetivoPorChave,
 } from '../constants';
 import { conferirFormato } from './formatos';
+import { conferirBotoes } from './regraEstrutural';
 
 // O texto de um modelo é uma lista de pedaços: { t: 'texto', v: 'Olá, ' } ou
 // { t: 'campo', v: 'nome_cliente' }. Assim a tela mostra o campo como etiqueta
@@ -83,7 +84,8 @@ export const topoCompleto = topo =>
 
 // O que pode fazer o WhatsApp recusar, conferido antes de enviar. Só regras de
 // forma (onde está o campo, exemplo, tamanho, botões completos): o sentido do
-// texto quem julga é o WhatsApp.
+// texto quem julga é o WhatsApp. `contexto.tipo` é o tipo da mensagem (aviso,
+// divulgacao): "Copiar código" só existe em divulgação.
 export const conferirConteudo = (conteudo, contexto = {}) => {
   // Código de verificação: o texto é fixo do WhatsApp, só a validade muda.
   if (conteudo.formato === 'codigo') return conferirFormato(conteudo, contexto);
@@ -104,12 +106,6 @@ export const conferirConteudo = (conteudo, contexto = {}) => {
           !temLetras(conteudo.texto[indice + 1].v) &&
           conteudo.texto[indice + 2]?.t === 'campo'))
   );
-  const botaoIncompleto = conteudo.botoes.some(
-    botao =>
-      !temLetras(botao.texto || '') ||
-      (['site', 'ligar'].includes(botao.tipo) && !temLetras(botao.valor || ''))
-  );
-
   const base = [
     { chave: 'TEM_TEXTO', ok: pedacos.some(p => p.t === 'texto') },
     { chave: 'NAO_COMECA_COM_CAMPO', ok: primeiro?.t !== 'campo' },
@@ -133,7 +129,7 @@ export const conferirConteudo = (conteudo, contexto = {}) => {
             chave: 'RODAPE',
             ok: (conteudo.rodape || '').length <= LIMITE_DO_RODAPE,
           },
-          { chave: 'BOTOES', ok: !botaoIncompleto },
+          ...conferirBotoes(conteudo.botoes, contexto.tipo),
         ]
       : []),
   ];

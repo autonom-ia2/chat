@@ -212,7 +212,10 @@ const escolherFormato = chave => {
 };
 
 const formato = computed(() => rascunho.value?.conteudo.formato || 'padrao');
-const contexto = computed(() => ({ temCatalogo: Boolean(catalogo.value) }));
+const contexto = computed(() => ({
+  temCatalogo: Boolean(catalogo.value),
+  tipo: rascunho.value?.tipo,
+}));
 
 // No carrossel, a etapa "Extras" vira "Cartões"; na oferta, "Oferta"; e assim por diante.
 const rotulos = computed(() =>

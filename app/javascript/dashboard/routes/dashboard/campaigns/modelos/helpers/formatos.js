@@ -8,6 +8,7 @@ import {
   VALIDADE_MINIMA,
   formatoPorChave,
 } from '../constants';
+import { codigoDeExemploValido, problemasDoBotao } from './regraEstrutural';
 
 // Formatos além da mensagem comum: carrossel, oferta por tempo limitado,
 // catálogo, código de verificação e botão de formulário. Cada um guarda os
@@ -23,8 +24,9 @@ export const paraCampoDeData = data => {
   return `${data.getFullYear()}-${dois(data.getMonth() + 1)}-${dois(data.getDate())}T${dois(data.getHours())}:${dois(data.getMinutes())}`;
 };
 
+// Carrossel é sempre divulgação.
 const botaoCompleto = botao =>
-  temLetras(botao.texto) && (botao.tipo !== 'site' || temLetras(botao.valor));
+  problemasDoBotao(botao, 'divulgacao').length === 0;
 
 const conferirCarrossel = ({ cartoes = [] }) => {
   const assinatura = cartao => cartao.botoes.map(botao => botao.tipo).join(',');
@@ -75,6 +77,8 @@ const conferirOferta = ({ oferta }) => [
     ok: Boolean(oferta.terminaEm) && new Date(oferta.terminaEm) > new Date(),
   },
   { chave: 'OFERTA_LINK', ok: temLetras(oferta.link) },
+  // Com a contagem regressiva, a Meta exige o botão de copiar o cupom.
+  { chave: 'OFERTA_CUPOM', ok: codigoDeExemploValido(oferta.cupom) },
 ];
 
 export const conferirFormato = (conteudo, { temCatalogo = true } = {}) => {

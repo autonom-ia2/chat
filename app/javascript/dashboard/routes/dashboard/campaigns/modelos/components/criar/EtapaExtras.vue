@@ -1,5 +1,6 @@
 <script setup>
 import { computed, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
 import EscolherArquivo from './EscolherArquivo.vue';
@@ -9,10 +10,15 @@ import {
   TIPOS_DE_BOTAO,
   TOPOS,
 } from '../../constants';
+import {
+  BOTOES_SO_DE_DIVULGACAO,
+  problemasDoBotao,
+} from '../../helpers/regraEstrutural';
 
 // Tudo opcional: foto/vídeo/documento no topo, rodapé e botões.
 const rascunho = defineModel('rascunho', { type: Object, required: true });
 
+const { t } = useI18n();
 const conteudo = computed(() => rascunho.value.conteudo);
 const escolhendoBotao = ref(false);
 
@@ -38,9 +44,26 @@ const aoEscolherArquivo = ({ arquivo, local }) =>
 const quantosDoTipo = tipo =>
   conteudo.value.botoes.filter(botao => botao.tipo === tipo).length;
 
+// "Copiar código" só existe em divulgação: num aviso, nem aparece para escolher.
 const tipoDisponivel = tipo =>
   conteudo.value.botoes.length < MAXIMO_DE_BOTOES &&
-  quantosDoTipo(tipo.chave) < tipo.maximo;
+  quantosDoTipo(tipo.chave) < tipo.maximo &&
+  (rascunho.value.tipo === 'divulgacao' ||
+    !BOTOES_SO_DE_DIVULGACAO.includes(tipo.chave));
+
+// O que falta em cada botão, dito no próprio campo (a mesma regra da conferência).
+const problemas = botao => problemasDoBotao(botao, rascunho.value.tipo);
+const PROBLEMAS_DO_VALOR = [
+  'SITE_SEM_ENDERECO',
+  'LIGAR_SEM_NUMERO',
+  'CODIGO_SEM_EXEMPLO',
+];
+const mensagem = (botao, codigos) => {
+  const codigo = problemas(botao).find(item => codigos.includes(item));
+  return codigo
+    ? t(`MODELOS_WHATSAPP.EXTRAS.PROBLEMAS_DO_BOTAO.${codigo}`)
+    : '';
+};
 
 const adicionarBotao = tipo => {
   mudar('botoes', [...conteudo.value.botoes, { tipo, texto: '', valor: '' }]);
@@ -188,9 +211,23 @@ const iconeDoBotao = tipo =>
               @click="tirarBotao(indice)"
             />
           </div>
-          <div class="grid gap-3 sm:grid-cols-2">
+          <p
+            v-if="problemas(botao).includes('SO_DIVULGACAO')"
+            data-so-divulgacao
+            role="alert"
+            class="flex items-start gap-2 p-3 mb-0 text-[0.9375rem] font-medium rounded-lg bg-n-ruby-2 text-n-ruby-11"
+          >
+            <span
+              class="i-lucide-circle-alert size-5 mt-0.5 shrink-0"
+              aria-hidden="true"
+            />
+            {{ $t('MODELOS_WHATSAPP.EXTRAS.PROBLEMAS_DO_BOTAO.SO_DIVULGACAO') }}
+          </p>
+          <div v-else class="grid gap-3 sm:grid-cols-2">
             <Input
               :model-value="botao.texto"
+              :message="mensagem(botao, ['SEM_TEXTO'])"
+              :message-type="mensagem(botao, ['SEM_TEXTO']) ? 'error' : 'info'"
               :label="$t('MODELOS_WHATSAPP.EXTRAS.TEXTO_DO_BOTAO')"
               :placeholder="
                 $t(`MODELOS_WHATSAPP.TIPOS_DE_BOTAO.${botao.tipo}.EXEMPLO`)
@@ -201,6 +238,10 @@ const iconeDoBotao = tipo =>
               v-if="['site', 'ligar', 'copiar_codigo'].includes(botao.tipo)"
               :model-value="botao.valor"
               :label="$t(`MODELOS_WHATSAPP.TIPOS_DE_BOTAO.${botao.tipo}.VALOR`)"
+              :message="mensagem(botao, PROBLEMAS_DO_VALOR)"
+              :message-type="
+                mensagem(botao, PROBLEMAS_DO_VALOR) ? 'error' : 'info'
+              "
               :placeholder="
                 $t(
                   `MODELOS_WHATSAPP.TIPOS_DE_BOTAO.${botao.tipo}.VALOR_EXEMPLO`
