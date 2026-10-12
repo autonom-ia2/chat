@@ -21,10 +21,24 @@
 # mesma reunião. Outro turno pedindo o mesmo horário é outro pedido, mas se quem ocupa o horário é a reunião deste
 # mesmo cliente nesta página, a ferramenta confirma essa reunião em vez de dizer que o horário foi ocupado.
 # Turno acionado por evento (aviso do sistema) não marca: não é pedido do cliente.
+#
+# AVISOS E LINK DE GESTÃO (#1305): depois da reserva, os avisos saem pelo MESMO ponto da página pública e do painel
+# (`Crm::BookingV2::BookingNotices`): lembretes e, se a caixa de avisos não for a desta conversa, o aviso "ao marcar".
+# Na mesma caixa ele nasce pulado (`told_in_conversation`): a IA já confirmou aqui, com o link. A reunião registra o
+# motivo de avisar quem pediu na conversa (`notice_basis`) e quem marcou: o agente de IA e a conversa de origem.
+# O retorno ao modelo vem em campos: quando, local, link de gestão (`/b/<código>`, o do convite DESTE contato) e o
+# link da reunião ou o endereço, quando a página tem.
+#
+# CONFIRMAÇÃO DO CLIENTE (#1305): `cliente_confirmou` é obrigatório no schema e quem decide é o MODELO, que entende a
+# conversa. Sem `true` nada é marcado e a ferramenta manda confirmar antes. O código não lê o que o cliente escreveu.
 class Autonomia::Agents::Tools::Native::AgendarReuniao < Autonomia::Agents::Tools::Native::Base
   include Autonomia::Agents::Tools::Native::Agenda
 
   SOURCE = 'ai'.freeze
+  # Por que avisar quem não marcou sozinho pela página (#1271, #1305): o cliente pediu a reunião na conversa com a IA.
+  NOTICE_BASIS = 'pedido_na_conversa_com_ia'.freeze
+  SEM_CONFIRMACAO = 'O cliente ainda não confirmou e NADA foi marcado. Repita o dia, a hora e o local e pergunte se ' \
+                    'pode marcar. Quando ele disser que sim, chame de novo com cliente_confirmou=true.'.freeze
   SEM_CONVERSA = 'Só dá para marcar dentro de uma conversa com o cliente. Aqui não há conversa: diga que a marcação ' \
                  'acontece no atendimento real.'.freeze
   SEM_TELEFONE = 'O contato não tem um telefone válido. Peça ao cliente o número com DDD e chame de novo com ' \
@@ -53,7 +67,7 @@ class Autonomia::Agents::Tools::Native::AgendarReuniao < Autonomia::Agents::Tool
 
     def description
       'Marca a reunião no horário que o cliente escolheu, entre os devolvidos por horarios_disponiveis. Use só ' \
-        'depois de o cliente confirmar dia, hora e local. O cliente é o desta conversa.'
+        'depois de o cliente confirmar dia, hora e local. O cliente é o desta conversa. Devolve o link de gestão.'
     end
 
     def params
@@ -67,17 +81,20 @@ class Autonomia::Agents::Tools::Native::AgendarReuniao < Autonomia::Agents::Tool
         { 'name' => 'telefone', 'type' => 'string', 'required' => false,
           'description' => 'Só quando a ferramenta pediu: o número que o cliente informou, com DDD. Senão null.' },
         { 'name' => 'email', 'type' => 'string', 'required' => false,
-          'description' => 'Só quando a ferramenta pediu: o e-mail que o cliente informou. Senão null.' }
+          'description' => 'Só quando a ferramenta pediu: o e-mail que o cliente informou. Senão null.' },
+        { 'name' => 'cliente_confirmou', 'type' => 'boolean',
+          'description' => 'true só se o cliente já disse que sim para ESTE dia, hora e local nesta conversa. Senão false.' }
       ]
     end
 
-    # O horário e a duração ajudam o diagnóstico; o telefone e o e-mail, nunca.
+    # O horário, a duração e a confirmação ajudam o diagnóstico; o telefone e o e-mail, nunca.
     def args_registraveis
-      %w[inicio duracao_minutos local]
+      %w[inicio duracao_minutos local cliente_confirmou]
     end
 
+    # Só com a página marcando agora (#1305): página apagada, pausada ou sem quem atenda não entra no turno.
     def available_for?(agent)
-      Autonomia::Agents::Tools::Native::Agenda.disponivel?(agent)
+      Autonomia::Agents::Tools::Native::Agenda.pode_marcar?(agent)
     end
   end
 
@@ -85,13 +102,18 @@ class Autonomia::Agents::Tools::Native::AgendarReuniao < Autonomia::Agents::Tool
     return recusar('agenda_sem_conversa', SEM_CONVERSA) if conversa.blank?
     return recusar('agenda_turno_de_evento', TURNO_DE_EVENTO) if delivery.try(:turno_de_evento?)
 
-    recusa = recusa_da_pagina || recusa_do_pedido
+    recusa = recusa_da_pagina || recusa_sem_confirmacao || recusa_do_pedido
     return recusa if recusa
 
     reservar(duracao_pedida)
   end
 
   private
+
+  # Só `true` marca: falso, nulo ou ausente é "ainda não confirmou". A decisão é do modelo.
+  def recusa_sem_confirmacao
+    recusar('agenda_sem_confirmacao', SEM_CONFIRMACAO) unless params['cliente_confirmou'] == true
+  end
 
   # nil quando o pedido serve para reservar; senão o texto da recusa.
   def recusa_do_pedido
@@ -128,16 +150,26 @@ class Autonomia::Agents::Tools::Native::AgendarReuniao < Autonomia::Agents::Tool
     ::Crm::BookingV2::PhoneLookup.normalize(numero, region: ::Crm::BookingV2::PhoneLookup.region_for(pagina.resolved_timezone))
   end
 
-  # O bloco roda só com a reserva NOVA, dentro da transação do Booker e sob as travas: convite e vínculo entram ou
-  # saem junto com a reunião. O reenvio do mesmo turno devolve a reunião que já tem os dois.
+  # O bloco roda só com a reserva NOVA, dentro da transação do Booker e sob as travas: convite, vínculo e registro de
+  # quem marcou entram ou saem junto com a reunião. O reenvio do mesmo turno devolve a reunião que já tem os três.
+  # Os avisos vêm depois do commit, pelo ponto único (`BookingNotices`); repetir não duplica.
   def reservar(duracao)
     reserva = booker(duracao).perform do |nova|
       vincular_card_a_conversa!(nova.card)
+      registrar_quem_marcou!(nova.meeting)
       convite!(nova)
     end
+    ::Crm::BookingV2::BookingNotices.new(meeting: reserva.meeting, invite: convite_do_cliente(reserva.meeting), told_in: conversa).schedule
     confirmar(reserva.meeting)
   rescue ArgumentError => e
     tratar_erro(e.message, duracao)
+  end
+
+  # Aviso ligado por padrão: o cliente pediu a reunião nesta conversa. Fica registrado o motivo e quem marcou.
+  def registrar_quem_marcou!(reuniao)
+    reuniao.update!(metadata: reuniao.metadata.to_h.merge(
+      'notify_client' => true, 'notice_basis' => NOTICE_BASIS, 'booked_by_agent_id' => agent.id, 'booked_in_conversation_id' => conversa.id
+    ))
   end
 
   def booker(duracao)
@@ -186,14 +218,6 @@ class Autonomia::Agents::Tools::Native::AgendarReuniao < Autonomia::Agents::Tool
       conversation: reserva.contact.id == conversa.contact_id ? conversa : nil, meeting: reserva.meeting, channel: SOURCE,
       scheduled_at: Time.current, expires_at: reserva.meeting.ends_at + ::Crm::BookingInvite::MANAGE_GRACE
     )
-  end
-
-  def confirmar(reuniao)
-    hora = reuniao.starts_at.in_time_zone(fuso)
-    local = reuniao.metadata.to_h['location'].to_h
-    "Reunião marcada: #{DIAS_DA_SEMANA[hora.wday]}, #{hora.strftime('%d/%m, %H:%M')} (fuso #{fuso.tzinfo.name}), " \
-      "#{((reuniao.ends_at - reuniao.starts_at) / 60).round} minutos, #{rotulo_do_local(local)}. Confirme ao cliente " \
-      'o dia, a hora e o local. Não diga que mandou convite por e-mail.'
   end
 
   def tratar_erro(codigo, duracao)

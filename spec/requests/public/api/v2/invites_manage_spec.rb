@@ -105,7 +105,8 @@ RSpec.describe 'Public::Api::V2::Invites manage', type: :request do
     expect(body).to include('can_rebook' => true)
     expect(body['meeting']).to include('status' => 'canceled')
 
-    allow(Crm::BookingV2::HostEligibility).to receive(:eligible?).and_return(false)
+    # Quem atende sai da conta de verdade: a elegibilidade é lida em lote (`HostEligibility.eligible_user_ids`, #1305).
+    AccountUser.find_by(account: account, user: world.host).destroy!
     show
     expect(body).to include('can_rebook' => false)
   end

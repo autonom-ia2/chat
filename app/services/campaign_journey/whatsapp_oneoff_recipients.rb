@@ -118,7 +118,9 @@ module CampaignJourney::WhatsappOneoffRecipients
     return @audience_variables if defined?(@audience_variables)
 
     link = audience_link
-    @audience_variables = link && CampaignJourney::VariableBindings.new(link.variable_bindings, link.variable_defaults)
+    @audience_variables = link && CampaignJourney::VariableBindings.new(
+      link.variable_bindings, link.variable_defaults, column_types: CampaignImports::ColumnTypes.stored(link.campaign_import)
+    )
   end
 
   # extra_values of the contact's audience row (the first row wins), read per recipient.

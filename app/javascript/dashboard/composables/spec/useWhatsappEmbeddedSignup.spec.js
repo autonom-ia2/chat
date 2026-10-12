@@ -94,6 +94,8 @@ describe('useWhatsappEmbeddedSignup', () => {
       waba_id: 'waba-1',
       phone_number_id: 'phone-1',
       is_coexistence: false,
+      signup_event: 'FINISH',
+      signup_version: '',
     });
     expect(setupFacebookSdk).toHaveBeenCalledWith('app-id', 'v22.0');
     expect(initWhatsAppEmbeddedSignup).toHaveBeenCalledWith('config-id');
@@ -109,6 +111,7 @@ describe('useWhatsappEmbeddedSignup', () => {
     // Business data lands first, while FB.login is still pending.
     emit({
       event: 'FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING',
+      version: 3,
       data: VALID_BUSINESS,
     });
     code.resolve('late-code');
@@ -119,6 +122,8 @@ describe('useWhatsappEmbeddedSignup', () => {
       waba_id: 'waba-1',
       phone_number_id: 'phone-1',
       is_coexistence: true,
+      signup_event: 'FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING',
+      signup_version: '3',
     });
   });
 
@@ -140,6 +145,8 @@ describe('useWhatsappEmbeddedSignup', () => {
       waba_id: 'waba-1',
       phone_number_id: '',
       is_coexistence: true,
+      signup_event: 'FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING',
+      signup_version: '',
     });
   });
 
@@ -177,6 +184,8 @@ describe('useWhatsappEmbeddedSignup', () => {
       waba_id: 'waba-1',
       phone_number_id: '',
       is_coexistence: null,
+      signup_event: 'FINISH_ONLY_WABA',
+      signup_version: '',
     });
   });
 
@@ -391,6 +400,8 @@ describe('useWhatsappEmbeddedSignup', () => {
       waba_id: 'waba-1',
       phone_number_id: '',
       is_coexistence: null,
+      signup_event: event,
+      signup_version: '',
     });
   });
 

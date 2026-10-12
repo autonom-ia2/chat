@@ -105,7 +105,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::AgendarReuniao, :relationships_
       Thread.current[:pause_after_check] = pause
       ActiveRecord::Base.connection_pool.with_connection do
         delivery = Autonomia::Agents::Tools::Delivery.new(conversation: conversation, agent_inbox: nil, origin_message_id: conversation.id)
-        outcome << described_class.new(agent: agent, params: { 'inicio' => slot }, delivery: delivery).call
+        outcome << described_class.new(agent: agent, params: { 'inicio' => slot, 'cliente_confirmou' => true }, delivery: delivery).call
       end
     end
     outcome

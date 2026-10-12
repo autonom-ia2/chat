@@ -5,6 +5,8 @@
 # 2. Reunião não está mais marcada → `canceled`; qualquer aviso (também "marcado" e "remarcado" atrasados) de reunião
 #    que já começou → `past_due`; lembrete cujo vencimento não bate mais com o início da reunião (reunião mudou de
 #    horário sem reprogramar) → `stale`.
+# 2b. Reunião que a IA confirmou na própria conversa da caixa de avisos e ali já respondeu (`BookingNotices.already_told?`,
+#    #1305) → o "ao marcar" vira `told_in_conversation`, sem repetir a confirmação.
 # 3. Parada, nesta precedência: `Contact#opted_out?` → `opted_out`; "Parar avisos" do contato → `stopped`;
 #    avisos parados na reunião → `stopped`.
 # 4. Página sem caixa de avisos utilizável → `no_inbox`; convite (link de gestão) ausente → `no_invite`.
@@ -32,7 +34,8 @@ class Crm::BookingV2::Notices::Sender
   ACCOUNT_LIMIT_ENV = 'CRM_BOOKING_NOTICES_ACCOUNT_DAILY_LIMIT'.freeze
   DEFAULT_ACCOUNT_LIMIT = 300
   # Pulos esperados (o cliente parou, a reunião acabou): não chamam o responsável.
-  QUIET_REASONS = %w[disabled canceled past_due stale opted_out stopped].freeze
+  # `told_in_conversation` (#1305): a IA já confirmou a reunião na conversa (`BookingNotices::TOLD_IN_CONVERSATION`).
+  QUIET_REASONS = %w[disabled canceled past_due stale opted_out stopped told_in_conversation].freeze
   STALE_TOLERANCE = 1.minute
   WAHA_UNAVAILABLE = 'waha_unavailable'.freeze
   # Até quando vale tentar de novo um aviso que esperou a WAHA (#1270): o "ao marcar" e o "remarcado" ainda servem até
@@ -88,6 +91,11 @@ class Crm::BookingV2::Notices::Sender
     waha_problem = waha_chat.prepare if Crm::BookingV2::Notices::WahaChat.needed?(decision, profile.notice_inbox)
     return waha_retry_or_skip!(waha_problem) if waha_problem
 
+    # De novo logo antes de enviar (#1305): a confirmação da IA pode ter sido gravada depois da primeira conferência,
+    # com o aviso já em `sending` (fora do alcance do `BookingNotices.mark_told!`).
+    told = told_reason
+    return skip!(told) if told
+
     deliver!(decision)
   end
 
@@ -101,7 +109,11 @@ class Crm::BookingV2::Notices::Sender
   attr_reader :notice, :meeting, :waha_outage
 
   def blocking_reason
-    meeting_reason || stop_reason || setup_reason || cap_reason
+    meeting_reason || told_reason || stop_reason || setup_reason || cap_reason
+  end
+
+  def told_reason
+    Crm::BookingV2::BookingNotices::TOLD_IN_CONVERSATION if Crm::BookingV2::BookingNotices.already_told?(notice)
   end
 
   def meeting_reason

@@ -33,8 +33,11 @@ RSpec.describe Autonomia::Agents::Tools::Native::Agenda do
     horarios_tool.new(agent: agent, params: { 'data' => data, 'duracao_minutos' => duracao }, delivery: entrega).call
   end
 
+  # O modelo manda `cliente_confirmou: true` depois do "sim" do cliente (#1305); os exemplos que testam outra coisa
+  # partem daí.
   def agendar(inicio: slot, entrega: delivery, **extra)
-    agendar_tool.new(agent: agent, params: { 'inicio' => inicio }.merge(extra.stringify_keys), delivery: entrega).call
+    params = { 'inicio' => inicio, 'cliente_confirmou' => true }.merge(extra.stringify_keys)
+    agendar_tool.new(agent: agent, params: params, delivery: entrega).call
   end
 
   # As opções que a ferramenta escreveu: a linha "- <iso> (<rótulo>)". Lê a NOSSA saída, não texto de pessoa.
@@ -207,10 +210,11 @@ RSpec.describe Autonomia::Agents::Tools::Native::Agenda do
       expect(Crm::Meeting.count).to be_zero
     end
 
-    it 'responsável que não pode mais atender conta como pausada' do
+    it 'responsável que não pode mais atender: motivo próprio e passa para uma pessoa' do
       AccountUser.find_by(account: account, user: world.host).destroy!
 
-      expect(horarios).to include('pausada', 'should_handoff=true')
+      expect(JSON.parse(horarios)).to include('agenda_disponivel' => false, 'motivo' => 'sem_responsavel')
+      expect(horarios).to include('should_handoff=true')
     end
 
     it 'sem nenhum horário na janela: a IA diz isso e passa para uma pessoa' do
