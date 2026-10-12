@@ -23,6 +23,11 @@ import ModeloCelular from '../components/ModeloCelular.vue';
 import ModeloSelo from '../components/ModeloSelo.vue';
 import ModeloUsos from '../components/ModeloUsos.vue';
 import CampanhasParadas from '../components/CampanhasParadas.vue';
+import AvisoDeSituacao from '../components/AvisoDeSituacao.vue';
+import {
+  mudancasDeSituacao,
+  useConferenciaAutomatica,
+} from '../helpers/useConferenciaAutomatica';
 
 // Um modelo (jornadas 1, 3, 4 e 5): a mensagem no celular, a situação
 // explicada com a próxima ação, onde ele está em uso e o que dá para fazer.
@@ -67,6 +72,21 @@ const carregar = async () => {
 };
 
 onMounted(carregar);
+
+// Em análise: a página confere sozinha a cada 60 s (#1394), sem voltar ao
+// "carregando", e avisa quando o modelo fica pronto ou é recusado.
+const mudancas = ref([]);
+const emAnalise = computed(
+  () => estado.value === 'pronto' && modelo.value?.situacao === 'em_analise'
+);
+useConferenciaAutomatica(emAnalise, async () => {
+  const lista = await api.listarModelos({ atualizar: true });
+  const novo = lista.find(item => item.id === modelo.value.id);
+  if (!novo) return;
+  const mudou = mudancasDeSituacao([modelo.value], [novo]);
+  if (mudou.length) mudancas.value = mudou;
+  modelo.value = novo;
+});
 
 const nomesDosNumeros = computed(() =>
   numeros.value
@@ -230,6 +250,7 @@ const confirmarApagar = async () => {
         </p>
 
         <template v-else>
+          <AvisoDeSituacao :mudancas="mudancas" />
           <header class="flex flex-col gap-2">
             <div class="flex flex-wrap items-center gap-3">
               <h1

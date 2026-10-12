@@ -13,6 +13,7 @@ import {
 import { camposUsados, contarLetras } from '../../helpers/conteudo';
 import ModeloEditorTexto from '../ModeloEditorTexto.vue';
 import ModeloMelhorarComIA from '../ModeloMelhorarComIA.vue';
+import CustoDoTipo from '../CustoDoTipo.vue';
 import {
   exemploDoCampo,
   ligacaoDoCatalogo,
@@ -20,14 +21,22 @@ import {
 } from '../../helpers/campos';
 import { useCanUseIA } from '../../helpers/useCanUseIA';
 
-defineProps({
+const props = defineProps({
   // Na correção: marca a caixa de texto enquanto o problema existir.
   destacarFim: { type: Boolean, default: false },
-  // Modelo novo do zero, cópia ou correção de recusado: a pessoa diz o tipo. Num
-  // modelo aprovado a Meta não deixa trocar o tipo, então não pergunta.
+  // Modelo novo do zero ou cópia: a pessoa diz o tipo. Alterar e corrigir não
+  // perguntam: a Meta não deixa trocar o tipo de um modelo que existe (#1394).
   perguntarTipo: { type: Boolean, default: false },
+  // Alterar ou corrigir (#1394): o tipo que a Meta tem, travado (a Meta não deixa
+  // trocar). Vazio: a tela não mostra o tipo aqui.
+  tipoTravado: { type: String, default: '' },
+  // Para onde vai "crie um modelo novo com este texto" (null: sem a saída).
+  criarNovoCom: { type: Object, default: null },
   // Nome já usado na mesma conta do WhatsApp: a sugestão de outro (ou '').
   nomeRepetido: { type: String, default: '' },
+  // Cópia para mudar o tipo (#1394): a mesma conta não aceita texto igual, então
+  // a etapa pede, antes do editor, para mudar pelo menos uma palavra.
+  pedirTextoNovo: { type: Boolean, default: false },
 });
 
 // Nome, texto e exemplos.
@@ -113,7 +122,11 @@ const escolherTipo = tipo => {
 // "Usar" na gaveta: o texto novo entra (os exemplos que a pessoa já tinha
 // ficam) e o tipo passa a ser o que a resposta prevê.
 const usarMelhoria = resposta => {
-  rascunho.value = comTexto(resposta.texto, { tipo: resposta.tipo });
+  // Tipo travado (alterar/corrigir): a resposta não troca o tipo.
+  rascunho.value = comTexto(
+    resposta.texto,
+    props.tipoTravado ? {} : { tipo: resposta.tipo }
+  );
   melhorando.value = false;
 };
 </script>
@@ -171,6 +184,29 @@ const usarMelhoria = resposta => {
       </div>
     </section>
 
+    <section
+      v-if="tipoTravado"
+      data-tipo-travado
+      class="flex flex-col gap-3 p-5 rounded-2xl ring-1 ring-inset ring-n-weak bg-n-solid-1"
+    >
+      <h2 class="m-0 text-base font-semibold text-n-slate-12">
+        {{ $t('MODELOS_WHATSAPP.TEXTO.TIPO_TRAVADO.TITULO') }}
+      </h2>
+      <CustoDoTipo :tipo="tipoTravado" />
+      <p class="mb-0 text-sm text-n-slate-11">
+        {{ $t('MODELOS_WHATSAPP.TEXTO.TIPO_TRAVADO.NAO_MUDA') }}
+      </p>
+      <router-link
+        v-if="criarNovoCom"
+        data-criar-novo-com-texto
+        :to="criarNovoCom"
+        class="inline-flex items-center self-start gap-2 text-[0.9375rem] font-medium rounded-lg min-h-11 text-n-blue-11 hover:underline"
+      >
+        <span class="i-lucide-copy-plus size-4" aria-hidden="true" />
+        {{ $t('MODELOS_WHATSAPP.TEXTO.TIPO_TRAVADO.CRIAR_NOVO') }}
+      </router-link>
+    </section>
+
     <section class="flex flex-col gap-3">
       <div class="flex flex-wrap items-end justify-between gap-2">
         <h2 class="m-0 text-base font-semibold text-n-slate-12">
@@ -203,6 +239,17 @@ const usarMelhoria = resposta => {
       </div>
 
       <template v-else>
+        <p
+          v-if="pedirTextoNovo"
+          data-mudar-texto
+          class="flex items-start gap-2.5 mb-0 text-[0.9375rem] text-n-slate-11"
+        >
+          <span
+            class="i-lucide-info mt-0.5 size-5 shrink-0 text-n-blue-10"
+            aria-hidden="true"
+          />
+          {{ $t('MODELOS_WHATSAPP.TEXTO.MUDAR_O_TEXTO') }}
+        </p>
         <ModeloEditorTexto
           :model-value="conteudo.texto"
           :rotulo="$t('MODELOS_WHATSAPP.TEXTO.MENSAGEM')"

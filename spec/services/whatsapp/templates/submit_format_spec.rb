@@ -182,4 +182,20 @@ RSpec.describe Whatsapp::Templates::SubmitFormat do
       expect(described_class.problems(template('MARKETING', offer(expiration: false), buttons(url)))).to eq([])
     end
   end
+
+  # #1394: a Meta não aceita trocar a categoria de um modelo que já existe; o produto trata como não editável sempre.
+  describe '.edit_problems' do
+    let(:current) { { 'category' => 'MARKETING', 'status' => 'REJECTED' } }
+
+    it 'recusa a troca de categoria na edição, com qualquer situação do modelo' do
+      expect(described_class.edit_problems(current, { 'category' => 'UTILITY' })).to eq(['category_change_not_allowed'])
+      expect(described_class.edit_problems(current.merge('status' => 'APPROVED'), { 'category' => 'utility' }))
+        .to eq(['category_change_not_allowed'])
+    end
+
+    it 'aceita a mesma categoria (sem diferença de maiúsculas) ou edição sem categoria' do
+      expect(described_class.edit_problems(current, { 'category' => 'marketing' })).to eq([])
+      expect(described_class.edit_problems(current, { 'components' => [] })).to eq([])
+    end
+  end
 end

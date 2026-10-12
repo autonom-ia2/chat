@@ -21,6 +21,10 @@
 #   carousel_card       — a card without a media header, body text or buttons;
 #   offer_title         — limited-time offer without a title of 1 to 16 characters;
 #   offer_buttons       — limited-time offer without its URL button, or with a countdown and no COPY_CODE button.
+# In an edit (`edit_problems`), one more code:
+#   category_change_not_allowed — the edit asks for another category. Meta refuses it (#1394: seen on a REJECTED template; the docs,
+#                                 developers.facebook.com/documentation/business-messaging/whatsapp/templates/template-management,
+#                                 only say "You cannot edit the category of an approved template"), so the product never changes it.
 # Sendability in a campaign is a different rule (`SendableFormat`); helpers are shared from it.
 module Whatsapp::Templates::SubmitFormat
   MARKETING = 'MARKETING'.freeze
@@ -37,6 +41,14 @@ module Whatsapp::Templates::SubmitFormat
   URL_STARTS = %w[https:// http://].freeze
 
   module_function
+
+  # What an edit cannot ask, compared with the template as it is in the inbox list (`current`).
+  def edit_problems(current, content)
+    content = content.is_a?(Hash) ? content.stringify_keys : {}
+    return [] unless content.key?('category')
+
+    upcase(content['category']) == upcase(current.to_h.stringify_keys['category']) ? [] : ['category_change_not_allowed']
+  end
 
   # Codes of everything wrong, without repeats (empty: Meta can receive it).
   def problems(template)

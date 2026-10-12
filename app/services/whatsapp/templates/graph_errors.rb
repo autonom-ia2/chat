@@ -43,7 +43,7 @@ module Whatsapp::Templates::GraphErrors
   def fail_with(response)
     error = meta_error(response)
     own = own_text_code(error)
-    raise Whatsapp::Templates::MetaClient::MetaError.new(text(own), own_text: true) if own
+    raise Whatsapp::Templates::MetaClient::MetaError.new(text(own), own_text: true, code: own) if own
 
     message = error['error_user_msg'].presence || error['message'].presence
     raise Whatsapp::Templates::MetaClient::MetaError, without_token(message.to_s).first(MAX_ERROR)

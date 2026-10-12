@@ -135,6 +135,13 @@ export const topoCompleto = topo =>
   TOPOS_SEM_ARQUIVO.includes(topo.tipo) ||
   Boolean(topo.local || topo.handle);
 
+// #1394: num aviso, o arquivo do topo vai igual para todos (não é o boleto de
+// cada cliente). Lembrete leve na conferência, que não conta como problema.
+export const lembrarArquivoIgual = (conteudo, contexto = {}) =>
+  contexto.tipo === 'aviso' &&
+  ['foto', 'video', 'documento'].includes(conteudo.topo?.tipo) &&
+  Boolean(conteudo.topo.local || conteudo.topo.handle);
+
 // Cópia na mesma conta: o corpo ou o rodapé precisam mudar (a Meta recusa
 // modelo repetido).
 const textoMudou = (conteudo, original) => {

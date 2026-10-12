@@ -121,10 +121,28 @@ const copiaPedeArquivos = computed(() => {
 // handle do original expira), então a conferência pede o arquivo.
 const semArquivos = conteudo => ({
   ...conteudo,
-  topo: { ...conteudo.topo, handle: '' },
+  topo: { ...conteudo.topo, handle: '', arquivo: '' },
   ...(conteudo.cartoes && {
-    cartoes: conteudo.cartoes.map(cartao => ({ ...cartao, handle: '' })),
+    cartoes: conteudo.cartoes.map(cartao => ({
+      ...cartao,
+      handle: '',
+      arquivo: '',
+    })),
   }),
+});
+
+// "Crie um modelo novo com este texto" (?novoTipo=1, #1394): a Meta não deixa
+// trocar o tipo de um modelo que existe. Vai o mesmo texto, campos, exemplos e
+// botões, o tipo para escolher e o nome do original (a regra de nome repetido
+// troca pela sugestão livre logo depois de carregar).
+const novoTipo = computed(() => route.query.novoTipo === '1');
+const copiaDe = base => ({
+  ...base,
+  nome: novoTipo.value
+    ? base.nome
+    : t('MODELOS_WHATSAPP.CRIAR.COPIA_DE', { nome: base.nome }),
+  tipo: novoTipo.value ? null : base.tipo,
+  conteudo: semArquivos(base.conteudo),
 });
 
 // Os prontos só existem em português e inglês; outro idioma da tela cai no
@@ -188,13 +206,7 @@ const carregar = async () => {
         return;
       }
       const base = doModelo(modelo.value);
-      rascunho.value = alterando.value
-        ? base
-        : {
-            ...base,
-            nome: t('MODELOS_WHATSAPP.CRIAR.COPIA_DE', { nome: base.nome }),
-            conteudo: semArquivos(base.conteudo),
-          };
+      rascunho.value = alterando.value ? base : copiaDe(base);
     } else {
       rascunho.value = rascunhoDaQuery();
       montadoDaQuery = rascunho.value ? JSON.stringify(rascunho.value) : '';
@@ -291,6 +303,14 @@ const nomeRepetido = computed(() => {
   return `${nome} ${numero}`;
 });
 
+// Cópia para mudar o tipo: o nome do original já existe na conta, então entra
+// a sugestão livre ("Cobrança 2") assim que a tela fica pronta.
+watch(estado, agora => {
+  if (agora === 'pronto' && novoTipo.value && nomeRepetido.value) {
+    rascunho.value = { ...rascunho.value, nome: nomeRepetido.value };
+  }
+});
+
 const contexto = computed(() => ({
   temCatalogo: Boolean(catalogo.value),
   tipo: rascunho.value?.tipo,
@@ -358,11 +378,27 @@ const podeSeguir = computed(() => {
   return true;
 });
 
+// Alterar e corrigir não perguntam o tipo: a Meta não deixa trocar (#1394).
 const perguntarTipo = computed(
   () =>
-    modo.value !== 'alterar' &&
+    !alterando.value &&
     rascunho.value?.objetivo === 'em_branco' &&
     (rascunho.value?.conteudo.formato || 'padrao') === 'padrao'
+);
+
+// Alterar ou corrigir: o tipo que a Meta tem, travado, com a saída "crie um
+// modelo novo com este texto" (só na mensagem comum: carrossel, oferta e código
+// só existem num tipo).
+const tipoTravado = computed(() =>
+  alterando.value ? modelo.value?.tipo || '' : ''
+);
+const criarNovoCom = computed(() =>
+  alterando.value && formato.value === 'padrao'
+    ? {
+        name: 'modelos_whatsapp_novo',
+        query: { de: modelo.value.id, novoTipo: '1', etapa: 'texto' },
+      }
+    : null
 );
 
 const terminaComCampo = computed(
@@ -585,9 +621,14 @@ const proximaAlteracao = computed(() => {
             <span class="flex flex-col gap-1">
               <span class="text-[0.9375rem] text-n-slate-12">
                 {{
-                  $t('MODELOS_WHATSAPP.CRIAR.AVISO_COPIA', {
-                    nome: modelo.nome,
-                  })
+                  $t(
+                    novoTipo
+                      ? 'MODELOS_WHATSAPP.CRIAR.AVISO_NOVO_TIPO'
+                      : 'MODELOS_WHATSAPP.CRIAR.AVISO_COPIA',
+                    {
+                      nome: modelo.nome,
+                    }
+                  )
                 }}
               </span>
               <span
@@ -634,7 +675,10 @@ const proximaAlteracao = computed(() => {
                   v-model:rascunho="rascunho"
                   :destacar-fim="terminaComCampo"
                   :perguntar-tipo="perguntarTipo"
+                  :tipo-travado="tipoTravado"
+                  :criar-novo-com="criarNovoCom"
                   :nome-repetido="nomeRepetido"
+                  :pedir-texto-novo="novoTipo"
                 />
                 <ModeloConferencia
                   v-if="modo === 'corrigir'"

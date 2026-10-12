@@ -89,8 +89,10 @@ class Api::V1::Accounts::Inboxes::WhatsappTemplatesController < Api::V1::Account
     render_error('meta_unreachable', :service_unavailable)
   end
 
+  # A tela nunca recebe o texto cru da Meta (#1394): sem texto nosso, vai o genérico e o `code` (`meta_text`).
   def meta_refused(error)
-    render json: { error: 'meta_refused', message: error.message }, status: :unprocessable_entity
+    message = error.own_text ? error.message : I18n.t('whatsapp_templates.errors.meta_text')
+    render json: { error: 'meta_refused', code: error.code, message: message }, status: :unprocessable_entity
   end
 
   def refused(error)

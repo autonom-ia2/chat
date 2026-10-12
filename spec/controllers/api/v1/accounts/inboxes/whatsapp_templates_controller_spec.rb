@@ -308,6 +308,51 @@ RSpec.describe 'Api::V1::Accounts::Inboxes::WhatsappTemplates', type: :request d
       expect(a_request(:any, graph_host)).not_to have_been_made
     end
 
+    # #1394: a Meta não aceita trocar a categoria de um modelo que já existe (vimos num recusado, na conta 16).
+    context 'when the edit changes the category' do
+      let(:rejected) { mine.merge('id' => '17', 'name' => 'cobranca_ou_boleto', 'status' => 'REJECTED', 'category' => 'MARKETING') }
+
+      before { channel.update_columns(message_templates: [mine, rejected]) } # rubocop:disable Rails/SkipsModelValidations
+
+      it 'recusa com 422 e o código, sem chamar a Graph nem mexer no perfil' do
+        call(:patch, "#{base}/17", { template: { category: 'UTILITY', friendly_name: 'Boleto',
+                                                 components: [{ type: 'BODY', text: 'Olá {{1}}, seu boleto saiu. Qualquer dúvida, responda.' }] } })
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response.parsed_body).to include('error' => 'category_change_not_allowed',
+                                                'message' => I18n.t('whatsapp_templates.errors.category_change_not_allowed'))
+        expect(a_request(:any, graph_host)).not_to have_been_made
+        expect(WhatsappTemplateProfile.where(inbox: inbox)).to be_empty
+      end
+
+      it 'a mesma categoria passa e não vai para a Meta (a edição nunca manda categoria)' do
+        stub_lookup('cobranca_ou_boleto', [rejected])
+        edit = stub_request(:post, "#{graph}/17").to_return(status: 200, headers: json, body: { success: true }.to_json)
+
+        call(:patch, "#{base}/17", { template: { category: 'MARKETING',
+                                                 components: [{ type: 'BODY', text: 'Olá {{1}}, seu boleto saiu. Qualquer dúvida, responda.' }] } })
+
+        expect(response).to have_http_status(:ok)
+        expect(edit.with { |request| JSON.parse(request.body).keys == ['components'] }).to have_been_requested.once
+        expect(response.parsed_body).to include('category' => 'MARKETING', 'status' => 'PENDING')
+      end
+    end
+
+    it 'a recusa da Meta sem texto nosso não chega crua à tela' do
+      stub_lookup('pedido_enviado', [mine])
+      # Subcódigo que não temos mapeado (o da troca de categoria a Meta não documenta).
+      meta_text = 'Você não pode atualizar uma categoria de modelo aprovada'
+      stub_request(:post, "#{graph}/11")
+        .to_return(status: 400, headers: json, body: { error: { code: 100, error_subcode: 2_388_999, error_user_msg: meta_text } }.to_json)
+
+      call(:patch, "#{base}/11", { template: { components: [{ type: 'BODY', text: 'Oi {{1}}, saiu. Qualquer dúvida, responda.' }] } })
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body).to include('error' => 'meta_refused', 'code' => 'meta_text',
+                                              'message' => I18n.t('whatsapp_templates.errors.meta_text'))
+      expect(response.parsed_body['message']).not_to include('categoria de modelo aprovada')
+    end
+
     it 'apaga na Meta só aquele modelo, tira da lista e apaga o perfil' do
       WhatsappTemplateProfile.create!(account: account, inbox: inbox, waba_id: channel.waba_id, name: 'pedido_enviado', language: 'pt_BR')
       stub_lookup('pedido_enviado', [mine])
@@ -478,7 +523,8 @@ RSpec.describe 'Api::V1::Accounts::Inboxes::WhatsappTemplates', type: :request d
       edit = stub_request(:post, "#{graph}/77")
       delete = stub_request(:delete, "#{graph}/waba_a/message_templates")
 
-      call(:patch, "#{base}/77", { template: { category: 'UTILITY' } })
+      # Conteúdo, não categoria: a categoria não vai para a Meta na edição (#1394).
+      call(:patch, "#{base}/77", { template: { components: [{ type: 'BODY', text: 'Oi, tudo certo. Qualquer dúvida, responda.' }] } })
       expect(response).to have_http_status(:not_found)
       call(:delete, "#{base}/77")
       expect(response).to have_http_status(:not_found)
