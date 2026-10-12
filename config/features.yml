@@ -311,10 +311,11 @@
   enabled: false
   column: feature_flags_ext_1
 
-# Agentes — nova jornada Conte · Confira · Comece (#1181). Desligada: menu, rotas e telas iguais ao main; as leituras L1/L2 respondem 404.
+# Agentes — nova jornada Conte · Confira · Comece (#1181). Padrão desde 12/10/2026 (migration 20261022100000). Desligada:
+# menu, rotas e telas do painel antigo; as leituras L1/L2 respondem 404.
 - name: autonomia_agents_journey
   display_name: Agents new journey (Agentes — nova jornada)
-  enabled: false
+  enabled: true
   column: feature_flags_ext_1
 
 # Agendamento WhatsApp-first (#1187): página de agendamento sem Google/Microsoft, link por cliente e avisos.
