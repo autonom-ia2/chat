@@ -9,6 +9,9 @@
 # Agenda pausada em "Meus horários" (#1195): a página continua no ar e recebendo convite (`usable?` não muda), mas
 # quem pausou não tem horário (`Slots#host_paused?`). Responsável fixo pausado, ou todos os links de quem pausou,
 # é `agenda_pausada`; no link por pessoa, o primeiro link de quem NÃO pausou recebe (`link_for`).
+#
+# `agenda_pausada` tem UM sentido só, na página e na pessoa (`people`): quem atende pausou Meus horários. A página
+# despublicada é `pausada`. (A recusa da IA para página despublicada é `agenda_pagina_pausada`.)
 class Crm::BookingV2::InvitePages
   ACTIVE = 'ativa'.freeze
   PAUSED = 'pausada'.freeze
@@ -76,7 +79,28 @@ class Crm::BookingV2::InvitePages
     own_link(page, user) || first_link(page)
   end
 
+  # As pessoas que atendem pela página (#1307), na ORDEM FIXA do #1305: no responsável fixo, ele só (se ainda pode
+  # atender); no link por pessoa, os links ativos de quem pode atender, na ordem da associação (por id). Cada uma com o
+  # link dela (nil no fixo) e o estado: 'ativa' | 'agenda_pausada' (pausou Meus horários). Lê o que já veio carregado
+  # e as consultas de elegibilidade e pausas desta instância: nenhuma consulta por pessoa.
+  Person = Struct.new(:user, :link, :status, keyword_init: true) do
+    def paused? = status == AGENDA_PAUSED
+  end
+
+  def people(page)
+    hosts = page.assignment_mode_fixed? ? fixed_host(page) : link_hosts(page)
+    hosts.map { |user, link| Person.new(user: user, link: link, status: paused?(user) ? AGENDA_PAUSED : ACTIVE) }
+  end
+
   private
+
+  def fixed_host(page)
+    eligible?(page.default_assignee) ? [[page.default_assignee, nil]] : []
+  end
+
+  def link_hosts(page)
+    page.agent_booking_links.select { |link| link_usable?(link) }.uniq(&:agent_id).map { |link| [link.agent, link] }
+  end
 
   attr_reader :account
 

@@ -917,7 +917,8 @@ module Autonomia
       end
 
       # #1196 — AGENDA LIGADA (criação e AJUSTE, qualquer tipo): a instrução não pode proibir o que as ferramentas
-      # fazem. Sem este bloco, um ajuste de um agente `scheduler` antigo manteria "nunca consulte a agenda".
+      # fazem. #1307: nem mandar remarcar/cancelar para a equipe quando há o link de gestão. Sem este bloco, um
+      # ajuste de um agente `scheduler` antigo manteria "nunca consulte a agenda".
       def booking_context
         return '' unless booking_enabled?
 
@@ -926,7 +927,10 @@ module Autonomia
           'pode proibir consultar a agenda, oferecer horários ou marcar. Ao redigir ou ajustar: oferecer 2 ou 3 ' \
           'horários vindos da ferramenta, confirmar dia, hora e local antes de marcar, nunca inventar horário e, se a ' \
           'ferramenta recusar, seguir o motivo dela (pedir o número, oferecer novas opções ou passar para uma pessoa). ' \
-          'Remover regra antiga que diga o contrário.'
+          'REMARCAR/CANCELAR: mandar o link de gestão enviado ao marcar (por ele o cliente muda ou cancela); só sem ' \
+          'esse link, passar para uma pessoa. COM QUEM MARCAR: se o dono disser com quem marcar, escrever isso na ' \
+          'instruction; no atendimento, quem escolhe entre as pessoas liberadas é o agente, pela instrução e pela conversa. Remover ' \
+          'regra antiga que diga o contrário, inclusive "encaminhar remarcação/cancelamento à equipe".'
       end
 
       def booking_enabled?

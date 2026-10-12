@@ -8,9 +8,10 @@
 # não recebe a agenda: não aceita página (`aceita?`) e não recebe a instrução (`ligada?`).
 #
 # A REGRA DE HORÁRIO É A DA PÁGINA PÚBLICA (J6-A1): o mesmo `Crm::BookingV2::Slots`, com o mesmo responsável que a
-# página atende. Página `per_agent`: o link de quem está atribuído à conversa (a Atribuição do CRM decide quem atende,
-# de propósito); sem ele, ou com ele de agenda pausada em Meus horários, o primeiro link ativo de quem não pausou, como
-# o convite (`InvitePages#link_for`).
+# página atende. Página `per_agent`: com quem marcar é decisão do MODELO entre as pessoas liberadas (ver PESSOAS
+# LIBERADAS abaixo; decisão do Rodrigo em 12/10/2026, #1307). Quem está atribuído à conversa chega ao modelo como
+# dado (`quem_atende_esta_conversa`), não decide sozinho. A Atribuição do CRM continua decidindo o handoff para a
+# equipe, que é outro assunto.
 #
 # NADA AQUI LÊ O QUE A PESSOA ESCREVEU (RA-09). Quem entende "a de quarta" é o modelo; as ferramentas recebem data,
 # horário ISO e duração e conferem por parser (`Date.iso8601`, `Time.iso8601`) e pelos limites da página.
@@ -23,11 +24,26 @@
 # ferramentas somem do turno (`pode_marcar?`) e a instrução "# Agenda" diz que a agenda está indisponível e manda
 # passar para uma pessoa, em vez de a IA prometer horário e cair na recusa. O `booking_page_id` não é apagado: o dono
 # vê o estado na tela. Se a página mudar no meio do turno, a recusa da ferramenta traz o mesmo motivo, estruturado.
+#
+# PESSOAS LIBERADAS (#1307): o dono libera, na configuração do agente, quais pessoas da página a IA pode usar
+# (`AgendaPessoas`, `config['booking_agent_ids']`; vazio = todas). Com quem marcar entre elas é decisão do MODELO,
+# pela instrução do dono e pela conversa: `horarios_disponiveis` aceita `pessoa_id` (sem ele, junta as liberadas que
+# podem atender, cada horário com a pessoa) e `agendar_reuniao` exige `pessoa_id` quando há mais de uma. O servidor
+# confere a pessoa contra as liberadas, quem atende a página, a agenda dela e o horário livre dela (o `Booker`). A
+# pessoa atribuída à conversa não decide mais sozinha: ela vai ao modelo (`quem_atende_esta_conversa`) como dado.
+#
+# MEMÓRIA DO TURNO (#1307): `pode_marcar?` (gate das duas ferramentas) e `instrucao` liam o estado da página três
+# vezes por turno (até 3 `InvitePages`, cada um com a consulta de elegibilidade e a de pausas). `no_turno` guarda o
+# estado por agente durante o turno (`Answerer#answer`); fora dele, nada é guardado. As ferramentas, ao rodar,
+# sempre leem de novo (`estado_da_pagina`).
 module Autonomia::Agents::Tools::Native::Agenda
   include Autonomia::Agents::Tools::Native::AgendaRespostas
+  include Autonomia::Agents::Tools::Native::AgendaComQuem
+  include Autonomia::Agents::Tools::Native::AgendaLocais
 
   SLUGS = %w[horarios_disponiveis agendar_reuniao].freeze
   CONFIG_KEY = 'booking_page_id'.freeze
+  PESSOAS_KEY = ::Autonomia::Agents::Tools::Native::AgendaPessoas::CONFIG_KEY
   MAX_OPCOES = 6
   # Sem data pedida, no máximo dois horários por dia: as opções se espalham por dias diferentes.
   POR_DIA_SEM_DATA = 2
@@ -48,6 +64,8 @@ module Autonomia::Agents::Tools::Native::Agenda
   SEM_ATENDENTE = "A página de agendamento está sem ninguém para atender. #{PASSAR_PARA_PESSOA}".freeze
   AGENDA_DE_QUEM_ATENDE_PAUSADA = "Quem atende por esta agenda pausou os próprios horários. #{PASSAR_PARA_PESSOA}".freeze
   SEM_HORARIOS = "Não há horário livre na agenda nos próximos dias. #{PASSAR_PARA_PESSOA}".freeze
+  SEM_HORARIOS_DA_PESSOA = 'Esta pessoa não tem horário livre nos próximos dias. Se houver outras pessoas liberadas, ' \
+                           "chame de novo sem pessoa_id e ofereça os horários delas. Senão: #{PASSAR_PARA_PESSOA}".freeze
 
   def self.page_id(agent)
     agent.config.to_h[CONFIG_KEY].presence
@@ -62,11 +80,28 @@ module Autonomia::Agents::Tools::Native::Agenda
   end
 
   # 'ativa' | 'pausada' | 'sem_responsavel' | 'agenda_pausada' | 'pagina_inexistente'. A regra é a do convite
-  # (`InvitePages#status`).
-  def self.estado(agent, pagina: pagina_de(agent))
+  # (`InvitePages#status`) e, com a página ativa, a das pessoas liberadas (`AgendaPessoas#estado`): sem liberada que
+  # possa atender é 'sem_responsavel'; todas pausadas, 'agenda_pausada'. Dentro de `no_turno`, uma vez por agente.
+  def self.estado(agent)
+    chave = [agent.id, agent.config.to_h.slice(CONFIG_KEY, PESSOAS_KEY)]
+    ::Autonomia::Agents::Tools::Native::AgendaDoTurno.lembrar(chave) { calcular_estado(agent) }
+  end
+
+  def self.calcular_estado(agent)
+    pagina = pagina_de(agent)
     return PAGINA_INEXISTENTE if pagina.nil?
 
-    ::Crm::BookingV2::InvitePages.new(agent.account).status(pagina)
+    paginas = ::Crm::BookingV2::InvitePages.new(agent.account)
+    status = paginas.status(pagina)
+    return status unless status == ATIVA
+
+    ::Autonomia::Agents::Tools::Native::AgendaPessoas.new(agent: agent, pagina: pagina, paginas: paginas).estado
+  end
+  private_class_method :calcular_estado
+
+  # O turno inteiro lê o estado uma vez por agente (gate das ferramentas e instrução). Aninhado, reaproveita.
+  def self.no_turno(&)
+    ::Autonomia::Agents::Tools::Native::AgendaDoTurno.no_turno(&)
   end
 
   # A agenda ligada E a página marcando agora: só aí as ferramentas entram no turno.
@@ -111,7 +146,14 @@ module Autonomia::Agents::Tools::Native::Agenda
   def self.instrucao(agent)
     return unless ligada?(agent)
 
-    ::Autonomia::Agents::Tools::Native::AgendaInstrucao.para(estado(agent))
+    situacao = estado(agent)
+    return ::Autonomia::Agents::Tools::Native::AgendaInstrucao.para(situacao) unless situacao == ATIVA
+
+    pagina = pagina_de(agent)
+    pessoas = ::Autonomia::Agents::Tools::Native::AgendaPessoas.new(
+      agent: agent, pagina: pagina, paginas: ::Crm::BookingV2::InvitePages.new(agent.account)
+    ).atendem
+    ::Autonomia::Agents::Tools::Native::AgendaInstrucao.para(situacao, pessoas: pessoas, prazo_minutos: pagina.cancel_until_minutes)
   end
 
   private
@@ -126,12 +168,13 @@ module Autonomia::Agents::Tools::Native::Agenda
     @paginas ||= ::Crm::BookingV2::InvitePages.new(account)
   end
 
-  # O estado da página nesta chamada, pela mesma regra do turno (`Agenda.estado`). Agenda desligada na conta conta
-  # como página inexistente: não há agenda para a IA.
+  # O estado da página nesta chamada, pela mesma regra do turno (`Agenda.estado`), lido de novo (sem a memória do
+  # turno). Agenda desligada na conta conta como página inexistente: não há agenda para a IA.
   def estado_da_pagina
     return PAGINA_INEXISTENTE if pagina.blank? || !::Crm::Config.booking_v2_enabled?(account)
 
-    paginas.status(pagina)
+    status = paginas.status(pagina)
+    status == ATIVA ? pessoas.estado : status
   end
 
   # nil quando a página serve; senão a recusa (com o registro), com o motivo estruturado.
@@ -141,36 +184,23 @@ module Autonomia::Agents::Tools::Native::Agenda
     when PAGINA_INEXISTENTE then recusar('agenda_sem_pagina', indisponivel(PAGINA_INEXISTENTE, SEM_PAGINA))
     when SEM_RESPONSAVEL then recusar('agenda_sem_responsavel', indisponivel(SEM_RESPONSAVEL, SEM_ATENDENTE))
     when AGENDA_PAUSADA then recusar('agenda_de_quem_atende_pausada', indisponivel(AGENDA_PAUSADA, AGENDA_DE_QUEM_ATENDE_PAUSADA))
-    else recusar('agenda_pausada', indisponivel(PAUSADA_ESTADO, PAUSADA))
+    else recusar('agenda_pagina_pausada', indisponivel(PAUSADA_ESTADO, PAUSADA))
     end
   end
 
   def recusa_sem_horarios
-    recusar('agenda_sem_horarios', indisponivel(SEM_HORARIO, SEM_HORARIOS))
+    instrucao = params['pessoa_id'].nil? ? SEM_HORARIOS : SEM_HORARIOS_DA_PESSOA
+    recusar('agenda_sem_horarios', indisponivel(SEM_HORARIO, instrucao))
   end
 
   # Data, horário, duração ou local fora do que a página oferece. Um código para os quatro; o texto diz qual.
   def parametro_invalido(texto)
-    recusar('agenda_parametro_invalido', texto)
+    recusar('agenda_parametro_invalido', recusa_em_campos('parametro_invalido', texto))
   end
 
   def conversa
     conversation = delivery.try(:conversation)
     conversation if conversation.present? && conversation.account_id == account.id
-  end
-
-  # Quem está atribuído à conversa, a menos que tenha pausado a agenda (#1305): aí recebe o primeiro link ativo de
-  # quem não pausou, como sem ninguém atribuído. Pausado não tem horário, e a IA diria "sem horários".
-  def link
-    return @link if defined?(@link)
-
-    atribuido = conversa&.assignee
-    @link = paginas.link_for(pagina, paginas.paused?(atribuido) ? nil : atribuido)
-  end
-
-  # O mesmo responsável do `Booker`: o do link individual ou o responsável padrão da página.
-  def responsavel
-    link&.agent || pagina.default_assignee
   end
 
   def fuso
@@ -190,65 +220,32 @@ module Autonomia::Agents::Tools::Native::Agenda
     parametro_invalido("Essa duração não existe nesta agenda. Durações possíveis, em minutos: #{pagina.durations.join(', ')}.")
   end
 
-  # Horários livres, do mesmo jeito que a página pública: o dia pedido, ou os próximos dias da janela.
-  def horarios(dia:, duracao:)
-    return livres_no_dia(dia, duracao).first(MAX_OPCOES) if dia
+  # Horários livres de `quem` (pessoas), do mesmo jeito que a página pública: o dia pedido, ou os próximos dias da
+  # janela. -> [{ inicio:, pessoa: }].
+  def horarios(dia:, duracao:, quem:)
+    return livres_no_dia(dia, duracao, quem).first(MAX_OPCOES) if dia
 
     proximos_dias.each_with_object([]) do |data, opcoes|
-      opcoes.concat(livres_no_dia(data, duracao).first(POR_DIA_SEM_DATA))
+      opcoes.concat(livres_no_dia(data, duracao, quem).first(POR_DIA_SEM_DATA))
       break opcoes if opcoes.size >= MAX_OPCOES
     end.first(MAX_OPCOES)
   end
 
-  def livres_no_dia(dia, duracao)
-    ::Crm::BookingV2::Slots.new(profile: pagina, host: responsavel, date: dia.iso8601, duration: duracao).perform
+  # Cada pessoa pela regra da página pública (`Slots`, com ela de responsável). Várias pessoas: junta pelo início; no
+  # mesmo início fica a primeira na ordem da página (o modelo pede outra pelo `pessoa_id`).
+  def livres_no_dia(dia, duracao, quem)
+    todas = quem.flat_map { |pessoa| livres_da_pessoa(pessoa, dia, duracao) }
+    todas.uniq { |opcao| opcao[:inicio] }.sort_by { |opcao| Time.iso8601(opcao[:inicio]) }
+  end
+
+  def livres_da_pessoa(pessoa, dia, duracao)
+    livres = ::Crm::BookingV2::Slots.new(profile: pagina, host: pessoa.user, date: dia.iso8601, duration: duracao).perform
+    livres.map { |iso| { inicio: iso, pessoa: pessoa } }
   end
 
   def proximos_dias
     hoje = Time.current.in_time_zone(fuso).to_date
     ultimo = hoje + [pagina.booking_window_days, ::Crm::BookingV2::Slots::MAX_SCAN_DAYS].min
     (hoje..ultimo).select { |dia| pagina.weekdays.include?(dia.wday) }
-  end
-
-  # "2026-10-20T10:00:00-03:00 (terça-feira, 20/10, 10:00)": o valor para devolver à ferramenta e o rótulo para falar.
-  def opcao(iso)
-    hora = Time.iso8601(iso).in_time_zone(fuso)
-    "- #{iso} (#{DIAS_DA_SEMANA[hora.wday]}, #{hora.strftime('%d/%m, %H:%M')})"
-  end
-
-  def locais
-    Array(pagina.locations).select { |item| item.is_a?(Hash) }
-  end
-
-  # Meet/Teams: o convite sai pelo provedor, que exige o e-mail do cliente (`Booker#validate_provider_location!`).
-  def local_pede_email?(tipo)
-    ::Crm::BookingPageSettings::CALENDAR_LOCATIONS.key?(tipo.to_s)
-  end
-
-  # O e-mail do contato da conversa; sem ele, o que o modelo mandou porque a ferramenta pediu. Dado, não texto de
-  # pessoa: quem confere a forma é o `BookingInput` do Booker.
-  def email_do_cliente
-    conversa&.contact&.email.presence || params['email'].to_s.strip.presence
-  end
-
-  # Os locais que a IA oferece: na conversa de um cliente sem e-mail, só os que não precisam dele (se todos
-  # precisam, todos, e a descrição avisa). Sem conversa (Testar), todos, como no atendimento de quem tem e-mail.
-  def locais_oferecidos
-    return locais if conversa.blank? || email_do_cliente.present?
-
-    locais.reject { |local| local_pede_email?(local['type']) }.presence || locais
-  end
-
-  def rotulo_do_local(local)
-    rotulo = ::Crm::BookingV2::LocationLabel.for(local, account: account) || local['type']
-    local['address'].present? ? "#{rotulo}: #{local['address']}" : rotulo
-  end
-
-  def descricao_dos_locais
-    locais_oferecidos.map { |local| "#{local['type']} (#{rotulo_do_local(local)}#{aviso_de_email(local)})" }.join('; ')
-  end
-
-  def aviso_de_email(local)
-    conversa.present? && email_do_cliente.blank? && local_pede_email?(local['type']) ? ', pede o e-mail do cliente' : ''
   end
 end

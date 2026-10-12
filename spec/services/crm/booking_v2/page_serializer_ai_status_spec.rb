@@ -100,7 +100,8 @@ RSpec.describe Crm::BookingV2::PageSerializer do
       Crm::AgentBookingProfile.where(id: profile.id).includes(agent_booking_links: :agent).each do |pagina|
         expect(described_class.new(pagina, invite_pages: lista).summary[:recebe][:nome]).to eq(terceiro.available_name)
       end
-      expect(ferramenta.send(:responsavel)).to eq(terceiro)
+      expect(ferramenta.send(:pessoas).atendem.map(&:user)).to eq([terceiro, colega, world.host])
+      expect(summary[:pessoas].pluck(:id)).to eq([terceiro, colega, world.host].map(&:id))
     end
 
     it 'sem nenhum link de quem possa atender: sem responsável' do
@@ -109,6 +110,53 @@ RSpec.describe Crm::BookingV2::PageSerializer do
 
       mesmo_estado_da_ia!('sem_responsavel')
       expect(summary[:recebe]).to eq(modo: 'por_pessoa', nome: nil)
+    end
+  end
+
+  # #1307: as pessoas que a gaveta oferece para liberar, só nome de exibição e estado, na ordem fixa.
+  describe 'pessoas' do
+    it 'responsável único: uma pessoa, sem e-mail nem telefone' do
+      world.host.update!(display_name: 'Cami')
+
+      expect(summary[:pessoas]).to eq([{ id: world.host.id, nome: 'Cami', ai_status: 'ativa' }])
+    end
+
+    it 'um link por pessoa: os links ativos de quem pode atender, na ordem dos links, com quem pausou marcado' do
+      colega = create(:user, account: account, role: :agent, name: 'Rui Prado')
+      saiu = create(:user, account: account, role: :agent)
+      profile.update!(assignment_mode: :per_agent, default_assignee: nil)
+      [colega, world.host, saiu].each { |user| profile.agent_booking_links.create!(account: account, agent: user) }
+      AccountUser.find_by(account: account, user: saiu).destroy!
+      Crm::AgentAvailability.create!(account: account, user: world.host, paused: true)
+
+      expect(summary[:pessoas]).to eq([
+                                        { id: colega.id, nome: colega.available_name, ai_status: 'ativa' },
+                                        { id: world.host.id, nome: world.host.available_name, ai_status: 'agenda_pausada' }
+                                      ])
+      expect(summary[:pessoas].flat_map(&:keys).uniq).to eq(%i[id nome ai_status])
+    end
+
+    it 'sem N+1: as mesmas consultas para 1 e para 4 páginas' do
+      outros = Array.new(3) { create(:user, account: account, role: :agent) }
+      paginas = Array.new(4) do
+        create_booking_profile(account: account, host: world.host, pipeline: world.pipeline, stage: world.stage).tap do |pagina|
+          pagina.update!(assignment_mode: :per_agent, default_assignee: nil)
+          outros.each { |user| pagina.agent_booking_links.create!(account: account, agent: user) }
+        end
+      end
+
+      consultas = lambda do |ids|
+        lista = Crm::AgentBookingProfile.where(id: ids).includes(:default_assignee, agent_booking_links: :agent).order(:id).to_a
+        invite_pages = Crm::BookingV2::InvitePages.new(account)
+        contadas = 0
+        contar = ->(*, payload) { contadas += 1 unless payload[:name] == 'SCHEMA' || payload[:cached] }
+        ActiveSupport::Notifications.subscribed(contar, 'sql.active_record') do
+          lista.each { |page| described_class.new(page, invite_pages: invite_pages).send(:pessoas) }
+        end
+        contadas
+      end
+
+      expect(consultas.call(paginas.first(1).map(&:id))).to eq(consultas.call(paginas.map(&:id)))
     end
   end
 

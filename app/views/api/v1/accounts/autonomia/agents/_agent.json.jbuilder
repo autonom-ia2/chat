@@ -20,11 +20,13 @@ json.tone agent.tone
 # `audience`/`response_window` (#284 · Entrega 2a): público-alvo e horário de atuação (PanelTune).
 # `audience_unknown_contact`: o que fazer com conversa sem contato quando há público-alvo.
 # `faq_suggestions` (#284 · 2b): toggle da geração de sugestões de FAQ (aba Conhecimento).
+# `booking_agent_ids` (#1307): as pessoas da página liberadas para a IA, como gravadas (conferidas ao salvar; vazio =
+# todas). Id que deixou de ser da página depois continua aqui até o próximo salvar; a IA confere de novo a cada turno.
 # `booking_page_id` (#1196): a página de agendamento que liga a agenda da IA (PanelTune).
 json.config agent.config.to_h.slice('handoff_strategy', 'handoff_target_id', 'confidence_threshold',
                                     'with_knowledge', 'knowledge_confidence', 'knowledge_summary',
                                     'audience', 'response_window', 'audience_unknown_contact',
-                                    'faq_suggestions', 'booking_page_id')
+                                    'faq_suggestions', 'booking_page_id', 'booking_agent_ids')
 # #1196: o agente recebe a agenda da IA (o Agente de Cotação, de ferramentas mantidas, não). O PanelTune esconde a
 # escolha da página quando é false.
 json.booking_available Autonomia::Agents::Tools::Native::Agenda.aceita?(agent)
