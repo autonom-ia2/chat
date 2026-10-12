@@ -172,6 +172,24 @@ RSpec.describe 'Follow-up da equipe pelo WhatsApp API do Híbrido' do # rubocop:
                                                                       text: text, id: '3EB0TEAM'))
       expect(message.reload.content_attributes).to include('whatsapp_transport' => 'web', 'whatsapp_transport_origin' => 'crm_follow_up')
     end
+
+    it 'não vira falha quando o Híbrido cai bem entre o envio e a gravação de sent_message_id (corrida, revisão #1349)' do
+      follow_up = team_follow_up(source: 'manual')
+      sender = described_class.new(follow_up: follow_up)
+      # persist_sent_message! grava sent_message_id com um update! no próprio follow_up (ainda pending), que
+      # revalida pelo AutoSendValidator. Se o Híbrido cair bem nesse intervalo, a revalidação não pode
+      # transformar o envio que já aconteceu em erro.
+      allow(sender).to receive(:deliver_message!).and_wrap_original do |original|
+        message = original.call
+        scenario[:connection].update!(status: 'disconnected')
+        message
+      end
+
+      result = sender.perform
+
+      expect(result.status).to eq(:sent)
+      expect(follow_up.reload.metadata).to include('sent_message_id' => result.message.id)
+    end
   end
 
   describe Crm::FollowUps::DueProcessor do

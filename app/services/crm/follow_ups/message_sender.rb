@@ -87,7 +87,9 @@ class Crm::FollowUps::MessageSender
 
   def team_whatsapp_api_requested?
     return false if AI_SOURCES.include?(metadata['source'])
-    return false if metadata['template_name'].to_s.strip.present?
+    # Mesma regra do AutoSendValidator (nome E idioma): nome sozinho não conta como modelo configurado, senão
+    # os dois lados divergem e o sender tenta o caminho de template com idioma vazio (achado da revisão).
+    return false if Crm::FollowUps::MetadataSanitizer.native_template_configured?(metadata)
 
     whatsapp_window.hybrid_configured? && !whatsapp_window.can_send_session_message?
   end

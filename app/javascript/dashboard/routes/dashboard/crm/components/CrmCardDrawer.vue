@@ -955,7 +955,11 @@ const resetFollowUpForm = () => {
   followUpDraftSnapshot.value = JSON.stringify({ ...followUpForm });
 };
 
-defineExpose({ resetFollowUpForm, guardNavigation: guardRelationship });
+defineExpose({
+  resetFollowUpForm,
+  guardNavigation: guardRelationship,
+  refreshMessagingWindow,
+});
 
 const createFollowUp = () => {
   if (!props.canManageCards) return;

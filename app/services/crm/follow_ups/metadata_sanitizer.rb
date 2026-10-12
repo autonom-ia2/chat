@@ -21,6 +21,14 @@ class Crm::FollowUps::MetadataSanitizer
     metadata.to_h.stringify_keys.except(*SERVER_OWNED_KEYS)
   end
 
+  # Única fonte do que conta como "modelo nativo configurado": nome E idioma, os dois presentes. Usado pelo
+  # AutoSendValidator (criação) e pelo MessageSender (envio) — nome sem idioma nunca conta como configurado
+  # nos dois lados, senão um aceita e o outro recusa de forma enganosa (achado da revisão em #1349).
+  def self.native_template_configured?(metadata)
+    metadata = metadata.to_h.stringify_keys
+    metadata['template_name'].to_s.strip.present? && metadata['template_language'].to_s.strip.present?
+  end
+
   def initialize(metadata:, automation_mode:)
     @metadata = (metadata || {}).to_h.stringify_keys
     @automation_mode = automation_mode

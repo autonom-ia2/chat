@@ -43,6 +43,10 @@ class Crm::FollowUps::AutoSendValidator
     # MessageSender), so the template is unknowable at create time. Skip the
     # create-time fallback gate for them; the message_body placeholder still guards.
     return if ai_driven?
+    # Já enviado: o MessageSender grava sent_message_id com um update! no próprio follow_up (ainda pending
+    # nesse instante), que passa por aqui de novo. Se o Híbrido cair bem nesse intervalo, essa revalidação não
+    # pode transformar um envio que já aconteceu em erro (corrida real, achado da revisão em #1349).
+    return if metadata['sent_message_id'].present?
     # Fechar o follow-up (enviado, atrasado, cancelado) não reabre a pergunta do modelo: se o Híbrido caiu entre o
     # agendamento e o envio, a falha precisa ser gravada em vez de a validação derrubar o update e travar a fila.
     return if @follow_up.status_changed? && !@follow_up.pending?
@@ -77,7 +81,7 @@ class Crm::FollowUps::AutoSendValidator
   end
 
   def native_template_configured?
-    metadata['template_name'].to_s.strip.present? && metadata['template_language'].to_s.strip.present?
+    Crm::FollowUps::MetadataSanitizer.native_template_configured?(metadata)
   end
 
   def ai_followup?

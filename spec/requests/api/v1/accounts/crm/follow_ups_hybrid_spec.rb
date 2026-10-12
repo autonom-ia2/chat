@@ -86,6 +86,32 @@ RSpec.describe 'CRM follow-ups com WhatsApp Híbrido', type: :request do
       expect(response).to have_http_status(:created)
       expect(Crm::FollowUp.find(response.parsed_body['payload']['id']).metadata.keys).not_to include('delivery_transport', 'hybrid_free_form_reason')
     end
+
+    # Achado da revisão em #1349: nome de template sem idioma é "modelo configurado" para o validator (que exige
+    # os dois) e para o sender (team_whatsapp_api_requested?) da MESMA forma — nome sozinho não conta em nenhum
+    # dos dois, senão um aceita na criação e o outro tenta o caminho de template com idioma vazio no envio.
+    it 'template_name sem template_language conta como "sem modelo": cria com o Híbrido e sai pelo texto livre no envio' do
+      post base_url, params: follow_up_params({ message_body: 'Oi!', template_name: 'retomada_orcamento' }),
+                     headers: auth_headers(user)
+
+      expect(response).to have_http_status(:created)
+      follow_up = Crm::FollowUp.find(response.parsed_body['payload']['id'])
+      result = Crm::FollowUps::MessageSender.new(follow_up: follow_up).perform
+
+      expect(result.status).to eq(:sent)
+      expect(result.message.content_attributes).to include('crm_follow_up_transport' => 'whatsapp_api')
+      expect(result.message.content_attributes).not_to have_key('template_params')
+    end
+
+    it 'sem Híbrido, template_name sem template_language continua bloqueado na criação, como hoje' do
+      plain = build_crm_hybrid_scenario(hybrid: false)
+      params = { follow_up: { card_id: plain[:card].id, conversation_id: plain[:conversation].id, title: 'Retomar',
+                              due_at: 2.hours.from_now.iso8601, timezone: 'UTC', automation_mode: 'auto_send_message',
+                              metadata: { message_body: 'Oi!', template_name: 'retomada_orcamento' } } }
+      post base_url.sub(account.id.to_s, plain[:account].id.to_s), params: params, headers: auth_headers(plain[:user])
+
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
   end
 
   describe 'PATCH update' do

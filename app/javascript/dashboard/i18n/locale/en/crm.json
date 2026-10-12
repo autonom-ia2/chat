@@ -1386,7 +1386,7 @@
       "FOLLOW_UP_NATIVE_TEMPLATE_OPTIONAL": "Approved template (optional)",
       "FOLLOW_UP_TEMPLATE_NONE_SEND_TEXT": "None, send the text above",
       "FOLLOW_UP_MESSAGE_BODY": "Free-form message",
-      "FOLLOW_UP_MESSAGE_BODY_PLACEHOLDER": "Text sent when the conversation is still inside the 24-hour window",
+      "FOLLOW_UP_MESSAGE_BODY_PLACEHOLDER": "Text sent to the contact when the message can go out without a template",
       "FOLLOW_UP_API_TEMPLATE": "Official template (fallback)",
       "FOLLOW_UP_TEMPLATE_PLACEHOLDER": "Select a template",
       "FOLLOW_UP_TEMPLATES_LOADING": "Loading templates...",

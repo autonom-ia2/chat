@@ -1386,7 +1386,7 @@
       "FOLLOW_UP_NATIVE_TEMPLATE_OPTIONAL": "Modelo aprovado (opcional)",
       "FOLLOW_UP_TEMPLATE_NONE_SEND_TEXT": "Nenhum, enviar o texto acima",
       "FOLLOW_UP_MESSAGE_BODY": "Mensagem livre",
-      "FOLLOW_UP_MESSAGE_BODY_PLACEHOLDER": "Texto enviado quando a conversa ainda estiver na janela de 24h",
+      "FOLLOW_UP_MESSAGE_BODY_PLACEHOLDER": "Texto enviado ao contato quando a mensagem puder sair sem modelo",
       "FOLLOW_UP_API_TEMPLATE": "Template oficial (fallback)",
       "FOLLOW_UP_TEMPLATE_PLACEHOLDER": "Selecione um template",
       "FOLLOW_UP_TEMPLATES_LOADING": "Carregando templates...",

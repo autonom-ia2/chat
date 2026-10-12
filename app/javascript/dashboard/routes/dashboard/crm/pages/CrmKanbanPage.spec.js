@@ -1,6 +1,7 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import { defineComponent, h, ref } from 'vue';
 import CrmKanbanPage from './CrmKanbanPage.vue';
+import { useAlert } from 'dashboard/composables';
 import { useEmitter } from 'dashboard/composables/emitter';
 import CrmKanbanZoom from '../components/CrmKanbanZoom.vue';
 import {
@@ -448,6 +449,66 @@ it('abre o card pedido pelo alerta do agendamento com o quadro já aberto', asyn
 
   expect(dispatch).toHaveBeenCalledWith('crmKanban/fetchCard', 42);
   expect(wrapper.vm.selectedCard).toMatchObject({ id: 42 });
+  wrapper.unmount();
+});
+
+it('refreshes the messaging window and shows the template alert when creating a follow-up fails that validation', async () => {
+  const refreshMessagingWindow = vi.fn();
+  const DrawerStub = defineComponent({
+    setup(_, { expose }) {
+      expose({ refreshMessagingWindow });
+      return () => h('div');
+    },
+  });
+  const wrapper = await mountPage({ stubs: { CrmCardDrawer: DrawerStub } });
+  wrapper.vm.selectedCard = { id: 7 };
+  dispatch.mockImplementation(async type => {
+    if (type === 'crmKanban/createFollowUp') {
+      const error = new Error('Validation failed');
+      error.response = {
+        data: {
+          message:
+            'Metadata template fallback is required outside the messaging window',
+          attributes: ['metadata'],
+        },
+      };
+      throw error;
+    }
+    return [];
+  });
+
+  await wrapper.vm.createFollowUp({ card_id: 7, title: 'Retomar' });
+
+  expect(refreshMessagingWindow).toHaveBeenCalledOnce();
+  expect(useAlert).toHaveBeenCalledWith(
+    'CRM_KANBAN.ALERTS.FOLLOW_UP_TEMPLATE_REQUIRED'
+  );
+  wrapper.unmount();
+});
+
+it('shows the raw API message for any other follow-up creation failure', async () => {
+  const refreshMessagingWindow = vi.fn();
+  const DrawerStub = defineComponent({
+    setup(_, { expose }) {
+      expose({ refreshMessagingWindow });
+      return () => h('div');
+    },
+  });
+  const wrapper = await mountPage({ stubs: { CrmCardDrawer: DrawerStub } });
+  wrapper.vm.selectedCard = { id: 7 };
+  dispatch.mockImplementation(async type => {
+    if (type === 'crmKanban/createFollowUp') {
+      const error = new Error('Validation failed');
+      error.response = { data: { message: 'conversation is required' } };
+      throw error;
+    }
+    return [];
+  });
+
+  await wrapper.vm.createFollowUp({ card_id: 7, title: 'Retomar' });
+
+  expect(refreshMessagingWindow).not.toHaveBeenCalled();
+  expect(useAlert).toHaveBeenCalledWith('conversation is required');
   wrapper.unmount();
 });
 
