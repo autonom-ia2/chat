@@ -266,7 +266,7 @@ describe('#1369 — quando foi e de onde veio', () => {
     );
   });
 
-  it('finds the version a rollback went back to, by the same text', () => {
+  it('dates a rollback only when exactly one earlier version has the same text', () => {
     const versoes = [
       { id: 5, reason: 'rollback', instruction_hash: 'a' },
       { id: 4, reason: 'kb_refresh', instruction_hash: 'b' },
@@ -274,7 +274,8 @@ describe('#1369 — quando foi e de onde veio', () => {
       { id: 2, reason: 'manual_edit', instruction_hash: 'c' },
       { id: 1, reason: 'manual_edit', instruction_hash: 'a' },
     ];
-    expect(origemDaVolta(versoes[0], versoes)).toBe(versoes[4]);
+    // Duas versões anteriores com o texto "a": não dá para saber qual foi escolhida.
+    expect(origemDaVolta(versoes[0], versoes)).toBeNull();
     expect(origemDaVolta(versoes[2], versoes)).toBe(versoes[4]);
     expect(origemDaVolta(versoes[1], versoes)).toBeNull();
     expect(

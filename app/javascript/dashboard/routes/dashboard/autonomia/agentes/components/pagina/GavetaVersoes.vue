@@ -62,8 +62,8 @@ const horaDe = versao =>
   });
 const quandoDe = versao => `${dataDe(versao)}, ${horaDe(versao)}`;
 
-// #1369 — o jeito criado pelo "Voltar" diz a qual jeito voltou (o mais antigo com o mesmo texto,
-// pelo instruction_hash); sem ele na lista, a frase genérica.
+// #1369 — o jeito criado pelo "Voltar" diz a qual jeito voltou quando só um jeito anterior tem o
+// mesmo texto (instruction_hash); com nenhum ou com vários, a frase genérica.
 const motivoDe = versao => {
   const origem = origemDaVolta(versao, versoes.value);
   if (origem) {

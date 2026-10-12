@@ -66,8 +66,12 @@ const escolher = chave => {
         >
           {{ nome }}
         </span>
+        <!-- #1369 — o estado é anunciado quando muda (Lendo…, Pronto); o aria-busy fica no "⋯", fora
+             da região viva, para não segurar o anúncio. -->
         <span
           data-estado-texto
+          role="status"
+          aria-live="polite"
           class="inline-flex items-center gap-1 text-xs"
           :class="{
             'text-n-slate-11': estado === 'lendo',
@@ -101,6 +105,7 @@ const escolher = chave => {
         v-if="podeGerenciar"
         :rotulo="t(`${NS}.MAIS_DE`, { nome })"
         :itens="itens"
+        :aria-busy="relendo ? 'true' : undefined"
         @escolher="escolher"
       />
     </div>

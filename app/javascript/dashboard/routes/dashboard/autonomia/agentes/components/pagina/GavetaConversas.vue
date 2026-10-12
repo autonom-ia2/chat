@@ -15,7 +15,8 @@ import { idiomaDoNavegador, quandoFoi } from '../../utils/pagina';
 // conversa numa aba nova do painel.
 // #1369 — a hora de cada linha é a última atividade da conversa (`conversation.last_activity_at`),
 // não o `occurred_at`: em linha de conversa o drilldown manda ali a data de criação (uma conversa de
-// 28/09 aparecia como "seg., 20:59"). Fora dos últimos 7 dias, a hora vem com a data.
+// 28/09 aparecia como "seg., 20:59"). Fora dos últimos 7 dias, a hora vem com a data. Sem a última
+// atividade (o backend manda 0 quando ela falta), a linha fica sem hora: nunca a data de criação.
 const props = defineProps({
   agentId: { type: Number, required: true },
   aba: { type: String, default: 'respondidas' },
@@ -59,7 +60,7 @@ watch(atual, carregar, { immediate: true });
 
 const quando = linha =>
   quandoFoi(
-    linha.conversation.last_activity_at || linha.occurred_at,
+    linha.conversation.last_activity_at,
     idiomaDoNavegador(locale.value)
   );
 
@@ -138,7 +139,11 @@ const abas = computed(() => [
             <span class="text-sm font-medium truncate text-n-slate-12">
               {{ contato(linha) }}
             </span>
-            <span data-quando class="text-xs tabular-nums text-n-slate-11">
+            <span
+              v-if="linha.conversation.last_activity_at"
+              data-quando
+              class="text-xs tabular-nums text-n-slate-11"
+            >
               {{ quando(linha) }}
             </span>
           </span>

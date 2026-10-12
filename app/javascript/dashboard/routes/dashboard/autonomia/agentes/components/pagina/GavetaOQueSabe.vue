@@ -1,5 +1,5 @@
 <script setup>
-import { computed, nextTick, ref, useId, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, ref, useId, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useStore } from 'dashboard/composables/store';
 import AgenteGaveta from '../AgenteGaveta.vue';
@@ -140,32 +140,62 @@ const mandarSite = () => {
   });
 };
 
-// #1369 — "Ler de novo": a API aceita o pedido (202) e devolve o site como estava ("Pronto"); a
-// leitura só começa depois, num job, e a store não se relia porque nada parecia estar sendo lido.
-// Até o próprio site dizer que está lendo, que falhou ou que foi lido de novo (`synced_at` mudou),
-// a linha mostra "Lendo…" e a store continua se relendo (o mesmo intervalo de 4 s).
-// { [id da fonte]: synced_at no momento do pedido }
+// #1369 — "Ler de novo": a API aceita o pedido (202) e devolve o site como estava ("Pronto" ou
+// "Não consegui ler"); a leitura só começa depois, num job. A linha mostra "Lendo…" até o site
+// voltar dela: `synced_at` mudou, ou o servidor disse que estava lendo (pending/processing) e saiu
+// disso. Enquanto o servidor ainda não começou, a gaveta pede à página que releia a lista a cada
+// 4 s (a store só se relê sozinha quando o servidor já diz que está lendo). Depois de 60 s sem
+// começar, a linha volta em silêncio ao estado que o servidor mostra e as releituras param.
+// { [id da fonte]: { syncedAt, visto (já viu pending/processing), desde } }
+const ESTADOS_LENDO = ['pending', 'processing'];
+const RELEITURA_MS = 4000;
+const LIMITE_RELEITURA_MS = 60000;
 const relendo = ref({});
+let relogioReleitura = null;
 
-const voltouDaLeitura = fonte =>
-  fonte.status !== 'ready' ||
-  (fonte.synced_at ?? null) !== relendo.value[fonte.id];
+const situacaoDaLeitura = (fonte, marca) => {
+  if ((fonte.synced_at ?? null) !== marca.syncedAt) return 'voltou';
+  if (ESTADOS_LENDO.includes(fonte.status)) return 'lendo';
+  return marca.visto ? 'voltou' : 'esperando';
+};
+
+const proximaMarca = (fonte, agora) => {
+  const marca = relendo.value[fonte.id];
+  if (!marca) return null;
+  const situacao = situacaoDaLeitura(fonte, marca);
+  if (situacao === 'voltou') return null;
+  if (situacao === 'esperando' && agora - marca.desde >= LIMITE_RELEITURA_MS) {
+    return null;
+  }
+  return { ...marca, visto: marca.visto || situacao === 'lendo' };
+};
+
+const agendarReleitura = aoReler => {
+  clearTimeout(relogioReleitura);
+  relogioReleitura = null;
+  const esperando = Object.values(relendo.value).some(marca => !marca.visto);
+  if (!esperando) return;
+  // A página relê a lista (`reler`): ela guarda a última lista lida e mostra o erro se falhar.
+  relogioReleitura = setTimeout(() => {
+    relogioReleitura = null;
+    emit('reler');
+    aoReler();
+  }, RELEITURA_MS);
+};
 
 const acompanharLeitura = () => {
-  const ainda = lista.value.filter(
-    fonte => fonte.id in relendo.value && !voltouDaLeitura(fonte)
-  );
+  const agora = Date.now();
   relendo.value = Object.fromEntries(
-    ainda.map(fonte => [fonte.id, relendo.value[fonte.id]])
+    lista.value.flatMap(fonte => {
+      const marca = proximaMarca(fonte, agora);
+      return marca ? [[fonte.id, marca]] : [];
+    })
   );
-  if (!ainda.length) return;
-  store.dispatch('autonomiaSources/schedulePoll', {
-    agentId: props.agente.id,
-    records: ainda.map(fonte => ({ ...fonte, status: 'pending' })),
-  });
+  agendarReleitura(acompanharLeitura);
 };
 
 watch(lista, acompanharLeitura);
+onBeforeUnmount(() => clearTimeout(relogioReleitura));
 
 const lerDeNovo = fonte =>
   salvar(async () => {
@@ -173,7 +203,14 @@ const lerDeNovo = fonte =>
       agentId: props.agente.id,
       sourceId: fonte.id,
     });
-    relendo.value = { ...relendo.value, [fonte.id]: fonte.synced_at ?? null };
+    relendo.value = {
+      ...relendo.value,
+      [fonte.id]: {
+        syncedAt: fonte.synced_at ?? null,
+        visto: false,
+        desde: Date.now(),
+      },
+    };
     acompanharLeitura();
   });
 

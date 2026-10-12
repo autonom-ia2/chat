@@ -284,6 +284,56 @@ describe('AgentesListaPage', () => {
       wrapper.unmount();
     });
 
+    it('shows the cards anyway after 2.5 s when a reading hangs, and fills them in later (#1369)', async () => {
+      vi.useFakeTimers();
+      let responderSemana;
+      api.semana.mockReturnValue(
+        new Promise(resolve => {
+          responderSemana = resolve;
+        })
+      );
+      const wrapper = mount(AgentesListaPage, { attachTo: document.body });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(wrapper.find('[data-cartao]').exists()).toBe(false);
+
+      await vi.advanceTimersByTimeAsync(2500);
+      expect(wrapper.find('[data-esqueleto]').exists()).toBe(false);
+      expect(wrapper.findAll('[data-cartao]')).toHaveLength(3);
+      expect(wrapper.find('[data-semana]').exists()).toBe(false);
+
+      responderSemana({
+        data: { payload: [{ agent_id: 3, answered: 12, handed: 3 }] },
+      });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(wrapper.find('[data-semana]').exists()).toBe(true);
+      wrapper.unmount();
+    });
+
+    it('frees "Continuar" after 8 s when the navigation never ends (#1369)', async () => {
+      vi.useFakeTimers();
+      const nuncaTermina = () => new Promise(() => {});
+      router.push
+        .mockReturnValueOnce(nuncaTermina())
+        .mockReturnValueOnce(nuncaTermina());
+      const wrapper = mount(AgentesListaPage, { attachTo: document.body });
+      await vi.advanceTimersByTimeAsync(2500);
+      const botao = wrapper.get('[data-continuar]');
+
+      await botao.trigger('click');
+      expect(botao.attributes('aria-busy')).toBe('true');
+      await vi.advanceTimersByTimeAsync(7999);
+      expect(botao.attributes('aria-busy')).toBe('true');
+      await vi.advanceTimersByTimeAsync(1);
+      expect(botao.attributes('aria-busy')).toBeUndefined();
+
+      await botao.trigger('click');
+      expect(router.push).toHaveBeenCalledTimes(2);
+      const relogiosComOBotao = vi.getTimerCount();
+      wrapper.unmount();
+      // Ao sair da tela, o relógio do botão não fica para trás.
+      expect(vi.getTimerCount()).toBe(relogiosComOBotao - 1);
+    });
+
     it('deletes a draft only after the confirmation', async () => {
       const wrapper = await montar();
       await wrapper.get('[aria-haspopup="menu"]').trigger('click');

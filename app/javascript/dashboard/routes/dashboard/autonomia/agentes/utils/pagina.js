@@ -173,15 +173,15 @@ export const quandoFoi = (segundos, idioma, agora = new Date()) => {
   return data.toLocaleString(idioma, formato);
 };
 
-// #1369 — de onde veio um jeito criado pelo "Voltar": o jeito mais antigo com o mesmo texto
-// (mesmo instruction_hash), anterior a ele. null quando esse jeito já saiu da lista (a API guarda
-// os 50 mais novos). `versoes` vem do mais novo para o mais antigo, como a API devolve.
+// #1369 — de onde veio um jeito criado pelo "Voltar": o jeito anterior com o mesmo texto (mesmo
+// instruction_hash), só quando há exatamente um. Com dois ou mais não dá para saber qual deles foi
+// escolhido, e sem nenhum o jeito já saiu da lista (a API guarda os 50 mais novos): null, e a tela
+// usa a frase genérica. `versoes` vem do mais novo para o mais antigo, como a API devolve.
 export const origemDaVolta = (versao, versoes) => {
   if (versao?.reason !== 'rollback' || !versao.instruction_hash) return null;
   const posicao = versoes.indexOf(versao);
-  const anteriores = versoes.slice(posicao + 1);
-  const iguais = anteriores.filter(
-    item => item.instruction_hash === versao.instruction_hash
-  );
-  return iguais[iguais.length - 1] || null;
+  const iguais = versoes
+    .slice(posicao + 1)
+    .filter(item => item.instruction_hash === versao.instruction_hash);
+  return iguais.length === 1 ? iguais[0] : null;
 };

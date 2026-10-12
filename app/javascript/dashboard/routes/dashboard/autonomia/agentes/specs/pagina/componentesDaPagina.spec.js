@@ -334,6 +334,32 @@ describe('GavetaConversas', () => {
     wrapper.unmount();
   });
 
+  it('shows no time, never the creation date, when the last activity is missing (#1369)', async () => {
+    const criada = Math.floor(Date.now() / 1000) - 60;
+    const semAtividade = (id, last_activity_at) => ({
+      conversation: {
+        id,
+        display_id: id + 100,
+        contact_name: `Pessoa ${id}`,
+        created_at: criada,
+        last_activity_at,
+      },
+      occurred_at: criada,
+    });
+    agentesApi.analyticsConversations.mockResolvedValueOnce({
+      data: { payload: [semAtividade(1, 0), semAtividade(2, undefined)] },
+    });
+    const wrapper = mount(GavetaConversas, {
+      attachTo: document.body,
+      props: { agentId: 7 },
+    });
+    await flushPromises();
+    expect(document.querySelectorAll('[data-linha]')).toHaveLength(2);
+    expect(document.querySelector('[data-quando]')).toBeNull();
+    expect(document.body.textContent).not.toContain('1970');
+    wrapper.unmount();
+  });
+
   it('shows the standard error with a retry', async () => {
     agentesApi.analyticsConversations
       .mockRejectedValueOnce(new Error('500'))

@@ -262,75 +262,94 @@ describe('GavetaOQueSabe', () => {
     wrapper.unmount();
   });
 
-  it('shows "Lendo…" right after "Ler de novo" until the website comes back (#1369)', async () => {
-    const site = fonte(4, {
+  describe('Ler de novo (#1369)', () => {
+    const SITE = fonte(4, {
       source_type: 'link',
       reference: 'loja.com',
       synced_at: '2026-10-12T10:00:00Z',
     });
-    preparar([site]);
-    const wrapper = montar();
-    await nextTick();
-    expect(no('[data-fonte]').dataset.estado).toBe('pronto');
+    const estadoDaLinha = () => no('[data-fonte]').dataset.estado;
+    const pedirLerDeNovo = async () => {
+      no('[data-fonte] [aria-haspopup="menu"]').click();
+      await nextTick();
+      todos('[role="menuitem"]')[0].click();
+      await vi.advanceTimersByTimeAsync(0);
+    };
 
-    no('[data-fonte] [aria-haspopup="menu"]').click();
-    await nextTick();
-    todos('[role="menuitem"]')[0].click();
-    await flushPromises();
+    beforeEach(() => vi.useFakeTimers());
+    afterEach(() => vi.useRealTimers());
 
-    // A API devolveu o site como estava ("ready"): a linha diz que está lendo e a store se relê.
-    expect(no('[data-fonte]').dataset.estado).toBe('lendo');
-    expect(no('[data-estado-texto]').textContent).toContain(
-      'AGENTS.JORNADA.PAGINA.SABE.LENDO'
-    );
-    expect(store.dispatch).toHaveBeenCalledWith(
-      'autonomiaSources/schedulePoll',
-      {
-        agentId: 7,
-        records: [expect.objectContaining({ id: 4, status: 'pending' })],
-      }
-    );
+    it('shows "Lendo…", announced, until the website is read again', async () => {
+      const wrapper = montar({ fontes: [SITE] });
+      expect(estadoDaLinha()).toBe('pronto');
+      await pedirLerDeNovo();
 
-    // A releitura da store ainda traz o site sem mudança: continua lendo e pede outra releitura.
-    store.dispatch.mockClear();
-    await wrapper.setProps({ fontes: [{ ...site }] });
-    expect(no('[data-fonte]').dataset.estado).toBe('lendo');
-    expect(store.dispatch).toHaveBeenCalledWith(
-      'autonomiaSources/schedulePoll',
-      expect.anything()
-    );
+      // A API devolveu o site como estava ("ready"): a linha diz que está lendo.
+      expect(estadoDaLinha()).toBe('lendo');
+      const status = no('[data-estado-texto]');
+      expect(status.getAttribute('role')).toBe('status');
+      expect(status.getAttribute('aria-live')).toBe('polite');
+      expect(status.textContent).toContain('AGENTS.JORNADA.PAGINA.SABE.LENDO');
+      expect(
+        no('[data-fonte] [aria-haspopup="menu"]').parentElement.getAttribute(
+          'aria-busy'
+        )
+      ).toBe('true');
 
-    // O servidor começou a ler: quem diz é ele.
-    await wrapper.setProps({ fontes: [{ ...site, status: 'processing' }] });
-    expect(no('[data-fonte]').dataset.estado).toBe('lendo');
+      // O servidor ainda não começou: a página relê a lista a cada 4 s.
+      await vi.advanceTimersByTimeAsync(4000);
+      expect(wrapper.emitted('reler')).toHaveLength(1);
+      await wrapper.setProps({ fontes: [{ ...SITE }] });
+      expect(estadoDaLinha()).toBe('lendo');
 
-    // Leu de novo: volta "Pronto" e a store para de se reler por causa dele.
-    store.dispatch.mockClear();
-    await wrapper.setProps({
-      fontes: [{ ...site, synced_at: '2026-10-12T10:05:00Z' }],
+      // Leu de novo (synced_at mudou): volta "Pronto" e as releituras param.
+      await wrapper.setProps({
+        fontes: [{ ...SITE, synced_at: '2026-10-12T10:05:00Z' }],
+      });
+      expect(estadoDaLinha()).toBe('pronto');
+      expect(
+        no('[data-fonte] [aria-haspopup="menu"]').parentElement.hasAttribute(
+          'aria-busy'
+        )
+      ).toBe(false);
+      await vi.advanceTimersByTimeAsync(20000);
+      expect(wrapper.emitted('reler')).toHaveLength(1);
+      wrapper.unmount();
     });
-    expect(no('[data-fonte]').dataset.estado).toBe('pronto');
-    expect(store.dispatch).not.toHaveBeenCalledWith(
-      'autonomiaSources/schedulePoll',
-      expect.anything()
-    );
-    wrapper.unmount();
-  });
 
-  it('goes back to the real state when the new reading fails (#1369)', async () => {
-    const site = fonte(4, { source_type: 'link', reference: 'loja.com' });
-    preparar([site]);
-    const wrapper = montar();
-    await nextTick();
-    no('[data-fonte] [aria-haspopup="menu"]').click();
-    await nextTick();
-    todos('[role="menuitem"]')[0].click();
-    await flushPromises();
-    expect(no('[data-fonte]').dataset.estado).toBe('lendo');
+    it('shows "Lendo…" for a website it could not read, until the new reading ends', async () => {
+      const falho = { ...SITE, status: 'failed' };
+      const wrapper = montar({ fontes: [falho] });
+      expect(estadoDaLinha()).toBe('falha');
+      await pedirLerDeNovo();
 
-    await wrapper.setProps({ fontes: [{ ...site, status: 'failed' }] });
-    expect(no('[data-fonte]').dataset.estado).toBe('falha');
-    wrapper.unmount();
+      // A API devolveu o site ainda "failed": não é a resposta da nova leitura.
+      expect(estadoDaLinha()).toBe('lendo');
+      await wrapper.setProps({ fontes: [{ ...falho }] });
+      expect(estadoDaLinha()).toBe('lendo');
+
+      // O servidor começou a ler e terminou de novo sem conseguir: aí sim, falhou.
+      await wrapper.setProps({ fontes: [{ ...falho, status: 'processing' }] });
+      expect(estadoDaLinha()).toBe('lendo');
+      await wrapper.setProps({ fontes: [{ ...falho }] });
+      expect(estadoDaLinha()).toBe('falha');
+      wrapper.unmount();
+    });
+
+    it('stops after 60 s without the server starting, keeping the current state', async () => {
+      const wrapper = montar({ fontes: [SITE] });
+      await pedirLerDeNovo();
+      expect(estadoDaLinha()).toBe('lendo');
+
+      await vi.advanceTimersByTimeAsync(60000);
+      expect(estadoDaLinha()).toBe('pronto');
+      const releituras = wrapper.emitted('reler').length;
+      expect(releituras).toBe(15);
+
+      await vi.advanceTimersByTimeAsync(60000);
+      expect(wrapper.emitted('reler')).toHaveLength(releituras);
+      wrapper.unmount();
+    });
   });
 
   it('is read-only for view-only seats', async () => {

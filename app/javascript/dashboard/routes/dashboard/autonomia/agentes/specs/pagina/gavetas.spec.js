@@ -505,6 +505,13 @@ describe('GavetaVersoes (T13)', () => {
         reason: 'rollback',
         instruction_hash: 'z',
       },
+      // Uma segunda versão com o texto "b": a volta da versão 5 fica ambígua.
+      {
+        id: 0,
+        created_at: '2026-09-20T10:00:00Z',
+        reason: 'manual_edit',
+        instruction_hash: 'b',
+      },
     ]);
     const wrapper = montar();
     await flushPromises();
@@ -512,9 +519,10 @@ describe('GavetaVersoes (T13)', () => {
     const linhas = todos('[data-versao]');
     const quando = data =>
       `${new Date(data).toLocaleDateString('en', { day: 'numeric', month: 'short' })}, ${new Date(data).toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' })}`;
-    expect(linhas[0].textContent).toContain(
-      `Went back to the way from ${quando('2026-10-10T15:00:00Z')}`
-    );
+    // Ambígua (duas anteriores com o mesmo texto): frase genérica, sem data.
+    expect(linhas[0].textContent).toContain('Went back to a previous way');
+    expect(linhas[0].textContent).not.toContain('Went back to the way from');
+    // Só uma anterior com o mesmo texto: diz de quando é.
     expect(linhas[1].textContent).toContain(
       `Went back to the way from ${quando('2026-10-02T09:05:00Z')}`
     );
