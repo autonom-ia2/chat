@@ -1,7 +1,7 @@
 require 'rails_helper'
 
-# Envio do follow-up pelo WhatsApp API do Híbrido (chat#1349). Só a metadata gravada pelos runners de IA
-# (delivery_transport) aciona o caminho novo; follow-up manual segue exatamente como antes.
+# Envio do follow-up pelo WhatsApp API do Híbrido (chat#1349). A metadata delivery_transport só vale vinda dos
+# runners de IA; o follow-up da equipe (PR B) deriva do estado de agora, em manual_hybrid_spec.rb.
 RSpec.describe Crm::FollowUps::MessageSender do
   include CrmHybridHelpers
 
@@ -61,7 +61,7 @@ RSpec.describe Crm::FollowUps::MessageSender do
     expect(result.message.content_attributes).not_to have_key('crm_follow_up_transport')
   end
 
-  it 'sem delivery_transport, fora das 24h, o envio continua no caminho de template, mesmo com Híbrido pronto' do
+  it 'sem delivery_transport, fora das 24h, o envio de IA continua no caminho de template, mesmo com Híbrido pronto' do
     follow_up = create_crm_hybrid_follow_up(scenario, metadata: { 'message_body' => 'Olá' })
 
     result = nil
@@ -72,9 +72,10 @@ RSpec.describe Crm::FollowUps::MessageSender do
   end
 
   it 'ignores delivery_transport on a follow-up that is not from the AI runners (metadata arbitrária pela API)' do
-    follow_up = create_crm_hybrid_follow_up(scenario, metadata: ai_metadata)
+    plain = build_crm_hybrid_scenario(hybrid: false)
+    follow_up = create_crm_hybrid_follow_up(plain, metadata: ai_metadata.merge('template_name' => 'x', 'template_language' => 'pt_BR'))
     # Direto no banco: a validação de criação barraria o follow-up manual fora das 24h.
-    follow_up.update_columns(metadata: follow_up.metadata.merge('source' => 'manual')) # rubocop:disable Rails/SkipsModelValidations
+    follow_up.update_columns(metadata: follow_up.metadata.merge('source' => 'manual', 'template_name' => '')) # rubocop:disable Rails/SkipsModelValidations
 
     result = nil
     expect { result = sender_for(follow_up.reload).perform }.not_to change(Message, :count)
@@ -83,8 +84,9 @@ RSpec.describe Crm::FollowUps::MessageSender do
     expect(result.error).to eq('template_name_required')
   end
 
-  it 'follow-up manual fora das 24h continua exigindo template na criação, mesmo com Híbrido pronto' do
-    expect { create_crm_hybrid_follow_up(scenario, source: 'manual', metadata: { 'message_body' => 'Olá' }) }
+  it 'follow-up manual fora das 24h continua exigindo template na criação quando a caixa não tem Híbrido' do
+    plain = build_crm_hybrid_scenario(hybrid: false)
+    expect { create_crm_hybrid_follow_up(plain, source: 'manual', metadata: { 'message_body' => 'Olá' }) }
       .to raise_error(ActiveRecord::RecordInvalid, include('template fallback is required outside the messaging window'))
   end
 end

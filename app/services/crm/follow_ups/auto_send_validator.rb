@@ -43,10 +43,22 @@ class Crm::FollowUps::AutoSendValidator
     # MessageSender), so the template is unknowable at create time. Skip the
     # create-time fallback gate for them; the message_body placeholder still guards.
     return if ai_driven?
-    return unless Crm::FollowUps::MessagingWindow.new(conversation, at: @follow_up.due_at).requires_template?
-    return if template_fallback_configured?(conversation)
+    # Fechar o follow-up (enviado, atrasado, cancelado) não reabre a pergunta do modelo: se o Híbrido caiu entre o
+    # agendamento e o envio, a falha precisa ser gravada em vez de a validação derrubar o update e travar a fila.
+    return if @follow_up.status_changed? && !@follow_up.pending?
+    return if team_template_fallback_satisfied?(conversation)
 
     @follow_up.errors.add(:metadata, 'template fallback is required outside the messaging window')
+  end
+
+  def team_template_fallback_satisfied?(conversation)
+    window = Crm::FollowUps::MessagingWindow.new(conversation, at: @follow_up.due_at)
+    return true unless window.requires_template?
+    return true if template_fallback_configured?(conversation)
+
+    # Sem modelo, o texto escrito pela equipe sai pelo WhatsApp API do Híbrido (chat#1349). Nada no metadata do
+    # cliente decide isso: o MessageSender refaz a pergunta no envio, com o Híbrido do momento.
+    window.hybrid_web_available?
   end
 
   def template_fallback_configured?(conversation)

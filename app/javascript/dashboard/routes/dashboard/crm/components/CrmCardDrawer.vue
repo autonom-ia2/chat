@@ -343,6 +343,17 @@ const isWhatsappNativeInbox = computed(
 const requiresTemplateNow = computed(
   () => followUpMessagingWindow.value?.requires_template === true
 );
+// Fora das 24h, caixa oficial com o WhatsApp Híbrido pronto: o texto escrito sai pelo WhatsApp API e o modelo
+// aprovado passa a ser opcional (chat#1349). Só a caixa nativa tem Híbrido.
+const outsideWindowViaWhatsappApi = computed(
+  () =>
+    isWhatsappNativeInbox.value &&
+    requiresTemplateNow.value &&
+    followUpMessagingWindow.value?.whatsapp_api_available === true
+);
+const templateMandatoryNow = computed(
+  () => requiresTemplateNow.value && !outsideWindowViaWhatsappApi.value
+);
 const whatsappApiTemplateOptions = computed(() =>
   whatsappApiTemplates.value.map(template => ({
     value: template.id,
@@ -375,8 +386,19 @@ const whatsappApiTemplateChoices = computed(() =>
 );
 const nativeWhatsappTemplateChoices = computed(() =>
   withEmptyChoice(
-    t('CRM_KANBAN.DRAWER.FOLLOW_UP_TEMPLATE_PLACEHOLDER'),
+    t(
+      outsideWindowViaWhatsappApi.value
+        ? 'CRM_KANBAN.DRAWER.FOLLOW_UP_TEMPLATE_NONE_SEND_TEXT'
+        : 'CRM_KANBAN.DRAWER.FOLLOW_UP_TEMPLATE_PLACEHOLDER'
+    ),
     nativeWhatsappTemplateOptions.value
+  )
+);
+const nativeTemplateLabel = computed(() =>
+  t(
+    outsideWindowViaWhatsappApi.value
+      ? 'CRM_KANBAN.DRAWER.FOLLOW_UP_NATIVE_TEMPLATE_OPTIONAL'
+      : 'CRM_KANBAN.DRAWER.FOLLOW_UP_API_TEMPLATE'
   )
 );
 const followUpModeChoices = computed(() => [
@@ -951,7 +973,7 @@ const createFollowUp = () => {
 
   if (
     followUpForm.automationMode === 'auto_send_message' &&
-    requiresTemplateNow.value &&
+    templateMandatoryNow.value &&
     !hasAutoSendTemplateFallback()
   ) {
     useAlert(t('CRM_KANBAN.ALERTS.FOLLOW_UP_TEMPLATE_REQUIRED'));
@@ -2412,8 +2434,16 @@ useFixedPanelPresence(computed(() => props.show));
                   {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_WINDOW_LOADING') }}
                 </p>
                 <p
+                  v-else-if="outsideWindowViaWhatsappApi"
+                  class="mb-0 text-xs text-n-teal-11"
+                  data-test="follow-up-whatsapp-api-notice"
+                >
+                  {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_WINDOW_WHATSAPP_API') }}
+                </p>
+                <p
                   v-else-if="requiresTemplateNow"
                   class="mb-0 text-xs text-n-ruby-11"
+                  data-test="follow-up-template-required-notice"
                 >
                   {{
                     t('CRM_KANBAN.DRAWER.FOLLOW_UP_WINDOW_TEMPLATE_REQUIRED')
@@ -2457,17 +2487,20 @@ useFixedPanelPresence(computed(() => props.show));
                   class="grid gap-1"
                 >
                   <span class="text-heading-3 text-n-slate-12">
-                    {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_API_TEMPLATE') }}
+                    {{ nativeTemplateLabel }}
                   </span>
                   <ChoiceSelect
                     v-model="followUpForm.nativeTemplateKey"
                     :options="nativeWhatsappTemplateChoices"
-                    :aria-label="t('CRM_KANBAN.DRAWER.FOLLOW_UP_API_TEMPLATE')"
+                    :aria-label="nativeTemplateLabel"
                     class="w-full"
                     @change="onNativeTemplateSelected"
                   />
                   <span
-                    v-if="!nativeWhatsappTemplateOptions.length"
+                    v-if="
+                      !nativeWhatsappTemplateOptions.length &&
+                      !outsideWindowViaWhatsappApi
+                    "
                     class="text-xs text-n-slate-10"
                   >
                     {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_NATIVE_TEMPLATE_EMPTY') }}

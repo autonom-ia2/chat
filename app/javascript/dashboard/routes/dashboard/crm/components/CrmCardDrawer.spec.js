@@ -819,6 +819,131 @@ describe('CrmCardDrawer follow-ups', () => {
     wrapper.unmount();
   });
 
+  describe('outside the 24h window with the WhatsApp Hybrid ready', () => {
+    const hybridWindow = {
+      requires_template: true,
+      whatsapp_native_inbox: true,
+      whatsapp_api_available: true,
+    };
+
+    const openNewFollowUp = async wrapper => {
+      wrapper.vm.newFollowUpOpen = true;
+      await flushPromises();
+    };
+
+    it('shows the green notice and the optional template instead of the red one', async () => {
+      CrmKanbanAPI.getFollowUpMessagingWindow.mockResolvedValue({
+        data: hybridWindow,
+      });
+      const wrapper = await mountFollowUps({ card: linkedCard });
+      await openNewFollowUp(wrapper);
+      await fillAutoSend(wrapper);
+
+      expect(
+        wrapper.find('[data-test="follow-up-whatsapp-api-notice"]').text()
+      ).toBe('CRM_KANBAN.DRAWER.FOLLOW_UP_WINDOW_WHATSAPP_API');
+      expect(
+        wrapper
+          .find('[data-test="follow-up-template-required-notice"]')
+          .exists()
+      ).toBe(false);
+      expect(wrapper.text()).toContain(
+        'CRM_KANBAN.DRAWER.FOLLOW_UP_NATIVE_TEMPLATE_OPTIONAL'
+      );
+      expect(wrapper.vm.nativeWhatsappTemplateChoices[0]).toEqual({
+        value: '',
+        label: 'CRM_KANBAN.DRAWER.FOLLOW_UP_TEMPLATE_NONE_SEND_TEXT',
+      });
+      wrapper.unmount();
+    });
+
+    it('saves without a template, sending only the written text', async () => {
+      CrmKanbanAPI.getFollowUpMessagingWindow.mockResolvedValue({
+        data: hybridWindow,
+      });
+      const wrapper = await mountFollowUps({ card: linkedCard });
+      await fillAutoSend(wrapper);
+
+      wrapper.vm.createFollowUp();
+
+      expect(alertSpy).not.toHaveBeenCalled();
+      const [[payload]] = wrapper.emitted('createFollowUp');
+      expect(payload.metadata).toEqual({ message_body: 'Olá, tudo bem?' });
+      wrapper.unmount();
+    });
+
+    it('still sends the template when the person chooses one', async () => {
+      storeGetters['inboxes/getFilteredWhatsAppTemplates'] = () => [
+        { name: 'retomada_contato', language: 'pt_BR' },
+      ];
+      CrmKanbanAPI.getFollowUpMessagingWindow.mockResolvedValue({
+        data: hybridWindow,
+      });
+      const wrapper = await mountFollowUps({ card: linkedCard });
+      await fillAutoSend(wrapper);
+      wrapper.vm.followUpForm.nativeTemplateKey = 'retomada_contato::pt_BR';
+      wrapper.vm.onNativeTemplateSelected();
+
+      wrapper.vm.createFollowUp();
+
+      const [[payload]] = wrapper.emitted('createFollowUp');
+      expect(payload.metadata).toMatchObject({
+        message_body: 'Olá, tudo bem?',
+        template_name: 'retomada_contato',
+        template_language: 'pt_BR',
+      });
+      wrapper.unmount();
+    });
+
+    it('without the Hybrid keeps the red notice and the mandatory template', async () => {
+      CrmKanbanAPI.getFollowUpMessagingWindow.mockResolvedValue({
+        data: { ...hybridWindow, whatsapp_api_available: false },
+      });
+      const wrapper = await mountFollowUps({ card: linkedCard });
+      await openNewFollowUp(wrapper);
+      await fillAutoSend(wrapper);
+
+      expect(
+        wrapper
+          .find('[data-test="follow-up-template-required-notice"]')
+          .exists()
+      ).toBe(true);
+      expect(
+        wrapper.find('[data-test="follow-up-whatsapp-api-notice"]').exists()
+      ).toBe(false);
+      expect(wrapper.vm.nativeWhatsappTemplateChoices[0].label).toBe(
+        'CRM_KANBAN.DRAWER.FOLLOW_UP_TEMPLATE_PLACEHOLDER'
+      );
+
+      wrapper.vm.createFollowUp();
+
+      expect(alertSpy).toHaveBeenCalledWith(
+        'CRM_KANBAN.ALERTS.FOLLOW_UP_TEMPLATE_REQUIRED'
+      );
+      expect(wrapper.emitted('createFollowUp')).toBeUndefined();
+      wrapper.unmount();
+    });
+
+    it('ignores the Hybrid flag on a WhatsApp API (non-native) inbox', async () => {
+      CrmKanbanAPI.getFollowUpMessagingWindow.mockResolvedValue({
+        data: {
+          requires_template: true,
+          whatsapp_api_inbox: true,
+          whatsapp_api_available: true,
+        },
+      });
+      const wrapper = await mountFollowUps({ card: linkedCard });
+      await fillAutoSend(wrapper);
+
+      wrapper.vm.createFollowUp();
+
+      expect(alertSpy).toHaveBeenCalledWith(
+        'CRM_KANBAN.ALERTS.FOLLOW_UP_TEMPLATE_REQUIRED'
+      );
+      wrapper.unmount();
+    });
+  });
+
   it('sends the WhatsApp API template id outside the 24h window', async () => {
     CrmKanbanAPI.getFollowUpMessagingWindow.mockResolvedValue({
       data: { requires_template: true, whatsapp_api_inbox: true },

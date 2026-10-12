@@ -14,6 +14,13 @@ class Crm::FollowUps::MetadataSanitizer
     touch
   ].freeze
 
+  # Escritas só pelo servidor (runners de IA): o cliente nunca as define (chat#1349).
+  SERVER_OWNED_KEYS = %w[delivery_transport hybrid_free_form_reason].freeze
+
+  def self.without_server_keys(metadata)
+    metadata.to_h.stringify_keys.except(*SERVER_OWNED_KEYS)
+  end
+
   def initialize(metadata:, automation_mode:)
     @metadata = (metadata || {}).to_h.stringify_keys
     @automation_mode = automation_mode
