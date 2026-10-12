@@ -113,6 +113,78 @@ RSpec.describe Ai::Redacao::Escrever do
     expect { escrever }.to raise_error(described_class::Indisponivel, 'OpenSSL::SSL::SSLError')
   end
 
+  it 'confere o texto da resposta antes de ler o JSON' do
+    allow(client).to receive(:create).and_return(text: nil)
+    expect { escrever }.to raise_error(described_class::Indisponivel, 'resposta_vazia')
+
+    allow(client).to receive(:create).and_return({})
+    expect { escrever }.to raise_error(described_class::Indisponivel, 'resposta_vazia')
+  end
+
+  it 'devolve o motivo quando o pedido não se aplica, sem opções' do
+    responde([bom], status: 'nao_se_aplica', pergunta: 'Isto não é uma mensagem para cliente.')
+
+    expect(escrever).to include(status: 'nao_se_aplica', pergunta: 'Isto não é uma mensagem para cliente.', opcoes: [])
+  end
+
+  it 'com tudo descartado, fica ok sem opções e conta as descartadas' do
+    responde(['{{cliente.primeiro_nome}}, seu horário é {{horario.data_hora}}: {{horario.link_gestao}}. Até!',
+              'Oi! Seu horário é {{horario.data_hora}}.'])
+
+    expect(escrever).to include(status: 'ok', opcoes: [], descartadas: 2)
+  end
+
+  it 'descarta campo no começo do texto' do
+    responde(['{{cliente.primeiro_nome}}, seu horário é {{horario.data_hora}}. Mude em {{horario.link_gestao}}. Até!', bom])
+
+    expect(escrever[:opcoes].pluck(:texto)).to eq([bom])
+  end
+
+  it 'passa timeout e tentativas da chamada, e só os limites que o canal entende' do
+    responde([bom])
+
+    escrever(timeout: 30, max_retries: 2, limites: { max_chars: 200, categoria_desejada: 'servico', sem_midia: true })
+
+    expect(Crm::Ai::ResponsesClient).to have_received(:new).with(hash_including(max_retries: 2))
+    expect(client).to have_received(:create) do |args|
+      expect(args[:timeout]).to eq(30)
+      expect(JSON.parse(args[:input])['limites']).to eq('max_chars' => 200)
+    end
+  end
+
+  describe 'modo melhorar' do
+    let(:base) { 'Oi, {{cliente.primeiro_nome}}! Seu horário é {{horario.data_hora}}. Mude em {{horario.link_gestao}}. Até!' }
+    let(:sem_nome) { 'Olá! Seu horário é {{horario.data_hora}}. Mude em {{horario.link_gestao}}. Até lá!' }
+    let(:com_empresa) do
+      'Oi, {{cliente.primeiro_nome}}! A {{minha_empresa.nome}} te espera em {{horario.data_hora}}. Mude em {{horario.link_gestao}}. Até!'
+    end
+
+    it 'descarta a opção que tira um campo da base' do
+      responde([sem_nome, bom])
+
+      expect(escrever(base: base, pedido: { melhorias: %w[mais_claro] })[:opcoes].pluck(:texto)).to eq([bom])
+    end
+
+    it 'em "mais curto", descarta a opção que traz campo novo; sem "mais curto", aceita' do
+      responde([com_empresa, bom])
+      expect(escrever(base: base, pedido: { melhorias: %w[mais_curto] })[:opcoes].pluck(:texto)).to eq([bom])
+
+      expect(escrever(base: base, pedido: { melhorias: %w[mais_claro] })[:opcoes].pluck(:texto)).to eq([com_empresa, bom])
+    end
+
+    it 'manda a base e o pedido como dado, com recusa_da_meta' do
+      responde([bom])
+
+      escrever(base: base, pedido: { melhorias: %w[corrigir_recusa], observacao: nil, recusa_da_meta: { motivo: 'INVALID_FORMAT' } })
+
+      expect(client).to have_received(:create) do |args|
+        entrada = JSON.parse(args[:input])
+        expect(entrada['base']).to eq(base)
+        expect(entrada['pedido']['recusa_da_meta']).to eq('motivo' => 'INVALID_FORMAT')
+      end
+    end
+  end
+
   it 'erro de programação não vira "indisponível": estoura' do
     allow(client).to receive(:create).and_raise(NoMethodError)
 

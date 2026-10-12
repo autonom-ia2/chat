@@ -263,6 +263,12 @@ describe('bookingNoticeTexts (#1354)', () => {
       'UNKNOWN_FIELD'
     );
     expect(noticeTextProblem(`${AI_TEXT} {{horario`)).toBe('MALFORMED');
+    expect(noticeTextProblem(`${AI_TEXT} {{ horario.data_hora }}`)).toBe(
+      'MALFORMED'
+    );
+    expect(noticeTextProblem(`${AI_TEXT} {{horario.data_hora}}}`)).toBe(
+      'MALFORMED'
+    );
     expect(noticeTextProblem(`${AI_TEXT} [Dia e hora]`)).toBe('BRACKET');
     expect(noticeTextProblem(`${AI_TEXT}${'a'.repeat(500)}`)).toBe('TOO_LONG');
   });

@@ -12,9 +12,11 @@
 #   #      pergunta: nil, sugestoes: [], descartadas: 0 }
 #
 # Entrada para o modelo: só o que o chamador passa e o catálogo (rótulo, tipo e exemplo FICTÍCIO de cada chave), nunca
-# dado de cliente. `base` (texto atual) e `pedido` (`{ melhorias: [...], observacao:, recusa_meta: }`, modo melhorar)
-# vão como DADO no JSON. Pela chave de IA da conta (`Crm::Ai::CredentialResolver`), com a `feature` do chamador na
-# Gestão IA. Roda na requisição do painel: uma tentativa, 11 s, sem retry (o rack-timeout de produção corta aos 15 s).
+# dado de cliente. `base` (texto atual; o canal pode estender) e `pedido` (`{ melhorias: [...], observacao:,
+# recusa_da_meta: }`, modo melhorar, o mesmo nome do prompt calibrado) vão como DADO no JSON: nenhum código interpreta o
+# que a pessoa escreveu. Pela chave de IA da conta (`Crm::Ai::CredentialResolver`), com a `feature` do chamador na
+# Gestão IA. Na requisição do painel: por padrão uma tentativa e 11 s (o rack-timeout de produção corta aos 15 s);
+# `timeout:` e `max_retries:` por chamada, para quem roda num job.
 class Ai::Redacao::Escrever
   class Indisponivel < StandardError; end
 
@@ -22,7 +24,7 @@ class Ai::Redacao::Escrever
   ESFORCO = 'low'.freeze
   TIMEOUT = 11
   OPCOES_PADRAO = 2
-  ERROS_DA_FRONTEIRA = [Crm::Ai::ResponsesClient::Error, JSON::ParserError, TypeError, SystemCallError, SocketError,
+  ERROS_DA_FRONTEIRA = [Crm::Ai::ResponsesClient::Error, JSON::ParserError, SystemCallError, SocketError,
                         OpenSSL::SSL::SSLError, Timeout::Error, Net::HTTPBadResponse, Net::ProtocolError].freeze
   # Exemplos fictícios por chave (nunca valor real), e por tipo para as demais chaves do catálogo.
   EXEMPLOS = {
@@ -38,7 +40,7 @@ class Ai::Redacao::Escrever
 
   # rubocop:disable Metrics/ParameterLists
   def initialize(account:, feature:, proposito:, canal:, limites:, chaves:, tom: nil, base: nil, pedido: nil,
-                 opcoes: OPCOES_PADRAO, contexto: {}, modelo: nil)
+                 opcoes: OPCOES_PADRAO, contexto: {}, modelo: nil, timeout: TIMEOUT, max_retries: 0)
     @account = account
     @feature = feature
     @proposito = proposito
@@ -51,12 +53,14 @@ class Ai::Redacao::Escrever
     @opcoes = opcoes.to_i.clamp(1, Ai::Redacao::Canais::Base::MAX_OPCOES)
     @contexto = contexto.to_h
     @modelo = modelo.presence || MODELO
+    @timeout = timeout
+    @max_retries = max_retries
     conferir_chaves!
   end
   # rubocop:enable Metrics/ParameterLists
 
   def call
-    saida = @canal.normalizar(perguntar)
+    saida = @canal.validar_saida(@canal.normalizar(perguntar), base: @base)
     validas, descartadas = saida[:opcoes].partition { |opcao| motivo_do_descarte(opcao).nil? }
     saida.merge(opcoes: validas.first(@opcoes).map { |opcao| @canal.normalizar_opcao(opcao) }, descartadas: descartadas.size)
   end
@@ -71,7 +75,7 @@ class Ai::Redacao::Escrever
   end
 
   def motivo_do_descarte(opcao)
-    motivo = @canal.validar(opcao, chaves: @chaves, limites: @limites)
+    motivo = @canal.validar(opcao, chaves: @chaves, limites: @limites, base: @base, pedido: @pedido)
     Rails.logger.info("[ai][redacao] opcao_descartada canal=#{@canal.nome} feature=#{@feature} motivo=#{motivo}") if motivo
     motivo
   end
@@ -79,8 +83,11 @@ class Ai::Redacao::Escrever
   def perguntar
     resposta = cliente.create(model: @modelo, instructions: @canal.prompt, input: entrada.to_json,
                               schema: @canal.schema(permitidas: @chaves[:permitidas], opcoes: @opcoes),
-                              reasoning_effort: ESFORCO, timeout: TIMEOUT)
-    saida = JSON.parse(resposta[:text])
+                              reasoning_effort: ESFORCO, timeout: @timeout)
+    texto = resposta.to_h[:text]
+    raise Indisponivel, 'resposta_vazia' unless texto.is_a?(String) && texto.present?
+
+    saida = JSON.parse(texto)
     raise Indisponivel, 'resposta_fora_do_formato' unless saida.is_a?(Hash)
 
     saida
@@ -97,7 +104,8 @@ class Ai::Redacao::Escrever
     credencial = Crm::Ai::CredentialResolver.new(account: @account).resolve
     raise Indisponivel, 'ai_not_configured' if credencial.blank?
 
-    Crm::Ai::ResponsesClient.new(credential: credencial, feature: @feature, account: @account, max_retries: 0, cache_key_scope: :feature)
+    Crm::Ai::ResponsesClient.new(credential: credencial, feature: @feature, account: @account, max_retries: @max_retries,
+                                 cache_key_scope: :feature)
   end
 
   # O JSON da mensagem do usuário (formato do `comum.md`). O kit da marca ainda não tem "jeito de falar" (BrandKit só
@@ -106,7 +114,7 @@ class Ai::Redacao::Escrever
     {
       canal: @canal.nome, proposito: @proposito, pedido: @pedido, base: @base,
       tom: { kit: nil, escolha: @tom.presence },
-      limites: @limites.slice(:max_chars, :categoria_desejada, :sem_midia),
+      limites: @limites.slice(*@canal.limites_aceitos),
       chaves: { permitidas: @chaves[:permitidas].map { |chave| campo(chave) }, obrigatorias: @chaves[:obrigatorias] },
       opcoes: @opcoes, contexto: @contexto
     }

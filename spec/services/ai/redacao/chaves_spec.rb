@@ -2,8 +2,8 @@ require 'rails_helper'
 
 # Chaves do catálogo dentro de um texto, na sintaxe `{{chave}}` (#1354): leitura por index, sem regex.
 RSpec.describe Ai::Redacao::Chaves do
-  it 'extrai as chaves na ordem, com repetição e sem espaços em volta' do
-    texto = 'Oi, {{cliente.primeiro_nome}}! Dia {{ horario.data_hora }}: {{horario.link_gestao}} e {{cliente.primeiro_nome}}.'
+  it 'extrai as chaves na ordem, com repetição' do
+    texto = 'Oi, {{cliente.primeiro_nome}}! Dia {{horario.data_hora}}: {{horario.link_gestao}} e {{cliente.primeiro_nome}}.'
 
     expect(described_class.extrair(texto)).to eq(%w[cliente.primeiro_nome horario.data_hora horario.link_gestao cliente.primeiro_nome])
   end
@@ -14,13 +14,21 @@ RSpec.describe Ai::Redacao::Chaves do
     expect(partes.map { |parte| [parte.tipo, parte.valor] }).to eq([[:texto, 'Oi, '], [:chave, 'cliente.primeiro_nome'], [:texto, '!']])
   end
 
+  it 'texto vazio ou nulo não tem chave nem é malformado' do
+    [nil, ''].each do |texto|
+      expect(described_class.extrair(texto)).to eq([])
+      expect(described_class).not_to be_malformado(texto)
+    end
+  end
+
   it 'texto sem chave é uma parte só' do
     expect(described_class.extrair('Sem campo nenhum.')).to eq([])
     expect(described_class).not_to be_malformado('Sem campo nenhum.')
   end
 
-  it 'acusa chave sem fechar, chave vazia, chave com chave dentro e }} sobrando' do
-    ['Oi {{cliente.primeiro_nome', 'Oi {{}} tchau', 'Oi {{a{{b}} tchau', 'Oi }} tchau'].each do |texto|
+  it 'acusa chave sem fechar, vazia, com chave dentro, com espaço, } colado depois e }} sobrando' do
+    ['Oi {{cliente.primeiro_nome', 'Oi {{}} tchau', 'Oi {{a{{b}} tchau', 'Oi }} tchau', 'Oi {{ cliente.nome }}!',
+     'Oi {{cliente.nome}}} tchau', 'Oi {{cliente. nome}}'].each do |texto|
       expect(described_class).to be_malformado(texto), texto
     end
   end

@@ -10,6 +10,11 @@ class Ai::Redacao::Canais::WhatsappTexto < Ai::Redacao::Canais::Base
     'whatsapp_texto'
   end
 
+  # Texto livre não tem categoria nem mídia: só o tamanho vai à IA.
+  def self.limites_aceitos
+    %i[max_chars]
+  end
+
   def self.normalizar_opcao(opcao)
     super.merge(categoria_prevista: nil)
   end

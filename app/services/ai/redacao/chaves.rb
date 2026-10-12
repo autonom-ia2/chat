@@ -3,7 +3,8 @@
 # guarda sempre a chave; o número `{{1}}` só existe do lado da Meta.
 #
 # Leitura por `index` de `{{` e `}}`, sem regex: o texto é quebrado em partes de texto fixo e de chave, na ordem.
-# Texto com `{{` sem fechar, `}}` sobrando ou `{{` dentro de uma chave é malformado.
+# Texto com `{{` sem fechar, `}}` sobrando, `{{` dentro de uma chave, chave com espaço (`{{ cliente.nome }}`) ou `}`
+# colado depois da chave (`{{a}}}`) é malformado: a chave vai exatamente como no catálogo.
 #
 #   Ai::Redacao::Chaves.extrair('Oi, {{cliente.primeiro_nome}}! {{horario.data_hora}}')
 #   # => ['cliente.primeiro_nome', 'horario.data_hora']
@@ -38,7 +39,7 @@ module Ai::Redacao::Chaves
       break if fim.nil?
 
       resultado << Parte.new(:texto, texto[posicao...inicio]) if inicio > posicao
-      resultado << Parte.new(:chave, texto[(inicio + ABRE.length)...fim].strip)
+      resultado << Parte.new(:chave, texto[(inicio + ABRE.length)...fim])
       posicao = fim + FECHA.length
     end
     resultado << Parte.new(:texto, texto[posicao..]) if posicao < texto.length
@@ -51,10 +52,20 @@ module Ai::Redacao::Chaves
   end
 
   def bem_formado?(texto)
-    partes(texto).all? { |parte| parte.chave? ? chave_limpa?(parte.valor) : parte.valor.exclude?(ABRE) && parte.valor.exclude?(FECHA) }
+    lista = partes(texto)
+    lista.each_with_index.all? do |parte, indice|
+      next chave_limpa?(parte.valor) if parte.chave?
+
+      texto_limpo?(parte.valor, depois_de_chave: indice.positive? && lista[indice - 1].chave?)
+    end
   end
 
+  def texto_limpo?(valor, depois_de_chave:)
+    valor.exclude?(ABRE) && valor.exclude?(FECHA) && !(depois_de_chave && valor.start_with?('}'))
+  end
+
+  # Sem chave dentro de chave e sem espaço nenhum: `{{ cliente.nome }}` não é a chave do catálogo.
   def chave_limpa?(chave)
-    chave.present? && chave.exclude?('{') && chave.exclude?('}')
+    chave.present? && chave.exclude?('{') && chave.exclude?('}') && chave.each_char.none? { |char| char.strip.empty? }
   end
 end

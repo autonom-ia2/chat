@@ -33,17 +33,25 @@ export const partsOf = text => {
     if (start === -1 || end === -1) break;
     if (start > position)
       parts.push({ type: 'text', value: source.slice(position, start) });
-    const key = source.slice(start + OPEN.length, end).trim();
-    if (!key || key.includes('{') || key.includes('}')) malformed = true;
+    // A chave vai exatamente como no catálogo: sem espaço e sem chave dentro.
+    const key = source.slice(start + OPEN.length, end);
+    const hasSpace = key.split('').some(char => !char.trim());
+    if (!key || hasSpace || key.includes('{') || key.includes('}'))
+      malformed = true;
     parts.push({ type: 'key', value: key });
     position = end + CLOSE.length;
   }
   if (position < source.length)
     parts.push({ type: 'text', value: source.slice(position) });
+  // `}}` sobrando, ou `}` colado depois da chave (`{{a}}}`).
   const strayBraces = parts.some(
-    part =>
+    (part, index) =>
       part.type === 'text' &&
-      (part.value.includes(OPEN) || part.value.includes(CLOSE))
+      (part.value.includes(OPEN) ||
+        part.value.includes(CLOSE) ||
+        (index > 0 &&
+          parts[index - 1].type === 'key' &&
+          part.value.startsWith('}')))
   );
   return { parts, malformed: malformed || strayBraces };
 };
