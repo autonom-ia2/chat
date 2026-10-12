@@ -1447,9 +1447,12 @@
         "RESET": "Refresh - restart cycle",
         "REACTIVATE": "Reactivate follow-up",
         "REACTIVATE_CONFIRM_TITLE": "Reactivate despite the opt-out request?",
-        "REACTIVATE_CONFIRM_BODY": "This contact asked to stop receiving automated messages. Reactivating resumes follow-ups for them, unless the contact has a recorded opt-out from outbound messages: in that case automated follow-ups stay stopped until the opt-out is removed on the contact. The action is recorded under your name.",
+        "REACTIVATE_CONFIRM_BODY": "This contact asked to stop receiving automated messages. Reactivating resumes follow-ups for them. The opt-out this request recorded on the contact is removed only when no other card of the contact is still stopped at the customer's request; until then, follow-ups stay stopped. An opt-out from another source (team, Prospecting or email unsubscribe) is not removed here, and follow-ups stay stopped until it is removed where it came from. The action is recorded under your name.",
         "REACTIVATE_CONFIRM_OK": "Reactivate anyway",
         "RESET_SUCCESS": "Cycle restarted.",
+        "RESET_KEPT_OTHER_CARDS": "Follow-up reactivated. The contact's opt-out stays: another card still holds it.",
+        "RESET_KEPT_NO_PERMISSION": "Follow-up reactivated. The contact's opt-out stays: only people who can edit contacts can remove it.",
+        "RESET_KEPT_OTHER_SOURCE": "Follow-up reactivated. The contact's opt-out stays because of another source.",
         "RESET_ERROR": "Could not restart.",
         "TIMELINE_TOUCH_REMINDER": "Touch {n}: AI generated a team reminder"
       },

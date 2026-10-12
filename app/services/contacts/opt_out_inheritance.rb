@@ -4,8 +4,12 @@
 # - 'email_unsubscribe': o e-mail do contato se descadastrou das campanhas de e-mail da conta;
 # - 'prospecting': um lead recusado da conta (consent_refused_at ou no_consent) alcança o contato (ConsentVeto#contact_vetoed?).
 #
-# source_for também diz, quando a recusa da Prospecção sai, se outra recusa ainda sustenta a marca (ContactOptOutSync).
+# source_for também diz, quando uma recusa sai, se outra ainda sustenta a marca (ContactOptOutSync, release_opt_out!).
+# Ali entra também 'follow_up_reply' (chat#1325): a prova dela é um card do contato marcado pelo pedido de parar no
+# follow-up de IA (Crm::FollowUps::CardOptOut). Ela vem primeiro, na mesma ordem da fusão (ContactMergeAction), e é
+# do próprio contato: um contato novo não tem card marcado. 'manual' não tem prova fora do contato e não volta sozinha.
 class Contacts::OptOutInheritance
+  FOLLOW_UP_SOURCE = 'follow_up_reply'.freeze
   EMAIL_SOURCE = 'email_unsubscribe'.freeze
   PROSPECTING_SOURCE = 'prospecting'.freeze
 
@@ -34,6 +38,7 @@ class Contacts::OptOutInheritance
 
   # A origem da recusa que vale hoje para o contato, ou nil.
   def source_for(contact)
+    return FOLLOW_UP_SOURCE if Crm::FollowUps::CardOptOut.contact_marked?(contact)
     return EMAIL_SOURCE if EmailSuppression.unsubscribed?(@account, contact.email)
 
     PROSPECTING_SOURCE if consent_veto.contact_vetoed?(contact)

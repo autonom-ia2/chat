@@ -17,10 +17,6 @@
 # `outage` (a rodada do cron, `Notices::WahaOutage`), não consulta de novo o que já falhou na rodada. Pedido que a WAHA
 # recusa de vez (4xx que não seja 408, 425 ou 429) é `waha_refused`, definitivo.
 class Crm::BookingV2::Notices::WahaChat
-  CHAT_ID = 'waha_whatsapp_chat_id'.freeze
-  JID = 'waha_whatsapp_jid'.freeze
-  LID = 'waha_whatsapp_lid'.freeze
-  LID_SUFFIX = '@lid'.freeze
   LOOKUP_TIMEOUT = 5
   # 4xx passageiros: tempo esgotado, cedo demais e pedidos demais. Voltam para a fila como o 5xx.
   TRANSIENT_STATUSES = [408, 425, 429].freeze
@@ -48,8 +44,8 @@ class Crm::BookingV2::Notices::WahaChat
     @retryable == true
   end
 
-  # nil quando pode abrir a conversa (e os atributos ficam no contato: gravados se ele já existe, só atribuídos se é
-  # novo, para quem chama gravar junto); senão o motivo.
+  # nil quando pode abrir a conversa (e os atributos ficam no contato pelo `Waha::ContactChatId.store!`: gravados se
+  # ele já existe, só atribuídos se é novo, para quem chama gravar junto); senão o motivo.
   def prepare
     return 'waha_unavailable' unless Waha::Config.enabled? && session.present?
     return transient_failure if outage&.down?(inbox)
@@ -76,7 +72,7 @@ class Crm::BookingV2::Notices::WahaChat
   def store_or_refuse(chat_id)
     return 'no_whatsapp' if chat_id.blank?
 
-    store!(chat_id)
+    Waha::ContactChatId.store!(contact, chat_id)
     nil
   end
 
@@ -118,15 +114,5 @@ class Crm::BookingV2::Notices::WahaChat
 
   def client
     @client ||= Waha::Client.new
-  end
-
-  # Como a WAHA faz a cada mensagem recebida: o chat id confirmado agora passa a ser o `waha_whatsapp_chat_id` (o
-  # endereço que a WAHA usa para mandar) e vai também na chave do tipo dele (jid ou lid); a outra chave fica como está.
-  def store!(chat_id)
-    current = contact.custom_attributes.to_h
-    merged = current.merge(CHAT_ID => chat_id, (chat_id.end_with?(LID_SUFFIX) ? LID : JID) => chat_id)
-    return if merged == current
-
-    contact.new_record? ? contact.assign_attributes(custom_attributes: merged) : contact.update!(custom_attributes: merged)
   end
 end

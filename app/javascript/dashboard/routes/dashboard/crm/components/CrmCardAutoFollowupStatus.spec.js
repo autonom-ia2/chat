@@ -1,7 +1,9 @@
 import { shallowMount } from '@vue/test-utils';
 import CrmKanbanAPI from 'dashboard/api/crmKanban';
 import ContactAPI from 'dashboard/api/contacts';
+import { useAlert } from 'dashboard/composables';
 import CrmCardAutoFollowupStatus from './CrmCardAutoFollowupStatus.vue';
+vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
 vi.mock('dashboard/api/crmKanban', () => ({
   default: { resetAutoFollowup: vi.fn().mockResolvedValue({}) },
 }));
@@ -68,3 +70,25 @@ it('rechecks both capabilities for stale actions after revocation', async () => 
   expect(ContactAPI.update).not.toHaveBeenCalled();
   wrapper.unmount();
 });
+it.each([
+  ['kept_no_permission', 'RESET_KEPT_NO_PERMISSION'],
+  ['kept_other_cards', 'RESET_KEPT_OTHER_CARDS'],
+  ['kept_other_source', 'RESET_KEPT_OTHER_SOURCE'],
+  ['released', 'RESET_SUCCESS'],
+  [undefined, 'RESET_SUCCESS'],
+])(
+  'reset with contact opt-out %s shows the matching alert',
+  async (result, key) => {
+    CrmKanbanAPI.resetAutoFollowup.mockResolvedValueOnce({
+      data: { contact_opt_out: result },
+    });
+    const wrapper = shallowMount(CrmCardAutoFollowupStatus, {
+      props: { card, canManageAi: true },
+    });
+    await wrapper.vm.resetCycle();
+    expect(useAlert).toHaveBeenCalledWith(
+      `CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.${key}`
+    );
+    wrapper.unmount();
+  }
+);

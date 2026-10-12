@@ -8,9 +8,10 @@
 # não recebe a agenda: não aceita página (`aceita?`) e não recebe a instrução (`ligada?`).
 #
 # A REGRA DE HORÁRIO É A DA PÁGINA PÚBLICA (J6-A1): o mesmo `Crm::BookingV2::Slots`, com o mesmo responsável que a
-# página atende. Página `per_agent`: o link de quem está atribuído à conversa (a Atribuição do CRM decide quem atende,
-# de propósito); sem ele, ou com ele de agenda pausada em Meus horários, o primeiro link ativo de quem não pausou, como
-# o convite (`InvitePages#link_for`).
+# página atende. Página `per_agent`: com quem marcar é decisão do MODELO entre as pessoas liberadas (ver PESSOAS
+# LIBERADAS abaixo; decisão do Rodrigo em 12/10/2026, #1307). Quem está atribuído à conversa chega ao modelo como
+# dado (`quem_atende_esta_conversa`), não decide sozinho. A Atribuição do CRM continua decidindo o handoff para a
+# equipe, que é outro assunto.
 #
 # NADA AQUI LÊ O QUE A PESSOA ESCREVEU (RA-09). Quem entende "a de quarta" é o modelo; as ferramentas recebem data,
 # horário ISO e duração e conferem por parser (`Date.iso8601`, `Time.iso8601`) e pelos limites da página.

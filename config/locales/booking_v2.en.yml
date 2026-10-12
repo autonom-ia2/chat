@@ -21,7 +21,6 @@ en:
         default_text: 'Hi, {nome}! Pick the best time for you: {link}'
         default_text_without_name: 'Hi! Pick the best time for you: {link}'
       notices:
-        from_line: "Message from %{business}"
         when_format: "%m/%d at %H:%M"
         booked: "Hi%{name}! Your appointment is booked for %{when}. To confirm, change or cancel: %{link}"
         booked_by_team: "Hi%{name}! %{booker} booked your appointment for %{when}. To confirm, change or cancel: %{link}"
