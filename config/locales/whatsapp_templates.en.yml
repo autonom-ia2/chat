@@ -3,6 +3,7 @@ en:
     errors:
       permission_denied: "This WhatsApp connection is not allowed to manage templates. Reconnect the inbox in Settings › Inboxes and try again."
       meta_failed: "Meta did not accept the request. Try again in a few minutes."
+      not_found_or_no_access: "WhatsApp did not find this template or the number has no access to it. Refresh the list; if it continues, reconnect the number."
       meta_unreachable: "Meta did not answer. Try again in a few minutes."
       app_not_configured: "The WhatsApp app is not configured on this installation, so files cannot be sent to Meta."
       media_invalid: "Use a JPG or PNG up to 5 MB, an MP4 up to 16 MB or a PDF up to 100 MB."

@@ -98,7 +98,9 @@ const explicacao = computed(() => {
       `MODELOS_WHATSAPP.RECUSAS.${modelo.value.recusa?.codigo || 'outro'}.EXPLICACAO`
     );
   }
-  if (situacao.value === 'desativado') return t(`${base}.EXPLICACAO`);
+  if (['desativado', 'limite'].includes(situacao.value)) {
+    return t(`${base}.EXPLICACAO`);
+  }
   if (modelo.value.enviosNoMes == null)
     return t(`${base}.EXPLICACAO_SEM_CONTA`);
   return t(
@@ -116,7 +118,7 @@ const dica = computed(() => {
   }
   // A dica do desativado é duplicar; sem cópia possível, vale o aviso de não editável.
   if (situacao.value === 'desativado' && !modelo.value.editavel) return '';
-  if (['pausado', 'desativado'].includes(situacao.value)) {
+  if (['pausado', 'desativado', 'limite'].includes(situacao.value)) {
     return t(`MODELOS_WHATSAPP.SITUACOES.${situacao.value}.DICA`);
   }
   return '';

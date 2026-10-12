@@ -123,11 +123,18 @@ export const SITUACOES = {
     selo: 'bg-n-ruby-3 text-n-ruby-11',
     caixa: 'bg-n-ruby-2 ring-n-ruby-6',
   },
+  // LIMIT_EXCEEDED: não criado, porque a conta chegou ao limite de modelos.
+  limite: {
+    icone: 'i-lucide-octagon-x',
+    selo: 'bg-n-amber-3 text-n-amber-11',
+    caixa: 'bg-n-amber-2 ring-n-amber-6',
+  },
 };
 
 // Ordem da lista: o que precisa da pessoa vem primeiro.
 export const ORDEM_DAS_SITUACOES = [
   'recusado',
+  'limite',
   'desativado',
   'pausado',
   'em_analise',

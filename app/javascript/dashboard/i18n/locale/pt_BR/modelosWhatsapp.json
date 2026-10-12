@@ -35,7 +35,8 @@
         "PAUSADO": "O WhatsApp pausou {quando}",
         "EM_ANALISE_SEM_DATA": "Com o WhatsApp para análise",
         "PAUSADO_SEM_DATA": "O WhatsApp pausou",
-        "DESATIVADO": "Desativado pelo WhatsApp"
+        "DESATIVADO": "Desativado pelo WhatsApp",
+        "LIMITE": "Não criado: limite de modelos"
       },
       "CONTA": "Conta {nome}",
       "PARCIAL": "Não conseguimos ler os modelos de uma conta do WhatsApp agora. Pode faltar modelo na lista."
@@ -69,6 +70,12 @@
         "TITULO": "O WhatsApp desativou este modelo",
         "EXPLICACAO": "Depois de pausas seguidas por bloqueios e denúncias, o WhatsApp desativou este modelo. Ele não volta sozinho e não dá para alterar.",
         "DICA": "duplique o modelo, reescreva o texto dizendo logo no começo quem está falando, e mande só para quem conhece a sua empresa."
+      },
+      "limite": {
+        "ROTULO": "Não criado: limite de modelos",
+        "TITULO": "Não criado: a conta do WhatsApp chegou ao limite de modelos",
+        "EXPLICACAO": "O WhatsApp não criou este modelo porque a conta já tem o máximo de modelos que ela pode ter.",
+        "DICA": "apague os modelos que você não usa mais e crie este de novo. Se precisar de mais modelos, verifique a sua empresa na Meta: contas verificadas podem ter mais."
       }
     },
     "RECUSAS": {
@@ -662,7 +669,8 @@
         "FORMATO_NAO_VAI": "ainda não vai em campanha",
         "RECUSADO": "recusado",
         "PAUSADO": "pausado",
-        "DESATIVADO": "desativado"
+        "DESATIVADO": "desativado",
+        "LIMITE": "não criado"
       },
       "EM_ANALISE": "“{nome}” ainda está em análise no WhatsApp. Você pode montar e agendar a campanha; enviar agora libera quando ele for aprovado.",
       "ENVIAR_AGORA_BLOQUEADO": "Enviar agora libera quando o WhatsApp aprovar o modelo. Escolha uma data para agendar.",

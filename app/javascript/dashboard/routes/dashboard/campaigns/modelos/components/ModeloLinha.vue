@@ -56,6 +56,7 @@ const frase = computed(() => {
       : t(`${base}.EM_ANALISE_SEM_DATA`);
   }
   if (situacao === 'desativado') return t(`${base}.DESATIVADO`);
+  if (situacao === 'limite') return t(`${base}.LIMITE`);
   if (situacao === 'pausado') {
     return pausa?.desde
       ? t(`${base}.PAUSADO`, {

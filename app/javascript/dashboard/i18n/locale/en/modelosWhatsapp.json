@@ -35,7 +35,8 @@
         "PAUSADO": "WhatsApp paused it {quando}",
         "EM_ANALISE_SEM_DATA": "With WhatsApp for review",
         "PAUSADO_SEM_DATA": "WhatsApp paused it",
-        "DESATIVADO": "Disabled by WhatsApp"
+        "DESATIVADO": "Disabled by WhatsApp",
+        "LIMITE": "Not created: template limit"
       },
       "CONTA": "Account {nome}",
       "PARCIAL": "We could not read the templates of one WhatsApp account now. Some templates may be missing from the list."
@@ -69,6 +70,12 @@
         "TITULO": "WhatsApp disabled this template",
         "EXPLICACAO": "After repeated pauses for blocks and reports, WhatsApp disabled this template. It does not come back on its own and cannot be changed.",
         "DICA": "duplicate the template, rewrite the text saying right at the start who is talking, and send it only to people who know your business."
+      },
+      "limite": {
+        "ROTULO": "Not created: template limit",
+        "TITULO": "Not created: the WhatsApp account reached its template limit",
+        "EXPLICACAO": "WhatsApp did not create this template because the account already has the most templates it can have.",
+        "DICA": "delete the templates you no longer use and create this one again. If you need more templates, verify your business with Meta: verified accounts can have more."
       }
     },
     "RECUSAS": {
@@ -662,7 +669,8 @@
         "FORMATO_NAO_VAI": "cannot go in campaigns yet",
         "RECUSADO": "rejected",
         "PAUSADO": "paused",
-        "DESATIVADO": "disabled"
+        "DESATIVADO": "disabled",
+        "LIMITE": "not created"
       },
       "EM_ANALISE": "“{nome}” is still in review at WhatsApp. You can set up and schedule the campaign; sending now unlocks when it is approved.",
       "ENVIAR_AGORA_BLOQUEADO": "Sending now unlocks when WhatsApp approves the template. Pick a date to schedule.",

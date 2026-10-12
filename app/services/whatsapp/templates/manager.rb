@@ -1,10 +1,11 @@
 # O que a API de Modelos faz numa caixa do WhatsApp oficial (#1330): lista (lista sincronizada + perfis), cria, edita,
-# apaga, duplica e sobe o arquivo de exemplo do topo. A Meta é falada só pelo `MetaClient` (WABA e token da caixa).
+# apaga e sobe o arquivo de exemplo do topo (duplicar é criar: a tela manda o conteúdo da cópia). A Meta é falada só
+# pelo `MetaClient` (WABA e token da caixa).
 #
 # Regras:
-# - modelo do sistema (`SystemTemplates`) não é criado, alterado nem apagado por aqui; duplicar pode;
+# - modelo do sistema (`SystemTemplates`) não é criado, alterado nem apagado por aqui (a cópia pela tela pode);
 # - modelo em uso (`Usage`, inclusive uso que a pessoa não vê) não é apagado nem tem o conteúdo alterado;
-# - criar, alterar o conteúdo e duplicar só chegam à Meta com a forma que ela exige (`SubmitFormat`, #1380): o que não
+# - criar e alterar o conteúdo só chegam à Meta com a forma que ela exige (`SubmitFormat`, #1380): o que não
 #   passa volta 422 com o código, sem nenhuma chamada à Graph;
 # - o estado do Chat2You fica no perfil (`WhatsappTemplateProfile`), que sobrevive ao sync. A lista da caixa só recebe o
 #   modelo criado/alterado até o próximo sync trazer a versão da Meta (mesmo caminho do `NoticeTemplates::Creator`).
@@ -72,22 +73,6 @@ class Whatsapp::Templates::Manager
     true
   end
 
-  # Cópia com outro nome (modelo do sistema também). Topo com mídia precisa de um arquivo novo na Meta: o handle do pedido
-  # ou o arquivo guardado no perfil do original.
-  def duplicate(template_id, attrs)
-    attrs = attrs.to_h.deep_stringify_keys
-    source = find!(template_id)
-    # O arquivo do topo sobe de novo logo abaixo; a forma do resto é conferida antes de qualquer chamada à Meta.
-    check_format!(source.merge('components' => fill_media(source['components'], STORED_MEDIA)))
-    profile = profile_for(source)
-    handle = attrs.dig('header_media', 'handle').presence || (reupload(profile) if media_header_in?(source['components']))
-    copy = { 'friendly_name' => attrs['friendly_name'], 'fields' => profile&.fields,
-             'header_media' => attrs['header_media'] || profile&.header_media }
-    copied = create(duplicate_body(source, attrs, handle).merge(copy.compact))
-    share_media(profile, copied['profile_id']) unless attrs.dig('header_media', 'blob_signed_id')
-    copied
-  end
-
   # O tipo do arquivo é o que o conteúdo diz (Marcel, o mesmo do ActiveStorage), não o que o navegador declarou.
   def upload(file)
     content_type = Marcel::MimeType.for(file, name: file.original_filename, declared_type: file.content_type)
@@ -153,12 +138,6 @@ class Whatsapp::Templates::Manager
                    'system_owner' => system_owner(template, profile), 'profile_id' => profile&.id)
   end
 
-  def duplicate_body(source, attrs, handle)
-    { 'name' => attrs['name'], 'language' => attrs['language'].presence || source['language'],
-      'category' => source['category'], 'parameter_format' => source['parameter_format'],
-      'components' => copy_components(source['components'], handle) }.compact
-  end
-
   def profile_for(template)
     WhatsappTemplateProfile.for_inbox(@inbox).find_by(name: template['name'], language: template['language'])
   end
@@ -197,13 +176,6 @@ class Whatsapp::Templates::Manager
     raise Refused, 'media_invalid' unless blob && blob.metadata['account_id'].to_s == @inbox.account_id.to_s
 
     blob
-  end
-
-  # A cópia guarda o mesmo arquivo do original (para duplicar de novo sem pedir o arquivo).
-  def share_media(source_profile, profile_id)
-    return unless profile_id && source_profile&.header_file&.attached?
-
-    WhatsappTemplateProfile.find(profile_id).header_file.attach(source_profile.header_file.blob)
   end
 
   # Põe (ou troca) o modelo na lista da caixa até o próximo sync trazer a lista da Meta.

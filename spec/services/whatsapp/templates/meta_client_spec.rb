@@ -103,14 +103,14 @@ RSpec.describe Whatsapp::Templates::MetaClient do
       }
     end
 
-    it 'conta sem acesso ao objeto (100/33) também vira o texto de permissão, não o inglês técnico' do
+    it 'modelo que sumiu ou número sem acesso (100/33) vira texto honesto para os dois casos, não o inglês técnico' do
       stub_lookup([])
       stub_request(:post, templates_url)
         .to_return(status: 400, headers: json,
                    body: { error: { code: 100, error_subcode: 33, message: 'Unsupported post request. Object does not exist' } }.to_json)
 
       expect { client.create(body) }.to raise_error(described_class::MetaError) { |error|
-        expect(error.message).to eq(I18n.t('whatsapp_templates.errors.permission_denied', locale: 'pt_BR'))
+        expect(error.message).to eq(I18n.t('whatsapp_templates.errors.not_found_or_no_access', locale: 'pt_BR'))
       }
     end
 

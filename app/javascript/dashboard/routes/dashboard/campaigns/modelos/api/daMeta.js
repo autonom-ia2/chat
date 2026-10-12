@@ -16,7 +16,8 @@ const SITUACOES = {
   REJECTED: 'recusado',
   PAUSED: 'pausado',
   DISABLED: 'desativado',
-  LIMIT_EXCEEDED: 'desativado',
+  // A conta do WhatsApp chegou ao limite de modelos: este não chegou a ser criado.
+  LIMIT_EXCEEDED: 'limite',
 };
 // Já pedido para apagar na Meta: não aparece mais na lista.
 export const SITUACOES_FORA_DA_LISTA = ['PENDING_DELETION', 'DELETED'];

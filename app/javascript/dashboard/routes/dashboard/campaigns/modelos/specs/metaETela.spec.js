@@ -192,15 +192,12 @@ describe('Meta → tela', () => {
 });
 
 describe('situação e o que a tela sabe editar (#1380)', () => {
-  it('DISABLED e LIMIT_EXCEEDED ficam "desativado", não "pausado"', () => {
-    expect(modeloDaMeta(template({ status: 'PAUSED' }), GRUPO).situacao).toBe(
-      'pausado'
-    );
-    ['DISABLED', 'LIMIT_EXCEEDED'].forEach(status =>
-      expect(modeloDaMeta(template({ status }), GRUPO).situacao).toBe(
-        'desativado'
-      )
-    );
+  it('PAUSED, DISABLED e LIMIT_EXCEEDED têm cada um a sua situação', () => {
+    const situacao = status =>
+      modeloDaMeta(template({ status }), GRUPO).situacao;
+    expect(situacao('PAUSED')).toBe('pausado');
+    expect(situacao('DISABLED')).toBe('desativado');
+    expect(situacao('LIMIT_EXCEEDED')).toBe('limite');
   });
 
   it('modelo feito fora com parte que a tela não edita não vira outra coisa', () => {

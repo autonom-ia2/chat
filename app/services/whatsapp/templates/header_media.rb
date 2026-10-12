@@ -1,4 +1,4 @@
-# O arquivo do topo (foto, vídeo ou documento) de um modelo quando ele é alterado ou duplicado (#1380). O handle que a
+# O arquivo do topo (foto, vídeo ou documento) de um modelo quando ele é alterado (#1380). O handle que a
 # Meta deu na criação expira, então nunca é reaproveitado: sobe de novo o arquivo guardado no perfil
 # (`WhatsappTemplateProfile#header_file`). Sem arquivo guardado, a pessoa escolhe o arquivo de novo (media_required).
 # Incluído no `Whatsapp::Templates::Manager`; usa `client` e `profile_for` dele.
@@ -17,16 +17,6 @@ module Whatsapp::Templates::HeaderMedia
     end
   end
 
-  def copy_components(components, handle)
-    Array(components).map do |component|
-      component = component.deep_dup
-      next component unless media_header?(component)
-      raise Whatsapp::Templates::Manager::Refused, 'media_required' if handle.blank?
-
-      component.merge('example' => { 'header_handle' => [handle] })
-    end
-  end
-
   # Alterar sem arquivo novo: a tela manda o topo sem handle.
   def assume_stored_media(body, template)
     return body unless media_pending?(body['components']) && profile_for(template)&.header_file&.attached?
@@ -38,10 +28,6 @@ module Whatsapp::Templates::HeaderMedia
     return content unless media_pending?(content['components'])
 
     content.merge('components' => fill_media(content['components'], reupload(profile_for(template))))
-  end
-
-  def media_header_in?(components)
-    Array(components).any? { |component| media_header?(component) }
   end
 
   def media_pending?(components)

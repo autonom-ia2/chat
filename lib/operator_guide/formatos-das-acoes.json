@@ -886,7 +886,7 @@
     "origem": [
       "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:31",
       "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:32",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:57"
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:53"
     ],
     "sem_corpo": true
   },
@@ -6671,10 +6671,10 @@
     "modelo": "Crm::Card",
     "origem": [
       "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:27",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:73",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:76",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:69",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:72",
       "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:28",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:57"
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:53"
     ],
     "sem_corpo": false
   },
@@ -16946,49 +16946,9 @@
     "modelo": "Crm::Card",
     "origem": [
       "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:23",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:73",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:76",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:57"
-    ],
-    "sem_corpo": false
-  },
-  "POST inboxes/:inbox_id/whatsapp_templates/:id/duplicate": {
-    "campos": {
-      "category": {},
-      "components": {
-        "tipo": "lista",
-        "tipo_pela_leitura": "uso"
-      },
-      "fields": {
-        "tipo": "objeto_livre"
-      },
-      "friendly_name": {},
-      "header_media": {
-        "campos": {
-          "blob_signed_id": {},
-          "byte_size": {},
-          "content_type": {},
-          "file_name": {},
-          "handle": {}
-        },
-        "tipo": "objeto"
-      },
-      "language": {},
-      "message_send_ttl_seconds": {},
-      "name": {},
-      "parameter_format": {}
-    },
-    "completo": true,
-    "controller": "api/v1/accounts/inboxes/whatsapp_templates#duplicate",
-    "corpo_plano": false,
-    "envelope": "template",
-    "modelo": "Crm::Card",
-    "origem": [
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:36",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:73",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:76",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:37",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:57"
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:69",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:72",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:53"
     ],
     "sem_corpo": false
   },
@@ -17003,10 +16963,10 @@
       "leitura crua sem tipo: file (repassada a manager.upload)"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:40",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:43",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:41",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:57"
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:36",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:39",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:37",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:53"
     ],
     "sem_corpo": false
   },
@@ -24160,10 +24120,10 @@
     "modelo": "Crm::Card",
     "origem": [
       "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:27",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:73",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:76",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:69",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:72",
       "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:28",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:57"
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:53"
     ],
     "sem_corpo": false
   },
