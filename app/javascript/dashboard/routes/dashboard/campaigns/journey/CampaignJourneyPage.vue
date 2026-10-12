@@ -490,7 +490,11 @@ useOnEnter(fetchAll);
             <p class="mb-0">
               <span
                 class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium"
-                :class="STATUS_CLASSES[row.status]"
+                :class="
+                  row.stopReason
+                    ? STATUS_CLASSES[JOURNEY_STATUSES.PAUSED]
+                    : STATUS_CLASSES[row.status]
+                "
               >
                 {{ rowStatusLabel(row) }}
               </span>

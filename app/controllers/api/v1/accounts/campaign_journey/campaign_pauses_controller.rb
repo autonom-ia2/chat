@@ -21,8 +21,9 @@ class Api::V1::Accounts::CampaignJourney::CampaignPausesController < Api::V1::Ac
 
   def index
     pauses = CampaignPause.in_effect.where(account_id: Current.account.id, pausable_type: 'Campaign')
-                          .includes(:pausable).order(paused_at: :desc).limit(LIST_LIMIT)
-    render json: { payload: pauses.filter_map { |pause| list_item(pause) } }
+                          .includes(pausable: { inbox: :channel }).order(paused_at: :desc).limit(LIST_LIMIT)
+    readiness = ::CampaignPauses::ResumeReadiness.new(Current.account)
+    render json: { payload: pauses.filter_map { |pause| list_item(pause, readiness) } }
   end
 
   def resume
@@ -34,26 +35,15 @@ class Api::V1::Accounts::CampaignJourney::CampaignPausesController < Api::V1::Ac
 
   private
 
-  def list_item(pause)
+  def list_item(pause, readiness)
     campaign = pause.pausable
     return unless campaign
 
     pause.payload.merge(
       campaign: { id: campaign.id, display_id: campaign.display_id, title: campaign.title, inbox_id: campaign.inbox_id,
                   scheduled_at: campaign.scheduled_at },
-      ready_to_resume: ready_to_resume?(campaign)
+      ready_to_resume: readiness.ready?(campaign)
     )
-  end
-
-  # "Retomar" só passa com o modelo aprovado de novo e igual ao que a campanha guardou. Confere pela lista guardada da
-  # caixa (sem chamar a Meta por campanha); no disparo a conferência pergunta à Meta de novo.
-  def ready_to_resume?(campaign)
-    return true if campaign.template_params.blank?
-
-    ::Whatsapp::Templates::DispatchCheck.new(campaign, lookup: false).call.ok?
-  rescue StandardError => e
-    Rails.logger.warn "[CampaignPauses] campaign=#{campaign.id} ready_to_resume check failed: #{e.class.name}"
-    false
   end
 
   def authorize_index

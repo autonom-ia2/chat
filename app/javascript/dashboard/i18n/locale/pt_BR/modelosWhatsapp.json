@@ -611,7 +611,8 @@
       "NAO_RETOMOU": "Esta campanha não pode ser retomada: ela já começou a enviar ou já foi retomada.",
       "RETOMAR_FALHOU": "Não conseguimos retomar agora. Tente de novo.",
       "CORRIJA_PRIMEIRO": "Corrija o modelo primeiro.",
-      "VER_MODELO": "Abrir “{modelo}”"
+      "VER_MODELO": "Abrir “{modelo}”",
+      "AGUARDE_CONFERENCIA": "Ainda não deu para conferir o modelo com o WhatsApp. Retomar libera quando a conferência passar."
     },
     "PONTE": {
       "CAIXA_RECONECTAR": "{nome} · precisa reconectar",

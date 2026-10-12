@@ -119,6 +119,17 @@ RSpec.describe 'Campaign journey campaign pauses API (#1329)', :aggregate_failur
       expect(a_request(:any, ->(uri) { uri.host == 'graph.facebook.com' })).not_to have_been_made
     end
 
+    it 'reads the freshest list among the inboxes of the same WhatsApp account' do
+      channel.update_columns(message_templates: [CampaignJourneyHelpers::JOURNEY_TEMPLATE.merge('status' => 'PAUSED')], # rubocop:disable Rails/SkipsModelValidations
+                             message_templates_last_updated: 2.hours.ago)
+      sibling = create(:channel_whatsapp, account: account, provider: 'whatsapp_cloud', sync_templates: false, validate_provider_config: false)
+      sibling.update_columns(message_templates: [CampaignJourneyHelpers::JOURNEY_TEMPLATE], message_templates_last_updated: 1.minute.ago) # rubocop:disable Rails/SkipsModelValidations
+
+      list
+
+      expect(response.parsed_body['payload'].sole['ready_to_resume']).to be(true)
+    end
+
     it 'keeps the old campaigns list working with a paused campaign (account without the journey)' do
       with_modified_env(CAMPAIGN_JOURNEY_ENABLED: 'false') do
         get "/api/v1/accounts/#{account.id}/campaigns", headers: headers

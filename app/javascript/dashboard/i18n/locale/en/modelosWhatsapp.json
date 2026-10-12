@@ -611,7 +611,8 @@
       "NAO_RETOMOU": "This campaign cannot be resumed: it already started sending or was resumed before.",
       "RETOMAR_FALHOU": "We could not resume now. Try again.",
       "CORRIJA_PRIMEIRO": "Fix the template first.",
-      "VER_MODELO": "Open “{modelo}”"
+      "VER_MODELO": "Open “{modelo}”",
+      "AGUARDE_CONFERENCIA": "We could not check the template with WhatsApp yet. Resume unlocks when the check passes."
     },
     "PONTE": {
       "CAIXA_RECONECTAR": "{nome} · needs reconnecting",

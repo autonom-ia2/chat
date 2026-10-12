@@ -80,12 +80,11 @@ class Whatsapp::Templates::Usage
   end
 
   def campaign_rows
-    paused = paused_campaign_ids
-    Campaign.where(account_id: account.id, inbox_id: inbox_ids, campaign_status: OPEN_CAMPAIGNS)
-            .where("template_params ->> 'name' = ?", @name)
-            .where("LOWER(template_params ->> 'language') = ?", @language.downcase)
-            .order(:id)
-            .map { |campaign| campaign_row(campaign, paused.include?(campaign.id)) }
+    campaigns = Campaign.where(account_id: account.id, inbox_id: inbox_ids, campaign_status: OPEN_CAMPAIGNS)
+                        .where("template_params ->> 'name' = ?", @name)
+                        .where("LOWER(template_params ->> 'language') = ?", @language.downcase)
+    paused = paused_campaign_ids(campaigns)
+    campaigns.order(:id).map { |campaign| campaign_row(campaign, paused.include?(campaign.id)) }
   end
 
   def campaign_row(campaign, paused)
@@ -93,8 +92,10 @@ class Whatsapp::Templates::Usage
       paused: paused }
   end
 
-  def paused_campaign_ids
-    CampaignPause.in_effect.where(account_id: account.id, pausable_type: 'Campaign').pluck(:pausable_id).to_set
+  # Só as pausas abertas das campanhas deste modelo.
+  def paused_campaign_ids(campaigns)
+    CampaignPause.in_effect.where(account_id: account.id, pausable_type: 'Campaign', pausable_id: campaigns.select(:id))
+                 .pluck(:pausable_id).to_set
   end
 
   def booking_page_rows

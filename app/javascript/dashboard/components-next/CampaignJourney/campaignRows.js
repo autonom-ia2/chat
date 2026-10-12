@@ -132,23 +132,26 @@ const CHATWOOT_ROUTES = {
   }),
 };
 
-// Fork (#1332): a campaign with an open pause (campaign_pauses, #1329) is shown as stopped, with
-// the short reason; only the label changes, nothing about the campaign itself.
-const stoppedStatus = (campaign, channel, stopReason) =>
-  stopReason ? JOURNEY_STATUSES.PAUSED : chatwootStatus(campaign, channel);
+// Fork (#1332): a campaign with an open pause (campaign_pauses, #1329) that still waits to go
+// (active or processing) carries `stopReason`; the page shows "Parada" and the short reason. The
+// status, date, filters and counters stay the ones the campaign really has.
+const WAITING_STATUSES = ['active', 'processing'];
+const stopReasonOf = (campaign, pauses) =>
+  WAITING_STATUSES.includes(campaign.campaign_status)
+    ? pauses[campaign.id] || ''
+    : '';
 
 const fromChatwootCampaign = (campaign, pauses = {}) => {
   const channel = chatwootChannel(campaign);
   if (!channel) return null;
-  const stopReason =
-    campaign.campaign_status === 'completed' ? '' : pauses[campaign.id] || '';
+  const stopReason = stopReasonOf(campaign, pauses);
   return datedRow(
     {
       key: `${channel}-${campaign.id}`,
       channel,
       name: campaign.title,
       detail: campaign.inbox?.name || '',
-      status: stoppedStatus(campaign, channel, stopReason),
+      status: chatwootStatus(campaign, channel),
       stopReason,
       sent: null,
       total: null,

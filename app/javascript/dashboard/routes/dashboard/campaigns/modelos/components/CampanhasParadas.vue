@@ -120,9 +120,13 @@ const retomar = async campanha => {
             data-corrija-primeiro
             class="inline-flex flex-wrap items-center gap-x-1 text-sm font-medium text-n-amber-11"
           >
-            {{ $t('MODELOS_WHATSAPP.PARADAS.CORRIJA_PRIMEIRO') }}
+            {{
+              campanha.motivo === 'nao_conferido'
+                ? $t('MODELOS_WHATSAPP.PARADAS.AGUARDE_CONFERENCIA')
+                : $t('MODELOS_WHATSAPP.PARADAS.CORRIJA_PRIMEIRO')
+            }}
             <router-link
-              v-if="campanha.modeloId"
+              v-if="campanha.modeloId && campanha.motivo !== 'nao_conferido'"
               :to="{
                 name: 'modelos_whatsapp_modelo',
                 params: { id: campanha.modeloId },
