@@ -201,6 +201,18 @@ RSpec.describe CampaignPauses::WhatsappDispatchGate, :aggregate_failures do
       expect(channel.reload.message_templates).to eq([other, from_meta])
     end
 
+    it 'Meta answered without parameter_format (field refused): updates only an existing entry, never adds one' do
+      channel.update_columns(message_templates: [other]) # rubocop:disable Rails/SkipsModelValidations
+      sent = stub_graph_messages
+      stub_meta_template_lookup([template])
+
+      dispatch
+
+      expect(sent).to be_empty
+      expect(channel.reload.message_templates).to eq([other])
+      expect(CampaignPause.open_for(campaign)).to have_attributes(source: 'system', reason_code: 'template_missing')
+    end
+
     it 'pauses by the system with template_missing, sending nothing, when the send would not find the template' do
       channel.update_columns(message_templates: [other]) # rubocop:disable Rails/SkipsModelValidations
       allow(Whatsapp::Templates::ChannelList).to receive(:upsert!).and_raise(ActiveRecord::LockWaitTimeout)
@@ -223,13 +235,11 @@ RSpec.describe CampaignPauses::WhatsappDispatchGate, :aggregate_failures do
     it 'locks only the campaign inbox row, once, with no HTTP call while the lock is held' do
       channel.update_columns(message_templates: [template.merge('status' => 'PAUSED')]) # rubocop:disable Rails/SkipsModelValidations
       inside_lock = false
-      allow_any_instance_of(Channel::Whatsapp).to receive(:with_lock).and_wrap_original do |original, *args, &block| # rubocop:disable RSpec/AnyInstance
-        original.call(*args) do
-          inside_lock = true
-          block.call
-        ensure
-          inside_lock = false
-        end
+      allow(Whatsapp::Templates::ChannelList).to receive(:write!).and_wrap_original do |original, *args, **options, &block|
+        inside_lock = true
+        original.call(*args, **options, &block)
+      ensure
+        inside_lock = false
       end
       http_inside_lock = []
       WebMock.after_request { http_inside_lock << inside_lock }

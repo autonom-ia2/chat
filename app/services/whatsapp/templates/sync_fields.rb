@@ -26,7 +26,11 @@ module Whatsapp::Templates::SyncFields
   NEXT_LEVEL = { 'full' => 'minimal', 'minimal' => 'none' }.freeze
   # A Graph responde 400 com o código 100 quando não reconhece um parâmetro (um campo, por exemplo).
   INVALID_PARAMETER = 100
-  NETWORK_ERRORS = (Crm::Ai::ResponsesClient::NETWORK_ERRORS + [HTTParty::Error, Timeout::Error]).freeze
+  NETWORK_ERRORS = (Crm::Ai::ResponsesClient::NETWORK_ERRORS +
+                    [HTTParty::Error, Timeout::Error, OpenSSL::SSL::SSLError, Errno::EHOSTUNREACH, Errno::ENETUNREACH]).freeze
+  TIMEOUT_SECONDS = 30
+  # Teto de páginas: uma WABA tem no máximo alguns milhares de modelos; passar disso é cursor em laço.
+  MAX_PAGES = 500
 
   # code: 'ok' | 'meta_unreachable' (5xx/429/rede) | 'permission_denied' (token ou permissão) | 'meta_refused' (outro 4xx)
   #       | 'unexpected_body' (2xx sem a lista)
@@ -50,7 +54,8 @@ module Whatsapp::Templates::SyncFields
     whatsapp_channel.mark_message_templates_updated
     base = Channel::Whatsapp.where(id: whatsapp_channel.id).pick(:message_templates)
     templates = fetch_whatsapp_templates
-    Whatsapp::Templates::ChannelList.replace!(whatsapp_channel, templates, base: base)
+    # Como no Chatwoot: resposta vazia não apaga a lista guardada (uma WABA sem nenhum modelo é rara; apagar por engano não).
+    Whatsapp::Templates::ChannelList.replace!(whatsapp_channel, templates, base: base) if templates.any?
     Result.new(code: 'ok', count: templates.size)
   rescue Failed => e
     Result.new(code: e.code, count: 0)
@@ -62,10 +67,14 @@ module Whatsapp::Templates::SyncFields
   # Todas as páginas ou `Failed`; nunca uma lista parcial.
   def fetch_whatsapp_templates(after: nil)
     templates = []
+    cursors = []
     loop do
       data, after = fetch_templates_page(after)
       templates.concat(data)
       return templates if after.blank?
+
+      endless_pagination! if cursors.include?(after) || cursors.size >= MAX_PAGES
+      cursors << after
     end
   end
 
@@ -75,7 +84,8 @@ module Whatsapp::Templates::SyncFields
     query = sync_fields_level == 'none' ? {} : { fields: LEVELS.fetch(sync_fields_level) }
     query[:after] = after if after.present?
     response = HTTParty.get("#{business_account_path}/message_templates",
-                            headers: { 'Authorization' => "Bearer #{whatsapp_channel.template_access_token}" }, query: query)
+                            headers: { 'Authorization' => "Bearer #{whatsapp_channel.template_access_token}" }, query: query,
+                            timeout: TIMEOUT_SECONDS)
     if sync_fields_level != 'none' && fields_refused?(response)
       lower_fields_level(response)
       return fetch_templates_page(after)
@@ -94,6 +104,11 @@ module Whatsapp::Templates::SyncFields
     end
 
     [data, body.dig('paging', 'cursors', 'after')]
+  end
+
+  def endless_pagination!
+    log_sync_failure('unexpected_body', 'pagination=endless')
+    raise Failed, 'unexpected_body'
   end
 
   def sync_fields_level

@@ -159,6 +159,17 @@ RSpec.describe Whatsapp::Templates::SyncFields do
       expect(channel.reload.message_templates).to eq([old])
     end
 
+    it 'cursor que volta (paginação sem fim) e erro de SSL: falham sem gravar' do
+      stub_request(:get, url).with(query: { 'fields' => fields }).to_return(page([complete], 'cursor-1'))
+      stub_request(:get, url).with(query: { 'fields' => fields, 'after' => 'cursor-1' }).to_return(page([bare], 'cursor-1'))
+      expect(channel.provider_service.sync_templates.code).to eq('unexpected_body')
+
+      WebMock.reset!
+      stub_request(:get, url).with(query: hash_including('fields' => fields)).to_raise(OpenSSL::SSL::SSLError)
+      expect(channel.provider_service.sync_templates.code).to eq('meta_unreachable')
+      expect(channel.reload.message_templates).to eq([old])
+    end
+
     it 'sucesso: devolve ok com a contagem, troca a lista e renova o carimbo' do
       stub_request(:get, url).with(query: { 'fields' => fields }).to_return(page([complete, bare]))
 
@@ -170,11 +181,11 @@ RSpec.describe Whatsapp::Templates::SyncFields do
       expect(channel.message_templates_last_updated).to be_within(5.seconds).of(Time.current)
     end
 
-    it 'a WABA sem nenhum modelo grava a lista vazia (a falha não é mais confundida com lista vazia)' do
+    it 'resposta vazia da Meta: ok, mas não apaga a lista guardada (como no Chatwoot)' do
       stub_request(:get, url).with(query: { 'fields' => fields }).to_return(page([]))
 
       expect(channel.provider_service.sync_templates).to be_ok
-      expect(channel.reload.message_templates).to eq([])
+      expect(channel.reload.message_templates).to eq([old])
     end
 
     it 'o que a tela gravou enquanto o sync esperava a Meta não é apagado pelo sync' do
@@ -188,6 +199,15 @@ RSpec.describe Whatsapp::Templates::SyncFields do
 
       expect(channel.reload.message_templates).to eq([complete, created])
     end
+  end
+
+  # O sync roda no after_create do canal (o mesmo caminho do Chatwoot): a caixa nova já nasce com a lista.
+  it 'roda no after_create de uma caixa nova e grava a lista' do
+    stub_request(:get, %r{/message_templates}).to_return(page([bare]))
+
+    created = create(:channel_whatsapp, provider: 'whatsapp_cloud', validate_provider_config: false, message_templates: [])
+
+    expect(created.reload.message_templates).to eq([bare])
   end
 
   # Provas pedidas pela Orquestração (#1382): o sync vale para toda caixa WhatsApp Cloud, com ou sem flag.
@@ -230,13 +250,11 @@ RSpec.describe Whatsapp::Templates::SyncFields do
     it 'a trava é só na linha desta caixa e nenhuma chamada HTTP acontece com a trava aberta' do
       inside_lock = false
       http_inside_lock = []
-      allow_any_instance_of(Channel::Whatsapp).to receive(:with_lock).and_wrap_original do |original, *args, &block| # rubocop:disable RSpec/AnyInstance
-        original.call(*args) do
-          inside_lock = true
-          block.call
-        ensure
-          inside_lock = false
-        end
+      allow(Whatsapp::Templates::ChannelList).to receive(:write!).and_wrap_original do |original, *args, **options, &block|
+        inside_lock = true
+        original.call(*args, **options, &block)
+      ensure
+        inside_lock = false
       end
       stub_request(:get, url).with(query: { 'fields' => fields }).to_return do
         http_inside_lock << inside_lock

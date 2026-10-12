@@ -197,7 +197,7 @@ describe Whatsapp::OneoffCampaignService do
 
         expect(Whatsapp::TemplateProcessorService).to receive(:new)
           .with(channel: whatsapp_channel, template_params: template_params)
-          .and_call_original
+          .at_least(:once).and_call_original
 
         described_class.new(campaign: campaign).perform
       end

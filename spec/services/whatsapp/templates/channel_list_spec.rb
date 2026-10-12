@@ -11,17 +11,40 @@ RSpec.describe Whatsapp::Templates::ChannelList do
   before { channel.update_columns(message_templates: [aviso, promo]) } # rubocop:disable Rails/SkipsModelValidations
 
   describe '.upsert!' do
-    it 'troca a entrada pelo id, mantém os campos que o item não traz e não mexe nas outras' do
-      described_class.upsert!(channel, { 'id' => '1', 'name' => 'aviso', 'language' => 'pt_BR', 'status' => 'APPROVED' })
+    it 'merge: troca a entrada pelo id, mantém os campos que o item não traz e não mexe nas outras' do
+      described_class.upsert!(channel, { 'id' => '1', 'name' => 'aviso', 'language' => 'pt_BR', 'status' => 'APPROVED' }, merge: true)
 
       expect(channel.reload.message_templates).to eq([aviso.merge('status' => 'APPROVED'), promo])
     end
 
-    it 'sem id, acha pelo nome e idioma (sem diferença de maiúscula no idioma)' do
-      described_class.upsert!(channel, { 'name' => 'promo', 'language' => 'PT_br', 'status' => 'PAUSED' })
+    it 'merge sem id: acha pelo nome e idioma (sem diferença de maiúscula no idioma)' do
+      described_class.upsert!(channel, { 'name' => 'promo', 'language' => 'PT_br', 'status' => 'PAUSED' }, merge: true)
 
       expect(channel.reload.message_templates.last).to include('id' => '2', 'status' => 'PAUSED')
       expect(channel.message_templates.size).to eq(2)
+    end
+
+    it 'sem merge: troca a entrada inteira (item completo, campos velhos como o motivo de recusa somem)' do
+      channel.update_columns(message_templates: [aviso.merge('rejected_reason' => 'INVALID_FORMAT'), promo]) # rubocop:disable Rails/SkipsModelValidations
+      approved = { 'id' => '1', 'name' => 'aviso', 'language' => 'pt_BR', 'status' => 'APPROVED' }
+
+      described_class.upsert!(channel, approved)
+
+      expect(channel.reload.message_templates).to eq([approved, promo])
+    end
+
+    it 'modelo apagado e criado de novo na Meta (outro id, mesmo nome e idioma) troca a entrada, sem duplicar' do
+      recreated = { 'id' => '99', 'name' => 'aviso', 'language' => 'pt_BR', 'status' => 'PENDING' }
+
+      described_class.upsert!(channel, recreated)
+
+      expect(channel.reload.message_templates).to eq([recreated, promo])
+    end
+
+    it 'only_existing: não acrescenta modelo que não está na lista' do
+      described_class.upsert!(channel, { 'name' => 'novo', 'language' => 'en' }, merge: true, only_existing: true)
+
+      expect(channel.reload.message_templates).to eq([aviso, promo])
     end
 
     it 'modelo que não está na lista entra no fim' do
@@ -36,7 +59,7 @@ RSpec.describe Whatsapp::Templates::ChannelList do
       stale = Channel::Whatsapp.find(channel.id)
       described_class.upsert!(channel, { 'id' => '3', 'name' => 'novo', 'language' => 'en' })
 
-      described_class.upsert!(stale, { 'id' => '1', 'status' => 'APPROVED' })
+      described_class.upsert!(stale, { 'id' => '1', 'status' => 'APPROVED' }, merge: true)
 
       expect(channel.reload.message_templates.pluck('id')).to eq(%w[1 2 3])
       expect(stale.message_templates.size).to eq(3)
@@ -66,6 +89,15 @@ RSpec.describe Whatsapp::Templates::ChannelList do
 
       expect(channel.reload.message_templates).to eq(from_meta)
       expect(channel.message_templates_last_updated).to be_within(5.seconds).of(Time.current)
+    end
+
+    it 'lista zerada durante a busca (troca de conta do WhatsApp): não grava nem carimba' do
+      channel.update_columns(message_templates: [], message_templates_last_updated: nil) # rubocop:disable Rails/SkipsModelValidations
+
+      described_class.replace!(channel, from_meta, base: base)
+
+      expect(channel.reload.message_templates).to eq([])
+      expect(channel.message_templates_last_updated).to be_nil
     end
 
     it 'mantém o que outro escritor criou, mudou ou apagou enquanto o sync buscava' do

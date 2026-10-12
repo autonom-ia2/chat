@@ -62,6 +62,10 @@ RSpec.describe Whatsapp::Templates::HeaderMedia, :aggregate_failures do
       end
     end
 
+    it 'topo que não é objeto (texto solto no pedido): recusa header_media_url_invalid, sem erro 500' do
+      expect(refusal_code('https://exemplo.com/a.png')).to eq('header_media_url_invalid')
+    end
+
     it 'link de tipo diferente do topo do modelo: recusa header_media_type_mismatch' do
       expect(refusal_code({ 'media_url' => 'https://exemplo.com/v.mp4', 'media_type' => 'video' })).to eq('header_media_type_mismatch')
     end

@@ -37,12 +37,19 @@ module Whatsapp::Templates::HeaderMedia
     type = media_type(template)
     return header unless type
 
-    header = header.to_h.stringify_keys
-    raise Invalid, 'header_media_type_mismatch' if header['media_type'].present? && !header['media_type'].to_s.casecmp?(type)
-
+    header = checked_header!(header, type)
     url = header['media_url'].to_s.strip
     url.present? ? check_url!(url) : (profile_file(inbox, template) || raise(Invalid, 'header_media_required'))
     header.merge('media_url' => url, 'media_type' => type)
+  end
+
+  def checked_header!(header, type)
+    raise Invalid, 'header_media_url_invalid' unless header.nil? || header.is_a?(Hash)
+
+    header = header.to_h.stringify_keys
+    raise Invalid, 'header_media_type_mismatch' if header['media_type'].present? && !header['media_type'].to_s.casecmp?(type)
+
+    header
   end
 
   def check_url!(url)

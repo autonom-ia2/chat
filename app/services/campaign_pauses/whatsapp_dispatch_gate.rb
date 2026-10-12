@@ -77,7 +77,8 @@ module CampaignPauses::WhatsappDispatchGate
   end
 
   def keep_meta_version(template)
-    Whatsapp::Templates::ChannelList.upsert!(channel, template)
+    # Sem parameter_format (a Graph recusou o campo), só atualiza a entrada que o sync já gravou: o envio precisa do formato.
+    Whatsapp::Templates::ChannelList.upsert!(channel, template, merge: true, only_existing: !template.key?('parameter_format'))
   rescue StandardError => e
     # The send-list check right after decides: the item may already be there from the sync.
     Rails.logger.error "[CampaignPauses] campaign=#{campaign.id} meta template not kept: #{e.class.name}"

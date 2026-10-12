@@ -43,8 +43,11 @@ class Whatsapp::Templates::MetaLookup
   def field_refused?(response)
     return false unless response.code.to_i == 400
 
-    error = response.parsed_response.is_a?(Hash) ? response.parsed_response['error'] : nil
+    body = response.parsed_response
+    error = body.is_a?(Hash) ? body['error'] : nil
     error.is_a?(Hash) && error['code'].to_i == INVALID_PARAMETER
+  rescue JSON::ParserError
+    false
   end
 
   def askable?
