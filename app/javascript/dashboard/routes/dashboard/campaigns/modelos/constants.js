@@ -41,11 +41,9 @@ export const OBJETIVOS = [
     tom: 'bg-n-ruby-3 text-n-ruby-11',
     tipo: 'divulgacao',
     botoes: [
-      {
-        tipo: 'site',
-        chaveTexto: 'VER_OFERTAS',
-        valor: 'https://hub2you.com.br/ofertas',
-      },
+      // Sem endereço de fábrica: cada empresa escreve o do próprio site, e a
+      // conferência não deixa enviar sem ele.
+      { tipo: 'site', chaveTexto: 'VER_OFERTAS' },
     ],
   },
   {
@@ -53,8 +51,13 @@ export const OBJETIVOS = [
     icone: 'i-lucide-receipt-text',
     tom: 'bg-n-violet-3 text-n-violet-11',
     tipo: 'aviso',
-    topo: 'documento',
-    botoes: [{ tipo: 'copiar_codigo', chaveTexto: 'COPIAR_CODIGO' }],
+    // Lembrete de pagamento (#1380): só texto, aviso de serviço. Sem boleto no
+    // topo (a campanha manda o mesmo arquivo para todos) e sem "Copiar código"
+    // (só existe em divulgação). A segunda via vai pela conversa, uma a uma.
+    botoes: [
+      { tipo: 'resposta', chaveTexto: 'SEGUNDA_VIA' },
+      { tipo: 'resposta', chaveTexto: 'JA_PAGUEI' },
+    ],
   },
   {
     chave: 'retomar',

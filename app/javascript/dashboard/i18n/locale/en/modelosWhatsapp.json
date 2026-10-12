@@ -226,32 +226,32 @@
       "boas_vindas": {
         "TITULO": "Welcome",
         "PARA": "For people who just arrived.",
-        "TEXTO": "Hello, [nome_cliente]! Glad to have you with us at [nome_empresa]. Count on us here whenever you need."
+        "TEXTO": "Hello, [nome_cliente]! This is [nome_empresa]. Glad to have you with us. Whenever you need anything, just send us a message here."
       },
       "lembrete": {
         "TITULO": "Appointment reminder",
         "PARA": "To remind the customer of the booked time.",
-        "TEXTO": "Hello, [nome_cliente]! Just a reminder of your appointment on [data], at [horario]. Can we confirm?"
+        "TEXTO": "Hello, [nome_cliente]! A reminder of your appointment at [nome_empresa]: on [data], at [horario]. Do you confirm? Tap one of the options below."
       },
       "pesquisa": {
         "TITULO": "Satisfaction survey",
-        "PARA": "To learn how the service went.",
-        "TEXTO": "Hello, [nome_cliente]! How was your service with us? Your opinion helps a lot."
+        "PARA": "To learn how a service that already happened went.",
+        "TEXTO": "Hello, [nome_cliente]! You were served by [nome_empresa] on [data]. How was it? Tap one of the options below."
       },
       "promocao": {
         "TITULO": "Promotion",
         "PARA": "To tell about an offer with a deadline.",
-        "TEXTO": "Hi, [nome_cliente]! Only until [data]: [desconto] off the whole store. Want to take it?"
+        "TEXTO": "Hi, [nome_cliente]! Until [data], you get [desconto] off at [nome_empresa]. Want to take it? See the offers in the button below."
       },
       "cobranca": {
-        "TITULO": "Bill or payment slip",
-        "PARA": "To send the bill or remind of the due date.",
-        "TEXTO": "Hello, [nome_cliente]. Your bill of [valor] is due on [data]. The payment code is in the button below."
+        "TITULO": "Payment reminder",
+        "PARA": "To remind the customer of a payment that is coming due.",
+        "TEXTO": "Hello, [nome_cliente]. A reminder from [nome_empresa]: the payment of [valor] is due on [data]. If you have already paid, please disregard. If you need a copy of the bill, tap the button below."
       },
       "retomar": {
         "TITULO": "Resume conversation",
         "PARA": "To talk again to someone who went quiet.",
-        "TEXTO": "Hi, [nome_cliente]! Any questions left from our last conversation? Just reply here and we'll pick it up."
+        "TEXTO": "Hi, [nome_cliente]! This is [nome_empresa]. Any questions left from our last conversation? Just reply here and we will pick it up."
       },
       "em_branco": {
         "TITULO": "Start from scratch",
@@ -267,7 +267,9 @@
       "PODE_MELHORAR": "Could be better",
       "VER_OFERTAS": "See offers",
       "COPIAR_CODIGO": "Copy code",
-      "QUERO_CONTINUAR": "Let's continue"
+      "QUERO_CONTINUAR": "Let's continue",
+      "SEGUNDA_VIA": "I need a copy of the bill",
+      "JA_PAGUEI": "I have already paid"
     },
     "CAMPOS": {
       "nome_cliente": {
@@ -276,7 +278,7 @@
       },
       "nome_empresa": {
         "ROTULO": "Business name",
-        "EXEMPLO": "Hub2you"
+        "EXEMPLO": "Your Company"
       },
       "data": {
         "ROTULO": "Date",
@@ -296,7 +298,7 @@
       },
       "link": {
         "ROTULO": "Link",
-        "EXEMPLO": "hub2you.com.br/b/123"
+        "EXEMPLO": "yourstore.com/b/123"
       },
       "codigo": {
         "ROTULO": "Code",
@@ -373,7 +375,7 @@
       "ESCOLHER_ARQUIVO": "Pick file",
       "TROCAR_ARQUIVO": "Change file",
       "RODAPE": "Footer",
-      "RODAPE_EXEMPLO": "E.g.: Hub2you · open Monday to Friday",
+      "RODAPE_EXEMPLO": "E.g.: Your Company · open Monday to Friday",
       "RODAPE_LIMITE": "{n} of {limite} characters",
       "BOTOES": "Buttons",
       "BOTOES_LIMITE": "Up to 10 buttons. Open website: up to 2. Call and copy code: 1 each.",
@@ -522,9 +524,8 @@
         "PARA": "An offer with an end time. The customer sees how long is left.",
         "ETAPA": "Offer",
         "NOME_PADRAO": "Flash offer",
-        "TEXTO": "Hi, [nome_cliente]! There is still time: [desconto] off until the offer ends.",
+        "TEXTO": "Hi, [nome_cliente]! For a short time: [desconto] off. See it in the button below.",
         "TITULO_EXEMPLO": "Today: 30% off",
-        "CUPOM_EXEMPLO": "HUB30",
         "BOTAO": "See offer"
       },
       "catalogo": {

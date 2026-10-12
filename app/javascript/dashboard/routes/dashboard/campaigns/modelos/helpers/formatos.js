@@ -129,7 +129,7 @@ export const rascunhoDoFormato = (chave, { t, ler, exemplosDe }) => {
           {
             tipo: 'site',
             texto: t(`${base}.BOTAO`),
-            valor: 'https://hub2you.com.br/novidades',
+            valor: '',
           },
         ],
       })),
@@ -138,8 +138,8 @@ export const rascunhoDoFormato = (chave, { t, ler, exemplosDe }) => {
       oferta: {
         titulo: t(`${base}.TITULO_EXEMPLO`),
         terminaEm: paraCampoDeData(new Date(Date.now() + 2 * DIA_MS)),
-        link: 'https://hub2you.com.br/ofertas',
-        cupom: t(`${base}.CUPOM_EXEMPLO`),
+        link: '',
+        cupom: '',
       },
     },
     catalogo: { catalogo: { botao: t(`${base}.BOTAO`) } },

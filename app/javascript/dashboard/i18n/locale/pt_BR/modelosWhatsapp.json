@@ -226,32 +226,32 @@
       "boas_vindas": {
         "TITULO": "Boas-vindas",
         "PARA": "Para quem acabou de chegar.",
-        "TEXTO": "Olá, [nome_cliente]! Que bom ter você com a gente na [nome_empresa]. Pode contar com a gente por aqui sempre que precisar."
+        "TEXTO": "Olá, [nome_cliente]! Aqui é da [nome_empresa]. Que bom ter você com a gente. Quando precisar de alguma coisa, é só mandar mensagem por aqui."
       },
       "lembrete": {
         "TITULO": "Lembrete de agendamento",
         "PARA": "Para lembrar o cliente do horário marcado.",
-        "TEXTO": "Olá, [nome_cliente]! Passando para lembrar do seu horário em [data], às [horario]. Podemos confirmar?"
+        "TEXTO": "Olá, [nome_cliente]! Lembrete do seu horário na [nome_empresa]: dia [data], às [horario]. Você confirma? Toque em uma das opções abaixo."
       },
       "pesquisa": {
         "TITULO": "Pesquisa de satisfação",
-        "PARA": "Para saber como foi o atendimento.",
-        "TEXTO": "Olá, [nome_cliente]! Como foi o seu atendimento com a gente? Sua opinião ajuda muito."
+        "PARA": "Para saber como foi um atendimento que já aconteceu.",
+        "TEXTO": "Olá, [nome_cliente]! Você foi atendido pela [nome_empresa] no dia [data]. Como foi esse atendimento? Toque em uma opção abaixo."
       },
       "promocao": {
         "TITULO": "Promoção",
         "PARA": "Para avisar de uma oferta com prazo.",
-        "TEXTO": "Oi, [nome_cliente]! Só até [data]: [desconto] de desconto em toda a loja. Quer aproveitar?"
+        "TEXTO": "Oi, [nome_cliente]! Até [data], você tem [desconto] de desconto na [nome_empresa]. Quer aproveitar? Veja as ofertas no botão abaixo."
       },
       "cobranca": {
-        "TITULO": "Cobrança ou boleto",
-        "PARA": "Para mandar o boleto ou lembrar do vencimento.",
-        "TEXTO": "Olá, [nome_cliente]. O seu boleto de [valor] vence em [data]. O código para pagar está no botão abaixo."
+        "TITULO": "Lembrete de pagamento",
+        "PARA": "Para lembrar o cliente de um pagamento que vai vencer.",
+        "TEXTO": "Olá, [nome_cliente]. Lembrete da [nome_empresa]: o pagamento de [valor] vence em [data]. Se já pagou, pode desconsiderar. Se precisar da segunda via, toque no botão abaixo."
       },
       "retomar": {
         "TITULO": "Retomar conversa",
         "PARA": "Para voltar a falar com quem sumiu.",
-        "TEXTO": "Oi, [nome_cliente]! Ficou alguma dúvida da nossa última conversa? É só responder aqui que a gente continua."
+        "TEXTO": "Oi, [nome_cliente]! Aqui é da [nome_empresa]. Ficou alguma dúvida da nossa última conversa? É só responder aqui que a gente continua."
       },
       "em_branco": {
         "TITULO": "Começar do zero",
@@ -267,7 +267,9 @@
       "PODE_MELHORAR": "Pode melhorar",
       "VER_OFERTAS": "Ver ofertas",
       "COPIAR_CODIGO": "Copiar código",
-      "QUERO_CONTINUAR": "Quero continuar"
+      "QUERO_CONTINUAR": "Quero continuar",
+      "SEGUNDA_VIA": "Quero a segunda via",
+      "JA_PAGUEI": "Já paguei"
     },
     "CAMPOS": {
       "nome_cliente": {
@@ -276,7 +278,7 @@
       },
       "nome_empresa": {
         "ROTULO": "Nome da empresa",
-        "EXEMPLO": "Hub2you"
+        "EXEMPLO": "Sua Empresa"
       },
       "data": {
         "ROTULO": "Data",
@@ -296,7 +298,7 @@
       },
       "link": {
         "ROTULO": "Link",
-        "EXEMPLO": "hub2you.com.br/b/123"
+        "EXEMPLO": "sualoja.com.br/b/123"
       },
       "codigo": {
         "ROTULO": "Código",
@@ -373,7 +375,7 @@
       "ESCOLHER_ARQUIVO": "Escolher arquivo",
       "TROCAR_ARQUIVO": "Trocar arquivo",
       "RODAPE": "Rodapé",
-      "RODAPE_EXEMPLO": "Ex.: Hub2you · atendimento de segunda a sexta",
+      "RODAPE_EXEMPLO": "Ex.: Sua Empresa · atendimento de segunda a sexta",
       "RODAPE_LIMITE": "{n} de {limite} letras",
       "BOTOES": "Botões",
       "BOTOES_LIMITE": "Até 10 botões. Abrir site: até 2. Ligar e copiar código: 1 de cada.",
@@ -522,9 +524,8 @@
         "PARA": "Uma oferta com hora para acabar. O cliente vê quanto tempo falta.",
         "ETAPA": "Oferta",
         "NOME_PADRAO": "Oferta relâmpago",
-        "TEXTO": "Oi, [nome_cliente]! Corre que dá tempo: [desconto] de desconto até a oferta acabar.",
+        "TEXTO": "Oi, [nome_cliente]! Por pouco tempo: [desconto] de desconto. Veja no botão abaixo.",
         "TITULO_EXEMPLO": "Só hoje: 30%",
-        "CUPOM_EXEMPLO": "HUB30",
         "BOTAO": "Ver oferta"
       },
       "catalogo": {
