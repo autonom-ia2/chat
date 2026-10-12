@@ -17,7 +17,10 @@ RSpec.describe 'Modelos do WhatsApp com função personalizada', type: :request 
       'components' => [{ 'type' => 'BODY', 'text' => 'Olá {{1}}, tudo certo?' }] }
   end
 
-  before { channel.update_columns(message_templates: [template]) } # rubocop:disable Rails/SkipsModelValidations
+  before do
+    channel.update_columns(message_templates: [template]) # rubocop:disable Rails/SkipsModelValidations
+    account.enable_features!('whatsapp_templates_journey')
+  end
 
   def role_user(*permissions)
     user = create(:user, account: account, role: :agent)
@@ -55,6 +58,15 @@ RSpec.describe 'Modelos do WhatsApp com função personalizada', type: :request 
     expect(response).to have_http_status(:ok)
     expect(WhatsappTemplatePolicy.new({ user: manager, account: account,
                                         account_user: manager.account_users.find_by(account: account) }, nil).destroy?).to be(true)
+  end
+
+  it 'com whatsapp_templates_manage mas sem a flag da conta, apagar dá 404 sem chamar a Meta' do
+    account.disable_features!('whatsapp_templates_journey')
+
+    call(role_user('whatsapp_templates_manage'), :delete, "#{base}/11")
+
+    expect(response).to have_http_status(:not_found)
+    expect(a_request(:any, ->(uri) { uri.host == 'graph.facebook.com' })).not_to have_been_made
   end
 
   it 'campaign_manage sozinha não abre os modelos' do

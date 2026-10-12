@@ -14,3 +14,4 @@ pt_BR:
       in_use: "Este modelo tem envio agendado. Tire o modelo do que o usa antes de alterar ou apagar."
       in_use_hidden: "Este modelo está em uso onde você não tem acesso. Peça a um administrador."
       invalid_profile: "Confira o nome amigável e os campos deste modelo."
+      feature_disabled: "A gestão de modelos não está liberada para esta conta."

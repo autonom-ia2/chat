@@ -1,7 +1,12 @@
 # API de Modelos do WhatsApp oficial de uma caixa (#1330, épico #1320). Só caixas `whatsapp_cloud` com WABA gravada.
 # A WABA é sempre a da caixa: nenhum parâmetro do pedido escolhe WABA, e o id do modelo só vale se estiver na lista
 # sincronizada desta caixa (e a Meta confirmar que é da WABA dela).
+# Escrever na Meta (criar, editar, apagar, duplicar, subir mídia) só com a flag `whatsapp_templates_journey` na conta:
+# sem ela, 404 antes de qualquer outra coisa. Listar e "onde está em uso" seguem abertos.
 class Api::V1::Accounts::Inboxes::WhatsappTemplatesController < Api::V1::Accounts::BaseController
+  WRITE_ACTIONS = %i[create update destroy duplicate media].freeze
+
+  before_action :ensure_journey_enabled, only: WRITE_ACTIONS
   before_action :fetch_inbox
   before_action :check_authorization
 
@@ -43,6 +48,10 @@ class Api::V1::Accounts::Inboxes::WhatsappTemplatesController < Api::V1::Account
   end
 
   private
+
+  def ensure_journey_enabled
+    render_error('feature_disabled', :not_found) unless Current.account.feature_enabled?('whatsapp_templates_journey')
+  end
 
   def fetch_inbox
     @inbox = Current.account.inboxes.find(params[:inbox_id])

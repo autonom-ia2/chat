@@ -28,6 +28,7 @@ RSpec.describe 'Api::V1::Accounts::Inboxes::WhatsappTemplates', type: :request d
 
   before do
     channel.update_columns(message_templates: [mine, booking, csat]) # rubocop:disable Rails/SkipsModelValidations
+    account.enable_features!('whatsapp_templates_journey')
     allow_any_instance_of(Whatsapp::Templates::MetaClient).to receive(:sleep) # rubocop:disable RSpec/AnyInstance
   end
 
@@ -38,6 +39,38 @@ RSpec.describe 'Api::V1::Accounts::Inboxes::WhatsappTemplates', type: :request d
   def stub_lookup(name, data)
     stub_request(:get, templates_url).with(query: hash_including('name' => name))
                                      .to_return(status: 200, headers: json, body: { data: data }.to_json)
+  end
+
+  # Sem a flag `whatsapp_templates_journey`, nenhuma escrita chega à Meta (apagar lá não tem volta).
+  describe 'sem a flag da conta' do
+    before { account.disable_features!('whatsapp_templates_journey') }
+
+    it 'cada escrita responde 404 sem nenhuma chamada à Meta' do
+      file = Rack::Test::UploadedFile.new(Rails.root.join('spec/assets/avatar.png'), 'image/png')
+      writes = [[:post, base, { template: { name: 'novo', language: 'pt_BR' } }],
+                [:patch, "#{base}/11", { template: { category: 'UTILITY' } }],
+                [:delete, "#{base}/11", {}],
+                [:post, "#{base}/12/duplicate", { template: { name: 'copia' } }]]
+
+      writes.each do |verb, path, params|
+        call(verb, path, params)
+        expect(response).to have_http_status(:not_found), "#{verb} #{path} devolveu #{response.status}"
+        expect(response.parsed_body['error']).to eq('feature_disabled')
+      end
+      post "#{base}/media", params: { file: file }, headers: admin.create_new_auth_token
+      expect(response).to have_http_status(:not_found)
+
+      expect(a_request(:any, graph_host)).not_to have_been_made
+      expect(channel.reload.message_templates.pluck('id')).to eq(%w[11 12 13])
+    end
+
+    it 'listar e "onde está em uso" seguem abertos' do
+      call(:get, base)
+      expect(response).to have_http_status(:ok)
+
+      call(:get, "#{base}/11/usage")
+      expect(response).to have_http_status(:ok)
+    end
   end
 
   describe 'GET index' do

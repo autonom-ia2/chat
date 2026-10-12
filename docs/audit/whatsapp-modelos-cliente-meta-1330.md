@@ -25,6 +25,9 @@ Só backend. Tela (D), Jev (E) e webhook (I) ficam fora.
   `policy_scope(::Crm::Card)`; campanha exige `campaign_view` e página `agendamento_view`. O que a pessoa não vê vira só
   `uso_oculto: true`. Página de agendamento volta só com id e título (sem o link público). Apagar ou alterar conteúdo com qualquer uso devolve 422.
 
+- **Flag `whatsapp_templates_journey`** (bit 16 da `feature_flags_ext_1`, desligada): sem ela, criar, editar, apagar,
+  duplicar e subir mídia respondem 404 antes de qualquer chamada à Meta. Listar e "onde está em uso" seguem abertos.
+
 ## Efeito esperado no deploy
 
 Pedir `fields=` muda o payload do sync: no primeiro sync depois do deploy, a cache de inbox invalida uma vez em todas as

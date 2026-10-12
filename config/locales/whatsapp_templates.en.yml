@@ -14,3 +14,4 @@ en:
       in_use: "This template is scheduled to be sent. Remove it from what uses it before changing or deleting it."
       in_use_hidden: "This template is in use where you do not have access. Ask an administrator."
       invalid_profile: "Check the friendly name and the fields of this template."
+      feature_disabled: "Template management is not enabled for this account."
