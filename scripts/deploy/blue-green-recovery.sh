@@ -73,6 +73,60 @@ switch_listener_destination() {
   # LISTENER_SWITCH_STATUS. Failed confirmation always aborts recovery here.
 }
 
+# Estado EC2 de uma instância. Instância que a AWS já esqueceu (terminada há tempo) conta como terminated;
+# qualquer outro erro da API falha, para ninguém agir sobre um estado que não leu.
+instance_state() {
+  local error_file state status=0
+  error_file=$(mktemp)
+  state=$(aws ec2 describe-instances --instance-ids "$1" \
+    --query 'Reservations[0].Instances[0].State.Name' --output text 2>"$error_file") || status=$?
+  if [ "$status" -ne 0 ]; then
+    if grep -qF InvalidInstanceID.NotFound "$error_file"; then
+      rm -f "$error_file"
+      INSTANCE_STATE=terminated
+      return 0
+    fi
+    cat "$error_file" >&2
+    rm -f "$error_file"
+    return 1
+  fi
+  rm -f "$error_file"
+  INSTANCE_STATE="$state"
+}
+
+# #1350: a green só sai do wait_for_image do user data quando a imagem deste commit está no ECR. Sem a imagem, ela
+# não rodou o deploy.sh nem migration. Retorna 0 só com ImageNotFoundException; imagem presente ou erro = 1.
+green_image_absent() {
+  local error_file status=0
+  error_file=$(mktemp)
+  aws ecr describe-images --repository-name "$1" --image-ids "imageTag=$2" >/dev/null 2>"$error_file" || status=$?
+  if [ "$status" -ne 0 ] && grep -qF ImageNotFoundException "$error_file"; then
+    rm -f "$error_file"
+    return 0
+  fi
+  if [ "$status" -ne 0 ]; then
+    cat "$error_file" >&2
+  fi
+  rm -f "$error_file"
+  return 1
+}
+
+# #1350: termina a green que nunca recebeu a imagem e sai com o status que recebeu (o erro original da limpeza, ou
+# 0). Se a terminação falhar, o job falha mesmo que o resto tenha dado certo.
+terminate_green_without_image() {
+  local status=$1
+  trap - EXIT
+  if aws ec2 terminate-instances --instance-ids "$GREEN_INSTANCE_ID" >/dev/null; then
+    echo "Green $GREEN_INSTANCE_ID terminada: não chegou a receber a imagem (#1350)."
+  else
+    echo "blue_green_unused_green_termination_failed:$GREEN_INSTANCE_ID" >&2
+    if [ "$status" -eq 0 ]; then
+      status=1
+    fi
+  fi
+  exit "$status"
+}
+
 # The helper is shipped by the workflow, never required on an older target.
 # Failure propagates before stopping the remaining worker whenever target is online.
 suspend_instagram_assisted() {

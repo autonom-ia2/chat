@@ -45,9 +45,11 @@ def fake_aws():
                          'modify-listener', 'deregister-targets', 'delete-target-group'), 'elbv2'),
         **dict.fromkeys(('get-parameter', 'put-parameter', 'describe-instance-information',
                          'send-command', 'get-command-invocation'), 'ssm'),
-        **dict.fromkeys(('describe-instances', 'start-instances', 'terminate-instances', 'create-tags'), 'ec2'),
+        **dict.fromkeys(('describe-instances', 'start-instances', 'stop-instances', 'terminate-instances',
+                         'create-tags'), 'ec2'),
+        'describe-images': 'ecr',
     }
-    expected_service = ({'command-executed': 'ssm', 'instance-running': 'ec2',
+    expected_service = ({'command-executed': 'ssm', 'instance-running': 'ec2', 'instance-stopped': 'ec2',
                          'target-deregistered': 'elbv2'}[args[2]] if operation == 'wait' else expected_services[operation])
     assert service == expected_service
     state['calls'].append(args)
@@ -139,10 +141,44 @@ def fake_aws():
         if not state.get('ignore_switch'):
             state['listener'] = action.split('TargetGroupArn=', 1)[1]
         result = {'Listeners': [{'DefaultActions': [{'Type': 'forward', 'TargetGroupArn': state['listener']}]}]}
+    elif operation == 'describe-instances' and '--filters' in args:
+        # Listagem do aviso de green esquecida: saída em texto, uma instância por linha.
+        assert arg('--output') == 'text'
+        assert arg('--query') == "Reservations[].Instances[].[InstanceId,LaunchTime,Tags[?Key=='Name'].Value | [0]]"
+        filters = args[args.index('--filters') + 1:args.index('--query')]
+        assert filters == ['Name=tag:BlueGreenRole,Values=green', 'Name=tag:Project,Values=chatwoot-autonomia',
+                           'Name=tag:Environment,Values=prod', 'Name=instance-state-name,Values=running']
+        result = '\n'.join('\t'.join(row) for row in state.get('running_greens', []))
     elif operation == 'describe-instances':
-        envelope = {'Reservations': [{'Instances': [{'State': {'Name': state.get('instance_state', 'running')}}]}]}
+        instance = arg('--instance-ids')
+        name = state.get('instance_states', {}).get(instance, state.get('instance_state', 'running'))
         assert arg('--query') == 'Reservations[0].Instances[0].State.Name'
+        if name == 'not-found':
+            save()
+            print(f'An error occurred (InvalidInstanceID.NotFound) when calling DescribeInstances: {instance}',
+                  file=sys.stderr)
+            sys.exit(254)
+        if name == 'api-error':
+            save()
+            print('An error occurred (RequestLimitExceeded) when calling DescribeInstances', file=sys.stderr)
+            sys.exit(254)
+        envelope = {'Reservations': [{'Instances': [{'State': {'Name': name}}]}]}
         result = envelope['Reservations'][0]['Instances'][0]['State']['Name']
+    elif operation == 'describe-images':
+        assert arg('--repository-name') == 'repo-test'
+        assert arg('--image-ids') == 'imageTag=sha-test'
+        image = state.get('image', 'absent')
+        if image != 'present':
+            save()
+            code = 'ImageNotFoundException' if image == 'absent' else 'AccessDeniedException'
+            print(f'An error occurred ({code}) when calling DescribeImages', file=sys.stderr)
+            sys.exit(254)
+        result = {'imageDetails': [{'imageTags': ['sha-test']}]}
+    elif operation == 'stop-instances':
+        instance = arg('--instance-ids')
+        state.setdefault('stopped', []).append(instance)
+        state.setdefault('instance_states', {})[instance] = 'stopping'
+        result = {}
     elif operation == 'describe-instance-information':
         envelope = {'InstanceInformationList': [{'PingStatus': 'Online'}]}
         assert arg('--query') == 'InstanceInformationList[0].PingStatus'
@@ -188,7 +224,10 @@ def fake_aws():
             result = {'Status': envelope['Status'], 'Output': envelope['StandardOutputContent'],
                       'Error': envelope['StandardErrorContent']}
     elif operation == 'wait':
-        assert args[2] in ('command-executed', 'instance-running', 'target-deregistered')
+        assert args[2] in ('command-executed', 'instance-running', 'instance-stopped', 'target-deregistered')
+        if args[2] == 'instance-stopped':
+            state.setdefault('instance_states', {})[arg('--instance-ids')] = 'stopped'
+            state.setdefault('waited_stopped', []).append(arg('--instance-ids'))
         if args[2] == 'command-executed':
             instance = state.get('command_coordination_checks', {}).get(arg('--command-id'))
             if instance:
@@ -222,6 +261,9 @@ def fake_aws():
             state['target_deleted_at'] = state['time']
         elif operation == 'terminate-instances':
             state['terminated_at'] = state['time']
+            state.setdefault('terminated', []).append(arg('--instance-ids'))
+        if operation == 'delete-target-group':
+            state.setdefault('deleted_target_groups', []).append(arg('--target-group-arn'))
         result = {}
     else:
         raise AssertionError(f'unsupported fake operation: {service}/{operation}')
@@ -257,6 +299,8 @@ class DeployRecoveryTest(unittest.TestCase):
             'GREEN_TG_ARN': 'tg-green', 'GREEN_INSTANCE_ID': 'i-green',
             'GREEN_WORKER_START_ATTEMPTED': 'true',
             'BLUE_WORKER_STOPPED': 'true',  # Existing recovery cases follow the worker-stop intent step.
+            # Existing recovery cases happen after the image reached ECR (#1350 covers the earlier failures).
+            'GREEN_IMAGE_PUBLISHED': 'true', 'ECR_REPOSITORY': 'repo-test', 'GITHUB_SHA': 'sha-test',
         }
 
     def execute(self, script, **changes):
@@ -1109,6 +1153,262 @@ printf 'shutdown\\n' >> "$REMOTE_LOG"
                     self.assertEqual(result.returncode, 1, 'unknown deploy status must not report successful cleanup')
                     self.assertIn('blue_green_deploy_status_unknown', result.stderr)
                     self.assert_pointers(state, 'tg-blue', 'i-blue')
+
+    # #1350: build falho antes de a green receber a imagem.
+    def before_image(self):
+        """Ambiente da limpeza quando o deploy caiu antes do "Publish runtime image parameter"."""
+        saved = {key: self.env.get(key) for key in ('GREEN_IMAGE_PUBLISHED', 'GREEN_TG_ARN',
+                                                     'GREEN_WORKER_START_ATTEMPTED', 'BLUE_WORKER_STOPPED')}
+        self.env.update({'GREEN_IMAGE_PUBLISHED': 'false', 'GREEN_TG_ARN': '',
+                         'GREEN_WORKER_START_ATTEMPTED': 'false', 'BLUE_WORKER_STOPPED': 'false'})
+
+        def restore():
+            for key, value in saved.items():
+                self.env[key] = value
+        self.addCleanup(restore)
+        # O tráfego nunca saiu da blue.
+        return {'listener': 'tg-blue', 'running_workers': ['i-blue'],
+                'parameters': {'current-tg': 'tg-blue', 'current-instance': 'i-blue',
+                               'previous-tg': 'tg-older', 'previous-instance': 'i-older'}}
+
+    def test_cleanup_without_image_terminates_green_even_when_blue_recovery_fails(self):
+        for workflow in WORKFLOWS:
+            initial = self.before_image()
+            script = run_block(workflow.read_text(), 'Cleanup failed green resources before traffic shift')
+            with self.subTest(stack=workflow.name, scenario='blue-ok'):
+                result, state = self.execute(script, **initial)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(state['terminated'], ['i-green'])
+                self.assertEqual(state['calls'][0][:2], ['ecr', 'describe-images'])
+                # Sem imagem não há migration: nada de sondar o deploy.sh, marcar pending ou esperar drenagem.
+                self.assertFalse(any(command['instance'] == 'i-green' for command in state.get('commands', {}).values()))
+                self.assertNotIn('tags', state)
+                self.assertFalse(any(event[0] == 'sleep' for event in state['events']))
+                self.assert_pointers(state, 'tg-blue', 'i-blue')
+            with self.subTest(stack=workflow.name, scenario='suspension-failed'):
+                result, state = self.execute(script, fail_suspension_instance='i-blue', **initial)
+                # O erro original da blue (o status 1 do helper) não é engolido pela terminação da green.
+                self.assertEqual(result.returncode, 1, result.stderr)
+                self.assertIn('instagram_recovery_suspension_failed:i-blue', result.stderr)
+                self.assertIn('não chegou a receber a imagem', result.stdout)
+                self.assertEqual(state['terminated'], ['i-green'])
+                self.assertEqual(state['calls'][-1][:2], ['ec2', 'terminate-instances'])
+                # A regra da blue não muda: sem a suspensão, nada de reiniciar web, trocar listener ou gravar ponteiro.
+                self.assertFalse(any(call[1] == 'modify-listener' for call in state['calls']))
+                self.assertEqual(state['writes'], [])
+                self.assertEqual(state['running_workers'], ['i-blue'])
+            with self.subTest(stack=workflow.name, scenario='blue-binding-missing'):
+                original = self.env['BLUE_TG_ARN']
+                self.env['BLUE_TG_ARN'] = ''
+                try:
+                    result, state = self.execute(script, **initial)
+                finally:
+                    self.env['BLUE_TG_ARN'] = original
+                self.assertEqual(result.returncode, 1, result.stderr)
+                self.assertIn('blue_green_recovery_destination_missing', result.stderr)
+                self.assertEqual(state['terminated'], ['i-green'])
+                self.assertEqual(state['writes'], [])
+
+    def test_cleanup_without_image_reports_failed_termination(self):
+        for workflow in WORKFLOWS:
+            initial = self.before_image()
+            script = run_block(workflow.read_text(), 'Cleanup failed green resources before traffic shift')
+            for blue_failure in (False, True):
+                with self.subTest(stack=workflow.name, blue_failure=blue_failure):
+                    extra = {'fail_suspension_instance': 'i-blue'} if blue_failure else {}
+                    result, state = self.execute(script, fail_operation='terminate-instances', **extra, **initial)
+                    self.assertIn('blue_green_unused_green_termination_failed:i-green', result.stderr)
+                    # Com falha na blue, sai com o erro dela; sem, a terminação falha o job. Nunca sucesso.
+                    self.assertEqual(result.returncode, 1, result.stderr)
+                    self.assertEqual('instagram_recovery_suspension_failed:i-blue' in result.stderr, blue_failure)
+                    self.assertNotIn('terminated', state)
+                    self.assertEqual(state['calls'][-1][:2], ['ec2', 'terminate-instances'])
+
+    def test_cleanup_with_image_or_unknown_ecr_keeps_migration_rule(self):
+        # Imagem no ECR (build caiu depois do push) ou ECR ilegível: a green pode estar no deploy.sh (#972).
+        for workflow in WORKFLOWS:
+            initial = self.before_image()
+            script = run_block(workflow.read_text(), 'Cleanup failed green resources before traffic shift')
+            for image in ('present', 'unreadable'):
+                with self.subTest(stack=workflow.name, image=image, scenario='migration-running'):
+                    result, state = self.execute(script, image=image, deploy_status='DEPLOY_RUNNING', **initial)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertEqual(state['tags'], {'i-green': {'DeployCleanup': 'pending'}})
+                    self.assertTrue(state['retirement_scheduled'])
+                    self.assertNotIn('terminated', state)
+                with self.subTest(stack=workflow.name, image=image, scenario='suspension-failed'):
+                    result, state = self.execute(script, image=image, fail_suspension_instance='i-blue', **initial)
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertIn('instagram_recovery_suspension_failed:i-blue', result.stderr)
+                    self.assertNotIn('terminated', state)
+
+    def test_cleanup_after_published_image_never_asks_ecr(self):
+        for workflow in WORKFLOWS:
+            initial = self.before_image()
+            self.env['GREEN_IMAGE_PUBLISHED'] = 'true'
+            result, state = self.execute(run_block(workflow.read_text(), 'Cleanup failed green resources before traffic shift'),
+                                         **initial)
+            with self.subTest(stack=workflow.name):
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertFalse(any(call[0] == 'ecr' for call in state['calls']))
+                self.assertTrue(any(command['kind'] == 'deploy-status' for command in state['commands'].values()))
+                self.assertEqual(state['terminated'], ['i-green'])
+
+    def test_workflow_marks_image_published_only_after_build(self):
+        for workflow in WORKFLOWS:
+            source = workflow.read_text()
+            with self.subTest(stack=workflow.name):
+                self.assertIn('echo "GREEN_IMAGE_PUBLISHED=false"', run_block(source, 'Discover current infrastructure'))
+                self.assertTrue(run_block(source, 'Publish runtime image parameter').splitlines()[2]
+                                .startswith('echo "GREEN_IMAGE_PUBLISHED=true"'))
+                self.assertLess(source.index('      - name: Build and push image'),
+                                source.index('      - name: Publish runtime image parameter'))
+
+    # Parte 1: o desligamento da blue saiu do job deploy.
+    def shutdown(self, workflow, **changes):
+        self.env.update({'OLD_PREVIOUS_INSTANCE_ID': 'i-older', 'OLD_PREVIOUS_TG_ARN': 'tg-older'})
+        self.addCleanup(lambda: [self.env.pop(key, None) for key in ('OLD_PREVIOUS_INSTANCE_ID', 'OLD_PREVIOUS_TG_ARN')])
+        state = {'instance_states': {'i-blue': 'running', 'i-older': 'stopped'},
+                 'targets': {'tg-blue': 'i-blue', 'tg-green': 'i-green', 'tg-older': 'i-older'}}
+        state.update(changes)
+        return self.execute(run_block(workflow.read_text(), 'Stop blue instance and remove older rollback'), **state)
+
+    def test_shutdown_job_runs_outside_deploy_lock_after_traffic_shift(self):
+        for workflow in WORKFLOWS:
+            stack = workflow.name.removeprefix('deploy-').removesuffix('-blue-green.yml')
+            source = workflow.read_text()
+            job = source.split('\n  desligar-blue:\n', 1)[1].split('\n  rollback:\n', 1)[0]
+            with self.subTest(stack=stack):
+                self.assertIn('    needs: deploy\n', job)
+                self.assertIn("needs.deploy.result == 'success' && needs.deploy.outputs.traffic_shift_done == 'true'", job)
+                self.assertIn(f'      group: desligar-blue-{stack}\n      cancel-in-progress: false\n', job)
+                self.assertNotIn(f'group: deploy-{stack}-blue-green', job)
+                self.assertIn('          sleep 300\n', job)
+                # O job deploy não para mais a blue nem espera a janela.
+                deploy = source.split('\n  deploy:\n', 1)[1].split('\n  desligar-blue:\n', 1)[0]
+                self.assertNotIn('sleep 300', deploy)
+                self.assertNotIn('stop-instances', deploy)
+                hand_off = run_block(source, 'Hand off blue shutdown')
+                for name in ('traffic_shift_done', 'listener_arn', 'blue_instance_id', 'blue_tg_arn', 'green_instance_id',
+                             'green_tg_arn', 'old_previous_instance_id', 'old_previous_tg_arn'):
+                    self.assertIn(f'echo "{name}=$', hand_off)
+                    self.assertIn(f'      {name}: ${{{{ steps.hand-off.outputs.{name} }}}}\n', deploy)
+                    if name != 'traffic_shift_done':  # este só entra no if: do job
+                        self.assertIn(f'${{{{ needs.deploy.outputs.{name} }}}}', job)
+
+    def test_shutdown_stops_blue_and_retires_older_rollback(self):
+        for workflow in WORKFLOWS:
+            with self.subTest(stack=workflow.name):
+                result, state = self.shutdown(workflow, parameters={
+                    'current-tg': 'tg-green', 'current-instance': 'i-green',
+                    'previous-tg': 'tg-blue', 'previous-instance': 'i-blue'})
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(state['stopped'], ['i-blue'])
+                self.assertEqual(state['waited_stopped'], ['i-blue'])
+                self.assertEqual(state['terminated'], ['i-older'])
+                self.assertEqual(state['deleted_target_groups'], ['tg-older'])
+                self.assertEqual(state['writes'], [])
+                self.assertFalse(any(call[1] == 'modify-listener' for call in state['calls']))
+
+    def test_shutdown_keeps_blue_that_became_current_after_rollback(self):
+        for workflow in WORKFLOWS:
+            for pointer_only in (False, True):
+                with self.subTest(stack=workflow.name, pointer_only=pointer_only):
+                    # Rollback na janela: o listener (ou o ponteiro current) voltou para a blue.
+                    result, state = self.shutdown(workflow, listener='tg-green' if pointer_only else 'tg-blue', parameters={
+                        'current-tg': 'tg-blue', 'current-instance': 'i-blue',
+                        'previous-tg': 'tg-blue', 'previous-instance': 'i-blue'})
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertIn('voltou a ser a atual', result.stdout)
+                    self.assertNotIn('stopped', state)
+                    self.assertEqual(state['terminated'], ['i-older'])
+
+    def test_shutdown_after_newer_deploy_tolerates_instances_already_handled(self):
+        newer = {'listener': 'tg-next', 'targets': {'tg-blue': 'i-blue', 'tg-green': 'i-green', 'tg-next': 'i-next',
+                                                     'tg-older': 'i-older'},
+                 'parameters': {'current-tg': 'tg-next', 'current-instance': 'i-next',
+                                'previous-tg': 'tg-green', 'previous-instance': 'i-green'}}
+        for workflow in WORKFLOWS:
+            for blue, older, stop_calls, waits, terminated in (
+                    ('stopping', 'terminated', [], ['i-blue'], []),
+                    ('stopped', 'shutting-down', [], [], []),
+                    ('terminated', 'not-found', [], [], []),
+                    ('not-found', 'stopped', [], [], ['i-older']),
+                    ('running', 'running', ['i-blue'], ['i-blue'], ['i-older'])):
+                with self.subTest(stack=workflow.name, blue=blue, older=older):
+                    result, state = self.shutdown(workflow, instance_states={'i-blue': blue, 'i-older': older}, **newer)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertEqual(state.get('stopped', []), stop_calls)
+                    self.assertEqual(state.get('waited_stopped', []), waits)
+                    self.assertEqual(state.get('terminated', []), terminated)
+                    # A atual e a previous de agora nunca são tocadas.
+                    for call in state['calls']:
+                        if call[1] in ('stop-instances', 'terminate-instances'):
+                            self.assertNotIn(call[call.index('--instance-ids')+1], ('i-next', 'i-green'))
+
+    def test_shutdown_never_retires_instance_or_target_group_in_use_now(self):
+        for workflow in WORKFLOWS:
+            with self.subTest(stack=workflow.name):
+                # A "mais antiga" registrada virou a previous de agora: fica, com o target group dela.
+                result, state = self.shutdown(workflow, instance_states={'i-blue': 'running', 'i-older': 'running'},
+                    parameters={'current-tg': 'tg-green', 'current-instance': 'i-green',
+                                'previous-tg': 'tg-older', 'previous-instance': 'i-older'})
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertNotIn('terminated', state)
+                self.assertNotIn('deleted_target_groups', state)
+                self.assertEqual(state['stopped'], ['i-blue'])
+
+    def test_shutdown_unreadable_state_acts_on_nothing(self):
+        for workflow in WORKFLOWS:
+            for changes in ({'instance_states': {'i-blue': 'api-error', 'i-older': 'stopped'}},
+                            {'fail_operation': 'describe-listeners'}, {'fail_operation': 'get-parameter'}):
+                with self.subTest(stack=workflow.name, changes=changes):
+                    result, state = self.shutdown(workflow, **changes)
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertFalse(any(call[1] in ('stop-instances', 'terminate-instances', 'delete-target-group')
+                                         for call in state['calls']))
+
+    def test_rollback_waits_for_stopping_previous_before_boot(self):
+        for workflow in WORKFLOWS:
+            with self.subTest(stack=workflow.name):
+                result, state = self.execute(run_block(workflow.read_text(), 'Restore previous target group'),
+                                             instance_state='stopping', boot_worker_enabled=True, running_workers=['i-green'])
+                self.assertEqual(result.returncode, 0, result.stderr)
+                calls = state['calls']
+                wait = next(i for i, call in enumerate(calls) if call[:3] == ['ec2', 'wait', 'instance-stopped'])
+                start = next(i for i, call in enumerate(calls) if call[1] == 'start-instances')
+                self.assertLess(wait, start)
+                self.assert_pointers(state, 'tg-blue', 'i-blue')
+
+    def test_forgotten_green_warning_lists_only_old_unregistered_instances(self):
+        (self.bin / 'date').write_text(f'''#!{sys.executable}
+import sys
+from datetime import datetime, timedelta, timezone
+now = datetime(2026, 10, 12, 12, 0, tzinfo=timezone.utc)
+assert sys.argv[1:2] == ['-u'] and sys.argv[2] == '-d' and sys.argv[4] == '+%s'
+moment = now - timedelta(hours=2) if sys.argv[3] == '2 hours ago' else datetime.fromisoformat(sys.argv[3])
+print(int(moment.timestamp()))
+''')
+        (self.bin / 'date').chmod(0o700)
+        self.env['RUNNER_TEMP'] = str(self.directory)
+        rows = [['i-forgotten', '2026-10-10T13:05:12+00:00', 'chatwoot-x-prod-ec2-green-1'],
+                ['i-young', '2026-10-12T11:00:00+00:00', 'chatwoot-x-prod-ec2-green-2'],
+                ['i-green', '2026-10-01T00:00:00+00:00', 'current'],
+                ['i-blue', '2026-10-01T00:00:00+00:00', 'listener'],
+                ['i-older', '2026-10-01T00:00:00+00:00', 'previous']]
+        for workflow in WORKFLOWS:
+            with self.subTest(stack=workflow.name):
+                result, state = self.execute(run_block(workflow.read_text(), 'Warn about forgotten green instances'),
+                    running_greens=rows, parameters={'current-instance': 'i-green', 'previous-instance': 'i-older'})
+                self.assertEqual(result.returncode, 0, result.stderr)
+                warnings = [line for line in result.stdout.splitlines() if line.startswith('::warning::')]
+                self.assertEqual(len(warnings), 1, result.stdout)
+                self.assertIn('i-forgotten (Name=chatwoot-x-prod-ec2-green-1, LaunchTime=2026-10-10T13:05:12+00:00)',
+                              warnings[0])
+                mutations = ('stop-instances', 'terminate-instances', 'create-tags', 'put-parameter')
+                self.assertFalse(any(call[1] in mutations for call in state['calls']))
+                header = workflow.read_text().split('      - name: Warn about forgotten green instances\n', 1)[1]
+                self.assertTrue(header.startswith('        continue-on-error: true\n'))
 
 
 if __name__ == '__main__':
