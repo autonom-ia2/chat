@@ -698,6 +698,18 @@
         "SEM_CANAL_GARANTIA": "{nome} já pode atender. Falta escolher onde."
       },
       "ONDE_QUANDO": {
+        "TIPO": {
+          "WHATSAPP": "WhatsApp",
+          "INSTAGRAM": "Instagram",
+          "SITE": "Chat do site",
+          "EMAIL": "E-mail",
+          "API": "API",
+          "FACEBOOK": "Facebook",
+          "TELEGRAM": "Telegram",
+          "SMS": "SMS",
+          "LINE": "LINE",
+          "TIKTOK": "TikTok"
+        },
         "TITULO": "Onde e quando {nome} atende",
         "ONDE": "Onde atende",
         "QUANDO": "Quando atende",
@@ -1042,6 +1054,7 @@
         "BLOCO_SABE": {
           "TITULO": "O que sabe",
           "TEXTO": "{nome} sabe o que você contou na conversa.",
+          "TEXTO_COM_FONTES": "{nome} sabe o que você contou na conversa e o que está no arquivo ou site. | {nome} sabe o que você contou na conversa e o que está nos arquivos e sites.",
           "ALTERAR_ARIA": "Alterar o que sabe",
           "VER_ARIA": "Ver o que sabe",
           "N_FONTES": "1 arquivo ou site | {n} arquivos e sites",
@@ -1098,9 +1111,9 @@
         "SEMANA": {
           "ROTULO": "Números desta semana",
           "VAZIA": "Ainda sem conversas esta semana. Os números aparecem aqui assim que {nome} responder alguém.",
-          "RESPONDIDAS": "conversas respondidas",
-          "PASSADAS": "passadas para a equipe",
-          "NOTA_RESPONDIDAS": "Esta semana, {nome} respondeu {n} conversas e passou {m} para a equipe.",
+          "RESPONDIDAS": "conversa respondida | conversas respondidas",
+          "PASSADAS": "passada para a equipe | passadas para a equipe",
+          "NOTA_RESPONDIDAS": "Esta semana, {nome} respondeu {n} conversa e passou {m} para a equipe. | Esta semana, {nome} respondeu {n} conversas e passou {m} para a equipe.",
           "NOTA_PASSADAS": "Quando não soube responder."
         },
         "CONVERSAS": {
@@ -1297,9 +1310,10 @@
           "LISTA": "Jeitos de responder, do mais novo para o mais antigo",
           "CARREGANDO": "Carregando os jeitos anteriores",
           "MOTIVO": {
-            "KB_REFRESH": "Atualizado pelo que sabe",
+            "KB_REFRESH": "Mudou sozinho quando os arquivos e sites mudaram",
             "MANUAL_EDIT": "Escrito por você",
-            "ROLLBACK": "Voltou a um jeito anterior"
+            "ROLLBACK": "Voltou a um jeito anterior",
+            "ROLLBACK_DE": "Voltou ao jeito de {quando}"
           },
           "VOLTAR_ESTA": "Voltar para esta",
           "VOLTANDO": "Voltando…",

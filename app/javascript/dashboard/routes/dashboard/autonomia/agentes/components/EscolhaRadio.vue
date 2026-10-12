@@ -4,7 +4,8 @@ import { nextTick, ref } from 'vue';
 // #1181 — cartões-rádio do módulo (padrão WAI-ARIA radio group): role=radio, alvo de 44 px, um só
 // item no Tab (o marcado, ou o primeiro disponível) e setas que andam e marcam, pulando opção
 // desabilitada. Opção desabilitada fica visível e anunciada (aria-disabled), com o motivo no texto.
-// opcoes: [{ valor, titulo, texto?, desabilitada?, ambar? }]
+// opcoes: [{ valor, titulo, texto?, etiqueta?, desabilitada?, ambar? }]
+// `etiqueta` (#1369): selo curto ao lado do título, como o tipo de canal da caixa.
 const props = defineProps({
   rotulo: { type: String, required: true },
   opcoes: { type: Array, required: true },
@@ -96,9 +97,18 @@ const aoTeclar = (evento, opcao) => {
         />
       </span>
       <span class="flex flex-col gap-0.5 grow">
-        <span class="text-sm font-medium text-n-slate-12">{{
-          opcao.titulo
-        }}</span>
+        <span class="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <span class="text-sm font-medium text-n-slate-12">{{
+            opcao.titulo
+          }}</span>
+          <span
+            v-if="opcao.etiqueta"
+            data-etiqueta
+            class="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-n-slate-3 text-n-slate-12"
+          >
+            {{ opcao.etiqueta }}
+          </span>
+        </span>
         <span v-if="opcao.texto" class="text-sm text-n-slate-11">{{
           opcao.texto
         }}</span>
