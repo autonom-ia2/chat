@@ -1086,8 +1086,6 @@
           "NAO_EXISTE_SO_VER": "A página escolhida não existe mais. {nome} vai passar a conversa para a equipe.",
           "NENHUMA": "{nome} não marca reuniões.",
           "ABRIR_PAGINAS": "Abrir páginas de agendamento",
-          "ESCOLHA": "Escolha uma página",
-          "FUSO": "Horários no fuso da empresa ({fuso}).",
           "RECEBE": {
             "FIXO": "A reunião fica com {nome}.",
             "FIXO_SEM_NOME": "A reunião fica com a pessoa responsável pela página.",
@@ -1367,6 +1365,9 @@
           "CARTAO": {
             "NAO_MARCAR": "Não marcar reuniões",
             "DURACAO": "{minutos} min"
+          },
+          "RASCUNHO": {
+            "DICA": "Publique a página para {nome} usar."
           },
           "SEM_PAGINAS": {
             "TITULO": "Você ainda não tem uma página de agendamento",

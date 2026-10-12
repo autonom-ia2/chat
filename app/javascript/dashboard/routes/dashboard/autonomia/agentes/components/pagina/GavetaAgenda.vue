@@ -28,7 +28,9 @@ import {
   quemRecebe,
   restricaoGravada,
   tiposDeLocal,
+  ehRascunho,
 } from '../../utils/agendaDaPagina';
+import { GAVETA } from '../../utils/pagina';
 
 // #1253 — Marcar reuniões na página nova do agente: a página de agendamento que o agente usa para
 // oferecer horários e marcar, ou "Não marcar". Mesma regra e mesma gravação do AgentBookingForm do
@@ -146,19 +148,23 @@ const textoDoAviso = computed(() =>
     pagina: tituloEscolhida.value,
   })
 );
-const linkPaginas = computed(() =>
-  podeAbrirAgendamento.value && COM_LINK.includes(estado.value)
+const hrefPaginas = computed(() =>
+  podeAbrirAgendamento.value
     ? router.resolve({ name: 'settings_booking' }).href
     : ''
 );
-// #1371 — o assistente de CRM › Agendamento abre vazio com `nova=1` e volta para cá com `voltar`.
+const linkPaginas = computed(() =>
+  COM_LINK.includes(estado.value) ? hrefPaginas.value : ''
+);
+// #1371 — o assistente de CRM › Agendamento abre vazio com `nova=1` e volta com `voltar`: a página
+// do agente com `?gaveta=agenda`, que reabre esta gaveta (AgentePage tira a consulta ao abrir).
 const podeCriarPagina = computed(
   () => podeAbrirAgendamento.value && podeGerenciarAgendamento.value
 );
 const rotaCriar = computed(() => ({
   name: 'settings_booking',
   params: { accountId: route.params.accountId },
-  query: { nova: 1, voltar: route.path },
+  query: { nova: 1, voltar: `${route.path}?gaveta=${GAVETA.AGENDA}` },
 }));
 const hrefCriar = computed(() => router.resolve(rotaCriar.value).href);
 const criarPagina = () => router.push(rotaCriar.value);
@@ -205,13 +211,29 @@ const cartoes = computed(() => [
       },
     ],
   },
-  ...agenda.paginas.value.map(pagina => ({
-    value: idDaPagina(pagina.id),
-    label: agenda.tituloDaPagina(pagina),
-    pagina,
-    linhas: linhasDaPagina(pagina),
-  })),
+  ...agenda.paginas.value
+    .filter(pagina => !ehRascunho(pagina))
+    .map(pagina => ({
+      value: idDaPagina(pagina.id),
+      label: agenda.tituloDaPagina(pagina),
+      pagina,
+      linhas: linhasDaPagina(pagina),
+    })),
 ]);
+// Rascunho não é escolha (decisão do Rodrigo, #1370): cartão apagado, fora do grupo de rádios, com o
+// que falta para publicar nas palavras do assistente (BOOKING.PREVIEW.MISSING) e o link das páginas.
+// A página pausada continua escolha: o dono pode retomá-la, e o aviso âmbar explica.
+const FALTAS = ['host', 'location', 'working_hours', 'pipeline'];
+const rascunhos = computed(() =>
+  agenda.paginas.value.filter(ehRascunho).map(pagina => ({
+    id: idDaPagina(pagina.id),
+    titulo: agenda.tituloDaPagina(pagina),
+    pagina,
+    faltas: pagina.missing
+      .filter(falta => FALTAS.includes(falta))
+      .map(falta => t(`BOOKING.PREVIEW.MISSING.${falta.toUpperCase()}`)),
+  }))
+);
 
 // Só o que mudou. Página nova leva a liberação junto (todas = []), para a restrição de outra
 // página não deixar a agenda sem ninguém.
@@ -361,6 +383,66 @@ onMounted(agenda.carregar);
               </span>
             </template>
           </BookingChoiceCards>
+          <ul
+            v-if="rascunhos.length"
+            data-rascunhos
+            class="grid gap-3 p-0 m-0 list-none grid-cols-[repeat(auto-fit,minmax(min(100%,13rem),1fr))]"
+          >
+            <li
+              v-for="rascunho in rascunhos"
+              :key="rascunho.id"
+              :data-rascunho="rascunho.id"
+              aria-disabled="true"
+              class="flex flex-col gap-1 p-4 rounded-2xl ring-1 ring-inset ring-n-weak bg-n-alpha-1"
+            >
+              <span class="flex items-start justify-between gap-2">
+                <span
+                  class="min-w-0 text-base font-semibold break-words text-n-slate-11"
+                >
+                  {{ rascunho.titulo }}
+                </span>
+                <BookingStatusBadge :page="rascunho.pagina" class="shrink-0" />
+              </span>
+              <span class="text-sm text-n-slate-12">
+                {{ t(`${NS}.RASCUNHO.DICA`, { nome }) }}
+              </span>
+              <span
+                v-if="rascunho.faltas.length"
+                data-faltas
+                class="flex flex-col gap-0.5 text-sm text-n-slate-11"
+              >
+                <span>{{ t('BOOKING.PREVIEW.MISSING_TITLE') }}</span>
+                <span
+                  v-for="falta in rascunho.faltas"
+                  :key="falta"
+                  class="flex items-start gap-1.5"
+                >
+                  <span
+                    class="i-lucide-circle-dashed size-4 mt-0.5 shrink-0"
+                    aria-hidden="true"
+                  />
+                  {{ falta }}
+                </span>
+              </span>
+              <a
+                v-if="hrefPaginas"
+                data-abrir-rascunho
+                :href="hrefPaginas"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="relative inline-flex items-center gap-1 text-sm font-semibold underline min-h-11 w-fit text-n-blue-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-blue-11"
+              >
+                {{ t(`${NS_ESTADO}.ABRIR_PAGINAS`) }}
+                <span
+                  class="i-lucide-external-link size-4"
+                  aria-hidden="true"
+                />
+                <span class="sr-only">{{
+                  t('AGENTS.JORNADA.COMUM.NOVA_ABA')
+                }}</span>
+              </a>
+            </li>
+          </ul>
           <a
             v-if="podeCriarPagina"
             data-criar-pagina

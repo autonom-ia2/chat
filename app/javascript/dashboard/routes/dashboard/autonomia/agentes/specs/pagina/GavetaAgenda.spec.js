@@ -152,7 +152,7 @@ describe('GavetaAgenda · cartões e estado real da página (#1181 item A, #1370
     wrapper = await montar(3);
     expect(
       [...document.querySelectorAll('[data-choice]')].map(c => c.dataset.choice)
-    ).toEqual(['', '3', '5', '6']);
+    ).toEqual(['', '3', '5']);
     expect(texto('[data-choice=""]')).toContain("Don't book meetings");
     const visita = texto('[data-choice="3"]');
     expect(visita).toContain('Visita');
@@ -163,11 +163,53 @@ describe('GavetaAgenda · cartões e estado real da página (#1181 item A, #1370
     expect(no('[data-choice="5"] [data-status]').dataset.statusKey).toBe(
       'PAUSED'
     );
-    expect(no('[data-choice="6"] [data-status]').dataset.statusKey).toBe(
-      'DRAFT'
-    );
     expect(escolhida()).toBe('3');
     expect(no('select')).toBeNull();
+  });
+
+  // Decisão do Rodrigo (#1370): rascunho não é escolha. A pausada continua (o dono pode retomar).
+  it('a draft page is a disabled card outside the choice, with what is missing and the pages link', async () => {
+    paginasApi.get.mockResolvedValue({
+      data: {
+        payload: [
+          { id: 3, title: 'Visita', enabled: true, ai_status: 'ativa' },
+          {
+            id: 6,
+            title: 'Plantão',
+            enabled: false,
+            missing: ['location', 'pipeline', 'outra'],
+          },
+        ],
+      },
+    });
+    wrapper = await montar(3);
+    const rascunho = no('[data-rascunho="6"]');
+    expect(rascunho.getAttribute('aria-disabled')).toBe('true');
+    expect(rascunho.querySelector('input')).toBeNull();
+    expect(no('[data-choice="6"]')).toBeNull();
+    expect(rascunho.querySelector('[data-status]').dataset.statusKey).toBe(
+      'DRAFT'
+    );
+    const textoRascunho = texto('[data-rascunho="6"]');
+    expect(textoRascunho).toContain('Publish the page so Bia can use it.');
+    expect(texto('[data-rascunho="6"] [data-faltas]')).toBe(
+      'Almost ready to publish: Choose where the appointment happens Choose which pipeline new bookings go to'
+    );
+    const link = rascunho.querySelector('[data-abrir-rascunho]');
+    expect(link.getAttribute('href')).toBe('/app/settings_booking');
+    expect(link.getAttribute('target')).toBe('_blank');
+  });
+
+  it('a draft without access to Agendamento: no link', async () => {
+    permissao.podeAbrirAgendamento = false;
+    paginasApi.get.mockResolvedValue({
+      data: {
+        payload: [{ id: 6, title: 'P', enabled: false, missing: ['host'] }],
+      },
+    });
+    wrapper = await montar(null);
+    expect(no('[data-rascunho="6"]')).not.toBeNull();
+    expect(no('[data-abrir-rascunho]')).toBeNull();
   });
 
   it('no duration on the card when the list does not bring it', async () => {
@@ -298,7 +340,7 @@ describe('GavetaAgenda · cartões e estado real da página (#1181 item A, #1370
     expect(roteador.push).toHaveBeenCalledWith({
       name: 'settings_booking',
       params: { accountId: '1' },
-      query: { nova: 1, voltar: '/app/accounts/1/agents/7' },
+      query: { nova: 1, voltar: '/app/accounts/1/agents/7?gaveta=agenda' },
     });
   });
 

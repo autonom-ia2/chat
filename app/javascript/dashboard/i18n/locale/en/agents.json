@@ -1086,8 +1086,6 @@
           "NAO_EXISTE_SO_VER": "The chosen page no longer exists. {nome} will pass the conversation to the team.",
           "NENHUMA": "{nome} doesn't book meetings.",
           "ABRIR_PAGINAS": "Open booking pages",
-          "ESCOLHA": "Choose a page",
-          "FUSO": "Times in the business time zone ({fuso}).",
           "RECEBE": {
             "FIXO": "The meeting goes to {nome}.",
             "FIXO_SEM_NOME": "The meeting goes to the person in charge of the page.",
@@ -1367,6 +1365,9 @@
           "CARTAO": {
             "NAO_MARCAR": "Don't book meetings",
             "DURACAO": "{minutos} min"
+          },
+          "RASCUNHO": {
+            "DICA": "Publish the page so {nome} can use it."
           },
           "SEM_PAGINAS": {
             "TITULO": "You don't have a booking page yet",

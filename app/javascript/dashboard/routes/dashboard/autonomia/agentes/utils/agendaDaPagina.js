@@ -1,7 +1,7 @@
 // #1181 (item A) — o que a página de agendamento escolhida faz de verdade, só com o que GET
 // crm/booking_pages devolve. Campos preferidos (#1305, quando vierem): `ai_status` ("ativa" |
-// "pausada" | "sem_responsavel" | "agenda_pausada"), `recebe` ({ modo: "fixo" | "por_pessoa", nome })
-// e `timezone`. Sem eles, a lista de hoje (Crm::BookingV2::PageSerializer#summary): `enabled`;
+// "pausada" | "sem_responsavel" | "agenda_pausada") e `recebe` ({ modo: "fixo" | "por_pessoa", nome }).
+// O fuso não aparece na gaveta (#1370). Sem eles, a lista de hoje (PageSerializer#summary): `enabled`;
 // `assignment_mode`; `attention` (responsável único ausente ou que não pode atender); `links` (só os
 // ativos de quem pode atender, na ordem em que a IA procura o primeiro); `paused_people` (quem
 // atende e pausou "Meus horários": a IA não acha horário dessa pessoa, Slots#host_paused?). Página
@@ -71,21 +71,6 @@ export const quemRecebe = pagina => {
   return { modo, nome: nome || '' };
 };
 
-// Nome do fuso para leigo ("horário de Brasília"), pelo Intl no idioma da tela; o nome IANA cru
-// quando o navegador não conhece o fuso. Vazio sem fuso (a lista de hoje não traz).
-export const fusoLegivel = (timezone, idioma) => {
-  if (!timezone) return '';
-  try {
-    const partes = new Intl.DateTimeFormat(idioma, {
-      timeZone: timezone,
-      timeZoneName: 'longGeneric',
-    }).formatToParts(new Date());
-    return partes.find(parte => parte.type === 'timeZoneName')?.value || '';
-  } catch {
-    return timezone;
-  }
-};
-
 // #1307 — as pessoas da página que o dono libera para a IA (`config.booking_agent_ids`). A lista
 // vem em `pessoas: [{ id, nome, ai_status: 'ativa' | 'agenda_pausada' }]`, na ordem fixa da página.
 // Gravado vazio (ausente, null ou []) = todas. A preferência por uma pessoa vai na instrução; aqui é
@@ -135,6 +120,11 @@ export const estadoComLiberacao = (estado, pessoas, liberadas) => {
 // trazer o id em texto). Só então a liberação volta para todas (painel antigo, PanelTune).
 export const outraPaginaDeAgenda = (nova, salva) =>
   Boolean(nova) && String(nova) !== String(salva ?? '');
+
+// #1370 — rascunho: desligada e ainda falta algo para publicar (o `missing` da lista, como o selo
+// de Páginas e links). Não é escolha na gaveta: a IA não marca por uma página que nunca foi ao ar.
+export const ehRascunho = pagina =>
+  pagina?.enabled !== true && Boolean(pagina?.missing?.length);
 
 // #1370 — os locais da página como o assistente os nomeia (BOOKING.WHERE.<TIPO>.NAME), sem repetir.
 export const tiposDeLocal = pagina => [
