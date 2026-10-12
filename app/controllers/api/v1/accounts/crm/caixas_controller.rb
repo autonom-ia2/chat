@@ -1,5 +1,7 @@
 # Caixas no CRM (#1149): a tela CRM → Caixas no CRM. Listar as caixas, abrir uma e salvar a caixa inteira de uma vez.
 class Api::V1::Accounts::Crm::CaixasController < Api::V1::Accounts::Crm::BaseController
+  # A flag por conta protege a API também, não só a rota do painel: sem ela, nada aqui grava acesso por funil.
+  before_action :ensure_caixas_enabled
   before_action :authorize_index, only: [:index, :show]
   before_action :authorize_update, only: [:update]
   before_action :fetch_inbox, only: [:show, :update]
@@ -24,6 +26,10 @@ class Api::V1::Accounts::Crm::CaixasController < Api::V1::Accounts::Crm::BaseCon
   end
 
   private
+
+  def ensure_caixas_enabled
+    render json: { error: 'crm.caixas.disabled' }, status: :not_found unless Current.account.feature_enabled?('crm_configurar_caixas')
+  end
 
   def authorize_index
     authorize ::Crm::InboxAgentAccess, :index?

@@ -16,6 +16,8 @@ RSpec.describe 'CRM Caixas no CRM API', type: :request do
   let(:pos_venda) { create_crm_pipeline(account: account, user: admin, name: 'Pós-venda') }
   let(:url) { "/api/v1/accounts/#{account.id}/crm/caixas" }
 
+  before { account.enable_features!('crm_configurar_caixas') }
+
   def salvar(user: admin, **caixa)
     put "#{url}/#{inbox.id}", params: { caixa: caixa }, headers: auth_headers(user), as: :json
   end
@@ -43,6 +45,16 @@ RSpec.describe 'CRM Caixas no CRM API', type: :request do
     expect(caixa['people'].find { |item| item['id'] == ana.id })
       .to include('triage' => true, 'all_pipelines' => true, 'only_own' => false, 'administrator' => false)
     expect(response.parsed_body.dig('payload', 'funis').pluck('name')).to include('Vendas')
+  end
+
+  it 'answers 404 and writes nothing when the account does not have the flag' do
+    account.disable_features!('crm_configurar_caixas')
+
+    salvar(pipeline_ids: [vendas.first.id], modo: 'chegou', people: [])
+
+    expect(response).to have_http_status(:not_found)
+    expect(account.crm_inbox_settings.find_by(inbox: inbox)).to be_nil
+    expect(account.crm_pipeline_inboxes.where(inbox: inbox)).to be_empty
   end
 
   it 'refuses agents: only administrators decide who sees what' do
