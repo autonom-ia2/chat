@@ -57,7 +57,8 @@ module Enterprise::AutoAssignment::AssignmentService
 
   # Override to apply exclusion rules
   def unassigned_conversations(limit)
-    scope = inbox.conversations.unassigned.open
+    # Inclui as que o robô passou e seguem à espera de pessoa (#1377).
+    scope = inbox.conversations.awaiting_person.open
 
     # First apply the assignment policy's age exclusion (defaults to 7 days)
     scope = apply_age_exclusions(scope, age_exclusion_hours(policy))

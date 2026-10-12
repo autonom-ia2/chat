@@ -167,6 +167,24 @@ RSpec.describe Enterprise::Conversations::PermissionFilterService do
         expect(result).not_to include(other_assigned_conversation)
         expect(result).not_to include(other_inbox_conversation)
       end
+
+      it 'also returns a conversation the bot handed off that waits for a person (#1377)' do
+        test_account = create(:account)
+        test_inbox = create(:inbox, account: test_account)
+        test_agent = create(:user, account: test_account, role: :agent)
+        create(:inbox_member, user: test_agent, inbox: test_inbox)
+        role = create(:custom_role, account: test_account, permissions: %w[conversation_unassigned_manage])
+        AccountUser.find_by(user: test_agent, account: test_account).update(role: :agent, custom_role: role)
+        bot = create(:agent_bot, account: test_account)
+        waiting = create(:conversation, account: test_account, inbox: test_inbox, ai_assignee: bot)
+        waiting.bot_handoff!
+        bot_only = create(:conversation, account: test_account, inbox: test_inbox, ai_assignee: bot)
+
+        result = Conversations::PermissionFilterService.new(test_account.conversations, test_agent, test_account).perform
+
+        expect(result).to include(waiting)
+        expect(result).not_to include(bot_only)
+      end
     end
 
     context 'when user has both participating and unassigned permissions (hierarchical test)' do

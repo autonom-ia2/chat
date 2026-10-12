@@ -42,8 +42,16 @@ class Crm::Access::TriageExit
       next unless @conversation.assignee_id == previous_id
 
       open_cards.each(&:reload).select { |card| card.owner_id == previous_id }.each { |card| card.update!(owner_id: nil) }
-      @conversation.update!(assignee_id: nil)
+      # Caixa com robô: sem pessoa, a conversa volta ao robô (#1377, regra 4). Em andamento, ela fica no mesmo estado de
+      # uma passagem, à espera do rodízio do funil; sem isso a próxima resposta do robô a tiraria do rodízio.
+      @conversation.update!(assignee_id: nil, ai_assignee: @conversation.inbox_agent_bot)
+      @conversation.bot_handoff!(dispatch_event: false) if waits_for_funnel_round_robin?
     end
+  end
+
+  # Só conversa em andamento e com robô: liberar a triagem de uma resolvida ou adiada não a reabre.
+  def waits_for_funnel_round_robin?
+    (@conversation.open? || @conversation.pending?) && @conversation.ai_assignee.present?
   end
 
   def add_owners_as_participants

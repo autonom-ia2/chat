@@ -107,7 +107,11 @@ const getters = {
   },
   getUnAssignedChats: _state => activeFilters => {
     return _state.allConversations.filter(conversation => {
-      const isUnAssigned = !conversation.meta.assignee;
+      // O robô passou a conversa e ela espera pessoa: segue em "Não atribuídas" com o robô no nome (#1377).
+      const waitsForPerson =
+        conversation.meta?.assignee_type === 'AgentBot' &&
+        Boolean(conversation.additional_attributes?.bot_handoff_waiting_since);
+      const isUnAssigned = !conversation.meta.assignee || waitsForPerson;
       const shouldFilter = applyPageFilters(conversation, activeFilters);
       return isUnAssigned && shouldFilter;
     });

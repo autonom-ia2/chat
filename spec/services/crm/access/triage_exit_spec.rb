@@ -150,4 +150,57 @@ RSpec.describe 'Acesso por funil: saída da triagem' do # rubocop:disable RSpec/
 
     expect(conversation.assignee_id).to eq(triagem.id)
   end
+
+  describe 'em caixa com robô (#1377)' do
+    let(:bot) { create(:agent_bot, account: account) }
+
+    before { create(:agent_bot_inbox, inbox: inbox, agent_bot: bot) }
+
+    it 'devolve a conversa ao robô, à espera do rodízio do funil' do
+      conversation = conversation_with(triagem)
+      card_in(conversation, vendas, owner: triagem)
+
+      sync(conversation)
+
+      expect(conversation).to have_attributes(assignee_id: nil, ai_assignee: bot, status: 'open')
+      expect(conversation).to be_bot_handoff_waiting
+      expect(Conversation.awaiting_person).to include(conversation)
+    end
+
+    it 'a resposta do robô depois da saída não tira a conversa do rodízio' do
+      conversation = conversation_with(triagem)
+      card_in(conversation, vendas, owner: triagem)
+      sync(conversation)
+
+      create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :outgoing, sender: bot, content: 'Oi')
+
+      expect(Conversation.awaiting_person).to include(conversation.reload)
+    end
+
+    %i[resolved snoozed].each do |status|
+      it "devolve ao robô sem reabrir nem esperar rodízio uma conversa #{status}" do
+        conversation = conversation_with(triagem)
+        conversation.update!(status: status, snoozed_until: (1.day.from_now if status == :snoozed))
+        card_in(conversation, vendas, owner: triagem)
+
+        sync(conversation)
+
+        expect(conversation).to have_attributes(assignee_id: nil, ai_assignee: bot, status: status.to_s)
+        expect(conversation).not_to be_bot_handoff_waiting
+      end
+    end
+
+    it 'com rodízio na caixa, quem tem o funil recebe a conversa e o robô sai' do
+      inbox.update!(enable_auto_assignment: true)
+      allow(OnlineStatusTracker).to receive(:get_available_users)
+        .and_return([triagem, vendas_agent, pos_agent, propria].to_h { |user| [user.id.to_s, 'online'] })
+      conversation = conversation_with(triagem)
+      card_in(conversation, vendas, owner: triagem)
+
+      sync(conversation)
+
+      expect(conversation).to have_attributes(assignee_id: vendas_agent.id, ai_assignee: nil)
+      expect(conversation).not_to be_bot_handoff_waiting
+    end
+  end
 end

@@ -77,6 +77,11 @@ class Conversations::UnreadCounts::Refresher
     )
   end
 
+  # Conversa de robô não entra na contagem por atribuição, salvo a que espera pessoa (aba "Não atribuídas", #1377).
+  def counted_by_assignment?
+    conversation.assignee_agent_bot_id.blank? || conversation.bot_handoff_waiting?
+  end
+
   def refresh_assignment_membership
     conversation_id = conversation.id
     store.remove_assignment_membership(
@@ -87,8 +92,7 @@ class Conversations::UnreadCounts::Refresher
       team_ids: affected_team_ids,
       conversation_id: conversation_id
     )
-    return unless unread?
-    return if conversation.assignee_agent_bot_id
+    return unless unread? && counted_by_assignment?
 
     store.add_assignment_membership(
       account_id: account.id,

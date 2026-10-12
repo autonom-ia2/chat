@@ -74,9 +74,9 @@ module Crm::Cards::SharedFilters
     when 'agent'
       scoped.where(human_responsible_sql)
     when 'bot'
-      scoped.where("NOT (#{human_responsible_sql})").where.not(agent_bot_inboxes: { id: nil })
+      scoped.where("NOT (#{human_responsible_sql})").where(bot_responsible_sql)
     when 'none'
-      scoped.where("NOT (#{human_responsible_sql})").where(agent_bot_inboxes: { id: nil })
+      scoped.where("NOT (#{human_responsible_sql})").where.not(bot_responsible_sql)
     end
   end
 
@@ -141,6 +141,12 @@ module Crm::Cards::SharedFilters
   def human_responsible_sql
     '(crm_cards.conversation_id IS NOT NULL AND conversations.assignee_id IS NOT NULL) OR ' \
       '(crm_cards.conversation_id IS NULL AND crm_cards.owner_id IS NOT NULL)'
+  end
+
+  # Robô responsável: o atribuído à conversa (#1377) ou o robô ativo da caixa. Mirrors Crm::Card#responsible_agent_bot.
+  def bot_responsible_sql
+    "(conversations.assignee_agent_bot_id IS NOT NULL AND COALESCE(conversations.ai_assignee_type, '') = 'AgentBot') " \
+      'OR agent_bot_inboxes.id IS NOT NULL'
   end
 
   def parse_stage_ids

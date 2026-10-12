@@ -28,7 +28,7 @@ module Crm
 
       def open_cards
         scope = account.crm_cards.where(status: Crm::Card.statuses[:open])
-                       .includes(:owner, primary_conversation: [:assignee, { inbox: { agent_bot_inbox: :agent_bot } }],
+                       .includes(:owner, primary_conversation: [:assignee, :ai_assignee, { inbox: { agent_bot_inbox: :agent_bot } }],
                                          inbox: { agent_bot_inbox: :agent_bot })
         pipeline.present? ? scope.where(pipeline_id: pipeline.id) : scope
       end

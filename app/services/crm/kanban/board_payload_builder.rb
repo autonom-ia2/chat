@@ -160,7 +160,8 @@ class Crm::Kanban::BoardPayloadBuilder
       :owner, { linked_conversations: :conversation_participants },
       { contact: Crm::Cards::CompanyResolver.contact_preload },
       { inbox: { agent_bot_inbox: :agent_bot } },
-      { primary_conversation: [:conversation_participants, :assignee, { applied_sla: :sla_policy }, { inbox: { agent_bot_inbox: :agent_bot } }] }
+      { primary_conversation: [:conversation_participants, :assignee, :ai_assignee, { applied_sla: :sla_policy },
+                               { inbox: { agent_bot_inbox: :agent_bot } }] }
     ).limit(limit_per_stage + 1).to_a
     [cards.first(limit_per_stage), cards.size > limit_per_stage]
   end

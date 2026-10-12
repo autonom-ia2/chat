@@ -62,13 +62,16 @@ class Conversation < ApplicationRecord
   include LlmFormattable
   include AssignmentHandler
   include AutoAssignmentHandler
+  include ConversationBotHandoff
   include ActivityMessageHandler
   include UrlHelper
   include SortHandler
   include PushDataHelper
   include ConversationMuteHelpers
 
-  CONVERSATION_UPDATED_ADDITIONAL_ATTRIBUTE_KEYS = %w[conversation_language].freeze
+  # bot_handoff_waiting_since: a passagem do robô que fica à espera de pessoa só muda essa marca (#1377), e a conversa
+  # precisa entrar na hora na aba "Não atribuídas" e na contagem dela.
+  CONVERSATION_UPDATED_ADDITIONAL_ATTRIBUTE_KEYS = %w[conversation_language bot_handoff_waiting_since].freeze
   WAHA_RESOLUTION_CYCLE_STARTED_AT_KEY = 'waha_resolution_cycle_started_at'.freeze
   FILTERED_UNREAD_COUNT_ADDITIONAL_ATTRIBUTE_KEYS = %w[browser_language conversation_language mail_subject referer].freeze
   FILTERED_UNREAD_COUNT_UPDATE_KEYS = %w[
@@ -187,17 +190,6 @@ class Conversation < ApplicationRecord
   def toggle_priority(priority = nil)
     self.priority = priority.presence
     save
-  end
-
-  def bot_handoff!(dispatch_event: true)
-    update(waiting_since: Time.current) if waiting_since.blank?
-    self.ai_assignee = nil
-    open!
-    dispatch_bot_handoff_event if dispatch_event
-  end
-
-  def dispatch_bot_handoff_event
-    dispatcher_dispatch(CONVERSATION_BOT_HANDOFF)
   end
 
   # A caixa tem um AgentBot WEBHOOK ATIVO? (n8n / espelho do operador Autonom.ia). Essas conversas nunca

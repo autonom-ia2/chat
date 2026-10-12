@@ -29,7 +29,7 @@ class Conversations::UnreadCounts::Listener < BaseListener
     conversation, = extract_conversation_and_account(event)
     changed_attributes = event.data[:changed_attributes]
     notify_filtered_count_change(conversation) if filtered_conversation_update_changed?(changed_attributes) && !label_changed?(changed_attributes)
-    return unless label_changed?(changed_attributes)
+    return unless label_changed?(changed_attributes) || bot_handoff_wait_changed?(changed_attributes)
 
     refresh(conversation, changed_attributes)
   end
@@ -115,6 +115,13 @@ class Conversations::UnreadCounts::Listener < BaseListener
   def label_ids_for(account, label_list)
     label_titles = label_list.to_s.split(',').map(&:strip).compact_blank
     account.labels.pluck(:title, :id).to_h.values_at(*label_titles).compact
+  end
+
+  # A marca de espera de pessoa põe e tira a conversa de robô da contagem de "Não atribuídas" (#1377).
+  def bot_handoff_wait_changed?(changed_attributes)
+    before, after = Array(changed_attributes&.with_indifferent_access&.dig(:additional_attributes))
+    key = Conversation::BOT_HANDOFF_WAITING_SINCE_KEY
+    before.to_h[key].present? != after.to_h[key].present?
   end
 
   def label_changed?(changed_attributes)

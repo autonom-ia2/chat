@@ -157,14 +157,21 @@ class Crm::Card < ApplicationRecord
     nil
   end
 
+  # O robô atribuído à conversa (#1377); sem ele, o robô ativo da caixa.
   def responsible_agent_bot
-    resolved_inbox = primary_conversation&.inbox || inbox
+    conversation_bot = primary_conversation&.ai_assignee
+    return conversation_bot if conversation_bot.is_a?(AgentBot)
+
+    active_inbox_bot(primary_conversation&.inbox || inbox)
+  end
+
+  private
+
+  def active_inbox_bot(resolved_inbox)
     return if resolved_inbox.blank?
 
     resolved_inbox.agent_bot_inbox&.active? ? resolved_inbox.agent_bot : nil
   end
-
-  private
 
   def invalidate_funnel_counts
     return unless Crm::Access::AccountFlag.any?(account_id)

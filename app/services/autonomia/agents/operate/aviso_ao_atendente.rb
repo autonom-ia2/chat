@@ -45,7 +45,7 @@ class Autonomia::Agents::Operate::AvisoAoAtendente
   def escalar(agent_inbox)
     liberou = false
     @conversation.with_lock do
-      if @conversation.assignee_agent_bot_id == agent_inbox.agent_bot_id || @conversation.pending?
+      if ::Autonomia::Agents::Operate.espelho_no_comando?(@conversation, agent_inbox)
         @conversation.bot_handoff!
         liberou = true
       end

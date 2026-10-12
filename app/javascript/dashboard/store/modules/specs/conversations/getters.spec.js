@@ -207,6 +207,31 @@ describe('#getters', () => {
         },
       ]);
     });
+
+    it('keeps a bot conversation that waits for a person after a handoff', () => {
+      const waiting = {
+        id: 3,
+        inbox_id: 2,
+        status: 1,
+        meta: { assignee: { id: 9 }, assignee_type: 'AgentBot' },
+        additional_attributes: {
+          bot_handoff_waiting_since: '2026-10-12T10:00:00Z',
+        },
+      };
+      const botOnly = {
+        id: 4,
+        inbox_id: 2,
+        status: 1,
+        meta: { assignee: { id: 9 }, assignee_type: 'AgentBot' },
+        additional_attributes: {},
+      };
+
+      expect(
+        getters.getUnAssignedChats({ allConversations: [waiting, botOnly] })({
+          status: 1,
+        })
+      ).toEqual([waiting]);
+    });
   });
   describe('#getParticipatingChats', () => {
     const conversationList = [

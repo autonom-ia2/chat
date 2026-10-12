@@ -169,6 +169,20 @@ RSpec.describe Conversations::UnreadCounts::Refresher do
     expect(store.counts_for_keys([key])).to eq(key => 0)
   end
 
+  it 'counts a bot conversation that waits for a person as unassigned, in the refresh and in the rebuild (#1377)' do
+    conversation = create_unread_conversation(account: account, inbox: inbox)
+    agent_bot = create(:agent_bot, account: account)
+    conversation.update!(ai_assignee: agent_bot)
+    conversation.bot_handoff!(dispatch_event: false)
+    Conversations::UnreadCounts::Builder.new(account).build_assignment!
+    key = store.inbox_unassigned_key(account.id, inbox.id)
+    expect(store.counts_for_keys([key])).to eq(key => 1)
+
+    described_class.new(conversation.reload, changed_attributes: { additional_attributes: [{}, conversation.additional_attributes] }).perform
+
+    expect(store.counts_for_keys([key])).to eq(key => 1)
+  end
+
   it 'moves assignment-aware team membership when team changes' do
     create(:team_member, user: assignee, team: new_team)
     conversation = create_unread_conversation(account: account, inbox: inbox, assignee: assignee, team: team)
