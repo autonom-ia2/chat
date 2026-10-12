@@ -63,10 +63,12 @@ RSpec.describe Autonomia::Agents::Tools::Native::AgendarReuniao do
       expect(meeting.metadata).to include('notify_client' => true, 'notice_basis' => described_class::NOTICE_BASIS,
                                           'booked_by_agent_id' => agent.id, 'booked_in_conversation_id' => conversation.id)
       expect(kinds_e_status(meeting)).to eq([['booked', 'pending', nil], ['day_before', 'pending', nil], ['hour_before', 'pending', nil]])
-      expect(resposta).to include('marcada' => true, 'inicio' => slot, 'duracao_minutos' => 30,
+      expect(resposta).to include('marcada' => true, 'inicio' => slot, 'fuso' => 'America/Sao_Paulo', 'duracao_minutos' => 30,
                                   'link_de_gestao' => "https://app.example.com/b/#{invite.code}")
       expect(resposta['resumo']).to include('Reunião marcada', 'terça-feira, 20/10, 10:00')
       expect(resposta['instrucao']).to include('link_de_gestao')
+      # #1362: o fuso fica no dado (`fuso`, `inicio`), não no texto que o modelo repete.
+      [resposta['resumo'], resposta['instrucao']].each { |fala| expect(fala).not_to include('fuso', 'Sao_Paulo', 'Brasília') }
     end
 
     describe 'na mesma caixa da conversa' do
@@ -224,6 +226,13 @@ RSpec.describe Autonomia::Agents::Tools::Native::AgendarReuniao do
       expect(agenda.estado(agent)).to eq('ativa')
       expect(Autonomia::Agents::Tools::Registry.for_agent(agent).map(&:slug)).to eq(agenda::SLUGS)
       expect(agenda.instrucao(agent)).to include('chame `horarios_disponiveis`', 'cliente_confirmou: true', 'link_de_gestao')
+    end
+
+    # #1362: o fuso é dado; a instrução manda não repeti-lo e deixa ao modelo quando explicar.
+    it 'manda falar o horário sem citar o fuso, salvo se o cliente perguntar ou estiver em outro' do
+      expect(agenda.instrucao(agent)).to include(
+        'Fale o horário sem citar o fuso', 'se o cliente perguntar ou disser que está em outro fuso', 'use o campo `fuso`'
+      )
     end
 
     it 'pausada: tira a agenda do turno e, se a ferramenta rodar mesmo assim, devolve o motivo' do
