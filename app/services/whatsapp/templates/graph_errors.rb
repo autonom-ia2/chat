@@ -8,6 +8,10 @@ module Whatsapp::Templates::GraphErrors
   MAX_ERROR = 300
   PERMISSION_CODES = [10, 190].freeze
   PERMISSION_RANGE = (200..299)
+  # 100/33: a Meta não diz qual dos dois: o objeto não existe (modelo apagado lá) ou este token não o alcança.
+  NOT_FOUND_OR_NO_ACCESS = { code: 100, subcode: 33 }.freeze
+  # Subcódigos de nome que a Meta devolve em inglês: viram texto nosso.
+  NAME_SUBCODES = { 2_388_024 => 'name_taken', 2_388_023 => 'name_held' }.freeze
   NETWORK_ERRORS = (Crm::Ai::ResponsesClient::NETWORK_ERRORS + [HTTParty::Error]).freeze
 
   private
@@ -38,12 +42,20 @@ module Whatsapp::Templates::GraphErrors
 
   def fail_with(response)
     error = meta_error(response)
-    raise Whatsapp::Templates::MetaClient::MetaError.new(text('permission_denied'), own_text: true) if permission_error?(error)
+    own = own_text_code(error)
+    raise Whatsapp::Templates::MetaClient::MetaError.new(text(own), own_text: true) if own
 
     message = error['error_user_msg'].presence || error['message'].presence
-    raise Whatsapp::Templates::MetaClient::MetaError.new(text('meta_failed'), own_text: true) if message.blank?
-
     raise Whatsapp::Templates::MetaClient::MetaError, without_token(message.to_s).first(MAX_ERROR)
+  end
+
+  # O erro que tem texto nosso (pelo código, nunca pela leitura do texto da Meta); nil quando vale o texto da Meta.
+  def own_text_code(error)
+    return 'permission_denied' if permission_error?(error)
+    return 'not_found_or_no_access' if not_found_or_no_access?(error)
+    return NAME_SUBCODES[error['error_subcode'].to_i] if NAME_SUBCODES.key?(error['error_subcode'].to_i)
+
+    'meta_failed' if error['error_user_msg'].blank? && error['message'].blank?
   end
 
   # O erro da Graph API; no log só números (nada do texto, nada do token).
@@ -62,6 +74,10 @@ module Whatsapp::Templates::GraphErrors
   def permission_error?(error)
     code = error['code'].to_i
     PERMISSION_CODES.include?(code) || PERMISSION_RANGE.cover?(code)
+  end
+
+  def not_found_or_no_access?(error)
+    error['code'].to_i == NOT_FOUND_OR_NO_ACCESS[:code] && error['error_subcode'].to_i == NOT_FOUND_OR_NO_ACCESS[:subcode]
   end
 
   def without_token(text)

@@ -1,10 +1,10 @@
 # API de Modelos do WhatsApp oficial de uma caixa (#1330, épico #1320). Só caixas `whatsapp_cloud` com WABA gravada.
 # A WABA é sempre a da caixa: nenhum parâmetro do pedido escolhe WABA, e o id do modelo só vale se estiver na lista
 # sincronizada desta caixa (e a Meta confirmar que é da WABA dela).
-# Escrever na Meta (criar, editar, apagar, duplicar, subir mídia) só com a flag `whatsapp_templates_journey` na conta:
+# Escrever na Meta (criar, editar, apagar, subir mídia) só com a flag `whatsapp_templates_journey` na conta:
 # sem ela, 404 antes de qualquer outra coisa. Listar e "onde está em uso" seguem abertos.
 class Api::V1::Accounts::Inboxes::WhatsappTemplatesController < Api::V1::Accounts::BaseController
-  WRITE_ACTIONS = %i[create update destroy duplicate media].freeze
+  WRITE_ACTIONS = %i[create update destroy media].freeze
 
   before_action :ensure_journey_enabled, only: WRITE_ACTIONS
   before_action :fetch_inbox
@@ -15,8 +15,14 @@ class Api::V1::Accounts::Inboxes::WhatsappTemplatesController < Api::V1::Account
   rescue_from Whatsapp::Templates::MetaClient::MetaError, with: :meta_refused
   rescue_from Whatsapp::Templates::Manager::Refused, with: :refused
 
+  # "Atualizar" pede a lista nova à Meta. Se o sync não deu certo (#1382, `SyncFields::Result`), a resposta diz isso com o
+  # código (422; 502 quando a Meta não respondeu), em vez de devolver a lista antiga como se fosse nova; a tela lê a lista
+  # guardada sem `refresh` e avisa.
   def index
-    @inbox.channel.sync_templates if ActiveModel::Type::Boolean.new.cast(params[:refresh])
+    if ActiveModel::Type::Boolean.new.cast(params[:refresh])
+      result = @inbox.channel.sync_templates
+      return render_sync_failure(result.code) if result.respond_to?(:ok?) && !result.ok?
+    end
     render json: { payload: manager.list, meta: { last_synced_at: @inbox.channel.reload.message_templates_last_updated } }
   end
 
@@ -31,10 +37,6 @@ class Api::V1::Accounts::Inboxes::WhatsappTemplatesController < Api::V1::Account
   def destroy
     manager.destroy(params[:id])
     head :no_content
-  end
-
-  def duplicate
-    render json: manager.duplicate(params[:id], template_params), status: :created
   end
 
   def media
@@ -94,6 +96,12 @@ class Api::V1::Accounts::Inboxes::WhatsappTemplatesController < Api::V1::Account
   def refused(error)
     render json: { error: error.code, message: I18n.t("whatsapp_templates.errors.#{error.code}") }.merge(error.details),
            status: :unprocessable_entity
+  end
+
+  def render_sync_failure(code)
+    status = code == 'meta_unreachable' ? :bad_gateway : :unprocessable_entity
+    message_key = code == 'permission_denied' ? 'permission_denied' : 'sync_failed'
+    render json: { error: 'sync_failed', code: code, message: I18n.t("whatsapp_templates.errors.#{message_key}") }, status: status
   end
 
   def render_error(code, status = :unprocessable_entity)

@@ -320,12 +320,13 @@
         "TEMPLATE_LABEL": "Approved template",
         "TEMPLATE_PLACEHOLDER": "Choose the template",
         "TEMPLATE_EMPTY": "This inbox has no approved template yet.",
-        "MEDIA_LABEL": "Link of the file shown at the top of the message",
+        "MEDIA_LABEL": "Link to another file for the top (optional)",
         "MEDIA_PLACEHOLDER": "https://",
         "CONTINUE": "Continue to review",
         "PREVIEW_TITLE": "How the customer sees it",
         "PREVIEW_HINT": "Preview with the first contact of the audience.",
-        "PREVIEW_EMPTY": "Choose a template to see the preview."
+        "PREVIEW_EMPTY": "Choose a template to see the preview.",
+        "MEDIA_DEFAULT": "Without a link, the file approved with the template goes."
       },
       "VARIABLES": {
         "TITLE": "Where each part of the message comes from",
@@ -401,7 +402,10 @@
           "INVALID_SCHEDULE": "Choose a future date and time.",
           "FEATURE_DISABLED": "WhatsApp campaigns are not enabled in this account.",
           "SMS_INBOX_REQUIRED": "Choose a connected SMS inbox.",
-          "MESSAGE_TOO_LONG": "The message is too long for SMS (1,600 characters at most)."
+          "MESSAGE_TOO_LONG": "The message is too long for SMS (1,600 characters at most).",
+          "HEADER_MEDIA_REQUIRED": "This template has a photo, video or document at the top, but the file is not saved. Add the file link or pick the file again in the template.",
+          "HEADER_MEDIA_URL_INVALID": "The file link must be complete, starting with https://.",
+          "HEADER_MEDIA_TYPE_MISMATCH": "The linked file is not the same kind as the template top (photo, video or document)."
         },
         "OPTED_OUT": "Refused messages",
         "REASONS": {

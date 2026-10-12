@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { useAlert } from 'dashboard/composables';
@@ -15,6 +15,7 @@ import {
   rascunhoDoObjetivo,
 } from '../helpers/conteudo';
 import { rascunhoDoFormato } from '../helpers/formatos';
+import { IDIOMA, nomeParaWhatsapp } from '../helpers/paraMeta';
 import { exemploDoCampo } from '../helpers/campos';
 import { useCanUseIA } from '../helpers/useCanUseIA';
 import AgenteGaveta from 'dashboard/routes/dashboard/autonomia/agentes/components/AgenteGaveta.vue';
@@ -51,6 +52,7 @@ const enviando = ref(false);
 const catalogo = ref(null);
 const formularios = ref([]);
 const verPrevia = ref(false);
+const existentes = ref([]);
 // "Criar com IA" é a entrega E (#1333): escondido até lá.
 const podeUsarIA = useCanUseIA();
 
@@ -99,14 +101,41 @@ const doModelo = dados =>
   copiarRascunho({
     nome: dados.nome,
     objetivo: dados.objetivo,
-    biblioteca: dados.biblioteca,
     tipo: dados.tipo,
+    idioma: dados.idioma,
     numeros: dados.numeros,
     conteudo: dados.conteudo,
   });
 
+// O original tem arquivo no topo ou nos cartões: a cópia pede de novo.
+const copiaPedeArquivos = computed(() => {
+  const conteudo = modelo.value?.conteudo;
+  if (!conteudo) return false;
+  return (
+    ['foto', 'video', 'documento'].includes(conteudo.topo?.tipo) ||
+    Boolean(conteudo.cartoes?.length)
+  );
+});
+
+// A cópia é um modelo novo: o arquivo do topo e dos cartões sobe de novo (o
+// handle do original expira), então a conferência pede o arquivo.
+const semArquivos = conteudo => ({
+  ...conteudo,
+  topo: { ...conteudo.topo, handle: '' },
+  ...(conteudo.cartoes && {
+    cartoes: conteudo.cartoes.map(cartao => ({ ...cartao, handle: '' })),
+  }),
+});
+
+// Os prontos só existem em português e inglês; outro idioma da tela cai no
+// inglês, que é o texto que aparece.
+const IDIOMAS_DOS_PRONTOS = ['pt_BR', 'en'];
+const idiomaDosProntos = () =>
+  IDIOMAS_DOS_PRONTOS.includes(locale.value) ? locale.value : 'en';
+
 // Rascunho novo de um formato (carrossel, oferta…), com os exemplos já preenchidos.
 const doFormato = chave => ({
+  idioma: idiomaDosProntos(),
   ...rascunhoDoFormato(chave, {
     t,
     ler: fonte => lerTextoComCampos(fonte, CAMPOS),
@@ -127,6 +156,7 @@ const rascunhoDaQuery = () => {
   if (!route.query.objetivo) return null;
   return {
     ...rascunhoDoObjetivo(route.query.objetivo, { t, campos: CAMPOS }),
+    idioma: idiomaDosProntos(),
     numeros: numerosDaPrimeiraConta(numeros.value),
   };
 };
@@ -139,11 +169,15 @@ const carregar = async () => {
   rascunho.value = null;
   modelo.value = null;
   try {
-    [numeros.value, catalogo.value, formularios.value] = await Promise.all([
-      api.listarNumeros(),
-      api.obterCatalogo(),
-      api.listarFormularios(),
-    ]);
+    [numeros.value, catalogo.value, formularios.value, existentes.value] =
+      await Promise.all([
+        api.listarNumeros(),
+        api.obterCatalogo(),
+        api.listarFormularios(),
+        // Para avisar de nome repetido já no Texto. Sem a lista, o aviso some e
+        // quem barra é o servidor (name_taken, com o texto traduzido).
+        api.listarModelos().catch(() => []),
+      ]);
     const id = alterando.value ? route.params.id : route.query.de;
     if (id) {
       modelo.value = await api.obterModelo(id);
@@ -159,6 +193,7 @@ const carregar = async () => {
         : {
             ...base,
             nome: t('MODELOS_WHATSAPP.CRIAR.COPIA_DE', { nome: base.nome }),
+            conteudo: semArquivos(base.conteudo),
           };
     } else {
       rascunho.value = rascunhoDaQuery();
@@ -180,12 +215,20 @@ watch(locale, () => {
   montadoDaQuery = JSON.stringify(rascunho.value);
 });
 
+// Trocou de etapa: o foco volta ao título, para o teclado e o leitor de tela
+// começarem do começo da etapa nova (não ficam perdidos no fim da página).
+const titulo = ref(null);
+watch(etapa, (nova, antiga) => {
+  if (antiga && nova !== antiga) nextTick(() => titulo.value?.focus());
+});
+
 const ir = proxima =>
   router.replace({ query: { ...route.query, etapa: proxima } });
 
 const escolherObjetivo = chave => {
   rascunho.value = {
     ...rascunhoDoObjetivo(chave, { t, campos: CAMPOS }),
+    idioma: idiomaDosProntos(),
     numeros: numerosDaPrimeiraConta(numeros.value),
   };
   router.replace({ query: { ...origem(), objetivo: chave, etapa: 'texto' } });
@@ -198,8 +241,8 @@ const usarOpcaoDaIA = opcao => {
   rascunho.value = {
     nome: opcao.nome,
     objetivo: 'em_branco',
-    biblioteca: false,
     tipo: opcao.tipo,
+    idioma: idiomaDosProntos(),
     numeros: numerosDaPrimeiraConta(numeros.value),
     conteudo: opcao.conteudo,
   };
@@ -212,7 +255,48 @@ const escolherFormato = chave => {
 };
 
 const formato = computed(() => rascunho.value?.conteudo.formato || 'padrao');
-const contexto = computed(() => ({ temCatalogo: Boolean(catalogo.value) }));
+// Cópia na mesma conta do WhatsApp com o mesmo texto e rodapé do original: a
+// Meta recusa como repetido. A conferência pede para mudar o texto.
+const originalNaMesmaConta = computed(() => {
+  if (modo.value !== 'duplicar' || !modelo.value) return null;
+  const mesmaConta = numeros.value.some(
+    numero =>
+      rascunho.value?.numeros.includes(numero.id) &&
+      numero.conta.id === modelo.value.conta
+  );
+  return mesmaConta ? modelo.value.conteudo : null;
+});
+
+// Nome que a conta do WhatsApp já tem no mesmo idioma: a Meta não cria de novo.
+// Devolve a sugestão de outro nome ("Retomar conversa 2") ou ''.
+const nomeRepetido = computed(() => {
+  if (alterando.value || !rascunho.value) return '';
+  const contas = numeros.value
+    .filter(numero => rascunho.value.numeros.includes(numero.id))
+    .map(numero => numero.conta.id);
+  // Mesma comparação do adaptador: o idioma sem diferença de maiúsculas.
+  const idioma = (rascunho.value.idioma || IDIOMA).toLowerCase();
+  const usados = existentes.value
+    .filter(
+      item =>
+        contas.includes(item.conta) &&
+        (item.idioma || '').toLowerCase() === idioma
+    )
+    .map(item => item.nomeNoWhatsapp);
+  const nome = rascunho.value.nome.trim();
+  if (!nomeParaWhatsapp(nome) || !usados.includes(nomeParaWhatsapp(nome)))
+    return '';
+  let numero = 2;
+  while (usados.includes(nomeParaWhatsapp(`${nome} ${numero}`))) numero += 1;
+  return `${nome} ${numero}`;
+});
+
+const contexto = computed(() => ({
+  temCatalogo: Boolean(catalogo.value),
+  tipo: rascunho.value?.tipo,
+  original: originalNaMesmaConta.value,
+  nomeRepetido: Boolean(nomeRepetido.value),
+}));
 
 // No carrossel, a etapa "Extras" vira "Cartões"; na oferta, "Oferta"; e assim por diante.
 const rotulos = computed(() =>
@@ -256,7 +340,13 @@ const podeSeguir = computed(() => {
   if (etapa.value === 'texto') {
     const temTexto =
       formato.value === 'codigo' || rascunho.value.conteudo.texto.length > 0;
-    return Boolean(rascunho.value.nome.trim() && temTexto);
+    // "Começar do zero" pergunta o tipo: nada de aviso escondido por padrão.
+    return Boolean(
+      rascunho.value.nome.trim() &&
+        temTexto &&
+        rascunho.value.tipo &&
+        !nomeRepetido.value
+    );
   }
   if (etapa.value === 'numeros') return rascunho.value.numeros.length > 0;
   if (etapa.value === 'confira') {
@@ -267,6 +357,13 @@ const podeSeguir = computed(() => {
   }
   return true;
 });
+
+const perguntarTipo = computed(
+  () =>
+    modo.value !== 'alterar' &&
+    rascunho.value?.objetivo === 'em_branco' &&
+    (rascunho.value?.conteudo.formato || 'padrao') === 'padrao'
+);
 
 const terminaComCampo = computed(
   () =>
@@ -319,6 +416,8 @@ const enviar = async () => {
         ...origem(),
         ids: salvos.map(salvo => salvo.id).join(','),
         modo: modo.value,
+        // Carrossel, oferta e código ainda não vão em campanha: o Enviado diz isso.
+        ...(formato.value === 'padrao' ? {} : { semCampanha: '1' }),
       },
     });
   } catch (erro) {
@@ -407,7 +506,9 @@ const proximaAlteracao = computed(() => {
         <template v-else>
           <header class="flex flex-col gap-5">
             <h1
-              class="m-0 text-3xl font-bold tracking-tight md:text-4xl text-n-slate-12"
+              ref="titulo"
+              tabindex="-1"
+              class="m-0 text-3xl font-bold tracking-tight md:text-4xl text-n-slate-12 focus:outline-none"
             >
               {{ $t(`MODELOS_WHATSAPP.CRIAR.TITULO.${modo}`) }}
             </h1>
@@ -481,11 +582,22 @@ const proximaAlteracao = computed(() => {
               class="i-lucide-copy size-5 mt-0.5 shrink-0 text-n-blue-11"
               aria-hidden="true"
             />
-            <p class="mb-0 text-[0.9375rem] text-n-slate-12">
-              {{
-                $t('MODELOS_WHATSAPP.CRIAR.AVISO_COPIA', { nome: modelo.nome })
-              }}
-            </p>
+            <span class="flex flex-col gap-1">
+              <span class="text-[0.9375rem] text-n-slate-12">
+                {{
+                  $t('MODELOS_WHATSAPP.CRIAR.AVISO_COPIA', {
+                    nome: modelo.nome,
+                  })
+                }}
+              </span>
+              <span
+                v-if="copiaPedeArquivos"
+                data-aviso-copia-arquivos
+                class="text-[0.9375rem] font-medium text-n-slate-12"
+              >
+                {{ $t('MODELOS_WHATSAPP.CRIAR.AVISO_COPIA_ARQUIVOS') }}
+              </span>
+            </span>
           </section>
 
           <EtapaCriarComIA
@@ -521,6 +633,8 @@ const proximaAlteracao = computed(() => {
                 <EtapaTexto
                   v-model:rascunho="rascunho"
                   :destacar-fim="terminaComCampo"
+                  :perguntar-tipo="perguntarTipo"
+                  :nome-repetido="nomeRepetido"
                 />
                 <ModeloConferencia
                   v-if="modo === 'corrigir'"

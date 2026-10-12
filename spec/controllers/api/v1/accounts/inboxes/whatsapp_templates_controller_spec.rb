@@ -49,8 +49,7 @@ RSpec.describe 'Api::V1::Accounts::Inboxes::WhatsappTemplates', type: :request d
       file = Rack::Test::UploadedFile.new(Rails.root.join('spec/assets/avatar.png'), 'image/png')
       writes = [[:post, base, { template: { name: 'novo', language: 'pt_BR' } }],
                 [:patch, "#{base}/11", { template: { category: 'UTILITY' } }],
-                [:delete, "#{base}/11", {}],
-                [:post, "#{base}/12/duplicate", { template: { name: 'copia' } }]]
+                [:delete, "#{base}/11", {}]]
 
       writes.each do |verb, path, params|
         call(verb, path, params)
@@ -112,6 +111,27 @@ RSpec.describe 'Api::V1::Accounts::Inboxes::WhatsappTemplates', type: :request d
       call(:get, base, { refresh: true })
 
       expect(response.parsed_body['payload']).to contain_exactly(a_hash_including('name' => 'pedido_enviado', 'friendly_name' => 'Pedido enviado'))
+    end
+
+    # #1382: o "Atualizar" diz a verdade quando o sync não deu certo, em vez da lista antiga como se fosse nova.
+    it 'atualizar que falha responde com o código (502 quando a Meta não respondeu, 422 nos outros)' do
+      sync_url = "https://graph.facebook.com/v14.0/#{channel.waba_id}/message_templates"
+      stub_request(:get, sync_url).with(query: hash_including({})).to_return(status: 503)
+      allow_any_instance_of(Whatsapp::Providers::WhatsappCloudService).to receive(:sleep) # rubocop:disable RSpec/AnyInstance
+
+      call(:get, base, { refresh: true })
+
+      expect(response).to have_http_status(:bad_gateway)
+      expect(response.parsed_body).to include('error' => 'sync_failed', 'code' => 'meta_unreachable',
+                                              'message' => I18n.t('whatsapp_templates.errors.sync_failed', locale: 'pt_BR'))
+
+      stub_request(:get, sync_url).with(query: hash_including({})).to_return(status: 401, headers: json,
+                                                                             body: { error: { code: 190 } }.to_json)
+      call(:get, base, { refresh: true })
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body).to include('code' => 'permission_denied',
+                                              'message' => I18n.t('whatsapp_templates.errors.permission_denied', locale: 'pt_BR'))
     end
 
     it 'caixa que não é do WhatsApp oficial com WABA não tem a API' do
@@ -187,6 +207,85 @@ RSpec.describe 'Api::V1::Accounts::Inboxes::WhatsappTemplates', type: :request d
 
       expect(response).to have_http_status(:unprocessable_entity)
       expect(response.parsed_body['error']).to eq('system_template')
+    end
+  end
+
+  # #1380: o pronto "Cobrança ou boleto" foi à Meta com COPY_CODE sem exemplo num aviso e voltou recusado. A forma que a
+  # Meta exige é conferida aqui, antes de qualquer chamada à Graph.
+  describe 'forma que a Meta exige' do
+    let(:boleto_antigo) do
+      [{ type: 'HEADER', format: 'DOCUMENT', example: { header_handle: ['h'] } },
+       { type: 'BODY', text: 'Olá, {{1}}. O seu boleto vence hoje. O código está no botão.', example: { body_text: [['Ana']] } },
+       { type: 'BUTTONS', buttons: [{ type: 'COPY_CODE' }] }]
+    end
+
+    it 'não cria o pronto antigo do boleto: 422 com o código, sem chamar a Meta' do
+      call(:post, base, { template: { name: 'cobranca_ou_boleto', language: 'pt_BR', category: 'UTILITY', components: boleto_antigo } })
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body).to include('error' => 'marketing_only', 'problems' => %w[marketing_only copy_code_example])
+      expect(response.parsed_body['message']).to eq(I18n.t('whatsapp_templates.errors.marketing_only'))
+      expect(a_request(:any, graph_host)).not_to have_been_made
+      expect(WhatsappTemplateProfile.where(inbox: inbox)).to be_empty
+    end
+
+    it 'não cria botão de site sem endereço nem de ligar sem número' do
+      buttons = [{ type: 'URL', text: 'Ver', url: '' }, { type: 'PHONE_NUMBER', text: 'Ligar' }]
+      call(:post, base, { template: { name: 'aviso', language: 'pt_BR', category: 'UTILITY',
+                                      components: [{ type: 'BODY', text: 'Oi.' }, { type: 'BUTTONS', buttons: buttons }] } })
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['problems']).to eq(%w[url_missing phone_missing])
+      expect(a_request(:any, graph_host)).not_to have_been_made
+    end
+
+    it 'não altera o conteúdo para uma forma que a Meta recusa' do
+      call(:patch, "#{base}/11", { template: { components: [{ type: 'BODY', text: 'Oi {{1}}, saiu.' },
+                                                            { type: 'BUTTONS', buttons: [{ type: 'COPY_CODE', example: 'PIX 123' }] }] } })
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['problems']).to eq(%w[marketing_only copy_code_example])
+      expect(a_request(:any, graph_host)).not_to have_been_made
+    end
+
+    context 'when the template has a picture at the top and the edit brings no new file' do
+      def photo
+        mine.merge('id' => '16', 'name' => 'com_foto', 'status' => 'REJECTED',
+                   'components' => [{ 'type' => 'HEADER', 'format' => 'IMAGE', 'example' => { 'header_handle' => ['4::velho'] } },
+                                    { 'type' => 'BODY', 'text' => 'Olá {{1}}, veja.' }])
+      end
+
+      def edit
+        { components: [{ type: 'HEADER', format: 'IMAGE' }, { type: 'BODY', text: 'Olá {{1}}, veja a novidade.' }] }
+      end
+
+      before { channel.update_columns(message_templates: [mine, photo]) } # rubocop:disable Rails/SkipsModelValidations
+
+      it 'sobe de novo o arquivo guardado no perfil e manda o handle novo, nunca o velho' do
+        profile = WhatsappTemplateProfile.create!(account: account, inbox: inbox, waba_id: channel.waba_id, name: 'com_foto', language: 'pt_BR')
+        profile.header_file.attach(io: Rails.root.join('spec/assets/avatar.png').open, filename: 'topo.png', content_type: 'image/png')
+        allow(GlobalConfigService).to receive(:load).and_call_original
+        allow(GlobalConfigService).to receive(:load).with('WHATSAPP_APP_ID', '').and_return('app_1')
+        stub_request(:post, "#{graph}/app_1/uploads").with(query: hash_including({}))
+                                                     .to_return(status: 200, headers: json, body: { id: 'upload:s3' }.to_json)
+        stub_request(:post, "#{graph}/upload:s3").to_return(status: 200, headers: json, body: { h: '4::novo' }.to_json)
+        stub_lookup('com_foto', [photo])
+        edit_request = stub_request(:post, "#{graph}/16").to_return(status: 200, headers: json, body: { success: true }.to_json)
+
+        call(:patch, "#{base}/16", { template: edit })
+
+        expect(response).to have_http_status(:ok)
+        expect(edit_request.with { |request| JSON.parse(request.body).dig('components', 0, 'example', 'header_handle') == ['4::novo'] })
+          .to have_been_requested
+      end
+
+      it 'sem arquivo guardado, pede o arquivo (422) sem falar com a Meta' do
+        call(:patch, "#{base}/16", { template: edit })
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response.parsed_body['error']).to eq('media_required')
+        expect(a_request(:any, graph_host)).not_to have_been_made
+      end
     end
   end
 
@@ -294,52 +393,6 @@ RSpec.describe 'Api::V1::Accounts::Inboxes::WhatsappTemplates', type: :request d
     end
   end
 
-  describe 'POST duplicate' do
-    it 'duplica um modelo do sistema com outro nome' do
-      stub_lookup('meu_aviso', [])
-      post = stub_request(:post, templates_url).to_return(status: 200, headers: json, body: { id: '950' }.to_json)
-
-      call(:post, "#{base}/12/duplicate", { template: { name: 'meu_aviso', friendly_name: 'Meu aviso' } })
-
-      expect(response).to have_http_status(:created)
-      expect(post).to have_been_requested.once
-      expect(response.parsed_body).to include('name' => 'meu_aviso', 'system_owner' => nil, 'friendly_name' => 'Meu aviso')
-    end
-
-    it 'topo com mídia: sobe de novo o arquivo guardado no perfil e a cópia fica com o mesmo arquivo' do
-      media = mine.merge('id' => '15', 'name' => 'com_foto',
-                         'components' => [{ 'type' => 'HEADER', 'format' => 'IMAGE', 'example' => { 'header_handle' => ['https://x'] } },
-                                          { 'type' => 'BODY', 'text' => 'Olá {{1}}, veja.' }])
-      channel.update_columns(message_templates: [media]) # rubocop:disable Rails/SkipsModelValidations
-      source = WhatsappTemplateProfile.create!(account: account, inbox: inbox, waba_id: channel.waba_id, name: 'com_foto', language: 'pt_BR')
-      source.header_file.attach(io: Rails.root.join('spec/assets/avatar.png').open, filename: 'topo.png', content_type: 'image/png')
-      allow(GlobalConfigService).to receive(:load).and_call_original
-      allow(GlobalConfigService).to receive(:load).with('WHATSAPP_APP_ID', '').and_return('app_1')
-      stub_request(:post, "#{graph}/app_1/uploads").with(query: hash_including({}))
-                                                   .to_return(status: 200, headers: json, body: { id: 'upload:s2' }.to_json)
-      stub_request(:post, "#{graph}/upload:s2").to_return(status: 200, headers: json, body: { h: '4::novo' }.to_json)
-      stub_lookup('com_foto_2', [])
-      stub_request(:post, templates_url).to_return(status: 200, headers: json, body: { id: '960' }.to_json)
-
-      call(:post, "#{base}/15/duplicate", { template: { name: 'com_foto_2' } })
-
-      expect(response).to have_http_status(:created)
-      sent_handle = ->(request) { JSON.parse(request.body).dig('components', 0, 'example', 'header_handle') == ['4::novo'] }
-      expect(a_request(:post, templates_url).with(&sent_handle)).to have_been_made
-      expect(WhatsappTemplateProfile.find_by!(name: 'com_foto_2').header_file.blob).to eq(source.header_file.blob)
-    end
-
-    it 'topo com mídia sem arquivo novo pede o arquivo' do
-      media = mine.merge('id' => '14', 'name' => 'com_foto',
-                         'components' => [{ 'type' => 'HEADER', 'format' => 'IMAGE', 'example' => { 'header_handle' => ['https://x'] } }])
-      channel.update_columns(message_templates: [media]) # rubocop:disable Rails/SkipsModelValidations
-
-      call(:post, "#{base}/14/duplicate", { template: { name: 'com_foto_2' } })
-
-      expect(response.parsed_body['error']).to eq('media_required')
-    end
-  end
-
   describe 'POST media' do
     it 'sobe o arquivo na Meta pelo tipo do conteúdo (não o declarado) e devolve o handle e a referência' do
       allow(GlobalConfigService).to receive(:load).and_call_original
@@ -399,7 +452,7 @@ RSpec.describe 'Api::V1::Accounts::Inboxes::WhatsappTemplates', type: :request d
     it 'nenhum endpoint da conta A abre a caixa da B' do
       other_base = "/api/v1/accounts/#{account.id}/inboxes/#{other_inbox.id}/whatsapp_templates"
       [[:get, other_base], [:post, other_base], [:patch, "#{other_base}/77"], [:delete, "#{other_base}/77"],
-       [:post, "#{other_base}/77/duplicate"], [:get, "#{other_base}/77/usage"], [:post, "#{other_base}/media"]].each do |verb, path|
+       [:get, "#{other_base}/77/usage"], [:post, "#{other_base}/media"]].each do |verb, path|
         call(verb, path, { template: { name: 'x' } })
         expect(response).to have_http_status(:not_found), "#{verb} #{path} devolveu #{response.status}"
       end

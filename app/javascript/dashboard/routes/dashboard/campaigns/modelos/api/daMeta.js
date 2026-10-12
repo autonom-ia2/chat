@@ -4,6 +4,7 @@
 // está pausado, quantas alterações restam) fica null e a tela não inventa.
 // Sem expressão regular (regra do Rodrigo): o texto é lido com indexOf/slice.
 import { campoDoPerfil } from '../helpers/campos';
+import { codigoDeExemploValido } from '../helpers/regraEstrutural';
 
 const ABRE = '{{';
 const FECHA = '}}';
@@ -14,8 +15,9 @@ const SITUACOES = {
   IN_APPEAL: 'em_analise',
   REJECTED: 'recusado',
   PAUSED: 'pausado',
-  DISABLED: 'pausado',
-  LIMIT_EXCEEDED: 'pausado',
+  DISABLED: 'desativado',
+  // A conta do WhatsApp chegou ao limite de modelos: este não chegou a ser criado.
+  LIMIT_EXCEEDED: 'limite',
 };
 // Já pedido para apagar na Meta: não aparece mais na lista.
 export const SITUACOES_FORA_DA_LISTA = ['PENDING_DELETION', 'DELETED'];
@@ -62,6 +64,15 @@ export const lerCorpo = (texto, campoDe) => {
   return pedacos;
 };
 
+// O que a tela sabe editar sem perder nada: topo de texto, foto, vídeo ou
+// documento; botões de resposta, site, ligar e copiar código; código de
+// verificação de copiar. Modelo feito fora com outra coisa (topo de localização,
+// botão de ligação por voz, preenchimento automático) não é alterado nem
+// duplicado aqui: a conversão perderia essa parte sem aviso.
+const TOPOS_EDITAVEIS = ['TEXT', 'IMAGE', 'VIDEO', 'DOCUMENT'];
+const BOTOES_EDITAVEIS = ['QUICK_REPLY', 'URL', 'PHONE_NUMBER', 'COPY_CODE'];
+const PREENCHIMENTO_AUTOMATICO = ['ONE_TAP', 'ZERO_TAP'];
+
 // Variável → valor de exemplo que a Meta guardou (posicional ou com nome).
 const exemplosDoCorpo = corpo => {
   const exemplo = corpo?.example || {};
@@ -80,7 +91,16 @@ const exemplosDoCorpo = corpo => {
 const botaoDaMeta = botao => {
   const tipo = maiusculo(botao.type);
   if (tipo === 'URL') {
-    return { tipo: 'site', texto: botao.text || '', valor: botao.url || '' };
+    // O exemplo do final variável ({{1}}) volta junto ao alterar ou duplicar.
+    const exemplo = Array.isArray(botao.example)
+      ? botao.example[0]
+      : botao.example;
+    return {
+      tipo: 'site',
+      texto: botao.text || '',
+      valor: botao.url || '',
+      ...(exemplo ? { exemplo } : {}),
+    };
   }
   if (tipo === 'PHONE_NUMBER') {
     return {
@@ -141,9 +161,10 @@ const ofertaDe = (template, botoes) => {
   const link = botoes.find(botao => maiusculo(botao.type) === 'URL');
   return {
     titulo: oferta?.limited_time_offer?.text || '',
-    terminaEm: '',
     link: link?.url || '',
-    cupom: cupom?.example || '',
+    botao: link?.text || '',
+    cupom:
+      (Array.isArray(cupom?.example) ? cupom.example[0] : cupom?.example) || '',
   };
 };
 
@@ -170,6 +191,26 @@ const formatoDe = template => {
   if (tipos.includes('FLOW')) return 'formulario';
   if (tipos.includes('CATALOG') || tipos.includes('MPM')) return 'catalogo';
   return 'padrao';
+};
+
+export const editavelNaTela = template => {
+  const topo = componente(template, 'HEADER');
+  if (topo && !TOPOS_EDITAVEIS.includes(maiusculo(topo.format))) return false;
+  const botoes = botoesDe(componente(template, 'BUTTONS'));
+  const formato = formatoDe(template);
+  if (formato === 'codigo') {
+    return !botoes.some(
+      botao =>
+        PREENCHIMENTO_AUTOMATICO.includes(maiusculo(botao.otp_type)) ||
+        Array.isArray(botao.supported_apps)
+    );
+  }
+  // Catálogo e formulário: a tela ainda não remonta esses botões.
+  if (['catalogo', 'formulario'].includes(formato)) return false;
+  if (formato !== 'padrao') return true;
+  return botoes.every(botao =>
+    BOTOES_EDITAVEIS.includes(maiusculo(botao.type))
+  );
 };
 
 // O conteúdo na tela e o mapa variável → campo (para a campanha ligar sozinha).
@@ -216,11 +257,17 @@ export const conteudoDaMeta = (template, perfil = template) => {
 };
 
 // Motivo da recusa: o que a Meta disse ou, quando ela diz só "formato inválido",
-// o que dá para ver no próprio texto (campo no começo, no fim, exemplo faltando).
+// o que dá para ver no próprio modelo (botão "Copiar código" sem código, campo
+// no começo, no fim, exemplo faltando).
 export const recusaDe = (template, conteudo) => {
   const motivo = maiusculo(template.rejected_reason);
   if (RECUSAS[motivo]) return { codigo: RECUSAS[motivo] };
   if (motivo !== 'INVALID_FORMAT') return { codigo: 'outro' };
+  const copiarSemCodigo = (conteudo.botoes || []).some(
+    botao =>
+      botao.tipo === 'copiar_codigo' && !codigoDeExemploValido(botao.valor)
+  );
+  if (copiarSemCodigo) return { codigo: 'botao_copiar_codigo' };
   const pedacos = conteudo.texto.filter(
     pedaco => pedaco.t === 'campo' || pedaco.v.trim()
   );
@@ -244,9 +291,13 @@ export const modeloDaMeta = (template, grupo) => {
     nome: template.friendly_name || template.name,
     nomeNoWhatsapp: template.name,
     objetivo: conteudo.formato === 'padrao' ? 'em_branco' : conteudo.formato,
-    biblioteca: false,
     sistema: Boolean(template.system_owner),
+    donoDoSistema: template.system_owner || '',
+    editavel: editavelNaTela(template),
     idioma: template.language,
+    // Variáveis com nome ({{primeiro_nome}}) continuam com nome ao alterar.
+    formatoDosCampos:
+      maiusculo(template.parameter_format) === 'NAMED' ? 'named' : 'positional',
     situacao,
     tipo,
     tipoMudouPeloWhatsapp:

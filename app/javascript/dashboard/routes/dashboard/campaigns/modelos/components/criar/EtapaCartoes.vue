@@ -10,6 +10,7 @@ import {
   CARTOES_MINIMO,
   LIMITE_DO_CARTAO,
 } from '../../constants';
+import { LIMITE_DO_BOTAO, ordenarBotoes } from '../../helpers/regraEstrutural';
 
 // Carrossel: de 2 a 10 cartões, cada um com foto ou vídeo, um texto curto e
 // até 2 botões. O WhatsApp exige os mesmos botões em todos os cartões, então os
@@ -61,7 +62,7 @@ const alternarTipo = tipo => {
       ...cartao,
       botoes: ligado
         ? cartao.botoes.filter(botao => botao.tipo !== tipo)
-        : [...cartao.botoes, { tipo, texto: '', valor: '' }],
+        : ordenarBotoes([...cartao.botoes, { tipo, texto: '', valor: '' }]),
     }))
   );
 };
@@ -144,7 +145,7 @@ const aoEscolherArquivo = (indice, { arquivo, local }) =>
           </h3>
           <Button
             v-if="cartoes.length > CARTOES_MINIMO"
-            :label="$t('MODELOS_WHATSAPP.EXTRAS.TIRAR_BOTAO')"
+            :label="$t('MODELOS_WHATSAPP.CARTOES.TIRAR')"
             icon="i-lucide-x"
             color="slate"
             variant="ghost"
@@ -178,11 +179,11 @@ const aoEscolherArquivo = (indice, { arquivo, local }) =>
             <span class="size-4" :class="midia.icone" aria-hidden="true" />
             {{ $t(`MODELOS_WHATSAPP.TOPOS.${midia.chave}.ROTULO`) }}
           </button>
+          <span v-if="cartao.arquivo" class="text-sm break-all text-n-slate-12">
+            {{ cartao.arquivo }}
+          </span>
           <EscolherArquivo
             :nome="cartao.arquivo"
-            :rotulo="
-              cartao.arquivo || $t('MODELOS_WHATSAPP.EXTRAS.ESCOLHER_ARQUIVO')
-            "
             :aceita="MIDIAS.find(m => m.chave === cartao.midia).aceita"
             @escolhido="escolhido => aoEscolherArquivo(indice, escolhido)"
           />
@@ -200,7 +201,18 @@ const aoEscolherArquivo = (indice, { arquivo, local }) =>
           class="grid gap-3 sm:grid-cols-2"
         >
           <Input
+            wrap-message
             :model-value="botao.texto"
+            :maxlength="LIMITE_DO_BOTAO"
+            :message="
+              $t('MODELOS_WHATSAPP.EXTRAS.LIMITE_DO_BOTAO', {
+                n: (botao.texto || '').length,
+                limite: LIMITE_DO_BOTAO,
+              })
+            "
+            :message-type="
+              (botao.texto || '').length > LIMITE_DO_BOTAO ? 'error' : 'info'
+            "
             :label="$t(`MODELOS_WHATSAPP.TIPOS_DE_BOTAO.${botao.tipo}.ROTULO`)"
             :placeholder="
               $t(`MODELOS_WHATSAPP.TIPOS_DE_BOTAO.${botao.tipo}.EXEMPLO`)

@@ -1,4 +1,5 @@
 <script setup>
+import { andarComSetas } from '../../helpers/setas';
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
@@ -12,16 +13,24 @@ import {
 import { camposUsados, contarLetras } from '../../helpers/conteudo';
 import ModeloEditorTexto from '../ModeloEditorTexto.vue';
 import ModeloMelhorarComIA from '../ModeloMelhorarComIA.vue';
-import { exemploDoCampo, useRotuloDoCampo } from '../../helpers/campos';
+import {
+  exemploDoCampo,
+  ligacaoDoCatalogo,
+  useRotuloDoCampo,
+} from '../../helpers/campos';
 import { useCanUseIA } from '../../helpers/useCanUseIA';
 
 defineProps({
   // Na correção: marca a caixa de texto enquanto o problema existir.
   destacarFim: { type: Boolean, default: false },
+  // Modelo novo do zero, cópia ou correção de recusado: a pessoa diz o tipo. Num
+  // modelo aprovado a Meta não deixa trocar o tipo, então não pergunta.
+  perguntarTipo: { type: Boolean, default: false },
+  // Nome já usado na mesma conta do WhatsApp: a sugestão de outro (ou '').
+  nomeRepetido: { type: String, default: '' },
 });
 
-// Nome, texto e exemplos. Modelo pronto do WhatsApp: o texto vem fixo (por isso
-// é aprovado mais rápido) e a pessoa pode trocar para escrever do jeito dela.
+// Nome, texto e exemplos.
 const rascunho = defineModel('rascunho', { type: Object, required: true });
 
 const { t } = useI18n();
@@ -83,8 +92,22 @@ const mudarNome = nome => {
   rascunho.value = { ...rascunho.value, nome };
 };
 
-const escreverDoMeuJeito = () => {
-  rascunho.value = { ...rascunho.value, biblioteca: false };
+// De onde vem o valor de cada campo quando o modelo for usado numa campanha.
+const fonteDoCampo = campo => {
+  if (campo === 'nome_empresa') {
+    return t('MODELOS_WHATSAPP.TEXTO.NOME_DA_EMPRESA', {
+      conta: currentAccount.value?.name || '',
+    });
+  }
+  return ligacaoDoCatalogo(campo)
+    ? t('MODELOS_WHATSAPP.TEXTO.FONTE_CADASTRO')
+    : t('MODELOS_WHATSAPP.TEXTO.FONTE_COLUNA');
+};
+
+// "Começar do zero": a pessoa diz o tipo (aviso ou divulgação), sem padrão.
+const TIPOS_DO_ZERO = ['aviso', 'divulgacao'];
+const escolherTipo = tipo => {
+  rascunho.value = { ...rascunho.value, tipo };
 };
 
 // "Usar" na gaveta: o texto novo entra (os exemplos que a pessoa já tinha
@@ -98,12 +121,55 @@ const usarMelhoria = resposta => {
 <template>
   <div data-etapa-texto class="flex flex-col gap-7">
     <Input
+      wrap-message
       :model-value="rascunho.nome"
       data-nome
       :label="$t('MODELOS_WHATSAPP.TEXTO.NOME')"
-      :message="$t('MODELOS_WHATSAPP.TEXTO.NOME_AJUDA')"
+      :message="
+        nomeRepetido
+          ? $t('MODELOS_WHATSAPP.TEXTO.NOME_REPETIDO', {
+              sugestao: nomeRepetido,
+            })
+          : $t('MODELOS_WHATSAPP.TEXTO.NOME_AJUDA')
+      "
+      :message-type="nomeRepetido ? 'error' : 'info'"
       @update:model-value="mudarNome"
     />
+
+    <section v-if="perguntarTipo" data-tipo-do-zero class="flex flex-col gap-3">
+      <h2 id="tipo-do-zero" class="m-0 text-base font-semibold text-n-slate-12">
+        {{ $t('MODELOS_WHATSAPP.TEXTO.TIPO.PERGUNTA') }}
+      </h2>
+      <div
+        role="radiogroup"
+        aria-labelledby="tipo-do-zero"
+        class="grid gap-3 sm:grid-cols-2"
+        @keydown="andarComSetas"
+      >
+        <button
+          v-for="tipo in TIPOS_DO_ZERO"
+          :key="tipo"
+          type="button"
+          role="radio"
+          :data-tipo="tipo"
+          :aria-checked="rascunho.tipo === tipo"
+          class="flex flex-col items-start gap-1 p-4 text-start rounded-xl min-h-11 ring-1 ring-inset focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+          :class="
+            rascunho.tipo === tipo
+              ? 'ring-2 ring-n-blue-8 bg-n-blue-2'
+              : 'ring-n-weak bg-n-solid-1 hover:ring-n-blue-6'
+          "
+          @click="escolherTipo(tipo)"
+        >
+          <span class="text-[0.9375rem] font-semibold text-n-slate-12">
+            {{ $t(`MODELOS_WHATSAPP.TEXTO.TIPO.${tipo}.ROTULO`) }}
+          </span>
+          <span class="text-sm text-n-slate-11">
+            {{ $t(`MODELOS_WHATSAPP.TEXTO.TIPO.${tipo}.PARA`) }}
+          </span>
+        </button>
+      </div>
+    </section>
 
     <section class="flex flex-col gap-3">
       <div class="flex flex-wrap items-end justify-between gap-2">
@@ -111,7 +177,7 @@ const usarMelhoria = resposta => {
           {{ $t('MODELOS_WHATSAPP.TEXTO.MENSAGEM') }}
         </h2>
         <Button
-          v-if="podeUsarIA && !rascunho.biblioteca && !textoFixo"
+          v-if="podeUsarIA && !textoFixo"
           data-melhorar-com-ia
           :label="$t('MODELOS_WHATSAPP.IA.MELHORAR_COM_IA')"
           icon="i-lucide-sparkles"
@@ -133,37 +199,6 @@ const usarMelhoria = resposta => {
         </p>
         <p class="mb-0 text-sm text-n-slate-11">
           {{ $t('MODELOS_WHATSAPP.FORMATOS.codigo.PARA_QUE_SERVE') }}
-        </p>
-      </div>
-
-      <div
-        v-else-if="rascunho.biblioteca"
-        data-texto-pronto
-        class="flex flex-col gap-3 p-5 rounded-xl bg-n-teal-2 ring-1 ring-inset ring-n-teal-6"
-      >
-        <p
-          class="mb-0 text-base leading-relaxed whitespace-pre-wrap text-n-slate-12"
-        >
-          <template v-for="(pedaco, indice) in conteudo.texto" :key="indice">
-            <span
-              v-if="pedaco.t === 'campo'"
-              class="px-1 text-sm font-medium rounded-md bg-n-blue-3 text-n-blue-11"
-            >
-              <span>{{ rotulo(pedaco.v) }}</span>
-            </span>
-            <span v-else>{{ pedaco.v }}</span>
-          </template>
-        </p>
-        <p class="mb-0 text-sm text-n-slate-11">
-          {{ $t('MODELOS_WHATSAPP.TEXTO.PRONTO_DO_WHATSAPP') }}
-          <button
-            type="button"
-            data-meu-jeito
-            class="font-medium min-h-11 text-n-blue-11 hover:underline"
-            @click="escreverDoMeuJeito"
-          >
-            {{ $t('MODELOS_WHATSAPP.TEXTO.MEU_JEITO') }}
-          </button>
         </p>
       </div>
 
@@ -202,24 +237,29 @@ const usarMelhoria = resposta => {
         </p>
       </div>
       <div class="grid gap-4 sm:grid-cols-2">
-        <Input
+        <div
           v-for="campo in campos"
           :key="campo"
-          :data-exemplo="campo"
-          :model-value="conteudo.exemplos[campo] || ''"
-          :label="rotulo(campo)"
-          :message-type="conteudo.exemplos[campo] ? 'info' : 'error'"
-          :message="
-            !conteudo.exemplos[campo]
-              ? $t('MODELOS_WHATSAPP.TEXTO.SEM_EXEMPLO')
-              : campo === 'nome_empresa'
-                ? $t('MODELOS_WHATSAPP.TEXTO.NOME_DA_EMPRESA', {
-                    conta: currentAccount?.name || '',
-                  })
-                : ''
-          "
-          @update:model-value="valor => mudarExemplo(campo, valor)"
-        />
+          class="flex flex-col gap-1 min-w-0"
+        >
+          <Input
+            wrap-message
+            :data-exemplo="campo"
+            :model-value="conteudo.exemplos[campo] || ''"
+            :label="rotulo(campo)"
+            :message-type="conteudo.exemplos[campo] ? 'info' : 'error'"
+            :message="
+              conteudo.exemplos[campo]
+                ? ''
+                : $t('MODELOS_WHATSAPP.TEXTO.SEM_EXEMPLO')
+            "
+            @update:model-value="valor => mudarExemplo(campo, valor)"
+          />
+          <!-- De onde vem o valor de verdade na campanha (texto que quebra linha). -->
+          <p :data-fonte="campo" class="mb-0 text-xs text-n-slate-11">
+            {{ fonteDoCampo(campo) }}
+          </p>
+        </div>
       </div>
     </section>
     <ModeloMelhorarComIA

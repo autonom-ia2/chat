@@ -20,6 +20,15 @@ const ids = computed(() =>
     .filter(Boolean)
 );
 const daCampanha = computed(() => route.query.from === 'campaign');
+const semCampanha = computed(() => route.query.semCampanha === '1');
+
+// O que o passo diz: o da campanha, o de formato que ainda não vai em campanha
+// ou o de sempre.
+const textoDoPasso = chave => {
+  if (chave === 'ENVIADO') return 'TEXTO';
+  if (chave === 'PRONTO' && semCampanha.value) return 'SEM_CAMPANHA';
+  return daCampanha.value ? 'CAMPANHA' : 'TEXTO';
+};
 const modeloDaCaixa = ref('');
 
 const PASSOS = [
@@ -114,7 +123,7 @@ const seguir = () => {
               <span class="text-[0.9375rem] text-n-slate-11">
                 {{
                   $t(
-                    `MODELOS_WHATSAPP.ENVIADO.PASSOS.${passo.chave}.${daCampanha && passo.chave !== 'ENVIADO' ? 'CAMPANHA' : 'TEXTO'}`
+                    `MODELOS_WHATSAPP.ENVIADO.PASSOS.${passo.chave}.${textoDoPasso(passo.chave)}`
                   )
                 }}
               </span>

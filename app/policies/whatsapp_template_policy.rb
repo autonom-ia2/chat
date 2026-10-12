@@ -21,10 +21,6 @@ class WhatsappTemplatePolicy < ApplicationPolicy
     manage?
   end
 
-  def duplicate?
-    manage?
-  end
-
   def media?
     manage?
   end

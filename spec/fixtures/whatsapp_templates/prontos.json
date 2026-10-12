@@ -1,0 +1,890 @@
+[
+  {
+    "origem": "objetivo",
+    "chave": "boas_vindas",
+    "idioma": "en",
+    "pode_ir_em_campanha": true,
+    "corpo": {
+      "name": "welcome",
+      "language": "en",
+      "category": "MARKETING",
+      "parameter_format": "positional",
+      "components": [
+        {
+          "type": "BODY",
+          "text": "Hello, {{1}}! This is {{2}}. Glad to have you with us. Whenever you need anything, just send us a message here.",
+          "example": {
+            "body_text": [
+              [
+                "Ana",
+                "Your Company"
+              ]
+            ]
+          }
+        },
+        {
+          "type": "BUTTONS",
+          "buttons": [
+            {
+              "type": "QUICK_REPLY",
+              "text": "Tell me more"
+            }
+          ]
+        }
+      ],
+      "friendly_name": "Welcome",
+      "fields": {
+        "1": "cliente.primeiro_nome",
+        "2": "minha_empresa.nome"
+      }
+    }
+  },
+  {
+    "origem": "objetivo",
+    "chave": "lembrete",
+    "idioma": "en",
+    "pode_ir_em_campanha": true,
+    "corpo": {
+      "name": "appointment_reminder",
+      "language": "en",
+      "category": "UTILITY",
+      "parameter_format": "positional",
+      "components": [
+        {
+          "type": "BODY",
+          "text": "Hello, {{1}}! A reminder of your appointment at {{2}}: on {{3}}, at {{4}}. Do you confirm? Tap one of the options below.",
+          "example": {
+            "body_text": [
+              [
+                "Ana",
+                "Your Company",
+                "10/15",
+                "2:30 PM"
+              ]
+            ]
+          }
+        },
+        {
+          "type": "BUTTONS",
+          "buttons": [
+            {
+              "type": "QUICK_REPLY",
+              "text": "I confirm"
+            },
+            {
+              "type": "QUICK_REPLY",
+              "text": "I need to reschedule"
+            }
+          ]
+        }
+      ],
+      "friendly_name": "Appointment reminder",
+      "fields": {
+        "1": "cliente.primeiro_nome",
+        "2": "minha_empresa.nome",
+        "3": "data",
+        "4": "horario"
+      }
+    }
+  },
+  {
+    "origem": "objetivo",
+    "chave": "pesquisa",
+    "idioma": "en",
+    "pode_ir_em_campanha": true,
+    "corpo": {
+      "name": "satisfaction_survey",
+      "language": "en",
+      "category": "UTILITY",
+      "parameter_format": "positional",
+      "components": [
+        {
+          "type": "BODY",
+          "text": "Hello, {{1}}! You were served by {{2}} on {{3}}. How was it? Tap one of the options below.",
+          "example": {
+            "body_text": [
+              [
+                "Ana",
+                "Your Company",
+                "10/15"
+              ]
+            ]
+          }
+        },
+        {
+          "type": "BUTTONS",
+          "buttons": [
+            {
+              "type": "QUICK_REPLY",
+              "text": "Great"
+            },
+            {
+              "type": "QUICK_REPLY",
+              "text": "Good"
+            },
+            {
+              "type": "QUICK_REPLY",
+              "text": "Could be better"
+            }
+          ]
+        }
+      ],
+      "friendly_name": "Satisfaction survey",
+      "fields": {
+        "1": "cliente.primeiro_nome",
+        "2": "minha_empresa.nome",
+        "3": "data"
+      }
+    }
+  },
+  {
+    "origem": "objetivo",
+    "chave": "promocao",
+    "idioma": "en",
+    "pode_ir_em_campanha": true,
+    "corpo": {
+      "name": "promotion",
+      "language": "en",
+      "category": "MARKETING",
+      "parameter_format": "positional",
+      "components": [
+        {
+          "type": "BODY",
+          "text": "Hi, {{1}}! Until {{2}}, you get {{3}} off at {{4}}. Want to take it? See the offers in the button below.",
+          "example": {
+            "body_text": [
+              [
+                "Ana",
+                "10/15",
+                "20%",
+                "Your Company"
+              ]
+            ]
+          }
+        },
+        {
+          "type": "BUTTONS",
+          "buttons": [
+            {
+              "type": "URL",
+              "text": "See offers",
+              "url": "https://sualoja.com.br"
+            }
+          ]
+        }
+      ],
+      "friendly_name": "Promotion",
+      "fields": {
+        "1": "cliente.primeiro_nome",
+        "2": "data",
+        "3": "desconto",
+        "4": "minha_empresa.nome"
+      }
+    }
+  },
+  {
+    "origem": "objetivo",
+    "chave": "cobranca",
+    "idioma": "en",
+    "pode_ir_em_campanha": true,
+    "corpo": {
+      "name": "payment_reminder",
+      "language": "en",
+      "category": "UTILITY",
+      "parameter_format": "positional",
+      "components": [
+        {
+          "type": "BODY",
+          "text": "Hello, {{1}}. A reminder from {{2}}: the payment of {{3}} is due on {{4}}. If you have already paid, please disregard. If you need a copy of the bill, tap the button below.",
+          "example": {
+            "body_text": [
+              [
+                "Ana",
+                "Your Company",
+                "R$ 189.90",
+                "10/15"
+              ]
+            ]
+          }
+        },
+        {
+          "type": "BUTTONS",
+          "buttons": [
+            {
+              "type": "QUICK_REPLY",
+              "text": "I need a copy of the bill"
+            },
+            {
+              "type": "QUICK_REPLY",
+              "text": "I have already paid"
+            }
+          ]
+        }
+      ],
+      "friendly_name": "Payment reminder",
+      "fields": {
+        "1": "cliente.primeiro_nome",
+        "2": "minha_empresa.nome",
+        "3": "valor",
+        "4": "data"
+      }
+    }
+  },
+  {
+    "origem": "objetivo",
+    "chave": "retomar",
+    "idioma": "en",
+    "pode_ir_em_campanha": true,
+    "corpo": {
+      "name": "resume_conversation",
+      "language": "en",
+      "category": "MARKETING",
+      "parameter_format": "positional",
+      "components": [
+        {
+          "type": "BODY",
+          "text": "Hi, {{1}}! This is {{2}}. Any questions left from our last conversation? Just reply here and we will pick it up.",
+          "example": {
+            "body_text": [
+              [
+                "Ana",
+                "Your Company"
+              ]
+            ]
+          }
+        },
+        {
+          "type": "BUTTONS",
+          "buttons": [
+            {
+              "type": "QUICK_REPLY",
+              "text": "Let's continue"
+            }
+          ]
+        }
+      ],
+      "friendly_name": "Resume conversation",
+      "fields": {
+        "1": "cliente.primeiro_nome",
+        "2": "minha_empresa.nome"
+      }
+    }
+  },
+  {
+    "origem": "formato",
+    "chave": "carrossel",
+    "idioma": "en",
+    "pode_ir_em_campanha": false,
+    "corpo": {
+      "name": "news",
+      "language": "en",
+      "category": "MARKETING",
+      "parameter_format": "positional",
+      "components": [
+        {
+          "type": "BODY",
+          "text": "Hi, {{1}}! We picked some news for you:",
+          "example": {
+            "body_text": [
+              [
+                "Ana"
+              ]
+            ]
+          }
+        },
+        {
+          "type": "CAROUSEL",
+          "cards": [
+            {
+              "components": [
+                {
+                  "type": "HEADER",
+                  "format": "IMAGE",
+                  "example": {
+                    "header_handle": [
+                      "HANDLE"
+                    ]
+                  }
+                },
+                {
+                  "type": "BODY",
+                  "text": "This week’s news, with fast delivery."
+                },
+                {
+                  "type": "BUTTONS",
+                  "buttons": [
+                    {
+                      "type": "URL",
+                      "text": "See product",
+                      "url": "https://sualoja.com.br"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "components": [
+                {
+                  "type": "HEADER",
+                  "format": "IMAGE",
+                  "example": {
+                    "header_handle": [
+                      "HANDLE"
+                    ]
+                  }
+                },
+                {
+                  "type": "BODY",
+                  "text": "The month’s best seller, at a special price."
+                },
+                {
+                  "type": "BUTTONS",
+                  "buttons": [
+                    {
+                      "type": "URL",
+                      "text": "See product",
+                      "url": "https://sualoja.com.br"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "friendly_name": "News",
+      "fields": {
+        "1": "cliente.primeiro_nome"
+      }
+    }
+  },
+  {
+    "origem": "formato",
+    "chave": "oferta",
+    "idioma": "en",
+    "pode_ir_em_campanha": false,
+    "corpo": {
+      "name": "flash_offer",
+      "language": "en",
+      "category": "MARKETING",
+      "parameter_format": "positional",
+      "components": [
+        {
+          "type": "LIMITED_TIME_OFFER",
+          "limited_time_offer": {
+            "text": "Today: 30% off",
+            "has_expiration": true
+          }
+        },
+        {
+          "type": "BODY",
+          "text": "Hi, {{1}}! For a short time: {{2}} off. See it in the button below.",
+          "example": {
+            "body_text": [
+              [
+                "Ana",
+                "20%"
+              ]
+            ]
+          }
+        },
+        {
+          "type": "BUTTONS",
+          "buttons": [
+            {
+              "type": "COPY_CODE",
+              "example": "PROMO10"
+            },
+            {
+              "type": "URL",
+              "text": "See offer",
+              "url": "https://sualoja.com.br"
+            }
+          ]
+        }
+      ],
+      "friendly_name": "Flash offer",
+      "fields": {
+        "1": "cliente.primeiro_nome",
+        "2": "desconto"
+      }
+    }
+  },
+  {
+    "origem": "formato",
+    "chave": "codigo",
+    "idioma": "en",
+    "pode_ir_em_campanha": false,
+    "corpo": {
+      "name": "access_code",
+      "language": "en",
+      "category": "AUTHENTICATION",
+      "parameter_format": "positional",
+      "components": [
+        {
+          "type": "BODY",
+          "add_security_recommendation": true
+        },
+        {
+          "type": "FOOTER",
+          "code_expiration_minutes": 10
+        },
+        {
+          "type": "BUTTONS",
+          "buttons": [
+            {
+              "type": "OTP",
+              "otp_type": "COPY_CODE"
+            }
+          ]
+        }
+      ],
+      "friendly_name": "Access code",
+      "fields": {}
+    }
+  },
+  {
+    "origem": "objetivo",
+    "chave": "boas_vindas",
+    "idioma": "pt_BR",
+    "pode_ir_em_campanha": true,
+    "corpo": {
+      "name": "boas_vindas",
+      "language": "pt_BR",
+      "category": "MARKETING",
+      "parameter_format": "positional",
+      "components": [
+        {
+          "type": "BODY",
+          "text": "Olá, {{1}}! Aqui é da {{2}}. Que bom ter você com a gente. Quando precisar de alguma coisa, é só mandar mensagem por aqui.",
+          "example": {
+            "body_text": [
+              [
+                "Ana",
+                "Sua Empresa"
+              ]
+            ]
+          }
+        },
+        {
+          "type": "BUTTONS",
+          "buttons": [
+            {
+              "type": "QUICK_REPLY",
+              "text": "Quero saber mais"
+            }
+          ]
+        }
+      ],
+      "friendly_name": "Boas-vindas",
+      "fields": {
+        "1": "cliente.primeiro_nome",
+        "2": "minha_empresa.nome"
+      }
+    }
+  },
+  {
+    "origem": "objetivo",
+    "chave": "lembrete",
+    "idioma": "pt_BR",
+    "pode_ir_em_campanha": true,
+    "corpo": {
+      "name": "lembrete_de_agendamento",
+      "language": "pt_BR",
+      "category": "UTILITY",
+      "parameter_format": "positional",
+      "components": [
+        {
+          "type": "BODY",
+          "text": "Olá, {{1}}! Lembrete do seu horário na {{2}}: dia {{3}}, às {{4}}. Você confirma? Toque em uma das opções abaixo.",
+          "example": {
+            "body_text": [
+              [
+                "Ana",
+                "Sua Empresa",
+                "15/10",
+                "14h30"
+              ]
+            ]
+          }
+        },
+        {
+          "type": "BUTTONS",
+          "buttons": [
+            {
+              "type": "QUICK_REPLY",
+              "text": "Confirmo"
+            },
+            {
+              "type": "QUICK_REPLY",
+              "text": "Preciso remarcar"
+            }
+          ]
+        }
+      ],
+      "friendly_name": "Lembrete de agendamento",
+      "fields": {
+        "1": "cliente.primeiro_nome",
+        "2": "minha_empresa.nome",
+        "3": "data",
+        "4": "horario"
+      }
+    }
+  },
+  {
+    "origem": "objetivo",
+    "chave": "pesquisa",
+    "idioma": "pt_BR",
+    "pode_ir_em_campanha": true,
+    "corpo": {
+      "name": "pesquisa_de_satisfacao",
+      "language": "pt_BR",
+      "category": "UTILITY",
+      "parameter_format": "positional",
+      "components": [
+        {
+          "type": "BODY",
+          "text": "Olá, {{1}}! Você foi atendido pela {{2}} no dia {{3}}. Como foi esse atendimento? Toque em uma opção abaixo.",
+          "example": {
+            "body_text": [
+              [
+                "Ana",
+                "Sua Empresa",
+                "15/10"
+              ]
+            ]
+          }
+        },
+        {
+          "type": "BUTTONS",
+          "buttons": [
+            {
+              "type": "QUICK_REPLY",
+              "text": "Ótimo"
+            },
+            {
+              "type": "QUICK_REPLY",
+              "text": "Bom"
+            },
+            {
+              "type": "QUICK_REPLY",
+              "text": "Pode melhorar"
+            }
+          ]
+        }
+      ],
+      "friendly_name": "Pesquisa de satisfação",
+      "fields": {
+        "1": "cliente.primeiro_nome",
+        "2": "minha_empresa.nome",
+        "3": "data"
+      }
+    }
+  },
+  {
+    "origem": "objetivo",
+    "chave": "promocao",
+    "idioma": "pt_BR",
+    "pode_ir_em_campanha": true,
+    "corpo": {
+      "name": "promocao",
+      "language": "pt_BR",
+      "category": "MARKETING",
+      "parameter_format": "positional",
+      "components": [
+        {
+          "type": "BODY",
+          "text": "Oi, {{1}}! Até {{2}}, você tem {{3}} de desconto na {{4}}. Quer aproveitar? Veja as ofertas no botão abaixo.",
+          "example": {
+            "body_text": [
+              [
+                "Ana",
+                "15/10",
+                "20%",
+                "Sua Empresa"
+              ]
+            ]
+          }
+        },
+        {
+          "type": "BUTTONS",
+          "buttons": [
+            {
+              "type": "URL",
+              "text": "Ver ofertas",
+              "url": "https://sualoja.com.br"
+            }
+          ]
+        }
+      ],
+      "friendly_name": "Promoção",
+      "fields": {
+        "1": "cliente.primeiro_nome",
+        "2": "data",
+        "3": "desconto",
+        "4": "minha_empresa.nome"
+      }
+    }
+  },
+  {
+    "origem": "objetivo",
+    "chave": "cobranca",
+    "idioma": "pt_BR",
+    "pode_ir_em_campanha": true,
+    "corpo": {
+      "name": "lembrete_de_pagamento",
+      "language": "pt_BR",
+      "category": "UTILITY",
+      "parameter_format": "positional",
+      "components": [
+        {
+          "type": "BODY",
+          "text": "Olá, {{1}}. Lembrete da {{2}}: o pagamento de {{3}} vence em {{4}}. Se já pagou, pode desconsiderar. Se precisar da segunda via, toque no botão abaixo.",
+          "example": {
+            "body_text": [
+              [
+                "Ana",
+                "Sua Empresa",
+                "R$ 189,90",
+                "15/10"
+              ]
+            ]
+          }
+        },
+        {
+          "type": "BUTTONS",
+          "buttons": [
+            {
+              "type": "QUICK_REPLY",
+              "text": "Quero a segunda via"
+            },
+            {
+              "type": "QUICK_REPLY",
+              "text": "Já paguei"
+            }
+          ]
+        }
+      ],
+      "friendly_name": "Lembrete de pagamento",
+      "fields": {
+        "1": "cliente.primeiro_nome",
+        "2": "minha_empresa.nome",
+        "3": "valor",
+        "4": "data"
+      }
+    }
+  },
+  {
+    "origem": "objetivo",
+    "chave": "retomar",
+    "idioma": "pt_BR",
+    "pode_ir_em_campanha": true,
+    "corpo": {
+      "name": "retomar_conversa",
+      "language": "pt_BR",
+      "category": "MARKETING",
+      "parameter_format": "positional",
+      "components": [
+        {
+          "type": "BODY",
+          "text": "Oi, {{1}}! Aqui é da {{2}}. Ficou alguma dúvida da nossa última conversa? É só responder aqui que a gente continua.",
+          "example": {
+            "body_text": [
+              [
+                "Ana",
+                "Sua Empresa"
+              ]
+            ]
+          }
+        },
+        {
+          "type": "BUTTONS",
+          "buttons": [
+            {
+              "type": "QUICK_REPLY",
+              "text": "Quero continuar"
+            }
+          ]
+        }
+      ],
+      "friendly_name": "Retomar conversa",
+      "fields": {
+        "1": "cliente.primeiro_nome",
+        "2": "minha_empresa.nome"
+      }
+    }
+  },
+  {
+    "origem": "formato",
+    "chave": "carrossel",
+    "idioma": "pt_BR",
+    "pode_ir_em_campanha": false,
+    "corpo": {
+      "name": "novidades",
+      "language": "pt_BR",
+      "category": "MARKETING",
+      "parameter_format": "positional",
+      "components": [
+        {
+          "type": "BODY",
+          "text": "Oi, {{1}}! Separamos algumas novidades para você:",
+          "example": {
+            "body_text": [
+              [
+                "Ana"
+              ]
+            ]
+          }
+        },
+        {
+          "type": "CAROUSEL",
+          "cards": [
+            {
+              "components": [
+                {
+                  "type": "HEADER",
+                  "format": "IMAGE",
+                  "example": {
+                    "header_handle": [
+                      "HANDLE"
+                    ]
+                  }
+                },
+                {
+                  "type": "BODY",
+                  "text": "Novidade da semana, com entrega rápida."
+                },
+                {
+                  "type": "BUTTONS",
+                  "buttons": [
+                    {
+                      "type": "URL",
+                      "text": "Ver produto",
+                      "url": "https://sualoja.com.br"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "components": [
+                {
+                  "type": "HEADER",
+                  "format": "IMAGE",
+                  "example": {
+                    "header_handle": [
+                      "HANDLE"
+                    ]
+                  }
+                },
+                {
+                  "type": "BODY",
+                  "text": "O mais pedido do mês, com preço especial."
+                },
+                {
+                  "type": "BUTTONS",
+                  "buttons": [
+                    {
+                      "type": "URL",
+                      "text": "Ver produto",
+                      "url": "https://sualoja.com.br"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "friendly_name": "Novidades",
+      "fields": {
+        "1": "cliente.primeiro_nome"
+      }
+    }
+  },
+  {
+    "origem": "formato",
+    "chave": "oferta",
+    "idioma": "pt_BR",
+    "pode_ir_em_campanha": false,
+    "corpo": {
+      "name": "oferta_relampago",
+      "language": "pt_BR",
+      "category": "MARKETING",
+      "parameter_format": "positional",
+      "components": [
+        {
+          "type": "LIMITED_TIME_OFFER",
+          "limited_time_offer": {
+            "text": "Só hoje: 30%",
+            "has_expiration": true
+          }
+        },
+        {
+          "type": "BODY",
+          "text": "Oi, {{1}}! Por pouco tempo: {{2}} de desconto. Veja no botão abaixo.",
+          "example": {
+            "body_text": [
+              [
+                "Ana",
+                "20%"
+              ]
+            ]
+          }
+        },
+        {
+          "type": "BUTTONS",
+          "buttons": [
+            {
+              "type": "COPY_CODE",
+              "example": "PROMO10"
+            },
+            {
+              "type": "URL",
+              "text": "Ver oferta",
+              "url": "https://sualoja.com.br"
+            }
+          ]
+        }
+      ],
+      "friendly_name": "Oferta relâmpago",
+      "fields": {
+        "1": "cliente.primeiro_nome",
+        "2": "desconto"
+      }
+    }
+  },
+  {
+    "origem": "formato",
+    "chave": "codigo",
+    "idioma": "pt_BR",
+    "pode_ir_em_campanha": false,
+    "corpo": {
+      "name": "codigo_de_acesso",
+      "language": "pt_BR",
+      "category": "AUTHENTICATION",
+      "parameter_format": "positional",
+      "components": [
+        {
+          "type": "BODY",
+          "add_security_recommendation": true
+        },
+        {
+          "type": "FOOTER",
+          "code_expiration_minutes": 10
+        },
+        {
+          "type": "BUTTONS",
+          "buttons": [
+            {
+              "type": "OTP",
+              "otp_type": "COPY_CODE"
+            }
+          ]
+        }
+      ],
+      "friendly_name": "Código de acesso",
+      "fields": {}
+    }
+  }
+]

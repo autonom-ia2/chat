@@ -50,6 +50,11 @@ export const CAMPOS_DO_PUBLICO = CHAVES_DO_CATALOGO.filter(chave =>
   ['cliente', 'empresa_cliente', 'minha_empresa'].includes(chave.split('.')[0])
 );
 
+// Chave do catálogo que um Público não preenche (horario.*, negocio.*): numa
+// campanha ela não tem de onde vir para cada cliente.
+export const semFonteNaCampanha = campo =>
+  CHAVES_DO_CATALOGO.includes(campo) && !CAMPOS_DO_PUBLICO.includes(campo);
+
 export const campoDaVariavel = numero => `${VARIAVEL}${numero}`;
 
 // O campo da tela para o que o perfil do modelo guardou na variável.

@@ -103,6 +103,30 @@ RSpec.describe Whatsapp::Templates::MetaClient do
       }
     end
 
+    it 'modelo que sumiu ou número sem acesso (100/33) vira texto honesto para os dois casos, não o inglês técnico' do
+      stub_lookup([])
+      stub_request(:post, templates_url)
+        .to_return(status: 400, headers: json,
+                   body: { error: { code: 100, error_subcode: 33, message: 'Unsupported post request. Object does not exist' } }.to_json)
+
+      expect { client.create(body) }.to raise_error(described_class::MetaError) { |error|
+        expect(error.message).to eq(I18n.t('whatsapp_templates.errors.not_found_or_no_access', locale: 'pt_BR'))
+      }
+    end
+
+    it 'nome repetido ou preso que a Meta recusa em inglês vira o nosso texto' do
+      stub_lookup([])
+      { 2_388_024 => 'name_taken', 2_388_023 => 'name_held' }.each do |subcode, key|
+        stub_request(:post, templates_url)
+          .to_return(status: 400, headers: json,
+                     body: { error: { code: 100, error_subcode: subcode, error_user_msg: 'A template with this name exists' } }.to_json)
+
+        expect { client.create(body) }.to raise_error(described_class::MetaError) { |error|
+          expect(error.message).to eq(I18n.t("whatsapp_templates.errors.#{key}", locale: 'pt_BR'))
+        }
+      end
+    end
+
     it 'o texto da Meta vai sem o token, mesmo se ela o repetir' do
       stub_lookup([])
       stub_request(:post, templates_url)
