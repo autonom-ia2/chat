@@ -19,7 +19,7 @@ Base: `origin/fix/1305-agenda-ia-completa` (PR #1347, ainda não mesclado). Bran
 - **Precedência:** a instrução "# Agenda" vale sobre regras antigas que mandem encaminhar remarcação e cancelamento à equipe. Para remarcar ou cancelar, a IA manda o link de gestão. O `booking_context` do Construtor diz o mesmo.
 - **Prazo:** com `cancel_until_minutes`, a instrução e a confirmação dizem "só até N horas (ou minutos) antes do horário", o mesmo prazo que o link aplica (`too_late`).
 - **Meet/Teams:** a confirmação diz que o convite do calendário vai para o e-mail do cliente. Nos outros locais continua "não diga que mandou convite por e-mail".
-- **De quem é o aviso:** o texto livre dos avisos de sessão (WAHA, janela aberta) começa com "Mensagem de <nome da conta>". Nenhum aviso usava o nome do negócio até aqui. O nome da página é um título como "Conversa de 30 min", então ficou o da conta. Os modelos aprovados pela Meta (`Catalog`) e o `appendix` deles não mudaram.
+- **De quem é o aviso:** chegou a ser feito ("Mensagem de <nome da conta>" no texto livre) e foi retirado por decisão do Rodrigo em 12/10/2026: conversar por um canal e receber o aviso por outro é normal, e se o dono quiser avisar o cliente, ele põe na instrução do agente que a confirmação chega pelo WhatsApp. O texto dos avisos não muda neste PR.
 - **Memória do turno:** `AgendaDoTurno.no_turno`, aberto em `Answerer#answer`, calcula o estado uma vez por agente. Antes eram três vezes por turno (gate das duas ferramentas e instrução), cada uma com as consultas de página, elegibilidade e pausas. Quando rodam, as ferramentas leem tudo de novo.
 
 ## Medições

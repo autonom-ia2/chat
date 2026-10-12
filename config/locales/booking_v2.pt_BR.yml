@@ -21,7 +21,6 @@ pt_BR:
         default_text: 'Oi, {nome}! Escolha o melhor horário para você: {link}'
         default_text_without_name: 'Oi! Escolha o melhor horário para você: {link}'
       notices:
-        from_line: "Mensagem de %{business}"
         when_format: "%d/%m às %H:%M"
         booked: "Oi%{name}! Seu horário está marcado para %{when}. Para confirmar, mudar ou cancelar: %{link}"
         booked_by_team: "Oi%{name}! %{booker} marcou seu horário para %{when}. Para confirmar, mudar ou cancelar: %{link}"
