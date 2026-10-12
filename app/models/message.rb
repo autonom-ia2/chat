@@ -342,8 +342,37 @@ class Message < ApplicationRecord
     set_conversation_activity
     dispatch_create_events
     send_reply
+    claim_conversation_for_bot
     execute_message_template_hooks
     update_contact_activity
+  end
+
+  # Robô respondendo sem pessoa atribuída fica como o atribuído da conversa (#1377): não há "não atribuída" enquanto
+  # um robô atende, e conversa de robô nunca fica pendente. Nunca tira a conversa de uma pessoa. Roda depois do envio,
+  # e trava a linha numa cópia lida do banco (o registro em memória pode trazer mudança não gravada, que o `with_lock`
+  # recusa), para não disputar com uma pessoa assumindo.
+  def claim_conversation_for_bot
+    return unless public_bot_reply?
+
+    Conversation.transaction do
+      locked = Conversation.lock.find(conversation_id)
+      next if locked.assignee_id.present? || (locked.ai_assignee == sender && !locked.pending?)
+
+      locked.update!(ai_assignee: sender, status: locked.pending? ? :open : locked.status)
+    end
+  rescue ActiveRecord::ActiveRecordError => e
+    # A mensagem já está gravada e enviada: falhar aqui não pode pular os passos seguintes nem devolver erro a quem
+    # postou (o n8n reenviaria e o cliente receberia a resposta duas vezes). A próxima resposta do robô tenta de novo.
+    ChatwootExceptionTracker.new(e, account: account).capture_exception
+  end
+
+  # Resposta pública de robô ao cliente; disparo de campanha (qualquer das duas marcas) não conta.
+  def public_bot_reply?
+    outgoing? && !private? && sender.is_a?(AgentBot) && !campaign_message?
+  end
+
+  def campaign_message?
+    additional_attributes.to_h['campaign_id'].present? || additional_attributes.to_h['whatsapp_api_campaign_id'].present?
   end
 
   def update_contact_activity
@@ -364,8 +393,9 @@ class Message < ApplicationRecord
       return
     end
 
-    # Bot responses also clear waiting_since (simpler than checking on next customer message)
-    conversation.update(waiting_since: nil) if bot_response? && !preserve_waiting_since
+    # Bot responses also clear waiting_since (simpler than checking on next customer message). Not while a handoff
+    # waits for a person: the bot keeps answering, but the customer still waits for the team (#1377).
+    conversation.update(waiting_since: nil) if bot_response? && !preserve_waiting_since && !conversation.bot_handoff_waiting?
   end
 
   def set_waiting_since_on_incoming_message

@@ -40,6 +40,6 @@ module Enterprise::Conversations::PermissionFilterService
 
   def filter_unassigned_and_mine
     conversations = accessible_conversations
-    conversations.unassigned.or(conversations.assigned_to(user))
+    conversations.awaiting_person.or(conversations.assigned_to(user))
   end
 end

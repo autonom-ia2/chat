@@ -176,7 +176,7 @@ module Autonomia
         # Espelho DESTE vínculo ainda é o ai_assignee (ou a conversa ainda está pending). Chamar só com
         # estado fresco (dentro do with_lock).
         def bot_still_in_command?
-          @conversation.assignee_agent_bot_id == @agent_inbox.agent_bot_id || @conversation.pending?
+          ::Autonomia::Agents::Operate.espelho_no_comando?(@conversation, @agent_inbox)
         end
 
         # Escolhe o caminho de entrega (extraído do perform p/ legibilidade; mesma ordem de sempre):

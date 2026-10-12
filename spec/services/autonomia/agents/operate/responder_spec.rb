@@ -16,6 +16,7 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
   let(:agent_inbox) do
     Autonomia::Agents::AgentInbox.create!(agent: agent, inbox: inbox, account: account, agent_bot: agent_bot)
   end
+  let(:waiting_for_person) { { Conversation::BOT_HANDOFF_WAITING_SINCE_KEY => Time.current.iso8601 } }
 
   around do |example|
     with_modified_env AUTONOMIA_AGENTS_ENABLED: 'true' do
@@ -72,7 +73,7 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
     end
 
     before do
-      conversation.update!(assignee_agent_bot_id: agent_bot.id)
+      conversation.update!(ai_assignee: agent_bot)
       create(:message, account: account, conversation: conversation, message_type: :incoming, content: 'prazo?')
     end
 
@@ -94,27 +95,28 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
       expect(Autonomia::Agents::AgentEvent.handed_off.count).to eq(0)
     end
 
-    it 'posts the same reply, releases the mirror bot and logs handed_off when the instruction signals handoff' do
+    it 'posts the same reply, keeps the mirror bot and logs handed_off when the instruction signals handoff' do
       # Arrange
       stub_answer(handoff: { should: true, reason: 'human_requested' })
 
       # Act
       result = described_class.new(conversation: conversation, agent_inbox: agent_inbox).perform
 
-      # Assert — a resposta ao cliente é a mesma; o que muda é o ciclo do ai_assignee.
+      # Assert — a resposta ao cliente é a mesma; o espelho segue como ai_assignee até uma pessoa assumir (#1377).
       expect(result.status).to eq(:replied)
       expect(result.message.content).to eq('Entregamos em 2 dias.')
-      expect(conversation.reload).to have_attributes(status: 'open', assignee_agent_bot_id: nil)
+      expect(conversation.reload).to have_attributes(status: 'open', assignee_agent_bot_id: agent_bot.id, ai_assignee_type: 'AgentBot')
+      expect(conversation.waiting_since).to be_present
       expect(Autonomia::Agents::AgentEvent.handed_off.last.handoff_reason).to eq('human_requested')
     end
 
-    it 'does not hand off again when a concurrent caller released the mirror bot before the lock' do
-      # Arrange — simula o 2º chamador: quem venceu o lock já soltou o espelho (assignee_agent_bot_id nil,
-      # open) por outra conexão; este chamador só vê isso ao recarregar DENTRO do with_lock.
+    it 'does not hand off again when a concurrent caller handed off before the lock' do
+      # Arrange — simula o 2º chamador: quem venceu o lock já passou a conversa (marca de espera de pessoa) por outra
+      # conexão; este chamador só vê isso ao recarregar DENTRO do with_lock.
       stub_answer(handoff: { should: true, reason: 'human_requested' })
       allow(conversation).to receive(:with_lock).and_wrap_original do |original, &block|
         # rubocop:disable Rails/SkipsModelValidations -- escrita "por fora" (outra conexão) é o ponto do teste
-        Conversation.where(id: conversation.id).update_all(assignee_agent_bot_id: nil, status: Conversation.statuses[:open])
+        Conversation.where(id: conversation.id).update_all(additional_attributes: waiting_for_person)
         # rubocop:enable Rails/SkipsModelValidations
         original.call(&block)
       end
@@ -124,13 +126,12 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
 
       # Assert — a resposta ainda é postada (elegibilidade só olha assignee humano); handoff/evento NÃO duplicam.
       expect(result.status).to eq(:replied)
-      expect(conversation.reload.assignee_agent_bot_id).to be_nil
       expect(Autonomia::Agents::AgentEvent.handed_off.count).to eq(0)
     end
 
-    it 'does not log handoff twice once the mirror bot was already released' do
-      # Arrange — ciclo já fechado (sem ai_assignee, open).
-      conversation.update!(assignee_agent_bot_id: nil, status: :open)
+    it 'does not log handoff twice while the previous handoff still waits for a person' do
+      # Arrange — passagem já feita, nenhuma pessoa entrou na conversa.
+      conversation.update!(additional_attributes: waiting_for_person)
       stub_answer(handoff: { should: true, reason: 'human_requested' })
 
       # Act
@@ -138,6 +139,22 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
 
       # Assert
       expect(Autonomia::Agents::AgentEvent.handed_off.count).to eq(0)
+    end
+
+    it 'hands off again once a person took the conversation and gave it back' do
+      # Arrange — 1ª passagem; uma pessoa entra e depois tira o nome dela.
+      stub_answer(handoff: { should: true, reason: 'human_requested' })
+      described_class.new(conversation: conversation, agent_inbox: agent_inbox).perform
+      atendente = create(:user, account: account, role: :agent)
+      create(:inbox_member, inbox: inbox, user: atendente)
+      Conversations::AssignmentService.new(conversation: conversation, assignee_id: atendente.id).perform
+      Conversations::AssignmentService.new(conversation: conversation, assignee_id: nil).perform
+
+      # Act
+      described_class.new(conversation: conversation.reload, agent_inbox: agent_inbox).perform
+
+      # Assert
+      expect(Autonomia::Agents::AgentEvent.handed_off.count).to eq(2)
     end
   end
 
@@ -161,7 +178,7 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
     end
 
     before do
-      conversation.update!(assignee_agent_bot_id: agent_bot.id)
+      conversation.update!(ai_assignee: agent_bot)
       create(:message, account: account, conversation: conversation, message_type: :incoming, content: 'oi')
     end
 
@@ -185,7 +202,7 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
       expect(Autonomia::Agents::AgentEvent.skipped_audience.count).to eq(0)
     end
 
-    it 'never calls the LLM, releases the mirror bot and logs skipped_audience when outside the audience' do
+    it 'never calls the LLM, keeps the mirror bot and logs skipped_audience when outside the audience' do
       agent.update!(config: { 'audience' => usa })
       expect(Autonomia::Agents::Answerer).not_to receive(:new)
 
@@ -193,7 +210,7 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
 
       expect(result.status).to eq(:skipped)
       expect(result.error).to eq('audience')
-      expect(conversation.reload).to have_attributes(status: 'open', assignee_agent_bot_id: nil)
+      expect(conversation.reload).to have_attributes(status: 'open', assignee_agent_bot_id: agent_bot.id)
       expect(conversation.messages.outgoing.count).to eq(0)
       event = Autonomia::Agents::AgentEvent.skipped_audience.last
       expect(event).to have_attributes(conversation_id: conversation.id, handoff_reason: 'audience')
@@ -210,15 +227,15 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
       result = described_class.new(conversation: conversation, agent_inbox: agent_inbox).perform
 
       expect(result.status).to eq(:skipped)
-      expect(conversation.reload.assignee_agent_bot_id).to be_nil
+      expect(conversation.reload.assignee_agent_bot_id).to eq(agent_bot.id)
       expect(Autonomia::Agents::AgentEvent.skipped_schedule.count).to eq(1)
     end
 
-    it 'does not duplicate the handoff or the event when a concurrent caller released the mirror bot first' do
+    it 'does not duplicate the handoff or the event when a concurrent caller handed off first' do
       agent.update!(config: { 'audience' => usa })
       allow(conversation).to receive(:with_lock).and_wrap_original do |original, &block|
         # rubocop:disable Rails/SkipsModelValidations -- escrita "por fora" (outra conexão) é o ponto do teste
-        Conversation.where(id: conversation.id).update_all(assignee_agent_bot_id: nil, status: Conversation.statuses[:open])
+        Conversation.where(id: conversation.id).update_all(additional_attributes: waiting_for_person)
         # rubocop:enable Rails/SkipsModelValidations
         original.call(&block)
       end
@@ -229,13 +246,13 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
       expect(Autonomia::Agents::AgentEvent.count).to eq(0)
     end
 
-    it 'stays silent on later messages once the conversation was already released' do
+    it 'does not log a second skip on later messages while the previous handoff still waits for a person' do
       agent.update!(config: { 'audience' => usa })
-      conversation.update!(assignee_agent_bot_id: nil, status: :open)
+      described_class.new(conversation: conversation, agent_inbox: agent_inbox).perform
 
       described_class.new(conversation: conversation, agent_inbox: agent_inbox).perform
 
-      expect(Autonomia::Agents::AgentEvent.count).to eq(0)
+      expect(Autonomia::Agents::AgentEvent.skipped_audience.count).to eq(1)
     end
   end
 end

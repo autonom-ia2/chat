@@ -83,11 +83,16 @@ RSpec.describe Message do
       expect(conversation.reload.pending?).to be true
     end
 
-    it 'does not mark the conversation open for bot outgoing messages' do
+    # Robô respondendo não é resposta humana (sem atividade de "aberta pelo atendente"), mas assume a conversa e a
+    # abre: conversa de robô nunca fica pendente (#1377).
+    it 'does not treat bot outgoing messages as human response, and the bot claims the conversation open' do
       agent_bot = create(:agent_bot, account: conversation.account)
-      create(:message, message_type: :outgoing, conversation: conversation, sender: agent_bot)
 
-      expect(conversation.reload.pending?).to be true
+      expect do
+        create(:message, message_type: :outgoing, conversation: conversation, sender: agent_bot)
+      end.not_to have_enqueued_job(Conversations::ActivityMessageJob).with(conversation, hash_including(content: auto_open_activity_content))
+
+      expect(conversation.reload).to have_attributes(status: 'open', ai_assignee: agent_bot)
     end
   end
 end
