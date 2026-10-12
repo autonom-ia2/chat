@@ -225,7 +225,8 @@
       "AVISO_COPIA": "This is a copy of “{nome}”. Adjust what you want and pick a different name.",
       "FALHOU": "We couldn't send it now. Try again.",
       "FALHOU_UMA_CONTA": "The template was sent for one WhatsApp account, but not for the other. {motivo}",
-      "AVISO_COPIA_ARQUIVOS": "The copy does not take the files: pick again the photo, video or document at the top and on the cards."
+      "AVISO_COPIA_ARQUIVOS": "The copy does not take the files: pick again the photo, video or document at the top and on the cards.",
+      "AVISO_NOVO_TIPO": "New template with the text of “{nome}”. Pick the type and check the name."
     },
     "OBJETIVO": {
       "SUGESTOES": {
@@ -349,7 +350,12 @@
       },
       "FONTE_CADASTRO": "In the campaign, it comes from each customer’s record.",
       "FONTE_COLUNA": "In the campaign, it comes from a column of your audience or is the same text for everyone.",
-      "NOME_REPETIDO": "There is already a template with this name in this WhatsApp account. Use another one, such as “{sugestao}”."
+      "NOME_REPETIDO": "There is already a template with this name in this WhatsApp account. Use another one, such as “{sugestao}”.",
+      "TIPO_TRAVADO": {
+        "TITULO": "Message type",
+        "NAO_MUDA": "WhatsApp does not let you change the type of a template that already exists.",
+        "CRIAR_NOVO": "To change the type, create a new template with this text"
+      }
     },
     "TOPOS": {
       "nenhum": {
@@ -432,7 +438,8 @@
         "foto": "The photo can have up to 5 MB.",
         "video": "The video can have up to 16 MB.",
         "documento": "The PDF can have up to 100 MB."
-      }
+      },
+      "TOPO_AJUDA": "Optional. The same file goes to everyone who receives the message. Use it for something that is the same for everyone (menu, catalog, rules). A bill, receipt or document for each customer does not go here."
     },
     "NUMEROS": {
       "INTRO": "Pick where this template will work. Only official WhatsApp numbers show up.",
@@ -487,7 +494,8 @@
         "FORMATO_DIVULGACAO": "This format goes as a promotion",
         "CARTOES_MESMA_MIDIA": "All cards have the same kind of media (only photos or only videos)",
         "NOME_LIVRE": "The name does not exist yet in this WhatsApp account"
-      }
+      },
+      "LEMBRETE_ARQUIVO_IGUAL": "This file goes out the same to everyone."
     },
     "QUEM_APROVA": {
       "TITULO": "WhatsApp is who approves it",
@@ -790,6 +798,10 @@
       "EXPLICA_SEM_VALOR": "WhatsApp gives {limite} free replies per number each month.",
       "USADAS": "{n} of {limite}",
       "PASSOU": "Over the {limite} free ones"
+    },
+    "CONFERENCIA_AUTOMATICA": {
+      "PRONTO": "“{nome}” is ready to use.",
+      "RECUSADO": "“{nome}” was rejected."
     }
   }
 }

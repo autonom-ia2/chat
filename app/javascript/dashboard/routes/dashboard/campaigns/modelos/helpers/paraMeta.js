@@ -276,13 +276,13 @@ const nomesDoModelo = modelo =>
       )
     : undefined;
 
-// Corpo do PATCH de alteração: a Meta não deixa trocar nome nem idioma; o tipo
-// só vai quando a pessoa mudou. Sem mudança no conteúdo nem no tipo (só o nome
+// Corpo do PATCH de alteração: a Meta não deixa trocar nome, idioma nem tipo
+// (#1394: recusou a troca de tipo até num recusado), então a categoria nunca
+// vai; mudar de tipo é criar um modelo novo. Sem mudança no conteúdo (só o nome
 // amigável), nada vai para a Meta: o modelo não volta para análise nem gasta
 // uma das alterações do mês.
 // Recusado vai sempre de novo: corrigir é pedir outra análise.
 export const corpoParaAlterar = (rascunho, modelo, opcoes = {}) => {
-  const mudouOTipo = rascunho.tipo !== modelo.tipo;
   const nomes = nomesDoModelo(modelo);
   const { components, fields } = componentesNaMeta(rascunho.conteudo, {
     ...opcoes,
@@ -294,7 +294,6 @@ export const corpoParaAlterar = (rascunho, modelo, opcoes = {}) => {
         .components
     : null;
   const mudouOConteudo =
-    mudouOTipo ||
     modelo.situacao === 'recusado' ||
     JSON.stringify(components) !== JSON.stringify(doOriginal);
   const topo = opcoes.midias?.topo;
@@ -302,7 +301,6 @@ export const corpoParaAlterar = (rascunho, modelo, opcoes = {}) => {
     ...(mudouOConteudo ? { components } : {}),
     friendly_name: rascunho.nome.trim(),
     fields,
-    ...(mudouOTipo ? { category: CATEGORIA[rascunho.tipo] } : {}),
     ...(topo ? { header_media: topo } : {}),
   };
 };

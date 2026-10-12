@@ -225,7 +225,8 @@
       "AVISO_COPIA": "Esta é uma cópia de “{nome}”. Ajuste o que quiser e escolha um nome diferente.",
       "FALHOU": "Não conseguimos enviar agora. Tente de novo.",
       "FALHOU_UMA_CONTA": "O modelo foi enviado para uma conta do WhatsApp, mas não para a outra. {motivo}",
-      "AVISO_COPIA_ARQUIVOS": "A cópia não leva os arquivos: escolha de novo a foto, o vídeo ou o documento do topo e dos cartões."
+      "AVISO_COPIA_ARQUIVOS": "A cópia não leva os arquivos: escolha de novo a foto, o vídeo ou o documento do topo e dos cartões.",
+      "AVISO_NOVO_TIPO": "Modelo novo com o texto de “{nome}”. Escolha o tipo e confira o nome."
     },
     "OBJETIVO": {
       "SUGESTOES": {
@@ -349,7 +350,12 @@
       },
       "FONTE_CADASTRO": "Na campanha, vem do cadastro de cada cliente.",
       "FONTE_COLUNA": "Na campanha, vem de uma coluna do seu público ou é o mesmo texto para todos.",
-      "NOME_REPETIDO": "Já existe um modelo com este nome nesta conta do WhatsApp. Use outro, por exemplo “{sugestao}”."
+      "NOME_REPETIDO": "Já existe um modelo com este nome nesta conta do WhatsApp. Use outro, por exemplo “{sugestao}”.",
+      "TIPO_TRAVADO": {
+        "TITULO": "Tipo da mensagem",
+        "NAO_MUDA": "O WhatsApp não deixa mudar o tipo de um modelo que já existe.",
+        "CRIAR_NOVO": "Para mudar o tipo, crie um modelo novo com este texto"
+      }
     },
     "TOPOS": {
       "nenhum": {
@@ -432,7 +438,8 @@
         "foto": "A foto pode ter até 5 MB.",
         "video": "O vídeo pode ter até 16 MB.",
         "documento": "O PDF pode ter até 100 MB."
-      }
+      },
+      "TOPO_AJUDA": "Opcional. O mesmo arquivo vai para todas as pessoas que receberem. Use para algo igual para todos (cardápio, catálogo, regulamento). Boleto, comprovante ou documento de cada cliente não vão aqui."
     },
     "NUMEROS": {
       "INTRO": "Escolha onde este modelo vai valer. Só aparecem números do WhatsApp oficial.",
@@ -487,7 +494,8 @@
         "FORMATO_DIVULGACAO": "Este formato vai como divulgação",
         "CARTOES_MESMA_MIDIA": "Todos os cartões têm o mesmo tipo de mídia (só foto ou só vídeo)",
         "NOME_LIVRE": "O nome ainda não existe nesta conta do WhatsApp"
-      }
+      },
+      "LEMBRETE_ARQUIVO_IGUAL": "Esse arquivo vai igual para todos."
     },
     "QUEM_APROVA": {
       "TITULO": "Quem aprova é o WhatsApp",
@@ -790,6 +798,10 @@
       "EXPLICA_SEM_VALOR": "O WhatsApp dá {limite} respostas grátis por número a cada mês.",
       "USADAS": "{n} de {limite}",
       "PASSOU": "Passou das {limite} grátis"
+    },
+    "CONFERENCIA_AUTOMATICA": {
+      "PRONTO": "“{nome}” ficou pronto para usar.",
+      "RECUSADO": "“{nome}” foi recusado."
     }
   }
 }

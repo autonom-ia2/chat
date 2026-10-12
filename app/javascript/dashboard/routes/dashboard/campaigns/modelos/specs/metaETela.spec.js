@@ -366,7 +366,7 @@ describe('tela → Meta', () => {
     });
   });
 
-  it('on change sends no name or language, and the type only when it changed', () => {
+  it('on change sends no name, language or type (#1394)', () => {
     const corpo = corpoParaAlterar(
       {
         ...rascunho,
@@ -383,9 +383,15 @@ describe('tela → Meta', () => {
     // Sem arquivo novo, o topo vai sem o handle antigo (ele expira): o servidor
     // sobe de novo o arquivo guardado no perfil.
     expect(corpo.components[0]).toEqual({ type: 'HEADER', format: 'IMAGE' });
-    expect(corpoParaAlterar(rascunho, { tipo: 'divulgacao' }).category).toBe(
-      'UTILITY'
-    );
+    // #1394: a Meta não aceita trocar o tipo de um modelo que já existe. A
+    // edição nunca manda categoria, nem quando o rascunho chega com outro tipo.
+    const outroTipo = corpoParaAlterar(rascunho, {
+      tipo: 'divulgacao',
+      situacao: 'recusado',
+      conteudo: rascunho.conteudo,
+    });
+    expect(outroTipo.category).toBeUndefined();
+    expect(outroTipo.components).toBeDefined();
   });
 
   it('só o nome amigável mudou: nada de conteúdo vai para a Meta', () => {

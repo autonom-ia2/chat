@@ -102,9 +102,15 @@ const iconeDoBotao = tipo =>
     </p>
 
     <section class="flex flex-col gap-3">
-      <h2 class="m-0 text-base font-semibold text-n-slate-12">
-        {{ $t('MODELOS_WHATSAPP.EXTRAS.TOPO') }}
-      </h2>
+      <div class="flex flex-col gap-1">
+        <h2 class="m-0 text-base font-semibold text-n-slate-12">
+          {{ $t('MODELOS_WHATSAPP.EXTRAS.TOPO') }}
+        </h2>
+        <!-- #1394: o topo é igual para todos; documento de cada cliente não vai aqui. -->
+        <p data-topo-ajuda class="mb-0 text-sm text-n-slate-11">
+          {{ $t('MODELOS_WHATSAPP.EXTRAS.TOPO_AJUDA') }}
+        </p>
+      </div>
       <div
         role="radiogroup"
         :aria-label="$t('MODELOS_WHATSAPP.EXTRAS.TOPO')"
