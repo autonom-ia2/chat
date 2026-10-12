@@ -1,3 +1,5 @@
+import { INBOX_TYPES } from 'dashboard/helper/inbox';
+
 // #1181 — leitura das caixas da L2 para a escolha de onde atender.
 // Uma caixa pode estar livre (occupied_by null), com um agente nativo ({kind:'agent'}) ou com outro
 // sistema ({kind:'external'}, ex.: bot de webhook). A caixa que já é deste agente conta como livre.
@@ -25,3 +27,22 @@ export const trocaNoCanal = (canais, inboxId, agenteId) => {
     canal: canal.name,
   };
 };
+
+// #1369 — o tipo de cada caixa na lista de onde atende ("HUBBER COMUNIDADE · WhatsApp"), pelo
+// `channel_type` da própria caixa (AGENTS.JORNADA.ONDE_QUANDO.TIPO.<chave>). Tipo sem nome claro para
+// quem lê (Twilio, que pode ser SMS ou WhatsApp; X) fica sem etiqueta.
+const TIPO_DA_CAIXA = {
+  [INBOX_TYPES.WHATSAPP]: 'WHATSAPP',
+  [INBOX_TYPES.INSTAGRAM]: 'INSTAGRAM',
+  [INBOX_TYPES.WEB]: 'SITE',
+  [INBOX_TYPES.EMAIL]: 'EMAIL',
+  [INBOX_TYPES.API]: 'API',
+  [INBOX_TYPES.FB]: 'FACEBOOK',
+  [INBOX_TYPES.TELEGRAM]: 'TELEGRAM',
+  [INBOX_TYPES.SMS]: 'SMS',
+  [INBOX_TYPES.LINE]: 'LINE',
+  [INBOX_TYPES.TIKTOK]: 'TIKTOK',
+};
+
+export const chaveDoTipoDaCaixa = canal =>
+  TIPO_DA_CAIXA[canal?.channel_type] || null;

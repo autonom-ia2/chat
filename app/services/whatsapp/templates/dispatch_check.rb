@@ -12,7 +12,12 @@
 #   templates_not_synced       (system) Meta did not answer and the cache is empty after an account switch
 #   template_unverifiable      (system) Meta did not answer and there is no cache to read
 class Whatsapp::Templates::DispatchCheck
-  Verdict = Data.define(:reason_code, :source, :details) do
+  # `template`: the item the check matched (from Meta or the cache), so the dispatch gate can keep it (#1382).
+  Verdict = Data.define(:reason_code, :source, :details, :template) do
+    def initialize(reason_code:, source:, details:, template: nil)
+      super
+    end
+
     def ok?
       reason_code.nil?
     end
@@ -106,7 +111,7 @@ class Whatsapp::Templates::DispatchCheck
   def ok(template, base)
     warnings = sendable_format(template).warnings
     Rails.logger.warn "[WhatsappTemplates::DispatchCheck] campaign=#{@campaign.id} warnings=#{warnings.join(',')}" if warnings.any?
-    Verdict.new(reason_code: nil, source: nil, details: base.merge(warnings: warnings))
+    Verdict.new(reason_code: nil, source: nil, details: base.merge(warnings: warnings), template: template)
   end
 
   def unverifiable_verdict

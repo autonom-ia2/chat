@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { pageStatus } from '../bookingPageStatus';
 
 // O selo de situação de uma página de agendamento (#1371): No ar, Pausada ou
 // Rascunho. Mora aqui para o cartão da lista e a gaveta "Marcar reuniões" do
@@ -14,14 +15,9 @@ const props = defineProps({
 
 const { t } = useI18n();
 
-// Rascunho: desligada e ainda falta algo para publicar (o `missing` do index).
-const statusOf = page => {
-  if (page?.enabled === true) return 'LIVE';
-  return page?.missing?.length ? 'DRAFT' : 'PAUSED';
-};
 const STATUSES = ['LIVE', 'PAUSED', 'DRAFT'];
 const current = computed(() =>
-  STATUSES.includes(props.status) ? props.status : statusOf(props.page)
+  STATUSES.includes(props.status) ? props.status : pageStatus(props.page)
 );
 
 const label = computed(() => {

@@ -6,13 +6,17 @@ import AutonomiaAgentsAPI from 'dashboard/api/autonomia/agents';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import AgenteGaveta from '../AgenteGaveta.vue';
 import AgenteErro from '../AgenteErro.vue';
-import { idiomaDoNavegador } from '../../utils/pagina';
+import { idiomaDoNavegador, quandoFoi } from '../../utils/pagina';
 
 // #1181 PR3 (protótipo t07-conversas) — "Conversas desta semana": as conversas por trás dos números,
 // nas abas Respondidas e Passadas para a equipe. Lê o drilldown que já existe
 // (`analytics/conversations`, 7 dias, até 50, as mais recentes): "passadas" = handed_off; "respondidas"
 // = handled, a lista de conversas tratadas pelo agente que o backend tem hoje. Cada linha abre a
 // conversa numa aba nova do painel.
+// #1369 — a hora de cada linha é a última atividade da conversa (`conversation.last_activity_at`),
+// não o `occurred_at`: em linha de conversa o drilldown manda ali a data de criação (uma conversa de
+// 28/09 aparecia como "seg., 20:59"). Fora dos últimos 7 dias, a hora vem com a data. Sem a última
+// atividade (o backend manda 0 quando ela falta), a linha fica sem hora: nunca a data de criação.
 const props = defineProps({
   agentId: { type: Number, required: true },
   aba: { type: String, default: 'respondidas' },
@@ -54,12 +58,11 @@ const carregar = async () => {
 
 watch(atual, carregar, { immediate: true });
 
-const quando = segundos =>
-  new Date(segundos * 1000).toLocaleString(idiomaDoNavegador(locale.value), {
-    weekday: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+const quando = linha =>
+  quandoFoi(
+    linha.conversation.last_activity_at,
+    idiomaDoNavegador(locale.value)
+  );
 
 const contato = linha => linha.conversation.contact_name || t(`${NS}.SEM_NOME`);
 
@@ -136,10 +139,12 @@ const abas = computed(() => [
             <span class="text-sm font-medium truncate text-n-slate-12">
               {{ contato(linha) }}
             </span>
-            <span class="text-xs tabular-nums text-n-slate-11">
-              {{
-                quando(linha.occurred_at || linha.conversation.last_activity_at)
-              }}
+            <span
+              v-if="linha.conversation.last_activity_at"
+              data-quando
+              class="text-xs tabular-nums text-n-slate-11"
+            >
+              {{ quando(linha) }}
             </span>
           </span>
           <a

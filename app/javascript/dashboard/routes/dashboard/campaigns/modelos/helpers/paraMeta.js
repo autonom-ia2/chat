@@ -142,7 +142,7 @@ export const corpoComNumeros = (conteudo, { nomes } = {}) => {
 
 // Topo com arquivo: o handle do arquivo que acabou de subir. Sem arquivo novo
 // (alterar), vai sem handle: o handle antigo expira, e o servidor sobe de novo o
-// arquivo guardado no perfil (Whatsapp::Templates::HeaderMedia).
+// arquivo guardado no perfil (Whatsapp::Templates::StoredMedia).
 const topoNaMeta = (topo, midia) => {
   if (topo?.tipo === 'texto') return [topo.componente];
   const formato = TOPO_NA_META[topo?.tipo];

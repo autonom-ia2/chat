@@ -1,7 +1,7 @@
 <script setup>
-import { computed, nextTick, ref, useId } from 'vue';
+import { computed, nextTick, onBeforeUnmount, ref, useId, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useStore } from 'dashboard/composables/store';
+import { useMapGetter, useStore } from 'dashboard/composables/store';
 import AgenteGaveta from '../AgenteGaveta.vue';
 import AgenteBotao from '../AgenteBotao.vue';
 import AgenteErro from '../AgenteErro.vue';
@@ -35,6 +35,7 @@ const emit = defineEmits(['fechar', 'perguntaResolvida', 'reler']);
 
 const { t } = useI18n();
 const store = useStore();
+const flagsDasFontes = useMapGetter('autonomiaSources/getUIFlags');
 const NS = 'AGENTS.JORNADA.PAGINA.SABE';
 const base = `sabe-${useId()}`;
 
@@ -140,13 +141,80 @@ const mandarSite = () => {
   });
 };
 
-const lerDeNovo = fonte =>
-  salvar(() =>
-    store.dispatch('autonomiaSources/resync', {
-      agentId: props.agente.id,
-      sourceId: fonte.id,
+// #1369 — "Ler de novo": a API aceita o pedido (202) e devolve o site como estava ("Pronto" ou
+// "Não consegui ler"); a leitura só começa depois, num job. A linha mostra "Lendo…" até o site
+// voltar dela: `synced_at` mudou, ou o servidor disse que estava lendo (pending/processing) e saiu
+// disso. Enquanto o servidor ainda não começou, a gaveta pede à página que releia a lista a cada
+// 4 s (a store só se relê sozinha quando o servidor já diz que está lendo). Depois de 60 s sem
+// começar, a linha volta em silêncio ao estado que o servidor mostra e as releituras param.
+// { [id da fonte]: { syncedAt, visto (já viu pending/processing), desde } }
+const ESTADOS_LENDO = ['pending', 'processing'];
+const RELEITURA_MS = 4000;
+const LIMITE_RELEITURA_MS = 60000;
+const relendo = ref({});
+let relogioReleitura = null;
+
+const situacaoDaLeitura = (fonte, marca) => {
+  if ((fonte.synced_at ?? null) !== marca.syncedAt) return 'voltou';
+  if (ESTADOS_LENDO.includes(fonte.status)) return 'lendo';
+  return marca.visto ? 'voltou' : 'esperando';
+};
+
+const proximaMarca = (fonte, agora) => {
+  const marca = relendo.value[fonte.id];
+  if (!marca) return null;
+  const situacao = situacaoDaLeitura(fonte, marca);
+  if (situacao === 'voltou') return null;
+  if (situacao === 'esperando' && agora - marca.desde >= LIMITE_RELEITURA_MS) {
+    return null;
+  }
+  return { ...marca, visto: marca.visto || situacao === 'lendo' };
+};
+
+const agendarReleitura = aoReler => {
+  clearTimeout(relogioReleitura);
+  relogioReleitura = null;
+  const esperando = Object.values(relendo.value).some(marca => !marca.visto);
+  if (!esperando) return;
+  // A página relê a lista (`reler`): ela guarda a última lista lida (sem piscar a gaveta) e mostra
+  // o erro se falhar. Com uma leitura ainda em andamento, este intervalo passa sem pedir outra.
+  relogioReleitura = setTimeout(() => {
+    relogioReleitura = null;
+    if (!flagsDasFontes.value?.fetchingList) emit('reler');
+    aoReler();
+  }, RELEITURA_MS);
+};
+
+const acompanharLeitura = () => {
+  const agora = Date.now();
+  relendo.value = Object.fromEntries(
+    lista.value.flatMap(fonte => {
+      const marca = proximaMarca(fonte, agora);
+      return marca ? [[fonte.id, marca]] : [];
     })
   );
+  agendarReleitura(acompanharLeitura);
+};
+
+watch(lista, acompanharLeitura);
+onBeforeUnmount(() => clearTimeout(relogioReleitura));
+
+const lerDeNovo = fonte =>
+  salvar(async () => {
+    await store.dispatch('autonomiaSources/resync', {
+      agentId: props.agente.id,
+      sourceId: fonte.id,
+    });
+    relendo.value = {
+      ...relendo.value,
+      [fonte.id]: {
+        syncedAt: fonte.synced_at ?? null,
+        visto: false,
+        desde: Date.now(),
+      },
+    };
+    acompanharLeitura();
+  });
 
 const pedirTirar = fonte => {
   tirando.value = fonte;
@@ -260,6 +328,7 @@ const tirar = () => remover(tirando.value);
         :key="fonte.id"
         :fonte="fonte"
         :nome-agente="nome"
+        :relendo="fonte.id in relendo"
         :pode-gerenciar="podeGerenciar"
         @ler-de-novo="lerDeNovo"
         @tirar="pedirTirar"

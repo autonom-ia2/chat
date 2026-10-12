@@ -21,7 +21,7 @@ class Whatsapp::Templates::Manager
     end
   end
 
-  include Whatsapp::Templates::HeaderMedia
+  include Whatsapp::Templates::StoredMedia
 
   Draft = Struct.new(:profile, :blob)
   CONTENT_KEYS = %w[category components message_send_ttl_seconds].freeze

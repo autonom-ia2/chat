@@ -14,7 +14,7 @@
 class FollowUpEvalCase
   # send/closure aparecem na linha porque, sem eles, uma falha só dizia "FALHA" sem dizer se o
   # desacordo foi na decisão de enviar ou na leitura da vez.
-  LINHA = '%-32<nome>s %-6<veredito>s %-6<send>s %-6<closure>s %-9<owner>s %-16<kind>s %<detalhe>s'.freeze
+  LINHA = '%-32<nome>s %-6<veredito>s %-6<send>s %-6<closure>s %-9<owner>s %-16<kind>s %-20<decline>s %<detalhe>s'.freeze
 
   def initialize(kase, card, credential)
     @kase = kase
@@ -29,10 +29,11 @@ class FollowUpEvalCase
       linha: format(LINHA, nome: nome, veredito: ok ? 'ok' : 'FALHA',
                            send: out['should_send'].to_s, closure: out['closure_detected'].to_s,
                            owner: out['next_action_owner'].to_s, kind: out['message_kind'].to_s,
+                           decline: out['decline_reason'].to_s,
                            detalhe: out['message_body'].to_s.truncate(70)) }
   rescue StandardError => e
     { ok: false,
-      linha: format(LINHA, nome: nome, veredito: 'ERRO', send: '-', closure: '-', owner: '-', kind: '-',
+      linha: format(LINHA, nome: nome, veredito: 'ERRO', send: '-', closure: '-', owner: '-', kind: '-', decline: '-',
                            detalhe: "#{e.class}: #{e.message.to_s.truncate(60)}") }
   end
 
@@ -47,7 +48,8 @@ class FollowUpEvalCase
       card: @card,
       client: Crm::Ai::ResponsesClient.new(credential: @credential, feature: 'follow_up'),
       context: context,
-      mode: :free_form,
+      mode: (@kase['modo'].presence || 'free_form').to_sym,
+      candidates: Array(@kase['candidates']).map(&:symbolize_keys),
       cadence: cadence,
       tone_instructions: @kase['tone_instructions'].to_s
     ).perform
@@ -78,7 +80,9 @@ class FollowUpEvalCase
   # caso. Cobrar um só transformaria a régua em alarme falso.
   def matches?(out)
     expected = @kase['esperado'].to_h
-    %w[should_send closure_detected next_action_owner message_kind].all? do |field|
+    # chosen_index confere o template escolhido no modo choose_template (índice na lista de candidates).
+    out = out.merge('chosen_index' => out.dig('chosen_template', 'index'))
+    %w[should_send closure_detected next_action_owner message_kind decline_reason chosen_index].all? do |field|
       next true unless expected.key?(field)
 
       Array(expected[field]).map(&:to_s).include?(out[field].to_s)
@@ -96,7 +100,7 @@ namespace :crm do
     results = JSON.parse(File.read(path)).map { |kase| FollowUpEvalCase.new(kase, card, credential).run }
 
     puts format(FollowUpEvalCase::LINHA, nome: 'CASO', veredito: 'VERD', send: 'SEND', closure: 'FIM',
-                                         owner: 'VEZ', kind: 'TIPO', detalhe: 'MENSAGEM')
+                                         owner: 'VEZ', kind: 'TIPO', decline: 'RECUSA', detalhe: 'MENSAGEM')
     results.each { |r| puts r[:linha] }
     aprovados = results.count { |r| r[:ok] }
     puts "\n#{aprovados}/#{results.size} de acordo com o esperado"

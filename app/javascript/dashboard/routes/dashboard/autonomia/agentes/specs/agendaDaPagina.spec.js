@@ -3,7 +3,6 @@ import {
   MODO_RECEBE,
   estadoComLiberacao,
   estadoDaPagina,
-  fusoLegivel,
   idsLiberados,
   liberacaoParaSalvar,
   outraPaginaDeAgenda,
@@ -166,20 +165,6 @@ describe('quemRecebe', () => {
   it('is null without the mode or the page', () => {
     expect(quemRecebe({})).toBeNull();
     expect(quemRecebe(undefined)).toBeNull();
-  });
-});
-
-describe('fusoLegivel', () => {
-  it('names the zone for a lay reader in the screen language', () => {
-    // O texto exato é do ICU do navegador ("Horário Padrão de Brasília" no Node 24).
-    const fuso = fusoLegivel('America/Sao_Paulo', 'pt-BR');
-    expect(fuso.startsWith('Horário')).toBe(true);
-    expect(fuso.endsWith('de Brasília')).toBe(true);
-  });
-
-  it('is empty without a zone and the raw name for an unknown one', () => {
-    expect(fusoLegivel(undefined, 'en')).toBe('');
-    expect(fusoLegivel('Lua/Base', 'en')).toBe('Lua/Base');
   });
 });
 

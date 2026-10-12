@@ -18,6 +18,20 @@ RSpec.describe Crm::Ai::FollowUpComposer do
     expect(schema[:required]).to include('next_action_owner', 'message_kind')
   end
 
+  it 'requires decline_reason (strict schema has no optional field) and explains it only in choose_template' do
+    schema = described_class::COMPOSE_SCHEMA[:schema]
+    template_mode = described_class.new(card: nil, client: nil, context: {}, mode: :choose_template).send(:instructions)
+    free_mode = described_class.new(card: nil, client: nil, context: {}, mode: :free_form).send(:instructions)
+
+    expect(schema[:properties][:decline_reason][:enum]).to eq(%w[none no_fitting_template nothing_to_send])
+    expect(schema[:required]).to include('decline_reason')
+    expect(schema[:required].sort).to eq(schema[:properties].keys.map(&:to_s).sort)
+    expect(template_mode).to include('no_fitting_template', 'nothing_to_send')
+    expect(free_mode).to include('decline_reason="none"')
+    expect(free_mode).not_to include('no_fitting_template')
+    expect(free_mode).to include('MODO free_form (texto livre permitido nesta conversa):')
+  end
+
   it 'treats a passive confirmation as our turn, not as customer silence' do
     expect(instructions).to include('vou aguardar')
     expect(instructions).to include('Na dúvida, escolha "empresa"')

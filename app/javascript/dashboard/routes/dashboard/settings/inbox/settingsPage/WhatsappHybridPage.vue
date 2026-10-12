@@ -22,7 +22,7 @@ const tk = (key, params) => t(`INBOX_MGMT.WHATSAPP_HYBRID.${key}`, params);
 // eslint-disable-next-line @intlify/vue-i18n/no-dynamic-keys
 const tw = (key, params) => t(`INBOX_MGMT.WAHA_CONNECTION.${key}`, params);
 
-const ORIGINS = ['human', 'bot', 'automation', 'campaign'];
+const ORIGINS = ['human', 'bot', 'automation', 'crm_follow_up', 'campaign'];
 
 const state = ref({ status: 'loading' });
 const qrDataUrl = ref('');

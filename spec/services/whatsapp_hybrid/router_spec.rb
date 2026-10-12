@@ -183,6 +183,50 @@ describe WhatsappHybrid::Router do
     end
   end
 
+  describe 'origem crm_follow_up' do
+    it 'reconhece a mensagem do follow-up do CRM pelo crm_follow_up_id, antes de human' do
+      message = outgoing(content_attributes: { crm_follow_up_id: 4242 })
+
+      expect(message.sender_type).to eq('User')
+      expect(described_class.new(conversation).origin_of(message)).to eq('crm_follow_up')
+    end
+
+    it 'continua human sem crm_follow_up_id e deixa campaign na frente' do
+      router = described_class.new(conversation)
+
+      expect(router.origin_of(outgoing)).to eq('human')
+      expect(router.origin_of(outgoing(content_attributes: { crm_follow_up_id: 4242 },
+                                       additional_attributes: { campaign_id: 7 }))).to eq('campaign')
+    end
+
+    it 'envia o follow-up pelo WhatsApp API e registra a origem nova no estatístico' do
+      allow(client).to receive(:send_text).and_return({ 'id' => 'true_5511937016094@c.us_3EB0AAAA' })
+      message = outgoing(content_attributes: { crm_follow_up_id: 4242 })
+
+      Whatsapp::SendOnWhatsappService.new(message: message).perform
+
+      expect(client).to have_received(:send_text).once
+      expect(message.reload.content_attributes).to include('whatsapp_transport' => 'web', 'whatsapp_transport_origin' => 'crm_follow_up')
+      expect(WhatsappHybrid::Stats.summary(connection).dig('crm_follow_up', 'sent')).to eq(1)
+    end
+
+    it 'respeita a origem desligada sem afetar a humana' do
+      connection.update!(disabled_origins: ['crm_follow_up'])
+      allow(client).to receive(:send_text).and_return({ 'id' => 'true_5511937016094@c.us_3EB0AAAA' })
+
+      Whatsapp::SendOnWhatsappService.new(message: outgoing(content_attributes: { crm_follow_up_id: 4242 })).perform
+      expect(client).not_to have_received(:send_text)
+
+      Whatsapp::SendOnWhatsappService.new(message: outgoing).perform
+      expect(client).to have_received(:send_text).once
+    end
+
+    it 'aceita a origem nova na lista de origens desligáveis e rejeita as desconhecidas' do
+      expect(connection.update(disabled_origins: ['crm_follow_up'])).to be(true)
+      expect(connection.update(disabled_origins: ['inventada'])).to be(false)
+    end
+  end
+
   describe 'echo reconciliation' do
     let(:echo_wamid) { 'wamid.HBgTQlIuMTM3NzQ0NTI1NDIyMjE2MhUUABEYFjNFQjA2QjI0NjZFN0VGQkFCMkRFNzkA' }
 

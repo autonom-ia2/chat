@@ -698,6 +698,18 @@
         "SEM_CANAL_GARANTIA": "{nome} já pode atender. Falta escolher onde."
       },
       "ONDE_QUANDO": {
+        "TIPO": {
+          "WHATSAPP": "WhatsApp",
+          "INSTAGRAM": "Instagram",
+          "SITE": "Chat do site",
+          "EMAIL": "E-mail",
+          "API": "API",
+          "FACEBOOK": "Facebook",
+          "TELEGRAM": "Telegram",
+          "SMS": "SMS",
+          "LINE": "LINE",
+          "TIKTOK": "TikTok"
+        },
         "TITULO": "Onde e quando {nome} atende",
         "ONDE": "Onde atende",
         "QUANDO": "Quando atende",
@@ -1042,6 +1054,7 @@
         "BLOCO_SABE": {
           "TITULO": "O que sabe",
           "TEXTO": "{nome} sabe o que você contou na conversa.",
+          "TEXTO_COM_FONTES": "{nome} sabe o que você contou na conversa e o que está no arquivo ou site. | {nome} sabe o que você contou na conversa e o que está nos arquivos e sites.",
           "ALTERAR_ARIA": "Alterar o que sabe",
           "VER_ARIA": "Ver o que sabe",
           "N_FONTES": "1 arquivo ou site | {n} arquivos e sites",
@@ -1086,8 +1099,6 @@
           "NAO_EXISTE_SO_VER": "A página escolhida não existe mais. {nome} vai passar a conversa para a equipe.",
           "NENHUMA": "{nome} não marca reuniões.",
           "ABRIR_PAGINAS": "Abrir páginas de agendamento",
-          "ESCOLHA": "Escolha uma página",
-          "FUSO": "Horários no fuso da empresa ({fuso}).",
           "RECEBE": {
             "FIXO": "A reunião fica com {nome}.",
             "FIXO_SEM_NOME": "A reunião fica com a pessoa responsável pela página.",
@@ -1098,9 +1109,9 @@
         "SEMANA": {
           "ROTULO": "Números desta semana",
           "VAZIA": "Ainda sem conversas esta semana. Os números aparecem aqui assim que {nome} responder alguém.",
-          "RESPONDIDAS": "conversas respondidas",
-          "PASSADAS": "passadas para a equipe",
-          "NOTA_RESPONDIDAS": "Esta semana, {nome} respondeu {n} conversas e passou {m} para a equipe.",
+          "RESPONDIDAS": "conversa respondida | conversas respondidas",
+          "PASSADAS": "passada para a equipe | passadas para a equipe",
+          "NOTA_RESPONDIDAS": "Esta semana, {nome} respondeu {n} conversa e passou {m} para a equipe. | Esta semana, {nome} respondeu {n} conversas e passou {m} para a equipe.",
           "NOTA_PASSADAS": "Quando não soube responder."
         },
         "CONVERSAS": {
@@ -1297,9 +1308,10 @@
           "LISTA": "Jeitos de responder, do mais novo para o mais antigo",
           "CARREGANDO": "Carregando os jeitos anteriores",
           "MOTIVO": {
-            "KB_REFRESH": "Atualizado pelo que sabe",
+            "KB_REFRESH": "Mudou sozinho quando os arquivos e sites mudaram",
             "MANUAL_EDIT": "Escrito por você",
-            "ROLLBACK": "Voltou a um jeito anterior"
+            "ROLLBACK": "Voltou a um jeito anterior",
+            "ROLLBACK_DE": "Voltou ao jeito de {quando}"
           },
           "VOLTAR_ESTA": "Voltar para esta",
           "VOLTANDO": "Voltando…",
@@ -1354,7 +1366,8 @@
         },
         "GAVETA_AGENDA": {
           "TITULO": "Marcar reuniões",
-          "TEXTO": "{nome} oferece horários livres de uma página de agendamento e marca a reunião na conversa.",
+          "TEXTO": "{nome} oferece horários na conversa e já marca a reunião.",
+          "QUAL_PAGINA": "Qual página {nome} usa?",
           "CARREGANDO": "Carregando suas páginas de agendamento…",
           "ERRO_LER": "Não deu para ler suas páginas de agendamento.",
           "GARANTIA": "Nada mudou.",
@@ -1362,11 +1375,38 @@
           "SALVANDO": "Salvando…",
           "PRONTO": "Pronto.",
           "ERRO": "Não deu para salvar.",
+          "CRIAR": "Criar uma página",
+          "CARTAO": {
+            "NAO_MARCAR": "Não marcar reuniões",
+            "DURACAO": "{minutos} min"
+          },
+          "RASCUNHO": {
+            "DICA": "Publique a página para {nome} usar.",
+            "AVISO": "{pagina} ainda não está publicada. {nome} vai passar a conversa para a equipe até você publicar.",
+            "ATUAL": "Escolha atual"
+          },
+          "SEM_PAGINAS": {
+            "TITULO": "Você ainda não tem uma página de agendamento",
+            "TEXTO": "Na página você diz os dias, os horários e quem atende. São poucos passos. Depois volte aqui para {nome} marcar reuniões.",
+            "PECA": "Peça a quem cuida da conta para criar uma página em CRM › Agendamento."
+          },
           "PESSOAS": {
-            "TITULO": "Pessoas que {nome} pode usar",
+            "TITULO": "Com quem {nome} pode marcar",
+            "TODAS": "Todas as pessoas",
+            "TODAS_DICA": "Inclui quem entrar na página depois.",
             "PAUSADA": "agenda pausada",
             "NENHUMA": "Marque pelo menos uma pessoa.",
-            "DICA": "{nome} só marca reunião com as pessoas marcadas acima. Para preferir uma delas, diga em Mudar conversando. Exemplo: “Marque com {exemplo}”."
+            "DICA": "Quer que {nome} prefira uma pessoa? Diga em {acao}.",
+            "DICA_ACAO": "Mudar conversando"
+          },
+          "EXEMPLO": {
+            "TITULO": "Como o cliente vê",
+            "TEXTO": "{nome} vai oferecer horários assim:",
+            "SELO": "Exemplo",
+            "SR": "Exemplo de conversa em que {nome} oferece horários",
+            "CLIENTE": "Oi! Queria marcar um horário.",
+            "AGENTE": "Claro! Para {pagina}, tenho terça às 10h ou quarta às 15h. Qual fica melhor para você?",
+            "NOTA": "É só um exemplo. {nome} escreve com as próprias palavras e mostra os horários livres de verdade na hora da conversa."
           }
         }
       },
