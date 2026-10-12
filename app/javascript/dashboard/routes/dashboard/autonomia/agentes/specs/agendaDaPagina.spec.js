@@ -6,6 +6,7 @@ import {
   fusoLegivel,
   idsLiberados,
   liberacaoParaSalvar,
+  outraPaginaDeAgenda,
   pessoasDaPagina,
   quemRecebe,
 } from '../utils/agendaDaPagina';
@@ -225,5 +226,14 @@ describe('pessoas liberadas (#1307)', () => {
     expect(estadoComLiberacao(ATIVA, PESSOAS, [2])).toBe(AGENDA_PAUSADA);
     expect(estadoComLiberacao(PAUSADA, PESSOAS, [])).toBe(PAUSADA);
     expect(estadoComLiberacao(ATIVA, [], [])).toBe(ATIVA);
+  });
+});
+
+describe('outraPaginaDeAgenda (#1307, painel antigo)', () => {
+  it('is true only for a real page different from the saved one', () => {
+    expect(outraPaginaDeAgenda(5, 3)).toBe(true);
+    expect(outraPaginaDeAgenda(5, null)).toBe(true);
+    expect(outraPaginaDeAgenda(5, '5')).toBe(false);
+    expect(outraPaginaDeAgenda(null, 3)).toBe(false);
   });
 });

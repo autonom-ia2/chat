@@ -130,3 +130,8 @@ export const estadoComLiberacao = (estado, pessoas, liberadas) => {
     ? ESTADO_PAGINA.AGENDA_PAUSADA
     : estado;
 };
+
+// #1307 — a página nova é outra (não "Não marcar" e não a salva, comparando como texto: a config pode
+// trazer o id em texto). Só então a liberação volta para todas (painel antigo, PanelTune).
+export const outraPaginaDeAgenda = (nova, salva) =>
+  Boolean(nova) && String(nova) !== String(salva ?? '');

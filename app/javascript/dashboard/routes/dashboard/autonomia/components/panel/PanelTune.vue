@@ -17,6 +17,7 @@ import BuilderChat from '../builder/BuilderChat.vue';
 import AgentAudienceForm from './AgentAudienceForm.vue';
 import AgentScheduleForm from './AgentScheduleForm.vue';
 import AgentBookingForm from './AgentBookingForm.vue';
+import { outraPaginaDeAgenda } from '../../agentes/utils/agendaDaPagina';
 
 const props = defineProps({
   agent: {
@@ -161,16 +162,19 @@ const saveResponseWindow = responseWindow =>
     config: { ...buildPayload().config, response_window: responseWindow },
   });
 // #1196 — the booking page the AI uses to offer times and book; null turns it off.
-// #1307 — a new page goes with everyone on it (`booking_agent_ids: []`): the people released for
-// the previous page do not count on the new one and would leave the AI with nobody.
-const saveBookingPage = bookingPageId =>
-  saveSettings({
-    config: {
-      ...buildPayload().config,
-      booking_page_id: bookingPageId,
-      ...(bookingPageId ? { booking_agent_ids: [] } : {}),
-    },
-  });
+// #1307 — a different page goes with everyone on it (`booking_agent_ids: []`): the people released
+// for the previous page do not count on the new one and would leave the AI with nobody. Saving the
+// same page again keeps the people released in the new agent page.
+const saveBookingPage = bookingPageId => {
+  const config = {
+    ...buildPayload().config,
+    booking_page_id: bookingPageId,
+  };
+  if (outraPaginaDeAgenda(bookingPageId, props.agent.config?.booking_page_id)) {
+    config.booking_agent_ids = [];
+  }
+  return saveSettings({ config });
+};
 
 const onAvatarUpload = async ({ file, url }) => {
   // isSaving = updatingItem: também um write do agente (UPSERT). Bail se restore/
