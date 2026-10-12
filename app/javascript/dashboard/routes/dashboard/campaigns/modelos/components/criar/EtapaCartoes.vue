@@ -145,7 +145,7 @@ const aoEscolherArquivo = (indice, { arquivo, local }) =>
           </h3>
           <Button
             v-if="cartoes.length > CARTOES_MINIMO"
-            :label="$t('MODELOS_WHATSAPP.EXTRAS.TIRAR_BOTAO')"
+            :label="$t('MODELOS_WHATSAPP.CARTOES.TIRAR')"
             icon="i-lucide-x"
             color="slate"
             variant="ghost"
@@ -179,11 +179,11 @@ const aoEscolherArquivo = (indice, { arquivo, local }) =>
             <span class="size-4" :class="midia.icone" aria-hidden="true" />
             {{ $t(`MODELOS_WHATSAPP.TOPOS.${midia.chave}.ROTULO`) }}
           </button>
+          <span v-if="cartao.arquivo" class="text-sm break-all text-n-slate-12">
+            {{ cartao.arquivo }}
+          </span>
           <EscolherArquivo
             :nome="cartao.arquivo"
-            :rotulo="
-              cartao.arquivo || $t('MODELOS_WHATSAPP.EXTRAS.ESCOLHER_ARQUIVO')
-            "
             :aceita="MIDIAS.find(m => m.chave === cartao.midia).aceita"
             @escolhido="escolhido => aoEscolherArquivo(indice, escolhido)"
           />

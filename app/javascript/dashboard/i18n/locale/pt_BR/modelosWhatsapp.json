@@ -145,7 +145,7 @@
       "CONTA": "Conta do WhatsApp",
       "CONTA_EXPLICA": "Vale para todos os números desta conta.",
       "DETALHES": "Detalhes",
-      "NOME_NO_WHATSAPP": "Nome no WhatsApp: {nome} · Português (Brasil)",
+      "NOME_NO_WHATSAPP": "Nome no WhatsApp: {nome} · {idioma}",
       "ALTERACOES_RESTANTES": "Você ainda pode alterar {n} vez neste mês. | Você ainda pode alterar {n} vezes neste mês.",
       "ALTERAR_DEPOIS": "Você poderá alterar de novo em {dia}, às {hora}.",
       "SEM_ALTERACOES": "Este modelo já foi alterado 10 vezes neste mês. Para mudar agora, duplique.",
@@ -443,7 +443,8 @@
       "EXTRAS": "Sem extras | 1 extra | {n} extras",
       "FALTA_PREENCHER": "Falta preencher",
       "CARTOES": "{n} cartão | {n} cartões",
-      "CODIGO": "{botao} · vale {n} min"
+      "CODIGO": "{botao} · vale {n} min",
+      "NOME_E_TEXTO": "Nome e texto"
     },
     "CONFERENCIA": {
       "TITULO": "O que o WhatsApp confere",
@@ -610,7 +611,8 @@
       "BOTOES_AJUDA": "Até 2. Valem para todos os cartões; o texto e o link mudam em cada um.",
       "CARTAO": "Cartão {n}",
       "TEXTO": "Texto do cartão",
-      "ADICIONAR": "Adicionar cartão"
+      "ADICIONAR": "Adicionar cartão",
+      "TIRAR": "Tirar cartão"
     },
     "OFERTA": {
       "INTRO": "Só para divulgação. Este formato não tem rodapé.",

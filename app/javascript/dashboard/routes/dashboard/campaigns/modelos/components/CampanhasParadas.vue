@@ -139,7 +139,8 @@ const retomar = async campanha => {
               v-if="
                 !noModelo &&
                 campanha.modeloId &&
-                campanha.motivo !== 'nao_conferido'
+                campanha.motivo !== 'nao_conferido' &&
+                !ACAO[campanha.motivo]
               "
               :to="{
                 name: 'modelos_whatsapp_modelo',

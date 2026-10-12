@@ -7,7 +7,13 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import api from '../api/modelosWhatsapp';
 import { usavelEmCampanha } from '../helpers/paraMeta';
 import { SITUACOES } from '../constants';
-import { diaEMes, hora, haQuantoTempo, numero } from '../helpers/datas';
+import {
+  diaEMes,
+  hora,
+  haQuantoTempo,
+  numero,
+  localeDoIntl,
+} from '../helpers/datas';
 import {
   usePodeCriarModelo,
   usePodeUsarEmCampanha,
@@ -75,6 +81,19 @@ const contaDoModelo = computed(
 );
 
 const situacao = computed(() => modelo.value.situacao);
+// "pt_BR" → "português (Brasil)", no idioma da tela.
+const nomeDoIdioma = computed(() => {
+  const codigo = (modelo.value.idioma || '').split('_').join('-');
+  try {
+    return (
+      new Intl.DisplayNames([localeDoIntl(locale.value)], {
+        type: 'language',
+      }).of(codigo) || codigo
+    );
+  } catch {
+    return codigo;
+  }
+});
 const caixa = computed(() => SITUACOES[situacao.value].caixa);
 
 const explicacao = computed(() => {
@@ -390,22 +409,23 @@ const confirmarApagar = async () => {
                 :dono-do-sistema="modelo.donoDoSistema"
               />
 
-              <details
-                class="px-6 py-4 rounded-2xl ring-1 ring-inset ring-n-weak bg-n-solid-1 group"
+              <!-- Detalhes sempre à vista: o nome que o WhatsApp conhece e o idioma. -->
+              <section
+                data-detalhes
+                class="flex flex-col gap-1 px-6 py-4 rounded-2xl ring-1 ring-inset ring-n-weak bg-n-solid-1"
               >
-                <summary
-                  class="text-[0.9375rem] font-medium cursor-pointer min-h-11 flex items-center text-n-slate-11"
-                >
+                <h3 class="m-0 text-base font-semibold text-n-slate-12">
                   {{ $t('MODELOS_WHATSAPP.MODELO.DETALHES') }}
-                </summary>
-                <p class="mt-2 mb-0 text-sm text-n-slate-11">
+                </h3>
+                <p class="mb-0 text-sm break-words text-n-slate-11">
                   {{
                     $t('MODELOS_WHATSAPP.MODELO.NOME_NO_WHATSAPP', {
                       nome: modelo.nomeNoWhatsapp,
+                      idioma: nomeDoIdioma,
                     })
                   }}
                 </p>
-              </details>
+              </section>
 
               <p
                 v-if="podeCriar && !modelo.editavel"

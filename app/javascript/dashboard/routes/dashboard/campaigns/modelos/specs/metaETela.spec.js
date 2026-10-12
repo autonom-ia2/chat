@@ -10,7 +10,7 @@ import {
   nomeParaWhatsapp,
   usavelEmCampanha,
 } from '../helpers/paraMeta';
-import { ajustarEspacosDosCampos } from '../helpers/conteudo';
+import { ajustarEspacosDosCampos, previaCurta } from '../helpers/conteudo';
 import { ligacaoDoCatalogo, rotuloDoCampo } from '../helpers/campos';
 
 // Ida e volta entre o modelo da Meta (API de Modelos, #1330) e a tela (#1332).
@@ -278,6 +278,26 @@ describe('QA na tela (#1380)', () => {
     expect(corpo.components[0].text).toBe(
       'Olá, {{1}}! Amanhã, dia {{2}} e às {{3}}.'
     );
+  });
+
+  it('L2: a prévia da lista corta entre palavras, nunca no meio de um campo', () => {
+    const rotulo = campo =>
+      ({ data: 'Data e hora do horário' })[campo] || campo;
+    const pedacos = [
+      { t: 'texto', v: 'Olá! Seu horário está marcado para ' },
+      { t: 'campo', v: 'data' },
+      { t: 'texto', v: '. Até lá!' },
+    ];
+    const { pedacos: curtos, cortado } = previaCurta(pedacos, rotulo, 50);
+    expect(cortado).toBe(true);
+    expect(curtos).toEqual([
+      { t: 'texto', v: 'Olá! Seu horário está marcado para ' },
+    ]);
+    expect(previaCurta(pedacos, rotulo, 200).cortado).toBe(false);
+    expect(
+      previaCurta([{ t: 'texto', v: 'uma frase bem comprida' }], rotulo, 12)
+        .pedacos
+    ).toEqual([{ t: 'texto', v: 'uma frase' }]);
   });
 
   it('A6: modelo com campo que a campanha não preenche não é oferecido para campanha', () => {

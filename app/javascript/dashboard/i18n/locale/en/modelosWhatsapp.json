@@ -145,7 +145,7 @@
       "CONTA": "WhatsApp account",
       "CONTA_EXPLICA": "Works on every number of this account.",
       "DETALHES": "Details",
-      "NOME_NO_WHATSAPP": "Name on WhatsApp: {nome} · Portuguese (Brazil)",
+      "NOME_NO_WHATSAPP": "Name on WhatsApp: {nome} · {idioma}",
       "ALTERACOES_RESTANTES": "You can still change it {n} time this month. | You can still change it {n} times this month.",
       "ALTERAR_DEPOIS": "You can change it again on {dia}, at {hora}.",
       "SEM_ALTERACOES": "This template was already changed 10 times this month. To change it now, duplicate it.",
@@ -443,7 +443,8 @@
       "EXTRAS": "No extras | 1 extra | {n} extras",
       "FALTA_PREENCHER": "Still empty",
       "CARTOES": "{n} card | {n} cards",
-      "CODIGO": "{botao} · valid for {n} min"
+      "CODIGO": "{botao} · valid for {n} min",
+      "NOME_E_TEXTO": "Name and text"
     },
     "CONFERENCIA": {
       "TITULO": "What WhatsApp checks",
@@ -610,7 +611,8 @@
       "BOTOES_AJUDA": "Up to 2. They apply to every card; the text and link change on each one.",
       "CARTAO": "Card {n}",
       "TEXTO": "Card text",
-      "ADICIONAR": "Add card"
+      "ADICIONAR": "Add card",
+      "TIRAR": "Remove card"
     },
     "OFERTA": {
       "INTRO": "Promotion only. This format has no footer.",

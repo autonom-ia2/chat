@@ -79,6 +79,31 @@ export const lerTextoComCampos = (fonte, camposConhecidos) => {
   return juntarTextos(pedacos);
 };
 
+// Começo do texto para a lista e o Confira: corta só entre palavras ou antes de
+// um campo, nunca no meio da etiqueta de um campo. `rotulo` dá o nome do campo.
+export const previaCurta = (pedacos, rotulo, limite = 140) => {
+  const saida = [];
+  let usado = 0;
+  // eslint-disable-next-line no-restricted-syntax
+  for (const pedaco of pedacos) {
+    const tamanho =
+      pedaco.t === 'campo' ? rotulo(pedaco.v).length : pedaco.v.length;
+    if (usado + tamanho <= limite) {
+      saida.push(pedaco);
+      usado += tamanho;
+    } else {
+      if (pedaco.t === 'texto') {
+        const cabe = pedaco.v.slice(0, limite - usado);
+        const ultimoEspaco = cabe.lastIndexOf(' ');
+        const corte = ultimoEspaco > 0 ? cabe.slice(0, ultimoEspaco) : '';
+        if (corte) saida.push({ t: 'texto', v: corte });
+      }
+      return { pedacos: saida, cortado: true };
+    }
+  }
+  return { pedacos: saida, cortado: false };
+};
+
 export const camposUsados = pedacos => [
   ...new Set(pedacos.filter(p => p.t === 'campo').map(p => p.v)),
 ];
