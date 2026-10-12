@@ -3,9 +3,11 @@
 #
 # O convite de teste leva `metadata.test = true`: fica fora da lista do botão Agendar, do reaproveitamento de
 # convites e dos números (F2-C usa `Crm::BookingInvite.real`); a reunião marcada por ele também leva `test: true`
-# (`Crm::Meeting.real` a exclui). Vale a mesma regra de canal dos avisos (`Notices::Route`, só texto: fora da janela
-# do WhatsApp oficial é preciso mandar uma mensagem ao número da empresa antes), a mesma parada (recusou mensagens
-# ou parou os avisos) e os mesmos tetos (por número e, desde #1270, por conta).
+# (`Crm::Meeting.real` a exclui). Vale a mesma regra de canal dos avisos (`Notices::Route`): fora da janela do
+# WhatsApp oficial, modelo aprovado; sem modelo que resolva e com o WhatsApp Híbrido pronto para o contato (#1349),
+# texto pela sessão também — sempre com `sender: user` (o atendente que testou), nunca sem remetente como o aviso
+# automático do `Notices::Sender`. Mesma parada (recusou mensagens ou parou os avisos) e os mesmos tetos (por número
+# e, desde #1270, por conta).
 #
 # Quem testa precisa enxergar a caixa de avisos (`policy_scope(::Inbox)`, o mesmo escopo da escolha da caixa) e, se a
 # mensagem vai para uma conversa que já existe, poder responder nela (`ConversationPolicy#show?`, o mesmo critério do

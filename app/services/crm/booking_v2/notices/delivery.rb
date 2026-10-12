@@ -1,7 +1,11 @@
 # Envia uma mensagem automática do agendamento pelo caminho que o `Notices::Route` decidiu (#1192). Sem conversa
 # (só no caminho de modelo), abre uma na caixa de avisos para o contato (`ContactInbox` + `ConversationBuilder`).
-# Pelo WhatsApp Híbrido (`decision.via == :hybrid_web`, #1349) a mensagem não leva remetente: assim o roteador do
-# Híbrido a trata como `automation` (com usuário seria `human`) e ela fica marcada em `crm_booking_notice_via`.
+# Pelo WhatsApp Híbrido (`decision.via == :hybrid_web`, #1349) a mensagem fica marcada em `crm_booking_notice_via`
+# para auditoria — essa marca só reflete a decisão no momento do envio: se o cliente responder antes de o job de
+# conferência de entrega rodar, ela pode já estar desatualizada para quem a lê depois. A origem que o roteador do
+# Híbrido dá à mensagem (`automation` com remetente ausente, `human` com usuário) é escolha de quem chama (`sender:`):
+# o aviso automático do `Notices::Sender` manda sem remetente; o "Testar no meu WhatsApp" (`TestInvite`) manda com o
+# usuário, porque é uma ação manual do atendente.
 # Texto já pronto: sai literal (`LiteralMessageBuilder`, sem a passada de Liquid).
 #
 # Modelo da Meta: variáveis posicionais do corpo {{1}} primeiro nome, {{2}} dia e hora, {{3}} link de gestão; só as
@@ -46,12 +50,8 @@ class Crm::BookingV2::Notices::Delivery
     attributes[:crm_booking_notice_via] = decision.via.to_s if decision.via
     params = { content: content, private: false, message_type: 'outgoing', content_attributes: attributes }
     params[:template_params] = template_params if template_params
-    Autonomia::LiteralMessageBuilder.new(message_sender, conversation, ActionController::Parameters.new(params),
+    Autonomia::LiteralMessageBuilder.new(sender, conversation, ActionController::Parameters.new(params),
                                          literal_content: true, literal_template_params: template_params.present?).perform
-  end
-
-  def message_sender
-    decision.via == Crm::BookingV2::Notices::Route::HYBRID_WEB ? nil : sender
   end
 
   def native_body

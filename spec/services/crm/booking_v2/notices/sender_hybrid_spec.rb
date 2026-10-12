@@ -48,7 +48,8 @@ RSpec.describe Crm::BookingV2::Notices::Sender do
     allow(Waha::Client).to receive(:new).and_return(client)
     allow(client).to receive(:check_contact_exists).and_return({ 'numberExists' => true, 'chatId' => '5511912345678@c.us' })
     allow(client).to receive(:new_message_id).and_return('3EB0AVISO')
-    allow(client).to receive_messages(send_text: { 'id' => 'true_5511912345678@c.us_3EB0AVISO' }, start_typing: {}, stop_typing: {})
+    allow(client).to receive_messages(send_text: { 'id' => 'true_5511912345678@c.us_3EB0AVISO' }, start_typing: {}, stop_typing: {},
+                                      update_session: {}, capping: {})
     allow(Kernel).to receive(:sleep)
     Redis::Alfred.delete('whatsapp_hybrid:chat_id:hybrid-aviso:5511912345678')
   end
@@ -280,6 +281,53 @@ RSpec.describe Crm::BookingV2::Notices::Sender do
       expect(client).not_to have_received(:send_text)
       expect(message.reload.status).to eq('failed')
       expect(notice.reload).to have_attributes(status: 'failed', error_code: 'delivery_failed')
+      expect(alerts.count).to eq(1)
+    end
+
+    # Falha DURANTE o envio (não antes dele): o mesmo ponto que `router_spec.rb` já testa para `WhatsappHybrid::WebTransport`
+    # (sessão revalidada como caída, erro da WAHA, timeout). A mensagem fica `failed`, nunca `sent` de mentira nem
+    # `pending` para sempre: o `NoticeDispatchJob` troca o aviso de `sent` para `failed: delivery_failed` na rodada seguinte.
+    def notice_message_after_send!
+      notice = claimed
+      described_class.new(notice).perform
+      message = Message.find(notice.reload.message_id)
+      yield
+      Whatsapp::SendOnWhatsappService.new(message: message).perform
+      Crm::BookingV2::NoticeDispatchJob.perform_now
+      [notice.reload, message.reload]
+    end
+
+    it 'sessão revalidada como caída no momento do envio: delivery_failed, sem reenviar' do
+      notice, message = notice_message_after_send! do
+        connection.update!(status_checked_at: 5.minutes.ago)
+        allow(client).to receive(:get_session).and_return({ 'status' => 'STOPPED' })
+      end
+
+      expect(client).not_to have_received(:send_text)
+      expect(message.status).to eq('failed')
+      expect(notice).to have_attributes(status: 'failed', error_code: 'delivery_failed')
+      expect(alerts.count).to eq(1)
+    end
+
+    it 'erro da WAHA no envio: delivery_failed, sem reenviar' do
+      notice, message = notice_message_after_send! do
+        allow(client).to receive(:send_text).and_raise(Waha::Client::Error, 'WAHA POST /api/sendText -> 500: erro')
+        allow(client).to receive(:get_session).and_return({ 'status' => 'WORKING', 'me' => { 'id' => "#{connection.connected_phone}@c.us" } })
+      end
+
+      expect(message.status).to eq('failed')
+      expect(notice).to have_attributes(status: 'failed', error_code: 'delivery_failed')
+      expect(alerts.count).to eq(1)
+    end
+
+    it 'timeout sem resposta da WAHA no envio: delivery_failed, sem reenviar (nunca sabemos se saiu)' do
+      notice, message = notice_message_after_send! do
+        allow(client).to receive(:send_text).and_raise(Waha::Client::Timeout, 'timeout')
+      end
+
+      expect(client).to have_received(:send_text).once
+      expect(message.status).to eq('failed')
+      expect(notice).to have_attributes(status: 'failed', error_code: 'delivery_failed')
       expect(alerts.count).to eq(1)
     end
   end

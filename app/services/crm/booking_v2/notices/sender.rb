@@ -16,6 +16,8 @@
 #    contato: o telefone é único por conta (validação do `Contact`). Como o cron marca `sending` ANTES de contar,
 #    dois processos ao mesmo tempo se enxergam e o teto nunca é ultrapassado (no limite, os dois podem recusar).
 # 6. Regra do canal (`Notices::Route`): janela e modelo aprovado no oficial e no canal API; WAHA manda texto sem janela.
+#    Oficial sem modelo que resolva e WhatsApp Híbrido pronto para o contato (#1349): texto pela sessão também,
+#    mandado sem remetente para o roteador do Híbrido contar como `automation` (ver `#notice_sender`).
 #    WAHA sem conversa: antes de abrir uma, o chat id real vem da WAHA (`Notices::WahaChat`) → `no_whatsapp` ou
 #    `waha_unavailable` quando não dá, ou `waha_refused` quando a WAHA recusa o pedido. `no_whatsapp` e `waha_refused`
 #    são definitivos. `waha_unavailable` não: a consulta não mandou nada,
@@ -214,9 +216,16 @@ class Crm::BookingV2::Notices::Sender
   def delivery(decision)
     text = Crm::BookingV2::Notices::Text.new(meeting: meeting, invite: invite, kind: notice.kind)
     Crm::BookingV2::Notices::Delivery.new(
-      decision: decision, inbox: profile.notice_inbox, contact: contact, sender: meeting.created_by,
+      decision: decision, inbox: profile.notice_inbox, contact: contact, sender: notice_sender(decision),
       content: text.to_s, values: text.template_values, appendix: text.appendix
     )
+  end
+
+  # Pelo WhatsApp Híbrido (#1349) o aviso automático sai sem remetente, para o roteador do Híbrido contar como
+  # `automation` (com usuário viraria `human`). Fora desse caminho, o remetente é sempre quem marcou a reunião, como
+  # antes. O "Testar no meu WhatsApp" (`TestInvite`) não passa por aqui: ele manda sempre com o usuário que testou.
+  def notice_sender(decision)
+    decision.via == Crm::BookingV2::Notices::Route::HYBRID_WEB ? nil : meeting.created_by
   end
 
   # A marca de espera da WAHA (`error_code`) só fica quando é ela o motivo do pulo.

@@ -351,5 +351,55 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingPages notices', type: :request do
         expect(response.status).to eq(status), "#{user.id}: #{response.status} #{response.body}"
       end
     end
+
+    # #1349: na caixa oficial, sem modelo, com conversa e janela fechada, e o WhatsApp Híbrido pronto para o contato,
+    # o teste manual sai pelo Híbrido (via a sessão auxiliar) mas CONTINUA como `human` — quem testou, não `automation`.
+    context 'when the official inbox has WhatsApp Híbrido ready and no template (#1349)' do
+      before do
+        page.update!(notice_inbox: cloud)
+        WhatsappHybrid::Connection.create!(
+          account: account, inbox: cloud, session_name: 'hybrid-teste', status: 'connected',
+          connected_phone: cloud.channel.phone_number.delete('^0-9'), risk_accepted_at: Time.current, status_checked_at: Time.current
+        )
+      end
+
+      def closed_window_for(phone)
+        contact = account.contacts.create!(name: 'Admin Ana', phone_number: phone)
+        conversation = create(:conversation, account: account, inbox: cloud, contact: contact)
+        create(:message, account: account, inbox: cloud, conversation: conversation, message_type: :incoming, created_at: 25.hours.ago)
+        conversation
+      end
+
+      def stub_hybrid_send!
+        allow(Kernel).to receive(:sleep)
+        stub_request(:post, 'https://waha.test/api/startTyping').to_return(status: 200, body: '{}', headers: { 'Content-Type' => 'application/json' })
+        stub_request(:post, 'https://waha.test/api/stopTyping').to_return(status: 200, body: '{}', headers: { 'Content-Type' => 'application/json' })
+        stub_request(:get, 'https://waha.test/api/hybrid-teste/new-message-id')
+          .to_return(status: 200, body: { id: '3EB0TESTE' }.to_json, headers: { 'Content-Type' => 'application/json' })
+        stub_request(:get, 'https://waha.test/api/contacts/check-exists')
+          .with(query: hash_including(session: 'hybrid-teste'))
+          .to_return(status: 200, body: { numberExists: true, chatId: '5511955554444@c.us' }.to_json,
+                     headers: { 'Content-Type' => 'application/json' })
+        stub_request(:post, 'https://waha.test/api/sendText')
+          .to_return(status: 200, body: { id: 'true_5511955554444@c.us_3EB0TESTE' }.to_json, headers: { 'Content-Type' => 'application/json' })
+      end
+
+      it 'manda a mensagem pelo Híbrido com o remetente de quem testou (human), não automation' do
+        conversation = closed_window_for('+5511955554444')
+        send_stub = stub_hybrid_send!
+
+        with_modified_env('WHATSAPP_HYBRID_ACCOUNT_IDS' => account.id.to_s) do
+          perform_enqueued_jobs { call(admin, :post, path, phone: '+5511955554444') }
+        end
+
+        expect(response).to have_http_status(:ok)
+        message = conversation.messages.outgoing.sole
+        expect(message).to have_attributes(sender_id: admin.id, sender_type: 'User', content_type: 'text')
+        expect(message.content_attributes).to include(
+          'crm_booking_notice_via' => 'hybrid_web', 'whatsapp_transport' => 'web', 'whatsapp_transport_origin' => 'human'
+        )
+        expect(send_stub).to have_been_made.once
+      end
+    end
   end
 end
