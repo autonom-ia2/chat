@@ -149,7 +149,7 @@ const carregar = async () => {
       modelo.value = await api.obterModelo(id);
       usos.value = alterando.value ? await api.ondeEstaEmUso(id) : [];
       // Modelo em uso não muda (a API recusa): a tela mostra onde, em vez do formulário.
-      if (alterando.value && usos.value.length) {
+      if (alterando.value && usos.value.some(uso => !uso.pausada)) {
         estado.value = 'em_uso';
         return;
       }

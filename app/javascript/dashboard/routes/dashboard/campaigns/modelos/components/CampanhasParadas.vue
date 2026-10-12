@@ -10,7 +10,9 @@ import api from '../api/modelosWhatsapp';
 // Campanhas que pararam por causa do modelo (pausado, recusado, alterado, com
 // o tipo mudado…). Na lista de campanhas leva ao modelo para resolver; na
 // página do modelo leva à campanha. "Retomar" (campaign_manage) confere o
-// modelo de novo: se ainda estiver errado, a campanha para outra vez, sem enviar.
+// modelo de novo. Só fica ligado com o modelo aprovado e igual ao que a campanha
+// guardou (`podeRetomar`, conferido no servidor); antes disso, "Corrija o modelo
+// primeiro" com o link para ele.
 const props = defineProps({
   campanhas: { type: Array, required: true },
   // Na página do próprio modelo: não repete o nome dele e leva à campanha.
@@ -46,7 +48,7 @@ const rotuloDaAcao = campanha => {
 // Retomar é de quem gerencia campanhas (CampaignPolicy#update?).
 const usuario = useMapGetter('getCurrentUser');
 const contaId = useMapGetter('getCurrentAccountId');
-const podeRetomar = computed(() =>
+const gerenciaCampanhas = computed(() =>
   getUserPermissions(usuario.value, contaId.value).some(permissao =>
     ['administrator', 'campaign_manage'].includes(permissao)
   )
@@ -111,10 +113,33 @@ const retomar = async campanha => {
               })
             }}
           </span>
+          <span
+            v-if="
+              gerenciaCampanhas && campanha.pausaId && !campanha.podeRetomar
+            "
+            data-corrija-primeiro
+            class="inline-flex flex-wrap items-center gap-x-1 text-sm font-medium text-n-amber-11"
+          >
+            {{ $t('MODELOS_WHATSAPP.PARADAS.CORRIJA_PRIMEIRO') }}
+            <router-link
+              v-if="campanha.modeloId"
+              :to="{
+                name: 'modelos_whatsapp_modelo',
+                params: { id: campanha.modeloId },
+              }"
+              class="inline-flex items-center underline min-h-11 text-n-blue-11"
+            >
+              {{
+                $t('MODELOS_WHATSAPP.PARADAS.VER_MODELO', {
+                  modelo: campanha.modeloNome,
+                })
+              }}
+            </router-link>
+          </span>
         </span>
         <span class="flex flex-wrap items-center gap-2 shrink-0">
           <Button
-            v-if="podeRetomar && campanha.pausaId"
+            v-if="gerenciaCampanhas && campanha.pausaId"
             data-retomar
             :label="$t('MODELOS_WHATSAPP.PARADAS.ACOES.RETOMAR')"
             icon="i-lucide-play"
@@ -122,6 +147,7 @@ const retomar = async campanha => {
             variant="faded"
             class="!min-h-11 !rounded-xl"
             :is-loading="retomando === campanha.pausaId"
+            :disabled="!campanha.podeRetomar"
             @click="retomar(campanha)"
           />
           <router-link

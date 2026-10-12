@@ -109,6 +109,31 @@ RSpec.describe 'Campaign journey campaign pauses API (#1329)', :aggregate_failur
                                          'inbox_id' => channel.inbox.id)
     end
 
+    it 'says the campaign is ready to resume only when the template is approved again, from the inbox cache' do
+      list
+      expect(response.parsed_body['payload'].sole['ready_to_resume']).to be(true)
+
+      channel.update_columns(message_templates: [CampaignJourneyHelpers::JOURNEY_TEMPLATE.merge('status' => 'PAUSED')]) # rubocop:disable Rails/SkipsModelValidations
+      list
+      expect(response.parsed_body['payload'].sole['ready_to_resume']).to be(false)
+      expect(a_request(:any, ->(uri) { uri.host == 'graph.facebook.com' })).not_to have_been_made
+    end
+
+    it 'keeps the old campaigns list working with a paused campaign (account without the journey)' do
+      with_modified_env(CAMPAIGN_JOURNEY_ENABLED: 'false') do
+        get "/api/v1/accounts/#{account.id}/campaigns", headers: headers
+
+        expect(response).to have_http_status(:ok)
+        expect(response.parsed_body.pluck('title')).to include('Renovação')
+      end
+    end
+
+    it 'never puts contact data in the list' do
+      list
+
+      expect(response.parsed_body['payload'].sole['details'].keys).to match_array(%w[template_name status])
+    end
+
     it 'leaves out resumed pauses and pauses of another account' do
       other_account, = create_account_and_user
       other_campaign = create(:campaign, account: other_account, inbox: journey_cloud_channel(other_account).inbox, audience: [],

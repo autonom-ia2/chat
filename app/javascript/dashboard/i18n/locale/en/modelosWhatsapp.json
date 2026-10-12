@@ -145,7 +145,8 @@
         "oculto": "Restricted"
       },
       "ABRIR": "Open",
-      "OCULTO": "This template is in use where you do not have access. Ask an administrator."
+      "OCULTO": "This template is in use where you do not have access. Ask an administrator.",
+      "PARADA": "stopped by the template"
     },
     "APAGAR": {
       "TITULO": "Delete “{nome}”?",
@@ -608,7 +609,9 @@
       },
       "RETOMADA": "“{nome}” resumed. It checks the template again and goes out if everything is right.",
       "NAO_RETOMOU": "This campaign cannot be resumed: it already started sending or was resumed before.",
-      "RETOMAR_FALHOU": "We could not resume now. Try again."
+      "RETOMAR_FALHOU": "We could not resume now. Try again.",
+      "CORRIJA_PRIMEIRO": "Fix the template first.",
+      "VER_MODELO": "Open “{modelo}”"
     },
     "PONTE": {
       "CAIXA_RECONECTAR": "{nome} · needs reconnecting",

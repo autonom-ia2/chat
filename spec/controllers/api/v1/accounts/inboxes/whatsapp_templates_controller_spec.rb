@@ -244,6 +244,49 @@ RSpec.describe 'Api::V1::Accounts::Inboxes::WhatsappTemplates', type: :request d
       expect(a_request(:any, graph_host)).not_to have_been_made
     end
 
+    # #1332: a campanha parou por causa do modelo (pausa aberta). Corrigir o modelo é o caminho para ela voltar; apagar
+    # continua barrado (o nome fica preso 30 dias e a campanha não sairia mais).
+    context 'with a campaign stopped by the template' do
+      before do
+        campaign = create(:campaign, account: account, inbox: inbox, title: 'Lembrete de outubro', message: 'x', campaign_type: :one_off,
+                                     scheduled_at: 1.hour.ago, template_params: { 'name' => 'pedido_enviado', 'language' => 'pt_BR' })
+        CampaignPauses::Pauser.new(campaign, source: 'template', reason_code: 'template_not_approved',
+                                             details: { template_name: 'pedido_enviado', status: 'REJECTED' }).perform
+      end
+
+      it 'deixa corrigir o modelo' do
+        stub_lookup('pedido_enviado', [mine])
+        edit = stub_request(:post, "#{graph}/11").to_return(status: 200, body: { success: true }.to_json, headers: json)
+        components = [{ 'type' => 'BODY', 'text' => 'Olá {{1}}, seu pedido saiu. Qualquer dúvida, responda.' }]
+
+        call(:patch, "#{base}/11", { template: { components: components } })
+
+        expect(response).to have_http_status(:ok)
+        expect(edit).to have_been_made.once
+        call(:get, "#{base}/11/usage")
+        expect(response.parsed_body).to include('in_use' => true, 'blocks_change' => false)
+        expect(response.parsed_body.dig('campaigns', 0)).to include('title' => 'Lembrete de outubro', 'paused' => true)
+      end
+
+      it 'não deixa apagar' do
+        call(:delete, "#{base}/11")
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response.parsed_body['error']).to eq('in_use')
+        expect(a_request(:any, graph_host)).not_to have_been_made
+      end
+
+      it 'uma campanha agendada que não parou continua travando alterar' do
+        create(:campaign, account: account, inbox: inbox, title: 'Black Friday', message: 'x', campaign_type: :one_off,
+                          scheduled_at: 1.day.from_now, template_params: { 'name' => 'pedido_enviado', 'language' => 'pt_BR' })
+
+        call(:patch, "#{base}/11", { template: { components: [{ 'type' => 'BODY', 'text' => 'Olá {{1}}, ok.' }] } })
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response.parsed_body['error']).to eq('in_use')
+      end
+    end
+
     it 'id que não está na lista da caixa é 404' do
       call(:delete, "#{base}/999")
 

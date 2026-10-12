@@ -21,9 +21,12 @@ class Whatsapp::Templates::DispatchCheck
   META = 'meta'.freeze
   CACHE = 'cache'.freeze
 
-  def initialize(campaign, channel: campaign.inbox.channel)
+  # `lookup: false` (#1332): só a lista guardada da caixa, sem perguntar à Meta. A lista de campanhas paradas usa assim
+  # para dizer se "Retomar" já vai passar, sem uma chamada à Meta por campanha.
+  def initialize(campaign, channel: campaign.inbox.channel, lookup: true)
     @campaign = campaign
     @channel = channel
+    @lookup = lookup
     @params = campaign.template_params.to_h
   end
 
@@ -46,12 +49,16 @@ class Whatsapp::Templates::DispatchCheck
   end
 
   def current_templates
-    from_meta = Whatsapp::Templates::MetaLookup.new(channel: @channel, name: name).templates
+    from_meta = @lookup ? Whatsapp::Templates::MetaLookup.new(channel: @channel, name: name).templates : nil
     return [from_meta, META] if from_meta
 
     cache = Array(@channel.message_templates)
-    Rails.logger.warn "[WhatsappTemplates::DispatchCheck] campaign=#{@campaign.id} meta_unavailable source=#{CACHE} cached=#{cache.size}"
+    warn_cache_fallback(cache) if @lookup
     cache.empty? ? [nil, CACHE] : [cache, CACHE]
+  end
+
+  def warn_cache_fallback(cache)
+    Rails.logger.warn "[WhatsappTemplates::DispatchCheck] campaign=#{@campaign.id} meta_unavailable source=#{CACHE} cached=#{cache.size}"
   end
 
   def template_verdict(template, lookup_source)

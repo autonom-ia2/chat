@@ -6,6 +6,9 @@ import api from 'dashboard/api/whatsappTemplates';
 import { arquivoGuardado, esquecerArquivos } from './arquivos';
 import { SITUACOES_FORA_DA_LISTA, modeloDaMeta } from './daMeta';
 import { corpoParaAlterar, corpoParaCriar } from '../helpers/paraMeta';
+import { motivoDaPausa } from '../helpers/motivoDaPausa';
+
+export { motivoDaPausa };
 
 const DIA_MS = 24 * 60 * 60 * 1000;
 const DIAS_DO_NOME_PRESO = 30;
@@ -17,14 +20,6 @@ const CATEGORIA_DO_PRECO = {
   divulgacao: 'marketing',
   codigo: 'authentication',
   resposta: 'service',
-};
-
-// Por que a campanha parou (CampaignPause.reason_code, #1329) → motivo da tela.
-const MOTIVOS_DA_PAUSA = {
-  template_category_changed: 'tipo_mudou',
-  template_structure_changed: 'modelo_mudou',
-  template_missing: 'modelo_apagado',
-  template_format_unsupported: 'formato_nao_vai',
 };
 
 // Erro com o texto que o servidor mandou (já traduzido), para a tela mostrar.
@@ -159,6 +154,8 @@ export const usosDaApi = uso => [
     tipo: 'campanha',
     nome: campanha.title,
     data: campanha.scheduled_at || null,
+    // Parada pelo modelo: não trava alterar (corrigir é o caminho de volta), só apagar.
+    pausada: Boolean(campanha.paused),
     agendado: true,
     rota: { name: 'campaigns_journey_index' },
   })),
@@ -188,18 +185,6 @@ const ondeEstaEmUso = async id => {
   return usosDaApi(await chamar(api.getUsage(modelo.caixa, modelo.id)));
 };
 
-// Por que a campanha parou → motivo da tela.
-export const motivoDaPausa = pausa => {
-  if (pausa.reason_code === 'template_not_approved') {
-    const status = String(pausa.details?.status || '').toUpperCase();
-    if (status === 'REJECTED') return 'modelo_recusado';
-    if (['PAUSED', 'DISABLED'].includes(status)) return 'modelo_pausado';
-    return 'modelo_em_analise';
-  }
-  if (pausa.source === 'system') return 'nao_conferido';
-  return MOTIVOS_DA_PAUSA[pausa.reason_code] || 'outro';
-};
-
 // O modelo de uma pausa: o mesmo nome e idioma, na conta do WhatsApp da caixa da campanha.
 const modeloDaPausa = (pausa, modelos) => {
   const nome = pausa.details?.template_name;
@@ -224,6 +209,8 @@ const listarCampanhasParadas = async () => {
       modeloId: modelo?.id || null,
       modeloNome: modelo?.nome || pausa.details?.template_name || '',
       motivo: motivoDaPausa(pausa),
+      // O modelo já está aprovado e igual ao que a campanha guardou (o servidor confere).
+      podeRetomar: Boolean(pausa.ready_to_resume),
     };
   });
 };

@@ -58,6 +58,9 @@ const quando = uso => (uso.data ? diaEMes(uso.data, locale.value) : uso.quando);
           <span class="text-sm text-n-slate-10">
             {{ $t(`MODELOS_WHATSAPP.USOS.TIPOS.${uso.tipo}`) }}
             <template v-if="quando(uso)"> · {{ quando(uso) }}</template>
+            <template v-if="uso.pausada">
+              · {{ $t('MODELOS_WHATSAPP.USOS.PARADA') }}
+            </template>
           </span>
           <span class="break-words">
             {{

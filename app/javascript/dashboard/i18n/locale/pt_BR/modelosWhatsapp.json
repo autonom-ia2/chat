@@ -145,7 +145,8 @@
         "oculto": "Sem acesso"
       },
       "ABRIR": "Abrir",
-      "OCULTO": "Este modelo está em uso onde você não tem acesso. Peça a um administrador."
+      "OCULTO": "Este modelo está em uso onde você não tem acesso. Peça a um administrador.",
+      "PARADA": "parada pelo modelo"
     },
     "APAGAR": {
       "TITULO": "Apagar “{nome}”?",
@@ -608,7 +609,9 @@
       },
       "RETOMADA": "“{nome}” retomada. Ela confere o modelo de novo e sai se estiver tudo certo.",
       "NAO_RETOMOU": "Esta campanha não pode ser retomada: ela já começou a enviar ou já foi retomada.",
-      "RETOMAR_FALHOU": "Não conseguimos retomar agora. Tente de novo."
+      "RETOMAR_FALHOU": "Não conseguimos retomar agora. Tente de novo.",
+      "CORRIJA_PRIMEIRO": "Corrija o modelo primeiro.",
+      "VER_MODELO": "Abrir “{modelo}”"
     },
     "PONTE": {
       "CAIXA_RECONECTAR": "{nome} · precisa reconectar",

@@ -9,6 +9,10 @@
 # Só lista o que a pessoa pode ver: campanhas com `campaign_view`, páginas com `agendamento_view` e follow-ups de
 # cards do `policy_scope(::Crm::Card)` (acesso por funil, #1148). O resto vira só `uso_oculto: true`, sem número nem
 # nome: a tela bloqueia com "em uso onde você não tem acesso".
+#
+# Campanha com pausa aberta (`campaign_pauses`, #1329) é uso para apagar (o nome fica preso 30 dias e ela não sairia
+# mais), mas não para alterar ou corrigir: ela está parada justamente pelo modelo, e ao ser retomada a conferência do
+# disparo (`DispatchCheck`) pega a mudança (#1332). `blocks_change` e `blocks_change_hidden` dizem o que trava alterar.
 class Whatsapp::Templates::Usage
   PENDING_FOLLOW_UPS = %w[pending overdue].freeze
   OPEN_CAMPAIGNS = %w[active processing].freeze
@@ -32,8 +36,8 @@ class Whatsapp::Templates::Usage
       booking_pages: allowed?('agendamento_view') ? pages : [],
       follow_ups: follow_ups[:visible],
       uso_oculto: hidden,
-      in_use: hidden || campaigns.any? || pages.any? || follow_ups[:visible].any?
-    }
+      in_use: blocking?(hidden, campaigns, pages, follow_ups)
+    }.merge(change_blockers(campaigns, pages, follow_ups))
   end
 
   def in_use?
@@ -41,6 +45,17 @@ class Whatsapp::Templates::Usage
   end
 
   private
+
+  # Alterar ou corrigir: campanha parada pelo modelo (pausa aberta) não conta.
+  def change_blockers(campaigns, pages, follow_ups)
+    running = campaigns.reject { |row| row[:paused] }
+    hidden = hidden?(running, pages, follow_ups)
+    { blocks_change_hidden: hidden, blocks_change: blocking?(hidden, running, pages, follow_ups) }
+  end
+
+  def blocking?(hidden, campaigns, pages, follow_ups)
+    hidden || campaigns.any? || pages.any? || follow_ups[:visible].any?
+  end
 
   def hidden?(campaigns, pages, follow_ups)
     (campaigns.any? && !allowed?('campaign_view')) || (pages.any? && !allowed?('agendamento_view')) || follow_ups[:hidden]
@@ -65,15 +80,21 @@ class Whatsapp::Templates::Usage
   end
 
   def campaign_rows
+    paused = paused_campaign_ids
     Campaign.where(account_id: account.id, inbox_id: inbox_ids, campaign_status: OPEN_CAMPAIGNS)
             .where("template_params ->> 'name' = ?", @name)
             .where("LOWER(template_params ->> 'language') = ?", @language.downcase)
             .order(:id)
-            .map { |campaign| campaign_row(campaign) }
+            .map { |campaign| campaign_row(campaign, paused.include?(campaign.id)) }
   end
 
-  def campaign_row(campaign)
-    { id: campaign.display_id, title: campaign.title, status: campaign.campaign_status, scheduled_at: campaign.scheduled_at }
+  def campaign_row(campaign, paused)
+    { id: campaign.display_id, title: campaign.title, status: campaign.campaign_status, scheduled_at: campaign.scheduled_at,
+      paused: paused }
+  end
+
+  def paused_campaign_ids
+    CampaignPause.in_effect.where(account_id: account.id, pausable_type: 'Campaign').pluck(:pausable_id).to_set
   end
 
   def booking_page_rows

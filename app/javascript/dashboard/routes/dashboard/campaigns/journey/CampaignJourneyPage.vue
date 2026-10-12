@@ -30,6 +30,9 @@ import CampaignTabs from 'dashboard/components-next/CampaignJourney/CampaignTabs
 import BrandKitNudge from 'dashboard/components-next/BrandKits/BrandKitNudge.vue';
 // Fork (Modelos do WhatsApp): campanhas paradas por causa do modelo (flag whatsapp_templates_journey).
 import AvisoCampanhasParadas from '../modelos/ponte/AvisoCampanhasParadas.vue';
+// Fork (#1332): campanha com pausa aberta aparece como "Parada", com o motivo curto (com ou sem a flag).
+import whatsappTemplatesAPI from 'dashboard/api/whatsappTemplates';
+import { motivoDaPausa } from '../modelos/helpers/motivoDaPausa';
 import {
   CAMPAIGN_CHANNELS,
   CHANNEL_ICONS,
@@ -81,9 +84,12 @@ const CREATION_DIALOGS = {
   [CAMPAIGN_CHANNELS.LIVE_CHAT]: LiveChatCampaignDialog,
 };
 
+// Fork (#1332): { [campaignId]: motivo } das pausas abertas.
+const pauses = ref({});
 const rows = computed(() =>
   buildJourneyRows({
     campaigns: campaigns.value || [],
+    pauses: pauses.value,
     whatsappApiCampaigns: features.value.whatsappApiCampaigns
       ? whatsappApiCampaigns.value || []
       : [],
@@ -107,6 +113,11 @@ const channelLabel = channel =>
   t(`CAMPAIGN_JOURNEY.CHANNELS.${CHANNEL_LABEL_KEYS[channel]}`);
 const statusLabel = status =>
   t(`CAMPAIGN_JOURNEY.STATUS.${status.toUpperCase()}`);
+// Fork (#1332): parada pelo modelo (pausa aberta), com o motivo curto.
+const rowStatusLabel = row =>
+  row.stopReason
+    ? t('CAMPAIGN_JOURNEY.STATUS.STOPPED')
+    : statusLabel(row.status);
 
 const STATUS_CLASSES = {
   [JOURNEY_STATUSES.DRAFT]: 'bg-n-alpha-2 text-n-slate-11',
@@ -167,9 +178,25 @@ const alwaysOn = computed(
     rows.value.filter(row => row.status === JOURNEY_STATUSES.ALWAYS_ON).length
 );
 
+// Fork (#1332): pausas abertas (campaign_pauses). Sem permissão ou sem resposta, a lista fica como sempre.
+const loadPauses = async () => {
+  try {
+    const { data } = await whatsappTemplatesAPI.getCampaignPauses();
+    pauses.value = Object.fromEntries(
+      (data?.payload || []).map(pause => [
+        pause.campaign.id,
+        motivoDaPausa(pause),
+      ])
+    );
+  } catch {
+    pauses.value = {};
+  }
+};
+
 const fetchAll = async () => {
   isLoading.value = true;
   hasLoadError.value = false;
+  loadPauses();
   const requests = [
     store.dispatch('inboxes/get'),
     store.dispatch('campaigns/get'),
@@ -465,7 +492,14 @@ useOnEnter(fetchAll);
                 class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium"
                 :class="STATUS_CLASSES[row.status]"
               >
-                {{ statusLabel(row.status) }}
+                {{ rowStatusLabel(row) }}
+              </span>
+              <span
+                v-if="row.stopReason"
+                class="block mt-0.5 text-xs text-n-slate-11"
+                data-test="stop-reason"
+              >
+                {{ t(`CAMPAIGN_JOURNEY.STOP_REASONS.${row.stopReason}`) }}
               </span>
             </p>
             <div class="flex items-center justify-end gap-1 md:w-40">

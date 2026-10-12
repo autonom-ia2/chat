@@ -4,8 +4,9 @@
 #   POST …/campaign_journey/campaign_pauses/:id/resume   resume one pause
 #
 # index: campaign_view (CampaignPolicy#index?). Lists only open pauses of Chatwoot campaigns (WhatsApp
-# Oficial today), newest first, with the campaign and the reason — the Modelos screen and the campaign
-# list show them with "Retomar". details never carry personal data (CampaignPause).
+# Oficial today), newest first, with the campaign, the reason and `ready_to_resume` (the template is approved again
+# and matches what the campaign recorded, read from the inbox cache) — the Modelos screen and the campaign list show
+# them with "Retomar". details never carry personal data (CampaignPause).
 # resume: campaign_manage (CampaignPolicy#update?). The pause must belong to the account. A Chatwoot
 # one-off campaign still `active` is fired again right away and its template is checked again
 # (CampaignPauses::Resumer). 422 with `code`: pause_not_open | campaign_already_sent.
@@ -39,8 +40,20 @@ class Api::V1::Accounts::CampaignJourney::CampaignPausesController < Api::V1::Ac
 
     pause.payload.merge(
       campaign: { id: campaign.id, display_id: campaign.display_id, title: campaign.title, inbox_id: campaign.inbox_id,
-                  scheduled_at: campaign.scheduled_at }
+                  scheduled_at: campaign.scheduled_at },
+      ready_to_resume: ready_to_resume?(campaign)
     )
+  end
+
+  # "Retomar" só passa com o modelo aprovado de novo e igual ao que a campanha guardou. Confere pela lista guardada da
+  # caixa (sem chamar a Meta por campanha); no disparo a conferência pergunta à Meta de novo.
+  def ready_to_resume?(campaign)
+    return true if campaign.template_params.blank?
+
+    ::Whatsapp::Templates::DispatchCheck.new(campaign, lookup: false).call.ok?
+  rescue StandardError => e
+    Rails.logger.warn "[CampaignPauses] campaign=#{campaign.id} ready_to_resume check failed: #{e.class.name}"
+    false
   end
 
   def authorize_index

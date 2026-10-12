@@ -218,6 +218,7 @@ describe('adaptador HTTP de Modelos', () => {
               status: 'PAUSED',
             },
             campaign: { id: 4, title: 'Outubro', inbox_id: 7 },
+            ready_to_resume: true,
           },
         ],
       })
@@ -231,6 +232,7 @@ describe('adaptador HTTP de Modelos', () => {
         modeloId: '1001',
         modeloNome: 'boas_vindas',
         motivo: 'modelo_pausado',
+        podeRetomar: true,
       },
     ]);
   });

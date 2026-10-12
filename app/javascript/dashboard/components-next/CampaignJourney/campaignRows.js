@@ -132,16 +132,24 @@ const CHATWOOT_ROUTES = {
   }),
 };
 
-const fromChatwootCampaign = campaign => {
+// Fork (#1332): a campaign with an open pause (campaign_pauses, #1329) is shown as stopped, with
+// the short reason; only the label changes, nothing about the campaign itself.
+const stoppedStatus = (campaign, channel, stopReason) =>
+  stopReason ? JOURNEY_STATUSES.PAUSED : chatwootStatus(campaign, channel);
+
+const fromChatwootCampaign = (campaign, pauses = {}) => {
   const channel = chatwootChannel(campaign);
   if (!channel) return null;
+  const stopReason =
+    campaign.campaign_status === 'completed' ? '' : pauses[campaign.id] || '';
   return datedRow(
     {
       key: `${channel}-${campaign.id}`,
       channel,
       name: campaign.title,
       detail: campaign.inbox?.name || '',
-      status: chatwootStatus(campaign, channel),
+      status: stoppedStatus(campaign, channel, stopReason),
+      stopReason,
       sent: null,
       total: null,
       route: CHATWOOT_ROUTES[channel](campaign),
@@ -201,13 +209,15 @@ const fromEmailCampaign = campaign =>
 /**
  * Rows of the "Campanha" list, newest first (drafts without date go last).
  */
+// `pauses`: { [campaignId]: reason } of the open pauses (fork, #1332).
 export const buildJourneyRows = ({
   campaigns = [],
   whatsappApiCampaigns = [],
   emailCampaigns = [],
+  pauses = {},
 } = {}) =>
   [
-    ...campaigns.map(fromChatwootCampaign),
+    ...campaigns.map(campaign => fromChatwootCampaign(campaign, pauses)),
     ...whatsappApiCampaigns.map(fromWhatsappApiCampaign),
     ...emailCampaigns.map(fromEmailCampaign),
   ]

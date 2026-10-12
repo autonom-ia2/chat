@@ -46,6 +46,7 @@ const PARADA = {
   modeloId: '1001',
   modeloNome: 'Boas-vindas',
   motivo: 'modelo_pausado',
+  podeRetomar: true,
 };
 
 beforeEach(() => {
@@ -83,6 +84,19 @@ describe('CampanhasParadas', () => {
       en.MODELOS_WHATSAPP.PARADAS.NAO_RETOMOU
     );
     expect(wrapper.emitted('retomada')).toBeUndefined();
+  });
+
+  it('keeps "Resume" off and points to the template until it is approved again', async () => {
+    const wrapper = montar(CampanhasParadas, {
+      props: { campanhas: [{ ...PARADA, podeRetomar: false }] },
+    });
+
+    expect(wrapper.find('[data-retomar]').attributes('disabled')).toBeDefined();
+    expect(wrapper.find('[data-corrija-primeiro]').text()).toContain(
+      en.MODELOS_WHATSAPP.PARADAS.CORRIJA_PRIMEIRO
+    );
+    await wrapper.find('[data-retomar]').trigger('click');
+    expect(api.retomarCampanha).not.toHaveBeenCalled();
   });
 
   it('hides "Resume" from who cannot manage campaigns', () => {

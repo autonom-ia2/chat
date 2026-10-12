@@ -121,7 +121,8 @@ const dica = computed(() => {
 
 // Modelo em uso (campanha agendada, aviso, follow-up) não muda: a mensagem que
 // vai sair mudaria junto. A API recusa; aqui o botão já diz por quê.
-const emUso = computed(() => usos.value.length > 0);
+// Campanha parada pelo próprio modelo não trava: corrigir é o caminho para ela voltar.
+const emUso = computed(() => usos.value.some(uso => !uso.pausada));
 
 // Alteração de modelo aprovado: 1 a cada 24 h e até 10 em 30 dias (regra do
 // WhatsApp). Fora disso, o botão diz quando volta a poder. A Meta não informa
