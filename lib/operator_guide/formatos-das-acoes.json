@@ -496,8 +496,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/booking_invites#destroy",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:55",
-      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:71"
+      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:56",
+      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:72"
     ],
     "sem_corpo": true
   },
@@ -505,8 +505,18 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/booking_pages#destroy",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:78",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:147"
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:79",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:148"
+    ],
+    "sem_corpo": true
+  },
+  "DELETE crm/booking_pages/:id/logo_dark": {
+    "completo": true,
+    "controller": "api/v1/accounts/crm/booking_pages#destroy_logo_dark",
+    "modelo": "Inbox",
+    "origem": [
+      "app/controllers/concerns/crm/booking_page_brand.rb:38",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:148"
     ],
     "sem_corpo": true
   },
@@ -534,7 +544,7 @@
     "controller": "api/v1/accounts/crm/cards#destroy",
     "origem": [
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:115",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:349"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:359"
     ],
     "sem_corpo": true
   },
@@ -542,8 +552,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/follow_ups#destroy",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:63",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:97"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:64",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:98"
     ],
     "sem_corpo": true
   },
@@ -599,8 +609,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/saved_views#destroy",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/saved_views_controller.rb:28",
-      "app/controllers/api/v1/accounts/crm/saved_views_controller.rb:37"
+      "app/controllers/api/v1/accounts/crm/saved_views_controller.rb:30",
+      "app/controllers/api/v1/accounts/crm/saved_views_controller.rb:39"
     ],
     "sem_corpo": true
   },
@@ -642,9 +652,9 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/stages#destroy",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:34",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:35",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:59"
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:36",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:37",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:62"
     ],
     "sem_corpo": false
   },
@@ -4819,10 +4829,10 @@
     "modelo": "Inbox",
     "origem": [
       "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:49",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:213",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:214",
       "app/controllers/concerns/crm/booking_page_inboxes.rb:44",
       "app/controllers/concerns/crm/booking_page_inboxes.rb:25",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:147"
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:148"
     ],
     "sem_corpo": false
   },
@@ -4976,8 +4986,8 @@
     "modelo": "Crm::Card",
     "origem": [
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:103",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:500",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:349"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:510",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:359"
     ],
     "sem_corpo": false
   },
@@ -5036,9 +5046,9 @@
     "envelope": "follow_up",
     "modelo": "Crm::FollowUp",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:55",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:191",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:97"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:56",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:198",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:98"
     ],
     "sem_corpo": false
   },
@@ -5357,9 +5367,9 @@
     "envelope": "saved_view",
     "modelo": "Crm::SavedView",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/saved_views_controller.rb:22",
-      "app/controllers/api/v1/accounts/crm/saved_views_controller.rb:41",
-      "app/controllers/api/v1/accounts/crm/saved_views_controller.rb:37"
+      "app/controllers/api/v1/accounts/crm/saved_views_controller.rb:23",
+      "app/controllers/api/v1/accounts/crm/saved_views_controller.rb:62",
+      "app/controllers/api/v1/accounts/crm/saved_views_controller.rb:39"
     ],
     "sem_corpo": false
   },
@@ -5869,62 +5879,34 @@
   },
   "PATCH crm/stages/:id": {
     "campos": {
-      "color": {
-        "tipo": "string"
-      },
-      "description": {
-        "tipo": "string"
-      },
+      "color": {},
+      "description": {},
       "funnel_stage_type": {},
-      "is_lost_stage": {
-        "padrao": false,
-        "tipo": "booleano"
-      },
-      "is_won_stage": {
-        "padrao": false,
-        "tipo": "booleano"
-      },
+      "is_lost_stage": {},
+      "is_won_stage": {},
       "metadata": {
         "tipo": "objeto_livre"
       },
-      "name": {
-        "nao_pode_ficar_vazio": true,
-        "tipo": "string"
-      },
-      "position": {
-        "padrao": 0,
-        "tipo": "inteiro"
-      },
-      "sla_seconds": {
-        "tipo": "inteiro"
-      },
-      "sla_warning_seconds": {
-        "tipo": "inteiro"
-      },
-      "win_probability": {
-        "max": 100,
-        "min": 0,
-        "padrao": 0,
-        "tipo": "inteiro"
-      },
-      "wip_limit": {
-        "tipo": "inteiro"
-      }
+      "name": {},
+      "position": {},
+      "sla_seconds": {},
+      "sla_warning_seconds": {},
+      "win_probability": {},
+      "wip_limit": {}
     },
     "completo": false,
     "controller": "api/v1/accounts/crm/stages#update",
     "corpo_plano": true,
     "envelope": "stage",
-    "modelo": "Crm::PipelineStage",
     "motivos": [
       "leitura crua sem tipo: funnel_stage_type"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:29",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:64",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:90",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:87",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:59"
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:31",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:81",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:107",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:104",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:62"
     ],
     "sem_corpo": false
   },
@@ -13366,7 +13348,7 @@
     "controller": "api/v1/accounts/crm/ai_suggestions#accept",
     "origem": [
       "app/controllers/api/v1/accounts/crm/ai_suggestions_controller.rb:5",
-      "app/controllers/api/v1/accounts/crm/ai_suggestions_controller.rb:36"
+      "app/controllers/api/v1/accounts/crm/ai_suggestions_controller.rb:38"
     ],
     "sem_corpo": true
   },
@@ -13375,7 +13357,7 @@
     "controller": "api/v1/accounts/crm/ai_suggestions#dismiss",
     "origem": [
       "app/controllers/api/v1/accounts/crm/ai_suggestions_controller.rb:19",
-      "app/controllers/api/v1/accounts/crm/ai_suggestions_controller.rb:36"
+      "app/controllers/api/v1/accounts/crm/ai_suggestions_controller.rb:38"
     ],
     "sem_corpo": true
   },
@@ -13400,13 +13382,13 @@
     "modelo": "Contact",
     "origem": [
       "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:26",
-      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:103",
-      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:101",
-      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:97",
-      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:95",
-      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:91",
-      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:89",
-      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:28"
+      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:110",
+      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:108",
+      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:104",
+      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:102",
+      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:92",
+      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:90",
+      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:29"
     ],
     "sem_corpo": false
   },
@@ -13414,8 +13396,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/booking_invites#copied",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:46",
-      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:71"
+      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:47",
+      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:72"
     ],
     "sem_corpo": true
   },
@@ -13433,10 +13415,10 @@
       "leitura crua sem tipo: text (repassada a ::Crm::BookingV2::InviteDeliverer.new)"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:35",
-      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:40",
       "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:36",
-      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:71"
+      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:41",
+      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:37",
+      "app/controllers/api/v1/accounts/crm/booking_invites_controller.rb:72"
     ],
     "sem_corpo": false
   },
@@ -13464,8 +13446,8 @@
     "controller": "api/v1/accounts/crm/booking_pages#apply_identity",
     "modelo": "Inbox",
     "origem": [
-      "app/controllers/concerns/crm/booking_page_brand.rb:19",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:147"
+      "app/controllers/concerns/crm/booking_page_brand.rb:50",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:148"
     ],
     "sem_corpo": true
   },
@@ -13478,9 +13460,24 @@
     "controller": "api/v1/accounts/crm/booking_pages#logo",
     "modelo": "Inbox",
     "origem": [
-      "app/controllers/concerns/crm/booking_page_brand.rb:8",
-      "app/controllers/concerns/crm/booking_page_brand.rb:48",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:147"
+      "app/controllers/concerns/crm/booking_page_brand.rb:17",
+      "app/controllers/concerns/crm/booking_page_brand.rb:115",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:148"
+    ],
+    "sem_corpo": false
+  },
+  "POST crm/booking_pages/:id/logo_dark": {
+    "campos": {
+      "apply_to_profile": {},
+      "file": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/crm/booking_pages#logo_dark",
+    "modelo": "Inbox",
+    "origem": [
+      "app/controllers/concerns/crm/booking_page_brand.rb:25",
+      "app/controllers/concerns/crm/booking_page_brand.rb:115",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:148"
     ],
     "sem_corpo": false
   },
@@ -13526,10 +13523,10 @@
     "controller": "api/v1/accounts/crm/booking_pages#notice_template_suggestions",
     "modelo": "Crm::MeetingNotice",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:118",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:119",
       "app/controllers/concerns/crm/booking_page_notice_templates.rb:53",
       "app/controllers/concerns/crm/booking_page_notice_templates.rb:48",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:147"
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:148"
     ],
     "sem_corpo": false
   },
@@ -13548,10 +13545,10 @@
       "leitura crua sem tipo: kinds (repassada a requests.start!)"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:126",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:127",
       "app/controllers/concerns/crm/booking_page_notice_templates.rb:37",
       "app/controllers/concerns/crm/booking_page_notice_templates.rb:48",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:147"
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:148"
     ],
     "sem_corpo": false
   },
@@ -13560,8 +13557,8 @@
     "controller": "api/v1/accounts/crm/booking_pages#pause",
     "modelo": "Inbox",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:73",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:147"
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:74",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:148"
     ],
     "sem_corpo": true
   },
@@ -13574,9 +13571,9 @@
     "controller": "api/v1/accounts/crm/booking_pages#photo",
     "modelo": "Inbox",
     "origem": [
-      "app/controllers/concerns/crm/booking_page_brand.rb:15",
-      "app/controllers/concerns/crm/booking_page_brand.rb:48",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:147"
+      "app/controllers/concerns/crm/booking_page_brand.rb:46",
+      "app/controllers/concerns/crm/booking_page_brand.rb:115",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:148"
     ],
     "sem_corpo": false
   },
@@ -13584,8 +13581,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/booking_pages#preview_token",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:86",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:147"
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:87",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:148"
     ],
     "sem_corpo": true
   },
@@ -13594,8 +13591,8 @@
     "controller": "api/v1/accounts/crm/booking_pages#publish",
     "modelo": "Inbox",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:65",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:147"
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:66",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:148"
     ],
     "sem_corpo": true
   },
@@ -13604,8 +13601,8 @@
     "controller": "api/v1/accounts/crm/booking_pages#save_identity",
     "modelo": "Inbox",
     "origem": [
-      "app/controllers/concerns/crm/booking_page_brand.rb:24",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:147"
+      "app/controllers/concerns/crm/booking_page_brand.rb:55",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:148"
     ],
     "sem_corpo": true
   },
@@ -13619,9 +13616,9 @@
       "leitura crua sem tipo: phone (repassada a ::Crm::BookingV2::TestInvite.new)"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:58",
       "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:59",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:147"
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:60",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:148"
     ],
     "sem_corpo": false
   },
@@ -13644,9 +13641,9 @@
     "controller": "api/v1/accounts/crm/booking_pages#reassign",
     "modelo": "Crm::AgentBookingProfile",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:111",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:134",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:133"
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:112",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:135",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:134"
     ],
     "sem_corpo": false
   },
@@ -13862,8 +13859,8 @@
     "modelo": "Crm::Card",
     "origem": [
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:70",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:466",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:399",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:476",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:409",
       "app/controllers/concerns/crm/opportunity_registration.rb:7"
     ],
     "sem_corpo": false
@@ -13916,7 +13913,7 @@
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:139",
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:138",
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:137",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:349"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:359"
     ],
     "sem_corpo": false
   },
@@ -13924,8 +13921,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/cards#evaluate_ai",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:188",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:349"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:192",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:359"
     ],
     "sem_corpo": true
   },
@@ -13939,9 +13936,9 @@
     "controller": "api/v1/accounts/crm/cards#link_contact",
     "modelo": "Contact",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:170",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:171",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:349"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:174",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:175",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:359"
     ],
     "sem_corpo": false
   },
@@ -13960,9 +13957,9 @@
     "modelo": "Conversation",
     "origem": [
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:149",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:156",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:160",
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:150",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:349"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:359"
     ],
     "sem_corpo": false
   },
@@ -13979,7 +13976,7 @@
     "origem": [
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:122",
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:124",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:349"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:359"
     ],
     "sem_corpo": false
   },
@@ -13987,8 +13984,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/cards#reset_auto_followup",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:204",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:349"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:208",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:359"
     ],
     "sem_corpo": true
   },
@@ -13996,8 +13993,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/cards#summarize",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:192",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:349"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:196",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:359"
     ],
     "sem_corpo": true
   },
@@ -14005,8 +14002,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/cards#unlink_contact",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:177",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:349"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:181",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:359"
     ],
     "sem_corpo": true
   },
@@ -14020,9 +14017,9 @@
     "controller": "api/v1/accounts/crm/cards#unlink_conversation",
     "modelo": "Conversation",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:162",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:163",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:349"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:166",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:167",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:359"
     ],
     "sem_corpo": false
   },
@@ -14172,10 +14169,10 @@
     "modelo": "Crm::Card",
     "origem": [
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:92",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:466",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:440",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:356",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:354"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:476",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:450",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:366",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:364"
     ],
     "sem_corpo": false
   },
@@ -14275,7 +14272,7 @@
     "modelo": "Crm::FollowUp",
     "origem": [
       "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:44",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:191"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:198"
     ],
     "sem_corpo": false
   },
@@ -14283,8 +14280,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/follow_ups#cancel",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:71",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:97"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:72",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:98"
     ],
     "sem_corpo": true
   },
@@ -14292,8 +14289,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/follow_ups#complete",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:67",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:97"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:68",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:98"
     ],
     "sem_corpo": true
   },
@@ -14301,8 +14298,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/follow_ups#dismiss_reminder",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:75",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:97"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:76",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:98"
     ],
     "sem_corpo": true
   },
@@ -14315,9 +14312,9 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/follow_ups#reschedule",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:83",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:87",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:97"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:84",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:88",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:98"
     ],
     "sem_corpo": false
   },
@@ -14804,11 +14801,11 @@
       "leitura crua sem tipo: funnel_stage_type"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:16",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:64",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:90",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:87",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:55"
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:18",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:81",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:107",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:104",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:58"
     ],
     "sem_corpo": false
   },
@@ -14846,7 +14843,7 @@
     "modelo": "Crm::SavedView",
     "origem": [
       "app/controllers/api/v1/accounts/crm/saved_views_controller.rb:13",
-      "app/controllers/api/v1/accounts/crm/saved_views_controller.rb:41"
+      "app/controllers/api/v1/accounts/crm/saved_views_controller.rb:62"
     ],
     "sem_corpo": false
   },
@@ -15355,16 +15352,16 @@
   "POST crm/stages/reorder": {
     "campos": {
       "stage_ids": {
-        "tipo": "lista",
-        "tipo_pela_leitura": "nome"
+        "tipo": "lista"
       }
     },
     "completo": true,
     "controller": "api/v1/accounts/crm/stages#reorder",
-    "modelo": "Crm::PipelineStage",
+    "modelo": "Crm::Pipeline",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:45",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:71"
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:47",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:88",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:49"
     ],
     "sem_corpo": false
   },
@@ -22176,10 +22173,10 @@
     "modelo": "Inbox",
     "origem": [
       "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:49",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:213",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:214",
       "app/controllers/concerns/crm/booking_page_inboxes.rb:44",
       "app/controllers/concerns/crm/booking_page_inboxes.rb:25",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:147"
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:148"
     ],
     "sem_corpo": false
   },
@@ -22194,9 +22191,9 @@
     "controller": "api/v1/accounts/crm/booking_pages#update_people",
     "modelo": "Inbox",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:97",
       "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:98",
-      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:147"
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:99",
+      "app/controllers/api/v1/accounts/crm/booking_pages_controller.rb:148"
     ],
     "sem_corpo": false
   },
@@ -22350,8 +22347,8 @@
     "modelo": "Crm::Card",
     "origem": [
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:103",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:500",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:349"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:510",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:359"
     ],
     "sem_corpo": false
   },
@@ -22410,9 +22407,9 @@
     "envelope": "follow_up",
     "modelo": "Crm::FollowUp",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:55",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:191",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:97"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:56",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:198",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:98"
     ],
     "sem_corpo": false
   },
@@ -22649,9 +22646,9 @@
     "envelope": "saved_view",
     "modelo": "Crm::SavedView",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/saved_views_controller.rb:22",
-      "app/controllers/api/v1/accounts/crm/saved_views_controller.rb:41",
-      "app/controllers/api/v1/accounts/crm/saved_views_controller.rb:37"
+      "app/controllers/api/v1/accounts/crm/saved_views_controller.rb:23",
+      "app/controllers/api/v1/accounts/crm/saved_views_controller.rb:62",
+      "app/controllers/api/v1/accounts/crm/saved_views_controller.rb:39"
     ],
     "sem_corpo": false
   },
@@ -23161,62 +23158,34 @@
   },
   "PUT crm/stages/:id": {
     "campos": {
-      "color": {
-        "tipo": "string"
-      },
-      "description": {
-        "tipo": "string"
-      },
+      "color": {},
+      "description": {},
       "funnel_stage_type": {},
-      "is_lost_stage": {
-        "padrao": false,
-        "tipo": "booleano"
-      },
-      "is_won_stage": {
-        "padrao": false,
-        "tipo": "booleano"
-      },
+      "is_lost_stage": {},
+      "is_won_stage": {},
       "metadata": {
         "tipo": "objeto_livre"
       },
-      "name": {
-        "nao_pode_ficar_vazio": true,
-        "tipo": "string"
-      },
-      "position": {
-        "padrao": 0,
-        "tipo": "inteiro"
-      },
-      "sla_seconds": {
-        "tipo": "inteiro"
-      },
-      "sla_warning_seconds": {
-        "tipo": "inteiro"
-      },
-      "win_probability": {
-        "max": 100,
-        "min": 0,
-        "padrao": 0,
-        "tipo": "inteiro"
-      },
-      "wip_limit": {
-        "tipo": "inteiro"
-      }
+      "name": {},
+      "position": {},
+      "sla_seconds": {},
+      "sla_warning_seconds": {},
+      "win_probability": {},
+      "wip_limit": {}
     },
     "completo": false,
     "controller": "api/v1/accounts/crm/stages#update",
     "corpo_plano": true,
     "envelope": "stage",
-    "modelo": "Crm::PipelineStage",
     "motivos": [
       "leitura crua sem tipo: funnel_stage_type"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:29",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:64",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:90",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:87",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:59"
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:31",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:81",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:107",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:104",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:62"
     ],
     "sem_corpo": false
   },

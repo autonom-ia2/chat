@@ -37,8 +37,22 @@ describe('bookingPreview', () => {
         headline: 'Oi',
         logo_align: 'center',
         logo_url: 'https://cdn.exemplo.com/logo.png',
+        logo_dark_url: null,
+        logo_dark_source: null,
         photo_url: null,
       },
+    });
+  });
+
+  it('leva a logo de fundo escuro e de onde ela veio (#1295)', () => {
+    const dark = {
+      ...page,
+      logo_dark_url: 'https://cdn.exemplo.com/escura.png',
+      brand: { ...page.brand, logo_dark_source: 'generated' },
+    };
+    expect(publicPageFrom(pageToForm(dark), dark).brand).toMatchObject({
+      logo_dark_url: 'https://cdn.exemplo.com/escura.png',
+      logo_dark_source: 'generated',
     });
   });
 

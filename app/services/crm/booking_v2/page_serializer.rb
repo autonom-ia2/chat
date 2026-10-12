@@ -34,12 +34,11 @@ class Crm::BookingV2::PageSerializer
 
   def summary
     {
-      id: profile.id, slug: profile.slug, short_name: profile.short_name, title: profile.title, enabled: profile.enabled, public_url: public_url,
-      links: links, locations: profile.locations, assignment_mode: profile.assignment_mode,
-      upcoming_meetings_count: upcoming_meetings_count,
-      attention: attention, orphaned: @orphaned, paused_people: paused_people,
-      ai_status: invite_pages.status(profile), recebe: recebe, timezone: profile.resolved_timezone
-    }
+      id: profile.id, slug: profile.slug, short_name: profile.short_name, account_address: profile.booking_account_address,
+      title: profile.title, enabled: profile.enabled, public_url: public_url, links: links, locations: profile.locations,
+      assignment_mode: profile.assignment_mode, upcoming_meetings_count: upcoming_meetings_count,
+      attention: attention, orphaned: @orphaned, paused_people: paused_people
+    }.merge(for_ai_agent)
   end
 
   def full
@@ -53,6 +52,11 @@ class Crm::BookingV2::PageSerializer
 
   def invite_pages
     @invite_pages ||= Crm::BookingV2::InvitePages.new(profile.account)
+  end
+
+  # O que a gaveta do agente de IA lê (#1305): o estado pela regra única, quem recebe e o fuso.
+  def for_ai_agent
+    { ai_status: invite_pages.status(profile), recebe: recebe, timezone: profile.resolved_timezone }
   end
 
   # Só o nome de exibição: nada de e-mail ou telefone de quem atende.
@@ -103,7 +107,7 @@ class Crm::BookingV2::PageSerializer
   def branding
     {
       template_key: profile.template_key, brand: profile.brand, contact_phone: profile.contact_phone,
-      logo_url: attachment_url(profile.logo), photo_url: attachment_url(profile.photo)
+      logo_url: attachment_url(profile.logo), logo_dark_url: attachment_url(profile.logo_dark), photo_url: attachment_url(profile.photo)
     }
   end
 
@@ -112,7 +116,7 @@ class Crm::BookingV2::PageSerializer
   def identity
     saved = brand_identity
     saved.data.symbolize_keys.merge(
-      saved: saved.any_for?(profile), logo_url: attachment_url(saved.logo),
+      saved: saved.any_for?(profile), logo_url: attachment_url(saved.logo), logo_dark_url: attachment_url(saved.logo_dark),
       photo_url: attachment_url(saved.photo_of(saved.host_of(profile)))
     )
   end
@@ -159,7 +163,7 @@ class Crm::BookingV2::PageSerializer
     end
   end
 
-  # Link curto quando a página tem nome (#1282); senão o `/book/<slug>` de sempre.
+  # Link curto (`/a/<conta>/<página>/<pessoa>`) quando a página tem nome (#1282, #1299); senão o `/book/<slug>` de sempre.
   def link_url(link)
     Crm::BookingV2::ShortLink.url_for(profile, link: link)
   end

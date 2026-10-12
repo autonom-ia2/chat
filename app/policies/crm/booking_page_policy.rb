@@ -16,8 +16,8 @@ class Crm::BookingPagePolicy < ApplicationPolicy
     view?
   end
 
-  %i[create? update? destroy? publish? pause? preview_token? logo? photo? update_people? test_invite? reassign? reassign_preview?
-     notice_template_suggestions? notice_templates? apply_identity?].each do |action|
+  %i[create? update? destroy? publish? pause? preview_token? logo? logo_dark? destroy_logo_dark? photo? update_people? test_invite?
+     reassign? reassign_preview? notice_template_suggestions? notice_templates? apply_identity?].each do |action|
     define_method(action) { manage? }
   end
 
@@ -32,7 +32,7 @@ class Crm::BookingPagePolicy < ApplicationPolicy
     manage? && account_user&.administrator? == true
   end
 
-  # Link curto (#1282): conferir se um nome está livre responde sobre a instalação inteira; só quem gerencia páginas.
+  # Link curto (#1282, #1299): conferir se um nome está livre na conta; só quem gerencia páginas.
   def short_name?
     manage?
   end

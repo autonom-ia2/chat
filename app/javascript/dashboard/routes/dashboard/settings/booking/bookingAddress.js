@@ -1,7 +1,8 @@
-// Endereço da página de agendamento (#1282): o `<nome>` de `/a/<nome>`.
-// As mesmas regras de formato do servidor (Crm::BookingV2::ShortName),
-// conferidas caractere a caractere contra um conjunto fechado. O que depende
-// do banco (nome do sistema, nome que já tem dono) quem responde é o servidor.
+// Endereço da página de agendamento (#1282, #1299): o `<página>` de
+// `/a/<conta>/<página>`. As mesmas regras de formato do servidor
+// (Crm::BookingV2::ShortName), conferidas caractere a caractere contra um
+// conjunto fechado. O que depende do banco (nome do sistema, nome que outra
+// página da conta já usa) quem responde é o servidor.
 export const ADDRESS_MIN = 3;
 export const ADDRESS_MAX = 40;
 const ALLOWED = 'abcdefghijklmnopqrstuvwxyz0123456789-';
@@ -32,5 +33,6 @@ export const addressProblem = value => {
   return null;
 };
 
-export const addressUrl = (name, host = window.location.host) =>
-  `${host}/a/${name}`;
+// O link como a pessoa vai ler: `<site>/a/<conta>/<página>`.
+export const addressUrl = (name, account, host = window.location.host) =>
+  `${host}/a/${account}/${name}`;

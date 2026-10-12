@@ -5,6 +5,7 @@ import {
   isWebUrl,
   pageToForm,
   stepProblem,
+  uploadProblem,
 } from '../bookingPageForm';
 import { formatMinutes, formatWeekdays } from '../bookingFormat';
 
@@ -141,6 +142,16 @@ describe('bookingPageForm', () => {
       'IMAGE_SIZE'
     );
     expect(imageProblem({ type: 'image/webp', size: 1024 })).toBeNull();
+  });
+
+  it('envio recusado: o motivo do servidor escolhe o aviso', () => {
+    const refused = reason => ({ response: { data: { reason } } });
+    expect(uploadProblem(refused('image_content'))).toBe('IMAGE_CONTENT');
+    expect(uploadProblem(refused('image_pixels'))).toBe('IMAGE_PIXELS');
+    expect(uploadProblem(refused('image_type'))).toBe('IMAGE_TYPE');
+    expect(uploadProblem(refused('image_size'))).toBe('IMAGE_SIZE');
+    expect(uploadProblem(refused('outro'))).toBe('IMAGE_UPLOAD');
+    expect(uploadProblem(new Error('rede'))).toBe('IMAGE_UPLOAD');
   });
 
   it('a primeira pendência leva ao passo que a resolve', () => {

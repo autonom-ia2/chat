@@ -539,18 +539,19 @@ class Rack::Attack
   end
 
   # Link curto e prévia do link (#1282). Mesmo método: caminho normalizado e comparado em pedaços, sem expressão regular.
-  # - `/a/<nome>` e `/a/<nome>/<pessoa>` (GET): o nome curto é adivinhável, diferente do slug opaco de `/book`; o teto
-  #   por IP (o mesmo do GET da página na API v2) freia quem varre nomes.
+  # - `/a/<conta>`, `/a/<conta>/<página>` e `/a/<conta>/<página>/<pessoa>` (GET, #1299; o formato antigo `/a/<página>`
+  #   cabe nos mesmos tamanhos): o endereço curto é adivinhável, diferente do slug opaco de `/book`; o teto por IP (o
+  #   mesmo do GET da página na API v2) freia quem varre nomes.
   # - `/book/<slug>/preview/<versão>.png` (GET): a imagem de prévia. Ela fica guardada e só é desenhada quando a marca
   #   muda, mas cada pedido ainda lê o arquivo: teto por IP.
-  # - `.../crm/booking_pages/short_name` (GET, com login): "este nome está livre?" responde sobre a instalação inteira;
-  #   os tetos por IP e por conta freiam quem tenta usar a tela para listar os nomes das outras contas.
+  # - `.../crm/booking_pages/short_name` (GET, com login): "este nome está livre?". Desde o #1299 só olha as páginas
+  #   da própria conta; os tetos por IP e por conta continuam, para a tela não virar consulta em massa.
   PUBLIC_BOOKING_SHORT_PREFIX = '/a/'.freeze
   PUBLIC_BOOKING_PAGE_PREFIX = '/book/'.freeze
   BOOKING_SHORT_NAME_CHECK_SUFFIX = '/crm/booking_pages/short_name'.freeze
 
   throttle('public_booking_short/show_ip', limit: ENV.fetch('RATE_LIMIT_PUBLIC_BOOKING_SHORT', '60').to_i, period: 1.minute) do |req|
-    req.ip if (req.get? || req.head?) && public_path_segments(req, PUBLIC_BOOKING_SHORT_PREFIX).size.between?(1, 2)
+    req.ip if (req.get? || req.head?) && public_path_segments(req, PUBLIC_BOOKING_SHORT_PREFIX).size.between?(1, 3)
   end
 
   throttle('public_booking_preview/image_ip', limit: ENV.fetch('RATE_LIMIT_PUBLIC_BOOKING_PREVIEW_IMAGE', '60').to_i,

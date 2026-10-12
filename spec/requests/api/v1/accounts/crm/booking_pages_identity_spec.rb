@@ -71,7 +71,7 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingPages identity', type: :request d
     it 'sem nada salvo, diz que não há identidade' do
       call(admin, :get, "#{base}/#{page.id}")
 
-      expect(body.dig('payload', 'identity')).to eq({ 'saved' => false, 'logo_url' => nil, 'photo_url' => nil })
+      expect(body.dig('payload', 'identity')).to eq({ 'saved' => false, 'logo_url' => nil, 'logo_dark_url' => nil, 'photo_url' => nil })
     end
   end
 
@@ -149,7 +149,7 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingPages identity', type: :request d
 
       expect(response).to have_http_status(:ok)
       other.reload
-      expect(other.brand).to eq({ 'color' => '#FFE066', 'logo_align' => 'center', 'headline' => 'Vamos conversar' })
+      expect(other.brand).to include('color' => '#FFE066', 'logo_align' => 'center', 'headline' => 'Vamos conversar')
       expect(other.logo.blob).to eq(page.logo.blob)
       expect(other.photo.blob).to eq(page.photo.blob)
       expect(body.dig('payload', 'logo_url')).to be_present
@@ -218,7 +218,7 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingPages identity', type: :request d
 
       expect(response).to have_http_status(:created)
       created = account.crm_agent_booking_profiles.find(body.dig('payload', 'id'))
-      expect(created.brand).to eq({ 'color' => '#FFE066', 'logo_align' => 'center', 'headline' => 'Vamos conversar' })
+      expect(created.brand).to include('color' => '#FFE066', 'logo_align' => 'center', 'headline' => 'Vamos conversar')
       expect(created.logo.blob).to eq(page.logo.blob)
       expect(body.dig('payload', 'logo_url')).to be_present
       expect(body.dig('payload', 'identity', 'saved')).to be(true)
@@ -238,6 +238,116 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingPages identity', type: :request d
       created = account.crm_agent_booking_profiles.find(body.dig('payload', 'id'))
       expect(created.brand).to eq({})
       expect(created.logo).not_to be_attached
+    end
+  end
+
+  # A identidade reaproveita o arquivo da página, sem enviar de novo: sem conferir, um arquivo que entrou antes da
+  # regra (ou por fora dela) ia parar na conta e em toda página nova (#1303).
+  describe 'conferência das imagens da identidade' do
+    let(:svg) { %(#{' ' * 5000}<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>) }
+
+    it 'salvar: logo que não é imagem de verdade é recusada e nada é salvo' do
+      dress(page)
+      attach_unchecked(page, :logo, svg)
+
+      call(admin, :post, "#{base}/#{page.id}/save_identity")
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(body['errors']).to have_key('logo')
+      expect(body['error']).to include('PNG, JPEG or WebP')
+      expect(account.reload.booking_identity_logo).not_to be_attached
+      expect(identity.data).to eq({})
+      expect(identity.photo_of(world.host)).to be_nil
+    end
+
+    it 'salvar: foto que não é imagem de verdade também é recusada, e a identidade de antes fica' do
+      dress(page)
+      call(admin, :post, "#{base}/#{page.id}/save_identity")
+      saved_logo = account.reload.booking_identity_logo.blob
+      other = dress(create_booking_profile(account: account, host: world.host), color: '#0D2344')
+      attach_unchecked(other, :photo, '<html><script>alert(1)</script></html>', filename: 'foto.jpg', content_type: 'image/jpeg')
+
+      call(admin, :post, "#{base}/#{other.id}/save_identity")
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(body['errors']).to have_key('photo')
+      expect(identity.data).to include('color' => '#FFE066')
+      expect(account.reload.booking_identity_logo.blob).to eq(saved_logo)
+      expect(identity.photo_of(world.host).blob).to eq(page.photo.blob)
+    end
+
+    it 'salvar: imagem grande demais guardada na página é recusada' do
+      dress(page)
+      attach_unchecked(page, :logo, 'x' * (Crm::BookingPageSettings::MAX_IMAGE_BYTES + 1))
+
+      call(admin, :post, "#{base}/#{page.id}/save_identity")
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(account.reload.booking_identity_logo).not_to be_attached
+    end
+
+    it 'usar: logo salva que não passa na conferência não vai para a página, e o resto vai' do
+      dress(page)
+      call(admin, :post, "#{base}/#{page.id}/save_identity")
+      attach_unchecked(account, :booking_identity_logo, svg)
+      other = create_booking_profile(account: account, host: world.host, brand: { 'color' => '#0D2344' })
+      allow(Rails.logger).to receive(:warn)
+
+      call(admin, :post, "#{base}/#{other.id}/apply_identity")
+
+      expect(response).to have_http_status(:ok)
+      other.reload
+      expect(other.logo).not_to be_attached
+      expect(other.photo.blob).to eq(page.photo.blob)
+      expect(other.brand).to include('color' => '#FFE066')
+      expect(Rails.logger).to have_received(:warn)
+        .with("Booking identity image skipped (account #{account.id}, booking_identity_logo): image_content")
+    end
+
+    it 'usar: foto salva que não passa na conferência não vai para a página' do
+      dress(page)
+      call(admin, :post, "#{base}/#{page.id}/save_identity")
+      availability = Crm::AgentAvailability.find_by!(account: account, user: world.host)
+      attach_unchecked(availability, :booking_photo, svg, filename: 'foto.png')
+      other = create_booking_profile(account: account, host: world.host)
+
+      call(admin, :post, "#{base}/#{other.id}/apply_identity")
+
+      expect(response).to have_http_status(:ok)
+      expect(other.reload.photo).not_to be_attached
+      expect(other.logo.blob).to eq(page.logo.blob)
+    end
+
+    it 'página nova nasce sem a imagem salva que não passa, em vez de não nascer' do
+      dress(page)
+      call(admin, :post, "#{base}/#{page.id}/save_identity")
+      attach_unchecked(account, :booking_identity_logo, svg)
+
+      call(admin, :post, base, { template_key: 'sales_30' })
+
+      expect(response).to have_http_status(:created)
+      created = account.crm_agent_booking_profiles.find(body.dig('payload', 'id'))
+      expect(created.logo).not_to be_attached
+      expect(created.brand).to include('color' => '#FFE066')
+    end
+
+    it 'a identidade de uma conta não chega à página de outra, nem com imagem inválida no meio' do
+      dress(page)
+      call(admin, :post, "#{base}/#{page.id}/save_identity")
+      other_account = create(:account)
+      other_account.enable_features('crm_booking_v2')
+      other_account.save!
+      other_admin = create(:user, account: other_account, role: :administrator)
+
+      saved_logo = account.reload.booking_identity_logo.blob
+      call(other_admin, :post, "#{base}/#{page.id}/save_identity")
+      expect(response).to have_http_status(:unauthorized)
+
+      call(other_admin, :post, "/api/v1/accounts/#{other_account.id}/crm/booking_pages/#{page.id}/apply_identity")
+      expect(response).to have_http_status(:not_found)
+      expect(other_account.reload.booking_identity_logo).not_to be_attached
+      expect(account.reload.booking_identity_logo.blob).to eq(saved_logo)
+      expect(identity.data).to include('color' => '#FFE066')
     end
   end
 

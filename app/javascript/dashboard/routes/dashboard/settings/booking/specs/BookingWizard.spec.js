@@ -26,6 +26,7 @@ vi.mock('dashboard/api/crmBookingPages', () => ({
     updatePeople: vi.fn(),
     publish: vi.fn(),
     uploadImage: vi.fn(),
+    removeLogoDark: vi.fn(),
     applyIdentity: vi.fn(),
     saveIdentity: vi.fn(),
     testInvite: vi.fn(),
@@ -419,6 +420,23 @@ describe('BookingWizard', () => {
       );
     });
 
+    it('diz o que trocar quando o servidor recusa o conteúdo do arquivo', async () => {
+      BookingPagesAPI.uploadImage.mockRejectedValue({
+        response: { status: 422, data: { reason: 'image_content' } },
+      });
+      const wrapper = await openAtStep(5);
+      const input = wrapper.find('[data-logo] [data-file]');
+      Object.defineProperty(input.element, 'files', {
+        value: [file('image/png')],
+        configurable: true,
+      });
+      await input.trigger('change');
+      await flushPromises();
+      expect(wrapper.find('[data-logo]').text()).toContain(
+        'BOOKING.WIZARD.ERRORS.IMAGE_CONTENT'
+      );
+    });
+
     it('cor escolhida e frase vão no PATCH', async () => {
       const wrapper = await openAtStep(5);
       await wrapper.find('[data-color="#0B7A5A"]').trigger('click');
@@ -559,14 +577,20 @@ describe('BookingWizard', () => {
         .find('[data-custom-color] input[type="color"]')
         .setValue('#ffe066');
       await flushPromises();
-      const sample = wrapper.find('[data-brand-sample]').element;
-      expect(sample.style.getPropertyValue('--brand-fill')).toBe('#ffe066');
-      expect(sample.style.getPropertyValue('--brand-on')).toBe('#000000');
+      const sample = wrapper.find(
+        '[data-brand-sample] [data-sample-page]'
+      ).element;
+      expect(sample.style.getPropertyValue('--brand-fill-light')).toBe(
+        '#ffe066'
+      );
+      expect(sample.style.getPropertyValue('--brand-on-light')).toBe('#000000');
 
       await wrapper.find('[data-color="#0D2344"]').trigger('click');
       await flushPromises();
-      expect(sample.style.getPropertyValue('--brand-fill')).toBe('#0d2344');
-      expect(sample.style.getPropertyValue('--brand-on')).toBe('#ffffff');
+      expect(sample.style.getPropertyValue('--brand-fill-light')).toBe(
+        '#0d2344'
+      );
+      expect(sample.style.getPropertyValue('--brand-on-light')).toBe('#ffffff');
     });
 
     it('sem logo não pergunta o lado; com logo, três cartões e o padrão é a esquerda', async () => {
@@ -1022,6 +1046,245 @@ describe('BookingWizard', () => {
         photo,
         { applyToProfile: false },
       ]);
+    });
+  });
+
+  describe('passo 5: logo para fundo claro e escuro, e tema da prévia (#1295)', () => {
+    const LOGO = 'https://cdn.exemplo.com/logo.png';
+    const LOGO_DARK = 'https://cdn.exemplo.com/logo-escura.png';
+    const png = () => new File(['x'], 'logo.png', { type: 'image/png' });
+    const withLogo = (source, extra = {}) =>
+      fullPage({
+        logo_url: LOGO,
+        brand: source ? { logo_dark_source: source } : {},
+        ...extra,
+      });
+    const pickFile = async (wrapper, selector, chosen) => {
+      const input = wrapper.find(selector);
+      Object.defineProperty(input.element, 'files', {
+        value: [chosen],
+        configurable: true,
+      });
+      await input.trigger('change');
+      await flushPromises();
+    };
+    const origin = wrapper =>
+      wrapper.find('[data-logo-dark-origin]').attributes('data-origin');
+    const darkImage = wrapper => wrapper.find('[data-logo-dark] img');
+
+    it('sem logo: um botão só, e a linha diz que a de fundo escuro é criada na hora', async () => {
+      const wrapper = await openAtStep(5);
+
+      expect(wrapper.find('[data-logo] img').exists()).toBe(false);
+      expect(darkImage(wrapper).exists()).toBe(false);
+      expect(wrapper.find('[data-upload-dark]').exists()).toBe(false);
+      expect(origin(wrapper)).toBe('NONE');
+      expect(wrapper.find('[data-logo-dark-origin]').text()).toBe(
+        'BOOKING.LOOK.LOGO_DARK.ORIGIN.NONE'
+      );
+    });
+
+    it('as duas versões aparecem lado a lado, cada uma sobre o fundo certo', async () => {
+      const wrapper = await openAtStep(
+        5,
+        withLogo('generated', { logo_dark_url: LOGO_DARK })
+      );
+      const light = wrapper.find('[data-logo] [data-booking-theme]');
+      const dark = wrapper.find('[data-logo-dark] [data-booking-theme]');
+
+      expect(light.attributes('data-booking-theme')).toBe('light');
+      expect(dark.attributes('data-booking-theme')).toBe('dark');
+      [light, dark].forEach(frame =>
+        expect(frame.classes()).toContain('bg-bk-card')
+      );
+      expect(light.find('img').attributes('src')).toBe(LOGO);
+      expect(dark.find('img').attributes('src')).toBe(LOGO_DARK);
+      expect(wrapper.find('[data-logo-card]').text()).toContain(
+        'BOOKING.LOOK.LOGO_LIGHT.TITLE'
+      );
+      expect(wrapper.find('[data-logo-card]').text()).toContain(
+        'BOOKING.LOOK.LOGO_DARK.TITLE'
+      );
+      expect(wrapper.find('[data-logo] [data-upload]').exists()).toBe(true);
+      expect(wrapper.find('[data-upload-dark]').exists()).toBe(true);
+    });
+
+    it.each([
+      ['generated', LOGO_DARK, 'GENERATED', LOGO_DARK, 'false'],
+      ['uploaded', LOGO_DARK, 'UPLOADED', LOGO_DARK, 'false'],
+      ['same', null, 'SAME', LOGO, 'false'],
+      ['plate', null, 'PLATE', LOGO, 'true'],
+      // Página de antes do tema escuro, ou origem que a tela não conhece: o caso seguro.
+      [null, null, 'PLATE', LOGO, 'true'],
+      ['qualquer', null, 'PLATE', LOGO, 'true'],
+    ])(
+      'origem %s: explica em uma linha e mostra como fica no escuro',
+      async (source, darkUrl, expected, shown, onPlate) => {
+        const wrapper = await openAtStep(
+          5,
+          withLogo(source, { logo_dark_url: darkUrl })
+        );
+
+        expect(origin(wrapper)).toBe(expected);
+        expect(wrapper.find('[data-logo-dark-origin]').text()).toBe(
+          `BOOKING.LOOK.LOGO_DARK.ORIGIN.${expected}`
+        );
+        expect(darkImage(wrapper).attributes('src')).toBe(shown);
+        expect(darkImage(wrapper).attributes('data-on-plate')).toBe(onPlate);
+        expect(
+          darkImage(wrapper).classes().includes('bg-[var(--bk-plate)]')
+        ).toBe(onPlate === 'true');
+        expect(wrapper.find('[data-remove-dark]').exists()).toBe(
+          expected === 'UPLOADED'
+        );
+      }
+    );
+
+    it('enviar a logo já traz a de fundo escuro criada: a pessoa não faz mais nada', async () => {
+      let finish;
+      BookingPagesAPI.uploadImage.mockImplementation(
+        () =>
+          new Promise(resolve => {
+            finish = resolve;
+          })
+      );
+      const wrapper = await openAtStep(5);
+      const chosen = png();
+      await pickFile(wrapper, '[data-logo] [data-file]', chosen);
+
+      expect(BookingPagesAPI.uploadImage).toHaveBeenCalledWith(
+        7,
+        'logo',
+        chosen,
+        { applyToProfile: false }
+      );
+      expect(origin(wrapper)).toBe('CREATING');
+
+      finish({
+        data: {
+          payload: withLogo('generated', { logo_dark_url: LOGO_DARK }),
+        },
+      });
+      await flushPromises();
+      expect(origin(wrapper)).toBe('GENERATED');
+      expect(darkImage(wrapper).attributes('src')).toBe(LOGO_DARK);
+    });
+
+    it('trocar a de fundo escuro envia para a rota dela', async () => {
+      BookingPagesAPI.uploadImage.mockImplementation(() =>
+        reply(withLogo('uploaded', { logo_dark_url: LOGO_DARK }))
+      );
+      const wrapper = await openAtStep(5, withLogo('plate'));
+      const chosen = png();
+      await pickFile(wrapper, '[data-logo-dark] [data-file-dark]', chosen);
+
+      expect(BookingPagesAPI.uploadImage).toHaveBeenCalledWith(
+        7,
+        'logo_dark',
+        chosen,
+        { applyToProfile: false }
+      );
+      expect(origin(wrapper)).toBe('UPLOADED');
+      expect(wrapper.find('[data-remove-dark]').exists()).toBe(true);
+    });
+
+    it('arquivo errado na de fundo escuro: avisa nela, sem chamar a API', async () => {
+      const wrapper = await openAtStep(5, withLogo('plate'));
+      await pickFile(
+        wrapper,
+        '[data-logo-dark] [data-file-dark]',
+        new File(['x'], 'logo.svg', { type: 'image/svg+xml' })
+      );
+
+      expect(BookingPagesAPI.uploadImage).not.toHaveBeenCalled();
+      expect(wrapper.find('[data-logo-dark] [role="alert"]').text()).toBe(
+        'BOOKING.WIZARD.ERRORS.IMAGE_TYPE'
+      );
+      expect(wrapper.find('[data-logo] [role="alert"]').exists()).toBe(false);
+    });
+
+    it('"Voltar para a criada por nós" tira a enviada e mostra a que o servidor devolveu', async () => {
+      BookingPagesAPI.removeLogoDark.mockImplementation(() =>
+        reply(withLogo('same'))
+      );
+      const wrapper = await openAtStep(
+        5,
+        withLogo('uploaded', { logo_dark_url: LOGO_DARK })
+      );
+      await wrapper.find('[data-remove-dark]').trigger('click');
+      await flushPromises();
+
+      expect(BookingPagesAPI.removeLogoDark).toHaveBeenCalledWith(7);
+      expect(origin(wrapper)).toBe('SAME');
+      expect(darkImage(wrapper).attributes('src')).toBe(LOGO);
+      expect(wrapper.find('[data-remove-dark]').exists()).toBe(false);
+    });
+
+    it('se tirar falhar, avisa e deixa como estava', async () => {
+      BookingPagesAPI.removeLogoDark.mockImplementation(() =>
+        Promise.reject(new Error('fora do ar'))
+      );
+      const wrapper = await openAtStep(
+        5,
+        withLogo('uploaded', { logo_dark_url: LOGO_DARK })
+      );
+      await wrapper.find('[data-remove-dark]').trigger('click');
+      await flushPromises();
+
+      expect(wrapper.find('[data-logo-dark] [role="alert"]').text()).toBe(
+        'BOOKING.WIZARD.ERRORS.IMAGE_REMOVE'
+      );
+      expect(origin(wrapper)).toBe('UPLOADED');
+    });
+
+    it('salvar o passo não manda a origem da logo: ela é do servidor', async () => {
+      const wrapper = await openAtStep(
+        5,
+        withLogo('generated', { logo_dark_url: LOGO_DARK })
+      );
+      await continueStep(wrapper);
+
+      expect(Object.keys(lastPayload().brand).sort()).toEqual([
+        'color',
+        'headline',
+        'logo_align',
+      ]);
+    });
+
+    it('a amostra troca de tema no seletor Claro / Escuro, sem lista nativa', async () => {
+      const wrapper = await openAtStep(
+        5,
+        withLogo('generated', { logo_dark_url: LOGO_DARK })
+      );
+      const sample = wrapper.find('[data-brand-sample]');
+      const shown = sample.find('[data-sample-page]');
+
+      expect(wrapper.find('select').exists()).toBe(false);
+      expect(shown.attributes('data-booking-theme')).toBe('light');
+      await sample.find('[data-theme-option="dark"] input').setValue(true);
+      expect(shown.attributes('data-booking-theme')).toBe('dark');
+      expect(sample.find('[data-theme-toggle]').text()).toContain(
+        'BOOKING.THEME.LABEL'
+      );
+      expect(
+        shown.find('[data-logo-box] [data-logo-for-dark]').attributes('src')
+      ).toBe(LOGO_DARK);
+    });
+
+    it('a prévia do passo 7 também tem Claro / Escuro', async () => {
+      const wrapper = await openAtStep(
+        7,
+        withLogo('plate', { enabled: false })
+      );
+      const preview = wrapper.find('[data-preview]');
+
+      expect(preview.attributes('data-booking-theme')).toBe('light');
+      await wrapper.find('[data-theme-option="dark"] input').setValue(true);
+      expect(preview.attributes('data-booking-theme')).toBe('dark');
+      expect(preview.classes()).toContain('bg-bk-page');
+      expect(preview.find('[data-logo-box]').attributes('data-logo-dark')).toBe(
+        'plate'
+      );
     });
   });
 

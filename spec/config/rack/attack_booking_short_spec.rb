@@ -11,15 +11,15 @@ RSpec.describe Rack::Attack do
   let(:ip) { '203.0.113.9' }
   let(:slug) { '0f8e1c2a-1111-4c3d-9e2f-abcdefabcdef' }
 
-  it 'limita a casca do link curto, da página e da pessoa, por minuto' do
+  it 'limita a casca do link curto, da conta, da página e da pessoa, por minuto' do
     nome = 'public_booking_short/show_ip'
     expect(described_class.throttles.fetch(nome)).to have_attributes(limit: 60, period: 60)
-    ['/a/clinica-viva', '/a/clinica-viva/ana', '//a/clinica-viva/', '/a/clinica-viva.html'].each do |grafia|
+    ['/a/hub2you', '/a/hub2you/clinica-viva', '/a/hub2you/clinica-viva/ana', '//a/clinica-viva/', '/a/clinica-viva.html'].each do |grafia|
       expect(chave(nome, grafia)).to eq(ip), grafia
     end
     expect(chave(nome, '/a/clinica-viva', metodo: 'HEAD')).to eq(ip)
     expect(chave(nome, '/a/clinica-viva', metodo: 'POST')).to be_nil
-    ['/a', '/a/', '/a/x/y/z', '/app/accounts/1/dashboard', '/api/v1/accounts/1', '/auth/sign_in', "/book/#{slug}"].each do |outro|
+    ['/a', '/a/', '/a/x/y/z/w', '/app/accounts/1/dashboard', '/api/v1/accounts/1', '/auth/sign_in', "/book/#{slug}"].each do |outro|
       expect(chave(nome, outro)).to be_nil, outro
     end
   end

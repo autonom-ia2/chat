@@ -97,8 +97,11 @@
         "HOURS": "O horário final precisa ser depois do inicial.",
         "IMAGE_TYPE": "Use uma imagem PNG, JPEG ou WebP.",
         "IMAGE_SIZE": "A imagem pode ter até 2 MB.",
+        "IMAGE_CONTENT": "Este arquivo não é uma imagem de verdade. Salve de novo como PNG ou JPEG e tente outra vez.",
+        "IMAGE_PIXELS": "Esta imagem é grande demais. Use uma menor, de até 16 megapixels.",
         "IMAGE_UPLOAD": "Não deu para enviar a imagem. Tente outra.",
-        "SHORT_NAME": "Confira o endereço da página."
+        "SHORT_NAME": "Confira o endereço da página.",
+        "IMAGE_REMOVE": "Não deu para tirar a imagem. Tente de novo."
       },
       "SERVER_ERRORS": {
         "CALENDAR_GONE": "Essa caixa de e-mail da agenda não está mais disponível. Escolha outra ou tire o Google Meet e o Teams.",
@@ -147,8 +150,9 @@
     },
     "ADDRESS": {
       "LABEL": "Endereço da página",
-      "HINT": "É o link que você manda para o cliente. Use letras, números e hífen.",
+      "HINT": "Mude só o final do link. Use letras, números e hífen.",
       "PREVIEW": "O link fica assim: {url}",
+      "CHANGE": "Mudar endereço",
       "EMPTY": "Sem endereço, a página usa um link comprido.",
       "CHECKING": "Conferindo o endereço",
       "FREE": "Este endereço está livre.",
@@ -160,7 +164,7 @@
         "INVALID_CHARS": "Use só letras sem acento, números e hífen.",
         "HYPHEN_EDGE": "O endereço não pode começar nem terminar com hífen.",
         "RESERVED": "Este endereço é do sistema. Escolha outro.",
-        "TAKEN": "Este endereço já tem dono. Escolha outro."
+        "TAKEN": "Outra página sua já usa este endereço. Escolha outro."
       }
     },
     "WHERE": {
@@ -303,6 +307,22 @@
         "ALSO_PROFILE": "Também no meu perfil",
         "SEND": "Enviar foto",
         "CANCEL": "Cancelar"
+      },
+      "LOGO_LIGHT": {
+        "TITLE": "Em fundo claro"
+      },
+      "LOGO_DARK": {
+        "TITLE": "Em fundo escuro",
+        "ALT": "Logo da empresa para fundo escuro",
+        "REMOVE": "Voltar para a criada por nós",
+        "ORIGIN": {
+          "NONE": "Envie a logo. A versão para fundo escuro é criada na hora.",
+          "CREATING": "Criando a versão para fundo escuro…",
+          "GENERATED": "Criamos esta versão para fundo escuro. Se preferir, envie a sua.",
+          "SAME": "Sua logo já fica boa no escuro.",
+          "PLATE": "Não deu para criar uma versão clara; no escuro ela aparece sobre uma placa.",
+          "UPLOADED": "Você enviou esta versão para fundo escuro."
+        }
       }
     },
     "NOTICES": {
@@ -592,6 +612,11 @@
       "SAVE": "Salvar",
       "BOOKED_BY_AI": "Agendada pela IA",
       "BOOKED_BY_AI_DETAIL": "Agendada pela IA: {title}"
+    },
+    "THEME": {
+      "LABEL": "A página segue o tema do aparelho do cliente. Veja nos dois:",
+      "LIGHT": "Claro",
+      "DARK": "Escuro"
     }
   }
 }

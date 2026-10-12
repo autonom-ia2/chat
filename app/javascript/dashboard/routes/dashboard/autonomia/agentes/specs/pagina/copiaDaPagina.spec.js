@@ -206,10 +206,17 @@ describe('catálogo da página', () => {
     );
   });
 
+  // "Ligar" é proibido para o agente (DECISOES item 9). Ferramenta não é agente: "Ligada/Desligada" e
+  // "Ligar ferramenta" foram aprovados pelo Rodrigo em 11/10/2026 (#1301), só em FERRAMENTAS.
   it('never says "Ligar" nor a confidence percentage', () => {
-    const textos = JSON.stringify(ptBR.AGENTS.JORNADA.PAGINA);
+    const { FERRAMENTAS, ...doAgente } = ptBR.AGENTS.JORNADA.PAGINA;
+    const textos = JSON.stringify(doAgente);
     ['Ligar', 'Ligado', '%', 'confiança', 'certeza'].forEach(palavra =>
       expect(textos).not.toContain(palavra)
+    );
+    // Nas ferramentas, "para ter certeza" (protótipo F09) é sobre testar, não nota de confiança.
+    ['%', 'confiança'].forEach(palavra =>
+      expect(JSON.stringify(FERRAMENTAS)).not.toContain(palavra)
     );
   });
 });

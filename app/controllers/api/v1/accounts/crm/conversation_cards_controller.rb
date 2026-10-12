@@ -65,10 +65,14 @@ class Api::V1::Accounts::Crm::ConversationCardsController < Api::V1::Accounts::C
       card_id: decision.card_id, card_title: decision.card&.title }
   end
 
+  # Acesso por funil (#1148, PR D): sugestão de assunto novo só aparece para quem pode criar card naquele funil (aceitar
+  # daria 403, e o aviso mostraria o nome de um funil escondido).
   def suggestion_visible?(decision)
     return false unless ::Crm::Subjects::SuggestionResponder.applicable?(decision)
+    return policy_scope(::Crm::Card).exists?(id: decision.card_id) if decision.card_id
 
-    decision.card_id.nil? || policy_scope(::Crm::Card).exists?(id: decision.card_id)
+    ::Crm::Access::CardGuard.new(user: Current.user, account: Current.account, account_user: Current.account_user)
+                            .create_allowed?(decision.pipeline_id, conversation: @conversation)
   end
 
   def conversation_cards

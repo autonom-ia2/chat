@@ -2,6 +2,7 @@ import { computed, ref, toValue } from 'vue';
 import { useI18n } from 'vue-i18n';
 import CrmBookingPagesAPI from 'dashboard/api/crmBookingPages';
 import { recebeAgenda as agenteRecebeAgenda } from '../utils/pagina';
+import { estadoDaPagina } from '../utils/agendaDaPagina';
 
 // #1196 / #1253 — a página de agendamento que a IA usa para oferecer horários e marcar. Mesma regra
 // no painel antigo (AgentBookingForm) e na página nova do agente (linha "Marca reuniões" e
@@ -34,8 +35,10 @@ export function useAgendaDoAgente(agente) {
     idDaPagina(toValue(agente)?.config?.booking_page_id)
   );
 
+  const tituloDaPagina = pagina => pagina.title || t('BOOKING.CARD.UNTITLED');
+
   const nomeDaPagina = pagina => {
-    const titulo = pagina.title || t('BOOKING.CARD.UNTITLED');
+    const titulo = tituloDaPagina(pagina);
     return pagina.enabled
       ? titulo
       : t('BOOKING.AI_AGENT.PAUSED_PAGE', { title: titulo });
@@ -53,6 +56,10 @@ export function useAgendaDoAgente(agente) {
     id === SEM_PAGINA
       ? undefined
       : paginas.value.find(pagina => idDaPagina(pagina.id) === id);
+
+  // #1181 (item A) — estado real da página `id` (utils/agendaDaPagina): nenhuma, não existe mais,
+  // pausada, sem ninguém para atender ou ativa.
+  const estadoDe = id => estadoDaPagina(id !== SEM_PAGINA, paginaDe(id));
 
   const carregar = async () => {
     if (!recebeAgenda.value) return;
@@ -74,6 +81,8 @@ export function useAgendaDoAgente(agente) {
     paginaSalva,
     opcoes,
     paginaDe,
+    estadoDe,
+    tituloDaPagina,
     nomeDaPagina,
     carregar,
   };

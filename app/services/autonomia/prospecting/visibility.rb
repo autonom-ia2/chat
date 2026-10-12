@@ -23,6 +23,10 @@ class Autonomia::Prospecting::Visibility
     @account_user = account_user
   end
 
+  def crm_card_scope
+    @crm_card_scope ||= Crm::Access::CardScope.new(user: account_user.user, account: account_user.account, account_user: account_user)
+  end
+
   def all_searches?
     return @all_searches if defined?(@all_searches)
 
@@ -58,8 +62,29 @@ class Autonomia::Prospecting::Visibility
 
   # O lead como a API o devolve (chaves texto ou símbolo), sem o bloco técnico para quem não é administrador.
   def lead_payload(payload)
+    payload = crm_presence_for_viewer(payload)
     return payload if score_details?
 
     payload.except(*TECHNICAL_SCORE_FIELDS, *TECHNICAL_SCORE_FIELDS.map(&:to_sym))
+  end
+
+  # Acesso por funil (#1148, PR D): o card de um funil que a pessoa não vê fica só com o id. A tela marca o lead como
+  # já no CRM, sem o nome do funil, da etapa nem do responsável.
+  def crm_presence_for_viewer(payload)
+    key = payload.key?('crm_presence') ? 'crm_presence' : :crm_presence
+    presence = payload[key]
+    return payload unless presence.is_a?(Hash)
+
+    card_id = presence['card_id'] || presence[:card_id]
+    return payload if crm_card_visible?(card_id)
+
+    payload.merge(key => { (key.is_a?(String) ? 'card_id' : :card_id) => card_id })
+  end
+
+  def crm_card_visible?(card_id)
+    return true if card_id.nil? || account_user.nil? || !crm_card_scope.restricted?
+
+    card = Crm::Card.find_by(id: card_id, account_id: account_user.account_id)
+    card.nil? || crm_card_scope.allows?(card)
   end
 end

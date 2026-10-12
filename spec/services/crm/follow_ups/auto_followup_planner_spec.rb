@@ -148,6 +148,32 @@ RSpec.describe Crm::FollowUps::AutoFollowupPlanner do
     expect(card.metadata['ai']['auto_followup_state']['opted_out']).to be(true)
   end
 
+  # #1317: a resposta que parou a cadência pode ter sido um SAIR. Enquanto o modelo não decidiu (pendente) ou a decisão
+  # falhou, re-armar seria falhar ABERTO na guarda de consentimento.
+  it 'decisão de opt-out pendente ou com falha NÃO re-arma o card' do
+    account, user = create_account_and_user
+    pipeline, stage = setup_pipeline(account: account, user: user, config: eligible_config)
+    cards = %w[pendente falhou sem_credencial].map do |decision|
+      card, = build_card_with_exchange(stage: stage, anchor_at: 21.hours.ago)
+      card.update!(metadata: { 'ai' => { 'auto_followup_state' => { 'active' => false, 'opted_out' => false,
+                                                                    'opt_out_decision' => decision } } })
+      card
+    end
+
+    expect(described_class.new(pipeline: pipeline).perform).to eq(0)
+    expect(cards.sum { |card| card.reload.follow_ups.count }).to eq(0)
+  end
+
+  it 'decisão "nao" do modelo libera o card para um ciclo novo' do
+    account, user = create_account_and_user
+    pipeline, stage = setup_pipeline(account: account, user: user, config: eligible_config)
+    card, = build_card_with_exchange(stage: stage, anchor_at: 21.hours.ago)
+    card.update!(metadata: { 'ai' => { 'auto_followup_state' => { 'active' => false, 'opted_out' => false,
+                                                                  'opt_out_decision' => 'nao' } } })
+
+    expect(described_class.new(pipeline: pipeline).perform).to eq(1)
+  end
+
   # Guarda de produto: o cliente já disse QUANDO volta (ai_callback com due_at futuro) — não
   # perturbar com a cadência genérica antes desse retorno agendado disparar.
   it 'card com ai_callback ativo e due_at futuro NÃO cria o toque' do

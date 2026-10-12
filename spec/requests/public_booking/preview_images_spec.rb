@@ -20,6 +20,17 @@ RSpec.describe 'PublicBooking::PreviewImages', type: :request do
   before do
     account.enable_features('crm_booking_v2')
     account.save!
+    clear_draw_marks
+  end
+
+  after { clear_draw_marks }
+
+  # Vagas do teto global e a marca da varredura (#1303) ficam no Redis de teste: cada exemplo começa sem elas.
+  def clear_draw_marks
+    draw_limit = Crm::BookingV2::PreviewImage::DrawLimit
+    draw_limit::MAX_LIMIT.times { |index| Redis::Alfred.delete(draw_limit.slot_key(index)) }
+    Redis::Alfred.delete(draw_limit.account_key(account.id))
+    Redis::Alfred.delete(Crm::BookingV2::PreviewImage::Warmup.sweep_key)
   end
 
   def vips!
@@ -171,7 +182,8 @@ RSpec.describe 'PublicBooking::PreviewImages', type: :request do
     end
 
     it 'troca para o desenho claro, e guarda, quando a logo não pode ser lida' do
-      profile.logo.attach(io: StringIO.new('isto não é uma imagem'), filename: 'logo.png', content_type: 'image/png')
+      # Arquivo que entrou antes da conferência de conteúdo (#1303): hoje o envio dele seria recusado.
+      attach_unchecked(profile, :logo, 'isto não é uma imagem')
       expect(content_for(profile.slug).design).to eq(:brand)
 
       get image_path(profile.slug)
@@ -247,6 +259,167 @@ RSpec.describe 'PublicBooking::PreviewImages', type: :request do
 
       get image_path(profile.slug)
       expect_neutral_image(cached: false)
+    end
+  end
+
+  # Teto global (#1303): a trava de antes era por página, então um robô pedindo páginas diferentes punha um desenho
+  # em cada thread do web. O desenho é trocado por um PNG pronto: estes exemplos não precisam da libvips.
+  describe 'teto global de desenhos' do
+    let(:draw_limit) { Crm::BookingV2::PreviewImage::DrawLimit }
+    let(:warmup) { Crm::BookingV2::PreviewImage::Warmup }
+    let(:warm_job) { Crm::BookingV2::PreviewImageWarmJob }
+    let(:sweep_job) { Crm::BookingV2::PreviewImageSweepJob }
+    let(:drawn) { Rails.root.join('spec/assets/avatar.png').binread }
+    let(:store) { Crm::BookingV2::PreviewImage::Store.new(content_for(profile.slug)) }
+
+    before { allow(Crm::BookingV2::PreviewImage::Renderer).to receive(:png).and_return(drawn) }
+
+    after do
+      Crm::AgentBookingProfile.where(account: account).find_each { |page| Redis::Alfred.delete(warmup.queued_key(page.id)) }
+      [store.lock_key, store.failure_key].each { |key| Redis::Alfred.delete(key) }
+    end
+
+    # Dois desenhos em andamento em outros processos.
+    def fill_slots
+      draw_limit.limit.times { |index| Redis::Alfred.set(draw_limit.slot_key(index), 'outro-processo', nx: true, ex: 30) }
+    end
+
+    def slots_taken
+      draw_limit::MAX_LIMIT.times.count { |index| Redis::Alfred.exists?(draw_limit.slot_key(index)) }
+    end
+
+    it 'cheio: responde a neutra sem cache, sem desenhar, sem marcar falha e soltando a trava da página' do
+      fill_slots
+
+      get image_path(profile.slug)
+
+      expect_neutral_image(cached: false)
+      expect(Crm::BookingV2::PreviewImage::Renderer).not_to have_received(:png)
+      expect(Redis::Alfred.exists?(store.failure_key)).to be(false)
+      expect(Redis::Alfred.exists?(store.lock_key)).to be(false)
+      expect(profile.reload.preview_image).not_to be_attached
+    end
+
+    it 'cheio: registra o motivo e põe a página na fila uma vez só, por mais que o robô insista' do
+      fill_slots
+      allow(Rails.logger).to receive(:info)
+
+      expect { 5.times { get image_path(profile.slug) } }.to have_enqueued_job(warm_job).with(profile.id).once
+
+      expect(Rails.logger).to have_received(:info).with('Booking preview image not drawn: draw_limit').exactly(5).times
+    end
+
+    it 'um robô pedindo páginas diferentes não desenha além do teto' do
+      pages = Array.new(4) { create_booking_profile(account: account, host: world.host) }
+      fill_slots
+
+      pages.each do |page|
+        get image_path(page.slug)
+        expect_neutral_image(cached: false)
+      end
+
+      expect(Crm::BookingV2::PreviewImage::Renderer).not_to have_received(:png)
+      expect(slots_taken).to eq(draw_limit.limit)
+    end
+
+    it 'com uma vaga livre desenha, guarda e solta a vaga' do
+      Redis::Alfred.set(draw_limit.slot_key(0), 'outro-processo', nx: true, ex: 30)
+
+      get image_path(profile.slug)
+
+      expect(response.body.b).to eq(drawn)
+      expect(profile.reload.preview_image).to be_attached
+      expect(slots_taken).to eq(1)
+    end
+
+    it 'solta a vaga quando o desenho falha' do
+      allow(Crm::BookingV2::PreviewImage::Renderer).to receive(:png).and_raise('quebrou')
+
+      get image_path(profile.slug)
+
+      expect_neutral_image(cached: false)
+      expect(slots_taken).to eq(0)
+    end
+
+    # O prazo de cada vaga é conferido no spec do DrawLimit; aqui, o prazo vence entre um pedido e outro.
+    it 'vaga de processo que morreu expira, e o pedido seguinte desenha' do
+      keys = Array.new(draw_limit.limit) { |index| draw_limit.slot_key(index) }
+      keys.each { |key| Redis::Alfred.set(key, 'processo-morto', nx: true, ex: 30) }
+      get image_path(profile.slug)
+      expect_neutral_image(cached: false)
+
+      keys.each { |key| Redis::Alfred.with { |conn| conn.pexpire(key, 1) } }
+      sleep 0.05
+      get image_path(profile.slug)
+      expect(response.body.b).to eq(drawn)
+    end
+
+    it 'uma conta que já está desenhando não pega a segunda vaga; outra conta pega' do
+      Redis::Alfred.set(draw_limit.account_key(account.id), 'outro-processo', nx: true, ex: 30)
+      get image_path(profile.slug)
+      expect_neutral_image(cached: false)
+
+      other_account = create(:account)
+      other_account.enable_features('crm_booking_v2')
+      other_account.save!
+      other = create_booking_profile(account: other_account, host: create(:user, account: other_account, role: :agent))
+      get image_path(other.slug)
+
+      expect(response.body.b).to eq(drawn)
+      expect(slots_taken).to eq(0)
+    ensure
+      Redis::Alfred.delete(draw_limit.account_key(other_account.id)) if other_account
+    end
+
+    it 'erro do Redis ao pegar a vaga: neutra sem cache, sem marcar a página como falha' do
+      allow(draw_limit).to receive(:with_slot).and_raise(Redis::CannotConnectError, 'sem Redis')
+
+      get image_path(profile.slug)
+
+      expect_neutral_image(cached: false)
+      expect(Redis::Alfred.exists?(store.failure_key)).to be(false)
+      expect(Redis::Alfred.exists?(store.lock_key)).to be(false)
+    end
+
+    it 'servir a imagem já guardada não depende de vaga' do
+      get image_path(profile.slug)
+      fill_slots
+
+      get image_path(profile.slug)
+
+      expect(response.body.b).to eq(drawn)
+      expect(Crm::BookingV2::PreviewImage::Renderer).to have_received(:png).once
+    end
+
+    describe 'varredura quando o desenho muda' do
+      it 'o primeiro pedido sem imagem guardada enfileira a varredura, uma vez só' do
+        other = create_booking_profile(account: account, host: world.host)
+
+        expect do
+          get image_path(profile.slug)
+          get image_path(other.slug)
+        end.to have_enqueued_job(sweep_job).once
+      end
+
+      it 'pedido servido da imagem guardada não enfileira nada' do
+        get image_path(profile.slug)
+        Redis::Alfred.delete(warmup.sweep_key)
+
+        expect { get image_path(profile.slug) }.not_to have_enqueued_job
+      end
+
+      it 'versão nova do desenho: enfileira outra varredura e redesenha a página pedida' do
+        get image_path(profile.slug)
+        old_key = warmup.sweep_key
+        stub_const('Crm::BookingV2::PreviewImage::Content::RENDER_VERSION', Crm::BookingV2::PreviewImage::Content::RENDER_VERSION + 1)
+
+        expect { get image_path(profile.slug) }.to have_enqueued_job(sweep_job).once
+        expect(warmup.sweep_key).not_to eq(old_key)
+        expect(Crm::BookingV2::PreviewImage::Renderer).to have_received(:png).twice
+      ensure
+        Redis::Alfred.delete(warmup.sweep_key)
+        Redis::Alfred.delete(old_key) if old_key
+      end
     end
   end
 

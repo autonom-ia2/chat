@@ -6,7 +6,7 @@
 <template>
   <div
     data-page-card
-    class="rounded-3xl border border-solid border-slate-200 bg-white p-5 shadow-sm sm:p-8"
+    class="rounded-3xl border border-solid border-bk-line bg-bk-card p-5 shadow-sm sm:p-8"
   >
     <slot />
   </div>

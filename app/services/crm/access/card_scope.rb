@@ -23,6 +23,17 @@ class Crm::Access::CardScope
     end
   end
 
+  def restricted?
+    @conversation_scope.restricted?
+  end
+
+  # A mesma regra como condição SQL para consultas cruas (a soma da CTWA, #1148 PR D); nil sem restrição.
+  def ids_condition
+    return unless restricted?
+
+    "crm_cards.id IN (#{apply(Crm::Card.where(account_id: @account.id)).select(:id).to_sql})"
+  end
+
   def allows?(card)
     return true if card.inbox_id.nil?
 

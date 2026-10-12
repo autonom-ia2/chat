@@ -45,8 +45,8 @@ module Crm
         @ids.each do |id|
           card = visible_cards_by_id[id]
           next failed << { id: id, error: 'forbidden' } if card.blank?
-          # Acesso por funil (#1148, parte C): mover para um funil que a pessoa não tem destravaria a conversa de outro.
-          next failed << { id: id, error: 'forbidden' } if move_forbidden?(card, target_stage)
+          # Acesso por funil (#1148): mexer no card exige o funil dele, e mover exige também o de destino.
+          next failed << { id: id, error: 'forbidden' } if forbidden?(card, target_stage)
 
           # Each card is its own transaction so a single failure (e.g. a card
           # that vanished mid-request) reports as `failed` without rolling back
@@ -122,7 +122,9 @@ module Crm
 
       # The same visible scope the CardPolicy::Scope resolves, so a bulk request
       # can only ever touch cards the caller can see one-by-one.
-      def move_forbidden?(card, target_stage)
+      def forbidden?(card, target_stage)
+        return true unless card_guard.edit_allowed?(card)
+
         target_stage.present? && !card_guard.move_allowed?(card, target_stage.pipeline_id)
       end
 
