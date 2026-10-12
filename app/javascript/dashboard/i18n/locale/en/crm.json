@@ -3767,7 +3767,7 @@
     "PESSOAS": {
       "EXPLICA": "Who is in the inbox is set in Settings → Inboxes.",
       "TODOS_TUDO": "Everyone handles everything",
-      "LEGADO": "Today, in this inbox, each person only sees conversations assigned to them. Keep it that way?",
+      "LEGADO": "Today, in this inbox, each person only sees conversations assigned to them. Keep it that way or use what you select below?",
       "LEGADO_MANTER": "Keep it",
       "FALTA_TRIAGEM": "Nobody will see conversations that don't have a subject yet. Select “No subject” for at least one person.",
       "FALTA_TRIAGEM_CURTO": "Select “No subject” for someone.",
@@ -3779,7 +3779,9 @@
       "SO_AS_QUE_ATENDE": "Only theirs",
       "NAO_VE": "Sees nothing",
       "RODIZIO": "Whoever handles a subject gets its new conversations, one at a time.",
-      "SO_AS_QUE_ATENDE_EXPLICA": "“Only theirs”: conversations where the person is the agent, a participant or the card owner."
+      "SO_AS_QUE_ATENDE_EXPLICA": "“Only theirs”: conversations where the person is the agent, a participant or the card owner.",
+      "LEGADO_MUDAR": "Use what I select",
+      "LEGADO_CURTO": "Choose whether each person keeps seeing only assigned conversations."
     },
     "EDITOR": {
       "ERRO": "We couldn't open this inbox right now.",

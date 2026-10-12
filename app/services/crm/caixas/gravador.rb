@@ -6,6 +6,9 @@
 # - Vários funis: nenhum card nasce num funil fixo (R9). Quem cria é a IA de assunto ('auto' ou 'suggest') ou a
 #   equipe ('off').
 # - Nenhum funil: a caixa sai do CRM. Os vínculos ficam, com a criação desligada, como o PipelineLinkSyncer faz.
+# - Caixa ainda em "Agente vê apenas atribuídos" (R6) só sai dele com escolha explícita ('manter' ou 'mudar'; com
+#   'manter' a tela já manda cada agente em "Só as que atende"). Sem escolha, nada é gravado.
+# - Funil arquivado não aparece na tela: seus vínculos e liberações ficam como estão.
 # - Pessoa que cuida de tudo (sem assunto, todos os funis, todas as conversas) fica sem linha de acesso: é o mesmo
 #   que não ter configuração (R5). Administrador e usuário de integração nunca ganham linha.
 class Crm::Caixas::Gravador
@@ -20,6 +23,7 @@ class Crm::Caixas::Gravador
 
   MODOS_UM_FUNIL = %w[chegou off].freeze
   MODOS_VARIOS = %w[auto suggest off].freeze
+  ESCOLHAS_DO_LEGADO = %w[manter mudar].freeze
 
   def initialize(account:, inbox:, user:, dados:)
     @account = account
@@ -29,11 +33,12 @@ class Crm::Caixas::Gravador
   end
 
   def perform
-    validar!
     ActiveRecord::Base.transaction do
+      validar!
+      funis_retirados = gravar_vinculos!
       gravar_configuracao!
-      gravar_vinculos!
       gravar_acessos!
+      expirar_sugestoes!(funis_retirados)
     end
   end
 
@@ -44,13 +49,38 @@ class Crm::Caixas::Gravador
     raise Invalida, erro if erro
   end
 
-  def primeiro_erro
-    return 'crm.caixas.funil_invalido' unless (pipeline_ids - funis_da_conta.map(&:id)).empty?
-    return 'crm.caixas.modo_invalido' unless modos_validos.include?(modo)
-    return 'crm.caixas.etapa_invalida' if um_funil? && etapa.nil?
-    return 'crm.caixas.pessoa_invalida' unless (pessoas.keys - agentes.keys).empty?
+  # Na ordem: o primeiro que falhar é o código devolvido à tela.
+  VALIDACOES = {
+    'crm.caixas.funil_invalido' => :funil_de_fora?,
+    'crm.caixas.modo_invalido' => :modo_invalido?,
+    'crm.caixas.etapa_invalida' => :etapa_invalida?,
+    'crm.caixas.pessoa_invalida' => :pessoa_de_fora?,
+    'crm.caixas.legado_pendente' => :legado_sem_escolha?,
+    'crm.caixas.sem_triagem' => :falta_triagem?
+  }.freeze
 
-    'crm.caixas.sem_triagem' if falta_triagem?
+  def primeiro_erro
+    VALIDACOES.find { |_codigo, regra| send(regra) }&.first
+  end
+
+  def funil_de_fora?
+    (pipeline_ids - funis_da_conta.map(&:id)).any?
+  end
+
+  def modo_invalido?
+    modos_validos.exclude?(modo)
+  end
+
+  def etapa_invalida?
+    um_funil? && etapa.nil?
+  end
+
+  def pessoa_de_fora?
+    (pessoas.keys - agentes.keys).any?
+  end
+
+  def legado_sem_escolha?
+    legado? && ESCOLHAS_DO_LEGADO.exclude?(@dados[:legado].to_s)
   end
 
   def modos_validos
@@ -66,8 +96,15 @@ class Crm::Caixas::Gravador
     agentes.keys.none? { |user_id| triagem?(user_id) }
   end
 
+  def setting
+    @setting ||= @account.crm_inbox_settings.find_or_initialize_by(inbox: @inbox)
+  end
+
+  def legado?
+    setting.persisted? && setting.crm_enabled? && setting.assigned_only?
+  end
+
   def gravar_configuracao!
-    setting = @account.crm_inbox_settings.find_or_initialize_by(inbox: @inbox)
     setting.update!(
       crm_enabled: pipeline_ids.any?,
       default_pipeline_id: um_funil? ? pipeline_ids.first : nil,
@@ -78,17 +115,43 @@ class Crm::Caixas::Gravador
     )
   end
 
+  # Devolve os funis que saíram da caixa.
   def gravar_vinculos!
-    vinculos = @account.crm_pipeline_inboxes.where(inbox_id: @inbox.id)
-    return vinculos.find_each { |vinculo| vinculo.update!(auto_create_card: false) } if pipeline_ids.empty?
+    vinculos = @account.crm_pipeline_inboxes.where(inbox_id: @inbox.id, pipeline_id: funis_da_conta.map(&:id))
+    return desligar_vinculos!(vinculos) if pipeline_ids.empty?
 
-    vinculos.where.not(pipeline_id: pipeline_ids).destroy_all
-    pipeline_ids.each do |pipeline_id|
-      vinculo = vinculos.find_or_initialize_by(pipeline_id: pipeline_id, account_id: @account.id)
-      vinculo.assign_attributes(auto_create_card: um_funil? && modo == 'chegou', default_stage_id: um_funil? ? etapa.id : nil)
-      vinculo.created_by ||= @user
-      vinculo.save!
-    end
+    retirados = vinculos.where.not(pipeline_id: pipeline_ids)
+    ids_retirados = retirados.pluck(:pipeline_id)
+    retirados.destroy_all
+    pipeline_ids.each { |pipeline_id| gravar_vinculo!(vinculos, pipeline_id) }
+    ids_retirados
+  end
+
+  # Caixa sem funil sai do CRM: os vínculos ficam, com a criação desligada. Nenhum funil saiu de fato.
+  def desligar_vinculos!(vinculos)
+    vinculos.find_each { |vinculo| vinculo.update!(auto_create_card: false) }
+    []
+  end
+
+  def gravar_vinculo!(vinculos, pipeline_id)
+    vinculo = vinculos.find_or_initialize_by(pipeline_id: pipeline_id, account_id: @account.id)
+    vinculo.assign_attributes(auto_create_card: um_funil? && modo == 'chegou', default_stage_id: um_funil? ? etapa.id : nil)
+    vinculo.created_by ||= @user
+    vinculo.save!
+  end
+
+  # Sugestão de assunto que esperava resposta num funil que saiu da caixa não pode mais ser aceita: sai da tela,
+  # como quando a caixa deixa de sugerir (#1221).
+  def expirar_sugestoes!(funis_retirados)
+    return if funis_retirados.empty?
+
+    pendentes = Crm::SubjectDecision.suggested.where(account_id: @account.id, pipeline_id: funis_retirados,
+                                                     conversation_id: @inbox.conversations.select(:id))
+    conversation_ids = pendentes.distinct.pluck(:conversation_id)
+    return if conversation_ids.empty?
+
+    pendentes.update_all(state: 'expired', updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+    @account.conversations.where(id: conversation_ids).find_each { |conversation| Crm::Subjects::Notifier.notify(conversation) }
   end
 
   def gravar_acessos!
@@ -103,7 +166,7 @@ class Crm::Caixas::Gravador
     access = Crm::InboxAgentAccess.find_or_initialize_by(account_id: @account.id, inbox_id: @inbox.id, user_id: user_id)
     access.update!(all_pipelines: todos_os_funis?(user_id), triage: triagem?(user_id), only_own: so_as_suas?(user_id))
     desejados = todos_os_funis?(user_id) ? [] : funis_da_pessoa(user_id)
-    access.agent_pipelines.where.not(pipeline_id: desejados).destroy_all
+    access.agent_pipelines.where(pipeline_id: funis_da_conta.map(&:id)).where.not(pipeline_id: desejados).destroy_all
     (desejados - access.agent_pipelines.pluck(:pipeline_id)).each do |pipeline_id|
       access.agent_pipelines.create!(account_id: @account.id, pipeline_id: pipeline_id)
     end
@@ -153,7 +216,8 @@ class Crm::Caixas::Gravador
 
     @etapa ||= begin
       stages = funis_da_conta.find { |pipeline| pipeline.id == pipeline_ids.first }.stages.order(:position, :id)
-      stages.find_by(id: @dados[:default_stage_id]) || stages.first
+      # Etapa de outro funil é recusada; sem etapa, a primeira.
+      @dados[:default_stage_id].present? ? stages.find_by(id: @dados[:default_stage_id]) : stages.first
     end
   end
 

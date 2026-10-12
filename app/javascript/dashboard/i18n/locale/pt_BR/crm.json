@@ -3768,7 +3768,7 @@
     "PESSOAS": {
       "EXPLICA": "Quem está na caixa se define em Configurações → Caixas de entrada.",
       "TODOS_TUDO": "Todos cuidam de tudo",
-      "LEGADO": "Hoje, nesta caixa, cada pessoa só vê as conversas atribuídas a ela. Quer manter assim?",
+      "LEGADO": "Hoje, nesta caixa, cada pessoa só vê as conversas atribuídas a ela. Quer manter assim ou usar o que você marcar abaixo?",
       "LEGADO_MANTER": "Manter assim",
       "FALTA_TRIAGEM": "Ninguém vai ver as conversas que ainda não têm assunto. Marque “Sem assunto” para pelo menos uma pessoa.",
       "FALTA_TRIAGEM_CURTO": "Marque “Sem assunto” para alguém.",
@@ -3780,7 +3780,9 @@
       "SO_AS_QUE_ATENDE": "Só as que atende",
       "NAO_VE": "Não vê nada",
       "RODIZIO": "Quem cuida de um assunto recebe as conversas novas dele, um de cada vez.",
-      "SO_AS_QUE_ATENDE_EXPLICA": "“Só as que atende”: conversas em que a pessoa é atendente, participa ou é dona do card."
+      "SO_AS_QUE_ATENDE_EXPLICA": "“Só as que atende”: conversas em que a pessoa é atendente, participa ou é dona do card.",
+      "LEGADO_MUDAR": "Usar o que eu marcar",
+      "LEGADO_CURTO": "Escolha se cada pessoa continua vendo só as atribuídas."
     },
     "EDITOR": {
       "ERRO": "Não deu para abrir esta caixa agora.",

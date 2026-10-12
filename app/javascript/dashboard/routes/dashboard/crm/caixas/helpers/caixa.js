@@ -48,6 +48,7 @@ export const paraSalvar = form => ({
   default_stage_id:
     form.pipeline_ids.length === 1 ? form.default_stage_id : null,
   modo: form.pipeline_ids.length ? form.modo : 'off',
+  ...(form.legado ? { legado: form.legado } : {}),
   people: agentes(form).map(pessoa => ({
     id: pessoa.id,
     triage: pessoa.triage,
@@ -68,6 +69,9 @@ export const faltaTriagem = caixa =>
 // "Só as que atende" é oferecida, nunca feita sozinha.
 export const legadoPendente = caixa =>
   caixa.crm_enabled && caixa.visibility_mode === 'assigned_only';
+
+// Na tela: a caixa é antiga e ninguém escolheu ainda entre manter e mudar.
+export const faltaEscolherLegado = form => legadoPendente(form) && !form.legado;
 
 export const cuidaDoFunil = (pessoa, funilId) =>
   pessoa.administrator || pessoa.pipeline_ids.includes(funilId);

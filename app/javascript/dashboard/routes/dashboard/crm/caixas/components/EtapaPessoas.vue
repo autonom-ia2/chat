@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import { corDoFunil } from '../helpers/caixa';
+import { aoTeclarNoGrupo } from '../helpers/setas';
 
 // #1149 — etapa 2: quem cuida do quê. Para cada pessoa da caixa, de quais
 // assuntos ela cuida (inclusive as conversas ainda sem assunto) e se vê todas
@@ -15,9 +16,11 @@ const props = defineProps({
   faltaTriagem: { type: Boolean, default: false },
   // R6: caixa ainda em "Agente vê apenas atribuídos".
   legado: { type: Boolean, default: false },
+  // 'manter', 'mudar' ou null enquanto a pessoa não escolheu.
+  escolha: { type: String, default: null },
 });
 
-const emit = defineEmits(['manterLegado']);
+const emit = defineEmits(['escolherLegado']);
 const pessoas = defineModel('pessoas', { type: Array, required: true });
 
 const atualizar = (pessoa, mudanca) => {
@@ -78,13 +81,29 @@ const chipClasse = ativo =>
       <p class="mb-0 flex-1 text-[0.9375rem] text-n-slate-12">
         {{ $t('CRM_CAIXAS.PESSOAS.LEGADO') }}
       </p>
-      <Button
-        :label="$t('CRM_CAIXAS.PESSOAS.LEGADO_MANTER')"
-        slate
-        faded
-        class="!min-h-11 shrink-0"
-        @click="emit('manterLegado')"
-      />
+      <div class="flex shrink-0 flex-wrap gap-2">
+        <button
+          v-for="opcao in ['manter', 'mudar']"
+          :key="opcao"
+          type="button"
+          :data-legado-escolha="opcao"
+          :aria-pressed="escolha === opcao"
+          class="inline-flex min-h-11 items-center gap-2 rounded-xl border border-solid px-3 text-[0.9375rem] font-medium"
+          :class="chipClasse(escolha === opcao)"
+          @click="emit('escolherLegado', opcao)"
+        >
+          <span
+            v-if="escolha === opcao"
+            class="i-lucide-check size-4"
+            aria-hidden="true"
+          />
+          {{
+            opcao === 'manter'
+              ? $t('CRM_CAIXAS.PESSOAS.LEGADO_MANTER')
+              : $t('CRM_CAIXAS.PESSOAS.LEGADO_MUDAR')
+          }}
+        </button>
+      </div>
     </div>
 
     <div class="flex flex-wrap items-center justify-between gap-3">
@@ -142,6 +161,11 @@ const chipClasse = ativo =>
             role="radiogroup"
             :aria-label="$t('CRM_CAIXAS.PESSOAS.VE', { nome: pessoa.name })"
             class="flex w-full shrink-0 rounded-xl bg-n-alpha-2 p-1 sm:w-auto"
+            @keydown="
+              aoTeclarNoGrupo($event, [false, true], pessoa.only_own, valor =>
+                atualizar(pessoa, { only_own: valor })
+              )
+            "
           >
             <button
               v-for="opcao in [false, true]"
@@ -149,6 +173,7 @@ const chipClasse = ativo =>
               type="button"
               role="radio"
               :aria-checked="pessoa.only_own === opcao"
+              :tabindex="pessoa.only_own === opcao ? 0 : -1"
               class="min-h-10 flex-1 whitespace-nowrap rounded-lg px-3 text-[0.9375rem] font-medium"
               :class="
                 pessoa.only_own === opcao

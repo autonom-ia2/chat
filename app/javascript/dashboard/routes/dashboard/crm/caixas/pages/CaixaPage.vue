@@ -14,6 +14,7 @@ import EtapaConfira from '../components/EtapaConfira.vue';
 import {
   faltaTriagem,
   funisDaCaixa,
+  faltaEscolherLegado,
   legadoPendente,
   paraFormulario,
   paraSalvar,
@@ -71,9 +72,17 @@ watch(umFunil, unico => {
   const { modo } = form.value;
   if (unico && modo !== 'off') form.value.modo = 'chegou';
   if (!unico && modo === 'chegou') form.value.modo = 'auto';
-  if (unico && !form.value.default_stage_id) {
-    form.value.default_stage_id = funisMarcados.value[0].stages[0]?.id || null;
-  }
+});
+
+// Com um funil só, a etapa inicial precisa ser dele: trocar de funil volta para
+// a primeira etapa do novo.
+watch(funisMarcados, marcados => {
+  if (!form.value || marcados.length !== 1) return;
+  const { stages } = marcados[0];
+  const daquiMesmo = stages.some(
+    stage => stage.id === form.value.default_stage_id
+  );
+  if (!daquiMesmo) form.value.default_stage_id = stages[0]?.id || null;
 });
 
 // Funil novo na caixa entra para quem já cuidava de todos os funis dela (o
@@ -118,6 +127,9 @@ const bloqueio = computed(() => {
   if (etapa.value === 2 && semTriagem.value) {
     return t('CRM_CAIXAS.PESSOAS.FALTA_TRIAGEM_CURTO');
   }
+  if (etapa.value >= 2 && faltaEscolherLegado(form.value)) {
+    return t('CRM_CAIXAS.PESSOAS.LEGADO_CURTO');
+  }
   return '';
 });
 
@@ -136,15 +148,18 @@ const continuar = () => {
 const voltarParaLista = (query = {}) =>
   router.push({ name: 'crm_caixas', params: route.params, query });
 
-const manterLegado = () => {
+// R6: manter deixa cada agente em "Só as que atende" (o que vê hoje); mudar
+// vale o que estiver marcado. A escolha vai junto no salvamento.
+const escolherLegado = escolha => {
+  form.value.legado = escolha;
+  if (escolha !== 'manter') return;
   form.value.people = form.value.people.map(pessoa =>
     pessoa.administrator ? pessoa : { ...pessoa, only_own: true }
   );
-  form.value.visibility_mode = 'all_inbox_cards';
 };
 
 const salvar = async () => {
-  if (semTriagem.value) {
+  if (semTriagem.value || faltaEscolherLegado(form.value)) {
     ir(2);
     return;
   }
@@ -243,7 +258,8 @@ const salvar = async () => {
             :todos-os-funis="funis"
             :falta-triagem="semTriagem"
             :legado="legadoPendente(form)"
-            @manter-legado="manterLegado"
+            :escolha="form.legado || null"
+            @escolher-legado="escolherLegado"
           />
           <EtapaSozinho
             v-else-if="etapa === 3"

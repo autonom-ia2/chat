@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue';
+import { aoTeclarNoGrupo } from '../helpers/setas';
 
 // #1149 — etapa 3: o que o sistema faz sozinho quando chega mensagem. Com
 // vários funis, o card nasce quando o assunto é identificado (R9/R17); com um
@@ -29,6 +30,7 @@ const chave = opcao => opcao.toUpperCase();
     class="flex flex-col gap-3"
     role="radiogroup"
     :aria-label="$t('CRM_CAIXAS.ETAPAS.SOZINHO')"
+    @keydown="aoTeclarNoGrupo($event, opcoes, modo, valor => (modo = valor))"
   >
     <div
       v-for="opcao in opcoes"
@@ -40,6 +42,7 @@ const chave = opcao => opcao.toUpperCase();
         type="button"
         role="radio"
         :aria-checked="modo === opcao"
+        :tabindex="modo === opcao ? 0 : -1"
         :data-modo="opcao"
         class="flex min-h-11 w-full items-start gap-4 p-4 text-start"
         @click="modo = opcao"

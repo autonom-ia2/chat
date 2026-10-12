@@ -1,4 +1,5 @@
 import {
+  faltaEscolherLegado,
   faltaTriagem,
   mudancas,
   paraFormulario,
@@ -91,5 +92,14 @@ describe('caixa helpers', () => {
     expect(mudancas(antes, paraFormulario(legado), FUNIS, opcoes)).toEqual([
       { chave: 'PESSOA_TODAS', valores: { nome: 'Ana' } },
     ]);
+  });
+
+  it('asks for an explicit choice on an "assigned only" inbox and sends it', () => {
+    const form = paraFormulario(caixa({ visibility_mode: 'assigned_only' }));
+    expect(faltaEscolherLegado(form)).toBe(true);
+    form.legado = 'manter';
+    expect(faltaEscolherLegado(form)).toBe(false);
+    expect(paraSalvar(form).legado).toBe('manter');
+    expect(paraSalvar(paraFormulario(caixa()))).not.toHaveProperty('legado');
   });
 });

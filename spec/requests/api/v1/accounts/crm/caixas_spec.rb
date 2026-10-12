@@ -123,14 +123,74 @@ RSpec.describe 'CRM Caixas no CRM API', type: :request do
     expect(response.parsed_body.dig('error', 'code')).to eq('crm.caixas.funil_invalido')
   end
 
-  it 'turns an "assigned only" inbox into per-person rows when the admin keeps it that way' do
-    account.crm_inbox_settings.create!(inbox: inbox, crm_enabled: true, visibility_mode: :assigned_only,
-                                       default_pipeline: vendas.first)
-    salvar(pipeline_ids: [vendas.first.id], modo: 'off',
-           people: [pessoa(ana, triage: true, pipeline_ids: [vendas.first.id], only_own: true),
-                    pessoa(leo, triage: true, pipeline_ids: [vendas.first.id], only_own: true)])
+  context 'when the inbox is still on "assigned only" (R6)' do
+    before do
+      account.crm_inbox_settings.create!(inbox: inbox, crm_enabled: true, visibility_mode: :assigned_only,
+                                         default_pipeline: vendas.first)
+    end
 
-    expect(account.crm_inbox_settings.find_by(inbox: inbox).visibility_mode).to eq('all_inbox_cards')
-    expect([acesso(ana), acesso(leo)].map(&:only_own)).to eq([true, true])
+    it 'refuses to save without an explicit choice, so nobody starts seeing more by accident' do
+      salvar(pipeline_ids: [vendas.first.id], modo: 'off', people: [pessoa(ana, triage: true, pipeline_ids: [vendas.first.id])])
+
+      expect(response.parsed_body.dig('error', 'code')).to eq('crm.caixas.legado_pendente')
+      expect(account.crm_inbox_settings.find_by(inbox: inbox).visibility_mode).to eq('assigned_only')
+    end
+
+    it 'keeps each agent on "only theirs" when the admin keeps it that way' do
+      salvar(pipeline_ids: [vendas.first.id], modo: 'off', legado: 'manter',
+             people: [pessoa(ana, triage: true, pipeline_ids: [vendas.first.id], only_own: true),
+                      pessoa(leo, triage: true, pipeline_ids: [vendas.first.id], only_own: true)])
+
+      expect(account.crm_inbox_settings.find_by(inbox: inbox).visibility_mode).to eq('all_inbox_cards')
+      expect([acesso(ana), acesso(leo)].map(&:only_own)).to eq([true, true])
+    end
+
+    it 'uses what was selected when the admin chooses to change' do
+      salvar(pipeline_ids: [vendas.first.id], modo: 'off', legado: 'mudar',
+             people: [pessoa(ana, triage: true, pipeline_ids: [vendas.first.id])])
+
+      expect(account.crm_inbox_settings.find_by(inbox: inbox).visibility_mode).to eq('all_inbox_cards')
+      expect(acesso(ana)).to be_nil
+    end
+  end
+
+  it 'leaves links and grants of archived pipelines untouched' do
+    arquivado = create_crm_pipeline(account: account, user: admin, name: 'Antigo').first
+    account.crm_pipeline_inboxes.create!(inbox: inbox, pipeline: arquivado)
+    access = Crm::InboxAgentAccess.create!(account: account, inbox: inbox, user: ana, all_pipelines: false)
+    access.agent_pipelines.create!(account: account, pipeline: arquivado)
+    arquivado.update!(status: :archived)
+
+    salvar(pipeline_ids: [vendas.first.id, pos_venda.first.id], modo: 'off',
+           people: [pessoa(ana, triage: true, pipeline_ids: [vendas.first.id])])
+
+    expect(response).to have_http_status(:ok)
+    expect(account.crm_pipeline_inboxes.where(inbox: inbox, pipeline: arquivado)).to exist
+    expect(access.agent_pipelines.reload.pluck(:pipeline_id)).to contain_exactly(arquivado.id, vendas.first.id)
+  end
+
+  it 'expires pending subject suggestions of a pipeline taken out of the inbox' do
+    salvar(pipeline_ids: [vendas.first.id, pos_venda.first.id], modo: 'suggest',
+           people: [pessoa(ana, triage: true, pipeline_ids: [vendas.first.id, pos_venda.first.id])])
+    conversation = create_crm_conversation(account: account, inbox: inbox, contact: account.contacts.create!(name: 'Cliente'))
+    decision = Crm::SubjectDecision.create!(account: account, conversation: conversation, mode: 'suggest', action: 'create',
+                                            state: 'suggested', pipeline: pos_venda.first, title: 'Troca')
+
+    salvar(pipeline_ids: [vendas.first.id], modo: 'chegou', people: [])
+
+    expect(decision.reload.state).to eq('expired')
+  end
+
+  it 'refuses a start stage from another pipeline, a body without caixa and an inbox of another account' do
+    salvar(pipeline_ids: [vendas.first.id], default_stage_id: pos_venda.last.id, modo: 'chegou', people: [])
+    expect(response.parsed_body.dig('error', 'code')).to eq('crm.caixas.etapa_invalida')
+
+    put "#{url}/#{inbox.id}", params: { pipeline_ids: [] }, headers: auth_headers(admin), as: :json
+    expect(response).to have_http_status(:unprocessable_entity)
+
+    other_account, other_admin = create_account_and_user
+    other_inbox = create_crm_inbox(account: other_account, members: [other_admin])
+    get "#{url}/#{other_inbox.id}", headers: auth_headers(admin)
+    expect(response).to have_http_status(:not_found)
   end
 end
