@@ -49,6 +49,17 @@ RSpec.describe LigarJornadaDeAgentesPorPadrao do
     expect(com.feature_enabled?('crm')).to be(true)
   end
 
+  it 'conta antiga com dado inválido não derruba a migration e é ligada', :aggregate_failures do
+    invalida = create(:account)
+    invalida.disable_features!(feature)
+    invalida.update_columns(name: '') # rubocop:disable Rails/SkipsModelValidations
+    expect(invalida.reload).not_to be_valid
+
+    expect { described_class.new.up }.not_to raise_error
+    expect(invalida.reload.feature_enabled?(feature)).to be(true)
+    expect(invalida.name).to eq('')
+  end
+
   it 'conta criada depois nasce com a jornada' do
     described_class.new.up
 
