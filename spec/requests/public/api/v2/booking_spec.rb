@@ -264,6 +264,30 @@ RSpec.describe 'Public::Api::V2::Booking', type: :request do
       expect_not_found
     end
 
+    it 'sem funil de destino: o aviso vem sem formulário e o pedido responde 404, em vez de falhar no envio' do
+      profile.update!(default_pipeline_id: nil, default_stage_id: nil)
+      world.pipeline.update!(status: :archived)
+
+      get base
+      expect(body).to include('paused' => true)
+      expect(body.keys).not_to include('form_token')
+
+      expect { ask_contact }.not_to change(Crm::Card, :count)
+      expect_not_found
+    end
+
+    it 'rascunho nunca publicado conta como pausada e também recebe o pedido' do
+      draft = create_booking_profile(account: account, host: world.host, pipeline: world.pipeline, stage: world.stage,
+                                     enabled: false, title: 'Rascunho')
+
+      get base(draft.slug)
+      expect(body).to include('paused' => true)
+      expect(body.keys).to include('form_token')
+
+      ask_contact(draft.slug)
+      expect(response).to have_http_status(:created)
+    end
+
     it 'a prévia continua sem receber pedido' do
       preview = Crm::BookingV2::Tokens.generate('preview', { 'p' => profile.id }, expires_in: 1.hour)
 

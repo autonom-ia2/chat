@@ -11,7 +11,9 @@
 # - `readable?`: pode mostrar dados e horários (publicada ou em prévia) e o responsável ainda pode atender.
 # - `bookable?`: pode reservar. A prévia NUNCA reserva: exige página e link publicados.
 # - `contactable?`: pode receber pedido de contato (RA-17, #1401): onde se reserva e também na página pausada, para o
-#   cliente não ficar sem saída; o responsável ainda precisa poder atender. A prévia também não recebe.
+#   cliente não ficar sem saída. Exige responsável que ainda atende e funil/etapa de destino (o pedido vira card).
+#   A prévia de página despublicada não recebe; a de página publicada recebe, como já recebia antes. Rascunho nunca
+#   publicado conta como pausada: o modelo não distingue os dois e o cliente vê o mesmo aviso de pausa.
 #
 # `time_zone`: fuso em que a página mostra horários. A página nova valida o fuso ao salvar; um inválido gravado antes
 # disso levanta `InvalidTimeZone` em vez de cair em outro fuso em silêncio (RA-08). Sem fuso gravado vale o da conta.
@@ -67,7 +69,7 @@ class Crm::BookingV2::PublicPage
   end
 
   def contactable?
-    (published? || paused?) && host_eligible?
+    (published? || paused?) && host_eligible? && pipeline_ready?
   end
 
   def host
@@ -88,6 +90,10 @@ class Crm::BookingV2::PublicPage
   end
 
   private
+
+  def pipeline_ready?
+    ::Crm::BookingV2::Booker.pipeline_target(profile).values.all?(&:present?)
+  end
 
   def preview_for?(token)
     return false if profile.blank?
