@@ -147,6 +147,13 @@ const lista = computed(() =>
         <h3 class="mb-0 text-base font-semibold text-n-slate-12">
           {{ $t('CRM_CAIXAS.CONFIRA.RODIZIO') }}
         </h3>
+        <p
+          v-if="form.agent_bot"
+          class="mb-0 flex items-center gap-2 text-[0.9375rem] text-n-slate-12"
+        >
+          <span class="i-lucide-bot size-4" aria-hidden="true" />
+          {{ $t('CRM_CAIXAS.CONFIRA.ROBO', { nome: form.agent_bot.name }) }}
+        </p>
         <ul class="m-0 flex list-none flex-col gap-2 p-0">
           <li
             v-for="item in rodizio"

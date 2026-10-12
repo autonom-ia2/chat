@@ -259,6 +259,7 @@ const salvar = async () => {
             :falta-triagem="semTriagem"
             :legado="legadoPendente(form)"
             :escolha="form.legado || null"
+            :robo="form.agent_bot || null"
             @escolher-legado="escolherLegado"
           />
           <EtapaSozinho

@@ -3677,7 +3677,8 @@
       "CONECTAR": "Connect an inbox",
       "LIGADAS": "{n} inbox in CRM | {n} inboxes in CRM",
       "FORA": "{n} outside CRM | {n} outside CRM",
-      "ADMIN": "Administrators see every conversation in every inbox."
+      "ADMIN": "Administrators see every conversation in every inbox.",
+      "VOLTAR": "Kanban"
     },
     "CARTAO": {
       "NO_CRM": "In CRM",
@@ -3692,7 +3693,8 @@
       "SEM_ASSUNTO": "· no subject: {nomes}",
       "SOZINHO": "What happens automatically",
       "ALTERAR": "Change",
-      "LIGAR": "Add to CRM"
+      "LIGAR": "Add to CRM",
+      "ROBO": "{nome} (AI agent) answers first"
     },
     "MODO_RESUMO": {
       "AUTO": "The system creates the card when it understands the subject.",
@@ -3752,7 +3754,8 @@
       "MUDA": "What changes when you save",
       "NADA_MUDOU": "Nothing changed.",
       "SAI_DO_CRM": "With no pipeline selected, this inbox leaves the CRM. Its conversations stop becoming cards.",
-      "RODIZIO_NOME": "{nome}:"
+      "RODIZIO_NOME": "{nome}:",
+      "ROBO": "{nome}, the AI agent, answers first. Then the people below."
     },
     "MUDA": {
       "FUNIL_ENTRA": "{funil} starts coming in through this inbox.",
@@ -3786,7 +3789,8 @@
       "RODIZIO": "Whoever handles a subject gets its new conversations, one at a time.",
       "SO_AS_QUE_ATENDE_EXPLICA": "“Only theirs”: conversations where the person is the agent, a participant or the card owner.",
       "LEGADO_MUDAR": "Use what I select",
-      "LEGADO_CURTO": "Choose whether each person keeps seeing only assigned conversations."
+      "LEGADO_CURTO": "Choose whether each person keeps seeing only assigned conversations.",
+      "ROBO": "{nome}, this inbox’s AI agent, answers first. When the conversation goes to a person, what is selected here applies."
     },
     "EDITOR": {
       "ERRO": "We couldn't open this inbox right now.",

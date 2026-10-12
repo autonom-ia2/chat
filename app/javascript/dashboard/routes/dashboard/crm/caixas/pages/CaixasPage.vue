@@ -42,6 +42,10 @@ const alterar = caixa =>
     params: { ...route.params, inboxId: caixa.inbox.id },
   });
 
+// Quem chega pelo Kanban (Configurar → Configurar caixas de entrada) volta para ele.
+const voltarAoKanban = () =>
+  router.push({ name: 'crm_kanban_index', params: route.params });
+
 const conectarCaixa = () =>
   router.push({ name: 'settings_inbox_new', params: route.params });
 </script>
@@ -52,6 +56,18 @@ const conectarCaixa = () =>
       <div
         class="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 pb-28 pt-8 md:px-8 md:py-10"
       >
+        <button
+          type="button"
+          data-voltar
+          class="-ms-2 -mb-4 inline-flex min-h-11 items-center gap-1.5 self-start rounded-lg px-2 text-[0.9375rem] font-medium text-n-slate-11 hover:bg-n-alpha-2 hover:text-n-slate-12"
+          @click="voltarAoKanban"
+        >
+          <span
+            class="i-lucide-arrow-left size-4 rtl:rotate-180"
+            aria-hidden="true"
+          />
+          {{ $t('CRM_CAIXAS.LISTA.VOLTAR') }}
+        </button>
         <header class="flex flex-col gap-2">
           <h1
             class="mb-0 text-3xl font-bold tracking-tight text-n-slate-12 md:text-4xl"

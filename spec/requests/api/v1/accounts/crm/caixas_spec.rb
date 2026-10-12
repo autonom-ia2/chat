@@ -47,6 +47,20 @@ RSpec.describe 'CRM Caixas no CRM API', type: :request do
     expect(response.parsed_body.dig('payload', 'funis').pluck('name')).to include('Vendas')
   end
 
+  it 'shows the AI agent that answers first in the inbox, the same one the card shows' do
+    bot = AgentBot.create!(name: 'Clara', account: account)
+    AgentBotInbox.create!(inbox: inbox, agent_bot: bot, account: account)
+
+    get url, headers: auth_headers(admin)
+
+    caixa = response.parsed_body.dig('payload', 'caixas').find { |item| item.dig('inbox', 'id') == inbox.id }
+    expect(caixa['agent_bot']).to eq('id' => bot.id, 'name' => 'Clara')
+
+    inbox.agent_bot_inbox.update!(status: :inactive)
+    get "#{url}/#{inbox.id}", headers: auth_headers(admin)
+    expect(response.parsed_body.dig('payload', 'caixa', 'agent_bot')).to be_nil
+  end
+
   it 'answers 404 and writes nothing when the account does not have the flag' do
     account.disable_features!('crm_configurar_caixas')
 
