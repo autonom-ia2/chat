@@ -193,3 +193,16 @@ A Entrega 3 precisa de uma conta com **mais de um funil** para o piloto do acess
 - **"Só as suas" e só triagem (11/10, Rodrigo):** quem não tem funil nenhum na caixa mexe nos cards que são dela
   (dona do card ou atendente da conversa principal): edita, fecha, troca de etapa e põe lembrete, sem mudar de funil e
   sem mexer no card dos outros. Vira dona pela conversa que atende (sincronização, vínculo e card criado da conversa).
+
+## 13. Decisões de 12/10/2026 (Rodrigo) — distribuição (#1150)
+
+- **Saída da triagem (R10):** quando nasce o primeiro card e quem atende tem acesso restrito na caixa, não é "Só as
+  suas" e não tem o funil do card, a conversa sai dela e vai para o rodízio de quem tem o funil; o card fica com quem
+  assumir. Quem tem o funil continua dona e atendente. Sem rodízio na caixa, a conversa fica "Não atribuída" para quem
+  tem o funil. O mesmo vale quando o card muda para um funil que a pessoa não tem. (`Crm::Access::TriageExit`)
+- **Card novo não transfere:** o dono de um card aberto que não atende a conversa entra como participante, se for
+  membro da caixa e tiver o funil do card.
+- **Outro canal (R13):** cliente com card aberto que escreve por outro canal tem a conversa ligada ao card aberto mais
+  recente e entregue ao dono dele, sem passar pela triagem; card sem dono segue a triagem.
+- **Lista de conversas:** filtro "Funil" (inclui "Sem assunto") e o item do menu passa a se chamar "Participando".
+  Protótipo em tela real antes do código.
