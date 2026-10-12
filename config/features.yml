@@ -338,3 +338,10 @@
   display_name: Modelos do WhatsApp (criar e gerenciar na Meta)
   enabled: false
   column: feature_flags_ext_1
+
+# Caixas no CRM (#1149): a tela nova CRM → Caixas no CRM no lugar da gaveta Configurar caixas. Liga a rota, o botão do
+# Kanban e a API crm/caixas (sem a flag, 404); desligada, a gaveta antiga continua. Piloto por conta no Super Admin.
+- name: crm_configurar_caixas
+  display_name: Caixas no CRM (tela nova)
+  enabled: false
+  column: feature_flags_ext_1
