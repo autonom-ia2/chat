@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import { useEmitter } from 'dashboard/composables/emitter';
@@ -1003,7 +1004,17 @@ const loadInboxSettings = async () => {
   }
 };
 
+// Caixas no CRM (#1149): com a flag da conta, leva à tela nova; sem ela, a
+// gaveta antiga, como sempre.
 const openInboxSettingsDrawer = async () => {
+  const account = getAccount.value(currentAccountId.value);
+  if (account?.features?.[FEATURE_FLAGS.CRM_CONFIGURAR_CAIXAS] === true) {
+    router.push({
+      name: 'crm_caixas',
+      params: { accountId: currentAccountId.value },
+    });
+    return;
+  }
   showInboxSettingsDrawer.value = true;
   await loadInboxSettings();
 };

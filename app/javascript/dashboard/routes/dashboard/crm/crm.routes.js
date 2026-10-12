@@ -10,6 +10,8 @@ const CrmKanbanPage = () => import('./pages/CrmKanbanPage.vue');
 const CrmDashboardPage = () => import('./pages/CrmDashboardPage.vue');
 const CrmAiUsagePage = () => import('./pages/CrmAiUsagePage.vue');
 const CrmSlaPage = () => import('./pages/CrmSlaPage.vue');
+const CaixasPage = () => import('./caixas/pages/CaixasPage.vue');
+const CaixaPage = () => import('./caixas/pages/CaixaPage.vue');
 const CrmIntegrationTokensPage = () =>
   import('./pages/CrmIntegrationTokensPage.vue');
 // Journey on: multichannel overview (#1007); off: the old e-mail report page, unchanged.
@@ -56,7 +58,28 @@ const ensureCrmAiEnabled = (to, _from, next) => {
   next({ name: 'home', params: to.params });
 };
 
+// Caixas no CRM (#1149): mesma permissão da gaveta antiga (quem gerencia os
+// funis), atrás da flag por conta crm_configurar_caixas.
+const caixasMeta = {
+  ...adminMeta,
+  featureFlag: FEATURE_FLAGS.CRM_CONFIGURAR_CAIXAS,
+};
+
 export const routes = [
+  {
+    path: frontendURL('accounts/:accountId/crm/caixas'),
+    name: 'crm_caixas',
+    meta: caixasMeta,
+    beforeEnter: ensureCrmEnabled,
+    component: CaixasPage,
+  },
+  {
+    path: frontendURL('accounts/:accountId/crm/caixas/:inboxId'),
+    name: 'crm_caixa',
+    meta: caixasMeta,
+    beforeEnter: ensureCrmEnabled,
+    component: CaixaPage,
+  },
   {
     path: frontendURL('accounts/:accountId/campaigns/links'),
     name: 'campaigns_tracked_links_index',

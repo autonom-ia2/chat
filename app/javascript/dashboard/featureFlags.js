@@ -8,6 +8,7 @@ export const FEATURE_FLAGS = {
   ADVANCED_ASSIGNMENT: 'advanced_assignment',
   AUTO_RESOLVE_CONVERSATIONS: 'auto_resolve_conversations',
   AUTOMATIONS: 'automations',
+  CRM_CONFIGURAR_CAIXAS: 'crm_configurar_caixas',
   CAMPAIGNS: 'campaigns',
   WHATSAPP_CAMPAIGNS: 'whatsapp_campaign',
   WHATSAPP_EMBEDDED_SIGNUP_FLOW: 'whatsapp_embedded_signup_inbox_creation',

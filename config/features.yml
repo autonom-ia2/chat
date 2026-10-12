@@ -331,3 +331,10 @@
   display_name: Base de clientes (leitura nova da planilha)
   enabled: false
   column: feature_flags_ext_1
+
+# Caixas no CRM (#1149): a tela nova CRM → Caixas no CRM no lugar da gaveta Configurar caixas. Liga só a rota e o
+# botão do Kanban; desligada, a gaveta antiga continua. Piloto por conta no Super Admin.
+- name: crm_configurar_caixas
+  display_name: Caixas no CRM (tela nova)
+  enabled: false
+  column: feature_flags_ext_1
