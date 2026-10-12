@@ -271,6 +271,11 @@ Rails.application.routes.draw do
                 post :improve_criteria
               end
             end
+            # Funil ainda não salvo (#1384): critério padrão e IA das etapas.
+            resource :stage_criteria, only: [], controller: 'stage_criteria' do
+              get :defaults
+              post :improve
+            end
             resources :stages, only: [:update, :destroy] do
               post :reorder, on: :collection
               resources :stage_automations, only: [:index, :create]

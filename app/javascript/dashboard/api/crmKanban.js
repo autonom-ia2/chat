@@ -324,6 +324,19 @@ class CrmKanbanAPI extends ApiClient {
     );
   }
 
+  // Funil ainda não salvo (#1384): critério padrão por nome de etapa e IA antes de salvar.
+  getStageCriteriaDefaults(names) {
+    return axios.get(`${this.url}/stage_criteria/defaults`, {
+      params: { names },
+    });
+  }
+
+  improveDraftStageCriteria(payload) {
+    return pollAiRequest(
+      axios.post(`${this.url}/stage_criteria/improve`, payload)
+    );
+  }
+
   getAiSettings(pipelineId) {
     return axios.get(`${this.url}/pipelines/${pipelineId}/ai_settings`);
   }

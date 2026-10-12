@@ -1,5 +1,6 @@
-import { mount } from '@vue/test-utils';
+import { flushPromises, mount } from '@vue/test-utils';
 import { ref } from 'vue';
+import Button from 'dashboard/components-next/button/Button.vue';
 import CrmPipelineDrawer from './CrmPipelineDrawer.vue';
 
 // The drawer pulls global config + permissions; stub them so we can mount it in
@@ -13,6 +14,11 @@ vi.mock('../composables/useCrmPermissions', () => ({
 }));
 vi.mock('dashboard/composables/useKeyboardEvents', () => ({
   useKeyboardEvents: () => {},
+}));
+vi.mock('dashboard/api/crmGoogleConversionFeed', () => ({
+  default: {
+    create: vi.fn().mockResolvedValue({ data: { url: 'https://feed/x' } }),
+  },
 }));
 
 // Fresh array + fresh objects every call: this is exactly what the Vuex board
@@ -91,38 +97,34 @@ describe('CrmPipelineDrawer form reset vs realtime churn', () => {
     expect(wrapper.vm.form.stages[0].name).toBe('Novo Editado');
   });
 
-  it('keeps order and delete actions labeled and automation separate from options', async () => {
+  it('keeps the open stage to name, sentence and color, with remove in the footer', async () => {
     const wrapper = mountDrawer();
     wrapper.vm.openStage(wrapper.vm.form.stages[1]);
     await wrapper.vm.$nextTick();
 
-    const options = wrapper.get('details');
-    expect(options.text()).toContain('CRM_KANBAN.PIPELINE_EDITOR.ORDER_LABEL');
-    expect(options.text()).toContain('CRM_KANBAN.PIPELINE_EDITOR.MOVE_BEFORE');
-    expect(options.text()).toContain('CRM_KANBAN.PIPELINE_EDITOR.MOVE_AFTER');
-    expect(options.text()).toContain(
-      'CRM_KANBAN.PIPELINE_EDITOR.DELETE_STATUS'
+    // #1384: uma decisão por bloco; a Meta foi para Anúncios e tirar, para o rodapé.
+    expect(wrapper.find('details').exists()).toBe(false);
+    expect(wrapper.text()).toContain('CRM_FUNIL.ETAPA.COR');
+    expect(wrapper.text()).not.toContain(
+      'CRM_KANBAN.PIPELINE_EDITOR.META_PROGRESS'
     );
-    expect(options.text()).not.toContain('CRM_KANBAN.STAGE_AUTOMATIONS');
-    expect(wrapper.text()).toContain('CRM_KANBAN.STAGE_AUTOMATIONS.OPEN');
+    expect(wrapper.get('footer [data-funil-tirar]').text()).toContain(
+      'CRM_FUNIL.ETAPA.TIRAR'
+    );
   });
 
-  it('moves the selected status with the visible order action', async () => {
-    const wrapper = mountDrawer();
-    wrapper.vm.openStage(wrapper.vm.form.stages[1]);
+  it('removes an unsaved stage from the footer and goes back', async () => {
+    const wrapper = mountDrawer({ mode: 'create', pipeline: null, stages: [] });
+    wrapper.vm.view = 'etapas';
+    const total = wrapper.vm.form.stages.length;
+    wrapper.vm.addStage();
     await wrapper.vm.$nextTick();
+    expect(wrapper.vm.view).toBe('stage');
 
-    const moveBefore = wrapper
-      .findAll('button')
-      .find(button =>
-        button.text().includes('CRM_KANBAN.PIPELINE_EDITOR.MOVE_BEFORE')
-      );
-    await moveBefore.trigger('click');
+    await wrapper.get('[data-funil-tirar]').trigger('click');
 
-    expect(wrapper.vm.form.stages.map(stage => stage.name)).toEqual([
-      'Em atendimento',
-      'Novo',
-    ]);
+    expect(wrapper.vm.form.stages).toHaveLength(total);
+    expect(wrapper.vm.view).toBe('etapas');
   });
 
   it('keeps the drawer open when AI settings fail to save', async () => {
@@ -162,8 +164,12 @@ describe('CrmPipelineDrawer website Pixel', () => {
 
   it('keeps only digits, up to 20, when the Pixel id is typed or pasted', async () => {
     const wrapper = mountDrawer({ pipeline: metaPipeline });
-    wrapper.vm.view = 'adjustments';
+    wrapper.vm.view = 'ads';
     await wrapper.vm.$nextTick();
+    // O código do site fica na tela do Facebook e Instagram.
+    await wrapper.get('[data-anuncio-alterar="facebook"]').trigger('click');
+    expect(wrapper.vm.view).toBe('ads-facebook');
+    await wrapper.get('[data-site]').trigger('click');
 
     const input = wrapper.get('input[inputmode="numeric"]');
     await input.setValue(' 2164 8826-6762 3689abc 12345678 ');
@@ -181,5 +187,184 @@ describe('CrmPipelineDrawer website Pixel', () => {
 
     const [[payload]] = wrapper.emitted('save');
     expect(payload.pipeline.meta_sync.pixel_id).toBeNull();
+  });
+});
+
+// #1384 — criar em dois passos, editar por partes e "Cancelar" que desfaz.
+describe('CrmPipelineDrawer journey', () => {
+  const principal = wrapper => wrapper.get('[data-funil-principal]');
+
+  it('creates in three steps: name, stages, then review', async () => {
+    const wrapper = mountDrawer({ mode: 'create', pipeline: null, stages: [] });
+    expect(wrapper.vm.view).toBe('nome');
+    expect(wrapper.find('[data-funil-nome]').exists()).toBe(true);
+    expect(principal(wrapper).text()).toContain('CRM_FUNIL.CONTINUAR');
+
+    await principal(wrapper).trigger('click');
+    expect(wrapper.vm.view).toBe('etapas');
+    expect(wrapper.find('[data-funil-nome]').exists()).toBe(false);
+
+    await principal(wrapper).trigger('click');
+
+    expect(wrapper.vm.view).toBe('confira');
+    expect(principal(wrapper).text()).toContain(
+      'CRM_KANBAN.PIPELINE_DRAWER.CREATE'
+    );
+    await principal(wrapper).trigger('click');
+    await flushPromises();
+    const [[payload]] = wrapper.emitted('save');
+    expect(payload.stages).toHaveLength(5);
+    expect(payload.pipeline.counts_as_sale).toBe(true);
+  });
+
+  it('switches to a ready-made template with its own stages', async () => {
+    const wrapper = mountDrawer({ mode: 'create', pipeline: null, stages: [] });
+    await wrapper.get('[data-modelo="ATENDIMENTO"]').trigger('click');
+
+    expect(wrapper.vm.form.stages.map(stage => stage.name)).toEqual([
+      'CRM_FUNIL.MODELOS.ATENDIMENTO.E1',
+      'CRM_FUNIL.MODELOS.ATENDIMENTO.E2',
+      'CRM_FUNIL.MODELOS.ATENDIMENTO.E3',
+      'CRM_FUNIL.MODELOS.ATENDIMENTO.E4',
+    ]);
+    expect(wrapper.vm.form.countsAsSale).toBe(false);
+    expect(wrapper.vm.form.name).toBe('CRM_FUNIL.MODELOS.ATENDIMENTO.NOME');
+  });
+
+  it('asks before a template switch throws away edited stages', async () => {
+    const wrapper = mountDrawer({ mode: 'create', pipeline: null, stages: [] });
+    wrapper.vm.form.stages[0].name = 'Primeiro oi';
+    await wrapper.get('[data-modelo="ATENDIMENTO"]').trigger('click');
+
+    expect(wrapper.vm.form.stages[0].name).toBe('Primeiro oi');
+    await wrapper.get('[data-funil-manter-modelo]').trigger('click');
+    expect(wrapper.find('[data-funil-trocar-modelo]').exists()).toBe(false);
+    expect(wrapper.vm.form.stages[0].name).toBe('Primeiro oi');
+
+    await wrapper.get('[data-modelo="ATENDIMENTO"]').trigger('click');
+    await wrapper.get('[data-funil-confirmar-modelo]').trigger('click');
+    expect(wrapper.vm.form.stages[0].name).toBe(
+      'CRM_FUNIL.MODELOS.ATENDIMENTO.E1'
+    );
+  });
+
+  it('opens a part from the summary and cancel puts everything back', async () => {
+    const wrapper = mountDrawer();
+    expect(wrapper.vm.view).toBe('home');
+    await wrapper
+      .get('[data-setting="sales"]')
+      .findComponent(Button)
+      .trigger('click');
+    expect(wrapper.vm.view).toBe('sales');
+
+    wrapper.vm.form.countsAsSale = false;
+    wrapper.vm.form.monthlyTarget = 900;
+    wrapper.vm.cancelar();
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.vm.view).toBe('home');
+    expect(wrapper.vm.form.countsAsSale).toBe(true);
+    expect(wrapper.vm.form.monthlyTarget).toBe('');
+  });
+
+  it('closes from the summary: each part saves on its own screen', async () => {
+    const wrapper = mountDrawer();
+    expect(principal(wrapper).text()).toContain('CRM_FUNIL.FECHAR');
+
+    await principal(wrapper).trigger('click');
+    expect(wrapper.emitted('close')).toHaveLength(1);
+    expect(wrapper.emitted('save')).toBeUndefined();
+  });
+
+  it('starts the Sales template with the same stages the editor shows', () => {
+    const wrapper = mountDrawer({ mode: 'create', pipeline: null, stages: [] });
+    expect(wrapper.vm.form.stages.map(stage => stage.name)).toEqual(
+      [1, 2, 3, 4, 5].map(n => `CRM_FUNIL.MODELOS.VENDAS.E${n}`)
+    );
+    // "Quando usar" já vem pronto pelo modelo, com "Alterar" no Confira.
+    expect(wrapper.vm.form.whenToUse).toBe('CRM_FUNIL.SOBRE.IDEIAS.PRECO');
+  });
+
+  it('shows the board preview from the same form state', async () => {
+    const wrapper = mountDrawer();
+    expect(
+      wrapper.findAll('[data-coluna]').map(col => col.attributes('data-coluna'))
+    ).toEqual(['Novo', 'Em atendimento']);
+
+    wrapper.vm.form.stages[0].name = 'Primeiro oi';
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.find('[data-coluna="Primeiro oi"]').exists()).toBe(true);
+  });
+});
+
+// #1384 — Anúncios: um seletor só para a etapa e o Google em três passos.
+describe('CrmPipelineDrawer ads', () => {
+  const principal = wrapper => wrapper.get('[data-funil-principal]');
+  const comAnuncios = {
+    id: 1,
+    name: 'Vendas',
+    metadata: { meta_sync: { enabled: true } },
+  };
+
+  it('starts with only the sale made and tells about one stage at most, keeping other ad types', async () => {
+    const wrapper = mountDrawer({
+      pipeline: comAnuncios,
+      stages: makeStages().map((stage, index) => ({
+        ...stage,
+        funnel_stage_type: index === 0 ? 'lead' : '',
+      })),
+    });
+    expect(wrapper.vm.form.metaSync.events).toEqual({
+      won: true,
+      lost: false,
+      moved: false,
+    });
+
+    const [, segunda] = wrapper.vm.form.stages;
+    wrapper.vm.avisarNaEtapa(segunda.editorKey);
+
+    expect(
+      wrapper.vm.form.stages.map(stage => stage.funnel_stage_type)
+    ).toEqual(['lead', 'qualified']);
+    expect(wrapper.vm.etapaAvisada.editorKey).toBe(segunda.editorKey);
+    wrapper.vm.avisarNaEtapa('');
+    expect(
+      wrapper.vm.form.stages.map(stage => stage.funnel_stage_type)
+    ).toEqual(['lead', '']);
+    expect(wrapper.vm.etapaAvisada).toBeNull();
+  });
+
+  it('turns Google on only at the end of the three steps; cancel leaves it off', async () => {
+    const wrapper = mountDrawer({ pipeline: comAnuncios });
+    wrapper.vm.view = 'ads';
+    await wrapper.vm.$nextTick();
+    wrapper.vm.abrirGoogle();
+    await flushPromises();
+    expect(wrapper.vm.view).toBe('ads-google');
+    expect(wrapper.vm.form.googleSync.enabled).toBe(false);
+
+    await principal(wrapper).trigger('click');
+    await principal(wrapper).trigger('click');
+    expect(wrapper.vm.passoGoogle).toBe(3);
+    expect(principal(wrapper).text()).toContain(
+      'CRM_FUNIL.ANUNCIOS.GOOGLE.LIGAR'
+    );
+
+    await principal(wrapper).trigger('click');
+    expect(wrapper.vm.view).toBe('ads');
+    expect(wrapper.vm.form.googleSync.enabled).toBe(true);
+
+    wrapper.vm.form.googleSync.enabled = false;
+    wrapper.vm.abrirGoogle();
+    wrapper.vm.cancelar();
+    expect(wrapper.vm.form.googleSync.enabled).toBe(false);
+  });
+
+  it('keeps Close neutral on the summary', () => {
+    const wrapper = mountDrawer();
+    const fechar = wrapper.get('[data-funil-principal]');
+    expect(fechar.text()).toContain('CRM_FUNIL.FECHAR');
+    expect(fechar.classes().join(' ')).toContain('bg-n-slate-9/10');
   });
 });
