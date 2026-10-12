@@ -360,11 +360,19 @@ class Message < ApplicationRecord
 
       locked.update!(ai_assignee: sender, status: locked.pending? ? :open : locked.status)
     end
+  rescue ActiveRecord::ActiveRecordError => e
+    # A mensagem já está gravada e enviada: falhar aqui não pode pular os passos seguintes nem devolver erro a quem
+    # postou (o n8n reenviaria e o cliente receberia a resposta duas vezes). A próxima resposta do robô tenta de novo.
+    ChatwootExceptionTracker.new(e, account: account).capture_exception
   end
 
-  # Resposta pública de robô ao cliente; disparo de campanha não conta.
+  # Resposta pública de robô ao cliente; disparo de campanha (qualquer das duas marcas) não conta.
   def public_bot_reply?
-    outgoing? && !private? && sender.is_a?(AgentBot) && !additional_attributes&.key?('whatsapp_api_campaign_id')
+    outgoing? && !private? && sender.is_a?(AgentBot) && !campaign_message?
+  end
+
+  def campaign_message?
+    additional_attributes.to_h['campaign_id'].present? || additional_attributes.to_h['whatsapp_api_campaign_id'].present?
   end
 
   def update_contact_activity

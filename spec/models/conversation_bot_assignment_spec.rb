@@ -43,6 +43,27 @@ RSpec.describe 'Robô atribuído à conversa' do # rubocop:disable RSpec/Describ
       bot_reply(other, private: true)
       expect(other.reload.ai_assignee).to be_nil
     end
+
+    it 'não assume a conversa num disparo de campanha, com qualquer das duas marcas' do
+      bot_reply(additional_attributes: { 'campaign_id' => 7 })
+      expect(conversation.reload.ai_assignee).to be_nil
+
+      other = create(:conversation, account: account, inbox: inbox, status: :open)
+      bot_reply(other, additional_attributes: { 'whatsapp_api_campaign_id' => 9 })
+      expect(other.reload.ai_assignee).to be_nil
+    end
+
+    it 'se assumir falhar, a mensagem segue gravada e o erro só é registrado' do
+      allow(Conversation).to receive(:lock).and_raise(ActiveRecord::LockWaitTimeout)
+      tracker = instance_double(ChatwootExceptionTracker, capture_exception: true)
+      allow(ChatwootExceptionTracker).to receive(:new).and_return(tracker)
+
+      message = nil
+      expect { message = bot_reply }.not_to raise_error
+
+      expect(message).to be_persisted
+      expect(tracker).to have_received(:capture_exception)
+    end
   end
 
   describe 'atribuir pelo seletor' do
