@@ -77,11 +77,7 @@ const salvar = async () => {
 </script>
 
 <template>
-  <AgenteGaveta
-    larga
-    :titulo="t(`${NS}.TITULO`, { nome })"
-    @fechar="emit('fechar')"
-  >
+  <AgenteGaveta :titulo="t(`${NS}.TITULO`, { nome })" @fechar="emit('fechar')">
     <p :id="`${base}-dica`" class="m-0 text-sm text-n-slate-11">
       {{ t(`${NS}.DICA`, { nome }) }}
     </p>

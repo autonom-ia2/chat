@@ -13,7 +13,6 @@ import TeleportWithDirection from 'dashboard/components-next/TeleportWithDirecti
 // aberta. Quem usa monta com v-if e fecha no evento `fechar`.
 const props = defineProps({
   titulo: { type: String, required: true },
-  larga: { type: Boolean, default: false },
   // Opcional: devolve false quando fechar agora perderia trabalho (ex.: formulário aberto dentro
   // da gaveta). Vale para Esc e clique no fundo; o botão X do formulário de dentro continua dele.
   podeFechar: { type: Function, default: null },
@@ -62,8 +61,7 @@ useModalFocus({
       aria-modal="true"
       :aria-labelledby="tituloId"
       tabindex="-1"
-      class="fixed inset-x-0 bottom-0 z-40 flex flex-col max-h-[90vh] rounded-t-2xl bg-n-solid-1 shadow-xl outline-none sm:inset-x-auto sm:inset-y-0 sm:max-h-none sm:rounded-none ltr:sm:right-0 rtl:sm:left-0 ltr:sm:border-l rtl:sm:border-r border-n-weak"
-      :class="larga ? 'sm:w-[32.5rem]' : 'sm:w-[30rem]'"
+      class="fixed inset-x-0 bottom-0 z-40 flex flex-col max-h-[90vh] rounded-t-2xl bg-n-solid-1 shadow-xl outline-none sm:inset-x-auto sm:inset-y-0 sm:max-h-none sm:w-[40rem] sm:max-w-full sm:rounded-none ltr:sm:right-0 rtl:sm:left-0 ltr:sm:border-l rtl:sm:border-r border-n-weak"
     >
       <header
         class="flex items-center justify-between gap-3 px-5 py-3 border-b border-n-weak"
