@@ -552,8 +552,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/follow_ups#destroy",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:64",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:98"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:60",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:94"
     ],
     "sem_corpo": true
   },
@@ -5046,9 +5046,9 @@
     "envelope": "follow_up",
     "modelo": "Crm::FollowUp",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:56",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:198",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:98"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:52",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:202",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:94"
     ],
     "sem_corpo": false
   },
@@ -14271,8 +14271,8 @@
     "envelope": "follow_up",
     "modelo": "Crm::FollowUp",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:44",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:198"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:40",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:202"
     ],
     "sem_corpo": false
   },
@@ -14280,8 +14280,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/follow_ups#cancel",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:72",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:98"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:68",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:94"
     ],
     "sem_corpo": true
   },
@@ -14289,8 +14289,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/follow_ups#complete",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:68",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:98"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:64",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:94"
     ],
     "sem_corpo": true
   },
@@ -14298,8 +14298,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/follow_ups#dismiss_reminder",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:76",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:98"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:72",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:94"
     ],
     "sem_corpo": true
   },
@@ -14312,9 +14312,9 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/follow_ups#reschedule",
     "origem": [
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:80",
       "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:84",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:88",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:98"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:94"
     ],
     "sem_corpo": false
   },
@@ -22409,9 +22409,9 @@
     "envelope": "follow_up",
     "modelo": "Crm::FollowUp",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:56",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:198",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:98"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:52",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:202",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:94"
     ],
     "sem_corpo": false
   },

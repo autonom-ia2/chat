@@ -1330,10 +1330,9 @@ const syncCalendarIfActive = async () => {
 // A mensagem crua do Rails (em inglês) nunca deve aparecer; quando o 422 é essa validação
 // específica, o card já sabe explicar — e a janela pode ter mudado entre o preenchimento e o
 // envio, então o aviso do drawer (verde/vermelho) precisa recarregar antes do operador tentar de novo.
+// Código estável (não o texto da mensagem, que é do Rails e pode mudar) — ver follow_ups_controller.rb.
 const isTemplateFallbackError = error =>
-  Boolean(
-    error?.response?.data?.message?.includes('template fallback is required')
-  );
+  error?.response?.data?.code === 'template_fallback_required';
 
 const createFollowUp = async payload => {
   try {

@@ -470,6 +470,7 @@ it('refreshes the messaging window and shows the template alert when creating a 
           message:
             'Metadata template fallback is required outside the messaging window',
           attributes: ['metadata'],
+          code: 'template_fallback_required',
         },
       };
       throw error;

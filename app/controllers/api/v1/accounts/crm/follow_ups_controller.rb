@@ -1,5 +1,10 @@
 class Api::V1::Accounts::Crm::FollowUpsController < Api::V1::Accounts::Crm::BaseController
   before_action :fetch_follow_up, only: [:show, :update, :destroy, :complete, :cancel, :dismiss_reminder, :reschedule]
+  # Soma um `code` estável ao 422 genérico quando é o fallback de template (achado da revisão em #1349).
+  rescue_from ActiveRecord::RecordInvalid do |exception|
+    log_handled_error(exception)
+    render json: Crm::FollowUps::RecordInvalidResponse.render(exception), status: :unprocessable_entity
+  end
 
   RESULTS_PER_PAGE = 50
   MAX_RESULTS_PER_PAGE = 100
@@ -129,11 +134,8 @@ class Api::V1::Accounts::Crm::FollowUpsController < Api::V1::Accounts::Crm::Base
   end
 
   def authorize_conversation!(conversation)
-    Crm::Conversations::AccessAuthorizer.new(
-      account: Current.account,
-      user: Current.user,
-      account_user: Current.account_user
-    ).authorize!(conversation)
+    Crm::Conversations::AccessAuthorizer.new(account: Current.account, user: Current.user,
+                                             account_user: Current.account_user).authorize!(conversation)
   end
 
   def resolved_follow_up_params(card, attributes, conversation)

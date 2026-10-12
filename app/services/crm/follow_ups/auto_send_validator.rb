@@ -52,7 +52,10 @@ class Crm::FollowUps::AutoSendValidator
     return if @follow_up.status_changed? && !@follow_up.pending?
     return if team_template_fallback_satisfied?(conversation)
 
-    @follow_up.errors.add(:metadata, 'template fallback is required outside the messaging window')
+    # Tipo estável (não só a mensagem) para o controller devolver um código que a tela possa checar sem
+    # comparar texto (achado da revisão em #1349: comparar a mensagem do Rails por substring é frágil).
+    @follow_up.errors.add(:metadata, :template_fallback_required,
+                          message: 'template fallback is required outside the messaging window')
   end
 
   def team_template_fallback_satisfied?(conversation)
