@@ -12,6 +12,9 @@ class Crm::Access::CardGuard
     CODE = 'crm.owner_without_funnel'.freeze
   end
 
+  # Recusa de quem não tem o funil do card (decisão b): a tela traduz este código (#1149).
+  FUNNEL_REQUIRED = 'crm.access.card_funnel_required'.freeze
+
   def initialize(user:, account:, account_user: nil)
     @user = user
     @account = account

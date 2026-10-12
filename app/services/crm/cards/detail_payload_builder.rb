@@ -16,11 +16,19 @@ class Crm::Cards::DetailPayloadBuilder
     payload_options[:company] = @company unless @company.equal?(UNRESOLVED_COMPANY)
     Crm::Cards::PayloadBuilder.new(@card, **payload_options).perform.merge(
       linked_conversations: linked_conversations_payload,
-      activities: activities_payload
+      activities: activities_payload,
+      can_edit: can_edit?
     )
   end
 
   private
+
+  # Acesso por funil (#1148, decisão b; #1149): a tela esconde o que a pessoa não pode mexer neste card.
+  def can_edit?
+    return true unless @user.is_a?(User)
+
+    Crm::Access::CardGuard.new(user: @user, account: @account, account_user: @account_user).edit_allowed?(@card)
+  end
 
   # Acesso por funil (#1148, parte C): as conversas do card (principal e vinculadas) numa consulta só.
   def conversation_visibility
