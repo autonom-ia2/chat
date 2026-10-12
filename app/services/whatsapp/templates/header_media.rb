@@ -40,6 +40,10 @@ module Whatsapp::Templates::HeaderMedia
     content.merge('components' => fill_media(content['components'], reupload(profile_for(template))))
   end
 
+  def media_header_in?(components)
+    Array(components).any? { |component| media_header?(component) }
+  end
+
   def media_pending?(components)
     Array(components).any? { |component| media_header?(component) && !handle?(component) }
   end

@@ -110,7 +110,7 @@
       "botao_copiar_codigo": {
         "TITULO": "O botão “Copiar código” está sem código",
         "EXPLICACAO": "O WhatsApp pede um código de exemplo nesse botão, e esse botão só existe em mensagens de divulgação.",
-        "COMO_RESOLVER": "se é um aviso, como um boleto, tire o botão e mande o boleto como documento no topo; se é divulgação, escreva um código de exemplo, como PROMO10."
+        "COMO_RESOLVER": "se é um aviso, como um lembrete de pagamento, tire o botão e mande a segunda via pela conversa; se é divulgação, escreva um código de exemplo, como PROMO10."
       }
     },
     "TIPOS": {
@@ -455,7 +455,8 @@
         "BOTOES_TAMANHO": "Todo botão tem até 25 letras",
         "BOTAO_SITE_EXEMPLO": "O site com final variável tem exemplo",
         "TEXTO_DIFERENTE": "O texto ou o rodapé mudou em relação ao original (o WhatsApp recusa cópia igual na mesma conta)",
-        "SEM_CHAVES": "O texto e o rodapé não têm chaves duplas digitadas à mão"
+        "SEM_CHAVES": "O texto e o rodapé não têm chaves duplas digitadas à mão",
+        "FORMATO_DIVULGACAO": "Este formato vai como divulgação"
       }
     },
     "QUEM_APROVA": {

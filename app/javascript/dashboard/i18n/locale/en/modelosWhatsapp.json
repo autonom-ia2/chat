@@ -110,7 +110,7 @@
       "botao_copiar_codigo": {
         "TITULO": "The “Copy code” button has no code",
         "EXPLICACAO": "WhatsApp asks for an example code in this button, and the button only exists in promotion messages.",
-        "COMO_RESOLVER": "for a notice such as a bill, remove the button and send the bill as a document at the top; for a promotion, write an example code such as PROMO10."
+        "COMO_RESOLVER": "if it is a notice, such as a payment reminder, remove the button and send the copy of the bill in the conversation; if it is a promotion, write an example code such as PROMO10."
       }
     },
     "TIPOS": {
@@ -455,7 +455,8 @@
         "BOTOES_TAMANHO": "Every button has up to 25 characters",
         "BOTAO_SITE_EXEMPLO": "The website with a variable ending has an example",
         "TEXTO_DIFERENTE": "The text or the footer changed from the original (WhatsApp refuses an identical copy in the same account)",
-        "SEM_CHAVES": "The text and the footer have no double braces typed by hand"
+        "SEM_CHAVES": "The text and the footer have no double braces typed by hand",
+        "FORMATO_DIVULGACAO": "This format goes as a promotion"
       }
     },
     "QUEM_APROVA": {

@@ -69,9 +69,17 @@ const botaoNaMeta = botao => {
   return { type: 'QUICK_REPLY', text: botao.texto };
 };
 
+// O texto vai sem espaço nas pontas: é o que a conferência mediu (até 25 letras).
+const botaoLimpo = botao => ({ ...botao, texto: (botao.texto || '').trim() });
+
 const botoesNaMeta = botoes =>
   botoes.length
-    ? [{ type: 'BUTTONS', buttons: ordenarBotoes(botoes).map(botaoNaMeta) }]
+    ? [
+        {
+          type: 'BUTTONS',
+          buttons: ordenarBotoes(botoes).map(botaoLimpo).map(botaoNaMeta),
+        },
+      ]
     : [];
 
 // Corpo com {{1}}, {{2}}… na ordem em que cada campo aparece, os exemplos e o
@@ -90,7 +98,7 @@ const exemploDoCorpo = (ordem, conteudo, nomes) => {
   return {
     example: {
       body_text_named_params: ordem.map(campo => ({
-        param_name: nomes[campo] || campo,
+        param_name: nomes[campo] || nomeParaWhatsapp(campo),
         example: conteudo.exemplos[campo] || '',
       })),
     },
@@ -99,8 +107,12 @@ const exemploDoCorpo = (ordem, conteudo, nomes) => {
 
 export const corpoComNumeros = (conteudo, { nomes } = {}) => {
   const ordem = [];
+  // Campo novo num modelo nomeado ganha um nome que a Meta aceita (minúsculas,
+  // números e _), feito como o nome do modelo.
   const chaveDe = campo =>
-    nomes ? nomes[campo] || campo : String(ordem.indexOf(campo) + 1);
+    nomes
+      ? nomes[campo] || nomeParaWhatsapp(campo)
+      : String(ordem.indexOf(campo) + 1);
   const texto = conteudo.texto
     .map(pedaco => {
       if (pedaco.t !== 'campo') return pedaco.v;
@@ -165,7 +177,8 @@ const botoesDaOferta = (oferta, textoDoBotao) => [
     type: 'BUTTONS',
     buttons: [
       ...(oferta.cupom ? [{ type: 'COPY_CODE', example: oferta.cupom }] : []),
-      { type: 'URL', text: textoDoBotao, url: oferta.link },
+      // O texto do botão do original volta como estava; num modelo novo, o da tela.
+      { type: 'URL', text: oferta.botao || textoDoBotao, url: oferta.link },
     ],
   },
 ];
@@ -249,16 +262,23 @@ const nomesDoModelo = modelo =>
 // só vai quando a pessoa mudou. Sem mudança no conteúdo nem no tipo (só o nome
 // amigável), nada vai para a Meta: o modelo não volta para análise nem gasta
 // uma das alterações do mês.
+// Recusado vai sempre de novo: corrigir é pedir outra análise.
 export const corpoParaAlterar = (rascunho, modelo, opcoes = {}) => {
   const mudouOTipo = rascunho.tipo !== modelo.tipo;
-  const mudouOConteudo =
-    mudouOTipo ||
-    Boolean(opcoes.midias?.topo) ||
-    JSON.stringify(rascunho.conteudo) !== JSON.stringify(modelo.conteudo);
+  const nomes = nomesDoModelo(modelo);
   const { components, fields } = componentesNaMeta(rascunho.conteudo, {
     ...opcoes,
-    nomes: nomesDoModelo(modelo),
+    nomes,
   });
+  // Compara o que iria para a Meta (o fim da oferta, por exemplo, não vai).
+  const doOriginal = modelo.conteudo
+    ? componentesNaMeta(modelo.conteudo, { textos: opcoes.textos, nomes })
+        .components
+    : null;
+  const mudouOConteudo =
+    mudouOTipo ||
+    modelo.situacao === 'recusado' ||
+    JSON.stringify(components) !== JSON.stringify(doOriginal);
   const topo = opcoes.midias?.topo;
   return {
     ...(mudouOConteudo ? { components } : {}),

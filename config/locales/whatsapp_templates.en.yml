@@ -27,3 +27,4 @@ en:
       button_order: "Quick reply buttons must stay together, before or after the other buttons."
       button_text_long: "A button text can have up to 25 characters."
       url_example: "The website button with a variable ending needs an example of that ending."
+      stray_braces: "Double braces can only be in the message text, not in the footer, the buttons or the offer title."

@@ -80,7 +80,7 @@ class Whatsapp::Templates::Manager
     # O arquivo do topo sobe de novo logo abaixo; a forma do resto é conferida antes de qualquer chamada à Meta.
     check_format!(source.merge('components' => fill_media(source['components'], STORED_MEDIA)))
     profile = profile_for(source)
-    handle = attrs.dig('header_media', 'handle').presence || reupload(profile)
+    handle = attrs.dig('header_media', 'handle').presence || (reupload(profile) if media_header_in?(source['components']))
     copy = { 'friendly_name' => attrs['friendly_name'], 'fields' => profile&.fields,
              'header_media' => attrs['header_media'] || profile&.header_media }
     copied = create(duplicate_body(source, attrs, handle).merge(copy.compact))

@@ -155,7 +155,7 @@ const podeUsarIA = useCanUseIA();
               <!-- A campanha só envia a mensagem comum (podeIrEmCampanha). -->
               <span
                 data-nao-vai-em-campanha
-                class="px-2 py-0.5 text-xs font-medium rounded-full bg-n-slate-3 text-n-slate-11"
+                class="px-2 py-0.5 text-xs font-medium rounded-lg bg-n-slate-3 text-n-slate-11"
               >
                 {{ $t('MODELOS_WHATSAPP.OBJETIVO.NAO_VAI_EM_CAMPANHA') }}
               </span>

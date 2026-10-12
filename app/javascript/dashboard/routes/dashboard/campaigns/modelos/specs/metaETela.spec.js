@@ -145,6 +145,7 @@ describe('Meta → tela', () => {
       titulo: 'Só hoje',
       terminaEm: '',
       link: 'https://h.com/o',
+      botao: 'Ver',
       cupom: 'HUB30',
     });
 
@@ -230,6 +231,16 @@ describe('situação e o que a tela sabe editar (#1380)', () => {
       GRUPO
     );
     expect(autenticacao.editavel).toBe(false);
+    const catalogo = modeloDaMeta(
+      template({
+        components: [
+          corpo,
+          { type: 'BUTTONS', buttons: [{ type: 'CATALOG', text: 'Ver' }] },
+        ],
+      }),
+      GRUPO
+    );
+    expect(catalogo.editavel).toBe(false);
   });
 });
 
@@ -398,6 +409,69 @@ describe('tela → Meta', () => {
         body_text_named_params: [{ param_name: 'first_name', example: 'Ana' }],
       },
     });
+  });
+
+  it('revisão: campo novo num modelo nomeado ganha nome válido (sem ponto)', () => {
+    const modelo = {
+      tipo: 'aviso',
+      formatoDosCampos: 'named',
+      campos: { first_name: 'nome_cliente' },
+    };
+    const conteudo = {
+      ...rascunho.conteudo,
+      topo: { tipo: 'nenhum' },
+      texto: [
+        { t: 'texto', v: 'Oi ' },
+        { t: 'campo', v: 'nome_cliente' },
+        { t: 'texto', v: ', da ' },
+        { t: 'campo', v: 'cliente.primeiro_nome' },
+        { t: 'texto', v: '.' },
+      ],
+    };
+    const corpo = corpoParaAlterar({ ...rascunho, conteudo }, modelo);
+    expect(corpo.components[0].text).toBe(
+      'Oi {{first_name}}, da {{cliente_primeiro_nome}}.'
+    );
+  });
+
+  it('revisão: texto do botão vai sem espaço nas pontas', () => {
+    const botoes = [{ tipo: 'resposta', texto: '  Sim  ', valor: '' }];
+    const corpo = corpoParaCriar(
+      { ...rascunho, conteudo: { ...rascunho.conteudo, botoes } },
+      { midias }
+    );
+    expect(corpo.components[2].buttons[0].text).toBe('Sim');
+  });
+
+  it('revisão: mudar só o fim da oferta não manda nada; recusado sempre manda', () => {
+    const oferta = {
+      formato: 'oferta',
+      topo: { tipo: 'nenhum' },
+      texto: [{ t: 'texto', v: 'Corre!' }],
+      exemplos: {},
+      rodape: '',
+      botoes: [],
+      oferta: {
+        titulo: 'Hoje',
+        terminaEm: '',
+        link: 'https://x.com',
+        cupom: 'A1',
+        botao: 'Ver',
+      },
+    };
+    const modelo = { tipo: 'divulgacao', conteudo: oferta };
+    const soData = {
+      ...rascunho,
+      tipo: 'divulgacao',
+      conteudo: {
+        ...oferta,
+        oferta: { ...oferta.oferta, terminaEm: '2999-01-01T10:00' },
+      },
+    };
+    expect(corpoParaAlterar(soData, modelo).components).toBeUndefined();
+    expect(
+      corpoParaAlterar(soData, { ...modelo, situacao: 'recusado' }).components
+    ).toBeDefined();
   });
 
   it('round-trips a created template back to the same screen content', () => {

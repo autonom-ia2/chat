@@ -27,3 +27,4 @@ pt_BR:
       button_order: "Os botões de resposta rápida precisam ficar juntos, antes ou depois dos outros botões."
       button_text_long: "O texto de um botão pode ter até 25 letras."
       url_example: "O botão de site com final variável precisa de um exemplo desse final."
+      stray_braces: "Chaves duplas só podem estar no texto da mensagem, não no rodapé, nos botões ou no título da oferta."

@@ -11,6 +11,7 @@
 #   button_text_long    — button text over 25 characters;
 #   url_missing         — URL button without the address;
 #   url_example         — URL ending in a variable without the example;
+#   stray_braces        — {{ or }} typed in the footer, a button text or the offer title (only the body has variables);
 #   phone_missing       — PHONE_NUMBER button without the number;
 #   copy_code_example   — COPY_CODE without an example code of 1 to 15 letters and digits;
 #   carousel_cards      — carousel without 2 to 10 cards;
@@ -36,14 +37,21 @@ module Whatsapp::Templates::SubmitFormat
   def problems(template)
     template = template.is_a?(Hash) ? template.stringify_keys : {}
     components = Whatsapp::Templates::SendableFormat.hashes(template['components'])
-    category = upcase(template['category'])
-    found = []
-    found << 'marketing_only' if category != MARKETING && marketing_only?(components)
-    found << 'media_required' unless media_handle?(component(components, 'HEADER'))
-    found.concat(button_problems(buttons_of(components)))
-    found.concat(carousel_problems(component(components, 'CAROUSEL')))
-    found.concat(offer_problems(component(components, 'LIMITED_TIME_OFFER'), buttons_of(components)))
-    found.uniq
+    buttons = buttons_of(components)
+    (top_problems(components, upcase(template['category'])) + button_problems(buttons) +
+      carousel_problems(component(components, 'CAROUSEL')) +
+      offer_problems(component(components, 'LIMITED_TIME_OFFER'), buttons)).uniq
+  end
+
+  def top_problems(components, category)
+    [('marketing_only' if category != MARKETING && marketing_only?(components)),
+     ('media_required' unless media_handle?(component(components, 'HEADER'))),
+     ('stray_braces' if stray_braces?(components))].compact
+  end
+
+  def stray_braces?(components)
+    braces?(component(components, 'FOOTER')&.dig('text')) ||
+      braces?(component(components, 'LIMITED_TIME_OFFER')&.dig('limited_time_offer', 'text'))
   end
 
   # The create request carries the example as a string; a template read back from Meta may carry it in a list.
@@ -58,7 +66,8 @@ module Whatsapp::Templates::SubmitFormat
   end
 
   TEXT_CHECKS = [['button_text_missing', ->(button) { filled?(button['text']) }],
-                 ['button_text_long', ->(button) { button['text'].to_s.strip.length <= BUTTON_TEXT_MAX }]].freeze
+                 ['button_text_long', ->(button) { button['text'].to_s.length <= BUTTON_TEXT_MAX }],
+                 ['stray_braces', ->(button) { !braces?(button['text']) }]].freeze
   # Each button type and what it cannot lack: [code, ok?].
   BUTTON_CHECKS = {
     'QUICK_REPLY' => TEXT_CHECKS,
@@ -86,6 +95,10 @@ module Whatsapp::Templates::SubmitFormat
     return true unless button['url'].to_s.include?('{{')
 
     Array(button['example']).any? { |value| filled?(value) }
+  end
+
+  def braces?(text)
+    text.to_s.include?('{{') || text.to_s.include?('}}')
   end
 
   def media_handle?(header)

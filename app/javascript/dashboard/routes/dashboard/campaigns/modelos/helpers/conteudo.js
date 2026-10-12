@@ -2,6 +2,7 @@ import {
   LIMITE_DO_RODAPE,
   LIMITE_DO_TEXTO,
   LIMITE_DO_TEXTO_DA_OFERTA,
+  formatoPorChave,
   objetivoPorChave,
 } from '../constants';
 import { conferirFormato } from './formatos';
@@ -119,9 +120,18 @@ export const conferirConteudo = (conteudo, contexto = {}) => {
   // Chaves digitadas à mão ({{ ou }}) viram variável sem exemplo na Meta.
   const temChaves = texto =>
     (texto || '').includes('{{') || (texto || '').includes('}}');
+  // Tudo o que vai escrito para a Meta, menos o endereço do site (o final
+  // variável de um modelo feito fora é legítimo e tem regra própria).
   const semChaves = ![
     ...conteudo.texto.filter(p => p.t === 'texto').map(p => p.v),
     conteudo.rodape,
+    ...(conteudo.botoes || []).map(botao => botao.texto),
+    ...(conteudo.cartoes || []).flatMap(cartao => [
+      cartao.texto,
+      ...cartao.botoes.map(botao => botao.texto),
+    ]),
+    conteudo.oferta?.titulo,
+    conteudo.oferta?.link,
   ].some(temChaves);
 
   const base = [
@@ -141,6 +151,10 @@ export const conferirConteudo = (conteudo, contexto = {}) => {
     },
     ...(['padrao', 'oferta'].includes(formato)
       ? [{ chave: 'TOPO_ARQUIVO', ok: topoCompleto(conteudo.topo) }]
+      : []),
+    // Carrossel e oferta só existem como divulgação.
+    ...(formatoPorChave(formato)?.soDivulgacao && contexto.tipo
+      ? [{ chave: 'FORMATO_DIVULGACAO', ok: contexto.tipo === 'divulgacao' }]
       : []),
     ...(formato === 'padrao'
       ? [

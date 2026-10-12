@@ -106,6 +106,19 @@ RSpec.describe Whatsapp::Templates::SubmitFormat do
     expect(described_class.problems(template('UTILITY', { 'type' => 'HEADER', 'format' => 'TEXT', 'text' => 'Oi' }))).to eq([])
   end
 
+  it 'chaves duplas só no corpo: rodapé, botão e título da oferta recusam' do
+    footer = template('UTILITY', { 'type' => 'FOOTER', 'text' => 'até {{1}}' })
+    button = template('UTILITY', buttons({ 'type' => 'QUICK_REPLY', 'text' => 'Sim {{' }))
+    expect(described_class.problems(footer)).to eq(['stray_braces'])
+    expect(described_class.problems(button)).to eq(['stray_braces'])
+    expect(described_class.problems(template('UTILITY', { 'type' => 'FOOTER', 'text' => 'Sua Empresa' }))).to eq([])
+  end
+
+  it 'mede o texto do botão como vai, com espaços' do
+    expect(described_class.problems(template('UTILITY', buttons({ 'type' => 'QUICK_REPLY', 'text' => " #{'x' * 25}" }))))
+      .to eq(['button_text_long'])
+  end
+
   it 'código de verificação (OTP) não conta como divulgação' do
     template = { 'category' => 'AUTHENTICATION', 'components' => [{ 'type' => 'BODY' }, buttons({ 'type' => 'OTP', 'otp_type' => 'COPY_CODE' })] }
     expect(described_class.problems(template)).to eq([])

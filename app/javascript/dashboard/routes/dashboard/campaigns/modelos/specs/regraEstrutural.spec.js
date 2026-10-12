@@ -200,6 +200,24 @@ describe('médios e baixos da auditoria (#1380)', () => {
     expect(rodape.find(item => item.chave === 'SEM_CHAVES').ok).toBe(false);
   });
 
+  it('revisão: chaves duplas no texto do botão também não enviam', () => {
+    const itens = conferirConteudo(
+      conteudo([{ tipo: 'resposta', texto: 'Sim {{', valor: '' }]),
+      { tipo: 'aviso' }
+    );
+    expect(itens.find(item => item.chave === 'SEM_CHAVES').ok).toBe(false);
+  });
+
+  it('revisão: carrossel e oferta só como divulgação', () => {
+    const carrossel = { ...conteudo([]), formato: 'carrossel', cartoes: [] };
+    const tipo = valor =>
+      conferirConteudo(carrossel, { tipo: valor }).find(
+        item => item.chave === 'FORMATO_DIVULGACAO'
+      ).ok;
+    expect(tipo('divulgacao')).toBe(true);
+    expect(tipo('aviso')).toBe(false);
+  });
+
   it('validade do código só em minutos inteiros', () => {
     const validade = valor =>
       conferirFormato({ formato: 'codigo', codigo: { validade: valor } })[0].ok;

@@ -162,7 +162,9 @@ const ofertaDe = (template, botoes) => {
     titulo: oferta?.limited_time_offer?.text || '',
     terminaEm: '',
     link: link?.url || '',
-    cupom: cupom?.example || '',
+    botao: link?.text || '',
+    cupom:
+      (Array.isArray(cupom?.example) ? cupom.example[0] : cupom?.example) || '',
   };
 };
 
@@ -203,6 +205,8 @@ export const editavelNaTela = template => {
         Array.isArray(botao.supported_apps)
     );
   }
+  // Catálogo e formulário: a tela ainda não remonta esses botões.
+  if (['catalogo', 'formulario'].includes(formato)) return false;
   if (formato !== 'padrao') return true;
   return botoes.every(botao =>
     BOTOES_EDITAVEIS.includes(maiusculo(botao.type))
