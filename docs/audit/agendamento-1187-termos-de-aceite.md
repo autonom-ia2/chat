@@ -17,6 +17,11 @@ Respostas dadas no chat do Agendamento, em escolha entre opções:
   e os prints em aparelho real não são exigidos. A parte de código do RA-18 (aviso antes de confirmar, "Parar avisos",
   só nome e WhatsApp) segue conferida na tabela.
 
+- **RA-16** (3 s em 4G): "Aceitar a mediana". Conta como cumprido com a mediana de 2,9 s; a página mais leve fica para
+  a continuação no #1402.
+- **RA-17** (sem beco sem saída): "Pedido de contato". A página pausada passa a oferecer o pedido de contato que já
+  existe no "Nenhum horário serve?", mesmo pausada; o link inexistente ganha um botão genérico para o WhatsApp. Em #1401.
+
 **RA-12** resolvido neste PR: `docs/agendamento-whatsapp-first/ROLLBACK.md` (uma conta, todas as contas, imagem
 anterior; caminho, comando e ETA de cada um).
 
