@@ -17,7 +17,10 @@ Respostas dadas no chat do Agendamento, em escolha entre opções:
   e os prints em aparelho real não são exigidos. A parte de código do RA-18 (aviso antes de confirmar, "Parar avisos",
   só nome e WhatsApp) segue conferida na tabela.
 
-Ficam para fechar o épico: RA-17 e RA-21 (código e spec, issue própria), RA-12 (rollback escrito), RA-06, RA-11,
+**RA-12** resolvido neste PR: `docs/agendamento-whatsapp-first/ROLLBACK.md` (uma conta, todas as contas, imagem
+anterior; caminho, comando e ETA de cada um).
+
+Ficam para fechar o épico: RA-17 e RA-21 (código e spec, issue própria), RA-06, RA-11,
 RA-14 e RA-20 (conferência no navegador, com prints) e RA-16 (tempo de carga medido).
 
 ## Como ler
