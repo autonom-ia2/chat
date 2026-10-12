@@ -5,7 +5,6 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import CaixaIcone from './CaixaIcone.vue';
 import FunilSelo from './FunilSelo.vue';
 import {
-  agentes,
   corDoFunil,
   faltaTriagem,
   funisDaCaixa,
@@ -30,7 +29,9 @@ const { t, locale } = useI18n();
 
 const ligada = computed(() => props.caixa.crm_enabled);
 const funis = computed(() => funisDaCaixa(props.caixa, props.funis));
-const pessoas = computed(() => agentes(props.caixa).length);
+// Todo mundo da caixa, administrador incluído: numa conta em que só há
+// administradores, "0 pessoas" diria que ninguém cuida, e todos veem tudo.
+const pessoas = computed(() => props.caixa.people.length);
 const triagem = computed(() =>
   juntar(quemFazTriagem(props.caixa).map(primeiroNome), locale.value)
 );
