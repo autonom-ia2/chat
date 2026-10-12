@@ -5,6 +5,7 @@ import { useStore } from 'vuex';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import WhatsappApiMessageTemplatesAPI from 'dashboard/api/whatsappApiMessageTemplates';
 import BookingChoiceCards from '../BookingChoiceCards.vue';
+import BookingNoticeTexts from '../BookingNoticeTexts.vue';
 import {
   CANCEL_UNTIL_OPTIONS,
   DEFAULT_CANCEL_UNTIL,
@@ -33,6 +34,8 @@ const props = defineProps({
   savedTemplates: { type: Object, default: () => ({}) },
   // Página do assistente: os pedidos de modelo à Meta ficam nela (#1272).
   pageId: { type: Number, default: null },
+  // Texto próprio dos avisos (#1354): notice_text_setup da página.
+  textSetup: { type: Object, default: null },
 });
 
 const emit = defineEmits(['change']);
@@ -315,17 +318,14 @@ const emptyText = computed(() => {
         @update:model-value="emit('change', { noticePreset: $event })"
       />
 
-      <figure class="flex flex-col gap-2 m-0">
-        <figcaption class="text-base font-semibold text-n-slate-12">
-          {{ t('BOOKING.NOTICES.SAMPLE_LABEL') }}
-        </figcaption>
-        <p
-          data-notice-sample
-          class="m-0 max-w-md px-4 py-3 text-base whitespace-pre-line rounded-2xl rounded-ss-sm bg-n-teal-2 text-n-slate-12 ring-1 ring-inset ring-n-teal-6"
-        >
-          {{ t('BOOKING.NOTICES.SAMPLE_TEXT') }}
-        </p>
-      </figure>
+      <BookingNoticeTexts
+        v-if="textSetup"
+        :form="form"
+        :kinds="kinds"
+        :setup="textSetup"
+        :page-id="pageId"
+        @change="emit('change', $event)"
+      />
 
       <div
         v-if="isOfficial || isApiChannel"

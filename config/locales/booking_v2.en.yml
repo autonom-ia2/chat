@@ -34,6 +34,23 @@ en:
         permission_denied: "This WhatsApp connection is not allowed to create templates. Reconnect the inbox in Settings › Inboxes and try again."
         meta_rejected: "Meta did not approve it."
         platform_reason: "Ready message made for this notice and approved by Meta."
+      notice_texts:
+        sample_name: "Ana"
+        ai_failed: "We could not write it right now. Try again, or write it your own way."
+        kinds:
+          booked: "When booked"
+          rescheduled: "When the time changes"
+          day_before: "1 day before"
+          hour_before: "1 hour before"
+        errors:
+          blank: "The \"%{notice}\" message is empty."
+          too_long: "The \"%{notice}\" message is longer than %{max} characters."
+          malformed: "The \"%{notice}\" message has a badly written field. Use the buttons to add fields."
+          bracket: "The \"%{notice}\" message has brackets that are not a field. Remove the brackets or use the buttons to add fields."
+          unknown_field: "The \"%{notice}\" message has a field this notice cannot fill."
+          missing_link: "The \"%{notice}\" message needs the link to confirm, change or cancel."
+          missing_when: "The \"%{notice}\" message needs the day and time."
+          stop_line: "Remove the line to stop messages from \"%{notice}\": we always add it at the end."
       remind:
         text: "Hi%{name}! Just a reminder of your appointment on %{when}. Can you confirm here? %{link}"
       agent_alerts:

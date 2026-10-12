@@ -8,6 +8,12 @@
 # ({{1}} {{2}} {{3}}) não mudam.
 #
 # `when_text` também alimenta o modelo aprovado ({{2}}) e as notificações ao agente.
+#
+# Texto próprio da página (#1354, `Notices::CustomText`): quando o dono escreveu um texto para o aviso, ele vai no
+# lugar do padrão, preenchido pelo catálogo de campos (`TemplateFields::Resolver.for_meeting`). A linha de parar vai
+# SEMPRE, pelo sistema. Texto salvo que não passa mais na conferência, ou sem dia/hora ou link para preencher: vai o
+# padrão e fica no log (sem o texto). O aviso marcado pela equipe usa o padrão `booked_by_team`, porque ele diz quem
+# marcou e o texto próprio não tem como dizer. `appendix` e `template_values` (modelos) não mudam.
 class Crm::BookingV2::Notices::Text
   STOP_PARAM = '?stop_notices=1'.freeze
   TEAM_BOOKED_KIND = 'booked'.freeze
@@ -26,16 +32,16 @@ class Crm::BookingV2::Notices::Text
     "#{invite.url}#{STOP_PARAM}"
   end
 
-  def initialize(meeting:, invite:, kind:)
+  # page: a página do aviso (`Notices::Scheduler.profile_for`), para o texto próprio. Sem ela, o padrão.
+  def initialize(meeting:, invite:, kind:, page: nil)
     @meeting = meeting
     @invite = invite
     @kind = kind.to_s
+    @page = page
   end
 
   def to_s
-    body = I18n.t("crm.booking_v2.notices.#{body_key}", name: name_part, booker: booker_name,
-                                                        when: self.class.when_text(meeting), link: invite.url, locale: locale)
-    "#{body}\n\n#{stop_line}"
+    "#{custom_body || default_body}\n\n#{stop_line}"
   end
 
   # Depois do corpo de um modelo do canal API (que só tem variáveis de contato): dia e hora, link de gestão e a
@@ -51,7 +57,21 @@ class Crm::BookingV2::Notices::Text
 
   private
 
-  attr_reader :meeting, :invite, :kind
+  attr_reader :meeting, :invite, :kind, :page
+
+  def default_body
+    I18n.t("crm.booking_v2.notices.#{body_key}", name: name_part, booker: booker_name,
+                                                 when: self.class.when_text(meeting), link: invite.url, locale: locale)
+  end
+
+  def custom_body
+    text = page&.account_id == meeting.account_id ? page.notice_text(kind) : nil
+    return if text.blank? || booker_name.present?
+
+    body = Crm::BookingV2::Notices::CustomText.fill(text, TemplateFields::Resolver.for_meeting(meeting, invite: invite))
+    Rails.logger.warn("[crm][booking_v2][notices] custom_text_fallback page_id=#{page.id} kind=#{kind}") if body.nil?
+    body
+  end
 
   def body_key
     booker_name.present? ? 'booked_by_team' : kind

@@ -212,7 +212,7 @@ class Crm::BookingV2::Notices::Sender
   end
 
   def delivery(decision)
-    text = Crm::BookingV2::Notices::Text.new(meeting: meeting, invite: invite, kind: notice.kind)
+    text = Crm::BookingV2::Notices::Text.new(meeting: meeting, invite: invite, kind: notice.kind, page: profile)
     Crm::BookingV2::Notices::Delivery.new(
       decision: decision, inbox: profile.notice_inbox, contact: contact, sender: meeting.created_by,
       content: text.to_s, values: text.template_values, appendix: text.appendix
