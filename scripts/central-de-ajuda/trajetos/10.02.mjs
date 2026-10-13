@@ -1,7 +1,11 @@
+// OBSOLETO desde #1423: o card do funil trocou a gaveta com abas pelo card
+// "Resumo primeiro" (app/javascript/dashboard/routes/dashboard/crm/components/card/).
+// Os alvos abaixo (abas, "Ganhar", "Analisar agora"...) são da gaveta antiga:
+// refazer o roteiro e regravar o vídeo antes de usar.
 // Roteiro do vídeo de trajeto do artigo 10.02 — "Ler o quadro Kanban e criar
 // um card na mão". Rótulos conferidos em
 // app/javascript/dashboard/i18n/locale/pt_BR/crm.json e em
-// app/javascript/dashboard/routes/dashboard/crm/components/CrmCardDrawer.vue.
+// na gaveta antiga do card (removida no #1423).
 //
 // Trajeto: barra lateral → CRM → Kanban → Novo card → Título → Criar card.
 // O botão "Criar card" usa o mesmo ícone de confirmação (i-lucide-check) que
