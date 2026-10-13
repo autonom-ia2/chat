@@ -199,7 +199,8 @@ RSpec.describe Account do
         feature_crm_booking_v2: 1 << 14,
         feature_customer_base: 1 << 15,
         feature_whatsapp_templates_journey: 1 << 16,
-        feature_crm_configurar_caixas: 1 << 17
+        feature_crm_configurar_caixas: 1 << 17,
+        feature_campaign_open_window_text: 1 << 18
       )
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_whatsapp_manual_transfer]).to eq(1)
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_data_import]).to eq(2)

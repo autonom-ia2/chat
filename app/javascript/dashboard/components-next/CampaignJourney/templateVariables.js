@@ -319,10 +319,13 @@ export const buildCampaignPayload = ({
   bindings,
   defaults,
   mediaUrl,
+  freeText = '',
 }) => ({
   campaign_import_id: audienceId,
   channel: 'whatsapp_cloud',
   campaign: {
+    // Fork (#1335): a mensagem escrita para quem falou nas últimas 24 h.
+    ...(freeText ? { free_text: freeText } : {}),
     title: title.trim(),
     inbox_id: inboxId,
     scheduled_at: scheduledAt,

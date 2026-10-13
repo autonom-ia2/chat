@@ -38,6 +38,9 @@ const CREATE_ERRORS = {
   header_media_required: 'HEADER_MEDIA_REQUIRED',
   header_media_url_invalid: 'HEADER_MEDIA_URL_INVALID',
   header_media_type_mismatch: 'HEADER_MEDIA_TYPE_MISMATCH',
+  // Fork #1335: a mensagem escrita para quem falou nas últimas 24 h.
+  free_text_invalid: 'FREE_TEXT_INVALID',
+  free_text_disabled: 'FREE_TEXT_DISABLED',
 };
 
 export const createErrorKey = error => {

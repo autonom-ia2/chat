@@ -43,6 +43,8 @@ const props = defineProps({
   emailForm: { type: Object, default: () => ({}) },
   // SMS form: { inboxOptions, extraColumns, sample, preview }
   smsForm: { type: Object, default: () => ({}) },
+  // Fork (#1335): texto do cartão do canal trocado por quem chama, { canal: texto }.
+  channelHints: { type: Object, default: () => ({}) },
 });
 
 const emit = defineEmits([
@@ -106,10 +108,13 @@ const crmTag = computed(() =>
   t(`${NS}.CRM_TAG`, { name: props.draft.title.trim() || '…' })
 );
 
-const cardHint = card =>
-  card.available
-    ? t(`CAMPAIGN_JOURNEY.CHOOSER.HINTS.${HINT_KEYS[card.channel]}`)
-    : t(`${NS}.UNAVAILABLE.${card.reason}`);
+const cardHint = card => {
+  if (!card.available) return t(`${NS}.UNAVAILABLE.${card.reason}`);
+  return (
+    props.channelHints[card.channel] ||
+    t(`CAMPAIGN_JOURNEY.CHOOSER.HINTS.${HINT_KEYS[card.channel]}`)
+  );
+};
 
 const chooseChannel = card => {
   if (!card.available || !JOURNEY_CHANNELS.includes(card.channel)) return;
@@ -316,6 +321,8 @@ const chooseChannel = card => {
             @bind="(key, binding) => emit('bind', key, binding)"
             @default="(key, value) => emit('default', key, value)"
           />
+          <!-- Fork (#1335): conversa aberta nas últimas 24 h, preenchido pela Nova campanha. -->
+          <slot name="janela" />
         </template>
       </section>
       <slot v-if="!isEmail && !isSms" name="previa">

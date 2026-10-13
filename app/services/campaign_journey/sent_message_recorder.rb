@@ -14,16 +14,19 @@
 #
 # Both: outgoing, the text the person received, source_id = the provider id (Meta, Twilio or
 # Bandwidth; the status callback updates it; Base::SendOnChannelService never sends a message
-# with a source_id), additional_attributes campaign_id (+ campaign_template_name on WhatsApp).
+# with a source_id), additional_attributes campaign_id (+ campaign_template_name on WhatsApp, or campaign_free_text for
+# the written message of #1335).
 # Idempotent by inbox + source_id. No campaign mark here (D14). Best effort: a failure is logged
 # and never changes the recipient.
 class CampaignJourney::SentMessageRecorder
   MESSAGE_STATUSES = %w[sent delivered read].freeze
 
-  def initialize(campaign:, recipient:)
+  # free_text (#1335): a mensagem escrita da conversa aberta — sem nome de modelo, marcada como texto da campanha.
+  def initialize(campaign:, recipient:, free_text: false)
     @campaign = campaign
     @recipient = recipient
     @inbox = campaign.inbox
+    @free_text = free_text
   end
 
   def record_at_send(destination)
@@ -60,8 +63,15 @@ class CampaignJourney::SentMessageRecorder
       sender: @campaign.sender,
       # The text the person received already carries contact and audience values: it stays literal (#1021).
       literal_content: true,
-      additional_attributes: { campaign_id: @campaign.id, campaign_template_name: @campaign.template_params.to_h['name'] }.compact
+      additional_attributes: campaign_attributes
     }
+  end
+
+  # campaign_id sempre (o robô do #1405 não assume conversa de campanha); o modelo só quando foi modelo.
+  def campaign_attributes
+    return { campaign_id: @campaign.id, campaign_free_text: true } if @free_text
+
+    { campaign_id: @campaign.id, campaign_template_name: @campaign.template_params.to_h['name'] }.compact
   end
 
   def message_status

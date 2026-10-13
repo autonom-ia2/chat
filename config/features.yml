@@ -346,3 +346,12 @@
   display_name: Caixas no CRM (tela nova)
   enabled: false
   column: feature_flags_ext_1
+
+# Conversa aberta na campanha (#1335, épico #1320): na campanha do WhatsApp oficial, quem falou com a caixa nas últimas
+# 24 horas recebe uma mensagem escrita (sem modelo), com a ajuda para escrever; a janela é conferida de novo em cada envio.
+# Nasce ligada em todas as contas (decisão do Rodrigo; migration 20261024100001). Desligada numa conta: a campanha manda
+# o modelo para todos e a API campaign_journey/conversa_aberta responde 404.
+- name: campaign_open_window_text
+  display_name: Campanha com mensagem escrita para quem falou nas últimas 24 h
+  enabled: true
+  column: feature_flags_ext_1

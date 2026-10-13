@@ -9,6 +9,7 @@ export const FEATURE_FLAGS = {
   AUTO_RESOLVE_CONVERSATIONS: 'auto_resolve_conversations',
   AUTOMATIONS: 'automations',
   CRM_CONFIGURAR_CAIXAS: 'crm_configurar_caixas',
+  CAMPAIGN_OPEN_WINDOW_TEXT: 'campaign_open_window_text',
   CAMPAIGNS: 'campaigns',
   WHATSAPP_CAMPAIGNS: 'whatsapp_campaign',
   WHATSAPP_EMBEDDED_SIGNUP_FLOW: 'whatsapp_embedded_signup_inbox_creation',
