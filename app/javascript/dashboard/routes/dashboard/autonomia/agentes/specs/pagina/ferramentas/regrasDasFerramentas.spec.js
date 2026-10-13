@@ -10,7 +10,6 @@ import {
   rascunhoDeExemplo,
   validarPasso,
   variaveisEm,
-  variaveisSemCodificar,
   avisosDasInformacoes,
   passosProvaveisDoErro,
   conteudoDoRascunho,
@@ -60,15 +59,6 @@ describe('regras das Ferramentas', () => {
       ).toEqual(['numero', 'termo']);
       expect(variaveisEm('')).toEqual([]);
       expect(variaveisEm('sem {{ fim')).toEqual([]);
-    });
-
-    it('flags only query variables without url_encode', () => {
-      expect(
-        variaveisSemCodificar(
-          'https://x.com/{{numero}}?a={{termo}}&b={{ cor | url_encode }}'
-        )
-      ).toEqual(['termo']);
-      expect(variaveisSemCodificar('https://x.com/{{numero}}')).toEqual([]);
     });
   });
 
@@ -388,7 +378,6 @@ describe('regras das Ferramentas', () => {
       expect(chamada.endereco).toEqual([
         { texto: 'https://x.com/b?t=pastilha+de+freio&c=azul+claro' },
       ]);
-      expect(chamada.ruim).toBe('');
       expect(chamada.cabecalhos).toEqual([
         'x-api-key: ••••••',
         'x-loja: 7',

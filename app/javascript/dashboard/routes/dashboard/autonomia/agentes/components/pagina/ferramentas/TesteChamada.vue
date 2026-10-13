@@ -2,26 +2,14 @@
 import { computed, h } from 'vue';
 
 // #1301 (protótipo F07) — "O que vai ser chamado": método, endereço com os valores trocados como o
-// backend troca, cabeçalhos (segredo mascarado e os automáticos) e o corpo. O trecho que entra cru
-// com espaço no endereço fica marcado: é ali que a chamada quebra. Quebra linha, sem rolagem lateral.
+// backend troca (cada valor já codificado, #1425), cabeçalhos (segredo mascarado e os automáticos) e o
+// corpo. Quebra linha, sem rolagem lateral.
 // Texto montado por funções (h), para o espaço da formatação do template não entrar no endereço.
 const props = defineProps({
   chamada: { type: Object, required: true },
 });
 
-const Endereco = ({ pedacos }) =>
-  pedacos.map(pedaco =>
-    pedaco.ruim
-      ? h(
-          'mark',
-          {
-            'data-trecho-ruim': '',
-            class: 'px-0.5 rounded bg-n-amber-4 text-n-slate-12',
-          },
-          pedaco.texto
-        )
-      : pedaco.texto
-  );
+const Endereco = ({ pedacos }) => pedacos.map(pedaco => pedaco.texto);
 Endereco.props = ['pedacos'];
 
 const Linhas = ({ linhas }) =>

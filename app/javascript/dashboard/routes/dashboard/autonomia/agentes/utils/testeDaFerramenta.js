@@ -228,8 +228,6 @@ export const montarChamada = (rascunho, valores) => {
   return {
     metodo: rascunho.metodo,
     endereco: montarEndereco(rascunho.endereco, valores),
-    // O backend codifica todo valor do endereço (#1425): não sobra espaço cru para marcar.
-    ruim: '',
     cabecalhos: [...cabecalhos, ...automaticos],
     corpo: comCorpo(rascunho) ? montarCorpo(rascunho, valores) : '',
   };

@@ -823,7 +823,7 @@
               "POST": "Send data (POST)",
               "POST_TEXTO": "Sends a body with the data. Use it when the system asks for it.",
               "ENDERECO": "Address",
-              "ENDERECO_AJUDA": "Start with https://. Use {variavel} for what the agent fills in. After the ?, write {codificada}.",
+              "ENDERECO_AJUDA": "Start with https://. Use {variavel} for what the agent fills in.",
               "ERRO": {
                 "VAZIO": "Write the address.",
                 "HTTPS": "Use an address that starts with https://.",
@@ -831,7 +831,6 @@
                 "REDE": "This address cannot be used: it points inside the private network.",
                 "IP": "Use the site name, not an IP number."
               },
-              "CODIFICAR": "If the person types a space or an accent, the call fails. Write {codificada} instead of {crua}.",
               "VAI_CRIAR": "You will create {variaveis} in the next step.",
               "SLUG": "Technical name",
               "SLUG_AJUDA": "The name of the tool for the agent. If empty, we build it from the name. Only letters, numbers and _.",
@@ -920,7 +919,6 @@
             "NAO": "No",
             "CHAMADA": "What will be called",
             "VER_CHAMADA": "See call",
-            "ESPACO": "The address goes with a space and the call fails. In Where it calls, write {codificada}.",
             "FAZER": "Make test call",
             "CHAMANDO": "Calling…",
             "CHAMANDO_LONGO": "Calling… it can take up to 10 seconds.",
@@ -958,7 +956,6 @@
               "TIPO_DO_CORPO": "The body uses a Content-Type or a tag (such as cycle) that cannot be escaped safely. Use JSON or form, with only variables, if and for.",
               "NAO_JSON": "The system's answer is not JSON, and the mapping needs JSON.",
               "URL_INVALIDA": "The address became invalid with the value typed.",
-              "URL_INVALIDA_POR_QUE": "A space or an accent after the ? breaks the call.",
               "REDE": "This address points inside the private network and cannot be used.",
               "SEM_RESPOSTA": "The system did not answer within 10 seconds or refused the connection.",
               "NAO_EXISTE": "The address, the body or the mapping uses something that does not exist.",
