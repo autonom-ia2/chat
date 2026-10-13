@@ -384,6 +384,14 @@ const PEDIDO_PARA_A_IA = { manter_aviso: 'manter_como_servico' };
 const semOpcao = () =>
   new ErroDaApi({ response: { data: { error: 'suggestion_unavailable' } } });
 
+// O resultado do job (#1333): { payload } ou { error, message } (sem IA, IA fora
+// do ar, nenhuma opção boa). O erro vira ErroDaApi, como os outros da tela.
+const pedirSugestao = async corpo => {
+  const resultado = await chamar(api.suggest(corpo));
+  if (resultado?.error) throw new ErroDaApi({ response: { data: resultado } });
+  return resultado.payload;
+};
+
 const respostaDaIA = payload => ({
   status: payload.status,
   pergunta: payload.question || '',
@@ -391,14 +399,12 @@ const respostaDaIA = payload => ({
 });
 
 const criarComIA = async ({ objetivo, tom, tipo, exemplo = () => '' }) => {
-  const { payload } = await chamar(
-    api.suggest({
-      mode: 'create',
-      goal: objetivo,
-      tone: tom,
-      category: tipo,
-    })
-  );
+  const payload = await pedirSugestao({
+    mode: 'create',
+    goal: objetivo,
+    tone: tom,
+    category: tipo,
+  });
   const opcoes = (payload.options || [])
     .map((opcao, indice) => opcaoDaIA(opcao, indice, exemplo))
     .filter(opcao => passaNaRegra(opcao.conteudo, opcao.tipo));
@@ -413,15 +419,13 @@ const tipoFinal = (item, tipo, travado) =>
   travado ? tipo : tipoDaCategoria(item.category);
 
 const melhorarComIA = async ({ conteudo, pedido, tipo, travado, recusa }) => {
-  const { payload } = await chamar(
-    api.suggest({
-      mode: 'improve',
-      text: pedacosParaTexto(conteudo.texto),
-      improvements: [PEDIDO_PARA_A_IA[pedido] || pedido],
-      category: tipo,
-      meta_reason: recusa || undefined,
-    })
-  );
+  const payload = await pedirSugestao({
+    mode: 'improve',
+    text: pedacosParaTexto(conteudo.texto),
+    improvements: [PEDIDO_PARA_A_IA[pedido] || pedido],
+    category: tipo,
+    meta_reason: recusa || undefined,
+  });
   const opcao = (payload.options || [])
     .map(item => ({ item, texto: textoParaPedacos(item.text) }))
     .find(({ item, texto }) =>

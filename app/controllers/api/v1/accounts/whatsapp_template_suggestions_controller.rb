@@ -1,60 +1,32 @@
-# "Criar com IA" e "Melhorar com IA" da tela de Modelos do WhatsApp (#1333, épico #1320). Escreve opções de texto com o
-# redator compartilhado (`Whatsapp::Templates::Redacao`); nada é salvo nem enviado à Meta.
+# "Criar com IA" e "Melhorar com IA" da tela de Modelos do WhatsApp (#1333, épico #1320). Nada é salvo nem enviado à Meta.
 #
 #   POST /api/v1/accounts/:account_id/whatsapp_template_suggestions
 #     criar:    { mode: 'create', goal:, tone?, category? }
 #     melhorar: { mode: 'improve', text: (com {{chave.do.catalogo}}), improvements: [...], tone?, category?, meta_reason? }
-#   => { payload: { status: ok|precisa_mais_info|nao_se_aplica, question, suggestions, options: [...] } }
+#   => 202 { id, status: 'pending', poll_url }  (padrão `DeferInteractiveAi`; o resultado sai em GET ai_requests/:id:
+#      { payload: { status, question, suggestions, options } } ou { error: 'suggestion_unavailable', message })
 #
-# Mesma porta de escrever modelo: flag `whatsapp_templates_journey` (404 sem ela) e `whatsapp_templates_manage`.
-# Sem IA (desligada, sem chave, erro) ou sem opção que passe na conferência: 422 com uma frase simples.
+# Mesma porta de escrever modelo: flag `whatsapp_templates_journey` (404 sem ela) e `whatsapp_templates_manage`; o job
+# confere as duas de novo antes de chamar a IA. Pedido fora do formato: 422 na hora, sem enfileirar.
 class Api::V1::Accounts::WhatsappTemplateSuggestionsController < Api::V1::Accounts::BaseController
-  MODES = %w[create improve].freeze
+  include DeferInteractiveAi
 
   before_action :ensure_journey_enabled
   before_action :check_authorization
 
   def create
-    result = write
-    return render_unavailable if result[:status] == 'ok' && result[:opcoes].empty?
-
-    render json: { payload: payload(result) }
+    defer_interactive_ai(Whatsapp::Templates::Sugestao::OPERACAO, Whatsapp::Templates::Sugestao.entradas(suggestion_params))
   rescue Whatsapp::Templates::Redacao::Invalida
     render_error('suggestion_invalid')
-  rescue Ai::Redacao::Escrever::Indisponivel => e
-    Rails.logger.info("[whatsapp_templates][redacao] unavailable account_id=#{Current.account.id} reason=#{e.message}")
-    render_unavailable
   end
 
   private
 
-  def write
-    mode = params[:mode].to_s
-    raise Whatsapp::Templates::Redacao::Invalida, 'mode' unless MODES.include?(mode)
-
-    writer = Whatsapp::Templates::Redacao.new(account: Current.account)
-    mode == 'create' ? create_with(writer) : improve_with(writer)
-  end
-
-  def create_with(writer)
-    writer.criar(objetivo: params[:goal].to_s, tom: params[:tone].to_s, tipo: params[:category].to_s)
-  end
-
-  def improve_with(writer)
-    writer.melhorar(texto: params[:text].to_s, melhorias: Array(params[:improvements]), tom: params[:tone].to_s,
-                    tipo: params[:category].to_s, recusa: params[:meta_reason].to_s)
-  end
-
-  def payload(result)
-    { status: result[:status], question: result[:pergunta], suggestions: result[:sugestoes],
-      options: result[:opcoes].map { |option| option_json(option) } }
-  end
-
-  def option_json(option)
-    whatsapp = option[:whatsapp]
-    { text: option[:texto], keys: option[:chaves_usadas], category: option[:categoria_prevista],
-      reason: option[:motivo_categoria], changes: option[:o_que_mudou], name: whatsapp[:nome_sugerido],
-      header: whatsapp[:cabecalho], footer: whatsapp[:rodape], buttons: whatsapp[:botoes] }
+  def suggestion_params
+    {
+      mode: params[:mode].to_s, goal: params[:goal].to_s, text: params[:text].to_s, tone: params[:tone].to_s,
+      category: params[:category].to_s, meta_reason: params[:meta_reason].to_s, improvements: Array(params[:improvements])
+    }.with_indifferent_access
   end
 
   def ensure_journey_enabled
@@ -63,10 +35,6 @@ class Api::V1::Accounts::WhatsappTemplateSuggestionsController < Api::V1::Accoun
 
   def check_authorization
     authorize(WhatsappTemplateProfile, :create?, policy_class: WhatsappTemplatePolicy)
-  end
-
-  def render_unavailable
-    render_error('suggestion_unavailable')
   end
 
   def render_error(code, status = :unprocessable_entity)

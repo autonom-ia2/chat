@@ -24,11 +24,12 @@ class Crm::Ai::InteractiveOperation # rubocop:disable Metrics/ClassLength
     when 'meta_funnel_stages' then authorize_meta_funnel!
     when 'meta_ads_daily_action' then authorize_meta_ads_panel!
     when 'meta_ads_quote_message' then authorize_meta_ads_quote!
+    when 'whatsapp_template_suggestion' then authorize_whatsapp_templates!
     else raise ArgumentError, 'unknown_interactive_operation'
     end
   end
 
-  def perform # rubocop:disable Metrics/CyclomaticComplexity
+  def perform # rubocop:disable Metrics/CyclomaticComplexity, Metrics/AbcSize
     case @data.fetch('operation')
     when 'meeting_times', 'meeting_invite', 'meeting_summary' then meeting_result
     when 'card_summary' then card_summary
@@ -43,6 +44,7 @@ class Crm::Ai::InteractiveOperation # rubocop:disable Metrics/ClassLength
     when 'meta_funnel_stages' then Crm::MetaAds::StageTypeSuggester.new(pipeline: meta_funnel, language: @inputs.fetch(:language)).perform
     when 'meta_ads_daily_action' then meta_ads_daily_action
     when 'meta_ads_quote_message' then meta_ads_quote_message
+    when 'whatsapp_template_suggestion' then whatsapp_template_suggestion
     end
   end
 
@@ -144,6 +146,17 @@ class Crm::Ai::InteractiveOperation # rubocop:disable Metrics/ClassLength
   def meta_ads_quote_message
     suggester = Crm::MetaAds::QuoteMessageSuggester.new(card: card, conversation: meta_ads_conversation, language: @inputs.fetch(:language))
     { quote_message: suggester.perform }
+  end
+
+  def whatsapp_template_suggestion
+    Whatsapp::Templates::Sugestao.executar(account: @account, inputs: @inputs)
+  end
+
+  # Modelos do WhatsApp (#1333): a mesma porta do POST (flag da conta e whatsapp_templates_manage).
+  def authorize_whatsapp_templates!
+    raise Pundit::NotAuthorizedError unless @account.feature_enabled?('whatsapp_templates_journey')
+
+    Pundit.authorize(@context, WhatsappTemplateProfile, :create?, policy_class: WhatsappTemplatePolicy)
   end
 
   def authorize_email!

@@ -33,24 +33,48 @@ class Whatsapp::Templates::Redacao
   COLUNAS = { 'data' => 'data', 'horario' => 'hora', 'valor' => 'moeda', 'desconto' => 'texto', 'link' => 'link',
               'codigo' => 'texto' }.freeze
 
-  def initialize(account:)
+  # `timeout:`/`max_retries:` vão ao redator: o job usa mais tempo e uma nova tentativa (`Sugestao`).
+  def initialize(account:, timeout: Ai::Redacao::Escrever::TIMEOUT, max_retries: 0)
     @account = account
+    @timeout = timeout
+    @max_retries = max_retries
   end
 
-  def criar(objetivo:, tom: nil, tipo: nil)
+  # Confere o pedido sem chamar a IA (o controller, antes de enfileirar). Levanta `Invalida`.
+  def self.conferir_criar!(objetivo)
     objetivo = objetivo.to_s.strip
     raise Invalida, 'objetivo' if objetivo.empty? || objetivo.length > OBJETIVO_MAXIMO
 
-    escrever(pedido: objetivo, tom: tom, tipo: tipo, permitidas: permitidas)
+    objetivo
+  end
+
+  def self.conferir_melhorar!(texto, melhorias)
+    melhorias = Array(melhorias).map(&:to_s).uniq
+    raise Invalida, 'melhorias' if melhorias.empty? || !(melhorias - MELHORIAS).empty?
+
+    chaves_do_texto(texto.to_s)
+    melhorias
+  end
+
+  # O texto da pessoa: até 1024, chaves bem escritas e todas do catálogo (as da tela já chegam como chave).
+  def self.chaves_do_texto(texto)
+    raise Invalida, 'texto' if texto.strip.empty? || texto.length > TEXTO_MAXIMO || Ai::Redacao::Chaves.malformado?(texto)
+
+    chaves = Ai::Redacao::Chaves.extrair(texto).uniq
+    raise Invalida, 'texto' unless chaves.all? { |chave| TemplateFields::Catalog.known?(chave) && chave != TemplateFields::Catalog::FIXED }
+
+    chaves
+  end
+
+  def criar(objetivo:, tom: nil, tipo: nil)
+    escrever(pedido: self.class.conferir_criar!(objetivo), tom: tom, tipo: tipo, permitidas: permitidas)
   end
 
   def melhorar(texto:, melhorias:, tom: nil, tipo: nil, recusa: nil)
     texto = texto.to_s
-    melhorias = Array(melhorias).map(&:to_s).uniq
-    raise Invalida, 'melhorias' if melhorias.empty? || !(melhorias - MELHORIAS).empty?
-
+    melhorias = self.class.conferir_melhorar!(texto, melhorias)
     pedido = { melhorias: melhorias, observacao: nil, recusa_da_meta: recusa.present? ? { motivo: recusa.to_s.first(MOTIVO_MAXIMO) } : nil }
-    escrever(pedido: pedido, base: texto, tom: tom, tipo: tipo, permitidas: permitidas | chaves_do_texto(texto))
+    escrever(pedido: pedido, base: texto, tom: tom, tipo: tipo, permitidas: permitidas | self.class.chaves_do_texto(texto))
   end
 
   private
@@ -62,21 +86,12 @@ class Whatsapp::Templates::Redacao
     Ai::Redacao::Escrever.call(
       account: @account, feature: FEATURE, canal: 'whatsapp_modelo', proposito: PROPOSITOS[modo], pedido: pedido, base: base,
       tom: tom, opcoes: OPCOES[modo], colunas: COLUNAS, chaves: { permitidas: permitidas, obrigatorias: [] },
-      limites: { max_chars: MAX_CHARS.fetch(tom, MAX_CHARS_SEM_TOM), categoria_desejada: CATEGORIAS[tipo.to_s], sem_midia: true }
+      limites: { max_chars: MAX_CHARS.fetch(tom, MAX_CHARS_SEM_TOM), categoria_desejada: CATEGORIAS[tipo.to_s], sem_midia: true },
+      timeout: @timeout, max_retries: @max_retries
     )
   end
 
   def permitidas
     FIXAS + COLUNAS.keys.map { |coluna| TemplateFields::Catalog.audience_key(coluna) }
-  end
-
-  # O texto da pessoa: até 1024, chaves bem escritas e todas do catálogo (as da tela já chegam como chave).
-  def chaves_do_texto(texto)
-    raise Invalida, 'texto' if texto.strip.empty? || texto.length > TEXTO_MAXIMO || Ai::Redacao::Chaves.malformado?(texto)
-
-    chaves = Ai::Redacao::Chaves.extrair(texto).uniq
-    raise Invalida, 'texto' unless chaves.all? { |chave| TemplateFields::Catalog.known?(chave) && chave != TemplateFields::Catalog::FIXED }
-
-    chaves
   end
 end

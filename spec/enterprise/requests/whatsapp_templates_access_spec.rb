@@ -77,9 +77,12 @@ RSpec.describe 'Modelos do WhatsApp com função personalizada', type: :request 
     call(role_user('whatsapp_templates_view'), :post, path, { mode: 'create', goal: 'lembrar do horário' })
     expect(response).to have_http_status(:unauthorized)
 
-    call(role_user('whatsapp_templates_manage'), :post, path, { mode: 'create', goal: 'lembrar do horário' })
-    expect(response).to have_http_status(:unprocessable_entity)
-    expect(response.parsed_body['error']).to eq('suggestion_unavailable')
+    manager = role_user('whatsapp_templates_manage')
+    call(manager, :post, path, { mode: 'create', goal: 'lembrar do horário' })
+    expect(response).to have_http_status(:accepted)
+    Crm::Ai::InteractiveJob.perform_now(response.parsed_body['id'])
+    call(manager, :get, response.parsed_body['poll_url'])
+    expect(response.parsed_body.dig('result', 'error')).to eq('suggestion_unavailable')
   end
 
   it 'campaign_manage sozinha não abre os modelos' do

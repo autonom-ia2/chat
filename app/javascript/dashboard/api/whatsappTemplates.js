@@ -1,6 +1,11 @@
 /* global axios */
 
 import ApiClient from './ApiClient';
+import { pollAiRequest } from '../helper/aiRequestPolling';
+
+// O job leva até 25 s por tentativa, com 1 nova tentativa, mais a fila (#1333);
+// a tela desiste depois disto.
+const SUGGESTION_POLL = { intervalMs: 1500, timeoutMs: 120 * 1000 };
 
 // Modelos de mensagem do WhatsApp oficial (#1330 backend, #1332 tela). Uma caixa por chamada: a conta do WhatsApp
 // (WABA) é sempre a da caixa, nunca escolhida aqui.
@@ -11,6 +16,7 @@ import ApiClient from './ApiClient';
 // GET  whatsapp_message_prices    → { payload: { currency, prices, free_tier, service_usage } }
 // GET  campaign_journey/campaign_pauses · POST campaign_journey/campaign_pauses/:id/resume
 // POST whatsapp_template_suggestions  { mode: create|improve, goal | text + improvements, tone, category } (#1333)
+//   → 202 + poll_url (job); `suggest` busca o resultado: { payload } ou { error, message }
 class WhatsappTemplatesAPI extends ApiClient {
   constructor() {
     super('', { accountScoped: true });
@@ -59,7 +65,10 @@ class WhatsappTemplatesAPI extends ApiClient {
   }
 
   suggest(body) {
-    return axios.post(`${this.url}whatsapp_template_suggestions`, body);
+    return pollAiRequest(
+      axios.post(`${this.url}whatsapp_template_suggestions`, body),
+      SUGGESTION_POLL
+    );
   }
 
   getCampaignPauses() {

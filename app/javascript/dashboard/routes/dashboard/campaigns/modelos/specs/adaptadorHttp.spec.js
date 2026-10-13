@@ -442,6 +442,22 @@ describe('criar e melhorar com IA (#1333)', () => {
     );
   });
 
+  it('turns the job error (no AI, AI down) into the simple message of the screen', async () => {
+    http.suggest.mockImplementation(() =>
+      ok({
+        error: 'suggestion_unavailable',
+        message: 'Não consegui escrever agora.',
+      })
+    );
+
+    await expect(
+      adaptador.criarComIA({ objetivo: 'x', tom: 'curto' })
+    ).rejects.toMatchObject({
+      codigo: 'suggestion_unavailable',
+      mensagem: 'Não consegui escrever agora.',
+    });
+  });
+
   it('improves only the text, sends the catalog keys and the type of the draft', async () => {
     http.suggest.mockImplementation(() =>
       ok({

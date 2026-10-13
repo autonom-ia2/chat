@@ -36,3 +36,12 @@ conferência do código: no "Mais curto" de um texto com 4 campos, ela descartav
 - **"Mais curto" medido:** o código mede o texto fixo (sem os campos), da base para a opção. Abaixo de 30% de corte, a
   opção cai (`corte_pequeno`); com 4 campos ou mais na base, o mínimo é 25%. Na gaveta, a tela mostra o corte medido
   no lugar do "o que mudou" escrito pela IA.
+
+**Escrita assíncrona.** A IA passa de 11 s numa parte dos pedidos (p95 perto de 11 s), e a chamada síncrona virava erro
+na tela. Hoje a escrita segue o padrão `DeferInteractiveAi` do fork:
+- o `POST whatsapp_template_suggestions` confere o pedido e enfileira o `Crm::Ai::InteractiveJob`, que responde 202
+  com `poll_url`;
+- o job escreve com 25 s e uma nova tentativa do cliente HTTP (`Whatsapp::Templates::Sugestao`);
+- a tela mostra "Escrevendo…" e busca o resultado a cada 1,5 s em `GET ai_requests/:id`, desistindo em 120 s.
+
+O resultado é `{ payload }` ou `{ error, message }`.
