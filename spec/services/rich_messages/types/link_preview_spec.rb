@@ -6,6 +6,7 @@ describe RichMessages::Types::LinkPreview do
   let(:rich_message) { { type: 'link_preview' } }
   let(:body) { "Sua proposta está pronta: #{link}" }
   let(:graph_recent) { 'https://graph.facebook.com/v22.0/123456789/messages' }
+  let(:graph_legacy) { 'https://graph.facebook.com/v13.0/123456789/messages' }
   let(:meta_ok) { { status: 200, body: { messages: [{ id: 'wamid.previa' }] }.to_json, headers: { 'Content-Type' => 'application/json' } } }
 
   def outgoing(conversation, attrs = {})
@@ -33,8 +34,11 @@ describe RichMessages::Types::LinkPreview do
       'Veja http://exemplo.com.br/a e responda',
       "Primeira linha\nhttps://exemplo.com.br/p",
       'Proposta (https://exemplo.com.br/p).',
+      'Veja https://exemplo.com.br.',
       'Sem link aqui, mas este tem: https://exemplo.com.br, ok?',
-      'https://açaí.com.br/promoção'
+      'https://açaí.com.br/promoção',
+      'Veja HTTPS://EXEMPLO.COM.BR, como no botão de link',
+      'Painel em http://192.168.0.10:8080/status'
     ].each do |text|
       it "accepts #{text.inspect}" do
         expect(described_class.new({}).error_for(text)).to be_nil
@@ -45,13 +49,29 @@ describe RichMessages::Types::LinkPreview do
       'a body without any address' => 'Sua proposta está pronta.',
       'an address without http or https' => 'Acesse www.exemplo.com.br/proposta',
       'an address with another scheme' => 'Baixe em ftp://exemplo.com.br/arquivo',
-      'a scheme without a host' => 'Veja https:// e https:///caminho',
-      'a scheme in capitals (Meta asks for http:// or https://)' => 'Veja HTTPS://EXEMPLO.COM.BR',
       'a blank body' => '   '
     }.each do |title, text|
-      it "refuses #{title}" do
+      it "refuses #{title} as having no address" do
         expect(described_class.new({}).error_for(text)).to eq(described_class::NO_WEB_ADDRESS)
       end
+    end
+
+    {
+      'a scheme without a host' => 'Veja https:// agora',
+      'a host that is only punctuation' => 'Veja https://.',
+      'a host with an empty part' => 'Veja https://exemplo..com.br',
+      'a one-part host the phone cannot reach' => 'Veja http://localhost:3000',
+      'a path without a host' => 'Veja https:///caminho',
+      'an address the parser rejects (port that is not a number)' => 'Veja https://exemplo.com.br:abc/p',
+      'an invalid first address followed by a valid one' => 'Veja https://. ou https://exemplo.com.br'
+    }.each do |title, text|
+      it "refuses #{title}, because the first address is the one previewed" do
+        expect(described_class.new({}).error_for(text)).to eq(described_class::INVALID_FIRST_ADDRESS)
+      end
+    end
+
+    it 'goes through the parser error for a port that is not a number' do
+      expect { Addressable::URI.parse('https://exemplo.com.br:abc/p') }.to raise_error(Addressable::URI::InvalidURIError)
     end
 
     it 'refuses a body above 4096 characters and accepts the limit itself' do
@@ -79,6 +99,11 @@ describe RichMessages::Types::LinkPreview do
       message.reload
     end
 
+    def expect_nothing_sent_to_meta
+      expect(a_request(:post, graph_recent)).not_to have_been_made
+      expect(a_request(:post, graph_legacy)).not_to have_been_made
+    end
+
     context 'when the 24h window is open' do
       before { open_window(conversation) }
 
@@ -89,7 +114,7 @@ describe RichMessages::Types::LinkPreview do
 
         expect(request).to have_been_requested.once
         expect(message.source_id).to eq('wamid.previa')
-        expect(message.status).not_to eq('failed')
+        expect(message.status).to eq('sent')
         expect(RichMessages.delivery_mode(inbox: inbox, type: 'link_preview', conversation: conversation)).to eq(:native)
       end
 
@@ -110,11 +135,11 @@ describe RichMessages::Types::LinkPreview do
         message = deliver(outgoing(conversation, content: "Veja [a proposta](#{link})"))
 
         expect(request).to have_been_requested.once
-        expect(message.status).not_to eq('failed')
+        expect(message.status).to eq('sent')
       end
 
       it 'keeps the plain text request untouched without rich_message (v13.0, no preview_url)' do
-        request = stub_request(:post, 'https://graph.facebook.com/v13.0/123456789/messages')
+        request = stub_request(:post, graph_legacy)
                   .with(body: { messaging_product: 'whatsapp', context: nil, to: '5511937016094', text: { body: body }, type: 'text' }.to_json)
                   .to_return(meta_ok)
 
@@ -127,6 +152,7 @@ describe RichMessages::Types::LinkPreview do
       {
         'a body without an address' => [{ content: 'Sua proposta está pronta.' }, described_class::NO_WEB_ADDRESS],
         'a blank body' => [{ content: '' }, described_class::NO_WEB_ADDRESS],
+        'an invalid first address' => [{ content: 'Veja https://. ou https://exemplo.com.br' }, described_class::INVALID_FIRST_ADDRESS],
         'a body above 4096 characters' => [{ content: "https://exemplo.com.br #{'a' * 4096}" }, described_class::BODY_TOO_LONG]
       }.each do |title, (message_changes, error)|
         it "fails the message without sending anything for #{title}" do
@@ -134,7 +160,7 @@ describe RichMessages::Types::LinkPreview do
 
           expect(message.status).to eq('failed')
           expect(message.external_error).to eq(error)
-          expect(a_request(:any, /graph\.facebook\.com/)).not_to have_been_made
+          expect_nothing_sent_to_meta
         end
       end
     end
@@ -145,7 +171,7 @@ describe RichMessages::Types::LinkPreview do
 
         expect(message.status).to eq('failed')
         expect(message.external_error).to eq(I18n.t('errors.whatsapp.message_outside_messaging_window'))
-        expect(a_request(:any, /graph\.facebook\.com/)).not_to have_been_made
+        expect_nothing_sent_to_meta
       end
     end
   end
@@ -169,7 +195,7 @@ describe RichMessages::Types::LinkPreview do
       Whatsapp::SendOnWhatsappService.new(message: message).perform
 
       expect(request).to have_been_requested.once
-      expect(message.reload.status).not_to eq('failed')
+      expect(message.reload.status).to eq('sent')
     end
   end
 
@@ -179,5 +205,25 @@ describe RichMessages::Types::LinkPreview do
 
     expect(message.outgoing_content).to eq(body)
     expect(RichMessages.delivery_mode(inbox: channel.inbox, type: 'link_preview')).to eq(:text)
+  end
+
+  it 'accepts a markdown link on Telegram, whose outgoing text is HTML, as it does on WhatsApp' do
+    channel = create(:channel_telegram)
+    message = outgoing(create(:conversation, inbox: channel.inbox, account: channel.account), content: "Veja [a proposta](#{link})")
+
+    expect(RichMessages.format_error(message)).to be_nil
+  end
+
+  {
+    'e-mail' => [:channel_email, 'Channel::Email'],
+    'the website chat' => [:channel_widget, 'Channel::WebWidget']
+  }.each do |name, (factory, channel_type)|
+    it "is refused on #{name}, like every rich_message there" do
+      channel = create(factory)
+      message = outgoing(create(:conversation, inbox: channel.inbox, account: channel.account))
+
+      expect(RichMessages.format_error(message)).to eq(RichMessages::UNSUPPORTED_CHANNELS.fetch(channel_type))
+      expect(RichMessages.delivery_mode(inbox: channel.inbox, type: 'link_preview')).to eq(:refused)
+    end
   end
 end
