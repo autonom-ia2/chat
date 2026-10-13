@@ -16,6 +16,7 @@ import adaptador from './adaptadorHttp';
 //   Um modelo é da conta do WhatsApp (WABA) e vale para todos os números dela;
 //   `conta.id` é o id da primeira caixa da conta (a tela nunca vê o id da WABA).
 // listarModelos({ atualizar }) → [Modelo]  (`atualizar`: pede a lista nova à Meta)
+//   com `naoLeu` (nomes das contas do WhatsApp que não responderam) e `naoAtualizou`.
 // obterModelo(id) → Modelo
 // ondeEstaEmUso(id) → [{ tipo: 'campanha' | 'agendamento' | 'crm'
 //   | 'oculto', nome, data? (ISO), agendado, rota: { name, query? } | null }]
@@ -28,7 +29,8 @@ import adaptador from './adaptadorHttp';
 // retomarCampanha(pausaId) → a pausa fechada (a campanha confere o modelo de novo)
 // custoPorEnvio(tipo) → { valor, moeda } | null  (tabela WHATSAPP_MESSAGE_PRICES)
 // obterFranquia() → { limite, numeros: [{ id, nome, usadas }] } | null
-// criarModelo(rascunho, { textos }) → [Modelo]  (um por conta do WhatsApp)
+// criarModelo(rascunho, { textos }) → [Modelo]  (um por conta do WhatsApp); se uma
+//   conta falha depois de outra criar, a lista vem com `falha` e `contasSemPedido`.
 // alterarModelo(id, rascunho, { textos }) → Modelo (volta para 'em_analise')
 // apagarModelo(id) → { nomeBloqueadoAte }  (data ISO, 30 dias depois)
 //   Erros da API chegam como ErroDaApi { codigo, mensagem (já traduzida), status }.
@@ -44,6 +46,11 @@ import adaptador from './adaptadorHttp';
 //     cartoes?, oferta?, catalogo?, codigo?, formulario? },
 //   campos: { '1': campo }, template (o modelo como a Meta devolve),
 //   recusa: { codigo } | null, pausa: { desde | null } | null,
+//   sinal: 'bom' | 'atencao' | 'ruim' | 'sem_nota'  (qualidade dada pelo WhatsApp),
+//   saude: { dias, enviadas, entregues, lidas, responderam,
+//     custo: { total, porResposta | null, moeda } | null,
+//     mediaDeRespostas: % | null (só com 3 modelos ou mais com envios) }
+//     | undefined  (últimos 30 dias, só o que saiu pelo Chat2You, #1338),
 //   enviosNoMes | null, enviadoEm | null,
 //   edicoes: { restantesNoMes | null, liberadaEm | null },
 // }

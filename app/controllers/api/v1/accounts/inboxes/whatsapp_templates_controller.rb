@@ -81,23 +81,32 @@ class Api::V1::Accounts::Inboxes::WhatsappTemplatesController < Api::V1::Account
     permitted.to_h.merge('components' => Array(components).grep(ActionController::Parameters).map { |item| item.permit!.to_h })
   end
 
+  # Os quatro abaixo respondem pelo `rescue_from`, que o Rails roda fora dos `around_action`: quando chegam aqui, o
+  # `I18n.with_locale` do `switch_locale_using_account_locale` já terminou e o idioma voltou ao padrão (#1419). Por isso
+  # cada um reabre o idioma da pessoa (ou da conta) antes de montar a mensagem.
   def template_not_found
-    render_error('template_not_found', :not_found)
+    switch_locale_using_account_locale { render_error('template_not_found', :not_found) }
   end
 
   def meta_unreachable
-    render_error('meta_unreachable', :service_unavailable)
+    switch_locale_using_account_locale { render_error('meta_unreachable', :service_unavailable) }
   end
 
-  # A tela nunca recebe o texto cru da Meta (#1394): sem texto nosso, vai o genérico e o `code` (`meta_text`).
+  # A tela nunca recebe o texto cru da Meta (#1394): sem texto nosso, vai o genérico e o `code` (`meta_text`). Com texto
+  # nosso, o `code` é a chave dele: traduzimos aqui, no idioma da pessoa, em vez do `message` que o serviço montou no
+  # idioma da conta (o mesmo serviço roda fora de pedido, no sync).
   def meta_refused(error)
-    message = error.own_text ? error.message : I18n.t('whatsapp_templates.errors.meta_text')
-    render json: { error: 'meta_refused', code: error.code, message: message }, status: :unprocessable_entity
+    switch_locale_using_account_locale do
+      message = I18n.t("whatsapp_templates.errors.#{error.own_text ? error.code : 'meta_text'}")
+      render json: { error: 'meta_refused', code: error.code, message: message }, status: :unprocessable_entity
+    end
   end
 
   def refused(error)
-    render json: { error: error.code, message: I18n.t("whatsapp_templates.errors.#{error.code}") }.merge(error.details),
-           status: :unprocessable_entity
+    switch_locale_using_account_locale do
+      render json: { error: error.code, message: I18n.t("whatsapp_templates.errors.#{error.code}") }.merge(error.details),
+             status: :unprocessable_entity
+    end
   end
 
   def render_sync_failure(code)

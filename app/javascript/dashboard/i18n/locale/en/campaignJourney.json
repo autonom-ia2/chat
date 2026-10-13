@@ -30,7 +30,7 @@
       "CONNECT": "Connect a channel",
       "HINTS": {
         "EMAIL": "Rich content, with editor and templates.",
-        "WHATSAPP_OFFICIAL": "Template approved by Meta. For people who have not talked to you yet.",
+        "WHATSAPP_OFFICIAL": "Template approved by WhatsApp. For people who have not talked to you yet.",
         "WHATSAPP_API": "Free text and media, one message at a time, at a safe pace.",
         "SMS": "Short text that reaches any phone.",
         "LIVE_CHAT": "Automatic message on your website."
@@ -369,6 +369,7 @@
         "LATER": "Pick date and time",
         "DATE_LABEL": "Date and time ({zone})",
         "PAST": "Choose a future date and time.",
+        "PICK_DATE": "Choose the date and time of the send.",
         "RECEIVE": "Will receive",
         "ON_CHANNEL": "In the audience with mobile",
         "LEFT_OUT": "Left out for missing data",

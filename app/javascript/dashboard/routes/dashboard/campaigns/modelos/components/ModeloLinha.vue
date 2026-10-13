@@ -2,7 +2,7 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
-import { objetivoPorChave } from '../constants';
+import { SINAIS, SINAIS_DE_ALERTA, objetivoPorChave } from '../constants';
 import { usavelEmCampanha } from '../helpers/paraMeta';
 import { haQuantoTempo, numero } from '../helpers/datas';
 import ModeloSelo from './ModeloSelo.vue';
@@ -72,6 +72,21 @@ const frase = computed(() => {
   return t(`MODELOS_WHATSAPP.RECUSAS.${recusa?.codigo || 'outro'}.TITULO`);
 });
 
+// Saúde (#1338): o selo só aparece quando pede ação; a resposta, quando já saiu.
+const sinal = computed(() =>
+  props.modelo.situacao === 'pronto' &&
+  SINAIS_DE_ALERTA.includes(props.modelo.sinal)
+    ? props.modelo.sinal
+    : ''
+);
+const respostas = computed(() => {
+  const saude = props.modelo.saude;
+  if (props.modelo.situacao !== 'pronto' || !saude?.entregues) return '';
+  return t('MODELOS_WHATSAPP.SAUDE.LISTA.RESPONDERAM', {
+    n: Math.round((saude.responderam / saude.entregues) * 100),
+  });
+});
+
 const numeros = computed(() => {
   const [primeiro, ...outros] = props.nomesDosNumeros;
   if (!primeiro) return '';
@@ -121,6 +136,19 @@ const acao = computed(() => {
           </span>
           <ModeloSelo :situacao="modelo.situacao" />
           <span
+            v-if="sinal"
+            :data-selo-sinal="sinal"
+            class="inline-flex items-center gap-1.5 px-2.5 py-1 text-sm font-medium rounded-full whitespace-nowrap"
+            :class="SINAIS[sinal].selo"
+          >
+            <span
+              class="size-4"
+              :class="SINAIS[sinal].icone"
+              aria-hidden="true"
+            />
+            {{ $t(`MODELOS_WHATSAPP.SAUDE.SINAIS.${sinal}.SELO`) }}
+          </span>
+          <span
             v-if="modelo.sistema"
             data-selo-sistema
             class="inline-flex items-center gap-1 px-2.5 py-1 text-sm font-medium rounded-full bg-n-iris-3 text-n-iris-11"
@@ -165,6 +193,8 @@ const acao = computed(() => {
             {{ $t(`MODELOS_WHATSAPP.FORMATOS.${formato}.TITULO`) }}
           </span>
           <span>{{ frase }}</span>
+          <span v-if="respostas" aria-hidden="true">{{ PONTO }}</span>
+          <span v-if="respostas" data-respostas>{{ respostas }}</span>
           <span v-if="numeros" aria-hidden="true">{{ PONTO }}</span>
           <span v-if="numeros" class="text-n-slate-10 font-normal">{{
             numeros

@@ -7,12 +7,16 @@ import Breadcrumb from 'dashboard/components-next/breadcrumb/Breadcrumb.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import SettingsLayout from 'dashboard/routes/dashboard/settings/SettingsLayout.vue';
 import CrmKanbanAPI from 'dashboard/api/crmKanban';
+import { situacaoDoFunil } from './passagem/passagem';
 
 const { t } = useI18n();
 const router = useRouter();
 
 const isLoading = ref(false);
 const pipelines = ref([]);
+// A situação de cada funil sai do ai_settings, que traz as etapas: um funil desligado com uma etapa do seu jeito ainda
+// chama a equipe nessa etapa (#1385). Sem resposta para um funil, ele fica sem selo em vez de um selo errado.
+const situacoes = ref({});
 
 const breadcrumbItems = computed(() => [
   {
@@ -23,21 +27,42 @@ const breadcrumbItems = computed(() => [
 ]);
 
 const handoffSummary = pipeline => {
-  const handoff = pipeline.metadata?.ai?.handoff || {};
-  if (handoff.enabled !== true && handoff.enabled !== 'true') {
+  const situacao = situacoes.value[pipeline.id];
+  if (!situacao) return null;
+  const H = 'CRM_KANBAN.HANDOFF_SETTINGS';
+  if (situacao.estado === 'ligada' && !situacao.jeito) {
+    return { enabled: true, label: t(`${H}.STATUS_ON_MIXED`) };
+  }
+  if (situacao.estado === 'ligada') {
+    const fluxo = situacao.jeito === 'convite' ? 'FLOW_INVITE' : 'FLOW_DIRECT';
     return {
-      enabled: false,
-      label: t('CRM_KANBAN.HANDOFF_SETTINGS.STATUS_OFF'),
+      enabled: true,
+      label: t(`${H}.STATUS_ON`, { flow: t(`${H}.${fluxo}`) }),
     };
   }
-  const flowKey =
-    handoff.handoff_mode === 'r3_invite' ? 'FLOW_INVITE' : 'FLOW_DIRECT';
-  return {
-    enabled: true,
-    label: t('CRM_KANBAN.HANDOFF_SETTINGS.STATUS_ON', {
-      flow: t(`CRM_KANBAN.HANDOFF_SETTINGS.${flowKey}`),
-    }),
-  };
+  if (situacao.estado === 'parte') {
+    return {
+      enabled: true,
+      label: t(`${H}.STATUS_SOME`, {
+        n: situacao.ligadas,
+        total: situacao.total,
+      }),
+    };
+  }
+  return { enabled: false, label: t(`${H}.STATUS_OFF`) };
+};
+
+const carregarSituacoes = async lista => {
+  const respostas = await Promise.allSettled(
+    lista.map(pipeline => CrmKanbanAPI.getAiSettings(pipeline.id))
+  );
+  situacoes.value = Object.fromEntries(
+    respostas.flatMap((resposta, indice) =>
+      resposta.status === 'fulfilled'
+        ? [[lista[indice].id, situacaoDoFunil(resposta.value.data.payload)]]
+        : []
+    )
+  );
 };
 
 const openPipeline = pipeline => {
@@ -56,6 +81,7 @@ onMounted(async () => {
   try {
     const response = await CrmKanbanAPI.getPipelines();
     pipelines.value = response.data.payload || [];
+    await carregarSituacoes(pipelines.value);
   } catch {
     useAlert(t('CRM_KANBAN.HANDOFF_SETTINGS.LOAD_ERROR'));
   } finally {
@@ -110,6 +136,7 @@ onMounted(async () => {
           </div>
           <div class="flex shrink-0 items-center gap-2">
             <span
+              v-if="handoffSummary(pipeline)"
               class="rounded-full px-2.5 py-0.5 text-xs font-medium"
               :class="
                 handoffSummary(pipeline).enabled

@@ -39,7 +39,7 @@
         "LIMITE": "Not created: template limit"
       },
       "CONTA": "Account {nome}",
-      "PARCIAL": "We could not read the templates of one WhatsApp account now. Some templates may be missing from the list.",
+      "PARCIAL": "We could not read the templates of the account {conta} now. Some of its templates may be missing from the list.",
       "NAO_ATUALIZOU": "We could not update the list of the account {conta} right now. This is the last saved list; try again in a few minutes.",
       "NAO_ATUALIZOU_PERMISSAO": "We could not update the list of the account {conta}: the number lost its permission on WhatsApp. Reconnect the number in Settings › Inboxes. This is the last saved list."
     },
@@ -224,7 +224,7 @@
       "COPIA_DE": "{nome} (copy)",
       "AVISO_COPIA": "This is a copy of “{nome}”. Adjust what you want and pick a different name.",
       "FALHOU": "We couldn't send it now. Try again.",
-      "FALHOU_UMA_CONTA": "The template was sent for one WhatsApp account, but not for the other. {motivo}",
+      "FALHOU_UMA_CONTA": "The request did not go to the account {contas}. {motivo} | The request did not go to the accounts {contas}. {motivo}",
       "AVISO_COPIA_ARQUIVOS": "The copy does not take the files: pick again the photo, video or document at the top and on the cards.",
       "AVISO_NOVO_TIPO": "New template with the text of “{nome}”. Pick the type and check the name."
     },
@@ -517,7 +517,8 @@
       "CUPOM": "Coupon: {cupom}",
       "CATALOGO": "Catalog",
       "VER_COMO_FICA": "See how it looks",
-      "OFERTA_CONTAGEM": "Ends in 2 days (example)"
+      "OFERTA_CONTAGEM": "Ends in 2 days (example)",
+      "VER_TODAS_AS_OPCOES": "See all options"
     },
     "ENVIADO": {
       "TITULO": {
@@ -716,7 +717,11 @@
       },
       "GRUPO_CATALOGO": "From the records",
       "SEM_MODELO_LIBERADO": "No template of this WhatsApp account can go in a campaign right now: they are rejected, paused or in a format campaigns cannot send yet.",
-      "CORRIGIR": "Fix “{nome}”"
+      "CORRIGIR": "Fix “{nome}”",
+      "SINAL": {
+        "ruim": "WhatsApp sees many people blocking or reporting the template \"{nome}\". It can pause the template at any time, and the campaign stops with it. You can send, but it is best to send only to people who know your business.",
+        "atencao": "Some people blocked or reported the template \"{nome}\". If it gets worse, WhatsApp pauses the template and the campaign stops with it. You can send, but send only to people who know your business."
+      }
     },
     "IA": {
       "CRIAR_COM_IA": "Create with AI",
@@ -868,6 +873,59 @@
       },
       "CANAL_HINT": "Template approved by Meta. People who talked to you in the last 24 hours can get a message written by you.",
       "AVISO_PROPAGANDA": "Too much advertising can get the number blocked. Write something useful for the person."
+    },
+    "SAUDE": {
+      "TITULO": "How this template is doing",
+      "PERIODO": "Last 30 days",
+      "SINAIS": {
+        "bom": {
+          "SELO": "Well received",
+          "TITULO": "People are receiving it well",
+          "TEXTO": "Almost nobody blocked or reported this message. Keep sending it to people who know your business."
+        },
+        "atencao": {
+          "SELO": "Attention",
+          "TITULO": "Attention: some people did not like it",
+          "TEXTO": "WhatsApp saw blocks, reports or few people reading. If it gets worse, WhatsApp pauses this template and the campaigns using it stop."
+        },
+        "ruim": {
+          "SELO": "May be paused",
+          "TITULO": "May be paused: many people are blocking",
+          "TEXTO": "Many people blocked the number, reported it or did not read it. WhatsApp can pause this template at any time: 3 hours the 1st time, 6 hours the 2nd, and the 3rd time it disables it."
+        },
+        "sem_nota": {
+          "SELO": "No rating yet",
+          "TITULO": "No rating from WhatsApp yet",
+          "TEXTO": "WhatsApp rates a template after people receive it and react. Every new template starts like this."
+        }
+      },
+      "O_QUE_FAZER": "What to do:",
+      "DICAS": {
+        "QUEM": "Send it only to customers or to people who asked to receive it.",
+        "COMECO": "Say right at the start who is writing and why.",
+        "MENOS": "Send it less often to the same person."
+      },
+      "MELHORAR": "Make a better version",
+      "NUMEROS": {
+        "receberam": "Received",
+        "leram": "Read",
+        "responderam": "Replied",
+        "custo": "Cost per reply"
+      },
+      "DE_ENVIADAS": "of {n} sent",
+      "PESSOAS": "{n} person | {n} people",
+      "MEDIA": {
+        "ACIMA": "Above your templates average: {n}%",
+        "ABAIXO": "Below your templates average: {n}%"
+      },
+      "SEM_RESPOSTA": "Nobody replied",
+      "TOTAL_GASTO": "Estimated spend: {valor}",
+      "SEM_ENVIOS": "This template was not sent in the last 30 days. The numbers show up after the first send.",
+      "NOTA": "We only count what was sent through Chat2You, and the spend is estimated from the WhatsApp price table. Not everyone lets WhatsApp show they read it, so more people may have read it.",
+      "LISTA": {
+        "RESPONDERAM": "{n}% replied"
+      },
+      "USAR_MESMO_ASSIM": "Use it anyway"
     }
   }
 }

@@ -1660,8 +1660,8 @@
 - intent: Onde configuro a IA passando o atendimento para uma pessoa?; Em quais funis o handoff já está ligado?; Por que essa tela não aparece para mim?; Como reviso a passagem da IA de um funil específico?
 - onde_fica: Configurações > Transferir para humano (CRM)
 - pre_requisitos: CRM Kanban e IA do CRM ligados, pelo menos um funil criado, e permissão de administrador
-- passos: 1. Abra Configurações > Transferir para humano (CRM); 2. Veja na etiqueta de cada funil se está ligado e em qual fluxo; 3. Clique no funil que quer configurar.
-- gotchas: aqui nada é configurado, é só a lista de escolha; a etiqueta reflete o padrão do funil, não as personalizações por etapa; com o CRM ou a IA do CRM desligados a plataforma devolve você à tela inicial sem avisar; sem funil criado a lista fica vazia.
+- passos: 1. Abra Configurações > Transferir para humano (CRM); 2. Veja na etiqueta de cada funil se a passagem está ligada (na hora ou com convite), ligada só em algumas etapas, ou desligada; 3. Clique no funil que quer configurar.
+- gotchas: aqui nada é configurado, é só a lista de escolha; a etiqueta conta as etapas, então um funil desligado com uma etapa do seu jeito aparece como ligado em 1 etapa; com a assistente do funil desligada a etiqueta diz desligado, porque ninguém é chamado; com o CRM ou a IA do CRM desligados a plataforma devolve você à tela inicial sem avisar; sem funil criado a lista fica vazia.
 - nav_target: `crm_handoff_settings_index`
 
 ### handoff_da_ia_configurar_funil
@@ -1669,9 +1669,9 @@
 - rota: crm_handoff_settings_edit
 - intent: Como faço a IA chamar um humano no meio do atendimento?; Qual a diferença entre transferir direto e por convite?; O que acontece se ninguém pegar a conversa?; Como coloco uma regra diferente só em uma etapa do funil?; Como escolho quem recebe a conversa?
 - onde_fica: Configurações > Transferir para humano (CRM) > nome do funil
-- pre_requisitos: um funil com etapas criadas, caixas vinculadas ao funil e agentes cadastrados
-- passos: 1. Escolha o funil no seletor do topo; 2. No padrão do funil, ligue a transferência para humano e escreva quando transferir; 3. Escolha direto ou convite e o destino; 4. Defina o tempo de espera e o que fazer se ninguém pegar; 5. Nas personalizações por etapa, deixe em Padrão o que herda e personalize onde a regra é diferente; 6. Salve.
-- gotchas: a transferência só acontece de verdade quando o funil está configurado E a caixa de entrada tem atendente como membro: caixa de entrada sem membro deixa a promessa de que alguém vai assumir sem ninguém para atribuir, e nada na tela avisa isso; salvar grava o padrão e todas as etapas de uma vez, inclusive etapa que você deixou pela metade; etapa marcada como Padrão herda e ignora o que estiver preenchido nela; no rodízio a equipe sai da caixa em que a conversa chegou; direto atribui na hora, a IA para de responder e só entrega para quem está online, enquanto convite notifica e a IA continua atendendo até alguém pegar; o tempo de espera padrão é 15 minutos, Avisar de novo avisa até 8 vezes e Escalar exige escolher a pessoa.
+- pre_requisitos: um funil com a assistente ligada, pelo menos uma caixa de entrada ligada ao funil e pessoas nessas caixas
+- passos: 1. No cartão Passagem para a equipe, ligue a passagem (salva na hora); 2. Em Quando passar, toque em Alterar e escreva quando chamar a equipe; 3. Em Quem recebe, escolha alguém da equipe ou a mesma pessoa; 4. Em Como entregar, escolha na hora ou com convite e, no convite, o tempo de espera e o que fazer se ninguém aceitar; 5. Em Etapas, toque em Alterar na etapa diferente e escolha como nas outras, do meu jeito ou não chamar ninguém; 6. Salve cada tela; 7. Para trocar de funil, volte em Todos os funis.
+- gotchas: cada tela de detalhe salva sozinha e Cancelar desfaz só ela; a equipe é quem está nas caixas de entrada do funil, e pessoa fora delas aparece como fora da equipe e não recebe; com a mesma pessoa, ela recebe quando estiver na caixa da conversa, senão a conversa vai para alguém da equipe dessa caixa; os avisos de falta levam ao CRM, onde se liga a assistente e as caixas do funil; quando falta ligar a assistente do funil ou uma caixa, a tela avisa no topo; na hora entrega para quem está online e, sem ninguém, a assistente segue com o cliente até alguém entrar; com convite a pessoa é avisada e a assistente segue até ela aceitar; o tempo de espera padrão é 15 minutos, Avisar de novo avisa até 8 vezes e o convite vale 24 horas; uma regra antiga que entregava para quem está fora aparece com aviso e o botão Corrigir agora; com alteração sem salvar, a tela pede para salvar ou cancelar antes de sair.
 - nav_target: `crm_handoff_settings_edit`
 
 ### fluxo_de_conversa_regras_de_fechamento
