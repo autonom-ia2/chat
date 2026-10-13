@@ -1,7 +1,7 @@
 # Prepend em Whatsapp::IncomingMessageBaseService (chat#1473, P3): quando o cliente toca num botão de resposta, numa
 # opção de lista ou num botão de resposta rápida de modelo, a mensagem recebida guarda, além do título (que o
 # Chatwoot já põe em `content`), a opção tocada em `content_attributes.selected_option`:
-#   { "id": "agendar", "title": "Agendar visita" }
+#   { "id": "agendar", "title": "Agendar visita" }   (sem título quando a Meta não manda um)
 # Vale para qualquer botão ou lista (`options`, o `input_select` antigo e os modelos). O robô a recebe no webhook
 # (`content_attributes` vai inteiro) e o agente a lê na mensagem. A mensagem que ofereceu as opções continua em
 # `in_reply_to`, que o Chatwoot já grava a partir de `context.id`.
@@ -18,8 +18,9 @@ module RichMessages::SelectedOption
     option(button[:payload], button[:text]) if button
   end
 
+  # Sem título (ou com título vazio) grava só o `id`: quem lê procura o título na opção oferecida com esse `id`.
   def self.option(id, title)
-    { id: id, title: title }.compact if id.present?
+    { id: id, title: title.presence }.compact if id.present?
   end
 
   private

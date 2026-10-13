@@ -7,9 +7,11 @@
 # `button` (o texto que abre a lista) é OBRIGATÓRIO na lista e ignorado nos botões: o painel não inventa texto para
 # o cliente, porque não sabe o idioma da conversa.
 # Limites da Meta: até 3 botões (título 20, id 256, corpo 1024, títulos diferentes entre si); lista com até 10
-# opções no total em até 10 seções (título 24, id 200, descrição 72, título de seção 24, obrigatório com mais de
-# uma seção, botão 20, corpo 4096); cabeçalho de texto e rodapé até 60. Os ids não se repetem. Títulos, cabeçalho,
-# rodapé e botão em uma linha só. Cabeçalho de imagem não entra nesta entrega.
+# opções no total em até 10 seções (título 24, id 200, descrição 72, título de seção 24, botão 20, corpo 4096);
+# cabeçalho de texto e rodapé até 60. Os ids não se repetem. Títulos, cabeçalho, rodapé e botão em uma linha só.
+# Toda seção sai com título (a página da Meta o dá como obrigatório): com mais de uma seção o chamador manda o de
+# cada uma; a seção única sem título (inclusive a das opções soltas) sai com o texto do `button`, que cabe (20 <= 24).
+# Cabeçalho de imagem não entra nesta entrega.
 class RichMessages::Types::Options
   BUTTONS_MAX = 3
   OPTIONS_MAX = 10
@@ -20,7 +22,9 @@ class RichMessages::Types::Options
   LIST_BUTTON_MAX = 20
   BUTTONS = { body: 1024, title: 20, id: 256 }.freeze
   LIST = { body: 4096, title: 24, id: 200 }.freeze
-  LINE_BREAKS = ["\n", "\r"].freeze
+  # Quebras de linha que o WhatsApp pode desenhar: \n, \r, tabulação vertical, NEL (U+0085), separador de linha
+  # (U+2028) e de parágrafo (U+2029).
+  LINE_BREAKS = ["\n", "\r", "\v", "\u0085", "\u2028", "\u2029"].freeze
 
   BODY_BLANK = 'As opções precisam de um texto na mensagem.'.freeze
   BUTTONS_BODY_TOO_LONG = "O texto da mensagem com botões de opção passa de #{BUTTONS[:body]} caracteres.".freeze
@@ -115,7 +119,7 @@ class RichMessages::Types::Options
   def list_action
     sections = groups.map do |title, options|
       rows = options.map { |option| { id: option['id'], title: option['title'], description: option['description'] }.compact }
-      { title: title.presence, rows: rows }.compact
+      { title: title.presence || @button, rows: rows }
     end
     { button: @button, sections: sections }
   end
@@ -153,7 +157,8 @@ class RichMessages::Types::Options
     (list? ? LIST_BODY_TOO_LONG : BUTTONS_BODY_TOO_LONG) if body.length > limits[:body]
   end
 
-  # Com uma seção só o título pode faltar; com mais de uma, cada seção precisa do seu.
+  # Com uma seção só o título pode faltar (sai o texto do botão da lista no lugar); com mais de uma, cada seção
+  # precisa do seu.
   def section_titles_error
     return unless @sections
 

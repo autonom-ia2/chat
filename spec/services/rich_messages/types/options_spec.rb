@@ -51,7 +51,7 @@ describe RichMessages::Types::Options do
       expect(interactive.keys).to eq(%i[type body action])
     end
 
-    it 'turns more than 3 options into a list with one untitled section' do
+    it 'turns more than 3 options into a list with one section titled by the list button' do
       interactive = options(options: four, button: 'Ver opções').whatsapp_cloud_payload(body)[:interactive]
 
       expect(interactive).to eq(
@@ -59,7 +59,7 @@ describe RichMessages::Types::Options do
         body: { text: body },
         action: {
           button: 'Ver opções',
-          sections: [{ rows: four.map { |option| option.slice(:id, :title) } }]
+          sections: [{ title: 'Ver opções', rows: four.map { |option| option.slice(:id, :title) } }]
         }
       )
     end
@@ -87,7 +87,7 @@ describe RichMessages::Types::Options do
       described_option = three.first.merge(description: 'Na unidade mais perto')
       described = options(options: [described_option], button: 'Ver').whatsapp_cloud_payload(body)[:interactive]
 
-      expect(in_sections).to include(type: 'list', action: hash_including(sections: [{ rows: three.first(2) }]))
+      expect(in_sections).to include(type: 'list', action: hash_including(sections: [{ title: 'Ver', rows: three.first(2) }]))
       expect(described).to include(type: 'list')
       expect(described.dig(:action, :sections, 0, :rows, 0, :description)).to eq('Na unidade mais perto')
     end
@@ -116,9 +116,30 @@ describe RichMessages::Types::Options do
       expect(options(sections: list_limits, button: 'b' * 20, header: 'h' * 60, footer: 'f' * 60).error_for('a' * 4096)).to be_nil
     end
 
-    it 'accepts one section without a title' do
-      expect(options(sections: [{ title: '', options: four }], button: 'Ver').error_for(body)).to be_nil
-      expect(options(sections: [{ options: four }], button: 'Ver').error_for(body)).to be_nil
+    it 'accepts one section without a title and sends it titled by the list button' do
+      [{ title: '', options: four }, { title: ' ', options: four }, { options: four }].each do |section|
+        untitled = options(sections: [section], button: 'Ver')
+
+        expect(untitled.error_for(body)).to be_nil
+        expect(untitled.whatsapp_cloud_payload(body).dig(:interactive, :action, :sections, 0, :title)).to eq('Ver')
+      end
+    end
+
+    it 'keeps the title the caller gave to a single section' do
+      titled = options(sections: [{ title: 'Unidades', options: four }], button: 'Ver')
+
+      expect(titled.whatsapp_cloud_payload(body).dig(:interactive, :action, :sections, 0, :title)).to eq('Unidades')
+    end
+
+    ["\n", "\r", "\v", "\u0085", "\u2028", "\u2029"].each do |line_break|
+      it "refuses a line break #{line_break.dump} in titles, header, footer, list button and section title" do
+        expect(options(options: [{ id: 'sim', title: "Sim#{line_break}claro" }]).error_for(body)).to eq(described_class::TITLE_MULTILINE)
+        expect(options(options: three, header: "a#{line_break}b").error_for(body)).to eq(described_class::HEADER_INVALID)
+        expect(options(options: three, footer: "a#{line_break}b").error_for(body)).to eq(described_class::FOOTER_INVALID)
+        expect(options(options: four, button: "a#{line_break}b").error_for(body)).to eq(described_class::LIST_BUTTON_INVALID)
+        expect(options(sections: [{ title: "a#{line_break}b", options: four }], button: 'Ver').error_for(body))
+          .to eq(described_class::SECTION_TITLE_INVALID)
+      end
     end
 
     {
@@ -131,7 +152,6 @@ describe RichMessages::Types::Options do
       'an option without id' => [{ options: [{ title: 'Sim' }] }, nil, :OPTION_INVALID],
       'an option with a numeric id' => [{ options: [{ id: 1, title: 'Sim' }] }, nil, :OPTION_INVALID],
       'an option with a blank title' => [{ options: [{ id: 'sim', title: ' ' }] }, nil, :OPTION_INVALID],
-      'a title with a line break' => [{ options: [{ id: 'sim', title: "Sim\nclaro" }] }, nil, :TITLE_MULTILINE],
       'a button title above 20 characters' => [{ options: [{ id: 'sim', title: 'a' * 21 }] }, nil, :BUTTON_TITLE_TOO_LONG],
       'a button id above 256 characters' => [{ options: [{ id: 'i' * 257, title: 'Sim' }] }, nil, :BUTTON_ID_TOO_LONG],
       'two options with the same id' => [{ options: [{ id: 'x', title: 'Sim' }, { id: 'x', title: 'Não' }] }, nil, :OPTION_ID_REPEATED],
@@ -232,10 +252,21 @@ describe RichMessages::Types::Options do
         expect(message.status).not_to eq('failed')
       end
 
-      it 'sends the list with its sections' do
+      it 'sends body, button and every section with its rows in one interactive list message' do
+        interactive = {
+          type: 'list', body: { text: body },
+          action: {
+            button: 'Ver assuntos',
+            sections: [
+              { title: 'Atendimento', rows: [{ id: 'remarcar', title: 'Remarcar horário', description: 'Trocar o dia ou a hora' },
+                                             { id: 'cancelar', title: 'Cancelar horário' }] },
+              { title: 'Pagamento', rows: [{ id: 'boleto', title: 'Segunda via do boleto' }] }
+            ]
+          }
+        }
         request = stub_request(:post, meta_url)
-                  .with(body: hash_including('type' => 'interactive',
-                                             'interactive' => hash_including('type' => 'list', 'body' => { 'text' => body })))
+                  .with(body: { messaging_product: 'whatsapp', recipient_type: 'individual', to: '5511937016094',
+                                type: 'interactive', interactive: interactive }.to_json)
                   .to_return(meta_ok)
 
         expect(deliver(outgoing({ type: 'options', sections: sections, button: 'Ver assuntos' })).status).not_to eq('failed')

@@ -50,20 +50,29 @@ const isList = computed(
     allOptions.value.some(option => option.description)
 );
 
+// As seções como saíram para a Meta: a seção única sem título sai com o texto do botão da lista (o envio faz o
+// mesmo, porque a Meta pede título em toda seção). A bolha é espelho do que o cliente recebeu.
+const sentSections = computed(() => {
+  const [only, ...others] = sections.value;
+  if (others.length || only.title) return sections.value;
+  return [{ ...only, title: textOf(richMessage.value.button) }];
+});
+
 const answer = computed(() =>
   selectedOptionFor(id.value, currentChat.value?.messages)
 );
 const chosenId = computed(() => answer.value?.id ?? '');
-// O título como foi oferecido; se a opção não está mais na mensagem, o que o cliente tocou.
+// O título como foi oferecido; se a opção não está na mensagem, o que o cliente tocou; sem nenhum dos dois, vazio.
 const chosenTitle = computed(
   () =>
     allOptions.value.find(option => option.id === chosenId.value)?.title ||
     textOf(answer.value?.title)
 );
 
-// Só afirma o que achou: sem resposta carregada não há linha (o cliente pode ter respondido fora do que está na tela).
+// Só afirma o que achou: sem resposta carregada (o cliente pode ter respondido fora do que está na tela) ou sem
+// título para dizer, não há linha.
 const chosenLine = computed(() =>
-  answer.value
+  chosenTitle.value
     ? t('RICH_MESSAGE.OPTIONS.CHOSEN', { title: chosenTitle.value })
     : ''
 );
@@ -79,7 +88,7 @@ const chosenLine = computed(() =>
       <span class="sr-only">{{ t('RICH_MESSAGE.OPTIONS.MIRROR') }}</span>
       <template v-if="isList">
         <ActionRow icon="i-lucide-list" :label="textOf(richMessage.button)" />
-        <OptionsList :sections="sections" :chosen-id="chosenId" />
+        <OptionsList :sections="sentSections" :chosen-id="chosenId" />
       </template>
       <template v-else>
         <ActionRow

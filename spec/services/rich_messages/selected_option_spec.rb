@@ -57,6 +57,28 @@ describe RichMessages::SelectedOption do
     expect(reply.content_attributes['selected_option']).to eq('id' => 'confirmar-visita', 'title' => 'Confirmar')
   end
 
+  it 'keeps only the id when the tapped option comes without a title' do
+    blank = receive(type: 'interactive', interactive: { type: 'button_reply', button_reply: { id: 'agendar', title: '' } })
+
+    expect(blank.content_attributes['selected_option']).to eq('id' => 'agendar')
+  end
+
+  it 'keeps only the id of a template quick reply without text' do
+    reply = receive(type: 'button', button: { payload: 'confirmar-visita' })
+
+    expect(reply.content_attributes['selected_option']).to eq('id' => 'confirmar-visita')
+  end
+
+  it 'leaves a Flow answer (nfm_reply) without selected_option and with both flow keys' do
+    response_json = { flow_token: 'token-da-proposta', nome: 'Ana' }.to_json
+    reply = receive(type: 'interactive', interactive: { type: 'nfm_reply',
+                                                        nfm_reply: { name: 'flow', body: 'Sent', response_json: response_json } })
+
+    expect(reply.content_attributes).not_to have_key('selected_option')
+    expect(reply.content_attributes['flow_response']).to include('type' => 'nfm_reply', 'response_json' => response_json)
+    expect(reply.content_attributes['whatsapp_flow_response']).to include('name' => 'flow', 'body' => 'Sent')
+  end
+
   it 'leaves a plain text answer as it was' do
     reply = receive(type: 'text', text: { body: 'Quero agendar' })
 

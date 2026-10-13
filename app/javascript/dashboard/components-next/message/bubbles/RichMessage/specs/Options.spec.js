@@ -1,3 +1,4 @@
+import { nextTick } from 'vue';
 import { config, mount } from '@vue/test-utils';
 import { createStore } from 'vuex';
 import { createI18n } from 'vue-i18n';
@@ -65,7 +66,7 @@ const propsDaMensagem = (status, content, richMessage) => ({
 });
 
 // A mensagem inteira (Message.vue), como a conversa do painel monta: a mesma loja mínima do `montarMensagem`,
-// com a conversa aberta trazendo as mensagens dadas.
+// com a conversa aberta trazendo as mensagens dadas, no estado reativo da loja (como chegam pelo websocket).
 const montar = ({
   conversa = [],
   status = MESSAGE_STATUS.SENT,
@@ -77,9 +78,10 @@ const montar = ({
     Object.keys(base).map(name => [name, () => base[name]])
   );
   const store = createStore({
+    state: () => ({ messages: [...conversa] }),
     getters: {
       ...getters,
-      getSelectedChat: () => ({ id: 7, messages: conversa }),
+      getSelectedChat: state => ({ id: 7, messages: state.messages }),
     },
   });
 
@@ -228,6 +230,54 @@ describe('bolha das opções', () => {
     expect(linhas(wrapper)).toHaveLength(4);
     expect(bolha(wrapper).text()).toContain('Escolher');
     expect(bolha(wrapper).text()).not.toContain('Ver opções');
+  });
+
+  it('mostra a seção única sem título com o título que saiu: o texto do botão', () => {
+    const wrapper = montar({
+      sections: [{ options: [...TRES, { id: 'sair', title: 'Encerrar' }] }],
+      button: 'Escolher',
+    });
+    const grupos = bolha(wrapper).findAll('[role="group"]');
+
+    expect(grupos.map(grupo => grupo.attributes('aria-label'))).toEqual([
+      'Escolher',
+    ]);
+    expect(grupos[0].findAll('li')).toHaveLength(4);
+  });
+
+  it('mostra a escolha quando a resposta chega depois, pela loja', async () => {
+    const wrapper = montar({ options: TRES });
+    expect(bolha(wrapper).text()).not.toContain('O cliente tocou');
+
+    wrapper.vm.$store.state.messages.push(
+      resposta({ id: 'horarios', title: 'Ver horários' })
+    );
+    await nextTick();
+
+    expect(bolha(wrapper).text()).toContain(
+      'O cliente tocou em "Ver horários"'
+    );
+    expect(botoes(wrapper)[1].find('.i-lucide-check').exists()).toBe(true);
+  });
+
+  it('usa o título oferecido quando a resposta traz só o id', () => {
+    const wrapper = montar({
+      options: TRES,
+      conversa: [resposta({ id: 'pessoa' })],
+    });
+
+    expect(bolha(wrapper).text()).toContain(
+      'O cliente tocou em "Falar com uma pessoa"'
+    );
+  });
+
+  it('não mostra a linha quando a resposta traz só um id que não foi oferecido', () => {
+    const wrapper = montar({
+      options: TRES,
+      conversa: [resposta({ id: 'outra-coisa' })],
+    });
+
+    expect(bolha(wrapper).text()).not.toContain('O cliente tocou');
   });
 
   it('vira lista quando alguma opção tem descrição', () => {
