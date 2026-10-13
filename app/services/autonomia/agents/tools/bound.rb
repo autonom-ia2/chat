@@ -87,6 +87,13 @@ class Autonomia::Agents::Tools::Bound
     "#{texto[0, MAX_OUTPUT_CHARS - AVISO_DE_CORTE.length]}#{AVISO_DE_CORTE}"
   end
 
+  # O texto que o modelo lê quando a ferramenta HTTP falha, SEM registrar recusa: é o que o teste da
+  # tela mostra (#1425). O atendimento usa `recusa_http`, que registra e devolve este mesmo texto.
+  def texto_da_recusa_http(erro)
+    categoria, status = http_error_code(erro.message)
+    ::Autonomia::Agents::Tools::Recusa.saida(categoria, detalhe: status, resposta: erro.try(:trecho))
+  end
+
   private
 
   # ASSÍNCRONA: não executa nada aqui. Registra a execução como `pending` e devolve ao modelo uma
@@ -128,10 +135,10 @@ class Autonomia::Agents::Tools::Bound
   # conversa, qual agente, o motivo e o que faltava — e monta o JSON que o modelo lê. Não existe outro
   # `{ error: ... }` neste arquivo: `recusa_guarda_spec` reprova quem escrever um. Antes, o agente
   # recusava e não deixava rastro nenhum; em 08/09/2026 uma cotação não abriu e ninguém soube por quê.
-  def recusar(codigo, delivery, detalhe: nil)
+  def recusar(codigo, delivery, detalhe: nil, resposta: nil)
     delivery.marcar_cotacao_existente if EXECUCAO_EXISTENTE.include?(codigo) && delivery.respond_to?(:marcar_cotacao_existente)
     ::Autonomia::Agents::Tools::Recusa.para_modelo(codigo, slug: slug, delivery: delivery,
-                                                           agente: @agent, detalhe: detalhe)
+                                                           agente: @agent, detalhe: detalhe, resposta: resposta)
   end
 
   # A recusa da conferência tem forma própria: o modelo recebe TEXTO (o que perguntar ao cliente),
@@ -236,15 +243,20 @@ class Autonomia::Agents::Tools::Bound
   def run_http(args, delivery)
     Autonomia::Agents::Tools::HttpExecutor.new(tool: @record, params: args).call
   rescue Autonomia::Agents::Tools::HttpExecutor::Error => e
-    categoria, status = http_error_code(e.message)
-    recusar(categoria, delivery, detalhe: status)
+    recusa_http(e, delivery)
+  end
+
+  def recusa_http(erro, delivery)
+    categoria, status = http_error_code(erro.message)
+    recusar(categoria, delivery, detalhe: status, resposta: erro.try(:trecho))
   end
 
   # Defesa na FRONTEIRA com o modelo. Hoje a mensagem do executor é segura ("tool_http_error:
   # 404 Not Found" — só status e frase padrão do HTTP), mas repassá-la inteira é uma porta aberta:
   # basta alguém, um dia, incluir corpo de resposta ou URL na exceção para vazar sem ninguém notar.
   # Aqui só passa o que é útil ao modelo e comprovadamente inócuo: a CATEGORIA do erro e o status
-  # numérico. Texto livre é descartado. -> [categoria, status ou nil].
+  # numérico. Texto livre da mensagem é descartado; o trecho do corpo de um 4xx (#1425) vem em campo
+  # próprio, já higienizado pelo executor (`HttpExecutor::Error#trecho`). -> [categoria, status ou nil].
   def http_error_code(message)
     text = message.to_s
     kind = text.split(':').first.to_s.strip.presence || 'tool_http_error'

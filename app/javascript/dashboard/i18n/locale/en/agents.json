@@ -823,7 +823,7 @@
               "POST": "Send data (POST)",
               "POST_TEXTO": "Sends a body with the data. Use it when the system asks for it.",
               "ENDERECO": "Address",
-              "ENDERECO_AJUDA": "Start with https://. Use {variavel} for what the agent fills in. After the ?, write {codificada}.",
+              "ENDERECO_AJUDA": "Start with https://. Use {variavel} for what the agent fills in.",
               "ERRO": {
                 "VAZIO": "Write the address.",
                 "HTTPS": "Use an address that starts with https://.",
@@ -831,7 +831,6 @@
                 "REDE": "This address cannot be used: it points inside the private network.",
                 "IP": "Use the site name, not an IP number."
               },
-              "CODIFICAR": "If the person types a space or an accent, the call fails. Write {codificada} instead of {crua}.",
               "VAI_CRIAR": "You will create {variaveis} in the next step.",
               "SLUG": "Technical name",
               "SLUG_AJUDA": "The name of the tool for the agent. If empty, we build it from the name. Only letters, numbers and _.",
@@ -873,7 +872,7 @@
               "CORPO_INVALIDO": "The body is not valid JSON. Check commas and quotes.",
               "SEM_CORPO": "A lookup sends no body. To send a body, choose \"Send data (POST)\" in step 2.",
               "MAPEAMENTO": "How the answer reaches the agent",
-              "MAPEAMENTO_AJUDA": "Use it to send the agent only part of the answer. The system’s answer is called {response}. Empty: the agent gets the whole answer, up to 8,000 characters. If you use a field that is not in the answer, the test fails."
+              "MAPEAMENTO_AJUDA": "Use it to send the agent only part of the answer. The system’s answer is called {response}. Empty: the agent gets the whole answer, up to 8,000 characters. A field that is not in the answer comes out empty, and so does the mapping."
             },
             "QUATRO": {
               "INTRO": "If the system asks for a key to answer, put it here. If it does not, you can continue.",
@@ -920,7 +919,6 @@
             "NAO": "No",
             "CHAMADA": "What will be called",
             "VER_CHAMADA": "See call",
-            "ESPACO": "The address goes with a space and the call fails. In Where it calls, write {codificada}.",
             "FAZER": "Make test call",
             "CHAMANDO": "Calling…",
             "CHAMANDO_LONGO": "Calling… it can take up to 10 seconds.",
@@ -928,7 +926,7 @@
             "DEU_CERTO_TEXTO": "The system answered.",
             "RECEBE": "What the agent gets",
             "MAPEADA": "Already with the mapping from Advanced.",
-            "CORTADA": "Showing the first 2,000 characters. The agent gets up to 8,000.",
+            "CORTADA": "The answer passed 8,000 characters and was cut. This is exactly what the agent gets, with the cut warning.",
             "VAZIA": "The system answered, but with no content.",
             "VAZIA_TEXTO": "Check that the address is right. You can turn it on anyway.",
             "OUTROS_VALORES": "Test with other values",
@@ -952,8 +950,12 @@
               "NAO_ENTENDEU": "The system did not understand what was sent.",
               "SERVIDOR": "The system has a problem right now. It is not the tool.",
               "REDIRECIONA": "The address sends you elsewhere. Use the final address.",
+              "CORPO": "The body stopped being valid JSON with the values received. Without quotes, only a number, true, false or null is accepted; put text inside quotes and do not use comments.",
+              "CABECALHO": "A header got a line break in its value, and the call was refused.",
+              "VALOR": "A value does not match the type of its information (number, yes/no).",
+              "TIPO_DO_CORPO": "The body uses a Content-Type or a tag (such as cycle) that cannot be escaped safely. Use JSON or form, with only variables, if and for.",
+              "NAO_JSON": "The system's answer is not JSON, and the mapping needs JSON.",
               "URL_INVALIDA": "The address became invalid with the value typed.",
-              "URL_INVALIDA_POR_QUE": "A space or an accent after the ? breaks the call.",
               "REDE": "This address points inside the private network and cannot be used.",
               "SEM_RESPOSTA": "The system did not answer within 10 seconds or refused the connection.",
               "NAO_EXISTE": "The address, the body or the mapping uses something that does not exist.",

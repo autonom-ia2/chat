@@ -3,7 +3,8 @@ import { computed, h } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 // #1301 (protótipo F07-ok) — o teste deu certo: um bloco só com o estado e "O que o agente recebe".
-// O /test devolve a resposta já com o mapeamento e cortada em 2.000 caracteres; JSON inteiro vira
+// O /test devolve o texto que o agente lê: já mapeado e, se passar de 8.000, cortado com o aviso
+// (#1425); JSON inteiro vira
 // linhas indentadas (a linha que quebra continua no próprio recuo), cortado ou texto vai como veio.
 // Cresce dentro da gaveta, sem segunda rolagem. Linhas montadas por funções (h): o espaço da
 // formatação do template não entra no texto.
