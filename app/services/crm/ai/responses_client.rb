@@ -43,13 +43,17 @@ module Crm
       # o roteamento entre contas p/ subir o hit-rate global do mesmo prefixo.
       # `max_retries: 0` é para quem chama dentro da requisição web, com prazo (o teste do Decisor, #858):
       # cada nova tentativa usa o `timeout` inteiro de novo, mais a espera, e passaria do teto de 15 s.
-      def initialize(credential:, feature: nil, account: nil, pipeline: nil, cache_key_scope: :account, max_retries: MAX_RETRIES)
+      # `cache_key:` (#1367) é para quem mede com um rótulo diferente da chave de cache (o Construtor, com uma
+      # feature por fase e uma chave só por conta). Ausente, a chave é exatamente a de antes.
+      def initialize(credential:, feature: nil, account: nil, pipeline: nil, cache_key_scope: :account, max_retries: MAX_RETRIES,
+                     cache_key: nil)
         @credential = credential
         @max_retries = max_retries
         @feature = feature
         @account = account
         @pipeline = pipeline
         @cache_key_scope = cache_key_scope
+        @cache_key = cache_key
       end
 
       def create(model:, instructions:, input:, schema: nil, reasoning_effort: 'low', tools: nil, timeout: REQUEST_TIMEOUT)
@@ -198,6 +202,7 @@ module Crm
       # metadado de roteamento — NUNCA contém conteúdo/credencial. Ausente quando não há feature
       # (caching automático ≥1024 tok segue valendo, só sem o ganho de roteamento).
       def prompt_cache_key
+        return @cache_key.to_s if @cache_key.present?
         return if @feature.blank?
         return @feature.to_s if @cache_key_scope == :feature
 
