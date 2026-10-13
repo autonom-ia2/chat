@@ -136,7 +136,7 @@ describe('adaptador HTTP de Modelos', () => {
     expect(http.getTemplates).toHaveBeenCalledWith(8, { refresh: true });
     expect(http.getTemplates).toHaveBeenCalledWith(8);
     expect(modelos).toHaveLength(1);
-    expect(modelos.parcial).toBe(false);
+    expect(modelos.naoLeu).toEqual([]);
     expect(modelos.naoAtualizou).toEqual([
       { conta: 'Matriz', motivo: 'permission_denied' },
     ]);
@@ -197,6 +197,54 @@ describe('adaptador HTTP de Modelos', () => {
       handle: 'h-9',
       blob_signed_id: 'b-9',
     });
+  });
+
+  it('names the WhatsApp account that did not answer the list (#1387)', async () => {
+    http.getTemplates.mockImplementation(caixa =>
+      caixa === 9
+        ? Promise.reject(
+            Object.assign(new Error('fora'), { response: { status: 500 } })
+          )
+        : ok({ payload: [TEMPLATE] })
+    );
+
+    const modelos = await adaptador.listarModelos();
+
+    expect(modelos).toHaveLength(1);
+    expect(modelos.naoLeu).toEqual(['Filial']);
+  });
+
+  it('keeps the created template and names the account left without the request (#1387)', async () => {
+    http.createTemplate.mockImplementation(caixa =>
+      caixa === 9
+        ? Promise.reject(
+            Object.assign(new Error('meta'), {
+              response: {
+                status: 422,
+                data: { error: 'meta_refused', message: 'Conta fora do ar.' },
+              },
+            })
+          )
+        : ok({ ...TEMPLATE, id: `novo-${caixa}`, status: 'PENDING' })
+    );
+
+    const criados = await adaptador.criarModelo({
+      nome: 'Boas-vindas',
+      tipo: 'aviso',
+      numeros: [8, 9],
+      conteudo: {
+        formato: 'padrao',
+        topo: { tipo: 'nenhum' },
+        texto: [{ t: 'texto', v: 'Oi!' }],
+        exemplos: {},
+        rodape: '',
+        botoes: [],
+      },
+    });
+
+    expect(criados.map(item => item.id)).toEqual(['novo-8']);
+    expect(criados.contasSemPedido).toEqual(['Filial']);
+    expect(criados.falha.mensagem).toBe('Conta fora do ar.');
   });
 
   it('turns an API refusal into a readable error', async () => {
@@ -356,6 +404,6 @@ describe('caixa sem modelos (message_templates = {} em produção)', () => {
     const modelos = await adaptador.listarModelos({ atualizar: true });
 
     expect(modelos).toHaveLength(0);
-    expect(modelos.parcial).toBe(false);
+    expect(modelos.naoLeu).toEqual([]);
   });
 });

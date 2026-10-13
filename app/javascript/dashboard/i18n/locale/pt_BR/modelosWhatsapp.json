@@ -39,7 +39,7 @@
         "LIMITE": "Não criado: limite de modelos"
       },
       "CONTA": "Conta {nome}",
-      "PARCIAL": "Não conseguimos ler os modelos de uma conta do WhatsApp agora. Pode faltar modelo na lista.",
+      "PARCIAL": "Não conseguimos ler agora os modelos da conta {conta}. Pode faltar modelo dela na lista.",
       "NAO_ATUALIZOU": "Não foi possível atualizar agora a lista da conta {conta}. Mostramos a última lista guardada; tente de novo em alguns minutos.",
       "NAO_ATUALIZOU_PERMISSAO": "Não foi possível atualizar a lista da conta {conta}: o número perdeu a permissão no WhatsApp. Reconecte o número em Configurações › Caixas de entrada. Mostramos a última lista guardada."
     },
@@ -224,7 +224,7 @@
       "COPIA_DE": "{nome} (cópia)",
       "AVISO_COPIA": "Esta é uma cópia de “{nome}”. Ajuste o que quiser e escolha um nome diferente.",
       "FALHOU": "Não conseguimos enviar agora. Tente de novo.",
-      "FALHOU_UMA_CONTA": "O modelo foi enviado para uma conta do WhatsApp, mas não para a outra. {motivo}",
+      "FALHOU_UMA_CONTA": "O pedido não foi para a conta {contas}. {motivo} | O pedido não foi para as contas {contas}. {motivo}",
       "AVISO_COPIA_ARQUIVOS": "A cópia não leva os arquivos: escolha de novo a foto, o vídeo ou o documento do topo e dos cartões.",
       "AVISO_NOVO_TIPO": "Modelo novo com o texto de “{nome}”. Escolha o tipo e confira o nome."
     },
@@ -517,7 +517,8 @@
       "CUPOM": "Cupom: {cupom}",
       "CATALOGO": "Catálogo",
       "VER_COMO_FICA": "Ver como fica",
-      "OFERTA_CONTAGEM": "Termina em 2 dias (exemplo)"
+      "OFERTA_CONTAGEM": "Termina em 2 dias (exemplo)",
+      "VER_TODAS_AS_OPCOES": "Ver todas as opções"
     },
     "ENVIADO": {
       "TITULO": {
