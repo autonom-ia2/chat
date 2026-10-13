@@ -115,6 +115,18 @@ RSpec.describe Autonomia::Agents::Builder do
       expect(thread.agent.instruction).to eq('Instrução completa da Ana.')
     end
 
+    it 'does not carry the close order into the next turn of the same builder' do
+      run_turn
+      lean_payload.merge!('needs_more_info' => true, 'next_question' => 'Algo mais?', 'user_asked_to_close' => false)
+      thread.update!(agent: nil)
+      calls.clear
+
+      run_turn
+
+      expect(calls.size).to eq(1)
+      expect(calls.first[:schema]).to eq(described_class::LEAN_SCHEMA)
+    end
+
     it 'keeps web_search off in the full call when the global switch is off' do
       run_turn(web_search: 'false')
 

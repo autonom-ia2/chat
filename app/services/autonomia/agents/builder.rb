@@ -745,6 +745,7 @@ module Autonomia
         @calls = []
         @built_input = nil
         @lean_asked_to_close = nil
+        @user_asked_to_close = nil
         text = deterministic_close? ? full_call : lean_then_full_call
         outcome = apply_result(token, text)
         log_turn
@@ -792,6 +793,9 @@ module Autonomia
       # A leitura da chamada enxuta, com os MESMOS portões do apply_result: fecha quando o modelo quer fechar ou
       # quando a ordem de fechar dele força o fechamento (force_close?, que em AJUSTE é sempre false). O portão
       # de materiais que seguraria esse fechamento dispensa a chamada completa: o turno vira a pergunta da revisão.
+      # A decisão usa a leitura de fechar da ENXUTA; se ela não leu ordem de fechar e o portão segura, a completa
+      # não roda (antes, a chamada única ainda podia ler a ordem por conta própria). Saída enxuta inválida falha o
+      # turno como a chamada única já falhava (empty_response), sem cair na completa.
       def lean_wants_full_call?(lean)
         @lean_asked_to_close = lean['user_asked_to_close'] == true
         @user_asked_to_close = @lean_asked_to_close
