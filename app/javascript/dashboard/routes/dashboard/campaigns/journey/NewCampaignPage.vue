@@ -71,6 +71,10 @@ import PontePrevia from '../modelos/ponte/PontePrevia.vue';
 import PonteSemModelo from '../modelos/ponte/PonteSemModelo.vue';
 import RevisaoDoModelo from '../modelos/ponte/RevisaoDoModelo.vue';
 import { rotuloDoCampo } from '../modelos/helpers/campos';
+// Fork (#1335, protótipo): conversa aberta — quem falou nas últimas 24 h recebe texto escrito.
+import { useConversaAberta } from '../modelos/janela/useConversaAberta';
+import ConversaAberta from '../modelos/janela/components/ConversaAberta.vue';
+import RevisaoDaConversaAberta from '../modelos/janela/components/RevisaoDaConversaAberta.vue';
 import {
   buildEmailPayload,
   buildSmsPayload,
@@ -280,6 +284,26 @@ const reach = computed(() =>
     ? reachOn(draft.value.channel, audience.value.channels)
     : 0
 );
+// Fork (#1335): só no WhatsApp oficial com a ponte de Modelos ligada.
+const comConversaAberta = computed(
+  () =>
+    ponteAtiva.value &&
+    draft.value.channel === CAMPAIGN_CHANNELS.WHATSAPP_OFFICIAL &&
+    Boolean(draft.value.inboxId)
+);
+const conversaAberta = useConversaAberta(
+  computed(() => ({
+    publicoId: comConversaAberta.value ? draft.value.audienceId : null,
+    caixaId: comConversaAberta.value ? draft.value.inboxId : null,
+    total: forms.preview.value?.receive ?? reach.value,
+    tipoDoModelo: modeloEscolhido.value?.tipo || null,
+  }))
+);
+const exemplosDoTexto = computed(() => ({
+  'cliente.primeiro_nome':
+    sample.value?.first_name || sample.value?.name?.split(' ')[0] || 'Ana',
+  'minha_empresa.nome': currentAccount.value?.name || remetente.value,
+}));
 const inboxName = computed(
   () =>
     (forms.inboxes.value || []).find(inbox => inbox.id === draft.value.inboxId)
@@ -929,6 +953,15 @@ onBeforeUnmount(() => {
           <template v-if="ponteAtiva" #modelo-aviso>
             <PonteAvisoDoModelo :modelo="modeloEscolhido" />
           </template>
+          <template v-if="comConversaAberta && modeloEscolhido" #janela>
+            <ConversaAberta
+              :janela="conversaAberta"
+              :texto="draft.textoNaConversaAberta || ''"
+              :exemplos="exemplosDoTexto"
+              tem-modelo
+              @update="update"
+            />
+          </template>
           <template v-if="modeloEscolhido" #previa>
             <PontePrevia
               :modelo="modeloEscolhido"
@@ -962,7 +995,14 @@ onBeforeUnmount(() => {
           @test-send="sendTestToMe"
         >
           <template v-if="modeloEscolhido" #modelo>
+            <RevisaoDaConversaAberta
+              v-if="comConversaAberta && conversaAberta.contagem.value"
+              :janela="conversaAberta"
+              :modelo="modeloEscolhido"
+              :tem-texto="Boolean(draft.textoNaConversaAberta)"
+            />
             <RevisaoDoModelo
+              v-else
               :modelo="modeloEscolhido"
               :recebem="forms.preview.value?.receive ?? reach"
             />

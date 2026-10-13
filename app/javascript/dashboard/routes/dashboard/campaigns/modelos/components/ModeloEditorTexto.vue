@@ -8,6 +8,8 @@ import { rotuloDoCampo as rotuloDoCampoDe } from '../helpers/campos';
 defineProps({
   rotulo: { type: String, required: true },
   destacarFim: { type: Boolean, default: false },
+  // Campos oferecidos para inserir; a conversa aberta (#1335) usa chaves do catálogo.
+  campos: { type: Array, default: () => CAMPOS },
 });
 
 // Caixa de texto da mensagem. Os campos ("Nome do cliente") entram como
@@ -154,7 +156,7 @@ defineExpose({ inserirCampo });
         {{ $t('MODELOS_WHATSAPP.EDITOR.INSERIR_CAMPO') }}
       </span>
       <button
-        v-for="campo in CAMPOS"
+        v-for="campo in campos"
         :key="campo"
         type="button"
         :data-inserir="campo"

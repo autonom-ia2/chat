@@ -316,6 +316,8 @@ const chooseChannel = card => {
             @bind="(key, binding) => emit('bind', key, binding)"
             @default="(key, value) => emit('default', key, value)"
           />
+          <!-- Fork (#1335): conversa aberta nas últimas 24 h, preenchido pela Nova campanha. -->
+          <slot name="janela" />
         </template>
       </section>
       <slot v-if="!isEmail && !isSms" name="previa">

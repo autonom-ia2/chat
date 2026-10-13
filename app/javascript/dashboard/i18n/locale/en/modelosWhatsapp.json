@@ -803,6 +803,63 @@
     "CONFERENCIA_AUTOMATICA": {
       "PRONTO": "“{nome}” is ready to use.",
       "RECUSADO": "“{nome}” was rejected."
+    },
+    "JANELA": {
+      "TITULO": "Who talked to you in the last 24 hours",
+      "CONTANDO": "Checking who talked to you…",
+      "NINGUEM": "No one in this audience talked to you in the last 24 hours. Everyone gets the template.",
+      "DENTRO": "{n} person talked to you | {n} people talked to you",
+      "DENTRO_PODE": "Can get a message written by you, without a template.",
+      "DENTRO_RECEBE_TEXTO": "Gets your message. {custo}",
+      "GRATIS": "Free.",
+      "PASSA_DA_FRANQUIA": "The first {gratis} are free; the rest costs {valor}.",
+      "FORA": "{n} person did not talk to you | {n} people did not talk to you",
+      "FORA_MODELO": "Gets the template chosen above.",
+      "FORA_SEM_MODELO": "Choose a template above for the people who did not talk to you.",
+      "ECONOMIA": "Writing to them saves you about {valor}.",
+      "ESCREVER": "Write to {n} person | Write to {n} people",
+      "ALTERAR": "Change the message",
+      "TODOS_MODELO": "Send the template to everyone",
+      "CONFERIMOS": "We check again when sending. Anyone who has not talked to you in the last 24 hours gets the template.",
+      "GAVETA": {
+        "TITULO": "Message for {n} person | Message for {n} people",
+        "O_QUE": "What do you want to say?",
+        "O_QUE_EXEMPLO": "E.g.: let them know the new collection arrived and they can reserve by replying",
+        "JEITO": "Tone",
+        "TONS": {
+          "simpatico": "Friendly",
+          "curto": "Short",
+          "formal": "Formal"
+        },
+        "ESCREVER_PARA_MIM": "Write it for me",
+        "SOZINHO": "I'd rather write it myself",
+        "ESCREVENDO": "Writing…",
+        "ERRO": "I could not write it now. Try again or write it your way.",
+        "TENTAR_DE_NOVO": "Try again",
+        "ESCOLHA": "Pick the one that suits you best. You can change it later.",
+        "USAR_ESTA": "Use this one",
+        "OUTRAS": "Write others",
+        "SUA_MENSAGEM": "Your message",
+        "MELHORAR": "Want to adjust it?",
+        "MELHORIAS": {
+          "mais_curta": "Shorter",
+          "mais_simpatica": "Friendlier",
+          "mais_clara": "Clearer"
+        },
+        "DESFAZER": "Undo",
+        "COMO_CHEGA": "How it arrives on WhatsApp",
+        "CANCELAR": "Cancel",
+        "PRONTO": "Done"
+      },
+      "REVISAO": {
+        "TITULO": "How much it costs",
+        "TEXTO": "{n} person gets your message | {n} people get your message",
+        "GRATIS": "Free",
+        "MODELO": "{n} person gets the template “{nome}” ({preco} each) | {n} people get the template “{nome}” ({preco} each)",
+        "TOTAL": "Total",
+        "ECONOMIZOU": "You save {valor} by writing to the people who talked to you.",
+        "ESTIMATIVA": "This is an estimate: when sending we check again who talked to you in the last 24 hours."
+      }
     }
   }
 }
