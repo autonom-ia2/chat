@@ -172,4 +172,23 @@ RSpec.describe Autonomia::Agents::Tools::Recusa do
         .to eq({ error: 'async_desligado' }.to_json)
     end
   end
+
+  # #1361: o Answerer pergunta ao registro se UMA chamada recusou, comparando antes e depois.
+  it 'conta cada recusa registrada, inclusive com o logger caido' do
+    antes = described_class.registradas
+    allow(Rails.logger).to receive(:info).and_raise(IOError, 'disco cheio')
+
+    described_class.registrar('faltam_dados', slug: 'cotar_seguro')
+    described_class.para_modelo('async_desligado', slug: 'cotar_seguro')
+
+    expect(described_class.registradas).to eq(antes + 2)
+  end
+
+  it 'nao conta a saida sem registro do botao Testar da tela' do
+    antes = described_class.registradas
+
+    described_class.saida('tool_http_error', detalhe: '500')
+
+    expect(described_class.registradas).to eq(antes)
+  end
 end

@@ -373,10 +373,37 @@ module Autonomia
         specialists_by_function = enabled_specialists.index_by(&:function_name)
         Array(calls).map do |call|
           inicio = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+          recusas_antes = Tools::Recusa.registradas
           output = dispatch_tool_call(call, tools_by_slug, specialists_by_function)
+          anotar_leitura(tools_by_slug[call['name'].to_s], output, recusou: Tools::Recusa.registradas > recusas_antes)
           registrar_chamada(call, output, inicio)
           { type: 'function_call_output', call_id: call['call_id'], output: output.to_s.truncate(8_000) }
         end
+      end
+
+      # DADO DE SISTEMA NO TURNO (#1361). Quem diz que a chamada recusou é o registro de recusas (`Tools::Recusa`),
+      # nunca o texto da saída. A promessa da ferramenta assíncrona ("consulta iniciada") não é dado, e saída vazia
+      # também não. A busca na web não passa por aqui: quem a executa é a OpenAI.
+      def anotar_leitura(tool, output, recusou:)
+        @recusa_no_turno = true if recusou
+        return if recusou || tool&.async? || saida_vazia?(output)
+
+        @dado_de_sistema = true
+      end
+
+      def saida_vazia?(output)
+        texto = output.to_s.strip
+        return true if texto.empty?
+
+        JSON.parse(texto).blank?
+      rescue JSON::ParserError
+        false
+      end
+
+      # O turno se apoia em dado que um sistema devolveu agora (agenda, estoque, especialista, HTTP) e nenhuma
+      # ferramenta recusou. Vale como base no portão, como a leitura da conta no Guia (`leu_a_conta?`).
+      def leu_dado_de_sistema?
+        @dado_de_sistema == true && @recusa_no_turno != true
       end
 
       # O registro de diagnóstico do Guia (#861): quem tem `operador` anota o que chamou. O atendimento
@@ -459,7 +486,9 @@ module Autonomia
         # Guia que leu a conta neste turno responde a partir dela: "não encontrei o Pedro" depois de ler
         # os contatos é o que a conta tem, não falta de conhecimento. Sem isto o piso do "não achei"
         # (0.29) retinha a resposta certa (#593). Agente de atendimento não tem `operador`: nada muda.
-        return self_conf if leu_a_conta?
+        # O mesmo vale para o dado que uma ferramenta devolveu neste turno (#1361): fica a confiança que o modelo
+        # declarou, sem os pisos da falta de base.
+        return self_conf if leu_a_conta? || leu_dado_de_sistema?
 
         # Recusa em banda (injeção/fora-de-escopo): reply presente, mas o modelo NÃO afirma ter respondido do
         # conhecimento (answered_from_knowledge=false) e não é "não achei". NÃO rebaixar — preservaria o portão de
@@ -576,7 +605,7 @@ module Autonomia
       end
 
       def improvised_specifics_without_kb?(snippets, reply_present, grounded_by_instruction, parsed)
-        reply_present && snippets.empty? && !grounded_by_instruction &&
+        reply_present && snippets.empty? && !grounded_by_instruction && !leu_dado_de_sistema? &&
           !agent_has_kb? && asks_for_specifics?(parsed)
       end
 
@@ -586,7 +615,7 @@ module Autonomia
       # <= 0.5 tornaria só o rebaixamento inócuo).
       def unanchored_business_claim?(parsed, used, reply_present, grounded_by_instruction)
         reply_present && parsed['answered_from_knowledge'] != true &&
-          !grounded_by_instruction && used.empty? && !leu_a_conta? && business_claim?(parsed)
+          !grounded_by_instruction && used.empty? && !leu_a_conta? && !leu_dado_de_sistema? && business_claim?(parsed)
       end
 
       # O Guia (quem chama com `operador`) nunca tem a resposta trocada por "encaminhe ao
