@@ -10,6 +10,8 @@
       "TITLE": "{title}."
     },
     "FLOW": {
+      "SENT": "Formulário enviado",
+      "SENT_NAMED": "Formulário enviado: {name}"
     },
     "LINK_BUTTON": {
       "OPENS": "Abre: {url}"

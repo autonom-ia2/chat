@@ -10,6 +10,8 @@
       "TITLE": "{title}."
     },
     "FLOW": {
+      "SENT": "Form sent",
+      "SENT_NAMED": "Form sent: {name}"
     },
     "LINK_BUTTON": {
       "OPENS": "Opens: {url}"
