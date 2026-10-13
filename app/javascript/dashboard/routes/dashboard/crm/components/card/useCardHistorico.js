@@ -270,6 +270,12 @@ const ACTIVITY_META = {
     icon: 'i-lucide-bell-ring',
     tone: 'neutral',
   },
+  // Motor de entrega (#1454): convite que nunca saiu, passado o prazo.
+  entrega_sem_ninguem: {
+    key: 'ACTIVITY_ENTREGA_SEM_NINGUEM',
+    icon: 'i-lucide-triangle-alert',
+    tone: 'negative',
+  },
 };
 
 const FALLBACK_META = { icon: 'i-lucide-history', tone: 'neutral' };

@@ -82,7 +82,7 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
   def toggle_status
     # FIXME: move this logic into a service object
     if bot_handoff?
-      @conversation.bot_handoff!
+      @conversation.bot_handoff!(motivo: 'n8n')
     elsif params[:status].present?
       set_conversation_status
       @status = @conversation.save!
@@ -92,10 +92,18 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
     handle_human_open if @conversation.open? && Current.user.is_a?(User)
   end
 
+  # Robô (token de AgentBot, o n8n) abrindo a conversa = passar para a equipe. Desde o #1377 a conversa de robô nasce
+  # e segue aberta com o robô no nome, então "pendente" deixou de ser o sinal: vale também a conversa com o robô no
+  # nome que ainda não está à espera de pessoa (#1454). Com uma pessoa já atribuída não há o que passar: o toggle do
+  # robô é só troca de status. Token de integração do CRM ou do MCP não chega aqui (RestrictIntegrationTokenToCrm nega
+  # toggle_status).
   def bot_handoff?
-    return false unless Current.user.is_a?(AgentBot)
+    return false unless Current.user.is_a?(AgentBot) && params[:status] == 'open' && @conversation.assignee_id.blank?
 
-    @conversation.status == 'pending' && params[:status] == 'open'
+    return true if @conversation.pending?
+
+    # Reabrir conversa resolvida ou adiada pelo robô não é passagem: só reabre, e o robô continua (como antes do #1454).
+    @conversation.open? && @conversation.ai_assignee.is_a?(AgentBot) && !@conversation.bot_handoff_waiting?
   end
 
   def toggle_priority
