@@ -71,6 +71,20 @@ RSpec.describe 'toggle_status como passagem do robô' do
       .with(Events::Types::CONVERSATION_BOT_HANDOFF, anything, anything)
   end
 
+  # Pega O26 (bateria do Agentes IA): o n8n reabrindo uma conversa resolvida com o robô no nome só reabre, como no main.
+  it 'conversa resolvida com o robô no nome: o toggle(open) só reabre, sem passagem', :aggregate_failures do
+    conversation.update!(status: :resolved)
+    allow(Rails.configuration.dispatcher).to receive(:dispatch).and_call_original
+
+    toggle(bot.access_token.token)
+
+    expect(response).to have_http_status(:success)
+    expect(conversation.reload).to have_attributes(status: 'open', assignee_id: nil, ai_assignee: bot)
+    expect(conversation.bot_handoff_waiting?).to be(false)
+    expect(Rails.configuration.dispatcher).not_to have_received(:dispatch)
+      .with(Events::Types::CONVERSATION_BOT_HANDOFF, anything, anything)
+  end
+
   it 'robô adiando a conversa não é passagem' do
     toggle(bot.access_token.token, status: 'snoozed')
 

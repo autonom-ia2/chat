@@ -100,7 +100,10 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
   def bot_handoff?
     return false unless Current.user.is_a?(AgentBot) && params[:status] == 'open' && @conversation.assignee_id.blank?
 
-    @conversation.pending? || (@conversation.ai_assignee.is_a?(AgentBot) && !@conversation.bot_handoff_waiting?)
+    return true if @conversation.pending?
+
+    # Reabrir conversa resolvida ou adiada pelo robô não é passagem: só reabre, e o robô continua (como antes do #1454).
+    @conversation.open? && @conversation.ai_assignee.is_a?(AgentBot) && !@conversation.bot_handoff_waiting?
   end
 
   def toggle_priority
