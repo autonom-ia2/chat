@@ -2,22 +2,30 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAccount } from 'dashboard/composables/useAccount';
+import {
+  formatInZone,
+  scheduleToUtc,
+} from 'dashboard/components-next/CampaignJourney/scheduleTime';
 import ModeloCelular from '../components/ModeloCelular.vue';
 import { rotuloDoCampo } from '../helpers/campos';
 
 // "Como o cliente vê" na campanha: o mesmo celular da tela de Modelos (com
 // topo, rodapé e botões), com o que cada variável vai receber da primeira
-// pessoa do público.
+// pessoa do público. #1456: também sem a ponte de Modelos (o modelo vem do
+// `conteudoDaMeta`), e com o que a campanha preencheu do formato: o cupom, o
+// "vale até" da oferta e o arquivo de cada cartão.
 const props = defineProps({
   modelo: { type: Object, required: true },
   bindings: { type: Object, default: () => ({}) },
   sample: { type: Object, default: null },
   remetente: { type: String, default: '' },
-  // #1334: o cupom digitado na campanha aparece no celular.
-  cupom: { type: String, default: '' },
+  // #1334: o que a campanha preencheu do formato (formatoNaCampanha): cupom,
+  // validade da oferta e o arquivo escolhido de cada cartão.
+  valores: { type: Object, default: () => ({}) },
+  timeZone: { type: String, default: 'UTC' },
 });
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const { currentAccount } = useAccount();
 
 const primeiroNome = () =>
@@ -48,8 +56,22 @@ const valorDe = ligacao => {
     return props.sample?.extra_values?.[ligacao.value] || `[${ligacao.value}]`;
   }
   if (ligacao.value === 'first_name') return primeiroNome();
+  if (ligacao.value === 'company') return props.sample?.company_name || '';
   return props.sample?.name || t('MODELOS_WHATSAPP.PONTE.NOME_DO_CONTATO');
 };
+
+const cupom = computed(() => (props.valores.cupom || '').trim());
+
+const validade = computed(() => {
+  const iso = scheduleToUtc(props.valores.validade, props.timeZone);
+  return iso ? formatInZone(iso, props.timeZone, locale.value) : '';
+});
+
+// O arquivo escolhido agora, senão o aprovado guardado com o modelo.
+const arquivoDoCartao = indice =>
+  props.valores.cartoes?.[indice]?.nome ||
+  props.modelo.cartoesGuardados?.[indice]?.nome ||
+  '';
 
 const conteudo = computed(() => {
   const exemplos = Object.fromEntries(
@@ -59,13 +81,29 @@ const conteudo = computed(() => {
     ])
   );
   const base = { ...props.modelo.conteudo, exemplos };
-  if (!props.cupom) return base;
   return {
     ...base,
-    ...(base.oferta ? { oferta: { ...base.oferta, cupom: props.cupom } } : {}),
+    ...(base.oferta
+      ? {
+          oferta: {
+            ...base.oferta,
+            ...(cupom.value ? { cupom: cupom.value } : {}),
+            validade: validade.value,
+          },
+        }
+      : {}),
+    // O código de exemplo do modelo nunca aparece como se fosse o da campanha.
     botoes: (base.botoes || []).map(botao =>
-      botao.tipo === 'copiar_codigo' ? { ...botao, valor: props.cupom } : botao
+      botao.tipo === 'copiar_codigo' ? { ...botao, valor: cupom.value } : botao
     ),
+    ...(base.cartoes
+      ? {
+          cartoes: base.cartoes.map((cartao, indice) => ({
+            ...cartao,
+            arquivo: arquivoDoCartao(indice) || cartao.arquivo,
+          })),
+        }
+      : {}),
   };
 });
 </script>

@@ -390,8 +390,9 @@ describe('Nova campanha — Passo 2 and 3 (PRD §6.3, §6.4)', () => {
     expect(wrapper.find('[data-test="coverage-warning"]').text()).toContain(
       '2 people are left out: missing {{2}}'
     );
-    expect(wrapper.find('[data-test="preview-text"]').text()).toBe(
-      'Olá, [First name of the contact]! O seguro vence em [Vencimento].'
+    // #1456: a prévia é o celular da tela de Modelos; coluna sem exemplo vai pelo nome.
+    expect(wrapper.find('[data-ponte-previa]').text()).toContain(
+      'O seguro vence em [Vencimento].'
     );
 
     await wrapper.find('[data-test="continue-review"]').trigger('click');
@@ -923,6 +924,47 @@ describe('Nova campanha — conversa aberta com modelo de cupom (#1456)', () => 
     expect(wrapper.find('[data-conversa-aberta]').exists()).toBe(false);
     expect(wrapper.find('[data-texto-descartado]').exists()).toBe(true);
     expect(loadDraft(1).textoNaConversaAberta).toBe('');
+    wrapper.unmount();
+  });
+});
+
+// #1456: sem a ponte de Modelos, a prévia era só o texto do corpo (sem topo e
+// sem botões). Agora é o mesmo celular da tela de Modelos.
+describe('Nova campanha — Como o cliente vê sem a ponte (#1456)', () => {
+  it('mostra topo, botões e o rótulo do campo sem valor', async () => {
+    const COM_BOTOES = {
+      ...TEMPLATE,
+      id: 11,
+      name: 'colecao_com_botoes',
+      components: [
+        { type: 'HEADER', format: 'IMAGE' },
+        { type: 'BODY', text: 'Olá, {{1}}! O seguro vence em {{2}}.' },
+        {
+          type: 'BUTTONS',
+          buttons: [
+            { type: 'QUICK_REPLY', text: 'Quero renovar' },
+            { type: 'URL', text: 'Ver apólice', url: 'https://x.com' },
+          ],
+        },
+      ],
+    };
+    const wrapper = mountPage({ templates: [COM_BOTOES] });
+    await flushPromises();
+    await wrapper.find('[data-audience-option="5"]').trigger('click');
+    await wrapper.find('[data-test="continue-message"]').trigger('click');
+    await wrapper
+      .find('[data-channel-card="whatsapp_official"]')
+      .trigger('click');
+    choice(wrapper, 'Sending inbox').vm.$emit('update:modelValue', 7);
+    await flushPromises();
+    choice(wrapper, 'Approved template').vm.$emit('update:modelValue', 11);
+    await flushPromises();
+
+    const previa = wrapper.find('[data-ponte-previa]');
+    expect(previa.exists()).toBe(true);
+    expect(previa.find('[data-celular-topo]').exists()).toBe(true);
+    expect(previa.findAll('[data-celular-botao]')).toHaveLength(2);
+    expect(previa.text()).not.toContain('{{');
     wrapper.unmount();
   });
 });

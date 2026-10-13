@@ -221,6 +221,13 @@ const vazio = computed(() => !pedacos.value.length);
           aria-hidden="true"
         />
         {{ botao.texto || $t('MODELOS_WHATSAPP.CELULAR.BOTAO_SEM_TEXTO') }}
+        <span
+          v-if="botao.tipo === 'copiar_codigo' && botao.valor"
+          data-celular-codigo
+          class="font-mono text-n-slate-11"
+        >
+          {{ botao.valor }}
+        </span>
       </span>
       <span
         v-if="botoesNaTela.escondidos"

@@ -518,7 +518,8 @@
       "CATALOGO": "Catálogo",
       "VER_COMO_FICA": "Ver como fica",
       "OFERTA_CONTAGEM": "Termina em 2 dias (exemplo)",
-      "VER_TODAS_AS_OPCOES": "Ver todas as opções"
+      "VER_TODAS_AS_OPCOES": "Ver todas as opções",
+      "OFERTA_VALE_ATE": "Vale até {data}"
     },
     "ENVIADO": {
       "TITULO": {

@@ -79,6 +79,7 @@ import {
   soModeloCompleto,
 } from '../modelos/helpers/formatoNaCampanha';
 import { rotuloDoCampo } from '../modelos/helpers/campos';
+import { conteudoDaMeta } from '../modelos/api/daMeta';
 // Fork (#1335, protótipo): conversa aberta — quem falou nas últimas 24 h recebe texto escrito.
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { useConversaAberta } from '../modelos/janela/useConversaAberta';
@@ -225,6 +226,13 @@ const variables = computed(() =>
 const modeloEscolhido = computed(() =>
   ponte.modeloPorId(draft.value.templateId)
 );
+// #1456: "Como o cliente vê" é sempre o celular da tela de Modelos (topo,
+// botões, oferta, cartões). Sem a ponte, o modelo vem direto do da Meta.
+const modeloDaPrevia = computed(() => {
+  if (modeloEscolhido.value) return modeloEscolhido.value;
+  if (draft.value.channel !== CAMPAIGN_CHANNELS.WHATSAPP_OFFICIAL) return null;
+  return template.value ? conteudoDaMeta(template.value) : null;
+});
 const remetente = computed(
   () =>
     ponte.caixas.value.find(caixa => caixa.id === draft.value.inboxId)?.conta
@@ -1088,13 +1096,14 @@ onBeforeUnmount(() => {
               @update="update"
             />
           </template>
-          <template v-if="modeloEscolhido" #previa>
+          <template v-if="modeloDaPrevia" #previa>
             <PontePrevia
-              :modelo="modeloEscolhido"
+              :modelo="modeloDaPrevia"
               :bindings="draft.bindings"
               :sample="sample"
-              :remetente="remetente"
-              :cupom="draft.formato?.cupom || ''"
+              :remetente="remetente || inboxName"
+              :valores="draft.formato || {}"
+              :time-zone="timeZone"
             />
           </template>
         </StepMessage>

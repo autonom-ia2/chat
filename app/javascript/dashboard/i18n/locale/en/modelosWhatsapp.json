@@ -518,7 +518,8 @@
       "CATALOGO": "Catalog",
       "VER_COMO_FICA": "See how it looks",
       "OFERTA_CONTAGEM": "Ends in 2 days (example)",
-      "VER_TODAS_AS_OPCOES": "See all options"
+      "VER_TODAS_AS_OPCOES": "See all options",
+      "OFERTA_VALE_ATE": "Valid until {data}"
     },
     "ENVIADO": {
       "TITULO": {
