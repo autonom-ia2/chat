@@ -56,6 +56,21 @@ RSpec.describe Autonomia::Agents::Areas do
         .to raise_error(described_class::AgenteInterno)
     end
 
+    it 'recusa agente que não está atendendo (pausado ou desligado), sem deixar espelho' do
+      pausado = agente('Pausado', status: :paused)
+
+      expect { described_class.vincular!(agent: pausado, inbox: inbox) }
+        .to raise_error(described_class::AgenteNaoAtende)
+        .and(not_change(AgentBot, :count))
+    end
+
+    it 'recusa agente de sistema (ex.: o do Guia)' do
+      de_sistema = agente('Guia', config: { 'system_key' => 'guia' })
+
+      expect { described_class.vincular!(agent: de_sistema, inbox: inbox) }
+        .to raise_error(described_class::AgenteDeSistema)
+    end
+
     it 'recusa caixa de outra conta' do
       caixa_alheia = create(:inbox, account: create(:account))
 
@@ -111,12 +126,65 @@ RSpec.describe Autonomia::Agents::Areas do
       expect(area.reload).to have_attributes(deleted_at: nil, papel: 'area')
     end
 
+    it 'devolve à porta e enfileira a resposta à última mensagem do cliente ainda sem resposta' do
+      atendida = conversa(ai_assignee: area.agent_bot, status: :open)
+      pergunta = create(:message, account: account, conversation: atendida, message_type: :incoming, content: 'e o boleto?')
+
+      expect { described_class.desvincular!(agent: agente_da_area, inbox: inbox) }
+        .to have_enqueued_job(Autonomia::Agents::Operate::ReplyJob).with(atendida.id, pergunta.id)
+    end
+
+    it 'não enfileira resposta quando a última mensagem já foi respondida' do
+      atendida = conversa(ai_assignee: area.agent_bot, status: :open)
+      create(:message, account: account, conversation: atendida, message_type: :incoming, content: 'oi')
+      create(:message, account: account, conversation: atendida, message_type: :outgoing, sender: area.agent_bot, content: 'olá')
+
+      expect { described_class.desvincular!(agent: agente_da_area, inbox: inbox) }
+        .not_to have_enqueued_job(Autonomia::Agents::Operate::ReplyJob)
+    end
+
     it 'é idempotente e não toca a porta' do
       described_class.desvincular!(agent: agente_da_area, inbox: inbox)
 
       expect { described_class.desvincular!(agent: agente_da_area, inbox: inbox) }.not_to raise_error
       expect { described_class.desvincular!(agent: agente_da_porta, inbox: inbox) }
         .not_to(change { porta.reload.attributes })
+    end
+  end
+
+  # A área só existe com porta ativa: em todo caminho que tira a porta, as áreas da caixa saem antes, e as conversas
+  # delas vão direto para a equipe humana (sem passar pelo robô da porta, que está saindo).
+  describe 'quando a porta sai da caixa' do
+    let!(:area) { described_class.vincular!(agent: agente_da_area, inbox: inbox) }
+    let!(:da_area) do
+      create(:conversation, account: account, inbox: inbox).tap { |c| c.update!(ai_assignee: area.agent_bot, status: :open) }
+    end
+
+    def areas_ativas
+      Autonomia::Agents::AgentInbox.kept.area.where(inbox_id: inbox.id)
+    end
+
+    it 'pelo desconectar da porta, sem atribuir antes ao robô da porta' do
+      expect(Conversations::AssignmentService).not_to receive(:new)
+
+      Autonomia::Agents::Operate::InboxConnector.new(agent: agente_da_porta, inbox: inbox).perform(connect: false)
+
+      expect(areas_ativas).to be_empty
+      expect(da_area.reload).to have_attributes(assignee_agent_bot_id: nil, status: 'open')
+    end
+
+    it 'pela exclusão lógica do agente da porta' do
+      Autonomia::Agents::SoftDelete.new(agent: agente_da_porta, actor: nil).perform
+
+      expect(areas_ativas).to be_empty
+      expect(da_area.reload).to have_attributes(assignee_agent_bot_id: nil, status: 'open')
+    end
+
+    it 'pelo destroy do agente da porta' do
+      agente_da_porta.destroy!
+
+      expect(areas_ativas).to be_empty
+      expect(da_area.reload).to have_attributes(assignee_agent_bot_id: nil, status: 'open')
     end
   end
 end

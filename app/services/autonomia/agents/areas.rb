@@ -15,30 +15,44 @@
 # crm.ai.responsible_agent_changed entram depois, sobre estes dois métodos e o QuemResponde.
 module Autonomia::Agents::Areas
   class AgenteInterno < StandardError; end
+  class AgenteNaoAtende < StandardError; end
+  class AgenteDeSistema < StandardError; end
 
   module_function
 
-  # -> o AgentInbox de área ativo. ActiveRecord::RecordInvalid quando a caixa não tem porta ativa, o agente já é a
-  # porta dela, ou agente/caixa são de contas diferentes.
+  # -> o AgentInbox de área ativo. Recusa o agente que não fala com cliente (mesmo predicado do
+  # InboxConnector#connect_locked!, mais o de sistema). ActiveRecord::RecordInvalid quando a caixa não tem porta
+  # ativa, o agente já é a porta dela, ou agente/caixa são de contas diferentes.
+  #
+  # TRAVA A CAIXA (a linha do inbox), a mesma que o InboxConnector#disconnect! e AgentInbox#soltar_areas_da_caixa!
+  # travam: a conferência "a caixa tem porta ativa" e a saída da porta não se cruzam. Só a caixa é travada aqui — nunca
+  # o agente — para não cruzar a ordem com quem trava o agente e depois a caixa (SoftDelete, InboxConnector#connect!).
   def vincular!(agent:, inbox:)
-    raise AgenteInterno, "agent #{agent.id} is internal and never talks to customers" if agent.actuation_internal?
+    recusar_quem_nao_fala_com_cliente!(agent)
 
-    agent.with_lock do
+    inbox.with_lock do
       vinculos = ::Autonomia::Agents::AgentInbox.where(autonomia_agent_id: agent.id, inbox_id: inbox.id)
       vinculos.kept.area.first || reativar!(vinculos.area.order(deleted_at: :desc).first) || criar!(agent, inbox)
     end
   end
 
-  # Solta o vínculo de área do agente na caixa (se houver) e devolve à porta as conversas que ele atendia.
+  # Solta o vínculo de área do agente na caixa (se houver). As conversas que ele atendia voltam à porta; com
+  # `porta_saindo: true` (a porta está saindo da caixa), vão direto para a equipe humana.
   # Nunca toca a porta: soltar a porta é o InboxConnector.
-  def desvincular!(agent:, inbox:)
-    agent.with_lock do
+  def desvincular!(agent:, inbox:, porta_saindo: false)
+    inbox.with_lock do
       vinculo = ::Autonomia::Agents::AgentInbox.kept.area.find_by(autonomia_agent_id: agent.id, inbox_id: inbox.id)
       next if vinculo.nil?
 
-      vinculo.release_bot_conversations!
+      vinculo.release_bot_conversations!(porta_saindo: porta_saindo)
       vinculo.update!(deleted_at: Time.current)
     end
+  end
+
+  def recusar_quem_nao_fala_com_cliente!(agent)
+    raise AgenteInterno, "agent #{agent.id} is internal and never talks to customers" if agent.actuation_internal?
+    raise AgenteDeSistema, "agent #{agent.id} is a system agent" if agent.config&.dig('system_key').present?
+    raise AgenteNaoAtende, "agent #{agent.id} is not operating" unless agent.operating?
   end
 
   def reativar!(vinculo)
@@ -53,5 +67,5 @@ module Autonomia::Agents::Areas
     espelho = AgentBot.new(account: agent.account, name: agent.name, bot_type: :webhook, outgoing_url: nil)
     ::Autonomia::Agents::AgentInbox.create!(agent: agent, inbox: inbox, account: agent.account, agent_bot: espelho, papel: 'area')
   end
-  private_class_method :reativar!, :criar!
+  private_class_method :recusar_quem_nao_fala_com_cliente!, :reativar!, :criar!
 end

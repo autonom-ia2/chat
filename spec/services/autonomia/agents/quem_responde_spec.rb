@@ -95,6 +95,24 @@ RSpec.describe Autonomia::Agents::QuemResponde do
       expect(described_class.agent_inbox(conversation)).to eq(porta)
     end
 
+    # Rede de segurança: a área dona que não pode responder nunca deixa a conversa muda. Grava por fora dos callbacks,
+    # como uma conversa passada depois de o agente já estar pausado.
+    it 'cai na porta quando a área dona está pausada' do
+      conversation.update!(ai_assignee: area.agent_bot)
+      area.agent.update_columns(status: Autonomia::Agents::Agent.statuses[:paused]) # rubocop:disable Rails/SkipsModelValidations
+
+      expect(described_class.agent_inbox(conversation)).to eq(porta)
+    end
+
+    it 'cai na porta quando a área dona é agente de sistema ou interno' do
+      conversation.update!(ai_assignee: area.agent_bot)
+      area.agent.update_columns(config: { 'system_key' => 'guia' }) # rubocop:disable Rails/SkipsModelValidations
+      expect(described_class.agent_inbox(conversation)).to eq(porta)
+
+      area.agent.update_columns(config: {}, actuation: Autonomia::Agents::Agent.actuations[:internal]) # rubocop:disable Rails/SkipsModelValidations
+      expect(described_class.agent_inbox(conversation)).to eq(porta)
+    end
+
     it 'cai na porta quando o vínculo da área foi apagado' do
       conversation.update!(ai_assignee: area.agent_bot)
       area.update_columns(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations

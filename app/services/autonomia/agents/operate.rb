@@ -41,9 +41,7 @@ module Autonomia
 
         agent = agent_inbox.agent
         return unless agent && agent.account_id == conversation.account_id
-        return unless agent.operating?
-        return if agent.actuation_internal?
-        return if agent.config&.dig('system_key').present?
+        return unless agent.atende_cliente?
         return unless test_allowlist_permits?(conversation, agent)
 
         agent_inbox

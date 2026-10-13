@@ -5,7 +5,8 @@
 #   vínculo era porta, então o resultado é o mesmo da consulta antiga.
 # - Ligada: se o ai_assignee da conversa é o espelho de um vínculo ATIVO desta caixa (porta ou área), é esse vínculo;
 #   senão, a porta. A área responde com o próprio espelho, então continua dona da conversa depois de responder
-#   (Message#claim_conversation_for_bot) e a porta fica calada.
+#   (Message#claim_conversation_for_bot) e a porta fica calada. Rede de segurança: dono que não pode falar com
+#   cliente agora (pausado, interno, de sistema) não deixa a conversa muda — responde a porta.
 #
 # Só ESCOLHE: o contrato de poder responder (agente ligado, conta, pessoa atribuída, allowlist) segue em
 # Autonomia::Agents::Operate.authorized_agent_inbox / eligible_agent_inbox. Tenancy: só lê vínculo da conta da
@@ -32,7 +33,8 @@ module Autonomia::Agents::QuemResponde
   def dono_da_conversa(vinculos, conversation)
     return if conversation.assignee_agent_bot_id.blank? || conversation.ai_assignee_type != 'AgentBot'
 
-    vinculos.find_by(agent_bot_id: conversation.assignee_agent_bot_id)
+    dono = vinculos.includes(:agent).find_by(agent_bot_id: conversation.assignee_agent_bot_id)
+    dono if dono&.agent&.atende_cliente?
   end
   private_class_method :dono_da_conversa
 end
