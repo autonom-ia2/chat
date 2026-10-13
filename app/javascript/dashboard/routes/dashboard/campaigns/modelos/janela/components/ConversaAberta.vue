@@ -78,6 +78,22 @@ const usar = texto => {
       {{ t(`${NS}.CONTANDO`) }}
     </p>
 
+    <div
+      v-else-if="janela.falhou.value"
+      data-contagem-falhou
+      class="flex flex-wrap items-center gap-3"
+      role="alert"
+    >
+      <p class="m-0 text-sm text-n-slate-12">{{ t(`${NS}.FALHOU`) }}</p>
+      <Button
+        :label="t(`${NS}.TENTAR_DE_NOVO`)"
+        variant="outline"
+        color="slate"
+        class="!min-h-11 !rounded-xl"
+        @click="janela.contar()"
+      />
+    </div>
+
     <p
       v-else-if="contagem && !dentro"
       data-ninguem

@@ -8,13 +8,16 @@ module CampaignJourney::ConversaAberta::Queda
 
   private
 
+  # `ensure`: se o Híbrido falhar ao reenviar pelo WhatsApp API (ele volta a mensagem para a falha e levanta), a pessoa
+  # ainda recebe o modelo.
   def process_statuses
     super
+  ensure
     pedir_modelo(@processed_params[:statuses].first)
   end
 
   def pedir_modelo(status)
-    return unless janela_fechada?(status)
+    return unless status && janela_fechada?(status)
 
     delivery = CampaignFreeTextDelivery.find_by(inbox_id: inbox.id, source_id: status[:id].to_s, fell_back_at: nil)
     return if delivery.nil? || entregue_pelo_hibrido?(delivery)

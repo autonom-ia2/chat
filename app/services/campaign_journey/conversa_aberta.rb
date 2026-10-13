@@ -3,7 +3,8 @@
 module CampaignJourney::ConversaAberta
   FLAG = 'campaign_open_window_text'.freeze
 
+  # O envio do texto vive no caminho Enterprise (CampaignRecipient): sem ele, nada é oferecido nem gravado.
   def self.enabled?(account)
-    account.feature_enabled?(FLAG)
+    ChatwootApp.enterprise? && account.feature_enabled?(FLAG)
   end
 end

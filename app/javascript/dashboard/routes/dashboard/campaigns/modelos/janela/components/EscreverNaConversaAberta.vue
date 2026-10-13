@@ -33,6 +33,9 @@ const emit = defineEmits(['usar', 'fechar']);
 
 const NS = 'MODELOS_WHATSAPP.JANELA.GAVETA';
 const TONS = ['simpatico', 'curto', 'formal'];
+// Os mesmos limites do servidor (CampaignJourney::ConversaAberta::Texto e Redacao).
+const MAX_TEXTO = 1000;
+const MAX_PEDIDO = 500;
 const MELHORIAS = [
   { chave: 'mais_curta', icone: 'i-lucide-scissors' },
   { chave: 'mais_simpatica', icone: 'i-lucide-smile' },
@@ -58,6 +61,7 @@ const titulo = computed(() =>
 const textoAtual = computed(() => juntar(conteudo.value));
 const vazio = computed(() => !textoAtual.value.trim());
 const linkDigitado = computed(() => linkInequivoco(textoAtual.value));
+const longo = computed(() => textoAtual.value.length > MAX_TEXTO);
 const talvezLink = computed(() => pareceLink(textoAtual.value));
 const chaves = computed(() => props.campos.map(campo => campo.chave));
 const rotulos = computed(() =>
@@ -146,6 +150,7 @@ const desfazer = () => {
             v-model="objetivo"
             data-objetivo
             rows="3"
+            :maxlength="MAX_PEDIDO"
             :placeholder="t(`${NS}.O_QUE_EXEMPLO`)"
             class="m-0 w-full rounded-xl border border-n-weak bg-n-solid-1 px-3 py-2 text-base text-n-slate-12 focus:outline-none focus:ring-2 focus:ring-n-brand"
           />
@@ -161,6 +166,7 @@ const desfazer = () => {
             v-model="resposta"
             data-resposta
             rows="2"
+            :maxlength="MAX_PEDIDO"
             class="m-0 w-full rounded-xl border border-n-weak bg-n-solid-1 px-3 py-2 text-base text-n-slate-12 focus:outline-none focus:ring-2 focus:ring-n-brand"
           />
         </label>
@@ -313,6 +319,14 @@ const desfazer = () => {
           {{ t(`${NS}.LINK_DIGITADO`) }}
         </p>
         <p
+          v-else-if="longo"
+          data-texto-longo
+          role="alert"
+          class="p-3 m-0 text-sm rounded-xl bg-n-ruby-2 text-n-slate-12"
+        >
+          {{ t(`${NS}.LONGO`, { max: MAX_TEXTO }) }}
+        </p>
+        <p
           v-else-if="talvezLink"
           data-parece-link
           role="status"
@@ -387,7 +401,7 @@ const desfazer = () => {
           :label="t(`${NS}.PRONTO`)"
           icon="i-lucide-check"
           class="!min-h-11"
-          :disabled="vazio || linkDigitado"
+          :disabled="vazio || linkDigitado || longo"
           @click="emit('usar', textoAtual)"
         />
       </div>

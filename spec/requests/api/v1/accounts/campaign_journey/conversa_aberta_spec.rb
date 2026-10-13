@@ -83,6 +83,7 @@ RSpec.describe 'Conversa aberta na campanha (#1335)', :aggregate_failures, type:
     let(:enviado) { {} }
 
     before do
+      Redis::Alfred.delete("conversa_aberta:escrever:#{account.id}:#{Time.zone.today.iso8601}")
       allow(Crm::Ai::CredentialResolver).to receive(:new).and_return(instance_double(Crm::Ai::CredentialResolver, resolve: { api_key: 'k' }))
       allow(Crm::Ai::ResponsesClient).to receive(:new).and_return(client)
       allow(client).to receive(:create) do |**kwargs|
@@ -128,6 +129,17 @@ RSpec.describe 'Conversa aberta na campanha (#1335)', :aggregate_failures, type:
       entrada = JSON.parse(enviado[:input])
       expect(entrada['tom']['escolha']).to eq('simpatico')
       expect(entrada['pedido']).to eq('melhorias' => [], 'observacao' => 'deixar mais simpática e calorosa, sem mudar o assunto')
+    end
+
+    it 'passou do teto diário da conta: 429, sem chamar a IA' do
+      stub_const('Api::V1::Accounts::CampaignJourney::ConversaAbertaController::LIMITE_DIARIO', 1)
+      Redis::Alfred.delete("conversa_aberta:escrever:#{account.id}:#{Time.zone.today.iso8601}")
+
+      escrever(objetivo: 'avisar da coleção nova')
+      escrever(objetivo: 'de novo')
+
+      expect(response).to have_http_status(:too_many_requests)
+      expect(client).to have_received(:create).once
     end
 
     it 'IA fora do ar vira 503 com código, sem texto da pessoa no erro' do

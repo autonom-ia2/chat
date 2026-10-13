@@ -73,6 +73,45 @@ describe('useConversaAberta', () => {
     expect(janela.custoEscrita(37)).toBeCloseTo(1.295, 5);
   });
 
+  it('a contagem que falha mostra o erro e conta de novo', async () => {
+    http.contagem.mockRejectedValueOnce(new Error('rede'));
+    const janela = await montar();
+
+    expect(janela.falhou.value).toBe(true);
+    expect(janela.contagem.value).toBeNull();
+
+    http.contagem.mockResolvedValue(resposta(null));
+    await janela.contar();
+
+    expect(janela.falhou.value).toBe(false);
+    expect(janela.contagem.value.dentro).toBe(900);
+  });
+
+  it('só a resposta do último pedido vale', async () => {
+    const categoria = ref('MARKETING');
+    let soltarAntiga;
+    http.contagem
+      .mockImplementationOnce(
+        () =>
+          new Promise(resolve => {
+            soltarAntiga = () => resolve(resposta(null));
+          })
+      )
+      .mockResolvedValueOnce({
+        data: { payload: { ...resposta(null).data.payload, dentro: 5 } },
+      });
+    const janela = useConversaAberta(
+      computed(() => ({ publicoId: 1, caixaId: 2, categoria: categoria.value }))
+    );
+    categoria.value = 'UTILITY';
+    await flushPromises();
+    soltarAntiga();
+    await flushPromises();
+
+    expect(http.contagem).toHaveBeenCalledTimes(2);
+    expect(janela.contagem.value.dentro).toBe(5);
+  });
+
   it('escreve pelo endpoint com o público, a caixa e a categoria', async () => {
     http.contagem.mockResolvedValue(resposta(null));
     http.escrever.mockResolvedValue({ data: { payload: { status: 'ok' } } });

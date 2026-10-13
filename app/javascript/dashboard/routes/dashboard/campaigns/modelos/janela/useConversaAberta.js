@@ -12,9 +12,16 @@ export function useConversaAberta(entrada) {
   const { locale } = useI18n();
   const contagem = ref(null);
   const carregando = ref(false);
+  const falhou = ref(false);
+  // Só a resposta do último pedido vale (trocar o modelo no meio não deixa a
+  // resposta antiga por cima da nova).
+  let pedidoAtual = 0;
 
   const contar = async () => {
     const { publicoId, caixaId, categoria } = entrada.value;
+    pedidoAtual += 1;
+    const pedido = pedidoAtual;
+    falhou.value = false;
     if (!publicoId || !caixaId) {
       contagem.value = null;
       return;
@@ -22,22 +29,26 @@ export function useConversaAberta(entrada) {
     // Recontagem mantém o número anterior na tela até o novo chegar.
     carregando.value = !contagem.value;
     try {
-      contagem.value = await api.contarJanela({
+      const resposta = await api.contarJanela({
         publicoId,
         caixaId,
         categoria,
       });
+      if (pedido === pedidoAtual) contagem.value = resposta;
     } catch {
-      contagem.value = null;
+      if (pedido === pedidoAtual) {
+        contagem.value = null;
+        falhou.value = true;
+      }
     } finally {
-      carregando.value = false;
+      if (pedido === pedidoAtual) carregando.value = false;
     }
   };
 
   // Outro público ou outra caixa: zera e conta de novo. Outro modelo: conta de
   // novo (o preço do modelo muda) mantendo o número na tela.
   watch(
-    () => [entrada.value.publicoId, entrada.value.caixaId],
+    [() => entrada.value.publicoId, () => entrada.value.caixaId],
     () => {
       contagem.value = null;
       contar();
@@ -103,6 +114,8 @@ export function useConversaAberta(entrada) {
   return {
     contagem,
     carregando,
+    falhou,
+    contar,
     campos,
     precoModelo,
     precoResposta,

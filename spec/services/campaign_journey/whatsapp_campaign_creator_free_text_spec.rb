@@ -50,6 +50,14 @@ RSpec.describe CampaignJourney::WhatsappCampaignCreator, :aggregate_failures do
     }
   end
 
+  it 'modelo de código de acesso nunca leva mensagem escrita' do
+    channel.update!(message_templates: [CampaignJourneyHelpers::JOURNEY_TEMPLATE.merge('category' => 'AUTHENTICATION')])
+
+    expect { criar('Oi, {{cliente.primeiro_nome}}!') }.to raise_error(described_class::Error) { |error|
+      expect(error.details).to eq(reason: 'authentication_template')
+    }
+  end
+
   it 'com a flag da conta desligada, recusa a mensagem escrita' do
     account.disable_features!(:campaign_open_window_text)
 

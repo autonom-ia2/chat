@@ -854,7 +854,8 @@
         "CANCELAR": "Cancelar",
         "PRONTO": "Pronto",
         "LINK_DIGITADO": "Link não pode ser digitado no texto. Use o botão do campo (ex.: o link da oferta, vindo do público).",
-        "PARECE_LINK": "Parece um link. Para link, use o botão do campo (ex.: o link da oferta)."
+        "PARECE_LINK": "Parece um link. Para link, use o botão do campo (ex.: o link da oferta).",
+        "LONGO": "A mensagem passou de {max} letras. Deixe mais curta."
       },
       "REVISAO": {
         "TITULO": "Quanto custa",
@@ -872,7 +873,9 @@
         "sem_franquia": "Não conseguimos ver as grátis do mês: conte com até {valor} ({preco} cada)."
       },
       "CANAL_HINT": "Modelo aprovado pela Meta. Quem falou com você nas últimas 24 horas pode receber uma mensagem escrita por você.",
-      "AVISO_PROPAGANDA": "Mensagem de propaganda demais pode levar a bloqueio. Escreva algo útil para a pessoa."
+      "AVISO_PROPAGANDA": "Mensagem de propaganda demais pode levar a bloqueio. Escreva algo útil para a pessoa.",
+      "FALHOU": "Não conseguimos conferir quem falou com você agora.",
+      "TENTAR_DE_NOVO": "Tentar de novo"
     },
     "SAUDE": {
       "TITULO": "Como este modelo está indo",

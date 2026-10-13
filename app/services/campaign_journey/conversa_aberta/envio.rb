@@ -10,8 +10,16 @@
 # Se a Meta recusar depois, pelo aviso de status 131047 (janela fechada), a CampaignJourney::ConversaAberta::Queda manda o
 # modelo, uma vez só. A mensagem escrita entra na conversa com campaign_id (o robô do #1405 não assume).
 module CampaignJourney::ConversaAberta::Envio
-  # A Queda pede o modelo para quem o texto não alcançou.
+  PAUSADA = 'Campanha parada: o modelo não foi enviado depois do texto recusado'.freeze
+  MODELO_NAO_PRONTO = 'O modelo não está pronto para envio: o texto foi recusado e o modelo não saiu'.freeze
+
+  # A Queda pede o modelo para quem o texto não alcançou. Passa pelas mesmas travas do disparo
+  # (CampaignPauses::WhatsappDispatchGate): campanha parada ou modelo que não confere não manda nada; a conferência
+  # também liga o arquivo do topo do modelo (#1382).
   def enviar_modelo!(recipient)
+    return recipient.mark_failed!(message: PAUSADA) if CampaignPause.open_for(campaign)
+    return recipient.mark_failed!(message: MODELO_NAO_PRONTO) if template_check_applies? && !template_verdict.ok?
+
     modelo_forcado << recipient.id
     process_recipient(recipient)
   end
@@ -25,18 +33,23 @@ module CampaignJourney::ConversaAberta::Envio
     source_id = channel.provider_service.send_message(to, CampaignJourney::ConversaAberta::TextoDeEnvio.new(texto))
     return super if source_id.blank?
 
-    entregar_texto(recipient, to, texto, source_id)
+    # A Meta aceitou: a pessoa fica `sent` ANTES de qualquer outra gravação (nunca vira `failed` depois do aceite).
+    update_recipient_from_provider_response(recipient, source_id)
+    registrar_texto(recipient, to, texto, source_id)
   end
 
-  def entregar_texto(recipient, destination, texto, source_id)
+  # Depois do aceite: o texto que a pessoa recebeu, a linha da entrega (para a queda no 131047) e a mensagem na
+  # conversa. Uma falha aqui só vai ao log: a mensagem já saiu.
+  def registrar_texto(recipient, destination, texto, source_id)
     recipient.update!(message_content: texto)
     CampaignFreeTextDelivery.create!(account_id: campaign.account_id, campaign: campaign, campaign_recipient_id: recipient.id,
                                      inbox_id: inbox.id, source_id: source_id)
-    update_recipient_from_provider_response(recipient, source_id)
     CampaignJourney::SentMessageRecorder.new(campaign: campaign, recipient: recipient.reload, free_text: true).record_at_send(destination)
+  rescue StandardError => e
+    Rails.logger.error "[ConversaAberta] campaign=#{campaign.id} recipient=#{recipient.id} texto enviado, registro falhou: #{e.class}"
   end
 
-  # O texto pronto da pessoa, ou nil quando vai o modelo.
+  # O texto pronto da pessoa, ou nil quando vai o modelo (inclusive se algo falhar ao montar o texto).
   def texto_para(contact)
     return unless texto_da_campanha && Whatsapp::ServiceWindow.new(inbox: inbox).open?(contact)
 
@@ -47,6 +60,9 @@ module CampaignJourney::ConversaAberta::Envio
     )
     CampaignJourney::ConversaAberta::Texto.preencher(texto_da_campanha, resolver,
                                                      colunas: CampaignJourney::ConversaAberta::Texto.colunas(import.extra_columns))
+  rescue StandardError => e
+    Rails.logger.error "[ConversaAberta] campaign=#{campaign.id} contact=#{contact.id} texto não montado, vai o modelo: #{e.class}"
+    nil
   end
 
   def texto_da_campanha

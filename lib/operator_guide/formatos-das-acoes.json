@@ -11968,11 +11968,11 @@
     "controller": "api/v1/accounts/campaign_journey/conversa_aberta#escrever",
     "origem": [
       "app/controllers/api/v1/accounts/campaign_journey/conversa_aberta_controller.rb:21",
-      "app/controllers/api/v1/accounts/campaign_journey/conversa_aberta_controller.rb:25",
-      "app/controllers/api/v1/accounts/campaign_journey/conversa_aberta_controller.rb:24",
+      "app/controllers/api/v1/accounts/campaign_journey/conversa_aberta_controller.rb:27",
+      "app/controllers/api/v1/accounts/campaign_journey/conversa_aberta_controller.rb:26",
+      "app/controllers/api/v1/accounts/campaign_journey/conversa_aberta_controller.rb:70",
       "app/controllers/api/v1/accounts/campaign_journey/conversa_aberta_controller.rb:58",
-      "app/controllers/api/v1/accounts/campaign_journey/conversa_aberta_controller.rb:46",
-      "app/controllers/api/v1/accounts/campaign_journey/conversa_aberta_controller.rb:45"
+      "app/controllers/api/v1/accounts/campaign_journey/conversa_aberta_controller.rb:57"
     ],
     "sem_corpo": false
   },

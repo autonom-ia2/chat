@@ -854,7 +854,8 @@
         "CANCELAR": "Cancel",
         "PRONTO": "Done",
         "LINK_DIGITADO": "Links cannot be typed in the text. Use the field button (e.g. the offer link, from the audience).",
-        "PARECE_LINK": "This looks like a link. For links, use the field button (e.g. the offer link)."
+        "PARECE_LINK": "This looks like a link. For links, use the field button (e.g. the offer link).",
+        "LONGO": "The message is over {max} characters. Make it shorter."
       },
       "REVISAO": {
         "TITULO": "How much it costs",
@@ -872,7 +873,9 @@
         "sem_franquia": "We could not read this month's free messages: count on up to {valor} ({preco} each)."
       },
       "CANAL_HINT": "Template approved by Meta. People who talked to you in the last 24 hours can get a message written by you.",
-      "AVISO_PROPAGANDA": "Too much advertising can get the number blocked. Write something useful for the person."
+      "AVISO_PROPAGANDA": "Too much advertising can get the number blocked. Write something useful for the person.",
+      "FALHOU": "We could not check who talked to you right now.",
+      "TENTAR_DE_NOVO": "Try again"
     },
     "SAUDE": {
       "TITULO": "How this template is doing",

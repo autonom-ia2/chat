@@ -302,7 +302,9 @@ const comConversaAberta = computed(
     conversaAbertaLigada.value &&
     draft.value.channel === CAMPAIGN_CHANNELS.WHATSAPP_OFFICIAL &&
     Boolean(draft.value.inboxId) &&
-    Boolean(template.value)
+    Boolean(template.value) &&
+    // Código de acesso nunca vai como texto livre.
+    template.value.category !== 'AUTHENTICATION'
 );
 const conversaAberta = useConversaAberta(
   computed(() => ({

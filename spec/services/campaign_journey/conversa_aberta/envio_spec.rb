@@ -107,6 +107,30 @@ RSpec.describe CampaignJourney::ConversaAberta::Envio, :aggregate_failures do
     expect(sent.select { |body| body['to'] == '+5511987654321' }.pluck('type')).to eq(%w[text template])
   end
 
+  it 'erro ao montar o texto: vai o modelo, nunca falha a pessoa' do
+    sent = stub_graph_messages
+    falou('Ana Souza')
+    allow(CampaignJourney::ConversaAberta::Texto).to receive(:preencher).and_raise(ArgumentError)
+    allow(Rails.logger).to receive(:error)
+
+    disparar(campanha)
+
+    expect(por_numero(sent)['+5511987654321']['type']).to eq('template')
+  end
+
+  it 'a Meta aceitou o texto e o registro falhou: a pessoa fica sent, sem modelo extra' do
+    sent = stub_graph_messages
+    falou('Ana Souza')
+    campaign = campanha
+    allow(CampaignFreeTextDelivery).to receive(:create!).and_raise(ActiveRecord::RecordInvalid)
+    allow(Rails.logger).to receive(:error)
+
+    disparar(campaign)
+
+    expect(sent.select { |body| body['to'] == '+5511987654321' }.pluck('type')).to eq(%w[text])
+    expect(CampaignRecipient.find_by(campaign: campaign, contact: contato('Ana Souza'))).to be_sent
+  end
+
   describe 'aviso 131047 da Meta (janela fechada depois do envio)' do
     def aviso(source_id, code)
       Whatsapp::IncomingMessageWhatsappCloudService.new(inbox: inbox, params: {
@@ -133,6 +157,21 @@ RSpec.describe CampaignJourney::ConversaAberta::Envio, :aggregate_failures do
       expect(ana.reload).to be_sent
       expect(ana.source_id).not_to eq(texto_id)
       expect(CampaignFreeTextDelivery.find_by(source_id: texto_id).fell_back_at).to be_present
+    end
+
+    it 'campanha parada: o modelo não sai, e a pessoa fica com o motivo' do
+      sent = stub_graph_messages
+      falou('Ana Souza')
+      campaign = campanha
+      disparar(campaign)
+      ana = CampaignRecipient.find_by(campaign: campaign, contact: contato('Ana Souza'))
+      CampaignPauses::Pauser.new(campaign, source: 'manual', reason_code: 'manual').perform
+
+      perform_enqueued_jobs { aviso(ana.source_id, 131_047) }
+
+      expect(sent.select { |body| body['to'] == '+5511987654321' }.pluck('type')).to eq(%w[text])
+      expect(ana.reload).to be_failed
+      expect(ana.error_message).to eq(described_class::PAUSADA)
     end
 
     it 'outro erro da Meta não troca para o modelo' do

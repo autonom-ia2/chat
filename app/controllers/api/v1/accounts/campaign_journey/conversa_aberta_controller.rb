@@ -19,6 +19,8 @@ class Api::V1::Accounts::CampaignJourney::ConversaAbertaController < Api::V1::Ac
   end
 
   def escrever
+    return render json: { error: 'conversa_aberta.limite', code: 'limite' }, status: :too_many_requests if limite_estourado?
+
     resultado = ::CampaignJourney::ConversaAberta::Redacao.new(
       account: Current.account, campaign_import: @campaign_import, categoria: categoria
     ).call(objetivo: params[:objetivo].to_s, resposta: params[:resposta].to_s, tom: params[:tom].to_s,
@@ -29,6 +31,16 @@ class Api::V1::Accounts::CampaignJourney::ConversaAbertaController < Api::V1::Ac
   end
 
   private
+
+  # Teto de pedidos à IA por conta, por dia (a chave pode ser a da plataforma). Bem acima do uso normal de uma tela.
+  LIMITE_DIARIO = 300
+
+  def limite_estourado?
+    chave = "conversa_aberta:escrever:#{Current.account.id}:#{Time.zone.today.iso8601}"
+    total = Redis::Alfred.incr(chave)
+    Redis::Alfred.expire(chave, 1.day.to_i) if total == 1
+    total > LIMITE_DIARIO
+  end
 
   def ensure_enabled
     return if ::CampaignJourney::Config.enabled? && ::CampaignJourney::ConversaAberta.enabled?(Current.account)
