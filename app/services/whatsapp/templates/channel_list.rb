@@ -8,6 +8,7 @@
 # - `upsert!`: põe ou atualiza um modelo (com `merge: true`, os campos que o item não traz ficam; a conferência no disparo
 #   pede menos campos que o sync).
 # - `remove!`: tira um modelo.
+# - `change!`: muda um modelo que já está na lista, a partir da entrada atual (aviso da Meta, #1337).
 # - `replace!`: só o sync. A lista da Meta vale, menos o que outro escritor mudou enquanto o sync esperava a Meta
 #   (diferença entre `base`, a lista lida antes de buscar, e a lista atual): isso fica como o outro escritor deixou.
 module Whatsapp::Templates::ChannelList
@@ -27,6 +28,23 @@ module Whatsapp::Templates::ChannelList
 
   def remove!(channel, item)
     write!(channel) { |list| list.reject { |entry| same?(entry, item) } }
+  end
+
+  # Muda só um modelo que já está na lista (aviso da Meta, #1337): o bloco recebe a entrada atual, lida com a trava, e
+  # devolve a nova, ou nil para deixar como está. Responde :changed, :unchanged ou :missing (modelo fora da lista).
+  def change!(channel, item)
+    result = :missing
+    write!(channel) do |list|
+      index = list.index { |entry| same?(entry, item) }
+      next unless index
+
+      updated = yield(list[index])
+      result = updated.nil? || updated == list[index] ? :unchanged : :changed
+      next unless result == :changed
+
+      list.dup.tap { |copy| copy[index] = updated }
+    end
+    result
   end
 
   # A lista guardada foi zerada durante a busca (troca de conta do WhatsApp, `SameNumberGuard`): o que o sync buscou
