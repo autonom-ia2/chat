@@ -1381,7 +1381,7 @@
       "FOLLOW_UP_AUTO_SEND_DISABLED": "Automatic send requires a conversation linked to this card.",
       "FOLLOW_UP_AUTO_SEND_HELP": "Inside the 24-hour window the CRM sends a free-form message. Outside the window it uses the approved template; if the inbox has the WhatsApp API connected, the text can be sent through it.",
       "FOLLOW_UP_WINDOW_LOADING": "Checking messaging window...",
-      "FOLLOW_UP_WINDOW_TEMPLATE_REQUIRED": "Outside the 24-hour window: select the official fallback template.",
+      "FOLLOW_UP_WINDOW_TEMPLATE_REQUIRED": "Outside the 24-hour window: choose the approved template to use.",
       "FOLLOW_UP_WINDOW_SESSION_OK": "Inside the 24-hour window: free-form message is available at due time.",
       "FOLLOW_UP_WINDOW_WHATSAPP_API": "Outside the 24-hour window: the text below is sent through this inbox's WhatsApp API. If you prefer the official connection, choose an approved template.",
       "FOLLOW_UP_NATIVE_TEMPLATE_OPTIONAL": "Approved template (optional)",

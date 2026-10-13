@@ -1381,7 +1381,7 @@
       "FOLLOW_UP_AUTO_SEND_DISABLED": "Envio automático exige conversa vinculada ao card.",
       "FOLLOW_UP_AUTO_SEND_HELP": "Dentro da janela de 24h o CRM envia mensagem livre. Fora da janela, usa o modelo aprovado; se a caixa tiver o WhatsApp API conectado, o texto pode sair por ele.",
       "FOLLOW_UP_WINDOW_LOADING": "Verificando janela de mensagem...",
-      "FOLLOW_UP_WINDOW_TEMPLATE_REQUIRED": "Fora da janela de 24h: selecione o template oficial de fallback.",
+      "FOLLOW_UP_WINDOW_TEMPLATE_REQUIRED": "Fora da janela de 24h: escolha o modelo aprovado que será usado.",
       "FOLLOW_UP_WINDOW_SESSION_OK": "Dentro da janela de 24h: mensagem livre disponível no vencimento.",
       "FOLLOW_UP_WINDOW_WHATSAPP_API": "Fora da janela de 24h: o texto abaixo sai pelo WhatsApp API desta caixa. Se preferir a conexão oficial, escolha um modelo aprovado.",
       "FOLLOW_UP_NATIVE_TEMPLATE_OPTIONAL": "Modelo aprovado (opcional)",
