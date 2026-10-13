@@ -1,5 +1,6 @@
 # Aplica um evento do webhook do WAHA à conexão híbrida (chat#1067).
 # - session.status: grava o estado; a queda vira aviso aos administradores (SessionManager#apply_status!).
+#   Traz também o limite de conversas novas (me.reachoutTimelock), que o envio usa sem consultar o motor (chat#1486).
 # - message.ack: leva o ✓✓ / lido às mensagens que saíram pelo WhatsApp API.
 class WhatsappHybrid::WebhookEventJob < ApplicationJob
   queue_as :default
@@ -21,6 +22,7 @@ class WhatsappHybrid::WebhookEventJob < ApplicationJob
     phone = payload.dig('me', 'id').to_s.split('@').first.to_s.delete('^0-9').presence
     WhatsappHybrid::SessionManager.new(connection).apply_status!(status, phone: phone)
     WhatsappHybrid::Capping.new(connection).apply!(payload['capping']) if payload['capping'].is_a?(Hash)
+    WhatsappHybrid::Timelock.new(connection).apply!(payload['timelock']) if payload['timelock'].is_a?(Hash)
   end
 
   def apply_ack(connection, payload)

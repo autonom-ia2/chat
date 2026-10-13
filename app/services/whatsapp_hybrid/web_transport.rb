@@ -44,6 +44,8 @@ class WhatsappHybrid::WebTransport
     fail!('O WhatsApp API não confirmou o envio. Confira no celular antes de reenviar.', 'uncertain')
   rescue Waha::Client::Error => e
     Rails.logger.error("[whatsapp_hybrid] send failed message=#{@message.id}: #{e.message.to_s[0, 200]}")
+    return reach_out_refused! if WhatsappHybrid::ReachOut.engine_refusal?(e)
+
     # O erro pode ser a sessão caída: atualiza o estado para o roteador parar de escolher o Web.
     session_manager.refresh!
     fail!(engine_error_text(e))
@@ -106,6 +108,15 @@ class WhatsappHybrid::WebTransport
     return CAPPED_ERROR if error.message.to_s.include?('error 475')
 
     'Não foi possível enviar pelo WhatsApp API. Verifique a conexão na aba WhatsApp API da caixa.'
+  end
+
+  # Erro 463 (chat#1486): o WhatsApp recusou conversa nova com este contato. Bloqueia o contato por 6 h, atualiza o
+  # retrato do limite com uma consulta e falha sem reenviar.
+  def reach_out_refused!
+    reach_out = WhatsappHybrid::ReachOut.new(@connection, @message.conversation.contact)
+    reach_out.block!
+    reach_out.refresh_timelock!(@client)
+    fail!(WhatsappHybrid::ReachOut::BLOCKED_ERROR)
   end
 
   # Passou do limite por minuto: a mensagem espera a próxima janela em vez de sair em rajada.

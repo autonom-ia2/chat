@@ -15,9 +15,18 @@ class WhatsappHybrid::Router
 
   def route_for(message)
     return :cloud if cloud_window_open?
-    return :cloud unless web_ready? && web_allowed_for?(message)
+    return :cloud unless web_ready? && web_allowed_for?(message) && reach_out.allowed?
 
     :web
+  end
+
+  # O WhatsApp API serviria, mas o limite de conversas novas do WhatsApp barrou este contato (chat#1486).
+  def reach_out_refused?(message)
+    web_ready? && web_allowed_for?(message) && !reach_out.allowed?
+  end
+
+  def reach_out
+    @reach_out ||= WhatsappHybrid::ReachOut.new(connection, @conversation.contact)
   end
 
   # Conexão pronta e contato com telefone, independente da janela (o plano B usa isto).
