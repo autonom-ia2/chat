@@ -3,6 +3,10 @@ import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import api from '../api/modelosWhatsapp';
 import { localeDoIntl } from '../helpers/datas';
+import {
+  formatInZone,
+  scheduleToUtc,
+} from 'dashboard/components-next/CampaignJourney/scheduleTime';
 import PonteSinalDoModelo from './PonteSinalDoModelo.vue';
 
 // Revisão da campanha: qual modelo vai, o tipo da mensagem e quanto custa cada
@@ -11,6 +15,10 @@ import PonteSinalDoModelo from './PonteSinalDoModelo.vue';
 const props = defineProps({
   modelo: { type: Object, required: true },
   recebem: { type: Number, default: 0 },
+  // #1334: o que o formato pediu (cupom, validade, cartões).
+  formato: { type: Object, default: () => ({}) },
+  pedido: { type: Object, default: null },
+  timeZone: { type: String, default: 'UTC' },
 });
 
 const { locale } = useI18n();
@@ -40,6 +48,11 @@ const dinheiro = (valor, casas = 2) =>
 const porEnvio = computed(() =>
   custo.value ? dinheiro(custo.value.valor, CASAS_DO_PRECO) : ''
 );
+const validade = computed(() => {
+  const iso = scheduleToUtc(props.formato.validade, props.timeZone);
+  return iso ? formatInZone(iso, props.timeZone, locale.value) : '';
+});
+
 const total = computed(() =>
   custo.value ? dinheiro(custo.value.valor * props.recebem) : ''
 );
@@ -77,6 +90,29 @@ const total = computed(() =>
           : $t('MODELOS_WHATSAPP.PONTE.REVISAO.POR_ENVIO', { porEnvio })
       }}
     </p>
+    <ul
+      v-if="pedido"
+      class="flex flex-col gap-1 p-0 m-0 text-sm list-none text-n-slate-12"
+      data-revisao-formato
+    >
+      <li v-if="pedido.cupom">
+        {{
+          $t('MODELOS_WHATSAPP.PONTE.REVISAO.CUPOM', { cupom: formato.cupom })
+        }}
+      </li>
+      <li v-if="pedido.validade && validade">
+        {{
+          $t('MODELOS_WHATSAPP.PONTE.REVISAO.VALIDADE', { quando: validade })
+        }}
+      </li>
+      <li v-if="pedido.cartoes.length">
+        {{
+          $t('MODELOS_WHATSAPP.PONTE.REVISAO.CARTOES', {
+            n: pedido.cartoes.length,
+          })
+        }}
+      </li>
+    </ul>
     <p class="m-0 text-xs text-n-slate-11">
       {{ $t('MODELOS_WHATSAPP.PONTE.REVISAO.CUSTO_AJUDA') }}
     </p>

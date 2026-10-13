@@ -5,7 +5,7 @@
 # Variables are read with CampaignJourney::TemplatePlaceholders (plain scan, no regular expressions).
 module Whatsapp::Templates::Structure
   MEDIA_FORMATS = %w[IMAGE VIDEO DOCUMENT].freeze
-  RECORDED_PARTS = %w[body header buttons].freeze
+  RECORDED_PARTS = %w[body header buttons carousel limited_time_offer].freeze
   MEDIA_PREFIX = 'media:'.freeze
   MEDIA_KEYS = %w[media_url media_type media_name].freeze
 
@@ -31,15 +31,6 @@ module Whatsapp::Templates::Structure
     return false unless params.empty? || params.keys.map(&:to_s).intersect?(RECORDED_PARTS)
 
     params['body'].blank? || params['body'].is_a?(Hash)
-  end
-
-  # Indexes of the COPY_CODE buttons whose code the campaign recorded (legacy dialog: one code for everyone).
-  def recorded_coupon_codes(processed_params)
-    return [] unless processed_params.is_a?(Hash)
-
-    Array(processed_params['buttons']).each_with_index.filter_map do |button, index|
-      index if button.is_a?(Hash) && button['type'].to_s.casecmp?('copy_code') && button['parameter'].to_s.strip.present?
-    end
   end
 
   def same?(recorded, current)

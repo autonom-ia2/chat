@@ -9,6 +9,7 @@ import {
   rotuloDoCampo,
 } from '../helpers/campos';
 import { podeIrEmCampanha, usavelEmCampanha } from '../helpers/paraMeta';
+import { formatoQueNaoVai } from '../helpers/formatoNaCampanha';
 import { SINAIS_DE_ALERTA } from '../constants';
 
 // Ponte Modelos ↔ Campanha (auditoria de campanhas, §6; PRD §7). Com a flag
@@ -92,6 +93,9 @@ export function useModelosNaCampanha() {
   };
 
   const motivoDeNaoUsar = modelo => {
+    // #1334: o motivo diz qual formato não vai (código de verificação, produtos).
+    const naoVai = modelo.template ? formatoQueNaoVai(modelo.template) : '';
+    if (naoVai) return `NAO_VAI_${naoVai}`;
     if (!podeIrEmCampanha(modelo)) return 'FORMATO_NAO_VAI';
     if (!usavelEmCampanha(modelo)) return 'SEM_FONTE';
     if (modelo.situacao === 'recusado') return 'RECUSADO';

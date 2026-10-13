@@ -38,6 +38,15 @@ const CREATE_ERRORS = {
   header_media_required: 'HEADER_MEDIA_REQUIRED',
   header_media_url_invalid: 'HEADER_MEDIA_URL_INVALID',
   header_media_type_mismatch: 'HEADER_MEDIA_TYPE_MISMATCH',
+  // Fork #1334: o que o formato do modelo pede (Whatsapp::Templates::SendParams).
+  coupon_code_invalid: 'COUPON_CODE_INVALID',
+  offer_expiration_required: 'OFFER_EXPIRATION_REQUIRED',
+  offer_expiration_past: 'OFFER_EXPIRATION_PAST',
+  carousel_cards_mismatch: 'CAROUSEL_CARDS_MISMATCH',
+  carousel_media_required: 'CAROUSEL_MEDIA_REQUIRED',
+  carousel_media_invalid: 'CAROUSEL_MEDIA_INVALID',
+  carousel_button_required: 'CAROUSEL_FIELD_REQUIRED',
+  carousel_body_required: 'CAROUSEL_FIELD_REQUIRED',
   // Fork #1335: a mensagem escrita para quem falou nas últimas 24 h.
   free_text_invalid: 'FREE_TEXT_INVALID',
   free_text_disabled: 'FREE_TEXT_DISABLED',

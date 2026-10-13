@@ -17,6 +17,31 @@ RSpec.describe Whatsapp::Templates::SubmitFormat do
     { 'components' => parts }
   end
 
+  # O que a Nova campanha grava para cada formato (PonteFormatoDaCampanha → Whatsapp::Templates::SendParams).
+  def what_the_campaign_fills(template)
+    components = Array(template['components'])
+    { 'buttons' => campaign_buttons(component_named(components, 'BUTTONS')),
+      'limited_time_offer' => { 'expiration_time_ms' => 1.day.from_now.to_i * 1000 },
+      'carousel' => { 'cards' => Array(component_named(components, 'CAROUSEL')&.dig('cards')).map { |card| campaign_card(card) } } }
+  end
+
+  def component_named(components, type)
+    components.find { |item| item['type'] == type }
+  end
+
+  def campaign_buttons(component)
+    Array(component&.dig('buttons')).map do |button|
+      next { 'type' => 'copy_code', 'parameter' => Array(button['example']).first.to_s } if button['type'] == 'COPY_CODE'
+
+      button['type'] == 'CATALOG' ? { 'type' => 'catalog' } : { 'type' => 'static' }
+    end
+  end
+
+  def campaign_card(card)
+    buttons = Array(component_named(Array(card['components']), 'BUTTONS')&.dig('buttons'))
+    { 'header' => { 'media_stored' => true }, 'buttons' => buttons.map { { 'type' => 'url', 'parameter' => 'x' } } }
+  end
+
   describe 'Prontos da galeria (spec/fixtures/whatsapp_templates/prontos.json, gerado pelo vitest da tela)' do
     prontos = JSON.parse(Rails.root.join('spec/fixtures/whatsapp_templates/prontos.json').read)
 
@@ -32,8 +57,9 @@ RSpec.describe Whatsapp::Templates::SubmitFormat do
         expect(described_class.problems(pronto['corpo'])).to eq([])
       end
 
+      # #1334: com o que a campanha pede na tela (cupom, validade, arquivo de cada cartão), o formato vai.
       it "#{label}: a campanha envia exatamente o que a tela promete" do
-        sendable = Whatsapp::Templates::SendableFormat.check(pronto['corpo'])
+        sendable = Whatsapp::Templates::SendableFormat.check(pronto['corpo'], recorded: what_the_campaign_fills(pronto['corpo']))
         expect(sendable.sendable?).to eq(pronto['pode_ir_em_campanha']), "motivo: #{sendable.reason_code.inspect}"
         expect(sendable.sendable?).to be(true) if pronto['origem'] == 'objetivo'
       end

@@ -41,7 +41,7 @@ class CampaignJourney::WhatsappCampaignCreator < CampaignJourney::AudienceCampai
   rescue CampaignJourney::VariableBindings::Error => e
     raise Error.new(e.message, 'The message variables do not match the template or the audience', e.details.presence)
   rescue Whatsapp::Templates::HeaderMedia::Invalid => e
-    raise Error.new(e.code, 'The template header needs the file saved with the template or a valid http(s) link of its type')
+    raise Error.new(e.code, 'The template needs what Meta asks at send time (header or card file, coupon code, offer expiration)')
   end
 
   # #1335: a mensagem escrita para quem falou com a caixa nas últimas 24 h, conferida antes de gravar (flag da conta).
@@ -71,16 +71,20 @@ class CampaignJourney::WhatsappCampaignCreator < CampaignJourney::AudienceCampai
   end
 
   # #1382: a media header without a link uses the template's saved file at send time; a typed link is checked here.
+  # #1334: coupon, offer expiration, carousel cards and catalog button (Whatsapp::Templates::SendParams).
   def template_params
     @template_params ||= begin
       params = @attributes[:template_params].to_h.deep_stringify_keys
       processed = params['processed_params']
-      if processed.is_a?(Hash) && Whatsapp::Templates::HeaderMedia.media_type(template)
-        header = Whatsapp::Templates::HeaderMedia.normalize!(processed['header'], template: template, inbox: inbox)
-        params = params.merge('processed_params' => processed.merge('header' => header))
-      end
-      params
+      processed.is_a?(Hash) ? params.merge('processed_params' => normalized_processed(processed)) : params
     end
+  end
+
+  def normalized_processed(processed)
+    if Whatsapp::Templates::HeaderMedia.media_type(template)
+      processed = processed.merge('header' => Whatsapp::Templates::HeaderMedia.normalize!(processed['header'], template: template, inbox: inbox))
+    end
+    Whatsapp::Templates::SendParams.normalize!(processed, template: template, inbox: inbox)
   end
 
   def variables

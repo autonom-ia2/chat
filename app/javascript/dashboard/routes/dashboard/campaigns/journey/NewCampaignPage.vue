@@ -70,6 +70,13 @@ import PonteCaixasReconectar from '../modelos/ponte/PonteCaixasReconectar.vue';
 import PontePrevia from '../modelos/ponte/PontePrevia.vue';
 import PonteSemModelo from '../modelos/ponte/PonteSemModelo.vue';
 import RevisaoDoModelo from '../modelos/ponte/RevisaoDoModelo.vue';
+// Fork (Modelos do WhatsApp, #1334): o que cada formato novo pede na campanha.
+import PonteFormatoDaCampanha from '../modelos/ponte/PonteFormatoDaCampanha.vue';
+import {
+  extrasParaEnvio,
+  oQuePedir,
+  pendencias,
+} from '../modelos/helpers/formatoNaCampanha';
 import { rotuloDoCampo } from '../modelos/helpers/campos';
 // Fork (#1335, protótipo): conversa aberta — quem falou nas últimas 24 h recebe texto escrito.
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
@@ -144,6 +151,8 @@ const update = patch => {
           bindings: ponte.ligacoesIniciais(patch.templateId),
           defaults: {},
           mediaUrl: '',
+          // #1334: nada vem preenchido; o cupom de exemplo do modelo nunca vai sozinho para o público.
+          formato: {},
         }
       : {}),
     ...patch,
@@ -270,14 +279,33 @@ const MESSAGE_READY = {
   [CAMPAIGN_CHANNELS.SMS]: () =>
     Boolean(draft.value.inboxId) && Boolean(draft.value.messageBody.trim()),
 };
-const isMessageReady = computed(
-  () =>
-    Boolean(draft.value.title.trim()) &&
-    Boolean(MESSAGE_READY[draft.value.channel]?.())
-);
 
 // ---- Review (Passo 3) ----
 const timeZone = computed(() => accountTimeZone(currentAccount.value));
+
+// Fork (#1334): cupom, validade da oferta e foto de cada cartão do carrossel.
+const pedidoDoFormato = computed(() =>
+  modeloEscolhido.value
+    ? oQuePedir(
+        modeloEscolhido.value.template,
+        modeloEscolhido.value.cartoesGuardados || []
+      )
+    : null
+);
+const formatoPendente = computed(() =>
+  pedidoDoFormato.value &&
+  draft.value.channel === CAMPAIGN_CHANNELS.WHATSAPP_OFFICIAL
+    ? pendencias(pedidoDoFormato.value, draft.value.formato || {}, {
+        timeZone: timeZone.value,
+      })
+    : []
+);
+const isMessageReady = computed(
+  () =>
+    Boolean(draft.value.title.trim()) &&
+    Boolean(MESSAGE_READY[draft.value.channel]?.()) &&
+    formatoPendente.value.length === 0
+);
 const isEmailChannel = computed(
   () => draft.value.channel === CAMPAIGN_CHANNELS.EMAIL
 );
@@ -639,6 +667,11 @@ const SUBMITTERS = {
         bindings: draft.value.bindings,
         defaults: draft.value.defaults,
         mediaUrl: draft.value.mediaUrl,
+        extras: pedidoDoFormato.value
+          ? extrasParaEnvio(pedidoDoFormato.value, draft.value.formato || {}, {
+              timeZone: timeZone.value,
+            })
+          : {},
         // Fork (#1335): a mensagem escrita para quem falou nas últimas 24 h.
         freeText: textoDaConversaAberta.value,
       })
@@ -1007,6 +1040,15 @@ onBeforeUnmount(() => {
           </template>
           <template v-if="ponteAtiva" #modelo-aviso>
             <PonteAvisoDoModelo :modelo="modeloEscolhido" />
+            <PonteFormatoDaCampanha
+              v-if="modeloEscolhido"
+              :key="modeloEscolhido.id"
+              :modelo="modeloEscolhido"
+              :valores="draft.formato || {}"
+              :caixa="draft.inboxId"
+              :time-zone="timeZone"
+              @update="formato => update({ formato })"
+            />
           </template>
           <template v-if="comConversaAberta" #janela>
             <ConversaAberta
@@ -1024,6 +1066,7 @@ onBeforeUnmount(() => {
               :bindings="draft.bindings"
               :sample="sample"
               :remetente="remetente"
+              :cupom="draft.formato?.cupom || ''"
             />
           </template>
         </StepMessage>
@@ -1061,6 +1104,9 @@ onBeforeUnmount(() => {
               v-else-if="modeloEscolhido"
               :modelo="modeloEscolhido"
               :recebem="forms.preview.value?.receive ?? reach"
+              :formato="draft.formato || {}"
+              :pedido="pedidoDoFormato"
+              :time-zone="timeZone"
             />
           </template>
         </StepReview>
