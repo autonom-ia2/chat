@@ -2,6 +2,7 @@ import { mount, flushPromises, config } from '@vue/test-utils';
 import { createI18n } from 'vue-i18n';
 import { createStore } from 'vuex';
 import enJourney from 'dashboard/i18n/locale/en/campaignJourney.json';
+import enModelos from 'dashboard/i18n/locale/en/modelosWhatsapp.json';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import {
   loadDraft,
@@ -135,7 +136,11 @@ const module = (getters, actions = {}) => ({
 });
 
 // The page asks the server for saved audiences (saved=true, q); NOT_SAVED never comes back.
-const mountPage = ({ imports = [PHONE_AUDIENCE], query = {} } = {}) => {
+const mountPage = ({
+  imports = [PHONE_AUDIENCE],
+  query = {},
+  templates = [TEMPLATE],
+} = {}) => {
   route.value = { query, params: { accountId: 1 } };
   const saved = imports.filter(item => item.status === 'completed');
   api.list.mockImplementation(({ q }) => {
@@ -157,7 +162,7 @@ const mountPage = ({ imports = [PHONE_AUDIENCE], query = {} } = {}) => {
       inboxes: module(
         {
           getInboxes: () => INBOXES,
-          getFilteredWhatsAppTemplates: () => () => [TEMPLATE],
+          getFilteredWhatsAppTemplates: () => () => templates,
         },
         { get: vi.fn() }
       ),
@@ -176,7 +181,7 @@ const mountPage = ({ imports = [PHONE_AUDIENCE], query = {} } = {}) => {
   const i18n = createI18n({
     legacy: false,
     locale: 'en',
-    messages: { en: enJourney },
+    messages: { en: { ...enJourney, ...enModelos } },
   });
   return mount(NewCampaignPage, {
     attachTo: document.body,
@@ -386,8 +391,10 @@ describe('Nova campanha — Passo 2 and 3 (PRD §6.3, §6.4)', () => {
     expect(wrapper.find('[data-test="coverage-warning"]').text()).toContain(
       '2 people are left out: missing {{2}}'
     );
-    expect(wrapper.find('[data-test="preview-text"]').text()).toBe(
-      'Olá, [First name of the contact]! O seguro vence em [Vencimento].'
+    // #1456: a prévia é o celular da tela de Modelos; sem a amostra, cada
+    // variável aparece pelo nome da origem.
+    expect(wrapper.find('[data-ponte-previa] [data-celular] p').text()).toBe(
+      "Olá, [Customer's first name]! O seguro vence em [Vencimento]."
     );
 
     await wrapper.find('[data-test="continue-review"]').trigger('click');
@@ -473,8 +480,12 @@ describe('Nova campanha — Passo 2 and 3 (PRD §6.3, §6.4)', () => {
     expect(wrapper.find('[data-step="3"]').attributes('aria-current')).toBe(
       'step'
     );
-    // Regra do Rodrigo (13/10/2026): o fuso da conta como Configurações mostra.
-    expect(wrapper.text()).toContain('Date and time (America/Sao Paulo)');
+    // #1456: the account time zone as the settings show it, never the long
+    // browser name; the browser runs in UTC and the date is read in the account zone.
+    expect(wrapper.text()).toContain(
+      'Date and time (account time zone: America/Sao Paulo)'
+    );
+    expect(wrapper.text()).not.toContain('Standard Time');
     await wrapper.find('[data-test="open-confirmation"]').trigger('click');
     await wrapper.find('[data-test="dialog-confirm"]').trigger('click');
     await flushPromises();
@@ -788,6 +799,178 @@ describe('Nova campanha — conversa aberta (#1335)', () => {
     expect(create.mock.calls[0][0].campaign.free_text).toBe(
       'Oi, {{cliente.primeiro_nome}}! Chegou. Quer ver?'
     );
+    wrapper.unmount();
+  });
+});
+
+// #1456: com cupom, oferta com prazo ou carrossel, quem recebe a mensagem
+// escrita perderia a oferta. O quadro some e todos recebem o modelo completo.
+describe('Nova campanha — conversa aberta com modelo de cupom (#1456)', () => {
+  const CUPOM = {
+    ...TEMPLATE,
+    id: 10,
+    name: 'cupom_outubro',
+    components: [
+      { type: 'BODY', text: 'Olá, {{1}}! Use o cupom até {{2}}.' },
+      { type: 'BUTTONS', buttons: [{ type: 'COPY_CODE', example: 'OUT10' }] },
+    ],
+  };
+
+  it('o quadro some com o modelo de cupom e o texto escrito é descartado com aviso', async () => {
+    const wrapper = mountPage({ templates: [TEMPLATE, CUPOM] });
+    await flushPromises();
+    await wrapper.find('[data-audience-option="5"]').trigger('click');
+    await wrapper.find('[data-test="continue-message"]').trigger('click');
+    await wrapper
+      .find('[data-channel-card="whatsapp_official"]')
+      .trigger('click');
+    choice(wrapper, 'Sending inbox').vm.$emit('update:modelValue', 7);
+    await flushPromises();
+
+    // Modelo de cupom desde o começo: nem quadro nem aviso.
+    choice(wrapper, 'Approved template').vm.$emit('update:modelValue', 10);
+    await flushPromises();
+    expect(wrapper.find('[data-conversa-aberta]').exists()).toBe(false);
+    expect(wrapper.find('[data-texto-descartado]').exists()).toBe(false);
+
+    // Modelo normal: o quadro aparece e a pessoa escreve.
+    choice(wrapper, 'Approved template').vm.$emit('update:modelValue', 9);
+    await flushPromises();
+    expect(wrapper.find('[data-conversa-aberta]').exists()).toBe(true);
+    wrapper.findComponent({ name: 'ConversaAberta' }).vm.$emit('update', {
+      textoNaConversaAberta: 'Oi, {{cliente.primeiro_nome}}!',
+    });
+    await flushPromises();
+
+    // Troca para o cupom: o quadro some, o texto vai embora e o aviso explica.
+    choice(wrapper, 'Approved template').vm.$emit('update:modelValue', 10);
+    await flushPromises();
+    expect(wrapper.find('[data-conversa-aberta]').exists()).toBe(false);
+    expect(wrapper.find('[data-texto-descartado]').exists()).toBe(true);
+    expect(loadDraft(1).textoNaConversaAberta).toBe('');
+
+    // De volta ao modelo normal: quadro sem texto e sem o aviso.
+    choice(wrapper, 'Approved template').vm.$emit('update:modelValue', 9);
+    await flushPromises();
+    expect(wrapper.find('[data-conversa-aberta]').exists()).toBe(true);
+    expect(wrapper.find('[data-texto-pronto]').exists()).toBe(false);
+    expect(wrapper.find('[data-texto-descartado]').exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it('cria a campanha de cupom sem mensagem escrita', async () => {
+    create.mockResolvedValue({ data: { id: 33, recipients_count: 98 } });
+    preview.mockResolvedValue({
+      data: { payload: { total: 98, receive: 98, reasons: {} } },
+    });
+    const wrapper = mountPage({ templates: [TEMPLATE, CUPOM] });
+    await flushPromises();
+    await wrapper.find('[data-audience-option="5"]').trigger('click');
+    await wrapper.find('[data-test="continue-message"]').trigger('click');
+    await wrapper
+      .find('[data-channel-card="whatsapp_official"]')
+      .trigger('click');
+    await wrapper
+      .find('[data-test="official-form"] input[type="text"]')
+      .setValue('Cupom de outubro');
+    choice(wrapper, 'Sending inbox').vm.$emit('update:modelValue', 7);
+    await flushPromises();
+    choice(wrapper, 'Approved template').vm.$emit('update:modelValue', 9);
+    await flushPromises();
+    wrapper.findComponent({ name: 'ConversaAberta' }).vm.$emit('update', {
+      textoNaConversaAberta: 'Oi, {{cliente.primeiro_nome}}!',
+    });
+    choice(wrapper, 'Approved template').vm.$emit('update:modelValue', 10);
+    await flushPromises();
+    choice(wrapper, 'Where {{1}} comes from').vm.$emit(
+      'update:modelValue',
+      'contact:first_name'
+    );
+    choice(wrapper, 'Where {{2}} comes from').vm.$emit(
+      'update:modelValue',
+      'column:Vencimento'
+    );
+    await flushPromises();
+    await vi.advanceTimersByTimeAsync(500);
+    await flushPromises();
+    await wrapper.find('[data-test="continue-review"]').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.find('[data-revisao-conversa-aberta]').exists()).toBe(false);
+    await wrapper.find('[data-test="open-confirmation"]').trigger('click');
+    await wrapper.find('[data-test="dialog-confirm"]').trigger('click');
+    await flushPromises();
+
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(create.mock.calls[0][0].campaign.template_params.name).toBe(
+      'cupom_outubro'
+    );
+    expect(create.mock.calls[0][0].campaign.free_text).toBeFalsy();
+    wrapper.unmount();
+  });
+
+  // Rascunho antigo (antes desta trava) com texto e modelo de cupom: ao voltar,
+  // o texto sai com o mesmo aviso, em vez de sumir calado do pedido.
+  it('rascunho guardado com texto e modelo de cupom volta sem o texto e com o aviso', async () => {
+    saveDraft(1, {
+      title: 'Cupom de outubro',
+      audienceId: 5,
+      channel: 'whatsapp_official',
+      inboxId: 7,
+      templateId: 10,
+      textoNaConversaAberta: 'Oi, {{cliente.primeiro_nome}}!',
+      step: 2,
+    });
+    const wrapper = mountPage({
+      templates: [TEMPLATE, CUPOM],
+      query: { draft: '1' },
+    });
+    await flushPromises();
+
+    expect(wrapper.find('[data-conversa-aberta]').exists()).toBe(false);
+    expect(wrapper.find('[data-texto-descartado]').exists()).toBe(true);
+    expect(loadDraft(1).textoNaConversaAberta).toBe('');
+    wrapper.unmount();
+  });
+});
+
+// #1456: sem a ponte de Modelos, a prévia era só o texto do corpo (sem topo e
+// sem botões). Agora é o mesmo celular da tela de Modelos.
+describe('Nova campanha — Como o cliente vê sem a ponte (#1456)', () => {
+  it('mostra topo, botões e o rótulo do campo sem valor', async () => {
+    const COM_BOTOES = {
+      ...TEMPLATE,
+      id: 11,
+      name: 'colecao_com_botoes',
+      components: [
+        { type: 'HEADER', format: 'IMAGE' },
+        { type: 'BODY', text: 'Olá, {{1}}! O seguro vence em {{2}}.' },
+        {
+          type: 'BUTTONS',
+          buttons: [
+            { type: 'QUICK_REPLY', text: 'Quero renovar' },
+            { type: 'URL', text: 'Ver apólice', url: 'https://x.com' },
+          ],
+        },
+      ],
+    };
+    const wrapper = mountPage({ templates: [COM_BOTOES] });
+    await flushPromises();
+    await wrapper.find('[data-audience-option="5"]').trigger('click');
+    await wrapper.find('[data-test="continue-message"]').trigger('click');
+    await wrapper
+      .find('[data-channel-card="whatsapp_official"]')
+      .trigger('click');
+    choice(wrapper, 'Sending inbox').vm.$emit('update:modelValue', 7);
+    await flushPromises();
+    choice(wrapper, 'Approved template').vm.$emit('update:modelValue', 11);
+    await flushPromises();
+
+    const previa = wrapper.find('[data-ponte-previa]');
+    expect(previa.exists()).toBe(true);
+    expect(previa.find('[data-celular-topo]').exists()).toBe(true);
+    expect(previa.findAll('[data-celular-botao]')).toHaveLength(2);
+    expect(previa.text()).not.toContain('{{');
     wrapper.unmount();
   });
 });

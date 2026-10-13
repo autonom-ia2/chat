@@ -56,14 +56,15 @@ describe('StepReview schedule (#1387)', () => {
     );
   });
 
-  // Regra do Rodrigo (13/10/2026): o fuso da conta como Configurações mostra,
-  // sem o código cru e sem o nome longo do Intl.
-  it('labels the date with the account zone as the settings show it', () => {
-    const wrapper = montar({ when: 'later', scheduledAt: '2026-11-03T09:00' });
+  // Regra do Rodrigo (#1456): o fuso da conta como a plataforma o mostra em
+  // Configurações, nunca o nome longo do navegador ("Horário Padrão de Brasília").
+  it('labels the date with the account time zone as the settings show it', () => {
+    const wrapper = montar({ when: 'later', scheduledAt: '2026-10-20T18:00' });
     const rotulo = wrapper
       .findAll('label')
       .map(label => label.text())
       .find(texto => texto.startsWith('Date and time'));
-    expect(rotulo).toBe('Date and time (America/Sao Paulo)');
+    expect(rotulo).toBe('Date and time (account time zone: America/Sao Paulo)');
+    expect(wrapper.text()).not.toContain('Standard Time');
   });
 });

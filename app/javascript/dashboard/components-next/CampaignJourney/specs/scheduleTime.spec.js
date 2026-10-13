@@ -1,14 +1,27 @@
-import { accountZoneLabel } from '../scheduleTime';
+import { accountTimeZone } from '../scheduleTime';
 
-// Regra do Rodrigo (13/10/2026): data e hora na tela levam o fuso da conta como
-// Configurações > Conta mostra — nem o nome longo do Intl ("Horário Padrão de
-// Brasília"), nem o código cru (America/Sao_Paulo).
-describe('accountZoneLabel', () => {
-  it('shows the zone like the account settings do', () => {
-    expect(accountZoneLabel('America/Sao_Paulo')).toBe('America/Sao Paulo');
-    expect(accountZoneLabel('America/Argentina/Buenos_Aires')).toBe(
-      'America/Argentina/Buenos Aires'
-    );
-    expect(accountZoneLabel('UTC')).toBe('UTC');
+// #1456: o fuso é o da conta, o mesmo que a plataforma usa (Configurações da
+// conta grava custom_attributes.timezone e o servidor copia para
+// settings.reporting_timezone). O navegador só quando a conta não tem fuso.
+describe('accountTimeZone', () => {
+  it('reads the zone chosen in the account settings', () => {
+    expect(
+      accountTimeZone({ custom_attributes: { timezone: 'America/Cuiaba' } })
+    ).toBe('America/Cuiaba');
+  });
+
+  it('falls back to the reporting zone the server keeps in sync', () => {
+    expect(
+      accountTimeZone({ settings: { reporting_timezone: 'America/Manaus' } })
+    ).toBe('America/Manaus');
+  });
+
+  it('ignores a zone that is not real', () => {
+    expect(
+      accountTimeZone({
+        custom_attributes: { timezone: 'Nowhere/Zone' },
+        settings: { reporting_timezone: 'America/Belem' },
+      })
+    ).toBe('America/Belem');
   });
 });

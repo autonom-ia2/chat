@@ -8,7 +8,6 @@
 import { computed, onBeforeUnmount, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Input from 'dashboard/components-next/input/Input.vue';
-import { accountZoneLabel } from 'dashboard/components-next/CampaignJourney/scheduleTime';
 import ArquivoDaCampanha from './ArquivoDaCampanha.vue';
 import api from '../api/modelosWhatsapp';
 import {
@@ -22,6 +21,7 @@ import {
   oQuePedir,
   pendencias,
 } from '../helpers/formatoNaCampanha';
+import { rotuloDoFuso } from 'dashboard/helper/fusoDaConta';
 
 const props = defineProps({
   modelo: { type: Object, required: true },
@@ -33,6 +33,10 @@ const emit = defineEmits(['update']);
 
 const { t } = useI18n();
 const NS = 'MODELOS_WHATSAPP.PONTE.FORMATO';
+
+// O fuso da conta como Configurações o mostra, igual à revisão (regra do
+// Rodrigo, #1456): a data digitada vale nesse fuso (formatoNaCampanha).
+const nomeDoFuso = computed(() => rotuloDoFuso(props.timeZone));
 
 const pedido = computed(() =>
   oQuePedir(
@@ -124,119 +128,122 @@ const escolher = async (chave, { arquivo, local }, gravar) => {
 </script>
 
 <template>
-  <section
-    v-if="temAlgo"
-    data-ponte-formato
-    class="flex flex-col gap-4 p-4 rounded-xl border border-n-weak bg-n-alpha-1"
-  >
-    <div>
-      <h3 class="m-0 text-sm font-semibold text-n-slate-12">
-        {{ t(`${NS}.TITULO`) }}
-      </h3>
-      <p class="m-0 mt-1 text-xs text-n-slate-11">
-        {{ t(`${NS}.AJUDA`) }}
+  <!-- Raiz fixa (vue/no-root-v-if): sem nada a preencher, o bloco some. -->
+  <div class="contents">
+    <section
+      v-if="temAlgo"
+      data-ponte-formato
+      class="flex flex-col gap-4 p-4 rounded-xl border border-n-weak bg-n-alpha-1"
+    >
+      <div>
+        <h3 class="m-0 text-sm font-semibold text-n-slate-12">
+          {{ t(`${NS}.TITULO`) }}
+        </h3>
+        <p class="m-0 mt-1 text-xs text-n-slate-11">
+          {{ t(`${NS}.AJUDA`) }}
+        </p>
+      </div>
+
+      <ArquivoDaCampanha
+        v-if="pedido.topo"
+        data-formato-topo
+        :titulo="t(`${NS}.TOPO.${pedido.topo.midia}`)"
+        :midia="pedido.topo.midia"
+        :guardado="pedido.topo.guardado"
+        :escolhido="valores.topo || null"
+        :enviando="enviando.topo || ''"
+        :erro="erroDoEnvio.topo || ''"
+        :miniatura="miniaturaDe(valores.topo, pedido.topo.guardado)"
+        @escolhido="arquivo => escolher('topo', arquivo, comTopo)"
+        @voltar="comTopo(null)"
+      />
+
+      <Input
+        v-if="pedido.cupom"
+        :model-value="valores.cupom || ''"
+        :label="t(`${NS}.CUPOM`)"
+        :placeholder="
+          pedido.cupom.exemplo
+            ? t(`${NS}.CUPOM_EXEMPLO`, { exemplo: pedido.cupom.exemplo })
+            : ''
+        "
+        :message="mensagemDoCupom"
+        :message-type="faltando.includes('CUPOM') ? 'error' : 'info'"
+        wrap-message
+        custom-input-class="!h-11"
+        data-formato-cupom
+        @update:model-value="cupom => atualizar({ cupom })"
+      />
+
+      <Input
+        v-if="pedido.validade"
+        :model-value="valores.validade || ''"
+        type="datetime-local"
+        :label="t(`${NS}.VALIDADE`, { zona: nomeDoFuso })"
+        :message="
+          faltando.includes('VALIDADE_PASSADA')
+            ? t(`${NS}.VALIDADE_PASSADA`)
+            : t(`${NS}.VALIDADE_AJUDA`)
+        "
+        :message-type="faltando.includes('VALIDADE_PASSADA') ? 'error' : 'info'"
+        wrap-message
+        custom-input-class="!h-11"
+        data-formato-validade
+        @update:model-value="validade => atualizar({ validade })"
+      />
+
+      <div v-if="pedido.cartoes.length" class="flex flex-col gap-2">
+        <span class="text-sm font-medium text-n-slate-12">
+          {{ t(`${NS}.CARTOES`, { n: pedido.cartoes.length }) }}
+        </span>
+        <ul class="flex flex-col gap-2 p-0 m-0 list-none">
+          <li
+            v-for="cartao in pedido.cartoes"
+            :key="cartao.indice"
+            :data-formato-cartao="cartao.indice"
+          >
+            <ArquivoDaCampanha
+              :titulo="t(`${NS}.CARTAO`, { n: cartao.indice + 1 })"
+              :midia="cartao.midia"
+              :guardado="cartao.guardado"
+              :escolhido="valores.cartoes?.[cartao.indice] || null"
+              :enviando="enviando[cartao.indice] || ''"
+              :erro="erroDoEnvio[cartao.indice] || ''"
+              :miniatura="miniaturaDe(valores.cartoes?.[cartao.indice])"
+              @escolhido="
+                arquivo =>
+                  escolher(cartao.indice, arquivo, novo =>
+                    comCartao(cartao.indice, novo)
+                  )
+              "
+              @voltar="comCartao(cartao.indice, null)"
+            />
+          </li>
+        </ul>
+      </div>
+
+      <p
+        v-if="pedido.catalogo"
+        class="flex gap-2 p-3 m-0 text-sm rounded-xl bg-n-blue-2 text-n-slate-12"
+        data-formato-catalogo
+      >
+        <span
+          class="i-lucide-shopping-bag size-4 mt-0.5 shrink-0 text-n-blue-11"
+          aria-hidden="true"
+        />
+        {{ t(`${NS}.CATALOGO`) }}
       </p>
-    </div>
-
-    <ArquivoDaCampanha
-      v-if="pedido.topo"
-      data-formato-topo
-      :titulo="t(`${NS}.TOPO.${pedido.topo.midia}`)"
-      :midia="pedido.topo.midia"
-      :guardado="pedido.topo.guardado"
-      :escolhido="valores.topo || null"
-      :enviando="enviando.topo || ''"
-      :erro="erroDoEnvio.topo || ''"
-      :miniatura="miniaturaDe(valores.topo, pedido.topo.guardado)"
-      @escolhido="arquivo => escolher('topo', arquivo, comTopo)"
-      @voltar="comTopo(null)"
-    />
-
-    <Input
-      v-if="pedido.cupom"
-      :model-value="valores.cupom || ''"
-      :label="t(`${NS}.CUPOM`)"
-      :placeholder="
-        pedido.cupom.exemplo
-          ? t(`${NS}.CUPOM_EXEMPLO`, { exemplo: pedido.cupom.exemplo })
-          : ''
-      "
-      :message="mensagemDoCupom"
-      :message-type="faltando.includes('CUPOM') ? 'error' : 'info'"
-      wrap-message
-      custom-input-class="!h-11"
-      data-formato-cupom
-      @update:model-value="cupom => atualizar({ cupom })"
-    />
-
-    <Input
-      v-if="pedido.validade"
-      :model-value="valores.validade || ''"
-      type="datetime-local"
-      :label="t(`${NS}.VALIDADE`, { zona: accountZoneLabel(timeZone) })"
-      :message="
-        faltando.includes('VALIDADE_PASSADA')
-          ? t(`${NS}.VALIDADE_PASSADA`)
-          : t(`${NS}.VALIDADE_AJUDA`)
-      "
-      :message-type="faltando.includes('VALIDADE_PASSADA') ? 'error' : 'info'"
-      wrap-message
-      custom-input-class="!h-11"
-      data-formato-validade
-      @update:model-value="validade => atualizar({ validade })"
-    />
-
-    <div v-if="pedido.cartoes.length" class="flex flex-col gap-2">
-      <span class="text-sm font-medium text-n-slate-12">
-        {{ t(`${NS}.CARTOES`, { n: pedido.cartoes.length }) }}
-      </span>
-      <ul class="flex flex-col gap-2 p-0 m-0 list-none">
-        <li
-          v-for="cartao in pedido.cartoes"
-          :key="cartao.indice"
-          :data-formato-cartao="cartao.indice"
-        >
-          <ArquivoDaCampanha
-            :titulo="t(`${NS}.CARTAO`, { n: cartao.indice + 1 })"
-            :midia="cartao.midia"
-            :guardado="cartao.guardado"
-            :escolhido="valores.cartoes?.[cartao.indice] || null"
-            :enviando="enviando[cartao.indice] || ''"
-            :erro="erroDoEnvio[cartao.indice] || ''"
-            :miniatura="miniaturaDe(valores.cartoes?.[cartao.indice])"
-            @escolhido="
-              arquivo =>
-                escolher(cartao.indice, arquivo, novo =>
-                  comCartao(cartao.indice, novo)
-                )
-            "
-            @voltar="comCartao(cartao.indice, null)"
-          />
-        </li>
-      </ul>
-    </div>
-
-    <p
-      v-if="pedido.catalogo"
-      class="flex gap-2 p-3 m-0 text-sm rounded-xl bg-n-blue-2 text-n-slate-12"
-      data-formato-catalogo
-    >
-      <span
-        class="i-lucide-shopping-bag size-4 mt-0.5 shrink-0 text-n-blue-11"
-        aria-hidden="true"
-      />
-      {{ t(`${NS}.CATALOGO`) }}
-    </p>
-    <p
-      v-if="pedido.formulario"
-      class="flex gap-2 p-3 m-0 text-sm rounded-xl bg-n-blue-2 text-n-slate-12"
-      data-formato-formulario
-    >
-      <span
-        class="i-lucide-clipboard-list size-4 mt-0.5 shrink-0 text-n-blue-11"
-        aria-hidden="true"
-      />
-      {{ t(`${NS}.FORMULARIO`, { botao: pedido.formulario.text || '' }) }}
-    </p>
-  </section>
+      <p
+        v-if="pedido.formulario"
+        class="flex gap-2 p-3 m-0 text-sm rounded-xl bg-n-blue-2 text-n-slate-12"
+        data-formato-formulario
+      >
+        <span
+          class="i-lucide-clipboard-list size-4 mt-0.5 shrink-0 text-n-blue-11"
+          aria-hidden="true"
+        />
+        {{ t(`${NS}.FORMULARIO`, { botao: pedido.formulario.text || '' }) }}
+      </p>
+    </section>
+  </div>
 </template>

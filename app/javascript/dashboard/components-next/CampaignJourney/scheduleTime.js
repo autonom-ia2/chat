@@ -20,11 +20,18 @@ const isValidTimeZone = timeZone => {
   }
 };
 
-/** Account zone (`timezone`, set in Configurações > Conta), else the browser zone. */
-export const accountTimeZone = account => {
-  const zone = account?.timezone || account?.custom_attributes?.timezone;
-  return zone && isValidTimeZone(zone) ? zone : browserTimeZone();
-};
+/**
+ * Account zone, the one the platform uses: chosen in Configurações > Conta
+ * (`custom_attributes.timezone`), kept in `settings.reporting_timezone` by the
+ * server (Account#sync_reporting_timezone). The browser zone only when the
+ * account has none (#954 fills it on the admin's next visit).
+ */
+export const accountTimeZone = account =>
+  [
+    account?.timezone,
+    account?.custom_attributes?.timezone,
+    account?.settings?.reporting_timezone,
+  ].find(zone => zone && isValidTimeZone(zone)) || browserTimeZone();
 
 /** `2026-10-06T09:00` typed in `timeZone` → ISO string in UTC; null when empty. */
 export const scheduleToUtc = (localDateTime, timeZone) => {
@@ -46,13 +53,3 @@ export const formatInZone = (iso, timeZone, locale) =>
     timeStyle: 'short',
     timeZone,
   });
-
-/**
- * The account zone as Configurações > Conta shows it ("America/Sao Paulo"). Regra do
- * Rodrigo (13/10/2026): never the long Intl name ("Horário Padrão de Brasília") nor
- * the raw id with underscores.
- */
-export const accountZoneLabel = timeZone =>
-  String(timeZone || '')
-    .split('_')
-    .join(' ');

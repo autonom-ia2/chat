@@ -7,6 +7,7 @@ import { guardarPrevia } from '../api/arquivos';
 import {
   extrasParaEnvio,
   formatoQueNaoVai,
+  soModeloCompleto,
   oQuePedir,
   pendencias,
 } from '../helpers/formatoNaCampanha';
@@ -171,6 +172,34 @@ describe('formatoNaCampanha', () => {
     expect(formatoQueNaoVai(carrossel)).toBe('');
     expect(formatoQueNaoVai(oferta)).toBe('');
   });
+
+  // #1456: quem recebe a mensagem escrita perderia o cupom, a oferta ou o carrossel.
+  it('cupom, oferta com prazo ou carrossel: todos recebem o modelo completo', () => {
+    const cupom = {
+      components: [
+        { type: 'BODY', text: 'Oi' },
+        { type: 'BUTTONS', buttons: [{ type: 'copy_code' }] },
+      ],
+    };
+    const ofertaSemPrazo = {
+      components: [
+        { type: 'BODY', text: 'Oi' },
+        { type: 'limited_time_offer', limited_time_offer: { text: 'Hoje' } },
+      ],
+    };
+    const simples = {
+      components: [
+        { type: 'BODY', text: 'Oi {{1}}' },
+        { type: 'BUTTONS', buttons: [{ type: 'URL', url: 'https://a.com' }] },
+      ],
+    };
+    expect(soModeloCompleto(cupom)).toBe(true);
+    expect(soModeloCompleto(ofertaSemPrazo)).toBe(true);
+    expect(soModeloCompleto(carrossel)).toBe(true);
+    expect(soModeloCompleto(oferta)).toBe(true);
+    expect(soModeloCompleto(simples)).toBe(false);
+    expect(soModeloCompleto(null)).toBe(false);
+  });
 });
 
 describe('PonteFormatoDaCampanha', () => {
@@ -188,6 +217,18 @@ describe('PonteFormatoDaCampanha', () => {
   // (mockReset devolve o próprio mock, que seria chamado ao fim do teste).
   beforeEach(() => {
     api.subirArquivoDaCampanha.mockReset();
+  });
+
+  // Regra do Rodrigo (#1456): o fuso da conta como Configurações o mostra,
+  // nunca o nome longo do navegador.
+  it('a validade da oferta diz o fuso da conta como a plataforma o mostra', () => {
+    const wrapper = montar({ modelo: { template: oferta } });
+
+    const rotulo = wrapper.find('[data-formato-validade]').text();
+    expect(rotulo).toContain(
+      'The offer is valid until (account time zone: America/Sao Paulo)'
+    );
+    expect(rotulo).not.toContain('Standard Time');
   });
 
   it('sobe a foto escolhida para o cartão pela caixa e guarda a referência', async () => {
@@ -335,14 +376,6 @@ describe('PonteFormatoDaCampanha', () => {
     expect(wrapper.emitted('update').at(-1)).toEqual([{}]);
   });
 
-  // Regra do Rodrigo (13/10/2026): o fuso da conta como Configurações mostra.
-  it('mostra a validade da oferta no fuso da conta, como em Configurações', () => {
-    const wrapper = montar({ modelo: { template: oferta } });
-    expect(wrapper.find('[data-formato-validade] label').text()).toBe(
-      'The offer is valid until (America/Sao Paulo time zone)'
-    );
-  });
-
   it('diz quando o arquivo não subiu, com o motivo do servidor', async () => {
     api.subirArquivoDaCampanha.mockRejectedValue({
       mensagem: 'Use JPG ou PNG',
@@ -406,14 +439,14 @@ describe('PontePrevia', () => {
     guardarPrevia('sig5', new File(['x'], 'nova.png', { type: 'image/png' }));
     const escolhida = topoDe({
       modelo: comLink,
-      topo: { referencia: 'sig5', nome: 'nova.png' },
+      valores: { topo: { referencia: 'sig5', nome: 'nova.png' } },
     });
     expect(escolhida.find('img').attributes('src')).toBe('blob:nova.png');
 
     // Recarregou a página: a miniatura local some, fica o nome do escolhido.
     const semPrevia = topoDe({
       modelo: comLink,
-      topo: { referencia: 'outra', nome: 'outra.png' },
+      valores: { topo: { referencia: 'outra', nome: 'outra.png' } },
     });
     expect(semPrevia.find('img').exists()).toBe(false);
     expect(semPrevia.text()).toBe('outra.png');

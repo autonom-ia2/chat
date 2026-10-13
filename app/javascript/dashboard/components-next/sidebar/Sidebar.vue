@@ -1247,6 +1247,9 @@ const menuItems = computed(() => {
                   'agent_capacity_policy_index',
                   'agent_capacity_policy_create',
                   'agent_capacity_policy_edit',
+                  // A passagem (#1385) mora em Atribuição para o administrador.
+                  'crm_handoff_settings_index',
+                  'crm_handoff_settings_edit',
                 ],
                 to: accountScopedRoute('assignment_policy_index'),
               },

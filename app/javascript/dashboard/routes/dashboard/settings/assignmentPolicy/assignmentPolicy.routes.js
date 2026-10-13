@@ -12,7 +12,7 @@ const AgentAssignmentEdit = () => import('./pages/AgentAssignmentEditPage.vue');
 const AgentCapacityIndex = () => import('./pages/AgentCapacityIndexPage.vue');
 const AgentCapacityCreate = () => import('./pages/AgentCapacityCreatePage.vue');
 const AgentCapacityEdit = () => import('./pages/AgentCapacityEditPage.vue');
-const CrmHandoffIndex = () => import('./pages/CrmHandoffIndexPage.vue');
+const CrmHandoffIndex = () => import('./pages/passagem/PassagemListaPage.vue');
 const CrmHandoffEdit = () => import('./pages/passagem/PassagemPage.vue');
 
 // Mirrors ensureCrmAiEnabled from crm.routes.js: the handoff pages only make
@@ -77,16 +77,6 @@ export default {
           },
         },
         {
-          path: 'handoff',
-          name: 'crm_handoff_settings_index',
-          component: CrmHandoffIndex,
-          beforeEnter: ensureCrmAiEnabled,
-          meta: {
-            featureFlag: FEATURE_FLAGS.CRM,
-            permissions: ['administrator', CRM_MANAGE_AI_PERMISSION],
-          },
-        },
-        {
           path: 'capacity',
           name: 'agent_capacity_policy_index',
           component: AgentCapacityIndex,
@@ -115,8 +105,20 @@ export default {
         },
       ],
     },
-    // Fora do SettingsWrapper: a tela de passagem (#1385) ocupa a área inteira, com herói e prévia lado a lado, como as
-    // telas de funil (#1384).
+    // Fora do SettingsWrapper: a lista de funis e a tela de passagem (#1385) ocupam a área inteira, com o herói escuro,
+    // como as telas de funil (#1384).
+    {
+      path: frontendURL(
+        'accounts/:accountId/settings/assignment-policy/handoff'
+      ),
+      name: 'crm_handoff_settings_index',
+      component: CrmHandoffIndex,
+      beforeEnter: ensureCrmAiEnabled,
+      meta: {
+        featureFlag: FEATURE_FLAGS.CRM,
+        permissions: ['administrator', CRM_MANAGE_AI_PERMISSION],
+      },
+    },
     {
       path: frontendURL(
         'accounts/:accountId/settings/assignment-policy/handoff/:pipelineId'

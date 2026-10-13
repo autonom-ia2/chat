@@ -208,7 +208,11 @@ watch(
             }}
           </span>
         </div>
-        <CelularOferta v-if="formato === 'oferta'" :oferta="conteudo.oferta" />
+        <CelularOferta
+          v-if="formato === 'oferta'"
+          :oferta="conteudo.oferta"
+          :na-campanha="conteudo.naCampanha"
+        />
         <p
           class="px-1 mb-0 text-sm leading-relaxed whitespace-pre-wrap break-words text-n-slate-12"
         >
@@ -249,6 +253,15 @@ watch(
           aria-hidden="true"
         />
         {{ botao.texto || $t('MODELOS_WHATSAPP.CELULAR.BOTAO_SEM_TEXTO') }}
+        <span
+          v-if="
+            conteudo.naCampanha && botao.tipo === 'copiar_codigo' && botao.valor
+          "
+          data-celular-codigo
+          class="font-mono text-n-slate-11"
+        >
+          {{ botao.valor }}
+        </span>
       </span>
       <span
         v-if="botoesNaTela.escondidos"

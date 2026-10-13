@@ -15,6 +15,7 @@ import {
   quemComParteFora,
   quemRecebeNoExemplo,
   regraDaEtapa,
+  fraseDaSituacao,
   situacaoDoFunil,
   textoDoJeito,
 } from './passagem';
@@ -414,10 +415,10 @@ describe('jeito de uma etapa do meu jeito', () => {
   });
 });
 
-describe('situacaoDoFunil: o selo da lista de funis', () => {
-  const etapa = (custom, ligada) => ({
+describe('situacaoDoFunil: a frase da lista de funis', () => {
+  const etapa = (custom, ligada, modo) => ({
     handoff_custom: custom,
-    handoff: { enabled: ligada },
+    handoff: { enabled: ligada, ...(modo ? { handoff_mode: modo } : {}) },
   });
   const ajustes = (campos = {}) => ({
     enabled: true,
@@ -430,6 +431,7 @@ describe('situacaoDoFunil: o selo da lista de funis', () => {
     expect(situacaoDoFunil(ajustes())).toEqual({
       estado: 'ligada',
       jeito: 'na_hora',
+      total: 2,
     });
     expect(
       situacaoDoFunil(
@@ -439,42 +441,72 @@ describe('situacaoDoFunil: o selo da lista de funis', () => {
   });
 
   it('etapa do seu jeito com outro jeito: ligada, sem dizer um jeito só', () => {
-    const convite = {
-      handoff_custom: true,
-      handoff: { enabled: true, handoff_mode: 'r3_invite' },
-    };
     expect(
-      situacaoDoFunil(ajustes({ stages: [etapa(false), convite] }))
-    ).toEqual({ estado: 'ligada', jeito: null });
+      situacaoDoFunil(
+        ajustes({ stages: [etapa(false), etapa(true, true, 'r3_invite')] })
+      )
+    ).toEqual({ estado: 'ligada', jeito: null, total: 2 });
   });
 
-  it('funil ligado sem etapas: ligada', () => {
-    expect(situacaoDoFunil(ajustes({ stages: [] })).estado).toBe('ligada');
+  it('funil ligado sem etapas: ligada, com o jeito do funil', () => {
+    expect(situacaoDoFunil(ajustes({ stages: [] }))).toEqual({
+      estado: 'ligada',
+      jeito: 'na_hora',
+      total: 0,
+    });
   });
 
-  it('funil desligado com uma etapa do seu jeito não aparece como desligado', () => {
+  it('funil desligado com uma etapa do seu jeito: parte, com o jeito dessa etapa', () => {
     const situacao = situacaoDoFunil(
       ajustes({
         handoff: { enabled: false },
-        stages: [etapa(false), etapa(true, true), etapa(true, false)],
+        stages: [
+          etapa(false),
+          etapa(true, true, 'r3_invite'),
+          etapa(true, false),
+        ],
       })
     );
-    expect(situacao).toEqual({ estado: 'parte', ligadas: 1, total: 3 });
+    expect(situacao).toEqual({
+      estado: 'parte',
+      ligadas: 1,
+      total: 3,
+      jeito: 'convite',
+    });
   });
 
-  it('funil ligado com uma etapa sem passagem: conta as etapas', () => {
+  it('funil desligado com todas as etapas do seu jeito: ligada em todas', () => {
+    const situacao = situacaoDoFunil(
+      ajustes({
+        handoff: { enabled: false },
+        stages: [
+          etapa(true, true, 'r2_direct'),
+          etapa(true, true, 'r2_direct'),
+        ],
+      })
+    );
+    expect(situacao).toEqual({ estado: 'ligada', jeito: 'na_hora', total: 2 });
+  });
+
+  it('funil ligado com uma etapa sem passagem: conta as etapas e diz o jeito', () => {
     const situacao = situacaoDoFunil(
       ajustes({ stages: [etapa(false), etapa(true, false)] })
     );
-    expect(situacao).toEqual({ estado: 'parte', ligadas: 1, total: 2 });
+    expect(situacao).toEqual({
+      estado: 'parte',
+      ligadas: 1,
+      total: 2,
+      jeito: 'na_hora',
+    });
   });
 
-  it('nenhuma etapa chama, ou assistente do funil desligada: desligada', () => {
+  it('nenhuma etapa chama: desligada; assistente do funil desligada: diz isso', () => {
     expect(situacaoDoFunil(ajustes({ handoff: { enabled: false } }))).toEqual({
       estado: 'desligada',
     });
     expect(situacaoDoFunil(ajustes({ enabled: false }))).toEqual({
       estado: 'desligada',
+      semAssistente: true,
     });
   });
 
@@ -482,5 +514,51 @@ describe('situacaoDoFunil: o selo da lista de funis', () => {
     expect(modoDaEtapa(etapa(false, true))).toBe(ETAPA_IGUAL);
     expect(modoDaEtapa(etapa(true, true))).toBe(ETAPA_PROPRIA);
     expect(modoDaEtapa(etapa(true, false))).toBe(ETAPA_DESLIGADA);
+  });
+});
+
+describe('fraseDaSituacao: a chave e os números da frase', () => {
+  it('ligada em todas, com um jeito; com jeitos diferentes, sem jeito', () => {
+    expect(
+      fraseDaSituacao({ estado: 'ligada', jeito: 'na_hora', total: 5 })
+    ).toEqual({
+      chave: 'LIGADA',
+      jeito: 'JEITO_NA_HORA',
+    });
+    expect(
+      fraseDaSituacao({ estado: 'ligada', jeito: null, total: 5 }).chave
+    ).toBe('LIGADA_MISTO');
+  });
+
+  it('funil sem etapas: só o jeito', () => {
+    expect(
+      fraseDaSituacao({ estado: 'ligada', jeito: 'convite', total: 0 })
+    ).toEqual({
+      chave: 'LIGADA_SEM_ETAPAS',
+      jeito: 'JEITO_CONVITE',
+    });
+  });
+
+  it('em parte das etapas: "na hora, em 4 de 5 etapas"', () => {
+    expect(
+      fraseDaSituacao({
+        estado: 'parte',
+        ligadas: 4,
+        total: 5,
+        jeito: 'na_hora',
+      })
+    ).toEqual({ chave: 'PARTE', jeito: 'JEITO_NA_HORA', n: 4, total: 5 });
+    expect(
+      fraseDaSituacao({ estado: 'parte', ligadas: 2, total: 3, jeito: null })
+        .chave
+    ).toBe('PARTE_MISTO');
+  });
+
+  it('desligada, sem assistente e sem resposta do servidor', () => {
+    expect(fraseDaSituacao({ estado: 'desligada' }).chave).toBe('DESLIGADA');
+    expect(
+      fraseDaSituacao({ estado: 'desligada', semAssistente: true }).chave
+    ).toBe('SEM_ASSISTENTE');
+    expect(fraseDaSituacao(undefined).chave).toBe('SEM_SITUACAO');
   });
 });

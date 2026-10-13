@@ -13,12 +13,8 @@ import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
-import {
-  formatInZone,
-  isFutureSchedule,
-  scheduleToUtc,
-  accountZoneLabel,
-} from './scheduleTime';
+import { formatInZone, isFutureSchedule, scheduleToUtc } from './scheduleTime';
+import { rotuloDoFuso } from 'dashboard/helper/fusoDaConta';
 import { toLocaleTag, formatNumber } from './localeTag';
 
 const props = defineProps({
@@ -81,7 +77,8 @@ const scheduleMessage = computed(() => {
   if (showPastError.value) return t(`${NS}.PAST`);
   return props.draft.scheduledAt ? '' : t(`${NS}.PICK_DATE`);
 });
-const zoneLabel = computed(() => accountZoneLabel(props.timeZone));
+// O fuso da conta como Configurações o mostra (regra do Rodrigo, #1456).
+const zoneLabel = computed(() => rotuloDoFuso(props.timeZone));
 const whenText = computed(() => {
   if (!isLater.value || !isScheduleValid.value) return '';
   return formatInZone(

@@ -518,7 +518,8 @@
       "CATALOGO": "Catalog",
       "VER_COMO_FICA": "See how it looks",
       "OFERTA_CONTAGEM": "Ends in 2 days (example)",
-      "VER_TODAS_AS_OPCOES": "See all options"
+      "VER_TODAS_AS_OPCOES": "See all options",
+      "OFERTA_VALE_ATE": "Valid until {data}"
     },
     "ENVIADO": {
       "TITULO": {
@@ -711,8 +712,6 @@
       },
       "EM_ANALISE": "“{nome}” is still in review at WhatsApp. You can set up and schedule the campaign; sending now unlocks when it is approved.",
       "ENVIAR_AGORA_BLOQUEADO": "Sending now unlocks when WhatsApp approves the template. Pick a date to schedule.",
-      "PRIMEIRO_NOME": "First name",
-      "NOME_DO_CONTATO": "Contact name",
       "REVISAO": {
         "TITULO": "Template",
         "CUSTO": "{porEnvio} per message · about {total} for {n} people",
@@ -732,7 +731,7 @@
         "CUPOM": "Coupon code",
         "CUPOM_AJUDA": "Everyone gets the same code. Up to {n} letters and numbers.",
         "CUPOM_ERRO": "Type the code, with up to {n} letters and numbers.",
-        "VALIDADE": "The offer is valid until ({zona} time zone)",
+        "VALIDADE": "The offer is valid until (account time zone: {zona})",
         "VALIDADE_AJUDA": "The customer sees a countdown. If this time passes before the send, the campaign stops and no one receives it.",
         "VALIDADE_PASSADA": "This time has already passed. Choose a later date.",
         "CARTOES": "Photos of the {n} cards",
@@ -936,7 +935,8 @@
       "CANAL_HINT": "Template approved by Meta. People who talked to you in the last 24 hours can get a message written by you.",
       "AVISO_PROPAGANDA": "Too much advertising can get the number blocked. Write something useful for the person.",
       "FALHOU": "We could not check who talked to you right now.",
-      "TENTAR_DE_NOVO": "Try again"
+      "TENTAR_DE_NOVO": "Try again",
+      "TEXTO_DESCARTADO": "This template has a coupon, a limited-time offer or a carousel. Everyone gets the full template, so the message you wrote was removed."
     },
     "SAUDE": {
       "TITULO": "How this template is doing",

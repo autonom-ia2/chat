@@ -458,6 +458,25 @@ describe('ActionCableConnector - Copilot Tests', () => {
     });
   });
 
+  describe('autonomia build thread updated (#1367)', () => {
+    it('avisa a tela do Construtor, só da conta aberta', () => {
+      actionCable.onReceived({
+        event: 'autonomia.build_thread.updated',
+        data: { account_id: 1, id: 7 },
+      });
+      actionCable.onReceived({
+        event: 'autonomia.build_thread.updated',
+        data: { account_id: 2, id: 8 },
+      });
+
+      expect(mockDispatch).toHaveBeenCalledTimes(1);
+      expect(mockDispatch).toHaveBeenCalledWith(
+        'autonomiaBuildThreads/buildThreadUpdated',
+        { account_id: 1, id: 7 }
+      );
+    });
+  });
+
   describe('crm subjects changed (#1145)', () => {
     it('relê os assuntos da conversa avisada, só da conta aberta', async () => {
       const { onCrmSubjectsChangedRemotely } = await import(

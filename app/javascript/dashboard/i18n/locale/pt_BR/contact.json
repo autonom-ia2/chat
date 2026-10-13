@@ -708,6 +708,7 @@
       "MESSAGE_EDITOR": {
         "PLACEHOLDER": "Escreva sua mensagem aqui..."
       },
+      "WHATSAPP_API_START_HINT": "Não precisa de modelo: o texto que você escrever sai pelo WhatsApp API.",
       "WHATSAPP_OPTIONS": {
         "LABEL": "Selecione o modelo",
         "SEARCH_PLACEHOLDER": "Pesquisar modelos",

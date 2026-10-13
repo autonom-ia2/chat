@@ -364,7 +364,7 @@
         "WHEN": "When it starts",
         "NOW": "Now",
         "LATER": "Pick date and time",
-        "DATE_LABEL": "Date and time ({zone})",
+        "DATE_LABEL": "Date and time (account time zone: {zone})",
         "PAST": "Choose a future date and time.",
         "PICK_DATE": "Choose the date and time of the send.",
         "RECEIVE": "Will receive",
@@ -413,7 +413,8 @@
           "CAROUSEL_MEDIA_INVALID": "A card photo cannot be used: use a JPG or PNG up to 5 MB (or an MP4 up to 16 MB for video).",
           "CAROUSEL_FIELD_REQUIRED": "A card of this template has a field the campaign does not fill yet.",
           "FREE_TEXT_INVALID": "The written message cannot go like this. Go back to Message and check the text (links only through the field button).",
-          "FREE_TEXT_DISABLED": "The written message is not enabled for this account. Remove it to send only the template."
+          "FREE_TEXT_DISABLED": "The written message is not enabled for this account. Remove it to send only the template.",
+          "FREE_TEXT_RICH_TEMPLATE": "This template has a coupon, a limited-time offer or a carousel: everyone gets the full template. Go back to Message and remove the written message."
         },
         "OPTED_OUT": "Refused messages",
         "REASONS": {

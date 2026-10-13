@@ -52,6 +52,8 @@ const CREATE_ERRORS = {
   // Fork #1335: a mensagem escrita para quem falou nas últimas 24 h.
   free_text_invalid: 'FREE_TEXT_INVALID',
   free_text_disabled: 'FREE_TEXT_DISABLED',
+  // Fork #1456: cupom, oferta com prazo ou carrossel só no modelo completo.
+  free_text_not_allowed_with_rich_template: 'FREE_TEXT_RICH_TEMPLATE',
 };
 
 export const createErrorKey = error => {

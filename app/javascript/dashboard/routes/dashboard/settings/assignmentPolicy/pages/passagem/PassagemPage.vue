@@ -16,18 +16,20 @@ import PassagemAvisos from './PassagemAvisos.vue';
 import PassagemLado from './PassagemLado.vue';
 import { usePassagem } from './usePassagem';
 import { usePassagemRodape } from './usePassagemRodape';
+import { usePassagemVolta } from './usePassagemVolta';
 import { ETAPA_PROPRIA } from './passagem';
 
 // #1385 — a tela "Atribuição e transferência para humano", na família das telas de funil (#1384): herói
 // escuro com o nome do funil, cartões-frase com "Alterar", prévia com a cliente de exemplo à direita e um botão azul por
-// tela. Como no funil, cada tela de detalhe salva na hora; o resumo só tem "Fechar". Trocar de funil é pela migalha
-// "Todos os funis".
+// tela. Como no funil, cada tela de detalhe salva na hora; o resumo só tem "Fechar". A seta, o X e o "Fechar" voltam
+// para de onde a pessoa veio: a lista de funis ou, aberto pelo Kanban, o Kanban no mesmo funil (usePassagemVolta).
 const route = useRoute();
 const router = useRouter();
 const store = useStore();
 const { t } = useI18n();
 const H = 'CRM_KANBAN.PASSAGEM.HEROI';
 const todas = useMapGetter('agents/getAgents');
+const { doFunil } = usePassagemVolta();
 
 const passagem = usePassagem();
 const {
@@ -77,13 +79,13 @@ const abrirEtapa = item => {
   irPara('etapa');
 };
 
-// Fechar volta para a lista de funis. Numa tela de detalhe com alteração, pede para salvar ou cancelar antes.
+// Fechar volta para de onde a pessoa veio. Numa tela de detalhe com alteração, pede para salvar ou cancelar antes.
 const fechar = () => {
   if (alterado.value) {
     useAlert(t('CRM_KANBAN.PASSAGEM.SALVE_ANTES_DE_SAIR'));
     return;
   }
-  router.push({ name: 'crm_handoff_settings_index' });
+  router.push(doFunil.value.destino);
 };
 
 const { rodape, voltar } = usePassagemRodape({
@@ -122,7 +124,7 @@ const heroi = computed(() => {
   const chave = view.value.toUpperCase();
   if (view.value === 'home') {
     return {
-      voltar: t(`${H}.TODOS_OS_FUNIS`),
+      voltar: doFunil.value.rotulo,
       rotulo: t(`${H}.HOME_ROTULO`),
       titulo: funil.value,
       texto: textoDoResumo.value,
@@ -154,7 +156,7 @@ const heroi = computed(() => {
 
 const aoVoltar = () => {
   if (view.value === 'home') {
-    router.push({ name: 'crm_handoff_settings_index' });
+    fechar();
     return;
   }
   voltar();
@@ -237,6 +239,7 @@ watch(
               v-if="!iaDoFunilLigada || !caixas.length"
               :ia-ligada="iaDoFunilLigada"
               :sem-caixa="!caixas.length"
+              :funil-id="funilId"
             />
             <PassagemResumo
               :regra="regra"

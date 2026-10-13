@@ -593,6 +593,10 @@ describe('journeyErrors', () => {
     expect(createErrorKey(withCode(404, 'campaign_journey_disabled'))).toBe(
       'JOURNEY_DISABLED'
     );
+    // #1456
+    expect(
+      createErrorKey(withCode(422, 'free_text_not_allowed_with_rich_template'))
+    ).toBe('FREE_TEXT_RICH_TEMPLATE');
     expect(createErrorKey(withCode(401))).toBe('NOT_ALLOWED');
     expect(createErrorKey(withCode(404))).toBe('GENERIC');
     // #1465: o arquivo do topo escolhido na campanha não serve.
