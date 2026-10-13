@@ -633,9 +633,138 @@ describe('AgenteCriarPage', () => {
     });
     expect(canaisApi.connect).not.toHaveBeenCalled();
     expect(wrapper.get('h1').text()).toBe(
-      'AGENTS.JORNADA.CRIAR.PRONTO.TITULO_SEM_CANAL'
+      'AGENTS.JORNADA.CRIAR.PRONTO.TITULO_COPILOTO'
+    );
+    expect(wrapper.text()).toContain(
+      'AGENTS.JORNADA.CRIAR.PRONTO.EQUIPE_COPILOTO'
     );
     wrapper.unmount();
+  });
+
+  describe('Copiloto da equipe (#1494)', () => {
+    const INTERNO = { ...AGENTE, actuation: 'internal' };
+
+    it('opens the Builder as internal, without the customer example nor the store ideas', async () => {
+      const wrapper = await montar({ query: { atuacao: 'interno' } });
+
+      expect(store.dispatch).toHaveBeenCalledWith(
+        'autonomiaBuildThreads/start',
+        { type: 'custom', actuation: 'internal', with_knowledge: true }
+      );
+      const exemplo = wrapper.get('[data-exemplo]');
+      expect(exemplo.text()).toContain(
+        'AGENTS.JORNADA.CRIAR.EXEMPLO.TITULO_COPILOTO'
+      );
+      expect(exemplo.find('[data-exemplo-copiloto]').exists()).toBe(true);
+      expect(exemplo.text()).not.toContain('AGENTS.JORNADA.MODELOS.EXEMPLO');
+      expect(exemplo.text()).not.toContain('.CLIENTE');
+
+      store.state['autonomiaBuildThreads/getMessages'] = [
+        { role: 'assistant', content: 'Como a equipe vai usar você?' },
+      ];
+      store.state['autonomiaBuildThreads/getStatus'] = null;
+      await flushPromises();
+      expect(wrapper.find('[data-ideias]').exists()).toBe(false);
+      expect(
+        secaoDaConversa(wrapper).get('textarea').attributes('placeholder')
+      ).toBe('AGENTS.JORNADA.CRIAR.CONTE.EXEMPLO_COPILOTO');
+      wrapper.unmount();
+    });
+
+    it('points the query to the draft without ?atuacao=, and F5 continues the same copilot', async () => {
+      const wrapper = await montar({ query: { atuacao: 'interno' } });
+      store.state['autonomiaBuildThreads/getThread'] = { id: 7, agent_id: 90 };
+      await flushPromises();
+      expect(router.replace).toHaveBeenCalledWith({ query: { agente: '90' } });
+      // Rascunho já existe, o registro ainda não chegou: continua copiloto.
+      expect(wrapper.find('[data-exemplo-copiloto]').exists()).toBe(true);
+      wrapper.unmount();
+
+      prepararStore({ agente: INTERNO });
+      const depoisDoF5 = await montar({ query: { agente: '90' } });
+      expect(store.dispatch).toHaveBeenCalledWith('autonomiaAgents/show', 90);
+      expect(
+        store.dispatch.mock.calls.some(
+          ([acao]) => acao === 'autonomiaBuildThreads/start'
+        )
+      ).toBe(false);
+      expect(depoisDoF5.get('[data-confira]').text()).toContain(
+        'AGENTS.JORNADA.CRIAR.CONFIRA.TITULO_COPILOTO'
+      );
+      depoisDoF5.unmount();
+    });
+
+    it('tests with team questions and starts helping the team without a channel', async () => {
+      prepararStore({ agente: INTERNO });
+      const wrapper = await montar({ query: { agente: '90' } });
+      const perguntas = wrapper
+        .findAll('[data-perguntas] button')
+        .map(botao => botao.text());
+      expect(perguntas).toEqual([
+        'AGENTS.JORNADA.CRIAR.CONFIRA.PERGUNTAS.COMO_RESPONDO',
+        'AGENTS.JORNADA.CRIAR.CONFIRA.PERGUNTAS.PROXIMO_PASSO',
+        'AGENTS.JORNADA.CRIAR.CONFIRA.PERGUNTAS.RASCUNHO',
+      ]);
+
+      await wrapper.get('[data-perguntas] button').trigger('click');
+      await flushPromises();
+      expect(store.dispatch).toHaveBeenCalledWith(
+        'autonomiaAgents/test',
+        expect.objectContaining({
+          agentId: 90,
+          message: 'AGENTS.JORNADA.CRIAR.CONFIRA.PERGUNTAS.COMO_RESPONDO',
+        })
+      );
+      const comecar = wrapper.get('[data-comecar]');
+      expect(comecar.text()).toContain(
+        'AGENTS.JORNADA.CRIAR.CONFIRA.COMECAR_COPILOTO'
+      );
+      expect(comecar.text()).toContain(
+        'AGENTS.JORNADA.CRIAR.CONFIRA.COMECAR_TEXTO_COPILOTO'
+      );
+      expect(wrapper.find('[data-sem-canal]').exists()).toBe(false);
+
+      await comecar.get('button').trigger('click');
+      await flushPromises();
+      expect(store.dispatch).toHaveBeenCalledWith('autonomiaAgents/update', {
+        id: 90,
+        enabled: true,
+        status: 'active',
+      });
+      expect(canaisApi.connect).not.toHaveBeenCalled();
+      expect(corpo().querySelector('[role="dialog"]')).toBeNull();
+      expect(wrapper.get('h1').text()).toBe(
+        'AGENTS.JORNADA.CRIAR.PRONTO.TITULO_COPILOTO'
+      );
+      wrapper.unmount();
+    });
+
+    it('keeps the customer agent as it was: customer questions, example and start in a channel', async () => {
+      const wrapper = await montar({ query: { agente: '90' } });
+      const confira = wrapper.get('[data-confira]');
+      expect(confira.text()).toContain('AGENTS.JORNADA.CRIAR.CONFIRA.TITULO');
+      expect(confira.text()).not.toContain('_COPILOTO');
+      expect(wrapper.get('[data-perguntas] button').text()).toBe(
+        'AGENTS.JORNADA.CRIAR.CONFIRA.PERGUNTAS.QUANTO_CUSTA'
+      );
+      await wrapper.get('[data-perguntas] button').trigger('click');
+      await flushPromises();
+      expect(wrapper.get('[data-comecar]').text()).toContain(
+        'AGENTS.JORNADA.CRIAR.CONFIRA.COMECAR_NO'
+      );
+      expect(wrapper.get('[data-comecar]').text()).toContain(
+        'AGENTS.JORNADA.CRIAR.CONFIRA.COMECAR_TEXTO'
+      );
+      wrapper.unmount();
+
+      const nova = await montar({ query: { modelo: 'support' } });
+      expect(nova.find('[data-exemplo-copiloto]').exists()).toBe(false);
+      expect(nova.get('[data-exemplo]').text()).toContain(
+        'AGENTS.JORNADA.CRIAR.EXEMPLO.TITULO'
+      );
+      expect(nova.get('[data-exemplo]').text()).not.toContain('_COPILOTO');
+      nova.unmount();
+    });
   });
 
   it('stops the Builder polling when leaving the page', async () => {

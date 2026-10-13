@@ -12,8 +12,10 @@ import { useCanaisOcupados } from '../composables/useCanaisOcupados';
 import { useComecarAAtender } from '../composables/useComecarAAtender';
 import { usePermissoesDaJornada } from '../composables/usePermissoesDaJornada';
 import {
+  ATUACAO,
   ETAPA,
   IDEIAS_PARA_COMECAR,
+  atuacaoDaQuery,
   etapaDaQuery,
   exemploDoModelo,
   idDaQuery,
@@ -51,6 +53,9 @@ import EtapaPronto from '../components/criar/EtapaPronto.vue';
 // Modelo novo: a conversa abre ao montar (a IA fala primeiro). Assim que o rascunho existe, a query
 // troca `?modelo=` por `?agente=`: F5 continua o mesmo rascunho em vez de criar outro (o modelo,
 // daí em diante, vem do agent_type do rascunho).
+// #1494 — Copiloto da equipe (`?atuacao=interno`): a conversa abre com actuation internal. Sem
+// exemplo de cliente nem ideias de loja; o teste usa perguntas da equipe e o Comece só liga o agente,
+// sem canal. Antes do rascunho existir, a atuação vem da query; depois, do próprio agente.
 const route = useRoute();
 const router = useRouter();
 const store = useStore();
@@ -59,8 +64,12 @@ const celular = useMediaQuery('(max-width: 767px)');
 
 const modeloPedido = modeloDaQuery(route.query);
 const idInicial = idDaQuery(route.query);
+const atuacaoPedida = atuacaoDaQuery(route.query);
 
-const conversa = useConversaDeCriacao({ modelo: modeloPedido });
+const conversa = useConversaDeCriacao({
+  modelo: modeloPedido,
+  atuacao: atuacaoPedida,
+});
 // O rascunho ainda está sendo escrito pelo Construtor: só o id; quem diz "incompleto" é o 422.
 const teste = useTesteDoAgente(
   computed(() => ({ id: conversa.agenteId.value })),
@@ -105,7 +114,11 @@ const modelo = computed(() =>
   modeloDoTipo(agente.value?.agent_type, modeloPedido)
 );
 const empresa = computed(() => contaDaStore.value?.(contaId.value)?.name || '');
-const interno = computed(() => agente.value?.actuation === 'internal');
+const interno = computed(() =>
+  agente.value
+    ? agente.value.actuation === ATUACAO.INTERNA
+    : atuacaoPedida === ATUACAO.INTERNA
+);
 const atendendo = computed(
   () => agente.value?.status === 'active' && agente.value?.enabled === true
 );
@@ -145,7 +158,7 @@ watch(
 );
 
 const rotuloComecar = computed(() => {
-  if (interno.value) return t('AGENTS.JORNADA.CRIAR.COMECE.COMECAR');
+  if (interno.value) return t('AGENTS.JORNADA.CRIAR.CONFIRA.COMECAR_COPILOTO');
   if (ocupacao.estado.value === 'carregando') {
     return t('AGENTS.JORNADA.CRIAR.COMECE.COMECAR');
   }
@@ -204,7 +217,12 @@ watch(
   () => conversa.agenteId.value,
   id => {
     if (!id || String(route.query.agente) === String(id)) return;
-    const { modelo: _modelo, type: _type, ...resto } = route.query;
+    const {
+      modelo: _modelo,
+      type: _type,
+      atuacao: _atuacao,
+      ...resto
+    } = route.query;
     router.replace({ query: { ...resto, agente: String(id) } });
   }
 );
@@ -237,18 +255,27 @@ const exemplo = computed(() => {
     { de: 'agente', texto: t(`${base}.AGENTE`), hora },
   ];
 });
+const tituloDoExemplo = computed(() =>
+  t(
+    interno.value
+      ? 'AGENTS.JORNADA.CRIAR.EXEMPLO.TITULO_COPILOTO'
+      : 'AGENTS.JORNADA.CRIAR.EXEMPLO.TITULO'
+  )
+);
 const ideias = computed(() =>
-  modelo.value === MODELO_DO_MEU_JEITO || idInicial
+  interno.value || modelo.value === MODELO_DO_MEU_JEITO || idInicial
     ? []
     : IDEIAS_PARA_COMECAR.map(chave =>
         t(`AGENTS.JORNADA.CRIAR.CONTE.IDEIAS.${chave}`)
       )
 );
-const exemploDoCampo = computed(() =>
-  modelo.value === MODELO_DO_MEU_JEITO && !idInicial
+const exemploDoCampo = computed(() => {
+  if (idInicial) return '';
+  if (interno.value) return t('AGENTS.JORNADA.CRIAR.CONTE.EXEMPLO_COPILOTO');
+  return modelo.value === MODELO_DO_MEU_JEITO
     ? t('AGENTS.JORNADA.CRIAR.CONTE.EXEMPLO_DO_MEU_JEITO')
-    : ''
-);
+    : '';
+});
 
 const linkConectarCanal = computed(
   () => router.resolve({ name: 'settings_inbox_new' }).href
@@ -426,6 +453,7 @@ onMounted(() => {
       :ultimo="teste.ultima.value"
       :empresa="empresa"
       :celular="celular"
+      :interno="interno"
       @ver="verAgente"
       @voltar="irParaLista"
     />
@@ -472,7 +500,11 @@ onMounted(() => {
         >
           {{
             celular && etapa === ETAPA.CONFIRA
-              ? t('AGENTS.JORNADA.CRIAR.CONFIRA.TITULO')
+              ? t(
+                  interno
+                    ? 'AGENTS.JORNADA.CRIAR.CONFIRA.TITULO_COPILOTO'
+                    : 'AGENTS.JORNADA.CRIAR.CONFIRA.TITULO'
+                )
               : t('AGENTS.JORNADA.CRIAR.TITULO')
           }}
         </h1>
@@ -542,7 +574,8 @@ onMounted(() => {
           v-if="conversa.fechada.value && (!celular || etapa !== ETAPA.CONTE)"
           :nome="nome"
           :empresa="empresa"
-          :perguntas="perguntasDeTeste(modelo)"
+          :perguntas="perguntasDeTeste(modelo, interno)"
+          :interno="interno"
           :mensagens="teste.mensagens.value"
           :digitando="teste.digitando.value"
           :problema="teste.aviso.value?.tipo ?? null"
@@ -571,17 +604,26 @@ onMounted(() => {
             id="exemplo-titulo"
             class="m-0 text-lg font-semibold text-n-slate-12"
           >
-            {{ t('AGENTS.JORNADA.CRIAR.EXEMPLO.TITULO') }}
+            {{ tituloDoExemplo }}
           </h2>
-          <CelularConversa
-            tamanho="mini"
-            :mensagens="exemplo"
-            :selo="t('AGENTS.JORNADA.MODELOS.EXEMPLO')"
-            :rotulo-sr="t('AGENTS.JORNADA.MODELOS.EXEMPLO_SR')"
-          />
-          <p class="m-0 text-sm text-n-slate-11">
-            {{ t('AGENTS.JORNADA.CRIAR.EXEMPLO.LEGENDA', { nome }) }}
+          <p
+            v-if="interno"
+            data-exemplo-copiloto
+            class="m-0 text-sm text-n-slate-11"
+          >
+            {{ t('AGENTS.JORNADA.CRIAR.EXEMPLO.COPILOTO', { nome }) }}
           </p>
+          <template v-else>
+            <CelularConversa
+              tamanho="mini"
+              :mensagens="exemplo"
+              :selo="t('AGENTS.JORNADA.MODELOS.EXEMPLO')"
+              :rotulo-sr="t('AGENTS.JORNADA.MODELOS.EXEMPLO_SR')"
+            />
+            <p class="m-0 text-sm text-n-slate-11">
+              {{ t('AGENTS.JORNADA.CRIAR.EXEMPLO.LEGENDA', { nome }) }}
+            </p>
+          </template>
           <template v-if="conversa.podeTestarAgora.value">
             <AgenteBotao
               data-testar-agora
@@ -616,18 +658,23 @@ onMounted(() => {
 
     <AgenteGaveta
       v-if="exemploAberto"
-      :titulo="t('AGENTS.JORNADA.CRIAR.EXEMPLO.TITULO')"
+      :titulo="tituloDoExemplo"
       @fechar="exemploAberto = false"
     >
-      <CelularConversa
-        tamanho="mini"
-        :mensagens="exemplo"
-        :selo="t('AGENTS.JORNADA.MODELOS.EXEMPLO')"
-        :rotulo-sr="t('AGENTS.JORNADA.MODELOS.EXEMPLO_SR')"
-      />
-      <p class="m-0 text-sm text-n-slate-11">
-        {{ t('AGENTS.JORNADA.CRIAR.EXEMPLO.LEGENDA', { nome }) }}
+      <p v-if="interno" class="m-0 text-sm text-n-slate-11">
+        {{ t('AGENTS.JORNADA.CRIAR.EXEMPLO.COPILOTO', { nome }) }}
       </p>
+      <template v-else>
+        <CelularConversa
+          tamanho="mini"
+          :mensagens="exemplo"
+          :selo="t('AGENTS.JORNADA.MODELOS.EXEMPLO')"
+          :rotulo-sr="t('AGENTS.JORNADA.MODELOS.EXEMPLO_SR')"
+        />
+        <p class="m-0 text-sm text-n-slate-11">
+          {{ t('AGENTS.JORNADA.CRIAR.EXEMPLO.LEGENDA', { nome }) }}
+        </p>
+      </template>
       <template v-if="conversa.podeTestarAgora.value">
         <AgenteBotao
           variante="contorno"

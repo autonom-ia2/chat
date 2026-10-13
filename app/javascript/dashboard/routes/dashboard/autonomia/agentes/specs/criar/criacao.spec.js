@@ -1,4 +1,6 @@
 import {
+  ATUACAO,
+  atuacaoDaQuery,
   modeloDaQuery,
   idDaQuery,
   perguntasDeTeste,
@@ -56,6 +58,32 @@ describe('modelo e etapa da query', () => {
     expect(perguntasDeTeste('custom')).toEqual(perguntasDeTeste('support'));
     expect(exemploDoModelo('custom')).toBe('SUPPORT');
     expect(exemploDoModelo('reception')).toBe('RECEPTION');
+  });
+});
+
+describe('Copiloto da equipe na query (#1494)', () => {
+  it('reads ?atuacao=interno as the internal actuation, anything else as external', () => {
+    expect(atuacaoDaQuery({ atuacao: 'interno' })).toBe(ATUACAO.INTERNA);
+    expect(ATUACAO.INTERNA).toBe('internal');
+    expect(atuacaoDaQuery({})).toBe('external');
+    expect(atuacaoDaQuery({ atuacao: 'INTERNO' })).toBe('external');
+    expect(atuacaoDaQuery({ atuacao: 'interno ' })).toBe('external');
+    expect(atuacaoDaQuery({ atuacao: ['interno'] })).toBe('external');
+    expect(atuacaoDaQuery({ atuacao: 'internal' })).toBe('external');
+  });
+
+  it('tests the copilot with three team questions, and keeps the customer ones for the others', () => {
+    expect(perguntasDeTeste('custom', true)).toEqual([
+      'COMO_RESPONDO',
+      'PROXIMO_PASSO',
+      'RASCUNHO',
+    ]);
+    expect(perguntasDeTeste('sdr', false)).toEqual(perguntasDeTeste('sdr'));
+    expect(perguntasDeTeste('support')).toEqual([
+      'QUANTO_CUSTA',
+      'SABADO',
+      'PESSOA',
+    ]);
   });
 });
 

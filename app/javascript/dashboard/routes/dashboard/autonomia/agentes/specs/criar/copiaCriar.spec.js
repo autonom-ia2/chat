@@ -3,6 +3,8 @@ import { withFullI18n } from 'test-i18n';
 import EtapaConte from '../../components/criar/EtapaConte.vue';
 import EtapaConfira from '../../components/criar/EtapaConfira.vue';
 import EtapaComece from '../../components/criar/EtapaComece.vue';
+import EtapaPronto from '../../components/criar/EtapaPronto.vue';
+import { perguntasDeTeste } from '../../constants/criacao';
 
 // Cópia real em pt_BR (protótipo jornada.html, T03–T06): os textos exatos, {nome} neutro e as
 // palavras que saíram da tela nova.
@@ -144,6 +146,44 @@ describe('cópia da criação em pt_BR', () => {
     expect(wrapper.get('[data-sem-canal]').text()).toContain(
       'Duda já pode atender. Falta escolher onde.'
     );
+  });
+
+  it('Confira and Pronto for the team copilot talk about the team, never about customers or channels (#1494)', () => {
+    const rotulo = i18n.global.t(
+      'AGENTS.JORNADA.CRIAR.CONFIRA.COMECAR_COPILOTO'
+    );
+    expect(rotulo).toBe('Começar a ajudar a equipe');
+    const confira = mount(EtapaConfira, {
+      props: {
+        nome: 'Duda',
+        interno: true,
+        perguntas: perguntasDeTeste('custom', true),
+        rotuloComecar: rotulo,
+        mensagens: respondido,
+        respondidas: 1,
+      },
+    });
+    expect(confira.text()).toContain('Teste como se fosse da equipe');
+    expect(confira.get('[data-perguntas]').text()).toContain(
+      'Um cliente pediu desconto. Como respondo?'
+    );
+    expect(confira.get('[data-perguntas]').text()).toContain(
+      'Rascunhe uma resposta sobre o prazo de entrega'
+    );
+    expect(confira.get('[data-comecar]').text()).toContain(
+      'Duda passa a ajudar a equipe dentro das conversas. Nunca fala com cliente.'
+    );
+    expect(confira.text()).not.toContain('seus clientes');
+    expect(confira.text()).not.toContain('canal');
+    semProibidas(confira.text());
+
+    const pronto = mount(EtapaPronto, {
+      props: { nome: 'Duda', interno: true },
+    });
+    expect(pronto.get('h1').text()).toBe('Duda já está ajudando a equipe');
+    expect(pronto.text()).toContain('Duda nunca fala com cliente.');
+    expect(pronto.text()).not.toContain('passa a conversa para a equipe');
+    semProibidas(pronto.text());
   });
 
   it('Comece: the drawer, the swap and the start button', async () => {

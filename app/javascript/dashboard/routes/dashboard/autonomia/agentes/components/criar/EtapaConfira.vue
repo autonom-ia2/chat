@@ -28,6 +28,8 @@ const props = defineProps({
   podeConectarCanal: { type: Boolean, default: false },
   linkConectarCanal: { type: String, default: '' },
   celular: { type: Boolean, default: false },
+  // Copiloto da equipe (#1494): o teste é de alguém da equipe e o agente não responde clientes.
+  interno: { type: Boolean, default: false },
 });
 
 const emit = defineEmits([
@@ -137,7 +139,7 @@ const respondeuErrado = () => {
         class="m-0 text-lg font-semibold text-n-slate-12"
         :class="celular ? 'sr-only' : ''"
       >
-        {{ t(`${NS}.TITULO`) }}
+        {{ interno ? t(`${NS}.TITULO_COPILOTO`) : t(`${NS}.TITULO`) }}
       </h2>
       <p class="m-0 text-sm text-n-slate-11">{{ t(`${NS}.TEXTO`) }}</p>
     </div>
@@ -256,7 +258,11 @@ const respondeuErrado = () => {
           {{ rotuloComecar }}
         </AgenteBotao>
         <p id="confira-comecar-texto" class="m-0 text-sm text-n-slate-11">
-          {{ t(`${NS}.COMECAR_TEXTO`, { nome }) }}
+          {{
+            interno
+              ? t(`${NS}.COMECAR_TEXTO_COPILOTO`, { nome })
+              : t(`${NS}.COMECAR_TEXTO`, { nome })
+          }}
         </p>
       </div>
       <div v-else data-sem-canal class="flex flex-col gap-2">
