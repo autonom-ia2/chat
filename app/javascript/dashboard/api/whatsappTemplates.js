@@ -10,6 +10,7 @@ import ApiClient from './ApiClient';
 // GET  whatsapp_template_inboxes  → { payload: [{ id, name, phone_number, group_id, group_name, reconnect, template_sends }] }
 // GET  whatsapp_message_prices    → { payload: { currency, prices, free_tier, service_usage } }
 // GET  campaign_journey/campaign_pauses · POST campaign_journey/campaign_pauses/:id/resume
+// POST whatsapp_template_suggestions  { mode: create|improve, goal | text + improvements, tone, category } (#1333)
 class WhatsappTemplatesAPI extends ApiClient {
   constructor() {
     super('', { accountScoped: true });
@@ -55,6 +56,10 @@ class WhatsappTemplatesAPI extends ApiClient {
     const body = new FormData();
     body.append('file', file);
     return axios.post(`${this.templatesUrl(inboxId)}/media`, body);
+  }
+
+  suggest(body) {
+    return axios.post(`${this.url}whatsapp_template_suggestions`, body);
   }
 
   getCampaignPauses() {

@@ -14,7 +14,7 @@ const grupos = computed(() => [
 // Formatos sem backend (catálogo, formulário) ficam fora: nenhum botão sem funcionar.
 const formatos = FORMATOS.filter(formato => formato.disponivel !== false);
 
-// "Criar com IA" é a entrega E (#1333): escondido até lá.
+// "Criar com IA" (#1333): só para quem cria modelo.
 const podeUsarIA = useCanUseIA();
 </script>
 

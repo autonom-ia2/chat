@@ -930,6 +930,8 @@ Rails.application.routes.draw do
           # Tela de Modelos do WhatsApp (#1332): as caixas que têm modelos e o preço por envio.
           resources :whatsapp_template_inboxes, only: [:index]
           resources :whatsapp_message_prices, only: [:index]
+          # Criar com IA e Melhorar com IA na tela de Modelos (#1333): opções de texto, nada é salvo.
+          resources :whatsapp_template_suggestions, only: [:create]
 
           namespace :twitter do
             resource :authorization, only: [:create]

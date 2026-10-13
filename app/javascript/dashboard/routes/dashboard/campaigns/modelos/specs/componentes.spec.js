@@ -136,9 +136,9 @@ describe('ModeloUsos', () => {
 });
 
 describe('EtapaObjetivo', () => {
-  it('has no AI entry and no format without backend (catalog, form)', () => {
+  it('shows "Criar com IA" to who creates templates, and no format without backend (catalog, form)', () => {
     const wrapper = montar(EtapaObjetivo);
-    expect(wrapper.find('[data-criar-com-ia-entrada]').exists()).toBe(false);
+    expect(wrapper.find('[data-criar-com-ia-entrada]').exists()).toBe(true);
     expect(wrapper.find('[data-formato="catalogo"]').exists()).toBe(false);
     expect(wrapper.find('[data-formato="formulario"]').exists()).toBe(false);
     expect(wrapper.find('[data-formato="carrossel"]').exists()).toBe(true);

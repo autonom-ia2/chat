@@ -4,14 +4,22 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import AgenteGaveta from 'dashboard/routes/dashboard/autonomia/agentes/components/AgenteGaveta.vue';
 import api from '../api/modelosWhatsapp';
 import CustoDoTipo from './CustoDoTipo.vue';
+import { useRotuloDoCampo } from '../helpers/campos';
 
 // Melhorar com IA: a gaveta (foco preso, Esc fecha) com o que a pessoa quer
-// melhorar, o antes e o depois lado a lado, e "Usar" ou "Manter o meu".
+// melhorar, o antes e o depois lado a lado, e "Usar" ou "Manter o meu". Só o
+// texto da mensagem muda. `tipoTravado` (alterar/corrigir, #1394): o tipo que
+// vai e o custo mostrado são os do modelo, nunca o previsto pela IA.
 const props = defineProps({
   rascunho: { type: Object, required: true },
+  tipoTravado: { type: String, default: '' },
+  // Corrigir um recusado: o motivo da recusa (código da tela) vai junto.
+  recusa: { type: String, default: '' },
 });
 
 const emit = defineEmits(['usar', 'fechar']);
+
+const rotulo = useRotuloDoCampo();
 
 const PEDIDOS = [
   { chave: 'mais_curto', icone: 'i-lucide-scissors' },
@@ -28,12 +36,13 @@ const melhorar = async () => {
   estado.value = 'escrevendo';
   try {
     resposta.value = await api.melhorarComIA({
-      texto: props.rascunho.conteudo.texto,
+      conteudo: props.rascunho.conteudo,
       pedido: pedido.value,
-      objetivo: props.rascunho.objetivo,
-      tipo: props.rascunho.tipo,
+      tipo: props.tipoTravado || props.rascunho.tipo,
+      travado: Boolean(props.tipoTravado),
+      recusa: props.recusa,
     });
-    estado.value = 'pronto';
+    estado.value = resposta.value.texto ? 'pronto' : 'pergunta';
   } catch {
     estado.value = 'erro';
   }
@@ -99,6 +108,15 @@ const melhorar = async () => {
       </p>
 
       <p
+        v-else-if="estado === 'pergunta'"
+        data-ia-pergunta
+        role="status"
+        class="p-4 mb-0 text-[0.9375rem] rounded-xl bg-n-amber-2 text-n-slate-12"
+      >
+        {{ resposta.pergunta || $t('MODELOS_WHATSAPP.IA.ERRO') }}
+      </p>
+
+      <p
         v-else-if="estado === 'erro'"
         data-ia-erro
         role="alert"
@@ -135,9 +153,7 @@ const melhorar = async () => {
                   v-if="pedaco.t === 'campo'"
                   class="px-1 text-xs font-medium rounded bg-n-blue-3 text-n-blue-11"
                 >
-                  <span>{{
-                    $t(`MODELOS_WHATSAPP.CAMPOS.${pedaco.v}.ROTULO`)
-                  }}</span>
+                  <span>{{ rotulo(pedaco.v) }}</span>
                 </span>
                 <span v-else>{{ pedaco.v }}</span>
               </template>
@@ -151,7 +167,17 @@ const melhorar = async () => {
         >
           {{ $t('MODELOS_WHATSAPP.IA.NAO_DA_AVISO') }}
         </p>
-        <CustoDoTipo :tipo="resposta.tipo" />
+        <p
+          v-if="resposta.oQueMudou"
+          data-o-que-mudou
+          class="mb-0 text-sm text-n-slate-11"
+        >
+          <strong class="font-semibold text-n-slate-12">
+            {{ $t('MODELOS_WHATSAPP.IA.O_QUE_MUDOU') }}
+          </strong>
+          {{ resposta.oQueMudou }}
+        </p>
+        <CustoDoTipo :tipo="tipoTravado || resposta.tipo" />
       </template>
     </div>
 

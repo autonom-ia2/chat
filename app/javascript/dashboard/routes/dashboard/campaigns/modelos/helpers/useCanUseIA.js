@@ -1,9 +1,9 @@
-import { computed } from 'vue';
+import { usePodeCriarModelo } from './usePodeCriarModelo';
 
-// "Criar com IA", "Melhorar com IA" e a conferência inteligente são a entrega E
-// (#1333). Os pontos de encaixe já estão na tela (EtapaObjetivo, EtapaTexto,
-// ModeloCriarPage), escondidos enquanto isto responder false: nenhum botão
-// aparece sem funcionar. A E troca esta resposta pela regra dela.
+// "Criar com IA" e "Melhorar com IA" (#1333) são escrever modelo: quem pode
+// criar e alterar (administrador ou whatsapp_templates_manage). Sem IA
+// configurada na conta, o botão aparece e responde com a frase simples; o
+// texto continua editável à mão.
 export function useCanUseIA() {
-  return computed(() => false);
+  return usePodeCriarModelo();
 }

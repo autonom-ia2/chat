@@ -53,7 +53,7 @@ const catalogo = ref(null);
 const formularios = ref([]);
 const verPrevia = ref(false);
 const existentes = ref([]);
-// "Criar com IA" é a entrega E (#1333): escondido até lá.
+// "Criar com IA" (#1333): só para quem cria modelo.
 const podeUsarIA = useCanUseIA();
 
 const alterando = computed(() => route.name === 'modelos_whatsapp_alterar');
@@ -643,7 +643,6 @@ const proximaAlteracao = computed(() => {
 
           <EtapaCriarComIA
             v-if="podeUsarIA && etapa === 'objetivo' && route.query.ia === '1'"
-            :numeros="numeros.map(numero => numero.id)"
             :remetente="remetente"
             @usar="usarOpcaoDaIA"
             @voltar="fecharIA"
@@ -679,6 +678,7 @@ const proximaAlteracao = computed(() => {
                   :criar-novo-com="criarNovoCom"
                   :nome-repetido="nomeRepetido"
                   :pedir-texto-novo="novoTipo"
+                  :recusa="modo === 'corrigir' ? modelo?.recusa?.codigo : ''"
                 />
                 <ModeloConferencia
                   v-if="modo === 'corrigir'"
