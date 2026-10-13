@@ -11854,6 +11854,7 @@
   "POST campaign_journey/campaigns": {
     "campos": {
       "delivery_mode": {},
+      "free_text": {},
       "from_email": {},
       "from_name": {},
       "inbox_id": {
@@ -11914,6 +11915,7 @@
     "sem_corpo": false,
     "so_no_envelope": [
       "delivery_mode",
+      "free_text",
       "from_email",
       "from_name",
       "preheader",
@@ -11924,6 +11926,58 @@
       "variable_bindings",
       "variable_defaults"
     ]
+  },
+  "POST campaign_journey/conversa_aberta/escrever": {
+    "campos": {
+      "base": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
+      "campaign_import_id": {
+        "obrigatorio": true,
+        "tipo": "id",
+        "tipo_pela_leitura": "nome"
+      },
+      "categoria": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
+      "inbox_id": {
+        "obrigatorio": true,
+        "tipo": "id",
+        "tipo_pela_leitura": "nome"
+      },
+      "melhoria": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
+      "objetivo": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
+      "resposta": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
+      "tom": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/campaign_journey/conversa_aberta#escrever",
+    "origem": [
+      "app/controllers/api/v1/accounts/campaign_journey/conversa_aberta_controller.rb:30",
+      "app/controllers/api/v1/accounts/campaign_journey/conversa_aberta_controller.rb:64",
+      "app/controllers/api/v1/accounts/campaign_journey/conversa_aberta_controller.rb:87",
+      "app/controllers/api/v1/accounts/campaign_journey/conversa_aberta_controller.rb:86",
+      "app/controllers/api/v1/accounts/campaign_journey/conversa_aberta_controller.rb:75",
+      "app/controllers/api/v1/accounts/campaign_journey/conversa_aberta_controller.rb:79",
+      "app/controllers/api/v1/accounts/campaign_journey/conversa_aberta_controller.rb:68",
+      "app/controllers/api/v1/accounts/campaign_journey/conversa_aberta_controller.rb:57",
+      "app/controllers/api/v1/accounts/campaign_journey/conversa_aberta_controller.rb:56"
+    ],
+    "sem_corpo": false
   },
   "POST campaign_journey/recipient_previews": {
     "campos": {

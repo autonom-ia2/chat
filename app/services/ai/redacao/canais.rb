@@ -7,6 +7,8 @@ module Ai::Redacao::Canais
 
   REGISTRO = {
     'whatsapp_texto' => 'Ai::Redacao::Canais::WhatsappTexto',
+    # #1335: campanha para quem falou nas últimas 24 h (Modelos WhatsApp G).
+    'whatsapp_campanha' => 'Ai::Redacao::Canais::WhatsappCampanha',
     'whatsapp_modelo' => nil,
     'email' => nil
   }.freeze

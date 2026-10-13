@@ -206,6 +206,7 @@ RSpec.describe Ai::Redacao::Escrever do
   describe 'canais' do
     it 'registra o texto livre e diz "não suportado ainda" para modelo do WhatsApp e e-mail, sem chamar a IA' do
       expect(Ai::Redacao::Canais.para('whatsapp_texto')).to eq(Ai::Redacao::Canais::WhatsappTexto)
+      expect(Ai::Redacao::Canais.para('whatsapp_campanha')).to eq(Ai::Redacao::Canais::WhatsappCampanha) # #1335
 
       %w[whatsapp_modelo email].each do |canal|
         expect(Ai::Redacao::Canais).to be_conhecido(canal)

@@ -409,6 +409,14 @@
     "controller": "api/v1/accounts/campaign_journey/contact_origins#show",
     "parametros": []
   },
+  "campaign_journey/conversa_aberta": {
+    "controller": "api/v1/accounts/campaign_journey/conversa_aberta#show",
+    "parametros": [
+      "campaign_import_id",
+      "categoria",
+      "inbox_id"
+    ]
+  },
   "campaign_journey/overview": {
     "controller": "api/v1/accounts/campaign_journey/overviews#show",
     "parametros": [

@@ -14,6 +14,12 @@ Rails.application.config.to_prepare do
   # Prepended after Enterprise::Whatsapp::OneoffCampaignService, so `super` reaches it.
   prepend_once.call(Whatsapp::OneoffCampaignService, CampaignJourney::AudienceContacts)
   prepend_once.call(Whatsapp::OneoffCampaignService, CampaignJourney::WhatsappOneoffRecipients) if ChatwootApp.enterprise?
+  # #1335: conversa aberta — quem falou nas últimas 24 h recebe a mensagem escrita (por fora dos dois acima); o aviso
+  # 131047 da Meta manda o modelo.
+  if ChatwootApp.enterprise?
+    prepend_once.call(Whatsapp::OneoffCampaignService, CampaignJourney::ConversaAberta::Envio)
+    prepend_once.call(Whatsapp::IncomingMessageBaseService, CampaignJourney::ConversaAberta::Queda)
+  end
 
   # #1004: an SMS campaign linked to an audience sends to the audience's phones with a recipient
   # per person; delivery callbacks of Twilio and Bandwidth update those recipients.
