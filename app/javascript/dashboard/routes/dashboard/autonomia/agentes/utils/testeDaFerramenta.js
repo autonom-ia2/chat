@@ -108,6 +108,12 @@ const preencher = (texto, valores, noEndereco, escapar = comoVeio) => {
     const valor = valorDe(valores, nome);
     if (!valor) {
       pedacos.push({ texto: `{{${parte.slice(0, fim)}}}` });
+    } else if (
+      escapar === comoCampoDeFormulario &&
+      filtros[filtros.length - 1] === 'url_encode'
+    ) {
+      // Formulário: o backend tira o url_encode final e codifica uma vez só.
+      pedacos.push({ texto: comoCampoDeFormulario(valor) });
     } else if (filtros.includes('url_encode')) {
       pedacos.push({ texto: escapar(codificar(valor)) });
     } else if (noEndereco && valor.includes(' ')) {
@@ -126,22 +132,25 @@ const comCorpo = rascunho =>
 
 const textoDe = pedacos => pedacos.map(p => p.texto).join('');
 
-// O tipo do corpo, pela mesma regra do backend (CorpoDaFerramenta#tipo): sem Content-Type ou com
-// "json" é JSON; formulário; o resto vai como foi escrito.
-const FORMULARIO = 'application/x-www-form-urlencoded';
-const tipoDoCorpo = rascunho => {
-  const declarado = [
-    ...(rascunho.automaticos || []),
-    ...(rascunho.cabecalhos || []),
-  ].find(
+// O cabeçalho automático declarado (Content-Type, Accept), com valor; vazio conta como ausente, como no
+// HttpExecutor#request_headers.
+const automaticoDeclarado = (rascunho, nome) =>
+  [...(rascunho.automaticos || []), ...(rascunho.cabecalhos || [])].find(
     c =>
       String(c.key ?? c.chave ?? '')
         .trim()
-        .toLowerCase() === 'content-type'
+        .toLowerCase() === nome &&
+      String(c.value ?? c.valor ?? '').trim() !== ''
   );
-  const valor = String(
-    declarado?.value ?? declarado?.valor ?? ''
-  ).toLowerCase();
+const valorDoCabecalho = cabecalho =>
+  String(cabecalho?.value ?? cabecalho?.valor ?? '').trim();
+
+// O tipo do corpo, pela mesma regra do backend (CorpoDaFerramenta#tipo): sem Content-Type (ou vazio)
+// ou com "json" é JSON; formulário; o resto vai como foi escrito.
+const FORMULARIO = 'application/x-www-form-urlencoded';
+const tipoDoCorpo = rascunho => {
+  const declarado = automaticoDeclarado(rascunho, 'content-type');
+  const valor = valorDoCabecalho(declarado).toLowerCase();
   if (!declarado || valor.includes('json')) return 'JSON';
   return valor.includes(FORMULARIO) ? 'FORMULARIO' : 'OUTRO';
 };
@@ -179,9 +188,19 @@ export const montarChamada = (rascunho, valores) => {
         : textoDe(preencher(c.valor, valores, false).pedacos);
       return `${c.chave.trim()}: ${valor}`;
     });
-  const automaticos = comCorpo(rascunho)
-    ? ['Content-Type: application/json', 'Accept: application/json']
-    : ['Accept: application/json'];
+  // Os automáticos como o backend manda: o declarado, ou application/json (Content-Type só com corpo).
+  const tipoDeclarado = automaticoDeclarado(rascunho, 'content-type');
+  const acceptDeclarado = automaticoDeclarado(rascunho, 'accept');
+  const contentType =
+    tipoDeclarado || comCorpo(rascunho)
+      ? [
+          `Content-Type: ${valorDoCabecalho(tipoDeclarado) || 'application/json'}`,
+        ]
+      : [];
+  const automaticos = [
+    ...contentType,
+    `Accept: ${valorDoCabecalho(acceptDeclarado) || 'application/json'}`,
+  ];
   return {
     metodo: rascunho.metodo,
     endereco: endereco.pedacos,

@@ -110,22 +110,11 @@ describe('regras das Ferramentas', () => {
     expect(jsonValido('{ "a": 1 "b": 2 }')).toBe(false);
   });
 
-  // #1425: o backend escapa o texto para dentro de aspas e recusa corpo que deixa de ser JSON. Texto
-  // solto (sem aspas) quebra a chamada; número e sim/não soltos continuam valendo.
-  it('asks text information to be inside quotes, like the backend', () => {
-    const informacoes = [
-      { nome: 'termo', tipo: 'string' },
-      { nome: 'limite', tipo: 'integer' },
-      { nome: 'ativo', tipo: 'boolean' },
-    ];
-    expect(
-      jsonValido(
-        '{ "t": "{{termo}}", "l": {{limite}}, "a": {{ ativo }} }',
-        informacoes
-      )
-    ).toBe(true);
-    expect(jsonValido('{ "t": {{termo}} }', informacoes)).toBe(false);
-    expect(jsonValido('{ "l": "{{limite}}" }', informacoes)).toBe(true);
+  // Revisão 2 do #1425: numa vaga sem aspas o backend aceita texto que seja número, true, false ou
+  // null (o tipo padrão da tela é texto). A tela não sabe o valor; checa só a forma do JSON.
+  it('accepts a variable without quotes, as the backend takes a number there', () => {
+    expect(jsonValido('{ "t": {{termo}} }')).toBe(true);
+    expect(jsonValido('{ "t": "{{termo}}" }')).toBe(true);
   });
 
   it('builds the technical name from the name, without accents', () => {
@@ -434,6 +423,42 @@ describe('regras das Ferramentas', () => {
         { termo: 'a&admin=true (x)' }
       );
       expect(chamada.corpo).toBe('q=a%26admin%3Dtrue+%28x%29&limit=5');
+      // Revisão 2: o cabeçalho mostrado é o declarado, não um JSON fixo.
+      expect(chamada.cabecalhos).toEqual([
+        'Content-Type: application/x-www-form-urlencoded',
+        'Accept: application/json',
+      ]);
+    });
+
+    it('previews url_encode already written in a form body only once', () => {
+      const chamada = montarChamada(
+        {
+          metodo: 'POST',
+          endereco: 'https://x.com/b',
+          corpo: 'q={{ termo | url_encode }}',
+          cabecalhos: [],
+          automaticos: [
+            { key: 'Content-Type', value: 'application/x-www-form-urlencoded' },
+          ],
+        },
+        { termo: 'a b' }
+      );
+      expect(chamada.corpo).toBe('q=a+b');
+    });
+
+    it('treats an empty Content-Type as JSON', () => {
+      const chamada = montarChamada(
+        {
+          metodo: 'POST',
+          endereco: 'https://x.com/b',
+          corpo: '{"q":"{{termo}}"}',
+          cabecalhos: [],
+          automaticos: [{ key: 'Content-Type', value: ' ' }],
+        },
+        { termo: 'a"b' }
+      );
+      expect(chamada.corpo).toBe('{"q":"a\\"b"}');
+      expect(chamada.cabecalhos).toContain('Content-Type: application/json');
     });
 
     it('previews another body type as written', () => {
