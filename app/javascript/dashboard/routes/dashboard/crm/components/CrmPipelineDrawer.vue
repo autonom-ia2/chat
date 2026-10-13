@@ -19,7 +19,7 @@ import FunilAnuncios from './funil/FunilAnuncios.vue';
 import FunilAnunciosFacebook from './funil/FunilAnunciosFacebook.vue';
 import FunilAnunciosGoogle from './funil/FunilAnunciosGoogle.vue';
 import FunilLado from './funil/FunilLado.vue';
-import { MODELOS, corDaPosicao } from './funil/funil';
+import { MODELOS, corLivre } from './funil/funil';
 import { useFunilMoldura } from './funil/useFunilMoldura';
 import { useFunilSugestao } from './funil/useFunilSugestao';
 import { useFunilModelo } from './funil/useFunilModelo';
@@ -317,7 +317,7 @@ const addStage = () => {
       count: form.stages.length + 1,
     }),
     description: '',
-    color: corDaPosicao(form.stages.length),
+    color: corLivre(form.stages.map(stage => stage.color)),
     funnel_stage_type: '',
     aiCriteria: '',
   });
