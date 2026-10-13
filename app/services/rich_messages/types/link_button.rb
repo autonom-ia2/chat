@@ -8,6 +8,7 @@ class RichMessages::Types::LinkButton
   BODY_MAX = 1024
   EDGE_MAX = 60
   URL_FORBIDDEN = [' ', '"', "'", '<', '>'].freeze
+  WEB_SCHEMES = %w[http https].freeze
   LINE_BREAKS = ["\n", "\r"].freeze
 
   BODY_BLANK = 'O botão de link precisa de um texto na mensagem.'.freeze
@@ -39,13 +40,14 @@ class RichMessages::Types::LinkButton
         header: (@header && { type: 'text', text: @header }),
         body: { text: body },
         footer: (@footer && { text: @footer }),
-        action: { name: 'cta_url', parameters: { display_text: @label, url: @url } }
+        action: { name: 'cta_url', parameters: { display_text: @label, url: web_address } }
       }.compact
     }
   end
 
-  # Só o rótulo e o endereço, com o endereço no fim da linha (os aplicativos o tornam clicável).
-  # Cabeçalho e rodapé não entram: são moldura do cartão, e em texto corrido confundem com o corpo.
+  # Só o rótulo e o endereço, com o endereço no fim da linha (os aplicativos o tornam clicável), como veio do
+  # robô (legível, com acento). Cabeçalho e rodapé não entram: são moldura do cartão, e em texto corrido confundem
+  # com o corpo.
   def fallback_text(_body)
     "#{@label}: #{@url}"
   end
@@ -66,14 +68,18 @@ class RichMessages::Types::LinkButton
   end
 
   def url_error
-    INVALID_URL unless @url.is_a?(String) && URL_FORBIDDEN.none? { |character| @url.include?(character) } && web_address?
+    INVALID_URL unless @url.is_a?(String) && URL_FORBIDDEN.none? { |character| @url.include?(character) } && web_address
   end
 
-  def web_address?
-    uri = URI.parse(@url)
-    uri.is_a?(URI::HTTP) && uri.host.present?
-  rescue URI::InvalidURIError
-    false
+  # O endereço normalizado em ASCII, como vai para a Meta: acento no caminho e na consulta vira %XX e domínio com
+  # acento vira punycode (`açaí.com.br` → `xn--aa-4iaz.com.br`). Nil quando não é endereço http(s) com host.
+  # Addressable porque a biblioteca padrão não converte domínio com acento; o próprio Chatwoot já o usa
+  # (Whatsapp::PopulateTemplateParametersService).
+  def web_address
+    uri = Addressable::URI.parse(@url).normalize
+    uri.to_s if WEB_SCHEMES.include?(uri.scheme) && uri.host.present?
+  rescue Addressable::URI::InvalidURIError
+    nil
   end
 
   def edge_error(text, error)

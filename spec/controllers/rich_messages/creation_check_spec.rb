@@ -56,6 +56,16 @@ describe RichMessages::CreationCheck, type: :request do
     end
   end
 
+  { 'true' => :success, 'false' => :unprocessable_entity }.each do |private_text, status|
+    it "reads private: \"#{private_text}\" sent as text (multipart) the way the message is saved" do
+      post api_v1_account_conversation_messages_url(account_id: account.id, conversation_id: conversation.display_id),
+           params: { content: 'Corpo', private: private_text, content_attributes: { rich_message: { type: 'carousel' } }.to_json },
+           headers: agent.create_new_auth_token
+
+      expect(response).to have_http_status(status)
+    end
+  end
+
   it 'does not refuse a private note, which never goes to the channel' do
     expect { create_message(content: 'Nota', private: true, content_attributes: { rich_message: { type: 'carousel' } }) }
       .to change(Message, :count).by(1)

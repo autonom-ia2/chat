@@ -13,7 +13,8 @@ describe 'Rich messages and the WhatsApp Híbrido fallback' do # rubocop:disable
       def initialize(_payload); end
       def error_for(_body); end
       def whatsapp_cloud_payload(_body) = { type: 'spec_mute', spec_mute: {} }
-      def fallback_text(_body); end
+      def self.text_version? = false
+      def fallback_text(_body) = ''
     end
   end
 
@@ -56,6 +57,13 @@ describe 'Rich messages and the WhatsApp Híbrido fallback' do # rubocop:disable
     expect(message.status).to eq('failed')
     expect(message.external_error).to include('131047')
     expect(message.content_attributes.keys).not_to include('whatsapp_transport', 'whatsapp_transport_fallback')
+  end
+
+  it 'does not let the router send by text a type that does not exist' do
+    message = accepted_by_meta(rich_message: { type: 'carousel' })
+
+    expect(WhatsappHybrid::Router.new(conversation).web_allowed_for?(message)).to be(false)
+    expect(WhatsappHybrid::Router.new(conversation).web_allowed_for?(accepted_by_meta({}))).to be(true)
   end
 
   it 'resends a link button as body, label and link' do

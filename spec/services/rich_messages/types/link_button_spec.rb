@@ -19,6 +19,22 @@ describe RichMessages::Types::LinkButton do
                      account: conversation.account)
   end
 
+  describe 'web addresses with accents' do
+    {
+      'https://exemplo.com.br/promoção' => 'https://exemplo.com.br/promo%C3%A7%C3%A3o',
+      'https://loja.com.br/coleção?cor=açaí' => 'https://loja.com.br/cole%C3%A7%C3%A3o?cor=a%C3%A7a%C3%AD',
+      'https://açaí.com.br' => 'https://xn--aa-4iaz.com.br/'
+    }.each do |typed, sent_to_meta|
+      it "accepts #{typed}, sends it to Meta in ASCII and keeps it readable in the text version" do
+        button = described_class.new('label' => 'Abrir', 'url' => typed)
+
+        expect(button.error_for(body)).to be_nil
+        expect(button.whatsapp_cloud_payload(body).dig(:interactive, :action, :parameters, :url)).to eq(sent_to_meta)
+        expect(button.fallback_text(body)).to eq("Abrir: #{typed}")
+      end
+    end
+  end
+
   it 'is the class of the link_button type' do
     expect(RichMessages.type_class('link_button')).to eq(described_class)
   end

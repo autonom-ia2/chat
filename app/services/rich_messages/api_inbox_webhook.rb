@@ -5,7 +5,9 @@
 # Mensagem que não pode sair não é entregue à caixa e, se de fato iria ao webhook dela, fica `failed` com o
 # motivo, como nos outros canais. Essa gravação emite um `message_updated`, que volta aqui, acha a mensagem já
 # `failed` e não grava de novo.
-# Nenhum erro daqui sobe ao dispatcher, para não tirar o evento dos outros listeners.
+# Nenhum erro daqui sobe ao dispatcher, para não tirar o evento dos outros listeners: vai ao rastreador de erros
+# e ao log, e a mensagem NÃO é entregue à caixa. Entregar o `content` cru mandaria ao cliente o corpo sem o
+# link, em silêncio; sem entrega, a mensagem fica parada e o erro aparece no rastreador.
 # Sem `rich_message`, a entrega original e mais nada.
 module RichMessages::ApiInboxWebhook
   MESSAGE_EVENTS = %w[message_created message_updated].freeze
@@ -36,6 +38,7 @@ module RichMessages::ApiInboxWebhook
     RichMessages.fail!(message, error) if !message.failed? && reaches_inbox_webhook?(payload, inbox)
     nil
   rescue StandardError => e
+    ChatwootExceptionTracker.new(e, account: inbox.account).capture_exception
     Rails.logger.error("[rich_messages] api_inbox_webhook message=#{payload[:id]} #{e.class}")
     nil
   end

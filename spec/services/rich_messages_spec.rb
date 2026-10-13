@@ -22,7 +22,7 @@ describe RichMessages do
       def fallback_text(_body)
         return '' if @code == 'bare'
 
-        "Carimbo <#{@code}> & cia" unless @code == 'mute'
+        "Carimbo <#{@code}> & cia"
       end
     end
   end
@@ -36,6 +36,7 @@ describe RichMessages do
 
   before do
     stub_const('RichMessages::Types::SpecStamp', spec_type)
+    stub_const('RichMessages::Types::SpecMute', Class.new(spec_type) { def self.text_version? = false })
     create(:message, message_type: :incoming, content: 'oi', conversation: conversation, inbox: inbox, account: inbox.account) if window_open
   end
 
@@ -101,14 +102,14 @@ describe RichMessages do
     it 'sends a type without a text version' do
       stub_request(:post, meta_url).to_return(meta_ok)
 
-      expect(deliver(outgoing({ type: 'spec_stamp', code: 'mute' })).status).not_to eq('failed')
+      expect(deliver(outgoing({ type: 'spec_mute', code: 'A1' })).status).not_to eq('failed')
     end
 
     context 'when the 24h window is closed' do
       let(:window_open) { false }
 
       it 'fails a type without a text version with the window error (no text transport can carry it)' do
-        expect_failed(deliver(outgoing({ type: 'spec_stamp', code: 'mute' })), I18n.t('errors.whatsapp.message_outside_messaging_window'))
+        expect_failed(deliver(outgoing({ type: 'spec_mute', code: 'A1' })), I18n.t('errors.whatsapp.message_outside_messaging_window'))
       end
     end
   end
@@ -239,7 +240,7 @@ describe RichMessages do
 
     it 'fails a type without a text version instead of sending only the body' do
       stub_request(:post, /api\.telegram\.org/)
-      message = message_on(:channel_telegram, { type: 'spec_stamp', code: 'mute' })
+      message = message_on(:channel_telegram, { type: 'spec_mute', code: 'A1' })
 
       Telegram::SendOnTelegramService.new(message: message).perform
 
@@ -261,7 +262,15 @@ describe RichMessages do
     it 'is true for a type with a text version, even a blank one, and false for a type without one' do
       expect(described_class.text_capable?(outgoing({ type: 'spec_stamp', code: 'A1' }))).to be(true)
       expect(described_class.text_capable?(outgoing({ type: 'spec_stamp', code: 'bare' }))).to be(true)
-      expect(described_class.text_capable?(outgoing({ type: 'spec_stamp', code: 'mute' }))).to be(false)
+      expect(described_class.text_capable?(outgoing({ type: 'spec_mute', code: 'A1' }))).to be(false)
+    end
+
+    it 'is false for a type that does not exist, so no text transport sends only its body' do
+      message = outgoing({ type: 'carousel' })
+
+      expect(described_class.text_capable?(message)).to be(false)
+      expect(described_class.text_capable?(outgoing({}))).to be(false)
+      expect(described_class.error_for(message)).to eq(described_class::UNKNOWN_TYPE)
     end
   end
 

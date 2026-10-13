@@ -129,8 +129,10 @@ describe RichMessages::ApiInboxWebhook do
     expect(message.reload.external_error).to eq(RichMessages::UNKNOWN_TYPE)
   end
 
-  it 'never lets an error out of the listener: logs it and skips the inbox webhook' do
+  it 'never lets an error out of the listener: reports it, logs it and does not deliver the raw body to the inbox' do
     message = outgoing
+    tracker = instance_double(ChatwootExceptionTracker, capture_exception: true)
+    allow(ChatwootExceptionTracker).to receive(:new).and_return(tracker)
     allow(RichMessages).to receive(:error_for).and_raise(ActiveRecord::ConnectionNotEstablished)
     allow(Rails.logger).to receive(:error)
 
@@ -139,6 +141,8 @@ describe RichMessages::ApiInboxWebhook do
 
     expect(payloads[:inbox]).to be_empty
     expect(payloads[:account].size).to eq(1)
+    expect(ChatwootExceptionTracker).to have_received(:new).with(instance_of(ActiveRecord::ConnectionNotEstablished), account: account)
+    expect(tracker).to have_received(:capture_exception)
     expect(Rails.logger).to have_received(:error)
       .with("[rich_messages] api_inbox_webhook message=#{message.id} ActiveRecord::ConnectionNotEstablished")
   end
@@ -148,7 +152,8 @@ describe RichMessages::ApiInboxWebhook do
       def initialize(_payload); end
       def error_for(_body); end
       def whatsapp_cloud_payload(_body) = {}
-      def fallback_text(_body); end
+      def self.text_version? = false
+      def fallback_text(_body) = ''
     end)
     message = outgoing(content_attributes: { rich_message: { type: 'spec_mute' } })
 
