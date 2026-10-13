@@ -152,9 +152,10 @@ RSpec.describe Ai::Redacao::Canais::WhatsappModelo do
   it 'no "mais curto", campo só do botão não conta como campo novo do corpo (PN12)' do
     base = 'Oi, {{cliente.primeiro_nome}}! Até {{publico.data}}, você tem {{publico.desconto}} de desconto na ' \
            '{{minha_empresa.nome}}. Quer aproveitar? Veja as ofertas no botão abaixo.'
-    # A 2ª opção real do PN12-A. A 1ª ("…{{cliente.primeiro_nome}}! {{publico.desconto}}…") cai por campos colados.
-    curto = 'Oi, {{cliente.primeiro_nome}}! Até {{publico.data}}, aproveite {{publico.desconto}} de desconto na ' \
-            '{{minha_empresa.nome}}. Confira as ofertas no botão.'
+    # Corpo com os mesmos 4 campos e corte medido de 45%. (As opções reais do PN12-A caem por outros motivos: a 1ª
+    # por campos colados, a 2ª por corte de 23%, abaixo dos 25%.)
+    curto = 'Oi, {{cliente.primeiro_nome}}! Até {{publico.data}}, tem {{publico.desconto}} de desconto na ' \
+            '{{minha_empresa.nome}}. Veja no botão.'
     responde([opcao(curto, botoes: [{ tipo: 'link', texto: 'Ver ofertas', chave: 'publico.link' }])])
 
     resultado = escrever(base: base, pedido: { melhorias: %w[mais_curto] },
@@ -162,6 +163,71 @@ RSpec.describe Ai::Redacao::Canais::WhatsappModelo do
                                    obrigatorias: [] })
 
     expect(resultado[:opcoes].pluck(:texto)).to eq([curto])
+  end
+
+  describe 'melhorar: link que vai do corpo para o botão (AG15, calibração r2)' do
+    let(:permitidas) { %w[cliente.primeiro_nome publico.desconto publico.link minha_empresa.nome] }
+    let(:base) do
+      '{{cliente.primeiro_nome}}, neste sábado as massas artesanais saem com {{publico.desconto}} de desconto para quem já é ' \
+        'cliente. É só acessar {{publico.link}} e garantir o seu. Bom apetite!'
+    end
+    let(:sem_link) { 'Oi, {{cliente.primeiro_nome}}! Neste sábado, massas com {{publico.desconto}} de desconto. Bom apetite!' }
+
+    it 'o campo que saiu do corpo para um botão de link continua presente' do
+      responde([opcao(sem_link, botoes: [{ tipo: 'link', texto: 'Pedir agora', chave: 'publico.link' }])])
+
+      expect(escrever(base: base, pedido: { melhorias: %w[mais_curto] })[:opcoes].pluck(:texto)).to eq([sem_link])
+    end
+
+    it 'sem o botão com o campo, tirar o link do corpo continua sendo campo removido' do
+      responde([opcao(sem_link, botoes: [{ tipo: 'link', texto: 'Pedir agora', chave: nil }])])
+
+      expect(escrever(base: base, pedido: { melhorias: %w[mais_curto] })[:opcoes]).to eq([])
+    end
+
+    it 'mesmo com o link no botão, campo novo no corpo do "mais curto" continua barrado' do
+      com_empresa = 'Oi, {{cliente.primeiro_nome}}! A {{minha_empresa.nome}} tem {{publico.desconto}} nas massas. Bom apetite!'
+      responde([opcao(com_empresa, botoes: [{ tipo: 'link', texto: 'Pedir agora', chave: 'publico.link' }])])
+
+      expect(escrever(base: base, pedido: { melhorias: %w[mais_curto] })[:opcoes]).to eq([])
+    end
+  end
+
+  # Calibração r2: o "mais curto" é medido no código (texto fixo, sem os campos), não pelo que a IA diz que cortou.
+  describe 'melhorar: corte medido no "mais curto"' do
+    let(:permitidas) { %w[cliente.primeiro_nome publico.data publico.horario minha_empresa.nome] }
+    let(:dois_campos) { "Olá, {{cliente.primeiro_nome}}! #{'a' * 70} {{publico.data}}. #{'b' * 26}" }
+
+    # Texto com dois campos e `fixo` letras fora dos campos.
+    def com_fixo(fixo)
+      "Olá, {{cliente.primeiro_nome}}! #{'a' * (fixo - 16)} {{publico.data}}. Tchau!"
+    end
+
+    it 'descarta abaixo de 30%; aceita a partir de 30%' do
+      fixo_base = described_class.tamanho_fixo(dois_campos)
+      pouco = com_fixo((fixo_base * 0.8).round)
+      bastante = com_fixo((fixo_base * 0.65).round)
+      responde([opcao(pouco), opcao(bastante)])
+
+      resultado = escrever(base: dois_campos, pedido: { melhorias: %w[mais_curto] })
+
+      expect(described_class.corte(dois_campos, pouco)).to be < 0.30
+      expect(described_class.corte(dois_campos, bastante)).to be >= 0.30
+      expect(resultado[:opcoes].pluck(:texto)).to eq([bastante])
+    end
+
+    it 'com 4 campos ou mais na base, aceita a partir de 25%' do
+      quatro = 'Oi {{cliente.primeiro_nome}}! Aqui é do {{minha_empresa.nome}}. Seu horário está marcado para ' \
+               '{{publico.data}} às {{publico.horario}}. Se não puder vir, responda aqui que a gente remarca, tá bom? Beijos!'
+      opcao_27 = 'Oi, {{cliente.primeiro_nome}}! Aqui é do {{minha_empresa.nome}}. Horário: dia {{publico.data}} às ' \
+                 '{{publico.horario}}. Não pode vir? Responda que a gente remarca. Beijos!'
+      corte = described_class.corte(quatro, opcao_27)
+      expect(corte).to be_between(0.25, 0.30)
+      responde([opcao(opcao_27)])
+
+      expect(escrever(base: quatro, pedido: { melhorias: %w[mais_curto] })[:opcoes].pluck(:texto)).to eq([opcao_27])
+      expect(escrever(base: quatro, pedido: { melhorias: %w[mais_claro] })[:opcoes].pluck(:texto)).to eq([opcao_27])
+    end
   end
 
   # Condição do Agendamento para o PN12: a chave proibida num botão continua pega (a soma corpo + botões vai para a

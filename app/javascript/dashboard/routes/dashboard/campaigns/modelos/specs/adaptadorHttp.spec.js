@@ -482,6 +482,7 @@ describe('criar e melhorar com IA (#1333)', () => {
       tipo: 'divulgacao',
       continuaDivulgacao: true,
       oQueMudou: 'Ficou mais curto.',
+      corte: null,
     });
     expect(resposta.texto[1]).toEqual({ t: 'campo', v: 'nome_cliente' });
   });

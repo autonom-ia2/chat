@@ -30,3 +30,9 @@ conferência do código: no "Mais curto" de um texto com 4 campos, ela descartav
 | AG11 | "Manter como aviso de serviço" ficava impossível quando a oferta estava num campo: tirar o campo descartava a opção | Em "manter como serviço" e "corrigir recusa", a opção pode tirar campo da base. Campo fora da lista continua barrado |
 | PN12 | O campo de um botão (`publico.link`) contava como "campo novo no mais curto" | A comparação com a base olha só o corpo (`Canais::Base`, com OK do Agendamento). A lista permitida continua conferindo a soma de corpo, cabeçalho e botões |
 | AG15 | O nome sugerido fora do formato descartava a opção | O nome é normalizado (minúsculas, sem acento, "_", até 40) e a opção fica |
+
+**Ajustes da calibração r2 (v4), no código:**
+- **AG15:** o campo da base que sai do corpo e vai para um botão de link ou telefone continua presente.
+- **"Mais curto" medido:** o código mede o texto fixo (sem os campos), da base para a opção. Abaixo de 30% de corte, a
+  opção cai (`corte_pequeno`); com 4 campos ou mais na base, o mínimo é 25%. Na gaveta, a tela mostra o corte medido
+  no lugar do "o que mudou" escrito pela IA.

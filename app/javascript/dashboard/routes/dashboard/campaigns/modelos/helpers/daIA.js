@@ -125,5 +125,18 @@ export const opcaoDaIA = (opcao, indice, exemplo) => {
   };
 };
 
+// "Mais curto" medido como no servidor: letras fora dos campos, antes e depois.
+// A porcentagem que a tela mostra é esta, nunca a que a IA escreveu.
+const letrasFixas = pedacos =>
+  pedacos
+    .filter(pedaco => pedaco.t !== 'campo')
+    .reduce((total, pedaco) => total + pedaco.v.length, 0);
+
+export const corteMedido = (antes, depois) => {
+  const total = letrasFixas(antes);
+  if (!total) return 0;
+  return Math.round((1 - letrasFixas(depois) / total) * 100);
+};
+
 export const tipoDaCategoria = categoria =>
   TIPO_DA_CATEGORIA[categoria] || 'divulgacao';

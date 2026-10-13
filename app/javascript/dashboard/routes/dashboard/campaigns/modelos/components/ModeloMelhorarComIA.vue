@@ -168,7 +168,14 @@ const melhorar = async () => {
           {{ $t('MODELOS_WHATSAPP.IA.NAO_DA_AVISO') }}
         </p>
         <p
-          v-if="resposta.oQueMudou"
+          v-if="resposta.corte !== null && resposta.corte !== undefined"
+          data-corte-medido
+          class="mb-0 text-sm text-n-slate-11"
+        >
+          {{ $t('MODELOS_WHATSAPP.IA.CORTE', { n: resposta.corte }) }}
+        </p>
+        <p
+          v-else-if="resposta.oQueMudou"
           data-o-que-mudou
           class="mb-0 text-sm text-n-slate-11"
         >

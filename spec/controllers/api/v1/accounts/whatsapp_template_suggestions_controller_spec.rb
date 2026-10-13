@@ -58,14 +58,14 @@ RSpec.describe 'Api::V1::Accounts::WhatsappTemplateSuggestions', type: :request 
     melhor = 'Oi, {{cliente.primeiro_nome}}! Lembrete: {{horario.data_hora}}. Qualquer dúvida, responda aqui.'
     responde([melhor])
 
-    pedir(mode: 'improve', text: texto, improvements: %w[mais_curto], category: 'aviso', meta_reason: 'INVALID_FORMAT')
+    pedir(mode: 'improve', text: texto, improvements: %w[mais_claro], category: 'aviso', meta_reason: 'INVALID_FORMAT')
 
     expect(response).to have_http_status(:ok)
     expect(response.parsed_body.dig('payload', 'options', 0, 'text')).to eq(melhor)
     expect(client).to have_received(:create) do |args|
       entrada = JSON.parse(args[:input])
       expect(entrada['base']).to eq(texto)
-      expect(entrada['pedido']).to eq('melhorias' => %w[mais_curto], 'observacao' => nil,
+      expect(entrada['pedido']).to eq('melhorias' => %w[mais_claro], 'observacao' => nil,
                                       'recusa_da_meta' => { 'motivo' => 'INVALID_FORMAT' })
       expect(entrada['chaves']['permitidas'].pluck('chave')).to include('horario.data_hora', 'publico.valor')
     end

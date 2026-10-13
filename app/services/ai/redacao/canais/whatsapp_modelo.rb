@@ -27,6 +27,13 @@ class Ai::Redacao::Canais::WhatsappModelo < Ai::Redacao::Canais::Base
   # Melhorias em que o campo da base pode ser o problema (a oferta num campo, o dado proibido): o comum.md manda tirar
   # e dizer em "o_que_mudou". Nas outras ("mais_curto", "mais_claro") os campos da base continuam obrigatórios.
   PODE_TIRAR_CAMPO = %w[manter_como_servico corrigir_recusa].freeze
+  # "Mais curto" medido no texto fixo (sem os campos): pelo menos 30% menor; 25% quando a base tem 4 campos ou mais,
+  # que sobra pouco texto para cortar (calibração r2, PN04). A explicação da IA não conta.
+  CORTE_MINIMO = 0.30
+  CORTE_MINIMO_COM_MUITOS_CAMPOS = 0.25
+  MUITOS_CAMPOS = 4
+  # Botões em que um campo do corpo da base pode ir morar (o link vai no botão, AG15).
+  BOTOES_COM_CAMPO = [LINK, TELEFONE].freeze
 
   class << self
     def nome
@@ -53,6 +60,31 @@ class Ai::Redacao::Canais::WhatsappModelo < Ai::Redacao::Canais::Base
       )
     end
 
+    # Calibração r2 (AG15): o campo da base que saiu do corpo e foi para um botão de link ou telefone continua presente.
+    # O "mais curto" segue sem campo novo no corpo.
+    def validar(opcao, chaves:, limites:, base: nil, pedido: nil)
+      motivo = super
+      return motivo unless motivo == :campo_da_base_removido && campos_da_base_presentes?(opcao, chaves, base)
+
+      da_base = chaves_da_base(base) & Array(chaves[:permitidas])
+      return :campo_novo_no_mais_curto if mais_curto?(pedido) && !(Ai::Redacao::Chaves.extrair(opcao['texto'].to_s) - da_base).empty?
+
+      problema_do_canal(opcao, chaves: chaves, limites: limites, base: base, pedido: pedido)
+    end
+
+    # Letras fora dos campos: o que o "mais curto" mede.
+    def tamanho_fixo(texto)
+      Ai::Redacao::Chaves.partes(texto.to_s).reject(&:chave?).sum { |parte| parte.valor.length }
+    end
+
+    # Quanto o texto fixo encolheu da base para a opção (0,3 = 30% menor).
+    def corte(base, texto)
+      antes = tamanho_fixo(texto_da_base(base))
+      return 0.0 if antes.zero?
+
+      1 - tamanho_fixo(texto).fdiv(antes)
+    end
+
     # O nome é cosmético (a pessoa troca na tela): fora do formato vira formato, sem descartar a opção. Minúsculas,
     # acento tirado, o resto que não é letra ou número vira "_", sem "_" repetido nem nas pontas, até 40.
     def nome_normalizado(nome)
@@ -63,10 +95,28 @@ class Ai::Redacao::Canais::WhatsappModelo < Ai::Redacao::Canais::Base
 
     private
 
-    def problema_do_canal(opcao, chaves:, **)
+    def problema_do_canal(opcao, chaves:, base: nil, pedido: nil, **)
       whatsapp = whatsapp_de(opcao)
       problema_do_corpo(opcao['texto'].to_s) || problema_do_cabecalho(whatsapp['cabecalho']) ||
-        problema_do_rodape(whatsapp['rodape']) || problema_dos_botoes(botoes_de(whatsapp), chaves)
+        problema_do_rodape(whatsapp['rodape']) || problema_dos_botoes(botoes_de(whatsapp), chaves) ||
+        problema_do_corte(opcao['texto'].to_s, base, pedido)
+    end
+
+    def problema_do_corte(texto, base, pedido)
+      return if base.blank? || !mais_curto?(pedido)
+
+      muitos = Ai::Redacao::Chaves.extrair(texto_da_base(base)).uniq.size >= MUITOS_CAMPOS
+      :corte_pequeno if corte(base, texto) < (muitos ? CORTE_MINIMO_COM_MUITOS_CAMPOS : CORTE_MINIMO)
+    end
+
+    def texto_da_base(base)
+      (base.is_a?(Hash) ? base.to_h.stringify_keys['texto'] : base).to_s
+    end
+
+    def campos_da_base_presentes?(opcao, chaves, base)
+      nos_botoes = botoes_de(whatsapp_de(opcao)).filter_map { |botao| botao['chave'] if BOTOES_COM_CAMPO.include?(botao['tipo']) }
+      presentes = Ai::Redacao::Chaves.extrair(opcao['texto'].to_s) + nos_botoes
+      ((chaves_da_base(base) & Array(chaves[:permitidas])) - presentes).empty?
     end
 
     # Calibração 13/10 (AG11): em "manter como serviço" e "corrigir recusa" a opção pode tirar campo da base. Campo

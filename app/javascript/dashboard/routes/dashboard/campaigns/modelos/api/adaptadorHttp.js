@@ -8,6 +8,7 @@ import { SITUACOES_FORA_DA_LISTA, modeloDaMeta } from './daMeta';
 import { corpoParaAlterar, corpoParaCriar } from '../helpers/paraMeta';
 import { motivoDaPausa } from '../helpers/motivoDaPausa';
 import {
+  corteMedido,
   opcaoDaIA,
   passaNaRegra,
   pedacosParaTexto,
@@ -434,6 +435,9 @@ const melhorarComIA = async ({ conteudo, pedido, tipo, travado, recusa }) => {
     texto: opcao.texto,
     tipo: previsto,
     oQueMudou: opcao.item.changes || '',
+    // No "mais curto", o corte medido (%), no lugar do que a IA diz que cortou.
+    corte:
+      pedido === 'mais_curto' ? corteMedido(conteudo.texto, opcao.texto) : null,
     motivo: opcao.item.reason || '',
     continuaDivulgacao: pedido === 'manter_aviso' && previsto === 'divulgacao',
   };

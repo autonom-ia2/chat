@@ -1,4 +1,5 @@
 import {
+  corteMedido,
   campoDaChave,
   chaveDoCampo,
   passaNaRegra,
@@ -71,5 +72,16 @@ describe('daIA', () => {
         'aviso'
       )
     ).toBe(false);
+  });
+
+  it('measures the cut on the fixed text only, like the server', () => {
+    const antes = textoParaPedacos(
+      'Oi, {{cliente.primeiro_nome}}! Até amanhã, tudo certo.'
+    );
+    const depois = textoParaPedacos(
+      'Oi, {{cliente.primeiro_nome}}! Até amanhã.'
+    );
+    expect(corteMedido(antes, depois)).toBe(41);
+    expect(corteMedido([], depois)).toBe(0);
   });
 });
