@@ -46,7 +46,10 @@ class WhatsappHybrid::SessionManager
     status = STATUS_MAP.fetch(remote['status'].to_s, remote.blank? ? 'disconnected' : 'connecting')
     phone = remote.dig('me', 'id').to_s.split('@').first.to_s.delete('^0-9').presence
     apply_status!(status, phone: phone)
-    refresh_capping! if status == 'connected'
+    if status == 'connected'
+      refresh_capping!
+      refresh_timelock!
+    end
     status
   end
 
@@ -55,6 +58,16 @@ class WhatsappHybrid::SessionManager
     WhatsappHybrid::Capping.new(connection).apply!(@client.capping(connection.session_name))
   rescue Waha::Client::Error => e
     Rails.logger.warn("[whatsapp_hybrid] capping refresh failed inbox=#{connection.inbox_id}: #{e.class}")
+  end
+
+  # O WhatsApp pode limitar conversas novas por algumas horas; a aba mostra até quando (chat#1480).
+  def refresh_timelock!
+    timelock = WhatsappHybrid::Timelock.new(connection)
+    return if timelock.fresh?
+
+    timelock.apply!(@client.timelock(connection.session_name))
+  rescue Waha::Client::Error => e
+    Rails.logger.warn("[whatsapp_hybrid] timelock refresh failed inbox=#{connection.inbox_id}: #{e.class}")
   end
 
   # Grava o estado vindo do motor (consulta ou webhook) e avisa os administradores uma vez por queda.

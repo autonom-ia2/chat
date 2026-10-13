@@ -94,10 +94,15 @@ class Api::V1::Accounts::WhatsappHybridConnectionsController < Api::V1::Accounts
       disabled_origins: connection.disabled_origins,
       rate_limit_per_minute: connection.rate_limit_per_minute,
       campaign_rate_limit_per_minute: WhatsappHybrid::RateLimit::CAMPAIGN_PER_MINUTE,
-      capping: capping_payload(connection),
+      **limits_payload(connection),
       stats: { days: WhatsappHybrid::Stats::DAYS, by_origin: WhatsappHybrid::Stats.summary(connection) },
       qr: qr_code
     }
+  end
+
+  # O que o WhatsApp está limitando neste número: o ciclo de conversas novas e o limite temporário (chat#1480).
+  def limits_payload(connection)
+    { capping: capping_payload(connection), timelock: WhatsappHybrid::Timelock.new(connection).payload }
   end
 
   def capping_payload(connection)

@@ -890,6 +890,10 @@
         "NEAR": "WhatsApp warned that this number is close to the limit of new conversations ({used} of {total}). Sending through WhatsApp API slowed down by itself. The cycle ends on {end}.",
         "BLOCKED": "WhatsApp blocked new conversations through WhatsApp API until {end}. Replies to people you already talk to keep going; for new contacts use an approved template."
       },
+      "TIMELOCK": {
+        "UNTIL": "WhatsApp limited new conversations through WhatsApp API on this number until {end}. Replying to people who already talk to you keeps working; for new contacts, use an approved template. Do not reconnect or generate a new QR code meanwhile: the limit lifts on its own.",
+        "NO_END": "WhatsApp limited new conversations through WhatsApp API on this number for now. Replying to people who already talk to you keeps working; for new contacts, use an approved template. Do not reconnect or generate a new QR code meanwhile: the limit lifts on its own."
+      },
       "STATS": {
         "TITLE": "Last {days} days through WhatsApp API",
         "EMPTY": "No message went through WhatsApp API yet.",

@@ -8,7 +8,7 @@ import NextButton from 'dashboard/components-next/button/Button.vue';
 import Switch from 'dashboard/components-next/switch/Switch.vue';
 import Checkbox from 'dashboard/components-next/checkbox/Checkbox.vue';
 import { qrSecondsLeft, formatSeconds } from 'dashboard/helper/wahaQrWindow';
-import { stoppedKeyFor } from './whatsappHybridState';
+import { stoppedKeyFor, timelockEndFor } from './whatsappHybridState';
 
 // Aba "WhatsApp API" da caixa WhatsApp Oficial (chat#1067): a mesma caixa ganha um segundo
 // caminho de envio, usado quando a janela oficial de 24 horas está fechada.
@@ -76,6 +76,21 @@ const cappingEnd = computed(() =>
     ? new Date(capping.value.cycle_end * 1000).toLocaleDateString()
     : '—'
 );
+
+// Limite temporário de conversas novas (chat#1480): `now` anda a cada segundo, então o aviso some na hora certa.
+const timelockEnd = computed(() => timelockEndFor(state.value, now.value));
+const timelockText = computed(() => {
+  if (!timelockEnd.value) return '';
+  if (timelockEnd.value === true) return tk('TIMELOCK.NO_END');
+  return tk('TIMELOCK.UNTIL', {
+    end: timelockEnd.value.toLocaleString([], {
+      day: '2-digit',
+      month: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    }),
+  });
+});
 
 // Últimos 7 dias, por origem: o que saiu, o que falhou e o que esperou a vez.
 const statsRows = computed(() => {
@@ -456,6 +471,14 @@ onBeforeUnmount(() => {
           }}
         </p>
       </div>
+    </section>
+
+    <section
+      v-if="connected && !wrongNumber && timelockEnd"
+      class="flex items-start gap-2 px-4 py-3 text-sm rounded-xl text-n-amber-11 bg-n-amber-3"
+    >
+      <span class="i-lucide-hourglass size-4 mt-0.5 shrink-0" />
+      <span>{{ timelockText }}</span>
     </section>
 
     <section

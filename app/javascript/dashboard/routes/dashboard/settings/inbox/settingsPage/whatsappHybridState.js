@@ -6,3 +6,12 @@ export const stoppedKeyFor = ({ status, phone } = {}) => {
   if (status === 'failed' && phone) return 'REMOVED';
   return 'EXPIRED';
 };
+
+// chat#1480 — até quando o WhatsApp limitou as conversas novas deste número.
+// Devolve a data do fim, `true` quando o limite está ativo sem prazo informado, ou null sem limite.
+export const timelockEndFor = ({ timelock } = {}, now = Date.now()) => {
+  if (!timelock?.active) return null;
+  if (!timelock.ends_at) return true;
+  const end = new Date(timelock.ends_at * 1000);
+  return end.getTime() > now ? end : null;
+};
