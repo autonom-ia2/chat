@@ -110,6 +110,58 @@ RSpec.describe 'Conversation typing delivered to the channel', type: :request do
       expect(job).not_to have_been_enqueued
     end
 
+    context 'when the conversation is on a WhatsApp API (WAHA) inbox' do
+      let(:channel) { create(:channel_api, account: account, additional_attributes: { 'provider' => 'waha', 'session' => '5511888880000' }) }
+      let(:contact) { create(:contact, account: account, custom_attributes: { 'waha_whatsapp_chat_id' => '5511999990000@c.us' }) }
+      let(:start_url) { 'https://waha.example/api/startTyping' }
+      let(:stop_url) { 'https://waha.example/api/stopTyping' }
+      let(:json) { { status: 200, headers: { 'Content-Type' => 'application/json' }, body: '{}' } }
+
+      around { |example| with_modified_env(WAHA_API_URL: 'https://waha.example', WAHA_API_KEY: 'waha-key') { example.run } }
+
+      before do
+        stub_request(:post, start_url).to_return(json)
+        stub_request(:post, stop_url).to_return(json)
+      end
+
+      it 'starts and stops typing on the engine with an AgentBot token' do
+        perform_enqueued_jobs(only: job) do
+          toggle(headers: { api_access_token: agent_bot.access_token.token }, deliver_to_channel: true)
+          toggle(headers: { api_access_token: agent_bot.access_token.token }, deliver_to_channel: true, typing_status: 'off')
+        end
+
+        expect(response).to have_http_status(:ok)
+        [start_url, stop_url].each do |url|
+          expect(WebMock).to have_requested(:post, url).once.with(body: { session: '5511888880000', chatId: '5511999990000@c.us' }.to_json)
+        end
+      end
+
+      it 'starts typing on the engine with a user token' do
+        perform_enqueued_jobs(only: job) { toggle(headers: { api_access_token: agent.access_token.token }, deliver_to_channel: true) }
+
+        expect(response).to have_http_status(:ok)
+        expect(WebMock).to have_requested(:post, start_url).once
+      end
+
+      it 'enqueues nothing for an AgentBot of another inbox of the account' do
+        other_bot = create(:agent_bot, account: account)
+        create(:agent_bot_inbox, inbox: create(:inbox, account: account), agent_bot: other_bot)
+
+        toggle(headers: { api_access_token: other_bot.access_token.token }, deliver_to_channel: true)
+
+        expect(response).to have_http_status(:ok)
+        expect(job).not_to have_been_enqueued
+      end
+
+      it 'still answers success when the engine refuses' do
+        stub_request(:post, start_url).to_return(status: 500, body: 'boom')
+
+        perform_enqueued_jobs(only: job) { toggle(headers: { api_access_token: agent_bot.access_token.token }, deliver_to_channel: true) }
+
+        expect(response).to have_http_status(:ok)
+      end
+    end
+
     context 'when the conversation is on Instagram' do
       let(:channel) { create(:channel_instagram, account: account) }
       let(:contact_inbox) { create(:contact_inbox, contact: contact, inbox: inbox, source_id: 'ig-contact-1') }
