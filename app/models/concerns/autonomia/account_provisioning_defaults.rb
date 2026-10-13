@@ -5,6 +5,7 @@ module Autonomia::AccountProvisioningDefaults
 
   DEFAULT_FEATURE_FLAGS = 8_950_126_033_336_532_983
   DEFAULT_ACCOUNT_USER_ID = 1
+  CHATWOOT_INTERNAL_FEATURES = Featurable::FEATURE_LIST.select { |feature| feature['chatwoot_internal'] }.pluck('name').freeze
 
   included do
     before_create :apply_autonomia_default_feature_flags, if: :autonomia_account_defaults_enabled?
@@ -13,8 +14,19 @@ module Autonomia::AccountProvisioningDefaults
 
   private
 
+  # O número fixo é a base da coluna `feature_flags` (#49). Os padrões por nome do ACCOUNT_LEVEL_FEATURE_DEFAULTS, que
+  # o Featurable ligou antes, valem por cima dele: sem isso, uma flag desta coluna ligada para contas novas (companies,
+  # #1175) era apagada aqui. As internas do Chatwoot (`chatwoot_internal` no features.yml) nunca nascem ligadas.
   def apply_autonomia_default_feature_flags
     self.feature_flags = autonomia_default_feature_flags
+    enable_features(*(autonomia_named_default_features - CHATWOOT_INTERNAL_FEATURES))
+  end
+
+  def autonomia_named_default_features
+    config = InstallationConfig.find_by(name: 'ACCOUNT_LEVEL_FEATURE_DEFAULTS')
+    return [] if config.blank?
+
+    config.value.select { |feature| feature[:enabled] }.pluck(:name)
   end
 
   def ensure_autonomia_default_account_user

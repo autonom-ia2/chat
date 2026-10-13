@@ -18,16 +18,19 @@ Nunca por `rails runner`.
 De onde vem o estado de uma conta nova (`before_create`):
 
 - `Featurable#enable_default_features` liga o que estiver `enabled` no `ACCOUNT_LEVEL_FEATURE_DEFAULTS`
-  (InstallationConfig), que segue o `enabled` do `config/features.yml`. As flags do fork nascem `enabled: false`, menos `instagram_assisted_onboarding`.
-- `Autonomia::AccountProvisioningDefaults` depois **sobrescreve a coluna `feature_flags` inteira** com um número fixo
-  (`AUTONOMIA_DEFAULT_ACCOUNT_FEATURE_FLAGS`, padrão `8950126033336532983`). Não é uma lista de nomes, e não toca na
-  coluna `feature_flags_ext_1`.
-- **Todas as flags nossas estão em `feature_flags_ext_1`.** Então só chega a uma conta nova a que estiver `enabled`
-  no `ACCOUNT_LEVEL_FEATURE_DEFAULTS`. Conferido em produção em 09/10/2026, nas duas stacks: Relacionamentos,
-  `meta_ads_hub`, `email_template_import`, `delayed_automations` e `companies` estão `enabled: false`; só
-  `instagram_assisted_onboarding` está `true`. Por isso a conta 23 do autonomia (criada em 08/10) nasceu com o
-  Instagram assistido e sem Relacionamentos nem Anúncios da Meta. A correção (decidir quais flags toda conta nova
-  recebe, e por onde) fica em Issue própria.
+  (InstallationConfig), que segue o `enabled` do `config/features.yml` só para itens novos: o ConfigLoader do deploy
+  não sobrescreve o valor já gravado. Mudar o padrão de uma flag existente é por migration com
+  `FeatureFlagRollout.padrao!` (`lib/feature_flag_rollout.rb`).
+- `Autonomia::AccountProvisioningDefaults` depois põe na coluna `feature_flags` um número fixo como base
+  (`AUTONOMIA_DEFAULT_ACCOUNT_FEATURE_FLAGS`, padrão `8950126033336532983`) e **religa por cima os padrões por nome**
+  do `ACCOUNT_LEVEL_FEATURE_DEFAULTS`, menos as `chatwoot_internal` (#1175). Não toca na `feature_flags_ext_1`.
+  Antes do #1175 o número apagava tudo o que o padrão por nome tinha ligado nessa coluna (era o caso do `companies`).
+- Desde o #1175 (migration `20261025100000`) a conta nova nasce com as que, segundo a Orquestração em 13/10/2026,
+  já estão ligadas em todas as contas: `data_import`,
+  `delayed_automations`, Relacionamentos (as três), `meta_ads_hub`, `email_template_import`,
+  `whatsapp_templates_journey`, `crm_configurar_caixas` e `companies`, além de `campaign_open_window_text`
+  (`20261024100001`) e das que já eram padrão. Antes, a conta 23 do autonomia (criada em 08/10) nasceu com o Instagram
+  assistido e sem Relacionamentos nem Anúncios da Meta.
 - Super Admin → liga e desliga por conta.
 - Lista de contas por variável de ambiente (`INSTAGRAM_TESTER_ALLOWED_ACCOUNT_IDS` e afins) → não aparece no SQL;
   conferir a variável.
@@ -121,5 +124,5 @@ Cada linha precisa de uma decisão do Rodrigo: liberar para todas, manter em pil
 | `email_template_import` | autonomia | nenhuma | pendente | |
 | `customer_base` (dona: sessão Base de Clientes, #1240) | hub2you | 16 | piloto | 24/10/2026 (proposta) |
 | `crm_booking_v2` (dona: sessão Agendamento CRM, #1187) | as duas | hub2you 1 (desde 11/10/2026) e 16 (desde 10/10/2026); autonomia 1 (desde 11/10/2026) | piloto: Hub2You 1 e 16 + Autonom.ia 1. **Condição para ligar em contas novas: #1303 no ar** (teto global no desenho da prévia do link, conferência do tipo real das logos, inclusive a de fundo escuro, e da foto; identidade salva validada). Consentimento decidido pelo Rodrigo em 11/10 (#1271): marcação pela equipe = o cliente combinou o horário com a atendente; "Avisar o cliente" vem ligado com a frase de orientação, o aviso diz quem marcou e o motivo fica registrado na reunião (`metadata.notice_basis`). Aviso por WAHA só em conta com o app da WAHA instalado (definições `waha_whatsapp_*` presentes); o teste real do #1275 é na conta 16 (HUBBER COMUNIDADE); o fallback por telefone na resposta não tem prova com envio real. Falta o teste do Rodrigo pelo playbook para decidir a liberação nas demais contas | |
-| flags que faltam na conta 23 do autonomia | autonomia | 23 | pendente (conta nova não recebe flag de `feature_flags_ext_1`) | |
+| flags que faltam na conta 23 do autonomia | autonomia | 23 | pendente: a causa (conta nova sem as flags do fork) foi corrigida no #1175 só para contas novas; conferir a 23 em produção | |
 | flags que faltam na conta 5 do hub2you | hub2you | 5 | pendente | |
