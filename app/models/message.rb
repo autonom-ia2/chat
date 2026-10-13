@@ -343,6 +343,7 @@ class Message < ApplicationRecord
     dispatch_create_events
     send_reply
     claim_conversation_for_bot
+    claim_waiting_conversation_for_person
     execute_message_template_hooks
     update_contact_activity
   end
@@ -364,6 +365,30 @@ class Message < ApplicationRecord
     # A mensagem já está gravada e enviada: falhar aqui não pode pular os passos seguintes nem devolver erro a quem
     # postou (o n8n reenviaria e o cliente receberia a resposta duas vezes). A próxima resposta do robô tenta de novo.
     ChatwootExceptionTracker.new(e, account: account).capture_exception
+  end
+
+  # Pessoa respondendo numa conversa que o robô já passou e está à espera de pessoa fica com ela (#1499, decisão do
+  # Rodrigo em 13/10, opção b): senão a fila do motor de entrega a daria a outro enquanto o cliente fala com quem
+  # respondeu. Enquanto o robô ainda atende (sem marca de espera), responder não tira o robô: só "Atribuir a mim".
+  # Atribuir encerra as marcas de espera e tira o robô (callbacks da conversa). Mesma trava do robô assumindo.
+  def claim_waiting_conversation_for_person
+    return unless public_person_reply?
+
+    Conversation.transaction do
+      locked = Conversation.lock.find(conversation_id)
+      next unless locked.open? && locked.assignee_id.blank?
+      next unless locked.bot_handoff_waiting? || locked.crm_delivery_pending?
+
+      locked.update!(assignee: sender)
+    end
+  rescue ActiveRecord::ActiveRecordError => e
+    # A mensagem já está gravada e enviada; a conversa segue na fila do motor, que a entrega a alguém.
+    ChatwootExceptionTracker.new(e, account: account).capture_exception
+  end
+
+  # Resposta pública de uma pessoa da conta (não automação, campanha nem eco do app nativo).
+  def public_person_reply?
+    human_response? && !private? && sender.is_a?(User) && account.users.exists?(id: sender_id)
   end
 
   # Resposta pública de robô ao cliente; disparo de campanha (qualquer das duas marcas) não conta.
