@@ -24,7 +24,7 @@ const heading = computed(() => {
   <SharedCard
     bubble-name="rich-contact"
     icon="i-teenyicons-user-circle-solid"
-    icon-bg-color="bg-[#D6409F]"
+    icon-bg-color="bg-n-ruby-9"
     :heading="heading"
     :title="textOf(richMessage.name)"
     :detail="textOf(richMessage.phone)"

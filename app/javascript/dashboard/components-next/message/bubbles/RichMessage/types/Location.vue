@@ -9,6 +9,8 @@ import SharedCard from '../SharedCard.vue';
 const { contentAttributes, sender } = useMessageContext();
 const { t } = useI18n();
 
+// O mesmo endereço de mapa está na versão em texto do envio
+// (app/services/rich_messages/types/location.rb, MAP_LINK): mudou um, mude o outro.
 const MAP_LINK = 'https://maps.google.com/?q=';
 
 // Tudo vem de quem chamou a API: só texto entra na tela, e só número finito na faixa vira coordenada.
@@ -36,7 +38,7 @@ const heading = computed(() => {
   <SharedCard
     bubble-name="rich-location"
     icon="i-ph-navigation-arrow-fill"
-    icon-bg-color="bg-[#0D9B8A]"
+    icon-bg-color="bg-n-teal-9"
     :heading="heading"
     :title="textOf(richMessage.name)"
     :detail="textOf(richMessage.address)"

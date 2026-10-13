@@ -30,7 +30,7 @@ describe('bolha da localização enviada', () => {
     expect(wrapper.find('iframe').exists()).toBe(false);
   });
 
-  it('deixa o endereço longo quebrar linha em vez de cortar', () => {
+  it('o endereço leva a classe que quebra linha, não a que corta', () => {
     const wrapper = montarRica(Location, { richMessage: UNIDADE });
     const address = wrapper
       .findAll('div')
@@ -51,6 +51,20 @@ describe('bolha da localização enviada', () => {
     expect(link.classes()).toContain('min-h-11');
     expect(link.text()).toContain('Ver no mapa');
   });
+
+  it.each([
+    [90, -180, 'https://maps.google.com/?q=90,-180'],
+    [-90, 180, 'https://maps.google.com/?q=-90,180'],
+  ])(
+    'cria o link de mapa nos limites da faixa (%s, %s)',
+    (latitude, longitude, href) => {
+      const link = montarRica(Location, {
+        richMessage: { ...UNIDADE, latitude, longitude },
+      }).get('a');
+
+      expect(link.attributes('href')).toBe(href);
+    }
+  );
 
   it.each([
     ['latitude em texto', { latitude: '-23.5' }],

@@ -21,6 +21,7 @@
     },
     "LOCATION_REQUEST": {
       "BUTTON": "Send location",
+      "BUTTON_HINT": "(button shown in the customer's WhatsApp)",
       "CAPTION": "We asked the customer where they are"
     },
     "OPTIONS": {

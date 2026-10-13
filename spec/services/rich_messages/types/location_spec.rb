@@ -64,6 +64,16 @@ describe RichMessages::Types::Location do
       expect(location(name: 'a' * 100, address: 'a' * 300).error_for('')).to be_nil
     end
 
+    [['an empty', ''], ['a blank', '   ']].each do |title, blank|
+      it "treats #{title} name and address as absent, not as an error" do
+        blank_fields = location(name: blank, address: blank)
+
+        expect(blank_fields.error_for('')).to be_nil
+        expect(blank_fields.whatsapp_cloud_payload('')).to eq(type: 'location', location: { latitude: '-23.5489', longitude: '-46.6388' })
+        expect(blank_fields.fallback_text('')).to eq(map_link)
+      end
+    end
+
     {
       'a body' => [{}, 'Olá', 'BODY_NOT_ALLOWED'],
       'a missing latitude' => [{ latitude: nil }, '', 'LATITUDE_INVALID'],
@@ -75,11 +85,9 @@ describe RichMessages::Types::Location do
       'a longitude in text' => [{ longitude: '-46.6' }, '', 'LONGITUDE_INVALID'],
       'a longitude above 180' => [{ longitude: 180.5 }, '', 'LONGITUDE_INVALID'],
       'a longitude below -180' => [{ longitude: -181 }, '', 'LONGITUDE_INVALID'],
-      'a blank name' => [{ name: ' ' }, '', 'NAME_INVALID'],
       'a name that is not text' => [{ name: 7 }, '', 'NAME_INVALID'],
       'a name above 100 characters' => [{ name: 'a' * 101 }, '', 'NAME_INVALID'],
       'a name with a line break' => [{ name: "Unidade\nCentro" }, '', 'NAME_INVALID'],
-      'a blank address' => [{ address: '' }, '', 'ADDRESS_INVALID'],
       'an address above 300 characters' => [{ address: 'a' * 301 }, '', 'ADDRESS_INVALID'],
       'an address with a line break' => [{ address: "Rua A\rCentro" }, '', 'ADDRESS_INVALID']
     }.each do |title, (changes, body, error)|
@@ -166,5 +174,29 @@ describe RichMessages::Types::Location do
     message = outgoing(conversation, content_attributes: { rich_message: rich_message.merge(name: 'Loja <Centro> & cia', address: nil) })
 
     expect(message.outgoing_content).to eq("Loja &lt;Centro&gt; &amp; cia\n#{map_link}")
+  end
+
+  describe 'creation through the API', type: :request do
+    let(:channel) { create(:channel_whatsapp, provider: 'whatsapp_cloud', sync_templates: false, validate_provider_config: false) }
+    let(:conversation) { create(:conversation, inbox: channel.inbox, account: channel.account) }
+    let(:agent) { create(:user, account: channel.account, role: :administrator) }
+
+    def create_message(params)
+      post api_v1_account_conversation_messages_url(account_id: channel.account.id, conversation_id: conversation.display_id),
+           params: params, headers: agent.create_new_auth_token, as: :json
+    end
+
+    it 'creates a location without body' do
+      expect { create_message(content: '', content_attributes: { rich_message: rich_message }) }.to change(Message, :count).by(1)
+
+      expect(response).to have_http_status(:success)
+    end
+
+    it 'answers 422 with the reason and creates nothing for a location with a body' do
+      expect { create_message(content: 'Nossa unidade:', content_attributes: { rich_message: rich_message }) }.not_to change(Message, :count)
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq(described_class::BODY_NOT_ALLOWED)
+    end
   end
 end

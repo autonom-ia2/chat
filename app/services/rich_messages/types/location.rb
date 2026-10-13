@@ -2,7 +2,8 @@
 #   { "type": "location", "latitude": -23.5489, "longitude": -46.6388, "name": "Unidade Centro", "address": "Rua ..." }
 # `latitude` (-90 a 90) e `longitude` (-180 a 180) são obrigatórias e chegam como número JSON, já calculadas por
 # quem chama (o agente nativo converte endereço em coordenadas antes). `name` e `address` são opcionais, em uma
-# linha só; a Meta não dá limite para eles, os 100 e 300 caracteres são nossos, para caber no cartão.
+# linha só; a Meta não dá limite para eles, os 100 e 300 caracteres são nossos, para caber no cartão. Opcional em
+# branco ("" ou só espaços) conta como ausente.
 # Na Meta o formato não tem corpo: a mensagem vai com `content` vazio, e corpo não vazio é recusado.
 class RichMessages::Types::Location
   NAME_MAX = 100
@@ -10,6 +11,8 @@ class RichMessages::Types::Location
   LATITUDE_RANGE = (-90..90)
   LONGITUDE_RANGE = (-180..180)
   LINE_BREAKS = ["\n", "\r"].freeze
+  # O mesmo endereço de mapa está na bolha do atendente
+  # (app/javascript/dashboard/components-next/message/bubbles/RichMessage/types/Location.vue): mudou um, mude o outro.
   MAP_LINK = 'https://maps.google.com/?q='.freeze
 
   BODY_NOT_ALLOWED = 'A localização vai sem texto: deixe a mensagem vazia e ponha nome e endereço nos campos dela.'.freeze
@@ -21,8 +24,8 @@ class RichMessages::Types::Location
   def initialize(payload)
     @latitude = payload['latitude']
     @longitude = payload['longitude']
-    @name = payload['name']
-    @address = payload['address']
+    @name = absent_if_blank(payload['name'])
+    @address = absent_if_blank(payload['address'])
   end
 
   def error_for(body)
@@ -54,8 +57,12 @@ class RichMessages::Types::Location
     value.is_a?(Numeric) && value.finite? && range.cover?(value)
   end
 
+  def absent_if_blank(value)
+    value unless value.is_a?(String) && value.blank?
+  end
+
   def optional_line?(text, max)
-    text.nil? || (text.is_a?(String) && text.strip.present? && text.length <= max && LINE_BREAKS.none? { |line_break| text.include?(line_break) })
+    text.nil? || (text.is_a?(String) && text.length <= max && LINE_BREAKS.none? { |line_break| text.include?(line_break) })
   end
 
   # Notação decimal comum, sem perder casas e sem notação científica (0.00001, nunca 1.0e-05).

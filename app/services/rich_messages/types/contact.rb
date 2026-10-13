@@ -3,7 +3,7 @@
 # `name` obrigatório, em uma linha, até 100 caracteres (a Meta não dá limite; o número é nosso). `phone` obrigatório,
 # começando com `+` e o código do país, de 8 a 15 dígitos (o máximo do padrão internacional), aceitando espaço,
 # hífen, ponto e parênteses; sai para a Meta como foi escrito. `wa_id` opcional, só dígitos: com ele o cliente vê
-# os botões de conversa; sem ele, a Meta mostra "Convidar para o WhatsApp".
+# os botões de conversa; sem ele, a Meta mostra "Convidar para o WhatsApp". `wa_id` em branco conta como ausente.
 # Na Meta o formato não tem corpo: a mensagem vai com `content` vazio, e corpo não vazio é recusado.
 class RichMessages::Types::Contact
   NAME_MAX = 100
@@ -20,7 +20,8 @@ class RichMessages::Types::Contact
   def initialize(payload)
     @name = payload['name']
     @phone = payload['phone']
-    @wa_id = payload['wa_id']
+    wa_id = payload['wa_id']
+    @wa_id = wa_id unless wa_id.is_a?(String) && wa_id.blank?
   end
 
   def error_for(body)

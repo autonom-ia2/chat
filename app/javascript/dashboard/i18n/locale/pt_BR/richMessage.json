@@ -21,6 +21,7 @@
     },
     "LOCATION_REQUEST": {
       "BUTTON": "Enviar localização",
+      "BUTTON_HINT": "(botão que aparece no WhatsApp do cliente)",
       "CAPTION": "Pedimos ao cliente onde ele está"
     },
     "OPTIONS": {

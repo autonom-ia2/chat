@@ -46,6 +46,15 @@ describe RichMessages::Types::Contact do
       end
     end
 
+    [['an empty', ''], ['a blank', '  ']].each do |title, blank|
+      it "treats #{title} WhatsApp ID as absent, not as an error" do
+        blank_wa_id = contact(wa_id: blank)
+
+        expect(blank_wa_id.error_for('')).to be_nil
+        expect(blank_wa_id.whatsapp_cloud_payload('')).to eq(type: 'contacts', contacts: [card])
+      end
+    end
+
     it 'accepts a name of 100 characters and phones of 8 and 15 digits' do
       expect(contact(name: 'a' * 100, phone: '+12345678').error_for(nil)).to be_nil
       expect(contact(phone: '+123456789012345').error_for('')).to be_nil
@@ -131,6 +140,32 @@ describe RichMessages::Types::Contact do
 
       expect(request).to have_been_requested.once
       expect(message.reload.status).not_to eq('failed')
+    end
+  end
+
+  describe 'creation through the API', type: :request do
+    let(:channel) { create(:channel_whatsapp, provider: 'whatsapp_cloud', sync_templates: false, validate_provider_config: false) }
+    let(:conversation) { create(:conversation, inbox: channel.inbox, account: channel.account) }
+    let(:agent) { create(:user, account: channel.account, role: :administrator) }
+
+    def create_message(params)
+      post api_v1_account_conversation_messages_url(account_id: channel.account.id, conversation_id: conversation.display_id),
+           params: params, headers: agent.create_new_auth_token, as: :json
+    end
+
+    it 'creates a contact without body' do
+      expect { create_message(content: '', content_attributes: { rich_message: rich_message }) }.to change(Message, :count).by(1)
+
+      expect(response).to have_http_status(:success)
+    end
+
+    it 'answers 422 with the reason and creates nothing for an invalid phone' do
+      invalid = rich_message.merge(phone: '11 4000-0473')
+
+      expect { create_message(content: '', content_attributes: { rich_message: invalid }) }.not_to change(Message, :count)
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq(described_class::PHONE_INVALID)
     end
   end
 end
