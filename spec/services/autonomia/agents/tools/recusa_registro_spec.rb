@@ -221,7 +221,7 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
         espera: { motivo: 'conferencia_recusou' },
         dispara: -> { bound_com_conferencia('Ainda preciso do CPF.').execute(call, delivery: delivery) }
       },
-      'bound.rb#run_http#1' => {
+      'bound.rb#recusa_http#1' => {
         espera: { motivo: 'tool_http_error', slug: 'consultar_estoque', detalhe: '503' },
         dispara: lambda {
           bound_http_que_falha_com('tool_http_error: 503 Service Unavailable').execute({ 'arguments' => '{}' }, delivery: delivery)

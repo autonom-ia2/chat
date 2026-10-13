@@ -93,7 +93,7 @@ class Api::V1::Accounts::CampaignJourney::CampaignsController < Api::V1::Account
   # inbox_id, scheduled_at, message and variable_defaults.
   def whatsapp_cloud_params
     params.require(:campaign).permit(
-      :title, :inbox_id, :scheduled_at, :message, template_params: {}, variable_bindings: {}, variable_defaults: {}
+      :title, :inbox_id, :scheduled_at, :message, :free_text, template_params: {}, variable_bindings: {}, variable_defaults: {}
     ).to_h
   end
 

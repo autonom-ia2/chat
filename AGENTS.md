@@ -188,3 +188,25 @@ de novo. Snapshot novo só quando muda a base (outro HEAD, migration nova).
 
 Por que a regra existe: em dois dias as rodadas de teste criaram cerca de 120
 snapshots de ~360 MB cada. O disco do M4 chegou a 98% e travou o trabalho.
+
+## n8n: onde está a credencial (regra do Rodrigo, 13/10/2026)
+
+Os robôs de atendimento rodam no n8n em `https://auto.autonomia.site`. Quem
+precisar ler fluxo ou execução usa a API do n8n com a chave que já existe:
+
+- Arquivo: `/Users/rodrigosilva/dev/projetos.noindex/api_agger/.env.local`
+  (reserva: `/Users/rodrigosilva/dev/projetos.noindex/email_rodrigo/.env.local`).
+- Variáveis: `N8N_API_KEY` e `N8N_BASE_URL` (no reserva, `N8N_URL`).
+- Uso: cabeçalho `X-N8N-API-KEY` em `https://auto.autonomia.site/api/v1/...`.
+- A chave de `projetos.noindex/Fluxo_n8n/.env.local` não vale mais (HTTP 401).
+
+Regras:
+
+- Ler a chave do arquivo dentro do comando; nunca imprimir, colar em chat,
+  commitar ou copiar para este repositório.
+- Só leitura por padrão. Alterar, ativar ou executar fluxo exige OK do Rodrigo.
+- Fluxo exportado pode trazer token real em `pinData` e em nós com valor fixo:
+  mascarar antes de mostrar qualquer trecho.
+- O ID do número e o token da Meta usados pelos robôs não ficam no n8n: vêm do
+  Autonomia Settings (`api-settings.autonomia.site`, campos `api-key-evolution`
+  e `token_meta`). Trocar a conta do WhatsApp de uma caixa exige atualizar lá.

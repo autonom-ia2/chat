@@ -47,6 +47,9 @@ const CREATE_ERRORS = {
   carousel_media_invalid: 'CAROUSEL_MEDIA_INVALID',
   carousel_button_required: 'CAROUSEL_FIELD_REQUIRED',
   carousel_body_required: 'CAROUSEL_FIELD_REQUIRED',
+  // Fork #1335: a mensagem escrita para quem falou nas últimas 24 h.
+  free_text_invalid: 'FREE_TEXT_INVALID',
+  free_text_disabled: 'FREE_TEXT_DISABLED',
 };
 
 export const createErrorKey = error => {

@@ -20,8 +20,14 @@ class Ai::Redacao::Canais::WhatsappTexto < Ai::Redacao::Canais::Base
   end
 
   def self.problema_do_canal(opcao, **)
-    fixo = Ai::Redacao::Chaves.partes(opcao['texto']).reject(&:chave?).map(&:valor).join(' ').downcase
-    :link_inventado if ENDERECO.any? { |marca| fixo.include?(marca) } || fixo.split.any? { |palavra| dominio?(palavra) }
+    :link_inventado if link_inventado?(opcao['texto'])
+  end
+
+  # Endereço escrito à mão no texto fixo (fora dos campos). Público: a campanha da conversa aberta (#1335) confere o
+  # texto final da pessoa com a mesma regra ("link só por campo").
+  def self.link_inventado?(texto)
+    fixo = Ai::Redacao::Chaves.partes(texto).reject(&:chave?).map(&:valor).join(' ').downcase
+    ENDERECO.any? { |marca| fixo.include?(marca) } || fixo.split.any? { |palavra| dominio?(palavra) }
   end
 
   # "agenda.exemplo.com", "bit.ly/abc": ponto entre duas letras numa palavra. Fim de frase ("hoje.") não conta.

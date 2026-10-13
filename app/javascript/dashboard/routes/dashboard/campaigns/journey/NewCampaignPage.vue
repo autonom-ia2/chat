@@ -78,6 +78,12 @@ import {
   pendencias,
 } from '../modelos/helpers/formatoNaCampanha';
 import { rotuloDoCampo } from '../modelos/helpers/campos';
+// Fork (#1335, protótipo): conversa aberta — quem falou nas últimas 24 h recebe texto escrito.
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
+import { useConversaAberta } from '../modelos/janela/useConversaAberta';
+import { previa } from '../modelos/janela/textoComCampos';
+import ConversaAberta from '../modelos/janela/components/ConversaAberta.vue';
+import RevisaoDaConversaAberta from '../modelos/janela/components/RevisaoDaConversaAberta.vue';
 import {
   buildEmailPayload,
   buildSmsPayload,
@@ -308,6 +314,75 @@ const reach = computed(() =>
     ? reachOn(draft.value.channel, audience.value.channels)
     : 0
 );
+// Fork (#1335): conversa aberta no WhatsApp oficial. O gate é só a flag
+// campaign_open_window_text (não depende da ponte de Modelos).
+const isFeatureEnabledonAccount = useMapGetter(
+  'accounts/isFeatureEnabledonAccount'
+);
+const conversaAbertaLigada = computed(() =>
+  isFeatureEnabledonAccount.value(
+    accountId.value,
+    FEATURE_FLAGS.CAMPAIGN_OPEN_WINDOW_TEXT
+  )
+);
+const comConversaAberta = computed(
+  () =>
+    conversaAbertaLigada.value &&
+    draft.value.channel === CAMPAIGN_CHANNELS.WHATSAPP_OFFICIAL &&
+    Boolean(draft.value.inboxId) &&
+    Boolean(template.value) &&
+    // Código de acesso nunca vai como texto livre.
+    template.value.category !== 'AUTHENTICATION'
+);
+const conversaAberta = useConversaAberta(
+  computed(() => ({
+    publicoId: comConversaAberta.value ? draft.value.audienceId : null,
+    caixaId: comConversaAberta.value ? draft.value.inboxId : null,
+    categoria: template.value?.category || '',
+  }))
+);
+// Divulgação pelo modelo escolhido (categoria da Meta): mostra o aviso.
+const modeloDeDivulgacao = computed(
+  () => template.value?.category === 'MARKETING'
+);
+const nomeDoModelo = computed(
+  () => modeloEscolhido.value?.nome || template.value?.name || ''
+);
+// O cartão do WhatsApp oficial deixa de dizer "só para quem ainda não falou".
+const dicasDosCanais = computed(() =>
+  conversaAbertaLigada.value
+    ? {
+        [CAMPAIGN_CHANNELS.WHATSAPP_OFFICIAL]: t(
+          'MODELOS_WHATSAPP.JANELA.CANAL_HINT'
+        ),
+      }
+    : {}
+);
+// Exemplo de cada campo na prévia: a primeira pessoa do público.
+const exemplosDoTexto = computed(() => ({
+  'cliente.primeiro_nome':
+    sample.value?.first_name || sample.value?.name?.split(' ')[0] || 'Ana',
+  'cliente.nome': sample.value?.name || 'Ana Souza',
+  'minha_empresa.nome': currentAccount.value?.name || remetente.value,
+  'minha_empresa.site': currentAccount.value?.domain || '',
+  ...Object.fromEntries(
+    conversaAberta.campos.value
+      .filter(campo => campo.chave.startsWith('publico.'))
+      .map(campo => [
+        campo.chave,
+        sample.value?.extra_values?.[campo.rotulo] || campo.rotulo,
+      ])
+  ),
+}));
+const textoDaConversaAberta = computed(() =>
+  comConversaAberta.value ? draft.value.textoNaConversaAberta || '' : ''
+);
+const textoNaRevisao = () =>
+  textoDaConversaAberta.value
+    ? t('MODELOS_WHATSAPP.JANELA.REVISAO.CONTEUDO_TEXTO', {
+        texto: previa(textoDaConversaAberta.value, exemplosDoTexto.value),
+      })
+    : '';
 const inboxName = computed(
   () =>
     (forms.inboxes.value || []).find(inbox => inbox.id === draft.value.inboxId)
@@ -394,7 +469,8 @@ const reviewBlocks = computed(() => [
     step: 2,
     title: t(`${NS}.REVIEW.CONTENT`),
     main: messageMain(),
-    detail: '',
+    // Fork (#1335): a mensagem escrita para quem falou nas últimas 24 h.
+    detail: textoNaRevisao(),
   },
 ]);
 const crmTag = computed(() =>
@@ -596,6 +672,8 @@ const SUBMITTERS = {
               timeZone: timeZone.value,
             })
           : {},
+        // Fork (#1335): a mensagem escrita para quem falou nas últimas 24 h.
+        freeText: textoDaConversaAberta.value,
       })
     ),
   [CAMPAIGN_CHANNELS.WHATSAPP_API]: () => {
@@ -908,6 +986,7 @@ onBeforeUnmount(() => {
           v-else-if="draft.step === 2 && audience"
           :audience="audience"
           :channels="channels"
+          :channel-hints="dicasDosCanais"
           :draft="draft"
           :inbox-options="inboxOptions"
           :template-options="templateOptions"
@@ -971,6 +1050,16 @@ onBeforeUnmount(() => {
               @update="formato => update({ formato })"
             />
           </template>
+          <template v-if="comConversaAberta" #janela>
+            <ConversaAberta
+              :janela="conversaAberta"
+              :texto="draft.textoNaConversaAberta || ''"
+              :exemplos="exemplosDoTexto"
+              :divulgacao="modeloDeDivulgacao"
+              tem-modelo
+              @update="update"
+            />
+          </template>
           <template v-if="modeloEscolhido" #previa>
             <PontePrevia
               :modelo="modeloEscolhido"
@@ -1004,8 +1093,15 @@ onBeforeUnmount(() => {
           @submit="submit"
           @test-send="sendTestToMe"
         >
-          <template v-if="modeloEscolhido" #modelo>
+          <template v-if="modeloEscolhido || comConversaAberta" #modelo>
+            <RevisaoDaConversaAberta
+              v-if="comConversaAberta && conversaAberta.contagem.value"
+              :janela="conversaAberta"
+              :nome-do-modelo="nomeDoModelo"
+              :tem-texto="Boolean(textoDaConversaAberta)"
+            />
             <RevisaoDoModelo
+              v-else-if="modeloEscolhido"
               :modelo="modeloEscolhido"
               :recebem="forms.preview.value?.receive ?? reach"
               :formato="draft.formato || {}"

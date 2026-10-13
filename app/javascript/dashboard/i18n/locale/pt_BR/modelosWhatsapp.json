@@ -844,6 +844,74 @@
       "PRONTO": "“{nome}” ficou pronto para usar.",
       "RECUSADO": "“{nome}” foi recusado."
     },
+    "JANELA": {
+      "TITULO": "Quem falou com você nas últimas 24 horas",
+      "CONTANDO": "Conferindo quem falou com você…",
+      "NINGUEM": "Ninguém deste público falou com você nas últimas 24 horas. Todos recebem o modelo.",
+      "DENTRO": "{n} pessoa falou com você | {n} pessoas falaram com você",
+      "DENTRO_PODE": "Pode receber uma mensagem escrita por você, sem modelo.",
+      "DENTRO_RECEBE_TEXTO": "Recebe a sua mensagem. {custo}",
+      "FORA": "{n} pessoa não falou | {n} pessoas não falaram",
+      "FORA_MODELO": "Recebe o modelo escolhido acima.",
+      "FORA_SEM_MODELO": "Escolha um modelo acima para quem não falou com você.",
+      "ECONOMIA": "Escrevendo para elas você economiza cerca de {valor}.",
+      "ESCREVER": "Escrever para {n} pessoa | Escrever para {n} pessoas",
+      "ALTERAR": "Alterar a mensagem",
+      "TODOS_MODELO": "Mandar o modelo para todos",
+      "CONFERIMOS": "Na hora de enviar, conferimos de novo. Quem não tiver falado com você nas últimas 24 horas recebe o modelo.",
+      "GAVETA": {
+        "TITULO": "Mensagem para {n} pessoa | Mensagem para {n} pessoas",
+        "O_QUE": "O que você quer dizer?",
+        "O_QUE_EXEMPLO": "Ex.: avisar que chegou a coleção nova e que dá para reservar respondendo",
+        "JEITO": "Jeito de falar",
+        "TONS": {
+          "simpatico": "Simpático",
+          "curto": "Curto",
+          "formal": "Formal"
+        },
+        "ESCREVER_PARA_MIM": "Escrever para mim",
+        "SOZINHO": "Prefiro escrever sozinho",
+        "ESCREVENDO": "Escrevendo…",
+        "ERRO": "Não consegui escrever agora. Tente de novo ou escreva do seu jeito.",
+        "TENTAR_DE_NOVO": "Tentar de novo",
+        "ESCOLHA": "Escolha a que mais combina com você. Depois dá para mudar.",
+        "USAR_ESTA": "Usar esta",
+        "OUTRAS": "Escrever outras",
+        "SUA_MENSAGEM": "Sua mensagem",
+        "MELHORAR": "Quer ajustar?",
+        "MELHORIAS": {
+          "mais_curta": "Mais curta",
+          "mais_simpatica": "Mais simpática",
+          "mais_clara": "Mais clara"
+        },
+        "DESFAZER": "Desfazer",
+        "COMO_CHEGA": "Como chega no WhatsApp",
+        "CANCELAR": "Cancelar",
+        "PRONTO": "Pronto",
+        "LINK_DIGITADO": "Link não pode ser digitado no texto. Use o botão do campo (ex.: o link da oferta, vindo do público).",
+        "PARECE_LINK": "Parece um link. Para link, use o botão do campo (ex.: o link da oferta).",
+        "LONGO": "A mensagem passou de {max} letras. Deixe mais curta."
+      },
+      "REVISAO": {
+        "TITULO": "Quanto custa",
+        "TEXTO": "{n} pessoa recebe a sua mensagem | {n} pessoas recebem a sua mensagem",
+        "GRATIS": "Grátis",
+        "MODELO": "{n} pessoa recebe o modelo “{nome}” ({preco} cada) | {n} pessoas recebem o modelo “{nome}” ({preco} cada)",
+        "TOTAL": "Total",
+        "ECONOMIZOU": "Você economiza {valor} escrevendo para quem falou com você.",
+        "ESTIMATIVA": "É uma estimativa: na hora de enviar conferimos de novo quem falou com você nas últimas 24 horas.",
+        "CONTEUDO_TEXTO": "Quem falou com você nas últimas 24 horas recebe: “{texto}”"
+      },
+      "CUSTO_ESCRITA": {
+        "gratis": "Grátis (dentro das {limite} do mês: sobram {sobram}).",
+        "passa": "{gratis} saem grátis (sobram {sobram} das {limite} do mês); as outras {pagas} custam {preco} cada: {valor}.",
+        "sem_franquia": "Não conseguimos ver as grátis do mês: conte com até {valor} ({preco} cada)."
+      },
+      "CANAL_HINT": "Modelo aprovado pela Meta. Quem falou com você nas últimas 24 horas pode receber uma mensagem escrita por você.",
+      "AVISO_PROPAGANDA": "Mensagem de propaganda demais pode levar a bloqueio. Escreva algo útil para a pessoa.",
+      "FALHOU": "Não conseguimos conferir quem falou com você agora.",
+      "TENTAR_DE_NOVO": "Tentar de novo"
+    },
     "SAUDE": {
       "TITULO": "Como este modelo está indo",
       "PERIODO": "Últimos 30 dias",

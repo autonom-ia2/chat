@@ -34,12 +34,40 @@ class CampaignJourney::WhatsappCampaignCreator < CampaignJourney::AudienceCampai
   def validate_message!
     raise Error.new('template_not_found', 'The template is not approved in this inbox') unless template
 
+    validate_free_text!
+
     variables.validate!(@campaign_import, template_keys: CampaignJourney::TemplateVariableKeys.keys(template))
     template_params
   rescue CampaignJourney::VariableBindings::Error => e
     raise Error.new(e.message, 'The message variables do not match the template or the audience', e.details.presence)
   rescue Whatsapp::Templates::HeaderMedia::Invalid => e
     raise Error.new(e.code, 'The template needs what Meta asks at send time (header or card file, coupon code, offer expiration)')
+  end
+
+  # #1335: a mensagem escrita para quem falou com a caixa nas últimas 24 h, conferida antes de gravar (flag da conta).
+  def validate_free_text!
+    return if free_text.blank?
+    raise Error.new('free_text_disabled', 'Free text is not enabled for this account') unless CampaignJourney::ConversaAberta.enabled?(@account)
+    # Código de acesso (AUTHENTICATION) nunca vai como texto livre.
+    raise Error.new('free_text_invalid', 'The free text cannot be sent', { reason: 'authentication_template' }) if authentication_template?
+
+    permitidas = CampaignJourney::ConversaAberta::Texto.chaves_permitidas(@campaign_import.extra_columns)
+    reason = CampaignJourney::ConversaAberta::Texto.problema(free_text, permitidas: permitidas)
+    raise Error.new('free_text_invalid', 'The free text cannot be sent', { reason: reason.to_s }) if reason
+  end
+
+  def create_campaign_and_link!
+    campaign = super
+    CampaignFreeText.create!(account: @account, campaign: campaign, content: free_text) if free_text.present?
+    campaign
+  end
+
+  def free_text
+    @attributes[:free_text].to_s.strip
+  end
+
+  def authentication_template?
+    template.to_h['category'].to_s.casecmp?('AUTHENTICATION')
   end
 
   # #1382: a media header without a link uses the template's saved file at send time; a typed link is checked here.

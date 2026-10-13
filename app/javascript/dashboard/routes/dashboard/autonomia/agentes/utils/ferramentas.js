@@ -53,18 +53,6 @@ const semRepetir = nomes => nomes.filter((n, i) => nomes.indexOf(n) === i);
 export const variaveisEm = texto =>
   semRepetir(pedacosComVariavel(texto).map(v => v.nome));
 
-// Depois do "?", espaço ou acento num valor sem url_encode quebram a URL no backend.
-export const variaveisSemCodificar = endereco => {
-  const texto = String(endereco ?? '');
-  const interrogacao = texto.indexOf('?');
-  if (interrogacao < 0) return [];
-  return semRepetir(
-    pedacosComVariavel(texto.slice(interrogacao + 1))
-      .filter(v => !v.filtros.includes('url_encode'))
-      .map(v => v.nome)
-  );
-};
-
 const ehIpV4 = host =>
   host.split('.').every(parte => parte !== '' && [...parte].every(ehDigito));
 

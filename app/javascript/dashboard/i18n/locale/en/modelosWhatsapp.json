@@ -844,6 +844,74 @@
       "PRONTO": "“{nome}” is ready to use.",
       "RECUSADO": "“{nome}” was rejected."
     },
+    "JANELA": {
+      "TITULO": "Who talked to you in the last 24 hours",
+      "CONTANDO": "Checking who talked to you…",
+      "NINGUEM": "No one in this audience talked to you in the last 24 hours. Everyone gets the template.",
+      "DENTRO": "{n} person talked to you | {n} people talked to you",
+      "DENTRO_PODE": "Can get a message written by you, without a template.",
+      "DENTRO_RECEBE_TEXTO": "Gets your message. {custo}",
+      "FORA": "{n} person did not talk to you | {n} people did not talk to you",
+      "FORA_MODELO": "Gets the template chosen above.",
+      "FORA_SEM_MODELO": "Choose a template above for the people who did not talk to you.",
+      "ECONOMIA": "Writing to them saves you about {valor}.",
+      "ESCREVER": "Write to {n} person | Write to {n} people",
+      "ALTERAR": "Change the message",
+      "TODOS_MODELO": "Send the template to everyone",
+      "CONFERIMOS": "We check again when sending. Anyone who has not talked to you in the last 24 hours gets the template.",
+      "GAVETA": {
+        "TITULO": "Message for {n} person | Message for {n} people",
+        "O_QUE": "What do you want to say?",
+        "O_QUE_EXEMPLO": "E.g.: let them know the new collection arrived and they can reserve by replying",
+        "JEITO": "Tone",
+        "TONS": {
+          "simpatico": "Friendly",
+          "curto": "Short",
+          "formal": "Formal"
+        },
+        "ESCREVER_PARA_MIM": "Write it for me",
+        "SOZINHO": "I'd rather write it myself",
+        "ESCREVENDO": "Writing…",
+        "ERRO": "I could not write it now. Try again or write it your way.",
+        "TENTAR_DE_NOVO": "Try again",
+        "ESCOLHA": "Pick the one that suits you best. You can change it later.",
+        "USAR_ESTA": "Use this one",
+        "OUTRAS": "Write others",
+        "SUA_MENSAGEM": "Your message",
+        "MELHORAR": "Want to adjust it?",
+        "MELHORIAS": {
+          "mais_curta": "Shorter",
+          "mais_simpatica": "Friendlier",
+          "mais_clara": "Clearer"
+        },
+        "DESFAZER": "Undo",
+        "COMO_CHEGA": "How it arrives on WhatsApp",
+        "CANCELAR": "Cancel",
+        "PRONTO": "Done",
+        "LINK_DIGITADO": "Links cannot be typed in the text. Use the field button (e.g. the offer link, from the audience).",
+        "PARECE_LINK": "This looks like a link. For links, use the field button (e.g. the offer link).",
+        "LONGO": "The message is over {max} characters. Make it shorter."
+      },
+      "REVISAO": {
+        "TITULO": "How much it costs",
+        "TEXTO": "{n} person gets your message | {n} people get your message",
+        "GRATIS": "Free",
+        "MODELO": "{n} person gets the template “{nome}” ({preco} each) | {n} people get the template “{nome}” ({preco} each)",
+        "TOTAL": "Total",
+        "ECONOMIZOU": "You save {valor} by writing to the people who talked to you.",
+        "ESTIMATIVA": "This is an estimate: when sending we check again who talked to you in the last 24 hours.",
+        "CONTEUDO_TEXTO": "People who talked to you in the last 24 hours get: “{texto}”"
+      },
+      "CUSTO_ESCRITA": {
+        "gratis": "Free (within this month's {limite}: {sobram} left).",
+        "passa": "{gratis} go out free ({sobram} left of this month's {limite}); the other {pagas} cost {preco} each: {valor}.",
+        "sem_franquia": "We could not read this month's free messages: count on up to {valor} ({preco} each)."
+      },
+      "CANAL_HINT": "Template approved by Meta. People who talked to you in the last 24 hours can get a message written by you.",
+      "AVISO_PROPAGANDA": "Too much advertising can get the number blocked. Write something useful for the person.",
+      "FALHOU": "We could not check who talked to you right now.",
+      "TENTAR_DE_NOVO": "Try again"
+    },
     "SAUDE": {
       "TITULO": "How this template is doing",
       "PERIODO": "Last 30 days",

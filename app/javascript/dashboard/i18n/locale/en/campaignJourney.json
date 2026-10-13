@@ -413,7 +413,9 @@
           "CAROUSEL_CARDS_MISMATCH": "The template changed its number of cards. Choose the template again.",
           "CAROUSEL_MEDIA_REQUIRED": "A card photo is missing. Choose the photo of each card.",
           "CAROUSEL_MEDIA_INVALID": "A card photo cannot be used: use a JPG or PNG up to 5 MB (or an MP4 up to 16 MB for video).",
-          "CAROUSEL_FIELD_REQUIRED": "A card of this template has a field the campaign does not fill yet."
+          "CAROUSEL_FIELD_REQUIRED": "A card of this template has a field the campaign does not fill yet.",
+          "FREE_TEXT_INVALID": "The written message cannot go like this. Go back to Message and check the text (links only through the field button).",
+          "FREE_TEXT_DISABLED": "The written message is not enabled for this account. Remove it to send only the template."
         },
         "OPTED_OUT": "Refused messages",
         "REASONS": {
