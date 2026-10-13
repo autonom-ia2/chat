@@ -295,12 +295,17 @@ export const modoDaEtapa = etapa => {
   return etapa.handoff?.enabled === true ? ETAPA_PROPRIA : ETAPA_DESLIGADA;
 };
 
+const jeitoDoFluxo = fluxo => (fluxo === 'r3_invite' ? 'convite' : 'na_hora');
+
 // Para a lista de funis: o que vale hoje, contando as etapas. Funil desligado com uma etapa do seu jeito chama a
 // equipe nessa etapa, então não é "desligada". Com a assistente do funil desligada, ninguém é chamado. O jeito
 // (na hora ou com convite) só aparece quando é o mesmo em todas as etapas que chamam a equipe.
 export const situacaoDoFunil = ajustes => {
-  if (ajustes?.enabled === false) return { estado: 'desligada' };
+  if (ajustes?.enabled === false) {
+    return { estado: 'desligada', semAssistente: true };
+  }
   const regra = { enabled: ajustes?.handoff?.enabled === true };
+  const fluxoDoFunil = ajustes?.handoff?.handoff_mode;
   const etapas = (ajustes?.stages || []).map(etapa => ({
     modo: modoDaEtapa(etapa),
     fluxo: etapa.handoff?.handoff_mode,
@@ -309,19 +314,42 @@ export const situacaoDoFunil = ajustes => {
   if (!ligadas.length && !(regra.enabled && !etapas.length)) {
     return { estado: 'desligada' };
   }
-  if (!regra.enabled || ligadas.length < etapas.length) {
-    return { estado: 'parte', ligadas: ligadas.length, total: etapas.length };
+  const fluxos = new Set(
+    ligadas.length
+      ? ligadas.map(etapa =>
+          etapa.modo === ETAPA_PROPRIA ? etapa.fluxo : fluxoDoFunil
+        )
+      : [fluxoDoFunil]
+  );
+  const jeito = fluxos.size === 1 ? jeitoDoFluxo([...fluxos][0]) : null;
+  if (ligadas.length < etapas.length) {
+    return {
+      estado: 'parte',
+      ligadas: ligadas.length,
+      total: etapas.length,
+      jeito,
+    };
   }
-  const fluxoDoFunil = ajustes.handoff.handoff_mode;
-  const fluxos = new Set([
-    fluxoDoFunil,
-    ...ligadas
-      .filter(etapa => etapa.modo === ETAPA_PROPRIA)
-      .map(etapa => etapa.fluxo),
-  ]);
-  if (fluxos.size > 1) return { estado: 'ligada', jeito: null };
-  return {
-    estado: 'ligada',
-    jeito: fluxoDoFunil === 'r3_invite' ? 'convite' : 'na_hora',
-  };
+  return { estado: 'ligada', jeito, total: etapas.length };
+};
+
+// A frase do cartão da lista: a chave (em CRM_KANBAN.PASSAGEM.LISTA.ESTADO) e o que entra nela. O jeito vai como
+// chave também, para a página traduzir. Sem situação (o servidor não respondeu para esse funil), diz isso.
+export const fraseDaSituacao = situacao => {
+  if (!situacao) return { chave: 'SEM_SITUACAO' };
+  if (situacao.estado === 'desligada') {
+    return { chave: situacao.semAssistente ? 'SEM_ASSISTENTE' : 'DESLIGADA' };
+  }
+  const jeito =
+    situacao.jeito === 'convite' ? 'JEITO_CONVITE' : 'JEITO_NA_HORA';
+  if (situacao.estado === 'parte') {
+    return {
+      chave: situacao.jeito ? 'PARTE' : 'PARTE_MISTO',
+      jeito,
+      n: situacao.ligadas,
+      total: situacao.total,
+    };
+  }
+  if (!situacao.total) return { chave: 'LIGADA_SEM_ETAPAS', jeito };
+  return { chave: situacao.jeito ? 'LIGADA' : 'LIGADA_MISTO', jeito };
 };

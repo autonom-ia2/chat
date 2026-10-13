@@ -825,9 +825,15 @@ const refreshData = async () => {
       const currentStillExists = fetchedPipelines.some(
         pipeline => String(pipeline.id) === String(currentPipelineId.value)
       );
-      const nextPipelineId = currentStillExists
+      // `?pipeline_id=` abre o quadro num funil: a volta da passagem (#1385) cai no funil de onde a pessoa saiu.
+      // Passa pelo watch de currentPipelineId, que alinha o filtro de resultado ao funil.
+      const requested = fetchedPipelines.find(
+        pipeline => String(pipeline.id) === String(route.query.pipeline_id)
+      );
+      let nextPipelineId = currentStillExists
         ? currentPipelineId.value
         : fetchedPipelines[0].id;
+      if (requested) nextPipelineId = requested.id;
       if (String(currentPipelineId.value) === String(nextPipelineId)) {
         await loadActiveView(true);
         return;
@@ -962,12 +968,27 @@ const closePipelineDrawer = () => {
   showPipelineDrawer.value = false;
 };
 
-const openHandoffSettings = () => {
+// A passagem (#1385) volta para cá no mesmo funil: o endereço do quadro guarda o funil antes de sair (vale para o
+// voltar do navegador) e `from: 'crm'` diz à passagem que a seta e o X voltam ao Kanban, não à lista de funis.
+const openHandoffSettings = async () => {
   if (!selectedPipeline.value) return;
+  const pipelineId = selectedPipeline.value.id;
+  await router.replace({
+    query: { ...route.query, pipeline_id: String(pipelineId) },
+  });
   router.push({
     name: 'crm_handoff_settings_edit',
-    params: { pipelineId: selectedPipeline.value.id },
+    params: { pipelineId },
+    query: { from: 'crm' },
   });
+};
+
+// Depois de abrir o funil pedido, tira o `pipeline_id` do endereço: trocar de funil no quadro não o atualiza.
+const clearPipelineFromQuery = () => {
+  if (route.name !== 'crm_kanban_index') return;
+  if (route.query.pipeline_id === undefined) return;
+  const { pipeline_id: _pipeline, ...query } = route.query;
+  router.replace({ query });
 };
 
 const askConfirmation = async config => {
@@ -2088,6 +2109,7 @@ onMounted(async () => {
     await store.dispatch('crmKanban/setFilters', filters.value);
   }
   await refreshData();
+  clearPipelineFromQuery();
   // Seed the per-pipeline column layout for the resolved initial pipeline.
   if (currentPipelineId.value) {
     store.dispatch('crmKanban/loadListPrefs', currentPipelineId.value);

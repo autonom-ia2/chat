@@ -1798,19 +1798,6 @@
       "SAVE_ERROR": "Could not save AI settings.",
       "LOAD_ERROR": "Could not load AI settings."
     },
-    "HANDOFF_SETTINGS": {
-      "INDEX_TITLE": "AI handoff (CRM)",
-      "BACK_TO_CRM": "Back to CRM",
-      "INDEX_DESCRIPTION": "Pick the pipeline to set how the AI hands conversations to humans.",
-      "NO_PIPELINES": "No pipelines found.",
-      "LOAD_ERROR": "Could not load handoff settings.",
-      "FLOW_DIRECT": "right away",
-      "FLOW_INVITE": "with an invite",
-      "STATUS_ON": "on: {flow}",
-      "STATUS_OFF": "off",
-      "STATUS_SOME": "on in {n} of {total} stages",
-      "STATUS_ON_MIXED": "on in every stage"
-    },
     "AI_CARD": {
       "TITLE": "AI stage suggestion",
       "HELP": "AI analyzes the conversation and suggests the best stage.",
@@ -2936,7 +2923,8 @@
         "ETAPAS_TEXTO": "Change only the stage that needs it.",
         "ETAPA_ROTULO": "Stage",
         "ETAPA_TEXTO": "What applies while the customer is here.",
-        "FECHAR": "Close"
+        "FECHAR": "Close",
+        "VOLTAR_KANBAN": "Kanban"
       },
       "RESUMO": {
         "LIGADA_TITULO": "Handoff to the team",
@@ -3184,6 +3172,31 @@
           "NA_HORA_PESSOA": "the conversation goes right away to {nome}",
           "CONVITE_EQUIPE": "the team gets an invite",
           "CONVITE_PESSOA": "{nome} gets an invite"
+        }
+      },
+      "LISTA": {
+        "ROTULO": "Handoff to the team",
+        "TITULO": "The right person at the right time",
+        "TEXTO": "Pick a pipeline to see or change when the assistant calls the team.",
+        "LISTA_ROTULO": "Pipelines",
+        "ABRIR": "Open",
+        "ABRIR_FUNIL": "Open the handoff of pipeline {funil}",
+        "CARREGANDO": "Loading pipelines…",
+        "ERRO": "Could not load the pipelines right now.",
+        "VAZIO_TITULO": "You have no pipeline yet",
+        "VAZIO_TEXTO": "Create a pipeline in Kanban. Then come back here to set when the assistant calls the team.",
+        "VAZIO_BOTAO": "Create a pipeline",
+        "ESTADO": {
+          "LIGADA": "On: {jeito}, in every stage",
+          "LIGADA_MISTO": "On in every stage",
+          "LIGADA_SEM_ETAPAS": "On: {jeito}",
+          "PARTE": "On: {jeito}, in {n} of {total} stages",
+          "PARTE_MISTO": "On in {n} of {total} stages",
+          "DESLIGADA": "Off",
+          "SEM_ASSISTENTE": "Off: this pipeline assistant is off",
+          "SEM_SITUACAO": "Could not check whether it is on right now",
+          "JEITO_NA_HORA": "right away",
+          "JEITO_CONVITE": "with an invite"
         }
       }
     }
