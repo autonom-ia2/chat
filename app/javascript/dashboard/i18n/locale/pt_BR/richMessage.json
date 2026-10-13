@@ -4,6 +4,7 @@
       "OPENS_IN_NEW_TAB": "(abre em outra aba)"
     },
     "CONTACT": {
+      "SHARED": "{sender} compartilhou um contato"
     },
     "FAILURE": {
       "RETRY": "Enviar de novo",
@@ -15,8 +16,12 @@
       "OPENS": "Abre: {url}"
     },
     "LOCATION": {
+      "SEE_ON_MAP": "Ver no mapa",
+      "SHARED": "{sender} compartilhou uma localização"
     },
     "LOCATION_REQUEST": {
+      "BUTTON": "Enviar localização",
+      "CAPTION": "Pedimos ao cliente onde ele está"
     },
     "OPTIONS": {
     }
