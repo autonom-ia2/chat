@@ -94,11 +94,11 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
 
   # Robô (token de AgentBot, o n8n) abrindo a conversa = passar para a equipe. Desde o #1377 a conversa de robô nasce
   # e segue aberta com o robô no nome, então "pendente" deixou de ser o sinal: vale também a conversa com o robô no
-  # nome que ainda não está à espera de pessoa (#1454). Token de integração do CRM ou do MCP não chega aqui
-  # (RestrictIntegrationTokenToCrm nega toggle_status).
+  # nome que ainda não está à espera de pessoa (#1454). Com uma pessoa já atribuída não há o que passar: o toggle do
+  # robô é só troca de status. Token de integração do CRM ou do MCP não chega aqui (RestrictIntegrationTokenToCrm nega
+  # toggle_status).
   def bot_handoff?
-    return false unless Current.user.is_a?(AgentBot)
-    return false unless params[:status] == 'open'
+    return false unless Current.user.is_a?(AgentBot) && params[:status] == 'open' && @conversation.assignee_id.blank?
 
     @conversation.pending? || (@conversation.ai_assignee.is_a?(AgentBot) && !@conversation.bot_handoff_waiting?)
   end

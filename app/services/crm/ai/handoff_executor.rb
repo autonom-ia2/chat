@@ -13,7 +13,8 @@ module Crm
       # O motivo do motor no vocabulário de sempre deste executor (logs e specs).
       ERROS = {
         'ja_tem_pessoa' => 'already_assigned', 'intervalo' => 'cooldown', 'ninguem_cuida' => 'no_eligible_agent',
-        'falhou_atribuir' => 'assignment_failed', 'convite_falhou' => 'invite_failed', 'fechada' => 'no_conversation'
+        'falhou_atribuir' => 'assignment_failed', 'convite_falhou' => 'invite_failed', 'fechada' => 'no_conversation',
+        'ninguem_online' => 'no_online_agent'
       }.freeze
 
       def initialize(card:, handoff:, trigger: 'message')
@@ -53,7 +54,7 @@ module Crm
 
       def depois_da_entrega(entrega)
         status = STATUS[entrega.status]
-        return skip(ERROS.fetch(entrega.motivo.to_s, entrega.motivo.to_s)) if status.nil?
+        return skip(erro_de(entrega)) if status.nil?
 
         apos_entregar if status == :handed_off
         # A espera agora fica na conversa (Crm::Entrega::Marca); a do card, anterior ao #1454, sai.
@@ -61,13 +62,18 @@ module Crm
         # Fora da trava e da transação do card (revisão da chat#665): um erro ao postar não desfaz o convite.
         ::Autonomia::Agents::NotaDoEncaminhamento.postar(@conversation) if status == :invited
         registrar(status == :held_online ? 'held_online' : status.to_s, agente: entrega.pessoa)
-        Result.new(status: status, assignee: entrega.pessoa, error: status == :held_online ? 'no_online_agent' : nil)
+        Result.new(status: status, assignee: entrega.pessoa, error: status == :held_online ? erro_de(entrega) : nil)
       end
 
-      # Com a pessoa já no nome: encerra a passagem do robô (abre e avisa) e registra no histórico do agente
-      # Autonom.ia e a nota para quem assume (conversa 7057). Os dois últimos são best-effort.
+      def erro_de(entrega)
+        ERROS.fetch(entrega.motivo.to_s, entrega.motivo.to_s)
+      end
+
+      # O motor já gravou a passagem inteira (pessoa, robô fora, conversa aberta) numa gravação só; aqui só o aviso de
+      # passagem, o histórico do agente Autonom.ia e a nota para quem assume (conversa 7057). Os dois últimos são
+      # best-effort. Sem um segundo save: na mesma transação (o drain trava a conversa) ele apagaria o ASSIGNEE_CHANGED.
       def apos_entregar
-        @conversation.bot_handoff!(motivo: 'ia_crm')
+        @conversation.dispatch_bot_handoff_event
         ::Autonomia::Agents::Operate::EventLogger.handed_off_by_inbox(conversation: @conversation, reason: 'human_requested')
         ::Autonomia::Agents::NotaDoEncaminhamento.postar(@conversation)
       end
@@ -129,12 +135,15 @@ module Crm
 
       # Espera gravada no card antes do #1454 (hoje a espera fica na conversa, Crm::Entrega::Marca).
       def clear_handoff_hold!
-        metadata = (@card.metadata || {}).deep_dup
-        ai = metadata['ai'] || {}
-        return unless ai.key?('handoff_hold')
+        # Sob a trava do card, relendo o metadata: não apaga um carimbo gravado por outra conexão.
+        @card.with_lock do
+          metadata = (@card.metadata || {}).deep_dup
+          ai = metadata['ai'] || {}
+          next unless ai.key?('handoff_hold')
 
-        metadata['ai'] = ai.except('handoff_hold')
-        @card.update!(metadata: metadata)
+          metadata['ai'] = ai.except('handoff_hold')
+          @card.update!(metadata: metadata)
+        end
       end
     end
   end

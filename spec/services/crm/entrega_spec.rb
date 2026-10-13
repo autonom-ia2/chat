@@ -391,7 +391,161 @@ RSpec.describe Crm::Entrega do
     end
   end
 
-  describe 'concorrência' do
+  describe 'casos negativos' do
+    before { membros(ana, bia) }
+
+    # Pega: no convite sem ninguém na fila, a conversa ficava sem marca e o rodízio nativo a dava a qualquer um, fora
+    # da regra e do funil.
+    it 'convite sem ninguém que cuide do funil: segura com a marca e o rodízio nativo V2 não a pega', :aggregate_failures do
+      account.enable_features('assignment_v2')
+      account.save!
+      inbox.update!(enable_auto_assignment: true)
+      create(:inbox_assignment_policy, inbox: inbox, assignment_policy: create(:assignment_policy, account: account, enabled: true))
+      acesso(ana, pos_venda)
+      acesso(bia, pos_venda)
+      online(ana, bia)
+      conversa = conversa_do_robo
+      card_em(conversa, vendas)
+      regra!(vendas, 'handoff_mode' => 'r3_invite')
+
+      conversa.bot_handoff!
+
+      expect(marca(conversa)).to include('modo' => 'segurando')
+      expect(conversa.conversation_participants).to be_empty
+      expect(AutoAssignment::AssignmentService.new(inbox: inbox).perform_bulk_assignment(limit: 10)).to eq(0)
+      expect(conversa.reload.assignee_id).to be_nil
+    end
+
+    # Pega: presença (Redis) fora do ar virava "ninguém online" em silêncio. Agora loga o erro e segura, para a fila
+    # tentar de novo.
+    it 'presença indisponível: loga, não atribui e segura para tentar de novo', :aggregate_failures do
+      allow(OnlineStatusTracker).to receive(:get_available_users).and_raise(Redis::CannotConnectError)
+      allow(Rails.logger).to receive(:error).and_call_original
+      conversa = conversa_do_robo
+
+      conversa.bot_handoff!
+
+      expect(conversa.reload).to have_attributes(assignee_id: nil, ai_assignee: bot)
+      expect(marca(conversa)).to include('modo' => 'segurando')
+      expect(Rails.logger).to have_received(:error).with(/presença indisponível.*Redis::CannotConnectError/)
+    end
+
+    # Pega: carimbo do card gravado a partir de uma cópia velha apagava o que outra conexão gravou no meio.
+    it 'o carimbo da passagem no card não apaga o que outra conexão gravou depois da leitura', :aggregate_failures do
+      online(ana)
+      conversa = conversa_do_robo
+      card = card_em(conversa, vendas)
+      regra!(vendas)
+      executor = Crm::Ai::HandoffExecutor.new(card: card, handoff: { intent: 'transferir' })
+      # rubocop:disable Rails/SkipsModelValidations -- escrita "por fora" (outra conexão) é o ponto do teste
+      Crm::Card.where(id: card.id).update_all(metadata: { 'ai' => { 'last_evaluated_at' => '2026-10-13T10:00:00Z' } })
+      # rubocop:enable Rails/SkipsModelValidations
+
+      expect(executor.perform.status).to eq(:handed_off)
+
+      ai = card.reload.metadata['ai']
+      expect(ai['last_evaluated_at']).to eq('2026-10-13T10:00:00Z')
+      expect(ai['last_handoff_at']).to be_present
+    end
+
+    # Pega: refazer a passagem (falha no meio, nova tentativa) mandava outra notificação de convite.
+    it 'convite refeito não manda outra notificação enquanto a primeira não foi lida' do
+      online(ana)
+      conversa = conversa_do_robo
+      convite = -> { Crm::Ai::HandoffInviter.new(conversation: conversa, agent: ana, idempotente: true).perform }
+
+      expect { 2.times { convite.call } }.to change {
+        Notification.where(user: ana, notification_type: :conversation_handoff_request).count
+      }.by(1)
+    end
+
+    # Pega: a saída da triagem gravava duas vezes na mesma trava; sem ninguém online o after_commit perdia a troca
+    # "quem atendia → ninguém" e o card não era sincronizado.
+    it 'saída da triagem sem ninguém online avisa a troca de atendente', :aggregate_failures do
+      membros(tito)
+      acesso(ana, vendas)
+      acesso(tito, triage: true)
+      conversa = create(:conversation, account: account, inbox: inbox, contact: contact, assignee: tito).reload
+      card_em(conversa, vendas)
+      allow(Rails.configuration.dispatcher).to receive(:dispatch).and_call_original
+
+      Crm::Access::VisibilitySync.perform(conversa.reload)
+
+      expect(conversa.reload).to have_attributes(assignee_id: nil, ai_assignee: bot)
+      expect(conversa).to be_bot_handoff_waiting
+      expect(Rails.configuration.dispatcher).to atribuicoes_de(conversa).once
+    end
+
+    # Pega: convite que não saiu (notificação recusada) deixava a conversa sem marca, e o nativo passava por cima.
+    it 'convite que falha: segura com a marca, motivo convite_falhou', :aggregate_failures do
+      online(ana)
+      allow(Crm::Ai::HandoffInviter).to receive(:new).and_return(instance_double(Crm::Ai::HandoffInviter, perform: false))
+      conversa = conversa_do_robo
+      card = card_em(conversa, vendas)
+      regra!(vendas, 'handoff_mode' => 'r3_invite')
+
+      resultado = described_class.new(conversation: conversa, motivo: 'robo_pediu', origem: 'spec').call
+
+      expect(resultado).to have_attributes(status: :segurando, motivo: 'convite_falhou')
+      expect(marca(conversa)).to include('modo' => 'segurando')
+      expect(card.reload.metadata.dig('ai', 'handoff')).to be_nil
+    end
+
+    # Pega: convite recente ainda valendo (intervalo) também não pode deixar a conversa sem marca.
+    it 'convite dentro do intervalo de um convite anterior: segura com a marca', :aggregate_failures do
+      online(ana)
+      conversa = conversa_do_robo
+      card = card_em(conversa, vendas)
+      regra!(vendas, 'handoff_mode' => 'r3_invite')
+      card.update!(metadata: { 'ai' => { 'last_handoff_at' => 1.minute.ago.iso8601, 'last_handoff_mode' => 'invite' } })
+
+      resultado = described_class.new(conversation: conversa, motivo: 'robo_pediu', origem: 'spec').call
+
+      expect(resultado).to have_attributes(status: :segurando, motivo: 'intervalo')
+      expect(marca(conversa)).to include('modo' => 'segurando')
+      expect(conversa.conversation_participants).to be_empty
+    end
+
+    # Regra do adiado: a conversa adiada guarda a marca e fica fora da fila; reaberta, a fila a entrega.
+    it 'conversa adiada com a marca fica fora da fila até reabrir', :aggregate_failures do
+      conversa = conversa_do_robo
+      conversa.bot_handoff!
+      conversa.reload.update!(status: :snoozed, snoozed_until: 1.day.from_now)
+      online(ana)
+
+      Crm::Ai::HandoffDrainJob.perform_now
+      expect(conversa.reload).to have_attributes(status: 'snoozed', assignee_id: nil)
+      expect(marca(conversa)).to include('modo' => 'segurando')
+
+      conversa.update!(status: :open, snoozed_until: nil)
+      Crm::Ai::HandoffDrainJob.perform_now
+
+      expect(conversa.reload.assignee_id).to eq(ana.id)
+    end
+
+    # Pega: na triagem, um robô de Agentes IA no nome que não é o robô ativo da caixa também segura a conversa.
+    it 'triagem com robô no nome que não é o da caixa: passa pelo motor e o robô fica à espera', :aggregate_failures do
+      inbox.agent_bot_inbox.destroy!
+      inbox.reload
+      outro_robo = create(:agent_bot, account: account)
+      membros(tito)
+      acesso(ana, vendas)
+      acesso(tito, triage: true)
+      conversa = create(:conversation, account: account, inbox: inbox, contact: contact, status: :open).reload
+      conversa.update!(assignee: tito)
+      Conversation.where(id: conversa.id).update_all(assignee_agent_bot_id: outro_robo.id, ai_assignee_type: 'AgentBot') # rubocop:disable Rails/SkipsModelValidations
+      card_em(conversa, vendas)
+
+      Crm::Access::VisibilitySync.perform(conversa.reload)
+
+      expect(conversa.reload).to have_attributes(assignee_id: nil, ai_assignee: outro_robo)
+      expect(conversa).to be_bot_handoff_waiting
+    end
+  end
+
+  # Sequenciais de propósito: provam que o motor relê a conversa SOB a trava (uma corrida real precisa de duas conexões,
+  # que o spec transacional não tem). A intercalação reproduz a ordem da corrida R1.
+  describe 'releitura sob a trava' do
     before do
       membros(ana, bia)
       online(ana, bia)
@@ -412,15 +566,19 @@ RSpec.describe Crm::Entrega do
       expect(conversa.reload.assignee_id).to eq(bia.id)
     end
 
-    it 'duas passagens seguidas: a segunda não muda nada' do
+    it 'duas passagens seguidas sem ninguém online: a segunda não muda o robô, a marca nem o atendente', :aggregate_failures do
+      online
       conversa = conversa_do_robo
       conversa.bot_handoff!
-      primeira = conversa.reload.assignee_id
+      antes = marca(conversa)
       allow(Rails.configuration.dispatcher).to receive(:dispatch).and_call_original
 
-      Conversation.find(conversa.id).bot_handoff!
+      travel 1.minute do
+        Conversation.find(conversa.id).bot_handoff!
+      end
 
-      expect(conversa.reload.assignee_id).to eq(primeira)
+      expect(conversa.reload).to have_attributes(assignee_id: nil, ai_assignee: bot)
+      expect(marca(conversa)).to eq(antes)
       expect(Rails.configuration.dispatcher).not_to atribuicoes_de(conversa)
     end
   end

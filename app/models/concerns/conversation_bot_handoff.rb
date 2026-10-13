@@ -35,10 +35,11 @@ module ConversationBotHandoff
 
   # `keep_bot: false` solta o robô de vez: é o caminho de quem desliga o robô, não de quem passa a conversa.
   # `motivo`: por que a conversa precisa de alguém (log do motor de entrega).
+  # `release_assignee`: tira quem atende na mesma gravação (saída da triagem): uma gravação só por passagem.
   # Uma gravação só, com a linha travada: quem chega primeiro (uma pessoa assumindo, outra passagem) decide.
-  def bot_handoff!(dispatch_event: true, keep_bot: true, motivo: nil)
+  def bot_handoff!(dispatch_event: true, keep_bot: true, motivo: nil, release_assignee: false)
     self.class.transaction do
-      take_fresh_assignee
+      take_fresh_assignee(release_assignee)
       robo = keep_bot ? handoff_bot : nil
       self.waiting_since = Time.current if waiting_since.blank?
       self.ai_assignee = nil
@@ -89,10 +90,11 @@ module ConversationBotHandoff
   # apagar uma chave gravada por outra conexão —, sem marcar como mudança. O mesmo que
   # AgentAssignmentService#assign_under_lock faz com o assignee.
   # Contrato: quem chama não deixa mudança não gravada nesses atributos; ela seria descartada.
-  def take_fresh_assignee
+  def take_fresh_assignee(release_assignee)
     locked = self.class.lock.find(id)
     FRESH_ON_HANDOFF.each { |attribute| self[attribute] = locked[attribute] }
     clear_attribute_changes(FRESH_ON_HANDOFF)
+    self.assignee = nil if release_assignee
   end
 
   def handoff_bot

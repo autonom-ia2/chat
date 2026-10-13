@@ -65,14 +65,19 @@ class Crm::Entrega::RegistroNoCard
     @conversation&.assignee_id.blank?
   end
 
+  # Sob a trava do card, relendo o metadata: um carimbo gravado no meio (devolução à IA, avaliação) não se perde.
+  # Contrato: quem chama já travou a conversa (ordem conversa → card, sem deadlock ABBA) e não deixa mudança não gravada
+  # no card (o with_lock relê e recusaria). Pode ser chamado dentro de outra trava do mesmo card (reentrante).
   def carimbar!(convidado: nil)
-    metadata = (@card.metadata || {}).deep_dup
-    now = Time.current.iso8601
-    ai = (metadata['ai'] || {}).merge('last_handoff_at' => now, 'last_handoff_mode' => convidado ? 'invite' : 'direct')
-    ai.delete('handoff_hold')
-    ai = acrescentar_ciclo(ai, now, convidado) if convidado
-    metadata['ai'] = ai
-    @card.update!(metadata: metadata)
+    @card.with_lock do
+      metadata = (@card.metadata || {}).deep_dup
+      now = Time.current.iso8601
+      ai = (metadata['ai'] || {}).merge('last_handoff_at' => now, 'last_handoff_mode' => convidado ? 'invite' : 'direct')
+      ai.delete('handoff_hold')
+      ai = acrescentar_ciclo(ai, now, convidado) if convidado
+      metadata['ai'] = ai
+      @card.update!(metadata: metadata)
+    end
   end
 
   # Cada convite é um CICLO em ai['handoffs'], com o ponteiro ai['handoff'] no ciclo ativo. Um ciclo novo encerra o

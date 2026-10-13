@@ -8,6 +8,12 @@
 class Crm::Ai::HandoffDrainJob < ApplicationJob
   queue_as :scheduled_jobs
 
+  # Conversas que o motor segura, por rodada. A consulta entra pelo índice parcial
+  # index_conversations_on_crm_entrega_pendente, que só tem as marcadas. Com mais que isso na fila, a rodada seguinte
+  # continua de onde esta parou (cursor no Redis) e, no fim, volta ao começo: nenhuma conversa fica sempre de fora.
+  CONVERSAS_POR_RODADA = 500
+  CURSOR_KEY = 'crm:entrega:fila:cursor'.freeze
+
   def perform
     drain_held_conversations
     return unless Crm::Ai::Config.enabled?
@@ -20,18 +26,38 @@ class Crm::Ai::HandoffDrainJob < ApplicationJob
   private
 
   # Abertas (ou pendentes, legado) e sem pessoa: a marca sai sozinha quando alguém é atribuído ou a conversa resolve.
-  def held_conversations
-    Conversation.where(status: [Conversation.statuses[:open], Conversation.statuses[:pending]], assignee_id: nil)
-                .where(Crm::Entrega::Marca::PRESENTE_SQL)
+  # Adiada fica de fora de propósito: ninguém atende uma conversa adiada; ela guarda a marca (o rodízio nativo também
+  # não a pega) e volta para esta fila quando reabre.
+  def held_conversations(after_id)
+    Conversation.where(Crm::Entrega::Marca::PRESENTE_SQL)
+                .where(status: [Conversation.statuses[:open], Conversation.statuses[:pending]], assignee_id: nil)
+                .where('conversations.id > ?', after_id)
+                .order(:id).limit(CONVERSAS_POR_RODADA)
   end
 
   def drain_held_conversations
-    held_conversations.find_each do |conversation|
+    ids = held_conversations(read_cursor).pluck(:id)
+    Conversation.where(id: ids).order(:id).each do |conversation|
       drain_conversation(conversation)
     rescue StandardError => e
       # Uma conversa com problema não pode travar a fila das outras.
       Rails.logger.error("[crm][entrega] fila conversa=#{conversation.id} erro=#{e.class}")
     end
+    write_cursor(ids.size < CONVERSAS_POR_RODADA ? 0 : ids.last)
+  end
+
+  # Sem Redis, a rodada começa do início e segue; os cards do CRM (passo 2) também rodam.
+  def read_cursor
+    Redis::Alfred.get(CURSOR_KEY).to_i
+  rescue StandardError => e
+    Rails.logger.error("[crm][entrega] fila cursor indisponível erro=#{e.class}")
+    0
+  end
+
+  def write_cursor(value)
+    Redis::Alfred.set(CURSOR_KEY, value)
+  rescue StandardError => e
+    Rails.logger.error("[crm][entrega] fila cursor não gravado erro=#{e.class}")
   end
 
   def drain_conversation(conversation)
@@ -94,12 +120,15 @@ class Crm::Ai::HandoffDrainJob < ApplicationJob
     card.metadata.to_h.dig('ai', 'handoff_hold', 'handoff') || {}
   end
 
+  # Sob a trava do card, relendo o metadata: não apaga um carimbo gravado por outra conexão.
   def clear_handoff_hold!(card)
-    metadata = (card.metadata || {}).deep_dup
-    ai = metadata['ai'] || {}
-    return unless ai.key?('handoff_hold')
+    card.with_lock do
+      metadata = (card.metadata || {}).deep_dup
+      ai = metadata['ai'] || {}
+      next unless ai.key?('handoff_hold')
 
-    metadata['ai'] = ai.except('handoff_hold')
-    card.update!(metadata: metadata)
+      metadata['ai'] = ai.except('handoff_hold')
+      card.update!(metadata: metadata)
+    end
   end
 end

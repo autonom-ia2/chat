@@ -5,7 +5,7 @@
 #   - o rodízio nativo (V1 e V2, OSS e Enterprise) pula a conversa: nunca duas atribuições, nem uma por cima da regra;
 #   - o HandoffDrainJob tenta de novo a cada 2 minutos (segurando) ou limpa o convite vencido.
 # A marca sai quando uma pessoa é atribuída, quando a conversa é resolvida ou quando alguém a entrega de novo a um robô
-# (ConversationBotHandoff#end_bot_handoff_wait).
+# (ConversationBotHandoff#end_bot_handoff_wait). Adiada, a conversa guarda a marca e volta à fila quando reabre.
 module Crm::Entrega::Marca
   CHAVE = 'crm_entrega'.freeze
   SEGURANDO = 'segurando'.freeze

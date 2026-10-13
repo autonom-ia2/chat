@@ -60,12 +60,9 @@ class Crm::Entrega
   end
 
   def pela_regra(card, settings)
-    if settings[:handoff_mode] == 'r3_invite'
-      pessoa = seletor(card, settings, require_online: false).perform
-      return pessoa ? Plano.new(acao: :convite, pessoa: pessoa, card: card, settings: settings) : nada('ninguem_cuida')
-    end
-
-    escolher(seletor(card, settings, require_online: settings[:prefer_online]), card, settings)
+    convite = settings[:handoff_mode] == 'r3_invite'
+    selector = seletor(card, settings, require_online: convite ? false : settings[:prefer_online])
+    escolher(selector, card, settings, acao: convite ? :convite : :pessoa)
   end
 
   # Sem regra: quem cuida da conversa e está online, com menos conversas abertas (decisão 2 do Rodrigo, 13/10).
@@ -77,13 +74,16 @@ class Crm::Entrega
     escolher(selector, card, nil)
   end
 
-  # Ninguém que possa receber agora (ninguém online, ou ninguém na fila deste assunto): segura. A fila tenta de novo a
-  # cada 2 minutos e entrega quando alguém entrar ou passar a cuidar do assunto; nunca silêncio.
-  def escolher(selector, card, settings)
+  # Ninguém que possa receber agora (ninguém online, ninguém na fila deste assunto, nem para convidar, ou a presença fora
+  # do ar): segura, com a marca. O rodízio nativo não passa por cima, e a fila tenta de novo a cada 2 minutos e entrega
+  # quando alguém entrar ou passar a cuidar do assunto. Nunca silêncio.
+  def escolher(selector, card, settings, acao: :pessoa)
     pessoa = selector.perform
-    return Plano.new(acao: :pessoa, pessoa: pessoa, card: card, settings: settings) if pessoa
+    return Plano.new(acao: acao, pessoa: pessoa, card: card, settings: settings) if pessoa
 
     Plano.new(acao: :segurar, card: card, settings: settings, motivo: selector.held_for_online? ? 'ninguem_online' : 'ninguem_cuida')
+  rescue Crm::Ai::HandoffMemberSelector::PresencaIndisponivel
+    Plano.new(acao: :segurar, card: card, settings: settings, motivo: 'presenca_indisponivel')
   end
 
   def seletor(card, settings, require_online:)
@@ -134,12 +134,11 @@ class Crm::Entrega
     resultado(:entregue, plano)
   end
 
-  # O caminho de sempre da tela (cala o robô e encerra a espera numa gravação). Ele revalida a pessoa na conta.
+  # Uma gravação só (Crm::Entrega::Atribuicao): revalida a pessoa na conta, cala o robô e encerra as esperas.
   def atribuir(pessoa, gravar)
-    return ::Conversations::AssignmentService.new(conversation: @conversation, assignee_id: pessoa.id).perform.present? if gravar
+    return false unless Crm::Entrega::Atribuicao.aplicar(@conversation, pessoa)
 
-    @conversation.assignee = pessoa
-    Crm::Entrega::Marca.tirar(@conversation)
+    @conversation.save! if gravar
     true
   end
 
@@ -153,7 +152,9 @@ class Crm::Entrega
   # relê o intervalo: duas passagens ao mesmo tempo não convidam duas vezes.
   def convidar(plano, gravar)
     falha = convite_no_card(plano)
-    return resultado(:nada, nada(falha)) if falha
+    # Convite que não saiu (ninguém recebe a notificação, ou um convite recente ainda vale): segura com a marca, para o
+    # rodízio nativo não passar por cima e a fila tentar de novo.
+    return segurar(Plano.new(acao: :segurar, card: plano.card, settings: plano.settings, motivo: falha), gravar) if falha
 
     ate = Time.current + plano.settings[:invite_ttl_seconds].to_i.seconds
     Crm::Entrega::Marca.marcar(@conversation, modo: Crm::Entrega::Marca::CONVITE, motivo: @motivo, ate: ate)
@@ -170,7 +171,7 @@ class Crm::Entrega
         falha = 'intervalo'
         next
       end
-      raise ActiveRecord::Rollback unless Crm::Ai::HandoffInviter.new(conversation: @conversation, agent: plano.pessoa).perform
+      raise ActiveRecord::Rollback unless Crm::Ai::HandoffInviter.new(conversation: @conversation, agent: plano.pessoa, idempotente: true).perform
 
       registro.convidado!(plano.pessoa, razao: @razao)
       falha = nil

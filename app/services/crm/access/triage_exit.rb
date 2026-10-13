@@ -44,16 +44,21 @@ class Crm::Access::TriageExit
 
       open_cards.each(&:reload).select { |card| card.owner_id == previous_id }.each { |card| card.update!(owner_id: nil) }
       # Caixa com robô: sem pessoa, a conversa volta ao robô (#1377, regra 4). Em andamento, ela passa como numa passagem
-      # e o motor de entrega escolhe quem cuida do funil; sem ninguém agora, fica à espera com o robô respondendo. Sem
-      # robô, quem entrega é o VisibilitySync#reassign, logo depois.
-      @conversation.update!(assignee_id: nil, ai_assignee: @conversation.inbox_agent_bot)
-      @conversation.bot_handoff!(dispatch_event: false, motivo: 'triagem') if waits_for_funnel_round_robin?
+      # e o motor de entrega escolhe quem cuida do funil; sem ninguém agora, fica à espera com o robô respondendo. Uma
+      # gravação só (sai quem atendia, entra quem recebe): duas na mesma trava apagariam o ASSIGNEE_CHANGED. Sem robô,
+      # quem entrega é o VisibilitySync#reassign, logo depois.
+      if waits_for_funnel_round_robin?
+        @conversation.bot_handoff!(dispatch_event: false, motivo: 'triagem', release_assignee: true)
+      else
+        @conversation.update!(assignee_id: nil, ai_assignee: @conversation.inbox_agent_bot)
+      end
     end
   end
 
-  # Só conversa em andamento e com robô: liberar a triagem de uma resolvida ou adiada não a reabre.
+  # Só conversa em andamento e com robô (o da caixa ou um agente de IA que a atende): liberar a triagem de uma resolvida
+  # ou adiada não a reabre.
   def waits_for_funnel_round_robin?
-    (@conversation.open? || @conversation.pending?) && @conversation.ai_assignee.present?
+    (@conversation.open? || @conversation.pending?) && (@conversation.ai_assignee.present? || @conversation.inbox_agent_bot.present?)
   end
 
   def add_owners_as_participants

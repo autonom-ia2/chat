@@ -59,6 +59,18 @@ RSpec.describe 'toggle_status como passagem do robô' do
     expect(conversation.reload).to have_attributes(assignee_id: nil, ai_assignee: bot)
   end
 
+  # Com uma pessoa já atribuída, o toggle(open) do robô é só troca de status: nada de passagem nem aviso à caixa.
+  it 'conversa com pessoa atribuída: o toggle do robô só troca o status', :aggregate_failures do
+    conversation.update!(assignee: ana, status: :pending)
+    allow(Rails.configuration.dispatcher).to receive(:dispatch).and_call_original
+
+    toggle(bot.access_token.token)
+
+    expect(conversation.reload).to have_attributes(status: 'open', assignee_id: ana.id)
+    expect(Rails.configuration.dispatcher).not_to have_received(:dispatch)
+      .with(Events::Types::CONVERSATION_BOT_HANDOFF, anything, anything)
+  end
+
   it 'robô adiando a conversa não é passagem' do
     toggle(bot.access_token.token, status: 'snoozed')
 

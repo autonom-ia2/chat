@@ -2,8 +2,8 @@ module Crm
   module Ai
     # Seletor de membro humano para handoff — lógica de seleção EXTRAÍDA (verbatim)
     # do HandoffExecutor (round-robin por carga de conversas abertas, preferência por
-    # online, match direto por nome sugerido pela IA). Usado pelo Kanban
-    # (HandoffExecutor#select_agent delega aqui).
+    # online, match direto por nome sugerido pela IA). Usado pelo motor de entrega
+    # (Crm::Entrega, #1454).
     #
     # Parâmetros:
     #   inbox          -> Inbox cujos membros formam o pool elegível
@@ -19,6 +19,9 @@ module Crm
     #
     # Retorna User | nil (nil = sem membro elegível).
     class HandoffMemberSelector
+      # A presença (Redis) não respondeu.
+      class PresencaIndisponivel < StandardError; end
+
       def initialize(
         inbox:,
         account_id:,
@@ -124,8 +127,10 @@ module Crm
         @online_agent_ids ||= OnlineStatusTracker.get_available_users(@account_id)
                                                  .select { |_id, status| status == 'online' }
                                                  .keys.map(&:to_i)
-      rescue StandardError
-        []
+      rescue StandardError => e
+        # Presença fora do ar não é "ninguém online": quem chama decide (o motor segura e a fila tenta de novo, #1454).
+        Rails.logger.error("[crm][entrega] presença indisponível conta=#{@account_id} erro=#{e.class}")
+        raise PresencaIndisponivel, e.class.name
       end
     end
   end
