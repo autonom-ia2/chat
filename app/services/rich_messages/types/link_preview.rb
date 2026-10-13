@@ -12,8 +12,15 @@ class RichMessages::Types::LinkPreview
   BODY_MAX = 4096
   WEB_PREFIXES = ['http://', 'https://'].freeze
   WEB_SCHEMES = %w[http https].freeze
-  # Pontuação que fecha a frase, não o endereço: "veja https://exemplo.com.br." ou "(https://exemplo.com.br)".
-  TRAILING_PUNCTUATION = ['.', ',', ';', ':', '!', '?', ')', ']', '}', '"', "'", '>'].freeze
+  # Espaços que o `split` não separa sozinho: sem quebra (U+00A0), estreito sem quebra (U+202F) e ideográfico
+  # (U+3000). Viram espaço comum antes de quebrar o texto em palavras.
+  UNICODE_SPACES = "\u00A0\u202F\u3000".freeze
+  # Caracteres que nunca fazem parte de um endereço sem escape (RFC 3986): onde aparecem, o endereço acabou. No
+  # texto em HTML do Telegram é o fim do `href="..."` ou o começo de uma tag (`<strong>`, `<em>`).
+  ADDRESS_ENDS = ['"', '<', '>'].freeze
+  # Pontuação que fecha a frase, não o endereço: "veja https://exemplo.com.br." ou "(https://exemplo.com.br)…", e os
+  # marcadores de formatação do WhatsApp em volta do endereço (`*negrito*`, `_itálico_`, `~riscado~`).
+  TRAILING_PUNCTUATION = ['.', ',', ';', ':', '!', '?', ')', ']', '}', "'", '…', '*', '_', '~'].freeze
 
   NO_WEB_ADDRESS = 'A mensagem com prévia de link precisa ter no texto um endereço completo, começando com http:// ou https://.'.freeze
   INVALID_FIRST_ADDRESS = 'O primeiro endereço do texto, o que ganha a prévia, não é um endereço completo ' \
@@ -44,15 +51,21 @@ class RichMessages::Types::LinkPreview
   private
 
   # O primeiro trecho do texto que começa com http:// ou https:// (em qualquer caixa), do esquema até o fim da
-  # palavra, sem a pontuação que fecha a frase. Nil quando o texto não tem nenhum.
+  # palavra (ou até um caractere de ADDRESS_ENDS), sem a pontuação que fecha a frase. Nil quando o texto não tem
+  # nenhum.
   def first_candidate(body)
-    body.split.lazy.filter_map { |word| candidate_in(word) }.first
+    body.tr(UNICODE_SPACES, ' ').split.lazy.filter_map { |word| candidate_in(word) }.first
   end
 
   def candidate_in(word)
     lowered = word.downcase(:ascii)
     start = WEB_PREFIXES.filter_map { |prefix| lowered.index(prefix) }.min
-    without_trailing_punctuation(word[start..]) if start
+    without_trailing_punctuation(up_to_address_end(word[start..])) if start
+  end
+
+  def up_to_address_end(text)
+    finish = ADDRESS_ENDS.filter_map { |character| text.index(character) }.min
+    finish ? text[0, finish] : text
   end
 
   def without_trailing_punctuation(text)

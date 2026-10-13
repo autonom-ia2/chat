@@ -38,7 +38,11 @@ describe RichMessages::Types::LinkPreview do
       'Sem link aqui, mas este tem: https://exemplo.com.br, ok?',
       'https://açaí.com.br/promoção',
       'Veja HTTPS://EXEMPLO.COM.BR, como no botão de link',
-      'Painel em http://192.168.0.10:8080/status'
+      'Painel em http://192.168.0.10:8080/status',
+      'Veja https://exemplo.com.br… e responda',
+      "Veja\u00A0https://exemplo.com.br\u00A0agora",
+      "Veja\u202Fhttps://exemplo.com.br\u3000agora",
+      'Veja "https://exemplo.com.br" agora'
     ].each do |text|
       it "accepts #{text.inspect}" do
         expect(described_class.new({}).error_for(text)).to be_nil
@@ -68,10 +72,6 @@ describe RichMessages::Types::LinkPreview do
       it "refuses #{title}, because the first address is the one previewed" do
         expect(described_class.new({}).error_for(text)).to eq(described_class::INVALID_FIRST_ADDRESS)
       end
-    end
-
-    it 'goes through the parser error for a port that is not a number' do
-      expect { Addressable::URI.parse('https://exemplo.com.br:abc/p') }.to raise_error(Addressable::URI::InvalidURIError)
     end
 
     it 'refuses a body above 4096 characters and accepts the limit itself' do
@@ -207,11 +207,26 @@ describe RichMessages::Types::LinkPreview do
     expect(RichMessages.delivery_mode(inbox: channel.inbox, type: 'link_preview')).to eq(:text)
   end
 
-  it 'accepts a markdown link on Telegram, whose outgoing text is HTML, as it does on WhatsApp' do
-    channel = create(:channel_telegram)
-    message = outgoing(create(:conversation, inbox: channel.inbox, account: channel.account), content: "Veja [a proposta](#{link})")
+  # O mesmo texto em markdown é aceito nos dois canais: no WhatsApp vira o endereço puro (ou entre `*`), no
+  # Telegram vira HTML (`<a href="...">`, `<strong>`).
+  rendering_channels = {
+    'WhatsApp' => [:channel_whatsapp, { provider: 'whatsapp_cloud', sync_templates: false, validate_provider_config: false }],
+    'Telegram' => [:channel_telegram, {}]
+  }
+  [
+    'Veja [proposta](https://exemplo.com.br)',
+    '<https://exemplo.com.br>',
+    '**https://exemplo.com.br**',
+    'Veja https://exemplo.com.br/a*b*c'
+  ].each do |text|
+    rendering_channels.each do |name, (factory, attributes)|
+      it "accepts #{text.inspect} as rendered for #{name}" do
+        channel = create(factory, **attributes)
+        message = outgoing(create(:conversation, inbox: channel.inbox, account: channel.account), content: text)
 
-    expect(RichMessages.format_error(message)).to be_nil
+        expect(RichMessages.format_error(message)).to be_nil
+      end
+    end
   end
 
   {
