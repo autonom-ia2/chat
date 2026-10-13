@@ -32,6 +32,7 @@ describe WhatsappHybrid::NewConversation, type: :request do
         headers: administrator.create_new_auth_token, as: :json
     expect(response).to have_http_status(:success)
     entry = response.parsed_body['payload'].find { |item| item['inbox']['id'] == inbox.id }
+    expect(entry).to be_present
     entry['inbox']['whatsapp_api_start']
   end
 
@@ -140,6 +141,17 @@ describe WhatsappHybrid::NewConversation, type: :request do
 
     it 'routes it through the WhatsApp API transport' do
       expect(WhatsappHybrid::Router.new(conversation).route_for(message)).to eq(:web)
+    end
+
+    it 'is delivered by the WhatsApp API transport as a human send' do
+      transport = instance_double(WhatsappHybrid::WebTransport, perform: true)
+      allow(WhatsappHybrid::WebTransport).to receive(:new).and_return(transport)
+
+      Whatsapp::SendOnWhatsappService.new(message: message).perform
+
+      expect(WhatsappHybrid::WebTransport).to have_received(:new).with(hash_including(message: message, origin: 'human'))
+      expect(transport).to have_received(:perform)
+      expect(message.reload.status).not_to eq('failed')
     end
   end
 end
