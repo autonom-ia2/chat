@@ -13,7 +13,12 @@ import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
-import { formatInZone, isFutureSchedule, scheduleToUtc } from './scheduleTime';
+import {
+  formatInZone,
+  isFutureSchedule,
+  scheduleToUtc,
+  timeZoneName,
+} from './scheduleTime';
 import { toLocaleTag, formatNumber } from './localeTag';
 
 const props = defineProps({
@@ -67,6 +72,21 @@ const reasons = computed(() =>
 const isScheduleValid = computed(
   () =>
     !isLater.value || isFutureSchedule(props.draft.scheduledAt, props.timeZone)
+);
+// The past-date error only after the person typed a date (#1387): empty is not wrong yet.
+const showPastError = computed(
+  () => Boolean(props.draft.scheduledAt) && !isScheduleValid.value
+);
+const scheduleMessage = computed(() => {
+  if (showPastError.value) return t(`${NS}.PAST`);
+  return props.draft.scheduledAt ? '' : t(`${NS}.PICK_DATE`);
+});
+const zoneLabel = computed(() =>
+  timeZoneName(
+    props.timeZone,
+    locale.value,
+    scheduleToUtc(props.draft.scheduledAt, props.timeZone) || undefined
+  )
 );
 const whenText = computed(() => {
   if (!isLater.value || !isScheduleValid.value) return '';
@@ -148,49 +168,53 @@ const submit = () => {
         </span>
         {{ t(`${NS}.CRM`, { tag: crmTag }) }}
       </p>
-      <fieldset class="m-0 flex flex-col gap-3 border-0 p-0 py-4">
-        <legend class="mb-2 text-xs font-semibold uppercase text-n-slate-11">
-          {{ t(`${NS}.WHEN`) }}
-        </legend>
-        <div class="flex flex-wrap gap-2" role="radiogroup">
-          <button
-            v-for="option in ['now', 'later']"
-            :key="option"
-            type="button"
-            role="radio"
-            :aria-checked="draft.when === option"
-            :data-when="option"
-            :disabled="option === 'now' && Boolean(nowBlockedReason)"
-            class="min-h-11 rounded-xl border px-4 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand disabled:cursor-not-allowed disabled:opacity-50"
-            :class="
-              draft.when === option
-                ? 'border-n-blue-8 bg-n-blue-2 text-n-blue-11'
-                : 'border-n-weak text-n-slate-12 hover:bg-n-alpha-1'
-            "
-            @click="emit('update', { when: option })"
+      <!-- The padding lives on a wrapper: a legend sits on the fieldset's top edge and
+           ignores its padding, so "Quando começa" stuck to the line above (#1387). -->
+      <div class="py-4">
+        <fieldset class="m-0 flex flex-col gap-3 border-0 p-0">
+          <legend class="mb-2 text-xs font-semibold uppercase text-n-slate-11">
+            {{ t(`${NS}.WHEN`) }}
+          </legend>
+          <div class="flex flex-wrap gap-2" role="radiogroup">
+            <button
+              v-for="option in ['now', 'later']"
+              :key="option"
+              type="button"
+              role="radio"
+              :aria-checked="draft.when === option"
+              :data-when="option"
+              :disabled="option === 'now' && Boolean(nowBlockedReason)"
+              class="min-h-11 rounded-xl border px-4 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand disabled:cursor-not-allowed disabled:opacity-50"
+              :class="
+                draft.when === option
+                  ? 'border-n-blue-8 bg-n-blue-2 text-n-blue-11'
+                  : 'border-n-weak text-n-slate-12 hover:bg-n-alpha-1'
+              "
+              @click="emit('update', { when: option })"
+            >
+              {{ option === 'now' ? t(`${NS}.NOW`) : t(`${NS}.LATER`) }}
+            </button>
+          </div>
+          <p
+            v-if="nowBlockedReason"
+            class="m-0 text-xs text-n-slate-11"
+            data-test="now-blocked"
           >
-            {{ option === 'now' ? t(`${NS}.NOW`) : t(`${NS}.LATER`) }}
-          </button>
-        </div>
-        <p
-          v-if="nowBlockedReason"
-          class="m-0 text-xs text-n-slate-11"
-          data-test="now-blocked"
-        >
-          {{ nowBlockedReason }}
-        </p>
-        <Input
-          v-if="isLater"
-          :model-value="draft.scheduledAt"
-          type="datetime-local"
-          :label="t(`${NS}.DATE_LABEL`, { zone: timeZone })"
-          :message="isScheduleValid ? '' : t(`${NS}.PAST`)"
-          :message-type="isScheduleValid ? 'info' : 'error'"
-          custom-input-class="!h-11"
-          data-test="schedule-at"
-          @update:model-value="scheduledAt => emit('update', { scheduledAt })"
-        />
-      </fieldset>
+            {{ nowBlockedReason }}
+          </p>
+          <Input
+            v-if="isLater"
+            :model-value="draft.scheduledAt"
+            type="datetime-local"
+            :label="t(`${NS}.DATE_LABEL`, { zone: zoneLabel })"
+            :message="scheduleMessage"
+            :message-type="showPastError ? 'error' : 'info'"
+            custom-input-class="!h-11"
+            data-test="schedule-at"
+            @update:model-value="scheduledAt => emit('update', { scheduledAt })"
+          />
+        </fieldset>
+      </div>
     </section>
 
     <aside
@@ -208,8 +232,10 @@ const submit = () => {
           {{ n(receivers) }}
         </p>
         <p class="m-0 text-sm opacity-80">
-          {{ channelLabel }} {{ DOT }}
-          {{ isLater ? whenText : t(`${NS}.NOW`) }}
+          {{ channelLabel }}
+          <template v-if="!isLater || whenText">
+            {{ DOT }} {{ isLater ? whenText : t(`${NS}.NOW`) }}
+          </template>
         </p>
       </div>
       <dl class="m-0 flex flex-col gap-1 text-sm" data-test="review-counts">
