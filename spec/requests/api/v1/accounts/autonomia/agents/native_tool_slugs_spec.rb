@@ -8,7 +8,7 @@ RSpec.describe 'Autonomia agent native tool slugs', type: :request do
   let(:administrator) { create(:user, account: account, role: :administrator) }
   let(:agent) do
     Autonomia::Agents::Agent.create!(account: account, name: 'Ana', agent_type: 'custom', instruction: 'Atenda.',
-                                     config: { 'handoff_strategy' => 'none' })
+                                     config: { 'confidence_threshold' => 0.6 })
   end
   let(:base_url) { "/api/v1/accounts/#{account.id}/autonomia/agents" }
   let(:slug_do_guia) { Autonomia::Agents::Tools::Native::GuiaPagina.slug }
@@ -28,7 +28,7 @@ RSpec.describe 'Autonomia agent native tool slugs', type: :request do
 
       expect(response).to have_http_status(:unprocessable_entity)
       expect(response.parsed_body).to include('code' => 'native_tool_not_allowed', 'slugs' => [slug_do_guia])
-      expect(agent.reload.config).to eq('handoff_strategy' => 'none')
+      expect(agent.reload.config).to eq('confidence_threshold' => 0.6)
       expect(agent.name).to eq('Ana')
     end
 
@@ -65,7 +65,7 @@ RSpec.describe 'Autonomia agent native tool slugs', type: :request do
                                        headers: administrator.create_new_auth_token, as: :json
 
       expect(response).to have_http_status(:success)
-      expect(agent.reload.config).to eq('handoff_strategy' => 'none', 'native_tool_slugs' => [slug_de_atendimento])
+      expect(agent.reload.config).to eq('confidence_threshold' => 0.6, 'native_tool_slugs' => [slug_de_atendimento])
     end
 
     # A agenda da IA (#1196) é do fluxo de atendimento: a API aceita as duas, e a página da internet do Guia não.
@@ -100,7 +100,7 @@ RSpec.describe 'Autonomia agent native tool slugs', type: :request do
                                        headers: administrator.create_new_auth_token, as: :json
 
       expect(response).to have_http_status(:success)
-      expect(agent.reload.config).to eq('handoff_strategy' => 'none', 'response_window' => 'business_hours')
+      expect(agent.reload.config).to eq('confidence_threshold' => 0.6, 'response_window' => 'business_hours')
     end
   end
 

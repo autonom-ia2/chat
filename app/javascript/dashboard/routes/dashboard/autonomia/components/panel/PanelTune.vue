@@ -53,13 +53,6 @@ const TONE_OPTIONS = computed(() =>
   }))
 );
 
-const HANDOFF_OPTIONS = computed(() =>
-  ['low_confidence', 'always_ask', 'never'].map(value => ({
-    value,
-    label: t(`AGENTS.TUNE.HANDOFF_OPTIONS.${value.toUpperCase()}`),
-  }))
-);
-
 // V2.2 — where the agent actuates. `external` (default) atende clientes;
 // `internal` is a team copilot that never connects to an inbox; `both` does
 // both. Switching to `internal` while channels are connected is rejected by the
@@ -71,13 +64,13 @@ const ACTUATION_OPTIONS = computed(() =>
   }))
 );
 
-// handoff_strategy/confidence_threshold are jsonb `config` store-accessors on
-// the backend — read them from agent.config, never the top level.
+// confidence_threshold is a jsonb `config` store-accessor on the backend — read
+// it from agent.config, never the top level. Who receives a handed-off
+// conversation is not chosen here: CRM Assignment decides it (#1454).
 const form = reactive({
   greeting: props.agent.greeting || '',
   fallback_message: props.agent.fallback_message || '',
   tone: props.agent.tone || 'friendly',
-  handoff_strategy: props.agent.config?.handoff_strategy || 'low_confidence',
   confidence_threshold:
     props.agent.config?.confidence_threshold != null
       ? props.agent.config.confidence_threshold
@@ -92,7 +85,6 @@ watch(
     form.greeting = agent.greeting || '';
     form.fallback_message = agent.fallback_message || '';
     form.tone = agent.tone || 'friendly';
-    form.handoff_strategy = agent.config?.handoff_strategy || 'low_confidence';
     form.confidence_threshold =
       agent.config?.confidence_threshold != null
         ? agent.config.confidence_threshold
@@ -111,9 +103,9 @@ const avatarSource = computed(
   () => avatarPreviewUrl.value || props.agent.avatar_url || ''
 );
 
-// handoff_strategy/confidence_threshold MUST be nested under `config` — the
-// controller's strong params only permit `config: {}` for these virtuals and
-// would silently drop them at the top level.
+// confidence_threshold MUST be nested under `config` — the controller's strong
+// params only permit it inside `config: {}` and would silently drop it at the
+// top level.
 // Always stamp the current `mode` so saving the simple block never drops the
 // advanced/manual toggle silently. `extra` may still override (manual save).
 const buildPayload = (extra = {}) => ({
@@ -124,7 +116,6 @@ const buildPayload = (extra = {}) => ({
   actuation: form.actuation,
   mode: advancedMode.value ? 'manual' : 'guided',
   config: {
-    handoff_strategy: form.handoff_strategy,
     confidence_threshold: Number(form.confidence_threshold),
   },
   ...extra,
@@ -508,18 +499,6 @@ onMounted(loadHistory);
           v-model="form.tone"
           :options="TONE_OPTIONS"
           :aria-label="t('AGENTS.TUNE.TONE')"
-          class="w-full"
-        />
-      </div>
-
-      <div class="flex flex-col gap-1">
-        <label class="text-sm font-medium text-n-slate-12">
-          {{ t('AGENTS.TUNE.HANDOFF_STRATEGY') }}
-        </label>
-        <ChoiceSelect
-          v-model="form.handoff_strategy"
-          :options="HANDOFF_OPTIONS"
-          :aria-label="t('AGENTS.TUNE.HANDOFF_STRATEGY')"
           class="w-full"
         />
       </div>

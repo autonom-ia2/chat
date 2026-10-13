@@ -339,14 +339,14 @@ RSpec.describe 'Autonomia journeys - external agent lifecycle', type: :request d
       # Act — o payload do PanelTune: campos simples + `mode: 'guided'` + config das virtuais.
       patch "/api/v1/accounts/#{account.id}/autonomia/agents/#{lia.id}",
             params: { agent: { greeting: 'Olá! Sou a Lia.', tone: 'cordial', mode: 'guided',
-                               config: { handoff_strategy: 'none', confidence_threshold: 0.5 } } },
+                               config: { confidence_threshold: 0.5 } } },
             headers: administrator.create_new_auth_token, as: :json
 
       # Assert
       expect(response).to have_http_status(:success)
       lia.reload
       expect(lia.greeting).to eq('Olá! Sou a Lia.')
-      expect(lia.config['handoff_strategy']).to eq('none')
+      expect(lia.config['confidence_threshold']).to eq(0.5)
       expect(lia.config[Autonomia::Insurance::QuoteAgent::Builder::ESCOLHAS_DA_CORRETORA]).to include('nome_agente' => 'Lia')
     end
 

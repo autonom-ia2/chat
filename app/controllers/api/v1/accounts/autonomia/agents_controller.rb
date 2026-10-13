@@ -63,6 +63,10 @@ class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autono
     with_knowledge system_key builder_active_thread_id
   ] + [::Autonomia::Insurance::QuoteAgent::Builder::ESCOLHAS_DA_CORRETORA]).freeze
 
+  # #1454 — o agente não escolhe mais para quem passa a conversa: a Atribuição do CRM é o motor único de entrega.
+  # Chaves aposentadas não são gravadas; o que agentes antigos já têm no jsonb fica onde está.
+  RETIRED_CONFIG_KEYS = %w[handoff_strategy handoff_target_id].freeze
+
   def update
     rejeitar_edicao_da_instrucao_mantida
     discard_generated_instruction_on_manual_switch
@@ -238,7 +242,7 @@ class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autono
   # ainda as chaves COMPUTADAS (topic_map/knowledge_*/with_knowledge) que o usuário não define pela API.
   # Antes o update SUBSTITUÍA o jsonb inteiro e apagava o que o Revisor/Construtor gerou.
   def merge_config!(incoming)
-    safe = parameter_hash(incoming).except(*PROTECTED_CONFIG_KEYS)
+    safe = parameter_hash(incoming).except(*PROTECTED_CONFIG_KEYS, *RETIRED_CONFIG_KEYS)
     @agent.config = @agent.config.to_h.merge(safe)
   end
 

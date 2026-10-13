@@ -6,7 +6,7 @@ RSpec.describe 'Autonomia agent engagement settings', type: :request do
   let(:administrator) { create(:user, account: account, role: :administrator) }
   let(:agent) do
     Autonomia::Agents::Agent.create!(account: account, name: 'Ana', agent_type: 'custom', instruction: 'Atenda.',
-                                     config: { 'handoff_strategy' => 'none' })
+                                     config: { 'confidence_threshold' => 0.6 })
   end
   let(:url) { "/api/v1/accounts/#{account.id}/autonomia/agents/#{agent.id}" }
   let(:audience) do
@@ -33,7 +33,7 @@ RSpec.describe 'Autonomia agent engagement settings', type: :request do
     expect(response.parsed_body.dig('config', 'audience')).to eq(audience)
     expect(response.parsed_body.dig('config', 'response_window')).to eq('business_hours')
     expect(agent.reload.config).to include('audience' => audience, 'response_window' => 'business_hours',
-                                           'handoff_strategy' => 'none')
+                                           'confidence_threshold' => 0.6)
   end
 
   it 'saves and exposes what to do with a conversation without a contact' do
@@ -43,7 +43,7 @@ RSpec.describe 'Autonomia agent engagement settings', type: :request do
     expect(response).to have_http_status(:success)
     expect(response.parsed_body.dig('config', 'audience_unknown_contact')).to eq('handoff')
     expect(agent.reload.config).to include('audience' => audience, 'audience_unknown_contact' => 'handoff',
-                                           'handoff_strategy' => 'none')
+                                           'confidence_threshold' => 0.6)
   end
 
   it 'rejects an unknown policy for a conversation without a contact' do

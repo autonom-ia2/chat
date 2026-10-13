@@ -77,12 +77,7 @@ const radio = texto =>
   todos('[role="radio"]').find(item => item.textContent.includes(texto));
 
 const naoMandouCamposDoPainelAntigo = () => {
-  const proibidos = [
-    'greeting',
-    'fallback_message',
-    'handoff_strategy',
-    'confidence_threshold',
-  ];
+  const proibidos = ['greeting', 'fallback_message', 'confidence_threshold'];
   store.dispatch.mock.calls.forEach(([, dados]) => {
     proibidos.forEach(campo => expect(dados).not.toHaveProperty(campo));
   });

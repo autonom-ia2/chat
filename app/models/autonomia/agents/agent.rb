@@ -141,11 +141,6 @@ module Autonomia
       # #1196 — a página de agendamento da agenda da IA; escolhê-la liga `horarios_disponiveis` e `agendar_reuniao`.
       store_accessor :config, :booking_page_id
       store_accessor :config, :confidence_threshold # Fase B: portão de confiança (lido no Answerer)
-      # Fase D: handoff real configurável por agente (jsonb `config`, sem migração).
-      # handoff_strategy ∈ Operate::HANDOFF_STRATEGIES; default conservador = 'none'
-      # (comportamento da Fase C: só mensagem graciosa + bot_handoff!, conversa fica unassigned).
-      # handoff_target_id = id do User (assign_member) ou Team (assign_team) alvo.
-      store_accessor :config, :handoff_strategy, :handoff_target_id
       # Revisor v2: MAPA DE TEMAS + confiança geral da base, gravados por Reviewer.recompute_overall!
       # no jsonb `config` (sem migração). Alimentam a UI de Conhecimento e o Construtor (NÃO o
       # jbuilder do agente expõe instruction/scaffold; estes 3 são seguros de expor).

@@ -992,8 +992,8 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - rota: `autonomia_agent_panel` - `/app/accounts/:accountId/agents/:agentId/:tab(test|knowledge|channels|performance|tune|publish)?`
 - gate: papel `administrator` ou `autonomia_view` ou `autonomia_manage`
 - pre_requisitos: agente existente; para métricas, conversas/respostas já registradas.
-- passos: Use Testar para conversar e ver confiança, transferência para humano e fontes usadas; use Desempenho para período 7d/30d, respostas, transferências e taxa de conhecimento; use Ajustar para primeira mensagem, mensagem quando não souber responder, tom, quando transferir para um humano, limite de confiança e atuação; em modo guiado, use Ajustar com IA.
-- gotchas: testar agente não finalizado mostra aviso; histórico de teste fica em `sessionStorage` por agente; modo manual expõe instrução, mas não permite salvar instrução vazia; Performance pode ficar vazia até o agente operar de verdade.
+- passos: Use Testar para conversar e ver confiança, transferência para humano e fontes usadas; use Desempenho para período 7d/30d, respostas, transferências e taxa de conhecimento; use Ajustar para primeira mensagem, mensagem quando não souber responder, tom, limite de confiança e atuação; em modo guiado, use Ajustar com IA.
+- gotchas: o agente não escolhe para quem passa a conversa: quem recebe é definido na Atribuição, em Configurações > Transferir para humano (CRM) (o link Escolher quem recebe da página do agente leva até lá); testar agente não finalizado mostra aviso; histórico de teste fica em `sessionStorage` por agente; modo manual expõe instrução, mas não permite salvar instrução vazia; Performance pode ficar vazia até o agente operar de verdade.
 - nav_target: `autonomia_agent_panel`
 
 ### Deixar o agente de IA marcar reuniões

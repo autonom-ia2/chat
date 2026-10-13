@@ -8,7 +8,7 @@ RSpec.describe 'Autonomia agent booking page setting', type: :request do
   let(:world) { build_booking_world(account: account) }
   let(:agent) do
     Autonomia::Agents::Agent.create!(account: account, name: 'Ana', agent_type: 'scheduler', instruction: 'Atenda.',
-                                     config: { 'handoff_strategy' => 'none' })
+                                     config: { 'confidence_threshold' => 0.6 })
   end
   let(:url) { "/api/v1/accounts/#{account.id}/autonomia/agents/#{agent.id}" }
 
@@ -35,7 +35,7 @@ RSpec.describe 'Autonomia agent booking page setting', type: :request do
     expect(response).to have_http_status(:success)
     expect(response.parsed_body.dig('config', 'booking_page_id')).to eq(world.profile.id)
     expect(response.parsed_body['booking_available']).to be(true)
-    expect(agent.reload.config).to include('booking_page_id' => world.profile.id, 'handoff_strategy' => 'none')
+    expect(agent.reload.config).to include('booking_page_id' => world.profile.id, 'confidence_threshold' => 0.6)
 
     save(nil)
 
@@ -96,12 +96,12 @@ RSpec.describe 'Autonomia agent booking page setting', type: :request do
     it 'drops the computed and reserved config keys a request must never set' do
       post "/api/v1/accounts/#{account.id}/autonomia/agents",
            params: { agent: { name: 'Bia', agent_type: 'scheduler',
-                              config: { handoff_strategy: 'none', topic_map: [{ topic: 'x' }], system_key: 'guide', with_knowledge: true } } },
+                              config: { confidence_threshold: 0.6, topic_map: [{ topic: 'x' }], system_key: 'guide', with_knowledge: true } } },
            headers: administrator.create_new_auth_token, as: :json
 
       expect(response).to have_http_status(:created)
       config = Autonomia::Agents::Agent.find(response.parsed_body['id']).config
-      expect(config).to include('handoff_strategy' => 'none')
+      expect(config).to include('confidence_threshold' => 0.6)
       expect(config.keys).not_to include('topic_map', 'system_key', 'with_knowledge')
     end
 
