@@ -92,6 +92,25 @@ describe('useConversaDeCriacao', () => {
     );
   });
 
+  it('opens the Builder as a team copilot when asked (#1494)', async () => {
+    const { conversa } = montar({ modelo: 'custom', atuacao: 'internal' });
+    conversa.comecar();
+    expect(store.dispatch).toHaveBeenCalledWith('autonomiaBuildThreads/start', {
+      type: 'custom',
+      actuation: 'internal',
+      with_knowledge: true,
+    });
+
+    // O primeiro turno, se a abertura falhou, também vai como copiloto.
+    await conversa.enviar({ texto: 'Resumir conversas' });
+    expect(chamadas('autonomiaBuildThreads/start')[1][1]).toEqual({
+      type: 'custom',
+      actuation: 'internal',
+      with_knowledge: true,
+      message: 'Resumir conversas',
+    });
+  });
+
   it('continues a draft that already has an instruction straight into the test, without opening a thread', async () => {
     const { conversa } = montar();
     await conversa.continuar({ id: 4, name: 'Lia', has_instruction: true });

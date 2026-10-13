@@ -3,12 +3,13 @@ import { useI18n } from 'vue-i18n';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import AutonomiaBuilderImagesAPI from 'dashboard/api/autonomia/builderImages';
 import AutonomiaBuildThreadsAPI from 'dashboard/api/autonomia/buildThreads';
-import { MAX_ARQUIVO_BYTES } from '../constants/criacao';
+import { ATUACAO, MAX_ARQUIVO_BYTES } from '../constants/criacao';
 
 // #1181 PR2 — a conversa da etapa Conte com o Construtor, pela store autonomiaBuildThreads (sem
 // editá-la): start/send/retry/completeMaterials, e stopPolling ao sair (a store tem um poll único).
-// - A IA fala primeiro: a conversa abre só com o modelo (`type`), atuação externa e com base
-//   (arquivos sempre opcionais; o rascunho nasce na primeira resposta e dá o agentId).
+// - A IA fala primeiro: a conversa abre só com o modelo (`type`), a atuação (externa; interna para o
+//   Copiloto da equipe, #1494) e com base (arquivos sempre opcionais; o rascunho nasce na primeira
+//   resposta e dá o agentId).
 // - Continuar um rascunho: com instrução, já está pronto para testar (sem abrir conversa até a
 //   pessoa escrever); sem instrução, abre a conversa ligada ao agente (o backend retoma a pergunta).
 // - A conversa fecha quando o Construtor gera o agente (fase `reviewing` com `agent_id` na thread;
@@ -40,7 +41,7 @@ const estadoDaFonte = fonte => {
   return 'lendo';
 };
 
-export function useConversaDeCriacao({ modelo }) {
+export function useConversaDeCriacao({ modelo, atuacao = ATUACAO.EXTERNA }) {
   const store = useStore();
   const { t } = useI18n();
 
@@ -139,7 +140,7 @@ export function useConversaDeCriacao({ modelo }) {
   const opcoesDeInicio = () =>
     agenteExistente.value
       ? { agentId: agenteExistente.value.id }
-      : { type: modelo, actuation: 'external', with_knowledge: true };
+      : { type: modelo, actuation: atuacao, with_knowledge: true };
 
   const abrir = (extra = {}) =>
     store

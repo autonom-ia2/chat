@@ -594,6 +594,7 @@
         "NOVA_ABA": "(opens in a new tab)",
         "NOVO_AGENTE": "New agent",
         "CLIENTE": "Customer",
+        "EQUIPE": "Team",
         "AGENTE": "Agent",
         "ESCREVENDO": "Typing…",
         "USOU": "Used: {arquivo}",
@@ -618,6 +619,8 @@
         "EXEMPLO": "Example",
         "EXEMPLO_SR": "Example conversation, not a real agent",
         "DO_MEU_JEITO": "My own way: tell it in my own words",
+        "COPILOTO": "Team copilot",
+        "COPILOTO_TEXTO": "Helps your team inside conversations. Never talks to customers.",
         "ESCOLHA": "Pick a ready-made template. You chat for a bit, test the answers and decide when to start answering.",
         "SUPPORT": {
           "TITULO": "Answer customer questions",
@@ -1438,6 +1441,7 @@
         "CONTE": {
           "ROTULO": "Conversation to create the agent",
           "INTRO": "I will ask you a few short questions. The agent only starts answering when you say so.",
+          "INTRO_COPILOTO": "I will ask you a few short questions. The agent only starts helping your team when you say so.",
           "CONVERSA": "Conversation",
           "ASSISTENTE": "Creation assistant:",
           "VOCE": "You:",
@@ -1451,6 +1455,7 @@
           "ANEXO_FRASE": "Do you have a menu, a price list or your website? {acao} It is optional.",
           "ANEXO_ACAO": "Send it here.",
           "EXEMPLO_DO_MEU_JEITO": "E.g.: answer price and delivery questions for my store",
+          "EXEMPLO_COPILOTO": "E.g.: summarize conversations and suggest replies for the team",
           "MAIS": "Want to tell me anything else? Write here.",
           "FOTO": "I sent a photo.",
           "TESTAR_AGORA": "Test now",
@@ -1478,16 +1483,20 @@
         },
         "EXEMPLO": {
           "TITULO": "This is what your customers will see",
-          "LEGENDA": "After you tell me about it, {nome} answers the way your business does."
+          "TITULO_COPILOTO": "This is how your team will use it",
+          "LEGENDA": "After you tell me about it, {nome} answers the way your business does.",
+          "COPILOTO": "Inside a conversation, someone on the team asks for help and {nome} summarizes, suggests the next step or drafts a reply. {nome} never talks to customers."
         },
         "CONFIRA": {
           "TITULO": "Test it as if you were a customer",
+          "TITULO_COPILOTO": "Test it as if you were on the team",
           "TEXTO": "Nobody gets these messages. It is just a test.",
           "VAZIO": "Tap a question or write your own.",
           "VAZIO_CELULAR": "Tap a question below to test.",
           "ESCREVA": "Write a question",
           "PERGUNTAS_ROTULO": "Questions to test",
           "ATENDIDO_POR": "Answered by {nome}",
+          "AJUDA_DA_EQUIPE": "{nome} · team helper",
           "ESCREVENDO": "{nome} is typing…",
           "LIMPAR": "Clear test",
           "ATUALIZADO": "Updated. Test again.",
@@ -1497,12 +1506,15 @@
           "FOTO": "Look at this photo.",
           "FALHA": "{nome} did not answer right now.",
           "FALHA_GARANTIA": "This does not affect your customers.",
+          "FALHA_GARANTIA_COPILOTO": "It is just a test: nobody gets this answer.",
           "DEMORA": "This is taking too long. Try again.",
           "INCOMPLETO": "{nome} does not know enough yet. Tell a bit more on the side.",
           "INCOMPLETO_CELULAR": "{nome} does not know enough yet. Tell a bit more.",
           "PERGUNTE": "Ask a question to see how {nome} answers.",
           "COMECAR_NO": "Start answering on {canal}",
           "COMECAR_TEXTO": "{nome} starts answering your customers’ messages.",
+          "COMECAR_COPILOTO": "Start helping the team",
+          "COMECAR_TEXTO_COPILOTO": "{nome} starts helping your team inside conversations. Never talks to customers.",
           "VOLTAR_CONVERSA": "Back to the conversation",
           "PERGUNTAS": {
             "QUANTO_CUSTA": "How much is it?",
@@ -1511,7 +1523,10 @@
             "PEDIDO": "I want to place an order",
             "DESCONTO": "Is there a discount?",
             "AJUDA": "Hi, I need help",
-            "TROCAR": "I want to exchange a product"
+            "TROCAR": "I want to exchange a product",
+            "COMO_RESPONDO": "A customer asked for a discount. How do I reply?",
+            "PROXIMO_PASSO": "The customer stopped replying. What is the next step?",
+            "RASCUNHO": "Draft a reply about the delivery time"
           }
         },
         "CANAL": {
@@ -1526,15 +1541,17 @@
           "COMECAR": "Start answering",
           "TROCAR": "Swap and start answering",
           "VOLTAR_TESTE": "Back to the test",
-          "ERRO_INTERNO": "Could not start answering. Nothing changed: {nome} is still not answering."
+          "ERRO_INTERNO": "Could not start helping the team. Nothing changed: {nome} is not helping yet."
         },
         "PRONTO": {
           "TITULO": "{nome} is now answering on {canal}",
           "TITULO_SEM_CANAL": "{nome} is now answering",
+          "TITULO_COPILOTO": "{nome} is already helping the team",
           "AGORA": "Whoever messages {canal} now talks to {nome}.",
           "DENTRO": "{nome} answers on {canal} only during business hours.",
           "FORA": "{nome} answers on {canal} only outside business hours.",
           "EQUIPE": "When {nome} does not know, the conversation goes to the team.",
+          "EQUIPE_COPILOTO": "Inside conversations, the team asks {nome} for help. {nome} never talks to customers.",
           "TROCA": "{outro} stopped answering on {canal}.",
           "VER": "See {nome}"
         },
