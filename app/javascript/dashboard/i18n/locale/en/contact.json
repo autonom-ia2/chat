@@ -710,6 +710,7 @@
       "MESSAGE_EDITOR": {
         "PLACEHOLDER": "Write your message here..."
       },
+      "WHATSAPP_API_START_HINT": "No template needed: the text you write goes through WhatsApp API.",
       "WHATSAPP_OPTIONS": {
         "LABEL": "Select template",
         "SEARCH_PLACEHOLDER": "Search templates",

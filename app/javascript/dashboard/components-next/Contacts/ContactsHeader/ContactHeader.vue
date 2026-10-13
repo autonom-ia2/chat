@@ -4,7 +4,7 @@ import Input from 'dashboard/components-next/input/Input.vue';
 import Icon from 'dashboard/components-next/icon/Icon.vue';
 import ContactSortMenu from './components/ContactSortMenu.vue';
 import ContactMoreActions from './components/ContactMoreActions.vue';
-import ComposeConversation from 'dashboard/components-next/NewConversation/ComposeConversation.vue';
+import ComposeConversation from 'dashboard/components-next/NovaConversa/NovaConversaEntrada.vue';
 
 defineProps({
   showSearch: { type: Boolean, default: true },

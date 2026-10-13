@@ -100,6 +100,28 @@ RSpec.describe CampaignJourney::ConversaAberta::Envio, :aggregate_failures do
     expect(sent.pluck('type').uniq).to eq(['template'])
   end
 
+  # #1456: campanha gravada antes da trava, com mensagem escrita e modelo de cupom: todos recebem o modelo completo.
+  it 'modelo de cupom: quem falou nas últimas 24 h também recebe o modelo, com o cupom' do
+    cupom = { 'type' => 'BUTTONS', 'buttons' => [{ 'type' => 'COPY_CODE', 'example' => ['OUT10'] }] }
+    channel.update!(message_templates: [
+                      CampaignJourneyHelpers::JOURNEY_TEMPLATE.merge('components' => CampaignJourneyHelpers::JOURNEY_TEMPLATE['components'] + [cupom])
+                    ])
+    sent = stub_graph_messages
+    falou('Ana Souza')
+    campaign = campanha
+    params = campaign.template_params.deep_dup
+    params['processed_params']['buttons'] = [{ 'type' => 'copy_code', 'parameter' => 'OUT10' }]
+    campaign.update!(template_params: params)
+
+    disparar(campaign)
+
+    para_ana = por_numero(sent)['+5511987654321']
+    expect(para_ana['type']).to eq('template')
+    expect(para_ana.dig('template', 'components').find { |item| item['type'] == 'button' }).to include('sub_type' => 'copy_code')
+    expect(sent.pluck('type').uniq).to eq(['template'])
+    expect(CampaignFreeTextDelivery.count).to eq(0)
+  end
+
   it 'a Meta recusa o texto na hora: a pessoa recebe o modelo no mesmo disparo' do
     sent = stub_graph_messages(failing: ['+5511987654321'])
     falou('Ana Souza')

@@ -50,7 +50,6 @@ import {
   buildCampaignPayload,
   cleanDefaults,
   coverageMapping,
-  mediaHeaderOf,
   previewMessage,
   templateVariables,
 } from 'dashboard/components-next/CampaignJourney/templateVariables';
@@ -76,8 +75,10 @@ import {
   extrasParaEnvio,
   oQuePedir,
   pendencias,
+  soModeloCompleto,
 } from '../modelos/helpers/formatoNaCampanha';
 import { rotuloDoCampo } from '../modelos/helpers/campos';
+import { conteudoDaMeta } from '../modelos/api/daMeta';
 // Fork (#1335, protótipo): conversa aberta — quem falou nas últimas 24 h recebe texto escrito.
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { useConversaAberta } from '../modelos/janela/useConversaAberta';
@@ -150,7 +151,6 @@ const update = patch => {
       ? {
           bindings: ponte.ligacoesIniciais(patch.templateId),
           defaults: {},
-          mediaUrl: '',
           // #1334: nada vem preenchido; o cupom de exemplo do modelo nunca vai sozinho para o público.
           formato: {},
         }
@@ -224,13 +224,17 @@ const variables = computed(() =>
 const modeloEscolhido = computed(() =>
   ponte.modeloPorId(draft.value.templateId)
 );
+// #1456: "Como o cliente vê" é sempre o celular da tela de Modelos (topo,
+// botões, oferta, cartões). Sem a ponte, o modelo vem direto do da Meta.
+const modeloDaPrevia = computed(() => {
+  if (draft.value.channel !== CAMPAIGN_CHANNELS.WHATSAPP_OFFICIAL) return null;
+  if (modeloEscolhido.value) return modeloEscolhido.value;
+  return template.value ? conteudoDaMeta(template.value) : null;
+});
 const remetente = computed(
   () =>
     ponte.caixas.value.find(caixa => caixa.id === draft.value.inboxId)?.conta
       .nome || ''
-);
-const mediaHeader = computed(() =>
-  template.value ? mediaHeaderOf(template.value) : null
 );
 
 const sourceLabel = binding => {
@@ -268,7 +272,7 @@ const isOfficialReady = computed(
   () =>
     Boolean(draft.value.inboxId) &&
     Boolean(template.value) &&
-    // Fork (#1382): topo com mídia sem link usa o arquivo do modelo; o link é opcional.
+    // Fork (#1465): o arquivo do topo (aprovado ou escolhido) entra em formatoPendente.
     allBound(variables.value, draft.value.bindings)
 );
 const MESSAGE_READY = {
@@ -288,7 +292,8 @@ const pedidoDoFormato = computed(() =>
   modeloEscolhido.value
     ? oQuePedir(
         modeloEscolhido.value.template,
-        modeloEscolhido.value.cartoesGuardados || []
+        modeloEscolhido.value.cartoesGuardados || [],
+        modeloEscolhido.value.topoGuardado
       )
     : null
 );
@@ -332,8 +337,22 @@ const comConversaAberta = computed(
     Boolean(draft.value.inboxId) &&
     Boolean(template.value) &&
     // Código de acesso nunca vai como texto livre.
-    template.value.category !== 'AUTHENTICATION'
+    template.value.category !== 'AUTHENTICATION' &&
+    // #1456: cupom, oferta com prazo ou carrossel só no modelo completo.
+    !soModeloCompleto(template.value)
 );
+// #1456: trocou para um modelo desses com o texto já escrito → o texto sai e a
+// tela avisa por quê. Outro modelo apaga o aviso.
+const textoDescartado = ref(false);
+watch(template, atual => {
+  if (!atual || !soModeloCompleto(atual)) {
+    textoDescartado.value = false;
+    return;
+  }
+  if (!draft.value.textoNaConversaAberta) return;
+  update({ textoNaConversaAberta: '' });
+  textoDescartado.value = true;
+});
 const conversaAberta = useConversaAberta(
   computed(() => ({
     publicoId: comConversaAberta.value ? draft.value.audienceId : null,
@@ -666,7 +685,6 @@ const SUBMITTERS = {
         template: template.value,
         bindings: draft.value.bindings,
         defaults: draft.value.defaults,
-        mediaUrl: draft.value.mediaUrl,
         extras: pedidoDoFormato.value
           ? extrasParaEnvio(pedidoDoFormato.value, draft.value.formato || {}, {
               timeZone: timeZone.value,
@@ -994,7 +1012,6 @@ onBeforeUnmount(() => {
           :columns="columns"
           :coverage="coverage"
           :field-groups="ponte.gruposDeCampos.value"
-          :media-header="mediaHeader"
           :preview-text="previewText"
           :can-continue="isMessageReady"
           :api-form="{
@@ -1050,8 +1067,21 @@ onBeforeUnmount(() => {
               @update="formato => update({ formato })"
             />
           </template>
-          <template v-if="comConversaAberta" #janela>
+          <template v-if="comConversaAberta || textoDescartado" #janela>
+            <p
+              v-if="textoDescartado"
+              data-texto-descartado
+              role="status"
+              class="flex items-start gap-2 p-3 m-0 text-sm rounded-xl bg-n-amber-2 text-n-amber-11"
+            >
+              <span
+                class="i-lucide-info size-4 mt-0.5 shrink-0"
+                aria-hidden="true"
+              />
+              {{ t('MODELOS_WHATSAPP.JANELA.TEXTO_DESCARTADO') }}
+            </p>
             <ConversaAberta
+              v-else
               :janela="conversaAberta"
               :texto="draft.textoNaConversaAberta || ''"
               :exemplos="exemplosDoTexto"
@@ -1060,13 +1090,15 @@ onBeforeUnmount(() => {
               @update="update"
             />
           </template>
-          <template v-if="modeloEscolhido" #previa>
+          <template v-if="modeloDaPrevia" #previa>
             <PontePrevia
-              :modelo="modeloEscolhido"
+              :modelo="modeloDaPrevia"
               :bindings="draft.bindings"
+              :defaults="cleanDefaults(draft.defaults)"
               :sample="sample"
-              :remetente="remetente"
-              :cupom="draft.formato?.cupom || ''"
+              :remetente="remetente || inboxName"
+              :valores="draft.formato || {}"
+              :time-zone="timeZone"
             />
           </template>
         </StepMessage>

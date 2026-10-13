@@ -15,7 +15,6 @@ export const emptyDraft = () => ({
   channel: '',
   inboxId: null,
   templateId: null,
-  mediaUrl: '',
   bindings: {},
   defaults: {},
   // WhatsApp API (#999)
@@ -100,7 +99,7 @@ const withTemplate = (base, query) => {
     channel: CAMPAIGN_CHANNELS.WHATSAPP_OFFICIAL,
     inboxId: Number(query.caixa) || base.inboxId,
     templateId,
-    ...(sameTemplate ? {} : { bindings: {}, defaults: {}, mediaUrl: '' }),
+    ...(sameTemplate ? {} : { bindings: {}, defaults: {}, formato: {} }),
     step: base.audienceId ? 2 : 1,
   };
 };

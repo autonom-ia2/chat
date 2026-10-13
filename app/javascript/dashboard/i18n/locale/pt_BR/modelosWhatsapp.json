@@ -518,7 +518,8 @@
       "CATALOGO": "Catálogo",
       "VER_COMO_FICA": "Ver como fica",
       "OFERTA_CONTAGEM": "Termina em 2 dias (exemplo)",
-      "VER_TODAS_AS_OPCOES": "Ver todas as opções"
+      "VER_TODAS_AS_OPCOES": "Ver todas as opções",
+      "OFERTA_VALE_ATE": "Vale até {data}"
     },
     "ENVIADO": {
       "TITULO": {
@@ -711,8 +712,6 @@
       },
       "EM_ANALISE": "“{nome}” ainda está em análise no WhatsApp. Você pode montar e agendar a campanha; enviar agora libera quando ele for aprovado.",
       "ENVIAR_AGORA_BLOQUEADO": "Enviar agora libera quando o WhatsApp aprovar o modelo. Escolha uma data para agendar.",
-      "PRIMEIRO_NOME": "Primeiro nome",
-      "NOME_DO_CONTATO": "Nome do contato",
       "REVISAO": {
         "TITULO": "Modelo",
         "CUSTO": "{porEnvio} por envio · cerca de {total} para {n} pessoas",
@@ -732,24 +731,48 @@
         "CUPOM": "Código do cupom",
         "CUPOM_AJUDA": "Todos recebem o mesmo código. Até {n} letras e números.",
         "CUPOM_ERRO": "Escreva o código, com até {n} letras e números.",
-        "VALIDADE": "A oferta vale até (fuso {zona})",
+        "VALIDADE": "A oferta vale até (fuso da conta: {zona})",
         "VALIDADE_AJUDA": "O cliente vê a contagem regressiva. Se essa hora passar antes do envio, a campanha para e ninguém recebe.",
         "VALIDADE_PASSADA": "Essa hora já passou. Escolha uma data à frente.",
         "CARTOES": "Fotos dos {n} cartões",
         "CARTAO": "Cartão {n}",
-        "CARTAO_GUARDADO": "Vai a foto aprovada com o modelo: {arquivo}",
-        "CARTAO_SEM_ARQUIVO_FOTO": "Escolha a foto deste cartão (JPG ou PNG, até 5 MB).",
-        "CARTAO_SEM_ARQUIVO_VIDEO": "Escolha o vídeo deste cartão (MP4, até 16 MB).",
-        "CARTAO_VOLTAR": "Usar a aprovada",
         "CATALOGO": "O botão abre o catálogo do seu WhatsApp. A foto do primeiro produto aparece no topo da mensagem.",
         "FORMULARIO": "Quem tocar em “{botao}” abre o formulário ligado a este modelo.",
-        "CARTAO_ESCOLHER_FOTO": "Escolher foto",
-        "CARTAO_ESCOLHER_VIDEO": "Escolher vídeo",
-        "CARTAO_TROCAR_FOTO": "Trocar foto",
-        "CARTAO_TROCAR_VIDEO": "Trocar vídeo",
-        "CARTAO_ESCOLHIDO": "Vai o arquivo que você escolheu: {arquivo}",
-        "CARTAO_ENVIANDO": "Enviando {arquivo}…",
-        "CARTAO_ERRO": "Não deu para enviar o arquivo. Tente de novo.",
+        "TOPO": {
+          "foto": "Foto do topo",
+          "video": "Vídeo do topo",
+          "documento": "Documento do topo"
+        },
+        "ARQUIVO": {
+          "GUARDADO": {
+            "foto": "Vai a foto aprovada com o modelo: {arquivo}",
+            "video": "Vai o vídeo aprovado com o modelo: {arquivo}",
+            "documento": "Vai o documento aprovado com o modelo: {arquivo}"
+          },
+          "SEM_ARQUIVO": {
+            "foto": "Escolha a foto (JPG ou PNG, até 5 MB).",
+            "video": "Escolha o vídeo (MP4, até 16 MB).",
+            "documento": "Escolha o documento (PDF, até 100 MB)."
+          },
+          "ESCOLHER": {
+            "foto": "Escolher foto",
+            "video": "Escolher vídeo",
+            "documento": "Escolher documento"
+          },
+          "TROCAR": {
+            "foto": "Trocar foto",
+            "video": "Trocar vídeo",
+            "documento": "Trocar documento"
+          },
+          "VOLTAR": {
+            "foto": "Usar a aprovada",
+            "video": "Usar o aprovado",
+            "documento": "Usar o aprovado"
+          },
+          "ESCOLHIDO": "Vai o arquivo que você escolheu: {arquivo}",
+          "ENVIANDO": "Enviando {arquivo}…",
+          "ERRO": "Não deu para enviar o arquivo. Tente de novo."
+        },
         "CUPOM_VAZIO": "Escreva o código do cupom que seus clientes vão usar.",
         "CUPOM_EXEMPLO": "Ex.: {exemplo}"
       },
@@ -912,7 +935,8 @@
       "CANAL_HINT": "Modelo aprovado pela Meta. Quem falou com você nas últimas 24 horas pode receber uma mensagem escrita por você.",
       "AVISO_PROPAGANDA": "Mensagem de propaganda demais pode levar a bloqueio. Escreva algo útil para a pessoa.",
       "FALHOU": "Não conseguimos conferir quem falou com você agora.",
-      "TENTAR_DE_NOVO": "Tentar de novo"
+      "TENTAR_DE_NOVO": "Tentar de novo",
+      "TEXTO_DESCARTADO": "Este modelo tem cupom, oferta com prazo ou carrossel. Todos recebem o modelo completo, então a mensagem que você escreveu foi tirada."
     },
     "SAUDE": {
       "TITULO": "Como este modelo está indo",

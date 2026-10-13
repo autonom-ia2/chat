@@ -1,5 +1,6 @@
+/* eslint-disable vue/one-component-per-file -- stubs de teste da gaveta, um por cenário */
 import { flushPromises, mount } from '@vue/test-utils';
-import { defineComponent, h, ref } from 'vue';
+import { h, ref } from 'vue';
 import CrmKanbanPage from './CrmKanbanPage.vue';
 import { useAlert } from 'dashboard/composables';
 import { useEmitter } from 'dashboard/composables/emitter';
@@ -18,6 +19,7 @@ const permissions = {};
 const storeGetters = {};
 const dispatch = vi.fn();
 const push = vi.fn();
+const replace = vi.fn();
 
 vi.mock('vue-i18n', () => ({
   useI18n: () => ({
@@ -28,7 +30,7 @@ vi.mock('vue-i18n', () => ({
 
 vi.mock('vue-router', () => ({
   useRoute: () => route,
-  useRouter: () => ({ push, replace: vi.fn() }),
+  useRouter: () => ({ push, replace }),
 }));
 
 vi.mock('dashboard/composables/store', () => ({
@@ -164,7 +166,7 @@ const mountPage = async ({
         Draggable: DraggableStub,
         Spinner: true,
         ConfirmModal: true,
-        CrmCardDrawer: true,
+        CardGaveta: true,
         CrmKanbanFiltersDrawer: true,
         CrmOpportunityFromContact: true,
         CrmPipelineDrawer: true,
@@ -205,6 +207,53 @@ const openConfiguration = async wrapper => {
 
 describe('CrmKanbanPage', () => {
   let wrapper;
+
+  // #1385 — a passagem volta para o Kanban no funil de onde a pessoa saiu.
+  describe('passagem para a equipe', () => {
+    afterEach(() => {
+      route.query = {};
+      delete route.name;
+      push.mockClear();
+      replace.mockClear();
+    });
+
+    it('abre a passagem com from=crm e guarda o funil no endereço do quadro', async () => {
+      window.globalConfig.CRM_AI_ENABLED = 'true';
+      wrapper = await mountPage();
+      replace.mockClear();
+      await openConfiguration(wrapper);
+      Array.from(document.body.querySelectorAll('button'))
+        .find(
+          b => b.textContent.trim() === 'CRM_KANBAN.ACTIONS.HANDOFF_SETTINGS'
+        )
+        .click();
+      await flushPromises();
+
+      expect(replace).toHaveBeenCalledWith({ query: { pipeline_id: '1' } });
+      // O funil fica no endereço do quadro antes de sair (voltar do navegador).
+      expect(replace.mock.invocationCallOrder[0]).toBeLessThan(
+        push.mock.invocationCallOrder[0]
+      );
+      expect(push).toHaveBeenCalledWith({
+        name: 'crm_handoff_settings_edit',
+        params: { pipelineId: 1 },
+        query: { from: 'crm' },
+      });
+    });
+
+    it('com ?pipeline_id= abre nesse funil e tira o parâmetro do endereço', async () => {
+      const outro = { id: 2, name: 'Pós-venda' };
+      dispatch.mockImplementation(async type =>
+        type === 'crmKanban/fetchPipelines' ? [PIPELINE, outro] : []
+      );
+      route.name = 'crm_kanban_index';
+      route.query = { pipeline_id: '2', card_id: '9' };
+      wrapper = await mountPage();
+
+      expect(dispatch).toHaveBeenCalledWith('crmKanban/loadListPrefs', 2);
+      expect(replace).toHaveBeenCalledWith({ query: { card_id: '9' } });
+    });
+  });
 
   beforeEach(() => {
     window.globalConfig = { CRM_CALENDAR_MEETINGS_ENABLED: 'true' };
@@ -349,13 +398,13 @@ describe('CrmKanbanPage', () => {
       if (type === 'crmKanban/fetchCard') return { id: payload };
       return [];
     });
-    const DrawerStub = defineComponent({
+    const DrawerStub = {
       setup(_, { expose }) {
         expose({ guardNavigation });
         return () => h('div');
       },
-    });
-    wrapper = await mountPage({ stubs: { CrmCardDrawer: DrawerStub } });
+    };
+    wrapper = await mountPage({ stubs: { CardGaveta: DrawerStub } });
     const openButtons = () =>
       wrapper
         .findAll('button')
@@ -429,7 +478,7 @@ it('loads all authorized stages for card details independently of board filters'
   await wrapper.vm.openCardDrawer({ id: 100 });
   expect(dispatch).toHaveBeenCalledWith('crmKanban/fetchPipelineStages', 1);
   expect(
-    wrapper.findComponent({ name: 'CrmCardDrawer' }).attributes('stages')
+    wrapper.findComponent({ name: 'CardGaveta' }).attributes('stages')
   ).toBeTruthy();
   expect(wrapper.vm.cardDrawerStages).toEqual(STAGES);
   wrapper.unmount();
@@ -454,13 +503,13 @@ it('abre o card pedido pelo alerta do agendamento com o quadro já aberto', asyn
 
 it('refreshes the messaging window and shows the template alert when creating a follow-up fails that validation', async () => {
   const refreshMessagingWindow = vi.fn();
-  const DrawerStub = defineComponent({
+  const DrawerStub = {
     setup(_, { expose }) {
       expose({ refreshMessagingWindow });
       return () => h('div');
     },
-  });
-  const wrapper = await mountPage({ stubs: { CrmCardDrawer: DrawerStub } });
+  };
+  const wrapper = await mountPage({ stubs: { CardGaveta: DrawerStub } });
   wrapper.vm.selectedCard = { id: 7 };
   dispatch.mockImplementation(async type => {
     if (type === 'crmKanban/createFollowUp') {
@@ -489,13 +538,13 @@ it('refreshes the messaging window and shows the template alert when creating a 
 
 it('shows the raw API message for any other follow-up creation failure', async () => {
   const refreshMessagingWindow = vi.fn();
-  const DrawerStub = defineComponent({
+  const DrawerStub = {
     setup(_, { expose }) {
       expose({ refreshMessagingWindow });
       return () => h('div');
     },
-  });
-  const wrapper = await mountPage({ stubs: { CrmCardDrawer: DrawerStub } });
+  };
+  const wrapper = await mountPage({ stubs: { CardGaveta: DrawerStub } });
   wrapper.vm.selectedCard = { id: 7 };
   dispatch.mockImplementation(async type => {
     if (type === 'crmKanban/createFollowUp') {

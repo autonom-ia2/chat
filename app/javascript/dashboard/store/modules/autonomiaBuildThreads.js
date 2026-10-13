@@ -22,10 +22,19 @@ import { throwErrorMessage } from 'dashboard/store/utils/api';
 //
 // IP OCULTO: we only ever surface messages + the filtered `state`; the backend
 // never emits instruction/scaffold here.
+// #1367 — the backend now pushes `autonomia.build_thread.updated` (ActionCable)
+// to the thread creator as soon as the turn ends, and `buildThreadUpdated`
+// fetches right away. Polling stays as the fallback (other viewers of the same
+// thread, dropped websocket), so its interval did not need to shrink.
 const POLL_INTERVAL = 3000;
 const POLL_MAX_ATTEMPTS = 600; // ~30 minutes ceiling
 
 let pollTimer = null;
+// The thread the poll loop is following (null once it settled or stopped), the
+// attempt it is on, and whether a push arrived while a fetch was in flight.
+let pollThreadId = null;
+let pollAttempt = 0;
+let pushedDuringFetch = false;
 
 // T6 — idempotency id per TURN (not per request): minted when the user sends a
 // message and reused while that exact turn is unconfirmed (double-click,
@@ -275,16 +284,23 @@ export const actions = {
   // Polls `show` until the build settles (ready/failed), then stops. Self-
   // clearing; a new start/send resets the loop. On exhausting the (long) window
   // without settling we surface a visible timeout instead of going quiet.
-  poll: ({ commit, dispatch }, { threadId, attempt = 0 }) => {
+  poll: (
+    { commit, dispatch },
+    { threadId, attempt = 0, delay = POLL_INTERVAL }
+  ) => {
     clearPoll();
     if (!threadId) return;
     if (attempt >= POLL_MAX_ATTEMPTS) {
+      pollThreadId = null;
       commit('SET_ERROR', 'timeout');
       commit('SET_STATUS', 'failed');
       return;
     }
+    pollThreadId = threadId;
+    pollAttempt = attempt;
     pollTimer = setTimeout(async () => {
       pollTimer = null;
+      pushedDuringFetch = false;
       let payload = null;
       try {
         payload = await dispatch('fetch', { threadId });
@@ -298,10 +314,33 @@ export const actions = {
         payload &&
         (payload.status === 'ready' || payload.status === 'failed')
       ) {
+        if (pollThreadId === threadId) pollThreadId = null;
         return;
       }
-      dispatch('poll', { threadId, attempt: attempt + 1 });
-    }, POLL_INTERVAL);
+      // The page stopped polling, or moved to another thread, while this fetch
+      // was in flight: don't revive this loop nor kill the new thread's timer.
+      if (pollThreadId !== threadId) return;
+      dispatch('poll', {
+        threadId,
+        attempt: attempt + 1,
+        delay: pushedDuringFetch ? 0 : POLL_INTERVAL,
+      });
+    }, delay);
+  },
+
+  // #1367 — the server says this thread's turn just ended: fetch now instead of
+  // waiting for the next poll tick. Ignored when no poll is following that
+  // thread (settled, another thread, or the page left). The payload only
+  // carries ids; content still comes from `show`.
+  buildThreadUpdated: ({ dispatch }, { id } = {}) => {
+    if (!id || id !== pollThreadId) return;
+    if (!pollTimer) {
+      // A fetch is in flight and may have read the thread before the turn
+      // ended: poll again right after it.
+      pushedDuringFetch = true;
+      return;
+    }
+    dispatch('poll', { threadId: id, attempt: pollAttempt, delay: 0 });
   },
 
   // Resolve a settled build into a UI phase. `ready` is ambiguous on the wire,
@@ -362,6 +401,8 @@ export const actions = {
 
   stopPolling: () => {
     clearPoll();
+    pollThreadId = null;
+    pushedDuringFetch = false;
   },
 };
 

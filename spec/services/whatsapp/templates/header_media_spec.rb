@@ -28,6 +28,12 @@ RSpec.describe Whatsapp::Templates::HeaderMedia, :aggregate_failures do
     profile
   end
 
+  # O arquivo escolhido na campanha sobe pelo upload de mídia dos Modelos (blob com a conta), como nos cartões (#1334).
+  def uploaded(name, account_id: account.id, content_type: 'image/png', size: 3)
+    ActiveStorage::Blob.create_and_upload!(io: StringIO.new('x' * size), filename: name, content_type: content_type,
+                                           identify: false, metadata: { 'account_id' => account_id })
+  end
+
   def create_campaign(header)
     CampaignJourney::WhatsappCampaignCreator.new(
       account: account, campaign_import: audience, channel: 'whatsapp_cloud',
@@ -76,6 +82,35 @@ RSpec.describe Whatsapp::Templates::HeaderMedia, :aggregate_failures do
       expect(campaign.template_params.dig('processed_params', 'header'))
         .to eq('media_url' => 'https://exemplo.com/oferta.png', 'media_type' => 'image')
     end
+
+    # #1465: o arquivo escolhido na campanha sobe pelo upload dos Modelos; a campanha guarda a referência, sem link.
+    it 'arquivo escolhido na campanha: guarda a referência, mesmo sem arquivo no perfil' do
+      blob = uploaded('nova.png')
+
+      campaign = create_campaign({ 'media_url' => '', 'media_type' => 'image', 'media_blob' => blob.signed_id })
+
+      expect(campaign.template_params.dig('processed_params', 'header'))
+        .to eq('media_url' => '', 'media_blob' => blob.signed_id, 'media_type' => 'image')
+    end
+
+    it 'arquivo de outra conta, de outro tipo, grande demais ou referência inválida: recusa header_media_invalid' do
+      [uploaded('outra.png', account_id: account.id + 1), uploaded('a.pdf', content_type: 'application/pdf'),
+       uploaded('grande.png', size: 5.megabytes + 1)].each do |blob|
+        expect(refusal_code({ 'media_url' => '', 'media_blob' => blob.signed_id })).to eq('header_media_invalid')
+      end
+      expect(refusal_code({ 'media_url' => '', 'media_blob' => 'x' })).to eq('header_media_invalid')
+      expect(account.campaigns.count).to eq(0)
+    end
+
+    it 'documento no topo aceita PDF escolhido na campanha' do
+      channel.update_columns(message_templates: [template.merge('components' => [{ 'type' => 'HEADER', 'format' => 'DOCUMENT' }, # rubocop:disable Rails/SkipsModelValidations
+                                                                                 template['components'].last])])
+      blob = uploaded('tabela.pdf', content_type: 'application/pdf')
+
+      campaign = create_campaign({ 'media_url' => '', 'media_blob' => blob.signed_id })
+
+      expect(campaign.template_params.dig('processed_params', 'header')).to include('media_blob' => blob.signed_id, 'media_type' => 'document')
+    end
   end
 
   describe 'disparo' do
@@ -107,6 +142,45 @@ RSpec.describe Whatsapp::Templates::HeaderMedia, :aggregate_failures do
     end
 
     it 'sem link e o arquivo sumiu do perfil: pausa com template_media_missing e não envia' do
+      sent = stub_graph_messages
+
+      Whatsapp::OneoffCampaignService.new(campaign: campaign).perform
+
+      expect(sent).to be_empty
+      expect(CampaignPause.open_for(campaign)).to have_attributes(source: 'template', reason_code: 'template_media_missing')
+    end
+
+    it 'com arquivo escolhido na campanha: cada envio leva o link desse arquivo, não o do perfil' do
+      save_profile_file
+      blob = uploaded('nova.png')
+      campaign.update!(template_params: params({ 'media_url' => '', 'media_blob' => blob.signed_id, 'media_type' => 'image' }))
+      sent = stub_graph_messages
+
+      Whatsapp::OneoffCampaignService.new(campaign: campaign).perform
+
+      links = header_links(sent)
+      expect(links.size).to eq(2)
+      expect(links).to all(start_with('http').and(include('nova.png')))
+      expect(campaign.reload).to be_completed
+      expect(campaign.template_params.dig('processed_params', 'header', 'media_blob')).to eq(blob.signed_id)
+      expect(sent.map(&:to_json)).to all(satisfy { |body| body.exclude?('media_blob') && body.exclude?(blob.signed_id) })
+    end
+
+    it 'arquivo guardado que não é desta conta (gravado por fora da criação): pausa e não envia' do
+      blob = uploaded('alheio.png', account_id: account.id + 1)
+      campaign.update!(template_params: params({ 'media_url' => '', 'media_blob' => blob.signed_id, 'media_type' => 'image' }))
+      sent = stub_graph_messages
+
+      Whatsapp::OneoffCampaignService.new(campaign: campaign).perform
+
+      expect(sent).to be_empty
+      expect(CampaignPause.open_for(campaign)).to have_attributes(source: 'template', reason_code: 'template_media_missing')
+    end
+
+    it 'arquivo escolhido que sumiu: pausa com template_media_missing e não envia' do
+      blob = uploaded('nova.png')
+      campaign.update!(template_params: params({ 'media_url' => '', 'media_blob' => blob.signed_id, 'media_type' => 'image' }))
+      blob.purge
       sent = stub_graph_messages
 
       Whatsapp::OneoffCampaignService.new(campaign: campaign).perform

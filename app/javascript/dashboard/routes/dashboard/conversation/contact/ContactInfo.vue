@@ -19,7 +19,7 @@ import SocialIcons from './SocialIcons.vue';
 import EditContact from './EditContact.vue';
 import ContactMergeModal from 'dashboard/modules/contact/ContactMergeModal.vue';
 import ContactDeleteModal from 'dashboard/modules/contact/ContactDeleteModal.vue';
-import ComposeConversation from 'dashboard/components-next/NewConversation/ComposeConversation.vue';
+import ComposeConversation from 'dashboard/components-next/NovaConversa/NovaConversaEntrada.vue';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 import VoiceCallButton from 'dashboard/components-next/Contacts/VoiceCallButton.vue';
 import InlineInput from 'dashboard/components-next/inline-input/InlineInput.vue';

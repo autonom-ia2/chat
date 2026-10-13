@@ -95,11 +95,11 @@ RSpec.describe Crm::Ai::HandoffDrainJob do
     expect(conversa_do_card.reload.assignee_id).to eq(ana.id)
   end
 
-  it 'a ordem dos passos alterna por rodada (minuto par: conversas primeiro; ímpar: cards)', :aggregate_failures do
+  it 'a ordem dos passos alterna por rodada do cron de 2 minutos (conversas primeiro numa, cards na seguinte)', :aggregate_failures do
     job = described_class.new
     with_modified_env(CRM_KANBAN_ENABLED: 'true', CRM_AI_ENABLED: 'true') do
-      travel_to(Time.zone.local(2026, 10, 13, 10, 2)) { expect(job.send(:passos).first).to eq(:drain_held_conversations) }
-      travel_to(Time.zone.local(2026, 10, 13, 10, 3)) { expect(job.send(:passos).first).to eq(:drain_held_cards) }
+      travel_to(Time.zone.local(2026, 10, 13, 10, 4)) { expect(job.send(:passos).first).to eq(:drain_held_conversations) }
+      travel_to(Time.zone.local(2026, 10, 13, 10, 6)) { expect(job.send(:passos).first).to eq(:drain_held_cards) }
     end
   end
 

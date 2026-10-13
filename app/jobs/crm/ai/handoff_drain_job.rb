@@ -7,7 +7,9 @@
 # 2. Cards com a espera gravada no card, de antes do #1454 (só com a IA do CRM ligada), pelo HandoffExecutor.
 #
 # Uma rodada por vez (trava de sessão do Postgres; quem não pega, sai), 45 s por passo, ordem alternada, e a presença
-# de cada conta lida uma vez (Crm::Entrega::Presenca). A presença fica congelada durante a rodada (até 90 s):
+# de cada conta lida uma vez (Crm::Entrega::Presenca). O teto é checado entre itens: cada item pode somar até ~10 s
+# de trava (LOCK_TIMEOUT na linha e no carimbo), então uma rodada fica perto de 90 s, no pior caso ~110 s.
+# A presença fica congelada durante a rodada:
 # quem entrar no meio dela recebe na rodada seguinte, 2 minutos depois.
 class Crm::Ai::HandoffDrainJob < ApplicationJob
   queue_as :scheduled_jobs
@@ -42,11 +44,12 @@ class Crm::Ai::HandoffDrainJob < ApplicationJob
     Process.clock_gettime(Process::CLOCK_MONOTONIC)
   end
 
-  # Minuto par: conversas primeiro; ímpar: cards primeiro.
+  # O cron roda a cada 2 minutos (minuto sempre par): alterna pela rodada (minuto / 2), conversas primeiro numa,
+  # cards primeiro na seguinte.
   def passos
     passos = [:drain_held_conversations]
     passos << :drain_held_cards if Crm::Ai::Config.enabled?
-    Time.current.min.even? ? passos : passos.reverse
+    (Time.current.min / 2).even? ? passos : passos.reverse
   end
 
   def tempo_acabou?
@@ -142,6 +145,7 @@ class Crm::Ai::HandoffDrainJob < ApplicationJob
     Rails.logger.warn("[crm][entrega] fila card=#{card.id} pulado: trava ocupada")
   rescue StandardError => e
     Rails.logger.error("[crm][entrega] fila card=#{card.id} erro=#{e.class}")
+    ChatwootExceptionTracker.new(e, account: card.account).capture_exception
   end
 
   def drain_held_cards

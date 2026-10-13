@@ -38,6 +38,8 @@ const CREATE_ERRORS = {
   header_media_required: 'HEADER_MEDIA_REQUIRED',
   header_media_url_invalid: 'HEADER_MEDIA_URL_INVALID',
   header_media_type_mismatch: 'HEADER_MEDIA_TYPE_MISMATCH',
+  // Fork #1465: o arquivo do topo escolhido na campanha (outra conta, tipo ou tamanho).
+  header_media_invalid: 'HEADER_MEDIA_INVALID',
   // Fork #1334: o que o formato do modelo pede (Whatsapp::Templates::SendParams).
   coupon_code_invalid: 'COUPON_CODE_INVALID',
   offer_expiration_required: 'OFFER_EXPIRATION_REQUIRED',
@@ -50,6 +52,8 @@ const CREATE_ERRORS = {
   // Fork #1335: a mensagem escrita para quem falou nas últimas 24 h.
   free_text_invalid: 'FREE_TEXT_INVALID',
   free_text_disabled: 'FREE_TEXT_DISABLED',
+  // Fork #1456: cupom, oferta com prazo ou carrossel só no modelo completo.
+  free_text_not_allowed_with_rich_template: 'FREE_TEXT_RICH_TEMPLATE',
 };
 
 export const createErrorKey = error => {

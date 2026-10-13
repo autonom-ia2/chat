@@ -169,4 +169,25 @@ describe('FunilQuadro', () => {
     expect(trilho(wrapper).element.scrollLeft).toBe(325);
     wrapper.unmount();
   });
+
+  it('stays read-only by default and, when clickable, offers every column but the lit one', async () => {
+    const leitura = montar({ etapas: etapas(3), acesa: 1 });
+    await flushPromises();
+    expect(leitura.find('[data-funil-quadro-escolher]').exists()).toBe(false);
+    leitura.unmount();
+
+    const wrapper = montar({
+      etapas: etapas(3),
+      acesa: 1,
+      clicavel: true,
+      rotuloEscolher: nome => `Mover para ${nome}`,
+    });
+    await flushPromises();
+    const botoes = wrapper.findAll('[data-funil-quadro-escolher]');
+    expect(botoes).toHaveLength(2);
+    expect(botoes[1].attributes('aria-label')).toBe('Mover para Etapa 3');
+    await botoes[1].trigger('click');
+    expect(wrapper.emitted('escolher')).toEqual([[2]]);
+    wrapper.unmount();
+  });
 });

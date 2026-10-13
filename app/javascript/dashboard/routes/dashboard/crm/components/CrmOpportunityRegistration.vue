@@ -15,12 +15,21 @@ import PhoneNumberInput from 'dashboard/components-next/phonenumberinput/PhoneNu
 import countries from 'shared/constants/countries';
 import CrmOpportunityCompanyPicker from './CrmOpportunityCompanyPicker.vue';
 import { companyDomain } from './opportunityRegistration';
+import { textosCom } from './card/textos';
 
-const props = defineProps({ disabled: { type: Boolean, default: false } });
+const props = defineProps({
+  disabled: { type: Boolean, default: false },
+  // #1423 — prefixo com as frases da gaveta nova; vazio = textos de sempre.
+  textos: { type: String, default: '' },
+});
 const emit = defineEmits(['useContact']);
 const draft = defineModel({ type: Object, required: true });
-const { t } = useI18n();
-const label = key => t(`CRM_KANBAN.OPPORTUNITY.REGISTRATION.${key}`);
+const { t, te } = useI18n();
+const label = textosCom(
+  { t, te },
+  props.textos,
+  'CRM_KANBAN.OPPORTUNITY.REGISTRATION'
+);
 const { attributesEnabled, companiesEnabled, state, load } = useRelationships();
 const root = ref(null);
 const phone = ref(null);
