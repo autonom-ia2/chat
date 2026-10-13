@@ -75,6 +75,36 @@ RSpec.describe 'Autonomia agent config exposure', type: :request do
       expect(agent.reload.config).to include('handoff_strategy' => 'low_confidence', 'handoff_target_id' => 42,
                                              'confidence_threshold' => 0.5)
     end
+
+    it 'leaves the stored config untouched when config carries only the retired handoff keys' do
+      # Arrange
+      before = agent.reload.config
+
+      # Act
+      patch "/api/v1/accounts/#{account.id}/autonomia/agents/#{agent.id}",
+            params: { agent: { config: { handoff_strategy: 'never', handoff_target_id: 9 } } },
+            headers: administrator.create_new_auth_token,
+            as: :json
+
+      # Assert
+      expect(response).to have_http_status(:success)
+      expect(agent.reload.config).to eq(before)
+    end
+
+    it 'leaves the stored config untouched when config is null' do
+      # Arrange
+      before = agent.reload.config
+
+      # Act
+      patch "/api/v1/accounts/#{account.id}/autonomia/agents/#{agent.id}",
+            params: { agent: { name: 'Agente', config: nil } },
+            headers: administrator.create_new_auth_token,
+            as: :json
+
+      # Assert
+      expect(response).to have_http_status(:success)
+      expect(agent.reload.config).to eq(before)
+    end
   end
 
   describe 'POST /api/v1/accounts/:account_id/autonomia/agents' do

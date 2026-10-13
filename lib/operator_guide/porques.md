@@ -915,7 +915,7 @@
 - onde_fica: Sidebar > Agentes de IA > Meus agentes > abrir agente > Testar, Desempenho ou Ajustar
 - pre_requisitos: agente existente; para métricas, conversas/respostas já registradas.
 - passos: Use Testar para conversar e ver confiança, transferência para humano e fontes usadas; use Desempenho para período 7d/30d, respostas, transferências e taxa de conhecimento; use Ajustar para primeira mensagem, mensagem quando não souber responder, tom, limite de confiança e atuação; em modo guiado, use Ajustar com IA.
-- gotchas: o agente não escolhe para quem passa a conversa: quem recebe é definido na Atribuição, em Configurações > Transferir para humano (CRM) (o link Escolher quem recebe da página do agente leva até lá); testar agente não finalizado mostra aviso; histórico de teste fica em `sessionStorage` por agente; modo manual expõe instrução, mas não permite salvar instrução vazia; Performance pode ficar vazia até o agente operar de verdade.
+- gotchas: o agente não escolhe para quem passa a conversa: quem recebe a conversa que o agente passa é definido pela Atribuição, em Configurações > Atribuição de Agentes > Transferir para humano (CRM), que só existe com o CRM com IA ligado; sem ele, vale a atribuição automática da caixa, quando ligada (quem está online, um de cada vez), e com ela desligada a conversa fica em Não atribuídas; na página nova do agente o atalho Escolher quem recebe leva até a Atribuição (em Ajustar não existe); testar agente não finalizado mostra aviso; histórico de teste fica em `sessionStorage` por agente; modo manual expõe instrução, mas não permite salvar instrução vazia; Performance pode ficar vazia até o agente operar de verdade.
 
 ### deixar_o_agente_de_ia_marcar_reunioes
 - titulo: Deixar o agente de IA marcar reuniões
