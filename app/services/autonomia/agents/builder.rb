@@ -688,6 +688,14 @@ module Autonomia
       # (o controller só persiste turnos `user`; o bubble do assistant vive só no FE).
       MAX_INTERVIEW_QUESTIONS = 6
 
+      # #1367 — rótulo de uso por FASE do turno (Gestão IA e medição de latência). O relatório soma os três,
+      # e o `agente_builder` legado do histórico, em "Construtor de agente" (Crm::Reports::AiUsage).
+      USAGE_FEATURES = {
+        coleta: 'agente_builder_coleta',
+        fechamento: 'agente_builder_fechamento',
+        ajuste: 'agente_builder_ajuste'
+      }.freeze
+
       def initialize(account:, build_thread:)
         @account = account
         @thread  = build_thread
@@ -717,9 +725,45 @@ module Autonomia
           input: build_input,
           schema: BUILDER_SCHEMA,
           reasoning_effort: reasoning_effort,
-          tools: Crm::Ai::WebSearch.tools
+          tools: web_search_tools
         )
+        log_turn(result)
         apply_result(token, result[:text])
+      end
+
+      # Fase do turno, decidida ANTES da chamada com os mesmos sinais que escolhem o raciocínio
+      # (closing_phase?). Memoizada: o rótulo do uso e a oferta de busca na web precisam concordar.
+      # Um fechamento que o próprio modelo decide num turno de coleta (needs_more_info=false sem nenhum
+      # sinal prévio) continua contado como coleta: a fase real só existe depois da resposta.
+      def turn_phase
+        @turn_phase ||= if adjust_mode?
+                          :ajuste
+                        elsif closing_phase?
+                          :fechamento
+                        else
+                          :coleta
+                        end
+      end
+
+      # #1367 (alavanca 1) — a busca na web só vai ao modelo quando o turno vai redigir ou ajustar a
+      # instrução. Na entrevista ela só alongava o turno. O kill-switch global (AI_WEB_SEARCH_ENABLED)
+      # continua mandando nas duas fases que ainda a recebem.
+      def web_search_tools
+        return nil if turn_phase == :coleta
+
+        Crm::Ai::WebSearch.tools
+      end
+
+      # Uma linha por turno, só metadados (nunca conteúdo): fase, se a busca foi oferecida e usada, e os
+      # tokens de raciocínio, que a tabela de uso não tem coluna para guardar.
+      def log_turn(result)
+        usage = (result[:usage] || {}).to_h.transform_keys(&:to_s)
+        details = (usage['output_tokens_details'] || {}).to_h.transform_keys(&:to_s)
+        Rails.logger.info(
+          "[autonomia][builder] turn thread=#{@thread.id} phase=#{turn_phase} " \
+          "web_search_offered=#{web_search_tools.present?} tools_used=#{Array(result[:tools_used]).join(',')} " \
+          "reasoning_tokens=#{details['reasoning_tokens'].to_i} output_tokens=#{usage['output_tokens'].to_i}"
+        )
       end
 
       # Sem agente ainda (criação) => ok; com agente, ele PRECISA ser da conta da thread.
@@ -1641,7 +1685,7 @@ module Autonomia
       end
 
       def client
-        @client ||= Crm::Ai::ResponsesClient.new(credential: credential, feature: 'agente_builder', account: @account)
+        @client ||= Crm::Ai::ResponsesClient.new(credential: credential, feature: USAGE_FEATURES.fetch(turn_phase), account: @account)
       end
 
       def credential
