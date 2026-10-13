@@ -15,6 +15,8 @@ import ContentTemplateSelector from './ContentTemplateSelector.vue';
 const props = defineProps({
   attachedFiles: { type: Array, default: () => [] },
   isWhatsappInbox: { type: Boolean, default: false },
+  // fork chat#1457: caixa WhatsApp com o Híbrido pronto também envia texto livre.
+  isWhatsappApiStart: { type: Boolean, default: false },
   isEmailOrWebWidgetInbox: { type: Boolean, default: false },
   isTwilioSmsInbox: { type: Boolean, default: false },
   isTwilioWhatsAppInbox: { type: Boolean, default: false },
@@ -72,14 +74,20 @@ const showTwilioContentTemplates = computed(() => {
   return props.isTwilioWhatsAppInbox && props.inboxId;
 });
 
+const isTemplateOnlyWhatsapp = computed(() => {
+  return props.isWhatsappInbox && !props.isWhatsappApiStart;
+});
+
 const shouldShowEmojiButton = computed(() => {
   return (
-    !props.isWhatsappInbox && !props.isTwilioWhatsAppInbox && !props.hasNoInbox
+    !isTemplateOnlyWhatsapp.value &&
+    !props.isTwilioWhatsAppInbox &&
+    !props.hasNoInbox
   );
 });
 
 const isRegularMessageMode = computed(() => {
-  return !props.isWhatsappInbox && !props.isTwilioWhatsAppInbox;
+  return !isTemplateOnlyWhatsapp.value && !props.isTwilioWhatsAppInbox;
 });
 
 const shouldShowSignatureButton = computed(() => {
@@ -191,7 +199,7 @@ useEventListener(document, 'paste', onPaste);
 
 <template>
   <div
-    class="flex items-center justify-between w-full h-[3.25rem] gap-2 px-4 py-3"
+    class="flex flex-wrap items-center justify-between w-full min-h-[3.25rem] gap-2 px-4 py-3"
   >
     <div class="flex gap-2 items-center">
       <WhatsAppOptions
