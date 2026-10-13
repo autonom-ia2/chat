@@ -45,17 +45,20 @@ export function useConversaAberta(entrada) {
     }
   };
 
-  // Outro público ou outra caixa: zera e conta de novo. Outro modelo: conta de
-  // novo (o preço do modelo muda) mantendo o número na tela.
+  // Um pedido por mudança. Outro público ou outra caixa: zera e conta de novo.
+  // Só outro modelo: conta de novo (o preço do modelo muda) mantendo o número.
   watch(
-    [() => entrada.value.publicoId, () => entrada.value.caixaId],
-    () => {
-      contagem.value = null;
+    [
+      () => entrada.value.publicoId,
+      () => entrada.value.caixaId,
+      () => entrada.value.categoria,
+    ],
+    (agora, antes = []) => {
+      if (agora[0] !== antes[0] || agora[1] !== antes[1]) contagem.value = null;
       contar();
     },
     { immediate: true }
   );
-  watch(() => entrada.value.categoria, contar);
 
   const precoModelo = computed(() => contagem.value?.precos.modelo || null);
   const precoResposta = computed(() => contagem.value?.precos.escrita || null);
