@@ -35,6 +35,7 @@ const ERROS_DE_EXECUCAO = {
   parametro_invalido: ['VALOR', 'PREENCHE'],
   corpo_sem_escape: ['TIPO_DO_CORPO', null],
   parser_error: ['NAO_JSON', 'PREENCHE'],
+  endereco_invalido: ['URL_INVALIDA', 'ENDERECO'],
   undefined_variable: ['NAO_EXISTE', 'PREENCHE'],
   undefined_filter: ['NAO_EXISTE', 'PREENCHE'],
   syntax_error: ['NAO_EXISTE', 'PREENCHE'],
@@ -65,21 +66,15 @@ const codificar = valor => encodeURIComponent(valor).split('%20').join('+');
 
 const valorDe = (valores, nome) => String(valores[nome] ?? '').trim();
 
-// Junta pedaços vizinhos sem marca, para a prévia não virar uma sopa de <span>.
-const juntar = pedacos =>
-  pedacos
-    .filter(p => p.texto !== '')
-    .reduce((lista, pedaco) => {
-      const ultimo = lista[lista.length - 1];
-      if (ultimo && !ultimo.ruim && !pedaco.ruim) {
-        return [...lista.slice(0, -1), { texto: ultimo.texto + pedaco.texto }];
-      }
-      return [...lista, pedaco];
-    }, []);
+// Junta os pedaços num só, para a prévia não virar uma sopa de <span>.
+const juntar = pedacos => {
+  const texto = pedacos.map(p => p.texto).join('');
+  return texto ? [{ texto }] : [];
+};
 
-// Troca as {{variáveis}} como o HttpExecutor (Liquid sem codificar, a não ser com url_encode).
-// Sem valor, a variável continua escrita; no endereço, valor com espaço sem url_encode é "ruim".
-// No corpo, cada valor vai com o escape do tipo do corpo, como o CorpoDaFerramenta envia (#1425).
+// Troca as {{variáveis}} como o HttpExecutor. Sem valor, a variável continua escrita. Cada valor vai com
+// o escape da posição (#1425): no endereço, pedaço do caminho ou valor da query (EnderecoDaFerramenta);
+// no corpo, o do tipo do corpo (CorpoDaFerramenta).
 const comoVeio = valor => valor;
 const paraDentroDeAspas = valor => JSON.stringify(valor).slice(1, -1);
 // URI.encode_www_form_component: só letras, dígitos e * - . _ ficam; espaço vira +.
@@ -90,11 +85,20 @@ const comoCampoDeFormulario = valor =>
       texto.split(c).join(`%${c.charCodeAt(0).toString(16).toUpperCase()}`),
     codificar(valor)
   );
+// ERB::Util.url_encode: só letras, dígitos e - . _ ~ ficam; espaço vira %20 e "/" também é codificada.
+const FORA_DO_ENCODE_URI_NO_CAMINHO = ['!', "'", '(', ')', '*'];
+const noCaminho = valor =>
+  FORA_DO_ENCODE_URI_NO_CAMINHO.reduce(
+    (texto, c) =>
+      texto.split(c).join(`%${c.charCodeAt(0).toString(16).toUpperCase()}`),
+    encodeURIComponent(valor)
+  );
+// Os escapes que já codificam: com eles, o backend tira o url_encode final e codifica uma vez só.
+const CODIFICAM = [comoCampoDeFormulario, noCaminho];
 
-const preencher = (texto, valores, noEndereco, escapar = comoVeio) => {
+const preencher = (texto, valores, escapar = comoVeio) => {
   const partes = String(texto ?? '').split('{{');
   const pedacos = [{ texto: partes[0] }];
-  let ruim = '';
   partes.slice(1).forEach(parte => {
     const fim = parte.indexOf('}}');
     if (fim < 0) {
@@ -109,22 +113,45 @@ const preencher = (texto, valores, noEndereco, escapar = comoVeio) => {
     if (!valor) {
       pedacos.push({ texto: `{{${parte.slice(0, fim)}}}` });
     } else if (
-      escapar === comoCampoDeFormulario &&
+      CODIFICAM.includes(escapar) &&
       filtros[filtros.length - 1] === 'url_encode'
     ) {
-      // Formulário: o backend tira o url_encode final e codifica uma vez só.
-      pedacos.push({ texto: comoCampoDeFormulario(valor) });
+      pedacos.push({ texto: escapar(valor) });
     } else if (filtros.includes('url_encode')) {
       pedacos.push({ texto: escapar(codificar(valor)) });
-    } else if (noEndereco && valor.includes(' ')) {
-      ruim = ruim || nome;
-      pedacos.push({ texto: valor, ruim: true });
     } else {
       pedacos.push({ texto: escapar(valor) });
     }
     pedacos.push({ texto: parte.slice(fim + 2) });
   });
-  return { pedacos: juntar(pedacos), ruim };
+  return { pedacos: juntar(pedacos) };
+};
+
+// -> [antes, depois do separador] ou [texto, null], como EnderecoDaFerramenta#dividir.
+const dividir = (texto, separador) => {
+  const posicao = texto.indexOf(separador);
+  return posicao < 0
+    ? [texto, null]
+    : [texto.slice(0, posicao), texto.slice(posicao + 1)];
+};
+
+// O endereço como o backend monta: fragmento a partir do primeiro #, query a partir do primeiro ? antes
+// dele. Sem {{ }}, como foi cadastrado.
+const montarEndereco = (endereco, valores) => {
+  const texto = String(endereco ?? '');
+  const [base, fragmento] = dividir(texto, '#');
+  const [caminho, query] = dividir(base, '?');
+  const pedacos = [
+    ...preencher(caminho, valores, noCaminho).pedacos,
+    ...(query === null
+      ? []
+      : [
+          { texto: '?' },
+          ...preencher(query, valores, comoCampoDeFormulario).pedacos,
+        ]),
+    ...(fragmento === null ? [] : [{ texto: `#${fragmento}` }]),
+  ];
+  return juntar(pedacos);
 };
 
 const comCorpo = rascunho =>
@@ -169,23 +196,20 @@ const montarCorpo = (rascunho, valores) => {
   const tipo = tipoDoCorpo(rascunho);
   if (tipo === 'JSON') {
     return regerado(
-      textoDe(
-        preencher(rascunho.corpo, valores, false, paraDentroDeAspas).pedacos
-      )
+      textoDe(preencher(rascunho.corpo, valores, paraDentroDeAspas).pedacos)
     );
   }
   const escapar = tipo === 'FORMULARIO' ? comoCampoDeFormulario : comoVeio;
-  return textoDe(preencher(rascunho.corpo, valores, false, escapar).pedacos);
+  return textoDe(preencher(rascunho.corpo, valores, escapar).pedacos);
 };
 
 export const montarChamada = (rascunho, valores) => {
-  const endereco = preencher(rascunho.endereco, valores, true);
   const cabecalhos = (rascunho.cabecalhos || [])
     .filter(c => String(c.chave ?? '').trim() !== '')
     .map(c => {
       const valor = c.segredo
         ? '••••••'
-        : textoDe(preencher(c.valor, valores, false).pedacos);
+        : textoDe(preencher(c.valor, valores).pedacos);
       return `${c.chave.trim()}: ${valor}`;
     });
   // Os automáticos como o backend manda: o declarado, ou application/json (Content-Type só com corpo).
@@ -203,8 +227,9 @@ export const montarChamada = (rascunho, valores) => {
   ];
   return {
     metodo: rascunho.metodo,
-    endereco: endereco.pedacos,
-    ruim: endereco.ruim,
+    endereco: montarEndereco(rascunho.endereco, valores),
+    // O backend codifica todo valor do endereço (#1425): não sobra espaço cru para marcar.
+    ruim: '',
     cabecalhos: [...cabecalhos, ...automaticos],
     corpo: comCorpo(rascunho) ? montarCorpo(rascunho, valores) : '',
   };

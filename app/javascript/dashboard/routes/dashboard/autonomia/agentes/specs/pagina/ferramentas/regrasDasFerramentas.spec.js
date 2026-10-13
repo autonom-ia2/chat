@@ -346,6 +346,12 @@ describe('regras das Ferramentas', () => {
       ['tool_execution_error: parametro_invalido', 'VALOR', 'PREENCHE', false],
       ['tool_execution_error: corpo_sem_escape', 'TIPO_DO_CORPO', null, false],
       ['tool_execution_error: parser_error', 'NAO_JSON', 'PREENCHE', false],
+      [
+        'tool_execution_error: endereco_invalido',
+        'URL_INVALIDA',
+        'ENDERECO',
+        false,
+      ],
       ['outra coisa', 'GENERICO', null, false],
     ])('%s → %s', (erro, chave, corrigir, ambar) => {
       expect(traduzirErroDoTeste(erro)).toEqual({
@@ -365,7 +371,8 @@ describe('regras das Ferramentas', () => {
       ).toMatchObject({ chave: 'NAO_ENTENDEU', detalhe: agente });
     });
 
-    it('shows the call as the backend builds it, marking raw spaces in the address', () => {
+    // Revisão 3 do #1425: o backend codifica cada valor do endereço pela posição; nada fica cru.
+    it('shows the call as the backend builds it, with the address values encoded', () => {
       const chamada = montarChamada(
         {
           metodo: 'POST',
@@ -379,10 +386,9 @@ describe('regras das Ferramentas', () => {
         { termo: 'pastilha de freio', cor: 'azul claro', loja: '7' }
       );
       expect(chamada.endereco).toEqual([
-        { texto: 'https://x.com/b?t=pastilha+de+freio&c=' },
-        { texto: 'azul claro', ruim: true },
+        { texto: 'https://x.com/b?t=pastilha+de+freio&c=azul+claro' },
       ]);
-      expect(chamada.ruim).toBe('cor');
+      expect(chamada.ruim).toBe('');
       expect(chamada.cabecalhos).toEqual([
         'x-api-key: ••••••',
         'x-loja: 7',
@@ -390,6 +396,34 @@ describe('regras das Ferramentas', () => {
         'Accept: application/json',
       ]);
       expect(chamada.corpo).toBe('{"t":"pastilha de freio"}');
+    });
+
+    it('encodes a path value as one segment and a query value as a field', () => {
+      const chamada = montarChamada(
+        {
+          metodo: 'GET',
+          endereco:
+            'https://x.com/estoque/{{p}}?t={{ q | url_encode }}&u={{q}}#ancora',
+          corpo: '',
+          cabecalhos: [],
+        },
+        { p: '../a b?x#y (ção)!', q: 'a&admin=1#z' }
+      );
+      expect(chamada.endereco).toEqual([
+        {
+          texto:
+            'https://x.com/estoque/..%2Fa%20b%3Fx%23y%20%28%C3%A7%C3%A3o%29%21?t=a%26admin%3D1%23z&u=a%26admin%3D1%23z#ancora',
+        },
+      ]);
+    });
+
+    it('keeps a fixed address identical', () => {
+      const fixo = 'https://x.com/v1?x=1&y=a%20b#frag';
+      const chamada = montarChamada(
+        { metodo: 'GET', endereco: fixo, corpo: '', cabecalhos: [] },
+        {}
+      );
+      expect(chamada.endereco).toEqual([{ texto: fixo }]);
     });
 
     // #1425: a prévia do corpo mostra o texto escapado, como o backend envia.
