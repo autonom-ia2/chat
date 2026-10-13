@@ -117,15 +117,10 @@ export const sameClock = (zoneA, zoneB, at = new Date()) =>
   dateInZone(at, zoneA) === dateInZone(at, zoneB) &&
   timeLabel(at, 'en', zoneA) === timeLabel(at, 'en', zoneB);
 
-// Nome amigável do fuso ("Horário de Brasília"), com o identificador como reserva.
-export const zoneLabel = (timeZone, locale) => {
-  try {
-    const parts = new Intl.DateTimeFormat(toIntlLocale(locale), {
-      timeZone,
-      timeZoneName: 'longGeneric',
-    }).formatToParts(new Date());
-    return parts.find(item => item.type === 'timeZoneName')?.value || timeZone;
-  } catch (error) {
-    return timeZone;
-  }
-};
+// O fuso como a plataforma o mostra em Configurações da conta: o nome do fuso, com espaço no lugar de "_"
+// ("America/Sao Paulo"). Regra do Rodrigo (#1456, #1468): nunca o nome longo do navegador ("Horário Padrão de …").
+// Mesmo rótulo do `rotuloDoFuso` do painel (`dashboard/helper/fusoDaConta.js`); a página pública não importa o painel.
+export const zoneLabel = timeZone =>
+  String(timeZone || '')
+    .split('_')
+    .join(' ');
