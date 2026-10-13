@@ -7,7 +7,7 @@ class AddCrmEntregaIndexToConversations < ActiveRecord::Migration[7.2]
 
   def change
     add_index :conversations, "((additional_attributes -> 'crm_entrega' ->> 'tentado_em')) NULLS FIRST, id",
-              name: 'index_conversations_on_crm_entrega_pendente',
+              name: 'idx_conversations_crm_entrega_fila',
               where: "(additional_attributes ->> 'crm_entrega') IS NOT NULL",
               algorithm: :concurrently,
               if_not_exists: true

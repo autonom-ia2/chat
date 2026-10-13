@@ -6,18 +6,22 @@
 #    ser pega pelo rodízio nativo.
 # 2. Cards com a espera gravada no card, de antes do #1454 (só com a IA do CRM ligada), pelo HandoffExecutor.
 #
-# Uma rodada por vez (trava de sessão do Postgres; quem não pega, sai), com teto de tempo para os dois passos e a
-# presença de cada conta lida uma vez (Crm::Entrega::Presenca). A presença fica congelada durante a rodada (até o teto):
+# Uma rodada por vez (trava de sessão do Postgres; quem não pega, sai), 45 s por passo, ordem alternada, e a presença
+# de cada conta lida uma vez (Crm::Entrega::Presenca). A presença fica congelada durante a rodada (até 90 s):
 # quem entrar no meio dela recebe na rodada seguinte, 2 minutos depois.
 class Crm::Ai::HandoffDrainJob < ApplicationJob
   queue_as :scheduled_jobs
 
   # Conversas por rodada, as que esperam há mais tempo sem nova tentativa primeiro (`tentado_em` da marca, nunca
   # tentadas antes). Sem estado fora do banco: a fila anda mesmo com o Redis fora do ar, e quem ficou de fora de uma
-  # rodada é das primeiras na seguinte. A consulta entra pelo índice parcial index_conversations_on_crm_entrega_pendente.
+  # rodada é das primeiras na seguinte. A consulta entra pelo índice parcial idx_conversations_crm_entrega_fila.
   CONVERSAS_POR_RODADA = 500
-  # Teto de tempo da rodada (o cron roda a cada 2 minutos): estourou, para.
-  TEMPO_MAXIMO_DA_RODADA = 90
+  # Orçamento de tempo de cada passo (o cron roda a cada 2 minutos). Separados, e a ordem dos passos alterna a cada
+  # rodada: uma fila cheia de conversas não deixa os cards sem vez, nem o contrário.
+  ORCAMENTO_CONVERSAS = 45
+  ORCAMENTO_CARDS = 45
+  # Espera máxima pela trava de uma linha (conversa ou card) dentro da fila: ocupada, a conversa é pulada nesta rodada.
+  LOCK_TIMEOUT = '5s'.freeze
   # Chave da trava de sessão (pg_try_advisory_lock) que impede duas rodadas ao mesmo tempo.
   TRAVA_DA_RODADA = 1_454_000_001
   TENTADO_EM_SQL = "(conversations.additional_attributes -> 'crm_entrega' ->> 'tentado_em')".freeze
@@ -26,11 +30,7 @@ class Crm::Ai::HandoffDrainJob < ApplicationJob
     return unless pegar_trava
 
     begin
-      @prazo = relogio + TEMPO_MAXIMO_DA_RODADA
-      Crm::Entrega::Presenca.na_rodada do
-        drain_held_conversations
-        drain_held_cards if Crm::Ai::Config.enabled?
-      end
+      Crm::Entrega::Presenca.na_rodada { passos.each { |passo| send(passo) } }
     ensure
       soltar_trava
     end
@@ -42,16 +42,46 @@ class Crm::Ai::HandoffDrainJob < ApplicationJob
     Process.clock_gettime(Process::CLOCK_MONOTONIC)
   end
 
+  # Minuto par: conversas primeiro; ímpar: cards primeiro.
+  def passos
+    passos = [:drain_held_conversations]
+    passos << :drain_held_cards if Crm::Ai::Config.enabled?
+    Time.current.min.even? ? passos : passos.reverse
+  end
+
   def tempo_acabou?
     relogio > @prazo
+  end
+
+  def comecar_passo(orcamento)
+    @prazo = relogio + orcamento
+  end
+
+  # A trava (SET LOCAL) vale só para a transação desta tentativa.
+  def com_lock_timeout(&)
+    ActiveRecord::Base.transaction(requires_new: true) do
+      ActiveRecord::Base.connection.execute("SET LOCAL lock_timeout = '#{LOCK_TIMEOUT}'")
+      yield
+    end
   end
 
   def pegar_trava
     ActiveRecord::Base.connection.select_value("SELECT pg_try_advisory_lock(#{TRAVA_DA_RODADA})")
   end
 
+  # Trava que não sai prenderia a fila para sempre (é da sessão): sem confirmação, a conexão cai e a trava vai junto.
   def soltar_trava
-    ActiveRecord::Base.connection.select_value("SELECT pg_advisory_unlock(#{TRAVA_DA_RODADA})")
+    connection = ActiveRecord::Base.connection
+    soltou = begin
+      connection.select_value("SELECT pg_advisory_unlock(#{TRAVA_DA_RODADA})")
+    rescue StandardError => e
+      Rails.logger.error("[crm][entrega] fila trava não soltou erro=#{e.class}")
+      false
+    end
+    return if soltou
+
+    Rails.logger.error('[crm][entrega] fila trava não confirmada: derrubando a conexão')
+    connection.disconnect!
   end
 
   # Abertas (ou pendentes, legado) e sem pessoa: a marca sai sozinha quando alguém é atribuído ou a conversa resolve.
@@ -65,6 +95,7 @@ class Crm::Ai::HandoffDrainJob < ApplicationJob
   end
 
   def drain_held_conversations
+    comecar_passo(ORCAMENTO_CONVERSAS)
     held_conversations.each do |conversation|
       break if tempo_acabou?
 
@@ -73,11 +104,15 @@ class Crm::Ai::HandoffDrainJob < ApplicationJob
   end
 
   def drain_one(conversation)
-    drain_conversation(conversation)
+    inicio = relogio
+    com_lock_timeout { drain_conversation(conversation) }
+  rescue ActiveRecord::LockWaitTimeout
+    Rails.logger.warn("[crm][entrega] fila conversa=#{conversation.id} pulada: trava ocupada")
   rescue StandardError => e
     # Uma conversa com problema não pode travar a fila das outras.
     Rails.logger.error("[crm][entrega] fila conversa=#{conversation.id} erro=#{e.class}")
   ensure
+    Rails.logger.info("[crm][entrega] fila conversa=#{conversation.id} ms=#{((relogio - inicio) * 1000).round}")
     marcar_tentativa(conversation)
   end
 
@@ -91,16 +126,28 @@ class Crm::Ai::HandoffDrainJob < ApplicationJob
       ]
     )
     # rubocop:enable Rails/SkipsModelValidations
+  rescue StandardError => e
+    # Sem o carimbo a conversa só volta mais cedo na fila; a rodada segue.
+    Rails.logger.error("[crm][entrega] fila conversa=#{conversation.id} tentativa não carimbada erro=#{e.class}")
+  end
+
+  def drain_card(card)
+    com_lock_timeout { drain(card) }
+  rescue ActiveRecord::LockWaitTimeout
+    Rails.logger.warn("[crm][entrega] fila card=#{card.id} pulado: trava ocupada")
+  rescue StandardError => e
+    Rails.logger.error("[crm][entrega] fila card=#{card.id} erro=#{e.class}")
   end
 
   def drain_held_cards
+    comecar_passo(ORCAMENTO_CARDS)
     Crm::Pipeline.active.find_each do |pipeline|
       break if tempo_acabou?
 
       held_cards(pipeline).find_each do |card|
         break if tempo_acabou?
 
-        drain(card) if drainable?(card)
+        drain_card(card) if drainable?(card)
       end
     end
   end

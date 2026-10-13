@@ -310,7 +310,7 @@ Branch `feat/1447-agente-responsavel`: `app/models/crm/inbox_ai_agent.rb`, `app/
 
 ## 8. Notas da implementação (PR do #1454)
 
-- **Fila de quem espera** (`Crm::Ai::HandoffDrainJob`, a cada 2 min): até 500 conversas por rodada, as menos tentadas primeiro (`tentado_em` na marca `crm_entrega`), pelo índice parcial `index_conversations_on_crm_entrega_pendente`. Sem estado fora do banco. Uma rodada por vez (`pg_try_advisory_lock`) e teto de 90 s para os dois passos (conversas e cards antigos).
-- **Presença congelada na rodada (aceito):** a presença de cada conta é lida uma vez por rodada. Quem entra online no meio de uma rodada só recebe na seguinte, até 2 minutos depois (no pior caso, 90 s de rodada + o intervalo do cron).
+- **Fila de quem espera** (`Crm::Ai::HandoffDrainJob`, a cada 2 min): até 500 conversas por rodada, as menos tentadas primeiro (`tentado_em` na marca `crm_entrega`), pelo índice parcial `idx_conversations_crm_entrega_fila`. Sem estado fora do banco. Uma rodada por vez (`pg_try_advisory_lock`), 45 s para cada passo (conversas e cards antigos), com a ordem alternada a cada rodada, e `lock_timeout` de 5 s por linha (ocupada, a conversa é pulada e volta na rodada seguinte).
+- **Presença congelada na rodada (aceito):** a presença de cada conta é lida uma vez por rodada. Quem entra online no meio de uma rodada só recebe na seguinte, até 2 minutos depois (no pior caso, até 90 s de rodada + o intervalo do cron).
 - **Medida no banco de teste (M4):** 500 conversas na fila; ninguém online, cerca de 3 s por rodada; todos online (500 atribuições), cerca de 12 s.
 - **Convite que nunca sai:** passado o prazo do convite contado da marca, a conversa continua segura com o robô, a marca diz `nao_conseguimos_chamar` e sai um aviso só (atividade no card e notificação aos administradores da caixa). Não volta ao rodízio nativo.
