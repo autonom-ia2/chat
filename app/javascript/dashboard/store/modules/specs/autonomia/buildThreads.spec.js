@@ -339,6 +339,44 @@ describe('#autonomiaBuildThreads store', () => {
       expect(fetchCalls()).toBe(2);
     });
 
+    it('does not poll again when the page stopped polling during a fetch', async () => {
+      let resolveFirst;
+      fetchResults.push(
+        new Promise(resolve => {
+          resolveFirst = resolve;
+        })
+      );
+      actions.poll(ctx, { threadId: 3 });
+      await vi.advanceTimersByTimeAsync(3000);
+
+      actions.stopPolling();
+      resolveFirst({ status: 'processing' });
+      await vi.advanceTimersByTimeAsync(10000);
+
+      expect(fetchCalls()).toBe(1);
+    });
+
+    it('keeps polling the new thread when the old thread fetch ends late', async () => {
+      let resolveOld;
+      fetchResults.push(
+        new Promise(resolve => {
+          resolveOld = resolve;
+        }),
+        Promise.resolve({ status: 'ready' })
+      );
+      actions.poll(ctx, { threadId: 3 });
+      await vi.advanceTimersByTimeAsync(3000);
+
+      actions.poll(ctx, { threadId: 4 });
+      resolveOld({ status: 'processing' });
+      await vi.advanceTimersByTimeAsync(3000);
+
+      const polledThreads = ctx.dispatch.mock.calls
+        .filter(([name]) => name === 'fetch')
+        .map(([, args]) => args.threadId);
+      expect(polledThreads).toEqual([3, 4]);
+    });
+
     it('does nothing once the build settled', async () => {
       fetchResults.push(Promise.resolve({ status: 'ready' }));
       actions.poll(ctx, { threadId: 3 });

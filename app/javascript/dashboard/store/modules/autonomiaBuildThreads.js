@@ -317,6 +317,9 @@ export const actions = {
         if (pollThreadId === threadId) pollThreadId = null;
         return;
       }
+      // The page stopped polling, or moved to another thread, while this fetch
+      // was in flight: don't revive this loop nor kill the new thread's timer.
+      if (pollThreadId !== threadId) return;
       dispatch('poll', {
         threadId,
         attempt: attempt + 1,
