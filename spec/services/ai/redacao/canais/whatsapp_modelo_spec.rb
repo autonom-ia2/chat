@@ -195,8 +195,9 @@ RSpec.describe Ai::Redacao::Canais::WhatsappModelo do
     # Fase final (AG15, risco 4 do juiz): dizer quem fala é o padrão do prompt, então o remetente pode entrar no "mais curto".
     it 'no "mais curto", acrescentar o nome da empresa (quem fala) não descarta a opção' do
       com_empresa = 'Oi, {{cliente.primeiro_nome}}! A {{minha_empresa.nome}} tem {{publico.desconto}} nas massas. Bom apetite!'
-      responde([opcao(com_empresa, botoes: [{ tipo: 'link', texto: 'Pedir agora', chave: 'publico.link' }]),
-                opcao(com_empresa.sub('nas massas', 'nas massas sábado'))])
+      com_empresa_e_data = com_empresa.sub('nas massas', 'nas massas até {{publico.data}}')
+      botao = [{ tipo: 'link', texto: 'Pedir agora', chave: 'publico.link' }]
+      responde([opcao(com_empresa, botoes: botao), opcao(com_empresa_e_data, botoes: botao)])
 
       resultado = escrever(base: base, pedido: { melhorias: %w[mais_curto] })
 
