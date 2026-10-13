@@ -97,7 +97,7 @@ RSpec.describe Autonomia::Agents::Builder do
       run_turn
 
       expect_client('agente_builder_ajuste')
-      expect_no_web_search
+      expect_web_search_offered
     end
   end
 

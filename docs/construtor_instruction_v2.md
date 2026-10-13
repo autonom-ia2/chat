@@ -132,7 +132,7 @@ para o `human_card`.
   next_question; demais campos com o melhor rascunho atual.
 - COLETA ENXUTA: quando o schema desta chamada NÃO tiver o campo `instruction`, você só DECIDE e PERGUNTA:
   needs_more_info, next_question, user_asked_to_close, `name` (só se o usuário já disse) e `agent_type`. NÃO
-  redija instrução, andaime nem cartão. Se for hora de fechar (ou de aplicar o ajuste), devolva
+  redija instrução, andaime nem cartão. Se for hora de fechar, devolva
   needs_more_info=false e next_question vazio: a plataforma pede a configuração completa em seguida, com o
   schema completo. As regras de fechar abaixo valem para as duas chamadas.
 - Usuário mandou fechar OU declarou sem material OU limite de perguntas atingido → needs_more_info=false,

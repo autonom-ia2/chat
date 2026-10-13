@@ -223,28 +223,31 @@ RSpec.describe Autonomia::Agents::Builder do
       thread.append_message!('user', 'Troque a saudação para "Olá, aqui é a Ana"')
     end
 
+    # Decisão do gestor (#1367): o "Mudar conversando" é o uso do dia a dia e não pode ficar mais lento. O ajuste
+    # segue com UMA chamada completa, com busca, como antes deste PR, inclusive quando a resposta é uma pergunta.
     context 'with a clear request' do
-      let(:lean_payload) { super().merge('needs_more_info' => false, 'next_question' => '') }
-
-      it 'closes with the full call and web_search, both labeled ajuste' do
+      it 'makes a single full call with web_search, labeled ajuste, and applies it' do
         run_turn
 
-        expect(calls.size).to eq(2)
-        expect(calls.first[:schema]).to eq(described_class::LEAN_SCHEMA)
-        expect_full_call_with_search(calls.last)
+        expect(calls.size).to eq(1)
+        expect_full_call_with_search(calls.first)
         expect_clients('agente_builder_ajuste')
+        expect(Crm::Ai::ResponsesClient).not_to have_received(:new).with(hash_including(feature: 'agente_builder_coleta'))
         expect(Crm::Ai::ResponsesClient).not_to have_received(:new).with(hash_including(feature: 'agente_builder_fechamento'))
         expect(agent.reload.instruction).to eq('Instrução completa da Ana.')
       end
     end
 
     context 'with a clarifying question' do
-      it 'answers with the lean call only and keeps the instruction' do
+      before { full_payload.merge!('needs_more_info' => true, 'next_question' => 'Substitui a saudação atual?') }
+
+      it 'still makes a single full call with web_search and keeps the instruction' do
         run_turn
 
         expect(calls.size).to eq(1)
-        expect(calls.first[:tools]).to be_nil
+        expect_full_call_with_search(calls.first)
         expect(thread.reload.state['needs_more_info']).to be(true)
+        expect(thread.state['next_question']).to eq('Substitui a saudação atual?')
         expect(agent.reload.instruction).to eq('Instrução fechada da Ana.')
       end
     end

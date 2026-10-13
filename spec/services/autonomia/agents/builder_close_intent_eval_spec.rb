@@ -7,7 +7,7 @@ require 'rails_helper'
 # campo `user_asked_to_close` do schema de saída. O que a regex tratava com exceção manual (negação, "pode criar" que
 # é pedido novo, "sem material") agora é entendimento do modelo, e só se prova com o modelo: mesma instrução-mãe,
 # mesmo input montado pelo Builder, mesmo schema e mesmo esforço de raciocínio da produção. Desde o #1367 a leitura
-# que decide o turno sai da chamada ENXUTA (LEAN_SCHEMA), então é ela que se avalia aqui.
+# que decide o turno de CRIAÇÃO sai da chamada ENXUTA (LEAN_SCHEMA); o AJUSTE segue com a chamada completa.
 module AvaliacaoDoFechamento
   PERGUNTA_ABERTA = 'E qual o horário de atendimento da Ana?'.freeze
 
@@ -51,7 +51,7 @@ RSpec.describe Autonomia::Agents::Builder do
     builder = described_class.new(account: account, build_thread: thread)
     cliente = Crm::Ai::ResponsesClient.new(credential: { api_key: ENV.fetch('OPENAI_API_KEY') }, feature: 'eval_construtor')
     raw = cliente.create(model: Autonomia::Agents::Config::BUILDER_MODEL, instructions: described_class::MOTHER_INSTRUCTION,
-                         input: builder.send(:build_input), schema: described_class::LEAN_SCHEMA,
+                         input: builder.send(:build_input), schema: agent ? described_class::BUILDER_SCHEMA : described_class::LEAN_SCHEMA,
                          reasoning_effort: Autonomia::Agents::Config::BUILDER_REASONING_EFFORT_COLLECT)
     JSON.parse(raw[:text])['user_asked_to_close']
   end

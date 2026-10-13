@@ -256,7 +256,7 @@ module Autonomia
           next_question; demais campos com o melhor rascunho atual.
         - COLETA ENXUTA: quando o schema desta chamada NÃO tiver o campo `instruction`, você só DECIDE e PERGUNTA:
           needs_more_info, next_question, user_asked_to_close, `name` (só se o usuário já disse) e `agent_type`. NÃO
-          redija instrução, andaime nem cartão. Se for hora de fechar (ou de aplicar o ajuste), devolva
+          redija instrução, andaime nem cartão. Se for hora de fechar, devolva
           needs_more_info=false e next_question vazio: a plataforma pede a configuração completa em seguida, com o
           schema completo. As regras de fechar abaixo valem para as duas chamadas.
         - Usuário mandou fechar OU declarou sem material OU limite de perguntas atingido → needs_more_info=false,
@@ -725,8 +725,9 @@ module Autonomia
       end
 
       # Roda a geração do Construtor de forma SÍNCRONA e guardada pelo `token` (mesmo padrão
-      # anti-supersede do PollJob anterior). Uma ou duas chamadas (#1367): a ENXUTA decide e pergunta; quando
-      # o turno fecha, a COMPLETA (com busca) escreve a config. Faz o parse do structured output e aplica:
+      # anti-supersede do PollJob anterior). Na CRIAÇÃO, uma ou duas chamadas (#1367): a ENXUTA decide e pergunta;
+      # quando o turno fecha, a COMPLETA (com busca) escreve a config. No AJUSTE, só a completa, como antes.
+      # Faz o parse do structured output e aplica:
       #   - needs_more_info=true  → não cria/edita Agent; só guarda a próxima pergunta e marca ready.
       #   - needs_more_info=false → cria/atualiza o Agent (instruction/scaffold OCULTOS) e marca ready.
       # Levanta ResponsesClient::Error em falha de rede/provedor (o SubmitJob marca a thread failed).
@@ -746,14 +747,14 @@ module Autonomia
         @built_input = nil
         @lean_asked_to_close = nil
         @user_asked_to_close = nil
-        text = deterministic_close? ? full_call : lean_then_full_call
+        text = single_full_call? ? full_call : lean_then_full_call
         outcome = apply_result(token, text)
         log_turn
         outcome
       end
 
-      # #1367 — COLETA ENXUTA (alavanca 2): o turno começa pela chamada enxuta, sem busca, que só decide e
-      # pergunta. Se ela indicar que vai fechar (ou aplicar o ajuste), vem a chamada COMPLETA; senão, a
+      # #1367 — COLETA ENXUTA (alavanca 2), só na CRIAÇÃO: o turno começa pela chamada enxuta, sem busca, que só
+      # decide e pergunta. Se ela indicar que vai fechar, vem a chamada COMPLETA; senão, a
       # pergunta dela é o turno. A fase só se conhece depois desta chamada, por isso a completa é condicional.
       def lean_then_full_call
         lean_text = call_model(lean_phase, LEAN_SCHEMA, nil, Autonomia::Agents::Config::BUILDER_REASONING_EFFORT_COLLECT)
@@ -783,6 +784,13 @@ module Autonomia
         @built_input ||= build_input
       end
 
+      # Turno de UMA chamada completa, sem a enxuta: o AJUSTE inteiro (decisão do gestor, #1367: o "Mudar
+      # conversando" é o uso do dia a dia e não pode ficar mais lento; segue como antes, com busca, mesmo quando a
+      # resposta é uma pergunta de esclarecimento) e o fechamento determinístico da criação.
+      def single_full_call?
+        adjust_mode? || deterministic_close?
+      end
+
       # Sinal DETERMINÍSTICO de fechamento antes de qualquer chamada (avançar para a Revisão, sem material
       # declarado, teto de perguntas): o turno vai fechar de qualquer jeito, então a chamada enxuta seria só
       # espera. Se o portão de materiais seguraria esse fechamento, o turno é de pergunta e começa enxuto.
@@ -790,8 +798,8 @@ module Autonomia
         force_close? && !materials_gate_holds?
       end
 
-      # A leitura da chamada enxuta, com os MESMOS portões do apply_result: fecha quando o modelo quer fechar ou
-      # quando a ordem de fechar dele força o fechamento (force_close?, que em AJUSTE é sempre false). O portão
+      # A leitura da chamada enxuta (só na CRIAÇÃO), com os MESMOS portões do apply_result: fecha quando o modelo
+      # quer fechar ou quando a ordem de fechar dele força o fechamento (force_close?). O portão
       # de materiais que seguraria esse fechamento dispensa a chamada completa: o turno vira a pergunta da revisão.
       # A decisão usa a leitura de fechar da ENXUTA; se ela não leu ordem de fechar e o portão segura, a completa
       # não roda (antes, a chamada única ainda podia ler a ordem por conta própria). Saída enxuta inválida falha o
@@ -803,10 +811,10 @@ module Autonomia
         closing && !materials_gate_holds?
       end
 
-      # Rótulo de uso por chamada: a enxuta grava como coleta (ou ajuste) e a completa como fechamento (ou
-      # ajuste). A soma em "Construtor de agente" segue certa (Crm::Reports::AiUsage).
+      # Rótulo de uso por chamada: a enxuta (só na criação) grava como coleta e a completa como fechamento, ou
+      # ajuste no modo AJUSTE. A soma em "Construtor de agente" segue certa (Crm::Reports::AiUsage).
       def lean_phase
-        adjust_mode? ? :ajuste : :coleta
+        :coleta
       end
 
       def full_phase
