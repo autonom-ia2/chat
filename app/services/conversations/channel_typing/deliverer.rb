@@ -3,6 +3,7 @@
 # e o agente nativo (Autonomia::Agents::Operate::TypingIndicator delega para cá).
 # Chave de instalação AI_HUMANIZE_CHANNEL_TYPING (ligada quando ausente): desligada, ninguém mostra
 # "digitando" no canal.
+# timeout (segundos) limita a chamada ao canal; o job informa, o agente nativo não (segue como era).
 # É cosmético: nunca levanta. Recusa do canal vira log com o status HTTP, sem token e sem conteúdo.
 class Conversations::ChannelTyping::Deliverer
   SENDER_ACTIONS = { 'on' => 'typing_on', 'off' => 'typing_off' }.freeze
@@ -14,9 +15,10 @@ class Conversations::ChannelTyping::Deliverer
     channel.is_a?(Channel::Instagram) || (channel.is_a?(Channel::Whatsapp) && channel.provider == 'whatsapp_cloud')
   end
 
-  def initialize(conversation:, typing_status:)
+  def initialize(conversation:, typing_status:, timeout: nil)
     @conversation = conversation
     @typing_status = typing_status
+    @timeout = timeout
   end
 
   def perform
@@ -44,7 +46,7 @@ class Conversations::ChannelTyping::Deliverer
 
     # reorder: Message tem default_scope por created_at asc; com order, a mais antiga venceria.
     wamid = @conversation.messages.incoming.where.not(source_id: [nil, '']).reorder(created_at: :desc).pick(:source_id)
-    channel.provider_service.send_typing_indicator(wamid)
+    channel.provider_service.send_typing_indicator(wamid, timeout: @timeout)
   end
 
   def instagram_typing
@@ -52,6 +54,7 @@ class Conversations::ChannelTyping::Deliverer
     message = @conversation.messages.last
     return unless action && message
 
-    Instagram::SendOnInstagramService.new(message: message).send_sender_action(@conversation.contact_inbox&.source_id, action)
+    Instagram::SendOnInstagramService.new(message: message)
+                                     .send_sender_action(@conversation.contact_inbox&.source_id, action, timeout: @timeout)
   end
 end

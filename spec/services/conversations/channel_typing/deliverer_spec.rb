@@ -80,6 +80,27 @@ describe Conversations::ChannelTyping::Deliverer do
 
       expect { deliver(conversation, 'on') }.not_to raise_error
     end
+
+    it 'limits the channel call when a timeout is given and logs when it is exceeded' do
+      create(:message, conversation: conversation, account: account, inbox: channel.inbox, message_type: :incoming, source_id: 'wamid.LAST')
+      stub_request(:post, meta_typing_url).to_timeout
+      allow(HTTParty).to receive(:post).and_call_original
+      allow(Rails.logger).to receive(:warn)
+
+      expect { described_class.new(conversation: conversation, typing_status: 'on', timeout: 3).perform }.not_to raise_error
+
+      expect(HTTParty).to have_received(:post).with(meta_typing_url, hash_including(timeout: 3))
+      expect(Rails.logger).to have_received(:warn).with('[whatsapp][typing] failed phone=123456789 Net::OpenTimeout')
+    end
+
+    it 'sends no timeout option when none is given' do
+      create(:message, conversation: conversation, account: account, inbox: channel.inbox, message_type: :incoming, source_id: 'wamid.LAST')
+      allow(HTTParty).to receive(:post).and_call_original
+
+      deliver(conversation, 'on')
+
+      expect(HTTParty).to have_received(:post).with(meta_typing_url, hash_excluding(:timeout))
+    end
   end
 
   context 'when the conversation is on Instagram' do
@@ -101,6 +122,25 @@ describe Conversations::ChannelTyping::Deliverer do
           body: { recipient: { id: 'ig-contact-1' }, sender_action: sender_action }
         )
       end
+    end
+
+    it 'limits the channel call when a timeout is given and logs when it is exceeded' do
+      stub_request(:post, instagram_url).with(query: { access_token: channel.access_token }).to_timeout
+      allow(HTTParty).to receive(:post).and_call_original
+      allow(Rails.logger).to receive(:warn)
+
+      expect { described_class.new(conversation: conversation, typing_status: 'on', timeout: 3).perform }.not_to raise_error
+
+      expect(HTTParty).to have_received(:post).with(instagram_url, hash_including(timeout: 3))
+      expect(Rails.logger).to have_received(:warn).with('[instagram][typing] failed Net::OpenTimeout')
+    end
+
+    it 'sends no timeout option when none is given' do
+      allow(HTTParty).to receive(:post).and_call_original
+
+      deliver(conversation, 'on')
+
+      expect(HTTParty).to have_received(:post).with(instagram_url, hash_excluding(:timeout))
     end
 
     it 'does nothing for an unknown typing status' do

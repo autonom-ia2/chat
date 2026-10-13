@@ -25,6 +25,15 @@ RSpec.describe Conversations::ChannelTyping::DeliverJob do
     expect(WebMock).to have_requested(:post, meta_typing_url).once
   end
 
+  it 'limits the channel call to a few seconds' do
+    allow(HTTParty).to receive(:post).and_call_original
+
+    described_class.perform_now(conversation, 'on', Time.current)
+
+    expect(described_class::CHANNEL_TIMEOUT_SECONDS).to eq(3)
+    expect(HTTParty).to have_received(:post).with(meta_typing_url, hash_including(timeout: 3))
+  end
+
   it 'drops a request older than the limit' do
     described_class.perform_now(conversation, 'on', (described_class::MAX_AGE + 1.second).ago)
 
