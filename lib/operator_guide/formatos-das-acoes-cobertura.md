@@ -16,7 +16,7 @@ Gerado por `bundle exec rails autonomia:guia:formatos` a partir do código (#900
 | | Total |
 |---|---|
 | Campos aninhados com vocabulário | 17 de 193 |
-| Leituras cruas tipadas | 123 de 202 |
+| Leituras cruas tipadas | 124 de 204 |
 
 ## Incompletas por motivo
 
@@ -24,7 +24,7 @@ Uma ação pode ter mais de um motivo.
 
 | Motivo | Ações |
 |---|---|
-| leitura crua sem tipo | 63 |
+| leitura crua sem tipo | 64 |
 | aceita qualquer campo | 5 |
 | params inteiro repassado | 9 |
 | lê o corpo cru | 2 |
@@ -67,7 +67,7 @@ Uma ação pode ter mais de um motivo.
 - `POST conversations` — params inteiro repassado a ConversationBuilder.new; leitura crua sem tipo: message (repassada a Messages::MessageBuilder.new)
 - `POST conversations/:conversation_id/direct_uploads` — termina em código de fora do repositório (super em ActiveStorage::DirectUploadsController)
 - `POST conversations/:conversation_id/messages` — params inteiro repassado a Messages::MessageBuilder.new
-- `POST conversations/:id/toggle_typing_status` — params inteiro repassado a ::Conversations::TypingStatusManager.new
+- `POST conversations/:id/toggle_typing_status` — params inteiro repassado a ::Conversations::TypingStatusManager.new; leitura crua sem tipo: typing_status (repassada a Conversations::ChannelTyping::DeliverJob.perform_later)
 - `POST conversations/:id/transcript` — leitura crua sem tipo: email (repassada a ConversationReplyMailer.with(account: @conversation.accou...)
 - `POST conversations/filter` — aceita qualquer campo (permit! em app/controllers/api/v1/accounts/conversations_controller.rb:52); params inteiro repassado a ::Conversations::FilterService.new
 - `POST crm/booking_invites/:id/deliver` — leitura crua sem tipo: text (repassada a ::Crm::BookingV2::InviteDeliverer.new)
@@ -151,6 +151,7 @@ Uma ação pode ter mais de um motivo.
 - `api/v1/accounts/conference#destroy` call_sid — o código não converte nem compara o valor
 - `api/v1/accounts/contacts#export` column_names — o código não converte nem compara o valor
 - `api/v1/accounts/conversations#create` message — repassada a Messages::MessageBuilder.new
+- `api/v1/accounts/conversations#toggle_typing_status` typing_status — repassada a Conversations::ChannelTyping::DeliverJob.perform_later
 - `api/v1/accounts/conversations#transcript` email — repassada a ConversationReplyMailer.with(account: @conversation.accou...
 - `api/v1/accounts/crm/booking_invites#deliver` text — repassada a ::Crm::BookingV2::InviteDeliverer.new
 - `api/v1/accounts/crm/booking_pages#create_notice_templates` kinds — repassada a requests.start!
