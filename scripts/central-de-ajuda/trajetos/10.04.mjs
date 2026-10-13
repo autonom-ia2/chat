@@ -1,7 +1,11 @@
+// OBSOLETO desde #1423: o card do funil trocou a gaveta com abas pelo card
+// "Resumo primeiro" (app/javascript/dashboard/routes/dashboard/crm/components/card/).
+// Os alvos abaixo (abas, "Ganhar", "Analisar agora"...) são da gaveta antiga:
+// refazer o roteiro e regravar o vídeo antes de usar.
 // Roteiro do vídeo de trajeto do artigo 10.04 — "Ganhar, perder, reabrir e
 // arquivar". Rótulos conferidos em
 // app/javascript/dashboard/i18n/locale/pt_BR/crm.json e em
-// app/javascript/dashboard/routes/dashboard/crm/components/CrmCardDrawer.vue.
+// na gaveta antiga do card (removida no #1423).
 //
 // Trajeto: barra lateral → CRM → Kanban → abra um card → Ganhar → confirme o
 // valor → Marcar como ganho. Os botões "Ganhar" e "Marcar como ganho" ficam
