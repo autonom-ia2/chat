@@ -19,6 +19,9 @@
     "LOCATION_REQUEST": {
     },
     "OPTIONS": {
+      "CHOSEN": "The customer tapped \"{title}\"",
+      "LIST_BUTTON_DEFAULT": "Ver opções",
+      "WAITING": "The customer has not chosen yet"
     }
   }
 }
