@@ -45,80 +45,85 @@ const semTexto = computed(() =>
 </script>
 
 <template>
-  <section
-    v-if="janela.contagem.value && precoModelo"
-    data-revisao-conversa-aberta
-    class="flex flex-col gap-3 py-4 border-b border-n-weak"
-  >
-    <p class="m-0 text-xs font-semibold text-n-slate-11">
-      {{ t(`${NS}.TITULO`) }}
-    </p>
-    <ul class="flex flex-col gap-2 p-0 m-0 list-none">
-      <li
-        v-if="dentro"
-        data-linha="texto"
-        class="grid grid-cols-[minmax(0,1fr)_auto] gap-3 text-sm"
-      >
-        <span class="text-n-slate-12">
-          {{ t(`${NS}.TEXTO`, { n: n(dentro) }, dentro) }}
-        </span>
-        <span
-          class="font-medium text-end"
-          :class="custoTexto ? 'text-n-slate-12' : 'text-n-teal-11'"
-        >
-          {{ custoTexto ? janela.dinheiro(custoTexto) : t(`${NS}.GRATIS`) }}
-        </span>
-        <span
-          data-franquia-da-escrita
-          class="col-span-2 text-xs text-n-slate-11"
-        >
-          {{
-            t(`MODELOS_WHATSAPP.JANELA.CUSTO_ESCRITA.${resumo.tipo}`, resumo)
-          }}
-        </span>
-      </li>
-      <li
-        data-linha="modelo"
-        class="grid grid-cols-[minmax(0,1fr)_auto] gap-3 text-sm"
-      >
-        <span class="text-n-slate-12">
-          {{
-            t(
-              `${NS}.MODELO`,
-              {
-                n: n(fora),
-                nome: nomeDoModelo,
-                preco: janela.dinheiro(precoModelo.valor, 4),
-              },
-              fora
-            )
-          }}
-        </span>
-        <span class="font-medium text-end text-n-slate-12">
-          {{ janela.dinheiro(custoModelo) }}
-        </span>
-      </li>
-      <li
-        data-linha="total"
-        class="grid grid-cols-[minmax(0,1fr)_auto] gap-3 pt-2 text-sm border-t border-n-weak"
-      >
-        <span class="font-semibold text-n-slate-12">
-          {{ t(`${NS}.TOTAL`) }}
-        </span>
-        <span class="font-semibold text-end text-n-slate-12">
-          {{ janela.dinheiro(total) }}
-        </span>
-      </li>
-    </ul>
-    <p
-      v-if="temTexto && semTexto > total"
-      data-economizou
-      class="m-0 text-sm text-n-teal-11"
+  <!-- Sem contagem ou sem preço, o embrulho não ocupa lugar (display: contents). -->
+  <div class="contents">
+    <section
+      v-if="janela.contagem.value && precoModelo"
+      data-revisao-conversa-aberta
+      class="flex flex-col gap-3 py-4 border-b border-n-weak"
     >
-      {{ t(`${NS}.ECONOMIZOU`, { valor: janela.dinheiro(semTexto - total) }) }}
-    </p>
-    <p class="m-0 text-xs text-n-slate-11">
-      {{ t(`${NS}.ESTIMATIVA`) }}
-    </p>
-  </section>
+      <p class="m-0 text-xs font-semibold text-n-slate-11">
+        {{ t(`${NS}.TITULO`) }}
+      </p>
+      <ul class="flex flex-col gap-2 p-0 m-0 list-none">
+        <li
+          v-if="dentro"
+          data-linha="texto"
+          class="grid grid-cols-[minmax(0,1fr)_auto] gap-3 text-sm"
+        >
+          <span class="text-n-slate-12">
+            {{ t(`${NS}.TEXTO`, { n: n(dentro) }, dentro) }}
+          </span>
+          <span
+            class="font-medium text-end"
+            :class="custoTexto ? 'text-n-slate-12' : 'text-n-teal-11'"
+          >
+            {{ custoTexto ? janela.dinheiro(custoTexto) : t(`${NS}.GRATIS`) }}
+          </span>
+          <span
+            data-franquia-da-escrita
+            class="col-span-2 text-xs text-n-slate-11"
+          >
+            {{
+              t(`MODELOS_WHATSAPP.JANELA.CUSTO_ESCRITA.${resumo.tipo}`, resumo)
+            }}
+          </span>
+        </li>
+        <li
+          data-linha="modelo"
+          class="grid grid-cols-[minmax(0,1fr)_auto] gap-3 text-sm"
+        >
+          <span class="text-n-slate-12">
+            {{
+              t(
+                `${NS}.MODELO`,
+                {
+                  n: n(fora),
+                  nome: nomeDoModelo,
+                  preco: janela.dinheiro(precoModelo.valor, 4),
+                },
+                fora
+              )
+            }}
+          </span>
+          <span class="font-medium text-end text-n-slate-12">
+            {{ janela.dinheiro(custoModelo) }}
+          </span>
+        </li>
+        <li
+          data-linha="total"
+          class="grid grid-cols-[minmax(0,1fr)_auto] gap-3 pt-2 text-sm border-t border-n-weak"
+        >
+          <span class="font-semibold text-n-slate-12">
+            {{ t(`${NS}.TOTAL`) }}
+          </span>
+          <span class="font-semibold text-end text-n-slate-12">
+            {{ janela.dinheiro(total) }}
+          </span>
+        </li>
+      </ul>
+      <p
+        v-if="temTexto && semTexto > total"
+        data-economizou
+        class="m-0 text-sm text-n-teal-11"
+      >
+        {{
+          t(`${NS}.ECONOMIZOU`, { valor: janela.dinheiro(semTexto - total) })
+        }}
+      </p>
+      <p class="m-0 text-xs text-n-slate-11">
+        {{ t(`${NS}.ESTIMATIVA`) }}
+      </p>
+    </section>
+  </div>
 </template>
