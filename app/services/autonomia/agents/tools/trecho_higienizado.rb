@@ -4,9 +4,12 @@
 # um token no caminho, um valor fixo do corpo. Antes de chegar ao modelo (e à tela de teste):
 #   1. se o corpo foi cortado na origem (`cortado`), o fim é um corte: um começo de segredo que ficou
 #      lá vira `[oculto]`, e o último pedaço (depois do último separador) é descartado;
-#   2. cada valor que a ferramenta mandou (`segredos`) vira `[oculto]` — inteiro e por partes ("Bearer
-#      abc…" ecoado só como "abc…"), nas formas em que um servidor o devolve (escapado em JSON, com
-#      `\/`, codificado em URL, em HTML) e sem diferenciar maiúsculas de minúsculas (ASCII);
+#   2. SEGREDO FORTE (`segredos`: valores de cabeçalho, usuário e senha do endereço) vira `[oculto]` —
+#      inteiro e por partes ("Bearer abc…" ecoado só como "abc…"); LITERAL DO CADASTRO (`literais`:
+#      pedaços do caminho, valores da query e do corpo) só quando tem cara de credencial
+#      (`credencial?`), e inteiro, nunca por partes — "clientes" e "ativo" continuam legíveis. Os dois
+#      nas formas em que um servidor os devolve (escapado em JSON, com `\/`, codificado em URL, em
+#      HTML) e sem diferenciar maiúsculas de minúsculas (ASCII);
 #   3. qualquer sequência longa com cara de token (letras, dígitos, `_` e `-`, a partir de `MIN_TOKEN`
 #      caracteres) vira `[oculto]`;
 #   4. espaços e quebras de linha viram um espaço só, e SÓ ENTÃO o texto é cortado em `limite`.
@@ -19,9 +22,14 @@ class Autonomia::Agents::Tools::TrechoHigienizado
   # Onde um pedaço termina, para descartar o último quando o texto foi cortado no meio.
   SEPARADORES = [' ', "\n", "\r", "\t", '"', "'", ',', ':', ';', '{', '}', '[', ']', '(', ')', '<', '>', '=', '&'].freeze
 
-  def initialize(texto, segredos:, limite:, cortado: false)
+  # Literal do cadastro com cara de credencial: 12 caracteres ou mais e não só letras, ou 8 ou mais
+  # com letra e dígito.
+  MIN_CREDENCIAL = 12
+  MIN_CREDENCIAL_COM_DIGITO = 8
+
+  def initialize(texto, segredos:, limite:, literais: [], cortado: false)
     @texto = texto.to_s
-    @segredos = formas_dos_segredos(segredos)
+    @segredos = formas_dos_segredos(segredos, Array(literais).map(&:to_s).select { |literal| credencial?(literal) })
     @limite = limite
     @cortado = cortado
   end
@@ -35,11 +43,21 @@ class Autonomia::Agents::Tools::TrechoHigienizado
   private
 
   # Do mais longo para o mais curto: um pedaço de um segredo não pode estragar a troca do inteiro.
-  def formas_dos_segredos(segredos)
-    Array(segredos).flat_map { |valor| [valor.to_s, *valor.to_s.split] }
-                   .map(&:strip).flat_map { |valor| formas(valor) }
-                   .select { |valor| valor.length >= MIN_SEGREDO }
-                   .uniq.sort_by { |valor| -valor.length }
+  def formas_dos_segredos(segredos, literais)
+    fortes = Array(segredos).flat_map { |valor| [valor.to_s, *valor.to_s.split] }
+    todas = (fortes + literais).map(&:strip).flat_map { |valor| formas(valor) }
+    todas.select { |valor| valor.length >= MIN_SEGREDO }.uniq.sort_by { |valor| -valor.length }
+  end
+
+  def credencial?(literal)
+    caracteres = literal.each_char
+    return caracteres.any? { |c| !letra?(c) } if literal.length >= MIN_CREDENCIAL
+
+    literal.length >= MIN_CREDENCIAL_COM_DIGITO && caracteres.any? { |c| letra?(c) } && caracteres.any? { |c| c.between?('0', '9') }
+  end
+
+  def letra?(caractere)
+    caractere.downcase != caractere.upcase
   end
 
   def formas(valor)

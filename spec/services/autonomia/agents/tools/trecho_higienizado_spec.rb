@@ -2,8 +2,20 @@ require 'rails_helper'
 
 # #1425 (revisão): o trecho do corpo de um 4xx que chega ao modelo e à tela de teste.
 RSpec.describe Autonomia::Agents::Tools::TrechoHigienizado do
-  def trecho(texto, segredos: [], limite: 500, cortado: false)
-    described_class.new(texto, segredos: segredos, limite: limite, cortado: cortado).to_s
+  def trecho(texto, segredos: [], literais: [], limite: 500, cortado: false)
+    described_class.new(texto, segredos: segredos, literais: literais, limite: limite, cortado: cortado).to_s
+  end
+
+  # Revisão 2: literal do cadastro (caminho, query, corpo) só vale como segredo com cara de credencial.
+  it 'keeps a common word of the setup readable' do
+    expect(trecho('clientes: busca inválida', literais: %w[clientes busca palavrasemnumero]))
+      .to eq('clientes: busca inválida')
+  end
+
+  it 'hides a setup literal that looks like a credential, whole and never split' do
+    resultado = trecho('chave abc123def e conta loja-0001-matriz', literais: ['abc123def', 'loja-0001-matriz', 'nota fiscal'])
+
+    expect(resultado).to eq('chave [oculto] e conta [oculto]')
   end
 
   it 'cuts a long common text at the limit' do

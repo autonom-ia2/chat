@@ -131,26 +131,42 @@ module Autonomia
         def trecho_do_erro(error, headers)
           return unless error.status.to_i.between?(400, 499)
 
-          TrechoHigienizado.new(error.body_excerpt, segredos: segredos(headers), limite: MAX_TRECHO_DO_ERRO,
-                                                    cortado: error.body_excerpt_truncated).to_s
+          TrechoHigienizado.new(error.body_excerpt, segredos: segredos(headers), literais: literais_do_cadastro,
+                                                    limite: MAX_TRECHO_DO_ERRO, cortado: error.body_excerpt_truncated).to_s
         end
 
-        # O que veio da CONFIGURAÇÃO da ferramenta, e não do modelo, e que o servidor pode ecoar no erro:
-        # os valores de cabeçalho (menos os automáticos), o usuário e a senha, os pedaços do caminho e os
-        # valores da query do endereço, e os valores escritos no modelo do corpo.
+        # SEGREDO FORTE, sempre oculto: os valores de cabeçalho (menos os automáticos) e o usuário e a
+        # senha do endereço.
         def segredos(headers)
           cabecalhos = Array(headers).reject { |key, _| %w[content-type accept].include?(key.to_s.downcase) }.map(&:last)
-          cabecalhos + literais_do_endereco + literais_do_corpo
+          cabecalhos + usuario_e_senha
+        end
+
+        # LITERAL DO CADASTRO (pedaços do caminho, valores da query e do corpo): o `TrechoHigienizado` só
+        # o oculta quando ele tem cara de credencial — "clientes" ou "ativo" continuam legíveis no erro.
+        def literais_do_cadastro
+          uri = endereco_do_cadastro
+          caminho = uri ? uri.path.to_s.split('/').map { |parte| URI.decode_www_form_component(parte) } : []
+          query = uri ? URI.decode_www_form(uri.query.to_s).map(&:last) : []
+          caminho + query + literais_do_corpo
+        rescue ArgumentError
+          literais_do_corpo
+        end
+
+        def usuario_e_senha
+          uri = endereco_do_cadastro
+          return [] unless uri
+
+          [uri.user, uri.password].compact.map { |parte| URI.decode_www_form_component(parte) }
+        rescue ArgumentError
+          []
         end
 
         # O endereço com cada {{ }} vazio: sobra só o que está escrito no cadastro.
-        def literais_do_endereco
-          uri = URI.parse(render_template(@tool.endpoint_url.to_s, global_filter: ->(_valor) {}))
-          usuario = [uri.user, uri.password].compact.map { |parte| URI.decode_www_form_component(parte) }
-          caminho = uri.path.to_s.split('/').map { |parte| URI.decode_www_form_component(parte) }
-          usuario + caminho + URI.decode_www_form(uri.query.to_s).map(&:last)
-        rescue URI::InvalidURIError, ArgumentError, Liquid::Error
-          []
+        def endereco_do_cadastro
+          @endereco_do_cadastro ||= URI.parse(render_template(@tool.endpoint_url.to_s, global_filter: ->(_valor) {}))
+        rescue URI::InvalidURIError, Liquid::Error
+          nil
         end
 
         def literais_do_corpo

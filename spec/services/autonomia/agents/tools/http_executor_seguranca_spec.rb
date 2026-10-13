@@ -158,17 +158,77 @@ RSpec.describe Autonomia::Agents::Tools::HttpExecutor do
         expect(erro_de(q: '[1 /*').message).to eq('tool_execution_error: corpo_json_invalido')
         expect(enviados).to be_empty
       end
-    end
 
-    context 'with a comment written in the template' do
-      let(:body_template) { '{"q": "{{q}}" /* nota do admin */, "limit": 5}' }
-
-      it 'sends the regenerated JSON, without the comment' do
+      # Revisão 2 do #1425: o tipo padrão da tela é texto. Numa vaga sem aspas, o texto vale se for um
+      # escalar JSON (número, true, false, null) — como antes do PR; o resto é recusado.
+      it 'accepts a text that is a JSON number, as before' do
         responder_ok
 
-        executar(q: 'freio')
+        executar(q: '4512')
 
-        expect(enviados.last.body).to eq('{"q":"freio","limit":5}')
+        expect(enviados.last.body).to eq('{"q":4512,"conta":"loja-7"}')
+      end
+    end
+
+    context 'with a text in quotes that looks like a number' do
+      let(:body_template) { '{"cep": "{{q}}"}' }
+
+      it 'keeps it as text, with the leading zero' do
+        responder_ok
+
+        executar(q: '01234')
+
+        expect(enviados.last.body).to eq('{"cep":"01234"}')
+      end
+    end
+
+    # Revisão 2: comentário no modelo do corpo pode esconder uma {{ }}; o corpo é recusado.
+    context 'with a comment written in the template' do
+      let(:body_template) { '{"a": [1 /* {{ q }} */]}' }
+
+      it 'refuses, so no value hides in or closes a comment' do
+        responder_ok
+
+        expect(erro_de(q: '*/, 2, 3 /*').message).to eq('tool_execution_error: corpo_json_invalido')
+        expect(enviados).to be_empty
+      end
+    end
+
+    # Revisão 2: só tags que não escrevem valor fora de {{ }} (cycle escreve cru).
+    context 'with a tag that writes the value without the escape' do
+      let(:body_template) { '{"role":"cliente","q":"{% cycle q %}"}' }
+
+      it 'refuses the body' do
+        responder_ok
+
+        expect(erro_de(q: 'x","role":"admin","z":"').message).to eq('tool_execution_error: corpo_sem_escape')
+        expect(enviados).to be_empty
+      end
+    end
+
+    context 'with if and for around the variables' do
+      let(:body_template) { '{"q":"{% if q %}{{ q }}{% else %}nada{% endif %}"}' }
+
+      it 'still works' do
+        responder_ok
+
+        executar(q: 'a"b')
+
+        expect(JSON.parse(enviados.last.body)).to eq('q' => 'a"b')
+      end
+    end
+
+    # Revisão 2: Content-Type cadastrado vazio é o mesmo que ausente (o executor manda JSON).
+    context 'with an empty Content-Type' do
+      let(:body_template) { '{"q":"{{ q }}"}' }
+      let(:headers_config) { [{ key: 'Content-Type', value: '', secret: false }] }
+
+      it 'treats the body as JSON' do
+        responder_ok
+
+        executar(q: 'x","admin":true')
+
+        expect(JSON.parse(enviados.last.body)).to eq('q' => 'x","admin":true')
       end
     end
 
@@ -199,6 +259,18 @@ RSpec.describe Autonomia::Agents::Tools::HttpExecutor do
 
         expect(enviados.last.body).to eq('q=a%26admin%3Dtrue%26limit%3D999&limit=5')
         expect(URI.decode_www_form(enviados.last.body).to_h).to eq('q' => 'a&admin=true&limit=999', 'limit' => '5')
+      end
+
+      context 'with url_encode already written in the variable' do
+        let(:body_template) { 'q={{ q | url_encode }}&limit=5' }
+
+        it 'encodes only once' do
+          responder_ok
+
+          executar(q: 'a b&c')
+
+          expect(URI.decode_www_form(enviados.last.body).to_h).to eq('q' => 'a b&c', 'limit' => '5')
+        end
       end
     end
 
@@ -368,6 +440,30 @@ RSpec.describe Autonomia::Agents::Tools::HttpExecutor do
       %w[sk_live_ab12-xyz SK_LIVE_AB12-XYZ tok3n-do-caminho senha-da-loja].each do |segredo|
         expect(trecho).not_to include(segredo)
       end
+    end
+
+    # Revisão 2: literal do cadastro só é oculto quando tem cara de credencial; palavra comum fica.
+    it 'keeps common words of the path and of the body readable' do
+      tool.endpoint_url = 'https://api.loja.test/v1/clientes/busca'
+      tool.request_body_template = '{"q":"{{q}}","status":"ativo"}'
+      stub_request(:post, 'https://api.loja.test/v1/clientes/busca')
+        .to_return(status: [404, 'Not Found'], body: '{"error":"Clientes: campo busca inválido","status":"ativo"}')
+
+      trecho = erro_de(q: 'freio').trecho
+
+      expect(trecho).to include('Clientes: campo busca inválido')
+      expect(trecho).to include('ativo')
+    end
+
+    it 'hides a short key written in a fixed body that is not JSON' do
+      tool.headers_config = [{ 'key' => 'Content-Type', 'value' => 'text/xml', 'secret' => false }]
+      tool.request_body_template = '<auth><key>s3cr3t.k3y</key></auth>'
+      stub_request(:post, endpoint).to_return(status: [401, 'Unauthorized'], body: 'invalid key s3cr3t.k3y for user')
+
+      trecho = erro_de(q: 'freio').trecho
+
+      expect(trecho).to include('invalid key')
+      expect(trecho).not_to include('s3cr3t.k3y')
     end
 
     it 'gives no body piece for a 5xx' do
