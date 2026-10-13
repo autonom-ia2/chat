@@ -42,6 +42,9 @@ module Autonomia
       self.table_name = 'autonomia_agent_inboxes'
 
       PAPEIS = %w[porta area].freeze
+      # Folga sobre a janela do debounce para um turno da área ainda contar como EM ANDAMENTO: a chamada de IA (com
+      # ferramentas) e a entrega em pedaços que vêm depois do settle (#1433).
+      FOLGA_DO_TURNO = 2.minutes
 
       scope :kept, -> { where(deleted_at: nil) }
       scope :porta, -> { where(papel: 'porta') }
@@ -110,6 +113,9 @@ module Autonomia
       def soltar_areas_da_caixa!
         return unless porta? && inbox
 
+        # Trava a caixa antes de listar: um Areas.vincular! paralelo espera, e depois não acha mais a porta. Ordem
+        # agente -> caixa (SoftDelete) ou só caixa (Areas, disconnect!): sem ciclo.
+        inbox.lock!
         self.class.kept.area.where(inbox_id: inbox_id).includes(:agent).find_each do |area|
           ::Autonomia::Agents::Areas.desvincular!(agent: area.agent, inbox: inbox, porta_saindo: true)
         end
@@ -140,16 +146,25 @@ module Autonomia
         end
       end
 
-      # Desmarcar a área no meio de um turno dela silencia esse turno (o Responder reconfere quem responde). A última
-      # mensagem do cliente sem resposta vai para o ReplyJob da porta, depois do commit; o debounce e o
-      # `already_replied?` do Responder seguram resposta dupla.
+      # Desmarcar ou pausar a área no meio de um turno dela silencia esse turno (o Responder reconfere quem responde).
+      # Só ESSE turno é refeito pela porta: a última mensagem pública é do cliente E a marca do debounce do ReplyJob
+      # (a mesma que o settle confere) aponta para ela e é recente. Mensagem antiga sem turno nunca vira resposta nova.
+      # Enfileira depois do commit; o debounce e o `already_replied?` do Responder seguram resposta dupla.
       def responder_mensagem_pendente(conversation)
         ultima = conversation.messages.where(private: false, message_type: %i[incoming outgoing]).reorder(:created_at, :id).last
-        return unless ultima&.incoming?
+        return unless ultima&.incoming? && turno_em_andamento?(conversation, ultima)
 
         ActiveRecord.after_all_transactions_commit do
           ::Autonomia::Agents::Operate::ReplyJob.perform_later(conversation.id, ultima.id)
         end
+      end
+
+      def turno_em_andamento?(conversation, mensagem)
+        stamp = conversation.additional_attributes.to_h[::Autonomia::Agents::Operate::ReplyJob::DEBOUNCE_KEY]
+        return false unless stamp.is_a?(Hash) && stamp['pending_message_id'] == mensagem.id
+
+        janela = ::Autonomia::Agents::Config.debounce_seconds_for(agent) + FOLGA_DO_TURNO
+        stamp['at'].to_f >= janela.ago.to_f
       end
 
       def area_precisa_de_porta_ativa

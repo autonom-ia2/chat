@@ -126,21 +126,66 @@ RSpec.describe Autonomia::Agents::Areas do
       expect(area.reload).to have_attributes(deleted_at: nil, papel: 'area')
     end
 
-    it 'devolve à porta e enfileira a resposta à última mensagem do cliente ainda sem resposta' do
+    # Só reenfileira o turno que estava EM ANDAMENTO (a marca do debounce do ReplyJob aponta para a mensagem e é
+    # recente). Mensagem antiga sem turno nunca vira resposta nova: seria envio a cliente real, em lote.
+    def turno_em_andamento(conversa, mensagem, at: Time.current)
+      stamp = { 'pending_message_id' => mensagem.id, 'at' => at.to_f }
+      conversa.update!(additional_attributes: conversa.additional_attributes.to_h.merge(
+        Autonomia::Agents::Operate::ReplyJob::DEBOUNCE_KEY => stamp
+      ))
+    end
+
+    def pergunta_em(conversa, texto = 'e o boleto?')
+      create(:message, account: account, conversation: conversa, message_type: :incoming, content: texto)
+    end
+
+    it 'devolve à porta e enfileira uma vez a resposta à mensagem cujo turno estava em andamento' do
       atendida = conversa(ai_assignee: area.agent_bot, status: :open)
-      pergunta = create(:message, account: account, conversation: atendida, message_type: :incoming, content: 'e o boleto?')
+      pergunta = pergunta_em(atendida)
+      turno_em_andamento(atendida, pergunta)
 
       expect { described_class.desvincular!(agent: agente_da_area, inbox: inbox) }
-        .to have_enqueued_job(Autonomia::Agents::Operate::ReplyJob).with(atendida.id, pergunta.id)
+        .to have_enqueued_job(Autonomia::Agents::Operate::ReplyJob).with(atendida.id, pergunta.id).exactly(:once)
+    end
+
+    it 'não enfileira mensagem antiga do cliente sem turno em andamento' do
+      atendida = conversa(ai_assignee: area.agent_bot, status: :open)
+      pergunta_em(atendida, 'ok, obrigado')
+
+      expect { described_class.desvincular!(agent: agente_da_area, inbox: inbox) }
+        .not_to have_enqueued_job(Autonomia::Agents::Operate::ReplyJob)
+    end
+
+    it 'não enfileira quando a marca do turno é velha, ou aponta para outra mensagem' do
+      velha = conversa(ai_assignee: area.agent_bot, status: :open)
+      turno_em_andamento(velha, pergunta_em(velha), at: 3.days.ago)
+      outra = conversa(ai_assignee: area.agent_bot, status: :open)
+      turno_em_andamento(outra, pergunta_em(outra, 'primeira'))
+      pergunta_em(outra, 'segunda, que não abriu turno')
+
+      expect { described_class.desvincular!(agent: agente_da_area, inbox: inbox) }
+        .not_to have_enqueued_job(Autonomia::Agents::Operate::ReplyJob)
     end
 
     it 'não enfileira resposta quando a última mensagem já foi respondida' do
       atendida = conversa(ai_assignee: area.agent_bot, status: :open)
-      create(:message, account: account, conversation: atendida, message_type: :incoming, content: 'oi')
+      turno_em_andamento(atendida, pergunta_em(atendida, 'oi'))
       create(:message, account: account, conversation: atendida, message_type: :outgoing, sender: area.agent_bot, content: 'olá')
 
       expect { described_class.desvincular!(agent: agente_da_area, inbox: inbox) }
         .not_to have_enqueued_job(Autonomia::Agents::Operate::ReplyJob)
+    end
+
+    it 'pausar a área com várias conversas reenfileira só as que tinham turno em andamento' do
+      em_andamento = conversa(ai_assignee: area.agent_bot, status: :open)
+      pergunta = pergunta_em(em_andamento)
+      turno_em_andamento(em_andamento, pergunta)
+      2.times { pergunta_em(conversa(ai_assignee: area.agent_bot, status: :open), 'ok, obrigado') }
+
+      agente_da_area.update!(status: :paused)
+
+      respostas = enqueued_jobs.select { |job| job['job_class'] == 'Autonomia::Agents::Operate::ReplyJob' }
+      expect(respostas.map { |job| job['arguments'] }).to eq([[em_andamento.id, pergunta.id]])
     end
 
     it 'é idempotente e não toca a porta' do
