@@ -102,6 +102,22 @@ RSpec.describe 'Api::V1::Accounts::Inboxes::WhatsappTemplates', type: :request d
       expect(rows[csat['name']]['system_owner']).to eq('satisfacao')
     end
 
+    # #1338: a saúde de cada modelo (últimos 30 dias) vem na própria lista, sem uma chamada por modelo.
+    it 'traz a saúde de cada modelo: envios, entregas, leituras, respostas e custo' do
+      conversation = create(:conversation, account: account, inbox: inbox)
+      create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :outgoing, status: :read,
+                       created_at: 2.days.ago, additional_attributes: { 'template_params' => { 'name' => 'pedido_enviado', 'language' => 'pt_BR' } })
+      create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :incoming, created_at: 1.day.ago)
+
+      call(:get, base)
+
+      rows = response.parsed_body['payload'].index_by { |row| row['name'] }
+      expect(rows['pedido_enviado']['health']).to include('days' => 30, 'sent' => 1, 'delivered' => 1, 'read' => 1, 'replied' => 1,
+                                                          'average_reply_rate' => nil)
+      expect(rows['pedido_enviado']['health']['cost']).to include('currency' => 'BRL')
+      expect(rows['agendamento_ao_marcar_v1']['health']).to include('sent' => 0, 'cost' => nil)
+    end
+
     it 'o perfil sobrevive ao sync que regrava a lista inteira' do
       WhatsappTemplateProfile.create!(account: account, inbox: inbox, waba_id: channel.waba_id, name: 'pedido_enviado',
                                       language: 'pt_BR', friendly_name: 'Pedido enviado')

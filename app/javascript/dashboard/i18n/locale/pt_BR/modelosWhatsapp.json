@@ -717,7 +717,11 @@
       },
       "GRUPO_CATALOGO": "Do cadastro",
       "SEM_MODELO_LIBERADO": "Nenhum modelo desta conta do WhatsApp pode ir em campanha agora: estão recusados, pausados ou num formato que a campanha ainda não envia.",
-      "CORRIGIR": "Corrigir “{nome}”"
+      "CORRIGIR": "Corrigir “{nome}”",
+      "SINAL": {
+        "ruim": "O WhatsApp está vendo muita gente bloquear ou denunciar o modelo \"{nome}\". Ele pode pausar o modelo a qualquer momento, e a campanha para junto. Dá para enviar, mas o melhor é mandar só para quem conhece a sua empresa.",
+        "atencao": "Algumas pessoas bloquearam ou denunciaram o modelo \"{nome}\". Se piorar, o WhatsApp pausa o modelo e a campanha para junto. Dá para enviar, mas mande só para quem conhece a sua empresa."
+      }
     },
     "IA": {
       "CRIAR_COM_IA": "Criar com IA",
@@ -804,6 +808,59 @@
     "CONFERENCIA_AUTOMATICA": {
       "PRONTO": "“{nome}” ficou pronto para usar.",
       "RECUSADO": "“{nome}” foi recusado."
+    },
+    "SAUDE": {
+      "TITULO": "Como este modelo está indo",
+      "PERIODO": "Últimos 30 dias",
+      "SINAIS": {
+        "bom": {
+          "SELO": "Bem recebido",
+          "TITULO": "As pessoas estão recebendo bem",
+          "TEXTO": "Quase ninguém bloqueou ou denunciou esta mensagem. Continue mandando para quem conhece a sua empresa."
+        },
+        "atencao": {
+          "SELO": "Atenção",
+          "TITULO": "Atenção: algumas pessoas não gostaram",
+          "TEXTO": "O WhatsApp viu bloqueios, denúncias ou pouca gente lendo. Se piorar, ele pausa este modelo e as campanhas com ele param."
+        },
+        "ruim": {
+          "SELO": "Risco de pausa",
+          "TITULO": "Risco de pausa: muita gente bloqueando",
+          "TEXTO": "Muitas pessoas bloquearam o número, denunciaram ou não leram. O WhatsApp pode pausar este modelo a qualquer momento: 3 horas na 1ª vez, 6 horas na 2ª, e na 3ª ele desativa."
+        },
+        "sem_nota": {
+          "SELO": "Ainda sem nota",
+          "TITULO": "Ainda sem nota do WhatsApp",
+          "TEXTO": "O WhatsApp dá a nota depois que as pessoas recebem e reagem. Todo modelo novo começa assim."
+        }
+      },
+      "O_QUE_FAZER": "O que fazer:",
+      "DICAS": {
+        "QUEM": "Mande só para quem já é cliente ou pediu para receber.",
+        "COMECO": "Diga logo no começo quem está falando e por quê.",
+        "MENOS": "Mande menos vezes para a mesma pessoa."
+      },
+      "MELHORAR": "Fazer uma versão melhor",
+      "NUMEROS": {
+        "receberam": "Receberam",
+        "leram": "Leram",
+        "responderam": "Responderam",
+        "custo": "Custo por resposta"
+      },
+      "DE_ENVIADAS": "de {n} enviadas",
+      "PESSOAS": "{n} pessoa | {n} pessoas",
+      "MEDIA": {
+        "ACIMA": "Acima da média dos seus modelos: {n}%",
+        "ABAIXO": "Abaixo da média dos seus modelos: {n}%"
+      },
+      "SEM_RESPOSTA": "Ninguém respondeu",
+      "TOTAL_GASTO": "Gasto estimado: {valor}",
+      "SEM_ENVIOS": "Este modelo não foi enviado nos últimos 30 dias. Os números aparecem depois do primeiro envio.",
+      "NOTA": "Contamos só o que saiu pelo Chat2You, e o gasto é estimado pela tabela de preços do WhatsApp. Nem todo mundo deixa o WhatsApp avisar que leu, então quem leu pode ser mais.",
+      "LISTA": {
+        "RESPONDERAM": "{n}% responderam"
+      },
+      "USAR_MESMO_ASSIM": "Usar mesmo assim"
     }
   }
 }

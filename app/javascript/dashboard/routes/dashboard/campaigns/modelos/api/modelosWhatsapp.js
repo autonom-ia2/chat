@@ -46,6 +46,11 @@ import adaptador from './adaptadorHttp';
 //     cartoes?, oferta?, catalogo?, codigo?, formulario? },
 //   campos: { '1': campo }, template (o modelo como a Meta devolve),
 //   recusa: { codigo } | null, pausa: { desde | null } | null,
+//   sinal: 'bom' | 'atencao' | 'ruim' | 'sem_nota'  (qualidade dada pelo WhatsApp),
+//   saude: { dias, enviadas, entregues, lidas, responderam,
+//     custo: { total, porResposta | null, moeda } | null,
+//     mediaDeRespostas: % | null (só com 3 modelos ou mais com envios) }
+//     | undefined  (últimos 30 dias, só o que saiu pelo Chat2You, #1338),
 //   enviosNoMes | null, enviadoEm | null,
 //   edicoes: { restantesNoMes | null, liberadaEm | null },
 // }

@@ -9,6 +9,7 @@ import {
   rotuloDoCampo,
 } from '../helpers/campos';
 import { podeIrEmCampanha, usavelEmCampanha } from '../helpers/paraMeta';
+import { SINAIS_DE_ALERTA } from '../constants';
 
 // Ponte Modelos ↔ Campanha (auditoria de campanhas, §6; PRD §7). Com a flag
 // whatsapp_templates_journey ligada, a Nova campanha pega daqui as caixas do
@@ -104,13 +105,21 @@ export function useModelosNaCampanha() {
   const templates = inboxId =>
     modelosDaCaixa(inboxId).map(modelo => modelo.template);
 
+  // Em análise, ou pronto com nota ruim do WhatsApp (#1338): a opção diz já na lista.
+  const extraDoModelo = modelo => {
+    if (modelo.situacao === 'em_analise')
+      return t('MODELOS_WHATSAPP.SITUACOES.em_analise.ROTULO');
+    if (SINAIS_DE_ALERTA.includes(modelo.sinal))
+      return t(`MODELOS_WHATSAPP.SAUDE.SINAIS.${modelo.sinal}.SELO`);
+    return '';
+  };
+
   const opcoesDeModelo = inboxId =>
     modelosDaCaixa(inboxId).map(modelo => {
       const motivo = motivoDeNaoUsar(modelo);
       const extra = motivo
         ? t(`MODELOS_WHATSAPP.PONTE.NAO_VAI.${motivo}`)
-        : modelo.situacao === 'em_analise' &&
-          t('MODELOS_WHATSAPP.SITUACOES.em_analise.ROTULO');
+        : extraDoModelo(modelo);
       return {
         value: modelo.id,
         label: extra ? `${modelo.nome} · ${extra}` : modelo.nome,
