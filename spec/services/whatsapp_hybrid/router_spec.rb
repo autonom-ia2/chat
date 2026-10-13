@@ -81,7 +81,6 @@ describe WhatsappHybrid::Router do
       allow(client).to receive(:send_text).and_raise(Waha::Client::Error, 'WAHA POST /api/sendText -> 500: server returned error 475')
       allow(client).to receive(:get_session).and_return({ 'status' => 'WORKING', 'me' => { 'id' => "#{connection.connected_phone}@c.us" } })
       allow(client).to receive(:capping).and_return({ 'cappingStatus' => 'CAPPED' })
-      allow(client).to receive(:timelock).and_return({ 'isActive' => false })
       message = outgoing
 
       Whatsapp::SendOnWhatsappService.new(message: message).perform

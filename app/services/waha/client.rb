@@ -82,8 +82,11 @@ module Waha
     end
 
     # Limite temporário de conversas novas pelos aparelhos conectados (WhatsApp Híbrido, chat#1480).
+    # Só informativo na aba: timeout curto para não segurar a tela.
+    TIMELOCK_TIMEOUT = 5
+
     def timelock(session)
-      get("/api/sessions/#{session}/timelock")
+      get("/api/sessions/#{session}/timelock", timeout: TIMELOCK_TIMEOUT)
     end
 
     # "digitando…" antes do envio (WhatsApp Híbrido, chat#1067).

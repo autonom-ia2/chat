@@ -18,8 +18,7 @@ class WhatsappHybrid::Timelock
   end
 
   # Ativo no motor e ainda dentro do prazo (sem prazo informado, vale enquanto o motor disser que está ativo).
-  def active?
-    snapshot = current
+  def active?(snapshot = current)
     return false unless snapshot['active']
 
     snapshot['ends_at'].blank? || snapshot['ends_at'].to_i > Time.current.to_i
@@ -29,19 +28,30 @@ class WhatsappHybrid::Timelock
     current['checked_at'].to_i > FRESH_FOR.ago.to_i
   end
 
-  # `data`: a resposta crua do motor.
+  # `data`: a resposta crua do motor (epoch em segundos em timeEnforcementEnds).
   def apply!(data)
-    snapshot = { 'active' => data.to_h['isActive'] == true, 'ends_at' => data.to_h['timeEnforcementEnds'],
-                 'checked_at' => Time.current.to_i }
-    ::Redis::Alfred.setex(key, snapshot.to_json, KEY_TTL)
+    data = {} unless data.is_a?(Hash)
+    write('active' => data['isActive'] == true, 'ends_at' => data['timeEnforcementEnds'])
+  end
+
+  # A consulta falhou: guarda só a hora da tentativa, sem mexer no último retrato.
+  def checked!
+    write(current.slice('active', 'ends_at'))
   end
 
   def payload
-    active = active?
-    { active: active, ends_at: active ? current['ends_at'] : nil }
+    snapshot = current
+    active = active?(snapshot)
+    { active: active, ends_at: active ? snapshot['ends_at'] : nil }
   end
 
   def key
     "whatsapp_hybrid:timelock:#{@connection.id}"
+  end
+
+  private
+
+  def write(snapshot)
+    ::Redis::Alfred.setex(key, snapshot.merge('checked_at' => Time.current.to_i).to_json, KEY_TTL)
   end
 end

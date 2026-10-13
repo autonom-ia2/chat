@@ -46,16 +46,55 @@ describe WhatsappHybrid::Timelock do
     expect(timelock.active?).to be(false)
   end
 
-  it 'asks the engine again only after the snapshot gets old' do
-    client = instance_double(Waha::Client, get_session: { 'status' => 'WORKING', 'me' => { 'id' => "#{connection.connected_phone}@c.us" } },
-                                           update_session: {}, capping: {}, timelock: { 'isActive' => false })
-    manager = WhatsappHybrid::SessionManager.new(connection, client: client)
+  it 'ignores an answer that is not an object' do
+    timelock.apply!('isActive' => true, 'timeEnforcementEnds' => 1.hour.from_now.to_i)
+    timelock.apply!('unexpected')
 
-    manager.refresh!
-    manager.refresh!
-    expect(client).to have_received(:timelock).once
+    expect(timelock.payload).to eq(active: false, ends_at: nil)
+  end
 
-    travel_to(2.minutes.from_now) { manager.refresh! }
-    expect(client).to have_received(:timelock).twice
+  describe 'reading from the engine' do
+    let(:client) { instance_double(Waha::Client, timelock: { 'isActive' => false }) }
+    let(:manager) { WhatsappHybrid::SessionManager.new(connection, client: client) }
+
+    it 'asks the engine again only after the snapshot gets old' do
+      manager.refresh_timelock!
+      manager.refresh_timelock!
+      expect(client).to have_received(:timelock).once
+
+      travel_to(2.minutes.from_now) { manager.refresh_timelock! }
+      expect(client).to have_received(:timelock).twice
+    end
+
+    it 'keeps the last snapshot and waits before asking again when the engine fails' do
+      ends_at = 3.hours.from_now.to_i
+      timelock.apply!('isActive' => true, 'timeEnforcementEnds' => ends_at)
+      travel_to(2.minutes.from_now) do
+        allow(client).to receive(:timelock).and_raise(Waha::Client::Error, 'WAHA GET -> 500')
+
+        manager.refresh_timelock!
+        manager.refresh_timelock!
+
+        expect(client).to have_received(:timelock).once
+        expect(timelock.payload).to eq(active: true, ends_at: ends_at)
+      end
+    end
+
+    it 'does not ask the engine while the session is not connected' do
+      connection.update!(status: 'failed')
+
+      manager.refresh_timelock!
+
+      expect(client).not_to have_received(:timelock)
+    end
+
+    it 'stays out of the regular session refresh used before sending' do
+      allow(client).to receive_messages(get_session: { 'status' => 'WORKING', 'me' => { 'id' => "#{connection.connected_phone}@c.us" } },
+                                        update_session: {}, capping: {})
+
+      manager.refresh!
+
+      expect(client).not_to have_received(:timelock)
+    end
   end
 end

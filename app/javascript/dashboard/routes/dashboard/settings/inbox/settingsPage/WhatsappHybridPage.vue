@@ -474,7 +474,9 @@ onBeforeUnmount(() => {
     </section>
 
     <section
-      v-if="connected && !wrongNumber && timelockEnd"
+      v-if="
+        connected && !wrongNumber && timelockEnd && cappingKey !== 'BLOCKED'
+      "
       class="flex items-start gap-2 px-4 py-3 text-sm rounded-xl text-n-amber-11 bg-n-amber-3"
     >
       <span class="i-lucide-hourglass size-4 mt-0.5 shrink-0" />

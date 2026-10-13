@@ -49,7 +49,7 @@ RSpec.describe Crm::BookingV2::Notices::Sender do
     allow(client).to receive(:check_contact_exists).and_return({ 'numberExists' => true, 'chatId' => '5511912345678@c.us' })
     allow(client).to receive(:new_message_id).and_return('3EB0AVISO')
     allow(client).to receive_messages(send_text: { 'id' => 'true_5511912345678@c.us_3EB0AVISO' }, start_typing: {}, stop_typing: {},
-                                      update_session: {}, capping: {}, timelock: {})
+                                      update_session: {}, capping: {})
     allow(Kernel).to receive(:sleep)
     Redis::Alfred.delete('whatsapp_hybrid:chat_id:hybrid-aviso:5511912345678')
   end

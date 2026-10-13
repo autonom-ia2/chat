@@ -11,6 +11,7 @@ class Api::V1::Accounts::WhatsappHybridConnectionsController < Api::V1::Accounts
 
     manager = WhatsappHybrid::SessionManager.new(connection)
     manager.refresh!
+    manager.refresh_timelock!
     render json: payload(connection, qr_code: manager.qr)
   end
 
