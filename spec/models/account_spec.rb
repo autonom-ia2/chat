@@ -201,7 +201,8 @@ RSpec.describe Account do
         feature_whatsapp_templates_journey: 1 << 16,
         feature_crm_configurar_caixas: 1 << 17,
         feature_campaign_open_window_text: 1 << 18,
-        feature_whatsapp_templates_ai: 1 << 19
+        feature_whatsapp_templates_ai: 1 << 19,
+        feature_nova_conversa_tela: 1 << 20
       )
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_whatsapp_manual_transfer]).to eq(1)
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_data_import]).to eq(2)

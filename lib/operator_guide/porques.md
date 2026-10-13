@@ -1220,10 +1220,10 @@
 - titulo: Iniciar nova conversa
 - rota: home
 - intent: Como começo uma nova conversa?; Onde envio a primeira mensagem para um contato?; Como crio um atendimento do zero?; Como mando mensagem proativa por WhatsApp/e-mail?
-- onde_fica: Sidebar (canto superior) > botão de nova conversa (ícone de caneta)
+- onde_fica: Topo do menu lateral > botão de nova conversa (ícone de lápis); ou Contatos > abrir o contato > botão Enviar mensagem. Os dois abrem a mesma tela, que desliza pela direita.
 - pre_requisitos: existir ao menos uma caixa de entrada que permita criar conversa; contato existente ou criar um novo no fluxo
-- passos: 1. Clique no botão de nova conversa (ícone de caneta) no topo da sidebar; 2. Selecione a caixa de entrada; 3. Escolha ou crie o contato; 4. Para WhatsApp/e-mail escolha o template/opções; 5. Escreva a mensagem e envie para abrir a conversa.
-- gotchas: canais que exigem janela/template (WhatsApp API) podem limitar o envio livre; a caixa precisa suportar criação de conversa; o contato precisa ter o identificador correto (telefone/e-mail) do canal escolhido.
+- passos: 1. Clique no lápis no topo do menu lateral (ou em Enviar mensagem, na página do contato); 2. Pelo lápis, digite o nome, o telefone ou o e-mail em Para quem e clique na pessoa (pela página do contato ela já vem escolhida); 3. Em Por onde, confira o canal: o primeiro já vem marcado, e com mais de um você pode trocar; 4. Escreva em Sua mensagem ou, no WhatsApp, escolha uma mensagem pronta e complete os campos dela; à direita, a prévia mostra como a pessoa recebe; 5. Clique em Enviar mensagem; 6. Na confirmação, clique em Abrir a conversa.
+- gotchas: no WhatsApp oficial, a primeira mensagem para um cliente precisa ser uma mensagem pronta (modelo aprovado pelo WhatsApp); só dá para escrever livremente quando o mesmo número também está ligado na aba WhatsApp API da caixa; sem nenhuma mensagem pronta aprovada, a tela avisa e quem administra a conta pode criar uma; o contato precisa ter telefone ou e-mail, senão a tela mostra Completar o cadastro; fechar pelo X, pela tecla Esc ou clicando fora guarda o que você escreveu, e Cancelar apaga; o botão Enviar mensagem só acende quando não falta nada, e o texto ao lado dele diz o que falta; nas contas em que a tela nova está desligada, o mesmo botão abre a tela antiga, uma janelinha ao lado do botão.
 - highlight: `conversations-compose-new`
 
 ### filtrar_contatos

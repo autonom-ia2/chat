@@ -7,7 +7,7 @@ import { useEventListener } from '@vueuse/core';
 
 import Button from 'dashboard/components-next/button/Button.vue';
 import Breadcrumb from 'dashboard/components-next/breadcrumb/Breadcrumb.vue';
-import ComposeConversation from 'dashboard/components-next/NewConversation/ComposeConversation.vue';
+import ComposeConversation from 'dashboard/components-next/NovaConversa/NovaConversaEntrada.vue';
 import VoiceCallButton from 'dashboard/components-next/Contacts/VoiceCallButton.vue';
 
 const props = defineProps({
@@ -80,7 +80,12 @@ useEventListener(
       '[role="combobox"][aria-expanded="true"]'
     );
     if (openChoice) return;
-    if (document.querySelector('[data-popover-content], dialog[open]')) return;
+    if (
+      document.querySelector(
+        '[data-popover-content], dialog[open], [data-nova-conversa-gaveta]'
+      )
+    )
+      return;
     closeMobileSidebar();
   },
   { capture: true }
@@ -185,6 +190,8 @@ useEventListener(
               'dialog.ProseMirror-prompt-backdrop',
               '[data-popover-content]',
               '[data-popover-backdrop]',
+              '[data-nova-conversa-gaveta]',
+              '[data-nova-conversa-fundo]',
             ],
           },
         ]"

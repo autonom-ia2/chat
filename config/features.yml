@@ -367,3 +367,13 @@
   display_name: Modelos do WhatsApp com IA (criar e melhorar)
   enabled: false
   column: feature_flags_ext_1
+
+# Tela nova de "Nova conversa / Enviar mensagem" (#1459): gaveta no padrão da casa (para quem, por onde, a mensagem e a
+# prévia de como a pessoa recebe). Bit 20 (1048576), confirmado pela Orquestração: fica LOGO ABAIXO de
+# `whatsapp_templates_ai` (#1333, bit 19). Desligada numa conta: o lápis do menu e o botão "Enviar mensagem"
+# abrem o popover antigo do Chatwoot. Nasce ligada em todas as contas (decisão do Rodrigo; migration 20261026100000).
+# Refs #1459.
+- name: nova_conversa_tela
+  display_name: Nova conversa em gaveta (para quem, por onde, mensagem e prévia)
+  enabled: true
+  column: feature_flags_ext_1
