@@ -13,6 +13,7 @@ import {
   sameClock,
   slotLabel,
   timeLabel,
+  zoneLabel,
 } from '../helpers/datetime';
 import {
   locationHint,
@@ -340,5 +341,17 @@ describe('request id', () => {
       true
     );
     expect(newRequestId()).not.toBe(first);
+  });
+});
+
+// Regra do Rodrigo (#1456, #1468): o fuso como a plataforma mostra, nunca o nome longo do navegador.
+describe('zoneLabel', () => {
+  it('shows the zone name the way the platform does, never the browser long name', () => {
+    expect(zoneLabel('America/Sao_Paulo')).toBe('America/Sao Paulo');
+    expect(zoneLabel('America/Argentina/Buenos_Aires')).toBe(
+      'America/Argentina/Buenos Aires'
+    );
+    expect(zoneLabel('Asia/Tokyo')).toBe('Asia/Tokyo');
+    expect(zoneLabel(undefined)).toBe('');
   });
 });
