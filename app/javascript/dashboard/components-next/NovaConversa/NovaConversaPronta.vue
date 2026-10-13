@@ -14,7 +14,6 @@ import { preenchedorProprioCobre, textoDoCorpo } from './modeloPronto';
 // com "Alterar" e os campos aparecem logo abaixo.
 const props = defineProps({
   modelos: { type: Array, default: () => [] },
-  nomeDoContato: { type: String, default: '' },
   // Só quem pode gerenciar modelos vê o botão de criar.
   podeCriar: { type: Boolean, default: false },
 });
@@ -111,7 +110,6 @@ defineExpose({ montar });
       v-if="comPreenchedorProprio"
       ref="preenchedor"
       :template="modelo"
-      :nome-do-contato="nomeDoContato"
       @send-message="montada = $event"
     />
     <!-- Só para modelo com mídia no cabeçalho ou botão com variável: o

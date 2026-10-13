@@ -5,7 +5,7 @@ import {
   camposDoModelo,
   comCampo,
   modeloCompleto,
-  paramsIniciais,
+  paramsVazios,
   payloadDoModelo,
   previaDoModelo,
   trechoFalado,
@@ -14,13 +14,11 @@ import {
 
 // #1459 — "Complete a mensagem": um campo por parte variável da mensagem
 // pronta. O rótulo é o trecho da própria mensagem em volta do campo, com a
-// pastilha no lugar dele, e o placeholder é o exemplo do próprio modelo. O primeiro campo
-// numerado já vem com o primeiro nome do contato. Expõe a mesma interface do
-// preenchedor antigo (isFormInvalid, renderedHeader, renderedTemplate,
+// pastilha no lugar dele, e o placeholder é o exemplo do próprio modelo. Todo
+// campo começa vazio. Expõe a mesma interface do preenchedor antigo (isFormInvalid, renderedHeader, renderedTemplate,
 // sendMessage), e o que envia tem o mesmo formato.
 const props = defineProps({
   template: { type: Object, required: true },
-  nomeDoContato: { type: String, default: '' },
 });
 
 const emit = defineEmits(['sendMessage']);
@@ -40,7 +38,7 @@ const renderedTemplate = computed(() => previa.value.corpo);
 watch(
   () => props.template,
   modelo => {
-    params.value = paramsIniciais(modelo, props.nomeDoContato);
+    params.value = paramsVazios(modelo);
   },
   { immediate: true }
 );
@@ -68,8 +66,10 @@ defineExpose({ isFormInvalid, renderedHeader, renderedTemplate, sendMessage });
 </script>
 
 <template>
+  <!-- Modelo sem campo não desenha nada, mas o componente continua montado:
+       é ele quem entrega a mensagem pronta na hora de enviar. -->
   <fieldset
-    v-if="campos.length"
+    v-show="campos.length"
     data-nova-conversa-campos
     class="m-0 flex min-w-0 flex-col gap-4 border-0 p-0"
   >

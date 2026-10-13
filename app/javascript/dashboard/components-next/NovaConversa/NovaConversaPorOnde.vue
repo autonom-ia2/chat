@@ -4,6 +4,7 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import NovaConversaCartao from './NovaConversaCartao.vue';
 import NovaConversaOpcao from './NovaConversaOpcao.vue';
 import { chaveDoCanal, linhaDoCanal } from './novaConversa';
+import { SINAIS } from './modeloPronto';
 
 // #1459 — "Por onde": os canais em que o contato pode ser alcançado. Um só
 // vira frase; vários viram opções lado a lado, com o primeiro já marcado.
@@ -21,7 +22,9 @@ const canalId = defineModel({ type: Number, default: null });
 const { t } = useI18n();
 const P = 'NOVA_CONVERSA.POR_ONDE';
 const tipoDe = canal => t(`${P}.CANAL.${chaveDoCanal(canal)}`);
-const nomeDe = canal => `${tipoDe(canal)} · ${canal.name}`;
+const nomeDe = canal => `${tipoDe(canal)} ${SINAIS.ponto} ${canal.name}`;
+const entreParenteses = texto =>
+  `${SINAIS.abreParenteses}${texto}${SINAIS.fechaParenteses}`;
 </script>
 
 <template>
@@ -70,7 +73,7 @@ const nomeDe = canal => `${tipoDe(canal)} · ${canal.name}`;
   >
     <strong class="font-semibold">{{ nomeDe(canais[0]) }}</strong>
     <template v-if="linhaDoCanal(canais[0])">
-      ({{ linhaDoCanal(canais[0]) }})
+      {{ entreParenteses(linhaDoCanal(canais[0])) }}
     </template>
   </NovaConversaCartao>
 

@@ -13,6 +13,7 @@ import {
   oQueFalta,
   ordenarCanais,
   podeCriarContato,
+  primeiroNome,
   telaDaGaveta,
   telefoneLegivel,
   tipoDeMensagem,
@@ -252,6 +253,15 @@ describe('nomeLegivel', () => {
     expect(nomeLegivel('boas_vindas_cliente')).toBe('Boas vindas cliente');
     expect(nomeLegivel('lembrete-de-pagamento')).toBe('Lembrete de pagamento');
     expect(nomeLegivel('')).toBe('');
+  });
+});
+
+describe('primeiroNome', () => {
+  it('fica com a primeira palavra do nome', () => {
+    expect(primeiroNome('  Mariana Souza Lima ')).toBe('Mariana');
+    expect(primeiroNome('Ana')).toBe('Ana');
+    expect(primeiroNome('')).toBe('');
+    expect(primeiroNome()).toBe('');
   });
 });
 

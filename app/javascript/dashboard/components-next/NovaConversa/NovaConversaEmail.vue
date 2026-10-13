@@ -18,7 +18,9 @@ const cc = defineModel('cc', { type: String, default: '' });
 const bcc = defineModel('bcc', { type: String, default: '' });
 
 const P = 'NOVA_CONVERSA.MENSAGEM';
-const maisOpcoes = ref(false);
+// Com cópia já preenchida (rascunho de antes), as opções nascem abertas:
+// ninguém envia cópia sem ver para quem.
+const maisOpcoes = ref(Boolean(cc.value || bcc.value));
 </script>
 
 <template>

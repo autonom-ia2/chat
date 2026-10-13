@@ -1,13 +1,18 @@
 <script setup>
 import PreviaWhatsapp from 'dashboard/components-next/whatsapp-preview/PreviaWhatsapp.vue';
+import NovaConversaCartaoEmail from './NovaConversaCartaoEmail.vue';
 
-// #1459 — depois de enviar: o visto verde, o que foi enviado e por onde. O
-// título ("Mensagem a caminho para …") está no herói, e os botões ("Abrir a
-// conversa" e "Fechar"), no rodapé da gaveta.
+// #1459 — depois de enviar: o visto verde, o que foi enviado e por onde. No
+// e-mail, o cartão com assunto e corpo; nos outros canais, o balão. O título
+// ("Mensagem a caminho para …") está no herói, e os botões ("Abrir a conversa"
+// e "Fechar"), no rodapé da gaveta.
 defineProps({
   texto: { type: String, default: '' },
+  email: { type: Boolean, default: false },
+  assunto: { type: String, default: '' },
   chaveDoCanal: { type: String, default: 'OUTRO' },
   caixa: { type: String, default: '' },
+  endereco: { type: String, default: '' },
 });
 </script>
 
@@ -23,11 +28,19 @@ defineProps({
     >
       <span class="i-lucide-check size-8" />
     </span>
+    <NovaConversaCartaoEmail
+      v-if="email"
+      :remetente="caixa"
+      :endereco="endereco"
+      :assunto="assunto"
+      :corpo="texto"
+    />
     <PreviaWhatsapp
-      v-if="texto.trim()"
+      v-else-if="texto.trim()"
       class="w-full"
       :texto="texto"
       :nome-do-remetente="caixa"
+      :hora="$t('NOVA_CONVERSA.PREVIA.AGORA')"
     />
     <p
       data-nova-conversa-enviada-canal

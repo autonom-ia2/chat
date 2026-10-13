@@ -1,5 +1,5 @@
 <script setup>
-import { computed, nextTick, ref, useId, watch } from 'vue';
+import { computed, nextTick, onUnmounted, ref, useId, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { useStore } from 'dashboard/composables/store';
@@ -26,9 +26,9 @@ import {
   TIPOS,
   linhaDoCanal,
   lugarDeOrigem,
+  primeiroNome,
   telaDaGaveta,
 } from './novaConversa';
-import { primeiroNome } from './modeloPronto';
 
 // #1459 — "Nova conversa" numa gaveta lateral: para quem, por onde, a
 // mensagem e, à direita, como a pessoa recebe. Uma tela, uma ação: Enviar.
@@ -90,7 +90,7 @@ const {
   enviarPronta,
 } = useNovaConversa({ contato, canal });
 
-const { prender, entrar } = useFocoPreso(raiz, aberta);
+const { prender, entrar, entrarSeLivre } = useFocoPreso(raiz, aberta);
 const { podeCriar: podeCriarPronta, irCriar } = useCriarMensagemPronta();
 
 const nome = computed(() => contato.value?.name || '');
@@ -153,6 +153,23 @@ const fechar = () => {
 
 const alternar = () => (aberta.value ? fechar() : abrir());
 
+// A página trocou de contato com a gaveta aberta: a gaveta acompanha. Trocar
+// de contato zera o que estava escrito (useNovaConversa).
+watch(
+  () => props.contactId,
+  id => {
+    if (!aberta.value) return;
+    if (id) usarContatoDaPagina(id);
+    else limparContato();
+  }
+);
+
+// Quem usa a gaveta sumiu da tela com ela aberta: devolve o sinal, para o
+// arrastar-e-soltar da conversa não ficar desligado.
+onUnmounted(() => {
+  if (aberta.value) emitter.emit(BUS_EVENTS.NEW_CONVERSATION_MODAL, false);
+});
+
 const cancelar = () => {
   limpar();
   erro.value = '';
@@ -205,18 +222,9 @@ watch([enviada, erro], async ([foi]) => {
 });
 
 // Os canais chegam depois de a gaveta abrir. Quando chegam, o foco vai para
-// onde a pessoa vai agir (o campo da mensagem, ou a primeira opção), a não
-// ser que ela já tenha levado o foco para outro lugar da gaveta.
-const focoLivre = () => {
-  const atual = document.activeElement;
-  return !raiz.value?.contains(atual) || atual?.hasAttribute('data-view-title');
-};
-watch(carregandoCanais, async carregando => {
-  if (carregando || !aberta.value) return;
-  // Dois ciclos: o bloco da mensagem monta e, depois, os campos dele.
-  await nextTick();
-  await nextTick();
-  if (focoLivre()) entrar();
+// onde a pessoa vai agir (o campo da mensagem, ou a primeira opção).
+watch(carregandoCanais, carregando => {
+  if (!carregando && aberta.value) entrarSeLivre();
 });
 
 // Um seletor aberto por cima da gaveta (mensagem pronta do Twilio, sugestão
@@ -252,6 +260,7 @@ useFixedPanelPresence(aberta);
     >
       <div
         v-if="aberta"
+        data-nova-conversa-fundo
         aria-hidden="true"
         class="fixed inset-0 z-40 bg-n-alpha-black1"
         @click="fechar"
@@ -285,8 +294,11 @@ useFixedPanelPresence(aberta);
           <NovaConversaEnviada
             v-if="tela === TELAS.ENVIADA"
             :texto="enviada.texto"
+            :email="enviada.email"
+            :assunto="enviada.assunto"
             :chave-do-canal="enviada.chaveDoCanal"
             :caixa="enviada.caixa"
+            :endereco="enviada.endereco"
           />
           <div
             v-else
@@ -347,7 +359,6 @@ useFixedPanelPresence(aberta);
                 :tipo="tipo"
                 :assinatura="assinatura"
                 :com-assinatura="comAssinatura"
-                :nome-do-contato="nome"
                 :pode-criar-pronta="podeCriarPronta"
                 @update:campos-prontos="form.camposProntos = $event"
                 @update:texto-do-modelo="form.textoDoModelo = $event"

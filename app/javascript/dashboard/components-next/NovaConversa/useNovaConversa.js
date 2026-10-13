@@ -17,6 +17,7 @@ import {
   MODOS,
   TIPOS,
   chaveDoCanal,
+  linhaDoCanal,
   oQueFalta,
   tipoDeMensagem,
   usaModelo,
@@ -97,8 +98,24 @@ export function useNovaConversa({ contato, canal }) {
     if (novo?.id !== antigo?.id) aoTrocarDeCanal(novo, antigo);
   });
 
+  // Trocar de contato (ou ficar sem contato) zera tudo: o que foi escrito
+  // para uma pessoa nunca segue para outra. O rascunho só sobrevive enquanto
+  // o contato for o mesmo. Fica DEPOIS do watch do canal de propósito: na
+  // troca de contato os dois disparam, e é este que dá a palavra final.
+  watch(
+    () => contato.value?.id ?? null,
+    (novo, antigo) => {
+      if (String(novo) === String(antigo)) return;
+      limpar();
+      erro.value = '';
+    }
+  );
+
   // `texto` é o que a pessoa vê na confirmação: a mensagem como foi enviada.
+  // Ponto único de envio: enquanto um envio está no ar, outro não sai (clique
+  // duplo, Ctrl+Enter repetido, ou o seletor do Twilio confirmando de novo).
   const despachar = async (params, isFromWhatsApp, texto) => {
+    if (enviando.value) return;
     enviando.value = true;
     erro.value = '';
     try {
@@ -111,8 +128,11 @@ export function useNovaConversa({ contato, canal }) {
         contaId: conversa.account_id,
         nome: contato.value?.name || '',
         texto,
+        assunto: tipo.value === TIPOS.EMAIL ? form.assunto : '',
+        email: tipo.value === TIPOS.EMAIL,
         chaveDoCanal: chaveDoCanal(canal.value),
         caixa: canal.value?.name || '',
+        endereco: linhaDoCanal(canal.value),
       };
       limpar();
     } catch (error) {

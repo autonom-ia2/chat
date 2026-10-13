@@ -37,35 +37,66 @@ export function useNovaConversaContato() {
     () => canais.value.find(item => item.id === canalId.value) || null
   );
 
+  // Cada pedido de canais leva um número. Só o último pedido pode mexer no
+  // estado: resposta, erro ou "carregando" de um pedido antigo (de outro
+  // contato, ou do mesmo, pedido antes) são descartados.
+  let ultimoPedido = 0;
+
+  const receberCanais = alcancaveis => {
+    canais.value = ordenarCanais(
+      buildContactableInboxesList(mergeInboxDetails(alcancaveis, caixas.value))
+    );
+    // "Começar pronto": o primeiro da ordem já vem marcado. Recarregando os
+    // canais do mesmo contato, o que a pessoa escolheu continua escolhido.
+    const mantem = canais.value.some(item => item.id === canalId.value);
+    if (!mantem) canalId.value = canais.value[0]?.id ?? null;
+  };
+
   const carregarCanais = async () => {
     const id = contato.value?.id;
     if (!id) return;
+    ultimoPedido += 1;
+    const pedido = ultimoPedido;
     carregandoCanais.value = true;
     erroNosCanais.value = false;
     try {
       const alcancaveis = await fetchContactableInboxes(id);
-      // A resposta chegou depois de a pessoa trocar de contato: descarta.
-      if (contato.value?.id !== id) return;
-      canais.value = ordenarCanais(
-        buildContactableInboxesList(
-          mergeInboxDetails(alcancaveis, caixas.value)
-        )
-      );
-      // "Começar pronto": o primeiro da ordem já vem marcado.
-      canalId.value = canais.value[0]?.id ?? null;
+      if (pedido === ultimoPedido) receberCanais(alcancaveis);
     } catch (error) {
-      erroNosCanais.value = true;
+      if (pedido === ultimoPedido) erroNosCanais.value = true;
     } finally {
-      carregandoCanais.value = false;
+      if (pedido === ultimoPedido) carregandoCanais.value = false;
     }
   };
 
-  const escolherContato = escolhido => {
-    contato.value = escolhido;
-    canais.value = [];
-    canalId.value = null;
+  // A busca espera um instante antes de sair (debounce). Cada tecla ganha um
+  // número; a busca que acordar com número antigo não faz nada.
+  let ultimaBusca = 0;
+
+  const encerrarBusca = () => {
+    ultimaBusca += 1;
+    // Chamar o buscador sem texto cancela o pedido que estiver no ar.
+    buscar('');
     termo.value = '';
     resultados.value = [];
+    buscando.value = false;
+    erroNaBusca.value = false;
+  };
+
+  const soltarCanais = () => {
+    // Invalida o pedido de canais que estiver no ar.
+    ultimoPedido += 1;
+    canais.value = [];
+    canalId.value = null;
+    carregandoCanais.value = false;
+    erroNosCanais.value = false;
+  };
+
+  const escolherContato = escolhido => {
+    const mesmo = String(contato.value?.id ?? '') === String(escolhido.id);
+    encerrarBusca();
+    if (!mesmo) soltarCanais();
+    contato.value = escolhido;
     return carregarCanais();
   };
 
@@ -76,19 +107,20 @@ export function useNovaConversaContato() {
 
   const limparContato = () => {
     contato.value = null;
-    canais.value = [];
-    canalId.value = null;
+    soltarCanais();
   };
 
   const procurar = debounce(
-    async texto => {
+    async (texto, busca) => {
+      if (busca !== ultimaBusca) return;
       erroNaBusca.value = false;
       try {
         const achados = await buscar(texto);
-        // null = pedido cancelado por uma busca mais nova.
-        if (achados === null) return;
+        // null = pedido cancelado; número antigo = a pessoa já seguiu adiante.
+        if (achados === null || busca !== ultimaBusca) return;
         resultados.value = achados;
       } catch (error) {
+        if (busca !== ultimaBusca) return;
         erroNaBusca.value = true;
       }
       buscando.value = false;
@@ -98,11 +130,12 @@ export function useNovaConversaContato() {
   );
 
   const mudarTermo = texto => {
+    ultimaBusca += 1;
     termo.value = texto;
     erroAoCriar.value = false;
     buscando.value = texto.trim().length > 1;
     if (!buscando.value) resultados.value = [];
-    procurar(texto);
+    procurar(texto, ultimaBusca);
   };
 
   const criarContato = async () => {

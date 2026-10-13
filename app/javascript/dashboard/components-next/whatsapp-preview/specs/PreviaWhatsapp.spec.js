@@ -3,12 +3,9 @@ import PreviaWhatsapp from '../PreviaWhatsapp.vue';
 
 // #1459 — os quatro estados da prévia reutilizável: balão, fantasma, aviso
 // tracejado e a linha de cabeçalho.
+// `hora` é obrigatória: quem usa diz o que escrever ("agora", "9h").
 const montar = (props = {}, slots = {}) =>
-  mount(PreviaWhatsapp, {
-    props,
-    slots,
-    global: { mocks: { $t: chave => chave } },
-  });
+  mount(PreviaWhatsapp, { props: { hora: 'agora', ...props }, slots });
 
 const tem = (wrapper, parte) => wrapper.find(`[data-previa-${parte}]`).exists();
 
@@ -21,17 +18,19 @@ describe('PreviaWhatsapp', () => {
 
     const balao = wrapper.find('[data-previa-balao]');
     expect(balao.text()).toContain('Oi, Ana!\nTudo bem?');
-    expect(balao.text()).toContain('NOVA_CONVERSA.PREVIA.AGORA');
+    expect(balao.text()).toContain('agora');
     expect(wrapper.find('[data-previa-remetente]').text()).toBe('Loja');
     expect(tem(wrapper, 'fantasma')).toBe(false);
     expect(tem(wrapper, 'aviso')).toBe(false);
   });
 
-  it('usa a hora recebida no lugar de "agora"', () => {
+  it('escreve a hora que recebe e não traz texto próprio nenhum', () => {
     const wrapper = montar({ texto: 'Oi', hora: '9h' });
 
     expect(wrapper.find('[data-previa-balao]').text()).toContain('9h');
-    expect(wrapper.text()).not.toContain('NOVA_CONVERSA.PREVIA.AGORA');
+    expect(wrapper.text()).not.toContain('agora');
+    // Sem catálogo: o componente não chama $t (montado aqui sem i18n).
+    expect(wrapper.text()).not.toContain('NOVA_CONVERSA');
   });
 
   it('mostra o balão fantasma, com o texto da prop, quando está vazio', () => {

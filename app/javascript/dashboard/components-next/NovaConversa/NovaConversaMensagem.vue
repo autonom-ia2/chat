@@ -17,7 +17,6 @@ const props = defineProps({
   tipo: { type: String, required: true },
   assinatura: { type: String, default: '' },
   comAssinatura: { type: Boolean, default: false },
-  nomeDoContato: { type: String, default: '' },
   podeCriarPronta: { type: Boolean, default: false },
 });
 
@@ -118,7 +117,6 @@ defineExpose({ montar: () => pronta.value?.montar() ?? null });
       ref="pronta"
       v-model="modelo"
       :modelos="modelos"
-      :nome-do-contato="nomeDoContato"
       :pode-criar="podeCriarPronta"
       @update:campos-prontos="$emit('update:camposProntos', $event)"
       @update:texto="$emit('update:textoDoModelo', $event)"

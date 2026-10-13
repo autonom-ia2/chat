@@ -60,5 +60,23 @@ export function useFocoPreso(raiz, aberta) {
     quemAbriu = null;
   });
 
-  return { prender, entrar };
+  // O foco está "livre" enquanto a pessoa não o levou para dentro da gaveta
+  // (segue no título, ou fora dela). Só nesse caso dá para movê-lo sem
+  // atrapalhar quem já está digitando.
+  const focoLivre = () => {
+    const atual = document.activeElement;
+    return (
+      !raiz.value?.contains(atual) || atual?.hasAttribute('data-view-title')
+    );
+  };
+
+  // Para depois de a tela ganhar um bloco novo. Dois ciclos: o bloco monta
+  // e, em seguida, os campos dele.
+  const entrarSeLivre = async () => {
+    await nextTick();
+    await nextTick();
+    if (focoLivre()) entrar();
+  };
+
+  return { prender, entrar, entrarSeLivre };
 }

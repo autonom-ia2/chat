@@ -2,6 +2,8 @@ import { ref } from 'vue';
 import { flushPromises, mount } from '@vue/test-utils';
 import { INBOX_TYPES } from 'dashboard/helper/inbox';
 import { useKeyboardEvents } from 'dashboard/composables/useKeyboardEvents';
+import { emitter } from 'shared/helpers/mitt';
+import { BUS_EVENTS } from 'shared/constants/busEvents';
 import NovaConversaGaveta from '../NovaConversaGaveta.vue';
 
 // #1459 — a jornada da gaveta de ponta a ponta, com o servidor de mentira:
@@ -16,6 +18,7 @@ const estado = vi.hoisted(() => ({
   nome: 'Ana Souza',
   permissoes: [],
   jornadaDeModelos: false,
+  achados: [],
 }));
 
 vi.mock('vue-i18n', () => ({
@@ -32,7 +35,10 @@ vi.mock('dashboard/composables/store', () => ({
   useMapGetter: nome => {
     const getters = {
       'inboxes/getInboxes': [],
-      'contacts/getContactById': id => ({ id: Number(id), name: estado.nome }),
+      'contacts/getContactById': id => ({
+        id: Number(id),
+        name: Number(id) === 10 ? 'Bia Lima' : estado.nome,
+      }),
       'inboxes/getFilteredWhatsAppTemplates': () => estado.modelos,
       'inboxes/getInbox': () => ({}),
       'accounts/isRTL': false,
@@ -63,9 +69,14 @@ vi.mock(
   async original => ({
     ...(await original()),
     fetchContactableInboxes: vi.fn(async () => estado.canais),
-    createContactSearcher: () => vi.fn(async () => []),
+    createContactSearcher: () => vi.fn(async () => estado.achados),
   })
 );
+// A busca sai na hora, sem a espera de digitação.
+vi.mock('@chatwoot/utils', async original => ({
+  ...(await original()),
+  debounce: funcao => funcao,
+}));
 
 const SITE = {
   id: 5,
@@ -79,6 +90,14 @@ const WHATSAPP = {
   channelType: INBOX_TYPES.WHATSAPP,
   phoneNumber: '+5511999990000',
   sourceId: 's1',
+};
+const WHATSAPP_LIVRE = { ...WHATSAPP, whatsappApiStart: true };
+const EMAIL = {
+  id: 4,
+  name: 'Contato',
+  channelType: INBOX_TYPES.EMAIL,
+  email: 'oi@loja.com',
+  sourceId: 's4',
 };
 const MODELO = {
   id: 10,
@@ -114,7 +133,19 @@ const abrir = async (props = { contactId: '9' }) => {
         TeleportWithDirection: { template: '<div><slot /></div>' },
         transition: true,
         FileUpload: { template: '<span><slot /></span>' },
-        MessageEditor: true,
+        // O editor de e-mail entrega texto com marcação; aqui, um campo simples.
+        MessageEditor: {
+          props: ['modelValue'],
+          emits: ['update:modelValue'],
+          template: `<textarea data-editor :value="modelValue"
+            @input="$emit('update:modelValue', $event.target.value)" />`,
+        },
+        EmailOptions: {
+          props: ['ccEmails'],
+          emits: ['update:ccEmails'],
+          template: `<input data-copia :value="ccEmails"
+            @input="$emit('update:ccEmails', $event.target.value)" />`,
+        },
         Avatar: true,
       },
     },
@@ -142,6 +173,7 @@ describe('NovaConversaGaveta', () => {
     estado.nome = 'Ana Souza';
     estado.permissoes = ['agent'];
     estado.jornadaDeModelos = false;
+    estado.achados = [];
     estado.rota = { name: 'home', params: { accountId: 7 } };
     estado.dispatch = vi.fn(async acao =>
       acao === 'contactConversations/create' ? { id: 42, account_id: 7 } : null
@@ -303,14 +335,16 @@ describe('NovaConversaGaveta', () => {
     expect(wrapper.text()).toContain(`${F}.MODELO`);
   });
 
-  it('completa a mensagem pronta: primeiro nome pronto, o resto a pessoa preenche', async () => {
+  it('completa a mensagem pronta: todo campo vazio, com o exemplo do modelo', async () => {
     estado.canais = [WHATSAPP];
     estado.modelos = [MODELO_COM_CAMPOS];
     const wrapper = await abrir();
 
     const campos = wrapper.findAll('[data-nova-conversa-campos] input');
     expect(campos).toHaveLength(2);
-    expect(campos[0].element.value).toBe('Ana');
+    // Nada vem preenchido: {{1}} pode não ser o nome de quem recebe.
+    expect(campos[0].element.value).toBe('');
+    expect(campos[1].element.value).toBe('');
     expect(campos[1].attributes('placeholder')).toBe(
       'NOVA_CONVERSA.MENSAGEM.CAMPO_EXEMPLO'
     );
@@ -327,6 +361,8 @@ describe('NovaConversaGaveta', () => {
     expect(principal(wrapper).attributes('disabled')).toBeDefined();
 
     await campos[1].setValue('sexta, 9h');
+    expect(principal(wrapper).attributes('disabled')).toBeDefined();
+    await campos[0].setValue('Ana');
     expect(wrapper.find('[data-previa-balao]').text()).toContain(
       'Oi, Ana. Seu horário é sexta, 9h.'
     );
@@ -452,6 +488,160 @@ describe('NovaConversaGaveta', () => {
     expect(enviou()).toBeUndefined();
     await campo.trigger('keydown', { key: 'Enter', ctrlKey: true });
     expect(enviou()).toBeDefined();
+  });
+
+  describe('o que foi escrito para um contato não segue para outro', () => {
+    const escolher = async (wrapper, pessoa) => {
+      estado.achados = [pessoa];
+      await wrapper.find('#nova-conversa-busca').setValue(pessoa.name);
+      await flushPromises();
+      await wrapper.find('[data-nova-conversa-achado]').trigger('click');
+      await flushPromises();
+    };
+    const ANA = { id: 9, name: 'Ana Souza', phoneNumber: '+5511988887777' };
+    const BIA = { id: 10, name: 'Bia Lima', email: 'bia@exemplo.com' };
+
+    it('zera a mensagem ao trocar de contato pelo "Alterar"', async () => {
+      const wrapper = await abrir({});
+      await escolher(wrapper, ANA);
+      await wrapper.find('#nova-conversa-texto').setValue('Segredo da Ana');
+
+      await wrapper.find('article button').trigger('click');
+      expect(wrapper.find('#nova-conversa-busca').exists()).toBe(true);
+      await escolher(wrapper, BIA);
+
+      expect(titulo(wrapper)).toBe('NOVA_CONVERSA.TITULO:Bia Lima');
+      expect(wrapper.find('#nova-conversa-texto').element.value).toBe('');
+      expect(wrapper.text()).not.toContain('Segredo da Ana');
+    });
+
+    it('zera também se a pessoa volta para o mesmo contato depois de limpar', async () => {
+      const wrapper = await abrir({});
+      await escolher(wrapper, ANA);
+      await wrapper.find('#nova-conversa-texto').setValue('Rascunho');
+
+      await wrapper.find('article button').trigger('click');
+      await escolher(wrapper, ANA);
+
+      expect(wrapper.find('#nova-conversa-texto').element.value).toBe('');
+    });
+
+    it('acompanha a página quando o contato muda com a gaveta aberta', async () => {
+      const wrapper = await abrir();
+      await wrapper.find('#nova-conversa-texto').setValue('Segredo da Ana');
+
+      await wrapper.setProps({ contactId: '10' });
+      await flushPromises();
+
+      expect(titulo(wrapper)).toBe('NOVA_CONVERSA.TITULO:Bia Lima');
+      expect(wrapper.find('#nova-conversa-texto').element.value).toBe('');
+    });
+
+    it('zera ao reabrir com outro contato, e mantém ao reabrir com o mesmo', async () => {
+      const wrapper = await abrir();
+      await wrapper.find('#nova-conversa-texto').setValue('Rascunho da Ana');
+
+      await wrapper.find('[data-nova-conversa-fechar]').trigger('click');
+      await wrapper.find('[data-abrir]').trigger('click');
+      await flushPromises();
+      expect(wrapper.find('#nova-conversa-texto').element.value).toBe(
+        'Rascunho da Ana'
+      );
+
+      await wrapper.find('[data-nova-conversa-fechar]').trigger('click');
+      await wrapper.setProps({ contactId: '10' });
+      await wrapper.find('[data-abrir]').trigger('click');
+      await flushPromises();
+      expect(wrapper.find('#nova-conversa-texto').element.value).toBe('');
+    });
+
+    it('mantém o texto ao trocar só o canal do mesmo contato', async () => {
+      estado.canais = [SITE, WHATSAPP_LIVRE];
+      const wrapper = await abrir();
+      await wrapper.find('#nova-conversa-texto').setValue('Oi, Ana!');
+
+      await wrapper.findAll('input[name="nova-conversa-canal"]')[1].setValue();
+
+      expect(wrapper.find('#nova-conversa-texto').element.value).toBe(
+        'Oi, Ana!'
+      );
+    });
+  });
+
+  describe('e-mail', () => {
+    beforeEach(() => {
+      estado.canais = [EMAIL];
+    });
+
+    it('mostra a prévia sem a marcação de formatação do editor', async () => {
+      const wrapper = await abrir();
+
+      await wrapper.find('#nova-conversa-assunto').setValue('Proposta');
+      await wrapper.find('[data-editor]').setValue('**Oi**, _Ana_!');
+
+      const corpo = wrapper.find('[data-nova-conversa-email-corpo]');
+      expect(corpo.text()).toBe('Oi, Ana!');
+      expect(wrapper.find('[data-previa-balao]').exists()).toBe(false);
+    });
+
+    it('confirma o envio com o cartão de e-mail, e não com balão', async () => {
+      const wrapper = await abrir();
+      await wrapper.find('#nova-conversa-assunto').setValue('Proposta');
+      await wrapper.find('[data-editor]').setValue('**Oi**, Ana!');
+
+      await principal(wrapper).trigger('click');
+      await flushPromises();
+
+      const { params } = enviou()[1];
+      expect(params.mailSubject).toBe('Proposta');
+      expect(params.message.content).toBe('**Oi**, Ana!');
+      const enviada = wrapper.find('[data-nova-conversa-enviada]');
+      expect(enviada.find('[data-previa-balao]').exists()).toBe(false);
+      expect(enviada.find('[data-nova-conversa-email-assunto]').text()).toBe(
+        'Proposta'
+      );
+      expect(enviada.find('[data-nova-conversa-email-corpo]').text()).toBe(
+        'Oi, Ana!'
+      );
+      expect(enviada.text()).toContain('oi@loja.com');
+      expect(enviada.find('[data-nova-conversa-enviada-canal]').text()).toBe(
+        'NOVA_CONVERSA.ENVIADA.PELO.EMAIL'
+      );
+    });
+
+    it('abre "Mais opções" sozinho quando já há cópia preenchida', async () => {
+      estado.canais = [EMAIL, SITE];
+      const wrapper = await abrir();
+      const mais = () => wrapper.find('[data-nova-conversa-mais]');
+      expect(mais().attributes('aria-expanded')).toBe('false');
+      await mais().trigger('click');
+      await wrapper.find('[data-copia]').setValue('chefe@loja.com');
+
+      // Sai do e-mail e volta: a cópia continua valendo, então fica à vista.
+      const canais = wrapper.findAll('input[name="nova-conversa-canal"]');
+      await canais[1].setValue();
+      await canais[0].setValue();
+
+      expect(mais().attributes('aria-expanded')).toBe('true');
+      expect(wrapper.find('[data-copia]').element.value).toBe('chefe@loja.com');
+    });
+  });
+
+  it('devolve o sinal de "conversa nova aberta" se some da tela ainda aberta', async () => {
+    const sinal = vi.spyOn(emitter, 'emit');
+    const wrapper = await abrir();
+    expect(sinal).toHaveBeenLastCalledWith(
+      BUS_EVENTS.NEW_CONVERSATION_MODAL,
+      true
+    );
+
+    wrapper.unmount();
+
+    expect(sinal).toHaveBeenLastCalledWith(
+      BUS_EVENTS.NEW_CONVERSATION_MODAL,
+      false
+    );
+    sinal.mockRestore();
   });
 
   describe('foco', () => {

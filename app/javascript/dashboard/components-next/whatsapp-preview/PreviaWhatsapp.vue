@@ -2,22 +2,26 @@
 import { computed } from 'vue';
 
 // Prévia de uma mensagem como o cliente a recebe no WhatsApp: um balão com o
-// texto e a hora. Reutilizável e sem dependências: não conhece gaveta, store
-// nem rota, e todo texto chega por prop ou slot (só "agora" é dela).
+// texto e a hora. Compartilhado e sem dependências: não conhece gaveta, store,
+// rota nem catálogo de textos. Todo texto, inclusive a hora ("agora"), chega
+// por prop ou slot de quem usa.
 //
 // Quatro estados:
-// - com `texto`: o balão da empresa;
+// - com `texto`: o balão da empresa, com `hora` embaixo;
 // - sem texto (ou com `vazio`): o balão fantasma, com o texto de `fantasma`;
 // - com `aviso` (prop ou slot): caixa tracejada, para quando só se sabe que
 //   sai uma mensagem pronta aprovada, e não o que ela diz;
 // - slot `cabecalho`: uma linha acima dos balões ("Vai para Mariana").
+//
+// A tela de Nova conversa (#1459) usa o balão e o fantasma. `cabecalho`,
+// `aviso` e `vazio` existem para o card do funil (#1423) reutilizar.
 const props = defineProps({
   texto: { type: String, default: '' },
   nomeDoRemetente: { type: String, default: '' },
   vazio: { type: Boolean, default: false },
   fantasma: { type: String, default: '' },
   aviso: { type: String, default: '' },
-  hora: { type: String, default: '' },
+  hora: { type: String, required: true },
 });
 
 const semTexto = computed(() => props.vazio || !props.texto.trim());
@@ -76,7 +80,7 @@ const semTexto = computed(() => props.vazio || !props.texto.trim());
         {{ texto }}
       </p>
       <span class="self-end text-xs text-n-slate-10">
-        {{ hora || $t('NOVA_CONVERSA.PREVIA.AGORA') }}
+        {{ hora }}
       </span>
     </div>
   </div>

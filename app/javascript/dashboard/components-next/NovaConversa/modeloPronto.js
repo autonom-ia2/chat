@@ -154,9 +154,6 @@ export const trechoFalado = (trecho, falar) =>
     .join('')
     .trim();
 
-const soNumeros = chave =>
-  chave.length > 0 && [...chave].every(letra => letra >= '0' && letra <= '9');
-
 const corpo = modelo => findComponentByType(modelo, COMPONENT_TYPES.BODY);
 const cabecalho = modelo => findComponentByType(modelo, COMPONENT_TYPES.HEADER);
 
@@ -199,17 +196,10 @@ export const camposDoModelo = modelo => {
   ];
 };
 
-export const primeiroNome = (nome = '') => nome.trim().split(' ')[0] || '';
-
-// "Começar pronto": num modelo de campos numerados, o primeiro campo do corpo
-// costuma ser o nome de quem recebe, então já vem com o primeiro nome.
-export const paramsIniciais = (modelo, nomeDoContato = '') => {
-  const params = buildTemplateParameters(modelo);
-  const [primeira] = Object.keys(params.body || {});
-  const nome = primeiroNome(nomeDoContato);
-  if (!primeira || !soNumeros(primeira) || !nome) return params;
-  return { ...params, body: { ...params.body, [primeira]: nome } };
-};
+// Os campos do modelo, todos vazios. Nada vem preenchido de antemão: num
+// modelo, "{{1}}" pode não ser o nome de quem recebe, e um palpite errado
+// sairia para o cliente. Quem ajuda a preencher é o exemplo do próprio modelo.
+export const paramsVazios = modelo => buildTemplateParameters(modelo);
 
 export const comCampo = (params, { parte, chave }, valor) => ({
   ...params,
@@ -251,4 +241,7 @@ export const SINAIS = Object.freeze({
   reticencias: '…',
   abreAspas: '“',
   fechaAspas: '”',
+  ponto: '·',
+  abreParenteses: '(',
+  fechaParenteses: ')',
 });

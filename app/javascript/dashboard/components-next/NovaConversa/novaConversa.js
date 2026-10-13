@@ -156,6 +156,9 @@ export const lugarDeOrigem = ({ rota = '', comContato = false }) => {
   return 'CONVERSAS';
 };
 
+// O primeiro nome de uma pessoa, para as frases que falam dela.
+export const primeiroNome = (nome = '') => nome.trim().split(' ')[0] || '';
+
 // Em que momento a gaveta está, para o cabeçalho, a prévia e o rodapé
 // mudarem juntos.
 export const TELAS = {

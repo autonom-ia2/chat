@@ -80,7 +80,12 @@ useEventListener(
       '[role="combobox"][aria-expanded="true"]'
     );
     if (openChoice) return;
-    if (document.querySelector('[data-popover-content], dialog[open]')) return;
+    if (
+      document.querySelector(
+        '[data-popover-content], dialog[open], [data-nova-conversa-gaveta]'
+      )
+    )
+      return;
     closeMobileSidebar();
   },
   { capture: true }
@@ -185,6 +190,8 @@ useEventListener(
               'dialog.ProseMirror-prompt-backdrop',
               '[data-popover-content]',
               '[data-popover-backdrop]',
+              '[data-nova-conversa-gaveta]',
+              '[data-nova-conversa-fundo]',
             ],
           },
         ]"

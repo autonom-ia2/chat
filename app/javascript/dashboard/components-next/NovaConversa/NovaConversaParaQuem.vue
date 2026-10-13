@@ -4,6 +4,7 @@ import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import NovaConversaCartao from './NovaConversaCartao.vue';
 import { contatoLegivel, podeCriarContato } from './novaConversa';
+import { SINAIS } from './modeloPronto';
 
 // #1459 — "Para quem": um campo grande de busca e os achados como linhas
 // clicáveis. Escolhido, vira uma frase com "Alterar".
@@ -38,7 +39,7 @@ const podeCriar = computed(
   >
     <strong class="font-semibold">{{ contato.name }}</strong>
     <template v-if="contatoLegivel(contato)">
-      · {{ contatoLegivel(contato) }}
+      {{ SINAIS.ponto }} {{ contatoLegivel(contato) }}
     </template>
   </NovaConversaCartao>
 

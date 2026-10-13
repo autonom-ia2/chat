@@ -8,14 +8,18 @@ import NovaConversaEntrada from '../NovaConversaEntrada.vue';
 // passam direto para a que estiver montada.
 const estado = vi.hoisted(() => ({ features: null, pedidos: [] }));
 
-// Um dublê por tela, com a mesma interface pública das duas de verdade.
+// Um dublê por tela, com a mesma interface pública das duas de verdade: props
+// `contactId` e `align`, evento `close` e o slot `trigger`, que recebe o
+// estado de aberto (aqui, um estado de verdade, que o botão interno muda).
 const { tela } = vi.hoisted(() => ({
   tela: nome => ({
     name: nome,
     props: ['contactId', 'align'],
     emits: ['close'],
+    data: () => ({ aberta: false }),
     template: `<div data-tela="${nome}" :data-contato="contactId" :data-align="align">
-      <slot name="trigger" :is-open="false" />
+      <slot name="trigger" :is-open="aberta" />
+      <button data-alternar @click="aberta = !aberta" />
       <button data-fechar @click="$emit('close')" />
     </div>`,
   }),
@@ -92,9 +96,11 @@ describe('NovaConversaEntrada', () => {
     const montada = wrapper.find(`[data-tela="${nome}"]`);
     expect(montada.attributes('data-contato')).toBe('9');
     expect(montada.attributes('data-align')).toBe('start');
-    expect(montada.find('[data-abrir]').attributes('data-aberta')).toBe(
-      'false'
-    );
+    // O escopo do slot atravessa a ponte: o botão de quem usa vê o estado.
+    const botao = () => montada.find('[data-abrir]').attributes('data-aberta');
+    expect(botao()).toBe('false');
+    await montada.find('[data-alternar]').trigger('click');
+    expect(botao()).toBe('true');
     await montada.find('[data-fechar]').trigger('click');
     expect(fechou).toHaveBeenCalledTimes(1);
   });

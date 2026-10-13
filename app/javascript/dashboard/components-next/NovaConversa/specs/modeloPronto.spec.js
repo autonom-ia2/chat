@@ -4,12 +4,11 @@ import {
   camposDoModelo,
   comCampo,
   modeloCompleto,
-  paramsIniciais,
+  paramsVazios,
   partesDoTexto,
   payloadDoModelo,
   preenchedorProprioCobre,
   previaDoModelo,
-  primeiroNome,
   textoDoCorpo,
   trechoDoCampo,
   trechoFalado,
@@ -296,35 +295,30 @@ describe('preenchedorProprioCobre', () => {
   });
 });
 
-describe('paramsIniciais e comCampo', () => {
-  it('começa o primeiro campo numerado com o primeiro nome', () => {
-    expect(primeiroNome('  Mariana Souza Lima ')).toBe('Mariana');
-    expect(paramsIniciais(doisCampos, 'Mariana Souza')).toEqual({
-      body: { 1: 'Mariana', 2: '' },
-    });
-  });
+const com = (params, chave, valor) =>
+  comCampo(params, { parte: 'body', chave }, valor);
 
-  it('não adivinha em campo nomeado nem sem nome de contato', () => {
-    expect(paramsIniciais(nomeado, 'Mariana')).toEqual({
-      body: { nome: '', pedido: '' },
-    });
-    expect(paramsIniciais(umCampo, '')).toEqual({ body: { 1: '' } });
-    expect(paramsIniciais(semCampo, 'Mariana')).toEqual({});
+describe('paramsVazios e comCampo', () => {
+  it('começa com todo campo vazio, sem adivinhar o nome de ninguém', () => {
+    expect(paramsVazios(doisCampos)).toEqual({ body: { 1: '', 2: '' } });
+    expect(paramsVazios(nomeado)).toEqual({ body: { nome: '', pedido: '' } });
+    expect(paramsVazios(semCampo)).toEqual({});
   });
 
   it('troca um campo sem mexer no objeto anterior', () => {
-    const antes = paramsIniciais(doisCampos, 'Mariana');
-    const depois = comCampo(antes, { parte: 'body', chave: '2' }, 'sexta');
+    const antes = paramsVazios(doisCampos);
+    const depois = com(antes, '2', 'sexta');
 
-    expect(depois.body).toEqual({ 1: 'Mariana', 2: 'sexta' });
-    expect(antes.body).toEqual({ 1: 'Mariana', 2: '' });
+    expect(depois.body).toEqual({ 1: '', 2: 'sexta' });
+    expect(antes.body).toEqual({ 1: '', 2: '' });
   });
 
   it('só está completo com todos os campos preenchidos', () => {
-    const inicio = paramsIniciais(doisCampos, 'Mariana');
-    const cheio = comCampo(inicio, { parte: 'body', chave: '2' }, 'sexta');
+    const meio = com(paramsVazios(doisCampos), '1', 'Mariana');
+    const cheio = com(meio, '2', 'sexta');
 
-    expect(modeloCompleto(doisCampos, inicio)).toBe(false);
+    expect(modeloCompleto(doisCampos, paramsVazios(doisCampos))).toBe(false);
+    expect(modeloCompleto(doisCampos, meio)).toBe(false);
     expect(modeloCompleto(doisCampos, cheio)).toBe(true);
     expect(modeloCompleto(semCampo, {})).toBe(true);
     expect(previaDoModelo(doisCampos, cheio)).toEqual({
@@ -353,7 +347,7 @@ describe('payloadDoModelo', () => {
     const valores = { 1: 'Mariana' };
     const proprio = payloadDoModelo(
       umCampo,
-      paramsIniciais(umCampo, 'Mariana')
+      com(paramsVazios(umCampo), '1', 'Mariana')
     );
 
     expect(proprio).toEqual(await doPreenchedorAntigo(umCampo, valores));
@@ -373,9 +367,9 @@ describe('payloadDoModelo', () => {
 
   it('é idêntico ao do preenchedor antigo com 2 campos de corpo', async () => {
     const valores = { 1: 'Mariana', 2: 'sexta, 9h' };
-    const params = comCampo(
-      paramsIniciais(doisCampos, 'Mariana Souza'),
-      { parte: 'body', chave: '2' },
+    const params = com(
+      com(paramsVazios(doisCampos), '1', 'Mariana'),
+      '2',
       'sexta, 9h'
     );
     const proprio = payloadDoModelo(doisCampos, params);
@@ -388,7 +382,7 @@ describe('payloadDoModelo', () => {
   });
 
   it('é idêntico ao do preenchedor antigo sem campo nenhum', async () => {
-    expect(payloadDoModelo(semCampo, paramsIniciais(semCampo))).toEqual(
+    expect(payloadDoModelo(semCampo, paramsVazios(semCampo))).toEqual(
       await doPreenchedorAntigo(semCampo, {})
     );
   });
