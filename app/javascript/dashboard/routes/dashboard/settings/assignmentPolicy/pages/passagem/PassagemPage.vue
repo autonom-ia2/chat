@@ -234,6 +234,7 @@ watch(
         <main class="flex min-w-0 flex-col gap-5 px-5 py-7 sm:px-8">
           <template v-if="view === 'home'">
             <PassagemAvisos
+              v-if="!iaDoFunilLigada || !caixas.length"
               :ia-ligada="iaDoFunilLigada"
               :sem-caixa="!caixas.length"
             />

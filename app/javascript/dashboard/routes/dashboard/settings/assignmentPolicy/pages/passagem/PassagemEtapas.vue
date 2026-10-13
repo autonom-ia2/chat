@@ -74,8 +74,9 @@ const selo = (etapa, funilLigado) => {
           <span
             :title="etapa.nome"
             class="max-w-full truncate text-base font-semibold text-n-slate-12"
-            >{{ etapa.nome }}</span
           >
+            {{ etapa.nome }}
+          </span>
           <span
             class="shrink-0 rounded-lg px-2 py-0.5 text-sm font-medium"
             :class="selo(etapa, funilLigado).tom"

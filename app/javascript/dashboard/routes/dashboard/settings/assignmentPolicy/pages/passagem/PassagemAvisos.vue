@@ -2,9 +2,9 @@
 import { computed } from 'vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 
-// #1385 — o que impede a passagem de acontecer de verdade, num aviso só, com uma ação. Com a assistente desligada, a
-// ação leva ao quadro do CRM (o funil se edita de lá; a rota não abre um funil direto); sem caixa só, leva direto para
-// Caixas no CRM.
+// #1385 — o que impede a passagem de acontecer de verdade, num aviso só, com uma ação. A página só o mostra quando
+// falta algo. Com a assistente desligada, a ação leva ao quadro do CRM (o funil se edita de lá; a rota não abre um
+// funil direto); sem caixa só, leva direto para Caixas no CRM.
 const props = defineProps({
   iaLigada: { type: Boolean, default: true },
   semCaixa: { type: Boolean, default: false },
@@ -32,7 +32,6 @@ const acao = computed(() =>
 
 <template>
   <div
-    v-if="faltas.length"
     data-aviso="falta"
     class="flex flex-col items-start gap-3 rounded-2xl border border-dashed border-n-amber-8 bg-n-amber-2 p-4 sm:flex-row sm:items-center"
   >
