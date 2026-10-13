@@ -33,6 +33,17 @@ as contas.
   até a franquia do mês do número (`Whatsapp::ServiceMessageCount`); depois paga a tarifa de serviço. Sem a franquia
   lida, a tela conta tudo como pago.
 
+## Tempo da contagem (medido em 13/10/2026)
+
+Volume sintético, local: 400 mil mensagens recebidas em 2 caixas e 20 mil contatos.
+
+- **Consulta de um lote de 1.000 contatos** (`EXPLAIN ANALYZE`): 1,9 ms. Usa o índice
+  `index_messages_on_sender_and_created` (sender_type, sender_id, created_at), filtrando conta, caixa e tipo.
+- **Público de 20 mil pessoas**: 20 lotes, cerca de 40 ms, mais a leitura das linhas do público (a mesma regra do envio).
+- **No envio**: uma consulta igual por pessoa, com 1 contato, lida pelo mesmo índice.
+
+Antes de ligar numa conta muito grande, vale repetir o `EXPLAIN` com o volume real (só leitura).
+
 ## API (gate: `CAMPAIGN_JOURNEY_ENABLED` + flag `campaign_open_window_text` no servidor; `campaign_manage`)
 
 `GET /api/v1/accounts/:id/campaign_journey/conversa_aberta?campaign_import_id=&inbox_id=&categoria=MARKETING`
