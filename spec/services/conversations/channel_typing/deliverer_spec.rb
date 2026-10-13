@@ -81,7 +81,7 @@ describe Conversations::ChannelTyping::Deliverer do
       expect { deliver(conversation, 'on') }.not_to raise_error
     end
 
-    it 'limits the channel call when a timeout is given and logs when it is exceeded' do
+    it 'passes the given timeout to the channel call and logs a timeout error without raising' do
       create(:message, conversation: conversation, account: account, inbox: channel.inbox, message_type: :incoming, source_id: 'wamid.LAST')
       stub_request(:post, meta_typing_url).to_timeout
       allow(HTTParty).to receive(:post).and_call_original
@@ -124,7 +124,7 @@ describe Conversations::ChannelTyping::Deliverer do
       end
     end
 
-    it 'limits the channel call when a timeout is given and logs when it is exceeded' do
+    it 'passes the given timeout to the channel call and logs a timeout error without raising' do
       stub_request(:post, instagram_url).with(query: { access_token: channel.access_token }).to_timeout
       allow(HTTParty).to receive(:post).and_call_original
       allow(Rails.logger).to receive(:warn)

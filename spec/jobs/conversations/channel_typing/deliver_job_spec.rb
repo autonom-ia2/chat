@@ -25,18 +25,68 @@ RSpec.describe Conversations::ChannelTyping::DeliverJob do
     expect(WebMock).to have_requested(:post, meta_typing_url).once
   end
 
-  it 'limits the channel call to a few seconds' do
+  it 'passes its channel timeout to the channel call' do
     allow(HTTParty).to receive(:post).and_call_original
 
     described_class.perform_now(conversation, 'on', Time.current)
 
-    expect(described_class::CHANNEL_TIMEOUT_SECONDS).to eq(3)
-    expect(HTTParty).to have_received(:post).with(meta_typing_url, hash_including(timeout: 3))
+    expect(HTTParty).to have_received(:post).with(meta_typing_url, hash_including(timeout: described_class::CHANNEL_TIMEOUT_SECONDS))
   end
 
-  it 'drops a request older than the limit' do
+  it 'drops a request older than the limit and logs it' do
+    allow(Rails.logger).to receive(:info)
+
     described_class.perform_now(conversation, 'on', (described_class::MAX_AGE + 1.second).ago)
 
     expect(WebMock).not_to have_requested(:post, meta_typing_url)
+    expect(Rails.logger).to have_received(:info)
+      .with(a_string_starting_with("[channel_typing] dropped conversation=#{conversation.id} status=on reason=stale age_seconds=11"))
+  end
+
+  context 'when the reply already went out after the request' do
+    let(:requested_at) { 2.seconds.ago }
+
+    before { create(:message, conversation: conversation, account: account, inbox: channel.inbox, message_type: :outgoing) }
+
+    it 'drops typing on, so it does not show typing again, and logs it' do
+      allow(Rails.logger).to receive(:info)
+
+      described_class.perform_now(conversation, 'on', requested_at)
+
+      expect(WebMock).not_to have_requested(:post, meta_typing_url)
+      expect(Rails.logger).to have_received(:info)
+        .with(a_string_starting_with("[channel_typing] dropped conversation=#{conversation.id} status=on reason=already_replied age_seconds="))
+    end
+  end
+
+  it 'delivers typing on when the only outgoing message is older than the request' do
+    create(:message, conversation: conversation, account: account, inbox: channel.inbox, message_type: :outgoing, created_at: 1.minute.ago)
+
+    described_class.perform_now(conversation, 'on', 2.seconds.ago)
+
+    expect(WebMock).to have_requested(:post, meta_typing_url).once
+  end
+
+  it 'does not count a private note as the reply' do
+    create(:message, conversation: conversation, account: account, inbox: channel.inbox, message_type: :outgoing, private: true)
+
+    described_class.perform_now(conversation, 'on', 2.seconds.ago)
+
+    expect(WebMock).to have_requested(:post, meta_typing_url).once
+  end
+
+  context 'when the conversation is on Instagram' do
+    let(:channel) { create(:channel_instagram, account: account) }
+    let(:instagram_url) { "https://graph.instagram.com/v22.0/#{channel.instagram_id}/messages" }
+
+    before { stub_request(:post, instagram_url).with(query: { access_token: channel.access_token }).to_return(status: 200, body: '{}') }
+
+    it 'still delivers typing off after the reply went out' do
+      create(:message, conversation: conversation, account: account, inbox: channel.inbox, message_type: :outgoing)
+
+      described_class.perform_now(conversation, 'off', 2.seconds.ago)
+
+      expect(WebMock).to have_requested(:post, instagram_url).with(query: { access_token: channel.access_token }).once
+    end
   end
 end

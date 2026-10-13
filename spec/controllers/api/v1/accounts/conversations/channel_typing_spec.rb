@@ -77,6 +77,18 @@ RSpec.describe 'Conversation typing delivered to the channel', type: :request do
       expect(Rails.logger).to have_received(:warn).with("[channel_typing] enqueue failed conversation=#{conversation.id} Redis::CannotConnectError")
     end
 
+    it 'answers success and logs when the check before enqueueing raises' do
+      allow(Conversations::ChannelTyping::Deliverer).to receive(:supports?).and_raise(ActiveRecord::ConnectionNotEstablished)
+      allow(Rails.logger).to receive(:warn)
+
+      toggle(headers: { api_access_token: agent_bot.access_token.token }, deliver_to_channel: true)
+
+      expect(response).to have_http_status(:ok)
+      expect(Rails.logger).to have_received(:warn)
+        .with("[channel_typing] enqueue failed conversation=#{conversation.id} ActiveRecord::ConnectionNotEstablished")
+      expect(job).not_to have_been_enqueued
+    end
+
     it 'enqueues nothing for an AgentBot of another inbox of the account' do
       other_bot = create(:agent_bot, account: account)
       create(:agent_bot_inbox, inbox: create(:inbox, account: account), agent_bot: other_bot)

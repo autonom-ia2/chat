@@ -13370,11 +13370,11 @@
       "leitura crua sem tipo: typing_status (repassada a Conversations::ChannelTyping::DeliverJob.perform_later)"
     ],
     "origem": [
-      "app/controllers/concerns/conversations/channel_typing/toggle_endpoint.rb:8",
-      "app/controllers/concerns/conversations/channel_typing/toggle_endpoint.rb:29",
-      "app/controllers/concerns/conversations/channel_typing/toggle_endpoint.rb:18",
-      "app/controllers/concerns/conversations/channel_typing/toggle_endpoint.rb:17",
-      "app/controllers/concerns/conversations/channel_typing/toggle_endpoint.rb:16",
+      "app/controllers/concerns/conversations/channel_typing/toggle_endpoint.rb:9",
+      "app/controllers/concerns/conversations/channel_typing/toggle_endpoint.rb:19",
+      "app/controllers/concerns/conversations/channel_typing/toggle_endpoint.rb:27",
+      "app/controllers/concerns/conversations/channel_typing/toggle_endpoint.rb:26",
+      "app/controllers/concerns/conversations/channel_typing/toggle_endpoint.rb:25",
       "app/controllers/api/v1/accounts/conversations_controller.rb:189"
     ],
     "sem_corpo": false
