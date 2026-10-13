@@ -54,13 +54,15 @@ module Autonomia::Agents::AgentVersioning
     true
   end
 
-  # Envolve a escrita do Construtor (`apply_builder_config!`, dentro da trava do agente). Antes: se ainda
-  # não há versão completa e o agente já tem instrução, guarda o estado de antes ('base'). Depois, se a
-  # escrita venceu, grava 1 versão da aplicação — mesmo sem mudança, porque é o rastro da aplicação.
+  # Envolve a escrita do Construtor (`apply_builder_config!`, dentro da trava do agente). Antes: se o agente
+  # já tem instrução e o estado atual não está na última versão da lista (agente de antes das versões
+  # completas, ou saudação editada à mão, que não gera versão), guarda-o como 'base' — o ajuste nunca
+  # sobrescreve trabalho sem rastro. Depois, se a escrita venceu, grava 1 versão da aplicação — mesmo sem
+  # mudança, porque é o rastro da aplicação.
   def versionar_aplicacao_do_construtor(autor_id)
     antes = estado_versionado
     criacao = instruction.blank?
-    gravar_versao!('base', nil) unless criacao || versao_completa?
+    gravar_versao!('base', nil) unless criacao || estado_atual_guardado?
     venceu = yield
     # Sem instrução não há versão (a coluna é obrigatória); a escrita do Construtor não cai por isso.
     return venceu unless venceu && instruction.present?
@@ -82,26 +84,31 @@ module Autonomia::Agents::AgentVersioning
                                .merge('config' => CHAVES_DA_CONFIG.index_with { |chave| atual[chave] })
   end
 
-  def ultima_versao
-    instruction_versions.order(created_at: :desc, id: :desc).first
+  def ultima_versao(escopo = instruction_versions)
+    escopo.order(created_at: :desc, id: :desc).first
   end
 
-  # O estado atual já está na última versão? Compara pelo JSON, que é como o retrato volta do banco.
+  # O estado atual já está na última versão DA LISTA? A linha `sem_mudanca` fica fora da lista: contá-la
+  # deixaria uma edição à mão sem versão visível. Compara pelo JSON, que é como o retrato volta do banco.
   def estado_atual_guardado?
     return true if instruction.blank?
 
-    ultima = ultima_versao
+    ultima = ultima_versao(instruction_versions.na_lista)
     ultima.present? && ultima.instruction_hash == hash_da_instrucao &&
       ultima.metadata.to_h['agente'] == retrato_da_versao.as_json
   end
 
-  def versao_completa?
-    instruction_versions.where("metadata ? 'agente'").exists?
+  # #1484 — instrução que não é do dono (versão guiada, antiga sem retrato, ou com retrato inválido) nunca
+  # fica num agente manual, onde a API a mostraria: o agente volta guiado, e a versão 'rollback' gravada
+  # depois também fica guiada, portanto oculta.
+  def atributos_da_versao(version)
+    atributos = atributos_guardados(version)
+    version.instrucao_visivel? ? atributos : atributos.merge('mode' => 'guided')
   end
 
-  def atributos_da_versao(version)
+  def atributos_guardados(version)
     agente = version.metadata.to_h['agente']
-    return { instruction: version.instruction } if agente.nil?
+    return { 'instruction' => version.instruction } if agente.nil?
     return retrato_invalido(version) unless Autonomia::Agents::RetratoDaVersao.valido?(agente)
 
     agente.slice(*CAMPOS).merge('instruction' => version.instruction,
@@ -112,7 +119,7 @@ module Autonomia::Agents::AgentVersioning
   # só a instrução, que tem coluna própria e validada, e registra — só ids, nunca conteúdo.
   def retrato_invalido(version)
     Rails.logger.warn("[autonomia][agents] retrato invalido na volta agente=#{id} versao=#{version.id}")
-    { instruction: version.instruction }
+    { 'instruction' => version.instruction }
   end
 
   def hash_da_instrucao

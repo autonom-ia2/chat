@@ -174,6 +174,30 @@ RSpec.describe 'Autonomia agent instruction versions', type: :request do
       expect(manual_agent.instruction_versions.where(reason: 'rollback').count).to eq(1)
     end
 
+    # Conferência do #1428, sonda A (#1484): um agente manual voltando a uma versão antiga do Construtor
+    # (kb_refresh, sem retrato) saía manual, com a instrução gerada no GET do agente e na lista.
+    it 'never shows the Builder instruction after a manual agent goes back to an old guided version' do
+      # Arrange
+      antiga = guided_agent.instruction_versions.create!(account: account, reason: 'kb_refresh', instruction: 'guided v1',
+                                                         instruction_hash: Digest::SHA256.hexdigest('guided v1'))
+      guided_agent.update!(mode: :manual, instruction: 'escrita pelo dono')
+
+      # Act
+      post "/api/v1/accounts/#{account.id}/autonomia/agents/#{guided_agent.id}" \
+           "/instruction_versions/#{antiga.id}/restore",
+           headers: administrator.create_new_auth_token, as: :json
+
+      # Assert
+      expect(response.body).not_to include('guided v1')
+      get "/api/v1/accounts/#{account.id}/autonomia/agents/#{guided_agent.id}/instruction_versions",
+          headers: administrator.create_new_auth_token, as: :json
+      expect(response.body).not_to include('guided v1')
+      get "/api/v1/accounts/#{account.id}/autonomia/agents/#{guided_agent.id}",
+          headers: administrator.create_new_auth_token, as: :json
+      expect(response.parsed_body['mode']).to eq('guided')
+      expect(response.body).not_to include('guided v1')
+    end
+
     it 'gives back every field kept in the version and keeps the hidden ones out of the response' do
       # Arrange
       guided_agent.update!(scaffold: 'andaime v1', greeting: 'oi v1', tone: 'tom v1')

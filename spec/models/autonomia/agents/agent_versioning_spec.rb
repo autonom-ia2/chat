@@ -121,6 +121,32 @@ RSpec.describe Autonomia::Agents::AgentVersioning do
       expect(rascunho.instruction_versions.count).to eq(0)
     end
 
+    # Conferência do #1428, sonda B: a saudação editada à mão era sobrescrita pelo ajuste sem versão do antes.
+    it 'guarda o estado editado à mão (base) antes de um ajuste que muda campos' do
+      # Arrange
+      aplicar(rascunho, gerado('v1'))
+      rascunho.update!(greeting: 'oi escrito a mao')
+
+      # Act
+      aplicar(rascunho, gerado('v2'))
+
+      # Assert
+      versoes = rascunho.instruction_versions.order(:id)
+      expect(versoes.pluck(:reason)).to eq(%w[builder_create base builder_adjust])
+      expect(versoes.second.metadata['agente']['greeting']).to eq('oi escrito a mao')
+    end
+
+    it 'não grava base quando o estado atual já é a última versão da lista' do
+      # Arrange
+      aplicar(rascunho, gerado('v1'))
+
+      # Act
+      aplicar(rascunho, gerado('v2'))
+
+      # Assert
+      expect(rascunho.instruction_versions.where(reason: 'base')).not_to exist
+    end
+
     it 'não grava versão quando a aplicação perde para um ajuste mais novo' do
       # Arrange
       aplicar(rascunho, gerado('v1'))
@@ -262,6 +288,85 @@ RSpec.describe Autonomia::Agents::AgentVersioning do
 
       # Assert
       expect(rascunho.instruction_versions.order(:id).last.metadata).not_to have_key('sem_mudanca')
+    end
+
+    # Conferência do #1428, sonda A (#1484): agente manual voltando a uma versão cuja instrução não é do
+    # dono (antiga, sem retrato, ou com retrato inválido) saía manual, com a instrução do Construtor à mostra.
+    describe 'versão cuja instrução não é do dono' do
+      before do
+        aplicar(rascunho, gerado('v1'))
+        rascunho.update!(mode: :manual, instruction: 'escrita pelo dono')
+      end
+
+      def versao_antiga(reason, metadata = {})
+        rascunho.instruction_versions.create!(account: account, instruction: 'gerada pelo construtor', reason: reason,
+                                              instruction_hash: Digest::SHA256.hexdigest('gerada pelo construtor'),
+                                              metadata: metadata)
+      end
+
+      it 'sem retrato (kb_refresh antiga): o agente volta guiado e a volta fica oculta' do
+        # Act
+        rascunho.restore_instruction!(versao_antiga('kb_refresh'))
+
+        # Assert
+        rascunho.reload
+        expect([rascunho.mode, rascunho.instruction]).to eq(['guided', 'gerada pelo construtor'])
+        volta = rascunho.instruction_versions.order(:id).last
+        expect([volta.reason, volta.instrucao_visivel?]).to eq(['rollback', false])
+      end
+
+      it 'com retrato inválido: o agente volta guiado' do
+        # Act
+        rascunho.restore_instruction!(versao_antiga('builder_adjust', 'agente' => { 'config' => 'texto' }))
+
+        # Assert
+        expect(rascunho.reload.mode).to eq('guided')
+      end
+
+      it 'edição manual antiga, sem retrato, continua manual' do
+        # Act
+        rascunho.restore_instruction!(versao_antiga('manual_edit'))
+
+        # Assert
+        expect(rascunho.reload.mode).to eq('manual')
+      end
+    end
+
+    # Conferência do #1428, sonda C: a linha `sem_mudanca` (fora da lista) não conta como "estado guardado".
+    it 'grava antes_de_voltar quando o estado atual só está numa versão escondida da lista' do
+      # Arrange
+      aplicar(rascunho, gerado('v1'))
+      versao_v1 = rascunho.instruction_versions.order(:id).last
+      rascunho.update!(greeting: 'oi escrito a mao')
+      escondida = rascunho.instruction_versions.create!(
+        account: account, instruction: rascunho.instruction, reason: 'builder_adjust',
+        instruction_hash: Digest::SHA256.hexdigest(rascunho.instruction),
+        metadata: { 'agente' => rascunho.send(:retrato_da_versao), 'sem_mudanca' => true }
+      )
+
+      # Act
+      rascunho.restore_instruction!(versao_v1)
+
+      # Assert
+      antes = rascunho.instruction_versions.na_lista.find_by(reason: 'antes_de_voltar')
+      expect(antes.id).to be > escondida.id
+      expect(antes.metadata['agente']['greeting']).to eq('oi escrito a mao')
+    end
+
+    it 'a edição à mão seguida de uma aplicação sem mudança continua numa versão da lista depois da volta' do
+      # Arrange
+      aplicar(rascunho, gerado('v1'))
+      versao_v1 = rascunho.instruction_versions.order(:id).last
+      rascunho.update!(greeting: 'oi escrito a mao')
+      aplicar(rascunho, gerado('v1').merge('greeting' => 'oi escrito a mao'))
+
+      # Act
+      rascunho.restore_instruction!(versao_v1)
+
+      # Assert
+      saudacoes = rascunho.instruction_versions.na_lista.map { |versao| versao.metadata['agente']['greeting'] }
+      expect(saudacoes).to include('oi escrito a mao')
+      expect(rascunho.reload.greeting).to eq('oi v1')
     end
 
     describe 'retrato inválido' do

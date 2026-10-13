@@ -434,7 +434,7 @@
       "CONFIDENCE_HINT": "Abaixo de {pct}% de confiança, o agente transfere a conversa para um humano em vez de arriscar.",
       "HISTORY": {
         "TITLE": "Histórico do agente",
-        "HINT": "Toda mudança conversando, atualização automática e edição manual fica salva com o agente inteiro: instrução, tom, saudação e o resto. Se algo sair errado, volte para uma versão anterior.",
+        "HINT": "O agente inteiro (instrução, tom, saudação e o resto) fica salvo quando você muda conversando, edita a instrução ou volta a uma versão, e quando os arquivos o atualizam. Se algo sair errado, volte para uma versão anterior.",
         "LOADING": "Carregando histórico…",
         "EMPTY": "Ainda não há versões.",
         "META": "{date} · {author}",
