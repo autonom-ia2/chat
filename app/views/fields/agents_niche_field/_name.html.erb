@@ -1,0 +1,4 @@
+<%# Nome legível do nicho ("Insurance · Broker" ou "General"). Local: escolha = Autonomia::Agents::Nicho::Escolha %>
+<% partes = [t("autonomia_agents_niche.niches.#{escolha.nicho}.title")] %>
+<% partes << t("autonomia_agents_niche.profiles.#{escolha.perfil}.title") if escolha.perfil.present? %>
+<%= partes.join(t('autonomia_agents_niche.separator')) %>
