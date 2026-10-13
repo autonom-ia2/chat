@@ -110,13 +110,12 @@ class WhatsappHybrid::WebTransport
     'Não foi possível enviar pelo WhatsApp API. Verifique a conexão na aba WhatsApp API da caixa.'
   end
 
-  # Erro 463 (chat#1486): o WhatsApp recusou conversa nova com este contato. Bloqueia o contato por 6 h, atualiza o
-  # retrato do limite com uma consulta e falha sem reenviar.
+  # Erro 463 (chat#1486): o WhatsApp recusou conversa nova com este contato. Bloqueia o contato por 6 h e falha sem
+  # reenviar; o retrato do limite é atualizado num job à parte, sem consulta ao motor dentro do envio.
   def reach_out_refused!
-    reach_out = WhatsappHybrid::ReachOut.new(@connection, @message.conversation.contact)
-    reach_out.block!
-    reach_out.refresh_timelock!(@client)
+    WhatsappHybrid::ReachOut.new(@connection, @message.conversation.contact).block!
     fail!(WhatsappHybrid::ReachOut::BLOCKED_ERROR)
+    WhatsappHybrid::TimelockRefreshJob.perform_later(@connection.id)
   end
 
   # Passou do limite por minuto: a mensagem espera a próxima janela em vez de sair em rajada.

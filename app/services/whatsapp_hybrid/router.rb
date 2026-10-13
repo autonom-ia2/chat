@@ -8,9 +8,10 @@ class WhatsappHybrid::Router
     @conversation = conversation
   end
 
-  # Conversa pode receber texto livre pelo Web (usado para destravar o editor e pelo envio).
+  # Conversa pode receber texto livre pelo Web (usado para destravar o editor e pelo envio). Com o limite de
+  # conversas novas barrando o contato (chat#1486), não oferece o que o envio vai recusar.
   def web_reply_available?
-    web_ready? && !cloud_window_open?
+    web_ready? && !cloud_window_open? && reach_out.allowed?
   end
 
   def route_for(message)

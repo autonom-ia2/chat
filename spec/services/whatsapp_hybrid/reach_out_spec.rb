@@ -105,6 +105,23 @@ describe WhatsappHybrid::ReachOut do
       expect(reach_out.allowed?).to be(false)
     end
 
+    it 'does not offer free text to a new contact: editor, CRM follow-up and booking notice fall back to a template' do
+      router = WhatsappHybrid::Router.new(conversation)
+
+      expect(router.web_ready?).to be(true)
+      expect(router.web_reply_available?).to be(false)
+      expect(conversation.can_reply?).to be(false)
+      expect(Crm::FollowUps::MessagingWindow.new(conversation).hybrid_web_available?).to be(false)
+    end
+
+    it 'keeps offering free text to a contact the device already talked to' do
+      outgoing(content_attributes: { whatsapp_transport: 'web' }, status: :delivered)
+
+      expect(WhatsappHybrid::Router.new(conversation).web_reply_available?).to be(true)
+      expect(conversation.can_reply?).to be(true)
+      expect(Crm::FollowUps::MessagingWindow.new(conversation).hybrid_web_available?).to be(true)
+    end
+
     it 'says "por enquanto" when the engine gave no end' do
       timelock.apply!('isActive' => true, 'timeEnforcementEnds' => nil)
 
@@ -120,28 +137,18 @@ describe WhatsappHybrid::ReachOut do
       allow(client).to receive(:timelock).and_return({ 'isActive' => true, 'timeEnforcementEnds' => ends_at })
     end
 
-    it 'blocks the contact, does not resend, refreshes the limit once and fails with a clear text' do
+    it 'blocks the contact, does not resend, fails with a clear text and refreshes the limit outside the send' do
       message = outgoing
 
-      send_reply(message)
+      expect { send_reply(message) }
+        .to have_enqueued_job(WhatsappHybrid::TimelockRefreshJob).with(connection.id).on_queue('default').exactly(:once)
 
       expect(client).to have_received(:send_text).once
-      expect(client).to have_received(:timelock).with('hybrid-test').once
+      expect(client).not_to have_received(:timelock)
       expect(message.reload.status).to eq('failed')
       expect(message.external_error).to eq(described_class::BLOCKED_ERROR)
       expect(reach_out.blocked?).to be(true)
       expect(Redis::Alfred.ttl(reach_out.key)).to be_within(5).of(6.hours.to_i)
-      expect(timelock.payload).to eq(active: true, ends_at: ends_at)
-    end
-
-    it 'survives a failure of the limit query' do
-      allow(client).to receive(:timelock).and_raise(Waha::Client::Timeout, 'sem resposta')
-      message = outgoing
-
-      expect { send_reply(message) }.not_to raise_error
-
-      expect(message.reload.external_error).to eq(described_class::BLOCKED_ERROR)
-      expect(reach_out.blocked?).to be(true)
     end
 
     it 'keeps the blocked contact out of WhatsApp API, even without a limit, until the block expires' do

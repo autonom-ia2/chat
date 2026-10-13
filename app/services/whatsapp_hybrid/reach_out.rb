@@ -36,14 +36,6 @@ class WhatsappHybrid::ReachOut
     ::Redis::Alfred.setex(key, BLOCK_FOR.from_now.to_i, BLOCK_FOR.to_i)
   end
 
-  # Uma consulta ao motor (timeout curto) para o retrato do limite; falha aqui não muda o desfecho do envio.
-  def refresh_timelock!(client)
-    timelock.apply!(client.timelock(@connection.session_name))
-  rescue Waha::Client::Error => e
-    timelock.checked!
-    Rails.logger.warn("[whatsapp_hybrid] timelock refresh after 463 failed inbox=#{@connection.inbox_id}: #{e.class}")
-  end
-
   def refusal_text
     ends_at = limited_until
     return LIMITED_ERROR if ends_at.blank?
