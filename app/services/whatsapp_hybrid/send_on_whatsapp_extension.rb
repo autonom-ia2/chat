@@ -11,7 +11,7 @@ module WhatsappHybrid::SendOnWhatsappExtension
     return super if router.cloud_window_open?
     # Conversation#can_reply? fica verdadeiro com o híbrido pronto; se esta mensagem não pode ir pelo
     # Web (origem desligada, por exemplo), ela falha como antes em vez de tentar a Cloud fora da janela.
-    return fail_outside_window! unless router.route_for(message) == :web
+    return refuse_web!(router) unless router.route_for(message) == :web
 
     WhatsappHybrid::WebTransport.new(message: message, connection: router.connection, origin: router.origin_of(message)).perform
   end
@@ -22,7 +22,15 @@ module WhatsappHybrid::SendOnWhatsappExtension
       WhatsappHybrid::Config.hybrid_inbox?(message.inbox_id)
   end
 
-  def fail_outside_window!
-    message.update!(status: :failed, external_error: I18n.t('errors.whatsapp.message_outside_messaging_window'))
+  # Barrada pelo limite de conversas novas do WhatsApp (chat#1486): diz até quando e não tenta a Cloud.
+  def refuse_web!(router)
+    return fail_outside_window! unless router.reach_out_refused?(message)
+
+    Rails.logger.info("[whatsapp_hybrid] route=web outcome=reach_out_refused inbox=#{message.inbox_id} message=#{message.id}")
+    fail_outside_window!(router.reach_out.refusal_text)
+  end
+
+  def fail_outside_window!(reason = I18n.t('errors.whatsapp.message_outside_messaging_window'))
+    message.update!(status: :failed, external_error: reason)
   end
 end
