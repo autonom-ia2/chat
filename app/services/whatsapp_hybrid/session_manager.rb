@@ -73,13 +73,10 @@ class WhatsappHybrid::SessionManager
   # Grava o estado vindo do motor (consulta ou webhook) e avisa os administradores uma vez por queda.
   def apply_status!(status, phone: nil)
     was_connected = connection.status == 'connected'
+    paired = status == 'connected' && fresh_pairing?
     connection.update!(status: status, connected_phone: phone || connection.connected_phone, status_checked_at: Time.current)
-    if status == 'connected'
-      connection.update!(down_alerted_at: nil) if connection.down_alerted_at
-    elsif was_connected && connection.routable_when_connected? && connection.down_alerted_at.nil?
-      connection.update!(down_alerted_at: Time.current)
-      WhatsappHybrid::DownAlert.new(connection).deliver!
-    end
+    WhatsappHybrid::ReachOut.paired!(connection) if paired
+    status == 'connected' ? clear_down_alert! : alert_down!(was_connected)
   end
 
   def qr
@@ -113,6 +110,26 @@ class WhatsappHybrid::SessionManager
   end
 
   private
+
+  def clear_down_alert!
+    connection.update!(down_alerted_at: nil) if connection.down_alerted_at
+  end
+
+  def alert_down!(was_connected)
+    return unless was_connected && connection.routable_when_connected? && connection.down_alerted_at.nil?
+
+    connection.update!(down_alerted_at: Time.current)
+    WhatsappHybrid::DownAlert.new(connection).deliver!
+  end
+
+  # Pareamento novo (chat#1486): saiu da leitura do QR, ou ainda não havia aparelho (primeira vez ou depois de
+  # `reconnect!`, que apaga o número). Reconexão automática do websocket e nova consulta com a sessão já conectada
+  # não são pareamento.
+  def fresh_pairing?
+    return false if connection.status == 'connected'
+
+    connection.status == 'awaiting_scan' || connection.connected_phone.blank?
+  end
 
   def session_config
     {

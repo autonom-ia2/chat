@@ -36,6 +36,16 @@ describe WhatsappHybrid::ReachOut do
     Redis::Alfred.delete('whatsapp_hybrid:chat_id:hybrid-test:5511937016094')
     Redis::Alfred.delete(timelock.key)
     Redis::Alfred.delete(reach_out.key)
+    Redis::Alfred.delete(described_class.paired_at_key(connection))
+  end
+
+  def incoming(attrs = {})
+    create(:message, { message_type: :incoming, content: 'Oi', conversation: conversation, account: account,
+                       inbox: inbox, sender: contact }.merge(attrs))
+  end
+
+  def web_sent(attrs = {})
+    outgoing({ content_attributes: { whatsapp_transport: 'web' }, status: :delivered }.merge(attrs))
   end
 
   def outgoing(attrs = {})
@@ -59,6 +69,89 @@ describe WhatsappHybrid::ReachOut do
 
       expect(client).to have_received(:send_text).once
       expect(reach_out.allowed?).to be(true)
+    end
+
+    it 'does not look for any proof of a previous conversation' do
+      reach_out
+      described_class.paired!(connection)
+      allow(described_class).to receive(:paired_at).and_call_original
+      queries = []
+      subscriber = ->(*, payload) { queries << payload[:sql] if payload[:sql].include?('"messages"') }
+
+      ActiveSupport::Notifications.subscribed(subscriber, 'sql.active_record') do
+        expect(reach_out.allowed?).to be(true)
+        reach_out.refusal_text
+      end
+
+      expect(queries).to be_empty
+      expect(described_class).not_to have_received(:paired_at)
+    end
+  end
+
+  context 'when WhatsApp limits new conversations and the device was paired today' do
+    let(:paired_at) { Time.zone.parse('2026-10-13 12:00:00 UTC') }
+
+    before do
+      restrict!
+      described_class.paired!(connection, at: paired_at)
+    end
+
+    it 'does not count messages received before the pairing, only after it' do
+      incoming(created_at: paired_at - 1.day)
+      expect(described_class.new(connection, contact).allowed?).to be(false)
+
+      incoming(created_at: paired_at + 1.hour)
+      expect(described_class.new(connection, contact).allowed?).to be(true)
+    end
+
+    it 'does not count WhatsApp API sends accepted before the pairing, only after it' do
+      web_sent(created_at: paired_at - 1.day)
+      expect(described_class.new(connection, contact).allowed?).to be(false)
+
+      web_sent(created_at: paired_at + 1.hour)
+      expect(described_class.new(connection, contact).allowed?).to be(true)
+    end
+
+    it 'does not count a message the same contact sent to another inbox' do
+      other_channel = create(:channel_whatsapp, account: account, provider: 'whatsapp_cloud', sync_templates: false,
+                                                validate_provider_config: false)
+      other_conversation = create(:conversation, inbox: other_channel.inbox, contact: contact, account: account)
+      create(:message, message_type: :incoming, conversation: other_conversation, account: account,
+                       inbox: other_channel.inbox, sender: contact, created_at: paired_at + 1.hour)
+
+      expect(reach_out.allowed?).to be(false)
+    end
+  end
+
+  context 'when WhatsApp limits new conversations and the pairing time is unknown' do
+    before { restrict! }
+
+    it 'counts a WhatsApp API send accepted at any time, as before' do
+      web_sent(created_at: 30.days.ago)
+
+      expect(reach_out.allowed?).to be(true)
+    end
+
+    it 'does not take a received message as proof without the pairing time' do
+      incoming(created_at: 1.hour.ago)
+
+      expect(reach_out.allowed?).to be(false)
+    end
+  end
+
+  context 'when the contact is both blocked by 463 and held by the limit' do
+    it 'shows the end of the block when it comes later than the end of the limit' do
+      timelock.apply!('isActive' => true, 'timeEnforcementEnds' => 1.hour.from_now.to_i)
+      reach_out.block!
+
+      expect(reach_out.refusal_text).to eq('O WhatsApp limitou conversas novas por este número até 21:20. Use uma mensagem pronta.')
+    end
+
+    it 'shows the end of the limit when it comes later than the end of the block' do
+      restrict!
+      reach_out.block!
+
+      expect(reach_out.refusal_text).to eq('O WhatsApp limitou conversas novas por este número até 21:26. Use uma mensagem pronta.')
     end
   end
 
