@@ -272,7 +272,21 @@ export const previewMessage = ({
 };
 
 /** `template_params` in the shape the old WhatsApp dialog sends (api-993 §6). */
-export const buildTemplateParams = ({ template, bindings, mediaUrl = '' }) => {
+// Botão a botão, na posição do modelo: o que o formato preenche (cupom) por cima.
+const mergeButtons = (base = [], extra = []) =>
+  Array.from(
+    { length: Math.max(base.length, extra.length) },
+    (_, index) => extra[index] || base[index] || null
+  );
+
+// PROTÓTIPO #1334: `extras` = cupom, validade da oferta e cartões do carrossel
+// (formatoNaCampanha.extrasParaEnvio), por cima das partes do modelo.
+export const buildTemplateParams = ({
+  template,
+  bindings,
+  mediaUrl = '',
+  extras = {},
+}) => {
   const processed = buildTemplateParameters(template) || {};
   const body = processed.body
     ? Object.fromEntries(
@@ -300,6 +314,10 @@ export const buildTemplateParams = ({ template, bindings, mediaUrl = '' }) => {
       ...processed,
       ...(body ? { body } : {}),
       ...(header ? { header } : {}),
+      ...extras,
+      ...(extras.buttons
+        ? { buttons: mergeButtons(processed.buttons, extras.buttons) }
+        : {}),
     },
   };
 };
@@ -319,6 +337,7 @@ export const buildCampaignPayload = ({
   bindings,
   defaults,
   mediaUrl,
+  extras = {},
 }) => ({
   campaign_import_id: audienceId,
   channel: 'whatsapp_cloud',
@@ -326,7 +345,12 @@ export const buildCampaignPayload = ({
     title: title.trim(),
     inbox_id: inboxId,
     scheduled_at: scheduledAt,
-    template_params: buildTemplateParams({ template, bindings, mediaUrl }),
+    template_params: buildTemplateParams({
+      template,
+      bindings,
+      mediaUrl,
+      extras,
+    }),
     variable_bindings: Object.fromEntries(
       templateVariables(template).map(({ key }) => [
         key,

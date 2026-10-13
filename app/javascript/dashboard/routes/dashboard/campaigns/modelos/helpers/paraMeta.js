@@ -4,6 +4,7 @@
 // ({ '1': 'cliente.primeiro_nome' }), para a campanha ligar as variáveis sem
 // adivinhar. Sem expressão regular (regra do Rodrigo).
 import { campoParaPerfil, semFonteNaCampanha } from './campos';
+import { formatoQueNaoVai } from '../ponte/formatoNaCampanha';
 import { ajustarEspacosDosCampos } from './conteudo';
 import { ordenarBotoes, telefoneNaMeta } from './regraEstrutural';
 
@@ -19,16 +20,12 @@ const TOPO_NA_META = { foto: 'IMAGE', video: 'VIDEO', documento: 'DOCUMENT' };
 const LETRAS = 'abcdefghijklmnopqrstuvwxyz0123456789';
 const MAXIMO_DO_NOME = 512;
 
-// O que a campanha já sabe enviar hoje (auditoria de campanhas, §2): texto,
-// mídia no topo, botão de site e botões sem parâmetro. Carrossel, oferta,
-// copiar código, catálogo, código de verificação e formulário ainda não.
-export const podeIrEmCampanha = modelo => {
-  const { formato = 'padrao', botoes = [] } = modelo.conteudo;
-  return (
-    formato === 'padrao' &&
-    !botoes.some(botao => botao.tipo === 'copiar_codigo')
-  );
-};
+// PROTÓTIPO #1334: a campanha envia todos os formatos, menos código de
+// verificação e catálogo com produtos escolhidos (formatoQueNaoVai).
+export const podeIrEmCampanha = modelo =>
+  modelo.template
+    ? !formatoQueNaoVai(modelo.template)
+    : modelo.conteudo?.formato !== 'codigo';
 
 // Vai em campanha de verdade: formato que a campanha envia e nenhum campo sem
 // fonte (como a data e hora do agendamento, num modelo do sistema).

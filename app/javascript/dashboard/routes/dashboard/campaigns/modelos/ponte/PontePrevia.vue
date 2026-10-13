@@ -13,6 +13,8 @@ const props = defineProps({
   bindings: { type: Object, default: () => ({}) },
   sample: { type: Object, default: null },
   remetente: { type: String, default: '' },
+  // PROTÓTIPO #1334: o cupom digitado na campanha aparece no celular.
+  cupom: { type: String, default: '' },
 });
 
 const { t } = useI18n();
@@ -56,7 +58,15 @@ const conteudo = computed(() => {
       valorDe(props.bindings[chave]) || rotuloDoCampo(t, campo),
     ])
   );
-  return { ...props.modelo.conteudo, exemplos };
+  const base = { ...props.modelo.conteudo, exemplos };
+  if (!props.cupom) return base;
+  return {
+    ...base,
+    ...(base.oferta ? { oferta: { ...base.oferta, cupom: props.cupom } } : {}),
+    botoes: (base.botoes || []).map(botao =>
+      botao.tipo === 'copiar_codigo' ? { ...botao, valor: props.cupom } : botao
+    ),
+  };
 });
 </script>
 

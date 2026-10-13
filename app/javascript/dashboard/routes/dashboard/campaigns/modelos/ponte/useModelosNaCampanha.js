@@ -9,6 +9,7 @@ import {
   rotuloDoCampo,
 } from '../helpers/campos';
 import { podeIrEmCampanha, usavelEmCampanha } from '../helpers/paraMeta';
+import { formatoQueNaoVai } from './formatoNaCampanha';
 
 // Ponte Modelos ↔ Campanha (auditoria de campanhas, §6; PRD §7). Com a flag
 // whatsapp_templates_journey ligada, a Nova campanha pega daqui as caixas do
@@ -91,6 +92,9 @@ export function useModelosNaCampanha() {
   };
 
   const motivoDeNaoUsar = modelo => {
+    // PROTÓTIPO #1334: o motivo diz qual formato não vai.
+    const naoVai = modelo.template ? formatoQueNaoVai(modelo.template) : '';
+    if (naoVai) return `NAO_VAI_${naoVai}`;
     if (!podeIrEmCampanha(modelo)) return 'FORMATO_NAO_VAI';
     if (!usavelEmCampanha(modelo)) return 'SEM_FONTE';
     if (modelo.situacao === 'recusado') return 'RECUSADO';

@@ -672,7 +672,8 @@
         "formato_nao_vai": "The template “{modelo}” has a format campaigns cannot send yet.",
         "nao_conferido": "We could not check the template “{modelo}” with WhatsApp. Nothing was sent.",
         "outro": "The campaign stopped before sending. Nothing was sent.",
-        "arquivo_do_topo": "The template “{modelo}” has a photo, video or document at the top and the file is not saved. Pick the file again in the template or add the link in the campaign."
+        "arquivo_do_topo": "The template “{modelo}” has a photo, video or document at the top and the file is not saved. Pick the file again in the template or add the link in the campaign.",
+        "oferta_vencida": "The offer deadline passed before the send. Nothing was sent."
       },
       "ACOES": {
         "ABRIR_MODELO": "See the template",
@@ -688,7 +689,8 @@
       "VER_MODELO": "Open “{modelo}”",
       "AGUARDE_CONFERENCIA": "We could not check the template with WhatsApp yet. Resume unlocks when the check passes.",
       "AGUARDE_LIBERAR": "Wait for WhatsApp to release the template. When it comes back, tap Resume.",
-      "AGUARDE_APROVAR": "Wait for WhatsApp to approve the template. Then tap Resume."
+      "AGUARDE_APROVAR": "Wait for WhatsApp to approve the template. Then tap Resume.",
+      "NOVA_DATA": "Create the campaign again with a later date."
     },
     "PONTE": {
       "CAIXA_RECONECTAR": "{nome} · needs reconnecting",
@@ -701,7 +703,9 @@
         "PAUSADO": "paused",
         "DESATIVADO": "disabled",
         "LIMITE": "not created",
-        "SEM_FONTE": "has a field campaigns cannot fill"
+        "SEM_FONTE": "has a field campaigns cannot fill",
+        "NAO_VAI_CODIGO": "verification codes do not go in campaigns",
+        "NAO_VAI_PRODUTOS": "chosen products do not go in campaigns"
       },
       "EM_ANALISE": "“{nome}” is still in review at WhatsApp. You can set up and schedule the campaign; sending now unlocks when it is approved.",
       "ENVIAR_AGORA_BLOQUEADO": "Sending now unlocks when WhatsApp approves the template. Pick a date to schedule.",
@@ -712,11 +716,35 @@
         "CUSTO": "{porEnvio} per message · about {total} for {n} people",
         "CUSTO_AJUDA": "Estimated amount, charged by WhatsApp. It changes if WhatsApp changes the template type.",
         "DIVULGACAO": "Promotion message: people who asked not to receive are left out.",
-        "POR_ENVIO": "{porEnvio} per message"
+        "POR_ENVIO": "{porEnvio} per message",
+        "CUPOM": "Coupon: {cupom}",
+        "VALIDADE": "The offer is valid until {quando}",
+        "CARTOES": "{n} cards with photos"
       },
       "GRUPO_CATALOGO": "From the records",
       "SEM_MODELO_LIBERADO": "No template of this WhatsApp account can go in a campaign right now: they are rejected, paused or in a format campaigns cannot send yet.",
-      "CORRIGIR": "Fix “{nome}”"
+      "CORRIGIR": "Fix “{nome}”",
+      "FORMATO": {
+        "TITULO": "What this message needs",
+        "AJUDA": "This template has parts you complete now. They are the same for everyone who receives it.",
+        "CUPOM": "Coupon code",
+        "CUPOM_AJUDA": "Everyone gets the same code. Up to {n} letters and numbers.",
+        "CUPOM_ERRO": "Type the code, with up to {n} letters and numbers.",
+        "VALIDADE": "The offer is valid until ({zona} time zone)",
+        "VALIDADE_AJUDA": "The customer sees a countdown. If this time passes before the send, the campaign stops and no one receives it.",
+        "VALIDADE_PASSADA": "This time has already passed. Choose a later date.",
+        "CARTOES": "Photos of the {n} cards",
+        "CARTAO": "Card {n}",
+        "CARTAO_GUARDADO": "The photo approved with the template goes: {arquivo}",
+        "CARTAO_SEM_ARQUIVO_FOTO": "Paste the link to this card photo.",
+        "CARTAO_SEM_ARQUIVO_VIDEO": "Paste the link to this card video.",
+        "CARTAO_TROCAR": "Use another file",
+        "CARTAO_VOLTAR": "Use the approved one",
+        "CARTAO_LINK": "File link (starts with https://)",
+        "CARTAO_LINK_EXEMPLO": "https://yourcompany.com/photo.jpg",
+        "CATALOGO": "The button opens your WhatsApp catalog. The photo of the first product shows at the top of the message.",
+        "FORMULARIO": "Whoever taps “{botao}” opens the form linked to this template."
+      }
     },
     "IA": {
       "CRIAR_COM_IA": "Create with AI",
