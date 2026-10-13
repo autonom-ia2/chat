@@ -1,15 +1,17 @@
-import { defineComponent, ref } from 'vue';
 import { config, mount } from '@vue/test-utils';
 import { createStore } from 'vuex';
 import { createI18n } from 'vue-i18n';
-import Options from '../types/Options.vue';
 import ptBR from 'dashboard/i18n/locale/pt_BR/richMessage.json';
-import { provideMessageContext } from '../../../provider.js';
+import Message from '../../../Message.vue';
 import {
-  MESSAGE_STATUS,
-  MESSAGE_TYPES,
-  MESSAGE_VARIANTS,
-} from '../../../constants';
+  AGORA,
+  montagem,
+  montarMensagem,
+} from '../../../specs/montarMensagem.js';
+import { MESSAGE_STATUS, MESSAGE_TYPES } from '../../../constants';
+
+// A mesma rota mínima do `montarMensagem` (Message.vue lê `route.query`).
+vi.mock('vue-router', () => ({ useRoute: () => ({ query: {}, params: {} }) }));
 
 // Troca o i18n vazio do setup global pelo catálogo de verdade desta entrega.
 config.global.plugins = [
@@ -17,6 +19,8 @@ config.global.plugins = [
 ];
 
 const ID_ENVIADA = 41;
+const ESPELHO =
+  'Cópia do que o cliente recebeu. Só o cliente pode tocar nestas opções.';
 
 const TRES = [
   { id: 'agendar', title: 'Agendar visita' },
@@ -48,48 +52,59 @@ const resposta = (selected, extra = {}) => ({
   ...extra,
 });
 
+const propsDaMensagem = (status, content, richMessage) => ({
+  id: ID_ENVIADA,
+  messageType: MESSAGE_TYPES.OUTGOING,
+  status,
+  content,
+  conversationId: 7,
+  createdAt: AGORA,
+  currentUserId: 1,
+  sender: { id: 1, name: 'Marina', type: 'User' },
+  contentAttributes: { richMessage: { type: 'options', ...richMessage } },
+});
+
+// A mensagem inteira (Message.vue), como a conversa do painel monta: a mesma loja mínima do `montarMensagem`,
+// com a conversa aberta trazendo as mensagens dadas.
 const montar = ({
   conversa = [],
   status = MESSAGE_STATUS.SENT,
   content = 'Como você prefere continuar?',
   ...richMessage
 }) => {
+  const base = montagem.plugins[0].getters;
+  const getters = Object.fromEntries(
+    Object.keys(base).map(name => [name, () => base[name]])
+  );
   const store = createStore({
-    getters: { getSelectedChat: () => ({ id: 7, messages: conversa }) },
-  });
-  const TestHost = defineComponent({
-    components: { Options },
-    setup() {
-      provideMessageContext({
-        id: ref(ID_ENVIADA),
-        status: ref(status),
-        content: ref(content),
-        contentAttributes: ref({
-          richMessage: { type: 'options', ...richMessage },
-        }),
-        variant: ref(MESSAGE_VARIANTS.AGENT),
-      });
+    getters: {
+      ...getters,
+      getSelectedChat: () => ({ id: 7, messages: conversa }),
     },
-    template: '<Options />',
   });
 
-  return mount(TestHost, {
-    global: {
-      plugins: [store],
-      directives: {
-        dompurifyHtml: (el, { value }) => {
-          el.innerHTML = value;
-        },
-      },
-      stubs: { BaseBubble: { template: '<div><slot /></div>' } },
-    },
+  return mount(Message, {
+    props: propsDaMensagem(status, content, richMessage),
+    global: { ...montagem, plugins: [store] },
   });
 };
 
-const botoes = wrapper => wrapper.findAll('[data-option-button]');
-const linhas = wrapper => wrapper.findAll('li[data-option-row]');
+const bolha = wrapper => wrapper.get('[data-bubble-name="rich-options"]');
+const botoes = wrapper => bolha(wrapper).findAll('[data-option-button]');
+const linhas = wrapper => bolha(wrapper).findAll('li[data-option-row]');
 
 describe('bolha das opções', () => {
+  it('é a bolha que a mensagem escolhe para o tipo options', () => {
+    const wrapper = montarMensagem({
+      id: ID_ENVIADA,
+      content: 'Como você prefere continuar?',
+      contentAttributes: { richMessage: { type: 'options', options: TRES } },
+    });
+
+    expect(bolha(wrapper).exists()).toBe(true);
+    expect(botoes(wrapper)).toHaveLength(3);
+  });
+
   it('mostra até três opções como botões, com corpo, cabeçalho e rodapé', () => {
     const wrapper = montar({
       options: TRES,
@@ -102,17 +117,27 @@ describe('bolha das opções', () => {
       'Ver horários',
       'Falar com uma pessoa',
     ]);
-    expect(wrapper.text()).toContain('Próximo passo');
-    expect(wrapper.text()).toContain('Como você prefere continuar?');
-    expect(wrapper.text()).toContain('Toque em uma opção.');
+    expect(bolha(wrapper).text()).toContain('Próximo passo');
+    expect(bolha(wrapper).text()).toContain('Como você prefere continuar?');
+    expect(bolha(wrapper).text()).toContain('Toque em uma opção.');
     expect(linhas(wrapper)).toHaveLength(0);
   });
 
-  it('diz que o cliente ainda não escolheu enquanto não há resposta', () => {
+  it('diz ao leitor de tela que é cópia e não deixa nada da bolha focável', () => {
+    const wrapper = montar({ sections: SECOES, button: 'Ver assuntos' });
+
+    expect(bolha(wrapper).get('.sr-only').text()).toBe(ESPELHO);
+    expect(bolha(wrapper).findAll('a, button, input, [tabindex]')).toHaveLength(
+      0
+    );
+  });
+
+  it('não afirma nada sobre a escolha quando não acha a resposta', () => {
     const wrapper = montar({ options: TRES });
 
-    expect(wrapper.text()).toContain('O cliente ainda não escolheu');
-    expect(wrapper.find('.i-lucide-check').exists()).toBe(false);
+    expect(bolha(wrapper).text()).not.toContain('O cliente tocou');
+    expect(bolha(wrapper).text()).not.toContain('ainda não');
+    expect(bolha(wrapper).find('.i-lucide-check').exists()).toBe(false);
   });
 
   it('marca o botão tocado e diz qual foi, pela resposta do cliente', () => {
@@ -121,7 +146,9 @@ describe('bolha das opções', () => {
       conversa: [resposta({ id: 'agendar', title: 'Agendar visita' })],
     });
 
-    expect(wrapper.text()).toContain('O cliente tocou em "Agendar visita"');
+    expect(bolha(wrapper).text()).toContain(
+      'O cliente tocou em "Agendar visita"'
+    );
     expect(botoes(wrapper)[0].find('.i-lucide-check').exists()).toBe(true);
     expect(botoes(wrapper)[1].find('.i-lucide-check').exists()).toBe(false);
   });
@@ -135,7 +162,7 @@ describe('bolha das opções', () => {
       ],
     });
 
-    expect(wrapper.text()).toContain(
+    expect(bolha(wrapper).text()).toContain(
       'O cliente tocou em "Falar com uma pessoa"'
     );
   });
@@ -166,15 +193,13 @@ describe('bolha das opções', () => {
       ],
     });
 
-    expect(wrapper.text()).toContain('O cliente ainda não escolheu');
+    expect(bolha(wrapper).text()).not.toContain('O cliente tocou');
   });
 
-  it('mostra a lista sempre aberta, com seções, descrições e o texto do botão', () => {
+  it('mostra a lista sempre aberta, com o botão enviado, seções e descrições', () => {
     const wrapper = montar({ sections: SECOES, button: 'Ver assuntos' });
 
-    expect(wrapper.text()).toContain('Ver assuntos');
-    expect(wrapper.text()).toContain('Atendimento');
-    expect(wrapper.text()).toContain('Pagamento');
+    expect(bolha(wrapper).text()).toContain('Ver assuntos');
     expect(linhas(wrapper).map(linha => linha.text())).toEqual([
       'Remarcar horárioTrocar o dia ou a hora',
       'Cancelar horário',
@@ -183,18 +208,32 @@ describe('bolha das opções', () => {
     expect(botoes(wrapper)).toHaveLength(0);
   });
 
-  it('vira lista com mais de três opções, com o botão padrão', () => {
+  it('faz de cada seção um grupo com o nome dela', () => {
+    const wrapper = montar({ sections: SECOES, button: 'Ver assuntos' });
+    const grupos = bolha(wrapper).findAll('[role="group"]');
+
+    expect(grupos.map(grupo => grupo.attributes('aria-label'))).toEqual([
+      'Atendimento',
+      'Pagamento',
+    ]);
+    expect(grupos[1].findAll('li')).toHaveLength(1);
+  });
+
+  it('vira lista com mais de três opções e mostra só o botão que foi enviado', () => {
     const wrapper = montar({
       options: [...TRES, { id: 'sair', title: 'Encerrar' }],
+      button: 'Escolher',
     });
 
     expect(linhas(wrapper)).toHaveLength(4);
-    expect(wrapper.text()).toContain('Ver opções');
+    expect(bolha(wrapper).text()).toContain('Escolher');
+    expect(bolha(wrapper).text()).not.toContain('Ver opções');
   });
 
   it('vira lista quando alguma opção tem descrição', () => {
     const wrapper = montar({
       options: [{ id: 'a', title: 'Centro', description: 'Rua das Flores' }],
+      button: 'Unidades',
     });
 
     expect(linhas(wrapper)).toHaveLength(1);
@@ -204,29 +243,25 @@ describe('bolha das opções', () => {
   it('marca a linha escolhida da lista', () => {
     const wrapper = montar({
       sections: SECOES,
+      button: 'Ver assuntos',
       conversa: [resposta({ id: 'remarcar', title: 'Remarcar horário' })],
     });
 
-    expect(wrapper.text()).toContain('O cliente tocou em "Remarcar horário"');
+    expect(bolha(wrapper).text()).toContain(
+      'O cliente tocou em "Remarcar horário"'
+    );
     expect(linhas(wrapper)[0].find('.i-lucide-check').exists()).toBe(true);
     expect(linhas(wrapper)[1].find('.i-lucide-check').exists()).toBe(false);
-  });
-
-  it('não diz nada sobre a escolha quando a mensagem falhou', () => {
-    const wrapper = montar({ options: TRES, status: MESSAGE_STATUS.FAILED });
-
-    expect(wrapper.text()).not.toContain('O cliente');
   });
 
   it('trata títulos como texto e não quebra com entrada estranha', () => {
     const wrapper = montar({
       options: [{ id: 'x', title: '<img src=x onerror=alert(1)>' }, 'Sim', 7],
       header: { type: 'image' },
-      sections: undefined,
     });
 
-    expect(wrapper.find('img').exists()).toBe(false);
-    expect(wrapper.text()).toContain('<img src=x onerror=alert(1)>');
-    expect(wrapper.text()).toContain('Como você prefere continuar?');
+    expect(bolha(wrapper).find('img').exists()).toBe(false);
+    expect(bolha(wrapper).text()).toContain('<img src=x onerror=alert(1)>');
+    expect(bolha(wrapper).text()).toContain('Como você prefere continuar?');
   });
 });

@@ -65,7 +65,24 @@ describe RichMessages::SelectedOption do
     expect(reply.content_attributes['in_reply_to']).to eq(offered.id)
   end
 
-  it 'works the same through the 360dialog service, which shares the incoming base' do
-    expect(Whatsapp::IncomingMessageService.ancestors).to include(described_class)
+  context 'with a 360dialog inbox' do
+    let(:dialog_channel) { create(:channel_whatsapp, sync_templates: false) }
+
+    before { stub_request(:post, 'https://waba.360dialog.io/v1/configs/webhook') }
+
+    # O webhook do 360dialog chega sem o envelope `entry`/`changes` da Meta, com o mesmo item `messages[]`.
+    it 'keeps the id and the title of a tapped list row' do
+      params = {
+        contacts: [{ profile: { name: 'Camila' }, wa_id: '2423423243' }],
+        messages: [{ from: '2423423243', id: 'wamid.resposta-360', timestamp: '1760371200', type: 'interactive',
+                     interactive: { type: 'list_reply', list_reply: { id: 'boleto', title: 'Segunda via do boleto' } } }]
+      }.with_indifferent_access
+
+      Whatsapp::IncomingMessageService.new(inbox: dialog_channel.inbox, params: params).perform
+      reply = dialog_channel.inbox.messages.find_by!(source_id: 'wamid.resposta-360')
+
+      expect(reply.content).to eq('Segunda via do boleto')
+      expect(reply.content_attributes['selected_option']).to eq('id' => 'boleto', 'title' => 'Segunda via do boleto')
+    end
   end
 end

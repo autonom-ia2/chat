@@ -6,7 +6,6 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useMapGetter } from 'dashboard/composables/store';
 import { useMessageContext } from '../../../provider.js';
-import { MESSAGE_STATUS } from '../../../constants';
 import Frame from '../Frame.vue';
 import ActionRow from '../ActionRow.vue';
 import OptionsList from '../OptionsList.vue';
@@ -14,7 +13,7 @@ import { selectedOptionFor } from '../optionsAnswer.js';
 
 const BUTTONS_MAX = 3;
 
-const { id, status, contentAttributes } = useMessageContext();
+const { id, contentAttributes } = useMessageContext();
 const { t } = useI18n();
 const currentChat = useMapGetter('getSelectedChat');
 
@@ -62,13 +61,12 @@ const chosenTitle = computed(
     textOf(answer.value?.title)
 );
 
-const statusLine = computed(() => {
-  if (status.value === MESSAGE_STATUS.FAILED) return '';
-  if (answer.value) {
-    return t('RICH_MESSAGE.OPTIONS.CHOSEN', { title: chosenTitle.value });
-  }
-  return t('RICH_MESSAGE.OPTIONS.WAITING');
-});
+// Só afirma o que achou: sem resposta carregada não há linha (o cliente pode ter respondido fora do que está na tela).
+const chosenLine = computed(() =>
+  answer.value
+    ? t('RICH_MESSAGE.OPTIONS.CHOSEN', { title: chosenTitle.value })
+    : ''
+);
 </script>
 
 <template>
@@ -78,14 +76,9 @@ const statusLine = computed(() => {
     :footer="textOf(richMessage.footer)"
   >
     <div class="flex flex-col gap-1.5">
+      <span class="sr-only">{{ t('RICH_MESSAGE.OPTIONS.MIRROR') }}</span>
       <template v-if="isList">
-        <ActionRow
-          icon="i-lucide-list"
-          :label="
-            textOf(richMessage.button) ||
-            t('RICH_MESSAGE.OPTIONS.LIST_BUTTON_DEFAULT')
-          "
-        />
+        <ActionRow icon="i-lucide-list" :label="textOf(richMessage.button)" />
         <OptionsList :sections="sections" :chosen-id="chosenId" />
       </template>
       <template v-else>
@@ -98,10 +91,10 @@ const statusLine = computed(() => {
         />
       </template>
       <div
-        v-if="statusLine"
+        v-if="chosenLine"
         class="text-xs font-medium text-n-slate-11 break-words"
       >
-        {{ statusLine }}
+        {{ chosenLine }}
       </div>
     </div>
   </Frame>

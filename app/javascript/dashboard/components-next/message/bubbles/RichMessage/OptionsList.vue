@@ -17,9 +17,15 @@ const isChosen = option =>
   <div
     class="rounded-lg border border-n-container bg-n-solid-3 overflow-hidden py-1"
   >
-    <div v-for="(section, index) in sections" :key="index">
+    <div
+      v-for="(section, index) in sections"
+      :key="index"
+      :role="section.title ? 'group' : undefined"
+      :aria-label="section.title || undefined"
+    >
       <div
         v-if="section.title"
+        aria-hidden="true"
         class="px-3 pt-2 pb-1 text-xs text-n-slate-11 break-words"
       >
         {{ section.title }}

@@ -51,14 +51,14 @@ describe RichMessages::Types::Options do
       expect(interactive.keys).to eq(%i[type body action])
     end
 
-    it 'turns more than 3 options into a list with one untitled section and the default button' do
-      interactive = options(options: four).whatsapp_cloud_payload(body)[:interactive]
+    it 'turns more than 3 options into a list with one untitled section' do
+      interactive = options(options: four, button: 'Ver opções').whatsapp_cloud_payload(body)[:interactive]
 
       expect(interactive).to eq(
         type: 'list',
         body: { text: body },
         action: {
-          button: described_class::LIST_BUTTON_DEFAULT,
+          button: 'Ver opções',
           sections: [{ rows: four.map { |option| option.slice(:id, :title) } }]
         }
       )
@@ -83,8 +83,9 @@ describe RichMessages::Types::Options do
     end
 
     it 'uses a list even with few options when they come in sections or with a description' do
-      in_sections = options(sections: [{ options: three.first(2) }]).whatsapp_cloud_payload(body)[:interactive]
-      described = options(options: [three.first.merge(description: 'Na unidade mais perto')]).whatsapp_cloud_payload(body)[:interactive]
+      in_sections = options(sections: [{ options: three.first(2) }], button: 'Ver').whatsapp_cloud_payload(body)[:interactive]
+      described_option = three.first.merge(description: 'Na unidade mais perto')
+      described = options(options: [described_option], button: 'Ver').whatsapp_cloud_payload(body)[:interactive]
 
       expect(in_sections).to include(type: 'list', action: hash_including(sections: [{ rows: three.first(2) }]))
       expect(described).to include(type: 'list')
@@ -116,8 +117,8 @@ describe RichMessages::Types::Options do
     end
 
     it 'accepts one section without a title' do
-      expect(options(sections: [{ title: '', options: four }]).error_for(body)).to be_nil
-      expect(options(sections: [{ options: four }]).error_for(body)).to be_nil
+      expect(options(sections: [{ title: '', options: four }], button: 'Ver').error_for(body)).to be_nil
+      expect(options(sections: [{ options: four }], button: 'Ver').error_for(body)).to be_nil
     end
 
     {
@@ -137,13 +138,19 @@ describe RichMessages::Types::Options do
       'two buttons with the same title' => [{ options: [{ id: 'a', title: 'Sim' }, { id: 'b', title: 'Sim' }] }, nil, :BUTTON_TITLE_REPEATED],
       'a header above 60 characters' => [{ header: 'h' * 61 }, nil, :HEADER_INVALID],
       'an image header' => [{ header: { type: 'image', link: 'https://exemplo.com.br/a.png' } }, nil, :HEADER_INVALID],
-      'a footer with a line break' => [{ footer: "um\ndois" }, nil, :FOOTER_INVALID],
-      'a list button above 20 characters' => [{ button: 'b' * 21 }, nil, :LIST_BUTTON_INVALID]
+      'a footer with a line break' => [{ footer: "um\ndois" }, nil, :FOOTER_INVALID]
     }.each do |title, (changes, message_body, error)|
       it "refuses #{title}" do
         expect(options({ options: three }.merge(changes)).error_for(message_body.nil? ? body : message_body))
           .to eq(described_class.const_get(error))
       end
+    end
+
+    it 'ignores the list button when the options go as buttons, even if it would not fit a list' do
+      buttons = options(options: three, button: "#{'b' * 21}\nx")
+
+      expect(buttons.error_for(body)).to be_nil
+      expect(buttons.whatsapp_cloud_payload(body).dig(:interactive, :action)).not_to have_key(:button)
     end
 
     {
@@ -152,13 +159,18 @@ describe RichMessages::Types::Options do
       'a row title above 24 characters' => [{ options: [{ id: 'x', title: 'a' * 25 }] }, nil, :ROW_TITLE_TOO_LONG],
       'a row id above 200 characters' => [{ options: [{ id: 'i' * 201, title: 'X' }] }, nil, :ROW_ID_TOO_LONG],
       'a description above 72 characters' => [{ options: [{ id: 'x', title: 'X', description: 'd' * 73 }] }, nil, :DESCRIPTION_INVALID],
-      'a description that is not text' => [{ options: [{ id: 'x', title: 'X', description: 7 }] }, nil, :DESCRIPTION_INVALID]
+      'a description that is not text' => [{ options: [{ id: 'x', title: 'X', description: 7 }] }, nil, :DESCRIPTION_INVALID],
+      'a missing list button' => [{ options: [], button: nil }, nil, :LIST_BUTTON_INVALID],
+      'a list button above 20 characters' => [{ options: [], button: 'b' * 21 }, nil, :LIST_BUTTON_INVALID],
+      'a list button with a line break' => [{ options: [], button: "Ver\nopções" }, nil, :LIST_BUTTON_INVALID]
     }.each do |title, (changes, message_body, error)|
       it "refuses on a list #{title}" do
         count = error == :TOO_MANY_OPTIONS ? 11 : 4
         list = changes[:options] + option_list(count - changes[:options].size)
 
-        expect(options(options: list).error_for(message_body || body)).to eq(described_class.const_get(error))
+        refused = options(options: list, button: changes.fetch(:button, 'Ver opções'))
+
+        expect(refused.error_for(message_body || body)).to eq(described_class.const_get(error))
       end
     end
 
@@ -226,7 +238,7 @@ describe RichMessages::Types::Options do
                                              'interactive' => hash_including('type' => 'list', 'body' => { 'text' => body })))
                   .to_return(meta_ok)
 
-        expect(deliver(outgoing({ type: 'options', sections: sections })).status).not_to eq('failed')
+        expect(deliver(outgoing({ type: 'options', sections: sections, button: 'Ver assuntos' })).status).not_to eq('failed')
         expect(request).to have_been_requested.once
       end
 
@@ -235,7 +247,7 @@ describe RichMessages::Types::Options do
 
         expect(message.status).to eq('failed')
         expect(message.external_error).to eq(described_class::BUTTON_TITLE_TOO_LONG)
-        expect(a_request(:any, /graph\.facebook\.com/)).not_to have_been_made
+        expect(a_request(:post, meta_url)).not_to have_been_made
       end
     end
 
@@ -244,7 +256,7 @@ describe RichMessages::Types::Options do
 
       expect(message.status).to eq('failed')
       expect(message.external_error).to eq(I18n.t('errors.whatsapp.message_outside_messaging_window'))
-      expect(a_request(:any, /graph\.facebook\.com/)).not_to have_been_made
+      expect(a_request(:post, meta_url)).not_to have_been_made
     end
   end
 

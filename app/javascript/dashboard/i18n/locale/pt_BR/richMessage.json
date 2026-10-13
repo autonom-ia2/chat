@@ -20,8 +20,7 @@
     },
     "OPTIONS": {
       "CHOSEN": "O cliente tocou em \"{title}\"",
-      "LIST_BUTTON_DEFAULT": "Ver opções",
-      "WAITING": "O cliente ainda não escolheu"
+      "MIRROR": "Cópia do que o cliente recebeu. Só o cliente pode tocar nestas opções."
     }
   }
 }

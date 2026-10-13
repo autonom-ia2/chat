@@ -1,10 +1,11 @@
 # Opções para o cliente tocar (chat#1473, P3): botões de resposta ou lista.
-#   { "type": "options", "header": "Próximo passo", "footer": "Toque em uma opção.", "button": "Ver opções",
+#   { "type": "options", "header": "Próximo passo", "footer": "Toque em uma opção.", "button": "Ver unidades",
 #     "options": [{ "id": "agendar", "title": "Agendar visita", "description": "Na unidade mais perto" }] }
 #   ou, no lugar de `options`, "sections": [{ "title": "Atendimento", "options": [...] }]
-# Só `options` OU `sections`; `header`, `footer`, `button` e `description` são opcionais. Sai como LISTA quando vêm
-# seções, mais de 3 opções ou alguma descrição (o botão de resposta não mostra nem seção nem descrição); senão,
-# como BOTÕES. `button` (o texto que abre a lista) só vale na lista; sem ele vai LIST_BUTTON_DEFAULT.
+# Só `options` OU `sections`; `header`, `footer` e `description` são opcionais. Sai como LISTA quando vêm seções,
+# mais de 3 opções ou alguma descrição (o botão de resposta não mostra nem seção nem descrição); senão, como BOTÕES.
+# `button` (o texto que abre a lista) é OBRIGATÓRIO na lista e ignorado nos botões: o painel não inventa texto para
+# o cliente, porque não sabe o idioma da conversa.
 # Limites da Meta: até 3 botões (título 20, id 256, corpo 1024, títulos diferentes entre si); lista com até 10
 # opções no total em até 10 seções (título 24, id 200, descrição 72, título de seção 24, obrigatório com mais de
 # uma seção, botão 20, corpo 4096); cabeçalho de texto e rodapé até 60. Os ids não se repetem. Títulos, cabeçalho,
@@ -19,7 +20,6 @@ class RichMessages::Types::Options
   LIST_BUTTON_MAX = 20
   BUTTONS = { body: 1024, title: 20, id: 256 }.freeze
   LIST = { body: 4096, title: 24, id: 200 }.freeze
-  LIST_BUTTON_DEFAULT = 'Ver opções'.freeze
   LINE_BREAKS = ["\n", "\r"].freeze
 
   BODY_BLANK = 'As opções precisam de um texto na mensagem.'.freeze
@@ -43,8 +43,8 @@ class RichMessages::Types::Options
   DESCRIPTION_INVALID = "A descrição de uma opção precisa ser um texto de até #{DESCRIPTION_MAX} caracteres, em uma linha só.".freeze
   HEADER_INVALID = "O cabeçalho das opções precisa ser um texto de até #{EDGE_MAX} caracteres, em uma linha só.".freeze
   FOOTER_INVALID = "O rodapé das opções precisa ser um texto de até #{EDGE_MAX} caracteres, em uma linha só.".freeze
-  LIST_BUTTON_INVALID = "O texto do botão que abre a lista precisa ser um texto de até #{LIST_BUTTON_MAX} caracteres, " \
-                        'em uma linha só.'.freeze
+  LIST_BUTTON_INVALID = 'A lista de opções precisa do texto do botão que a abre (button), com até ' \
+                        "#{LIST_BUTTON_MAX} caracteres, em uma linha só.".freeze
 
   def initialize(payload)
     @header = payload['header']
@@ -57,7 +57,7 @@ class RichMessages::Types::Options
   def error_for(body)
     shape_error || body_error(body) || section_titles_error || options_error ||
       text_error(@header, EDGE_MAX, HEADER_INVALID) || text_error(@footer, EDGE_MAX, FOOTER_INVALID) ||
-      text_error(@button, LIST_BUTTON_MAX, LIST_BUTTON_INVALID)
+      list_button_error
   end
 
   # https://developers.facebook.com/documentation/business-messaging/whatsapp/messages/interactive-reply-buttons-messages
@@ -78,9 +78,9 @@ class RichMessages::Types::Options
   # As opções numeradas, uma por linha, na ordem em que o cliente as veria; título da seção numa linha própria e a
   # descrição depois de " - ". Cabeçalho, rodapé e botão da lista não entram: são moldura do cartão.
   def fallback_text(_body)
-    number = 0
-    groups.flat_map do |title, options|
-      lines = options.map { |option| "#{number += 1}. #{[option['title'], option['description']].compact.join(' - ')}" }
+    groups.each_with_index.flat_map do |(title, options), index|
+      first = groups.first(index).sum { |(_previous_title, previous)| previous.size } + 1
+      lines = options.map.with_index(first) { |option, number| "#{number}. #{option_text(option)}" }
       title.present? ? [title, *lines] : lines
     end.join("\n")
   end
@@ -94,6 +94,10 @@ class RichMessages::Types::Options
 
   def all_options
     groups.flat_map(&:last)
+  end
+
+  def option_text(option)
+    [option['title'], option['description']].compact.join(' - ')
   end
 
   def list?
@@ -113,7 +117,7 @@ class RichMessages::Types::Options
       rows = options.map { |option| { id: option['id'], title: option['title'], description: option['description'] }.compact }
       { title: title.presence, rows: rows }.compact
     end
-    { button: @button || LIST_BUTTON_DEFAULT, sections: sections }
+    { button: @button, sections: sections }
   end
 
   # A forma da entrada, antes de qualquer outra regra: depois dela `groups` só tem listas de objetos.
@@ -179,6 +183,11 @@ class RichMessages::Types::Options
     return OPTION_ID_REPEATED unless all_options.pluck('id').uniq.size == all_options.size
 
     BUTTON_TITLE_REPEATED unless list? || all_options.pluck('title').uniq.size == all_options.size
+  end
+
+  # O botão que abre a lista: obrigatório na lista, ignorado nos botões.
+  def list_button_error
+    LIST_BUTTON_INVALID if list? && !fits?(@button, LIST_BUTTON_MAX)
   end
 
   # Campo opcional de texto: ausente, ou texto preenchido de até `max` caracteres em uma linha.
