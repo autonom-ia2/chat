@@ -52,6 +52,17 @@ const mountFlow = ({ content = 'Entre com seus dados.', ...richMessage }) => {
   });
 };
 
+// As linhas de texto puro (sem elementos dentro) que falam do formulário, com o texto exato.
+const formLabelsOf = wrapper =>
+  wrapper
+    .findAll('div')
+    .filter(
+      node =>
+        node.element.children.length === 0 &&
+        node.text().startsWith('Formulário')
+    )
+    .map(node => node.text());
+
 describe('bolha do formulário (Flow)', () => {
   it('mostra o corpo, o botão com o texto que o cliente vê e o nome do formulário', () => {
     const wrapper = mountFlow({
@@ -72,10 +83,21 @@ describe('bolha do formulário (Flow)', () => {
     expect(wrapper.text()).not.toContain('Formulário:');
   });
 
-  it('nunca afirma que o formulário foi enviado', () => {
-    const wrapper = mountFlow({ cta: 'Iniciar', name: 'Login' });
+  it('a linha do formulário diz exatamente o nome, sem afirmar o envio', () => {
+    expect(formLabelsOf(mountFlow({ cta: 'Iniciar', name: 'Login' }))).toEqual([
+      'Formulário: Login',
+    ]);
+    expect(formLabelsOf(mountFlow({ cta: 'Iniciar' }))).toEqual([
+      'Formulário do WhatsApp',
+    ]);
+  });
 
-    expect(wrapper.text().toLowerCase()).not.toContain('enviado');
+  it('sem texto do botão, não desenha a caixa do botão', () => {
+    const wrapper = mountFlow({ name: 'Login' });
+
+    expect(wrapper.find('.sr-only').exists()).toBe(false);
+    expect(wrapper.find('.rounded-lg').exists()).toBe(false);
+    expect(formLabelsOf(wrapper)).toEqual(['Formulário: Login']);
   });
 
   it('o botão não é link nem é focável: o atendente não abre o formulário pelo painel', () => {
@@ -156,7 +178,7 @@ describe('bolha do formulário (Flow)', () => {
     expect(wrapper.text()).toContain('Formulário: Login');
   });
 
-  it('com a mensagem que falhou, a bolha não diz que o formulário foi enviado', () => {
+  it('com a mensagem que falhou, a bolha mostra o formulário pelo nome e a conversa mostra o motivo da falha', () => {
     const wrapper = montarMensagem({
       messageType: MESSAGE_TYPES.OUTGOING,
       status: MESSAGE_STATUS.FAILED,
@@ -168,7 +190,8 @@ describe('bolha do formulário (Flow)', () => {
     });
     const bubble = wrapper.get('[data-bubble-name="rich-flow"]');
 
-    expect(bubble.text()).toContain('Formulário: Login');
-    expect(bubble.text().toLowerCase()).not.toContain('enviado');
+    expect(formLabelsOf(bubble)).toEqual(['Formulário: Login']);
+    expect(bubble.text()).not.toContain('Flow not published');
+    expect(wrapper.text()).toContain('Flow not published');
   });
 });

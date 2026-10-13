@@ -8,7 +8,7 @@
 # 2^53 ele perde precisão no caminho.
 # `data` vai como veio para a primeira tela. Ele fica em `content_attributes`, que chega aos webhooks da conta, ao
 # robô, ao painel e à API: nunca deve levar credencial nem dado pessoal. A bolha do atendente não o mostra.
-# Limites: botão até 30 caracteres (o que a Meta recomenda para o `flow_cta`; emoji é aceito, a Meta só desaconselha);
+# Limites: botão até 30 caracteres (o que a Meta recomenda para o `flow_cta`; emoji é aceito, ver o doc de auditoria);
 # corpo até 1024, cabeçalho de texto, rodapé e nome até 60, como no botão de link (para o Flow a Meta não publica
 # esses números); `data` até DATA_MAX bytes.
 # Não há versão em texto: só sai pelo WhatsApp oficial com a janela aberta.

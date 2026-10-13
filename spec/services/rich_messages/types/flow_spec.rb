@@ -81,7 +81,7 @@ describe RichMessages::Types::Flow do
         expect(request).to have_been_requested.once
       end
 
-      it 'keeps the form data and the token out of the application log, at every level, when Meta refuses the flow' do
+      it 'keeps the form data and the token out of the application logger (Rails.logger, all levels) when Meta refuses the flow' do
         refusal = { error: { message: 'Flow not published', code: 100 } }.to_json
         stub_request(:post, graph_url).to_return(status: 400, body: refusal, headers: { 'Content-Type' => 'application/json' })
         message = outgoing(conversation)
@@ -144,7 +144,7 @@ describe RichMessages::Types::Flow do
         expect(request).to have_been_requested.once
       end
 
-      it 'accepts an emoji in the button text, which Meta only advises against' do
+      it 'accepts an emoji in the button text (Meta writes "no emoji" next to the length advice; whether it refuses is unconfirmed)' do
         request = stub_request(:post, graph_url).to_return(meta_ok)
 
         message = deliver(outgoing(conversation, content_attributes: { rich_message: rich_message.merge(cta: 'Iniciar 👉') }))

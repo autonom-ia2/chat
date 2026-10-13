@@ -32,7 +32,7 @@ const formLabel = computed(() =>
     :footer="textOf(richMessage.footer)"
   >
     <div class="flex flex-col gap-1.5">
-      <ActionRow icon="i-lucide-clipboard-list" :label="cta">
+      <ActionRow v-if="cta" icon="i-lucide-clipboard-list" :label="cta">
         {{ cta }}
         <span class="sr-only">
           {{ t('RICH_MESSAGE.FLOW.OPENS_ON_CUSTOMER_PHONE') }}
