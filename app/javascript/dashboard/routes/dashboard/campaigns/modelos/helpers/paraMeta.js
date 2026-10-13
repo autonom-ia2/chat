@@ -248,6 +248,20 @@ export const componentesNaMeta = (
   };
 };
 
+// Arquivo de cada cartão que subiu agora, com a posição dele (#1334): o
+// servidor guarda no perfil e a campanha do carrossel usa a mesma mídia.
+export const cardMedia = (cartoes = []) =>
+  (cartoes || []).flatMap((midia, indice) =>
+    midia?.blob_signed_id
+      ? [{ card_index: indice, blob_signed_id: midia.blob_signed_id }]
+      : []
+  );
+
+const comCartoes = midias => {
+  const lista = cardMedia(midias?.cartoes);
+  return lista.length ? { card_media: lista } : {};
+};
+
 // Corpo do POST de criação.
 export const corpoParaCriar = (rascunho, opcoes = {}) => {
   const { components, fields } = componentesNaMeta(rascunho.conteudo, opcoes);
@@ -262,6 +276,7 @@ export const corpoParaCriar = (rascunho, opcoes = {}) => {
     friendly_name: rascunho.nome.trim(),
     fields,
     ...(topo ? { header_media: topo } : {}),
+    ...comCartoes(opcoes.midias),
   };
 };
 
@@ -302,5 +317,6 @@ export const corpoParaAlterar = (rascunho, modelo, opcoes = {}) => {
     friendly_name: rascunho.nome.trim(),
     fields,
     ...(topo ? { header_media: topo } : {}),
+    ...comCartoes(opcoes.midias),
   };
 };

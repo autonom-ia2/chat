@@ -61,17 +61,25 @@ module Whatsapp::Templates::HeaderMedia
 
   # O arquivo do topo guardado no perfil do modelo (caixas da mesma WABA dividem o perfil), ou nil.
   def profile_file(inbox, template)
-    profile = WhatsappTemplateProfile.for_inbox(inbox).where(name: template['name'])
-                                     .detect { |candidate| candidate.language.to_s.casecmp?(template['language'].to_s) }
+    profile = profile(inbox, template)
     profile&.header_file&.attached? ? profile.header_file : nil
+  end
+
+  # O perfil do modelo na WABA da caixa (nome e idioma), ou nil. Também usado pelos cartões do carrossel (#1334).
+  def profile(inbox, template)
+    WhatsappTemplateProfile.for_inbox(inbox).where(name: template['name'])
+                           .detect { |candidate| candidate.language.to_s.casecmp?(template['language'].to_s) }
+  end
+
+  # Link assinado do arquivo para o envio (vale um dia: o disparo de uma campanha grande leva horas).
+  def signed_media(file)
+    ActiveStorage::Current.url_options = Rails.application.routes.default_url_options if ActiveStorage::Current.url_options.blank?
+    { 'media_url' => file.blob.url(expires_in: URL_TTL), 'media_name' => file.filename.to_s }
   end
 
   # { 'media_url' => link assinado, 'media_name' => nome do arquivo } para o envio, ou nil sem arquivo no perfil.
   def profile_media(inbox, template)
     file = profile_file(inbox, template)
-    return unless file
-
-    ActiveStorage::Current.url_options = Rails.application.routes.default_url_options if ActiveStorage::Current.url_options.blank?
-    { 'media_url' => file.blob.url(expires_in: URL_TTL), 'media_name' => file.filename.to_s }
+    file && signed_media(file)
   end
 end

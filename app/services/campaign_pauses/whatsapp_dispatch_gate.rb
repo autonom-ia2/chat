@@ -37,7 +37,8 @@ module CampaignPauses::WhatsappDispatchGate
   def template_verdict
     verdict = Whatsapp::Templates::DispatchCheck.new(campaign, channel: channel).call
     verdict = send_list_verdict(verdict) if verdict.ok?
-    verdict.ok? ? header_media_verdict(verdict) : verdict
+    verdict = header_media_verdict(verdict) if verdict.ok?
+    verdict.ok? ? send_extras_verdict(verdict) : verdict
   rescue StandardError => e
     Rails.logger.error "[CampaignPauses] campaign=#{campaign.id} template check failed: #{e.class.name}"
     Whatsapp::Templates::DispatchCheck::Verdict.new(reason_code: 'template_unverifiable', source: 'system',
@@ -68,12 +69,26 @@ module CampaignPauses::WhatsappDispatchGate
     )
   end
 
+  # #1334: the saved file of each carousel card and the campaign flow_token, built once per run (Whatsapp::Templates::SendParams).
+  def send_extras_verdict(verdict)
+    processed = campaign.template_params.to_h['processed_params']
+    extras = Whatsapp::Templates::SendParams.dispatch_extras(processed, template: verdict.template, inbox: inbox, campaign: campaign)
+    @send_extras = extras.presence
+    return verdict if extras
+
+    Whatsapp::Templates::DispatchCheck::Verdict.new(
+      reason_code: 'template_media_missing', source: 'template', details: verdict.details.slice(:template_name, :language, :lookup_source)
+    )
+  end
+
   def process_liquid_template_params(contact)
     params = super
-    return params unless params && @profile_header_media
+    return params unless params && (@profile_header_media || @send_extras)
 
     processed = params['processed_params'].to_h
-    params.merge('processed_params' => processed.merge('header' => processed['header'].to_h.merge(@profile_header_media)))
+    processed = processed.merge('header' => processed['header'].to_h.merge(@profile_header_media)) if @profile_header_media
+    processed = Whatsapp::Templates::SendParams.apply_extras(processed, @send_extras) if @send_extras
+    params.merge('processed_params' => processed)
   end
 
   def keep_meta_version(template)

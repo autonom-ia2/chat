@@ -1,0 +1,241 @@
+require 'rails_helper'
+
+# #1334: a campanha do WhatsApp oficial envia os formatos novos — cupom (copiar código), oferta por tempo limitado com
+# validade, carrossel com a mídia de cada cartão, formulário (Flow) com flow_token e botão de catálogo — com o que a
+# Meta exige no envio. Código de verificação continua fora (é pedido por uma pessoa num app, nunca para uma lista).
+RSpec.describe Whatsapp::Templates::SendParams, :aggregate_failures do
+  let(:account_and_user) { create_account_and_user }
+  let(:account) { account_and_user.first }
+  let(:user) { account_and_user.last }
+  let(:channel) { journey_cloud_channel(account) }
+  let(:inbox) { channel.inbox }
+  let(:audience) do
+    saved_audience(account: account, user: user, content: "Nome,Celular\nAna Souza,11987654321\nBia Lima,21987654321\n")
+  end
+  let(:ahead) { 3.days.from_now.to_i * 1000 }
+
+  let(:body) { { 'type' => 'BODY', 'text' => 'Chegou a oferta do mês.' } }
+  let(:offer) do
+    approved('oferta', { 'type' => 'HEADER', 'format' => 'IMAGE' },
+             { 'type' => 'LIMITED_TIME_OFFER', 'limited_time_offer' => { 'text' => 'Só hoje', 'has_expiration' => true } }, body,
+             { 'type' => 'BUTTONS', 'buttons' => [{ 'type' => 'COPY_CODE', 'example' => 'CUPOM10' },
+                                                  { 'type' => 'URL', 'text' => 'Comprar', 'url' => 'https://loja.com' }] })
+  end
+  let(:card) do
+    { 'components' => [{ 'type' => 'HEADER', 'format' => 'IMAGE' }, { 'type' => 'BODY', 'text' => 'Produto' },
+                       { 'type' => 'BUTTONS', 'buttons' => [{ 'type' => 'URL', 'text' => 'Ver', 'url' => 'https://loja.com' }] }] }
+  end
+  let(:carousel) { approved('vitrine', body, { 'type' => 'CAROUSEL', 'cards' => [card, card] }) }
+  let(:flow_and_catalog) do
+    approved('loja', body, { 'type' => 'BUTTONS', 'buttons' => [{ 'type' => 'CATALOG', 'text' => 'Ver catálogo' },
+                                                                { 'type' => 'FLOW', 'text' => 'Pedir', 'flow_id' => '9' }] })
+  end
+
+  def approved(name, *components)
+    { 'name' => name, 'language' => 'pt_BR', 'status' => 'APPROVED', 'category' => 'MARKETING', 'components' => components }
+  end
+
+  def stored_cards
+    { 'carousel' => { 'cards' => [{ 'header' => { 'media_stored' => true, 'media_type' => 'image' } }] * 2 } }
+  end
+
+  before do
+    channel.update_columns(message_templates: [offer, carousel, flow_and_catalog]) # rubocop:disable Rails/SkipsModelValidations
+  end
+
+  def params(name, processed)
+    { 'name' => name, 'language' => 'pt_BR', 'category' => 'MARKETING', 'processed_params' => processed }
+  end
+
+  def offer_params(code: 'CUPOM10', expiration: ahead)
+    params('oferta', { 'header' => { 'media_url' => 'https://loja.com/oferta.png', 'media_type' => 'image' },
+                       'limited_time_offer' => { 'expiration_time_ms' => expiration },
+                       'buttons' => [{ 'type' => 'copy_code', 'parameter' => code }] })
+  end
+
+  def create_campaign(template_params)
+    CampaignJourney::WhatsappCampaignCreator.new(
+      account: account, campaign_import: audience, channel: 'whatsapp_cloud',
+      attributes: { title: 'Formatos', inbox_id: inbox.id, template_params: template_params, variable_bindings: {} }
+    ).perform
+  end
+
+  def refusal_code(template_params)
+    create_campaign(template_params)
+    nil
+  rescue CampaignJourney::WhatsappCampaignCreator::Error => e
+    e.code
+  end
+
+  def save_card_files(name = 'vitrine')
+    profile = WhatsappTemplateProfile.create!(account: account, inbox: inbox, waba_id: channel.waba_id, name: name, language: 'pt_BR')
+    2.times do |index|
+      profile.card_files.attach(io: StringIO.new('png'), filename: "cartao-#{index + 1}.png", content_type: 'image/png',
+                                metadata: { 'card_index' => index })
+    end
+    profile
+  end
+
+  def component(body, type)
+    Array(body.dig('template', 'components')).find { |item| item['type'] == type }
+  end
+
+  describe 'criação da campanha' do
+    it 'oferta: aceita validade à frente e cupom; recusa sem validade, validade passada e cupom vazio ou longo' do
+      expect(create_campaign(offer_params).template_params.dig('processed_params', 'limited_time_offer'))
+        .to eq('expiration_time_ms' => ahead)
+      expect(refusal_code(offer_params(expiration: nil))).to eq('offer_expiration_required')
+      expect(refusal_code(offer_params(expiration: 'amanhã'))).to eq('offer_expiration_required')
+      expect(refusal_code(offer_params(expiration: 1.hour.ago.to_i * 1000))).to eq('offer_expiration_past')
+      expect(refusal_code(offer_params(code: ' '))).to eq('coupon_code_invalid')
+      expect(refusal_code(offer_params(code: 'A' * 16))).to eq('coupon_code_invalid')
+    end
+
+    it 'carrossel: sem link usa o arquivo de cada cartão guardado no modelo; sem arquivo nem link, recusa' do
+      expect(refusal_code(params('vitrine', { 'carousel' => { 'cards' => [{}, {}] } }))).to eq('carousel_media_required')
+
+      save_card_files
+      campaign = create_campaign(params('vitrine', { 'carousel' => { 'cards' => [{}, {}] } }))
+
+      expect(campaign.template_params.dig('processed_params', 'carousel', 'cards').pluck('header'))
+        .to eq([{ 'media_stored' => true, 'media_type' => 'image' }] * 2)
+    end
+
+    it 'carrossel: link digitado precisa ser http(s) e há um item por cartão do modelo' do
+      linked = { 'header' => { 'media_url' => 'https://loja.com/1.png' } }
+
+      expect(refusal_code(params('vitrine', { 'carousel' => { 'cards' => [linked] } }))).to eq('carousel_cards_mismatch')
+      expect(refusal_code(params('vitrine', { 'carousel' => { 'cards' => [linked, { 'header' => { 'media_url' => 'ftp://x/2.png' } }] } })))
+        .to eq('carousel_media_invalid')
+      expect(create_campaign(params('vitrine', { 'carousel' => { 'cards' => [linked, linked] } }))
+               .template_params.dig('processed_params', 'carousel', 'cards', 0, 'header'))
+        .to eq('media_url' => 'https://loja.com/1.png', 'media_type' => 'image')
+    end
+
+    it 'catálogo: marca o botão sozinho, sem nada a preencher na tela; o botão sem nada a enviar guarda a posição' do
+      campaign = create_campaign(params('loja', {}))
+
+      expect(campaign.template_params.dig('processed_params', 'buttons')).to eq([{ 'type' => 'catalog' }, { 'type' => 'static' }])
+    end
+
+    it 'carrossel: botão de site do cartão com final variável precisa do valor' do
+      card['components'].last['buttons'] = [{ 'type' => 'URL', 'text' => 'Ver', 'url' => 'https://loja.com/{{1}}' }]
+      channel.update_columns(message_templates: [carousel]) # rubocop:disable Rails/SkipsModelValidations
+      linked = { 'header' => { 'media_url' => 'https://loja.com/1.png' } }
+
+      expect(refusal_code(params('vitrine', { 'carousel' => { 'cards' => [linked, linked] } }))).to eq('carousel_button_required')
+      with_value = linked.merge('buttons' => [{ 'type' => 'url', 'parameter' => 'tenis' }])
+      expect(create_campaign(params('vitrine', { 'carousel' => { 'cards' => [with_value, with_value] } }))).to be_persisted
+    end
+
+    it 'chave que o modelo não tem não fica guardada (validade sem contagem, carrossel num modelo comum)' do
+      offer['components'][1]['limited_time_offer']['has_expiration'] = false
+      channel.update_columns(message_templates: [offer]) # rubocop:disable Rails/SkipsModelValidations
+
+      processed = create_campaign(offer_params.deep_merge('processed_params' => { 'carousel' => { 'cards' => [{}] } }))
+                  .template_params['processed_params']
+
+      expect(processed.keys).not_to include('limited_time_offer', 'carousel')
+    end
+
+    it 'pedido malformado vira recusa com código, não erro 500' do
+      expect(refusal_code(params('vitrine', { 'carousel' => 'cartões' }))).to eq('carousel_cards_mismatch')
+      header = { 'media_url' => 'https://loja.com/oferta.png', 'media_type' => 'image' }
+      expect(refusal_code(params('oferta', { 'header' => header, 'limited_time_offer' => 'amanhã', 'buttons' => 'CUPOM' })))
+        .to eq('coupon_code_invalid')
+    end
+  end
+
+  describe 'disparo' do
+    def dispatch(template_params)
+      campaign = create(:campaign, account: account, inbox: inbox, audience: [], message: 'Chegou a oferta do mês.',
+                                   template_params: template_params)
+      CampaignAudienceLink.create!(account: account, campaign: campaign, campaign_import: audience, variable_bindings: {}, variable_defaults: {})
+      Whatsapp::OneoffCampaignService.new(campaign: campaign).perform
+      campaign
+    end
+
+    it 'oferta: cada envio leva a validade e o cupom' do
+      sent = stub_graph_messages
+
+      dispatch(offer_params)
+
+      expect(sent.size).to eq(2)
+      expect(component(sent.first, 'limited_time_offer')['parameters'])
+        .to eq([{ 'type' => 'limited_time_offer', 'limited_time_offer' => { 'expiration_time_ms' => ahead } }])
+      expect(component(sent.first, 'button'))
+        .to include('sub_type' => 'copy_code', 'parameters' => [{ 'type' => 'coupon_code', 'coupon_code' => 'CUPOM10' }])
+    end
+
+    it 'oferta vencida enquanto esperava: ninguém recebe e a campanha para com o motivo' do
+      sent = stub_graph_messages
+
+      campaign = dispatch(offer_params(expiration: 1.hour.ago.to_i * 1000))
+
+      expect(sent).to be_empty
+      expect(CampaignPause.open_for(campaign)).to have_attributes(source: 'template', reason_code: 'template_offer_expired')
+    end
+
+    it 'carrossel: cada cartão leva o link do arquivo guardado no modelo' do
+      save_card_files
+      sent = stub_graph_messages
+
+      dispatch(params('vitrine', stored_cards))
+
+      cards = component(sent.first, 'carousel')['cards']
+      expect(cards.pluck('card_index')).to eq([0, 1])
+      expect(cards.map { |item| item.dig('components', 0, 'parameters', 0, 'image', 'link') })
+        .to match([include('cartao-1.png'), include('cartao-2.png')])
+    end
+
+    it 'carrossel sem os arquivos do modelo na hora do disparo: para com template_media_missing' do
+      sent = stub_graph_messages
+
+      campaign = dispatch(params('vitrine', stored_cards))
+
+      expect(sent).to be_empty
+      expect(CampaignPause.open_for(campaign).reason_code).to eq('template_media_missing')
+    end
+
+    it 'formulário e catálogo: o botão do Flow leva o flow_token da campanha e o do catálogo vai sem parâmetro' do
+      sent = stub_graph_messages
+
+      campaign = dispatch(params('loja', { 'buttons' => [{ 'type' => 'catalog' }] }))
+
+      buttons = sent.first.dig('template', 'components').select { |item| item['type'] == 'button' }
+      expect(sent.size).to eq(2)
+      expect(buttons).to eq([{ 'type' => 'button', 'sub_type' => 'catalog', 'index' => 0 },
+                             { 'type' => 'button', 'sub_type' => 'flow', 'index' => 1,
+                               'parameters' => [{ 'type' => 'action', 'action' => { 'flow_token' => "chat2you_campaign_#{campaign.id}" } }] }])
+    end
+
+    it 'campanha antiga com valores em lista (formato legado) segue enviando como antes, sem extras' do
+      form = approved('formulario', { 'type' => 'BODY', 'text' => 'Oi {{1}}' },
+                      { 'type' => 'BUTTONS', 'buttons' => [{ 'type' => 'FLOW', 'text' => 'Pedir' }] })
+      channel.update_columns(message_templates: [form]) # rubocop:disable Rails/SkipsModelValidations
+      sent = stub_graph_messages
+
+      campaign = dispatch(params('formulario', ['Ana']))
+
+      expect(CampaignPause.open_for(campaign)).to be_nil
+      expect(sent.size).to eq(2)
+      expect(sent.first.dig('template', 'components').pluck('type')).to eq(['body'])
+    end
+
+    # #1405 (Multifunil): o robô toma a conversa em toda resposta pública, menos na mensagem de campanha. A mensagem dos
+    # formatos novos gravada na conversa precisa continuar sendo de campanha.
+    it 'a mensagem gravada na conversa é de campanha (campaign_message?)' do
+      sent = stub_graph_messages
+      ana = audience.campaign_import_rows.order(:row_number).first.contact
+      contact_inbox = ContactInbox.create!(contact: ana, inbox: inbox, source_id: '5511987654321')
+      conversation = create(:conversation, account: account, inbox: inbox, contact: ana, contact_inbox: contact_inbox)
+
+      campaign = dispatch(offer_params)
+
+      expect(sent.size).to eq(2)
+      message = conversation.messages.outgoing.sole
+      expect(message.additional_attributes).to include('campaign_id' => campaign.id)
+      expect(message.send(:campaign_message?)).to be(true) # privado no Message; é o que o #1405 consulta
+    end
+  end
+end

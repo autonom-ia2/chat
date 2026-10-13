@@ -6640,6 +6640,13 @@
   },
   "PATCH inboxes/:inbox_id/whatsapp_templates/:id": {
     "campos": {
+      "card_media": {
+        "campos": {
+          "blob_signed_id": {},
+          "card_index": {}
+        },
+        "tipo": "objeto"
+      },
       "category": {},
       "components": {
         "tipo": "lista",
@@ -6672,7 +6679,7 @@
     "origem": [
       "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:33",
       "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:75",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:78",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:79",
       "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:34",
       "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:59"
     ],
@@ -16935,6 +16942,13 @@
   },
   "POST inboxes/:inbox_id/whatsapp_templates": {
     "campos": {
+      "card_media": {
+        "campos": {
+          "blob_signed_id": {},
+          "card_index": {}
+        },
+        "tipo": "objeto"
+      },
       "category": {},
       "components": {
         "tipo": "lista",
@@ -16967,7 +16981,7 @@
     "origem": [
       "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:29",
       "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:75",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:78",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:79",
       "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:59"
     ],
     "sem_corpo": false
@@ -24109,6 +24123,13 @@
   },
   "PUT inboxes/:inbox_id/whatsapp_templates/:id": {
     "campos": {
+      "card_media": {
+        "campos": {
+          "blob_signed_id": {},
+          "card_index": {}
+        },
+        "tipo": "objeto"
+      },
       "category": {},
       "components": {
         "tipo": "lista",
@@ -24141,7 +24162,7 @@
     "origem": [
       "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:33",
       "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:75",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:78",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:79",
       "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:34",
       "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:59"
     ],
