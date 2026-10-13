@@ -267,6 +267,12 @@
         "NEUTRAL": "Neutral",
         "PLAYFUL": "Desenfadado"
       },
+      "HANDOFF_STRATEGY": "Transferir a una persona",
+      "HANDOFF_OPTIONS": {
+        "LOW_CONFIDENCE": "Cuando haya dudas",
+        "ALWAYS_ASK": "Ofrecer siempre una persona",
+        "NEVER": "Nunca"
+      },
       "CONFIDENCE_THRESHOLD": "Umbral de confianza",
       "SAVE": "Guardar cambios",
       "SAVE_SUCCESS": "Cambios guardados.",

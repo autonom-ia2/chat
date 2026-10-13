@@ -267,6 +267,12 @@
         "NEUTRAL": "Neutro",
         "PLAYFUL": "Descontraído"
       },
+      "HANDOFF_STRATEGY": "Transferir para um humano",
+      "HANDOFF_OPTIONS": {
+        "LOW_CONFIDENCE": "Quando estiver em dúvida",
+        "ALWAYS_ASK": "Oferecer sempre um humano",
+        "NEVER": "Nunca"
+      },
       "CONFIDENCE_THRESHOLD": "Limite de confiança",
       "SAVE": "Guardar alterações",
       "SAVE_SUCCESS": "Alterações guardadas.",
