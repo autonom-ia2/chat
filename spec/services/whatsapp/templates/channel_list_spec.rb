@@ -105,6 +105,28 @@ RSpec.describe Whatsapp::Templates::ChannelList do
     expect(channel.reload.message_templates).to eq([promo])
   end
 
+  # #1337: o aviso da Meta só muda modelo que já está na lista; o bloco decide a entrada nova a partir da atual.
+  describe '.change!' do
+    it 'acha pelo id da Meta, grava o que o bloco devolve e responde :changed' do
+      result = described_class.change!(channel, { 'id' => '2' }) { |entry| entry.merge('status' => 'PAUSED') }
+
+      expect(result).to eq(:changed)
+      expect(channel.reload.message_templates).to eq([aviso, promo.merge('status' => 'PAUSED')])
+    end
+
+    it 'modelo fora da lista: não grava nada e responde :missing' do
+      expect { described_class.change!(channel, { 'id' => '404' }) { |entry| entry.merge('status' => 'PAUSED') } }
+        .not_to(change { channel.reload.message_templates })
+      expect(described_class.change!(channel, { 'id' => '404' }) { |entry| entry }).to eq(:missing)
+    end
+
+    it 'bloco que devolve nil ou a mesma entrada: não grava e responde :unchanged' do
+      expect(described_class.change!(channel, { 'id' => '1' }) { |_entry| nil }).to eq(:unchanged)
+      expect(described_class.change!(channel, { 'id' => '1' }) { |entry| entry }).to eq(:unchanged)
+      expect(channel.reload.message_templates).to eq([aviso, promo])
+    end
+  end
+
   describe '.replace!' do
     let(:base) { [aviso, promo] }
     let(:from_meta) { [aviso.merge('status' => 'APPROVED')] }
