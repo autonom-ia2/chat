@@ -5,7 +5,7 @@ import AgenteStatus from '../AgenteStatus.vue';
 import AgenteInterruptor from '../AgenteInterruptor.vue';
 import AgenteBotao from '../AgenteBotao.vue';
 import MaisOpcoes from './MaisOpcoes.vue';
-import { ESTADO } from '../../utils/estadoDoAgente';
+import { ESTADO, TRABALHANDO } from '../../utils/estadoDoAgente';
 
 // #1181 PR3 (protótipo T07, heroT07) — o único bloco navy da página: volta para a lista, foto, nome e
 // onde responde. Quem gerencia tem o interruptor Atendendo/Parado (o estado fica só nele), a ação
@@ -28,6 +28,18 @@ const emit = defineEmits(['voltarLista', 'alternar', 'acaoPrincipal', 'mais']);
 
 const { t } = useI18n();
 const NS = 'AGENTS.JORNADA.PAGINA';
+
+// #1366 (protótipo): o interruptor fica ligado em qualquer estado de trabalho e diz qual é
+// (Na equipe, Ajudando); desligado sem onde trabalhar, diz isso no lugar de "Parado".
+const TEXTO_DO_INTERRUPTOR = {
+  [ESTADO.NA_EQUIPE]: 'NA_EQUIPE',
+  [ESTADO.AJUDANDO]: 'AJUDANDO',
+  [ESTADO.SEM_ONDE]: 'SEM_ONDE',
+};
+const textoDoInterruptor = estado =>
+  TEXTO_DO_INTERRUPTOR[estado]
+    ? t(`AGENTS.JORNADA.STATUS.${TEXTO_DO_INTERRUPTOR[estado]}`)
+    : '';
 
 const aoVoltar = evento => {
   if (evento.metaKey || evento.ctrlKey || evento.shiftKey || evento.button) {
@@ -105,7 +117,8 @@ const aoVoltar = evento => {
         >
           <AgenteInterruptor
             data-interruptor
-            :ligado="estado === ESTADO.ATENDENDO"
+            :ligado="TRABALHANDO.includes(estado)"
+            :texto="textoDoInterruptor(estado)"
             :rotulo="t(`${NS}.INTERRUPTOR`, { nome })"
             :desabilitado="alternando"
             @alternar="emit('alternar', $event)"

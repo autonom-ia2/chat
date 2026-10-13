@@ -1,6 +1,6 @@
 // #1181 PR3 — regras da página do agente (protótipo T07–T17) que não dependem de tela.
 
-import { ESTADO } from './estadoDoAgente';
+import { ESTADO, estadoDoAgente } from './estadoDoAgente';
 
 export const GAVETA = {
   TESTAR: 'testar',
@@ -42,9 +42,14 @@ export const ehInterno = agente => agente?.actuation === 'internal';
 
 // Estado de operação na página: o agente de cotação também atende ou está parado (o cartão da lista
 // mostra "Cotação", mas a página precisa do interruptor certo). Mesma regra de Agent#operating?.
-export const estadoDeOperacao = agente => {
+// #1366 (protótipo): com o papel (segundo argumento), a mesma regra de onde trabalha do cartão.
+export const estadoDeOperacao = (agente, papel) => {
   if (!agente?.status || agente.status === 'draft')
     return ESTADO.FALTA_TERMINAR;
+  if (papel !== undefined) {
+    const estado = estadoDoAgente({ ...agente, agent_type: null }, papel);
+    return estado;
+  }
   if (agente.status === 'active' && agente.enabled === true) {
     return ESTADO.ATENDENDO;
   }

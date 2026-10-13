@@ -609,7 +609,10 @@
         "ATENDENDO": "Answering",
         "PARADO": "Stopped",
         "FALTA_TERMINAR": "Not finished",
-        "COTACAO": "Quotes"
+        "COTACAO": "Quotes",
+        "NA_EQUIPE": "On the team",
+        "AJUDANDO": "Helping",
+        "SEM_ONDE": "Nowhere to work"
       },
       "MODELOS": {
         "ROTULO": "Ready-made templates",
@@ -654,7 +657,9 @@
         "CARREGANDO": "Loading your agents",
         "SEUS_AGENTES": "Your agents",
         "CONTAGEM_ATENDENDO": "None answering | 1 answering | {n} answering",
-        "CONTAGEM_PARADOS": "None stopped | 1 stopped | {n} stopped"
+        "CONTAGEM_PARADOS": "None stopped | 1 stopped | {n} stopped",
+        "CONTAGEM_TRABALHANDO": "None working | 1 working | {n} working",
+        "CONTAGEM_SEM_ONDE": "None without a place | 1 without a place to work | {n} without a place to work"
       },
       "CARTAO": {
         "ONDE_NENHUM": "Not on any channel yet",
@@ -670,7 +675,12 @@
         "CONTINUAR": "Continue",
         "CONTINUAR_ARIA": "Continue {nome}",
         "MAIS_OPCOES": "More options for {nome}",
-        "EXCLUIR_RASCUNHO": "Delete draft"
+        "EXCLUIR_RASCUNHO": "Delete draft",
+        "CUIDA_DE": "Takes care of: {areas}",
+        "AJUDANDO": "Answers when {agente} asks.",
+        "SEM_ONDE": "Has nowhere to work yet. Open to choose.",
+        "PORTA": "Answers first every conversation in this inbox.",
+        "SEM_ASSUNTO": "Takes care of no subject in this inbox."
       },
       "EXCLUIR": {
         "TITULO": "Delete this draft?",
@@ -1282,6 +1292,21 @@
             "B": "More formal",
             "C": "More relaxed",
             "D": "Shorter answers"
+          },
+          "CONFERIDO": {
+            "TITULO_TUDO": "Done. I changed {n} thing in {nome}. | Done. I changed {n} things in {nome}.",
+            "TITULO_PARTE": "I applied {ok} of {total} requests in {nome}.",
+            "APLICADO": "Applied:",
+            "DUVIDA": "I could not apply: “{pedido}”.",
+            "PERGUNTA": "Do you mean…?",
+            "PROVA": "{ok} of {total} check questions ok",
+            "VER_PROVA": "See the questions",
+            "ESCONDER_PROVA": "Hide the questions",
+            "CLIENTE": "Customer:",
+            "DESFAZER": "Undo",
+            "DESFAZENDO": "Undoing…",
+            "DESFEITO": "Undone. {nome} is back to how it was.",
+            "ERRO": "I could not finish. Nothing changed in {nome}."
           }
         },
         "FOTO": {
@@ -1410,7 +1435,12 @@
             "AGENTE": "Sure! For {pagina}, I have Tuesday at 10am or Wednesday at 3pm. Which one works best for you?",
             "NOTA": "This is only an example. {nome} writes in their own words and shows the times that are really free during the chat."
           }
-        }
+        },
+        "CUIDA_DE": "Takes care of: {areas}",
+        "AJUDA": "Answers when {agente} asks",
+        "SEM_ONDE": "Has nowhere to work yet",
+        "SEM_ONDE_FAIXA": "{nome} has nowhere to work yet. Choose a channel or a role to start.",
+        "ESCOLHER_ONDE": "Choose where it works"
       },
       "CRIAR": {
         "TITULO": "Create agent",
@@ -1555,6 +1585,37 @@
           "HORA": "{h}:00",
           "HORA_MIN": "{h}:{m}"
         }
+      },
+      "ONDE_TRABALHAR": {
+        "TITULO": "Where will {nome} work?",
+        "TEXTO": "{nome} only starts after you confirm.",
+        "ROTULO": "Where it works",
+        "CANAL": {
+          "TITULO": "Answer on a channel",
+          "TEXTO": "Answers whoever writes on WhatsApp, Instagram or the website."
+        },
+        "EQUIPE": {
+          "TITULO": "Take care of team pipelines",
+          "TEXTO": "Takes care of pipeline areas, with no channel of its own."
+        },
+        "AJUDA": {
+          "TITULO": "Help another agent",
+          "TEXTO": "Answers when another agent asks."
+        },
+        "CONTINUAR": "Continue",
+        "VOLTAR": "Back",
+        "EQUIPE_PASSO": {
+          "TITULO": "Who takes care of what lives in the CRM",
+          "TEXTO": "In Inboxes in the CRM › Who takes care of what?, choose the inbox and the pipeline {nome} will take care of.",
+          "ABRIR": "Open Inboxes in the CRM"
+        },
+        "AJUDA_PASSO": {
+          "ROTULO": "Who will {nome} help?",
+          "CONFIRMAR": "Start helping",
+          "NENHUM": "There is no other agent to help yet.",
+          "FEITO": "Done. {nome} now helps {agente}."
+        },
+        "ERRO": "Could not save. Nothing changed in {nome}."
       }
     }
   }

@@ -35,6 +35,8 @@
 # Module keys: '<module>_manage' implies '<module>_view' (see Enterprise::AccountUser#permission_granted?).
 # - 'contact_view' / 'knowledge_base_view': read-only access to contacts / help center.
 # - 'autonomia_view': view and test Autonom.ia agents. 'autonomia_manage': create, train and publish them.
+# - 'autonomia_tools_manage': create, connect and test agent tools (#1430). Separate from autonomia_manage: whoever holds it
+#   decides where conversation data goes. Never implied by another key.
 # - 'campaign_view': view campaigns and their reports. 'campaign_manage': create, send and import lists.
 # - 'inbox_view': view every inbox configuration. 'inbox_manage': create, connect and configure inboxes.
 # - 'canned_response_manage': create, edit and delete canned responses.
@@ -75,6 +77,7 @@ class CustomRole < ApplicationRecord
     knowledge_base_view
     autonomia_view
     autonomia_manage
+    autonomia_tools_manage
     campaign_view
     campaign_manage
     inbox_view

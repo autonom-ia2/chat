@@ -54,6 +54,7 @@
       "KNOWLEDGE_BASE_VIEW": "Ver base de conhecimento",
       "AUTONOMIA_VIEW": "Ver e testar Agentes Autonom.ia",
       "AUTONOMIA_MANAGE": "Editar Agentes Autonom.ia",
+      "AUTONOMIA_TOOLS_MANAGE": "Gerenciar ferramentas dos agentes",
       "CAMPAIGN_VIEW": "Ver campanhas",
       "CAMPAIGN_MANAGE": "Editar campanhas",
       "INBOX_VIEW": "Ver caixas de entrada",
@@ -133,6 +134,14 @@
           "HINT": "Seus agentes de IA",
           "LEVEL_VIEW": "Abre os agentes e conversa no playground.",
           "LEVEL_MANAGE": "Cria, treina e publica agentes."
+        },
+        "AUTONOMIA_TOOLS": {
+          "NAME": "Ferramentas dos agentes",
+          "HINT": "Quem tem esta permissão escolhe para onde vão dados das conversas.",
+          "LEVEL_MANAGE": "Cria, liga e testa ferramentas dos agentes. Escolhe para onde vão dados das conversas.",
+          "LEVEL_LABEL_MANAGE": "Gerenciar",
+          "NOTE": "Só um administrador libera. Não vem junto com Editar em Agentes.",
+          "CONFIRM": "Quem tem esta permissão escolhe para onde vão dados das conversas: uma ferramenta manda dados para outro sistema. Libere só para quem precisa."
         },
         "PROSPECTING": {
           "NAME": "Prospecção",

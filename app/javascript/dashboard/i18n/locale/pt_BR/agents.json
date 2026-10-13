@@ -609,7 +609,10 @@
         "ATENDENDO": "Atendendo",
         "PARADO": "Parado",
         "FALTA_TERMINAR": "Falta terminar",
-        "COTACAO": "Cotação"
+        "COTACAO": "Cotação",
+        "NA_EQUIPE": "Na equipe",
+        "AJUDANDO": "Ajudando",
+        "SEM_ONDE": "Sem onde trabalhar"
       },
       "MODELOS": {
         "ROTULO": "Modelos prontos",
@@ -654,7 +657,9 @@
         "CARREGANDO": "Carregando seus agentes",
         "SEUS_AGENTES": "Seus agentes",
         "CONTAGEM_ATENDENDO": "Nenhum atendendo | 1 atendendo | {n} atendendo",
-        "CONTAGEM_PARADOS": "Nenhum parado | 1 parado | {n} parados"
+        "CONTAGEM_PARADOS": "Nenhum parado | 1 parado | {n} parados",
+        "CONTAGEM_TRABALHANDO": "Nenhum trabalhando | 1 trabalhando | {n} trabalhando",
+        "CONTAGEM_SEM_ONDE": "Nenhum sem onde trabalhar | 1 sem onde trabalhar | {n} sem onde trabalhar"
       },
       "CARTAO": {
         "ONDE_NENHUM": "Ainda não está em nenhum canal",
@@ -670,7 +675,12 @@
         "CONTINUAR": "Continuar",
         "CONTINUAR_ARIA": "Continuar {nome}",
         "MAIS_OPCOES": "Mais opções de {nome}",
-        "EXCLUIR_RASCUNHO": "Excluir rascunho"
+        "EXCLUIR_RASCUNHO": "Excluir rascunho",
+        "CUIDA_DE": "Cuida de: {areas}",
+        "AJUDANDO": "Responde quando {agente} pergunta.",
+        "SEM_ONDE": "Ainda não tem onde trabalhar. Abra para escolher.",
+        "PORTA": "Atende primeiro todas as conversas desta caixa.",
+        "SEM_ASSUNTO": "Não cuida de nenhum assunto nesta caixa."
       },
       "EXCLUIR": {
         "TITULO": "Excluir este rascunho?",
@@ -1282,6 +1292,21 @@
             "B": "Mais formal",
             "C": "Mais descontraído",
             "D": "Respostas mais curtas"
+          },
+          "CONFERIDO": {
+            "TITULO_TUDO": "Pronto. Mudei {n} coisa em {nome}. | Pronto. Mudei {n} coisas em {nome}.",
+            "TITULO_PARTE": "Mudei {ok} de {total} pedidos em {nome}.",
+            "APLICADO": "Aplicado:",
+            "DUVIDA": "Não consegui aplicar: “{pedido}”.",
+            "PERGUNTA": "Você quer dizer…?",
+            "PROVA": "{ok} de {total} perguntas de prova ok",
+            "VER_PROVA": "Ver as perguntas",
+            "ESCONDER_PROVA": "Esconder as perguntas",
+            "CLIENTE": "Cliente:",
+            "DESFAZER": "Desfazer",
+            "DESFAZENDO": "Desfazendo…",
+            "DESFEITO": "Desfeito. {nome} voltou a ser como antes.",
+            "ERRO": "Não consegui terminar. Nada mudou em {nome}."
           }
         },
         "FOTO": {
@@ -1410,7 +1435,12 @@
             "AGENTE": "Claro! Para {pagina}, tenho terça às 10h ou quarta às 15h. Qual fica melhor para você?",
             "NOTA": "É só um exemplo. {nome} escreve com as próprias palavras e mostra os horários livres de verdade na hora da conversa."
           }
-        }
+        },
+        "CUIDA_DE": "Cuida de: {areas}",
+        "AJUDA": "Responde quando {agente} pergunta",
+        "SEM_ONDE": "Ainda não tem onde trabalhar",
+        "SEM_ONDE_FAIXA": "{nome} ainda não tem onde trabalhar. Escolha um canal ou um papel para começar.",
+        "ESCOLHER_ONDE": "Escolher onde trabalha"
       },
       "CRIAR": {
         "TITULO": "Criar agente",
@@ -1555,6 +1585,37 @@
           "HORA": "{h}h",
           "HORA_MIN": "{h}h{m}"
         }
+      },
+      "ONDE_TRABALHAR": {
+        "TITULO": "Onde {nome} vai trabalhar?",
+        "TEXTO": "{nome} só começa depois que você confirmar.",
+        "ROTULO": "Onde trabalha",
+        "CANAL": {
+          "TITULO": "Atender num canal",
+          "TEXTO": "Responde quem escreve no WhatsApp, no Instagram ou no site."
+        },
+        "EQUIPE": {
+          "TITULO": "Cuidar de funis da equipe",
+          "TEXTO": "Cuida de áreas do funil, sem canal próprio."
+        },
+        "AJUDA": {
+          "TITULO": "Ajudar outro agente",
+          "TEXTO": "Responde quando outro agente pergunta."
+        },
+        "CONTINUAR": "Continuar",
+        "VOLTAR": "Voltar",
+        "EQUIPE_PASSO": {
+          "TITULO": "Quem cuida do quê fica no CRM",
+          "TEXTO": "Em Caixas no CRM › Quem cuida do quê?, escolha a caixa e o funil de que {nome} vai cuidar.",
+          "ABRIR": "Abrir Caixas no CRM"
+        },
+        "AJUDA_PASSO": {
+          "ROTULO": "Quem {nome} vai ajudar?",
+          "CONFIRMAR": "Começar a ajudar",
+          "NENHUM": "Ainda não há outro agente para ajudar.",
+          "FEITO": "Pronto. {nome} já ajuda {agente}."
+        },
+        "ERRO": "Não deu para salvar. Nada mudou em {nome}."
       }
     }
   }

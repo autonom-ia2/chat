@@ -7,6 +7,7 @@ import { useAlert } from 'dashboard/composables';
 import { useCanManage } from 'dashboard/composables/useCanManage';
 import FaqSuggestionsAPI from 'dashboard/api/autonomia/faqSuggestions';
 import AgenteErro from '../components/AgenteErro.vue';
+import AgenteBotao from '../components/AgenteBotao.vue';
 import PaginaHeroi from '../components/pagina/PaginaHeroi.vue';
 import PaginaBlocos from '../components/pagina/PaginaBlocos.vue';
 import AgenteSemana from '../components/pagina/AgenteSemana.vue';
@@ -21,6 +22,9 @@ import GavetaInstrucoes from '../components/pagina/GavetaInstrucoes.vue';
 import GavetaAgenda from '../components/pagina/GavetaAgenda.vue';
 import GavetaFerramentas from '../components/pagina/GavetaFerramentas.vue';
 import MudarConversando from '../components/pagina/MudarConversando.vue';
+import GavetaOndeTrabalhar from '../components/pagina/GavetaOndeTrabalhar.vue';
+import { usePrototipoFase2 } from '../prototipo/usePrototipoFase2';
+import { usePapeisDosAgentes } from '../prototipo/usePapeisDosAgentes';
 import {
   ESTADO_PAGINA,
   useAgenteDaPagina,
@@ -28,7 +32,7 @@ import {
 import { useCanaisDoAgente } from '../composables/useCanaisDoAgente';
 import { useNumerosDaSemana } from '../composables/useNumerosDaSemana';
 import { useAgendaNovaNaConta } from '../composables/useAgendaNovaNaConta';
-import { ESTADO } from '../utils/estadoDoAgente';
+import { ESTADO, TRABALHANDO, nomesDasAreas } from '../utils/estadoDoAgente';
 import { horariosDasCaixas } from '../utils/horarios';
 import {
   GAVETA,
@@ -71,6 +75,12 @@ const fontes = useMapGetter('autonomiaSources/getKnowledgeSources');
 const flagsFontes = useMapGetter('autonomiaSources/getUIFlags');
 const agendaNova = useAgendaNovaNaConta();
 const usuario = useMapGetter('getCurrentUser');
+const todosOsAgentes = useMapGetter('autonomiaAgents/getRecords');
+// #1366 (protótipo da Fase 2): onde o agente trabalha sem canal (equipe ou ajuda) e a gaveta
+// "Onde vai trabalhar?" quando ele não tem onde. Sem o protótipo, tudo segue como antes.
+const prototipo = usePrototipoFase2();
+const papeis = usePapeisDosAgentes();
+const ONDE_TRABALHAR = 'onde_trabalhar';
 
 const aberta = ref(null);
 const vista = ref('pagina');
@@ -94,8 +104,23 @@ const pronto = computed(
 const nome = computed(
   () => agente.value?.name || t('AGENTS.JORNADA.COMUM.NOVO_AGENTE')
 );
-const estadoDaPagina = computed(() => estadoDeOperacao(agente.value));
+const papel = computed(() =>
+  prototipo && agente.value?.id ? papeis.papelDe(agente.value) : undefined
+);
+const estadoDaPagina = computed(() =>
+  estadoDeOperacao(agente.value, papel.value)
+);
 const atendendo = computed(() => estadoDaPagina.value === ESTADO.ATENDENDO);
+const trabalhando = computed(() => TRABALHANDO.includes(estadoDaPagina.value));
+const semOnde = computed(() => estadoDaPagina.value === ESTADO.SEM_ONDE);
+const outrosAgentes = computed(() =>
+  (todosOsAgentes.value || []).filter(
+    item =>
+      item.id !== agente.value?.id &&
+      item.status !== 'draft' &&
+      item.agent_type !== 'insurance_quote'
+  )
+);
 const cotacao = computed(() => ehCotacao(agente.value));
 const manual = computed(() => ehManual(agente.value));
 const interno = computed(() => ehInterno(agente.value));
@@ -137,7 +162,23 @@ const foto = computed(
   () => canalDaFoto.value?.foto || agente.value?.avatar_url || ''
 );
 
+const ondeSemCanal = () => {
+  if (semOnde.value) return t(`${NS}.SEM_ONDE`);
+  if (papel.value?.tipo === 'equipe' && !papel.value.areas?.length) {
+    return `${papel.value.caixa} · ${t('AGENTS.JORNADA.CARTAO.SEM_ASSUNTO')}`;
+  }
+  if (papel.value?.tipo === 'equipe') {
+    return t(`${NS}.CUIDA_DE`, { areas: nomesDasAreas(papel.value) });
+  }
+  if (papel.value?.tipo === 'ajuda') {
+    return t(`${NS}.AJUDA`, { agente: papel.value.agente });
+  }
+  return null;
+};
+
 const ondeNoHeroi = computed(() => {
+  const semCanal = !temCanal.value && papel.value !== undefined;
+  if (semCanal && ondeSemCanal()) return ondeSemCanal();
   if (interno.value) return '';
   if (!temCanal.value) return t(`${NS}.NENHUM_CANAL`);
   const ligado = atendendo.value;
@@ -315,6 +356,7 @@ const carregarTudo = async () => {
   canais.carregar();
   await carregar();
   if (estado.value !== ESTADO_PAGINA.PRONTO) return;
+  if (prototipo) papeis.carregar([agente.value]);
   lerFontes();
   lerPerguntas();
 };
@@ -382,9 +424,40 @@ const voltarInterno = async () => {
   }
 };
 
+const abrirOndeTrabalhar = () => {
+  if ((todosOsAgentes.value || []).length < 2) {
+    store.dispatch('autonomiaAgents/get').catch(() => {});
+  }
+  aberta.value = ONDE_TRABALHAR;
+};
+
+// Grava o papel (adaptador do protótipo) e liga o agente, como o "Começar a atender" faz com o canal.
+const confirmarPapel = async novo => {
+  await papeis.definir(agente.value, novo);
+  await store.dispatch('autonomiaAgents/update', {
+    id: agente.value.id,
+    enabled: true,
+    status: 'active',
+  });
+};
+
+const papelPronto = novo => {
+  aberta.value = null;
+  useAlert(
+    t('AGENTS.JORNADA.ONDE_TRABALHAR.AJUDA_PASSO.FEITO', {
+      nome: nome.value,
+      agente: novo.agente,
+    })
+  );
+};
+
 const alternar = ligar => {
   if (!ligar) {
     dialogoParar.value?.abrir();
+    return;
+  }
+  if (semOnde.value) {
+    abrirOndeTrabalhar();
     return;
   }
   if (interno.value) {
@@ -554,8 +627,29 @@ const tirarPergunta = id => {
           @acao-principal="acaoDoHeroi"
           @mais="escolherMais"
         />
+        <div
+          v-if="semOnde"
+          data-faixa-sem-onde
+          class="flex flex-col gap-3 p-4 text-sm rounded-2xl bg-n-amber-2 ring-1 ring-inset ring-n-amber-6 text-n-slate-12 md:flex-row md:items-center"
+        >
+          <p class="flex items-start gap-3 m-0 grow">
+            <span
+              class="i-lucide-map-pin-off size-5 shrink-0 text-n-amber-11"
+              aria-hidden="true"
+            />
+            {{ t(`${NS}.SEM_ONDE_FAIXA`, { nome }) }}
+          </p>
+          <AgenteBotao
+            v-if="podeGerenciar"
+            data-escolher-onde
+            variante="contorno"
+            @click="abrirOndeTrabalhar"
+          >
+            {{ t(`${NS}.ESCOLHER_ONDE`) }}
+          </AgenteBotao>
+        </div>
         <p
-          v-if="!atendendo"
+          v-else-if="!trabalhando"
           data-faixa-parado
           class="flex items-start gap-3 p-4 m-0 text-sm rounded-2xl bg-n-amber-2 ring-1 ring-inset ring-n-amber-6 text-n-slate-12"
         >
@@ -642,6 +736,15 @@ const tirarPergunta = id => {
         @pronto="canais.carregar()"
         @reler="canais.carregar()"
         @voltar-a-atender="aberta = GAVETA.VOLTAR"
+      />
+      <GavetaOndeTrabalhar
+        v-else-if="aberta === ONDE_TRABALHAR"
+        :nome="nome"
+        :outros="outrosAgentes"
+        :confirmar="confirmarPapel"
+        @fechar="fechar"
+        @canal="aberta = GAVETA.VOLTAR"
+        @pronto="papelPronto"
       />
       <GavetaConversas
         v-else-if="aberta === GAVETA.CONVERSAS"

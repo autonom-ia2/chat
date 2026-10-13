@@ -5,7 +5,12 @@ import AgenteAvatar from './AgenteAvatar.vue';
 import AgenteStatus from './AgenteStatus.vue';
 import AgenteBotao from './AgenteBotao.vue';
 import AgenteMenuMais from './AgenteMenuMais.vue';
-import { ESTADO, estadoDoAgente } from '../utils/estadoDoAgente';
+import {
+  ESTADO,
+  TRABALHANDO,
+  estadoDoAgente,
+  nomesDasAreas,
+} from '../utils/estadoDoAgente';
 
 // #1181 (protótipo T02) — cartão do agente na lista.
 // - Atendendo/Parado: o cartão inteiro abre o agente. Atendendo mostra onde responde (nome do canal
@@ -24,12 +29,14 @@ const props = defineProps({
   continuando: { type: Boolean, default: false },
   // Endereço da página do agente (ou do módulo de cotação): abrir em outra aba continua funcionando.
   href: { type: String, required: true },
+  // #1366 (protótipo da Fase 2): onde trabalha sem canal (equipe ou ajuda). undefined = regra antiga.
+  papel: { type: Object, default: undefined },
 });
 
 const emit = defineEmits(['abrir', 'continuar', 'excluir', 'abrirCotacao']);
 
 const { t } = useI18n();
-const estado = computed(() => estadoDoAgente(props.agente));
+const estado = computed(() => estadoDoAgente(props.agente, props.papel));
 const nome = computed(
   () => props.agente.name || t('AGENTS.JORNADA.COMUM.NOVO_AGENTE')
 );
@@ -41,6 +48,29 @@ const quantosCanais = computed(() => props.agente.channels_count || 0);
 const rascunho = computed(() => estado.value === ESTADO.FALTA_TERMINAR);
 const cotacao = computed(() => estado.value === ESTADO.COTACAO);
 const atendendo = computed(() => estado.value === ESTADO.ATENDENDO);
+const trabalhando = computed(() => TRABALHANDO.includes(estado.value));
+
+// #1366 (protótipo) — mesmo texto da tela do CRM "Quem cuida do quê?": a caixa e, embaixo, o papel
+// nela (porta: "Atende primeiro todas as conversas desta caixa"; equipe sem funil: "Não cuida de
+// nenhum assunto nesta caixa"). null quando não se aplica (sem protótipo, ou mais de uma caixa).
+const naCaixa = computed(() => {
+  if (props.papel === undefined) return null;
+  if (atendendo.value && quantosCanais.value === 1 && props.canais?.[0]) {
+    return {
+      caixa: props.canais[0].name,
+      texto: t('AGENTS.JORNADA.CARTAO.PORTA'),
+    };
+  }
+  const semAssunto =
+    estado.value === ESTADO.NA_EQUIPE && !props.papel?.areas?.length;
+  if (semAssunto) {
+    return {
+      caixa: props.papel.caixa,
+      texto: t('AGENTS.JORNADA.CARTAO.SEM_ASSUNTO'),
+    };
+  }
+  return null;
+});
 
 const onde = computed(() => {
   const total = quantosCanais.value;
@@ -55,6 +85,20 @@ const onde = computed(() => {
 const linha = computed(() => {
   if (cotacao.value) return t('AGENTS.JORNADA.CARTAO.COTACAO');
   if (atendendo.value) return null;
+  if (estado.value === ESTADO.SEM_ONDE) {
+    return t('AGENTS.JORNADA.CARTAO.SEM_ONDE');
+  }
+  if (naCaixa.value) return null;
+  if (estado.value === ESTADO.NA_EQUIPE) {
+    return t('AGENTS.JORNADA.CARTAO.CUIDA_DE', {
+      areas: nomesDasAreas(props.papel),
+    });
+  }
+  if (estado.value === ESTADO.AJUDANDO) {
+    return t('AGENTS.JORNADA.CARTAO.AJUDANDO', {
+      agente: props.papel.agente,
+    });
+  }
   // Agente interno nunca entra em canal (backend: agent_internal_not_connectable).
   return quantosCanais.value || interno.value
     ? t('AGENTS.JORNADA.CARTAO.PARADO')
@@ -134,7 +178,7 @@ const itensDoMenu = computed(() => [
         <AgenteAvatar
           :nome="nome"
           :src="fotoDoCartao"
-          :tom="atendendo ? 'atendendo' : 'neutro'"
+          :tom="trabalhando ? 'atendendo' : 'neutro'"
         />
         <span class="flex flex-col gap-1 grow min-w-0">
           <h2 class="m-0 text-base font-semibold truncate text-n-slate-12">
@@ -156,8 +200,14 @@ const itensDoMenu = computed(() => [
         />
       </span>
       <span v-if="linha" class="text-sm text-n-slate-12">{{ linha }}</span>
+      <span v-if="naCaixa" data-na-caixa class="flex flex-col text-sm">
+        <b class="font-semibold text-n-slate-12">{{ naCaixa.caixa }}</b>
+        <span class="text-n-slate-11">{{ naCaixa.texto }}</span>
+      </span>
       <template v-if="atendendo && !interno">
-        <span data-onde class="text-sm text-n-slate-12">{{ onde }}</span>
+        <span v-if="!naCaixa" data-onde class="text-sm text-n-slate-12">{{
+          onde
+        }}</span>
         <span
           v-if="numeros && semConversas"
           data-semana

@@ -158,10 +158,19 @@ const matches = module => {
   return texts.join(' ').toLowerCase().includes(query.value);
 };
 
+// #1424 — módulo do protótipo da Fase 2 (Ferramentas dos agentes) só aparece com ele ligado na conta.
+const isPrototypeOn = computed(
+  () =>
+    getAccount.value(currentAccountId.value)?.autonomia_fase2_prototipo === true
+);
+const isListed = module => !module.prototype || isPrototypeOn.value;
+
 const visibleGroups = computed(() =>
   MODULE_GROUPS.map(group => ({
     group,
-    modules: group.modules.filter(matches),
+    modules: group.modules.filter(
+      module => isListed(module) && matches(module)
+    ),
   })).filter(item => item.modules.length)
 );
 
@@ -182,7 +191,7 @@ const toggleRow = key => {
   openRows.value = toggleItem(openRows.value, key);
 };
 
-const selectLevel = (module, level) => {
+const applyLevel = (module, level) => {
   const wasOff = !hasAccess(module, permissions.value);
   permissions.value = setLevel(module, level, permissions.value);
   const opensExtras =
@@ -190,6 +199,25 @@ const selectLevel = (module, level) => {
   if (opensExtras?.length && !openRows.value.includes(module.key)) {
     openRows.value = [...openRows.value, module.key];
   }
+};
+
+// Módulo sensível (Ferramentas dos agentes, #1430): liberar pede confirmação, como os ajustes finos.
+const selectLevel = (module, level) => {
+  const turningOn =
+    level !== LEVELS.NONE && !hasAccess(module, permissions.value);
+  if (!module.sensitive || !turningOn) return applyLevel(module, level);
+  return askConfirmation(
+    {
+      title: t('CUSTOM_ROLE.EDITOR.SENSITIVE_CONFIRM.TITLE', {
+        name: t(
+          `CUSTOM_ROLE.PERMISSIONS.${module.levels[level].toUpperCase()}`
+        ),
+      }),
+      description: t(`CUSTOM_ROLE.MATRIX.MODULES.${module.key}.CONFIRM`),
+      label: t('CUSTOM_ROLE.EDITOR.SENSITIVE_CONFIRM.CONFIRM'),
+    },
+    () => applyLevel(module, level)
+  );
 };
 
 const changeExtra = (module, key) => {

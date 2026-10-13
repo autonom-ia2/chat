@@ -97,6 +97,17 @@ export const MODULE_GROUPS = [
         levels: { view: 'autonomia_view', manage: 'autonomia_manage' },
       },
       {
+        // #1430 (protótipo da Fase 2, #1424) — linha própria, separada de Agentes: quem tem esta chave
+        // escolhe para onde vão dados das conversas. Nenhum modelo pronto a inclui e "Editar" em Agentes
+        // não a liga. `prototype`: só aparece com o protótipo ligado na conta (CustomRoleEditor).
+        key: 'AUTONOMIA_TOOLS',
+        icon: 'i-lucide-wrench',
+        sensitive: true,
+        prototype: true,
+        levelLabels: ['manage'],
+        levels: { manage: 'autonomia_tools_manage' },
+      },
+      {
         key: 'PROSPECTING',
         icon: 'i-lucide-search',
         levels: { view: 'prospecting_view', manage: 'prospecting_manage' },
@@ -220,6 +231,16 @@ const SLOT_BY_LEVEL = {
   [CONVERSATION_LEVELS.LIMITED]: 1,
   [LEVELS.MANAGE]: 2,
   [CONVERSATION_LEVELS.ALL]: 2,
+};
+
+// Rótulo de um nível: "Sem acesso" vira o básico do módulo (baseline) e um módulo pode dar nome
+// próprio a um nível (Ferramentas dos agentes: "Gerenciar" no lugar de "Editar").
+export const levelLabelKey = (module, option) => {
+  if (option === LEVELS.NONE && module.baseline)
+    return `CUSTOM_ROLE.MATRIX.BASELINE.${module.baseline}`;
+  if (module.levelLabels?.includes(option))
+    return `CUSTOM_ROLE.MATRIX.MODULES.${module.key}.LEVEL_LABEL_${option.toUpperCase()}`;
+  return `CUSTOM_ROLE.MATRIX.LEVELS.${option.toUpperCase()}`;
 };
 
 export const levelSlots = module => {

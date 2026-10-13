@@ -11,6 +11,9 @@ import CompositorAA from '../CompositorAA.vue';
 import RespostasRapidas from '../RespostasRapidas.vue';
 import TesteDoAgente from './TesteDoAgente.vue';
 import DialogoAcao from './DialogoAcao.vue';
+import ResultadoDaMudanca from './ResultadoDaMudanca.vue';
+import { usePrototipoFase2 } from '../../prototipo/usePrototipoFase2';
+import { useMudarConferido } from '../../prototipo/useMudarConferido';
 import { useTesteDoAgente } from '../../composables/useTesteDoAgente';
 import { fecharFrase } from '../../utils/pagina';
 
@@ -36,6 +39,11 @@ const emit = defineEmits(['sair', 'voltarNome']);
 const { t } = useI18n();
 const store = useStore();
 const NS = 'AGENTS.JORNADA.PAGINA.MUDAR_VISTA';
+
+// #1428 (protótipo da Fase 2): com o protótipo ligado, a conversa e o resultado vêm do adaptador e o
+// resultado aparece pedido por pedido (ResultadoDaMudanca). Sem ele, tudo como antes.
+const conferido = usePrototipoFase2() ? useMudarConferido() : null;
+const resultado = computed(() => conferido?.resultado.value || null);
 
 const mensagens = useMapGetter('autonomiaBuildThreads/getMessages');
 const status = useMapGetter('autonomiaBuildThreads/getStatus');
@@ -81,21 +89,34 @@ const ideias = computed(() => {
 });
 
 const visiveis = computed(() =>
-  (mensagens.value || []).filter(
+  (conferido ? conferido.mensagens.value : mensagens.value || []).filter(
     mensagem => mensagem.role === 'user' || mensagem.role === 'assistant'
   )
 );
 const comecou = computed(() =>
   visiveis.value.some(mensagem => mensagem.role === 'user')
 );
-const pensando = computed(
-  () =>
+const pensando = computed(() => {
+  if (conferido) return conferido.pensando.value;
+  return (
     Boolean(flags.value?.sending || flags.value?.creating) ||
     status.value === 'processing'
+  );
+});
+const falhou = computed(() =>
+  conferido
+    ? conferido.erro.value
+    : Boolean(erroDaConversa.value) && !pensando.value
 );
-const falhou = computed(() => Boolean(erroDaConversa.value) && !pensando.value);
+// Com o protótipo, só termina quando todos os pedidos foram aplicados (nunca "Pronto" com dúvida).
+const terminou = computed(() =>
+  conferido
+    ? Boolean(resultado.value) &&
+      resultado.value.itens.every(item => item.estado === 'aplicado')
+    : Boolean(feito.value)
+);
 const noMeio = computed(
-  () => pensando.value || (comecou.value && !feito.value)
+  () => pensando.value || (comecou.value && !terminou.value)
 );
 
 const subirImagens = async imagens => {
@@ -152,6 +173,13 @@ const tentarMandar = async envio => {
 
 const enviar = async ({ texto, anexos }) => {
   if (pensando.value) return;
+  if (conferido) {
+    rascunho.value = '';
+    await conferido.enviar(
+      texto || anexos.map(arquivo => arquivo.name).join(', ')
+    );
+    return;
+  }
   const imagens = anexos.filter(arquivo =>
     (arquivo.type || '').startsWith('image/')
   );
@@ -165,6 +193,10 @@ const enviar = async ({ texto, anexos }) => {
 };
 
 const tentarDeNovo = async () => {
+  if (conferido) {
+    conferido.limparErro();
+    return;
+  }
   if (erroDaConversa.value !== 'send' && thread.value?.id) {
     try {
       await store.dispatch('autonomiaBuildThreads/retry', {
@@ -247,8 +279,8 @@ onBeforeUnmount(() => {
         <AgenteBotao
           data-pronto
           tamanho="lg"
-          :variante="feito ? 'primario' : 'contorno'"
-          :icone="feito ? 'i-lucide-check' : ''"
+          :variante="terminou ? 'primario' : 'contorno'"
+          :icone="terminou ? 'i-lucide-check' : ''"
           @click="pedirSaida"
         >
           {{ t(`${NS}.PRONTO`) }}
@@ -371,8 +403,18 @@ onBeforeUnmount(() => {
           </div>
         </div>
 
+        <ResultadoDaMudanca
+          v-if="resultado"
+          :resultado="resultado"
+          :nome="nome"
+          :pensando="pensando"
+          :desfeito="conferido.desfeito.value"
+          :desfazendo="conferido.desfazendo.value"
+          @responder="conferido.responderDuvida"
+          @desfazer="conferido.desfazer"
+        />
         <p
-          v-if="!feito"
+          v-if="!terminou"
           class="flex items-center gap-2 m-0 text-sm text-n-slate-11"
         >
           <span class="i-lucide-info size-4 shrink-0" aria-hidden="true" />

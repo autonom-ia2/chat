@@ -54,6 +54,7 @@
       "KNOWLEDGE_BASE_VIEW": "View knowledge base",
       "AUTONOMIA_VIEW": "View and test Autonom.ia agents",
       "AUTONOMIA_MANAGE": "Edit Autonom.ia agents",
+      "AUTONOMIA_TOOLS_MANAGE": "Manage agent tools",
       "CAMPAIGN_VIEW": "View campaigns",
       "CAMPAIGN_MANAGE": "Edit campaigns",
       "INBOX_VIEW": "View inboxes",
@@ -133,6 +134,14 @@
           "HINT": "Your AI agents",
           "LEVEL_VIEW": "Opens the agents and chats in the playground.",
           "LEVEL_MANAGE": "Creates, trains and publishes agents."
+        },
+        "AUTONOMIA_TOOLS": {
+          "NAME": "Agent tools",
+          "HINT": "Whoever has this permission chooses where conversation data goes.",
+          "LEVEL_MANAGE": "Creates, turns on and tests agent tools. Chooses where conversation data goes.",
+          "LEVEL_LABEL_MANAGE": "Manage",
+          "NOTE": "Only an administrator grants it. It does not come with Edit in Agents.",
+          "CONFIRM": "Whoever has this permission chooses where conversation data goes: a tool sends data to another system. Grant it only to who needs it."
         },
         "PROSPECTING": {
           "NAME": "Prospecting",

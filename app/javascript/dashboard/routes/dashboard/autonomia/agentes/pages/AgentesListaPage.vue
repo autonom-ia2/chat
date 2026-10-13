@@ -11,9 +11,12 @@ import { usePermissoesDaJornada } from '../composables/usePermissoesDaJornada';
 import {
   canaisDoAgente,
   contarEstados,
+  contarPorLugar,
   ordenarAgentes,
 } from '../utils/estadoDoAgente';
 import { fotoDoAgente } from '../utils/fotoDoCanal';
+import { usePrototipoFase2 } from '../prototipo/usePrototipoFase2';
+import { usePapeisDosAgentes } from '../prototipo/usePapeisDosAgentes';
 import { MODELOS, MODELO_DO_MEU_JEITO } from '../constants/modelos';
 import AgentesHeroi from '../components/AgentesHeroi.vue';
 import AgenteCartao from '../components/AgenteCartao.vue';
@@ -41,6 +44,10 @@ const podeGerenciar = useCanManage('autonomia_manage');
 const { podeConectarCanal } = usePermissoesDaJornada();
 const semana = useNumerosDaSemana();
 const ocupacao = useCanaisOcupados();
+// #1366 (protótipo da Fase 2): estados por onde o agente trabalha (canal, equipe, ajuda).
+const prototipo = usePrototipoFase2();
+const papeis = usePapeisDosAgentes();
+const papelDe = agente => (prototipo ? papeis.papelDe(agente) : undefined);
 
 const agentes = useMapGetter('autonomiaAgents/getRecords');
 const caixas = useMapGetter('inboxes/getInboxes');
@@ -64,8 +71,11 @@ let relogioDasLeituras = null;
 let relogioDoConstrutor = null;
 let tentativaDeContinuar = 0;
 
-const lista = computed(() => ordenarAgentes(agentes.value));
+const lista = computed(() => ordenarAgentes(agentes.value, papelDe));
 const contagem = computed(() => contarEstados(agentes.value));
+const contagemPorLugarDe = computed(() =>
+  contarPorLugar(agentes.value, papelDe)
+);
 const vazia = computed(
   () => !carregando.value && !falhou.value && !agentes.value.length
 );
@@ -73,7 +83,8 @@ const leiturasDosCartoes = computed(
   () =>
     esperaVencida.value ||
     (semana.estado.value !== 'carregando' &&
-      ocupacao.estado.value !== 'carregando')
+      ocupacao.estado.value !== 'carregando' &&
+      (!prototipo || papeis.estado.value !== 'carregando'))
 );
 // Esqueleto até a lista chegar e, com agentes, até os cartões terem tudo o que mostram.
 const esperando = computed(
@@ -83,9 +94,34 @@ const esperando = computed(
 );
 const semCanal = computed(() => !(caixas.value || []).length);
 
-const contagemTexto = computed(
-  () =>
-    `${t('AGENTS.JORNADA.LISTA.CONTAGEM_ATENDENDO', { n: contagem.value.atendendo }, contagem.value.atendendo)} · ${t('AGENTS.JORNADA.LISTA.CONTAGEM_PARADOS', { n: contagem.value.parados }, contagem.value.parados)}`
+const contagemAntiga = () =>
+  `${t('AGENTS.JORNADA.LISTA.CONTAGEM_ATENDENDO', { n: contagem.value.atendendo }, contagem.value.atendendo)} · ${t('AGENTS.JORNADA.LISTA.CONTAGEM_PARADOS', { n: contagem.value.parados }, contagem.value.parados)}`;
+
+// Protótipo: quem trabalha, e só os grupos que existem de parados e sem onde trabalhar.
+const contagemPorLugar = () => {
+  const { trabalhando, parados, semOnde } = contagemPorLugarDe.value;
+  const partes = [
+    t(
+      'AGENTS.JORNADA.LISTA.CONTAGEM_TRABALHANDO',
+      { n: trabalhando },
+      trabalhando
+    ),
+  ];
+  if (parados) {
+    partes.push(
+      t('AGENTS.JORNADA.LISTA.CONTAGEM_PARADOS', { n: parados }, parados)
+    );
+  }
+  if (semOnde) {
+    partes.push(
+      t('AGENTS.JORNADA.LISTA.CONTAGEM_SEM_ONDE', { n: semOnde }, semOnde)
+    );
+  }
+  return partes.join(' · ');
+};
+
+const contagemTexto = computed(() =>
+  prototipo ? contagemPorLugar() : contagemAntiga()
 );
 
 const linkConectarCanal = computed(
@@ -104,6 +140,7 @@ const carregar = async ({ repetir = true } = {}) => {
   falhou.value = false;
   try {
     await store.dispatch('autonomiaAgents/get');
+    if (prototipo) await papeis.carregar(agentes.value);
     carregando.value = false;
   } catch {
     if (repetir) {
@@ -378,6 +415,7 @@ onBeforeUnmount(() => {
               :canais="canaisDe(agente)"
               :foto="fotoDe(agente)"
               :pode-gerenciar="podeGerenciar"
+              :papel="papelDe(agente)"
               :continuando="continuando === agente.id"
               @abrir="abrirAgente"
               @abrir-cotacao="abrirCotacao"

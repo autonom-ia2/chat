@@ -5,6 +5,7 @@ import { ESTADO } from '../utils/estadoDoAgente';
 
 // #1181 — pílula de estado: o estado vai em texto (Atendendo / Parado / Falta terminar / Cotação),
 // o ponto colorido só reforça. Texto em slate 12 sobre fundo claro do tom, AA nos dois temas.
+// #1366 (protótipo): Na equipe azul, Ajudando íris, Sem onde trabalhar âmbar.
 // Parado e Falta terminar são âmbar, como no protótipo (.pill-off e .pill-draft); o texto distingue.
 const props = defineProps({
   estado: {
@@ -18,6 +19,9 @@ const { t } = useI18n();
 
 const ESTILO = {
   [ESTADO.ATENDENDO]: { fundo: 'bg-n-teal-3', ponto: 'bg-n-teal-9' },
+  [ESTADO.NA_EQUIPE]: { fundo: 'bg-n-blue-3', ponto: 'bg-n-blue-9' },
+  [ESTADO.AJUDANDO]: { fundo: 'bg-n-iris-3', ponto: 'bg-n-iris-9' },
+  [ESTADO.SEM_ONDE]: { fundo: 'bg-n-amber-3', ponto: 'bg-n-amber-9' },
   [ESTADO.PARADO]: { fundo: 'bg-n-amber-3', ponto: 'bg-n-amber-9' },
   [ESTADO.FALTA_TERMINAR]: { fundo: 'bg-n-amber-3', ponto: 'bg-n-amber-9' },
   [ESTADO.COTACAO]: { fundo: 'bg-n-slate-3', ponto: 'bg-n-slate-9' },
@@ -25,6 +29,9 @@ const ESTILO = {
 
 const ROTULO = {
   [ESTADO.ATENDENDO]: 'ATENDENDO',
+  [ESTADO.NA_EQUIPE]: 'NA_EQUIPE',
+  [ESTADO.AJUDANDO]: 'AJUDANDO',
+  [ESTADO.SEM_ONDE]: 'SEM_ONDE',
   [ESTADO.PARADO]: 'PARADO',
   [ESTADO.FALTA_TERMINAR]: 'FALTA_TERMINAR',
   [ESTADO.COTACAO]: 'COTACAO',

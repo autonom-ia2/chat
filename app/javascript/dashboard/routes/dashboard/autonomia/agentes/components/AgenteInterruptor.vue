@@ -9,6 +9,8 @@ const props = defineProps({
   ligado: { type: Boolean, required: true },
   rotulo: { type: String, required: true },
   desabilitado: { type: Boolean, default: false },
+  // #1366 (protótipo): estado escrito ao lado quando não é Atendendo/Parado (Na equipe, Ajudando…).
+  texto: { type: String, default: '' },
 });
 
 const emit = defineEmits(['alternar']);
@@ -43,9 +45,10 @@ const alternar = () => {
     </span>
     <span aria-hidden="true">
       {{
-        ligado
+        texto ||
+        (ligado
           ? t('AGENTS.JORNADA.STATUS.ATENDENDO')
-          : t('AGENTS.JORNADA.STATUS.PARADO')
+          : t('AGENTS.JORNADA.STATUS.PARADO'))
       }}
     </span>
   </button>

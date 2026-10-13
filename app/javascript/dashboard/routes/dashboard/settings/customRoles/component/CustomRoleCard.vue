@@ -6,6 +6,7 @@ import {
   MODULES,
   getLevel,
   hasAccess,
+  levelLabelKey,
   sensitiveExtrasOn,
 } from '../permissionMatrix';
 
@@ -24,7 +25,7 @@ const areas = computed(() =>
   MODULES.filter(module => hasAccess(module, props.role.permissions)).map(
     module => ({
       key: module.key,
-      level: getLevel(module, props.role.permissions).toUpperCase(),
+      level: levelLabelKey(module, getLevel(module, props.role.permissions)),
     })
   )
 );
@@ -93,7 +94,7 @@ const hasSensitive = computed(
           {{ $t('CUSTOM_ROLE.SEPARATORS.DOT') }}
         </span>
         <span class="font-medium text-n-slate-12">
-          {{ $t(`CUSTOM_ROLE.MATRIX.LEVELS.${area.level}`) }}
+          {{ $t(area.level) }}
         </span>
       </span>
       <span
