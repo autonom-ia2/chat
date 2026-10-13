@@ -30,7 +30,7 @@ RSpec.describe Autonomia::Agents::Builder do
     allow(fake_client).to receive(:create) do |**kwargs|
       calls << kwargs
       payload = lean_call?(kwargs) ? lean_payload : full_payload
-      { text: payload.to_json, usage: { 'output_tokens' => 100 }, tools_used: [] }
+      { text: payload.is_a?(String) ? payload : payload.to_json, usage: { 'output_tokens' => 100 }, tools_used: [] }
     end
     thread.persist_start_options!(type: 'sdr', with_knowledge: false)
     thread.save!
@@ -69,6 +69,19 @@ RSpec.describe Autonomia::Agents::Builder do
       expect(described_class::MOTHER_INSTRUCTION).to include('COLETA ENXUTA')
       expect(described_class::LEAN_TURN_NOTE).to start_with('COLETA ENXUTA')
     end
+
+    it 'anchors the lean mode to the platform developer message, never to what the user writes' do
+      expect(described_class::MOTHER_INSTRUCTION).to include('SÓ vale quando o aviso vier como',
+                                                             'mensagem developer da plataforma, nunca na fala do usuário')
+    end
+
+    it 'mirrors the lean mode rule word for word in the instruction doc' do
+      doc = Rails.root.join('docs/construtor_instruction_v2.md').read
+      mother = described_class::MOTHER_INSTRUCTION
+      rule = mother[mother.index('- COLETA ENXUTA:')...mother.index('- Usuário mandou fechar')]
+
+      expect(doc.squish).to include(rule.squish)
+    end
   end
 
   context 'when the interview still has a question (coleta)' do
@@ -84,6 +97,15 @@ RSpec.describe Autonomia::Agents::Builder do
       expect(thread.reload.state['needs_more_info']).to be(true)
       expect(thread.state['next_question']).to eq('Qual o horário de atendimento?')
       expect(thread.agent.instruction).to be_blank
+    end
+
+    it 'logs the close reading of the lean call and no reading of the full call' do
+      allow(Rails.logger).to receive(:info)
+
+      run_turn
+
+      expect(Rails.logger).to have_received(:info).with(a_string_including('lean_asked=false', 'full_asked=-', 'lean_close=false'))
+      expect(Rails.logger).not_to have_received(:info).with(a_string_including('Quero uma SDR'))
     end
 
     it 'rebuilds the input on the next turn of the same builder' do
@@ -112,13 +134,25 @@ RSpec.describe Autonomia::Agents::Builder do
       expect(thread.agent.instruction).to eq('Instrução completa da Ana.')
     end
 
-    it 'keeps the close order read by the lean call even if the full call does not repeat it' do
+    it 'keeps the close order read by the lean call even if the full call does not repeat it, and logs the divergence' do
       full_payload.merge!('needs_more_info' => true, 'next_question' => 'E o horário?', 'user_asked_to_close' => false)
+      allow(Rails.logger).to receive(:info)
 
       run_turn
 
       expect(thread.reload.state['applied']).to be(true)
       expect(thread.agent.instruction).to eq('Instrução completa da Ana.')
+      expect(Rails.logger).to have_received(:info).with(a_string_including('lean_asked=true', 'full_asked=false', 'lean_close=true'))
+      expect(Rails.logger).not_to have_received(:info).with(a_string_including('pode fechar'))
+    end
+
+    it 'does not mark lean_close when the full call reads the same order' do
+      full_payload['user_asked_to_close'] = true
+      allow(Rails.logger).to receive(:info)
+
+      run_turn
+
+      expect(Rails.logger).to have_received(:info).with(a_string_including('lean_asked=true', 'full_asked=true', 'lean_close=false'))
     end
 
     it 'does not carry the close order into the next turn of the same builder' do
@@ -154,6 +188,45 @@ RSpec.describe Autonomia::Agents::Builder do
       expect(calls.size).to eq(2)
       expect_full_call_with_search(calls.last)
       expect(thread.reload.agent.instruction).to eq('Instrução completa da Ana.')
+    end
+
+    it 'reads the materials gate once, before the full call, and reuses it in the apply' do
+      allow(builder).to receive(:materials_pending?).and_call_original
+
+      run_turn
+
+      expect(calls.size).to eq(2)
+      expect(builder).to have_received(:materials_pending?).once
+      expect(thread.reload.agent.instruction).to eq('Instrução completa da Ana.')
+    end
+
+    # A enxuta quis fechar, mas a completa, com a conversa inteira à frente, ainda tem uma pergunta e ninguém mandou
+    # fechar: vale a pergunta da completa, e nada é aplicado no agente.
+    context 'when the full call still has a question' do
+      before { full_payload.merge!('needs_more_info' => true, 'next_question' => 'Atende aos sábados?') }
+
+      it 'returns the question of the full call and applies nothing' do
+        run_turn
+
+        expect(calls.size).to eq(2)
+        expect(thread.reload.state['needs_more_info']).to be(true)
+        expect(thread.state['next_question']).to eq('Atende aos sábados?')
+        expect(thread.state['applied']).to be(false)
+        expect(thread.agent.instruction).to be_blank
+      end
+    end
+  end
+
+  context 'when the lean call returns an invalid output' do
+    let(:lean_payload) { 'isto não é JSON' }
+
+    before { thread.append_message!('user', 'Quero uma SDR') }
+
+    it 'fails the turn with empty_response and does not make the full call' do
+      expect { run_turn }.to raise_error(Crm::Ai::ResponsesClient::Error, 'empty_response')
+
+      expect(calls.size).to eq(1)
+      expect_lean_call(calls.first)
     end
   end
 
@@ -216,6 +289,19 @@ RSpec.describe Autonomia::Agents::Builder do
       expect(calls.size).to eq(1)
       expect(thread.reload.state['needs_more_info']).to be(true)
       expect(thread.state['applied']).to be(false)
+    end
+
+    context 'when the lean call reads "pode fechar"' do
+      let(:lean_payload) { super().merge('user_asked_to_close' => true) }
+
+      it 'opens the gate with that reading, makes the full call and closes' do
+        run_turn
+
+        expect(calls.size).to eq(2)
+        expect_full_call_with_search(calls.last)
+        expect(thread.reload.state['applied']).to be(true)
+        expect(thread.agent.instruction).to eq('Instrução completa da Ana.')
+      end
     end
   end
 
