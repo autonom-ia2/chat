@@ -224,7 +224,7 @@ RSpec.describe 'Api::V1::Accounts::Inboxes::WhatsappTemplates', type: :request d
 
       expect(response).to have_http_status(:unprocessable_entity)
       expect(response.parsed_body).to include('error' => 'marketing_only', 'problems' => %w[marketing_only copy_code_example])
-      expect(response.parsed_body['message']).to eq(I18n.t('whatsapp_templates.errors.marketing_only'))
+      expect(response.parsed_body['message']).to eq(I18n.t('whatsapp_templates.errors.marketing_only', locale: 'pt_BR'))
       expect(a_request(:any, graph_host)).not_to have_been_made
       expect(WhatsappTemplateProfile.where(inbox: inbox)).to be_empty
     end
@@ -320,7 +320,7 @@ RSpec.describe 'Api::V1::Accounts::Inboxes::WhatsappTemplates', type: :request d
 
         expect(response).to have_http_status(:unprocessable_entity)
         expect(response.parsed_body).to include('error' => 'category_change_not_allowed',
-                                                'message' => I18n.t('whatsapp_templates.errors.category_change_not_allowed'))
+                                                'message' => I18n.t('whatsapp_templates.errors.category_change_not_allowed', locale: 'pt_BR'))
         expect(a_request(:any, graph_host)).not_to have_been_made
         expect(WhatsappTemplateProfile.where(inbox: inbox)).to be_empty
       end
@@ -349,7 +349,7 @@ RSpec.describe 'Api::V1::Accounts::Inboxes::WhatsappTemplates', type: :request d
 
       expect(response).to have_http_status(:unprocessable_entity)
       expect(response.parsed_body).to include('error' => 'meta_refused', 'code' => 'meta_text',
-                                              'message' => I18n.t('whatsapp_templates.errors.meta_text'))
+                                              'message' => I18n.t('whatsapp_templates.errors.meta_text', locale: 'pt_BR'))
       expect(response.parsed_body['message']).not_to include('categoria de modelo aprovada')
     end
 
@@ -477,6 +477,65 @@ RSpec.describe 'Api::V1::Accounts::Inboxes::WhatsappTemplates', type: :request d
   end
 
   # Mesmo token em duas contas (como em produção): a conta A não alcança a WABA da B por nenhum endpoint.
+  # #1419: os erros que saem por `rescue_from` vinham em inglês para quem usa o painel em pt_BR, porque o `rescue_from`
+  # roda depois que o `around_action` de idioma já devolveu o idioma padrão.
+  describe 'idioma das mensagens de erro' do
+    let(:account) { create(:account, locale: 'en') }
+
+    before { admin.update!(ui_settings: { 'locale' => 'pt_BR' }) }
+
+    def message_for(key)
+      I18n.t("whatsapp_templates.errors.#{key}", locale: 'pt_BR')
+    end
+
+    it 'nome repetido sai no idioma da pessoa' do
+      stub_lookup('boas_vindas', [{ 'id' => '5', 'name' => 'boas_vindas', 'language' => 'pt_BR' }])
+
+      call(:post, base, { template: { name: 'boas_vindas', language: 'pt_BR', category: 'MARKETING',
+                                      components: [{ type: 'BODY', text: 'Oi, que bom te ver.' }] } })
+
+      expect(response.parsed_body).to include('error' => 'name_taken', 'message' => message_for('name_taken'))
+    end
+
+    it 'a recusa da Meta sem texto nosso sai no idioma da pessoa' do
+      stub_lookup('pedido_enviado', [mine])
+      stub_request(:post, "#{graph}/11")
+        .to_return(status: 400, headers: json, body: { error: { code: 100, error_subcode: 2_388_999, error_user_msg: 'x' } }.to_json)
+
+      call(:patch, "#{base}/11", { template: { components: [{ type: 'BODY', text: 'Oi {{1}}, saiu. Qualquer dúvida, responda.' }] } })
+
+      expect(response.parsed_body).to include('error' => 'meta_refused', 'message' => message_for('meta_text'))
+    end
+
+    # O texto nosso para uma recusa da Meta (aqui, o nome preso) é montado no serviço com o idioma da conta; a tela
+    # mostra o da pessoa.
+    it 'a recusa da Meta com texto nosso sai no idioma da pessoa, não no da conta' do
+      stub_lookup('pedido_enviado', [mine])
+      stub_request(:post, "#{graph}/11")
+        .to_return(status: 400, headers: json, body: { error: { code: 100, error_subcode: 2_388_023, message: 'x' } }.to_json)
+
+      call(:patch, "#{base}/11", { template: { components: [{ type: 'BODY', text: 'Oi {{1}}, saiu. Qualquer dúvida, responda.' }] } })
+
+      expect(response.parsed_body).to include('error' => 'meta_refused', 'code' => 'name_held', 'message' => message_for('name_held'))
+    end
+
+    it 'modelo que não está na lista sai no idioma da pessoa' do
+      call(:patch, "#{base}/999", { template: { friendly_name: 'Outro' } })
+
+      expect(response).to have_http_status(:not_found)
+      expect(response.parsed_body).to include('error' => 'template_not_found', 'message' => message_for('template_not_found'))
+    end
+
+    it 'Meta fora do ar sai no idioma da pessoa' do
+      stub_request(:get, templates_url).with(query: hash_including('name' => 'pedido_enviado')).to_return(status: 503)
+
+      call(:delete, "#{base}/11")
+
+      expect(response).to have_http_status(:service_unavailable)
+      expect(response.parsed_body).to include('error' => 'meta_unreachable', 'message' => message_for('meta_unreachable'))
+    end
+  end
+
   describe 'isolamento entre contas' do # rubocop:disable RSpec/MultipleMemoizedHelpers
     let(:other_account) { create(:account) }
     let(:other_channel) do
