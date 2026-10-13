@@ -77,6 +77,21 @@ RSpec.describe Autonomia::Agents::Tools::Bound do
       expect(output).not_to include('senha')
     end
 
+    # #1425: num 4xx o modelo precisa saber O QUE o sistema recusou. O trecho vem num campo próprio,
+    # já higienizado pelo executor; o texto livre da mensagem continua descartado.
+    it 'hands the model the cleaned body piece of a 4xx next to the status' do
+      tool = create_http_tool('consultar_estoque')
+      erro = Autonomia::Agents::Tools::HttpExecutor::Error.new(
+        'tool_http_error: 422 Unprocessable Entity', status: 422, trecho: '{"erro":"cep obrigatório"}'
+      )
+      allow(Autonomia::Agents::Tools::HttpExecutor).to receive(:new).and_raise(erro)
+      bound = described_class.new(agent: agent, record: tool)
+
+      output = bound.execute({ 'arguments' => '{}' })
+
+      expect(JSON.parse(output)).to eq('error' => 'tool_http_error: 422', 'resposta' => '{"erro":"cep obrigatório"}')
+    end
+
     it 'falls back to a bare category when the message carries no status' do
       tool = create_http_tool('consultar_estoque')
       allow(Autonomia::Agents::Tools::HttpExecutor).to receive(:new)

@@ -145,9 +145,13 @@ module Autonomia::Agents::Tools::Recusa
   # `{"error":"<código>: <detalhe>"}` — o formato que o modelo conhece desde #312, montado com o
   # código e o detalhe COMO VIERAM. O filtro de forma é só do registro: mudar o que o modelo lê
   # por causa de uma linha de log seria regressão.
-  def para_modelo(codigo, slug:, delivery: nil, agente: nil, detalhe: nil)
+  #
+  # `resposta` (#1425): o trecho do corpo de um 4xx, que diz ao modelo o que o sistema recusou. Vai
+  # só ao modelo, em campo próprio (`{"error":…,"resposta":…}`), e já higienizado por quem chama
+  # (`HttpExecutor`, `TrechoHigienizado`); o registro nunca o leva — ele vem de fora.
+  def para_modelo(codigo, slug:, delivery: nil, agente: nil, detalhe: nil, resposta: nil) # rubocop:disable Metrics/ParameterLists
     registrar(codigo, slug: slug, conversa: conversa_de(delivery), agente: agente, detalhe: detalhe)
-    { error: [codigo.to_s, detalhe.presence].compact.join(': ') }.to_json
+    { error: [codigo.to_s, detalhe.presence].compact.join(': '), resposta: resposta.presence }.compact.to_json
   end
 
   # O id da conversa do contexto de entrega, sem levantar: `delivery` nulo ou de tipo inesperado
