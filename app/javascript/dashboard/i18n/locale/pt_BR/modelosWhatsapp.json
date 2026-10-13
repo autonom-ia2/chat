@@ -712,8 +712,6 @@
       },
       "EM_ANALISE": "“{nome}” ainda está em análise no WhatsApp. Você pode montar e agendar a campanha; enviar agora libera quando ele for aprovado.",
       "ENVIAR_AGORA_BLOQUEADO": "Enviar agora libera quando o WhatsApp aprovar o modelo. Escolha uma data para agendar.",
-      "PRIMEIRO_NOME": "Primeiro nome",
-      "NOME_DO_CONTATO": "Nome do contato",
       "REVISAO": {
         "TITULO": "Modelo",
         "CUSTO": "{porEnvio} por envio · cerca de {total} para {n} pessoas",

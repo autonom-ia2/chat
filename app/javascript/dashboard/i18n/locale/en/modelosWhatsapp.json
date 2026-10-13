@@ -712,8 +712,6 @@
       },
       "EM_ANALISE": "“{nome}” is still in review at WhatsApp. You can set up and schedule the campaign; sending now unlocks when it is approved.",
       "ENVIAR_AGORA_BLOQUEADO": "Sending now unlocks when WhatsApp approves the template. Pick a date to schedule.",
-      "PRIMEIRO_NOME": "First name",
-      "NOME_DO_CONTATO": "Contact name",
       "REVISAO": {
         "TITULO": "Template",
         "CUSTO": "{porEnvio} per message · about {total} for {n} people",

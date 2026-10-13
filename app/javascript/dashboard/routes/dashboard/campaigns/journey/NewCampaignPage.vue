@@ -229,8 +229,8 @@ const modeloEscolhido = computed(() =>
 // #1456: "Como o cliente vê" é sempre o celular da tela de Modelos (topo,
 // botões, oferta, cartões). Sem a ponte, o modelo vem direto do da Meta.
 const modeloDaPrevia = computed(() => {
-  if (modeloEscolhido.value) return modeloEscolhido.value;
   if (draft.value.channel !== CAMPAIGN_CHANNELS.WHATSAPP_OFFICIAL) return null;
+  if (modeloEscolhido.value) return modeloEscolhido.value;
   return template.value ? conteudoDaMeta(template.value) : null;
 });
 const remetente = computed(
@@ -1100,6 +1100,7 @@ onBeforeUnmount(() => {
             <PontePrevia
               :modelo="modeloDaPrevia"
               :bindings="draft.bindings"
+              :defaults="cleanDefaults(draft.defaults)"
               :sample="sample"
               :remetente="remetente || inboxName"
               :valores="draft.formato || {}"

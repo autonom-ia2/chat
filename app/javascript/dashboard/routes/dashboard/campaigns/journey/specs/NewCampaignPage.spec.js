@@ -2,6 +2,7 @@ import { mount, flushPromises, config } from '@vue/test-utils';
 import { createI18n } from 'vue-i18n';
 import { createStore } from 'vuex';
 import enJourney from 'dashboard/i18n/locale/en/campaignJourney.json';
+import enModelos from 'dashboard/i18n/locale/en/modelosWhatsapp.json';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import {
   loadDraft,
@@ -180,7 +181,7 @@ const mountPage = ({
   const i18n = createI18n({
     legacy: false,
     locale: 'en',
-    messages: { en: enJourney },
+    messages: { en: { ...enJourney, ...enModelos } },
   });
   return mount(NewCampaignPage, {
     attachTo: document.body,
@@ -390,9 +391,10 @@ describe('Nova campanha — Passo 2 and 3 (PRD §6.3, §6.4)', () => {
     expect(wrapper.find('[data-test="coverage-warning"]').text()).toContain(
       '2 people are left out: missing {{2}}'
     );
-    // #1456: a prévia é o celular da tela de Modelos; coluna sem exemplo vai pelo nome.
-    expect(wrapper.find('[data-ponte-previa]').text()).toContain(
-      'O seguro vence em [Vencimento].'
+    // #1456: a prévia é o celular da tela de Modelos; sem a amostra, cada
+    // variável aparece pelo nome da origem.
+    expect(wrapper.find('[data-ponte-previa] [data-celular] p').text()).toBe(
+      "Olá, [Customer's first name]! O seguro vence em [Vencimento]."
     );
 
     await wrapper.find('[data-test="continue-review"]').trigger('click');

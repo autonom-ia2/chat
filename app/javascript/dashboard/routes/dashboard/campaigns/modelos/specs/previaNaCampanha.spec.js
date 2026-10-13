@@ -99,33 +99,35 @@ describe('PontePrevia — Como o cliente vê na campanha (#1456)', () => {
     expect(wrapper.text()).not.toContain('EXEMPLO');
   });
 
+  const ofertaCom = ({ prazo }) => ({
+    name: 'oferta',
+    category: 'MARKETING',
+    components: [
+      {
+        type: 'LIMITED_TIME_OFFER',
+        limited_time_offer: { text: 'Só hoje', has_expiration: prazo },
+      },
+      { type: 'BODY', text: 'Aproveite.' },
+      {
+        type: 'BUTTONS',
+        buttons: [
+          { type: 'COPY_CODE', example: 'EXEMPLO' },
+          { type: 'URL', text: 'Comprar', url: 'https://loja.com' },
+        ],
+      },
+    ],
+  });
+
   it('oferta com prazo: título, cupom e "vale até" no fuso da conta', () => {
-    const oferta = {
-      name: 'oferta',
-      category: 'MARKETING',
-      components: [
-        {
-          type: 'LIMITED_TIME_OFFER',
-          limited_time_offer: { text: 'Só hoje', has_expiration: true },
-        },
-        { type: 'BODY', text: 'Aproveite.' },
-        {
-          type: 'BUTTONS',
-          buttons: [
-            { type: 'COPY_CODE', example: 'EXEMPLO' },
-            { type: 'URL', text: 'Comprar', url: 'https://loja.com' },
-          ],
-        },
-      ],
-    };
-    const wrapper = montar(daMeta(oferta), {
+    const wrapper = montar(daMeta(ofertaCom({ prazo: true })), {
       valores: { cupom: 'OUT10', validade: '2026-10-20T18:00' },
     });
 
     const caixa = wrapper.find('[data-celular-oferta]');
     expect(caixa.text()).toContain('Só hoje');
     expect(caixa.text()).toContain('OUT10');
-    expect(caixa.text()).toContain('Valid until Oct 20, 2026');
+    // 18:00 em São Paulo (a hora do fuso da conta, não a de UTC).
+    expect(caixa.text()).toContain('Valid until Oct 20, 2026, 6:00');
     expect(caixa.text()).not.toContain('(example)');
   });
 
@@ -159,5 +161,44 @@ describe('PontePrevia — Como o cliente vê na campanha (#1456)', () => {
     expect(cartoes[0].text()).toContain('Tênis');
     expect(cartoes[1].text()).toContain('bolsa.png');
     expect(cartoes[1].text()).toContain('Quero');
+  });
+
+  it('oferta sem cupom digitado nem prazo: nada de exemplo nem contagem inventada', () => {
+    const wrapper = montar(daMeta(ofertaCom({ prazo: false })));
+
+    const caixa = wrapper.find('[data-celular-oferta]');
+    expect(caixa.text()).toContain('Só hoje');
+    expect(caixa.text()).not.toContain('EXEMPLO');
+    expect(caixa.text()).not.toContain('(example)');
+    expect(caixa.text()).not.toContain('Valid until');
+  });
+
+  it('cupom ainda vazio: o botão não mostra código nenhum', () => {
+    const cupom = {
+      name: 'cupom',
+      components: [
+        { type: 'BODY', text: 'Seu cupom.' },
+        { type: 'BUTTONS', buttons: [{ type: 'COPY_CODE', example: 'EX1' }] },
+      ],
+    };
+    const wrapper = montar(daMeta(cupom));
+
+    expect(wrapper.find('[data-celular-codigo]').exists()).toBe(false);
+    expect(wrapper.text()).not.toContain('EX1');
+  });
+
+  it('sem o valor da pessoa, usa o texto padrão da variável e depois o nome da coluna', () => {
+    const bindings = {
+      1: { source: 'column', value: 'Vencimento' },
+      2: { source: 'column', value: 'Loja' },
+    };
+    const wrapper = montar(daMeta(normal), {
+      bindings,
+      defaults: { 1: 'em breve' },
+      sample: { name: 'Ana', extra_values: {} },
+    });
+
+    expect(wrapper.text()).toContain('Oi, em breve!');
+    expect(wrapper.text()).toContain('coleção da [Loja].');
   });
 });

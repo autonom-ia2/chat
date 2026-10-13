@@ -4,6 +4,8 @@
 // dada no envio) e o cupom, como o WhatsApp mostra em cima do texto.
 defineProps({
   oferta: { type: Object, required: true },
+  // Na campanha a contagem só aparece com a data escolhida, nunca de exemplo.
+  naCampanha: { type: Boolean, default: false },
 });
 </script>
 
@@ -29,7 +31,10 @@ defineProps({
         }}
       </span>
       <template v-if="oferta.cupom">
-        <span v-if="!oferta.validade" class="text-xs text-n-ruby-11">
+        <span
+          v-if="!naCampanha && !oferta.validade"
+          class="text-xs text-n-ruby-11"
+        >
           {{ $t('MODELOS_WHATSAPP.CELULAR.OFERTA_CONTAGEM') }}
         </span>
         <span class="text-xs text-n-slate-11">
