@@ -12,7 +12,7 @@ class Crm::Reports::AiUsage < Crm::Reports::BaseReport
     'Base de conhecimento' => %w[kb_revisao kb_instrucao],
     'Construtor de agente' => %w[agente_builder],
     'SLA' => %w[sla], 'Assunto da conversa' => %w[assunto assunto_revisao],
-    'Guia da Plataforma' => %w[guia guia_midia], 'Anúncios da Meta' => %w[anuncios_meta]
+    'Guia da Plataforma' => %w[guia guia_midia], 'Anúncios da Meta' => %w[anuncios_meta], 'Modelos do WhatsApp' => %w[modelo_redacao]
   }.freeze
   FEATURE_RESOURCES = RESOURCE_FEATURES.each_with_object({}) do |(resource, features), memo|
     features.each { |feature| memo[feature] = resource }

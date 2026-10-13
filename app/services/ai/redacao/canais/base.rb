@@ -5,7 +5,9 @@
 # Interface de um canal: `prompt`, `schema(permitidas:, opcoes:)`, `limites_aceitos`, `validar_saida(saida, base:)`
 # (antes de separar as opções; aqui não faz nada), `validar(opcao, chaves:, limites:, base:, pedido:)` (nil ou o motivo
 # do descarte), `textos_com_chaves(opcao)` (os textos da opção que levam chave; aqui só o corpo) e `normalizar(saida)`.
-# Modo melhorar (`base` preenchida): os campos da base continuam na opção, e "mais_curto" não traz campo novo.
+# Modo melhorar (`base` preenchida): os campos da base continuam na opção, e "mais_curto" não traz campo novo. A base
+# é só o corpo, então essa comparação usa só as chaves do corpo; a lista permitida confere a soma (corpo e, no canal
+# que tem, cabeçalho e botões).
 # A conferência é só de estrutura, sem regex e sem ler linguagem: as chaves saem do `Ai::Redacao::Chaves`, e "tem
 # palavra antes/depois do campo" é "tem letra" (caractere com maiúscula e minúscula diferentes).
 class Ai::Redacao::Canais::Base
@@ -55,7 +57,8 @@ class Ai::Redacao::Canais::Base
       return problema if problema
 
       usadas = textos.flat_map { |item| Ai::Redacao::Chaves.extrair(item) }
-      problema_das_chaves(usadas, chaves) || problema_das_pontas(texto) || problema_da_base(usadas, chaves, base, pedido) ||
+      problema_das_chaves(usadas, chaves) || problema_das_pontas(texto) ||
+        problema_da_base(Ai::Redacao::Chaves.extrair(texto), chaves, base, pedido) ||
         problema_do_canal(opcao, chaves: chaves, limites: limites, base: base, pedido: pedido)
     end
 
@@ -95,7 +98,8 @@ class Ai::Redacao::Canais::Base
       :obrigatoria_ausente unless (Array(chaves[:obrigatorias]) - usadas).empty?
     end
 
-    # Modo melhorar: os campos da base (que a lista permite) continuam; "mais_curto" não traz campo novo.
+    # Modo melhorar: os campos da base (que a lista permite) continuam; "mais_curto" não traz campo novo. `usadas`: as
+    # chaves do CORPO da opção, o mesmo escopo da base.
     def problema_da_base(usadas, chaves, base, pedido)
       return if base.blank?
 

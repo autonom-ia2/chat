@@ -37,7 +37,11 @@ import adaptador from './adaptadorHttp';
 //   de um cartão do carrossel escolhido na campanha, #1334)
 //   Erros da API chegam como ErroDaApi { codigo, mensagem (já traduzida), status }.
 // obterCatalogo() → null e listarFormularios() → []: ainda sem backend.
-// criarComIA / melhorarComIA: entrega E (#1333); hoje recusam e a tela esconde.
+// criarComIA({ objetivo, tom, tipo?, exemplo }) → { status, pergunta,
+//   sugestoes, opcoes: [{ id, nome, tipo, motivo, conteudo }] }
+// melhorarComIA({ conteudo, pedido, tipo, recusa? }) → { status, pergunta,
+//   sugestoes, texto (pedaços) | null, tipo, oQueMudou, motivo,
+//   continuaDivulgacao }  (#1333; opções já conferidas pela regra estrutural)
 //
 // Modelo = {
 //   id, nome, nomeNoWhatsapp, objetivo, sistema, idioma,
