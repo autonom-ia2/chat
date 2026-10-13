@@ -3,6 +3,7 @@ import { createI18n } from 'vue-i18n';
 import en from 'dashboard/i18n/locale/en/modelosWhatsapp.json';
 import PonteFormatoDaCampanha from '../ponte/PonteFormatoDaCampanha.vue';
 import PontePrevia from '../ponte/PontePrevia.vue';
+import { guardarPrevia } from '../api/arquivos';
 import {
   extrasParaEnvio,
   formatoQueNaoVai,
@@ -17,6 +18,16 @@ vi.mock('../api/modelosWhatsapp', () => ({ default: api }));
 vi.mock('dashboard/composables/useAccount', () => ({
   useAccount: () => ({ currentAccount: { value: { name: 'Hub2you' } } }),
 }));
+
+// #1465: a miniatura da foto escolhida é um object URL do próprio arquivo.
+// jsdom não tem object URL; volta ao que era no fim do arquivo.
+const urlOriginal = { criar: URL.createObjectURL, soltar: URL.revokeObjectURL };
+URL.createObjectURL = vi.fn(arquivo => `blob:${arquivo.name}`);
+URL.revokeObjectURL = vi.fn();
+afterAll(() => {
+  URL.createObjectURL = urlOriginal.criar;
+  URL.revokeObjectURL = urlOriginal.soltar;
+});
 
 const ZONA = 'America/Sao_Paulo';
 const AGORA = new Date('2026-10-13T12:00:00Z').getTime();
@@ -240,10 +251,15 @@ describe('PonteFormatoDaCampanha', () => {
     const wrapper = montar({
       modelo: {
         template: comTopo('IMAGE'),
-        topoGuardado: { nome: 'topo.png' },
+        topoGuardado: { nome: 'topo.png', url: 'https://s/topo.png' },
       },
     });
     const topo = wrapper.find('[data-formato-topo]');
+    // A miniatura da foto aprovada, no lugar do ícone.
+    expect(topo.find('img').attributes()).toMatchObject({
+      src: 'https://s/topo.png',
+      alt: '',
+    });
 
     expect(topo.text()).toContain(FORMATO.TOPO.foto);
     expect(topo.text()).toContain(
@@ -258,12 +274,19 @@ describe('PonteFormatoDaCampanha', () => {
   });
 
   it('topo sem arquivo guardado: pede para escolher, com o tipo do modelo', () => {
-    const video = montar({ modelo: { template: comTopo('VIDEO') } });
-    expect(video.find('[data-formato-topo]').text()).toContain(
+    const video = montar({
+      modelo: {
+        template: comTopo('VIDEO'),
+        topoGuardado: { nome: 'v.mp4', url: '' },
+      },
+    });
+    expect(video.find('[data-formato-topo] img').exists()).toBe(false);
+    const semVideo = montar({ modelo: { template: comTopo('VIDEO') } });
+    expect(semVideo.find('[data-formato-topo]').text()).toContain(
       FORMATO.ARQUIVO.SEM_ARQUIVO.video
     );
     expect(
-      video.find('[data-formato-topo] [data-escolher-arquivo]').text()
+      semVideo.find('[data-formato-topo] [data-escolher-arquivo]').text()
     ).toBe(FORMATO.ARQUIVO.ESCOLHER.video);
 
     const documento = montar({ modelo: { template: comTopo('DOCUMENT') } });
@@ -303,7 +326,12 @@ describe('PonteFormatoDaCampanha', () => {
     expect(topo.text()).toContain(
       textoCom(FORMATO.ARQUIVO.ESCOLHIDO, 'nova.png')
     );
+    // A miniatura vem do próprio arquivo escolhido, sem baixar nada.
+    expect(URL.createObjectURL).toHaveBeenCalledWith(arquivo);
+    expect(topo.find('img').attributes('src')).toBe('blob:nova.png');
     await topo.find('[data-usar-aprovado]').trigger('click');
+    // Desfeito: a miniatura local sai da memória.
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:nova.png');
     expect(wrapper.emitted('update').at(-1)).toEqual([{}]);
   });
 
@@ -358,14 +386,58 @@ describe('PontePrevia', () => {
     topoGuardado: { nome: 'aprovada.png' },
   };
 
-  it('mostra o arquivo aprovado e, escolhido outro, o escolhido', () => {
-    expect(montarPrevia({ modelo }).find('[data-celular-topo]').text()).toBe(
-      'aprovada.png'
-    );
-    expect(
-      montarPrevia({ modelo, topo: 'nova.png' })
-        .find('[data-celular-topo]')
-        .text()
-    ).toBe('nova.png');
+  const topoDe = props => montarPrevia(props).find('[data-celular-topo]');
+
+  it('foto aprovada sem link: ícone e nome do arquivo', () => {
+    expect(topoDe({ modelo }).text()).toBe('aprovada.png');
+    expect(topoDe({ modelo }).find('img').exists()).toBe(false);
+  });
+
+  it('mostra a foto de verdade: a aprovada e, escolhida outra, a escolhida', () => {
+    const comLink = {
+      ...modelo,
+      topoGuardado: { nome: 'aprovada.png', url: 'https://s/aprovada.png' },
+    };
+    expect(topoDe({ modelo: comLink }).find('img').attributes()).toMatchObject({
+      src: 'https://s/aprovada.png',
+      alt: 'aprovada.png',
+    });
+
+    guardarPrevia('sig5', new File(['x'], 'nova.png', { type: 'image/png' }));
+    const escolhida = topoDe({
+      modelo: comLink,
+      topo: { referencia: 'sig5', nome: 'nova.png' },
+    });
+    expect(escolhida.find('img').attributes('src')).toBe('blob:nova.png');
+
+    // Recarregou a página: a miniatura local some, fica o nome do escolhido.
+    const semPrevia = topoDe({
+      modelo: comLink,
+      topo: { referencia: 'outra', nome: 'outra.png' },
+    });
+    expect(semPrevia.find('img').exists()).toBe(false);
+    expect(semPrevia.text()).toBe('outra.png');
+  });
+
+  it('link da foto aprovada que não abre (expirou): volta ao ícone com o nome', async () => {
+    const wrapper = montarPrevia({
+      modelo: {
+        ...modelo,
+        topoGuardado: { nome: 'aprovada.png', url: 'https://s/velho.png' },
+      },
+    });
+    await wrapper.find('[data-celular-topo] img').trigger('error');
+    expect(wrapper.find('[data-celular-topo] img').exists()).toBe(false);
+    expect(wrapper.find('[data-celular-topo]').text()).toBe('aprovada.png');
+  });
+
+  it('documento: ícone e nome, nunca imagem', () => {
+    const documento = {
+      ...modelo,
+      conteudo: { ...modelo.conteudo, topo: { tipo: 'documento' } },
+      topoGuardado: { nome: 'tabela.pdf', url: '' },
+    };
+    expect(topoDe({ modelo: documento }).find('img').exists()).toBe(false);
+    expect(topoDe({ modelo: documento }).text()).toBe('tabela.pdf');
   });
 });

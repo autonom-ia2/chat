@@ -374,16 +374,24 @@ describe('Nova campanha com a ponte de Modelos (#1332)', () => {
     ).toBeDefined();
 
     const input = topo.find('input[type="file"]');
+    // jsdom não tem object URL: só neste teste.
+    const criarOriginal = URL.createObjectURL;
+    URL.createObjectURL = vi.fn(file => `blob:${file.name}`);
     const arquivo = new File(['x'], 'nova.png', { type: 'image/png' });
     Object.defineProperty(input.element, 'files', { value: [arquivo] });
     await input.trigger('change');
     await flushPromises();
 
     expect(modelosApi.subirArquivoDaCampanha).toHaveBeenCalledWith(7, arquivo);
-    expect(wrapper.find('[data-celular-topo]').text()).toContain('nova.png');
+    // A prévia mostra a foto escolhida (object URL do arquivo, sem baixar nada).
+    expect(wrapper.find('[data-celular-topo] img').attributes()).toMatchObject({
+      src: 'blob:nova.png',
+      alt: 'nova.png',
+    });
     expect(
       wrapper.find('[data-test="continue-review"]').attributes('disabled')
     ).toBeUndefined();
+    URL.createObjectURL = criarOriginal;
     wrapper.unmount();
   });
 

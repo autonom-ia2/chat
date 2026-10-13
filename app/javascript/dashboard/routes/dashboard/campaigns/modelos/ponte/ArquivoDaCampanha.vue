@@ -3,7 +3,7 @@
 // do carrossel (#1334). Diz o que vai — o arquivo aprovado com o modelo, o que
 // a pessoa escolheu agora ou o que está subindo — e oferece Escolher/Trocar e
 // "Usar o aprovado". Quem sobe o arquivo é o PonteFormatoDaCampanha.
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import EscolherArquivo from '../components/criar/EscolherArquivo.vue';
 import { ACEITA } from '../helpers/formatoNaCampanha';
@@ -19,6 +19,8 @@ const props = defineProps({
   // Nome do arquivo que está subindo ('' = nenhum).
   enviando: { type: String, default: '' },
   erro: { type: String, default: '' },
+  // Link da foto que vai (escolhida ou aprovada) para a miniatura; '' = ícone.
+  miniatura: { type: String, default: '' },
 });
 const emit = defineEmits(['escolhido', 'voltar']);
 
@@ -42,6 +44,14 @@ const descricao = computed(() => {
   }
   return t(`${NS}.SEM_ARQUIVO.${props.midia}`);
 });
+// Link que expirou ou não abriu: volta ao ícone.
+const miniaturaFalhou = ref(false);
+watch(
+  () => props.miniatura,
+  () => {
+    miniaturaFalhou.value = false;
+  }
+);
 const rotulo = computed(() =>
   props.guardado || props.escolhido
     ? t(`${NS}.TROCAR.${props.midia}`)
@@ -53,7 +63,15 @@ const rotulo = computed(() =>
   <div
     class="flex flex-wrap gap-3 items-center p-3 rounded-xl border border-n-weak bg-n-solid-1"
   >
+    <img
+      v-if="miniatura && !miniaturaFalhou"
+      :src="miniatura"
+      alt=""
+      class="object-cover rounded-lg size-11 shrink-0 bg-n-slate-3"
+      @error="miniaturaFalhou = true"
+    />
     <span
+      v-else
       class="flex justify-center items-center rounded-lg size-11 shrink-0 bg-n-blue-3 text-n-blue-11"
       aria-hidden="true"
     >

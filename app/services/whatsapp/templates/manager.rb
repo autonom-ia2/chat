@@ -155,7 +155,16 @@ class Whatsapp::Templates::Manager
     template.merge('friendly_name' => profile&.friendly_name.presence || template['name'],
                    'fields' => profile&.fields || {}, 'header_media' => profile&.header_media || {},
                    'system_owner' => system_owner(template, profile), 'profile_id' => profile&.id,
-                   'card_media' => card_media(profile), 'header_file_name' => header_file_name(profile))
+                   'card_media' => card_media(profile), 'header_file_name' => header_file_name(profile),
+                   'header_file_preview_url' => header_file_preview_url(profile))
+  end
+
+  # A prévia da campanha mostra a foto aprovada (#1465): link de leitura assinado, que expira; só para foto.
+  def header_file_preview_url(profile)
+    file = profile&.header_file
+    return unless file&.attached? && file.content_type.to_s.start_with?('image/')
+
+    Whatsapp::Templates::HeaderMedia.signed_media(file)['media_url']
   end
 
   # O arquivo do topo de fato guardado (#1465): a campanha mostra "vai a foto aprovada" e, sem ele, pede para escolher.

@@ -11,7 +11,12 @@ import Input from 'dashboard/components-next/input/Input.vue';
 import { accountZoneLabel } from 'dashboard/components-next/CampaignJourney/scheduleTime';
 import ArquivoDaCampanha from './ArquivoDaCampanha.vue';
 import api from '../api/modelosWhatsapp';
-import { arquivoGuardado } from '../api/arquivos';
+import {
+  arquivoGuardado,
+  esquecerPrevia,
+  guardarPrevia,
+  miniaturaDe,
+} from '../api/arquivos';
 import {
   CODIGO_MAXIMO,
   oQuePedir,
@@ -74,13 +79,22 @@ const semChave = (objeto, chave) =>
   Object.fromEntries(
     Object.entries(objeto).filter(([item]) => item !== String(chave))
   );
+// O arquivo escolhido antes, trocado ou desfeito, solta a miniatura dele.
+const soltarAnterior = (anterior, novo) => {
+  if (anterior && anterior.referencia !== novo?.referencia) {
+    esquecerPrevia(anterior.referencia);
+  }
+};
 const comCartao = (indice, arquivo) => {
+  if (!ativo) return;
+  soltarAnterior(props.valores.cartoes?.[indice], arquivo);
   const cartoes = semChave(props.valores.cartoes || {}, indice);
   atualizar({ cartoes: arquivo ? { ...cartoes, [indice]: arquivo } : cartoes });
 };
 // Sem arquivo escolhido, o topo sai dos valores: vai o aprovado com o modelo.
 const comTopo = arquivo => {
   if (!ativo) return;
+  soltarAnterior(props.valores.topo, arquivo);
   const resto = semChave(props.valores, 'topo');
   emit('update', arquivo ? { ...resto, topo: arquivo } : resto);
 };
@@ -93,9 +107,11 @@ const escolher = async (chave, { arquivo, local }, gravar) => {
   enviando.value = { ...enviando.value, [chave]: arquivo };
   erroDoEnvio.value = { ...erroDoEnvio.value, [chave]: '' };
   try {
-    gravar(
-      await api.subirArquivoDaCampanha(props.caixa, arquivoGuardado(local))
-    );
+    const selecionado = arquivoGuardado(local);
+    const enviado = await api.subirArquivoDaCampanha(props.caixa, selecionado);
+    // A miniatura entra antes do valor: a tela lê o Map ao redesenhar com ele.
+    guardarPrevia(enviado.referencia, selecionado);
+    gravar(enviado);
   } catch (erro) {
     erroDoEnvio.value = {
       ...erroDoEnvio.value,
@@ -131,6 +147,7 @@ const escolher = async (chave, { arquivo, local }, gravar) => {
       :escolhido="valores.topo || null"
       :enviando="enviando.topo || ''"
       :erro="erroDoEnvio.topo || ''"
+      :miniatura="miniaturaDe(valores.topo, pedido.topo.guardado)"
       @escolhido="arquivo => escolher('topo', arquivo, comTopo)"
       @voltar="comTopo(null)"
     />
@@ -186,6 +203,7 @@ const escolher = async (chave, { arquivo, local }, gravar) => {
             :escolhido="valores.cartoes?.[cartao.indice] || null"
             :enviando="enviando[cartao.indice] || ''"
             :erro="erroDoEnvio[cartao.indice] || ''"
+            :miniatura="miniaturaDe(valores.cartoes?.[cartao.indice])"
             @escolhido="
               arquivo =>
                 escolher(cartao.indice, arquivo, novo =>

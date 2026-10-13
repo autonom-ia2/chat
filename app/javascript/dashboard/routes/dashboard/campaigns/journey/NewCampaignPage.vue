@@ -1061,7 +1061,7 @@ onBeforeUnmount(() => {
               :sample="sample"
               :remetente="remetente"
               :cupom="draft.formato?.cupom || ''"
-              :topo="draft.formato?.topo?.nome || ''"
+              :topo="draft.formato?.topo || null"
             />
           </template>
         </StepMessage>

@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { useAccount } from 'dashboard/composables/useAccount';
 import ModeloCelular from '../components/ModeloCelular.vue';
 import { rotuloDoCampo } from '../helpers/campos';
+import { miniaturaDe } from '../api/arquivos';
 
 // "Como o cliente vê" na campanha: o mesmo celular da tela de Modelos (com
 // topo, rodapé e botões), com o que cada variável vai receber da primeira
@@ -15,8 +16,9 @@ const props = defineProps({
   remetente: { type: String, default: '' },
   // #1334: o cupom digitado na campanha aparece no celular.
   cupom: { type: String, default: '' },
-  // #1465: o nome do arquivo do topo escolhido na campanha; sem ele, o aprovado.
-  topo: { type: String, default: '' },
+  // #1465: o arquivo do topo escolhido na campanha ({ referencia, nome }); sem
+  // ele, vai o aprovado.
+  topo: { type: Object, default: null },
 });
 
 const { t } = useI18n();
@@ -60,14 +62,19 @@ const conteudo = computed(() => {
       valorDe(props.bindings[chave]) || rotuloDoCampo(t, campo),
     ])
   );
-  // O arquivo do topo que vai: o escolhido agora ou o aprovado guardado.
-  const arquivoDoTopo = props.topo || props.modelo.topoGuardado?.nome;
+  // O arquivo do topo que vai — o escolhido agora ou o aprovado guardado — e,
+  // se for foto, a miniatura dele.
+  const guardado = props.modelo.topoGuardado;
+  const arquivoDoTopo = props.topo?.nome || guardado?.nome;
+  const topo = {
+    ...props.modelo.conteudo.topo,
+    arquivo: arquivoDoTopo,
+    imagem: miniaturaDe(props.topo, guardado),
+  };
   const base = {
     ...props.modelo.conteudo,
     exemplos,
-    ...(arquivoDoTopo
-      ? { topo: { ...props.modelo.conteudo.topo, arquivo: arquivoDoTopo } }
-      : {}),
+    ...(arquivoDoTopo ? { topo } : {}),
   };
   if (!props.cupom) return base;
   return {

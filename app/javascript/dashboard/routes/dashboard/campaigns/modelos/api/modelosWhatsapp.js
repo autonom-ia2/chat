@@ -53,7 +53,8 @@ import adaptador from './adaptadorHttp';
 //   campos: { '1': campo }, template (o modelo como a Meta devolve),
 //   cartoesGuardados: [{ nome } | null]  (arquivo aprovado de cada cartão do
 //     carrossel, guardado no Chat2You; a campanha usa o mesmo, #1334),
-//   topoGuardado: { nome } | null  (arquivo do topo guardado, #1465),
+//   topoGuardado: { nome, url } | null  (arquivo do topo guardado; url = link
+//     assinado da foto para a miniatura, vazio em vídeo e documento, #1465),
 //   recusa: { codigo } | null, pausa: { desde | null } | null,
 //   sinal: 'bom' | 'atencao' | 'ruim' | 'sem_nota'  (qualidade dada pelo WhatsApp),
 //   saude: { dias, enviadas, entregues, lidas, responderam,

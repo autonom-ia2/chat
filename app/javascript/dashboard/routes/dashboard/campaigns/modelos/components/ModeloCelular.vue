@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { CODIGO_DE_EXEMPLO, TIPOS_DE_BOTAO } from '../constants';
 import { trocarCamposPorExemplos } from '../helpers/conteudo';
@@ -124,6 +124,21 @@ const topo = computed(() => {
 });
 
 const vazio = computed(() => !pedacos.value.length);
+
+// #1465: miniatura da foto do topo (conteudo.topo.imagem); link que não abre
+// volta ao ícone com o nome.
+const fotoFalhou = ref(false);
+const fotoDoTopo = computed(() =>
+  topo.value === 'foto' && !fotoFalhou.value
+    ? props.conteudo.topo?.imagem || ''
+    : ''
+);
+watch(
+  () => props.conteudo.topo?.imagem,
+  () => {
+    fotoFalhou.value = false;
+  }
+);
 </script>
 
 <template>
@@ -156,8 +171,21 @@ const vazio = computed(() => !pedacos.value.length);
       <div
         class="flex flex-col gap-2 p-2 shadow-sm rounded-xl rounded-tl-sm bg-n-solid-1 max-w-[92%]"
       >
+        <!-- #1465: a foto de verdade (escolhida na campanha ou a aprovada); sem ela, ícone e nome. -->
         <div
-          v-if="topo !== 'nenhum'"
+          v-if="fotoDoTopo"
+          data-celular-topo
+          class="overflow-hidden rounded-lg h-28 bg-n-slate-4"
+        >
+          <img
+            :src="fotoDoTopo"
+            :alt="conteudo.topo.arquivo || ''"
+            class="object-cover size-full"
+            @error="fotoFalhou = true"
+          />
+        </div>
+        <div
+          v-else-if="topo !== 'nenhum'"
           data-celular-topo
           class="grid gap-1 rounded-lg place-items-center h-28 bg-n-slate-4 text-n-slate-11"
         >
