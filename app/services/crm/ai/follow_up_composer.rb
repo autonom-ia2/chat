@@ -10,7 +10,8 @@ module Crm
     # assembles the prompt + strict JSON schema and parses the response.
     #
     # Two modes (decided by the runner from the messaging window):
-    #   :free_form      — inside the 24h window: write a natural PT-BR message_body.
+    #   :free_form      — free text allowed: inside the 24h window, or outside it when the Hybrid WhatsApp API
+    #                     is ready and no template fits (chat#1349). Write a natural PT-BR message_body.
     #   :choose_template — outside the 24h window: pick the BEST approved template
     #                      from +candidates+ (by index) and fill its variables.
     #
