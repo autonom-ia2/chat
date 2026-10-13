@@ -376,7 +376,8 @@ class Message < ApplicationRecord
   # Atribuir encerra as marcas de espera e tira o robô (callbacks da conversa). Olha as marcas antes de travar (a maioria
   # das respostas não está à espera) e trava com teto, como a fila do motor: a resposta não fica presa atrás de uma entrega.
   def claim_waiting_conversation_for_person
-    return unless public_person_reply? && waiting_for_person?(conversation)
+    # Leitura nova (sem trava): a conversa em memória vem do começo do pedido e pode não ver uma passagem recém-gravada.
+    return unless public_person_reply? && waiting_for_person?(Conversation.find(conversation_id))
 
     Conversation.transaction do
       Conversation.connection.execute("SET LOCAL lock_timeout = '#{PERSON_CLAIM_LOCK_TIMEOUT}'")
