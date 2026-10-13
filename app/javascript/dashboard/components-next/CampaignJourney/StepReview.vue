@@ -17,7 +17,7 @@ import {
   formatInZone,
   isFutureSchedule,
   scheduleToUtc,
-  timeZoneName,
+  accountZoneLabel,
 } from './scheduleTime';
 import { toLocaleTag, formatNumber } from './localeTag';
 
@@ -81,13 +81,7 @@ const scheduleMessage = computed(() => {
   if (showPastError.value) return t(`${NS}.PAST`);
   return props.draft.scheduledAt ? '' : t(`${NS}.PICK_DATE`);
 });
-const zoneLabel = computed(() =>
-  timeZoneName(
-    props.timeZone,
-    locale.value,
-    scheduleToUtc(props.draft.scheduledAt, props.timeZone) || undefined
-  )
-);
+const zoneLabel = computed(() => accountZoneLabel(props.timeZone));
 const whenText = computed(() => {
   if (!isLater.value || !isScheduleValid.value) return '';
   return formatInZone(

@@ -8,6 +8,7 @@
 import { computed, onBeforeUnmount, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Input from 'dashboard/components-next/input/Input.vue';
+import { accountZoneLabel } from 'dashboard/components-next/CampaignJourney/scheduleTime';
 import ArquivoDaCampanha from './ArquivoDaCampanha.vue';
 import api from '../api/modelosWhatsapp';
 import { arquivoGuardado } from '../api/arquivos';
@@ -155,7 +156,7 @@ const escolher = async (chave, { arquivo, local }, gravar) => {
       v-if="pedido.validade"
       :model-value="valores.validade || ''"
       type="datetime-local"
-      :label="t(`${NS}.VALIDADE`, { zona: timeZone })"
+      :label="t(`${NS}.VALIDADE`, { zona: accountZoneLabel(timeZone) })"
       :message="
         faltando.includes('VALIDADE_PASSADA')
           ? t(`${NS}.VALIDADE_PASSADA`)

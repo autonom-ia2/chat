@@ -307,6 +307,14 @@ describe('PonteFormatoDaCampanha', () => {
     expect(wrapper.emitted('update').at(-1)).toEqual([{}]);
   });
 
+  // Regra do Rodrigo (13/10/2026): o fuso da conta como Configurações mostra.
+  it('mostra a validade da oferta no fuso da conta, como em Configurações', () => {
+    const wrapper = montar({ modelo: { template: oferta } });
+    expect(wrapper.find('[data-formato-validade] label').text()).toBe(
+      'The offer is valid until (America/Sao Paulo time zone)'
+    );
+  });
+
   it('diz quando o arquivo não subiu, com o motivo do servidor', async () => {
     api.subirArquivoDaCampanha.mockRejectedValue({
       mensagem: 'Use JPG ou PNG',

@@ -473,8 +473,8 @@ describe('Nova campanha — Passo 2 and 3 (PRD §6.3, §6.4)', () => {
     expect(wrapper.find('[data-step="3"]').attributes('aria-current')).toBe(
       'step'
     );
-    // #1387: the zone by its name, not the IANA id.
-    expect(wrapper.text()).toContain('Date and time (Brasilia Standard Time)');
+    // Regra do Rodrigo (13/10/2026): o fuso da conta como Configurações mostra.
+    expect(wrapper.text()).toContain('Date and time (America/Sao Paulo)');
     await wrapper.find('[data-test="open-confirmation"]').trigger('click');
     await wrapper.find('[data-test="dialog-confirm"]').trigger('click');
     await flushPromises();

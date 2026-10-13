@@ -56,13 +56,14 @@ describe('StepReview schedule (#1387)', () => {
     );
   });
 
-  it('labels the date with the zone name, not the IANA id', () => {
-    const wrapper = montar({ when: 'later', scheduledAt: '' });
+  // Regra do Rodrigo (13/10/2026): o fuso da conta como Configurações mostra,
+  // sem o código cru e sem o nome longo do Intl.
+  it('labels the date with the account zone as the settings show it', () => {
+    const wrapper = montar({ when: 'later', scheduledAt: '2026-11-03T09:00' });
     const rotulo = wrapper
       .findAll('label')
       .map(label => label.text())
       .find(texto => texto.startsWith('Date and time'));
-    expect(rotulo).toBeTruthy();
-    expect(rotulo).not.toContain('America/Sao_Paulo');
+    expect(rotulo).toBe('Date and time (America/Sao Paulo)');
   });
 });

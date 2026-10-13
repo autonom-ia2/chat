@@ -1,23 +1,14 @@
-import { timeZoneName } from '../scheduleTime';
+import { accountZoneLabel } from '../scheduleTime';
 
-// #1387 (L15): the review shows the zone by its name, not the IANA id.
-describe('timeZoneName', () => {
-  it('names the zone for people', () => {
-    const nome = timeZoneName('America/Sao_Paulo', 'pt_BR');
-    expect(nome).not.toBe('America/Sao_Paulo');
-    expect(nome).toContain('Brasília');
-  });
-
-  it('names the zone at the scheduled instant (summer time)', () => {
-    expect(timeZoneName('America/New_York', 'en', '2026-07-01T12:00:00Z')).toBe(
-      'Eastern Daylight Time'
+// Regra do Rodrigo (13/10/2026): data e hora na tela levam o fuso da conta como
+// Configurações > Conta mostra — nem o nome longo do Intl ("Horário Padrão de
+// Brasília"), nem o código cru (America/Sao_Paulo).
+describe('accountZoneLabel', () => {
+  it('shows the zone like the account settings do', () => {
+    expect(accountZoneLabel('America/Sao_Paulo')).toBe('America/Sao Paulo');
+    expect(accountZoneLabel('America/Argentina/Buenos_Aires')).toBe(
+      'America/Argentina/Buenos Aires'
     );
-    expect(timeZoneName('America/New_York', 'en', '2026-12-01T12:00:00Z')).toBe(
-      'Eastern Standard Time'
-    );
-  });
-
-  it('falls back to the id when the zone is unknown', () => {
-    expect(timeZoneName('Nowhere/Zone', 'pt_BR')).toBe('Nowhere/Zone');
+    expect(accountZoneLabel('UTC')).toBe('UTC');
   });
 });
