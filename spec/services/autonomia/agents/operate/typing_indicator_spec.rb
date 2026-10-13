@@ -102,6 +102,14 @@ describe Autonomia::Agents::Operate::TypingIndicator do
       expect(WebMock).to have_requested(:post, meta_typing_url).once.with(body: hash_including('message_id' => 'wamid.NEWER'))
     end
 
+    it 'does not break the delivery of the agent when the channel typing raises inside' do
+      allow(Conversations::ChannelTyping::Deliverer).to receive(:new).and_raise(StandardError, 'boom')
+
+      expect { indicator(conversation).on }.not_to raise_error
+
+      expect(WebMock).not_to have_requested(:post, meta_typing_url)
+    end
+
     it 'does nothing on typing off' do
       indicator(conversation).off
 

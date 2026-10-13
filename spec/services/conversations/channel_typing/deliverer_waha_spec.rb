@@ -41,13 +41,6 @@ describe Conversations::ChannelTyping::Deliverer do
     expect(WebMock).not_to have_requested(:post, start_url)
   end
 
-  it 'does nothing for an unknown typing status' do
-    deliver('maybe')
-
-    expect(WebMock).not_to have_requested(:post, start_url)
-    expect(WebMock).not_to have_requested(:post, stop_url)
-  end
-
   it 'passes the given timeout to the engine call and keeps the default of the client without one' do
     allow(HTTParty).to receive(:post).and_call_original
 
@@ -90,6 +83,47 @@ describe Conversations::ChannelTyping::Deliverer do
         expect(WebMock).not_to have_requested(:post, start_url)
         expect(Rails.logger).not_to have_received(:warn)
       end
+    end
+  end
+
+  context 'when the chat id of the contact is a lid' do
+    let(:chat_id) { '123456789012345@lid' }
+
+    it 'sends the lid as it is' do
+      deliver('on')
+
+      expect(WebMock).to have_requested(:post, start_url).once.with(body: { session: '5511888880000', chatId: chat_id }.to_json)
+    end
+  end
+
+  context 'when the contact only has the jid' do
+    let(:contact) { create(:contact, account: account, custom_attributes: { 'waha_whatsapp_jid' => '5511977770000@c.us' }) }
+
+    it 'falls back to the jid' do
+      deliver('on')
+
+      expect(WebMock).to have_requested(:post, start_url).once.with(body: { session: '5511888880000', chatId: '5511977770000@c.us' }.to_json)
+    end
+  end
+
+  context 'when only the jid says it is a group' do
+    let(:contact) { create(:contact, account: account, custom_attributes: { 'waha_whatsapp_jid' => '120363000000000000@g.us' }) }
+
+    it 'does not show typing' do
+      deliver('on')
+
+      expect(WebMock).not_to have_requested(:post, start_url)
+      expect(Rails.logger).not_to have_received(:warn)
+    end
+  end
+
+  { 404 => 'Waha::Client::NotFound', 422 => 'Waha::Client::Error' }.each do |status, error_class|
+    it "logs only the error class when the engine answers #{status}" do
+      stub_request(:post, start_url).to_return(status: status, body: 'session 5511888880000 not found')
+
+      expect { deliver('on') }.not_to raise_error
+
+      expect(Rails.logger).to have_received(:warn).once.with("[channel_typing] failed conversation=#{conversation.id} #{error_class}")
     end
   end
 
