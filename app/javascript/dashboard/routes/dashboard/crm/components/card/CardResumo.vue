@@ -32,6 +32,8 @@ const props = defineProps({
   // A conta usa empresas (feature companies).
   empresas: { type: Boolean, default: false },
   arquivando: { type: Boolean, default: false },
+  // Funil de venda: "Negócio"; fora de venda (atendimento, suporte): "Assunto".
+  venda: { type: Boolean, default: true },
 });
 
 defineEmits(['abrir', 'arquivar', 'conversa', 'cliente']);
@@ -257,7 +259,7 @@ const temConversa = computed(() =>
         parte="negocio"
         icone="i-lucide-briefcase-business"
         tom="bg-n-iris-3 text-n-iris-11"
-        :titulo="t(`${R}.NEGOCIO`)"
+        :titulo="t(venda ? `${R}.NEGOCIO` : `${R}.ASSUNTO`)"
         :acao="podeGerenciar ? 'alterar' : 'ver'"
         @abrir="$emit('abrir', 'negocio')"
       >

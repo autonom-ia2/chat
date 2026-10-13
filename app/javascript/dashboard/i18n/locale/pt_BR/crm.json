@@ -4495,7 +4495,8 @@
         "NAO_ERA_HORA": "Não era a hora"
       },
       "GANHOU_TITULO_PADRAO": "Negócio ganho! Quanto ficou?",
-      "GANHOU_CONFIRMA_PADRAO": "Marcar como ganho"
+      "GANHOU_CONFIRMA_PADRAO": "Marcar como ganho",
+      "CANCELOU_TEXTO": "Contar o motivo é opcional, mas ajuda a entender o que aconteceu."
     },
     "ARQUIVAR": {
       "BOTAO": "Arquivar",
@@ -4593,7 +4594,9 @@
       "EMPRESA_PARTE": "Empresa",
       "JA_COMPROU": "Já comprou de você.",
       "DESFAZER_CLIENTE": "Desfazer",
-      "MARCAR_CLIENTE": "Marcar como cliente"
+      "MARCAR_CLIENTE": "Marcar como cliente",
+      "ASSUNTO_DE": "Assunto: {titulo}",
+      "ASSUNTO": "Assunto"
     },
     "ETAPA": {
       "TELA": "Etapa",

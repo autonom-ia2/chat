@@ -314,6 +314,19 @@ describe('CardGaveta (#1423)', () => {
     expect(semVenda.emitted('closeDeal')).toEqual([[{ result: 'won' }]]);
   });
 
+  it('fora de venda o card fala em Assunto, não em Negócio', async () => {
+    const semVenda = montar({
+      pipelines: [{ id: 1, name: 'Suporte', counts_as_sale: false }],
+    });
+    await flushPromises();
+    expect(semVenda.html()).toContain('CRM_CARD.RESUMO.ASSUNTO');
+    expect(semVenda.html()).not.toContain('CRM_CARD.RESUMO.NEGOCIO"');
+
+    const venda = montar();
+    await flushPromises();
+    expect(venda.html()).toContain('CRM_CARD.RESUMO.NEGOCIO');
+  });
+
   it('Arquivar pede confirmação antes de arquivar (OB-03)', async () => {
     const wrapper = montar();
     await flushPromises();

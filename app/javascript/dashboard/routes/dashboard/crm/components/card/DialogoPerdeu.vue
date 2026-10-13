@@ -46,7 +46,11 @@ defineExpose({ abrir, fechar });
         ? t('CRM_CARD.DESFECHO.PERDEU_TITULO')
         : t('CRM_KANBAN.DRAWER.CLOSE_AS_TITLE', { label: props.rotulo })
     "
-    :description="t('CRM_CARD.DESFECHO.PERDEU_TEXTO')"
+    :description="
+      venda
+        ? t('CRM_CARD.DESFECHO.PERDEU_TEXTO')
+        : t('CRM_CARD.DESFECHO.CANCELOU_TEXTO')
+    "
     width="md"
     @confirm="confirmar"
   >
