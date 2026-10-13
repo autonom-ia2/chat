@@ -14,6 +14,8 @@ module Crm
     #   suggested_name -> nome sugerido pela IA (apenas em mode 'direct')
     #   pool_type      -> 'inbox' (default) | 'user' (restringe a um membro da inbox)
     #   pool_id        -> id do usuário quando pool_type='user'
+    #   members        -> fila já montada (Crm::Entrega::QuemCuida, #1454); sem ela, os membros da caixa que o funil
+    #                     deixa ver
     #
     # Retorna User | nil (nil = sem membro elegível).
     class HandoffMemberSelector
@@ -26,7 +28,8 @@ module Crm
         suggested_name: nil,
         pool_type: 'inbox',
         pool_id: nil,
-        conversation: nil
+        conversation: nil,
+        members: nil
       )
         @inbox = inbox
         @account_id = account_id
@@ -37,6 +40,7 @@ module Crm
         @pool_type = pool_type
         @pool_id = pool_id
         @conversation = conversation
+        @members = members
       end
 
       def perform
@@ -62,6 +66,8 @@ module Crm
 
       # Acesso por funil (#1148): a IA só passa a conversa para quem pode vê-la.
       def inbox_members
+        return @members.to_a if @members
+
         members = @inbox ? @inbox.members.to_a : []
         @conversation ? Crm::Access::Recipients.new(@conversation).filter(members) : members
       end

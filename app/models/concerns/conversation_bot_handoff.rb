@@ -1,12 +1,16 @@
-# PASSAGEM DO ROBÔ PARA PESSOA (#1377, decisões do Rodrigo em 12/10).
+# PASSAGEM DO ROBÔ PARA PESSOA (#1377, decisões do Rodrigo em 12/10; motor de entrega do #1454, 13/10).
 #
-# O robô passa a conversa (`bot_handoff!`): ela abre e o rodízio tenta uma pessoa na hora. Sem ninguém agora, o robô
-# segue no nome da conversa e respondendo, e a conversa fica marcada "à espera de pessoa" (BOT_HANDOFF_WAITING_SINCE_KEY).
-# Com a marca:
-#   - o rodízio continua a enxergá-la (`awaiting_person`) e a entrega quando houver alguém;
+# O robô passa a conversa (`bot_handoff!`): ela abre e o motor único de entrega (Crm::Entrega) escolhe quem a recebe
+# na hora, pela regra da Atribuição do funil do card ou, sem ela, para quem cuida da conversa, está online e tem menos
+# conversas abertas. O rodízio nativo da caixa não é chamado daqui: a entrega acontece com ele ligado ou desligado.
+# Sem ninguém agora, o robô segue no nome da conversa e respondendo, e a conversa fica marcada "à espera de pessoa"
+# (BOT_HANDOFF_WAITING_SINCE_KEY), além da marca do motor (Crm::Entrega::Marca) quando ele segura ou convida.
+# Com a marca de espera:
+#   - a conversa segue em "Não atribuídas" (`awaiting_person`) e o motor a entrega quando alguém ficar online
+#     (HandoffDrainJob);
 #   - a resposta do robô não a tira de "Não atendidas" (Message#clear_waiting_since_on_outgoing_response);
 #   - o agente Autonom.ia não registra uma segunda passagem (Autonomia::Agents::Operate.espelho_no_comando?).
-# A marca sai quando uma pessoa entra na conversa (é o "assumiu"), quando ela é resolvida ou quando alguém a entrega
+# As marcas saem quando uma pessoa entra na conversa (é o "assumiu"), quando ela é resolvida ou quando alguém a entrega
 # de novo a um robô.
 module ConversationBotHandoff
   extend ActiveSupport::Concern
@@ -23,28 +27,30 @@ module ConversationBotHandoff
 
   included do
     scope :awaiting_person, -> { where(AWAITING_PERSON_SQL) }
+    # O que o rodízio nativo pode pegar: sem a marca do motor de entrega (#1454).
+    scope :outside_crm_delivery, -> { where(Crm::Entrega::Marca::AUSENTE_SQL) }
 
-    before_save :end_bot_handoff_wait, if: -> { bot_handoff_waiting? && (assignee_id.present? || resolved?) }
+    before_save :end_bot_handoff_wait, if: -> { (bot_handoff_waiting? || crm_delivery_pending?) && (assignee_id.present? || resolved?) }
   end
 
   # `keep_bot: false` solta o robô de vez: é o caminho de quem desliga o robô, não de quem passa a conversa.
+  # `motivo`: por que a conversa precisa de alguém (log do motor de entrega).
   # Uma gravação só, com a linha travada: quem chega primeiro (uma pessoa assumindo, outra passagem) decide.
-  def bot_handoff!(dispatch_event: true, keep_bot: true)
+  def bot_handoff!(dispatch_event: true, keep_bot: true, motivo: nil)
     self.class.transaction do
       take_fresh_assignee
       robo = keep_bot ? handoff_bot : nil
       self.waiting_since = Time.current if waiting_since.blank?
       self.ai_assignee = nil
       self.status = :open
-      assign_person_on_handoff
+      deliver_on_handoff(motivo, keep_bot)
       if robo && assignee_id.blank?
         wait_for_person_with(robo)
       else
-        end_bot_handoff_wait
+        clear_bot_wait_mark
       end
       save!
     end
-    enqueue_auto_assignment_after_handoff
     dispatch_bot_handoff_event if dispatch_event
   end
 
@@ -52,13 +58,19 @@ module ConversationBotHandoff
     additional_attributes.is_a?(Hash) && additional_attributes[BOT_HANDOFF_WAITING_SINCE_KEY].present?
   end
 
+  def crm_delivery_pending?
+    Crm::Entrega::Marca.presente?(self)
+  end
+
   # O mesmo critério do scope `awaiting_person`, para um registro só: aba "Não atribuídas", contagens e permissões.
   def awaiting_person?
     assignee_id.nil? && (assignee_agent_bot_id.nil? || bot_handoff_waiting?)
   end
 
+  # Encerra a espera de pessoa e a do motor de entrega.
   def end_bot_handoff_wait
-    self.additional_attributes = additional_attributes.except(BOT_HANDOFF_WAITING_SINCE_KEY)
+    clear_bot_wait_mark
+    Crm::Entrega::Marca.tirar(self)
   end
 
   # O robô ativo da caixa, quando há.
@@ -87,13 +99,13 @@ module ConversationBotHandoff
     ai_assignee.is_a?(AgentBot) ? ai_assignee : inbox_agent_bot
   end
 
-  # Rodízio antigo (V1): roda aqui, na mesma gravação, porque a conversa de robô já está aberta e a troca de status
-  # que o dispararia não acontece.
-  def assign_person_on_handoff
-    return if inbox.auto_assignment_v2_enabled?
-    return unless should_run_auto_assignment?
+  # O motor de entrega (#1454), na mesma gravação da passagem: a pessoa escolhida entra junto com a abertura, e a
+  # marca de quem segura ou convida também. Já com pessoa no nome (a IA do CRM entregou antes), não há o que entregar.
+  def deliver_on_handoff(motivo, keep_bot)
+    return if assignee_id.present?
 
-    AutoAssignment::AgentAssignmentService.new(conversation: self, allowed_agent_ids: legacy_allowed_agent_ids).assign_under_lock
+    motivo ||= keep_bot ? 'robo_pediu' : 'robo_desligado'
+    Crm::Entrega.new(conversation: self, motivo: motivo, origem: 'passagem').na_passagem
   end
 
   def wait_for_person_with(robo)
@@ -101,11 +113,7 @@ module ConversationBotHandoff
     self.additional_attributes = additional_attributes.merge(BOT_HANDOFF_WAITING_SINCE_KEY => Time.current.iso8601)
   end
 
-  # Rodízio novo (V2): o job lê o banco, então só depois do commit.
-  def enqueue_auto_assignment_after_handoff
-    return unless assignee_id.blank? && inbox.auto_assignment_v2_enabled? && inbox.enable_auto_assignment?
-
-    inbox_id_to_assign = inbox_id
-    ActiveRecord.after_all_transactions_commit { AutoAssignment::AssignmentJob.enqueue_for_inbox(inbox_id_to_assign) }
+  def clear_bot_wait_mark
+    self.additional_attributes = additional_attributes.except(BOT_HANDOFF_WAITING_SINCE_KEY)
   end
 end

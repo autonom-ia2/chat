@@ -1,7 +1,15 @@
+# A fila de quem espera uma pessoa (a cada 2 minutos, config/schedule.yml).
+#
+# 1. Conversas que o motor de entrega segura (Crm::Entrega::Marca, #1454): tenta de novo, com a mesma regra, e entrega
+#    para quem tiver ficado online. Vale com ou sem CRM e sem a IA do CRM ligada: é o "segura e entrega quando alguém
+#    entrar" da caixa sem regra também. O convite que venceu (TTL da etapa) só perde a marca, e a conversa volta a poder
+#    ser pega pelo rodízio nativo.
+# 2. Cards com a espera gravada no card, de antes do #1454 (só com a IA do CRM ligada), pelo HandoffExecutor.
 class Crm::Ai::HandoffDrainJob < ApplicationJob
   queue_as :scheduled_jobs
 
   def perform
+    drain_held_conversations
     return unless Crm::Ai::Config.enabled?
 
     Crm::Pipeline.active.find_each do |pipeline|
@@ -10,6 +18,36 @@ class Crm::Ai::HandoffDrainJob < ApplicationJob
   end
 
   private
+
+  # Abertas (ou pendentes, legado) e sem pessoa: a marca sai sozinha quando alguém é atribuído ou a conversa resolve.
+  def held_conversations
+    Conversation.where(status: [Conversation.statuses[:open], Conversation.statuses[:pending]], assignee_id: nil)
+                .where(Crm::Entrega::Marca::PRESENTE_SQL)
+  end
+
+  def drain_held_conversations
+    held_conversations.find_each do |conversation|
+      drain_conversation(conversation)
+    rescue StandardError => e
+      # Uma conversa com problema não pode travar a fila das outras.
+      Rails.logger.error("[crm][entrega] fila conversa=#{conversation.id} erro=#{e.class}")
+    end
+  end
+
+  def drain_conversation(conversation)
+    if Crm::Entrega::Marca.convite_vencido?(conversation)
+      conversation.with_lock do
+        Crm::Entrega::Marca.tirar(conversation) if Crm::Entrega::Marca.convite_vencido?(conversation)
+        conversation.save! if conversation.changed?
+      end
+      return
+    end
+
+    marca = Crm::Entrega::Marca.dados(conversation)
+    return unless marca && marca['modo'] == Crm::Entrega::Marca::SEGURANDO
+
+    Crm::Entrega.new(conversation: conversation, motivo: marca['motivo'], origem: 'fila', pedido: { sugestao: marca['sugestao'] }).call
+  end
 
   # Pré-filtro barato no JSONB: o volume esperado é baixo, mas isso evita varrer
   # todo card aberto. A elegibilidade real fica no lock, porque humano/self-assign
@@ -28,16 +66,12 @@ class Crm::Ai::HandoffDrainJob < ApplicationJob
   end
 
   # Drena sem IA: trava a CONVERSA primeiro, na mesma ordem do CardSyncer
-  # (conversation→card), para não criar deadlock ABBA. O executor abre transação
-  # aninhada e o AssignmentService atualiza a MESMA linha de conversa já travada
-  # (reentrante). O recheck de assignee_id sob lock fecha a brecha de self-assign
+  # (conversation→card), para não criar deadlock ABBA. O recheck de assignee_id sob lock fecha a brecha de self-assign
   # humano entre a query do cron e a tentativa de atribuição.
   def drain(card)
-    # A MESMA CONVERSA QUE O EXECUTOR VAI ATRIBUIR, e não a primária do card (issue #553). São
-    # duas coisas nesta linha: a trava abaixo só serializa contra o self-assign humano se travar
-    # a linha que vai ser escrita; e o recheck de `assignee_id` lido na conversa errada apagava o
-    # marcador de espera para sempre — cliente que pediu humano de madrugada, quando ninguém
-    # estava online, nunca mais era atendido, porque a primária tinha um responsável antigo.
+    # A MESMA CONVERSA QUE O EXECUTOR VAI ATRIBUIR, e não a primária do card (issue #553): a trava só serializa contra
+    # o self-assign humano se travar a linha que vai ser escrita, e o recheck de `assignee_id` lido na conversa errada
+    # apagava o marcador de espera para sempre.
     conversation = card.conversa_em_atendimento
     return clear_handoff_hold!(card) if conversation.blank?
 
