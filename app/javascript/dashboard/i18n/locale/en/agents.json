@@ -676,11 +676,9 @@
         "CONTINUAR_ARIA": "Continue {nome}",
         "MAIS_OPCOES": "More options for {nome}",
         "EXCLUIR_RASCUNHO": "Delete draft",
-        "CUIDA_DE": "Takes care of: {areas}",
-        "AJUDANDO": "Answers when {agente} asks.",
         "SEM_ONDE": "Has nowhere to work yet. Open to choose.",
-        "PORTA": "Answers first every conversation in this inbox.",
-        "SEM_ASSUNTO": "Takes care of no subject in this inbox."
+        "PRIMEIRO_EM": "Answers first on: {caixas}",
+        "RECEBE_EM": "Receives when someone hands over on: {caixas}"
       },
       "EXCLUIR": {
         "TITULO": "Delete this draft?",
@@ -1436,8 +1434,6 @@
             "NOTA": "This is only an example. {nome} writes in their own words and shows the times that are really free during the chat."
           }
         },
-        "CUIDA_DE": "Takes care of: {areas}",
-        "AJUDA": "Answers when {agente} asks",
         "SEM_ONDE": "Has nowhere to work yet",
         "SEM_ONDE_FAIXA": "{nome} has nowhere to work yet. Choose a channel or a role to start.",
         "ESCOLHER_ONDE": "Choose where it works"
@@ -1586,36 +1582,84 @@
           "HORA_MIN": "{h}:{m}"
         }
       },
-      "ONDE_TRABALHAR": {
-        "TITULO": "Where will {nome} work?",
-        "TEXTO": "{nome} only starts after you confirm.",
-        "ROTULO": "Where it works",
-        "CANAL": {
-          "TITULO": "Answer on a channel",
-          "TEXTO": "Answers whoever writes on WhatsApp, Instagram or the website."
+      "ONDE": {
+        "TITULO": "Where {nome} works",
+        "TITULO_SEM_NOME": "Where it will work",
+        "PAPEL": {
+          "PRIMEIRO": "Answers first",
+          "RECEBE": "Receives when someone hands over"
         },
-        "EQUIPE": {
-          "TITULO": "Take care of team pipelines",
-          "TEXTO": "Takes care of pipeline areas, with no channel of its own."
+        "CUIDA_DE": "Takes care of: {assuntos}",
+        "SEM_ASSUNTO": "Takes care of no subject",
+        "AJUDA": "Helps: {agentes}",
+        "ALTERAR": "Change",
+        "MUDAR": "Change",
+        "MUDAR_ARIA": "Change where {nome} works",
+        "FEITO": "Done. {nome} now works the new way.",
+        "ERRO": "Could not save. Nothing changed in {nome}.",
+        "PRONTO_TITULO": "{nome} is already working",
+        "SALVAR": "Save",
+        "CONVITE": {
+          "TEXTO": "Do you want to choose which subjects {nome} takes care of?",
+          "AGORA": "Do it now",
+          "DEPOIS": "Later"
         },
-        "AJUDA": {
-          "TITULO": "Help another agent",
-          "TEXTO": "Answers when another agent asks."
+        "JORNADA": {
+          "PASSO": "Step {n} of {total}",
+          "VOLTAR": "Back",
+          "CONTINUAR": "Continue",
+          "COMO": {
+            "TITULO": "How will {nome} work?",
+            "TITULO_SEM_NOME": "First, choose how it will work",
+            "TEXTO": "You can change it later on the agent page.",
+            "CLIENTES": {
+              "TITULO": "Talks to your customers",
+              "TEXTO": "Answers on WhatsApp, Instagram or the website."
+            },
+            "AJUDA": {
+              "TITULO": "Helps other agents",
+              "TEXTO": "Only answers another agent, never the customer."
+            }
+          },
+          "CANAIS": {
+            "TITULO": "On which channels?",
+            "TEXTO": "Choose one or more. Only connected channels show up.",
+            "VAZIO": "No channel connected yet.",
+            "CONECTAR": "Connect a channel"
+          },
+          "CAIXA": {
+            "TITULO": "How does {nome} join conversations on {canal}?",
+            "TITULO_SEM_NOME": "How does it join conversations on {canal}?",
+            "CONTADOR": "Channel {i} of {n}",
+            "PRIMEIRO": {
+              "TITULO": "Answers first",
+              "TEXTO": "Answers every new conversation that arrives on this channel.",
+              "OCUPADA": "Today {outro} answers first. {outro} starts receiving when someone hands over.",
+              "LIVRE": "This channel has no one answering first yet."
+            },
+            "RECEBE": {
+              "TITULO": "Receives when someone hands over",
+              "TEXTO": "Like a team member: a person or another agent hands the conversation to {nome}.",
+              "TEXTO_SEM_NOME": "Like a team member: a person or another agent hands the conversation over.",
+              "MANTER": "{outro} keeps answering first.",
+              "BLOQUEADO": "Only works when the channel has someone answering first. No one does here today."
+            }
+          },
+          "AJUDAR": {
+            "TITULO": "Who will {nome} help?",
+            "TITULO_SEM_NOME": "Who will it help?",
+            "TEXTO": "Choose one or more agents that talk to your customers.",
+            "VAZIO": "No agent talks to customers yet."
+          },
+          "QUANDO": {
+            "TITULO": "When to call {nome}?",
+            "TITULO_SEM_NOME": "When to call it?",
+            "TEXTO": "The chosen agents call it in this situation. Adjust the text if you want.",
+            "ROTULO": "When to call",
+            "SUGESTAO": "When the question is about exchanges and returns"
+          }
         },
-        "CONTINUAR": "Continue",
-        "VOLTAR": "Back",
-        "EQUIPE_PASSO": {
-          "TITULO": "Who takes care of what lives in the CRM",
-          "TEXTO": "In Inboxes in the CRM › Who takes care of what?, choose the inbox and the pipeline {nome} will take care of.",
-          "ABRIR": "Open Inboxes in the CRM"
-        },
-        "AJUDA_PASSO": {
-          "ROTULO": "Who will {nome} help?",
-          "CONFIRMAR": "Start helping",
-          "NENHUM": "There is no other agent to help yet.",
-          "FEITO": "Done. {nome} now helps {agente}."
-        },
-        "ERRO": "Could not save. Nothing changed in {nome}."
+        "COMECAR": "Start working"
       }
     }
   }

@@ -39,6 +39,13 @@ import EtapaConte from '../components/criar/EtapaConte.vue';
 import EtapaConfira from '../components/criar/EtapaConfira.vue';
 import EtapaComece from '../components/criar/EtapaComece.vue';
 import EtapaPronto from '../components/criar/EtapaPronto.vue';
+import JornadaOndeTrabalha from '../components/onde/JornadaOndeTrabalha.vue';
+import ResumoOndeTrabalha from '../components/onde/ResumoOndeTrabalha.vue';
+import ConviteAssuntos from '../components/onde/ConviteAssuntos.vue';
+import { usePrototipoFase2 } from '../prototipo/usePrototipoFase2';
+import { usePapeisDosAgentes } from '../prototipo/usePapeisDosAgentes';
+import fonte from '../prototipo/fonte';
+import { agentesPrincipais, portasOcupadas } from '../utils/ondeTrabalha';
 
 // #1181 PR2 — criar agente: Conte · Confira · Comece · Pronto (protótipo T03–T06), atrás da flag
 // autonomia_agents_journey (o seletor da rota decide). A etapa vem da query (`?etapa=`), e só vale
@@ -92,6 +99,15 @@ const etapaConte = ref(null);
 // "Respondeu errado?" e o texto que não entrou (409).
 const rascunhoDaConversa = ref('');
 
+// #1366 (protótipo da Fase 2, rodada 2) — antes da conversa, a jornada "Onde vai trabalhar" (como
+// trabalha, canais e papel em cada um, ou quem ajuda). O papel fica visível no topo da criação, em
+// Confira e em Pronto. Ele só vale quando o agente começa (Começar), como o canal hoje.
+const prototipo = usePrototipoFase2();
+const papeis = usePapeisDosAgentes();
+const escolhendoOnde = ref(prototipo && !idInicial);
+const papelNovo = ref(null);
+const aplicandoPapel = ref(false);
+
 const agente = computed(
   () =>
     (registros.value || []).find(item => item.id === conversa.agenteId.value) ||
@@ -144,7 +160,66 @@ watch(
   }
 );
 
+// Papel do rascunho: o escolhido nesta criação, o já gravado no agente ou o guardado antes do F5.
+const papelDaCriacao = computed(() => {
+  if (!prototipo) return null;
+  if (papelNovo.value) return papelNovo.value;
+  const doAgente = agente.value?.id ? papeis.papelDe(agente.value) : null;
+  return doAgente || fonte.rascunho();
+});
+const conversaComCliente = computed(
+  () => papelDaCriacao.value?.tipo === 'clientes'
+);
+const portas = computed(() =>
+  portasOcupadas(registros.value, papeis.papelDe, conversa.agenteId.value)
+);
+const principais = computed(() =>
+  agentesPrincipais(registros.value, papeis.papelDe, conversa.agenteId.value)
+);
+const carregarPapeis = async () => {
+  await store.dispatch('autonomiaAgents/get').catch(() => null);
+  await papeis.carregar(registros.value);
+};
+
+const escolheuOnde = papel => {
+  papelNovo.value = papel;
+  fonte.guardarRascunho(papel);
+  escolhendoOnde.value = false;
+  if (!conversa.agenteId.value && !conversa.falas.value.length) {
+    conversa.comecar();
+  }
+};
+
+const voltarDaJornada = () => {
+  if (papelDaCriacao.value) {
+    escolhendoOnde.value = false;
+    return;
+  }
+  router.push({ name: 'autonomia_agents_index' });
+};
+
+// Começar com o papel: grava onde trabalha (adaptador) e liga o agente.
+const aplicarPapel = async () => {
+  if (aplicandoPapel.value || !papelDaCriacao.value) return false;
+  aplicandoPapel.value = true;
+  try {
+    await papeis.definir(agente.value, papelDaCriacao.value);
+    await store.dispatch('autonomiaAgents/update', {
+      id: agente.value.id,
+      enabled: true,
+      status: 'active',
+    });
+    return true;
+  } catch {
+    useAlert(t('AGENTS.JORNADA.ONDE.ERRO', { nome: nome.value }));
+    return false;
+  } finally {
+    aplicandoPapel.value = false;
+  }
+};
+
 const rotuloComecar = computed(() => {
+  if (papelDaCriacao.value) return t('AGENTS.JORNADA.ONDE.COMECAR');
   if (interno.value) return t('AGENTS.JORNADA.CRIAR.COMECE.COMECAR');
   if (ocupacao.estado.value === 'carregando') {
     return t('AGENTS.JORNADA.CRIAR.COMECE.COMECAR');
@@ -325,7 +400,14 @@ const ativarInterno = async () => {
   }
 };
 
-const abrirComece = () => {
+const abrirComece = async () => {
+  if (papelDaCriacao.value) {
+    if (await aplicarPapel()) {
+      resultado.value = { canal: '', quando: 'always', saiu: '' };
+      irPara(ETAPA.PRONTO);
+    }
+    return;
+  }
   if (interno.value) {
     ativarInterno();
     return;
@@ -405,20 +487,65 @@ const abrirAgenteExistente = async () => {
   }
 };
 
-onMounted(() => {
+onMounted(async () => {
   conversa.limpar();
+  if (prototipo) carregarPapeis();
   if (idInicial) {
     abrirAgenteExistente();
     return;
   }
+  if (escolhendoOnde.value) return;
   conversa.comecar();
 });
+
+// Demonstração local: o teste não responde sem chave de IA, então Pronto pode ser aberto pela URL
+// com o agente já ligado; o papel guardado é aplicado ali, como o Começar faria.
+watch(
+  () => [etapa.value, papeis.estado.value, agente.value?.id],
+  async ([agora, lidos, id]) => {
+    if (!prototipo || agora !== ETAPA.PRONTO || lidos !== 'pronto' || !id) {
+      return;
+    }
+    if (!papeis.papelDe(agente.value) && fonte.rascunho()) await aplicarPapel();
+  }
+);
 </script>
 
 <template>
   <div class="w-full h-full overflow-y-auto bg-n-background">
+    <div
+      v-if="escolhendoOnde"
+      data-criar-onde
+      class="flex flex-col w-full max-w-3xl gap-6 px-4 py-6 mx-auto md:px-6"
+    >
+      <button
+        type="button"
+        data-voltar-lista
+        class="inline-flex items-center gap-1 text-sm font-semibold min-h-11 w-fit text-n-blue-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-blue-11"
+        @click="voltarParaLista"
+      >
+        <span
+          class="i-lucide-arrow-left size-4 rtl:rotate-180"
+          aria-hidden="true"
+        />
+        {{ t('AGENTS.JORNADA.CRIAR.VOLTAR') }}
+      </button>
+      <p class="m-0 text-sm font-semibold text-n-slate-11">
+        {{ t('AGENTS.JORNADA.CRIAR.TITULO') }}
+      </p>
+      <JornadaOndeTrabalha
+        :nome="agente?.name || ''"
+        :caixas="caixas"
+        :portas="portas"
+        :principais="principais"
+        :inicial="papelDaCriacao"
+        @pronto="escolheuOnde"
+        @voltar="voltarDaJornada"
+      />
+    </div>
+
     <EtapaPronto
-      v-if="etapa === ETAPA.PRONTO"
+      v-else-if="etapa === ETAPA.PRONTO"
       :nome="nome"
       :canal="pronto.canal"
       :quando="pronto.quando"
@@ -426,9 +553,24 @@ onMounted(() => {
       :ultimo="teste.ultima.value"
       :empresa="empresa"
       :celular="celular"
+      :titulo-pronto="
+        papelDaCriacao ? t('AGENTS.JORNADA.ONDE.PRONTO_TITULO', { nome }) : ''
+      "
       @ver="verAgente"
       @voltar="irParaLista"
-    />
+    >
+      <section
+        v-if="papelDaCriacao"
+        data-onde-pronto
+        class="flex flex-col gap-4 p-5 shadow-sm rounded-2xl bg-n-solid-1 ring-1 ring-inset ring-n-weak"
+      >
+        <h2 class="m-0 text-base font-semibold text-n-slate-12">
+          {{ t('AGENTS.JORNADA.ONDE.TITULO', { nome }) }}
+        </h2>
+        <ResumoOndeTrabalha :papel="papelDaCriacao" :caixas="caixas" />
+        <ConviteAssuntos v-if="conversaComCliente" :nome="nome" />
+      </section>
+    </EtapaPronto>
 
     <div
       v-else
@@ -478,6 +620,42 @@ onMounted(() => {
         </h1>
         <AgentesEtapas :atual="numeroDaEtapa" />
       </div>
+
+      <section
+        v-if="papelDaCriacao && !abrindo"
+        data-onde-criacao
+        :aria-label="t('AGENTS.JORNADA.ONDE.TITULO', { nome })"
+        class="flex flex-col gap-3 p-4 shadow-sm rounded-2xl bg-n-solid-1 ring-1 ring-inset ring-n-weak"
+      >
+        <div class="flex items-start gap-3">
+          <div class="flex flex-col flex-1 min-w-0 gap-2">
+            <h2 class="m-0 text-sm font-semibold text-n-slate-11">
+              {{
+                agente?.name
+                  ? t('AGENTS.JORNADA.ONDE.TITULO', { nome })
+                  : t('AGENTS.JORNADA.ONDE.TITULO_SEM_NOME')
+              }}
+            </h2>
+            <ResumoOndeTrabalha
+              :papel="papelDaCriacao"
+              :caixas="caixas"
+              :compacto="!conversa.fechada.value"
+            />
+          </div>
+          <AgenteBotao
+            data-alterar-onde
+            variante="fantasma"
+            class="shrink-0"
+            @click="escolhendoOnde = true"
+          >
+            {{ t('AGENTS.JORNADA.ONDE.ALTERAR') }}
+          </AgenteBotao>
+        </div>
+        <ConviteAssuntos
+          v-if="conversa.fechada.value && conversaComCliente"
+          :nome="nome"
+        />
+      </section>
 
       <p v-if="abrindo" role="status" class="m-0 text-sm text-n-slate-11">
         {{ t('AGENTS.JORNADA.CRIAR.CARREGANDO') }}

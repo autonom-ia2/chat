@@ -9,7 +9,8 @@ import {
   ESTADO,
   TRABALHANDO,
   estadoDoAgente,
-  nomesDasAreas,
+  assuntosDoPapel,
+  caixasDoPapel,
 } from '../utils/estadoDoAgente';
 
 // #1181 (protótipo T02) — cartão do agente na lista.
@@ -50,26 +51,30 @@ const cotacao = computed(() => estado.value === ESTADO.COTACAO);
 const atendendo = computed(() => estado.value === ESTADO.ATENDENDO);
 const trabalhando = computed(() => TRABALHANDO.includes(estado.value));
 
-// #1366 (protótipo) — mesmo texto da tela do CRM "Quem cuida do quê?": a caixa e, embaixo, o papel
-// nela (porta: "Atende primeiro todas as conversas desta caixa"; equipe sem funil: "Não cuida de
-// nenhum assunto nesta caixa"). null quando não se aplica (sem protótipo, ou mais de uma caixa).
-const naCaixa = computed(() => {
-  if (props.papel === undefined) return null;
-  if (atendendo.value && quantosCanais.value === 1 && props.canais?.[0]) {
-    return {
-      caixa: props.canais[0].name,
-      texto: t('AGENTS.JORNADA.CARTAO.PORTA'),
-    };
+// #1366 (protótipo, rodada 2) — como trabalha, com o papel: onde atende primeiro, onde recebe quando
+// alguém passar e de quais assuntos cuida; no ajudante, quem ele ajuda. Vazio sem protótipo.
+const linhasDoPapel = computed(() => {
+  const papel = props.papel;
+  if (!papel) return [];
+  if (papel.tipo === 'ajuda') {
+    return [
+      t('AGENTS.JORNADA.ONDE.AJUDA', { agentes: papel.ajuda.join(', ') }),
+    ];
   }
-  const semAssunto =
-    estado.value === ESTADO.NA_EQUIPE && !props.papel?.areas?.length;
-  if (semAssunto) {
-    return {
-      caixa: props.papel.caixa,
-      texto: t('AGENTS.JORNADA.CARTAO.SEM_ASSUNTO'),
-    };
-  }
-  return null;
+  const primeiro = caixasDoPapel(papel, 'primeiro');
+  const recebe = caixasDoPapel(papel, 'recebe');
+  const assuntos = assuntosDoPapel(papel);
+  return [
+    primeiro.length
+      ? t('AGENTS.JORNADA.CARTAO.PRIMEIRO_EM', { caixas: primeiro.join(', ') })
+      : null,
+    recebe.length
+      ? t('AGENTS.JORNADA.CARTAO.RECEBE_EM', { caixas: recebe.join(', ') })
+      : null,
+    assuntos.length
+      ? t('AGENTS.JORNADA.ONDE.CUIDA_DE', { assuntos: assuntos.join(', ') })
+      : null,
+  ].filter(Boolean);
 });
 
 const onde = computed(() => {
@@ -88,17 +93,7 @@ const linha = computed(() => {
   if (estado.value === ESTADO.SEM_ONDE) {
     return t('AGENTS.JORNADA.CARTAO.SEM_ONDE');
   }
-  if (naCaixa.value) return null;
-  if (estado.value === ESTADO.NA_EQUIPE) {
-    return t('AGENTS.JORNADA.CARTAO.CUIDA_DE', {
-      areas: nomesDasAreas(props.papel),
-    });
-  }
-  if (estado.value === ESTADO.AJUDANDO) {
-    return t('AGENTS.JORNADA.CARTAO.AJUDANDO', {
-      agente: props.papel.agente,
-    });
-  }
+  if (linhasDoPapel.value.length) return null;
   // Agente interno nunca entra em canal (backend: agent_internal_not_connectable).
   return quantosCanais.value || interno.value
     ? t('AGENTS.JORNADA.CARTAO.PARADO')
@@ -200,14 +195,26 @@ const itensDoMenu = computed(() => [
         />
       </span>
       <span v-if="linha" class="text-sm text-n-slate-12">{{ linha }}</span>
-      <span v-if="naCaixa" data-na-caixa class="flex flex-col text-sm">
-        <b class="font-semibold text-n-slate-12">{{ naCaixa.caixa }}</b>
-        <span class="text-n-slate-11">{{ naCaixa.texto }}</span>
+      <span
+        v-if="linhasDoPapel.length"
+        data-papel
+        class="flex flex-col gap-0.5 text-sm"
+      >
+        <span
+          v-for="(texto, indice) in linhasDoPapel"
+          :key="texto"
+          :class="indice ? 'text-n-slate-11' : 'text-n-slate-12'"
+        >
+          {{ texto }}
+        </span>
       </span>
       <template v-if="atendendo && !interno">
-        <span v-if="!naCaixa" data-onde class="text-sm text-n-slate-12">{{
-          onde
-        }}</span>
+        <span
+          v-if="!linhasDoPapel.length"
+          data-onde
+          class="text-sm text-n-slate-12"
+          >{{ onde }}</span
+        >
         <span
           v-if="numeros && semConversas"
           data-semana

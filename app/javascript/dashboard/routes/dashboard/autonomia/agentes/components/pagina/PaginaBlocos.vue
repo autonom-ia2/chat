@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import AgenteBotao from '../AgenteBotao.vue';
 import AgendaEstado from './AgendaEstado.vue';
+import ResumoOndeTrabalha from '../onde/ResumoOndeTrabalha.vue';
 import { usePermissoesDaJornada } from '../../composables/usePermissoesDaJornada';
 import { useAgendaDoAgente } from '../../composables/useAgendaDoAgente';
 import { useAgendaNovaNaConta } from '../../composables/useAgendaNovaNaConta';
@@ -26,6 +27,10 @@ const props = defineProps({
   textoOnde: { type: String, default: '' },
   quantasFontes: { type: Number, default: 0 },
   quantasPerguntas: { type: Number, default: 0 },
+  // #1366 (protótipo, rodada 2): com o papel lido (null = sem papel), "Onde e quando responde" vira
+  // "Onde {nome} trabalha", com uma linha por caixa (ou quem ajuda), e "Mudar" reabre a jornada.
+  papel: { type: Object, default: undefined },
+  caixas: { type: Array, default: () => [] },
 });
 
 const emit = defineEmits([
@@ -34,6 +39,7 @@ const emit = defineEmits([
   'mudar',
   'escrever',
   'escolherCanal',
+  'mudarOnde',
 ]);
 
 const { t } = useI18n();
@@ -233,7 +239,48 @@ onMounted(() => {
       </div>
 
       <div
-        v-if="!interno"
+        v-if="papel !== undefined"
+        data-linha="onde-trabalha"
+        role="group"
+        :aria-labelledby="`${base}-onde-trabalha`"
+        class="flex flex-col gap-3 p-5 sm:flex-row sm:items-start"
+      >
+        <div class="flex items-start flex-1 min-w-0 gap-3">
+          <span
+            class="grid rounded-lg place-items-center size-9 shrink-0 bg-n-alpha-2"
+            aria-hidden="true"
+          >
+            <span class="i-lucide-map-pin size-5 text-n-slate-11" />
+          </span>
+          <div class="flex flex-col flex-1 min-w-0 gap-2">
+            <h3
+              :id="`${base}-onde-trabalha`"
+              class="m-0 text-sm font-semibold text-n-slate-11"
+            >
+              {{ t('AGENTS.JORNADA.ONDE.TITULO', { nome }) }}
+            </h3>
+            <ResumoOndeTrabalha v-if="papel" :papel="papel" :caixas="caixas" />
+            <p v-else class="m-0 text-sm text-n-slate-12">
+              {{ t(`${NS}.SEM_ONDE`) }}
+            </p>
+          </div>
+        </div>
+        <AgenteBotao
+          v-if="podeGerenciar"
+          data-mudar-onde
+          class="max-sm:w-full max-sm:ring-1 max-sm:ring-inset max-sm:ring-n-blue-9 shrink-0"
+          :variante="papel ? 'fantasma' : 'contorno'"
+          :aria-label="t('AGENTS.JORNADA.ONDE.MUDAR_ARIA', { nome })"
+          @click="emit('mudarOnde')"
+        >
+          {{
+            papel ? t('AGENTS.JORNADA.ONDE.MUDAR') : t(`${NS}.ESCOLHER_ONDE`)
+          }}
+        </AgenteBotao>
+      </div>
+
+      <div
+        v-else-if="!interno"
         data-linha="onde"
         role="group"
         :aria-labelledby="`${base}-onde`"

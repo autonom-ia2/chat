@@ -8,6 +8,7 @@ import { useCanManage } from 'dashboard/composables/useCanManage';
 import FaqSuggestionsAPI from 'dashboard/api/autonomia/faqSuggestions';
 import AgenteErro from '../components/AgenteErro.vue';
 import AgenteBotao from '../components/AgenteBotao.vue';
+import AgenteGaveta from '../components/AgenteGaveta.vue';
 import PaginaHeroi from '../components/pagina/PaginaHeroi.vue';
 import PaginaBlocos from '../components/pagina/PaginaBlocos.vue';
 import AgenteSemana from '../components/pagina/AgenteSemana.vue';
@@ -22,7 +23,8 @@ import GavetaInstrucoes from '../components/pagina/GavetaInstrucoes.vue';
 import GavetaAgenda from '../components/pagina/GavetaAgenda.vue';
 import GavetaFerramentas from '../components/pagina/GavetaFerramentas.vue';
 import MudarConversando from '../components/pagina/MudarConversando.vue';
-import GavetaOndeTrabalhar from '../components/pagina/GavetaOndeTrabalhar.vue';
+import JornadaOndeTrabalha from '../components/onde/JornadaOndeTrabalha.vue';
+import { agentesPrincipais, portasOcupadas } from '../utils/ondeTrabalha';
 import { usePrototipoFase2 } from '../prototipo/usePrototipoFase2';
 import { usePapeisDosAgentes } from '../prototipo/usePapeisDosAgentes';
 import {
@@ -32,7 +34,12 @@ import {
 import { useCanaisDoAgente } from '../composables/useCanaisDoAgente';
 import { useNumerosDaSemana } from '../composables/useNumerosDaSemana';
 import { useAgendaNovaNaConta } from '../composables/useAgendaNovaNaConta';
-import { ESTADO, TRABALHANDO, nomesDasAreas } from '../utils/estadoDoAgente';
+import {
+  ESTADO,
+  TRABALHANDO,
+  assuntosDoPapel,
+  caixasDoPapel,
+} from '../utils/estadoDoAgente';
 import { horariosDasCaixas } from '../utils/horarios';
 import {
   GAVETA,
@@ -113,14 +120,14 @@ const estadoDaPagina = computed(() =>
 const atendendo = computed(() => estadoDaPagina.value === ESTADO.ATENDENDO);
 const trabalhando = computed(() => TRABALHANDO.includes(estadoDaPagina.value));
 const semOnde = computed(() => estadoDaPagina.value === ESTADO.SEM_ONDE);
-const outrosAgentes = computed(() =>
-  (todosOsAgentes.value || []).filter(
-    item =>
-      item.id !== agente.value?.id &&
-      item.status !== 'draft' &&
-      item.agent_type !== 'insurance_quote'
-  )
+// Para a jornada "Onde trabalha": quem já atende primeiro em cada caixa e quem pode ser ajudado.
+const portas = computed(() =>
+  portasOcupadas(todosOsAgentes.value, papeis.papelDe, agente.value?.id)
 );
+const principais = computed(() =>
+  agentesPrincipais(todosOsAgentes.value, papeis.papelDe, agente.value?.id)
+);
+const salvandoOnde = ref(false);
 const cotacao = computed(() => ehCotacao(agente.value));
 const manual = computed(() => ehManual(agente.value));
 const interno = computed(() => ehInterno(agente.value));
@@ -162,23 +169,34 @@ const foto = computed(
   () => canalDaFoto.value?.foto || agente.value?.avatar_url || ''
 );
 
-const ondeSemCanal = () => {
-  if (semOnde.value) return t(`${NS}.SEM_ONDE`);
-  if (papel.value?.tipo === 'equipe' && !papel.value.areas?.length) {
-    return `${papel.value.caixa} · ${t('AGENTS.JORNADA.CARTAO.SEM_ASSUNTO')}`;
+// #1366 (protótipo, rodada 2): no herói, como trabalha (o detalhe por caixa fica no bloco).
+const ondePeloPapel = () => {
+  if (!papel.value) return t(`${NS}.SEM_ONDE`);
+  if (papel.value.tipo === 'ajuda') {
+    return t('AGENTS.JORNADA.ONDE.AJUDA', {
+      agentes: papel.value.ajuda.join(', '),
+    });
   }
-  if (papel.value?.tipo === 'equipe') {
-    return t(`${NS}.CUIDA_DE`, { areas: nomesDasAreas(papel.value) });
-  }
-  if (papel.value?.tipo === 'ajuda') {
-    return t(`${NS}.AJUDA`, { agente: papel.value.agente });
-  }
-  return null;
+  const primeiro = caixasDoPapel(papel.value, 'primeiro');
+  const recebe = caixasDoPapel(papel.value, 'recebe');
+  const assuntos = assuntosDoPapel(papel.value);
+  return [
+    primeiro.length
+      ? t('AGENTS.JORNADA.CARTAO.PRIMEIRO_EM', { caixas: primeiro.join(', ') })
+      : '',
+    !primeiro.length && recebe.length
+      ? t('AGENTS.JORNADA.CARTAO.RECEBE_EM', { caixas: recebe.join(', ') })
+      : '',
+    assuntos.length
+      ? t('AGENTS.JORNADA.ONDE.CUIDA_DE', { assuntos: assuntos.join(', ') })
+      : '',
+  ]
+    .filter(Boolean)
+    .join(' · ');
 };
 
 const ondeNoHeroi = computed(() => {
-  const semCanal = !temCanal.value && papel.value !== undefined;
-  if (semCanal && ondeSemCanal()) return ondeSemCanal();
+  if (papel.value !== undefined) return ondePeloPapel();
   if (interno.value) return '';
   if (!temCanal.value) return t(`${NS}.NENHUM_CANAL`);
   const ligado = atendendo.value;
@@ -356,7 +374,10 @@ const carregarTudo = async () => {
   canais.carregar();
   await carregar();
   if (estado.value !== ESTADO_PAGINA.PRONTO) return;
-  if (prototipo) papeis.carregar([agente.value]);
+  if (prototipo) {
+    await store.dispatch('autonomiaAgents/get').catch(() => null);
+    papeis.carregar(todosOsAgentes.value);
+  }
   lerFontes();
   lerPerguntas();
 };
@@ -425,30 +446,29 @@ const voltarInterno = async () => {
 };
 
 const abrirOndeTrabalhar = () => {
-  if ((todosOsAgentes.value || []).length < 2) {
-    store.dispatch('autonomiaAgents/get').catch(() => {});
-  }
   aberta.value = ONDE_TRABALHAR;
 };
 
-// Grava o papel (adaptador do protótipo) e liga o agente, como o "Começar a atender" faz com o canal.
-const confirmarPapel = async novo => {
-  await papeis.definir(agente.value, novo);
-  await store.dispatch('autonomiaAgents/update', {
-    id: agente.value.id,
-    enabled: true,
-    status: 'active',
-  });
-};
-
-const papelPronto = novo => {
-  aberta.value = null;
-  useAlert(
-    t('AGENTS.JORNADA.ONDE_TRABALHAR.AJUDA_PASSO.FEITO', {
-      nome: nome.value,
-      agente: novo.agente,
-    })
-  );
+// Grava o papel (adaptador do protótipo) e liga o agente, como o "Começar a atender" faz com o
+// canal. Atender primeiro numa caixa passa quem atendia ali para "recebe" (o adaptador cuida disso).
+const salvarOnde = async novo => {
+  if (salvandoOnde.value) return;
+  salvandoOnde.value = true;
+  try {
+    await papeis.definir(agente.value, novo);
+    await papeis.carregar(todosOsAgentes.value);
+    await store.dispatch('autonomiaAgents/update', {
+      id: agente.value.id,
+      enabled: true,
+      status: 'active',
+    });
+    aberta.value = null;
+    useAlert(t('AGENTS.JORNADA.ONDE.FEITO', { nome: nome.value }));
+  } catch {
+    useAlert(t('AGENTS.JORNADA.ONDE.ERRO', { nome: nome.value }));
+  } finally {
+    salvandoOnde.value = false;
+  }
 };
 
 const alternar = ligar => {
@@ -687,11 +707,14 @@ const tirarPergunta = id => {
           :texto-onde="textoOnde"
           :quantas-fontes="listaDeFontes.length"
           :quantas-perguntas="perguntas.length"
+          :papel="papel"
+          :caixas="caixas"
           @perguntar="perguntar"
           @abrir="abrir"
           @mudar="mudar"
           @escrever="escrever"
           @escolher-canal="escolherCanal"
+          @mudar-onde="abrirOndeTrabalhar"
         />
       </template>
     </div>
@@ -737,15 +760,24 @@ const tirarPergunta = id => {
         @reler="canais.carregar()"
         @voltar-a-atender="aberta = GAVETA.VOLTAR"
       />
-      <GavetaOndeTrabalhar
+      <AgenteGaveta
         v-else-if="aberta === ONDE_TRABALHAR"
-        :nome="nome"
-        :outros="outrosAgentes"
-        :confirmar="confirmarPapel"
+        :titulo="t('AGENTS.JORNADA.ONDE.TITULO', { nome })"
         @fechar="fechar"
-        @canal="aberta = GAVETA.VOLTAR"
-        @pronto="papelPronto"
-      />
+      >
+        <JornadaOndeTrabalha
+          :nome="nome"
+          :caixas="caixas"
+          :portas="portas"
+          :principais="principais"
+          :inicial="papel"
+          :salvando="salvandoOnde"
+          :texto-final="t('AGENTS.JORNADA.ONDE.SALVAR')"
+          na-gaveta
+          @pronto="salvarOnde"
+          @voltar="fechar"
+        />
+      </AgenteGaveta>
       <GavetaConversas
         v-else-if="aberta === GAVETA.CONVERSAS"
         :agent-id="agente.id"

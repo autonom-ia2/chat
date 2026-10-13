@@ -17,6 +17,8 @@ const props = defineProps({
   ultimo: { type: Object, default: null },
   empresa: { type: String, default: '' },
   celular: { type: Boolean, default: false },
+  // #1366 (protótipo, rodada 2): título que diz como trabalha, no lugar do "atendendo no canal".
+  tituloPronto: { type: String, default: '' },
 });
 
 const emit = defineEmits(['ver', 'voltar']);
@@ -26,11 +28,12 @@ const NS = 'AGENTS.JORNADA.CRIAR.PRONTO';
 
 const valores = computed(() => ({ nome: props.nome, canal: props.canal }));
 
-const titulo = computed(() =>
-  props.canal
+const titulo = computed(() => {
+  if (props.tituloPronto) return props.tituloPronto;
+  return props.canal
     ? t(`${NS}.TITULO`, valores.value)
-    : t(`${NS}.TITULO_SEM_CANAL`, valores.value)
-);
+    : t(`${NS}.TITULO_SEM_CANAL`, valores.value);
+});
 
 const QUANDO = {
   business_hours: 'DENTRO',
@@ -137,5 +140,6 @@ const conversa = computed(() =>
         />
       </div>
     </section>
+    <slot />
   </div>
 </template>

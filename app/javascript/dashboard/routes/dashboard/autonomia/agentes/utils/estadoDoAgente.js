@@ -3,9 +3,10 @@
 // Rascunho continua "Falta terminar" mesmo com instrução (DECISOES.md item 5): só começa a atender
 // quem escolheu onde. O agente de cotação mora no módulo de cotação e tem cartão próprio.
 // #1366 (protótipo da Fase 2) — com o papel conhecido (segundo argumento, null = sem papel), o estado
-// diz ONDE o agente trabalha: Atendendo (porta de um canal), Na equipe (área de um funil, sem canal
-// próprio), Ajudando (consultado por outro agente) e Sem onde trabalhar. Sem onde trabalhar nunca
-// aparece como ligado, mesmo que o servidor diga "ativo". Sem o papel (undefined), vale a regra antiga.
+// diz COMO o agente trabalha: Atendendo (atende primeiro em alguma caixa), Na equipe (recebe quando
+// alguém passar, em alguma caixa), Ajudando (só responde a outros agentes) e Sem onde trabalhar.
+// Sem onde trabalhar nunca aparece como ligado, mesmo que o servidor diga "ativo". Sem o papel
+// (undefined), vale a regra antiga.
 export const ESTADO = {
   ATENDENDO: 'atendendo',
   NA_EQUIPE: 'na_equipe',
@@ -31,13 +32,25 @@ const ESTADO_DO_LUGAR = {
   ajuda: ESTADO.AJUDANDO,
 };
 
-// Onde o agente trabalha: a porta de um canal vem da contagem de canais da API; equipe e ajuda, do papel.
-export const ondeTrabalha = (agente, papel) => {
-  if ((agente?.channels_count || 0) > 0) return 'canal';
-  if (papel?.tipo === 'equipe') return 'equipe';
-  if (papel?.tipo === 'ajuda') return 'ajuda';
+// Como o agente trabalha, pelo papel: atender primeiro em alguma caixa vale mais que receber.
+export const ondeTrabalha = (_agente, papel) => {
+  if (papel?.tipo === 'ajuda') return papel.ajuda?.length ? 'ajuda' : null;
+  const caixas = papel?.caixas || [];
+  if (caixas.some(item => item.papel === 'primeiro')) return 'canal';
+  if (caixas.some(item => item.papel === 'recebe')) return 'equipe';
   return null;
 };
+
+// Nomes das caixas em que o agente tem um papel ("primeiro" ou "recebe").
+export const caixasDoPapel = (papel, qual) =>
+  (papel?.caixas || [])
+    .filter(item => item.papel === qual)
+    .map(item => item.caixa);
+
+// Assuntos (funis) de que cuida, sem repetir, em todas as caixas.
+export const assuntosDoPapel = papel => [
+  ...new Set((papel?.caixas || []).flatMap(item => item.assuntos || [])),
+];
 
 const ligado = agente => agente.status === 'active' && agente.enabled === true;
 
@@ -102,15 +115,3 @@ export const canaisDoAgente = (agenteId, canais) =>
       canal.occupied_by?.kind === 'agent' &&
       canal.occupied_by.agent_id === agenteId
   );
-
-// #1366 (protótipo) — áreas que o agente "Na equipe" cuida, no mesmo texto da tela do CRM "Caixas no
-// CRM › Quem cuida do quê?": os funis, com o nome da caixa só quando as áreas estão em mais de uma.
-export const nomesDasAreas = papel => {
-  const areas = papel?.areas || [];
-  const caixas = new Set(areas.map(area => area.caixa));
-  return areas
-    .map(area =>
-      caixas.size > 1 ? `${area.funil} (${area.caixa})` : area.funil
-    )
-    .join(', ');
-};

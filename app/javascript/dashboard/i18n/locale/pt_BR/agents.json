@@ -676,11 +676,9 @@
         "CONTINUAR_ARIA": "Continuar {nome}",
         "MAIS_OPCOES": "Mais opções de {nome}",
         "EXCLUIR_RASCUNHO": "Excluir rascunho",
-        "CUIDA_DE": "Cuida de: {areas}",
-        "AJUDANDO": "Responde quando {agente} pergunta.",
         "SEM_ONDE": "Ainda não tem onde trabalhar. Abra para escolher.",
-        "PORTA": "Atende primeiro todas as conversas desta caixa.",
-        "SEM_ASSUNTO": "Não cuida de nenhum assunto nesta caixa."
+        "PRIMEIRO_EM": "Atende primeiro em: {caixas}",
+        "RECEBE_EM": "Recebe quando alguém passar em: {caixas}"
       },
       "EXCLUIR": {
         "TITULO": "Excluir este rascunho?",
@@ -1436,8 +1434,6 @@
             "NOTA": "É só um exemplo. {nome} escreve com as próprias palavras e mostra os horários livres de verdade na hora da conversa."
           }
         },
-        "CUIDA_DE": "Cuida de: {areas}",
-        "AJUDA": "Responde quando {agente} pergunta",
         "SEM_ONDE": "Ainda não tem onde trabalhar",
         "SEM_ONDE_FAIXA": "{nome} ainda não tem onde trabalhar. Escolha um canal ou um papel para começar.",
         "ESCOLHER_ONDE": "Escolher onde trabalha"
@@ -1586,36 +1582,84 @@
           "HORA_MIN": "{h}h{m}"
         }
       },
-      "ONDE_TRABALHAR": {
-        "TITULO": "Onde {nome} vai trabalhar?",
-        "TEXTO": "{nome} só começa depois que você confirmar.",
-        "ROTULO": "Onde trabalha",
-        "CANAL": {
-          "TITULO": "Atender num canal",
-          "TEXTO": "Responde quem escreve no WhatsApp, no Instagram ou no site."
+      "ONDE": {
+        "TITULO": "Onde {nome} trabalha",
+        "TITULO_SEM_NOME": "Onde vai trabalhar",
+        "PAPEL": {
+          "PRIMEIRO": "Atende primeiro",
+          "RECEBE": "Recebe quando alguém passar"
         },
-        "EQUIPE": {
-          "TITULO": "Cuidar de funis da equipe",
-          "TEXTO": "Cuida de áreas do funil, sem canal próprio."
+        "CUIDA_DE": "Cuida de: {assuntos}",
+        "SEM_ASSUNTO": "Não cuida de nenhum assunto",
+        "AJUDA": "Ajuda: {agentes}",
+        "ALTERAR": "Alterar",
+        "MUDAR": "Mudar",
+        "MUDAR_ARIA": "Mudar onde {nome} trabalha",
+        "FEITO": "Pronto. {nome} já trabalha do jeito novo.",
+        "ERRO": "Não deu para salvar. Nada mudou em {nome}.",
+        "PRONTO_TITULO": "{nome} já está trabalhando",
+        "SALVAR": "Salvar",
+        "CONVITE": {
+          "TEXTO": "Quer escolher de quais assuntos {nome} cuida?",
+          "AGORA": "Fazer agora",
+          "DEPOIS": "Depois"
         },
-        "AJUDA": {
-          "TITULO": "Ajudar outro agente",
-          "TEXTO": "Responde quando outro agente pergunta."
+        "JORNADA": {
+          "PASSO": "Passo {n} de {total}",
+          "VOLTAR": "Voltar",
+          "CONTINUAR": "Continuar",
+          "COMO": {
+            "TITULO": "Como {nome} vai trabalhar?",
+            "TITULO_SEM_NOME": "Primeiro, escolha como vai trabalhar",
+            "TEXTO": "Dá para mudar depois, na página do agente.",
+            "CLIENTES": {
+              "TITULO": "Conversa com seus clientes",
+              "TEXTO": "Atende no WhatsApp, no Instagram ou no site."
+            },
+            "AJUDA": {
+              "TITULO": "Ajuda outros agentes",
+              "TEXTO": "Responde só para outro agente, nunca para o cliente."
+            }
+          },
+          "CANAIS": {
+            "TITULO": "Em quais canais?",
+            "TEXTO": "Escolha um ou mais. Aparecem só os canais conectados.",
+            "VAZIO": "Nenhum canal conectado ainda.",
+            "CONECTAR": "Conectar um canal"
+          },
+          "CAIXA": {
+            "TITULO": "Como {nome} entra nas conversas de {canal}?",
+            "TITULO_SEM_NOME": "Como entra nas conversas de {canal}?",
+            "CONTADOR": "Canal {i} de {n}",
+            "PRIMEIRO": {
+              "TITULO": "Atende primeiro",
+              "TEXTO": "Responde toda conversa nova que chega neste canal.",
+              "OCUPADA": "Hoje {outro} atende primeiro. {outro} passa a receber quando alguém passar.",
+              "LIVRE": "Este canal ainda não tem quem atenda primeiro."
+            },
+            "RECEBE": {
+              "TITULO": "Recebe quando alguém passar",
+              "TEXTO": "Como um atendente da equipe: uma pessoa ou outro agente passa a conversa para {nome}.",
+              "TEXTO_SEM_NOME": "Como um atendente da equipe: uma pessoa ou outro agente passa a conversa.",
+              "MANTER": "{outro} continua atendendo primeiro.",
+              "BLOQUEADO": "Só funciona quando o canal tem quem atenda primeiro. Hoje ninguém atende primeiro aqui."
+            }
+          },
+          "AJUDAR": {
+            "TITULO": "Quem {nome} vai ajudar?",
+            "TITULO_SEM_NOME": "Quem vai ajudar?",
+            "TEXTO": "Escolha um ou mais agentes que conversam com seus clientes.",
+            "VAZIO": "Ainda não há agente conversando com clientes."
+          },
+          "QUANDO": {
+            "TITULO": "Quando chamar {nome}?",
+            "TITULO_SEM_NOME": "Quando chamar?",
+            "TEXTO": "Os agentes escolhidos chamam nesta situação. Ajuste o texto se quiser.",
+            "ROTULO": "Quando chamar",
+            "SUGESTAO": "Quando a dúvida for sobre trocas e devoluções"
+          }
         },
-        "CONTINUAR": "Continuar",
-        "VOLTAR": "Voltar",
-        "EQUIPE_PASSO": {
-          "TITULO": "Quem cuida do quê fica no CRM",
-          "TEXTO": "Em Caixas no CRM › Quem cuida do quê?, escolha a caixa e o funil de que {nome} vai cuidar.",
-          "ABRIR": "Abrir Caixas no CRM"
-        },
-        "AJUDA_PASSO": {
-          "ROTULO": "Quem {nome} vai ajudar?",
-          "CONFIRMAR": "Começar a ajudar",
-          "NENHUM": "Ainda não há outro agente para ajudar.",
-          "FEITO": "Pronto. {nome} já ajuda {agente}."
-        },
-        "ERRO": "Não deu para salvar. Nada mudou em {nome}."
+        "COMECAR": "Começar a trabalhar"
       }
     }
   }

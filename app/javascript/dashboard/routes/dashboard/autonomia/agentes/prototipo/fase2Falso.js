@@ -9,38 +9,108 @@ const esperar = (ms = ESPERA_MS) =>
     setTimeout(resolve, ms);
   });
 
-// Onde cada agente da demonstração trabalha sem canal próprio (#1366, #1433). O servidor de verdade
-// responde por id; aqui os agentes da semente local são achados pelo nome. As áreas da equipe são
-// CAIXA + FUNIL, escolhidas no CRM em "Caixas no CRM › Quem cuida do quê?" (vocabulário do Multifunil).
+// Onde cada agente da demonstração trabalha (#1366, #1433), no modelo do Rodrigo (rodada 2):
+// - quem conversa com cliente fica DENTRO de caixas, com um papel em cada uma: "primeiro" (atende
+//   primeiro, a porta: um por caixa) ou "recebe" (recebe quando alguém passar, por atribuição);
+// - quem ajuda outros agentes não tem caixa, e diz quais agentes ajuda e quando é chamado.
+// `assuntos` são os funis escolhidos depois, no CRM ("Quem cuida do quê?"). O servidor de verdade
+// responde por id de agente e de caixa; aqui os agentes e as caixas da semente são achados pelo nome.
 const PAPEIS_DA_DEMO = {
-  Maria: {
-    tipo: 'equipe',
-    areas: [
-      { caixa: 'WhatsApp Loja', funil: 'Comercial' },
-      { caixa: 'WhatsApp Loja', funil: 'Financeiro' },
+  Clara: {
+    tipo: 'clientes',
+    caixas: [
+      { caixa: 'WhatsApp Loja', papel: 'primeiro', assuntos: ['Comercial'] },
     ],
   },
-  Marta: { tipo: 'equipe', caixa: 'WhatsApp Loja', areas: [] },
-  'Joana-produto-auto': { tipo: 'ajuda', agente: 'Joana' },
+  Maria: {
+    tipo: 'clientes',
+    caixas: [
+      { caixa: 'WhatsApp Loja', papel: 'recebe', assuntos: ['Vendas'] },
+      { caixa: '@lojaexemplo', papel: 'recebe', assuntos: ['Vendas'] },
+    ],
+  },
+  Joana: {
+    tipo: 'clientes',
+    caixas: [{ caixa: '@lojaexemplo', papel: 'primeiro', assuntos: [] }],
+  },
+  'Joana-produto-auto': {
+    tipo: 'ajuda',
+    ajuda: ['Joana', 'Clara'],
+    quando: 'Quando a dúvida for sobre um produto',
+  },
 };
 
-const definidos = new Map();
+// Papel escolhido na criação antes de o rascunho existir (a jornada vem antes da conversa).
+const RASCUNHO = 'novo';
+// Guardado na aba (sessionStorage): sobrevive ao F5 e some ao fechar a aba, para a demonstração
+// recomeçar igual. Sem acesso ao armazenamento, fica só em memória.
+const GUARDADO = 'prototipo-fase2-papeis';
+const lerGuardado = () => {
+  try {
+    return JSON.parse(window.sessionStorage.getItem(GUARDADO) || 'null');
+  } catch {
+    return null;
+  }
+};
+const definidos = new Map(
+  lerGuardado() ||
+    Object.entries(PAPEIS_DA_DEMO).map(([nome, papel]) => [
+      `nome:${nome}`,
+      papel,
+    ])
+);
+const guardar = () => {
+  try {
+    window.sessionStorage.setItem(GUARDADO, JSON.stringify([...definidos]));
+  } catch {
+    // Sem armazenamento: segue em memória.
+  }
+};
+const chaveDe = agente => `nome:${agente.name}`;
 
 const listarPapeis = async agentes => {
   await esperar(300);
   return Object.fromEntries(
     (agentes || []).map(agente => [
       agente.id,
-      definidos.get(agente.id) || PAPEIS_DA_DEMO[agente.name] || null,
+      definidos.get(chaveDe(agente)) || null,
     ])
   );
 };
 
+// Atender primeiro numa caixa tira dali quem atendia primeiro: essa pessoa passa a receber.
+const passarPortas = (agente, papel) => {
+  const portas = (papel?.caixas || [])
+    .filter(item => item.papel === 'primeiro')
+    .map(item => item.caixa);
+  definidos.forEach((outro, chave) => {
+    if (chave === chaveDe(agente) || chave === RASCUNHO) return;
+    if (outro?.tipo !== 'clientes') return;
+    definidos.set(chave, {
+      ...outro,
+      caixas: outro.caixas.map(item =>
+        portas.includes(item.caixa) && item.papel === 'primeiro'
+          ? { ...item, papel: 'recebe' }
+          : item
+      ),
+    });
+  });
+};
+
 const definirPapel = async (agente, papel) => {
   await esperar(900);
-  definidos.set(agente.id, papel);
+  passarPortas(agente, papel);
+  definidos.set(chaveDe(agente), papel);
+  guardar();
   return papel;
 };
+
+const guardarRascunho = papel => {
+  definidos.set(RASCUNHO, papel);
+  guardar();
+};
+
+const rascunho = () => definidos.get(RASCUNHO) || null;
 
 // ---------- Mudar conversando conferido (#1428) ----------
 const PROVA = {
@@ -123,6 +193,8 @@ const desfazer = async () => {
 export default {
   listarPapeis,
   definirPapel,
+  guardarRascunho,
+  rascunho,
   aplicarPedido,
   responderDuvida,
   desfazer,
