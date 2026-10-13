@@ -50,6 +50,45 @@ describe RichMessages::ApiInboxWebhook do
         expect(payloads[:inbox].map { |payload| payload[:content] }).to eq(['Corpo'])
       end
 
+      it 'delivers the real payload of a message whose content_attributes was never written, without loading it again' do
+        message = outgoing(content_attributes: {})
+        message.update_column(:content_attributes, nil) # rubocop:disable Rails/SkipsModelValidations
+        message = Message.find(message.id)
+        allow(Message).to receive(:find_by).and_call_original
+
+        expect(message.webhook_data[:content_attributes]).to eq({})
+        expect(inbox_webhook_payloads(event_method, message)[:inbox].map { |payload| payload[:content] }).to eq(['Corpo'])
+        expect(Message).not_to have_received(:find_by)
+      end
+
+      it 'reads rich_message from the real payload, whose keys are strings' do
+        payload = outgoing.webhook_data
+
+        expect(payload[:content_attributes].keys).to eq(['rich_message'])
+        expect(payload[:content_attributes]).to be_key(RichMessages::KEY)
+      end
+
+      it 'follows the original delivery when the message was deleted before the event ran' do
+        message = outgoing
+        payload_source = Message.find(message.id)
+        message.delete
+
+        payloads = inbox_webhook_payloads(event_method, payload_source)
+
+        expect(payloads[:inbox].map { |payload| payload[:content] }).to eq(['Corpo'])
+      end
+
+      it 'fails an invalid message once: the event of that update does not write it again' do
+        message = outgoing(content_attributes: { rich_message: { type: 'carousel' } })
+        inbox_webhook_payloads(event_method, message)
+        failed_at = message.reload.updated_at
+
+        payloads = travel_to(1.minute.from_now) { inbox_webhook_payloads(:message_updated, message) }
+
+        expect(payloads[:inbox]).to be_empty
+        expect(message.reload.updated_at).to eq(failed_at)
+      end
+
       it 'leaves a private note with an invalid rich_message untouched' do
         message = outgoing(private: true, content_attributes: { rich_message: { type: 'carousel' } })
 

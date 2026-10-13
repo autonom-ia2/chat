@@ -13,10 +13,10 @@ module RichMessages::CreationCheck
   private
 
   def reject_invalid_rich_message
-    return if mcp_integration_token_request?
+    return if params[:content_attributes].blank?
 
     content_attributes = requested_content_attributes
-    return unless content_attributes.key?(RichMessages::KEY)
+    return unless content_attributes.key?(RichMessages::KEY) && !mcp_integration_token_request?
 
     error = RichMessages.format_error(rich_message_draft(content_attributes))
     render_could_not_create_error(error) if error

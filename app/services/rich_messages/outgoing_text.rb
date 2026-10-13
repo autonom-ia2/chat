@@ -4,8 +4,11 @@
 # Onde o texto de saída é HTML (e-mail, Telegram), o complemento vai escapado.
 # O WhatsApp oficial não passa por aqui: usa RichMessages.body_text. Senão, no botão de link, o endereço
 # sairia duas vezes, no corpo e no botão.
+# Sem `rich_message`, o método original e mais nada.
 module RichMessages::OutgoingText
   def outgoing_content
+    return super unless RichMessages.rich?(self)
+
     RichMessages.text_with_fallback(self, super, html: RichMessages.html_channel?(inbox))
   end
 end

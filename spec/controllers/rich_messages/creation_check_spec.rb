@@ -21,9 +21,13 @@ describe RichMessages::CreationCheck, type: :request do
     expect(Message.last.content_attributes['rich_message']).to eq(rich_message.stringify_keys)
   end
 
-  it 'creates a message without rich_message as before' do
-    expect { create_message(content: 'Corpo') }.to change(Message, :count).by(1)
+  it 'creates a message without rich_message as before, without building a draft' do
+    allow(RichMessages).to receive(:format_error).and_call_original
+
+    expect { create_message(content: 'Corpo', content_attributes: { in_reply_to: nil }) }.to change(Message, :count).by(1)
+
     expect(response).to have_http_status(:success)
+    expect(RichMessages).not_to have_received(:format_error)
   end
 
   button = { type: 'link_button', label: 'Abrir', url: 'https://x.io' }

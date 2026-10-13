@@ -111,6 +111,45 @@ describe RichMessages do
     end
   end
 
+  # Sem a chave `rich_message`, cada prepend cai no caminho original na primeira linha: nada do módulo roda além
+  # da checagem da chave.
+  describe 'a message without rich_message' do
+    let(:plain) do
+      create(:message, message_type: :outgoing, content: 'Corpo', conversation: conversation, inbox: inbox, account: inbox.account)
+    end
+
+    before do
+      plain
+      [:html_channel?, :text_with_fallback, :error_for, :format_error, :build, :body_text, :whatsapp_cloud?].each do |entry|
+        allow(described_class).to receive(entry).and_call_original
+      end
+    end
+
+    def expect_only_the_key_check
+      [:html_channel?, :text_with_fallback, :error_for, :format_error, :build, :body_text, :whatsapp_cloud?].each do |entry|
+        expect(described_class).not_to have_received(entry)
+      end
+    end
+
+    it 'has the original outgoing text without reading the inbox or the renderer map' do
+      expect(Message.find(plain.id).outgoing_content).to eq('Corpo')
+
+      expect_only_the_key_check
+    end
+
+    it 'goes through the send service and the WhatsApp Cloud text request untouched' do
+      request = stub_request(:post, 'https://graph.facebook.com/v13.0/123456789/messages')
+                .with(body: { messaging_product: 'whatsapp', context: nil, to: '5511937016094', text: { body: 'Corpo' }, type: 'text' }.to_json)
+                .to_return(meta_ok)
+      allow(described_class).to receive(:html_channel?).and_call_original
+
+      deliver(plain)
+
+      expect(request).to have_been_requested.once
+      expect_only_the_key_check
+    end
+  end
+
   describe 'what does not go to the channel' do
     it 'leaves a private note with an invalid rich_message alone' do
       message = deliver(outgoing({ type: 'carousel' }, private: true))

@@ -1,8 +1,10 @@
 # Prepend em Whatsapp::Providers::WhatsappCloudService (chat#1473): mensagem com `rich_message` sai no formato
-# da Meta, corpo e formato na mesma mensagem. Sem `rich_message`, o envio original, intocado.
+# da Meta, corpo e formato na mesma mensagem. Sem `rich_message`, o envio original e mais nada.
 # Graph recente, como o pedido de telefone: o v13.0 do envio de texto não é alterado.
 module RichMessages::WhatsappCloudDelivery
   def send_message(phone_number, message)
+    return super unless RichMessages.rich?(message)
+
     rich = RichMessages.build(message)
     return super if rich.nil?
 
