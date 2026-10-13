@@ -542,6 +542,7 @@ onMounted(() => {
           :ideias="ideias"
           :exemplo-do-campo="exemploDoCampo"
           :celular="celular"
+          :interno="interno"
           @enviar="enviarNaConversa"
           @tentar-de-novo="conversa.tentarDeNovo"
           @tirar="conversa.tirar"

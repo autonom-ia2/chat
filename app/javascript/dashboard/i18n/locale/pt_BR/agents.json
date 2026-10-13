@@ -1440,6 +1440,7 @@
         "CONTE": {
           "ROTULO": "Conversa para criar o agente",
           "INTRO": "Vou te fazer umas perguntas curtas. O agente só começa a atender quando você mandar.",
+          "INTRO_COPILOTO": "Vou te fazer umas perguntas curtas. O agente só começa a ajudar a equipe quando você mandar.",
           "CONVERSA": "Conversa",
           "ASSISTENTE": "Assistente de criação:",
           "VOCE": "Você:",
@@ -1494,6 +1495,7 @@
           "ESCREVA": "Escreva uma pergunta",
           "PERGUNTAS_ROTULO": "Perguntas para testar",
           "ATENDIDO_POR": "Atendido por {nome}",
+          "AJUDA_DA_EQUIPE": "{nome} · ajuda da equipe",
           "ESCREVENDO": "{nome} está escrevendo…",
           "LIMPAR": "Limpar teste",
           "ATUALIZADO": "Atualizado. Teste de novo.",
@@ -1537,7 +1539,7 @@
           "COMECAR": "Começar a atender",
           "TROCAR": "Trocar e começar a atender",
           "VOLTAR_TESTE": "Voltar ao teste",
-          "ERRO_INTERNO": "Não deu para começar a atender. Nada mudou: {nome} ainda não está atendendo."
+          "ERRO_INTERNO": "Não deu para começar a ajudar a equipe. Nada mudou: {nome} ainda não está ajudando."
         },
         "PRONTO": {
           "TITULO": "{nome} já está atendendo no {canal}",

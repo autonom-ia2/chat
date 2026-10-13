@@ -26,6 +26,8 @@ const props = defineProps({
   exemploDoCampo: { type: String, default: '' },
   // No celular a etapa é a tela inteira e o campo fica fixo embaixo, com a barra do slot `barra`.
   celular: { type: Boolean, default: false },
+  // Copiloto da equipe (#1494): a introdução fala de ajudar a equipe, não de atender.
+  interno: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['enviar', 'tentarDeNovo', 'tirar']);
@@ -110,7 +112,9 @@ defineExpose({ abrirArquivos, focar: () => compositor.value?.focar() });
         class="flex items-start gap-2 p-3 m-0 text-sm rounded-xl bg-n-blue-2 text-n-slate-12"
       >
         <span class="i-lucide-info size-4 mt-0.5 shrink-0" aria-hidden="true" />
-        <span>{{ t(`${NS}.INTRO`) }}</span>
+        <span data-intro>
+          {{ interno ? t(`${NS}.INTRO_COPILOTO`) : t(`${NS}.INTRO`) }}
+        </span>
       </p>
       <div
         data-conversa

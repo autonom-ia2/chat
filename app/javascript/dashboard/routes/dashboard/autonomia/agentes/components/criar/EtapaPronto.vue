@@ -142,7 +142,11 @@ const conversa = computed(() =>
           data-celular
           :mensagens="conversa"
           :nome="empresa || nome"
-          :estado="t('AGENTS.JORNADA.CRIAR.CONFIRA.ATENDIDO_POR', { nome })"
+          :estado="
+            interno
+              ? t('AGENTS.JORNADA.CRIAR.CONFIRA.AJUDA_DA_EQUIPE', { nome })
+              : t('AGENTS.JORNADA.CRIAR.CONFIRA.ATENDIDO_POR', { nome })
+          "
         />
       </div>
     </section>

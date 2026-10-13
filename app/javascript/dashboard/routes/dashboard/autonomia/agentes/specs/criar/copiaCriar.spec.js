@@ -186,6 +186,69 @@ describe('cópia da criação em pt_BR', () => {
     semProibidas(pronto.text());
   });
 
+  it('the team copilot never reads "atender" nor "Atendido por" (#1494)', () => {
+    const semAtender = texto => {
+      expect(texto).not.toContain('atend');
+      expect(texto).not.toContain('Atend');
+    };
+
+    const conte = mount(EtapaConte, {
+      props: { falas: [], estadoDoMaterial: () => 'lendo', interno: true },
+    });
+    expect(conte.get('[data-intro]').text()).toBe(
+      'Vou te fazer umas perguntas curtas. O agente só começa a ajudar a equipe quando você mandar.'
+    );
+    semAtender(conte.text());
+
+    const confira = mount(EtapaConfira, {
+      props: { nome: 'Duda', interno: true, mensagens: respondido },
+    });
+    expect(confira.text()).toContain('Duda · ajuda da equipe');
+    semAtender(confira.text());
+
+    const pronto = mount(EtapaPronto, {
+      props: {
+        nome: 'Duda',
+        interno: true,
+        ultimo: { pergunta: 'Como respondo?', resposta: 'Assim.' },
+      },
+    });
+    expect(pronto.get('[data-celular]').text()).toContain(
+      'Duda · ajuda da equipe'
+    );
+    semAtender(pronto.text());
+
+    const erro = i18n.global.t('AGENTS.JORNADA.CRIAR.COMECE.ERRO_INTERNO', {
+      nome: 'Duda',
+    });
+    expect(erro).toBe(
+      'Não deu para começar a ajudar a equipe. Nada mudou: Duda ainda não está ajudando.'
+    );
+    semAtender(erro);
+  });
+
+  it('the customer agent keeps "atender" and "Atendido por" as before', () => {
+    const conte = mount(EtapaConte, {
+      props: { falas: [], estadoDoMaterial: () => 'lendo' },
+    });
+    expect(conte.get('[data-intro]').text()).toBe(
+      'Vou te fazer umas perguntas curtas. O agente só começa a atender quando você mandar.'
+    );
+    const confira = mount(EtapaConfira, {
+      props: { nome: 'Duda', mensagens: respondido },
+    });
+    expect(confira.text()).toContain('Atendido por Duda');
+    expect(confira.text()).not.toContain('ajuda da equipe');
+    const pronto = mount(EtapaPronto, {
+      props: {
+        nome: 'Duda',
+        canal: 'WhatsApp',
+        ultimo: { pergunta: 'Oi', resposta: 'Olá' },
+      },
+    });
+    expect(pronto.get('[data-celular]').text()).toContain('Atendido por Duda');
+  });
+
   it('Comece: the drawer, the swap and the start button', async () => {
     const wrapper = mount(EtapaComece, {
       props: {

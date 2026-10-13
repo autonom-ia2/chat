@@ -81,11 +81,13 @@ const podeDizerErrado = computed(
     ultima.value?.de === 'agente'
 );
 
-const estadoDoCabecalho = computed(() =>
-  props.digitando
-    ? t(`${NS}.ESCREVENDO`, { nome: props.nome })
-    : t(`${NS}.ATENDIDO_POR`, { nome: props.nome })
-);
+const estadoDoCabecalho = computed(() => {
+  const nome = { nome: props.nome };
+  if (props.digitando) return t(`${NS}.ESCREVENDO`, nome);
+  return props.interno
+    ? t(`${NS}.AJUDA_DA_EQUIPE`, nome)
+    : t(`${NS}.ATENDIDO_POR`, nome);
+});
 
 const erro = computed(() => {
   const nome = { nome: props.nome };

@@ -1440,6 +1440,7 @@
         "CONTE": {
           "ROTULO": "Conversation to create the agent",
           "INTRO": "I will ask you a few short questions. The agent only starts answering when you say so.",
+          "INTRO_COPILOTO": "I will ask you a few short questions. The agent only starts helping your team when you say so.",
           "CONVERSA": "Conversation",
           "ASSISTENTE": "Creation assistant:",
           "VOCE": "You:",
@@ -1494,6 +1495,7 @@
           "ESCREVA": "Write a question",
           "PERGUNTAS_ROTULO": "Questions to test",
           "ATENDIDO_POR": "Answered by {nome}",
+          "AJUDA_DA_EQUIPE": "{nome} · team helper",
           "ESCREVENDO": "{nome} is typing…",
           "LIMPAR": "Clear test",
           "ATUALIZADO": "Updated. Test again.",
@@ -1537,7 +1539,7 @@
           "COMECAR": "Start answering",
           "TROCAR": "Swap and start answering",
           "VOLTAR_TESTE": "Back to the test",
-          "ERRO_INTERNO": "Could not start answering. Nothing changed: {nome} is still not answering."
+          "ERRO_INTERNO": "Could not start helping the team. Nothing changed: {nome} is not helping yet."
         },
         "PRONTO": {
           "TITULO": "{nome} is now answering on {canal}",
