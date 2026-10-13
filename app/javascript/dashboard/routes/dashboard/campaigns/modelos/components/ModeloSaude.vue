@@ -27,8 +27,13 @@ const visual = computed(() => SINAIS[sinal.value]);
 const saude = computed(() => props.modelo.saude || null);
 const enviou = computed(() => Boolean(saude.value?.enviadas));
 
+// Sem nenhuma entrega não há porcentagem: a tela mostra um traço, não "0%".
+const SEM_VALOR = '—';
 const porCento = parte =>
-  saude.value.entregues ? Math.round((parte / saude.value.entregues) * 100) : 0;
+  saude.value.entregues
+    ? Math.round((parte / saude.value.entregues) * 100)
+    : null;
+const emPorCento = valor => (valor == null ? SEM_VALOR : `${valor}%`);
 
 const dinheiro = valor =>
   new Intl.NumberFormat(localeDoIntl(locale.value), {
@@ -39,7 +44,7 @@ const dinheiro = valor =>
 const respostas = computed(() => porCento(saude.value.responderam));
 const comparacao = computed(() => {
   const media = saude.value.mediaDeRespostas;
-  if (media == null) return '';
+  if (media == null || respostas.value == null) return '';
   if (respostas.value === media) return '';
   return respostas.value > media ? 'ACIMA' : 'ABAIXO';
 });
@@ -56,12 +61,12 @@ const numeros = computed(() => {
     },
     {
       chave: 'leram',
-      valor: `${porCento(lidas)}%`,
+      valor: emPorCento(porCento(lidas)),
       detalhe: t('MODELOS_WHATSAPP.SAUDE.PESSOAS', { n: n(lidas) }, lidas),
     },
     {
       chave: 'responderam',
-      valor: `${respostas.value}%`,
+      valor: emPorCento(respostas.value),
       detalhe: t(
         'MODELOS_WHATSAPP.SAUDE.PESSOAS',
         { n: n(responderam) },

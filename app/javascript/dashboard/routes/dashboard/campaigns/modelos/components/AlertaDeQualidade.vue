@@ -5,11 +5,11 @@ import { SINAIS } from '../constants';
 
 // Modelo pronto, mas o WhatsApp está vendo bloqueios e denúncias (#1338). Toma o
 // lugar da caixa "Pronto para usar": o que acontece, o que fazer e um botão
-// principal para melhorar o texto. Usar em campanha continua, em segundo plano.
+// principal para fazer uma versão melhor (cópia). Usar em campanha continua, em segundo plano.
 const props = defineProps({
   sinal: { type: String, required: true },
-  // 'alterar' | 'duplicar' | '': o caminho que a pessoa tem para melhorar o texto.
-  caminho: { type: String, default: '' },
+  // Quem cria modelos faz uma versão melhor (cópia); quem só vê, não.
+  podeMelhorar: { type: Boolean, default: false },
   podeUsar: { type: Boolean, default: false },
 });
 
@@ -62,10 +62,10 @@ const DICAS = ['QUEM', 'COMECO', 'MENOS'];
     </div>
     <div class="flex flex-wrap items-center w-full gap-3 mt-1 sm:ps-9">
       <Button
-        v-if="caminho"
+        v-if="podeMelhorar"
         data-melhorar
-        :label="$t(`MODELOS_WHATSAPP.SAUDE.MELHORAR.${caminho}`)"
-        icon="i-lucide-pencil"
+        :label="$t('MODELOS_WHATSAPP.SAUDE.MELHORAR')"
+        icon="i-lucide-copy"
         :color="sinal === 'ruim' ? 'ruby' : 'amber'"
         size="lg"
         class="!min-h-12 !rounded-xl"

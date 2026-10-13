@@ -716,7 +716,11 @@
       },
       "GRUPO_CATALOGO": "From the records",
       "SEM_MODELO_LIBERADO": "No template of this WhatsApp account can go in a campaign right now: they are rejected, paused or in a format campaigns cannot send yet.",
-      "CORRIGIR": "Fix “{nome}”"
+      "CORRIGIR": "Fix “{nome}”",
+      "SINAL": {
+        "ruim": "WhatsApp sees many people blocking or reporting the template \"{nome}\". It can pause the template at any time, and the campaign stops with it. You can send, but it is best to send only to people who know your business.",
+        "atencao": "Some people blocked or reported the template \"{nome}\". If it gets worse, WhatsApp pauses the template and the campaign stops with it. You can send, but send only to people who know your business."
+      }
     },
     "IA": {
       "CRIAR_COM_IA": "Create with AI",
@@ -835,10 +839,7 @@
         "COMECO": "Say right at the start who is writing and why.",
         "MENOS": "Send it less often to the same person."
       },
-      "MELHORAR": {
-        "alterar": "Improve the text",
-        "duplicar": "Make a better version"
-      },
+      "MELHORAR": "Make a better version",
       "NUMEROS": {
         "receberam": "Received",
         "leram": "Read",
@@ -852,9 +853,9 @@
         "ABAIXO": "Below your templates average: {n}%"
       },
       "SEM_RESPOSTA": "Nobody replied",
-      "TOTAL_GASTO": "Spent in total: {valor}",
+      "TOTAL_GASTO": "Estimated spend: {valor}",
       "SEM_ENVIOS": "This template was not sent in the last 30 days. The numbers show up after the first send.",
-      "NOTA": "We only count what was sent through Chat2You. Not everyone lets WhatsApp show they read it, so more people may have read it.",
+      "NOTA": "We only count what was sent through Chat2You, and the spend is estimated from the WhatsApp price table. Not everyone lets WhatsApp show they read it, so more people may have read it.",
       "LISTA": {
         "RESPONDERAM": "{n}% replied"
       },

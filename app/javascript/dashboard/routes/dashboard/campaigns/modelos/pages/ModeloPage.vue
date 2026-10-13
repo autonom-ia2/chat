@@ -199,14 +199,12 @@ const duplicar = () =>
     query: { de: modelo.value.id, etapa: 'texto' },
   });
 
-// Sinal ruim (#1338): o caminho para melhorar o texto. Alterar quando dá
-// (volta para a análise do WhatsApp); em uso ou no limite de alterações, uma
-// versão nova pela cópia. Modelo do sistema: quem cuida é a plataforma.
-const caminhoParaMelhorar = computed(() => {
-  if (!podeCriar.value || !modelo.value.editavel || modelo.value.sistema)
-    return '';
-  return alteracaoTravada.value ? 'duplicar' : 'alterar';
-});
+// Sinal ruim (#1338): melhorar é sempre fazer uma versão nova pela cópia
+// (decisão do Rodrigo): o modelo aprovado continua no ar enquanto a cópia passa
+// pela análise. Modelo do sistema: quem cuida é a plataforma.
+const podeMelhorar = computed(
+  () => podeCriar.value && modelo.value.editavel && !modelo.value.sistema
+);
 
 // Pronto, mas com sinal ruim do WhatsApp: o alerta toma o lugar da situação.
 const alertaDeQualidade = computed(() =>
@@ -214,11 +212,6 @@ const alertaDeQualidade = computed(() =>
     ? modelo.value.sinal
     : ''
 );
-
-const melhorar = () =>
-  caminhoParaMelhorar.value === 'alterar'
-    ? ir('modelos_whatsapp_alterar')
-    : duplicar();
 
 const confirmarApagar = async () => {
   apagando.value = true;
@@ -299,9 +292,9 @@ const confirmarApagar = async () => {
               <AlertaDeQualidade
                 v-if="alertaDeQualidade"
                 :sinal="alertaDeQualidade"
-                :caminho="caminhoParaMelhorar"
+                :pode-melhorar="podeMelhorar"
                 :pode-usar="podeUsar && usavelEmCampanha(modelo)"
-                @melhorar="melhorar"
+                @melhorar="duplicar"
                 @usar="ir('modelos_whatsapp_usar')"
               />
               <section
