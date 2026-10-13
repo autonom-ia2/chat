@@ -92,7 +92,7 @@ const rows = computed(() => {
 
         <p
           v-if="row.marker"
-          class="m-0 text-[11px] font-medium uppercase leading-4 tracking-wide text-n-slate-10"
+          class="m-0 text-xs font-medium leading-4 text-n-slate-11"
         >
           {{ row.marker }}
         </p>

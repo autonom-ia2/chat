@@ -7,11 +7,14 @@ import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import Switch from 'dashboard/components-next/switch/Switch.vue';
 import CrmKanbanAPI from 'dashboard/api/crmKanban';
 import ContactAPI from 'dashboard/api/contacts';
+import { textosCom } from './card/textos';
 
 const props = defineProps({
   card: { type: Object, default: null },
   canManageAi: { type: Boolean, default: false },
   canManageRecords: { type: Boolean, default: false },
+  // #1423 — prefixo com as frases da gaveta nova; vazio = textos de sempre.
+  textos: { type: String, default: '' },
 });
 
 const emit = defineEmits(['reset']);
@@ -19,7 +22,12 @@ const emit = defineEmits(['reset']);
 // Mesma chave de Crm::Ai::Config::CONTACT_FOLLOWUP_DISABLED_KEY (exclusão por contato).
 const CONTACT_FOLLOWUP_DISABLED_KEY = 'crm_ai_followup_disabled';
 
-const { t } = useI18n();
+const { t, te } = useI18n();
+const label = textosCom(
+  { t, te },
+  props.textos,
+  'CRM_KANBAN.DRAWER.AUTO_FOLLOWUP'
+);
 
 const isResetting = ref(false);
 const isSavingContact = ref(false);
@@ -64,28 +72,20 @@ const isContactDisabled = computed(
 );
 
 const statusText = computed(() => {
-  if (isContactDisabled.value)
-    return t('CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.STATUS_CONTACT_DISABLED');
-  if (!hasState.value)
-    return t('CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.STATUS_NOT_STARTED');
+  if (isContactDisabled.value) return label('STATUS_CONTACT_DISABLED');
+  if (!hasState.value) return label('STATUS_NOT_STARTED');
   const reason = stoppedReason.value;
-  if (reason === 'opt_out')
-    return t('CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.STATUS_OPT_OUT');
-  if (reason === 'replied')
-    return t('CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.STATUS_REPLIED');
-  if (reason === 'conversation_closed')
-    return t('CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.STATUS_CLOSED');
-  if (reason === 'no_open_loop')
-    return t('CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.STATUS_NO_LOOP');
-  if (reason === 'no_template')
-    return t('CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.STATUS_NO_TEMPLATE');
-  if (reason === 'send_failed')
-    return t('CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.STATUS_FAILED');
+  if (reason === 'opt_out') return label('STATUS_OPT_OUT');
+  if (reason === 'replied') return label('STATUS_REPLIED');
+  if (reason === 'conversation_closed') return label('STATUS_CLOSED');
+  if (reason === 'no_open_loop') return label('STATUS_NO_LOOP');
+  if (reason === 'no_template') return label('STATUS_NO_TEMPLATE');
+  if (reason === 'send_failed') return label('STATUS_FAILED');
   if (isSpent.value && reason === 'max_touches')
-    return t('CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.STATUS_DONE', {
+    return label('STATUS_DONE', {
       total: maxTouches.value,
     });
-  return t('CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.STATUS_ACTIVE', {
+  return label('STATUS_ACTIVE', {
     n: usedTouches.value,
     total: maxTouches.value,
   });
@@ -97,7 +97,7 @@ const timelineEntries = computed(() =>
     if (item?.outcome === 'reminded') {
       return {
         key: index,
-        label: t('CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.TIMELINE_TOUCH_REMINDER', {
+        label: label('TIMELINE_TOUCH_REMINDER', {
           n,
         }),
         icon: 'i-lucide-bell-ring',
@@ -107,7 +107,7 @@ const timelineEntries = computed(() =>
     if (item?.outcome === 'sent' && item?.mode === 'template') {
       return {
         key: index,
-        label: t('CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.TIMELINE_TOUCH_TEMPLATE', {
+        label: label('TIMELINE_TOUCH_TEMPLATE', {
           n,
           name: item?.template_name || '',
         }),
@@ -118,14 +118,14 @@ const timelineEntries = computed(() =>
     if (item?.outcome === 'sent') {
       return {
         key: index,
-        label: t('CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.TIMELINE_TOUCH_FREE', { n }),
+        label: label('TIMELINE_TOUCH_FREE', { n }),
         icon: 'i-lucide-sparkles',
         tone: 'text-n-teal-11',
       };
     }
     return {
       key: index,
-      label: t('CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.TIMELINE_TOUCH_SKIPPED', { n }),
+      label: label('TIMELINE_TOUCH_SKIPPED', { n }),
       icon: 'i-lucide-circle-slash',
       tone: 'text-n-slate-10',
     };
@@ -133,23 +133,21 @@ const timelineEntries = computed(() =>
 );
 
 const resetButtonLabel = computed(() =>
-  isOptedOut.value
-    ? t('CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.REACTIVATE')
-    : t('CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.RESET')
+  isOptedOut.value ? label('REACTIVATE') : label('RESET')
 );
 
 // chat#1325: quando a recusa do contato continua depois do reset, o aviso diz por quê.
 const resetResultMessage = result => {
   if (result === 'kept_other_cards') {
-    return t('CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.RESET_KEPT_OTHER_CARDS');
+    return label('RESET_KEPT_OTHER_CARDS');
   }
   if (result === 'kept_no_permission') {
-    return t('CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.RESET_KEPT_NO_PERMISSION');
+    return label('RESET_KEPT_NO_PERMISSION');
   }
   if (result === 'kept_other_source') {
-    return t('CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.RESET_KEPT_OTHER_SOURCE');
+    return label('RESET_KEPT_OTHER_SOURCE');
   }
-  return t('CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.RESET_SUCCESS');
+  return label('RESET_SUCCESS');
 };
 
 const resetCycle = async () => {
@@ -161,7 +159,7 @@ const resetCycle = async () => {
     reactivateDialogRef.value?.close();
     emit('reset');
   } catch {
-    useAlert(t('CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.RESET_ERROR'));
+    useAlert(label('RESET_ERROR'));
   } finally {
     isResetting.value = false;
   }
@@ -177,7 +175,7 @@ const onContactToggle = async disabled => {
     });
     emit('reset');
   } catch {
-    useAlert(t('CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.CONTACT_TOGGLE_ERROR'));
+    useAlert(label('CONTACT_TOGGLE_ERROR'));
   } finally {
     isSavingContact.value = false;
   }
@@ -205,7 +203,7 @@ const onResetClick = () => {
       <span class="flex min-w-0 items-center gap-2">
         <span class="i-lucide-bot size-4 shrink-0 text-n-slate-11" />
         <span class="truncate text-sm font-medium text-n-slate-12">
-          {{ t('CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.TITLE') }}
+          {{ label('TITLE') }}
         </span>
       </span>
       <span
@@ -237,14 +235,14 @@ const onResetClick = () => {
         class="mb-0 flex items-center gap-1.5 text-xs text-n-slate-11"
       >
         <span class="i-lucide-hand size-3.5 shrink-0" />
-        <span>{{ t('CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.OPT_OUT_HINT') }}</span>
+        <span>{{ label('OPT_OUT_HINT') }}</span>
       </p>
 
       <label
         v-if="contact?.id"
         class="mb-0 flex items-center justify-between gap-3 text-xs text-n-slate-11"
       >
-        <span>{{ t('CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.CONTACT_TOGGLE') }}</span>
+        <span>{{ label('CONTACT_TOGGLE') }}</span>
         <Switch
           :model-value="isContactDisabled"
           :disabled="isSavingContact || !canManageRecords"
@@ -272,13 +270,9 @@ const onResetClick = () => {
     <Dialog
       ref="reactivateDialogRef"
       type="alert"
-      :title="t('CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.REACTIVATE_CONFIRM_TITLE')"
-      :description="
-        t('CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.REACTIVATE_CONFIRM_BODY')
-      "
-      :confirm-button-label="
-        t('CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.REACTIVATE_CONFIRM_OK')
-      "
+      :title="label('REACTIVATE_CONFIRM_TITLE')"
+      :description="label('REACTIVATE_CONFIRM_BODY')"
+      :confirm-button-label="label('REACTIVATE_CONFIRM_OK')"
       :is-loading="isResetting"
       :disable-confirm-button="isResetting || !canManageAi"
       @confirm="resetCycle"

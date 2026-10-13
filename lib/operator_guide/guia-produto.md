@@ -463,7 +463,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - rota: `crm_kanban_index` - `/app/accounts/:accountId/crm`
 - gate: papel `administrator` ou `agent` ou `crm_view`
 - pre_requisitos: CRM habilitado e permissão de criar oportunidades; funil e etapa disponíveis. Contato e empresa são opcionais.
-- passos: Clique em **Nova oportunidade**; em Relacionamento, use um contato existente, **Criar novo** ou **Continuar sem vínculo**. Para contato novo, a empresa pode ficar ausente, ser escolhida ou criada. Preencha título, funil, etapa, valor e responsável; abra **Mais opções da oportunidade** para os dados adicionais; confira o resumo do rodapé e clique em **Criar oportunidade**.
+- passos: Clique em **Nova oportunidade**; em **Quem é o cliente?** (Passo 1 de 2), escolha **Já está nos contatos** (procure e clique em **Procurar**), **Pessoa nova** ou **Sem pessoa por enquanto**, e clique em **Continuar**. Para pessoa nova, a empresa pode ficar sem, ser escolhida ou criada. Em **Sobre o negócio** (Passo 2 de 2), escreva o **Nome do negócio** (único obrigatório), confira **Funil**, **Em que etapa entra**, **Quem cuida** e **Caixa de entrada**; abra **Mais detalhes** para o resto; confira o resumo do rodapé e clique em **Colocar no funil**.
 - gotchas: os cadastros são compartilhados com Relacionamentos, não cópias; reutilizar existente não altera a pessoa ou empresa; identidade/domínio repetidos pedem escolha explícita, nomes iguais não causam fusão; erro de gravação conserva o preenchimento; repetir a mesma solicitação recupera a oportunidade confirmada. Cards sem conversa podem ser ocultados pelo filtro vinculado; a caixa influencia a visibilidade para agentes.
 - nav_target: `crm_kanban_index`
 - highlight: `crm-new-card`
@@ -474,7 +474,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - rota: `contacts_edit` - `/app/accounts/:accountId/contacts/:contactId`
 - gate: feature flag `crm`; papel `administrator` ou `agent` ou `contact_manage` ou `contact_view`
 - pre_requisitos: navegação de Relacionamentos e CRM habilitados; permissão de visualizar CRM e gerenciar oportunidades; acesso ao contato; funil com etapa disponível.
-- passos: Na ficha do contato, clique em **Nova oportunidade**. O CRM abre em outra aba com a pessoa e sua empresa cadastrada selecionadas. Preencha os dados comerciais e confirme **Criar oportunidade**. O card criado abre com o mesmo contato vinculado. **Voltar ao contato** retorna à ficha; se houver dados comerciais não salvos, confirme o descarte ou continue editando.
+- passos: Na ficha do contato, clique em **Nova oportunidade**. O CRM abre em outra aba com a pessoa e sua empresa cadastrada selecionadas. Preencha os dados do negócio e confirme em **Colocar no funil**. O card criado abre com o mesmo contato vinculado. **Voltar ao contato** retorna à ficha; se houver dados comerciais não salvos, confirme o descarte ou continue editando.
 - gotchas: a aba original e seu preenchimento não salvo permanecem abertos. A oportunidade usa o cadastro salvo, não alterações ainda não confirmadas na ficha. Abrir o formulário não cria nenhum registro. Contato indisponível mostra erro e permite tentar novamente ou cancelar, sem virar card avulso silenciosamente. Usuário somente leitura não vê a ação. Sem funil/etapa, selecione ou crie um disponível conforme suas permissões.
 - nav_target: `contacts_edit`
 
@@ -504,18 +504,18 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - rota: `crm_kanban_index` - `/app/accounts/:accountId/crm`
 - gate: papel `administrator` ou `agent` ou `crm_view`
 - pre_requisitos: card existente em funil ativo.
-- passos: Arraste o card entre colunas no Kanban ou abra o drawer; ajuste etapa e responsável; para fechar, use ações de ganhar ou perder; informe valor ganho ou motivo da perda quando solicitado; reabra pelo mesmo drawer quando aplicável.
+- passos: Arraste o card entre colunas no Kanban, ou abra o card e toque na coluna certa em **Onde está no funil** (à direita) e confirme em **Mover**; a etapa também muda pela linha "Etapa X, a Nª de N" do cartão **Negócio**; quem cuida muda na linha "Fulano cuida deste cliente" do mesmo cartão, com **Salvar** no rodapé; para fechar, use **Ganhou** ou **Perdeu** na faixa do topo do card; informe o valor (**Marcar como ganho**) ou o motivo (**Marcar como perdido**); para reabrir, use o botão azul **Reabrir** em **Próximo passo**; para arquivar, **Mais detalhes > Arquivar** e confirme.
 - gotchas: se o movimento falhar, o front restaura o estado anterior; cards fechados podem aparecer melhor na Lista com filtro de resultado; perder e arquivar não deletam contato nem conversa; em funil com "Fechar com sucesso aqui conta como venda" desligado (Editar funil), os botões fecham como Resolvido/Cancelado (ou o nome que o funil der), não somam em vendas nem avisam anúncios.
 - nav_target: `crm_kanban_index`
 
 ### Criar follow-ups e lembretes no CRM
 - intent: "Como crio um lembrete?"; "Como programo follow-up de WhatsApp?"; "Como vejo follow-ups atrasados?"
-- onde_fica: Sidebar > CRM > CRM Kanban > abrir card > aba Retornos; ou CRM > Calendário (com o agendamento novo ligado na conta: CRM > Agendamento > Calendário) > clique no dia
+- onde_fica: Sidebar > CRM > CRM Kanban > abrir card > cartão Agenda > Alterar (ou Marcar) > Marcar algo novo; ou CRM > Calendário (com o agendamento novo ligado na conta: CRM > Agendamento > Calendário) > clique no dia
 - rota: `crm_kanban_index` - `/app/accounts/:accountId/crm`
 - gate: papel `administrator` ou `agent` ou `crm_view`
 - pre_requisitos: card existente; para retorno com mensagem, a conversa vinculada precisa existir e a janela/template do canal pode ser exigida.
-- passos: Abra o card; entre em Retornos; informe título, data/hora e modo de automação; escolha mensagem/template quando houver envio automático; crie o retorno; conclua ou cancele pelo card ou calendário. Consulte Histórico para acompanhar as atividades e tentativas registradas.
-- gotchas: sem conversa vinculada não há adiar/envio automático; WhatsApp fora da janela pode exigir template; lembretes vencidos aparecem por popup e no filtro de retorno; envio automático para contato que não quer receber mensagens ativas é cancelado sem virar atraso, e o Histórico mostra Retorno cancelado com o motivo.
+- passos: Abra o card; no cartão **Agenda**, clique em **Alterar** (ou **Marcar**, quando não há nada marcado); em **Marcar algo novo**, escolha **Lembrete** ou **Mensagem no dia** (o azul **Novo lembrete** do rodapé também abre um lembrete); escreva **O que é**, confira **O que fazer?** (**Me lembrar**, **Esconder a conversa até lá** ou **Mandar uma mensagem**), escolha **Quando?** e, se for mensagem, **Sua mensagem** ou a mensagem pronta; clique em **Salvar**. Em **Já marcado**, use **Feito**, **Adiar** ou **Cancelar**; o retorno atrasado também aparece em **Próximo passo** com **Marcar como feito**. Para ver o que aconteceu, **Mais detalhes > O que já aconteceu**, filtro **Retornos**.
+- gotchas: o card não tem mais abas: tudo de retorno fica no cartão Agenda; sem conversa ligada, **Mensagem no dia** e **Esconder a conversa até lá** ficam travados (aparece "Precisa de uma conversa ligada a este cliente."); WhatsApp fora da janela de 24 horas exige mensagem pronta, e o rodapé diz o que falta; lembretes vencidos aparecem por popup e no filtro de retorno; envio automático para contato que não quer receber mensagens ativas é cancelado sem virar atraso, e o Histórico mostra Retorno cancelado com o motivo.
 - nav_target: `crm_kanban_index`
 
 ### Usar o card CRM a partir de uma conversa
@@ -555,8 +555,8 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - rota: `crm_calendar_index` - `/app/accounts/:accountId/crm/calendar`
 - gate: papel `administrator` ou `agent` ou `crm_view`
 - pre_requisitos: caixa de e-mail Google ou Microsoft conectada com calendário ativo; card CRM existente para a reunião.
-- passos: Abra CRM Calendar; clique em um dia ou abra um card e escolha agendar reunião; selecione caixa/calendário, data, horário, duração e convidados; confira horários ocupados; confirme.
-- gotchas: sem caixa com `calendar_enabled`, o scheduler mostra estado vazio; horários ocupados vêm do free/busy do provedor e podem falhar de forma silenciosa; reuniões arrastadas no calendário não são alteradas sem confirmação, abrem o scheduler de reagendamento.
+- passos: Abra CRM Calendar e clique em um dia; ou abra o card, no cartão **Agenda** clique em **Alterar** (ou **Marcar**) e em **Marcar reunião**: a tela abre no próprio card; com página de agendamento e Google/Microsoft, escolha em cima **Pela minha página** ou **Pelo Google ou Microsoft**; pela página, escolha dia e horário livre (o cliente recebe aviso no WhatsApp); pelo Google/Microsoft, preencha **Enviar de**, **Título da reunião**, **Data**, **Horário de início**, **Duração** e **Convidados** (o cliente recebe convite por e-mail); clique em **Marcar reunião** no rodapé. Para o cliente escolher, use **O cliente escolhe pelo link**: abre a tela **Link da agenda** no card, com mensagem editável, **Enviar na conversa** (sem conversa, **Copiar o link**) e **Cancelar este link**.
+- gotchas: sem página de agendamento e sem caixa com `calendar_enabled`, a Agenda do card mostra "Para marcar reunião, falta a sua página de agendamento", com **Criar minha página** (com permissão) e **Só um lembrete**; **O cliente escolhe pelo link** só aparece com página de agendamento no ar; no calendário, sem caixa com `calendar_enabled`, o scheduler mostra estado vazio; horários ocupados vêm do free/busy do provedor e podem falhar de forma silenciosa; reuniões arrastadas no calendário não são alteradas sem confirmação, abrem o scheduler de reagendamento.
 - nav_target: `crm_calendar_index`
 
 ### Configurar link público de agendamento
@@ -591,10 +591,10 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Atender no dia da reunião marcada pela página de agendamento
 - intent: Onde vejo as reuniões de hoje?; Como sei se o cliente confirmou a reunião?; Como lembro o cliente da reunião?; Como chamo o cliente no WhatsApp na hora da reunião?; Como faço a chamada de vídeo no WhatsApp?; O cliente faltou, como mando o link para marcar outro horário?; Como registro que a reunião aconteceu?
-- onde_fica: CRM > Agendamento > Calendário > visão Agenda > Hoje (escolha Meus para ver só as suas); o detalhe abre ao clicar na reunião; no card, a Próxima reunião aparece no topo do Resumo
+- onde_fica: CRM > Agendamento > Calendário > visão Agenda > Hoje (escolha Meus para ver só as suas); o detalhe abre ao clicar na reunião; no card, a reunião de hoje aparece em Próximo passo (Ver a reunião) e as outras no cartão Agenda, onde a Próxima reunião mostra Chamar no WhatsApp e Lembrar
 - rota: `crm_calendar_index` - `/app/accounts/:accountId/crm/calendar`
 - gate: papel `administrator` ou `agent` ou `crm_view`
-- perfil: quem vê o card vê a reunião; Lembrar e Enviar link mandam mensagem na conversa do cliente, então só funcionam para quem pode responder essa conversa (sem isso, aparece Copiar link); Enviar link para marcar outro horário também pede poder usar o link do cliente (o mesmo do botão Agendar).
+- perfil: quem vê o card vê a reunião; Lembrar e Enviar link mandam mensagem na conversa do cliente, então só funcionam para quem pode responder essa conversa (sem isso, aparece Copiar link); Enviar link para marcar outro horário também pede poder usar o link do cliente (o mesmo de O cliente escolhe pelo link, no cartão Agenda do card).
 - pre_requisitos: a opção Agendamento WhatsApp-first ligada na conta pelo suporte; reunião marcada por uma página de agendamento; para mandar mensagem, uma conversa com o cliente aberta para resposta.
 - passos: 1. Abra CRM Calendar, escolha a visão Agenda e veja Hoje; 2. Cada reunião mostra a hora, onde acontece e Confirmou, Pediu para mudar ou Ainda não respondeu; 3. Se o cliente não respondeu, toque em Lembrar: ele recebe na conversa uma mensagem curta com o link para confirmar; 4. Na hora, clique na reunião e em Chamar no WhatsApp: abre a conversa do cliente (ou o WhatsApp no número dele) e a chamada de vídeo ou de voz começa no próprio WhatsApp; 5. Depois, em Como foi a reunião?, toque em Aconteceu ou Não compareceu; 6. Se o cliente não compareceu, toque em Enviar link para ele marcar outro horário, ou em Agora não; 7. Se a página tem etapa para depois da reunião, responda Mover ou Agora não (no modo automático o card já muda sozinho).
 - gotchas: nada é enviado sem o seu toque; Lembrar não aparece quando o cliente já confirmou ou pediu para não receber avisos, e não repete em menos de 10 minutos; com a janela de mensagens fechada (o cliente precisa escrever primeiro) ou sem conversa que você possa responder, a mensagem não sai e aparece Copiar link para mandar de outro jeito; o link para marcar outro horário é um link novo do cliente, da mesma página quando ela ainda está no ar; Enviar link também não sai para quem pediu para não receber mensagens e não repete em menos de 10 minutos; a chamada de vídeo não acontece no painel, só no WhatsApp; Meus mostra as reuniões dos cards de que você é responsável.
@@ -894,11 +894,11 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Ver todas as origens de um contato no CRM
 - intent: O que é o +2 ao lado da origem no card do CRM?; Como vejo todas as campanhas que trouxeram este contato?; Onde vejo o primeiro e o último anúncio que o cliente clicou?; Por que a origem mostra ID e um número?
-- onde_fica: Menu lateral > CRM > CRM Kanban > botão +N ao lado da origem no card; ou abrir o card > bloco de vínculos > Origens do contato
+- onde_fica: Menu lateral > CRM > CRM Kanban > botão +N ao lado da origem no card; ou abrir o card > Mais detalhes > De onde veio > Caminho até aqui
 - rota: `crm_kanban_index` - `/app/accounts/:accountId/crm`
 - gate: papel `administrator` ou `agent` ou `crm_view`
 - pre_requisitos: card com conversa que veio de anúncio, link rastreado ou landing page; para ver nomes no lugar de números, a conexão em Links e QR codes > Nomes das campanhas da Meta.
-- passos: 1. No Kanban, clique no +N ao lado da origem do card (o card não abre); 2. Leia a lista do primeiro ao último toque, com data, origem, campanha, conjunto, anúncio e o link do post ou da página; 3. Feche com Esc ou clicando fora; 4. No card aberto, a mesma lista aparece em Origens do contato quando houve mais de um toque.
+- passos: 1. No Kanban, clique no +N ao lado da origem do card (o card não abre); 2. Leia a lista do primeiro ao último toque, com data, origem, campanha, conjunto, anúncio e o link do post ou da página; 3. Feche com Esc ou clicando fora; 4. No card aberto, a mesma lista aparece em Mais detalhes > De onde veio > Caminho até aqui.
 - gotchas: guarda no máximo 20 toques; com um toque só, o card mostra a origem e a campanha como antes; no clique para WhatsApp sem nome resolvido, o anúncio é o título do anúncio; ID 1202…0416 aparece quando a Meta mandou só o número, e o número inteiro fica ao passar o mouse; o link abre em outra aba.
 - nav_target: `crm_kanban_index`
 
@@ -1198,18 +1198,18 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - perfil: `administrator`, `agent` sem custom role, ou custom role com `crm_manage_ai`/`crm_admin`; se o perfil nao puder, diga que ele pode visualizar o CRM quando tiver acesso, mas precisa de permissao de IA do CRM para alterar essas configuracoes.
 - pre_requisitos: funil ja criado; etapas do funil definidas; para auto-move, criterios de IA por etapa bem descritos.
 - passos: 1. Abra CRM Kanban; 2. Selecione o funil; 3. Clique em Editar funil; 4. No bloco IA do funil, habilite IA, auto-move, callback e/ou retorno automatico; 5. Preencha criterios por etapa, transferencia para humano e horarios de envio; 6. Clique em Salvar IA ou Salvar funil.
-- gotchas: o painel so aparece ao editar um funil existente; auto-move depende de criterios por etapa; callback tem modos "so lembrar", "enviar mensagem" ou "ambos"; o retorno automatico envia mensagens, entao deve ser ligado com cuidado; contato marcado como quem nao quer receber mensagens ativas nao recebe retorno automatico: o card mostra Parado a pedido do cliente.
+- gotchas: o painel so aparece ao editar um funil existente; auto-move depende de criterios por etapa; callback tem modos "so lembrar", "enviar mensagem" ou "ambos"; o retorno automatico envia mensagens, entao deve ser ligado com cuidado; contato marcado como quem nao quer receber mensagens ativas nao recebe retorno automatico: o card mostra Parado: o cliente pediu (cartão Agenda > Chamar de volta sozinho).
 - nav_target: `crm_kanban_index`
 
 ### Usar sugestoes e resumo por IA no card do CRM
 - intent: "Como peco para a IA analisar um card?"; "Onde aceito a etapa sugerida pela IA?"; "Como vejo resumo da conversa no card?"
-- onde_fica: Sidebar > CRM > CRM Kanban > abrir card > paineis de IA no drawer do card
+- onde_fica: Sidebar > CRM > CRM Kanban > abrir card > Próximo passo (sugestão de etapa) ou cartão Negócio > linha da etapa > Leitura da conversa; resumo da conversa no cartão Conversa e na tela Conversas
 - rota: `crm_kanban_index` - `/app/accounts/:accountId/crm`
 - gate: papel `administrator` ou `agent` ou `crm_view`
 - perfil: `administrator`, `agent` sem custom role, ou custom role com `crm_manage_ai`/`crm_admin` para analisar, aceitar, dispensar e atualizar resumo; custom role apenas com `crm_view` pode ser orientada a visualizar o card, mas nao a executar acoes de IA.
 - pre_requisitos: card existente; para resumo, card precisa estar vinculado a uma conversa visivel ao usuario.
-- passos: 1. Abra o card; 2. Veja o painel Sugestao de estagio; 3. Clique em Analisar agora quando quiser reavaliar; 4. Aceite para mover o card ou dispense a sugestao; 5. No painel Resumo da conversa por IA, use Atualizar quando precisar regenerar.
-- gotchas: se a IA ficar abaixo do limiar, a tela mostra que nao encontrou etapa adequada; resumo nao aparece para card sem conversa; aceitar sugestao move o card de etapa.
+- passos: 1. Abra o card; 2. Em Próximo passo, leia "Lendo a conversa, achamos que..." (quando outra coisa é mais urgente, a sugestão vira uma linha no cartão Negócio); 3. Clique em **Mover para** a etapa sugerida para aceitar, ou em **Deixar como está** para dispensar; 4. Para pedir nova leitura, no cartão Negócio clique na linha "Etapa X, a Nª de N" e, em **Leitura da conversa**, clique em **Ler a conversa de novo**; 5. O resumo da conversa aparece em 2 linhas no cartão Conversa; para ver inteiro e regenerar, clique em "N conversas" e use **Atualizar** na tela Conversas.
+- gotchas: o card nao tem mais paineis nem abas de IA; abaixo do limiar a tela diz "A leitura não teve certeza de uma etapa melhor."; sem sugestao, "A leitura não achou nada para mudar."; resumo nao aparece para card sem conversa ("Nenhuma conversa ligada a este cliente."); aceitar sugestao move o card de etapa; Mover e Deixar como está pedem permissao de IA do CRM e poder mudar o card.
 - nav_target: `crm_kanban_index`
 
 ### Conectar ou autorizar calendario em uma caixa de e-mail
@@ -2077,7 +2077,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Consultar cadastros sem alterar os dados compartilhados
 - intent: Por que não aparece Editar contato?; Posso criar oportunidade sem editar a pessoa?; Por que Criar novo está indisponível no CRM?
-- onde_fica: Relacionamentos > ficha do contato ou empresa; CRM > card > Relacionamento; Conversas > painel do contato
+- onde_fica: Relacionamentos > ficha do contato ou empresa; CRM > abrir card > cartão Contato e empresa > Alterar (ou Ver); Conversas > painel do contato
 - rota: `contacts_edit` - `/app/accounts/:accountId/contacts/:contactId`
 - gate: feature flag `crm`; papel `administrator` ou `agent` ou `contact_manage` ou `contact_view`
 - pre_requisitos: acesso ao cadastro; permissões de Relacionamentos e do CRM são independentes

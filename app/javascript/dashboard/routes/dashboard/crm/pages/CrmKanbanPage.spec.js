@@ -1,5 +1,5 @@
 import { flushPromises, mount } from '@vue/test-utils';
-import { defineComponent, h, ref } from 'vue';
+import { h, ref } from 'vue';
 import CrmKanbanPage from './CrmKanbanPage.vue';
 import { useAlert } from 'dashboard/composables';
 import { useEmitter } from 'dashboard/composables/emitter';
@@ -164,7 +164,7 @@ const mountPage = async ({
         Draggable: DraggableStub,
         Spinner: true,
         ConfirmModal: true,
-        CrmCardDrawer: true,
+        CardGaveta: true,
         CrmKanbanFiltersDrawer: true,
         CrmOpportunityFromContact: true,
         CrmPipelineDrawer: true,
@@ -349,13 +349,13 @@ describe('CrmKanbanPage', () => {
       if (type === 'crmKanban/fetchCard') return { id: payload };
       return [];
     });
-    const DrawerStub = defineComponent({
+    const DrawerStub = {
       setup(_, { expose }) {
         expose({ guardNavigation });
         return () => h('div');
       },
-    });
-    wrapper = await mountPage({ stubs: { CrmCardDrawer: DrawerStub } });
+    };
+    wrapper = await mountPage({ stubs: { CardGaveta: DrawerStub } });
     const openButtons = () =>
       wrapper
         .findAll('button')
@@ -429,7 +429,7 @@ it('loads all authorized stages for card details independently of board filters'
   await wrapper.vm.openCardDrawer({ id: 100 });
   expect(dispatch).toHaveBeenCalledWith('crmKanban/fetchPipelineStages', 1);
   expect(
-    wrapper.findComponent({ name: 'CrmCardDrawer' }).attributes('stages')
+    wrapper.findComponent({ name: 'CardGaveta' }).attributes('stages')
   ).toBeTruthy();
   expect(wrapper.vm.cardDrawerStages).toEqual(STAGES);
   wrapper.unmount();
@@ -454,13 +454,13 @@ it('abre o card pedido pelo alerta do agendamento com o quadro já aberto', asyn
 
 it('refreshes the messaging window and shows the template alert when creating a follow-up fails that validation', async () => {
   const refreshMessagingWindow = vi.fn();
-  const DrawerStub = defineComponent({
+  const DrawerStub = {
     setup(_, { expose }) {
       expose({ refreshMessagingWindow });
       return () => h('div');
     },
-  });
-  const wrapper = await mountPage({ stubs: { CrmCardDrawer: DrawerStub } });
+  };
+  const wrapper = await mountPage({ stubs: { CardGaveta: DrawerStub } });
   wrapper.vm.selectedCard = { id: 7 };
   dispatch.mockImplementation(async type => {
     if (type === 'crmKanban/createFollowUp') {
@@ -489,13 +489,13 @@ it('refreshes the messaging window and shows the template alert when creating a 
 
 it('shows the raw API message for any other follow-up creation failure', async () => {
   const refreshMessagingWindow = vi.fn();
-  const DrawerStub = defineComponent({
+  const DrawerStub = {
     setup(_, { expose }) {
       expose({ refreshMessagingWindow });
       return () => h('div');
     },
-  });
-  const wrapper = await mountPage({ stubs: { CrmCardDrawer: DrawerStub } });
+  };
+  const wrapper = await mountPage({ stubs: { CardGaveta: DrawerStub } });
   wrapper.vm.selectedCard = { id: 7 };
   dispatch.mockImplementation(async type => {
     if (type === 'crmKanban/createFollowUp') {
