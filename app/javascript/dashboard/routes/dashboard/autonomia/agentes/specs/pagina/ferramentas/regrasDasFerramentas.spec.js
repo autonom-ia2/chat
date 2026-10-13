@@ -354,6 +354,9 @@ describe('regras das Ferramentas', () => {
       ],
       ['tool_execution_error: corpo_json_invalido', 'CORPO', 'PREENCHE', false],
       ['tool_execution_error: cabecalho_invalido', 'CABECALHO', 'CHAVE', false],
+      ['tool_execution_error: parametro_invalido', 'VALOR', 'PREENCHE', false],
+      ['tool_execution_error: corpo_sem_escape', 'TIPO_DO_CORPO', null, false],
+      ['tool_execution_error: parser_error', 'NAO_JSON', 'PREENCHE', false],
       ['outra coisa', 'GENERICO', null, false],
     ])('%s → %s', (erro, chave, corrigir, ambar) => {
       expect(traduzirErroDoTeste(erro)).toEqual({
@@ -397,7 +400,7 @@ describe('regras das Ferramentas', () => {
         'Content-Type: application/json',
         'Accept: application/json',
       ]);
-      expect(chamada.corpo).toBe('{ "t": "pastilha de freio" }');
+      expect(chamada.corpo).toBe('{"t":"pastilha de freio"}');
     });
 
     // #1425: a prévia do corpo mostra o texto escapado, como o backend envia.
@@ -411,8 +414,40 @@ describe('regras das Ferramentas', () => {
         },
         { termo: 'x","admin":true' }
       );
-      expect(chamada.corpo).toBe('{ "t": "x\\",\\"admin\\":true" }');
+      expect(chamada.corpo).toBe('{"t":"x\\",\\"admin\\":true"}');
       expect(JSON.parse(chamada.corpo)).toEqual({ t: 'x","admin":true' });
+    });
+
+    // Revisão do #1425: a prévia espelha o backend — JSON só quando o Content-Type é JSON ou falta;
+    // formulário codifica cada valor; outro tipo mostra como foi escrito.
+    it('previews a form body with each value encoded, like the backend', () => {
+      const chamada = montarChamada(
+        {
+          metodo: 'POST',
+          endereco: 'https://x.com/b',
+          corpo: 'q={{termo}}&limit=5',
+          cabecalhos: [],
+          automaticos: [
+            { key: 'Content-Type', value: 'application/x-www-form-urlencoded' },
+          ],
+        },
+        { termo: 'a&admin=true (x)' }
+      );
+      expect(chamada.corpo).toBe('q=a%26admin%3Dtrue+%28x%29&limit=5');
+    });
+
+    it('previews another body type as written', () => {
+      const chamada = montarChamada(
+        {
+          metodo: 'POST',
+          endereco: 'https://x.com/b',
+          corpo: '<q>{{termo}}</q>',
+          cabecalhos: [],
+          automaticos: [{ key: 'content-type', value: 'application/xml' }],
+        },
+        { termo: 'a"b' }
+      );
+      expect(chamada.corpo).toBe('<q>a"b</q>');
     });
 
     it('keeps the variable visible while the value is empty, and GET has no body', () => {

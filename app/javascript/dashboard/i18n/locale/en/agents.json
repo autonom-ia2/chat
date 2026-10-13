@@ -873,7 +873,7 @@
               "CORPO_INVALIDO": "The body is not valid JSON. Check commas and quotes. Text information goes inside quotes.",
               "SEM_CORPO": "A lookup sends no body. To send a body, choose \"Send data (POST)\" in step 2.",
               "MAPEAMENTO": "How the answer reaches the agent",
-              "MAPEAMENTO_AJUDA": "Use it to send the agent only part of the answer. The system’s answer is called {response}. Empty: the agent gets the whole answer, up to 8,000 characters. A field that is not in the answer comes out empty."
+              "MAPEAMENTO_AJUDA": "Use it to send the agent only part of the answer. The system’s answer is called {response}. Empty: the agent gets the whole answer, up to 8,000 characters. A field that is not in the answer comes out empty, and so does the mapping."
             },
             "QUATRO": {
               "INTRO": "If the system asks for a key to answer, put it here. If it does not, you can continue.",
@@ -954,6 +954,9 @@
               "REDIRECIONA": "The address sends you elsewhere. Use the final address.",
               "CORPO": "The body stopped being valid JSON with the values received. Put text information inside quotes.",
               "CABECALHO": "A header got a line break in its value, and the call was refused.",
+              "VALOR": "A value does not match the type of its information (number, yes/no).",
+              "TIPO_DO_CORPO": "With this Content-Type the body cannot use the agent's information. Use JSON or form.",
+              "NAO_JSON": "The system's answer is not JSON, and the mapping needs JSON.",
               "URL_INVALIDA": "The address became invalid with the value typed.",
               "URL_INVALIDA_POR_QUE": "A space or an accent after the ? breaks the call.",
               "REDE": "This address points inside the private network and cannot be used.",

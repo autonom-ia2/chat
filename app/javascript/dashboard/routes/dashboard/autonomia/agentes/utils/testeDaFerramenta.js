@@ -30,6 +30,11 @@ const ERROS_DE_EXECUCAO = {
   cross_origin_redirect_error: ['REDIRECIONA', 'ENDERECO'],
   corpo_json_invalido: ['CORPO', 'PREENCHE'],
   cabecalho_invalido: ['CABECALHO', 'CHAVE'],
+  // Revisão do #1425: valor fora do tipo da informação, corpo de tipo sem escape seguro com {{ }}, e
+  // resposta que não é JSON numa ferramenta com mapeamento.
+  parametro_invalido: ['VALOR', 'PREENCHE'],
+  corpo_sem_escape: ['TIPO_DO_CORPO', null],
+  parser_error: ['NAO_JSON', 'PREENCHE'],
   undefined_variable: ['NAO_EXISTE', 'PREENCHE'],
   undefined_filter: ['NAO_EXISTE', 'PREENCHE'],
   syntax_error: ['NAO_EXISTE', 'PREENCHE'],
@@ -74,10 +79,19 @@ const juntar = pedacos =>
 
 // Troca as {{variáveis}} como o HttpExecutor (Liquid sem codificar, a não ser com url_encode).
 // Sem valor, a variável continua escrita; no endereço, valor com espaço sem url_encode é "ruim".
-// No corpo JSON o texto vai escapado para dentro de aspas, como o backend envia (#1425).
+// No corpo, cada valor vai com o escape do tipo do corpo, como o CorpoDaFerramenta envia (#1425).
+const comoVeio = valor => valor;
 const paraDentroDeAspas = valor => JSON.stringify(valor).slice(1, -1);
+// URI.encode_www_form_component: só letras, dígitos e * - . _ ficam; espaço vira +.
+const FORA_DO_ENCODE_URI = ['!', "'", '(', ')', '~'];
+const comoCampoDeFormulario = valor =>
+  FORA_DO_ENCODE_URI.reduce(
+    (texto, c) =>
+      texto.split(c).join(`%${c.charCodeAt(0).toString(16).toUpperCase()}`),
+    codificar(valor)
+  );
 
-const preencher = (texto, valores, noEndereco, noCorpo = false) => {
+const preencher = (texto, valores, noEndereco, escapar = comoVeio) => {
   const partes = String(texto ?? '').split('{{');
   const pedacos = [{ texto: partes[0] }];
   let ruim = '';
@@ -95,12 +109,12 @@ const preencher = (texto, valores, noEndereco, noCorpo = false) => {
     if (!valor) {
       pedacos.push({ texto: `{{${parte.slice(0, fim)}}}` });
     } else if (filtros.includes('url_encode')) {
-      pedacos.push({ texto: codificar(valor) });
+      pedacos.push({ texto: escapar(codificar(valor)) });
     } else if (noEndereco && valor.includes(' ')) {
       ruim = ruim || nome;
       pedacos.push({ texto: valor, ruim: true });
     } else {
-      pedacos.push({ texto: noCorpo ? paraDentroDeAspas(valor) : valor });
+      pedacos.push({ texto: escapar(valor) });
     }
     pedacos.push({ texto: parte.slice(fim + 2) });
   });
@@ -111,6 +125,49 @@ const comCorpo = rascunho =>
   rascunho.metodo === 'POST' && String(rascunho.corpo ?? '').trim() !== '';
 
 const textoDe = pedacos => pedacos.map(p => p.texto).join('');
+
+// O tipo do corpo, pela mesma regra do backend (CorpoDaFerramenta#tipo): sem Content-Type ou com
+// "json" é JSON; formulário; o resto vai como foi escrito.
+const FORMULARIO = 'application/x-www-form-urlencoded';
+const tipoDoCorpo = rascunho => {
+  const declarado = [
+    ...(rascunho.automaticos || []),
+    ...(rascunho.cabecalhos || []),
+  ].find(
+    c =>
+      String(c.key ?? c.chave ?? '')
+        .trim()
+        .toLowerCase() === 'content-type'
+  );
+  const valor = String(
+    declarado?.value ?? declarado?.valor ?? ''
+  ).toLowerCase();
+  if (!declarado || valor.includes('json')) return 'JSON';
+  return valor.includes(FORMULARIO) ? 'FORMULARIO' : 'OUTRO';
+};
+
+// O backend manda o JSON regerado (sem espaços nem comentários); com {{variável}} ainda sem valor,
+// a prévia mostra como está.
+const regerado = texto => {
+  try {
+    return JSON.stringify(JSON.parse(texto));
+  } catch {
+    return texto;
+  }
+};
+
+const montarCorpo = (rascunho, valores) => {
+  const tipo = tipoDoCorpo(rascunho);
+  if (tipo === 'JSON') {
+    return regerado(
+      textoDe(
+        preencher(rascunho.corpo, valores, false, paraDentroDeAspas).pedacos
+      )
+    );
+  }
+  const escapar = tipo === 'FORMULARIO' ? comoCampoDeFormulario : comoVeio;
+  return textoDe(preencher(rascunho.corpo, valores, false, escapar).pedacos);
+};
 
 export const montarChamada = (rascunho, valores) => {
   const endereco = preencher(rascunho.endereco, valores, true);
@@ -130,9 +187,7 @@ export const montarChamada = (rascunho, valores) => {
     endereco: endereco.pedacos,
     ruim: endereco.ruim,
     cabecalhos: [...cabecalhos, ...automaticos],
-    corpo: comCorpo(rascunho)
-      ? textoDe(preencher(rascunho.corpo, valores, false, true).pedacos)
-      : '',
+    corpo: comCorpo(rascunho) ? montarCorpo(rascunho, valores) : '',
   };
 };
 
