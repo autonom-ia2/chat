@@ -20,7 +20,8 @@ class Crm::Subjects::Abrir
     end
   end
 
-  RECUSAS = %i[sem_crm funil_invalido sem_agente_responsavel agente_fora_da_caixa pessoa_atribuida esperando_pessoa].freeze
+  RECUSAS = %i[sem_crm funil_invalido sem_agente_responsavel agente_fora_da_caixa pessoa_atribuida esperando_pessoa
+               assunto_escolhido_por_pessoa].freeze
   EVENTO = 'ai_subject_opened'.freeze
   # Teto de cada texto livre na atividade (o payload do card recusa texto maior que 1500).
   MAX_TEXTO = 1_000
@@ -77,35 +78,40 @@ class Crm::Subjects::Abrir
     @agente = Crm::Ai::Config.responsible_agent(inbox: @conversation.inbox, pipeline: @pipeline)
   end
 
+  # Dentro do lock. Abrir ou voltar a outro card troca o assunto atual; o assunto que uma pessoa escolheu há pouco
+  # (Crm::Subjects::RESPEITO_AO_FOCO) não é trocado pelo agente (#1260): vira a recusa :assunto_escolhido_por_pessoa.
+  # Já estar no funil não troca nada e segue valendo.
   def aplicar
     abertos = Crm::Cards::ConversationCardFinder.new(account: @account).all(@conversation).to_a.select(&:open?)
-    atual = abertos.first
-    acao, card = if atual&.pipeline_id == @pipeline.id
-                   [:ja_no_funil, atual]
-                 elsif (existente = abertos.find { |aberto| aberto.pipeline_id == @pipeline.id })
-                   Crm::Subjects::Acoes.focar(conversation: @conversation, card: existente)
-                   [:reaproveitado, existente]
-                 else
-                   [:aberto, criar]
-                 end
+    return confirmar(abertos.first) if abertos.first&.pipeline_id == @pipeline.id
+    return recusar(:assunto_escolhido_por_pessoa) if pessoa_escolheu_assunto?
+
+    existente = abertos.find { |aberto| aberto.pipeline_id == @pipeline.id }
+    if existente
+      Crm::Subjects::Acoes.focar(conversation: @conversation, card: existente)
+      return concluir(:reaproveitado, existente)
+    end
+
+    concluir(:aberto, criar)
+  end
+
+  def confirmar(atual)
+    concluir(:ja_no_funil, atual)
+  end
+
+  def concluir(acao, card)
     registrar(card, acao)
     Resultado.new(ok: true, acao: acao, card: card, pipeline: @pipeline, agente: agente)
   end
 
-  # O card nasce já como assunto atual: a passagem é um pedido explícito do agente, não a IA de assunto adivinhando, e
-  # só acontece sem pessoa atribuída. Por isso o respeito à escolha recente de uma pessoa (#1260) não vale aqui: o
-  # Creator deixa sem foco quando uma pessoa escolheu o assunto há pouco, e o foco é marcado de novo. O mesmo vale para
-  # voltar a um card aberto (:reaproveitado).
-  def criar
-    titulo = @resumo.first(Crm::SubjectDecision::MAX_TITLE).presence || @pipeline.name
-    card = Crm::Subjects::Acoes.criar(conversation: @conversation, pipeline: @pipeline, titulo: titulo, source: 'agente')
-    Crm::Subjects::Acoes.focar(conversation: @conversation, card: card) unless atual?(card)
-    card
+  def pessoa_escolheu_assunto?
+    Crm::Cards::Focus.pessoa_escolheu?(account_id: @account.id, conversation_id: @conversation.id)
   end
 
-  def atual?(card)
-    Crm::CardConversation.where(account_id: @account.id, card_id: card.id, conversation_id: @conversation.id)
-                         .where.not(focused_at: nil).exists?
+  # Sem escolha recente de pessoa, o Creator já marca o card novo como o assunto atual.
+  def criar
+    titulo = @resumo.first(Crm::SubjectDecision::MAX_TITLE).presence || @pipeline.name
+    Crm::Subjects::Acoes.criar(conversation: @conversation, pipeline: @pipeline, titulo: titulo, source: 'agente')
   end
 
   def registrar(card, acao)

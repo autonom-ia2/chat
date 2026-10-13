@@ -152,6 +152,17 @@ RSpec.describe Crm::Ai::ResponsibleAgentSync do
       expect(conversation.reload.ai_assignee).to eq(porta)
     end
 
+    it 'quando o card em atendimento passa para um funil cujo responsável não tem vínculo com a caixa' do
+      outra_area = Autonomia::Agents::Agent.create!(account: account, name: 'Área Comercial', agent_type: 'custom')
+      Crm::InboxAiAgent.create!(account: account, inbox: inbox, pipeline: comercial, agent: outra_area)
+      card.update!(pipeline: comercial, stage: comercial.stages.first)
+
+      resultado = sync(described_class::PIPELINE, card_id: card.id)
+
+      expect(resultado).to have_attributes(trocou: true, para_agent_bot_id: porta.id, autonomia_agent_id: nil)
+      expect(conversation.reload.ai_assignee).to eq(porta)
+    end
+
     it 'não volta sozinha na troca de foco para um funil sem responsável' do
       create_card(pipeline: comercial)
 

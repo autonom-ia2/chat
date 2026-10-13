@@ -99,12 +99,44 @@ RSpec.describe Crm::Subjects::Abrir do
     expect(Crm::Ai::ResponsibleAgentSyncJob).to have_been_enqueued.with(conversation.id, 'abrir', nil)
   end
 
-  it ':aberto marca o foco mesmo quando uma pessoa escolheu o assunto há pouco' do
-    create_card(pipeline: comercial).card_conversations.first.update!(focused_by_id: admin.id)
+  describe 'respeita o assunto que uma pessoa escolheu há pouco (#1260)' do
+    def escolhido_por_pessoa(card, quando: 1.hour.ago)
+      card.card_conversations.find_by(conversation: conversation).update!(focused_at: quando, focused_by_id: admin.id)
+      card
+    end
 
-    card = abrir.card
+    it 'recusa abrir card novo com :assunto_escolhido_por_pessoa, sem gravar nada' do
+      escolhido_por_pessoa(create_card(pipeline: comercial))
 
-    expect(Crm::Cards::ConversationCardFinder.new(account: account).find(conversation)).to eq(card)
+      expect { expect(abrir).to have_attributes(ok: false, recusa: :assunto_escolhido_por_pessoa, agente: area) }
+        .not_to(change { account.crm_cards.count })
+      expect(pedidos).to be_empty
+      expect(Crm::Ai::ResponsibleAgentSyncJob).not_to have_been_enqueued.with(conversation.id, 'abrir', nil)
+    end
+
+    it 'recusa voltar a outro card aberto e não mexe no foco' do
+      existente = create_card(pipeline: suporte, focused_at: 2.days.ago)
+      atual = escolhido_por_pessoa(create_card(pipeline: comercial))
+
+      expect(abrir).to have_attributes(ok: false, recusa: :assunto_escolhido_por_pessoa)
+      expect(Crm::Cards::ConversationCardFinder.new(account: account).find(conversation)).to eq(atual)
+      expect(existente.card_conversations.first.reload.focused_at).to be < 1.day.ago
+    end
+
+    it 'segue valendo :ja_no_funil, que não troca o assunto' do
+      escolhido_por_pessoa(create_card(pipeline: suporte))
+
+      expect(abrir).to have_attributes(ok: true, acao: :ja_no_funil)
+    end
+
+    it 'depois do tempo de respeito, abre normalmente' do
+      escolhido_por_pessoa(create_card(pipeline: comercial), quando: Crm::Subjects::RESPEITO_AO_FOCO.ago - 1.minute)
+
+      resultado = abrir
+
+      expect(resultado).to have_attributes(ok: true, acao: :aberto)
+      expect(Crm::Cards::ConversationCardFinder.new(account: account).find(conversation)).to eq(resultado.card)
+    end
   end
 
   it ':reaproveitado volta ao card aberto do funil, sem criar outro' do

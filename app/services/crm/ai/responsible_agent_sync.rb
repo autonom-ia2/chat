@@ -7,8 +7,9 @@
 # - uma pessoa está atribuída, ou a conversa espera uma pessoa (passagem do robô);
 # - nenhum robô atende a conversa agora (sem ai_assignee): entregar a um robô seria tirá-la da fila de pessoas;
 # - a conversa está resolvida ou adiada e a troca não veio do pedido do agente: entregar a um robô a reabriria;
-# - o responsável não tem vínculo com a caixa (sem espelho não há como postar) ou já é quem atende.
-# Funil arquivado, fora da caixa ou com a IA do funil desligada conta como funil sem responsável.
+# - o responsável já é quem atende.
+# Funil arquivado, fora da caixa, com a IA do funil desligada, ou cujo responsável não tem vínculo com a caixa (sem
+# espelho não há como postar) conta como funil sem responsável.
 #
 # A porta (o robô ativo da caixa) só recebe a conversa de volta quando o próprio card em atendimento passa para um
 # funil sem responsável, ou cujo responsável é a porta (motivo PIPELINE). Troca de foco ou pedido do agente nunca
@@ -103,7 +104,9 @@ class Crm::Ai::ResponsibleAgentSync
     return volta_para_a_porta(porta, nil) if agente.nil?
 
     espelho = Crm::Ai::Config.agent_inbox_for(inbox: @conversation.inbox, agent: agente)&.agent_bot
-    return if espelho.nil?
+    # Responsável sem vínculo com a caixa não tem como postar: conta como funil sem responsável. Um agente de área não
+    # segue atendendo o funil de outra área.
+    return volta_para_a_porta(porta, nil) if espelho.nil?
     return volta_para_a_porta(porta, agente) if espelho == porta
 
     { bot: espelho, agente: agente }
