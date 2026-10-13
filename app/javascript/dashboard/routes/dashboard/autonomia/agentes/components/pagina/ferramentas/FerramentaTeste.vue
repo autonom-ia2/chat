@@ -110,11 +110,18 @@ const rodar = async () => {
   erroAoLigar.value = false;
   try {
     const dados = await props.testar(props.ferramenta.id, parametros());
-    resultado.value = { ok: true, resposta: lerResposta(dados?.body) };
+    resultado.value = {
+      ok: true,
+      resposta: lerResposta(dados?.body, dados?.cortada),
+    };
   } catch (erro) {
-    // Só o texto da API vira "Detalhe"; sem rede não há detalhe real a mostrar.
+    // Só o texto da API vira "Detalhe" (o que o agente recebe, #1425); sem rede não há detalhe real.
     const mensagem = erro?.motivo?.mensagem || '';
-    resultado.value = { ok: false, erro: traduzirErroDoTeste(mensagem) };
+    const agenteRecebe = erro?.motivo?.agenteRecebe || '';
+    resultado.value = {
+      ok: false,
+      erro: traduzirErroDoTeste(mensagem, agenteRecebe),
+    };
   } finally {
     testando.value = false;
   }
@@ -150,9 +157,6 @@ const garantia = computed(() =>
 const textoDaFalha = computed(() => {
   if (!falha.value) return '';
   const partes = [
-    falha.value.chave === 'URL_INVALIDA'
-      ? t(`${NS}.ERROS.URL_INVALIDA_POR_QUE`)
-      : '',
     garantia.value,
     passoDaFalha.value
       ? t(`${NS}.CORRIJA_EM`, { parte: nomeDaParte(passoDaFalha.value) })
@@ -160,13 +164,6 @@ const textoDaFalha = computed(() => {
   ];
   return partes.filter(Boolean).join(' ');
 });
-const avisoDeEspaco = computed(() =>
-  chamada.value.ruim
-    ? t(`${NS}.ESPACO`, {
-        codificada: `{{ ${chamada.value.ruim} | url_encode }}`,
-      })
-    : ''
-);
 const resumoDaChamada = computed(
   () =>
     `${chamada.value.metodo} ${hostDoEndereco(props.ferramenta.endpoint_url)}`
@@ -279,9 +276,6 @@ const resumoDaChamada = computed(
       </p>
       <TesteChamada :chamada="chamada" />
     </section>
-    <FerramentaFaixa v-if="avisoDeEspaco" data-aviso-espaco tom="ambar" solta>
-      <p class="m-0 break-words">{{ avisoDeEspaco }}</p>
-    </FerramentaFaixa>
 
     <div aria-live="polite" class="relative flex flex-col gap-3">
       <p

@@ -1,9 +1,8 @@
 // #1301 (protótipo F07) — teste de uma ferramenta salva: a prévia do que vai ser chamado, a leitura
 // do que o agente recebe e a tradução do erro do POST /tools/:id/test. Só métodos de string.
 
-// O /test devolve o body cortado em 2.000 caracteres (truncate, que termina em "...").
-export const LIMITE_DA_RESPOSTA = 2000;
-const CORTE = '...';
+// #1425: o /test devolve o MESMO texto que o agente lê (cortado em 8.000 caracteres, com o aviso de
+// corte) e diz se cortou (`cortada`).
 
 const HTTP = 'tool_http_error:';
 const EXECUCAO = 'tool_execution_error:';
@@ -26,6 +25,17 @@ const ERROS_DE_EXECUCAO = {
   unsafe_url_error: ['REDE', 'ENDERECO'],
   fetch_error: ['SEM_RESPOSTA', null],
   total_timeout_error: ['SEM_RESPOSTA', null],
+  // #1425: o HttpExecutor recusa redirecionamento para outro domínio, corpo que deixou de ser JSON
+  // depois de preenchido e quebra de linha num cabeçalho.
+  cross_origin_redirect_error: ['REDIRECIONA', 'ENDERECO'],
+  corpo_json_invalido: ['CORPO', 'PREENCHE'],
+  cabecalho_invalido: ['CABECALHO', 'CHAVE'],
+  // Revisão do #1425: valor fora do tipo da informação, corpo de tipo sem escape seguro com {{ }}, e
+  // resposta que não é JSON numa ferramenta com mapeamento.
+  parametro_invalido: ['VALOR', 'PREENCHE'],
+  corpo_sem_escape: ['TIPO_DO_CORPO', null],
+  parser_error: ['NAO_JSON', 'PREENCHE'],
+  endereco_invalido: ['URL_INVALIDA', 'ENDERECO'],
   undefined_variable: ['NAO_EXISTE', 'PREENCHE'],
   undefined_filter: ['NAO_EXISTE', 'PREENCHE'],
   syntax_error: ['NAO_EXISTE', 'PREENCHE'],
@@ -42,10 +52,12 @@ const lerPrefixo = erro => {
   return null;
 };
 
-// Mantém o texto original em "detalhe": a tradução depende do formato do HttpExecutor.
-export const traduzirErroDoTeste = erro => {
-  const detalhe = String(erro ?? '');
-  const [chave, corrigir] = lerPrefixo(detalhe) || ['GENERICO', null];
+// A tradução lê a mensagem do HttpExecutor. O "detalhe" é o que o agente recebe (#1425), quando a API
+// manda; senão, a própria mensagem.
+export const traduzirErroDoTeste = (erro, agenteRecebe = '') => {
+  const mensagem = String(erro ?? '');
+  const [chave, corrigir] = lerPrefixo(mensagem) || ['GENERICO', null];
+  const detalhe = String(agenteRecebe ?? '') || mensagem;
   return { chave, corrigir, ambar: chave === 'SEM_RESPOSTA', detalhe };
 };
 
@@ -54,24 +66,39 @@ const codificar = valor => encodeURIComponent(valor).split('%20').join('+');
 
 const valorDe = (valores, nome) => String(valores[nome] ?? '').trim();
 
-// Junta pedaços vizinhos sem marca, para a prévia não virar uma sopa de <span>.
-const juntar = pedacos =>
-  pedacos
-    .filter(p => p.texto !== '')
-    .reduce((lista, pedaco) => {
-      const ultimo = lista[lista.length - 1];
-      if (ultimo && !ultimo.ruim && !pedaco.ruim) {
-        return [...lista.slice(0, -1), { texto: ultimo.texto + pedaco.texto }];
-      }
-      return [...lista, pedaco];
-    }, []);
+// Junta os pedaços num só, para a prévia não virar uma sopa de <span>.
+const juntar = pedacos => {
+  const texto = pedacos.map(p => p.texto).join('');
+  return texto ? [{ texto }] : [];
+};
 
-// Troca as {{variáveis}} como o HttpExecutor (Liquid sem codificar, a não ser com url_encode).
-// Sem valor, a variável continua escrita; no endereço, valor com espaço sem url_encode é "ruim".
-const preencher = (texto, valores, noEndereco) => {
+// Troca as {{variáveis}} como o HttpExecutor. Sem valor, a variável continua escrita. Cada valor vai com
+// o escape da posição (#1425): no endereço, pedaço do caminho ou valor da query (EnderecoDaFerramenta);
+// no corpo, o do tipo do corpo (CorpoDaFerramenta).
+const comoVeio = valor => valor;
+const paraDentroDeAspas = valor => JSON.stringify(valor).slice(1, -1);
+// URI.encode_www_form_component: só letras, dígitos e * - . _ ficam; espaço vira +.
+const FORA_DO_ENCODE_URI = ['!', "'", '(', ')', '~'];
+const comoCampoDeFormulario = valor =>
+  FORA_DO_ENCODE_URI.reduce(
+    (texto, c) =>
+      texto.split(c).join(`%${c.charCodeAt(0).toString(16).toUpperCase()}`),
+    codificar(valor)
+  );
+// ERB::Util.url_encode: só letras, dígitos e - . _ ~ ficam; espaço vira %20 e "/" também é codificada.
+const FORA_DO_ENCODE_URI_NO_CAMINHO = ['!', "'", '(', ')', '*'];
+const noCaminho = valor =>
+  FORA_DO_ENCODE_URI_NO_CAMINHO.reduce(
+    (texto, c) =>
+      texto.split(c).join(`%${c.charCodeAt(0).toString(16).toUpperCase()}`),
+    encodeURIComponent(valor)
+  );
+// Os escapes que já codificam: com eles, o backend tira o url_encode final e codifica uma vez só.
+const CODIFICAM = [comoCampoDeFormulario, noCaminho];
+
+const preencher = (texto, valores, escapar = comoVeio) => {
   const partes = String(texto ?? '').split('{{');
   const pedacos = [{ texto: partes[0] }];
-  let ruim = '';
   partes.slice(1).forEach(parte => {
     const fim = parte.indexOf('}}');
     if (fim < 0) {
@@ -85,17 +112,46 @@ const preencher = (texto, valores, noEndereco) => {
     const valor = valorDe(valores, nome);
     if (!valor) {
       pedacos.push({ texto: `{{${parte.slice(0, fim)}}}` });
+    } else if (
+      CODIFICAM.includes(escapar) &&
+      filtros[filtros.length - 1] === 'url_encode'
+    ) {
+      pedacos.push({ texto: escapar(valor) });
     } else if (filtros.includes('url_encode')) {
-      pedacos.push({ texto: codificar(valor) });
-    } else if (noEndereco && valor.includes(' ')) {
-      ruim = ruim || nome;
-      pedacos.push({ texto: valor, ruim: true });
+      pedacos.push({ texto: escapar(codificar(valor)) });
     } else {
-      pedacos.push({ texto: valor });
+      pedacos.push({ texto: escapar(valor) });
     }
     pedacos.push({ texto: parte.slice(fim + 2) });
   });
-  return { pedacos: juntar(pedacos), ruim };
+  return { pedacos: juntar(pedacos) };
+};
+
+// -> [antes, depois do separador] ou [texto, null], como EnderecoDaFerramenta#dividir.
+const dividir = (texto, separador) => {
+  const posicao = texto.indexOf(separador);
+  return posicao < 0
+    ? [texto, null]
+    : [texto.slice(0, posicao), texto.slice(posicao + 1)];
+};
+
+// O endereço como o backend monta: fragmento a partir do primeiro #, query a partir do primeiro ? antes
+// dele. Sem {{ }}, como foi cadastrado.
+const montarEndereco = (endereco, valores) => {
+  const texto = String(endereco ?? '');
+  const [base, fragmento] = dividir(texto, '#');
+  const [caminho, query] = dividir(base, '?');
+  const pedacos = [
+    ...preencher(caminho, valores, noCaminho).pedacos,
+    ...(query === null
+      ? []
+      : [
+          { texto: '?' },
+          ...preencher(query, valores, comoCampoDeFormulario).pedacos,
+        ]),
+    ...(fragmento === null ? [] : [{ texto: `#${fragmento}` }]),
+  ];
+  return juntar(pedacos);
 };
 
 const comCorpo = rascunho =>
@@ -103,34 +159,84 @@ const comCorpo = rascunho =>
 
 const textoDe = pedacos => pedacos.map(p => p.texto).join('');
 
+// O cabeçalho automático declarado (Content-Type, Accept), com valor; vazio conta como ausente, como no
+// HttpExecutor#request_headers.
+const automaticoDeclarado = (rascunho, nome) =>
+  [...(rascunho.automaticos || []), ...(rascunho.cabecalhos || [])].find(
+    c =>
+      String(c.key ?? c.chave ?? '')
+        .trim()
+        .toLowerCase() === nome &&
+      String(c.value ?? c.valor ?? '').trim() !== ''
+  );
+const valorDoCabecalho = cabecalho =>
+  String(cabecalho?.value ?? cabecalho?.valor ?? '').trim();
+
+// O tipo do corpo, pela mesma regra do backend (CorpoDaFerramenta#tipo): sem Content-Type (ou vazio)
+// ou com "json" é JSON; formulário; o resto vai como foi escrito.
+const FORMULARIO = 'application/x-www-form-urlencoded';
+const tipoDoCorpo = rascunho => {
+  const declarado = automaticoDeclarado(rascunho, 'content-type');
+  const valor = valorDoCabecalho(declarado).toLowerCase();
+  if (!declarado || valor.includes('json')) return 'JSON';
+  return valor.includes(FORMULARIO) ? 'FORMULARIO' : 'OUTRO';
+};
+
+// O backend manda o JSON regerado (sem espaços nem comentários); com {{variável}} ainda sem valor,
+// a prévia mostra como está.
+const regerado = texto => {
+  try {
+    return JSON.stringify(JSON.parse(texto));
+  } catch {
+    return texto;
+  }
+};
+
+const montarCorpo = (rascunho, valores) => {
+  const tipo = tipoDoCorpo(rascunho);
+  if (tipo === 'JSON') {
+    return regerado(
+      textoDe(preencher(rascunho.corpo, valores, paraDentroDeAspas).pedacos)
+    );
+  }
+  const escapar = tipo === 'FORMULARIO' ? comoCampoDeFormulario : comoVeio;
+  return textoDe(preencher(rascunho.corpo, valores, escapar).pedacos);
+};
+
 export const montarChamada = (rascunho, valores) => {
-  const endereco = preencher(rascunho.endereco, valores, true);
   const cabecalhos = (rascunho.cabecalhos || [])
     .filter(c => String(c.chave ?? '').trim() !== '')
     .map(c => {
       const valor = c.segredo
         ? '••••••'
-        : textoDe(preencher(c.valor, valores, false).pedacos);
+        : textoDe(preencher(c.valor, valores).pedacos);
       return `${c.chave.trim()}: ${valor}`;
     });
-  const automaticos = comCorpo(rascunho)
-    ? ['Content-Type: application/json', 'Accept: application/json']
-    : ['Accept: application/json'];
+  // Os automáticos como o backend manda: o declarado, ou application/json (Content-Type só com corpo).
+  const tipoDeclarado = automaticoDeclarado(rascunho, 'content-type');
+  const acceptDeclarado = automaticoDeclarado(rascunho, 'accept');
+  const contentType =
+    tipoDeclarado || comCorpo(rascunho)
+      ? [
+          `Content-Type: ${valorDoCabecalho(tipoDeclarado) || 'application/json'}`,
+        ]
+      : [];
+  const automaticos = [
+    ...contentType,
+    `Accept: ${valorDoCabecalho(acceptDeclarado) || 'application/json'}`,
+  ];
   return {
     metodo: rascunho.metodo,
-    endereco: endereco.pedacos,
-    ruim: endereco.ruim,
+    endereco: montarEndereco(rascunho.endereco, valores),
     cabecalhos: [...cabecalhos, ...automaticos],
-    corpo: comCorpo(rascunho)
-      ? textoDe(preencher(rascunho.corpo, valores, false).pedacos)
-      : '',
+    corpo: comCorpo(rascunho) ? montarCorpo(rascunho, valores) : '',
   };
 };
 
 // O que o agente recebe: JSON indentado quando dá para ler; cortado ou texto, como veio.
-export const lerResposta = corpo => {
+export const lerResposta = (corpo, cortadaNaApi = false) => {
   const texto = String(corpo ?? '');
-  const cortada = texto.length >= LIMITE_DA_RESPOSTA && texto.endsWith(CORTE);
+  const cortada = Boolean(cortadaNaApi);
   let json = null;
   if (!cortada) {
     try {

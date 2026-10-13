@@ -313,7 +313,8 @@ describe('GavetaFerramentas · nova ferramenta (F03–F06)', () => {
     wrapper.unmount();
   });
 
-  it('checks the address and warns about a query variable without url_encode', async () => {
+  // #1425: o backend codifica cada valor do endereço; não há mais aviso de url_encode.
+  it('checks the address, with no url_encode warning for a query variable', async () => {
     const wrapper = await montar();
     await clicar('#ferramentas-adicionar');
     await digitar('[data-campo-nome]', 'Estoque');
@@ -328,9 +329,7 @@ describe('GavetaFerramentas · nova ferramenta (F03–F06)', () => {
       '[data-campo-endereco]',
       'https://api.loja.com.br/b?t={{termo}}'
     );
-    expect(no('[data-aviso-codificar]').textContent).toContain(
-      'Escreva {{ termo | url_encode }} no lugar de {{termo}}.'
-    );
+    expect(no('[data-aviso-codificar]')).toBeNull();
     expect(no('[data-aviso-criar]').textContent).toContain(
       'Você vai criar {{termo}} no próximo passo.'
     );

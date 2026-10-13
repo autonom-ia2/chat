@@ -9,12 +9,11 @@ import {
   conferirEndereco,
   nomeTecnico,
   variaveisEm,
-  variaveisSemCodificar,
 } from '../../../utils/ferramentas';
 
 // #1301 (protótipo F04) — passo 2: buscar (GET) ou enviar (POST) e o endereço. O endereço é
-// conferido ao sair do campo (parser URL do navegador, sem regex); variável depois do "?" sem
-// url_encode ganha aviso, porque o backend não codifica e espaço quebra a chamada.
+// conferido ao sair do campo (parser URL do navegador, sem regex). Cada valor do endereço é codificado
+// pelo backend conforme a posição (#1425): não há aviso de url_encode.
 const props = defineProps({
   rascunho: { type: Object, required: true },
   base: { type: String, required: true },
@@ -28,7 +27,6 @@ const NS = 'AGENTS.JORNADA.PAGINA.FERRAMENTAS.PASSOS.DOIS';
 const { t } = useI18n();
 
 const VARIAVEL = '{{nome}}';
-const CODIFICADA = '{{ nome | url_encode }}';
 const EXEMPLO =
   'https://api.sualoja.com.br/estoque/busca?termo={{ termo | url_encode }}';
 const INICIO = 'https://';
@@ -57,14 +55,6 @@ const conferirAoSair = () => {
   conferido.value = texto ? conferirEndereco(texto) : '';
 };
 
-const avisoCodificar = computed(() => {
-  const nome = variaveisSemCodificar(props.rascunho.endereco)[0];
-  if (!nome) return '';
-  return t(`${NS}.CODIFICAR`, {
-    codificada: `{{ ${nome} | url_encode }}`,
-    crua: `{{${nome}}}`,
-  });
-});
 const avisoCriar = computed(() => {
   if (!props.novo) return '';
   const nomes = props.rascunho.informacoes.map(i => String(i.nome).trim());
@@ -100,7 +90,6 @@ const preenchido = valor => String(valor ?? '').trim() !== '';
       :ajuda="
         t(`${NS}.ENDERECO_AJUDA`, {
           variavel: VARIAVEL,
-          codificada: CODIFICADA,
         })
       "
       :exemplo="EXEMPLO"
@@ -123,14 +112,6 @@ const preenchido = valor => String(valor ?? '').trim() !== '';
         />
       </template>
       <template #depois>
-        <FerramentaFaixa
-          v-if="avisoCodificar"
-          data-aviso-codificar
-          tom="ambar"
-          solta
-        >
-          <p class="m-0 break-words">{{ avisoCodificar }}</p>
-        </FerramentaFaixa>
         <FerramentaFaixa v-if="avisoCriar" data-aviso-criar tom="azul" solta>
           <p class="m-0 break-words">{{ avisoCriar }}</p>
         </FerramentaFaixa>

@@ -823,7 +823,7 @@
               "POST": "Enviar dados (POST)",
               "POST_TEXTO": "Manda um corpo com os dados. Use quando o sistema pede assim.",
               "ENDERECO": "Endereço",
-              "ENDERECO_AJUDA": "Comece com https://. Use {variavel} para o que o agente preenche. Depois do ?, escreva {codificada}.",
+              "ENDERECO_AJUDA": "Comece com https://. Use {variavel} para o que o agente preenche.",
               "ERRO": {
                 "VAZIO": "Escreva o endereço.",
                 "HTTPS": "Use um endereço que comece com https://.",
@@ -831,7 +831,6 @@
                 "REDE": "Esse endereço não pode ser usado: aponta para dentro da própria rede.",
                 "IP": "Use o nome do site, não um número de IP."
               },
-              "CODIFICAR": "Se a pessoa digitar espaço ou acento, a chamada falha. Escreva {codificada} no lugar de {crua}.",
               "VAI_CRIAR": "Você vai criar {variaveis} no próximo passo.",
               "SLUG": "Nome técnico",
               "SLUG_AJUDA": "É o nome da ferramenta para o agente. Se ficar vazio, criamos a partir do nome. Só letras, números e _.",
@@ -873,7 +872,7 @@
               "CORPO_INVALIDO": "O corpo não é um JSON válido. Confira vírgulas e aspas.",
               "SEM_CORPO": "Busca não envia corpo. Para mandar um corpo, escolha \"Enviar dados (POST)\" no passo 2.",
               "MAPEAMENTO": "Como a resposta chega ao agente",
-              "MAPEAMENTO_AJUDA": "Use para mandar ao agente só uma parte da resposta. A resposta do sistema se chama {response}. Vazio: o agente recebe a resposta inteira, até 8.000 caracteres. Se usar um campo que não vem na resposta, o teste falha."
+              "MAPEAMENTO_AJUDA": "Use para mandar ao agente só uma parte da resposta. A resposta do sistema se chama {response}. Vazio: o agente recebe a resposta inteira, até 8.000 caracteres. Campo que não vem na resposta fica vazio, e o mapeamento também."
             },
             "QUATRO": {
               "INTRO": "Se o sistema pede uma chave para responder, coloque aqui. Se não pede, pode continuar.",
@@ -920,7 +919,6 @@
             "NAO": "Não",
             "CHAMADA": "O que vai ser chamado",
             "VER_CHAMADA": "Ver chamada",
-            "ESPACO": "O endereço vai com espaço e a chamada falha. Em Para onde chama, escreva {codificada}.",
             "FAZER": "Fazer chamada de teste",
             "CHAMANDO": "Chamando…",
             "CHAMANDO_LONGO": "Chamando… pode levar até 10 segundos.",
@@ -928,7 +926,7 @@
             "DEU_CERTO_TEXTO": "O sistema respondeu.",
             "RECEBE": "O que o agente recebe",
             "MAPEADA": "Já com o mapeamento de Avançado.",
-            "CORTADA": "Mostrando os primeiros 2.000 caracteres. O agente recebe até 8.000.",
+            "CORTADA": "A resposta passou de 8.000 caracteres e foi cortada. É exatamente isto que o agente recebe, com o aviso de corte.",
             "VAZIA": "O sistema respondeu, mas sem conteúdo.",
             "VAZIA_TEXTO": "Confira se o endereço está certo. Dá para ligar mesmo assim.",
             "OUTROS_VALORES": "Testar com outros valores",
@@ -952,8 +950,12 @@
               "NAO_ENTENDEU": "O sistema não entendeu o que foi enviado.",
               "SERVIDOR": "O sistema está com problema agora. Não é na ferramenta.",
               "REDIRECIONA": "O endereço manda para outro lugar. Use o endereço final.",
+              "CORPO": "O corpo deixou de ser um JSON válido com os valores recebidos. Sem aspas só vale número, true, false ou null; ponha o texto entre aspas e não use comentário.",
+              "CABECALHO": "Um cabeçalho ficou com quebra de linha no valor, e a chamada foi recusada.",
+              "VALOR": "Um valor não combina com o tipo da informação (número, sim/não).",
+              "TIPO_DO_CORPO": "O corpo usa um Content-Type ou uma tag (como cycle) que não dá para escapar com segurança. Use JSON ou formulário, só com variáveis, if e for.",
+              "NAO_JSON": "A resposta do sistema não é JSON, e o mapeamento precisa de JSON.",
               "URL_INVALIDA": "O endereço ficou inválido com o valor digitado.",
-              "URL_INVALIDA_POR_QUE": "Espaço ou acento depois do ? quebram a chamada.",
               "REDE": "Esse endereço aponta para dentro da própria rede e não pode ser usado.",
               "SEM_RESPOSTA": "O sistema não respondeu em 10 segundos ou recusou a conexão.",
               "NAO_EXISTE": "O endereço, o corpo ou o mapeamento usa algo que não existe.",
