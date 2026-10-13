@@ -22,6 +22,13 @@ vi.mock('dashboard/api/campaignJourney', () => ({
   journeyCampaignsAPI: { create, preview },
 }));
 
+// #1335: a conversa aberta conta pelo endpoint próprio; fora do teste dela, ele não responde.
+const conversaAberta = vi.hoisted(() => ({
+  contagem: vi.fn(),
+  escrever: vi.fn(),
+}));
+vi.mock('dashboard/api/conversaAberta', () => ({ default: conversaAberta }));
+
 const stub = name => ({ default: { name, render: () => null } });
 vi.mock(
   'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/EmailCampaignDialog.vue',
@@ -195,6 +202,8 @@ beforeEach(() => {
   api.variableSuggestions.mockResolvedValue({ data: { payload: [] } });
   api.variableCoverage.mockResolvedValue({ data: { payload: null } });
   create.mockReset();
+  conversaAberta.contagem.mockReset();
+  conversaAberta.contagem.mockRejectedValue({ response: { status: 404 } });
   preview.mockReset();
   preview.mockResolvedValue({ data: { payload: null } });
   push.mockClear();
@@ -693,6 +702,91 @@ describe('Nova campanha — campanha sem terminar (#1093)', () => {
 
     expect(replace).toHaveBeenCalledWith({ query: { draft: '1' } });
     expect(loadDraft(1)).toMatchObject({ audienceId: 5 });
+    wrapper.unmount();
+  });
+});
+
+// #1335: com a flag campaign_open_window_text e SEM a ponte de Modelos, quem
+// falou nas últimas 24 h aparece no passo Mensagem e a mensagem escrita vai no
+// pedido de criação.
+describe('Nova campanha — conversa aberta (#1335)', () => {
+  it('conta pela categoria do modelo e manda a mensagem escrita ao criar', async () => {
+    conversaAberta.contagem.mockResolvedValue({
+      data: {
+        payload: {
+          dentro: 3,
+          fora: 95,
+          fecham_logo: 0,
+          conferido_em: '2026-10-13T12:00:00Z',
+          precos: {
+            modelo: { valor: '0.3217', moeda: 'BRL' },
+            escrita: { valor: '0.035', moeda: 'BRL' },
+          },
+          franquia: { limite: 1000, usadas: 10 },
+          campos: [{ chave: 'cliente.primeiro_nome', rotulo: 'Primeiro nome' }],
+        },
+      },
+    });
+    create.mockResolvedValue({ data: { id: 32, recipients_count: 98 } });
+    preview.mockResolvedValue({
+      data: { payload: { total: 98, receive: 98, reasons: {} } },
+    });
+    const wrapper = mountPage();
+    await flushPromises();
+
+    await wrapper.find('[data-audience-option="5"]').trigger('click');
+    await wrapper.find('[data-test="continue-message"]').trigger('click');
+    await wrapper
+      .find('[data-channel-card="whatsapp_official"]')
+      .trigger('click');
+    await wrapper
+      .find('[data-test="official-form"] input[type="text"]')
+      .setValue('Coleção nova');
+    choice(wrapper, 'Sending inbox').vm.$emit('update:modelValue', 7);
+    await flushPromises();
+    choice(wrapper, 'Approved template').vm.$emit('update:modelValue', 9);
+    await flushPromises();
+
+    expect(conversaAberta.contagem).toHaveBeenLastCalledWith({
+      campaignImportId: 5,
+      inboxId: 7,
+      categoria: 'MARKETING',
+    });
+    const cartao = wrapper.find('[data-conversa-aberta]');
+    expect(cartao.find('[data-grupo="dentro"]').exists()).toBe(true);
+    expect(cartao.find('[data-aviso-propaganda]').exists()).toBe(true);
+
+    // "Pronto" na gaveta de escrever guarda o texto no rascunho.
+    wrapper.findComponent({ name: 'ConversaAberta' }).vm.$emit('update', {
+      textoNaConversaAberta: 'Oi, {{cliente.primeiro_nome}}! Chegou. Quer ver?',
+    });
+    await flushPromises();
+    expect(wrapper.find('[data-texto-pronto]').text()).toContain(
+      'Oi, Ana! Chegou. Quer ver?'
+    );
+
+    choice(wrapper, 'Where {{1}} comes from').vm.$emit(
+      'update:modelValue',
+      'contact:first_name'
+    );
+    choice(wrapper, 'Where {{2}} comes from').vm.$emit(
+      'update:modelValue',
+      'column:Vencimento'
+    );
+    await flushPromises();
+    await vi.advanceTimersByTimeAsync(500);
+    await flushPromises();
+    await wrapper.find('[data-test="continue-review"]').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.find('[data-revisao-conversa-aberta]').exists()).toBe(true);
+    await wrapper.find('[data-test="open-confirmation"]').trigger('click');
+    await wrapper.find('[data-test="dialog-confirm"]').trigger('click');
+    await flushPromises();
+
+    expect(create.mock.calls[0][0].campaign.free_text).toBe(
+      'Oi, {{cliente.primeiro_nome}}! Chegou. Quer ver?'
+    );
     wrapper.unmount();
   });
 });
