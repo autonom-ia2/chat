@@ -8,7 +8,7 @@ import { numero } from '../../helpers/datas';
 // total se todos recebessem o modelo.
 const props = defineProps({
   janela: { type: Object, required: true },
-  modelo: { type: Object, required: true },
+  nomeDoModelo: { type: String, default: '' },
   temTexto: { type: Boolean, default: false },
 });
 
@@ -72,7 +72,9 @@ const semTexto = computed(() =>
           data-franquia-da-escrita
           class="col-span-2 text-xs text-n-slate-11"
         >
-          {{ t(`MODELOS_WHATSAPP.JANELA.CUSTO_ESCRITA.${resumo.tipo}`, resumo) }}
+          {{
+            t(`MODELOS_WHATSAPP.JANELA.CUSTO_ESCRITA.${resumo.tipo}`, resumo)
+          }}
         </span>
       </li>
       <li
@@ -85,7 +87,7 @@ const semTexto = computed(() =>
               `${NS}.MODELO`,
               {
                 n: n(fora),
-                nome: modelo.nome,
+                nome: nomeDoModelo,
                 preco: janela.dinheiro(precoModelo.valor, 4),
               },
               fora

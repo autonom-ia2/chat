@@ -6,7 +6,13 @@ import AgenteGaveta from 'dashboard/routes/dashboard/autonomia/agentes/component
 import ModeloEditorTexto from '../../components/ModeloEditorTexto.vue';
 import { rotuloDoCampo } from '../../helpers/campos';
 import { numero } from '../../helpers/datas';
-import { juntar, pedacos, previa, temLinkDigitado } from '../textoComCampos';
+import {
+  juntar,
+  linkInequivoco,
+  pareceLink,
+  pedacos,
+  previa,
+} from '../textoComCampos';
 
 // A ajuda para escrever a mensagem da conversa aberta (#1335). Uma coisa por
 // vez: dizer o que quer → escolher uma opção → ajustar e "Pronto". "Alterar"
@@ -39,6 +45,8 @@ const resposta = ref('');
 const tom = ref('simpatico');
 const etapa = ref(props.texto ? 'ajustar' : 'pedir');
 const pergunta = ref('');
+// Quando o pedido não dá para virar mensagem, a explicação do redator.
+const explicacao = ref('');
 const opcoes = ref([]);
 const conteudo = ref(pedacos(props.texto));
 const anterior = ref(null);
@@ -49,7 +57,8 @@ const titulo = computed(() =>
 );
 const textoAtual = computed(() => juntar(conteudo.value));
 const vazio = computed(() => !textoAtual.value.trim());
-const linkDigitado = computed(() => temLinkDigitado(textoAtual.value));
+const linkDigitado = computed(() => linkInequivoco(textoAtual.value));
+const talvezLink = computed(() => pareceLink(textoAtual.value));
 const chaves = computed(() => props.campos.map(campo => campo.chave));
 const rotulos = computed(() =>
   Object.fromEntries(props.campos.map(campo => [campo.chave, campo.rotulo]))
@@ -58,19 +67,20 @@ const rotular = chave => rotulos.value[chave] || rotuloDoCampo(t, chave);
 
 const pedirOpcoes = async () => {
   etapa.value = 'escrevendo';
+  explicacao.value = '';
   try {
     const saida = await props.escrever({
       objetivo: objetivo.value,
       resposta: resposta.value,
       tom: tom.value,
-      quantos: props.quantos,
-      campos: chaves.value,
     });
     if (saida.status === 'precisa_mais_info') {
       pergunta.value = saida.pergunta;
       etapa.value = 'pergunta';
       return;
     }
+    if (saida.status === 'nao_se_aplica')
+      explicacao.value = saida.pergunta || '';
     opcoes.value = saida.opcoes;
     etapa.value = saida.opcoes.length ? 'escolher' : 'erro';
   } catch {
@@ -93,10 +103,8 @@ const melhorar = async chave => {
   try {
     const saida = await props.escrever({
       base: textoAtual.value,
-      pedido: { melhoria: chave },
+      melhoria: chave,
       tom: tom.value,
-      quantos: props.quantos,
-      campos: chaves.value,
     });
     if (saida.opcoes?.length) {
       anterior.value = conteudo.value;
@@ -222,7 +230,7 @@ const desfazer = () => {
           role="alert"
           class="p-4 m-0 text-[0.9375rem] rounded-xl bg-n-ruby-2 text-n-slate-12"
         >
-          {{ t(`${NS}.ERRO`) }}
+          {{ explicacao || t(`${NS}.ERRO`) }}
         </p>
         <div class="flex flex-wrap gap-2">
           <Button
@@ -303,6 +311,14 @@ const desfazer = () => {
           class="p-3 m-0 text-sm rounded-xl bg-n-ruby-2 text-n-slate-12"
         >
           {{ t(`${NS}.LINK_DIGITADO`) }}
+        </p>
+        <p
+          v-else-if="talvezLink"
+          data-parece-link
+          role="status"
+          class="p-3 m-0 text-sm rounded-xl bg-n-amber-2 text-n-slate-12"
+        >
+          {{ t(`${NS}.PARECE_LINK`) }}
         </p>
         <div v-if="!vazio" class="flex flex-col gap-2">
           <span class="text-sm font-medium text-n-slate-12">

@@ -848,7 +848,8 @@
         "COMO_CHEGA": "How it arrives on WhatsApp",
         "CANCELAR": "Cancel",
         "PRONTO": "Done",
-        "LINK_DIGITADO": "Links cannot be typed in the text. Use the field button (e.g. the offer link, from the audience)."
+        "LINK_DIGITADO": "Links cannot be typed in the text. Use the field button (e.g. the offer link, from the audience).",
+        "PARECE_LINK": "This looks like a link. For links, use the field button (e.g. the offer link)."
       },
       "REVISAO": {
         "TITULO": "How much it costs",

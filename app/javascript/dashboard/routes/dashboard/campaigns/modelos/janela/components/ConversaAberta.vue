@@ -15,8 +15,6 @@ const props = defineProps({
   texto: { type: String, default: '' },
   exemplos: { type: Object, default: () => ({}) },
   temModelo: { type: Boolean, default: false },
-  // [{ chave, rotulo }] que a mensagem pode usar.
-  campos: { type: Array, default: () => [] },
   divulgacao: { type: Boolean, default: false },
 });
 
@@ -125,7 +123,9 @@ const usar = texto => {
             </span>
           </span>
           <span class="text-sm text-n-slate-11">
-            {{ temModelo ? t(`${NS}.FORA_MODELO`) : t(`${NS}.FORA_SEM_MODELO`) }}
+            {{
+              temModelo ? t(`${NS}.FORA_MODELO`) : t(`${NS}.FORA_SEM_MODELO`)
+            }}
           </span>
         </li>
       </ul>
@@ -195,7 +195,7 @@ const usar = texto => {
       :texto="texto"
       :exemplos="exemplos"
       :escrever="janela.escrever"
-      :campos="campos"
+      :campos="janela.campos.value"
       :divulgacao="divulgacao"
       @usar="usar"
       @fechar="aberta = false"

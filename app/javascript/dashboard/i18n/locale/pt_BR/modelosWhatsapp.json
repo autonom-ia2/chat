@@ -848,7 +848,8 @@
         "COMO_CHEGA": "Como chega no WhatsApp",
         "CANCELAR": "Cancelar",
         "PRONTO": "Pronto",
-        "LINK_DIGITADO": "Link não pode ser digitado no texto. Use o botão do campo (ex.: o link da oferta, vindo do público)."
+        "LINK_DIGITADO": "Link não pode ser digitado no texto. Use o botão do campo (ex.: o link da oferta, vindo do público).",
+        "PARECE_LINK": "Parece um link. Para link, use o botão do campo (ex.: o link da oferta)."
       },
       "REVISAO": {
         "TITULO": "Quanto custa",

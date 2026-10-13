@@ -405,7 +405,9 @@
           "MESSAGE_TOO_LONG": "The message is too long for SMS (1,600 characters at most).",
           "HEADER_MEDIA_REQUIRED": "This template has a photo, video or document at the top, but the file is not saved. Add the file link or pick the file again in the template.",
           "HEADER_MEDIA_URL_INVALID": "The file link must be complete, starting with https://.",
-          "HEADER_MEDIA_TYPE_MISMATCH": "The linked file is not the same kind as the template top (photo, video or document)."
+          "HEADER_MEDIA_TYPE_MISMATCH": "The linked file is not the same kind as the template top (photo, video or document).",
+          "FREE_TEXT_INVALID": "The written message cannot go like this. Go back to Message and check the text (links only through the field button).",
+          "FREE_TEXT_DISABLED": "The written message is not enabled for this account. Remove it to send only the template."
         },
         "OPTED_OUT": "Refused messages",
         "REASONS": {

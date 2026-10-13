@@ -72,9 +72,9 @@ import PonteSemModelo from '../modelos/ponte/PonteSemModelo.vue';
 import RevisaoDoModelo from '../modelos/ponte/RevisaoDoModelo.vue';
 import { rotuloDoCampo } from '../modelos/helpers/campos';
 // Fork (#1335, protótipo): conversa aberta — quem falou nas últimas 24 h recebe texto escrito.
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { useConversaAberta } from '../modelos/janela/useConversaAberta';
 import { previa } from '../modelos/janela/textoComCampos';
-import { audienceColumnTokens } from 'dashboard/components-next/CampaignJourney/audienceTokens';
 import ConversaAberta from '../modelos/janela/components/ConversaAberta.vue';
 import RevisaoDaConversaAberta from '../modelos/janela/components/RevisaoDaConversaAberta.vue';
 import {
@@ -286,24 +286,41 @@ const reach = computed(() =>
     ? reachOn(draft.value.channel, audience.value.channels)
     : 0
 );
-// Fork (#1335): só no WhatsApp oficial com a ponte de Modelos ligada.
+// Fork (#1335): conversa aberta no WhatsApp oficial. O gate é só a flag
+// campaign_open_window_text (não depende da ponte de Modelos).
+const isFeatureEnabledonAccount = useMapGetter(
+  'accounts/isFeatureEnabledonAccount'
+);
+const conversaAbertaLigada = computed(() =>
+  isFeatureEnabledonAccount.value(
+    accountId.value,
+    FEATURE_FLAGS.CAMPAIGN_OPEN_WINDOW_TEXT
+  )
+);
 const comConversaAberta = computed(
   () =>
-    ponteAtiva.value &&
+    conversaAbertaLigada.value &&
     draft.value.channel === CAMPAIGN_CHANNELS.WHATSAPP_OFFICIAL &&
-    Boolean(draft.value.inboxId)
+    Boolean(draft.value.inboxId) &&
+    Boolean(template.value)
 );
 const conversaAberta = useConversaAberta(
   computed(() => ({
     publicoId: comConversaAberta.value ? draft.value.audienceId : null,
     caixaId: comConversaAberta.value ? draft.value.inboxId : null,
-    total: forms.preview.value?.receive ?? reach.value,
-    tipoDoModelo: modeloEscolhido.value?.tipo || null,
+    categoria: template.value?.category || '',
   }))
+);
+// Divulgação pelo modelo escolhido (categoria da Meta): mostra o aviso.
+const modeloDeDivulgacao = computed(
+  () => template.value?.category === 'MARKETING'
+);
+const nomeDoModelo = computed(
+  () => modeloEscolhido.value?.nome || template.value?.name || ''
 );
 // O cartão do WhatsApp oficial deixa de dizer "só para quem ainda não falou".
 const dicasDosCanais = computed(() =>
-  ponteAtiva.value
+  conversaAbertaLigada.value
     ? {
         [CAMPAIGN_CHANNELS.WHATSAPP_OFFICIAL]: t(
           'MODELOS_WHATSAPP.JANELA.CANAL_HINT'
@@ -311,40 +328,29 @@ const dicasDosCanais = computed(() =>
       }
     : {}
 );
-// Campos da mensagem escrita: nome do cliente, da empresa e o site, mais as
-// colunas do Público (o link da oferta vem daqui; nunca digitado no texto).
-const CAMPOS_FIXOS_DO_TEXTO = [
-  'cliente.primeiro_nome',
-  'minha_empresa.nome',
-  'minha_empresa.site',
-];
-const colunasDoTexto = computed(() => audienceColumnTokens(columns.value));
-const camposDoTexto = computed(() => [
-  ...CAMPOS_FIXOS_DO_TEXTO.map(chave => ({
-    chave,
-    rotulo: rotuloDoCampo(t, chave),
-  })),
-  ...colunasDoTexto.value.map(coluna => ({
-    chave: coluna.token,
-    rotulo: coluna.header,
-  })),
-]);
+// Exemplo de cada campo na prévia: a primeira pessoa do público.
 const exemplosDoTexto = computed(() => ({
   'cliente.primeiro_nome':
     sample.value?.first_name || sample.value?.name?.split(' ')[0] || 'Ana',
+  'cliente.nome': sample.value?.name || 'Ana Souza',
   'minha_empresa.nome': currentAccount.value?.name || remetente.value,
   'minha_empresa.site': currentAccount.value?.domain || '',
   ...Object.fromEntries(
-    colunasDoTexto.value.map(coluna => [
-      coluna.token,
-      sample.value?.extra_values?.[coluna.header] || coluna.header,
-    ])
+    conversaAberta.campos.value
+      .filter(campo => campo.chave.startsWith('publico.'))
+      .map(campo => [
+        campo.chave,
+        sample.value?.extra_values?.[campo.rotulo] || campo.rotulo,
+      ])
   ),
 }));
+const textoDaConversaAberta = computed(() =>
+  comConversaAberta.value ? draft.value.textoNaConversaAberta || '' : ''
+);
 const textoNaRevisao = () =>
-  comConversaAberta.value && draft.value.textoNaConversaAberta
+  textoDaConversaAberta.value
     ? t('MODELOS_WHATSAPP.JANELA.REVISAO.CONTEUDO_TEXTO', {
-        texto: previa(draft.value.textoNaConversaAberta, exemplosDoTexto.value),
+        texto: previa(textoDaConversaAberta.value, exemplosDoTexto.value),
       })
     : '';
 const inboxName = computed(
@@ -631,6 +637,8 @@ const SUBMITTERS = {
         bindings: draft.value.bindings,
         defaults: draft.value.defaults,
         mediaUrl: draft.value.mediaUrl,
+        // Fork (#1335): a mensagem escrita para quem falou nas últimas 24 h.
+        freeText: textoDaConversaAberta.value,
       })
     ),
   [CAMPAIGN_CHANNELS.WHATSAPP_API]: () => {
@@ -998,13 +1006,12 @@ onBeforeUnmount(() => {
           <template v-if="ponteAtiva" #modelo-aviso>
             <PonteAvisoDoModelo :modelo="modeloEscolhido" />
           </template>
-          <template v-if="comConversaAberta && modeloEscolhido" #janela>
+          <template v-if="comConversaAberta" #janela>
             <ConversaAberta
               :janela="conversaAberta"
               :texto="draft.textoNaConversaAberta || ''"
               :exemplos="exemplosDoTexto"
-              :campos="camposDoTexto"
-              :divulgacao="modeloEscolhido.tipo === 'divulgacao'"
+              :divulgacao="modeloDeDivulgacao"
               tem-modelo
               @update="update"
             />
@@ -1041,15 +1048,15 @@ onBeforeUnmount(() => {
           @submit="submit"
           @test-send="sendTestToMe"
         >
-          <template v-if="modeloEscolhido" #modelo>
+          <template v-if="modeloEscolhido || comConversaAberta" #modelo>
             <RevisaoDaConversaAberta
               v-if="comConversaAberta && conversaAberta.contagem.value"
               :janela="conversaAberta"
-              :modelo="modeloEscolhido"
-              :tem-texto="Boolean(draft.textoNaConversaAberta)"
+              :nome-do-modelo="nomeDoModelo"
+              :tem-texto="Boolean(textoDaConversaAberta)"
             />
             <RevisaoDoModelo
-              v-else
+              v-else-if="modeloEscolhido"
               :modelo="modeloEscolhido"
               :recebem="forms.preview.value?.receive ?? reach"
             />
