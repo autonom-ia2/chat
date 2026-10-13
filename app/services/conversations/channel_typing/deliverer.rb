@@ -86,7 +86,10 @@ class Conversations::ChannelTyping::Deliverer
     return if Crm::WhatsappGroupDetector.group_conversation?(@conversation)
 
     options = { session: session, chat_id: chat_id, **{ timeout: @timeout }.compact }
-    @typing_status == 'on' ? Waha::Client.new.start_typing(**options) : Waha::Client.new.stop_typing(**options)
+    case @typing_status
+    when 'on' then Waha::Client.new.start_typing(**options)
+    when 'off' then Waha::Client.new.stop_typing(**options)
+    end
     nil
   end
 end

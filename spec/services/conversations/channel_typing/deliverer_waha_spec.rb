@@ -41,6 +41,14 @@ describe Conversations::ChannelTyping::Deliverer do
     expect(WebMock).not_to have_requested(:post, start_url)
   end
 
+  it 'does not call the engine for an unknown typing status' do
+    deliver('maybe')
+
+    expect(WebMock).not_to have_requested(:post, start_url)
+    expect(WebMock).not_to have_requested(:post, stop_url)
+    expect(Rails.logger).not_to have_received(:warn)
+  end
+
   it 'passes the given timeout to the engine call and keeps the default of the client without one' do
     allow(HTTParty).to receive(:post).and_call_original
 
