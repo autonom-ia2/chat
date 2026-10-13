@@ -1334,6 +1334,7 @@
       "ACTIVITY_AI_HANDOFF_PICKUP": "Humano assumiu o atendimento da IA",
       "ACTIVITY_AI_HANDOFF_ESCALATION": "Transferência para humano escalada",
       "ACTIVITY_AI_HANDOFF_RENOTIFY": "Lembrete de transferência para humano enviado",
+      "ACTIVITY_ENTREGA_SEM_NINGUEM": "Não conseguimos chamar ninguém da equipe para esta conversa",
       "ACTIVITY_GENERIC": "Atividade registrada",
       "ACTIVITY_DETAIL_STAGE_CHANGE": "De {from} para {to}",
       "ACTIVITY_DETAIL_STAGE_TO": "Para {to}",

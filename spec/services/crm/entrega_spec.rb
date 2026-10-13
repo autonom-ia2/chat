@@ -476,6 +476,30 @@ RSpec.describe Crm::Entrega do
       expect(Rails.configuration.dispatcher).to atribuicoes_de(conversa).once
     end
 
+    # Decisão do Rodrigo (opção c): convite que nunca sai segue segurado com o robô, sem voltar ao nativo; passado o
+    # prazo do convite, a marca diz "nao_conseguimos_chamar" e o aviso (card + administradores) sai uma vez só.
+    it 'convite que nunca sai: passado o prazo, avisa uma vez e segue segura', :aggregate_failures do
+      acesso(ana, pos_venda)
+      acesso(bia, pos_venda)
+      admin
+      conversa = conversa_do_robo
+      card = card_em(conversa, vendas)
+      regra!(vendas, 'handoff_mode' => 'r3_invite')
+      conversa.bot_handoff!
+      expect(marca(conversa)).to include('modo' => 'segurando', 'falha' => 'ninguem_cuida', 'motivo' => 'robo_pediu')
+      avisos = -> { Notification.where(user: admin, notification_type: :conversation_handoff_request).count }
+
+      travel 25.hours do
+        Crm::Ai::HandoffDrainJob.perform_now
+        Crm::Ai::HandoffDrainJob.perform_now
+      end
+
+      expect(marca(conversa)).to include('modo' => 'segurando', 'falha' => 'nao_conseguimos_chamar')
+      expect(conversa.reload).to have_attributes(assignee_id: nil, ai_assignee: bot)
+      expect(card.activities.where(event_type: 'entrega_sem_ninguem').count).to eq(1)
+      expect(avisos.call).to eq(1)
+    end
+
     # Pega: convite que não saiu (notificação recusada) deixava a conversa sem marca, e o nativo passava por cima.
     it 'convite que falha: segura com a marca, motivo convite_falhou', :aggregate_failures do
       online(ana)

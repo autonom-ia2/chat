@@ -26,15 +26,20 @@ module Crm::Entrega::Marca
     valor.is_a?(Hash) ? valor : nil
   end
 
-  # Só na memória: quem chama grava (sob a trava). `desde` sobrevive às novas tentativas, para medir a espera.
-  def marcar(conversation, modo:, motivo:, sugestao: nil, ate: nil)
+  # Só na memória: quem chama grava (sob a trava). `motivo`: por que a conversa precisa de alguém (a origem);
+  # `falha`: por que ainda não foi entregue. `desde` e `avisado_em` sobrevivem às novas tentativas, para medir a espera
+  # e avisar uma vez só.
+  # `detalhes`: `sugestao` (o nome que a IA sugeriu, para a próxima tentativa) e `ate` (o fim do convite).
+  def marcar(conversation, modo:, motivo:, falha: nil, **detalhes)
     anterior = dados(conversation) || {}
     valor = {
       'modo' => modo,
       'motivo' => motivo.to_s,
+      'falha' => falha.presence,
       'desde' => anterior['desde'].presence || Time.current.iso8601,
-      'sugestao' => sugestao.presence,
-      'ate' => ate&.iso8601
+      'avisado_em' => anterior['avisado_em'].presence,
+      'sugestao' => detalhes[:sugestao].presence,
+      'ate' => detalhes[:ate]&.iso8601
     }.compact
     conversation.additional_attributes = (conversation.additional_attributes || {}).merge(CHAVE => valor)
   end
@@ -43,6 +48,19 @@ module Crm::Entrega::Marca
     return unless conversation.additional_attributes.is_a?(Hash)
 
     conversation.additional_attributes = conversation.additional_attributes.except(CHAVE)
+  end
+
+  # Há quanto tempo o motor segura ou convida esta conversa.
+  def desde(conversation)
+    Time.zone.parse(dados(conversation)&.dig('desde').to_s)
+  rescue ArgumentError
+    nil
+  end
+
+  # Marca o aviso de "não conseguimos chamar ninguém" (na memória), para ele sair uma vez só.
+  def avisado!(conversation)
+    valor = (dados(conversation) || {}).merge('avisado_em' => Time.current.iso8601)
+    conversation.additional_attributes = conversation.additional_attributes.merge(CHAVE => valor)
   end
 
   def convite_vencido?(conversation, agora: Time.current)

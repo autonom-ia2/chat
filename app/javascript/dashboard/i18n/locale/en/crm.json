@@ -1334,6 +1334,7 @@
       "ACTIVITY_AI_HANDOFF_PICKUP": "Human took over from AI",
       "ACTIVITY_AI_HANDOFF_ESCALATION": "AI handoff escalated",
       "ACTIVITY_AI_HANDOFF_RENOTIFY": "AI handoff reminder sent",
+      "ACTIVITY_ENTREGA_SEM_NINGUEM": "We could not reach anyone on the team for this conversation",
       "ACTIVITY_GENERIC": "Activity recorded",
       "ACTIVITY_DETAIL_STAGE_CHANGE": "From {from} to {to}",
       "ACTIVITY_DETAIL_STAGE_TO": "To {to}",

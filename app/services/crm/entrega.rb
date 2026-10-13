@@ -142,10 +142,15 @@ class Crm::Entrega
     true
   end
 
+  # A marca guarda a origem (@motivo) e a falha (por que ainda não entregou). Convite que nunca sai, passado o prazo do
+  # convite: segue segura, com a falha "nao_conseguimos_chamar" e um aviso (Crm::Entrega::AvisoSemNinguem).
   def segurar(plano, gravar)
-    Crm::Entrega::Marca.marcar(@conversation, modo: Crm::Entrega::Marca::SEGURANDO, motivo: @motivo, sugestao: @sugestao)
+    vencido = Crm::Entrega::AvisoSemNinguem.vencido?(@conversation, plano)
+    falha = vencido ? Crm::Entrega::AvisoSemNinguem::FALHA : plano.motivo
+    Crm::Entrega::Marca.marcar(@conversation, modo: Crm::Entrega::Marca::SEGURANDO, motivo: @motivo, falha: falha, sugestao: @sugestao)
+    Crm::Entrega::AvisoSemNinguem.new(conversation: @conversation, card: plano.card).avisar! if vencido
     @conversation.save! if gravar && @conversation.changed?
-    resultado(:segurando, plano)
+    Resultado.new(status: :segurando, motivo: falha, card: plano.card)
   end
 
   # Convite: participante + notificação, sem atribuir e sem calar o robô. O ciclo é gravado sob a trava do card, que

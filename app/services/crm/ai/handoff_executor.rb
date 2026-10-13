@@ -14,7 +14,8 @@ module Crm
       ERROS = {
         'ja_tem_pessoa' => 'already_assigned', 'intervalo' => 'cooldown', 'ninguem_cuida' => 'no_eligible_agent',
         'falhou_atribuir' => 'assignment_failed', 'convite_falhou' => 'invite_failed', 'fechada' => 'no_conversation',
-        'ninguem_online' => 'no_online_agent'
+        'ninguem_online' => 'no_online_agent', 'presenca_indisponivel' => 'presence_unavailable',
+        'nao_conseguimos_chamar' => 'nobody_reached'
       }.freeze
 
       def initialize(card:, handoff:, trigger: 'message')

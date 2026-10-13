@@ -13,6 +13,8 @@ class Crm::Ai::HandoffDrainJob < ApplicationJob
   # continua de onde esta parou (cursor no Redis) e, no fim, volta ao começo: nenhuma conversa fica sempre de fora.
   CONVERSAS_POR_RODADA = 500
   CURSOR_KEY = 'crm:entrega:fila:cursor'.freeze
+  # Teto de tempo da rodada (o cron roda a cada 2 minutos): estourou, para e grava o cursor onde parou.
+  TEMPO_MAXIMO_DA_RODADA = 90
 
   def perform
     drain_held_conversations
@@ -36,14 +38,31 @@ class Crm::Ai::HandoffDrainJob < ApplicationJob
   end
 
   def drain_held_conversations
-    ids = held_conversations(read_cursor).pluck(:id)
+    cursor = read_cursor
+    ids = held_conversations(cursor).pluck(:id)
+    parou_em = Crm::Entrega::Presenca.na_rodada { drain_ids(ids, cursor) }
+    write_cursor(parou_em || (ids.size < CONVERSAS_POR_RODADA ? 0 : ids.last))
+  end
+
+  # Devolve onde parou se o tempo da rodada acabou antes do fim (a última conversa tratada, ou o cursor de entrada se
+  # nenhuma foi tratada); nil quando terminou.
+  def drain_ids(ids, cursor)
+    inicio = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    ultima = nil
     Conversation.where(id: ids).order(:id).each do |conversation|
-      drain_conversation(conversation)
-    rescue StandardError => e
-      # Uma conversa com problema não pode travar a fila das outras.
-      Rails.logger.error("[crm][entrega] fila conversa=#{conversation.id} erro=#{e.class}")
+      return ultima || cursor if Process.clock_gettime(Process::CLOCK_MONOTONIC) - inicio > TEMPO_MAXIMO_DA_RODADA
+
+      drain_one(conversation)
+      ultima = conversation.id
     end
-    write_cursor(ids.size < CONVERSAS_POR_RODADA ? 0 : ids.last)
+    nil
+  end
+
+  def drain_one(conversation)
+    drain_conversation(conversation)
+  rescue StandardError => e
+    # Uma conversa com problema não pode travar a fila das outras.
+    Rails.logger.error("[crm][entrega] fila conversa=#{conversation.id} erro=#{e.class}")
   end
 
   # Sem Redis, a rodada começa do início e segue; os cards do CRM (passo 2) também rodam.
