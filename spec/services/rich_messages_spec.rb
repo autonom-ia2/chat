@@ -20,6 +20,8 @@ describe RichMessages do
       end
 
       def fallback_text(_body)
+        return '' if @code == 'bare'
+
         "Carimbo <#{@code}> & cia" unless @code == 'mute'
       end
     end
@@ -204,9 +206,27 @@ describe RichMessages do
         .to eq("Corpo\n\nCarimbo &lt;A1&gt; &amp; cia")
     end
 
-    it 'escapes the text version where the outgoing text is HTML (e-mail)' do
-      expect(message_on(:channel_email, { type: 'spec_stamp', code: 'A1' }).outgoing_content)
-        .to eq("<p>Corpo</p>\n\n\nCarimbo &lt;A1&gt; &amp; cia")
+    it 'is only the body when the text version of the type is blank' do
+      message = message_on(:channel_line, { type: 'spec_stamp', code: 'bare' })
+
+      expect(message.outgoing_content).to eq('Corpo')
+      expect(described_class.error_for(message)).to be_nil
+    end
+
+    it 'refuses e-mail, whose send does not read the outgoing text' do
+      message = message_on(:channel_email, { type: 'spec_stamp', code: 'A1' })
+
+      Email::SendOnEmailService.new(message: message).perform
+
+      expect(message.reload.status).to eq('failed')
+      expect(message.external_error).to eq(described_class::UNSUPPORTED_CHANNELS.fetch('Channel::Email'))
+      expect(ActionMailer::Base.deliveries).to be_empty
+    end
+
+    it 'refuses the website widget, which shows the raw content' do
+      message = message_on(:channel_widget, { type: 'spec_stamp', code: 'A1' })
+
+      expect(described_class.format_error(message)).to eq(described_class::UNSUPPORTED_CHANNELS.fetch('Channel::WebWidget'))
     end
 
     it 'is only the text version when the body is empty' do
@@ -226,6 +246,50 @@ describe RichMessages do
       expect(message.reload.status).to eq('failed')
       expect(message.external_error).to eq(described_class::NO_TEXT_VERSION)
       expect(a_request(:post, /api\.telegram\.org/)).not_to have_been_made
+    end
+  end
+
+  describe '.text_capable?' do
+    it 'is true for a message without rich_message, checking only the key' do
+      plain = create(:message, message_type: :outgoing, content: 'Corpo', conversation: conversation, inbox: inbox, account: inbox.account)
+      allow(described_class).to receive(:build).and_call_original
+
+      expect(described_class.text_capable?(plain)).to be(true)
+      expect(described_class).not_to have_received(:build)
+    end
+
+    it 'is true for a type with a text version, even a blank one, and false for a type without one' do
+      expect(described_class.text_capable?(outgoing({ type: 'spec_stamp', code: 'A1' }))).to be(true)
+      expect(described_class.text_capable?(outgoing({ type: 'spec_stamp', code: 'bare' }))).to be(true)
+      expect(described_class.text_capable?(outgoing({ type: 'spec_stamp', code: 'mute' }))).to be(false)
+    end
+  end
+
+  describe 'a conversation above the messages per minute limit' do
+    around { |example| with_modified_env(CONVERSATION_MESSAGE_PER_MINUTE_LIMIT: '1') { example.run } }
+
+    def over_the_limit(rich_message)
+      message = with_modified_env(CONVERSATION_MESSAGE_PER_MINUTE_LIMIT: '200') { outgoing(rich_message) }
+      expect(message).not_to be_valid
+      message
+    end
+
+    it 'still fails a message that cannot go out, instead of raising and leaving it as sent' do
+      expect_failed(deliver(over_the_limit({ type: 'carousel' })), described_class::UNKNOWN_TYPE)
+    end
+
+    it 'still fails a message whose type raised a DeliveryError' do
+      expect_failed(deliver(over_the_limit({ type: 'spec_stamp', code: 'boom' })), 'Carimbo indisponível agora.')
+    end
+  end
+
+  describe 'the request log' do
+    it 'filters rich_message, which carries the link and, in other types, form data' do
+      filter = ActiveSupport::ParameterFilter.new(Rails.application.config.filter_parameters)
+
+      filtered = filter.filter('content' => 'Corpo', 'content_attributes' => { 'rich_message' => { 'type' => 'spec_stamp', 'code' => 'A1' } })
+
+      expect(filtered).to eq('content' => 'Corpo', 'content_attributes' => { 'rich_message' => '[FILTERED]' })
     end
   end
 

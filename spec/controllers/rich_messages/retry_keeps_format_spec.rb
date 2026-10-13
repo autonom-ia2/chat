@@ -30,7 +30,8 @@ describe RichMessages::RetryKeepsFormat, type: :request do
 
   it 'drops the marks of the previous transport, so the bubble is not shown as sent by WhatsApp API' do
     message = failed_message(rich_message: rich_message, whatsapp_transport: 'web', whatsapp_transport_origin: 'human',
-                             whatsapp_transport_fallback: true, whatsapp_web_id: '3EB0', crm_follow_up_id: 9)
+                             whatsapp_transport_fallback: true, whatsapp_transport_outcome: 'sent', whatsapp_web_id: '3EB0',
+                             crm_follow_up_id: 9)
 
     expect(retry_message(message).content_attributes).to eq('rich_message' => rich_message, 'crm_follow_up_id' => 9)
   end

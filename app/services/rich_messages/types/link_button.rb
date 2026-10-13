@@ -1,21 +1,23 @@
 # Botão de link (chat#1473):
 #   { "type": "link_button", "label": "Abrir", "url": "https://...", "header": "Proposta", "footer": "Válida hoje" }
 # `header` e `footer` são opcionais. Limites da Meta para o `cta_url`: rótulo até 20 caracteres, corpo até 1024,
-# cabeçalho de texto e rodapé até 60. Valem em qualquer canal, para o mesmo pedido ter o mesmo resultado onde
-# quer que a conversa esteja.
+# cabeçalho de texto e rodapé até 60; rótulo, cabeçalho e rodapé em uma linha só. Valem em qualquer canal, para o
+# mesmo pedido ter o mesmo resultado onde quer que a conversa esteja.
 class RichMessages::Types::LinkButton
   LABEL_MAX = 20
   BODY_MAX = 1024
   EDGE_MAX = 60
   URL_FORBIDDEN = [' ', '"', "'", '<', '>'].freeze
+  LINE_BREAKS = ["\n", "\r"].freeze
 
   BODY_BLANK = 'O botão de link precisa de um texto na mensagem.'.freeze
   BODY_TOO_LONG = "O texto da mensagem com botão de link passa de #{BODY_MAX} caracteres.".freeze
   LABEL_BLANK = 'O botão de link está sem o texto do botão.'.freeze
   LABEL_TOO_LONG = "O texto do botão de link passa de #{LABEL_MAX} caracteres.".freeze
+  LABEL_MULTILINE = 'O texto do botão de link precisa ficar em uma linha só.'.freeze
   INVALID_URL = 'O endereço do botão de link precisa ser um endereço completo, começando com http:// ou https://.'.freeze
-  HEADER_INVALID = "O cabeçalho do botão de link precisa ser um texto de até #{EDGE_MAX} caracteres.".freeze
-  FOOTER_INVALID = "O rodapé do botão de link precisa ser um texto de até #{EDGE_MAX} caracteres.".freeze
+  HEADER_INVALID = "O cabeçalho do botão de link precisa ser um texto de até #{EDGE_MAX} caracteres, em uma linha só.".freeze
+  FOOTER_INVALID = "O rodapé do botão de link precisa ser um texto de até #{EDGE_MAX} caracteres, em uma linha só.".freeze
 
   def initialize(payload)
     @label = payload['label']
@@ -58,6 +60,7 @@ class RichMessages::Types::LinkButton
 
   def label_error
     return LABEL_BLANK unless @label.is_a?(String) && @label.strip.present?
+    return LABEL_MULTILINE unless one_line?(@label)
 
     LABEL_TOO_LONG if @label.length > LABEL_MAX
   end
@@ -74,6 +77,10 @@ class RichMessages::Types::LinkButton
   end
 
   def edge_error(text, error)
-    error unless text.nil? || (text.is_a?(String) && text.strip.present? && text.length <= EDGE_MAX)
+    error unless text.nil? || (text.is_a?(String) && text.strip.present? && text.length <= EDGE_MAX && one_line?(text))
+  end
+
+  def one_line?(text)
+    LINE_BREAKS.none? { |line_break| text.include?(line_break) }
   end
 end

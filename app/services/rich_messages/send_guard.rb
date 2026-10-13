@@ -10,6 +10,6 @@ module RichMessages::SendGuard
     error = RichMessages.error_for(message) if outgoing_message? && !invalid_message?
     return super if error.nil?
 
-    message.update!(status: :failed, external_error: error)
+    RichMessages.fail!(message, error)
   end
 end

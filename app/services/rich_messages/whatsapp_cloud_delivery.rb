@@ -22,7 +22,7 @@ module RichMessages::WhatsappCloudDelivery
 
     process_response(response, message)
   rescue RichMessages::DeliveryError => e
-    message.update!(status: :failed, external_error: e.message)
+    RichMessages.fail!(message, e.message)
     nil
   end
 end

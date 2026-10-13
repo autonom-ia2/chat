@@ -99,6 +99,50 @@ describe RichMessages::ApiInboxWebhook do
     end
   end
 
+  it 'treats a template message like the send does' do
+    message = outgoing(message_type: :template, content_attributes: { rich_message: { type: 'carousel' } })
+
+    payloads = inbox_webhook_payloads(:message_created, message)
+
+    expect(payloads[:inbox]).to be_empty
+    expect(message.reload.external_error).to eq(RichMessages::UNKNOWN_TYPE)
+  end
+
+  it 'does not fail a message that would not reach the inbox webhook anyway (no webhook_url)' do
+    channel.update!(webhook_url: nil)
+    message = outgoing(content_attributes: { rich_message: { type: 'carousel' } })
+
+    payloads = inbox_webhook_payloads(:message_created, message)
+
+    expect(payloads[:inbox]).to be_empty
+    expect(message.reload.status).not_to eq('failed')
+  end
+
+  it 'fails an invalid message even when the conversation is above the messages per minute limit' do
+    message = outgoing(content_attributes: { rich_message: { type: 'carousel' } })
+
+    with_modified_env(CONVERSATION_MESSAGE_PER_MINUTE_LIMIT: '1') do
+      expect(message).not_to be_valid
+      expect { inbox_webhook_payloads(:message_created, message) }.not_to raise_error
+    end
+
+    expect(message.reload.external_error).to eq(RichMessages::UNKNOWN_TYPE)
+  end
+
+  it 'never lets an error out of the listener: logs it and skips the inbox webhook' do
+    message = outgoing
+    allow(RichMessages).to receive(:error_for).and_raise(ActiveRecord::ConnectionNotEstablished)
+    allow(Rails.logger).to receive(:error)
+
+    payloads = nil
+    expect { payloads = inbox_webhook_payloads(:message_created, message) }.not_to raise_error
+
+    expect(payloads[:inbox]).to be_empty
+    expect(payloads[:account].size).to eq(1)
+    expect(Rails.logger).to have_received(:error)
+      .with("[rich_messages] api_inbox_webhook message=#{message.id} ActiveRecord::ConnectionNotEstablished")
+  end
+
   it 'fails a type without a text version instead of delivering only the body' do
     stub_const('RichMessages::Types::SpecMute', Class.new do
       def initialize(_payload); end

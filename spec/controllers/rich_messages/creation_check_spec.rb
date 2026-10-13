@@ -56,6 +56,42 @@ describe RichMessages::CreationCheck, type: :request do
     end
   end
 
+  it 'does not refuse a private note, which never goes to the channel' do
+    expect { create_message(content: 'Nota', private: true, content_attributes: { rich_message: { type: 'carousel' } }) }
+      .to change(Message, :count).by(1)
+
+    expect(response).to have_http_status(:success)
+  end
+
+  it 'does not refuse an incoming message, which never goes to the channel' do
+    api_channel = create(:channel_api, account: account)
+    api_conversation = create(:conversation, inbox: api_channel.inbox, account: account)
+
+    expect do
+      post api_v1_account_conversation_messages_url(account_id: account.id, conversation_id: api_conversation.display_id),
+           params: { content: 'Oi', message_type: 'incoming', content_attributes: { rich_message: { type: 'carousel' } } },
+           headers: agent.create_new_auth_token, as: :json
+    end.to change(Message, :count).by(1)
+
+    expect(response).to have_http_status(:success)
+  end
+
+  { channel_widget: 'Channel::WebWidget', channel_email: 'Channel::Email' }.each do |factory, channel_type|
+    it "answers 422 for a valid rich_message in a #{channel_type} inbox, which cannot show it" do
+      other = create(factory, account: account)
+      other_conversation = create(:conversation, inbox: other.inbox, account: account)
+
+      expect do
+        post api_v1_account_conversation_messages_url(account_id: account.id, conversation_id: other_conversation.display_id),
+             params: { content: 'Corpo', content_attributes: { rich_message: rich_message } },
+             headers: agent.create_new_auth_token, as: :json
+      end.not_to change(Message, :count)
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq(RichMessages::UNSUPPORTED_CHANNELS.fetch(channel_type))
+    end
+  end
+
   it 'answers 422 for rich_message with an attachment' do
     file = fixture_file_upload(Rails.root.join('spec/assets/avatar.png'), 'image/png')
 

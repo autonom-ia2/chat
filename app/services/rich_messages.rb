@@ -3,30 +3,45 @@
 #
 # COMO ACRESCENTAR UM TIPO (só arquivos novos, nenhum arquivo comum):
 # 1. Crie `app/services/rich_messages/types/<type>.rb` com a classe `RichMessages::Types::<TypeEmCamelCase>`.
-#    O `type` do contrato é o nome do arquivo: minúsculas, números e `_` simples (ex.: `location_request`).
+#    O `type` do contrato é o nome do arquivo e precisa voltar igual do nome da classe: minúsculas e números,
+#    com `_` só entre palavras que começam por letra. `location_request` serve (LocationRequest); `step_1` não
+#    (Step1 volta `step1`): escreva `step1` ou `first_step`.
 # 2. A classe cumpre esta interface, e só ela (sem as três respostas o tipo não é reconhecido):
 #      initialize(payload)           # o hash de `rich_message`, chaves em string
 #      error_for(body)               # nil se pode sair; senão o motivo, em texto para o atendente
 #      whatsapp_cloud_payload(body)  # o trecho da mensagem da Meta: `{ type: ..., <type>: {...} }`
-#      fallback_text(body)           # SÓ o complemento, em texto puro; nil se o tipo não tem versão em texto
+#      fallback_text(body)           # a versão em texto do formato, sem o corpo (três casos, abaixo)
 #    `body` é o texto que sai de fato (já renderizado para o canal) e pode ser vazio: quem exige corpo é o tipo.
-# 3. Regras do tipo:
-#    - o complemento vai sem escape nem corpo: quem junta ao corpo e escapa onde o canal é HTML é o OutgoingText;
-#    - tipo sem versão em texto (`fallback_text` nil) só sai pelo WhatsApp oficial, com a janela aberta;
+# 3. O que `fallback_text` devolve:
+#    - nil: o tipo não tem versão em texto. Só sai pelo WhatsApp oficial, com a janela aberta;
+#    - "" (em branco): a versão em texto é só o corpo;
+#    - texto: sai o corpo, uma linha em branco e esse complemento. Vai em texto puro, sem escape e sem o corpo:
+#      quem junta e escapa onde o canal é HTML é o OutgoingText.
+# 4. Regras do tipo:
+#    - corpo e formato saem numa mensagem só. Tipo cujo formato na Meta não tem corpo (`location`, `contact`)
+#      recusa corpo não vazio no `error_for`, em vez de mandar duas mensagens ou perder o corpo;
 #    - se não der para montar o envio, levante RichMessages::DeliveryError com o motivo: a mensagem fica `failed`;
 #    - nada de HTTP dentro do tipo (quem fala com a Meta é o WhatsappCloudDelivery) e nada de log com link,
-#      telefone, token ou conteúdo.
-# 4. Crie `spec/services/rich_messages/types/<type>_spec.rb` (payload exato da Meta, cada entrada inválida, o
-#    complemento em texto). Despacho, trava, criação pela API, reenvio, texto de saída e webhook da caixa API já
-#    estão cobertos com tipos de teste em `spec/services/rich_messages_spec.rb` e não mudam.
+#      telefone, token ou conteúdo (`rich_message` já sai filtrado do log de parâmetros);
+#    - as mensagens de erro são constantes dentro do arquivo do tipo;
+#    - quem precisar de prepend novo (recebimento, redação de dados) cria um initializer PRÓPRIO; não edite
+#      `config/initializers/rich_messages.rb`.
+# 5. Crie `spec/services/rich_messages/types/<type>_spec.rb` (payload exato da Meta, cada entrada inválida, a
+#    versão em texto) e o documento da entrega em `docs/audit/`, sem editar o do botão de link. Despacho, trava,
+#    criação pela API, reenvio, texto de saída, webhook da caixa API e plano B do Híbrido já estão cobertos com
+#    tipos de teste em `spec/services/rich_messages_spec.rb` e vizinhos, e não mudam.
+#
+# "WhatsApp oficial" aqui é só a caixa `Channel::Whatsapp` com `provider: 'whatsapp_cloud'`. A do 360dialog
+# (`provider: 'default'`) recebe a versão em texto, como os outros canais.
 #
 # Onde isto encosta no envio (tudo por prepend, em config/initializers/rich_messages.rb):
 # - RichMessages::CreationCheck: a criação pela API recusa formato errado na hora (422);
 # - RichMessages::SendGuard: mensagem que não pode sair fica `failed` com o motivo, em qualquer canal;
 # - RichMessages::WhatsappCloudDelivery: no WhatsApp oficial sai no formato da Meta;
-# - RichMessages::OutgoingText: nos outros canais o texto de saída é corpo + complemento do tipo;
+# - RichMessages::OutgoingText: nos outros canais o texto de saída é corpo + versão em texto do tipo;
 # - RichMessages::ApiInboxWebhook: a caixa API recebe esse mesmo texto no webhook dela;
 # - RichMessages::RetryKeepsFormat: o reenvio não apaga o formato.
+# E o WhatsappHybrid::Router consulta RichMessages.text_capable? antes de mandar a mensagem em texto.
 module RichMessages
   KEY = 'rich_message'.freeze
   TYPE_CHARACTERS = 'a-z0-9_'.freeze
@@ -38,12 +53,23 @@ module RichMessages
   NOT_PLAIN_TEXT = 'Mensagem com formato especial precisa ser de texto simples.'.freeze
   WITH_ATTACHMENT = 'Mensagem com formato especial não pode levar anexo.'.freeze
   NO_TEXT_VERSION = 'Este formato de mensagem só pode ser enviado pelo WhatsApp oficial.'.freeze
+  # Canais em que nem o formato nem a versão em texto chegam: o e-mail monta o corpo por campos próprios, sem ler
+  # o texto de saída, e o chat do site mostra o `content` cru. Recusar é melhor que sair só o corpo, em silêncio.
+  UNSUPPORTED_CHANNELS = {
+    'Channel::Email' => 'Mensagem com formato especial ainda não pode ser enviada por e-mail. Escreva o link no texto.',
+    'Channel::WebWidget' => 'Mensagem com formato especial ainda não pode ser enviada pelo chat do site. Escreva o link no texto.'
+  }.freeze
 
   module_function
 
   # A mensagem traz a chave `rich_message`, com qualquer valor (vazio também conta: é formato inválido, não texto).
   def rich?(message)
     message.content_attributes.key?(KEY)
+  end
+
+  # O mesmo critério do envio: só mensagem de saída (ou modelo) que não é nota privada vai ao canal.
+  def goes_to_channel?(message)
+    !message.private? && (message.outgoing? || message.template?)
   end
 
   # O formato da mensagem, ou nil quando ela não tem `rich_message` ou o tipo não existe.
@@ -66,17 +92,34 @@ module RichMessages
     type.is_a?(String) && type.start_with?(*('a'..'z')) && type.delete(TYPE_CHARACTERS).empty? && type.camelize.underscore == type
   end
 
+  # A mensagem pode sair em texto: não tem `rich_message` (só uma checagem de chave), ou o tipo dela tem versão
+  # em texto. Falso só para tipo sem versão em texto, que nenhum transporte de texto pode levar.
+  def text_capable?(message)
+    return true unless rich?(message)
+
+    rich = build(message)
+    rich.nil? || !rich.fallback_text(body_text(message)).nil?
+  end
+
   # Por que esta mensagem não pode sair, em texto para o atendente; nil quando pode (ou não tem `rich_message`).
   def error_for(message)
     format_error(message) || window_error(message)
   end
 
-  # A parte que não depende do momento: combinação proibida, tipo desconhecido, entrada do tipo fora do contrato
-  # e tipo sem versão em texto num canal que não é o WhatsApp oficial. É o que a criação pela API recusa na hora.
+  # A parte que não depende do momento: combinação proibida, canal que não mostra o formato, tipo desconhecido,
+  # entrada do tipo fora do contrato e tipo sem versão em texto num canal que não é o WhatsApp oficial. É o que
+  # a criação pela API recusa na hora.
   def format_error(message)
     return unless rich?(message)
 
-    combination_error(message) || type_error(message)
+    combination_error(message) || UNSUPPORTED_CHANNELS[message.inbox.channel_type] || type_error(message)
+  end
+
+  # Grava a falha com o motivo. Sem as validações do modelo: a de rajada (`prevent_message_flooding`) recusaria
+  # a gravação numa conversa movimentada, e a mensagem ficaria como enviada. O evento de atualização sai igual.
+  def fail!(message, error)
+    message.assign_attributes(status: :failed, external_error: error)
+    message.save!(validate: false)
   end
 
   # O corpo como o canal o recebe, sem nada do formato.
@@ -84,10 +127,10 @@ module RichMessages
     MessageContentPresenter.new(message).outgoing_content
   end
 
-  # Corpo + complemento do tipo, com uma linha em branco entre os dois. `html: true` escapa o complemento.
+  # Corpo + versão em texto do tipo, com uma linha em branco entre os dois. `html: true` escapa o complemento.
   def text_with_fallback(message, body, html: false)
     complement = build(message)&.fallback_text(body)
-    return body if complement.nil?
+    return body if complement.blank?
 
     [body.presence, html ? CGI.escapeHTML(complement) : complement].compact.join("\n\n")
   end
@@ -111,14 +154,13 @@ module RichMessages
     rich = build(message)
     return UNKNOWN_TYPE if rich.nil?
 
-    body = body_text(message)
-    rich.error_for(body) || (NO_TEXT_VERSION if rich.fallback_text(body).nil? && !whatsapp_cloud?(message.inbox))
+    rich.error_for(body_text(message)) || (NO_TEXT_VERSION unless text_capable?(message) || whatsapp_cloud?(message.inbox))
   end
 
   # Tipo sem versão em texto no WhatsApp oficial com a janela fechada: nenhum transporte de texto (WhatsApp
   # Híbrido) pode levá-lo, então falha com o erro de janela em vez de sair só o corpo.
   def window_error(message)
-    return unless rich?(message) && whatsapp_cloud?(message.inbox) && build(message).fallback_text(body_text(message)).nil?
+    return if text_capable?(message) || !whatsapp_cloud?(message.inbox)
     return if Conversations::MessageWindowService.new(message.conversation).can_reply?
 
     I18n.t('errors.whatsapp.message_outside_messaging_window')

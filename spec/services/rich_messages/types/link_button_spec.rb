@@ -221,8 +221,15 @@ describe RichMessages::Types::LinkButton do
       expect(message_on(:channel_telegram).outgoing_content).to eq("#{body}\n\n#{escaped}")
     end
 
-    it 'escapes label and link on e-mail' do
-      expect(message_on(:channel_email).outgoing_content).to eq("<p>#{body}</p>\n\n\n#{escaped}")
+    {
+      'label' => 'LABEL_MULTILINE', 'header' => 'HEADER_INVALID', 'footer' => 'FOOTER_INVALID'
+    }.each do |field, error|
+      it "refuses a #{field} with a line break" do
+        button = described_class.new(rich_message.stringify_keys.merge(field => "uma\nduas"))
+
+        expect(button.error_for(body)).to eq(described_class.const_get(error))
+        expect(described_class.new(rich_message.stringify_keys.merge(field => "uma\rduas")).error_for(body)).to be_present
+      end
     end
 
     it 'fails an invalid rich message on Telegram instead of sending it as text' do
