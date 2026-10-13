@@ -20,11 +20,18 @@ const isValidTimeZone = timeZone => {
   }
 };
 
-/** Account zone (`timezone`, set in Configurações > Conta), else the browser zone. */
-export const accountTimeZone = account => {
-  const zone = account?.timezone || account?.custom_attributes?.timezone;
-  return zone && isValidTimeZone(zone) ? zone : browserTimeZone();
-};
+/**
+ * Account zone, the one the platform uses: chosen in Configurações > Conta
+ * (`custom_attributes.timezone`), kept in `settings.reporting_timezone` by the
+ * server (Account#sync_reporting_timezone). The browser zone only when the
+ * account has none (#954 fills it on the admin's next visit).
+ */
+export const accountTimeZone = account =>
+  [
+    account?.timezone,
+    account?.custom_attributes?.timezone,
+    account?.settings?.reporting_timezone,
+  ].find(zone => zone && isValidTimeZone(zone)) || browserTimeZone();
 
 /** `2026-10-06T09:00` typed in `timeZone` → ISO string in UTC; null when empty. */
 export const scheduleToUtc = (localDateTime, timeZone) => {
@@ -46,25 +53,3 @@ export const formatInZone = (iso, timeZone, locale) =>
     timeStyle: 'short',
     timeZone,
   });
-
-/**
- * Name of the zone for people ("Horário Padrão de Brasília"), else the zone id. Read at
- * the scheduled instant (`at`, ISO), so a zone with summer time shows the right name.
- */
-export const timeZoneName = (
-  timeZone,
-  locale,
-  at = new Date().toISOString()
-) => {
-  try {
-    const part = new Intl.DateTimeFormat(toLocaleTag(locale), {
-      timeZone,
-      timeZoneName: 'long',
-    })
-      .formatToParts(new Date(at))
-      .find(item => item.type === 'timeZoneName');
-    return part?.value || timeZone;
-  } catch {
-    return timeZone;
-  }
-};

@@ -8,4 +8,9 @@ module Whatsapp::Templates::ProcessorLookup
   def template_in_list?
     template_params.present? && find_template.present?
   end
+
+  # O próprio modelo que o envio vai usar (nil fora da lista). Lido pela conversa aberta (#1456).
+  def template_for_send
+    find_template if template_params.present?
+  end
 end

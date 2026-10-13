@@ -58,6 +58,26 @@ RSpec.describe CampaignJourney::WhatsappCampaignCreator, :aggregate_failures do
     }
   end
 
+  # #1456: cupom, oferta com prazo ou carrossel só chegam no modelo completo; quem recebesse o texto perderia a oferta.
+  {
+    'cupom' => { 'type' => 'BUTTONS', 'buttons' => [{ 'type' => 'COPY_CODE', 'example' => ['OUT10'] }] },
+    'oferta com prazo' => { 'type' => 'LIMITED_TIME_OFFER', 'limited_time_offer' => { 'text' => 'Hoje', 'has_expiration' => true } },
+    'carrossel' => { 'type' => 'CAROUSEL', 'cards' => [{ 'components' => [{ 'type' => 'HEADER', 'format' => 'IMAGE' }] }] }
+  }.each do |formato, componente|
+    it "modelo com #{formato} recusa a mensagem escrita e não cria nada" do
+      template = CampaignJourneyHelpers::JOURNEY_TEMPLATE.merge(
+        'components' => CampaignJourneyHelpers::JOURNEY_TEMPLATE['components'] + [componente]
+      )
+      channel.update!(message_templates: [template])
+
+      expect { criar('Oi, {{cliente.primeiro_nome}}!') }.to raise_error(described_class::Error) { |error|
+        expect(error.code).to eq('free_text_not_allowed_with_rich_template')
+      }
+      expect(account.campaigns.count).to eq(0)
+      expect(CampaignFreeText.count).to eq(0)
+    end
+  end
+
   it 'com a flag da conta desligada, recusa a mensagem escrita' do
     account.disable_features!(:campaign_open_window_text)
 

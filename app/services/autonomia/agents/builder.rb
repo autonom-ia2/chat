@@ -688,6 +688,14 @@ module Autonomia
       # (o controller só persiste turnos `user`; o bubble do assistant vive só no FE).
       MAX_INTERVIEW_QUESTIONS = 6
 
+      # #1367 — rótulo de uso por FASE do turno (Gestão IA e medição de latência). O relatório soma os três,
+      # e o `agente_builder` legado do histórico, em "Construtor de agente" (Crm::Reports::AiUsage).
+      USAGE_FEATURES = {
+        coleta: 'agente_builder_coleta',
+        fechamento: 'agente_builder_fechamento',
+        ajuste: 'agente_builder_ajuste'
+      }.freeze
+
       def initialize(account:, build_thread:)
         @account = account
         @thread  = build_thread
@@ -711,15 +719,46 @@ module Autonomia
           return nil
         end
 
+        tools = Crm::Ai::WebSearch.tools
         result = client.create(
           model: Autonomia::Agents::Config::BUILDER_MODEL,
           instructions: MOTHER_INSTRUCTION,
           input: build_input,
           schema: BUILDER_SCHEMA,
           reasoning_effort: reasoning_effort,
-          tools: Crm::Ai::WebSearch.tools
+          tools: tools
         )
-        apply_result(token, result[:text])
+        outcome = apply_result(token, result[:text])
+        log_turn(result, web_search_offered: tools.present?)
+        outcome
+      end
+
+      # Fase PREVISTA do turno, decidida ANTES da chamada com os mesmos sinais que escolhem o raciocínio
+      # (closing_phase?). É o rótulo do uso (a soma em "Construtor de agente" fica certa de qualquer jeito).
+      # Um fechamento que o modelo decide no próprio turno ("pode fechar" ou needs_more_info=false sem sinal
+      # prévio) sai rotulado como coleta: o resultado real vai no log do turno (fechou/forced_close).
+      def turn_phase
+        @turn_phase ||= if adjust_mode?
+                          :ajuste
+                        elsif closing_phase?
+                          :fechamento
+                        else
+                          :coleta
+                        end
+      end
+
+      # Uma linha por turno, só metadados (nunca conteúdo), escrita DEPOIS do apply: fase prevista, busca
+      # oferecida e usada, tokens de raciocínio (a tabela de uso não tem coluna para eles) e o resultado real
+      # do turno, para medir os fechamentos por fase.
+      def log_turn(result, web_search_offered:)
+        usage = (result[:usage] || {}).to_h.transform_keys(&:to_s)
+        details = (usage['output_tokens_details'] || {}).to_h.transform_keys(&:to_s)
+        Rails.logger.info(
+          "[autonomia][builder] turn thread=#{@thread.id} phase=#{turn_phase} " \
+          "web_search_offered=#{web_search_offered} tools_used=#{Array(result[:tools_used]).join(',')} " \
+          "reasoning_tokens=#{details['reasoning_tokens'].to_i} output_tokens=#{usage['output_tokens'].to_i} " \
+          "fechou=#{@closed == true} forced_close=#{@forced_close == true}"
+        )
       end
 
       # Sem agente ainda (criação) => ok; com agente, ele PRECISA ser da conta da thread.
@@ -1203,6 +1242,8 @@ module Autonomia
         # degenerada (instruction/human_card em branco), reabre a entrevista em vez de gravar um agente
         # quebrado. Defesa em profundidade — não confia que o modelo sempre preenche os campos essenciais.
         reopen_if_incomplete_final!(parsed)
+        # #1367 — resultado REAL do turno, depois de todos os portões, para o log do turno.
+        @closed = parsed['needs_more_info'] != true
 
         if parsed['needs_more_info'] == true
           # Falta info: NÃO fecha a instrução (não chama apply_builder_config!), mas CRIA o
@@ -1640,8 +1681,11 @@ module Autonomia
         agent.sources.knowledge_sources.where(review_status: 'needs_resend').exists?
       end
 
+      # O rótulo de uso varia pela fase; a chave de cache NÃO (#1367): uma só por conta, a mesma de antes, para
+      # o turno de fechamento aproveitar o prefixo que a entrevista já aqueceu.
       def client
-        @client ||= Crm::Ai::ResponsesClient.new(credential: credential, feature: 'agente_builder', account: @account)
+        @client ||= Crm::Ai::ResponsesClient.new(credential: credential, feature: USAGE_FEATURES.fetch(turn_phase), account: @account,
+                                                 cache_key: "agente_builder:#{@account.id}")
       end
 
       def credential

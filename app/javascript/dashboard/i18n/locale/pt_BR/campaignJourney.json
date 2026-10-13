@@ -367,7 +367,7 @@
         "WHEN": "Quando começa",
         "NOW": "Agora",
         "LATER": "Escolher data e hora",
-        "DATE_LABEL": "Data e hora ({zone})",
+        "DATE_LABEL": "Data e hora (fuso da conta: {zone})",
         "PAST": "Escolha uma data e hora no futuro.",
         "PICK_DATE": "Escolha a data e a hora do envio.",
         "RECEIVE": "Vão receber",
@@ -415,7 +415,8 @@
           "CAROUSEL_MEDIA_INVALID": "A foto de um cartão não serve: use JPG ou PNG de até 5 MB (ou MP4 de até 16 MB para vídeo).",
           "CAROUSEL_FIELD_REQUIRED": "Um cartão deste modelo tem campo que a campanha ainda não preenche.",
           "FREE_TEXT_INVALID": "A mensagem escrita não pode ir assim. Volte à Mensagem e confira o texto (link só pelo botão do campo).",
-          "FREE_TEXT_DISABLED": "A mensagem escrita não está liberada nesta conta. Tire a mensagem escrita para mandar só o modelo."
+          "FREE_TEXT_DISABLED": "A mensagem escrita não está liberada nesta conta. Tire a mensagem escrita para mandar só o modelo.",
+          "FREE_TEXT_RICH_TEMPLATE": "Este modelo tem cupom, oferta com prazo ou carrossel: todos recebem o modelo completo. Volte à Mensagem e tire a mensagem escrita."
         },
         "OPTED_OUT": "Recusaram mensagens",
         "REASONS": {

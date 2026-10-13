@@ -5,6 +5,7 @@ import PonteFormatoDaCampanha from '../ponte/PonteFormatoDaCampanha.vue';
 import {
   extrasParaEnvio,
   formatoQueNaoVai,
+  soModeloCompleto,
   oQuePedir,
   pendencias,
 } from '../helpers/formatoNaCampanha';
@@ -124,6 +125,34 @@ describe('formatoNaCampanha', () => {
     expect(formatoQueNaoVai(carrossel)).toBe('');
     expect(formatoQueNaoVai(oferta)).toBe('');
   });
+
+  // #1456: quem recebe a mensagem escrita perderia o cupom, a oferta ou o carrossel.
+  it('cupom, oferta com prazo ou carrossel: todos recebem o modelo completo', () => {
+    const cupom = {
+      components: [
+        { type: 'BODY', text: 'Oi' },
+        { type: 'BUTTONS', buttons: [{ type: 'copy_code' }] },
+      ],
+    };
+    const ofertaSemPrazo = {
+      components: [
+        { type: 'BODY', text: 'Oi' },
+        { type: 'limited_time_offer', limited_time_offer: { text: 'Hoje' } },
+      ],
+    };
+    const simples = {
+      components: [
+        { type: 'BODY', text: 'Oi {{1}}' },
+        { type: 'BUTTONS', buttons: [{ type: 'URL', url: 'https://a.com' }] },
+      ],
+    };
+    expect(soModeloCompleto(cupom)).toBe(true);
+    expect(soModeloCompleto(ofertaSemPrazo)).toBe(true);
+    expect(soModeloCompleto(carrossel)).toBe(true);
+    expect(soModeloCompleto(oferta)).toBe(true);
+    expect(soModeloCompleto(simples)).toBe(false);
+    expect(soModeloCompleto(null)).toBe(false);
+  });
 });
 
 describe('PonteFormatoDaCampanha', () => {
@@ -141,6 +170,18 @@ describe('PonteFormatoDaCampanha', () => {
   // (mockReset devolve o próprio mock, que seria chamado ao fim do teste).
   beforeEach(() => {
     api.subirArquivoDaCampanha.mockReset();
+  });
+
+  // Regra do Rodrigo (#1456): o fuso da conta como Configurações o mostra,
+  // nunca o nome longo do navegador.
+  it('a validade da oferta diz o fuso da conta como a plataforma o mostra', () => {
+    const wrapper = montar({ modelo: { template: oferta } });
+
+    const rotulo = wrapper.find('[data-formato-validade]').text();
+    expect(rotulo).toContain(
+      'The offer is valid until (account time zone: America/Sao Paulo)'
+    );
+    expect(rotulo).not.toContain('Standard Time');
   });
 
   it('sobe a foto escolhida para o cartão pela caixa e guarda a referência', async () => {
