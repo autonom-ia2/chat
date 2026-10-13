@@ -1,4 +1,4 @@
-import { diasEmFaixa, quandoSai, tempoAte } from './funil';
+import { CORES, corLivre, diasEmFaixa, quandoSai, tempoAte } from './funil';
 
 describe('tempoAte', () => {
   it('says each wait in everyday words', () => {
@@ -41,5 +41,18 @@ describe('quandoSai', () => {
     expect(quandoSai({ ...semana, intervalos: [108] })).toEqual([
       { dia: 1, hora: 8, semanaQueVem: true },
     ]);
+  });
+});
+
+describe('corLivre', () => {
+  it('gives the first color nobody uses yet', () => {
+    expect(corLivre(['#2563eb', '#0891B2', '#9333ea'])).toBe('#ca8a04');
+    expect(corLivre(['#16a34a'])).toBe('#2563eb');
+  });
+
+  it('only repeats when every color is in use', () => {
+    const todas = CORES.map(item => item.valor);
+    expect(corLivre(todas)).toBe(CORES[0].valor);
+    expect(corLivre([...todas, '#2563eb'])).toBe(CORES[1].valor);
   });
 });
