@@ -1847,6 +1847,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_27_113417) do
     t.bigint "assignee_agent_bot_id"
     t.datetime "status_changed_at"
     t.string "ai_assignee_type"
+    t.index "(((additional_attributes -> 'crm_entrega'::text) ->> 'tentado_em'::text)) NULLS FIRST, id", name: "index_conversations_on_crm_entrega_pendente", where: "((additional_attributes ->> 'crm_entrega'::text) IS NOT NULL)"
     t.index "((additional_attributes ->> 'campaign_source_ids'::text)) gin_trgm_ops", name: "idx_conversations_campaign_source_ids_trgm", using: :gin
     t.index ["account_id", "display_id"], name: "index_conversations_on_account_id_and_display_id", unique: true
     t.index ["account_id", "id"], name: "index_conversations_on_id_and_account_id"
@@ -1859,7 +1860,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_27_113417) do
     t.index ["contact_inbox_id"], name: "index_conversations_on_contact_inbox_id"
     t.index ["created_at"], name: "index_conversations_on_created_at"
     t.index ["first_reply_created_at"], name: "index_conversations_on_first_reply_created_at"
-    t.index ["id"], name: "index_conversations_on_crm_entrega_pendente", where: "((additional_attributes ->> 'crm_entrega'::text) IS NOT NULL)"
     t.index ["identifier", "account_id"], name: "index_conversations_on_identifier_and_account_id"
     t.index ["inbox_id"], name: "index_conversations_on_inbox_id"
     t.index ["priority"], name: "index_conversations_on_priority"

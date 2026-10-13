@@ -5,57 +5,71 @@
 #    entrar" da caixa sem regra também. O convite que venceu (TTL da etapa) só perde a marca, e a conversa volta a poder
 #    ser pega pelo rodízio nativo.
 # 2. Cards com a espera gravada no card, de antes do #1454 (só com a IA do CRM ligada), pelo HandoffExecutor.
+#
+# Uma rodada por vez (trava de sessão do Postgres; quem não pega, sai), com teto de tempo para os dois passos e a
+# presença de cada conta lida uma vez (Crm::Entrega::Presenca). A presença fica congelada durante a rodada (até o teto):
+# quem entrar no meio dela recebe na rodada seguinte, 2 minutos depois.
 class Crm::Ai::HandoffDrainJob < ApplicationJob
   queue_as :scheduled_jobs
 
-  # Conversas que o motor segura, por rodada. A consulta entra pelo índice parcial
-  # index_conversations_on_crm_entrega_pendente, que só tem as marcadas. Com mais que isso na fila, a rodada seguinte
-  # continua de onde esta parou (cursor no Redis) e, no fim, volta ao começo: nenhuma conversa fica sempre de fora.
+  # Conversas por rodada, as que esperam há mais tempo sem nova tentativa primeiro (`tentado_em` da marca, nunca
+  # tentadas antes). Sem estado fora do banco: a fila anda mesmo com o Redis fora do ar, e quem ficou de fora de uma
+  # rodada é das primeiras na seguinte. A consulta entra pelo índice parcial index_conversations_on_crm_entrega_pendente.
   CONVERSAS_POR_RODADA = 500
-  CURSOR_KEY = 'crm:entrega:fila:cursor'.freeze
-  # Teto de tempo da rodada (o cron roda a cada 2 minutos): estourou, para e grava o cursor onde parou.
+  # Teto de tempo da rodada (o cron roda a cada 2 minutos): estourou, para.
   TEMPO_MAXIMO_DA_RODADA = 90
+  # Chave da trava de sessão (pg_try_advisory_lock) que impede duas rodadas ao mesmo tempo.
+  TRAVA_DA_RODADA = 1_454_000_001
+  TENTADO_EM_SQL = "(conversations.additional_attributes -> 'crm_entrega' ->> 'tentado_em')".freeze
 
   def perform
-    drain_held_conversations
-    return unless Crm::Ai::Config.enabled?
+    return unless pegar_trava
 
-    Crm::Pipeline.active.find_each do |pipeline|
-      held_cards(pipeline).find_each { |card| drain(card) if drainable?(card) }
+    begin
+      @prazo = relogio + TEMPO_MAXIMO_DA_RODADA
+      Crm::Entrega::Presenca.na_rodada do
+        drain_held_conversations
+        drain_held_cards if Crm::Ai::Config.enabled?
+      end
+    ensure
+      soltar_trava
     end
   end
 
   private
 
+  def relogio
+    Process.clock_gettime(Process::CLOCK_MONOTONIC)
+  end
+
+  def tempo_acabou?
+    relogio > @prazo
+  end
+
+  def pegar_trava
+    ActiveRecord::Base.connection.select_value("SELECT pg_try_advisory_lock(#{TRAVA_DA_RODADA})")
+  end
+
+  def soltar_trava
+    ActiveRecord::Base.connection.select_value("SELECT pg_advisory_unlock(#{TRAVA_DA_RODADA})")
+  end
+
   # Abertas (ou pendentes, legado) e sem pessoa: a marca sai sozinha quando alguém é atribuído ou a conversa resolve.
   # Adiada fica de fora de propósito: ninguém atende uma conversa adiada; ela guarda a marca (o rodízio nativo também
   # não a pega) e volta para esta fila quando reabre.
-  def held_conversations(after_id)
+  def held_conversations
     Conversation.where(Crm::Entrega::Marca::PRESENTE_SQL)
                 .where(status: [Conversation.statuses[:open], Conversation.statuses[:pending]], assignee_id: nil)
-                .where('conversations.id > ?', after_id)
-                .order(:id).limit(CONVERSAS_POR_RODADA)
+                .order(Arel.sql("#{TENTADO_EM_SQL} ASC NULLS FIRST, conversations.id ASC"))
+                .limit(CONVERSAS_POR_RODADA)
   end
 
   def drain_held_conversations
-    cursor = read_cursor
-    ids = held_conversations(cursor).pluck(:id)
-    parou_em = Crm::Entrega::Presenca.na_rodada { drain_ids(ids, cursor) }
-    write_cursor(parou_em || (ids.size < CONVERSAS_POR_RODADA ? 0 : ids.last))
-  end
-
-  # Devolve onde parou se o tempo da rodada acabou antes do fim (a última conversa tratada, ou o cursor de entrada se
-  # nenhuma foi tratada); nil quando terminou.
-  def drain_ids(ids, cursor)
-    inicio = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-    ultima = nil
-    Conversation.where(id: ids).order(:id).each do |conversation|
-      return ultima || cursor if Process.clock_gettime(Process::CLOCK_MONOTONIC) - inicio > TEMPO_MAXIMO_DA_RODADA
+    held_conversations.each do |conversation|
+      break if tempo_acabou?
 
       drain_one(conversation)
-      ultima = conversation.id
     end
-    nil
   end
 
   def drain_one(conversation)
@@ -63,20 +77,32 @@ class Crm::Ai::HandoffDrainJob < ApplicationJob
   rescue StandardError => e
     # Uma conversa com problema não pode travar a fila das outras.
     Rails.logger.error("[crm][entrega] fila conversa=#{conversation.id} erro=#{e.class}")
+  ensure
+    marcar_tentativa(conversation)
   end
 
-  # Sem Redis, a rodada começa do início e segue; os cards do CRM (passo 2) também rodam.
-  def read_cursor
-    Redis::Alfred.get(CURSOR_KEY).to_i
-  rescue StandardError => e
-    Rails.logger.error("[crm][entrega] fila cursor indisponível erro=#{e.class}")
-    0
+  # Só o carimbo da tentativa, direto no JSONB e só se a marca continua lá: sem callbacks nem eventos a cada rodada.
+  def marcar_tentativa(conversation)
+    # rubocop:disable Rails/SkipsModelValidations
+    Conversation.where(id: conversation.id).where(Crm::Entrega::Marca::PRESENTE_SQL).update_all(
+      [
+        "additional_attributes = jsonb_set(additional_attributes, '{#{Crm::Entrega::Marca::CHAVE},tentado_em}', to_jsonb(?::text))",
+        Time.current.utc.iso8601(6)
+      ]
+    )
+    # rubocop:enable Rails/SkipsModelValidations
   end
 
-  def write_cursor(value)
-    Redis::Alfred.set(CURSOR_KEY, value)
-  rescue StandardError => e
-    Rails.logger.error("[crm][entrega] fila cursor não gravado erro=#{e.class}")
+  def drain_held_cards
+    Crm::Pipeline.active.find_each do |pipeline|
+      break if tempo_acabou?
+
+      held_cards(pipeline).find_each do |card|
+        break if tempo_acabou?
+
+        drain(card) if drainable?(card)
+      end
+    end
   end
 
   def drain_conversation(conversation)

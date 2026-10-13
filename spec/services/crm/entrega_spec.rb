@@ -476,6 +476,20 @@ RSpec.describe Crm::Entrega do
       expect(Rails.configuration.dispatcher).to atribuicoes_de(conversa).once
     end
 
+    # O prazo do convite conta do convite: virar convite recomeça a contagem; convite → segurando mantém.
+    it 'marca: o começo da espera recomeça ao virar convite e se mantém ao voltar a segurar', :aggregate_failures do
+      conversa = conversa_do_robo
+      marca = Crm::Entrega::Marca
+      inicio = Time.zone.local(2026, 10, 13, 8, 0)
+
+      travel_to(inicio) { marca.marcar(conversa, modo: marca::SEGURANDO, motivo: 'robo_pediu') }
+      travel_to(inicio + 1.hour) { marca.marcar(conversa, modo: marca::CONVITE, motivo: 'robo_pediu') }
+      expect(marca.desde(conversa)).to eq(inicio + 1.hour)
+
+      travel_to(inicio + 2.hours) { marca.marcar(conversa, modo: marca::SEGURANDO, motivo: 'robo_pediu') }
+      expect(marca.desde(conversa)).to eq(inicio + 1.hour)
+    end
+
     # Decisão do Rodrigo (opção c): convite que nunca sai segue segurado com o robô, sem voltar ao nativo; passado o
     # prazo do convite, a marca diz "nao_conseguimos_chamar" e o aviso (card + administradores) sai uma vez só.
     it 'convite que nunca sai: passado o prazo, avisa uma vez e segue segura', :aggregate_failures do

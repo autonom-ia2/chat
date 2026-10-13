@@ -28,7 +28,7 @@ module Crm::Entrega::Marca
 
   # Só na memória: quem chama grava (sob a trava). `motivo`: por que a conversa precisa de alguém (a origem);
   # `falha`: por que ainda não foi entregue. `desde` e `avisado_em` sobrevivem às novas tentativas, para medir a espera
-  # e avisar uma vez só.
+  # e avisar uma vez só; `tentado_em` é da fila (HandoffDrainJob).
   # `detalhes`: `sugestao` (o nome que a IA sugeriu, para a próxima tentativa) e `ate` (o fim do convite).
   def marcar(conversation, modo:, motivo:, falha: nil, **detalhes)
     anterior = dados(conversation) || {}
@@ -36,12 +36,21 @@ module Crm::Entrega::Marca
       'modo' => modo,
       'motivo' => motivo.to_s,
       'falha' => falha.presence,
-      'desde' => anterior['desde'].presence || Time.current.iso8601,
+      'desde' => desde_para(anterior, modo),
       'avisado_em' => anterior['avisado_em'].presence,
+      'tentado_em' => anterior['tentado_em'].presence,
       'sugestao' => detalhes[:sugestao].presence,
       'ate' => detalhes[:ate]&.iso8601
     }.compact
     conversation.additional_attributes = (conversation.additional_attributes || {}).merge(CHAVE => valor)
+  end
+
+  # O prazo do convite conta do CONVITE: virar convite recomeça a contagem; o resto (inclusive convite → segurando)
+  # mantém o começo da espera.
+  def desde_para(anterior, modo)
+    return Time.current.iso8601 if modo == CONVITE && anterior['modo'] != CONVITE
+
+    anterior['desde'].presence || Time.current.iso8601
   end
 
   def tirar(conversation)
