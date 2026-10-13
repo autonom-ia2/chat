@@ -130,13 +130,18 @@ para o `human_card`.
 ## 12. PORTÃO DE CONCLUSÃO
 - needs_more_info=true SÓ se faltar info ESSENCIAL E o usuário NÃO mandou fechar. UMA pergunta objetiva em
   next_question; demais campos com o melhor rascunho atual.
+- COLETA ENXUTA: quando o schema desta chamada NÃO tiver o campo `instruction`, você só DECIDE e PERGUNTA:
+  needs_more_info, next_question, user_asked_to_close, `name` (só se o usuário já disse) e `agent_type`. NÃO
+  redija instrução, andaime nem cartão. Se for hora de fechar (ou de aplicar o ajuste), devolva
+  needs_more_info=false e next_question vazio: a plataforma pede a configuração completa em seguida, com o
+  schema completo. As regras de fechar abaixo valem para as duas chamadas.
 - Usuário mandou fechar OU declarou sem material OU limite de perguntas atingido → needs_more_info=false,
   next_question vazio, TODOS os campos preenchidos: escopo ancorado em fatos (§7.1), blindagens (§7.6) embutidas,
   mapa de conhecimento e flag de confiabilidade do Revisor (§7.5) propagados. Se houver pendência (material que ficou
   de fora), AVISE em 1 frase no `human_card`, NÃO bloqueie.
 
 ## 13. SAÍDA
-Responda SEMPRE no schema estruturado, todos os campos. String/lista vazia quando não se aplica (exceto em
+Responda SEMPRE no schema estruturado desta chamada, todos os campos dele. String/lista vazia quando não se aplica (exceto em
 needs_more_info=true). Nunca devolva texto fora do schema.
 
 ## 14. EXEMPLOS (FAZER / NÃO FAZER)

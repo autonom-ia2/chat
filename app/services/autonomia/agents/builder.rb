@@ -4,8 +4,8 @@ module Autonomia
     # cérebro só) e devolve structured output que vira a config do Agente. A INSTRUÇÃO gerada e o
     # ANDAIME são IP OCULTO — este serviço só os produz; o jbuilder/serializer NUNCA os expõe.
     #
-    # Fluxo: SubmitJob chama #run! — uma chamada síncrona ao ResponsesClient (reasoning baixo, alguns
-    # segundos), faz o parse do JSON estruturado e, no MESMO job, ou guarda a próxima pergunta da
+    # Fluxo: SubmitJob chama #run! — chamada síncrona ao ResponsesClient (enxuta na coleta; completa, com
+    # busca, no fechamento — #1367), faz o parse do JSON estruturado e, no MESMO job, ou guarda a próxima pergunta da
     # entrevista (needs_more_info) ou cria/edita o Agent e marca a thread `ready`. Sem PollJob.
     class Builder
       # ORÇAMENTO DE CARACTERES declarado ao modelo (§8 do MOTHER_INSTRUCTION + descrição do schema).
@@ -64,6 +64,24 @@ module Autonomia
           required: %w[name agent_type instruction scaffold human_card greeting fallback_message
                        handoff_rule starter_questions tone guardrails voice needs_more_info next_question
                        user_asked_to_close],
+          additionalProperties: false
+        }
+      }.freeze
+
+      # #1367 — COLETA ENXUTA: o schema dos turnos em que o Construtor ainda vai perguntar. Só a decisão e a
+      # pergunta; instrução, andaime e cartão saem só na chamada completa do fechamento (BUILDER_SCHEMA).
+      LEAN_SCHEMA = {
+        name: 'autonomia_agent_interview',
+        schema: {
+          type: 'object',
+          properties: {
+            name: { type: 'string', description: 'Nome do agente, se o usuario ja disse. Vazio se nao.' },
+            agent_type: BUILDER_SCHEMA[:schema][:properties][:agent_type],
+            needs_more_info: { type: 'boolean' },
+            next_question: { type: 'string', description: 'A pergunta ao usuario quando needs_more_info=true. Vazio se for fechar.' },
+            user_asked_to_close: { type: 'boolean', description: USER_ASKED_TO_CLOSE_DESCRIPTION }
+          },
+          required: %w[name agent_type needs_more_info next_question user_asked_to_close],
           additionalProperties: false
         }
       }.freeze
@@ -236,6 +254,11 @@ module Autonomia
         ## 12. PORTÃO DE CONCLUSÃO
         - needs_more_info=true SÓ se faltar info ESSENCIAL E o usuário NÃO mandou fechar. UMA pergunta objetiva em
           next_question; demais campos com o melhor rascunho atual.
+        - COLETA ENXUTA: quando o schema desta chamada NÃO tiver o campo `instruction`, você só DECIDE e PERGUNTA:
+          needs_more_info, next_question, user_asked_to_close, `name` (só se o usuário já disse) e `agent_type`. NÃO
+          redija instrução, andaime nem cartão. Se for hora de fechar (ou de aplicar o ajuste), devolva
+          needs_more_info=false e next_question vazio: a plataforma pede a configuração completa em seguida, com o
+          schema completo. As regras de fechar abaixo valem para as duas chamadas.
         - Usuário mandou fechar OU declarou sem material OU limite de perguntas atingido → needs_more_info=false,
           next_question vazio, TODOS os campos preenchidos: escopo ancorado em fatos (§7.1), blindagens (§7.6) embutidas,
           mapa de conhecimento e flag de confiabilidade do Revisor (§7.5) propagados. Se houver pendência (material que ficou
@@ -251,7 +274,7 @@ module Autonomia
           confirmação. O bloco "STATUS DOS MATERIAIS" no contexto interno diz o que já foi subido e se falta confirmar.
 
         ## 13. SAÍDA
-        Responda SEMPRE no schema estruturado, todos os campos. String/lista vazia quando não se aplica (exceto em
+        Responda SEMPRE no schema estruturado desta chamada, todos os campos dele. String/lista vazia quando não se aplica (exceto em
         needs_more_info=true). Nunca devolva texto fora do schema.
 
         ## 14. EXEMPLOS (FAZER / NÃO FAZER)
@@ -702,8 +725,8 @@ module Autonomia
       end
 
       # Roda a geração do Construtor de forma SÍNCRONA e guardada pelo `token` (mesmo padrão
-      # anti-supersede do PollJob anterior). Numa só chamada: pede ao modelo (reasoning baixo, poucos
-      # segundos), faz o parse do structured output e aplica:
+      # anti-supersede do PollJob anterior). Uma ou duas chamadas (#1367): a ENXUTA decide e pergunta; quando
+      # o turno fecha, a COMPLETA (com busca) escreve a config. Faz o parse do structured output e aplica:
       #   - needs_more_info=true  → não cria/edita Agent; só guarda a próxima pergunta e marca ready.
       #   - needs_more_info=false → cria/atualiza o Agent (instruction/scaffold OCULTOS) e marca ready.
       # Levanta ResponsesClient::Error em falha de rede/provedor (o SubmitJob marca a thread failed).
@@ -719,44 +742,84 @@ module Autonomia
           return nil
         end
 
-        tools = Crm::Ai::WebSearch.tools
-        result = client.create(
-          model: Autonomia::Agents::Config::BUILDER_MODEL,
-          instructions: MOTHER_INSTRUCTION,
-          input: build_input,
-          schema: BUILDER_SCHEMA,
-          reasoning_effort: reasoning_effort,
-          tools: tools
-        )
-        outcome = apply_result(token, result[:text])
-        log_turn(result, web_search_offered: tools.present?)
+        @calls = []
+        @built_input = nil
+        @lean_asked_to_close = nil
+        text = deterministic_close? ? full_call : lean_then_full_call
+        outcome = apply_result(token, text)
+        log_turn
         outcome
       end
 
-      # Fase PREVISTA do turno, decidida ANTES da chamada com os mesmos sinais que escolhem o raciocínio
-      # (closing_phase?). É o rótulo do uso (a soma em "Construtor de agente" fica certa de qualquer jeito).
-      # Um fechamento que o modelo decide no próprio turno ("pode fechar" ou needs_more_info=false sem sinal
-      # prévio) sai rotulado como coleta: o resultado real vai no log do turno (fechou/forced_close).
-      def turn_phase
-        @turn_phase ||= if adjust_mode?
-                          :ajuste
-                        elsif closing_phase?
-                          :fechamento
-                        else
-                          :coleta
-                        end
+      # #1367 — COLETA ENXUTA (alavanca 2): o turno começa pela chamada enxuta, sem busca, que só decide e
+      # pergunta. Se ela indicar que vai fechar (ou aplicar o ajuste), vem a chamada COMPLETA; senão, a
+      # pergunta dela é o turno. A fase só se conhece depois desta chamada, por isso a completa é condicional.
+      def lean_then_full_call
+        lean_text = call_model(lean_phase, LEAN_SCHEMA, nil, Autonomia::Agents::Config::BUILDER_REASONING_EFFORT_COLLECT)
+        lean = parse_output(lean_text)
+        return lean_text unless lean && lean_wants_full_call?(lean)
+
+        full_call
       end
 
-      # Uma linha por turno, só metadados (nunca conteúdo), escrita DEPOIS do apply: fase prevista, busca
-      # oferecida e usada, tokens de raciocínio (a tabela de uso não tem coluna para eles) e o resultado real
-      # do turno, para medir os fechamentos por fase.
-      def log_turn(result, web_search_offered:)
-        usage = (result[:usage] || {}).to_h.transform_keys(&:to_s)
-        details = (usage['output_tokens_details'] || {}).to_h.transform_keys(&:to_s)
+      # A chamada COMPLETA (alavanca 1): schema inteiro e busca na web (AI_WEB_SEARCH_ENABLED). É a única que
+      # escreve instrução, andaime e cartão, e a única cujo resultado aplica a configuração no agente.
+      def full_call
+        call_model(full_phase, BUILDER_SCHEMA, Crm::Ai::WebSearch.tools, Autonomia::Agents::Config::BUILDER_REASONING_EFFORT_FINAL)
+      end
+
+      # As duas chamadas mandam a MESMA instrução-mãe e o MESMO input: só mudam o schema e a busca.
+      def call_model(phase, schema, tools, reasoning_effort)
+        result = client(phase).create(
+          model: Autonomia::Agents::Config::BUILDER_MODEL, instructions: MOTHER_INSTRUCTION, input: built_input,
+          schema: schema, reasoning_effort: reasoning_effort, tools: tools
+        )
+        @calls << { phase: phase, tools: tools, result: result }
+        result[:text]
+      end
+
+      def built_input
+        @built_input ||= build_input
+      end
+
+      # Sinal DETERMINÍSTICO de fechamento antes de qualquer chamada (avançar para a Revisão, sem material
+      # declarado, teto de perguntas): o turno vai fechar de qualquer jeito, então a chamada enxuta seria só
+      # espera. Se o portão de materiais seguraria esse fechamento, o turno é de pergunta e começa enxuto.
+      def deterministic_close?
+        force_close? && !materials_gate_holds?
+      end
+
+      # A leitura da chamada enxuta, com os MESMOS portões do apply_result: fecha quando o modelo quer fechar ou
+      # quando a ordem de fechar dele força o fechamento (force_close?, que em AJUSTE é sempre false). O portão
+      # de materiais que seguraria esse fechamento dispensa a chamada completa: o turno vira a pergunta da revisão.
+      def lean_wants_full_call?(lean)
+        @lean_asked_to_close = lean['user_asked_to_close'] == true
+        @user_asked_to_close = @lean_asked_to_close
+        closing = lean['needs_more_info'] == false || force_close?
+        closing && !materials_gate_holds?
+      end
+
+      # Rótulo de uso por chamada: a enxuta grava como coleta (ou ajuste) e a completa como fechamento (ou
+      # ajuste). A soma em "Construtor de agente" segue certa (Crm::Reports::AiUsage).
+      def lean_phase
+        adjust_mode? ? :ajuste : :coleta
+      end
+
+      def full_phase
+        adjust_mode? ? :ajuste : :fechamento
+      end
+
+      # Uma linha por turno, só metadados (nunca conteúdo), escrita DEPOIS do apply: fase da chamada que decidiu
+      # o turno, quantas chamadas houve (1 ou 2), busca oferecida e usada, tokens somados das chamadas (a tabela
+      # de uso não tem coluna para os de raciocínio) e o resultado real do turno.
+      def log_turn
+        usages = @calls.map { |c| (c[:result][:usage] || {}).to_h.transform_keys(&:to_s) }
+        reasoning = usages.sum { |u| (u['output_tokens_details'] || {}).to_h.transform_keys(&:to_s)['reasoning_tokens'].to_i }
+        last = @calls.last
         Rails.logger.info(
-          "[autonomia][builder] turn thread=#{@thread.id} phase=#{turn_phase} " \
-          "web_search_offered=#{web_search_offered} tools_used=#{Array(result[:tools_used]).join(',')} " \
-          "reasoning_tokens=#{details['reasoning_tokens'].to_i} output_tokens=#{usage['output_tokens'].to_i} " \
+          "[autonomia][builder] turn thread=#{@thread.id} phase=#{last[:phase]} calls=#{@calls.size} " \
+          "web_search_offered=#{last[:tools].present?} tools_used=#{Array(last[:result][:tools_used]).join(',')} " \
+          "reasoning_tokens=#{reasoning} output_tokens=#{usages.sum { |u| u['output_tokens'].to_i }} " \
           "fechou=#{@closed == true} forced_close=#{@forced_close == true}"
         )
       end
@@ -776,33 +839,8 @@ module Autonomia
         nil
       end
 
-      # CONSTRUTOR (P1) — reasoning POR FASE para cortar latência (~24s/turno na campanha). O ramo só é
-      # conhecido APÓS a chamada, então usamos uma heurística pré-chamada barata: SÓ os turnos que
-      # tendem a REDIGIR a instruction final usam o effort de FECHAMENTO ('medium'). Caso contrário é
-      # turno de COLETA ('low', rápido) — a maioria dos turnos da entrevista. AJUSTE também é fechamento
-      # (edição cirúrgica da instruction). Conservador: na dúvida, COLETA é o default barato.
-      def reasoning_effort
-        if closing_phase?
-          Autonomia::Agents::Config::BUILDER_REASONING_EFFORT_FINAL
-        else
-          Autonomia::Agents::Config::BUILDER_REASONING_EFFORT_COLLECT
-        end
-      end
-
-      # Heurística de fase de FECHAMENTO (pré-chamada, barata): AJUSTE (edição cirúrgica), intenção
-      # explícita de fechar, sem-material DECLARADO, ou teto de perguntas atingido (o turn_budget vai
-      # mandar fechar AGORA) ⇒ o próximo turno tende a redigir a instruction final → 'medium'.
-      # IMPORTANTE: ausência de material pendente NÃO é sinal de fechamento — é o estado PADRÃO de
-      # qualquer entrevista (sem upload ou com material já aceito). Usá-la jogava TODA a coleta para
-      # 'medium' e anulava o ganho de latência da P1. A coleta normal fica em 'low'.
-      #
-      # A intenção de fechar NÃO entra aqui: ela é decidida pelo modelo NESTA chamada (user_asked_to_close),
-      # então não existe antes dela. Hoje isso não muda nada, porque COLLECT e FINAL são ambos 'medium'
-      # (config.rb). Se um dia COLLECT baixar, um "pode fechar" que chegue sem nenhum outro sinal passa a
-      # redigir a instrução no esforço de coleta, como o fechamento natural do modelo já faz hoje.
-      def closing_phase?
-        adjust_mode? || force_close_declared? || no_materials_declared? || interview_budget_exhausted?
-      end
+      # Raciocínio: a chamada enxuta usa BUILDER_REASONING_EFFORT_COLLECT e a completa, FINAL. Os dois são
+      # 'medium' (config.rb, regra do Rodrigo); o ganho de latência vem de escrever menos, não de pensar menos.
 
       # Monta o `input` da chamada: (1) bloco de contexto interno (conhecimento revisado + mapa de
       # temas + status dos materiais + config atual em modo AJUSTE) e (2) a JANELA ROLANTE das últimas
@@ -867,10 +905,13 @@ module Autonomia
 
       # Blocos de contexto interno, na ordem em que aparecem antes do histórico. Cada um é DADO de
       # trabalho do Construtor (nunca fala do usuário). Omite os que não se aplicam.
+      # #1367 (cache): o que é ESTÁVEL ao longo da conversa vem primeiro (atuação, base, esqueleto, agenda e a
+      # config atual do AJUSTE, o maior bloco); o que muda de um turno para outro (materiais em revisão,
+      # abertura, teto de perguntas, pergunta pendente) vem por último, para não invalidar o prefixo em cache.
       def context_blocks
-        [actuation_context, knowledge_intent_context, skeleton_context, booking_context, opening_context, knowledge_context,
-         send_media_context, materials_status_context, turn_budget_context, pending_request_context,
-         adjust_context].compact_blank
+        [actuation_context, knowledge_intent_context, skeleton_context, booking_context, adjust_context, knowledge_context,
+         send_media_context, materials_status_context, opening_context, turn_budget_context,
+         pending_request_context].compact_blank
       end
 
       # PEDIDOS ACUMULAM (§4). Duas pendências morriam em silêncio:
@@ -1213,7 +1254,9 @@ module Autonomia
 
         # Intenção de fechar = o que o MODELO leu da última fala (close_intent?). Ausente/não-booleano
         # conta como "não se aplica": nunca força fechamento por omissão (mesmo fail-safe do #19).
-        @user_asked_to_close = parsed['user_asked_to_close'] == true
+        # #1367: a ordem lida pela chamada ENXUTA vale também quando a completa não a repete. É ela que pediu a
+        # chamada completa, e perdê-la aqui devolveria a pergunta teimosa da completa em vez de fechar.
+        @user_asked_to_close = parsed['user_asked_to_close'] == true || @lean_asked_to_close == true
 
         # GATE (P0) + CONSTRUTOR (P1) — fechamento determinístico (defesa em profundidade): o modelo
         # PODE devolver needs_more_info=true mesmo quando deveria fechar (loop teimoso T01/T06/T08, em
@@ -1288,21 +1331,28 @@ module Autonomia
       # REORDER preservado: quando NÃO há close_intent? nem no_materials_declared? e há material
       # pendente, o portão continua bloqueando → materiais antes da instrução (comportamento legado).
       def force_materials_gate!(parsed)
-        return if adjust_mode?           # AJUSTE (§6.2): edição cirúrgica — nunca trava
-        return if no_materials_declared? # ramo SEM MATERIAL destrava o fechamento (P0)
-        return if close_intent?          # "pode fechar" destrava com os accepted (P0)
-        return if force_close_declared?  # auto-finalize (#3): avançar p/ Revisão fecha com os accepted
-        return unless materials_pending?(@thread.agent)
+        return unless materials_gate_holds?
 
         parsed['needs_more_info'] = true
         parsed['next_question'] = parsed['next_question'].to_s.presence ||
                                   'Antes de fechar, vamos revisar seus materiais para eu ajustar o agente ao que ele sabe.'
       end
 
+      # O portão de materiais seguraria um fechamento neste turno? Uma fonte só da regra, lida pelo apply e,
+      # antes dele, pela decisão de fazer ou não a chamada completa (#1367).
+      def materials_gate_holds?
+        return false if adjust_mode?           # AJUSTE (§6.2): edição cirúrgica — nunca trava
+        return false if no_materials_declared? # ramo SEM MATERIAL destrava o fechamento (P0)
+        return false if close_intent?          # "pode fechar" destrava com os accepted (P0)
+        return false if force_close_declared?  # auto-finalize (#3): avançar p/ Revisão fecha com os accepted
+
+        materials_pending?(@thread.agent)
+      end
+
       # GATE (P0): sinais determinísticos que FORÇAM o fechamento mesmo com o LLM devolvendo
-      # needs_more_info=true. Reúne os três gatilhos de fechamento já usados por closing_phase? (que só
-      # escolhe o reasoning_effort): intenção explícita do usuário, ramo SEM MATERIAL declarado e teto
-      # de perguntas.
+      # needs_more_info=true: avançar para a Revisão, intenção explícita do usuário, ramo SEM MATERIAL
+      # declarado e teto de perguntas. Também decide (#1367) se o turno pula a chamada enxuta
+      # (deterministic_close?) ou se a leitura dela pede a chamada completa (lean_wants_full_call?).
       #
       # AJUSTE NUNCA entra aqui. O comentário antigo assumia que ajuste "nunca está em
       # needs_more_info=true" — falso: o Construtor PODE (e deve) fazer uma pergunta de esclarecimento
@@ -1681,11 +1731,12 @@ module Autonomia
         agent.sources.knowledge_sources.where(review_status: 'needs_resend').exists?
       end
 
-      # O rótulo de uso varia pela fase; a chave de cache NÃO (#1367): uma só por conta, a mesma de antes, para
-      # o turno de fechamento aproveitar o prefixo que a entrevista já aqueceu.
-      def client
-        @client ||= Crm::Ai::ResponsesClient.new(credential: credential, feature: USAGE_FEATURES.fetch(turn_phase), account: @account,
-                                                 cache_key: "agente_builder:#{@account.id}")
+      # O rótulo de uso varia pela fase da CHAMADA; a chave de cache NÃO (#1367): uma só por conta, a mesma nas
+      # duas chamadas do turno e nos turnos seguintes.
+      def client(phase)
+        @clients ||= {}
+        @clients[phase] ||= Crm::Ai::ResponsesClient.new(credential: credential, feature: USAGE_FEATURES.fetch(phase),
+                                                         account: @account, cache_key: "agente_builder:#{@account.id}")
       end
 
       def credential
