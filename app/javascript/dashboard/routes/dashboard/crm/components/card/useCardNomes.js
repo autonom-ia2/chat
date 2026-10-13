@@ -3,7 +3,8 @@ import { computed } from 'vue';
 // #1423 — como o card chama o cliente: o nome curto (pessoa, senão empresa),
 // o título do topo (empresa > pessoa > negócio) e a frase de baixo (a pessoa
 // e o negócio, só quando não repetem o título).
-export const useCardNomes = ({ t, card }) => {
+// Fora de venda (atendimento, suporte) o card fala em "Assunto", não em "Negócio".
+export const useCardNomes = ({ t, card, venda }) => {
   const nomeEmpresa = computed(() =>
     String(card.value.company?.name || '').trim()
   );
@@ -38,7 +39,12 @@ export const useCardNomes = ({ t, card }) => {
       )
     )
       partes.push(
-        t('CRM_CARD.RESUMO.NEGOCIO_DE', { titulo: nomeNegocio.value })
+        t(
+          venda?.value === false
+            ? 'CRM_CARD.RESUMO.ASSUNTO_DE'
+            : 'CRM_CARD.RESUMO.NEGOCIO_DE',
+          { titulo: nomeNegocio.value }
+        )
       );
     return partes.join(' · ') || t('CRM_CARD.RESUMO.TEXTO');
   });
