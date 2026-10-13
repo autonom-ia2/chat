@@ -63,15 +63,19 @@ RSpec.describe Autonomia::Agents::Answerer do
   end
 
   describe 'com dado devolvido por ferramenta' do
-    it 'deixa passar a confirmação da agenda', :aggregate_failures do
-      nativa('agendar_reuniao') { { marcada: true, resumo: 'terça, 14/10, às 11:00, por Google Meet' }.to_json }
-      modelo_responde(resposta_do_modelo('Sua reunião está marcada para terça às 11:00, por Google Meet.'),
-                      chamadas: [chamada('agendar_reuniao')])
+    # No Testar não há conversa e `agendar_reuniao` recusa; o que a agenda devolve ali são os horários livres.
+    it 'deixa passar os horários livres da agenda', :aggregate_failures do
+      nativa('horarios_disponiveis') do
+        { horarios: [{ inicio: '2026-10-14T11:00:00-03:00', quando: 'terça, 14/10, às 11:00', pessoa_id: 7,
+                       pessoa_nome: 'Ana' }] }.to_json
+      end
+      modelo_responde(resposta_do_modelo('Tenho terça, 14/10, às 11:00 com a Ana. Pode ser?'),
+                      chamadas: [chamada('horarios_disponiveis')])
 
       resultado = testar
 
       expect(resultado.handoff[:should]).to be(false)
-      expect(resultado.reply).to eq('Sua reunião está marcada para terça às 11:00, por Google Meet.')
+      expect(resultado.reply).to eq('Tenho terça, 14/10, às 11:00 com a Ana. Pode ser?')
     end
 
     it 'deixa passar o estoque lido da ferramenta HTTP', :aggregate_failures do
@@ -115,6 +119,16 @@ RSpec.describe Autonomia::Agents::Answerer do
 
       expect(barrou?(testar)).to be(true)
     end
+
+    # O teto do "não achei" (0.29) não é falta de base: é o próprio modelo dizendo que não tem a resposta.
+    it 'continua passando à equipe o "não tenho essa informação" com confiança alta' do
+      ferramenta_http('consulta_estoque')
+      http_devolve({ unidades: 3 }.to_json)
+      modelo_responde(resposta_do_modelo('Não tenho essa informação sobre o prazo de entrega.', confidence: 0.95),
+                      chamadas: [chamada('consulta_estoque')])
+
+      expect(barrou?(testar)).to be(true)
+    end
   end
 
   describe 'com recusa de ferramenta' do
@@ -132,12 +146,12 @@ RSpec.describe Autonomia::Agents::Answerer do
     end
 
     it 'barra como hoje a recusa em texto, pelo registro e não pelo que o texto diz' do
-      nativa('agendar_reuniao') do
-        Autonomia::Agents::Tools::Recusa.registrar('agenda_sem_confirmacao', slug: 'agendar_reuniao')
-        'Reunião confirmada para terça às 11:00.'
+      nativa('horarios_disponiveis') do
+        Autonomia::Agents::Tools::Recusa.registrar('agenda_sem_horarios', slug: 'horarios_disponiveis')
+        'Horário livre: terça às 11:00.'
       end
-      modelo_responde(resposta_do_modelo('Sua reunião está marcada para terça às 11:00.'),
-                      chamadas: [chamada('agendar_reuniao')])
+      modelo_responde(resposta_do_modelo('Tenho terça às 11:00. Pode ser?'),
+                      chamadas: [chamada('horarios_disponiveis')])
 
       expect(barrou?(testar)).to be(true)
     end
@@ -149,6 +163,36 @@ RSpec.describe Autonomia::Agents::Answerer do
                       chamadas: [chamada('consulta_estoque'), chamada('ferramenta_que_nao_existe', 'c2')])
 
       expect(barrou?(testar)).to be(true)
+    end
+
+    # O formato da própria Recusa, chegando por HTTP 200 sem passar pelo registro: é erro, não dado.
+    it 'barra o {"error": ...} devolvido com HTTP 200' do
+      ferramenta_http('consulta_estoque')
+      http_devolve({ error: 'produto_nao_encontrado' }.to_json)
+      modelo_responde(resposta_do_modelo('Temos 3 unidades por R$ 89.'), chamadas: [chamada('consulta_estoque')])
+
+      expect(barrou?(testar)).to be(true)
+    end
+  end
+
+  # O Guia (quem chama com `operador`) tem regra própria: nunca retém a resposta (#914) e só a leitura da conta
+  # tira os pisos da confiança (#593). A marca do #1361 não vale para ele.
+  describe 'no Guia' do
+    let(:guia) do
+      conta, admin = create_account_and_user
+      Autonomia::Guide::Contexto.new(account: conta, user: admin)
+    end
+
+    it 'mantém a confiança de hoje mesmo com dado de ferramenta', :aggregate_failures do
+      ferramenta_http('consultar_apolice')
+      http_devolve({ carencia_dias: 30 }.to_json)
+      modelo_responde(resposta_do_modelo('A carência é de 30 dias.', confidence: 0.9),
+                      chamadas: [chamada('consultar_apolice')])
+
+      resultado = described_class.new(agent: agent, query: 'qual a carência?', operador: guia).answer
+
+      expect(resultado.confidence).to eq(0.29)
+      expect(resultado.handoff[:should]).to be(false)
     end
   end
 

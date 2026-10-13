@@ -119,6 +119,10 @@ module Autonomia::Agents::Tools::Recusa
   MAX_VALOR = 20
   # Quantas recusas este fio de execução já registrou (#1361). Só cresce; quem quer saber se UMA chamada recusou
   # compara antes e depois (`registradas`). É o registro, e não o texto da saída, que diz que houve recusa.
+  # O isolamento é o do `ActiveSupport::IsolatedExecutionState`, hoje `:thread` (o padrão do Rails): a contagem é do
+  # fio, e a ferramenta roda no mesmo fio do turno. Se a aplicação passar a `:fiber`, a contagem vira da fibra: a
+  # comparação do turno continua certa enquanto a ferramenta rodar na mesma fibra, mas uma recusa registrada noutra
+  # fibra ou noutro fio (ferramentas em paralelo, por exemplo) deixaria de ser vista pelo turno.
   CONTADOR = :autonomia_recusas_registradas
 
   module_function

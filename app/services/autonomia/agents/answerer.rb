@@ -383,27 +383,31 @@ module Autonomia
 
       # DADO DE SISTEMA NO TURNO (#1361). Quem diz que a chamada recusou é o registro de recusas (`Tools::Recusa`),
       # nunca o texto da saída. A promessa da ferramenta assíncrona ("consulta iniciada") não é dado, e saída vazia
-      # também não. A busca na web não passa por aqui: quem a executa é a OpenAI.
+      # ou com erro também não. A busca na web não passa por aqui: quem a executa é a OpenAI.
       def anotar_leitura(tool, output, recusou:)
         @recusa_no_turno = true if recusou
-        return if recusou || tool&.async? || saida_vazia?(output)
+        return if recusou || tool&.async? || saida_sem_dado?(output)
 
         @dado_de_sistema = true
       end
 
-      def saida_vazia?(output)
+      # Vazia ("", "{}", "[]", "null") ou um JSON com `error` no topo: o formato da própria Recusa, que um
+      # sistema externo pode devolver com HTTP 200 sem passar pelo registro. A conferência é da estrutura.
+      def saida_sem_dado?(output)
         texto = output.to_s.strip
         return true if texto.empty?
 
-        JSON.parse(texto).blank?
+        dado = JSON.parse(texto)
+        dado.blank? || (dado.is_a?(Hash) && dado.key?('error'))
       rescue JSON::ParserError
         false
       end
 
       # O turno se apoia em dado que um sistema devolveu agora (agenda, estoque, especialista, HTTP) e nenhuma
-      # ferramenta recusou. Vale como base no portão, como a leitura da conta no Guia (`leu_a_conta?`).
+      # ferramenta recusou. Vale como base no portão do Testar e do Copiloto. O Guia (`operador`) fica fora: ele
+      # tem regra própria (`leu_a_conta?`, `guia_com_resposta?`).
       def leu_dado_de_sistema?
-        @dado_de_sistema == true && @recusa_no_turno != true
+        @operador.nil? && @dado_de_sistema == true && @recusa_no_turno != true
       end
 
       # O registro de diagnóstico do Guia (#861): quem tem `operador` anota o que chamou. O atendimento
@@ -486,9 +490,7 @@ module Autonomia
         # Guia que leu a conta neste turno responde a partir dela: "não encontrei o Pedro" depois de ler
         # os contatos é o que a conta tem, não falta de conhecimento. Sem isto o piso do "não achei"
         # (0.29) retinha a resposta certa (#593). Agente de atendimento não tem `operador`: nada muda.
-        # O mesmo vale para o dado que uma ferramenta devolveu neste turno (#1361): fica a confiança que o modelo
-        # declarou, sem os pisos da falta de base.
-        return self_conf if leu_a_conta? || leu_dado_de_sistema?
+        return self_conf if leu_a_conta?
 
         # Recusa em banda (injeção/fora-de-escopo): reply presente, mas o modelo NÃO afirma ter respondido do
         # conhecimento (answered_from_knowledge=false) e não é "não achei". NÃO rebaixar — preservaria o portão de
@@ -496,6 +498,10 @@ module Autonomia
         claims_knowledge = parsed['answered_from_knowledge'] == true
         if used.empty? && refusal_no_info?(parsed)
           [self_conf, 0.29].min # "não achei" determinístico: nunca > 0.3 (resolve S01 frete 0.95)
+        elsif leu_dado_de_sistema?
+          # Dado que uma ferramenta devolveu neste turno (#1361): fica a confiança que o modelo declarou, sem os
+          # pisos da falta de base. O "não achei" acima continua valendo: é o modelo dizendo que não tem a resposta.
+          self_conf
         elsif !claims_knowledge
           # Recusa em banda (injeção/fora-de-escopo) E conhecimento geral do mundo: respeita o
           # self-report — SALVO fato do negócio afirmado sem base (cinto): piso da recusa (0.29).
