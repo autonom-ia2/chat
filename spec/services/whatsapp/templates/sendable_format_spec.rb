@@ -167,4 +167,26 @@ RSpec.describe Whatsapp::Templates::SendableFormat do
       expect(described_class.sendable?(template({ 'type' => 'BODY', 'text' => 'Use o cupom COPY_CODE e o carrossel' }))).to be(true)
     end
   end
+
+  # #1456: what only reaches the person in the full template, so the campaign free text never replaces it.
+  describe '.offer_format?' do
+    it 'is true for a coupon button, a limited-time offer (with or without expiration) or a carousel, in any case' do
+      offer = { 'type' => 'limited_time_offer', 'limited_time_offer' => { 'text' => 'Hoje' } }
+      carousel = { 'type' => 'CAROUSEL', 'cards' => [] }
+
+      expect(described_class.offer_format?(template(body, buttons({ 'type' => 'COPY_CODE', 'example' => ['OUT10'] })))).to be(true)
+      expect(described_class.offer_format?(template(body, buttons({ 'type' => 'URL' }, { 'type' => 'copy_code' })))).to be(true)
+      expect(described_class.offer_format?(template(offer, body))).to be(true)
+      expect(described_class.offer_format?(template(body, carousel))).to be(true)
+    end
+
+    it 'is false for other formats, a body that only mentions them and anything that is not a template' do
+      mentions = { 'type' => 'BODY', 'text' => 'Use o cupom COPY_CODE no CAROUSEL' }
+
+      expect(described_class.offer_format?(template(body, buttons({ 'type' => 'URL' }, { 'type' => 'QUICK_REPLY' })))).to be(false)
+      expect(described_class.offer_format?(template(mentions))).to be(false)
+      expect(described_class.offer_format?(nil)).to be(false)
+      expect(described_class.offer_format?({ 'components' => [nil, 'x'] })).to be(false)
+    end
+  end
 end

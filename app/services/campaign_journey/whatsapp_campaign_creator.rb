@@ -51,7 +51,7 @@ class CampaignJourney::WhatsappCampaignCreator < CampaignJourney::AudienceCampai
     # Código de acesso (AUTHENTICATION) nunca vai como texto livre.
     raise Error.new('free_text_invalid', 'The free text cannot be sent', { reason: 'authentication_template' }) if authentication_template?
     # #1456: cupom, oferta com prazo ou carrossel só no modelo completo (quem recebesse o texto perderia a oferta).
-    if CampaignJourney::ConversaAberta.so_modelo_completo?(template)
+    if Whatsapp::Templates::SendableFormat.offer_format?(template)
       raise Error.new('free_text_not_allowed_with_rich_template', 'Templates with a coupon, a limited-time offer or a carousel go to everyone')
     end
 

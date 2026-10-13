@@ -70,15 +70,21 @@ module CampaignJourney::ConversaAberta::Envio
   def texto_da_campanha
     return @texto_da_campanha if defined?(@texto_da_campanha)
 
-    @texto_da_campanha = audience_link&.campaign_import && CampaignJourney::ConversaAberta.enabled?(campaign.account) &&
-                         !modelo_completo? && CampaignFreeText.find_by(campaign_id: campaign.id)&.content
+    texto = texto_gravado
+    @texto_da_campanha = texto.presence && !modelo_com_oferta? ? texto : nil
+  end
+
+  def texto_gravado
+    return unless audience_link&.campaign_import && CampaignJourney::ConversaAberta.enabled?(campaign.account)
+
+    CampaignFreeText.find_by(campaign_id: campaign.id)&.content
   end
 
   # #1456: campanha gravada antes da trava da criação, com texto e modelo de cupom, oferta com prazo ou carrossel: todos
   # recebem o modelo. O modelo é o mesmo que o envio lê (Whatsapp::Templates::ProcessorLookup).
-  def modelo_completo?
+  def modelo_com_oferta?
     modelo = Whatsapp::TemplateProcessorService.new(channel: channel, template_params: campaign.template_params).template_for_send
-    CampaignJourney::ConversaAberta.so_modelo_completo?(modelo)
+    Whatsapp::Templates::SendableFormat.offer_format?(modelo)
   end
 
   def modelo_forcado

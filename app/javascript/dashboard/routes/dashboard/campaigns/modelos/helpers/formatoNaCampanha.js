@@ -58,7 +58,7 @@ export const formatoQueNaoVai = template => {
 // #1456: cupom, oferta com prazo ou carrossel só chegam no modelo completo.
 // Com eles a campanha não oferece a mensagem escrita das últimas 24 h (quem a
 // recebesse perderia a oferta). Mesma regra no servidor:
-// CampaignJourney::ConversaAberta.so_modelo_completo?.
+// Whatsapp::Templates::SendableFormat.offer_format?.
 export const soModeloCompleto = template =>
   botoes(template).some(botao => maiusculo(botao?.type) === 'COPY_CODE') ||
   ['LIMITED_TIME_OFFER', 'CAROUSEL'].some(tipo =>

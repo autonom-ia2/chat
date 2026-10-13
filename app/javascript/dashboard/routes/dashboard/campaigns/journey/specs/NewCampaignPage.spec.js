@@ -850,4 +850,79 @@ describe('Nova campanha — conversa aberta com modelo de cupom (#1456)', () => 
     expect(wrapper.find('[data-texto-descartado]').exists()).toBe(false);
     wrapper.unmount();
   });
+
+  it('cria a campanha de cupom sem mensagem escrita', async () => {
+    create.mockResolvedValue({ data: { id: 33, recipients_count: 98 } });
+    preview.mockResolvedValue({
+      data: { payload: { total: 98, receive: 98, reasons: {} } },
+    });
+    const wrapper = mountPage({ templates: [TEMPLATE, CUPOM] });
+    await flushPromises();
+    await wrapper.find('[data-audience-option="5"]').trigger('click');
+    await wrapper.find('[data-test="continue-message"]').trigger('click');
+    await wrapper
+      .find('[data-channel-card="whatsapp_official"]')
+      .trigger('click');
+    await wrapper
+      .find('[data-test="official-form"] input[type="text"]')
+      .setValue('Cupom de outubro');
+    choice(wrapper, 'Sending inbox').vm.$emit('update:modelValue', 7);
+    await flushPromises();
+    choice(wrapper, 'Approved template').vm.$emit('update:modelValue', 9);
+    await flushPromises();
+    wrapper.findComponent({ name: 'ConversaAberta' }).vm.$emit('update', {
+      textoNaConversaAberta: 'Oi, {{cliente.primeiro_nome}}!',
+    });
+    choice(wrapper, 'Approved template').vm.$emit('update:modelValue', 10);
+    await flushPromises();
+    choice(wrapper, 'Where {{1}} comes from').vm.$emit(
+      'update:modelValue',
+      'contact:first_name'
+    );
+    choice(wrapper, 'Where {{2}} comes from').vm.$emit(
+      'update:modelValue',
+      'column:Vencimento'
+    );
+    await flushPromises();
+    await vi.advanceTimersByTimeAsync(500);
+    await flushPromises();
+    await wrapper.find('[data-test="continue-review"]').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.find('[data-revisao-conversa-aberta]').exists()).toBe(false);
+    await wrapper.find('[data-test="open-confirmation"]').trigger('click');
+    await wrapper.find('[data-test="dialog-confirm"]').trigger('click');
+    await flushPromises();
+
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(create.mock.calls[0][0].campaign.template_params.name).toBe(
+      'cupom_outubro'
+    );
+    expect(create.mock.calls[0][0].campaign.free_text).toBeFalsy();
+    wrapper.unmount();
+  });
+
+  // Rascunho antigo (antes desta trava) com texto e modelo de cupom: ao voltar,
+  // o texto sai com o mesmo aviso, em vez de sumir calado do pedido.
+  it('rascunho guardado com texto e modelo de cupom volta sem o texto e com o aviso', async () => {
+    saveDraft(1, {
+      title: 'Cupom de outubro',
+      audienceId: 5,
+      channel: 'whatsapp_official',
+      inboxId: 7,
+      templateId: 10,
+      textoNaConversaAberta: 'Oi, {{cliente.primeiro_nome}}!',
+      step: 2,
+    });
+    const wrapper = mountPage({
+      templates: [TEMPLATE, CUPOM],
+      query: { draft: '1' },
+    });
+    await flushPromises();
+
+    expect(wrapper.find('[data-conversa-aberta]').exists()).toBe(false);
+    expect(wrapper.find('[data-texto-descartado]').exists()).toBe(true);
+    expect(loadDraft(1).textoNaConversaAberta).toBe('');
+    wrapper.unmount();
+  });
 });
