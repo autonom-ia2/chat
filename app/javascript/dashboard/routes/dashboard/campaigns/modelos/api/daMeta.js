@@ -40,6 +40,15 @@ const RECUSAS = {
 };
 
 const maiusculo = valor => String(valor || '').toUpperCase();
+
+// Qualidade que o WhatsApp dá ao modelo (quality_score.score) → sinal da tela.
+// UNKNOWN ou ausente: ainda sem retorno das pessoas.
+const SINAIS_DA_META = { GREEN: 'bom', YELLOW: 'atencao', RED: 'ruim' };
+
+// A Graph manda { score, date }.
+export const sinalDe = template =>
+  SINAIS_DA_META[maiusculo(template.quality_score?.score)] || 'sem_nota';
+
 const componente = (template, tipo) =>
   (template.components || []).find(item => maiusculo(item.type) === tipo);
 
@@ -309,6 +318,7 @@ export const modeloDaMeta = (template, grupo) => {
     campos,
     recusa: situacao === 'recusado' ? recusaDe(template, conteudo) : null,
     pausa: situacao === 'pausado' ? { desde: null } : null,
+    sinal: sinalDe(template),
     enviosNoMes: grupo.envios ? grupo.envios[template.name] || 0 : null,
     enviadoEm: null,
     edicoes: { restantesNoMes: null, liberadaEm: null },

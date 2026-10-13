@@ -44,6 +44,8 @@ import adaptador from './adaptadorHttp';
 //     cartoes?, oferta?, catalogo?, codigo?, formulario? },
 //   campos: { '1': campo }, template (o modelo como a Meta devolve),
 //   recusa: { codigo } | null, pausa: { desde | null } | null,
+//   sinal: 'bom' | 'atencao' | 'ruim' | 'sem_nota'  (qualidade dada pelo WhatsApp),
+//   saude: Saude | undefined  (últimos 30 dias; formato em ./saudeFalsa.js, #1338),
 //   enviosNoMes | null, enviadoEm | null,
 //   edicoes: { restantesNoMes | null, liberadaEm | null },
 // }

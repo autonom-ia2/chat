@@ -6,7 +6,7 @@ import { useAlert } from 'dashboard/composables';
 import Button from 'dashboard/components-next/button/Button.vue';
 import api from '../api/modelosWhatsapp';
 import { usavelEmCampanha } from '../helpers/paraMeta';
-import { SITUACOES } from '../constants';
+import { SINAIS_DE_ALERTA, SITUACOES } from '../constants';
 import {
   diaEMes,
   hora,
@@ -23,6 +23,8 @@ import ModeloCelular from '../components/ModeloCelular.vue';
 import ModeloSelo from '../components/ModeloSelo.vue';
 import ModeloUsos from '../components/ModeloUsos.vue';
 import CampanhasParadas from '../components/CampanhasParadas.vue';
+import ModeloSaude from '../components/ModeloSaude.vue';
+import AlertaDeQualidade from '../components/AlertaDeQualidade.vue';
 import AvisoDeSituacao from '../components/AvisoDeSituacao.vue';
 import {
   mudancasDeSituacao,
@@ -197,6 +199,27 @@ const duplicar = () =>
     query: { de: modelo.value.id, etapa: 'texto' },
   });
 
+// Sinal ruim (#1338): o caminho para melhorar o texto. Alterar quando dá
+// (volta para a análise do WhatsApp); em uso ou no limite de alterações, uma
+// versão nova pela cópia. Modelo do sistema: quem cuida é a plataforma.
+const caminhoParaMelhorar = computed(() => {
+  if (!podeCriar.value || !modelo.value.editavel || modelo.value.sistema)
+    return '';
+  return alteracaoTravada.value ? 'duplicar' : 'alterar';
+});
+
+// Pronto, mas com sinal ruim do WhatsApp: o alerta toma o lugar da situação.
+const alertaDeQualidade = computed(() =>
+  situacao.value === 'pronto' && SINAIS_DE_ALERTA.includes(modelo.value.sinal)
+    ? modelo.value.sinal
+    : ''
+);
+
+const melhorar = () =>
+  caminhoParaMelhorar.value === 'alterar'
+    ? ir('modelos_whatsapp_alterar')
+    : duplicar();
+
 const confirmarApagar = async () => {
   apagando.value = true;
   try {
@@ -273,7 +296,16 @@ const confirmarApagar = async () => {
             class="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_20rem]"
           >
             <div class="flex flex-col min-w-0 gap-5">
+              <AlertaDeQualidade
+                v-if="alertaDeQualidade"
+                :sinal="alertaDeQualidade"
+                :caminho="caminhoParaMelhorar"
+                :pode-usar="podeUsar && usavelEmCampanha(modelo)"
+                @melhorar="melhorar"
+                @usar="ir('modelos_whatsapp_usar')"
+              />
               <section
+                v-else
                 data-situacao
                 class="flex flex-col items-start gap-3 p-6 rounded-2xl ring-1 ring-inset"
                 :class="caixa"
@@ -354,6 +386,15 @@ const confirmarApagar = async () => {
                   </a>
                 </div>
               </section>
+
+              <!-- Sem dado, em análise, recusado ou não criado: nada a medir (nunca "não foi enviado" por falta de dado). -->
+              <ModeloSaude
+                v-if="
+                  modelo.saude &&
+                  ['pronto', 'pausado', 'desativado'].includes(situacao)
+                "
+                :modelo="modelo"
+              />
 
               <section
                 v-if="modelo.sistema"

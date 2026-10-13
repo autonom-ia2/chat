@@ -5,7 +5,7 @@ import { useRouter } from 'vue-router';
 import Button from 'dashboard/components-next/button/Button.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import api from '../api/modelosWhatsapp';
-import { ORDEM_DAS_SITUACOES } from '../constants';
+import { ORDEM_DAS_SITUACOES, SINAIS_DE_ALERTA } from '../constants';
 import {
   usePodeCriarModelo,
   usePodeUsarEmCampanha,
@@ -90,6 +90,13 @@ const textoDoModelo = modelo =>
     )
     .join('');
 
+// Entre os prontos, quem está com sinal ruim do WhatsApp vem antes (#1338).
+const alerta = modelo => {
+  if (modelo.situacao !== 'pronto') return SINAIS_DE_ALERTA.length;
+  const posicao = SINAIS_DE_ALERTA.indexOf(modelo.sinal);
+  return posicao === -1 ? SINAIS_DE_ALERTA.length : posicao;
+};
+
 const visiveis = computed(() => {
   const termo = busca.value.trim().toLocaleLowerCase();
   return modelos.value
@@ -108,7 +115,7 @@ const visiveis = computed(() => {
     .sort(
       (a, b) =>
         ORDEM_DAS_SITUACOES.indexOf(a.situacao) -
-        ORDEM_DAS_SITUACOES.indexOf(b.situacao)
+          ORDEM_DAS_SITUACOES.indexOf(b.situacao) || alerta(a) - alerta(b)
     );
 });
 

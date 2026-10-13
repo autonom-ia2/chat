@@ -7,6 +7,8 @@ import { arquivoGuardado, esquecerArquivos } from './arquivos';
 import { SITUACOES_FORA_DA_LISTA, modeloDaMeta } from './daMeta';
 import { corpoParaAlterar, corpoParaCriar } from '../helpers/paraMeta';
 import { motivoDaPausa } from '../helpers/motivoDaPausa';
+// PROTÓTIPO #1338: troca por `template.health` quando a API trouxer.
+import { saudeFalsa } from './saudeFalsa';
 
 export { motivoDaPausa };
 
@@ -130,7 +132,10 @@ const lerModelosDoGrupo = async (grupo, atualizar) => {
       template =>
         !SITUACOES_FORA_DA_LISTA.includes(String(template.status).toUpperCase())
     )
-    .map(template => modeloDaMeta(template, grupo));
+    .map(template => ({
+      ...modeloDaMeta(template, grupo),
+      saude: saudeFalsa(template),
+    }));
   modelos.naoAtualizou = naoAtualizou;
   return modelos;
 };
