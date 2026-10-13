@@ -12,6 +12,9 @@ module Whatsapp::Templates::HeaderMedia
   MAX_URL = 2000
   # O disparo de uma campanha grande leva horas; o link do arquivo vale um dia (link assinado do armazenamento).
   URL_TTL = 1.day
+  # Tipo e tamanho que a Meta aceita (página "Media" da documentação, lida em 13/10/2026); o mesmo da tela (EscolherArquivo).
+  UPLOAD_LIMITS = { 'image/jpeg' => 5.megabytes, 'image/png' => 5.megabytes, 'video/mp4' => 16.megabytes,
+                    'application/pdf' => 100.megabytes }.freeze
 
   # Recusa com `code` estável para a tela.
   class Invalid < StandardError
@@ -61,17 +64,31 @@ module Whatsapp::Templates::HeaderMedia
 
   # O arquivo do topo guardado no perfil do modelo (caixas da mesma WABA dividem o perfil), ou nil.
   def profile_file(inbox, template)
-    profile = WhatsappTemplateProfile.for_inbox(inbox).where(name: template['name'])
-                                     .detect { |candidate| candidate.language.to_s.casecmp?(template['language'].to_s) }
+    profile = profile(inbox, template)
     profile&.header_file&.attached? ? profile.header_file : nil
+  end
+
+  # O perfil do modelo na WABA da caixa (nome e idioma), ou nil. Também usado pelos cartões do carrossel (#1334).
+  def profile(inbox, template)
+    WhatsappTemplateProfile.for_inbox(inbox).where(name: template['name'])
+                           .detect { |candidate| candidate.language.to_s.casecmp?(template['language'].to_s) }
+  end
+
+  def upload_allowed?(content_type, byte_size)
+    limit = UPLOAD_LIMITS[content_type.to_s]
+    limit.present? && byte_size.to_i.between?(1, limit)
+  end
+
+  # Link assinado do arquivo (anexo ou blob) para o envio (vale um dia: o disparo de uma campanha grande leva horas).
+  def signed_media(file)
+    blob = file.is_a?(ActiveStorage::Blob) ? file : file.blob
+    ActiveStorage::Current.url_options = Rails.application.routes.default_url_options if ActiveStorage::Current.url_options.blank?
+    { 'media_url' => blob.url(expires_in: URL_TTL), 'media_name' => blob.filename.to_s }
   end
 
   # { 'media_url' => link assinado, 'media_name' => nome do arquivo } para o envio, ou nil sem arquivo no perfil.
   def profile_media(inbox, template)
     file = profile_file(inbox, template)
-    return unless file
-
-    ActiveStorage::Current.url_options = Rails.application.routes.default_url_options if ActiveStorage::Current.url_options.blank?
-    { 'media_url' => file.blob.url(expires_in: URL_TTL), 'media_name' => file.filename.to_s }
+    file && signed_media(file)
   end
 end

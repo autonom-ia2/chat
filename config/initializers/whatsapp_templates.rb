@@ -12,6 +12,9 @@ Rails.application.config.to_prepare do
   prepend_once.call(Whatsapp::Providers::WhatsappCloudService, Whatsapp::Templates::SyncFields)
   # chat#1382: a conferência do disparo pergunta ao envio se ele vai achar o modelo na lista da caixa.
   prepend_once.call(Whatsapp::TemplateProcessorService, Whatsapp::Templates::ProcessorLookup)
+  # chat#1334: o envio monta os componentes dos formatos novos (oferta, carrossel, Flow, catálogo) quando a campanha os traz.
+  prepend_once.call(Whatsapp::TemplateProcessorService, Whatsapp::Templates::SendComponents)
+  prepend_once.call(Whatsapp::TemplateParameterConverterService, Whatsapp::Templates::ForkParamKeys)
   # chat#1337: aviso da Meta sobre modelo (situação, qualidade, tipo) vai para o job do fork, com assinatura obrigatória.
   prepend_once.call(Webhooks::WhatsappController, Whatsapp::Templates::WebhookEntry)
 end

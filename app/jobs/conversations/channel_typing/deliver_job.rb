@@ -5,6 +5,8 @@
 # No job a chamada ao canal é limitada a CHANNEL_TIMEOUT_SECONDS, para não prender thread da fila.
 # "Digitando" que chega tarde é pior que não chegar: o pedido é descartado (com log) quando ficou mais
 # velho que MAX_AGE, ou quando é um "on" e a resposta já saiu — ele reacenderia o indicador.
+# "on" e "off" são jobs independentes e podem inverter numa fila congestionada: limite conhecido, aceito
+# por ser um indicador cosmético.
 class Conversations::ChannelTyping::DeliverJob < ApplicationJob
   queue_as :medium
 

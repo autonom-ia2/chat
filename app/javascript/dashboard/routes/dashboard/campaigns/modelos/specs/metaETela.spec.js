@@ -5,6 +5,7 @@ import {
   recusaDe,
 } from '../api/daMeta';
 import {
+  cardMedia,
   corpoParaAlterar,
   corpoParaCriar,
   nomeParaWhatsapp,
@@ -68,6 +69,15 @@ describe('Meta → tela', () => {
     expect(lerCorpo('Oi {{ sem fim', () => 'x')).toEqual([
       { t: 'texto', v: 'Oi {{ sem fim' },
     ]);
+  });
+
+  // #1334: o arquivo aprovado de cada cartão vem do perfil, na posição do cartão.
+  it('keeps the saved file of each carousel card in its position', () => {
+    const modelo = modeloDaMeta(
+      template({ card_media: [{ card_index: 1, file_name: 'b.jpg' }] }),
+      GRUPO
+    );
+    expect(modelo.cartoesGuardados).toEqual([undefined, { nome: 'b.jpg' }]);
   });
 
   it('builds the screen model with what Meta says and null for what it does not', () => {
@@ -364,6 +374,22 @@ describe('tela → Meta', () => {
       fields: { 1: 'cliente.primeiro_nome', 2: 'minha_empresa.nome' },
       header_media: midias.topo,
     });
+  });
+
+  // #1334: a campanha do carrossel usa a mesma mídia aprovada de cada cartão,
+  // então o arquivo que subiu agora vai junto, com a posição do cartão.
+  it('sends the file of each carousel card that was uploaded now, with its position', () => {
+    const cartoes = [
+      { handle: '4::c1', blob_signed_id: 'sig1' },
+      null,
+      { handle: '4::c3', blob_signed_id: 'sig3' },
+    ];
+    expect(cardMedia(cartoes)).toEqual([
+      { card_index: 0, blob_signed_id: 'sig1' },
+      { card_index: 2, blob_signed_id: 'sig3' },
+    ]);
+    expect(cardMedia([])).toEqual([]);
+    expect(cardMedia(undefined)).toEqual([]);
   });
 
   it('on change sends no name, language or type (#1394)', () => {

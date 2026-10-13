@@ -26,7 +26,7 @@ class Whatsapp::Templates::Manager
 
   include Whatsapp::Templates::StoredMedia
 
-  Draft = Struct.new(:profile, :blob)
+  Draft = Struct.new(:profile, :blob, :card_blobs)
   # A categoria não está aqui: não muda na edição (#1394; a igual é ignorada e o modelo não volta para análise por ela).
   CONTENT_KEYS = %w[components message_send_ttl_seconds].freeze
 
@@ -39,7 +39,7 @@ class Whatsapp::Templates::Manager
 
   # Cada modelo leva a saúde dos últimos 30 dias (`health`, #1338), calculada de uma vez para a lista toda.
   def list
-    profiles = WhatsappTemplateProfile.for_inbox(@inbox).index_by(&:key)
+    profiles = WhatsappTemplateProfile.for_inbox(@inbox).with_attached_card_files.index_by(&:key)
     health = Whatsapp::Templates::Health.new(inbox: @inbox, templates: synced).perform
     synced.map do |template|
       key = WhatsappTemplateProfile.key_for(template['name'], template['language'])
@@ -84,10 +84,13 @@ class Whatsapp::Templates::Manager
     true
   end
 
-  # O tipo do arquivo é o que o conteúdo diz (Marcel, o mesmo do ActiveStorage), não o que o navegador declarou.
+  # O tipo do arquivo é o que o conteúdo diz (assinatura dos bytes, Marcel, o mesmo do ActiveStorage), nunca o nome nem o
+  # que o navegador declarou (#1334: um texto chamado .png não passa).
   def upload(file)
-    content_type = Marcel::MimeType.for(file, name: file.original_filename, declared_type: file.content_type)
+    content_type = Marcel::MimeType.for(file)
     file.rewind
+    raise Refused, 'media_invalid' unless Whatsapp::Templates::HeaderMedia.upload_allowed?(content_type, file.size)
+
     handle = client.upload_media(io: file, file_name: file.original_filename, content_type: content_type)
     file.rewind
     blob = ActiveStorage::Blob.create_and_upload!(io: file, filename: file.original_filename, content_type: content_type,
@@ -151,7 +154,16 @@ class Whatsapp::Templates::Manager
   def present(template, profile)
     template.merge('friendly_name' => profile&.friendly_name.presence || template['name'],
                    'fields' => profile&.fields || {}, 'header_media' => profile&.header_media || {},
-                   'system_owner' => system_owner(template, profile), 'profile_id' => profile&.id)
+                   'system_owner' => system_owner(template, profile), 'profile_id' => profile&.id,
+                   'card_media' => card_media(profile))
+  end
+
+  # O arquivo guardado de cada cartão do carrossel (#1334): a campanha mostra "vai a foto aprovada".
+  def card_media(profile)
+    return [] unless profile
+
+    profile.card_files.map { |file| { 'card_index' => file.blob.metadata['card_index'].to_i, 'file_name' => file.filename.to_s } }
+           .sort_by { |media| media['card_index'] }
   end
 
   def profile_for(template)
@@ -167,7 +179,35 @@ class Whatsapp::Templates::Manager
     profile.header_media = media.slice('handle', 'file_name', 'content_type', 'byte_size') if media.is_a?(Hash)
     raise Refused.new('invalid_profile', errors: profile.errors.full_messages) unless profile.valid?
 
-    Draft.new(profile, media.is_a?(Hash) ? media_blob(media) : nil)
+    Draft.new(profile, media.is_a?(Hash) ? media_blob(media) : nil, card_blobs(profile, attrs['card_media']))
+  end
+
+  # #1334: { posição do cartão => arquivo } do que subiu agora; a campanha do carrossel usa a mesma mídia aprovada.
+  # Conferido antes de falar com a Meta. O arquivo que já é deste cartão fica; ligado a outro registro, é recusado.
+  def card_blobs(profile, card_media)
+    pairs = Array(card_media).grep(Hash).map { |media| card_pair(media) }
+    raise Refused, 'media_invalid' unless pairs.map(&:first).uniq.size == pairs.size
+
+    fresh = pairs.to_h.reject { |index, blob| same_card_file?(profile, index, blob) }
+    raise Refused, 'media_invalid' if fresh.values.any? { |blob| blob.attachments.exists? }
+
+    fresh
+  end
+
+  def card_pair(media)
+    [card_index!(media), media_blob(media) || raise(Refused, 'media_invalid')]
+  end
+
+  def same_card_file?(profile, index, blob)
+    profile.persisted? && profile.card_file(index)&.blob_id == blob.id
+  end
+
+  # A Meta aceita de 2 a 10 cartões (SubmitFormat::CARDS).
+  def card_index!(media)
+    index = Integer(media['card_index'].to_s, exception: false)
+    raise Refused, 'media_invalid' unless index&.between?(0, Whatsapp::Templates::SubmitFormat::CARDS.max - 1)
+
+    index
   end
 
   def new_profile(template)
@@ -180,7 +220,14 @@ class Whatsapp::Templates::Manager
     profile.meta_template_id = template['id'].presence || profile.meta_template_id
     profile.save!
     profile.header_file.attach(draft.blob) if draft.blob
+    draft.card_blobs.each { |index, blob| attach_card_file(profile, index, blob) }
     profile
+  end
+
+  def attach_card_file(profile, index, blob)
+    profile.card_file(index)&.purge_later
+    blob.update!(metadata: blob.metadata.merge('card_index' => index))
+    profile.card_files.attach(blob)
   end
 
   # Só arquivo que o upload desta conta gravou.

@@ -33,6 +33,8 @@ import adaptador from './adaptadorHttp';
 //   conta falha depois de outra criar, a lista vem com `falha` e `contasSemPedido`.
 // alterarModelo(id, rascunho, { textos }) → Modelo (volta para 'em_analise')
 // apagarModelo(id) → { nomeBloqueadoAte }  (data ISO, 30 dias depois)
+// subirArquivoDaCampanha(caixa, arquivo) → { referencia, nome }  (foto ou vídeo
+//   de um cartão do carrossel escolhido na campanha, #1334)
 //   Erros da API chegam como ErroDaApi { codigo, mensagem (já traduzida), status }.
 // obterCatalogo() → null e listarFormularios() → []: ainda sem backend.
 // criarComIA({ objetivo, tom, tipo?, exemplo }) → { status, pergunta,
@@ -49,6 +51,8 @@ import adaptador from './adaptadorHttp';
 //   conteudo: { formato, topo, texto, exemplos, rodape, botoes,
 //     cartoes?, oferta?, catalogo?, codigo?, formulario? },
 //   campos: { '1': campo }, template (o modelo como a Meta devolve),
+//   cartoesGuardados: [{ nome } | null]  (arquivo aprovado de cada cartão do
+//     carrossel, guardado no Chat2You; a campanha usa o mesmo, #1334),
 //   recusa: { codigo } | null, pausa: { desde | null } | null,
 //   sinal: 'bom' | 'atencao' | 'ruim' | 'sem_nota'  (qualidade dada pelo WhatsApp),
 //   saude: { dias, enviadas, entregues, lidas, responderam,

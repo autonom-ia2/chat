@@ -152,8 +152,9 @@ const podeUsarIA = useCanUseIA();
               >
                 {{ $t('MODELOS_WHATSAPP.OBJETIVO.SO_DIVULGACAO') }}
               </span>
-              <!-- A campanha só envia a mensagem comum (podeIrEmCampanha). -->
+              <!-- #1334: só o código de verificação não vai em campanha. -->
               <span
+                v-if="formato.chave === 'codigo'"
                 data-nao-vai-em-campanha
                 class="px-2 py-0.5 text-xs font-medium rounded-lg bg-n-slate-3 text-n-slate-11"
               >

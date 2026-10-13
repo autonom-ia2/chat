@@ -4,6 +4,7 @@
 // ({ '1': 'cliente.primeiro_nome' }), para a campanha ligar as variáveis sem
 // adivinhar. Sem expressão regular (regra do Rodrigo).
 import { campoParaPerfil, semFonteNaCampanha } from './campos';
+import { formatoQueNaoVai } from './formatoNaCampanha';
 import { ajustarEspacosDosCampos } from './conteudo';
 import { ordenarBotoes, telefoneNaMeta } from './regraEstrutural';
 
@@ -19,16 +20,12 @@ const TOPO_NA_META = { foto: 'IMAGE', video: 'VIDEO', documento: 'DOCUMENT' };
 const LETRAS = 'abcdefghijklmnopqrstuvwxyz0123456789';
 const MAXIMO_DO_NOME = 512;
 
-// O que a campanha já sabe enviar hoje (auditoria de campanhas, §2): texto,
-// mídia no topo, botão de site e botões sem parâmetro. Carrossel, oferta,
-// copiar código, catálogo, código de verificação e formulário ainda não.
-export const podeIrEmCampanha = modelo => {
-  const { formato = 'padrao', botoes = [] } = modelo.conteudo;
-  return (
-    formato === 'padrao' &&
-    !botoes.some(botao => botao.tipo === 'copiar_codigo')
-  );
-};
+// O que a campanha envia (#1334): todos os formatos, menos código de
+// verificação e produtos escolhidos do catálogo (formatoQueNaoVai).
+export const podeIrEmCampanha = modelo =>
+  modelo.template
+    ? !formatoQueNaoVai(modelo.template)
+    : modelo.conteudo?.formato !== 'codigo';
 
 // Vai em campanha de verdade: formato que a campanha envia e nenhum campo sem
 // fonte (como a data e hora do agendamento, num modelo do sistema).
@@ -248,6 +245,20 @@ export const componentesNaMeta = (
   };
 };
 
+// Arquivo de cada cartão que subiu agora, com a posição dele (#1334): o
+// servidor guarda no perfil e a campanha do carrossel usa a mesma mídia.
+export const cardMedia = (cartoes = []) =>
+  (cartoes || []).flatMap((midia, indice) =>
+    midia?.blob_signed_id
+      ? [{ card_index: indice, blob_signed_id: midia.blob_signed_id }]
+      : []
+  );
+
+const comCartoes = midias => {
+  const lista = cardMedia(midias?.cartoes);
+  return lista.length ? { card_media: lista } : {};
+};
+
 // Corpo do POST de criação.
 export const corpoParaCriar = (rascunho, opcoes = {}) => {
   const { components, fields } = componentesNaMeta(rascunho.conteudo, opcoes);
@@ -262,6 +273,7 @@ export const corpoParaCriar = (rascunho, opcoes = {}) => {
     friendly_name: rascunho.nome.trim(),
     fields,
     ...(topo ? { header_media: topo } : {}),
+    ...comCartoes(opcoes.midias),
   };
 };
 
@@ -302,5 +314,6 @@ export const corpoParaAlterar = (rascunho, modelo, opcoes = {}) => {
     friendly_name: rascunho.nome.trim(),
     fields,
     ...(topo ? { header_media: topo } : {}),
+    ...comCartoes(opcoes.midias),
   };
 };

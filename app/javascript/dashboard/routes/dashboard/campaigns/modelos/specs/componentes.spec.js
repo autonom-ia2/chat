@@ -160,12 +160,13 @@ describe('EtapaObjetivo', () => {
     expect(wrapper.find('[data-formato="carrossel"]').exists()).toBe(true);
   });
 
-  it('says in plain words that the other formats do not go in campaigns yet', () => {
+  // #1334: carrossel e oferta vão em campanha; só o código de verificação não.
+  it('says in plain words that only the verification code does not go in campaigns', () => {
     const wrapper = montar(EtapaObjetivo);
     const avisos = wrapper.findAll('[data-nao-vai-em-campanha]');
-    expect(avisos.map(aviso => aviso.text())).toEqual(
-      Array(3).fill(en.MODELOS_WHATSAPP.OBJETIVO.NAO_VAI_EM_CAMPANHA)
-    );
+    expect(avisos.map(aviso => aviso.text())).toEqual([
+      en.MODELOS_WHATSAPP.OBJETIVO.NAO_VAI_EM_CAMPANHA,
+    ]);
   });
 });
 

@@ -9,6 +9,7 @@
 #   template_category_changed  category differs from the one recorded (cost changes)
 #   template_structure_changed variables, header or buttons differ from the recorded ones
 #   template_format_unsupported a format our engines cannot send yet (Whatsapp::Templates::SendableFormat)
+#   template_offer_expired     the limited-time offer expiration the campaign recorded already passed (#1334)
 #   templates_not_synced       (system) Meta did not answer and the cache is empty after an account switch
 #   template_unverifiable      (system) Meta did not answer and there is no cache to read
 class Whatsapp::Templates::DispatchCheck
@@ -89,13 +90,13 @@ class Whatsapp::Templates::DispatchCheck
   def format_verdict(template, base)
     format = sendable_format(template)
     return if format.sendable?
+    return verdict('template_offer_expired', base) if format.reason_code == Whatsapp::Templates::SendableFormat::OFFER_EXPIRED
 
     verdict('template_format_unsupported', base.merge(format_code: format.reason_code))
   end
 
   def sendable_format(template)
-    coupon_codes = Whatsapp::Templates::Structure.recorded_coupon_codes(@params['processed_params'])
-    Whatsapp::Templates::SendableFormat.check(template, coupon_codes: coupon_codes)
+    Whatsapp::Templates::SendableFormat.check(template, recorded: @params['processed_params'])
   end
 
   def structure_verdict(template, base)

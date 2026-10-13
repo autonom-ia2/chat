@@ -99,6 +99,7 @@ class ActionCableConnector extends BaseActionCableConnector {
       'email_campaign.ai.failed': this.onEmailCampaignAiFailed,
       'prospecting.lead.updated': this.onProspectingLeadUpdated,
       'guide.aviso.created': this.onGuideAvisoCreated,
+      'autonomia.build_thread.updated': this.onAutonomiaBuildThreadUpdated,
     };
   }
 
@@ -384,6 +385,13 @@ class ActionCableConnector extends BaseActionCableConnector {
   onGuideAvisoCreated = data => {
     if (!this.isAValidEvent(data)) return;
     emitter.emit(BUS_EVENTS.GUIDE_AVISO_CREATED, data);
+  };
+
+  // #1367 — o turno do Construtor terminou: a tela busca a conversa na hora.
+  onAutonomiaBuildThreadUpdated = data => {
+    if (!this.isAValidEvent(data)) return;
+
+    this.app.$store.dispatch('autonomiaBuildThreads/buildThreadUpdated', data);
   };
 
   onEnrichmentCompleted = () => {
