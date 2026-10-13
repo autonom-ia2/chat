@@ -10,5 +10,7 @@ Rails.application.config.to_prepare do
   prepend_once.call(Base::SendOnChannelService, RichMessages::SendGuard)
   prepend_once.call(Whatsapp::Providers::WhatsappCloudService, RichMessages::WhatsappCloudDelivery)
   prepend_once.call(Message, RichMessages::OutgoingText)
+  prepend_once.call(WebhookListener, RichMessages::ApiInboxWebhook)
   prepend_once.call(Api::V1::Accounts::Conversations::MessagesController, RichMessages::RetryKeepsFormat)
+  prepend_once.call(Api::V1::Accounts::Conversations::MessagesController, RichMessages::CreationCheck)
 end

@@ -1,6 +1,6 @@
 require 'rails_helper'
 
-# chat#1473: o encaixe dos envios ricos, provado com um tipo que só existe neste spec. Nada aqui (nem em `app/`)
+# chat#1473: o encaixe dos envios ricos, provado com tipos que só existem neste spec. Nada aqui (nem em `app/`)
 # conhece um tipo específico: acrescentar um tipo é criar a classe dele em RichMessages::Types.
 describe RichMessages do
   let(:spec_type) do
@@ -9,16 +9,18 @@ describe RichMessages do
         @code = payload['code']
       end
 
-      def error_for(body)
-        'Carimbo sem código.' if @code.blank? || body.blank?
+      def error_for(_body)
+        'Carimbo sem código.' if @code.blank?
       end
 
       def whatsapp_cloud_payload(body)
+        raise RichMessages::DeliveryError, 'Carimbo indisponível agora.' if @code == 'boom'
+
         { type: 'spec_stamp', spec_stamp: { code: @code, text: body } }
       end
 
-      def fallback_text(body)
-        "#{body} [#{@code}]"
+      def fallback_text(_body)
+        "Carimbo <#{@code}> & cia" unless @code == 'mute'
       end
     end
   end
@@ -28,15 +30,16 @@ describe RichMessages do
   let(:conversation) { create(:conversation, inbox: inbox, contact_inbox: contact_inbox, account: inbox.account) }
   let(:meta_url) { 'https://graph.facebook.com/v22.0/123456789/messages' }
   let(:meta_ok) { { status: 200, body: { messages: [{ id: 'wamid.rico' }] }.to_json, headers: { 'Content-Type' => 'application/json' } } }
+  let(:window_open) { true }
 
   before do
     stub_const('RichMessages::Types::SpecStamp', spec_type)
-    create(:message, message_type: :incoming, content: 'oi', conversation: conversation, inbox: inbox, account: inbox.account)
+    create(:message, message_type: :incoming, content: 'oi', conversation: conversation, inbox: inbox, account: inbox.account) if window_open
   end
 
-  def outgoing(rich_message, attrs = {})
-    create(:message, { message_type: :outgoing, content: 'Corpo', conversation: conversation, inbox: inbox, account: inbox.account,
-                       content_attributes: { rich_message: rich_message } }.merge(attrs))
+  def outgoing(rich_message, attrs = {}, in_conversation = conversation)
+    create(:message, { message_type: :outgoing, content: 'Corpo', conversation: in_conversation, inbox: in_conversation.inbox,
+                       account: in_conversation.account, content_attributes: { rich_message: rich_message } }.merge(attrs))
   end
 
   def deliver(message)
@@ -44,45 +47,155 @@ describe RichMessages do
     message.reload
   end
 
-  it 'sends on WhatsApp Cloud whatever the type builds, in a single message' do
-    request = stub_request(:post, meta_url)
-              .with(body: { messaging_product: 'whatsapp', recipient_type: 'individual', to: '5511937016094',
-                            type: 'spec_stamp', spec_stamp: { code: 'A1', text: 'Corpo' } }.to_json)
-              .to_return(meta_ok)
-
-    message = deliver(outgoing({ type: 'spec_stamp', code: 'A1' }))
-
-    expect(request).to have_been_requested.once
-    expect(message.source_id).to eq('wamid.rico')
-  end
-
-  it 'uses the fallback text of the type as the outgoing text' do
-    message = outgoing({ type: 'spec_stamp', code: 'A1' })
-
-    expect(message.outgoing_content).to eq('Corpo [A1]')
-    expect(described_class.fallback_text(message)).to eq('Corpo [A1]')
-    expect(described_class.body_text(message)).to eq('Corpo')
-  end
-
-  it 'fails the message with the error of the type, without sending' do
-    message = deliver(outgoing({ type: 'spec_stamp' }))
-
+  def expect_failed(message, error)
     expect(message.status).to eq('failed')
-    expect(message.external_error).to eq('Carimbo sem código.')
+    expect(message.external_error).to eq(error)
     expect(a_request(:any, /graph\.facebook\.com/)).not_to have_been_made
   end
 
-  it 'marks the message as failed with the error returned by Meta' do
-    stub_request(:post, meta_url).to_return(status: 400, body: { error: { message: '(#100) Invalid parameter' } }.to_json,
-                                            headers: { 'Content-Type' => 'application/json' })
+  describe 'on WhatsApp Cloud' do
+    it 'sends whatever the type builds, in a single message' do
+      request = stub_request(:post, meta_url)
+                .with(body: { messaging_product: 'whatsapp', recipient_type: 'individual', to: '5511937016094',
+                              type: 'spec_stamp', spec_stamp: { code: 'A1', text: 'Corpo' } }.to_json)
+                .to_return(meta_ok)
 
-    message = deliver(outgoing({ type: 'spec_stamp', code: 'A1' }))
+      message = deliver(outgoing({ type: 'spec_stamp', code: 'A1' }))
 
-    expect(message.status).to eq('failed')
-    expect(message.external_error).to eq('(#100) Invalid parameter')
+      expect(request).to have_been_requested.once
+      expect(message.source_id).to eq('wamid.rico')
+    end
+
+    it 'quotes the message it replies to' do
+      request = stub_request(:post, meta_url).with(body: hash_including('context' => { 'message_id' => 'wamid.citada' })).to_return(meta_ok)
+
+      quoted = create(:message, message_type: :incoming, content: 'e o valor?', conversation: conversation, inbox: inbox,
+                                account: inbox.account, source_id: 'wamid.citada')
+
+      deliver(outgoing({ type: 'spec_stamp', code: 'A1' },
+                       content_attributes: { rich_message: { type: 'spec_stamp', code: 'A1' }, in_reply_to: quoted.id }))
+
+      expect(request).to have_been_requested.once
+    end
+
+    it 'fails the message with the error of the type, without sending' do
+      expect_failed(deliver(outgoing({ type: 'spec_stamp' })), 'Carimbo sem código.')
+    end
+
+    it 'fails the message when the type raises a DeliveryError while building the payload' do
+      expect_failed(deliver(outgoing({ type: 'spec_stamp', code: 'boom' })), 'Carimbo indisponível agora.')
+    end
+
+    it 'marks the message as failed with the error returned by Meta' do
+      stub_request(:post, meta_url).to_return(status: 400, body: { error: { message: '(#100) Invalid parameter' } }.to_json,
+                                              headers: { 'Content-Type' => 'application/json' })
+
+      message = deliver(outgoing({ type: 'spec_stamp', code: 'A1' }))
+
+      expect(message.status).to eq('failed')
+      expect(message.external_error).to eq('(#100) Invalid parameter')
+    end
+
+    it 'sends a type without a text version' do
+      stub_request(:post, meta_url).to_return(meta_ok)
+
+      expect(deliver(outgoing({ type: 'spec_stamp', code: 'mute' })).status).not_to eq('failed')
+    end
+
+    context 'when the 24h window is closed' do
+      let(:window_open) { false }
+
+      it 'fails a type without a text version with the window error (no text transport can carry it)' do
+        expect_failed(deliver(outgoing({ type: 'spec_stamp', code: 'mute' })), I18n.t('errors.whatsapp.message_outside_messaging_window'))
+      end
+    end
+  end
+
+  describe 'what does not go to the channel' do
+    it 'leaves a private note with an invalid rich_message alone' do
+      message = deliver(outgoing({ type: 'carousel' }, private: true))
+
+      expect(message.status).not_to eq('failed')
+      expect(message.external_error).to be_nil
+    end
+
+    it 'leaves a message that came from the channel alone' do
+      message = deliver(outgoing({ type: 'carousel' }, source_id: 'wamid.eco'))
+
+      expect(message.status).not_to eq('failed')
+    end
+  end
+
+  describe 'combinations that cannot go out' do
+    it 'fails rich_message together with a template' do
+      message = outgoing({ type: 'spec_stamp', code: 'A1' }, additional_attributes: { template_params: { name: 'x', language: 'pt_BR' } })
+
+      expect_failed(deliver(message), described_class::WITH_TEMPLATE)
+    end
+
+    it 'fails rich_message on a message that is not plain text' do
+      with_items = { rich_message: { type: 'spec_stamp', code: 'A1' }, items: [{ title: 'Sim', value: 'sim' }] }
+      message = outgoing({ type: 'spec_stamp', code: 'A1' }, content_type: 'input_select', content_attributes: with_items)
+
+      expect_failed(deliver(message), described_class::NOT_PLAIN_TEXT)
+    end
+
+    it 'fails rich_message together with an attachment' do
+      message = outgoing({ type: 'spec_stamp', code: 'A1' })
+      attachment = message.attachments.new(account_id: message.account_id, file_type: :image)
+      attachment.file.attach(io: Rails.root.join('spec/assets/avatar.png').open, filename: 'avatar.png', content_type: 'image/png')
+      attachment.save!
+
+      expect_failed(deliver(message), described_class::WITH_ATTACHMENT)
+    end
+  end
+
+  describe 'the outgoing text of the other channels' do
+    def message_on(channel_factory, rich_message, attrs = {})
+      other = create(channel_factory)
+      outgoing(rich_message, attrs, create(:conversation, inbox: other.inbox, account: other.account))
+    end
+
+    it 'joins body and text version with a blank line on a plain text channel, untouched' do
+      expect(message_on(:channel_line, { type: 'spec_stamp', code: 'A1' }).outgoing_content).to eq("Corpo\n\nCarimbo <A1> & cia")
+    end
+
+    it 'escapes the text version where the outgoing text is HTML (Telegram)' do
+      expect(message_on(:channel_telegram, { type: 'spec_stamp', code: 'A1' }).outgoing_content)
+        .to eq("Corpo\n\nCarimbo &lt;A1&gt; &amp; cia")
+    end
+
+    it 'escapes the text version where the outgoing text is HTML (e-mail)' do
+      expect(message_on(:channel_email, { type: 'spec_stamp', code: 'A1' }).outgoing_content)
+        .to eq("<p>Corpo</p>\n\n\nCarimbo &lt;A1&gt; &amp; cia")
+    end
+
+    it 'is only the text version when the body is empty' do
+      expect(message_on(:channel_line, { type: 'spec_stamp', code: 'A1' }, content: nil).outgoing_content).to eq('Carimbo <A1> & cia')
+    end
+
+    it 'keeps the plain outgoing text for an unknown type' do
+      expect(message_on(:channel_line, { type: 'carousel' }).outgoing_content).to eq('Corpo')
+    end
+
+    it 'fails a type without a text version instead of sending only the body' do
+      stub_request(:post, /api\.telegram\.org/)
+      message = message_on(:channel_telegram, { type: 'spec_stamp', code: 'mute' })
+
+      Telegram::SendOnTelegramService.new(message: message).perform
+
+      expect(message.reload.status).to eq('failed')
+      expect(message.external_error).to eq(described_class::NO_TEXT_VERSION)
+      expect(a_request(:post, /api\.telegram\.org/)).not_to have_been_made
+    end
   end
 
   describe 'an unknown or unsafe type' do
+    before do
+      stub_const('RichMessages::Types::NotAClass', Module.new)
+      stub_const('RichMessages::Types::HalfType', Class.new { def error_for(_body); end })
+    end
+
     {
       'a type nobody defined' => 'carousel',
       'an empty type' => '',
@@ -93,29 +206,24 @@ describe RichMessages do
       'a type with a slash' => 'types/spec_stamp',
       'a type starting with a number' => '1stamp',
       'a type written as a constant' => 'SpecStamp',
+      'a type with a doubled underscore' => 'spec__stamp',
+      'a type with a trailing underscore' => 'spec_stamp_',
       'a type that names a top-level class' => 'message',
       'a type that names Object' => 'object',
-      'a type that names a class outside RichMessages::Types' => 'send_guard'
+      'a type that names a class outside RichMessages::Types' => 'send_guard',
+      'a type that names a module' => 'not_a_class',
+      'a type whose class lacks the interface' => 'half_type'
     }.each do |title, type|
       it "fails the message as an unknown format for #{title}" do
-        message = deliver(outgoing({ type: type, code: 'A1' }))
-
         expect(described_class.type_class(type)).to be_nil
-        expect(message.status).to eq('failed')
-        expect(message.external_error).to eq(described_class::UNKNOWN_TYPE)
-        expect(a_request(:any, /graph\.facebook\.com/)).not_to have_been_made
+        expect_failed(deliver(outgoing({ type: type, code: 'A1' })), described_class::UNKNOWN_TYPE)
       end
     end
 
-    it 'fails a rich_message that is not an object' do
-      message = deliver(outgoing('spec_stamp'))
-
-      expect(message.status).to eq('failed')
-      expect(message.external_error).to eq(described_class::UNKNOWN_TYPE)
-    end
-
-    it 'keeps the plain outgoing text' do
-      expect(outgoing({ type: 'carousel' }).outgoing_content).to eq('Corpo')
+    [{}, '', [], false, 'spec_stamp'].each do |value|
+      it "fails a rich_message that is #{value.inspect}" do
+        expect_failed(deliver(outgoing(value)), described_class::UNKNOWN_TYPE)
+      end
     end
   end
 end

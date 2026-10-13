@@ -2,15 +2,12 @@ require 'rails_helper'
 
 # chat#1473 (P1a): `content_attributes.rich_message` do tipo `link_button`.
 describe RichMessages::Types::LinkButton do
-  let(:link) { 'https://exemplo.com.br/proposta?id=42' }
+  let(:link) { 'https://exemplo.com.br/proposta?id=42&origem=painel' }
   let(:rich_message) { { type: 'link_button', label: 'Abrir proposta', url: link } }
   let(:body) { 'Sua proposta está pronta.' }
+  let(:text_version) { "#{body}\n\nAbrir proposta: #{link}" }
   let(:cta_url) { 'https://graph.facebook.com/v22.0/123456789/messages' }
   let(:meta_ok) { { status: 200, body: { messages: [{ id: 'wamid.botao' }] }.to_json, headers: { 'Content-Type' => 'application/json' } } }
-
-  it 'is the class of the link_button type' do
-    expect(RichMessages.type_class('link_button')).to eq(described_class)
-  end
 
   def outgoing(conversation, attrs = {})
     create(:message, { message_type: :outgoing, content: body, conversation: conversation, inbox: conversation.inbox,
@@ -22,24 +19,20 @@ describe RichMessages::Types::LinkButton do
                      account: conversation.account)
   end
 
+  it 'is the class of the link_button type' do
+    expect(RichMessages.type_class('link_button')).to eq(described_class)
+  end
+
   context 'with a WhatsApp Cloud inbox' do
     let(:channel) { create(:channel_whatsapp, provider: 'whatsapp_cloud', sync_templates: false, validate_provider_config: false) }
     let(:inbox) { channel.inbox }
     let(:contact) { create(:contact, account: inbox.account, phone_number: '+5511937016094') }
     let(:contact_inbox) { create(:contact_inbox, inbox: inbox, contact: contact, source_id: '5511937016094') }
     let(:conversation) { create(:conversation, inbox: inbox, contact: contact, contact_inbox: contact_inbox, account: inbox.account) }
-    let(:expected_payload) do
-      {
-        messaging_product: 'whatsapp',
-        recipient_type: 'individual',
-        to: '5511937016094',
-        type: 'interactive',
-        interactive: {
-          type: 'cta_url',
-          body: { text: body },
-          action: { name: 'cta_url', parameters: { display_text: 'Abrir proposta', url: link } }
-        }
-      }
+    let(:action) { { name: 'cta_url', parameters: { display_text: 'Abrir proposta', url: link } } }
+
+    def envelope(interactive)
+      { messaging_product: 'whatsapp', recipient_type: 'individual', to: '5511937016094', type: 'interactive', interactive: interactive }
     end
 
     def deliver(message)
@@ -51,7 +44,8 @@ describe RichMessages::Types::LinkButton do
       before { open_window(conversation) }
 
       it 'sends one interactive cta_url message with the exact payload' do
-        request = stub_request(:post, cta_url).with(body: expected_payload.to_json).to_return(meta_ok)
+        request = stub_request(:post, cta_url)
+                  .with(body: envelope({ type: 'cta_url', body: { text: body }, action: action }).to_json).to_return(meta_ok)
 
         message = deliver(outgoing(conversation))
 
@@ -60,14 +54,27 @@ describe RichMessages::Types::LinkButton do
         expect(message.status).not_to eq('failed')
       end
 
+      it 'sends the text header and the footer when they come' do
+        interactive = { type: 'cta_url', header: { type: 'text', text: 'Proposta 42' }, body: { text: body },
+                        footer: { text: 'Válida por 7 dias' }, action: action }
+        request = stub_request(:post, cta_url).with(body: envelope(interactive).to_json).to_return(meta_ok)
+
+        framed = rich_message.merge(header: 'Proposta 42', footer: 'Válida por 7 dias')
+        deliver(outgoing(conversation, content_attributes: { rich_message: framed }))
+
+        expect(request).to have_been_requested.once
+      end
+
       it 'puts the link only in the button, never in the body text' do
         sent = nil
         stub_request(:post, cta_url).with { |req| sent = req.body }.to_return(meta_ok)
 
         deliver(outgoing(conversation))
 
-        expect(sent.scan(link).size).to eq(1)
-        expect(JSON.parse(sent).dig('interactive', 'body', 'text')).to eq(body)
+        interactive = JSON.parse(sent)['interactive']
+        expect(interactive.dig('action', 'parameters', 'url')).to eq(link)
+        expect(interactive.dig('body', 'text')).to eq(body)
+        expect(interactive.to_s.scan(link).size).to eq(1)
       end
 
       it 'keeps the plain text request untouched without rich_message' do
@@ -81,32 +88,26 @@ describe RichMessages::Types::LinkButton do
         expect(message.source_id).to eq('wamid.botao')
       end
 
-      it 'marks the message as failed with the error returned by Meta' do
-        stub_request(:post, cta_url).to_return(status: 400, body: { error: { message: '(#131009) Parameter value is not valid' } }.to_json,
-                                               headers: { 'Content-Type' => 'application/json' })
-
-        message = deliver(outgoing(conversation))
-
-        expect(message.status).to eq('failed')
-        expect(message.external_error).to eq('(#131009) Parameter value is not valid')
-        expect(message.source_id).to be_nil
-      end
-
-      it 'keeps body and link as the outgoing text (the caption) when the message carries an attachment' do
-        message = outgoing(conversation)
-        message.attachments.new(account_id: message.account_id, file_type: :image)
-
-        expect(message.outgoing_content).to eq("#{body}\n\n#{link}")
-      end
-
       {
         'a blank label' => [{ label: ' ' }, {}, described_class::LABEL_BLANK],
         'a missing label' => [{ label: nil }, {}, described_class::LABEL_BLANK],
         'a label above 20 characters' => [{ label: 'a' * 21 }, {}, described_class::LABEL_TOO_LONG],
         'a link without http or https' => [{ url: 'exemplo.com.br/proposta' }, {}, described_class::INVALID_URL],
+        'a link with another scheme' => [{ url: 'ftp://exemplo.com.br/x' }, {}, described_class::INVALID_URL],
+        'a link without a host' => [{ url: 'https://' }, {}, described_class::INVALID_URL],
+        'a link with only a path' => [{ url: 'https:///caminho' }, {}, described_class::INVALID_URL],
+        'a link with a space' => [{ url: 'https://exemplo.com.br/a b' }, {}, described_class::INVALID_URL],
+        'a link with a quote' => [{ url: "https://exemplo.com.br/a'b" }, {}, described_class::INVALID_URL],
+        'a link with a double quote' => [{ url: 'https://exemplo.com.br/a"b' }, {}, described_class::INVALID_URL],
+        'a link with angle brackets' => [{ url: 'https://exemplo.com.br/<script>' }, {}, described_class::INVALID_URL],
+        'a link that is not text' => [{ url: 42 }, {}, described_class::INVALID_URL],
         'a missing link' => [{ url: nil }, {}, described_class::INVALID_URL],
         'a blank body' => [{}, { content: '' }, described_class::BODY_BLANK],
-        'a body above 1024 characters' => [{}, { content: 'a' * 1025 }, described_class::BODY_TOO_LONG]
+        'a body above 1024 characters' => [{}, { content: 'a' * 1025 }, described_class::BODY_TOO_LONG],
+        'a header above 60 characters' => [{ header: 'a' * 61 }, {}, described_class::HEADER_INVALID],
+        'a blank header' => [{ header: ' ' }, {}, described_class::HEADER_INVALID],
+        'a footer above 60 characters' => [{ footer: 'a' * 61 }, {}, described_class::FOOTER_INVALID],
+        'a footer that is not text' => [{ footer: 7 }, {}, described_class::FOOTER_INVALID]
       }.each do |title, (rich_changes, message_changes, error)|
         it "fails the message without sending anything for #{title}" do
           message = outgoing(conversation, { content_attributes: { rich_message: rich_message.merge(rich_changes) } }.merge(message_changes))
@@ -119,11 +120,19 @@ describe RichMessages::Types::LinkButton do
         end
       end
 
-      it 'accepts the limits themselves (20 character label, 1024 character body)' do
+      it 'accepts the limits themselves (20 character label, 1024 character body, 60 character header and footer)' do
         stub_request(:post, cta_url).to_return(meta_ok)
-        message = outgoing(conversation, content: 'a' * 1024, content_attributes: { rich_message: rich_message.merge(label: 'a' * 20) })
+        at_the_limit = rich_message.merge(label: 'a' * 20, header: 'a' * 60, footer: 'a' * 60)
+        message = outgoing(conversation, content: 'a' * 1024, content_attributes: { rich_message: at_the_limit })
 
         expect(deliver(message).status).not_to eq('failed')
+      end
+
+      it 'measures the body that is actually sent, not the text as typed' do
+        stub_request(:post, cta_url).with(body: hash_including('interactive' => hash_including('body' => { 'text' => "*#{'a' * 1022}*" })))
+                                    .to_return(meta_ok)
+
+        expect(deliver(outgoing(conversation, content: "**#{'a' * 1022}**")).status).not_to eq('failed')
       end
     end
 
@@ -153,11 +162,11 @@ describe RichMessages::Types::LinkButton do
           Redis::Alfred.delete('whatsapp_hybrid:chat_id:hybrid-test:5511937016094')
         end
 
-        it 'sends body and link as text through the real WebTransport' do
+        it 'sends body, label and link as text through the real WebTransport' do
           message = deliver(outgoing(conversation, sender: create(:user, account: inbox.account)))
 
           expect(client).to have_received(:send_text).with(session: 'hybrid-test', chat_id: '5511937016094@c.us',
-                                                           text: "#{body}\n\n#{link}", id: '3EB0AAAA')
+                                                           text: text_version, id: '3EB0AAAA')
           expect(message.status).not_to eq('failed')
           expect(message.content_attributes['rich_message']).to include('type' => 'link_button', 'url' => link)
         end
@@ -186,9 +195,9 @@ describe RichMessages::Types::LinkButton do
       open_window(conversation)
     end
 
-    it 'sends body and link as text' do
+    it 'sends body, label and link as text' do
       request = stub_request(:post, 'https://waba.360dialog.io/v1/messages')
-                .with(body: { 'to' => '123456789', 'text' => { 'body' => "#{body}\n\n#{link}" }, 'type' => 'text' }.to_json)
+                .with(body: { 'to' => '123456789', 'text' => { 'body' => text_version }, 'type' => 'text' }.to_json)
                 .to_return(status: 200, body: { 'messages' => [{ 'id' => 'd360' }] }.to_json, headers: { 'Content-Type' => 'application/json' })
 
       message = outgoing(conversation)
@@ -199,26 +208,28 @@ describe RichMessages::Types::LinkButton do
     end
   end
 
-  context 'with a channel that has no link button (Telegram)' do
-    let(:channel) { create(:channel_telegram) }
-    let(:conversation) { create(:conversation, inbox: channel.inbox, account: channel.account) }
+  context 'with channels whose outgoing text is HTML' do
+    let(:rich_message) { { type: 'link_button', label: 'Ver <oferta>', url: link, header: 'Topo', footer: 'Fim' } }
+    let(:escaped) { 'Ver &lt;oferta&gt;: https://exemplo.com.br/proposta?id=42&amp;origem=painel' }
 
-    before { stub_request(:post, /api\.telegram\.org/).to_return(status: 200, body: { ok: true, result: { message_id: 7 } }.to_json) }
-
-    it 'renders body and link as the outgoing text' do
-      expect(outgoing(conversation).outgoing_content).to eq("#{body}\n\n#{link}")
-      expect(RichMessages.fallback_text(outgoing(conversation))).to eq("#{body}\n\n#{link}")
+    def message_on(channel_factory)
+      channel = create(channel_factory)
+      outgoing(create(:conversation, inbox: channel.inbox, account: channel.account))
     end
 
-    it 'keeps the outgoing text untouched without rich_message' do
-      message = outgoing(conversation, content_attributes: {})
-
-      expect(message.outgoing_content).to eq(body)
-      expect(RichMessages.fallback_text(message)).to eq(body)
+    it 'escapes label and link on Telegram, without header or footer' do
+      expect(message_on(:channel_telegram).outgoing_content).to eq("#{body}\n\n#{escaped}")
     end
 
-    it 'fails an invalid rich message instead of sending it as text' do
-      message = outgoing(conversation, content_attributes: { rich_message: rich_message.merge(url: 'ftp://exemplo.com.br') })
+    it 'escapes label and link on e-mail' do
+      expect(message_on(:channel_email).outgoing_content).to eq("<p>#{body}</p>\n\n\n#{escaped}")
+    end
+
+    it 'fails an invalid rich message on Telegram instead of sending it as text' do
+      stub_request(:post, /api\.telegram\.org/)
+      channel = create(:channel_telegram)
+      message = outgoing(create(:conversation, inbox: channel.inbox, account: channel.account),
+                         content_attributes: { rich_message: rich_message.merge(url: 'ftp://exemplo.com.br') })
 
       Telegram::SendOnTelegramService.new(message: message).perform
 
