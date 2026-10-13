@@ -120,7 +120,7 @@ RSpec.describe Ai::Redacao::Canais::WhatsappModelo do
         '{{publico.desconto}} na próxima compra.'
     end
     let(:so_servico) { 'Oi, {{cliente.primeiro_nome}}! Seu pedido {{publico.numero_pedido}} está a caminho. Qualquer dúvida, responda.' }
-    let(:permitidas) { %w[cliente.primeiro_nome publico.numero_pedido publico.codigo publico.desconto minha_empresa.nome] }
+    let(:permitidas) { %w[cliente.primeiro_nome publico.numero_pedido publico.codigo publico.desconto minha_empresa.nome publico.data] }
 
     it 'em "manter como serviço" e "corrigir recusa", aceita a opção que tira o campo da oferta' do
       responde([opcao(so_servico)])
@@ -140,7 +140,7 @@ RSpec.describe Ai::Redacao::Canais::WhatsappModelo do
 
     it 'mesmo tirando campo, não aceita campo fora da lista nem campo novo no "mais curto"' do
       fora = 'Oi, {{cliente.primeiro_nome}}! Seu pedido {{publico.numero_pedido}} sai hoje de {{minha_empresa.endereco}}. Até!'
-      novo = 'Oi, {{cliente.primeiro_nome}}! Seu pedido {{publico.numero_pedido}} da {{minha_empresa.nome}} saiu. Até!'
+      novo = 'Oi, {{cliente.primeiro_nome}}! Seu pedido {{publico.numero_pedido}} chega em {{publico.data}}. Até!'
       responde([opcao(fora), opcao(novo)])
 
       expect(escrever(base: base, pedido: { melhorias: %w[manter_como_servico mais_curto] })[:opcoes]).to eq([])
@@ -166,7 +166,7 @@ RSpec.describe Ai::Redacao::Canais::WhatsappModelo do
   end
 
   describe 'melhorar: link que vai do corpo para o botão (AG15, calibração r2)' do
-    let(:permitidas) { %w[cliente.primeiro_nome publico.desconto publico.link minha_empresa.nome] }
+    let(:permitidas) { %w[cliente.primeiro_nome publico.desconto publico.link minha_empresa.nome publico.data] }
     let(:base) do
       '{{cliente.primeiro_nome}}, neste sábado as massas artesanais saem com {{publico.desconto}} de desconto para quem já é ' \
         'cliente. É só acessar {{publico.link}} e garantir o seu. Bom apetite!'
@@ -186,10 +186,21 @@ RSpec.describe Ai::Redacao::Canais::WhatsappModelo do
     end
 
     it 'mesmo com o link no botão, campo novo no corpo do "mais curto" continua barrado' do
-      com_empresa = 'Oi, {{cliente.primeiro_nome}}! A {{minha_empresa.nome}} tem {{publico.desconto}} nas massas. Bom apetite!'
-      responde([opcao(com_empresa, botoes: [{ tipo: 'link', texto: 'Pedir agora', chave: 'publico.link' }])])
+      com_data = 'Oi, {{cliente.primeiro_nome}}! Até {{publico.data}}, {{publico.desconto}} nas massas. Bom apetite!'
+      responde([opcao(com_data, botoes: [{ tipo: 'link', texto: 'Pedir agora', chave: 'publico.link' }])])
 
       expect(escrever(base: base, pedido: { melhorias: %w[mais_curto] })[:opcoes]).to eq([])
+    end
+
+    # Fase final (AG15, risco 4 do juiz): dizer quem fala é o padrão do prompt, então o remetente pode entrar no "mais curto".
+    it 'no "mais curto", acrescentar o nome da empresa (quem fala) não descarta a opção' do
+      com_empresa = 'Oi, {{cliente.primeiro_nome}}! A {{minha_empresa.nome}} tem {{publico.desconto}} nas massas. Bom apetite!'
+      responde([opcao(com_empresa, botoes: [{ tipo: 'link', texto: 'Pedir agora', chave: 'publico.link' }]),
+                opcao(com_empresa.sub('nas massas', 'nas massas sábado'))])
+
+      resultado = escrever(base: base, pedido: { melhorias: %w[mais_curto] })
+
+      expect(resultado[:opcoes].pluck(:texto)).to eq([com_empresa])
     end
   end
 

@@ -34,6 +34,8 @@ class Ai::Redacao::Canais::WhatsappModelo < Ai::Redacao::Canais::Base
   MUITOS_CAMPOS = 4
   # Botões em que um campo do corpo da base pode ir morar (o link vai no botão, AG15).
   BOTOES_COM_CAMPO = [LINK, TELEFONE].freeze
+  # Quem fala: o prompt pede o remetente na 1ª ou 2ª frase, então ele pode entrar até no "mais curto" (AG15).
+  REMETENTE = 'minha_empresa.nome'.freeze
 
   class << self
     def nome
@@ -66,8 +68,7 @@ class Ai::Redacao::Canais::WhatsappModelo < Ai::Redacao::Canais::Base
       motivo = super
       return motivo unless motivo == :campo_da_base_removido && campos_da_base_presentes?(opcao, chaves, base)
 
-      da_base = chaves_da_base(base) & Array(chaves[:permitidas])
-      return :campo_novo_no_mais_curto if mais_curto?(pedido) && !(Ai::Redacao::Chaves.extrair(opcao['texto'].to_s) - da_base).empty?
+      return :campo_novo_no_mais_curto if campo_novo_no_mais_curto?(Ai::Redacao::Chaves.extrair(opcao['texto'].to_s), chaves, base, pedido)
 
       problema_do_canal(opcao, chaves: chaves, limites: limites, base: base, pedido: pedido)
     end
@@ -121,11 +122,21 @@ class Ai::Redacao::Canais::WhatsappModelo < Ai::Redacao::Canais::Base
 
     # Calibração 13/10 (AG11): em "manter como serviço" e "corrigir recusa" a opção pode tirar campo da base. Campo
     # fora da lista segue barrado (`problema_das_chaves`), e no "mais curto" não entra campo novo.
+    # Fase final (AG15): no "mais curto", o remetente ({{minha_empresa.nome}}) pode entrar; outro campo novo, não.
     def problema_da_base(usadas, chaves, base, pedido)
-      return super unless pode_tirar_campo?(pedido)
+      return if base.blank?
 
       da_base = chaves_da_base(base) & Array(chaves[:permitidas])
-      :campo_novo_no_mais_curto if mais_curto?(pedido) && !(usadas - da_base).empty?
+      return :campo_da_base_removido if !pode_tirar_campo?(pedido) && !(da_base - usadas).empty?
+
+      :campo_novo_no_mais_curto if campo_novo_no_mais_curto?(usadas, chaves, base, pedido)
+    end
+
+    # `corpo`: as chaves do corpo da opção.
+    def campo_novo_no_mais_curto?(corpo, chaves, base, pedido)
+      return false unless mais_curto?(pedido)
+
+      !(corpo - (chaves_da_base(base) & Array(chaves[:permitidas])) - [REMETENTE]).empty?
     end
 
     def pode_tirar_campo?(pedido)

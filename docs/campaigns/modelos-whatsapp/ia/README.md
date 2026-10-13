@@ -6,6 +6,7 @@ Estes são os artefatos da calibração de 12/10/2026, guardados como estavam na
 |---|---|
 | `DESENHO.md` | Pesquisa (OpenAI e Meta), desenho de tela e proposta de implementação |
 | `calibracao-12-10.md` | A bateria de 30 casos: 29/30 e 8/8 armadilhas no `gpt-6-luna` low, com custo de US$ 0,24 |
+| `calibracao-13-10.md` | 4 rodadas com juiz cego, 60 casos em 3 perfis. Vencedora: `v7-final`, aprovada para piloto na conta 16. Custo de ~US$ 0,28 |
 | `NOTA-canal.md` | Como o prompt e o schema viraram o canal `whatsapp_modelo` do `Ai::Redacao` |
 | `SCHEMA.json` | O schema estrito calibrado, que o código monta em `Ai::Redacao::Canais::{Base,WhatsappModelo}.schema` |
 
@@ -13,7 +14,10 @@ O prompt que vale é o do código:
 - `app/services/ai/redacao/prompts/comum.md`;
 - `app/services/ai/redacao/prompts/whatsapp_modelo.md`.
 
-Os dois juntos são a v3 citada nos documentos (`PROMPT.md`).
+Desde 13/10/2026, `whatsapp_modelo.md` é a `v7-final` da 2ª calibração (`calibracao-13-10.md`).
+
+**Piloto.** A IA só aparece com a flag `whatsapp_templates_ai`, ligada só na conta 16 (decisão do Rodrigo). Sem ela, a
+tela segue sem IA, e o endpoint e o job respondem 404. A liberação para todas as contas está na #1450. Refs #1450.
 
 **O que não veio para cá.** Os arquivos de trabalho da bateria ficaram no scratchpad da sessão e não foram preservados:
 `bateria.jsonl`, `gen_bateria.py`, `run_bateria.py`, `PROMPT_v1/v2.md` e `custo.json`.
