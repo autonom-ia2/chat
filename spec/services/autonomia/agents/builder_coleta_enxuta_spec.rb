@@ -1,8 +1,10 @@
 require 'rails_helper'
 
-# #1367 PR 2 (alavancas 2 + 1). Nos turnos em que o Construtor ainda vai perguntar, a chamada pede só o schema
-# ENXUTO, sem busca na web: o modelo não escreve instrução, andaime nem cartão. Quando ele indica que vai fechar
-# (ou há sinal determinístico de fechamento), vem a chamada COMPLETA, com a busca, e só ela aplica a configuração.
+# #1367 PR 2 (alavancas 2 + 1). Nos turnos em que o Construtor ainda vai perguntar, a chamada ENXUTA termina com o
+# aviso LEAN_TURN_NOTE e desliga a busca (tool_choice 'none'): o modelo não escreve instrução, andaime nem cartão.
+# Quando ele indica que vai fechar (ou há sinal determinístico de fechamento), vem a chamada COMPLETA, com a busca, e
+# só ela aplica a configuração. As duas mandam o MESMO começo de pedido (instrução, schema, ferramentas, input), para
+# a completa aproveitar o cache da enxuta.
 RSpec.describe Autonomia::Agents::Builder do
   let(:account) { create(:account) }
   let(:thread) { Autonomia::Agents::BuildThread.create!(account: account) }
@@ -27,11 +29,21 @@ RSpec.describe Autonomia::Agents::Builder do
     allow(Crm::Ai::ResponsesClient).to receive(:new).and_return(fake_client)
     allow(fake_client).to receive(:create) do |**kwargs|
       calls << kwargs
-      payload = kwargs[:schema] == described_class::LEAN_SCHEMA ? lean_payload : full_payload
+      payload = lean_call?(kwargs) ? lean_payload : full_payload
       { text: payload.to_json, usage: { 'output_tokens' => 100 }, tools_used: [] }
     end
     thread.persist_start_options!(type: 'sdr', with_knowledge: false)
     thread.save!
+  end
+
+  def lean_call?(call)
+    call[:input].last[:content].first[:text] == described_class::LEAN_TURN_NOTE
+  end
+
+  def expect_lean_call(call, tool_choice: 'none')
+    expect(lean_call?(call)).to be(true)
+    expect(call[:schema]).to eq(described_class::BUILDER_SCHEMA)
+    expect(call[:tool_choice]).to eq(tool_choice)
   end
 
   def run_turn(web_search: 'true')
@@ -39,8 +51,10 @@ RSpec.describe Autonomia::Agents::Builder do
   end
 
   def expect_full_call_with_search(call)
+    expect(lean_call?(call)).to be(false)
     expect(call[:schema]).to eq(described_class::BUILDER_SCHEMA)
     expect(call[:tools]).to eq(Crm::Ai::WebSearch::TOOL)
+    expect(call).not_to have_key(:tool_choice)
   end
 
   def expect_clients(*features)
@@ -50,30 +64,22 @@ RSpec.describe Autonomia::Agents::Builder do
     end
   end
 
-  describe 'the lean schema' do
-    it 'carries only what the question needs, with the model close reading' do
-      properties = described_class::LEAN_SCHEMA[:schema][:properties]
-
-      expect(properties.keys).to contain_exactly(:name, :agent_type, :needs_more_info, :next_question,
-                                                 :user_asked_to_close)
-      expect(described_class::LEAN_SCHEMA[:schema][:required]).to match_array(properties.keys.map(&:to_s))
-      expect(properties[:user_asked_to_close][:description]).to eq(described_class::USER_ASKED_TO_CLOSE_DESCRIPTION)
-    end
-
+  describe 'the lean turn note' do
     it 'tells the model in the mother instruction not to write the instruction in the lean turns' do
       expect(described_class::MOTHER_INSTRUCTION).to include('COLETA ENXUTA')
+      expect(described_class::LEAN_TURN_NOTE).to start_with('COLETA ENXUTA')
     end
   end
 
   context 'when the interview still has a question (coleta)' do
     before { thread.append_message!('user', 'Quero uma SDR para a minha corretora') }
 
-    it 'makes one lean call, without web_search, labeled coleta, and applies nothing' do
+    it 'makes one lean call, with web_search turned off by tool_choice, labeled coleta, and applies nothing' do
       run_turn
 
       expect(calls.size).to eq(1)
-      expect(calls.first[:schema]).to eq(described_class::LEAN_SCHEMA)
-      expect(calls.first[:tools]).to be_nil
+      expect_lean_call(calls.first)
+      expect(calls.first[:tools]).to eq(Crm::Ai::WebSearch::TOOL)
       expect_clients('agente_builder_coleta')
       expect(thread.reload.state['needs_more_info']).to be(true)
       expect(thread.state['next_question']).to eq('Qual o horário de atendimento?')
@@ -99,7 +105,7 @@ RSpec.describe Autonomia::Agents::Builder do
       run_turn
 
       expect(calls.size).to eq(2)
-      expect(calls.first[:schema]).to eq(described_class::LEAN_SCHEMA)
+      expect_lean_call(calls.first)
       expect_full_call_with_search(calls.last)
       expect_clients('agente_builder_coleta', 'agente_builder_fechamento')
       expect(thread.reload.state['applied']).to be(true)
@@ -124,15 +130,16 @@ RSpec.describe Autonomia::Agents::Builder do
       run_turn
 
       expect(calls.size).to eq(1)
-      expect(calls.first[:schema]).to eq(described_class::LEAN_SCHEMA)
+      expect_lean_call(calls.first)
     end
 
-    it 'keeps web_search off in the full call when the global switch is off' do
+    it 'keeps web_search off in both calls when the global switch is off' do
       run_turn(web_search: 'false')
 
       expect(calls.size).to eq(2)
+      expect_lean_call(calls.first, tool_choice: nil)
+      expect(calls.pluck(:tools)).to all(be_nil)
       expect(calls.last[:schema]).to eq(described_class::BUILDER_SCHEMA)
-      expect(calls.last[:tools]).to be_nil
     end
   end
 
@@ -275,8 +282,23 @@ RSpec.describe Autonomia::Agents::Builder do
       expect(calls.size).to eq(2)
       expect(calls.pluck(:reasoning_effort)).to all(eq('medium'))
       expect(calls.pluck(:model)).to all(eq(Autonomia::Agents::Config::BUILDER_MODEL))
-      expect(calls.pluck(:instructions)).to all(eq(described_class::MOTHER_INSTRUCTION))
-      expect(calls.first[:input]).to eq(calls.last[:input])
+    end
+  end
+
+  # Rodada 1 do A/B do #1367: com schema e ferramentas diferentes na enxuta, a completa do fechamento teve 0% de
+  # cache. A OpenAI põe ferramentas e schema no prefixo em cache; a enxuta só pode diferir DEPOIS do input comum.
+  describe 'cache prefix shared by the two calls' do
+    let(:lean_payload) { super().merge('needs_more_info' => false, 'next_question' => '') }
+
+    before { thread.append_message!('user', 'De segunda a sexta') }
+
+    it 'sends the same instructions, schema, tools and input, with the lean note only at the end' do
+      run_turn
+      lean, full = calls
+
+      %i[instructions schema tools reasoning_effort].each { |key| expect(lean[key]).to eq(full[key]) }
+      expect(lean[:input][0...-1]).to eq(full[:input])
+      expect(lean[:input].last).to eq(role: 'developer', content: [{ type: 'input_text', text: described_class::LEAN_TURN_NOTE }])
     end
   end
 end

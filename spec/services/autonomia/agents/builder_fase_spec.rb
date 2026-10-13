@@ -1,7 +1,8 @@
 require 'rails_helper'
 
 # #1367: cada CHAMADA do Construtor é medida com o rótulo da sua fase. A chave de cache continua uma só por conta.
-# PR 2: a pergunta da entrevista sai da chamada enxuta, sem busca; o fechamento sai da chamada completa, com busca
+# PR 2: a pergunta da entrevista sai da chamada enxuta, com a busca desligada por tool_choice; o fechamento sai da
+# chamada completa, com busca
 # (detalhes em builder_coleta_enxuta_spec). O log do turno traz quantas chamadas houve e o resultado REAL
 # (fechou/forced_close), que só existe depois do apply.
 RSpec.describe Autonomia::Agents::Builder do
@@ -37,14 +38,16 @@ RSpec.describe Autonomia::Agents::Builder do
     expect(fake_client).to have_received(:create).with(hash_including(tools: Crm::Ai::WebSearch::TOOL))
   end
 
+  # A enxuta mantém a busca na lista (prefixo em cache) e a desliga por tool_choice: nenhuma chamada pode buscar.
   def expect_no_web_search
-    expect(fake_client).not_to have_received(:create).with(hash_including(tools: Crm::Ai::WebSearch::TOOL))
+    expect(fake_client).to have_received(:create).with(hash_including(tool_choice: 'none'))
+    expect(fake_client).not_to have_received(:create).with(hash_excluding(:tool_choice))
   end
 
   context 'when the turn is an interview question (coleta)' do
     before { thread.append_message!('user', 'Quero um agente de suporte') }
 
-    it 'labels the usage as agente_builder_coleta, keeps the account cache key and leaves web_search out' do
+    it 'labels the usage as agente_builder_coleta, keeps the account cache key and turns web_search off' do
       run_turn
 
       expect_client('agente_builder_coleta')

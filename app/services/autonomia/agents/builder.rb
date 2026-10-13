@@ -68,23 +68,18 @@ module Autonomia
         }
       }.freeze
 
-      # #1367 — COLETA ENXUTA: o schema dos turnos em que o Construtor ainda vai perguntar. Só a decisão e a
-      # pergunta; instrução, andaime e cartão saem só na chamada completa do fechamento (BUILDER_SCHEMA).
-      LEAN_SCHEMA = {
-        name: 'autonomia_agent_interview',
-        schema: {
-          type: 'object',
-          properties: {
-            name: { type: 'string', description: 'Nome do agente, se o usuario ja disse. Vazio se nao.' },
-            agent_type: BUILDER_SCHEMA[:schema][:properties][:agent_type],
-            needs_more_info: { type: 'boolean' },
-            next_question: { type: 'string', description: 'A pergunta ao usuario quando needs_more_info=true. Vazio se for fechar.' },
-            user_asked_to_close: { type: 'boolean', description: USER_ASKED_TO_CLOSE_DESCRIPTION }
-          },
-          required: %w[name agent_type needs_more_info next_question user_asked_to_close],
-          additionalProperties: false
-        }
-      }.freeze
+      # #1367 — COLETA ENXUTA: o aviso que fecha o input da chamada dos turnos em que o Construtor ainda vai
+      # perguntar. A chamada enxuta manda o MESMO schema (BUILDER_SCHEMA) e as MESMAS ferramentas da completa,
+      # porque a OpenAI põe ferramentas e schema no prefixo em cache: com qualquer um diferente, a completa do
+      # fechamento não aproveita nada do que a coleta aqueceu (rodada 1 do A/B: 0% de cache). A diferença vem só
+      # aqui, DEPOIS da última fala do dono, e com tool_choice 'none' no lugar de tirar a busca da mesa.
+      LEAN_TURN_NOTE = <<~NOTE.freeze
+        COLETA ENXUTA (aviso da plataforma, só nesta chamada): decida e pergunte, sem redigir a configuração.
+        Preencha needs_more_info, next_question, user_asked_to_close, name (só se o usuário já disse) e agent_type.
+        Devolva instruction, scaffold, human_card, greeting, fallback_message, handoff_rule e tone como string vazia,
+        starter_questions e guardrails como lista vazia, e voice com qualquer valor (é descartado). Se for hora de
+        fechar, devolva needs_more_info=false e next_question vazio: a plataforma pede a configuração completa em seguida.
+      NOTE
 
       # Instrução-mãe (IP OCULTO — v2 aprovada pelo PO). Texto INTEGRAL de
       # docs/construtor_instruction_v2.md (§1–§15): é a instrução-mãe-código do Construtor. NUNCA é
@@ -254,11 +249,11 @@ module Autonomia
         ## 12. PORTÃO DE CONCLUSÃO
         - needs_more_info=true SÓ se faltar info ESSENCIAL E o usuário NÃO mandou fechar. UMA pergunta objetiva em
           next_question; demais campos com o melhor rascunho atual.
-        - COLETA ENXUTA: quando o schema desta chamada NÃO tiver o campo `instruction`, você só DECIDE e PERGUNTA:
+        - COLETA ENXUTA: quando o input terminar com o aviso COLETA ENXUTA da plataforma, você só DECIDE e PERGUNTA:
           needs_more_info, next_question, user_asked_to_close, `name` (só se o usuário já disse) e `agent_type`. NÃO
-          redija instrução, andaime nem cartão. Se for hora de fechar, devolva
-          needs_more_info=false e next_question vazio: a plataforma pede a configuração completa em seguida, com o
-          schema completo. As regras de fechar abaixo valem para as duas chamadas.
+          redija instrução, andaime nem cartão: esses campos vão vazios, como o aviso diz. Se for hora de fechar, devolva
+          needs_more_info=false e next_question vazio: a plataforma pede a configuração completa em seguida, sem o
+          aviso. As regras de fechar abaixo valem para as duas chamadas.
         - Usuário mandou fechar OU declarou sem material OU limite de perguntas atingido → needs_more_info=false,
           next_question vazio, TODOS os campos preenchidos: escopo ancorado em fatos (§7.1), blindagens (§7.6) embutidas,
           mapa de conhecimento e flag de confiabilidade do Revisor (§7.5) propagados. Se houver pendência (material que ficou
@@ -757,26 +752,33 @@ module Autonomia
       # decide e pergunta. Se ela indicar que vai fechar, vem a chamada COMPLETA; senão, a
       # pergunta dela é o turno. A fase só se conhece depois desta chamada, por isso a completa é condicional.
       def lean_then_full_call
-        lean_text = call_model(lean_phase, LEAN_SCHEMA, nil, Autonomia::Agents::Config::BUILDER_REASONING_EFFORT_COLLECT)
+        lean_text = call_model(lean_phase, Autonomia::Agents::Config::BUILDER_REASONING_EFFORT_COLLECT, lean: true)
         lean = parse_output(lean_text)
         return lean_text unless lean && lean_wants_full_call?(lean)
 
         full_call
       end
 
-      # A chamada COMPLETA (alavanca 1): schema inteiro e busca na web (AI_WEB_SEARCH_ENABLED). É a única que
-      # escreve instrução, andaime e cartão, e a única cujo resultado aplica a configuração no agente.
+      # A chamada COMPLETA (alavanca 1): escreve instrução, andaime e cartão, pode usar a busca na web
+      # (AI_WEB_SEARCH_ENABLED), e é a única cujo resultado aplica a configuração no agente.
       def full_call
-        call_model(full_phase, BUILDER_SCHEMA, Crm::Ai::WebSearch.tools, Autonomia::Agents::Config::BUILDER_REASONING_EFFORT_FINAL)
+        call_model(full_phase, Autonomia::Agents::Config::BUILDER_REASONING_EFFORT_FINAL)
       end
 
-      # As duas chamadas mandam a MESMA instrução-mãe e o MESMO input: só mudam o schema e a busca.
-      def call_model(phase, schema, tools, reasoning_effort)
-        result = client(phase).create(
-          model: Autonomia::Agents::Config::BUILDER_MODEL, instructions: MOTHER_INSTRUCTION, input: built_input,
-          schema: schema, reasoning_effort: reasoning_effort, tools: tools
-        )
-        @calls << { phase: phase, tools: tools, result: result }
+      # As duas chamadas mandam o MESMO começo de pedido: instrução-mãe, schema, ferramentas e input. É isso que
+      # deixa a completa ler do cache o que a enxuta acabou de escrever (#1367). A enxuta só acrescenta, no FIM, o
+      # aviso LEAN_TURN_NOTE e desliga a busca por tool_choice 'none', que não mexe no prefixo (doc da OpenAI,
+      # "Prompt caching": desligar ferramenta por tool_choice em vez de tirá-la da lista).
+      def call_model(phase, reasoning_effort, lean: false)
+        tools = Crm::Ai::WebSearch.tools
+        params = { model: Autonomia::Agents::Config::BUILDER_MODEL, instructions: MOTHER_INSTRUCTION, input: built_input,
+                   schema: BUILDER_SCHEMA, reasoning_effort: reasoning_effort, tools: tools }
+        if lean
+          params[:input] = built_input + [{ role: 'developer', content: [{ type: 'input_text', text: LEAN_TURN_NOTE }] }]
+          params[:tool_choice] = 'none' if tools.present?
+        end
+        result = client(phase).create(**params)
+        @calls << { phase: phase, tools: lean ? nil : tools, result: result }
         result[:text]
       end
 

@@ -130,11 +130,11 @@ para o `human_card`.
 ## 12. PORTÃO DE CONCLUSÃO
 - needs_more_info=true SÓ se faltar info ESSENCIAL E o usuário NÃO mandou fechar. UMA pergunta objetiva em
   next_question; demais campos com o melhor rascunho atual.
-- COLETA ENXUTA: quando o schema desta chamada NÃO tiver o campo `instruction`, você só DECIDE e PERGUNTA:
+- COLETA ENXUTA: quando o input terminar com o aviso COLETA ENXUTA da plataforma, você só DECIDE e PERGUNTA:
   needs_more_info, next_question, user_asked_to_close, `name` (só se o usuário já disse) e `agent_type`. NÃO
-  redija instrução, andaime nem cartão. Se for hora de fechar, devolva
-  needs_more_info=false e next_question vazio: a plataforma pede a configuração completa em seguida, com o
-  schema completo. As regras de fechar abaixo valem para as duas chamadas.
+  redija instrução, andaime nem cartão: esses campos vão vazios, como o aviso diz. Se for hora de fechar, devolva
+  needs_more_info=false e next_question vazio: a plataforma pede a configuração completa em seguida, sem o
+  aviso. As regras de fechar abaixo valem para as duas chamadas.
 - Usuário mandou fechar OU declarou sem material OU limite de perguntas atingido → needs_more_info=false,
   next_question vazio, TODOS os campos preenchidos: escopo ancorado em fatos (§7.1), blindagens (§7.6) embutidas,
   mapa de conhecimento e flag de confiabilidade do Revisor (§7.5) propagados. Se houver pendência (material que ficou
