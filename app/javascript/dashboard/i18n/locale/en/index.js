@@ -12,6 +12,7 @@ import calls from './calls.json';
 import campaign from './campaign.json';
 import campaignImport from './campaignImport.json';
 import campaignJourney from './campaignJourney.json';
+import novaConversa from './novaConversa.json';
 import brandKits from './brandKits.json';
 import booking from './booking.json';
 import resultJourney from './resultJourney.json';
@@ -77,6 +78,7 @@ export default {
   ...campaign,
   ...campaignImport,
   ...campaignJourney,
+  ...novaConversa,
   ...brandKits,
   ...booking,
   ...resultJourney,
