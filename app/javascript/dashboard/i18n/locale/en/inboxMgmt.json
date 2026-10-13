@@ -877,6 +877,8 @@
       "NEW_QR": "New QR code",
       "EXPIRED_HELP": "WhatsApp ends pairing when no code is read for about two and a half minutes. Create a new one with the phone in hand. The official inbox keeps working normally.",
       "DISCONNECTED_HELP": "The WhatsApp API connection of this number was closed. Until you reconnect, replies after 24 hours need an approved template, as before. The official inbox keeps working normally.",
+      "REMOVED_TITLE": "WhatsApp disconnected this device",
+      "REMOVED_HELP": "WhatsApp closed the WhatsApp API connection of this number. Generate a new QR code and scan it with the phone of this number. Until you reconnect, replies after 24 hours need an approved template, as before. The official inbox keeps working normally.",
       "CONNECTED_HELP": "Connected to {phone}. Same number as the official inbox.",
       "WRONG_NUMBER": "The connected phone ({phone}) is not this inbox's number. Disconnect and connect the right phone.",
       "DISCONNECT": "Disconnect WhatsApp API",
@@ -887,6 +889,10 @@
       "CAPPING": {
         "NEAR": "WhatsApp warned that this number is close to the limit of new conversations ({used} of {total}). Sending through WhatsApp API slowed down by itself. The cycle ends on {end}.",
         "BLOCKED": "WhatsApp blocked new conversations through WhatsApp API until {end}. Replies to people you already talk to keep going; for new contacts use an approved template."
+      },
+      "TIMELOCK": {
+        "UNTIL": "WhatsApp limited new conversations through WhatsApp API on this number until {end}. Replying to people who already talk to you keeps working; for new contacts, use an approved template. Do not reconnect or generate a new QR code meanwhile: the limit lifts on its own.",
+        "NO_END": "WhatsApp limited new conversations through WhatsApp API on this number for now. Replying to people who already talk to you keeps working; for new contacts, use an approved template. Do not reconnect or generate a new QR code meanwhile: the limit lifts on its own."
       },
       "STATS": {
         "TITLE": "Last {days} days through WhatsApp API",
@@ -902,6 +908,7 @@
         "AWAITING": "Waiting for the phone",
         "CONNECTED": "Connected",
         "FAILED": "Connection failed",
+        "REMOVED": "Disconnected by WhatsApp",
         "DISCONNECTED": "Disconnected"
       },
       "RISK": {
