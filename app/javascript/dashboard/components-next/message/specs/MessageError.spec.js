@@ -13,15 +13,16 @@ const MOTIVO =
   'Fora da janela de 24 horas: o cliente não escreve há mais de um dia.';
 
 // Troca o i18n vazio do setup global pelos catálogos de verdade.
-config.global.plugins = [
-  createI18n({
-    legacy: false,
-    locale: 'pt_BR',
-    messages: { pt_BR: { ...chatlist, ...richMessage } },
-  }),
-];
+const i18n = createI18n({
+  legacy: false,
+  locale: 'pt_BR',
+  messages: { pt_BR: { ...chatlist, ...richMessage } },
+});
+config.global.plugins = [i18n];
 
-const mountError = (context = {}) => {
+const MOTIVO_SEM_ESPACO = `https://graph.exemplo.com/v21.0/${'a1b2c3d4e5'.repeat(9)}`;
+
+const mountError = (context = {}, error = MOTIVO) => {
   const onRetry = vi.fn();
   const TestHost = defineComponent({
     components: { MessageError },
@@ -34,9 +35,9 @@ const mountError = (context = {}) => {
         attachments: ref([]),
         ...context,
       });
-      return { onRetry, MOTIVO };
+      return { onRetry, error };
     },
-    template: '<MessageError :error="MOTIVO" @retry="onRetry" />',
+    template: '<MessageError :error="error" @retry="onRetry" />',
   });
 
   const wrapper = mount(TestHost);
@@ -54,6 +55,33 @@ describe('motivo da falha na conversa', () => {
     expect(reason.exists()).toBe(true);
     expect(wrapper.html()).not.toContain('group-hover');
     expect(wrapper.html()).not.toContain('invisible');
+  });
+
+  it('quebra em qualquer ponto o motivo com trecho longo sem espaço', () => {
+    const { wrapper } = mountError({}, MOTIVO_SEM_ESPACO);
+    const reason = wrapper
+      .findAll('span')
+      .find(node => node.text() === `Falha ao enviar. ${MOTIVO_SEM_ESPACO}`);
+
+    expect(reason.classes()).toContain('[overflow-wrap:anywhere]');
+    expect(reason.classes()).toContain('min-w-0');
+  });
+
+  it('a pontuação do título vem do catálogo do fork', () => {
+    const original = i18n.global.getLocaleMessage('pt_BR');
+    i18n.global.setLocaleMessage('pt_BR', {
+      ...original,
+      RICH_MESSAGE: {
+        ...original.RICH_MESSAGE,
+        FAILURE: { ...original.RICH_MESSAGE.FAILURE, TITLE: '{title} —' },
+      },
+    });
+
+    const { wrapper } = mountError();
+    i18n.global.setLocaleMessage('pt_BR', original);
+
+    expect(wrapper.text()).toContain(`Falha ao enviar — ${MOTIVO}`);
+    expect(richMessage.RICH_MESSAGE.FAILURE.TITLE).toBe('{title}.');
   });
 
   it('tem o botão Enviar de novo com rótulo e alvo de toque de 44 px', async () => {

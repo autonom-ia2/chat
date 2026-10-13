@@ -1,5 +1,5 @@
 import { montarMensagem, AGORA } from './montarMensagem';
-import { MESSAGE_STATUS } from '../constants';
+import { MESSAGE_STATUS, MESSAGE_TYPES } from '../constants';
 
 const LINK_BUTTON = {
   type: 'link_button',
@@ -51,7 +51,7 @@ describe('Message', () => {
 
       expect(bubbleNames(wrapper)).toEqual(['rich-link-button']);
       expect(wrapper.text()).toContain('Você escolhe pelo site.');
-      expect(wrapper.get('a').text()).toBe('Escolher horário');
+      expect(wrapper.get('a').text()).toContain('Escolher horário');
       expect(wrapper.get('a').attributes('href')).toBe(LINK_BUTTON.url);
     });
 
@@ -75,6 +75,48 @@ describe('Message', () => {
       });
 
       expect(bubbleNames(wrapper)).toEqual(['image']);
+    });
+
+    it('nota privada com formato rico é nota comum: nada foi enviado ao cliente', () => {
+      const wrapper = montarMensagem({
+        private: true,
+        content: 'Rascunho do botão para o cliente.',
+        contentAttributes: { richMessage: LINK_BUTTON },
+      });
+
+      expect(bubbleNames(wrapper)).toEqual(['text']);
+      expect(wrapper.text()).toContain('Rascunho do botão para o cliente.');
+      expect(wrapper.find('a').exists()).toBe(false);
+    });
+
+    it('mensagem recebida do cliente com formato rico segue na bolha de texto', () => {
+      const wrapper = montarMensagem({
+        messageType: MESSAGE_TYPES.INCOMING,
+        sender: { id: 9, name: 'Camila', type: 'Contact' },
+        content: 'Texto que o cliente escreveu.',
+        contentAttributes: { richMessage: LINK_BUTTON },
+      });
+
+      expect(bubbleNames(wrapper)).toEqual(['text']);
+      expect(wrapper.find('a').exists()).toBe(false);
+    });
+
+    it('mostra o anexo que veio junto, para o atendente ver o arquivo', () => {
+      const wrapper = montarMensagem({
+        content: 'Segue a tabela.',
+        contentAttributes: { richMessage: LINK_BUTTON },
+        attachments: [
+          {
+            id: 5,
+            fileType: 'file',
+            dataUrl: 'https://x/tabela-de-precos.pdf',
+          },
+        ],
+      });
+
+      expect(bubbleNames(wrapper)).toEqual(['rich-link-button']);
+      // O chip de arquivo encurta o nome longo (tabela-de-pr...pdf), como na bolha de texto.
+      expect(wrapper.text()).toContain('tabela-de-pr...pdf');
     });
 
     it('tipo com bolha aparece mesmo sem corpo', () => {

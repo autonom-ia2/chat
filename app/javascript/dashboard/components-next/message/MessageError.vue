@@ -35,9 +35,13 @@ const canRetry = computed(() => {
         icon="i-lucide-alert-triangle"
         class="size-[14px] mt-px flex-shrink-0"
       />
-      <span class="min-w-0 break-words">
+      <span class="min-w-0 [overflow-wrap:anywhere]">
         <span class="font-medium">
-          {{ `${t('CHAT_LIST.FAILED_TO_SEND')}.` }}
+          {{
+            t('RICH_MESSAGE.FAILURE.TITLE', {
+              title: t('CHAT_LIST.FAILED_TO_SEND'),
+            })
+          }}
         </span>
         {{ error }}
       </span>

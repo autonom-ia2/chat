@@ -51,10 +51,35 @@ describe('bolha do botão de link', () => {
     });
 
     expect(wrapper.text()).toContain('Escolha pelo site.');
-    expect(wrapper.get('a').text()).toBe('Escolher horário');
+    expect(wrapper.get('a').text()).toContain('Escolher horário');
     expect(wrapper.text()).toContain(
       'Abre: https://exemplo.com.br/agendar?origem=whatsapp'
     );
+  });
+
+  it('diz ao leitor de tela que abre em outra aba e liga o endereço ao link', () => {
+    const wrapper = mountLinkButton({
+      label: 'Escolher horário',
+      url: 'https://exemplo.com.br/agendar',
+    });
+    const link = wrapper.get('a');
+    const hint = link.get('.sr-only');
+    const address = wrapper.get(`#${link.attributes('aria-describedby')}`);
+
+    expect(hint.text()).toBe('(abre em outra aba)');
+    expect(address.text()).toBe('Abre: https://exemplo.com.br/agendar');
+  });
+
+  it('usa como link o endereço interpretado, nunca um caminho relativo ao painel', () => {
+    const wrapper = mountLinkButton({
+      label: 'Abrir',
+      url: 'https:exemplo.com.br/agendar',
+    });
+
+    expect(wrapper.get('a').attributes('href')).toBe(
+      'https://exemplo.com.br/agendar'
+    );
+    expect(wrapper.text()).toContain('Abre: https:exemplo.com.br/agendar');
   });
 
   it('abre o endereço em outra aba, sem dar a página de origem ao destino', () => {
@@ -63,7 +88,7 @@ describe('bolha do botão de link', () => {
       url: 'http://exemplo.com.br',
     }).get('a');
 
-    expect(link.attributes('href')).toBe('http://exemplo.com.br');
+    expect(link.attributes('href')).toBe('http://exemplo.com.br/');
     expect(link.attributes('target')).toBe('_blank');
     expect(link.attributes('rel')).toBe('noopener noreferrer');
   });
@@ -87,7 +112,7 @@ describe('bolha do botão de link', () => {
     });
 
     expect(wrapper.text()).toBe(
-      'Escolha pelo site.\nAbrirAbre: https://exemplo.com.br'
+      'Escolha pelo site.\nAbrir(abre em outra aba)Abre: https://exemplo.com.br'
     );
   });
 

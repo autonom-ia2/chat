@@ -23,6 +23,16 @@ const store = createStore({
 
 export const AGORA = Math.floor(Date.now() / 1000);
 
+export const montagem = {
+  plugins: [store],
+  directives: {
+    dompurifyHtml: (el, { value }) => {
+      el.innerHTML = value;
+    },
+  },
+  stubs: { MessageMeta: true, ContextMenu: true, Avatar: true },
+};
+
 export const montarMensagem = (props = {}) =>
   mount(Message, {
     props: {
@@ -36,13 +46,5 @@ export const montarMensagem = (props = {}) =>
       sender: { id: 1, name: 'Marina', type: 'User' },
       ...props,
     },
-    global: {
-      plugins: [store],
-      directives: {
-        dompurifyHtml: (el, { value }) => {
-          el.innerHTML = value;
-        },
-      },
-      stubs: { MessageMeta: true, ContextMenu: true, Avatar: true },
-    },
+    global: montagem,
   });

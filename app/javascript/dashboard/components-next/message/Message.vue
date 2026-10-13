@@ -305,9 +305,7 @@ const shouldShowAvatar = computed(() => {
 
 // chat#1473: formato rico enviado ao cliente (botão de link e os próximos tipos).
 // Tipo sem bolha própria devolve null e a mensagem segue pelo caminho de antes.
-const richMessageBubble = computed(() =>
-  richMessageBubbleFor(props.contentAttributes)
-);
+const richMessageBubble = computed(() => richMessageBubbleFor(props));
 
 const componentToRender = computed(() => {
   if (props.isEmailInbox && !props.private) {
