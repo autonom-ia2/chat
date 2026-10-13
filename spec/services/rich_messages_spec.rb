@@ -89,6 +89,14 @@ describe RichMessages do
       expect_failed(deliver(outgoing({ type: 'spec_stamp', code: 'boom' })), 'Carimbo indisponível agora.')
     end
 
+    it 'fails, instead of sending the body as plain text, an unknown type that reaches the provider without the guard' do
+      message = outgoing({ type: 'carousel' })
+
+      expect(channel.provider_service.send_message('5511937016094', message)).to be_nil
+
+      expect_failed(message.reload, described_class::UNKNOWN_TYPE)
+    end
+
     it 'marks the message as failed with the error returned by Meta' do
       stub_request(:post, meta_url).to_return(status: 400, body: { error: { message: '(#100) Invalid parameter' } }.to_json,
                                               headers: { 'Content-Type' => 'application/json' })

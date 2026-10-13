@@ -9,6 +9,8 @@ class RichMessages::Types::LinkButton
   EDGE_MAX = 60
   URL_FORBIDDEN = [' ', '"', "'", '<', '>'].freeze
   WEB_SCHEMES = %w[http https].freeze
+  # Limite que a Meta documenta para endereço em botão de modelo; para o `cta_url` livre ela não dá número.
+  URL_MAX = 2000
   LINE_BREAKS = ["\n", "\r"].freeze
 
   BODY_BLANK = 'O botão de link precisa de um texto na mensagem.'.freeze
@@ -16,6 +18,7 @@ class RichMessages::Types::LinkButton
   LABEL_BLANK = 'O botão de link está sem o texto do botão.'.freeze
   LABEL_TOO_LONG = "O texto do botão de link passa de #{LABEL_MAX} caracteres.".freeze
   LABEL_MULTILINE = 'O texto do botão de link precisa ficar em uma linha só.'.freeze
+  URL_TOO_LONG = "O endereço do botão de link passa de #{URL_MAX} caracteres.".freeze
   INVALID_URL = 'O endereço do botão de link precisa ser um endereço completo, começando com http:// ou https://.'.freeze
   HEADER_INVALID = "O cabeçalho do botão de link precisa ser um texto de até #{EDGE_MAX} caracteres, em uma linha só.".freeze
   FOOTER_INVALID = "O rodapé do botão de link precisa ser um texto de até #{EDGE_MAX} caracteres, em uma linha só.".freeze
@@ -67,8 +70,12 @@ class RichMessages::Types::LinkButton
     LABEL_TOO_LONG if @label.length > LABEL_MAX
   end
 
+  # O tamanho é conferido antes de interpretar o endereço.
   def url_error
-    INVALID_URL unless @url.is_a?(String) && URL_FORBIDDEN.none? { |character| @url.include?(character) } && web_address
+    return INVALID_URL unless @url.is_a?(String)
+    return URL_TOO_LONG if @url.length > URL_MAX
+
+    INVALID_URL unless URL_FORBIDDEN.none? { |character| @url.include?(character) } && web_address
   end
 
   # O endereço normalizado em ASCII, como vai para a Meta: acento no caminho e na consulta vira %XX e domínio com

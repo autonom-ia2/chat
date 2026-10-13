@@ -117,6 +117,7 @@ describe RichMessages::Types::LinkButton do
         'a link with a double quote' => [{ url: 'https://exemplo.com.br/a"b' }, {}, described_class::INVALID_URL],
         'a link with angle brackets' => [{ url: 'https://exemplo.com.br/<script>' }, {}, described_class::INVALID_URL],
         'a link that is not text' => [{ url: 42 }, {}, described_class::INVALID_URL],
+        'a link above 2000 characters' => [{ url: "https://exemplo.com.br/#{'a' * 1978}" }, {}, described_class::URL_TOO_LONG],
         'a missing link' => [{ url: nil }, {}, described_class::INVALID_URL],
         'a blank body' => [{}, { content: '' }, described_class::BODY_BLANK],
         'a body above 1024 characters' => [{}, { content: 'a' * 1025 }, described_class::BODY_TOO_LONG],

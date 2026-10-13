@@ -68,14 +68,15 @@ describe RichMessages::ApiInboxWebhook do
         expect(payload[:content_attributes]).to be_key(RichMessages::KEY)
       end
 
-      it 'follows the original delivery when the message was deleted before the event ran' do
+      it 'delivers nothing to the inbox when the message was deleted before the event ran (the raw body has no link)' do
         message = outgoing
         payload_source = Message.find(message.id)
         message.delete
 
         payloads = inbox_webhook_payloads(event_method, payload_source)
 
-        expect(payloads[:inbox].map { |payload| payload[:content] }).to eq(['Corpo'])
+        expect(payloads[:inbox]).to be_empty
+        expect(payloads[:account].size).to eq(1)
       end
 
       it 'fails an invalid message once: the event of that update does not write it again' do

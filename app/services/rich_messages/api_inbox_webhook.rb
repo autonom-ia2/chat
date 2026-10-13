@@ -8,6 +8,7 @@
 # Nenhum erro daqui sobe ao dispatcher, para não tirar o evento dos outros listeners: vai ao rastreador de erros
 # e ao log, e a mensagem NÃO é entregue à caixa. Entregar o `content` cru mandaria ao cliente o corpo sem o
 # link, em silêncio; sem entrega, a mensagem fica parada e o erro aparece no rastreador.
+# Pelo mesmo motivo, mensagem com `rich_message` apagada entre o evento e a entrega não é entregue à caixa.
 # Sem `rich_message`, a entrega original e mais nada.
 module RichMessages::ApiInboxWebhook
   MESSAGE_EVENTS = %w[message_created message_updated].freeze
@@ -30,7 +31,8 @@ module RichMessages::ApiInboxWebhook
   # O que entregar ao webhook da caixa; nil quando a mensagem não pode sair.
   def rich_inbox_payload(payload, inbox)
     message = Message.find_by(id: payload[:id])
-    return payload unless message && RichMessages.goes_to_channel?(message)
+    return nil unless message
+    return payload unless RichMessages.goes_to_channel?(message)
 
     error = RichMessages.error_for(message)
     return payload.merge(content: RichMessages.text_with_fallback(message, payload[:content])) if error.nil?
