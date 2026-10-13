@@ -7,6 +7,11 @@ class SafeFetch::RequestOptions
     read_timeout: SafeFetch::DEFAULT_READ_TIMEOUT,
     total_timeout: SafeFetch::DEFAULT_TOTAL_TIMEOUT,
     max_redirects: SafeFetch::DEFAULT_MAX_REDIRECTS,
+    # false: um redirecionamento para outra origem é recusado (`CrossOriginRedirectError`), em vez de
+    # seguido com os cabeçalhos sensíveis removidos. O padrão segue, como sempre seguiu.
+    cross_origin_redirects: true,
+    # Bytes do corpo de uma resposta de erro guardados em `HttpError#body_excerpt`. 0 = nenhum.
+    error_body_bytes: 0,
     headers: nil,
     sensitive_headers: [],
     resolver: SafeFetch::DEFAULT_RESOLVER,
@@ -18,8 +23,9 @@ class SafeFetch::RequestOptions
     schemes: nil
   }.freeze
 
-  attr_reader :allowed_content_type_prefixes, :allowed_content_types, :body, :headers, :http_basic_authentication,
-              :max_redirects, :method, :open_timeout, :read_timeout, :resolver, :schemes, :sensitive_headers, :total_timeout, :uri, :url
+  attr_reader :allowed_content_type_prefixes, :allowed_content_types, :body, :error_body_bytes, :headers,
+              :http_basic_authentication, :max_redirects, :method, :open_timeout, :read_timeout, :resolver, :schemes,
+              :sensitive_headers, :total_timeout, :uri, :url
 
   def initialize(url:, **options)
     config = DEFAULTS.merge(options)
@@ -65,6 +71,22 @@ class SafeFetch::RequestOptions
     max_redirects.positive?
   end
 
+  def cross_origin_redirects?
+    @cross_origin_redirects
+  end
+
+  # O destino de um 3xx é da mesma origem do endereço pedido? Caminho começando por "/" é: o
+  # ssrf_filter (e o `PrivateNetworkRequest`) o monta sobre o host do salto atual, que já passou por
+  # esta mesma conferência. Qualquer outro valor é lido como endereço e comparado.
+  def same_origin_location?(location)
+    return true if location.to_s.start_with?('/')
+
+    destino = URI.parse(location.to_s)
+    destino.scheme == uri.scheme && destino.hostname == uri.hostname && destino.port == uri.port
+  rescue URI::InvalidURIError
+    false
+  end
+
   private
 
   def apply_limits(config)
@@ -73,6 +95,8 @@ class SafeFetch::RequestOptions
     @read_timeout = config[:read_timeout]
     @total_timeout = normalize_total_timeout(config[:total_timeout])
     @max_redirects = normalize_max_redirects(config[:max_redirects])
+    @cross_origin_redirects = config[:cross_origin_redirects] != false
+    @error_body_bytes = [config[:error_body_bytes].to_i, 0].max
   end
 
   def apply_content_type_rules(config)
