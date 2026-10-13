@@ -181,7 +181,6 @@ RSpec.describe 'Api::V1::Accounts::WhatsappTemplateSuggestions', type: :request 
   end
 
   it 'a flag do piloto nasce desligada e mora no bit 19 de feature_flags_ext_1, logo abaixo de campaign_open_window_text' do
-    pending 'o bit 19 depende do #1448 (campaign_open_window_text, bit 18) entrar na main antes'
     flag = Featurable::FEATURE_LIST.find { |item| item['name'] == 'whatsapp_templates_ai' }
     expect(flag).to include('enabled' => false, 'column' => 'feature_flags_ext_1')
     ext = Featurable::FEATURE_LIST.select { |item| item['column'] == 'feature_flags_ext_1' }.pluck('name')

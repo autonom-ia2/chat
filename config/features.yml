@@ -347,10 +347,19 @@
   enabled: false
   column: feature_flags_ext_1
 
+# Conversa aberta na campanha (#1335, épico #1320): na campanha do WhatsApp oficial, quem falou com a caixa nas últimas
+# 24 horas recebe uma mensagem escrita (sem modelo), com a ajuda para escrever; a janela é conferida de novo em cada envio.
+# Nasce ligada em todas as contas (decisão do Rodrigo; migration 20261024100001). Desligada numa conta: a campanha manda
+# o modelo para todos e a API campaign_journey/conversa_aberta responde 404.
+- name: campaign_open_window_text
+  display_name: Campanha com mensagem escrita para quem falou nas últimas 24 h
+  enabled: true
+  column: feature_flags_ext_1
+
 # "Criar com IA" e "Melhorar com IA" nos Modelos do WhatsApp (#1333). Bit 19 (524288), confirmado pela Orquestração:
-# fica LOGO ABAIXO de `campaign_open_window_text` (#1448, bit 18), que entra antes. Desligada (padrão): os botões não
-# aparecem, e o endpoint e o job de sugestão respondem 404, também sem `whatsapp_templates_journey`. Piloto na conta 16,
-# ligada pela Orquestração depois do deploy (sem migration). Liberar para todas: Refs #1450.
+# fica LOGO ABAIXO de `campaign_open_window_text` (#1448, bit 18). Desligada (padrão): os botões não aparecem, e o
+# endpoint e o job de sugestão respondem 404, também sem `whatsapp_templates_journey`. Piloto na conta 16, ligada pela
+# Orquestração depois do deploy (sem migration). Liberar para todas: Refs #1450.
 - name: whatsapp_templates_ai
   display_name: Modelos do WhatsApp com IA (criar e melhorar)
   enabled: false

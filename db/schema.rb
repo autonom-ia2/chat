@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_10_23_100000) do
+ActiveRecord::Schema[7.2].define(version: 2026_10_24_100001) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1125,6 +1125,32 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_23_100000) do
     t.index ["account_id"], name: "index_campaign_audience_links_on_account_id"
     t.index ["campaign_import_id"], name: "index_campaign_audience_links_on_campaign_import_id"
     t.index ["campaign_type", "campaign_id"], name: "index_campaign_audience_links_on_campaign_type_and_campaign_id", unique: true
+  end
+
+  create_table "campaign_free_text_deliveries", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "campaign_id", null: false
+    t.bigint "campaign_recipient_id", null: false
+    t.bigint "inbox_id", null: false
+    t.string "source_id", null: false
+    t.bigint "message_id"
+    t.datetime "fell_back_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["campaign_id"], name: "index_campaign_free_text_deliveries_on_campaign_id"
+    t.index ["campaign_recipient_id"], name: "idx_campaign_free_text_deliveries_recipient", unique: true
+    t.index ["inbox_id", "source_id"], name: "idx_campaign_free_text_deliveries_source", unique: true
+    t.index ["message_id"], name: "index_campaign_free_text_deliveries_on_message_id"
+  end
+
+  create_table "campaign_free_texts", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "campaign_id", null: false
+    t.text "content", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_campaign_free_texts_on_account_id"
+    t.index ["campaign_id"], name: "index_campaign_free_texts_on_campaign_id", unique: true
   end
 
   create_table "campaign_import_labels", force: :cascade do |t|
@@ -3981,6 +4007,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_23_100000) do
   add_foreign_key "brand_kits", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "campaign_audience_links", "accounts", on_delete: :cascade
   add_foreign_key "campaign_audience_links", "campaign_imports", on_delete: :nullify
+  add_foreign_key "campaign_free_text_deliveries", "accounts", on_delete: :cascade
+  add_foreign_key "campaign_free_text_deliveries", "campaigns", on_delete: :cascade
+  add_foreign_key "campaign_free_texts", "accounts", on_delete: :cascade
+  add_foreign_key "campaign_free_texts", "campaigns", on_delete: :cascade
   add_foreign_key "campaign_pauses", "accounts", on_delete: :cascade
   add_foreign_key "campaign_pauses", "users", column: "paused_by_id", on_delete: :nullify
   add_foreign_key "campaign_pauses", "users", column: "resumed_by_id", on_delete: :nullify

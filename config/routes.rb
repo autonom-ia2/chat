@@ -240,6 +240,8 @@ Rails.application.routes.draw do
             resource :overview, only: [:show]
             get 'campaign_pauses', to: 'campaign_pauses#index', as: :campaign_pauses # #1332
             post 'campaign_pauses/:id/resume', to: 'campaign_pauses#resume', as: :campaign_pause_resume # #1329
+            get 'conversa_aberta', to: 'conversa_aberta#show', as: :conversa_aberta # #1335
+            post 'conversa_aberta/escrever', to: 'conversa_aberta#escrever', as: :conversa_aberta_escrever # #1335
             scope 'results/:channel/:id', controller: :results do
               get '/', action: :show, as: :result
               get :recipients, as: :result_recipients

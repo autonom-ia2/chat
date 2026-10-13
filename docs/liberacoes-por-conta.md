@@ -46,6 +46,7 @@ De onde vem o estado de uma conta nova (`before_create`):
 | `customer_base` | Base de clientes (#1240): leitura nova da planilha na importação de contatos e em Públicos (#1246). Desligada = leitura igual ao `main`, provado linha a linha em `docs/base-de-clientes/BATERIA-F0.md` |
 | `whatsapp_templates_journey` | Modelos do WhatsApp (#1320/#1330): criar, editar, apagar, duplicar e subir mídia de modelos na Meta pela API nova. Desligada = essas escritas respondem 404 sem chamar a Meta; listar e "onde está em uso" seguem abertos. Bit 16 da `feature_flags_ext_1` |
 | `crm_configurar_caixas` | Caixas no CRM (#1149): a tela CRM → Caixas no CRM no lugar da gaveta Configurar caixas — o que chega em cada caixa, quem cuida de quê e o que o sistema faz sozinho — e a API `crm/caixas`. Desligada = gaveta antiga e a API responde 404. Antes de ligar numa conta grande, repetir o EXPLAIN da lista restrita na maior conta. Bit 17 da `feature_flags_ext_1` |
+| `campaign_open_window_text` | Conversa aberta na campanha (#1335): na campanha do WhatsApp oficial, quem falou com a caixa nas últimas 24 h recebe uma mensagem escrita (sem modelo), com a ajuda para escrever; a janela é conferida de novo em cada envio e o 131047 cai para o modelo. Ligada em todas as contas e nas novas (migration `20261024100001`). Desligada = modelo para todos e a API `campaign_journey/conversa_aberta` responde 404. Bit 18 da `feature_flags_ext_1` |
 
 ### Do Chatwoot, oferecidas aos clientes
 
