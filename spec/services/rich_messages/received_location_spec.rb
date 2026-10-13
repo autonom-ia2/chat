@@ -71,6 +71,30 @@ describe RichMessages::ReceivedLocation do
     expect(data[:content_attributes]['shared_location']).to include('latitude' => -23.5505, 'longitude' => -46.6333)
   end
 
+  it 'leaves out the coexistence echo: the location was sent by the business from the app, not by the customer' do
+    echo_params = {
+      phone_number: channel.phone_number, object: 'whatsapp_business_account',
+      entry: [{ changes: [{ field: 'smb_message_echoes', value: {
+        message_echoes: [{ from: channel.phone_number.delete('+'), to: '5511900000001', id: 'wamid.eco-local',
+                           timestamp: '1760371920', type: 'location', location: location }]
+      } }] }]
+    }.with_indifferent_access
+
+    Whatsapp::IncomingMessageWhatsappCloudService.new(inbox: inbox, params: echo_params, outgoing_echo: true).perform
+    echo = Message.find_by!(source_id: 'wamid.eco-local')
+
+    expect(echo.message_type).to eq('outgoing')
+    expect(echo.attachments.sole.file_type).to eq('location')
+    expect(echo.content_attributes).not_to have_key('shared_location')
+  end
+
+  it 'records nothing and raises nothing when the location is not an object' do
+    message = nil
+
+    expect { message = receive('Praça da Sé') }.not_to raise_error
+    expect(message.content_attributes).not_to have_key('shared_location')
+  end
+
   it 'adds nothing to a message that is not a location' do
     params = {
       phone_number: channel.phone_number, object: 'whatsapp_business_account',

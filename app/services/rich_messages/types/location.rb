@@ -1,6 +1,6 @@
 # Localização (chat#1473, P5): um ponto no mapa.
 #   { "type": "location", "latitude": -23.5489, "longitude": -46.6388, "name": "Unidade Centro", "address": "Rua ..." }
-# `latitude` (-90 a 90) e `longitude` (-180 a 180) são obrigatórias e chegam como número JSON, já calculadas por
+# `latitude` (-90 a 90) e `longitude` (-180 a 180) são obrigatórias e chegam como número JSON (inteiro ou decimal), já calculadas por
 # quem chama (o agente nativo converte endereço em coordenadas antes). `name` e `address` são opcionais, em uma
 # linha só; a Meta não dá limite para eles, os 100 e 300 caracteres são nossos, para caber no cartão. Opcional em
 # branco ("" ou só espaços) conta como ausente.
@@ -10,7 +10,11 @@ class RichMessages::Types::Location
   ADDRESS_MAX = 300
   LATITUDE_RANGE = (-90..90)
   LONGITUDE_RANGE = (-180..180)
-  LINE_BREAKS = ["\n", "\r"].freeze
+  # Quebras de linha, inclusive as do Unicode (o tab continua aceito).
+  LINE_BREAKS = ["\n", "\r", "\v", "\u0085", "\u2028", "\u2029"].freeze
+  # Só os números que o JSON produz. BigDecimal, Rational e Complex são recusados: o BigDecimal vira texto ao ser
+  # gravado em `content_attributes` e falharia depois, no envio.
+  COORDINATE_CLASSES = [Integer, Float].freeze
   # O mesmo endereço de mapa está na bolha do atendente
   # (app/javascript/dashboard/components-next/message/bubbles/RichMessage/types/Location.vue): mudou um, mude o outro.
   MAP_LINK = 'https://maps.google.com/?q='.freeze
@@ -54,7 +58,7 @@ class RichMessages::Types::Location
   private
 
   def coordinate?(value, range)
-    value.is_a?(Numeric) && value.finite? && range.cover?(value)
+    COORDINATE_CLASSES.any? { |klass| value.is_a?(klass) } && value.finite? && range.cover?(value)
   end
 
   def absent_if_blank(value)
@@ -65,7 +69,8 @@ class RichMessages::Types::Location
     text.nil? || (text.is_a?(String) && text.length <= max && LINE_BREAKS.none? { |line_break| text.include?(line_break) })
   end
 
-  # Notação decimal comum, sem perder casas e sem notação científica (0.00001, nunca 1.0e-05).
+  # Notação decimal comum, sem perder casas, sempre com ao menos uma casa e sem notação científica: 90 → "90.0",
+  # 1.0e-07 → "0.0000001". A bolha (types/Location.vue, `decimalOf`) escreve igual, para o link sair o mesmo.
   def decimal(value)
     BigDecimal(value.to_s).to_s('F')
   end

@@ -52,11 +52,13 @@ describe('bolha da localização enviada', () => {
     expect(link.text()).toContain('Ver no mapa');
   });
 
+  // Os mesmos pares e links estão em spec/services/rich_messages/types/location_spec.rb: bolha e texto saem iguais.
   it.each([
-    [90, -180, 'https://maps.google.com/?q=90,-180'],
-    [-90, 180, 'https://maps.google.com/?q=-90,180'],
+    [90, -180, 'https://maps.google.com/?q=90.0,-180.0'],
+    [-90, 180, 'https://maps.google.com/?q=-90.0,180.0'],
+    [1e-7, -1e-7, 'https://maps.google.com/?q=0.0000001,-0.0000001'],
   ])(
-    'cria o link de mapa nos limites da faixa (%s, %s)',
+    'cria o link de mapa em notação decimal, como a versão em texto (%s, %s)',
     (latitude, longitude, href) => {
       const link = montarRica(Location, {
         richMessage: { ...UNIDADE, latitude, longitude },

@@ -10,12 +10,14 @@ class RichMessages::Types::Contact
   DIGITS = '0-9'.freeze
   PHONE_CHARACTERS = '0-9 ().-'.freeze
   PHONE_DIGITS = (8..15)
-  LINE_BREAKS = ["\n", "\r"].freeze
+  # Quebras de linha, inclusive as do Unicode (o tab continua aceito).
+  LINE_BREAKS = ["\n", "\r", "\v", "\u0085", "\u2028", "\u2029"].freeze
 
   BODY_NOT_ALLOWED = 'O contato vai sem texto: deixe a mensagem vazia e ponha nome e telefone nos campos dele.'.freeze
   NAME_INVALID = "O nome do contato precisa ser um texto de até #{NAME_MAX} caracteres, em uma linha só.".freeze
   PHONE_INVALID = 'O telefone do contato precisa começar com + e o código do país, com 8 a 15 dígitos (ex.: +55 11 4000-0473).'.freeze
   WA_ID_INVALID = 'O WhatsApp do contato (wa_id) precisa ter só números, de 8 a 15 dígitos, sem o +.'.freeze
+  WA_ID_NOT_TEXT = 'Mande o wa_id do contato como texto, só com dígitos (ex.: "551140000473"), não como número.'.freeze
 
   def initialize(payload)
     @name = payload['name']
@@ -29,11 +31,11 @@ class RichMessages::Types::Contact
     return NAME_INVALID unless name?
     return PHONE_INVALID unless phone?
 
-    WA_ID_INVALID unless @wa_id.nil? || wa_id?
+    wa_id_error
   end
 
   # https://developers.facebook.com/documentation/business-messaging/whatsapp/messages/contacts-messages
-  # Só `formatted_name` é obrigatório na Meta; `first_name` vai junto para o aparelho do cliente salvar com nome.
+  # `first_name` vai junto do `formatted_name` para o aparelho do cliente salvar com nome.
   def whatsapp_cloud_payload(_body)
     {
       type: 'contacts',
@@ -58,7 +60,10 @@ class RichMessages::Types::Contact
     number.delete(PHONE_CHARACTERS).empty? && PHONE_DIGITS.cover?(number.count(DIGITS))
   end
 
-  def wa_id?
-    @wa_id.is_a?(String) && @wa_id.delete(DIGITS).empty? && PHONE_DIGITS.cover?(@wa_id.length)
+  def wa_id_error
+    return if @wa_id.nil?
+    return WA_ID_NOT_TEXT if @wa_id.is_a?(Numeric)
+
+    WA_ID_INVALID unless @wa_id.is_a?(String) && @wa_id.delete(DIGITS).empty? && PHONE_DIGITS.cover?(@wa_id.length)
   end
 end

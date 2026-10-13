@@ -65,7 +65,7 @@ describe RichMessages::Types::LocationRequest do
 
         expect(message.status).to eq('failed')
         expect(message.external_error).to eq(error)
-        expect(a_request(:any, /graph\.facebook\.com/)).not_to have_been_made
+        expect(a_request(:post, meta_url)).not_to have_been_made
       end
     end
   end

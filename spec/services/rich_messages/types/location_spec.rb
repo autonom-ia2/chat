@@ -37,6 +37,16 @@ describe RichMessages::Types::Location do
       expect(location(latitude: 0.00001, longitude: 10, name: nil, address: nil).fallback_text(''))
         .to eq('https://maps.google.com/?q=0.00001,10.0')
     end
+
+    # Os mesmos pares e links estão em RichMessage/specs/Location.spec.js: a bolha e o texto saem iguais.
+    {
+      [90, -180] => 'https://maps.google.com/?q=90.0,-180.0',
+      [1e-7, -1e-7] => 'https://maps.google.com/?q=0.0000001,-0.0000001'
+    }.each do |(latitude, longitude), link|
+      it "writes #{latitude}, #{longitude} as #{link}" do
+        expect(location(latitude: latitude, longitude: longitude, name: nil, address: nil).fallback_text('')).to eq(link)
+      end
+    end
   end
 
   describe 'Meta payload' do
@@ -58,6 +68,10 @@ describe RichMessages::Types::Location do
     it 'accepts the edges of the ranges and integer coordinates' do
       expect(location(latitude: -90, longitude: 180).error_for('')).to be_nil
       expect(location(latitude: 90.0, longitude: -180.0).error_for(nil)).to be_nil
+    end
+
+    it 'accepts a tab in name and address' do
+      expect(location(name: "Unidade\tCentro", address: "Rua A\t123").error_for('')).to be_nil
     end
 
     it 'accepts name of 100 and address of 300 characters' do
@@ -89,7 +103,14 @@ describe RichMessages::Types::Location do
       'a name above 100 characters' => [{ name: 'a' * 101 }, '', 'NAME_INVALID'],
       'a name with a line break' => [{ name: "Unidade\nCentro" }, '', 'NAME_INVALID'],
       'an address above 300 characters' => [{ address: 'a' * 301 }, '', 'ADDRESS_INVALID'],
-      'an address with a line break' => [{ address: "Rua A\rCentro" }, '', 'ADDRESS_INVALID']
+      'an address with a line break' => [{ address: "Rua A\rCentro" }, '', 'ADDRESS_INVALID'],
+      'an address with a vertical tab' => [{ address: "Rua A\vCentro" }, '', 'ADDRESS_INVALID'],
+      'an address with a next line (U+0085)' => [{ address: "Rua A\u0085Centro" }, '', 'ADDRESS_INVALID'],
+      'a name with a line separator (U+2028)' => [{ name: "Unidade\u2028Centro" }, '', 'NAME_INVALID'],
+      'an address with a paragraph separator (U+2029)' => [{ address: "Rua A\u2029Centro" }, '', 'ADDRESS_INVALID'],
+      'a Rational latitude' => [{ latitude: Rational(-47, 2) }, '', 'LATITUDE_INVALID'],
+      'a Complex latitude' => [{ latitude: Complex(-23.5, 0) }, '', 'LATITUDE_INVALID'],
+      'a BigDecimal longitude' => [{ longitude: BigDecimal('-46.6388') }, '', 'LONGITUDE_INVALID']
     }.each do |title, (changes, body, error)|
       it "refuses #{title}" do
         expect(location(changes).error_for(body)).to eq(described_class.const_get(error))
@@ -132,7 +153,7 @@ describe RichMessages::Types::Location do
 
       expect(message.status).to eq('failed')
       expect(message.external_error).to eq(described_class::BODY_NOT_ALLOWED)
-      expect(a_request(:any, /graph\.facebook\.com/)).not_to have_been_made
+      expect(a_request(:post, meta_url)).not_to have_been_made
     end
 
     it 'fails invalid coordinates without sending anything' do
@@ -140,7 +161,7 @@ describe RichMessages::Types::Location do
 
       expect(message.status).to eq('failed')
       expect(message.external_error).to eq(described_class::LATITUDE_INVALID)
-      expect(a_request(:any, /graph\.facebook\.com/)).not_to have_been_made
+      expect(a_request(:post, meta_url)).not_to have_been_made
     end
   end
 

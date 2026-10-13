@@ -18,6 +18,18 @@ const textOf = value => (typeof value === 'string' ? value : '');
 const coordinateOf = (value, limit) =>
   Number.isFinite(value) && Math.abs(value) <= limit ? value : null;
 
+// Notação decimal comum, igual à da versão em texto (location.rb, `decimal`): sempre com ao menos uma casa e sem
+// notação científica (90 → "90.0", 1e-7 → "0.0000001"), para o link sair o mesmo nos dois lados.
+const decimalOf = value => {
+  if (Number.isInteger(value)) return value.toFixed(1);
+
+  const [mantissa, exponent] = String(value).split('e');
+  if (!exponent) return mantissa;
+
+  const mantissaDecimals = (mantissa.split('.')[1] ?? '').length;
+  return value.toFixed(mantissaDecimals - Number(exponent));
+};
+
 const richMessage = computed(() => contentAttributes.value?.richMessage ?? {});
 
 const mapHref = computed(() => {
@@ -25,7 +37,7 @@ const mapHref = computed(() => {
   const longitude = coordinateOf(richMessage.value.longitude, 180);
   if (latitude === null || longitude === null) return '';
 
-  return `${MAP_LINK}${latitude},${longitude}`;
+  return `${MAP_LINK}${decimalOf(latitude)},${decimalOf(longitude)}`;
 });
 
 const heading = computed(() => {

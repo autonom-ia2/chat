@@ -35,8 +35,11 @@ Formatos conferidos nas páginas oficiais da Meta em 13/10/2026:
                                             "name": "Unidade Centro", "address": "Rua das Flores, 123 - Centro" } } }
 ```
 
-- `latitude` (-90 a 90) e `longitude` (-180 a 180): obrigatórias, **número JSON** (texto é recusado). O agente
-  nativo converte endereço em coordenadas antes (Google Places, outra frente); este tipo recebe as coordenadas prontas.
+- `latitude` (-90 a 90) e `longitude` (-180 a 180): obrigatórias, **número JSON** (inteiro ou decimal, finito, na
+  faixa). Texto é recusado, e também `BigDecimal`, `Rational` e `Complex` de quem chama por dentro do Ruby: o
+  `BigDecimal` vira texto ao ser gravado e falharia só no envio. O agente nativo converte endereço em coordenadas
+  antes (Google Places, outra frente); este tipo recebe as coordenadas prontas.
+- "Em uma linha" (aqui e no contato) recusa `\n`, `\r`, `\v`, U+0085, U+2028 e U+2029, por lista constante; tab passa.
 - `name` (até 100) e `address` (até 300): opcionais, em uma linha. A Meta não documenta limite; os números são
   nossos, para caber no cartão e na versão em texto. Em branco (`""` ou só espaços) contam como ausentes: não dão
   422 e não vão à Meta.
@@ -49,7 +52,9 @@ Formatos conferidos nas páginas oficiais da Meta em 13/10/2026:
   nunca `1.0e-05`), sem perder casas.
 - Versão em texto: nome, endereço e `https://maps.google.com/?q=<lat>,<lng>`, um por linha (os que vierem).
 - O endereço do mapa (`MAP_LINK`) existe em dois lugares, o tipo Ruby e a bolha `types/Location.vue`, porque o
-  front não importa constante do Ruby. Cada um tem um comentário apontando o outro.
+  front não importa constante do Ruby. Cada um tem um comentário apontando o outro. As coordenadas saem com a mesma
+  formatação nos dois lados (sempre com uma casa, sem notação científica: 90 → `90.0`, 1e-7 → `0.0000001`); os
+  pares `90/-180` e `1e-7` estão provados nos specs Ruby e JS com o mesmo link.
 
 ### `contact` — enviar um cartão de contato
 
@@ -64,7 +69,12 @@ Formatos conferidos nas páginas oficiais da Meta em 13/10/2026:
   internacional E.164), aceitando espaço, hífen, ponto e parênteses. Vai à Meta como foi escrito. A Meta não dá
   regra de formato: a linha de `<PHONE_NUMBER>` diz só "WhatsApp user phone number.", tipo _String_, exemplo
   `+16505559999`. O `+` obrigatório e a contagem de dígitos são regra nossa (decisão: sem `+` é recusado).
-- `wa_id`: opcional, só dígitos (8 a 15); em branco conta como ausente. Linha de `<WHATSAPP_USER_ID>` na Meta:
+  **Pontuação livre continua aceita** (decisão da revisão): depois do `+`, espaço, hífen, ponto e parênteses
+  passam em qualquer posição e quantidade (`+55 (11) 4000.0473-` é aceito); só se confere que o resto são dígitos
+  e que eles são de 8 a 15.
+- `wa_id`: opcional, texto só com dígitos (8 a 15); em branco conta como ausente. Mandado como número JSON, é
+  recusado com mensagem própria ("Mande o wa_id do contato como texto, só com dígitos…"). Linha de
+  `<WHATSAPP_USER_ID>` na Meta:
   "WhatsApp user ID. If omitted, the message will display an Invite to WhatsApp button instead of the standard
   buttons."
 - **Sem corpo**, como a localização.
@@ -103,6 +113,11 @@ initializer próprio (`config/initializers/rich_messages_received_location.rb`),
 - O webhook do robô leva `content_attributes` (`Message#webhook_data`), então recebe `shared_location`. A resposta
   ao pedido traz `context.id`; o recebimento já grava `in_reply_to` com o id da mensagem do pedido — o robô liga a
   resposta ao pedido por aí. Provado em `spec/services/rich_messages/received_location_spec.rb`.
+- **Eco da coexistência fica de fora:** quando a empresa manda uma localização pelo app do celular, a Meta devolve um
+  eco (`smb_message_echoes`) que vira mensagem de saída (`outgoing_echo`). A localização é da empresa, não do
+  cliente: o anexo é criado como antes, mas `shared_location` não é gravado.
+- `location` que não é objeto: nada é gravado e nada é levantado aqui. (Se vier `nil`, o próprio
+  `attach_location` do Chatwoot, que roda antes, é quem falha; isso não mudou.)
 - Vale para o WhatsApp oficial e o 360dialog (mesmo serviço base). Outra frente (#1433) mexe nesse arquivo: aqui
   nada dele é editado e o método que escolhe o agente não é tocado; o prepend só cobre `attach_location`.
 

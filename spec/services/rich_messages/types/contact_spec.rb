@@ -55,6 +55,11 @@ describe RichMessages::Types::Contact do
       end
     end
 
+    it 'accepts a tab in the name and free punctuation in the phone' do
+      expect(contact(name: "Recepção\tCentro").error_for('')).to be_nil
+      expect(contact(phone: '+55 (11) 4000.0473-').error_for('')).to be_nil
+    end
+
     it 'accepts a name of 100 characters and phones of 8 and 15 digits' do
       expect(contact(name: 'a' * 100, phone: '+12345678').error_for(nil)).to be_nil
       expect(contact(phone: '+123456789012345').error_for('')).to be_nil
@@ -66,6 +71,10 @@ describe RichMessages::Types::Contact do
       'a blank name' => [{ name: '  ' }, '', 'NAME_INVALID'],
       'a name above 100 characters' => [{ name: 'a' * 101 }, '', 'NAME_INVALID'],
       'a name with a line break' => [{ name: "Recepção\nCentro" }, '', 'NAME_INVALID'],
+      'a name with a vertical tab' => [{ name: "Recepção\vCentro" }, '', 'NAME_INVALID'],
+      'a name with a next line (U+0085)' => [{ name: "Recepção\u0085Centro" }, '', 'NAME_INVALID'],
+      'a name with a line separator (U+2028)' => [{ name: "Recepção\u2028Centro" }, '', 'NAME_INVALID'],
+      'a name with a paragraph separator (U+2029)' => [{ name: "Recepção\u2029Centro" }, '', 'NAME_INVALID'],
       'a missing phone' => [{ phone: nil }, '', 'PHONE_INVALID'],
       'a phone that is a number' => [{ phone: 5_511_940_000_473 }, '', 'PHONE_INVALID'],
       'a phone without the country code sign' => [{ phone: '11 4000-0473' }, '', 'PHONE_INVALID'],
@@ -74,7 +83,8 @@ describe RichMessages::Types::Contact do
       'a phone with more than 15 digits' => [{ phone: '+1234567890123456' }, '', 'PHONE_INVALID'],
       'a phone with a plus sign in the middle' => [{ phone: '+55+11940000473' }, '', 'PHONE_INVALID'],
       'a WhatsApp ID with a plus sign' => [{ wa_id: '+551140000473' }, '', 'WA_ID_INVALID'],
-      'a WhatsApp ID that is a number' => [{ wa_id: 551_140_000_473 }, '', 'WA_ID_INVALID'],
+      'a WhatsApp ID that is a number' => [{ wa_id: 551_140_000_473 }, '', 'WA_ID_NOT_TEXT'],
+      'a WhatsApp ID that is a list' => [{ wa_id: ['551140000473'] }, '', 'WA_ID_INVALID'],
       'a WhatsApp ID with fewer than 8 digits' => [{ wa_id: '1234567' }, '', 'WA_ID_INVALID']
     }.each do |title, (changes, body, error)|
       it "refuses #{title}" do
@@ -114,7 +124,7 @@ describe RichMessages::Types::Contact do
 
       expect(message.status).to eq('failed')
       expect(message.external_error).to eq(described_class::BODY_NOT_ALLOWED)
-      expect(a_request(:any, /graph\.facebook\.com/)).not_to have_been_made
+      expect(a_request(:post, meta_url)).not_to have_been_made
     end
   end
 
