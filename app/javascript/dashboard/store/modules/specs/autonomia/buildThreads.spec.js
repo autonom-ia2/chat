@@ -274,6 +274,83 @@ describe('#autonomiaBuildThreads store', () => {
     });
   });
 
+  // #1367 — o servidor avisa pelo ActionCable quando o turno termina; a consulta
+  // periódica fica de reserva.
+  describe('buildThreadUpdated (push)', () => {
+    let fetchResults;
+    let ctx;
+
+    const fetchCalls = () =>
+      ctx.dispatch.mock.calls.filter(([name]) => name === 'fetch').length;
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+      fetchResults = [];
+      ctx = { commit: vi.fn() };
+      ctx.dispatch = vi.fn((name, args) => {
+        if (name === 'fetch') return fetchResults.shift();
+        if (name === 'poll') return actions.poll(ctx, args);
+        return undefined;
+      });
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('fetches the polled thread right away instead of waiting the interval', async () => {
+      fetchResults.push(Promise.resolve({ status: 'ready' }));
+      actions.poll(ctx, { threadId: 3 });
+
+      actions.buildThreadUpdated(ctx, { account_id: 1, id: 3 });
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(fetchCalls()).toBe(1);
+    });
+
+    it('ignores a push for another thread', async () => {
+      fetchResults.push(Promise.resolve({ status: 'ready' }));
+      actions.poll(ctx, { threadId: 3 });
+
+      actions.buildThreadUpdated(ctx, { account_id: 1, id: 9 });
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(fetchCalls()).toBe(0);
+      await vi.advanceTimersByTimeAsync(3000);
+      expect(fetchCalls()).toBe(1);
+    });
+
+    it('fetches again right after a fetch that was in flight when the push arrived', async () => {
+      let resolveFirst;
+      fetchResults.push(
+        new Promise(resolve => {
+          resolveFirst = resolve;
+        }),
+        Promise.resolve({ status: 'ready' })
+      );
+      actions.poll(ctx, { threadId: 3 });
+      await vi.advanceTimersByTimeAsync(3000);
+      expect(fetchCalls()).toBe(1);
+
+      actions.buildThreadUpdated(ctx, { account_id: 1, id: 3 });
+      resolveFirst({ status: 'processing' });
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(fetchCalls()).toBe(2);
+    });
+
+    it('does nothing once the build settled', async () => {
+      fetchResults.push(Promise.resolve({ status: 'ready' }));
+      actions.poll(ctx, { threadId: 3 });
+      await vi.advanceTimersByTimeAsync(3000);
+
+      actions.buildThreadUpdated(ctx, { account_id: 1, id: 3 });
+      await vi.advanceTimersByTimeAsync(3000);
+
+      expect(fetchCalls()).toBe(1);
+    });
+  });
+
   describe('mutations', () => {
     it('RESET clears every tracked slice', () => {
       const state = {
