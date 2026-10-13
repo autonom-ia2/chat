@@ -47,6 +47,7 @@ RSpec.describe 'Conversa aberta na campanha (#1335)', :aggregate_failures, type:
       expect(payload['precos']).to eq('modelo' => { 'valor' => '0.3217', 'moeda' => 'BRL' },
                                       'escrita' => { 'valor' => '0.035', 'moeda' => 'BRL' })
       expect(payload['franquia']).to eq('limite' => 1000, 'usadas' => 0)
+      expect(payload['campos'].pluck('chave')).to include('cliente.primeiro_nome', 'publico.Link_da_oferta')
     end
 
     it 'sem a flag da conta, 404' do

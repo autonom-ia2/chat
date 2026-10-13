@@ -15,6 +15,14 @@ RSpec.describe CampaignJourney::ConversaAberta::Texto do
     expect(described_class.colunas(['Link da oferta'])).to eq('publico.Link_da_oferta' => 'publico.Link da oferta')
   end
 
+  it 'lista os campos para a tela, com o cabeçalho da coluna como rótulo' do
+    campos = described_class.campos(['Link da oferta'], locale: :pt_BR)
+
+    expect(campos.pluck(:chave)).to eq(%w[cliente.primeiro_nome cliente.nome minha_empresa.nome minha_empresa.site publico.Link_da_oferta])
+    expect(campos.last).to eq(chave: 'publico.Link_da_oferta', rotulo: 'Link da oferta')
+    expect(campos.first[:rotulo]).to eq(TemplateFields::Catalog.label('cliente.primeiro_nome', locale: :pt_BR))
+  end
+
   it 'aceita o texto com campos do catálogo e link vindo de campo' do
     texto = 'Oi, {{cliente.primeiro_nome}}! A coleção nova chegou: {{publico.Link_da_oferta}}. Responda aqui.'
 

@@ -20,7 +20,8 @@ class CampaignJourney::ConversaAberta::Contagem
     window = Whatsapp::ServiceWindow.new(inbox: @inbox, now: @now)
     dentro = window.open_contact_ids(ids)
     { dentro: dentro.size, fora: ids.size - dentro.size, fecham_logo: window.closing_soon_count(dentro.to_a),
-      conferido_em: @now.iso8601, precos: precos, franquia: franquia }
+      conferido_em: @now.iso8601, precos: precos, franquia: franquia,
+      campos: CampaignJourney::ConversaAberta::Texto.campos(@campaign_import.extra_columns) }
   end
 
   private

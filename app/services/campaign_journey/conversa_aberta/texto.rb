@@ -24,6 +24,12 @@ class CampaignJourney::ConversaAberta::Texto
       end
     end
 
+    # [{ chave:, rotulo: }] para os botões da tela: os campos fixos e as colunas do Público (rótulo = o cabeçalho).
+    def campos(columns, locale: I18n.locale)
+      fixos = CHAVES_FIXAS.map { |chave| { chave: chave, rotulo: TemplateFields::Catalog.label(chave, locale: locale) } }
+      fixos + colunas(columns).map { |chave, real| { chave: chave, rotulo: TemplateFields::Catalog.label(real) } }
+    end
+
     # nil quando o texto serve; senão o motivo (símbolo).
     def problema(texto, permitidas:)
       texto = texto.to_s
