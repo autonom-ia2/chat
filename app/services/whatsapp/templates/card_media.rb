@@ -8,7 +8,6 @@
 module Whatsapp::Templates::CardMedia
   Invalid = Whatsapp::Templates::HeaderMedia::Invalid
   FORMATS = %w[IMAGE VIDEO].freeze
-  MIME_PREFIX = { 'image' => 'image/', 'video' => 'video/' }.freeze
 
   module_function
 
@@ -29,14 +28,9 @@ module Whatsapp::Templates::CardMedia
 
   def checked_blob!(signed_id, type, account_id)
     blob = ActiveStorage::Blob.find_signed(signed_id)
-    raise Invalid, 'carousel_media_invalid' unless blob && accepted?(blob, type, account_id)
+    raise Invalid, 'carousel_media_invalid' unless Whatsapp::Templates::HeaderMedia.blob_accepted?(blob, type, account_id)
 
     signed_id
-  end
-
-  def accepted?(blob, type, account_id)
-    blob.metadata['account_id'].to_s == account_id.to_s && blob.content_type.to_s.start_with?(MIME_PREFIX[type]) &&
-      Whatsapp::Templates::HeaderMedia.upload_allowed?(blob.content_type, blob.byte_size)
   end
 
   def checked_url!(url)

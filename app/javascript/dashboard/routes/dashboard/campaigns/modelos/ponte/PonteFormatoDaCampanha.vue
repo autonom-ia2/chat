@@ -1,17 +1,17 @@
 <script setup>
 // No passo Mensagem da Nova campanha (#1334), o que o formato do modelo
-// escolhido pede antes do envio: o código do cupom, até quando vale a oferta e
-// a foto ou o vídeo de cada cartão do carrossel (o aprovado com o modelo, ou um
-// arquivo escolhido agora, que sobe na hora). Catálogo e formulário só avisam o
-// que acontece. Uma pergunta por bloco.
+// escolhido pede antes do envio: a foto, o vídeo ou o documento do topo (#1465),
+// o código do cupom, até quando vale a oferta e a foto ou o vídeo de cada cartão
+// do carrossel. Cada arquivo é o aprovado com o modelo, ou um escolhido agora,
+// que sobe na hora. Catálogo e formulário só avisam o que acontece. Uma
+// pergunta por bloco.
 import { computed, onBeforeUnmount, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Input from 'dashboard/components-next/input/Input.vue';
-import EscolherArquivo from '../components/criar/EscolherArquivo.vue';
+import ArquivoDaCampanha from './ArquivoDaCampanha.vue';
 import api from '../api/modelosWhatsapp';
 import { arquivoGuardado } from '../api/arquivos';
 import {
-  ACEITA_NO_CARTAO,
   CODIGO_MAXIMO,
   oQuePedir,
   pendencias,
@@ -29,7 +29,11 @@ const { t } = useI18n();
 const NS = 'MODELOS_WHATSAPP.PONTE.FORMATO';
 
 const pedido = computed(() =>
-  oQuePedir(props.modelo.template, props.modelo.cartoesGuardados || [])
+  oQuePedir(
+    props.modelo.template,
+    props.modelo.cartoesGuardados || [],
+    props.modelo.topoGuardado
+  )
 );
 // Cupom vazio é o começo: o código de exemplo do modelo aparece só como dica,
 // para nunca ir sem querer para o público inteiro.
@@ -47,6 +51,7 @@ const faltando = computed(() =>
 );
 const temAlgo = computed(
   () =>
+    pedido.value.topo ||
     pedido.value.cupom ||
     pedido.value.validade ||
     pedido.value.cartoes.length ||
@@ -64,46 +69,40 @@ onBeforeUnmount(() => {
 const atualizar = patch => {
   if (ativo) emit('update', { ...props.valores, ...patch });
 };
+const semChave = (objeto, chave) =>
+  Object.fromEntries(
+    Object.entries(objeto).filter(([item]) => item !== String(chave))
+  );
 const comCartao = (indice, arquivo) => {
-  const cartoes = { ...(props.valores.cartoes || {}) };
-  if (arquivo) cartoes[indice] = arquivo;
-  else delete cartoes[indice];
-  atualizar({ cartoes });
+  const cartoes = semChave(props.valores.cartoes || {}, indice);
+  atualizar({ cartoes: arquivo ? { ...cartoes, [indice]: arquivo } : cartoes });
+};
+// Sem arquivo escolhido, o topo sai dos valores: vai o aprovado com o modelo.
+const comTopo = arquivo => {
+  if (!ativo) return;
+  const resto = semChave(props.valores, 'topo');
+  emit('update', arquivo ? { ...resto, topo: arquivo } : resto);
 };
 
-// O arquivo sobe assim que é escolhido; enquanto sobe, o cartão diz "Enviando".
+// O arquivo sobe assim que é escolhido; enquanto sobe, a linha diz "Enviando".
+// Chave: 'topo' ou o índice do cartão.
 const enviando = ref({});
 const erroDoEnvio = ref({});
-const escolher = async (indice, { arquivo, local }) => {
-  enviando.value = { ...enviando.value, [indice]: arquivo };
-  erroDoEnvio.value = { ...erroDoEnvio.value, [indice]: '' };
+const escolher = async (chave, { arquivo, local }, gravar) => {
+  enviando.value = { ...enviando.value, [chave]: arquivo };
+  erroDoEnvio.value = { ...erroDoEnvio.value, [chave]: '' };
   try {
-    comCartao(
-      indice,
+    gravar(
       await api.subirArquivoDaCampanha(props.caixa, arquivoGuardado(local))
     );
   } catch (erro) {
     erroDoEnvio.value = {
       ...erroDoEnvio.value,
-      [indice]: erro?.mensagem || t(`${NS}.CARTAO_ERRO`),
+      [chave]: erro?.mensagem || t(`${NS}.ARQUIVO.ERRO`),
     };
   } finally {
-    enviando.value = { ...enviando.value, [indice]: '' };
+    enviando.value = { ...enviando.value, [chave]: '' };
   }
-};
-
-const descricao = cartao => {
-  const novo = props.valores.cartoes?.[cartao.indice];
-  if (enviando.value[cartao.indice]) {
-    return t(`${NS}.CARTAO_ENVIANDO`, {
-      arquivo: enviando.value[cartao.indice],
-    });
-  }
-  if (novo) return t(`${NS}.CARTAO_ESCOLHIDO`, { arquivo: novo.nome });
-  if (cartao.guardado) {
-    return t(`${NS}.CARTAO_GUARDADO`, { arquivo: cartao.guardado.nome });
-  }
-  return t(`${NS}.CARTAO_SEM_ARQUIVO_${cartao.midia.toUpperCase()}`);
 };
 </script>
 
@@ -121,6 +120,19 @@ const descricao = cartao => {
         {{ t(`${NS}.AJUDA`) }}
       </p>
     </div>
+
+    <ArquivoDaCampanha
+      v-if="pedido.topo"
+      data-formato-topo
+      :titulo="t(`${NS}.TOPO.${pedido.topo.midia}`)"
+      :midia="pedido.topo.midia"
+      :guardado="pedido.topo.guardado"
+      :escolhido="valores.topo || null"
+      :enviando="enviando.topo || ''"
+      :erro="erroDoEnvio.topo || ''"
+      @escolhido="arquivo => escolher('topo', arquivo, comTopo)"
+      @voltar="comTopo(null)"
+    />
 
     <Input
       v-if="pedido.cupom"
@@ -164,57 +176,23 @@ const descricao = cartao => {
         <li
           v-for="cartao in pedido.cartoes"
           :key="cartao.indice"
-          class="flex flex-wrap gap-3 items-center p-3 rounded-xl border border-n-weak bg-n-solid-1"
           :data-formato-cartao="cartao.indice"
         >
-          <span
-            class="flex justify-center items-center rounded-lg size-11 shrink-0 bg-n-blue-3 text-n-blue-11"
-            aria-hidden="true"
-          >
-            <span
-              :class="
-                cartao.midia === 'video' ? 'i-lucide-video' : 'i-lucide-image'
-              "
-              class="size-5"
-            />
-          </span>
-          <span class="flex flex-col flex-1 min-w-0 basis-48">
-            <strong class="text-sm text-n-slate-12">
-              {{ t(`${NS}.CARTAO`, { n: cartao.indice + 1 }) }}
-            </strong>
-            <span
-              class="text-xs break-words text-n-slate-11"
-              aria-live="polite"
-            >
-              {{ descricao(cartao) }}
-            </span>
-            <span
-              v-if="erroDoEnvio[cartao.indice]"
-              role="alert"
-              class="text-xs text-n-ruby-11"
-            >
-              {{ erroDoEnvio[cartao.indice] }}
-            </span>
-          </span>
-          <span class="flex flex-wrap gap-2 items-center w-full sm:w-auto">
-            <EscolherArquivo
-              :aceita="ACEITA_NO_CARTAO[cartao.midia]"
-              :rotulo="
-                cartao.guardado || valores.cartoes?.[cartao.indice]
-                  ? t(`${NS}.CARTAO_TROCAR_${cartao.midia.toUpperCase()}`)
-                  : t(`${NS}.CARTAO_ESCOLHER_${cartao.midia.toUpperCase()}`)
-              "
-              @escolhido="arquivo => escolher(cartao.indice, arquivo)"
-            />
-            <button
-              v-if="cartao.guardado && valores.cartoes?.[cartao.indice]"
-              type="button"
-              class="px-2 text-sm min-h-11 text-n-blue-11 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand rounded-lg"
-              @click="comCartao(cartao.indice, null)"
-            >
-              {{ t(`${NS}.CARTAO_VOLTAR`) }}
-            </button>
-          </span>
+          <ArquivoDaCampanha
+            :titulo="t(`${NS}.CARTAO`, { n: cartao.indice + 1 })"
+            :midia="cartao.midia"
+            :guardado="cartao.guardado"
+            :escolhido="valores.cartoes?.[cartao.indice] || null"
+            :enviando="enviando[cartao.indice] || ''"
+            :erro="erroDoEnvio[cartao.indice] || ''"
+            @escolhido="
+              arquivo =>
+                escolher(cartao.indice, arquivo, novo =>
+                  comCartao(cartao.indice, novo)
+                )
+            "
+            @voltar="comCartao(cartao.indice, null)"
+          />
         </li>
       </ul>
     </div>

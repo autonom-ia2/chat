@@ -15,6 +15,8 @@ const props = defineProps({
   remetente: { type: String, default: '' },
   // #1334: o cupom digitado na campanha aparece no celular.
   cupom: { type: String, default: '' },
+  // #1465: o nome do arquivo do topo escolhido na campanha; sem ele, o aprovado.
+  topo: { type: String, default: '' },
 });
 
 const { t } = useI18n();
@@ -58,7 +60,15 @@ const conteudo = computed(() => {
       valorDe(props.bindings[chave]) || rotuloDoCampo(t, campo),
     ])
   );
-  const base = { ...props.modelo.conteudo, exemplos };
+  // O arquivo do topo que vai: o escolhido agora ou o aprovado guardado.
+  const arquivoDoTopo = props.topo || props.modelo.topoGuardado?.nome;
+  const base = {
+    ...props.modelo.conteudo,
+    exemplos,
+    ...(arquivoDoTopo
+      ? { topo: { ...props.modelo.conteudo.topo, arquivo: arquivoDoTopo } }
+      : {}),
+  };
   if (!props.cupom) return base;
   return {
     ...base,

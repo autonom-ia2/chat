@@ -351,6 +351,10 @@ export const modeloDaMeta = (template, grupo) => {
     enviadoEm: null,
     edicoes: { restantesNoMes: null, liberadaEm: null },
     cartoesGuardados: cartoesGuardadosDe(template.card_media),
+    // #1465: o arquivo do topo guardado de fato (a campanha diz "vai a foto aprovada").
+    topoGuardado: template.header_file_name
+      ? { nome: template.header_file_name }
+      : null,
     template,
   };
 };

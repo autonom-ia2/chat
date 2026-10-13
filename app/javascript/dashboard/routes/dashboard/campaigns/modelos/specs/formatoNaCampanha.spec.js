@@ -2,6 +2,7 @@ import { mount, flushPromises } from '@vue/test-utils';
 import { createI18n } from 'vue-i18n';
 import en from 'dashboard/i18n/locale/en/modelosWhatsapp.json';
 import PonteFormatoDaCampanha from '../ponte/PonteFormatoDaCampanha.vue';
+import PontePrevia from '../ponte/PontePrevia.vue';
 import {
   extrasParaEnvio,
   formatoQueNaoVai,
@@ -13,6 +14,9 @@ import {
 // (Whatsapp::Templates::SendParams).
 const api = vi.hoisted(() => ({ subirArquivoDaCampanha: vi.fn() }));
 vi.mock('../api/modelosWhatsapp', () => ({ default: api }));
+vi.mock('dashboard/composables/useAccount', () => ({
+  useAccount: () => ({ currentAccount: { value: { name: 'Hub2you' } } }),
+}));
 
 const ZONA = 'America/Sao_Paulo';
 const AGORA = new Date('2026-10-13T12:00:00Z').getTime();
@@ -53,7 +57,7 @@ const carrossel = {
 
 describe('formatoNaCampanha', () => {
   it('pede cupom (com o exemplo do modelo) e validade na oferta', () => {
-    const pedido = oQuePedir(oferta);
+    const pedido = oQuePedir(oferta, [], { nome: 'oferta.png' });
     expect(pedido.cupom).toEqual({ indice: 0, exemplo: 'CUPOM10' });
     expect(pedido.validade).toBe(true);
     expect(pendencias(pedido, {}, { timeZone: ZONA, agora: AGORA })).toEqual([
@@ -91,6 +95,38 @@ describe('formatoNaCampanha', () => {
     expect(extrasParaEnvio(pedido, valores, { timeZone: ZONA })).toEqual({
       carousel: { cards: [{ header: {} }, { header: { media_blob: 'sig2' } }] },
     });
+  });
+
+  // #1465: topo com foto, vídeo ou documento — o aprovado com o modelo, ou um
+  // arquivo escolhido agora, que vai como referência (o servidor gera o link).
+  it('no topo, usa o arquivo aprovado ou o escolhido agora, conforme o tipo', () => {
+    const comTopo = formato => ({
+      components: [
+        { type: 'HEADER', format: formato },
+        { type: 'BODY', text: 'Oi' },
+      ],
+    });
+    expect(oQuePedir(comTopo('IMAGE')).topo).toEqual({
+      midia: 'foto',
+      guardado: null,
+    });
+    expect(oQuePedir(comTopo('VIDEO')).topo.midia).toBe('video');
+    expect(oQuePedir(comTopo('DOCUMENT')).topo.midia).toBe('documento');
+    expect(oQuePedir(comTopo('TEXT')).topo).toBeNull();
+    expect(oQuePedir({ components: [] }).topo).toBeNull();
+
+    const semGuardado = oQuePedir(comTopo('DOCUMENT'));
+    expect(pendencias(semGuardado, {}, { timeZone: ZONA })).toEqual(['TOPO']);
+    const valores = { topo: { referencia: 'sig1', nome: 'tabela.pdf' } };
+    expect(pendencias(semGuardado, valores, { timeZone: ZONA })).toEqual([]);
+    expect(extrasParaEnvio(semGuardado, valores, { timeZone: ZONA })).toEqual({
+      header: { media_blob: 'sig1' },
+    });
+
+    const guardado = oQuePedir(comTopo('IMAGE'), [], { nome: 'topo.png' });
+    expect(guardado.topo.guardado).toEqual({ nome: 'topo.png' });
+    expect(pendencias(guardado, {}, { timeZone: ZONA })).toEqual([]);
+    expect(extrasParaEnvio(guardado, {}, { timeZone: ZONA })).toEqual({});
   });
 
   it('código de verificação e produtos do catálogo não vão em campanha', () => {
@@ -154,7 +190,7 @@ describe('PonteFormatoDaCampanha', () => {
     const cartoes = wrapper.findAll('[data-formato-cartao]');
     expect(cartoes[0].text()).toContain('a.jpg');
     expect(cartoes[1].text()).toContain(
-      en.MODELOS_WHATSAPP.PONTE.FORMATO.CARTAO_SEM_ARQUIVO_FOTO
+      en.MODELOS_WHATSAPP.PONTE.FORMATO.ARQUIVO.SEM_ARQUIVO.foto
     );
 
     const input = cartoes[1].find('input[type="file"]');
@@ -188,6 +224,89 @@ describe('PonteFormatoDaCampanha', () => {
     expect(wrapper.emitted('update').at(-1)).toEqual([{ cupom: 'OUTUBRO15' }]);
   });
 
+  // #1465: o topo do modelo no lugar do campo de link.
+  const comTopo = formato => ({
+    name: 'aviso',
+    category: 'MARKETING',
+    components: [
+      { type: 'HEADER', format: formato },
+      { type: 'BODY', text: 'Oi' },
+    ],
+  });
+  const FORMATO = en.MODELOS_WHATSAPP.PONTE.FORMATO;
+  const textoCom = (texto, arquivo) => texto.replace('{arquivo}', arquivo);
+
+  it('topo com arquivo aprovado: diz que vai a foto aprovada e oferece trocar', () => {
+    const wrapper = montar({
+      modelo: {
+        template: comTopo('IMAGE'),
+        topoGuardado: { nome: 'topo.png' },
+      },
+    });
+    const topo = wrapper.find('[data-formato-topo]');
+
+    expect(topo.text()).toContain(FORMATO.TOPO.foto);
+    expect(topo.text()).toContain(
+      textoCom(FORMATO.ARQUIVO.GUARDADO.foto, 'topo.png')
+    );
+    expect(topo.find('[data-escolher-arquivo]').text()).toBe(
+      FORMATO.ARQUIVO.TROCAR.foto
+    );
+    expect(topo.find('input[type="file"]').attributes('accept')).toBe(
+      'image/jpeg,image/png'
+    );
+  });
+
+  it('topo sem arquivo guardado: pede para escolher, com o tipo do modelo', () => {
+    const video = montar({ modelo: { template: comTopo('VIDEO') } });
+    expect(video.find('[data-formato-topo]').text()).toContain(
+      FORMATO.ARQUIVO.SEM_ARQUIVO.video
+    );
+    expect(
+      video.find('[data-formato-topo] [data-escolher-arquivo]').text()
+    ).toBe(FORMATO.ARQUIVO.ESCOLHER.video);
+
+    const documento = montar({ modelo: { template: comTopo('DOCUMENT') } });
+    const topo = documento.find('[data-formato-topo]');
+    expect(topo.text()).toContain(FORMATO.ARQUIVO.SEM_ARQUIVO.documento);
+    expect(topo.find('input[type="file"]').attributes('accept')).toBe(
+      'application/pdf'
+    );
+  });
+
+  it('sobe o arquivo do topo pela caixa, guarda a referência e volta para o aprovado', async () => {
+    api.subirArquivoDaCampanha.mockResolvedValue({
+      referencia: 'sig9',
+      nome: 'nova.png',
+    });
+    const wrapper = montar({
+      modelo: {
+        template: comTopo('IMAGE'),
+        topoGuardado: { nome: 'topo.png' },
+      },
+    });
+    const input = wrapper.find('[data-formato-topo] input[type="file"]');
+    const arquivo = new File(['x'], 'nova.png', { type: 'image/png' });
+    Object.defineProperty(input.element, 'files', { value: [arquivo] });
+    await input.trigger('change');
+    await flushPromises();
+
+    expect(api.subirArquivoDaCampanha).toHaveBeenCalledWith(7, arquivo);
+    expect(wrapper.emitted('update').at(-1)).toEqual([
+      { topo: { referencia: 'sig9', nome: 'nova.png' } },
+    ]);
+
+    await wrapper.setProps({
+      valores: { topo: { referencia: 'sig9', nome: 'nova.png' } },
+    });
+    const topo = wrapper.find('[data-formato-topo]');
+    expect(topo.text()).toContain(
+      textoCom(FORMATO.ARQUIVO.ESCOLHIDO, 'nova.png')
+    );
+    await topo.find('[data-usar-aprovado]').trigger('click');
+    expect(wrapper.emitted('update').at(-1)).toEqual([{}]);
+  });
+
   it('diz quando o arquivo não subiu, com o motivo do servidor', async () => {
     api.subirArquivoDaCampanha.mockRejectedValue({
       mensagem: 'Use JPG ou PNG',
@@ -204,5 +323,41 @@ describe('PonteFormatoDaCampanha', () => {
       wrapper.find('[data-formato-cartao="0"] [role="alert"]').text()
     ).toBe('Use JPG ou PNG');
     expect(wrapper.emitted('update')).toBeUndefined();
+  });
+});
+
+// #1465: "Como o cliente vê" mostra o arquivo do topo que vai.
+describe('PontePrevia', () => {
+  const montarPrevia = props =>
+    mount(PontePrevia, {
+      props,
+      global: {
+        plugins: [
+          createI18n({ legacy: false, locale: 'en', messages: { en } }),
+        ],
+      },
+    });
+  const modelo = {
+    conteudo: {
+      formato: 'padrao',
+      topo: { tipo: 'foto', arquivo: '' },
+      texto: [{ t: 'texto', v: 'Oi' }],
+      exemplos: {},
+      rodape: '',
+      botoes: [],
+    },
+    campos: {},
+    topoGuardado: { nome: 'aprovada.png' },
+  };
+
+  it('mostra o arquivo aprovado e, escolhido outro, o escolhido', () => {
+    expect(montarPrevia({ modelo }).find('[data-celular-topo]').text()).toBe(
+      'aprovada.png'
+    );
+    expect(
+      montarPrevia({ modelo, topo: 'nova.png' })
+        .find('[data-celular-topo]')
+        .text()
+    ).toBe('nova.png');
   });
 });

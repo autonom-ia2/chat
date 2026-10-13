@@ -33,6 +33,7 @@ const modelosApi = vi.hoisted(() => ({
   listarCaixasDaCampanha: vi.fn(),
   listarModelos: vi.fn(),
   custoPorEnvio: vi.fn(),
+  subirArquivoDaCampanha: vi.fn(),
 }));
 vi.mock('../../modelos/api/modelosWhatsapp', () => ({ default: modelosApi }));
 
@@ -330,6 +331,59 @@ describe('Nova campanha com a ponte de Modelos (#1332)', () => {
       { value: 7, label: 'Atendimento' },
     ]);
     expect(wrapper.find('[data-ponte-reconectar]').exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  // #1465: topo com foto sem arquivo guardado — sai o campo de link, entra
+  // "Escolher foto"; a campanha só segue com o arquivo, que aparece na prévia.
+  it('asks to choose the header photo instead of a link and shows it in the preview', async () => {
+    const comFoto = {
+      ...TEMPLATE,
+      id: '77',
+      name: 'oferta_com_foto',
+      status: 'APPROVED',
+      components: [{ type: 'HEADER', format: 'IMAGE' }, ...TEMPLATE.components],
+    };
+    modelosApi.listarModelos.mockResolvedValue([
+      modeloDaMeta(comFoto, {
+        id: 7,
+        conta: { id: 7, nome: 'Hub2you' },
+        numeros: [7, 8],
+        envios: {},
+      }),
+    ]);
+    modelosApi.subirArquivoDaCampanha.mockResolvedValue({
+      referencia: 'sig9',
+      nome: 'nova.png',
+    });
+    const wrapper = mountPage({ query: { modelo: '77', caixa: '7' } });
+    await flushPromises();
+    await wrapper.find('[data-audience-option="5"]').trigger('click');
+    await wrapper.find('[data-test="continue-message"]').trigger('click');
+    await flushPromises();
+    await wrapper
+      .find('[data-test="official-form"] input[type="text"]')
+      .setValue('Oferta');
+
+    expect(wrapper.find('[data-test="media-url"]').exists()).toBe(false);
+    expect(wrapper.find('input[type="url"]').exists()).toBe(false);
+    const topo = wrapper.find('[data-formato-topo]');
+    expect(topo.find('[data-escolher-arquivo]').text()).toBe('Choose photo');
+    expect(
+      wrapper.find('[data-test="continue-review"]').attributes('disabled')
+    ).toBeDefined();
+
+    const input = topo.find('input[type="file"]');
+    const arquivo = new File(['x'], 'nova.png', { type: 'image/png' });
+    Object.defineProperty(input.element, 'files', { value: [arquivo] });
+    await input.trigger('change');
+    await flushPromises();
+
+    expect(modelosApi.subirArquivoDaCampanha).toHaveBeenCalledWith(7, arquivo);
+    expect(wrapper.find('[data-celular-topo]').text()).toContain('nova.png');
+    expect(
+      wrapper.find('[data-test="continue-review"]').attributes('disabled')
+    ).toBeUndefined();
     wrapper.unmount();
   });
 

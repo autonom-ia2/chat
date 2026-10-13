@@ -3,6 +3,8 @@
 // expressão regular.
 //   cupom      → botão "Copiar código": o código que todos recebem;
 //   validade   → oferta por tempo limitado que mostra a contagem: até quando;
+//   topo       → foto, vídeo ou documento no topo (#1465): o aprovado, guardado
+//                com o modelo, ou um arquivo escolhido agora;
 //   cartoes    → carrossel: a foto ou o vídeo de cada cartão (o aprovado,
 //                guardado com o modelo, ou um arquivo escolhido agora);
 //   catalogo / formulario → nada a preencher, só o aviso do que acontece.
@@ -19,11 +21,14 @@ const botoes = template => componente(template, 'BUTTONS')?.buttons || [];
 
 // O envio do Chatwoot recusa cupom com mais de 15 caracteres (o teto da oferta).
 export const CODIGO_MAXIMO = 15;
-// O que o seletor de arquivo aceita em cada cartão (tipos da Meta).
-export const ACEITA_NO_CARTAO = {
+// O que o seletor de arquivo aceita no topo e em cada cartão (tipos da Meta).
+export const ACEITA = {
   foto: 'image/jpeg,image/png',
   video: 'video/mp4',
+  documento: 'application/pdf',
 };
+// Topo de mídia do modelo → o tipo da tela.
+const MIDIA_DO_TOPO = { IMAGE: 'foto', VIDEO: 'video', DOCUMENT: 'documento' };
 
 // Cartão de produto (carrossel de produtos): topo PRODUCT, sem foto nossa.
 const semMidia = cartao => {
@@ -56,7 +61,10 @@ export const formatoQueNaoVai = template => {
 };
 
 // O que pedir na tela. `guardados`: arquivo aprovado de cada cartão (API).
-export const oQuePedir = (template, guardados = []) => {
+export const oQuePedir = (template, guardados = [], topoGuardado = null) => {
+  // `topoGuardado`: { nome } do arquivo do topo aprovado (API), ou null.
+  const midiaDoTopo =
+    MIDIA_DO_TOPO[maiusculo(componente(template, 'HEADER')?.format)];
   const lista = botoes(template);
   const indiceDoCupom = lista.findIndex(
     botao => maiusculo(botao?.type) === 'COPY_CODE'
@@ -65,6 +73,9 @@ export const oQuePedir = (template, guardados = []) => {
   const oferta = componente(template, 'LIMITED_TIME_OFFER');
   const cartoes = componente(template, 'CAROUSEL')?.cards || [];
   return {
+    topo: midiaDoTopo
+      ? { midia: midiaDoTopo, guardado: topoGuardado || null }
+      : null,
     cupom:
       indiceDoCupom >= 0
         ? {
@@ -98,6 +109,9 @@ export const pendencias = (
   { timeZone, agora = Date.now() }
 ) => {
   const lista = [];
+  if (pedido.topo && !pedido.topo.guardado && !valores.topo?.referencia) {
+    lista.push('TOPO');
+  }
   if (pedido.cupom) {
     const codigo = (valores.cupom || '').trim();
     if (!codigo || codigo.length > CODIGO_MAXIMO) lista.push('CUPOM');
@@ -116,9 +130,13 @@ export const pendencias = (
 };
 
 // O que entra no `processed_params` da campanha (Whatsapp::Templates::SendParams).
-// Cartão sem arquivo escolhido vai vazio: o servidor usa o aprovado do modelo.
+// Topo ou cartão sem arquivo escolhido vai vazio: o servidor usa o aprovado do
+// modelo. O escolhido vai como referência; o link é gerado no disparo.
 export const extrasParaEnvio = (pedido, valores, { timeZone }) => {
   const extras = {};
+  if (pedido.topo && valores.topo?.referencia) {
+    extras.header = { media_blob: valores.topo.referencia };
+  }
   if (pedido.cupom) {
     const lista = [];
     lista[pedido.cupom.indice] = {

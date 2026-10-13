@@ -39,7 +39,7 @@ class Whatsapp::Templates::Manager
 
   # Cada modelo leva a saúde dos últimos 30 dias (`health`, #1338), calculada de uma vez para a lista toda.
   def list
-    profiles = WhatsappTemplateProfile.for_inbox(@inbox).with_attached_card_files.index_by(&:key)
+    profiles = WhatsappTemplateProfile.for_inbox(@inbox).with_attached_card_files.with_attached_header_file.index_by(&:key)
     health = Whatsapp::Templates::Health.new(inbox: @inbox, templates: synced).perform
     synced.map do |template|
       key = WhatsappTemplateProfile.key_for(template['name'], template['language'])
@@ -155,7 +155,13 @@ class Whatsapp::Templates::Manager
     template.merge('friendly_name' => profile&.friendly_name.presence || template['name'],
                    'fields' => profile&.fields || {}, 'header_media' => profile&.header_media || {},
                    'system_owner' => system_owner(template, profile), 'profile_id' => profile&.id,
-                   'card_media' => card_media(profile))
+                   'card_media' => card_media(profile), 'header_file_name' => header_file_name(profile))
+  end
+
+  # O arquivo do topo de fato guardado (#1465): a campanha mostra "vai a foto aprovada" e, sem ele, pede para escolher.
+  # `header_media` pode ter o nome sem o arquivo (só o handle da Meta), por isso não serve para isso.
+  def header_file_name(profile)
+    profile&.header_file&.attached? ? profile.header_file.filename.to_s : nil
   end
 
   # O arquivo guardado de cada cartão do carrossel (#1334): a campanha mostra "vai a foto aprovada".
