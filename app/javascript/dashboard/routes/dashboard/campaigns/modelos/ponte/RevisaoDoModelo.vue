@@ -14,7 +14,7 @@ import {
 const props = defineProps({
   modelo: { type: Object, required: true },
   recebem: { type: Number, default: 0 },
-  // PROTÓTIPO #1334: o que o formato pediu (cupom, validade, cartões).
+  // #1334: o que o formato pediu (cupom, validade, cartões).
   formato: { type: Object, default: () => ({}) },
   pedido: { type: Object, default: null },
   timeZone: { type: String, default: 'UTC' },

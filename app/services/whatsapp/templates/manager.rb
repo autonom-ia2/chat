@@ -38,7 +38,7 @@ class Whatsapp::Templates::Manager
   end
 
   def list
-    profiles = WhatsappTemplateProfile.for_inbox(@inbox).index_by(&:key)
+    profiles = WhatsappTemplateProfile.for_inbox(@inbox).with_attached_card_files.index_by(&:key)
     synced.map { |template| present(template, profiles[WhatsappTemplateProfile.key_for(template['name'], template['language'])]) }
   end
 
@@ -79,10 +79,13 @@ class Whatsapp::Templates::Manager
     true
   end
 
-  # O tipo do arquivo é o que o conteúdo diz (Marcel, o mesmo do ActiveStorage), não o que o navegador declarou.
+  # O tipo do arquivo é o que o conteúdo diz (assinatura dos bytes, Marcel, o mesmo do ActiveStorage), nunca o nome nem o
+  # que o navegador declarou (#1334: um texto chamado .png não passa).
   def upload(file)
-    content_type = Marcel::MimeType.for(file, name: file.original_filename, declared_type: file.content_type)
+    content_type = Marcel::MimeType.for(file)
     file.rewind
+    raise Refused, 'media_invalid' unless Whatsapp::Templates::HeaderMedia.upload_allowed?(content_type, file.size)
+
     handle = client.upload_media(io: file, file_name: file.original_filename, content_type: content_type)
     file.rewind
     blob = ActiveStorage::Blob.create_and_upload!(io: file, filename: file.original_filename, content_type: content_type,
@@ -146,7 +149,16 @@ class Whatsapp::Templates::Manager
   def present(template, profile)
     template.merge('friendly_name' => profile&.friendly_name.presence || template['name'],
                    'fields' => profile&.fields || {}, 'header_media' => profile&.header_media || {},
-                   'system_owner' => system_owner(template, profile), 'profile_id' => profile&.id)
+                   'system_owner' => system_owner(template, profile), 'profile_id' => profile&.id,
+                   'card_media' => card_media(profile))
+  end
+
+  # O arquivo guardado de cada cartão do carrossel (#1334): a campanha mostra "vai a foto aprovada".
+  def card_media(profile)
+    return [] unless profile
+
+    profile.card_files.map { |file| { 'card_index' => file.blob.metadata['card_index'].to_i, 'file_name' => file.filename.to_s } }
+           .sort_by { |media| media['card_index'] }
   end
 
   def profile_for(template)

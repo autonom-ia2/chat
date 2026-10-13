@@ -705,7 +705,8 @@
         "LIMITE": "not created",
         "SEM_FONTE": "has a field campaigns cannot fill",
         "NAO_VAI_CODIGO": "verification codes do not go in campaigns",
-        "NAO_VAI_PRODUTOS": "chosen products do not go in campaigns"
+        "NAO_VAI_PRODUTOS": "chosen products do not go in campaigns",
+        "NAO_VAI_CARTAO_COM_CAMPO": "cards with fields do not go in campaigns yet"
       },
       "EM_ANALISE": "“{nome}” is still in review at WhatsApp. You can set up and schedule the campaign; sending now unlocks when it is approved.",
       "ENVIAR_AGORA_BLOQUEADO": "Sending now unlocks when WhatsApp approves the template. Pick a date to schedule.",
@@ -736,14 +737,18 @@
         "CARTOES": "Photos of the {n} cards",
         "CARTAO": "Card {n}",
         "CARTAO_GUARDADO": "The photo approved with the template goes: {arquivo}",
-        "CARTAO_SEM_ARQUIVO_FOTO": "Paste the link to this card photo.",
-        "CARTAO_SEM_ARQUIVO_VIDEO": "Paste the link to this card video.",
-        "CARTAO_TROCAR": "Use another file",
+        "CARTAO_SEM_ARQUIVO_FOTO": "Choose the photo for this card (JPG or PNG, up to 5 MB).",
+        "CARTAO_SEM_ARQUIVO_VIDEO": "Choose the video for this card (MP4, up to 16 MB).",
         "CARTAO_VOLTAR": "Use the approved one",
-        "CARTAO_LINK": "File link (starts with https://)",
-        "CARTAO_LINK_EXEMPLO": "https://yourcompany.com/photo.jpg",
         "CATALOGO": "The button opens your WhatsApp catalog. The photo of the first product shows at the top of the message.",
-        "FORMULARIO": "Whoever taps “{botao}” opens the form linked to this template."
+        "FORMULARIO": "Whoever taps “{botao}” opens the form linked to this template.",
+        "CARTAO_ESCOLHER_FOTO": "Choose photo",
+        "CARTAO_ESCOLHER_VIDEO": "Choose video",
+        "CARTAO_TROCAR_FOTO": "Change photo",
+        "CARTAO_TROCAR_VIDEO": "Change video",
+        "CARTAO_ESCOLHIDO": "The file you chose goes: {arquivo}",
+        "CARTAO_ENVIANDO": "Uploading {arquivo}…",
+        "CARTAO_ERRO": "The file could not be uploaded. Try again."
       }
     },
     "IA": {

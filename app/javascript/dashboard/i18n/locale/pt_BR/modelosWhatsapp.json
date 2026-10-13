@@ -705,7 +705,8 @@
         "LIMITE": "não criado",
         "SEM_FONTE": "tem campo que a campanha não preenche",
         "NAO_VAI_CODIGO": "código de verificação não vai em campanha",
-        "NAO_VAI_PRODUTOS": "produtos escolhidos não vão em campanha"
+        "NAO_VAI_PRODUTOS": "produtos escolhidos não vão em campanha",
+        "NAO_VAI_CARTAO_COM_CAMPO": "cartão com campo ainda não vai em campanha"
       },
       "EM_ANALISE": "“{nome}” ainda está em análise no WhatsApp. Você pode montar e agendar a campanha; enviar agora libera quando ele for aprovado.",
       "ENVIAR_AGORA_BLOQUEADO": "Enviar agora libera quando o WhatsApp aprovar o modelo. Escolha uma data para agendar.",
@@ -736,14 +737,18 @@
         "CARTOES": "Fotos dos {n} cartões",
         "CARTAO": "Cartão {n}",
         "CARTAO_GUARDADO": "Vai a foto aprovada com o modelo: {arquivo}",
-        "CARTAO_SEM_ARQUIVO_FOTO": "Cole o link da foto deste cartão.",
-        "CARTAO_SEM_ARQUIVO_VIDEO": "Cole o link do vídeo deste cartão.",
-        "CARTAO_TROCAR": "Usar outro arquivo",
+        "CARTAO_SEM_ARQUIVO_FOTO": "Escolha a foto deste cartão (JPG ou PNG, até 5 MB).",
+        "CARTAO_SEM_ARQUIVO_VIDEO": "Escolha o vídeo deste cartão (MP4, até 16 MB).",
         "CARTAO_VOLTAR": "Usar a aprovada",
-        "CARTAO_LINK": "Link do arquivo (começa com https://)",
-        "CARTAO_LINK_EXEMPLO": "https://suaempresa.com.br/foto.jpg",
         "CATALOGO": "O botão abre o catálogo do seu WhatsApp. A foto do primeiro produto aparece no topo da mensagem.",
-        "FORMULARIO": "Quem tocar em “{botao}” abre o formulário ligado a este modelo."
+        "FORMULARIO": "Quem tocar em “{botao}” abre o formulário ligado a este modelo.",
+        "CARTAO_ESCOLHER_FOTO": "Escolher foto",
+        "CARTAO_ESCOLHER_VIDEO": "Escolher vídeo",
+        "CARTAO_TROCAR_FOTO": "Trocar foto",
+        "CARTAO_TROCAR_VIDEO": "Trocar vídeo",
+        "CARTAO_ESCOLHIDO": "Vai o arquivo que você escolheu: {arquivo}",
+        "CARTAO_ENVIANDO": "Enviando {arquivo}…",
+        "CARTAO_ERRO": "Não deu para enviar o arquivo. Tente de novo."
       }
     },
     "IA": {

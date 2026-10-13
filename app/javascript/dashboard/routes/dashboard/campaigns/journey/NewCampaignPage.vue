@@ -70,14 +70,13 @@ import PonteCaixasReconectar from '../modelos/ponte/PonteCaixasReconectar.vue';
 import PontePrevia from '../modelos/ponte/PontePrevia.vue';
 import PonteSemModelo from '../modelos/ponte/PonteSemModelo.vue';
 import RevisaoDoModelo from '../modelos/ponte/RevisaoDoModelo.vue';
-// PROTÓTIPO #1334: o que cada formato novo pede na campanha.
+// Fork (Modelos do WhatsApp, #1334): o que cada formato novo pede na campanha.
 import PonteFormatoDaCampanha from '../modelos/ponte/PonteFormatoDaCampanha.vue';
 import {
   extrasParaEnvio,
   oQuePedir,
   pendencias,
-} from '../modelos/ponte/formatoNaCampanha';
-import { arquivosDosCartoes } from '../modelos/ponte/arquivosGuardadosFalso';
+} from '../modelos/helpers/formatoNaCampanha';
 import { rotuloDoCampo } from '../modelos/helpers/campos';
 import {
   buildEmailPayload,
@@ -135,7 +134,7 @@ const isCreatingEmail = ref(false);
 const isTestSending = ref(false);
 let coverageTimer = null;
 
-// PROTÓTIPO #1334: o cupom começa com o código de exemplo do modelo.
+// Fork (#1334): o cupom começa com o código de exemplo do modelo.
 const formatoInicial = templateId => {
   const modelo = ponte.modeloPorId(templateId);
   const cupom = modelo ? oQuePedir(modelo.template).cupom : null;
@@ -284,13 +283,13 @@ const MESSAGE_READY = {
 // ---- Review (Passo 3) ----
 const timeZone = computed(() => accountTimeZone(currentAccount.value));
 
-// PROTÓTIPO #1334: cupom, validade da oferta e foto de cada cartão.
-const guardadosDoModelo = computed(() =>
-  arquivosDosCartoes(modeloEscolhido.value)
-);
+// Fork (#1334): cupom, validade da oferta e foto de cada cartão do carrossel.
 const pedidoDoFormato = computed(() =>
   modeloEscolhido.value
-    ? oQuePedir(modeloEscolhido.value.template, guardadosDoModelo.value)
+    ? oQuePedir(
+        modeloEscolhido.value.template,
+        modeloEscolhido.value.cartoesGuardados || []
+      )
     : null
 );
 const formatoPendente = computed(() =>
@@ -973,7 +972,7 @@ onBeforeUnmount(() => {
               :key="modeloEscolhido.id"
               :modelo="modeloEscolhido"
               :valores="draft.formato || {}"
-              :guardados="guardadosDoModelo"
+              :caixa="draft.inboxId"
               :time-zone="timeZone"
               @update="formato => update({ formato })"
             />

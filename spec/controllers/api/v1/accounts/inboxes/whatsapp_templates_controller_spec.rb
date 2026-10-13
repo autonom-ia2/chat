@@ -193,6 +193,11 @@ RSpec.describe 'Api::V1::Accounts::Inboxes::WhatsappTemplates', type: :request d
       expect(response).to have_http_status(:created)
       profile = WhatsappTemplateProfile.find_by!(inbox: inbox, name: 'vitrine')
       expect([0, 1].map { |index| profile.card_file(index).filename.to_s }).to eq(%w[cartao-1.png cartao-2.png])
+      # A lista devolve os arquivos guardados de cada cartão: a campanha mostra "vai a foto aprovada".
+      call(:get, base)
+      row = response.parsed_body['payload'].find { |item| item['name'] == 'vitrine' }
+      expect(row['card_media']).to eq([{ 'card_index' => 0, 'file_name' => 'cartao-1.png' },
+                                       { 'card_index' => 1, 'file_name' => 'cartao-2.png' }])
 
       foreign = ActiveStorage::Blob.create_and_upload!(io: StringIO.new('x'), filename: 'a.png', metadata: { 'account_id' => account.id + 1 })
       call(:post, base, { template: template.merge(name: 'vitrine_2', card_media: [{ card_index: 0, blob_signed_id: foreign.signed_id }]) })
@@ -484,6 +489,39 @@ RSpec.describe 'Api::V1::Accounts::Inboxes::WhatsappTemplates', type: :request d
       expect(response).to have_http_status(:created)
       expect(response.parsed_body).to include('handle' => '4::h', 'content_type' => 'image/png')
       expect(ActiveStorage::Blob.find_signed(response.parsed_body['blob_signed_id'])).to be_present
+    end
+  end
+
+  # #1334: tipo e tamanho que a Meta aceita, conferidos no servidor antes de subir (página "Media" da Meta, 13/10/2026):
+  # JPG/PNG até 5 MB, MP4 até 16 MB, PDF até 100 MB. A foto do cartão da campanha sobe por aqui também.
+  describe 'POST media: tipo e tamanho' do
+    it 'recusa arquivo de tipo que a Meta não aceita, sem falar com a Meta' do
+      file = Rack::Test::UploadedFile.new(StringIO.new('texto'), 'text/plain', original_filename: 'nota.txt')
+
+      post "#{base}/media", params: { file: file }, headers: admin.create_new_auth_token
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq('media_invalid')
+      expect(a_request(:any, graph_host)).not_to have_been_made
+    end
+
+    it 'recusa arquivo que só tem nome de foto (o conteúdo manda, não o nome nem o tipo declarado)' do
+      file = Rack::Test::UploadedFile.new(StringIO.new('não sou foto'), 'image/png', original_filename: 'falsa.png')
+
+      post "#{base}/media", params: { file: file }, headers: admin.create_new_auth_token
+
+      expect(response.parsed_body['error']).to eq('media_invalid')
+      expect(a_request(:any, graph_host)).not_to have_been_made
+    end
+
+    it 'recusa foto acima de 5 MB, sem falar com a Meta' do
+      big = StringIO.new("\x89PNG\r\n\x1A\n".b + ('0' * (5.megabytes + 1)))
+      file = Rack::Test::UploadedFile.new(big, 'image/png', original_filename: 'grande.png')
+
+      post "#{base}/media", params: { file: file }, headers: admin.create_new_auth_token
+
+      expect(response.parsed_body['error']).to eq('media_invalid')
+      expect(a_request(:any, graph_host)).not_to have_been_made
     end
   end
 

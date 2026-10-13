@@ -9,7 +9,8 @@
 # the payload is built by Whatsapp::Templates::SendComponents):
 #   COPY_CODE button   — buttons[i] = { type: 'copy_code', parameter: <code> };
 #   LIMITED_TIME_OFFER — with has_expiration, limited_time_offer.expiration_time_ms still ahead (offer_expired after);
-#   CAROUSEL           — one card per template card, each header with media_url or media_stored (the saved file);
+#   CAROUSEL           — one card per template card, each header with media_blob (file chosen in the campaign), media_url
+#                        or media_stored (the template's saved file);
 #   CATALOG button     — buttons[i] = { type: 'catalog' }.
 # Not sendable, each with its reason code:
 #   verification_code (OTP: a one-time code is asked by one person in an app, never sent to a list),
@@ -124,17 +125,27 @@ module Whatsapp::Templates::SendableFormat
 
   def card_media?(card)
     header = card.is_a?(Hash) ? card['header'] : nil
-    header.is_a?(Hash) && (header['media_url'].to_s.strip.present? || header['media_stored'] == true)
+    header.is_a?(Hash) && (header['media_url'].to_s.strip.present? || header['media_blob'].to_s.strip.present? ||
+      header['media_stored'] == true)
   end
 
   # A card URL button whose address ends in a variable needs its value at send time.
   def card_buttons?(card, template_card)
+    return false unless card_body?(card, template_card)
+
     sent = card.is_a?(Hash) ? Array(card['buttons']) : []
     card_template_buttons(template_card).each_with_index.all? do |button, index|
       next true unless upcase(button['type']) == 'URL' && CampaignJourney::TemplatePlaceholders.keys(button['url']).any?
 
       sent[index].is_a?(Hash) && sent[index]['parameter'].to_s.strip.present?
     end
+  end
+
+  # A card body with variables needs their values at send time.
+  def card_body?(card, template_card)
+    body = hashes(template_card['components']).find { |component| upcase(component['type']) == 'BODY' }
+    sent = card.is_a?(Hash) && card['body'].is_a?(Hash) ? card['body'] : {}
+    CampaignJourney::TemplatePlaceholders.keys(body&.dig('text')).all? { |key| sent[key].to_s.strip.present? }
   end
 
   def card_template_buttons(template_card)

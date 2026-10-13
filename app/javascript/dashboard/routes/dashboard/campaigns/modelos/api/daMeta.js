@@ -278,6 +278,14 @@ export const recusaDe = (template, conteudo) => {
   return { codigo: semExemplo ? 'exemplo_faltando' : 'formato_invalido' };
 };
 
+// Arquivo guardado de cada cartão, na posição do cartão (null onde não há).
+const cartoesGuardadosDe = (lista = []) =>
+  (lista || []).reduce((guardados, midia) => {
+    const copia = [...guardados];
+    copia[midia.card_index] = { nome: midia.file_name };
+    return copia;
+  }, []);
+
 // grupo: { id (caixa que fala com a Meta), conta: { id, nome }, numeros: [inbox_id], envios: { nome: n } }
 export const modeloDaMeta = (template, grupo) => {
   const { conteudo, campos } = conteudoDaMeta(template);
@@ -312,6 +320,7 @@ export const modeloDaMeta = (template, grupo) => {
     enviosNoMes: grupo.envios ? grupo.envios[template.name] || 0 : null,
     enviadoEm: null,
     edicoes: { restantesNoMes: null, liberadaEm: null },
+    cartoesGuardados: cartoesGuardadosDe(template.card_media),
     template,
   };
 };

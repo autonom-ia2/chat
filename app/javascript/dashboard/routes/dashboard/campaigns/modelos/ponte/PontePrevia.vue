@@ -13,7 +13,7 @@ const props = defineProps({
   bindings: { type: Object, default: () => ({}) },
   sample: { type: Object, default: null },
   remetente: { type: String, default: '' },
-  // PROTÓTIPO #1334: o cupom digitado na campanha aparece no celular.
+  // #1334: o cupom digitado na campanha aparece no celular.
   cupom: { type: String, default: '' },
 });
 

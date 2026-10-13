@@ -99,8 +99,10 @@ RSpec.describe Whatsapp::Templates::SendableFormat do
         carousel = template(body, { 'type' => 'CAROUSEL', 'cards' => [card, card] })
         linked = { 'header' => { 'media_url' => 'https://a.com/1.png', 'media_type' => 'image' } }
         saved = { 'header' => { 'media_stored' => true, 'media_type' => 'image' } }
+        chosen = { 'header' => { 'media_blob' => 'assinado', 'media_type' => 'image' } }
 
         expect(check(carousel, { 'carousel' => { 'cards' => [linked, saved] } })).to be_sendable
+        expect(check(carousel, { 'carousel' => { 'cards' => [chosen, saved] } })).to be_sendable
         expect(check(carousel, { 'carousel' => { 'cards' => [linked] } }).reason_code).to eq('carousel')
         expect(check(carousel, { 'carousel' => { 'cards' => [linked, {}] } }).reason_code).to eq('carousel')
         expect(check(carousel, {}).reason_code).to eq('carousel')
@@ -126,7 +128,7 @@ RSpec.describe Whatsapp::Templates::SendableFormat do
         expect(check(copy, { 'buttons' => [{ 'type' => 'copy_code', 'parameter' => 'A' * 16 }] }).reason_code).to eq('copy_code')
       end
 
-      it 'refuses a carousel whose card link button ends in a variable without its value' do
+      it 'refuses a carousel whose card text or link button has a variable without its value' do
         card = { 'components' => [{ 'type' => 'HEADER', 'format' => 'IMAGE' },
                                   { 'type' => 'BUTTONS', 'buttons' => [{ 'type' => 'URL', 'url' => 'https://a.com/{{1}}' }] }] }
         carousel = template(body, { 'type' => 'CAROUSEL', 'cards' => [card, card] })
@@ -135,6 +137,11 @@ RSpec.describe Whatsapp::Templates::SendableFormat do
 
         expect(check(carousel, { 'carousel' => { 'cards' => [linked, linked] } }).reason_code).to eq('carousel')
         expect(check(carousel, { 'carousel' => { 'cards' => [with_value, with_value] } })).to be_sendable
+
+        card['components'] << { 'type' => 'BODY', 'text' => 'Tênis {{1}}' }
+        expect(check(carousel, { 'carousel' => { 'cards' => [with_value, with_value] } }).reason_code).to eq('carousel')
+        filled = with_value.merge('body' => { '1' => 'azul' })
+        expect(check(carousel, { 'carousel' => { 'cards' => [filled, filled] } })).to be_sendable
       end
 
       it 'keeps verification codes out of campaigns, whatever is recorded' do

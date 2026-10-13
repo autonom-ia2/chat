@@ -152,7 +152,7 @@ const podeUsarIA = useCanUseIA();
               >
                 {{ $t('MODELOS_WHATSAPP.OBJETIVO.SO_DIVULGACAO') }}
               </span>
-              <!-- PROTÓTIPO #1334: só o código de verificação não vai em campanha. -->
+              <!-- #1334: só o código de verificação não vai em campanha. -->
               <span
                 v-if="formato.chave === 'codigo'"
                 data-nao-vai-em-campanha

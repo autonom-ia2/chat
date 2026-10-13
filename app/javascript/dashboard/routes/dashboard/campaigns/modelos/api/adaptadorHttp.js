@@ -290,6 +290,14 @@ const subirArquivos = async (conteudo, caixa) => {
   return { topo, cartoes };
 };
 
+// Arquivo escolhido na campanha (foto ou vídeo de um cartão do carrossel, #1334):
+// o mesmo upload de mídia dos Modelos, com tipo e tamanho conferidos no
+// servidor. Devolve a referência que a campanha guarda.
+const subirArquivoDaCampanha = async (caixa, arquivo) => {
+  const enviado = await chamar(api.uploadMedia(caixa, arquivo));
+  return { referencia: enviado.blob_signed_id, nome: enviado.file_name };
+};
+
 // Um modelo por conta do WhatsApp: números de contas diferentes viram modelos
 // diferentes, cada um com a sua análise. Devolve a lista criada. Se uma conta
 // falhar depois de outra já ter criado, devolve as criadas com `falha` (o erro),
@@ -393,6 +401,7 @@ export default {
   obterFranquia,
   criarModelo,
   alterarModelo,
+  subirArquivoDaCampanha,
   apagarModelo,
   obterCatalogo,
   listarFormularios,

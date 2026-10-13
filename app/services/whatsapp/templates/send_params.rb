@@ -4,9 +4,9 @@
 # Na criação (`CampaignJourney::WhatsappCampaignCreator`), `normalize!` confere e completa o `processed_params`:
 #   cupom (COPY_CODE)  — buttons[i].parameter de 1 a 15 caracteres (o envio do Chatwoot recusa mais de 15);
 #   oferta             — com has_expiration, limited_time_offer.expiration_time_ms inteiro e à frente (Unix, em ms);
-#   carrossel          — um item por cartão do modelo; cada topo com link http(s) ou, sem link, o arquivo do cartão
-#                        guardado no perfil do modelo (marca `media_stored`, o link é gerado no disparo, porque expira);
-#                        botão de site com final variável precisa do valor;
+#   carrossel          — um item por cartão do modelo, cada topo conferido por `Whatsapp::Templates::CardMedia`
+#                        (arquivo escolhido na campanha, link ou o arquivo aprovado guardado no perfil); campo no texto
+#                        do cartão ou no fim do link do botão precisa do valor;
 #   catálogo (CATALOG) — o botão é marcado sozinho; a Meta mostra o primeiro item do catálogo.
 # Botão sem nada a enviar ocupa a posição dele como { 'type' => 'static' }: o conversor do Chatwoot só aceita a lista
 # de botões sem buracos, e o envio pula o estático.
@@ -19,7 +19,6 @@
 module Whatsapp::Templates::SendParams
   Invalid = Whatsapp::Templates::HeaderMedia::Invalid
   CODE_MAX = 15
-  CARD_FORMATS = %w[IMAGE VIDEO].freeze
   FLOW_TOKEN_PREFIX = 'chat2you_campaign_'.freeze
   STATIC_BUTTON = CampaignJourney::TemplateVariableKeys::STATIC_BUTTON
 
@@ -67,40 +66,31 @@ module Whatsapp::Templates::SendParams
     raise Invalid, 'carousel_cards_mismatch' unless cards.size == template_cards.size
 
     profile = Whatsapp::Templates::HeaderMedia.profile(inbox, template)
-    normalized = cards.each_with_index.map { |card, index| checked_card(as_hash(card), template_cards[index], profile, index) }
+    normalized = cards.each_with_index.map do |card, index|
+      checked_card(as_hash(card), template_cards[index], profile, index, inbox.account_id)
+    end
     processed.merge('carousel' => { 'cards' => normalized })
   end
 
-  def checked_card(card, template_card, profile, index)
+  def checked_card(card, template_card, profile, index, account_id)
     check_card_buttons!(card, template_card)
-    card.merge('header' => card_header(card, template_card, profile, index))
+    card.merge('header' => Whatsapp::Templates::CardMedia.header(as_hash(card['header']), template_card, profile, index, account_id))
   end
 
-  def card_header(card, template_card, profile, index)
-    type = card_format(template_card)
-    raise Invalid, 'carousel_media_invalid' unless type
-
-    url = as_hash(card['header'])['media_url'].to_s.strip
-    return { 'media_url' => card_url!(url), 'media_type' => type } if url.present?
-    raise Invalid, 'carousel_media_required' unless profile&.card_file(index)
-
-    { 'media_stored' => true, 'media_type' => type }
-  end
-
-  # Botão de site do cartão com final variável: a Meta pede o valor no envio.
+  # Campo no texto do cartão ou no fim do link do botão: a Meta pede o valor no envio.
   def check_card_buttons!(card, template_card)
+    body_keys = CampaignJourney::TemplatePlaceholders.keys(component(template_card, 'BODY')&.dig('text'))
+    raise Invalid, 'carousel_body_required' if body_keys.any? { |key| as_hash(card['body'])[key].to_s.strip.empty? }
+
     sent = Array(card['buttons'])
     template_buttons(template_card).each_with_index do |button, index|
-      next unless button['type'].to_s.casecmp?('URL') && CampaignJourney::TemplatePlaceholders.keys(button['url']).any?
+      next unless variable_url?(button)
       raise Invalid, 'carousel_button_required' if as_hash(sent[index])['parameter'].to_s.strip.empty?
     end
   end
 
-  def card_url!(url)
-    Whatsapp::Templates::HeaderMedia.check_url!(url)
-    url
-  rescue Invalid
-    raise Invalid, 'carousel_media_invalid'
+  def variable_url?(button)
+    button['type'].to_s.casecmp?('URL') && CampaignJourney::TemplatePlaceholders.keys(button['url']).any?
   end
 
   def with_catalog(processed, template)
@@ -123,7 +113,7 @@ module Whatsapp::Templates::SendParams
   def dispatch_extras(processed, template:, inbox:, campaign:)
     return {} unless processed.is_a?(Hash)
 
-    cards = stored_card_media(processed, template, inbox)
+    cards = Whatsapp::Templates::CardMedia.for_dispatch(processed, template, inbox)
     return if cards.nil?
 
     flow = template_buttons(template).each_with_index.filter_map do |button, index|
@@ -133,25 +123,13 @@ module Whatsapp::Templates::SendParams
     extras.values.any?(&:present?) ? extras : {}
   end
 
-  def stored_card_media(processed, template, inbox)
-    cards = Array(as_hash(processed['carousel'])['cards'])
-    stored = cards.each_index.select { |index| as_hash(as_hash(cards[index])['header'])['media_stored'] == true }
-    return {} if stored.empty?
-
-    profile = Whatsapp::Templates::HeaderMedia.profile(inbox, template)
-    files = stored.index_with { |index| profile&.card_file(index) }
-    return if files.values.any?(&:nil?)
-
-    files.transform_values { |file| Whatsapp::Templates::HeaderMedia.signed_media(file) }
-  end
-
   # O processed_params de um envio com os extras do disparo (o que a campanha guardou não muda).
   def apply_extras(processed, extras)
     processed = as_hash(processed).deep_dup
     processed = with_flow_tokens(processed, extras[:flow]) if extras[:flow].present?
     extras[:cards].to_h.each do |index, media|
       card = processed['carousel']['cards'][index]
-      card['header'] = as_hash(card['header']).except('media_stored').merge(media)
+      card['header'] = as_hash(card['header']).except('media_stored', 'media_blob').merge(media)
     end
     processed
   end
@@ -169,12 +147,6 @@ module Whatsapp::Templates::SendParams
 
   def catalog?(button)
     button['type'].to_s.casecmp?('CATALOG')
-  end
-
-  def card_format(template_card)
-    header = component(template_card, 'HEADER')
-    format = header&.dig('format').to_s.upcase
-    format.downcase if CARD_FORMATS.include?(format)
   end
 
   def cards_of(template)

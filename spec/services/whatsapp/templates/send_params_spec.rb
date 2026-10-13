@@ -35,6 +35,12 @@ RSpec.describe Whatsapp::Templates::SendParams, :aggregate_failures do
     { 'name' => name, 'language' => 'pt_BR', 'status' => 'APPROVED', 'category' => 'MARKETING', 'components' => components }
   end
 
+  # O arquivo que a pessoa escolheu na campanha sobe pelo upload de mídia dos Modelos (blob com a conta).
+  def uploaded(name, account_id: account.id, content_type: 'image/png', size: 3)
+    ActiveStorage::Blob.create_and_upload!(io: StringIO.new('x' * size), filename: name, content_type: content_type,
+                                           identify: false, metadata: { 'account_id' => account_id })
+  end
+
   def stored_cards
     { 'carousel' => { 'cards' => [{ 'header' => { 'media_stored' => true, 'media_type' => 'image' } }] * 2 } }
   end
@@ -101,6 +107,23 @@ RSpec.describe Whatsapp::Templates::SendParams, :aggregate_failures do
         .to eq([{ 'media_stored' => true, 'media_type' => 'image' }] * 2)
     end
 
+    it 'carrossel: arquivo escolhido na campanha vale quando é da conta, do tipo do cartão e do tamanho que a Meta aceita' do
+      own = uploaded('nova.png')
+      cards = [{ 'header' => { 'media_blob' => own.signed_id } }, { 'header' => { 'media_blob' => uploaded('outra.png').signed_id } }]
+
+      header = create_campaign(params('vitrine', { 'carousel' => { 'cards' => cards } }))
+               .template_params.dig('processed_params', 'carousel', 'cards', 0, 'header')
+      expect(header).to eq('media_blob' => own.signed_id, 'media_type' => 'image')
+
+      [uploaded('alheia.png', account_id: account.id + 1), uploaded('filme.mp4', content_type: 'video/mp4'),
+       uploaded('grande.png', size: 5.megabytes + 1)].each do |blob|
+        bad = [{ 'header' => { 'media_blob' => blob.signed_id } }, cards.last]
+        expect(refusal_code(params('vitrine', { 'carousel' => { 'cards' => bad } }))).to eq('carousel_media_invalid')
+      end
+      expect(refusal_code(params('vitrine', { 'carousel' => { 'cards' => [{ 'header' => { 'media_blob' => 'x' } }, cards.last] } })))
+        .to eq('carousel_media_invalid')
+    end
+
     it 'carrossel: link digitado precisa ser http(s) e há um item por cartão do modelo' do
       linked = { 'header' => { 'media_url' => 'https://loja.com/1.png' } }
 
@@ -118,13 +141,17 @@ RSpec.describe Whatsapp::Templates::SendParams, :aggregate_failures do
       expect(campaign.template_params.dig('processed_params', 'buttons')).to eq([{ 'type' => 'catalog' }, { 'type' => 'static' }])
     end
 
-    it 'carrossel: botão de site do cartão com final variável precisa do valor' do
+    it 'carrossel: campo no texto do cartão ou no fim do link do botão precisa do valor' do
       card['components'].last['buttons'] = [{ 'type' => 'URL', 'text' => 'Ver', 'url' => 'https://loja.com/{{1}}' }]
       channel.update_columns(message_templates: [carousel]) # rubocop:disable Rails/SkipsModelValidations
       linked = { 'header' => { 'media_url' => 'https://loja.com/1.png' } }
 
       expect(refusal_code(params('vitrine', { 'carousel' => { 'cards' => [linked, linked] } }))).to eq('carousel_button_required')
-      with_value = linked.merge('buttons' => [{ 'type' => 'url', 'parameter' => 'tenis' }])
+      card['components'][1]['text'] = 'Tênis {{1}}'
+      channel.update_columns(message_templates: [carousel]) # rubocop:disable Rails/SkipsModelValidations
+      buttoned = linked.merge('buttons' => [{ 'type' => 'url', 'parameter' => 'tenis' }])
+      expect(refusal_code(params('vitrine', { 'carousel' => { 'cards' => [buttoned, buttoned] } }))).to eq('carousel_body_required')
+      with_value = buttoned.merge('body' => { '1' => 'azul' })
       expect(create_campaign(params('vitrine', { 'carousel' => { 'cards' => [with_value, with_value] } }))).to be_persisted
     end
 
@@ -186,6 +213,16 @@ RSpec.describe Whatsapp::Templates::SendParams, :aggregate_failures do
       expect(cards.pluck('card_index')).to eq([0, 1])
       expect(cards.map { |item| item.dig('components', 0, 'parameters', 0, 'image', 'link') })
         .to match([include('cartao-1.png'), include('cartao-2.png')])
+    end
+
+    it 'carrossel: o arquivo escolhido na campanha vai com link gerado no disparo' do
+      sent = stub_graph_messages
+      cards = %w[nova.png outra.png].map { |name| { 'header' => { 'media_blob' => uploaded(name).signed_id, 'media_type' => 'image' } } }
+
+      dispatch(params('vitrine', { 'carousel' => { 'cards' => cards } }))
+
+      links = component(sent.first, 'carousel')['cards'].map { |item| item.dig('components', 0, 'parameters', 0, 'image', 'link') }
+      expect(links).to match([include('nova.png'), include('outra.png')])
     end
 
     it 'carrossel sem os arquivos do modelo na hora do disparo: para com template_media_missing' do

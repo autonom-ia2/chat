@@ -7,7 +7,7 @@ const MOTIVOS = {
   template_format_unsupported: 'formato_nao_vai',
   // #1382: topo com mídia sem link e sem o arquivo guardado no modelo.
   template_media_missing: 'arquivo_do_topo',
-  // PROTÓTIPO #1334: a validade da oferta passou antes do envio.
+  // #1334: a validade da oferta passou antes do envio.
   template_offer_expired: 'oferta_vencida',
 };
 // Do sistema, mas com motivo que a pessoa resolve (não é "não deu para conferir").

@@ -27,7 +27,7 @@ const ESPERA = {
   nao_conferido: 'AGUARDE_CONFERENCIA',
   modelo_pausado: 'AGUARDE_LIBERAR',
   modelo_em_analise: 'AGUARDE_APROVAR',
-  // PROTÓTIPO #1334: a oferta venceu; o modelo está certo, a data é da campanha.
+  // #1334: a oferta venceu; o modelo está certo, a data é da campanha.
   oferta_vencida: 'NOVA_DATA',
 };
 const oQueFazer = campanha => ESPERA[campanha.motivo] || 'CORRIJA_PRIMEIRO';

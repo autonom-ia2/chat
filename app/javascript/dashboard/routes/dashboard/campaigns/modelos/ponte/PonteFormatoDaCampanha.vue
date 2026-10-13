@@ -1,18 +1,26 @@
 <script setup>
-// PROTÓTIPO #1334 (aguarda aprovação do Rodrigo): no passo Mensagem da Nova
-// campanha, o que o formato do modelo escolhido pede antes do envio — cupom,
-// até quando vale a oferta, a foto de cada cartão do carrossel — e o aviso do
-// que acontece nos botões de catálogo e formulário. Uma pergunta por bloco.
-import { computed, ref } from 'vue';
+// No passo Mensagem da Nova campanha (#1334), o que o formato do modelo
+// escolhido pede antes do envio: o código do cupom, até quando vale a oferta e
+// a foto ou o vídeo de cada cartão do carrossel (o aprovado com o modelo, ou um
+// arquivo escolhido agora, que sobe na hora). Catálogo e formulário só avisam o
+// que acontece. Uma pergunta por bloco.
+import { computed, onBeforeUnmount, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Input from 'dashboard/components-next/input/Input.vue';
-import Button from 'dashboard/components-next/button/Button.vue';
-import { CODIGO_MAXIMO, oQuePedir, pendencias } from './formatoNaCampanha';
+import EscolherArquivo from '../components/criar/EscolherArquivo.vue';
+import api from '../api/modelosWhatsapp';
+import { arquivoGuardado } from '../api/arquivos';
+import {
+  ACEITA_NO_CARTAO,
+  CODIGO_MAXIMO,
+  oQuePedir,
+  pendencias,
+} from '../helpers/formatoNaCampanha';
 
 const props = defineProps({
   modelo: { type: Object, required: true },
   valores: { type: Object, default: () => ({}) },
-  guardados: { type: Array, default: () => [] },
+  caixa: { type: [Number, String], default: null },
   timeZone: { type: String, default: 'UTC' },
 });
 const emit = defineEmits(['update']);
@@ -21,7 +29,7 @@ const { t } = useI18n();
 const NS = 'MODELOS_WHATSAPP.PONTE.FORMATO';
 
 const pedido = computed(() =>
-  oQuePedir(props.modelo.template, props.guardados)
+  oQuePedir(props.modelo.template, props.modelo.cartoesGuardados || [])
 );
 const faltando = computed(() =>
   pendencias(pedido.value, props.valores, { timeZone: props.timeZone })
@@ -35,16 +43,56 @@ const temAlgo = computed(
     pedido.value.formulario
 );
 
-// Cartão com arquivo guardado: o link só aparece se a pessoa pedir.
-const trocando = ref({});
-const mostrarLink = cartao => !cartao.guardado || trocando.value[cartao.indice];
+// Trocou de modelo enquanto o arquivo subia: o resultado é do modelo anterior e
+// não entra no rascunho do novo.
+let ativo = true;
+onBeforeUnmount(() => {
+  ativo = false;
+});
 
-const atualizar = patch => emit('update', { ...props.valores, ...patch });
-const linkDoCartao = (indice, link) =>
-  atualizar({ cartoes: { ...(props.valores.cartoes || {}), [indice]: link } });
-const usarGuardado = indice => {
-  trocando.value = { ...trocando.value, [indice]: false };
-  linkDoCartao(indice, '');
+const atualizar = patch => {
+  if (ativo) emit('update', { ...props.valores, ...patch });
+};
+const comCartao = (indice, arquivo) => {
+  const cartoes = { ...(props.valores.cartoes || {}) };
+  if (arquivo) cartoes[indice] = arquivo;
+  else delete cartoes[indice];
+  atualizar({ cartoes });
+};
+
+// O arquivo sobe assim que é escolhido; enquanto sobe, o cartão diz "Enviando".
+const enviando = ref({});
+const erroDoEnvio = ref({});
+const escolher = async (indice, { arquivo, local }) => {
+  enviando.value = { ...enviando.value, [indice]: arquivo };
+  erroDoEnvio.value = { ...erroDoEnvio.value, [indice]: '' };
+  try {
+    comCartao(
+      indice,
+      await api.subirArquivoDaCampanha(props.caixa, arquivoGuardado(local))
+    );
+  } catch (erro) {
+    erroDoEnvio.value = {
+      ...erroDoEnvio.value,
+      [indice]: erro?.mensagem || t(`${NS}.CARTAO_ERRO`),
+    };
+  } finally {
+    enviando.value = { ...enviando.value, [indice]: '' };
+  }
+};
+
+const descricao = cartao => {
+  const novo = props.valores.cartoes?.[cartao.indice];
+  if (enviando.value[cartao.indice]) {
+    return t(`${NS}.CARTAO_ENVIANDO`, {
+      arquivo: enviando.value[cartao.indice],
+    });
+  }
+  if (novo) return t(`${NS}.CARTAO_ESCOLHIDO`, { arquivo: novo.nome });
+  if (cartao.guardado) {
+    return t(`${NS}.CARTAO_GUARDADO`, { arquivo: cartao.guardado.nome });
+  }
+  return t(`${NS}.CARTAO_SEM_ARQUIVO_${cartao.midia.toUpperCase()}`);
 };
 </script>
 
@@ -104,63 +152,57 @@ const usarGuardado = indice => {
         <li
           v-for="cartao in pedido.cartoes"
           :key="cartao.indice"
-          class="flex flex-col gap-2 p-3 rounded-xl border border-n-weak bg-n-solid-1"
+          class="flex flex-wrap gap-3 items-center p-3 rounded-xl border border-n-weak bg-n-solid-1"
           :data-formato-cartao="cartao.indice"
         >
-          <div class="flex flex-wrap gap-3 items-center">
+          <span
+            class="flex justify-center items-center rounded-lg size-11 shrink-0 bg-n-blue-3 text-n-blue-11"
+            aria-hidden="true"
+          >
             <span
-              class="flex justify-center items-center rounded-lg size-11 shrink-0 bg-n-blue-3 text-n-blue-11"
-              aria-hidden="true"
+              :class="
+                cartao.midia === 'video' ? 'i-lucide-video' : 'i-lucide-image'
+              "
+              class="size-5"
+            />
+          </span>
+          <span class="flex flex-col flex-1 min-w-0 basis-48">
+            <strong class="text-sm text-n-slate-12">
+              {{ t(`${NS}.CARTAO`, { n: cartao.indice + 1 }) }}
+            </strong>
+            <span
+              class="text-xs break-words text-n-slate-11"
+              aria-live="polite"
             >
-              <span
-                :class="
-                  cartao.midia === 'video' ? 'i-lucide-video' : 'i-lucide-image'
-                "
-                class="size-5"
-              />
+              {{ descricao(cartao) }}
             </span>
-            <span class="flex flex-col flex-1 min-w-0">
-              <strong class="text-sm text-n-slate-12">
-                {{ t(`${NS}.CARTAO`, { n: cartao.indice + 1 }) }}
-              </strong>
-              <span class="text-xs truncate text-n-slate-11">
-                {{
-                  cartao.guardado && !mostrarLink(cartao)
-                    ? t(`${NS}.CARTAO_GUARDADO`, {
-                        arquivo: cartao.guardado.nome,
-                      })
-                    : t(
-                        `${NS}.CARTAO_SEM_ARQUIVO_${cartao.midia.toUpperCase()}`
-                      )
-                }}
-              </span>
+            <span
+              v-if="erroDoEnvio[cartao.indice]"
+              role="alert"
+              class="text-xs text-n-ruby-11"
+            >
+              {{ erroDoEnvio[cartao.indice] }}
             </span>
-            <Button
-              v-if="cartao.guardado && !mostrarLink(cartao)"
-              :label="t(`${NS}.CARTAO_TROCAR`)"
-              variant="ghost"
-              size="sm"
-              class="!min-h-11"
-              @click="trocando = { ...trocando, [cartao.indice]: true }"
+          </span>
+          <span class="flex flex-wrap gap-2 items-center w-full sm:w-auto">
+            <EscolherArquivo
+              :aceita="ACEITA_NO_CARTAO[cartao.midia]"
+              :rotulo="
+                cartao.guardado || valores.cartoes?.[cartao.indice]
+                  ? t(`${NS}.CARTAO_TROCAR_${cartao.midia.toUpperCase()}`)
+                  : t(`${NS}.CARTAO_ESCOLHER_${cartao.midia.toUpperCase()}`)
+              "
+              @escolhido="arquivo => escolher(cartao.indice, arquivo)"
             />
-            <Button
-              v-else-if="cartao.guardado"
-              :label="t(`${NS}.CARTAO_VOLTAR`)"
-              variant="ghost"
-              size="sm"
-              class="!min-h-11"
-              @click="usarGuardado(cartao.indice)"
-            />
-          </div>
-          <Input
-            v-if="mostrarLink(cartao)"
-            :model-value="valores.cartoes?.[cartao.indice] || ''"
-            type="url"
-            :label="t(`${NS}.CARTAO_LINK`)"
-            :placeholder="t(`${NS}.CARTAO_LINK_EXEMPLO`)"
-            custom-input-class="!h-11"
-            @update:model-value="link => linkDoCartao(cartao.indice, link)"
-          />
+            <button
+              v-if="cartao.guardado && valores.cartoes?.[cartao.indice]"
+              type="button"
+              class="px-2 text-sm min-h-11 text-n-blue-11 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand rounded-lg"
+              @click="comCartao(cartao.indice, null)"
+            >
+              {{ t(`${NS}.CARTAO_VOLTAR`) }}
+            </button>
+          </span>
         </li>
       </ul>
     </div>

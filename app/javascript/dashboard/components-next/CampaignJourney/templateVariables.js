@@ -279,7 +279,7 @@ const mergeButtons = (base = [], extra = []) =>
     (_, index) => extra[index] || base[index] || null
   );
 
-// PROTÓTIPO #1334: `extras` = cupom, validade da oferta e cartões do carrossel
+// Fork (Modelos do WhatsApp, #1334): `extras` = cupom, validade da oferta e cartões do carrossel
 // (formatoNaCampanha.extrasParaEnvio), por cima das partes do modelo.
 export const buildTemplateParams = ({
   template,

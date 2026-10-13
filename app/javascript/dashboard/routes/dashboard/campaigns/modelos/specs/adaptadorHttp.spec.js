@@ -284,6 +284,8 @@ describe('adaptador HTTP de Modelos', () => {
       motivoDaPausa({ source: 'system', reason_code: 'template_missing' })
     ).toBe('modelo_apagado');
     expect(motivo('template_media_missing')).toBe('arquivo_do_topo');
+    // #1334: a validade da oferta passou antes do envio.
+    expect(motivo('template_offer_expired')).toBe('oferta_vencida');
   });
 
   it('shows usage the person can see and only a notice for the rest', () => {

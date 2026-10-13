@@ -71,6 +71,15 @@ describe('Meta → tela', () => {
     ]);
   });
 
+  // #1334: o arquivo aprovado de cada cartão vem do perfil, na posição do cartão.
+  it('keeps the saved file of each carousel card in its position', () => {
+    const modelo = modeloDaMeta(
+      template({ card_media: [{ card_index: 1, file_name: 'b.jpg' }] }),
+      GRUPO
+    );
+    expect(modelo.cartoesGuardados).toEqual([undefined, { nome: 'b.jpg' }]);
+  });
+
   it('builds the screen model with what Meta says and null for what it does not', () => {
     const modelo = modeloDaMeta(
       template({

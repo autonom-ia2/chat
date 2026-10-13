@@ -4,7 +4,7 @@
 // ({ '1': 'cliente.primeiro_nome' }), para a campanha ligar as variáveis sem
 // adivinhar. Sem expressão regular (regra do Rodrigo).
 import { campoParaPerfil, semFonteNaCampanha } from './campos';
-import { formatoQueNaoVai } from '../ponte/formatoNaCampanha';
+import { formatoQueNaoVai } from './formatoNaCampanha';
 import { ajustarEspacosDosCampos } from './conteudo';
 import { ordenarBotoes, telefoneNaMeta } from './regraEstrutural';
 
@@ -20,8 +20,8 @@ const TOPO_NA_META = { foto: 'IMAGE', video: 'VIDEO', documento: 'DOCUMENT' };
 const LETRAS = 'abcdefghijklmnopqrstuvwxyz0123456789';
 const MAXIMO_DO_NOME = 512;
 
-// PROTÓTIPO #1334: a campanha envia todos os formatos, menos código de
-// verificação e catálogo com produtos escolhidos (formatoQueNaoVai).
+// O que a campanha envia (#1334): todos os formatos, menos código de
+// verificação e produtos escolhidos do catálogo (formatoQueNaoVai).
 export const podeIrEmCampanha = modelo =>
   modelo.template
     ? !formatoQueNaoVai(modelo.template)

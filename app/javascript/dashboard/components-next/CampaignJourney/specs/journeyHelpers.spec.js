@@ -441,6 +441,43 @@ describe('templateVariables (B1, B1b)', () => {
       },
     });
   });
+
+  // #1334: o cupom entra na posição do botão, sem apagar o botão de site com variável.
+  it('puts the format extras (coupon, offer, carousel) on top of the template parts', () => {
+    const template = {
+      ...TEMPLATE,
+      components: [
+        { type: 'BODY', text: 'Oi' },
+        {
+          type: 'BUTTONS',
+          buttons: [
+            { type: 'URL', text: 'Ver', url: 'https://a.com/{{1}}' },
+            { type: 'COPY_CODE', example: 'A1' },
+          ],
+        },
+      ],
+    };
+    const payload = buildCampaignPayload({
+      audienceId: 1,
+      title: 'Cupom',
+      inboxId: 7,
+      scheduledAt: null,
+      template,
+      bindings: { 'button.0': { source: 'fixed', value: 'x' } },
+      defaults: {},
+      extras: {
+        buttons: [undefined, { type: 'copy_code', parameter: 'OUT15' }],
+        limited_time_offer: { expiration_time_ms: 1 },
+      },
+    });
+    const processed = payload.campaign.template_params.processed_params;
+    expect(processed.buttons[0]).toMatchObject({ type: 'url' });
+    expect(processed.buttons[1]).toEqual({
+      type: 'copy_code',
+      parameter: 'OUT15',
+    });
+    expect(processed.limited_time_offer).toEqual({ expiration_time_ms: 1 });
+  });
 });
 
 describe('campaignDraft (J2, J3)', () => {
