@@ -42,6 +42,9 @@ as contas.
 - **Mensagem achada pelo id.** O Híbrido troca o `source_id` da mensagem pelo id do WAHA antes de enviar. Por isso a
   entrega guarda o `message_id` da mensagem da conversa, e a queda acha a mensagem por ele. A entrega em si é achada
   pelo `source_id` do aviso, que é o wamid gravado no envio.
+- **Aviso antes da entrega gravada.** A entrega é gravada logo depois que a Meta aceita o texto. Se o aviso 131047
+  chegar antes dessa gravação (janela de milissegundos), não há entrega para achar e o modelo não sai. Pode haver perda,
+  nunca envio duplo.
 - **Contagem.** Quem falou nas últimas 24 h mas não tem o valor de um campo do texto entra em "falaram com você" e, no
   envio, recebe o modelo. A tela avisa que é uma estimativa.
 
