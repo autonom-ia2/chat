@@ -42,8 +42,14 @@ class Crm::CardConversation < ApplicationRecord
   validate :linked_records_must_belong_to_account
   # Acesso por funil (#1148): vínculo novo ou desfeito muda quem vê a conversa.
   after_commit -> { Crm::Access::CountInvalidation.card_changed!(account_id, [conversation_id]) }, on: [:create, :destroy]
+  # Agente de IA responsável por caixa + funil (#1447): o assunto em atendimento trocou de card.
+  after_commit :sync_responsible_agent, on: [:create, :update], if: -> { focused_at.present? && saved_change_to_focused_at? }
 
   private
+
+  def sync_responsible_agent
+    Crm::Ai::ResponsibleAgentSync.agendar(conversation_id: conversation_id, motivo: Crm::Ai::ResponsibleAgentSync::FOCO)
+  end
 
   def linked_records_must_belong_to_account
     validate_same_account(:card)

@@ -1,0 +1,11 @@
+en:
+  crm:
+    subjects:
+      abrir:
+        recusas:
+          sem_crm: "CRM is off for this inbox."
+          funil_invalido: "This pipeline cannot receive a new subject from this inbox."
+          sem_agente_responsavel: "No AI agent takes care of this pipeline in this inbox."
+          agente_fora_da_caixa: "The AI agent that takes care of this pipeline is not connected to this inbox."
+          pessoa_atribuida: "A person is already handling this conversation."
+          esperando_pessoa: "This conversation is waiting for a person."

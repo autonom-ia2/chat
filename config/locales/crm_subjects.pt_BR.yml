@@ -1,0 +1,11 @@
+pt_BR:
+  crm:
+    subjects:
+      abrir:
+        recusas:
+          sem_crm: "O CRM está desligado nesta caixa."
+          funil_invalido: "Este funil não pode receber um assunto novo desta caixa."
+          sem_agente_responsavel: "Nenhum agente de IA cuida deste funil nesta caixa."
+          agente_fora_da_caixa: "O agente de IA que cuida deste funil não está ligado a esta caixa."
+          pessoa_atribuida: "Uma pessoa já está atendendo esta conversa."
+          esperando_pessoa: "Esta conversa está esperando uma pessoa."
