@@ -36,6 +36,7 @@ module WhatsappHybrid::CloudFailureFallback
     return unless WhatsappHybrid::Config.account_allowed?(message.account_id)
 
     router = WhatsappHybrid::Router.new(message.conversation)
-    router if router.web_ready? && router.web_allowed_for?(message)
+    # Contato barrado pelo limite de conversas novas do WhatsApp (chat#1486) fica com a falha original.
+    router if router.web_ready? && router.web_allowed_for?(message) && router.reach_out.allowed?
   end
 end

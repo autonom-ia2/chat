@@ -1,6 +1,7 @@
 # Conversa nova pelo painel numa caixa Cloud com WhatsApp Híbrido (chat#1457). Conversa nova não tem
 # janela de 24h aberta: o texto livre de um atendente sai pelo WhatsApp API, sem modelo. A tela de nova
-# conversa usa isto para mostrar o campo de texto ao lado do modelo.
+# conversa usa isto para mostrar o campo de texto ao lado do modelo. Com o WhatsApp limitando conversas novas
+# (chat#1486), só modelo.
 class WhatsappHybrid::NewConversation
   HUMAN_ORIGIN = 'human'.freeze
 
@@ -13,7 +14,8 @@ class WhatsappHybrid::NewConversation
     return false unless hybrid_inbox?
 
     connection = WhatsappHybrid::Connection.find_by(inbox_id: @inbox.id)
-    connection.present? && connection.routable? && connection.origin_enabled?(HUMAN_ORIGIN) && contact_phone.present?
+    connection.present? && connection.routable? && connection.origin_enabled?(HUMAN_ORIGIN) && contact_phone.present? &&
+      !WhatsappHybrid::Timelock.new(connection).active?
   end
 
   private
