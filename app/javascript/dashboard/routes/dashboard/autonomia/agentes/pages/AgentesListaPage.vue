@@ -175,6 +175,15 @@ const usarModelo = async chave => {
   }
 };
 
+// #1366 (protótipo, rodada 3): "Criar agente" vira uma página inteira, no lugar da gaveta.
+const abrirCriar = (qual = 'criar') => {
+  if (prototipo) {
+    router.push({ name: 'autonomia_agents_builder' });
+    return;
+  }
+  gaveta.value = typeof qual === 'string' ? qual : 'criar';
+};
+
 const abrirAgente = agente =>
   router.push({
     name: 'autonomia_agent_panel',
@@ -355,7 +364,7 @@ onBeforeUnmount(() => {
               tamanho="lg"
               icone="i-lucide-plus"
               class="hidden md:inline-flex"
-              @click="gaveta = 'criar'"
+              @click="abrirCriar"
             >
               {{ t('AGENTS.JORNADA.LISTA.CRIAR') }}
             </AgenteBotao>
@@ -427,7 +436,7 @@ onBeforeUnmount(() => {
             <AgenteBotao
               data-ver-modelos
               variante="fantasma"
-              @click="gaveta = 'modelos'"
+              @click="abrirCriar('modelos')"
             >
               {{ t('AGENTS.JORNADA.LISTA.VER_MODELOS') }}
             </AgenteBotao>
@@ -442,7 +451,7 @@ onBeforeUnmount(() => {
             tamanho="xl"
             bloco
             icone="i-lucide-plus"
-            @click="gaveta = 'criar'"
+            @click="abrirCriar"
           >
             {{ t('AGENTS.JORNADA.LISTA.CRIAR') }}
           </AgenteBotao>

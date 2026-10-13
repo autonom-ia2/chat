@@ -3,6 +3,7 @@ import { computed, nextTick, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import AgenteBotao from '../AgenteBotao.vue';
+import ChannelIcon from 'dashboard/components-next/icon/ChannelIcon.vue';
 import GrupoDeCartoes from './GrupoDeCartoes.vue';
 import { enderecoDaCaixa } from '../../utils/ondeTrabalha';
 
@@ -15,6 +16,11 @@ import { enderecoDaCaixa } from '../../utils/ondeTrabalha';
 //   B2. Quem vai ajudar (um ou mais agentes que conversam com clientes).
 //   B3. Quando é chamado (frase sugerida, editável).
 // Os assuntos (funis) não são escolhidos aqui: ficam no CRM ("Quem cuida do quê?").
+// Rodada 3: na criação, o agente normal não passa por aqui. `caminho` diz o trecho:
+//   - equipe: agente da equipe (secundário), em canais que já têm quem atenda primeiro, e um aviso
+//     de como fica em cada um;
+//   - ajuda: B2 e B3;
+//   - completo: o caminho todo, a partir do passo 1 (o "Mudar" da página do agente).
 const props = defineProps({
   // Sem nome (criação antes da conversa), os textos não citam o agente.
   nome: { type: String, default: '' },
@@ -29,6 +35,11 @@ const props = defineProps({
   textoFinal: { type: String, default: '' },
   // Na gaveta (página do agente) os cartões do passo 1 ficam um embaixo do outro.
   naGaveta: { type: Boolean, default: false },
+  caminho: {
+    type: String,
+    default: 'completo',
+    validator: v => ['completo', 'equipe', 'ajuda'].includes(v),
+  },
 });
 
 const emit = defineEmits(['pronto', 'voltar']);
@@ -37,7 +48,8 @@ const { t } = useI18n();
 const router = useRouter();
 const NS = 'AGENTS.JORNADA.ONDE.JORNADA';
 
-const tipo = ref(props.inicial?.tipo || null);
+const TIPO_DO_CAMINHO = { equipe: 'clientes', ajuda: 'ajuda' };
+const tipo = ref(TIPO_DO_CAMINHO[props.caminho] || props.inicial?.tipo || null);
 const escolhidas = ref((props.inicial?.caixas || []).map(item => item.caixa));
 const papeis = ref(
   Object.fromEntries(
@@ -58,6 +70,8 @@ const caixasEscolhidas = computed(() =>
 );
 
 const passos = computed(() => {
+  if (props.caminho === 'equipe') return ['canais-equipe', 'papel-equipe'];
+  if (props.caminho === 'ajuda') return ['ajudar', 'quando'];
   if (tipo.value === 'clientes') {
     return [
       'como',
@@ -80,10 +94,15 @@ const caixaDoPasso = computed(() =>
 const ultimo = computed(
   () =>
     indice.value === passos.value.length - 1 &&
-    (passo.value === 'quando' || passo.value?.startsWith('caixa:'))
+    (['quando', 'papel-equipe'].includes(passo.value) ||
+      Boolean(passo.value?.startsWith('caixa:')))
 );
-// Total previsto: antes de escolher, conta o caminho mais curto (3).
-const total = computed(() => Math.max(passos.value.length, 3));
+// Total previsto: no caminho completo, antes de escolher, conta o mais curto (3).
+const total = computed(() =>
+  props.caminho === 'completo'
+    ? Math.max(passos.value.length, 3)
+    : passos.value.length
+);
 
 const comNome = chave =>
   props.nome
@@ -143,6 +162,35 @@ const opcoesDaCaixa = computed(() => {
   ];
 });
 
+// Agente da equipe: só canais em que alguém já atende primeiro; os outros aparecem com o motivo.
+const opcoesEquipe = computed(() =>
+  props.caixas.map(caixa => {
+    const principal = props.portas[caixa.name];
+    return {
+      valor: caixa.name,
+      inbox: caixa,
+      titulo: caixa.name,
+      texto: principal
+        ? t(`${NS}.EQUIPE.PRINCIPAL`, { outro: principal })
+        : enderecoDaCaixa(caixa),
+      desabilitada: !principal,
+      motivo: t(`${NS}.EQUIPE.SEM_PRINCIPAL`),
+    };
+  })
+);
+
+const avisosDaEquipe = computed(() =>
+  caixasEscolhidas.value.map(caixa => ({
+    caixa,
+    texto: props.nome
+      ? t(`${NS}.EQUIPE.AVISO`, {
+          outro: props.portas[caixa.name],
+          nome: props.nome,
+        })
+      : t(`${NS}.EQUIPE.AVISO_SEM_NOME`, { outro: props.portas[caixa.name] }),
+  }))
+);
+
 const opcoesAjuda = computed(() =>
   props.principais.map(agente => ({
     valor: agente.name,
@@ -168,7 +216,10 @@ watch(caixaDoPasso, caixa => {
 
 const podeSeguir = computed(() => {
   if (passo.value === 'como') return Boolean(tipo.value);
-  if (passo.value === 'canais') return escolhidas.value.length > 0;
+  if (['canais', 'canais-equipe'].includes(passo.value)) {
+    return escolhidas.value.length > 0;
+  }
+  if (passo.value === 'papel-equipe') return true;
   if (caixaDoPasso.value) return Boolean(papelDaCaixa.value);
   if (passo.value === 'ajudar') return ajudados.value.length > 0;
   if (passo.value === 'quando') return Boolean(quando.value.trim());
@@ -182,7 +233,8 @@ const montarPapel = () =>
         tipo: 'clientes',
         caixas: caixasEscolhidas.value.map(caixa => ({
           caixa: caixa.name,
-          papel: papeis.value[caixa.name],
+          papel:
+            props.caminho === 'equipe' ? 'recebe' : papeis.value[caixa.name],
           assuntos: assuntosAntes[caixa.name] || [],
         })),
       };
@@ -214,6 +266,8 @@ const voltar = () => {
 const tituloDoPasso = computed(() => {
   if (passo.value === 'como') return comNome('COMO.TITULO');
   if (passo.value === 'canais') return t(`${NS}.CANAIS.TITULO`);
+  if (passo.value === 'canais-equipe') return comNome('EQUIPE.TITULO');
+  if (passo.value === 'papel-equipe') return t(`${NS}.EQUIPE.CONFIRA`);
   if (caixaDoPasso.value) {
     return props.nome
       ? t(`${NS}.CAIXA.TITULO`, {
@@ -229,6 +283,8 @@ const tituloDoPasso = computed(() => {
 const textoDoPasso = computed(() => {
   if (passo.value === 'como') return t(`${NS}.COMO.TEXTO`);
   if (passo.value === 'canais') return t(`${NS}.CANAIS.TEXTO`);
+  if (passo.value === 'canais-equipe') return t(`${NS}.EQUIPE.TEXTO`);
+  if (passo.value === 'papel-equipe') return t(`${NS}.EQUIPE.CONFIRA_TEXTO`);
   if (caixaDoPasso.value) {
     const posicao = caixasEscolhidas.value.indexOf(caixaDoPasso.value) + 1;
     return t(`${NS}.CAIXA.CONTADOR`, {
@@ -307,6 +363,39 @@ const linkConectar = computed(
         </a>
       </div>
     </template>
+
+    <GrupoDeCartoes
+      v-else-if="passo === 'canais-equipe'"
+      v-model="escolhidas"
+      multiplo
+      :rotulo="tituloDoPasso"
+      :opcoes="opcoesEquipe"
+    />
+
+    <ul
+      v-else-if="passo === 'papel-equipe'"
+      data-avisos-equipe
+      class="flex flex-col gap-3 p-0 m-0 list-none"
+    >
+      <li
+        v-for="aviso in avisosDaEquipe"
+        :key="aviso.caixa.name"
+        class="flex items-start gap-4 p-4 shadow-sm rounded-2xl bg-n-solid-1 ring-1 ring-inset ring-n-weak"
+      >
+        <span
+          aria-hidden="true"
+          class="grid rounded-xl place-items-center size-12 shrink-0 bg-n-alpha-2"
+        >
+          <ChannelIcon :inbox="aviso.caixa" use-brand-icon class="size-6" />
+        </span>
+        <span class="flex flex-col gap-1 min-w-0">
+          <span class="text-base font-semibold text-n-slate-12">
+            {{ aviso.caixa.name }}
+          </span>
+          <span class="text-sm text-n-slate-12">{{ aviso.texto }}</span>
+        </span>
+      </li>
+    </ul>
 
     <GrupoDeCartoes
       v-else-if="caixaDoPasso"

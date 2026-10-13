@@ -1657,9 +1657,34 @@
             "TEXTO": "The chosen agents call it in this situation. Adjust the text if you want.",
             "ROTULO": "When to call",
             "SUGESTAO": "When the question is about exchanges and returns"
+          },
+          "EQUIPE": {
+            "TITULO": "On which channels will {nome} be on the team?",
+            "TITULO_SEM_NOME": "On which channels will it be on the team?",
+            "TEXTO": "Choose one or more. Only channels that already have someone answering first can be chosen.",
+            "PRINCIPAL": "{outro} answers first",
+            "SEM_PRINCIPAL": "No one answers first on this channel yet. A team agent needs a main agent on the channel.",
+            "CONFIRA": "Check how it works",
+            "CONFIRA_TEXTO": "Nothing changes for who already answers first.",
+            "AVISO": "{outro} answers first; {nome} receives when someone hands over.",
+            "AVISO_SEM_NOME": "{outro} answers first; the agent you are creating receives when someone hands over."
           }
         },
-        "COMECAR": "Start working"
+        "COMECAR": "Start working",
+        "ESCOLHER": {
+          "TITULO": "Create agent",
+          "TEXTO": "Pick a ready-made template. Then tell it your way and choose the channel at the end.",
+          "OUTRO_TIPO": "Need another kind?",
+          "OUTRO_TEXTO": "For special cases. Most agents start from a template above.",
+          "EQUIPE": {
+            "TITULO": "Team agent",
+            "TEXTO": "Stays on a channel that already has a main agent and receives the conversation when someone hands over."
+          },
+          "AJUDA": {
+            "TITULO": "Helps other agents",
+            "TEXTO": "Only answers another agent, never the customer."
+          }
+        }
       }
     }
   }

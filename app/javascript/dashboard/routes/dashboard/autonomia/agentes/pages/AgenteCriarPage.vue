@@ -99,12 +99,17 @@ const etapaConte = ref(null);
 // "Respondeu errado?" e o texto que não entrou (409).
 const rascunhoDaConversa = ref('');
 
-// #1366 (protótipo da Fase 2, rodada 2) — antes da conversa, a jornada "Onde vai trabalhar" (como
-// trabalha, canais e papel em cada um, ou quem ajuda). O papel fica visível no topo da criação, em
-// Confira e em Pronto. Ele só vale quando o agente começa (Começar), como o canal hoje.
+// #1366 (protótipo da Fase 2, rodada 3) — o agente normal segue a criação de hoje (canal no fim, em
+// Comece). Só os outros tipos, escolhidos na página "Criar agente" (`?tipo=`), passam antes pela
+// jornada: agente da equipe (canais que já têm quem atenda primeiro) ou ajuda outros agentes. O
+// papel fica visível no topo da criação, em Confira e em Pronto, e vale quando o agente começa.
 const prototipo = usePrototipoFase2();
 const papeis = usePapeisDosAgentes();
-const escolhendoOnde = ref(prototipo && !idInicial);
+const TIPOS_COM_JORNADA = ['equipe', 'ajuda'];
+const tipoPedido = TIPOS_COM_JORNADA.includes(route.query.tipo)
+  ? route.query.tipo
+  : null;
+const escolhendoOnde = ref(prototipo && !idInicial && Boolean(tipoPedido));
 const papelNovo = ref(null);
 const aplicandoPapel = ref(false);
 
@@ -165,7 +170,9 @@ const papelDaCriacao = computed(() => {
   if (!prototipo) return null;
   if (papelNovo.value) return papelNovo.value;
   const doAgente = agente.value?.id ? papeis.papelDe(agente.value) : null;
-  return doAgente || fonte.rascunho();
+  if (doAgente) return doAgente;
+  // Criação normal (por modelo) não tem papel antes de Comece.
+  return idInicial ? fonte.rascunho() : null;
 });
 const conversaComCliente = computed(
   () => papelDaCriacao.value?.tipo === 'clientes'
@@ -195,7 +202,7 @@ const voltarDaJornada = () => {
     escolhendoOnde.value = false;
     return;
   }
-  router.push({ name: 'autonomia_agents_index' });
+  router.replace({ query: {} });
 };
 
 // Começar com o papel: grava onde trabalha (adaptador) e liga o agente.
@@ -539,6 +546,7 @@ watch(
         :portas="portas"
         :principais="principais"
         :inicial="papelDaCriacao"
+        :caminho="tipoPedido || 'completo'"
         @pronto="escolheuOnde"
         @voltar="voltarDaJornada"
       />
