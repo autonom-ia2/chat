@@ -2502,7 +2502,7 @@
     {
      "id": "10.10",
      "titulo": "Handoff da IA: conceito, gatilho, destino e por etapa",
-     "para_que_serve": "Escolher entre 'Direto' e 'Convite', escrever o gatilho, o destino e personalizar por etapa do funil.",
+     "para_que_serve": "Escolher quando a assistente do funil chama a equipe, quem recebe, se entrega 'Na hora' ou 'Com convite', e o que muda em cada etapa.",
      "publico": "admin",
      "prioridade": "P1",
      "assuntos": [

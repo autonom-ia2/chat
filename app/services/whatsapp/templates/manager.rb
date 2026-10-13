@@ -37,9 +37,14 @@ class Whatsapp::Templates::Manager
     @visible_cards = visible_cards
   end
 
+  # Cada modelo leva a saúde dos últimos 30 dias (`health`, #1338), calculada de uma vez para a lista toda.
   def list
     profiles = WhatsappTemplateProfile.for_inbox(@inbox).with_attached_card_files.index_by(&:key)
-    synced.map { |template| present(template, profiles[WhatsappTemplateProfile.key_for(template['name'], template['language'])]) }
+    health = Whatsapp::Templates::Health.new(inbox: @inbox, templates: synced).perform
+    synced.map do |template|
+      key = WhatsappTemplateProfile.key_for(template['name'], template['language'])
+      present(template, profiles[key]).merge('health' => health[key])
+    end
   end
 
   def create(attrs)

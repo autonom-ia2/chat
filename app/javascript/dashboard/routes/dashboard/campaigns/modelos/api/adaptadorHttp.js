@@ -143,8 +143,10 @@ const lerModelos = async atualizar => {
   const lidos = resultados.filter(item => item.status === 'fulfilled');
   if (grupos.length && !lidos.length) throw resultados[0].reason;
   const modelos = lidos.flatMap(item => item.value);
-  // Uma conta do WhatsApp não respondeu: a lista avisa que pode faltar modelo.
-  modelos.parcial = lidos.length < grupos.length;
+  // Uma conta do WhatsApp não respondeu: a lista avisa qual, e que pode faltar modelo.
+  modelos.naoLeu = grupos
+    .filter((_, indice) => resultados[indice].status === 'rejected')
+    .map(grupo => grupo.conta.nome);
   modelos.naoAtualizou = lidos
     .map(item => item.value.naoAtualizou)
     .filter(Boolean);
@@ -300,8 +302,8 @@ const subirArquivoDaCampanha = async (caixa, arquivo) => {
 
 // Um modelo por conta do WhatsApp: números de contas diferentes viram modelos
 // diferentes, cada um com a sua análise. Devolve a lista criada. Se uma conta
-// falhar depois de outra já ter criado, devolve as criadas com `falha` (o erro),
-// para a tela não mandar de novo o que já foi.
+// falhar depois de outra já ter criado, devolve as criadas com `falha` (o erro) e
+// `contasSemPedido` (os nomes), para a tela dizer quais e não mandar de novo o que já foi.
 const criarModelo = async (rascunho, { textos } = {}) => {
   const grupos = gruposDe(await lerCaixas()).filter(grupo =>
     grupo.numeros.some(id => rascunho.numeros.includes(id))
@@ -324,6 +326,10 @@ const criarModelo = async (rascunho, { textos } = {}) => {
   } catch (erro) {
     if (!criados.length) throw erro;
     criados.falha = erro;
+    // Quais contas ficaram sem o pedido (a que falhou e as que vinham depois).
+    criados.contasSemPedido = grupos
+      .slice(criados.length)
+      .map(grupo => grupo.conta.nome);
   } finally {
     esquecerLista();
   }

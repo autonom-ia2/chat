@@ -94,8 +94,10 @@ module Crm
       def eligible_agent_names
         return [] unless handoff_config[:enabled]
 
-        conversation = @card.primary_conversation
-        return [] if conversation&.inbox.blank?
+        # A conversa que o executor vai passar (#553), e não a primária: com o cliente escrevendo por outra caixa, a lista
+        # da primária oferecia ao modelo nomes que o seletor depois descarta (#1385).
+        conversation = @card.conversa_em_atendimento
+        return [] if conversation.blank? || conversation.inbox.blank?
 
         # Acesso por funil (#1148, parte C): o modelo só conhece quem pode receber a conversa.
         Crm::Access::Recipients.inbox_members(conversation).pluck(:name)
