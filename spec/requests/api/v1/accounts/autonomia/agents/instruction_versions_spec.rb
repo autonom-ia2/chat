@@ -70,6 +70,24 @@ RSpec.describe 'Autonomia agent instruction versions', type: :request do
       expect(version['instruction_hash']).to be_present
     end
 
+    # #1428 — a versão agora guarda o agente inteiro (metadata), inclusive o andaime. O que é oculto
+    # continua fora da API: nem a instrução, nem o andaime, nem o metadata saem.
+    it 'never exposes the hidden instruction or scaffold kept in the whole-agent version' do
+      # Arrange
+      guided_agent.update!(scaffold: 'andaime secreto', greeting: 'oi')
+      guided_agent.record_instruction_version!(reason: 'kb_refresh')
+
+      # Act
+      get "/api/v1/accounts/#{account.id}/autonomia/agents/#{guided_agent.id}/instruction_versions",
+          headers: administrator.create_new_auth_token, as: :json
+
+      # Assert
+      version = response.parsed_body['payload'].first
+      expect(version.keys).to match_array(%w[id created_at reason created_by_name instruction_hash])
+      expect(response.body).not_to include('andaime secreto')
+      expect(response.body).not_to include('guided v1')
+    end
+
     it '404s an agent from another account' do
       # Arrange
       other_account = create(:account, internal_attributes: { 'autonomia_agents_enabled' => true })
@@ -101,6 +119,26 @@ RSpec.describe 'Autonomia agent instruction versions', type: :request do
       expect(response).to have_http_status(:success)
       expect(manual_agent.reload.instruction).to eq('manual v1')
       expect(manual_agent.instruction_versions.where(reason: 'rollback').count).to eq(1)
+    end
+
+    it 'gives back every field kept in the version and keeps the hidden ones out of the response' do
+      # Arrange
+      guided_agent.update!(scaffold: 'andaime v1', greeting: 'oi v1', tone: 'tom v1')
+      v1 = guided_agent.record_instruction_version!(reason: 'kb_refresh')
+      guided_agent.update!(instruction: 'guided v2', scaffold: 'andaime v2', greeting: 'oi v2', tone: 'tom v2')
+
+      # Act
+      post "/api/v1/accounts/#{account.id}/autonomia/agents/#{guided_agent.id}" \
+           "/instruction_versions/#{v1.id}/restore",
+           headers: administrator.create_new_auth_token, as: :json
+
+      # Assert
+      expect(response).to have_http_status(:success)
+      guided_agent.reload
+      expect([guided_agent.instruction, guided_agent.scaffold, guided_agent.greeting, guided_agent.tone])
+        .to eq(['guided v1', 'andaime v1', 'oi v1', 'tom v1'])
+      expect(response.body).not_to include('andaime v1')
+      expect(response.body).not_to include('guided v1')
     end
 
     # #380 (rodada de correção) — a instrução do Agente de Cotação é mantida pela Autonom.ia; o

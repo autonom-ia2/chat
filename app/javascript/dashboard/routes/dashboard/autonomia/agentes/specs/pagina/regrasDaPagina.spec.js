@@ -175,6 +175,10 @@ describe('regras da página do agente', () => {
     expect(chaveDoMotivo('kb_refresh')).toBe('KB_REFRESH');
     expect(chaveDoMotivo('manual_edit')).toBe('MANUAL_EDIT');
     expect(chaveDoMotivo('rollback')).toBe('ROLLBACK');
+    // #1428 — criar e ajustar conversando são a mesma frase; a versão base (o estado de antes) não tem frase.
+    expect(chaveDoMotivo('builder_create')).toBe('BUILDER');
+    expect(chaveDoMotivo('builder_adjust')).toBe('BUILDER');
+    expect(chaveDoMotivo('base')).toBeNull();
     expect(chaveDoMotivo('outro')).toBeNull();
   });
 

@@ -440,6 +440,7 @@
         "META": "{date} · {author}",
         "RESTORE": "Restaurar",
         "REASON": {
+          "BUILDER": "Mudado conversando",
           "KB_REFRESH": "Atualização da base de conhecimento",
           "MANUAL_EDIT": "Edição manual",
           "ROLLBACK": "Versão restaurada"
@@ -1310,10 +1311,11 @@
           "LISTA": "Jeitos de responder, do mais novo para o mais antigo",
           "CARREGANDO": "Carregando os jeitos anteriores",
           "MOTIVO": {
-            "KB_REFRESH": "Mudou sozinho quando os arquivos e sites mudaram",
+            "BUILDER": "Mudado conversando",
+            "KB_REFRESH": "Atualizado pelos arquivos",
             "MANUAL_EDIT": "Escrito por você",
-            "ROLLBACK": "Voltou a um jeito anterior",
-            "ROLLBACK_DE": "Voltou ao jeito de {quando}"
+            "ROLLBACK": "Voltou a uma versão",
+            "ROLLBACK_DE": "Voltou à versão de {quando}"
           },
           "VOLTAR_ESTA": "Voltar para esta",
           "VOLTANDO": "Voltando…",

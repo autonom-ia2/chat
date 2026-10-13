@@ -311,14 +311,18 @@ const instructionVersions = useMapGetter(
 const isLoadingHistory = ref(false);
 const restoringVersionId = ref(null);
 
+// #1428 — the Builder now records a version on every apply; 'base' (the state before the first
+// recorded apply) has no label, like any reason this panel does not know.
 const REASON_LABELS = {
+  builder_create: 'AGENTS.TUNE.HISTORY.REASON.BUILDER',
+  builder_adjust: 'AGENTS.TUNE.HISTORY.REASON.BUILDER',
   kb_refresh: 'AGENTS.TUNE.HISTORY.REASON.KB_REFRESH',
   manual_edit: 'AGENTS.TUNE.HISTORY.REASON.MANUAL_EDIT',
   rollback: 'AGENTS.TUNE.HISTORY.REASON.ROLLBACK',
 };
 
 const reasonLabel = reason =>
-  REASON_LABELS[reason] ? t(REASON_LABELS[reason]) : reason;
+  REASON_LABELS[reason] ? t(REASON_LABELS[reason]) : '';
 
 const formatVersionDate = createdAt =>
   new Date(createdAt).toLocaleString(undefined, {

@@ -143,7 +143,11 @@ export const nomeDaFonte = fonte =>
   fonte?.reference || fonte?.external_link || '';
 
 // Frase de cada versão da instrução (DECISOES.md item 6): só o que a API tem.
+// #1428 — criar e ajustar conversando dizem o mesmo; a versão 'base' (o estado de antes da primeira
+// mudança conversando) não tem frase: mostra só data e hora.
 const MOTIVOS = {
+  builder_create: 'BUILDER',
+  builder_adjust: 'BUILDER',
   kb_refresh: 'KB_REFRESH',
   manual_edit: 'MANUAL_EDIT',
   rollback: 'ROLLBACK',

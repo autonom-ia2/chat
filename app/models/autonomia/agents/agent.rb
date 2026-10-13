@@ -49,6 +49,8 @@ module Autonomia
       end
 
       include Avatarable
+      # #1428 — versões do agente inteiro (gravar, voltar, versão da aplicação do Construtor).
+      include Autonomia::Agents::AgentVersioning
 
       belongs_to :account
       belongs_to :created_by, class_name: 'User', optional: true
@@ -244,8 +246,8 @@ module Autonomia
 
           # Merge no jsonb `config` em vez de substituí-lo: preserva model/temperature/business_hours/
           # max_turns já setados (o Construtor só gera `guardrails`). Substituir zeraria a config a
-          # cada "Ajustar com IA".
-          apply_builder_attributes!(attrs)
+          # cada "Ajustar com IA". A versão da aplicação leva como autor quem conversava (#1428).
+          apply_builder_attributes!(attrs, thread.created_by_id)
         end
       end
 
@@ -280,43 +282,6 @@ module Autonomia
         token
       end
 
-      # G2 — grava um snapshot da instrução ATUAL persistida (auditoria best-effort). IDEMPOTENTE:
-      # no-op (retorna nil) se a base ainda não tem instrução OU se a última versão gravada já tem
-      # o mesmo hash — evita duplicatas quando o refresh produz texto idêntico. `reason` classifica
-      # a origem (kb_refresh/manual_edit/rollback); `created_by` = usuário que editou (nil = sistema).
-      def record_instruction_version!(reason:, created_by: nil)
-        current = instruction.to_s
-        return if current.blank?
-
-        digest = Digest::SHA256.hexdigest(current)
-        last = instruction_versions.order(created_at: :desc, id: :desc).first
-        return if last&.instruction_hash == digest
-
-        write_instruction_version!(current, digest, reason, created_by)
-      end
-
-      # G2 — ROLLBACK ATÔMICO: restaura `instruction` para o texto de `version` e grava um novo
-      # snapshot (reason 'rollback'). O agente não tem callbacks → update_columns é seguro e evita
-      # validações tocarem outros campos; setamos updated_at à mão. Guarda de tenancy: a versão TEM
-      # de pertencer a este agente (retorna false caso contrário). O snapshot de rollback é gravado
-      # SEM o dedup por hash: restaurar para um texto igual ao head atual ainda é um evento de
-      # auditoria distinto (o usuário pediu o rollback). Retorna truthy no sucesso.
-      def restore_instruction!(version, created_by: nil)
-        recusar_se_instrucao_mantida!
-        return false if version.blank? || version.autonomia_agent_id != id
-
-        # Atômico: restaurar a instrução e gravar o snapshot 'rollback' vivem na MESMA transação —
-        # se o insert do snapshot falhar, o update da instrução reverte junto (nunca fica restaurado
-        # sem versão correspondente).
-        transaction do
-          update_columns(instruction: version.instruction, updated_at: Time.current)
-          write_instruction_version!(
-            version.instruction, Digest::SHA256.hexdigest(version.instruction), 'rollback', created_by
-          )
-        end
-        true
-      end
-
       # Mesmo predicado de Operate.authorized_agent_inbox e do InboxConnector#connect!.
       def operating?
         !deleted? && enabled? && active?
@@ -324,14 +289,16 @@ module Autonomia
 
       private
 
-      def apply_builder_attributes!(attrs)
+      def apply_builder_attributes!(attrs, autor_id)
         with_lock do
           next false if deleted?
 
-          merged = attrs.dup
-          merged[:config] = config.to_h.merge(attrs[:config] || {}) if attrs.key?(:config)
-          update!(merged)
-          true
+          versionar_aplicacao_do_construtor(autor_id) do
+            merged = attrs.dup
+            merged[:config] = config.to_h.merge(attrs[:config] || {}) if attrs.key?(:config)
+            update!(merged)
+            true
+          end
         end
       end
 
@@ -375,14 +342,6 @@ module Autonomia
         return unless [agent_type_was, agent_type].include?('insurance_quote')
 
         errors.add(:agent_type, I18n.t('autonomia.agents.instrucao_mantida'))
-      end
-
-      # Cria a linha de versão (sem dedup — o dedup é responsabilidade do chamador público).
-      def write_instruction_version!(text, digest, reason, created_by)
-        instruction_versions.create!(
-          account_id: account_id, instruction: text, instruction_hash: digest,
-          reason: reason, created_by: created_by
-        )
       end
     end
   end

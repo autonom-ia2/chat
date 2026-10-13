@@ -6,6 +6,9 @@ import GavetaVersoes from '../../components/pagina/GavetaVersoes.vue';
 import GavetaInstrucoes from '../../components/pagina/GavetaInstrucoes.vue';
 import GavetaAgenda from '../../components/pagina/GavetaAgenda.vue';
 import { comNotaDaGaveta, semMensagens } from './i18nDaNota';
+import agentesPtBR from 'dashboard/i18n/locale/pt_BR/agents.json';
+
+const ptBR = agentesPtBR.AGENTS.JORNADA.PAGINA.VERSOES;
 
 const store = vi.hoisted(() => ({ dispatch: vi.fn(), getters: {} }));
 vi.mock('dashboard/composables/store', async () => {
@@ -456,6 +459,36 @@ describe('GavetaVersoes (T13)', () => {
     expect(linhas[2].textContent).toContain('VERSOES.MOTIVO.KB_REFRESH');
     expect(linhas[0].textContent).toContain('Oct');
     expect(document.body.textContent).not.toContain('Em uso');
+    wrapper.unmount();
+  });
+
+  // #1428 — a origem de cada versão, em linguagem simples, com as frases do catálogo.
+  it('shows where each version came from in plain words (#1428)', async () => {
+    config.global.plugins[0].global.setLocaleMessage('en', {
+      AGENTS: { JORNADA: { PAGINA: { VERSOES: { MOTIVO: ptBR.MOTIVO } } } },
+    });
+    store.dispatch.mockResolvedValue([
+      { id: 6, created_at: '2026-10-13T15:00:00Z', reason: 'builder_adjust' },
+      { id: 5, created_at: '2026-10-12T15:00:00Z', reason: 'builder_create' },
+      { id: 4, created_at: '2026-10-11T15:00:00Z', reason: 'manual_edit' },
+      { id: 3, created_at: '2026-10-10T15:00:00Z', reason: 'kb_refresh' },
+      { id: 2, created_at: '2026-10-09T15:00:00Z', reason: 'rollback' },
+      { id: 1, created_at: '2026-10-08T15:00:00Z', reason: 'base' },
+    ]);
+    const wrapper = montar();
+    await flushPromises();
+
+    const linhas = todos('[data-versao]');
+    expect(linhas[0].textContent).toContain('Mudado conversando');
+    expect(linhas[1].textContent).toContain('Mudado conversando');
+    expect(linhas[2].textContent).toContain('Escrito por você');
+    expect(linhas[3].textContent).toContain('Atualizado pelos arquivos');
+    expect(linhas[4].textContent).toContain('Voltou a uma versão');
+    // A versão base é o estado de antes: só data e hora, sem frase.
+    expect(
+      linhas[5].querySelectorAll('span.text-sm.text-n-slate-11')
+    ).toHaveLength(0);
+    semMensagens();
     wrapper.unmount();
   });
 
