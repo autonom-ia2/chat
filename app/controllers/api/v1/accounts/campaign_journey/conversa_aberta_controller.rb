@@ -7,15 +7,6 @@
 # da tela de Modelos. Criar campanha exige campaign_manage (CampaignPolicy#create?). O que a pessoa escreve vai ao
 # redator como dado; nada dela vai ao log.
 class Api::V1::Accounts::CampaignJourney::ConversaAbertaController < Api::V1::Accounts::BaseController
-  FEATURE = 'campanha_redacao'.freeze
-  CANAL = 'whatsapp_campanha'.freeze
-  PROPOSITO = 'campanha para quem mandou mensagem para a empresa nas últimas 24 horas'.freeze
-  TONS = %w[simpatico curto formal].freeze
-  # O que a tela pede → o vocabulário do redator (comum.md); "mais simpática" é o tom.
-  MELHORIAS = { 'mais_curta' => 'mais_curto', 'mais_clara' => 'mais_claro', 'mais_simpatica' => nil }.freeze
-  TIPO_DO_MODELO = { 'MARKETING' => 'divulgacao', 'UTILITY' => 'servico' }.freeze
-  MAX_PEDIDO = 500
-
   before_action :ensure_enabled
   before_action :check_authorization
   before_action :fetch_audience_and_inbox
@@ -28,13 +19,11 @@ class Api::V1::Accounts::CampaignJourney::ConversaAbertaController < Api::V1::Ac
   end
 
   def escrever
-    resultado = ::Ai::Redacao::Escrever.call(
-      account: Current.account, feature: FEATURE, canal: CANAL, proposito: PROPOSITO,
-      limites: { max_chars: ::CampaignJourney::ConversaAberta::Texto::MAX_CHARS },
-      chaves: { permitidas: ::CampaignJourney::ConversaAberta::Texto.chaves_permitidas(@campaign_import.extra_columns), obrigatorias: [] },
-      tom: tom, base: base, pedido: pedido, opcoes: 2, contexto: { tipo_do_modelo: TIPO_DO_MODELO[categoria] }
-    )
-    render json: { payload: resultado.slice(:status, :pergunta, :sugestoes).merge(opcoes: resultado[:opcoes].map { |o| o.slice(:texto) }) }
+    resultado = ::CampaignJourney::ConversaAberta::Redacao.new(
+      account: Current.account, campaign_import: @campaign_import, categoria: categoria
+    ).call(objetivo: params[:objetivo].to_s, resposta: params[:resposta].to_s, tom: params[:tom].to_s,
+           base: params[:base].to_s, melhoria: params[:melhoria].to_s)
+    render json: { payload: payload_da_redacao(resultado) }
   rescue ::Ai::Redacao::Escrever::Indisponivel
     render json: { error: 'conversa_aberta.ia_indisponivel', code: 'ia_indisponivel' }, status: :service_unavailable
   end
@@ -60,31 +49,12 @@ class Api::V1::Accounts::CampaignJourney::ConversaAbertaController < Api::V1::Ac
     render json: { error: 'conversa_aberta.caixa_invalida', code: 'caixa_invalida' }, status: :unprocessable_entity
   end
 
+  # Só o texto de cada opção vai para a tela.
+  def payload_da_redacao(resultado)
+    resultado.slice(:status, :pergunta, :sugestoes).merge(opcoes: resultado[:opcoes].map { |opcao| opcao.slice(:texto) })
+  end
+
   def categoria
     params[:categoria].to_s.upcase.presence
-  end
-
-  def tom
-    escolhido = params[:tom].to_s
-    return 'simpatico' if melhoria == 'mais_simpatica'
-
-    TONS.include?(escolhido) ? escolhido : nil
-  end
-
-  def melhoria
-    params[:melhoria].to_s.presence_in(MELHORIAS.keys)
-  end
-
-  def base
-    params[:base].to_s.first(::CampaignJourney::ConversaAberta::Texto::MAX_CHARS).presence if melhoria
-  end
-
-  # Modo criar: a frase da pessoa (e a resposta à pergunta do redator, se houver). Modo melhorar: as melhorias.
-  def pedido
-    return { melhorias: [MELHORIAS[melhoria]].compact, observacao: nil } if melhoria
-
-    frase = params[:objetivo].to_s.strip.first(MAX_PEDIDO)
-    resposta = params[:resposta].to_s.strip.first(MAX_PEDIDO)
-    [frase, resposta].compact_blank.join("\n")
   end
 end
