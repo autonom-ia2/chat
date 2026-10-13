@@ -6,7 +6,7 @@ class Api::V1::Accounts::Autonomia::Agents::InstructionVersionsController < Api:
   MAX_VERSIONS = 50
 
   def index
-    @versions = @agent.instruction_versions
+    @versions = @agent.instruction_versions.na_lista
                       .includes(:created_by)
                       .order(created_at: :desc, id: :desc)
                       .limit(MAX_VERSIONS)

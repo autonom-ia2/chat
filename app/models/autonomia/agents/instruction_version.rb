@@ -40,4 +40,17 @@ class Autonomia::Agents::InstructionVersion < ApplicationRecord
   validates :instruction, presence: true, length: { maximum: Autonomia::Agents::Agent::MAX_INSTRUCTION_LENGTH }
   validates :instruction_hash, presence: true
   validates :reason, presence: true
+
+  # #1428 — a aplicação do Construtor que não mudou nada fica no banco (rastro), mas não vira linha na lista.
+  scope :na_lista, -> { where.not('metadata @> ?', { sem_mudanca: true }.to_json) }
+
+  # #1484 — o texto só sai de versão gravada em modo MANUAL (texto do próprio dono). Quem decide é o modo da
+  # VERSÃO, nunca o modo atual do agente: a instrução gerada pelo Construtor não aparece nem depois que o
+  # agente passa a manual. Versão antiga, sem retrato: só a edição manual (gravada sempre em modo manual).
+  def instrucao_visivel?
+    agente = metadata.to_h['agente']
+    return agente['mode'] == 'manual' if agente.is_a?(Hash)
+
+    reason == 'manual_edit'
+  end
 end

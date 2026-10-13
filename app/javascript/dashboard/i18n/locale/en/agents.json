@@ -433,8 +433,8 @@
       "CONFIDENCE_HIGH": "High (hands off often)",
       "CONFIDENCE_HINT": "Below {pct}% confidence, the agent hands the conversation to a human instead of guessing.",
       "HISTORY": {
-        "TITLE": "Instruction history",
-        "HINT": "Every automatic refresh and manual edit is saved. Restore a previous version if something goes wrong.",
+        "TITLE": "Agent history",
+        "HINT": "Every change by chatting, automatic refresh and manual edit is saved with the whole agent: instruction, tone, greeting and the rest. Restore a previous version if something goes wrong.",
         "LOADING": "Loading history…",
         "EMPTY": "No versions yet.",
         "META": "{date} · {author}",
@@ -445,8 +445,8 @@
           "MANUAL_EDIT": "Manual edit",
           "ROLLBACK": "Restored version"
         },
-        "LOAD_ERROR": "We couldn't load the instruction history.",
-        "RESTORE_SUCCESS": "Instruction restored.",
+        "LOAD_ERROR": "We couldn't load the agent history.",
+        "RESTORE_SUCCESS": "Agent restored to how it was in this version.",
         "RESTORE_ERROR": "We couldn't restore this version. Please try again."
       }
     },
@@ -1312,10 +1312,10 @@
           "CARREGANDO": "Loading the previous ways",
           "MOTIVO": {
             "BUILDER": "Changed by chatting",
-            "KB_REFRESH": "Updated from the files",
+            "KB_REFRESH": "Updated from the files and websites",
             "MANUAL_EDIT": "Written by you",
-            "ROLLBACK": "Went back to a version",
-            "ROLLBACK_DE": "Went back to the version from {quando}"
+            "ROLLBACK": "Went back to a previous way",
+            "ROLLBACK_DE": "Went back to the way from {quando}"
           },
           "VOLTAR_ESTA": "Go back to this one",
           "VOLTANDO": "Going back…",

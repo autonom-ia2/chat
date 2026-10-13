@@ -20,10 +20,10 @@ RSpec.describe Autonomia::Agents::AgentVersioning do
     }
   end
 
-  def aplicar(agent, parsed)
+  def aplicar(agent, parsed, extra = {})
     thread = Autonomia::Agents::BuildThread.create!(account: account, agent: agent, created_by: user,
                                                     status: :processing, build_token: SecureRandom.hex(4))
-    agent.apply_builder_config!(thread.build_token, Autonomia::Agents::Builder.map_attributes(parsed))
+    agent.apply_builder_config!(thread.build_token, Autonomia::Agents::Builder.map_attributes(parsed).merge(extra))
   end
 
   # O estado do agente nos campos versionados, lido do banco.
@@ -31,7 +31,7 @@ RSpec.describe Autonomia::Agents::AgentVersioning do
     agent.reload
     campos.index_with { |campo| agent[campo] }
           .merge('instruction' => agent.instruction, 'guardrails' => agent.config['guardrails'],
-                 'voice' => agent.config['voice'])
+                 'voice' => agent.config['voice'], 'with_knowledge' => agent.config['with_knowledge'])
   end
 
   describe 'aplicação do Construtor' do
@@ -44,10 +44,11 @@ RSpec.describe Autonomia::Agents::AgentVersioning do
       expect(versoes.count).to eq(1)
       versao = versoes.first
       expect([versao.reason, versao.created_by, versao.instruction]).to eq(['builder_create', user, 'instrucao v1'])
-      expect(versao.metadata['agente'].keys).to match_array(campos + %w[config])
+      expect(versao.metadata['agente'].keys).to match_array(campos + %w[config actuation])
       expect(versao.metadata['agente']).to include('name' => 'Bia v1', 'scaffold' => 'andaime v1', 'tone' => 'tom v1',
                                                    'starter_questions' => ['pergunta v1'], 'agent_type' => 'support')
-      expect(versao.metadata['agente']['config']).to eq('guardrails' => ['limite v1'], 'voice' => 'feminina')
+      expect(versao.metadata['agente']['config'])
+        .to eq('guardrails' => ['limite v1'], 'voice' => 'feminina', 'with_knowledge' => nil)
       expect(versao.metadata).not_to have_key('sem_mudanca')
     end
 
@@ -184,6 +185,131 @@ RSpec.describe Autonomia::Agents::AgentVersioning do
 
       # Assert
       expect(retrato(rascunho)).to eq(antes.merge('instruction' => 'instrucao antiga'))
+    end
+
+    # Revisão do #1428 (ALTO): o PATCH só grava versão quando a instrução muda em modo manual; a saudação
+    # editada à mão não estava em versão nenhuma e voltar a apagava sem rastro.
+    it 'guarda o estado atual antes de voltar quando ele não está em versão nenhuma' do
+      # Arrange
+      aplicar(rascunho, gerado('v1'))
+      versao_v1 = rascunho.instruction_versions.order(:id).last
+      aplicar(rascunho, gerado('v2'))
+      rascunho.update!(greeting: 'oi escrito a mao')
+
+      # Act
+      rascunho.restore_instruction!(versao_v1, created_by: user)
+
+      # Assert
+      motivos = rascunho.instruction_versions.order(:id).pluck(:reason)
+      expect(motivos).to eq(%w[builder_create builder_adjust antes_de_voltar rollback])
+      antes = rascunho.instruction_versions.find_by(reason: 'antes_de_voltar')
+      expect([antes.metadata['agente']['greeting'], antes.created_by]).to eq(['oi escrito a mao', user])
+      expect(rascunho.reload.greeting).to eq('oi v1')
+    end
+
+    it 'não duplica o estado atual quando ele já é a última versão' do
+      # Arrange
+      aplicar(rascunho, gerado('v1'))
+      versao_v1 = rascunho.instruction_versions.order(:id).last
+      aplicar(rascunho, gerado('v2'))
+
+      # Act
+      rascunho.restore_instruction!(versao_v1)
+
+      # Assert
+      expect(rascunho.instruction_versions.where(reason: 'antes_de_voltar')).not_to exist
+    end
+
+    # Revisão do #1428 + #1484: voltar a uma versão guiada num agente que hoje é manual devolve o modo junto;
+    # a instrução gerada pelo Construtor nunca fica num agente manual, onde a API a mostraria.
+    it 'voltar a uma versão guiada num agente manual devolve o modo guiado' do
+      # Arrange
+      aplicar(rascunho, gerado('v1'))
+      guiada = rascunho.instruction_versions.order(:id).last
+      rascunho.update!(mode: :manual, instruction: 'escrita pelo dono', scaffold: 'andaime manual')
+
+      # Act
+      rascunho.restore_instruction!(guiada)
+
+      # Assert
+      rascunho.reload
+      expect([rascunho.mode, rascunho.instruction, rascunho.scaffold]).to eq(['guided', 'instrucao v1', 'andaime v1'])
+      expect(guiada.metadata['agente']['mode']).to eq('guided')
+    end
+
+    it 'devolve with_knowledge e não devolve a atuação' do
+      # Arrange
+      aplicar(rascunho, gerado('v1'))
+      versao_v1 = rascunho.instruction_versions.order(:id).last
+      rascunho.update!(actuation: :both, config: rascunho.config.merge('with_knowledge' => false))
+
+      # Act
+      rascunho.restore_instruction!(versao_v1)
+
+      # Assert
+      rascunho.reload
+      expect(rascunho.config['with_knowledge']).to be_nil
+      expect(rascunho.actuation).to eq('both')
+      expect(versao_v1.metadata['agente']['actuation']).to eq('external')
+    end
+
+    it 'só a atuação mudada já conta como mudança na aplicação do Construtor' do
+      # Arrange
+      aplicar(rascunho, gerado('v1'))
+
+      # Act — o Construtor grava a atuação escolhida na abertura junto com o resto (Builder#build_attributes)
+      aplicar(rascunho, gerado('v1'), actuation: 'both')
+
+      # Assert
+      expect(rascunho.instruction_versions.order(:id).last.metadata).not_to have_key('sem_mudanca')
+    end
+
+    describe 'retrato inválido' do
+      before { aplicar(rascunho, gerado('v1')) }
+
+      def versao_com(agente)
+        rascunho.instruction_versions.create!(account: account, instruction: 'instrucao velha', reason: 'kb_refresh',
+                                              instruction_hash: Digest::SHA256.hexdigest('instrucao velha'),
+                                              metadata: { 'agente' => agente })
+      end
+
+      it 'com config que não é hash, restaura só a instrução e registra' do
+        # Arrange
+        versao = versao_com(rascunho.instruction_versions.last.metadata['agente'].merge('config' => 'texto'))
+        antes = retrato(rascunho)
+        allow(Rails.logger).to receive(:warn)
+
+        # Act
+        rascunho.restore_instruction!(versao)
+
+        # Assert
+        expect(retrato(rascunho)).to eq(antes.merge('instruction' => 'instrucao velha'))
+        expect(Rails.logger).to have_received(:warn).with(/retrato invalido.*versao=#{versao.id}/)
+      end
+
+      it 'com agent_type fora da lista, restaura só a instrução' do
+        # Arrange
+        versao = versao_com(rascunho.instruction_versions.last.metadata['agente'].merge('agent_type' => 'hacker'))
+        antes = retrato(rascunho)
+
+        # Act
+        rascunho.restore_instruction!(versao)
+
+        # Assert
+        expect(retrato(rascunho)).to eq(antes.merge('instruction' => 'instrucao velha'))
+      end
+
+      it 'com chave desconhecida, restaura só a instrução' do
+        # Arrange
+        versao = versao_com(rascunho.instruction_versions.last.metadata['agente'].merge('status' => 'active'))
+        antes = retrato(rascunho)
+
+        # Act
+        rascunho.restore_instruction!(versao)
+
+        # Assert
+        expect(retrato(rascunho)).to eq(antes.merge('instruction' => 'instrucao velha'))
+      end
     end
   end
 end

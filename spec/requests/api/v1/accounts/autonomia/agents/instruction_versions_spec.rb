@@ -88,6 +88,59 @@ RSpec.describe 'Autonomia agent instruction versions', type: :request do
       expect(response.body).not_to include('guided v1')
     end
 
+    # #1484 — a instrução gerada pelo Construtor (versão guiada) ficava visível quando o agente passava a
+    # manual. Quem decide é o modo da VERSÃO, não o modo atual do agente.
+    it 'never exposes the instruction of a guided version, even after the agent becomes manual' do
+      # Arrange
+      guided_agent.record_instruction_version!(reason: 'kb_refresh')
+      guided_agent.update!(mode: :manual, instruction: 'escrita pelo dono')
+      guided_agent.record_instruction_version!(reason: 'manual_edit', created_by: administrator)
+
+      # Act
+      get "/api/v1/accounts/#{account.id}/autonomia/agents/#{guided_agent.id}/instruction_versions",
+          headers: administrator.create_new_auth_token, as: :json
+
+      # Assert
+      manual, guiada = response.parsed_body['payload']
+      expect(manual['instruction']).to eq('escrita pelo dono')
+      expect(guiada).not_to have_key('instruction')
+      expect(response.body).not_to include('guided v1')
+    end
+
+    it 'exposes an old instruction-only version only when it was a manual edit' do
+      # Arrange
+      %w[kb_refresh manual_edit].each_with_index do |reason, indice|
+        texto = "antiga #{indice}"
+        manual_agent.instruction_versions.create!(account: account, reason: reason, instruction: texto,
+                                                  instruction_hash: Digest::SHA256.hexdigest(texto))
+      end
+
+      # Act
+      get "/api/v1/accounts/#{account.id}/autonomia/agents/#{manual_agent.id}/instruction_versions",
+          headers: administrator.create_new_auth_token, as: :json
+
+      # Assert
+      por_motivo = response.parsed_body['payload'].index_by { |versao| versao['reason'] }
+      expect(por_motivo['manual_edit']['instruction']).to eq('antiga 1')
+      expect(por_motivo['kb_refresh']).not_to have_key('instruction')
+    end
+
+    # Revisão do #1428: a aplicação sem mudança fica no banco (rastro), mas não vira linha na lista.
+    it 'keeps no-change versions out of the list' do
+      # Arrange
+      guided_agent.record_instruction_version!(reason: 'kb_refresh')
+      guided_agent.instruction_versions.create!(account: account, reason: 'builder_adjust', instruction: 'guided v1',
+                                                instruction_hash: 'x', metadata: { 'sem_mudanca' => true })
+
+      # Act
+      get "/api/v1/accounts/#{account.id}/autonomia/agents/#{guided_agent.id}/instruction_versions",
+          headers: administrator.create_new_auth_token, as: :json
+
+      # Assert
+      expect(response.parsed_body['payload'].pluck('reason')).to eq(['kb_refresh'])
+      expect(guided_agent.instruction_versions.count).to eq(2)
+    end
+
     it '404s an agent from another account' do
       # Arrange
       other_account = create(:account, internal_attributes: { 'autonomia_agents_enabled' => true })

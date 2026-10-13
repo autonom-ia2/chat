@@ -179,6 +179,7 @@ describe('regras da página do agente', () => {
     expect(chaveDoMotivo('builder_create')).toBe('BUILDER');
     expect(chaveDoMotivo('builder_adjust')).toBe('BUILDER');
     expect(chaveDoMotivo('base')).toBeNull();
+    expect(chaveDoMotivo('antes_de_voltar')).toBeNull();
     expect(chaveDoMotivo('outro')).toBeNull();
   });
 
