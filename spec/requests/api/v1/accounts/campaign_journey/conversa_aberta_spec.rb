@@ -122,6 +122,14 @@ RSpec.describe 'Conversa aberta na campanha (#1335)', :aggregate_failures, type:
       expect(entrada['pedido']).to eq('melhorias' => ['mais_curto'], 'observacao' => nil)
     end
 
+    it 'mais simpática: tom simpático e uma observação no lugar de uma lista vazia' do
+      escrever(base: 'Prezado {{cliente.nome}}, o relatório está disponível.', melhoria: 'mais_simpatica')
+
+      entrada = JSON.parse(enviado[:input])
+      expect(entrada['tom']['escolha']).to eq('simpatico')
+      expect(entrada['pedido']).to eq('melhorias' => [], 'observacao' => 'deixar mais simpática e calorosa, sem mudar o assunto')
+    end
+
     it 'IA fora do ar vira 503 com código, sem texto da pessoa no erro' do
       allow(client).to receive(:create).and_raise(Crm::Ai::ResponsesClient::Error, 'boom')
 

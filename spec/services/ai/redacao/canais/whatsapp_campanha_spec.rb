@@ -52,6 +52,19 @@ RSpec.describe Ai::Redacao::Canais::WhatsappCampanha do
     expect(resultado[:descartadas]).to eq(1)
   end
 
+  # Bateria #1335: com o link no fim ("...: {{publico.Link_da_oferta}}."), o texto de campanha é bom; só o modelo da
+  # Meta recusa campo na ponta. O whatsapp_texto continua descartando (spec dele intocado).
+  it 'aceita campo no começo e no fim do texto de campanha' do
+    responde('Hoje a loja toda está com 50% de desconto. Veja: {{publico.Link_da_oferta}}.',
+             '{{cliente.primeiro_nome}}, chegou a coleção nova. Quer ver?')
+
+    expect(escrever[:opcoes].size).to eq(2)
+    no_texto = Ai::Redacao::Canais::WhatsappTexto.validar(
+      { 'texto' => 'Veja: {{publico.Link_da_oferta}}.' }, chaves: { permitidas: permitidas, obrigatorias: [] }, limites: { max_chars: 1000 }
+    )
+    expect(no_texto).to eq(:campo_no_fim)
+  end
+
   it 'o link_inventado? público do whatsapp_texto acusa só o texto fixo' do
     expect(Ai::Redacao::Canais::WhatsappTexto.link_inventado?('Veja www.x.com')).to be(true)
     expect(Ai::Redacao::Canais::WhatsappTexto.link_inventado?('Veja {{publico.Link_da_oferta}}. Até.')).to be(false)

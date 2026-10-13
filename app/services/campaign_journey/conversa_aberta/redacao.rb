@@ -9,8 +9,10 @@ class CampaignJourney::ConversaAberta::Redacao
   CANAL = 'whatsapp_campanha'.freeze
   PROPOSITO = 'campanha para quem mandou mensagem para a empresa nas últimas 24 horas'.freeze
   TONS = %w[simpatico curto formal].freeze
-  # O que a tela pede → o vocabulário do redator (comum.md); "mais simpática" é o tom.
+  # O que a tela pede → o vocabulário do redator (comum.md). "Mais simpática" não tem melhoria própria lá: vai como o
+  # tom simpático e uma observação (com a lista de melhorias vazia, a IA estourava o tempo na bateria da #1335).
   MELHORIAS = { 'mais_curta' => 'mais_curto', 'mais_clara' => 'mais_claro', 'mais_simpatica' => nil }.freeze
+  OBSERVACAO = { 'mais_simpatica' => 'deixar mais simpática e calorosa, sem mudar o assunto' }.freeze
   TIPO_DO_MODELO = { 'MARKETING' => 'divulgacao', 'UTILITY' => 'servico' }.freeze
   MAX_PEDIDO = 500
   OPCOES = 2
@@ -42,7 +44,7 @@ class CampaignJourney::ConversaAberta::Redacao
 
   # Modo criar: a frase da pessoa (e a resposta à pergunta do redator, se houver). Modo melhorar: as melhorias.
   def pedido_de(objetivo, resposta, melhoria)
-    return { melhorias: [MELHORIAS[melhoria]].compact, observacao: nil } if melhoria
+    return { melhorias: [MELHORIAS[melhoria]].compact, observacao: OBSERVACAO[melhoria] } if melhoria
 
     [objetivo, resposta].map { |texto| texto.to_s.strip.first(MAX_PEDIDO) }.compact_blank.join("\n")
   end
