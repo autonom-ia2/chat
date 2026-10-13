@@ -1376,6 +1376,12 @@
     "controller": "api/v1/accounts/crm/stage_automations#show",
     "parametros": []
   },
+  "crm/stage_criteria/defaults": {
+    "controller": "api/v1/accounts/crm/stage_criteria#defaults",
+    "parametros": [
+      "names"
+    ]
+  },
   "crm/stages/:stage_id/stage_automations": {
     "controller": "api/v1/accounts/crm/stage_automations#index",
     "parametros": []

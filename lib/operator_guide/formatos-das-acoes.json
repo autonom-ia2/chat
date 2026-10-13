@@ -15213,6 +15213,26 @@
     ],
     "sem_corpo": false
   },
+  "POST crm/stage_criteria/improve": {
+    "campos": {
+      "pipeline_name": {},
+      "stage_index": {},
+      "stages": {
+        "campos": {
+          "description": {},
+          "name": {}
+        },
+        "tipo": "objeto"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/crm/stage_criteria#improve",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/stage_criteria_controller.rb:15",
+      "app/controllers/api/v1/accounts/crm/stage_criteria_controller.rb:19"
+    ],
+    "sem_corpo": false
+  },
   "POST crm/stages/:stage_id/stage_automations": {
     "campos": {
       "description": {

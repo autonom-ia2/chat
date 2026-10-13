@@ -2428,7 +2428,7 @@
     {
      "id": "10.07",
      "titulo": "IA do funil: ligar, critérios e extração de campos",
-     "para_que_serve": "Ligar a IA do funil, escrever os critérios de cada etapa e deixar a IA preencher campos personalizados.",
+     "para_que_serve": "Entender o que a IA do funil faz sozinha e escrever a frase de cada etapa, com ou sem sugestão.",
      "publico": "admin",
      "prioridade": "P1",
      "assuntos": [
@@ -4626,7 +4626,7 @@
     {
      "id": "18.05",
      "titulo": "O critério de cada etapa é a instrução que a IA do funil segue",
-     "para_que_serve": "Explicar que o critério de cada etapa, no painel IA do funil, é lido pela IA para decidir quando mover um card.",
+     "para_que_serve": "Explicar que a frase de cada etapa (Quando o cliente está nesta etapa?) é lida pela IA para decidir quando mover um card.",
      "publico": "admin",
      "prioridade": "P1",
      "assuntos": [

@@ -11,4 +11,18 @@ RSpec.describe Crm::Ai::DefaultStageCriteria do
       'ai_criteria' => described_class.criteria_for('Proposta')
     )
   end
+
+  it 'knows the stages of the ready-made Sales pipeline, in plain words' do
+    names = ['Novo contato', 'Em conversa', 'Proposta enviada', 'Negociação', 'Fechado']
+
+    expect(names.map { |name| described_class.criteria_for(name) }).to all(be_present)
+    expect(described_class.criteria_for('  NEGOCIAÇÃO ')).to include('acertando detalhes')
+  end
+
+  it 'knows the stages of the ready-made Service and Appointments pipelines' do
+    names = ['Novo pedido', 'Em atendimento', 'Esperando o cliente', 'Resolvido',
+             'Novo contato', 'Horário marcado', 'Atendido', 'Não veio']
+
+    expect(names.map { |name| described_class.criteria_for(name) }).to all(be_present)
+  end
 end
