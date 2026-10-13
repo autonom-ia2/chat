@@ -25,6 +25,9 @@ class AccountDashboard < Administrate::BaseDashboard
                                  { feature_instagram_assisted_onboarding: InstagramAssistedOnboardingField }
                                end
 
+  # #1429 — nicho dos agentes por conta, nos dois ramos (enterprise ou não). Por enquanto só no protótipo da Fase 2.
+  agents_niche_attributes = Autonomia::Agents::Fase2Prototipo.ativo? ? { agents_niche: AgentsNicheField } : {}
+
   ATTRIBUTE_TYPES = {
     id: Field::Number.with_options(searchable: true),
     name: Field::String.with_options(searchable: true),
@@ -37,7 +40,7 @@ class AccountDashboard < Administrate::BaseDashboard
     suspension_history: SuspensionHistoryField,
     account_users: Field::HasMany,
     custom_attributes: Field::String
-  }.merge(enterprise_attribute_types).freeze
+  }.merge(enterprise_attribute_types).merge(agents_niche_attributes).freeze
 
   # COLLECTION_ATTRIBUTES
   # an array of attributes that will be displayed on the model's index page.
@@ -74,7 +77,7 @@ class AccountDashboard < Administrate::BaseDashboard
     suspension_history
     conversations
     account_users
-  ] + enterprise_show_page_attributes).freeze
+  ] + enterprise_show_page_attributes + agents_niche_attributes.keys).freeze
 
   # FORM_ATTRIBUTES
   # an array of attributes that will be displayed
@@ -92,7 +95,7 @@ class AccountDashboard < Administrate::BaseDashboard
     name
     locale
     status
-  ] + enterprise_form_attributes).freeze
+  ] + enterprise_form_attributes + agents_niche_attributes.keys).freeze
 
   # COLLECTION_FILTERS
   # a hash that defines filters that can be used while searching via the search

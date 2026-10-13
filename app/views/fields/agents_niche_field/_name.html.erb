@@ -1,0 +1,4 @@
+<%# Nome legível do nicho ("Seguros · Corretora" ou "Geral"). Local: valor = { 'nicho' =>, 'perfil' => } %>
+<% partes = [t("autonomia_agents_niche.niches.#{valor['nicho']}.title")] %>
+<% partes << t("autonomia_agents_niche.profiles.#{valor['perfil']}.title") if valor['perfil'].present? %>
+<%= partes.join(t('autonomia_agents_niche.separator')) %>

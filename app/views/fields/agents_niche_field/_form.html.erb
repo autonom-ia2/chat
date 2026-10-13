@@ -1,0 +1,45 @@
+<%# #1429 — nicho dos agentes em cartões (rádios nativos com rótulo; sem <select>). Cor de seleção íris: o tema do super
+    admin não define a escala azul (--blue-*). O perfil só aparece em Seguros,
+    por CSS (:has), sem script. Os nomes dos campos seguem AgentsNicheField.permitted_attribute. %>
+<% base = "#{f.object_name}[#{field.attribute}]" %>
+<% cartao = 'flex items-start gap-3 p-4 rounded-xl cursor-pointer min-h-11 ring-1 ring-inset ring-n-slate-7 bg-n-solid-1 hover:bg-n-slate-2 has-[:checked]:ring-2 has-[:checked]:ring-n-iris-9 has-[:checked]:bg-n-iris-2 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-n-iris-9' %>
+<div class="field-unit__label">
+  <%= f.label field.attribute, t('autonomia_agents_niche.label') %>
+</div>
+<div class="field-unit__field group/nicho" data-agents-niche-form>
+  <p class="mt-0 mb-3 text-sm text-n-slate-11"><%= t('autonomia_agents_niche.help') %></p>
+  <fieldset class="grid gap-3 p-0 m-0 border-0 sm:grid-cols-2">
+    <legend class="sr-only"><%= t('autonomia_agents_niche.label') %></legend>
+    <% field.nichos.each do |nicho| %>
+      <label class="<%= cartao %>">
+        <input type="radio" id="agents-niche-<%= nicho %>" name="<%= base %>[nicho]" value="<%= nicho %>"
+               class="mt-1 size-4 accent-n-iris-9" <%= 'checked' if field.nicho == nicho %>>
+        <span class="flex flex-col gap-0.5">
+          <span class="text-sm font-semibold text-n-slate-12"><%= t("autonomia_agents_niche.niches.#{nicho}.title") %></span>
+          <span class="text-sm text-n-slate-11"><%= t("autonomia_agents_niche.niches.#{nicho}.text") %></span>
+        </span>
+      </label>
+    <% end %>
+  </fieldset>
+  <fieldset class="hidden p-0 m-0 mt-4 border-0 group-has-[#agents-niche-seguros:checked]/nicho:block" data-agents-niche-profile>
+    <legend class="mb-2 text-sm font-semibold text-n-slate-12"><%= t('autonomia_agents_niche.profile_label') %></legend>
+    <div class="grid gap-3 sm:grid-cols-3">
+      <% field.perfis.each do |perfil| %>
+        <label class="<%= cartao %>">
+          <input type="radio" name="<%= base %>[perfil]" value="<%= perfil %>"
+                 class="mt-1 size-4 accent-n-iris-9" <%= 'checked' if field.perfil == perfil %>>
+          <span class="flex flex-col gap-0.5">
+            <span class="text-sm font-semibold text-n-slate-12"><%= t("autonomia_agents_niche.profiles.#{perfil}.title") %></span>
+            <span class="text-sm text-n-slate-11"><%= t("autonomia_agents_niche.profiles.#{perfil}.text") %></span>
+          </span>
+        </label>
+      <% end %>
+    </div>
+  </fieldset>
+  <p class="mt-4 mb-0 text-sm text-n-slate-12">
+    <%= t('autonomia_agents_niche.installation_default', niche: render('fields/agents_niche_field/name', valor: field.padrao).strip) %>
+  </p>
+  <p class="flex items-start gap-2 p-3 mt-2 mb-0 text-sm rounded-xl bg-n-amber-2 ring-1 ring-inset ring-n-amber-6 text-n-slate-12" role="note">
+    <%= t('autonomia_agents_niche.warning') %>
+  </p>
+</div>

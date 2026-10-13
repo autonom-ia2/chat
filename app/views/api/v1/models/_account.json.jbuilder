@@ -37,6 +37,8 @@ json.status @account.status
 json.autonomia_agents_enabled Autonomia::Agents::Config.enabled?(@account)
 json.autonomia_prospecting_enabled Autonomia::Prospecting::Config.enabled?(@account)
 json.autonomia_insurance_enabled Autonomia::Insurance::Config.enabled?(@account)
+# Protótipo da Fase 2 dos Agentes (#1424): só em instalação de desenvolvimento com a ENV ligada.
+json.autonomia_fase2_prototipo Autonomia::Agents::Fase2Prototipo.ativo?
 # Guia da Plataforma: gate EXATO do backend (Config.enabled? + credencial de IA resolvível) — o widget
 # do guia só aparece quando o /autonomia/guide/chat de fato responderia. Best-effort: nunca quebra o
 # payload da conta.
