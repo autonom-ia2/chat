@@ -367,7 +367,7 @@
         "WHEN": "Quando começa",
         "NOW": "Agora",
         "LATER": "Escolher data e hora",
-        "DATE_LABEL": "Data e hora ({zone})",
+        "DATE_LABEL": "Data e hora (fuso da conta: {zone})",
         "PAST": "Escolha uma data e hora no futuro.",
         "PICK_DATE": "Escolha a data e a hora do envio.",
         "RECEIVE": "Vão receber",

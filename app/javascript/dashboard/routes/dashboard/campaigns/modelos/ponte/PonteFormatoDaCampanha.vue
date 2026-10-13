@@ -16,10 +16,7 @@ import {
   oQuePedir,
   pendencias,
 } from '../helpers/formatoNaCampanha';
-import {
-  scheduleToUtc,
-  timeZoneName,
-} from 'dashboard/components-next/CampaignJourney/scheduleTime';
+import { rotuloDoFuso } from 'dashboard/helper/fusoDaConta';
 
 const props = defineProps({
   modelo: { type: Object, required: true },
@@ -29,18 +26,12 @@ const props = defineProps({
 });
 const emit = defineEmits(['update']);
 
-const { t, locale } = useI18n();
+const { t } = useI18n();
 const NS = 'MODELOS_WHATSAPP.PONTE.FORMATO';
 
-// O fuso pelo nome que a pessoa conhece ("Horário Padrão de Brasília"), o mesmo
-// da revisão (#1387), lido na data escolhida (horário de verão).
-const nomeDoFuso = computed(() =>
-  timeZoneName(
-    props.timeZone,
-    locale.value,
-    scheduleToUtc(props.valores.validade, props.timeZone) || undefined
-  )
-);
+// O fuso da conta como Configurações o mostra, igual à revisão (regra do
+// Rodrigo, #1456): a data digitada vale nesse fuso (formatoNaCampanha).
+const nomeDoFuso = computed(() => rotuloDoFuso(props.timeZone));
 
 const pedido = computed(() =>
   oQuePedir(props.modelo.template, props.modelo.cartoesGuardados || [])

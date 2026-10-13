@@ -480,8 +480,12 @@ describe('Nova campanha — Passo 2 and 3 (PRD §6.3, §6.4)', () => {
     expect(wrapper.find('[data-step="3"]').attributes('aria-current')).toBe(
       'step'
     );
-    // #1387: the zone by its name, not the IANA id.
-    expect(wrapper.text()).toContain('Date and time (Brasilia Standard Time)');
+    // #1456: the account time zone as the settings show it, never the long
+    // browser name; the browser runs in UTC and the date is read in the account zone.
+    expect(wrapper.text()).toContain(
+      'Date and time (account time zone: America/Sao Paulo)'
+    );
+    expect(wrapper.text()).not.toContain('Standard Time');
     await wrapper.find('[data-test="open-confirmation"]').trigger('click');
     await wrapper.find('[data-test="dialog-confirm"]').trigger('click');
     await flushPromises();

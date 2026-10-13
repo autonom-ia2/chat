@@ -731,7 +731,7 @@
         "CUPOM": "Código do cupom",
         "CUPOM_AJUDA": "Todos recebem o mesmo código. Até {n} letras e números.",
         "CUPOM_ERRO": "Escreva o código, com até {n} letras e números.",
-        "VALIDADE": "A oferta vale até ({zona})",
+        "VALIDADE": "A oferta vale até (fuso da conta: {zona})",
         "VALIDADE_AJUDA": "O cliente vê a contagem regressiva. Se essa hora passar antes do envio, a campanha para e ninguém recebe.",
         "VALIDADE_PASSADA": "Essa hora já passou. Escolha uma data à frente.",
         "CARTOES": "Fotos dos {n} cartões",

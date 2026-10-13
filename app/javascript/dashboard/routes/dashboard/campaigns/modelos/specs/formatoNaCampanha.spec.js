@@ -172,13 +172,16 @@ describe('PonteFormatoDaCampanha', () => {
     api.subirArquivoDaCampanha.mockReset();
   });
 
-  // #1456: o fuso pelo nome que a pessoa conhece, o mesmo da revisão (#1387).
-  it('a validade da oferta diz o fuso pelo nome, não pelo código', () => {
+  // Regra do Rodrigo (#1456): o fuso da conta como Configurações o mostra,
+  // nunca o nome longo do navegador.
+  it('a validade da oferta diz o fuso da conta como a plataforma o mostra', () => {
     const wrapper = montar({ modelo: { template: oferta } });
 
     const rotulo = wrapper.find('[data-formato-validade]').text();
-    expect(rotulo).toContain('Brasilia Standard Time');
-    expect(rotulo).not.toContain(ZONA);
+    expect(rotulo).toContain(
+      'The offer is valid until (account time zone: America/Sao Paulo)'
+    );
+    expect(rotulo).not.toContain('Standard Time');
   });
 
   it('sobe a foto escolhida para o cartão pela caixa e guarda a referência', async () => {

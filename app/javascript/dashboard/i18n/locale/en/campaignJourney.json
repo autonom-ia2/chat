@@ -367,7 +367,7 @@
         "WHEN": "When it starts",
         "NOW": "Now",
         "LATER": "Pick date and time",
-        "DATE_LABEL": "Date and time ({zone})",
+        "DATE_LABEL": "Date and time (account time zone: {zone})",
         "PAST": "Choose a future date and time.",
         "PICK_DATE": "Choose the date and time of the send.",
         "RECEIVE": "Will receive",
