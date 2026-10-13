@@ -52,6 +52,11 @@ watch(
     miniaturaFalhou.value = false;
   }
 );
+// Miniatura só de foto: vídeo e documento ficam no ícone, mesmo com link.
+const mostraMiniatura = computed(
+  () =>
+    props.midia === 'foto' && Boolean(props.miniatura) && !miniaturaFalhou.value
+);
 const rotulo = computed(() =>
   props.guardado || props.escolhido
     ? t(`${NS}.TROCAR.${props.midia}`)
@@ -64,7 +69,7 @@ const rotulo = computed(() =>
     class="flex flex-wrap gap-3 items-center p-3 rounded-xl border border-n-weak bg-n-solid-1"
   >
     <img
-      v-if="miniatura && !miniaturaFalhou"
+      v-if="mostraMiniatura"
       :src="miniatura"
       alt=""
       class="object-cover rounded-lg size-11 shrink-0 bg-n-slate-3"

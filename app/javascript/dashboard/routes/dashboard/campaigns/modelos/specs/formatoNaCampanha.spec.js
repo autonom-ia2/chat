@@ -318,10 +318,21 @@ describe('PonteFormatoDaCampanha', () => {
     const video = montar({
       modelo: {
         template: comTopo('VIDEO'),
-        topoGuardado: { nome: 'v.mp4', url: '' },
+        // Mesmo com link de leitura (arquivo guardado que é imagem), vídeo e
+        // documento ficam no ícone: a miniatura é só de topo de foto.
+        topoGuardado: { nome: 'v.mp4', url: 'https://s/v.png' },
       },
     });
     expect(video.find('[data-formato-topo] img').exists()).toBe(false);
+    const documentoComLink = montar({
+      modelo: {
+        template: comTopo('DOCUMENT'),
+        topoGuardado: { nome: 'a.pdf', url: 'https://s/a.png' },
+      },
+    });
+    expect(documentoComLink.find('[data-formato-topo] img').exists()).toBe(
+      false
+    );
     const semVideo = montar({ modelo: { template: comTopo('VIDEO') } });
     expect(semVideo.find('[data-formato-topo]').text()).toContain(
       FORMATO.ARQUIVO.SEM_ARQUIVO.video
