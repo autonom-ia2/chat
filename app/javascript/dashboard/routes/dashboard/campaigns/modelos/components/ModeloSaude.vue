@@ -123,8 +123,8 @@ const COR_DA_COMPARACAO = {
         aria-hidden="true"
       />
       <p class="mb-0 text-[0.9375rem] leading-relaxed text-n-slate-12">
-        <strong class="font-semibold">
-          {{ $t(`MODELOS_WHATSAPP.SAUDE.SINAIS.${sinal}.TITULO`) }}.
+        <strong class="block font-semibold">
+          {{ $t(`MODELOS_WHATSAPP.SAUDE.SINAIS.${sinal}.TITULO`) }}
         </strong>
         {{ $t(`MODELOS_WHATSAPP.SAUDE.SINAIS.${sinal}.TEXTO`) }}
       </p>
