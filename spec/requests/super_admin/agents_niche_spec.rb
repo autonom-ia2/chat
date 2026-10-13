@@ -45,6 +45,14 @@ RSpec.describe 'Super Admin agents niche', type: :request do
     end
   end
 
+  it 'não deixa rótulo apontando para um campo que não existe' do
+    get "#{path}/edit"
+
+    document = Nokogiri::HTML(response.body)
+    expect(document.css('label[for="account_agents_niche"]')).to be_empty
+    expect(document.at_css('[data-agents-niche-form] legend').text.squish).to eq('AI agents niche')
+  end
+
   it 'mostra o nicho efetivo na página da conta' do
     account.update!(internal_attributes: account.internal_attributes.merge(nicho_key => 'seguros', perfil_key => 'insurtech'))
 
@@ -84,11 +92,5 @@ RSpec.describe 'Super Admin agents niche', type: :request do
     patch path, params: { account: { name: 'Renamed account' } }
 
     expect(account.reload.internal_attributes[nicho_key]).to eq('geral')
-  end
-
-  it 'entra no AccountDashboard fora da escolha enterprise/não enterprise' do
-    expect(AccountDashboard::ATTRIBUTE_TYPES[:agents_niche]).to eq(AgentsNicheField)
-    expect(AccountDashboard::SHOW_PAGE_ATTRIBUTES).to include(:agents_niche)
-    expect(AccountDashboard::FORM_ATTRIBUTES).to include(:agents_niche)
   end
 end

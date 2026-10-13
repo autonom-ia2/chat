@@ -4,7 +4,8 @@
 <% base = "#{f.object_name}[#{field.attribute}]" %>
 <% cartao = 'flex items-start gap-3 p-4 rounded-xl cursor-pointer min-h-11 ring-1 ring-inset ring-n-slate-7 bg-n-solid-1 hover:bg-n-slate-2 has-[:checked]:ring-2 has-[:checked]:ring-n-iris-9 has-[:checked]:bg-n-iris-2 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-n-iris-9' %>
 <div class="field-unit__label">
-  <%= f.label field.attribute, t('autonomia_agents_niche.label') %>
+  <%# Texto simples, sem for: nenhum campo tem o id do atributo, e o <legend> do grupo já anuncia o campo. %>
+  <span><%= t('autonomia_agents_niche.label') %></span>
 </div>
 <div class="field-unit__field group/nicho" data-agents-niche-form>
   <p class="mt-0 mb-3 text-sm text-n-slate-11"><%= t('autonomia_agents_niche.help') %></p>
