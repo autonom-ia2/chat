@@ -108,19 +108,28 @@ export const conferirNomeDaInformacao = (nome, lista, indice) => {
   return repetido ? 'REPETIDO' : '';
 };
 
-// Troca cada {{ … }} por 1 e tenta ler: vale para "{{x}}" entre aspas e para número solto.
-export const jsonValido = corpo => {
+// #1425: o HttpExecutor escapa o texto para dentro de aspas e recusa o corpo que deixa de ser JSON.
+// Por isso cada {{ … }} é trocado por um exemplo do tipo da informação: texto vira uma letra (só vale
+// entre aspas), número e sim/não viram 1 (valem soltos ou entre aspas). Sem informação, 1.
+const EXEMPLO_DE_TEXTO = 'a';
+const exemploDaVariavel = (dentro, informacoes) => {
+  const nome = dentro.split('|')[0].trim();
+  const info = informacoes.find(i => String(i.nome ?? '').trim() === nome);
+  return info?.tipo === 'string' ? EXEMPLO_DE_TEXTO : '1';
+};
+
+export const jsonValido = (corpo, informacoes = []) => {
   const texto = String(corpo ?? '');
   if (!texto.trim()) return true;
   const partes = texto.split('{{');
-  const preenchidoComUm = partes.slice(1).reduce((saida, pedaco) => {
+  const comExemplos = partes.slice(1).reduce((saida, pedaco) => {
     const fim = pedaco.indexOf('}}');
-    return fim < 0
-      ? `${saida}{{${pedaco}`
-      : `${saida}1${pedaco.slice(fim + 2)}`;
+    if (fim < 0) return `${saida}{{${pedaco}`;
+    const exemplo = exemploDaVariavel(pedaco.slice(0, fim), informacoes);
+    return `${saida}${exemplo}${pedaco.slice(fim + 2)}`;
   }, partes[0]);
   try {
-    JSON.parse(preenchidoComUm);
+    JSON.parse(comExemplos);
     return true;
   } catch {
     return false;

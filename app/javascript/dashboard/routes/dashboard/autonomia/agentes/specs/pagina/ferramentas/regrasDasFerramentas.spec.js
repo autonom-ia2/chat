@@ -110,6 +110,24 @@ describe('regras das Ferramentas', () => {
     expect(jsonValido('{ "a": 1 "b": 2 }')).toBe(false);
   });
 
+  // #1425: o backend escapa o texto para dentro de aspas e recusa corpo que deixa de ser JSON. Texto
+  // solto (sem aspas) quebra a chamada; número e sim/não soltos continuam valendo.
+  it('asks text information to be inside quotes, like the backend', () => {
+    const informacoes = [
+      { nome: 'termo', tipo: 'string' },
+      { nome: 'limite', tipo: 'integer' },
+      { nome: 'ativo', tipo: 'boolean' },
+    ];
+    expect(
+      jsonValido(
+        '{ "t": "{{termo}}", "l": {{limite}}, "a": {{ ativo }} }',
+        informacoes
+      )
+    ).toBe(true);
+    expect(jsonValido('{ "t": {{termo}} }', informacoes)).toBe(false);
+    expect(jsonValido('{ "l": "{{limite}}" }', informacoes)).toBe(true);
+  });
+
   it('builds the technical name from the name, without accents', () => {
     expect(nomeTecnico('Cálculo de frete!')).toBe('calculo_de_frete');
     expect(nomeTecnico('')).toBe('ferramenta');
@@ -328,6 +346,14 @@ describe('regras das Ferramentas', () => {
         'PREENCHE',
         false,
       ],
+      [
+        'tool_execution_error: cross_origin_redirect_error',
+        'REDIRECIONA',
+        'ENDERECO',
+        false,
+      ],
+      ['tool_execution_error: corpo_json_invalido', 'CORPO', 'PREENCHE', false],
+      ['tool_execution_error: cabecalho_invalido', 'CABECALHO', 'CHAVE', false],
       ['outra coisa', 'GENERICO', null, false],
     ])('%s → %s', (erro, chave, corrigir, ambar) => {
       expect(traduzirErroDoTeste(erro)).toEqual({
@@ -336,6 +362,15 @@ describe('regras das Ferramentas', () => {
         ambar,
         detalhe: erro,
       });
+    });
+
+    // #1425: o detalhe é o que o agente recebe, quando a API manda.
+    it('shows in the detail what the agent receives, when the API sends it', () => {
+      const agente =
+        '{"error":"tool_http_error: 400","resposta":"falta o cep"}';
+      expect(
+        traduzirErroDoTeste('tool_http_error: 400 Bad Request', agente)
+      ).toMatchObject({ chave: 'NAO_ENTENDEU', detalhe: agente });
     });
 
     it('shows the call as the backend builds it, marking raw spaces in the address', () => {
@@ -365,6 +400,21 @@ describe('regras das Ferramentas', () => {
       expect(chamada.corpo).toBe('{ "t": "pastilha de freio" }');
     });
 
+    // #1425: a prévia do corpo mostra o texto escapado, como o backend envia.
+    it('shows the body with the text escaped for JSON, as the backend sends it', () => {
+      const chamada = montarChamada(
+        {
+          metodo: 'POST',
+          endereco: 'https://x.com/b',
+          corpo: '{ "t": "{{termo}}" }',
+          cabecalhos: [],
+        },
+        { termo: 'x","admin":true' }
+      );
+      expect(chamada.corpo).toBe('{ "t": "x\\",\\"admin\\":true" }');
+      expect(JSON.parse(chamada.corpo)).toEqual({ t: 'x","admin":true' });
+    });
+
     it('keeps the variable visible while the value is empty, and GET has no body', () => {
       const chamada = montarChamada(
         {
@@ -389,8 +439,16 @@ describe('regras das Ferramentas', () => {
         json: '{\n  "a": 1\n}',
         texto: '{"a":1}',
       });
-      const longa = `${'x'.repeat(1997)}...`;
-      expect(lerResposta(longa)).toMatchObject({ cortada: true, json: null });
+      // #1425: quem diz que cortou é a API (o mesmo corte de 8.000 do agente, com o aviso).
+      const longa = `${'x'.repeat(7900)} […cortado por tamanho]`;
+      expect(lerResposta(longa, true)).toMatchObject({
+        cortada: true,
+        json: null,
+        texto: longa,
+      });
+      expect(lerResposta(`${'x'.repeat(1997)}...`)).toMatchObject({
+        cortada: false,
+      });
       expect(lerResposta('  ')).toMatchObject({ vazia: true });
     });
   });

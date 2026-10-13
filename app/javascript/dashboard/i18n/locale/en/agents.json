@@ -870,10 +870,10 @@
               "NAO_USADA": "{nome} is not used in the address or in the body. The agent will fill it in for nothing.",
               "CORPO": "Call body",
               "CORPO_AJUDA": "What goes along with the call, in JSON.",
-              "CORPO_INVALIDO": "The body is not valid JSON. Check commas and quotes.",
+              "CORPO_INVALIDO": "The body is not valid JSON. Check commas and quotes. Text information goes inside quotes.",
               "SEM_CORPO": "A lookup sends no body. To send a body, choose \"Send data (POST)\" in step 2.",
               "MAPEAMENTO": "How the answer reaches the agent",
-              "MAPEAMENTO_AJUDA": "Use it to send the agent only part of the answer. The system’s answer is called {response}. Empty: the agent gets the whole answer, up to 8,000 characters. If you use a field that is not in the answer, the test fails."
+              "MAPEAMENTO_AJUDA": "Use it to send the agent only part of the answer. The system’s answer is called {response}. Empty: the agent gets the whole answer, up to 8,000 characters. A field that is not in the answer comes out empty."
             },
             "QUATRO": {
               "INTRO": "If the system asks for a key to answer, put it here. If it does not, you can continue.",
@@ -928,7 +928,7 @@
             "DEU_CERTO_TEXTO": "The system answered.",
             "RECEBE": "What the agent gets",
             "MAPEADA": "Already with the mapping from Advanced.",
-            "CORTADA": "Showing the first 2,000 characters. The agent gets up to 8,000.",
+            "CORTADA": "The answer passed 8,000 characters and was cut. This is exactly what the agent gets, with the cut warning.",
             "VAZIA": "The system answered, but with no content.",
             "VAZIA_TEXTO": "Check that the address is right. You can turn it on anyway.",
             "OUTROS_VALORES": "Test with other values",
@@ -952,6 +952,8 @@
               "NAO_ENTENDEU": "The system did not understand what was sent.",
               "SERVIDOR": "The system has a problem right now. It is not the tool.",
               "REDIRECIONA": "The address sends you elsewhere. Use the final address.",
+              "CORPO": "The body stopped being valid JSON with the values received. Put text information inside quotes.",
+              "CABECALHO": "A header got a line break in its value, and the call was refused.",
               "URL_INVALIDA": "The address became invalid with the value typed.",
               "URL_INVALIDA_POR_QUE": "A space or an accent after the ? breaks the call.",
               "REDE": "This address points inside the private network and cannot be used.",

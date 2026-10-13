@@ -110,11 +110,18 @@ const rodar = async () => {
   erroAoLigar.value = false;
   try {
     const dados = await props.testar(props.ferramenta.id, parametros());
-    resultado.value = { ok: true, resposta: lerResposta(dados?.body) };
+    resultado.value = {
+      ok: true,
+      resposta: lerResposta(dados?.body, dados?.cortada),
+    };
   } catch (erro) {
-    // Só o texto da API vira "Detalhe"; sem rede não há detalhe real a mostrar.
+    // Só o texto da API vira "Detalhe" (o que o agente recebe, #1425); sem rede não há detalhe real.
     const mensagem = erro?.motivo?.mensagem || '';
-    resultado.value = { ok: false, erro: traduzirErroDoTeste(mensagem) };
+    const agenteRecebe = erro?.motivo?.agenteRecebe || '';
+    resultado.value = {
+      ok: false,
+      erro: traduzirErroDoTeste(mensagem, agenteRecebe),
+    };
   } finally {
     testando.value = false;
   }

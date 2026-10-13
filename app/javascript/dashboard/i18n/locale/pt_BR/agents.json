@@ -870,10 +870,10 @@
               "NAO_USADA": "{nome} não é usado no endereço nem no corpo. O agente vai preencher à toa.",
               "CORPO": "Corpo da chamada",
               "CORPO_AJUDA": "O que vai junto na chamada, em JSON.",
-              "CORPO_INVALIDO": "O corpo não é um JSON válido. Confira vírgulas e aspas.",
+              "CORPO_INVALIDO": "O corpo não é um JSON válido. Confira vírgulas e aspas. Informação de texto vai entre aspas.",
               "SEM_CORPO": "Busca não envia corpo. Para mandar um corpo, escolha \"Enviar dados (POST)\" no passo 2.",
               "MAPEAMENTO": "Como a resposta chega ao agente",
-              "MAPEAMENTO_AJUDA": "Use para mandar ao agente só uma parte da resposta. A resposta do sistema se chama {response}. Vazio: o agente recebe a resposta inteira, até 8.000 caracteres. Se usar um campo que não vem na resposta, o teste falha."
+              "MAPEAMENTO_AJUDA": "Use para mandar ao agente só uma parte da resposta. A resposta do sistema se chama {response}. Vazio: o agente recebe a resposta inteira, até 8.000 caracteres. Campo que não vem na resposta fica vazio."
             },
             "QUATRO": {
               "INTRO": "Se o sistema pede uma chave para responder, coloque aqui. Se não pede, pode continuar.",
@@ -928,7 +928,7 @@
             "DEU_CERTO_TEXTO": "O sistema respondeu.",
             "RECEBE": "O que o agente recebe",
             "MAPEADA": "Já com o mapeamento de Avançado.",
-            "CORTADA": "Mostrando os primeiros 2.000 caracteres. O agente recebe até 8.000.",
+            "CORTADA": "A resposta passou de 8.000 caracteres e foi cortada. É exatamente isto que o agente recebe, com o aviso de corte.",
             "VAZIA": "O sistema respondeu, mas sem conteúdo.",
             "VAZIA_TEXTO": "Confira se o endereço está certo. Dá para ligar mesmo assim.",
             "OUTROS_VALORES": "Testar com outros valores",
@@ -952,6 +952,8 @@
               "NAO_ENTENDEU": "O sistema não entendeu o que foi enviado.",
               "SERVIDOR": "O sistema está com problema agora. Não é na ferramenta.",
               "REDIRECIONA": "O endereço manda para outro lugar. Use o endereço final.",
+              "CORPO": "O corpo deixou de ser um JSON válido com os valores recebidos. Ponha a informação de texto entre aspas.",
+              "CABECALHO": "Um cabeçalho ficou com quebra de linha no valor, e a chamada foi recusada.",
               "URL_INVALIDA": "O endereço ficou inválido com o valor digitado.",
               "URL_INVALIDA_POR_QUE": "Espaço ou acento depois do ? quebram a chamada.",
               "REDE": "Esse endereço aponta para dentro da própria rede e não pode ser usado.",

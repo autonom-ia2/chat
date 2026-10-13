@@ -55,7 +55,9 @@ const remover = indice => {
 };
 
 const post = computed(() => props.rascunho.metodo === 'POST');
-const corpoValido = computed(() => jsonValido(props.rascunho.corpo));
+const corpoValido = computed(() =>
+  jsonValido(props.rascunho.corpo, props.rascunho.informacoes)
+);
 
 const avisos = computed(() => {
   const { semInformacao, naoUsadas } = avisosDasInformacoes(props.rascunho);

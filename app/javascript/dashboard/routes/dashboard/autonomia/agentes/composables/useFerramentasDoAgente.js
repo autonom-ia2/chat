@@ -22,7 +22,9 @@ export const motivoDoErro = erro => {
   const mensagem = String(resposta.data?.error ?? '');
   if (mensagem.startsWith(LIMITE_DO_BACKEND))
     return { tipo: 'LIMITE', mensagem };
-  return { tipo: 'API', mensagem };
+  // #1425: o teste da ferramenta manda também o que o agente recebe nessa falha.
+  const agenteRecebe = String(resposta.data?.agente_recebe ?? '');
+  return { tipo: 'API', mensagem, agenteRecebe };
 };
 
 export const useFerramentasDoAgente = agenteId => {

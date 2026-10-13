@@ -1,9 +1,8 @@
 // #1301 (protótipo F07) — teste de uma ferramenta salva: a prévia do que vai ser chamado, a leitura
 // do que o agente recebe e a tradução do erro do POST /tools/:id/test. Só métodos de string.
 
-// O /test devolve o body cortado em 2.000 caracteres (truncate, que termina em "...").
-export const LIMITE_DA_RESPOSTA = 2000;
-const CORTE = '...';
+// #1425: o /test devolve o MESMO texto que o agente lê (cortado em 8.000 caracteres, com o aviso de
+// corte) e diz se cortou (`cortada`).
 
 const HTTP = 'tool_http_error:';
 const EXECUCAO = 'tool_execution_error:';
@@ -26,6 +25,11 @@ const ERROS_DE_EXECUCAO = {
   unsafe_url_error: ['REDE', 'ENDERECO'],
   fetch_error: ['SEM_RESPOSTA', null],
   total_timeout_error: ['SEM_RESPOSTA', null],
+  // #1425: o HttpExecutor recusa redirecionamento para outro domínio, corpo que deixou de ser JSON
+  // depois de preenchido e quebra de linha num cabeçalho.
+  cross_origin_redirect_error: ['REDIRECIONA', 'ENDERECO'],
+  corpo_json_invalido: ['CORPO', 'PREENCHE'],
+  cabecalho_invalido: ['CABECALHO', 'CHAVE'],
   undefined_variable: ['NAO_EXISTE', 'PREENCHE'],
   undefined_filter: ['NAO_EXISTE', 'PREENCHE'],
   syntax_error: ['NAO_EXISTE', 'PREENCHE'],
@@ -42,10 +46,12 @@ const lerPrefixo = erro => {
   return null;
 };
 
-// Mantém o texto original em "detalhe": a tradução depende do formato do HttpExecutor.
-export const traduzirErroDoTeste = erro => {
-  const detalhe = String(erro ?? '');
-  const [chave, corrigir] = lerPrefixo(detalhe) || ['GENERICO', null];
+// A tradução lê a mensagem do HttpExecutor. O "detalhe" é o que o agente recebe (#1425), quando a API
+// manda; senão, a própria mensagem.
+export const traduzirErroDoTeste = (erro, agenteRecebe = '') => {
+  const mensagem = String(erro ?? '');
+  const [chave, corrigir] = lerPrefixo(mensagem) || ['GENERICO', null];
+  const detalhe = String(agenteRecebe ?? '') || mensagem;
   return { chave, corrigir, ambar: chave === 'SEM_RESPOSTA', detalhe };
 };
 
@@ -68,7 +74,10 @@ const juntar = pedacos =>
 
 // Troca as {{variáveis}} como o HttpExecutor (Liquid sem codificar, a não ser com url_encode).
 // Sem valor, a variável continua escrita; no endereço, valor com espaço sem url_encode é "ruim".
-const preencher = (texto, valores, noEndereco) => {
+// No corpo JSON o texto vai escapado para dentro de aspas, como o backend envia (#1425).
+const paraDentroDeAspas = valor => JSON.stringify(valor).slice(1, -1);
+
+const preencher = (texto, valores, noEndereco, noCorpo = false) => {
   const partes = String(texto ?? '').split('{{');
   const pedacos = [{ texto: partes[0] }];
   let ruim = '';
@@ -91,7 +100,7 @@ const preencher = (texto, valores, noEndereco) => {
       ruim = ruim || nome;
       pedacos.push({ texto: valor, ruim: true });
     } else {
-      pedacos.push({ texto: valor });
+      pedacos.push({ texto: noCorpo ? paraDentroDeAspas(valor) : valor });
     }
     pedacos.push({ texto: parte.slice(fim + 2) });
   });
@@ -122,15 +131,15 @@ export const montarChamada = (rascunho, valores) => {
     ruim: endereco.ruim,
     cabecalhos: [...cabecalhos, ...automaticos],
     corpo: comCorpo(rascunho)
-      ? textoDe(preencher(rascunho.corpo, valores, false).pedacos)
+      ? textoDe(preencher(rascunho.corpo, valores, false, true).pedacos)
       : '',
   };
 };
 
 // O que o agente recebe: JSON indentado quando dá para ler; cortado ou texto, como veio.
-export const lerResposta = corpo => {
+export const lerResposta = (corpo, cortadaNaApi = false) => {
   const texto = String(corpo ?? '');
-  const cortada = texto.length >= LIMITE_DA_RESPOSTA && texto.endsWith(CORTE);
+  const cortada = Boolean(cortadaNaApi);
   let json = null;
   if (!cortada) {
     try {
