@@ -102,6 +102,38 @@ RSpec.describe 'Api::V1::Accounts::Inboxes::WhatsappTemplates', type: :request d
       expect(rows[csat['name']]['system_owner']).to eq('satisfacao')
     end
 
+    # #1465: a campanha mostra "vai a foto aprovada" só quando o arquivo do topo está mesmo guardado no perfil.
+    it 'traz o nome do arquivo do topo guardado no perfil; sem arquivo, nil' do
+      profile = WhatsappTemplateProfile.create!(account: account, inbox: inbox, waba_id: channel.waba_id, name: 'pedido_enviado',
+                                                language: 'pt_BR', header_media: { 'file_name' => 'antigo.png' })
+      profile.header_file.attach(io: StringIO.new('png'), filename: 'topo.png', content_type: 'image/png')
+      WhatsappTemplateProfile.create!(account: account, inbox: inbox, waba_id: channel.waba_id, name: 'agendamento_ao_marcar_v1',
+                                      language: 'pt_BR', header_media: { 'file_name' => 'so-no-json.png' })
+
+      call(:get, base)
+
+      rows = response.parsed_body['payload'].index_by { |row| row['name'] }
+      expect(rows['pedido_enviado']['header_file_name']).to eq('topo.png')
+      expect(rows['agendamento_ao_marcar_v1']['header_file_name']).to be_nil
+      expect(rows[csat['name']]['header_file_name']).to be_nil
+    end
+
+    # A prévia da campanha mostra a foto aprovada: link de leitura assinado, só para foto.
+    it 'traz o link assinado da foto do topo guardada; documento e vídeo ficam sem link' do
+      foto = WhatsappTemplateProfile.create!(account: account, inbox: inbox, waba_id: channel.waba_id, name: 'pedido_enviado', language: 'pt_BR')
+      foto.header_file.attach(io: StringIO.new('png'), filename: 'topo.png', content_type: 'image/png')
+      pdf = WhatsappTemplateProfile.create!(account: account, inbox: inbox, waba_id: channel.waba_id, name: 'agendamento_ao_marcar_v1',
+                                            language: 'pt_BR')
+      pdf.header_file.attach(io: StringIO.new('pdf'), filename: 'tabela.pdf', content_type: 'application/pdf')
+
+      call(:get, base)
+
+      rows = response.parsed_body['payload'].index_by { |row| row['name'] }
+      expect(rows['pedido_enviado']['header_file_preview_url']).to start_with('http').and include('topo.png')
+      expect(rows['agendamento_ao_marcar_v1']['header_file_preview_url']).to be_nil
+      expect(rows[csat['name']]['header_file_preview_url']).to be_nil
+    end
+
     # #1338: a saúde de cada modelo (últimos 30 dias) vem na própria lista, sem uma chamada por modelo.
     it 'traz a saúde de cada modelo: envios, entregas, leituras, respostas e custo' do
       conversation = create(:conversation, account: account, inbox: inbox)

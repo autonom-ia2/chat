@@ -21,6 +21,7 @@ RSpec.describe 'WhatsApp Híbrido connections API', type: :request do
     allow(Waha::Client).to receive(:new).and_return(client)
     allow(client).to receive(:update_session)
     allow(client).to receive(:capping).and_return({ 'cappingStatus' => 'NONE', 'totalQuota' => -1, 'usedQuota' => 0 })
+    allow(client).to receive(:timelock).and_return({ 'enforcementType' => 'DEFAULT', 'isActive' => false, 'timeEnforcementEnds' => nil })
   end
 
   it 'hides the tab for accounts outside the allowlist' do
@@ -53,6 +54,34 @@ RSpec.describe 'WhatsApp Híbrido connections API', type: :request do
     expected_config = hash_including(ignore: hash_including(groups: true), webhooks: [webhook])
     expect(client).to have_received(:create_session).with('hybrid-5511999993846', start: true, config: expected_config)
     expect(response.parsed_body).to include('connected' => true, 'same_number' => true, 'risk_accepted' => false, 'routing_active' => false)
+  end
+
+  it 'tells the tab when WhatsApp limited new conversations' do
+    ends_at = 6.hours.from_now.to_i
+    connection = WhatsappHybrid::Connection.create!(account: account, inbox: inbox, session_name: 'hybrid-5511999993846',
+                                                    status: 'connected', connected_phone: '5511999993846')
+    Redis::Alfred.delete(WhatsappHybrid::Timelock.new(connection).key)
+    allow(client).to receive(:get_session).and_return(working)
+    allow(client).to receive(:timelock).and_return(
+      { 'enforcementType' => 'RESTRICT_ALL_COMPANIONS', 'isActive' => true, 'timeEnforcementEnds' => ends_at }
+    )
+
+    get base, headers: admin.create_new_auth_token, as: :json
+
+    expect(response.parsed_body).to include('connected' => true, 'timelock' => { 'active' => true, 'ends_at' => ends_at })
+  end
+
+  it 'keeps the tab working when the engine does not answer the limit' do
+    connection = WhatsappHybrid::Connection.create!(account: account, inbox: inbox, session_name: 'hybrid-5511999993846',
+                                                    status: 'connected', connected_phone: '5511999993846')
+    Redis::Alfred.delete(WhatsappHybrid::Timelock.new(connection).key)
+    allow(client).to receive(:get_session).and_return(working)
+    allow(client).to receive(:timelock).and_raise(Waha::Client::Error, 'WAHA GET -> 500')
+
+    get base, headers: admin.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:success)
+    expect(response.parsed_body).to include('connected' => true, 'timelock' => { 'active' => false, 'ends_at' => nil })
   end
 
   it 'records who accepted the risk and activates routing' do

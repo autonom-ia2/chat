@@ -478,6 +478,37 @@ describe('templateVariables (B1, B1b)', () => {
     });
     expect(processed.limited_time_offer).toEqual({ expiration_time_ms: 1 });
   });
+
+  // #1465: o arquivo do topo escolhido na campanha vai como referência, junto do tipo; sem ele, o link vai vazio e o
+  // servidor usa o arquivo aprovado com o modelo.
+  it('sends the header file chosen in the campaign next to the media type', () => {
+    const template = {
+      ...TEMPLATE,
+      components: [
+        { type: 'HEADER', format: 'IMAGE' },
+        { type: 'BODY', text: 'Oi' },
+      ],
+    };
+    const base = {
+      audienceId: 1,
+      title: 'Topo',
+      inboxId: 7,
+      scheduledAt: null,
+      template,
+      bindings: {},
+      defaults: {},
+    };
+    const header = extras =>
+      buildCampaignPayload({ ...base, extras }).campaign.template_params
+        .processed_params.header;
+
+    expect(header({})).toEqual({ media_url: '', media_type: 'image' });
+    expect(header({ header: { media_blob: 'sig1' } })).toEqual({
+      media_url: '',
+      media_type: 'image',
+      media_blob: 'sig1',
+    });
+  });
 });
 
 describe('campaignDraft (J2, J3)', () => {
@@ -568,6 +599,10 @@ describe('journeyErrors', () => {
     ).toBe('FREE_TEXT_RICH_TEMPLATE');
     expect(createErrorKey(withCode(401))).toBe('NOT_ALLOWED');
     expect(createErrorKey(withCode(404))).toBe('GENERIC');
+    // #1465: o arquivo do topo escolhido na campanha não serve.
+    expect(createErrorKey(withCode(422, 'header_media_invalid'))).toBe(
+      'HEADER_MEDIA_INVALID'
+    );
   });
 });
 

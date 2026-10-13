@@ -81,6 +81,14 @@ module Waha
       get("/api/sessions/#{session}/capping")
     end
 
+    # Limite temporário de conversas novas pelos aparelhos conectados (WhatsApp Híbrido, chat#1480).
+    # Só informativo na aba: timeout curto para não segurar a tela.
+    TIMELOCK_TIMEOUT = 5
+
+    def timelock(session)
+      get("/api/sessions/#{session}/timelock", timeout: TIMELOCK_TIMEOUT)
+    end
+
     # "digitando…" antes do envio (WhatsApp Híbrido, chat#1067).
     def start_typing(session:, chat_id:, timeout: DEFAULT_TIMEOUT)
       post('/api/startTyping', { session: session, chatId: chat_id }, timeout: timeout)
