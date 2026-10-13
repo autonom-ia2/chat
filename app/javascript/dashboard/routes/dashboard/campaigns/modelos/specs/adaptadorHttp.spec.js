@@ -16,6 +16,7 @@ const http = vi.hoisted(() => ({
   uploadMedia: vi.fn(),
   getCampaignPauses: vi.fn(),
   resumeCampaignPause: vi.fn(),
+  suggest: vi.fn(),
 }));
 vi.mock('dashboard/api/whatsappTemplates', () => ({ default: http }));
 
@@ -390,10 +391,201 @@ describe('adaptador HTTP de Modelos', () => {
     });
   });
 
-  it('keeps the AI entry points closed until delivery E', async () => {
-    await expect(adaptador.criarComIA({})).rejects.toThrow('ia_indisponivel');
+  it('keeps catalog and forms closed (no backend yet)', async () => {
     expect(await adaptador.obterCatalogo()).toBeNull();
     expect(await adaptador.listarFormularios()).toEqual([]);
+  });
+});
+
+describe('criar e melhorar com IA (#1333)', () => {
+  const opcao = (text, extra = {}) => ({
+    text,
+    category: 'servico',
+    reason: 'Fala do horário do cliente.',
+    changes: 'Ficou mais curto.',
+    name: 'lembrete_horario',
+    footer: null,
+    buttons: [{ tipo: 'resposta_rapida', texto: 'Confirmar', chave: null }],
+    ...extra,
+  });
+  const BOA =
+    'Oi, {{cliente.primeiro_nome}}! Seu horário é {{publico.data}}. Qualquer dúvida, responda.';
+
+  it('turns each option into the screen format and drops the one that breaks the structural rule', async () => {
+    http.suggest.mockImplementation(() =>
+      ok({
+        payload: {
+          status: 'ok',
+          question: null,
+          suggestions: [],
+          options: [
+            opcao('{{cliente.primeiro_nome}}, seu horário é amanhã. Até.'),
+            opcao(BOA),
+          ],
+        },
+      })
+    );
+
+    const resposta = await adaptador.criarComIA({
+      objetivo: 'lembrar do horário',
+      tom: 'curto',
+      tipo: 'aviso',
+      exemplo: campo => (campo === 'data' ? '15/10' : ''),
+    });
+
+    expect(http.suggest).toHaveBeenCalledWith({
+      mode: 'create',
+      goal: 'lembrar do horário',
+      tone: 'curto',
+      category: 'aviso',
+    });
+    expect(resposta.opcoes).toHaveLength(1);
+    expect(resposta.opcoes[0]).toMatchObject({
+      nome: 'Lembrete horario',
+      tipo: 'aviso',
+      conteudo: {
+        texto: [
+          { t: 'texto', v: 'Oi, ' },
+          { t: 'campo', v: 'nome_cliente' },
+          { t: 'texto', v: '! Seu horário é ' },
+          { t: 'campo', v: 'data' },
+          { t: 'texto', v: '. Qualquer dúvida, responda.' },
+        ],
+        exemplos: { nome_cliente: '', data: '15/10' },
+        botoes: [{ tipo: 'resposta', texto: 'Confirmar', valor: '' }],
+      },
+    });
+  });
+
+  it('with no good option, fails with the simple message; a vague request comes back as a question', async () => {
+    http.suggest.mockImplementation(() =>
+      ok({
+        payload: {
+          status: 'ok',
+          options: [opcao('Seu horário é {{publico.data}}')],
+        },
+      })
+    );
+    await expect(
+      adaptador.criarComIA({ objetivo: 'x', tom: 'curto' })
+    ).rejects.toMatchObject({ codigo: 'suggestion_unavailable' });
+
+    http.suggest.mockImplementation(() =>
+      ok({
+        payload: {
+          status: 'precisa_mais_info',
+          question: 'Sobre o que é?',
+          suggestions: ['Lembrar horário'],
+          options: [],
+        },
+      })
+    );
+    expect(await adaptador.criarComIA({ objetivo: 'x', tom: 'curto' })).toEqual(
+      {
+        status: 'precisa_mais_info',
+        pergunta: 'Sobre o que é?',
+        sugestoes: ['Lembrar horário'],
+        opcoes: [],
+      }
+    );
+  });
+
+  it('turns the job error (no AI, AI down) into the simple message of the screen', async () => {
+    http.suggest.mockImplementation(() =>
+      ok({
+        error: 'suggestion_unavailable',
+        message: 'Não consegui escrever agora.',
+      })
+    );
+
+    await expect(
+      adaptador.criarComIA({ objetivo: 'x', tom: 'curto' })
+    ).rejects.toMatchObject({
+      codigo: 'suggestion_unavailable',
+      mensagem: 'Não consegui escrever agora.',
+    });
+  });
+
+  it('improves only the text, sends the catalog keys and the type of the draft', async () => {
+    http.suggest.mockImplementation(() =>
+      ok({
+        payload: {
+          status: 'ok',
+          options: [opcao(BOA, { category: 'divulgacao' })],
+        },
+      })
+    );
+    const conteudo = {
+      formato: 'padrao',
+      texto: [
+        { t: 'texto', v: 'Olá ' },
+        { t: 'campo', v: 'nome_cliente' },
+        { t: 'texto', v: ', até ' },
+        { t: 'campo', v: 'data' },
+        { t: 'texto', v: '. Abraço!' },
+      ],
+      exemplos: { nome_cliente: 'Ana', data: '15/10' },
+      rodape: '',
+      botoes: [],
+    };
+
+    const resposta = await adaptador.melhorarComIA({
+      conteudo,
+      pedido: 'manter_aviso',
+      tipo: 'aviso',
+    });
+
+    expect(http.suggest).toHaveBeenCalledWith({
+      mode: 'improve',
+      text: 'Olá {{cliente.primeiro_nome}}, até {{publico.data}}. Abraço!',
+      improvements: ['manter_como_servico'],
+      category: 'aviso',
+      meta_reason: undefined,
+    });
+    expect(resposta).toMatchObject({
+      tipo: 'divulgacao',
+      continuaDivulgacao: true,
+      oQueMudou: 'Ficou mais curto.',
+      corte: null,
+    });
+    expect(resposta.texto[1]).toEqual({ t: 'campo', v: 'nome_cliente' });
+  });
+
+  it('on a locked type, checks with the locked type and sends the refusal reason', async () => {
+    http.suggest.mockImplementation(() =>
+      ok({ payload: { status: 'ok', options: [opcao(BOA)] } })
+    );
+    const conteudo = {
+      formato: 'padrao',
+      texto: [{ t: 'texto', v: 'Oi, tudo bem?' }],
+      exemplos: {},
+      rodape: '',
+      botoes: [{ tipo: 'copiar_codigo', valor: 'CUPOM10' }],
+    };
+
+    const resposta = await adaptador.melhorarComIA({
+      conteudo,
+      pedido: 'corrigir_recusa',
+      tipo: 'divulgacao',
+      travado: true,
+      recusa: 'campo_no_fim',
+    });
+
+    expect(http.suggest).toHaveBeenCalledWith(
+      expect.objectContaining({
+        category: 'divulgacao',
+        meta_reason: 'campo_no_fim',
+      })
+    );
+    expect(resposta.texto).not.toBeNull();
+    // Sem travar, a opção prevista como serviço não passa com "Copiar código".
+    await expect(
+      adaptador.melhorarComIA({
+        conteudo,
+        pedido: 'mais_claro',
+        tipo: 'divulgacao',
+      })
+    ).rejects.toMatchObject({ codigo: 'suggestion_unavailable' });
   });
 });
 

@@ -763,7 +763,9 @@
       "DEPOIS": "Depois",
       "NAO_DA_AVISO": "Este texto oferece algo ao cliente, então o WhatsApp trata como divulgação. Para ser aviso de serviço, ele precisa falar só de algo que o cliente já pediu ou já tem com você.",
       "MANTER_O_MEU": "Manter o meu",
-      "USAR": "Usar"
+      "USAR": "Usar",
+      "O_QUE_MUDOU": "O que mudou:",
+      "CORTE": "O texto ficou {n}% mais curto, sem contar os campos."
     },
     "CAMPO_SEM_NOME": "Campo {n}",
     "CATALOGO_DE_CAMPOS": {

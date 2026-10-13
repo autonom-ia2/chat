@@ -36,3 +36,5 @@ en:
       carousel_media: "All carousel cards need the same kind of media: only photos or only videos."
       category_change_not_allowed: "WhatsApp does not let you change the type of a template that already exists. Create a new template with this text."
       meta_text: "WhatsApp did not accept the request. Check the text, the examples and the buttons and try again."
+      suggestion_unavailable: "Could not write it right now. Try again in a moment or write it your own way."
+      suggestion_invalid: "Check the request: say what the message needs to do, or send a text of up to 1024 characters."

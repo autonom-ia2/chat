@@ -18771,6 +18771,46 @@
     ],
     "sem_corpo": true
   },
+  "POST whatsapp_template_suggestions": {
+    "campos": {
+      "category": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
+      "goal": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
+      "improvements": {
+        "tipo": "lista",
+        "tipo_pela_leitura": "uso"
+      },
+      "meta_reason": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
+      "mode": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
+      "text": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
+      "tone": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/whatsapp_template_suggestions#create",
+    "origem": [
+      "app/controllers/api/v1/accounts/whatsapp_template_suggestions_controller.rb:17",
+      "app/controllers/api/v1/accounts/whatsapp_template_suggestions_controller.rb:28",
+      "app/controllers/api/v1/accounts/whatsapp_template_suggestions_controller.rb:27"
+    ],
+    "sem_corpo": false
+  },
   "PUT agent_bots/:id": {
     "campos": {
       "avatar": {},

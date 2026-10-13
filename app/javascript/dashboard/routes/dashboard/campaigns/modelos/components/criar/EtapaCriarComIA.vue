@@ -1,16 +1,19 @@
 <script setup>
 import { ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import TextArea from 'dashboard/components-next/textarea/TextArea.vue';
 import api from '../../api/modelosWhatsapp';
 import CustoDoTipo from '../CustoDoTipo.vue';
 import ModeloCelular from '../ModeloCelular.vue';
+import { exemploDoCampo, useRotuloDoCampo } from '../../helpers/campos';
 
 // Criar com IA: a pessoa diz o objetivo em uma frase e escolhe o tom; recebe 2
 // ou 3 opções prontas, cada uma no celular, com o tipo previsto, o custo por
 // envio e os campos. "Usar esta" leva para o texto; "Gerar outras" pede de novo.
-const props = defineProps({
-  numeros: { type: Array, default: () => [] },
+// Pedido vago: a pergunta e objetivos para tocar. Não se aplica: o motivo.
+// Sem IA ou sem opção boa: a frase simples, e dá para escrever do seu jeito.
+defineProps({
   remetente: { type: String, default: '' },
 });
 
@@ -23,10 +26,15 @@ const TONS = [
   { chave: 'formal', icone: 'i-lucide-briefcase' },
 ];
 
+const { t } = useI18n();
+const rotulo = useRotuloDoCampo();
 const objetivo = ref('');
 const tom = ref('simpatico');
 const estado = ref('pedindo');
 const opcoes = ref([]);
+// Pergunta da IA (pedido vago) ou motivo (não se aplica), e os objetivos sugeridos.
+const pergunta = ref('');
+const sugestoes = ref([]);
 
 const escrever = async () => {
   estado.value = 'escrevendo';
@@ -34,13 +42,20 @@ const escrever = async () => {
     const resposta = await api.criarComIA({
       objetivo: objetivo.value.trim(),
       tom: tom.value,
-      numeros: props.numeros,
+      exemplo: campo => exemploDoCampo(t, campo),
     });
     opcoes.value = resposta.opcoes;
-    estado.value = 'pronto';
+    pergunta.value = resposta.pergunta;
+    sugestoes.value = resposta.sugestoes;
+    estado.value = resposta.status === 'ok' ? 'pronto' : 'pergunta';
   } catch {
     estado.value = 'erro';
   }
+};
+
+const usarSugestao = sugestao => {
+  objetivo.value = sugestao.slice(0, LIMITE_DO_OBJETIVO);
+  escrever();
 };
 
 const camposDa = opcao => [
@@ -188,6 +203,34 @@ const camposDa = opcao => [
       </div>
     </div>
 
+    <div
+      v-else-if="estado === 'pergunta'"
+      data-ia-pergunta
+      role="status"
+      class="flex flex-col items-start gap-4 p-6 rounded-2xl bg-n-amber-2 ring-1 ring-inset ring-n-amber-6"
+    >
+      <p class="mb-0 text-base text-n-slate-12">{{ pergunta }}</p>
+      <div v-if="sugestoes.length" class="flex flex-wrap gap-2">
+        <button
+          v-for="sugestao in sugestoes"
+          :key="sugestao"
+          type="button"
+          data-sugestao-ia
+          class="px-4 py-2 text-[0.9375rem] font-medium text-start rounded-xl min-h-11 ring-1 ring-inset ring-n-weak bg-n-solid-1 text-n-slate-12 hover:ring-n-blue-6 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+          @click="usarSugestao(sugestao)"
+        >
+          {{ sugestao }}
+        </button>
+      </div>
+      <Button
+        :label="$t('MODELOS_WHATSAPP.IA.MEU_JEITO')"
+        color="slate"
+        variant="faded"
+        class="min-h-11"
+        @click="emit('meuJeito')"
+      />
+    </div>
+
     <ul
       v-else-if="estado === 'pronto'"
       data-ia-opcoes
@@ -220,9 +263,16 @@ const camposDa = opcao => [
             :key="campo"
             class="px-1.5 py-0.5 text-xs font-medium rounded-md bg-n-blue-3 text-n-blue-11"
           >
-            {{ $t(`MODELOS_WHATSAPP.CAMPOS.${campo}.ROTULO`) }}
+            {{ rotulo(campo) }}
           </span>
         </div>
+        <p
+          v-if="opcao.motivo"
+          data-motivo-ia
+          class="mb-0 text-sm text-n-slate-11"
+        >
+          {{ opcao.motivo }}
+        </p>
         <Button
           data-usar-opcao
           :label="$t('MODELOS_WHATSAPP.IA.USAR_ESTA')"

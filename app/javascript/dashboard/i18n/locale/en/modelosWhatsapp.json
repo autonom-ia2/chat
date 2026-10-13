@@ -763,7 +763,9 @@
       "DEPOIS": "After",
       "NAO_DA_AVISO": "This text offers something to the customer, so WhatsApp treats it as promotion. To be a service notice, it must only talk about something the customer already asked for or already has with you.",
       "MANTER_O_MEU": "Keep mine",
-      "USAR": "Use"
+      "USAR": "Use",
+      "O_QUE_MUDOU": "What changed:",
+      "CORTE": "The text is {n}% shorter, without counting the fields."
     },
     "CAMPO_SEM_NOME": "Field {n}",
     "CATALOGO_DE_CAMPOS": {
