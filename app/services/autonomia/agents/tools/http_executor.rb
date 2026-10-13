@@ -33,7 +33,7 @@ module Autonomia
 
         def initialize(tool:, params: {})
           @tool = tool
-          @params = params.to_h.deep_stringify_keys
+          @params_do_modelo = params.to_h.deep_stringify_keys
         end
 
         def call
@@ -86,36 +86,19 @@ module Autonomia
           render_template(@tool.endpoint_url.to_s)
         end
 
-        # #1425: num corpo JSON, o texto que vem do modelo entra JÁ escapado para dentro de aspas —
-        # `x","admin":true` continua sendo o texto de um campo, e não um campo novo. O modelo do corpo
-        # escrito antes continua valendo: `"{{ termo }}"` recebe o texto escapado, `{{ qtd }}` sem
-        # aspas recebe o número como antes. Corpo que deixa de ser JSON depois de preenchido não sai.
+        # O escape do corpo, por tipo, está em `CorpoDaFerramenta` (#1425).
         def render_body
-          template = @tool.request_body_template.to_s
-          return nil if template.blank? || @tool.http_method == 'GET'
-          return render_template(template) unless corpo_json?
-
-          corpo = render_template(template, escapar_para_json(@params))
-          JSON.parse(corpo)
-          corpo
-        rescue JSON::ParserError
-          raise ValorRecusado, 'corpo_json_invalido'
+          corpo.texto
         end
 
-        # O corpo é JSON a menos que a ferramenta declare outro Content-Type (o executor põe
-        # `application/json` quando ela não declara nenhum).
-        def corpo_json?
-          tipo = Array(@tool.headers_config).find { |header| header['key'].to_s.casecmp?('content-type') }
-          tipo.nil? || tipo['value'].to_s.downcase.include?('json')
+        def corpo
+          @corpo ||= CorpoDaFerramenta.new(tool: @tool, params: params)
         end
 
-        def escapar_para_json(valor)
-          case valor
-          when String then JSON.generate(valor)[1..-2]
-          when Hash then valor.transform_values { |item| escapar_para_json(item) }
-          when Array then valor.map { |item| escapar_para_json(item) }
-          else valor
-          end
+        # Os argumentos já no tipo do param_schema (`ParamsTipados`). Lido dentro de `call`: valor que
+        # não converte é recusa tratada, como as outras.
+        def params
+          @params ||= ParamsTipados.converter(@params_do_modelo, @tool.param_schema)
         end
 
         def request_headers(body)
@@ -138,9 +121,9 @@ module Autonomia
           value
         end
 
-        def render_template(template, assigns = @params)
+        def render_template(template, global_filter: nil)
           Liquid::Template.parse(template, error_mode: :strict)
-                          .render(assigns, strict_variables: true, strict_filters: true)
+                          .render(params, strict_variables: true, strict_filters: true, global_filter: global_filter)
         end
 
         # Só de 4xx: é o que diz ao modelo o que o sistema recusou ("falta o CEP"). Um 5xx traz página
@@ -148,44 +131,59 @@ module Autonomia
         def trecho_do_erro(error, headers)
           return unless error.status.to_i.between?(400, 499)
 
-          TrechoHigienizado.new(error.body_excerpt, segredos: segredos(headers), limite: MAX_TRECHO_DO_ERRO).to_s
+          TrechoHigienizado.new(error.body_excerpt, segredos: segredos(headers), limite: MAX_TRECHO_DO_ERRO,
+                                                    cortado: error.body_excerpt_truncated).to_s
         end
 
-        # Os valores que a ferramenta mandou e que o servidor pode ecoar no erro: cabeçalhos (menos os
-        # automáticos) e os valores da query do endereço.
+        # O que veio da CONFIGURAÇÃO da ferramenta, e não do modelo, e que o servidor pode ecoar no erro:
+        # os valores de cabeçalho (menos os automáticos), o usuário e a senha, os pedaços do caminho e os
+        # valores da query do endereço, e os valores escritos no modelo do corpo.
         def segredos(headers)
           cabecalhos = Array(headers).reject { |key, _| %w[content-type accept].include?(key.to_s.downcase) }.map(&:last)
-          cabecalhos + valores_da_query
+          cabecalhos + literais_do_endereco + literais_do_corpo
         end
 
-        def valores_da_query
-          query = URI.parse(rendered_url).query.to_s
-          URI.decode_www_form(query).map(&:last)
+        # O endereço com cada {{ }} vazio: sobra só o que está escrito no cadastro.
+        def literais_do_endereco
+          uri = URI.parse(render_template(@tool.endpoint_url.to_s, global_filter: ->(_valor) {}))
+          usuario = [uri.user, uri.password].compact.map { |parte| URI.decode_www_form_component(parte) }
+          caminho = uri.path.to_s.split('/').map { |parte| URI.decode_www_form_component(parte) }
+          usuario + caminho + URI.decode_www_form(uri.query.to_s).map(&:last)
         rescue URI::InvalidURIError, ArgumentError, Liquid::Error
+          []
+        end
+
+        def literais_do_corpo
+          corpo.literais
+        rescue ValorRecusado, Liquid::Error
           []
         end
 
         # Sem corte aqui: quem corta é o `Bound#cabendo`, com o aviso de corte que o modelo precisa ler
         # (#1425 — antes, texto que não era JSON saía cortado em silêncio, com "...").
+        # Com mapeamento, vai o que ele renderizou, MESMO VAZIO: o mapeamento existe para filtrar a
+        # resposta, e cair na resposta crua entregaria ao modelo justamente o que ele tira (revisão do
+        # #1425). Resposta que não é JSON não tem como ser mapeada: é erro (`parser_error`), não a crua.
         def format_response(response)
-          mapped = render_response_mapping(response)
-          return mapped if mapped.present?
+          return render_response_mapping(response) if mapping_template.present?
 
-          parsed = JSON.parse(response)
-          JSON.generate(parsed)
+          JSON.generate(JSON.parse(response))
         rescue JSON::ParserError
+          raise if mapping_template.present?
+
           response.to_s
+        end
+
+        def mapping_template
+          @tool.response_mapping.to_h['template'].to_s
         end
 
         # Campo que a resposta não trouxe vira vazio (`strict_variables: false`): a resposta de um
         # sistema de fora muda sem aviso, e um campo a menos não pode derrubar a ferramenta. Modelo
         # com erro de sintaxe continua erro (`error_mode: :strict`, na leitura).
         def render_response_mapping(response)
-          template = @tool.response_mapping.to_h['template'].to_s
-          return if template.blank?
-
           parsed = JSON.parse(response)
-          Liquid::Template.parse(template, error_mode: :strict)
+          Liquid::Template.parse(mapping_template, error_mode: :strict)
                           .render({ 'response' => parsed, 'r' => parsed },
                                   strict_variables: false, strict_filters: true)
         end

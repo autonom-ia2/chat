@@ -151,6 +151,12 @@ module Autonomia::Agents::Tools::Recusa
   # (`HttpExecutor`, `TrechoHigienizado`); o registro nunca o leva — ele vem de fora.
   def para_modelo(codigo, slug:, delivery: nil, agente: nil, detalhe: nil, resposta: nil) # rubocop:disable Metrics/ParameterLists
     registrar(codigo, slug: slug, conversa: conversa_de(delivery), agente: agente, detalhe: detalhe)
+    saida(codigo, detalhe: detalhe, resposta: resposta)
+  end
+
+  # Só o JSON que o modelo lê, SEM registro: o botão Testar da tela (#1425) mostra este texto, e uma
+  # falha de teste não é recusa de atendimento.
+  def saida(codigo, detalhe: nil, resposta: nil)
     { error: [codigo.to_s, detalhe.presence].compact.join(': '), resposta: resposta.presence }.compact.to_json
   end
 

@@ -87,11 +87,11 @@ class Autonomia::Agents::Tools::Bound
     "#{texto[0, MAX_OUTPUT_CHARS - AVISO_DE_CORTE.length]}#{AVISO_DE_CORTE}"
   end
 
-  # O que o modelo lê quando a ferramenta HTTP falha. Público para o teste da tela (#1425) mostrar
-  # exatamente o mesmo texto: a categoria, o status e, num 4xx, o trecho que o executor higienizou.
-  def recusa_http(erro, delivery = nil)
+  # O texto que o modelo lê quando a ferramenta HTTP falha, SEM registrar recusa: é o que o teste da
+  # tela mostra (#1425). O atendimento usa `recusa_http`, que registra e devolve este mesmo texto.
+  def texto_da_recusa_http(erro)
     categoria, status = http_error_code(erro.message)
-    recusar(categoria, delivery, detalhe: status, resposta: erro.try(:trecho))
+    ::Autonomia::Agents::Tools::Recusa.saida(categoria, detalhe: status, resposta: erro.try(:trecho))
   end
 
   private
@@ -244,6 +244,11 @@ class Autonomia::Agents::Tools::Bound
     Autonomia::Agents::Tools::HttpExecutor.new(tool: @record, params: args).call
   rescue Autonomia::Agents::Tools::HttpExecutor::Error => e
     recusa_http(e, delivery)
+  end
+
+  def recusa_http(erro, delivery)
+    categoria, status = http_error_code(erro.message)
+    recusar(categoria, delivery, detalhe: status, resposta: erro.try(:trecho))
   end
 
   # Defesa na FRONTEIRA com o modelo. Hoje a mensagem do executor é segura ("tool_http_error:

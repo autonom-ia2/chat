@@ -40,6 +40,19 @@ RSpec.describe SafeFetch do
       expect(lido).to eq('ok')
     end
 
+    it 'treats the same host in another letter case as the same origin' do
+      allow(Resolv).to receive(:getaddresses).with('API.Loja.test').and_return(['93.184.216.34'])
+      stub_request(:get, 'https://API.Loja.test/dados').to_return(status: 302, headers: { 'Location' => 'https://api.loja.test/v2' })
+      stub_request(:get, 'https://api.loja.test/v2').to_return(status: 200, body: 'ok')
+
+      lido = nil
+      described_class.fetch('https://API.Loja.test/dados', cross_origin_redirects: false, validate_content_type: false) do |r|
+        lido = r.tempfile.read
+      end
+
+      expect(lido).to eq('ok')
+    end
+
     it 'keeps following cross-host redirects by default' do
       stub_request(:get, url).to_return(status: 302, headers: { 'Location' => 'https://outro.test/x' })
       stub_request(:get, 'https://outro.test/x').to_return(status: 200, body: 'ok')

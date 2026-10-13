@@ -66,4 +66,15 @@ RSpec.describe 'Autonomia agent tool test', type: :request do
     expect(agente['resposta']).to include('falta o cep')
     expect(response.body).not_to include('chave-da-loja-987')
   end
+
+  # Revisão do #1425: falha do botão Testar não é recusa de atendimento e não vai ao registro.
+  it 'does not log a test failure as a service refusal' do
+    stub_request(:get, endpoint).to_return(status: [400, 'Bad Request'], body: '{}')
+    allow(Autonomia::Agents::Tools::Recusa).to receive(:registrar).and_call_original
+
+    testar
+
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(Autonomia::Agents::Tools::Recusa).not_to have_received(:registrar)
+  end
 end

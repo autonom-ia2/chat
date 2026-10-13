@@ -45,12 +45,14 @@ module SafeFetch
   # (`message` traz "404 Not Found", e a frase vem de fora).
   # `body_excerpt` é o começo do corpo da resposta de erro, só quando quem chamou pediu
   # (`error_body_bytes:`); nil por padrão. Vem de fora: quem o repassa higieniza antes.
+  # `body_excerpt_truncated` diz que o corpo era maior que o trecho: o fim dele é um corte, não o fim do texto.
   class HttpError < Error
-    attr_reader :status, :body_excerpt
+    attr_reader :status, :body_excerpt, :body_excerpt_truncated
 
-    def initialize(message = nil, status: nil, body_excerpt: nil)
+    def initialize(message = nil, status: nil, body_excerpt: nil, body_excerpt_truncated: false)
       @status = status
       @body_excerpt = body_excerpt
+      @body_excerpt_truncated = body_excerpt_truncated
       super(message)
     end
   end

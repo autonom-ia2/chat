@@ -82,7 +82,9 @@ class SafeFetch::RequestOptions
     return true if location.to_s.start_with?('/')
 
     destino = URI.parse(location.to_s)
-    destino.scheme == uri.scheme && destino.hostname == uri.hostname && destino.port == uri.port
+    # Host e esquema não diferenciam maiúsculas: `https://API.x.com` e `https://api.x.com` são a mesma origem.
+    destino.scheme.to_s.casecmp?(uri.scheme.to_s) && destino.hostname.to_s.casecmp?(uri.hostname.to_s) &&
+      destino.port == uri.port
   rescue URI::InvalidURIError
     false
   end

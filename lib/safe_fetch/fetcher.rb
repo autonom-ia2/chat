@@ -63,8 +63,12 @@ class SafeFetch::Fetcher
     SsrfFilter.public_send(options.method, options.url, **options.request_options, &)
   end
 
-  def http_error(response, body_excerpt = nil)
-    SafeFetch::HttpError.new("#{response.code} #{response.message}", status: response.code.to_i, body_excerpt: body_excerpt)
+  # `excerpt`: o que `error_excerpt` devolve — [trecho, cortou?], ou [] sem trecho.
+  def http_error(response, excerpt = [])
+    body_excerpt, truncated = excerpt
+    SafeFetch::HttpError.new("#{response.code} #{response.message}",
+                             status: response.code.to_i, body_excerpt: body_excerpt,
+                             body_excerpt_truncated: truncated || false)
   end
 
   # Roda dentro do bloco, ANTES de o ssrf_filter seguir o salto: levantar aqui impede a requisição ao
@@ -79,14 +83,15 @@ class SafeFetch::Fetcher
   # O começo do corpo de uma resposta de erro, até `error_body_bytes`, dentro do prazo. Parar de ler
   # no meio é seguro: quem chama levanta logo em seguida, ainda dentro do bloco, e a conexão é
   # descartada sem o Net::HTTP materializar o resto. Falha ao ler não troca o erro: vira sem trecho.
+  # Lê um byte a mais que o teto para saber se cortou. -> [trecho, cortou?] ou [].
   def error_excerpt(response)
     limit = options.error_body_bytes
-    return if limit.zero?
+    return [] if limit.zero?
 
     excerpt = read_excerpt(response, limit)
-    excerpt.byteslice(0, limit).force_encoding(Encoding::UTF_8).scrub.presence
+    [excerpt.byteslice(0, limit).force_encoding(Encoding::UTF_8).scrub.presence, excerpt.bytesize > limit]
   rescue SafeFetch::Error, Net::ReadTimeout, IOError, SystemCallError, OpenSSL::SSL::SSLError
-    nil
+    []
   end
 
   def read_excerpt(response, limit)
@@ -95,7 +100,7 @@ class SafeFetch::Fetcher
     excerpt = String.new(encoding: Encoding::BINARY)
     response.read_body do |chunk|
       excerpt << chunk
-      break if excerpt.bytesize >= limit
+      break if excerpt.bytesize > limit
 
       deadline.enforce!(socket)
     end

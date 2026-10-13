@@ -32,15 +32,15 @@ class Api::V1::Accounts::Autonomia::Agents::ToolsController < Api::V1::Accounts:
   end
 
   # #1425: o teste mostra EXATAMENTE o que o agente lê no atendimento — o mesmo corte (`Bound#cabendo`)
-  # e, na falha, a mesma recusa (`Bound#recusa_http`). `error` continua com a mensagem do executor,
-  # que a tela traduz para dizer o que corrigir.
+  # e, na falha, o mesmo texto de recusa (`Bound#texto_da_recusa_http`, sem registrar: teste não é
+  # recusa de atendimento). `error` continua com a mensagem do executor, que a tela traduz.
   def test
     bound = Autonomia::Agents::Tools::Bound.new(agent: @agent, record: @tool)
     result = Autonomia::Agents::Tools::HttpExecutor.new(tool: @tool, params: test_params).call.to_s
     render json: { status: 'ok', body: bound.cabendo(result),
                    cortada: result.length > Autonomia::Agents::Tools::Bound::MAX_OUTPUT_CHARS }
   rescue Autonomia::Agents::Tools::HttpExecutor::Error => e
-    render json: { error: e.message, agente_recebe: bound.recusa_http(e) }, status: :unprocessable_entity
+    render json: { error: e.message, agente_recebe: bound.texto_da_recusa_http(e) }, status: :unprocessable_entity
   end
 
   private
