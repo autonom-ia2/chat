@@ -4,13 +4,20 @@ import { createI18n } from 'vue-i18n';
 import Flow from '../types/Flow.vue';
 import ptBR from 'dashboard/i18n/locale/pt_BR/richMessage.json';
 import { provideMessageContext } from '../../../provider.js';
-import { MESSAGE_VARIANTS, MESSAGE_TYPES } from '../../../constants';
+import {
+  MESSAGE_VARIANTS,
+  MESSAGE_TYPES,
+  MESSAGE_STATUS,
+} from '../../../constants';
 import { montarMensagem } from '../../../specs/montarMensagem.js';
 
 // Troca o i18n vazio do setup global pelo catálogo de verdade desta entrega.
 config.global.plugins = [
   createI18n({ legacy: false, locale: 'pt_BR', messages: { pt_BR: ptBR } }),
 ];
+
+const AVISO_LEITOR =
+  '(abre o formulário no WhatsApp do cliente, não no painel)';
 
 // Como a lista de mensagens entrega: chaves em camelCase em profundidade, inclusive dentro de `data`.
 const DADOS_INICIAIS = {
@@ -55,21 +62,37 @@ describe('bolha do formulário (Flow)', () => {
 
     expect(wrapper.text()).toContain('Entre com seus dados.');
     expect(wrapper.text()).toContain('Iniciar');
-    expect(wrapper.text()).toContain('Formulário enviado: Login do corretor');
+    expect(wrapper.text()).toContain('Formulário: Login do corretor');
   });
 
-  it('sem nome, diz só que um formulário foi enviado', () => {
+  it('sem nome, diz só que é um formulário do WhatsApp', () => {
     const wrapper = mountFlow({ flowId: '1234567890', cta: 'Iniciar' });
 
-    expect(wrapper.text()).toContain('Formulário enviado');
-    expect(wrapper.text()).not.toContain('Formulário enviado:');
+    expect(wrapper.text()).toContain('Formulário do WhatsApp');
+    expect(wrapper.text()).not.toContain('Formulário:');
   });
 
-  it('o botão não é link: o atendente não abre o formulário pelo painel', () => {
+  it('nunca afirma que o formulário foi enviado', () => {
+    const wrapper = mountFlow({ cta: 'Iniciar', name: 'Login' });
+
+    expect(wrapper.text().toLowerCase()).not.toContain('enviado');
+  });
+
+  it('o botão não é link nem é focável: o atendente não abre o formulário pelo painel', () => {
     const wrapper = mountFlow({ cta: 'Iniciar', name: 'Login' });
 
     expect(wrapper.find('a').exists()).toBe(false);
+    expect(wrapper.find('button').exists()).toBe(false);
     expect(wrapper.find('[href]').exists()).toBe(false);
+    expect(wrapper.find('[tabindex]').exists()).toBe(false);
+  });
+
+  it('diz ao leitor de tela que o botão abre no WhatsApp do cliente, não no painel', () => {
+    const wrapper = mountFlow({ cta: 'Iniciar', name: 'Login' });
+    const hint = wrapper.get('.sr-only');
+
+    expect(hint.text()).toBe(AVISO_LEITOR);
+    expect(hint.element.parentElement.textContent).toContain('Iniciar');
   });
 
   it('mostra o cabeçalho e o rodapé quando vieram', () => {
@@ -116,8 +139,8 @@ describe('bolha do formulário (Flow)', () => {
     const wrapper = mountFlow({ cta: { a: 1 }, name: 42, header: ['x'] });
 
     expect(wrapper.text()).toContain('Entre com seus dados.');
-    expect(wrapper.text()).toContain('Formulário enviado');
-    expect(wrapper.text()).not.toContain('Formulário enviado:');
+    expect(wrapper.text()).toContain('Formulário do WhatsApp');
+    expect(wrapper.text()).not.toContain('Formulário:');
   });
 
   it('a conversa escolhe esta bolha para mensagem de saída com rich_message do tipo flow', () => {
@@ -130,6 +153,22 @@ describe('bolha do formulário (Flow)', () => {
     });
 
     expect(wrapper.find('[data-bubble-name="rich-flow"]').exists()).toBe(true);
-    expect(wrapper.text()).toContain('Formulário enviado: Login');
+    expect(wrapper.text()).toContain('Formulário: Login');
+  });
+
+  it('com a mensagem que falhou, a bolha não diz que o formulário foi enviado', () => {
+    const wrapper = montarMensagem({
+      messageType: MESSAGE_TYPES.OUTGOING,
+      status: MESSAGE_STATUS.FAILED,
+      content: 'Entre com seus dados.',
+      contentAttributes: {
+        richMessage: { type: 'flow', cta: 'Iniciar', name: 'Login' },
+        externalError: 'Flow not published',
+      },
+    });
+    const bubble = wrapper.get('[data-bubble-name="rich-flow"]');
+
+    expect(bubble.text()).toContain('Formulário: Login');
+    expect(bubble.text().toLowerCase()).not.toContain('enviado');
   });
 });

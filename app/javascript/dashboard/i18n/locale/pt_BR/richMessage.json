@@ -10,8 +10,9 @@
       "TITLE": "{title}."
     },
     "FLOW": {
-      "SENT": "Formulário enviado",
-      "SENT_NAMED": "Formulário enviado: {name}"
+      "FORM": "Formulário do WhatsApp",
+      "FORM_NAMED": "Formulário: {name}",
+      "OPENS_ON_CUSTOMER_PHONE": "(abre o formulário no WhatsApp do cliente, não no painel)"
     },
     "LINK_BUTTON": {
       "OPENS": "Abre: {url}"

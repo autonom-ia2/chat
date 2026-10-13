@@ -81,25 +81,32 @@ describe RichMessages::Types::Flow do
         expect(request).to have_been_requested.once
       end
 
-      it 'keeps the form data out of the log when Meta refuses the flow' do
+      it 'keeps the form data and the token out of the application log, at every level, when Meta refuses the flow' do
         refusal = { error: { message: 'Flow not published', code: 100 } }.to_json
         stub_request(:post, graph_url).to_return(status: 400, body: refusal, headers: { 'Content-Type' => 'application/json' })
-        logged = []
-        allow(Rails.logger).to receive(:error) { |line| logged << line.to_s }
+        message = outgoing(conversation)
+        log = StringIO.new
+        allow(Rails).to receive(:logger).and_return(ActiveSupport::Logger.new(log, level: :debug))
 
-        message = deliver(outgoing(conversation))
+        deliver(message)
 
         expect(message.status).to eq('failed')
-        expect(message.external_error).to include('Flow not published')
-        expect(logged.join).not_to include('01001000')
+        expect(message.external_error).to eq('Flow not published')
+        expect(log.string).to include('Flow not published')
+        expect(log.string).not_to include('01001000')
+        expect(log.string).not_to include('sessao-1739999999-123456')
       end
 
       {
         'a blank body' => [{}, { content: '' }, described_class::BODY_BLANK],
         'a body above 1024 characters' => [{}, { content: 'a' * 1025 }, described_class::BODY_TOO_LONG],
         'a missing flow id' => [{ flow_id: nil }, {}, described_class::FLOW_ID_INVALID],
-        'a flow id that is not text' => [{ flow_id: 1_234_567_890 }, {}, described_class::FLOW_ID_INVALID],
+        'a flow id that is a JSON number' => [{ flow_id: 1_234_567_890 }, {}, described_class::FLOW_ID_INVALID],
         'a blank flow id' => [{ flow_id: ' ' }, {}, described_class::FLOW_ID_INVALID],
+        'an empty flow id' => [{ flow_id: '' }, {}, described_class::FLOW_ID_INVALID],
+        'a flow id with letters' => [{ flow_id: '12345abc' }, {}, described_class::FLOW_ID_INVALID],
+        'a flow id with a space' => [{ flow_id: '123 456' }, {}, described_class::FLOW_ID_INVALID],
+        'a flow id with a sign' => [{ flow_id: '-123456' }, {}, described_class::FLOW_ID_INVALID],
         'a missing button text' => [{ cta: nil }, {}, described_class::CTA_BLANK],
         'a button text above 30 characters' => [{ cta: 'a' * 31 }, {}, described_class::CTA_TOO_LONG],
         'a missing token' => [{ token: nil }, {}, described_class::TOKEN_INVALID],
@@ -108,10 +115,12 @@ describe RichMessages::Types::Flow do
         'empty data' => [{ data: {} }, {}, described_class::DATA_INVALID],
         'data that is not an object' => [{ data: 'cep=01001000' }, {}, described_class::DATA_INVALID],
         'data that is a list' => [{ data: ['01001000'] }, {}, described_class::DATA_INVALID],
+        'data above 8 KB' => [{ data: { 'x' => 'a' * 8185 } }, {}, described_class::DATA_TOO_LARGE],
         'a published mode written out' => [{ mode: 'published' }, {}, described_class::MODE_INVALID],
         'a header above 60 characters' => [{ header: 'a' * 61 }, {}, described_class::HEADER_INVALID],
         'a footer that is not text' => [{ footer: 7 }, {}, described_class::FOOTER_INVALID],
-        'a blank name' => [{ name: ' ' }, {}, described_class::NAME_INVALID]
+        'a blank name' => [{ name: ' ' }, {}, described_class::NAME_INVALID],
+        'a name above 60 characters' => [{ name: 'a' * 61 }, {}, described_class::NAME_INVALID]
       }.each do |title, (rich_changes, message_changes, error)|
         it "fails the message without sending anything for #{title}" do
           message = outgoing(conversation, { content_attributes: { rich_message: rich_message.merge(rich_changes) } }.merge(message_changes))
@@ -120,16 +129,28 @@ describe RichMessages::Types::Flow do
 
           expect(message.status).to eq('failed')
           expect(message.external_error).to eq(error)
-          expect(a_request(:any, /graph\.facebook\.com/)).not_to have_been_made
+          expect(a_request(:post, graph_url)).not_to have_been_made
         end
       end
 
-      it 'accepts the limits themselves (30 character button, 1024 character body, 60 character header and footer)' do
-        stub_request(:post, graph_url).to_return(meta_ok)
-        at_the_limit = rich_message.merge(cta: 'a' * 30, header: 'a' * 60, footer: 'a' * 60)
+      it 'accepts the limits themselves (30 character button, 1024 character body, 60 character header, footer and name, 8 KB data)' do
+        request = stub_request(:post, graph_url).to_return(meta_ok)
+        data_at_the_limit = { 'x' => 'a' * 8184 }
+        at_the_limit = rich_message.merge(cta: 'a' * 30, header: 'a' * 60, footer: 'a' * 60, name: 'a' * 60, data: data_at_the_limit)
         message = outgoing(conversation, content: 'a' * 1024, content_attributes: { rich_message: at_the_limit })
 
-        expect(deliver(message).status).not_to eq('failed')
+        expect(data_at_the_limit.to_json.bytesize).to eq(described_class::DATA_MAX)
+        expect(deliver(message).status).to eq('sent')
+        expect(request).to have_been_requested.once
+      end
+
+      it 'accepts an emoji in the button text, which Meta only advises against' do
+        request = stub_request(:post, graph_url).to_return(meta_ok)
+
+        message = deliver(outgoing(conversation, content_attributes: { rich_message: rich_message.merge(cta: 'Iniciar 👉') }))
+
+        expect(message.status).to eq('sent')
+        expect(request).to have_been_requested.once
       end
     end
 
@@ -139,7 +160,64 @@ describe RichMessages::Types::Flow do
 
         expect(message.status).to eq('failed')
         expect(message.external_error).to eq(I18n.t('errors.whatsapp.message_outside_messaging_window'))
-        expect(a_request(:any, /graph\.facebook\.com/)).not_to have_been_made
+        expect(a_request(:post, graph_url)).not_to have_been_made
+      end
+    end
+
+    context 'when an agent retries a failed flow', type: :request do
+      let(:agent) { create(:user, account: inbox.account, role: :agent) }
+
+      before do
+        open_window(conversation)
+        create(:inbox_member, inbox: inbox, user: agent)
+      end
+
+      it 'keeps the whole rich_message, token and data included, and sends again with the same flow_token' do
+        message = outgoing(conversation, status: :failed,
+                                         content_attributes: { rich_message: rich_message, external_error: 'Flow not published' })
+        request = stub_request(:post, graph_url).with(
+          body: hash_including('interactive' => hash_including('action' => hash_including(
+            'parameters' => hash_including('flow_token' => 'sessao-1739999999-123456',
+                                           'flow_action_payload' => { 'screen' => 'LOGIN', 'data' => data })
+          )))
+        ).to_return(meta_ok)
+
+        post "/api/v1/accounts/#{inbox.account_id}/conversations/#{conversation.display_id}/messages/#{message.id}/retry",
+             headers: agent.create_new_auth_token, as: :json
+        expect(response).to have_http_status(:success)
+        expect(message.reload.content_attributes).to eq('rich_message' => rich_message.deep_stringify_keys)
+
+        expect(deliver(message).status).to eq('sent')
+        expect(request).to have_been_requested.once
+      end
+    end
+
+    context 'when the message is created through the API', type: :request do
+      let(:agent) { create(:user, account: inbox.account, role: :administrator) }
+
+      def create_message(rich)
+        post api_v1_account_conversation_messages_url(account_id: inbox.account_id, conversation_id: conversation.display_id),
+             params: { content: body, content_attributes: { rich_message: rich } }, headers: agent.create_new_auth_token, as: :json
+      end
+
+      it 'creates a valid flow' do
+        expect { create_message(rich_message) }.to change(Message, :count).by(1)
+
+        expect(response).to have_http_status(:success)
+      end
+
+      {
+        'a flow id that is a JSON number' => [{ flow_id: 1_234_567_890 }, described_class::FLOW_ID_INVALID],
+        'a flow id with letters' => [{ flow_id: '12ab' }, described_class::FLOW_ID_INVALID],
+        'data above 8 KB' => [{ data: { 'x' => 'a' * 8185 } }, described_class::DATA_TOO_LARGE],
+        'a missing token' => [{ token: nil }, described_class::TOKEN_INVALID]
+      }.each do |title, (changes, error)|
+        it "answers 422 with the reason and creates nothing for #{title}" do
+          expect { create_message(rich_message.merge(changes)) }.not_to change(Message, :count)
+
+          expect(response).to have_http_status(:unprocessable_entity)
+          expect(response.parsed_body['error']).to eq(error)
+        end
       end
     end
   end

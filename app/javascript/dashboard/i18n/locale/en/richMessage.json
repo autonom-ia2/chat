@@ -10,8 +10,9 @@
       "TITLE": "{title}."
     },
     "FLOW": {
-      "SENT": "Form sent",
-      "SENT_NAMED": "Form sent: {name}"
+      "FORM": "WhatsApp form",
+      "FORM_NAMED": "Form: {name}",
+      "OPENS_ON_CUSTOMER_PHONE": "(opens the form in the customer's WhatsApp, not in the dashboard)"
     },
     "LINK_BUTTON": {
       "OPENS": "Opens: {url}"
