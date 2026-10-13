@@ -169,6 +169,25 @@ describe('PonteFormatoDaCampanha', () => {
     ]);
   });
 
+  // O código de exemplo do modelo nunca vai sozinho para o público: o campo começa
+  // vazio, com o exemplo só como dica, e sem código a campanha não continua.
+  it('começa com o cupom vazio, o exemplo só como dica, e pede o código', async () => {
+    const wrapper = montar({ modelo: { template: oferta } });
+    const campo = wrapper.find('[data-formato-cupom] input');
+
+    expect(campo.element.value).toBe('');
+    expect(campo.attributes('placeholder')).toBe('E.g. CUPOM10');
+    expect(wrapper.find('[data-formato-cupom]').text()).toContain(
+      en.MODELOS_WHATSAPP.PONTE.FORMATO.CUPOM_VAZIO
+    );
+    expect(
+      pendencias(oQuePedir(oferta), {}, { timeZone: ZONA, agora: AGORA })
+    ).toContain('CUPOM');
+
+    await campo.setValue('OUTUBRO15');
+    expect(wrapper.emitted('update').at(-1)).toEqual([{ cupom: 'OUTUBRO15' }]);
+  });
+
   it('diz quando o arquivo não subiu, com o motivo do servidor', async () => {
     api.subirArquivoDaCampanha.mockRejectedValue({
       mensagem: 'Use JPG ou PNG',

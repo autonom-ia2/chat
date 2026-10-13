@@ -134,13 +134,6 @@ const isCreatingEmail = ref(false);
 const isTestSending = ref(false);
 let coverageTimer = null;
 
-// Fork (#1334): o cupom começa com o código de exemplo do modelo.
-const formatoInicial = templateId => {
-  const modelo = ponte.modeloPorId(templateId);
-  const cupom = modelo ? oQuePedir(modelo.template).cupom : null;
-  return cupom ? { cupom: cupom.exemplo } : {};
-};
-
 // A new template (or inbox) starts its variables from scratch.
 const update = patch => {
   const templateChanged =
@@ -152,7 +145,8 @@ const update = patch => {
           bindings: ponte.ligacoesIniciais(patch.templateId),
           defaults: {},
           mediaUrl: '',
-          formato: formatoInicial(patch.templateId),
+          // #1334: nada vem preenchido; o cupom de exemplo do modelo nunca vai sozinho para o público.
+          formato: {},
         }
       : {}),
     ...patch,

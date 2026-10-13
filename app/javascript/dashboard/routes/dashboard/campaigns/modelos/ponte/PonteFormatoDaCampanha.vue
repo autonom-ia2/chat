@@ -31,6 +31,17 @@ const NS = 'MODELOS_WHATSAPP.PONTE.FORMATO';
 const pedido = computed(() =>
   oQuePedir(props.modelo.template, props.modelo.cartoesGuardados || [])
 );
+// Cupom vazio é o começo: o código de exemplo do modelo aparece só como dica,
+// para nunca ir sem querer para o público inteiro.
+const mensagemDoCupom = computed(() => {
+  const codigo = (props.valores.cupom || '').trim();
+  if (!codigo) return t(`${NS}.CUPOM_VAZIO`);
+  if (codigo.length > CODIGO_MAXIMO) {
+    return t(`${NS}.CUPOM_ERRO`, { n: CODIGO_MAXIMO });
+  }
+  return t(`${NS}.CUPOM_AJUDA`, { n: CODIGO_MAXIMO });
+});
+
 const faltando = computed(() =>
   pendencias(pedido.value, props.valores, { timeZone: props.timeZone })
 );
@@ -115,11 +126,12 @@ const descricao = cartao => {
       v-if="pedido.cupom"
       :model-value="valores.cupom || ''"
       :label="t(`${NS}.CUPOM`)"
-      :message="
-        faltando.includes('CUPOM')
-          ? t(`${NS}.CUPOM_ERRO`, { n: CODIGO_MAXIMO })
-          : t(`${NS}.CUPOM_AJUDA`, { n: CODIGO_MAXIMO })
+      :placeholder="
+        pedido.cupom.exemplo
+          ? t(`${NS}.CUPOM_EXEMPLO`, { exemplo: pedido.cupom.exemplo })
+          : ''
       "
+      :message="mensagemDoCupom"
       :message-type="faltando.includes('CUPOM') ? 'error' : 'info'"
       wrap-message
       custom-input-class="!h-11"

@@ -748,7 +748,9 @@
         "CARTAO_TROCAR_VIDEO": "Trocar vídeo",
         "CARTAO_ESCOLHIDO": "Vai o arquivo que você escolheu: {arquivo}",
         "CARTAO_ENVIANDO": "Enviando {arquivo}…",
-        "CARTAO_ERRO": "Não deu para enviar o arquivo. Tente de novo."
+        "CARTAO_ERRO": "Não deu para enviar o arquivo. Tente de novo.",
+        "CUPOM_VAZIO": "Escreva o código do cupom que seus clientes vão usar.",
+        "CUPOM_EXEMPLO": "Ex.: {exemplo}"
       }
     },
     "IA": {

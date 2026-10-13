@@ -748,7 +748,9 @@
         "CARTAO_TROCAR_VIDEO": "Change video",
         "CARTAO_ESCOLHIDO": "The file you chose goes: {arquivo}",
         "CARTAO_ENVIANDO": "Uploading {arquivo}…",
-        "CARTAO_ERRO": "The file could not be uploaded. Try again."
+        "CARTAO_ERRO": "The file could not be uploaded. Try again.",
+        "CUPOM_VAZIO": "Type the coupon code your customers will use.",
+        "CUPOM_EXEMPLO": "E.g. {exemplo}"
       }
     },
     "IA": {
