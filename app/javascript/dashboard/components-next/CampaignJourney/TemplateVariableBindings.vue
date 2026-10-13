@@ -31,6 +31,8 @@ const FIXED = BINDING_SOURCES.FIXED;
 // "{{1}}" for the body, "Header {{1}}" and "Button “Renovar” {{1}}" for the other parts.
 const display = key => {
   const variable = props.variables.find(item => item.key === key);
+  // Fork (Modelos do WhatsApp): campo com nome ("Nome do cliente") aparece pelo nome, sem {{1}}.
+  if (variable?.friendly) return variable.label;
   const placeholder = `{{${variable?.variable ?? key}}}`;
   if (variable?.part === 'header') {
     return t(`${NS}.PART_HEADER`, { variable: placeholder });
@@ -119,7 +121,10 @@ const defaultKeys = computed(() => [
           <strong class="text-sm text-n-slate-12">
             {{ display(variable.key) }}
           </strong>
-          <p class="m-0 truncate text-xs text-n-slate-11">
+          <p
+            v-if="!variable.friendly"
+            class="m-0 truncate text-xs text-n-slate-11"
+          >
             {{ variable.label }}
           </p>
         </div>

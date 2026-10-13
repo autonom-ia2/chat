@@ -331,3 +331,10 @@
   display_name: Base de clientes (leitura nova da planilha)
   enabled: false
   column: feature_flags_ext_1
+
+# Modelos de mensagem do WhatsApp — nova jornada (criar, corrigir, alterar, usar). Fase 1 é só front, com dados
+# falsos em memória (routes/dashboard/campaigns/modelos/api). Desligada: o menu "Modelos WhatsApp" abre a tela de sempre.
+- name: whatsapp_templates_journey
+  display_name: WhatsApp templates new journey (Modelos WhatsApp — nova jornada)
+  enabled: false
+  column: feature_flags_ext_1
