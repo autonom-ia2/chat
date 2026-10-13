@@ -50,7 +50,6 @@ import {
   buildCampaignPayload,
   cleanDefaults,
   coverageMapping,
-  mediaHeaderOf,
   previewMessage,
   templateVariables,
 } from 'dashboard/components-next/CampaignJourney/templateVariables';
@@ -152,7 +151,6 @@ const update = patch => {
       ? {
           bindings: ponte.ligacoesIniciais(patch.templateId),
           defaults: {},
-          mediaUrl: '',
           // #1334: nada vem preenchido; o cupom de exemplo do modelo nunca vai sozinho para o público.
           formato: {},
         }
@@ -238,9 +236,6 @@ const remetente = computed(
     ponte.caixas.value.find(caixa => caixa.id === draft.value.inboxId)?.conta
       .nome || ''
 );
-const mediaHeader = computed(() =>
-  template.value ? mediaHeaderOf(template.value) : null
-);
 
 const sourceLabel = binding => {
   if (binding.source === BINDING_SOURCES.COLUMN) return binding.value;
@@ -277,7 +272,7 @@ const isOfficialReady = computed(
   () =>
     Boolean(draft.value.inboxId) &&
     Boolean(template.value) &&
-    // Fork (#1382): topo com mídia sem link usa o arquivo do modelo; o link é opcional.
+    // Fork (#1465): o arquivo do topo (aprovado ou escolhido) entra em formatoPendente.
     allBound(variables.value, draft.value.bindings)
 );
 const MESSAGE_READY = {
@@ -297,7 +292,8 @@ const pedidoDoFormato = computed(() =>
   modeloEscolhido.value
     ? oQuePedir(
         modeloEscolhido.value.template,
-        modeloEscolhido.value.cartoesGuardados || []
+        modeloEscolhido.value.cartoesGuardados || [],
+        modeloEscolhido.value.topoGuardado
       )
     : null
 );
@@ -689,7 +685,6 @@ const SUBMITTERS = {
         template: template.value,
         bindings: draft.value.bindings,
         defaults: draft.value.defaults,
-        mediaUrl: draft.value.mediaUrl,
         extras: pedidoDoFormato.value
           ? extrasParaEnvio(pedidoDoFormato.value, draft.value.formato || {}, {
               timeZone: timeZone.value,
@@ -1017,7 +1012,6 @@ onBeforeUnmount(() => {
           :columns="columns"
           :coverage="coverage"
           :field-groups="ponte.gruposDeCampos.value"
-          :media-header="mediaHeader"
           :preview-text="previewText"
           :can-continue="isMessageReady"
           :api-form="{

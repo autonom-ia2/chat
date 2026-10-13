@@ -56,13 +56,16 @@ module CampaignPauses::WhatsappDispatchGate
     )
   end
 
-  # Media header without a typed link (#1382): the template's saved file, linked once per run, goes to every send.
+  # Media header without a typed link (#1382): the file chosen in the campaign (#1465) or else the template's saved file,
+  # linked once per run, goes to every send.
   def header_media_verdict(verdict)
     return verdict unless Whatsapp::Templates::HeaderMedia.media_type(verdict.template)
-    return verdict if campaign.template_params.to_h.dig('processed_params', 'header', 'media_url').present?
 
-    @profile_header_media = Whatsapp::Templates::HeaderMedia.profile_media(inbox, verdict.template)
-    return verdict if @profile_header_media
+    header = campaign.template_params.to_h.dig('processed_params', 'header')
+    return verdict if header.is_a?(Hash) && header['media_url'].present?
+
+    @header_media = Whatsapp::Templates::HeaderMedia.dispatch_media(header, inbox, verdict.template)
+    return verdict if @header_media
 
     Whatsapp::Templates::DispatchCheck::Verdict.new(
       reason_code: 'template_media_missing', source: 'template', details: verdict.details.slice(:template_name, :language, :lookup_source)
@@ -83,10 +86,10 @@ module CampaignPauses::WhatsappDispatchGate
 
   def process_liquid_template_params(contact)
     params = super
-    return params unless params && (@profile_header_media || @send_extras)
+    return params unless params && (@header_media || @send_extras)
 
     processed = params['processed_params'].to_h
-    processed = processed.merge('header' => processed['header'].to_h.merge(@profile_header_media)) if @profile_header_media
+    processed = processed.merge('header' => processed['header'].to_h.except('media_blob').merge(@header_media)) if @header_media
     processed = Whatsapp::Templates::SendParams.apply_extras(processed, @send_extras) if @send_extras
     params.merge('processed_params' => processed)
   end
