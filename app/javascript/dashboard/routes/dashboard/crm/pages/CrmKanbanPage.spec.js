@@ -1,3 +1,4 @@
+/* eslint-disable vue/one-component-per-file -- stubs de teste da gaveta, um por cenário */
 import { flushPromises, mount } from '@vue/test-utils';
 import { defineComponent, h, ref } from 'vue';
 import CrmKanbanPage from './CrmKanbanPage.vue';
@@ -18,6 +19,7 @@ const permissions = {};
 const storeGetters = {};
 const dispatch = vi.fn();
 const push = vi.fn();
+const replace = vi.fn();
 
 vi.mock('vue-i18n', () => ({
   useI18n: () => ({
@@ -28,7 +30,7 @@ vi.mock('vue-i18n', () => ({
 
 vi.mock('vue-router', () => ({
   useRoute: () => route,
-  useRouter: () => ({ push, replace: vi.fn() }),
+  useRouter: () => ({ push, replace }),
 }));
 
 vi.mock('dashboard/composables/store', () => ({
@@ -205,6 +207,53 @@ const openConfiguration = async wrapper => {
 
 describe('CrmKanbanPage', () => {
   let wrapper;
+
+  // #1385 — a passagem volta para o Kanban no funil de onde a pessoa saiu.
+  describe('passagem para a equipe', () => {
+    afterEach(() => {
+      route.query = {};
+      delete route.name;
+      push.mockClear();
+      replace.mockClear();
+    });
+
+    it('abre a passagem com from=crm e guarda o funil no endereço do quadro', async () => {
+      window.globalConfig.CRM_AI_ENABLED = 'true';
+      wrapper = await mountPage();
+      replace.mockClear();
+      await openConfiguration(wrapper);
+      Array.from(document.body.querySelectorAll('button'))
+        .find(
+          b => b.textContent.trim() === 'CRM_KANBAN.ACTIONS.HANDOFF_SETTINGS'
+        )
+        .click();
+      await flushPromises();
+
+      expect(replace).toHaveBeenCalledWith({ query: { pipeline_id: '1' } });
+      // O funil fica no endereço do quadro antes de sair (voltar do navegador).
+      expect(replace.mock.invocationCallOrder[0]).toBeLessThan(
+        push.mock.invocationCallOrder[0]
+      );
+      expect(push).toHaveBeenCalledWith({
+        name: 'crm_handoff_settings_edit',
+        params: { pipelineId: 1 },
+        query: { from: 'crm' },
+      });
+    });
+
+    it('com ?pipeline_id= abre nesse funil e tira o parâmetro do endereço', async () => {
+      const outro = { id: 2, name: 'Pós-venda' };
+      dispatch.mockImplementation(async type =>
+        type === 'crmKanban/fetchPipelines' ? [PIPELINE, outro] : []
+      );
+      route.name = 'crm_kanban_index';
+      route.query = { pipeline_id: '2', card_id: '9' };
+      wrapper = await mountPage();
+
+      expect(dispatch).toHaveBeenCalledWith('crmKanban/loadListPrefs', 2);
+      expect(replace).toHaveBeenCalledWith({ query: { card_id: '9' } });
+    });
+  });
 
   beforeEach(() => {
     window.globalConfig = { CRM_CALENDAR_MEETINGS_ENABLED: 'true' };
