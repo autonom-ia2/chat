@@ -75,6 +75,14 @@ RSpec.describe Conversations::ChannelTyping::DeliverJob do
     expect(WebMock).to have_requested(:post, meta_typing_url).once
   end
 
+  # "on" e "off" são jobs independentes. Na Meta o "off" não faz nada, então ele não pode impedir o "on".
+  it 'still delivers a typing on that runs after a typing off requested later' do
+    described_class.perform_now(conversation, 'off', 1.second.ago)
+    described_class.perform_now(conversation, 'on', 3.seconds.ago)
+
+    expect(WebMock).to have_requested(:post, meta_typing_url).once.with(body: hash_including('message_id' => 'wamid.LAST'))
+  end
+
   context 'when the conversation is on Instagram' do
     let(:channel) { create(:channel_instagram, account: account) }
     let(:instagram_url) { "https://graph.instagram.com/v22.0/#{channel.instagram_id}/messages" }
