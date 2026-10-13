@@ -739,6 +739,85 @@ describe('AgenteCriarPage', () => {
       wrapper.unmount();
     });
 
+    it('says nothing changed and stays in Confira when the copilot cannot start', async () => {
+      prepararStore({ agente: INTERNO });
+      const wrapper = await montar({ query: { agente: '90' } });
+      await wrapper.get('[data-perguntas] button').trigger('click');
+      await flushPromises();
+      falharAcao('autonomiaAgents/update', new Error('500'));
+      await wrapper.get('[data-comecar] button').trigger('click');
+      await flushPromises();
+
+      expect(alerta).toHaveBeenCalledTimes(1);
+      expect(alerta).toHaveBeenCalledWith(
+        'AGENTS.JORNADA.CRIAR.COMECE.ERRO_INTERNO'
+      );
+      expect(wrapper.find('[data-confira]').exists()).toBe(true);
+      expect(wrapper.get('h1').text()).toBe('AGENTS.JORNADA.CRIAR.TITULO');
+      expect(etapaAtual()).toBe('AGENTS.JORNADA.CRIAR.ETAPAS.CONFIRA');
+      wrapper.unmount();
+    });
+
+    it('on the phone, the Confira title is the team one', async () => {
+      prepararStore({ agente: INTERNO });
+      const wrapper = await montar({
+        query: { agente: '90', etapa: 'confira' },
+        celular: true,
+      });
+      expect(wrapper.get('h1').text()).toBe(
+        'AGENTS.JORNADA.CRIAR.CONFIRA.TITULO_COPILOTO'
+      );
+      wrapper.unmount();
+
+      prepararStore();
+      const externo = await montar({
+        query: { agente: '90', etapa: 'confira' },
+        celular: true,
+      });
+      expect(externo.get('h1').text()).toBe(
+        'AGENTS.JORNADA.CRIAR.CONFIRA.TITULO'
+      );
+      externo.unmount();
+    });
+
+    it('the team question shows as a team bubble, never as a customer one', async () => {
+      prepararStore({ agente: INTERNO });
+      const wrapper = await montar({ query: { agente: '90' } });
+      await wrapper.get('[data-perguntas] button').trigger('click');
+      await flushPromises();
+      const confira = wrapper.get('[data-confira]');
+      expect(confira.find('[data-balao="equipe"]').exists()).toBe(true);
+      expect(confira.find('[data-balao="cliente"]').exists()).toBe(false);
+      wrapper.unmount();
+    });
+
+    it('never reads the inboxes for a copilot, on mount nor on focus', async () => {
+      prepararStore({ agente: INTERNO });
+      jornada.canaisOcupados.mockClear();
+      const rascunho = await montar({ query: { agente: '90' } });
+      window.dispatchEvent(new Event('focus'));
+      await flushPromises();
+      expect(jornada.canaisOcupados).not.toHaveBeenCalled();
+      rascunho.unmount();
+
+      prepararStore();
+      const novo = await montar({ query: { atuacao: 'interno' } });
+      expect(jornada.canaisOcupados).not.toHaveBeenCalled();
+      novo.unmount();
+    });
+
+    it('still reads the inboxes once on mount for the customer agent', async () => {
+      jornada.canaisOcupados.mockClear();
+      const rascunho = await montar({ query: { agente: '90' } });
+      expect(jornada.canaisOcupados).toHaveBeenCalledTimes(1);
+      rascunho.unmount();
+
+      jornada.canaisOcupados.mockClear();
+      const novo = await montar({ query: { modelo: 'support' } });
+      expect(jornada.canaisOcupados).toHaveBeenCalledTimes(1);
+      novo.unmount();
+    });
+
     it('keeps the customer agent as it was: customer questions, example and start in a channel', async () => {
       const wrapper = await montar({ query: { agente: '90' } });
       const confira = wrapper.get('[data-confira]');

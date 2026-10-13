@@ -75,7 +75,8 @@ const teste = useTesteDoAgente(
   computed(() => ({ id: conversa.agenteId.value })),
   { textoSoFoto: t('AGENTS.JORNADA.CRIAR.CONFIRA.FOTO') }
 );
-const ocupacao = useCanaisOcupados();
+// O copiloto não tem canal: as caixas só são lidas para quem atende clientes (#1494).
+const ocupacao = useCanaisOcupados({ aoMontar: false });
 const {
   comecar: comecarAAtender,
   comecando,
@@ -365,7 +366,7 @@ const abrirComece = () => {
 
 // De volta à janela (ex.: conectou um canal na outra aba): relê as caixas quando elas importam.
 useEventListener(window, 'focus', () => {
-  if (conversa.fechada.value) ocupacao.carregar();
+  if (conversa.fechada.value && !interno.value) ocupacao.carregar();
 });
 
 const fecharComece = () => {
@@ -415,6 +416,7 @@ const abrirAgenteExistente = async () => {
   falhouAoAbrir.value = false;
   try {
     const dados = await store.dispatch('autonomiaAgents/show', idInicial);
+    if (dados?.actuation !== ATUACAO.INTERNA) ocupacao.carregar();
     const ativo = dados?.status === 'active' && dados?.enabled === true;
     if (ativo && etapaPedida.value !== ETAPA.PRONTO) {
       router.replace({
@@ -438,6 +440,7 @@ onMounted(() => {
     abrirAgenteExistente();
     return;
   }
+  if (atuacaoPedida !== ATUACAO.INTERNA) ocupacao.carregar();
   conversa.comecar();
 });
 </script>

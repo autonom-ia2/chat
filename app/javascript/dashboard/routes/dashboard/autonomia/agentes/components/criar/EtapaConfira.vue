@@ -55,16 +55,22 @@ watch(
 );
 
 // A última parte da resposta traz `passaria` quando o agente passaria a conversa para a equipe:
-// a faixa entra logo depois dela.
+// a faixa entra logo depois dela. O copiloto já fala com a equipe: sem faixa, e quem pergunta é
+// alguém da equipe, não um cliente.
 const celularMensagens = computed(() =>
-  props.mensagens.flatMap(mensagem =>
-    mensagem.passaria
+  props.mensagens.flatMap(mensagem => {
+    if (props.interno) {
+      return [
+        mensagem.de === 'cliente' ? { ...mensagem, de: 'equipe' } : mensagem,
+      ];
+    }
+    return mensagem.passaria
       ? [
           mensagem,
           { de: 'aviso', texto: t(`${NS}.PASSARIA`, { nome: props.nome }) },
         ]
-      : [mensagem]
-  )
+      : [mensagem];
+  })
 );
 
 const textosDasPerguntas = computed(() =>
@@ -95,7 +101,9 @@ const erro = computed(() => {
   const MAPA = {
     falha: {
       titulo: t(`${NS}.FALHA`, nome),
-      garantia: t(`${NS}.FALHA_GARANTIA`),
+      garantia: props.interno
+        ? t(`${NS}.FALHA_GARANTIA_COPILOTO`)
+        : t(`${NS}.FALHA_GARANTIA`),
       acao: tentar,
     },
     demora: { titulo: t(`${NS}.DEMORA`), tom: 'ambar', acao: tentar },
@@ -149,7 +157,7 @@ const respondeuErrado = () => {
     <CelularConversa
       :mensagens="celularMensagens"
       :digitando="digitando"
-      :nome="empresa || nome"
+      :nome="interno ? nome : empresa || nome"
       :estado="estadoDoCabecalho"
     >
       <template v-if="mensagens.length || atualizado" #acao>

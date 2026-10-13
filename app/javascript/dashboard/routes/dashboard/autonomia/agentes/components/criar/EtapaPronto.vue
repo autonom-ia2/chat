@@ -48,7 +48,10 @@ const agora = computed(() => {
 const conversa = computed(() =>
   props.ultimo
     ? [
-        { de: 'cliente', texto: props.ultimo.pergunta },
+        {
+          de: props.interno ? 'equipe' : 'cliente',
+          texto: props.ultimo.pergunta,
+        },
         { de: 'agente', texto: props.ultimo.resposta },
       ]
     : []
@@ -141,7 +144,7 @@ const conversa = computed(() =>
           v-if="ultimo"
           data-celular
           :mensagens="conversa"
-          :nome="empresa || nome"
+          :nome="interno ? nome : empresa || nome"
           :estado="
             interno
               ? t('AGENTS.JORNADA.CRIAR.CONFIRA.AJUDA_DA_EQUIPE', { nome })

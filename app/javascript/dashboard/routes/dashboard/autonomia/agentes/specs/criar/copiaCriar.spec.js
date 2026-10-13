@@ -227,6 +227,82 @@ describe('cópia da criação em pt_BR', () => {
     semAtender(erro);
   });
 
+  it('the copilot test shows the team as the sender, without the hand-off band nor the company (#1494)', () => {
+    const confira = mount(EtapaConfira, {
+      props: {
+        nome: 'Duda',
+        empresa: 'Loja da Ana',
+        interno: true,
+        mensagens: [respondido[0], { ...respondido[1], passaria: true }],
+        respondidas: 1,
+      },
+    });
+    expect(confira.find('[data-balao="equipe"]').text()).toContain('Equipe:');
+    expect(confira.find('[data-balao="cliente"]').exists()).toBe(false);
+    expect(confira.text()).not.toContain('Cliente:');
+    expect(confira.find('[data-aviso]').exists()).toBe(false);
+    expect(confira.text()).not.toContain('passaria');
+    expect(confira.text()).not.toContain('Loja da Ana');
+
+    const falha = mount(EtapaConfira, {
+      props: {
+        nome: 'Duda',
+        interno: true,
+        mensagens: [respondido[0]],
+        problema: 'falha',
+      },
+    });
+    expect(falha.get('[data-erro-teste]').text()).toContain(
+      'É só um teste: ninguém recebe esta resposta.'
+    );
+    expect(falha.text()).not.toContain('clientes');
+
+    const pronto = mount(EtapaPronto, {
+      props: {
+        nome: 'Duda',
+        empresa: 'Loja da Ana',
+        interno: true,
+        ultimo: { pergunta: 'Como respondo?', resposta: 'Assim.' },
+      },
+    });
+    const celular = pronto.get('[data-celular]');
+    expect(celular.find('[data-balao="equipe"]').text()).toContain('Equipe:');
+    expect(celular.text()).not.toContain('Cliente:');
+    expect(celular.text()).not.toContain('Loja da Ana');
+  });
+
+  it('the customer agent test keeps the customer bubble, the band and the company', () => {
+    const confira = mount(EtapaConfira, {
+      props: {
+        nome: 'Duda',
+        empresa: 'Loja da Ana',
+        mensagens: [respondido[0], { ...respondido[1], passaria: true }],
+        respondidas: 1,
+      },
+    });
+    expect(confira.get('[data-balao="cliente"]').text()).toContain('Cliente:');
+    expect(confira.find('[data-aviso]').exists()).toBe(true);
+    expect(confira.text()).toContain('Loja da Ana');
+
+    const falha = mount(EtapaConfira, {
+      props: { nome: 'Duda', mensagens: [respondido[0]], problema: 'falha' },
+    });
+    expect(falha.get('[data-erro-teste]').text()).toContain(
+      'Isso não afeta seus clientes.'
+    );
+
+    const pronto = mount(EtapaPronto, {
+      props: {
+        nome: 'Duda',
+        empresa: 'Loja da Ana',
+        canal: 'WhatsApp',
+        ultimo: { pergunta: 'Oi', resposta: 'Olá' },
+      },
+    });
+    expect(pronto.get('[data-celular]').text()).toContain('Loja da Ana');
+    expect(pronto.get('[data-celular]').text()).toContain('Cliente:');
+  });
+
   it('the customer agent keeps "atender" and "Atendido por" as before', () => {
     const conte = mount(EtapaConte, {
       props: { falas: [], estadoDoMaterial: () => 'lendo' },
