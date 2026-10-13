@@ -55,6 +55,16 @@ export const formatoQueNaoVai = template => {
   return '';
 };
 
+// #1456: cupom, oferta com prazo ou carrossel só chegam no modelo completo.
+// Com eles a campanha não oferece a mensagem escrita das últimas 24 h (quem a
+// recebesse perderia a oferta). Mesma regra no servidor:
+// CampaignJourney::ConversaAberta.so_modelo_completo?.
+export const soModeloCompleto = template =>
+  botoes(template).some(botao => maiusculo(botao?.type) === 'COPY_CODE') ||
+  ['LIMITED_TIME_OFFER', 'CAROUSEL'].some(tipo =>
+    Boolean(componente(template, tipo))
+  );
+
 // O que pedir na tela. `guardados`: arquivo aprovado de cada cartão (API).
 export const oQuePedir = (template, guardados = []) => {
   const lista = botoes(template);

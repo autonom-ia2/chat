@@ -7,4 +7,16 @@ module CampaignJourney::ConversaAberta
   def self.enabled?(account)
     ChatwootApp.enterprise? && account.feature_enabled?(FLAG)
   end
+
+  # #1456 (decisão do Rodrigo): cupom (botão COPY_CODE), oferta com prazo (LIMITED_TIME_OFFER) ou carrossel só chegam
+  # no modelo completo. Com eles não há mensagem escrita: todos recebem o modelo. Lido da estrutura do modelo da Meta
+  # (Whatsapp::Templates::SendableFormat), nunca do texto. Mesma regra na tela: `soModeloCompleto` (formatoNaCampanha.js).
+  RICH_COMPONENTS = %w[LIMITED_TIME_OFFER CAROUSEL].freeze
+  RICH_BUTTON = 'COPY_CODE'.freeze
+
+  def self.so_modelo_completo?(template)
+    components = Whatsapp::Templates::SendableFormat.hashes(template.is_a?(Hash) ? template['components'] : nil)
+    components.any? { |component| RICH_COMPONENTS.include?(component['type'].to_s.upcase) } ||
+      Whatsapp::Templates::SendableFormat.button_types(components).include?(RICH_BUTTON)
+  end
 end

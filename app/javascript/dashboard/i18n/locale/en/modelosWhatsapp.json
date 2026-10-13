@@ -912,7 +912,8 @@
       "CANAL_HINT": "Template approved by Meta. People who talked to you in the last 24 hours can get a message written by you.",
       "AVISO_PROPAGANDA": "Too much advertising can get the number blocked. Write something useful for the person.",
       "FALHOU": "We could not check who talked to you right now.",
-      "TENTAR_DE_NOVO": "Try again"
+      "TENTAR_DE_NOVO": "Try again",
+      "TEXTO_DESCARTADO": "This template has a coupon, a limited-time offer or a carousel. Everyone gets the full template, so the message you wrote was removed."
     },
     "SAUDE": {
       "TITULO": "How this template is doing",

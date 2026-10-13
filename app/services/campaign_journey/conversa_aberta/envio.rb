@@ -6,6 +6,7 @@
 # recebe a mensagem escrita, com os campos dela. Em qualquer outro caso recebe o modelo, como sempre:
 # - fora da janela, sem a flag ou sem texto;
 # - falta o valor de um campo (nunca vai texto pela metade);
+# - o modelo tem cupom, oferta com prazo ou carrossel (#1456: quem recebesse o texto perderia a oferta);
 # - a Meta recusa o texto na hora.
 # Se a Meta recusar depois, pelo aviso de status 131047 (janela fechada), a CampaignJourney::ConversaAberta::Queda manda o
 # modelo, uma vez só. A mensagem escrita entra na conversa com campaign_id (o robô do #1405 não assume).
@@ -70,7 +71,14 @@ module CampaignJourney::ConversaAberta::Envio
     return @texto_da_campanha if defined?(@texto_da_campanha)
 
     @texto_da_campanha = audience_link&.campaign_import && CampaignJourney::ConversaAberta.enabled?(campaign.account) &&
-                         CampaignFreeText.find_by(campaign_id: campaign.id)&.content
+                         !modelo_completo? && CampaignFreeText.find_by(campaign_id: campaign.id)&.content
+  end
+
+  # #1456: campanha gravada antes da trava da criação, com texto e modelo de cupom, oferta com prazo ou carrossel: todos
+  # recebem o modelo. O modelo é o mesmo que o envio lê (Whatsapp::Templates::ProcessorLookup).
+  def modelo_completo?
+    modelo = Whatsapp::TemplateProcessorService.new(channel: channel, template_params: campaign.template_params).template_for_send
+    CampaignJourney::ConversaAberta.so_modelo_completo?(modelo)
   end
 
   def modelo_forcado

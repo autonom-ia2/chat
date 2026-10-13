@@ -912,7 +912,8 @@
       "CANAL_HINT": "Modelo aprovado pela Meta. Quem falou com você nas últimas 24 horas pode receber uma mensagem escrita por você.",
       "AVISO_PROPAGANDA": "Mensagem de propaganda demais pode levar a bloqueio. Escreva algo útil para a pessoa.",
       "FALHOU": "Não conseguimos conferir quem falou com você agora.",
-      "TENTAR_DE_NOVO": "Tentar de novo"
+      "TENTAR_DE_NOVO": "Tentar de novo",
+      "TEXTO_DESCARTADO": "Este modelo tem cupom, oferta com prazo ou carrossel. Todos recebem o modelo completo, então a mensagem que você escreveu foi tirada."
     },
     "SAUDE": {
       "TITULO": "Como este modelo está indo",

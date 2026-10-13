@@ -135,7 +135,11 @@ const module = (getters, actions = {}) => ({
 });
 
 // The page asks the server for saved audiences (saved=true, q); NOT_SAVED never comes back.
-const mountPage = ({ imports = [PHONE_AUDIENCE], query = {} } = {}) => {
+const mountPage = ({
+  imports = [PHONE_AUDIENCE],
+  query = {},
+  templates = [TEMPLATE],
+} = {}) => {
   route.value = { query, params: { accountId: 1 } };
   const saved = imports.filter(item => item.status === 'completed');
   api.list.mockImplementation(({ q }) => {
@@ -157,7 +161,7 @@ const mountPage = ({ imports = [PHONE_AUDIENCE], query = {} } = {}) => {
       inboxes: module(
         {
           getInboxes: () => INBOXES,
-          getFilteredWhatsAppTemplates: () => () => [TEMPLATE],
+          getFilteredWhatsAppTemplates: () => () => templates,
         },
         { get: vi.fn() }
       ),
@@ -788,6 +792,62 @@ describe('Nova campanha — conversa aberta (#1335)', () => {
     expect(create.mock.calls[0][0].campaign.free_text).toBe(
       'Oi, {{cliente.primeiro_nome}}! Chegou. Quer ver?'
     );
+    wrapper.unmount();
+  });
+});
+
+// #1456: com cupom, oferta com prazo ou carrossel, quem recebe a mensagem
+// escrita perderia a oferta. O quadro some e todos recebem o modelo completo.
+describe('Nova campanha — conversa aberta com modelo de cupom (#1456)', () => {
+  const CUPOM = {
+    ...TEMPLATE,
+    id: 10,
+    name: 'cupom_outubro',
+    components: [
+      { type: 'BODY', text: 'Olá, {{1}}! Use o cupom até {{2}}.' },
+      { type: 'BUTTONS', buttons: [{ type: 'COPY_CODE', example: 'OUT10' }] },
+    ],
+  };
+
+  it('o quadro some com o modelo de cupom e o texto escrito é descartado com aviso', async () => {
+    const wrapper = mountPage({ templates: [TEMPLATE, CUPOM] });
+    await flushPromises();
+    await wrapper.find('[data-audience-option="5"]').trigger('click');
+    await wrapper.find('[data-test="continue-message"]').trigger('click');
+    await wrapper
+      .find('[data-channel-card="whatsapp_official"]')
+      .trigger('click');
+    choice(wrapper, 'Sending inbox').vm.$emit('update:modelValue', 7);
+    await flushPromises();
+
+    // Modelo de cupom desde o começo: nem quadro nem aviso.
+    choice(wrapper, 'Approved template').vm.$emit('update:modelValue', 10);
+    await flushPromises();
+    expect(wrapper.find('[data-conversa-aberta]').exists()).toBe(false);
+    expect(wrapper.find('[data-texto-descartado]').exists()).toBe(false);
+
+    // Modelo normal: o quadro aparece e a pessoa escreve.
+    choice(wrapper, 'Approved template').vm.$emit('update:modelValue', 9);
+    await flushPromises();
+    expect(wrapper.find('[data-conversa-aberta]').exists()).toBe(true);
+    wrapper.findComponent({ name: 'ConversaAberta' }).vm.$emit('update', {
+      textoNaConversaAberta: 'Oi, {{cliente.primeiro_nome}}!',
+    });
+    await flushPromises();
+
+    // Troca para o cupom: o quadro some, o texto vai embora e o aviso explica.
+    choice(wrapper, 'Approved template').vm.$emit('update:modelValue', 10);
+    await flushPromises();
+    expect(wrapper.find('[data-conversa-aberta]').exists()).toBe(false);
+    expect(wrapper.find('[data-texto-descartado]').exists()).toBe(true);
+    expect(loadDraft(1).textoNaConversaAberta).toBe('');
+
+    // De volta ao modelo normal: quadro sem texto e sem o aviso.
+    choice(wrapper, 'Approved template').vm.$emit('update:modelValue', 9);
+    await flushPromises();
+    expect(wrapper.find('[data-conversa-aberta]').exists()).toBe(true);
+    expect(wrapper.find('[data-texto-pronto]').exists()).toBe(false);
+    expect(wrapper.find('[data-texto-descartado]').exists()).toBe(false);
     wrapper.unmount();
   });
 });
