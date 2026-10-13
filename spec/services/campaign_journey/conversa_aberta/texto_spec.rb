@@ -59,6 +59,10 @@ RSpec.describe CampaignJourney::ConversaAberta::Texto do
     expect(described_class.aviso('Veja: {{publico.Link_da_oferta}}. Chegou hoje.')).to be_nil
   end
 
+  it 'texto vazio (nil) não avisa nem quebra' do
+    expect(described_class.aviso(nil)).to be_nil
+  end
+
   it 'o link inequívoco trava e não vira só aviso' do
     expect(described_class.aviso('Veja www.loja.com')).to be_nil
   end

@@ -63,8 +63,10 @@ RSpec.describe CampaignJourney::ConversaAberta::Envio, :aggregate_failures do
     expect(envios['+5531987654321']['type']).to eq('template')
     ana = CampaignRecipient.find_by(campaign: campaign, contact: contato('Ana Souza'))
     expect(ana).to have_attributes(status: 'sent', message_content: 'Oi, Ana! Suas peças: https://x.com/ana. Quer ver?')
-    expect(CampaignFreeTextDelivery.find_by(campaign_recipient_id: ana.id)).to have_attributes(source_id: ana.source_id, fell_back_at: nil)
     registrada = conversa.messages.outgoing.last
+    expect(CampaignFreeTextDelivery.find_by(campaign_recipient_id: ana.id)).to have_attributes(
+      source_id: ana.source_id, message_id: registrada.id, fell_back_at: nil
+    )
     expect(registrada.content).to eq('Oi, Ana! Suas peças: https://x.com/ana. Quer ver?')
     expect(registrada.additional_attributes).to eq('campaign_id' => campaign.id, 'campaign_free_text' => true)
   end
@@ -172,6 +174,39 @@ RSpec.describe CampaignJourney::ConversaAberta::Envio, :aggregate_failures do
       expect(sent.select { |body| body['to'] == '+5511987654321' }.pluck('type')).to eq(%w[text])
       expect(ana.reload).to be_failed
       expect(ana.error_message).to eq(described_class::PAUSADA)
+    end
+
+    # Bloqueio do Followup IA (#1448): o Híbrido assume o texto e troca o source_id da mensagem pelo id do WAHA antes de
+    # enviar. A entrega continua achada pelo wamid do aviso; a mensagem, pelo id. Com a marca do Híbrido, sem modelo.
+    it 'o Híbrido assumiu o texto (source_id trocado): nenhum modelo é enfileirado' do
+      sent = stub_graph_messages
+      conversa = falou('Ana Souza')
+      campaign = campanha
+      disparar(campaign)
+      texto_id = CampaignRecipient.find_by(campaign: campaign, contact: contato('Ana Souza')).source_id
+      allow(WhatsappHybrid::Router).to receive(:new).and_return(instance_double(WhatsappHybrid::Router, web_ready?: false))
+      conversa.messages.outgoing.last.update!(source_id: 'waha-fisico-1', content_attributes: { whatsapp_transport_fallback: true })
+
+      expect { aviso(texto_id, 131_047) }.not_to have_enqueued_job(CampaignJourney::ConversaAberta::QuedaJob)
+      expect(sent.select { |body| body['to'] == '+5511987654321' }.pluck('type')).to eq(%w[text])
+    end
+
+    it 'sem a marca do Híbrido, a mesma troca de source_id ainda pede o modelo' do
+      stub_graph_messages
+      conversa = falou('Ana Souza')
+      campaign = campanha
+      disparar(campaign)
+      texto_id = CampaignRecipient.find_by(campaign: campaign, contact: contato('Ana Souza')).source_id
+      conversa.messages.outgoing.last.update!(source_id: 'waha-fisico-1')
+
+      expect { aviso(texto_id, 131_047) }.to have_enqueued_job(CampaignJourney::ConversaAberta::QuedaJob)
+    end
+
+    it 'aviso sem statuses não levanta erro novo no ensure' do
+      servico = Whatsapp::IncomingMessageWhatsappCloudService.new(inbox: inbox, params: {})
+      servico.instance_variable_set(:@processed_params, {})
+
+      expect { servico.send(:pedir_modelo_sem_levantar) }.not_to raise_error
     end
 
     it 'outro erro da Meta não troca para o modelo' do

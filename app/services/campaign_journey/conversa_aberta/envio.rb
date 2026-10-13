@@ -42,9 +42,10 @@ module CampaignJourney::ConversaAberta::Envio
   # conversa. Uma falha aqui só vai ao log: a mensagem já saiu.
   def registrar_texto(recipient, destination, texto, source_id)
     recipient.update!(message_content: texto)
+    message = CampaignJourney::SentMessageRecorder.new(campaign: campaign, recipient: recipient.reload, free_text: true)
+                                                  .record_at_send(destination)
     CampaignFreeTextDelivery.create!(account_id: campaign.account_id, campaign: campaign, campaign_recipient_id: recipient.id,
-                                     inbox_id: inbox.id, source_id: source_id)
-    CampaignJourney::SentMessageRecorder.new(campaign: campaign, recipient: recipient.reload, free_text: true).record_at_send(destination)
+                                     inbox_id: inbox.id, source_id: source_id, message_id: message.try(:id))
   rescue StandardError => e
     Rails.logger.error "[ConversaAberta] campaign=#{campaign.id} recipient=#{recipient.id} texto enviado, registro falhou: #{e.class}"
   end

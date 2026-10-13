@@ -1133,12 +1133,14 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_24_100001) do
     t.bigint "campaign_recipient_id", null: false
     t.bigint "inbox_id", null: false
     t.string "source_id", null: false
+    t.bigint "message_id"
     t.datetime "fell_back_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["campaign_id"], name: "index_campaign_free_text_deliveries_on_campaign_id"
     t.index ["campaign_recipient_id"], name: "idx_campaign_free_text_deliveries_recipient", unique: true
     t.index ["inbox_id", "source_id"], name: "idx_campaign_free_text_deliveries_source", unique: true
+    t.index ["message_id"], name: "index_campaign_free_text_deliveries_on_message_id"
   end
 
   create_table "campaign_free_texts", force: :cascade do |t|

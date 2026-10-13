@@ -43,6 +43,7 @@ class CampaignJourney::ConversaAberta::Texto
 
     # :parece_link quando só a heurística de domínio acusa (a pessoa pode seguir); nil nos outros casos.
     def aviso(texto)
+      texto = texto.to_s
       return if link_inequivoco?(texto)
 
       :parece_link if Ai::Redacao::Canais::WhatsappTexto.link_inventado?(texto)

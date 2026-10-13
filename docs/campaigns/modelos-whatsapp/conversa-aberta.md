@@ -33,6 +33,18 @@ as contas.
   até a franquia do mês do número (`Whatsapp::ServiceMessageCount`); depois paga a tarifa de serviço. Sem a franquia
   lida, a tela conta tudo como pago.
 
+## Limitações conhecidas
+
+- **Híbrido e 131047.** Quando a Meta recusa o texto com 131047 e o WhatsApp Híbrido **assume** o reenvio pelo WhatsApp
+  API, a mensagem ganha a marca `whatsapp_transport_fallback`. Com essa marca, a campanha **não** manda o modelo: a marca
+  quer dizer "o Híbrido assumiu", não "entregou". Se o envio do Híbrido falhar depois, a pessoa fica sem texto e sem
+  modelo. É uma escolha conservadora, para não mandar duas mensagens à mesma pessoa.
+- **Mensagem achada pelo id.** O Híbrido troca o `source_id` da mensagem pelo id do WAHA antes de enviar. Por isso a
+  entrega guarda o `message_id` da mensagem da conversa, e a queda acha a mensagem por ele. A entrega em si é achada
+  pelo `source_id` do aviso, que é o wamid gravado no envio.
+- **Contagem.** Quem falou nas últimas 24 h mas não tem o valor de um campo do texto entra em "falaram com você" e, no
+  envio, recebe o modelo. A tela avisa que é uma estimativa.
+
 ## Tempo da contagem (medido em 13/10/2026)
 
 Volume sintético, local: 400 mil mensagens recebidas em 2 caixas e 20 mil contatos.
