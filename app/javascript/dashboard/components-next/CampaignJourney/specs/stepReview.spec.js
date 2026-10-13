@@ -56,13 +56,15 @@ describe('StepReview schedule (#1387)', () => {
     );
   });
 
-  it('labels the date with the zone name, not the IANA id', () => {
-    const wrapper = montar({ when: 'later', scheduledAt: '' });
+  // Regra do Rodrigo (#1456): o fuso da conta como a plataforma o mostra em
+  // Configurações, nunca o nome longo do navegador ("Horário Padrão de Brasília").
+  it('labels the date with the account time zone as the settings show it', () => {
+    const wrapper = montar({ when: 'later', scheduledAt: '2026-10-20T18:00' });
     const rotulo = wrapper
       .findAll('label')
       .map(label => label.text())
       .find(texto => texto.startsWith('Date and time'));
-    expect(rotulo).toBeTruthy();
-    expect(rotulo).not.toContain('America/Sao_Paulo');
+    expect(rotulo).toBe('Date and time (account time zone: America/Sao Paulo)');
+    expect(wrapper.text()).not.toContain('Standard Time');
   });
 });

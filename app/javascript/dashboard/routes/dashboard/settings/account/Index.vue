@@ -19,6 +19,7 @@ import AccountDelete from './components/AccountDelete.vue';
 import AudioTranscription from './components/AudioTranscription.vue';
 import SectionLayout from './components/SectionLayout.vue';
 import { setDashboardLocale } from 'dashboard/i18n/localeLoader';
+import { rotuloDoFuso } from 'dashboard/helper/fusoDaConta';
 
 export default {
   components: {
@@ -91,7 +92,7 @@ export default {
       try {
         return Intl.supportedValuesOf('timeZone').map(tz => ({
           value: tz,
-          label: tz.split('_').join(' '),
+          label: rotuloDoFuso(tz),
         }));
       } catch {
         return [];

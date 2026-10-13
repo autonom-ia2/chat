@@ -21,6 +21,7 @@
 # the follow-up template filter and the conversation picker in later PRs):
 #   Whatsapp::Templates::SendableFormat.check(template, recorded: {})  # => Result(reason_code, warnings), #sendable?
 #   Whatsapp::Templates::SendableFormat.sendable?(template)            # => true/false
+#   Whatsapp::Templates::SendableFormat.offer_format?(template)        # => coupon, limited-time offer or carousel (#1456)
 #
 # Category rules stay in Whatsapp::AuthenticationTemplateGuard (authentication template to a BSUID
 # recipient); this rule only looks at the format, so the two never repeat each other.
@@ -47,11 +48,21 @@ module Whatsapp::Templates::SendableFormat
   NO_COMPONENTS = 'no_components'.freeze
   OFFER_EXPIRED = 'offer_expired'.freeze
   COUPON_MAX = 15
+  # What only reaches the person inside the full template (#1456): the coupon button, the offer and the carousel.
+  OFFER_COMPONENTS = %w[LIMITED_TIME_OFFER CAROUSEL].freeze
+  OFFER_BUTTON = 'COPY_CODE'.freeze
 
   module_function
 
   def sendable?(template, recorded: {})
     check(template, recorded: recorded).sendable?
+  end
+
+  # The campaign free text (#1335) never replaces these: whoever got the text would lose the offer (#1456).
+  def offer_format?(template)
+    components = hashes(template.is_a?(Hash) ? template['components'] : nil)
+    components.any? { |component| OFFER_COMPONENTS.include?(upcase(component['type'])) } ||
+      button_types(components).include?(OFFER_BUTTON)
   end
 
   def check(template, recorded: {}, now: Time.current)
