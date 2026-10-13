@@ -18,7 +18,7 @@ RSpec.describe 'Api::V1::Accounts::WhatsappTemplateSuggestions', type: :request 
   around { |example| with_modified_env('CRM_KANBAN_ENABLED' => 'true', 'CRM_AI_ENABLED' => 'true') { example.run } }
 
   before do
-    account.enable_features!('whatsapp_templates_journey')
+    account.enable_features!('whatsapp_templates_journey', 'whatsapp_templates_ai')
     allow(Crm::Ai::CredentialResolver).to receive(:new).and_return(instance_double(Crm::Ai::CredentialResolver, resolve: { api_key: 'k' }))
     allow(Crm::Ai::ResponsesClient).to receive(:new).and_return(client)
   end
@@ -156,13 +156,43 @@ RSpec.describe 'Api::V1::Accounts::WhatsappTemplateSuggestions', type: :request 
     expect(Crm::Ai::ResponsesClient).not_to have_received(:new)
   end
 
-  it 'sem a flag da conta, 404 sem chamar a IA' do
-    account.disable_features!('whatsapp_templates_journey')
+  it 'sem a flag da tela ou sem a do piloto da IA, 404 sem enfileirar' do
+    %w[whatsapp_templates_journey whatsapp_templates_ai].each do |flag|
+      account.disable_features!(flag)
 
-    pedir(mode: 'create', goal: 'lembrar do horário')
-
-    expect(response).to have_http_status(:not_found)
+      expect { pedir(mode: 'create', goal: 'lembrar do horário') }.not_to have_enqueued_job(Crm::Ai::InteractiveJob)
+      expect(response).to have_http_status(:not_found), flag
+      expect(response.parsed_body['error']).to eq('feature_disabled')
+      account.enable_features!(flag)
+    end
     expect(Crm::Ai::ResponsesClient).not_to have_received(:new)
+  end
+
+  it 'flag do piloto desligada depois do pedido: o job não chama a IA' do
+    responde([bom])
+    pedir(mode: 'create', goal: 'lembrar do horário')
+    aceito = response.parsed_body
+    account.disable_features!('whatsapp_templates_ai')
+
+    Crm::Ai::InteractiveJob.perform_now(aceito['id'])
+
+    expect(Crm::Ai::InteractiveRequest.read(aceito['id'])['status']).to eq('failed')
+    expect(Crm::Ai::ResponsesClient).not_to have_received(:new)
+  end
+
+  it 'a flag do piloto nasce desligada e mora no bit 19 de feature_flags_ext_1, logo abaixo de campaign_open_window_text' do
+    pending 'o bit 19 depende do #1448 (campaign_open_window_text, bit 18) entrar na main antes'
+    flag = Featurable::FEATURE_LIST.find { |item| item['name'] == 'whatsapp_templates_ai' }
+    expect(flag).to include('enabled' => false, 'column' => 'feature_flags_ext_1')
+    ext = Featurable::FEATURE_LIST.select { |item| item['column'] == 'feature_flags_ext_1' }.pluck('name')
+    expect(ext[ext.index('whatsapp_templates_ai') - 1]).to eq('campaign_open_window_text')
+    nova = Account.new
+    nova.feature_whatsapp_templates_ai = true
+    expect(nova.feature_flags_ext_1).to eq(524_288)
+  end
+
+  it 'a flag do piloto nasce desligada numa conta nova' do
+    expect(create(:account).feature_enabled?('whatsapp_templates_ai')).to be(false)
   end
 
   it 'agente sem whatsapp_templates_manage não usa' do

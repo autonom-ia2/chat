@@ -6,7 +6,7 @@
 #   => 202 { id, status: 'pending', poll_url }  (padrão `DeferInteractiveAi`; o resultado sai em GET ai_requests/:id:
 #      { payload: { status, question, suggestions, options } } ou { error: 'suggestion_unavailable', message })
 #
-# Mesma porta de escrever modelo: flag `whatsapp_templates_journey` (404 sem ela) e `whatsapp_templates_manage`; o job
+# Flags `whatsapp_templates_journey` E `whatsapp_templates_ai` (404 sem uma delas) e `whatsapp_templates_manage`; o job
 # confere as duas de novo antes de chamar a IA. Pedido fora do formato: 422 na hora, sem enfileirar.
 class Api::V1::Accounts::WhatsappTemplateSuggestionsController < Api::V1::Accounts::BaseController
   include DeferInteractiveAi
@@ -30,7 +30,7 @@ class Api::V1::Accounts::WhatsappTemplateSuggestionsController < Api::V1::Accoun
   end
 
   def ensure_journey_enabled
-    render_error('feature_disabled', :not_found) unless Current.account.feature_enabled?('whatsapp_templates_journey')
+    render_error('feature_disabled', :not_found) unless Whatsapp::Templates::Sugestao.liberada?(Current.account)
   end
 
   def check_authorization

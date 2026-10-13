@@ -72,6 +72,7 @@ RSpec.describe 'Modelos do WhatsApp com função personalizada', type: :request 
   # #1333: "Criar com IA" é escrever modelo. Quem só vê é barrado antes de chamar a IA.
   it 'escrever com IA: whatsapp_templates_manage passa da porta; whatsapp_templates_view não' do
     path = "/api/v1/accounts/#{account.id}/whatsapp_template_suggestions"
+    account.enable_features!('whatsapp_templates_ai')
     allow(Crm::Ai::Config).to receive(:enabled?).and_return(false)
 
     call(role_user('whatsapp_templates_view'), :post, path, { mode: 'create', goal: 'lembrar do horário' })

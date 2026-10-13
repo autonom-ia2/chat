@@ -68,6 +68,8 @@ const RECUSADO = modeloDaMeta(
   GRUPO
 );
 
+let flagsLigadas = [];
+
 const loja = () =>
   createStore({
     getters: {
@@ -78,6 +80,9 @@ const loja = () =>
       }),
       getCurrentAccount: () => ({ id: 1, name: 'Hub2you' }),
       'accounts/getAccount': () => () => ({ id: 1, name: 'Hub2you' }),
+      // Piloto da IA ligado (#1333); sem ele, o "Melhorar com IA" não aparece.
+      'accounts/isFeatureEnabledonAccount': () => (_conta, flag) =>
+        flagsLigadas.includes(flag),
     },
   });
 
@@ -133,6 +138,7 @@ const abrir = async caminho => {
 };
 
 beforeEach(() => {
+  flagsLigadas = ['whatsapp_templates_ai'];
   Object.values(api).forEach(fn => fn.mockReset());
   api.listarNumeros.mockResolvedValue(NUMEROS);
   api.obterCatalogo.mockResolvedValue(null);
@@ -201,6 +207,14 @@ describe('Corrigir e alterar: o tipo vem travado (#1394)', () => {
     expect(wrapper.find('[data-tipo-travado]').text()).toContain(
       en.MODELOS_WHATSAPP.TIPOS.divulgacao.ROTULO
     );
+  });
+
+  it('sem a flag do piloto da IA, o corrigir não mostra o "Melhorar com IA"', async () => {
+    flagsLigadas = [];
+    const { wrapper } = await abrir('/modelos/1001/alterar?etapa=texto');
+
+    expect(wrapper.find('[data-tipo-travado]').exists()).toBe(true);
+    expect(wrapper.find('[data-melhorar-com-ia]').exists()).toBe(false);
   });
 
   it('alterar um modelo aprovado também mostra o tipo travado', async () => {

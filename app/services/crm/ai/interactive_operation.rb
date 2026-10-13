@@ -152,9 +152,9 @@ class Crm::Ai::InteractiveOperation # rubocop:disable Metrics/ClassLength
     Whatsapp::Templates::Sugestao.executar(account: @account, inputs: @inputs)
   end
 
-  # Modelos do WhatsApp (#1333): a mesma porta do POST (flag da conta e whatsapp_templates_manage).
+  # Modelos do WhatsApp (#1333): a mesma porta do POST (as duas flags da conta e whatsapp_templates_manage).
   def authorize_whatsapp_templates!
-    raise Pundit::NotAuthorizedError unless @account.feature_enabled?('whatsapp_templates_journey')
+    raise Pundit::NotAuthorizedError unless Whatsapp::Templates::Sugestao.liberada?(@account)
 
     Pundit.authorize(@context, WhatsappTemplateProfile, :create?, policy_class: WhatsappTemplatePolicy)
   end

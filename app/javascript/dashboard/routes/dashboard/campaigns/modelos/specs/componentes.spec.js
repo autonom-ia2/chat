@@ -21,7 +21,8 @@ vi.mock('dashboard/composables', () => ({ useAlert: alerta }));
 const i18n = () =>
   createI18n({ legacy: false, locale: 'en', messages: { en } });
 
-const loja = papel =>
+// `flags`: as flags ligadas na conta (o piloto da IA é whatsapp_templates_ai).
+const loja = (papel, flags = []) =>
   createStore({
     getters: {
       getCurrentAccountId: () => 1,
@@ -29,14 +30,19 @@ const loja = papel =>
         id: 1,
         accounts: [{ id: 1, role: papel, permissions: [papel] }],
       }),
+      'accounts/isFeatureEnabledonAccount': () => (_conta, flag) =>
+        flags.includes(flag),
     },
   });
 
-const montar = (componente, { props = {}, papel = 'administrator' } = {}) =>
+const montar = (
+  componente,
+  { props = {}, papel = 'administrator', flags = [] } = {}
+) =>
   mount(componente, {
     props,
     global: {
-      plugins: [i18n(), loja(papel)],
+      plugins: [i18n(), loja(papel, flags)],
       stubs: { 'router-link': { template: '<a><slot /></a>' } },
     },
   });
@@ -136,9 +142,19 @@ describe('ModeloUsos', () => {
 });
 
 describe('EtapaObjetivo', () => {
-  it('shows "Criar com IA" to who creates templates, and no format without backend (catalog, form)', () => {
+  it('shows "Criar com IA" only with the AI pilot flag (#1333, Refs #1450)', () => {
+    expect(
+      montar(EtapaObjetivo, { flags: ['whatsapp_templates_ai'] })
+        .find('[data-criar-com-ia-entrada]')
+        .exists()
+    ).toBe(true);
+    expect(
+      montar(EtapaObjetivo).find('[data-criar-com-ia-entrada]').exists()
+    ).toBe(false);
+  });
+
+  it('has no format without backend (catalog, form)', () => {
     const wrapper = montar(EtapaObjetivo);
-    expect(wrapper.find('[data-criar-com-ia-entrada]').exists()).toBe(true);
     expect(wrapper.find('[data-formato="catalogo"]').exists()).toBe(false);
     expect(wrapper.find('[data-formato="formulario"]').exists()).toBe(false);
     expect(wrapper.find('[data-formato="carrossel"]').exists()).toBe(true);

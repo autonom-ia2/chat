@@ -13,6 +13,13 @@ class Whatsapp::Templates::Sugestao
   OPERACAO = 'whatsapp_template_suggestion'.freeze
   TIMEOUT = 25
   MAX_RETRIES = 1
+  # A tela de Modelos (`whatsapp_templates_journey`) e o piloto da IA (`whatsapp_templates_ai`, conta 16; Refs #1450).
+  FLAGS = %w[whatsapp_templates_journey whatsapp_templates_ai].freeze
+
+  def self.liberada?(account)
+    FLAGS.all? { |flag| account.feature_enabled?(flag) }
+  end
+
   # Só o que o modo usa, já conferido, vai para o pedido guardado (Redis, 30 min, `Crm::Ai::InteractiveRequest`).
   def self.entradas(params)
     mode = params[:mode].to_s
