@@ -6,7 +6,8 @@
 # A conferência é a comum (chaves, pontas, tamanho, base) mais a da Meta, só de estrutura e sem regex:
 # corpo até 1024; campos sem palavra entre eles;
 # cabeçalho até 60, com no máximo 1 campo e sem campo nas pontas; rodapé até 60 sem campo; até 3 botões de um grupo só
-# (respostas rápidas, ou até 2 links e 1 telefone), texto até 25, campo só em link/telefone; nome em a-z, 0-9 e "_".
+# (respostas rápidas, ou até 2 links e 1 telefone), texto até 25, campo só em link/telefone. O nome sugerido é
+# normalizado (a-z, 0-9 e "_"), nunca motivo de descarte.
 # "No máximo 5 campos, um para cada 4 palavras" fica só no prompt: é escolha nossa (a Meta não publica número), e no
 # "melhorar" a base já pode ter mais campos que isso, que a opção é obrigada a manter.
 class Ai::Redacao::Canais::WhatsappModelo < Ai::Redacao::Canais::Base
@@ -22,6 +23,10 @@ class Ai::Redacao::Canais::WhatsappModelo < Ai::Redacao::Canais::Base
   TIPOS_DE_BOTAO = [RESPOSTA, LINK, TELEFONE].freeze
   LIMITE_POR_TIPO = { LINK => 2, TELEFONE => 1 }.freeze
   LETRAS_DO_NOME = [*'a'..'z', *'0'..'9', '_'].to_set.freeze
+  SEPARADOR = '_'.freeze
+  # Melhorias em que o campo da base pode ser o problema (a oferta num campo, o dado proibido): o comum.md manda tirar
+  # e dizer em "o_que_mudou". Nas outras ("mais_curto", "mais_claro") os campos da base continuam obrigatórios.
+  PODE_TIRAR_CAMPO = %w[manter_como_servico corrigir_recusa].freeze
 
   class << self
     def nome
@@ -42,10 +47,18 @@ class Ai::Redacao::Canais::WhatsappModelo < Ai::Redacao::Canais::Base
         certeza_categoria: opcao['certeza_categoria'],
         whatsapp: {
           cabecalho: whatsapp['cabecalho'].to_s.strip.presence, rodape: whatsapp['rodape'].to_s.strip.presence,
-          nome_sugerido: whatsapp['nome_sugerido'].to_s,
+          nome_sugerido: nome_normalizado(whatsapp['nome_sugerido']),
           botoes: botoes_de(whatsapp).map { |botao| { tipo: botao['tipo'], texto: botao['texto'].to_s.strip, chave: botao['chave'] } }
         }
       )
+    end
+
+    # O nome é cosmético (a pessoa troca na tela): fora do formato vira formato, sem descartar a opção. Minúsculas,
+    # acento tirado, o resto que não é letra ou número vira "_", sem "_" repetido nem nas pontas, até 40.
+    def nome_normalizado(nome)
+      limpo = ActiveSupport::Inflector.transliterate(nome.to_s).downcase
+      limpo = limpo.each_char.map { |char| LETRAS_DO_NOME.include?(char) ? char : SEPARADOR }.join.squeeze(SEPARADOR)
+      limpo.delete_prefix(SEPARADOR).delete_suffix(SEPARADOR).first(NOME_MAXIMO).delete_suffix(SEPARADOR)
     end
 
     private
@@ -53,8 +66,21 @@ class Ai::Redacao::Canais::WhatsappModelo < Ai::Redacao::Canais::Base
     def problema_do_canal(opcao, chaves:, **)
       whatsapp = whatsapp_de(opcao)
       problema_do_corpo(opcao['texto'].to_s) || problema_do_cabecalho(whatsapp['cabecalho']) ||
-        problema_do_rodape(whatsapp['rodape']) || problema_dos_botoes(botoes_de(whatsapp), chaves) ||
-        problema_do_nome(whatsapp['nome_sugerido'])
+        problema_do_rodape(whatsapp['rodape']) || problema_dos_botoes(botoes_de(whatsapp), chaves)
+    end
+
+    # Calibração 13/10 (AG11): em "manter como serviço" e "corrigir recusa" a opção pode tirar campo da base. Campo
+    # fora da lista segue barrado (`problema_das_chaves`), e no "mais curto" não entra campo novo.
+    def problema_da_base(usadas, chaves, base, pedido)
+      return super unless pode_tirar_campo?(pedido)
+
+      da_base = chaves_da_base(base) & Array(chaves[:permitidas])
+      :campo_novo_no_mais_curto if mais_curto?(pedido) && !(usadas - da_base).empty?
+    end
+
+    def pode_tirar_campo?(pedido)
+      melhorias = pedido.is_a?(Hash) ? Array(pedido.to_h.stringify_keys['melhorias']).map(&:to_s) : []
+      melhorias.intersect?(PODE_TIRAR_CAMPO)
     end
 
     def problema_do_corpo(texto)
@@ -115,11 +141,6 @@ class Ai::Redacao::Canais::WhatsappModelo < Ai::Redacao::Canais::Base
       return false if chave.nil?
 
       botao['tipo'] == RESPOSTA || Array(chaves[:permitidas]).exclude?(chave)
-    end
-
-    def problema_do_nome(nome)
-      nome = nome.to_s
-      :nome_invalido if nome.empty? || nome.length > NOME_MAXIMO || nome.each_char.any? { |char| LETRAS_DO_NOME.exclude?(char) }
     end
 
     def whatsapp_de(opcao)

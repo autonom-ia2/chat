@@ -70,7 +70,6 @@ RSpec.describe Ai::Redacao::Canais::WhatsappModelo do
       opcao(so_virgula),
       opcao(bom, rodape: 'Fale com {{minha_empresa.nome}}'),
       opcao(bom, cabecalho: '{{minha_empresa.nome}}'),
-      opcao(bom, nome_sugerido: 'Aviso Entrega'),
       opcao(bom, botoes: [{ tipo: 'resposta_rapida', texto: 'Confirmar', chave: nil }, { tipo: 'link', texto: 'Ver site', chave: nil }]),
       opcao(bom, botoes: [{ tipo: 'resposta_rapida', texto: 'Confirmar meu horário agora mesmo', chave: nil }]),
       opcao(bom, botoes: [{ tipo: 'resposta_rapida', texto: 'Ver', chave: 'minha_empresa.site' }]),
@@ -82,7 +81,7 @@ RSpec.describe Ai::Redacao::Canais::WhatsappModelo do
     resultado = escrever(opcoes: 3, limites: { max_chars: 2000, categoria_desejada: nil, sem_midia: true })
 
     expect(resultado[:opcoes].pluck(:texto)).to eq([bom])
-    expect(resultado[:descartadas]).to eq(9)
+    expect(resultado[:descartadas]).to eq(8)
   end
 
   # Bateria real (13/10): "mais curto" na promoção pronta tem de manter os 4 campos da base; a regra de "um campo a cada
@@ -96,6 +95,83 @@ RSpec.describe Ai::Redacao::Canais::WhatsappModelo do
     resultado = escrever(base: base, pedido: { melhorias: %w[mais_curto] })
 
     expect(resultado[:opcoes].pluck(:texto)).to eq([curto])
+  end
+
+  # Calibração 13/10 (AG15): o nome é cosmético. Nome fora do formato vira nome no formato; a opção não cai.
+  it 'normaliza o nome sugerido em vez de descartar a opção' do
+    nomes = ['desconto_m massas_sabado', 'Promoção de Sábado!', '__Aviso--Entrega__', "lembrete_#{'x' * 60}", '!!!']
+    responde(nomes.map { |nome| opcao(bom, nome_sugerido: nome) })
+
+    resultado = escrever(opcoes: 3)
+
+    expect(resultado[:descartadas]).to eq(0)
+    expect(described_class.nome_normalizado('desconto_m massas_sabado')).to eq('desconto_m_massas_sabado')
+    expect(described_class.nome_normalizado('Promoção de Sábado!')).to eq('promocao_de_sabado')
+    expect(described_class.nome_normalizado('__Aviso--Entrega__')).to eq('aviso_entrega')
+    expect(described_class.nome_normalizado("lembrete_#{'x' * 60}").length).to eq(40)
+    expect(described_class.nome_normalizado('!!!')).to eq('')
+    expect(resultado[:opcoes].map { |opcao| opcao[:whatsapp][:nome_sugerido] })
+      .to eq(%w[desconto_m_massas_sabado promocao_de_sabado aviso_entrega])
+  end
+
+  describe 'melhorar: tirar campo da base (AG11, calibração 13/10)' do
+    let(:base) do
+      '{{cliente.primeiro_nome}}, seu pedido {{publico.numero_pedido}} está a caminho! Use o cupom {{publico.codigo}} e ganhe ' \
+        '{{publico.desconto}} na próxima compra.'
+    end
+    let(:so_servico) { 'Oi, {{cliente.primeiro_nome}}! Seu pedido {{publico.numero_pedido}} está a caminho. Qualquer dúvida, responda.' }
+    let(:permitidas) { %w[cliente.primeiro_nome publico.numero_pedido publico.codigo publico.desconto minha_empresa.nome] }
+
+    it 'em "manter como serviço" e "corrigir recusa", aceita a opção que tira o campo da oferta' do
+      responde([opcao(so_servico)])
+
+      %w[manter_como_servico corrigir_recusa].each do |melhoria|
+        expect(escrever(base: base, pedido: { melhorias: [melhoria] })[:opcoes].pluck(:texto)).to eq([so_servico]), melhoria
+      end
+    end
+
+    it 'em "mais curto" e "mais claro", continua descartando quem tira campo da base' do
+      responde([opcao(so_servico)])
+
+      %w[mais_curto mais_claro].each do |melhoria|
+        expect(escrever(base: base, pedido: { melhorias: [melhoria] })[:opcoes]).to eq([]), melhoria
+      end
+    end
+
+    it 'mesmo tirando campo, não aceita campo fora da lista nem campo novo no "mais curto"' do
+      fora = 'Oi, {{cliente.primeiro_nome}}! Seu pedido {{publico.numero_pedido}} sai hoje de {{minha_empresa.endereco}}. Até!'
+      novo = 'Oi, {{cliente.primeiro_nome}}! Seu pedido {{publico.numero_pedido}} da {{minha_empresa.nome}} saiu. Até!'
+      responde([opcao(fora), opcao(novo)])
+
+      expect(escrever(base: base, pedido: { melhorias: %w[manter_como_servico mais_curto] })[:opcoes]).to eq([])
+    end
+  end
+
+  # Calibração 13/10 (PN12-A): corpo com os mesmos 4 campos da base, e o botão de link com `publico.link`. A base é só o
+  # corpo, então o campo do botão não é "campo novo no mais curto" (`Canais::Base`, com OK do Agendamento).
+  it 'no "mais curto", campo só do botão não conta como campo novo do corpo (PN12)' do
+    base = 'Oi, {{cliente.primeiro_nome}}! Até {{publico.data}}, você tem {{publico.desconto}} de desconto na ' \
+           '{{minha_empresa.nome}}. Quer aproveitar? Veja as ofertas no botão abaixo.'
+    # A 2ª opção real do PN12-A. A 1ª ("…{{cliente.primeiro_nome}}! {{publico.desconto}}…") cai por campos colados.
+    curto = 'Oi, {{cliente.primeiro_nome}}! Até {{publico.data}}, aproveite {{publico.desconto}} de desconto na ' \
+            '{{minha_empresa.nome}}. Confira as ofertas no botão.'
+    responde([opcao(curto, botoes: [{ tipo: 'link', texto: 'Ver ofertas', chave: 'publico.link' }])])
+
+    resultado = escrever(base: base, pedido: { melhorias: %w[mais_curto] },
+                         chaves: { permitidas: %w[cliente.primeiro_nome publico.data publico.desconto minha_empresa.nome publico.link],
+                                   obrigatorias: [] })
+
+    expect(resultado[:opcoes].pluck(:texto)).to eq([curto])
+  end
+
+  # Condição do Agendamento para o PN12: a chave proibida num botão continua pega (a soma corpo + botões vai para a
+  # conferência das chaves), também no melhorar.
+  it 'chave fora da lista num botão continua descartando a opção, inclusive no melhorar' do
+    base = 'Oi, {{cliente.primeiro_nome}}! Seu pedido chega em {{publico.data}}. Qualquer dúvida, responda.'
+    responde([opcao(bom, botoes: [{ tipo: 'link', texto: 'Ver pedido', chave: 'minha_empresa.endereco' }])])
+
+    expect(escrever[:descartadas]).to eq(1)
+    expect(escrever(base: base, pedido: { melhorias: %w[mais_curto] })[:descartadas]).to eq(1)
   end
 
   it 'aceita botão de link com campo da lista e conta a chave dele' do
