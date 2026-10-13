@@ -1,3 +1,4 @@
+/* eslint-disable vue/one-component-per-file -- stubs de teste da gaveta, um por cenário */
 import { flushPromises, mount } from '@vue/test-utils';
 import { defineComponent, h, ref } from 'vue';
 import CrmKanbanPage from './CrmKanbanPage.vue';
