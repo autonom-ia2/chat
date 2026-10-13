@@ -108,6 +108,16 @@ describe Conversations::ChannelTyping::Deliverer do
 
       expect(WebMock).not_to have_requested(:post, instagram_url).with(query: hash_including({}))
     end
+
+    it 'stays quiet for a legacy conversation without contact_inbox' do
+      allow(conversation).to receive(:contact_inbox).and_return(nil)
+      allow(Rails.logger).to receive(:warn)
+
+      deliver(conversation, 'on')
+
+      expect(Rails.logger).not_to have_received(:warn)
+      expect(WebMock).not_to have_requested(:post, instagram_url).with(query: hash_including({}))
+    end
   end
 
   context 'when the channel has no typing delivery' do
@@ -122,6 +132,8 @@ describe Conversations::ChannelTyping::Deliverer do
     end
 
     it 'does not support the conversation and calls nothing' do
+      allow(Rails.logger).to receive(:warn)
+
       unsupported_inboxes.each do |inbox|
         conversation = conversation_in(inbox, "5511#{inbox.id.to_s.rjust(9, '0')}")
         create(:message, conversation: conversation, account: account, inbox: inbox, message_type: :incoming, source_id: 'wamid.LAST')
@@ -130,8 +142,9 @@ describe Conversations::ChannelTyping::Deliverer do
         deliver(conversation, 'on')
       end
 
-      requested_hosts = WebMock::RequestRegistry.instance.requested_signatures.hash.keys.map { |signature| signature.uri.host }
-      expect(requested_hosts).not_to include('graph.facebook.com', 'graph.instagram.com')
+      # Nenhuma URL está registrada neste contexto: qualquer chamada HTTP faria o WebMock levantar aqui.
+      expect(WebMock).not_to have_requested(:post, meta_typing_url)
+      expect(Rails.logger).not_to have_received(:warn)
     end
   end
 end

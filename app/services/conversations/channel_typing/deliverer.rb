@@ -52,6 +52,6 @@ class Conversations::ChannelTyping::Deliverer
     message = @conversation.messages.last
     return unless action && message
 
-    Instagram::SendOnInstagramService.new(message: message).send_sender_action(@conversation.contact_inbox.source_id, action)
+    Instagram::SendOnInstagramService.new(message: message).send_sender_action(@conversation.contact_inbox&.source_id, action)
   end
 end

@@ -70,6 +70,15 @@ describe Autonomia::Agents::Operate::TypingIndicator do
         .with(Conversation::CONVERSATION_TYPING_ON, any_args)
     end
 
+    it 'references the most recent incoming message, not the oldest' do
+      conversation.messages.incoming.first.update!(created_at: 2.minutes.ago)
+      create(:message, conversation: conversation, account: account, inbox: channel.inbox, message_type: :incoming, source_id: 'wamid.NEWER')
+
+      indicator(conversation).on
+
+      expect(WebMock).to have_requested(:post, meta_typing_url).once.with(body: hash_including('message_id' => 'wamid.NEWER'))
+    end
+
     it 'does nothing on typing off' do
       indicator(conversation).off
 

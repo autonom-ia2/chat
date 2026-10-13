@@ -13356,6 +13356,10 @@
         "tipo": "booleano",
         "tipo_pela_leitura": "uso"
       },
+      "is_private": {
+        "tipo": "booleano",
+        "tipo_pela_leitura": "uso"
+      },
       "typing_status": {}
     },
     "completo": false,
@@ -13366,9 +13370,11 @@
       "leitura crua sem tipo: typing_status (repassada a Conversations::ChannelTyping::DeliverJob.perform_later)"
     ],
     "origem": [
-      "app/controllers/concerns/conversations/channel_typing/toggle_endpoint.rb:6",
-      "app/controllers/concerns/conversations/channel_typing/toggle_endpoint.rb:11",
       "app/controllers/concerns/conversations/channel_typing/toggle_endpoint.rb:8",
+      "app/controllers/concerns/conversations/channel_typing/toggle_endpoint.rb:29",
+      "app/controllers/concerns/conversations/channel_typing/toggle_endpoint.rb:18",
+      "app/controllers/concerns/conversations/channel_typing/toggle_endpoint.rb:17",
+      "app/controllers/concerns/conversations/channel_typing/toggle_endpoint.rb:16",
       "app/controllers/api/v1/accounts/conversations_controller.rb:189"
     ],
     "sem_corpo": false

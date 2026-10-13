@@ -53,8 +53,72 @@ RSpec.describe 'Conversation typing delivered to the channel', type: :request do
     it 'does not call the channel inside the request' do
       toggle(headers: { api_access_token: agent_bot.access_token.token }, deliver_to_channel: true)
 
-      expect(job).to have_been_enqueued.with(conversation, 'on').on_queue('high')
+      expect(job).to have_been_enqueued.with(conversation, 'on', kind_of(Time)).on_queue('medium')
       expect(WebMock).not_to have_requested(:post, meta_typing_url)
+    end
+
+    it 'answers success and enqueues nothing when typing_status is not on or off' do
+      [{ nested: 'on' }, ['on'], 'maybe', nil].each do |typing_status|
+        toggle(headers: { api_access_token: agent_bot.access_token.token }, deliver_to_channel: true, typing_status: typing_status)
+
+        expect(response).to have_http_status(:ok)
+      end
+
+      expect(job).not_to have_been_enqueued
+    end
+
+    it 'answers success and logs when the queue is down' do
+      allow(job).to receive(:perform_later).and_raise(Redis::CannotConnectError)
+      allow(Rails.logger).to receive(:warn)
+
+      toggle(headers: { api_access_token: agent_bot.access_token.token }, deliver_to_channel: true)
+
+      expect(response).to have_http_status(:ok)
+      expect(Rails.logger).to have_received(:warn).with("[channel_typing] enqueue failed conversation=#{conversation.id} Redis::CannotConnectError")
+    end
+
+    it 'enqueues nothing for an AgentBot of another inbox of the account' do
+      other_bot = create(:agent_bot, account: account)
+      create(:agent_bot_inbox, inbox: create(:inbox, account: account), agent_bot: other_bot)
+
+      toggle(headers: { api_access_token: other_bot.access_token.token }, deliver_to_channel: true)
+
+      expect(response).to have_http_status(:ok)
+      expect_panel_event(other_bot)
+      expect(job).not_to have_been_enqueued
+    end
+
+    it 'enqueues nothing for a private note' do
+      toggle(headers: { api_access_token: agent_bot.access_token.token }, deliver_to_channel: true, is_private: true)
+
+      expect(response).to have_http_status(:ok)
+      expect(Rails.configuration.dispatcher).to have_received(:dispatch).once.with(
+        Conversation::CONVERSATION_TYPING_ON, kind_of(Time), { conversation: conversation, user: agent_bot, is_private: true }
+      )
+      expect(job).not_to have_been_enqueued
+    end
+
+    context 'when the conversation is on Instagram' do
+      let(:channel) { create(:channel_instagram, account: account) }
+      let(:contact_inbox) { create(:contact_inbox, contact: contact, inbox: inbox, source_id: 'ig-contact-1') }
+      let(:instagram_url) { "https://graph.instagram.com/v22.0/#{channel.instagram_id}/messages" }
+
+      before { stub_request(:post, instagram_url).with(query: { access_token: channel.access_token }).to_return(status: 200, body: '{}') }
+
+      it 'reaches Instagram with typing_on and typing_off' do
+        perform_enqueued_jobs(only: job) do
+          toggle(headers: { api_access_token: agent_bot.access_token.token }, deliver_to_channel: true)
+          toggle(headers: { api_access_token: agent_bot.access_token.token }, deliver_to_channel: true, typing_status: 'off')
+        end
+
+        expect(response).to have_http_status(:ok)
+        %w[typing_on typing_off].each do |sender_action|
+          expect(WebMock).to have_requested(:post, instagram_url).once.with(
+            query: { access_token: channel.access_token },
+            body: { recipient: { id: 'ig-contact-1' }, sender_action: sender_action }
+          )
+        end
+      end
     end
 
     it 'still answers success when the channel refuses' do
