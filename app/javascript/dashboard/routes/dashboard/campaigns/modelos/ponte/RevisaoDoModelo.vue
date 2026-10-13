@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import api from '../api/modelosWhatsapp';
 import { localeDoIntl } from '../helpers/datas';
+import PonteSinalDoModelo from './PonteSinalDoModelo.vue';
 
 // Revisão da campanha: qual modelo vai, o tipo da mensagem e quanto custa cada
 // envio (e o total para quem recebe). Divulgação lembra que quem pediu para não
@@ -82,5 +83,6 @@ const total = computed(() =>
     <p v-if="modelo.tipo === 'divulgacao'" class="m-0 text-xs text-n-slate-11">
       {{ $t('MODELOS_WHATSAPP.PONTE.REVISAO.DIVULGACAO') }}
     </p>
+    <PonteSinalDoModelo :modelo="modelo" />
   </section>
 </template>

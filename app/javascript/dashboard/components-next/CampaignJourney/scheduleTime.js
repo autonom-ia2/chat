@@ -46,3 +46,25 @@ export const formatInZone = (iso, timeZone, locale) =>
     timeStyle: 'short',
     timeZone,
   });
+
+/**
+ * Name of the zone for people ("Horário Padrão de Brasília"), else the zone id. Read at
+ * the scheduled instant (`at`, ISO), so a zone with summer time shows the right name.
+ */
+export const timeZoneName = (
+  timeZone,
+  locale,
+  at = new Date().toISOString()
+) => {
+  try {
+    const part = new Intl.DateTimeFormat(toLocaleTag(locale), {
+      timeZone,
+      timeZoneName: 'long',
+    })
+      .formatToParts(new Date(at))
+      .find(item => item.type === 'timeZoneName');
+    return part?.value || timeZone;
+  } catch {
+    return timeZone;
+  }
+};

@@ -21,6 +21,10 @@ const ids = computed(() =>
 );
 const daCampanha = computed(() => route.query.from === 'campaign');
 const semCampanha = computed(() => route.query.semCampanha === '1');
+// Criação em várias contas com falha numa delas: qual ficou sem o pedido.
+const semPedido = computed(() =>
+  [route.query.semPedido || []].flat().filter(Boolean)
+);
 
 // O que o passo diz: o da campanha, o de formato que ainda não vai em campanha
 // ou o de sempre.
@@ -100,6 +104,27 @@ const seguir = () => {
             {{ $t('MODELOS_WHATSAPP.ENVIADO.POR_CONTA', { n: ids.length }) }}
           </p>
         </div>
+        <p
+          v-if="semPedido.length"
+          data-sem-pedido
+          role="status"
+          class="flex items-start w-full gap-3 px-4 py-3 mb-0 text-[0.9375rem] rounded-xl text-start bg-n-amber-2 text-n-slate-12"
+        >
+          <span
+            class="i-lucide-triangle-alert size-5 mt-0.5 shrink-0 text-n-amber-11"
+            aria-hidden="true"
+          />
+          {{
+            $t(
+              'MODELOS_WHATSAPP.CRIAR.FALHOU_UMA_CONTA',
+              {
+                contas: semPedido.join(', '),
+                motivo: route.query.motivo || '',
+              },
+              semPedido.length
+            )
+          }}
+        </p>
         <ol
           class="flex flex-col w-full gap-0 p-0 m-0 list-none text-start rounded-2xl ring-1 ring-inset ring-n-weak bg-n-solid-1"
         >

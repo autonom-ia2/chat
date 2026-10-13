@@ -239,3 +239,36 @@ export const VALIDADE_MAXIMA = 90;
 // Código que as prévias mostram no formato "código de verificação" (não é texto
 // traduzível: é só um exemplo de número).
 export const CODIGO_DE_EXEMPLO = '482913';
+
+// Sinal de qualidade que o WhatsApp dá ao modelo (quality_score da Meta), em
+// palavras de gente. 'sem_nota': ainda sem retorno das pessoas (modelo novo ou
+// pouco enviado). Textos em MODELOS_WHATSAPP.SAUDE.SINAIS.<chave>.
+export const SINAIS = {
+  bom: {
+    icone: 'i-lucide-smile',
+    selo: 'bg-n-teal-3 text-n-teal-11',
+    caixa: 'bg-n-teal-2 ring-n-teal-6',
+    cor: 'text-n-teal-11',
+  },
+  atencao: {
+    icone: 'i-lucide-triangle-alert',
+    selo: 'bg-n-amber-3 text-n-amber-11',
+    caixa: 'bg-n-amber-2 ring-n-amber-6',
+    cor: 'text-n-amber-11',
+  },
+  ruim: {
+    icone: 'i-lucide-octagon-alert',
+    selo: 'bg-n-ruby-3 text-n-ruby-11',
+    caixa: 'bg-n-ruby-2 ring-n-ruby-6',
+    cor: 'text-n-ruby-11',
+  },
+  sem_nota: {
+    icone: 'i-lucide-hourglass',
+    selo: 'bg-n-slate-3 text-n-slate-11',
+    caixa: 'bg-n-slate-2 ring-n-slate-6',
+    cor: 'text-n-slate-11',
+  },
+};
+
+// Sinais que pedem ação da pessoa: a lista mostra o selo e sobe o modelo.
+export const SINAIS_DE_ALERTA = ['ruim', 'atencao'];

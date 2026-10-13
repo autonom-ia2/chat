@@ -39,8 +39,11 @@ class SafeFetch::Fetcher
     bytes_written = 0
 
     perform_request do |res|
-      next if res.is_a?(Net::HTTPRedirection) && options.follow_redirects?
-      raise http_error(res) unless res.is_a?(Net::HTTPSuccess)
+      if res.is_a?(Net::HTTPRedirection) && options.follow_redirects?
+        refuse_cross_origin_redirect!(res)
+        next
+      end
+      raise http_error(res, error_excerpt(res)) unless res.is_a?(Net::HTTPSuccess)
 
       validate_content_type!(res['content-type'])
       validate_announced_size!(res['content-length'])
@@ -60,8 +63,48 @@ class SafeFetch::Fetcher
     SsrfFilter.public_send(options.method, options.url, **options.request_options, &)
   end
 
-  def http_error(response)
-    SafeFetch::HttpError.new("#{response.code} #{response.message}", status: response.code.to_i)
+  # `excerpt`: o que `error_excerpt` devolve — [trecho, cortou?], ou [] sem trecho.
+  def http_error(response, excerpt = [])
+    body_excerpt, truncated = excerpt
+    SafeFetch::HttpError.new("#{response.code} #{response.message}",
+                             status: response.code.to_i, body_excerpt: body_excerpt,
+                             body_excerpt_truncated: truncated || false)
+  end
+
+  # Roda dentro do bloco, ANTES de o ssrf_filter seguir o salto: levantar aqui impede a requisição ao
+  # destino. Sem `Location` não há salto, e o 3xx cai na recusa por status como sempre.
+  def refuse_cross_origin_redirect!(response)
+    location = response['location']
+    return if options.cross_origin_redirects? || location.blank? || options.same_origin_location?(location)
+
+    raise SafeFetch::CrossOriginRedirectError
+  end
+
+  # O começo do corpo de uma resposta de erro, até `error_body_bytes`, dentro do prazo. Parar de ler
+  # no meio é seguro: quem chama levanta logo em seguida, ainda dentro do bloco, e a conexão é
+  # descartada sem o Net::HTTP materializar o resto. Falha ao ler não troca o erro: vira sem trecho.
+  # Lê um byte a mais que o teto para saber se cortou. -> [trecho, cortou?] ou [].
+  def error_excerpt(response)
+    limit = options.error_body_bytes
+    return [] if limit.zero?
+
+    excerpt = read_excerpt(response, limit)
+    [excerpt.byteslice(0, limit).force_encoding(Encoding::UTF_8).scrub.presence, excerpt.bytesize > limit]
+  rescue SafeFetch::Error, Net::ReadTimeout, IOError, SystemCallError, OpenSSL::SSL::SSLError
+    []
+  end
+
+  def read_excerpt(response, limit)
+    socket = response.instance_variable_get(:@socket)
+    deadline.enforce!(socket)
+    excerpt = String.new(encoding: Encoding::BINARY)
+    response.read_body do |chunk|
+      excerpt << chunk
+      break if excerpt.bytesize > limit
+
+      deadline.enforce!(socket)
+    end
+    excerpt
   end
 
   def validate_content_type!(content_type)

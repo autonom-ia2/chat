@@ -1,6 +1,8 @@
 <script setup>
+import PonteSinalDoModelo from './PonteSinalDoModelo.vue';
+
 // Modelo escolhido ainda em análise: dá para montar e agendar; enviar agora só
-// depois que o WhatsApp aprovar.
+// depois que o WhatsApp aprovar. Pronto com nota ruim: o aviso do sinal (#1338).
 defineProps({
   modelo: { type: Object, default: null },
 });
@@ -20,5 +22,6 @@ defineProps({
       />
       {{ $t('MODELOS_WHATSAPP.PONTE.EM_ANALISE', { nome: modelo.nome }) }}
     </p>
+    <PonteSinalDoModelo :modelo="modelo" />
   </div>
 </template>

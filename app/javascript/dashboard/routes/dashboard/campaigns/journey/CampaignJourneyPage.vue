@@ -385,7 +385,7 @@ useOnEnter(fetchAll);
           class="flex flex-wrap items-center justify-between gap-3 border-b border-n-weak px-4 py-4 xl:px-6"
         >
           <nav
-            class="flex max-w-full gap-1 overflow-x-auto"
+            class="flex max-w-full flex-wrap gap-1"
             :aria-label="t(`${NS}.CHANNEL_FILTER`)"
           >
             <button

@@ -46,6 +46,16 @@ export const CORES = [
 
 export const corDaPosicao = indice => CORES[indice % CORES.length].valor;
 
+// Etapa nova ganha a primeira cor que ainda ninguém usa. Só repete quando
+// todas estão em uso; aí segue a ordem pela posição.
+export const corLivre = usadas => {
+  const emUso = new Set(usadas.map(cor => cor?.toLowerCase()));
+  return (
+    CORES.find(item => !emUso.has(item.valor))?.valor ||
+    corDaPosicao(usadas.length)
+  );
+};
+
 export const seloDaCor = cor =>
   CORES.find(item => item.valor === cor)?.selo || 'bg-n-blue-3 text-n-blue-11';
 

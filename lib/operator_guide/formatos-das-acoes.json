@@ -118,8 +118,8 @@
     "controller": "api/v1/accounts/autonomia/agents/tools#destroy",
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:29",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:48",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:52"
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:53",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:57"
     ],
     "sem_corpo": true
   },
@@ -3422,9 +3422,9 @@
     "modelo": "Autonomia::Agents::Tool",
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:21",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:60",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:48",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:52"
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:65",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:53",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:57"
     ],
     "sem_corpo": false
   },
@@ -10483,8 +10483,8 @@
     "envelope": "tool",
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:12",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:60",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:48"
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:65",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:53"
     ],
     "sem_corpo": false
   },
@@ -10498,10 +10498,10 @@
       "leitura crua sem tipo: params"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:34",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:83",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:48",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:52"
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:37",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:88",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:53",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:57"
     ],
     "sem_corpo": false
   },
@@ -13351,14 +13351,30 @@
     "sem_corpo": false
   },
   "POST conversations/:id/toggle_typing_status": {
+    "campos": {
+      "deliver_to_channel": {
+        "tipo": "booleano",
+        "tipo_pela_leitura": "uso"
+      },
+      "is_private": {
+        "tipo": "booleano",
+        "tipo_pela_leitura": "uso"
+      },
+      "typing_status": {}
+    },
     "completo": false,
     "controller": "api/v1/accounts/conversations#toggle_typing_status",
     "modelo": "Conversation",
     "motivos": [
-      "params inteiro repassado a ::Conversations::TypingStatusManager.new"
+      "params inteiro repassado a ::Conversations::TypingStatusManager.new",
+      "leitura crua sem tipo: typing_status (repassada a Conversations::ChannelTyping::DeliverJob.perform_later)"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/conversations_controller.rb:106",
+      "app/controllers/concerns/conversations/channel_typing/toggle_endpoint.rb:9",
+      "app/controllers/concerns/conversations/channel_typing/toggle_endpoint.rb:19",
+      "app/controllers/concerns/conversations/channel_typing/toggle_endpoint.rb:27",
+      "app/controllers/concerns/conversations/channel_typing/toggle_endpoint.rb:26",
+      "app/controllers/concerns/conversations/channel_typing/toggle_endpoint.rb:25",
       "app/controllers/api/v1/accounts/conversations_controller.rb:189"
     ],
     "sem_corpo": false
@@ -21076,9 +21092,9 @@
     "modelo": "Autonomia::Agents::Tool",
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:21",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:60",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:48",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:52"
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:65",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:53",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:57"
     ],
     "sem_corpo": false
   },

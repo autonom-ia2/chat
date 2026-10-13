@@ -10,7 +10,6 @@ import {
   rascunhoDeExemplo,
   validarPasso,
   variaveisEm,
-  variaveisSemCodificar,
   avisosDasInformacoes,
   passosProvaveisDoErro,
   conteudoDoRascunho,
@@ -61,15 +60,6 @@ describe('regras das Ferramentas', () => {
       expect(variaveisEm('')).toEqual([]);
       expect(variaveisEm('sem {{ fim')).toEqual([]);
     });
-
-    it('flags only query variables without url_encode', () => {
-      expect(
-        variaveisSemCodificar(
-          'https://x.com/{{numero}}?a={{termo}}&b={{ cor | url_encode }}'
-        )
-      ).toEqual(['termo']);
-      expect(variaveisSemCodificar('https://x.com/{{numero}}')).toEqual([]);
-    });
   });
 
   describe('conferirEndereco', () => {
@@ -108,6 +98,13 @@ describe('regras das Ferramentas', () => {
       true
     );
     expect(jsonValido('{ "a": 1 "b": 2 }')).toBe(false);
+  });
+
+  // Revisão 2 do #1425: numa vaga sem aspas o backend aceita texto que seja número, true, false ou
+  // null (o tipo padrão da tela é texto). A tela não sabe o valor; checa só a forma do JSON.
+  it('accepts a variable without quotes, as the backend takes a number there', () => {
+    expect(jsonValido('{ "t": {{termo}} }')).toBe(true);
+    expect(jsonValido('{ "t": "{{termo}}" }')).toBe(true);
   });
 
   it('builds the technical name from the name, without accents', () => {
@@ -328,6 +325,23 @@ describe('regras das Ferramentas', () => {
         'PREENCHE',
         false,
       ],
+      [
+        'tool_execution_error: cross_origin_redirect_error',
+        'REDIRECIONA',
+        'ENDERECO',
+        false,
+      ],
+      ['tool_execution_error: corpo_json_invalido', 'CORPO', 'PREENCHE', false],
+      ['tool_execution_error: cabecalho_invalido', 'CABECALHO', 'CHAVE', false],
+      ['tool_execution_error: parametro_invalido', 'VALOR', 'PREENCHE', false],
+      ['tool_execution_error: corpo_sem_escape', 'TIPO_DO_CORPO', null, false],
+      ['tool_execution_error: parser_error', 'NAO_JSON', 'PREENCHE', false],
+      [
+        'tool_execution_error: endereco_invalido',
+        'URL_INVALIDA',
+        'ENDERECO',
+        false,
+      ],
       ['outra coisa', 'GENERICO', null, false],
     ])('%s → %s', (erro, chave, corrigir, ambar) => {
       expect(traduzirErroDoTeste(erro)).toEqual({
@@ -338,7 +352,17 @@ describe('regras das Ferramentas', () => {
       });
     });
 
-    it('shows the call as the backend builds it, marking raw spaces in the address', () => {
+    // #1425: o detalhe é o que o agente recebe, quando a API manda.
+    it('shows in the detail what the agent receives, when the API sends it', () => {
+      const agente =
+        '{"error":"tool_http_error: 400","resposta":"falta o cep"}';
+      expect(
+        traduzirErroDoTeste('tool_http_error: 400 Bad Request', agente)
+      ).toMatchObject({ chave: 'NAO_ENTENDEU', detalhe: agente });
+    });
+
+    // Revisão 3 do #1425: o backend codifica cada valor do endereço pela posição; nada fica cru.
+    it('shows the call as the backend builds it, with the address values encoded', () => {
       const chamada = montarChamada(
         {
           metodo: 'POST',
@@ -352,17 +376,126 @@ describe('regras das Ferramentas', () => {
         { termo: 'pastilha de freio', cor: 'azul claro', loja: '7' }
       );
       expect(chamada.endereco).toEqual([
-        { texto: 'https://x.com/b?t=pastilha+de+freio&c=' },
-        { texto: 'azul claro', ruim: true },
+        { texto: 'https://x.com/b?t=pastilha+de+freio&c=azul+claro' },
       ]);
-      expect(chamada.ruim).toBe('cor');
       expect(chamada.cabecalhos).toEqual([
         'x-api-key: ••••••',
         'x-loja: 7',
         'Content-Type: application/json',
         'Accept: application/json',
       ]);
-      expect(chamada.corpo).toBe('{ "t": "pastilha de freio" }');
+      expect(chamada.corpo).toBe('{"t":"pastilha de freio"}');
+    });
+
+    it('encodes a path value as one segment and a query value as a field', () => {
+      const chamada = montarChamada(
+        {
+          metodo: 'GET',
+          endereco:
+            'https://x.com/estoque/{{p}}?t={{ q | url_encode }}&u={{q}}#ancora',
+          corpo: '',
+          cabecalhos: [],
+        },
+        { p: '../a b?x#y (ção)!', q: 'a&admin=1#z' }
+      );
+      expect(chamada.endereco).toEqual([
+        {
+          texto:
+            'https://x.com/estoque/..%2Fa%20b%3Fx%23y%20%28%C3%A7%C3%A3o%29%21?t=a%26admin%3D1%23z&u=a%26admin%3D1%23z#ancora',
+        },
+      ]);
+    });
+
+    it('keeps a fixed address identical', () => {
+      const fixo = 'https://x.com/v1?x=1&y=a%20b#frag';
+      const chamada = montarChamada(
+        { metodo: 'GET', endereco: fixo, corpo: '', cabecalhos: [] },
+        {}
+      );
+      expect(chamada.endereco).toEqual([{ texto: fixo }]);
+    });
+
+    // #1425: a prévia do corpo mostra o texto escapado, como o backend envia.
+    it('shows the body with the text escaped for JSON, as the backend sends it', () => {
+      const chamada = montarChamada(
+        {
+          metodo: 'POST',
+          endereco: 'https://x.com/b',
+          corpo: '{ "t": "{{termo}}" }',
+          cabecalhos: [],
+        },
+        { termo: 'x","admin":true' }
+      );
+      expect(chamada.corpo).toBe('{"t":"x\\",\\"admin\\":true"}');
+      expect(JSON.parse(chamada.corpo)).toEqual({ t: 'x","admin":true' });
+    });
+
+    // Revisão do #1425: a prévia espelha o backend — JSON só quando o Content-Type é JSON ou falta;
+    // formulário codifica cada valor; outro tipo mostra como foi escrito.
+    it('previews a form body with each value encoded, like the backend', () => {
+      const chamada = montarChamada(
+        {
+          metodo: 'POST',
+          endereco: 'https://x.com/b',
+          corpo: 'q={{termo}}&limit=5',
+          cabecalhos: [],
+          automaticos: [
+            { key: 'Content-Type', value: 'application/x-www-form-urlencoded' },
+          ],
+        },
+        { termo: 'a&admin=true (x)' }
+      );
+      expect(chamada.corpo).toBe('q=a%26admin%3Dtrue+%28x%29&limit=5');
+      // Revisão 2: o cabeçalho mostrado é o declarado, não um JSON fixo.
+      expect(chamada.cabecalhos).toEqual([
+        'Content-Type: application/x-www-form-urlencoded',
+        'Accept: application/json',
+      ]);
+    });
+
+    it('previews url_encode already written in a form body only once', () => {
+      const chamada = montarChamada(
+        {
+          metodo: 'POST',
+          endereco: 'https://x.com/b',
+          corpo: 'q={{ termo | url_encode }}',
+          cabecalhos: [],
+          automaticos: [
+            { key: 'Content-Type', value: 'application/x-www-form-urlencoded' },
+          ],
+        },
+        { termo: 'a b' }
+      );
+      expect(chamada.corpo).toBe('q=a+b');
+    });
+
+    it('treats an empty Content-Type as JSON', () => {
+      const chamada = montarChamada(
+        {
+          metodo: 'POST',
+          endereco: 'https://x.com/b',
+          corpo: '{"q":"{{termo}}"}',
+          cabecalhos: [],
+          automaticos: [{ key: 'Content-Type', value: ' ' }],
+        },
+        { termo: 'a"b' }
+      );
+      expect(chamada.corpo).toBe('{"q":"a\\"b"}');
+      expect(chamada.cabecalhos).toContain('Content-Type: application/json');
+    });
+
+    it('previews another body type as written', () => {
+      const chamada = montarChamada(
+        {
+          metodo: 'POST',
+          endereco: 'https://x.com/b',
+          corpo: '<q>{{termo}}</q>',
+          cabecalhos: [],
+          automaticos: [{ key: 'content-type', value: 'application/xml' }],
+        },
+        { termo: 'a"b' }
+      );
+      expect(chamada.corpo).toBe('<q>a"b</q>');
     });
 
     it('keeps the variable visible while the value is empty, and GET has no body', () => {
@@ -389,8 +522,16 @@ describe('regras das Ferramentas', () => {
         json: '{\n  "a": 1\n}',
         texto: '{"a":1}',
       });
-      const longa = `${'x'.repeat(1997)}...`;
-      expect(lerResposta(longa)).toMatchObject({ cortada: true, json: null });
+      // #1425: quem diz que cortou é a API (o mesmo corte de 8.000 do agente, com o aviso).
+      const longa = `${'x'.repeat(7900)} […cortado por tamanho]`;
+      expect(lerResposta(longa, true)).toMatchObject({
+        cortada: true,
+        json: null,
+        texto: longa,
+      });
+      expect(lerResposta(`${'x'.repeat(1997)}...`)).toMatchObject({
+        cortada: false,
+      });
       expect(lerResposta('  ')).toMatchObject({ vazia: true });
     });
   });

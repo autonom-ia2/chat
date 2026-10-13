@@ -438,18 +438,19 @@ const enviar = async () => {
     const salvos = alterando.value
       ? [await api.alterarModelo(route.params.id, rascunho.value, opcoes)]
       : await api.criarModelo(rascunho.value, opcoes);
-    // Uma conta do WhatsApp criou e a outra não: segue com a criada e diz o que faltou.
-    if (salvos.falha) {
-      useAlert(
-        t('MODELOS_WHATSAPP.CRIAR.FALHOU_UMA_CONTA', {
+    // Uma conta do WhatsApp criou e outra não: segue com a criada, e o Enviado
+    // diz qual conta ficou sem o pedido e por quê (#1387).
+    const semPedido = salvos.falha
+      ? {
+          semPedido: salvos.contasSemPedido,
           motivo: salvos.falha.mensagem || '',
-        })
-      );
-    }
+        }
+      : {};
     router.push({
       name: 'modelos_whatsapp_enviado',
       query: {
         ...origem(),
+        ...semPedido,
         ids: salvos.map(salvo => salvo.id).join(','),
         modo: modo.value,
         // Carrossel, oferta e código ainda não vão em campanha: o Enviado diz isso.
