@@ -8,9 +8,9 @@ As migrations do épico só acrescentam (tabelas, colunas, índices). Nenhuma vo
 
 ## 1. Uma conta: desligar a flag (o mais comum)
 
-> **Não use o Super Admin para isto por enquanto (alerta de 13/10/2026).** Clicar em "Update Account" desliga funções
-> que o formulário não manda (no plano das duas stacks: `crm_v2` e `inbox_view`). Até a correção sair, ninguém salva
-> conta pelo Super Admin. Mudar flag é por psql, pedido à Orquestração Deploy, que faz o backup antes.
+> **Enquanto a #1470 estiver aberta, prefira o psql.** Salvar a conta no Super Admin ("Update Account") desliga, na
+> mesma conta, funções que o formulário não manda: no plano das duas stacks, `crm_v2` e `inbox_view`. A flag do
+> agendamento em si não é afetada, mas desligá-la por ali derruba essas duas de carona.
 
 - **Como:** psql via SSM dentro do `chatwoot-web` (nunca `rails runner`), com OK do Rodrigo. O bit é o mesmo da seção 2
   (máscara 16384 em `feature_flags_ext_1`):
@@ -28,8 +28,8 @@ As migrations do épico só acrescentam (tabelas, colunas, índices). Nenhuma vo
   ```
 
   Religar: `feature_flags_ext_1 = feature_flags_ext_1 | 16384`.
-- **Depois da correção do Super Admin:** Accounts › a conta › Edit › em Features, desmarcar **"Agendamento
-  WhatsApp-first (CRM)"** (`crm_booking_v2`) › Save. Tirar este aviso quando a correção estiver no ar.
+- **Pelo Super Admin (depois da #1470 corrigida):** Accounts › a conta › Edit › em Features, desmarcar **"Agendamento
+  WhatsApp-first (CRM)"** (`crm_booking_v2`) › Update Account. Com a #1470 no ar, tirar o aviso acima.
 - **Efeito:** as rotas novas passam a responder 404, a página pública nova e o link curto `/a/...` param, o menu volta ao
   Calendário solto e o botão "Agendamento" do Kanban volta para a gaveta antiga. As reuniões já marcadas continuam no
   calendário. O cron de avisos não envia nada para conta sem a flag.
