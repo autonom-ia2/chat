@@ -5,11 +5,13 @@ import { CAMPOS } from '../constants';
 import { ajustarEspacosDosCampos, juntarTextos } from '../helpers/conteudo';
 import { rotuloDoCampo as rotuloDoCampoDe } from '../helpers/campos';
 
-defineProps({
+const props = defineProps({
   rotulo: { type: String, required: true },
   destacarFim: { type: Boolean, default: false },
   // Campos oferecidos para inserir; a conversa aberta (#1335) usa chaves do catálogo.
   campos: { type: Array, default: () => CAMPOS },
+  // Nome de campo que o catálogo não conhece (coluna do Público): { chave: nome }.
+  rotulos: { type: Object, default: () => ({}) },
 });
 
 // Caixa de texto da mensagem. Os campos ("Nome do cliente") entram como
@@ -25,7 +27,8 @@ let ultimoEmitido = '';
 const CLASSE_DA_ETIQUETA =
   'inline-flex items-center px-1.5 mx-px text-sm font-medium align-baseline rounded-md select-none bg-n-blue-3 text-n-blue-11';
 
-const rotuloDoCampo = campo => rotuloDoCampoDe(t, campo);
+const rotuloDoCampo = campo =>
+  props.rotulos[campo] || rotuloDoCampoDe(t, campo);
 
 const criarEtiqueta = campo => {
   const etiqueta = document.createElement('span');

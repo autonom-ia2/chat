@@ -811,8 +811,6 @@
       "DENTRO": "{n} pessoa falou com você | {n} pessoas falaram com você",
       "DENTRO_PODE": "Pode receber uma mensagem escrita por você, sem modelo.",
       "DENTRO_RECEBE_TEXTO": "Recebe a sua mensagem. {custo}",
-      "GRATIS": "Grátis.",
-      "PASSA_DA_FRANQUIA": "As {gratis} primeiras saem grátis; o resto custa {valor}.",
       "FORA": "{n} pessoa não falou | {n} pessoas não falaram",
       "FORA_MODELO": "Recebe o modelo escolhido acima.",
       "FORA_SEM_MODELO": "Escolha um modelo acima para quem não falou com você.",
@@ -849,7 +847,8 @@
         "DESFAZER": "Desfazer",
         "COMO_CHEGA": "Como chega no WhatsApp",
         "CANCELAR": "Cancelar",
-        "PRONTO": "Pronto"
+        "PRONTO": "Pronto",
+        "LINK_DIGITADO": "Link não pode ser digitado no texto. Use o botão do campo (ex.: o link da oferta, vindo do público)."
       },
       "REVISAO": {
         "TITULO": "Quanto custa",
@@ -858,8 +857,16 @@
         "MODELO": "{n} pessoa recebe o modelo “{nome}” ({preco} cada) | {n} pessoas recebem o modelo “{nome}” ({preco} cada)",
         "TOTAL": "Total",
         "ECONOMIZOU": "Você economiza {valor} escrevendo para quem falou com você.",
-        "ESTIMATIVA": "É uma estimativa: na hora de enviar conferimos de novo quem falou com você nas últimas 24 horas."
-      }
+        "ESTIMATIVA": "É uma estimativa: na hora de enviar conferimos de novo quem falou com você nas últimas 24 horas.",
+        "CONTEUDO_TEXTO": "Quem falou com você nas últimas 24 horas recebe: “{texto}”"
+      },
+      "CUSTO_ESCRITA": {
+        "gratis": "Grátis (dentro das {limite} do mês: sobram {sobram}).",
+        "passa": "{gratis} saem grátis (sobram {sobram} das {limite} do mês); as outras {pagas} custam {preco} cada: {valor}.",
+        "sem_franquia": "Não conseguimos ver as grátis do mês: conte com até {valor} ({preco} cada)."
+      },
+      "CANAL_HINT": "Modelo aprovado pela Meta. Quem falou com você nas últimas 24 horas pode receber uma mensagem escrita por você.",
+      "AVISO_PROPAGANDA": "Mensagem de propaganda demais pode levar a bloqueio. Escreva algo útil para a pessoa."
     }
   }
 }

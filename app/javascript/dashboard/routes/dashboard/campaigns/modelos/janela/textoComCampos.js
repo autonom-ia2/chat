@@ -37,3 +37,28 @@ export const juntar = lista =>
       pedaco.t === 'campo' ? `${ABRE}${pedaco.v}${FECHA}` : pedaco.v
     )
     .join('');
+
+// Link só entra por campo (decisão do Rodrigo, 13/10/2026): endereço digitado
+// no texto fixo não vale. Mesma conferência estrutural do canal whatsapp_texto
+// no backend (Ai::Redacao::Canais::WhatsappTexto): "://", "www." ou um ponto
+// entre duas letras numa palavra ("loja.com"). Fim de frase ("hoje.") não conta.
+const MARCAS_DE_ENDERECO = ['://', 'www.'];
+const letra = char =>
+  Boolean(char) && char.toUpperCase() !== char.toLowerCase();
+const pareceDominio = palavra =>
+  [...palavra].some(
+    (char, i, letras) =>
+      char === '.' && i > 0 && letra(letras[i - 1]) && letra(letras[i + 1])
+  );
+
+export const temLinkDigitado = texto => {
+  const fixo = pedacos(texto)
+    .filter(pedaco => pedaco.t === 'texto')
+    .map(pedaco => pedaco.v)
+    .join(' ')
+    .toLowerCase();
+  return (
+    MARCAS_DE_ENDERECO.some(marca => fixo.includes(marca)) ||
+    fixo.split(' ').some(pareceDominio)
+  );
+};

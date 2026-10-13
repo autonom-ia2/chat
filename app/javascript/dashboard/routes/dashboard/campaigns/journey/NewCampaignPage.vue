@@ -73,6 +73,8 @@ import RevisaoDoModelo from '../modelos/ponte/RevisaoDoModelo.vue';
 import { rotuloDoCampo } from '../modelos/helpers/campos';
 // Fork (#1335, protótipo): conversa aberta — quem falou nas últimas 24 h recebe texto escrito.
 import { useConversaAberta } from '../modelos/janela/useConversaAberta';
+import { previa } from '../modelos/janela/textoComCampos';
+import { audienceColumnTokens } from 'dashboard/components-next/CampaignJourney/audienceTokens';
 import ConversaAberta from '../modelos/janela/components/ConversaAberta.vue';
 import RevisaoDaConversaAberta from '../modelos/janela/components/RevisaoDaConversaAberta.vue';
 import {
@@ -299,11 +301,52 @@ const conversaAberta = useConversaAberta(
     tipoDoModelo: modeloEscolhido.value?.tipo || null,
   }))
 );
+// O cartão do WhatsApp oficial deixa de dizer "só para quem ainda não falou".
+const dicasDosCanais = computed(() =>
+  ponteAtiva.value
+    ? {
+        [CAMPAIGN_CHANNELS.WHATSAPP_OFFICIAL]: t(
+          'MODELOS_WHATSAPP.JANELA.CANAL_HINT'
+        ),
+      }
+    : {}
+);
+// Campos da mensagem escrita: nome do cliente, da empresa e o site, mais as
+// colunas do Público (o link da oferta vem daqui; nunca digitado no texto).
+const CAMPOS_FIXOS_DO_TEXTO = [
+  'cliente.primeiro_nome',
+  'minha_empresa.nome',
+  'minha_empresa.site',
+];
+const colunasDoTexto = computed(() => audienceColumnTokens(columns.value));
+const camposDoTexto = computed(() => [
+  ...CAMPOS_FIXOS_DO_TEXTO.map(chave => ({
+    chave,
+    rotulo: rotuloDoCampo(t, chave),
+  })),
+  ...colunasDoTexto.value.map(coluna => ({
+    chave: coluna.token,
+    rotulo: coluna.header,
+  })),
+]);
 const exemplosDoTexto = computed(() => ({
   'cliente.primeiro_nome':
     sample.value?.first_name || sample.value?.name?.split(' ')[0] || 'Ana',
   'minha_empresa.nome': currentAccount.value?.name || remetente.value,
+  'minha_empresa.site': currentAccount.value?.domain || '',
+  ...Object.fromEntries(
+    colunasDoTexto.value.map(coluna => [
+      coluna.token,
+      sample.value?.extra_values?.[coluna.header] || coluna.header,
+    ])
+  ),
 }));
+const textoNaRevisao = () =>
+  comConversaAberta.value && draft.value.textoNaConversaAberta
+    ? t('MODELOS_WHATSAPP.JANELA.REVISAO.CONTEUDO_TEXTO', {
+        texto: previa(draft.value.textoNaConversaAberta, exemplosDoTexto.value),
+      })
+    : '';
 const inboxName = computed(
   () =>
     (forms.inboxes.value || []).find(inbox => inbox.id === draft.value.inboxId)
@@ -390,7 +433,8 @@ const reviewBlocks = computed(() => [
     step: 2,
     title: t(`${NS}.REVIEW.CONTENT`),
     main: messageMain(),
-    detail: '',
+    // Fork (#1335): a mensagem escrita para quem falou nas últimas 24 h.
+    detail: textoNaRevisao(),
   },
 ]);
 const crmTag = computed(() =>
@@ -899,6 +943,7 @@ onBeforeUnmount(() => {
           v-else-if="draft.step === 2 && audience"
           :audience="audience"
           :channels="channels"
+          :channel-hints="dicasDosCanais"
           :draft="draft"
           :inbox-options="inboxOptions"
           :template-options="templateOptions"
@@ -958,6 +1003,8 @@ onBeforeUnmount(() => {
               :janela="conversaAberta"
               :texto="draft.textoNaConversaAberta || ''"
               :exemplos="exemplosDoTexto"
+              :campos="camposDoTexto"
+              :divulgacao="modeloEscolhido.tipo === 'divulgacao'"
               tem-modelo
               @update="update"
             />

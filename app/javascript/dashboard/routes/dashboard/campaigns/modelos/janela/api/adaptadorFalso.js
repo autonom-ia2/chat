@@ -1,9 +1,11 @@
 // Adaptador FALSO do protótipo (#1335). Números e textos inventados, para a
 // jornada poder ser clicada antes do backend. `?demo=` no endereço mostra os
-// outros casos: `ninguem` (ninguém do público falou nas últimas 24 h), `erro`
-// (a ajuda para escrever não responde) e `pergunta` (a ajuda pede mais detalhe).
+// outros casos: `ninguem` (ninguém do público falou nas últimas 24 h), `muitos`
+// (mais gente do que as grátis que sobram no mês), `erro` (a ajuda para
+// escrever não responde) e `pergunta` (a ajuda pede mais detalhe).
 const ESPERA_MS = 900;
 const PARTE_QUE_FALOU = 0.031;
+const MUITOS = 900;
 
 // Lido quando o módulo carrega: a Nova campanha reescreve o endereço logo depois.
 const MODO_DEMO = new URLSearchParams(window.location.search).get('demo') || '';
@@ -16,10 +18,14 @@ const esperar = () =>
 
 const contarJanela = async ({ total }) => {
   await esperar();
-  const dentro =
-    modoDemo() === 'ninguem'
-      ? 0
-      : Math.min(total, Math.max(1, Math.round(total * PARTE_QUE_FALOU)));
+  const quantos = {
+    ninguem: 0,
+    muitos: MUITOS,
+  }[modoDemo()];
+  const dentro = Math.min(
+    total,
+    quantos ?? Math.max(1, Math.round(total * PARTE_QUE_FALOU))
+  );
   return {
     dentro,
     fora: total - dentro,
@@ -42,7 +48,14 @@ const MELHORADAS = {
     '{{cliente.primeiro_nome}}, a coleção nova chegou hoje. Se quiser ver as fotos, responda esta mensagem que eu mando aqui mesmo.',
 };
 
-const escrever = async ({ pedido }) => {
+// Com uma coluna do Público na lista de campos, a 2ª opção usa ela como link
+// (no backend, a escolha do campo é da IA, dentro das chaves permitidas).
+const comLink = (texto, campos = []) => {
+  const coluna = campos.find(chave => chave.startsWith('publico.'));
+  return coluna ? `${texto} Veja as peças aqui: {{${coluna}}}` : texto;
+};
+
+const escrever = async ({ pedido, campos }) => {
   await esperar();
   const modo = modoDemo();
   if (modo === 'erro') throw new Error('indisponivel');
@@ -63,7 +76,7 @@ const escrever = async ({ pedido }) => {
   }
   return {
     status: 'ok',
-    opcoes: OPCOES.map(texto => ({ texto })),
+    opcoes: [{ texto: OPCOES[0] }, { texto: comLink(OPCOES[1], campos) }],
     pergunta: null,
   };
 };

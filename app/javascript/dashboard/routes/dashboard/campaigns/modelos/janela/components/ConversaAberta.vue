@@ -15,6 +15,9 @@ const props = defineProps({
   texto: { type: String, default: '' },
   exemplos: { type: Object, default: () => ({}) },
   temModelo: { type: Boolean, default: false },
+  // [{ chave, rotulo }] que a mensagem pode usar.
+  campos: { type: Array, default: () => [] },
+  divulgacao: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['update']);
@@ -35,14 +38,15 @@ const economia = computed(() => {
   return valor > 0 ? props.janela.dinheiro(valor) : '';
 });
 
+// Contrato da #1322: grátis até 1.000 por número no mês; depois, tarifa de serviço.
 const custoDaEscrita = computed(() => {
-  const restantes = props.janela.gratisRestantes.value;
-  if (restantes == null || dentro.value <= restantes) {
-    return t(`${NS}.GRATIS`);
-  }
-  return t(`${NS}.PASSA_DA_FRANQUIA`, {
-    gratis: n(restantes),
-    valor: props.janela.dinheiro(props.janela.custoEscrita(dentro.value)),
+  const resumo = props.janela.resumoDaEscrita(dentro.value);
+  return t(`${NS}.CUSTO_ESCRITA.${resumo.tipo}`, {
+    ...resumo,
+    sobram: n(resumo.sobram ?? 0),
+    limite: n(resumo.limite ?? 0),
+    pagas: n(resumo.pagas),
+    gratis: n(resumo.gratis),
   });
 });
 
@@ -126,6 +130,18 @@ const usar = texto => {
         </li>
       </ul>
 
+      <p
+        v-if="divulgacao"
+        data-aviso-propaganda
+        class="flex gap-2 p-3 m-0 text-sm rounded-xl bg-n-amber-2 text-n-slate-12"
+      >
+        <span
+          class="i-lucide-triangle-alert size-4 mt-0.5 shrink-0 text-n-amber-11"
+          aria-hidden="true"
+        />
+        {{ t(`${NS}.AVISO_PROPAGANDA`) }}
+      </p>
+
       <div v-if="texto" data-texto-pronto class="flex flex-col gap-3">
         <div class="p-3 rounded-2xl bg-n-teal-2">
           <p
@@ -179,6 +195,8 @@ const usar = texto => {
       :texto="texto"
       :exemplos="exemplos"
       :escrever="janela.escrever"
+      :campos="campos"
+      :divulgacao="divulgacao"
       @usar="usar"
       @fechar="aberta = false"
     />

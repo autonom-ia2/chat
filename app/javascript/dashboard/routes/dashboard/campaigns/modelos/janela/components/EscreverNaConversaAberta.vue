@@ -6,7 +6,7 @@ import AgenteGaveta from 'dashboard/routes/dashboard/autonomia/agentes/component
 import ModeloEditorTexto from '../../components/ModeloEditorTexto.vue';
 import { rotuloDoCampo } from '../../helpers/campos';
 import { numero } from '../../helpers/datas';
-import { juntar, pedacos, previa } from '../textoComCampos';
+import { juntar, pedacos, previa, temLinkDigitado } from '../textoComCampos';
 
 // A ajuda para escrever a mensagem da conversa aberta (#1335). Uma coisa por
 // vez: dizer o que quer → escolher uma opção → ajustar e "Pronto". "Alterar"
@@ -17,12 +17,15 @@ const props = defineProps({
   exemplos: { type: Object, default: () => ({}) },
   // (pedido) → { status, opcoes: [{ texto }], pergunta }
   escrever: { type: Function, required: true },
+  // Campos que a mensagem pode usar: [{ chave, rotulo }] (catálogo e colunas do Público).
+  campos: { type: Array, default: () => [] },
+  // O modelo escolhido é de divulgação: mostra o aviso de propaganda.
+  divulgacao: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['usar', 'fechar']);
 
 const NS = 'MODELOS_WHATSAPP.JANELA.GAVETA';
-const CAMPOS_DO_TEXTO = ['cliente.primeiro_nome', 'minha_empresa.nome'];
 const TONS = ['simpatico', 'curto', 'formal'];
 const MELHORIAS = [
   { chave: 'mais_curta', icone: 'i-lucide-scissors' },
@@ -46,6 +49,12 @@ const titulo = computed(() =>
 );
 const textoAtual = computed(() => juntar(conteudo.value));
 const vazio = computed(() => !textoAtual.value.trim());
+const linkDigitado = computed(() => temLinkDigitado(textoAtual.value));
+const chaves = computed(() => props.campos.map(campo => campo.chave));
+const rotulos = computed(() =>
+  Object.fromEntries(props.campos.map(campo => [campo.chave, campo.rotulo]))
+);
+const rotular = chave => rotulos.value[chave] || rotuloDoCampo(t, chave);
 
 const pedirOpcoes = async () => {
   etapa.value = 'escrevendo';
@@ -55,6 +64,7 @@ const pedirOpcoes = async () => {
       resposta: resposta.value,
       tom: tom.value,
       quantos: props.quantos,
+      campos: chaves.value,
     });
     if (saida.status === 'precisa_mais_info') {
       pergunta.value = saida.pergunta;
@@ -86,6 +96,7 @@ const melhorar = async chave => {
       pedido: { melhoria: chave },
       tom: tom.value,
       quantos: props.quantos,
+      campos: chaves.value,
     });
     if (saida.opcoes?.length) {
       anterior.value = conteudo.value;
@@ -107,6 +118,17 @@ const desfazer = () => {
 <template>
   <AgenteGaveta :titulo="titulo" @fechar="emit('fechar')">
     <div data-escrever-conversa-aberta class="flex flex-col gap-5">
+      <p
+        v-if="divulgacao"
+        data-aviso-propaganda
+        class="flex gap-2 p-3 m-0 text-sm rounded-xl bg-n-amber-2 text-n-slate-12"
+      >
+        <span
+          class="i-lucide-triangle-alert size-4 mt-0.5 shrink-0 text-n-amber-11"
+          aria-hidden="true"
+        />
+        {{ t('MODELOS_WHATSAPP.JANELA.AVISO_PROPAGANDA') }}
+      </p>
       <template v-if="etapa === 'pedir' || etapa === 'pergunta'">
         <label class="flex flex-col gap-2">
           <span class="text-base font-medium text-n-slate-12">
@@ -240,7 +262,7 @@ const desfazer = () => {
                   v-if="pedaco.t === 'campo'"
                   class="px-1 text-sm font-medium rounded bg-n-blue-3 text-n-blue-11"
                 >
-                  {{ rotuloDoCampo(t, pedaco.v) }}
+                  {{ rotular(pedaco.v) }}
                 </span>
                 <span v-else>{{ pedaco.v }}</span>
               </template>
@@ -270,8 +292,18 @@ const desfazer = () => {
         <ModeloEditorTexto
           v-model="conteudo"
           :rotulo="t(`${NS}.SUA_MENSAGEM`)"
-          :campos="CAMPOS_DO_TEXTO"
+          :campos="chaves"
+          :rotulos="rotulos"
+          :destacar-fim="linkDigitado"
         />
+        <p
+          v-if="linkDigitado"
+          data-link-digitado
+          role="alert"
+          class="p-3 m-0 text-sm rounded-xl bg-n-ruby-2 text-n-slate-12"
+        >
+          {{ t(`${NS}.LINK_DIGITADO`) }}
+        </p>
         <div v-if="!vazio" class="flex flex-col gap-2">
           <span class="text-sm font-medium text-n-slate-12">
             {{ t(`${NS}.MELHORAR`) }}
@@ -339,7 +371,7 @@ const desfazer = () => {
           :label="t(`${NS}.PRONTO`)"
           icon="i-lucide-check"
           class="!min-h-11"
-          :disabled="vazio"
+          :disabled="vazio || linkDigitado"
           @click="emit('usar', textoAtual)"
         />
       </div>

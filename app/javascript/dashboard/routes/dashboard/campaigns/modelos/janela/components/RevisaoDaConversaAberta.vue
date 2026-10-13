@@ -27,6 +27,16 @@ const fora = computed(() => {
 const precoModelo = computed(() => props.janela.precoModelo.value);
 
 const custoTexto = computed(() => props.janela.custoEscrita(dentro.value));
+const resumo = computed(() => {
+  const dados = props.janela.resumoDaEscrita(dentro.value);
+  return {
+    ...dados,
+    sobram: n(dados.sobram ?? 0),
+    limite: n(dados.limite ?? 0),
+    pagas: n(dados.pagas),
+    gratis: n(dados.gratis),
+  };
+});
 const custoModelo = computed(() => props.janela.custoModelo(fora.value));
 const total = computed(() => custoTexto.value + custoModelo.value);
 const semTexto = computed(() =>
@@ -52,10 +62,17 @@ const semTexto = computed(() =>
         <span class="text-n-slate-12">
           {{ t(`${NS}.TEXTO`, { n: n(dentro) }, dentro) }}
         </span>
-        <span class="font-medium text-end text-n-teal-11">
-          {{
-            custoTexto ? janela.dinheiro(custoTexto) : t(`${NS}.GRATIS`)
-          }}
+        <span
+          class="font-medium text-end"
+          :class="custoTexto ? 'text-n-slate-12' : 'text-n-teal-11'"
+        >
+          {{ custoTexto ? janela.dinheiro(custoTexto) : t(`${NS}.GRATIS`) }}
+        </span>
+        <span
+          data-franquia-da-escrita
+          class="col-span-2 text-xs text-n-slate-11"
+        >
+          {{ t(`MODELOS_WHATSAPP.JANELA.CUSTO_ESCRITA.${resumo.tipo}`, resumo) }}
         </span>
       </li>
       <li

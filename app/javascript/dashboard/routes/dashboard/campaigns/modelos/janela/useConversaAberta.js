@@ -18,9 +18,13 @@ export function useConversaAberta(entrada) {
 
   const contar = async () => {
     const { publicoId, caixaId, total } = entrada.value;
-    contagem.value = null;
-    if (!publicoId || !caixaId || !total) return;
-    carregando.value = true;
+    if (!publicoId || !caixaId || !total) {
+      contagem.value = null;
+      return;
+    }
+    // Recontagem (ex.: o total do público chegou depois) mantém o número
+    // anterior na tela até o novo chegar: a gaveta aberta não cai para zero.
+    carregando.value = !contagem.value;
     try {
       contagem.value = await api.contarJanela({ publicoId, caixaId, total });
     } catch {
@@ -45,11 +49,17 @@ export function useConversaAberta(entrada) {
     }
   };
 
+  // Outro público ou outra caixa: zera e conta de novo. Só o total mudou:
+  // conta de novo mantendo o número na tela.
   watch(
-    () => [entrada.value.publicoId, entrada.value.caixaId, entrada.value.total],
-    contar,
+    () => [entrada.value.publicoId, entrada.value.caixaId],
+    () => {
+      contagem.value = null;
+      contar();
+    },
     { immediate: true }
   );
+  watch(() => entrada.value.total, contar);
   watch(() => entrada.value.tipoDoModelo, lerPrecos, { immediate: true });
 
   // Grátis que ainda restam neste número no mês.
@@ -68,12 +78,32 @@ export function useConversaAberta(entrada) {
       maximumFractionDigits: casas,
     }).format(valor);
 
-  // Mensagem escrita: grátis até acabar a franquia; o que passar paga a tarifa.
-  const custoEscrita = quantos => {
-    const pagas = Math.max(quantos - (gratisRestantes.value ?? quantos), 0);
-    return pagas * (precoResposta.value?.valor || 0);
-  };
+  const limiteDaFranquia = computed(() => franquia.value?.limite ?? null);
+
+  // Mensagem escrita (contrato da #1322, Whatsapp::Pricing.free_tier): grátis
+  // até acabar a franquia do mês deste número; o que passar paga a tarifa de
+  // serviço. Sem a franquia lida, conta tudo como pago (nunca promete grátis).
+  const pagasNaEscrita = quantos =>
+    Math.max(quantos - (gratisRestantes.value ?? 0), 0);
+  const custoEscrita = quantos =>
+    pagasNaEscrita(quantos) * (precoResposta.value?.valor || 0);
   const custoModelo = quantos => quantos * (precoModelo.value?.valor || 0);
+
+  // O que a tela diz sobre o custo da mensagem escrita para `quantos`:
+  // 'gratis' (cabe nas que sobram), 'passa' (parte cobrada) ou 'sem_franquia'.
+  const resumoDaEscrita = quantos => {
+    const sobram = gratisRestantes.value;
+    const base = {
+      sobram,
+      limite: limiteDaFranquia.value,
+      pagas: pagasNaEscrita(quantos),
+      gratis: Math.min(quantos, sobram ?? 0),
+      valor: dinheiro(custoEscrita(quantos)),
+      preco: precoResposta.value ? dinheiro(precoResposta.value.valor, 4) : '',
+    };
+    if (sobram == null) return { ...base, tipo: 'sem_franquia' };
+    return { ...base, tipo: quantos <= sobram ? 'gratis' : 'passa' };
+  };
 
   return {
     contagem,
@@ -81,9 +111,12 @@ export function useConversaAberta(entrada) {
     precoModelo,
     precoResposta,
     gratisRestantes,
+    limiteDaFranquia,
     dinheiro,
+    pagasNaEscrita,
     custoEscrita,
     custoModelo,
+    resumoDaEscrita,
     escrever: api.escrever,
   };
 }
