@@ -24,36 +24,33 @@ const canRetry = computed(() => {
 });
 </script>
 
+<!-- chat#1473: o motivo fica escrito na conversa (no celular não existe passar o mouse) e o reenvio tem rótulo. -->
 <template>
-  <div class="text-xs text-n-ruby-11 flex items-center gap-1.5">
-    <span>{{ t('CHAT_LIST.FAILED_TO_SEND') }}</span>
-    <div class="relative group">
-      <div
-        class="bg-n-alpha-2 rounded-md size-5 grid place-content-center cursor-pointer"
-      >
-        <Icon
-          icon="i-lucide-alert-triangle"
-          class="text-n-ruby-11 size-[14px]"
-        />
-      </div>
-      <div
-        class="absolute bg-n-alpha-3 px-4 py-3 border rounded-xl border-n-strong text-n-slate-12 bottom-6 w-52 text-xs backdrop-blur-[100px] shadow-[0px_0px_24px_0px_rgba(0,0,0,0.12)] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all break-all"
-        :class="{
-          'ltr:left-0 rtl:right-0': orientation === ORIENTATION.LEFT,
-          'ltr:right-0 rtl:left-0': orientation === ORIENTATION.RIGHT,
-        }"
-      >
+  <div
+    class="flex flex-col gap-1.5 min-w-0 text-xs text-n-ruby-11"
+    :class="orientation === ORIENTATION.RIGHT ? 'items-end' : 'items-start'"
+  >
+    <div class="flex items-start gap-1.5 max-w-lg min-w-0">
+      <Icon
+        icon="i-lucide-alert-triangle"
+        class="size-[14px] mt-px flex-shrink-0"
+      />
+      <span class="min-w-0 break-words">
+        <span class="font-medium">
+          {{ `${t('CHAT_LIST.FAILED_TO_SEND')}.` }}
+        </span>
         {{ error }}
-      </div>
+      </span>
     </div>
     <button
       v-if="canRetry"
       type="button"
       :disabled="status !== MESSAGE_STATUS.FAILED"
-      class="bg-n-alpha-2 rounded-md size-5 grid place-content-center cursor-pointer"
+      class="inline-flex items-center gap-1.5 min-h-11 px-3 rounded-lg bg-n-alpha-2 font-medium cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
       @click="emit('retry')"
     >
-      <Icon icon="i-lucide-refresh-ccw" class="text-n-ruby-11 size-[14px]" />
+      <Icon icon="i-lucide-refresh-ccw" class="size-[14px] flex-shrink-0" />
+      {{ t('RICH_MESSAGE.FAILURE.RETRY') }}
     </button>
   </div>
 </template>

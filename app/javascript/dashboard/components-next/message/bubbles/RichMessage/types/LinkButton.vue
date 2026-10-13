@@ -1,0 +1,46 @@
+<script setup>
+// Botão de link: `{ type: 'link_button', label, url, header?, footer? }`, com o corpo em `content`.
+import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
+import { useMessageContext } from '../../../provider.js';
+import Frame from '../Frame.vue';
+import ActionRow from '../ActionRow.vue';
+
+const { contentAttributes } = useMessageContext();
+const { t } = useI18n();
+
+// O rótulo e o endereço vêm de quem chamou a API: só texto entra na tela.
+const textOf = value => (typeof value === 'string' ? value : '');
+
+// A conversa pode ter mensagem antiga ou de outra origem: só endereço http ou https vira link.
+const isHttpUrl = value => {
+  try {
+    return ['http:', 'https:'].includes(new URL(value).protocol);
+  } catch (error) {
+    return false;
+  }
+};
+
+const richMessage = computed(() => contentAttributes.value?.richMessage ?? {});
+const url = computed(() => textOf(richMessage.value.url));
+const href = computed(() => (isHttpUrl(url.value) ? url.value : ''));
+</script>
+
+<template>
+  <Frame
+    bubble-name="rich-link-button"
+    :header="textOf(richMessage.header)"
+    :footer="textOf(richMessage.footer)"
+  >
+    <div class="flex flex-col gap-1.5">
+      <ActionRow
+        icon="i-lucide-external-link"
+        :label="textOf(richMessage.label)"
+        :href="href"
+      />
+      <div class="text-xs text-n-slate-11 break-all">
+        {{ t('RICH_MESSAGE.LINK_BUTTON.OPENS', { url }) }}
+      </div>
+    </div>
+  </Frame>
+</template>
