@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_10_25_100000) do
+ActiveRecord::Schema[7.2].define(version: 2026_10_27_100000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -418,10 +418,12 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_25_100000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.datetime "deleted_at"
+    t.string "papel", default: "porta", null: false
     t.index ["account_id"], name: "index_autonomia_agent_inboxes_on_account_id"
     t.index ["agent_bot_id"], name: "index_autonomia_agent_inboxes_on_agent_bot_id"
     t.index ["autonomia_agent_id"], name: "index_autonomia_agent_inboxes_on_autonomia_agent_id"
-    t.index ["inbox_id"], name: "idx_autonomia_agent_inboxes_on_live_inbox_uniq", unique: true, where: "(deleted_at IS NULL)"
+    t.index ["inbox_id", "autonomia_agent_id"], name: "idx_autonomia_agent_inboxes_on_live_inbox_agent_uniq", unique: true, where: "(deleted_at IS NULL)"
+    t.index ["inbox_id"], name: "idx_autonomia_agent_inboxes_on_live_porta_uniq", unique: true, where: "(((papel)::text = 'porta'::text) AND (deleted_at IS NULL))"
   end
 
   create_table "autonomia_agent_instruction_versions", force: :cascade do |t|
