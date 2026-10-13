@@ -274,21 +274,27 @@ const conectarHref = computed(
                   })
             }}
           </p>
+          <!-- #1387: diz qual conta do WhatsApp não respondeu. -->
           <p
-            v-if="modelos.parcial"
+            v-for="(conta, indice) in modelos.naoLeu || []"
+            :key="indice"
             data-lista-parcial
             role="status"
-            class="flex items-center gap-3 px-4 py-3 mb-0 text-[0.9375rem] rounded-xl bg-n-amber-2 text-n-slate-12"
+            class="flex items-start gap-3 px-4 py-3 mb-0 text-[0.9375rem] rounded-xl bg-n-amber-2 text-n-slate-12"
           >
             <span
-              class="i-lucide-triangle-alert size-5 shrink-0 text-n-amber-11"
+              class="i-lucide-triangle-alert size-5 mt-0.5 shrink-0 text-n-amber-11"
               aria-hidden="true"
             />
-            {{ $t('MODELOS_WHATSAPP.LISTA.PARCIAL') }}
+            {{ $t('MODELOS_WHATSAPP.LISTA.PARCIAL', { conta }) }}
           </p>
 
           <div class="flex flex-wrap items-center gap-3">
-            <label class="relative flex-1 min-w-[min(100%,16rem)]">
+            <!-- #1387 (L14): busca na altura dos campos do design system (40 px, a mesma
+                 do filtro ao lado), com o rótulo levando a área de toque a 44 px. -->
+            <label
+              class="relative flex items-center flex-1 min-h-11 min-w-[min(100%,16rem)]"
+            >
               <span class="sr-only">{{
                 $t('MODELOS_WHATSAPP.LISTA.BUSCAR')
               }}</span>
@@ -301,7 +307,7 @@ const conectarHref = computed(
                 data-busca
                 type="search"
                 :placeholder="$t('MODELOS_WHATSAPP.LISTA.BUSCAR')"
-                class="w-full !mb-0 !h-12 !ps-11 !rounded-xl !text-base !bg-n-solid-1 !border-0 outline outline-1 outline-n-weak focus:outline-2 focus:outline-n-brand text-n-slate-12"
+                class="w-full !mb-0 !h-10 !ps-11 !rounded-lg !text-base !bg-n-solid-1 !border-0 outline outline-1 outline-n-weak focus:outline-2 focus:outline-n-brand text-n-slate-12"
               />
             </label>
             <ChoiceSelect

@@ -151,3 +151,13 @@ export const ordenarBotoes = botoes => [
   ...botoes.filter(botao => botao.tipo === 'resposta'),
   ...botoes.filter(botao => botao.tipo !== 'resposta'),
 ];
+
+// Com mais de 3 botões, o WhatsApp mostra só os 2 primeiros e troca o resto por
+// "Ver todas as opções" (Meta, componentes do modelo: "If a template has more than
+// three buttons, two buttons appear in the delivered message"). A prévia faz igual.
+export const BOTOES_A_VISTA = 3;
+export const botoesNoCelular = botoes => {
+  if (botoes.length <= BOTOES_A_VISTA) return { aVista: botoes, escondidos: 0 };
+  const aVista = botoes.slice(0, BOTOES_A_VISTA - 1);
+  return { aVista, escondidos: botoes.length - aVista.length };
+};

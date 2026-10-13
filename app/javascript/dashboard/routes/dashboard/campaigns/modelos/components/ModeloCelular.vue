@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { CODIGO_DE_EXEMPLO, TIPOS_DE_BOTAO } from '../constants';
 import { trocarCamposPorExemplos } from '../helpers/conteudo';
 import { rotuloDoCampo } from '../helpers/campos';
+import { botoesNoCelular } from '../helpers/regraEstrutural';
 import CelularCartoes from './celular/CelularCartoes.vue';
 import CelularOferta from './celular/CelularOferta.vue';
 
@@ -98,6 +99,9 @@ const botoes = computed(() => {
       : botao
   );
 });
+
+// Mais de 3 botões: o WhatsApp mostra 2 e "Ver todas as opções" (#1387, L8).
+const botoesNaTela = computed(() => botoesNoCelular(botoes.value));
 
 const rodape = computed(() => {
   if (formato.value === 'codigo') {
@@ -206,7 +210,7 @@ const vazio = computed(() => !pedacos.value.length);
         :cartoes="conteudo.cartoes"
       />
       <span
-        v-for="(botao, indice) in botoes"
+        v-for="(botao, indice) in botoesNaTela.aVista"
         :key="indice"
         data-celular-botao
         class="flex items-center justify-center gap-1.5 py-2 text-sm font-medium shadow-sm rounded-xl bg-n-solid-1 text-n-blue-11 max-w-[92%]"
@@ -217,6 +221,14 @@ const vazio = computed(() => !pedacos.value.length);
           aria-hidden="true"
         />
         {{ botao.texto || $t('MODELOS_WHATSAPP.CELULAR.BOTAO_SEM_TEXTO') }}
+      </span>
+      <span
+        v-if="botoesNaTela.escondidos"
+        data-celular-ver-todas
+        class="flex items-center justify-center gap-1.5 py-2 text-sm font-medium shadow-sm rounded-xl bg-n-solid-1 text-n-blue-11 max-w-[92%]"
+      >
+        <span class="i-lucide-list size-4" aria-hidden="true" />
+        {{ $t('MODELOS_WHATSAPP.CELULAR.VER_TODAS_AS_OPCOES') }}
       </span>
     </div>
   </figure>

@@ -39,7 +39,7 @@
         "LIMITE": "Not created: template limit"
       },
       "CONTA": "Account {nome}",
-      "PARCIAL": "We could not read the templates of one WhatsApp account now. Some templates may be missing from the list.",
+      "PARCIAL": "We could not read the templates of the account {conta} now. Some of its templates may be missing from the list.",
       "NAO_ATUALIZOU": "We could not update the list of the account {conta} right now. This is the last saved list; try again in a few minutes.",
       "NAO_ATUALIZOU_PERMISSAO": "We could not update the list of the account {conta}: the number lost its permission on WhatsApp. Reconnect the number in Settings › Inboxes. This is the last saved list."
     },
@@ -224,7 +224,7 @@
       "COPIA_DE": "{nome} (copy)",
       "AVISO_COPIA": "This is a copy of “{nome}”. Adjust what you want and pick a different name.",
       "FALHOU": "We couldn't send it now. Try again.",
-      "FALHOU_UMA_CONTA": "The template was sent for one WhatsApp account, but not for the other. {motivo}",
+      "FALHOU_UMA_CONTA": "The request did not go to the account {contas}. {motivo} | The request did not go to the accounts {contas}. {motivo}",
       "AVISO_COPIA_ARQUIVOS": "The copy does not take the files: pick again the photo, video or document at the top and on the cards.",
       "AVISO_NOVO_TIPO": "New template with the text of “{nome}”. Pick the type and check the name."
     },
@@ -517,7 +517,8 @@
       "CUPOM": "Coupon: {cupom}",
       "CATALOGO": "Catalog",
       "VER_COMO_FICA": "See how it looks",
-      "OFERTA_CONTAGEM": "Ends in 2 days (example)"
+      "OFERTA_CONTAGEM": "Ends in 2 days (example)",
+      "VER_TODAS_AS_OPCOES": "See all options"
     },
     "ENVIADO": {
       "TITULO": {
