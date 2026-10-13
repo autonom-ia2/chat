@@ -29,7 +29,7 @@ class Autonomia::Agents::Tools::TrechoHigienizado
 
   def initialize(texto, segredos:, limite:, literais: [], cortado: false)
     @texto = texto.to_s
-    @segredos = formas_dos_segredos(segredos, Array(literais).map(&:to_s).select { |literal| credencial?(literal) })
+    @segredos = formas_dos_segredos(segredos, Array(literais).map { |literal| literal.to_s.scrub }.select { |literal| credencial?(literal) })
     @limite = limite
     @cortado = cortado
   end
@@ -44,7 +44,7 @@ class Autonomia::Agents::Tools::TrechoHigienizado
 
   # Do mais longo para o mais curto: um pedaço de um segredo não pode estragar a troca do inteiro.
   def formas_dos_segredos(segredos, literais)
-    fortes = Array(segredos).flat_map { |valor| [valor.to_s, *valor.to_s.split] }
+    fortes = Array(segredos).map { |valor| valor.to_s.scrub }.flat_map { |valor| [valor, *valor.split] }
     todas = (fortes + literais).map(&:strip).flat_map { |valor| formas(valor) }
     todas.select { |valor| valor.length >= MIN_SEGREDO }.uniq.sort_by { |valor| -valor.length }
   end

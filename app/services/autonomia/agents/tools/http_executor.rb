@@ -45,7 +45,7 @@ module Autonomia
             log_success(started_at, response.bytesize)
             return format_response(response)
           end
-        rescue ValorRecusado, SafeFetch::Error, Liquid::Error, JSON::ParserError => e
+        rescue ValorRecusado, SafeFetch::Error, Liquid::Error, JSON::JSONError, EncodingError => e
           log_failure(started_at, e.class.name)
           raise erro_da_ferramenta(e, headers)
         end
@@ -82,8 +82,9 @@ module Autonomia
           }
         end
 
+        # O escape do endereço, pela posição de cada {{ }}, está em `EnderecoDaFerramenta` (#1425).
         def rendered_url
-          render_template(@tool.endpoint_url.to_s)
+          EnderecoDaFerramenta.new(tool: @tool, params: params).texto
         end
 
         # O escape do corpo, por tipo, está em `CorpoDaFerramenta` (#1425).
@@ -135,20 +136,38 @@ module Autonomia
                                                     limite: MAX_TRECHO_DO_ERRO, cortado: error.body_excerpt_truncated).to_s
         end
 
-        # SEGREDO FORTE, sempre oculto: os valores de cabeçalho (menos os automáticos) e o usuário e a
-        # senha do endereço.
+        # SEGREDO FORTE, sempre oculto: os valores de cabeçalho (menos os automáticos) em todas as formas
+        # de autenticação, o usuário e a senha do endereço (e o Basic que o SafeFetch monta com eles) e os
+        # valores da query do cadastro — chave em query pode ser só letras, e aí não tem "cara" nenhuma.
         def segredos(headers)
           cabecalhos = Array(headers).reject { |key, _| %w[content-type accept].include?(key.to_s.downcase) }.map(&:last)
-          cabecalhos + usuario_e_senha
+          cabecalhos.flat_map { |valor| formas_de_autenticacao(valor) } + usuario_e_senha + valores_da_query
         end
 
-        # LITERAL DO CADASTRO (pedaços do caminho, valores da query e do corpo): o `TrechoHigienizado` só
+        # "Bearer x" -> o valor e x; "Basic b64" -> também o base64 decodificado ("usuario:senha"), o
+        # usuário e a senha.
+        def formas_de_autenticacao(valor)
+          esquema, token = valor.to_s.split(' ', 2)
+          return [valor] if token.blank?
+
+          token = token.strip
+          formas = [valor, token]
+          esquema.casecmp?('basic') ? formas + basic_decodificado(token) : formas
+        end
+
+        def basic_decodificado(token)
+          texto = Base64.strict_decode64(token).force_encoding(Encoding::UTF_8)
+          texto.valid_encoding? ? [texto, *texto.split(':', 2)] : []
+        rescue ArgumentError
+          []
+        end
+
+        # LITERAL DO CADASTRO (pedaços do caminho e valores do corpo): o `TrechoHigienizado` só
         # o oculta quando ele tem cara de credencial — "clientes" ou "ativo" continuam legíveis no erro.
         def literais_do_cadastro
           uri = endereco_do_cadastro
           caminho = uri ? uri.path.to_s.split('/').map { |parte| URI.decode_www_form_component(parte) } : []
-          query = uri ? URI.decode_www_form(uri.query.to_s).map(&:last) : []
-          caminho + query + literais_do_corpo
+          caminho + literais_do_corpo
         rescue ArgumentError
           literais_do_corpo
         end
@@ -157,7 +176,17 @@ module Autonomia
           uri = endereco_do_cadastro
           return [] unless uri
 
-          [uri.user, uri.password].compact.map { |parte| URI.decode_www_form_component(parte) }
+          partes = [uri.user, uri.password].compact.map { |parte| URI.decode_www_form_component(parte) }
+          return partes if uri.user.blank?
+
+          partes + [Base64.strict_encode64("#{partes.first}:#{partes.second}")]
+        rescue ArgumentError
+          []
+        end
+
+        def valores_da_query
+          uri = endereco_do_cadastro
+          uri ? URI.decode_www_form(uri.query.to_s).map(&:last) : []
         rescue ArgumentError
           []
         end
@@ -184,10 +213,10 @@ module Autonomia
           return render_response_mapping(response) if mapping_template.present?
 
           JSON.generate(JSON.parse(response))
-        rescue JSON::ParserError
+        rescue JSON::JSONError, EncodingError
           raise if mapping_template.present?
 
-          response.to_s
+          response.to_s.scrub
         end
 
         def mapping_template

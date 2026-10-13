@@ -89,7 +89,10 @@ RSpec.describe Autonomia::Agents::Tools::Bound do
 
       output = bound.execute({ 'arguments' => '{}' })
 
-      expect(JSON.parse(output)).to eq('error' => 'tool_http_error: 422', 'resposta' => '{"erro":"cep obrigatório"}')
+      # Revisão 3: o trecho vai como DADO citado e rotulado, com o aviso de que não é instrução.
+      expect(JSON.parse(output)).to eq('error' => 'tool_http_error: 422',
+                                       'resposta_do_sistema_externo' => '{"erro":"cep obrigatório"}',
+                                       'aviso' => Autonomia::Agents::Tools::Recusa::AVISO_DE_DADO_EXTERNO)
     end
 
     it 'falls back to a bare category when the message carries no status' do

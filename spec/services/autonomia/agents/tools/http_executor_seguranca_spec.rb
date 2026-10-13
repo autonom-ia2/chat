@@ -302,6 +302,89 @@ RSpec.describe Autonomia::Agents::Tools::HttpExecutor do
     end
   end
 
+  # Revisão 3 do #1425: o valor do modelo no ENDEREÇO vai codificado conforme a posição da {{ }} —
+  # pedaço do caminho (`/` incluso) ou valor da query —, e nunca no esquema, no host ou no fragmento.
+  describe 'endereço (revisão 3)' do
+    let(:body_template) { '' }
+
+    def url_chamada(endereco, params)
+      tool.endpoint_url = endereco
+      allow(SafeFetch).to receive(:fetch)
+      executar(params)
+      url = nil
+      expect(SafeFetch).to have_received(:fetch) { |chamada, **| url = chamada }
+      url
+    end
+
+    it 'keeps a fixed address identical' do
+      fixo = 'https://api.loja.test/v1/estoque?x=1&y=a%20b#frag'
+
+      expect(url_chamada(fixo, q: 'x')).to eq(fixo)
+    end
+
+    it 'encodes a path value as one segment, slash included' do
+      expect(url_chamada('https://api.loja.test/estoque/{{q}}/itens', q: '../admin?x=1#y'))
+        .to eq('https://api.loja.test/estoque/..%2Fadmin%3Fx%3D1%23y/itens')
+    end
+
+    it 'encodes spaces and accents in the path' do
+      expect(url_chamada('https://api.loja.test/estoque/{{q}}', q: 'freio ção'))
+        .to eq('https://api.loja.test/estoque/freio%20%C3%A7%C3%A3o')
+    end
+
+    it 'refuses a path value that is . or ..' do
+      tool.endpoint_url = 'https://api.loja.test/estoque/{{q}}/itens'
+
+      expect(erro_de(q: '..').message).to eq('tool_execution_error: endereco_invalido')
+      expect(erro_de(q: '.').message).to eq('tool_execution_error: endereco_invalido')
+    end
+
+    it 'encodes a query value as a form field, so & and # do not add or cut anything' do
+      expect(url_chamada('https://api.loja.test/estoque?termo={{q}}&limit=5', q: 'a&admin=1#x ção'))
+        .to eq('https://api.loja.test/estoque?termo=a%26admin%3D1%23x+%C3%A7%C3%A3o&limit=5')
+    end
+
+    it 'encodes only once when url_encode is already written' do
+      expect(url_chamada('https://api.loja.test/estoque/{{ q | url_encode }}?t={{ q | url_encode }}', q: 'a b&c'))
+        .to eq('https://api.loja.test/estoque/a%20b%26c?t=a+b%26c')
+    end
+
+    # Host ou esquema vindos do modelo mandariam os cabeçalhos de autenticação para onde ele quiser;
+    # o cadastro já não aceita (`validate_endpoint_url`), e aqui a recusa é explícita.
+    it 'refuses a variable in the scheme, the host or the fragment' do
+      %w[https://{{q}}.loja.test/x {{q}}://api.loja.test/x https://api.loja.test/x#{{q}}].each do |endereco|
+        tool.endpoint_url = endereco
+
+        expect(erro_de(q: 'outro').message).to eq('tool_execution_error: endereco_invalido')
+      end
+    end
+  end
+
+  # Revisão 3: número não finito e UTF-8 inválido viram recusa tratada, nunca exceção solta.
+  describe 'valores que o JSON não representa' do
+    it 'refuses 1e999 in a slot without quotes' do
+      tool.request_body_template = '{"n": {{q}}}'
+      responder_ok
+
+      expect(erro_de(q: '1e999').message).to eq('tool_execution_error: corpo_json_invalido')
+    end
+
+    it 'refuses invalid UTF-8 in the body' do
+      responder_ok
+
+      expect(erro_de(q: (+"ab\xFFcd").force_encoding('UTF-8')).message).to eq('tool_execution_error: corpo_json_invalido')
+    end
+
+    it 'answers with valid text when the system sends invalid UTF-8' do
+      responder_ok((+"{\"a\":\"\xFF\"}").force_encoding('UTF-8'))
+
+      resposta = executar(q: 'freio')
+
+      expect(resposta).to be_a(String)
+      expect(resposta.valid_encoding?).to be(true)
+    end
+  end
+
   describe 'redirecionamento (item 2)' do
     it 'does not follow a redirect to another domain, and no configured header reaches it' do
       stub_request(:post, endpoint).to_return(status: 302, headers: { 'Location' => 'https://outro.test/coleta' })
@@ -464,6 +547,21 @@ RSpec.describe Autonomia::Agents::Tools::HttpExecutor do
 
       expect(trecho).to include('invalid key')
       expect(trecho).not_to include('s3cr3t.k3y')
+    end
+
+    # Revisão 3: chave só de letras na query e Basic auth em todas as formas são sempre segredo.
+    it 'hides query values and every form of a Basic auth header' do
+      basic = Base64.strict_encode64('usuarioloja:senhasoletrasmuitolonga')
+      tool.headers_config = [{ 'key' => 'Authorization', 'value' => "Basic #{basic}", 'secret' => true }]
+      tool.endpoint_url = 'https://api.loja.test/estoque/busca?api_key=chaveapenasletrasx'
+      eco = "negado: usuarioloja senhasoletrasmuitolonga #{basic} chaveapenasletrasx"
+      stub_request(:post, 'https://api.loja.test/estoque/busca?api_key=chaveapenasletrasx')
+        .to_return(status: [403, 'Forbidden'], body: eco)
+
+      trecho = erro_de(q: 'freio').trecho
+
+      expect(trecho).to start_with('negado:')
+      ['usuarioloja', 'senhasoletrasmuitolonga', basic, 'chaveapenasletrasx'].each { |segredo| expect(trecho).not_to include(segredo) }
     end
 
     it 'gives no body piece for a 5xx' do

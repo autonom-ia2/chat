@@ -2,9 +2,8 @@
 #
 # O ESCAPE É NA SAÍDA de cada {{ }}, DEPOIS dos filtros (`global_filter` do Liquid): um `url_decode`
 # ou `base64_decode` no modelo do corpo não desfaz o escape, e um filtro de texto (`upcase`, `truncate`)
-# trabalha sobre o valor original. O `global_filter` só vale para {{ }} (e `echo`): por isso o modelo do
-# corpo só aceita as tags de `NOS_PERMITIDOS` — `cycle`, por exemplo, escreve o valor cru, e `capture`
-# escaparia duas vezes. Cada tipo de corpo tem o seu escape:
+# trabalha sobre o valor original. As tags aceitas e o `url_encode` final estão em `ModeloLiquid`. Cada
+# tipo de corpo tem o seu escape:
 #
 # - JSON (Content-Type ausente, vazio ou com "json"): texto vai escapado para dentro de aspas; número e
 #   sim/não vão como são. Uma sonda renderiza o corpo com cada texto trocado por um caractere que nunca
@@ -13,7 +12,8 @@
 #   e "4512", que funcionava antes; qualquer outro texto ali faria a sonda deixar de ser JSON, e o corpo
 #   é recusado — ele poderia abrir lista, objeto ou comentário. Comentário (`/* */`, `//`) no modelo do
 #   corpo também é recusado: uma {{ }} escondida nele não aparece na sonda. Vai pelo fio o JSON
-#   REGERADO (`JSON.generate(JSON.parse(...))`).
+#   REGERADO (`JSON.generate(JSON.parse(...))`). Número não finito (`1e999`) e texto com UTF-8 inválido
+#   não têm forma JSON: o corpo é recusado, nunca uma exceção solta.
 # - Formulário (`application/x-www-form-urlencoded`): cada valor vai codificado como campo
 #   (`URI.encode_www_form_component`), e `&`/`=` vindos do modelo não abrem campo novo. Um
 #   `| url_encode` já escrito no fim da variável sai da lista de filtros: codifica uma vez só.
@@ -26,10 +26,7 @@ class Autonomia::Agents::Tools::CorpoDaFerramenta
   Recusa = Autonomia::Agents::Tools::HttpExecutor::ValorRecusado
   MARCA = "\u{E000}".freeze
   FORMULARIO = 'application/x-www-form-urlencoded'.freeze
-  NOS_PERMITIDOS = [
-    String, Liquid::Document, Liquid::BlockBody, Liquid::Variable, Liquid::Echo, Liquid::If, Liquid::Unless,
-    Liquid::For, Liquid::Assign, Liquid::Raw, Liquid::Comment
-  ].freeze
+  Modelo = Autonomia::Agents::Tools::ModeloLiquid
 
   def initialize(tool:, params:)
     @tool = tool
@@ -79,15 +76,26 @@ class Autonomia::Agents::Tools::CorpoDaFerramenta
     raise Recusa, 'corpo_json_invalido' if com_comentario?(teste)
 
     JSON.parse(teste)
-    JSON.generate(JSON.parse(renderizar(method(:para_json))))
-  rescue JSON::ParserError
+    @utf8_invalido = false
+    real = renderizar(method(:para_json))
+    raise Recusa, 'corpo_json_invalido' if @utf8_invalido
+
+    JSON.generate(JSON.parse(real))
+  rescue JSON::JSONError, EncodingError
     raise Recusa, 'corpo_json_invalido'
   end
 
+  # Roda DENTRO do render do Liquid, que engole exceção (vira "Liquid error" no texto): o UTF-8 inválido
+  # é marcado aqui e recusado depois do render.
   def para_json(valor)
     case valor
     when nil, Numeric, true, false then valor
-    else JSON.generate(texto_de(valor))[1..-2]
+    else
+      texto = texto_de(valor)
+      return JSON.generate(texto)[1..-2] if texto.valid_encoding?
+
+      @utf8_invalido = true
+      ''
     end
   end
 
@@ -106,8 +114,8 @@ class Autonomia::Agents::Tools::CorpoDaFerramenta
     return false if texto.include?('/')
 
     valor = JSON.parse(texto)
-    valor.nil? || valor == true || valor == false || valor.is_a?(Numeric)
-  rescue JSON::ParserError
+    valor.nil? || valor == true || valor == false || (valor.is_a?(Numeric) && valor.finite?)
+  rescue JSON::JSONError, EncodingError
     false
   end
 
@@ -153,7 +161,7 @@ class Autonomia::Agents::Tools::CorpoDaFerramenta
 
       folha.is_a?(Numeric) ? [folha.to_s] : []
     end
-  rescue JSON::ParserError
+  rescue JSON::JSONError, EncodingError
     []
   end
 
@@ -179,35 +187,14 @@ class Autonomia::Agents::Tools::CorpoDaFerramenta
   end
 
   def texto_de(valor)
-    valor.is_a?(Array) ? valor.join : valor.to_s
+    Modelo.texto_de(valor)
   end
 
   def renderizar(filtro)
-    modelo.render(@params, strict_variables: true, strict_filters: true, global_filter: filtro)
+    Modelo.renderizar(modelo, @params, filtro)
   end
 
   def modelo
-    @modelo ||= conferido(Liquid::Template.parse(@tool.request_body_template.to_s, error_mode: :strict))
-  end
-
-  # Só as tags de `NOS_PERMITIDOS`; no formulário, o `url_encode` final de cada variável sai (o escape
-  # do formulário já codifica).
-  def conferido(template)
-    nos = todos_os_nos(template.root)
-    raise Recusa, 'corpo_sem_escape' unless nos.all? { |no| NOS_PERMITIDOS.any? { |classe| no.instance_of?(classe) } }
-
-    sem_url_encode_final(nos) if tipo == :formulario
-    template
-  end
-
-  def todos_os_nos(raiz)
-    filhos = raiz.respond_to?(:nodelist) ? Array(raiz.nodelist) : []
-    [raiz] + filhos.flat_map { |filho| todos_os_nos(filho) }
-  end
-
-  def sem_url_encode_final(nos)
-    nos.grep(Liquid::Variable).each do |variavel|
-      variavel.filters = variavel.filters[0..-2] if variavel.filters.last&.first == 'url_encode'
-    end
+    @modelo ||= Modelo.ler(@tool.request_body_template, recusa: 'corpo_sem_escape', sem_url_encode_final: tipo == :formulario)
   end
 end

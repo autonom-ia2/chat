@@ -63,7 +63,8 @@ RSpec.describe 'Autonomia agent tool test', type: :request do
     expect(response.parsed_body['error']).to eq('tool_http_error: 400 Bad Request')
     agente = JSON.parse(response.parsed_body['agente_recebe'])
     expect(agente['error']).to eq('tool_http_error: 400')
-    expect(agente['resposta']).to include('falta o cep')
+    expect(agente['resposta_do_sistema_externo']).to include('falta o cep')
+    expect(agente['aviso']).to be_present
     expect(response.body).not_to include('chave-da-loja-987')
   end
 

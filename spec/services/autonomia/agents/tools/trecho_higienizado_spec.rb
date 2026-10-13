@@ -52,6 +52,13 @@ RSpec.describe Autonomia::Agents::Tools::TrechoHigienizado do
     expect(resultado).to eq('json [oculto] url [oculto] barra [oculto]')
   end
 
+  # Revisão 3: segredo com UTF-8 inválido (um %FF decodificado do cadastro) não derruba o trecho.
+  it 'does not raise on a secret with invalid UTF-8' do
+    segredo = (+"chave\xFFsecreta").force_encoding('UTF-8')
+
+    expect(trecho('erro comum', segredos: [segredo], literais: [segredo])).to eq('erro comum')
+  end
+
   it 'hides long tokens even when nobody listed them' do
     expect(trecho("sessao #{'x' * 40} expirou")).to eq('sessao [oculto] expirou')
   end
