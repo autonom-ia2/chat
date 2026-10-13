@@ -6,8 +6,10 @@
 # `#`, e a query no primeiro `?` antes dele. Cada parte é lida e renderizada à parte (`ModeloLiquid`):
 # - esquema e host: variável recusada. Host vindo do modelo mandaria a chave para onde ele quisesse; o
 #   cadastro já não aceita esse endereço (`Tool#validate_endpoint_url`), e aqui a recusa é explícita;
-# - caminho: cada valor vira UM pedaço (`ERB::Util.url_encode`, que codifica também `/`, `?` e `#`);
-#   pedaço que termina como "." ou ".." é recusado;
+# - caminho: cada valor vira UM pedaço (`ERB::Util.url_encode`, que codifica também `/`, `?` e `#`).
+#   Valor vazio é recusado (cairia na coleção: `/clientes/`), e também valor que, partido em barra ou
+#   barra invertida, tenha um pedaço "." ou ".." — um servidor que decodifica %2F antes de rotear
+#   resolveria o `../`;
 # - query: cada valor vira valor de campo (`URI.encode_www_form_component`);
 # - fragmento: variável recusada (não vai ao servidor; só confundiria).
 # Um `| url_encode` já escrito no fim da variável sai: codifica uma vez só. Endereço sem {{ }} sai
@@ -16,7 +18,7 @@ class Autonomia::Agents::Tools::EnderecoDaFerramenta
   Recusa = Autonomia::Agents::Tools::HttpExecutor::ValorRecusado
   Modelo = Autonomia::Agents::Tools::ModeloLiquid
   RECUSA = 'endereco_invalido'.freeze
-  NO_CAMINHO = ->(valor) { valor.nil? ? nil : ERB::Util.url_encode(Modelo.texto_de(valor)) }
+  BARRA_INVERTIDA = 92.chr.freeze
   NA_QUERY = ->(valor) { valor.nil? ? nil : URI.encode_www_form_component(Modelo.texto_de(valor)) }
 
   def initialize(tool:, params:)
@@ -31,7 +33,8 @@ class Autonomia::Agents::Tools::EnderecoDaFerramenta
     caminho, query = dividir(base, '?')
     recusar if Modelo.variavel?(fragmento) || Modelo.variavel?(origem(caminho))
 
-    url = sem_ponto(renderizar(caminho, NO_CAMINHO))
+    url = renderizar(caminho, method(:no_caminho))
+    recusar if @caminho_invalido
     url += "?#{renderizar(query, NA_QUERY)}" if query
     url += "##{fragmento}" if fragmento
     url
@@ -54,11 +57,17 @@ class Autonomia::Agents::Tools::EnderecoDaFerramenta
     barra ? caminho[0...barra] : caminho
   end
 
-  def sem_ponto(url)
-    caminho = url[origem(url).length..].to_s
-    recusar if caminho.split('/').any? { |pedaco| ['.', '..'].include?(pedaco) }
+  # Roda DENTRO do render do Liquid, que engole exceção: o valor inválido é marcado aqui e recusado
+  # depois do render.
+  def no_caminho(valor)
+    texto = Modelo.texto_de(valor)
+    @caminho_invalido ||= caminho_invalido?(texto)
+    ERB::Util.url_encode(texto)
+  end
 
-    url
+  def caminho_invalido?(texto)
+    pedacos = texto.split('/', -1).flat_map { |pedaco| pedaco.split(BARRA_INVERTIDA, -1) }
+    texto.empty? || pedacos.any? { |pedaco| ['.', '..'].include?(pedaco) }
   end
 
   def renderizar(texto, filtro)

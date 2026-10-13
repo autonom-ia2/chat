@@ -176,10 +176,11 @@ module Autonomia
           uri = endereco_do_cadastro
           return [] unless uri
 
-          partes = [uri.user, uri.password].compact.map { |parte| URI.decode_www_form_component(parte) }
-          return partes if uri.user.blank?
+          crus = [uri.user, uri.password].compact
+          partes = crus.map { |parte| URI.decode_www_form_component(parte) }
+          return crus + partes if uri.user.blank?
 
-          partes + [Base64.strict_encode64("#{partes.first}:#{partes.second}")]
+          crus + partes + [Base64.strict_encode64("#{partes.first}:#{partes.second}")]
         rescue ArgumentError
           []
         end

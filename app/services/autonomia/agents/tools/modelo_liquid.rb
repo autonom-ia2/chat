@@ -1,12 +1,13 @@
 # A leitura de um modelo Liquid da ferramenta HTTP que recebe valor do modelo de IA — corpo e endereço
 # (#1425). O escape é na SAÍDA de cada {{ }}, pelo `global_filter`, que o Liquid só aplica em {{ }} e
-# `echo`. Por isso só entram as tags de `NOS_PERMITIDOS`: `cycle` escreve o valor cru, e `capture`
-# escaparia duas vezes. Com `sem_url_encode_final`, o `| url_encode` escrito no fim de uma variável sai
-# da lista de filtros, porque o escape da posição já codifica — e codificar duas vezes muda o valor.
+# `echo`. Por isso só entram as tags de `NOS_PERMITIDOS`: `cycle` escreve o valor cru, e `capture` e
+# `assign` escapariam duas vezes (o `global_filter` roda também dentro do `assign`). Com
+# `sem_url_encode_final`, o `| url_encode` escrito no fim de uma variável (ou de um `echo`) sai da lista
+# de filtros, porque o escape da posição já codifica — e codificar duas vezes muda o valor.
 module Autonomia::Agents::Tools::ModeloLiquid
   NOS_PERMITIDOS = [
     String, Liquid::Document, Liquid::BlockBody, Liquid::Variable, Liquid::Echo, Liquid::If, Liquid::Unless,
-    Liquid::For, Liquid::Assign, Liquid::Raw, Liquid::Comment
+    Liquid::For, Liquid::Raw, Liquid::Comment
   ].freeze
 
   module_function
@@ -40,8 +41,9 @@ module Autonomia::Agents::Tools::ModeloLiquid
     [raiz] + filhos.flat_map { |filho| todos_os_nos(filho) }
   end
 
+  # O `echo` carrega a variável dele em `#variable`, fora da árvore de nós.
   def tirar_url_encode_final(nos)
-    nos.grep(Liquid::Variable).each do |variavel|
+    (nos.grep(Liquid::Variable) + nos.grep(Liquid::Echo).map(&:variable)).each do |variavel|
       variavel.filters = variavel.filters[0..-2] if variavel.filters.last&.first == 'url_encode'
     end
   end

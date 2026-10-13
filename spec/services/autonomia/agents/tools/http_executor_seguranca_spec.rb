@@ -323,8 +323,8 @@ RSpec.describe Autonomia::Agents::Tools::HttpExecutor do
     end
 
     it 'encodes a path value as one segment, slash included' do
-      expect(url_chamada('https://api.loja.test/estoque/{{q}}/itens', q: '../admin?x=1#y'))
-        .to eq('https://api.loja.test/estoque/..%2Fadmin%3Fx%3D1%23y/itens')
+      expect(url_chamada('https://api.loja.test/estoque/{{q}}/itens', q: 'a/b?x=1#y'))
+        .to eq('https://api.loja.test/estoque/a%2Fb%3Fx%3D1%23y/itens')
     end
 
     it 'encodes spaces and accents in the path' do
@@ -337,6 +337,35 @@ RSpec.describe Autonomia::Agents::Tools::HttpExecutor do
 
       expect(erro_de(q: '..').message).to eq('tool_execution_error: endereco_invalido')
       expect(erro_de(q: '.').message).to eq('tool_execution_error: endereco_invalido')
+    end
+
+    # Revisão 4: um servidor que decodifica %2F antes de rotear resolveria o "../" de dentro do valor.
+    it 'refuses . or .. inside a path value, split by slash and backslash' do
+      tool.endpoint_url = 'https://api.loja.test/estoque/{{q}}/itens'
+
+      ['../admin', '..\admin', 'a/../b', 'a\.\b'].each do |valor|
+        expect(erro_de(q: valor).message).to eq('tool_execution_error: endereco_invalido'), valor
+      end
+    end
+
+    # Revisão 4: pedaço vazio cairia na coleção (`/clientes/`).
+    it 'refuses an empty path value' do
+      tool.endpoint_url = 'https://api.loja.test/clientes/{{q}}'
+
+      expect(erro_de(q: '').message).to eq('tool_execution_error: endereco_invalido')
+    end
+
+    # Revisão 4: `echo` com url_encode final também codifica uma vez só.
+    it 'encodes only once with echo and url_encode' do
+      expect(url_chamada('https://api.loja.test/estoque/{% echo q | url_encode %}', q: 'a b'))
+        .to eq('https://api.loja.test/estoque/a%20b')
+    end
+
+    # Revisão 4: o global_filter roda dentro do assign; o valor sairia escapado duas vezes.
+    it 'refuses assign in the address' do
+      tool.endpoint_url = 'https://api.loja.test/estoque/{% assign x = q %}{{ x }}'
+
+      expect(erro_de(q: 'a b').message).to eq('tool_execution_error: endereco_invalido')
     end
 
     it 'encodes a query value as a form field, so & and # do not add or cut anything' do
@@ -361,6 +390,14 @@ RSpec.describe Autonomia::Agents::Tools::HttpExecutor do
   end
 
   # Revisão 3: número não finito e UTF-8 inválido viram recusa tratada, nunca exceção solta.
+  # Revisão 4: assign no corpo escaparia duas vezes (o global_filter roda dentro dele).
+  it 'refuses assign in the body' do
+    tool.request_body_template = '{% assign x = q %}{"q":"{{ x }}"}'
+    responder_ok
+
+    expect(erro_de(q: 'a"b').message).to eq('tool_execution_error: corpo_sem_escape')
+  end
+
   describe 'valores que o JSON não representa' do
     it 'refuses 1e999 in a slot without quotes' do
       tool.request_body_template = '{"n": {{q}}}'
@@ -550,6 +587,19 @@ RSpec.describe Autonomia::Agents::Tools::HttpExecutor do
     end
 
     # Revisão 3: chave só de letras na query e Basic auth em todas as formas são sempre segredo.
+    # Revisão 4: o servidor pode ecoar o usuário e a senha ainda codificados, como estão na URL.
+    it 'hides the userinfo also in its raw, still encoded form' do
+      tool.endpoint_url = 'https://usuario.loja:senha%2Dmuito%2Dforte@api.loja.test/estoque'
+      stub_request(:post, 'https://api.loja.test/estoque')
+        .with(basic_auth: ['usuario.loja', 'senha-muito-forte'])
+        .to_return(status: [401, 'Unauthorized'], body: 'negado para senha%2Dmuito%2Dforte')
+
+      trecho = erro_de(q: 'freio').trecho
+
+      expect(trecho).to start_with('negado para')
+      expect(trecho).not_to include('senha%2Dmuito')
+    end
+
     it 'hides query values and every form of a Basic auth header' do
       basic = Base64.strict_encode64('usuarioloja:senhasoletrasmuitolonga')
       tool.headers_config = [{ 'key' => 'Authorization', 'value' => "Basic #{basic}", 'secret' => true }]
