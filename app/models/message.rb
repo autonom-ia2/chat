@@ -40,6 +40,9 @@
 #
 
 class Message < ApplicationRecord
+  # Teto de espera pela linha da conversa quando uma pessoa responde uma conversa à espera (#1499).
+  PERSON_CLAIM_LOCK_TIMEOUT = '2s'.freeze
+
   searchkick callbacks: false if ChatwootApp.advanced_search_allowed?
 
   include MessageFilterHelpers
@@ -370,25 +373,35 @@ class Message < ApplicationRecord
   # Pessoa respondendo numa conversa que o robô já passou e está à espera de pessoa fica com ela (#1499, decisão do
   # Rodrigo em 13/10, opção b): senão a fila do motor de entrega a daria a outro enquanto o cliente fala com quem
   # respondeu. Enquanto o robô ainda atende (sem marca de espera), responder não tira o robô: só "Atribuir a mim".
-  # Atribuir encerra as marcas de espera e tira o robô (callbacks da conversa). Mesma trava do robô assumindo.
+  # Atribuir encerra as marcas de espera e tira o robô (callbacks da conversa). Olha as marcas antes de travar (a maioria
+  # das respostas não está à espera) e trava com teto, como a fila do motor: a resposta não fica presa atrás de uma entrega.
   def claim_waiting_conversation_for_person
-    return unless public_person_reply?
+    return unless public_person_reply? && waiting_for_person?(conversation)
 
     Conversation.transaction do
+      Conversation.connection.execute("SET LOCAL lock_timeout = '#{PERSON_CLAIM_LOCK_TIMEOUT}'")
       locked = Conversation.lock.find(conversation_id)
-      next unless locked.open? && locked.assignee_id.blank?
-      next unless locked.bot_handoff_waiting? || locked.crm_delivery_pending?
+      next unless waiting_for_person?(locked)
 
-      locked.update!(assignee: sender)
+      locked.update!(assignee: sender, status: :open)
     end
+  rescue ActiveRecord::LockWaitTimeout
+    # Linha presa por uma entrega em andamento: quem decide é ela; a resposta já foi gravada e enviada.
+    Rails.logger.warn("[crm][entrega] resposta conversa=#{conversation_id} não assumiu: trava ocupada")
   rescue ActiveRecord::ActiveRecordError => e
     # A mensagem já está gravada e enviada; a conversa segue na fila do motor, que a entrega a alguém.
     ChatwootExceptionTracker.new(e, account: account).capture_exception
   end
 
-  # Resposta pública de uma pessoa da conta (não automação, campanha nem eco do app nativo).
+  # Resposta pública que a própria pessoa mandou agora (ela é quem está logado no pedido). Aviso, follow-up ou envio
+  # agendado gravados em nome dela por um job não contam: não são ela respondendo.
   def public_person_reply?
-    human_response? && !private? && sender.is_a?(User) && account.users.exists?(id: sender_id)
+    human_response? && !private? && sender.is_a?(User) && Current.user == sender
+  end
+
+  # Aberta (ou pendente, legado) e sem pessoa no nome, com a marca de espera da passagem ou a do motor de entrega.
+  def waiting_for_person?(conv)
+    (conv.open? || conv.pending?) && conv.assignee_id.blank? && (conv.bot_handoff_waiting? || conv.crm_delivery_pending?)
   end
 
   # Resposta pública de robô ao cliente; disparo de campanha (qualquer das duas marcas) não conta.
