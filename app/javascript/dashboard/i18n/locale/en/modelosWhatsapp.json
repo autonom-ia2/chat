@@ -731,7 +731,7 @@
         "CUPOM": "Coupon code",
         "CUPOM_AJUDA": "Everyone gets the same code. Up to {n} letters and numbers.",
         "CUPOM_ERRO": "Type the code, with up to {n} letters and numbers.",
-        "VALIDADE": "The offer is valid until ({zona} time zone)",
+        "VALIDADE": "The offer is valid until ({zona})",
         "VALIDADE_AJUDA": "The customer sees a countdown. If this time passes before the send, the campaign stops and no one receives it.",
         "VALIDADE_PASSADA": "This time has already passed. Choose a later date.",
         "CARTOES": "Photos of the {n} cards",

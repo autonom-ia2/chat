@@ -172,6 +172,15 @@ describe('PonteFormatoDaCampanha', () => {
     api.subirArquivoDaCampanha.mockReset();
   });
 
+  // #1456: o fuso pelo nome que a pessoa conhece, o mesmo da revisão (#1387).
+  it('a validade da oferta diz o fuso pelo nome, não pelo código', () => {
+    const wrapper = montar({ modelo: { template: oferta } });
+
+    const rotulo = wrapper.find('[data-formato-validade]').text();
+    expect(rotulo).toContain('Brasilia Standard Time');
+    expect(rotulo).not.toContain(ZONA);
+  });
+
   it('sobe a foto escolhida para o cartão pela caixa e guarda a referência', async () => {
     api.subirArquivoDaCampanha.mockResolvedValue({
       referencia: 'sig2',
