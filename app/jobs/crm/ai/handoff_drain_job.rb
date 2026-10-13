@@ -116,8 +116,16 @@ class Crm::Ai::HandoffDrainJob < ApplicationJob
     marcar_tentativa(conversation)
   end
 
-  # Só o carimbo da tentativa, direto no JSONB e só se a marca continua lá: sem callbacks nem eventos a cada rodada.
+  # Só o carimbo da tentativa, direto no JSONB e só se a marca continua lá: sem callbacks nem eventos a cada rodada. Com o
+  # mesmo lock_timeout: linha presa por outra transação não segura a rodada (nem a trava de sessão).
   def marcar_tentativa(conversation)
+    com_lock_timeout { carimbar_tentativa(conversation) }
+  rescue StandardError => e
+    # Sem o carimbo a conversa só volta mais cedo na fila; a rodada segue.
+    Rails.logger.error("[crm][entrega] fila conversa=#{conversation.id} tentativa não carimbada erro=#{e.class}")
+  end
+
+  def carimbar_tentativa(conversation)
     # rubocop:disable Rails/SkipsModelValidations
     Conversation.where(id: conversation.id).where(Crm::Entrega::Marca::PRESENTE_SQL).update_all(
       [
@@ -126,9 +134,6 @@ class Crm::Ai::HandoffDrainJob < ApplicationJob
       ]
     )
     # rubocop:enable Rails/SkipsModelValidations
-  rescue StandardError => e
-    # Sem o carimbo a conversa só volta mais cedo na fila; a rodada segue.
-    Rails.logger.error("[crm][entrega] fila conversa=#{conversation.id} tentativa não carimbada erro=#{e.class}")
   end
 
   def drain_card(card)
