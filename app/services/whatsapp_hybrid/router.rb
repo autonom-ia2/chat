@@ -28,7 +28,7 @@ class WhatsappHybrid::Router
   # Botões, listas, carrossel, formulário e pesquisa são recursos Meta: pelo WhatsApp Web viram
   # texto solto (e chamam atenção de bloqueio). Só texto e anexos passam pelo Web.
   def web_allowed_for?(message)
-    message.content_type == 'text' && connection.origin_enabled?(origin_of(message))
+    message.content_type == 'text' && connection.origin_enabled?(origin_of(message)) && RichMessages.text_capable?(message)
   end
 
   def cloud_window_open?
