@@ -908,6 +908,15 @@
 - passos: 1. Abra Agentes e clique em Criar agente; 2. Na página Criar agente, escolha um dos modelos prontos (Tirar dúvidas dos clientes, Atender quem quer comprar ou Receber quem chega) e clique em Usar este, ou clique em Do meu jeito para contar com suas palavras; 3. Se o agente deve só ajudar as pessoas da equipe dentro das conversas, desça até Precisa de outro tipo? e escolha Copiloto da equipe; 4. Siga a conversa de criação (Conte, Confira, Comece); o canal do agente normal é escolhido no fim.
 - gotchas: a maioria dos agentes começa por um modelo; o Copiloto da equipe nunca fala com cliente e não escolhe canal; Voltar para Agentes sai sem criar nada; quem só vê não tem o botão Criar agente; com a jornada desligada o mesmo endereço abre o Construtor antigo.
 
+### criar_agente_da_equipe
+- titulo: Criar um agente da equipe (recebe quando alguém passa)
+- rota: autonomia_agents_builder
+- intent: "Como crio um agente que recebe a conversa quando alguém passa?"; "Quero um segundo agente no mesmo WhatsApp"; "O que é agente da equipe?"; "Por que o canal aparece bloqueado para o agente da equipe?"
+- onde_fica: Agentes > Criar agente > Precisa de outro tipo? > Agente da equipe
+- pre_requisitos: nova jornada de agentes ligada na conta (autonomia_agents_journey) e a Fase 2 dos Agentes ligada (piloto); administrador ou função com autonomia_manage; pelo menos um canal com um agente principal atendendo.
+- passos: 1. Abra Agentes e clique em Criar agente; 2. Em Precisa de outro tipo?, escolha Agente da equipe; 3. Conte na conversa o que ele faz e teste, como num agente normal; 4. Clique em Começar a trabalhar e marque os canais em que ele fica na equipe (só os que já têm quem atenda primeiro); 5. Em Confira como fica, veja quem atende primeiro em cada canal e clique em Começar a trabalhar; 6. Na página do agente, em Onde ele trabalha, Mudar troca os canais.
+- gotchas: o agente da equipe não atende primeiro: quem atende é o agente principal do canal, e ele recebe a conversa quando alguém (pessoa ou outro agente) passa; canal sem principal, com outro robô ou com o principal parado aparece bloqueado com o motivo; na lista ele aparece como Na equipe, não como Atendendo; escolher de quais funis ele cuida ainda não está nesta tela.
+
 ### atualizar_conhecimento_e_fontes_do_agente
 - titulo: Atualizar conhecimento e fontes do agente
 - rota: autonomia_agent_panel

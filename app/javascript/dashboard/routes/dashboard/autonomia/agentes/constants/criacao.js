@@ -76,3 +76,11 @@ export const IDEIAS_PARA_COMECAR = ['ROUPAS', 'DOCES', 'ESTETICA', 'OFICINA'];
 
 // Arquivo da base: mesmo teto do backend (Source::MAX_FILE_BYTES, 25 MB).
 export const MAX_ARQUIVO_BYTES = 25 * 1024 * 1024;
+
+// #1433 (tema 13) — agente da equipe: a página "Criar agente" manda `?papel=area` (só com a Fase 2). A
+// conversa é a de sempre; no Comece ele escolhe canais que já têm principal e entra como área. A
+// marca fica na query depois do rascunho (junto de `?agente=`), para o F5 continuar no mesmo papel.
+export const PAPEL_AREA_NA_QUERY = 'area';
+
+export const papelDaQuery = (query = {}) =>
+  query.papel === PAPEL_AREA_NA_QUERY ? PAPEL_AREA_NA_QUERY : null;

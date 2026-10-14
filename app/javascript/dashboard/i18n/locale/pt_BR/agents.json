@@ -609,13 +609,18 @@
         "ATENDENDO": "Atendendo",
         "PARADO": "Parado",
         "FALTA_TERMINAR": "Falta terminar",
-        "COTACAO": "Cotação"
+        "COTACAO": "Cotação",
+        "NA_EQUIPE": "Na equipe"
       },
       "ESCOLHER": {
         "TITULO": "Criar agente",
         "TEXTO": "Escolha um modelo pronto. Depois você conta do seu jeito e escolhe o canal no fim.",
         "OUTRO_TIPO": "Precisa de outro tipo?",
-        "OUTRO_TEXTO": "Para casos especiais. A maioria dos agentes começa por um modelo acima."
+        "OUTRO_TEXTO": "Para casos especiais. A maioria dos agentes começa por um modelo acima.",
+        "EQUIPE": {
+          "TITULO": "Agente da equipe",
+          "TEXTO": "Fica num canal que já tem agente principal e recebe a conversa quando alguém passa."
+        }
       },
       "MODELOS": {
         "ROTULO": "Modelos prontos",
@@ -662,7 +667,8 @@
         "CARREGANDO": "Carregando seus agentes",
         "SEUS_AGENTES": "Seus agentes",
         "CONTAGEM_ATENDENDO": "Nenhum atendendo | 1 atendendo | {n} atendendo",
-        "CONTAGEM_PARADOS": "Nenhum parado | 1 parado | {n} parados"
+        "CONTAGEM_PARADOS": "Nenhum parado | 1 parado | {n} parados",
+        "CONTAGEM_NA_EQUIPE": "Nenhum na equipe | 1 na equipe | {n} na equipe"
       },
       "CARTAO": {
         "ONDE_NENHUM": "Ainda não está em nenhum canal",
@@ -678,7 +684,8 @@
         "CONTINUAR": "Continuar",
         "CONTINUAR_ARIA": "Continuar {nome}",
         "MAIS_OPCOES": "Mais opções de {nome}",
-        "EXCLUIR_RASCUNHO": "Excluir rascunho"
+        "EXCLUIR_RASCUNHO": "Excluir rascunho",
+        "RECEBE_EM": "Recebe quando alguém passar em: {caixas}"
       },
       "EXCLUIR": {
         "TITULO": "Excluir este rascunho?",
@@ -1606,6 +1613,43 @@
           "TIRAR_ERRO": "Não deu para tirar {item} agora.",
           "TIRAR_ERRO_GARANTIA": "Ele continua na base."
         }
+      },
+      "EQUIPE": {
+        "TITULO": "Em quais canais {nome} vai ficar na equipe?",
+        "TITULO_SEM_NOME": "Em quais canais o agente que você está criando vai ficar na equipe?",
+        "TEXTO": "Escolha um ou mais. Só dá para escolher canais que já têm quem atenda primeiro.",
+        "PRINCIPAL": "{outro} atende primeiro",
+        "SEM_PRINCIPAL": "Ninguém atende primeiro neste canal ainda. O agente da equipe precisa de um agente principal no canal.",
+        "PRINCIPAL_PARADO": "{outro} está parado neste canal. O agente da equipe precisa de um agente principal atendendo.",
+        "NENHUM": "Nenhum canal tem um agente principal atendendo ainda. Ponha um agente para atender primeiro num canal e volte aqui.",
+        "CONFIRA": "Confira como fica",
+        "CONFIRA_TEXTO": "Nada muda para quem já atende primeiro.",
+        "AVISO": "{outro} atende primeiro; {nome} recebe quando alguém passar.",
+        "AVISO_SEM_NOME": "{outro} atende primeiro; o agente que você está criando recebe quando alguém passar.",
+        "SAI": "{nome} sai da equipe deste canal. As conversas que estavam com {nome} voltam para {outro}.",
+        "PASSO": "Passo {n} de {total}",
+        "CONTINUAR": "Continuar",
+        "COMECAR": "Começar a trabalhar",
+        "SALVAR": "Salvar",
+        "VOLTAR": "Voltar",
+        "VOLTAR_TESTE": "Voltar ao teste",
+        "SEM_MUDANCA": "Nada mudou. Escolha ou tire um canal para salvar.",
+        "ERRO_LER": "Não deu para ler os canais agora.",
+        "ERRO_LER_GARANTIA": "Nada mudou em {nome}. Tente de novo em instantes.",
+        "ERRO": "Não deu para pôr {nome} na equipe.",
+        "ERRO_GARANTIA": "Os canais que já estavam certos continuam. Tente de novo.",
+        "FEITO": "Pronto. {nome} já trabalha nos canais escolhidos.",
+        "CARREGANDO": "Lendo os canais",
+        "SALVANDO": "Salvando…",
+        "COMECAR_TEXTO": "{nome} recebe a conversa quando alguém passar, nos canais que você escolher."
+      },
+      "ONDE": {
+        "TITULO": "Onde {nome} trabalha",
+        "TITULO_SEM_NOME": "Onde o agente que você está criando trabalha",
+        "RECEBE": "Recebe quando alguém passar",
+        "PRONTO_TITULO": "{nome} já está trabalhando",
+        "MUDAR": "Mudar",
+        "MUDAR_ARIA": "Mudar onde {nome} trabalha"
       }
     }
   }

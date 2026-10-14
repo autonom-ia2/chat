@@ -14,10 +14,12 @@ class AutonomiaChannelsAPI extends ApiClient {
 
   // `ativar` (#1366): "Começar a atender neste canal" — o servidor liga o agente parado junto com o
   // vínculo. Sem canal, o agente não pode ficar atendendo: ativar antes, sozinho, é recusado (422).
-  connect(agentId, inboxId, { ativar = false } = {}) {
-    const corpo = ativar
-      ? { inbox_id: inboxId, ativar: true }
-      : { inbox_id: inboxId };
+  // `papel: 'area'` (#1433, tema 13): agente da equipe — entra na caixa (que já tem principal
+  // atendendo) para receber quando alguém passa, e o servidor já o liga. Só com a Fase 2.
+  connect(agentId, inboxId, { ativar = false, papel = null } = {}) {
+    const corpo = { inbox_id: inboxId };
+    if (papel) corpo.papel = papel;
+    else if (ativar) corpo.ativar = true;
     return axios.post(`${this.url}/${agentId}/channels`, corpo);
   }
 

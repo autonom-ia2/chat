@@ -1262,4 +1262,244 @@ describe('AgenteCriarPage', () => {
       wrapper.unmount();
     });
   });
+
+  describe('Agente da equipe (#1433, tema 13)', () => {
+    // 11: Bia atende primeiro (atendendo); 10: livre; 12: Leo parado; 13: outro robô.
+    const L2_EQUIPE = [
+      {
+        inbox_id: 10,
+        name: 'WhatsApp da Loja',
+        channel_type: 'Channel::Whatsapp',
+        occupied_by: null,
+        areas: [],
+      },
+      {
+        inbox_id: 11,
+        name: 'WhatsApp do Centro',
+        channel_type: 'Channel::Whatsapp',
+        occupied_by: {
+          kind: 'agent',
+          agent_id: 9,
+          agent_name: 'Bia',
+          operating: true,
+          caixas: 1,
+        },
+        areas: [],
+      },
+      {
+        inbox_id: 12,
+        name: 'Instagram',
+        channel_type: 'Channel::Instagram',
+        occupied_by: {
+          kind: 'agent',
+          agent_id: 8,
+          agent_name: 'Leo',
+          operating: false,
+          caixas: 1,
+        },
+        areas: [],
+      },
+      {
+        inbox_id: 13,
+        name: 'Site',
+        channel_type: 'Channel::WebWidget',
+        occupied_by: { kind: 'external' },
+        areas: [],
+      },
+    ];
+    const DEPOIS = L2_EQUIPE.map(canal =>
+      canal.inbox_id === 11
+        ? {
+            ...canal,
+            areas: [{ agent_id: 90, agent_name: 'Duda', operating: true }],
+          }
+        : canal
+    );
+
+    const ligarFase2 = (ligada = true) => {
+      store.state['accounts/getAccount'] = () => ({
+        id: 1,
+        name: 'Loja da Ana',
+        autonomia_agents_fase2: ligada,
+      });
+    };
+
+    beforeEach(() => {
+      ligarFase2();
+      jornada.canaisOcupados.mockResolvedValue({
+        data: { payload: L2_EQUIPE },
+      });
+      canaisApi.connect.mockImplementation(async (id, inbox, opcoes) => {
+        ordem.push(`post:${id}:${inbox}:${opcoes?.papel || '-'}`);
+        ligadoNoServidor = true;
+        jornada.canaisOcupados.mockResolvedValue({ data: { payload: DEPOIS } });
+      });
+      // O servidor devolve o agente da equipe ligado com `na_equipe`.
+      const original = store.dispatch.getMockImplementation();
+      store.dispatch.mockImplementation(async (acao, dados) => {
+        const lido = await original(acao, dados);
+        if (acao !== 'autonomiaAgents/show' || !ligadoNoServidor) return lido;
+        const naEquipe = { ...lido, na_equipe: true };
+        store.state['autonomiaAgents/getRecords'] = [naEquipe];
+        return naEquipe;
+      });
+    });
+
+    const abrirComece = async wrapper => {
+      await wrapper.get('[data-comecar] button').trigger('click');
+      await flushPromises();
+      return corpo().querySelector('[data-equipe-canais]');
+    };
+    const opcao = valor => corpo().querySelector(`[data-opcao="${valor}"]`);
+    const clicar = async elemento => {
+      elemento.click();
+      await flushPromises();
+    };
+
+    it('keeps ?papel=area next to the draft in the query, so F5 continues as a team agent', async () => {
+      const wrapper = await montar({ query: { papel: 'area' } });
+      store.state['autonomiaBuildThreads/getThread'] = { id: 7, agent_id: 90 };
+      await flushPromises();
+      expect(router.replace).toHaveBeenCalledWith({
+        query: { papel: 'area', agente: '90' },
+      });
+      wrapper.unmount();
+
+      const depoisDoF5 = await montar({
+        query: { papel: 'area', agente: '90' },
+      });
+      expect(depoisDoF5.get('[data-comecar] button').text()).toBe(
+        'AGENTS.JORNADA.EQUIPE.COMECAR'
+      );
+      expect(depoisDoF5.get('[data-comecar]').text()).toContain(
+        'AGENTS.JORNADA.EQUIPE.COMECAR_TEXTO'
+      );
+      depoisDoF5.unmount();
+    });
+
+    it('in Comece, only inboxes with a main agent answering can be chosen; the others say why', async () => {
+      const wrapper = await montar({ query: { papel: 'area', agente: '90' } });
+      const gaveta = await abrirComece(wrapper);
+
+      expect(gaveta.dataset.passo).toBe('canais');
+      expect(corpo().querySelector('[data-comece]')).toBeNull();
+      expect(opcao(11).getAttribute('aria-disabled')).toBeNull();
+      expect(opcao(11).textContent).toContain(
+        'AGENTS.JORNADA.EQUIPE.PRINCIPAL'
+      );
+      [10, 12, 13].forEach(valor => {
+        expect(opcao(valor).getAttribute('aria-disabled')).toBe('true');
+        const motivo = opcao(valor).querySelector('[data-motivo]');
+        expect(opcao(valor).getAttribute('aria-describedby')).toBe(motivo.id);
+      });
+      expect(opcao(10).textContent).toContain(
+        'AGENTS.JORNADA.EQUIPE.SEM_PRINCIPAL'
+      );
+      expect(opcao(13).textContent).toContain(
+        'AGENTS.JORNADA.EQUIPE.SEM_PRINCIPAL'
+      );
+      expect(opcao(12).textContent).toContain(
+        'AGENTS.JORNADA.EQUIPE.PRINCIPAL_PARADO'
+      );
+
+      // Bloqueado não marca; sem escolha, "Continuar" não anda.
+      await clicar(opcao(10));
+      expect(opcao(10).getAttribute('aria-checked')).toBe('false');
+      await clicar(corpo().querySelector('[data-seguir-equipe]'));
+      expect(gaveta.dataset.passo).toBe('canais');
+      expect(corpo().querySelector('select')).toBeNull();
+      wrapper.unmount();
+    });
+
+    it('shows "Confira como fica", then links as team (papel area) and opens Pronto with where it works', async () => {
+      const wrapper = await montar({ query: { papel: 'area', agente: '90' } });
+      const gaveta = await abrirComece(wrapper);
+      await clicar(opcao(11));
+      expect(opcao(11).getAttribute('aria-checked')).toBe('true');
+      await clicar(corpo().querySelector('[data-seguir-equipe]'));
+
+      expect(gaveta.dataset.passo).toBe('confira');
+      const confira = corpo().querySelector('[data-confira-equipe]');
+      expect(confira.textContent).toContain('WhatsApp do Centro');
+      expect(confira.textContent).toContain('AGENTS.JORNADA.EQUIPE.AVISO');
+      expect(canaisApi.connect).not.toHaveBeenCalled();
+
+      await clicar(corpo().querySelector('[data-seguir-equipe]'));
+      await flushPromises();
+      expect(ordem).toContain('post:90:11:area');
+      expect(canaisApi.connect).toHaveBeenCalledWith(90, 11, { papel: 'area' });
+      expect(
+        store.dispatch.mock.calls.some(
+          ([acao, dados]) =>
+            acao === 'autonomiaAgents/update' && dados?.status === 'active'
+        )
+      ).toBe(false);
+
+      expect(router.replace).toHaveBeenLastCalledWith({
+        query: { papel: 'area', agente: '90', etapa: 'pronto' },
+      });
+      expect(wrapper.get('#pronto-titulo').text()).toBe(
+        'AGENTS.JORNADA.ONDE.PRONTO_TITULO'
+      );
+      const onde = wrapper.get('[data-onde-pronto]');
+      expect(onde.text()).toContain('AGENTS.JORNADA.ONDE.TITULO');
+      expect(onde.text()).toContain('WhatsApp do Centro');
+      expect(onde.text()).toContain('AGENTS.JORNADA.ONDE.RECEBE');
+      // Sem funis por enquanto: nenhum botão de escolher assuntos.
+      expect(onde.find('a').exists()).toBe(false);
+      expect(onde.find('button').exists()).toBe(false);
+      wrapper.unmount();
+    });
+
+    it('says "the agent you are creating" in Confira while the agent has no name yet', async () => {
+      prepararStore({ agente: { ...AGENTE, name: 'Novo agente' } });
+      ligarFase2();
+      jornada.canaisOcupados.mockResolvedValue({
+        data: { payload: L2_EQUIPE },
+      });
+      const wrapper = await montar({ query: { papel: 'area', agente: '90' } });
+      await abrirComece(wrapper);
+      expect(
+        corpo().querySelector('#equipe-passo-titulo').textContent.trim()
+      ).toBe('AGENTS.JORNADA.EQUIPE.TITULO_SEM_NOME');
+      await clicar(opcao(11));
+      await clicar(corpo().querySelector('[data-seguir-equipe]'));
+      expect(
+        corpo().querySelector('[data-confira-equipe]').textContent
+      ).toContain('AGENTS.JORNADA.EQUIPE.AVISO_SEM_NOME');
+      wrapper.unmount();
+    });
+
+    it('shows the server reason and stays in Confira when the link is refused', async () => {
+      canaisApi.connect.mockRejectedValue({
+        response: { data: { error: 'Ninguém atende primeiro em X agora.' } },
+      });
+      const wrapper = await montar({ query: { papel: 'area', agente: '90' } });
+      const gaveta = await abrirComece(wrapper);
+      await clicar(opcao(11));
+      await clicar(corpo().querySelector('[data-seguir-equipe]'));
+      await clicar(corpo().querySelector('[data-seguir-equipe]'));
+      await flushPromises();
+
+      expect(gaveta.dataset.passo).toBe('confira');
+      expect(corpo().querySelector('[data-erro-salvar]').textContent).toContain(
+        'Ninguém atende primeiro em X agora.'
+      );
+      expect(wrapper.find('#pronto-titulo').exists()).toBe(false);
+      wrapper.unmount();
+    });
+
+    it('without the Fase 2, ?papel=area is the normal creation: Comece picks one inbox to answer', async () => {
+      ligarFase2(false);
+      jornada.canaisOcupados.mockResolvedValue({ data: { payload: L2 } });
+      const wrapper = await montar({ query: { papel: 'area', agente: '90' } });
+      expect(wrapper.get('[data-comecar] button').text()).toBe(
+        'AGENTS.JORNADA.CRIAR.CONFIRA.COMECAR_NO'
+      );
+      await wrapper.get('[data-comecar] button').trigger('click');
+      await flushPromises();
+      expect(corpo().querySelector('[data-equipe-canais]')).toBeNull();
+      wrapper.unmount();
+    });
+  });
 });
