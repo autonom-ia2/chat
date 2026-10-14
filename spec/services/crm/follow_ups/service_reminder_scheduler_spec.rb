@@ -240,6 +240,23 @@ RSpec.describe Crm::FollowUps::ServiceReminderScheduler do
       expect(lembrete.description).to include('recusou o modelo').or include('rejected the message template')
     end
 
+    # Decisão do Rodrigo (14/10, opção a): o "deu tudo certo?" que vira aviso para a equipe não reabre a conversa.
+    it '"deu tudo certo?" que vira aviso para a equipe não reabre a conversa resolvida', :aggregate_failures do
+      card = setup_card
+      card.update_columns(status: Crm::Card.statuses[:resolved], closed_at: 2.days.ago)
+      described_class.new(card: card.reload).perform
+      lembrete = reminders(card).sole
+      card.primary_conversation.resolved!
+      fallback = Crm::FollowUps::CallbackRunner::Result.fallback('modelo_indisponivel:em_analise')
+      allow(Crm::FollowUps::CallbackRunner).to receive(:new).and_return(instance_double(Crm::FollowUps::CallbackRunner, perform: fallback))
+
+      Crm::FollowUps::DueProcessor.new(now: lembrete.due_at + 1.minute).perform
+
+      expect(lembrete.metadata['kind']).to eq('resolved_check')
+      expect(lembrete.reload).to be_reminder_only
+      expect(card.primary_conversation.reload).to be_resolved
+    end
+
     it 'cliente que pediu para não receber: cancela calado, sem aviso para a equipe' do
       card = setup_card
       card.update_columns(entered_stage_at: 2.days.ago)
