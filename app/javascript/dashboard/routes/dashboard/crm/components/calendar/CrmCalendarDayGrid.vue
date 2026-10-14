@@ -21,7 +21,7 @@ import {
   isDraggable,
   isValidDrop,
   filterByOverlays,
-  formatTime,
+  eventTime,
   EVENT_TYPE_GROUP,
   OVERLAY_GROUP,
   DAY_HOURS,
@@ -358,7 +358,7 @@ const hourLabel = hour => `${String(hour).padStart(2, '0')}:00`;
             />
             <span class="flex flex-col min-w-0">
               <span class="text-[11px] tabular-nums text-n-slate-10">
-                {{ formatTime(event.starts_at) }}
+                {{ eventTime(event) }}
               </span>
               <span class="text-sm truncate" :class="eventLabelClass(event)">
                 {{ event.title }}
