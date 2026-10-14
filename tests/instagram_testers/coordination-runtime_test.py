@@ -5,6 +5,8 @@ import os
 from pathlib import Path
 import subprocess
 import tempfile
+import threading
+import time
 import unittest
 
 os.sys.dont_write_bytecode = True
@@ -64,10 +66,14 @@ elif name == 'docker':
         print(os.environ.get('GATEWAY', '172.17.0.1'))
     elif args[:2] != ['run', '--rm']:
         sys.exit(99)
+elif name == 'ss':
+    listeners = Path(os.environ.get('FAKE_SS', '/nonexistent'))
+    if listeners.exists():
+        print(listeners.read_text(), end='')
 elif name not in ('ssh', 'ssh-keygen', 'openssl', 'systemctl'):
     sys.exit(99)
 '''
-        for name in ('aws', 'ssh', 'ssh-keygen', 'openssl', 'systemctl', 'docker', 'id'):
+        for name in ('aws', 'ssh', 'ssh-keygen', 'openssl', 'systemctl', 'docker', 'id', 'ss'):
             executable = self.bin / name
             executable.write_text(dispatcher)
             executable.chmod(0o700)
@@ -298,20 +304,91 @@ elif name not in ('ssh', 'ssh-keygen', 'openssl', 'systemctl'):
         self.assertNotEqual(result.returncode, 0)
         self.assertFalse(any(name == 'ssh' for name, _ in self.calls()))
 
-    def test_inactive_tunnel_blocks_rails_preflight_and_container_has_all_settings(self):
+    def preflight_check(self, wait_seconds=60):
         (self.app / 'runtime.env').write_text('IMAGE_URI=test-image\n')
         check = self.directory / 'check.sh'
-        check.write_text((RUNTIME / 'coordination-preflight.sh').read_text().replace('APP_DIR=/opt/chatwoot', f'APP_DIR={self.app}'))
+        source = (RUNTIME / 'coordination-preflight.sh').read_text()
+        self.assertEqual(source.count('wait_seconds=60'), 1)
+        check.write_text(source.replace('APP_DIR=/opt/chatwoot', f'APP_DIR={self.app}')
+                         .replace('wait_seconds=60', f'wait_seconds={wait_seconds}'))
+        self.env['FAKE_SS'] = str(self.directory / 'listeners.txt')
+        return check
+
+    def tunnel_listeners(self, process='ssh', delay=0.0):
+        # Fake `ss -Hltnp` output: the two ssh -L forwards on the gateway.
+        lines = ''.join(f'LISTEN 0 128 172.17.0.1:{port} 0.0.0.0:* users:(("{process}",pid=7,fd=4))\n'
+                        for port in (16381, 16380))
+        path = Path(self.env['FAKE_SS'])
+        if not delay:
+            path.write_text(lines)
+            return
+        timer = threading.Timer(delay, path.write_text, args=(lines,))
+        timer.start()
+        self.addCleanup(lambda: [timer.cancel(), timer.join()])
+
+    def run_check(self, check, **env):
+        return subprocess.run(['/bin/bash', str(check)], env={**self.env, **env},
+                              text=True, capture_output=True, timeout=20)
+
+    def rails_preflight_ran(self):
+        return any(name == 'docker' and args[:2] == ['run', '--rm'] for name, args in self.calls())
+
+    def test_preflight_waits_for_a_tunnel_that_connects_late(self):
+        check = self.preflight_check()
+        self.tunnel_listeners(delay=1.5)
+        started = time.monotonic()
+        result = self.run_check(check)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertGreaterEqual(time.monotonic() - started, 1.5)
+        self.assertTrue(self.rails_preflight_ran())
+
+    def test_preflight_fails_with_its_own_code_when_the_tunnel_never_listens(self):
+        for process in (None, 'docker-proxy'):
+            with self.subTest(process=process):
+                check = self.preflight_check(wait_seconds=2)
+                Path(self.env['FAKE_SS']).unlink(missing_ok=True)
+                if process:
+                    self.tunnel_listeners(process=process)
+                self.log.write_text('')
+                result = self.run_check(check)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(result.stderr.strip(), 'instagram_coordination_tunnel_timeout')
+                self.assertFalse(self.rails_preflight_ran())
+
+    def test_preflight_stops_waiting_when_the_tunnel_unit_dies(self):
+        check = self.preflight_check()
+        Path(self.env['FAKE_SS']).unlink(missing_ok=True)
+        marker = self.directory / 'systemctl-calls'
+        # First is-active (before the wait) passes; the one inside the wait fails.
+        (self.bin / 'systemctl').write_text(
+            f"#!/bin/bash\nif [ -e {marker} ]; then exit 3; fi\ntouch {marker}\n")
+        started = time.monotonic()
+        result = self.run_check(check)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(result.stderr.strip(), 'instagram_coordination_tunnel_inactive')
+        self.assertLess(time.monotonic() - started, 10)
+        self.assertFalse(self.rails_preflight_ran())
+
+    def test_preflight_rejects_an_invalid_gateway_before_waiting(self):
+        check = self.preflight_check()
+        started = time.monotonic()
+        result = self.run_check(check, GATEWAY='not-an-ip')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertLess(time.monotonic() - started, 10)
+        self.assertFalse(self.rails_preflight_ran())
+
+    def test_inactive_tunnel_blocks_rails_preflight_and_container_has_all_settings(self):
+        check = self.preflight_check()
+        self.tunnel_listeners()
         for fail in ('systemctl', ''):
             self.log.write_text('')
-            result = subprocess.run(['/bin/bash', str(check)], env={**self.env, 'FAIL_COMMAND': fail},
-                                    text=True, capture_output=True, timeout=5)
+            result = self.run_check(check, FAIL_COMMAND=fail)
             if fail:
                 self.assertNotEqual(result.returncode, 0)
                 self.assertFalse(any(name == 'docker' for name, _ in self.calls()))
             else:
                 self.assertEqual(result.returncode, 0, result.stderr)
-                docker = next(args for name, args in self.calls() if name == 'docker')
+                docker = next(args for name, args in self.calls() if name == 'docker' and args[:2] == ['run', '--rm'])
                 self.assertIn('ig-coord.internal:host-gateway', docker)
                 self.assertIn('ig-proxy.internal:host-gateway', docker)
                 self.assertIn(str(self.app / 'igcoord/redis.env'), docker)
