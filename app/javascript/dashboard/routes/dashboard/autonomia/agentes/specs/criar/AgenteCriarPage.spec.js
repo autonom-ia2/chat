@@ -173,10 +173,11 @@ const prepararRota = query => {
 const montar = async ({
   query = { modelo: 'support' },
   celular = false,
+  props = {},
 } = {}) => {
   prepararRota(query);
   tela.celular = ref(celular);
-  const wrapper = mount(AgenteCriarPage, { attachTo: document.body });
+  const wrapper = mount(AgenteCriarPage, { attachTo: document.body, props });
   await flushPromises();
   return wrapper;
 };
@@ -247,6 +248,21 @@ describe('AgenteCriarPage', () => {
     store.state['autonomiaBuildThreads/getStatus'] = null;
     await flushPromises();
     expect(wrapper.find('[data-ideias]').exists()).toBe(true);
+    wrapper.unmount();
+  });
+
+  it('takes the focus to the title when it replaces the "Criar agente" page (#1543)', async () => {
+    const wrapper = await montar({ props: { focarTitulo: true } });
+    expect(document.activeElement.tagName).toBe('H1');
+    expect(document.activeElement.textContent).toContain(
+      'AGENTS.JORNADA.CRIAR'
+    );
+    wrapper.unmount();
+  });
+
+  it('leaves the focus alone when opened straight from a link or F5', async () => {
+    const wrapper = await montar();
+    expect(document.activeElement.tagName).not.toBe('H1');
     wrapper.unmount();
   });
 

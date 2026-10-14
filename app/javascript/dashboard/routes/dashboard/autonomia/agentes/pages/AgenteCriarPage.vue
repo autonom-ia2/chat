@@ -67,6 +67,12 @@ import BaseDaCriacao from '../components/criar/BaseDaCriacao.vue';
 // lista é a do clipe da conversa (conversa.base). Vale para o agente externo e para o copiloto.
 // #1504 — "Fazer ajustes avançados" (no Confira) deixa o agente parado (status paused), sem ligar
 // caixa nenhuma, e abre a página dele; vale para os dois tipos. Terminar depois é o "Voltar" do topo.
+// #1543 — vinda da página "Criar agente" (mesma rota, a criação toma o lugar dela): o foco vai ao
+// título da criação, para teclado e leitor de tela saberem que a tela mudou.
+const props = defineProps({
+  focarTitulo: { type: Boolean, default: false },
+});
+
 const route = useRoute();
 const router = useRouter();
 const store = useStore();
@@ -505,6 +511,7 @@ const abrirAgenteExistente = async () => {
 };
 
 onMounted(() => {
+  if (props.focarTitulo) nextTick(() => titulo.value?.focus());
   conversa.limpar();
   if (idInicial) {
     abrirAgenteExistente();
