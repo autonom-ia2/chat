@@ -20,6 +20,10 @@ RSpec.describe Autonomia::Agents::Nicho do
     [escolha.nicho, escolha.perfil, escolha.padrao?]
   end
 
+  def com_canal(escolha)
+    [escolha.nicho, escolha.perfil, escolha.canal, escolha.padrao?]
+  end
+
   describe '.for' do
     it 'fica em geral quando nem a conta nem a instalação escolheram' do
       expect(resumo(described_class.for(account))).to eq(['geral', nil, true])
@@ -84,6 +88,50 @@ RSpec.describe Autonomia::Agents::Nicho do
       expect(Rails.logger).to have_received(:warn).with(a_string_including("account=#{account.id}", 'banco'))
     end
 
+    it 'lê o canal no padrão da instalação com três partes' do
+      with_modified_env(AUTONOMIA_NICHO_PADRAO: 'seguros:insurtech:parceiros') do
+        expect(com_canal(described_class.for(account))).to eq(%w[seguros insurtech parceiros] + [true])
+      end
+    end
+
+    it 'completa a insurtech sem canal no padrão com direto' do
+      with_modified_env(AUTONOMIA_NICHO_PADRAO: 'seguros:insurtech') do
+        expect(com_canal(described_class.for(account))).to eq(%w[seguros insurtech direto] + [true])
+      end
+    end
+
+    it 'aceita seguros:insurtech:direto como padrão da instalação' do
+      with_modified_env(AUTONOMIA_NICHO_PADRAO: 'seguros:insurtech:direto') do
+        expect(com_canal(described_class.for(account))).to eq(%w[seguros insurtech direto] + [true])
+      end
+    end
+
+    it 'não dá canal a perfil que não é insurtech, nem no padrão da instalação' do
+      with_modified_env(AUTONOMIA_NICHO_PADRAO: 'seguros:corretora:parceiros') do
+        expect(com_canal(described_class.for(account))).to eq(['seguros', 'corretora', nil, true])
+      end
+    end
+
+    it 'aceita saude_beneficios como perfil de seguros' do
+      gravar(described_class::NICHO_KEY => 'seguros', described_class::PERFIL_KEY => 'saude_beneficios')
+
+      expect(com_canal(described_class.for(account))).to eq(['seguros', 'saude_beneficios', nil, false])
+    end
+
+    it 'devolve o canal gravado da insurtech' do
+      gravar(described_class::NICHO_KEY => 'seguros', described_class::PERFIL_KEY => 'insurtech',
+             described_class::CANAL_KEY => 'corretores')
+
+      expect(com_canal(described_class.for(account))).to eq(%w[seguros insurtech corretores] + [false])
+    end
+
+    it 'trata canal gravado inválido como nil sem invalidar nicho e perfil' do
+      gravar(described_class::NICHO_KEY => 'seguros', described_class::PERFIL_KEY => 'insurtech',
+             described_class::CANAL_KEY => 'loja')
+
+      expect(com_canal(described_class.for(account))).to eq(['seguros', 'insurtech', nil, false])
+    end
+
     it 'cai em geral e registra log quando o padrão da instalação é inválido' do
       allow(Rails.logger).to receive(:warn)
 
@@ -136,6 +184,72 @@ RSpec.describe Autonomia::Agents::Nicho do
       account.save!
 
       expect(account.reload.internal_attributes).to eq(outras_chaves)
+    end
+
+    it 'grava o canal da insurtech' do
+      described_class.atribuir(account, nicho: 'seguros', perfil: 'insurtech', canal: 'corretores')
+      account.save!
+
+      expect(account.reload.internal_attributes).to eq(
+        outras_chaves.merge(described_class::NICHO_KEY => 'seguros', described_class::PERFIL_KEY => 'insurtech',
+                            described_class::CANAL_KEY => 'corretores')
+      )
+    end
+
+    it 'não grava canal em perfil que não é insurtech' do
+      described_class.atribuir(account, nicho: 'seguros', perfil: 'corretora', canal: 'corretores')
+      account.save!
+
+      expect(account.reload.internal_attributes).to eq(
+        outras_chaves.merge(described_class::NICHO_KEY => 'seguros', described_class::PERFIL_KEY => 'corretora')
+      )
+    end
+
+    it 'apaga o canal ao trocar de insurtech para seguradora' do
+      described_class.atribuir(account, nicho: 'seguros', perfil: 'insurtech', canal: 'parceiros')
+      account.save!
+      described_class.atribuir(account, nicho: 'seguros', perfil: 'seguradora', canal: 'parceiros')
+      account.save!
+
+      expect(account.reload.internal_attributes).to eq(
+        outras_chaves.merge(described_class::NICHO_KEY => 'seguros', described_class::PERFIL_KEY => 'seguradora')
+      )
+    end
+
+    it 'grava a troca só do canal numa conta que já escolheu' do
+      described_class.atribuir(account, nicho: 'seguros', perfil: 'insurtech', canal: 'direto')
+      account.save!
+      described_class.atribuir(account, nicho: 'seguros', perfil: 'insurtech', canal: 'parceiros')
+      account.save!
+
+      expect(account.reload.internal_attributes[described_class::CANAL_KEY]).to eq('parceiros')
+    end
+
+    it 'não prende a conta ao padrão insurtech/direto quando ela ainda não escolheu e recebe o próprio padrão' do
+      with_modified_env(AUTONOMIA_NICHO_PADRAO: 'seguros:insurtech:direto') do
+        described_class.atribuir(account, nicho: 'seguros', perfil: 'insurtech', canal: 'direto')
+      end
+      account.save!
+
+      expect(account.reload.internal_attributes).to eq(outras_chaves)
+    end
+
+    it 'grava canal diferente do padrão numa conta que ainda não escolheu' do
+      with_modified_env(AUTONOMIA_NICHO_PADRAO: 'seguros:insurtech:direto') do
+        described_class.atribuir(account, nicho: 'seguros', perfil: 'insurtech', canal: 'corretores')
+      end
+      account.save!
+
+      expect(account.reload.internal_attributes[described_class::CANAL_KEY]).to eq('corretores')
+    end
+
+    it 'grava saude_beneficios' do
+      described_class.atribuir(account, nicho: 'seguros', perfil: 'saude_beneficios', canal: 'direto')
+      account.save!
+
+      expect(account.reload.internal_attributes).to eq(
+        outras_chaves.merge(described_class::NICHO_KEY => 'seguros', described_class::PERFIL_KEY => 'saude_beneficios')
+      )
     end
 
     it 'grava o valor igual ao padrão quando a conta já tinha outra escolha' do

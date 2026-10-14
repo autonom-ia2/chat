@@ -5,6 +5,7 @@ RSpec.describe 'Super Admin agents niche', type: :request do
   let(:path) { "/super_admin/accounts/#{account.id}" }
   let(:nicho_key) { Autonomia::Agents::Nicho::NICHO_KEY }
   let(:perfil_key) { Autonomia::Agents::Nicho::PERFIL_KEY }
+  let(:canal_key) { Autonomia::Agents::Nicho::CANAL_KEY }
 
   around do |example|
     GlobalConfig.clear_cache(Autonomia::Agents::Nicho::PADRAO_KEY)
@@ -25,20 +26,56 @@ RSpec.describe 'Super Admin agents niche', type: :request do
     document = Nokogiri::HTML(response.body)
     campo = document.at_css('[data-agents-niche-form]')
     expect(radios(document, 'nicho').pluck('value')).to eq(%w[seguros geral])
-    expect(radios(document, 'perfil').pluck('value')).to eq(%w[corretora seguradora insurtech])
+    expect(radios(document, 'perfil').pluck('value')).to eq(%w[corretora seguradora insurtech saude_beneficios])
     expect(radios(document, 'nicho').find { |radio| radio['checked'] }['value']).to eq('seguros')
     expect(campo.css('select')).to be_empty
     expect(campo.text.squish).to include('Default for this installation: Insurance · Broker')
     expect(campo.text.squish).to include(
-      'Changing the niche does not change agents that already exist; they only change through the Update with the new base button.'
+      'The change shows the next time the team opens the dashboard. Funnels already created do not change. ' \
+      'Existing agents only change through the Update with the new base button.'
     )
+  end
+
+  it 'explica o que a escolha muda' do
+    get "#{path}/edit"
+
+    texto = Nokogiri::HTML(response.body).at_css('[data-agents-niche-form]').text.squish
+    expect(texto).to include('Changes the words in the dashboard, the Guide, the Help Center and the agents to the way this account works.')
+  end
+
+  it 'mostra o "Como vende" só dentro do tipo de empresa, com os três canais' do
+    get "#{path}/edit"
+
+    document = Nokogiri::HTML(response.body)
+    canais = document.css(%([data-agents-niche-profile] [data-agents-niche-channel] input[type="radio"][name="account[agents_niche][canal]"]))
+    expect(canais.pluck('value')).to eq(%w[direto corretores parceiros])
+    expect(canais.find { |radio| radio['checked'] }['value']).to eq('direto')
+    expect(document.at_css('#agents-niche-perfil-insurtech')).to be_present
+    expect(document.at_css('[data-agents-niche-channel] legend').text.squish).to eq('How it sells')
+  end
+
+  it 'avisa que a escolha só fica guardada enquanto as palavras por segmento estão desligadas' do
+    get "#{path}/edit"
+
+    nota = Nokogiri::HTML(response.body).at_css('[data-agents-niche-form] [data-agents-niche-switch-off]')
+    expect(nota).to be_present
+    expect(nota['role']).to eq('note')
+    expect(nota.text.squish).to start_with('While segment wording is turned off on this installation')
+  end
+
+  it 'não mostra o aviso de desligado quando as palavras por segmento estão ligadas' do
+    with_modified_env(AUTONOMIA_PACOTES_ENABLED: 'true') { get "#{path}/edit" }
+
+    expect(Nokogiri::HTML(response.body).at_css('[data-agents-niche-switch-off]')).to be_nil
   end
 
   it 'liga cada cartão ao seu rótulo, com alvo de toque de 44 px' do
     get "#{path}/edit"
 
     document = Nokogiri::HTML(response.body)
-    (radios(document, 'nicho') + radios(document, 'perfil')).each do |radio|
+    todos = radios(document, 'nicho') + radios(document, 'perfil') + radios(document, 'canal')
+    expect(radios(document, 'canal').size).to eq(3)
+    todos.each do |radio|
       label = radio.ancestors('label').first
       expect(label).to be_present
       expect(label['class'].split).to include('min-h-11')
@@ -50,7 +87,7 @@ RSpec.describe 'Super Admin agents niche', type: :request do
 
     document = Nokogiri::HTML(response.body)
     expect(document.css('label[for="account_agents_niche"]')).to be_empty
-    expect(document.at_css('[data-agents-niche-form] legend').text.squish).to eq('AI agents niche')
+    expect(document.at_css('[data-agents-niche-form] legend').text.squish).to eq('Account segment and niche')
   end
 
   it 'mostra o nicho efetivo na página da conta' do
@@ -68,6 +105,33 @@ RSpec.describe 'Super Admin agents niche', type: :request do
     expect(response).to have_http_status(:redirect)
     expect(account.reload.internal_attributes).to eq(
       'unrelated' => 'preserved', 'autonomia_insurance_enabled' => true, nicho_key => 'seguros', perfil_key => 'insurtech'
+    )
+  end
+
+  it 'mostra o canal da insurtech no nome efetivo da conta' do
+    account.update!(internal_attributes: account.internal_attributes.merge(nicho_key => 'seguros', perfil_key => 'insurtech',
+                                                                           canal_key => 'parceiros'))
+
+    get path
+
+    expect(Nokogiri::HTML(response.body).at_css('[data-agents-niche]').text.squish).to eq('Insurance · Insurtech · Through partners')
+  end
+
+  it 'grava o canal da insurtech no update' do
+    patch path, params: { account: { name: account.name, agents_niche: { nicho: 'seguros', perfil: 'insurtech', canal: 'corretores' } } }
+
+    expect(response).to have_http_status(:redirect)
+    expect(account.reload.internal_attributes).to eq(
+      'unrelated' => 'preserved', 'autonomia_insurance_enabled' => true, nicho_key => 'seguros', perfil_key => 'insurtech',
+      canal_key => 'corretores'
+    )
+  end
+
+  it 'não grava canal quando o perfil não é insurtech' do
+    patch path, params: { account: { name: account.name, agents_niche: { nicho: 'seguros', perfil: 'corretora', canal: 'corretores' } } }
+
+    expect(account.reload.internal_attributes).to eq(
+      'unrelated' => 'preserved', 'autonomia_insurance_enabled' => true, nicho_key => 'seguros', perfil_key => 'corretora'
     )
   end
 

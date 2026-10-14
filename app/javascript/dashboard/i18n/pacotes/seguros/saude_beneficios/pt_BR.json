@@ -1,0 +1,15 @@
+{
+  "CRM_KANBAN": {
+    "CARD_STATUS": {
+      "WON": "Plano ativo"
+    },
+    "DRAWER": {
+      "STATUS_WON": "Plano ativo"
+    }
+  },
+  "CRM_CARD": {
+    "DESFECHO": {
+      "GANHOU": "Plano ativo"
+    }
+  }
+}

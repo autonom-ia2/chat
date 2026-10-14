@@ -1,0 +1,7 @@
+en:
+  crm:
+    export:
+      statuses:
+        won: 'Won'
+        lost: 'Lost'
+      count: '%{count} cards'

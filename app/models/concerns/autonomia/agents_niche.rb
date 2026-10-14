@@ -9,10 +9,10 @@ module Autonomia::AgentsNiche
     Autonomia::Agents::Nicho.for(self)
   end
 
-  # Recebe { nicho:, perfil: } do formulário. Valor fora da lista não muda nada; as outras chaves de
+  # Recebe { nicho:, perfil:, canal: } do formulário. Valor fora da lista não muda nada; as outras chaves de
   # internal_attributes ficam intactas.
   def agents_niche=(valor)
     valor = valor.to_h.with_indifferent_access
-    Autonomia::Agents::Nicho.atribuir(self, nicho: valor[:nicho], perfil: valor[:perfil])
+    Autonomia::Agents::Nicho.atribuir(self, nicho: valor[:nicho], perfil: valor[:perfil], canal: valor[:canal])
   end
 end

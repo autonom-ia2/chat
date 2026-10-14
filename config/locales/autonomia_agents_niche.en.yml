@@ -2,22 +2,24 @@ en:
   helpers:
     label:
       account:
-        agents_niche: AI agents niche
+        agents_niche: Account segment and niche
   autonomia_agents_niche:
-    label: AI agents niche
-    help: The base that the instructions of new agents start from.
+    label: Account segment and niche
+    help: Changes the words in the dashboard, the Guide, the Help Center and the agents to the way this account works.
     installation_default: "Default for this installation: %{niche}"
     is_default: (default for this installation)
-    warning: Changing the niche does not change agents that already exist; they only change through the Update with the new base button.
-    profile_label: Insurance profile
+    warning: The change shows the next time the team opens the dashboard. Funnels already created do not change. Existing agents only change through the Update with the new base button.
+    switch_off: While segment wording is turned off on this installation, the choice is saved and starts to apply once it is turned on.
+    profile_label: Type of company
+    channel_label: How it sells
     separator: " · "
     niches:
       seguros:
         title: Insurance
-        text: Insurance base.
+        text: For insurance companies.
       geral:
         title: General
-        text: General base, for any business.
+        text: For any business.
     profiles:
       corretora:
         title: Broker
@@ -28,3 +30,16 @@ en:
       insurtech:
         title: Insurtech
         text: Digital insurance company.
+      saude_beneficios:
+        title: Health and benefits
+        text: Health, dental and benefit plans (ANS rules).
+    channels:
+      direto:
+        title: Direct to customer
+        text: Through the website, app or WhatsApp.
+      corretores:
+        title: Through partner brokers
+        text: Brokers sell your policies.
+      parceiros:
+        title: Through partners
+        text: Bundled with another company's purchase.

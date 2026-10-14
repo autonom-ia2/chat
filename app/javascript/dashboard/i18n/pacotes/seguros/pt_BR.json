@@ -1,0 +1,18 @@
+{
+  "CRM_KANBAN": {
+    "CARD_STATUS": {
+      "WON": "Seguro ativo",
+      "LOST": "Não fechou"
+    },
+    "DRAWER": {
+      "STATUS_WON": "Seguro ativo",
+      "STATUS_LOST": "Não fechou"
+    }
+  },
+  "CRM_CARD": {
+    "DESFECHO": {
+      "GANHOU": "Seguro ativo",
+      "PERDEU": "Não fechou"
+    }
+  }
+}

@@ -1,0 +1,7 @@
+pt_BR:
+  crm:
+    export:
+      statuses:
+        won: 'Ganho'
+        lost: 'Perdido'
+      count: '%{count} cards'
