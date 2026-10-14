@@ -144,17 +144,21 @@ describe('InsuranceAgentTab', () => {
     expect(wrapper.find('[data-sem-canal]').exists()).toBe(false);
   });
 
-  // #1525 — "Abrir o agente" levava à lista, e o cartão da lista voltava para cá. Agora leva à página
-  // do agente já na escolha de canal (o :tab channels).
-  it('abre a pagina do agente na escolha de canal', async () => {
-    api.getQuoteAgent.mockResolvedValue({ data: { payload: criado } });
+  // #1525 — "Abrir o agente" levava à lista, e o cartão da lista voltava para cá. Com canal, leva à
+  // página do agente, sem abrir a escolha de canal.
+  it('abre a pagina do agente quando ele ja tem canal', async () => {
+    api.getQuoteAgent.mockResolvedValue({
+      data: {
+        payload: { ...criado, status: 'active', tem_onde_trabalhar: true },
+      },
+    });
     const wrapper = await montar();
 
     await botao(wrapper, 'ACTIONS.OPEN_AGENT').trigger('click');
 
     expect(push).toHaveBeenCalledWith({
       name: 'autonomia_agent_panel',
-      params: { agentId: 1, tab: 'channels' },
+      params: { agentId: 1 },
     });
   });
 

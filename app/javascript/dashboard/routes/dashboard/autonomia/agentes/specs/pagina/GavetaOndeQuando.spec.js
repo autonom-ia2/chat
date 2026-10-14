@@ -234,6 +234,42 @@ describe('GavetaOndeQuando', () => {
     wrapper.unmount();
   });
 
+  // #1525 — quem não está em canal nenhum (a Lia que nasceu parada) começa a atender; não "volta".
+  it('says "start answering" to an agent that is on no channel', async () => {
+    const wrapper = montar({
+      modo: 'voltar',
+      atendendo: false,
+      atuais: [],
+      agente: {
+        ...AGENTE,
+        status: 'paused',
+        enabled: false,
+        channels_count: 0,
+      },
+    });
+    radio('Instagram').click();
+    await nextTick();
+    const botao = no('[data-confirmar]').textContent;
+    expect(botao).toContain('PAGINA.ONDE.COMECAR');
+    expect(botao).not.toContain('PAGINA.ONDE.VOLTAR');
+    await clicar('[data-confirmar]');
+    expect(canaisApi.connect).toHaveBeenCalledWith(7, 2, { ativar: true });
+    wrapper.unmount();
+  });
+
+  it('keeps "start answering again" while the channel count says it still has one', async () => {
+    const wrapper = montar({
+      modo: 'voltar',
+      atendendo: false,
+      atuais: [],
+      estadoCanais: 'carregando',
+      canais: CANAIS,
+      agente: { ...AGENTE, status: 'paused', channels_count: 1 },
+    });
+    expect(no('[data-confirmar]').textContent).toContain('PAGINA.ONDE.VOLTAR');
+    wrapper.unmount();
+  });
+
   it('starts answering again on the same inbox with only the active PATCH', async () => {
     const wrapper = montar({
       modo: 'voltar',

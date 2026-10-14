@@ -1222,6 +1222,7 @@
           "SEM_CANAL": "You have not connected any channel yet.",
           "PARADO": "To change the channel, {nome} needs to start answering again.",
           "VOLTAR": "Start answering again",
+          "COMECAR": "Start answering",
           "TROCAR": "Swap and start answering",
           "VOLTAR_TEXTO": "{nome} starts answering your customers’ messages.",
           "VOLTOU": "Whoever messages {canal} now talks to {nome}.",

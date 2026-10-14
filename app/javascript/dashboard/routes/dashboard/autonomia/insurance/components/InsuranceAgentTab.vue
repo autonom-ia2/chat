@@ -46,6 +46,7 @@ const canSubmit = computed(
 
 // #1525 — o agente nasce parado e sem canal (como todo agente externo): a aba convida a escolher onde ele
 // atende, e o botão leva à página do agente já na escolha de canal (o `:tab` channels, o fluxo da própria página).
+// Com canal, "Abrir o agente" leva só à página.
 const semCanal = computed(() => agent.value?.tem_onde_trabalhar === false);
 
 const branchNames = computed(() =>
@@ -109,11 +110,12 @@ const goToAgents = () => {
   router.push({ name: 'autonomia_agents_index' });
 };
 
-const openAgentChannels = () => {
-  router.push({
-    name: 'autonomia_agent_panel',
-    params: { agentId: agent.value.id, tab: 'channels' },
-  });
+// Sem canal, a página do agente abre já na escolha de canal; com canal, só a página.
+const openAgent = () => {
+  const params = semCanal.value
+    ? { agentId: agent.value.id, tab: 'channels' }
+    : { agentId: agent.value.id };
+  router.push({ name: 'autonomia_agent_panel', params });
 };
 </script>
 
@@ -199,7 +201,7 @@ const openAgentChannels = () => {
                 })
               : t('INSURANCE.AGENT.ACTIONS.OPEN_AGENT')
           "
-          @click="openAgentChannels"
+          @click="openAgent"
         />
         <NextButton
           faded

@@ -500,7 +500,7 @@ describe('AgentePage', () => {
       await clicar('[role="switch"]');
       expect(no('[role="dialog"]').textContent).toContain('ONDE_QUANDO.TITULO');
       expect(no('[role="dialog"] [data-confirmar]').textContent).toContain(
-        'PAGINA.ONDE.VOLTAR'
+        'PAGINA.ONDE.COMECAR'
       );
       expect(store.dispatch).not.toHaveBeenCalledWith(
         'autonomiaAgents/update',
@@ -547,7 +547,7 @@ describe('AgentePage', () => {
       );
       await clicar('[data-escolher-canal]');
       expect(no('[role="dialog"] [data-confirmar]').textContent).toContain(
-        'PAGINA.ONDE.VOLTAR'
+        'PAGINA.ONDE.COMECAR'
       );
       wrapper.unmount();
     });
@@ -676,7 +676,7 @@ describe('AgentePage', () => {
       rota.params = { agentId: '7', tab: 'channels' };
       const wrapper = await montar({ gaveta: 'onde' });
       expect(no('[role="dialog"] [data-confirmar]').textContent).toContain(
-        'PAGINA.ONDE.VOLTAR'
+        'PAGINA.ONDE.COMECAR'
       );
       wrapper.unmount();
     });

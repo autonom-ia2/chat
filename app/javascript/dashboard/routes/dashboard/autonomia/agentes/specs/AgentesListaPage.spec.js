@@ -239,6 +239,25 @@ describe('AgentesListaPage', () => {
       wrapper.unmount();
     });
 
+    it('opens the quote agent page without the channel choice when it has a channel', async () => {
+      prepararStore({
+        agentes: [
+          agente(9, {
+            name: 'Lia',
+            agent_type: 'insurance_quote',
+            tem_onde_trabalhar: true,
+          }),
+        ],
+      });
+      const wrapper = await montar();
+      await wrapper.get('[data-abrir]').trigger('click');
+      expect(router.push).toHaveBeenCalledWith({
+        name: 'autonomia_agent_panel',
+        params: { agentId: 9 },
+      });
+      wrapper.unmount();
+    });
+
     it('continues a draft in the builder', async () => {
       const wrapper = await montar();
       await wrapper.get('[data-continuar]').trigger('click');

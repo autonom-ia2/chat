@@ -1222,6 +1222,7 @@
           "SEM_CANAL": "Você ainda não conectou nenhum canal.",
           "PARADO": "Para trocar o canal, {nome} precisa voltar a atender.",
           "VOLTAR": "Voltar a atender",
+          "COMECAR": "Começar a atender",
           "TROCAR": "Trocar e começar a atender",
           "VOLTAR_TEXTO": "{nome} passa a responder as mensagens dos seus clientes.",
           "VOLTOU": "Quem mandar mensagem no {canal} agora fala com {nome}.",

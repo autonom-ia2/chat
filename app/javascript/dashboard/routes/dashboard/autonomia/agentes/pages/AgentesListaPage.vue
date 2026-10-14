@@ -150,11 +150,15 @@ const abrirAgente = agente =>
     params: { agentId: agente.id },
   });
 
-// #1525 — a cotação abre a página do agente já na escolha de canal (o `:tab` channels, o fluxo da própria página),
-// e não o módulo: de lá o "Abrir o agente" voltava para cá, e a corretora não achava onde pôr a Lia num canal.
+// #1525 — a cotação abre a página do agente, e não o módulo: de lá o "Abrir o agente" voltava para cá, e a
+// corretora não achava onde pôr a Lia num canal. Sem canal, já na escolha de canal (o `:tab` channels, o fluxo da
+// própria página); com canal, só a página.
 const rotaDaCotacao = agente => ({
   name: 'autonomia_agent_panel',
-  params: { agentId: agente.id, tab: 'channels' },
+  params:
+    agente.tem_onde_trabalhar === false
+      ? { agentId: agente.id, tab: 'channels' }
+      : { agentId: agente.id },
 });
 
 const abrirCotacao = agente => router.push(rotaDaCotacao(agente));
