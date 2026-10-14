@@ -12,6 +12,12 @@ module WhatsappProxy::EngineProxy
     [server, Webshare::Proxy.digest_for(proxy['username'], proxy['password'])]
   end
 
+  # Credencial mascarada pelo motor (só asteriscos)? Aí o HMAC não diz nada: quem compara não regrava nem reaplica.
+  def masked?(session)
+    password = session.to_h.dig('config', 'proxy', 'password').to_s
+    password.present? && password.delete('*').empty?
+  end
+
   # Relê a sessão no motor (timeout curto); ilegível → [nil, nil].
   def read(client, session_name)
     from_session(client.get_session(session_name, timeout: WhatsappProxy::SessionUpdater::READ_TIMEOUT))

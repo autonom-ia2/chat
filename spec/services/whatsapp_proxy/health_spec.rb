@@ -38,6 +38,14 @@ RSpec.describe WhatsappProxy::Health do
     travel_to(25.hours.from_now) { expect(described_class.off_for_long?(session)).to be(false) }
   end
 
+  it 'forgets how long the session was off when it goes to QR (unlinked device)' do
+    Redis::Alfred.delete("whatsapp_proxy:off_since:#{session}")
+    described_class.observe!(session, 'FAILED', previous: 'FAILED')
+    described_class.observe!(session, 'SCAN_QR_CODE', previous: 'FAILED')
+
+    travel_to(25.hours.from_now) { expect(described_class.off_for_long?(session)).to be(false) }
+  end
+
   it 'counts drops seen by the Hybrid webhook (connected → connecting), not QR' do
     channel = create(:channel_whatsapp, provider: 'whatsapp_cloud', sync_templates: false, validate_provider_config: false)
     connection = WhatsappHybrid::Connection.create!(account: channel.account, inbox: channel.inbox, session_name: session,

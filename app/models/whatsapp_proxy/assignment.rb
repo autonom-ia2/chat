@@ -124,13 +124,29 @@ class WhatsappProxy::Assignment < ApplicationRecord
     update!(settled.merge(reset).merge(credential_digest: credential_digest))
   end
 
-  # O motor recusou a troca e a configuração anterior voltou: a atribuição volta inteira (IP, plano, conta, origem — ou
-  # fica pendente, se não havia IP antes) e conta mais uma falha para o recuo.
+  # O motor recusou a troca e a configuração anterior voltou: a atribuição volta inteira ao estado guardado (IP, plano,
+  # conta, origem — pendente só se ele era pendente) e conta mais uma falha. Sem estado guardado, mantém o IP atual e
+  # só conta a falha (nunca vira pendente por acidente).
   def revert_failed_apply!(credential_digest: previous_credential_digest)
+    return update!(failure.merge(apply_scheduled_at: nil)) unless awaiting_confirmation?
+
     restored = PREVIOUS.transform_values { |previous| self[previous] }
-    restored = restored.merge(pool: pool, account_id: account_id, origin: origin) unless awaiting_confirmation?
-    update!(restored.merge(settled).merge(credential_digest: credential_digest, apply_failures: apply_failures + 1,
-                                          last_apply_failed_at: Time.current))
+    update!(restored.merge(settled).merge(failure).merge(credential_digest: credential_digest))
+  end
+
+  # Antes do PUT: o IP que o motor usa de fato vira o estado guardado, se ainda não há um (troca que resolveu o mesmo
+  # IP da tabela, ex. :drift). Só com IP conhecido da Webshare (com id): volta para um IP desconhecido não serve.
+  def remember_engine_state!(proxy)
+    return if awaiting_confirmation? || proxy.nil? || proxy.address == proxy_address
+
+    update!(previous_proxy_address: proxy.address, previous_proxy_port: proxy.port, previous_webshare_proxy_id: proxy.id,
+            previous_credential_digest: credential_digest, previous_pool: pool, previous_account_id: account_id,
+            previous_origin: origin)
+  end
+
+  def mark_external!(server)
+    host, port = server.split(':')
+    update!(settled.merge(webshare_proxy_id: nil, proxy_address: host, proxy_port: port.to_i, credential_digest: nil))
   end
 
   # A volta da configuração anterior falhou. O motor é a fonte da verdade (#1516): com o que ele mostra relido,

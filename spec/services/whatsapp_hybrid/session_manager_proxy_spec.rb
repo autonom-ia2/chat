@@ -156,7 +156,7 @@ describe WhatsappHybrid::SessionManager do
     expect(assigner).to have_received(:mark_applied!).with(session, new_proxy)
   end
 
-  it 'reconnect does not write the proxy while another proxy change holds the lock (the reconciliation converges later)' do
+  it 'reconnect with the lock held writes only the missing webhook, never the proxy (the reconciliation converges later)' do
     assign!
     Redis::Alfred.delete(WhatsappProxy::SessionLock.key(session))
     Redis::Alfred.set(WhatsappProxy::SessionLock.key(session), 'apply-job', nx: true, ex: 60)
@@ -165,10 +165,35 @@ describe WhatsappHybrid::SessionManager do
 
     manager.reconnect!
 
-    expect(client).not_to have_received(:update_session)
+    expect(client).to have_received(:update_session)
+      .with(session, config: hash_including('proxy' => { 'server' => '10.0.0.9:6000' },
+                                            'webhooks' => [hash_including('url' => connection.webhook_url)]))
     expect(assigner).not_to have_received(:for)
   ensure
     Redis::Alfred.delete(WhatsappProxy::SessionLock.key(session))
+  end
+
+  it 'reconnect with the feature off and Redis down: no lock, writes only the missing webhook' do
+    real = WhatsappProxy::Assigner.new(engine: client, pools: { isp: fake_pool('isp', [proxy]) })
+    allow(client).to receive(:get_session).and_return(remote(webhook: false))
+    allow(Redis::Alfred).to receive(:set).and_raise(Redis::CannotConnectError)
+
+    with_modified_env(WHATSAPP_PROXY_ENABLED: nil) { described_class.new(connection, client: client, proxy_assigner: real).reconnect! }
+
+    expect(Redis::Alfred).not_to have_received(:set)
+    expect(client).to have_received(:update_session).with(session, config: hash_excluding('proxy'))
+  end
+
+  it 'reconnect with Redis down and an assignment: writes the webhook, never the proxy' do
+    assign!
+    allow(client).to receive(:get_session).and_return(remote(proxy: { 'server' => '10.0.0.9:6000' }, webhook: false))
+    allow(assigner).to receive(:for).and_return(proxy)
+    allow(Redis::Alfred).to receive(:set).and_raise(Redis::CannotConnectError)
+
+    manager.reconnect!
+
+    expect(client).to have_received(:update_session).with(session, config: hash_including('proxy' => { 'server' => '10.0.0.9:6000' }))
+    expect(assigner).not_to have_received(:for)
   end
 
   it 'behaves as before the proxy while WHATSAPP_PROXY_ENABLED is off, even with the Webshare key' do

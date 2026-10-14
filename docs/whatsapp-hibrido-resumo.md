@@ -253,21 +253,28 @@ Autonom.ia). Regra decidida em 14/10/2026:
 - Trocar o proxy de sessão existente (`WhatsappProxy::ApplyJob` + `SessionUpdater`): um job por sessão (trava com token,
   solta só por quem pegou); se o motor já tem o proxy e a credencial, nada; sessão pedindo QR ou parada (STOPPED)
   nunca é tocada; senão cópia → PUT → espera WORKING (até ~3 min) com o mesmo número (`me.id`), os mesmos apps e o proxy
-  gravado. Falhou: a configuração anterior volta no motor, a atribuição volta inteira ao estado anterior (IP, plano,
+  gravado. Sessão que já estava fora de WORKING (IP morto): basta o PUT aceito e o proxy gravado conferido no GET; não
+  espera WORKING e nunca volta (voltar para o IP morto não ajuda) — falhou, conta a falha e mantém o IP novo. Antes do
+  PUT, o IP que o motor usa (se for conhecido da lista) fica guardado para a volta; sem estado guardado, a volta mantém
+  o IP atual e só conta a falha. Falhou: a configuração anterior volta no motor, a atribuição volta inteira ao estado anterior (IP, plano,
   conta, origem), conta uma falha e entra em **recuo** (10 min, 30 min, 2 h, 6 h, 24 h) — job repetido que já estava na
   fila sai sem fazer nada; alerta `troca_desfeita` na primeira falha e ao chegar no recuo máximo. Se nem a volta der
   certo (`volta_falhou`, urgente), o motor é relido e a tabela fica exatamente como ele mostra (proxy novo, antigo, ou
   — ilegível — sem credencial e com o anterior guardado, para a convergência resolver). Confirmação sem PUT (o motor já
   tinha o proxy) só zera o recuo se ele já tinha vencido.
 - **Convergência: o motor é a fonte da verdade.** A cada rodada a reconciliação compara o proxy que o motor usa
-  (host:porta e credencial) com a tabela. Mesmo IP: a tabela registra a credencial do motor. IP diferente com a sessão
-  WORKING num IP válido da lista, da mesma conta e plano: a **tabela** passa a ser o motor (sem PUT, sem reinício).
-  IP do motor sumido, inválido ou de outra conta, ou sessão fora de WORKING: troca normal para o IP da tabela. Motor sem
-  proxy: reaplica. Troca agendada há menos de 30 min é esperada (não conta como divergência).
+  (host:porta e credencial) com a tabela. Mesmo IP: a tabela registra a credencial do motor (credencial mascarada:
+  nada é regravado nem reaplicado, alerta `credencial_mascarada` uma vez). IP diferente com a sessão WORKING num IP
+  oferecível do plano da sessão (na lista, válido, BR, na fatia, sem quarentena, não reservado), sem outro número de
+  fora da conta nele no motor e dentro do limite por IP: a **tabela** passa a ser o motor (sem PUT, sem reinício).
+  Atribuição importada cujo motor passou a usar proxy fora da Webshare: vira externa (o código para de gerenciar e
+  nunca sobrescreve; alerta `proxy_manual_detectado` uma vez). Qualquer outro IP diferente, ou sessão fora de WORKING:
+  troca normal para o IP da tabela. Motor sem proxy: reaplica. Não compara troca agendada há menos de 30 min nem
+  sessão com troca em andamento (trava).
 - Híbrido: a atualização da aba nunca grava proxy na requisição — só agenda o ApplyJob, e só para sessão que já tem
   atribuição, fora do recuo, no máximo uma vez por hora (Redis fora = não agenda). Reconectar grava junto o IP
-  atribuído, também só com atribuição e só com a trava livre (outra troca em andamento: não grava; a convergência
-  resolve depois). O envio de mensagem nunca mexe no proxy.
+  atribuído, também só com atribuição e só com a trava livre; trava ocupada ou Redis fora: grava só o webhook que
+  faltava, sem mexer no proxy (a convergência resolve depois). O envio de mensagem nunca mexe no proxy.
 - Proxy posto à mão sem registro na tabela não é trocado pelo código.
 - `WhatsappProxy::ReconcileJob` (a cada 10 minutos; decisão em `WhatsappProxy::Triage`): lê o motor e cada plano uma
   vez. Nunca toca sessão que o motor não tem, parada (STOPPED) ou pedindo QR; sessão em recuo espera (e não ocupa
@@ -308,7 +315,8 @@ Autonom.ia). Regra decidida em 14/10/2026:
   pediram QR no dia anterior). Códigos: `plano_esgotado`, `fatia_vazia`, `ip_da_fatia_sumiu`, `troca_desfeita`,
   `volta_falhou`, `sessao_instavel_trocada`, `sessao_instavel_de_novo`, `ip_em_quarentena`, `quarentena_sem_destino`,
   `aparelho_desvinculado`, `troca_em_massa`, `plano_configurado_inexistente`, `falha_geral`, `falha_geral_em_curso`,
-  `falha_geral_fim`, `falha_geral_perdida`, `sessao_fora_24h`, `motor_indisponivel`, `teto_de_quarentena`,
+  `falha_geral_fim`, `falha_geral_perdida`, `sessao_fora_24h`, `motor_indisponivel`, `credencial_mascarada`,
+  `proxy_manual_detectado`, `teto_de_quarentena`,
   `webshare_indisponivel`, `caixa_sem_proxy`, `atribuicao_invalida` (os de erro chegam como aviso urgente).
 - A lista da Webshare vem inteira ou dá erro (nunca parcial: com lista parcial, IP em uso pareceria sumido).
 - Excluir a conexão Híbrida ou a caixa WAHA tira o número do IP; apagar a conta apaga as atribuições dela.

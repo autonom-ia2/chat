@@ -27,6 +27,7 @@ class WhatsappProxy::ApplyJob < ApplicationJob
     remote = client.get_session(session_name, timeout: WhatsappProxy::SessionUpdater::READ_TIMEOUT)
     return assigner.mark_confirmed!(session_name, proxy) if already_applied?(remote, proxy)
 
+    remember_engine_state(assigner, session_name, remote)
     outcome = WhatsappProxy::SessionUpdater.new(client: client).apply!(session_name, proxy, before: remote)
     record_outcome(assigner, session_name, proxy, outcome, client)
   rescue Waha::Client::NotFound
@@ -46,7 +47,20 @@ class WhatsappProxy::ApplyJob < ApplicationJob
     when :rollback_failed
       server, digest = WhatsappProxy::EngineProxy.read(client, session_name)
       record_failure(session_name) { |assignment| assignment.rollback_failed!(engine_server: server, engine_digest: digest) }
+    when :failed then record_failure(session_name, &:apply_failed!)
+    when :refused then WhatsappProxy::Assignment.where(session_name: session_name).update_all(apply_scheduled_at: nil) # rubocop:disable Rails/SkipsModelValidations
     end
+  end
+
+  # O IP que o motor usa agora vira o estado guardado antes do PUT (troca que manteve o IP da tabela, ex. :drift), para
+  # a volta voltar a ele — só se for um IP conhecido da lista do plano.
+  def remember_engine_state(assigner, session_name, remote)
+    assignment = WhatsappProxy::Assignment.find_by(session_name: session_name)
+    server, = WhatsappProxy::EngineProxy.from_session(remote)
+    return if assignment.nil? || server.nil?
+
+    listed = assigner.pool(assignment.pool).proxies.find { |proxy| WhatsappProxy::Server.same?(proxy.server, server) }
+    assignment.remember_engine_state!(listed)
   end
 
   # O motor voltou à configuração anterior: a atribuição volta junto e entra em recuo.

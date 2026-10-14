@@ -20,6 +20,7 @@ class WhatsappProxy::ReconcileJob < ApplicationJob
     summarize_unlinked
     managed = managed_assignments
     @outage = WhatsappProxy::Outage.new(engine_sessions, managed, previous: WhatsappProxy::Outage.previous)
+    @assigner.use_engine_sessions(engine_sessions)
     @outage.evaluate!
     pending = triage(managed)
     warn_mass_change(pending, managed)
@@ -108,9 +109,11 @@ class WhatsappProxy::ReconcileJob < ApplicationJob
 
   # Não se chama `enqueue`: isso sobrescreveria o do ActiveJob e quebraria o cron (#1075).
   def enqueue_apply(assignment, wait)
-    WhatsappProxy::ApplyJob.set(wait: wait).perform_later(assignment.session_name)
     assignment.reload.scheduled!
+    WhatsappProxy::ApplyJob.set(wait: wait).perform_later(assignment.session_name)
     true
+  rescue ActiveRecord::RecordNotFound
+    false
   end
 
   # Atribui o IP novo antes de agendar a troca. nil do Assigner (plano sem IP, Webshare fora) conta como falha (recuo).

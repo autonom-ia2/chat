@@ -88,8 +88,14 @@ module WhatsappProxy::Health
   end
 
   # Conta a sessão (uma vez por dia) no resumo de aparelhos desvinculados do dia.
+  # Parada ou pedindo QR: não está "fora por falha" (zera o desde-quando).
+  def clear_off!(session_name)
+    redis { ::Redis::Alfred.delete(off_since_key(session_name)) }
+  end
+
   def unlinked!(session_name, today: Date.current)
     reset!(session_name)
+    clear_off!(session_name)
     first = redis { ::Redis::Alfred.set("whatsapp_proxy:unlinked:#{today}:#{session_name}", '1', nx: true, ex: DAY_TTL) }
     redis { ::Redis::Alfred.incr(unlinked_count_key(today)) && ::Redis::Alfred.expire(unlinked_count_key(today), DAY_TTL) } if first
     nil

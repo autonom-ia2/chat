@@ -20,7 +20,7 @@ class WhatsappProxy::Triage
     @assigner = assigner
     @outage = outage
     @sessions = sessions
-    @convergence = WhatsappProxy::Convergence.new(assigner)
+    @convergence = WhatsappProxy::Convergence.new(assigner, sessions)
   end
 
   def call(assignment)
@@ -28,11 +28,10 @@ class WhatsappProxy::Triage
     return if session.nil?
 
     status = session['status'].to_s
-    return if status == 'STOPPED'
-    return WhatsappProxy::Health.unlinked!(assignment.session_name) if status == 'SCAN_QR_CODE'
+    return if untouchable?(assignment, status)
 
     health = health_of(assignment, status)
-    return if assignment.in_backoff?
+    return if assignment.in_backoff? || assignment.in_flight?
     return (status == 'WORKING' ? [:pending, false] : nil) if assignment.pending?
 
     decide(assignment, session, status, health)
@@ -40,13 +39,23 @@ class WhatsappProxy::Triage
 
   private
 
+  # Parada (desligada de propósito) ou pedindo QR (aparelho desvinculado): nunca tocada; QR entra no resumo do dia.
+  def untouchable?(assignment, status)
+    case status
+    when 'STOPPED' then WhatsappProxy::Health.clear_off!(assignment.session_name)
+    when 'SCAN_QR_CODE' then WhatsappProxy::Health.unlinked!(assignment.session_name)
+    else return false
+    end
+    true
+  end
+
   def decide(assignment, session, status, health)
     owner = WhatsappProxy::SessionOwner.find(assignment.session_name)
     drift = @convergence.call(assignment, session, status, owner)
     return drift if drift
     return (status == 'WORKING' ? [:plan, false] : nil) if assignment.migratable_to?(owner)
 
-    ip_change(assignment, status) || ([:unstable, false] if health == :unstable) || credential_change(assignment, status)
+    ip_change(assignment, status) || ([:unstable, false] if health == :unstable) || credential_change(assignment, session, status)
   end
 
   def health_of(assignment, status)
@@ -104,8 +113,9 @@ class WhatsappProxy::Triage
     "whatsapp_proxy:gone_seen:#{assignment.session_name}"
   end
 
-  def credential_change(assignment, status)
-    return unless status == 'WORKING'
+  # Credencial mascarada pelo motor: não dá para comparar, não reaplica.
+  def credential_change(assignment, session, status)
+    return unless status == 'WORKING' && !WhatsappProxy::EngineProxy.masked?(session)
 
     listed = WhatsappProxy::Assigner.listed(@assigner.pool(assignment.pool), assignment)
     [:credential, false] if listed && listed.credential_digest != assignment.credential_digest

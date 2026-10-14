@@ -128,17 +128,71 @@ RSpec.describe WhatsappProxy::ApplyJob do
       moved_from_old!
       WhatsappProxy::Assignment.last.update!(proxy_address: '10.0.0.2', apply_failures: WhatsappProxy::Assignment::BACKOFF.size - 1,
                                              last_apply_failed_at: 2.days.ago)
+      undone_by_engine!
       log = capture_log { described_class.perform_now(session) }
       expect(log).to include('[alerta] troca_desfeita')
     end
 
-    it 'leaves a brand new number pending (no previous state) after an undone change' do
+    it 'keeps the current IP (never pending by accident) when there was no saved state, only counting the failure' do
       WhatsappProxy::Assignment.last.update!(WhatsappProxy::Assignment::FORGET_PREVIOUS)
 
       described_class.perform_now(session)
 
-      expect(WhatsappProxy::Assignment.last).to have_attributes(pending?: true, apply_failures: 1)
+      expect(WhatsappProxy::Assignment.last).to have_attributes(pending?: false, proxy_address: '10.0.0.2', apply_failures: 1)
     end
+  end
+
+  describe 'session already off WORKING (urgent drift, dead IP) — HIGH' do
+    before { WhatsappProxy::Assignment.last.update!(apply_scheduled_at: Time.current) }
+
+    it 'PUT accepted and proxy saved → applied, with no rollback and no wait for WORKING; the table keeps B' do
+      allow(client).to receive(:get_session).and_return(remote(server: '10.0.0.9:6000', username: 'x', status: 'FAILED'),
+                                                        remote(server: '10.0.0.2:6000', status: 'STARTING'))
+
+      described_class.perform_now(session)
+
+      expect(client).to have_received(:update_session).once
+      expect(WhatsappProxy::Assignment.last).to have_attributes(proxy_address: '10.0.0.2', apply_failures: 0, apply_scheduled_at: nil,
+                                                                credential_digest: proxy.credential_digest)
+    end
+
+    it 'proxy not saved → counts a failure, never rolls back, the table keeps B' do
+      allow(client).to receive(:get_session).and_return(remote(server: '10.0.0.9:6000', username: 'x', status: 'FAILED'))
+
+      described_class.perform_now(session)
+
+      expect(client).to have_received(:update_session).once
+      expect(WhatsappProxy::Assignment.last).to have_attributes(proxy_address: '10.0.0.2', apply_failures: 1, apply_scheduled_at: nil)
+    end
+
+    it 'PUT refused → counts a failure, never rolls back' do
+      allow(client).to receive(:get_session).and_return(remote(server: '10.0.0.9:6000', username: 'x', status: 'FAILED'))
+      allow(client).to receive(:update_session).and_raise(Waha::Client::Error, 'down')
+
+      described_class.perform_now(session)
+
+      expect(client).to have_received(:update_session).once
+      expect(WhatsappProxy::Assignment.last).to have_attributes(proxy_address: '10.0.0.2', apply_failures: 1)
+    end
+  end
+
+  it 'saves the IP the engine uses (known on the list) before the PUT of a drift that kept the table IP, and goes back to it' do
+    old = webshare_proxy(id: 9, address: '10.0.0.9')
+    allow(webshare).to receive(:proxies).and_return([proxy, old])
+    undone_by_engine!
+
+    described_class.perform_now(session)
+
+    expect(WhatsappProxy::Assignment.last).to have_attributes(proxy_address: '10.0.0.9', webshare_proxy_id: '9', apply_failures: 1)
+  end
+
+  it 'clears the in-flight mark when the session is refused (QR)' do
+    WhatsappProxy::Assignment.last.update!(apply_scheduled_at: Time.current)
+    allow(client).to receive(:get_session).and_return(remote(server: '10.0.0.9:6000', status: 'SCAN_QR_CODE'))
+
+    described_class.perform_now(session)
+
+    expect(WhatsappProxy::Assignment.last.apply_scheduled_at).to be_nil
   end
 
   it 'reverts a plan change (WAHA number that became Hybrid) back to plan, account and origin (M3)' do

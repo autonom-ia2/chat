@@ -9,6 +9,7 @@ RSpec.describe WhatsappProxy::ReconcileJob do
   let(:statuses) { {} }
   let(:extra_sessions) { [] }
   let(:passwords) { {} }
+  let(:engine_state) { {} }
 
   around do |example|
     with_modified_env(WHATSAPP_PROXY_ENABLED: 'true', WEBSHARE_ISP_PROXY_ADDRESSES: '10.5.0.1',
@@ -23,7 +24,7 @@ RSpec.describe WhatsappProxy::ReconcileJob do
     allow(Webshare::Client).to receive(:new).with(pool: 'isp').and_return(isp)
     allow(Webshare::Client).to receive(:new).with(pool: 'datacenter').and_return(datacenter)
     allow(Waha::Client).to receive(:new).and_return(engine)
-    allow(engine).to receive(:list_sessions) { engine_view(statuses, passwords: passwords, extra: extra_sessions) }
+    allow(engine).to receive(:list_sessions) { engine_view(statuses, engine: engine_state, passwords: passwords, extra: extra_sessions) }
   end
 
   def scheduled_sessions
@@ -132,7 +133,7 @@ RSpec.describe WhatsappProxy::ReconcileJob do
       round(session => 'STARTING')
       round(session => 'FAILED')
       ActiveJob::Base.queue_adapter.enqueued_jobs.clear
-      WhatsappProxy::Assignment.last.update!(credential_digest: webshare_proxy(id: 2, address: '10.0.0.2').credential_digest)
+      apply_engine!(engine_state, session)
 
       log = capture_log { [%w[WORKING], %w[STARTING], %w[FAILED]].each { |(status)| round(session => status) } }
 

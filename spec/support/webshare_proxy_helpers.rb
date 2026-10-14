@@ -34,17 +34,30 @@ module WebshareProxyHelpers
                                       credential_digest: digest)
   end
 
-  # O que o motor mostra numa rodada: cada sessão atribuída com o proxy da tabela (credencial da lista, salvo
-  # `passwords[sessão]`), mais `extra`. Simula o motor já convergido com a tabela.
-  def engine_view(statuses, passwords: {}, extra: [], without_proxy: [])
+  # O que o motor mostra numa rodada. `engine` guarda o proxy de cada sessão no motor: na primeira vez que a sessão
+  # aparece, é o da tabela naquele momento; depois o motor NÃO acompanha a tabela (reatribuição no meio da rodada não o
+  # muda) — só `apply_engine!` (o ApplyJob rodou) ou o teste mudam. `passwords[sessão]` troca a senha que o motor usa.
+  def engine_view(statuses, engine:, passwords: {}, extra: [])
     WhatsappProxy::Assignment.all.map do |row|
+      engine[row.session_name] = engine_snapshot(row, passwords) unless engine.key?(row.session_name)
       session = { 'name' => row.session_name, 'status' => statuses.fetch(row.session_name, 'WORKING') }
-      next session if row.pending? || without_proxy.include?(row.session_name)
-
-      password = passwords.fetch(row.session_name, "senha-#{row.webshare_proxy_id}")
-      proxy = { 'server' => row.server, 'username' => "user-#{row.webshare_proxy_id}", 'password' => password }
-      session.merge('config' => { 'proxy' => proxy })
+      proxy = engine[row.session_name]
+      proxy ? session.merge('config' => { 'proxy' => proxy }) : session
     end + extra
+  end
+
+  def engine_snapshot(row, passwords = {})
+    return if row.pending?
+
+    { 'server' => row.server, 'username' => "user-#{row.webshare_proxy_id}",
+      'password' => passwords.fetch(row.session_name, "senha-#{row.webshare_proxy_id}") }
+  end
+
+  # O ApplyJob aplicou a troca: o motor passa a usar o proxy da tabela e a tabela registra a conferência.
+  def apply_engine!(engine, session_name)
+    row = WhatsappProxy::Assignment.find_by!(session_name: session_name)
+    engine[session_name] = engine_snapshot(row)
+    row.applied!(Webshare::Proxy.digest_for(engine[session_name]['username'], engine[session_name]['password']))
   end
 
   def capture_log

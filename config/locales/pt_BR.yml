@@ -936,6 +936,8 @@ pt_BR:
           falha_geral_perdida: 'Proxy do WhatsApp: o registro da falha geral (%{plano}) sumiu antes de terminar (Redis?). A contagem recomeça.'
           sessao_fora_24h: 'Proxy do WhatsApp: a caixa %{caixa} (conta %{conta}) está fora há mais de 24 horas. Ela não caiu de um estado conectado, então o IP não foi trocado; confira o aparelho e o motor.'
           motor_indisponivel: 'Proxy do WhatsApp: a caixa %{caixa} (conta %{conta}) continua caindo no IP %{ip}, mas o motor não respondeu, então a troca ficou para depois.'
+          credencial_mascarada: 'Proxy do WhatsApp: o motor devolveu mascarada a credencial do proxy da caixa %{caixa} (conta %{conta}), então não dá para comparar. Nada foi regravado nem reaplicado.'
+          proxy_manual_detectado: 'Proxy do WhatsApp: a caixa %{caixa} (conta %{conta}) passou a usar um proxy fora da Webshare (%{ip}), posto à mão. Ela deixou de ser gerenciada pela plataforma.'
           falha_geral_fim: 'Proxy do WhatsApp: a falha geral (%{plano}) terminou. %{n} sessão(ões) ainda fora passam a ser avaliadas uma a uma.'
           webshare_indisponivel: 'Proxy do WhatsApp: a Webshare segue falhando no plano %{plano} (%{n} erros seguidos). Nada desse plano é corrigido até ela responder.'
           caixa_sem_proxy: 'Proxy do WhatsApp: a caixa %{caixa} (conta %{conta}) nasceu sem proxy porque a Webshare não respondeu. Vou tentar de novo.'

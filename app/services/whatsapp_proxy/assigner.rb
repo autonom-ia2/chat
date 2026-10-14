@@ -101,6 +101,11 @@ class WhatsappProxy::Assigner
     WhatsappProxy::Assignment.where(session_name: session_name).delete_all
   end
 
+  # A lista do motor já lida nesta rodada (a reconciliação passa a dela): uma chamada por rodada, não por atribuição.
+  def use_engine_sessions(sessions)
+    @engine_list = sessions
+  end
+
   private
 
   # Recurso desligado: nil calado (comportamento de antes). Ligado sem chave: nil com aviso.
@@ -162,7 +167,8 @@ class WhatsappProxy::Assigner
   # [nome, host] das outras sessões do motor que têm proxy. Só o host: a credencial que o motor devolve é descartada.
   # Motor fora: nil, e nada é atribuído de novo (sem a lista não dá para garantir IP livre).
   def engine_sessions(session_name)
-    Array(@engine.list_sessions(all: true)).filter_map do |session|
+    @engine_list ||= Array(@engine.list_sessions(all: true))
+    @engine_list.filter_map do |session|
       next if session['name'] == session_name
 
       host = WhatsappProxy::Server.host(session.dig('config', 'proxy', 'server'))

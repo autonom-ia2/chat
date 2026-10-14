@@ -517,6 +517,8 @@ en:
           falha_geral_perdida: 'WhatsApp proxy: the record of the general outage (%{plano}) vanished before it ended (Redis?). Counting starts over.'
           sessao_fora_24h: 'WhatsApp proxy: inbox %{caixa} (account %{conta}) has been off for more than 24 hours. It did not drop from a working state, so the IP was not changed; check the device and the engine.'
           motor_indisponivel: 'WhatsApp proxy: inbox %{caixa} (account %{conta}) keeps dropping on IP %{ip}, but the engine did not answer, so the change was postponed.'
+          credencial_mascarada: 'WhatsApp proxy: the engine returned the proxy credential of inbox %{caixa} (account %{conta}) masked, so it cannot be compared. Nothing was rewritten or reapplied.'
+          proxy_manual_detectado: 'WhatsApp proxy: inbox %{caixa} (account %{conta}) is now on a proxy outside Webshare (%{ip}), set by hand. It is no longer managed by the platform.'
           falha_geral_fim: 'WhatsApp proxy: the general outage (%{plano}) is over. %{n} session(s) still off are now checked one by one.'
           webshare_indisponivel: 'WhatsApp proxy: Webshare keeps failing for the %{plano} plan (%{n} errors in a row). Nothing in that plan is being fixed until it answers again.'
           caixa_sem_proxy: 'WhatsApp proxy: inbox %{caixa} (account %{conta}) was created without proxy because Webshare did not answer. I will try again.'

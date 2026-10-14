@@ -9,6 +9,7 @@ RSpec.describe WhatsappProxy::ReconcileJob do
   let(:statuses) { {} }
   let(:extra_sessions) { [] }
   let(:passwords) { {} }
+  let(:engine_state) { {} }
 
   around do |example|
     with_modified_env(WHATSAPP_PROXY_ENABLED: 'true', WEBSHARE_ISP_PROXY_ADDRESSES: '10.5.0.1,10.5.0.2',
@@ -24,7 +25,7 @@ RSpec.describe WhatsappProxy::ReconcileJob do
     allow(Webshare::Client).to receive(:new).with(pool: 'isp').and_return(isp)
     allow(Webshare::Client).to receive(:new).with(pool: 'datacenter').and_return(datacenter)
     allow(Waha::Client).to receive(:new).and_return(engine)
-    allow(engine).to receive(:list_sessions) { engine_view(statuses, passwords: passwords, extra: extra_sessions) }
+    allow(engine).to receive(:list_sessions) { engine_view(statuses, engine: engine_state, passwords: passwords, extra: extra_sessions) }
   end
 
   def apply_jobs
@@ -94,8 +95,9 @@ RSpec.describe WhatsappProxy::ReconcileJob do
   end
 
   describe 'what is never touched (H2)' do
-    it 'never touches a STOPPED session, even with its IP gone' do
+    it 'never touches a STOPPED session, even with its IP gone, and forgets how long it was off' do
       waha!('5511900000001', proxy: webshare_proxy(id: 1, address: '10.0.0.1'))
+      Redis::Alfred.setex('whatsapp_proxy:off_since:5511900000001', 1.day.ago.to_i.to_s, 3600)
       statuses['5511900000001'] = 'STOPPED'
       allow(datacenter).to receive(:proxies).and_return([webshare_proxy(id: 2, address: '10.0.0.2')])
 
@@ -103,6 +105,17 @@ RSpec.describe WhatsappProxy::ReconcileJob do
 
       expect(apply_jobs).to be_empty
       expect(WhatsappProxy::Assignment.last.proxy_address).to eq('10.0.0.1')
+      expect(Redis::Alfred.get('whatsapp_proxy:off_since:5511900000001')).to be_nil
+    end
+
+    it 'never reschedules a credential change while a change is in flight' do
+      old = webshare_proxy(id: 1, address: '10.0.0.1', password: 'antiga')
+      waha!('5511900000001', proxy: old)
+      passwords['5511900000001'] = 'antiga'
+      allow(datacenter).to receive(:proxies).and_return([webshare_proxy(id: 1, address: '10.0.0.1', password: 'nova')])
+      WhatsappProxy::Assignment.last.update!(apply_scheduled_at: 5.minutes.ago)
+
+      expect { described_class.perform_now }.not_to have_enqueued_job(WhatsappProxy::ApplyJob)
     end
 
     it 'reapplies a changed credential only while the session is WORKING' do
@@ -212,11 +225,13 @@ RSpec.describe WhatsappProxy::ReconcileJob do
       allow(datacenter).to receive(:proxies).and_return([table_ip, engine_ip])
     end
 
-    def engine_on(proxy, status: 'WORKING', password: nil)
-      allow(engine).to receive(:list_sessions).and_return(
-        [{ 'name' => '5511900000001', 'status' => status,
-           'config' => { 'proxy' => { 'server' => proxy.server, 'username' => "user-#{proxy.id}", 'password' => password || "senha-#{proxy.id}" } } }]
-      )
+    def engine_on(proxy, status: 'WORKING', password: nil, others: [])
+      config = { 'proxy' => { 'server' => proxy.server, 'username' => "user-#{proxy.id}", 'password' => password || "senha-#{proxy.id}" } }
+      allow(engine).to receive(:list_sessions).and_return([{ 'name' => '5511900000001', 'status' => status, 'config' => config }] + others)
+    end
+
+    def drift_scheduled?
+      apply_jobs.map { |job| job['arguments'].first }.include?('5511900000001')
     end
 
     it 'adjusts the TABLE to the engine (no PUT) when the session is WORKING on a valid IP of its account and plan' do
@@ -257,6 +272,128 @@ RSpec.describe WhatsappProxy::ReconcileJob do
       WhatsappProxy::Assignment.last.update!(apply_scheduled_at: 5.minutes.ago)
 
       expect { described_class.perform_now }.not_to have_enqueued_job(WhatsappProxy::ApplyJob)
+    end
+
+    it 'never adopts an engine IP in quarantine: schedules the change back' do
+      WhatsappProxy::Quarantine.put!('10.0.0.2', 'datacenter', 'teste')
+      engine_on(engine_ip)
+
+      described_class.perform_now
+
+      expect(drift_scheduled?).to be(true)
+      expect(WhatsappProxy::Assignment.last.proxy_address).to eq('10.0.0.1')
+    end
+
+    it 'never adopts when another session in the engine (unknown or of another account) uses the same IP' do
+      engine_on(engine_ip, others: [{ 'name' => '5511900000077', 'status' => 'WORKING',
+                                      'config' => { 'proxy' => { 'server' => '10.0.0.2:6000' } } }])
+
+      described_class.perform_now
+
+      expect(drift_scheduled?).to be(true)
+      expect(WhatsappProxy::Assignment.find_by!(session_name: '5511900000001').proxy_address).to eq('10.0.0.1')
+    end
+
+    it 'never adopts above the per-IP limit (3 numbers of the account already on it)' do
+      3.times { |i| waha!("551190000005#{i}", proxy: engine_ip) }
+      engine_on(engine_ip, others: (0..2).map do |i|
+        { 'name' => "551190000005#{i}", 'status' => 'WORKING',
+          'config' => { 'proxy' => { 'server' => '10.0.0.2:6000', 'username' => 'user-2', 'password' => 'senha-2' } } }
+      end)
+
+      described_class.perform_now
+
+      expect(drift_scheduled?).to be(true)
+      expect(WhatsappProxy::Assignment.find_by!(session_name: '5511900000001').proxy_address).to eq('10.0.0.1')
+    end
+
+    it 'never adopts an IP that is reserved or outside the slice of the stack' do
+      engine_on(engine_ip)
+
+      with_modified_env(WEBSHARE_RESERVED_PROXY_ADDRESSES: '10.0.0.2') { described_class.perform_now }
+      expect(drift_scheduled?).to be(true)
+
+      ActiveJob::Base.queue_adapter.enqueued_jobs.clear
+      WhatsappProxy::Assignment.last.update!(apply_scheduled_at: nil)
+      with_modified_env(WEBSHARE_DATACENTER_PROXY_ADDRESSES: '10.0.0.1') { described_class.perform_now }
+      expect(drift_scheduled?).to be(true)
+    end
+
+    it 'never adopts an IP of the other plan' do
+      isp_ip = webshare_proxy(id: 50, address: '10.5.0.1')
+      allow(isp).to receive(:proxies).and_return([isp_ip])
+      engine_on(isp_ip)
+
+      described_class.perform_now
+
+      expect(drift_scheduled?).to be(true)
+      expect(WhatsappProxy::Assignment.last.pool).to eq('datacenter')
+    end
+
+    it 'turns an imported assignment external when the engine moved to a proxy outside Webshare (alert once)' do
+      WhatsappProxy::Assignment.last.update!(origin: 'imported')
+      engine_on(webshare_proxy(id: 77, address: '200.1.1.1'))
+      Redis::Alfred.delete('whatsapp_proxy:alert:proxy_manual_detectado:5511900000001')
+
+      log = capture_log { 2.times { described_class.perform_now } }
+
+      expect(apply_jobs).to be_empty
+      expect(WhatsappProxy::Assignment.last).to have_attributes(external?: true, proxy_address: '200.1.1.1')
+      expect(log.scan('[alerta] proxy_manual_detectado').size).to eq(1)
+    end
+
+    it 'does not adopt a valid IP while the session is off WORKING: urgent change back' do
+      engine_on(engine_ip, status: 'FAILED')
+
+      described_class.perform_now
+
+      expect(drift_scheduled?).to be(true)
+      expect(WhatsappProxy::Assignment.last.proxy_address).to eq('10.0.0.1')
+    end
+
+    it 'treats an in-flight change older than 30 min (worker stopped) as divergence' do
+      engine_on(webshare_proxy(id: 9, address: '10.0.0.9'))
+      WhatsappProxy::Assignment.last.update!(apply_scheduled_at: 31.minutes.ago)
+
+      described_class.perform_now
+
+      expect(drift_scheduled?).to be(true)
+    end
+
+    it 'skips a session whose proxy change is running (lock held)' do
+      engine_on(webshare_proxy(id: 9, address: '10.0.0.9'))
+      Redis::Alfred.set(WhatsappProxy::SessionLock.key('5511900000001'), 'job', nx: true, ex: 60)
+
+      described_class.perform_now
+
+      expect(drift_scheduled?).to be(false)
+    ensure
+      Redis::Alfred.delete(WhatsappProxy::SessionLock.key('5511900000001'))
+    end
+
+    it 'after a drift fails, waits for the backoff before trying again' do
+      engine_on(webshare_proxy(id: 9, address: '10.0.0.9'))
+      described_class.perform_now
+      expect(drift_scheduled?).to be(true)
+      WhatsappProxy::Assignment.last.apply_failed!
+
+      ActiveJob::Base.queue_adapter.enqueued_jobs.clear
+      described_class.perform_now
+
+      expect(drift_scheduled?).to be(false)
+    end
+
+    it 'never rewrites nor reapplies when the engine masks the credential (contract), and alerts once' do
+      Redis::Alfred.delete('whatsapp_proxy:alert:credencial_mascarada:5511900000001')
+      Redis::Alfred.delete('whatsapp_proxy:masked_seen:5511900000001')
+      WhatsappProxy::Assignment.last.update!(credential_digest: 'antigo')
+      engine_on(table_ip, password: '********')
+
+      log = capture_log { 2.times { described_class.perform_now } }
+
+      expect(apply_jobs).to be_empty
+      expect(WhatsappProxy::Assignment.last.credential_digest).to eq('antigo')
+      expect(log.scan('[alerta] credencial_mascarada').size).to eq(1)
     end
 
     it 'records the credential the engine uses when the IP is the same' do
