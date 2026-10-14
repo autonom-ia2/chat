@@ -2,13 +2,13 @@
 # - o tipo da sessão escolhe o plano: Híbrido → isp (Static Residential), WAHA comum → datacenter; sempre IP do Brasil;
 # - um IP por CONTA, até N números por IP (WHATSAPP_PROXY_MAX_NUMBERS_PER_IP, padrão 3): número novo reaproveita o IP da
 #   conta que ainda tem vaga; senão pega um IP livre (São Paulo primeiro). Duas contas nunca no mesmo IP;
-# - IP livre = da fatia desta stack, fora da tabela e fora do que o próprio motor já usa (proxy posto à mão sem registro).
+# - IP livre = da fatia desta stack, fora da tabela e fora do que o próprio motor já usa (proxy posto à mão sem registro);
+# - número importado (proxy posto à mão) só muda de plano/conta com WHATSAPP_PROXY_AUTO_MIGRATE=true; IP morto se troca.
 # `for` devolve o proxy da sessão ou nil (recurso desligado, sem chave, sessão sem dono, API ou motor fora, plano sem IP
-# livre, proxy externo). O recurso só liga com WHATSAPP_PROXY_ENABLED=true: a chave da Webshare sozinha não basta.
+# livre, proxy externo, erro inesperado). O recurso só liga com WHATSAPP_PROXY_ENABLED=true.
 # A credencial só existe no Webshare::Proxy em memória: nada de usuário/senha em banco, Redis ou log.
 class WhatsappProxy::Assigner
-  LOCK_KEY = 1_516_000_001
-  # Depois de falha da API ou plano esgotado, a atualização da aba não consulta a Webshare de novo por um tempo.
+  # Depois de falha da API ou plano esgotado, quem roda com frequência não consulta a Webshare de novo por um tempo.
   BACKOFF_TTL = 10.minutes.to_i
   SAO_PAULO_NAMES = %w[saopaulo saopaolo].freeze
 
@@ -34,7 +34,7 @@ class WhatsappProxy::Assigner
     self.class.feature_enabled? && pool('isp').configured?
   end
 
-  # honor_backoff: só quem roda com frequência (atualização da aba) respeita a pausa; criar e reconectar sempre tentam.
+  # honor_backoff: só quem roda com frequência respeita a pausa; criar e reconectar sempre tentam.
   def for(session_name, honor_backoff: false)
     return unless ready?(session_name)
 
@@ -46,18 +46,20 @@ class WhatsappProxy::Assigner
   rescue Webshare::Client::Error => e
     backoff!(owner&.pool)
     warn_nil("lista da Webshare indisponível (#{e.message})", session_name)
+  rescue StandardError => e
+    warn_nil("falha inesperada (#{e.class})", session_name)
   end
 
   # Mesma decisão de `for`, com o dono já conhecido (a reconciliação busca cada plano uma vez por rodada).
+  # Webshare e motor são consultados ANTES da trava; dentro dela só a tabela.
   def resolve(session_name, owner, pool)
     pool.proxies
-    with_lock do
+    in_engine = engine_sessions(session_name)
+    WhatsappProxy::Assignment.exclusively do
       assignment = WhatsappProxy::Assignment.find_by(session_name: session_name)
-      if assignment&.external?
-        nil
-      else
-        kept(assignment, owner, pool) || reassign(session_name, owner, assignment, pool)
-      end
+      next if assignment&.external?
+
+      kept(assignment, owner) || reassign(session_name, owner, assignment, pool, in_engine)
     end
   end
 
@@ -83,69 +85,58 @@ class WhatsappProxy::Assigner
     false
   end
 
-  def with_lock(&)
-    WhatsappProxy::Assignment.transaction do
-      WhatsappProxy::Assignment.connection.execute("SELECT pg_advisory_xact_lock(#{LOCK_KEY})")
-      yield
-    end
+  # Fica onde está quando o IP ainda serve e o plano/conta batem — ou quando não batem, mas o número é importado e a
+  # migração automática está desligada (aí vale o plano em que ele já está).
+  def kept(assignment, owner)
+    return if assignment.nil? || assignment.migratable_to?(owner)
+
+    self.class.listed(pool(assignment.pool), assignment)
   end
 
-  # Mesmo plano, mesma conta e IP ainda servindo: fica onde está.
-  def kept(assignment, owner, pool)
-    return unless assignment && assignment.pool == pool.name && assignment.account_id == owner.account_id
-
-    self.class.listed(pool, assignment)
-  end
-
-  def reassign(session_name, owner, assignment, pool)
-    in_engine = engine_hosts(session_name)
+  def reassign(session_name, owner, assignment, pool, in_engine)
     return if in_engine.nil?
 
     others = WhatsappProxy::Assignment.where.not(session_name: session_name)
-    candidate = account_ip_with_room(owner, pool, others) || free_ip(pool, others, in_engine)
+    candidate = account_ip_with_room(owner, pool, others, in_engine) || free_ip(pool, others, in_engine)
     return pool_exhausted!(session_name, pool) if candidate.nil?
 
     log_reassign(session_name, assignment, candidate, pool)
     (assignment || WhatsappProxy::Assignment.new(session_name: session_name)).update!(
-      account_id: owner.account_id, pool: pool.name, webshare_proxy_id: candidate.id, proxy_address: candidate.address,
-      proxy_port: candidate.port, assigned_at: Time.current, credential_digest: nil
+      account_id: owner.account_id, pool: pool.name, origin: 'assigned', webshare_proxy_id: candidate.id,
+      proxy_address: candidate.address, proxy_port: candidate.port, assigned_at: Time.current, credential_digest: nil
     )
     candidate
   end
 
-  # IP da própria conta (mesmo plano) com menos de N números; o mais cheio primeiro, para usar menos IPs.
-  def account_ip_with_room(owner, pool, others)
-    counts = others.where(account_id: owner.account_id, pool: pool.name).group(:proxy_address).count
+  # IP da própria conta (mesmo plano) com menos de N números; o mais cheio primeiro, para usar menos IPs. Fora: IP que
+  # o motor mostra numa sessão que não é desta conta neste IP (proxy posto à mão sem registro).
+  def account_ip_with_room(owner, pool, others, in_engine)
+    mine = others.where(account_id: owner.account_id, pool: pool.name)
+    counts = mine.group(:proxy_address).count
+    known = mine.pluck(:session_name, :proxy_address)
+    foreign = in_engine.reject { |pair| known.include?(pair) }.map(&:last)
     max = WhatsappProxy::Assignment.max_numbers_per_ip
-    pool.candidates.select { |proxy| counts.fetch(proxy.address, max) < max }
+    pool.candidates.select { |proxy| counts.fetch(proxy.address, max) < max && foreign.exclude?(proxy.address) }
         .max_by { |proxy| [counts[proxy.address], proxy.address] }
   end
 
   def free_ip(pool, others, in_engine)
-    taken = others.distinct.pluck(:proxy_address) + in_engine
+    taken = others.distinct.pluck(:proxy_address) + in_engine.map(&:last)
     pool.candidates.reject { |proxy| taken.include?(proxy.address) }
         .min_by { |proxy| [sao_paulo?(proxy) ? 0 : 1, proxy.id] }
   end
 
-  # Hosts dos proxies que as outras sessões do motor usam. Só o host: a credencial que o motor devolve é descartada.
-  # Motor fora: nil, e nada é atribuído (sem a lista não dá para garantir IP livre).
-  def engine_hosts(session_name)
+  # [nome, host] das outras sessões do motor que têm proxy. Só o host: a credencial que o motor devolve é descartada.
+  # Motor fora: nil, e nada é atribuído de novo (sem a lista não dá para garantir IP livre).
+  def engine_sessions(session_name)
     Array(@engine.list_sessions(all: true)).filter_map do |session|
       next if session['name'] == session_name
 
-      proxy_host(session.dig('config', 'proxy', 'server'))
+      host = WhatsappProxy::Server.host(session.dig('config', 'proxy', 'server'))
+      [session['name'], host] if host
     end
   rescue Waha::Client::Error => e
     warn_nil("motor não listou as sessões (#{e.class})", session_name)
-  end
-
-  def proxy_host(server)
-    return if server.blank?
-
-    server = server.to_s
-    URI.parse(server.include?('://') ? server : "http://#{server}").host
-  rescue URI::InvalidURIError
-    nil
   end
 
   # A Webshare escreve "Sao Paulo", "Sao Paolo" ou "São Paulo".

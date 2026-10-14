@@ -5,12 +5,21 @@ RSpec.describe WhatsappProxy::ReconcileJob do
   let(:isp) { instance_double(Webshare::Client, configured?: true, proxies: []) }
   let(:datacenter) { instance_double(Webshare::Client, configured?: true, proxies: []) }
 
-  around { |example| with_modified_env(WHATSAPP_PROXY_ENABLED: 'true') { example.run } }
+  let(:engine) { instance_double(Waha::Client) }
+
+  around do |example|
+    with_modified_env(WHATSAPP_PROXY_ENABLED: 'true', WEBSHARE_ISP_PROXY_ADDRESSES: '10.5.0.1',
+                      WEBSHARE_DATACENTER_PROXY_ADDRESSES: (1..10).flat_map { |i| ["10.0.0.#{i}", "10.1.0.#{i}"] }.join(',')) do
+      example.run
+    end
+  end
 
   before do
     allow(Webshare::Client).to receive(:new).with(pool: 'isp').and_return(isp)
     allow(Webshare::Client).to receive(:new).with(pool: 'datacenter').and_return(datacenter)
-    allow(Waha::Client).to receive(:new).and_return(instance_double(Waha::Client, list_sessions: []))
+    allow(Waha::Client).to receive(:new).and_return(engine)
+    # O motor tem todas as sessões atribuídas (sem proxy na listagem, para não pesar na escolha de IP livre).
+    allow(engine).to receive(:list_sessions) { WhatsappProxy::Assignment.pluck(:session_name).map { |name| { 'name' => name } } }
   end
 
   def apply_jobs
@@ -46,6 +55,40 @@ RSpec.describe WhatsappProxy::ReconcileJob do
     expect(WhatsappProxy::Assignment.last.proxy_address).to eq('10.0.0.1')
   end
 
+  it 'leaves an imported number in the wrong plan alone unless WHATSAPP_PROXY_AUTO_MIGRATE is on' do
+    hybrid_session!('hybrid-5511900000001', account)
+    proxy = webshare_proxy(id: 1, address: '10.0.0.1')
+    assign_proxy!('hybrid-5511900000001', proxy, account: account, pool: 'datacenter', digest: proxy.credential_digest)
+      .update!(origin: 'imported')
+    allow(datacenter).to receive(:proxies).and_return([proxy])
+    allow(isp).to receive(:proxies).and_return([webshare_proxy(id: 50, address: '10.5.0.1')])
+
+    expect { described_class.perform_now }.not_to have_enqueued_job(WhatsappProxy::ApplyJob)
+
+    with_modified_env(WHATSAPP_PROXY_AUTO_MIGRATE: 'true') do
+      expect { described_class.perform_now }.to have_enqueued_job(WhatsappProxy::ApplyJob).with('hybrid-5511900000001')
+    end
+  end
+
+  it 'still fixes an imported number whose IP died' do
+    waha_session!('5511900000001', account)
+    assign_proxy!('5511900000001', webshare_proxy(id: 1, address: '10.0.0.1'), account: account).update!(origin: 'imported')
+    allow(datacenter).to receive(:proxies).and_return([webshare_proxy(id: 2, address: '10.0.0.2')])
+
+    expect { described_class.perform_now }.to have_enqueued_job(WhatsappProxy::ApplyJob).with('5511900000001')
+  end
+
+  it 'skips sessions the engine does not have and deletes assignments without an inbox' do
+    waha_session!('5511900000001', account)
+    assign_proxy!('5511900000001', webshare_proxy(id: 1, address: '10.0.0.1'), account: account)
+    assign_proxy!('5511900000077', webshare_proxy(id: 7, address: '10.0.0.7'), account: account)
+    allow(engine).to receive(:list_sessions).and_return([])
+    allow(datacenter).to receive(:proxies).and_return([webshare_proxy(id: 2, address: '10.0.0.2')])
+
+    expect { described_class.perform_now }.not_to have_enqueued_job(WhatsappProxy::ApplyJob)
+    expect(WhatsappProxy::Assignment.pluck(:session_name)).to eq(['5511900000001'])
+  end
+
   it 'moves a number that changed type (WAHA → Hybrid) to the right plan' do
     hybrid_session!('hybrid-5511900000001', account)
     proxy = webshare_proxy(id: 1, address: '10.0.0.1')
@@ -74,11 +117,10 @@ RSpec.describe WhatsappProxy::ReconcileJob do
     expect(log).not_to include('senha-')
   end
 
-  it 'leaves hand-made external proxies and sessions of no inbox here alone' do
+  it 'leaves hand-made external proxies alone' do
     waha_session!('5511900000001', account)
     WhatsappProxy::Assignment.create!(session_name: '5511900000001', account_id: account.id, pool: 'datacenter',
                                       proxy_address: '200.1.1.1', proxy_port: 3128, assigned_at: 1.day.ago)
-    assign_proxy!('5511900000077', webshare_proxy(id: 7, address: '10.0.0.7'), account: account)
 
     expect { described_class.perform_now }.not_to have_enqueued_job(WhatsappProxy::ApplyJob)
   end

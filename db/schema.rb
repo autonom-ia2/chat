@@ -3895,6 +3895,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_28_100000) do
     t.integer "proxy_port", null: false
     t.datetime "assigned_at", null: false
     t.string "credential_digest"
+    t.string "origin", default: "assigned", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["account_id", "pool"], name: "index_whatsapp_proxy_assignments_on_account_id_and_pool"
@@ -4196,6 +4197,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_28_100000) do
   add_foreign_key "whatsapp_api_message_templates", "inboxes", on_delete: :nullify
   add_foreign_key "whatsapp_api_message_templates", "users", column: "created_by_id"
   add_foreign_key "whatsapp_api_message_templates", "users", column: "updated_by_id"
+  add_foreign_key "whatsapp_proxy_assignments", "accounts", on_delete: :cascade
   add_foreign_key "whatsapp_template_profiles", "accounts", on_delete: :cascade
   add_foreign_key "whatsapp_template_profiles", "inboxes", on_delete: :cascade
   add_foreign_key "whatsapp_template_profiles", "users", column: "created_by_id", on_delete: :nullify

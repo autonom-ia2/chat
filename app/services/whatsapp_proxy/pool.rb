@@ -1,7 +1,8 @@
 # Um plano da Webshare visto por esta stack (#1516): isp (Static Residential, Híbrido) ou datacenter (Proxy Server, WAHA).
 # Cada stack usa só a sua fatia do plano: WEBSHARE_ISP_PROXY_ADDRESSES / WEBSHARE_DATACENTER_PROXY_ADDRESSES (IPs
-# separados por vírgula; vazio = plano inteiro). Candidato a número novo: válido, do Brasil e dentro da fatia — nunca
-# outro país, nunca fora da fatia. IP da fatia que sumiu da lista (a Webshare trocou) vira aviso alto no log.
+# separados por vírgula). Fatia vazia = nenhum candidato (log de erro): sem ela as duas stacks disputariam o mesmo IP.
+# Candidato: válido, do Brasil e dentro da fatia — nunca outro país, nunca fora da fatia. IP da fatia que sumiu da
+# lista (a Webshare trocou) vira aviso alto no log.
 class WhatsappProxy::Pool
   SLICE_ENVS = { 'isp' => 'WEBSHARE_ISP_PROXY_ADDRESSES', 'datacenter' => 'WEBSHARE_DATACENTER_PROXY_ADDRESSES' }.freeze
 
@@ -22,7 +23,12 @@ class WhatsappProxy::Pool
   end
 
   def candidates
-    proxies.select { |proxy| proxy.valid? && proxy.country_code.casecmp?('BR') && in_slice?(proxy) }
+    if slice.empty?
+      Rails.logger.error("[whatsapp_proxy] #{SLICE_ENVS.fetch(@name)} vazia: plano #{@name} sem IP para esta stack.")
+      return []
+    end
+
+    proxies.select { |proxy| proxy.valid? && proxy.country_code.casecmp?('BR') && slice.include?(proxy.address) }
   end
 
   def slice
@@ -30,10 +36,6 @@ class WhatsappProxy::Pool
   end
 
   private
-
-  def in_slice?(proxy)
-    slice.empty? || slice.include?(proxy.address)
-  end
 
   def warn_missing_slice(list)
     missing = slice - list.map(&:address)

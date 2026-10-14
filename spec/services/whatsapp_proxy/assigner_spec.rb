@@ -15,7 +15,11 @@ RSpec.describe WhatsappProxy::Assigner do
   let(:us) { webshare_proxy(id: 4, address: '10.0.0.4', country: 'US', city: 'New York') }
   let(:residential) { webshare_proxy(id: 50, address: '10.5.0.1') }
 
-  around { |example| with_modified_env(WHATSAPP_PROXY_ENABLED: 'true', WEBSHARE_API_KEY: 'k') { example.run } }
+  around do |example|
+    with_modified_env(WHATSAPP_PROXY_ENABLED: 'true', WEBSHARE_API_KEY: 'k',
+                      WEBSHARE_ISP_PROXY_ADDRESSES: '10.5.0.1,10.6.0.1',
+                      WEBSHARE_DATACENTER_PROXY_ADDRESSES: '10.0.0.1,10.0.0.2,10.0.0.3,10.0.0.4,10.0.0.5') { example.run }
+  end
 
   before do
     %w[isp datacenter].each { |pool| Redis::Alfred.delete("whatsapp_proxy:backoff:#{pool}") }
@@ -109,17 +113,44 @@ RSpec.describe WhatsappProxy::Assigner do
     let(:isp_list) { [residential] }
     let(:datacenter_list) { [sao_paulo] }
 
+    before { hybrid_session!('hybrid-5511900000001', account) }
+
     it 'moves a number that became Hybrid from the datacenter IP to an isp IP' do
-      hybrid_session!('hybrid-5511900000001', account)
       assign_proxy!('hybrid-5511900000001', sao_paulo, account: account, pool: 'datacenter')
 
       expect(assigner.for('hybrid-5511900000001').address).to eq('10.5.0.1')
-      expect(WhatsappProxy::Assignment.last.pool).to eq('isp')
+      expect(WhatsappProxy::Assignment.last).to have_attributes(pool: 'isp', origin: 'assigned')
+    end
+
+    it 'keeps an imported number where it is unless WHATSAPP_PROXY_AUTO_MIGRATE is on' do
+      assign_proxy!('hybrid-5511900000001', sao_paulo, account: account, pool: 'datacenter').update!(origin: 'imported')
+
+      expect(assigner.for('hybrid-5511900000001').address).to eq('10.0.0.2')
+      with_modified_env(WHATSAPP_PROXY_AUTO_MIGRATE: 'true') do
+        expect(assigner.for('hybrid-5511900000001').address).to eq('10.5.0.1')
+      end
+    end
+
+    it 'moves an imported number whose IP died, straight to the right plan' do
+      assign_proxy!('hybrid-5511900000001', webshare_proxy(id: 9, address: '10.0.0.9'), account: account, pool: 'datacenter')
+        .update!(origin: 'imported')
+
+      expect(assigner.for('hybrid-5511900000001').address).to eq('10.5.0.1')
     end
   end
 
   describe 'stack slice' do
     let(:datacenter_list) { [sao_paulo, rio, sao_paolo] }
+
+    it 'offers no IP at all when the slice is empty, with an error log' do
+      waha_session!('5511900000001', account)
+
+      log = capture_log do
+        with_modified_env(WEBSHARE_DATACENTER_PROXY_ADDRESSES: '') { expect(assigner.for('5511900000001')).to be_nil }
+      end
+
+      expect(log).to include('WEBSHARE_DATACENTER_PROXY_ADDRESSES vazia')
+    end
 
     it 'only picks IPs of this stack slice' do
       waha_session!('5511900000001', account)
@@ -190,6 +221,17 @@ RSpec.describe WhatsappProxy::Assigner do
       expect(log).not_to include('manual-secret')
     end
 
+    it 'does not reuse an account IP that the engine shows in a session of nobody known' do
+      waha_session!('5511900000002', account)
+      assign_proxy!('5511900000002', sao_paulo, account: account)
+      allow(engine).to receive(:list_sessions).and_return(
+        [{ 'name' => '5511900000002', 'config' => { 'proxy' => { 'server' => '10.0.0.2:6000' } } },
+         { 'name' => '5511900000077', 'config' => { 'proxy' => { 'server' => '10.0.0.2:6000' } } }]
+      )
+
+      expect(assigner.for('5511900000001').address).to eq('10.0.0.1')
+    end
+
     it 'assigns nothing when the engine cannot list its sessions' do
       allow(engine).to receive(:list_sessions).and_raise(Waha::Client::Error, 'down')
 
@@ -211,6 +253,15 @@ RSpec.describe WhatsappProxy::Assigner do
         end
       end
       expect(WhatsappProxy::Assignment.count).to eq(0)
+    end
+
+    it 'returns nil on an unexpected error, logging only the class' do
+      allow(WhatsappProxy::SessionOwner).to receive(:find).and_raise(ArgumentError, 'senha-2 vazou?')
+
+      log = capture_log { expect(assigner.for('5511900000001')).to be_nil }
+
+      expect(log).to include('falha inesperada (ArgumentError)')
+      expect(log).not_to include('senha-2')
     end
 
     it 'returns nil without the API key' do

@@ -3,13 +3,16 @@
 # motor (`engine` começa pelo nome do motor: "hubsegs (Hub2You)", "autonomia (Autonom.ia)"). A conta sai da sessão no
 # banco; o plano do IP, do campo `plano`. Se o plano não bate com o tipo da sessão (ex.: Híbrido num IP de datacenter),
 # a reconciliação troca depois, dentro do limite por rodada.
-# O HMAC da credencial atual sai da lista da Webshare: sem ele, a reconciliação reaplicaria (e reiniciaria) cada sessão.
+# O HMAC só é gravado quando o proxy que o motor usa de fato (GET da sessão, só leitura) tem o mesmo host:porta e a
+# mesma credencial da lista da Webshare; senão fica vazio e a reconciliação reaplica aquela sessão. Linha gravada como
+# `imported`: plano/conta só mudam sozinhos com WHATSAPP_PROXY_AUTO_MIGRATE=true. Escrita sob a mesma trava do Assigner.
 class WhatsappProxy::Importer
   Result = Struct.new(:imported, :unchanged, :skipped, keyword_init: true)
 
-  def initialize(entries:, engine:, pools: {}, output: $stdout)
+  def initialize(entries:, engine:, pools: {}, client: Waha::Client.new, output: $stdout)
     @entries = entries
     @engine = engine.to_s.strip
+    @client = client
     @pools = pools.transform_keys(&:to_s)
     @output = output
   end
@@ -57,16 +60,34 @@ class WhatsappProxy::Importer
   def save(session, owner, pool_name, address, port, webshare_id) # rubocop:disable Metrics/ParameterLists
     # Pelo host: a linha sem webshare_id (proxy posto à mão) também é resolvida na lista.
     listed = pool(pool_name).proxies.find { |proxy| proxy.address == address }
+    digest = engine_digest(session, address, port, listed)
+    return skip(session, 'motor não respondeu') if digest == :engine_down
+
+    attributes = { account_id: owner.account_id, pool: pool_name, origin: 'imported', proxy_address: address,
+                   proxy_port: port, webshare_proxy_id: listed&.id || webshare_id, credential_digest: digest }
+    WhatsappProxy::Assignment.exclusively { persist(session, attributes, listed) }
+  end
+
+  def persist(session, attributes, listed)
     record = WhatsappProxy::Assignment.find_or_initialize_by(session_name: session)
-    record.assign_attributes(
-      account_id: owner.account_id, pool: pool_name, proxy_address: address, proxy_port: port,
-      webshare_proxy_id: listed&.id || webshare_id, credential_digest: listed&.credential_digest,
-      assigned_at: record.assigned_at || Time.current
-    )
+    record.assign_attributes(attributes.merge(assigned_at: record.assigned_at || Time.current))
     return report(:unchanged, session, record, listed) unless record.changed?
     return skip(session, record.errors.full_messages.to_sentence) unless record.save
 
     report(:imported, session, record, listed)
+  end
+
+  # HMAC da credencial que o motor usa, quando ela é a mesma da lista neste host:porta; nil quando não bate.
+  def engine_digest(session, address, port, listed)
+    return if listed.nil?
+
+    proxy = @client.get_session(session).dig('config', 'proxy').to_h
+    return unless WhatsappProxy::Server.same?(proxy['server'], "#{address}:#{port}")
+
+    digest = Webshare::Proxy.digest_for(proxy['username'], proxy['password'])
+    digest if digest == listed.credential_digest
+  rescue Waha::Client::Error
+    :engine_down
   end
 
   def report(outcome, session, record, listed)

@@ -1,5 +1,5 @@
 # Um proxy do plano da Webshare (#1516). Carrega a credencial só em memória, para o pedido ao motor:
-# inspect/to_s nunca mostram usuário nem senha.
+# inspect/to_s/as_json/to_json nunca mostram usuário nem senha.
 class Webshare::Proxy
   attr_reader :id, :address, :port, :country_code, :city_name
 
@@ -36,9 +36,21 @@ class Webshare::Proxy
   end
 
   # HMAC de usuário:senha: nota que a Webshare trocou a credencial do mesmo IP sem guardar a credencial.
-  def credential_digest
+  def self.digest_for(username, password)
     key = Rails.application.key_generator.generate_key('whatsapp-proxy-credential-digest', 32)
-    OpenSSL::HMAC.hexdigest('SHA256', key, "#{@username}:#{@password}")
+    OpenSSL::HMAC.hexdigest('SHA256', key, "#{username}:#{password}")
+  end
+
+  def credential_digest
+    self.class.digest_for(@username, @password)
+  end
+
+  def as_json(*)
+    { 'id' => id, 'server' => server, 'valid' => @valid, 'country_code' => country_code, 'city_name' => city_name }
+  end
+
+  def to_json(*)
+    as_json.to_json(*)
   end
 
   def inspect

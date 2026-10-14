@@ -37,8 +37,12 @@ module Waha
       get("/api/sessions/#{name}")
     end
 
-    def update_session(name, config:, apps:)
-      put("/api/sessions/#{name}", { config: config, apps: apps })
+    # Sem `apps`, a chave não vai no corpo e o motor mantém os apps da sessão (verificado no motor em 14/10/2026).
+    # `apps: nil` também omite: null no JSON não é um pedido seguro.
+    def update_session(name, config:, apps: nil)
+      body = { config: config }
+      body[:apps] = apps unless apps.nil?
+      put("/api/sessions/#{name}", body)
     end
 
     def list_sessions(all: true)
@@ -192,8 +196,7 @@ module Waha
       )
       unless response.success?
         error_class = response.code == 404 ? NotFound : Error
-        detail = scrub("#{response.code}: #{response.body.to_s[0, 300]}", body)
-        raise error_class.new("WAHA #{method.upcase} #{path} -> #{detail}", status: response.code)
+        raise error_class.new("WAHA #{method.upcase} #{path} -> #{error_detail(response, body)}", status: response.code)
       end
 
       response.parsed_response
@@ -203,7 +206,18 @@ module Waha
       raise Error, "WAHA #{method.upcase} #{path} falhou: #{scrub(e.message, body)}"
     end
 
-    # A senha do proxy da sessão (#1516) vai no corpo do pedido; se o motor a ecoar num erro, ela não chega ao log.
+    def error_detail(response, body)
+      scrub(scrub("#{response.code}: #{response.body.to_s[0, 300]}", body), parsed_or_nil(response))
+    end
+
+    def parsed_or_nil(response)
+      response.parsed_response
+    rescue StandardError
+      nil
+    end
+
+    # A credencial do proxy da sessão (#1516) vai no corpo do pedido e volta em claro nas respostas do motor: se aparecer
+    # num erro (pedido ou resposta), não chega ao log.
     def scrub(text, body)
       proxy = body.is_a?(Hash) ? body.with_indifferent_access.dig(:config, :proxy) : nil
       secrets = proxy.is_a?(Hash) ? proxy.values_at(:password, :username).compact_blank.map(&:to_s) : []

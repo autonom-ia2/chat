@@ -98,6 +98,14 @@ RSpec.describe Webshare::Client do
     end
   end
 
+  it 'never serializes the proxy credential' do
+    proxy = Webshare::Proxy.from_api(webshare_api_item(1, '10.0.0.1'))
+
+    expect(proxy.to_json).not_to include('senha-1')
+    expect(proxy.as_json.to_s).not_to include('user-1')
+    expect(proxy.to_json).to include('10.0.0.1:6000')
+  end
+
   it 'is not configured without the key and never shows it in inspect' do
     expect(described_class.new(api_key: '')).not_to be_configured
     expect(client.inspect).not_to include('chave-webshare-secreta')
