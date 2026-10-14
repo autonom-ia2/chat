@@ -6,7 +6,8 @@ import { nomeSemExtensao } from '../../utils/nomeDoArquivo';
 
 // #1181 PR2 (protótipo materialMsg) — um arquivo ou foto mandado na conversa da criação, com o
 // estado em palavras: lendo, pronto, na fila (antes do rascunho existir), atenção (não deu para
-// ler: mandar outro ou tirar) e grande demais (passa de 25 MB).
+// ler: mandar outro ou tirar) e grande demais (passa de 25 MB). #1503 — também o site mandado pela
+// caixa da base (ícone de globo, endereço inteiro; "Mandar outro" é só para arquivo).
 const props = defineProps({
   material: { type: Object, required: true },
   estado: { type: String, required: true },
@@ -17,11 +18,15 @@ const emit = defineEmits(['mandarOutro', 'tirar']);
 const { t } = useI18n();
 const NS = 'AGENTS.JORNADA.CRIAR.MATERIAL';
 
-const nomeVisivel = computed(() => nomeSemExtensao(props.material.nome));
+const site = computed(() => props.material.tipo === 'site');
+const nomeVisivel = computed(() =>
+  site.value ? props.material.nome : nomeSemExtensao(props.material.nome)
+);
 
 const problema = computed(() => ['atencao', 'grande'].includes(props.estado));
 const icone = computed(() => {
   if (problema.value) return 'i-lucide-triangle-alert text-n-amber-11';
+  if (site.value) return 'i-lucide-globe text-n-slate-11';
   return props.material.tipo === 'foto'
     ? 'i-lucide-image text-n-slate-11'
     : 'i-lucide-file-text text-n-slate-11';
@@ -73,7 +78,7 @@ const icone = computed(() => {
       </p>
       <p class="flex flex-wrap gap-3 m-0">
         <button
-          v-if="estado === 'atencao'"
+          v-if="estado === 'atencao' && !site"
           data-mandar-outro
           type="button"
           class="font-semibold underline min-h-11 text-n-blue-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-blue-11"

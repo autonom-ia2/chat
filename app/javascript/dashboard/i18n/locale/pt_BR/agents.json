@@ -1571,6 +1571,24 @@
           "E": "{antes}, e {depois}",
           "HORA": "{h}h",
           "HORA_MIN": "{h}h{m}"
+        },
+        "BASE": {
+          "TITULO": "Base de conhecimento de {nome}",
+          "TEXTO": "O que {nome} lê para responder. O que você manda pelo clipe da conversa também aparece aqui.",
+          "LISTA": "Arquivos e sites de {nome}",
+          "VAZIO": "Ainda não tem nada aqui. Mande um cardápio, uma tabela de preços ou o endereço do seu site.",
+          "ADICIONAR": "Adicionar arquivo ou site",
+          "SITE_EXEMPLO": "www.sualoja.com.br",
+          "GRANDE_TEXTO": "Este arquivo passa de 25 MB. Tire e mande um menor.",
+          "TIRAR_TITULO": "Tirar {item}?",
+          "TIRAR_TEXTO": "{nome} deixa de usar o que está nele. Sai da conversa também.",
+          "TIRAR": "Tirar",
+          "ENTROU": "{item} entrou na base.",
+          "TIROU": "{item} saiu da base.",
+          "ERRO_LER": "Não deu para mostrar o que já estava na base.",
+          "ERRO_LER_GARANTIA": "Nada foi apagado.",
+          "BOTAO": "Base",
+          "BOTAO_ARIA": "Base de conhecimento de {nome}: {n}"
         }
       }
     }

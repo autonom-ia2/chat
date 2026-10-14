@@ -1571,6 +1571,24 @@
           "E": "{antes}, and {depois}",
           "HORA": "{h}:00",
           "HORA_MIN": "{h}:{m}"
+        },
+        "BASE": {
+          "TITULO": "{nome}’s knowledge base",
+          "TEXTO": "What {nome} reads to answer. What you send with the clip in the conversation also shows here.",
+          "LISTA": "{nome}’s files and websites",
+          "VAZIO": "Nothing here yet. Send a menu, a price list or your website address.",
+          "ADICIONAR": "Add a file or website",
+          "SITE_EXEMPLO": "www.yourstore.com",
+          "GRANDE_TEXTO": "This file is over 25 MB. Remove it and send a smaller one.",
+          "TIRAR_TITULO": "Remove {item}?",
+          "TIRAR_TEXTO": "{nome} stops using what is in it. It leaves the conversation too.",
+          "TIRAR": "Remove",
+          "ENTROU": "{item} was added to the base.",
+          "TIROU": "{item} was removed from the base.",
+          "ERRO_LER": "Could not show what was already in the base.",
+          "ERRO_LER_GARANTIA": "Nothing was deleted.",
+          "BOTAO": "Base",
+          "BOTAO_ARIA": "{nome}’s knowledge base: {n}"
         }
       }
     }

@@ -5,6 +5,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { useEventListener, useMediaQuery } from '@vueuse/core';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
+import { useCanManage } from 'dashboard/composables/useCanManage';
 import AutonomiaChannelsAPI from 'dashboard/api/autonomia/channels';
 import { useConversaDeCriacao } from '../composables/useConversaDeCriacao';
 import { useTesteDoAgente } from '../composables/useTesteDoAgente';
@@ -41,6 +42,7 @@ import EtapaConte from '../components/criar/EtapaConte.vue';
 import EtapaConfira from '../components/criar/EtapaConfira.vue';
 import EtapaComece from '../components/criar/EtapaComece.vue';
 import EtapaPronto from '../components/criar/EtapaPronto.vue';
+import BaseDaCriacao from '../components/criar/BaseDaCriacao.vue';
 
 // #1181 PR2 — criar agente: Conte · Confira · Comece · Pronto (protótipo T03–T06), atrás da flag
 // autonomia_agents_journey (o seletor da rota decide). A etapa vem da query (`?etapa=`), e só vale
@@ -56,6 +58,9 @@ import EtapaPronto from '../components/criar/EtapaPronto.vue';
 // #1494 — Copiloto da equipe (`?atuacao=interno`): a conversa abre com actuation internal. Sem
 // exemplo de cliente nem ideias de loja; o teste usa perguntas da equipe e o Comece só liga o agente,
 // sem canal. Antes do rascunho existir, a atuação vem da query; depois, do próprio agente.
+// #1503 — "Base de conhecimento de {nome}" só no Conte: no computador, na coluna da direita abaixo do
+// exemplo; no celular, um botão "Base" ao lado de "Ver exemplo" abre a mesma caixa numa gaveta. A
+// lista é a do clipe da conversa (conversa.base). Vale para o agente externo e para o copiloto.
 const route = useRoute();
 const router = useRouter();
 const store = useStore();
@@ -83,6 +88,7 @@ const {
   erro: erroDeComecar,
 } = useComecarAAtender();
 const { podeConectarCanal } = usePermissoesDaJornada();
+const podeGerenciar = useCanManage('autonomia_manage');
 
 const registros = useMapGetter('autonomiaAgents/getRecords');
 const caixas = useMapGetter('inboxes/getInboxes');
@@ -94,6 +100,7 @@ const falhouAoAbrir = ref(false);
 const elegiveis = ref(null);
 const resultado = ref(null);
 const exemploAberto = ref(false);
+const baseAberta = ref(false);
 const internoComecando = ref(false);
 const confirmarSaida = ref(null);
 const titulo = ref(null);
@@ -276,6 +283,19 @@ const exemploDoCampo = computed(() => {
   return modelo.value === MODELO_DO_MEU_JEITO
     ? t('AGENTS.JORNADA.CRIAR.CONTE.EXEMPLO_DO_MEU_JEITO')
     : '';
+});
+
+const propsDaBase = computed(() => ({
+  nome: nome.value,
+  itens: conversa.base.value,
+  estadoDoMaterial: conversa.estadoDoMaterial,
+  podeGerenciar: podeGerenciar.value,
+  erroAoLer: conversa.erroDaBase.value,
+}));
+
+// A caixa some no Confira (no celular, a gaveta fecha junto com a etapa).
+watch(etapa, nova => {
+  if (nova !== ETAPA.CONTE) baseAberta.value = false;
 });
 
 const linkConectarCanal = computed(
@@ -561,16 +581,40 @@ onMounted(() => {
             >
               {{ t('AGENTS.JORNADA.CRIAR.CONTE.VER_COMO', { nome }) }}
             </AgenteBotao>
-            <AgenteBotao
-              v-else
-              data-ver-exemplo
-              variante="contorno"
-              bloco
-              icone="i-lucide-eye"
-              @click="exemploAberto = true"
-            >
-              {{ t('AGENTS.JORNADA.CRIAR.CONTE.VER_EXEMPLO') }}
-            </AgenteBotao>
+            <div v-else class="flex gap-2">
+              <AgenteBotao
+                data-ver-exemplo
+                variante="contorno"
+                class="flex-1"
+                icone="i-lucide-eye"
+                @click="exemploAberto = true"
+              >
+                {{ t('AGENTS.JORNADA.CRIAR.CONTE.VER_EXEMPLO') }}
+              </AgenteBotao>
+              <AgenteBotao
+                data-abrir-base
+                variante="contorno"
+                class="flex-1"
+                icone="i-lucide-library-big"
+                :aria-label="
+                  t('AGENTS.JORNADA.CRIAR.BASE.BOTAO_ARIA', {
+                    nome,
+                    n: conversa.base.value.length,
+                  })
+                "
+                @click="baseAberta = true"
+              >
+                {{ t('AGENTS.JORNADA.CRIAR.BASE.BOTAO') }}
+                <span
+                  v-if="conversa.base.value.length"
+                  data-contagem-base
+                  aria-hidden="true"
+                  class="grid px-1.5 text-xs font-semibold rounded-full min-w-5 h-5 place-items-center bg-n-blue-3 text-n-blue-11"
+                >
+                  {{ conversa.base.value.length }}
+                </span>
+              </AgenteBotao>
+            </div>
           </template>
         </EtapaConte>
 
@@ -602,7 +646,7 @@ onMounted(() => {
           v-else-if="!celular"
           data-exemplo
           aria-labelledby="exemplo-titulo"
-          class="flex flex-col gap-4"
+          class="flex flex-col min-h-0 gap-4 md:overflow-y-auto md:pb-2"
         >
           <h2
             id="exemplo-titulo"
@@ -641,6 +685,14 @@ onMounted(() => {
               {{ t('AGENTS.JORNADA.CRIAR.CONTE.TESTAR_AGORA_TEXTO') }}
             </p>
           </template>
+          <BaseDaCriacao
+            v-bind="propsDaBase"
+            class="mt-2"
+            @anexar="conversa.anexarArquivo"
+            @site="conversa.anexarSite"
+            @tirar="conversa.tirar"
+            @reler="conversa.carregarBase"
+          />
         </aside>
       </div>
     </div>
@@ -694,6 +746,21 @@ onMounted(() => {
           {{ t('AGENTS.JORNADA.CRIAR.CONTE.TESTAR_AGORA_TEXTO') }}
         </p>
       </template>
+    </AgenteGaveta>
+
+    <AgenteGaveta
+      v-if="baseAberta"
+      :titulo="t('AGENTS.JORNADA.CRIAR.BASE.TITULO', { nome })"
+      @fechar="baseAberta = false"
+    >
+      <BaseDaCriacao
+        v-bind="propsDaBase"
+        na-gaveta
+        @anexar="conversa.anexarArquivo"
+        @site="conversa.anexarSite"
+        @tirar="conversa.tirar"
+        @reler="conversa.carregarBase"
+      />
     </AgenteGaveta>
 
     <AgenteConfirmacao
