@@ -138,12 +138,12 @@ describe('GavetaOndeQuando', () => {
     await nextTick();
     await clicar('[data-confirmar]');
 
-    expect(store.dispatch).toHaveBeenCalledWith('autonomiaAgents/update', {
-      id: 7,
-      enabled: true,
-      status: 'active',
-    });
-    expect(canaisApi.connect).toHaveBeenCalledWith(7, 2);
+    // #1366: ligar é o próprio POST do canal (ativar); não há PATCH de status.
+    expect(store.dispatch).not.toHaveBeenCalledWith(
+      'autonomiaAgents/update',
+      expect.anything()
+    );
+    expect(canaisApi.connect).toHaveBeenCalledWith(7, 2, { ativar: true });
     expect(canaisApi.disconnect).toHaveBeenCalledWith(7, 1);
     expect(canaisApi.disconnect).not.toHaveBeenCalledWith(9, expect.anything());
     naoMandouCamposDoPainelAntigo();
@@ -162,7 +162,7 @@ describe('GavetaOndeQuando', () => {
     await clicar('[data-confirmar]');
 
     expect(canaisApi.disconnect.mock.calls[0]).toEqual([9, 3]);
-    expect(canaisApi.connect).toHaveBeenCalledWith(7, 3);
+    expect(canaisApi.connect).toHaveBeenCalledWith(7, 3, { ativar: true });
     expect(canaisApi.disconnect).toHaveBeenCalledWith(7, 1);
     wrapper.unmount();
   });
@@ -234,6 +234,42 @@ describe('GavetaOndeQuando', () => {
     wrapper.unmount();
   });
 
+  // #1525 — quem não está em canal nenhum (a Lia que nasceu parada) começa a atender; não "volta".
+  it('says "start answering" to an agent that is on no channel', async () => {
+    const wrapper = montar({
+      modo: 'voltar',
+      atendendo: false,
+      atuais: [],
+      agente: {
+        ...AGENTE,
+        status: 'paused',
+        enabled: false,
+        channels_count: 0,
+      },
+    });
+    radio('Instagram').click();
+    await nextTick();
+    const botao = no('[data-confirmar]').textContent;
+    expect(botao).toContain('PAGINA.ONDE.COMECAR');
+    expect(botao).not.toContain('PAGINA.ONDE.VOLTAR');
+    await clicar('[data-confirmar]');
+    expect(canaisApi.connect).toHaveBeenCalledWith(7, 2, { ativar: true });
+    wrapper.unmount();
+  });
+
+  it('keeps "start answering again" while the channel count says it still has one', async () => {
+    const wrapper = montar({
+      modo: 'voltar',
+      atendendo: false,
+      atuais: [],
+      estadoCanais: 'carregando',
+      canais: CANAIS,
+      agente: { ...AGENTE, status: 'paused', channels_count: 1 },
+    });
+    expect(no('[data-confirmar]').textContent).toContain('PAGINA.ONDE.VOLTAR');
+    wrapper.unmount();
+  });
+
   it('starts answering again on the same inbox with only the active PATCH', async () => {
     const wrapper = montar({
       modo: 'voltar',
@@ -268,11 +304,33 @@ describe('GavetaOndeQuando', () => {
     const erro = no('[data-erro]');
     expect(erro.textContent).toContain('AGENTS.JORNADA.ERRO.COMECAR_ATENDER');
     expect(erro.textContent).toContain('COMECAR_ATENDER_GARANTIA');
-    expect(store.dispatch).toHaveBeenLastCalledWith('autonomiaAgents/update', {
-      id: 7,
-      enabled: true,
-      status: 'paused',
+    // Nada foi ligado: não há o que desfazer.
+    expect(store.dispatch).not.toHaveBeenCalledWith(
+      'autonomiaAgents/update',
+      expect.anything()
+    );
+    wrapper.unmount();
+  });
+
+  it('shows the server explanation when it refuses to start (422, #1366)', async () => {
+    canaisApi.connect.mockRejectedValueOnce(
+      Object.assign(new Error('422'), {
+        response: { status: 422, data: { message: 'Escolha um canal.' } },
+      })
+    );
+    const wrapper = montar({
+      modo: 'voltar',
+      atendendo: false,
+      atuais: [],
+      agente: { ...AGENTE, status: 'paused' },
     });
+    radio('Instagram').click();
+    await nextTick();
+    await clicar('[data-confirmar]');
+
+    const erro = no('[data-erro]');
+    expect(erro.textContent).toContain('Escolha um canal.');
+    expect(erro.textContent).toContain('AGENTS.JORNADA.ERRO.CANAL_GARANTIA');
     wrapper.unmount();
   });
 

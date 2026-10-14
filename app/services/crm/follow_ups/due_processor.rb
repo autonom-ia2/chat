@@ -15,6 +15,7 @@ class Crm::FollowUps::DueProcessor
   def process(follow_up)
     follow_up.with_lock do
       next unless follow_up.pending? && follow_up.due_at <= @now
+      next skip_paused_occurrence(follow_up) if follow_up.series&.paused?
 
       dispatch(follow_up)
     end
@@ -38,6 +39,14 @@ class Crm::FollowUps::DueProcessor
     else
       process_auto_send(follow_up)
     end
+  end
+
+  # #1460: série pausada não avisa ninguém. A vez passa em silêncio (cancelada, com o motivo) e a série volta a
+  # criar vezes a partir de quando for retomada.
+  def skip_paused_occurrence(follow_up)
+    follow_up.update!(status: :canceled, canceled_at: @now,
+                      metadata: follow_up.metadata.merge('canceled_reason' => 'series_paused'))
+    finalize_follow_up(follow_up)
   end
 
   def log_processing_error(follow_up, error)

@@ -215,7 +215,10 @@ module Crm
       # directly (product decision: "autopreenche sempre"). The ONLY guard is a
       # human takeover: once someone edits the value manually (value_source =
       # 'human'), a later eval must never undo that correction.
+      # #1498: funil de Atender não tem valor de venda; a IA não preenche (a Cobrança guarda o valor que a pessoa digita).
       def apply_ai_value!(ai_metadata, value, attributes)
+        return unless @card.pipeline&.counts_as_sale?
+
         value = value.respond_to?(:with_indifferent_access) ? value.with_indifferent_access : value
         return if value.blank? || value[:amount_cents].blank? || value[:currency].blank?
         return if ai_metadata['value_source'] == 'human'

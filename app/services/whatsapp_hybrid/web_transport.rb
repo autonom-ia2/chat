@@ -11,6 +11,13 @@ class WhatsappHybrid::WebTransport
   MEDIA_ENDPOINTS = { 'image' => 'sendImage', 'audio' => 'sendVoice', 'video' => 'sendVideo' }.freeze
 
   MESSAGE_KEY_TTL = 7.days.to_i
+
+  # Resultado estável do envio, em content_attributes (chat#1349). Quem decide reenviar por outro caminho lê isto, nunca o texto do erro:
+  #   accepted  - o motor aceitou o envio (não é entrega: a confirmação vem depois, pelo ack);
+  #   failed    - falha certa, nada saiu (sessão caída, contato sem WhatsApp, erro do motor, limite de conversas novas);
+  #   uncertain - o motor não respondeu: pode ter saído, nunca reenviar sozinho;
+  #   throttled - passou do limite por minuto, espera a próxima tentativa (resultado ainda não é final).
+  OUTCOME_KEY = 'whatsapp_transport_outcome'.freeze
   CAPPED_ERROR = 'O WhatsApp limitou conversas novas neste número por enquanto. Use um modelo aprovado ' \
                  'ou tente de novo depois do fim do ciclo (aba WhatsApp API da caixa).'.freeze
 
@@ -72,6 +79,7 @@ class WhatsappHybrid::WebTransport
     mark_pending!(physical_id)
     WhatsappHybrid::Typing.new(@client, session: session, chat_id: chat_id).simulate(@message)
     deliver(chat_id, physical_id)
+    record_outcome!('accepted')
     log('sent', physical_id)
   end
 
@@ -120,14 +128,20 @@ class WhatsappHybrid::WebTransport
 
   # Passou do limite por minuto: a mensagem espera a próxima janela em vez de sair em rajada.
   def throttle!
+    record_outcome!('throttled')
     SendReplyJob.set(wait: THROTTLE_RETRY).perform_later(@message.id)
     log('throttled')
+  end
+
+  def record_outcome!(value)
+    @message.update!(content_attributes: @message.content_attributes.to_h.merge(OUTCOME_KEY => value))
   end
 
   def fail!(reason, outcome = 'failed')
     # external_error mora dentro de content_attributes: grava junto, senão um sobrescreve o outro.
     attrs = @message.content_attributes.to_h.merge(
-      'whatsapp_transport' => 'web', 'whatsapp_transport_origin' => @origin, 'external_error' => reason
+      'whatsapp_transport' => 'web', 'whatsapp_transport_origin' => @origin, 'external_error' => reason,
+      OUTCOME_KEY => outcome == 'uncertain' ? 'uncertain' : 'failed'
     )
     @message.update!(status: :failed, content_attributes: attrs)
     log(outcome)

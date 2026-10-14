@@ -9,7 +9,11 @@ class Api::V1::Accounts::Crm::StageCriteriaController < Api::V1::Accounts::Crm::
 
   def defaults
     names = Array(params[:names]).first(Crm::Ai::StageCriteriaImprover::MAX_STAGES).map(&:to_s)
-    render json: { payload: names.map { |name| { name: name, criteria: Crm::Ai::DefaultStageCriteria.criteria_for(name).to_s } } }
+    # #1498: funil de Atender tem frases próprias para nomes que também existem em venda ("Em atendimento").
+    atender = ActiveModel::Type::Boolean.new.cast(params[:atender]) || false
+    render json: {
+      payload: names.map { |name| { name: name, criteria: Crm::Ai::DefaultStageCriteria.criteria_for(name, atender: atender).to_s } }
+    }
   end
 
   def improve

@@ -36,7 +36,36 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
       # Assert — o tipo é o que separa este agente do construtor conversacional.
       expect(agente.agent_type).to eq('insurance_quote')
       expect(agente).to be_persisted
-      expect(agente.enabled).to be(true)
+    end
+
+    # #1525 — sem caixa ele não cota com ninguém: nasce parado, como todo agente externo, e liga ao entrar no canal.
+    it 'nasce parado e sem onde trabalhar' do
+      agente = construir
+
+      expect(agente).to have_attributes(status: 'paused', enabled: false)
+      expect(agente.tem_onde_trabalhar?).to be(false)
+      expect(agente.atende_cliente?).to be(false)
+    end
+
+    it 'comeca a atender ao entrar num canal com ativar' do
+      agente = construir
+      inbox = create(:inbox, account: account)
+
+      resultado = Autonomia::Agents::Operate::InboxConnector.new(agent: agente, inbox: inbox, ativar: true).perform(connect: true)
+
+      expect(resultado).to be_success
+      expect(agente.reload).to have_attributes(status: 'active', enabled: true)
+      expect(agente.atende_cliente?).to be(true)
+    end
+
+    # O Builder grava no contexto :ativacao: quem mudar o nascimento para atendendo, sem canal, recebe a recusa.
+    it 'recusa nascer atendendo sem onde trabalhar' do
+      agente = Autonomia::Agents::Agent.new(account: account, name: 'Mia', agent_type: 'insurance_quote',
+                                            status: :active, enabled: true, instruction: 'x')
+      allow(Autonomia::Agents::Agent).to receive(:new).and_return(agente)
+
+      expect { construir }.to raise_error(ActiveRecord::RecordInvalid)
+      expect(Autonomia::Agents::Agent.where(account: account)).to be_empty
     end
 
     # CONTRA O CATÁLOGO, NUNCA CONTRA A PRÓPRIA CONSTANTE. A versão anterior deste exemplo

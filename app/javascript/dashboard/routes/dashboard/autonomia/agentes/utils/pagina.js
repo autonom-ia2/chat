@@ -1,6 +1,6 @@
 // #1181 PR3 — regras da página do agente (protótipo T07–T17) que não dependem de tela.
 
-import { ESTADO } from './estadoDoAgente';
+import { estadoDeAtendimento } from './estadoDoAgente';
 
 export const GAVETA = {
   TESTAR: 'testar',
@@ -41,15 +41,9 @@ export const ehManual = agente => agente?.mode === 'manual';
 export const ehInterno = agente => agente?.actuation === 'internal';
 
 // Estado de operação na página: o agente de cotação também atende ou está parado (o cartão da lista
-// mostra "Cotação", mas a página precisa do interruptor certo). Mesma regra de Agent#operating?.
-export const estadoDeOperacao = agente => {
-  if (!agente?.status || agente.status === 'draft')
-    return ESTADO.FALTA_TERMINAR;
-  if (agente.status === 'active' && agente.enabled === true) {
-    return ESTADO.ATENDENDO;
-  }
-  return ESTADO.PARADO;
-};
+// mostra "Cotação", mas a página precisa do interruptor certo). A mesma regra da lista
+// (estadoDeAtendimento): ativo, ligado e com onde trabalhar (#1366).
+export const estadoDeOperacao = agente => estadoDeAtendimento(agente);
 
 // Mudar conversando usa o Construtor: não serve a quem escreve à mão (o Construtor sobrescreveria a
 // instrução) nem à cotação (instrução mantida pelo módulo, o backend responde 422).

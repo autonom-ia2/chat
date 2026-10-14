@@ -99,6 +99,7 @@ class Account < ApplicationRecord
   has_many :crm_cards, class_name: 'Crm::Card', dependent: :destroy_async
   has_many :crm_card_conversations, class_name: 'Crm::CardConversation', dependent: :destroy_async
   has_many :crm_follow_ups, class_name: 'Crm::FollowUp', dependent: :destroy_async
+  has_many :crm_follow_up_series, class_name: 'Crm::FollowUpSeries', dependent: :destroy_async
   has_many :crm_meetings, class_name: 'Crm::Meeting', dependent: :destroy_async
   has_many :crm_meta_conversion_events, class_name: 'Crm::MetaConversionEvent', dependent: :destroy_async
   has_many :crm_google_conversion_events, class_name: 'Crm::GoogleConversionEvent', dependent: :destroy_async

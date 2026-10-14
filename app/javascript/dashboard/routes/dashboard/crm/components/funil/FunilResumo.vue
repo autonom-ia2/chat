@@ -21,6 +21,9 @@ const props = defineProps({
   anuncios: { type: Array, default: () => [] },
   arquivando: { type: Boolean, default: false },
   juntar: { type: Function, required: true },
+  // #1498 — o nome dos dois desfechos, para "Para que serve".
+  sucesso: { type: String, default: '' },
+  fracasso: { type: String, default: '' },
 });
 
 defineEmits(['abrir', 'criar', 'arquivar']);
@@ -33,6 +36,15 @@ const nomesSemFrase = computed(() =>
 </script>
 
 <template>
+  <!-- #1498 — Vender ou Atender sempre à vista, no topo. -->
+  <FunilCartaoVendas
+    :venda="venda"
+    :meta="meta"
+    :dinheiro="dinheiro"
+    :sucesso="sucesso"
+    :fracasso="fracasso"
+    @alterar="$emit('abrir', 'sales')"
+  />
   <FunilResumoCartao
     parte="stages"
     icone="i-lucide-columns-3"
@@ -85,12 +97,6 @@ const nomesSemFrase = computed(() =>
   <FunilCartaoQuandoUsar
     :texto="quandoUsar"
     @alterar="$emit('abrir', 'about')"
-  />
-  <FunilCartaoVendas
-    :venda="venda"
-    :meta="meta"
-    :dinheiro="dinheiro"
-    @alterar="$emit('abrir', 'sales')"
   />
   <FunilResumoCartao
     v-if="comRetorno"

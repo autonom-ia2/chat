@@ -15,6 +15,7 @@ import CampoValor from './card/campos/CampoValor.vue';
 import CampoUrgencia from './card/campos/CampoUrgencia.vue';
 import CampoFecharAte from './card/campos/CampoFecharAte.vue';
 import { textosCom } from './card/textos';
+import { useCardTipo } from './card/useCardTipo';
 import {
   newRegistrationDraft,
   registrationPayload,
@@ -66,6 +67,16 @@ const form = ref({
   score: 0,
   inboxId: '',
 });
+// #1498 — as palavras seguem o funil escolhido: Negócio (Vender), Assunto
+// (Atender) e, na Cobrança, valor a receber e vencimento.
+const funilEscolhido = computed(() =>
+  props.pipelines.find(
+    item => String(item.id) === String(form.value.pipelineId)
+  )
+);
+const jeito = useCardTipo({ t, funil: funilEscolhido });
+const N = chave => jeito.texto(`NEGOCIO.${chave}`);
+const semValor = computed(() => jeito.atender.value && !jeito.cobranca.value);
 const initial = JSON.stringify(form.value);
 const dirty = computed(
   () =>
@@ -247,11 +258,15 @@ const submit = async () => {
     description: data.description.trim(),
     pipeline_id: data.pipelineId,
     stage_id: data.stageId,
-    value_cents: Math.round(Number(data.valueAmount || 0) * 100),
+    // #1498 — Atender (fora a Cobrança) não leva valor, nota nem data, mesmo
+    // que algo tenha sido digitado antes de trocar o funil.
+    value_cents: semValor.value
+      ? 0
+      : Math.round(Number(data.valueAmount || 0) * 100),
     currency: data.currency.trim() || 'BRL',
     priority: data.priority,
-    score: Number(data.score || 0),
-    expected_close_at: data.expectedCloseAt || null,
+    score: jeito.atender.value ? 0 : Number(data.score || 0),
+    expected_close_at: semValor.value ? null : data.expectedCloseAt || null,
     ...(data.ownerId ? { owner_id: data.ownerId } : {}),
     ...(data.inboxId ? { inbox_id: data.inboxId } : {}),
     ...(mode.value === 'new'
@@ -395,9 +410,9 @@ defineExpose({
           required
           data-negocio-titulo
           custom-input-class="!text-base"
-          :label="t('CRM_CARD.NEGOCIO.NOME')"
-          :placeholder="t('CRM_CARD.NEGOCIO.TITULO_EXEMPLO')"
-          :message="faltaNome ? t('CRM_CARD.NEGOCIO.TITULO_FALTA') : ''"
+          :label="N('NOME')"
+          :placeholder="N('TITULO_EXEMPLO')"
+          :message="faltaNome ? N('TITULO_FALTA') : ''"
           :message-type="faltaNome ? 'error' : 'info'"
           :disabled="sending"
           @update:model-value="mexeuNoNome = true"
@@ -445,8 +460,10 @@ defineExpose({
           />
         </div>
         <CampoValor
+          v-if="!semValor"
           v-model:valor="form.valueAmount"
           v-model:moeda="form.currency"
+          :rotulo="N('VALOR')"
           :somente-leitura="sending"
         />
         <label class="grid min-w-0 gap-2 text-sm text-n-slate-12">
@@ -482,13 +499,18 @@ defineExpose({
             <TextArea
               :id="`${formId}-description`"
               v-model="form.description"
-              :label="t('CRM_CARD.NEGOCIO.OBSERVACOES')"
-              :placeholder="t('CRM_CARD.NEGOCIO.OBSERVACOES_EXEMPLO')"
+              :label="N('OBSERVACOES')"
+              :placeholder="N('OBSERVACOES_EXEMPLO')"
               :disabled="sending"
               auto-height
             />
-            <CampoUrgencia v-model="form.priority" :somente-leitura="sending" />
+            <CampoUrgencia
+              v-model="form.priority"
+              :rotulo="N('URGENCIA')"
+              :somente-leitura="sending"
+            />
             <Input
+              v-if="!jeito.atender.value"
               v-model="form.score"
               type="number"
               min="0"
@@ -500,7 +522,9 @@ defineExpose({
               :disabled="sending"
             />
             <CampoFecharAte
+              v-if="!semValor"
               v-model="form.expectedCloseAt"
+              :rotulo="N('FECHAR_ATE')"
               :somente-leitura="sending"
             />
             <label

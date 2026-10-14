@@ -121,6 +121,9 @@ module Autonomia
       validates :instruction, length: { maximum: MAX_INSTRUCTION_LENGTH }, allow_nil: true
       # #1196 — a página da agenda da IA só pode ser página nova da própria conta.
       validate :pagina_de_agendamento_da_conta, if: :will_save_change_to_config?
+      # Quem atende: `operating?`, `atende_cliente?` e, desde o #1366, `tem_onde_trabalhar?` (validação de ativar e parada
+      # automática). Moram juntos em Autonomia::Agents::OndeTrabalhar.
+      include ::Autonomia::Agents::OndeTrabalhar
 
       # #1035 — quando o agente DEIXA de atender (pausa, desliga) as conversas que estavam com ele voltam
       # para a equipe e o espelho da caixa fica inativo (conversa nova nasce sem bot); quando VOLTA a
@@ -315,17 +318,6 @@ module Autonomia
           )
         end
         true
-      end
-
-      # Mesmo predicado de Operate.authorized_agent_inbox e do InboxConnector#connect!.
-      def operating?
-        !deleted? && enabled? && active?
-      end
-
-      # Pode falar com cliente agora: atendendo, não interno (copiloto) e não de sistema (o Guia). É o mesmo predicado
-      # do agente em Operate.authorized_agent_inbox, sem a allowlist de teste, que depende da conversa (#1433).
-      def atende_cliente?
-        operating? && !actuation_internal? && config&.dig('system_key').blank?
       end
 
       private

@@ -91,7 +91,9 @@ export const toKeys = (text, fields) => {
   return result + source.slice(position);
 };
 
-// O mesmo que o servidor confere ao salvar (Notices::CustomText.problem).
+// O mesmo que o servidor confere ao salvar (Notices::CustomText.problem). O link
+// não é obrigatório (#1517): sem ele, o sistema manda o link no botão ou numa
+// linha fixa.
 // Devolve a chave do aviso em BOOKING.NOTICES.TEXTS.ERRORS ou null.
 export const noticeTextProblem = text => {
   const value = String(text || '');
@@ -103,13 +105,20 @@ export const noticeTextProblem = text => {
   if (value.includes('[') || value.includes(']')) return 'BRACKET';
   const keys = parts.filter(part => part.type === 'key').map(p => p.value);
   if (keys.some(key => !NOTICE_TEXT_KEYS.includes(key))) return 'UNKNOWN_FIELD';
-  if (!keys.includes(NOTICE_TEXT.LINK)) return 'MISSING_LINK';
   if (!keys.includes(NOTICE_TEXT.WHEN)) return 'MISSING_WHEN';
   return null;
 };
 
+// O texto põe o link de gestão.
+export const noticeTextHasLink = text =>
+  partsOf(text).parts.some(
+    part => part.type === 'key' && part.value === NOTICE_TEXT.LINK
+  );
+
 // Como o cliente vê: os campos trocados pelos exemplos e a linha de parar.
-export const noticeTextPreview = (text, samples, stopLine) => {
+// Texto sem o link (#1517): o sistema põe a linha do link (`manageLine`)
+// antes da de parar; no WhatsApp oficial ela vira o botão.
+export const noticeTextPreview = (text, samples, stopLine, manageLine = '') => {
   const body = partsOf(text)
     .parts.map(part =>
       part.type === 'key'
@@ -118,7 +127,8 @@ export const noticeTextPreview = (text, samples, stopLine) => {
     )
     .join('')
     .trim();
-  return stopLine ? `${body}\n\n${stopLine}` : body;
+  const linkLine = manageLine && !noticeTextHasLink(text) ? manageLine : '';
+  return [body, linkLine, stopLine].filter(Boolean).join('\n\n');
 };
 
 // Só os textos escritos dos avisos que aparecem na tela (`kinds`, os do jogo);

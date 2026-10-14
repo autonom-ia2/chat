@@ -145,7 +145,7 @@ const ERRO_DO_MOTIVO = {
   }),
 };
 
-const erroDeComecar = resultado => {
+const erroGeralDeComecar = resultado => {
   const doMotivo = ERRO_DO_MOTIVO[resultado.motivo];
   if (doMotivo) return doMotivo(resultado);
   if (!voltar.value) {
@@ -157,6 +157,12 @@ const erroDeComecar = resultado => {
       nome: props.nome,
     }),
   };
+};
+
+// #1366: o servidor explicou a recusa (422): a explicação dele no lugar do título geral.
+const erroDeComecar = resultado => {
+  const geral = erroGeralDeComecar(resultado);
+  return resultado.mensagem ? { ...geral, titulo: resultado.mensagem } : geral;
 };
 
 const erroDeSalvar = () => ({
@@ -280,9 +286,15 @@ const titulo = computed(() =>
     ? t('AGENTS.JORNADA.ONDE_QUANDO.TITULO', { nome: props.nome })
     : t(`${NS}.TITULO`, { nome: props.nome })
 );
-const rotuloVoltar = computed(() =>
-  troca.value ? t(`${NS}.TROCAR`) : t(`${NS}.VOLTAR`)
+// #1525 — quem não está em canal nenhum (a Lia que nasceu parada, um agente novo) começa a atender; quem
+// tem canal e foi parado volta a atender. Critério: nenhum canal atual, nem pela contagem do servidor.
+const semCanalAtual = computed(
+  () => !props.atuais.length && !props.agente.channels_count
 );
+const rotuloVoltar = computed(() => {
+  if (troca.value) return t(`${NS}.TROCAR`);
+  return semCanalAtual.value ? t(`${NS}.COMECAR`) : t(`${NS}.VOLTAR`);
+});
 </script>
 
 <template>

@@ -2176,9 +2176,45 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_28_150000) do
     t.index ["team_id"], name: "index_crm_cards_on_team_id"
   end
 
+  create_table "crm_follow_up_series", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "card_id"
+    t.bigint "contact_id"
+    t.bigint "company_id"
+    t.bigint "conversation_id"
+    t.bigint "created_by_id"
+    t.string "title", null: false
+    t.text "description"
+    t.integer "automation_mode", default: 0, null: false
+    t.integer "frequency", null: false
+    t.integer "weekdays", default: [], null: false, array: true
+    t.boolean "weekdays_only", default: false, null: false
+    t.datetime "starts_at", null: false
+    t.string "timezone", default: "UTC", null: false
+    t.integer "ends_mode", default: 0, null: false
+    t.date "ends_on"
+    t.integer "occurrences_count"
+    t.integer "status", default: 0, null: false
+    t.datetime "paused_at"
+    t.datetime "ended_at"
+    t.integer "recipient_mode", default: 0, null: false
+    t.bigint "recipient_user_ids", default: [], null: false, array: true
+    t.bigint "recipient_team_id"
+    t.jsonb "metadata", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "status"], name: "idx_crm_follow_up_series_account_status"
+    t.index ["card_id"], name: "index_crm_follow_up_series_on_card_id"
+    t.index ["company_id"], name: "index_crm_follow_up_series_on_company_id"
+    t.index ["contact_id"], name: "index_crm_follow_up_series_on_contact_id"
+    t.index ["conversation_id"], name: "index_crm_follow_up_series_on_conversation_id"
+    t.index ["created_by_id"], name: "index_crm_follow_up_series_on_created_by_id"
+    t.index ["recipient_team_id"], name: "index_crm_follow_up_series_on_recipient_team_id"
+  end
+
   create_table "crm_follow_ups", force: :cascade do |t|
     t.bigint "account_id", null: false
-    t.bigint "card_id", null: false
+    t.bigint "card_id"
     t.bigint "conversation_id"
     t.bigint "contact_id"
     t.bigint "inbox_id"
@@ -2196,6 +2232,12 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_28_150000) do
     t.jsonb "metadata", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "series_id"
+    t.datetime "occurrence_at"
+    t.integer "recipient_mode", default: 0, null: false
+    t.bigint "recipient_user_ids", default: [], null: false, array: true
+    t.bigint "recipient_team_id"
+    t.bigint "company_id"
     t.index ["account_id", "assignee_id", "due_at", "status"], name: "idx_crm_followups_assignee_due"
     t.index ["account_id", "card_id"], name: "idx_crm_followups_card"
     t.index ["account_id", "conversation_id"], name: "idx_crm_followups_conversation"
@@ -2203,11 +2245,15 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_28_150000) do
     t.index ["account_id"], name: "index_crm_follow_ups_on_account_id"
     t.index ["assignee_id"], name: "index_crm_follow_ups_on_assignee_id"
     t.index ["card_id"], name: "index_crm_follow_ups_on_card_id"
+    t.index ["company_id"], name: "index_crm_follow_ups_on_company_id"
     t.index ["contact_id"], name: "index_crm_follow_ups_on_contact_id"
     t.index ["conversation_id"], name: "index_crm_follow_ups_on_conversation_id"
     t.index ["created_by_id"], name: "index_crm_follow_ups_on_created_by_id"
     t.index ["inbox_id"], name: "index_crm_follow_ups_on_inbox_id"
+    t.index ["recipient_team_id"], name: "index_crm_follow_ups_on_recipient_team_id"
+    t.index ["series_id", "occurrence_at"], name: "idx_crm_followups_series_occurrence_uniq", unique: true, where: "(series_id IS NOT NULL)"
     t.index ["status", "due_at", "id"], name: "idx_crm_followups_due_processor"
+    t.check_constraint "card_id IS NOT NULL OR contact_id IS NOT NULL OR company_id IS NOT NULL OR created_by_id IS NOT NULL", name: "crm_follow_ups_has_owner"
   end
 
   create_table "crm_google_conversion_events", force: :cascade do |t|
@@ -4100,11 +4146,21 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_28_150000) do
   add_foreign_key "crm_cards", "inboxes", on_delete: :nullify
   add_foreign_key "crm_cards", "teams"
   add_foreign_key "crm_cards", "users", column: "owner_id"
+  add_foreign_key "crm_follow_up_series", "accounts"
+  add_foreign_key "crm_follow_up_series", "companies", on_delete: :cascade
+  add_foreign_key "crm_follow_up_series", "contacts", on_delete: :cascade
+  add_foreign_key "crm_follow_up_series", "conversations", on_delete: :nullify
+  add_foreign_key "crm_follow_up_series", "crm_cards", column: "card_id", on_delete: :cascade
+  add_foreign_key "crm_follow_up_series", "teams", column: "recipient_team_id", on_delete: :nullify
+  add_foreign_key "crm_follow_up_series", "users", column: "created_by_id"
   add_foreign_key "crm_follow_ups", "accounts"
+  add_foreign_key "crm_follow_ups", "companies", on_delete: :cascade
   add_foreign_key "crm_follow_ups", "contacts", on_delete: :cascade
   add_foreign_key "crm_follow_ups", "conversations", on_delete: :cascade
   add_foreign_key "crm_follow_ups", "crm_cards", column: "card_id", on_delete: :cascade
+  add_foreign_key "crm_follow_ups", "crm_follow_up_series", column: "series_id", on_delete: :nullify
   add_foreign_key "crm_follow_ups", "inboxes", on_delete: :nullify
+  add_foreign_key "crm_follow_ups", "teams", column: "recipient_team_id", on_delete: :nullify
   add_foreign_key "crm_follow_ups", "users", column: "assignee_id"
   add_foreign_key "crm_follow_ups", "users", column: "created_by_id"
   add_foreign_key "crm_google_conversion_events", "accounts", on_delete: :cascade

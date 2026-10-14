@@ -1,6 +1,8 @@
 # #1181 (L2) — caixas da conta e quem atende cada uma, em consultas fixas (sem N+1).
-# - Agente nativo (vínculo kept de um agente visível na API de agentes): { kind: 'agent', agent_id, agent_name, operating }.
-#   Agente parado continua dono da caixa; operating segue Agent#operating? (o escopo já tira os apagados).
+# - Agente nativo (vínculo kept de um agente visível na API de agentes): { kind: 'agent', agent_id, agent_name, operating,
+#   caixas }. Agente parado continua dono da caixa; operating segue Agent#operating? (o escopo já tira os apagados).
+#   `caixas` (#1366): quantos vínculos ativos (porta ou área) o agente tem na conta. Com 1, trocá-lo desta caixa o para,
+#   e a tela avisa.
 # - Atendimento automático externo, sem nome: bot de webhook na caixa ou vínculo de agente fora da API (de sistema).
 # - Livre (nil): sem bot e sem vínculo kept — a mesma regra das caixas elegíveis de agents/:id/channels.
 # O bot da caixa é lido pela associação da caixa: agent_bot_inboxes.account_id aceita nulo em linhas antigas.
@@ -12,7 +14,7 @@ class Autonomia::CanaisOcupadosFinder
     @agents_scope = agents_scope
   end
 
-  # [{ inbox_id:, name:, channel_type:, occupied_by: }] por nome da caixa; no máximo 4 consultas, seja qual for o número de caixas.
+  # [{ inbox_id:, name:, channel_type:, occupied_by: }] por nome da caixa; no máximo 5 consultas, seja qual for o número de caixas.
   def call
     com_bot = caixas_com_bot
     @account.inboxes.order(:name, :id).pluck(:id, :name, :channel_type).map do |inbox_id, name, channel_type|
@@ -24,14 +26,19 @@ class Autonomia::CanaisOcupadosFinder
 
   def ocupante(inbox_id, com_bot)
     agente = agentes[vinculos[inbox_id]]
-    return nativo(*agente) if agente
+    return nativo(*agente, caixas_por_agente.fetch(agente.first, 0)) if agente
     return EXTERNO if vinculos.key?(inbox_id) || com_bot.include?(inbox_id)
 
     nil
   end
 
-  def nativo(agent_id, agent_name, status, enabled)
-    { kind: 'agent', agent_id: agent_id, agent_name: agent_name, operating: enabled && status == 'active' }
+  def nativo(agent_id, agent_name, status, enabled, caixas)
+    { kind: 'agent', agent_id: agent_id, agent_name: agent_name, operating: enabled && status == 'active', caixas: caixas }
+  end
+
+  def caixas_por_agente
+    @caixas_por_agente ||= ::Autonomia::Agents::AgentInbox.kept.where(account_id: @account.id, autonomia_agent_id: vinculos.values.uniq)
+                                                          .group(:autonomia_agent_id).count
   end
 
   # { inbox_id => autonomia_agent_id } das portas kept da conta (uma por caixa, índice único). Quem ocupa a caixa é a

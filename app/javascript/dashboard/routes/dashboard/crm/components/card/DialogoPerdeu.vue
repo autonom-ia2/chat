@@ -16,10 +16,15 @@ const emit = defineEmits(['confirmar']);
 const { t } = useI18n();
 const dialogo = ref(null);
 const motivo = ref('');
+// #1498 — em Atender, motivos de quem não precisa mais (nada de "achou caro").
 const atalhos = computed(() =>
-  ['PRECO', 'SUMIU', 'OUTRO_LUGAR', 'NAO_ERA_HORA'].map(chave =>
-    t(`CRM_CARD.DESFECHO.MOTIVO.${chave}`)
-  )
+  props.venda
+    ? ['PRECO', 'SUMIU', 'OUTRO_LUGAR', 'NAO_ERA_HORA'].map(chave =>
+        t(`CRM_CARD.DESFECHO.MOTIVO.${chave}`)
+      )
+    : ['RESOLVEU', 'SUMIU', 'NAO_PRECISA'].map(chave =>
+        t(`CRM_CARD.DESFECHO.MOTIVO_ATENDER.${chave}`)
+      )
 );
 const abrir = card => {
   motivo.value = card?.lost_reason || '';
@@ -74,7 +79,11 @@ defineExpose({ abrir, fechar });
     <TextArea
       v-model="motivo"
       :label="t('CRM_CARD.DESFECHO.MOTIVO_ROTULO')"
-      :placeholder="t('CRM_KANBAN.DRAWER.LOSE_REASON_PLACEHOLDER')"
+      :placeholder="
+        venda
+          ? t('CRM_KANBAN.DRAWER.LOSE_REASON_PLACEHOLDER')
+          : t('CRM_CARD.DESFECHO.CANCELAR_EXEMPLO')
+      "
       :max-length="500"
       auto-height
     />

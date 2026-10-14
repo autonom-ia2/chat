@@ -32,6 +32,11 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  // #1498 — funil de Atender não mostra valor (a Cobrança mostra).
+  comValor: {
+    type: Boolean,
+    default: true,
+  },
 });
 
 defineEmits(['open', 'openConversation']);
@@ -103,7 +108,7 @@ const showPriorityGlyph = computed(() =>
 
 const valueLabel = computed(() => {
   const cents = Number(props.card.value_cents || 0);
-  if (!cents) return null;
+  if (!cents || !props.comValor) return null;
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: props.card.currency || 'BRL',

@@ -5,6 +5,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { useEventListener, useMediaQuery } from '@vueuse/core';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
+import { useCanManage } from 'dashboard/composables/useCanManage';
 import AutonomiaChannelsAPI from 'dashboard/api/autonomia/channels';
 import { useConversaDeCriacao } from '../composables/useConversaDeCriacao';
 import { useTesteDoAgente } from '../composables/useTesteDoAgente';
@@ -24,7 +25,11 @@ import {
   perguntasDeTeste,
 } from '../constants/criacao';
 import { MODELO_DO_MEU_JEITO, MODELOS } from '../constants/modelos';
-import { canaisDoAgente } from '../utils/estadoDoAgente';
+import {
+  ESTADO,
+  canaisDoAgente,
+  estadoDeAtendimento,
+} from '../utils/estadoDoAgente';
 import { fecharFrase } from '../utils/pagina';
 import {
   canalSugerido,
@@ -41,6 +46,7 @@ import EtapaConte from '../components/criar/EtapaConte.vue';
 import EtapaConfira from '../components/criar/EtapaConfira.vue';
 import EtapaComece from '../components/criar/EtapaComece.vue';
 import EtapaPronto from '../components/criar/EtapaPronto.vue';
+import BaseDaCriacao from '../components/criar/BaseDaCriacao.vue';
 
 // #1181 PR2 — criar agente: Conte · Confira · Comece · Pronto (protótipo T03–T06), atrás da flag
 // autonomia_agents_journey (o seletor da rota decide). A etapa vem da query (`?etapa=`), e só vale
@@ -56,6 +62,9 @@ import EtapaPronto from '../components/criar/EtapaPronto.vue';
 // #1494 — Copiloto da equipe (`?atuacao=interno`): a conversa abre com actuation internal. Sem
 // exemplo de cliente nem ideias de loja; o teste usa perguntas da equipe e o Comece só liga o agente,
 // sem canal. Antes do rascunho existir, a atuação vem da query; depois, do próprio agente.
+// #1503 — "Base de conhecimento de {nome}" só no Conte: no computador, na coluna da direita abaixo do
+// exemplo; no celular, um botão "Base" ao lado de "Ver exemplo" abre a mesma caixa numa gaveta. A
+// lista é a do clipe da conversa (conversa.base). Vale para o agente externo e para o copiloto.
 // #1504 — "Fazer ajustes avançados" (no Confira) deixa o agente parado (status paused), sem ligar
 // caixa nenhuma, e abre a página dele; vale para os dois tipos. Terminar depois é o "Voltar" do topo.
 const route = useRoute();
@@ -85,6 +94,7 @@ const {
   erro: erroDeComecar,
 } = useComecarAAtender();
 const { podeConectarCanal } = usePermissoesDaJornada();
+const podeGerenciar = useCanManage('autonomia_manage');
 
 const registros = useMapGetter('autonomiaAgents/getRecords');
 const caixas = useMapGetter('inboxes/getInboxes');
@@ -96,6 +106,7 @@ const falhouAoAbrir = ref(false);
 const elegiveis = ref(null);
 const resultado = ref(null);
 const exemploAberto = ref(false);
+const baseAberta = ref(false);
 const internoComecando = ref(false);
 const abrindoAjustes = ref(false);
 const confirmarSaida = ref(null);
@@ -114,6 +125,18 @@ const agente = computed(
 const nome = computed(
   () => agente.value?.name || t('AGENTS.JORNADA.COMUM.NOVO_AGENTE')
 );
+// O rascunho nasce com o nome provisório do backend (Builder#draft_agent: 'Novo agente') e só ganha
+// nome quando o Construtor fecha. Até lá a base fala "do agente" (comparação exata, sem regex).
+const NOME_DO_RASCUNHO = 'Novo agente';
+const semNome = computed(() =>
+  [
+    undefined,
+    null,
+    '',
+    NOME_DO_RASCUNHO,
+    t('AGENTS.JORNADA.COMUM.NOVO_AGENTE'),
+  ].includes(agente.value?.name)
+);
 const modelo = computed(() =>
   modeloDoTipo(agente.value?.agent_type, modeloPedido)
 );
@@ -124,7 +147,8 @@ const interno = computed(() =>
     : atuacaoPedida === ATUACAO.INTERNA
 );
 const atendendo = computed(
-  () => agente.value?.status === 'active' && agente.value?.enabled === true
+  // #1366: a mesma regra da lista: ativo, ligado e com onde trabalhar.
+  () => estadoDeAtendimento(agente.value) === ESTADO.ATENDENDO
 );
 
 // Onde atender: a leitura L2 (com quem ocupa cada caixa). Se ela falhar, as caixas livres que o
@@ -274,6 +298,26 @@ const exemploDoCampo = computed(() => {
   return modelo.value === MODELO_DO_MEU_JEITO
     ? t('AGENTS.JORNADA.CRIAR.CONTE.EXEMPLO_DO_MEU_JEITO')
     : '';
+});
+
+const propsDaBase = computed(() => ({
+  nome: nome.value,
+  semNome: semNome.value,
+  itens: conversa.base.value,
+  estadoDoMaterial: conversa.estadoDoMaterial,
+  podeGerenciar: podeGerenciar.value,
+  erroAoLer: conversa.erroDaBase.value,
+  falhaAoTirar: conversa.falhaAoTirar.value,
+}));
+const tituloDaBase = computed(() =>
+  semNome.value
+    ? t('AGENTS.JORNADA.CRIAR.BASE.TITULO_SEM_NOME')
+    : t('AGENTS.JORNADA.CRIAR.BASE.TITULO', { nome: nome.value })
+);
+
+// A caixa some no Confira (no celular, a gaveta fecha junto com a etapa).
+watch(etapa, nova => {
+  if (nova !== ETAPA.CONTE) baseAberta.value = false;
 });
 
 const linkConectarCanal = computed(
@@ -587,16 +631,42 @@ onMounted(() => {
             >
               {{ t('AGENTS.JORNADA.CRIAR.CONTE.VER_COMO', { nome }) }}
             </AgenteBotao>
-            <AgenteBotao
-              v-else
-              data-ver-exemplo
-              variante="contorno"
-              bloco
-              icone="i-lucide-eye"
-              @click="exemploAberto = true"
-            >
-              {{ t('AGENTS.JORNADA.CRIAR.CONTE.VER_EXEMPLO') }}
-            </AgenteBotao>
+            <!-- A base continua à mão no Conte, também depois que a conversa fecha. -->
+            <div class="flex gap-2">
+              <AgenteBotao
+                v-if="!conversa.fechada.value"
+                data-ver-exemplo
+                variante="contorno"
+                class="flex-1"
+                icone="i-lucide-eye"
+                @click="exemploAberto = true"
+              >
+                {{ t('AGENTS.JORNADA.CRIAR.CONTE.VER_EXEMPLO') }}
+              </AgenteBotao>
+              <AgenteBotao
+                data-abrir-base
+                variante="contorno"
+                class="flex-1"
+                icone="i-lucide-library-big"
+                :aria-label="
+                  t('AGENTS.JORNADA.CRIAR.BASE.BOTAO_ARIA', {
+                    titulo: tituloDaBase,
+                    n: conversa.base.value.length,
+                  })
+                "
+                @click="baseAberta = true"
+              >
+                {{ t('AGENTS.JORNADA.CRIAR.BASE.BOTAO') }}
+                <span
+                  v-if="conversa.base.value.length"
+                  data-contagem-base
+                  aria-hidden="true"
+                  class="grid px-1.5 text-xs font-semibold rounded-full min-w-5 h-5 place-items-center bg-n-blue-3 text-n-blue-11"
+                >
+                  {{ conversa.base.value.length }}
+                </span>
+              </AgenteBotao>
+            </div>
           </template>
         </EtapaConte>
 
@@ -632,7 +702,7 @@ onMounted(() => {
           v-else-if="!celular"
           data-exemplo
           aria-labelledby="exemplo-titulo"
-          class="flex flex-col gap-4"
+          class="flex flex-col min-h-0 gap-4 md:overflow-y-auto md:pb-2"
         >
           <h2
             id="exemplo-titulo"
@@ -671,6 +741,14 @@ onMounted(() => {
               {{ t('AGENTS.JORNADA.CRIAR.CONTE.TESTAR_AGORA_TEXTO') }}
             </p>
           </template>
+          <BaseDaCriacao
+            v-bind="propsDaBase"
+            class="mt-2"
+            @anexar="conversa.anexarArquivo"
+            @site="conversa.anexarSite"
+            @tirar="conversa.tirar"
+            @reler="conversa.carregarBase"
+          />
         </aside>
       </div>
     </div>
@@ -724,6 +802,21 @@ onMounted(() => {
           {{ t('AGENTS.JORNADA.CRIAR.CONTE.TESTAR_AGORA_TEXTO') }}
         </p>
       </template>
+    </AgenteGaveta>
+
+    <AgenteGaveta
+      v-if="baseAberta"
+      :titulo="tituloDaBase"
+      @fechar="baseAberta = false"
+    >
+      <BaseDaCriacao
+        v-bind="propsDaBase"
+        na-gaveta
+        @anexar="conversa.anexarArquivo"
+        @site="conversa.anexarSite"
+        @tirar="conversa.tirar"
+        @reler="conversa.carregarBase"
+      />
     </AgenteGaveta>
 
     <AgenteConfirmacao

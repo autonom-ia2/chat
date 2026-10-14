@@ -2,14 +2,17 @@ module Crm
   class ActivityLogger
     def initialize(card:, actor:, event_type:, payload: {}, conversation: nil)
       @card = card
-      @account = card.account
+      @account = card&.account
       @actor = actor
       @event_type = event_type
       @payload = payload || {}
       @conversation = conversation
     end
 
+    # A linha do tempo é do card: lembrete sem card (#1461) não tem onde registrar.
     def perform
+      return if @card.nil?
+
       Crm::Activity.create!(
         account: @account,
         card: @card,

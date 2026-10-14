@@ -59,10 +59,33 @@ export const corLivre = usadas => {
 export const seloDaCor = cor =>
   CORES.find(item => item.valor === cor)?.selo || 'bg-n-blue-3 text-n-blue-11';
 
-// Modelos para começar pronto. Os nomes das etapas de Vendas são os mesmos
-// que o servidor conhece (Crm::Ai::DefaultStageCriteria): o funil já chega
-// com a frase de cada etapa. "quandoUsar" é a ideia que já vem marcada em
-// "Quando usar este funil".
+// #1498 — a única escolha nova: para que serve o funil. Vender termina em
+// Ganhou/Perdeu (com valor); Atender termina em Resolvido/Cancelado. Por baixo
+// continua o mesmo `counts_as_sale` de sempre.
+export const TIPOS = [
+  {
+    chave: 'VENDER',
+    icone: 'i-lucide-badge-dollar-sign',
+    tom: 'bg-n-teal-3 text-n-teal-11',
+    venda: true,
+  },
+  {
+    chave: 'ATENDER',
+    icone: 'i-lucide-life-buoy',
+    tom: 'bg-n-blue-3 text-n-blue-11',
+    venda: false,
+  },
+];
+export const tipoDaVenda = venda => (venda ? 'VENDER' : 'ATENDER');
+
+// Categoria de cada etapa, por dentro (sem tela): Novo, Em andamento,
+// Esperando o cliente (pausa o prazo) e Resolvido.
+export const CATEGORIAS = ['novo', 'andamento', 'espera', 'resolvido'];
+
+// Modelos para começar pronto. Os nomes das etapas são os mesmos que o
+// servidor conhece (Crm::Ai::DefaultStageCriteria): o funil já chega com a
+// frase de cada etapa. "ideias" completam "Quando usar este funil"; a primeira
+// já vem marcada. As etapas de Atender servem a qualquer negócio.
 const etapasDo = (chave, total) =>
   Array.from(
     { length: total },
@@ -72,6 +95,7 @@ const etapasDo = (chave, total) =>
 export const MODELOS = [
   {
     chave: 'VENDAS',
+    tipo: 'VENDER',
     icone: 'i-lucide-badge-dollar-sign',
     tom: 'bg-n-teal-3 text-n-teal-11',
     venda: true,
@@ -80,21 +104,60 @@ export const MODELOS = [
   },
   {
     chave: 'ATENDIMENTO',
+    tipo: 'ATENDER',
     icone: 'i-lucide-life-buoy',
     tom: 'bg-n-blue-3 text-n-blue-11',
     venda: false,
     etapas: etapasDo('ATENDIMENTO', 4),
-    ideias: ['AJUDA', 'PROBLEMA', 'TROCAR'],
+    categorias: CATEGORIAS,
+    ideias: ['AJUDA', 'PROBLEMA', 'COMO_USAR'],
+  },
+  {
+    chave: 'POS_VENDA',
+    tipo: 'ATENDER',
+    icone: 'i-lucide-package-check',
+    tom: 'bg-n-teal-3 text-n-teal-11',
+    venda: false,
+    etapas: etapasDo('POS_VENDA', 4),
+    categorias: CATEGORIAS,
+    ideias: ['ACABOU_DE_COMPRAR', 'ENTREGA', 'TROCAR'],
+  },
+  {
+    chave: 'COBRANCA',
+    tipo: 'ATENDER',
+    icone: 'i-lucide-receipt',
+    tom: 'bg-n-amber-3 text-n-amber-11',
+    venda: false,
+    etapas: etapasDo('COBRANCA', 4),
+    categorias: CATEGORIAS,
+    // Termina em "Pago / Cancelado".
+    sucesso: true,
+    ideias: ['PAGAR', 'SEGUNDA_VIA', 'ATRASADO'],
   },
   {
     chave: 'AGENDAMENTOS',
+    tipo: 'ATENDER',
     icone: 'i-lucide-calendar-check',
     tom: 'bg-n-violet-3 text-n-violet-11',
-    venda: true,
+    venda: false,
     etapas: etapasDo('AGENDAMENTOS', 4),
+    categorias: CATEGORIAS,
     ideias: ['MARCAR', 'REMARCAR', 'HORARIOS'],
   },
 ];
+export const modelosDoTipo = tipo =>
+  MODELOS.filter(modelo => modelo.tipo === tipo);
+
+// O modelo de um funil salvo (metadata.template); sem ele (funis de antes do
+// #1498), o primeiro modelo do tipo.
+export const modeloDoFunil = funil => {
+  const tipo = tipoDaVenda(funil?.counts_as_sale !== false);
+  const salvo = MODELOS.find(
+    modelo => modelo.chave === funil?.metadata?.template
+  );
+  return salvo?.tipo === tipo ? salvo : modelosDoTipo(tipo)[0];
+};
+export const ehCobranca = funil => modeloDoFunil(funil)?.chave === 'COBRANCA';
 
 // Quanto tempo depois da última mensagem, em palavras de dia a dia:
 // "em 4 horas", "amanhã", "em 3 dias", "em 1 semana".

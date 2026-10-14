@@ -17,12 +17,9 @@ class Crm::FollowUps::ReminderNotifier
 
   private
 
-  # Acesso por funil (#1148, parte C): como no Broadcaster, o responsável que não vê o card não é avisado.
+  # Quem recebe (#1462) e o acesso por funil (#1148, parte C): o mesmo RecipientResolver do Broadcaster.
   def recipient_users
-    users = @follow_up.card.present? ? Crm::Cards::Broadcaster.recipient_users_for(@follow_up.card) : []
-    assignee = @follow_up.assignee
-    users << assignee if assignee.present? && Crm::Access::Recipients.card_visible_to?(@follow_up.card, assignee)
-    users.compact.index_by(&:id).values
+    Crm::FollowUps::RecipientResolver.new(@follow_up).users
   end
 
   def notify_user(user)
