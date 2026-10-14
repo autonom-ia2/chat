@@ -11,8 +11,13 @@ class Api::V1::Accounts::Crm::StageCriteriaController < Api::V1::Accounts::Crm::
     names = Array(params[:names]).first(Crm::Ai::StageCriteriaImprover::MAX_STAGES).map(&:to_s)
     # #1498: funil de Atender tem frases próprias para nomes que também existem em venda ("Em atendimento").
     atender = ActiveModel::Type::Boolean.new.cast(params[:atender]) || false
+    # #1548: modelo do funil novo e a posição de cada etapa nele (0 = etapa que a pessoa criou), na ordem dos nomes.
+    positions = Array(params[:positions])
     render json: {
-      payload: names.map { |name| { name: name, criteria: Crm::Ai::DefaultStageCriteria.criteria_for(name, atender: atender).to_s } }
+      payload: names.each_with_index.map do |name, index|
+        criteria = Crm::Ai::DefaultStageCriteria.criteria_for(name, atender: atender, template: params[:template], position: positions[index])
+        { name: name, criteria: criteria.to_s }
+      end
     }
   end
 

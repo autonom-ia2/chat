@@ -494,6 +494,10 @@ const normalizeStagePayload = (stage, index) => ({
   funnel_stage_type: stage.funnel_stage_type || null,
   // #1498 — categoria da etapa vinda do modelo; sem tela.
   ...(stage.category ? { category: stage.category } : {}),
+  // #1548 — posição da etapa no modelo do funil (critério padrão da IA).
+  ...(stage.template_position
+    ? { template_position: stage.template_position }
+    : {}),
 });
 
 export const actions = {
