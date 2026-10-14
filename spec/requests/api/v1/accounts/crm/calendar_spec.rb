@@ -148,10 +148,10 @@ RSpec.describe 'CRM calendar API', type: :request do
     let(:contact) { create(:contact, account: account, name: 'Mariana Costa', phone_number: '+5511987654321') }
     let(:conversation) { create(:conversation, account: account, inbox: inbox, contact: contact) }
 
-    def eventos(params = {})
+    def eventos(params = {}, como: user)
       get "/api/v1/accounts/#{account.id}/crm/calendar/events",
           params: { from: '2026-10-01T00:00:00-03:00', to: '2026-10-31T23:59:59-03:00' }.merge(params),
-          headers: auth_headers(user)
+          headers: auth_headers(como)
       expect(response).to have_http_status(:ok)
       response.parsed_body['payload'].index_by { |event| event['title'] }
     end
@@ -186,10 +186,8 @@ RSpec.describe 'CRM calendar API', type: :request do
                                        conversation_id: conversation.id)
       account.crm_follow_ups.create!(card: card, conversation: conversation, contact: contact, assignee: agente,
                                      title: 'Conversa fechada', due_at: '2026-10-14T19:30:00Z', timezone: 'UTC', created_by: user)
-      allow(Crm::Conversations::Visibility).to receive(:new).and_return(instance_double(Crm::Conversations::Visibility,
-                                                                                        preload: nil, visible?: false))
-
-      expect(eventos['Conversa fechada']).to include('conversation_id' => nil, 'conversation_display_id' => nil)
+      # O agente cuida do card, mas não está na caixa da conversa: a regra real de visibilidade decide.
+      expect(eventos({}, como: agente)['Conversa fechada']).to include('conversation_id' => nil, 'conversation_display_id' => nil)
     end
 
     it 'manda o vencimento como dia inteiro, com a data UTC' do
