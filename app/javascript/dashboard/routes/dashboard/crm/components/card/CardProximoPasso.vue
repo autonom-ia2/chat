@@ -17,6 +17,8 @@ const props = defineProps({
   temConversa: { type: Boolean, default: false },
   ocupado: { type: Boolean, default: false },
   status: { type: String, default: '' },
+  // #1498 — funil de Atender: "Este atendimento terminou".
+  venda: { type: Boolean, default: true },
 });
 
 const emit = defineEmits([
@@ -158,7 +160,10 @@ const disparar = acao => EVENTOS[acao.evento](acao.dado);
 const fraseDe = passo => {
   const quando = passo.quando ? props.formato.quando(passo.quando) : '';
   return {
-    chave: `${P}.${passo.tipo.toUpperCase()}`,
+    chave:
+      passo.tipo === 'fechado' && !props.venda
+        ? `${P}.FECHADO_ATENDER`
+        : `${P}.${passo.tipo.toUpperCase()}`,
     quando,
     ha: passo.quando ? props.formato.ha(passo.quando) : '',
     titulo: passo.retorno?.title || '',

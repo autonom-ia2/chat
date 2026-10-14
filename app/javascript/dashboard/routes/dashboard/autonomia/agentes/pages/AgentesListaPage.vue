@@ -21,7 +21,6 @@ import AgenteCartao from '../components/AgenteCartao.vue';
 import ModeloCartao from '../components/ModeloCartao.vue';
 import AgenteBotao from '../components/AgenteBotao.vue';
 import AgenteErro from '../components/AgenteErro.vue';
-import AgenteGaveta from '../components/AgenteGaveta.vue';
 import AgenteConfirmacao from '../components/AgenteConfirmacao.vue';
 
 // #1181 — lista nova de Agentes (protótipo T01 e T02), atrás da flag autonomia_agents_journey.
@@ -30,8 +29,11 @@ import AgenteConfirmacao from '../components/AgenteConfirmacao.vue';
 // Cotação → Falta terminar. Números da semana (L1) e nomes dos canais (L2) chegam em paralelo e,
 // se falharem, o cartão só perde a linha correspondente. Quem só vê não tem ação de escrita.
 // "Usar este" e "Do meu jeito" vão ao Construtor com ?modelo=; "Continuar" leva ?agente= (PR2).
-// #1494 — "Copiloto da equipe", abaixo de "Do meu jeito" (herói T01 e gaveta), vai com
-// ?atuacao=interno: o agente ajuda a equipe dentro das conversas e nunca fala com cliente.
+// #1494 — "Copiloto da equipe", abaixo de "Do meu jeito" no herói T01, vai com ?atuacao=interno: o
+// agente ajuda a equipe dentro das conversas e nunca fala com cliente.
+// #1543 — com agentes, "Criar agente" (herói e barra do celular) e "Ver modelos prontos" abrem a
+// página inteira "Criar agente" (AgenteEscolherPage, na rota do Construtor sem query), no lugar
+// da gaveta.
 // #1369 — os cartões só aparecem quando a L1 e a L2 já responderam (ou falharam). Antes, eles
 // surgiam com a lista e cresciam depois: a linha da semana e o nome do canal chegavam e empurravam
 // para baixo os cartões seguintes — o rascunho fica por último —, e o primeiro clique em
@@ -52,7 +54,6 @@ const carregando = ref(true);
 const falhou = ref(false);
 const comecandoModelo = ref(null);
 const modeloQueFalhou = ref(null);
-const gaveta = ref(null);
 const confirmacao = ref(null);
 const pendenteExcluir = ref(null);
 const excluindo = ref(false);
@@ -144,13 +145,27 @@ const usarModelo = chave => abrirCriacao(chave, { modelo: chave });
 const usarCopiloto = () =>
   abrirCriacao(COPILOTO, { atuacao: ATUACAO_INTERNA_NA_QUERY });
 
+const abrirPaginaCriar = () =>
+  router.push({ name: 'autonomia_agents_builder' });
+
 const abrirAgente = agente =>
   router.push({
     name: 'autonomia_agent_panel',
     params: { agentId: agente.id },
   });
 
-const abrirCotacao = () => router.push({ name: 'autonomia_insurance_agent' });
+// #1525 — a cotação abre a página do agente, e não o módulo: de lá o "Abrir o agente" voltava para cá, e a
+// corretora não achava onde pôr a Lia num canal. Sem canal, já na escolha de canal (o `:tab` channels, o fluxo da
+// própria página); com canal, só a página.
+const rotaDaCotacao = agente => ({
+  name: 'autonomia_agent_panel',
+  params:
+    agente.tem_onde_trabalhar === false
+      ? { agentId: agente.id, tab: 'channels' }
+      : { agentId: agente.id },
+});
+
+const abrirCotacao = agente => router.push(rotaDaCotacao(agente));
 
 // O Construtor é carregado à parte: enquanto ele chega, o botão mostra que está indo (um clique só).
 // Se a navegação não termina em 8 s, o botão volta a responder (e um clique novo não é desfeito
@@ -183,7 +198,7 @@ const continuar = async agente => {
 const enderecoDe = agente =>
   router.resolve(
     agente.agent_type === 'insurance_quote'
-      ? { name: 'autonomia_insurance_agent' }
+      ? rotaDaCotacao(agente)
       : { name: 'autonomia_agent_panel', params: { agentId: agente.id } }
   ).href;
 
@@ -343,7 +358,7 @@ onBeforeUnmount(() => {
               tamanho="lg"
               icone="i-lucide-plus"
               class="hidden md:inline-flex"
-              @click="gaveta = 'criar'"
+              @click="abrirPaginaCriar"
             >
               {{ t('AGENTS.JORNADA.LISTA.CRIAR') }}
             </AgenteBotao>
@@ -414,7 +429,7 @@ onBeforeUnmount(() => {
             <AgenteBotao
               data-ver-modelos
               variante="fantasma"
-              @click="gaveta = 'modelos'"
+              @click="abrirPaginaCriar"
             >
               {{ t('AGENTS.JORNADA.LISTA.VER_MODELOS') }}
             </AgenteBotao>
@@ -426,66 +441,17 @@ onBeforeUnmount(() => {
           class="fixed inset-x-0 bottom-0 z-20 p-4 border-t md:hidden bg-n-solid-1 border-n-weak"
         >
           <AgenteBotao
+            data-criar-celular
             tamanho="xl"
             bloco
             icone="i-lucide-plus"
-            @click="gaveta = 'criar'"
+            @click="abrirPaginaCriar"
           >
             {{ t('AGENTS.JORNADA.LISTA.CRIAR') }}
           </AgenteBotao>
         </div>
       </template>
     </div>
-
-    <AgenteGaveta
-      v-if="gaveta"
-      :titulo="
-        gaveta === 'criar'
-          ? t('AGENTS.JORNADA.MENU.CRIAR_AGENTE')
-          : t('AGENTS.JORNADA.MODELOS.ROTULO')
-      "
-      @fechar="gaveta = null"
-    >
-      <p class="m-0 text-sm text-n-slate-11">
-        {{ t('AGENTS.JORNADA.MODELOS.ESCOLHA') }}
-      </p>
-      <ul class="flex flex-col gap-4 p-0 m-0 list-none">
-        <ModeloCartao
-          v-for="modelo in MODELOS"
-          :key="modelo.chave"
-          :modelo="modelo"
-          pode-usar
-          :comecando="comecandoModelo === modelo.chave"
-          :bloqueado="!!comecandoModelo && comecandoModelo !== modelo.chave"
-          :falhou="modeloQueFalhou === modelo.chave"
-          @usar="usarModelo"
-        />
-      </ul>
-      <p class="m-0">
-        <AgenteBotao
-          variante="fantasma"
-          icone-direita="i-lucide-arrow-right"
-          @click="usarModelo(MODELO_DO_MEU_JEITO)"
-        >
-          {{ t('AGENTS.JORNADA.MODELOS.DO_MEU_JEITO') }}
-        </AgenteBotao>
-      </p>
-      <p class="flex flex-col gap-1 m-0">
-        <AgenteBotao
-          data-copiloto
-          variante="fantasma"
-          icone-direita="i-lucide-arrow-right"
-          aria-describedby="copiloto-gaveta-texto"
-          class="w-fit"
-          @click="usarCopiloto"
-        >
-          {{ t('AGENTS.JORNADA.MODELOS.COPILOTO') }}
-        </AgenteBotao>
-        <span id="copiloto-gaveta-texto" class="px-4 text-sm text-n-slate-11">
-          {{ t('AGENTS.JORNADA.MODELOS.COPILOTO_TEXTO') }}
-        </span>
-      </p>
-    </AgenteGaveta>
 
     <AgenteConfirmacao
       ref="confirmacao"

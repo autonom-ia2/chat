@@ -26,6 +26,7 @@ export const useFunilMoldura = ({
   cancelar,
   removeStage,
   ligarGoogle,
+  tipo,
 }) => {
   const VOLTA_PARA = {
     stages: 'CRM_FUNIL.ETAPAS.ROTULO',
@@ -91,6 +92,18 @@ export const useFunilMoldura = ({
       };
     }
     const subtela = SUBTELAS[view.value];
+    // #1498 — "Vendas e meta" virou "Para que serve": Vender fala de vendas e
+    // meta; Atender, de como cada pedido termina.
+    if (view.value === 'sales') {
+      const parte = form.countsAsSale ? 'VENDAS' : 'ATENDER';
+      return {
+        ...base,
+        rotulo: t(`${FUNIL}.TIPO.ROTULO`),
+        icone: form.countsAsSale ? 'i-lucide-target' : 'i-lucide-life-buoy',
+        titulo: t(`${FUNIL}.${parte}.TITULO`),
+        texto: t(`${FUNIL}.${parte}.TEXTO`),
+      };
+    }
     if (subtela)
       return {
         ...base,
@@ -173,7 +186,7 @@ export const useFunilMoldura = ({
     const criar = {
       nome: () => ({
         secundaria: { rotulo: t('CRM_FUNIL.CANCELAR'), acao: fechar },
-        principal: continuar('etapas', !form.name.trim()),
+        principal: continuar('etapas', !tipo.value || !form.name.trim()),
       }),
       etapas: () => ({
         secundaria: voltarA('nome'),

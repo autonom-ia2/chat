@@ -10,11 +10,18 @@ class WhatsappHybrid::TeardownSessionJob < ApplicationJob
     client = Waha::Client.new
     logout(client, session_name)
     client.delete_session(session_name)
+    release_proxy(session_name)
   rescue Waha::Client::NotFound
     Rails.logger.info("[whatsapp_hybrid] teardown session=#{session_name}: já não existia no motor")
+    release_proxy(session_name)
   end
 
   private
+
+  # Sessão apagada: o IP da Webshare volta para o pool (#1516).
+  def release_proxy(session_name)
+    WhatsappProxy::Assigner.new.release!(session_name)
+  end
 
   # Logout falhando não impede a exclusão (que também desconecta o aparelho).
   def logout(client, session_name)

@@ -33,6 +33,11 @@ vi.mock('@vueuse/core', async original => ({
 }));
 
 const alerta = vi.hoisted(() => vi.fn());
+const permissao = vi.hoisted(() => ({ gerenciar: true }));
+vi.mock('dashboard/composables/useCanManage', async () => {
+  const { computed } = await import('vue');
+  return { useCanManage: () => computed(() => permissao.gerenciar) };
+});
 vi.mock('dashboard/composables', () => ({ useAlert: alerta }));
 vi.mock('../../composables/usePermissoesDaJornada', async () => {
   const { computed } = await import('vue');
@@ -85,7 +90,10 @@ const AGENTE = {
 };
 
 let ordem = [];
+// #1366: o POST do canal com `ativar` liga o agente no servidor; a releitura (show) depois devolve-o atendendo.
+let ligadoNoServidor = false;
 const prepararStore = ({ agente = AGENTE, falhaShow = false, teste } = {}) => {
+  ligadoNoServidor = false;
   ordem = [];
   store.state = reactive({
     'autonomiaBuildThreads/getMessages': [],
@@ -114,8 +122,16 @@ const prepararStore = ({ agente = AGENTE, falhaShow = false, teste } = {}) => {
     }
     if (acao === 'autonomiaAgents/show') {
       if (falhaShow) throw new Error('500');
-      store.state['autonomiaAgents/getRecords'] = [agente];
-      return agente;
+      const lido = ligadoNoServidor
+        ? {
+            ...agente,
+            status: 'active',
+            enabled: true,
+            tem_onde_trabalhar: true,
+          }
+        : agente;
+      store.state['autonomiaAgents/getRecords'] = [lido];
+      return lido;
     }
     if (acao === 'autonomiaAgents/test') {
       if (teste instanceof Error) throw teste;
@@ -157,10 +173,11 @@ const prepararRota = query => {
 const montar = async ({
   query = { modelo: 'support' },
   celular = false,
+  props = {},
 } = {}) => {
   prepararRota(query);
   tela.celular = ref(celular);
-  const wrapper = mount(AgenteCriarPage, { attachTo: document.body });
+  const wrapper = mount(AgenteCriarPage, { attachTo: document.body, props });
   await flushPromises();
   return wrapper;
 };
@@ -190,12 +207,16 @@ const etapaAtual = () =>
 
 describe('AgenteCriarPage', () => {
   beforeEach(() => {
+    permissao.gerenciar = true;
     prepararStore();
     jornada.canaisOcupados.mockResolvedValue({ data: { payload: L2 } });
     canaisApi.get.mockReset();
-    canaisApi.connect.mockReset().mockImplementation(async (id, inbox) => {
-      ordem.push(`post:${id}:${inbox}`);
-    });
+    canaisApi.connect
+      .mockReset()
+      .mockImplementation(async (id, inbox, opcoes) => {
+        ordem.push(`post:${id}:${inbox}:${opcoes?.ativar ? 'ativar' : '-'}`);
+        if (opcoes?.ativar) ligadoNoServidor = true;
+      });
     canaisApi.disconnect.mockReset().mockImplementation(async (id, inbox) => {
       ordem.push(`delete:${id}:${inbox}`);
     });
@@ -227,6 +248,21 @@ describe('AgenteCriarPage', () => {
     store.state['autonomiaBuildThreads/getStatus'] = null;
     await flushPromises();
     expect(wrapper.find('[data-ideias]').exists()).toBe(true);
+    wrapper.unmount();
+  });
+
+  it('takes the focus to the title when it replaces the "Criar agente" page (#1543)', async () => {
+    const wrapper = await montar({ props: { focarTitulo: true } });
+    expect(document.activeElement.tagName).toBe('H1');
+    expect(document.activeElement.textContent).toContain(
+      'AGENTS.JORNADA.CRIAR'
+    );
+    wrapper.unmount();
+  });
+
+  it('leaves the focus alone when opened straight from a link or F5', async () => {
+    const wrapper = await montar();
+    expect(document.activeElement.tagName).not.toBe('H1');
     wrapper.unmount();
   });
 
@@ -301,8 +337,9 @@ describe('AgenteCriarPage', () => {
       !passo.startsWith('autonomiaBuildThreads') &&
       !passo.startsWith('autonomiaSources');
     expect(ordem.filter(daCriacao)).toEqual([
-      'autonomiaAgents/update',
-      'post:90:10',
+      // #1504: sem teste obrigatório. #1366: ligar é o próprio POST do canal (ativar), e o agente é relido.
+      'post:90:10:ativar',
+      'autonomiaAgents/show',
     ]);
     expect(rota.atual.query.etapa).toBe('pronto');
     expect(wrapper.get('h1').text()).toBe('AGENTS.JORNADA.CRIAR.PRONTO.TITULO');
@@ -351,12 +388,11 @@ describe('AgenteCriarPage', () => {
       'AGENTS.JORNADA.ERRO.COMECAR_ATENDER_GARANTIA'
     );
     expect(jornada.canaisOcupados).toHaveBeenCalledTimes(1);
-    // Desfez o "Atendendo": o agente volta ao que era.
-    expect(store.dispatch).toHaveBeenLastCalledWith('autonomiaAgents/update', {
-      id: 90,
-      enabled: false,
-      status: 'draft',
-    });
+    // #1366: nada foi ligado (ligar é o próprio POST que falhou), então não há o que desfazer.
+    expect(store.dispatch).not.toHaveBeenCalledWith(
+      'autonomiaAgents/update',
+      expect.anything()
+    );
     wrapper.unmount();
   });
 
@@ -1026,5 +1062,204 @@ describe('AgenteCriarPage', () => {
     const wrapper = await montar({ query: { agente: '90' } });
     expect(corpo().querySelector('select')).toBeNull();
     wrapper.unmount();
+  });
+
+  // #1503 — "Base de conhecimento de {nome}" só no Conte, a mesma lista do clipe da conversa.
+  describe('Base de conhecimento no Conte (#1503)', () => {
+    const responder = (nome, resposta) => {
+      const original = store.dispatch.getMockImplementation();
+      store.dispatch.mockImplementation(async (acao, dados) => {
+        if (acao === nome) {
+          ordem.push(acao);
+          return typeof resposta === 'function' ? resposta(dados) : resposta;
+        }
+        return original(acao, dados);
+      });
+    };
+    // O rascunho existe e a IA já respondeu (não está mais pensando).
+    const comRascunho = () => {
+      store.state['autonomiaBuildThreads/getThread'] = { id: 7, agent_id: 90 };
+      store.state['autonomiaBuildThreads/getStatus'] = null;
+    };
+    const escolher = async (entrada, arquivo) => {
+      Object.defineProperty(entrada.element, 'files', {
+        value: [arquivo],
+        configurable: true,
+      });
+      await entrada.trigger('change');
+    };
+    const pdf = nome => new File(['x'], nome, { type: 'application/pdf' });
+    const naConversa = wrapper =>
+      wrapper
+        .get('[data-conversa]')
+        .findAll('[data-material]')
+        .map(item => item.attributes('aria-label'));
+    const naCaixa = () =>
+      [...corpo().querySelectorAll('[data-base] [data-fonte]')].map(item =>
+        item.textContent.trim()
+      );
+
+    beforeEach(() => {
+      let proxima = 40;
+      responder('autonomiaSources/create', () => {
+        proxima += 1;
+        return { id: proxima };
+      });
+    });
+
+    it('shows the box under the example in Conte, and not in Confira', async () => {
+      const wrapper = await montar();
+      // Agente novo ainda sem nome: "Base de conhecimento do agente".
+      const caixa = wrapper.get('[data-exemplo] [data-base]');
+      expect(caixa.get('h2').text()).toBe(
+        'AGENTS.JORNADA.CRIAR.BASE.TITULO_SEM_NOME'
+      );
+      expect(caixa.find('[data-base-vazia]').exists()).toBe(true);
+
+      conversaFecha();
+      await flushPromises();
+      expect(wrapper.find('[data-confira]').exists()).toBe(true);
+      expect(wrapper.find('[data-base]').exists()).toBe(false);
+      wrapper.unmount();
+    });
+
+    it('a file added in the box shows in the conversation, and one from the clip shows in the box', async () => {
+      const wrapper = await montar();
+      comRascunho();
+      await flushPromises();
+
+      await wrapper.get('[data-base-adicionar-botao]').trigger('click');
+      await escolher(wrapper.get('[data-base-seletor]'), pdf('Cardápio.pdf'));
+      await flushPromises();
+      expect(naConversa(wrapper)).toEqual(['Cardápio']);
+      expect(store.dispatch).toHaveBeenCalledWith('autonomiaSources/create', {
+        agentId: 90,
+        descriptor: { file: expect.any(File), kind: 'knowledge' },
+      });
+
+      const secao = secaoDaConversa(wrapper);
+      await escolher(secao.get('input[type="file"]'), pdf('Tabela.pdf'));
+      await secao.get('form').trigger('submit');
+      await flushPromises();
+      expect(naConversa(wrapper)).toEqual(['Cardápio', 'Tabela']);
+      expect(naCaixa().join('|')).toContain('Cardápio.pdf');
+      expect(naCaixa().join('|')).toContain('Tabela.pdf');
+      wrapper.unmount();
+    });
+
+    it('a website added in the box shows in the conversation with the globe', async () => {
+      const wrapper = await montar();
+      comRascunho();
+      await flushPromises();
+      await wrapper.get('[data-base-adicionar-botao]').trigger('click');
+      await wrapper.get('[data-base-site]').setValue('loja.com.br');
+      await wrapper.get('[data-base-adicionar] form').trigger('submit');
+      await flushPromises();
+
+      expect(store.dispatch).toHaveBeenCalledWith('autonomiaSources/create', {
+        agentId: 90,
+        descriptor: { url: 'https://loja.com.br/', kind: 'knowledge' },
+      });
+      const material = wrapper.get('[data-conversa] [data-material]');
+      expect(material.text()).toContain('loja.com.br');
+      expect(material.find('.i-lucide-globe').exists()).toBe(true);
+      wrapper.unmount();
+    });
+
+    it('removing in the box asks first, then leaves the conversation and the base', async () => {
+      const wrapper = await montar();
+      comRascunho();
+      await flushPromises();
+      await wrapper.get('[data-base-adicionar-botao]').trigger('click');
+      await escolher(wrapper.get('[data-base-seletor]'), pdf('Cardápio.pdf'));
+      await flushPromises();
+
+      await wrapper.get('[data-base] [aria-haspopup]').trigger('click');
+      await flushPromises();
+      corpo().querySelector('[data-base] [role="menuitem"]').click();
+      await flushPromises();
+      expect(naConversa(wrapper)).toEqual(['Cardápio']);
+      expect(ordem).not.toContain('autonomiaSources/remove');
+
+      await wrapper.get('[data-sim-tirar]').trigger('click');
+      await flushPromises();
+      expect(naConversa(wrapper)).toEqual([]);
+      expect(naCaixa()).toEqual([]);
+      expect(store.dispatch).toHaveBeenCalledWith('autonomiaSources/remove', {
+        agentId: 90,
+        sourceId: 41,
+      });
+      wrapper.unmount();
+    });
+
+    it('continuing a draft brings back its base into the box, not into the conversation', async () => {
+      prepararStore({ agente: { ...AGENTE, has_instruction: false } });
+      responder('autonomiaSources/fetch', [
+        {
+          id: 5,
+          source_type: 'file',
+          reference: 'Antigo.pdf',
+          status: 'ready',
+          review: { status: 'accepted' },
+        },
+      ]);
+      const wrapper = await montar({ query: { agente: '90' } });
+      expect(store.dispatch).toHaveBeenCalledWith('autonomiaSources/fetch', {
+        agentId: 90,
+      });
+      expect(naCaixa().join('|')).toContain('Antigo.pdf');
+      expect(naConversa(wrapper)).toEqual([]);
+      // Com nome (Duda), o título leva o nome.
+      expect(wrapper.get('[data-base] h2').text()).toBe(
+        'AGENTS.JORNADA.CRIAR.BASE.TITULO'
+      );
+      wrapper.unmount();
+    });
+
+    it('the team copilot also has its base in Conte (#1494)', async () => {
+      const wrapper = await montar({ query: { atuacao: 'interno' } });
+      expect(wrapper.find('[data-exemplo-copiloto]').exists()).toBe(true);
+      expect(wrapper.find('[data-exemplo] [data-base]').exists()).toBe(true);
+      expect(wrapper.find('[data-base-adicionar-botao]').exists()).toBe(true);
+      wrapper.unmount();
+    });
+
+    it('a view-only seat sees the base without any writing action', async () => {
+      permissao.gerenciar = false;
+      const wrapper = await montar();
+      expect(wrapper.find('[data-base]').exists()).toBe(true);
+      expect(wrapper.find('[data-base-adicionar-botao]').exists()).toBe(false);
+      expect(wrapper.find('[data-base-seletor]').exists()).toBe(false);
+      wrapper.unmount();
+    });
+
+    it('on the phone, "Base" next to "See an example" opens the box in a drawer, only in Conte', async () => {
+      const wrapper = await montar({ celular: true });
+      expect(wrapper.find('[data-exemplo]').exists()).toBe(false);
+      const botao = wrapper.get('[data-abrir-base]');
+      expect(botao.classes()).toContain('min-h-11');
+      expect(botao.attributes('aria-label')).toBe(
+        'AGENTS.JORNADA.CRIAR.BASE.BOTAO_ARIA'
+      );
+      await botao.trigger('click');
+      await flushPromises();
+      const gaveta = corpo().querySelector('[role="dialog"]');
+      expect(gaveta.textContent).toContain('AGENTS.JORNADA.CRIAR.BASE.TITULO');
+      expect(gaveta.querySelector('[data-base]')).not.toBeNull();
+      // A conversa continua ali atrás, inteira.
+      expect(wrapper.find('[data-conversa]').exists()).toBe(true);
+
+      // A conversa fechou e a tela ainda é o Conte: a base continua na barra, ao lado de "Ver como";
+      // a gaveta fecha quando a etapa vira Confira.
+      conversaFecha();
+      await flushPromises();
+      expect(wrapper.find('[data-abrir-base]').exists()).toBe(true);
+      expect(wrapper.find('[data-ver-exemplo]').exists()).toBe(false);
+      await wrapper.get('[data-ver-como]').trigger('click');
+      await flushPromises();
+      expect(wrapper.find('[data-confira]').exists()).toBe(true);
+      expect(corpo().querySelector('[data-base]')).toBeNull();
+      wrapper.unmount();
+    });
   });
 });

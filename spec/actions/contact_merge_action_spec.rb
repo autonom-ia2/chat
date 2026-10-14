@@ -143,7 +143,7 @@ describe ContactMergeAction do
       end
 
       it 'pedido de parar no follow-up vence o descadastro de e-mail e a Prospecção, e perde para a manual (chat#1325)' do
-        expect(described_class::OPT_OUT_PRECEDENCE).to eq(%w[manual follow_up_reply email_unsubscribe prospecting])
+        expect(described_class::OPT_OUT_PRECEDENCE).to eq(%w[manual follow_up_reply campaign_reply email_unsubscribe prospecting])
         expect(described_class::OPT_OUT_PRECEDENCE).to match_array(ContactOptOut::OPT_OUT_SOURCES)
 
         mergee_contact.opt_out!(source: 'follow_up_reply')
@@ -152,6 +152,15 @@ describe ContactMergeAction do
         contact_merge
 
         expect(base_contact.reload.opt_out_source).to eq('follow_up_reply')
+      end
+
+      it 'pedido de parar na resposta a campanha vence o descadastro de e-mail (#1449)' do
+        mergee_contact.opt_out!(source: 'campaign_reply')
+        base_contact.opt_out!(source: 'email_unsubscribe')
+
+        contact_merge
+
+        expect(base_contact.reload.opt_out_source).to eq('campaign_reply')
       end
 
       it 'recusa manual do que fica vence o pedido de parar no follow-up do absorvido, que volta quando a manual é desfeita' do

@@ -1,8 +1,11 @@
 <script setup>
 import Input from 'dashboard/components-next/input/Input.vue';
-import FunilInterruptor from './FunilInterruptor.vue';
+import FunilTipo from './FunilTipo.vue';
+import { TIPOS, tipoDaVenda } from './funil';
 
 // #1384 — se o funil conta como venda, a meta do mês e o nome do resultado.
+// #1498 — "conta como venda" virou a pergunta do tipo (Vender ou Atender),
+// a mesma da criação. Atender não tem meta.
 defineProps({
   padraoSucesso: { type: String, required: true },
   padraoFracasso: { type: String, required: true },
@@ -16,31 +19,11 @@ const fracasso = defineModel('fracasso', { type: String, default: '' });
 
 <template>
   <div data-pipeline-outcome class="flex flex-col gap-5">
-    <label
-      class="flex cursor-pointer items-start gap-4 rounded-2xl border border-n-weak bg-n-solid-1 p-5"
-    >
-      <span
-        class="grid size-12 shrink-0 place-items-center rounded-2xl bg-n-teal-3 text-n-teal-11"
-        aria-hidden="true"
-      >
-        <span class="i-lucide-badge-dollar-sign size-6" />
-      </span>
-      <span class="flex min-w-0 flex-1 flex-col gap-1">
-        <span class="text-base font-semibold text-n-slate-12">
-          {{ $t('CRM_FUNIL.VENDAS.CONTA') }}
-        </span>
-        <span class="text-[0.9375rem] leading-relaxed text-n-slate-11">
-          {{
-            $t(
-              venda
-                ? 'CRM_FUNIL.VENDAS.CONTA_SIM'
-                : 'CRM_FUNIL.VENDAS.CONTA_NAO'
-            )
-          }}
-        </span>
-      </span>
-      <FunilInterruptor v-model="venda" />
-    </label>
+    <FunilTipo
+      compacto
+      :tipo="tipoDaVenda(venda)"
+      @escolher="venda = TIPOS.find(item => item.chave === $event).venda"
+    />
 
     <label
       v-if="venda"

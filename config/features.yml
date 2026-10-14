@@ -378,10 +378,19 @@
   enabled: true
   column: feature_flags_ext_1
 
+# Follow-up de IA com dados reais (#1336, épico #1320). Bit 21 (2097152), LOGO ABAIXO de `nova_conversa_tela`
+# (#1459, bit 20). Fora das 24 h, a variável do modelo que o perfil (`WhatsappTemplateProfile#fields`) liga a uma chave
+# do catálogo (`negocio.valor`, `negocio.prazo`, `negocio.responsavel`, `cliente.*`…) vai com o dado do card, e o
+# modelo cujo campo ligado não tem dado no card não é oferecido à IA. Desligada (padrão): a IA preenche tudo, como antes.
+- name: followup_template_real_values
+  display_name: Follow-up de IA com dados reais do card nos modelos
+  enabled: false
+  column: feature_flags_ext_1
+
 # Lembretes novos do CRM (#1460 repetir, #1461 sem card, #1462 quem recebe). Bit 22 (4194304), reservado pela
-# Orquestração: fica LOGO ABAIXO de `followup_template_real_values` (#1336, bit 21) — este PR só entra depois do #1336.
+# Orquestração: fica LOGO ABAIXO de `followup_template_real_values` (#1336, bit 21).
 # Desligada (padrão): o "Novo lembrete" do calendário abre a janela antiga e o card, o Relacionamento e o calendário
-# não mostram repetir nem quem recebe; a API nova continua, sem uso. Ligar: Issue "Ligar crm_lembretes_v2".
+# não mostram repetir nem quem recebe; a API (#1537) continua, sem uso. Ligar: #1527.
 - name: crm_lembretes_v2
   display_name: Lembretes que repetem, sem card e com quem recebe
   enabled: false

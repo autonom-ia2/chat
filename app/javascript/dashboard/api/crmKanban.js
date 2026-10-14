@@ -329,9 +329,10 @@ class CrmKanbanAPI extends ApiClient {
   }
 
   // Funil ainda não salvo (#1384): critério padrão por nome de etapa e IA antes de salvar.
-  getStageCriteriaDefaults(names) {
+  // #1498 — `atender`: frases de funil de Atender ("Em atendimento" sem proposta).
+  getStageCriteriaDefaults(names, { atender = false } = {}) {
     return axios.get(`${this.url}/stage_criteria/defaults`, {
-      params: { names },
+      params: { names, ...(atender ? { atender: true } : {}) },
     });
   }
 

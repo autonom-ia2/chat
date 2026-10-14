@@ -36,6 +36,7 @@ import CrmKanbanZoom from '../components/CrmKanbanZoom.vue';
 import { useCrmKanbanZoom } from '../composables/useCrmKanbanZoom';
 import { useCrmKanbanAutoScroll } from '../composables/useCrmKanbanAutoScroll';
 import { KANBAN_ZOOM_DRAG_CLASSES } from '../helpers/kanbanZoom';
+import { diaDoVencimento } from '../helpers/closeDate';
 import CrmKanbanFiltersDrawer from '../components/CrmKanbanFiltersDrawer.vue';
 import CardGaveta from '../components/card/CardGaveta.vue';
 import CrmOpportunityFromContact from '../components/CrmOpportunityFromContact.vue';
@@ -57,9 +58,11 @@ import CrmMeetingDetail from '../components/calendar/CrmMeetingDetail.vue';
 import {
   FAILURE_STATUSES,
   SUCCESS_STATUSES,
+  countsAsSale,
   outcomeLabels,
   outcomeStatuses,
 } from '../helpers/cardOutcome';
+import { ehCobranca } from '../components/funil/funil';
 import {
   buildCrmCardColumns,
   DEFAULT_COLUMN_ORDER,
@@ -215,6 +218,12 @@ const selectedPipeline = computed(() =>
   pipelines.value.find(
     pipeline => pipeline.id === Number(currentPipelineId.value)
   )
+);
+// #1498 — funil de Atender: "Novo atendimento" e cartão sem valor (a
+// Cobrança mostra o valor a receber).
+const funilDeVenda = computed(() => countsAsSale(selectedPipeline.value));
+const quadroComValor = computed(
+  () => funilDeVenda.value || ehCobranca(selectedPipeline.value)
 );
 
 const pipelineOptions = computed(() =>
@@ -1507,13 +1516,22 @@ const closeCardDeal = async payload => {
     if (selectedCard.value?.id === cardId) {
       selectedCard.value = detailedCard;
     }
+    // #1498 — reabrir num funil de Atender diz "Atendimento reaberto".
+    const reaberto = funilDeVenda.value
+      ? 'CARD_REOPENED'
+      : 'CARD_REOPENED_ATENDER';
     useAlert(
       t(
-        `CRM_KANBAN.ALERTS.${CLOSE_ALERT_KEYS[detailedCard?.status] || 'CARD_REOPENED'}`
+        `CRM_KANBAN.ALERTS.${detailedCard?.status === 'open' ? reaberto : CLOSE_ALERT_KEYS[detailedCard?.status] || reaberto}`
       )
     );
   } catch (error) {
-    avisarErro(error, 'CRM_KANBAN.ALERTS.CARD_CLOSE_ERROR');
+    avisarErro(
+      error,
+      funilDeVenda.value
+        ? 'CRM_KANBAN.ALERTS.CARD_CLOSE_ERROR'
+        : 'CRM_KANBAN.ALERTS.CARD_CLOSE_ERROR_ATENDER'
+    );
   }
 };
 
@@ -1573,6 +1591,7 @@ const cardColumnDefs = computed(() =>
     // Keep the settings menu in sync with the table: the Meta column must be
     // hideable/reorderable whenever it is rendered.
     includeMeta: isMetaSyncActive.value,
+    includeValue: quadroComValor.value,
   })
 );
 
@@ -2042,19 +2061,20 @@ const onCalendarReschedule = async ({ event, date }) => {
 
   try {
     const isCloseDate = event.event_type === 'expected_close';
-    let nextIso;
+    let nextDate;
     if (date instanceof Date) {
-      nextIso = date.toISOString();
+      nextDate = date;
     } else if (SNOOZE_PRESET_MS[date]) {
-      nextIso = new Date(Date.now() + SNOOZE_PRESET_MS[date]).toISOString();
+      nextDate = new Date(Date.now() + SNOOZE_PRESET_MS[date]);
     } else {
-      nextIso = new Date(date).toISOString();
+      nextDate = new Date(date);
     }
+    const nextIso = nextDate.toISOString();
 
     if (isCloseDate) {
       await store.dispatch('crmKanban/updateCardFields', {
         id: event.card_id,
-        expected_close_at: nextIso,
+        expected_close_at: diaDoVencimento(nextDate),
       });
     } else {
       const followUpId = String(event.id).replace(/^follow_up_/, '');
@@ -2220,7 +2240,13 @@ onUnmounted(() => {
         />
         <Button
           v-if="canManageCards && viewMode !== 'calendar'"
-          :label="t('CRM_KANBAN.ACTIONS.NEW_CARD')"
+          :label="
+            t(
+              funilDeVenda
+                ? 'CRM_KANBAN.ACTIONS.NEW_CARD'
+                : 'CRM_KANBAN.ACTIONS.NEW_CARD_ATENDER'
+            )
+          "
           icon="i-lucide-plus"
           :disabled="!hasPipelines || isLoading"
           class="order-2 !rounded-lg min-h-11 !font-bold"
@@ -2410,6 +2436,7 @@ onUnmounted(() => {
 
     <CrmKanbanFiltersDrawer
       :show="showFiltersDrawer"
+      :venda="funilDeVenda"
       :pipeline-name="selectedPipeline?.name"
       :current-user-id="currentUser?.id"
       :filters="filters"
@@ -2582,6 +2609,7 @@ onUnmounted(() => {
               <CrmKanbanCard
                 :card="element"
                 :stage-color="stage.color"
+                :com-valor="quadroComValor"
                 @open="openCardFromBoard"
                 @open-conversation="openCardConversation"
               />

@@ -214,10 +214,11 @@ class Crm::BookingV2::Notices::Sender
   end
 
   def delivery(decision)
-    text = Crm::BookingV2::Notices::Text.new(meeting: meeting, invite: invite, kind: notice.kind, page: profile)
+    button = Crm::BookingV2::Notices::Button.allowed?(decision, profile.notice_inbox)
+    text = Crm::BookingV2::Notices::Text.new(meeting: meeting, invite: invite, kind: notice.kind, page: profile, button: button)
     Crm::BookingV2::Notices::Delivery.new(
       decision: decision, inbox: profile.notice_inbox, contact: contact, sender: notice_sender(decision),
-      content: text.to_s, values: text.template_values, appendix: text.appendix
+      content: text.to_s, values: text.template_values, appendix: text.appendix, rich_message: text.rich_message
     )
   end
 

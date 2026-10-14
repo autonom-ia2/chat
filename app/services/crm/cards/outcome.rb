@@ -17,4 +17,12 @@ module Crm::Cards::Outcome
 
     pipeline.counts_as_sale? ? SALE.fetch(status, status) : NOT_SALE.fetch(status, status)
   end
+
+  # Ao mudar de funil (#1498): atendimento fechado (Resolvido ou Cancelado) entra Aberto num funil de Vender. Virar
+  # Ganho promoveria o contato a cliente; virar Perdido mandaria conversão aos anúncios. O resto segue status_for.
+  def self.status_after_move(pipeline, status)
+    return 'open' if NOT_SALE_STATUSES.include?(status.to_s) && pipeline&.counts_as_sale?
+
+    status_for(pipeline, status)
+  end
 end

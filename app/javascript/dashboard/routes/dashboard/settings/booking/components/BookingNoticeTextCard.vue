@@ -3,6 +3,7 @@ import { computed, nextTick, ref, useId, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import BookingPagesAPI from 'dashboard/api/crmBookingPages';
 import {
+  noticeTextHasLink,
   noticeTextPreview,
   noticeTextProblem,
   toFriendly,
@@ -17,7 +18,8 @@ const props = defineProps({
   kind: { type: String, required: true },
   // Texto próprio salvo/editado, com as chaves; vazio = texto padrão.
   text: { type: String, default: '' },
-  // notice_text_setup da página: defaults, fields, samples, stop_line.
+  // notice_text_setup da página: defaults, fields, samples, stop_line,
+  // manage_line e notice_channel (tipo da caixa de avisos salva).
   setup: { type: Object, required: true },
   tone: { type: String, default: '' },
   pageId: { type: Number, default: null },
@@ -73,8 +75,16 @@ const preview = computed(() =>
   noticeTextPreview(
     effective.value,
     props.setup.samples || {},
-    props.setup.stop_line
+    props.setup.stop_line,
+    props.setup.manage_line
   )
+);
+// Sem o link no texto, o sistema o manda: no WhatsApp oficial (whatsapp_cloud,
+// o único que mostra o botão), num botão. Nas outras caixas, só a linha.
+const showButtonNote = computed(
+  () =>
+    props.setup.notice_channel === 'whatsapp_cloud' &&
+    !noticeTextHasLink(effective.value)
 );
 
 // Põe o campo onde está o cursor.
@@ -125,7 +135,12 @@ const useOption = option => {
   options.value = [];
 };
 const optionPreview = option =>
-  noticeTextPreview(option.text, props.setup.samples || {}, '');
+  noticeTextPreview(
+    option.text,
+    props.setup.samples || {},
+    '',
+    props.setup.manage_line
+  );
 
 const buttonClass =
   'inline-flex items-center gap-2 px-4 text-base font-semibold min-h-11 rounded-xl text-n-slate-12 bg-n-solid-1 ring-1 ring-inset ring-n-weak hover:bg-n-alpha-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand disabled:opacity-60 disabled:cursor-not-allowed';
@@ -215,6 +230,13 @@ const buttonClass =
           class="m-0 px-4 py-3 text-base whitespace-pre-line break-words rounded-2xl rounded-ss-sm bg-n-teal-2 text-n-slate-12 ring-1 ring-inset ring-n-teal-6"
         >
           {{ preview }}
+        </p>
+        <p
+          v-if="showButtonNote"
+          data-button-note
+          class="m-0 text-sm text-n-slate-11"
+        >
+          {{ t('BOOKING.NOTICES.TEXTS.BUTTON_NOTE') }}
         </p>
       </figure>
     </div>

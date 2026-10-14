@@ -33,12 +33,13 @@ RSpec.describe 'Autonomia journeys - external agent lifecycle', type: :request d
     it 'activates an external agent even when it has no instruction' do
       # Arrange — agente externo recém-criado, sem instrução nenhuma.
       agent = create_external_agent(instruction: nil)
+      inbox = create(:inbox, account: account)
 
-      # Act
-      patch "/api/v1/accounts/#{account.id}/autonomia/agents/#{agent.id}",
-            params: { agent: { status: 'active', enabled: true } },
-            headers: administrator.create_new_auth_token,
-            as: :json
+      # Act — #1366: começar a atender é escolher o canal (ativar sozinho, sem caixa, é 422).
+      post "/api/v1/accounts/#{account.id}/autonomia/agents/#{agent.id}/channels",
+           params: { inbox_id: inbox.id, ativar: true },
+           headers: administrator.create_new_auth_token,
+           as: :json
 
       # Assert — comportamento ATUAL: nenhuma validação exige instrução na ativação;
       # o agente fica ativo/ligado mesmo "vazio".
