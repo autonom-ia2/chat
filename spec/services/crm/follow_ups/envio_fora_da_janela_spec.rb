@@ -45,10 +45,6 @@ RSpec.describe Crm::FollowUps::EnvioForaDaJanela do
     chamadas
   end
 
-  it 'sem o serviço de modelos, avisa a equipe e não manda nada' do
-    expect(envio).to have_attributes(status: :lembrar_equipe, motivo: 'sem_servico_de_modelos')
-  end
-
   it 'com o modelo pronto e enviável, preenche os campos com os dados do card' do
     chamadas = com_garantir(pronto)
     verdict = Whatsapp::Templates::DispatchCheck::Verdict.new(reason_code: nil, source: 'meta', details: {})
@@ -123,7 +119,7 @@ RSpec.describe Crm::FollowUps::EnvioForaDaJanela do
       expect(described_class.aviso('modelo_indisponivel:recusado')).to include('O WhatsApp recusou o modelo')
       expect(described_class.aviso('modelo_em_analise')).to include('está em análise')
       expect(described_class.aviso('motivo_novo')).to eq('A mensagem ao cliente não saiu sozinha: fale com ele.')
-      %w[sem_servico_de_modelos modelo_em_analise sem_finalidade_de_modelo canal_sem_modelo_oficial campo_sem_valor meta_fora
+      %w[modelo_em_analise sem_finalidade_de_modelo canal_sem_modelo_oficial campo_sem_valor meta_fora
          closure no_template not_composable send_failed_3 unverified_quote_2 whatsapp_api_unavailable
          modelo_template_missing modelo_template_not_approved modelo_template_category_changed
          modelo_template_structure_changed modelo_template_format_unsupported modelo_templates_not_synced

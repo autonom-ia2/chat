@@ -4,10 +4,9 @@
 #   2. preenche os campos que ele devolve, na ordem dele, pelo catálogo de campos (TemplateFields::Resolver);
 #   3. confere com o Whatsapp::Templates::DispatchCheck (aprovado e enviável), como a campanha faz;
 #   4. devolve o metadata que o MessageSender já sabe mandar (template_params do upstream).
-# PROVISÓRIO enquanto o Garantir não existe (causa raiz: falta o serviço de modelos): sem ele, com o modelo em
-# análise (o lembrete seguinte — no dia, depois — pede de novo), indisponível, com erro da Meta ou com campo sem
-# valor, devolve "lembrar a equipe" — o
-# lembrete vira aviso na tela, e nada vai ao cliente. Nunca usa modelo fixo nem cria modelo por conta própria.
+# Com o modelo em análise (o lembrete seguinte — no dia, depois — pede de novo), indisponível, com erro da Meta ou com
+# campo sem valor, devolve "lembrar a equipe": o lembrete vira aviso na tela, e nada vai ao cliente. Nunca usa modelo
+# fixo nem cria modelo por conta própria (quem cria é o Garantir).
 # Só roda dentro de job (DueProcessor): a Meta pode levar uns 10 s.
 class Crm::FollowUps::EnvioForaDaJanela
   Envio = Data.define(:status, :metadata, :motivo) do
@@ -62,9 +61,8 @@ class Crm::FollowUps::EnvioForaDaJanela
 
   def motivo_para_nao_tentar
     return 'sem_finalidade_de_modelo' if momento.nil?
-    return 'canal_sem_modelo_oficial' unless inbox&.channel_type == CANAL_OFICIAL
 
-    'sem_servico_de_modelos' unless garantir_disponivel?
+    'canal_sem_modelo_oficial' unless inbox&.channel_type == CANAL_OFICIAL
   end
 
   def momento
@@ -138,10 +136,6 @@ class Crm::FollowUps::EnvioForaDaJanela
   def categoria_da_meta_ok?(modelo_da_meta)
     categoria = modelo_da_meta.is_a?(Hash) ? modelo_da_meta['category'] : nil
     categoria.blank? || utilidade?(categoria)
-  end
-
-  def garantir_disponivel?
-    defined?(Whatsapp::Templates::Garantir) && Whatsapp::Templates::Garantir.respond_to?(:call)
   end
 
   def inbox

@@ -183,6 +183,12 @@ RSpec.describe Crm::FollowUps::CallbackRunner do
   context 'when it is a service reminder' do
     let!(:follow_up) { create_crm_hybrid_follow_up(scenario, source: 'service_reminder', metadata: { 'kind' => 'payment_due' }) }
 
+    # O Garantir (#1518) chama a Meta; aqui o modelo da finalidade ainda está em análise.
+    before do
+      allow(Whatsapp::Templates::Garantir).to receive(:call)
+        .and_return({ status: :em_analise, nome: 'cobranca_vencimento', idioma: 'pt_BR' })
+    end
+
     it 'sem modelo pronto, vai ao texto livre pelo Híbrido sem passar pelos modelos da lista' do
       stub_crm_hybrid_ai(crm_hybrid_ai_answer)
 
@@ -204,7 +210,7 @@ RSpec.describe Crm::FollowUps::CallbackRunner do
         result = run_callback
 
         expect(result.status).to eq(:fallback)
-        expect(result.error).to eq('sem_servico_de_modelos')
+        expect(result.error).to eq('modelo_em_analise')
         expect(ai_calls).to be_empty
       end
     end

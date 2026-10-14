@@ -612,7 +612,6 @@ pt_BR:
       payment_after: 'Lembrar do pagamento: depois do vencimento'
       aviso:
         titulo: 'A mensagem ao cliente não saiu sozinha: fale com ele.'
-        sem_servico_de_modelos: 'Fora das 24 horas do WhatsApp só sai modelo aprovado, e este aviso ainda não tem um.'
         em_analise: 'O modelo de mensagem deste aviso está em análise no WhatsApp.'
         sem_finalidade_de_modelo: 'Fora das 24 horas do WhatsApp este aviso não tem modelo de mensagem.'
         canal_sem_modelo_oficial: 'A conversa não é de um número oficial do WhatsApp, que é o único que manda modelo.'
