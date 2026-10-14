@@ -381,6 +381,29 @@ describe('CrmKanbanPage', () => {
       );
     });
 
+    it('reunião marcada no Meu dia avisa e recarrega o calendário', async () => {
+      wrapper = await mountPage({
+        calendarOnly: true,
+        account: { calendarioOuro: true },
+      });
+      dispatch.mockClear();
+      ouro().vm.$emit('reuniaoMarcada', { id: 1 });
+      await flushPromises();
+
+      expect(useAlert).toHaveBeenCalledWith(
+        'CRM_KANBAN.BOOKING_AGENDA.SUCCESS'
+      );
+      expect(dispatch).toHaveBeenCalledWith(
+        'crmKanban/fetchCalendarEvents',
+        expect.any(Object)
+      );
+      expect(
+        wrapper
+          .findComponent({ name: 'CrmCalendarMeetingScheduler' })
+          .props('show')
+      ).toBe(false);
+    });
+
     it('as configurações do topo antigo continuam no Mostrar', async () => {
       wrapper = await mountPage({
         calendarOnly: true,

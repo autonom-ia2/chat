@@ -5572,14 +5572,29 @@
     },
     "NOVO": {
       "TITULO": "What do you want to add?",
-      "TEXTO": "Pick one option.",
       "LEMBRETE": "Reminder",
       "LEMBRETE_TEXTO": "A heads-up for you or the team, on the day and time.",
       "REUNIAO": "Meeting with a customer",
       "REUNIAO_TEXTO": "Book a talk with the customer, with day and time.",
       "MENSAGEM": "Scheduled message",
       "MENSAGEM_TEXTO": "A message that goes out by itself on WhatsApp, on the day and time.",
-      "CANCELAR": "Cancel"
+      "CANCELAR": "Cancel",
+      "COM_QUEM": "Who is the meeting with?",
+      "COM_QUEM_TEXTO": "Search by the customer's or the deal's name.",
+      "BUSCA_ROTULO": "Customer or deal name",
+      "BUSCA_EXEMPLO": "E.g.: Mariana",
+      "BUSCA_DICA": "Type at least 2 letters.",
+      "BUSCANDO": "Searching…",
+      "BUSCA_FALHOU": "Could not search right now. Try again.",
+      "BUSCA_VAZIA": "No one with that name. Check the spelling.",
+      "VOLTAR": "Back",
+      "TITULO_TEXTO": "Pick one option.",
+      "SEM_NEGOCIO": "No deal yet",
+      "SEM_NEGOCIO_TEXTO": "{nome} has no deal yet. Meetings are booked on the customer's deal. For now, add a reminder.",
+      "SEM_NEGOCIO_CURTO": "No deal",
+      "MARCAR_LEMBRETE": "Add a reminder",
+      "FALTA_PAGINA": "To book meetings, create your scheduling page.",
+      "CRIAR_PAGINA": "Create page"
     },
     "LEGENDA": {
       "TITULO": "What shows up here"
@@ -5592,6 +5607,15 @@
       "PROXIMO_MARCADO": "Next step set.",
       "ADIADOS_PARCIAL": "{ok} of {total} moved to tomorrow. The others stayed as they were.",
       "NAO_CONCLUIU": "Could not mark it as done. Try again."
+    },
+    "REUNIAO": {
+      "ROTULO": "Meeting with a customer",
+      "TITULO": "Meeting with {nome}",
+      "TITULO_SEM_NOME": "Meeting with a customer",
+      "TEXTO_PAGINA": "Pick the day and a free time in your schedule.",
+      "TEXTO_EXTERNA": "The invite goes out through your Google or Microsoft calendar.",
+      "CANCELAR": "Cancel",
+      "MARCAR": "Book meeting"
     }
   }
 }

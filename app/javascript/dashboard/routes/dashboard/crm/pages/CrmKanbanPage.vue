@@ -2177,6 +2177,12 @@ const ouroAdiarAtrasados = async ({ eventos, quando }) => {
 const ouroAbrirConversa = displayId =>
   openCardConversation({ conversation: { display_id: displayId } });
 
+// Reunião marcada pelo agendamento novo, direto do Meu dia (#1568).
+const ouroReuniaoMarcada = async () => {
+  useAlert(t('CRM_KANBAN.BOOKING_AGENDA.SUCCESS'));
+  await loadCurrentCalendar();
+};
+
 const ouroMudarFunil = funil => {
   funilDoCalendario.value = funil;
   loadCurrentCalendar();
@@ -2819,9 +2825,11 @@ onUnmounted(() => {
       :reunioes-ligadas="isMeetingFeatureEnabled"
       :pode-agendamento="canOpenBooking && isMeetingFeatureEnabled"
       :pode-caixas="canOpenInboxSettings"
+      :caixas="inboxes"
       @update:funil="ouroMudarFunil"
       @abrir-agendamento="openBooking"
       @abrir-caixas="openInboxSettingsDrawer"
+      @reuniao-marcada="ouroReuniaoMarcada"
       @range-change="onCalendarRangeChange"
       @abrir="onCalendarOpenEvent"
       @abrir-conversa="ouroAbrirConversa"

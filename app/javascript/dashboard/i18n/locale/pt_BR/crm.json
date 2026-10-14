@@ -5573,14 +5573,29 @@
     },
     "NOVO": {
       "TITULO": "O que você quer marcar?",
-      "TEXTO": "Escolha uma opção.",
       "LEMBRETE": "Lembrete",
       "LEMBRETE_TEXTO": "Um aviso para você ou para a equipe, no dia e na hora.",
       "REUNIAO": "Reunião com cliente",
       "REUNIAO_TEXTO": "Marque uma conversa com o cliente, com dia e hora.",
       "MENSAGEM": "Mensagem marcada",
       "MENSAGEM_TEXTO": "Uma mensagem que sai sozinha no WhatsApp, no dia e na hora.",
-      "CANCELAR": "Cancelar"
+      "CANCELAR": "Cancelar",
+      "COM_QUEM": "Com quem é a reunião?",
+      "COM_QUEM_TEXTO": "Procure pelo nome do cliente ou do negócio.",
+      "BUSCA_ROTULO": "Nome do cliente ou do negócio",
+      "BUSCA_EXEMPLO": "Ex.: Mariana",
+      "BUSCA_DICA": "Digite pelo menos 2 letras.",
+      "BUSCANDO": "Procurando…",
+      "BUSCA_FALHOU": "Não deu para procurar agora. Tente de novo.",
+      "BUSCA_VAZIA": "Ninguém com esse nome. Confira se está escrito certo.",
+      "VOLTAR": "Voltar",
+      "TITULO_TEXTO": "Escolha uma opção.",
+      "SEM_NEGOCIO": "Ainda sem negócio",
+      "SEM_NEGOCIO_TEXTO": "{nome} ainda não tem um negócio. A reunião é marcada no negócio do cliente. Por enquanto, marque um lembrete.",
+      "SEM_NEGOCIO_CURTO": "Sem negócio",
+      "MARCAR_LEMBRETE": "Marcar um lembrete",
+      "FALTA_PAGINA": "Para marcar reuniões, crie sua página de agendamento.",
+      "CRIAR_PAGINA": "Criar página"
     },
     "LEGENDA": {
       "TITULO": "O que aparece aqui"
@@ -5593,6 +5608,15 @@
       "PROXIMO_MARCADO": "Próximo passo marcado.",
       "ADIADOS_PARCIAL": "{ok} de {total} passaram para amanhã. Os outros ficaram como estavam.",
       "NAO_CONCLUIU": "Não deu para marcar como feito. Tente de novo."
+    },
+    "REUNIAO": {
+      "ROTULO": "Reunião com cliente",
+      "TITULO": "Reunião com {nome}",
+      "TITULO_SEM_NOME": "Reunião com cliente",
+      "TEXTO_PAGINA": "Escolha o dia e um horário livre da sua agenda.",
+      "TEXTO_EXTERNA": "O convite sai pela sua agenda do Google ou da Microsoft.",
+      "CANCELAR": "Cancelar",
+      "MARCAR": "Marcar reunião"
     }
   }
 }

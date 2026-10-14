@@ -13,6 +13,22 @@ vi.mock('dashboard/composables/useAccount', () => ({
     currentAccount: ref({ timezone: 'America/Sao_Paulo' }),
   }),
 }));
+vi.mock('vue-router', () => ({
+  useRoute: () => ({ params: { accountId: '1' } }),
+  useRouter: () => ({ push: vi.fn(), hasRoute: () => true }),
+}));
+const jeito = { valor: 'pagina' };
+vi.mock('../card/useJeitoDeMarcar', async () => {
+  const { computed } = await import('vue');
+  return {
+    useJeitoDeMarcar: () => ({
+      jeito: computed(() => jeito.valor),
+      paginas: computed(() => [{ id: 1, title: 'Conversa de 30 min' }]),
+      podeCriarPagina: computed(() => true),
+      abrirPaginas: vi.fn(),
+    }),
+  };
+});
 vi.mock('dashboard/composables/store', () => ({
   useStore: () => ({ getters: { getCurrentUser: { name: 'Ana Souza' } } }),
 }));
@@ -70,7 +86,11 @@ const montar = (props = {}) =>
       ...props,
     },
     global: {
-      stubs: { CalendarioNovo: NovoStub, ChoiceSelect: true },
+      stubs: {
+        CalendarioNovo: NovoStub,
+        ChoiceSelect: true,
+        CalendarioReuniao: true,
+      },
     },
   });
 
@@ -281,8 +301,8 @@ describe('CalendarioOuro', () => {
       'reuniao',
       'mensagem',
     ]);
-    com.findComponent(NovoStub).vm.$emit('escolher', 'reuniao');
-    expect(com.emitted('novo')[0][0].type).toBe('meeting');
+    com.findComponent(NovoStub).vm.$emit('escolher', 'mensagem');
+    expect(com.emitted('novo')[0][0].type).toBe('whatsapp');
   });
 
   it('sem WhatsApp conectado, "Mensagens marcadas" não aparece no Mostrar', async () => {
@@ -292,5 +312,25 @@ describe('CalendarioOuro', () => {
 
     expect(wrapper.find('[data-mostrar-tipo="mensagem"]').exists()).toBe(false);
     expect(wrapper.find('[data-mostrar-tipo="lembrete"]').exists()).toBe(true);
+  });
+
+  it('Reunião com cliente abre o agendamento novo daqui, no negócio e no dia escolhidos', async () => {
+    const wrapper = montar({ reunioesLigadas: true });
+    await flushPromises();
+    await wrapper.find('[data-calendario-novo]').trigger('click');
+    wrapper.findComponent(NovoStub).vm.$emit('escolher', 'reuniao', {
+      cardId: 4,
+    });
+    await flushPromises();
+
+    const reuniao = wrapper.findComponent({ name: 'CalendarioReuniao' });
+    expect(reuniao.props()).toMatchObject({
+      show: true,
+      cardId: 4,
+      dia: '2026-10-14',
+      jeito: 'pagina',
+    });
+    // Nada da janela antiga: o calendário não pede o fluxo de reunião à página.
+    expect(wrapper.emitted('novo')).toBeUndefined();
   });
 });

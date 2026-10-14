@@ -4,6 +4,7 @@
 // Filtros num painel só ("Mostrar"). Dia e hora sempre no fuso da conta.
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useRoute, useRouter } from 'vue-router';
 import { useStore } from 'dashboard/composables/store';
 import { useAccount } from 'dashboard/composables/useAccount';
 import { fusoDaConta, rotuloDoFuso } from 'dashboard/helper/fusoDaConta';
@@ -16,6 +17,8 @@ import CalendarioSemana from './CalendarioSemana.vue';
 import CalendarioMes from './CalendarioMes.vue';
 import CalendarioMostrar from './CalendarioMostrar.vue';
 import CalendarioNovo from './CalendarioNovo.vue';
+import CalendarioReuniao from './CalendarioReuniao.vue';
+import { useJeitoDeMarcar } from '../card/useJeitoDeMarcar';
 import { TIPOS } from './itensDoCalendario';
 import {
   dataDaChave,
@@ -40,6 +43,8 @@ const props = defineProps({
   // Saídas para o que o topo antigo do calendário tinha (Configurar).
   podeAgendamento: { type: Boolean, default: false },
   podeCaixas: { type: Boolean, default: false },
+  // Caixas da conta: dizem se há agenda do Google/Microsoft para marcar reunião.
+  caixas: { type: Array, default: () => [] },
 });
 
 const emit = defineEmits([
@@ -54,6 +59,7 @@ const emit = defineEmits([
   'update:funil',
   'abrirAgendamento',
   'abrirCaixas',
+  'reuniaoMarcada',
 ]);
 
 const { t, locale } = useI18n();
@@ -196,11 +202,28 @@ const opcoesDoNovo = computed(() =>
 );
 const escolha = ref(null);
 const diaDoNovo = ref(null);
-const abrirFluxo = opcao =>
+// Reunião com cliente: o agendamento novo, direto na gaveta daqui, com o
+// negócio escolhido em "Com quem?" e o dia escolhido no calendário. Como a
+// conta marca (página, Google/Microsoft ou falta) é a mesma regra do card.
+const route = useRoute();
+const router = useRouter();
+const jeitoDeMarcar = useJeitoDeMarcar({
+  store,
+  router,
+  caixas: computed(() => props.caixas),
+  ligado: computed(() => props.reunioesLigadas),
+});
+const reuniao = ref({ show: false, cardId: null, dia: '' });
+const abrirFluxo = (opcao, extra = {}) => {
+  if (opcao === 'reuniao') {
+    reuniao.value = { show: true, cardId: extra.cardId, dia: diaDoNovo.value };
+    return;
+  }
   emit('novo', {
     date: dataDaChave(diaDoNovo.value),
     type: TIPO_DO_FLUXO[opcao],
   });
+};
 const novo = chave => {
   diaDoNovo.value = chave || dia.value;
   if (opcoesDoNovo.value.length === 1) abrirFluxo('lembrete');
@@ -487,7 +510,21 @@ const escolherDia = chave => {
     <CalendarioNovo
       ref="escolha"
       :opcoes="opcoesDoNovo"
+      :jeito-reuniao="jeitoDeMarcar.jeito.value"
+      :pode-criar-pagina="jeitoDeMarcar.podeCriarPagina.value"
       @escolher="abrirFluxo"
+      @criar-pagina="jeitoDeMarcar.abrirPaginas"
+    />
+    <CalendarioReuniao
+      :show="reuniao.show"
+      :card-id="reuniao.cardId"
+      :dia="reuniao.dia"
+      :jeito="jeitoDeMarcar.jeito.value"
+      :paginas="jeitoDeMarcar.paginas.value"
+      :caixas="caixas"
+      :account-id="route.params.accountId"
+      @marcou="emit('reuniaoMarcada', $event)"
+      @close="reuniao = { ...reuniao, show: false }"
     />
   </div>
 </template>
