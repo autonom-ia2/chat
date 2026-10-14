@@ -44,6 +44,10 @@ const canSubmit = computed(
   () => form.value.name.trim() !== '' && form.value.brokerName.trim() !== ''
 );
 
+// #1525 — o agente nasce parado e sem canal (como todo agente externo): a aba convida a escolher onde ele
+// atende, e o botão leva à página do agente já na escolha de canal (o `:tab` channels, o fluxo da própria página).
+const semCanal = computed(() => agent.value?.tem_onde_trabalhar === false);
+
 const branchNames = computed(() =>
   (agent.value?.specialists || []).map(s => s.name).join(', ')
 );
@@ -104,6 +108,13 @@ const submit = async () => {
 const goToAgents = () => {
   router.push({ name: 'autonomia_agents_index' });
 };
+
+const openAgentChannels = () => {
+  router.push({
+    name: 'autonomia_agent_panel',
+    params: { agentId: agent.value.id, tab: 'channels' },
+  });
+};
 </script>
 
 <template>
@@ -156,6 +167,9 @@ const goToAgents = () => {
         <p v-if="branchNames" class="text-sm text-n-slate-11">
           {{ t('INSURANCE.AGENT.EXISTING.BRANCHES', { ramos: branchNames }) }}
         </p>
+        <p v-if="semCanal" data-sem-canal class="text-sm text-n-slate-12">
+          {{ t('INSURANCE.AGENT.EXISTING.NO_CHANNEL', { name: agent.name }) }}
+        </p>
         <p class="text-xs text-n-slate-11">
           {{ t('INSURANCE.AGENT.EXISTING.NOTE') }}
         </p>
@@ -177,9 +191,15 @@ const goToAgents = () => {
           v-else-if="agent"
           solid
           blue
-          icon="i-lucide-external-link"
-          :label="t('INSURANCE.AGENT.ACTIONS.OPEN_AGENT')"
-          @click="goToAgents"
+          :icon="semCanal ? 'i-lucide-radio' : 'i-lucide-external-link'"
+          :label="
+            semCanal
+              ? t('INSURANCE.AGENT.ACTIONS.CHOOSE_CHANNEL', {
+                  name: agent.name,
+                })
+              : t('INSURANCE.AGENT.ACTIONS.OPEN_AGENT')
+          "
+          @click="openAgentChannels"
         />
         <NextButton
           faded

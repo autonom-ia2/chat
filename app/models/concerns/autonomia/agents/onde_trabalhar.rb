@@ -8,9 +8,9 @@
 # Ponto de extensão (#1434): o ajudante consultado por outro agente entra em `tem_onde_trabalhar?`, como mais um "ou".
 #
 # Ativar sem onde trabalhar é recusado em toda atualização; na criação, só no contexto :ativacao (a API,
-# AgentsController#create). Os outros nascimentos são rascunho (Builder), interno (Guia) ou o Agente de Cotação, que o
-# QuoteAgent::Builder ainda cria atendendo e sem canal (ponto aberto do #1366). Começar a atender num canal é o
-# InboxConnector com `ativar`, que cria o vínculo e liga o agente na mesma transação.
+# AgentsController#create, e o QuoteAgent::Builder, #1525). Os outros nascimentos não atendem: rascunho (Builder) e
+# interno (Guia). O Agente de Cotação nasce parado desde o #1525. Começar a atender num canal é o InboxConnector com
+# `ativar`, que cria o vínculo e liga o agente na mesma transação.
 module Autonomia::Agents::OndeTrabalhar
   extend ActiveSupport::Concern
 

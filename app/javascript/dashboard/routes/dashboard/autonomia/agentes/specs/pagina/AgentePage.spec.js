@@ -660,6 +660,37 @@ describe('AgentePage', () => {
       wrapper.unmount();
     });
 
+    // #1525 — o módulo de Cotação e o cartão da lista chegam por /channels com a Lia parada e sem canal:
+    // abre a escolha de canal que liga (a mesma do "Escolher canal"), não a gaveta só de leitura.
+    it('opens the channel choice that starts answering for a stopped agent on the old channels tab', async () => {
+      preparar({
+        agente: bia({
+          agent_type: 'insurance_quote',
+          status: 'paused',
+          enabled: false,
+          channels_count: 0,
+          tem_onde_trabalhar: false,
+        }),
+        canais: [{ inbox_id: 2, name: 'Instagram', occupied_by: null }],
+      });
+      rota.params = { agentId: '7', tab: 'channels' };
+      const wrapper = await montar({ gaveta: 'onde' });
+      expect(no('[role="dialog"] [data-confirmar]').textContent).toContain(
+        'PAGINA.ONDE.VOLTAR'
+      );
+      wrapper.unmount();
+    });
+
+    it('keeps where and when for an answering agent on the old channels tab', async () => {
+      rota.params = { agentId: '7', tab: 'channels' };
+      const wrapper = await montar({ gaveta: 'onde' });
+      expect(no('[role="dialog"]')).not.toBeNull();
+      expect(
+        no('[role="dialog"] [data-confirmar]')?.textContent || ''
+      ).not.toContain('PAGINA.ONDE.VOLTAR');
+      wrapper.unmount();
+    });
+
     it('opens the conversations of the week for the old performance tab', async () => {
       agentesApi.analyticsConversations.mockResolvedValue({
         data: { payload: [] },

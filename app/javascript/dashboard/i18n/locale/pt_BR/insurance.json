@@ -153,6 +153,7 @@
         "OPEN_AGENTS": "Ver meus agentes",
         "CONFIGURE": "Configurar e criar",
         "OPEN_AGENT": "Abrir o agente",
+        "CHOOSE_CHANNEL": "Escolher onde {name} atende",
         "CANCEL": "Cancelar",
         "SUBMIT": "Criar agente"
       },
@@ -178,6 +179,7 @@
       "EXISTING": {
         "TITLE": "O seu Agente de Cotação já existe",
         "BRANCHES": "Cota: {ramos}",
+        "NO_CHANNEL": "{name} ainda não atende em nenhum canal, então não cota com ninguém. Escolha onde atender para começar.",
         "NOTE": "Um por conta. Para mudar o nome ou o comportamento, edite o agente."
       },
       "ERRORS": {

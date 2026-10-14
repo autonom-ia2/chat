@@ -211,6 +211,34 @@ describe('AgentesListaPage', () => {
       wrapper.unmount();
     });
 
+    // #1525 — a cotação leva à página do agente já na escolha de canal, não ao módulo (que voltava para cá).
+    it('opens the quote agent page on the channel choice', async () => {
+      prepararStore({
+        agentes: [
+          agente(9, {
+            name: 'Lia',
+            agent_type: 'insurance_quote',
+            status: 'paused',
+            enabled: false,
+            channels_count: 0,
+            tem_onde_trabalhar: false,
+          }),
+        ],
+      });
+      const wrapper = await montar();
+      const rota = {
+        name: 'autonomia_agent_panel',
+        params: { agentId: 9, tab: 'channels' },
+      };
+      expect(router.resolve).toHaveBeenCalledWith(rota);
+      await wrapper.get('[data-abrir]').trigger('click');
+      expect(router.push).toHaveBeenCalledWith(rota);
+      expect(wrapper.text()).toContain(
+        'AGENTS.JORNADA.CARTAO.PARADO_SEM_CANAL'
+      );
+      wrapper.unmount();
+    });
+
     it('continues a draft in the builder', async () => {
       const wrapper = await montar();
       await wrapper.get('[data-continuar]').trigger('click');

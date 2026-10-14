@@ -13,7 +13,7 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
 
   def caixa_com_mensagem(agente)
     create(:message, account: account, conversation: conversation, inbox: inbox, message_type: :incoming, content: 'oi')
-    Autonomia::Agents::AgentInbox.create!(agent: agente, inbox: inbox, account: account, agent_bot: agent_bot)
+    lia_na_caixa(agente, inbox: inbox, agent_bot: agent_bot)
   end
 
   def rodadas_pedidas(agente)

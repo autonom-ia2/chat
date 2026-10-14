@@ -141,6 +141,50 @@ describe('InsuranceAgentTab', () => {
     expect(botao(wrapper, 'ACTIONS.CONFIGURE')).toBeFalsy();
     expect(botao(wrapper, 'ACTIONS.OPEN_AGENT')).toBeTruthy();
     expect(wrapper.text()).toContain('Mia');
+    expect(wrapper.find('[data-sem-canal]').exists()).toBe(false);
+  });
+
+  // #1525 — "Abrir o agente" levava à lista, e o cartão da lista voltava para cá. Agora leva à página
+  // do agente já na escolha de canal (o :tab channels).
+  it('abre a pagina do agente na escolha de canal', async () => {
+    api.getQuoteAgent.mockResolvedValue({ data: { payload: criado } });
+    const wrapper = await montar();
+
+    await botao(wrapper, 'ACTIONS.OPEN_AGENT').trigger('click');
+
+    expect(push).toHaveBeenCalledWith({
+      name: 'autonomia_agent_panel',
+      params: { agentId: 1, tab: 'channels' },
+    });
+  });
+
+  // Nasce parada e sem canal: a aba diz isso e convida a escolher onde ela atende.
+  it('convida a escolher onde o agente atende quando ele ainda nao tem canal', async () => {
+    api.getQuoteAgent.mockResolvedValue({
+      data: {
+        payload: {
+          ...criado,
+          status: 'paused',
+          enabled: false,
+          tem_onde_trabalhar: false,
+        },
+      },
+    });
+    const wrapper = await montar();
+
+    expect(wrapper.find('[data-sem-canal]').text()).toContain(
+      'EXISTING.NO_CHANNEL'
+    );
+    // `botao` procura por trecho, e OPEN_AGENT é trecho de OPEN_AGENTS ("Ver meus agentes"): aqui, texto exato.
+    const rotulos = wrapper.findAll('button').map(b => b.text());
+    expect(rotulos).not.toContain('INSURANCE.AGENT.ACTIONS.OPEN_AGENT');
+    expect(rotulos).toContain('INSURANCE.AGENT.ACTIONS.OPEN_AGENTS');
+    await botao(wrapper, 'ACTIONS.CHOOSE_CHANNEL').trigger('click');
+
+    expect(push).toHaveBeenCalledWith({
+      name: 'autonomia_agent_panel',
+      params: { agentId: 1, tab: 'channels' },
+    });
   });
 
   // 409 não é falha: alguém clicou duas vezes, ou já havia um. Mostrar erro sobre algo que a própria
