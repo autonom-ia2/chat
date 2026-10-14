@@ -28,6 +28,7 @@ import {
   isBefore,
   format,
 } from 'date-fns';
+import { dataDoVencimento } from '../../helpers/closeDate';
 import { ptBR } from 'date-fns/locale';
 
 /* -------------------------------------------------------------------------- */
@@ -152,7 +153,11 @@ export const toDate = value => {
 };
 
 /** The Date an event starts at (or null). */
-export const eventStart = event => toDate(event?.starts_at);
+// O vencimento do card é uma data (#1538): fica no dia gravado, não no instante lido no fuso do navegador.
+export const eventStart = event =>
+  event?.event_type === 'expected_close'
+    ? dataDoVencimento(event.starts_at)
+    : toDate(event?.starts_at);
 
 /* -------------------------------------------------------------------------- */
 /* Overdue / draggable rules (the 3 types are NOT symmetric)                  */

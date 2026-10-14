@@ -2019,19 +2019,20 @@ const onCalendarReschedule = async ({ event, date }) => {
 
   try {
     const isCloseDate = event.event_type === 'expected_close';
-    let nextIso;
+    let nextDate;
     if (date instanceof Date) {
-      nextIso = date.toISOString();
+      nextDate = date;
     } else if (SNOOZE_PRESET_MS[date]) {
-      nextIso = new Date(Date.now() + SNOOZE_PRESET_MS[date]).toISOString();
+      nextDate = new Date(Date.now() + SNOOZE_PRESET_MS[date]);
     } else {
-      nextIso = new Date(date).toISOString();
+      nextDate = new Date(date);
     }
+    const nextIso = nextDate.toISOString();
 
     if (isCloseDate) {
       await store.dispatch('crmKanban/updateCardFields', {
         id: event.card_id,
-        expected_close_at: diaDoVencimento(nextIso),
+        expected_close_at: diaDoVencimento(nextDate),
       });
     } else {
       const followUpId = String(event.id).replace(/^follow_up_/, '');
