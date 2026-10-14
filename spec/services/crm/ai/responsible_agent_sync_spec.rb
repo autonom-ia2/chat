@@ -37,6 +37,28 @@ RSpec.describe Crm::Ai::ResponsibleAgentSync do
       expect(sync.transfer_id).to be_nil
     end
 
+    it 'a troca que segue o pedido do agente sai como ABRIR, mesmo quando o sync do foco roda primeiro' do
+      create_card(pipeline: comercial)
+      eventos = []
+      ActiveSupport::Notifications.subscribed(->(*, payload) { eventos << payload }, described_class::EVENTO_TROCA) do
+        perform_enqueued_jobs do
+          Crm::Subjects::Abrir.new(conversation: conversation, pipeline: suporte, resumo: 'Senha', motivo: 'suporte',
+                                   origem: 'porta', transfer_id: 'tr-7').call
+        end
+      end
+
+      expect(eventos.sole).to include(motivo: 'abrir', transfer_id: 'tr-7', to_bot: espelho_area)
+      expect(trocas.sole.payload).to include('motivo' => 'abrir', 'transfer_id' => 'tr-7')
+    end
+
+    it 'não entrega à área com o CRM desligado na caixa' do
+      create_card(pipeline: suporte)
+      account.crm_inbox_settings.find_by(inbox: inbox).update!(crm_enabled: false)
+
+      expect(sync.trocou).to be(false)
+      expect(Crm::Ai::Config.destinos_para(conversation.reload)).to eq([])
+    end
+
     it 'no pedido do agente (ABRIR) entrega mesmo a conversa resolvida: o agente está atendendo agora' do
       create_card(pipeline: suporte)
       conversation.update!(status: :resolved)

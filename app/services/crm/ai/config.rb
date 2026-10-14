@@ -175,13 +175,20 @@ module Crm
         ::Autonomia::Agents::AgentInbox.kept.area.find_by(account_id: inbox.account_id, inbox_id: inbox.id, autonomia_agent_id: agent.id)
       end
 
-      # Funil que pode receber um assunto aberto pelo agente: da conta, ativo, ligado à caixa, com etapa para o card
-      # nascer e a IA do funil ligada. O mesmo critério da IA de assunto (Crm::Subjects::Identifier#pipelines).
+      # Funil que pode receber um assunto aberto pelo agente: da conta, ativo, ligado à caixa (com o CRM ligado nela), com
+      # etapa para o card nascer e a IA do funil ligada. O mesmo critério da IA de assunto (Crm::Subjects::Identifier#pipelines).
       def self.funil_de_destino?(pipeline, inbox)
-        pipeline.present? && inbox.present? && pipeline.account_id == inbox.account_id && pipeline.active? &&
-          pipeline_ai_settings(pipeline)[:enabled] != false &&
-          pipeline.pipeline_inboxes.exists?(inbox_id: inbox.id) && pipeline.stages.exists?
+        return false unless funil_da_caixa?(pipeline, inbox)
+
+        pipeline.active? && pipeline_ai_settings(pipeline)[:enabled] != false && pipeline.stages.exists?
       end
+
+      def self.funil_da_caixa?(pipeline, inbox)
+        pipeline.present? && inbox.present? && pipeline.account_id == inbox.account_id &&
+          ::Crm::InboxSetting.exists?(account_id: inbox.account_id, inbox_id: inbox.id, crm_enabled: true) &&
+          pipeline.pipeline_inboxes.exists?(inbox_id: inbox.id)
+      end
+      private_class_method :funil_da_caixa?
 
       # Para onde o agente da conversa pode passar o cliente (#1447): os funis da caixa com responsável que é área nela,
       # menos o funil do assunto em atendimento. [{ pipeline_id:, nome:, agente_id:, agente_nome: }], na ordem do CRM.

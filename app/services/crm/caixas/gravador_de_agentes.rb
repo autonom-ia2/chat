@@ -16,7 +16,8 @@ class Crm::Caixas::GravadorDeAgentes
   def initialize(account:, inbox:, lista:, pipeline_ids:)
     @account = account
     @inbox = inbox
-    @lista = Array(lista).index_by { |item| item['id'].to_i }
+    @itens = Array(lista)
+    @lista = @itens.index_by { |item| item['id'].to_i }
     @pipeline_ids = pipeline_ids
   end
 
@@ -32,10 +33,15 @@ class Crm::Caixas::GravadorDeAgentes
 
   def validar!
     raise Invalida, 'crm.caixas.agentes_desligados' unless Crm::Ai::Config.areas_ligadas?(@account)
-    raise Invalida, 'crm.caixas.agente_invalido' if (@lista.keys - candidatos.keys).any?
+    raise Invalida, 'crm.caixas.agente_invalido' if agente_invalido?
     raise Invalida, 'crm.caixas.sem_porta' if @lista.any? && porta.nil?
     raise Invalida, 'crm.caixas.funil_invalido' if (funis_pedidos - @pipeline_ids).any?
     raise Invalida, 'crm.caixas.funil_com_dois_agentes' if funis_pedidos.size != funis_pedidos.uniq.size
+  end
+
+  # O mesmo agente duas vezes, ou quem não pode ser área desta caixa.
+  def agente_invalido?
+    @itens.size != @lista.size || (@lista.keys - candidatos.keys).any?
   end
 
   # Quem pode ser área desta caixa: agente da conta, não apagado, que fala com cliente (não interno, não de sistema) e
@@ -86,14 +92,22 @@ class Crm::Caixas::GravadorDeAgentes
   rescue ::Autonomia::Agents::Areas::AgenteInterno, ::Autonomia::Agents::Areas::AgenteDeSistema
     raise Invalida, 'crm.caixas.agente_invalido'
   rescue ActiveRecord::RecordInvalid => e
-    raise Invalida, e.record.is_a?(::Autonomia::Agents::Agent) ? 'crm.caixas.agente_nao_liga' : 'crm.caixas.sem_porta'
+    raise Invalida, codigo_da_recusa(e.record)
   end
 
-  # Funis desmarcados (ou de agente que saiu) perdem a linha; cada funil marcado fica com o agente dele.
+  def codigo_da_recusa(record)
+    return 'crm.caixas.agente_nao_liga' if record.is_a?(::Autonomia::Agents::Agent)
+    return 'crm.caixas.sem_porta' if record.errors.include?(:papel)
+
+    'crm.caixas.agente_invalido'
+  end
+
+  # Funis da caixa desmarcados (ou de agente que saiu) perdem a linha; cada funil marcado fica com o agente dele. Funil
+  # arquivado não aparece na tela: a linha dele fica como está.
   def gravar_funis!
     desejados = @lista.flat_map { |id, item| funis_de(item).map { |pipeline_id| [pipeline_id, id] } }.to_h
     linhas = Crm::InboxAiAgent.where(account_id: @account.id, inbox_id: @inbox.id)
-    linhas.where.not(pipeline_id: desejados.keys).delete_all
+    linhas.where(pipeline_id: @pipeline_ids).where.not(pipeline_id: desejados.keys).delete_all
     desejados.each do |pipeline_id, agent_id|
       linha = linhas.find_or_initialize_by(pipeline_id: pipeline_id)
       linha.update!(autonomia_agent_id: agent_id)

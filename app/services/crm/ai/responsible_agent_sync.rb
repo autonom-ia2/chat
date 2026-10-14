@@ -33,9 +33,8 @@ class Crm::Ai::ResponsibleAgentSync
                          :evento, keyword_init: true)
 
   # Só enfileira em conta que configurou algum responsável: sem linha, nada a fazer.
-  def self.agendar(conversation_id:, motivo:, card_id: nil)
-    conversation = Conversation.find_by(id: conversation_id)
-    return if conversation.blank? || !Crm::InboxAiAgent.exists?(account_id: conversation.account_id)
+  def self.agendar(account_id:, conversation_id:, motivo:, card_id: nil)
+    return unless Crm::InboxAiAgent.exists?(account_id: account_id)
 
     Crm::Ai::ResponsibleAgentSyncJob.perform_later(conversation_id, motivo, card_id)
   end
@@ -123,34 +122,31 @@ class Crm::Ai::ResponsibleAgentSync
     { bot: porta, agente: nil } if porta && @motivo == PIPELINE
   end
 
+  # A troca que segue um pedido do agente (Abrir) é registrada como ABRIR, com o transfer_id dele, qualquer que seja o
+  # job que chegou primeiro: o Abrir também troca o foco, que agenda o seu próprio sync.
   def trocar(card, destino)
     de_bot = @conversation.ai_assignee
     Conversations::AssignmentService.new(conversation: @conversation, assignee_id: destino[:bot].id, assignee_type: 'AgentBot').perform
-    transfer_id = transfer_id_do_pedido(card)
+    pedido = pedido_do_agente(card)
+    troca = { motivo: pedido ? ABRIR : @motivo, transfer_id: pedido&.payload&.dig('transfer_id') }
     Crm::ActivityLogger.new(
       card: card, actor: nil, event_type: EVENTO, conversation: @conversation,
-      payload: { motivo: @motivo, de_agent_bot_id: de_bot.id, para_agent_bot_id: destino[:bot].id,
-                 autonomia_agent_id: destino[:agente]&.id, transfer_id: transfer_id }.compact
+      payload: { de_agent_bot_id: de_bot.id, para_agent_bot_id: destino[:bot].id, autonomia_agent_id: destino[:agente]&.id,
+                 **troca }.compact
     ).perform
     Resultado.new(trocou: true, de_agent_bot_id: de_bot.id, para_agent_bot_id: destino[:bot].id,
-                  autonomia_agent_id: destino[:agente]&.id, transfer_id: transfer_id, motivo: @motivo,
-                  evento: evento(de_bot, destino, transfer_id))
+                  autonomia_agent_id: destino[:agente]&.id, **troca,
+                  evento: { conversation: @conversation, from_bot: de_bot, to_bot: destino[:bot], agent: destino[:agente], **troca })
   end
 
-  # O payload do EVENTO_TROCA combinado com o Agentes IA (#1433).
-  def evento(de_bot, destino, transfer_id)
-    { conversation: @conversation, from_bot: de_bot, to_bot: destino[:bot], agent: destino[:agente], transfer_id: transfer_id,
-      motivo: @motivo }
-  end
-
-  # O transfer_id do pedido do agente (Abrir) neste card, se é recente e ainda não foi usado por uma troca desta
-  # conversa. O pedido que não virou troca (havia pessoa, por exemplo) não vale para uma troca de horas depois.
-  def transfer_id_do_pedido(card)
+  # O pedido do agente (Abrir) neste card, se é recente e ainda não virou troca desta conversa. O pedido que não virou
+  # troca (havia pessoa, por exemplo) não vale para uma troca de horas depois.
+  def pedido_do_agente(card)
     atividades = Crm::Activity.where(account_id: @account.id, conversation_id: @conversation.id)
     ultima_troca = atividades.where(event_type: EVENTO).maximum(:created_at)
     pedidos = atividades.where(card_id: card.id, event_type: Crm::Subjects::Abrir::EVENTO, created_at: JANELA_DO_PEDIDO.ago..)
     pedidos = pedidos.where('created_at > ?', ultima_troca) if ultima_troca
-    pedidos.order(created_at: :desc, id: :desc).pick(Arel.sql("payload->>'transfer_id'"))
+    pedidos.order(created_at: :desc, id: :desc).first
   end
 
   def publicar(resultado)

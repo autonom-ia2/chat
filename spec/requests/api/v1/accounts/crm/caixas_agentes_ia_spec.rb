@@ -105,6 +105,18 @@ RSpec.describe 'CRM Caixas no CRM API — agentes de IA', type: :request do
     expect(linhas).to be_empty
   end
 
+  it 'funil arquivado não aparece na tela e o responsável dele fica' do
+    arquivado = create_crm_pipeline(account: account, user: admin, name: 'Antigo').first
+    account.crm_pipeline_inboxes.create!(inbox: inbox, pipeline: arquivado)
+    Crm::InboxAiAgent.create!(account: account, inbox: inbox, pipeline: arquivado, agent: maria)
+    arquivado.update!(status: :archived)
+
+    salvar([{ id: maria.id, pipeline_ids: [] }])
+
+    expect(response).to have_http_status(:ok)
+    expect(linhas).to eq([[arquivado.id, maria.id]])
+  end
+
   describe 'recusa sem gravar nada' do
     def expect_recusa(code, status: :unprocessable_entity)
       expect(response).to have_http_status(status)
@@ -133,6 +145,11 @@ RSpec.describe 'CRM Caixas no CRM API — agentes de IA', type: :request do
 
       alheio = Autonomia::Agents::Agent.create!(account: create(:account), name: 'Alheio', agent_type: 'custom')
       salvar([{ id: alheio.id, pipeline_ids: [] }])
+      expect_recusa('crm.caixas.agente_invalido')
+    end
+
+    it 'o mesmo agente duas vezes' do
+      salvar([{ id: marta.id, pipeline_ids: [suporte.id] }, { id: marta.id, pipeline_ids: [] }])
       expect_recusa('crm.caixas.agente_invalido')
     end
 

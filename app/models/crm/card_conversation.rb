@@ -48,7 +48,7 @@ class Crm::CardConversation < ApplicationRecord
   private
 
   def sync_responsible_agent
-    Crm::Ai::ResponsibleAgentSync.agendar(conversation_id: conversation_id, motivo: Crm::Ai::ResponsibleAgentSync::FOCO)
+    Crm::Ai::ResponsibleAgentSync.agendar(account_id: account_id, conversation_id: conversation_id, motivo: Crm::Ai::ResponsibleAgentSync::FOCO)
   end
 
   def linked_records_must_belong_to_account

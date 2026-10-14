@@ -137,7 +137,8 @@ class Crm::Subjects::Abrir
       Crm::Cards::Broadcaster.broadcast(resultado.card, evento(resultado.acao)) unless resultado.acao == :ja_no_funil
       Crm::Subjects::Notifier.notify(@conversation)
       Crm::Ai::Observer.new(card: resultado.card).schedule_evaluation if resultado.acao == :aberto
-      Crm::Ai::ResponsibleAgentSync.agendar(conversation_id: @conversation.id, motivo: Crm::Ai::ResponsibleAgentSync::ABRIR)
+      Crm::Ai::ResponsibleAgentSync.agendar(account_id: @account.id, conversation_id: @conversation.id,
+                                            motivo: Crm::Ai::ResponsibleAgentSync::ABRIR)
     end
   end
 
