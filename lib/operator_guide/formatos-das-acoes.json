@@ -15187,6 +15187,7 @@
       "sla_warning_seconds": {
         "tipo": "inteiro"
       },
+      "template_position": {},
       "win_probability": {
         "max": 100,
         "min": 0,
@@ -15203,7 +15204,7 @@
     "envelope": "stage",
     "modelo": "Crm::PipelineStage",
     "motivos": [
-      "leitura crua sem tipo: category, funnel_stage_type"
+      "leitura crua sem tipo: category, funnel_stage_type, template_position (repassada a Crm::Ai::DefaultStageCriteria.metadata_for)"
     ],
     "origem": [
       "app/controllers/api/v1/accounts/crm/stages_controller.rb:18",
@@ -15212,6 +15213,7 @@
       "app/controllers/api/v1/accounts/crm/stages_controller.rb:120",
       "app/controllers/api/v1/accounts/crm/stages_controller.rb:109",
       "app/controllers/api/v1/accounts/crm/stages_controller.rb:106",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:137",
       "app/controllers/api/v1/accounts/crm/stages_controller.rb:59"
     ],
     "sem_corpo": false
@@ -15525,8 +15527,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/stage_criteria#improve",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/stage_criteria_controller.rb:19",
-      "app/controllers/api/v1/accounts/crm/stage_criteria_controller.rb:23"
+      "app/controllers/api/v1/accounts/crm/stage_criteria_controller.rb:24",
+      "app/controllers/api/v1/accounts/crm/stage_criteria_controller.rb:28"
     ],
     "sem_corpo": false
   },

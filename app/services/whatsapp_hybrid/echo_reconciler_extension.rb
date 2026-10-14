@@ -22,15 +22,19 @@ module WhatsappHybrid::EchoReconcilerExtension
     Message.find_by(inbox_id: inbox.id, source_id: physical_id, message_type: :outgoing)
   end
 
+  # Sob trava e sobre o registro relido (chat#1555): o envio e a marca de mensagem rica escrevem o mesmo content_attributes.
   def reconcile_hybrid_echo(message)
-    attrs = message.content_attributes.to_h.merge('whatsapp_web_id' => message.source_id)
-    changes = { source_id: messages_data.first[:id].to_s }
-    # Envio que ficou sem confirmação do WAHA, mas a Meta comprovou que saiu.
-    if message.failed?
-      attrs.delete('external_error')
-      changes[:status] = :sent
+    message.with_lock do
+      attrs = message.content_attributes.to_h.merge('whatsapp_web_id' => message.source_id)
+      changes = { source_id: messages_data.first[:id].to_s }
+      # Envio que ficou sem confirmação do WAHA, mas a Meta comprovou que saiu: o resultado deixa de ser incerto.
+      if message.failed?
+        attrs.delete('external_error')
+        attrs[WhatsappHybrid::WebTransport::OUTCOME_KEY] = 'accepted'
+        changes[:status] = :sent
+      end
+      message.update!(changes.merge(content_attributes: attrs))
     end
-    message.update!(changes.merge(content_attributes: attrs))
     Rails.logger.info("[whatsapp_hybrid] echo reconciled message=#{message.id} inbox=#{inbox.id}")
   end
 end

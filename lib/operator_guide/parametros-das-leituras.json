@@ -1396,7 +1396,9 @@
     "controller": "api/v1/accounts/crm/stage_criteria#defaults",
     "parametros": [
       "atender",
-      "names"
+      "names",
+      "positions",
+      "template"
     ]
   },
   "crm/stages/:stage_id/stage_automations": {

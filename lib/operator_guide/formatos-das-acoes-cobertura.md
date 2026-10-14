@@ -79,7 +79,7 @@ Uma ação pode ter mais de um motivo.
 - `POST crm/meetings/:id/sync` — leitura crua sem tipo: force
 - `POST crm/meetings/suggest_times` — leitura crua sem tipo: date, duration_minutes
 - `POST crm/pipelines` — leitura crua sem tipo: goal, outcome_labels
-- `POST crm/pipelines/:pipeline_id/stages` — leitura crua sem tipo: category, funnel_stage_type
+- `POST crm/pipelines/:pipeline_id/stages` — leitura crua sem tipo: category, funnel_stage_type, template_position (repassada a Crm::Ai::DefaultStageCriteria.metadata_for)
 - `POST ctwa_tracked_links` — leitura crua sem tipo: ctwa_tracked_link
 - `POST data_imports` — params inteiro repassado a DataImportSkipLogFinder.new
 - `POST data_imports/:id/abandon` — params inteiro repassado a DataImportSkipLogFinder.new
@@ -172,6 +172,7 @@ Uma ação pode ter mais de um motivo.
 - `api/v1/accounts/crm/pipelines#update` outcome_labels — o código não converte nem compara o valor
 - `api/v1/accounts/crm/stages#create` category — o código não converte nem compara o valor
 - `api/v1/accounts/crm/stages#create` funnel_stage_type — o código não converte nem compara o valor
+- `api/v1/accounts/crm/stages#create` template_position — repassada a Crm::Ai::DefaultStageCriteria.metadata_for
 - `api/v1/accounts/crm/stages#update` category — o código não converte nem compara o valor
 - `api/v1/accounts/crm/stages#update` funnel_stage_type — o código não converte nem compara o valor
 - `api/v1/accounts/ctwa_tracked_links#create` ctwa_tracked_link — o código não converte nem compara o valor
