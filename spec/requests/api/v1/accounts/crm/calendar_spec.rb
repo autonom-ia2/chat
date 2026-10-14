@@ -46,6 +46,23 @@ RSpec.describe 'CRM calendar API', type: :request do
     expect(titles).not_to include('Lead Suporte', 'Retornar Suporte')
   end
 
+  # #1538: o vencimento é uma data (00:00 UTC). A janela do mês em São Paulo começa às 03:00 UTC do dia 1; o vencimento
+  # do dia 1 precisa aparecer, e o do último dia do mês anterior não.
+  it 'inclui o vencimento do primeiro dia da janela pedida no fuso de quem olha' do
+    account, user = create_account_and_user
+    pipeline, stage = create_crm_pipeline(account: account, user: user, name: 'Cobrança')
+    account.crm_cards.create!(pipeline: pipeline, stage: stage, title: 'Vence no dia 1', expected_close_at: '2026-10-01')
+    account.crm_cards.create!(pipeline: pipeline, stage: stage, title: 'Venceu antes', expected_close_at: '2026-09-30')
+
+    get "/api/v1/accounts/#{account.id}/crm/calendar/events",
+        params: { pipeline_id: pipeline.id, from: '2026-10-01T00:00:00-03:00', to: '2026-10-31T23:59:59-03:00' },
+        headers: auth_headers(user)
+
+    titles = response.parsed_body['payload'].map { |event| event['title'] }
+    expect(titles).to include('Vence no dia 1')
+    expect(titles).not_to include('Venceu antes')
+  end
+
   it 'filters follow-ups and expected closes by owner_id from the frontend filters' do
     account, admin = create_account_and_user
     first_owner, = create_crm_agent(account: account, name: 'Primeiro')

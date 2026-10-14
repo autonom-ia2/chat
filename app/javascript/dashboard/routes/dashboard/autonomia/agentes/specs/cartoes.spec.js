@@ -158,7 +158,24 @@ describe('AgenteCartao', () => {
     wrapper.unmount();
   });
 
-  it('sends the quote agent to the quotes module', async () => {
+  // #1525 — nasce parada e sem canal: o cartão diz isso, e o clique segue para a escolha de canal.
+  it('says the quote agent is in no channel yet', () => {
+    const wrapper = montarCartao({
+      agente: agente({
+        agent_type: 'insurance_quote',
+        status: 'paused',
+        enabled: false,
+        channels_count: 0,
+        tem_onde_trabalhar: false,
+      }),
+    });
+    expect(wrapper.text()).toContain('AGENTS.JORNADA.STATUS.COTACAO');
+    expect(wrapper.text()).toContain('AGENTS.JORNADA.CARTAO.PARADO_SEM_CANAL');
+    expect(wrapper.text()).not.toContain('AGENTS.JORNADA.CARTAO.COTACAO');
+    wrapper.unmount();
+  });
+
+  it('sends the quote agent to its own page', async () => {
     const wrapper = montarCartao({
       agente: agente({ agent_type: 'insurance_quote' }),
     });

@@ -21,7 +21,10 @@ module Enterprise::Crm::FollowUpPolicy
     update?
   end
 
+  # Sem card (#1461), quem recebe e vê o lembrete também conclui.
   def complete?
+    return crm_permission?('crm_manage_cards') && show? if record.card_id.nil?
+
     update?
   end
 

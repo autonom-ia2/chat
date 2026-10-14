@@ -154,7 +154,18 @@ const abrirAgente = agente =>
     params: { agentId: agente.id },
   });
 
-const abrirCotacao = () => router.push({ name: 'autonomia_insurance_agent' });
+// #1525 — a cotação abre a página do agente, e não o módulo: de lá o "Abrir o agente" voltava para cá, e a
+// corretora não achava onde pôr a Lia num canal. Sem canal, já na escolha de canal (o `:tab` channels, o fluxo da
+// própria página); com canal, só a página.
+const rotaDaCotacao = agente => ({
+  name: 'autonomia_agent_panel',
+  params:
+    agente.tem_onde_trabalhar === false
+      ? { agentId: agente.id, tab: 'channels' }
+      : { agentId: agente.id },
+});
+
+const abrirCotacao = agente => router.push(rotaDaCotacao(agente));
 
 // O Construtor é carregado à parte: enquanto ele chega, o botão mostra que está indo (um clique só).
 // Se a navegação não termina em 8 s, o botão volta a responder (e um clique novo não é desfeito
@@ -187,7 +198,7 @@ const continuar = async agente => {
 const enderecoDe = agente =>
   router.resolve(
     agente.agent_type === 'insurance_quote'
-      ? { name: 'autonomia_insurance_agent' }
+      ? rotaDaCotacao(agente)
       : { name: 'autonomia_agent_panel', params: { agentId: agente.id } }
   ).href;
 
