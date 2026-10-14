@@ -267,6 +267,16 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
         espera: { motivo: 'invalid_tool_arguments', slug: 'consultar_auto' },
         dispara: -> { rodar_principal('name' => criar_especialista.function_name, 'call_id' => 'c1', 'arguments' => 'nao-e-json') }
       },
+      # Tema 14 (#1434): passado o prazo da resposta, a consulta ao ajudante não roda e o modelo responde com o que tem.
+      'ajudantes.rb#recusar_por_limite#1' => {
+        espera: { motivo: 'ajudante_limite_atingido', slug: 'consultar_regras_do_produto_auto' },
+        dispara: lambda {
+          Autonomia::Agents::Fase2.ligar!(account)
+          vinculo = vincular(agent, criar_ajudante(account))
+          allow(Autonomia::Agents::Ajudantes::Orcamento).to receive(:agora).and_return(0, 10_000)
+          rodar_principal('name' => vinculo.function_name, 'call_id' => 'c1', 'arguments' => { pedido: 'x' }.to_json)
+        }
+      },
       'runner.rb#sem_ferramenta#1' => {
         espera: { motivo: 'tool_not_available', slug: 'cotar_seguro' },
         dispara: -> { rodar_especialista_pedindo('cotar_seguro') }

@@ -42,6 +42,8 @@ json.enabled agent.enabled
 json.channels_count(agent.agent_inboxes.count { |vinculo| vinculo.deleted_at.nil? })
 # #1366 — a tela nunca mostra "Atendendo" para quem não tem onde trabalhar. O predicado é do servidor (Agent).
 json.tem_onde_trabalhar agent.tem_onde_trabalhar?
+# Tema 14 (#1434) — quem este agente ajuda, quando ele é ajudante (vazio nos demais). O "quando chamar" vem na rota /ajuda.
+json.ajuda(agent.vinculos_de_ajudante.filter_map { |vinculo| { id: vinculo.agent.id, name: vinculo.agent.name } unless vinculo.agent.deleted? })
 # IP oculto: `scaffold` JAMAIS é exposto. `instruction` só aparece em modo manual (texto do
 # próprio usuário, visível); em modo guiado a instrução é gerada pelo Construtor e permanece oculta.
 json.instruction agent.instruction if agent.manual?

@@ -3359,6 +3359,26 @@
     ],
     "sem_corpo": false
   },
+  "PATCH autonomia/agents/:agent_id/ajuda": {
+    "campos": {
+      "principal_ids": {
+        "tipo": "lista",
+        "tipo_pela_leitura": "nome"
+      },
+      "quando": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/autonomia/agents/ajuda#update",
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/agents/ajuda_controller.rb:14",
+      "app/controllers/api/v1/accounts/autonomia/agents/ajuda_controller.rb:15",
+      "app/controllers/api/v1/accounts/autonomia/agents/ajuda_controller.rb:28"
+    ],
+    "sem_corpo": false
+  },
   "PATCH autonomia/agents/:agent_id/tools/:id": {
     "campos": {
       "description": {
@@ -10869,7 +10889,7 @@
       "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:11",
       "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:14",
       "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:13",
-      "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:65"
+      "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:60"
     ],
     "sem_corpo": false
   },
@@ -10894,10 +10914,10 @@
       "leitura crua sem tipo: message"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:39",
-      "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:42",
-      "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:41",
-      "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:65"
+      "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:34",
+      "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:37",
+      "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:36",
+      "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:60"
     ],
     "sem_corpo": false
   },
@@ -21296,6 +21316,26 @@
       "app/controllers/api/v1/accounts/automation_rules_controller.rb:29",
       "app/controllers/api/v1/accounts/automation_rules_controller.rb:98",
       "app/controllers/api/v1/accounts/automation_rules_controller.rb:84"
+    ],
+    "sem_corpo": false
+  },
+  "PUT autonomia/agents/:agent_id/ajuda": {
+    "campos": {
+      "principal_ids": {
+        "tipo": "lista",
+        "tipo_pela_leitura": "nome"
+      },
+      "quando": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/autonomia/agents/ajuda#update",
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/agents/ajuda_controller.rb:14",
+      "app/controllers/api/v1/accounts/autonomia/agents/ajuda_controller.rb:15",
+      "app/controllers/api/v1/accounts/autonomia/agents/ajuda_controller.rb:28"
     ],
     "sem_corpo": false
   },

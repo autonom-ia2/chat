@@ -330,8 +330,14 @@ module Autonomia
             documents: media.documents,
             trust_instruction: true,
             delivery: delivery,
-            **::Autonomia::Insurance::QuoteAgent::Builder.rodadas_do_turno(@agent)
+            **rodadas_do_turno
           ).answer
+        end
+
+        # As rodadas do turno: as do principal com ajudante (tema 14, #1434) ou, sem ajudante, as de sempre — seis para a
+        # Lia (`QuoteAgent::Builder`), uma para os demais. A Lia nunca tem ajudante, então segue igual.
+        def rodadas_do_turno
+          ::Autonomia::Agents::Ajudantes.rodadas(@agent) || ::Autonomia::Insurance::QuoteAgent::Builder.rodadas_do_turno(@agent)
         end
 
         # QUAL DOS SILÊNCIOS, e por que isto existe. Os três caminhos terminavam no mesmo `silenced`,

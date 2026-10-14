@@ -93,12 +93,20 @@ class Autonomia::Agents::Specialists::Runner
     com_situacao(recusar('especialista_falhou', INDISPONIVEL))
   end
 
+  # Tema 14 (#1434): por que o especialista não trabalhou (o código da recusa), e quantas rodadas de ferramenta ele usou.
+  # O `Specialists::Ajudante` lê os dois para registrar `consulted` ou `consult_failed`; a Cotação não os usa.
+  attr_reader :motivo
+
+  def rodadas_usadas
+    @rodadas_usadas.to_i
+  end
+
   private
 
   def generate(credential)
     @abertas_antes = @delivery&.runs&.size.to_i
     raw = Crm::Ai::ResponsesClient.new(
-      credential: credential, feature: FEATURE, account: @specialist.account
+      credential: credential, feature: etiqueta_de_consumo, account: @specialist.account
     ).create_with_tool_executor(
       model: Autonomia::Agents::Config::ANSWERER_MODEL,
       instructions: @specialist.effective_instruction,
@@ -108,7 +116,7 @@ class Autonomia::Agents::Specialists::Runner
       tools: tool_schemas,
       timeout: SEGUNDOS_POR_CHAMADA,
       max_rodadas: RODADAS_DE_FERRAMENTA,
-      max_segundos: SEGUNDOS_DE_FERRAMENTA
+      max_segundos: prazo_do_laco
     ) { |calls| execute_tool_calls(calls) }
     parsed = JSON.parse(raw[:text])
     parsed.is_a?(Hash) ? parsed : nil
@@ -124,7 +132,26 @@ class Autonomia::Agents::Specialists::Runner
                                                           documents: @documents, agent: @specialist.agent,
                                                           faixa: ::Autonomia::Insurance::QuoteAgent::Builder.ramo_do_especialista(@specialist))
     pedido = "PEDIDO DO ATENDENTE:\n#{Autonomia::Agents::Config.truncate_text(@request, MAX_REQUEST_CHARS)}"
-    materia.mensagens + [Autonomia::Agents::PromptParts::Mensagem.montar('user', pedido)]
+    materia.mensagens + base_do_ajudante + [Autonomia::Agents::PromptParts::Mensagem.montar('user', pedido)]
+  end
+
+  # Tema 14 (#1434): o vínculo aponta para outro agente da conta, e não é a Cotação.
+  def ajudante?
+    @specialist.delegado?
+  end
+
+  # O ajudante tem etiqueta de consumo e prazo próprios (5 min); a Cotação segue com os dela.
+  def etiqueta_de_consumo
+    ajudante? ? ::Autonomia::Agents::Specialists::Ajudante::FEATURE : FEATURE
+  end
+
+  def prazo_do_laco
+    ajudante? ? ::Autonomia::Agents::Ajudantes::PRAZO_DA_CONSULTA : SEGUNDOS_DE_FERRAMENTA
+  end
+
+  # A base do ajudante, cercada, antes do pedido. A Lia não tem: o especialista dela não busca na base.
+  def base_do_ajudante
+    ajudante? ? ::Autonomia::Agents::Specialists::Ajudante.base(@specialist, @request) : []
   end
 
   def tool_schemas
@@ -141,6 +168,7 @@ class Autonomia::Agents::Specialists::Runner
   # contagem das rodadas (`#rodadas`).
   def execute_tool_calls(calls)
     by_slug = specialist_tools.index_by(&:slug)
+    @rodadas_usadas = rodadas_usadas + 1
     resultados = Array(calls).map { |call| executar(by_slug[call['name'].to_s], call) }
     rodadas.rodada!(resultados.filter_map(&:last))
     resultados.map(&:first)
@@ -148,11 +176,17 @@ class Autonomia::Agents::Specialists::Runner
 
   def executar(tool, call)
     assincrona = tool&.async?
-    @tentou_cotar = true if assincrona
+    @tentou_cotar = true if assincrona && !ajudante?
     abertas = execucoes_do_turno
-    output = tool.present? ? tool.execute(call, delivery: @delivery) : sem_ferramenta(call)
+    output = tool.present? ? tool.execute(call, delivery: entrega_das_ferramentas) : sem_ferramenta(call)
     recusa = output if assincrona && execucoes_do_turno == abertas
     [{ type: 'function_call_output', call_id: call['call_id'], output: output.to_s.truncate(MAX_TOOL_OUTPUT_CHARS) }, recusa]
+  end
+
+  # O ajudante nunca entrega nada ao cliente: as ferramentas dele rodam sem o contexto de entrega, e a assíncrona é
+  # recusada com erro nomeado (`async_indisponivel_nesta_superficie`). A Cotação segue com a entrega do principal.
+  def entrega_das_ferramentas
+    ajudante? ? nil : @delivery
   end
 
   # AS SEIS RODADAS ESGOTADAS SEM COTAÇÃO VIRAM NOTA À EQUIPE NA HORA (chat#718). Quem decide é
@@ -188,6 +222,7 @@ class Autonomia::Agents::Specialists::Runner
   # Recusa em PROSA ao principal, registrada com a conversa (o `delivery` desce do principal) e o
   # agente dono do especialista. O texto que o principal lê não muda.
   def recusar(codigo, texto)
+    @motivo = codigo
     Autonomia::Agents::Tools::Recusa.registrar(codigo, slug: @specialist.function_name, agente: @specialist.agent,
                                                        conversa: Autonomia::Agents::Tools::Recusa.conversa_de(@delivery))
     texto
