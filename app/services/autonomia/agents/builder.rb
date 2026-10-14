@@ -946,10 +946,17 @@ module Autonomia
       # #1367 (cache): o que é ESTÁVEL ao longo da conversa vem primeiro (atuação, base, esqueleto, agenda e a
       # config atual do AJUSTE, o maior bloco); o que muda de um turno para outro (materiais em revisão,
       # abertura, teto de perguntas, pergunta pendente) vem por último, para não invalidar o prefixo em cache.
+      # O segmento da conta (#1429) vem antes de todos: só depende da conta, então o prefixo segue igual entre os turnos
+      # e entre as duas chamadas do turno. nil (Fase 2 desligada ou sem bloco) some no compact_blank.
       def context_blocks
-        [actuation_context, knowledge_intent_context, skeleton_context, booking_context, adjust_context, knowledge_context,
+        [segmento_context, actuation_context, knowledge_intent_context, skeleton_context, booking_context, adjust_context, knowledge_context,
          send_media_context, materials_status_context, opening_context, turn_budget_context,
          pending_request_context].compact_blank
+      end
+
+      # SEGMENTO DA CONTA (tema 8, #1429): orientação e vocabulário do ramo, como DADO. Moldura em PromptParts.
+      def segmento_context
+        Autonomia::Agents::PromptParts::SegmentoDaConta.texto(@account)
       end
 
       # PEDIDOS ACUMULAM (§4). Duas pendências morriam em silêncio:

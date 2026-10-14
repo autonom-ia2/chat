@@ -68,6 +68,41 @@ RSpec.describe Waha::Client do
     expect(request).to have_been_requested.once
   end
 
+  it 'omits the apps key when no apps are given, so the engine keeps the session apps (#1516)' do
+    config = { 'ignore' => { 'groups' => true } }
+    request = stub_request(:put, 'https://waha.example/api/sessions/5511999999999')
+              .with { |http_request| JSON.parse(http_request.body) == { 'config' => config } }
+              .to_return(status: 200, headers: { 'Content-Type' => 'application/json' }, body: '{}')
+
+    client.update_session('5511999999999', config: config)
+    client.update_session('5511999999999', config: config, apps: nil)
+
+    expect(request).to have_been_requested.twice
+  end
+
+  it 'never puts a proxy credential from the engine response in the error (#1516)' do
+    body = { message: 'conflict', config: { proxy: { server: '10.0.0.8:6000', username: 'outro-user', password: 'outra-senha' } } }
+    stub_request(:get, 'https://waha.example/api/sessions/5511999999999')
+      .to_return(status: 409, headers: { 'Content-Type' => 'application/json' }, body: body.to_json)
+
+    expect { client.get_session('5511999999999') }.to raise_error(described_class::Error) { |error|
+      expect(error.message).not_to include('outra-senha')
+      expect(error.message).not_to include('outro-user')
+    }
+  end
+
+  it 'never puts the proxy credential in the error when the engine echoes it (#1516)' do
+    config = { ignore: {}, proxy: { server: '10.0.0.9:6000', username: 'user-9', password: 'senha-9' } }
+    stub_request(:post, 'https://waha.example/api/sessions')
+      .to_return(status: 400, body: '{"message":"bad proxy user-9:senha-9@10.0.0.9:6000"}')
+
+    expect { client.create_session('5511999999999', config: config) }.to raise_error(described_class::Error) { |error|
+      expect(error.message).not_to include('senha-9')
+      expect(error.message).not_to include('user-9')
+      expect(error.message).to include('[FILTERED]')
+    }
+  end
+
   it 'detects the Brazilian resolver module when the route exists but the session app is not configured' do
     request = stub_request(:get, 'https://waha.example/api/apps/brazilian-phone-numbers/5511999999999/cache/stats')
               .to_return(

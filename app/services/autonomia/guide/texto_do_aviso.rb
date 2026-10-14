@@ -41,6 +41,11 @@ class Autonomia::Guide::TextoDoAviso
     end
   end
 
+  # Alerta do proxy do WhatsApp (#1516): só nº de caixa/conta, plano e IP mascarado.
+  def whatsapp_proxy(codigo, detalhes)
+    I18n.with_locale(@locale) { t("whatsapp_proxy.#{codigo}", **detalhes) }
+  end
+
   private
 
   def linha(sinal)

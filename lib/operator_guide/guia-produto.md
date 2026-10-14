@@ -1,4 +1,4 @@
-# Guia da Plataforma Autonom.ia — base de conhecimento (217 fluxos)
+# Guia da Plataforma Autonom.ia — base de conhecimento (218 fluxos)
 
 > ARQUIVO GERADO por `pnpm guia:build`. Não edite à mão: a rota, o endereço e a
 > permissão saem do roteador do painel, e o texto humano fica em
@@ -974,6 +974,16 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - pre_requisitos: definir atuação Interna ou Sem conhecimento na tela inicial.
 - passos: Escolha atuação Interna quando o agente for copiloto da equipe; escolha Sem conhecimento se ele deve partir só da conversa guiada; selecione o tipo ou "Outros"; responda ao construtor; finalize para revisar; abra o painel para testar.
 - gotchas: agente interno não se conecta a caixa de entrada e a aba Canais fica oculta/redireciona; atuação `both` não é escolhida no construtor, é ajuste posterior; sem base reduz respostas ancoradas e pode aumentar as transferências para humano por falta de conhecimento.
+- nav_target: `autonomia_agents_builder`
+
+### Escolher como começar um agente novo
+- intent: "Como crio um agente?"; "Onde ficam os modelos prontos?"; "Como crio um copiloto para a equipe?"; "Tem outro tipo de agente além dos modelos?"
+- onde_fica: Agentes > Criar agente (botão do topo da lista, barra de baixo no celular ou Ver modelos prontos)
+- rota: `autonomia_agents_builder` - `/app/accounts/:accountId/agents/new`
+- gate: papel `administrator` ou `autonomia_manage`
+- pre_requisitos: nova jornada de agentes ligada na conta (autonomia_agents_journey); administrador ou função com autonomia_manage.
+- passos: 1. Abra Agentes e clique em Criar agente; 2. Na página Criar agente, escolha um dos modelos prontos (Tirar dúvidas dos clientes, Atender quem quer comprar ou Receber quem chega) e clique em Usar este, ou clique em Do meu jeito para contar com suas palavras; 3. Se o agente deve só ajudar as pessoas da equipe dentro das conversas, desça até Precisa de outro tipo? e escolha Copiloto da equipe; 4. Siga a conversa de criação (Conte, Confira, Comece); o canal do agente normal é escolhido no fim.
+- gotchas: a maioria dos agentes começa por um modelo; o Copiloto da equipe nunca fala com cliente e não escolhe canal; Voltar para Agentes sai sem criar nada; quem só vê não tem o botão Criar agente; com a jornada desligada o mesmo endereço abre o Construtor antigo.
 - nav_target: `autonomia_agents_builder`
 
 ### Atualizar conhecimento e fontes do agente
