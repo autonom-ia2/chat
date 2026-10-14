@@ -5,6 +5,7 @@ import {
   chaveDaEscolha,
   conversaDeDestino,
   conversaDoCanal,
+  conversaOculta,
   tipoAoContinuar,
 } from './continuarConversa';
 
@@ -19,6 +20,7 @@ export function useContinuarConversa({ contato, canal }) {
   const erro = ref(false);
 
   const existente = computed(() => conversaDoCanal(canal.value));
+  const oculta = computed(() => conversaOculta(canal.value));
   const conversa = computed(() =>
     conversaDeDestino({ canal: canal.value, destino: destino.value })
   );
@@ -42,7 +44,7 @@ export function useContinuarConversa({ contato, canal }) {
   const carregar = async () => {
     ultimoPedido += 1;
     const pedido = ultimoPedido;
-    const alvo = existente.value;
+    const alvo = existente.value?.visible ? existente.value : null;
     podeResponder.value = false;
     erro.value = false;
     carregando.value = Boolean(alvo);
@@ -70,6 +72,7 @@ export function useContinuarConversa({ contato, canal }) {
   return {
     destino,
     existente,
+    oculta,
     conversa,
     tipo,
     carregando,

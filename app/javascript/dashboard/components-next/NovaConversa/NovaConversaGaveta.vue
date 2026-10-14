@@ -134,7 +134,10 @@ const frase = computed(() => {
   return tela.value === TELAS.ESCREVENDO ? t('NOVA_CONVERSA.TEXTO') : '';
 });
 const modoDoRodape = computed(() => {
-  if (tela.value === TELAS.ENVIADA) return 'enviada';
+  // Entrou numa conversa que a pessoa não pode ver (#1505): sem "Abrir".
+  if (tela.value === TELAS.ENVIADA) {
+    return enviada.value.oculta ? 'fechar' : 'enviada';
+  }
   return tela.value === TELAS.ESCREVENDO ? 'enviar' : 'fechar';
 });
 const migalha = computed(() =>

@@ -146,7 +146,10 @@ export function useNovaConversa({ contato, canal, continuar = null }) {
     return { id: conversa.id, contaId: conversa.account_id, numero: null };
   };
 
-  // Responde dentro da conversa que já existe, como a caixa de resposta.
+  // Responde dentro da conversa que já existe, como a caixa de resposta. Sem
+  // `crm_card_id`: a gaveta não tem o seletor de assunto do CRM, então a
+  // mensagem fica no assunto atual da conversa, como uma resposta em conversa
+  // de um assunto só.
   const responderNaConversa = dados => async () => {
     const id = destino.value.displayId;
     await store.dispatch(
@@ -159,24 +162,34 @@ export function useNovaConversa({ contato, canal, continuar = null }) {
   // `texto` é o que a pessoa vê na confirmação: a mensagem como foi enviada.
   // Ponto único de envio: enquanto um envio está no ar, outro não sai (clique
   // duplo, Ctrl+Enter repetido, ou o seletor do Twilio confirmando de novo).
+  // O retrato do envio é tirado ANTES de esperar o servidor: se a pessoa
+  // trocar de contato ou de canal no meio, a confirmação fala do que foi
+  // enviado, e o rascunho novo não é apagado.
+  const retratoDoEnvio = texto => {
+    const email = tipo.value === TIPOS.EMAIL;
+    return {
+      contatoId: contato.value?.id ?? null,
+      nome: contato.value?.name || '',
+      texto,
+      assunto: email && !destino.value ? form.assunto : '',
+      email,
+      chaveDoCanal: chaveDoCanal(canal.value),
+      caixa: canal.value?.name || '',
+      endereco: linhaDoCanal(canal.value),
+      oculta: Boolean(continuar?.oculta.value),
+    };
+  };
+
   const despachar = async (mandar, texto) => {
     if (enviando.value) return;
     enviando.value = true;
     erro.value = '';
+    const retrato = retratoDoEnvio(texto);
     try {
       const onde = await mandar();
-      const email = tipo.value === TIPOS.EMAIL;
-      enviada.value = {
-        ...onde,
-        nome: contato.value?.name || '',
-        texto,
-        assunto: email && !onde.numero ? form.assunto : '',
-        email,
-        chaveDoCanal: chaveDoCanal(canal.value),
-        caixa: canal.value?.name || '',
-        endereco: linhaDoCanal(canal.value),
-      };
-      limpar();
+      const { contatoId, ...confirmacao } = retrato;
+      enviada.value = { ...onde, ...confirmacao };
+      if (String(contato.value?.id ?? null) === String(contatoId)) limpar();
     } catch (error) {
       erro.value = textoDoErro(error) || t('NOVA_CONVERSA.ERRO.PADRAO');
     } finally {

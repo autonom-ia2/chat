@@ -5,17 +5,23 @@ import {
   chaveDaSituacao,
   conversaDeDestino,
   conversaDoCanal,
-  temEscolha,
+  conversaOculta,
   tipoAoContinuar,
 } from '../continuarConversa';
 import { TIPOS, oQueFalta } from '../novaConversa';
 
 // #1505 — continuar a conversa que o contato já tem na caixa.
-const ABERTA = { displayId: 61, status: 'open', locked: false };
-const TRAVADA = { displayId: 70, status: 'resolved', locked: true };
+const ABERTA = { displayId: 61, status: 'open', locked: false, visible: true };
+const TRAVADA = {
+  displayId: 70,
+  status: 'resolved',
+  locked: true,
+  visible: true,
+};
+const OCULTA = { displayId: null, status: null, locked: true, visible: false };
 const comConversa = (conversa, dados = {}) => ({
   id: 1,
-  channelType: INBOX_TYPES.WEB,
+  channelType: INBOX_TYPES.API,
   conversationToContinue: conversa,
   ...dados,
 });
@@ -24,16 +30,18 @@ const TWILIO = { id: 3, channelType: INBOX_TYPES.TWILIO, medium: 'whatsapp' };
 const EMAIL = { id: 4, channelType: INBOX_TYPES.EMAIL };
 
 describe('continuarConversa', () => {
-  describe('conversaDoCanal e temEscolha', () => {
-    it('sem conversa do servidor, não há o que continuar nem escolha', () => {
+  describe('conversaDoCanal e conversaOculta', () => {
+    it('sem conversa do servidor, não há o que continuar', () => {
       expect(conversaDoCanal({ id: 1 })).toBeNull();
       expect(conversaDoCanal(null)).toBeNull();
-      expect(temEscolha({ id: 1, conversationToContinue: null })).toBe(false);
+      expect(conversaOculta({ id: 1, conversationToContinue: null })).toBe(
+        false
+      );
     });
 
-    it('só pergunta quando a caixa deixa criar conversas novas', () => {
-      expect(temEscolha(comConversa(ABERTA))).toBe(true);
-      expect(temEscolha(comConversa(TRAVADA))).toBe(false);
+    it('marca a conversa que a pessoa não pode ver', () => {
+      expect(conversaOculta(comConversa(OCULTA))).toBe(true);
+      expect(conversaOculta(comConversa(TRAVADA))).toBe(false);
     });
   });
 
@@ -51,6 +59,15 @@ describe('continuarConversa', () => {
         ABERTA
       );
       expect(conversaDeDestino({ canal, destino: DESTINOS.NOVA })).toBeNull();
+    });
+
+    it('conversa oculta vai pela criação, que o servidor reabre', () => {
+      expect(
+        conversaDeDestino({
+          canal: comConversa(OCULTA),
+          destino: DESTINOS.CONTINUAR,
+        })
+      ).toBeNull();
     });
 
     it('sem conversa, sempre cria', () => {

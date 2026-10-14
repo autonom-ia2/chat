@@ -3,7 +3,9 @@ import { TIPOS, tipoDeMensagem } from './novaConversa';
 // #1505 — continuar a conversa que o contato já tem na caixa, em funções
 // puras. O servidor manda em `conversationToContinue` a conversa em que a
 // mensagem entraria pela regra da caixa (ou null), e se a regra é "Reabrir a
-// mesma conversa" (`locked`): aí não há escolha.
+// mesma conversa" (`locked`): aí não há escolha. `visible` falso: a conversa
+// existe, mas a pessoa não pode vê-la (acesso por funil). Só vem com
+// "Reabrir", e aí o envio segue pela criação, que entra nela sozinha.
 
 export const DESTINOS = Object.freeze({
   CONTINUAR: 'continuar',
@@ -13,17 +15,17 @@ export const DESTINOS = Object.freeze({
 // A conversa que o servidor achou para este canal, ou null.
 export const conversaDoCanal = canal => canal?.conversationToContinue || null;
 
-// Pergunta "continuar ou começar outra"? Só quando há conversa e a caixa
-// deixa criar conversas novas.
-export const temEscolha = canal => {
+// A conversa existe, mas a pessoa não pode abri-la.
+export const conversaOculta = canal => {
   const conversa = conversaDoCanal(canal);
-  return Boolean(conversa && !conversa.locked);
+  return Boolean(conversa && !conversa.visible);
 };
 
-// Em que conversa a mensagem vai entrar; null = cria conversa nova.
+// Em que conversa a mensagem vai entrar pela API de mensagem; null = envia
+// pela criação de conversa (nova, ou a oculta que o servidor reabre).
 export const conversaDeDestino = ({ canal, destino }) => {
   const conversa = conversaDoCanal(canal);
-  if (!conversa) return null;
+  if (!conversa || !conversa.visible) return null;
   if (conversa.locked) return conversa;
   return destino === DESTINOS.CONTINUAR ? conversa : null;
 };

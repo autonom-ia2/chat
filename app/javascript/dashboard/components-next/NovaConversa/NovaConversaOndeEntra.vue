@@ -9,7 +9,8 @@ import { DESTINOS, chaveDaSituacao } from './continuarConversa';
 import { SINAIS } from './modeloPronto';
 
 // #1505 — o contato já tem conversa nesta caixa. Com a regra "Reabrir a
-// mesma conversa", uma frase diz onde a mensagem entra; com "Criar novas
+// mesma conversa", uma frase diz onde a mensagem entra (sem número, se a
+// pessoa não pode ver a conversa); com "Criar novas
 // conversas", a pessoa escolhe entre continuar a conversa (já marcada) e
 // começar outra. Enquanto confere o que a conversa aceita, avisa; se não
 // conseguir, oferece tentar de novo.
@@ -52,10 +53,21 @@ const resumo = computed(() =>
       :titulo="$t(`${P}.TITULO`)"
       sem-alterar
     >
-      <strong class="font-semibold">
-        {{ $t(`${P}.ENTRA_NA`, { numero }) }}
+      <template v-if="conversa.visible">
+        <strong class="font-semibold">
+          {{ $t(`${P}.ENTRA_NA`, { numero }) }}
+        </strong>
+        <span class="block text-sm text-n-slate-11">{{ resumo }}</span>
+      </template>
+      <!-- A pessoa não pode ver a conversa (acesso por funil): sem número nem
+           situação, só o aviso de que não nasce outra. -->
+      <strong
+        v-else
+        data-nova-conversa-entra-na-existente
+        class="font-semibold"
+      >
+        {{ $t(`${P}.ENTRA_NA_EXISTENTE`) }}
       </strong>
-      <span class="block text-sm text-n-slate-11">{{ resumo }}</span>
     </NovaConversaCartao>
 
     <fieldset v-else class="m-0 grid min-w-0 gap-3 border-0 p-0 sm:grid-cols-2">

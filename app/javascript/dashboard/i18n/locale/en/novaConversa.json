@@ -40,6 +40,7 @@
     "ONDE_ENTRA": {
       "TITULO": "Where the message goes",
       "ENTRA_NA": "The message goes into conversation #{numero}",
+      "ENTRA_NA_EXISTENTE": "The message goes into the conversation that already exists with this contact",
       "CONTINUAR": "Continue conversation #{numero}",
       "NOVA": "Start a new conversation",
       "NOVA_TEXTO": "A separate conversation, from the beginning.",

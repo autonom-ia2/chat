@@ -40,6 +40,7 @@
     "ONDE_ENTRA": {
       "TITULO": "Onde a mensagem entra",
       "ENTRA_NA": "A mensagem entra na conversa #{numero}",
+      "ENTRA_NA_EXISTENTE": "A mensagem entra na conversa que já existe com este contato",
       "CONTINUAR": "Continuar a conversa #{numero}",
       "NOVA": "Começar conversa nova",
       "NOVA_TEXTO": "Uma conversa separada, do começo.",

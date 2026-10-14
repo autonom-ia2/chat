@@ -1,6 +1,7 @@
 import { ref } from 'vue';
 import { flushPromises, mount } from '@vue/test-utils';
 import { INBOX_TYPES } from 'dashboard/helper/inbox';
+import conversaActions from 'dashboard/store/modules/conversations/actions';
 import NovaConversaGaveta from '../NovaConversaGaveta.vue';
 
 // #1505 — o contato já tem conversa na caixa: a gaveta continua essa conversa
@@ -13,6 +14,7 @@ const estado = vi.hoisted(() => ({
   podeResponder: true,
   falhaNaConversa: false,
   show: null,
+  axios: null,
 }));
 
 const traduz = (chave, dados) =>
@@ -71,6 +73,7 @@ const conversa = (dados = {}) => ({
   status: 'open',
   lastActivityAt: Math.floor(Date.now() / 1000) - UMA_HORA,
   locked: false,
+  visible: true,
   ...dados,
 });
 const SITE = {
@@ -79,10 +82,29 @@ const SITE = {
   channelType: INBOX_TYPES.WEB,
   sourceId: 's5',
 };
-const SITE_COM_CONVERSA = { ...SITE, conversationToContinue: conversa() };
-const SITE_TRAVADO = {
-  ...SITE,
+// Site nunca chega com conversa: o servidor só oferece o site a quem não tem
+// conversa nele (website_contactable_inbox). A caixa de API chega.
+const API = {
+  id: 5,
+  name: 'Integração',
+  channelType: INBOX_TYPES.API,
+  sourceId: 's5',
+};
+const API_COM_CONVERSA = { ...API, conversationToContinue: conversa() };
+const API_TRAVADA = {
+  ...API,
   conversationToContinue: conversa({ status: 'resolved', locked: true }),
+};
+const API_OCULTA = {
+  ...API,
+  conversationToContinue: {
+    id: null,
+    displayId: null,
+    status: null,
+    lastActivityAt: null,
+    locked: true,
+    visible: false,
+  },
 };
 const WHATSAPP = {
   id: 1,
@@ -148,15 +170,26 @@ const ONDE = 'NOVA_CONVERSA.ONDE_ENTRA';
 
 describe('NovaConversaGaveta — continuar a conversa', () => {
   beforeEach(() => {
-    estado.canais = [SITE_COM_CONVERSA];
+    estado.canais = [API_COM_CONVERSA];
     estado.modelos = [];
     estado.podeResponder = true;
     estado.show = vi.fn(async () => ({
       data: { can_reply: estado.podeResponder },
     }));
-    estado.dispatch = vi.fn(async acao =>
-      acao === 'contactConversations/create' ? { id: 42, account_id: 7 } : null
-    );
+    // O envio na conversa passa pela ação de verdade (sendMessageWithData →
+    // MessageApi.create); só o axios é de mentira.
+    estado.axios = vi.fn(async () => ({ data: { id: 900 } }));
+    globalThis.axios = estado.axios;
+    window.history.pushState({}, '', '/app/accounts/7/contacts/9');
+    estado.dispatch = vi.fn(async (acao, dados) => {
+      if (acao === 'contactConversations/create') {
+        return { id: 42, account_id: 7 };
+      }
+      if (acao === 'sendMessageWithData') {
+        return conversaActions.sendMessageWithData({ commit: vi.fn() }, dados);
+      }
+      return null;
+    });
     estado.push = vi.fn();
   });
 
@@ -177,7 +210,7 @@ describe('NovaConversaGaveta — continuar a conversa', () => {
   });
 
   it('com "Reabrir a mesma conversa", diz onde entra, sem escolha', async () => {
-    estado.canais = [SITE_TRAVADO];
+    estado.canais = [API_TRAVADA];
     const wrapper = await abrir();
 
     const frase = wrapper.find('[data-nova-conversa-entra-na]');
@@ -308,7 +341,7 @@ describe('NovaConversaGaveta — continuar a conversa', () => {
   });
 
   it('trocar de canal zera a escolha: o padrão volta a continuar', async () => {
-    estado.canais = [SITE_COM_CONVERSA, { ...EMAIL, id: 8 }];
+    estado.canais = [API_COM_CONVERSA, { ...EMAIL, id: 8 }];
     const wrapper = await abrir();
 
     await wrapper
@@ -329,5 +362,81 @@ describe('NovaConversaGaveta — continuar a conversa', () => {
     expect(wrapper.find('[data-nova-conversa-continuar]').text()).toContain(
       `${ONDE}.CONTINUAR:77`
     );
+  });
+
+  const postou = () => estado.axios.mock.calls.map(([pedido]) => pedido);
+
+  it('com "Reabrir", envia pela API de mensagem na conversa mostrada', async () => {
+    estado.canais = [API_TRAVADA];
+    const wrapper = await abrir();
+
+    await wrapper.find('#nova-conversa-texto').setValue('Voltando ao caso');
+    await principal(wrapper).trigger('click');
+    await flushPromises();
+
+    expect(criou()).toHaveLength(0);
+    const [pedido] = postou();
+    expect(pedido.method).toBe('post');
+    expect(pedido.url).toBe('/api/v1/accounts/7/conversations/61/messages');
+    expect(pedido.data).toMatchObject({
+      content: 'Voltando ao caso',
+      private: false,
+      cc_emails: '',
+      bcc_emails: '',
+    });
+    expect(wrapper.find('[data-nova-conversa-enviada]').exists()).toBe(true);
+  });
+
+  it('se a mensagem não sai, mostra o erro do servidor e não diz "enviada"', async () => {
+    estado.axios = vi.fn(async () => {
+      throw Object.assign(new Error('422'), {
+        response: { data: { error: 'Fora da janela' } },
+      });
+    });
+    globalThis.axios = estado.axios;
+    const wrapper = await abrir();
+
+    await wrapper.find('#nova-conversa-texto').setValue('Oi');
+    await principal(wrapper).trigger('click');
+    await flushPromises();
+
+    expect(wrapper.find('[data-nova-conversa-enviada]').exists()).toBe(false);
+    expect(wrapper.text()).toContain('Fora da janela');
+    expect(wrapper.find('#nova-conversa-texto').element.value).toBe('Oi');
+    expect(criou()).toHaveLength(0);
+  });
+
+  it('a mensagem pronta vai com template_params para a conversa', async () => {
+    estado.canais = [WHATSAPP];
+    estado.modelos = [MODELO];
+    estado.podeResponder = false;
+    const wrapper = await abrir();
+
+    await principal(wrapper).trigger('click');
+    await flushPromises();
+
+    const [pedido] = postou();
+    expect(pedido.url).toBe('/api/v1/accounts/7/conversations/61/messages');
+    expect(pedido.data.content).toBe('Oi! Podemos ajudar?');
+    expect(pedido.data.template_params.name).toBe('boas_vindas');
+  });
+
+  it('conversa que a pessoa não pode ver: avisa sem número, cria pelo servidor e não oferece abrir', async () => {
+    estado.canais = [API_OCULTA];
+    const wrapper = await abrir();
+
+    expect(wrapper.find('[data-nova-conversa-entra-na-existente]').text()).toBe(
+      `${ONDE}.ENTRA_NA_EXISTENTE`
+    );
+    expect(wrapper.text()).not.toContain(`${ONDE}.ENTRA_NA:`);
+    expect(estado.show).not.toHaveBeenCalled();
+    await wrapper.find('#nova-conversa-texto').setValue('Oi');
+    await principal(wrapper).trigger('click');
+    await flushPromises();
+
+    expect(criou()).toHaveLength(1);
+    expect(postou()).toHaveLength(0);
+    expect(wrapper.find('[data-nova-conversa-enviada]').exists()).toBe(true);
+    expect(principal(wrapper).exists()).toBe(false);
   });
 });
