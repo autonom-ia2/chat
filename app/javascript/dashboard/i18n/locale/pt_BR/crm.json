@@ -5343,6 +5343,9 @@
     "CALENDARIO": {
       "REPETE": "Lembrete que repete:",
       "PAUSADO": "Lembrete pausado:"
+    },
+    "FALTA": {
+      "NOME": "dar um nome ao lembrete"
     }
   }
 }

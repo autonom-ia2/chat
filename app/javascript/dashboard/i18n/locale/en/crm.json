@@ -5342,6 +5342,9 @@
     "CALENDARIO": {
       "REPETE": "Repeating reminder:",
       "PAUSADO": "Paused reminder:"
+    },
+    "FALTA": {
+      "NOME": "give the reminder a name"
     }
   }
 }

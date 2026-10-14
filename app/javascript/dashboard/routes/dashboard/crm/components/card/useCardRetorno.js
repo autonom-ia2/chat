@@ -48,6 +48,8 @@ export const useCardRetorno = ({
   // Flag crm_lembretes_v2 (#1460/#1461/#1462).
   lembretesV2 = computed(() => false),
   aoSalvarEdicao,
+  // Na gaveta nova (calendário, Relacionamento) a coisa se chama "lembrete".
+  chamarDeLembrete = false,
 }) => {
   const comCard = () => Boolean(card.value?.id);
   const form = reactive(formularioVazio('reminder_only', comCard()));
@@ -369,7 +371,11 @@ export const useCardRetorno = ({
     falta.value.length
       ? t('CRM_CARD.RETORNO.FALTA.FRASE', {
           itens: formato.juntar(
-            falta.value.map(chave => t(`CRM_CARD.RETORNO.FALTA.${chave}`))
+            falta.value.map(chave =>
+              chamarDeLembrete && chave === 'NOME'
+                ? t('CRM_LEMBRETE.FALTA.NOME')
+                : t(`CRM_CARD.RETORNO.FALTA.${chave}`)
+            )
           ),
         })
       : ''

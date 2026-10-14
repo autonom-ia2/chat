@@ -75,6 +75,7 @@ const retorno = useCardRetorno({
   locale,
   lembretesV2: computed(() => true),
   aoSalvarEdicao: salvou,
+  chamarDeLembrete: true,
 });
 provide('cardRetorno', retorno);
 
