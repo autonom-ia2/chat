@@ -157,7 +157,7 @@ class WhatsappProxy::Assigner
     backoff!(pool.name)
     WhatsappProxy::Alert.notify!('plano_esgotado', "plano #{pool.name} sem IP do Brasil livre na fatia desta stack: " \
                                                    "session=#{session_name} segue sem proxy. Compre mais IPs ou amplie a fatia.",
-                                 level: :error)
+                                 level: :error, session: session_name, pool: pool.name)
     nil
   end
 

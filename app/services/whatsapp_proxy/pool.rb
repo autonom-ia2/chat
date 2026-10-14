@@ -25,7 +25,7 @@ class WhatsappProxy::Pool
   def candidates
     if slice.empty?
       WhatsappProxy::Alert.notify!('fatia_vazia', "#{SLICE_ENVS.fetch(@name)} vazia: plano #{@name} sem IP para esta stack",
-                                   level: :error)
+                                   level: :error, pool: @name)
       return []
     end
 
@@ -57,6 +57,7 @@ class WhatsappProxy::Pool
 
     WhatsappProxy::Alert.notify!('ip_da_fatia_sumiu',
                                  "#{missing.size} IP(s) da fatia #{SLICE_ENVS.fetch(@name)} sumiram do plano #{@name} " \
-                                 "da Webshare (#{missing.join(', ')}): atualize a fatia desta stack", level: :error)
+                                 "da Webshare (#{missing.join(', ')}): atualize a fatia desta stack",
+                                 level: :error, pool: @name, count: missing.size)
   end
 end

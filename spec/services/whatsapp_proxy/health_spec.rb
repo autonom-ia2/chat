@@ -3,7 +3,10 @@ require 'rails_helper'
 RSpec.describe WhatsappProxy::Health do
   let(:session) { 'hybrid-551142155355' }
 
-  before { %w[unstable_rounds drops unstable_swap scan_qr].each { |key| Redis::Alfred.delete("whatsapp_proxy:#{key}:#{session}") } }
+  before do
+    %w[unstable_rounds drops unstable_swap scan_qr].each { |key| Redis::Alfred.delete("whatsapp_proxy:#{key}:#{session}") }
+    Redis::Alfred.delete('whatsapp_proxy:outage:isp')
+  end
 
   it 'reports unstable only after UNSTABLE_ROUNDS rounds off WORKING in a row' do
     expect(described_class.observe!(session, 'STARTING')).to be_nil

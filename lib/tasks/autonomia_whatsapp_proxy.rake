@@ -14,5 +14,14 @@ namespace :autonomia do
       result = WhatsappProxy::Importer.new(entries: entries, engine: args[:engine]).perform
       puts "[whatsapp_proxy][importar][done] imported=#{result.imported} unchanged=#{result.unchanged} skipped=#{result.skipped}"
     end
+
+    # Uso: bundle exec rails "autonomia:whatsapp_proxy:liberar_quarentena[10.0.0.1]"
+    desc 'Tira um IP da quarentena do proxy do WhatsApp (#1516) antes das 24 h.'
+    task :liberar_quarentena, %i[ip] => :environment do |_task, args|
+      abort('[whatsapp_proxy][liberar_quarentena] informe [ip]') if args[:ip].blank?
+
+      removed = WhatsappProxy::Quarantine.release!(args[:ip].strip)
+      puts "[whatsapp_proxy][liberar_quarentena] ip=#{args[:ip].strip} liberados=#{removed}"
+    end
   end
 end

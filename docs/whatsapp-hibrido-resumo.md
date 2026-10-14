@@ -220,7 +220,8 @@ Autonom.ia). Regra decidida em 14/10/2026:
 | `WHATSAPP_PROXY_AUTO_MIGRATE` | não | `true` deixa a reconciliação mover número importado de plano/conta. Padrão desligado. |
 | `WHATSAPP_PROXY_MAX_NUMBERS_PER_IP` | não | Números da mesma conta por IP. Padrão 3. |
 | `WEBSHARE_ISP_PLAN_ID` / `WEBSHARE_DATACENTER_PLAN_ID` | **não use** | O id do plano muda quando a assinatura é editada na Webshare (14/10/2026: 11408796 → 14564104). Sem elas, vale o plano ativo do subtipo (`isp` / `default`), descoberto em `/api/v2/subscription/plan/` e registrado no log. Se estiverem definidas com id que não é plano ativo daquele subtipo, o código alerta e usa a descoberta. |
-| `SENTRY_DSN` | recomendado | Os alertas do proxy vão para o Sentry da instalação; sem ele, só log. |
+| `WHATSAPP_PROXY_ALERT_ACCOUNT_ID` | sim | Conta da PLATAFORMA (ex.: 1 na Hub2You) cujos administradores recebem os alertas do proxy como aviso do Guia (conversa, sino, push e e-mail quando urgente). Nunca a conta de um cliente. Sem ela, os alertas ficam só no log (as duas stacks não têm `SENTRY_DSN`). |
+| `SENTRY_DSN` | não | Se um dia existir, os alertas também vão para o Sentry. |
 
 **Como funciona**
 
@@ -254,10 +255,21 @@ Autonom.ia). Regra decidida em 14/10/2026:
   (tabela `whatsapp_proxy_quarantines`; ninguém recebe esse IP) e o número troca de IP no mesmo plano e fatia. No
   máximo uma troca dessas por sessão por dia; se continuar instável, só alerta (o problema não é o proxy).
   SCAN_QR_CODE é aparelho desvinculado: nunca troca, só alerta (uma vez por dia).
-- **Alertas** (Sentry da instalação, agrupados por código, sem credencial; e log `[whatsapp_proxy][alerta]`):
-  `plano_esgotado`, `fatia_vazia`, `ip_da_fatia_sumiu`, `troca_desfeita`, `volta_falhou`, `sessao_instavel_trocada`,
-  `sessao_instavel_de_novo`, `ip_em_quarentena`, `aparelho_desvinculado`, `troca_em_massa`,
-  `plano_configurado_inexistente`. Não vão para o administrador da conta (o aviso do Guia): são problemas da plataforma.
+- **Falha geral não é IP ruim.** Se mais de 30% dos IPs em uso de um plano (com pelo menos 2) têm sessão fora de
+  WORKING na mesma rodada, ou se as sessões SEM proxy do mesmo motor também estão caindo (mais de 30%, pelo menos 2),
+  é falha da Webshare, do WhatsApp ou do motor: nenhuma quarentena, nenhuma troca por instabilidade, a contagem zera
+  (inclusive as quedas do webhook do Híbrido, ignoradas por 20 min) e sai o alerta `falha_geral` (uma vez por hora).
+  IP que sumiu da lista continua sendo reparado (é fato da Webshare).
+- **Teto de quarentena:** no máximo 3 IPs por plano em 24 h; acima disso, alerta `teto_de_quarentena` e para de
+  quarentenar. A quarentena expira sozinha em 24 h; para soltar antes:
+  `bundle exec rails "autonomia:whatsapp_proxy:liberar_quarentena[IP]"`.
+- **Alertas**: sempre no log `[whatsapp_proxy][alerta]`; como aviso do Guia para os administradores da conta da
+  plataforma (`WHATSAPP_PROXY_ALERT_ACCOUNT_ID`), em pt_BR/en, só com nº de caixa e de conta, plano e IP mascarado
+  (`10.20.x.x`) — nunca telefone, nome ou credencial, e nunca para a conta do cliente; e no Sentry, se houver
+  `SENTRY_DSN`. Um alerta por código e assunto por hora. Códigos: `plano_esgotado`, `fatia_vazia`,
+  `ip_da_fatia_sumiu`, `troca_desfeita`, `volta_falhou`, `sessao_instavel_trocada`, `sessao_instavel_de_novo`,
+  `ip_em_quarentena`, `aparelho_desvinculado`, `troca_em_massa`, `plano_configurado_inexistente`, `falha_geral`,
+  `teto_de_quarentena` (os de erro chegam como aviso urgente).
 - Excluir a conexão Híbrida ou a caixa WAHA tira o número do IP; apagar a conta apaga as atribuições dela.
 
 **Implantação**
@@ -269,6 +281,6 @@ Autonom.ia). Regra decidida em 14/10/2026:
    sai da sessão no banco e o plano do campo `plano` do arquivo; linha cuja sessão não existe na stack, de plano
    desconhecido, cujo IP já é de outra conta ou cujo motor não respondeu é pulada e listada. Só lê o motor (GET): a
    credencial fica marcada como aplicada apenas quando o motor usa de fato aquele IP com a credencial da lista.
-3. Definir as fatias das duas stacks (sem IP em comum), conferir `SENTRY_DSN` e só então ligar
+3. Definir as fatias das duas stacks (sem IP em comum), `WHATSAPP_PROXY_ALERT_ACCOUNT_ID` e só então ligar
    `WHATSAPP_PROXY_ENABLED=true`. Não definir `WEBSHARE_*_PLAN_ID`. Sessão importada
    num plano que não bate com o tipo (ex.: Híbrido num IP de datacenter) é trocada pela reconciliação.

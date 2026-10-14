@@ -3905,6 +3905,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_28_100000) do
 
   create_table "whatsapp_proxy_quarantines", force: :cascade do |t|
     t.string "proxy_address", null: false
+    t.string "pool", null: false
     t.datetime "quarantined_until", null: false
     t.string "reason", null: false
     t.datetime "created_at", null: false

@@ -1,14 +1,15 @@
 # Mantém cada número no IP certo (#1516). A cada rodada busca cada plano da Webshare UMA vez e as sessões do motor UMA
 # vez, e agenda a troca no motor (WhatsappProxy::ApplyJob, com espera e volta) para a sessão:
-# - cujo IP saiu da lista (ou da fatia), ficou inválido ou mudou de credencial;
+# - cujo IP saiu da lista (ou da fatia), ficou inválido ou mudou de credencial — fato da Webshare, vale sempre;
 # - instável no motor com IP que a Webshare ainda chama de válido (WhatsappProxy::Health): o IP vai para quarentena por
-#   24 h e o número ganha outro do mesmo plano e fatia — no máximo uma troca dessas por sessão por dia;
+#   24 h (teto por plano por dia) e o número ganha outro do mesmo plano e fatia — uma troca dessas por sessão por dia.
+#   Em falha geral (WhatsappProxy::Outage: muitos IPs caindo juntos, ou as sessões sem proxy caindo também) não há
+#   quarentena nem troca por instabilidade, e a contagem zera: só o alerta `falha_geral`;
 # - no plano ou na conta errada (número que trocou de tipo, WAHA ↔ Híbrido) — importada, só com
 #   WHATSAPP_PROXY_AUTO_MIGRATE=true.
-# No máximo MAX_CHANGES por rodada. IP que sumiu da lista é URGENTE (o número já está fora do ar: na ativação do "High IP
-# Reputation" em 14/10/2026 três sessões ficaram em STARTING): troca já, sem espaçamento; as demais saem espaçadas.
-# Sessão que o motor não tem fica de fora, e SCAN_QR_CODE (aparelho desvinculado) nunca é reparada; atribuição sem caixa
-# é apagada.
+# No máximo MAX_CHANGES por rodada. IP que sumiu da lista é URGENTE (o número já está fora do ar): troca já, sem
+# espaçamento; as demais saem espaçadas. Sessão que o motor não tem fica de fora e SCAN_QR_CODE (aparelho
+# desvinculado) nunca é reparada; atribuição sem caixa é apagada.
 class WhatsappProxy::ReconcileJob < ApplicationJob
   queue_as :scheduled_jobs
 
@@ -16,15 +17,16 @@ class WhatsappProxy::ReconcileJob < ApplicationJob
   SPACING = 2.minutes
 
   def perform
-    assigner = WhatsappProxy::Assigner.new
-    return unless assigner.enabled?
+    @assigner = WhatsappProxy::Assigner.new
+    return unless @assigner.enabled?
 
     managed = managed_assignments
-    pending = managed.filter_map { |assignment| pending_change(assignment, assigner, engine_statuses) }
+    @outage = WhatsappProxy::Outage.new(engine_sessions, managed)
+    pending = managed.filter_map { |assignment| pending_change(assignment) }
     return if pending.empty?
 
     warn_mass_change(pending, managed)
-    scheduled = schedule(urgent_first(pending).first(MAX_CHANGES), assigner)
+    scheduled = schedule(urgent_first(pending).first(MAX_CHANGES))
     Rails.logger.info("[whatsapp_proxy] reconciliação: pendentes=#{pending.size} agendadas=#{scheduled} limite=#{MAX_CHANGES}")
   rescue Webshare::Client::Error, Waha::Client::Error => e
     Rails.logger.warn("[whatsapp_proxy] reconciliação interrompida: #{e.class}")
@@ -32,9 +34,13 @@ class WhatsappProxy::ReconcileJob < ApplicationJob
 
   private
 
-  # Status de cada sessão no motor, numa chamada só (memorizado na rodada).
-  def engine_statuses
-    @engine_statuses ||= Array(Waha::Client.new.list_sessions(all: true)).to_h { |session| [session['name'], session['status'].to_s] }
+  def engine_sessions
+    @engine_sessions ||= Array(Waha::Client.new.list_sessions(all: true))
+  end
+
+  def status_of(session_name)
+    @statuses ||= engine_sessions.to_h { |session| [session['name'], session['status'].to_s] }
+    @statuses[session_name]
   end
 
   # IP sumido primeiro (o número já está fora do ar); o resto na ordem de atribuição.
@@ -54,8 +60,8 @@ class WhatsappProxy::ReconcileJob < ApplicationJob
   end
 
   # [assignment, dono, motivo] quando a sessão precisa trocar; nil quando está certa ou não está no motor.
-  def pending_change(assignment, assigner, statuses)
-    status = statuses[assignment.session_name]
+  def pending_change(assignment)
+    status = status_of(assignment.session_name)
     return if status.nil?
     return unlinked_device(assignment) if status == 'SCAN_QR_CODE'
 
@@ -63,7 +69,7 @@ class WhatsappProxy::ReconcileJob < ApplicationJob
     health = health_of(assignment, status)
     return [assignment, owner, :plan] if assignment.migratable_to?(owner)
 
-    listed = WhatsappProxy::Assigner.listed(assigner.pool(assignment.pool), assignment)
+    listed = WhatsappProxy::Assigner.listed(@assigner.pool(assignment.pool), assignment)
     return [assignment, owner, :gone] if listed.nil?
     return [assignment, owner, :unstable] if health == :unstable
 
@@ -77,19 +83,33 @@ class WhatsappProxy::ReconcileJob < ApplicationJob
   end
 
   def health_of(assignment, status)
+    return general_outage!(assignment) if status != 'SCAN_QR_CODE' && @outage.general?(assignment.pool)
+
     health = WhatsappProxy::Health.observe!(assignment.session_name, status)
     if health == :scan_qr
       WhatsappProxy::Alert.notify!('aparelho_desvinculado', "session=#{assignment.session_name} pede QR (aparelho " \
-                                                            'desvinculado): não é o proxy, nada foi trocado')
+                                                            'desvinculado): não é o proxy, nada foi trocado',
+                                   session: assignment.session_name)
     end
     health
   end
 
-  def schedule(batch, assigner)
+  # Falha geral: nada conta contra o IP (zera a contagem e marca o plano para o webhook não contar quedas). Só avisa.
+  def general_outage!(assignment)
+    WhatsappProxy::Health.reset!(assignment.session_name)
+    WhatsappProxy::Health.outage!(assignment.pool)
+    off, total = @outage.numbers(assignment.pool)
+    WhatsappProxy::Alert.notify!('falha_geral', "#{off} de #{total} fora de WORKING ao mesmo tempo (#{assignment.pool}): " \
+                                                'falha geral, nada trocado nem posto em quarentena',
+                                 level: :error, pool: assignment.pool, count: off, total: total)
+    nil
+  end
+
+  def schedule(batch)
     spaced = 0
     batch.count do |(assignment, owner, reason)|
-      next false if reason == :unstable && !quarantine!(assignment, assigner)
-      next false if assigner.resolve(assignment.session_name, owner, assigner.pool(owner.pool)).nil?
+      next false if reason == :unstable && !quarantine!(assignment)
+      next false if @assigner.resolve(assignment.session_name, owner, @assigner.pool(owner.pool)).nil?
 
       wait = reason == :gone ? 0 : (spaced += 1) * SPACING
       WhatsappProxy::ApplyJob.set(wait: wait).perform_later(assignment.session_name)
@@ -97,20 +117,25 @@ class WhatsappProxy::ReconcileJob < ApplicationJob
     end
   end
 
-  # Sessão caindo e voltando com IP "válido": o IP sai de circulação e o número troca, uma vez por dia no máximo.
-  def quarantine!(assignment, assigner)
+  # Sessão caindo e voltando com IP "válido": o IP sai de circulação e o número troca, uma vez por dia no máximo e
+  # dentro do teto de quarentenas do plano.
+  def quarantine!(assignment)
     session = assignment.session_name
-    unless WhatsappProxy::Health.claim_swap!(session)
-      WhatsappProxy::Alert.notify!('sessao_instavel_de_novo', "session=#{session} segue instável depois de trocar de IP " \
-                                                              'hoje: o problema não parece ser o proxy', level: :error)
-      return false
-    end
+    return false unless WhatsappProxy::Quarantine.room?(assignment.pool)
+    return unstable_again!(session) unless WhatsappProxy::Health.claim_swap!(session)
 
-    WhatsappProxy::Quarantine.put!(assignment.proxy_address, "session=#{session} instável")
+    WhatsappProxy::Quarantine.put!(assignment.proxy_address, assignment.pool, "session=#{session} instável")
     WhatsappProxy::Health.reset!(session)
-    assigner.pool(assignment.pool).forget_quarantine!
-    WhatsappProxy::Alert.notify!('sessao_instavel_trocada', "session=#{session} instável em #{assignment.server}: trocando de IP")
+    @assigner.pool(assignment.pool).forget_quarantine!
+    WhatsappProxy::Alert.notify!('sessao_instavel_trocada', "session=#{session} instável em #{assignment.server}: trocando de IP",
+                                 session: session, ip: assignment.server)
     true
+  end
+
+  def unstable_again!(session)
+    WhatsappProxy::Alert.notify!('sessao_instavel_de_novo', "session=#{session} segue instável depois de trocar de IP hoje: " \
+                                                            'o problema não parece ser o proxy', level: :error, session: session)
+    false
   end
 
   def warn_mass_change(pending, managed)
@@ -118,6 +143,7 @@ class WhatsappProxy::ReconcileJob < ApplicationJob
     return unless gone * 2 > managed.size
 
     WhatsappProxy::Alert.notify!('troca_em_massa', "#{gone} de #{managed.size} IPs atribuídos sumiram da lista da Webshare. " \
-                                                   "Trocando no máximo #{MAX_CHANGES} por rodada.", level: :error)
+                                                   "Trocando no máximo #{MAX_CHANGES} por rodada.",
+                                 level: :error, count: gone, total: managed.size)
   end
 end

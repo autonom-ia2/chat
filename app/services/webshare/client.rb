@@ -85,7 +85,7 @@ class Webshare::Client
       'plano_configurado_inexistente',
       "#{PLAN_ID_ENVS.fetch(@pool)}=#{@configured_plan_id} não está entre os planos ativos #{PLAN_SUBTYPES.fetch(@pool)}; " \
       'usando o plano ativo do subtipo. Remova a variável.',
-      level: :error
+      level: :error, pool: @pool.to_s
     )
   end
 

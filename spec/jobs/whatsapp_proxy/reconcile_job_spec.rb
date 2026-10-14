@@ -158,6 +158,7 @@ RSpec.describe WhatsappProxy::ReconcileJob do
 
     before do
       %w[unstable_rounds drops unstable_swap scan_qr].each { |key| Redis::Alfred.delete("whatsapp_proxy:#{key}:#{session}") }
+      %w[isp datacenter].each { |pool| Redis::Alfred.delete("whatsapp_proxy:outage:#{pool}") }
       waha_session!(session, account)
       assign_proxy!(session, bad, account: account, digest: bad.credential_digest)
       allow(datacenter).to receive(:proxies).and_return([bad, webshare_proxy(id: 2, address: '10.0.0.2')])
@@ -214,13 +215,92 @@ RSpec.describe WhatsappProxy::ReconcileJob do
       expect(log).to include('sessao_instavel_de_novo')
     end
 
+    it 'stops quarantining after DAILY_LIMIT IPs of the plan in 24 h, with an alert' do
+      3.times { |i| WhatsappProxy::Quarantine.put!("10.9.0.#{i}", 'datacenter', 'antes') }
+
+      log = capture_log { 2.times { round('STARTING') } }
+
+      expect(apply_jobs).to be_empty
+      expect(WhatsappProxy::Quarantine.addresses).not_to include('10.0.0.1')
+      expect(log).to include('teto_de_quarentena')
+    end
+
     it 'never hands a quarantined IP to anyone' do
-      WhatsappProxy::Quarantine.put!('10.0.0.2', 'teste')
+      WhatsappProxy::Quarantine.put!('10.0.0.2', 'datacenter', 'teste')
       waha_session!('5511900000002', create(:account))
       statuses['5511900000002'] = 'WORKING'
 
       expect(WhatsappProxy::Assigner.new.for('5511900000002')).to be_nil
       expect(WhatsappProxy::Assignment.find_by(session_name: '5511900000002')).to be_nil
+    end
+  end
+
+  describe 'general outage (Webshare, WhatsApp or the engine down) is not a bad IP' do
+    let(:engine_sessions) { [] }
+
+    before do
+      %w[isp datacenter].each { |pool| Redis::Alfred.delete("whatsapp_proxy:outage:#{pool}") }
+      allow(engine).to receive(:list_sessions) { engine_sessions }
+      ips = (1..4).map { |i| webshare_proxy(id: i, address: "10.0.0.#{i}") }
+      allow(datacenter).to receive(:proxies).and_return(ips + [webshare_proxy(id: 9, address: '10.0.0.9')])
+      counters = %w[unstable_rounds drops unstable_swap]
+      ips.each_with_index do |proxy, i|
+        owner = create(:account)
+        name = "551190000010#{i}"
+        waha_session!(name, owner)
+        assign_proxy!(name, proxy, account: owner, digest: proxy.credential_digest)
+        counters.each { |key| Redis::Alfred.delete("whatsapp_proxy:#{key}:#{name}") }
+      end
+    end
+
+    def sessions(status_by_index, unproxied: [])
+      engine_sessions.replace(status_by_index.each_with_index.map { |status, i| { 'name' => "551190000010#{i}", 'status' => status } } +
+                              unproxied.each_with_index.map { |status, i| { 'name' => "55119000009#{i}", 'status' => status, 'config' => {} } })
+    end
+
+    it 'does not quarantine nor swap when many IPs of the plan drop together, and alerts falha_geral' do
+      sessions(%w[STARTING STARTING FAILED WORKING])
+
+      log = capture_log { 3.times { described_class.perform_now } }
+
+      expect(apply_jobs).to be_empty
+      expect(WhatsappProxy::Quarantine.count).to eq(0)
+      expect(log).to include('falha_geral')
+      expect(WhatsappProxy::Health.outage?('datacenter')).to be(true)
+    end
+
+    it 'does not swap when the sessions without proxy (the baseline) are dropping too' do
+      sessions(%w[STARTING WORKING WORKING WORKING], unproxied: %w[FAILED STARTING WORKING])
+
+      2.times { described_class.perform_now }
+
+      expect(apply_jobs).to be_empty
+      expect(WhatsappProxy::Quarantine.count).to eq(0)
+    end
+
+    it 'still swaps one bad IP when the rest of the plan and the baseline are fine' do
+      sessions(%w[STARTING WORKING WORKING WORKING], unproxied: %w[WORKING WORKING])
+
+      2.times { described_class.perform_now }
+
+      expect(apply_jobs.map { |job| job['arguments'].first }).to eq(['5511900000100'])
+    end
+
+    it 'still repairs a vanished IP during a general outage (a Webshare fact, not a guess)' do
+      sessions(%w[STARTING STARTING FAILED WORKING])
+      allow(datacenter).to receive(:proxies).and_return((2..4).map { |i| webshare_proxy(id: i, address: "10.0.0.#{i}") } +
+                                                         [webshare_proxy(id: 9, address: '10.0.0.9')])
+
+      described_class.perform_now
+
+      expect(apply_jobs.map { |job| job['arguments'].first }).to eq(['5511900000100'])
+    end
+
+    it 'ignores Hybrid webhook drops while the plan is in a general outage' do
+      WhatsappProxy::Health.outage!('isp')
+      WhatsappProxy::Health.record_drop!('hybrid-x')
+
+      expect(WhatsappProxy::Health.drops('hybrid-x')).to eq(0)
     end
   end
 

@@ -33,10 +33,12 @@ class CreateWhatsappProxyAssignments < ActiveRecord::Migration[7.2]
     add_foreign_key :whatsapp_proxy_assignments, :accounts, on_delete: :cascade
   end
 
-  # IP que derrubou um número (sessão caindo e voltando) fica 24 h fora da escolha, para ninguém.
+  # IP que derrubou um número (sessão caindo e voltando) fica 24 h fora da escolha, para ninguém. `pool` conta o teto
+  # diário de quarentenas por plano.
   def create_quarantines
     create_table :whatsapp_proxy_quarantines do |t|
       t.string :proxy_address, null: false
+      t.string :pool, null: false
       t.datetime :quarantined_until, null: false
       t.string :reason, null: false
       t.timestamps
