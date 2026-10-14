@@ -5595,7 +5595,8 @@
       "SEM_NEGOCIO_CURTO": "Sem negócio",
       "MARCAR_LEMBRETE": "Marcar um lembrete",
       "FALTA_PAGINA": "Para marcar reuniões, crie sua página de agendamento.",
-      "CRIAR_PAGINA": "Criar página"
+      "CRIAR_PAGINA": "Criar página",
+      "FALTA_PAGINA_SEM_PERMISSAO": "Para marcar reuniões, quem administra a conta precisa criar a página de agendamento."
     },
     "LEGENDA": {
       "TITULO": "O que aparece aqui"

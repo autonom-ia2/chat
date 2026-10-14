@@ -151,4 +151,16 @@ describe('CalendarioNovo', () => {
     expect(wrapper.emitted('criarPagina')).toHaveLength(1);
     expect(wrapper.find('[data-calendario-com-quem]').exists()).toBe(false);
   });
+
+  it('sem permissão para criar a página, diz quem precisa criar e não mostra o botão', () => {
+    const wrapper = montar(['lembrete', 'reuniao'], {
+      jeitoReuniao: 'falta',
+      podeCriarPagina: false,
+    });
+
+    expect(wrapper.find('[data-escolha="reuniao"]').text()).toContain(
+      'CRM_CALENDARIO.NOVO.FALTA_PAGINA_SEM_PERMISSAO'
+    );
+    expect(wrapper.find('[data-criar-pagina]').exists()).toBe(false);
+  });
 });

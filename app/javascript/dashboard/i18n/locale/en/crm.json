@@ -5594,7 +5594,8 @@
       "SEM_NEGOCIO_CURTO": "No deal",
       "MARCAR_LEMBRETE": "Add a reminder",
       "FALTA_PAGINA": "To book meetings, create your scheduling page.",
-      "CRIAR_PAGINA": "Create page"
+      "CRIAR_PAGINA": "Create page",
+      "FALTA_PAGINA_SEM_PERMISSAO": "To book meetings, an account admin needs to create the scheduling page."
     },
     "LEGENDA": {
       "TITULO": "What shows up here"

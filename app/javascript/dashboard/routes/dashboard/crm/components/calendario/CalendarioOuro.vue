@@ -190,7 +190,6 @@ const acao = ({ item, acao: escolhida }) => {
 // Só com o lembrete, vai direto para ele.
 const TIPO_DO_FLUXO = {
   lembrete: 'reminder',
-  reuniao: 'meeting',
   mensagem: 'whatsapp',
 };
 const opcoesDoNovo = computed(() =>

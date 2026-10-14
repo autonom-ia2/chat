@@ -6,7 +6,7 @@
 // do cliente ou do negócio). Cliente sem negócio: uma frase e o lembrete. Sem
 // página de agendamento nem agenda do Google/Microsoft, o cartão diz o que
 // falta e leva às Páginas. Lembrete e mensagem abrem o fluxo que já existe.
-import { computed, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import CrmKanbanAPI from 'dashboard/api/crmKanban';
@@ -142,6 +142,7 @@ watch(termo, texto => {
   clearTimeout(espera);
   espera = setTimeout(() => buscar(texto), ESPERA_DA_BUSCA);
 });
+onBeforeUnmount(() => clearTimeout(espera));
 
 const TITULOS = {
   'o-que': 'TITULO',
@@ -195,7 +196,11 @@ defineExpose({
                 {{ t(`${N}.REUNIAO`) }}
               </span>
               <span class="block text-sm text-n-slate-11">
-                {{ t(`${N}.FALTA_PAGINA`) }}
+                {{
+                  podeCriarPagina
+                    ? t(`${N}.FALTA_PAGINA`)
+                    : t(`${N}.FALTA_PAGINA_SEM_PERMISSAO`)
+                }}
               </span>
             </span>
           </span>

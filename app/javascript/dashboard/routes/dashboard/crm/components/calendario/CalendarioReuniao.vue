@@ -41,21 +41,31 @@ const externa = ref(null);
 const raiz = ref(null);
 
 const pelaPagina = computed(() => props.jeito === 'pagina');
-const pronto = computed(() => Boolean(card.value) && !carregando.value);
+// Espera o negócio e saber como a conta marca (página ou Google/Microsoft).
+const pronto = computed(
+  () => Boolean(card.value) && !carregando.value && props.jeito !== 'carregando'
+);
 
+// Abrir A, fechar e abrir B: a resposta atrasada de A não vale mais.
+let pedido = 0;
 watch(
   () => [props.show, props.cardId],
   async ([aberta, id]) => {
+    pedido += 1;
+    const meu = pedido;
     if (!aberta || !id) return;
     card.value = null;
     carregando.value = true;
     try {
-      card.value = await store.dispatch('crmKanban/fetchCard', id);
+      const achado = await store.dispatch('crmKanban/fetchCard', id);
+      if (meu === pedido) card.value = achado;
     } catch {
-      useAlert(t('CRM_KANBAN.ALERTS.CARD_LOAD_ERROR'));
-      emit('close');
+      if (meu === pedido) {
+        useAlert(t('CRM_KANBAN.ALERTS.CARD_LOAD_ERROR'));
+        emit('close');
+      }
     } finally {
-      carregando.value = false;
+      if (meu === pedido) carregando.value = false;
     }
   },
   { immediate: true }
