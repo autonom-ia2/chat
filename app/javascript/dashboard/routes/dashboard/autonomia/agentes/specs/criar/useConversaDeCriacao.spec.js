@@ -746,6 +746,62 @@ describe('useConversaDeCriacao', () => {
       expect(conversa.base.value).toHaveLength(1);
     });
 
+    it('removing a file still uploading also removes it from the server when the upload ends', async () => {
+      comThread();
+      let terminar;
+      store.dispatch.mockImplementation(acao =>
+        acao === 'autonomiaSources/create'
+          ? new Promise(resolve => {
+              terminar = resolve;
+            })
+          : Promise.resolve(null)
+      );
+      const { conversa } = montar();
+      conversa.anexarArquivo(arquivo('Cardápio.pdf', 'application/pdf'));
+      conversa.tirar(conversa.base.value[0]);
+      expect(chamadas('autonomiaSources/remove')).toHaveLength(0);
+
+      terminar({ id: 77 });
+      await flushPromises();
+      expect(store.dispatch).toHaveBeenCalledWith('autonomiaSources/remove', {
+        agentId: 90,
+        sourceId: 77,
+      });
+      expect(conversa.base.value).toHaveLength(0);
+    });
+
+    it('reading the base twice at once, or while a file uploads, never duplicates it', async () => {
+      let terminarCriar;
+      store.dispatch.mockImplementation(acao => {
+        if (acao === 'autonomiaSources/fetch') {
+          return Promise.resolve([
+            { id: 5, source_type: 'pdf', reference: 'Antigo.pdf' },
+            { id: 77, source_type: 'pdf', reference: 'Novo.pdf' },
+          ]);
+        }
+        if (acao === 'autonomiaSources/create') {
+          return new Promise(resolve => {
+            terminarCriar = resolve;
+          });
+        }
+        return Promise.resolve(null);
+      });
+      const { conversa } = montar();
+      await conversa.continuar({ id: 4, name: 'Lia', has_instruction: true });
+      conversa.anexarArquivo(arquivo('Novo.pdf', 'application/pdf'));
+      await Promise.all([conversa.carregarBase(), conversa.carregarBase()]);
+      await flushPromises();
+      expect(chamadas('autonomiaSources/fetch').length).toBeLessThanOrEqual(2);
+
+      terminarCriar({ id: 77 });
+      await flushPromises();
+      expect(conversa.base.value.map(m => m.nome).sort()).toEqual([
+        'Antigo.pdf',
+        'Novo.pdf',
+      ]);
+      expect(conversa.base.value.filter(m => m.fonteId === 77)).toHaveLength(1);
+    });
+
     it('the team copilot also has a base (#1494)', async () => {
       comThread();
       criarFonte();

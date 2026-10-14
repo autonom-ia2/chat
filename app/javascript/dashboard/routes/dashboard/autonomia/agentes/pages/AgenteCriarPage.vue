@@ -581,8 +581,10 @@ onMounted(() => {
             >
               {{ t('AGENTS.JORNADA.CRIAR.CONTE.VER_COMO', { nome }) }}
             </AgenteBotao>
-            <div v-else class="flex gap-2">
+            <!-- A base continua à mão no Conte, também depois que a conversa fecha. -->
+            <div class="flex gap-2">
               <AgenteBotao
+                v-if="!conversa.fechada.value"
                 data-ver-exemplo
                 variante="contorno"
                 class="flex-1"

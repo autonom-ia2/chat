@@ -10,7 +10,8 @@ import { ehSite, estadoDaFonte, nomeDaFonte } from '../../utils/pagina';
 // (Ler de novo, só para site; Tirar) e, no que não deu para ler, "Mandar outro".
 // #1503 — a caixa da base na criação reaproveita a linha: o estado vem pronto (`estado`, do material
 // da conversa), sem "Ler de novo" (`podeReler`), com o texto do problema dela (`problema`) e a
-// confirmação de tirar no slot, dentro da própria linha.
+// confirmação de tirar no slot, dentro da própria linha. O nome quebra em até duas linhas (não corta
+// no meio da coluna estreita da criação).
 const props = defineProps({
   fonte: { type: Object, required: true },
   nomeAgente: { type: String, required: true },
@@ -72,7 +73,7 @@ const escolher = chave => {
       </span>
       <span class="flex flex-col min-w-0 grow">
         <span
-          class="text-sm font-medium truncate text-n-slate-12"
+          class="text-sm font-medium line-clamp-2 [overflow-wrap:anywhere] text-n-slate-12"
           :title="nome"
         >
           {{ nome }}

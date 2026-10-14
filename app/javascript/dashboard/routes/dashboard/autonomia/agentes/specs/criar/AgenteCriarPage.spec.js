@@ -1044,10 +1044,12 @@ describe('AgenteCriarPage', () => {
       // A conversa continua ali atrás, inteira.
       expect(wrapper.find('[data-conversa]').exists()).toBe(true);
 
-      // A conversa fechou: o botão sai da barra; a gaveta aberta fecha quando a etapa vira Confira.
+      // A conversa fechou e a tela ainda é o Conte: a base continua na barra, ao lado de "Ver como";
+      // a gaveta fecha quando a etapa vira Confira.
       conversaFecha();
       await flushPromises();
-      expect(wrapper.find('[data-abrir-base]').exists()).toBe(false);
+      expect(wrapper.find('[data-abrir-base]').exists()).toBe(true);
+      expect(wrapper.find('[data-ver-exemplo]').exists()).toBe(false);
       await wrapper.get('[data-ver-como]').trigger('click');
       await flushPromises();
       expect(wrapper.find('[data-confira]').exists()).toBe(true);

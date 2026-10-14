@@ -79,6 +79,13 @@ const alternarAdicionar = async () => {
 
 const escolherArquivo = () => seletor.value?.click();
 
+// O painel some depois de mandar: o foco volta ao botão que o abriu (não cai no body).
+const fecharAdicionar = async () => {
+  adicionando.value = false;
+  await nextTick();
+  botaoAdicionar.value?.$el?.focus();
+};
+
 const aoEscolherArquivo = evento => {
   const [arquivo] = evento.target.files || [];
   evento.target.value = '';
@@ -93,8 +100,8 @@ const aoEscolherArquivo = evento => {
     return;
   }
   emit('anexar', arquivo);
-  adicionando.value = false;
   anuncio.value = t(`${NS}.ENTROU`, { item: arquivo.name });
+  fecharAdicionar();
 };
 
 const mandarSite = () => {
@@ -111,7 +118,7 @@ const mandarSite = () => {
   emit('site', endereco);
   anuncio.value = t(`${NS}.ENTROU`, { item: site.value.trim() });
   site.value = '';
-  adicionando.value = false;
+  fecharAdicionar();
 };
 
 const mandarOutro = async material => {

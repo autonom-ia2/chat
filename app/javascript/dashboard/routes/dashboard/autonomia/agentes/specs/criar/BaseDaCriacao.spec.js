@@ -139,7 +139,12 @@ describe('BaseDaCriacao', () => {
     const arquivo = arquivoDe('Cardápio.pdf');
     await escolherArquivo(wrapper, arquivo);
     expect(wrapper.emitted('anexar')).toEqual([[arquivo]]);
+    await flushPromises();
     expect(wrapper.find('[data-base-adicionar]').exists()).toBe(false);
+    // O painel sumiu: o foco volta ao botão de adicionar, não cai no body.
+    expect(document.activeElement).toBe(
+      wrapper.get('[data-base-adicionar-botao]').element
+    );
     expect(wrapper.get('[data-base-anuncio]').text()).toBe(
       'AGENTS.JORNADA.CRIAR.BASE.ENTROU'
     );
@@ -178,7 +183,11 @@ describe('BaseDaCriacao', () => {
     await campo.setValue('www.loja.com.br');
     await wrapper.get('[data-base-adicionar] form').trigger('submit');
     expect(wrapper.emitted('site')).toEqual([['https://www.loja.com.br/']]);
+    await flushPromises();
     expect(wrapper.find('[data-base-adicionar]').exists()).toBe(false);
+    expect(document.activeElement).toBe(
+      wrapper.get('[data-base-adicionar-botao]').element
+    );
   });
 
   it('asks inside the row before removing, and removes only on "Remove"', async () => {

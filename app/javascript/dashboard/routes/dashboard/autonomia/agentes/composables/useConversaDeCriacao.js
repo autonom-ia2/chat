@@ -184,9 +184,9 @@ export function useConversaDeCriacao({ modelo, atuacao = ATUACAO.EXTERNA }) {
   };
 
   // O que já estava na base do rascunho (de outra vez) entra na caixa, nunca na conversa.
-  const carregarBase = async () => {
-    const id = agenteId.value;
-    if (!id) return;
+  // Uma leitura por vez: duas ao mesmo tempo poriam o mesmo arquivo duas vezes na caixa.
+  let lendoBase = null;
+  const lerBase = async id => {
     erroDaBase.value = false;
     try {
       const lidas = await store.dispatch('autonomiaSources/fetch', {
@@ -210,6 +210,16 @@ export function useConversaDeCriacao({ modelo, atuacao = ATUACAO.EXTERNA }) {
     } catch {
       erroDaBase.value = true;
     }
+  };
+  const carregarBase = () => {
+    const id = agenteId.value;
+    if (!id) return Promise.resolve();
+    if (!lendoBase) {
+      lendoBase = lerBase(id).finally(() => {
+        lendoBase = null;
+      });
+    }
+    return lendoBase;
   };
 
   const continuar = agente => {
@@ -248,6 +258,22 @@ export function useConversaDeCriacao({ modelo, atuacao = ATUACAO.EXTERNA }) {
         agentId: agenteId.value,
         descriptor: { ...descritor, kind: 'knowledge' },
       });
+      // Tirado enquanto subia: o servidor já guardou, então sai de lá também.
+      if (!materiais.value.some(m => m.id === material.id)) {
+        if (fonte?.id) {
+          store
+            .dispatch('autonomiaSources/remove', {
+              agentId: agenteId.value,
+              sourceId: fonte.id,
+            })
+            .catch(() => null);
+        }
+        return;
+      }
+      // A leitura da base pode ter trazido este mesmo arquivo antes da resposta: fica um só.
+      materiais.value = materiais.value.filter(
+        m => m.id === material.id || !fonte?.id || m.fonteId !== fonte.id
+      );
       trocarMaterial(material.id, { estado: 'base', fonteId: fonte?.id });
     } catch {
       trocarMaterial(material.id, { estado: 'atencao' });
