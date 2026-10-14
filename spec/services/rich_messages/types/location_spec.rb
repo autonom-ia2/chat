@@ -38,10 +38,14 @@ describe RichMessages::Types::Location do
         .to eq('https://maps.google.com/?q=0.00001,10.0')
     end
 
-    # Os mesmos pares e links estão em RichMessage/specs/Location.spec.js: a bolha e o texto saem iguais.
+    # Os mesmos pares e links estão em RichMessage/specs/mapLink.spec.js: a bolha e o texto saem iguais.
     {
       [90, -180] => 'https://maps.google.com/?q=90.0,-180.0',
-      [1e-7, -1e-7] => 'https://maps.google.com/?q=0.0000001,-0.0000001'
+      [1e-7, -1e-7] => 'https://maps.google.com/?q=0.0000001,-0.0000001',
+      [5e-324, 5e-101] => "https://maps.google.com/?q=0.#{'0' * 323}5,0.#{'0' * 100}5",
+      [1.2345e-7, -23.5489] => 'https://maps.google.com/?q=0.00000012345,-23.5489',
+      [-0.0, -90] => 'https://maps.google.com/?q=0.0,-90.0',
+      [-90, 180] => 'https://maps.google.com/?q=-90.0,180.0'
     }.each do |(latitude, longitude), link|
       it "writes #{latitude}, #{longitude} as #{link}" do
         expect(location(latitude: latitude, longitude: longitude, name: nil, address: nil).fallback_text('')).to eq(link)

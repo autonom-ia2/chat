@@ -30,6 +30,9 @@
     "OPTIONS": {
       "CHOSEN": "The customer tapped \"{title}\"",
       "MIRROR": "Copy of what the customer received. Only the customer can tap these options."
+    },
+    "SENT_AS_TEXT": {
+      "LABEL": "Sent as text"
     }
   }
 }
