@@ -30,9 +30,13 @@ module Crm::FollowUps::ServiceReminderContext
       return self.class::Result.fallback(envio.motivo)
     end
 
+    # Uma chamada de IA paga, de propósito: só para ler a conversa antes de mandar o modelo; o texto é descartado.
     @send_mode = :free_form
     @candidates = []
-    return self.class::Result.fallback('closure') if closure?(compose)
+    leitura = compose
+    # Sem leitura não há como saber se o cliente já pagou: tenta de novo (retry limitado), nunca manda às cegas.
+    return fail_or_fallback('compose_failed') if leitura.blank?
+    return self.class::Result.fallback('closure') if closure?(leitura)
 
     @follow_up.update!(metadata: base_metadata.merge(envio.metadata))
     @send_mode = :choose_template

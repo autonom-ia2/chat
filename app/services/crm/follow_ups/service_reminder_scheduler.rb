@@ -37,12 +37,15 @@ class Crm::FollowUps::ServiceReminderScheduler
     new(card: card, now: now).desired.any? { |reminder| reminder.key == key }
   end
 
-  # settings/schedule_config: o job calcula uma vez por funil. atraso: espaçamento dos lembretes novos desta rodada.
-  def initialize(card:, now: Time.current, settings: nil, schedule_config: nil, atraso: 0)
+  # config: { settings:, schedule_config: } que o job calcula uma vez por funil.
+  # atraso: espaçamento dos lembretes novos desta rodada. criar: false só cancela o que deixou de valer (o job
+  # passou do teto de lembretes novos desta rodada).
+  def initialize(card:, now: Time.current, config: {}, atraso: 0, criar: true)
     @card = card
     @now = now
-    @settings = settings
-    @schedule_config = schedule_config
+    @criar = criar
+    @settings = config[:settings]
+    @schedule_config = config[:schedule_config]
     @atraso = atraso
   end
 
@@ -55,7 +58,7 @@ class Crm::FollowUps::ServiceReminderScheduler
       Crm::Card.where(id: @card.id).lock.pluck(:id)
       wanted = desired
       cancel_obsolete!(wanted.map(&:key))
-      wanted.count { |reminder| create_unless_known!(reminder) }
+      @criar ? wanted.count { |reminder| create_unless_known!(reminder) } : 0
     end
   end
 

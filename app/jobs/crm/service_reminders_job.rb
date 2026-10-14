@@ -4,7 +4,7 @@
 #
 # Ligar o interruptor num funil cheio de cards parados não pode virar uma rajada de mensagens de IA (custo e incômodo
 # ao cliente): cada rodada cria no máximo MAX_NOVOS_POR_FUNIL lembretes por funil, espaçados de STAGGER; o resto
-# fica para as rodadas seguintes.
+# fica para as rodadas seguintes. Passado o teto, os cards ainda têm o que deixou de valer cancelado.
 class Crm::ServiceRemindersJob < ApplicationJob
   queue_as :scheduled_jobs
 
@@ -23,13 +23,12 @@ class Crm::ServiceRemindersJob < ApplicationJob
 
   def schedule_pipeline(pipeline, now)
     settings = Crm::Ai::Config.service_reminders_settings(pipeline)
-    opcoes = { now: now, settings: settings, schedule_config: Crm::Ai::Config.auto_followup_settings(pipeline) }
+    opcoes = { now: now, config: { settings: settings, schedule_config: Crm::Ai::Config.auto_followup_settings(pipeline) } }
     novos = 0
     cards_for(pipeline, now, settings).find_each do |card|
-      break if novos >= MAX_NOVOS_POR_FUNIL
-
       card.association(:pipeline).target = pipeline
-      novos += schedule(card, opcoes.merge(atraso: novos * Crm::FollowUps::ServiceReminderScheduler::STAGGER))
+      novos += schedule(card, opcoes.merge(atraso: novos * Crm::FollowUps::ServiceReminderScheduler::STAGGER,
+                                           criar: novos < MAX_NOVOS_POR_FUNIL))
     end
   end
 

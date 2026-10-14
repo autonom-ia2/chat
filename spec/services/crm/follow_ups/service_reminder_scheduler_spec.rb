@@ -99,6 +99,14 @@ RSpec.describe Crm::FollowUps::ServiceReminderScheduler do
     expect(described_class.wanted?(antes, now: segunda)).to be(false)
   end
 
+  it 'quando o "depois" chega e o "no dia" ainda espera o horário, só o "depois" vale' do
+    card = setup_card(template: 'COBRANCA', category: 'novo', expected_close_at: Date.new(2026, 10, 16))
+    schedule(card, at: Time.zone.parse('2026-10-14 15:00 UTC'))
+    no_dia = reminders(card).find { |r| r.metadata['kind'] == 'payment_due' }
+
+    expect(described_class.wanted?(no_dia, now: Time.zone.parse('2026-10-19 12:00 UTC'))).to be(false)
+  end
+
   it 'o job passa pelos funis de Atender e cria os lembretes' do
     card = setup_card
     card.update_columns(entered_stage_at: 2.days.ago)
@@ -118,6 +126,11 @@ RSpec.describe Crm::FollowUps::ServiceReminderScheduler do
     criados = Crm::FollowUp.where(card: cards).where("metadata ->> 'source' = ?", described_class::SOURCE).order(:due_at)
     expect(criados.size).to eq(2)
     expect(criados.last.due_at - criados.first.due_at).to be >= described_class::STAGGER
+
+    # Com o teto, a rodada seguinte ainda cancela o que deixou de valer.
+    criados.first.card.update_columns(status: Crm::Card.statuses[:resolved], closed_at: Time.current)
+    with_modified_env(CRM_KANBAN_ENABLED: 'true', CRM_AI_ENABLED: 'true') { Crm::ServiceRemindersJob.perform_now }
+    expect(criados.first.reload).to be_canceled
   end
 
   it 'não avisa o andamento enquanto espera o cliente (a pausa)' do
