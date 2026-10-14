@@ -3,7 +3,8 @@
 # - card_owner: quem cuida do cliente agora; sem dono, o responsável ou quem marcou;
 # - creator, users, team: quem marcou, as pessoas escolhidas, quem está no time agora.
 # Acesso por funil (#1148, parte C): quem não vê o card nunca recebe o título dele. Ninguém sobrando (time vazio,
-# pessoas que saíram da conta), o aviso vai para quem marcou, para não se perder em silêncio.
+# pessoas que saíram da conta), o aviso vai para quem marcou — se essa pessoa também não vê mais o card, ninguém
+# recebe (o lembrete continua atrasado no card, à vista de quem cuida dele).
 class Crm::FollowUps::RecipientResolver
   def initialize(follow_up)
     @follow_up = follow_up

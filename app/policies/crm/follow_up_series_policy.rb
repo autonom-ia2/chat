@@ -32,9 +32,12 @@ class Crm::FollowUpSeriesPolicy < ApplicationPolicy
 
   private
 
+  # Sem card, só quem marcou e o administrador mexem na série (quem recebe só vê).
   def card_funnel_member?
     card = record.card
-    card.nil? || Crm::Access::CardGuard.new(user: user, account: account, account_user: account_user).edit_allowed?(card)
+    return account_user&.administrator? || record.created_by_id == user&.id if card.nil?
+
+    Crm::Access::CardGuard.new(user: user, account: account, account_user: account_user).edit_allowed?(card)
   end
 end
 

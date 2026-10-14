@@ -34,7 +34,7 @@ class Crm::FollowUps::Creator
     resolved = Crm::FollowUps::ParamsResolver.new(
       account: @account, user: @user, card: @card, conversation: @conversation, attributes: @attributes
     ).perform
-    recipients = Crm::FollowUps::RecipientParams.new(account: @account, card: @card, attributes: @attributes).perform
+    recipients = Crm::FollowUps::RecipientParams.new(account: @account, card: @card, attributes: @attributes, user: @user).perform
     resolved.merge(recipients).merge(standalone_links).merge(card: @card, created_by: @user)
   end
 
@@ -62,7 +62,12 @@ class Crm::FollowUps::Creator
 
     series.transaction do
       series.save!
-      Crm::FollowUps::SeriesMaterializer.new(series).perform || raise(ActiveRecord::RecordInvalid, series)
+      first = Crm::FollowUps::SeriesMaterializer.new(series).perform
+      if first.nil?
+        series.errors.add(:ends_on, 'leaves no date to remind')
+        raise ActiveRecord::RecordInvalid, series
+      end
+      first
     end
   end
 

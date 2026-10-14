@@ -177,13 +177,8 @@ class Api::V1::Accounts::Crm::FollowUpsController < Api::V1::Accounts::Crm::Base
   end
 
   def activity_payload(follow_up)
-    {
-      follow_up_id: follow_up.id,
-      title: follow_up.title,
-      status: follow_up.status,
-      automation_mode: follow_up.automation_mode,
-      due_at: follow_up.due_at&.iso8601
-    }
+    { follow_up_id: follow_up.id, title: follow_up.title, status: follow_up.status,
+      automation_mode: follow_up.automation_mode, due_at: follow_up.due_at&.iso8601 }
   end
 
   def params_for_create
@@ -194,10 +189,14 @@ class Api::V1::Accounts::Crm::FollowUpsController < Api::V1::Accounts::Crm::Base
   # "Mudar só esta vez" (#1460) também troca quem recebe (#1462) desta vez.
   def params_for_update
     attributes = follow_up_params.except(:card_id, :conversation_id, :contact_id, :company_id, :recurrence)
-    recipients = ::Crm::FollowUps::RecipientParams.new(account: Current.account, card: @follow_up.card, attributes: attributes).perform
-    attributes = attributes.except(*RECIPIENT_KEYS).merge(recipients)
+    attributes = attributes.except(*RECIPIENT_KEYS).merge(recipient_changes(attributes))
     attributes[:metadata] &&= ::Crm::FollowUps::MetadataSanitizer.without_server_keys(attributes[:metadata])
     attributes
+  end
+
+  def recipient_changes(attributes)
+    ::Crm::FollowUps::RecipientParams.new(account: Current.account, card: @follow_up.card, attributes: attributes,
+                                          user: Current.user, account_user: Current.account_user).perform
   end
 
   def follow_up_params

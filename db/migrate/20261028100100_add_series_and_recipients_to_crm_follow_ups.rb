@@ -13,7 +13,11 @@ class AddSeriesAndRecipientsToCrmFollowUps < ActiveRecord::Migration[7.2]
   INDICE_VEZ = 'idx_crm_followups_series_occurrence_uniq'.freeze
 
   def up
+    # DROP NOT NULL pede trava exclusiva rápida: com uma transação longa na frente, desiste em 5 s em vez de enfileirar
+    # leitura e escrita atrás dela (rodar de novo depois).
+    execute "SET lock_timeout = '5s'"
     change_column_null :crm_follow_ups, :card_id, true
+    execute 'RESET lock_timeout'
     add_column :crm_follow_ups, :series_id, :bigint unless column_exists?(:crm_follow_ups, :series_id)
     add_column :crm_follow_ups, :occurrence_at, :datetime unless column_exists?(:crm_follow_ups, :occurrence_at)
     add_column :crm_follow_ups, :recipient_mode, :integer, null: false, default: 0 unless column_exists?(:crm_follow_ups, :recipient_mode)
@@ -51,14 +55,24 @@ class AddSeriesAndRecipientsToCrmFollowUps < ActiveRecord::Migration[7.2]
                                                              where: 'series_id IS NOT NULL', algorithm: :concurrently, if_not_exists: true
     add_index :crm_follow_ups, :recipient_team_id, algorithm: :concurrently, if_not_exists: true
     add_index :crm_follow_ups, :company_id, algorithm: :concurrently, if_not_exists: true
-    add_foreign_key :crm_follow_ups, :crm_follow_up_series, column: :series_id, on_delete: :nullify, validate: false
-    add_foreign_key :crm_follow_ups, :teams, column: :recipient_team_id, on_delete: :nullify, validate: false
-    add_foreign_key :crm_follow_ups, :companies, on_delete: :cascade, validate: false
-    add_check_constraint :crm_follow_ups, 'card_id IS NOT NULL OR contact_id IS NOT NULL OR company_id IS NOT NULL OR created_by_id IS NOT NULL',
-                         name: TRAVA, validate: false
+    add_foreign_keys
+    unless check_constraint_exists?(:crm_follow_ups, name: TRAVA)
+      add_check_constraint :crm_follow_ups, 'card_id IS NOT NULL OR contact_id IS NOT NULL OR company_id IS NOT NULL OR created_by_id IS NOT NULL',
+                           name: TRAVA, validate: false
+    end
     validate_foreign_key :crm_follow_ups, :crm_follow_up_series, column: :series_id
     validate_foreign_key :crm_follow_ups, :teams, column: :recipient_team_id
     validate_foreign_key :crm_follow_ups, :companies
     validate_check_constraint :crm_follow_ups, name: TRAVA
+  end
+
+  # Rodar de novo depois de uma falha no meio não quebra com "já existe".
+  def add_foreign_keys
+    { crm_follow_up_series: [:series_id, :nullify], teams: [:recipient_team_id, :nullify], companies: [:company_id, :cascade] }
+      .each do |tabela, (coluna, ao_apagar)|
+        next if foreign_key_exists?(:crm_follow_ups, tabela, column: coluna)
+
+        add_foreign_key :crm_follow_ups, tabela, column: coluna, on_delete: ao_apagar, validate: false
+      end
   end
 end

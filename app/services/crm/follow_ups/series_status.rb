@@ -11,29 +11,32 @@ class Crm::FollowUps::SeriesStatus
   end
 
   def pause
-    return @series unless @series.active?
+    changed = @series.with_lock { @series.active? && @series.update!(status: :paused, paused_at: @now) }
+    return @series unless changed
 
-    @series.update!(status: :paused, paused_at: @now)
     after_change('follow_up_series_paused')
   end
 
   def resume
-    return @series unless @series.paused?
+    changed = @series.with_lock { @series.paused? && @series.update!(status: :active, paused_at: nil) }
+    return @series unless changed
 
-    @series.update!(status: :active, paused_at: nil)
     Crm::FollowUps::SeriesMaterializer.new(@series, now: @now).perform
     after_change('follow_up_series_resumed')
   end
 
   def finish
-    return @series if @series.ended?
+    finished = @series.with_lock do
+      next false if @series.ended?
 
-    @series.transaction do
       @series.update!(status: :ended, ended_at: @now)
       @series.follow_ups.pending.find_each do |follow_up|
         follow_up.update!(status: :canceled, canceled_at: @now, metadata: follow_up.metadata.merge('canceled_reason' => 'series_ended'))
       end
+      true
     end
+    return @series unless finished
+
     after_change('follow_up_series_ended')
   end
 

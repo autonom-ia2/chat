@@ -23,7 +23,11 @@ class Crm::FollowUpPolicy < ApplicationPolicy
     update?
   end
 
+  # Sem card (#1461), quem recebe também conclui (o popup oferece "Concluir"); mudar, adiar, cancelar e apagar ficam com
+  # quem marcou e o administrador.
   def complete?
+    return show? if record.card_id.nil?
+
     update?
   end
 
@@ -61,7 +65,13 @@ class Crm::FollowUpPolicy < ApplicationPolicy
 
   def card_funnel_member?
     card = record.card
-    card.nil? || Crm::Access::CardGuard.new(user: user, account: account, account_user: account_user).edit_allowed?(card)
+    return standalone_owner? if card.nil?
+
+    Crm::Access::CardGuard.new(user: user, account: account, account_user: account_user).edit_allowed?(card)
+  end
+
+  def standalone_owner?
+    account_user&.administrator? || record.created_by_id == user&.id
   end
 end
 

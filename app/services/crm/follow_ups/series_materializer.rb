@@ -2,7 +2,8 @@
 # enquanto a vez marcada não passou (o DueProcessor a marca como atrasada e avisa) nem foi feita, nada novo nasce.
 # Vezes perdidas (job parado, série pausada) não voltam: a próxima é a primeira depois de agora. A primeira vez da
 # série vale mesmo no passado, porque foi a pessoa que escolheu o dia.
-# Sem próxima vez (fim da série), a série é encerrada.
+# Sem próxima vez (fim da série), a série é encerrada. A série fica travada (with_lock) enquanto isso, para pausar ou
+# encerrar ao mesmo tempo não criar vez numa série parada.
 class Crm::FollowUps::SeriesMaterializer
   def initialize(series, now: Time.current)
     @series = series
@@ -10,21 +11,25 @@ class Crm::FollowUps::SeriesMaterializer
   end
 
   def perform
+    follow_up = @series.with_lock { materialize }
+    return if follow_up.nil?
+
+    Crm::FollowUps::CardNextDueUpdater.update(@series.card)
+    Crm::Cards::Broadcaster.broadcast(@series.card, Events::Types::CRM_CARD_UPDATED)
+    follow_up
+  end
+
+  private
+
+  def materialize
     return unless @series.active?
     return if @series.follow_ups.pending.exists?
 
     occurrence = @series.schedule.next_after(start_from)
     return finish_series if occurrence.nil?
 
-    follow_up = create_follow_up(occurrence)
-    Crm::FollowUps::CardNextDueUpdater.update(@series.card)
-    Crm::Cards::Broadcaster.broadcast(@series.card, Events::Types::CRM_CARD_UPDATED)
-    follow_up
-  rescue ActiveRecord::RecordNotUnique
-    nil
+    create_follow_up(occurrence)
   end
-
-  private
 
   def start_from
     last = @series.follow_ups.maximum(:occurrence_at)
@@ -33,11 +38,16 @@ class Crm::FollowUps::SeriesMaterializer
     [last, @now].max
   end
 
+  # Savepoint: a mesma vez criada por outro processo (índice único) não aborta a transação de quem chamou.
   def create_follow_up(occurrence)
-    @series.follow_ups.create!(
-      links.merge(@series.slice(:title, :description, :timezone, :recipient_mode, :recipient_user_ids, :recipient_team_id))
-           .merge(follow_up_type: :task, automation_mode: :reminder_only, due_at: occurrence, occurrence_at: occurrence)
-    )
+    @series.transaction(requires_new: true) do
+      @series.follow_ups.create!(
+        links.merge(@series.slice(:title, :description, :timezone, :recipient_mode, :recipient_user_ids, :recipient_team_id))
+             .merge(follow_up_type: :task, automation_mode: :reminder_only, due_at: occurrence, occurrence_at: occurrence)
+      )
+    end
+  rescue ActiveRecord::RecordNotUnique
+    nil
   end
 
   def links
@@ -49,10 +59,12 @@ class Crm::FollowUps::SeriesMaterializer
     }
   end
 
+  # O responsável segue o lembrete de uma vez só (ParamsResolver): quem cuida do card, quem atende a conversa,
+  # quem marcou. "Só eu" fica com quem marcou.
   def assignee_id
-    return @series.card&.owner_id || @series.created_by_id if @series.recipients_card_owner?
+    return @series.created_by_id if @series.recipients_creator?
 
-    @series.created_by_id
+    @series.card&.owner_id || @series.conversation&.assignee_id || @series.created_by_id
   end
 
   def finish_series

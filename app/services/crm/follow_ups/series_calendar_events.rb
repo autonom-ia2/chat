@@ -23,7 +23,9 @@ class Crm::FollowUps::SeriesCalendarEvents
   def events
     return [] if @from.blank? || @to.blank?
 
-    series_in_view.flat_map { |series| events_for(series) }
+    series = series_in_view
+    @last_occurrences = Crm::FollowUp.where(series_id: series.map(&:id)).group(:series_id).maximum(:occurrence_at)
+    series.flat_map { |item| events_for(item) }
   end
 
   private
@@ -32,11 +34,12 @@ class Crm::FollowUps::SeriesCalendarEvents
     scope = @scope.where(status: %i[active paused]).includes(:card)
     return scope.to_a if @pipeline_id.blank?
 
-    scope.left_joins(:card).where(crm_cards: { pipeline_id: @pipeline_id }).or(scope.where(card_id: nil)).to_a
+    joined = scope.left_joins(:card)
+    joined.where(crm_cards: { pipeline_id: @pipeline_id }).or(joined.where(card_id: nil)).to_a
   end
 
   def events_for(series)
-    last = series.follow_ups.maximum(:occurrence_at)
+    last = @last_occurrences[series.id]
     series.schedule.between(@from, @to).reject { |occurrence| last && occurrence <= last }.map do |occurrence|
       event(series, occurrence)
     end

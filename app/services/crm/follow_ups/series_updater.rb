@@ -12,7 +12,8 @@ class Crm::FollowUps::SeriesUpdater
   def perform
     @series.transaction do
       @series.update!(changes_for_series)
-      @series.follow_ups.pending.destroy_all
+      # Só a vez futura é refeita; a que já venceu e espera o DueProcessor ainda avisa.
+      @series.follow_ups.pending.where('due_at > ?', Time.current).destroy_all
       Crm::FollowUps::SeriesMaterializer.new(@series).perform
     end
     after_change
@@ -25,15 +26,20 @@ class Crm::FollowUps::SeriesUpdater
     changes = @attributes.slice(*FIELDS)
     changes[:starts_at] = @attributes[:due_at] if @attributes[:due_at].present?
     changes.merge(recurrence_changes).merge(
-      Crm::FollowUps::RecipientParams.new(account: @series.account, card: @series.card, attributes: @attributes).perform
+      Crm::FollowUps::RecipientParams.new(account: @series.account, card: @series.card, attributes: @attributes, user: @user).perform
     )
   end
 
   def recurrence_changes
-    raw = @attributes[:recurrence].to_h.with_indifferent_access
-    return {} if raw[:frequency].blank?
+    raw = @attributes[:recurrence].to_h.with_indifferent_access.compact_blank
+    return {} if raw.empty?
 
-    Crm::FollowUps::Creator.recurrence_attributes(raw)
+    # O que não veio continua como está (mudar só a frequência não apaga o fim escolhido).
+    Crm::FollowUps::Creator.recurrence_attributes(current_rule.merge(raw))
+  end
+
+  def current_rule
+    @series.slice(:frequency, :weekdays, :weekdays_only, :ends_mode, :ends_on, :occurrences_count).with_indifferent_access
   end
 
   def after_change

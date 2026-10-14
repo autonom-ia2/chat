@@ -11,12 +11,14 @@ class Crm::FollowUps::SeriesSchedule
     @series = series
   end
 
-  # As vezes da série, em ordem, até o fim escolhido (ou até MAX_STEPS).
-  def each_occurrence
-    return enum_for(:each_occurrence) unless block_given?
+  # As vezes da série, em ordem, até o fim escolhido (ou até MAX_STEPS). Com `from`, começa perto dessa data (série
+  # sem número de vezes), para uma série antiga não ser recontada desde o começo.
+  def each_occurrence(from: nil)
+    return enum_for(:each_occurrence, from: from) unless block_given?
 
     count = 0
-    MAX_STEPS.times do |step|
+    first = first_step(from)
+    (first...(first + MAX_STEPS)).each do |step|
       candidate = anchor.advance(STEP.fetch(@series.frequency) => step)
       break if after_end_date?(candidate)
       next unless included?(candidate)
@@ -30,7 +32,7 @@ class Crm::FollowUps::SeriesSchedule
 
   # As próximas vezes depois de `time` (exclusivo).
   def occurrences_after(time, limit:)
-    each_occurrence.lazy.select { |occurrence| occurrence > time }.first(limit)
+    each_occurrence(from: time).lazy.select { |occurrence| occurrence > time }.first(limit)
   end
 
   def next_after(time)
@@ -39,7 +41,7 @@ class Crm::FollowUps::SeriesSchedule
 
   # As vezes dentro de uma janela (calendário).
   def between(from, to)
-    each_occurrence.lazy.reject { |occurrence| occurrence < from }.take_while { |occurrence| occurrence <= to }.to_a
+    each_occurrence(from: from).lazy.reject { |occurrence| occurrence < from }.take_while { |occurrence| occurrence <= to }.to_a
   end
 
   private
@@ -47,6 +49,23 @@ class Crm::FollowUps::SeriesSchedule
   def anchor
     @anchor ||= @series.starts_at.in_time_zone(@series.timezone)
   end
+
+  # Um passo antes da data pedida (a conta de "vezes" precisa começar do começo).
+  def first_step(from)
+    return 0 if from.nil? || @series.ends_after_count?
+
+    [steps_until(from.in_time_zone(@series.timezone)) - 1, 0].max
+  end
+
+  def steps_until(local)
+    case @series.frequency
+    when 'monthly' then month_index(local) - month_index(anchor)
+    when 'yearly' then local.year - anchor.year
+    else (local.to_date - anchor.to_date).to_i
+    end
+  end
+
+  def month_index(time) = (time.year * 12) + time.month
 
   def included?(candidate)
     return @series.weekdays.include?(candidate.wday) if @series.weekly?

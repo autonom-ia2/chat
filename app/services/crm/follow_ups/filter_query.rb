@@ -1,5 +1,6 @@
 class Crm::FollowUps::FilterQuery
-  DEFAULT_INCLUDES = [:card, :series, { conversation: :conversation_participants }, :contact, :inbox, :assignee, :created_by].freeze
+  DEFAULT_INCLUDES = [:card, :series, :company, { conversation: :conversation_participants }, :contact, :inbox, :assignee,
+                      :created_by].freeze
 
   def initialize(scope:, params:, includes: DEFAULT_INCLUDES)
     @scope = scope

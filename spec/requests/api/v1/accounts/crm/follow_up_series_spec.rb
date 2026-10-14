@@ -57,6 +57,19 @@ RSpec.describe 'CRM reminders that repeat, without card and with chosen recipien
       expect(response).to have_http_status(:unprocessable_entity)
     end
 
+    it 'lets who receives complete it, but only the creator changes or cancels it' do
+      create_reminder(agent, title: 'Conferir o caixa', due_at: 1.day.from_now.iso8601,
+                             recipient_mode: 'users', recipient_user_ids: [other_agent.id])
+      id = response.parsed_body['payload']['id']
+
+      post "#{base_url}/follow_ups/#{id}/cancel", headers: auth_headers(other_agent), as: :json
+      expect(response).to have_http_status(:unauthorized)
+
+      post "#{base_url}/follow_ups/#{id}/complete", headers: auth_headers(other_agent), as: :json
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body['payload']['status']).to eq('done')
+    end
+
     it 'shows the reminder to the people who receive it' do
       create_reminder(agent, title: 'Conferir o caixa', due_at: 1.day.from_now.iso8601,
                              recipient_mode: 'users', recipient_user_ids: [other_agent.id])
@@ -175,6 +188,32 @@ RSpec.describe 'CRM reminders that repeat, without card and with chosen recipien
       expect(pending.count).to eq(1)
       expect(pending.first.title).to eq('Ligar de manhã')
       expect(pending.first.due_at.to_i).to eq(next_monday.to_i)
+    end
+
+    it 'keeps the chosen end when only the frequency changes, and only the creator changes it' do
+      create_reminder(agent, title: 'Ligar', due_at: 1.hour.from_now.iso8601, recipient_mode: 'users', recipient_user_ids: [other_agent.id],
+                             recurrence: { frequency: 'daily', ends_mode: 'after_count', occurrences_count: 4 })
+      series_url = "#{base_url}/follow_up_series/#{Crm::FollowUp.last.series_id}"
+
+      post "#{series_url}/pause", headers: auth_headers(other_agent), as: :json
+      expect(response).to have_http_status(:unauthorized)
+
+      patch series_url, params: { follow_up_series: { recurrence: { frequency: 'weekly', weekdays: [1] } } },
+                        headers: auth_headers(agent), as: :json
+      expect(response.parsed_body['payload']).to include('frequency' => 'weekly', 'ends_mode' => 'after_count', 'occurrences_count' => 4)
+    end
+
+    it 'filters the calendar by pipeline and keeps reminders without card' do
+      pipeline, = pipeline_and_stage
+      create_reminder(agent, title: 'Conferir o caixa', due_at: 1.hour.from_now.iso8601, recurrence: { frequency: 'daily' })
+      create_reminder(agent, card_id: card.id, title: 'Ligar', due_at: 1.hour.from_now.iso8601, recurrence: { frequency: 'daily' })
+
+      get "#{base_url}/calendar/events", params: { from: Time.current.iso8601, to: 3.days.from_now.iso8601, pipeline_id: pipeline.id },
+                                         headers: auth_headers(agent)
+
+      expect(response).to have_http_status(:ok)
+      titles = response.parsed_body['payload'].select { |event| event['recurring'] }.map { |event| event['title'] }.uniq
+      expect(titles).to contain_exactly('Conferir o caixa', 'Ligar')
     end
 
     it 'does not let another agent see a series without card' do
