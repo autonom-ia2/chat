@@ -5491,7 +5491,10 @@
       "O_QUE": "O que aparece",
       "FEITOS_TITULO": "Já feitos",
       "FEITOS": "Mostrar o que já foi feito",
-      "PRONTO": "Pronto"
+      "PRONTO": "Pronto",
+      "CONFIG": "Configurações",
+      "CONFIG_AGENDAMENTO": "Agendamento",
+      "CONFIG_CAIXAS": "Caixas do CRM"
     },
     "TIPO": {
       "LEMBRETE": "Lembrete",
@@ -5555,7 +5558,10 @@
         "TRES_DIAS": "Em 3 dias",
         "SEMANA": "Semana que vem"
       },
-      "NAO_PRECISA": "Não precisa"
+      "NAO_PRECISA": "Não precisa",
+      "ANTIGOS": "E mais {n} antigo | E mais {n} antigos",
+      "VER_ANTIGOS": "Ver",
+      "ESCONDER_ANTIGOS": "Esconder"
     },
     "SEMANA": {
       "VER_DIA": "Ver {dia}",
@@ -5583,8 +5589,10 @@
     "ERRO": "Não deu para carregar o calendário.",
     "TENTAR": "Tentar de novo",
     "ALERTA": {
-      "ADIADOS": "Passamos {n} para amanhã. | Passamos {n} para amanhã.",
-      "PROXIMO_MARCADO": "Próximo passo marcado."
+      "ADIADOS": "{n} lembrete passou para amanhã. | {n} lembretes passaram para amanhã.",
+      "PROXIMO_MARCADO": "Próximo passo marcado.",
+      "ADIADOS_PARCIAL": "{ok} de {total} passaram para amanhã. Os outros ficaram como estavam.",
+      "NAO_CONCLUIU": "Não deu para marcar como feito. Tente de novo."
     }
   }
 }

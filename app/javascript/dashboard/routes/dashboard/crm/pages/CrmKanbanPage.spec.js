@@ -114,6 +114,7 @@ const setPermissions = overrides => {
 const setGetters = ({
   bookingV2 = false,
   calendarioOuro = false,
+  inboxes = [],
   role = 'administrator',
   keys,
 } = {}) => {
@@ -146,7 +147,7 @@ const setGetters = ({
       accounts: [{ id: 1, permissions: keys || [] }],
     }),
     getCurrentAccountId: ref(1),
-    'inboxes/getInboxes': ref([]),
+    'inboxes/getInboxes': ref(inboxes),
     'agents/getAgents': ref([]),
     'teams/getTeams': ref([]),
     'accounts/isRTL': ref(false),
@@ -300,6 +301,101 @@ describe('CrmKanbanPage', () => {
         ([tipo]) => tipo === 'crmKanban/fetchCalendarEvents'
       );
       expect(busca.at(-1)[1].pipeline_id).toBeUndefined();
+    });
+
+    const ouro = () => wrapper.findComponent({ name: 'CalendarioOuro' });
+
+    it('Mensagem marcada só com WhatsApp que não pede para reconectar', async () => {
+      wrapper = await mountPage({
+        calendarOnly: true,
+        account: {
+          calendarioOuro: true,
+          inboxes: [
+            {
+              channel_type: 'Channel::Whatsapp',
+              reauthorization_required: true,
+            },
+          ],
+        },
+      });
+      expect(ouro().props('temWhatsapp')).toBe(false);
+      wrapper.unmount();
+
+      wrapper = await mountPage({
+        calendarOnly: true,
+        account: {
+          calendarioOuro: true,
+          inboxes: [
+            {
+              channel_type: 'Channel::Whatsapp',
+              reauthorization_required: false,
+            },
+          ],
+        },
+      });
+      expect(ouro().props('temWhatsapp')).toBe(true);
+    });
+
+    it('concluir que falha devolve a linha e avisa', async () => {
+      wrapper = await mountPage({
+        calendarOnly: true,
+        account: { calendarioOuro: true },
+      });
+      dispatch.mockImplementation(async tipo => {
+        if (tipo === 'crmKanban/completeFollowUp') throw new Error('falhou');
+        return [];
+      });
+      const falhou = vi.fn();
+      ouro().vm.$emit('concluir', { evento: { id: 'follow_up_5' }, falhou });
+      await flushPromises();
+
+      expect(dispatch).toHaveBeenCalledWith('crmKanban/completeFollowUp', '5');
+      expect(falhou).toHaveBeenCalled();
+      expect(useAlert).toHaveBeenCalledWith(
+        'CRM_CALENDARIO.ALERTA.NAO_CONCLUIU'
+      );
+    });
+
+    it('"Passar tudo" diz quantos passaram quando parte falha', async () => {
+      wrapper = await mountPage({
+        calendarOnly: true,
+        account: { calendarioOuro: true },
+      });
+      dispatch.mockImplementation(async (tipo, carga) => {
+        if (tipo === 'crmKanban/rescheduleFollowUp' && carga.id === '2')
+          throw new Error('falhou');
+        return [];
+      });
+      ouro().vm.$emit('adiarAtrasados', {
+        eventos: [
+          { id: 'follow_up_1' },
+          { id: 'follow_up_2' },
+          { id: 'follow_up_3' },
+        ],
+        quando: '2026-10-15T12:00:00.000Z',
+      });
+      await flushPromises();
+
+      expect(useAlert).toHaveBeenCalledWith(
+        'CRM_CALENDARIO.ALERTA.ADIADOS_PARCIAL:{"ok":2,"total":3}'
+      );
+    });
+
+    it('as configurações do topo antigo continuam no Mostrar', async () => {
+      wrapper = await mountPage({
+        calendarOnly: true,
+        account: { calendarioOuro: true },
+      });
+      expect(ouro().props('podeCaixas')).toBe(true);
+      expect(ouro().props('podeAgendamento')).toBe(true);
+
+      ouro().vm.$emit('abrirAgendamento');
+      await flushPromises();
+      expect(
+        wrapper
+          .findComponent({ name: 'CrmBookingProfilesDrawer' })
+          .props('show')
+      ).toBe(true);
     });
 
     it('sem a flag, o calendário continua o de sempre', async () => {

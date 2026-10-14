@@ -40,7 +40,7 @@ const saudacao = computed(() => {
 <template>
   <header
     data-calendario-heroi
-    class="relative shrink-0 overflow-hidden bg-[#0D2344] px-4 py-6 text-white sm:px-8 sm:py-8"
+    class="relative shrink-0 overflow-hidden bg-n-heroi px-4 py-6 text-white sm:px-8 sm:py-8"
   >
     <span
       aria-hidden="true"
@@ -89,7 +89,7 @@ const saudacao = computed(() => {
       <button
         type="button"
         data-calendario-novo
-        class="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-xl bg-white px-5 text-base font-semibold text-[#0D2344] shadow-lg transition hover:bg-n-blue-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+        class="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-xl bg-white px-5 text-base font-semibold text-n-heroi shadow-lg transition hover:bg-n-blue-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
         @click="$emit('novo')"
       >
         <span class="i-lucide-plus size-5" aria-hidden="true" />

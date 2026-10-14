@@ -33,7 +33,7 @@ const hora = computed(() =>
     class="flex w-full min-w-0 gap-1.5 rounded-lg bg-n-alpha-1 text-start transition hover:bg-n-alpha-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
     :class="[
       compacto
-        ? 'items-center px-1.5 py-1 text-xs'
+        ? 'min-h-11 items-center px-1.5 text-xs'
         : 'min-h-11 flex-col px-2 py-1.5 text-sm',
       item.feito ? 'opacity-50 line-through' : '',
     ]"

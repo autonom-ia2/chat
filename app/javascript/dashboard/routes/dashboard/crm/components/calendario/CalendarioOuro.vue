@@ -6,8 +6,7 @@ import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useStore } from 'dashboard/composables/store';
 import { useAccount } from 'dashboard/composables/useAccount';
-import { accountTimeZone } from 'dashboard/components-next/CampaignJourney/scheduleTime';
-import { rotuloDoFuso } from 'dashboard/helper/fusoDaConta';
+import { fusoDaConta, rotuloDoFuso } from 'dashboard/helper/fusoDaConta';
 import Button from 'dashboard/components-next/button/Button.vue';
 import CalendarioHeroi from './CalendarioHeroi.vue';
 import CalendarioMeuDia from './CalendarioMeuDia.vue';
@@ -38,6 +37,9 @@ const props = defineProps({
   ehAdmin: { type: Boolean, default: false },
   temWhatsapp: { type: Boolean, default: false },
   reunioesLigadas: { type: Boolean, default: false },
+  // Saídas para o que o topo antigo do calendário tinha (Configurar).
+  podeAgendamento: { type: Boolean, default: false },
+  podeCaixas: { type: Boolean, default: false },
 });
 
 const emit = defineEmits([
@@ -50,18 +52,20 @@ const emit = defineEmits([
   'adiarAtrasados',
   'retry',
   'update:funil',
+  'abrirAgendamento',
+  'abrirCaixas',
 ]);
 
 const { t, locale } = useI18n();
 const store = useStore();
 const { currentAccount } = useAccount();
-const fuso = computed(() => accountTimeZone(currentAccount.value));
+const fuso = computed(() => fusoDaConta(currentAccount.value));
 const idioma = computed(() => locale.value.replace('_', '-'));
 // Decisão 4 do #1568: administrador vê toda a equipe; agente, só os seus.
 const cal = useCalendarioOuro({
   props,
   fuso,
-  quemPadrao: props.ehAdmin ? 'todos' : 'meus',
+  ehAdmin: computed(() => props.ehAdmin),
 });
 const { hoje, visao, dia, janela, itens, marcas } = cal;
 
@@ -132,16 +136,24 @@ watch(
     concluindo.value = [];
   }
 );
+const esquecerFeito = item => {
+  recemFeitos.value = recemFeitos.value.filter(f => f.id !== item.id);
+};
+// Marca na hora; se o servidor recusar, a página chama `falhou` e a linha
+// volta como estava (sem "Feito", com o círculo de novo).
 const concluir = item => {
   concluindo.value = [...concluindo.value, item.id];
   recemFeitos.value = [
     item,
     ...recemFeitos.value.filter(f => f.id !== item.id),
   ].slice(0, 2);
-  emit('concluir', item.evento);
-};
-const esquecerFeito = item => {
-  recemFeitos.value = recemFeitos.value.filter(f => f.id !== item.id);
+  emit('concluir', {
+    evento: item.evento,
+    falhou: () => {
+      concluindo.value = concluindo.value.filter(id => id !== item.id);
+      esquecerFeito(item);
+    },
+  });
 };
 const DIAS_DO_ATALHO = { AMANHA: 1, TRES_DIAS: 3 };
 const diaDoAtalho = atalho =>
@@ -324,7 +336,11 @@ const escolherDia = chave => {
         :tipos-disponiveis="cal.tiposDisponiveis.value"
         :funil="funil"
         :funis="funisDoMostrar"
+        :pode-agendamento="podeAgendamento"
+        :pode-caixas="podeCaixas"
         @update:funil="emit('update:funil', $event)"
+        @abrir-agendamento="emit('abrirAgendamento')"
+        @abrir-caixas="emit('abrirCaixas')"
         @fechar="mostrarAberto = false"
       />
 
@@ -365,7 +381,7 @@ const escolherDia = chave => {
       <!-- Meu dia -->
       <div
         v-else-if="visao === 'dia'"
-        class="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]"
+        class="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]"
       >
         <div class="flex min-w-0 flex-col gap-5">
           <CalendarioFaixaSemana
@@ -381,6 +397,7 @@ const escolherDia = chave => {
             :hoje="hoje"
             :dia="dia"
             :agora-minutos="cal.agoraMinutos.value"
+            :agora="cal.agora.value"
             :fuso="fuso"
             :idioma="idioma"
             :nome-de="nomeDe"
@@ -435,10 +452,6 @@ const escolherDia = chave => {
               </li>
             </ul>
           </div>
-          <p class="mb-0 flex items-center gap-2 px-1 text-xs text-n-slate-10">
-            <span class="i-lucide-globe size-3.5" aria-hidden="true" />
-            {{ t('CRM_CALENDARIO.FUSO', { fuso: rotuloDoFuso(fuso) }) }}
-          </p>
         </aside>
       </div>
 
@@ -464,6 +477,13 @@ const escolherDia = chave => {
         @abrir="abrir"
       />
     </div>
+    <p
+      data-fuso
+      class="mx-auto mb-0 flex w-full max-w-[90rem] items-center gap-2 px-4 pb-6 text-xs text-n-slate-10 sm:px-8"
+    >
+      <span class="i-lucide-globe size-3.5" aria-hidden="true" />
+      {{ t('CRM_CALENDARIO.FUSO', { fuso: rotuloDoFuso(fuso) }) }}
+    </p>
     <CalendarioNovo
       ref="escolha"
       :opcoes="opcoesDoNovo"

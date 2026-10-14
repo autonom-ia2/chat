@@ -76,7 +76,7 @@ const montar = (props = {}) =>
 
 describe('CalendarioOuro', () => {
   beforeEach(() => {
-    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.useFakeTimers({ toFake: ['Date', 'setInterval', 'clearInterval'] });
     vi.setSystemTime(new Date('2026-10-14T18:00:00Z'));
     abriuEscolha.mockClear();
   });
@@ -95,15 +95,27 @@ describe('CalendarioOuro', () => {
       'CRM_CALENDARIO.ITEM.DIA_TODO'
     );
     const [janela] = wrapper.emitted('rangeChange').at(-1);
-    // 30 dias para trás (o que atrasou) até o fim do mês pequeno ao lado.
-    expect(janela.from).toBe('2026-09-14T03:00:00.000Z');
+    // Um ano para trás (o que atrasou, antigos recolhidos) até o fim do mês pequeno ao lado.
+    expect(janela.from).toBe('2025-10-14T03:00:00.000Z');
     expect(janela.to).toBe('2026-11-01T02:59:00.000Z');
   });
 
   it('o agente vê só os seus; o administrador vê a equipe', async () => {
-    const agente = montar({ ehAdmin: false });
+    const repete = {
+      id: 'follow_up_series_9_1',
+      event_type: 'follow_up_reminder_only',
+      title: 'Conferir o caixa',
+      starts_at: '2026-10-14T21:00:00Z',
+      status: 'pending',
+      series_id: 9,
+      recurring: true,
+      virtual: true,
+    };
+    const agente = montar({ ehAdmin: false, events: [...EVENTOS, repete] });
     await flushPromises();
     expect(agente.text()).not.toContain('Da Paula');
+    // A próxima vez de uma repetição não tem dono no evento: não some.
+    expect(agente.text()).toContain('Conferir o caixa');
 
     const admin = montar();
     await flushPromises();
@@ -118,7 +130,7 @@ describe('CalendarioOuro', () => {
     await wrapper
       .find('[data-secao="atrasados"] [data-concluir]')
       .trigger('click');
-    expect(wrapper.emitted('concluir')[0][0].id).toBe('follow_up_1');
+    expect(wrapper.emitted('concluir')[0][0].evento.id).toBe('follow_up_1');
     expect(wrapper.find('[data-recem-feito]').exists()).toBe(true);
 
     await wrapper.find('[data-proximo="AMANHA"]').trigger('click');
@@ -128,6 +140,96 @@ describe('CalendarioOuro', () => {
       fuso: 'America/Sao_Paulo',
     });
     expect(wrapper.find('[data-recem-feito]').exists()).toBe(false);
+  });
+
+  it('se o servidor recusar o concluir, a linha volta como estava', async () => {
+    const wrapper = montar();
+    await flushPromises();
+
+    await wrapper
+      .find('[data-secao="atrasados"] [data-concluir]')
+      .trigger('click');
+    expect(wrapper.find('[data-recem-feito]').exists()).toBe(true);
+    wrapper.emitted('concluir')[0][0].falhou();
+    await flushPromises();
+
+    expect(wrapper.find('[data-recem-feito]').exists()).toBe(false);
+    expect(
+      wrapper
+        .find('[data-secao="atrasados"] [data-concluir]')
+        .attributes('disabled')
+    ).toBeUndefined();
+  });
+
+  it('o padrão de quem segue o papel que chega depois', async () => {
+    const wrapper = montar({ ehAdmin: false });
+    await flushPromises();
+    expect(wrapper.text()).not.toContain('Da Paula');
+
+    await wrapper.setProps({ ehAdmin: true });
+    expect(wrapper.text()).toContain('Da Paula');
+  });
+
+  it('sem saber quem é a pessoa, "Só os meus" não mostra o que não tem dono', async () => {
+    const semDono = {
+      id: 'follow_up_7',
+      event_type: 'follow_up_reminder_only',
+      title: 'Sem dono',
+      starts_at: '2026-10-14T20:00:00Z',
+      status: 'pending',
+      assignee_id: null,
+    };
+    const wrapper = montar({
+      ehAdmin: false,
+      currentUserId: null,
+      events: [...EVENTOS, semDono],
+    });
+    await flushPromises();
+
+    expect(wrapper.text()).not.toContain('Sem dono');
+    expect(wrapper.text()).not.toContain('Ligar para o Roberto');
+  });
+
+  it('atrasado há mais de 30 dias fica recolhido em "E mais N antigos"', async () => {
+    const antigo = {
+      id: 'follow_up_8',
+      event_type: 'follow_up_reminder_only',
+      title: 'Coisa antiga',
+      starts_at: '2026-08-20T13:00:00Z',
+      status: 'pending',
+      assignee_id: 1,
+    };
+    const wrapper = montar({ events: [...EVENTOS, antigo] });
+    await flushPromises();
+
+    const secao = () => wrapper.find('[data-secao="atrasados"]');
+    expect(secao().text()).not.toContain('Coisa antiga');
+    expect(wrapper.find('[data-antigos]').text()).toContain(
+      'CRM_CALENDARIO.DIA.ANTIGOS'
+    );
+    await wrapper.find('[data-antigos]').trigger('click');
+    expect(secao().text()).toContain('Coisa antiga');
+  });
+
+  it('o "Agora" anda com o relógio e a tela vira o dia sozinha', async () => {
+    const wrapper = montar();
+    await flushPromises();
+    expect(wrapper.find('[data-agora]').text()).toContain('15:00');
+
+    vi.advanceTimersByTime(60 * 1000);
+    await flushPromises();
+    expect(wrapper.find('[data-agora]').text()).toContain('15:01');
+
+    vi.setSystemTime(new Date('2026-10-15T03:00:30Z'));
+    vi.advanceTimersByTime(60 * 1000);
+    await flushPromises();
+    expect(wrapper.find('[data-secao="dia"] h3').text()).toContain(
+      'CRM_CALENDARIO.DIA.PARA_HOJE'
+    );
+    // O lembrete das 16:30 de ontem passou a "Ficou para trás".
+    expect(wrapper.find('[data-secao="atrasados"]').text()).toContain(
+      'Da Paula'
+    );
   });
 
   it('"Passar tudo para amanhã" leva os atrasados para amanhã, 09:00', async () => {

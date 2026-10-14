@@ -88,7 +88,7 @@ const rotulo = chave =>
           :data-mini-dia="chave"
           :aria-label="rotulo(chave)"
           :aria-pressed="chave === dia"
-          class="relative mx-auto grid size-10 place-items-center rounded-full text-sm tabular-nums transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+          class="relative mx-auto grid size-11 place-items-center rounded-full text-sm tabular-nums transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
           :class="[
             chave === dia
               ? 'bg-n-slate-12 font-semibold text-n-solid-1'

@@ -16,7 +16,8 @@ const props = defineProps({
 });
 const emit = defineEmits(['escolherDia', 'abrir']);
 const { t } = useI18n();
-const NO_DIA = 3;
+// Dois por dia: cada um com alvo de toque de 44 px; o resto em "+N mais".
+const NO_DIA = 2;
 
 const porDia = computed(() => {
   const mapa = {};
@@ -68,7 +69,7 @@ const longo = chave =>
       >
         <button
           type="button"
-          class="flex min-h-11 items-center justify-center rounded-lg hover:bg-n-alpha-2 md:min-h-8 md:justify-start md:px-1"
+          class="flex min-h-11 items-center justify-center rounded-lg hover:bg-n-alpha-2 md:justify-start md:px-1"
           :aria-label="
             t('CRM_CALENDARIO.SEMANA.VER_DIA', { dia: longo(chave) })
           "
@@ -114,7 +115,7 @@ const longo = chave =>
           <button
             v-if="(porDia[chave] || []).length > NO_DIA"
             type="button"
-            class="rounded-lg px-1.5 py-0.5 text-start text-xs font-medium text-n-blue-11 hover:bg-n-alpha-2"
+            class="min-h-11 rounded-lg px-1.5 text-start text-xs font-medium text-n-blue-11 hover:bg-n-alpha-2"
             @click="emit('escolherDia', chave)"
           >
             {{

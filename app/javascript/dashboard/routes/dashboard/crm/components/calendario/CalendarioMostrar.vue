@@ -13,6 +13,8 @@ const props = defineProps({
   feitos: { type: Boolean, default: false },
   funil: { type: [String, Number], default: null },
   funis: { type: Array, default: () => [] },
+  podeAgendamento: { type: Boolean, default: false },
+  podeCaixas: { type: Boolean, default: false },
 });
 const emit = defineEmits([
   'update:quem',
@@ -20,6 +22,8 @@ const emit = defineEmits([
   'update:feitos',
   'update:funil',
   'fechar',
+  'abrirAgendamento',
+  'abrirCaixas',
 ]);
 const { t } = useI18n();
 const N = 'CRM_CALENDARIO.MOSTRAR';
@@ -136,6 +140,31 @@ const alternar = tipo =>
         </span>
         <span class="text-sm text-n-slate-12">{{ t(`${N}.FEITOS`) }}</span>
       </button>
+      <template v-if="podeAgendamento || podeCaixas">
+        <h3 class="mb-0 mt-3 text-sm font-semibold text-n-slate-11">
+          {{ t(`${N}.CONFIG`) }}
+        </h3>
+        <button
+          v-if="podeAgendamento"
+          type="button"
+          data-config="agendamento"
+          class="flex min-h-11 items-center gap-2 rounded-xl px-2 text-start text-sm text-n-blue-11 hover:bg-n-alpha-2"
+          @click="emit('abrirAgendamento')"
+        >
+          <span class="i-lucide-calendar-clock size-4" aria-hidden="true" />
+          {{ t(`${N}.CONFIG_AGENDAMENTO`) }}
+        </button>
+        <button
+          v-if="podeCaixas"
+          type="button"
+          data-config="caixas"
+          class="flex min-h-11 items-center gap-2 rounded-xl px-2 text-start text-sm text-n-blue-11 hover:bg-n-alpha-2"
+          @click="emit('abrirCaixas')"
+        >
+          <span class="i-lucide-inbox size-4" aria-hidden="true" />
+          {{ t(`${N}.CONFIG_CAIXAS`) }}
+        </button>
+      </template>
       <button
         type="button"
         class="mt-auto min-h-11 self-end rounded-xl bg-n-alpha-2 px-5 text-sm font-semibold text-n-slate-12 hover:bg-n-alpha-3"

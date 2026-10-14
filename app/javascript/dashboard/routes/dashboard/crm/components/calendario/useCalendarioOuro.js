@@ -13,11 +13,13 @@ import {
 } from './tempoNaConta';
 import { ORDEM_DOS_TIPOS, paraItem } from './itensDoCalendario';
 
-const DIAS_PARA_TRAS = 30;
+// Busca um ano para trás: o que atrasou há mais de 30 dias não some calado,
+// aparece como "E mais N antigos" no fim do "Ficou para trás".
+const DIAS_PARA_TRAS = 365;
 const DIAS_A_FRENTE = 8;
 const UM_MINUTO = 60 * 1000;
 
-export const useCalendarioOuro = ({ props, fuso, quemPadrao }) => {
+export const useCalendarioOuro = ({ props, fuso, ehAdmin }) => {
   const agora = ref(new Date());
   let relogio = null;
   onMounted(() => {
@@ -32,12 +34,25 @@ export const useCalendarioOuro = ({ props, fuso, quemPadrao }) => {
 
   const visao = ref('dia');
   const dia = ref(hoje.value);
+  // Virou o dia com a tela aberta: quem estava em "hoje" passa para o novo hoje.
+  watch(hoje, (novo, antigo) => {
+    if (dia.value === antigo) dia.value = novo;
+  });
   const mesDoMini = ref(inicioDoMes(hoje.value));
   watch(dia, novo => {
     mesDoMini.value = inicioDoMes(novo);
   });
 
-  const quem = ref(quemPadrao);
+  // Decisão 4 do #1568: administrador vê toda a equipe; agente, só os seus.
+  // Segue o papel até a pessoa escolher no "Mostrar" (o papel pode chegar depois).
+  const quemEscolhido = ref(null);
+  const quemPadrao = computed(() => (ehAdmin.value ? 'todos' : 'meus'));
+  const quem = computed({
+    get: () => quemEscolhido.value || quemPadrao.value,
+    set: valor => {
+      quemEscolhido.value = valor;
+    },
+  });
   const tipos = ref({});
   const feitos = ref(false);
 
@@ -54,7 +69,7 @@ export const useCalendarioOuro = ({ props, fuso, quemPadrao }) => {
     () =>
       tiposDisponiveis.value.filter(tipo => tipos.value[tipo] === false)
         .length +
-      (quem.value === 'meus' ? 1 : 0) +
+      (quem.value !== quemPadrao.value ? 1 : 0) +
       (feitos.value ? 1 : 0)
   );
 
@@ -83,17 +98,24 @@ export const useCalendarioOuro = ({ props, fuso, quemPadrao }) => {
     return { de: candidatosDe.sort()[0], ate: candidatosAte.sort().at(-1) };
   });
 
+  // "Só os meus": o que está no meu nome. As próximas vezes de um lembrete que
+  // repete não têm dono no evento (quem recebe fica na repetição, e o back só
+  // manda as repetições que a pessoa pode ver); entram para não sumir.
+  const ehMeu = item => {
+    const { assignee_id: dono } = item.evento;
+    if (dono === null || dono === undefined) return item.virtual;
+    if (props.currentUserId === null || props.currentUserId === undefined)
+      return false;
+    return Number(dono) === Number(props.currentUserId);
+  };
+
   const itens = computed(() =>
     (props.events || [])
       .map(evento => paraItem(evento, { fuso: fuso.value, agora: agora.value }))
       .filter(item => tipos.value[item.tipo] !== false)
       .filter(item => tiposDisponiveis.value.includes(item.tipo))
       .filter(item => feitos.value || !item.feito)
-      .filter(
-        item =>
-          quem.value !== 'meus' ||
-          Number(item.evento.assignee_id) === Number(props.currentUserId)
-      )
+      .filter(item => quem.value !== 'meus' || ehMeu(item))
   );
 
   const marcas = computed(() => {

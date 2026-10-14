@@ -2,7 +2,7 @@
 // Calendário Ouro — "Meu dia": o que ficou para trás, o que é hoje (o dia
 // todo primeiro, depois por hora, com a linha do "agora") e os próximos dias.
 // Num outro dia escolhido, só aquele dia.
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import CalendarioItem from './CalendarioItem.vue';
@@ -14,6 +14,7 @@ const props = defineProps({
   hoje: { type: String, required: true },
   dia: { type: String, required: true },
   agoraMinutos: { type: Number, required: true },
+  agora: { type: Date, required: true },
   fuso: { type: String, required: true },
   idioma: { type: String, required: true },
   nomeDe: { type: Function, required: true },
@@ -55,10 +56,26 @@ const linhaDoAgora = computed(() => {
   );
   return indice === -1 ? doDia.value.length : indice;
 });
-const horaDeAgora = computed(() => {
-  const data = new Date();
-  return formatarHora(data, props.fuso, props.idioma);
-});
+const horaDeAgora = computed(() =>
+  formatarHora(props.agora, props.fuso, props.idioma)
+);
+
+// Atrasado há mais de 30 dias não some calado: fica recolhido no fim do
+// "Ficou para trás" ("E mais N antigos · Ver").
+const DIAS_RECENTES = 30;
+const verAntigos = ref(false);
+const limiteRecente = computed(() => somarDias(props.hoje, -DIAS_RECENTES));
+const atrasadosRecentes = computed(() =>
+  atrasados.value.filter(i => i.chave >= limiteRecente.value)
+);
+const atrasadosAntigos = computed(() =>
+  atrasados.value.filter(i => i.chave < limiteRecente.value)
+);
+const atrasadosVisiveis = computed(() =>
+  verAntigos.value
+    ? [...atrasadosAntigos.value, ...atrasadosRecentes.value]
+    : atrasadosRecentes.value
+);
 
 const proximosDias = computed(() => {
   if (!ehHoje.value) return [];
@@ -195,12 +212,31 @@ const ATALHOS = ['AMANHA', 'TRES_DIAS', 'SEMANA'];
       </header>
       <ul class="m-0 flex list-none flex-col gap-2 p-0">
         <CalendarioItem
-          v-for="item in atrasados"
+          v-for="item in atrasadosVisiveis"
           :key="item.id"
           v-bind="ligar(item)"
           v-on="repassar"
         />
       </ul>
+      <button
+        v-if="atrasadosAntigos.length"
+        type="button"
+        data-antigos
+        :aria-expanded="verAntigos"
+        class="flex min-h-11 items-center gap-2 self-start rounded-xl px-3 text-sm text-n-slate-11 hover:bg-n-alpha-2"
+        @click="verAntigos = !verAntigos"
+      >
+        <span>{{
+          t(
+            `${N}.ANTIGOS`,
+            { n: atrasadosAntigos.length },
+            atrasadosAntigos.length
+          )
+        }}</span>
+        <span class="font-semibold text-n-blue-11">
+          {{ verAntigos ? t(`${N}.ESCONDER_ANTIGOS`) : t(`${N}.VER_ANTIGOS`) }}
+        </span>
+      </button>
     </section>
 
     <!-- O dia -->

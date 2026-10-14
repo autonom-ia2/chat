@@ -2104,18 +2104,30 @@ const onCalendarReschedule = async ({ event, date }) => {
 };
 
 /* Calendário Ouro: concluir, próximo passo, adiar e abrir a conversa. */
-// Só os canais conectados: "Mensagens marcadas" exige uma caixa de WhatsApp.
+// Só os canais conectados: "Mensagem marcada" exige uma caixa de WhatsApp
+// que não esteja pedindo para reconectar (reauthorization_required). É o canal
+// oficial que envia a mensagem marcada; o WhatsApp API (Híbrido) é auxiliar e
+// não muda isso.
+const ehWhatsappConectado = inbox =>
+  (inbox.channel_type === 'Channel::Whatsapp' ||
+    (inbox.channel_type === 'Channel::TwilioSms' &&
+      inbox.medium === 'whatsapp')) &&
+  inbox.reauthorization_required !== true;
 const temWhatsappConectado = computed(() =>
-  (inboxes.value || []).some(
-    inbox =>
-      inbox.channel_type === 'Channel::Whatsapp' ||
-      (inbox.channel_type === 'Channel::TwilioSms' &&
-        inbox.medium === 'whatsapp')
-  )
+  (inboxes.value || []).some(ehWhatsappConectado)
 );
 const idDoLembrete = evento => String(evento.id).replace('follow_up_', '');
 
-const ouroConcluir = evento => completeFollowUp({ id: idDoLembrete(evento) });
+// A tela já marcou como feito; se o servidor recusar, ela volta como estava.
+const ouroConcluir = async ({ evento, falhou }) => {
+  try {
+    await store.dispatch('crmKanban/completeFollowUp', idDoLembrete(evento));
+  } catch {
+    falhou();
+    useAlert(t('CRM_CALENDARIO.ALERTA.NAO_CONCLUIU'));
+  }
+  await loadCurrentCalendar();
+};
 
 const ouroProximoPasso = async ({ evento, titulo, quando, fuso }) => {
   try {
@@ -2138,20 +2150,24 @@ const ouroProximoPasso = async ({ evento, titulo, quando, fuso }) => {
   }
 };
 
+// Só aquela vez de cada lembrete (o reschedule mexe na linha, nunca na
+// repetição). Se parte falhar, diz quantos passaram.
 const ouroAdiarAtrasados = async ({ eventos, quando }) => {
-  try {
-    await Promise.all(
-      eventos.map(evento =>
-        store.dispatch('crmKanban/rescheduleFollowUp', {
-          id: idDoLembrete(evento),
-          dueAt: quando,
-        })
-      )
-    );
-    useAlert(
-      t('CRM_CALENDARIO.ALERTA.ADIADOS', { n: eventos.length }, eventos.length)
-    );
-  } catch {
+  const resultados = await Promise.allSettled(
+    eventos.map(evento =>
+      store.dispatch('crmKanban/rescheduleFollowUp', {
+        id: idDoLembrete(evento),
+        dueAt: quando,
+      })
+    )
+  );
+  const total = eventos.length;
+  const ok = resultados.filter(r => r.status === 'fulfilled').length;
+  if (ok === total) {
+    useAlert(t('CRM_CALENDARIO.ALERTA.ADIADOS', { n: total }, total));
+  } else if (ok > 0) {
+    useAlert(t('CRM_CALENDARIO.ALERTA.ADIADOS_PARCIAL', { ok, total }));
+  } else {
     useAlert(t('CRM_KANBAN.CALENDAR.RESCHEDULE_ERROR'));
   }
   await loadCurrentCalendar();
@@ -2801,7 +2817,11 @@ onUnmounted(() => {
       :eh-admin="currentRole === 'administrator'"
       :tem-whatsapp="temWhatsappConectado"
       :reunioes-ligadas="isMeetingFeatureEnabled"
+      :pode-agendamento="canOpenBooking && isMeetingFeatureEnabled"
+      :pode-caixas="canOpenInboxSettings"
       @update:funil="ouroMudarFunil"
+      @abrir-agendamento="openBooking"
+      @abrir-caixas="openInboxSettingsDrawer"
       @range-change="onCalendarRangeChange"
       @abrir="onCalendarOpenEvent"
       @abrir-conversa="ouroAbrirConversa"

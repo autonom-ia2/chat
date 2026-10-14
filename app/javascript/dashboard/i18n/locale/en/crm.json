@@ -5490,7 +5490,10 @@
       "O_QUE": "What shows up",
       "FEITOS_TITULO": "Already done",
       "FEITOS": "Show what is already done",
-      "PRONTO": "Done"
+      "PRONTO": "Done",
+      "CONFIG": "Settings",
+      "CONFIG_AGENDAMENTO": "Scheduling",
+      "CONFIG_CAIXAS": "CRM inboxes"
     },
     "TIPO": {
       "LEMBRETE": "Reminder",
@@ -5554,7 +5557,10 @@
         "TRES_DIAS": "In 3 days",
         "SEMANA": "Next week"
       },
-      "NAO_PRECISA": "No need"
+      "NAO_PRECISA": "No need",
+      "ANTIGOS": "And {n} older one | And {n} older ones",
+      "VER_ANTIGOS": "See",
+      "ESCONDER_ANTIGOS": "Hide"
     },
     "SEMANA": {
       "VER_DIA": "See {dia}",
@@ -5582,8 +5588,10 @@
     "ERRO": "Could not load the calendar.",
     "TENTAR": "Try again",
     "ALERTA": {
-      "ADIADOS": "Moved {n} to tomorrow. | Moved {n} to tomorrow.",
-      "PROXIMO_MARCADO": "Next step set."
+      "ADIADOS": "{n} reminder moved to tomorrow. | {n} reminders moved to tomorrow.",
+      "PROXIMO_MARCADO": "Next step set.",
+      "ADIADOS_PARCIAL": "{ok} of {total} moved to tomorrow. The others stayed as they were.",
+      "NAO_CONCLUIU": "Could not mark it as done. Try again."
     }
   }
 }

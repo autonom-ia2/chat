@@ -45,7 +45,6 @@ defineExpose({ open: () => dialogo.value?.open() });
     :title="t(`${N}.TITULO`)"
     :description="t(`${N}.TEXTO`)"
     :show-confirm-button="false"
-    :cancel-button-label="t(`${N}.CANCELAR`)"
     width="md"
   >
     <div data-calendario-escolha class="flex flex-col gap-2">
@@ -78,5 +77,15 @@ defineExpose({ open: () => dialogo.value?.open() });
         />
       </button>
     </div>
+    <template #footer>
+      <button
+        type="button"
+        data-escolha-cancelar
+        class="min-h-11 w-full rounded-xl bg-n-alpha-2 text-sm font-medium text-n-slate-12 hover:bg-n-alpha-3"
+        @click="dialogo?.close()"
+      >
+        {{ t(`${N}.CANCELAR`) }}
+      </button>
+    </template>
   </Dialog>
 </template>
