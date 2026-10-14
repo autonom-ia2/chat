@@ -519,7 +519,13 @@
       "VER_COMO_FICA": "See how it looks",
       "OFERTA_CONTAGEM": "Ends in 2 days (example)",
       "VER_TODAS_AS_OPCOES": "See all options",
-      "OFERTA_VALE_ATE": "Valid until {data}"
+      "OFERTA_VALE_ATE": "Valid until {data}",
+      "PRODUTOS": {
+        "EXEMPLO": "Catalog product",
+        "LISTA": "Products",
+        "ITENS": "{n} item | {n} items",
+        "AO_TOCAR": "When they tap “{botao}”, the customer sees:"
+      }
     },
     "ENVIADO": {
       "TITULO": {
@@ -616,6 +622,9 @@
         "NOME_PADRAO": "Quick sign-up",
         "TEXTO": "Hi, [nome_cliente]! It takes 1 minute: fill in the form so we can help you better.",
         "BOTAO": "Fill in the form"
+      },
+      "produtos": {
+        "TITULO": "Catalog products"
       }
     },
     "CARTOES": {
@@ -708,7 +717,8 @@
         "SEM_FONTE": "has a field campaigns cannot fill",
         "NAO_VAI_CODIGO": "verification codes do not go in campaigns",
         "NAO_VAI_PRODUTOS": "chosen products do not go in campaigns",
-        "NAO_VAI_CARTAO_COM_CAMPO": "cards with fields do not go in campaigns yet"
+        "NAO_VAI_CARTAO_COM_CAMPO": "cards with fields do not go in campaigns yet",
+        "NAO_VAI_SEM_CATALOGO": "your WhatsApp account has no product catalog"
       },
       "EM_ANALISE": "“{nome}” is still in review at WhatsApp. You can set up and schedule the campaign; sending now unlocks when it is approved.",
       "ENVIAR_AGORA_BLOQUEADO": "Sending now unlocks when WhatsApp approves the template. Pick a date to schedule.",
@@ -720,7 +730,9 @@
         "POR_ENVIO": "{porEnvio} per message",
         "CUPOM": "Coupon: {cupom}",
         "VALIDADE": "The offer is valid until {quando}",
-        "CARTOES": "{n} cards with photos"
+        "CARTOES": "{n} cards with photos",
+        "PRODUTOS": "{n} catalog product: | {n} catalog products:",
+        "PRODUTOS_AJUDA": "If a product runs out or leaves the catalog before sending, the campaign stops and we let you know. Nobody gets the message without the product."
       },
       "GRUPO_CATALOGO": "From the records",
       "SEM_MODELO_LIBERADO": "No template of this WhatsApp account can go in a campaign right now: they are rejected, paused or in a format campaigns cannot send yet.",
@@ -779,6 +791,46 @@
       "SINAL": {
         "ruim": "WhatsApp sees many people blocking or reporting the template \"{nome}\". It can pause the template at any time, and the campaign stops with it. You can send, but it is best to send only to people who know your business.",
         "atencao": "Some people blocked or reported the template \"{nome}\". If it gets worse, WhatsApp pauses the template and the campaign stops with it. You can send, but send only to people who know your business."
+      },
+      "PRODUTOS": {
+        "TITULO": {
+          "um": "Product in the message",
+          "varios": "Products in the message",
+          "carrossel": "Products in the cards"
+        },
+        "AJUDA": {
+          "um": "Choose 1 product from your catalog. The photo, name and price come from there.",
+          "varios": "Choose up to {maximo} products. The photo of the first one shows in the message.",
+          "carrossel": "Choose 2 to {maximo} products. Each product becomes a card."
+        },
+        "ESCOLHER": {
+          "um": "Choose product",
+          "varios": "Choose products",
+          "carrossel": "Choose products"
+        },
+        "TROCAR": {
+          "um": "Change product",
+          "varios": "Change products",
+          "carrossel": "Change products"
+        },
+        "GAVETA": {
+          "um": "Choose the product",
+          "varios": "Choose the products",
+          "carrossel": "Choose the products for the cards"
+        },
+        "DO_CATALOGO": "From the {nome} catalog · {n} product | From the {nome} catalog · {n} products",
+        "BUSCA": "Search by name",
+        "BUSCA_EXEMPLO": "E.g. t-shirt",
+        "CARREGANDO": "Opening the catalog…",
+        "ERRO": "We couldn’t open the catalog right now.",
+        "NENHUM": "No product with that name.",
+        "ESGOTADO": "Out of stock",
+        "FALTAM": "Choose {n} more product | Choose {n} more products",
+        "ESCOLHIDOS": "{n} chosen, up to {maximo} | {n} chosen, up to {maximo}",
+        "USAR": "Use these products",
+        "FOTO_DA_MENSAGEM": "message photo",
+        "ACABOU": "This product is out of stock. Remove it or choose another.",
+        "TIRAR": "Remove {nome}"
       }
     },
     "IA": {

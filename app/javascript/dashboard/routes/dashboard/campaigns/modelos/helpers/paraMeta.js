@@ -22,15 +22,16 @@ const MAXIMO_DO_NOME = 512;
 
 // O que a campanha envia (#1334): todos os formatos, menos código de
 // verificação e produtos escolhidos do catálogo (formatoQueNaoVai).
-export const podeIrEmCampanha = modelo =>
+// `opcoes.comCatalogo` (#1418): a conta do WhatsApp tem catálogo de produtos.
+export const podeIrEmCampanha = (modelo, opcoes = {}) =>
   modelo.template
-    ? !formatoQueNaoVai(modelo.template)
+    ? !formatoQueNaoVai(modelo.template, opcoes)
     : modelo.conteudo?.formato !== 'codigo';
 
 // Vai em campanha de verdade: formato que a campanha envia e nenhum campo sem
 // fonte (como a data e hora do agendamento, num modelo do sistema).
-export const usavelEmCampanha = modelo =>
-  podeIrEmCampanha(modelo) &&
+export const usavelEmCampanha = (modelo, opcoes = {}) =>
+  podeIrEmCampanha(modelo, opcoes) &&
   !Object.values(modelo.campos || {}).some(semFonteNaCampanha);
 
 // "Pesquisa de satisfação" → "pesquisa_de_satisfacao", o nome que a Meta aceita.

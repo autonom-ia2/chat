@@ -39,6 +39,25 @@ export function useModelosNaCampanha() {
   const ativa = computed(() => flagLigada.value && lida.value);
   const caixas = ref([]);
   const modelos = ref([]);
+  // #1418: o catálogo de produtos de cada caixa conectada ({ nome, produtos }
+  // ou null), lido uma vez; sem ele, modelo com produtos não é oferecido.
+  const catalogos = ref({});
+
+  // Catálogo que não abre não derruba a ponte: só os modelos com produtos ficam
+  // de fora ("sua conta do WhatsApp não tem catálogo de produtos").
+  const lerCatalogos = async lista => {
+    const conectadas = lista.filter(item => item.situacao === 'conectada');
+    try {
+      const lidos = await Promise.all(
+        conectadas.map(item => api.obterCatalogo(item.id))
+      );
+      catalogos.value = Object.fromEntries(
+        conectadas.map((item, indice) => [item.id, lidos[indice]])
+      );
+    } catch {
+      catalogos.value = {};
+    }
+  };
 
   const carregar = async () => {
     if (!flagLigada.value) return;
@@ -52,7 +71,9 @@ export function useModelosNaCampanha() {
       lida.value = true;
     } catch {
       lida.value = false;
+      return;
     }
+    await lerCatalogos(caixas.value);
   };
 
   // A conta (e a flag) pode chegar depois da tela: carrega quando a flag liga.
@@ -92,12 +113,18 @@ export function useModelosNaCampanha() {
     return modelos.value.filter(modelo => modelo.conta === escolhida.conta.id);
   };
 
-  const motivoDeNaoUsar = modelo => {
-    // #1334: o motivo diz qual formato não vai (código de verificação, produtos).
-    const naoVai = modelo.template ? formatoQueNaoVai(modelo.template) : '';
+  const catalogoDaCaixa = inboxId => catalogos.value[Number(inboxId)] || null;
+
+  const motivoDeNaoUsar = (modelo, inboxId) => {
+    // #1334: o motivo diz qual formato não vai (código de verificação, produtos
+    // sem catálogo conectado, #1418).
+    const opcoes = { comCatalogo: Boolean(catalogoDaCaixa(inboxId)) };
+    const naoVai = modelo.template
+      ? formatoQueNaoVai(modelo.template, opcoes)
+      : '';
     if (naoVai) return `NAO_VAI_${naoVai}`;
-    if (!podeIrEmCampanha(modelo)) return 'FORMATO_NAO_VAI';
-    if (!usavelEmCampanha(modelo)) return 'SEM_FONTE';
+    if (!podeIrEmCampanha(modelo, opcoes)) return 'FORMATO_NAO_VAI';
+    if (!usavelEmCampanha(modelo, opcoes)) return 'SEM_FONTE';
     if (modelo.situacao === 'recusado') return 'RECUSADO';
     if (modelo.situacao === 'pausado') return 'PAUSADO';
     if (modelo.situacao === 'desativado') return 'DESATIVADO';
@@ -120,7 +147,7 @@ export function useModelosNaCampanha() {
 
   const opcoesDeModelo = inboxId =>
     modelosDaCaixa(inboxId).map(modelo => {
-      const motivo = motivoDeNaoUsar(modelo);
+      const motivo = motivoDeNaoUsar(modelo, inboxId);
       const extra = motivo
         ? t(`MODELOS_WHATSAPP.PONTE.NAO_VAI.${motivo}`)
         : extraDoModelo(modelo);
@@ -186,6 +213,7 @@ export function useModelosNaCampanha() {
 
   return {
     ativa,
+    catalogoDaCaixa,
     flagLigada,
     recusadoParaCorrigir,
     carregar,

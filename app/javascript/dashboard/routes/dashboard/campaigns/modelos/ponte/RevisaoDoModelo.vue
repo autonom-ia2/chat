@@ -8,6 +8,7 @@ import {
   scheduleToUtc,
 } from 'dashboard/components-next/CampaignJourney/scheduleTime';
 import PonteSinalDoModelo from './PonteSinalDoModelo.vue';
+import { dinheiroDoProduto } from '../helpers/produtosNaCampanha';
 
 // Revisão da campanha: qual modelo vai, o tipo da mensagem e quanto custa cada
 // envio (e o total para quem recebe). Divulgação lembra que quem pediu para não
@@ -52,6 +53,19 @@ const validade = computed(() => {
   const iso = scheduleToUtc(props.formato.validade, props.timeZone);
   return iso ? formatInZone(iso, props.timeZone, locale.value) : '';
 });
+
+// #1418: os produtos escolhidos, na ordem em que vão.
+const produtos = computed(() =>
+  props.pedido?.produtos ? props.formato.produtos || [] : []
+);
+// Separador visual entre nome e preço (não é texto para traduzir).
+const PONTO = '·';
+const rotuloDoProduto = produto =>
+  [
+    produto.nome,
+    PONTO,
+    dinheiroDoProduto(produto.preco, localeDoIntl(locale.value)),
+  ].join(' ');
 
 const total = computed(() =>
   custo.value ? dinheiro(custo.value.valor * props.recebem) : ''
@@ -113,6 +127,40 @@ const total = computed(() =>
         }}
       </li>
     </ul>
+    <div
+      v-if="produtos.length"
+      data-revisao-produtos
+      class="flex flex-col gap-2"
+    >
+      <p class="m-0 text-sm text-n-slate-12">
+        {{
+          $t(
+            'MODELOS_WHATSAPP.PONTE.REVISAO.PRODUTOS',
+            { n: produtos.length },
+            produtos.length
+          )
+        }}
+      </p>
+      <ul class="flex flex-wrap gap-2 p-0 m-0 list-none">
+        <li
+          v-for="produto in produtos"
+          :key="produto.id"
+          class="flex items-center gap-2 py-1 ltr:pl-1 ltr:pr-3 rtl:pr-1 rtl:pl-3 rounded-full bg-n-alpha-2"
+        >
+          <img
+            :src="produto.foto"
+            alt=""
+            class="object-cover rounded-full size-7 bg-n-slate-3"
+          />
+          <span class="text-xs text-n-slate-12">
+            {{ rotuloDoProduto(produto) }}
+          </span>
+        </li>
+      </ul>
+      <p class="m-0 text-xs text-n-slate-11">
+        {{ $t('MODELOS_WHATSAPP.PONTE.REVISAO.PRODUTOS_AJUDA') }}
+      </p>
+    </div>
     <p class="m-0 text-xs text-n-slate-11">
       {{ $t('MODELOS_WHATSAPP.PONTE.REVISAO.CUSTO_AJUDA') }}
     </p>

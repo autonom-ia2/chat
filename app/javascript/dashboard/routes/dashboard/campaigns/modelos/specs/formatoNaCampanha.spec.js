@@ -141,18 +141,19 @@ describe('formatoNaCampanha', () => {
     expect(extrasParaEnvio(guardado, {}, { timeZone: ZONA })).toEqual({});
   });
 
-  it('código de verificação e produtos do catálogo não vão em campanha', () => {
+  // #1418: produtos do catálogo vão quando a conta do WhatsApp tem catálogo.
+  it('código de verificação não vai; produtos só com catálogo conectado', () => {
     expect(formatoQueNaoVai({ category: 'AUTHENTICATION' })).toBe('CODIGO');
-    expect(
-      formatoQueNaoVai({
-        components: [{ type: 'BUTTONS', buttons: [{ type: 'MPM' }] }],
-      })
-    ).toBe('PRODUTOS');
-    expect(
-      formatoQueNaoVai({
-        components: [{ type: 'CAROUSEL', cards: [cartao('PRODUCT')] }],
-      })
-    ).toBe('PRODUTOS');
+    const varios = {
+      components: [{ type: 'BUTTONS', buttons: [{ type: 'MPM' }] }],
+    };
+    const cartoesDeProduto = {
+      components: [{ type: 'CAROUSEL', cards: [cartao('PRODUCT')] }],
+    };
+    expect(formatoQueNaoVai(varios)).toBe('SEM_CATALOGO');
+    expect(formatoQueNaoVai(cartoesDeProduto)).toBe('SEM_CATALOGO');
+    expect(formatoQueNaoVai(varios, { comCatalogo: true })).toBe('');
+    expect(formatoQueNaoVai(cartoesDeProduto, { comCatalogo: true })).toBe('');
     const comCampo = {
       components: [
         {

@@ -7,12 +7,20 @@
 //                com o modelo, ou um arquivo escolhido agora;
 //   cartoes    → carrossel: a foto ou o vídeo de cada cartão (o aprovado,
 //                guardado com o modelo, ou um arquivo escolhido agora);
-//   catalogo / formulario → nada a preencher, só o aviso do que acontece.
-// Código de verificação e produtos escolhidos do catálogo não vão em campanha.
+//   catalogo / formulario → nada a preencher, só o aviso do que acontece;
+//   produtos  → um, vários ou carrossel de produtos do catálogo (#1418): os
+//               produtos escolhidos (produtosNaCampanha.js).
+// Código de verificação não vai em campanha.
 import {
   isFutureSchedule,
   scheduleToUtc,
 } from 'dashboard/components-next/CampaignJourney/scheduleTime';
+import {
+  levaProdutos,
+  pedidoDeProdutos,
+  produtosParaEnvio,
+  produtosPendentes,
+} from './produtosNaCampanha';
 
 const maiusculo = valor => String(valor || '').toUpperCase();
 const componente = (template, tipo) =>
@@ -49,11 +57,12 @@ const cartaoComCampo = cartao =>
   );
 
 // Motivo para não oferecer o modelo na campanha (vazio = pode ir).
-export const formatoQueNaoVai = template => {
+// `comCatalogo`: a conta do WhatsApp da caixa tem catálogo conectado (#1418).
+export const formatoQueNaoVai = (template, { comCatalogo = false } = {}) => {
   if (maiusculo(template?.category) === 'AUTHENTICATION') return 'CODIGO';
   const tipos = botoes(template).map(botao => maiusculo(botao?.type));
   if (tipos.includes('OTP')) return 'CODIGO';
-  if (['MPM', 'SPM'].some(tipo => tipos.includes(tipo))) return 'PRODUTOS';
+  if (levaProdutos(template)) return comCatalogo ? '' : 'SEM_CATALOGO';
   const cartoes = componente(template, 'CAROUSEL')?.cards || [];
   if (cartoes.some(semMidia)) return 'PRODUTOS';
   if (cartoes.some(cartaoComCampo)) return 'CARTAO_COM_CAMPO';
@@ -65,6 +74,7 @@ export const formatoQueNaoVai = template => {
 // recebesse perderia a oferta). Mesma regra no servidor:
 // Whatsapp::Templates::SendableFormat.offer_format?.
 export const soModeloCompleto = template =>
+  levaProdutos(template) ||
   botoes(template).some(botao => maiusculo(botao?.type) === 'COPY_CODE') ||
   ['LIMITED_TIME_OFFER', 'CAROUSEL'].some(tipo =>
     Boolean(componente(template, tipo))
@@ -81,7 +91,12 @@ export const oQuePedir = (template, guardados = [], topoGuardado = null) => {
   );
   const exemplo = lista[indiceDoCupom]?.example;
   const oferta = componente(template, 'LIMITED_TIME_OFFER');
-  const cartoes = componente(template, 'CAROUSEL')?.cards || [];
+  const produtos = pedidoDeProdutos(template);
+  // Carrossel de produtos: a foto de cada cartão vem do catálogo.
+  const cartoes =
+    produtos?.tipo === 'carrossel'
+      ? []
+      : componente(template, 'CAROUSEL')?.cards || [];
   return {
     topo: midiaDoTopo
       ? { midia: midiaDoTopo, guardado: topoGuardado || null }
@@ -106,6 +121,7 @@ export const oQuePedir = (template, guardados = [], topoGuardado = null) => {
     }),
     catalogo: lista.some(botao => maiusculo(botao?.type) === 'CATALOG'),
     formulario: lista.find(botao => maiusculo(botao?.type) === 'FLOW') || null,
+    produtos,
   };
 };
 
@@ -136,6 +152,9 @@ export const pendencias = (
     cartao => !cartao.guardado && !escolhido(valores, cartao.indice)?.referencia
   );
   if (semArquivo) lista.push('CARTAO');
+  if (produtosPendentes(pedido.produtos, valores.produtos)) {
+    lista.push('PRODUTOS');
+  }
   return lista;
 };
 
@@ -167,5 +186,7 @@ export const extrasParaEnvio = (pedido, valores, { timeZone }) => {
       }),
     };
   }
-  return extras;
+  return pedido.produtos
+    ? { ...extras, ...produtosParaEnvio(valores.produtos) }
+    : extras;
 };
