@@ -107,13 +107,19 @@ describe RichMessages::AttachmentLimitGuard do
     let(:contact_inbox) { create(:contact_inbox, inbox: channel.inbox, contact: contact, source_id: '5511937016094') }
     let(:conversation) { create(:conversation, contact_inbox: contact_inbox, contact: contact, inbox: channel.inbox, account: channel.account) }
 
+    let(:transport) { instance_double(WhatsappHybrid::WebTransport, perform: nil) }
+
     around { |example| with_modified_env(WHATSAPP_HYBRID_ACCOUNT_IDS: channel.account_id.to_s) { example.run } }
 
-    it 'fails a message with two attachments with the reason and does not reach the WhatsApp API engine' do
+    before do
       WhatsappHybrid::Connection.create!(account: channel.account, inbox: channel.inbox, session_name: 'hybrid-anexos', status: 'connected',
                                          connected_phone: channel.phone_number.delete('^0-9'), risk_accepted_at: Time.current,
                                          status_checked_at: Time.current)
-      allow(WhatsappHybrid::WebTransport).to receive(:new)
+      WhatsappHybrid::Config.forget_inbox(channel.inbox.id)
+      allow(WhatsappHybrid::WebTransport).to receive(:new).and_return(transport)
+    end
+
+    it 'fails a message with two attachments with the reason and does not reach the WhatsApp API engine' do
       message = outgoing_message(conversation, files: 2)
 
       Whatsapp::SendOnWhatsappService.new(message: message).perform
@@ -121,6 +127,65 @@ describe RichMessages::AttachmentLimitGuard do
       expect(message.reload).to be_failed
       expect(message.external_error).to eq(RichMessages::AttachmentLimit::ONE_PER_MESSAGE)
       expect(WhatsappHybrid::WebTransport).not_to have_received(:new)
+    end
+
+    it 'sends a message with one attachment through the WhatsApp API engine once, as before' do
+      message = outgoing_message(conversation, files: 1)
+
+      Whatsapp::SendOnWhatsappService.new(message: message).perform
+
+      expect(WhatsappHybrid::WebTransport).to have_received(:new).once
+      expect(transport).to have_received(:perform).once
+      expect(message.reload).not_to be_failed
+    end
+  end
+
+  context 'with a template' do
+    let(:channel) { create(:channel_whatsapp, provider: 'whatsapp_cloud', sync_templates: false, validate_provider_config: false) }
+    let(:contact_inbox) { create(:contact_inbox, inbox: channel.inbox, source_id: '5511937016094') }
+    let(:conversation) { create(:conversation, contact_inbox: contact_inbox, inbox: channel.inbox, account: channel.account) }
+
+    it 'does not check a message with template params, which goes out by send_template without attachments' do
+      message = outgoing_message(conversation, files: 2)
+      message.update!(additional_attributes: { 'template_params' => { 'name' => 'aviso', 'language' => 'pt_BR' } })
+      service = Whatsapp::SendOnWhatsappService.new(message: message)
+      allow(service).to receive(:perform_reply)
+
+      service.perform
+
+      expect(service).to have_received(:perform_reply)
+      expect(message.reload).not_to be_failed
+    end
+
+    it 'does not check a template message, as before' do
+      message = outgoing_message(conversation, files: 2)
+      message.update!(message_type: :template)
+      service = Whatsapp::SendOnWhatsappService.new(message: message)
+      allow(service).to receive(:perform_reply)
+
+      service.perform
+
+      expect(service).to have_received(:perform_reply)
+      expect(message.reload).not_to be_failed
+    end
+  end
+
+  context 'with a channel that is not WhatsApp' do
+    let(:channel) { create(:channel_instagram) }
+    let(:inbox) { create(:inbox, channel: channel, account: channel.account) }
+    let(:conversation) { create(:conversation, inbox: inbox, account: channel.account) }
+
+    it 'does not count the attachments' do
+      message = Message.find(outgoing_message(conversation, content: 'oi', files: 0).id)
+      service = Instagram::SendOnInstagramService.new(message: message)
+      allow(service).to receive(:perform_reply)
+      statements = []
+      collect = ->(*, payload) { statements << payload[:sql] }
+
+      ActiveSupport::Notifications.subscribed(collect, 'sql.active_record') { service.perform }
+
+      expect(service).to have_received(:perform_reply)
+      expect(statements.select { |sql| sql.include?('"attachments"') }).to be_empty
     end
   end
 

@@ -38,6 +38,27 @@ describe RichMessages::AttachmentLimitCheck, type: :request do
     expect(response).to have_http_status(:success)
   end
 
+  it 'creates a WhatsApp message with template params and two attachments, which goes out by send_template' do
+    template_params = { name: 'aviso', language: 'pt_BR', processed_params: { body: { '1' => 'Ana' } } }
+
+    expect { create_message(conversation, content: 'Modelo', template_params: template_params, attachments: [file, file('sample.png')]) }
+      .to change(Message, :count).by(1)
+
+    expect(response).to have_http_status(:success)
+  end
+
+  it 'leaves the MCP integration request to its own path, without checking the attachments' do
+    allow(Api::V1::Accounts::Conversations::MessagesController).to receive(:new).and_wrap_original do |original, *args|
+      original.call(*args).tap { |controller| allow(controller).to receive(:mcp_integration_token_request?).and_return(true) }
+    end
+    allow(RichMessages::AttachmentLimit).to receive(:error_for).and_call_original
+
+    create_message(conversation, content: 'Arquivos', attachments: [file, file('sample.png')])
+
+    expect(RichMessages::AttachmentLimit).not_to have_received(:error_for)
+    expect(response.parsed_body['error']).not_to eq(RichMessages::AttachmentLimit::ONE_PER_MESSAGE)
+  end
+
   it 'creates a message with two attachments on a channel that delivers all of them' do
     api_conversation = create(:conversation, inbox: create(:channel_api, account: account).inbox, account: account)
 
