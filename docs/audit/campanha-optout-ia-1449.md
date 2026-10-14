@@ -4,11 +4,11 @@ Data: 14/10/2026. Branch `feat/1449-optout-campanha-ia`. Part of #1320.
 
 ## Decisões
 
-- Quem decide é o modelo: reaproveitado `Crm::Ai::OptOutClassifier` do follow-up (#1317). Aceite do chat Followup IA
-  para trocar só `feature:` (padrão `follow_up_saida`) e a redação neutra ("acompanhamento ou campanha"; saiu "a cadência
-  já parou com a resposta"). Schema, decisões, motivos e enum iguais. Depois da revisão entrou também
-  `previous_message:` opcional (sem ele, o follow-up segue igual), porque a mensagem da campanha gravada na resposta tem
-  id maior que a resposta.
+- Quem decide é o modelo: reaproveitado `Crm::Ai::OptOutClassifier` do follow-up (#1317). O prompt é o da main,
+  literal (decisão do Rodrigo, 14/10: o follow-up em produção não muda de comportamento). Mudam só dois parâmetros
+  opcionais: `feature:` (padrão `follow_up_saida`) e `previous_message:` (sem ele, vale a última enviada antes da
+  resposta, como hoje; a campanha passa o texto dela, porque a mensagem gravada na resposta tem id maior que a resposta).
+  Uma redação neutra chegou a ser testada e foi descartada: marcou "sim" falso mais vezes (abaixo).
 - Origem nova `campaign_reply` em `OPT_OUT_SOURCES` e na fusão logo depois de `follow_up_reply`.
 - A recusa vale pelo número (decisão do Rodrigo, 14/10): o contato marcado guarda o telefone em
   `additional_attributes.campaign_reply_phone` e é a prova (`Contacts::CampaignReplyOptOut`). Contato novo, ou que passa
@@ -36,40 +36,38 @@ Data: 14/10/2026. Branch `feat/1449-optout-campanha-ia`. Part of #1320.
 ## Bateria com IA real (14/10/2026)
 
 Autorizada pelo Rodrigo até US$ 0,20. Chave da conta 16 lida por psql READ ONLY via SSM para um arquivo 600, lida só
-pelo script e apagada depois; erro só com a classe. Modelo `gpt-6-luna` (o do classificador). 30 frases sintéticas,
-sem nome real; registros de teste numa transação desfeita. **Custo total: US$ 0,0123** (0,0037 na bateria + 0,0086 em duas
-rodadas de repetição).
+pelo script e apagada depois; erro só com a classe. Modelo `gpt-6-luna`. 30 frases sintéticas, sem nome real
+(15 de follow-up, 15 de campanha); registros de teste numa transação desfeita.
+**Custo total: US$ 0,0216** (US$ 0,0123 com a redação neutra, descartada, e US$ 0,0093 com o prompt da main).
 
-Follow-up: classificador da main (ANTES) x o desta branch (DEPOIS), mesma entrada.
+### Rodada 1 — redação neutra (descartada)
 
-| caso | esperado | antes | depois |
-|---|---|---|---|
-| pedido claro de parar (4 frases, incl. "SAIR", "me tira dessa lista") | sim | sim | sim |
-| "chega, não me procurem mais" | sim | sim | sim |
-| adiar, preço, "vou sair agora...", "já fechei com outro", "cancelar a reunião", "depois eu vejo" | nao | nao | nao |
-| emoji | nao_se_aplica | nao_se_aplica | nao_se_aplica |
-| "sai" | livre | nao (ambigua) | nao (ambigua) |
-| "não tenho interesse" | livre | nao | nao |
-| "pode parar de me ligar e manda por aqui" | nao | sim 1 de 26 | **sim 4 de 26** (1ª rodada + 5 + 20 repetições) |
+- Follow-up, main x branch: 14 de 15 iguais. "pode parar de me ligar e manda por aqui" deu "sim" 4 em 26 com a redação
+  nova contra 1 em 26 com a da main. Por isso o texto voltou ao da main.
 
-14 de 15 iguais na primeira rodada. Na única diferença, o modelo varia nos dois prompts; com a redação nova o "sim"
-errado apareceu um pouco mais (4/26 contra 1/26). A amostra não separa com segurança variação de efeito do prompt.
+### Rodada 2 — prompt da main literal (o que vai no PR)
 
-Campanha (só DEPOIS, feature `campanha_opt_out`, a campanha como `previous_message`):
+Follow-up, classificador da main (ANTES) x o desta branch (DEPOIS), mesma entrada: **15 de 15 iguais**.
+"pode parar de me ligar e manda por aqui", 20 vezes cada: **ANTES "nao" 20/20, DEPOIS "nao" 20/20**.
+
+| caso (follow-up) | esperado | antes = depois |
+|---|---|---|
+| "Por favor, parem de me mandar mensagem", "SAIR", "não quero mais receber isso", "me tira dessa lista", "chega, não me procurem mais" | sim | sim |
+| "agora não, obrigado", "quanto custa?", "vou sair agora...", "já fechei com outro", "pode parar de me ligar e manda por aqui", "cancelar a reunião", "depois eu vejo" | nao | nao |
+| emoji | nao_se_aplica | nao_se_aplica |
+| "sai", "não tenho interesse" | livre | nao |
+
+Campanha (feature `campanha_opt_out`, o texto da campanha como `previous_message`):
 
 | caso | esperado | resultado |
 |---|---|---|
 | "para de mandar", "SAIR", "Não quero receber promoções", "parem com esse spam", "descadastrar" | sim | sim |
-| "agora não, obrigado", "quanto custa?", "quero sim...", "quem é você?", "hoje não dá...", "não tenho interesse nessa oferta" | nao | nao |
+| "agora não, obrigado", "quanto custa?", "pode parar de me ligar e manda por aqui", "quero sim...", "quem é você?", "hoje não dá...", "não tenho interesse nessa oferta" | nao | nao |
 | emoji | nao_se_aplica | nao_se_aplica |
-| "sai" | livre | nao (ambigua) |
-| "pode parar de me ligar e manda por aqui" | nao | nao; na repetição, **sim 1 de 3** |
-| "não quero mais" | sim | **nao** 4/4 (2 textos de campanha diferentes): o modelo lê como recusa da oferta |
+| "sai" | livre | nao |
+| "não quero mais" | sim | **nao** |
 
-## Pendente (decisão do Rodrigo)
+## Decisão registrada
 
-- "não quero mais", sozinho, não marca: o modelo entende como recusa da oferta e, na dúvida, não marca. Mudar exige
-  mexer no prompt do classificador, que é compartilhado com o follow-up.
-- "pode parar de me ligar e manda por aqui": falso positivo ocasional. Campanha 1 em 4; follow-up 4 em 26 com a
-  redação nova contra 1 em 26 com a da main. Se for para o follow-up ficar idêntico à main, a saída é manter o texto
-  antigo (só o `feature:` e o `previous_message:` mudam) e aceitar "acompanhamento" na pergunta da campanha.
+- "não quero mais", sozinho, na resposta a uma campanha, não marca (nao em todas as rodadas): o modelo lê como recusa da
+  oferta, e na dúvida não se marca. Fica assim (Rodrigo, 14/10).
