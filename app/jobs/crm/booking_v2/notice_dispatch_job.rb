@@ -84,7 +84,7 @@ class Crm::BookingV2::NoticeDispatchJob < ApplicationJob
     flag_undelivered_stop!(since)
   end
 
-  # Mensagem 2 do aviso com botão (#1562), marcada pelo `Notices::Sender`: o SQL acha as mensagens `failed` da conversa
+  # Mensagem 2 do aviso com botão (#1562), marcada pelo `NoticeStopPartJob`: o SQL acha as mensagens `failed` da conversa
   # da mensagem 1 criadas depois dela (pelo índice de `conversation_id`) e a marca é conferida em Ruby, porque
   # `content_attributes` é json gravado como texto (`store ... coder: JSON`) e `->>` nele devolve sempre NULL. Falhou:
   # o aviso continua `sent` (a 1 saiu), ganha `error_code: stop_part_failed` e o responsável é avisado uma vez. Nada é
@@ -97,8 +97,8 @@ class Crm::BookingV2::NoticeDispatchJob < ApplicationJob
 
   def flag_undelivered_stop!(since)
     pairs = failed_after_notice(since)
-    marks = Message.where(id: pairs.map(&:last)).to_h { |message| [message.id, message.content_attributes.to_h.with_indifferent_access] }
-    pairs.select { |notice_id, message_id| stop_part_of?(marks[message_id], notice_id) }.map(&:first).uniq
+    messages = Message.where(id: pairs.map(&:last)).index_by(&:id)
+    pairs.select { |notice_id, message_id| Crm::BookingV2::NoticeStopPartJob.stop_part_of?(messages[message_id], notice_id) }.map(&:first).uniq
          .each { |id| flag_stop_failed!(id) }
   end
 
@@ -110,12 +110,8 @@ class Crm::BookingV2::NoticeDispatchJob < ApplicationJob
                       .limit(BATCH).pluck('crm_meeting_notices.id', 'stop_messages.id')
   end
 
-  def stop_part_of?(mark, notice_id)
-    mark[:crm_booking_notice_part] == Crm::BookingV2::Notices::Sender::STOP_PART && mark[:crm_booking_notice_id] == notice_id
-  end
-
   def flag_stop_failed!(id)
-    code = Crm::BookingV2::Notices::Sender::STOP_PART_FAILED
+    code = Crm::BookingV2::NoticeStopPartJob::STOP_PART_FAILED
     changed = Crm::MeetingNotice.where(id: id, status: :sent, error_code: nil)
                                 .update_all(error_code: code, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
     alert_failure(id, code, event: 'notice_stop_failed') if changed.positive?

@@ -12,8 +12,9 @@ import {
 
 // O texto de UM aviso (#1354): parte do texto padrão, a pessoa edita, pede à
 // IA (que só preenche o campo; salvar é o botão da página) ou volta ao padrão.
-// Ao lado, a prévia como o cliente vê, com nome e horário de exemplo e a linha
-// de parar que o sistema sempre põe. Os campos aparecem pelo rótulo leigo.
+// Ao lado, a prévia como o cliente vê, com nome e horário de exemplo e a saída
+// de parar que o sistema sempre põe (linha no texto, ou botão à parte, #1562).
+// Os campos aparecem pelo rótulo leigo.
 const props = defineProps({
   kind: { type: String, required: true },
   // Texto próprio salvo/editado, com as chaves; vazio = texto padrão.
@@ -71,20 +72,22 @@ const aiError = ref('');
 const problem = computed(() =>
   isCustom.value ? noticeTextProblem(props.text) : null
 );
-const preview = computed(() =>
-  noticeTextPreview(
-    effective.value,
-    props.setup.samples || {},
-    props.setup.stop_line,
-    props.setup.manage_line
-  )
-);
 // Sem o link no texto, o sistema o manda: no WhatsApp oficial (whatsapp_cloud,
 // o único que mostra o botão), num botão. Nas outras caixas, só a linha.
+// #1562: com o botão, a linha de parar não vai no aviso: sai logo depois, numa
+// mensagem com o botão "Parar avisos". A prévia fica sem ela e a nota diz isso.
 const showButtonNote = computed(
   () =>
     props.setup.notice_channel === 'whatsapp_cloud' &&
     !noticeTextHasLink(effective.value)
+);
+const preview = computed(() =>
+  noticeTextPreview(
+    effective.value,
+    props.setup.samples || {},
+    showButtonNote.value ? '' : props.setup.stop_line,
+    props.setup.manage_line
+  )
 );
 
 // Põe o campo onde está o cursor.

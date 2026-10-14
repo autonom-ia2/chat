@@ -104,7 +104,10 @@ describe('StepNotices — texto de cada aviso (#1354)', () => {
     BookingPagesAPI.noticeTextSuggestions.mockReset();
   });
 
-  it('mostra um cartão por aviso do jogo, com o texto padrão pelos rótulos e a prévia com a linha de parar', async () => {
+  // #1562: no WhatsApp oficial a linha de parar não vai no aviso (sai numa
+  // mensagem à parte, com o botão "Parar avisos"): a prévia fica sem ela e a
+  // nota do botão conta isso.
+  it('mostra um cartão por aviso do jogo, com o texto padrão pelos rótulos e a prévia sem a linha de parar no WhatsApp oficial', async () => {
     const wrapper = await mountStep();
 
     expect(
@@ -117,7 +120,7 @@ describe('StepNotices — texto de cada aviso (#1354)', () => {
       'Oi, [Primeiro nome do cliente]! Seu horário está marcado para [Dia e hora do horário].'
     );
     expect(booked.find('[data-text-preview]').text()).toBe(
-      'Oi, Ana! Seu horário está marcado para 14/10 às 15:00.\n\nPara confirmar, mudar ou cancelar: https://app.test/b/AB3K9QXZ\n\nPara parar estes avisos: https://app.test/b/AB3K9QXZ?stop_notices=1'
+      'Oi, Ana! Seu horário está marcado para 14/10 às 15:00.\n\nPara confirmar, mudar ou cancelar: https://app.test/b/AB3K9QXZ'
     );
     // #1517: sem o link no texto, a prévia mostra a linha que o sistema põe e avisa do botão.
     expect(booked.find('[data-button-note]').text()).toBe(
@@ -159,10 +162,15 @@ describe('StepNotices — texto de cada aviso (#1354)', () => {
 
   // #1517: a nota do botão só vale para o WhatsApp oficial e para texto sem o
   // link; outras caixas (e sem caixa) só levam a linha do link.
+  // #1562: e, sem o botão, a linha de parar volta para o fim da prévia.
   it('a nota do botão some fora do WhatsApp oficial e com o link no texto', async () => {
+    const stopLine = `\n\n${SETUP.stop_line}`;
     const waha = await mountStep(form(), { ...SETUP, notice_channel: 'waha' });
     expect(card(waha, 'booked').find('[data-button-note]').exists()).toBe(
       false
+    );
+    expect(card(waha, 'booked').find('[data-text-preview]').text()).toBe(
+      `Oi, Ana! Seu horário está marcado para 14/10 às 15:00.\n\nPara confirmar, mudar ou cancelar: https://app.test/b/AB3K9QXZ${stopLine}`
     );
     const none = await mountStep(form(), { ...SETUP, notice_channel: null });
     expect(card(none, 'booked').find('[data-button-note]').exists()).toBe(
@@ -174,6 +182,10 @@ describe('StepNotices — texto de cada aviso (#1354)', () => {
     expect(card(withLink, 'booked').find('[data-button-note]').exists()).toBe(
       false
     );
+    const withLinkPreview = card(withLink, 'booked')
+      .find('[data-text-preview]')
+      .text();
+    expect(withLinkPreview.endsWith(SETUP.stop_line)).toBe(true);
   });
 
   // #1517: a opção da IA sem o link mostra a linha do link que o sistema põe.

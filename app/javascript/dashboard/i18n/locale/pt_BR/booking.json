@@ -442,7 +442,7 @@
         "DEFAULT": "Texto padrão",
         "TEAM_BOOKED": "Quando alguém da equipe marca pelo painel, vai o texto padrão, que diz quem marcou.",
         "TEXT_LABEL": "Texto do aviso",
-        "BUTTON_NOTE": "No WhatsApp oficial, com a conversa aberta, o link vai num botão \"Ver meu horário\".",
+        "BUTTON_NOTE": "No WhatsApp oficial, com a conversa aberta, o link vai num botão \"Ver meu horário\". Em seguida vai uma mensagem com o botão \"Parar avisos\".",
         "FIELDS_HINT": "O que está entre colchetes o sistema preenche na hora. A frase para parar os avisos vai sempre no fim.",
         "INSERT": "+ {field}",
         "WRITE_AI": "Escrever com IA",

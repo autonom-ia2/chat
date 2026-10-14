@@ -20,9 +20,10 @@
 # nunca leva botão (duplicaria o link; tirar a chave deixaria a frase pela metade). Sem botão, o texto que não tem o
 # link (próprio, sem a chave) ganha a linha fixa `manage_line` antes da linha de parar: o link chega sempre.
 #
-# "Parar avisos" como botão (#1562): com o botão (`#button?`), o aviso sai SEM a linha de parar e `#stop_message`
-# dá a mensagem 2, que o `Notices::Sender` cria logo depois, na mesma conversa: `stop_prompt` + botão "Parar avisos"
-# para `stop_url`. Sem o botão, nada muda: uma mensagem só, com a linha de parar no texto (RA-18 nos dois casos).
+# "Parar avisos" como botão (#1562): com o botão (`#button?`), o aviso sai SEM a linha de parar e `.stop_message` dá
+# a mensagem 2, que o `NoticeStopPartJob` cria depois que a 1 saiu, na mesma conversa: `stop_prompt` + botão "Parar
+# avisos" para o link de gestão com `?stop_notices=1`. Sem o botão, nada muda: uma mensagem só, com a linha de parar
+# no texto (RA-18 nos dois casos).
 class Crm::BookingV2::Notices::Text
   STOP_PARAM = '?stop_notices=1'.freeze
   TEAM_BOOKED_KIND = 'booked'.freeze
@@ -39,6 +40,12 @@ class Crm::BookingV2::Notices::Text
 
   def self.stop_url(invite)
     "#{invite.url}#{STOP_PARAM}"
+  end
+
+  # A mensagem 2 do aviso com botão (#1562): `{ content:, rich_message: }`, pelo link de gestão que foi no botão da 1.
+  def self.stop_message(manage_url, locale:)
+    { content: I18n.t('crm.booking_v2.notices.stop_prompt', locale: locale),
+      rich_message: Crm::BookingV2::Notices::Button.rich_message("#{manage_url}#{STOP_PARAM}", kind: :stop, locale: locale) }
   end
 
   def self.manage_line(link, locale:)
@@ -62,14 +69,6 @@ class Crm::BookingV2::Notices::Text
   # O `content_attributes.rich_message` do botão, ou nil quando a mensagem vai só em texto.
   def rich_message
     Crm::BookingV2::Notices::Button.rich_message(invite.url, kind: :notice, locale: locale) if button?
-  end
-
-  # A mensagem 2 do aviso com botão (#1562): `{ content:, rich_message: }` com o botão "Parar avisos", ou nil sem botão.
-  def stop_message
-    return unless button?
-
-    { content: I18n.t('crm.booking_v2.notices.stop_prompt', locale: locale),
-      rich_message: Crm::BookingV2::Notices::Button.rich_message(self.class.stop_url(invite), kind: :stop, locale: locale) }
   end
 
   # Corpo acima do limite do botão (`Notices::Button.fits?`; sem a linha de parar, que vai na mensagem 2): cai no texto,
