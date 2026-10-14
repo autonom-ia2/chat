@@ -16,7 +16,7 @@ class RichMessages::Types::Location
   # gravado em `content_attributes` e falharia depois, no envio.
   COORDINATE_CLASSES = [Integer, Float].freeze
   # O mesmo endereço de mapa está na bolha do atendente
-  # (app/javascript/dashboard/components-next/message/bubbles/RichMessage/types/Location.vue): mudou um, mude o outro.
+  # (app/javascript/dashboard/components-next/message/bubbles/RichMessage/mapLink.js): mudou um, mude o outro.
   MAP_LINK = 'https://maps.google.com/?q='.freeze
 
   BODY_NOT_ALLOWED = 'A localização vai sem texto: deixe a mensagem vazia e ponha nome e endereço nos campos dela.'.freeze
@@ -70,7 +70,7 @@ class RichMessages::Types::Location
   end
 
   # Notação decimal comum, sem perder casas, sempre com ao menos uma casa e sem notação científica: 90 → "90.0",
-  # 1.0e-07 → "0.0000001". A bolha (types/Location.vue, `decimalOf`) escreve igual, para o link sair o mesmo.
+  # 1.0e-07 → "0.0000001". As bolhas (RichMessage/mapLink.js, `decimalOf`) escrevem igual, para o link sair o mesmo.
   def decimal(value)
     BigDecimal(value.to_s).to_s('F')
   end
