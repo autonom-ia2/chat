@@ -2,59 +2,78 @@
 #
 # Table name: crm_follow_ups
 #
-#  id              :bigint           not null, primary key
-#  automation_mode :integer          default("reminder_only"), not null
-#  canceled_at     :datetime
-#  completed_at    :datetime
-#  description     :text
-#  due_at          :datetime         not null
-#  follow_up_type  :integer          default("task"), not null
-#  metadata        :jsonb            not null
-#  status          :integer          default("pending"), not null
-#  timezone        :string           default("UTC"), not null
-#  title           :string           not null
-#  created_at      :datetime         not null
-#  updated_at      :datetime         not null
-#  account_id      :bigint           not null
-#  assignee_id     :bigint
-#  card_id         :bigint           not null
-#  contact_id      :bigint
-#  conversation_id :bigint
-#  created_by_id   :bigint
-#  inbox_id        :bigint
+#  id                 :bigint           not null, primary key
+#  automation_mode    :integer          default("reminder_only"), not null
+#  canceled_at        :datetime
+#  completed_at       :datetime
+#  description        :text
+#  due_at             :datetime         not null
+#  follow_up_type     :integer          default("task"), not null
+#  metadata           :jsonb            not null
+#  occurrence_at      :datetime
+#  recipient_mode     :integer          default("legacy"), not null
+#  recipient_user_ids :bigint           default([]), not null, is an Array
+#  status             :integer          default("pending"), not null
+#  timezone           :string           default("UTC"), not null
+#  title              :string           not null
+#  created_at         :datetime         not null
+#  updated_at         :datetime         not null
+#  account_id         :bigint           not null
+#  assignee_id        :bigint
+#  card_id            :bigint
+#  company_id         :bigint
+#  contact_id         :bigint
+#  conversation_id    :bigint
+#  created_by_id      :bigint
+#  inbox_id           :bigint
+#  recipient_team_id  :bigint
+#  series_id          :bigint
 #
 # Indexes
 #
-#  idx_crm_followups_assignee_due           (account_id,assignee_id,due_at,status)
-#  idx_crm_followups_card                   (account_id,card_id)
-#  idx_crm_followups_conversation           (account_id,conversation_id)
-#  idx_crm_followups_due_processor          (status,due_at,id)
-#  idx_crm_followups_status_due             (account_id,status,due_at)
-#  index_crm_follow_ups_on_account_id       (account_id)
-#  index_crm_follow_ups_on_assignee_id      (assignee_id)
-#  index_crm_follow_ups_on_card_id          (card_id)
-#  index_crm_follow_ups_on_contact_id       (contact_id)
-#  index_crm_follow_ups_on_conversation_id  (conversation_id)
-#  index_crm_follow_ups_on_created_by_id    (created_by_id)
-#  index_crm_follow_ups_on_inbox_id         (inbox_id)
+#  idx_crm_followups_assignee_due             (account_id,assignee_id,due_at,status)
+#  idx_crm_followups_card                     (account_id,card_id)
+#  idx_crm_followups_conversation             (account_id,conversation_id)
+#  idx_crm_followups_due_processor            (status,due_at,id)
+#  idx_crm_followups_series_occurrence_uniq   (series_id,occurrence_at) UNIQUE WHERE (series_id IS NOT NULL)
+#  idx_crm_followups_status_due               (account_id,status,due_at)
+#  index_crm_follow_ups_on_account_id         (account_id)
+#  index_crm_follow_ups_on_assignee_id        (assignee_id)
+#  index_crm_follow_ups_on_card_id            (card_id)
+#  index_crm_follow_ups_on_company_id         (company_id)
+#  index_crm_follow_ups_on_contact_id         (contact_id)
+#  index_crm_follow_ups_on_conversation_id    (conversation_id)
+#  index_crm_follow_ups_on_created_by_id      (created_by_id)
+#  index_crm_follow_ups_on_inbox_id           (inbox_id)
+#  index_crm_follow_ups_on_recipient_team_id  (recipient_team_id)
 #
 # Foreign Keys
 #
 #  fk_rails_...  (account_id => accounts.id)
 #  fk_rails_...  (assignee_id => users.id)
 #  fk_rails_...  (card_id => crm_cards.id) ON DELETE => cascade
+#  fk_rails_...  (company_id => companies.id) ON DELETE => cascade
 #  fk_rails_...  (contact_id => contacts.id) ON DELETE => cascade
 #  fk_rails_...  (conversation_id => conversations.id) ON DELETE => cascade
 #  fk_rails_...  (created_by_id => users.id)
 #  fk_rails_...  (inbox_id => inboxes.id) ON DELETE => nullify
+#  fk_rails_...  (recipient_team_id => teams.id) ON DELETE => nullify
+#  fk_rails_...  (series_id => crm_follow_up_series.id) ON DELETE => nullify
 #
 class Crm::FollowUp < ApplicationRecord
+  include Crm::FollowUpRecipients
+
   self.table_name = 'crm_follow_ups'
 
   belongs_to :account
-  belongs_to :card, class_name: 'Crm::Card'
+  # #1461: lembrete só no calendário ou de um cliente sem negócio aberto não tem card.
+  belongs_to :card, class_name: 'Crm::Card', optional: true
+  # #1460: a vez de um lembrete que repete.
+  belongs_to :series, class_name: 'Crm::FollowUpSeries', optional: true, inverse_of: :follow_ups
   belongs_to :conversation, optional: true
   belongs_to :contact, optional: true
+  # #1461: lembrete criado pela ficha da empresa (Relacionamento).
+  belongs_to :company, optional: true
   belongs_to :inbox, optional: true
   belongs_to :assignee, class_name: 'User', optional: true
   belongs_to :created_by, class_name: 'User', optional: true
@@ -68,11 +87,27 @@ class Crm::FollowUp < ApplicationRecord
   validate :linked_records_must_belong_to_account
   validate :snooze_requires_conversation
   validate :auto_send_requirements
+  validate :needs_an_owner
+  validate :without_card_only_reminds
 
   scope :active, -> { where(status: [statuses[:pending], statuses[:overdue]]) }
   scope :due, ->(time = Time.current) { pending.where(due_at: ..time) }
 
   private
+
+  # A mesma trava do banco (crm_follow_ups_has_owner): alguém precisa ser dono do lembrete.
+  def needs_an_owner
+    return if [card_id, contact_id, company_id, created_by_id, created_by].any?(&:present?)
+
+    errors.add(:base, 'needs a card, a contact or a creator')
+  end
+
+  # Sem card não há conversa nem cliente para mandar mensagem: só o lembrete para a equipe.
+  def without_card_only_reminds
+    return if card_id.present? || card.present? || reminder_only?
+
+    errors.add(:automation_mode, 'must be reminder_only without a card')
+  end
 
   def snooze_requires_conversation
     return unless snooze_conversation?
@@ -92,6 +127,8 @@ class Crm::FollowUp < ApplicationRecord
     validate_same_account(:conversation)
     validate_same_account(:contact)
     validate_same_account(:inbox)
+    validate_same_account(:series)
+    validate_same_account(:company)
     validate_assignee_account
     validate_created_by_account
   end

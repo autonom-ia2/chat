@@ -552,8 +552,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/follow_ups#destroy",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:60",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:94"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:69",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:103"
     ],
     "sem_corpo": true
   },
@@ -5022,6 +5022,64 @@
     ],
     "sem_corpo": false
   },
+  "PATCH crm/follow_up_series/:id": {
+    "campos": {
+      "description": {
+        "tipo": "string"
+      },
+      "due_at": {},
+      "recipient_mode": {
+        "padrao": "legacy",
+        "tipo": "string",
+        "um_de": [
+          "legacy",
+          "card_owner",
+          "creator",
+          "users",
+          "team"
+        ]
+      },
+      "recipient_team_id": {
+        "tipo": "inteiro"
+      },
+      "recipient_user_ids": {
+        "tipo": "lista"
+      },
+      "recurrence": {
+        "campos": {
+          "ends_mode": {},
+          "ends_on": {},
+          "frequency": {},
+          "occurrences_count": {},
+          "weekdays": {
+            "tipo": "lista"
+          },
+          "weekdays_only": {}
+        },
+        "tipo": "objeto"
+      },
+      "timezone": {
+        "nao_pode_ficar_vazio": true,
+        "padrao": "UTC",
+        "tipo": "string"
+      },
+      "title": {
+        "nao_pode_ficar_vazio": true,
+        "tipo": "string"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/crm/follow_up_series#update",
+    "corpo_plano": true,
+    "envelope": "follow_up_series",
+    "modelo": "Crm::FollowUpSeries",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/follow_up_series_controller.rb:16",
+      "app/controllers/api/v1/accounts/crm/follow_up_series_controller.rb:48",
+      "app/controllers/api/v1/accounts/crm/follow_up_series_controller.rb:39"
+    ],
+    "sem_corpo": false
+  },
   "PATCH crm/follow_ups/:id": {
     "campos": {
       "automation_mode": {
@@ -5034,7 +5092,12 @@
         ]
       },
       "card_id": {
-        "nao_pode_ficar_vazio": true,
+        "tipo": "inteiro"
+      },
+      "company_id": {
+        "tipo": "inteiro"
+      },
+      "contact_id": {
         "tipo": "inteiro"
       },
       "conversation_id": {
@@ -5061,6 +5124,36 @@
       "metadata": {
         "tipo": "objeto_livre"
       },
+      "recipient_mode": {
+        "padrao": "legacy",
+        "tipo": "string",
+        "um_de": [
+          "legacy",
+          "card_owner",
+          "creator",
+          "users",
+          "team"
+        ]
+      },
+      "recipient_team_id": {
+        "tipo": "inteiro"
+      },
+      "recipient_user_ids": {
+        "tipo": "lista"
+      },
+      "recurrence": {
+        "campos": {
+          "ends_mode": {},
+          "ends_on": {},
+          "frequency": {},
+          "occurrences_count": {},
+          "weekdays": {
+            "tipo": "lista"
+          },
+          "weekdays_only": {}
+        },
+        "tipo": "objeto"
+      },
       "timezone": {
         "nao_pode_ficar_vazio": true,
         "padrao": "UTC",
@@ -5077,9 +5170,9 @@
     "envelope": "follow_up",
     "modelo": "Crm::FollowUp",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:52",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:202",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:94"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:61",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:203",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:103"
     ],
     "sem_corpo": false
   },
@@ -14442,6 +14535,33 @@
     ],
     "sem_corpo": true
   },
+  "POST crm/follow_up_series/:id/end": {
+    "completo": true,
+    "controller": "api/v1/accounts/crm/follow_up_series#finish",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/follow_up_series_controller.rb:31",
+      "app/controllers/api/v1/accounts/crm/follow_up_series_controller.rb:39"
+    ],
+    "sem_corpo": true
+  },
+  "POST crm/follow_up_series/:id/pause": {
+    "completo": true,
+    "controller": "api/v1/accounts/crm/follow_up_series#pause",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/follow_up_series_controller.rb:21",
+      "app/controllers/api/v1/accounts/crm/follow_up_series_controller.rb:39"
+    ],
+    "sem_corpo": true
+  },
+  "POST crm/follow_up_series/:id/resume": {
+    "completo": true,
+    "controller": "api/v1/accounts/crm/follow_up_series#resume",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/follow_up_series_controller.rb:26",
+      "app/controllers/api/v1/accounts/crm/follow_up_series_controller.rb:39"
+    ],
+    "sem_corpo": true
+  },
   "POST crm/follow_ups": {
     "campos": {
       "automation_mode": {
@@ -14454,7 +14574,12 @@
         ]
       },
       "card_id": {
-        "obrigatorio": "pelo_modelo",
+        "tipo": "inteiro"
+      },
+      "company_id": {
+        "tipo": "inteiro"
+      },
+      "contact_id": {
         "tipo": "inteiro"
       },
       "conversation_id": {
@@ -14481,6 +14606,36 @@
       "metadata": {
         "tipo": "objeto_livre"
       },
+      "recipient_mode": {
+        "padrao": "legacy",
+        "tipo": "string",
+        "um_de": [
+          "legacy",
+          "card_owner",
+          "creator",
+          "users",
+          "team"
+        ]
+      },
+      "recipient_team_id": {
+        "tipo": "inteiro"
+      },
+      "recipient_user_ids": {
+        "tipo": "lista"
+      },
+      "recurrence": {
+        "campos": {
+          "ends_mode": {},
+          "ends_on": {},
+          "frequency": {},
+          "occurrences_count": {},
+          "weekdays": {
+            "tipo": "lista"
+          },
+          "weekdays_only": {}
+        },
+        "tipo": "objeto"
+      },
       "timezone": {
         "obrigatorio": "pelo_modelo",
         "padrao": "UTC",
@@ -14497,8 +14652,8 @@
     "envelope": "follow_up",
     "modelo": "Crm::FollowUp",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:40",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:202"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:48",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:203"
     ],
     "sem_corpo": false
   },
@@ -14506,8 +14661,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/follow_ups#cancel",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:68",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:94"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:77",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:103"
     ],
     "sem_corpo": true
   },
@@ -14515,8 +14670,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/follow_ups#complete",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:64",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:94"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:73",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:103"
     ],
     "sem_corpo": true
   },
@@ -14524,8 +14679,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/follow_ups#dismiss_reminder",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:72",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:94"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:81",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:103"
     ],
     "sem_corpo": true
   },
@@ -14538,9 +14693,9 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/follow_ups#reschedule",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:80",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:84",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:94"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:89",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:93",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:103"
     ],
     "sem_corpo": false
   },
@@ -22765,6 +22920,64 @@
     ],
     "sem_corpo": false
   },
+  "PUT crm/follow_up_series/:id": {
+    "campos": {
+      "description": {
+        "tipo": "string"
+      },
+      "due_at": {},
+      "recipient_mode": {
+        "padrao": "legacy",
+        "tipo": "string",
+        "um_de": [
+          "legacy",
+          "card_owner",
+          "creator",
+          "users",
+          "team"
+        ]
+      },
+      "recipient_team_id": {
+        "tipo": "inteiro"
+      },
+      "recipient_user_ids": {
+        "tipo": "lista"
+      },
+      "recurrence": {
+        "campos": {
+          "ends_mode": {},
+          "ends_on": {},
+          "frequency": {},
+          "occurrences_count": {},
+          "weekdays": {
+            "tipo": "lista"
+          },
+          "weekdays_only": {}
+        },
+        "tipo": "objeto"
+      },
+      "timezone": {
+        "nao_pode_ficar_vazio": true,
+        "padrao": "UTC",
+        "tipo": "string"
+      },
+      "title": {
+        "nao_pode_ficar_vazio": true,
+        "tipo": "string"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/crm/follow_up_series#update",
+    "corpo_plano": true,
+    "envelope": "follow_up_series",
+    "modelo": "Crm::FollowUpSeries",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/follow_up_series_controller.rb:16",
+      "app/controllers/api/v1/accounts/crm/follow_up_series_controller.rb:48",
+      "app/controllers/api/v1/accounts/crm/follow_up_series_controller.rb:39"
+    ],
+    "sem_corpo": false
+  },
   "PUT crm/follow_ups/:id": {
     "campos": {
       "automation_mode": {
@@ -22777,7 +22990,12 @@
         ]
       },
       "card_id": {
-        "nao_pode_ficar_vazio": true,
+        "tipo": "inteiro"
+      },
+      "company_id": {
+        "tipo": "inteiro"
+      },
+      "contact_id": {
         "tipo": "inteiro"
       },
       "conversation_id": {
@@ -22804,6 +23022,36 @@
       "metadata": {
         "tipo": "objeto_livre"
       },
+      "recipient_mode": {
+        "padrao": "legacy",
+        "tipo": "string",
+        "um_de": [
+          "legacy",
+          "card_owner",
+          "creator",
+          "users",
+          "team"
+        ]
+      },
+      "recipient_team_id": {
+        "tipo": "inteiro"
+      },
+      "recipient_user_ids": {
+        "tipo": "lista"
+      },
+      "recurrence": {
+        "campos": {
+          "ends_mode": {},
+          "ends_on": {},
+          "frequency": {},
+          "occurrences_count": {},
+          "weekdays": {
+            "tipo": "lista"
+          },
+          "weekdays_only": {}
+        },
+        "tipo": "objeto"
+      },
       "timezone": {
         "nao_pode_ficar_vazio": true,
         "padrao": "UTC",
@@ -22820,9 +23068,9 @@
     "envelope": "follow_up",
     "modelo": "Crm::FollowUp",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:52",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:202",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:94"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:61",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:203",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:103"
     ],
     "sem_corpo": false
   },
