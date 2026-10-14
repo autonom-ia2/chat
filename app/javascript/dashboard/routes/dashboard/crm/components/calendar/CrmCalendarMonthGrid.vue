@@ -11,7 +11,7 @@ import {
   isOverdue,
   isDraggable,
   isValidDrop,
-  formatTime,
+  eventTime,
   EVENT_TYPE_GROUP,
   EVENT_TYPE_META,
   ptBR,
@@ -350,10 +350,10 @@ const onEventClick = event => {
                   aria-hidden="true"
                 />
                 <span
-                  v-if="formatTime(event.starts_at)"
+                  v-if="eventTime(event)"
                   class="text-[10px] tabular-nums shrink-0 text-n-slate-10"
                 >
-                  {{ formatTime(event.starts_at) }}
+                  {{ eventTime(event) }}
                 </span>
                 <span class="text-xs truncate" :class="eventLabelClass(event)">
                   {{ eventTitle(event) }}
@@ -436,10 +436,10 @@ const onEventClick = event => {
                         aria-hidden="true"
                       />
                       <span
-                        v-if="formatTime(event.starts_at)"
+                        v-if="eventTime(event)"
                         class="text-[11px] tabular-nums shrink-0 text-n-slate-10"
                       >
-                        {{ formatTime(event.starts_at) }}
+                        {{ eventTime(event) }}
                       </span>
                       <span
                         class="text-sm truncate"

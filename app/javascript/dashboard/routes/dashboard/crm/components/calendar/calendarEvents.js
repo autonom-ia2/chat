@@ -414,6 +414,10 @@ export const formatTime = value => {
   return format(d, 'HH:mm', { locale: ptBR });
 };
 
+// A hora que aparece no evento; vazio para o vencimento, que é uma data (#1538).
+export const eventTime = event =>
+  isDateOnly(event) ? '' : formatTime(event?.starts_at);
+
 /** The hours rendered in week/day time-grids. */
 export const DAY_HOURS = Array.from({ length: 24 }, (_, h) => h);
 
