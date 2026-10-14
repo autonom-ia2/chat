@@ -58,6 +58,16 @@ describe WhatsappHybrid::WebTransport do
     expect(message.status).to eq('failed')
   end
 
+  it 'grava failed quando o motor recusa a conversa nova (463): contato barrado, sem reenvio' do
+    allow(client).to receive(:send_text).and_raise(Waha::Client::Error, 'WAHA POST /api/sendText -> 500: server returned error 463')
+
+    expect { perform }.to have_enqueued_job(WhatsappHybrid::TimelockRefreshJob).with(connection.id)
+
+    expect(outcome).to eq('failed')
+    expect(message.status).to eq('failed')
+    expect(client).to have_received(:send_text).once
+  end
+
   it 'grava failed sem enviar quando o celular está desconectado' do
     connection.update!(status_checked_at: 5.minutes.ago)
     allow(client).to receive(:get_session).and_return({ 'status' => 'STOPPED' })
