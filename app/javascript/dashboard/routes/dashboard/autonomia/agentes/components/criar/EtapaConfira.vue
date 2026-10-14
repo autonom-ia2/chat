@@ -33,6 +33,8 @@ const props = defineProps({
   interno: { type: Boolean, default: false },
   // "Fazer ajustes avançados" foi pedido e a página ainda está deixando o agente parado.
   abrindoAjustes: { type: Boolean, default: false },
+  // As caixas ainda estão sendo lidas: Começar espera (sem teste, a pessoa chega aqui antes delas).
+  carregandoCanais: { type: Boolean, default: false },
 });
 
 const emit = defineEmits([
@@ -147,7 +149,7 @@ const respondeuErrado = () => {
     data-confira
     aria-labelledby="confira-titulo"
     class="flex flex-col min-w-0 gap-4"
-    :class="celular ? 'pb-80' : ''"
+    :class="celular ? 'pb-[26rem]' : ''"
   >
     <div class="relative flex flex-col gap-1">
       <!-- No celular o título da tela já diz isso: aqui fica só para o leitor de tela. -->
@@ -159,6 +161,18 @@ const respondeuErrado = () => {
         {{ interno ? t(`${NS}.TITULO_COPILOTO`) : t(`${NS}.TITULO`) }}
       </h2>
       <p class="m-0 text-sm text-n-slate-11">{{ t(`${NS}.TEXTO`) }}</p>
+      <!-- No celular a dica fica aqui em cima: a barra fixa embaixo já leva perguntas, campo e Começar. -->
+      <p
+        v-if="celular && !respondidas"
+        data-teste-opcional
+        class="flex items-start gap-1.5 m-0 text-sm text-n-slate-11"
+      >
+        <span
+          class="i-lucide-lightbulb size-4 mt-0.5 shrink-0"
+          aria-hidden="true"
+        />
+        {{ t(`${NS}.TESTE_OPCIONAL`, { nome }) }}
+      </p>
     </div>
 
     <CelularConversa
@@ -263,7 +277,7 @@ const respondeuErrado = () => {
         />
       </template>
       <p
-        v-if="!respondidas"
+        v-if="!celular && !respondidas"
         data-teste-opcional
         class="flex items-start gap-1.5 m-0 text-sm text-n-slate-11"
       >
@@ -278,6 +292,7 @@ const respondeuErrado = () => {
           tamanho="xl"
           bloco
           aria-describedby="confira-comecar-texto"
+          :carregando="carregandoCanais"
           @click="emit('comecar')"
         >
           {{ rotuloComecar }}

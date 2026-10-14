@@ -71,6 +71,18 @@ describe('EtapaConfira', () => {
     );
   });
 
+  it('keeps Começar busy (and ignores the click) while the inboxes are still loading', async () => {
+    const wrapper = montar({ carregandoCanais: true });
+    const botao = wrapper.get('[data-comecar] button');
+    expect(botao.attributes('aria-busy')).toBe('true');
+    await botao.trigger('click');
+    expect(wrapper.emitted('comecar')).toBeUndefined();
+
+    await wrapper.setProps({ carregandoCanais: false });
+    await wrapper.get('[data-comecar] button').trigger('click');
+    expect(wrapper.emitted('comecar')).toHaveLength(1);
+  });
+
   it('the copilot also starts without a test answer', () => {
     const wrapper = montar({
       interno: true,
@@ -219,6 +231,15 @@ describe('EtapaConfira', () => {
     });
     const doca = wrapper.get('[data-comecar]').element.parentElement;
     expect(doca.className).toContain('fixed');
+  });
+
+  it('on the phone, the optional-test hint sits above the test, out of the bottom bar', () => {
+    const wrapper = montar({ celular: true });
+    const doca = wrapper.get('[data-comecar]').element.parentElement;
+    expect(wrapper.findAll('[data-teste-opcional]')).toHaveLength(1);
+    expect(doca.contains(wrapper.get('[data-teste-opcional]').element)).toBe(
+      false
+    );
   });
 
   it('keeps the advanced adjustments out of the bottom bar on the phone, so the bar stays short', () => {

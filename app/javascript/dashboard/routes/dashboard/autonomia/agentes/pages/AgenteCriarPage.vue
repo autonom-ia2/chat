@@ -395,8 +395,14 @@ const comecarNoCanal = async ({ inboxId, quando, troca }) => {
 // Parado (não rascunho) e sem canal: a página do agente abre com o interruptor desligado e a lista
 // mostra "Parado". Nenhuma caixa é ligada aqui. Se não salvar, a pessoa continua no Confira.
 const fazerAjustesAvancados = async () => {
+  if (abrindoAjustes.value) return;
   const id = agente.value?.id;
-  if (abrindoAjustes.value || !id) return;
+  if (!id) {
+    useAlert(
+      t('AGENTS.JORNADA.CRIAR.CONFIRA.AJUSTES_ERRO', { nome: nome.value })
+    );
+    return;
+  }
   abrindoAjustes.value = true;
   try {
     await store.dispatch('autonomiaAgents/update', {
@@ -611,6 +617,9 @@ onMounted(() => {
           :link-conectar-canal="linkConectarCanal"
           :celular="celular"
           :abrindo-ajustes="abrindoAjustes"
+          :carregando-canais="
+            !interno && ocupacao.estado.value === 'carregando'
+          "
           @perguntar="perguntarNoTeste"
           @tentar-de-novo="teste.tentarDeNovo"
           @limpar="teste.limpar"

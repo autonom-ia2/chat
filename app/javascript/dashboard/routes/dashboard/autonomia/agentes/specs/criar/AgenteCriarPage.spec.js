@@ -539,6 +539,48 @@ describe('AgenteCriarPage', () => {
     wrapper.unmount();
   });
 
+  it('says nothing changed when the agent is missing, instead of doing nothing', async () => {
+    const wrapper = await montar({ query: { agente: '90' } });
+    store.state['autonomiaAgents/getRecords'] = [];
+    await flushPromises();
+    await wrapper.get('[data-ajustes-botao]').trigger('click');
+    await flushPromises();
+    expect(alerta).toHaveBeenCalledWith(
+      'AGENTS.JORNADA.CRIAR.CONFIRA.AJUSTES_ERRO'
+    );
+    expect(
+      store.dispatch.mock.calls.some(
+        ([acao]) => acao === 'autonomiaAgents/update'
+      )
+    ).toBe(false);
+    expect(router.push).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
+  it('keeps Começar busy while the inboxes load, and starts once they arrive', async () => {
+    let responder;
+    jornada.canaisOcupados.mockImplementationOnce(
+      () =>
+        new Promise(resolve => {
+          responder = resolve;
+        })
+    );
+    const wrapper = await montar({ query: { agente: '90' } });
+    const botao = () => wrapper.get('[data-comecar] button');
+    expect(botao().attributes('aria-busy')).toBe('true');
+    await botao().trigger('click');
+    await flushPromises();
+    expect(rota.atual.query.etapa).not.toBe('comece');
+
+    responder({ data: { payload: L2 } });
+    await flushPromises();
+    expect(botao().attributes('aria-busy')).toBeUndefined();
+    await botao().trigger('click');
+    await flushPromises();
+    expect(rota.atual.query.etapa).toBe('comece');
+    wrapper.unmount();
+  });
+
   it('"Back to Agents" at the top still keeps the draft as Not finished', async () => {
     HTMLDialogElement.prototype.showModal ||= function abrir() {
       this.open = true;
