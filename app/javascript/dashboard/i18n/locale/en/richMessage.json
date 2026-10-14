@@ -4,6 +4,7 @@
       "OPENS_IN_NEW_TAB": "(opens in a new tab)"
     },
     "CONTACT": {
+      "SHARED": "{sender} shared a contact"
     },
     "FAILURE": {
       "RETRY": "Send again",
@@ -18,8 +19,13 @@
       "OPENS": "Opens: {url}"
     },
     "LOCATION": {
+      "SEE_ON_MAP": "See on map",
+      "SHARED": "{sender} shared a location"
     },
     "LOCATION_REQUEST": {
+      "BUTTON": "Send location",
+      "BUTTON_HINT": "(button shown in the customer's WhatsApp)",
+      "CAPTION": "We asked the customer where they are"
     },
     "OPTIONS": {
       "CHOSEN": "The customer tapped \"{title}\"",
