@@ -8,6 +8,8 @@
 #              payload: … } | { type: 'url', parameter: … } | nil] }] }   um item por cartão do modelo, na ordem dele
 #   buttons[i]: { type: 'flow', flow_token: … }                            botão de formulário (Flow)
 #   buttons[i]: { type: 'catalog', thumbnail_product_retailer_id?: … }     botão de catálogo
+#   buttons[i]: { type: 'quick_reply', payload: … }                        resposta rápida com payload estável (#1473): a Meta
+#                                                                          devolve o payload, não o texto do botão
 # O cupom (botão COPY_CODE) já era enviado pelo Chatwoot (`{ type: 'copy_code', parameter: … }`).
 #
 # Formato de cada componente conforme a documentação oficial da Meta, lida em 13/10/2026:
@@ -100,6 +102,8 @@ module Whatsapp::Templates::SendComponents
       case [button['type'], kinds[index]]
       when %w[flow FLOW] then flow_button(button, index)
       when %w[catalog CATALOG] then catalog_button(button, index)
+      # #1473: com `parameter`, o Chatwoot já monta o botão; aqui só o payload estável.
+      when %w[quick_reply QUICK_REPLY] then quick_reply_button(button, index) if button['parameter'].blank?
       end
     end
   end
