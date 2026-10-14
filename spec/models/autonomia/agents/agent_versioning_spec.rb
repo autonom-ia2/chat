@@ -1,4 +1,5 @@
 require 'rails_helper'
+require 'timeout'
 
 # #1428 — a versão guarda o AGENTE INTEIRO e voltar a ela devolve tudo. Caso real (13/10, conta 16): o
 # Construtor "aplicou" uma pergunta e regravou o agente sem deixar versão; não havia como saber o que
@@ -323,6 +324,19 @@ RSpec.describe Autonomia::Agents::AgentVersioning do
         expect(rascunho.reload.mode).to eq('guided')
       end
 
+      # Revisão do #1428 (MÉDIO): versão do Construtor gravada em modo manual deixava o agente manual.
+      it 'versão do Construtor gravada em modo manual: o agente volta guiado e a instrução fica oculta' do
+        # Arrange
+        versao = versao_antiga('builder_adjust', 'agente' => rascunho.send(:retrato_da_versao))
+
+        # Act
+        rascunho.restore_instruction!(versao)
+
+        # Assert
+        expect([versao.metadata['agente']['mode'], versao.instrucao_visivel?]).to eq(['manual', false])
+        expect([rascunho.reload.mode, rascunho.instruction]).to eq(['guided', 'gerada pelo construtor'])
+      end
+
       it 'edição manual antiga, sem retrato, continua manual' do
         # Act
         rascunho.restore_instruction!(versao_antiga('manual_edit'))
@@ -415,6 +429,89 @@ RSpec.describe Autonomia::Agents::AgentVersioning do
         # Assert
         expect(retrato(rascunho)).to eq(antes.merge('instruction' => 'instrucao velha'))
       end
+    end
+  end
+
+  # Revisão do #1428 (BAIXO): a volta pedida enquanto uma aplicação do Construtor está em andamento. Sem a
+  # trava (`lock!`) a volta decide pelo agente que tinha na memória — a saudação editada à mão — e grava
+  # um 'antes_de_voltar' falso no meio do ajuste, com um estado que já não era o do agente. Com a trava, espera
+  # o ajuste terminar, relê o agente e vê que o estado atual já está na versão do ajuste.
+  describe 'voltar durante uma aplicação do Construtor', :relationships_committed_fixtures do
+    self.use_transactional_tests = false
+
+    let!(:account) { create(:account) }
+    let!(:user) { create(:user, account: account) }
+    let(:workers) { [] }
+    let(:liberar_construtor) { Queue.new }
+
+    after do
+      liberar_construtor << true
+      workers.each { |worker| worker.join(1) || worker.kill.join }
+    ensure
+      Autonomia::Agents::InstructionVersion.where(account_id: account.id).delete_all
+      Autonomia::Agents::BuildThread.where(account_id: account.id).delete_all
+      Autonomia::Agents::Agent.where(account_id: account.id).delete_all
+      account.account_users.destroy_all
+      account.destroy!
+      NotificationSetting.where(user_id: user.id).delete_all
+      AccessToken.where(owner: user).delete_all
+      user.destroy!
+      Audited::Audit.where(associated: account).or(Audited::Audit.where(auditable: account)).delete_all
+    end
+
+    def em_conexao_propria(pids)
+      Thread.new do
+        ActiveRecord::Base.connection_pool.with_connection do |conexao|
+          conexao.execute("SET lock_timeout = '5s'")
+          pids << conexao.select_value('SELECT pg_backend_pid()')
+          yield
+        end
+      end
+    end
+
+    def esperar_a_volta_travada(pid)
+      Timeout.timeout(5) do
+        sleep 0.02 until ActiveRecord::Base.connection.select_value(
+          "SELECT wait_event_type = 'Lock' FROM pg_stat_activity WHERE pid = #{pid.to_i}"
+        )
+      end
+    end
+
+    it 'grava os motivos na ordem certa e não perde versão' do
+      # Arrange — v1 aplicada, saudação editada à mão (fora de versão), ajuste v2 parado no meio da escrita
+      aplicar(rascunho, gerado('v1'))
+      versao_v1 = rascunho.instruction_versions.order(:id).last
+      rascunho.update!(greeting: 'oi escrito a mao')
+      ajuste = Autonomia::Agents::BuildThread.create!(account: account, agent: rascunho, created_by: user,
+                                                      status: :processing, build_token: 'ajuste')
+      do_construtor = Autonomia::Agents::Agent.find(rascunho.id)
+      da_volta = Autonomia::Agents::Agent.find(rascunho.id)
+      em_andamento = Queue.new
+      liberar = liberar_construtor
+      allow(do_construtor).to receive(:update!).and_wrap_original do |original, *args|
+        em_andamento << true
+        liberar.pop
+        original.call(*args)
+      end
+      pids = Queue.new
+
+      # Act
+      workers << em_conexao_propria(pids) do
+        do_construtor.apply_builder_config!(ajuste.build_token, Autonomia::Agents::Builder.map_attributes(gerado('v2')))
+      end
+      pids.pop
+      em_andamento.pop
+      workers << em_conexao_propria(pids) { da_volta.restore_instruction!(versao_v1, created_by: user) }
+      esperar_a_volta_travada(pids.pop)
+      liberar_construtor << true
+      workers.each(&:join)
+
+      # Assert
+      versoes = rascunho.instruction_versions.order(:id).to_a
+      expect(versoes.map(&:reason)).to eq(%w[builder_create base builder_adjust rollback])
+      expect(versoes.map { |versao| versao.metadata['agente']['greeting'] })
+        .to eq(['oi v1', 'oi escrito a mao', 'oi v2', 'oi v1'])
+      expect(rascunho.reload.greeting).to eq('oi v1')
     end
   end
 end

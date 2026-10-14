@@ -125,6 +125,24 @@ RSpec.describe 'Autonomia agent instruction versions', type: :request do
       expect(por_motivo['kb_refresh']).not_to have_key('instruction')
     end
 
+    # Revisão do #1428 (MÉDIO): versão do Construtor gravada com modo manual expunha a instrução gerada.
+    it 'never exposes the instruction of a Builder version, even one recorded in manual mode' do
+      # Arrange
+      manual_agent.instruction_versions.create!(account: account, reason: 'builder_adjust', instruction: 'do construtor',
+                                                instruction_hash: Digest::SHA256.hexdigest('do construtor'),
+                                                metadata: { 'agente' => manual_agent.send(:retrato_da_versao) })
+
+      # Act
+      get "/api/v1/accounts/#{account.id}/autonomia/agents/#{manual_agent.id}/instruction_versions",
+          headers: administrator.create_new_auth_token, as: :json
+
+      # Assert
+      versao = response.parsed_body['payload'].first
+      expect(versao['reason']).to eq('builder_adjust')
+      expect(versao).not_to have_key('instruction')
+      expect(response.body).not_to include('do construtor')
+    end
+
     # Revisão do #1428: a aplicação sem mudança fica no banco (rastro), mas não vira linha na lista.
     it 'keeps no-change versions out of the list' do
       # Arrange
@@ -196,6 +214,31 @@ RSpec.describe 'Autonomia agent instruction versions', type: :request do
           headers: administrator.create_new_auth_token, as: :json
       expect(response.parsed_body['mode']).to eq('guided')
       expect(response.body).not_to include('guided v1')
+    end
+
+    # Revisão do #1428 (MÉDIO): voltar a uma versão do Construtor gravada em modo manual deixava a instrução
+    # gerada num agente manual.
+    it 'puts the agent back in guided mode when going back to a Builder version recorded in manual mode' do
+      # Arrange
+      retrato = manual_agent.send(:retrato_da_versao)
+      versao = manual_agent.instruction_versions.create!(account: account, reason: 'builder_adjust',
+                                                         instruction: 'do construtor',
+                                                         instruction_hash: Digest::SHA256.hexdigest('do construtor'),
+                                                         metadata: { 'agente' => retrato })
+      expect(retrato['mode']).to eq('manual')
+
+      # Act
+      post "/api/v1/accounts/#{account.id}/autonomia/agents/#{manual_agent.id}" \
+           "/instruction_versions/#{versao.id}/restore",
+           headers: administrator.create_new_auth_token, as: :json
+
+      # Assert
+      expect(response).to have_http_status(:success)
+      expect(response.body).not_to include('do construtor')
+      expect(manual_agent.reload.mode).to eq('guided')
+      get "/api/v1/accounts/#{account.id}/autonomia/agents/#{manual_agent.id}/instruction_versions",
+          headers: administrator.create_new_auth_token, as: :json
+      expect(response.body).not_to include('do construtor')
     end
 
     it 'gives back every field kept in the version and keeps the hidden ones out of the response' do

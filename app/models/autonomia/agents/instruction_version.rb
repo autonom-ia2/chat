@@ -44,10 +44,17 @@ class Autonomia::Agents::InstructionVersion < ApplicationRecord
   # #1428 — a aplicação do Construtor que não mudou nada fica no banco (rastro), mas não vira linha na lista.
   scope :na_lista, -> { where.not('metadata @> ?', { sem_mudanca: true }.to_json) }
 
+  # Versões que o Construtor grava: a instrução é dele, seja qual for o modo gravado.
+  DO_CONSTRUTOR = %w[builder_create builder_adjust].freeze
+
   # #1484 — o texto só sai de versão gravada em modo MANUAL (texto do próprio dono). Quem decide é o modo da
   # VERSÃO, nunca o modo atual do agente: a instrução gerada pelo Construtor não aparece nem depois que o
   # agente passa a manual. Versão antiga, sem retrato: só a edição manual (gravada sempre em modo manual).
+  # Versão do Construtor nunca: gravada em modo manual, exporia a instrução gerada e a volta a ela deixaria
+  # essa instrução num agente manual.
   def instrucao_visivel?
+    return false if DO_CONSTRUTOR.include?(reason)
+
     agente = metadata.to_h['agente']
     return agente['mode'] == 'manual' if agente.is_a?(Hash)
 
