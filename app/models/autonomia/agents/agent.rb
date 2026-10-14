@@ -322,6 +322,12 @@ module Autonomia
         !deleted? && enabled? && active?
       end
 
+      # Pode falar com cliente agora: atendendo, não interno (copiloto) e não de sistema (o Guia). É o mesmo predicado
+      # do agente em Operate.authorized_agent_inbox, sem a allowlist de teste, que depende da conversa (#1433).
+      def atende_cliente?
+        operating? && !actuation_internal? && config&.dig('system_key').blank?
+      end
+
       private
 
       def apply_builder_attributes!(attrs)
@@ -347,8 +353,9 @@ module Autonomia
         agent_inboxes.kept.find_each { |agent_inbox| agent_inbox.sync_mirror!(operating: operating?) }
       end
 
+      # #1433: sendo porta, solta antes as áreas da caixa (mesma ordem do InboxConnector#disconnect!).
       def release_bot_conversations
-        agent_inboxes.kept.find_each(&:release_bot_conversations!)
+        agent_inboxes.kept.find_each(&:sair_da_caixa!)
       end
 
       # O modo manual é o que expõe a coluna no jbuilder e a aceita pela API; um agente de instrução

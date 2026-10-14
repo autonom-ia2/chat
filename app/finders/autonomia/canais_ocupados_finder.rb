@@ -34,9 +34,10 @@ class Autonomia::CanaisOcupadosFinder
     { kind: 'agent', agent_id: agent_id, agent_name: agent_name, operating: enabled && status == 'active' }
   end
 
-  # { inbox_id => autonomia_agent_id } dos vínculos kept da conta (um por caixa, índice único).
+  # { inbox_id => autonomia_agent_id } das portas kept da conta (uma por caixa, índice único). Quem ocupa a caixa é a
+  # porta; o agente da equipe (área, #1433) não ocupa.
   def vinculos
-    @vinculos ||= ::Autonomia::Agents::AgentInbox.kept.where(account_id: @account.id)
+    @vinculos ||= ::Autonomia::Agents::AgentInbox.kept.porta.where(account_id: @account.id)
                                                  .pluck(:inbox_id, :autonomia_agent_id).to_h
   end
 

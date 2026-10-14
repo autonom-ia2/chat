@@ -4495,7 +4495,8 @@
         "NAO_ERA_HORA": "Not the right time"
       },
       "GANHOU_TITULO_PADRAO": "Deal won! How much was it?",
-      "GANHOU_CONFIRMA_PADRAO": "Mark as won"
+      "GANHOU_CONFIRMA_PADRAO": "Mark as won",
+      "CANCELOU_TEXTO": "Sharing the reason is optional, but it helps understand what happened."
     },
     "ARQUIVAR": {
       "BOTAO": "Archive",
@@ -4593,7 +4594,9 @@
       "EMPRESA_PARTE": "Company",
       "JA_COMPROU": "Already bought from you.",
       "DESFAZER_CLIENTE": "Undo",
-      "MARCAR_CLIENTE": "Mark as customer"
+      "MARCAR_CLIENTE": "Mark as customer",
+      "ASSUNTO_DE": "Subject: {titulo}",
+      "ASSUNTO": "Subject"
     },
     "ETAPA": {
       "TELA": "Stage",

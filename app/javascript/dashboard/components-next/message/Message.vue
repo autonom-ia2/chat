@@ -43,6 +43,7 @@ import FormBubble from './bubbles/Form.vue';
 import VoiceCallBubble from './bubbles/VoiceCall.vue';
 import WhatsappFlowResponseBubble from './bubbles/WhatsappFlowResponse.vue';
 import WhatsappReferral from './bubbles/Text/WhatsappReferral.vue';
+import { richMessageBubbleFor } from './bubbles/RichMessage/registry.js';
 import CampaignMessageLabel from 'dashboard/components-next/CampaignJourney/CampaignMessageLabel.vue';
 import { campaignRefFor } from 'dashboard/components-next/CampaignJourney/useCampaignNames';
 
@@ -302,6 +303,10 @@ const shouldShowAvatar = computed(() => {
   return true;
 });
 
+// chat#1473: formato rico enviado ao cliente (botão de link e os próximos tipos).
+// Tipo sem bolha própria devolve null e a mensagem segue pelo caminho de antes.
+const richMessageBubble = computed(() => richMessageBubbleFor(props));
+
 const componentToRender = computed(() => {
   if (props.isEmailInbox && !props.private) {
     const emailInboxTypes = [MESSAGE_TYPES.INCOMING, MESSAGE_TYPES.OUTGOING];
@@ -311,6 +316,8 @@ const componentToRender = computed(() => {
   if (props.contentAttributes?.whatsappFlowResponse) {
     return WhatsappFlowResponseBubble;
   }
+
+  if (richMessageBubble.value) return richMessageBubble.value;
 
   if (props.contentType === CONTENT_TYPES.INPUT_CSAT) {
     return CSATBubble;
@@ -449,6 +456,7 @@ const shouldRenderMessage = computed(() => {
     isUnsupported ||
     isAnIntegrationMessage ||
     hasWhatsappFlowResponse ||
+    !!richMessageBubble.value ||
     shouldShowWhatsappReferral.value ||
     isFailedMessage ||
     hasExternalError

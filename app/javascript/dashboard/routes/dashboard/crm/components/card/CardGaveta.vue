@@ -111,7 +111,6 @@ const podeIa = computed(
 );
 const podeGerenciar = computed(() => props.canManageCards);
 const podeMover = computed(() => props.canMoveCards);
-const { nome, titulo, subtitulo } = useCardNomes({ t, card });
 const funil = computed(() => {
   const id = Number(card.value.pipeline_id || props.pipelineId);
   return props.pipelines.find(item => item.id === id);
@@ -128,6 +127,7 @@ const migalha = computed(() => [funil.value?.name].filter(Boolean));
 // ——— Desfecho (ST-01 a ST-07) ———
 const { status, venda, rotulosProprios, rotuloGanhar, rotuloPerder, desfecho } =
   useCardDesfecho({ t, card, funil });
+const { nome, titulo, subtitulo } = useCardNomes({ t, card, venda });
 
 // ——— Partes do card ———
 const negocio = useCardNegocio();
@@ -616,6 +616,7 @@ defineExpose({
                 :pode-registros="canManageRelationshipRecords"
                 :arquivando="isArchiving"
                 :empresas="empresasLigadas"
+                :venda="venda"
                 @abrir="abrir"
                 @arquivar="arquivar"
                 @conversa="abrirConversa()"

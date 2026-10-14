@@ -1,5 +1,6 @@
 import financial from './financial.json';
 import relationships from './relationships.json';
+import richMessage from './richMessage.json';
 import prospecting from './prospecting.json';
 import advancedFilters from './advancedFilters.json';
 import agentBots from './agentBots.json';
@@ -67,6 +68,7 @@ import yearInReview from './yearInReview.json';
 export default {
   ...financial,
   ...relationships,
+  ...richMessage,
   ...prospecting,
   ...advancedFilters,
   ...agentBots,
