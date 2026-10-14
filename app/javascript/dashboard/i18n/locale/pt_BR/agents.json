@@ -721,6 +721,7 @@
         "EXTERNO": "{canal} · Já tem outro atendimento automático",
         "EXTERNO_TEXTO": "Outro sistema já responde aqui. Para usar, pare o outro sistema antes.",
         "TROCA": "{outro} para de responder no {canal}, mas continua na sua lista. As conversas abertas no {canal} voltam para a equipe.",
+        "TROCA_PARA": "{outro} não está em nenhum outro canal: para de atender até você escolher um canal para ele.",
         "TODOS_OCUPADOS": "Todos os seus canais já têm um agente. Coloque {nome} no lugar de um deles ou conecte outro canal.",
         "SEM_LEITURA": "Canais que já têm um agente não aparecem aqui.",
         "SEMPRE": "Sempre",
@@ -1478,7 +1479,8 @@
           "GRANDE": "Este arquivo passa de 25 MB. Tente um menor.",
           "MANDAR_OUTRO": "Mandar outro",
           "TIRAR": "Tirar",
-          "TIRAR_ARIA": "Tirar {nome}"
+          "TIRAR_ARIA": "Tirar {nome}",
+          "LIMITE": "Já são {n} arquivos e sites. Tire um para mandar outro."
         },
         "EXEMPLO": {
           "TITULO": "Assim seus clientes vão ver",
@@ -1573,6 +1575,30 @@
           "E": "{antes}, e {depois}",
           "HORA": "{h}h",
           "HORA_MIN": "{h}h{m}"
+        },
+        "BASE": {
+          "TITULO": "Base de conhecimento de {nome}",
+          "TEXTO": "O que {nome} lê para responder. O que você manda pelo clipe da conversa também aparece aqui.",
+          "LISTA": "Arquivos e sites de {nome}",
+          "VAZIO": "Ainda não tem nada aqui. Mande um cardápio, uma tabela de preços ou o endereço do seu site.",
+          "ADICIONAR": "Adicionar arquivo ou site",
+          "SITE_EXEMPLO": "www.sualoja.com.br",
+          "GRANDE_TEXTO": "Este arquivo passa de 25 MB. Tire e mande um menor.",
+          "TIRAR_TITULO": "Tirar {item}?",
+          "TIRAR_TEXTO": "{nome} deixa de usar o que está nele. Sai da conversa também.",
+          "TIRAR": "Tirar",
+          "ENTROU": "{item} entrou na base.",
+          "TIROU": "{item} saiu da base.",
+          "ERRO_LER": "Não deu para mostrar o que já estava na base.",
+          "ERRO_LER_GARANTIA": "Nada foi apagado.",
+          "BOTAO": "Base",
+          "BOTAO_ARIA": "{titulo}: {n}",
+          "TITULO_SEM_NOME": "Base de conhecimento do agente",
+          "TEXTO_SEM_NOME": "O que o agente lê para responder. O que você manda pelo clipe da conversa também aparece aqui.",
+          "LISTA_SEM_NOME": "Arquivos e sites do agente",
+          "TIRAR_TEXTO_SEM_NOME": "O agente deixa de usar o que está nele. Sai da conversa também.",
+          "TIRAR_ERRO": "Não deu para tirar {item} agora.",
+          "TIRAR_ERRO_GARANTIA": "Ele continua na base."
         }
       }
     }

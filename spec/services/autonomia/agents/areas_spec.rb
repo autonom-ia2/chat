@@ -121,9 +121,12 @@ RSpec.describe Autonomia::Agents::Areas do
 
     it 'vincular de novo reativa o mesmo vínculo e o mesmo espelho' do
       described_class.desvincular!(agent: agente_da_area, inbox: inbox)
+      # #1366: era a única caixa dele, então parou; volta com ativar, que o liga junto com o vínculo.
+      expect(agente_da_area.reload.operating?).to be(false)
 
-      expect { described_class.vincular!(agent: agente_da_area, inbox: inbox) }.not_to change(AgentBot, :count)
+      expect { described_class.vincular!(agent: agente_da_area, inbox: inbox, ativar: true) }.not_to change(AgentBot, :count)
       expect(area.reload).to have_attributes(deleted_at: nil, papel: 'area')
+      expect(agente_da_area.reload.operating?).to be(true)
     end
 
     # Só reenfileira o turno que estava EM ANDAMENTO (a marca do debounce do ReplyJob aponta para a mensagem e é

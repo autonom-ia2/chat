@@ -49,19 +49,48 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingPages notice texts', type: :reque
       expect(page.notice_templates).to eq({})
       body = response.parsed_body['payload']
       expect(body['notice_texts']).to eq('day_before' => good)
-      expect(body.dig('notice_text_setup', 'defaults', 'booked')).to include('{{horario.link_gestao}}')
+      expect(body.dig('notice_text_setup', 'defaults', 'booked'))
+        .to eq('Oi, {{cliente.primeiro_nome}}! Seu horário está marcado para {{horario.data_hora}}.')
       expect(body.dig('notice_text_setup', 'fields').pluck('label')).to include('Dia e hora do horário')
-      expect(body.dig('notice_text_setup', 'stop_line')).to start_with('Para parar estes avisos:')
+      expect(body['notice_text_setup']).to include(
+        'stop_line' => start_with('Para parar estes avisos:'),
+        'manage_line' => start_with('Para confirmar, mudar ou cancelar: ').and(end_with('/b/AB3K9QXZ')), 'notice_channel' => nil
+      )
     end
 
-    it 'recusa texto sem link, com a frase simples no idioma da conta, e não grava' do
+    # #1517: sem o link o texto é aceito (o sistema manda o link no botão ou na linha fixa); sem o dia e a hora, não.
+    it 'guarda texto sem link e recusa texto sem o dia e a hora, com a frase simples no idioma da conta' do
       save('booked' => 'Seu horário é {{horario.data_hora}}.')
+
+      expect(response).to have_http_status(:ok)
+      expect(page.reload.notice_texts).to eq('booked' => 'Seu horário é {{horario.data_hora}}.')
+
+      save('day_before' => 'Mude em {{horario.link_gestao}}.')
 
       expect(response).to have_http_status(:unprocessable_entity)
       expect(response.parsed_body.dig('errors', 'notice_texts')).to eq(
-        ['O texto do aviso "Ao marcar" precisa do link para confirmar, mudar ou cancelar.']
+        ['O texto do aviso "1 dia antes" precisa do dia e da hora.']
       )
-      expect(page.reload.notice_texts).to eq({})
+      expect(page.reload.notice_texts).to eq('booked' => 'Seu horário é {{horario.data_hora}}.')
+    end
+
+    # #1517: a tela só promete o botão quando a caixa de avisos é o WhatsApp oficial (whatsapp_cloud).
+    it 'devolve o tipo da caixa de avisos: whatsapp_cloud só para o oficial, o 360dialog e a WAHA com o tipo deles' do
+      inboxes = {
+        'whatsapp_cloud' => create(:channel_whatsapp, account: account, provider: 'whatsapp_cloud', validate_provider_config: false,
+                                                      sync_templates: false).inbox,
+        'whatsapp' => create(:channel_whatsapp, account: account, provider: 'default', validate_provider_config: false,
+                                                sync_templates: false).inbox,
+        'waha' => create(:channel_api, account: account, additional_attributes: { 'provider' => 'waha' }).inbox
+      }
+
+      channels = inboxes.transform_values do |inbox|
+        page.update!(notice_inbox: inbox)
+        get member, headers: admin.create_new_auth_token, as: :json
+        response.parsed_body.dig('payload', 'notice_text_setup', 'notice_channel')
+      end
+
+      expect(channels).to eq('whatsapp_cloud' => 'whatsapp_cloud', 'whatsapp' => 'whatsapp', 'waha' => 'waha')
     end
 
     it 'texto vazio volta ao padrão e preserva o resto do metadata' do
@@ -77,25 +106,28 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingPages notice texts', type: :reque
 
   describe 'POST notice_text_suggestions' do
     let(:path) { "#{member}/notice_text_suggestions" }
+    # #1517: a IA não põe o link (o sistema manda pelo botão ou pela linha fixa).
+    let(:ai_good) { 'Oi, {{cliente.primeiro_nome}}! Seu horário é {{horario.data_hora}}. Até lá!' }
 
     def ask(user = admin, kind: 'day_before', tone: 'formal')
       post path, params: { kind: kind, tone: tone }, headers: user.create_new_auth_token, as: :json
     end
 
     it 'devolve as opções da IA para o aviso, sem salvar, pela feature aviso_redacao' do
-      ai_answers(good, 'Olá! Seu horário é {{horario.data_hora}}. Confirme em {{horario.link_gestao}}, por favor.')
+      # A segunda põe o campo do link, que a IA não recebe mais: é descartada.
+      ai_answers(ai_good, 'Olá! Seu horário é {{horario.data_hora}}. Confirme em {{horario.link_gestao}}, por favor.')
 
       ask
 
       expect(response).to have_http_status(:ok)
-      expect(response.parsed_body['payload']['options'].pick('text')).to eq(good)
-      expect(response.parsed_body['payload']['options'].first['keys']).to eq(%w[cliente.primeiro_nome horario.data_hora horario.link_gestao])
+      expect(response.parsed_body['payload']['options'].pick('text')).to eq(ai_good)
+      expect(response.parsed_body['payload']['options'].first['keys']).to eq(%w[cliente.primeiro_nome horario.data_hora])
       expect(page.reload.notice_texts).to eq({})
       expect(Crm::Ai::ResponsesClient).to have_received(:new).with(hash_including(feature: 'aviso_redacao', max_retries: 0))
     end
 
     it 'manda à IA o que a página e a conta dizem e o tom escolhido, sem dado de cliente' do
-      ai_answers(good)
+      ai_answers(ai_good)
 
       ask
 
@@ -104,16 +136,18 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingPages notice texts', type: :reque
         expect(entrada['tom']['escolha']).to eq('formal')
         expect(entrada['contexto']).to include('atendimento' => 'Conversa de 30 min', 'duracao_minutos' => 30, 'idioma' => 'pt_BR')
         expect(entrada['contexto']['empresa']).to eq(account.name)
-        expect(entrada['chaves']['obrigatorias']).to eq(%w[horario.link_gestao horario.data_hora])
+        # #1517: a IA não exige mais o link (vai no botão ou na linha fixa).
+        expect(entrada['chaves']['obrigatorias']).to eq(%w[horario.data_hora])
+        expect(entrada['chaves']['permitidas'].pluck('chave')).not_to include('horario.link_gestao')
       end
     end
 
     it 'devolve só as opções que passam na conferência; nenhuma boa vira mensagem simples, nada salvo' do
-      ai_answers('Oi! Seu horário é {{horario.data_hora}}. Até lá!', good)
+      ai_answers('Oi! Mude em {{horario.link_gestao}}. Até lá!', ai_good)
       ask
-      expect(response.parsed_body['payload']['options'].pluck('text')).to eq([good])
+      expect(response.parsed_body['payload']['options'].pluck('text')).to eq([ai_good])
 
-      ai_answers('Oi! Seu horário é {{horario.data_hora}}. Até lá!')
+      ai_answers('Oi! Mude em {{horario.link_gestao}}. Até lá!')
       ask
       expect(response).to have_http_status(:unprocessable_entity)
       expect(response.parsed_body['message']).to eq('Não conseguimos escrever agora. Tente de novo ou escreva do seu jeito.')
@@ -146,7 +180,7 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingPages notice texts', type: :reque
     end
 
     it 'só quem gerencia páginas (agendamento_manage) pede à IA' do
-      ai_answers(good)
+      ai_answers(ai_good)
 
       ask(role_user('agendamento_manage'))
       expect(response).to have_http_status(:ok)

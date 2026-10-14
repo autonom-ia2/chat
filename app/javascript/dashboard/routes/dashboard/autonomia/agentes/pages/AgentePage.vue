@@ -366,6 +366,17 @@ const escrever = () => {
 const escolherCanal = () =>
   abrir(atendendo.value ? GAVETA.ONDE : GAVETA.VOLTAR);
 
+// #1366 — tirar o agente do último canal o para no servidor: relê o agente junto com as caixas, para o
+// herói não continuar dizendo "Atendendo". A releitura é só para a tela; falhando, a próxima acerta.
+const depoisDeMudarOnde = async () => {
+  canais.carregar();
+  try {
+    await store.dispatch('autonomiaAgents/show', agente.value.id);
+  } catch {
+    // O canal já mudou; a tela relê o agente ao abrir de novo.
+  }
+};
+
 const voltarInterno = async () => {
   alternando.value = true;
   try {
@@ -639,7 +650,7 @@ const tirarPergunta = id => {
         :sem-leitura="canais.semLeitura.value"
         :horarios="horarios"
         @fechar="fechar"
-        @pronto="canais.carregar()"
+        @pronto="depoisDeMudarOnde"
         @reler="canais.carregar()"
         @voltar-a-atender="aberta = GAVETA.VOLTAR"
       />

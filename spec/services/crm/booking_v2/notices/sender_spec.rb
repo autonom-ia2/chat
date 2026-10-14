@@ -52,7 +52,8 @@ RSpec.describe Crm::BookingV2::Notices::Sender do
   end
 
   describe 'WhatsApp oficial (J5-A1)' do
-    it 'manda texto dentro da janela de 24 h, com link de gestão e linha de parar (J2-A9)' do
+    # #1517: dentro da janela o link de gestão vai no botão "Ver meu horário" (sender_button_spec.rb).
+    it 'manda texto dentro da janela de 24 h, com o botão do link de gestão e linha de parar (J2-A9)' do
       conversation = open_window!
       notice = claimed
 
@@ -63,10 +64,11 @@ RSpec.describe Crm::BookingV2::Notices::Sender do
       expect(message).to have_attributes(conversation_id: conversation.id, message_type: 'outgoing')
       expect(message.additional_attributes.to_h['template_params']).to be_nil
       expect(message.content).to eq(
-        "Oi, Marcos! Seu horário está marcado para 20/10 às 10:00. Para confirmar, mudar ou cancelar: #{invite.url}\n\n" \
+        "Oi, Marcos! Seu horário está marcado para 20/10 às 10:00.\n\n" \
         "Para parar estes avisos: #{invite.url}?stop_notices=1"
       )
       expect(message.content_attributes['crm_booking_notice']).to be(true)
+      expect(message.content_attributes['rich_message']).to eq('type' => 'link_button', 'label' => 'Ver meu horário', 'url' => invite.url)
     end
 
     it 'fora da janela manda o modelo aprovado, com as três variáveis, numa conversa nova se não houver' do

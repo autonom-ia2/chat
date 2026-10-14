@@ -32,6 +32,9 @@
 #  fk_rails_...  (pipeline_id => crm_pipelines.id)
 #
 class Crm::PipelineStage < ApplicationRecord
+  # Categoria da etapa, vinda do modelo do funil (#1498), sem tela: Novo, Em andamento, Esperando o cliente, Resolvido.
+  CATEGORIES = %w[novo andamento espera resolvido].freeze
+
   self.table_name = 'crm_pipeline_stages'
 
   belongs_to :account

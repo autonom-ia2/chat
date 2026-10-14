@@ -1391,6 +1391,7 @@
   "crm/stage_criteria/defaults": {
     "controller": "api/v1/accounts/crm/stage_criteria#defaults",
     "parametros": [
+      "atender",
       "names"
     ]
   },

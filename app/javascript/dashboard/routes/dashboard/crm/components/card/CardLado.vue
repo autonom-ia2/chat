@@ -33,6 +33,9 @@ const props = defineProps({
   // passo 2; o nome do funil vem de `funis`.
   criacao: { type: Object, default: null },
   funis: { type: Array, default: () => [] },
+  // #1498 — Atender não mostra valor (só a Cobrança) nem a nota de atenção.
+  atender: { type: Boolean, default: false },
+  cobranca: { type: Boolean, default: false },
 });
 
 defineEmits(['mover']);
@@ -62,15 +65,16 @@ const quadro = computed(() => {
     cor: corDaEtapa.value,
     cliente: props.nome,
     titulo: dados.title,
-    valor: Number(dados.valueAmount)
-      ? props.formato.dinheiro(
-          Math.round(Number(dados.valueAmount) * 100),
-          dados.currency
-        )
-      : '',
+    valor:
+      Number(dados.valueAmount) && (!props.atender || props.cobranca)
+        ? props.formato.dinheiro(
+            Math.round(Number(dados.valueAmount) * 100),
+            dados.currency
+          )
+        : '',
     urgencia: t(`CRM_KANBAN.PRIORITY.${URGENCIA[dados.priority] || 'MEDIUM'}`),
     urgente: ['high', 'urgent'].includes(dados.priority),
-    atencao: Number(dados.score) || 0,
+    atencao: props.atender ? 0 : Number(dados.score) || 0,
     quemCuida: props.dono || props.card?.owner?.name || '',
   };
 });

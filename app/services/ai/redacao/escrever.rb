@@ -5,7 +5,7 @@
 #   Ai::Redacao::Escrever.call(
 #     account:, feature: 'aviso_redacao', canal: 'whatsapp_texto', proposito: 'lembrete 1 dia antes do horário',
 #     limites: { max_chars: 500 }, tom: 'simpatico',
-#     chaves: { permitidas: %w[cliente.primeiro_nome horario.data_hora horario.link_gestao], obrigatorias: %w[horario.link_gestao] },
+#     chaves: { permitidas: %w[cliente.primeiro_nome horario.data_hora horario.link_gestao], obrigatorias: %w[horario.data_hora] },
 #     contexto: { pagina: 'Consulta de 45 min' }
 #   )
 #   # => { status: 'ok', opcoes: [{ texto:, chaves_usadas:, categoria_prevista:, motivo_categoria:, o_que_mudou: }],

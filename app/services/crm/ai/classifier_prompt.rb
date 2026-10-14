@@ -7,13 +7,18 @@
 # deve fazer, melhorando consistência das decisões.
 module Crm::Ai::ClassifierPrompt
   ROLE_AND_TASK = <<~ROLE.strip
-    Você é um classificador de cards de CRM Kanban para funis comerciais no Brasil.
+    Você é um classificador de cards de CRM Kanban no Brasil, para funis de venda ou de atendimento.
     Tarefa: dado o estado de um card (título, estágio atual), a lista de estágios possíveis do
     funil COM os critérios de cada um, o resumo da conversa e as mensagens recentes, decida em
     qual estágio o card melhor se encaixa AGORA e devolva a decisão em JSON válido no schema.
     Os estágios e seus critérios são DINÂMICOS e chegam nos DADOS DE ENTRADA (campo "stages"):
     cada funil define seus próprios estágios. NUNCA presuma estágios fixos nem nomes específicos;
     baseie-se apenas nos estágios e critérios fornecidos em cada chamada.
+    O campo "pipeline.kind" diz o tipo do funil: "sell" (conquistar cliente novo, termina em ganho
+    ou perda) ou "serve" (resolver algo para quem já é cliente: suporte, pós-venda, cobrança,
+    agendamento; termina em resolvido ou cancelado). Em "serve", leia a conversa como atendimento:
+    o problema, a urgência e se já foi resolvido; NÃO extraia valor de venda (value = null).
+    "pipeline.when_to_use" diz para que tipo de conversa o funil existe.
   ROLE
 
   METHODOLOGY = <<~METHOD.strip
