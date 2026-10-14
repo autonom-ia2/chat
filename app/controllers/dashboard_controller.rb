@@ -100,6 +100,8 @@ class DashboardController < ActionController::Base
       CRM_COPILOT_ENABLED: ActiveModel::Type::Boolean.new.cast(ENV.fetch('CRM_COPILOT_ENABLED', false)).to_s,
       CRM_CALENDAR_MEETINGS_ENABLED: ActiveModel::Type::Boolean.new.cast(ENV.fetch('CRM_CALENDAR_MEETINGS_ENABLED', false)).to_s,
       CRM_AI_ENABLED: ActiveModel::Type::Boolean.new.cast(ENV.fetch('CRM_AI_ENABLED', false)).to_s,
+      # Fuso da plataforma (#1568): o que o CRM usa quando a conta não tem fuso; a tela nunca cai no do navegador.
+      CRM_DEFAULT_TIMEZONE: Crm::Timezone::Resolver.default_timezone,
       AUTONOMIA_AGENTS_ENABLED: ActiveModel::Type::Boolean.new.cast(ENV.fetch('AUTONOMIA_AGENTS_ENABLED', false)).to_s,
       INSURANCE_QUOTING_ENABLED: Autonomia::Insurance::Config.master_enabled?.to_s,
       BRAND_KITS_ENABLED: BrandKits::Config.enabled?.to_s,
