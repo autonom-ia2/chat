@@ -36,6 +36,7 @@ import CrmKanbanZoom from '../components/CrmKanbanZoom.vue';
 import { useCrmKanbanZoom } from '../composables/useCrmKanbanZoom';
 import { useCrmKanbanAutoScroll } from '../composables/useCrmKanbanAutoScroll';
 import { KANBAN_ZOOM_DRAG_CLASSES } from '../helpers/kanbanZoom';
+import { diaDoVencimento } from '../helpers/closeDate';
 import CrmKanbanFiltersDrawer from '../components/CrmKanbanFiltersDrawer.vue';
 import CardGaveta from '../components/card/CardGaveta.vue';
 import CrmOpportunityFromContact from '../components/CrmOpportunityFromContact.vue';
@@ -2030,7 +2031,7 @@ const onCalendarReschedule = async ({ event, date }) => {
     if (isCloseDate) {
       await store.dispatch('crmKanban/updateCardFields', {
         id: event.card_id,
-        expected_close_at: nextIso,
+        expected_close_at: diaDoVencimento(nextIso),
       });
     } else {
       const followUpId = String(event.id).replace(/^follow_up_/, '');
