@@ -9,6 +9,7 @@ import {
   EVENT_TYPE_GROUP,
   EVENT_TYPE_META,
   eventStart,
+  isDateOnly,
   isOverdue,
 } from './calendarEvents.js';
 import { resolveMeetingLocation } from '../../helpers/meetingLocation';
@@ -52,9 +53,11 @@ const typeKey = computed(() => typeKeyForGroup[group.value]);
 const overdue = computed(() => isOverdue(props.event, new Date()));
 
 const startsAtLabel = computed(() =>
-  format(eventStart(props.event), "dd/MM/yyyy 'às' HH:mm", {
-    locale: dateFnsLocale.value,
-  })
+  format(
+    eventStart(props.event),
+    isDateOnly(props.event) ? 'dd/MM/yyyy' : "dd/MM/yyyy 'às' HH:mm",
+    { locale: dateFnsLocale.value }
+  )
 );
 
 const isDone = computed(

@@ -1,4 +1,8 @@
 import { dataDoVencimento, diaDoVencimento } from '../closeDate';
+import {
+  eventStart,
+  isOverdue,
+} from '../../components/calendar/calendarEvents';
 
 describe('diaDoVencimento', () => {
   it('guarda o dia em que o card caiu, mesmo à noite', () => {
@@ -27,5 +31,21 @@ describe('dataDoVencimento', () => {
     expect(dataDoVencimento('2026-10-20').getDate()).toBe(20);
     expect(dataDoVencimento(null)).toBeNull();
     expect(dataDoVencimento('')).toBeNull();
+  });
+});
+
+describe('vencimento no calendário', () => {
+  const vencimento = {
+    event_type: 'expected_close',
+    starts_at: '2026-10-20T00:00:00Z',
+  };
+
+  it('fica no dia gravado', () => {
+    expect(eventStart(vencimento).getDate()).toBe(20);
+  });
+
+  it('só atrasa depois que o dia acaba', () => {
+    expect(isOverdue(vencimento, new Date(2026, 9, 20, 23, 0))).toBe(false);
+    expect(isOverdue(vencimento, new Date(2026, 9, 21, 0, 1))).toBe(true);
   });
 });
