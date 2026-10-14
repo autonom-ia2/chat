@@ -23,6 +23,11 @@ class WhatsappProxy::Pool
     @proxies ||= @client.proxies.tap { |list| warn_missing_slice(list) }
   end
 
+  # A Webshare respondeu este plano nesta instância (rodada)?
+  def fetched?
+    !@proxies.nil?
+  end
+
   # Memorizado por instância (uma rodada ou uma atribuição): a fatia vazia alerta uma vez só.
   def candidates
     @candidates ||= if slice.empty?

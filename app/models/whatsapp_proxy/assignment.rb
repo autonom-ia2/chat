@@ -102,32 +102,66 @@ class WhatsappProxy::Assignment < ApplicationRecord
     PREVIOUS.to_h { |field, previous| [previous, self[field]] }
   end
 
-  # A troca foi para o motor e foi conferida: zera o recuo e esquece o estado anterior.
-  def applied!(credential_digest)
-    update!(FORGET_PREVIOUS.merge(credential_digest: credential_digest, apply_failures: 0, last_apply_failed_at: nil))
+  IN_FLIGHT = 30.minutes
+
+  # Troca agendada há pouco e ainda sem desfecho: a convergência com o motor espera (a divergência é esperada).
+  def in_flight?
+    apply_scheduled_at.present? && apply_scheduled_at > IN_FLIGHT.ago
   end
 
-  # O motor já tinha este proxy (sem PUT): só registra a credencial e esquece o anterior; o recuo fica como está.
+  def scheduled!
+    update!(apply_scheduled_at: Time.current)
+  end
+
+  # A troca foi para o motor e foi conferida: zera o recuo e esquece o estado anterior.
+  def applied!(credential_digest)
+    update!(settled.merge(credential_digest: credential_digest, apply_failures: 0, last_apply_failed_at: nil))
+  end
+
+  # O motor já estava com este proxy (sem PUT): registra a credencial; o recuo só zera se já tinha vencido.
   def confirmed!(credential_digest)
-    update!(FORGET_PREVIOUS.merge(credential_digest: credential_digest))
+    reset = in_backoff? ? {} : { apply_failures: 0, last_apply_failed_at: nil }
+    update!(settled.merge(reset).merge(credential_digest: credential_digest))
   end
 
   # O motor recusou a troca e a configuração anterior voltou: a atribuição volta inteira (IP, plano, conta, origem — ou
   # fica pendente, se não havia IP antes) e conta mais uma falha para o recuo.
-  def revert_failed_apply!
+  def revert_failed_apply!(credential_digest: previous_credential_digest)
     restored = PREVIOUS.transform_values { |previous| self[previous] }
     restored = restored.merge(pool: pool, account_id: account_id, origin: origin) unless awaiting_confirmation?
-    update!(restored.merge(FORGET_PREVIOUS).merge(apply_failures: apply_failures + 1, last_apply_failed_at: Time.current))
+    update!(restored.merge(settled).merge(credential_digest: credential_digest, apply_failures: apply_failures + 1,
+                                          last_apply_failed_at: Time.current))
   end
 
-  # A volta da configuração anterior falhou: o motor ficou com o proxy novo, então a tabela fica nele também.
-  def rollback_failed!(credential_digest)
-    update!(FORGET_PREVIOUS.merge(credential_digest: credential_digest, apply_failures: apply_failures + 1,
-                                  last_apply_failed_at: Time.current))
+  # A volta da configuração anterior falhou. O motor é a fonte da verdade (#1516): com o que ele mostra relido,
+  # a tabela fica igual a ele — no IP novo, no anterior, ou (motor ilegível / outro proxy) sem credencial e com o
+  # anterior guardado, para a convergência da reconciliação resolver na próxima rodada.
+  def rollback_failed!(engine_server:, engine_digest:)
+    if WhatsappProxy::Server.same?(engine_server, server)
+      update!(settled.merge(credential_digest: engine_digest).merge(failure))
+    elsif awaiting_confirmation? && WhatsappProxy::Server.same?(engine_server, "#{previous_proxy_address}:#{previous_proxy_port}")
+      revert_failed_apply!(credential_digest: engine_digest)
+    else
+      update!(failure.merge(credential_digest: nil, apply_scheduled_at: nil))
+    end
+  end
+
+  # O motor usa um proxy válido da conta e do plano diferente do da tabela: a tabela passa a ser ele (sem PUT).
+  def adopt!(proxy, credential_digest, owner)
+    update!(settled.merge(proxy_address: proxy.address, proxy_port: proxy.port, webshare_proxy_id: proxy.id,
+                          credential_digest: credential_digest, pool: owner.pool, account_id: owner.account_id))
+  end
+
+  def failure
+    { apply_failures: apply_failures + 1, last_apply_failed_at: Time.current }
+  end
+
+  def settled
+    FORGET_PREVIOUS.merge(apply_scheduled_at: nil)
   end
 
   def apply_failed!
-    update!(apply_failures: apply_failures + 1, last_apply_failed_at: Time.current)
+    update!(failure.merge(apply_scheduled_at: nil))
   end
 
   private

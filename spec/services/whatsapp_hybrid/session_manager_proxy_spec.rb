@@ -156,6 +156,21 @@ describe WhatsappHybrid::SessionManager do
     expect(assigner).to have_received(:mark_applied!).with(session, new_proxy)
   end
 
+  it 'reconnect does not write the proxy while another proxy change holds the lock (the reconciliation converges later)' do
+    assign!
+    Redis::Alfred.delete(WhatsappProxy::SessionLock.key(session))
+    Redis::Alfred.set(WhatsappProxy::SessionLock.key(session), 'apply-job', nx: true, ex: 60)
+    allow(client).to receive(:get_session).and_return(remote(proxy: { 'server' => '10.0.0.9:6000' }, webhook: false))
+    allow(assigner).to receive(:for).and_return(proxy)
+
+    manager.reconnect!
+
+    expect(client).not_to have_received(:update_session)
+    expect(assigner).not_to have_received(:for)
+  ensure
+    Redis::Alfred.delete(WhatsappProxy::SessionLock.key(session))
+  end
+
   it 'behaves as before the proxy while WHATSAPP_PROXY_ENABLED is off, even with the Webshare key' do
     allow(client).to receive(:get_session).and_return(remote)
     real = WhatsappProxy::Assigner.new(engine: client, pools: { isp: fake_pool('isp', [proxy]) })

@@ -3905,6 +3905,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_28_100000) do
     t.string "previous_origin"
     t.integer "apply_failures", default: 0, null: false
     t.datetime "last_apply_failed_at"
+    t.datetime "apply_scheduled_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["account_id", "pool"], name: "index_whatsapp_proxy_assignments_on_account_id_and_pool"

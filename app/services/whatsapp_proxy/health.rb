@@ -21,15 +21,17 @@ module WhatsappProxy::Health
   # :unstable ou nil. previous: status da sessão na rodada anterior (nil quando desconhecido).
   def observe!(session_name, status, previous:)
     case status
-    when 'WORKING' then redis { ::Redis::Alfred.delete(rounds_key(session_name)) && ::Redis::Alfred.delete(eligible_key(session_name)) }
+    when 'WORKING' then redis { ::Redis::Alfred.delete(rounds_key(session_name)) && ::Redis::Alfred.delete(off_since_key(session_name)) }
     when 'SCAN_QR_CODE' then return unlinked!(session_name)
-    when *UNSTABLE_STATUSES then rounds = count_round(session_name, previous)
+    when *UNSTABLE_STATUSES
+      mark_off(session_name)
+      rounds = count_round(session_name, previous)
     end
     :unstable if rounds.to_i >= UNSTABLE_ROUNDS || drops(session_name) >= MAX_DROPS
   end
 
   def count_round(session_name, previous)
-    return unless previous == 'WORKING' || rounds(session_name).positive? || eligible?(session_name)
+    return unless previous == 'WORKING' || rounds(session_name).positive?
 
     count = redis { ::Redis::Alfred.incr(rounds_key(session_name)) }
     redis { ::Redis::Alfred.expire(rounds_key(session_name), ROUNDS_TTL) }
@@ -40,19 +42,22 @@ module WhatsappProxy::Health
     redis { ::Redis::Alfred.get(rounds_key(session_name)) }.to_i
   end
 
-  # Fim de uma falha geral: quem segue fora pode passar a contar uma a uma, do zero, a partir da PRÓXIMA rodada
-  # (precisa de UNSTABLE_ROUNDS rodadas novas fora). Sem isto nunca contaria (não estava WORKING antes).
-  def eligible!(session_name)
-    reset!(session_name)
-    redis { ::Redis::Alfred.setex(eligible_key(session_name), '1', ROUNDS_TTL) }
+  # Desde quando a sessão está fora de WORKING (zera ao voltar). Quem segue fora depois de uma falha geral, ou nunca
+  # esteve WORKING, não vira "instável" (precisa voltar a WORKING e cair de novo); passado OFF_LONG, só avisa.
+  OFF_LONG = 24.hours
+  OFF_SINCE_TTL = 7.days.to_i
+
+  def mark_off(session_name)
+    redis { ::Redis::Alfred.set(off_since_key(session_name), Time.current.to_i.to_s, nx: true, ex: OFF_SINCE_TTL) }
   end
 
-  def eligible?(session_name)
-    redis { ::Redis::Alfred.get(eligible_key(session_name)) }.present?
+  def off_for_long?(session_name)
+    since = redis { ::Redis::Alfred.get(off_since_key(session_name)) }
+    since.present? && Time.zone.at(since.to_i) < OFF_LONG.ago
   end
 
-  def eligible_key(session_name)
-    "whatsapp_proxy:eligible:#{session_name}"
+  def off_since_key(session_name)
+    "whatsapp_proxy:off_since:#{session_name}"
   end
 
   # pool: o plano da sessão (o webhook é do Híbrido: isp). Recurso desligado ou falha geral: não conta.

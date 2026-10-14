@@ -1,10 +1,11 @@
 # Sessão caindo e voltando com IP que a Webshare ainda chama de válido (#1516): o IP sai de circulação (quarentena de
 # 24 h) e o número ganha outro do mesmo plano e fatia. Ordem pensada para nunca mexer à toa:
+# `ready?` (antes do corte das vagas da rodada, sem gravar nada):
 # 1. uma troca dessas por sessão por dia (se continuar caindo, o problema não é o IP: alerta 1x por dia);
 # 2. teto de quarentenas do plano (WhatsappProxy::Quarantine.room?);
-# 3. há para onde mover? Checagem só de leitura; sem destino, nem põe quarentena (alerta 1x por dia);
-# 4. quarentena provisória, sem alerta → reatribui → só então avisa. Se a reatribuição falhar (sem IP ou registro
-#    recusado), a quarentena é desfeita.
+# 3. há para onde mover? Sem IP livre: `quarentena_sem_destino`; motor ilegível: `motor_indisponivel` (1x por dia).
+# `call`: quarentena provisória, sem alerta → reatribui → só então avisa. Reatribuição que falha (sem IP, registro
+# recusado) desfaz a quarentena — registro que já existia volta ao estado de antes.
 class WhatsappProxy::UnstableSwap
   DAILY = 1.day
 
@@ -12,43 +13,60 @@ class WhatsappProxy::UnstableSwap
     @assigner = assigner
   end
 
-  # true quando o número já ganhou o IP novo (a troca no motor pode ser agendada).
-  def call(assignment)
+  def ready?(assignment)
     session = assignment.session_name
-    return unstable_again!(session) if WhatsappProxy::Health.swapped_today?(session)
+    return daily_alert('sessao_instavel_de_novo', assignment, 'segue instável depois de trocar de IP hoje') if swapped_today?(session)
     return false unless WhatsappProxy::Quarantine.room?(assignment.pool)
 
-    owner = WhatsappProxy::SessionOwner.find(session)
-    return no_destination!(assignment) unless @assigner.destination?(session, owner, excluding: assignment.proxy_address)
+    destination = @assigner.destination?(session, owner(session), excluding: assignment.proxy_address)
+    return daily_alert('motor_indisponivel', assignment, 'o motor não listou as sessões: troca adiada') if destination == :engine_down
+    return daily_alert('quarentena_sem_destino', assignment, 'não há IP livre para onde mover: nada mudou') unless destination
 
-    move(assignment, owner)
+    true
+  end
+
+  # true quando o número já ganhou o IP novo (a troca no motor pode ser agendada).
+  def call(assignment)
+    return false unless ready?(assignment)
+
+    move(assignment)
   end
 
   private
 
-  def move(assignment, owner)
+  def swapped_today?(session)
+    WhatsappProxy::Health.swapped_today?(session)
+  end
+
+  def owner(session)
+    WhatsappProxy::SessionOwner.find(session)
+  end
+
+  def move(assignment)
     old_ip = assignment.server
-    quarantine = WhatsappProxy::Quarantine.put!(assignment.proxy_address, assignment.pool,
-                                                "session=#{assignment.session_name} instável", notify: false)
+    quarantine, before = WhatsappProxy::Quarantine.provisional!(assignment.proxy_address, assignment.pool,
+                                                                "session=#{assignment.session_name} instável")
     forget_quarantine(assignment)
-    proxy = resolve(assignment, owner, quarantine)
-    return undo(quarantine, assignment) && no_destination!(assignment) unless proxy && proxy.address != assignment.proxy_address
+    proxy = resolve(assignment, quarantine, before)
+    unless proxy && proxy.address != assignment.proxy_address
+      undo(quarantine, before, assignment)
+      return daily_alert('quarentena_sem_destino', assignment, 'não há IP livre para onde mover: nada mudou')
+    end
 
     announce(assignment.session_name, old_ip, quarantine)
     true
   end
 
-  def resolve(assignment, owner, quarantine)
-    @assigner.resolve(assignment.session_name, owner, @assigner.pool(owner.pool))
+  def resolve(assignment, quarantine, before)
+    @assigner.resolve(assignment.session_name, owner(assignment.session_name), @assigner.pool(owner(assignment.session_name).pool))
   rescue ActiveRecord::RecordInvalid
-    undo(quarantine, assignment)
+    undo(quarantine, before, assignment)
     raise
   end
 
-  def undo(quarantine, assignment)
-    quarantine.destroy!
+  def undo(quarantine, before, assignment)
+    quarantine.undo!(before)
     forget_quarantine(assignment)
-    true
   end
 
   def forget_quarantine(assignment)
@@ -63,18 +81,10 @@ class WhatsappProxy::UnstableSwap
                                  session: session, ip: old_ip)
   end
 
-  def no_destination!(assignment)
-    WhatsappProxy::Alert.notify!('quarentena_sem_destino', "session=#{assignment.session_name} instável em #{assignment.server}, " \
-                                                           'mas não há IP livre para onde mover: nada mudou',
+  def daily_alert(code, assignment, text)
+    WhatsappProxy::Alert.notify!(code, "session=#{assignment.session_name} instável em #{assignment.server}: #{text}",
                                  level: :error, session: assignment.session_name, ip: assignment.server, pool: assignment.pool,
                                  subject: "#{assignment.session_name}:#{Date.current}", window: DAILY)
-    false
-  end
-
-  def unstable_again!(session)
-    WhatsappProxy::Alert.notify!('sessao_instavel_de_novo', "session=#{session} segue instável depois de trocar de IP hoje: " \
-                                                            'o problema não parece ser o proxy',
-                                 level: :error, session: session, subject: "#{session}:#{Date.current}", window: DAILY)
     false
   end
 end

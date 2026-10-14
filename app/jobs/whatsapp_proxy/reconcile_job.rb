@@ -22,9 +22,9 @@ class WhatsappProxy::ReconcileJob < ApplicationJob
     @outage = WhatsappProxy::Outage.new(engine_sessions, managed, previous: WhatsappProxy::Outage.previous)
     @outage.evaluate!
     pending = triage(managed)
-    forget_plan_errors(managed)
     warn_mass_change(pending, managed)
-    scheduled = schedule(pick(pending))
+    scheduled = schedule(pick(ready(pending)))
+    forget_plan_errors
     Rails.logger.info("[whatsapp_proxy] reconciliação: agendadas=#{scheduled} limite=#{MAX_CHANGES}")
   rescue Waha::Client::Error => e
     Rails.logger.warn("[whatsapp_proxy] reconciliação sem o motor: #{e.class}")
@@ -38,8 +38,8 @@ class WhatsappProxy::ReconcileJob < ApplicationJob
     @engine_sessions ||= Array(Waha::Client.new.list_sessions(all: true))
   end
 
-  def statuses
-    @statuses ||= engine_sessions.to_h { |session| [session['name'], session['status'].to_s] }
+  def sessions_by_name
+    @sessions_by_name ||= engine_sessions.index_by { |session| session['name'] }
   end
 
   # Atribuições que o código cuida e cujo número ainda tem caixa; as sem dono são apagadas (IP volta ao plano).
@@ -55,7 +55,7 @@ class WhatsappProxy::ReconcileJob < ApplicationJob
 
   # [[assignment, motivo, urgente?]] — um plano com erro na Webshare fica de fora; o outro segue.
   def triage(managed)
-    decide = WhatsappProxy::Triage.new(assigner: @assigner, outage: @outage, statuses: statuses)
+    decide = WhatsappProxy::Triage.new(assigner: @assigner, outage: @outage, sessions: sessions_by_name)
     managed.filter_map do |assignment|
       next if failed_pools.include?(assignment.pool)
 
@@ -65,6 +65,12 @@ class WhatsappProxy::ReconcileJob < ApplicationJob
       plan_failed!(assignment.pool, e)
       nil
     end
+  end
+
+  # Instável sem como trocar hoje (já trocou, teto, sem destino, motor ilegível) sai ANTES do corte das vagas.
+  def ready(pending)
+    swap = WhatsappProxy::UnstableSwap.new(@assigner)
+    pending.select { |(assignment, reason, _urgent)| reason != :unstable || swap.ready?(assignment) }
   end
 
   # Urgentes primeiro; no máximo um irmão WORKING de IP em quarentena; corta em MAX_CHANGES.
@@ -82,19 +88,29 @@ class WhatsappProxy::ReconcileJob < ApplicationJob
   def schedule(batch)
     spaced = 0
     batch.count do |(assignment, reason, urgent)|
-      next false if failed_pools.include?(assignment.pool)
-      next false unless prepare(assignment, reason)
+      next false unless schedulable?(assignment, reason)
 
-      WhatsappProxy::ApplyJob.set(wait: urgent ? 0 : (spaced += 1) * SPACING).perform_later(assignment.session_name)
-      true
-    rescue ActiveRecord::RecordInvalid => e
-      WhatsappProxy::Alert.notify!('atribuicao_invalida', "session=#{assignment.session_name}: atribuição recusada (#{e.class})",
-                                   level: :error, session: assignment.session_name)
-      false
-    rescue Webshare::Client::Error => e
-      plan_failed!(assignment.pool, e)
-      false
+      enqueue_apply(assignment, urgent ? 0 : (spaced += 1) * SPACING)
     end
+  end
+
+  # Prepara a troca (IP novo atribuído); registro recusado ou plano com erro não param a rodada.
+  def schedulable?(assignment, reason)
+    failed_pools.exclude?(assignment.pool) && prepare(assignment, reason)
+  rescue ActiveRecord::RecordInvalid => e
+    WhatsappProxy::Alert.notify!('atribuicao_invalida', "session=#{assignment.session_name}: atribuição recusada (#{e.class})",
+                                 level: :error, session: assignment.session_name)
+    false
+  rescue Webshare::Client::Error => e
+    plan_failed!(WhatsappProxy::SessionOwner.find(assignment.session_name)&.pool || assignment.pool, e)
+    false
+  end
+
+  # Não se chama `enqueue`: isso sobrescreveria o do ActiveJob e quebraria o cron (#1075).
+  def enqueue_apply(assignment, wait)
+    WhatsappProxy::ApplyJob.set(wait: wait).perform_later(assignment.session_name)
+    assignment.reload.scheduled!
+    true
   end
 
   # Atribui o IP novo antes de agendar a troca. nil do Assigner (plano sem IP, Webshare fora) conta como falha (recuo).
@@ -112,9 +128,10 @@ class WhatsappProxy::ReconcileJob < ApplicationJob
     @failed_pools ||= []
   end
 
-  # Plano que respondeu nesta rodada zera a contagem de erros seguidos.
-  def forget_plan_errors(managed)
-    (managed.map(&:pool).uniq - failed_pools).each { |pool| ::Redis::Alfred.delete("whatsapp_proxy:plan_errors:#{pool}") }
+  # No fim da rodada: só o plano cuja lista a Webshare respondeu de fato zera a contagem de erros seguidos.
+  def forget_plan_errors
+    responded = WhatsappProxy::Assignment::POOLS.select { |pool| @assigner.pool(pool).fetched? } - failed_pools
+    responded.each { |pool| ::Redis::Alfred.delete("whatsapp_proxy:plan_errors:#{pool}") }
   rescue Redis::BaseError
     nil
   end

@@ -36,6 +36,19 @@ class WhatsappProxy::Quarantine < ApplicationRecord
                                                      "(#{record.reason})", ip: record.proxy_address, pool: record.pool)
   end
 
+  # Quarentena provisória (sem alerta) e como desfazê-la: um registro que já existia volta ao estado de antes, um novo é
+  # apagado.
+  def self.provisional!(address, pool, reason)
+    record = find_or_initialize_by(proxy_address: address)
+    before = record.new_record? ? nil : record.attributes.slice('pool', 'quarantined_until', 'reason')
+    record.update!(pool: pool, quarantined_until: DURATION.from_now, reason: reason)
+    [record, before]
+  end
+
+  def undo!(before)
+    before ? update!(before) : destroy!
+  end
+
   def self.release!(address)
     where(proxy_address: address).delete_all
   end

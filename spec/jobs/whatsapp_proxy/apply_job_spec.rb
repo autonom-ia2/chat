@@ -53,14 +53,23 @@ RSpec.describe WhatsappProxy::ApplyJob do
                                                               previous_pool: nil, apply_failures: 0)
   end
 
-  it 'confirms without PUT when the engine already has this proxy, keeping the failure count (M1)' do
+  it 'confirms without PUT when the engine already has this proxy; the backoff, already over, is cleared' do
     WhatsappProxy::Assignment.last.update!(apply_failures: 2, last_apply_failed_at: 1.day.ago)
     allow(client).to receive(:get_session).and_return(remote(server: 'http://10.0.0.2:6000'))
 
     described_class.perform_now(session)
 
     expect(client).not_to have_received(:update_session)
-    expect(WhatsappProxy::Assignment.last).to have_attributes(credential_digest: proxy.credential_digest, apply_failures: 2)
+    expect(WhatsappProxy::Assignment.last).to have_attributes(credential_digest: proxy.credential_digest, apply_failures: 0)
+  end
+
+  it 'never clears a backoff still running on a confirmation (model)' do
+    assignment = WhatsappProxy::Assignment.last
+    assignment.update!(apply_failures: 2, last_apply_failed_at: Time.current)
+
+    assignment.confirmed!('x')
+
+    expect(assignment.reload.apply_failures).to eq(2)
   end
 
   it 'leaves at once while the assignment is in backoff (M1)' do
@@ -151,20 +160,52 @@ RSpec.describe WhatsappProxy::ApplyJob do
       .to have_attributes(pool: 'datacenter', origin: 'imported', proxy_address: '10.0.0.3', credential_digest: 'importado')
   end
 
-  it 'keeps the table on the new proxy when the rollback itself failed, and alerts volta_falhou (M2)' do
-    moved_from_old!
-    allow(client).to receive(:get_session).and_return(remote(server: '10.0.0.9:6000', username: 'x'),
-                                                      remote(server: '10.0.0.2:6000', status: 'STARTING'))
-    stub_const('WhatsappProxy::SessionUpdater::HEALTH_ATTEMPTS', 1)
-    allow(client).to receive(:update_session).and_return({})
-    allow(client).to receive(:update_session).with(session, config: { 'ignore' => {}, 'proxy' => hash_including('server' => '10.0.0.9:6000') })
-                                             .and_raise(Waha::Client::Error, 'down')
+  describe 'PUT and rollback both fail (HIGH): the table follows what the engine shows' do
+    before do
+      moved_from_old!
+      stub_const('WhatsappProxy::SessionUpdater::HEALTH_ATTEMPTS', 1)
+      allow(client).to receive(:update_session).and_raise(Waha::Client::Error, 'down')
+    end
 
-    log = capture_log { described_class.perform_now(session) }
+    it 'engine stayed on the OLD proxy → the table goes back to the old one (with its credential)' do
+      allow(client).to receive(:get_session).and_return(remote(server: '10.0.0.9:6000', username: 'x'),
+                                                        remote(server: '10.0.0.9:6000', username: 'x'))
 
-    expect(WhatsappProxy::Assignment.last).to have_attributes(proxy_address: '10.0.0.2', previous_proxy_address: nil, apply_failures: 1,
-                                                              credential_digest: proxy.credential_digest)
-    expect(log).to include('[alerta] volta_falhou')
+      log = capture_log { described_class.perform_now(session) }
+
+      expect(WhatsappProxy::Assignment.last).to have_attributes(proxy_address: '10.0.0.9', previous_proxy_address: nil, apply_failures: 1,
+                                                                credential_digest: Webshare::Proxy.digest_for('x', 'senha-2'))
+      expect(log).to include('[alerta] volta_falhou')
+    end
+
+    it 'engine ended on the NEW proxy → the table stays on it' do
+      allow(client).to receive(:update_session).and_return({})
+      allow(client).to receive(:update_session).with(session, config: hash_including('proxy' => hash_including('server' => '10.0.0.9:6000')))
+                                               .and_raise(Waha::Client::Error, 'down')
+      allow(client).to receive(:get_session).and_return(remote(server: '10.0.0.9:6000', username: 'x'),
+                                                        remote(server: '10.0.0.2:6000', status: 'STARTING'),
+                                                        remote(server: '10.0.0.2:6000'))
+
+      described_class.perform_now(session)
+
+      expect(WhatsappProxy::Assignment.last).to have_attributes(proxy_address: '10.0.0.2', previous_proxy_address: nil, apply_failures: 1,
+                                                                credential_digest: proxy.credential_digest)
+    end
+
+    it 'engine unreadable → no credential, previous kept, convergence decides next round' do
+      call = 0
+      allow(client).to receive(:get_session) do
+        call += 1
+        raise Waha::Client::Error, 'down' if call > 1
+
+        remote(server: '10.0.0.9:6000', username: 'x')
+      end
+
+      described_class.perform_now(session)
+
+      expect(WhatsappProxy::Assignment.last).to have_attributes(proxy_address: '10.0.0.2', previous_proxy_address: '10.0.0.9',
+                                                                credential_digest: nil, apply_failures: 1, apply_scheduled_at: nil)
+    end
   end
 
   it 'clears the previous state when restoring is refused by validation (L1)' do

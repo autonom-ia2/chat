@@ -7,6 +7,7 @@
 # Endereço vazio = pendente: a caixa nasceu sem proxy (Webshare fora) e a reconciliação tenta de novo.
 # `previous_*`: o estado de antes da última troca (IP, plano, conta, origem), para voltar a ele se o motor recusar.
 # `apply_failures`/`last_apply_failed_at`: trocas desfeitas seguidas, para o recuo exponencial.
+# `apply_scheduled_at`: troca agendada e ainda não resolvida (a convergência com o motor espera por ela).
 class CreateWhatsappProxyAssignments < ActiveRecord::Migration[7.2]
   def change
     create_assignments
@@ -31,6 +32,7 @@ class CreateWhatsappProxyAssignments < ActiveRecord::Migration[7.2]
       previous_columns(t)
       t.integer :apply_failures, null: false, default: 0
       t.datetime :last_apply_failed_at
+      t.datetime :apply_scheduled_at
       t.timestamps
     end
     index_assignments

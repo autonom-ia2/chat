@@ -29,11 +29,13 @@ RSpec.describe WhatsappProxy::Health do
     expect(described_class.rounds(session)).to eq(0)
   end
 
-  it 'lets a session left off at the end of an outage count from zero: two NEW rounds off to become unstable' do
-    described_class.eligible!(session)
+  it 'knows when a session has been off for more than 24 h, and forgets it when back to WORKING' do
+    Redis::Alfred.delete("whatsapp_proxy:off_since:#{session}")
+    described_class.observe!(session, 'FAILED', previous: 'FAILED')
 
-    expect(described_class.observe!(session, 'STARTING', previous: 'STARTING')).to be_nil
-    expect(described_class.observe!(session, 'STARTING', previous: 'STARTING')).to eq(:unstable)
+    travel_to(25.hours.from_now) { expect(described_class.off_for_long?(session)).to be(true) }
+    described_class.observe!(session, 'WORKING', previous: 'FAILED')
+    travel_to(25.hours.from_now) { expect(described_class.off_for_long?(session)).to be(false) }
   end
 
   it 'counts drops seen by the Hybrid webhook (connected → connecting), not QR' do

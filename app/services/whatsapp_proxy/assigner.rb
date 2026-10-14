@@ -70,11 +70,12 @@ class WhatsappProxy::Assigner
   end
 
   # Há para onde mover o número, sem `excluding`? Só leitura (nada gravado): a reconciliação usa antes de pôr um IP em
-  # quarentena, para não pôr e tirar a cada rodada quando o plano está sem IP livre.
+  # quarentena, para não pôr e tirar a cada rodada quando o plano está sem IP livre. :engine_down quando o motor não
+  # listou as sessões (não dá para saber).
   def destination?(session_name, owner, excluding:)
     pool = pool(owner.pool)
     in_engine = engine_sessions(session_name)
-    return false if in_engine.nil?
+    return :engine_down if in_engine.nil?
 
     others = WhatsappProxy::Assignment.where.not(session_name: session_name)
     candidate = pick(owner, pool, others, in_engine + [[nil, excluding]])

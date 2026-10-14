@@ -8,6 +8,7 @@ RSpec.describe WhatsappProxy::ReconcileJob do
   # Status de cada sessão no motor (padrão WORKING) e sessões extras do motor sem atribuição.
   let(:statuses) { {} }
   let(:extra_sessions) { [] }
+  let(:passwords) { {} }
 
   around do |example|
     with_modified_env(WHATSAPP_PROXY_ENABLED: 'true', WEBSHARE_ISP_PROXY_ADDRESSES: '10.5.0.1,10.5.0.2',
@@ -23,10 +24,7 @@ RSpec.describe WhatsappProxy::ReconcileJob do
     allow(Webshare::Client).to receive(:new).with(pool: 'isp').and_return(isp)
     allow(Webshare::Client).to receive(:new).with(pool: 'datacenter').and_return(datacenter)
     allow(Waha::Client).to receive(:new).and_return(engine)
-    allow(engine).to receive(:list_sessions) do
-      WhatsappProxy::Assignment.pluck(:session_name).map { |name| { 'name' => name, 'status' => statuses.fetch(name, 'WORKING') } } +
-        extra_sessions
-    end
+    allow(engine).to receive(:list_sessions) { engine_view(statuses, passwords: passwords, extra: extra_sessions) }
   end
 
   def apply_jobs
@@ -110,6 +108,7 @@ RSpec.describe WhatsappProxy::ReconcileJob do
     it 'reapplies a changed credential only while the session is WORKING' do
       old = webshare_proxy(id: 1, address: '10.0.0.1', password: 'antiga')
       waha!('5511900000001', proxy: old)
+      passwords['5511900000001'] = 'antiga'
       allow(datacenter).to receive(:proxies).and_return([webshare_proxy(id: 1, address: '10.0.0.1', password: 'nova')])
       statuses['5511900000001'] = 'FAILED'
 
@@ -202,6 +201,85 @@ RSpec.describe WhatsappProxy::ReconcileJob do
       statuses['hybrid-5511900000001'] = 'WORKING'
       expect { described_class.perform_now }.to have_enqueued_job(WhatsappProxy::ApplyJob).with('hybrid-5511900000001')
     end
+  end
+
+  describe 'convergence with the engine (the engine is the source of truth)' do
+    let(:table_ip) { webshare_proxy(id: 1, address: '10.0.0.1') }
+    let(:engine_ip) { webshare_proxy(id: 2, address: '10.0.0.2') }
+
+    before do
+      waha!('5511900000001', proxy: table_ip)
+      allow(datacenter).to receive(:proxies).and_return([table_ip, engine_ip])
+    end
+
+    def engine_on(proxy, status: 'WORKING', password: nil)
+      allow(engine).to receive(:list_sessions).and_return(
+        [{ 'name' => '5511900000001', 'status' => status,
+           'config' => { 'proxy' => { 'server' => proxy.server, 'username' => "user-#{proxy.id}", 'password' => password || "senha-#{proxy.id}" } } }]
+      )
+    end
+
+    it 'adjusts the TABLE to the engine (no PUT) when the session is WORKING on a valid IP of its account and plan' do
+      engine_on(engine_ip)
+
+      expect { described_class.perform_now }.not_to have_enqueued_job(WhatsappProxy::ApplyJob)
+      expect(WhatsappProxy::Assignment.last).to have_attributes(proxy_address: '10.0.0.2', credential_digest: engine_ip.credential_digest)
+    end
+
+    it 'schedules a normal change back to the table IP when the engine IP is not on the list anymore' do
+      engine_on(webshare_proxy(id: 9, address: '10.0.0.9'))
+
+      expect { described_class.perform_now }.to have_enqueued_job(WhatsappProxy::ApplyJob).with('5511900000001')
+      expect(WhatsappProxy::Assignment.last.proxy_address).to eq('10.0.0.1')
+    end
+
+    it 'schedules a normal change when the engine IP belongs to another account' do
+      other = create(:account)
+      waha_session!('5511900000099', other)
+      assign_proxy!('5511900000099', engine_ip, account: other)
+      engine_on(engine_ip)
+
+      expect { described_class.perform_now }.to have_enqueued_job(WhatsappProxy::ApplyJob).with('5511900000001')
+      expect(WhatsappProxy::Assignment.find_by!(session_name: '5511900000001').proxy_address).to eq('10.0.0.1')
+    end
+
+    it 'reapplies when the engine has no proxy at all, respecting backoff' do
+      allow(engine).to receive(:list_sessions).and_return([{ 'name' => '5511900000001', 'status' => 'WORKING', 'config' => {} }])
+
+      expect { described_class.perform_now }.to have_enqueued_job(WhatsappProxy::ApplyJob).with('5511900000001')
+
+      WhatsappProxy::Assignment.last.update!(apply_failures: 1, last_apply_failed_at: Time.current, apply_scheduled_at: nil)
+      expect { described_class.perform_now }.not_to have_enqueued_job(WhatsappProxy::ApplyJob)
+    end
+
+    it 'waits while a change is in flight (scheduled minutes ago)' do
+      engine_on(webshare_proxy(id: 9, address: '10.0.0.9'))
+      WhatsappProxy::Assignment.last.update!(apply_scheduled_at: 5.minutes.ago)
+
+      expect { described_class.perform_now }.not_to have_enqueued_job(WhatsappProxy::ApplyJob)
+    end
+
+    it 'records the credential the engine uses when the IP is the same' do
+      engine_on(table_ip)
+      WhatsappProxy::Assignment.last.update!(credential_digest: nil)
+
+      described_class.perform_now
+
+      expect(WhatsappProxy::Assignment.last.credential_digest).to eq(table_ip.credential_digest)
+    end
+  end
+
+  it 'raises webshare_indisponivel for a plan with only pending numbers and a 401 in two rounds (MEDIUM a)' do
+    hybrid_session!('hybrid-5511900000001', account)
+    WhatsappProxy::Assignment.create!(session_name: 'hybrid-5511900000001', account_id: account.id, pool: 'isp', assigned_at: 1.hour.ago)
+    allow(isp).to receive(:proxies).and_raise(Webshare::Client::Error, 'webshare_list_failed status=401')
+
+    log = capture_log do
+      described_class.perform_now
+      travel_to(11.minutes.from_now) { described_class.perform_now }
+    end
+
+    expect(log).to include('[alerta] webshare_indisponivel')
   end
 
   it 'changes at most MAX_CHANGES sessions per run and warns when the whole list changed' do

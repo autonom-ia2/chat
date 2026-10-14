@@ -5,8 +5,8 @@
 # - Atribuição em recuo (troca desfeita há pouco): sai sem fazer nada — inclusive um job repetido que já estava na fila.
 # - Antes do PUT confere o motor: proxy (host:porta) e credencial já iguais → só registra, sem PUT e sem zerar o recuo.
 # - Troca desfeita: a atribuição volta inteira ao estado anterior (ou pendente) e entra em recuo (10 min a 24 h);
-#   alerta `troca_desfeita` na primeira falha e no recuo máximo. Volta que falhou: o motor ficou com o proxy novo, a
-#   tabela fica nele também e o alerta `volta_falhou` já saiu.
+#   alerta `troca_desfeita` na primeira falha e no recuo máximo. Volta que falhou (alerta `volta_falhou` já saiu): o
+#   motor é relido e a tabela fica igual ao que ele mostra; ilegível, fica sem credencial para a convergência resolver.
 class WhatsappProxy::ApplyJob < ApplicationJob
   queue_as :low
 
@@ -28,7 +28,7 @@ class WhatsappProxy::ApplyJob < ApplicationJob
     return assigner.mark_confirmed!(session_name, proxy) if already_applied?(remote, proxy)
 
     outcome = WhatsappProxy::SessionUpdater.new(client: client).apply!(session_name, proxy, before: remote)
-    record_outcome(assigner, session_name, proxy, outcome)
+    record_outcome(assigner, session_name, proxy, outcome, client)
   rescue Waha::Client::NotFound
     Rails.logger.warn("[whatsapp_proxy] session=#{session_name} não existe no motor: atribuição liberada")
     assigner&.release!(session_name)
@@ -37,13 +37,15 @@ class WhatsappProxy::ApplyJob < ApplicationJob
     record_failure(session_name, &:apply_failed!)
   end
 
-  def record_outcome(assigner, session_name, proxy, outcome)
+  def record_outcome(assigner, session_name, proxy, outcome, client)
     case outcome
     when :applied
       assigner.mark_applied!(session_name, proxy)
       Rails.logger.info("[whatsapp_proxy] session=#{session_name} agora sai por #{proxy.server}")
     when :rolled_back then failed!(session_name, proxy)
-    when :rollback_failed then record_failure(session_name) { |assignment| assignment.rollback_failed!(proxy.credential_digest) }
+    when :rollback_failed
+      server, digest = WhatsappProxy::EngineProxy.read(client, session_name)
+      record_failure(session_name) { |assignment| assignment.rollback_failed!(engine_server: server, engine_digest: digest) }
     end
   end
 
@@ -76,9 +78,7 @@ class WhatsappProxy::ApplyJob < ApplicationJob
   end
 
   def already_applied?(remote, proxy)
-    return false unless WhatsappProxy::Server.same?(remote.dig('config', 'proxy', 'server'), proxy.server)
-
-    remote_proxy = remote.dig('config', 'proxy')
-    Webshare::Proxy.digest_for(remote_proxy['username'], remote_proxy['password']) == proxy.credential_digest
+    server, digest = WhatsappProxy::EngineProxy.from_session(remote)
+    WhatsappProxy::Server.same?(server, proxy.server) && digest == proxy.credential_digest
   end
 end

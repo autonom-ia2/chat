@@ -8,6 +8,7 @@ RSpec.describe WhatsappProxy::ReconcileJob do
   let(:engine) { instance_double(Waha::Client) }
   let(:statuses) { {} }
   let(:extra_sessions) { [] }
+  let(:passwords) { {} }
 
   around do |example|
     with_modified_env(WHATSAPP_PROXY_ENABLED: 'true', WEBSHARE_ISP_PROXY_ADDRESSES: '10.5.0.1',
@@ -22,10 +23,7 @@ RSpec.describe WhatsappProxy::ReconcileJob do
     allow(Webshare::Client).to receive(:new).with(pool: 'isp').and_return(isp)
     allow(Webshare::Client).to receive(:new).with(pool: 'datacenter').and_return(datacenter)
     allow(Waha::Client).to receive(:new).and_return(engine)
-    allow(engine).to receive(:list_sessions) do
-      WhatsappProxy::Assignment.pluck(:session_name).map { |name| { 'name' => name, 'status' => statuses.fetch(name, 'WORKING') } } +
-        extra_sessions
-    end
+    allow(engine).to receive(:list_sessions) { engine_view(statuses, passwords: passwords, extra: extra_sessions) }
   end
 
   def scheduled_sessions
@@ -274,17 +272,42 @@ RSpec.describe WhatsappProxy::ReconcileJob do
       expect(scheduled_sessions).to be_empty
     end
 
-    it 'ends when most came back; the one still off needs two NEW rounds off to be judged unstable (HIGH1)' do
+    it 'after the outage ends, a session still off is never quarantined until it is back to WORKING (MEDIUM c)' do
       start = Time.current
       travel_to(start) { round(proxied('WORKING', 'WORKING', 'WORKING', 'WORKING')) }
       travel_to(start + 10.minutes) { round(proxied('STARTING', 'STARTING', 'FAILED', 'WORKING')) }
-      travel_to(start + 20.minutes) { round(proxied('STARTING', 'WORKING', 'WORKING', 'WORKING')) }
-      travel_to(start + 30.minutes) { round(proxied('STARTING', 'WORKING', 'WORKING', 'WORKING')) }
+      (2..8).each { |step| travel_to(start + (step * 10).minutes) { round(proxied('STARTING', 'WORKING', 'WORKING', 'WORKING')) } }
       expect(scheduled_sessions).to be_empty
+      expect(WhatsappProxy::Quarantine.count).to eq(0)
 
-      travel_to(start + 40.minutes) { round(proxied('STARTING', 'WORKING', 'WORKING', 'WORKING')) }
+      travel_to(start + 90.minutes) { round(proxied('WORKING', 'WORKING', 'WORKING', 'WORKING')) }
+      travel_to(start + 100.minutes) { round(proxied('STARTING', 'WORKING', 'WORKING', 'WORKING')) }
+      travel_to(start + 110.minutes) { round(proxied('STARTING', 'WORKING', 'WORKING', 'WORKING')) }
 
       expect(scheduled_sessions).to eq(['5511900000101'])
+    end
+
+    it 'warns once a day when a session stays off for more than 24 h without being unstable' do
+      Redis::Alfred.delete("whatsapp_proxy:alert:sessao_fora_24h:5511900000101:#{Date.current}")
+      Redis::Alfred.delete('whatsapp_proxy:off_since:5511900000101')
+      start = Time.current
+      travel_to(start) { round(proxied('FAILED', 'WORKING', 'WORKING', 'WORKING')) }
+
+      log = capture_log { travel_to(start + 25.hours) { round(proxied('FAILED', 'WORKING', 'WORKING', 'WORKING')) } }
+
+      expect(log).to include('[alerta] sessao_fora_24h')
+      expect(scheduled_sessions).to be_empty
+    end
+
+    it 'alerts when an episode vanishes without ending (MEDIUM b)' do
+      round(proxied('WORKING', 'WORKING', 'WORKING', 'WORKING'))
+      round(proxied('STARTING', 'STARTING', 'FAILED', 'WORKING'))
+      Redis::Alfred.delete(WhatsappProxy::Outage.episode_key('datacenter'))
+
+      log = capture_log { round(proxied('STARTING', 'STARTING', 'FAILED', 'WORKING')) }
+
+      expect(log).to include('[alerta] falha_geral_perdida')
+      expect(Redis::Alfred.ttl(WhatsappProxy::Outage.episode_key('datacenter'))).to be(-2)
     end
 
     it 'treats the sessions without proxy as baseline only with at least MIN_BASELINE that were WORKING' do

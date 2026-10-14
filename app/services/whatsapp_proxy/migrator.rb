@@ -4,7 +4,8 @@
 # - Confere o limite temporário do WhatsApp (/timelock): com restrição ativa, ou sem conseguir conferir, recusa.
 # - A troca é a do SessionUpdater (espera WORKING com o mesmo número; falhou, volta). Qualquer fim que não seja a troca
 #   aplicada — desfeita, recusada, exceção, Ctrl-C — apaga a atribuição, para nenhuma atribuição órfã ser aplicada
-#   depois sem o /timelock. Exceção: volta que falhou (o motor ficou com o proxy novo) — aí a tabela fica igual ao motor.
+#   depois sem o /timelock. Volta que falhou: o motor é relido; só se ele estiver com o IP atribuído a atribuição fica
+#   (igual ao motor) — senão, ou ilegível, também é apagada.
 class WhatsappProxy::Migrator
   Result = Struct.new(:outcome, :detail)
 
@@ -25,16 +26,26 @@ class WhatsappProxy::Migrator
     refusal = precheck(session_name)
     return Result.new(:refused, refusal) if refusal
 
-    outcome = nil
+    keep = false
     begin
       proxy = @assigner.for(session_name)
       return Result.new(:refused, 'sem IP disponível (veja os alertas)') if proxy.nil?
 
       outcome = @updater.apply!(session_name, proxy)
-      finish(session_name, proxy, outcome)
+      keep = outcome == :applied || (outcome == :rollback_failed && engine_on?(session_name, proxy))
+      finish(session_name, proxy, outcome, keep)
     ensure
-      @assigner.release!(session_name) unless %i[applied rollback_failed].include?(outcome)
+      @assigner.release!(session_name) unless keep
     end
+  end
+
+  # Depois de uma volta que falhou: o motor está com o IP atribuído? Grava o que ele mostra (credencial incluída).
+  def engine_on?(session_name, proxy)
+    server, digest = WhatsappProxy::EngineProxy.read(@client, session_name)
+    return false unless WhatsappProxy::Server.same?(server, proxy.server)
+
+    WhatsappProxy::Assignment.find_by(session_name: session_name)&.rollback_failed!(engine_server: server, engine_digest: digest)
+    true
   end
 
   def precheck(session_name)
@@ -52,14 +63,13 @@ class WhatsappProxy::Migrator
     "não deu para conferir o /timelock (#{e.class})"
   end
 
-  def finish(session_name, proxy, outcome)
+  def finish(session_name, proxy, outcome, kept)
     case outcome
     when :applied
       @assigner.mark_applied!(session_name, proxy)
       Result.new(:applied, proxy.server)
     when :rollback_failed
-      WhatsappProxy::Assignment.find_by(session_name: session_name)&.rollback_failed!(proxy.credential_digest)
-      Result.new(:rollback_failed, 'a volta falhou: o motor ficou com o proxy novo (veja o alerta volta_falhou)')
+      Result.new(:rollback_failed, kept ? 'volta falhou; o motor ficou com o proxy novo (mantido)' : 'volta falhou; atribuição apagada')
     when :refused then Result.new(:refused, 'sessão pedindo QR ou parada')
     else Result.new(outcome, 'troca desfeita; a sessão voltou ao que era')
     end

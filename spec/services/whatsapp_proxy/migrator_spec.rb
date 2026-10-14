@@ -74,11 +74,26 @@ RSpec.describe WhatsappProxy::Migrator do
     expect(Redis::Alfred.get(WhatsappProxy::SessionLock.key(session))).to be_nil
   end
 
-  it 'keeps the table on the new proxy when the rollback failed (engine left on it) (M2)' do
+  it 'keeps the assignment when the rollback failed and the engine is on the assigned IP (table = engine)' do
     allow(updater).to receive(:apply!).and_return(:rollback_failed)
+    allow(client).to receive(:get_session)
+      .and_return({ 'config' => { 'proxy' => { 'server' => '10.0.0.2:6000', 'username' => 'user-2', 'password' => 'senha-2' } } })
 
     expect(migrator.call(session).outcome).to eq(:rollback_failed)
-    expect(WhatsappProxy::Assignment.find_by!(session_name: session)).to have_attributes(proxy_address: '10.0.0.2', apply_failures: 1)
+    expect(WhatsappProxy::Assignment.find_by!(session_name: session))
+      .to have_attributes(proxy_address: '10.0.0.2', apply_failures: 1, credential_digest: proxy.credential_digest)
+  end
+
+  it 'drops the assignment when the rollback failed and the engine is not on the assigned IP (or unreadable)' do
+    allow(updater).to receive(:apply!).and_return(:rollback_failed)
+    allow(client).to receive(:get_session).and_return({ 'config' => {} })
+
+    expect(migrator.call(session).outcome).to eq(:rollback_failed)
+    expect(WhatsappProxy::Assignment.count).to eq(0)
+
+    allow(client).to receive(:get_session).and_raise(Waha::Client::Error, 'down')
+    migrator.call(session)
+    expect(WhatsappProxy::Assignment.count).to eq(0)
   end
 
   it 'refuses while another proxy change of the session holds the lock (M4)' do

@@ -12,16 +12,18 @@
 #   MIN_BASELINE sessões que estavam WORKING (poucas sessões não são linha de base) — vale para todos os planos.
 # Continua (sem prazo) enquanto as que caíram seguem fora acima do mesmo limite — falha geral longa não vira "IP
 # instável" por tempo. Termina quando a maioria voltou (alerta `falha_geral_fim`, um por episódio); as que seguem fora
-# passam a ser avaliadas uma a uma, do zero, a partir da rodada SEGUINTE (WhatsappProxy::Health.eligible!). Na rodada
-# em que um episódio termina, não abre outro no mesmo escopo. Falha que não melhora não fica calada: alerta
-# `falha_geral_em_curso` a cada STILL_ON_EVERY (duração e quantos números seguem fora).
+# não viram "instáveis" enquanto não voltarem a WORKING (WhatsappProxy::Health), só um aviso se ficarem fora > 24 h. Na
+# rodada em que um episódio termina, não abre outro no mesmo escopo. O episódio vive EPISODE_TTL no Redis, renovado a
+# cada rodada; se sumir sem terminar (Redis apagado, reconciliação parada), alerta `falha_geral_perdida`. Falha que não
+# melhora não fica calada: alerta `falha_geral_em_curso` a cada STILL_ON_EVERY (duração e quantos números fora).
 class WhatsappProxy::Outage
   MAX_SHARE = 0.3
   MIN_OFF = 2
   MIN_BASELINE = 5
   PREVIOUS_KEY = 'whatsapp_proxy:previous_statuses'.freeze
   PREVIOUS_TTL = 30.minutes.to_i
-  EPISODE_TTL = 20.minutes.to_i
+  EPISODE_TTL = 24.hours.to_i
+  SEEN_TTL = 7.days.to_i
   ALERT_WINDOW = 1.day
   STILL_ON_EVERY = 6.hours
   BASELINE = 'baseline'.freeze
@@ -52,6 +54,10 @@ class WhatsappProxy::Outage
     "whatsapp_proxy:outage:#{scope}"
   end
 
+  def self.seen_key(scope)
+    "whatsapp_proxy:outage_seen:#{scope}"
+  end
+
   # engine_sessions: o GET /api/sessions?all=true; assignments: as atribuições; previous: status da rodada anterior.
   def initialize(engine_sessions, assignments, previous:)
     @engine_sessions = engine_sessions
@@ -77,6 +83,7 @@ class WhatsappProxy::Outage
 
   # Avalia todos os escopos uma vez na rodada (começo, continuação e fim de episódio, com os alertas).
   def evaluate!
+    SCOPES.each { |scope| lost_episode?(scope) }
     SCOPES.each { |scope| episode?(scope) } if known?
   end
 
@@ -85,6 +92,18 @@ class WhatsappProxy::Outage
   end
 
   private
+
+  # Havia episódio (marca de longa duração) mas a chave dele sumiu sem finish!: avisa e limpa a marca.
+  def lost_episode?(scope)
+    seen = ::Redis::Alfred.get(self.class.seen_key(scope))
+    return if seen.blank? || ::Redis::Alfred.get(self.class.episode_key(scope)).present?
+
+    ::Redis::Alfred.delete(self.class.seen_key(scope))
+    WhatsappProxy::Alert.notify!('falha_geral_perdida', "o registro da falha geral #{seen} sumiu sem terminar (Redis?); " \
+                                                        'a contagem recomeça', level: :error, pool: scope, subject: seen, window: ALERT_WINDOW)
+  rescue Redis::BaseError
+    nil
+  end
 
   def episode?(scope)
     return @episodes[scope] if @episodes.key?(scope)
@@ -130,9 +149,9 @@ class WhatsappProxy::Outage
   end
 
   def finish!(scope, episode, still_off)
-    still_off.each { |name| WhatsappProxy::Health.eligible!(name) }
     @just_ended.concat(still_off)
     ::Redis::Alfred.delete(self.class.episode_key(scope))
+    ::Redis::Alfred.delete(self.class.seen_key(scope))
     WhatsappProxy::Alert.notify!('falha_geral_fim', "falha geral (#{scope}) terminou; #{still_off.size} sessão(ões) ainda fora",
                                  pool: scope, count: still_off.size, subject: episode['id'], window: ALERT_WINDOW)
     false
@@ -193,6 +212,7 @@ class WhatsappProxy::Outage
 
   def store_episode(scope, episode)
     ::Redis::Alfred.setex(self.class.episode_key(scope), episode.to_json, EPISODE_TTL)
+    ::Redis::Alfred.setex(self.class.seen_key(scope), episode['id'], SEEN_TTL)
   rescue Redis::BaseError
     nil
   end

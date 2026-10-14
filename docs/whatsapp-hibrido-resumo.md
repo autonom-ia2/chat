@@ -256,11 +256,18 @@ Autonom.ia). Regra decidida em 14/10/2026:
   gravado. Falhou: a configuração anterior volta no motor, a atribuição volta inteira ao estado anterior (IP, plano,
   conta, origem), conta uma falha e entra em **recuo** (10 min, 30 min, 2 h, 6 h, 24 h) — job repetido que já estava na
   fila sai sem fazer nada; alerta `troca_desfeita` na primeira falha e ao chegar no recuo máximo. Se nem a volta der
-  certo, o motor ficou com o proxy novo: a tabela fica nele também e sai `volta_falhou` (urgente). Confirmação sem PUT
-  (o motor já tinha o proxy) não zera o recuo; só uma troca aplicada e conferida zera.
+  certo (`volta_falhou`, urgente), o motor é relido e a tabela fica exatamente como ele mostra (proxy novo, antigo, ou
+  — ilegível — sem credencial e com o anterior guardado, para a convergência resolver). Confirmação sem PUT (o motor já
+  tinha o proxy) só zera o recuo se ele já tinha vencido.
+- **Convergência: o motor é a fonte da verdade.** A cada rodada a reconciliação compara o proxy que o motor usa
+  (host:porta e credencial) com a tabela. Mesmo IP: a tabela registra a credencial do motor. IP diferente com a sessão
+  WORKING num IP válido da lista, da mesma conta e plano: a **tabela** passa a ser o motor (sem PUT, sem reinício).
+  IP do motor sumido, inválido ou de outra conta, ou sessão fora de WORKING: troca normal para o IP da tabela. Motor sem
+  proxy: reaplica. Troca agendada há menos de 30 min é esperada (não conta como divergência).
 - Híbrido: a atualização da aba nunca grava proxy na requisição — só agenda o ApplyJob, e só para sessão que já tem
   atribuição, fora do recuo, no máximo uma vez por hora (Redis fora = não agenda). Reconectar grava junto o IP
-  atribuído, também só com atribuição. O envio de mensagem nunca mexe no proxy.
+  atribuído, também só com atribuição e só com a trava livre (outra troca em andamento: não grava; a convergência
+  resolve depois). O envio de mensagem nunca mexe no proxy.
 - Proxy posto à mão sem registro na tabela não é trocado pelo código.
 - `WhatsappProxy::ReconcileJob` (a cada 10 minutos; decisão em `WhatsappProxy::Triage`): lê o motor e cada plano uma
   vez. Nunca toca sessão que o motor não tem, parada (STOPPED) ou pedindo QR; sessão em recuo espera (e não ocupa
@@ -271,13 +278,14 @@ Autonom.ia). Regra decidida em 14/10/2026:
     importado só muda de plano/conta com `WHATSAPP_PROXY_AUTO_MIGRATE=true`;
   - **pendente**: com a sessão WORKING, atribui e aplica; sem IP ainda, conta falha (recuo);
   - um plano com erro na Webshare não para o outro (sai da rodada inteira, uma contagem por rodada); erro em duas
-    rodadas seguidas gera `webshare_indisponivel`; se mais da metade dos IPs sumiu de uma vez, `troca_em_massa`.
+    rodadas seguidas gera `webshare_indisponivel` (a contagem só zera quando a lista do plano respondeu de fato); se
+    mais da metade dos IPs sumiu de uma vez, `troca_em_massa`.
 - **IP instável** (a Webshare chama de válido, mas a sessão fica caindo — visto em 14/10/2026 na
   hybrid-551142155355): só conta a sessão que **caiu** — estava WORKING na rodada anterior; FAILED antiga não conta e
   não queima IP bom. Fora de WORKING em 2 rodadas seguidas, ou 3 quedas avisadas pelo webhook do Híbrido em 30 min, o
   número troca de IP no mesmo plano e fatia e o IP vai para quarentena por 24 h (tabela `whatsapp_proxy_quarantines`) —
-  mas só se houver para onde mover — checado antes, só leitura; sem destino nem põe quarentena e avisa
-  `quarentena_sem_destino` uma vez por dia. No máximo uma troca dessas por sessão por dia (`sessao_instavel_de_novo`,
+  mas só se houver para onde mover — checado antes do corte das vagas, só leitura; sem destino nem põe quarentena e
+  avisa `quarentena_sem_destino` (ou `motor_indisponivel`, se o motor não respondeu) uma vez por dia. No máximo uma troca dessas por sessão por dia (`sessao_instavel_de_novo`,
   uma vez por dia) e 3 quarentenas por plano em 24 h (`teto_de_quarentena`). Os números irmãos (mesma conta, mesmo IP) não saem
   à força: trocam se eles próprios caírem; WORKING, trocam sem urgência, um por rodada. A quarentena expira sozinha;
   para soltar antes: `bundle exec rails "autonomia:whatsapp_proxy:liberar_quarentena[IP]"`.
@@ -288,9 +296,10 @@ Autonom.ia). Regra decidida em 14/10/2026:
   nenhuma troca por instabilidade, contagem zerada (inclusive as quedas do webhook). Alerta `falha_geral` no começo e
   `falha_geral_fim` no fim, um de cada por episódio, e `falha_geral_em_curso` a cada 6 h enquanto durar (duração e
   quantos números seguem fora). Dura (sem prazo) enquanto as que caíram seguem fora acima do mesmo
-  limite: falha longa não vira "IP instável" por tempo. Quando a maioria volta, termina; as que seguem fora são
-  avaliadas uma a uma, do zero, a partir da rodada seguinte (2 rodadas novas fora para virar instável). Na rodada em
-  que um episódio termina não se abre outro. Sem a rodada anterior (primeira rodada, Redis vazio) só observa. IP sumido
+  limite: falha longa não vira "IP instável" por tempo. Quando a maioria volta, termina; as que seguem fora só podem
+  virar "instáveis" depois de voltar a WORKING ao menos uma vez (até lá, nada de quarentena; fora há mais de 24 h,
+  `sessao_fora_24h` uma vez por dia). Na rodada em que um episódio termina não se abre outro. O episódio fica 24 h no
+  Redis, renovado a cada rodada; se sumir sem terminar, `falha_geral_perdida`. Sem a rodada anterior (primeira rodada, Redis vazio) só observa. IP sumido
   continua sendo reparado.
 - **Alertas**: sempre no log `[whatsapp_proxy][alerta]`; como aviso do Guia para os administradores da conta da
   plataforma (`WHATSAPP_PROXY_ALERT_ACCOUNT_ID`), em pt_BR/en, só com nº de caixa e de conta, plano e IP mascarado
@@ -299,8 +308,8 @@ Autonom.ia). Regra decidida em 14/10/2026:
   pediram QR no dia anterior). Códigos: `plano_esgotado`, `fatia_vazia`, `ip_da_fatia_sumiu`, `troca_desfeita`,
   `volta_falhou`, `sessao_instavel_trocada`, `sessao_instavel_de_novo`, `ip_em_quarentena`, `quarentena_sem_destino`,
   `aparelho_desvinculado`, `troca_em_massa`, `plano_configurado_inexistente`, `falha_geral`, `falha_geral_em_curso`,
-  `falha_geral_fim`, `teto_de_quarentena`, `webshare_indisponivel`, `caixa_sem_proxy`, `atribuicao_invalida` (os de
-  erro chegam como aviso urgente).
+  `falha_geral_fim`, `falha_geral_perdida`, `sessao_fora_24h`, `motor_indisponivel`, `teto_de_quarentena`,
+  `webshare_indisponivel`, `caixa_sem_proxy`, `atribuicao_invalida` (os de erro chegam como aviso urgente).
 - A lista da Webshare vem inteira ou dá erro (nunca parcial: com lista parcial, IP em uso pareceria sumido).
 - Excluir a conexão Híbrida ou a caixa WAHA tira o número do IP; apagar a conta apaga as atribuições dela.
 

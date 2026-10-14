@@ -106,8 +106,10 @@ class WhatsappHybrid::SessionManager
     rescue Waha::Client::Error
       @client.restart_session(connection.session_name)
     end
-    # Reconectar já reinicia a sessão: hora de conferir na lista se o IP atribuído continua valendo.
-    sync_remote_config!(fetch_remote, proxy_mode: :verify)
+    # Reconectar já reinicia a sessão: hora de conferir na lista se o IP atribuído continua valendo. Com outra troca de
+    # proxy em andamento (mesma trava do ApplyJob), não grava agora: a reconciliação converge com o motor depois.
+    verified = WhatsappProxy::SessionLock.with(connection.session_name) { sync_remote_config!(fetch_remote, proxy_mode: :verify) }
+    Rails.logger.info("[whatsapp_hybrid] reconnect inbox=#{connection.inbox_id}: troca de proxy em andamento") if verified == :locked
     @client.start_session(connection.session_name) if fetch_remote['status'] == 'STOPPED'
     connection.update!(status: 'connecting', connected_phone: nil)
   end
@@ -204,7 +206,10 @@ class WhatsappHybrid::SessionManager
     assignment = managed_assignment
     return unless assignment && proxy_change_due?(assignment, remote_proxy)
 
-    WhatsappProxy::ApplyJob.perform_later(connection.session_name) unless proxy_rewrite_cooling_down?
+    return if proxy_rewrite_cooling_down?
+
+    WhatsappProxy::ApplyJob.perform_later(connection.session_name)
+    assignment.scheduled!
   end
 
   def proxy_change_due?(assignment, remote_proxy)

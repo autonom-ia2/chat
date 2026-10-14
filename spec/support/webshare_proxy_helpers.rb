@@ -34,6 +34,19 @@ module WebshareProxyHelpers
                                       credential_digest: digest)
   end
 
+  # O que o motor mostra numa rodada: cada sessão atribuída com o proxy da tabela (credencial da lista, salvo
+  # `passwords[sessão]`), mais `extra`. Simula o motor já convergido com a tabela.
+  def engine_view(statuses, passwords: {}, extra: [], without_proxy: [])
+    WhatsappProxy::Assignment.all.map do |row|
+      session = { 'name' => row.session_name, 'status' => statuses.fetch(row.session_name, 'WORKING') }
+      next session if row.pending? || without_proxy.include?(row.session_name)
+
+      password = passwords.fetch(row.session_name, "senha-#{row.webshare_proxy_id}")
+      proxy = { 'server' => row.server, 'username' => "user-#{row.webshare_proxy_id}", 'password' => password }
+      session.merge('config' => { 'proxy' => proxy })
+    end + extra
+  end
+
   def capture_log
     io = StringIO.new
     original = Rails.logger
