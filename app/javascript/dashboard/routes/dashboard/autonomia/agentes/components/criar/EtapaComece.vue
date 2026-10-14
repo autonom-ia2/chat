@@ -87,7 +87,8 @@ const erroVisivel = computed(() => {
   const valores = { nome: props.nome, canal: props.erro.troca?.canal || '' };
   return {
     motivo: props.erro.motivo,
-    titulo: t(molde.titulo, valores),
+    // #1366: o servidor explicou a recusa (422): a explicação dele no lugar do título geral.
+    titulo: props.erro.mensagem || t(molde.titulo, valores),
     garantia: t(molde.garantia, valores),
     acao: t(molde.acao),
     icone: molde.icone || 'i-lucide-refresh-cw',

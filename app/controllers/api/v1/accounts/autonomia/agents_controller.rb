@@ -48,7 +48,8 @@ class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autono
     merge_config!(attrs[:config]) if attrs.key?(:config)
     @agent.created_by = Current.user
     apply_manual_scaffold
-    @agent.save!
+    # :ativacao (#1366): nascer atendendo também exige onde trabalhar (Agent#tem_onde_trabalhar?).
+    @agent.save!(context: %i[create ativacao])
     render :show, status: :created
   end
 
@@ -63,21 +64,20 @@ class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autono
     with_knowledge system_key builder_active_thread_id
   ] + [::Autonomia::Insurance::QuoteAgent::Builder::ESCOLHAS_DA_CORRETORA]).freeze
 
+  # #1366 — status, enabled ou actuation mudando: tudo (assign + save!) com o AGENTE TRAVADO (with_lock relê o agente),
+  # para a validação de atender (Agent#tem_onde_trabalhar?) reler os vínculos depois da trava. Sem ela, um PATCH que
+  # ativa via o vínculo que uma desconexão paralela estava tirando, e a parada automática dessa desconexão via o agente
+  # ainda parado: o agente terminava atendendo sem caixa. É a mesma trava (agente → caixa) do InboxConnector.
+  # O histórico da instrução é gravado fora da trava: é best-effort e não pode envenenar a transação do save.
   def update
     rejeitar_edicao_da_instrucao_mantida
-    discard_generated_instruction_on_manual_switch
-    instruction_before = @agent.instruction
     attrs = agent_params
     return if recusar_pagina_de_agendamento_sem_permissao(attrs[:config])
 
-    @agent.assign_attributes(attrs.except(:config))
-    merge_config!(attrs[:config]) if attrs.key?(:config)
-    return if reject_internal_with_channels
-
-    apply_manual_scaffold
-    @agent.save!
-    record_manual_instruction_version(instruction_before)
-    render :show
+    instruction_before = ::Autonomia::Agents::Agent.muda_atendimento?(attrs) ? @agent.with_lock { salvar_update(attrs) } : salvar_update(attrs)
+    # performed?: reject_internal_with_channels já respondeu 422, sem salvar.
+    record_manual_instruction_version(instruction_before) unless performed?
+    render :show unless performed?
   end
 
   def destroy
@@ -105,6 +105,19 @@ class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autono
   end
 
   private
+
+  # -> a instrução de antes do save, ou nil quando recusou (a resposta 422 já foi renderizada).
+  def salvar_update(attrs)
+    discard_generated_instruction_on_manual_switch
+    instruction_before = @agent.instruction
+    @agent.assign_attributes(attrs.except(:config))
+    merge_config!(attrs[:config]) if attrs.key?(:config)
+    return if reject_internal_with_channels
+
+    apply_manual_scaffold
+    @agent.save!
+    instruction_before
+  end
 
   def fetch_agent
     @agent = agents_scope.find(params[:id])

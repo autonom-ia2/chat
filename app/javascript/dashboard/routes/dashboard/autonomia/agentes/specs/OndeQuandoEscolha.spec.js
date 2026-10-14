@@ -239,12 +239,38 @@ describe('OndeQuandoEscolha', () => {
   });
 });
 
+describe('troca de canal ocupado (#1366)', () => {
+  const comCaixas = caixas =>
+    canais.map(canal =>
+      canal.inbox_id === 11
+        ? { ...canal, occupied_by: { ...canal.occupied_by, caixas } }
+        : canal
+    );
+
+  it('warns that the other agent stops answering when it was its last inbox', () => {
+    const wrapper = montar({ canais: comCaixas(1), onde: 11 });
+    expect(wrapper.get('[data-troca-para]').text()).toBe(
+      'AGENTS.JORNADA.ONDE_QUANDO.TROCA_PARA'
+    );
+    wrapper.unmount();
+  });
+
+  it('does not warn when the other agent still has another inbox', () => {
+    const wrapper = montar({ canais: comCaixas(2), onde: 11 });
+    expect(wrapper.find('[data-troca]').exists()).toBe(true);
+    expect(wrapper.find('[data-troca-para]').exists()).toBe(false);
+    wrapper.unmount();
+  });
+});
+
 describe('trocaNoCanal', () => {
   it('describes the swap only for an inbox of another agent', () => {
     expect(trocaNoCanal(canais, 11, 5)).toEqual({
       agenteId: 9,
       nome: 'Bia',
       canal: 'WhatsApp do Centro',
+      atendia: true,
+      ultimaCaixa: false,
     });
     expect(trocaNoCanal(canais, 10, 5)).toBeNull();
     expect(trocaNoCanal(canais, 13, 5)).toBeNull();
