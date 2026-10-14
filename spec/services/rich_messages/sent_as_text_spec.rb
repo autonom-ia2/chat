@@ -117,11 +117,14 @@ describe 'Rich message sent as text' do # rubocop:disable RSpec/DescribeClass
 
     it 'keeps the send accepted, without failing or resending, when the mark breaks' do
       message = outgoing(rich_message: link_button)
-      allow(message).to receive(:with_lock).and_raise(ActiveRecord::Deadlocked)
+      # Quebra só a marca, por dentro dela: a trava (`with_lock`) que o envio usa para gravar o resultado fica intacta.
+      allow(RichMessages).to receive(:sent_as_text_attributes).and_raise(ActiveRecord::Deadlocked)
+      allow(Rails.logger).to receive(:error)
       allow(HTTParty).to receive(:post).and_call_original
 
       expect { send_by_web(message) }.not_to have_enqueued_job(SendReplyJob)
 
+      expect(Rails.logger).to have_received(:error).with("[rich_messages] mark_sent_as_text message=#{message.id} ActiveRecord::Deadlocked")
       expect(client).to have_received(:send_text).once
       expect(message.reload.status).not_to eq('failed')
       expect(message.content_attributes).to include('whatsapp_transport_outcome' => 'accepted')
