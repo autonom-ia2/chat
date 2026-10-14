@@ -16,17 +16,14 @@ const fusoValido = fuso => {
   }
 };
 
-// O mesmo padrão do back (Crm::Timezone::Resolver::FALLBACK_TIMEZONE), só para
-// quando a tela ainda não recebeu o CRM_DEFAULT_TIMEZONE.
-const PADRAO_DO_CRM = 'America/Sao_Paulo';
-
 // #1568: o fuso da conta (Configurações grava custom_attributes.timezone e o
 // servidor copia para settings.reporting_timezone). Sem fuso na conta, o padrão
-// que o CRM usa no back (CRM_DEFAULT_TIMEZONE) — nunca o do navegador.
+// que o CRM usa no back, que o servidor manda em CRM_DEFAULT_TIMEZONE (sempre
+// preenchido) — nunca o do navegador.
 export const fusoDaConta = account =>
   [
     account?.timezone,
     account?.custom_attributes?.timezone,
     account?.settings?.reporting_timezone,
     window.globalConfig?.CRM_DEFAULT_TIMEZONE,
-  ].find(fusoValido) || PADRAO_DO_CRM;
+  ].find(fusoValido);

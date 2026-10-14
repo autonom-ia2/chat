@@ -38,7 +38,5 @@ describe('fusoDaConta', () => {
     expect(fusoDaConta({ custom_attributes: { timezone: 'Lua/Base' } })).toBe(
       'America/Recife'
     );
-    delete window.globalConfig;
-    expect(fusoDaConta(null)).toBe('America/Sao_Paulo');
   });
 });
